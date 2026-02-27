@@ -109,7 +109,6 @@ export declare namespace TgpuVertexFn {
 
 export function vertexFn<VertexOut extends VertexOutConstrained>(options: {
   out: VertexOut;
-  // biome-ignore lint/complexity/noBannedTypes: it's fine
 }): TgpuVertexFnShell<{}, VertexOut>;
 
 export function vertexFn<
@@ -171,7 +170,7 @@ export function isTgpuVertexFn<
   VertexIn extends VertexInConstrained,
   VertexOut extends VertexOutConstrained,
 >(
-  value: unknown | TgpuVertexFn<VertexIn, VertexOut>,
+  value: unknown,
 ): value is TgpuVertexFn<VertexIn, VertexOut> {
   return (value as TgpuVertexFn<VertexIn, VertexOut>)?.shell?.entryPoint ===
     'vertex';

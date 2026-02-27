@@ -86,8 +86,8 @@ export type AnyAttribute<
 > =
   | Align<number>
   | Size<number>
-  | Location<number>
-  | Interpolate<InterpolationType>
+  | Location
+  | Interpolate
   | Invariant
   | AllowedBuiltins;
 
@@ -169,7 +169,7 @@ export function align<TAlign extends number, TData extends AnyData>(
     [$internal]: true,
     type: '@align',
     params: [alignment],
-    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any -- tired of lying to types
   }) as any;
 }
 
@@ -193,7 +193,7 @@ export function size<TSize extends number, TData extends AnyData>(
     [$internal]: true,
     type: '@size',
     params: [size],
-    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any -- tired of lying to types
   }) as any;
 }
 
@@ -218,7 +218,7 @@ export function location<TLocation extends number, TData extends BaseData>(
     [$internal]: true,
     type: '@location',
     params: [location],
-    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any -- tired of lying to types
   }) as any;
 }
 
@@ -281,7 +281,7 @@ export function interpolate<
     [$internal]: true,
     type: '@interpolate',
     params: [interpolationType],
-    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any -- tired of lying to types
   }) as any;
 }
 
@@ -324,15 +324,13 @@ export function invariant(
     [$internal]: true,
     type: '@invariant',
     params: [],
-    // biome-ignore lint/suspicious/noExplicitAny: <tired of lying to types>
+    // oxlint-disable-next-line typescript/no-explicit-any -- tired of lying to types
   }) as any;
 }
 
-export function isBuiltin<
-  T extends
-    | Decorated<AnyWgslData, AnyAttribute[]>
-    | LooseDecorated<AnyLooseData, AnyAttribute[]>,
->(value: T | unknown): value is T {
+export function isBuiltin(value: unknown): value is
+  | Decorated<AnyWgslData, AnyAttribute[]>
+  | LooseDecorated<AnyLooseData, AnyAttribute[]> {
   return (
     (isDecorated(value) || isLooseDecorated(value)) &&
     value.attribs.find(isBuiltinAttrib) !== undefined

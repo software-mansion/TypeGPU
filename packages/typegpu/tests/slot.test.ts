@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import tgpu, { d, std } from '../src/index.ts';
+import tgpu, { d, std } from '../src/index.js';
 import { it } from './utils/extendedIt.ts';
 import { getName } from '../src/shared/meta.ts';
 
@@ -286,7 +286,7 @@ describe('tgpu.slot', () => {
     const uniformSlotSlot = tgpu.slot(uniformSlot);
 
     const getColor = tgpu.fn([], d.vec3f)(() => d.vec3f(1, 2, 3));
-    const colorAccess = tgpu['~unstable'].accessor(d.vec3f, getColor);
+    const colorAccess = tgpu.accessor(d.vec3f, getColor);
     const colorAccessSlot = tgpu.slot(colorAccess);
 
     const func = tgpu.fn([])(() => {
@@ -345,7 +345,6 @@ describe('tgpu.slot', () => {
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main(uv: vec2f) -> vec3f {
         var color = vec3f(1, 0, 1);
-
         return color;
       }"
     `);

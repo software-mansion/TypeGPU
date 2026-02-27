@@ -72,10 +72,10 @@ export class Slider {
     this.totalLength = Math.hypot(dx, dy);
     this.restLen = this.totalLength / (this.n - 1);
 
-    this.#pos = new Array(this.n);
-    this.#controlPoints = new Array(this.n - 1);
-    this.#normals = new Array(this.n);
-    this.#prev = new Array(this.n);
+    this.#pos = Array.from({ length: this.n });
+    this.#controlPoints = Array.from({ length: this.n - 1 });
+    this.#normals = Array.from({ length: this.n });
+    this.#prev = Array.from({ length: this.n });
     this.#invMass = new Float32Array(this.n);
 
     for (let i = 0; i < this.n; i++) {
@@ -129,7 +129,7 @@ export class Slider {
 
     this.bbox = [top, right, bottom, left];
 
-    this.#computeBezierPipeline = this.#root['~unstable']
+    this.#computeBezierPipeline = this.#root
       .createGuardedComputePipeline((x, y) => {
         'use gpu';
         const size = std.textureDimensions(bezierWriteView.$);

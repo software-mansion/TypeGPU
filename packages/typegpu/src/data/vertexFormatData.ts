@@ -85,7 +85,7 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
   }
 
   [$cast](
-    v?: Infer<FormatToWGSLType<T>> | undefined,
+    v?: Infer<FormatToWGSLType<T>>,
   ): Infer<FormatToWGSLType<T>> {
     return schemaCallWrapper(formatToWGSLType[this.type], v);
   }

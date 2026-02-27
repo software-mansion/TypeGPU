@@ -1,6 +1,6 @@
 {
   "name": "unplugin-typegpu",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Build plugins for TypeGPU, enabling seamless JavaScript -> WGSL transpilation and improved debugging.",
   "keywords": [
     "rollup-plugin",
@@ -34,75 +34,119 @@
   "publishConfig": {
     "directory": "dist",
     "linkDirectory": false,
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
+    "main": "./dist/index.mjs",
+    "types": "./dist/index.d.mts",
     "exports": {
       "./package.json": "./package.json",
       ".": {
-        "types": "./dist/index.d.ts",
-        "module": "./dist/index.js",
-        "import": "./dist/index.js",
-        "default": "./dist/index.cjs"
+        "import": {
+          "types": "./dist/index.d.mts",
+          "default": "./dist/index.mjs"
+        },
+        "require": {
+          "types": "./dist/index.d.cts",
+          "default": "./dist/index.cjs"
+        }
       },
       "./rollup": {
-        "types": "./dist/rollup.d.ts",
-        "module": "./dist/rollup.js",
-        "import": "./dist/rollup.js",
-        "default": "./dist/rollup.cjs"
+        "import": {
+          "types": "./dist/rollup.d.mts",
+          "default": "./dist/rollup.mjs"
+        },
+        "require": {
+          "types": "./dist/rollup.d.cts",
+          "default": "./dist/rollup.cjs"
+        }
       },
       "./babel": {
-        "types": "./dist/babel.d.ts",
-        "module": "./dist/babel.js",
-        "import": "./dist/babel.js",
-        "default": "./dist/babel.cjs"
+        "import": {
+          "types": "./dist/babel.d.mts",
+          "default": "./dist/babel.mjs"
+        },
+        "require": {
+          "types": "./dist/babel.d.cts",
+          "default": "./dist/babel.cjs"
+        }
       },
       "./bun": {
-        "types": "./dist/bun.d.ts",
-        "module": "./dist/bun.js",
-        "import": "./dist/bun.js",
-        "default": "./dist/bun.cjs"
+        "import": {
+          "types": "./dist/bun.d.mts",
+          "default": "./dist/bun.mjs"
+        },
+        "require": {
+          "types": "./dist/bun.d.cts",
+          "default": "./dist/bun.cjs"
+        }
       },
       "./esbuild": {
-        "types": "./dist/esbuild.d.ts",
-        "module": "./dist/esbuild.js",
-        "import": "./dist/esbuild.js",
-        "default": "./dist/esbuild.cjs"
+        "import": {
+          "types": "./dist/esbuild.d.mts",
+          "default": "./dist/esbuild.mjs"
+        },
+        "require": {
+          "types": "./dist/esbuild.d.cts",
+          "default": "./dist/esbuild.cjs"
+        }
       },
       "./farm": {
-        "types": "./dist/farm.d.ts",
-        "module": "./dist/farm.js",
-        "import": "./dist/farm.js",
-        "default": "./dist/farm.cjs"
+        "import": {
+          "types": "./dist/farm.d.mts",
+          "default": "./dist/farm.mjs"
+        },
+        "require": {
+          "types": "./dist/farm.d.cts",
+          "default": "./dist/farm.cjs"
+        }
       },
       "./rolldown": {
-        "types": "./dist/rolldown.d.ts",
-        "module": "./dist/rolldown.js",
-        "import": "./dist/rolldown.js",
-        "default": "./dist/rolldown.cjs"
+        "import": {
+          "types": "./dist/rolldown.d.mts",
+          "default": "./dist/rolldown.mjs"
+        },
+        "require": {
+          "types": "./dist/rolldown.d.cts",
+          "default": "./dist/rolldown.cjs"
+        }
       },
       "./rolldown-browser": {
-        "types": "./dist/rolldown-browser.d.ts",
-        "module": "./dist/rolldown-browser.js",
-        "import": "./dist/rolldown-browser.js",
-        "default": "./dist/rolldown-browser.cjs"
+        "import": {
+          "types": "./dist/rolldown-browser.d.mts",
+          "default": "./dist/rolldown-browser.mjs"
+        },
+        "require": {
+          "types": "./dist/rolldown-browser.d.cts",
+          "default": "./dist/rolldown-browser.cjs"
+        }
       },
       "./rspack": {
-        "types": "./dist/rspack.d.ts",
-        "module": "./dist/rspack.js",
-        "import": "./dist/rspack.js",
-        "default": "./dist/rspack.cjs"
+        "import": {
+          "types": "./dist/rspack.d.mts",
+          "default": "./dist/rspack.mjs"
+        },
+        "require": {
+          "types": "./dist/rspack.d.cts",
+          "default": "./dist/rspack.cjs"
+        }
       },
       "./vite": {
-        "types": "./dist/vite.d.ts",
-        "module": "./dist/vite.js",
-        "import": "./dist/vite.js",
-        "default": "./dist/vite.cjs"
+        "import": {
+          "types": "./dist/vite.d.mts",
+          "default": "./dist/vite.mjs"
+        },
+        "require": {
+          "types": "./dist/vite.d.cts",
+          "default": "./dist/vite.cjs"
+        }
       },
       "./webpack": {
-        "types": "./dist/webpack.d.ts",
-        "module": "./dist/webpack.js",
-        "import": "./dist/webpack.js",
-        "default": "./dist/webpack.cjs"
+        "import": {
+          "types": "./dist/webpack.d.mts",
+          "default": "./dist/webpack.mjs"
+        },
+        "require": {
+          "types": "./dist/webpack.d.cts",
+          "default": "./dist/webpack.cjs"
+        }
       }
     }
   },
@@ -116,7 +160,7 @@
   },
   "homepage": "https://typegpu.com",
   "scripts": {
-    "build": "tsup",
+    "build": "tsdown",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
@@ -127,12 +171,12 @@
     "magic-string-ast": "^1.0.0",
     "pathe": "^2.0.3",
     "picomatch": "^4.0.3",
-    "tinyest": "workspace:~0.2.0",
-    "tinyest-for-wgsl": "workspace:~0.2.0",
+    "tinyest": "workspace:~0.3.0",
+    "tinyest-for-wgsl": "workspace:~0.3.0",
     "unplugin": "^2.3.5"
   },
   "peerDependencies": {
-    "typegpu": "workspace:^0.9.0"
+    "typegpu": "workspace:^0.10.1"
   },
   "devDependencies": {
     "@babel/template": "^7.27.2",
@@ -147,7 +191,7 @@
     "acorn": "^8.14.1",
     "rolldown": "1.0.0-beta.33",
     "rollup": "~4.37.0",
-    "tsup": "catalog:build",
+    "tsdown": "catalog:build",
     "typescript": "catalog:types"
   }
 }

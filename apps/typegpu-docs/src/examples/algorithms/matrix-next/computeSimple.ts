@@ -3,7 +3,7 @@ import { getIndex } from './computeShared.ts';
 import { WORKGROUP_SIZE } from './params.ts';
 import { computeLayout } from './types.ts';
 
-export const computeSimple = tgpu['~unstable'].computeFn({
+export const computeSimple = tgpu.computeFn({
   workgroupSize: WORKGROUP_SIZE,
   in: {
     gid: d.builtin.globalInvocationId,

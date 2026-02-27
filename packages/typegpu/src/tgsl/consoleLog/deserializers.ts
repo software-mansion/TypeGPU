@@ -178,7 +178,7 @@ export function deserializeAndStringify(
 export function logDataFromGPU(resources: LogResources) {
   const { indexBuffer, dataBuffer, logIdToMeta, options } = resources;
 
-  dataBuffer.read().then((data) => {
+  void dataBuffer.read().then((data) => {
     data
       .filter((e) => e.id)
       .forEach(({ id, serializedData }) => {
@@ -190,16 +190,16 @@ export function logDataFromGPU(resources: LogResources) {
         if (results.length === 0) {
           results.push('');
         }
-        console[op](...[
+        console[op](
           `%c${options.messagePrefix}%c ${results[0]}`,
           'background: #936ff5; color: white;',
           'color: inherit; background: none',
           ...results.slice(1),
-        ]);
+        );
       });
   });
 
-  indexBuffer.read().then((totalCalls) => {
+  void indexBuffer.read().then((totalCalls) => {
     if (totalCalls > options.logCountLimit) {
       console.warn(
         `Log count limit per dispatch (${options.logCountLimit}) exceeded by ${

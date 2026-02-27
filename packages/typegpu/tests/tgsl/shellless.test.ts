@@ -7,7 +7,7 @@ import tgpu, {
   type TgpuSlot,
   type TgpuTextureView,
   type TgpuUniform,
-} from '../../src/index.ts';
+} from '../../src/index.js';
 import { it } from '../utils/extendedIt.ts';
 
 describe('shellless', () => {
@@ -455,7 +455,7 @@ describe('shellless', () => {
   });
 
   it('throws a descriptive error when an accessor argument is not dereferenced', () => {
-    const myAccess = tgpu['~unstable'].accessor(d.f32);
+    const myAccess = tgpu.accessor(d.f32);
     const fn = (access: TgpuAccessor<d.F32>) => {
       'use gpu';
       return 0;

@@ -10,9 +10,10 @@ import type {
 import type { ExperimentalTgpuRoot } from '../src/core/root/rootTypes.ts';
 import { it } from './utils/extendedIt.ts';
 import * as d from '../src/data/index.ts';
+// oxlint-disable-next-line import/no-unassigned-import -- imported for side effects
 import './utils/webgpuGlobals.ts';
 import { attest } from '@ark/attest';
-import tgpu from '../src/index.ts';
+import tgpu from '../src/index.js';
 import { getName } from '../src/shared/meta.ts';
 
 describe('TgpuTexture', () => {
@@ -745,13 +746,13 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
   });
 
   describe('Attachment usage', () => {
-    const vertexFn = tgpu['~unstable'].vertexFn({
+    const vertexFn = tgpu.vertexFn({
       out: { pos: d.builtin.position, uv: d.vec2f },
     })(() => {
       return { pos: d.vec4f(0, 0, 0, 1), uv: d.vec2f() };
     });
 
-    const fragmentFn = tgpu['~unstable'].fragmentFn({
+    const fragmentFn = tgpu.fragmentFn({
       in: { uv: d.vec2f },
       out: d.vec4f,
     })(({ uv }) => {
@@ -759,7 +760,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
     });
 
     const createRenderPipeline = (root: ExperimentalTgpuRoot) =>
-      root['~unstable']
+      root
         .withVertex(vertexFn)
         .withFragment(fragmentFn, { format: 'rgba8unorm' })
         .createPipeline();

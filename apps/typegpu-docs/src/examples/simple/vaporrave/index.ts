@@ -7,12 +7,12 @@ import { circles, grid } from './floor.ts';
 import { rayUnion } from './helpers.ts';
 import { getSphere } from './sphere.ts';
 import { LightRay, Ray } from './types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // == INIT ==
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // == BUFFERS ==
 const floorAngleUniform = root.createUniform(d.f32);
@@ -90,7 +90,7 @@ const rayMarch = tgpu.fn(
   return { ray: result, glow };
 });
 
-const vertexMain = tgpu['~unstable'].vertexFn({
+const vertexMain = tgpu.vertexFn({
   in: { idx: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })(({ idx }) => {
@@ -103,7 +103,7 @@ const vertexMain = tgpu['~unstable'].vertexFn({
   };
 });
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -137,13 +137,12 @@ const perlinCache = perlin3d.staticCache({
   size: d.vec3u(7),
 });
 
-let renderPipeline = root['~unstable']
+let renderPipeline = root
   .with(floorPatternSlot, circles)
   .pipe(perlinCache.inject())
   .createRenderPipeline({
     vertex: vertexMain,
     fragment: fragmentMain,
-    targets: { format: presentationFormat },
   });
 
 let animationFrame: number;
@@ -165,11 +164,7 @@ function run(timestamp: number) {
   resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   animationFrame = requestAnimationFrame(run);
@@ -184,13 +179,13 @@ export function onCleanup() {
   root.destroy();
 }
 
-export const controls = {
+export const controls = defineControls({
   'glow intensity': {
     initial: c.INITIAL_GLOW_INTENSITY,
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       glowIntensityUniform.write(value);
     },
   },
@@ -199,7 +194,7 @@ export const controls = {
     min: -10,
     max: 10,
     step: 0.1,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       floorSpeed = value;
     },
   },
@@ -208,30 +203,29 @@ export const controls = {
     min: -10,
     max: 10,
     step: 0.1,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       sphereSpeed = value;
     },
   },
   'sphere color': {
-    initial: [...c.initialSphereColor] as const,
-    onColorChange: (value: readonly [number, number, number]) => {
-      sphereColorUniform.write(d.vec3f(...value));
+    initial: c.initialSphereColor,
+    onColorChange: (value) => {
+      sphereColorUniform.write(value);
     },
   },
   'floor pattern': {
     initial: 'circles',
     options: ['grid', 'circles'],
-    onSelectChange: (value: string) => {
-      renderPipeline = root['~unstable']
+    onSelectChange: (value) => {
+      renderPipeline = root
         .with(floorPatternSlot, value === 'grid' ? grid : circles)
         .pipe(perlinCache.inject())
         .createRenderPipeline({
           vertex: vertexMain,
           fragment: fragmentMain,
-          targets: { format: presentationFormat },
         });
     },
   },
-};
+});
 
 // #endregion

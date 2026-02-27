@@ -1,4 +1,8 @@
-import type { AnyComputeBuiltin, OmitBuiltins } from '../../builtin.ts';
+import type {
+  AnyComputeBuiltin,
+  AnyFragmentInputBuiltin,
+  OmitBuiltins,
+} from '../../builtin.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import type {
   AnyData,
@@ -56,9 +60,9 @@ import type {
 import type { IORecord } from '../function/fnTypes.ts';
 import type {
   FragmentInConstrained,
-  FragmentInFromVertexOut,
   FragmentOutConstrained,
   TgpuFragmentFn,
+  VertexOutToVarying,
 } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
@@ -127,9 +131,8 @@ export interface WithCompute {
   createPipeline(): TgpuComputePipeline;
 }
 
-type IsEmptyRecord<T> = T extends Record<string, never> ? true : false;
-
-type OptionalArgs<T> = IsEmptyRecord<T> extends true ? [] | [T] : [T];
+type OptionalArgs<T> = T extends Record<string, never> | undefined ? [] | [T]
+  : [T];
 
 /**
  * TODO: Remove in favor of createRenderPipeline's validation
@@ -248,6 +251,33 @@ export interface Withable<TSelf> {
   ): TSelf;
 }
 
+export interface Withable_Deprecated<TSelf> {
+  /**
+   * @deprecated This feature is stable, remove the `['~unstable']`
+   * @param slot
+   * @param value
+   */
+  with<T>(slot: TgpuSlot<T>, value: Eventual<T>): TSelf;
+  /**
+   * @deprecated This feature is stable, remove the `['~unstable']`
+   * @param slot
+   * @param value
+   */
+  with<T extends BaseData>(
+    accessor: TgpuAccessor<T>,
+    value: TgpuAccessor.In<NoInfer<T>>,
+  ): TSelf;
+  /**
+   * @deprecated This feature is stable, remove the `['~unstable']`
+   * @param slot
+   * @param value
+   */
+  with<T extends BaseData>(
+    accessor: TgpuMutableAccessor<T>,
+    value: TgpuMutableAccessor.In<NoInfer<T>>,
+  ): TSelf;
+}
+
 export interface Configurable extends Withable<Configurable> {
   readonly bindings: [slot: TgpuSlot<unknown>, value: unknown][];
 
@@ -267,6 +297,7 @@ type NormalizeOutput<T> = T extends
   : { [K in keyof OmitBuiltins<T>]: InstanceToSchema<OmitBuiltins<T>[K]> };
 
 export interface WithBinding extends Withable<WithBinding> {
+  /** @deprecated Use `root.createComputePipeline` instead. */
   withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute;
@@ -276,7 +307,7 @@ export interface WithBinding extends Withable<WithBinding> {
   ): TgpuComputePipeline;
 
   createRenderPipeline<
-    // biome-ignore lint/suspicious/noExplicitAny: if the shelled entry function is not provided, the default lets TAttribs be inferred
+    // oxlint-disable-next-line typescript/no-explicit-any -- if the shelled entry function is not provided, the default lets TAttribs be inferred
     TVertexIn extends TgpuVertexFn.In = Record<string, any>,
     TAttribs extends LayoutToAllowedAttribs<TVertexIn> = LayoutToAllowedAttribs<
       TVertexIn
@@ -300,22 +331,23 @@ export interface WithBinding extends Withable<WithBinding> {
           ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
         fragment:
           | TgpuFragmentFn<
-            FragmentInFromVertexOut<TVertexOut>,
+            & VertexOutToVarying<TVertexOut>
+            & Record<string, AnyFragmentInputBuiltin>,
             Assume<TFragmentOut, TgpuFragmentFn.Out>
           >
           | ((
             input: AutoFragmentIn<
               Assume<
-                InferGPURecord<FragmentInFromVertexOut<TVertexOut>>,
+                InferGPURecord<VertexOutToVarying<TVertexOut>>,
                 AnyAutoCustoms
               >
             >,
           ) => AutoFragmentOut<Assume<TFragmentOut, AnyAutoCustoms | v4f>>);
-        targets: FragmentOutToTargets<NoInfer<TFragmentOut>>;
+        targets?: FragmentOutToTargets<NoInfer<TFragmentOut>>;
       }),
   ): TgpuRenderPipeline<NormalizeOutput<TFragmentOut>>;
   createRenderPipeline<
-    // biome-ignore lint/suspicious/noExplicitAny: if the shelled entry function is not provided, the default lets TAttribs be inferred
+    // oxlint-disable-next-line typescript/no-explicit-any -- if the shelled entry function is not provided, the default lets TAttribs be inferred
     TVertexIn extends TgpuVertexFn.In = Record<string, any>,
     TAttribs extends LayoutToAllowedAttribs<TVertexIn> = LayoutToAllowedAttribs<
       TVertexIn
@@ -339,7 +371,8 @@ export interface WithBinding extends Withable<WithBinding> {
         fragment?:
           | undefined
           | TgpuFragmentFn<
-            FragmentInFromVertexOut<OmitBuiltins<TVertexOut>>,
+            & VertexOutToVarying<OmitBuiltins<TVertexOut>>
+            & Record<string, AnyFragmentInputBuiltin>,
             Record<string, never> | Void
           >
           | ((
@@ -354,7 +387,7 @@ export interface WithBinding extends Withable<WithBinding> {
       },
   ): TgpuRenderPipeline<Void>;
   createRenderPipeline<
-    // biome-ignore lint/suspicious/noExplicitAny: if the shelled entry function is not provided, the default lets TAttribs be inferred
+    // oxlint-disable-next-line typescript/no-explicit-any -- if the shelled entry function is not provided, the default lets TAttribs be inferred
     TVertexIn extends TgpuVertexFn.In = Record<string, any>,
     TAttribs extends LayoutToAllowedAttribs<TVertexIn> = LayoutToAllowedAttribs<
       TVertexIn
@@ -387,10 +420,11 @@ export interface WithBinding extends Withable<WithBinding> {
               >,
             ) => AutoFragmentOut<Assume<TFragmentOut, AnyAutoCustoms | v4f>>)
             | TgpuFragmentFn<
-              FragmentInFromVertexOut<OmitBuiltins<TVertexOut>>,
+              & VertexOutToVarying<OmitBuiltins<TVertexOut>>
+              & Record<string, AnyFragmentInputBuiltin>,
               Assume<TFragmentOut, TgpuFragmentFn.Out>
             >;
-          targets: FragmentOutToTargets<NoInfer<TFragmentOut>>;
+          targets?: FragmentOutToTargets<NoInfer<TFragmentOut>>;
         }
         | {
           attribs?: TAttribs;
@@ -407,7 +441,8 @@ export interface WithBinding extends Withable<WithBinding> {
           fragment?:
             | undefined
             | TgpuFragmentFn<
-              FragmentInFromVertexOut<OmitBuiltins<TVertexOut>>,
+              & VertexOutToVarying<OmitBuiltins<TVertexOut>>
+              & Record<string, AnyFragmentInputBuiltin>,
               Record<string, never>
             >
             | ((
@@ -607,7 +642,98 @@ export type CreateTextureResult<
   >
 >;
 
-export interface RenderPass {
+export interface RenderBundleEncoderPass {
+  /**
+   * Sets the current {@link TgpuRenderPipeline} for subsequent draw calls.
+   * @param pipeline - The render pipeline to use.
+   */
+  setPipeline(pipeline: TgpuRenderPipeline): void;
+
+  /**
+   * Sets the current index buffer.
+   * @param buffer - Buffer containing index data to use for subsequent drawing commands.
+   * @param indexFormat - Format of the index data contained in `buffer`.
+   * @param offset - Offset in bytes into `buffer` where the index data begins. Defaults to `0`.
+   * @param size - Size in bytes of the index data in `buffer`.
+   *               Defaults to the size of the buffer minus the offset.
+   */
+  setIndexBuffer<TData extends WgslArray | Disarray>(
+    buffer: TgpuBuffer<TData> | GPUBuffer,
+    indexFormat: GPUIndexFormat,
+    offset?: GPUSize64,
+    size?: GPUSize64,
+  ): void;
+
+  /**
+   * Binds a vertex buffer to the given vertex layout for subsequent draw calls.
+   * @param vertexLayout - The vertex layout describing the buffer's structure.
+   * @param buffer - The vertex buffer to bind.
+   * @param offset - Offset in bytes into `buffer`. Defaults to `0`.
+   * @param size - Size in bytes to bind. Defaults to the remainder of the buffer.
+   */
+  setVertexBuffer<TData extends WgslArray | Disarray>(
+    vertexLayout: TgpuVertexLayout<TData>,
+    buffer: (TgpuBuffer<TData> & VertexFlag) | GPUBuffer,
+    offset?: GPUSize64,
+    size?: GPUSize64,
+  ): void;
+
+  /**
+   * Associates a bind group with the given layout for subsequent draw calls.
+   * @param bindGroupLayout - The layout the bind group conforms to.
+   * @param bindGroup - The bind group to associate.
+   */
+  setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(
+    bindGroupLayout: TgpuBindGroupLayout<Entries>,
+    bindGroup: TgpuBindGroup<Entries> | GPUBindGroup,
+  ): void;
+
+  /**
+   * Draws primitives.
+   * @param vertexCount - The number of vertices to draw.
+   * @param instanceCount - The number of instances to draw.
+   * @param firstVertex - Offset into the vertex buffers, in vertices, to begin drawing from.
+   * @param firstInstance - First instance to draw.
+   */
+  draw(
+    vertexCount: number,
+    instanceCount?: number,
+    firstVertex?: number,
+    firstInstance?: number,
+  ): void;
+  /**
+   * Draws indexed primitives.
+   * @param indexCount - The number of indices to draw.
+   * @param instanceCount - The number of instances to draw.
+   * @param firstIndex - Offset into the index buffer, in indices, begin drawing from.
+   * @param baseVertex - Added to each index value before indexing into the vertex buffers.
+   * @param firstInstance - First instance to draw.
+   */
+  drawIndexed(
+    indexCount: number,
+    instanceCount?: number,
+    firstIndex?: number,
+    baseVertex?: number,
+    firstInstance?: number,
+  ): void;
+  /**
+   * Draws primitives using parameters read from a {@link GPUBuffer}.
+   * @param indirectBuffer - Buffer containing the indirect draw parameters.
+   * @param indirectOffset - Offset in bytes into `indirectBuffer` where the drawing data begins.
+   */
+  drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void;
+  /**
+   * Draws indexed primitives using parameters read from a {@link GPUBuffer}.
+   * @param indirectBuffer - Buffer containing the indirect drawIndexed parameters.
+   * @param indirectOffset - Offset in bytes into `indirectBuffer` where the drawing data begins.
+   */
+  drawIndexedIndirect(
+    indirectBuffer: GPUBuffer,
+    indirectOffset: GPUSize64,
+  ): void;
+}
+
+export interface RenderPass extends RenderBundleEncoderPass {
   /**
    * Sets the viewport used during the rasterization stage to linearly map from
    * NDC (i.e., normalized device coordinates) to viewport coordinates.
@@ -650,14 +776,14 @@ export interface RenderPass {
    * the {@link GPUStencilOperation#"replace"} {@link GPUStencilOperation}.
    * @param reference - The new stencil reference value.
    */
-  setStencilReference(reference: GPUStencilValue): undefined;
+  setStencilReference(reference: GPUStencilValue): void;
 
   /**
    * @param queryIndex - The index of the query in the query set.
    */
-  beginOcclusionQuery(queryIndex: GPUSize32): undefined;
+  beginOcclusionQuery(queryIndex: GPUSize32): void;
 
-  endOcclusionQuery(): undefined;
+  endOcclusionQuery(): void;
 
   /**
    * Executes the commands previously recorded into the given {@link GPURenderBundle}s as part of
@@ -671,7 +797,6 @@ export interface RenderPass {
    * @param bundles - List of render bundles to execute.
    */
   executeBundles(bundles: Iterable<GPURenderBundle>): undefined;
-
   setPipeline(pipeline: TgpuRenderPipeline): void;
 
   /**
@@ -689,14 +814,12 @@ export interface RenderPass {
     offset?: GPUSize64,
     size?: GPUSize64,
   ): void;
-
   setVertexBuffer<TData extends WgslArray | Disarray>(
     vertexLayout: TgpuVertexLayout<TData>,
     buffer: (TgpuBuffer<TData> & VertexFlag) | GPUBuffer,
     offset?: GPUSize64,
     size?: GPUSize64,
   ): void;
-
   setBindGroup<Entries extends Record<string, TgpuLayoutEntry | null>>(
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
     bindGroup: TgpuBindGroup<Entries> | GPUBindGroup,
@@ -711,9 +834,9 @@ export interface RenderPass {
    */
   draw(
     vertexCount: number,
-    instanceCount?: number | undefined,
-    firstVertex?: number | undefined,
-    firstInstance?: number | undefined,
+    instanceCount?: number,
+    firstVertex?: number,
+    firstInstance?: number,
   ): void;
   /**
    * Draws indexed primitives.
@@ -725,10 +848,10 @@ export interface RenderPass {
    */
   drawIndexed(
     indexCount: number,
-    instanceCount?: number | undefined,
-    firstIndex?: number | undefined,
-    baseVertex?: number | undefined,
-    firstInstance?: number | undefined,
+    instanceCount?: number,
+    firstIndex?: number,
+    baseVertex?: number,
+    firstInstance?: number,
   ): void;
   /**
    * Draws primitives using parameters read from a {@link GPUBuffer}.
@@ -737,7 +860,7 @@ export interface RenderPass {
    * @param indirectBuffer - Buffer containing the indirect draw parameters.
    * @param indirectOffset - Offset in bytes into `indirectBuffer` where the drawing data begins.
    */
-  drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): undefined;
+  drawIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void;
   /**
    * Draws indexed primitives using parameters read from a {@link GPUBuffer}.
    * Tightly packed block of **five 32-bit unsigned integer values (20 bytes total)**, given in
@@ -748,7 +871,7 @@ export interface RenderPass {
   drawIndexedIndirect(
     indirectBuffer: GPUBuffer,
     indirectOffset: GPUSize64,
-  ): undefined;
+  ): void;
 }
 
 export type ValidateBufferSchema<TData extends BaseData> =
@@ -778,7 +901,7 @@ export type ConfigureContextOptions = {
   format?: GPUTextureFormat;
 } & Omit<GPUCanvasConfiguration, 'device' | 'format'>;
 
-export interface TgpuRoot extends Unwrapper {
+export interface TgpuRoot extends Unwrapper, WithBinding {
   [$internal]: {
     logOptions: LogGeneratorOptions;
   };
@@ -807,7 +930,7 @@ export interface TgpuRoot extends Unwrapper {
   createBuffer<TData extends AnyData>(
     typeSchema: ValidateBufferSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: Infer<NoInfer<TData>> | undefined,
+    initial?: Infer<NoInfer<TData>>,
   ): TgpuBuffer<TData>;
 
   /**
@@ -918,7 +1041,7 @@ export interface TgpuRoot extends Unwrapper {
   createQuerySet<T extends GPUQueryType>(
     type: T,
     count: number,
-    rawQuerySet?: GPUQuerySet | undefined,
+    rawQuerySet?: GPUQuerySet,
   ): TgpuQuerySet<T>;
 
   /**
@@ -968,10 +1091,26 @@ export interface TgpuRoot extends Unwrapper {
    */
   destroy(): void;
 
-  '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
+  '~unstable': Pick<
+    ExperimentalTgpuRoot,
+    | 'beginRenderPass'
+    | 'beginRenderBundleEncoder'
+    | 'createComparisonSampler'
+    | 'createGuardedComputePipeline'
+    | 'createSampler'
+    | 'createTexture'
+    | 'flush'
+    | 'nameRegistrySetting'
+    | 'shaderGenerator'
+    | 'pipe'
+    | 'with'
+    | 'withCompute'
+    | 'withVertex'
+  >;
 }
 
-export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
+export interface ExperimentalTgpuRoot
+  extends Omit<TgpuRoot, 'with'>, Withable_Deprecated<WithBinding> {
   readonly nameRegistrySetting: 'strict' | 'random';
   readonly shaderGenerator?:
     | ShaderGenerator
@@ -1015,6 +1154,23 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
     callback: (pass: RenderPass) => void,
   ): void;
 
+  /**
+   * Creates a {@link GPURenderBundle} by recording draw commands into a
+   * {@link GPURenderBundleEncoder}. The resulting bundle can be replayed in a
+   * render pass via {@link RenderPass.executeBundles}.
+   *
+   * The caller is responsible for ensuring that the `descriptor` (e.g.
+   * `colorFormats`, `depthStencilFormat`) is compatible with the render pass
+   * in which the bundle will be executed.
+   *
+   * @param descriptor - Describes the formats the bundle must be compatible with.
+   * @param callback - A function that records draw commands into the bundle.
+   */
+  beginRenderBundleEncoder(
+    descriptor: GPURenderBundleEncoderDescriptor,
+    callback: (pass: RenderBundleEncoderPass) => void,
+  ): GPURenderBundle;
+
   createSampler(props: WgslSamplerProps): TgpuFixedSampler;
 
   createComparisonSampler(
@@ -1027,4 +1183,26 @@ export interface ExperimentalTgpuRoot extends TgpuRoot, WithBinding {
    * which makes this method unnecessary.
    */
   flush(): void;
+
+  /** @deprecated Use `root.createComputePipeline` instead. */
+  withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
+    entryFn: TgpuComputeFn<ComputeIn>,
+  ): WithCompute;
+
+  /** @deprecated This feature is now stable, use `root.createGuardedComputePipeline`. */
+  createGuardedComputePipeline<TArgs extends number[]>(
+    callback: (...args: TArgs) => void,
+  ): TgpuGuardedComputePipeline<TArgs>;
+
+  /** @deprecated Use `root.createRenderPipeline` instead. */
+  withVertex<
+    VertexIn extends TgpuVertexFn.In,
+    VertexOut extends TgpuVertexFn.Out,
+  >(
+    entryFn: TgpuVertexFn<VertexIn, VertexOut>,
+    ...args: OptionalArgs<LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>>
+  ): WithVertex<VertexOut>;
+
+  /** @deprecated This feature is now stable, use `root.pipe`. */
+  pipe(transform: (cfg: Configurable) => Configurable): WithBinding;
 }

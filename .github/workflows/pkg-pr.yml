@@ -27,7 +27,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 24.x
           cache: 'pnpm'
 
       - uses: denoland/setup-deno@v2
@@ -41,7 +41,7 @@ jobs:
         run: pnpm nightly-build
 
       - name: Publish (pkg.pr.new)
-        run: npx pkg-pr-new publish './packages/typegpu/dist' './packages/typegpu-noise/dist' './packages/unplugin-typegpu/dist' --json output.json --comment=off
+        run: npx pkg-pr-new publish './packages/typegpu/dist' './packages/typegpu-noise/dist' './packages/unplugin-typegpu/dist' --json output.json --comment=off --pnpm
       - name: Post or update comment
         uses: actions/github-script@v6
         with:

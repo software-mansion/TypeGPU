@@ -1,4 +1,5 @@
 import tgpu, { d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
   unstable_logOptions: {
@@ -11,10 +12,10 @@ const root = await tgpu.init({
 });
 
 // setup for render tests
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
-const mainVertex = tgpu['~unstable'].vertexFn({
+const mainVertex = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position },
 })((input) => {
@@ -27,7 +28,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   return { pos: d.vec4f(positions[input.vertexIndex], 0, 1) };
 });
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: { pos: d.builtin.position },
   out: d.vec4f,
 })(({ pos }) => {
@@ -35,35 +36,33 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
   return d.vec4f(0.769, 0.392, 1.0, 1);
 });
 
-const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'One argument': {
     onButtonClick: () =>
-      root['~unstable'].createGuardedComputePipeline(() => {
+      root.createGuardedComputePipeline(() => {
         'use gpu';
         console.log(d.u32(321));
       }).dispatchThreads(),
   },
   'Multiple arguments': {
     onButtonClick: () =>
-      root['~unstable'].createGuardedComputePipeline(() => {
+      root.createGuardedComputePipeline(() => {
         'use gpu';
         console.log(1, d.vec3u(2, 3, 4), 5, 6);
       }).dispatchThreads(),
   },
   'String literals': {
     onButtonClick: () =>
-      root['~unstable'].createGuardedComputePipeline(() => {
+      root.createGuardedComputePipeline(() => {
         'use gpu';
         console.log(2, 'plus', 3, 'equals', 5);
       }).dispatchThreads(),
   },
   'Two logs': {
     onButtonClick: () =>
-      root['~unstable'].createGuardedComputePipeline(() => {
+      root.createGuardedComputePipeline(() => {
         'use gpu';
         console.log('First log.');
         console.log('Second log.');
@@ -71,7 +70,7 @@ export const controls = {
   },
   'Different types': {
     onButtonClick: () =>
-      root['~unstable'].createGuardedComputePipeline(() => {
+      root.createGuardedComputePipeline(() => {
         'use gpu';
         console.log('--- scalars ---');
         console.log(d.f32(3.14));
@@ -120,7 +119,7 @@ export const controls = {
       const SimpleArray = d.arrayOf(d.u32, 2);
       const ComplexArray = d.arrayOf(SimpleArray, 3);
 
-      root['~unstable'].createGuardedComputePipeline(() => {
+      root.createGuardedComputePipeline(() => {
         'use gpu';
         const simpleStruct = SimpleStruct({ vec: d.vec3u(1, 2, 3), num: 4 });
         console.log(simpleStruct);
@@ -141,7 +140,7 @@ export const controls = {
   },
   'Two threads': {
     onButtonClick: () =>
-      root['~unstable'].createGuardedComputePipeline((x) => {
+      root.createGuardedComputePipeline((x) => {
         'use gpu';
         console.log('Log from thread', x);
       }).dispatchThreads(2),
@@ -149,7 +148,7 @@ export const controls = {
   '100 dispatches': {
     onButtonClick: async () => {
       const indexUniform = root.createUniform(d.u32);
-      const test = root['~unstable'].createGuardedComputePipeline(() => {
+      const test = root.createGuardedComputePipeline(() => {
         'use gpu';
         console.log('Log from dispatch', indexUniform.$);
       });
@@ -162,7 +161,7 @@ export const controls = {
   'Varying size logs': {
     onButtonClick: async () => {
       const logCountUniform = root.createUniform(d.u32);
-      const test = root['~unstable'].createGuardedComputePipeline(() => {
+      const test = root.createGuardedComputePipeline(() => {
         'use gpu';
         for (let i = d.u32(); i < logCountUniform.$; i++) {
           console.log('Log index', i + 1, 'out of', logCountUniform.$);
@@ -176,7 +175,7 @@ export const controls = {
   },
   'String interpolation': {
     onButtonClick: async () =>
-      root['~unstable'].createGuardedComputePipeline(() => {
+      root.createGuardedComputePipeline(() => {
         'use gpu';
         console.log(
           'The values %d, %f and %s were interpolated in this message.',
@@ -194,7 +193,7 @@ export const controls = {
   },
   'Different log functionalities': {
     onButtonClick: async () =>
-      root['~unstable'].createGuardedComputePipeline(() => {
+      root.createGuardedComputePipeline(() => {
         'use gpu';
         console.log('This message should be cleared.');
         console.clear();
@@ -212,28 +211,21 @@ export const controls = {
         alphaMode: 'premultiplied',
       });
 
-      const pipeline = root['~unstable'].createRenderPipeline({
+      const pipeline = root.createRenderPipeline({
         vertex: mainVertex,
         fragment: mainFragment,
-        targets: { format: presentationFormat },
       });
 
       pipeline
-        .withColorAttachment({
-          view: context.getCurrentTexture().createView(),
-          clearValue: [0, 0, 0, 0],
-          loadOp: 'clear',
-          storeOp: 'store',
-        })
+        .withColorAttachment({ view: context })
         .draw(3);
     },
   },
   'Draw indexed': {
     onButtonClick: () => {
-      const pipeline = root['~unstable'].createRenderPipeline({
+      const pipeline = root.createRenderPipeline({
         vertex: mainVertex,
         fragment: mainFragment,
-        targets: { format: presentationFormat },
       });
 
       const indexBuffer = root
@@ -242,24 +234,20 @@ export const controls = {
 
       pipeline
         .withIndexBuffer(indexBuffer)
-        .withColorAttachment({
-          view: context.getCurrentTexture().createView(),
-          clearValue: [0, 0, 0, 0],
-          loadOp: 'clear',
-          storeOp: 'store',
-        }).drawIndexed(3);
+        .withColorAttachment({ view: context })
+        .drawIndexed(3);
     },
   },
   'Too many logs': {
     onButtonClick: () =>
-      root['~unstable'].createGuardedComputePipeline((x) => {
+      root.createGuardedComputePipeline((x) => {
         'use gpu';
         console.log('Log 1 from thread', x);
         console.log('Log 2 from thread', x);
         console.log('Log 3 from thread', x);
       }).dispatchThreads(16),
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

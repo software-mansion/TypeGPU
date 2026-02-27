@@ -25,7 +25,7 @@ const triangleData = {
 
 const rotationUniform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
 
-const vertexFn = tgpu['~unstable'].vertexFn({
+const vertexFn = tgpu.vertexFn({
   in: {
     vid: d.builtin.vertexIndex,
   },
@@ -45,34 +45,34 @@ const vertexFn = tgpu['~unstable'].vertexFn({
   };
 });
 
-const fragmentFn = tgpu['~unstable'].fragmentFn({
-  in: {
-    uv: d.vec2f,
-  },
+const fragmentFn = tgpu.fragmentFn({
+  in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => d.vec4f(uv, 0, 1));
 
-const basePipeline = root['~unstable']
-  .withVertex(vertexFn);
-
-const writeStencilPipeline = basePipeline
-  .withDepthStencil({
-    format: 'stencil8',
-    stencilFront: { passOp: 'replace' },
-  })
-  .createPipeline()
-  .withStencilReference(1);
-
-const testStencilPipeline = basePipeline
-  .withFragment(fragmentFn, { format: presentationFormat })
-  .withDepthStencil({
-    format: 'stencil8',
-    stencilFront: {
-      compare: 'equal',
-      passOp: 'keep',
+const writeStencilPipeline = root
+  .createRenderPipeline({
+    vertex: vertexFn,
+    depthStencil: {
+      format: 'stencil8',
+      stencilFront: { passOp: 'replace' },
     },
   })
-  .createPipeline()
+  .withStencilReference(1);
+
+const testStencilPipeline = root
+  .createRenderPipeline({
+    vertex: vertexFn,
+    fragment: fragmentFn,
+    targets: { format: presentationFormat },
+    depthStencil: {
+      format: 'stencil8',
+      stencilFront: {
+        compare: 'equal',
+        passOp: 'keep',
+      },
+    },
+  })
   .withStencilReference(1);
 
 writeStencilPipeline
@@ -96,11 +96,7 @@ function frame(timestamp: number) {
       stencilLoadOp: 'load',
       stencilStoreOp: 'store',
     })
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   frameId = requestAnimationFrame(frame);

@@ -1,4 +1,5 @@
 import tgpu, { common, d } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -89,7 +90,7 @@ function createPipelineForFormat(format: TestFormat) {
 
   const sampler = filterable ? filteringSampler : nearestSampler;
 
-  const fragmentFunction = tgpu['~unstable'].fragmentFn({
+  const fragmentFunction = tgpu.fragmentFn({
     in: { uv: d.vec2f },
     out: d.vec4f,
   })`{
@@ -108,10 +109,11 @@ function createPipelineForFormat(format: TestFormat) {
     channel: channelUniform,
   });
 
-  const pipeline = root['~unstable']
-    .withVertex(common.fullScreenTriangle)
-    .withFragment(fragmentFunction, { format: presentationFormat })
-    .createPipeline();
+  const pipeline = root.createRenderPipeline({
+    vertex: common.fullScreenTriangle,
+    fragment: fragmentFunction,
+    targets: { format: presentationFormat },
+  });
 
   return { layout, pipeline };
 }
@@ -134,30 +136,26 @@ function recreateTexture() {
 function render() {
   pipeline
     .with(bindGroup)
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   requestAnimationFrame(render);
 }
 requestAnimationFrame(render);
 
-export const controls = {
+export const controls = defineControls({
   Format: {
     initial: currentFormat,
     options: [...testFormats],
-    onSelectChange: (value: string) => {
-      currentFormat = value as TestFormat;
+    onSelectChange: (value) => {
+      currentFormat = value;
       recreateTexture();
     },
   },
   Size: {
     initial: 'Original',
     options: [...Object.keys(sizePresets), 'Random'],
-    onSelectChange: (value: string) => {
+    onSelectChange: (value) => {
       if (value === 'Random') {
         const randomWidth = Math.floor(Math.random() * 1024) + 64;
         const randomHeight = Math.floor(Math.random() * 1024) + 64;
@@ -176,7 +174,7 @@ export const controls = {
   Channel: {
     initial: 'RGBA',
     options: ['RGBA', 'R', 'G', 'B', 'A'],
-    onSelectChange: (value: string) => {
+    onSelectChange: (value) => {
       channelUniform.write({ RGBA: 0, R: 1, G: 2, B: 3, A: 4 }[value] ?? 0);
     },
   },
@@ -185,12 +183,12 @@ export const controls = {
     min: -10,
     max: 10,
     step: 0.1,
-    onSliderChange: (value: number) => biasUniform.write(value),
+    onSliderChange: (value) => biasUniform.write(value),
   },
   Clear: {
     onButtonClick: () => texture.clear(),
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

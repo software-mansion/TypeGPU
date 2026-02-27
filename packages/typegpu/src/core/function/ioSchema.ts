@@ -23,7 +23,6 @@ export type WithLocations<T extends Record<string, BaseData>> = {
 export type IOLayoutToSchema<T> = T extends BaseData
   ? HasCustomLocation<T> extends true ? T : Decorate<T, Location<0>>
   : T extends Record<string, BaseData> ? WgslStruct<WithLocations<T>>
-  // biome-ignore lint/suspicious/noConfusingVoidType: <it actually is void>
   : T extends { type: 'void' } ? void
   : never;
 

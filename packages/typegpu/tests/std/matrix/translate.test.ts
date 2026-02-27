@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mat4x4f, vec3f, vec4f } from '../../../src/data/index.ts';
-import tgpu from '../../../src/index.ts';
+import tgpu from '../../../src/index.js';
 import { isCloseTo, mul, scale4, translate4 } from '../../../src/std/index.ts';
 
 describe('translate', () => {

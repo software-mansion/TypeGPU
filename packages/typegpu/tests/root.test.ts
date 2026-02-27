@@ -1,6 +1,6 @@
 import { describe, expect, vi } from 'vitest';
 import { Void } from '../src/data/wgslTypes.ts';
-import tgpu, { d } from '../src/index.ts';
+import tgpu, { d } from '../src/index.js';
 import { it } from './utils/extendedIt.ts';
 
 describe('TgpuRoot', () => {
@@ -189,7 +189,7 @@ describe('TgpuRoot', () => {
     const layout = tgpu.bindGroupLayout({ foo: { uniform: d.f32 } });
 
     // A vertex function that is using entries from the layout
-    const mainVertexUsing = tgpu['~unstable'].vertexFn({
+    const mainVertexUsing = tgpu.vertexFn({
       out: { pos: d.builtin.position },
     })(() => {
       layout.$.foo;
@@ -199,7 +199,7 @@ describe('TgpuRoot', () => {
     });
 
     // A vertex function that is using none of the layout's entries
-    const mainVertexNotUsing = tgpu['~unstable'].vertexFn({
+    const mainVertexNotUsing = tgpu.vertexFn({
       out: {
         pos: d.builtin.position,
       },
@@ -207,7 +207,7 @@ describe('TgpuRoot', () => {
       pos: d.vec4f(),
     }));
 
-    const mainFragment = tgpu['~unstable'].fragmentFn({ out: Void })(() => {});
+    const mainFragment = tgpu.fragmentFn({ out: Void })(() => {});
 
     it('ignores bind groups that are not used in the shader', ({ root, commandEncoder }) => {
       const group = root.createBindGroup(layout, {

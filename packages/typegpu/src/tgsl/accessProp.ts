@@ -37,7 +37,7 @@ import {
   isWgslStruct,
 } from '../data/wgslTypes.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
-import { add, div, mul, sub } from '../std/operators.ts';
+import { add, div, mod, mul, sub } from '../std/operators.ts';
 import { isKnownAtComptime } from '../types.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
 
@@ -64,6 +64,7 @@ export const infixOperators = {
   sub,
   mul,
   div,
+  mod,
 } as const;
 
 export type InfixOperator = keyof typeof infixOperators;
@@ -115,11 +116,12 @@ export function accessProp(
     infixKinds.includes((target.dataType as BaseData).type) &&
     propName in infixOperators
   ) {
+    const operator = infixOperators[propName as InfixOperator];
     return snip(
       new InfixDispatch(
         propName,
         target,
-        infixOperators[propName as InfixOperator][$gpuCallable].call,
+        operator[$gpuCallable].call.bind(operator),
       ),
       UnknownData,
       /* origin */ target.origin,
@@ -198,6 +200,14 @@ export function accessProp(
 
   const propLength = propName.length;
   if (isVec(target.dataType) && propLength >= 1 && propLength <= 4) {
+    const isXYZW = /^[xyzw]+$/.test(propName);
+    const isRGBA = /^[rgba]+$/.test(propName);
+
+    if (!isXYZW && !isRGBA) {
+      // Not a valid swizzle
+      return undefined;
+    }
+
     const swizzleTypeChar = target.dataType.type.includes('bool')
       ? 'b'
       : (target.dataType.type[4] as SwizzleableType);
@@ -209,7 +219,7 @@ export function accessProp(
 
     return snip(
       isKnownAtComptime(target)
-        // biome-ignore lint/suspicious/noExplicitAny: it's fine, the prop is there
+        // oxlint-disable-next-line typescript/no-explicit-any -- it's fine, the prop is there
         ? (target.value as any)[propName]
         : stitch`${target}.${propName}`,
       swizzleType,
@@ -224,7 +234,7 @@ export function accessProp(
   }
 
   if (isKnownAtComptime(target) || target.dataType === UnknownData) {
-    // biome-ignore lint/suspicious/noExplicitAny: we either know exactly what it is, or have no idea at all
+    // oxlint-disable-next-line typescript/no-explicit-any -- we either know exactly what it is, or have no idea at all
     return coerceToSnippet((target.value as any)[propName]);
   }
 

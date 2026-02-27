@@ -1,4 +1,5 @@
 import tgpu, { d } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const WORKGROUP_SIZE = [8, 8] as [number, number];
 const MAX_MATRIX_SIZE = 6;
@@ -119,7 +120,7 @@ async function run() {
   printMatrixToHtml(resultTable, multiplicationResult);
 }
 
-run();
+void run();
 
 // #region UI
 
@@ -148,40 +149,40 @@ const paramSettings = {
   step: 1,
 };
 
-export const controls = {
+export const controls = defineControls({
   Reshuffle: {
     onButtonClick: () => {
-      run();
+      void run();
     },
   },
 
   '#1 rows': {
     initial: firstRowCount,
     ...paramSettings,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       firstRowCount = value;
-      run();
+      void run();
     },
   },
 
   '#1 columns': {
     initial: firstColumnCount,
     ...paramSettings,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       firstColumnCount = value;
-      run();
+      void run();
     },
   },
 
   '#2 columns': {
     initial: secondColumnCount,
     ...paramSettings,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       secondColumnCount = value;
-      run();
+      void run();
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

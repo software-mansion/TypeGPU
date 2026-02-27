@@ -9,6 +9,7 @@ import {
   gatherTgpuAliases,
   getFunctionName,
   isShellImplementationCall,
+  operators,
   type Options,
   performExpressionNaming,
   useGpuDirective,
@@ -134,7 +135,7 @@ export const rollUpImpl = (rawOptions: Options) => {
         const magicString = new MagicStringAST(code);
 
         walk(ast, {
-          enter(_node, _parent, prop, index) {
+          enter(_node, _parent) {
             const node = _node as acorn.AnyNode;
             const parent = _parent as acorn.AnyNode;
 
@@ -182,6 +183,44 @@ export const rollUpImpl = (rawOptions: Options) => {
         for (const { def, name } of tgslFunctionDefs) {
           const { params, body, externalNames } = transpileFn(def);
           const isFunctionStatement = def.type === 'FunctionDeclaration';
+
+          walk(def as Node, {
+            leave(_node) {
+              const node = _node as acorn.AnyNode;
+
+              if (node.type === 'AssignmentExpression') {
+                const runtimeFn =
+                  operators[node.operator as keyof typeof operators];
+
+                if (runtimeFn) {
+                  const left = node.left;
+                  const right = node.right;
+
+                  const lhs = magicString.sliceNode(left);
+                  const rhs = magicString.sliceNode(right);
+                  magicString.overwriteNode(
+                    node,
+                    `${lhs} = ${runtimeFn}(${lhs}, ${rhs})`,
+                  );
+                }
+              } else if (node.type === 'BinaryExpression') {
+                const runtimeFn =
+                  operators[node.operator as keyof typeof operators];
+
+                if (runtimeFn) {
+                  const left = node.left;
+                  const right = node.right;
+
+                  const lhs = magicString.sliceNode(left);
+                  const rhs = magicString.sliceNode(right);
+                  magicString.overwriteNode(
+                    node,
+                    `${runtimeFn}(${lhs}, ${rhs})`,
+                  );
+                }
+              }
+            },
+          });
 
           if (
             isFunctionStatement &&

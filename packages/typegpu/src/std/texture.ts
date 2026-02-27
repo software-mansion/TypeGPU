@@ -587,7 +587,7 @@ type TextureGatherCpuFn = {
 };
 
 export const textureGatherCpu: TextureGatherCpuFn = (
-  ...args: TextureGatherCpuArgs
+  ..._args: TextureGatherCpuArgs
 ): v4f => {
   throw new Error(
     'Texture gather relies on GPU resources and cannot be executed outside of a draw call',
@@ -764,7 +764,7 @@ export const textureSampleCompareLevel = dualImpl({
 
 function textureSampleBaseClampToEdgeCpu<
   T extends texture2d | textureExternal,
->(texture: T, sampler: sampler, coords: v2f): v4f {
+>(_texture: T, _sampler: sampler, _coords: v2f): v4f {
   throw new MissingCpuImplError(
     'Texture sampling with base clamp to edge is not supported outside of GPU mode.',
   );

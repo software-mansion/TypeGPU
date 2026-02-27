@@ -36,7 +36,7 @@ import type {
 // ----------
 export function accessor<T extends AnyData | ((count: number) => AnyData)>(
   schemaOrConstructor: T,
-  defaultValue?: TgpuAccessor.In<NoInfer<T>> | undefined,
+  defaultValue?: TgpuAccessor.In<NoInfer<T>>,
 ): TgpuAccessor<UnwrapRuntimeConstructor<T>> {
   return new TgpuAccessorImpl(
     schemaOrConstructor,
@@ -48,7 +48,7 @@ export function mutableAccessor<
   T extends AnyData | ((count: number) => AnyData),
 >(
   schemaOrConstructor: T,
-  defaultValue?: TgpuMutableAccessor.In<NoInfer<T>> | undefined,
+  defaultValue?: TgpuMutableAccessor.In<NoInfer<T>>,
 ): TgpuMutableAccessor<UnwrapRuntimeConstructor<T>> {
   return new TgpuMutableAccessorImpl(
     schemaOrConstructor,
@@ -99,7 +99,7 @@ abstract class AccessorBase<
    * @returns A snippet representing the accessor.
    */
   #createSnippet() {
-    // biome-ignore lint/style/noNonNullAssertion: it's there
+    // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there
     const ctx = getResolutionCtx()!;
     let value = getGpuValueRecursively(ctx.unwrap(this.slot));
 

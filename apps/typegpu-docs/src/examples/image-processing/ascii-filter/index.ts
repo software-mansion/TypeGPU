@@ -1,4 +1,5 @@
 import tgpu, { common, d, std, type TgpuBindGroup } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 
@@ -47,10 +48,9 @@ const video = document.querySelector('video') as HTMLVideoElement;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const spinner = document.querySelector('.spinner-background') as HTMLDivElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 canvas.parentElement?.appendChild(video);
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   /**
    * Adapted from the original Shadertoy implementation by movAX13h:
@@ -143,7 +143,7 @@ const pipeline = root['~unstable'].createRenderPipeline({
     let resultColor = d.vec3f(1);
     // Color mode
     if (displayMode.$ === displayModes.color) {
-      resultColor = color.mul(charValue).xyz;
+      resultColor = color.mul(charValue).rgb;
     }
     // Grayscale mode
     if (displayMode.$ === displayModes.grayscale) {
@@ -155,7 +155,6 @@ const pipeline = root['~unstable'].createRenderPipeline({
     }
     return d.vec4f(resultColor, 1.0);
   },
-  targets: { format: presentationFormat },
 });
 
 if (navigator.mediaDevices.getUserMedia) {
@@ -212,11 +211,7 @@ function processVideoFrame(
 
   pipeline
     .with(bindGroup)
-    .withColorAttachment({
-      loadOp: 'clear',
-      storeOp: 'store',
-      view: context.getCurrentTexture().createView(),
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   spinner.style.display = 'none';
@@ -256,15 +251,15 @@ if (isIOS) {
 
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
-export const controls = {
+export const controls = defineControls({
   'use extended characters': {
     initial: false,
-    onToggleChange: (value: boolean) => charsetExtended.write(value ? 1 : 0),
+    onToggleChange: (value) => charsetExtended.write(value ? 1 : 0),
   },
   'display mode': {
     initial: 'color',
     options: ['color', 'grayscale', 'white'],
-    onSelectChange: (value: 'color' | 'grayscale' | 'white') => {
+    onSelectChange: (value) => {
       displayMode.write(displayModes[value]);
     },
   },
@@ -273,16 +268,16 @@ export const controls = {
     min: 0.1,
     max: 10.0,
     step: 0.1,
-    onSliderChange: (value: number) => gammaCorrection.write(value),
+    onSliderChange: (value) => gammaCorrection.write(value),
   },
   'glyph size (px)': {
     initial: 20,
     min: 4,
     max: 32,
     step: 2,
-    onSliderChange: (value: number) => glyphSize.write(value),
+    onSliderChange: (value) => glyphSize.write(value),
   },
-};
+});
 
 export function onCleanup() {
   if (videoFrameCallbackId !== undefined) {

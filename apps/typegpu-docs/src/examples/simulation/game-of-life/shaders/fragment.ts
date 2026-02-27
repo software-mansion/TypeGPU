@@ -2,7 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 
-export const fragmentFn = tgpu['~unstable'].fragmentFn({
+export const fragmentFn = tgpu.fragmentFn({
   in: {
     cell: d.interpolate('flat', d.u32),
     uv: d.vec2f,

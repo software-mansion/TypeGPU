@@ -30,7 +30,7 @@ function shallowEqualSchemas(a: BaseData, b: BaseData): boolean {
   }
   if (isWgslArray(a) && isWgslArray(b)) {
     return a.elementCount === b.elementCount &&
-      shallowEqualSchemas(a.elementType as BaseData, b.elementType as BaseData);
+      shallowEqualSchemas(a.elementType, b.elementType);
   }
   if (isWgslStruct(a) && isWgslStruct(b)) {
     // Only structs with the same identity are considered equal
@@ -80,7 +80,7 @@ export class ShelllessRepository {
         s.origin === 'constant-tgpu-const-ref' ||
         s.origin === 'runtime-tgpu-const-ref'
       ) {
-        // biome-ignore lint/style/noNonNullAssertion: it's there
+        // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there
         const ctx = getResolutionCtx()!;
         throw new Error(
           `Cannot pass constant references as function arguments. Explicitly copy them by wrapping them in a schema: '${

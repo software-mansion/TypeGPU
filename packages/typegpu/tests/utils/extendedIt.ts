@@ -1,6 +1,7 @@
 import { it as base, vi } from 'vitest';
 import type { ExperimentalTgpuRoot } from '../../src/core/root/rootTypes.ts';
-import tgpu from '../../src/index.ts';
+import tgpu from '../../src/index.js';
+// oxlint-disable-next-line import/no-unassigned-import -- imported for side effects
 import './webgpuGlobals.ts';
 
 const adapterMock = {
@@ -48,6 +49,7 @@ const mockCommandEncoder = {
 
 const mockComputePassEncoder = {
   dispatchWorkgroups: vi.fn(),
+  dispatchWorkgroupsIndirect: vi.fn(),
   end: vi.fn(),
   setBindGroup: vi.fn(),
   setPipeline: vi.fn(),
@@ -62,6 +64,18 @@ const mockRenderPassEncoder = {
   setVertexBuffer: vi.fn(),
   setIndexBuffer: vi.fn(),
   setStencilReference: vi.fn(),
+  executeBundles: vi.fn(),
+};
+
+const mockRenderBundleEncoder = {
+  draw: vi.fn(),
+  drawIndexed: vi.fn(),
+  setBindGroup: vi.fn(),
+  setPipeline: vi.fn(),
+  setVertexBuffer: vi.fn(),
+  setIndexBuffer: vi.fn(),
+  finish: vi.fn(() => 'mockRenderBundle'),
+  label: '<unnamed>',
 };
 
 const mockQuerySet = {
@@ -137,6 +151,10 @@ const mockDevice = {
     writeBuffer: vi.fn(),
     writeTexture: vi.fn(),
   },
+  limits: {
+    maxUniformBuffersPerShaderStage: 12,
+    maxStorageBuffersPerShaderStage: 8,
+  },
   destroy: vi.fn(),
 };
 
@@ -144,6 +162,9 @@ export const it = base.extend<{
   _global: undefined;
   commandEncoder: GPUCommandEncoder & { mock: typeof mockCommandEncoder };
   device: GPUDevice & { mock: typeof mockDevice };
+  renderBundleEncoder: GPURenderBundleEncoder & {
+    mock: typeof mockRenderBundleEncoder;
+  };
   root: ExperimentalTgpuRoot;
 }>({
   _global: [
@@ -162,6 +183,14 @@ export const it = base.extend<{
     await use(
       mockCommandEncoder as unknown as GPUCommandEncoder & {
         mock: typeof mockCommandEncoder;
+      },
+    );
+  },
+
+  renderBundleEncoder: async ({ task }, use) => {
+    await use(
+      mockRenderBundleEncoder as unknown as GPURenderBundleEncoder & {
+        mock: typeof mockRenderBundleEncoder;
       },
     );
   },

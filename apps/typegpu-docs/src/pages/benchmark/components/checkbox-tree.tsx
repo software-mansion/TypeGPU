@@ -84,6 +84,7 @@ function TestCheckbox(props: { suiteName: string; testName: string }) {
   const state = selected.includes(identifier) ? 'checked' : 'unchecked';
 
   function changeState() {
+    // oxlint-disable-next-line no-unused-expressions -- it's a call
     selected.includes(identifier)
       ? setSelected(selected.filter((item) => item !== identifier))
       : setSelected([...selected, identifier]);

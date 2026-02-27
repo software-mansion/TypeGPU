@@ -44,7 +44,7 @@ const Transpilers: Partial<
 
   ExpressionStatement: (ctx, node) => transpile(ctx, node.expression),
 
-  ArrowFunctionExpression: (ctx, node) => {
+  ArrowFunctionExpression: () => {
     throw new Error('Arrow functions are not supported inside TGSL.');
   },
 
@@ -175,11 +175,11 @@ const Transpilers: Partial<
         'BigInt literals are represented as numbers - loss of precision may occur.',
       );
     }
-    return [NODE.numericLiteral, String(Number(node.value)) ?? ''];
+    return [NODE.numericLiteral, String(Number(node.value))];
   },
 
   NumericLiteral(ctx, node) {
-    return [NODE.numericLiteral, String(node.value) ?? ''];
+    return [NODE.numericLiteral, String(node.value)];
   },
 
   BigIntLiteral(ctx, node) {
@@ -244,12 +244,7 @@ const Transpilers: Partial<
     }
 
     if (node.kind === 'const') {
-      if (init === undefined) {
-        throw new Error(
-          'Did not provide initial value in `const` declaration.',
-        );
-      }
-      return [NODE.const, id, init];
+      return init !== undefined ? [NODE.const, id, init] : [NODE.const, id];
     }
 
     return init !== undefined ? [NODE.let, id, init] : [NODE.let, id];
@@ -320,6 +315,13 @@ const Transpilers: Partial<
     const condition = transpile(ctx, node.test) as tinyest.Expression;
     const body = transpile(ctx, node.body) as tinyest.Statement;
     return [NODE.while, condition, body];
+  },
+
+  ForOfStatement(ctx, node) {
+    const loopVar = transpile(ctx, node.left) as tinyest.Const | tinyest.Let;
+    const iterable = transpile(ctx, node.right) as tinyest.Expression;
+    const body = transpile(ctx, node.body) as tinyest.Statement;
+    return [NODE.forOf, loopVar, iterable, body];
   },
 
   ContinueStatement() {
@@ -434,7 +436,9 @@ export function extractFunctionParts(rootNode: JsNode): {
   );
   if (unsupportedTypes.size > 0) {
     throw new Error(
-      `Unsupported function parameter type(s): ${[...unsupportedTypes]}`,
+      `Unsupported function parameter type(s): ${
+        [...unsupportedTypes].join(', ')
+      }`,
     );
   }
 

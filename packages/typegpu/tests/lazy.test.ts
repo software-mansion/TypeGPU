@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import * as d from '../src/data/index.ts';
-import tgpu, { type TgpuLazy } from '../src/index.ts';
+import tgpu, { type TgpuLazy } from '../src/index.js';
 import { mul } from '../src/std/index.ts';
 import { it } from './utils/extendedIt.ts';
 

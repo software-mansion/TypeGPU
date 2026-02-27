@@ -7,6 +7,7 @@ import { type GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import * as t3 from '@typegpu/three';
 import { d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const renderer = new THREE.WebGPURenderer({ canvas, antialias: true });
@@ -180,16 +181,16 @@ if ('ontouchstart' in window) {
 function animate() {
   renderer.render(scene, camera);
 }
-renderer.setAnimationLoop(animate);
+void renderer.setAnimationLoop(animate);
 
 // #region Example controls and cleanup
-export const controls = {
+export const controls = defineControls({
   elasticity: {
     initial: 0.4,
     min: 0,
     max: 0.5,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       elasticity.node.value = value;
     },
   },
@@ -198,7 +199,7 @@ export const controls = {
     min: 0.9,
     max: 0.98,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       damping.node.value = value;
     },
   },
@@ -207,7 +208,7 @@ export const controls = {
     min: 0.1,
     max: 0.5,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       brushSize.node.value = value;
     },
   },
@@ -216,11 +217,11 @@ export const controls = {
     min: 0.1,
     max: 0.3,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       brushStrength.node.value = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   renderer.dispose();

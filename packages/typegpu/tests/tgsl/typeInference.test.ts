@@ -1,6 +1,5 @@
-/** biome-ignore-all lint/style/noNonNullAssertion: not helpful at all in shaders */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import tgpu, { d, std } from '../../src/index.ts';
+import tgpu, { d, std } from '../../src/index.js';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { CodegenState } from '../../src/types.ts';
@@ -290,8 +289,6 @@ describe('wgsl generator type inference', () => {
 
   it('throws when for condition is not boolean', () => {
     const myFn = tgpu.fn([], d.bool)(() => {
-      // biome-ignore lint/correctness/noConstantCondition: this is a test
-      // biome-ignore lint/correctness/noUnreachable: this is a test
       for (let i = 0; 1; i < 10) {
         return true;
       }

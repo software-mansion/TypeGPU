@@ -131,7 +131,7 @@ class ItemStateStackImpl implements ItemStateStack {
     });
   }
 
-  pushSlotBindings(pairs: SlotValuePair<unknown>[]) {
+  pushSlotBindings(pairs: SlotValuePair[]) {
     this._stack.push({
       type: 'slotBinding',
       bindingMap: new WeakMap(pairs),
@@ -163,6 +163,7 @@ class ItemStateStackImpl implements ItemStateStack {
     this._stack.push({
       type: 'blockScope',
       declarations: new Map(),
+      externals: new Map(),
     });
   }
 
@@ -232,7 +233,8 @@ class ItemStateStackImpl implements ItemStateStack {
       }
 
       if (layer?.type === 'blockScope') {
-        const snippet = layer.declarations.get(id);
+        // the order matters
+        const snippet = layer.declarations.get(id) ?? layer.externals.get(id);
         if (snippet !== undefined) {
           return snippet;
         }
@@ -259,6 +261,30 @@ class ItemStateStackImpl implements ItemStateStack {
     }
 
     throw new Error('No block scope found to define a variable in.');
+  }
+
+  setBlockExternals(externals: Record<string, Snippet>) {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+      if (layer?.type === 'blockScope') {
+        Object.entries(externals).forEach(([id, snippet]) => {
+          layer.externals.set(id, snippet);
+        });
+        return;
+      }
+    }
+    throw new Error('No block scope found to set externals in.');
+  }
+
+  clearBlockExternals() {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+      if (layer?.type === 'blockScope') {
+        layer.externals.clear();
+        return;
+      }
+    }
+    throw new Error('No block scope found to clear externals in.');
   }
 }
 
@@ -420,11 +446,21 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   pushBlockScope() {
+    this.#namespaceInternal.nameRegistry.pushBlockScope();
     this._itemStateStack.pushBlockScope();
   }
 
   popBlockScope() {
+    this.#namespaceInternal.nameRegistry.popBlockScope();
     this._itemStateStack.pop('blockScope');
+  }
+
+  setBlockExternals(externals: Record<string, Snippet>) {
+    this._itemStateStack.setBlockExternals(externals);
+  }
+
+  clearBlockExternals() {
+    this._itemStateStack.clearBlockExternals();
   }
 
   generateLog(op: string, args: Snippet[]): Snippet {
@@ -597,7 +633,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return value;
   }
 
-  withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T {
+  withSlots<T>(pairs: SlotValuePair[], callback: () => T): T {
+    if (pairs.length === 0) {
+      return callback();
+    }
+
     this._itemStateStack.pushSlotBindings(pairs);
 
     try {
@@ -625,17 +665,24 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return callback();
     }
     const oldName = getName(item);
-    setName(item, name);
-    const result = callback();
-    setName(item, oldName);
-    return result;
+    try {
+      setName(item, name);
+      return callback();
+    } finally {
+      setName(item, oldName);
+    }
   }
 
   unwrap<T>(eventual: Eventual<T>): T {
     if (isProviding(eventual)) {
-      return this.withSlots(
-        eventual[$providing].pairs,
-        () => this.unwrap(eventual[$providing].inner) as T,
+      return this.withRenamed(
+        eventual[$providing].inner,
+        getName(eventual),
+        () =>
+          this.withSlots(
+            eventual[$providing].pairs,
+            () => this.unwrap(eventual[$providing].inner) as T,
+          ),
       );
     }
 
@@ -780,7 +827,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   resolve(
     item: unknown,
-    schema?: BaseData | UnknownData | undefined,
+    schema?: BaseData | UnknownData,
   ): ResolvedSnippet {
     if (isTgpuFn(item) || hasTinyestMetadata(item)) {
       if (
@@ -997,7 +1044,7 @@ export function resolve(
         Object.fromEntries(
           ctx.fixedBindings.map(
             (binding, idx) =>
-              // biome-ignore lint/suspicious/noExplicitAny: <it's fine>
+              // oxlint-disable-next-line typescript/no-explicit-any -- it's fine
               [String(idx), binding.resource] as [string, any],
           ),
         ),

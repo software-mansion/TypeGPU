@@ -10,6 +10,7 @@ import {
   VertexData,
   vertexLayout,
 } from './types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -83,7 +84,7 @@ const renderLayoutWithShadow = tgpu.bindGroupLayout({
   lightPosition: { uniform: d.vec3f },
 });
 
-const vertexDepth = tgpu['~unstable'].vertexFn({
+const vertexDepth = tgpu.vertexFn({
   in: { ...VertexData.propTypes, ...InstanceData.propTypes },
   out: { pos: d.builtin.position, worldPos: d.vec3f },
 })(({ position, column1, column2, column3, column4 }) => {
@@ -95,7 +96,7 @@ const vertexDepth = tgpu['~unstable'].vertexFn({
   return { pos, worldPos };
 });
 
-const fragmentDepth = tgpu['~unstable'].fragmentFn({
+const fragmentDepth = tgpu.fragmentFn({
   in: { worldPos: d.vec3f },
   out: d.builtin.fragDepth,
 })(({ worldPos }) => {
@@ -103,7 +104,7 @@ const fragmentDepth = tgpu['~unstable'].fragmentFn({
   return dist / pointLight.far;
 });
 
-const vertexMain = tgpu['~unstable'].vertexFn({
+const vertexMain = tgpu.vertexFn({
   in: { ...VertexData.propTypes, ...InstanceData.propTypes },
   out: {
     pos: d.builtin.position,
@@ -147,7 +148,7 @@ const samplesUniform = root.createUniform(
   }),
 );
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu.fragmentFn({
   in: { worldPos: d.vec3f, uv: d.vec2f, normal: d.vec3f },
   out: d.vec4f,
 })(({ worldPos, normal }) => {
@@ -209,7 +210,7 @@ const lightIndicatorLayout = tgpu.bindGroupLayout({
   lightPosition: { uniform: d.vec3f },
 });
 
-const vertexLightIndicator = tgpu['~unstable'].vertexFn({
+const vertexLightIndicator = tgpu.vertexFn({
   in: { position: d.vec3f },
   out: { pos: d.builtin.position },
 })(({ position }) => {
@@ -220,7 +221,7 @@ const vertexLightIndicator = tgpu['~unstable'].vertexFn({
   return { pos };
 });
 
-const fragmentLightIndicator = tgpu['~unstable'].fragmentFn({
+const fragmentLightIndicator = tgpu.fragmentFn({
   out: d.vec4f,
 })(() => d.vec4f(1.0, 1.0, 0.5, 1.0));
 
@@ -239,7 +240,7 @@ const depthToColor = tgpu.fn([d.f32], d.vec3f)((depth) => {
   return d.vec3f(r, g, b);
 });
 
-const fragmentDistanceView = tgpu['~unstable'].fragmentFn({
+const fragmentDistanceView = tgpu.fragmentFn({
   in: { worldPos: d.vec3f, uv: d.vec2f, normal: d.vec3f },
   out: d.vec4f,
 })(({ worldPos }) => {
@@ -249,7 +250,7 @@ const fragmentDistanceView = tgpu['~unstable'].fragmentFn({
   return d.vec4f(color, 1.0);
 });
 
-const previewFragment = tgpu['~unstable'].fragmentFn({
+const previewFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -309,53 +310,61 @@ const previewFragment = tgpu['~unstable'].fragmentFn({
   return d.vec4f(finalColor, 1.0);
 });
 
-const pipelineDepthOne = root['~unstable']
-  .withVertex(vertexDepth, { ...vertexLayout.attrib, ...instanceLayout.attrib })
-  .withFragment(fragmentDepth)
-  .withDepthStencil({
+const pipelineDepthOne = root.createRenderPipeline({
+  attribs: { ...vertexLayout.attrib, ...instanceLayout.attrib },
+  vertex: vertexDepth,
+  fragment: fragmentDepth,
+  depthStencil: {
     format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
-  })
-  .createPipeline();
+  },
+});
 
-const pipelineMain = root['~unstable']
-  .withVertex(vertexMain, { ...vertexLayout.attrib, ...instanceLayout.attrib })
-  .withFragment(fragmentMain, { format: presentationFormat })
-  .withDepthStencil({
+const pipelineMain = root.createRenderPipeline({
+  attribs: { ...vertexLayout.attrib, ...instanceLayout.attrib },
+  vertex: vertexMain,
+  fragment: fragmentMain,
+  targets: { format: presentationFormat },
+  depthStencil: {
     format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
-  })
-  .withMultisample({ count: 4 })
-  .createPipeline();
+  },
+  multisample: { count: 4 },
+});
 
-const pipelinePreview = root['~unstable']
-  .withVertex(common.fullScreenTriangle)
-  .withFragment(previewFragment, { format: presentationFormat })
-  .createPipeline();
+const pipelinePreview = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: previewFragment,
+  targets: { format: presentationFormat },
+});
 
-const pipelineLightIndicator = root['~unstable']
-  .withVertex(vertexLightIndicator, vertexLayout.attrib)
-  .withFragment(fragmentLightIndicator, { format: presentationFormat })
-  .withDepthStencil({
+const pipelineLightIndicator = root.createRenderPipeline({
+  attribs: vertexLayout.attrib,
+  vertex: vertexLightIndicator,
+  fragment: fragmentLightIndicator,
+  targets: { format: presentationFormat },
+  depthStencil: {
     format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
-  })
-  .withMultisample({ count: 4 })
-  .createPipeline();
+  },
+  multisample: { count: 4 },
+});
 
-const pipelineDistanceView = root['~unstable']
-  .withVertex(vertexMain, { ...vertexLayout.attrib, ...instanceLayout.attrib })
-  .withFragment(fragmentDistanceView, { format: presentationFormat })
-  .withDepthStencil({
+const pipelineDistanceView = root.createRenderPipeline({
+  attribs: { ...vertexLayout.attrib, ...instanceLayout.attrib },
+  vertex: vertexMain,
+  fragment: fragmentDistanceView,
+  targets: { format: presentationFormat },
+  depthStencil: {
     format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
-  })
-  .withMultisample({ count: 4 })
-  .createPipeline();
+  },
+  multisample: { count: 4 },
+});
 
 const mainBindGroup = root.createBindGroup(renderLayoutWithShadow, {
   camera: mainCamera.uniform.buffer,
@@ -395,11 +404,7 @@ function render(timestamp: number) {
 
   if (showDepthPreview) {
     pipelinePreview
-      .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        loadOp: 'clear',
-        storeOp: 'store',
-      })
+      .withColorAttachment({ view: context })
       .draw(3);
     requestAnimationFrame(render);
     return;
@@ -415,10 +420,8 @@ function render(timestamp: number) {
       depthStoreOp: 'store',
     })
     .withColorAttachment({
-      resolveTarget: context.getCurrentTexture().createView(),
+      resolveTarget: context,
       view: msaaTexture,
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .with(mainBindGroup)
     .withIndexBuffer(BoxGeometry.indexBuffer)
@@ -433,10 +436,9 @@ function render(timestamp: number) {
       depthStoreOp: 'store',
     })
     .withColorAttachment({
-      resolveTarget: context.getCurrentTexture().createView(),
+      resolveTarget: context,
       view: msaaTexture,
       loadOp: 'load',
-      storeOp: 'store',
     })
     .with(lightIndicatorBindGroup)
     .withIndexBuffer(BoxGeometry.indexBuffer)
@@ -592,13 +594,13 @@ canvas.addEventListener('touchmove', (e) => {
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'Light X': {
     initial: 4.5,
     min: -10,
     max: 10,
     step: 0.1,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       pointLight.position = d.vec3f(
         v,
         pointLight.position.y,
@@ -611,7 +613,7 @@ export const controls = {
     min: 0.5,
     max: 10,
     step: 0.1,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       pointLight.position = d.vec3f(
         pointLight.position.x,
         v,
@@ -624,7 +626,7 @@ export const controls = {
     min: -10,
     max: 10,
     step: 0.1,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       pointLight.position = d.vec3f(
         pointLight.position.x,
         pointLight.position.y,
@@ -634,13 +636,13 @@ export const controls = {
   },
   'Show Depth Cubemap': {
     initial: false,
-    onToggleChange: (v: boolean) => {
+    onToggleChange: (v) => {
       showDepthPreview = v;
     },
   },
   'Show Distance View': {
     initial: false,
-    onToggleChange: (v: boolean) => {
+    onToggleChange: (v) => {
       showDistanceView = v;
     },
   },
@@ -649,7 +651,7 @@ export const controls = {
     min: 1,
     max: 64,
     step: 1,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       shadowParams.writePartial({ pcfSamples: v });
     },
   },
@@ -658,7 +660,7 @@ export const controls = {
     min: 0.0,
     max: 0.1,
     step: 0.001,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       shadowParams.writePartial({ diskRadius: v });
     },
   },
@@ -667,7 +669,7 @@ export const controls = {
     min: 0.0,
     max: 0.1,
     step: 0.0001,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       shadowParams.writePartial({ normalBiasBase: v });
     },
   },
@@ -676,11 +678,11 @@ export const controls = {
     min: 0.0,
     max: 0.5,
     step: 0.0005,
-    onSliderChange: (v: number) => {
+    onSliderChange: (v) => {
       shadowParams.writePartial({ normalBiasSlope: v });
     },
   },
-};
+});
 
 export function onCleanup() {
   BoxGeometry.clearBuffers();

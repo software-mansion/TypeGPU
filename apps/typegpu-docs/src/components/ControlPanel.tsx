@@ -19,6 +19,7 @@ import { TextArea } from './design/TextArea.tsx';
 import { Toggle } from './design/Toggle.tsx';
 import { VectorSlider } from './design/VectorSlider.tsx';
 import { FPSCounter } from './FpsCounter.tsx';
+import type { d } from 'typegpu';
 
 function ToggleRow({
   label,
@@ -26,7 +27,7 @@ function ToggleRow({
   onChange,
 }: {
   label: string;
-  initial?: boolean;
+  initial: boolean;
   onChange: (value: boolean) => void;
 }) {
   const [value, setValue] = useState(initial);
@@ -47,7 +48,7 @@ function ToggleRow({
           checked={value}
           onChange={(e) => {
             setValue(e.target.checked);
-            runWithCatch(() => onChange(e.target.checked));
+            void runWithCatch(() => onChange(e.target.checked));
           }}
         />
       </label>
@@ -64,7 +65,7 @@ function SliderRow({
   onChange,
 }: {
   label: string;
-  initial?: number;
+  initial: number;
   min?: number;
   max?: number;
   step?: number;
@@ -84,7 +85,7 @@ function SliderRow({
         value={value}
         onChange={(newValue) => {
           setValue(newValue);
-          runWithCatch(() => onChange(newValue));
+          void runWithCatch(() => onChange(newValue));
         }}
       />
     </>
@@ -100,7 +101,7 @@ function VectorSliderRow({
   onChange,
 }: {
   label: string;
-  initial?: number[];
+  initial: number[];
   min: number[];
   max: number[];
   step: number[];
@@ -120,7 +121,7 @@ function VectorSliderRow({
         value={value}
         onChange={(newValue) => {
           setValue(newValue);
-          runWithCatch(() => onChange(newValue));
+          void runWithCatch(() => onChange(newValue));
         }}
       />
     </>
@@ -133,12 +134,10 @@ function ColorPickerRow({
   onChange,
 }: {
   label: string;
-  initial?: readonly [number, number, number];
-  onChange: (value: readonly [number, number, number]) => void;
+  initial: d.v3f;
+  onChange: (value: d.v3f) => void;
 }) {
-  const [value, setValue] = useState<readonly [number, number, number]>(
-    initial ?? [0, 0, 0],
-  );
+  const [value, setValue] = useState<d.v3f>(initial);
   const runWithCatch = useSetAtom(runWithCatchAtom);
 
   return (
@@ -149,7 +148,7 @@ function ColorPickerRow({
         value={value}
         onChange={(newValue) => {
           setValue(newValue);
-          runWithCatch(() => onChange(newValue));
+          void runWithCatch(() => onChange(newValue));
         }}
       />
     </>
@@ -162,7 +161,7 @@ function TextAreaRow({
   onChange,
 }: {
   label: string;
-  initial?: string;
+  initial: string;
   onChange: (value: string) => void;
 }) {
   const [value, setValue] = useState(initial ?? '');
@@ -176,7 +175,7 @@ function TextAreaRow({
         value={value}
         onChange={(newValue) => {
           setValue(newValue);
-          runWithCatch(() => onChange(newValue));
+          void runWithCatch(() => onChange(newValue));
         }}
       />
     </>
@@ -190,7 +189,7 @@ function SelectRow({
   onChange,
 }: {
   label: string;
-  initial?: string;
+  initial: string;
   options: string[];
   onChange: (value: string) => void;
 }) {
@@ -206,7 +205,7 @@ function SelectRow({
         options={options}
         onChange={(newValue) => {
           setValue(newValue);
-          runWithCatch(() => onChange(newValue));
+          void runWithCatch(() => onChange(newValue));
         }}
       />
     </>

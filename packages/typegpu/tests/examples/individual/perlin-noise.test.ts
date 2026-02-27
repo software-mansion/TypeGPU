@@ -30,9 +30,7 @@ describe('perlin noise example', () => {
       }
 
       fn randSeed3(seed: vec3f) {
-        {
-          seed3(seed);
-        }
+        seed3(seed);
       }
 
       fn sample() -> f32 {
@@ -143,13 +141,13 @@ describe('perlin noise example', () => {
 
       @group(0) @binding(2) var<uniform> sharpness: f32;
 
-      struct mainFragment_Input {
+      struct FragmentIn {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn mainFragment(input: mainFragment_Input) -> @location(0) vec4f {
-        var uv = (gridSize * input.uv);
-        let n = sample(vec3f(uv, time));
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
+        var suv = (gridSize * _arg_0.uv);
+        let n = sample(vec3f(suv, time));
         let sharp = exponentialSharpen(n, sharpness);
         let n01 = ((sharp * 0.5f) + 0.5f);
         var dark = vec3f(0, 0.20000000298023224, 1);

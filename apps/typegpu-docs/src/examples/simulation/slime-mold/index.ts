@@ -1,5 +1,6 @@
 import { randf } from '@typegpu/noise';
 import tgpu, { d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -31,7 +32,7 @@ const defaultParams = {
 const NUM_AGENTS = 200_000;
 const agentsData = root.createMutable(d.arrayOf(Agent, NUM_AGENTS));
 
-root['~unstable'].createGuardedComputePipeline((x) => {
+root.createGuardedComputePipeline((x) => {
   'use gpu';
   randf.seed(x / NUM_AGENTS + 0.1);
   const pos = randf.inUnitCircle().mul(resolution.x / 2 - 10).add(
@@ -79,12 +80,12 @@ const sense = (pos: d.v2f, angle: number, sensorAngleOffset: number) => {
   const sensorPosInt = d.vec2u(
     std.clamp(sensorPos, d.vec2f(0), dimsf.sub(d.vec2f(1))),
   );
-  const color = std.textureLoad(computeLayout.$.oldState, sensorPosInt).xyz;
+  const color = std.textureLoad(computeLayout.$.oldState, sensorPosInt).rgb;
 
   return color.x + color.y + color.z;
 };
 
-const updateAgents = tgpu['~unstable'].computeFn({
+const updateAgents = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [64],
 })(({ gid }) => {
@@ -147,7 +148,7 @@ const updateAgents = tgpu['~unstable'].computeFn({
   });
 
   const oldState =
-    std.textureLoad(computeLayout.$.oldState, d.vec2u(newPos)).xyz;
+    std.textureLoad(computeLayout.$.oldState, d.vec2u(newPos)).rgb;
   const newState = oldState.add(d.vec3f(1));
   std.textureStore(
     computeLayout.$.newState,
@@ -156,7 +157,7 @@ const updateAgents = tgpu['~unstable'].computeFn({
   );
 });
 
-const blur = tgpu['~unstable'].computeFn({
+const blur = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [16, 16],
 })(({ gid }) => {
@@ -167,8 +168,8 @@ const blur = tgpu['~unstable'].computeFn({
   let count = d.f32();
 
   // 3x3 blur kernel
-  for (let offsetY = -1; offsetY <= 1; offsetY++) {
-    for (let offsetX = -1; offsetX <= 1; offsetX++) {
+  for (const offsetY of tgpu.unroll([-1, 0, 1])) {
+    for (const offsetX of tgpu.unroll([-1, 0, 1])) {
       const samplePos = d.vec2i(gid.xy).add(d.vec2i(offsetX, offsetY));
       const dimsi = d.vec2i(dims);
 
@@ -177,7 +178,7 @@ const blur = tgpu['~unstable'].computeFn({
         samplePos.y < dimsi.y
       ) {
         const color =
-          std.textureLoad(computeLayout.$.oldState, d.vec2u(samplePos)).xyz;
+          std.textureLoad(computeLayout.$.oldState, d.vec2u(samplePos)).rgb;
         sum = sum.add(color);
         count = count + 1;
       }
@@ -197,7 +198,7 @@ const blur = tgpu['~unstable'].computeFn({
   );
 });
 
-const fullScreenTriangle = tgpu['~unstable'].vertexFn({
+const fullScreenTriangle = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })((input) => {
@@ -215,25 +216,21 @@ const filteringSampler = root['~unstable'].createSampler({
   minFilter: 'linear',
 });
 
-const fragmentShader = tgpu['~unstable'].fragmentFn({
+const fragmentShader = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
   return std.textureSample(renderLayout.$.state, filteringSampler.$, uv);
 });
 
-const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(fragmentShader, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: fullScreenTriangle,
+  fragment: fragmentShader,
+  targets: { format: presentationFormat },
+});
 
-const computePipeline = root['~unstable']
-  .withCompute(updateAgents)
-  .createPipeline();
-
-const blurPipeline = root['~unstable']
-  .withCompute(blur)
-  .createPipeline();
+const computePipeline = root.createComputePipeline({ compute: updateAgents });
+const blurPipeline = root.createComputePipeline({ compute: blur });
 
 const bindGroups = [0, 1].map((i) =>
   root.createBindGroup(computeLayout, {
@@ -271,11 +268,7 @@ function frame(now: number) {
     );
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .with(renderBindGroups[1 - currentTexture])
     .draw(3);
 
@@ -287,13 +280,13 @@ requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'Move Speed': {
     initial: defaultParams.moveSpeed,
     min: 0,
     max: 100,
     step: 1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ moveSpeed: newValue });
     },
   },
@@ -302,7 +295,7 @@ export const controls = {
     min: 0,
     max: 3.14,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ sensorAngle: newValue });
     },
   },
@@ -311,7 +304,7 @@ export const controls = {
     min: 1,
     max: 50,
     step: 0.5,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ sensorDistance: newValue });
     },
   },
@@ -320,7 +313,7 @@ export const controls = {
     min: 0,
     max: 10,
     step: 0.1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ turnSpeed: newValue });
     },
   },
@@ -329,11 +322,11 @@ export const controls = {
     min: 0,
     max: 0.5,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ evaporationRate: newValue });
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

@@ -1,22 +1,34 @@
 import { UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
-import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
+import {
+  isEphemeralSnippet,
+  isSnippet,
+  type ResolvedSnippet,
+  snip,
+  type Snippet,
+} from '../data/snippet.ts';
 import {
   type AnyWgslData,
   type BaseData,
   type F32,
   type I32,
   isMatInstance,
+  isNaturallyEphemeral,
   isVecInstance,
+  type WgslArray,
   WORKAROUND_getSchema,
 } from '../data/wgslTypes.ts';
 import {
   type FunctionScopeLayer,
   getOwnSnippet,
   type ResolutionCtx,
+  type SelfResolvable,
 } from '../types.ts';
 import type { ShelllessRepository } from './shellless.ts';
+import { stitch } from '../../src/core/resolve/stitch.ts';
+import { WgslTypeError } from '../../src/errors.ts';
+import { $internal, $resolve } from '../../src/shared/symbols.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
@@ -80,6 +92,8 @@ export type GenerationCtx = ResolutionCtx & {
   generateLog(op: string, args: Snippet[]): Snippet;
   getById(id: string): Snippet | null;
   defineVariable(id: string, snippet: Snippet): void;
+  setBlockExternals(externals: Record<string, Snippet>): void;
+  clearBlockExternals(): void;
 
   /**
    * Types that are used in `return` statements are
@@ -129,4 +143,51 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   return snip(value, UnknownData, /* origin */ 'constant');
+}
+
+/**
+ * Intermediate representation for WGSL array expressions.
+ * Defers resolution. Stores array elements as snippets so the
+ * generator can access them when needed.
+ */
+export class ArrayExpression implements SelfResolvable {
+  readonly [$internal] = true;
+
+  constructor(
+    public readonly type: WgslArray<AnyWgslData>,
+    public readonly elements: Snippet[],
+  ) {
+  }
+
+  toString(): string {
+    return 'ArrayExpression';
+  }
+
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    for (const elem of this.elements) {
+      // We check if there are no references among the elements
+      if (
+        (elem.origin === 'argument' &&
+          !isNaturallyEphemeral(elem.dataType)) ||
+        !isEphemeralSnippet(elem)
+      ) {
+        const snippetStr = ctx.resolve(elem.value, elem.dataType).value;
+        const snippetType =
+          ctx.resolve(concretize(elem.dataType as BaseData)).value;
+        throw new WgslTypeError(
+          `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,
+        );
+      }
+    }
+
+    const arrayType = `array<${
+      ctx.resolve(this.type.elementType).value
+    }, ${this.elements.length}>`;
+
+    return snip(
+      stitch`${arrayType}(${this.elements})`,
+      this.type,
+      /* origin */ 'runtime',
+    );
+  }
 }

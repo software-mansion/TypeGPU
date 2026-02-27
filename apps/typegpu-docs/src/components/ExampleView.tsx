@@ -32,7 +32,6 @@ function useExample(
   const exampleRef = useRef<ExampleState | null>(null);
   const setExampleControlParams = useSetAtom(exampleControlsAtom);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reload example on html change
   useEffect(() => {
     let cancelled = false;
     setSnackbarText(undefined);

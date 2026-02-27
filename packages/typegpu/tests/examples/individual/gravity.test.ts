@@ -181,6 +181,8 @@ describe('gravity example', () => {
         targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
+        viewInverse: mat4x4f,
+        projectionInverse: mat4x4f,
       }
 
       @group(0) @binding(0) var<uniform> camera: Camera;
@@ -234,6 +236,8 @@ describe('gravity example', () => {
         targetPos: vec4f,
         view: mat4x4f,
         projection: mat4x4f,
+        viewInverse: mat4x4f,
+        projectionInverse: mat4x4f,
       }
 
       @group(0) @binding(0) var<uniform> camera_1: Camera;
@@ -284,14 +288,14 @@ describe('gravity example', () => {
           discard;;
         }
         var lightColor = vec3f(1, 0.8999999761581421, 0.8999999761581421);
-        var textureColor = textureSample(celestialBodyTextures, sampler_1, input.uv, input.sphereTextureIndex).xyz;
+        var textureColor = textureSample(celestialBodyTextures, sampler_1, input.uv, input.sphereTextureIndex).rgb;
         var ambient = ((textureColor * lightColor) * input.ambientLightFactor);
         let normal = input.normals;
         var lightDirection = normalize((lightSource - input.worldPosition));
         let cosTheta = dot(normal, lightDirection);
         var diffuse = ((textureColor * lightColor) * max(0f, cosTheta));
         var litColor = (ambient + diffuse);
-        return vec4f(litColor.xyz, 1f);
+        return vec4f(litColor, 1f);
       }"
     `);
   });

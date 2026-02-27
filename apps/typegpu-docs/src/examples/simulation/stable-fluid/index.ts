@@ -3,6 +3,7 @@ import tgpu, {
   type TgpuBindGroup,
   type TgpuComputeFn,
   type TgpuFragmentFn,
+  type TgpuRenderPipeline,
 } from 'typegpu';
 import * as p from './params.ts';
 import {
@@ -13,20 +14,16 @@ import {
   renderLayout,
 } from './render.ts';
 import * as c from './simulation.ts';
-import type { BrushState, DisplayMode } from './types.ts';
+import type { BrushState } from './types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // Initialize
-const adapter = await navigator.gpu.requestAdapter();
-if (!adapter) {
-  throw new Error('No GPU adapter found');
-}
 const root = await tgpu.init();
 const device = root.device;
 
 // Setup canvas
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const format = navigator.gpu.getPreferredCanvasFormat();
 
 // Helpers
 function createField(name: string) {
@@ -37,9 +34,7 @@ function createField(name: string) {
 }
 
 function createComputePipeline(fn: TgpuComputeFn) {
-  return root['~unstable'].createComputePipeline({
-    compute: fn,
-  });
+  return root.createComputePipeline({ compute: fn });
 }
 
 function toGrid(x: number, y: number): [number, number] {
@@ -141,10 +136,9 @@ const addInkPipeline = createComputePipeline(c.addInkFn);
 function createRenderPipeline(
   fragmentFn: TgpuFragmentFn<{ uv: d.Vec2f }, d.Vec4f>,
 ) {
-  return root['~unstable'].createRenderPipeline({
+  return root.createRenderPipeline({
     vertex: renderFn,
     fragment: fragmentFn,
-    targets: { format },
 
     primitive: {
       topology: 'triangle-strip',
@@ -374,10 +368,7 @@ function loop() {
     result: { texture: d.WgslTexture2d<d.F32> };
     background: { texture: d.WgslTexture2d<d.F32> };
   }>;
-  let pipeline:
-    | typeof renderPipelineInk
-    | typeof renderPipelineVel
-    | typeof renderPipelineImage;
+  let pipeline: TgpuRenderPipeline<d.Vec4f>;
 
   switch (p.params.displayMode) {
     case 'ink':
@@ -397,11 +388,7 @@ function loop() {
   }
 
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .with(renderBG)
     .draw(3);
 
@@ -472,13 +459,13 @@ for (const eventName of ['click', 'touchstart']) {
   canvas.addEventListener(eventName, hideHelp, { once: true, passive: true });
 }
 
-export const controls = {
+export const controls = defineControls({
   'timestep (dt)': {
     initial: p.params.dt,
     min: 0.05,
     max: 2.0,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       p.params.dt = value;
       simParamBuffer.writePartial({
         dt: p.params.dt,
@@ -490,7 +477,7 @@ export const controls = {
     min: 0,
     max: 0.1,
     step: 0.000001,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       p.params.viscosity = value;
       simParamBuffer.writePartial({
         viscosity: p.params.viscosity,
@@ -502,24 +489,24 @@ export const controls = {
     min: 2,
     max: 50,
     step: 2,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       p.params.jacobiIter = value;
     },
   },
   visualization: {
     initial: 'image',
     options: ['image', 'velocity', 'ink'],
-    onSelectChange: (value: DisplayMode) => {
+    onSelectChange: (value) => {
       p.params.displayMode = value;
     },
   },
   pause: {
     initial: false,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       p.params.paused = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   window.removeEventListener('mouseup', mouseUpEventListener);

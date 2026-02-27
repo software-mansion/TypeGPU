@@ -1,4 +1,5 @@
 import tgpu, { d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 // constants
 
@@ -17,7 +18,6 @@ const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // data types
 
@@ -86,7 +86,7 @@ const rotate = tgpu.fn([d.vec2f, d.f32], d.vec2f)((v, angle) => {
   return pos;
 });
 
-const mainVert = tgpu['~unstable'].vertexFn({
+const mainVert = tgpu.vertexFn({
   in: {
     tilt: d.f32,
     angle: d.f32,
@@ -118,12 +118,12 @@ const mainVert = tgpu['~unstable'].vertexFn({
   aspectRatio,
 });
 
-const mainFrag = tgpu['~unstable'].fragmentFn({
+const mainFrag = tgpu.fragmentFn({
   in: VertexOutput,
   out: d.vec4f,
 }) /* wgsl */`{ return in.color; }`;
 
-const mainCompute = tgpu['~unstable'].computeFn({
+const mainCompute = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [1],
 }) /* wgsl */`{
@@ -141,11 +141,10 @@ const mainCompute = tgpu['~unstable'].computeFn({
 
 // pipelines
 
-const renderPipeline = root['~unstable']
+const renderPipeline = root
   .createRenderPipeline({
     vertex: mainVert,
     fragment: mainFrag,
-    targets: { format: presentationFormat },
     attribs: {
       tilt: geometryLayout.attrib.tilt,
       angle: geometryLayout.attrib.angle,
@@ -160,9 +159,7 @@ const renderPipeline = root['~unstable']
   .with(geometryLayout, particleGeometryBuffer)
   .with(dataLayout, particleDataBuffer);
 
-const computePipeline = root['~unstable'].createComputePipeline({
-  compute: mainCompute,
-});
+const computePipeline = root.createComputePipeline({ compute: mainCompute });
 
 // compute and draw
 
@@ -207,22 +204,17 @@ onFrame((dt) => {
   computePipeline.dispatchWorkgroups(PARTICLE_AMOUNT);
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
-      loadOp: 'clear' as const,
-      storeOp: 'store' as const,
-    })
+    .withColorAttachment({ view: context })
     .draw(4, PARTICLE_AMOUNT);
 });
 
 // example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   '🎉': {
-    onButtonClick: () => randomizePositions(),
+    onButtonClick: randomizePositions,
   },
-};
+});
 
 export function onCleanup() {
   disposed = true;

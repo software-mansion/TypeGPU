@@ -127,7 +127,7 @@ export class IcosphereGenerator {
   ) {
     this.smoothBuffer = this.root.createBuffer(d.u32).$usage('uniform');
 
-    const computeFn = tgpu['~unstable'].computeFn({
+    const computeFn = tgpu.computeFn({
       in: { gid: d.builtin.globalInvocationId },
       workgroupSize: [WORKGROUP_SIZE, 1, 1],
     })((input) => {
@@ -171,7 +171,7 @@ export class IcosphereGenerator {
       ]);
 
       const baseIndexNext = triangleIndex * 12;
-      for (let i = d.u32(0); i < 12; i++) {
+      for (const i of tgpu.unroll([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])) {
         const reprojectedVertex = newVertices[i];
 
         const triBase = i - (i % 3);
@@ -191,9 +191,7 @@ export class IcosphereGenerator {
       }
     });
 
-    this.pipeline = this.root['~unstable'].createComputePipeline({
-      compute: computeFn,
-    });
+    this.pipeline = this.root.createComputePipeline({ compute: computeFn });
   }
 
   createIcosphere(subdivisions: number, smooth: boolean): IcosphereBuffer {

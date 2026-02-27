@@ -19,7 +19,7 @@ function groupResultsByTest(results: typeof BenchmarkResults.infer) {
     if (!grouped[result.testFilename]) {
       grouped[result.testFilename] = {};
     }
-    // biome-ignore lint/style/noNonNullAssertion: it's there...
+    // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there...
     grouped[result.testFilename]![result.bundler] = result.size;
   }
   return grouped;
@@ -46,9 +46,9 @@ async function generateReport(
 
   // Split tests into static and dynamic
   const staticTests = [...allTests].filter((t) => !t.includes('_from_'))
-    .sort();
+    .toSorted();
   const dynamicTests = [...allTests].filter((t) => t.includes('_from_'))
-    .sort();
+    .toSorted();
 
   // Summary statistics
   let totalDecreased = 0;

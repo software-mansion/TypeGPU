@@ -11,7 +11,7 @@ function isEqual(e1: unknown, e2: unknown): boolean {
 
 async function test0d(): Promise<boolean> {
   const mutable = root.createMutable(d.u32);
-  root['~unstable'].createGuardedComputePipeline(() => {
+  root.createGuardedComputePipeline(() => {
     'use gpu';
     mutable.$ = 126;
   }).dispatchThreads();
@@ -22,7 +22,7 @@ async function test0d(): Promise<boolean> {
 async function test1d(): Promise<boolean> {
   const size = [7] as const;
   const mutable = root.createMutable(d.arrayOf(d.u32, size[0]));
-  root['~unstable'].createGuardedComputePipeline((x) => {
+  root.createGuardedComputePipeline((x) => {
     'use gpu';
     mutable.$[x] = x;
   }).dispatchThreads(...size);
@@ -35,7 +35,7 @@ async function test2d(): Promise<boolean> {
   const mutable = root.createMutable(
     d.arrayOf(d.arrayOf(d.vec2u, size[1]), size[0]),
   );
-  root['~unstable'].createGuardedComputePipeline((x, y) => {
+  root.createGuardedComputePipeline((x, y) => {
     'use gpu';
     mutable.$[x][y] = d.vec2u(x, y);
   }).dispatchThreads(...size);
@@ -54,7 +54,7 @@ async function test3d(): Promise<boolean> {
       size[0],
     ),
   );
-  root['~unstable'].createGuardedComputePipeline((x, y, z) => {
+  root.createGuardedComputePipeline((x, y, z) => {
     'use gpu';
     mutable.$[x][y][z] = d.vec3u(x, y, z);
   }).dispatchThreads(...size);
@@ -67,7 +67,7 @@ async function test3d(): Promise<boolean> {
 
 async function testWorkgroupSize(): Promise<boolean> {
   const mutable = root.createMutable(d.atomic(d.u32));
-  root['~unstable'].createGuardedComputePipeline((_x, _y, _z) => {
+  root.createGuardedComputePipeline((_x, _y, _z) => {
     'use gpu';
     std.atomicAdd(mutable.$, 1);
   }).dispatchThreads(4, 3, 2);
@@ -79,7 +79,7 @@ async function testMultipleDispatches(): Promise<boolean> {
   const size = [7] as const;
   const mutable = root
     .createMutable(d.arrayOf(d.u32, size[0]), [0, 1, 2, 3, 4, 5, 6]);
-  const test = root['~unstable'].createGuardedComputePipeline((x: number) => {
+  const test = root.createGuardedComputePipeline((x: number) => {
     'use gpu';
     mutable.$[x] *= 2;
   });
@@ -87,7 +87,7 @@ async function testMultipleDispatches(): Promise<boolean> {
   test.dispatchThreads(2);
   test.dispatchThreads(4);
   const filled = await mutable.read();
-  return isEqual(filled, [0 * 8, 1 * 8, 2 * 4, 3 * 4, 4 * 2, 5 * 2, 6 * 1]);
+  return isEqual(filled, [0, 1 * 8, 2 * 4, 3 * 4, 4 * 2, 5 * 2, 6 * 1]);
 }
 
 async function testDifferentBindGroups(): Promise<boolean> {
@@ -105,7 +105,7 @@ async function testDifferentBindGroups(): Promise<boolean> {
     buffer: buffer2,
   });
 
-  const test = root['~unstable'].createGuardedComputePipeline(() => {
+  const test = root.createGuardedComputePipeline(() => {
     'use gpu';
     for (let i = d.u32(); i < std.arrayLength(layout.$.buffer); i++) {
       layout.$.buffer[i] *= 2;
@@ -129,8 +129,8 @@ async function testSlots(): Promise<boolean> {
     result.$ += valueSlot.$;
   };
 
-  root['~unstable'].createGuardedComputePipeline(main).dispatchThreads(); // add 1
-  root['~unstable']
+  root.createGuardedComputePipeline(main).dispatchThreads(); // add 1
+  root
     .with(valueSlot, 3)
     .createGuardedComputePipeline(main)
     .dispatchThreads(); // add 3
@@ -155,7 +155,7 @@ const table = document.querySelector<HTMLDivElement>('.result');
 if (!table) {
   throw new Error('Nowhere to display the results');
 }
-runTests().then((result) => {
+void runTests().then((result) => {
   table.innerText = `Tests ${result ? 'succeeded' : 'failed'}.`;
 });
 

@@ -15,7 +15,7 @@ const getTileIndex = tgpu.fn([d.u32, d.u32], d.u32)((row, col) => {
   return col + row * TILE_SIZE;
 });
 
-export const computeSharedMemory = tgpu['~unstable'].computeFn({
+export const computeSharedMemory = tgpu.computeFn({
   workgroupSize: WORKGROUP_SIZE,
   in: {
     gid: d.builtin.globalInvocationId,

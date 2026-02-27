@@ -46,22 +46,21 @@ describe('boids example', () => {
         var cohesion = vec2f();
         var alignmentCount = 0;
         var cohesionCount = 0;
-        for (var i = 0u; (i < arrayLength(&currentTrianglePos)); i++) {
-          if ((i == index)) {
-            continue;
-          }
+        for (var i = 0u; i < arrayLength((&currentTrianglePos)); i++) {
           let other = (&currentTrianglePos[i]);
-          let dist = distance(instanceInfo.position, (*other).position);
-          if ((dist < paramsBuffer.separationDistance)) {
-            separation = (separation + (instanceInfo.position - (*other).position));
-          }
-          if ((dist < paramsBuffer.alignmentDistance)) {
-            alignment = (alignment + (*other).velocity);
-            alignmentCount++;
-          }
-          if ((dist < paramsBuffer.cohesionDistance)) {
-            cohesion = (cohesion + (*other).position);
-            cohesionCount++;
+          {
+            let dist = distance(instanceInfo.position, (*other).position);
+            if ((dist < paramsBuffer.separationDistance)) {
+              separation = (separation + (instanceInfo.position - (*other).position));
+            }
+            if ((dist < paramsBuffer.alignmentDistance)) {
+              alignment = (alignment + (*other).velocity);
+              alignmentCount++;
+            }
+            if ((dist < paramsBuffer.cohesionDistance)) {
+              cohesion = (cohesion + (*other).position);
+              cohesionCount++;
+            }
           }
         }
         if ((alignmentCount > 0i)) {

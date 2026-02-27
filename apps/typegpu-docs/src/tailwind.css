@@ -4,7 +4,6 @@
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
 
-/* biome-ignore lint/suspicious/noUnknownAtRules: shh */
 @theme {
   /* --- Colors --- */
   /* Starlight colors */
@@ -71,7 +70,6 @@ input {
 }
 
 .sl-badge {
-  /* biome-ignore lint/complexity/noImportantStyles: shh */
   font-size: 0.75rem !important;
   color: rgb(164, 137, 255);
   position: relative;
@@ -81,7 +79,6 @@ input {
 .sl-badge:is([data-theme='light'] *) {
   background-color: white;
   color: var(--sl-badge-default-border);
-  /* biome-ignore lint/complexity/noImportantStyles: shh */
   font-weight: normal !important;
 }
 

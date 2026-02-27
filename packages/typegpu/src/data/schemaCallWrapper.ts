@@ -40,7 +40,7 @@ export function schemaCallWrapper<T>(schema: BaseData, item?: T): T {
 export function schemaCallWrapperGPU(
   ctx: ResolutionCtx,
   schema: BaseData,
-  item?: Snippet | undefined,
+  item?: Snippet,
 ): Snippet {
   if (!isGPUCallable(schema)) {
     // Not callable

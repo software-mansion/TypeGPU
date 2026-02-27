@@ -31,8 +31,9 @@ export interface StaticPerlin2DCache {
  *   // Plugging the cache into the pipeline
  *   .pipe(cache.inject())
  *   // ...
- *   .withFragment(mainFragment)
- *   .createPipeline();
+ *   .createRenderPipeline({
+ *     // ...
+ *   });
  * ```
  *
  * --- Wrapped coordinates
@@ -64,7 +65,7 @@ export function staticCache(options: {
   const memoryReadonly = memoryBuffer.as('readonly');
   const memoryMutable = memoryBuffer.as('mutable');
 
-  const computePipeline = root['~unstable']
+  const computePipeline = root
     .createGuardedComputePipeline((x, y) => {
       'use gpu';
       const idx = x + y * size.x;

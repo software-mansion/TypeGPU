@@ -3,40 +3,6 @@ title: Utilities
 description: A list of various utilities provided by TypeGPU.
 ---
 
-## *tgpu.comptime*
-
-`tgpu['~unstable'].comptime(func)` creates a version of `func` that instead of being transpiled to WGSL, will be called during the WGSL code generation.
-This can be used to precompute and inject a value into the final shader code.
-
-```ts twoslash
-import tgpu, { d } from 'typegpu';
-
-// ---cut---
-const color = tgpu['~unstable']
-  .comptime((int: number) => {
-    const r = (int >> 16) & 0xff;
-    const g = (int >> 8) & 0xff;
-    const b = int & 0xff;
-    return d.vec3f(r / 255, g / 255, b / 255);
-  });
-
-const material = tgpu.fn([d.vec3f], d.vec3f)((diffuse) => {
-  'use gpu';
-  const albedo = color(0xff00ff);
-  return albedo.mul(diffuse);
-});
-
-const shader = tgpu.resolve([material]);
-// fn material(diffuse: vec3f) -> vec3f {
-//   var albedo = vec3f(1, 0, 1);
-//   return (albedo * diffuse);
-// }
-```
-
-Note how the function passed into `comptime` doesn't have to be marked with
-`'use gpu'` and can use `Math`. That's because the function doesn't execute on the GPU, it gets
-executed before the shader code gets sent to the GPU.
-
 ## *tgpu.rawCodeSnippet*
 
 When working on top of some existing shader code, sometimes you may know for certain that some variable will be already defined and should be accessible in the code. 
@@ -232,7 +198,7 @@ import tgpu, { d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const callCountMutable = root.createMutable(d.u32, 0);
-const compute = root['~unstable'].createGuardedComputePipeline(() => {
+const compute = root.createGuardedComputePipeline(() => {
   'use gpu';
   callCountMutable.$ += 1;
   console.log('Call number', callCountMutable.$);
@@ -269,7 +235,7 @@ const root = await tgpu.init({
 
 /* vertex shader */
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: { pos: d.builtin.position },
   out: d.vec4f,
 })(({ pos }) => {
@@ -296,8 +262,64 @@ Other supported `console` functionalities include `console.debug`, `console.info
 
 There are some limitations (some of which we intend to alleviate in the future):
 
-- `console.log` only works when used in TGSL, when calling or resolving a TypeGPU pipeline.
+- `console.log` only works when used in TypeGPU functions that are transitively called in a TypeGPU pipeline.
 Otherwise, for example when using `tgpu.resolve` on a WGSL template, logs are ignored.
 - `console.log` only works in fragment and compute shaders.
 This is due to a [WebGPU limitation](https://www.w3.org/TR/WGSL/#address-space) that does not allow modifying buffers during the vertex shader stage.
 - `console.log` currently does not support template literals (but you can use [string substitutions](https://developer.mozilla.org/en-US/docs/Web/API/console#using_string_substitutions), or just pass multiple arguments instead).
+
+## *for...of...* loops
+
+TypeGPU supports `for...of...` loops in shader functions. The only constraints are that the loop variable must be declared with `const` and the iterable must be stored in a variable.
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const processNeighbor = (cell: d.v2i) => {};
+
+// ---cut---
+const processNeighbors = (cell: d.v2i) => {
+  'use gpu';
+
+  const offsets = [
+    d.vec2i(0, 1),
+    d.vec2i(0, -1),
+    d.vec2i(1, 0),
+    d.vec2i(-1, 0),
+  ];
+
+  for (const offset of offsets) {
+    processNeighbor(cell.add(offset));
+  }
+};
+```
+
+## *tgpu.unroll*
+
+For code with small, fixed iteration counts, you can use `tgpu.unroll` to unroll loops at compile time. This eliminates branch prediction overhead and can significantly improve performance.
+
+### Usage
+
+Wrap your iterable with `tgpu.unroll()`:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const processNeighbor = (cell: d.v2i) => {};
+
+// ---cut---
+const processNeighbors = (cell: d.v2i) => {
+  'use gpu';
+
+  for (const dy of tgpu.unroll([-1, 0, 1])) {
+    for (const dx of tgpu.unroll([-1, 0, 1])) {
+      processNeighbor(cell.add(d.vec2i(dx, dy)));
+    }
+  }
+};
+```
+
+:::note
+- There are no constraints on how large a loop can be for unrolling. We will always try to unroll it, and if we can't, you'll receive an error.
+- You cannot use `continue` or `break` inside loop that you intend to unroll later.
+:::

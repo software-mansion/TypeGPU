@@ -50,10 +50,8 @@ export function vertexLayout<TData extends WgslArray | Disarray>(
   return new TgpuVertexLayoutImpl(schemaForCount, stepMode);
 }
 
-export function isVertexLayout<T extends TgpuVertexLayout>(
-  value: unknown | T,
-): value is T {
-  return (value as T)?.resourceType === 'vertex-layout';
+export function isVertexLayout(value: unknown): value is TgpuVertexLayout {
+  return (value as TgpuVertexLayout)?.resourceType === 'vertex-layout';
 }
 
 // --------------
@@ -89,7 +87,7 @@ function dataToContainedAttribs<
   if (isWgslStruct(data)) {
     let memberOffset = offset;
 
-    const propTypes = data.propTypes as Record<string, BaseData>;
+    const propTypes = data.propTypes;
     return Object.fromEntries(
       Object.entries(propTypes).map(([key, value]) => {
         memberOffset = roundUp(memberOffset, alignmentOf(value));
@@ -112,7 +110,7 @@ function dataToContainedAttribs<
   if (isUnstruct(data)) {
     let memberOffset = offset;
 
-    const propTypes = data.propTypes as Record<string, BaseData>;
+    const propTypes = data.propTypes;
     return Object.fromEntries(
       Object.entries(propTypes).map(([key, value]) => {
         memberOffset = roundUp(memberOffset, customAlignmentOf(value));
@@ -138,7 +136,7 @@ function dataToContainedAttribs<
         _layout: layout, // hidden property, used to determine which buffers to apply when executing the pipeline
         format: data.type as VertexFormat,
         offset,
-        // biome-ignore lint/suspicious/noExplicitAny: <too many type shenanigans>
+        // oxlint-disable-next-line typescript/no-explicit-any -- too many type shenanigans
       } satisfies TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib as any;
     }
 
@@ -151,7 +149,7 @@ function dataToContainedAttribs<
         _layout: layout, // hidden property, used to determine which buffers to apply when executing the pipeline
         format,
         offset,
-        // biome-ignore lint/suspicious/noExplicitAny: <too many type shenanigans>
+        // oxlint-disable-next-line typescript/no-explicit-any -- too many type shenanigans
       } satisfies TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib as any;
     }
   }
@@ -226,13 +224,11 @@ class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
     return {
       arrayStride: this.stride,
       stepMode: this.stepMode,
-      attributes: [
-        ...Object.entries(this.attrib).map(([key, attrib]) => ({
-          format: (attrib as TgpuVertexAttrib).format,
-          offset: (attrib as TgpuVertexAttrib).offset,
-          shaderLocation: this._customLocationMap[key],
-        })),
-      ] as GPUVertexAttribute[],
+      attributes: Object.entries(this.attrib).map(([key, attrib]) => ({
+        format: (attrib as TgpuVertexAttrib).format,
+        offset: (attrib as TgpuVertexAttrib).offset,
+        shaderLocation: this._customLocationMap[key],
+      })) as GPUVertexAttribute[],
     };
   }
 

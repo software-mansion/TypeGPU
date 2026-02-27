@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import tgpu, { d } from '../../src/index.ts';
+import tgpu, { d } from '../../src/index.js';
 import { it } from '../utils/extendedIt.ts';
 
 describe('wgslGenerator', () => {
@@ -125,6 +125,20 @@ describe('wgslGenerator', () => {
         var v1 = vec4f(0.5);
         var v2 = vec3f(6, 3, 2);
         var v3 = vec2f(0.25);
+      }"
+    `);
+  });
+
+  it('resolves mod infix operator', () => {
+    const testFn = tgpu.fn([])(() => {
+      const v1 = d.vec4f(11).mod(2);
+      const v2 = d.vec3f(13.5).mod(d.vec3f(1, 2, 10));
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "fn testFn() {
+        var v1 = vec4f(1);
+        var v2 = vec3f(0.5, 1.5, 3.5);
       }"
     `);
   });

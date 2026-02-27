@@ -60,7 +60,7 @@ function deepFreeze<T extends object>(object: T): T {
 
   // Freeze properties before freezing self
   for (const name of propNames) {
-    // biome-ignore lint/suspicious/noExplicitAny: chill TypeScript
+    // oxlint-disable-next-line typescript/no-explicit-any -- chill TypeScript
     const value = (object as any)[name];
 
     if ((value && typeof value === 'object') || typeof value === 'function') {

@@ -79,7 +79,7 @@ export type TgpuBufferShorthand<TData extends BaseData> =
   | TgpuUniform<TData>;
 
 export function isBufferShorthand<TData extends BaseData>(
-  value: unknown | TgpuBufferShorthand<TData>,
+  value: unknown,
 ): value is TgpuBufferShorthand<TData> {
   return value instanceof TgpuBufferShorthandImpl;
 }
@@ -103,7 +103,7 @@ export class TgpuBufferShorthandImpl<
       & (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag),
   ) {
     this[$getNameForward] = buffer;
-    // biome-ignore lint/suspicious/noExplicitAny: too complex a type
+    // oxlint-disable-next-line typescript/no-explicit-any -- too complex a type
     this.#usage = (this.buffer as any).as(this.resourceType);
   }
 

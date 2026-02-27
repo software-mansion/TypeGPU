@@ -25,17 +25,17 @@ const knownAlignmentMap: Record<string, number> = {
   vec2h: 4,
   vec2i: 8,
   vec2u: 8,
-  vec2b: 8,
+  'vec2<bool>': 8,
   vec3f: 16,
   vec3h: 8,
   vec3i: 16,
   vec3u: 16,
-  vec3b: 16,
+  'vec3<bool>': 16,
   vec4f: 16,
   vec4h: 8,
   vec4i: 16,
   vec4u: 16,
-  vec4b: 16,
+  'vec4<bool>': 16,
   mat2x2f: 8,
   mat3x3f: 16,
   mat4x4f: 16,
@@ -50,7 +50,7 @@ function computeAlignment(data: object): number {
   }
 
   if (isWgslStruct(data)) {
-    return Object.values(data.propTypes as Record<string, BaseData>)
+    return Object.values(data.propTypes)
       .map(alignmentOf)
       .reduce((a, b) => (a > b ? a : b));
   }
@@ -61,8 +61,7 @@ function computeAlignment(data: object): number {
 
   if (isUnstruct(data)) {
     // A loose struct is aligned to its first property.
-    const firstProp =
-      Object.values(data.propTypes as Record<string, BaseData>)[0];
+    const firstProp = Object.values(data.propTypes)[0];
     return firstProp ? (getCustomAlignment(firstProp) ?? 1) : 1;
   }
 
@@ -86,8 +85,7 @@ function computeAlignment(data: object): number {
 function computeCustomAlignment(data: BaseData): number {
   if (isUnstruct(data)) {
     // A loose struct is aligned to its first property.
-    const firstProp =
-      Object.values(data.propTypes as Record<string, BaseData>)[0];
+    const firstProp = Object.values(data.propTypes)[0];
     return firstProp ? customAlignmentOf(firstProp) : 1;
   }
 

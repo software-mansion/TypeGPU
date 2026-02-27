@@ -4,8 +4,10 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro check && astro build",
+    "transform-overloads": "find . -type f -name '*.tsnotover.ts' -delete && node scripts/transform-overloads.ts",
+    "dev": "pnpm run transform-overloads && astro dev",
+    "build": "pnpm run transform-overloads && astro check && astro build",
+    "test:types": "astro check",
     "preview": "astro preview",
     "astro": "astro"
   },
@@ -28,6 +30,7 @@
     "@typegpu/color": "workspace:*",
     "@typegpu/geometry": "workspace:*",
     "@typegpu/noise": "workspace:*",
+    "@typegpu/concurrent-scan": "workspace:*",
     "@typegpu/three": "workspace:*",
     "@typegpu/sdf": "workspace:*",
     "three": "catalog:example",
@@ -76,6 +79,7 @@
     "@webgpu/types": "catalog:types",
     "astro-vtbot": "^2.1.10",
     "autoprefixer": "^10.4.21",
+    "magic-string": "^0.30.21",
     "tailwindcss": "^4.1.11",
     "tailwindcss-motion": "^1.1.1",
     "vite-imagetools": "catalog:frontend",

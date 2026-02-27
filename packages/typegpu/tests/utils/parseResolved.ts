@@ -11,7 +11,7 @@ import type { Snippet } from '../../src/data/snippet.ts';
 import { $internal } from '../../src/shared/symbols.ts';
 import { CodegenState } from '../../src/types.ts';
 
-function extractSnippetFromFn(cb: () => unknown): Snippet {
+export function extractSnippetFromFn(cb: () => unknown): Snippet {
   const ctx = new ResolutionCtxImpl({
     namespace: namespace({ names: 'strict' }),
   });

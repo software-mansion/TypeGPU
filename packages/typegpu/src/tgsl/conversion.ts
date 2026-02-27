@@ -275,7 +275,7 @@ function applyActionToSnippet(
 
 export function unify<T extends (BaseData | UnknownData)[] | []>(
   inTypes: T,
-  restrictTo?: BaseData[] | undefined,
+  restrictTo?: BaseData[],
 ): { [K in keyof T]: BaseData } | undefined {
   if (inTypes.some((type) => type === UnknownData)) {
     return undefined;
@@ -294,7 +294,7 @@ export function unify<T extends (BaseData | UnknownData)[] | []>(
 export function convertToCommonType<T extends Snippet[]>(
   ctx: ResolutionCtx,
   values: T,
-  restrictTo?: BaseData[] | undefined,
+  restrictTo?: BaseData[],
   verbose = true,
 ): T | undefined {
   const types = values.map((value) => value.dataType);

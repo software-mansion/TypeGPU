@@ -11,8 +11,8 @@ interface SimulationResult<T> {
   value: T;
 
   buffers: Map<TgpuBuffer<BaseData>, unknown>;
-  privateVars: Map<TgpuVar<'private', BaseData>, unknown>[][][];
-  workgroupVars: Map<TgpuVar<'workgroup', BaseData>, unknown>[][][];
+  privateVars: Map<TgpuVar<'private'>, unknown>[][][];
+  workgroupVars: Map<TgpuVar<'workgroup'>, unknown>[][][];
 }
 
 /**
@@ -87,16 +87,16 @@ export function simulate<T>(callback: () => T): SimulationResult<T> {
             const wj = Math.floor(j / workgroupSize[1]);
             const wk = Math.floor(k / workgroupSize[2]);
             return new SimulationState(buffers, {
-              // biome-ignore lint/style/noNonNullAssertion: it's there, trust me
+              // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there, trust me
               private: privateVars[i]![j]![k]!,
-              // biome-ignore lint/style/noNonNullAssertion: it's there, trust me
+              // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there, trust me
               workgroup: workgroupVars[wi]![wj]![wk]!,
             });
           }),
       ),
   );
 
-  // biome-ignore lint/style/noNonNullAssertion: it's there, trust me
+  // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there, trust me
   ctx.pushMode(simStates[0]![0]![0]!);
   try {
     const value = provideCtx(ctx, callback);

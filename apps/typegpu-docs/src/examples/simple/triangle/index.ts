@@ -8,7 +8,7 @@ const getGradientColor = tgpu.fn([d.f32], d.vec4f) /* wgsl */`(ratio) {
 }
 `.$uses({ purple, blue });
 
-const mainVertex = tgpu['~unstable'].vertexFn({
+const mainVertex = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { outPos: d.builtin.position, uv: d.vec2f },
 }) /* wgsl */`{
@@ -27,7 +27,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   return Out(vec4f(pos[in.vertexIndex], 0.0, 1.0), uv[in.vertexIndex]);
 }`;
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 }) /* wgsl */`{
@@ -37,25 +37,17 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
 
 const root = await tgpu.init();
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
-const pipeline = root['~unstable']
-  .createRenderPipeline({
-    vertex: mainVertex,
-    fragment: mainFragment,
-    targets: { format: presentationFormat },
-  });
+const pipeline = root.createRenderPipeline({
+  vertex: mainVertex,
+  fragment: mainFragment,
+});
 
 setTimeout(() => {
   pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 }, 100);
 

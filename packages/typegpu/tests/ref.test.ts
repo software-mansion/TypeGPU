@@ -1,4 +1,4 @@
-import tgpu, { d } from '../src/index.ts';
+import tgpu, { d } from '../src/index.js';
 import { describe, expect } from 'vitest';
 import { it } from './utils/extendedIt.ts';
 
@@ -292,7 +292,6 @@ describe('d.ref', () => {
 
     const main = () => {
       'use gpu';
-      // biome-ignore lint/style/noNonNullAssertion: it's there
       const pos = layout.$.positions[0]!;
       advance(d.ref(pos));
       d.ref(pos);

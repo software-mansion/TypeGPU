@@ -50,9 +50,7 @@ describe('caustics example', () => {
       }
 
       fn randSeed3(seed: vec3f) {
-        {
-          seed3(seed);
-        }
+        seed3(seed);
       }
 
       fn sample_1() -> f32 {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
 import * as std from '../src/std/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu from '../src/index.js';
 
 describe('indents', () => {
   it('should indent sanely', () => {
@@ -336,7 +336,7 @@ describe('indents', () => {
       sampler: { sampler: 'filtering', multisampled: true },
     });
 
-    const someVertex = tgpu['~unstable'].vertexFn({
+    const someVertex = tgpu.vertexFn({
       in: {
         vertexIndex: d.builtin.vertexIndex,
         position: d.vec4f,

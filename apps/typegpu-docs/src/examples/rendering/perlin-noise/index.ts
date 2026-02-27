@@ -1,13 +1,10 @@
-import tgpu, { common, d } from 'typegpu';
 import { perlin3d } from '@typegpu/noise';
+import tgpu, { common, d } from 'typegpu';
 import { abs, mix, mul, pow, sign, tanh } from 'typegpu/std';
+import { defineControls } from '../../common/defineControls.ts';
 
 /** The depth of the perlin noise (in time), after which the pattern loops around */
 const DEPTH = 10;
-
-const gridSizeAccess = tgpu['~unstable'].accessor(d.f32);
-const timeAccess = tgpu['~unstable'].accessor(d.f32);
-const sharpnessAccess = tgpu['~unstable'].accessor(d.f32);
 
 const exponentialSharpen = (n: number, sharpness: number): number => {
   'use gpu';
@@ -19,30 +16,6 @@ const tanhSharpen = (n: number, sharpness: number): number => {
   return tanh(n * (1 + sharpness * 10));
 };
 
-const sharpenFnSlot = tgpu.slot<(n: number, sharpness: number) => number>(
-  exponentialSharpen,
-);
-
-const mainFragment = tgpu['~unstable'].fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-})((input) => {
-  const uv = mul(gridSizeAccess.$, input.uv);
-
-  const n = perlin3d.sample(d.vec3f(uv, timeAccess.$));
-
-  // Apply sharpening function
-  const sharp = sharpenFnSlot.$(n, sharpnessAccess.$);
-
-  // Map to 0-1 range
-  const n01 = sharp * 0.5 + 0.5;
-
-  // Gradient map
-  const dark = d.vec3f(0, 0.2, 1);
-  const light = d.vec3f(1, 0.3, 0.5);
-  return d.vec4f(mix(dark, light, n01), 1);
-});
-
 // Configuring a dynamic (meaning it's size can change) cache
 // for perlin noise gradients.
 const perlinCacheConfig = perlin3d.dynamicCacheConfig();
@@ -51,40 +24,45 @@ const perlinCacheConfig = perlin3d.dynamicCacheConfig();
 const dynamicLayout = tgpu.bindGroupLayout({ ...perlinCacheConfig.layout });
 
 const root = await tgpu.init();
-const device = root.device;
+
+const gridSize = root.createUniform(d.f32);
+const time = root.createUniform(d.f32, 0);
+const sharpness = root.createUniform(d.f32, 0.1);
 
 // Instantiating the cache with an initial size.
 const perlinCache = perlinCacheConfig.instance(root, d.vec3u(4, 4, DEPTH));
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const gridSize = root.createUniform(d.f32);
-const time = root.createUniform(d.f32, 0);
-const sharpness = root.createUniform(d.f32, 0.1);
+const createRenderPipeline = (
+  sharpenFn: (n: number, sharpness: number) => number,
+) =>
+  root
+    .pipe(perlinCacheConfig.inject(dynamicLayout.$))
+    .createRenderPipeline({
+      vertex: common.fullScreenTriangle,
+      fragment: ({ uv }) => {
+        'use gpu';
+        const suv = mul(gridSize.$, uv);
+        const n = perlin3d.sample(d.vec3f(suv, time.$));
 
-const renderPipelineBase = root['~unstable']
-  .with(gridSizeAccess, gridSize)
-  .with(timeAccess, time)
-  .with(sharpnessAccess, sharpness)
-  .pipe(perlinCacheConfig.inject(dynamicLayout.$));
+        // Apply sharpening function
+        const sharp = sharpenFn(n, sharpness.$);
+
+        // Map to 0-1 range
+        const n01 = sharp * 0.5 + 0.5;
+
+        // Gradient map
+        const dark = d.vec3f(0, 0.2, 1);
+        const light = d.vec3f(1, 0.3, 0.5);
+        return d.vec4f(mix(dark, light, n01), 1);
+      },
+    });
 
 const renderPipelines = {
-  exponential: renderPipelineBase
-    .with(sharpenFnSlot, exponentialSharpen)
-    .createRenderPipeline({
-      vertex: common.fullScreenTriangle,
-      fragment: mainFragment,
-      targets: { format: presentationFormat },
-    }),
-  tanh: renderPipelineBase
-    .with(sharpenFnSlot, tanhSharpen)
-    .createRenderPipeline({
-      vertex: common.fullScreenTriangle,
-      fragment: mainFragment,
-      targets: { format: presentationFormat },
-    }),
+  exponential: createRenderPipeline(exponentialSharpen),
+  tanh: createRenderPipeline(tanhSharpen),
 };
 
 let activeSharpenFn: 'exponential' | 'tanh' = 'exponential';
@@ -101,11 +79,7 @@ function draw(timestamp: number) {
 
   renderPipelines[activeSharpenFn]
     .with(bindGroup)
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   requestAnimationFrame(draw);
@@ -113,12 +87,12 @@ function draw(timestamp: number) {
 
 requestAnimationFrame(draw);
 
-export const controls = {
+export const controls = defineControls({
   'grid size': {
     initial: '4',
     options: [1, 2, 4, 8, 16, 32, 64, 128, 256].map((x) => x.toString()),
     onSelectChange: (value: string) => {
-      const iSize = Number.parseInt(value);
+      const iSize = Number.parseInt(value, 10);
       perlinCache.size = d.vec3u(iSize, iSize, DEPTH);
       gridSize.write(iSize);
       bindGroup = root.createBindGroup(dynamicLayout, perlinCache.bindings);
@@ -134,11 +108,11 @@ export const controls = {
   'sharpening function': {
     initial: 'exponential',
     options: ['exponential', 'tanh'],
-    onSelectChange: (value: 'exponential' | 'tanh') => {
+    onSelectChange: (value) => {
       activeSharpenFn = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   isRunning = false;

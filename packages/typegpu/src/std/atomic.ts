@@ -47,7 +47,7 @@ export const atomicLoad = dualImpl<<T extends AnyAtomic>(a: T) => number>({
   codegenImpl: (_ctx, [a]) => stitch`atomicLoad(&${a})`,
 });
 
-const atomicActionSignature = (a: BaseData, param: BaseData) => {
+const atomicActionSignature = (a: BaseData) => {
   if (!isAtomic(a)) {
     throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
   }
@@ -57,7 +57,7 @@ const atomicActionSignature = (a: BaseData, param: BaseData) => {
   };
 };
 
-const atomicOpSignature = (a: BaseData, param: BaseData) => {
+const atomicOpSignature = (a: BaseData) => {
   if (!isAtomic(a)) {
     throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
   }

@@ -226,7 +226,7 @@ describe('ascii filter example', () => {
         let charValue = characterFn(n, p);
         var resultColor = vec3f(1);
         if ((displayMode == 0u)) {
-          resultColor = (color * charValue).xyz;
+          resultColor = (color * charValue).rgb;
         }
         if ((displayMode == 1u)) {
           resultColor = vec3f((gray * charValue));

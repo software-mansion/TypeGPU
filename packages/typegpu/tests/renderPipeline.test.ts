@@ -1,6 +1,6 @@
-/** biome-ignore-all lint/style/noNonNullAssertion: they're useful */
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { matchUpVaryingLocations } from '../src/core/pipeline/renderPipeline.ts';
+import type { ExperimentalTgpuRoot } from '../src/core/root/rootTypes.ts';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
 import tgpu, {
   common,
@@ -9,25 +9,25 @@ import tgpu, {
   type TgpuFragmentFnShell,
   type TgpuRenderPipeline,
   type TgpuVertexFnShell,
-} from '../src/index.ts';
+} from '../src/index.js';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
 
 describe('root.withVertex(...).withFragment(...)', () => {
-  const vert = tgpu['~unstable'].vertexFn({
+  const vert = tgpu.vertexFn({
     out: { a: d.vec3f, b: d.vec2f },
   })`{ return Out(); }`;
-  const vertWithBuiltin = tgpu['~unstable'].vertexFn({
+  const vertWithBuiltin = tgpu.vertexFn({
     out: { a: d.vec3f, b: d.vec2f, pos: d.builtin.position },
   })`{ return Out(); }`;
 
   it('allows fragment functions to use a subset of the vertex output', ({ root }) => {
-    const emptyFragment = tgpu['~unstable'].fragmentFn({ in: {}, out: {} })`{}`;
-    const emptyFragmentWithBuiltin = tgpu['~unstable'].fragmentFn({
+    const emptyFragment = tgpu.fragmentFn({ in: {}, out: {} })`{}`;
+    const emptyFragmentWithBuiltin = tgpu.fragmentFn({
       in: { pos: d.builtin.frontFacing },
       out: {},
     })`{}`;
-    const fullFragment = tgpu['~unstable'].fragmentFn({
+    const fullFragment = tgpu.fragmentFn({
       in: { a: d.vec3f, b: d.vec2f },
       out: d.vec4f,
     })`{ return vec4f(); }`;
@@ -71,7 +71,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
   });
 
   it('rejects fragment functions that use non-existent vertex output', ({ root }) => {
-    const fragment = tgpu['~unstable'].fragmentFn({
+    const fragment = tgpu.fragmentFn({
       in: { a: d.vec3f, c: d.f32 },
       out: {},
     })('');
@@ -81,7 +81,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
   });
 
   it('rejects fragment functions that use mismatched vertex output data types', ({ root }) => {
-    const fragment = tgpu['~unstable'].fragmentFn({
+    const fragment = tgpu.fragmentFn({
       in: { a: d.vec3f, b: d.f32 },
       out: {},
     })('');
@@ -93,11 +93,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
   it('throws an error if bind groups are missing', ({ root }) => {
     const layout = tgpu.bindGroupLayout({ alpha: { uniform: d.f32 } });
 
-    const vertexFn = tgpu['~unstable']
+    const vertexFn = tgpu
       .vertexFn({ out: { pos: d.builtin.position } })`{ layout.$.alpha; }`
       .$uses({ layout });
 
-    const fragmentFn = tgpu['~unstable'].fragmentFn({
+    const fragmentFn = tgpu.fragmentFn({
       out: { out: d.vec4f },
     })`{}`;
 
@@ -105,7 +105,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
       .withVertex(vertexFn, {})
       .withFragment(fragmentFn, { out: { format: 'rgba8unorm' } })
       .createPipeline()
-      // biome-ignore lint/suspicious/noExplicitAny: <not testing color attachment at this time>
+      // oxlint-disable-next-line typescript/no-explicit-any -- not testing color attachment at this time
       .withColorAttachment({ out: {} } as any);
 
     expect(() => pipeline.draw(6)).toThrowError(
@@ -119,23 +119,19 @@ describe('root.withVertex(...).withFragment(...)', () => {
 
   it('allows to omit input in entry function shell', () => {
     expectTypeOf(
-      tgpu['~unstable'].vertexFn({ in: {}, out: { pos: d.builtin.position } }),
-      // biome-ignore lint/complexity/noBannedTypes: it's fine
+      tgpu.vertexFn({ in: {}, out: { pos: d.builtin.position } }),
     ).toEqualTypeOf<TgpuVertexFnShell<{}, { pos: d.BuiltinPosition }>>();
 
     expectTypeOf(
-      tgpu['~unstable'].vertexFn({ out: { pos: d.builtin.position } }),
-      // biome-ignore lint/complexity/noBannedTypes: it's fine
+      tgpu.vertexFn({ out: { pos: d.builtin.position } }),
     ).toEqualTypeOf<TgpuVertexFnShell<{}, { pos: d.BuiltinPosition }>>();
 
     expectTypeOf(
-      tgpu['~unstable'].fragmentFn({ in: {}, out: {} }),
-      // biome-ignore lint/complexity/noBannedTypes: it's fine
+      tgpu.fragmentFn({ in: {}, out: {} }),
     ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
 
     expectTypeOf(
-      tgpu['~unstable'].fragmentFn({ out: {} }),
-      // biome-ignore lint/complexity/noBannedTypes: it's fine
+      tgpu.fragmentFn({ out: {} }),
     ).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
   });
 
@@ -145,12 +141,12 @@ describe('root.withVertex(...).withFragment(...)', () => {
       d.vec2f(3, -1),
       d.vec2f(-1, 3),
     ]);
-    const vertexMain = tgpu['~unstable'].vertexFn({
+    const vertexMain = tgpu.vertexFn({
       in: { vid: d.builtin.vertexIndex },
       out: { pos: d.builtin.position },
     })(({ vid }) => ({ pos: d.vec4f(vertices.$[vid]!, 0, 1) }));
 
-    const fragmentMain = tgpu['~unstable'].fragmentFn({
+    const fragmentMain = tgpu.fragmentFn({
       out: { color: d.vec4f, depth: d.builtin.fragDepth },
     })(() => ({ color: d.vec4f(1, 0, 0, 1), depth: 0.5 }));
 
@@ -185,12 +181,12 @@ describe('root.withVertex(...).withFragment(...)', () => {
   });
 
   it('type checks passed bind groups', ({ root }) => {
-    const vertexMain = tgpu['~unstable'].vertexFn({
+    const vertexMain = tgpu.vertexFn({
       out: { bar: d.location(0, d.vec3f) },
     })(() => ({
       bar: d.vec3f(),
     }));
-    const fragmentMain = tgpu['~unstable'].fragmentFn({
+    const fragmentMain = tgpu.fragmentFn({
       in: { bar: d.vec3f },
       out: d.vec4f,
     })(() => d.vec4f());
@@ -216,10 +212,10 @@ describe('root.withVertex(...).withFragment(...)', () => {
 
   describe('resolve', () => {
     it('allows resolving the entire shader code', ({ root }) => {
-      const pipeline = root['~unstable']
+      const pipeline = root
         .withVertex(vertWithBuiltin.$name('vertex'), {})
         .withFragment(
-          tgpu['~unstable'].fragmentFn({
+          tgpu.fragmentFn({
             in: { a: d.builtin.position },
             out: d.vec4f,
           })(() => d.vec4f(1, 2, 3, 4)).$name('fragment'),
@@ -247,7 +243,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
     });
 
     it('resolves with correct locations when pairing up a vertex and a fragment function', ({ root }) => {
-      const vertexMain = tgpu['~unstable'].vertexFn({
+      const vertexMain = tgpu.vertexFn({
         out: {
           foo: d.vec3f,
           bar: d.vec3f,
@@ -265,7 +261,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
         pos: d.vec4f(),
       }));
 
-      const fragmentMain = tgpu['~unstable'].fragmentFn({
+      const fragmentMain = tgpu.fragmentFn({
         in: {
           baz3: d.u32,
           bar: d.vec3f,
@@ -275,7 +271,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
         out: d.vec4f,
       })(() => d.vec4f());
 
-      const pipeline = root['~unstable']
+      const pipeline = root
         .withVertex(vertexMain, {})
         .withFragment(fragmentMain, { format: 'r8unorm' })
         .createPipeline();
@@ -308,7 +304,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
     });
 
     it('resolves with correct locations when pairing up a vertex and a fragment function with rawFn implementation', ({ root }) => {
-      const vertexMain = tgpu['~unstable'].vertexFn({
+      const vertexMain = tgpu.vertexFn({
         out: {
           foo: d.vec3f,
           bar: d.vec3f,
@@ -319,7 +315,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
         },
       })`{ return Out(); }`;
 
-      const fragmentMain = tgpu['~unstable'].fragmentFn({
+      const fragmentMain = tgpu.fragmentFn({
         in: {
           position: d.builtin.position,
           baz3: d.u32,
@@ -330,7 +326,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
         out: d.vec4f,
       })`{ return vec4f(); }`;
 
-      const pipeline = root['~unstable']
+      const pipeline = root
         .withVertex(vertexMain, {})
         .withFragment(fragmentMain, { format: 'r8unorm' })
         .createPipeline();
@@ -364,7 +360,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
         () => {},
       );
 
-      const vertexMain = tgpu['~unstable'].vertexFn({
+      const vertexMain = tgpu.vertexFn({
         out: {
           foo: d.vec3f,
           bar: d.location(0, d.vec3f),
@@ -374,14 +370,14 @@ describe('root.withVertex(...).withFragment(...)', () => {
         bar: d.vec3f(),
       }));
 
-      const fragmentMain = tgpu['~unstable'].fragmentFn({
+      const fragmentMain = tgpu.fragmentFn({
         in: {
           bar: d.location(1, d.vec3f),
         },
         out: d.vec4f,
       })(() => d.vec4f());
 
-      const pipeline = root['~unstable']
+      const pipeline = root
         .withVertex(vertexMain, {})
         .withFragment(fragmentMain, { format: 'r8unorm' })
         .createPipeline();
@@ -397,7 +393,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
         () => {},
       );
 
-      const vertexMain = tgpu['~unstable'].vertexFn({
+      const vertexMain = tgpu.vertexFn({
         out: {
           foo: d.vec3f,
           bar: d.location(0, d.vec3f),
@@ -407,14 +403,14 @@ describe('root.withVertex(...).withFragment(...)', () => {
         bar: d.vec3f(),
       }));
 
-      const fragmentMain = tgpu['~unstable'].fragmentFn({
+      const fragmentMain = tgpu.fragmentFn({
         in: {
           bar: d.location(0, d.vec3f),
         },
         out: d.vec4f,
       })(() => d.vec4f());
 
-      const pipeline = root['~unstable']
+      const pipeline = root
         .withVertex(vertexMain, {})
         .withFragment(fragmentMain, { format: 'r8unorm' })
         .createPipeline();
@@ -428,11 +424,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
 
   describe('Performance Callbacks', () => {
     it('should add performance callback with automatic query set', ({ root }) => {
-      const vertexFn = tgpu['~unstable'].vertexFn({
+      const vertexFn = tgpu.vertexFn({
         out: { pos: d.builtin.position },
       })('');
 
-      const fragmentFn = tgpu['~unstable'].fragmentFn({
+      const fragmentFn = tgpu.fragmentFn({
         out: { color: d.vec4f },
       })('');
 
@@ -457,11 +453,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
     });
 
     it('should create automatic query set when adding performance callback', ({ root, device }) => {
-      const vertexFn = tgpu['~unstable'].vertexFn({
+      const vertexFn = tgpu.vertexFn({
         out: { pos: d.builtin.position },
       })('');
 
-      const fragmentFn = tgpu['~unstable'].fragmentFn({
+      const fragmentFn = tgpu.fragmentFn({
         out: { color: d.vec4f },
       })('');
 
@@ -495,11 +491,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
     });
 
     it('should replace previous performance callback', ({ root }) => {
-      const vertexFn = tgpu['~unstable'].vertexFn({
+      const vertexFn = tgpu.vertexFn({
         out: { pos: d.builtin.position },
       })('');
 
-      const fragmentFn = tgpu['~unstable'].fragmentFn({
+      const fragmentFn = tgpu.fragmentFn({
         out: { color: d.vec4f },
       })('');
 
@@ -528,11 +524,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
       //@ts-expect-error
       device.features = new Set();
 
-      const vertexFn = tgpu['~unstable'].vertexFn({
+      const vertexFn = tgpu.vertexFn({
         out: { pos: d.builtin.position },
       })('');
 
-      const fragmentFn = tgpu['~unstable'].fragmentFn({
+      const fragmentFn = tgpu.fragmentFn({
         out: { color: d.vec4f },
       })('');
 
@@ -553,11 +549,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
     });
 
     it("should not throw 'A color target was not provided to the shader'", ({ root, device }) => {
-      const vertexFn = tgpu['~unstable'].vertexFn({
+      const vertexFn = tgpu.vertexFn({
         out: { pos: d.builtin.position },
       })('');
 
-      const fragmentFn = tgpu['~unstable'].fragmentFn({
+      const fragmentFn = tgpu.fragmentFn({
         in: {},
         out: {
           fragColor: d.vec4f,
@@ -583,11 +579,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
 
   describe('Timestamp Writes', () => {
     it('should add timestamp writes with custom query set', ({ root }) => {
-      const vertexFn = tgpu['~unstable'].vertexFn({
+      const vertexFn = tgpu.vertexFn({
         out: { pos: d.builtin.position },
       })('');
 
-      const fragmentFn = tgpu['~unstable'].fragmentFn({
+      const fragmentFn = tgpu.fragmentFn({
         out: { color: d.vec4f },
       })('');
 
@@ -615,11 +611,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
     });
 
     it('should add timestamp writes with raw GPU query set', ({ root, device }) => {
-      const vertexFn = tgpu['~unstable'].vertexFn({
+      const vertexFn = tgpu.vertexFn({
         out: { pos: d.builtin.position },
       })('');
 
-      const fragmentFn = tgpu['~unstable'].fragmentFn({
+      const fragmentFn = tgpu.fragmentFn({
         out: { color: d.vec4f },
       })('');
 
@@ -647,11 +643,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
     });
 
     it('should handle optional timestamp write indices', ({ root }) => {
-      const vertexFn = tgpu['~unstable'].vertexFn({
+      const vertexFn = tgpu.vertexFn({
         out: { pos: d.builtin.position },
       })('');
 
-      const fragmentFn = tgpu['~unstable'].fragmentFn({
+      const fragmentFn = tgpu.fragmentFn({
         out: { color: d.vec4f },
       })('');
 
@@ -707,11 +703,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
     });
 
     it('should setup timestamp writes in render pass descriptor', ({ root, commandEncoder }) => {
-      const vertexFn = tgpu['~unstable'].vertexFn({
+      const vertexFn = tgpu.vertexFn({
         out: { pos: d.builtin.position },
       })('');
 
-      const fragmentFn = tgpu['~unstable'].fragmentFn({
+      const fragmentFn = tgpu.fragmentFn({
         out: { color: d.vec4f },
       })('');
 
@@ -750,11 +746,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
   });
 
   it('should handle depth stencil attachments with timestamp writes', ({ root, commandEncoder }) => {
-    const vertexFn = tgpu['~unstable'].vertexFn({
+    const vertexFn = tgpu.vertexFn({
       out: { pos: d.builtin.position },
     })('');
 
-    const fragmentFn = tgpu['~unstable'].fragmentFn({
+    const fragmentFn = tgpu.fragmentFn({
       out: { color: d.vec4f },
     })('');
 
@@ -795,13 +791,13 @@ describe('root.withVertex(...).withFragment(...)', () => {
   });
 
   it('should handle stencil reference value correctly', ({ root, commandEncoder }) => {
-    const vertexFn = tgpu['~unstable']
+    const vertexFn = tgpu
       .vertexFn({
         out: { pos: d.builtin.position },
       })('')
       .$name('vertex');
 
-    const fragmentFn = tgpu['~unstable']
+    const fragmentFn = tgpu
       .fragmentFn({
         out: { color: d.vec4f },
       })('')
@@ -842,13 +838,13 @@ describe('root.withVertex(...).withFragment(...)', () => {
   });
 
   it('should onlly allow for drawIndexed with assigned index buffer', ({ root }) => {
-    const vertexFn = tgpu['~unstable']
+    const vertexFn = tgpu
       .vertexFn({
         out: { pos: d.builtin.position },
       })('')
       .$name('vertex');
 
-    const fragmentFn = tgpu['~unstable']
+    const fragmentFn = tgpu
       .fragmentFn({
         out: { color: d.vec4f },
       })('')
@@ -887,13 +883,13 @@ describe('root.withVertex(...).withFragment(...)', () => {
   });
 
   it('works when combining timestamp writes and index buffer', ({ root, device, commandEncoder }) => {
-    const vertexFn = tgpu['~unstable']
+    const vertexFn = tgpu
       .vertexFn({
         out: { pos: d.builtin.position },
       })('')
       .$name('vertex');
 
-    const fragmentFn = tgpu['~unstable']
+    const fragmentFn = tgpu
       .fragmentFn({
         out: { color: d.vec4f },
       })('')
@@ -959,13 +955,13 @@ describe('root.withVertex(...).withFragment(...)', () => {
   });
 
   it('should handle a combination of timestamp writes, index buffer, and performance callback', ({ root, device, commandEncoder }) => {
-    const vertexFn = tgpu['~unstable']
+    const vertexFn = tgpu
       .vertexFn({
         out: { pos: d.builtin.position },
       })('')
       .$name('vertex');
 
-    const fragmentFn = tgpu['~unstable']
+    const fragmentFn = tgpu
       .fragmentFn({
         out: { color: d.vec4f },
       })('')
@@ -1057,23 +1053,105 @@ describe('root.withVertex(...).withFragment(...)', () => {
       },
     });
   });
+
+  it('warns when buffer limits are exceeded', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
+      () => {},
+    );
+
+    const uniform1 = root.createUniform(d.u32);
+    const uniform2 = root.createUniform(d.u32);
+    const uniform3 = root.createUniform(d.u32);
+    const uniform4 = root.createUniform(d.u32);
+    const uniform5 = root.createUniform(d.u32);
+    const uniform6 = root.createUniform(d.u32);
+    const uniform7 = root.createUniform(d.u32);
+    const uniform8 = root.createUniform(d.u32);
+    const uniform9 = root.createUniform(d.u32);
+    const uniform10 = root.createUniform(d.u32);
+    const uniform11 = root.createUniform(d.u32);
+    const uniform12 = root.createUniform(d.u32);
+    const uniform13 = root.createUniform(d.u32);
+
+    const readonly1 = root.createReadonly(d.u32);
+    const readonly2 = root.createReadonly(d.u32);
+    const readonly3 = root.createReadonly(d.u32);
+    const readonly4 = root.createReadonly(d.u32);
+    const readonly5 = root.createReadonly(d.u32);
+    const readonly6 = root.createReadonly(d.u32);
+    const readonly7 = root.createReadonly(d.u32);
+    const readonly8 = root.createReadonly(d.u32);
+    const readonly9 = root.createReadonly(d.u32);
+
+    const vertexFn = tgpu.vertexFn({
+      out: { pos: d.builtin.position },
+    })('');
+
+    const fragmentFn = tgpu.fragmentFn({ out: d.vec4f })(() => {
+      let a = d.u32();
+      a = uniform1.$;
+      a = uniform2.$;
+      a = uniform3.$;
+      a = uniform4.$;
+      a = uniform5.$;
+      a = uniform6.$;
+      a = uniform7.$;
+      a = uniform8.$;
+      a = uniform9.$;
+      a = uniform10.$;
+      a = uniform11.$;
+      a = uniform12.$;
+      a = uniform13.$;
+      a = readonly1.$;
+      a = readonly2.$;
+      a = readonly3.$;
+      a = readonly4.$;
+      a = readonly5.$;
+      a = readonly6.$;
+      a = readonly7.$;
+      a = readonly8.$;
+      a = readonly9.$;
+
+      return d.vec4f();
+    });
+
+    const pipeline = root
+      .withVertex(vertexFn)
+      .withFragment(fragmentFn, { format: 'rgba8unorm' })
+      .createPipeline();
+
+    pipeline.withColorAttachment({
+      loadOp: 'load',
+      storeOp: 'store',
+      view: {} as unknown as GPUTextureView,
+    }).draw(3);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      `Total number of uniform buffers (13) exceeds maxUniformBuffersPerShaderStage (12). Consider:
+1. Grouping some of the uniforms into one using 'd.struct',
+2. Increasing the limit when requesting a device or creating a root.`,
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      `Total number of storage buffers (9) exceeds maxStorageBuffersPerShaderStage (8).`,
+    );
+  });
 });
 
 describe('root.createRenderPipeline', () => {
-  const vertex = tgpu['~unstable'].vertexFn({
+  const vertex = tgpu.vertexFn({
     out: { a: d.vec3f, b: d.vec2f },
   })`{ return Out(); }`;
-  const vertexWithBuiltin = tgpu['~unstable'].vertexFn({
+  const vertexWithBuiltin = tgpu.vertexFn({
     out: { a: d.vec3f, b: d.vec2f, pos: d.builtin.position },
   })`{ return Out(); }`;
 
   it('allows fragment functions to use a subset of the vertex output', ({ root }) => {
-    const emptyFragment = tgpu['~unstable'].fragmentFn({ in: {}, out: {} })`{}`;
-    const emptyFragmentWithBuiltin = tgpu['~unstable'].fragmentFn({
+    const emptyFragment = tgpu.fragmentFn({ in: {}, out: {} })`{}`;
+    const emptyFragmentWithBuiltin = tgpu.fragmentFn({
       in: { pos: d.builtin.frontFacing },
       out: {},
     })`{}`;
-    const fullFragment = tgpu['~unstable'].fragmentFn({
+    const fullFragment = tgpu.fragmentFn({
       in: { a: d.vec3f, b: d.vec2f },
       out: d.vec4f,
     })`{ return vec4f(); }`;
@@ -1237,6 +1315,7 @@ describe('root.createRenderPipeline', () => {
         'use gpu';
         return { $position: d.vec4f() };
       },
+      // @ts-expect-error: The prop is not in the object
       fragment: ({ prop }) => {
         'use gpu';
         const a = prop;
@@ -1725,7 +1804,7 @@ describe('matchUpVaryingLocations', () => {
 
 describe('TgpuRenderPipeline', () => {
   it('any pipeline is assignable to default type', ({ root }) => {
-    const pipeline = root['~unstable'].createRenderPipeline({
+    const pipeline = root.createRenderPipeline({
       vertex: common.fullScreenTriangle,
       fragment: () => {
         return d.vec4f(1);
@@ -1741,9 +1820,9 @@ describe('TgpuRenderPipeline', () => {
   });
 
   it('a "wider" pipeline is assignable to a "thinner" pipeline', ({ root }) => {
-    const pipeline = root['~unstable'].createRenderPipeline({
+    const pipeline = root.createRenderPipeline({
       vertex: common.fullScreenTriangle,
-      fragment: tgpu['~unstable'].fragmentFn({ out: { a: d.vec4f } })(() => {
+      fragment: tgpu.fragmentFn({ out: { a: d.vec4f } })(() => {
         return { a: d.vec4f(1) };
       }),
       targets: { a: { format: 'rgba8unorm' } },
@@ -1754,5 +1833,142 @@ describe('TgpuRenderPipeline', () => {
     };
 
     helper(pipeline);
+  });
+});
+
+describe('Render Bundles', () => {
+  const vertexFn = tgpu.vertexFn({
+    out: { pos: d.builtin.position },
+  })('');
+
+  const fragmentFn = tgpu.fragmentFn({
+    out: { color: d.vec4f },
+  })('');
+
+  function createPipeline(root: ExperimentalTgpuRoot) {
+    return root
+      .createRenderPipeline({
+        vertex: vertexFn,
+        fragment: fragmentFn,
+        targets: { color: { format: 'rgba8unorm' } },
+      })
+      .withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      });
+  }
+
+  it('routes draw calls through the bundle encoder', ({ root, renderBundleEncoder }) => {
+    const pipeline = createPipeline(root);
+    pipeline.with(renderBundleEncoder).draw(6);
+
+    const encoder = renderBundleEncoder as unknown as {
+      setPipeline: ReturnType<typeof vi.fn>;
+      draw: ReturnType<typeof vi.fn>;
+    };
+
+    expect(encoder.setPipeline).toHaveBeenCalledTimes(1);
+    expect(encoder.draw).toHaveBeenCalledWith(
+      6,
+      undefined,
+      undefined,
+      undefined,
+    );
+  });
+
+  it('skips redundant state application when same pipeline draws twice (dirty flag)', ({ root, renderBundleEncoder }) => {
+    const pipeline = createPipeline(root).with(renderBundleEncoder);
+
+    pipeline.draw(3);
+    pipeline.draw(6);
+
+    const encoder = renderBundleEncoder as unknown as {
+      setPipeline: ReturnType<typeof vi.fn>;
+      draw: ReturnType<typeof vi.fn>;
+    };
+
+    expect(encoder.setPipeline).toHaveBeenCalledTimes(1);
+    expect(encoder.draw).toHaveBeenCalledTimes(2);
+  });
+
+  it('re-applies state when a different pipeline draws on the same encoder', ({ root, renderBundleEncoder }) => {
+    const pipeline1 = createPipeline(root).with(renderBundleEncoder);
+    const pipeline2 = createPipeline(root).with(renderBundleEncoder);
+
+    pipeline1.draw(3);
+    pipeline2.draw(6);
+
+    const encoder = renderBundleEncoder as unknown as {
+      setPipeline: ReturnType<typeof vi.fn>;
+    };
+
+    expect(encoder.setPipeline).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws on missing bind groups when using bundle encoder', ({ root, renderBundleEncoder }) => {
+    const layout = tgpu.bindGroupLayout({ alpha: { uniform: d.f32 } });
+
+    const vertexWithLayout = tgpu
+      .vertexFn({ out: { pos: d.builtin.position } })`{ layout.$.alpha; }`
+      .$uses({ layout });
+
+    const pipeline = root
+      .createRenderPipeline({
+        vertex: vertexWithLayout,
+        fragment: fragmentFn,
+        targets: { color: { format: 'rgba8unorm' } },
+      })
+      .withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      });
+
+    expect(() => pipeline.with(renderBundleEncoder).draw(6)).toThrowError(
+      new MissingBindGroupsError([layout]),
+    );
+  });
+
+  it('sets index buffer when drawIndexed is called on bundle encoder', ({ root, renderBundleEncoder }) => {
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 6)).$usage('index');
+
+    const pipeline = createPipeline(root)
+      .withIndexBuffer(indexBuffer)
+      .with(renderBundleEncoder);
+
+    pipeline.drawIndexed(6);
+
+    const encoder = renderBundleEncoder as unknown as {
+      setPipeline: ReturnType<typeof vi.fn>;
+      setIndexBuffer: ReturnType<typeof vi.fn>;
+      drawIndexed: ReturnType<typeof vi.fn>;
+    };
+
+    expect(encoder.setPipeline).toHaveBeenCalled();
+    expect(encoder.setIndexBuffer).toHaveBeenCalled();
+    expect(encoder.drawIndexed).toHaveBeenCalledWith(
+      6,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    );
+  });
+
+  it('creates its own render pass when using external command encoder', ({ root, commandEncoder }) => {
+    const beginRenderPassSpy = vi.spyOn(commandEncoder, 'beginRenderPass');
+    const pipeline = createPipeline(root);
+    pipeline.with(commandEncoder).draw(3);
+
+    expect(beginRenderPassSpy).toHaveBeenCalled();
+    const pass = beginRenderPassSpy.mock.results[0]!.value;
+    expect(pass.setPipeline).toHaveBeenCalled();
+    expect(pass.draw).toHaveBeenCalledWith(3, undefined, undefined, undefined);
+    expect(pass.end).toHaveBeenCalled();
   });
 });

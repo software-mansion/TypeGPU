@@ -16,11 +16,7 @@ import type {
   Vec3u,
   WgslArray,
 } from '../../data/wgslTypes.ts';
-import {
-  invariant,
-  MissingBindGroupsError,
-  MissingVertexBuffersError,
-} from '../../errors.ts';
+import { invariant } from '../../errors.ts';
 import { WeakMemo } from '../../memo.ts';
 import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import type { Infer } from '../../shared/repr.ts';
@@ -70,6 +66,10 @@ import {
 } from '../pipeline/renderPipeline.ts';
 import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
 import {
+  applyBindGroups,
+  applyVertexBuffers,
+} from '../pipeline/applyPipelineState.ts';
+import {
   INTERNAL_createComparisonSampler,
   INTERNAL_createSampler,
   isComparisonSampler,
@@ -109,6 +109,7 @@ import type {
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
+  RenderBundleEncoderPass,
   RenderPass,
   TgpuGuardedComputePipeline,
   TgpuRoot,
@@ -241,7 +242,7 @@ class WithBindingImpl implements WithBinding {
 
   createRenderPipeline(
     descriptor: TgpuRenderPipeline.Descriptor,
-    // biome-ignore lint/suspicious/noExplicitAny: required to be compatible with overloads
+    // oxlint-disable-next-line typescript/no-explicit-any -- required to be compatible with overloads
   ): TgpuRenderPipeline<any> {
     return INTERNAL_createRenderPipeline({
       root: this._getRoot(),
@@ -355,7 +356,7 @@ class WithVertexImpl implements WithVertex {
       | 'n/a',
     targets?: AnyFragmentTargets | 'n/a',
     _mismatch?: unknown,
-  ): WithFragment<FragmentOutConstrained> {
+  ): WithFragment {
     invariant(typeof fragmentFn !== 'string', 'Just type mismatch validation');
     invariant(
       targets === undefined || typeof targets !== 'string',
@@ -371,7 +372,7 @@ class WithVertexImpl implements WithVertex {
 
   withPrimitive(
     primitive: TgpuPrimitiveState | undefined,
-  ): WithFragment<FragmentOutConstrained> {
+  ): WithFragment {
     return new WithVertexImpl(this.#root, this.#slotBindings, {
       ...this.#partialDescriptor,
       primitive,
@@ -380,7 +381,7 @@ class WithVertexImpl implements WithVertex {
 
   withDepthStencil(
     depthStencil: GPUDepthStencilState | undefined,
-  ): WithFragment<FragmentOutConstrained> {
+  ): WithFragment {
     return new WithVertexImpl(this.#root, this.#slotBindings, {
       ...this.#partialDescriptor,
       depthStencil,
@@ -389,7 +390,7 @@ class WithVertexImpl implements WithVertex {
 
   withMultisample(
     multisample: GPUMultisampleState | undefined,
-  ): WithFragment<FragmentOutConstrained> {
+  ): WithFragment {
     return new WithVertexImpl(this.#root, this.#slotBindings, {
       ...this.#partialDescriptor,
       multisample,
@@ -460,7 +461,7 @@ class WithFragmentImpl implements WithFragment {
  */
 class TgpuRootImpl extends WithBindingImpl
   implements TgpuRoot, ExperimentalTgpuRoot {
-  '~unstable': Omit<ExperimentalTgpuRoot, keyof TgpuRoot>;
+  '~unstable': TgpuRoot['~unstable'];
 
   private _unwrappedBindGroupLayouts = new WeakMemo(
     (key: TgpuBindGroupLayout) => key.unwrap(this),
@@ -519,7 +520,7 @@ class TgpuRootImpl extends WithBindingImpl
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuUniform<TData> {
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
-      // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
+      // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
       .$usage('uniform' as any);
 
     return new TgpuBufferShorthandImpl('uniform', buffer);
@@ -530,7 +531,7 @@ class TgpuRootImpl extends WithBindingImpl
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuMutable<TData> {
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
-      // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
+      // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
       .$usage('storage' as any);
 
     return new TgpuBufferShorthandImpl('mutable', buffer);
@@ -541,7 +542,7 @@ class TgpuRootImpl extends WithBindingImpl
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuReadonly<TData> {
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
-      // biome-ignore lint/suspicious/noExplicitAny: i'm sure it's fine
+      // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
       .$usage('storage' as any);
 
     return new TgpuBufferShorthandImpl('readonly', buffer);
@@ -608,7 +609,7 @@ class TgpuRootImpl extends WithBindingImpl
     >
   > {
     const texture = INTERNAL_createTexture(props, this);
-    // biome-ignore lint/suspicious/noExplicitAny: <too much type wrangling>
+    // oxlint-disable-next-line typescript/no-explicit-any -- too much type wrangling
     return texture as any;
   }
 
@@ -708,13 +709,9 @@ class TgpuRootImpl extends WithBindingImpl
     throw new Error(`Unknown resource type: ${resource}`);
   }
 
-  beginRenderPass(
-    descriptor: GPURenderPassDescriptor,
-    callback: (pass: RenderPass) => void,
-  ): void {
-    const commandEncoder = this.device.createCommandEncoder();
-    const pass = commandEncoder.beginRenderPass(descriptor);
-
+  private createDrawablePassProxy(
+    encoder: GPURenderPassEncoder | GPURenderBundleEncoder,
+  ): RenderBundleEncoderPass {
     const bindGroups = new Map<
       TgpuBindGroupLayout,
       TgpuBindGroup | GPUBindGroup
@@ -731,70 +728,101 @@ class TgpuRootImpl extends WithBindingImpl
     >();
 
     let currentPipeline: TgpuRenderPipeline | undefined;
+    let dirty = true;
 
-    const setupPassBeforeDraw = () => {
+    const applyPipelineState = () => {
       if (!currentPipeline) {
         throw new Error('Cannot draw without a call to pass.setPipeline');
       }
-
+      if (!dirty) {
+        return;
+      }
+      dirty = false;
       const { core, priors } = currentPipeline[$internal];
       const memo = core.unwrap();
+      encoder.setPipeline(memo.pipeline);
 
-      pass.setPipeline(memo.pipeline);
+      applyBindGroups(
+        encoder,
+        this,
+        memo.usedBindGroupLayouts,
+        memo.catchall,
+        (layout) =>
+          priors.bindGroupLayoutMap?.get(layout) ?? bindGroups.get(layout),
+      );
 
-      const missingBindGroups = new Set(memo.usedBindGroupLayouts);
-      memo.usedBindGroupLayouts.forEach((layout, idx) => {
-        if (memo.catchall && idx === memo.catchall[0]) {
-          // Catch-all
-          pass.setBindGroup(idx, this.unwrap(memo.catchall[1]));
-          missingBindGroups.delete(layout);
-        } else {
-          const bindGroup = priors.bindGroupLayoutMap?.get(layout) ??
-            bindGroups.get(layout);
-          if (bindGroup !== undefined) {
-            missingBindGroups.delete(layout);
-            if (isBindGroup(bindGroup)) {
-              pass.setBindGroup(idx, this.unwrap(bindGroup));
-            } else {
-              pass.setBindGroup(idx, bindGroup);
-            }
-          }
-        }
-      });
+      applyVertexBuffers(
+        encoder,
+        this,
+        memo.usedVertexLayouts,
+        (vertexLayout) => {
+          const priorBuffer = priors.vertexLayoutMap?.get(vertexLayout);
+          return priorBuffer
+            ? { buffer: priorBuffer, offset: undefined, size: undefined }
+            : vertexBuffers.get(vertexLayout);
+        },
+      );
+    };
 
-      const missingVertexLayouts = new Set<TgpuVertexLayout>();
-      memo.usedVertexLayouts.forEach((vertexLayout, idx) => {
-        const priorBuffer = priors.vertexLayoutMap?.get(vertexLayout);
-        const opts = priorBuffer
-          ? {
-            buffer: priorBuffer,
-            offset: undefined,
-            size: undefined,
-          }
-          : vertexBuffers.get(vertexLayout);
+    return {
+      setPipeline(pipeline) {
+        currentPipeline = pipeline;
+        dirty = true;
+      },
 
-        if (!opts || !opts.buffer) {
-          missingVertexLayouts.add(vertexLayout);
-        } else if (isBuffer(opts.buffer)) {
-          pass.setVertexBuffer(
-            idx,
-            this.unwrap(opts.buffer),
-            opts.offset,
-            opts.size,
+      setIndexBuffer: (buffer, indexFormat, offset, size) => {
+        if (isBuffer(buffer)) {
+          encoder.setIndexBuffer(
+            this.unwrap(buffer),
+            indexFormat,
+            offset,
+            size,
           );
         } else {
-          pass.setVertexBuffer(idx, opts.buffer, opts.offset, opts.size);
+          encoder.setIndexBuffer(buffer, indexFormat, offset, size);
         }
-      });
+      },
 
-      if (missingBindGroups.size > 0) {
-        throw new MissingBindGroupsError(missingBindGroups);
-      }
+      setVertexBuffer(vertexLayout, buffer, offset, size) {
+        vertexBuffers.set(vertexLayout, { buffer, offset, size });
+        dirty = true;
+      },
 
-      if (missingVertexLayouts.size > 0) {
-        throw new MissingVertexBuffersError(missingVertexLayouts);
-      }
+      setBindGroup(bindGroupLayout, bindGroup) {
+        bindGroups.set(bindGroupLayout, bindGroup);
+        dirty = true;
+      },
+
+      draw(vertexCount, instanceCount, firstVertex, firstInstance) {
+        applyPipelineState();
+        encoder.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+      },
+
+      drawIndexed(...args) {
+        applyPipelineState();
+        encoder.drawIndexed(...args);
+      },
+
+      drawIndirect(...args) {
+        applyPipelineState();
+        encoder.drawIndirect(...args);
+      },
+
+      drawIndexedIndirect(...args) {
+        applyPipelineState();
+        encoder.drawIndexedIndirect(...args);
+      },
     };
+  }
+
+  beginRenderPass(
+    descriptor: GPURenderPassDescriptor,
+    callback: (pass: RenderPass) => void,
+  ): void {
+    const commandEncoder = this.device.createCommandEncoder();
+    const pass = commandEncoder.beginRenderPass(descriptor);
+
+    const proxy = this.createDrawablePassProxy(pass);
 
     callback({
       setViewport(...args) {
@@ -818,49 +846,22 @@ class TgpuRootImpl extends WithBindingImpl
       executeBundles(...args) {
         pass.executeBundles(...args);
       },
-      setPipeline(pipeline) {
-        currentPipeline = pipeline;
-      },
-
-      setIndexBuffer: (buffer, indexFormat, offset, size) => {
-        if (isBuffer(buffer)) {
-          pass.setIndexBuffer(this.unwrap(buffer), indexFormat, offset, size);
-        } else {
-          pass.setIndexBuffer(buffer, indexFormat, offset, size);
-        }
-      },
-
-      setVertexBuffer(vertexLayout, buffer, offset, size) {
-        vertexBuffers.set(vertexLayout, { buffer, offset, size });
-      },
-
-      setBindGroup(bindGroupLayout, bindGroup) {
-        bindGroups.set(bindGroupLayout, bindGroup);
-      },
-
-      draw(vertexCount, instanceCount, firstVertex, firstInstance) {
-        setupPassBeforeDraw();
-        pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
-      },
-
-      drawIndexed(...args) {
-        setupPassBeforeDraw();
-        pass.drawIndexed(...args);
-      },
-
-      drawIndirect(...args) {
-        setupPassBeforeDraw();
-        pass.drawIndirect(...args);
-      },
-
-      drawIndexedIndirect(...args) {
-        setupPassBeforeDraw();
-        pass.drawIndexedIndirect(...args);
-      },
+      ...proxy,
     });
 
     pass.end();
     this.device.queue.submit([commandEncoder.finish()]);
+  }
+
+  beginRenderBundleEncoder(
+    descriptor: GPURenderBundleEncoderDescriptor,
+    callback: (pass: RenderBundleEncoderPass) => void,
+  ): GPURenderBundle {
+    const bundleEncoder = this.device.createRenderBundleEncoder(descriptor);
+
+    callback(this.createDrawablePassProxy(bundleEncoder));
+
+    return bundleEncoder.finish();
   }
 
   flush() {
@@ -879,7 +880,7 @@ export type InitOptions = {
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
   /**
-   * A custom shader code generator, used when resolving TGSL.
+   * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
   shaderGenerator?: ShaderGenerator | undefined;
@@ -894,7 +895,7 @@ export type InitFromDeviceOptions = {
   /** @default 'random' */
   unstable_names?: 'random' | 'strict' | undefined;
   /**
-   * A custom shader code generator, used when resolving TGSL.
+   * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
   shaderGenerator?: ShaderGenerator | undefined;

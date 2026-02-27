@@ -10,7 +10,7 @@ const bench = new Bench({
   name: 'discriminated union',
   time: 100,
   async setup() {
-    // biome-ignore lint/suspicious/noExplicitAny: making sure GC has no impact on the results
+    // oxlint-disable-next-line typescript/no-explicit-any -- making sure GC has no impact on the results
     (globalThis as any).gc();
   },
 });
@@ -43,15 +43,15 @@ bench
   .add(
     'string tags',
     () => {
-      let count = 0;
+      let _count = 0;
 
       for (const obj of stringTaggedObjs) {
         if (obj[$internal].type === 'aaa') {
-          count += 2;
+          _count += 2;
         } else if (obj[$internal].type === 'bbb') {
-          count += 3;
+          _count += 3;
         } else if (obj[$internal].type === 'ccc') {
-          count += 4;
+          _count += 4;
         }
       }
     },
@@ -59,7 +59,7 @@ bench
       beforeEach() {
         stringTaggedObjs = Array.from({ length: NUMBER_OF_OBJS }, () => ({
           [$internal]: {
-            // biome-ignore lint/style/noNonNullAssertion: in range
+            // oxlint-disable-next-line typescript/no-non-null-assertion
             type: STRING_TAGS[Math.floor(Math.random() * STRING_TAGS.length)]!,
           },
         }));
@@ -69,15 +69,15 @@ bench
   .add(
     'number tags',
     async () => {
-      let count = 0;
+      let _count = 0;
 
       for (const obj of numberTaggedObjs) {
         if (obj[$internal].type === NUMBER_TAG_CATALOG.aaa) {
-          count += 2;
+          _count += 2;
         } else if (obj[$internal].type === NUMBER_TAG_CATALOG.bbb) {
-          count += 3;
+          _count += 3;
         } else if (obj[$internal].type === NUMBER_TAG_CATALOG.ccc) {
-          count += 4;
+          _count += 4;
         }
       }
     },
@@ -85,7 +85,7 @@ bench
       beforeEach() {
         numberTaggedObjs = Array.from({ length: NUMBER_OF_OBJS }, () => ({
           [$internal]: {
-            // biome-ignore lint/style/noNonNullAssertion: in range
+            // oxlint-disable-next-line typescript/no-non-null-assertion
             type: NUMBER_TAGS[Math.floor(Math.random() * NUMBER_TAGS.length)]!,
           },
         }));
@@ -95,15 +95,15 @@ bench
   .add(
     'number tags (inlined catalog)',
     async () => {
-      let count = 0;
+      let _count = 0;
 
       for (const obj of numberTaggedObjs) {
         if (obj[$internal].type === 0) {
-          count += 2;
+          _count += 2;
         } else if (obj[$internal].type === 1) {
-          count += 3;
+          _count += 3;
         } else if (obj[$internal].type === 2) {
-          count += 4;
+          _count += 4;
         }
       }
     },
@@ -111,7 +111,7 @@ bench
       beforeEach() {
         numberTaggedObjs = Array.from({ length: NUMBER_OF_OBJS }, () => ({
           [$internal]: {
-            // biome-ignore lint/style/noNonNullAssertion: in range
+            // oxlint-disable-next-line typescript/no-non-null-assertion
             type: NUMBER_TAGS[Math.floor(Math.random() * NUMBER_TAGS.length)]!,
           },
         }));
@@ -121,15 +121,15 @@ bench
   .add(
     'symbol tags',
     async () => {
-      let count = 0;
+      let _count = 0;
 
       for (const obj of symbolTaggedObjs) {
         if (obj[$internal].type === aaa) {
-          count += 2;
+          _count += 2;
         } else if (obj[$internal].type === bbb) {
-          count += 3;
+          _count += 3;
         } else if (obj[$internal].type === ccc) {
-          count += 4;
+          _count += 4;
         }
       }
     },
@@ -137,7 +137,7 @@ bench
       beforeEach() {
         symbolTaggedObjs = Array.from({ length: NUMBER_OF_OBJS }, () => ({
           [$internal]: {
-            // biome-ignore lint/style/noNonNullAssertion: in range
+            // oxlint-disable-next-line typescript/no-non-null-assertion
             type: SYMBOL_TAGS[Math.floor(Math.random() * SYMBOL_TAGS.length)]!,
           },
         }));
@@ -147,15 +147,15 @@ bench
   .add(
     'symbol keys',
     async () => {
-      let count = 0;
+      let _count = 0;
 
       for (const obj of symbolKeyedObjs) {
         if (obj[aaa]) {
-          count += 2;
+          _count += 2;
         } else if (obj[bbb]) {
-          count += 3;
+          _count += 3;
         } else if (obj[ccc]) {
-          count += 4;
+          _count += 4;
         }
       }
     },
@@ -165,7 +165,7 @@ bench
           { length: NUMBER_OF_OBJS },
           () =>
             ({
-              // biome-ignore lint/style/noNonNullAssertion: in range
+              // oxlint-disable-next-line typescript/no-non-null-assertion
               [SYMBOL_TAGS[Math.floor(Math.random() * SYMBOL_TAGS.length)]!]:
                 true,
             }) as { [K in (typeof SYMBOL_TAGS)[number]]: boolean },

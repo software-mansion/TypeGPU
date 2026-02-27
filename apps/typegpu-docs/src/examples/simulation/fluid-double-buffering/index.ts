@@ -5,6 +5,7 @@ import tgpu, {
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
 } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const MAX_GRID_SIZE = 1024;
 
@@ -106,9 +107,7 @@ const time = root.createUniform(d.f32);
 
 const isInsideObstacle = (x: number, y: number): boolean => {
   'use gpu';
-  for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
-    const obs = obstacles.$[obsIdx];
-
+  for (const obs of obstacles.$) {
     if (obs.enabled === 0) {
       continue;
     }
@@ -161,22 +160,19 @@ const computeVelocity = (x: number, y: number): d.v2f => {
   ];
   let dirChoiceCount = 1;
 
-  for (let i = 0; i < 4; i++) {
-    const offset = neighborOffsets[i];
+  for (const offset of tgpu.unroll(neighborOffsets)) {
     const neighborDensity = getCell(x + offset.x, y + offset.y);
     const cost = neighborDensity.z + d.f32(offset.y) * gravityCost;
 
-    if (!isValidFlowOut(x + offset.x, y + offset.y)) {
-      continue;
-    }
-
-    if (cost === leastCost) {
-      dirChoices[dirChoiceCount] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
-      dirChoiceCount++;
-    } else if (cost < leastCost) {
-      leastCost = cost;
-      dirChoices[0] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
-      dirChoiceCount = 1;
+    if (isValidFlowOut(x + offset.x, y + offset.y)) {
+      if (cost === leastCost) {
+        dirChoices[dirChoiceCount] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
+        dirChoiceCount++;
+      } else if (cost < leastCost) {
+        leastCost = cost;
+        dirChoices[0] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
+        dirChoiceCount = 1;
+      }
     }
   }
 
@@ -379,7 +375,7 @@ const limitedBoxX = () => {
 let boxY = 0.2;
 let leftWallX = 0;
 
-const vertexMain = tgpu['~unstable'].vertexFn({
+const vertexMain = tgpu.vertexFn({
   in: { idx: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })((input) => {
@@ -392,7 +388,7 @@ const vertexMain = tgpu['~unstable'].vertexFn({
   };
 });
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -444,13 +440,12 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 function makePipelines(
   inputGridReadonly: TgpuBufferReadonly<GridData>,
   outputGridMutable: TgpuBufferMutable<GridData>,
 ) {
-  const initWorldPipeline = root['~unstable']
+  const initWorldPipeline = root
     .with(outputGridSlot, outputGridMutable)
     .createGuardedComputePipeline((xu, yu) => {
       'use gpu';
@@ -473,22 +468,21 @@ function makePipelines(
       outputGridSlot.$[index] = d.vec4f(value);
     });
 
-  const simulatePipeline = root['~unstable']
+  const simulatePipeline = root
     .with(inputGridSlot, inputGridReadonly)
     .with(outputGridSlot, outputGridMutable)
     .createGuardedComputePipeline(simulate);
 
-  const moveObstaclesPipeline = root['~unstable']
+  const moveObstaclesPipeline = root
     .with(inputGridSlot, outputGridMutable)
     .with(outputGridSlot, outputGridMutable)
     .createGuardedComputePipeline(moveObstacles);
 
-  const renderPipeline = root['~unstable']
+  const renderPipeline = root
     .with(inputGridSlot, inputGridReadonly)
     .createRenderPipeline({
       vertex: vertexMain,
       fragment: fragmentMain,
-      targets: { format: presentationFormat },
 
       primitive: { topology: 'triangle-strip' },
     });
@@ -509,14 +503,10 @@ function makePipelines(
     },
 
     render() {
-      const textureView = context.getCurrentTexture().createView();
-
       renderPipeline
         .withColorAttachment({
-          view: textureView,
+          view: context,
           clearValue: [0, 0, 0, 1],
-          loadOp: 'clear',
-          storeOp: 'store',
         })
         .draw(4);
     },
@@ -589,13 +579,13 @@ onFrame((deltaTime) => {
   }
 });
 
-export const controls = {
+export const controls = defineControls({
   'source intensity': {
     initial: sourceIntensity,
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       sourceIntensity = value;
     },
   },
@@ -605,7 +595,7 @@ export const controls = {
     min: 0.01,
     max: 0.1,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       sourceRadius = value;
     },
   },
@@ -615,7 +605,7 @@ export const controls = {
     min: 0.2,
     max: 0.8,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       boxX = value;
       obstaclesCpu[OBSTACLE_BOX].x = limitedBoxX();
       primary.applyMovedObstacles(obstaclesToConcrete());
@@ -627,7 +617,7 @@ export const controls = {
     min: 0.2,
     max: 0.85,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       boxY = value;
       obstaclesCpu[OBSTACLE_BOX].y = boxY;
       primary.applyMovedObstacles(obstaclesToConcrete());
@@ -639,14 +629,14 @@ export const controls = {
     min: 0,
     max: 0.6,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       leftWallX = value;
       obstaclesCpu[OBSTACLE_LEFT_WALL].x = leftWallX;
       obstaclesCpu[OBSTACLE_BOX].x = limitedBoxX();
       primary.applyMovedObstacles(obstaclesToConcrete());
     },
   },
-};
+});
 
 export function onCleanup() {
   disposed = true;

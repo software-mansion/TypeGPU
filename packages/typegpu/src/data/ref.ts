@@ -7,7 +7,7 @@ import {
   $ownSnippet,
   $resolve,
 } from '../shared/symbols.ts';
-import type { DualFn, ResolutionCtx, SelfResolvable } from '../types.ts';
+import type { DualFn, SelfResolvable } from '../types.ts';
 import { UnknownData } from './dataTypes.ts';
 import { createPtrFromOrigin, explicitFrom } from './ptr.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './snippet.ts';
@@ -94,7 +94,7 @@ export const _ref = (() => {
   return impl;
 })();
 
-export function isRef<T>(value: unknown | ref<T>): value is ref<T> {
+export function isRef<T>(value: unknown): value is ref<T> {
   return (value as ref<T>)?.[$internal]?.type === 'ref';
 }
 
@@ -175,7 +175,7 @@ export class RefOperator implements SelfResolvable {
     return snip(this, this.#ptrType, this.snippet.origin);
   }
 
-  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+  [$resolve](): ResolvedSnippet {
     if (!this.#ptrType) {
       throw new Error(stitch`Cannot take a reference of ${this.snippet}`);
     }

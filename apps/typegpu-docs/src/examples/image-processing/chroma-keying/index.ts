@@ -1,5 +1,6 @@
 import { rgbToYcbcrMatrix } from '@typegpu/color';
 import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -17,7 +18,7 @@ const layout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
 });
 
-const fragment = tgpu['~unstable'].fragmentFn({
+const fragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -27,7 +28,7 @@ const fragment = tgpu['~unstable'].fragmentFn({
     sampler.$,
     uv2,
   );
-  const ycbcr = col.xyz.mul(rgbToYcbcrMatrix.$);
+  const ycbcr = col.rgb.mul(rgbToYcbcrMatrix.$);
   const colycbcr = color.$.mul(rgbToYcbcrMatrix.$);
 
   const crDiff = std.abs(ycbcr.y - colycbcr.y);
@@ -60,10 +61,11 @@ if (navigator.mediaDevices.getUserMedia) {
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const renderPipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle)
-  .withFragment(fragment, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment,
+  targets: { format: presentationFormat },
+});
 
 function onVideoChange(size: { width: number; height: number }) {
   const aspectRatio = size.width / size.height;
@@ -126,11 +128,7 @@ function processVideoFrame(
 
   renderPipeline
     .with(group)
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
@@ -140,11 +138,11 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 // #region Example controls & Cleanup
 
-export const controls = {
+export const controls = defineControls({
   color: {
-    initial: [0, 1, 0] as const,
-    onColorChange: (value: readonly [number, number, number]) => {
-      color.write(d.vec3f(...value));
+    initial: d.vec3f(0, 1, 0),
+    onColorChange: (value) => {
+      color.write(value);
     },
   },
   threshold: {
@@ -152,9 +150,9 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => threshold.write(value),
+    onSliderChange: (value) => threshold.write(value),
   },
-};
+});
 
 export function onCleanup() {
   if (videoFrameCallbackId !== undefined) {

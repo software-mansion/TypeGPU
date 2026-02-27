@@ -51,7 +51,7 @@ export class Executor {
     });
     this.#bindGroupLayout = bindGroupLayoutTempAlias;
 
-    this.#dataMoreWorkersFunc = tgpu['~unstable'].computeFn({
+    this.#dataMoreWorkersFunc = tgpu.computeFn({
       in: { gid: d.builtin.globalInvocationId },
       workgroupSize: [64],
     })((input) => {
@@ -98,13 +98,13 @@ export class Executor {
     }
 
     if (!this.#pipelineCache.has(distribution)) {
-      const pipeline = this.#root['~unstable']
+      const pipeline = this.#root
         .with(this.#distributionSlot, distribution)
         .createComputePipeline({ compute: this.#dataMoreWorkersFunc });
       this.#pipelineCache.set(distribution, pipeline);
     }
 
-    // biome-ignore lint/style/noNonNullAssertion: just checked it above
+    // oxlint-disable-next-line typescript/no-non-null-assertion -- just checked it above
     return this.#pipelineCache.get(distribution)!;
   }
 
@@ -113,7 +113,7 @@ export class Executor {
   ): Promise<d.v3f[]> {
     let pipeline = this.#pipelineCache.get(distribution);
     if (!pipeline) {
-      pipeline = this.#root['~unstable']
+      pipeline = this.#root
         .with(this.#distributionSlot, distribution)
         .createComputePipeline({ compute: this.#dataMoreWorkersFunc });
       this.#pipelineCache.set(distribution, pipeline);

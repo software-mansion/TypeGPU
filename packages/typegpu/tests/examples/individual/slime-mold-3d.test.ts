@@ -26,9 +26,7 @@ describe('slime mold 3d example', () => {
       }
 
       fn randSeed(seed: f32) {
-        {
-          seed_1(seed);
-        }
+        seed_1(seed);
       }
 
       fn sample() -> f32 {
@@ -135,9 +133,7 @@ describe('slime mold 3d example', () => {
       }
 
       fn randSeed(seed: f32) {
-        {
-          seed_1(seed);
-        }
+        seed_1(seed);
       }
 
       @group(1) @binding(1) var oldState: texture_storage_3d<r32float, read>;
@@ -188,9 +184,86 @@ describe('slime mold 3d example', () => {
         var totalWeight = 0f;
         var perp1 = getPerpendicular(direction);
         var perp2 = cross(direction, perp1);
-        const numSamples = 8;
-        for (var i = 0; (i < numSamples); i++) {
-          let theta = (((f32(i) / f32(numSamples)) * 2f) * 3.141592653589793f);
+        // unrolled iteration #0
+        {
+          const theta = 0.;
+          var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
+          var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
+          var sensorPos = (pos + (sensorDir * params.sensorDistance));
+          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - vec3f(1))));
+          let weight = textureLoad(oldState, sensorPosInt).x;
+          weightedDir = (weightedDir + (sensorDir * weight));
+          totalWeight = (totalWeight + weight);
+        }
+        // unrolled iteration #1
+        {
+          const theta = 0.7853981633974483;
+          var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
+          var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
+          var sensorPos = (pos + (sensorDir * params.sensorDistance));
+          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - vec3f(1))));
+          let weight = textureLoad(oldState, sensorPosInt).x;
+          weightedDir = (weightedDir + (sensorDir * weight));
+          totalWeight = (totalWeight + weight);
+        }
+        // unrolled iteration #2
+        {
+          const theta = 1.5707963267948966;
+          var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
+          var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
+          var sensorPos = (pos + (sensorDir * params.sensorDistance));
+          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - vec3f(1))));
+          let weight = textureLoad(oldState, sensorPosInt).x;
+          weightedDir = (weightedDir + (sensorDir * weight));
+          totalWeight = (totalWeight + weight);
+        }
+        // unrolled iteration #3
+        {
+          const theta = 2.356194490192345;
+          var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
+          var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
+          var sensorPos = (pos + (sensorDir * params.sensorDistance));
+          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - vec3f(1))));
+          let weight = textureLoad(oldState, sensorPosInt).x;
+          weightedDir = (weightedDir + (sensorDir * weight));
+          totalWeight = (totalWeight + weight);
+        }
+        // unrolled iteration #4
+        {
+          const theta = 3.141592653589793;
+          var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
+          var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
+          var sensorPos = (pos + (sensorDir * params.sensorDistance));
+          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - vec3f(1))));
+          let weight = textureLoad(oldState, sensorPosInt).x;
+          weightedDir = (weightedDir + (sensorDir * weight));
+          totalWeight = (totalWeight + weight);
+        }
+        // unrolled iteration #5
+        {
+          const theta = 3.9269908169872414;
+          var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
+          var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
+          var sensorPos = (pos + (sensorDir * params.sensorDistance));
+          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - vec3f(1))));
+          let weight = textureLoad(oldState, sensorPosInt).x;
+          weightedDir = (weightedDir + (sensorDir * weight));
+          totalWeight = (totalWeight + weight);
+        }
+        // unrolled iteration #6
+        {
+          const theta = 4.71238898038469;
+          var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
+          var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
+          var sensorPos = (pos + (sensorDir * params.sensorDistance));
+          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - vec3f(1))));
+          let weight = textureLoad(oldState, sensorPosInt).x;
+          weightedDir = (weightedDir + (sensorDir * weight));
+          totalWeight = (totalWeight + weight);
+        }
+        // unrolled iteration #7
+        {
+          const theta = 5.497787143782138;
           var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
           var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
           var sensorPos = (pos + (sensorDir * params.sensorDistance));
@@ -329,9 +402,7 @@ describe('slime mold 3d example', () => {
       }
 
       fn randSeed2(seed: vec2f) {
-        {
-          seed2(seed);
-        }
+        seed2(seed);
       }
 
       struct Camera {
