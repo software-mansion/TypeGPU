@@ -27,14 +27,14 @@ export const triNoise3D = tgpu.fn([d.vec3f, d.f32, d.f32], d.f32)(
     let bp = d.vec3f(p);
 
     for (let i = d.f32(); i <= 3.0; i += 1) {
-      const dg = tri3(bp.mul(d.vec3f(2.0)));
-      p = p.add(dg.add(d.vec3f(time * 0.1 * speed)));
-      bp = bp.mul(d.vec3f(1.8));
+      const dg = tri3(bp * 2);
+      p += dg + time * 0.1 * speed;
+      bp *= 1.8;
       z *= 1.5;
-      p = p.mul(1.2);
+      p *= 1.2;
       const t = tri(p.z + tri(p.x + tri(p.y)));
       rz = rz + t / z;
-      bp = bp.add(d.vec3f(0.14));
+      bp += 0.14;
     }
 
     return rz;
