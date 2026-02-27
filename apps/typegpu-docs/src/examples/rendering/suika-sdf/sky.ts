@@ -1,11 +1,15 @@
 import { randf } from '@typegpu/noise';
 import { d, std } from 'typegpu';
 
+// theta=π/2 at time=0 → start at noon, full cycle every 120s
+const computeTheta = (time: number) => {
+  'use gpu';
+  return std.fract(time / 120) * (2 * Math.PI) + Math.PI * 0.5;
+};
+
 export const computeDaylight = (time: number) => {
   'use gpu';
-  // theta=π/2 at time=0 → start at noon, full cycle every 120s
-  const theta = std.fract(time / 120) * (2 * Math.PI) + Math.PI * 0.5;
-  return std.smoothstep(-0.15, 0.4, std.sin(theta));
+  return std.smoothstep(-0.15, 0.4, std.sin(computeTheta(time)));
 };
 
 export const bucketBg = (scenePos: d.v2f, daylight: number) => {
@@ -21,11 +25,10 @@ export const bucketBg = (scenePos: d.v2f, daylight: number) => {
 
 export const skyColor = (uv: d.v2f, daylight: number, time: number) => {
   'use gpu';
-  const theta = std.fract(time / 120) * (2 * Math.PI) + Math.PI * 0.5;
+  const theta = computeTheta(time);
   const sinT = std.sin(theta);
   const cosT = std.cos(theta);
 
-  // Sky gradient blended between night and day palettes
   const skyMix = std.clamp(1 - uv.y, 0, 1);
   const daySky = std.mix(
     d.vec3f(0.98, 0.93, 0.78),
@@ -45,8 +48,8 @@ export const skyColor = (uv: d.v2f, daylight: number, time: number) => {
   const cellUv = std.fract(uv * STAR_N);
   randf.seed2(starCell);
   const starExists = randf.sample(); // >= 0.9 → cell has a star (10% density)
-  const starPx = randf.sample(); // star x within cell
-  const starPy = randf.sample(); // star y within cell
+  const starPx = randf.sample();
+  const starPy = randf.sample();
   const starBright = randf.sample() * 0.7 + 0.3;
   const distToStar = std.length(cellUv - d.vec2f(starPx, starPy));
   const starDot = std.smoothstep(0.1, 0.0, distToStar);
