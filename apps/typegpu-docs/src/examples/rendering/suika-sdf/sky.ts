@@ -51,11 +51,10 @@ export const skyColor = (uv: d.v2f, daylight: number, time: number) => {
   const distToStar = std.length(cellUv - d.vec2f(starPx, starPy));
   const starDot = std.smoothstep(0.1, 0.0, distToStar);
   const twinkle = std.sin(starPx * 80 + starPy * 60 + time * 0.3) * 0.25 + 0.75;
-  bgColor = bgColor +
-    d.vec3f(
-      starDot * std.step(0.9, starExists) * starBright * (1 - daylight) *
-        twinkle * 2.5,
-    );
+  bgColor += d.vec3f(
+    starDot * std.step(0.9, starExists) * starBright * (1 - daylight) *
+      twinkle * 2.5,
+  );
 
   // Sun
   const sunX = 0.5 + cosT * 0.38;
