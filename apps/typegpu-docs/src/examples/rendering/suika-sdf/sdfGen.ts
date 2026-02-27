@@ -1,0 +1,241 @@
+import tgpu, { d, std } from 'typegpu';
+import type { SampledFlag, TgpuRoot, TgpuSampler, TgpuTexture } from 'typegpu';
+import { LEVEL_COUNT } from './constants.ts';
+
+export const SPRITE_SIZE = 384;
+const MAX_DIST = SPRITE_SIZE / 2;
+
+async function loadImage(path: string): Promise<ImageBitmap> {
+  const response = await fetch(path);
+  return createImageBitmap(await response.blob());
+}
+
+function drawFruitSlice(
+  level: number,
+  ctx: OffscreenCanvasRenderingContext2D,
+  source: ImageBitmap,
+) {
+  ctx.drawImage(
+    source,
+    level * SPRITE_SIZE,
+    0,
+    SPRITE_SIZE,
+    SPRITE_SIZE,
+    0,
+    0,
+    SPRITE_SIZE,
+    SPRITE_SIZE,
+  );
+}
+
+function computeJfaSdf(
+  rgba: Uint8ClampedArray,
+  width: number,
+  height: number,
+): Float32Array {
+  const size = width * height;
+  const maxDim = Math.max(width, height);
+
+  const inside = new Uint8Array(size);
+  for (let i = 0; i < size; i++) {
+    inside[i] = rgba[i * 4 + 3] > 128 ? 1 : 0;
+  }
+
+  const seedX = new Float32Array(size).fill(-1);
+  const seedY = new Float32Array(size).fill(-1);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      const val = inside[idx];
+      if (
+        (x > 0 && inside[idx - 1] !== val) ||
+        (x < width - 1 && inside[idx + 1] !== val) ||
+        (y > 0 && inside[idx - width] !== val) ||
+        (y < height - 1 && inside[idx + width] !== val)
+      ) {
+        seedX[idx] = x;
+        seedY[idx] = y;
+      }
+    }
+  }
+
+  for (
+    let offset = Math.floor(maxDim / 2);
+    offset >= 1;
+    offset = Math.floor(offset / 2)
+  ) {
+    const readX = seedX.slice();
+    const readY = seedY.slice();
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        let bestDist = seedX[idx] >= 0
+          ? Math.hypot(x - seedX[idx], y - seedY[idx])
+          : Infinity;
+
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) {
+              continue;
+            }
+            const sx = x + dx * offset;
+            const sy = y + dy * offset;
+            if (sx < 0 || sx >= width || sy < 0 || sy >= height) {
+              continue;
+            }
+
+            const sIdx = sy * width + sx;
+            if (readX[sIdx] < 0) {
+              continue;
+            }
+
+            const dist = Math.hypot(x - readX[sIdx], y - readY[sIdx]);
+            if (dist < bestDist) {
+              bestDist = dist;
+              seedX[idx] = readX[sIdx];
+              seedY[idx] = readY[sIdx];
+            }
+          }
+        }
+      }
+    }
+  }
+
+  const sdf = new Float32Array(size);
+  for (let i = 0; i < size; i++) {
+    const x = i % width;
+    const y = Math.floor(i / width);
+    const dist = seedX[i] >= 0
+      ? Math.hypot(x - seedX[i], y - seedY[i])
+      : maxDim;
+    sdf[i] = inside[i] ? -dist : dist;
+  }
+
+  return sdf;
+}
+
+export async function createAtlases(): Promise<{
+  spriteAtlas: ImageBitmap[];
+  sdfAtlas: ImageBitmap[];
+  contours: Float32Array[];
+}> {
+  const fruits = await loadImage('./assets/suika-sdf/fruits.png');
+
+  const tmpCanvas = new OffscreenCanvas(SPRITE_SIZE, SPRITE_SIZE);
+  const tmpCtx = tmpCanvas.getContext('2d', { willReadFrequently: true });
+  if (!tmpCtx) {
+    throw new Error('Failed to create canvas context');
+  }
+
+  const spriteAtlas: ImageBitmap[] = [];
+  const sdfAtlas: ImageBitmap[] = [];
+  const contours: Float32Array[] = [];
+  const halfSize = SPRITE_SIZE / 2;
+
+  for (let level = 0; level < LEVEL_COUNT; level++) {
+    tmpCtx.clearRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+    drawFruitSlice(level, tmpCtx, fruits);
+    spriteAtlas.push(await createImageBitmap(tmpCanvas));
+
+    const imgData = tmpCtx.getImageData(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+    const alpha = imgData.data;
+
+    // 32 rays from center, each finds the outermost opaque pixel.
+    const N_HULL = 32;
+    const pts: number[] = [];
+    for (let i = 0; i < N_HULL; i++) {
+      const angle = (i / N_HULL) * Math.PI * 2;
+      const cosA = Math.cos(angle);
+      const sinA = Math.sin(angle);
+      for (let r = halfSize - 1; r > 0; r--) {
+        const px = Math.round(halfSize + cosA * r);
+        const py = Math.round(halfSize - sinA * r);
+        if (px < 0 || px >= SPRITE_SIZE || py < 0 || py >= SPRITE_SIZE) {
+          continue;
+        }
+        if (alpha[(py * SPRITE_SIZE + px) * 4 + 3] > 128) {
+          pts.push(cosA * r / halfSize, sinA * r / halfSize);
+          break;
+        }
+      }
+    }
+    contours.push(new Float32Array(pts));
+
+    const sdf = computeJfaSdf(imgData.data, SPRITE_SIZE, SPRITE_SIZE);
+    const levelSdfData = new ImageData(SPRITE_SIZE, SPRITE_SIZE);
+    for (let j = 0; j < SPRITE_SIZE * SPRITE_SIZE; j++) {
+      const byte = Math.round(
+        Math.max(0, Math.min(1, (sdf[j] / MAX_DIST + 1) * 0.5)) * 255,
+      );
+      const idx = j * 4;
+      levelSdfData.data[idx] = byte;
+      levelSdfData.data[idx + 1] = byte;
+      levelSdfData.data[idx + 2] = byte;
+      levelSdfData.data[idx + 3] = 255;
+    }
+    sdfAtlas.push(await createImageBitmap(levelSdfData));
+  }
+
+  return { spriteAtlas, sdfAtlas, contours };
+}
+
+export function createSmoothedSdf(
+  root: TgpuRoot,
+  sdfTexture: TgpuTexture & SampledFlag,
+  linSampler: TgpuSampler,
+) {
+  const sdfView = sdfTexture.createView(d.texture2dArray());
+
+  const smoothSdfTexture = root['~unstable']
+    .createTexture({
+      size: [SPRITE_SIZE, SPRITE_SIZE, LEVEL_COUNT],
+      format: 'rgba16float',
+    })
+    .$usage('sampled', 'storage');
+  const smoothSdfReadView = smoothSdfTexture.createView(d.texture2dArray());
+  const smoothSdfWriteView = smoothSdfTexture.createView(
+    d.textureStorage2dArray('rgba16float', 'write-only'),
+  );
+
+  const levelUniform = root.createUniform(d.u32, 0);
+
+  const sampleSdfRaw = (uv: d.v2f, level: number) => {
+    'use gpu';
+    return std.textureSampleLevel(sdfView.$, linSampler.$, uv, level, d.f32(0))
+      .x;
+  };
+
+  const smoothSdfPipeline = root.createGuardedComputePipeline(
+    (x: number, y: number) => {
+      'use gpu';
+      const lv = levelUniform.$;
+      const uv = (d.vec2f(x, y) + 0.5) / SPRITE_SIZE;
+      const t = 5 / SPRITE_SIZE;
+
+      // 3×3 Gaussian [1,2,1; 2,4,2; 1,2,1] / 16
+      let accum = d.f32(0);
+      for (const dy of tgpu.unroll([-1, 0, 1])) {
+        for (const dx of tgpu.unroll([-1, 0, 1])) {
+          const w = d.f32((2 - std.abs(dy)) * (2 - std.abs(dx)));
+          accum += sampleSdfRaw(uv + d.vec2f(dx, dy) * t, lv) * w;
+        }
+      }
+
+      std.textureStore(
+        smoothSdfWriteView.$,
+        d.vec2i(x, y),
+        lv,
+        d.vec4f(accum / 16, 0, 0, 1),
+      );
+    },
+  );
+
+  for (let level = 0; level < LEVEL_COUNT; level++) {
+    levelUniform.write(level);
+    smoothSdfPipeline.dispatchThreads(SPRITE_SIZE, SPRITE_SIZE);
+  }
+
+  return smoothSdfReadView;
+}
