@@ -89,6 +89,10 @@ export function mockResizeObserver() {
   );
 }
 
+export function mockMathRandom() {
+  vi.spyOn(Math, 'random').mockReturnValue(0.5);
+}
+
 export function mockCreateImageBitmap({ width = 2, height = 2 } = {}) {
   vi.stubGlobal('createImageBitmap', async () => {
     return {
