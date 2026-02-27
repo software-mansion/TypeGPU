@@ -173,7 +173,7 @@
     "picomatch": "^4.0.3",
     "tinyest": "workspace:~0.3.0",
     "tinyest-for-wgsl": "workspace:~0.3.0",
-    "unplugin": "^2.3.5"
+    "unplugin": "^3.0.0"
   },
   "peerDependencies": {
     "typegpu": "workspace:^0.10.1"
