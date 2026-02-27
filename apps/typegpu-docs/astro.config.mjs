@@ -124,6 +124,24 @@ export default defineConfig({
           label: 'Getting Started',
           slug: 'getting-started',
         },
+        DEV && {
+          label: 'Tutorials',
+          items: [
+            {
+              label: 'Your First Triangle',
+              slug: 'tutorials/your-first-triangle',
+            },
+            {
+              label:
+                'From a Triangle to Simulating Boids: Step-by-step Tutorial',
+              slug: 'tutorials/triangle-to-boids',
+            },
+            {
+              label: 'Game of life tutorial',
+              slug: 'tutorials/game-of-life',
+            },
+          ],
+        },
         {
           label: 'Fundamentals',
           items: stripFalsy([
@@ -258,20 +276,6 @@ export default defineConfig({
               slug: 'tooling/tgpu-gen',
             },
           ]),
-        },
-        DEV && {
-          label: 'Tutorials',
-          items: [
-            {
-              label:
-                'From a Triangle to Simulating Boids: Step-by-step Tutorial',
-              slug: 'tutorials/triangle-to-boids',
-            },
-            {
-              label: 'Game of life tutorial',
-              slug: 'tutorials/game-of-life',
-            },
-          ],
         },
         {
           label: 'Reference',

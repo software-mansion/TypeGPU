@@ -1,0 +1,58 @@
+---
+title: "Your First Triangle"
+description: A tutorial that will guide you through the process of creating a simple triangle rendering program.
+draft: true
+---
+
+Refer to [Getting Started](/TypeGPU/getting-started) on how to install TypeGPU.
+
+```ts twoslash
+import tgpu from 'typegpu';
+
+const root = await tgpu.init();
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+```
+
+```ts twoslash
+import tgpu, { d, common } from 'typegpu';
+const root = await tgpu.init();
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+// ---cut---
+const pipeline = root['~unstable'].createRenderPipeline({
+  // This effect will span the whole canvas.
+  vertex: common.fullScreenTriangle,
+  // A function that returns a color for each pixel.
+  fragment: () => {
+    'use gpu';
+    // Returning a red color (red: 1, green: 0, blue: 0, alpha: 1)
+    return d.vec4f(1, 0, 0, 1);
+  },
+  targets: { format: presentationFormat },
+});
+```
+
+To draw the prepared pipeline, we need to create a canvas.
+
+```html
+<canvas id="main-canvas"></canvas>
+```
+
+```ts twoslash
+import tgpu, { d, common } from 'typegpu';
+const root = await tgpu.init();
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const pipeline = root['~unstable'].createRenderPipeline({
+  // This effect will span the whole canvas.
+  vertex: common.fullScreenTriangle,
+  // A function that returns a color for each pixel.
+  fragment: () => {
+    'use gpu';
+    // Returning a red color (red: 1, green: 0, blue: 0, alpha: 1)
+    return d.vec4f(1, 0, 0, 1);
+  },
+  targets: { format: presentationFormat },
+});
+// ---cut---
+const canvas = document.getElementById('main-canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas });
+```
