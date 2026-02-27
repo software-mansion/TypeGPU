@@ -3,7 +3,7 @@ import tgpu, { d, std } from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import {
   DROP_Y,
-  EDGE_WIDTH,
+  GAME_ASPECT,
   GHOST_ALPHA,
   LEVEL_COUNT,
   LEVEL_RADII,
@@ -13,6 +13,7 @@ import {
   MIN_RADIUS,
   OFFSCREEN,
   PLAYFIELD_HALF_WIDTH,
+  SCENE_SCALE,
   SHARP_FACTOR,
   SMOOTH_MIN_K,
   SPAWN_COOLDOWN,
@@ -26,7 +27,9 @@ import {
 import type { BallState } from './physics.ts';
 import { createPhysicsWorld } from './physics.ts';
 import { createAtlases, SPRITE_SIZE } from './sdf-gen.ts';
+import { createSmoothedSdf } from './sdf-smooth.ts';
 import { bucketBg, computeDaylight, skyColor } from './sky.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -53,7 +56,18 @@ const circleUv = (p: d.v2f) => {
 
 const uvToScene = (uv: d.v2f) => {
   'use gpu';
-  return d.vec2f(uv.x * 2 - 1, 1 - uv.y * 2);
+  return d.vec2f((uv.x * 2 - 1) * SCENE_SCALE, (1 - uv.y * 2) * SCENE_SCALE);
+};
+
+const canvasToGameUv = (uv: d.v2f, canvasAspect: number) => {
+  'use gpu';
+  const scale = std.select(
+    d.vec2f(1, canvasAspect / GAME_ASPECT),
+    d.vec2f(GAME_ASPECT / canvasAspect, 1),
+    canvasAspect > GAME_ASPECT,
+  );
+  const offset = (d.vec2f(1) - scale) * 0.5;
+  return (uv - offset) / scale;
 };
 
 const wallColor = (local: d.v2f, dist: number, daylight: number) => {
@@ -80,7 +94,9 @@ function randomLevel(): number {
   let r = Math.random() * SPAWN_WEIGHT_TOTAL;
   for (let i = 0; i < SPAWN_WEIGHTS.length; i++) {
     r -= SPAWN_WEIGHTS[i];
-    if (r <= 0) return i;
+    if (r <= 0) {
+      return i;
+    }
   }
   return 0;
 }
@@ -96,6 +112,8 @@ let activeFruits: ActiveFruit[] = [];
 let ghostLevel = randomLevel();
 let ghostX = 0;
 let lastSpawnTime = -Infinity;
+let bgTime = 20;
+let timeScale = 1;
 
 const { spriteAtlas, sdfAtlas, contours } = await createAtlases();
 const physics = await createPhysicsWorld(WALL_DEFS);
@@ -112,19 +130,36 @@ const spriteView = spriteTexture.createView(d.texture2dArray());
 const sdfTexture = root['~unstable']
   .createTexture({
     size: [SPRITE_SIZE, SPRITE_SIZE, LEVEL_COUNT],
-    format: 'rgba8unorm',
-  })
-  .$usage('sampled', 'render');
-sdfTexture.write(sdfAtlas);
-const sdfView = sdfTexture.createView(d.texture2dArray());
-
-const mergedFieldTexture = root['~unstable']
-  .createTexture({
-    size: [canvas.width, canvas.height],
     format: 'rgba16float',
   })
   .$usage('sampled', 'render');
-const mergedFieldView = mergedFieldTexture.createView(d.texture2d());
+sdfTexture.write(sdfAtlas);
+
+const linSampler = root['~unstable'].createSampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+});
+
+const smoothSdfReadView = createSmoothedSdf(root, sdfTexture, linSampler);
+
+const mergedFieldLayout = tgpu.bindGroupLayout({
+  mergedField: { texture: d.texture2d(d.f32) },
+});
+
+function createMergedFieldResources() {
+  return root['~unstable']
+    .createTexture({
+      size: [canvas.width, canvas.height],
+      format: 'rgba16float',
+    })
+    .$usage('sampled', 'render');
+}
+
+let mergedFieldTexture = createMergedFieldResources();
+let mergedFieldView = mergedFieldTexture.createView(d.texture2d());
+let mergedFieldBindGroup = root.createBindGroup(mergedFieldLayout, {
+  mergedField: mergedFieldView,
+});
 
 const SdRect = d.struct({ center: d.vec2f, size: d.vec2f });
 const rectUniform = root.createUniform(
@@ -157,12 +192,14 @@ const circleUniform = root.createUniform(
 
 const Frame = d.struct({
   time: d.f32,
+  canvasAspect: d.f32,
   activeCount: d.u32,
   ghostCircle: SdCircle,
 });
 const frameUniform = root.createUniform(Frame, {
   ghostCircle: INACTIVE_CIRCLE,
   time: 0,
+  canvasAspect: 1,
   activeCount: 0,
 });
 
@@ -171,11 +208,6 @@ const circleData = Array.from(
   () => ({ ...INACTIVE_CIRCLE }),
 );
 const frameStates: (BallState | null)[] = [];
-
-const linSampler = root['~unstable'].createSampler({
-  magFilter: 'linear',
-  minFilter: 'linear',
-});
 
 const SceneHit = d.struct({ dist: d.f32, color: d.vec3f });
 
@@ -186,8 +218,13 @@ const sampleSdf = (
   level: number,
 ) => {
   'use gpu';
-  const sdfEncoded =
-    std.textureSampleLevel(sdfView.$, linSampler.$, uv, level, 0).x;
+  const sdfEncoded = std.textureSampleLevel(
+    smoothSdfReadView.$,
+    linSampler.$,
+    uv,
+    level,
+    d.f32(0),
+  ).x;
   const sdfWorld = (sdfEncoded * 2 - 1) * radius;
   const outside = std.max(std.abs(localPos) - 0.5, d.vec2f());
   return sdfWorld + std.length(outside) * radius * 2;
@@ -207,18 +244,18 @@ const sampleSprite = (uv: d.v2f, level: number) => {
 const blendSprite = (uv: d.v2f, level: number) => {
   'use gpu';
   const sprite = sampleSprite(uv, level);
-  const center = sampleSprite(d.vec2f(0.5, 0.5), level).xyz;
+  const center = sampleSprite(d.vec2f(0.5), level).xyz;
   return std.mix(center, sprite.xyz, sprite.w);
 };
 
 const evalFruits = (field: d.v4f, activeCount: number) => {
   'use gpu';
   if (activeCount === 0) {
-    return SceneHit({ dist: d.f32(2e10), color: d.vec3f(0, 0, 0) });
+    return SceneHit({ dist: d.f32(2e10), color: d.vec3f() });
   }
   return SceneHit({
     dist: field.x,
-    color: d.vec3f(blendSprite(d.vec2f(field.y, field.z), d.i32(field.w))),
+    color: d.vec3f(blendSprite(field.yz, d.i32(field.w))),
   });
 };
 
@@ -257,7 +294,7 @@ const applyGhost = (
   const clamped = clampRadial(localPos, MAX_LEVEL_RADIUS, MIN_RADIUS);
   const uv = circleUv(clamped);
   const dist = sampleSdf(uv, ghost.radius, localPos, ghost.level);
-  const alpha = std.smoothstep(EDGE_WIDTH, 0, dist) * GHOST_ALPHA;
+  const alpha = std.smoothstep(std.fwidth(scenePos.x), 0, dist) * GHOST_ALPHA;
   const spriteColor = blendSprite(uv, ghost.level);
   return std.mix(baseColor, spriteColor, alpha);
 };
@@ -271,12 +308,13 @@ const mergedFieldPipeline = root.createRenderPipeline({
   vertex: fullScreenTriangle,
   fragment: ({ uv }) => {
     'use gpu';
-    const scenePos = uvToScene(uv);
     const frame = frameUniform.$;
+    const gameUv = canvasToGameUv(uv, frame.canvasAspect);
+    const scenePos = uvToScene(gameUv);
 
     let bestDist = d.f32(2e10);
     let bestLevel = d.f32(0);
-    let bestUv = d.vec2f(0.5, 0.5);
+    let bestUv = d.vec2f(0.5);
 
     let smoothAccum = d.arrayOf(d.f32, LEVEL_COUNT)(LEVEL_F32_ZEROS);
     let uvAccum = d.arrayOf(d.vec2f, LEVEL_COUNT)(LEVEL_V2F_ZEROS);
@@ -296,9 +334,9 @@ const mergedFieldPipeline = root.createRenderPipeline({
       const dist = sampleSdf(uvLocal, circle.radius, localPos, circle.level);
       const weight = std.exp(-k * dist);
       const lv = circle.level;
-      smoothAccum[lv] = smoothAccum[lv] + weight;
-      uvAccum[lv] = uvAccum[lv] + uvLocal * weight;
-      uvWeight[lv] = uvWeight[lv] + weight;
+      smoothAccum[lv] += weight;
+      uvAccum[lv] += uvLocal * weight;
+      uvWeight[lv] += weight;
     }
 
     for (let level = d.i32(0); level < LEVEL_COUNT; level++) {
@@ -321,44 +359,54 @@ const renderPipeline = root.createRenderPipeline({
   vertex: fullScreenTriangle,
   fragment: ({ uv }) => {
     'use gpu';
-    const scenePos = uvToScene(uv);
     const frame = frameUniform.$;
+    const gameUv = canvasToGameUv(uv, frame.canvasAspect);
+    const scenePos = uvToScene(gameUv);
     const daylight = computeDaylight(frame.time);
 
-    // Bucket interior mask — inside the side walls, above the floor, below the open top
     const xInside = std.smoothstep(0.52, 0.48, std.abs(scenePos.x));
-    const yAboveFloor = std.smoothstep(-0.47, -0.43, scenePos.y);
+    const yAboveFloor = std.smoothstep(-0.55, -0.5, scenePos.y);
     const yBelowTop = std.smoothstep(0.52, 0.48, scenePos.y);
     const bucketMask = xInside * yAboveFloor * yBelowTop;
 
     let bg = std.mix(
-      skyColor(uv, daylight, frame.time),
+      skyColor(gameUv, daylight, frame.time),
       bucketBg(scenePos, daylight),
       bucketMask,
     );
 
     // Merged field: sampled once for both fruit hit and glow
     const field = std.textureSampleLevel(
-      mergedFieldView.$,
+      mergedFieldLayout.$.mergedField,
       linSampler.$,
       uv,
       d.f32(0),
     );
     // Fruit glow on bucket interior back wall
-    bg = bg + blendSprite(d.vec2f(field.y, field.z), d.i32(field.w)) *
-        std.exp(-std.max(field.x, 0) * 12) * bucketMask * 0.4;
+    bg += blendSprite(d.vec2f(0.2), d.i32(field.w)) *
+      std.exp(-std.max(field.x, 0) * 12) * bucketMask * 0.4;
 
     const hit = evalWalls(
       scenePos,
       evalFruits(field, frame.activeCount),
       daylight,
     );
-    const alpha = std.smoothstep(EDGE_WIDTH, 0, hit.dist);
+    const alpha = std.smoothstep(std.fwidth(scenePos.x), 0, hit.dist);
     const sceneColor = std.mix(bg, hit.color, alpha);
     return d.vec4f(applyGhost(sceneColor, frame.ghostCircle, scenePos), 1);
   },
   targets: { format: presentationFormat },
 });
+
+const resizeObserver = new ResizeObserver(() => {
+  mergedFieldTexture.destroy();
+  mergedFieldTexture = createMergedFieldResources();
+  mergedFieldView = mergedFieldTexture.createView(d.texture2d());
+  mergedFieldBindGroup = root.createBindGroup(mergedFieldLayout, {
+    mergedField: mergedFieldView,
+  });
+});
+resizeObserver.observe(canvas);
 
 // Event handlers
 
@@ -370,22 +418,36 @@ canvas.addEventListener('touchmove', (e) => e.preventDefault(), {
 });
 canvas.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
 
+function pointerToSceneX(clientX: number, rect: DOMRect): number {
+  const uvX = (clientX - rect.left) / rect.width;
+  const aspect = canvas.width / canvas.height;
+  const scaleX = aspect > GAME_ASPECT ? GAME_ASPECT / aspect : 1;
+  const offsetX = (1 - scaleX) / 2;
+  return (((uvX - offsetX) / scaleX) * 2 - 1) * SCENE_SCALE;
+}
+
 canvas.addEventListener('pointermove', (e) => {
   const rect = canvas.getBoundingClientRect();
-  const sceneX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  const sceneX = pointerToSceneX(e.clientX, rect);
   ghostX = clampSpawnX(sceneX, LEVEL_RADII[ghostLevel]);
 });
 
 canvas.addEventListener('touchend', (e) => {
   e.preventDefault();
   const touch = e.changedTouches[0];
-  if (!touch) return;
+  if (!touch) {
+    return;
+  }
   const rect = canvas.getBoundingClientRect();
-  const sceneX = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+  const sceneX = pointerToSceneX(touch.clientX, rect);
   ghostX = clampSpawnX(sceneX, LEVEL_RADII[ghostLevel]);
   const now = performance.now() * 0.001;
-  if (now - lastSpawnTime < SPAWN_COOLDOWN) return;
-  if (activeFruits.length >= MAX_FRUITS) return;
+  if (now - lastSpawnTime < SPAWN_COOLDOWN) {
+    return;
+  }
+  if (activeFruits.length >= MAX_FRUITS) {
+    return;
+  }
   spawnFruit(ghostLevel, ghostX);
   lastSpawnTime = now;
   ghostLevel = randomLevel();
@@ -394,8 +456,14 @@ canvas.addEventListener('touchend', (e) => {
 
 canvas.addEventListener('click', () => {
   const now = performance.now() * 0.001;
-  if (now - lastSpawnTime < SPAWN_COOLDOWN) return;
-  if (activeFruits.length >= MAX_FRUITS) return;
+
+  if (
+    now - lastSpawnTime < SPAWN_COOLDOWN ||
+    activeFruits.length >= MAX_FRUITS
+  ) {
+    return;
+  }
+
   spawnFruit(ghostLevel, ghostX);
   lastSpawnTime = now;
   ghostLevel = randomLevel();
@@ -405,7 +473,9 @@ canvas.addEventListener('click', () => {
 // Game logic
 
 function markDead(fruit: ActiveFruit) {
-  if (fruit.dead) return;
+  if (fruit.dead) {
+    return;
+  }
   fruit.dead = true;
   physics.removeBall(fruit.bodyIndex);
 }
@@ -450,16 +520,24 @@ function checkMerges() {
   let merged = false;
   for (let i = 0; i < count; i++) {
     const a = activeFruits[i];
-    if (a.dead || a.level >= maxLevel) continue;
+    if (a.dead || a.level >= maxLevel) {
+      continue;
+    }
     const sa = frameStates[i];
-    if (!sa) continue;
+    if (!sa) {
+      continue;
+    }
     const mergeDist = a.radius * MERGE_DISTANCE_FACTOR;
 
     for (let j = i + 1; j < count; j++) {
       const b = activeFruits[j];
-      if (b.dead || a.level !== b.level) continue;
+      if (b.dead || a.level !== b.level) {
+        continue;
+      }
       const sb = frameStates[j];
-      if (!sb) continue;
+      if (!sb) {
+        continue;
+      }
 
       const dx = sa.pos.x - sb.pos.x;
       const dy = sa.pos.y - sb.pos.y;
@@ -486,12 +564,26 @@ function checkMerges() {
   return merged;
 }
 
-// --- Frame loop ---
+function restart() {
+  for (const fruit of activeFruits) {
+    if (!fruit.dead) {
+      physics.removeBall(fruit.bodyIndex);
+    }
+  }
+  activeFruits = [];
+  frameStates.length = 0;
+  ghostLevel = randomLevel();
+  ghostX = 0;
+  lastSpawnTime = -Infinity;
+  for (let i = 0; i < MAX_FRUITS; i++) {
+    circleData[i] = { ...INACTIVE_CIRCLE };
+  }
+  circleUniform.write(circleData);
+}
 
-let lastTime = performance.now();
+let lastTime = 0;
 
-function frame() {
-  const now = performance.now();
+function frame(now: number) {
   const dt = Math.min((now - lastTime) / 1000, 0.05);
   lastTime = now;
 
@@ -543,9 +635,12 @@ function frame() {
     drawCount++;
   }
 
+  bgTime = (bgTime + dt * timeScale + 1000) % 1000;
+
   circleUniform.write(circleData);
   frameUniform.write({
-    time: (now * 0.001) % 1000,
+    time: bgTime,
+    canvasAspect: canvas.width / canvas.height,
     activeCount: drawCount,
     ghostCircle: {
       center: d.vec2f(ghostX, DROP_Y),
@@ -566,6 +661,7 @@ function frame() {
     .draw(3);
 
   renderPipeline
+    .with(mergedFieldBindGroup)
     .withColorAttachment({
       view: context.getCurrentTexture().createView(),
       loadOp: 'clear',
@@ -581,3 +677,18 @@ function frame() {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+export const controls = defineControls({
+  'Restart': {
+    onButtonClick: restart,
+  },
+  'Time Scale': {
+    initial: 1,
+    min: -1,
+    max: 1,
+    step: 0.01,
+    onSliderChange: (value) => {
+      timeScale = value;
+    },
+  },
+});

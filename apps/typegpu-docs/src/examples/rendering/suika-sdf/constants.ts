@@ -13,9 +13,9 @@ export const WALL_DEFS = [
 ];
 
 // Rendering
+export const SCENE_SCALE = 0.75;
 export const WALL_COLOR = d.vec3f(0.55, 0.5, 0.45);
 export const WALL_ROUNDNESS = 0.035;
-export const EDGE_WIDTH = 0.004;
 export const MIN_RADIUS = 0.001;
 export const GHOST_ALPHA = 0.45;
 export const SMOOTH_MIN_K = 16.0;
@@ -31,3 +31,4 @@ export const SPAWN_WEIGHT_TOTAL = SPAWN_WEIGHTS.reduce((a, b) => a + b, 0);
 export const MERGE_DISTANCE_FACTOR = 0.4;
 export const PLAYFIELD_HALF_WIDTH = 0.65;
 export const SPAWN_COOLDOWN = 0.35;
+export const GAME_ASPECT = 1;
