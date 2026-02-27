@@ -89,32 +89,18 @@ const jelly = TSL.Fn(({ renderer, geometry, object }) => {
     let position = positionAccessor.$[instanceIdx];
 
     if (pointerPosition.$.w === 1) {
-      const worldPosition = modelMatrixAccessor.$.mul(
-        d.vec4f(position, 1),
-      ).xyz;
+      const worldPosition = (modelMatrixAccessor.$ * d.vec4f(position, 1)).xyz;
       const dist = std.distance(worldPosition, pointerPosition.$.xyz);
-      const direction = std.normalize(
-        pointerPosition.$.xyz.sub(worldPosition),
-      );
-      const power = std.max(brushSize.$ - dist, 0) *
-        brushStrength.$;
+      const direction = std.normalize(pointerPosition.$.xyz - worldPosition);
+      const power = std.max(brushSize.$ - dist, 0) * brushStrength.$;
 
-      positionAccessor.$[instanceIdx] = position.add(
-        direction.mul(power),
-      );
+      positionAccessor.$[instanceIdx] = position + direction * power;
       position = positionAccessor.$[instanceIdx];
     }
 
-    const dist = std.distance(
-      basePosition,
-      position,
-    );
-    const force = basePosition
-      .sub(position)
-      .mul(elasticity.$ * dist);
-    const speed = speedAccessor.$[instanceIdx]
-      .add(force)
-      .mul(damping.$);
+    const dist = std.distance(basePosition, position);
+    const force = (basePosition - position) * elasticity.$ * dist;
+    const speed = (speedAccessor.$[instanceIdx] + force) * damping.$;
 
     speedAccessor.$[instanceIdx] = d.vec3f(speed);
     positionAccessor.$[instanceIdx] = position.add(speed);

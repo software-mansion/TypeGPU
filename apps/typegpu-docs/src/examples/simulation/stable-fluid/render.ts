@@ -52,6 +52,7 @@ export const fragmentImageFn = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
+  'use gpu';
   const pixelStep = d.f32(1) / SIM_N;
 
   const leftSample = std.textureSample(
@@ -80,10 +81,8 @@ export const fragmentImageFn = tgpu.fragmentFn({
 
   const distortStrength = 0.8;
   const distortVector = d.vec2f(gradientX, gradientY);
-  const distortedUV = std.add(
-    input.uv,
-    std.mul(distortVector, d.vec2f(distortStrength, -distortStrength)),
-  );
+  const distortedUV = input.uv +
+    distortVector * d.vec2f(distortStrength, -distortStrength);
 
   const outputColor = std.textureSample(
     renderLayout.$.background,

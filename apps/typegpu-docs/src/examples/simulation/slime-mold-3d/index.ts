@@ -101,9 +101,9 @@ const mutableAgentsDataBuffers = agentsDataBuffers.map((b) => b.as('mutable'));
 root.createGuardedComputePipeline((x) => {
   'use gpu';
   randf.seed(x / NUM_AGENTS);
-  const pos = randf.inUnitSphere().mul(resolution.x / 4).add(resolution.div(2));
-  const center = resolution.div(2);
-  const dir = std.normalize(center.sub(pos));
+  const pos = randf.inUnitSphere() * (resolution.x / 4) + (resolution / 2);
+  const center = resolution / 2;
+  const dir = std.normalize(center - pos);
   mutableAgentsDataBuffers[0].$[x] = Agent({ position: pos, direction: dir });
   mutableAgentsDataBuffers[1].$[x] = Agent({ position: pos, direction: dir });
 }).dispatchThreads(NUM_AGENTS);
@@ -192,19 +192,19 @@ const sense3D = (pos: d.v3f, direction: d.v3f) => {
   for (const i of tgpu.unroll(samplesIterations)) {
     const theta = (i / numSamples) * 2 * Math.PI;
 
-    const coneOffset = perp1.mul(std.cos(theta)).add(perp2.mul(std.sin(theta)));
+    const coneOffset = perp1 * std.cos(theta) + perp2 * std.sin(theta);
     const sensorDir = std.normalize(
-      direction.add(coneOffset.mul(std.sin(params.$.sensorAngle))),
+      direction + coneOffset * std.sin(params.$.sensorAngle),
     );
 
-    const sensorPos = pos.add(sensorDir.mul(params.$.sensorDistance));
+    const sensorPos = pos + sensorDir * params.$.sensorDistance;
     const sensorPosInt = d.vec3u(
-      std.clamp(sensorPos, d.vec3f(), dimsf.sub(d.vec3f(1))),
+      std.clamp(sensorPos, d.vec3f(), dimsf - 1),
     );
 
     const weight = std.textureLoad(computeLayout.$.oldState, sensorPosInt).x;
 
-    weightedDir = weightedDir.add(sensorDir.mul(weight));
+    weightedDir = weightedDir + sensorDir * weight;
     totalWeight = totalWeight + weight;
   }
 
@@ -215,6 +215,7 @@ const updateAgents = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [AGENT_WORKGROUP_SIZE],
 })(({ gid }) => {
+  'use gpu';
   if (gid.x >= NUM_AGENTS) {
     return;
   }
@@ -233,15 +234,14 @@ const updateAgents = tgpu.computeFn({
     std.normalize(senseResult.weightedDir),
     senseResult.totalWeight > 0.01,
   );
-  direction = std.normalize(direction.add(
-    targetDirection.mul(params.$.turnSpeed * params.$.deltaTime),
-  ));
-
-  const newPos = agent.position.add(
-    direction.mul(params.$.moveSpeed * params.$.deltaTime),
+  direction = std.normalize(
+    direction + (targetDirection * params.$.turnSpeed * params.$.deltaTime),
   );
 
-  const center = dimsf.div(2);
+  const newPos = agent.position +
+    (direction * params.$.moveSpeed * params.$.deltaTime);
+
+  const center = dimsf / 2;
 
   if (newPos.x < 0 || newPos.x >= dimsf.x) {
     newPos.x = std.clamp(newPos.x, 0, dimsf.x - 1);
@@ -250,12 +250,10 @@ const updateAgents = tgpu.computeFn({
       normal = d.vec3f(-1, 0, 0);
     }
     const randomDir = randf.inHemisphere(normal);
-    const toCenter = std.normalize(center.sub(newPos));
+    const toCenter = std.normalize(center - newPos);
 
     direction = std.normalize(
-      randomDir.mul(RANDOM_DIRECTION_WEIGHT).add(
-        toCenter.mul(CENTER_BIAS_WEIGHT),
-      ),
+      randomDir * RANDOM_DIRECTION_WEIGHT + toCenter * CENTER_BIAS_WEIGHT,
     );
   }
   if (newPos.y < 0 || newPos.y >= dimsf.y) {
@@ -265,11 +263,9 @@ const updateAgents = tgpu.computeFn({
       normal = d.vec3f(0, -1, 0);
     }
     const randomDir = randf.inHemisphere(normal);
-    const toCenter = std.normalize(center.sub(newPos));
+    const toCenter = std.normalize(center - newPos);
     direction = std.normalize(
-      randomDir.mul(RANDOM_DIRECTION_WEIGHT).add(
-        toCenter.mul(CENTER_BIAS_WEIGHT),
-      ),
+      randomDir * RANDOM_DIRECTION_WEIGHT + toCenter * CENTER_BIAS_WEIGHT,
     );
   }
   if (newPos.z < 0 || newPos.z >= dimsf.z) {
@@ -279,11 +275,9 @@ const updateAgents = tgpu.computeFn({
       normal = d.vec3f(0, 0, -1);
     }
     const randomDir = randf.inHemisphere(normal);
-    const toCenter = std.normalize(center.sub(newPos));
+    const toCenter = std.normalize(center - newPos);
     direction = std.normalize(
-      randomDir.mul(RANDOM_DIRECTION_WEIGHT).add(
-        toCenter.mul(CENTER_BIAS_WEIGHT),
-      ),
+      randomDir * RANDOM_DIRECTION_WEIGHT + toCenter * CENTER_BIAS_WEIGHT,
     );
   }
 
@@ -319,27 +313,24 @@ const blur = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: BLUR_WORKGROUP_SIZE,
 })(({ gid }) => {
+  'use gpu';
   const dims = d.vec3u(std.textureDimensions(blurLayout.$.oldState));
   if (gid.x >= dims.x || gid.y >= dims.y || gid.z >= dims.z) return;
 
-  const uv = d.vec3f(gid).add(0.5).div(d.vec3f(dims));
+  const uv = (d.vec3f(gid) + 0.5) / d.vec3f(dims);
 
   let sum = d.f32();
 
-  sum += getSummand(uv, d.vec3f(-1, 0, 0).div(d.vec3f(dims)));
-  sum += getSummand(uv, d.vec3f(1, 0, 0).div(d.vec3f(dims)));
-  sum += getSummand(uv, d.vec3f(0, -1, 0).div(d.vec3f(dims)));
-  sum += getSummand(uv, d.vec3f(0, 1, 0).div(d.vec3f(dims)));
-  sum += getSummand(uv, d.vec3f(0, 0, -1).div(d.vec3f(dims)));
-  sum += getSummand(uv, d.vec3f(0, 0, 1).div(d.vec3f(dims)));
+  sum += getSummand(uv, d.vec3f(-1, 0, 0) / d.vec3f(dims));
+  sum += getSummand(uv, d.vec3f(1, 0, 0) / d.vec3f(dims));
+  sum += getSummand(uv, d.vec3f(0, -1, 0) / d.vec3f(dims));
+  sum += getSummand(uv, d.vec3f(0, 1, 0) / d.vec3f(dims));
+  sum += getSummand(uv, d.vec3f(0, 0, -1) / d.vec3f(dims));
+  sum += getSummand(uv, d.vec3f(0, 0, 1) / d.vec3f(dims));
 
-  const blurred = sum / 6.0;
+  const blurred = sum / 6;
   const newValue = std.saturate(blurred - params.$.evaporationRate);
-  std.textureStore(
-    blurLayout.$.newState,
-    gid.xyz,
-    d.vec4f(newValue, 0, 0, 1),
-  );
+  std.textureStore(blurLayout.$.newState, gid.xyz, d.vec4f(newValue, 0, 0, 1));
 });
 
 // Ray-box intersection
@@ -350,9 +341,9 @@ const rayBoxIntersection = (
   boxMax: d.v3f,
 ) => {
   'use gpu';
-  const invDir = d.vec3f(1).div(rayDir);
-  const t0 = boxMin.sub(rayOrigin).mul(invDir);
-  const t1 = boxMax.sub(rayOrigin).mul(invDir);
+  const invDir = 1 / rayDir;
+  const t0 = (boxMin - rayOrigin) * invDir;
+  const t1 = (boxMax - rayOrigin) * invDir;
   const tmin = std.min(t0, t1);
   const tmax = std.max(t0, t1);
   const tNear = std.max(tmin.x, tmin.y, tmin.z);
@@ -365,17 +356,18 @@ const fragmentShader = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
+  'use gpu';
   randf.seed2(uv);
   const ndc = d.vec2f(uv.x * 2 - 1, 1 - uv.y * 2);
   const ndcNear = d.vec4f(ndc, -1, 1);
   const ndcFar = d.vec4f(ndc, 1, 1);
 
-  const worldNear = cameraData.$.invViewProj.mul(ndcNear);
-  const worldFar = cameraData.$.invViewProj.mul(ndcFar);
+  const worldNear = cameraData.$.invViewProj * ndcNear;
+  const worldFar = cameraData.$.invViewProj * ndcFar;
 
-  const rayOrigin = worldNear.xyz.div(worldNear.w);
-  const rayEnd = worldFar.xyz.div(worldFar.w);
-  const rayDir = std.normalize(rayEnd.sub(rayOrigin));
+  const rayOrigin = worldNear.xyz / worldNear.w;
+  const rayEnd = worldFar.xyz / worldFar.w;
+  const rayDir = std.normalize(rayEnd - rayOrigin);
 
   const boxMin = d.vec3f();
   const boxMax = resolution;
@@ -417,21 +409,21 @@ const fragmentShader = tgpu.fragmentFn({
   let i = d.i32(0);
   while (i < numSteps && transmittance > TMin) {
     const t = tStart + (d.f32(i) + 0.5) * stepSize;
-    const pos = rayOrigin.add(rayDir.mul(t));
-    const texCoord = pos.div(resolution);
+    const pos = rayOrigin + rayDir * t;
+    const texCoord = pos / resolution;
 
     const sampleValue = std
       .textureSampleLevel(renderLayout.$.state, sampler.$, texCoord, 0)
       .x;
 
     const d0 = std.smoothstep(thresholdLo, thresholdHi, sampleValue);
-    const density = std.pow(d0, gamma);
+    const density = d0 ** gamma;
 
     const alphaSrc = 1 - std.exp(-sigmaT * density * stepSize);
 
-    const contrib = albedo.mul(alphaSrc);
+    const contrib = albedo * alphaSrc;
 
-    accum = accum.add(contrib.mul(transmittance));
+    accum += contrib * transmittance;
     transmittance = transmittance * (1 - alphaSrc);
 
     i += 1;

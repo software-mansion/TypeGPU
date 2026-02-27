@@ -30,8 +30,9 @@ const displayModes = {
  * https://www.shadertoy.com/view/lssGDj
  */
 const characterFn = tgpu.fn([d.u32, d.vec2f], d.f32)((n, p) => {
+  'use gpu';
   // Transform texture coordinates to character bitmap coordinates (5x5 grid)
-  const pos = std.floor(p.mul(d.vec2f(-4, 4)).add(2.5));
+  const pos = std.floor(p * d.vec2f(-4, 4) + 2.5);
 
   // Check if position is outside the 5x5 character bitmap bounds
   if (pos.x < 0 || pos.x > 4 || pos.y < 0 || pos.y > 4) {
@@ -58,17 +59,16 @@ const pipeline = root.createRenderPipeline({
    */
   fragment: ({ uv }) => {
     'use gpu';
-    const uv2 = std.mul(uvTransformBuffer.$, uv.sub(0.5)).add(0.5);
+    const uv2 = uvTransformBuffer.$ * (uv - 0.5) + 0.5;
     const textureSize = d.vec2f(
       std.textureDimensions(layout.$.externalTexture),
     );
-    const pix = uv2.mul(textureSize);
+    const pix = uv2 * textureSize;
 
     const cellSize = d.f32(glyphSize.$);
     const halfCell = cellSize * 0.5;
 
-    const blockCoord = std.floor(pix.div(cellSize))
-      .mul(cellSize).div(textureSize);
+    const blockCoord = std.floor(pix / cellSize) * cellSize / textureSize;
 
     const color = std.textureSampleBaseClampToEdge(
       layout.$.externalTexture,
@@ -77,7 +77,7 @@ const pipeline = root.createRenderPipeline({
     );
 
     const rawGray = 0.3 * color.x + 0.59 * color.y + 0.11 * color.z;
-    const gray = std.pow(rawGray, gammaCorrection.$);
+    const gray = rawGray ** gammaCorrection.$;
 
     let n = d.u32(4096);
     if (charsetExtended.$ === 0) {
@@ -143,7 +143,7 @@ const pipeline = root.createRenderPipeline({
     let resultColor = d.vec3f(1);
     // Color mode
     if (displayMode.$ === displayModes.color) {
-      resultColor = color.mul(charValue).rgb;
+      resultColor = color.rgb * charValue;
     }
     // Grayscale mode
     if (displayMode.$ === displayModes.grayscale) {

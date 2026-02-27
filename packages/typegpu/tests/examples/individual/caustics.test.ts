@@ -134,9 +134,9 @@ describe('caustics example', () => {
         var noFogColor = (albedo * mix(vec3f(0.20000000298023224, 0.5, 1), (c1 + c2), blend));
         let fog = min((pow(_arg_0.uv.y, 0.5f) * 1.2f), 1f);
         var godRayUv = ((rotateXY(-0.3f) * _arg_0.uv) * vec2f(15, 3));
-        let godRayFactor = pow(_arg_0.uv.y, 1f);
-        var godRay1 = ((sample(vec3f(godRayUv, (time * 0.5f))) + 1f) * (vec3f(0.18000000715255737, 0.30000001192092896, 0.5) * godRayFactor));
-        var godRay2 = ((sample(vec3f((godRayUv * 2f), (time * 0.3f))) + 1f) * (vec3f(0.18000000715255737, 0.30000001192092896, 0.5) * (godRayFactor * 0.4f)));
+        let godRayFactor = _arg_0.uv.y;
+        var godRay1 = (((sample(vec3f(godRayUv, (time * 0.5f))) + 1f) * vec3f(0.18000000715255737, 0.30000001192092896, 0.5)) * godRayFactor);
+        var godRay2 = ((((sample(vec3f((godRayUv * 2f), (time * 0.3f))) + 1f) * vec3f(0.18000000715255737, 0.30000001192092896, 0.5)) * godRayFactor) * 0.4f);
         var godRays = (godRay1 + godRay2);
         return vec4f((mix(noFogColor, vec3f(0.05000000074505806, 0.20000000298023224, 0.699999988079071), fog) + godRays), 1f);
       }"

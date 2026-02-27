@@ -25,6 +25,7 @@ export const computeCollisionsShader = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [1],
 })((input) => {
+  'use gpu';
   const currentId = input.gid.x;
   const current = CelestialBody(computeLayout.$.inState[currentId]);
 
@@ -55,21 +56,19 @@ export const computeCollisionsShader = tgpu.computeFn({
         // bounce occurs
         // push the smaller object outside
         if (isSmaller(currentId, otherId)) {
-          const dir = std.normalize(current.position.sub(other.position));
-          current.position = other.position.add(
-            dir.mul(radiusOf(current) + radiusOf(other)),
-          );
+          const dir = std.normalize(current.position - other.position);
+          current.position = other.position +
+            (dir * (radiusOf(current) + radiusOf(other)));
         }
 
         // bounce with tiny damping
-        const posDiff = current.position.sub(other.position);
-        const velDiff = current.velocity.sub(other.velocity);
+        const posDiff = current.position - other.position;
+        const velDiff = current.velocity - other.velocity;
         const posDiffFactor =
           (((2 * other.mass) / (current.mass + other.mass)) *
             std.dot(velDiff, posDiff)) / std.dot(posDiff, posDiff);
 
-        current.velocity = current.velocity
-          .sub(posDiff.mul(posDiffFactor)).mul(0.99);
+        current.velocity = (current.velocity - posDiff * posDiffFactor) * 0.99;
       } else {
         // merge occurs
         const isCurrentAbsorbed = current.collisionBehavior === bounce ||
@@ -82,10 +81,8 @@ export const computeCollisionsShader = tgpu.computeFn({
           // absorbs the other
           const m1 = current.mass;
           const m2 = other.mass;
-          current.velocity = std.add(
-            current.velocity.mul(m1 / (m1 + m2)),
-            other.velocity.mul(m2 / (m1 + m2)),
-          );
+          current.velocity = current.velocity * (m1 / (m1 + m2)) +
+            other.velocity * (m2 / (m1 + m2));
           current.mass = m1 + m2;
         }
       }
@@ -99,6 +96,7 @@ export const computeGravityShader = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [1],
 })((input) => {
+  'use gpu';
   const dt = timeAccess.$.passed * timeAccess.$.multiplier;
   const currentId = input.gid.x;
   const current = CelestialBody(computeLayout.$.inState[currentId]);
@@ -121,13 +119,11 @@ export const computeGravityShader = tgpu.computeFn({
       );
       const gravityForce = (current.mass * other.mass) / dist / dist;
 
-      const direction = std.normalize(other.position.sub(current.position));
-      current.velocity = current.velocity.add(
-        direction.mul((gravityForce / current.mass) * dt),
-      );
+      const direction = std.normalize(other.position - current.position);
+      current.velocity += direction * (gravityForce / current.mass) * dt;
     }
 
-    current.position = current.position.add(current.velocity.mul(dt));
+    current.position += current.velocity * dt;
   }
 
   computeLayout.$.outState[currentId] = CelestialBody(current);
