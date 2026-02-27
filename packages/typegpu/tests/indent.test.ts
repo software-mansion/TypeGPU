@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import * as std from '../src/std/index.ts';
-import tgpu from '../src/index.js';
+import tgpu, { d, std } from '../src/index.js';
 
 describe('indents', () => {
   it('should indent sanely', () => {
@@ -14,14 +12,9 @@ describe('indents', () => {
       [Particle, d.vec3f, d.f32],
       Particle,
     )((particle, gravity, deltaTime) => {
-      const newVelocity = std.mul(
-        particle.velocity,
-        std.mul(gravity, deltaTime),
-      );
-      const newPosition = std.add(
-        particle.position,
-        std.mul(newVelocity, deltaTime),
-      );
+      'use gpu';
+      const newVelocity = particle.velocity * gravity * deltaTime;
+      const newPosition = particle.position + newVelocity * deltaTime;
       return Particle({
         position: newPosition,
         velocity: newVelocity,
@@ -35,7 +28,7 @@ describe('indents', () => {
       }
 
       fn updateParicle(particle: Particle, gravity: vec3f, deltaTime: f32) -> Particle {
-        var newVelocity = (particle.velocity * (gravity * deltaTime));
+        var newVelocity = ((particle.velocity * gravity) * deltaTime);
         var newPosition = (particle.position + (newVelocity * deltaTime));
         return Particle(newPosition, newVelocity);
       }"
@@ -62,14 +55,9 @@ describe('indents', () => {
       [Particle, d.vec3f, d.f32],
       Particle,
     )((particle, gravity, deltaTime) => {
-      const newVelocity = std.mul(
-        particle.velocity,
-        std.mul(gravity, deltaTime),
-      );
-      const newPosition = std.add(
-        particle.position,
-        std.mul(newVelocity, deltaTime),
-      );
+      'use gpu';
+      const newVelocity = particle.velocity * gravity * deltaTime;
+      const newPosition = particle.position + newVelocity * deltaTime;
       return Particle({
         position: newPosition,
         velocity: newVelocity,
@@ -78,9 +66,7 @@ describe('indents', () => {
 
     const main = tgpu.fn([])(() => {
       for (let i = 0; i < layout.$.systemData.particles.length; i++) {
-        const particle = layout.$.systemData.particles[i] as d.Infer<
-          typeof Particle
-        >;
+        const particle = layout.$.systemData.particles[i]!;
         layout.$.systemData.particles[i] = updateParicle(
           particle,
           layout.$.systemData.gravity,
@@ -104,7 +90,7 @@ describe('indents', () => {
       @group(0) @binding(0) var<storage, read> systemData: SystemData;
 
       fn updateParicle(particle: Particle, gravity: vec3f, deltaTime: f32) -> Particle {
-        var newVelocity = (particle.velocity * (gravity * deltaTime));
+        var newVelocity = ((particle.velocity * gravity) * deltaTime);
         var newPosition = (particle.position + (newVelocity * deltaTime));
         return Particle(newPosition, newVelocity);
       }
@@ -144,10 +130,7 @@ describe('indents', () => {
       counter: { storage: d.u32 },
     });
 
-    const getDensityAt = tgpu.fn(
-      [d.vec3f],
-      d.f32,
-    )((position) => {
+    const getDensityAt = tgpu.fn([d.vec3f], d.f32)((position) => {
       return std.textureLoad(layout.$.densityField, d.vec3i(position)).x;
     });
 
@@ -159,12 +142,12 @@ describe('indents', () => {
       [Particle, d.vec3f, d.f32],
       Particle,
     )((particle, gravity, deltaTime) => {
+      'use gpu';
       const density = getDensityAt(particle.physics.position);
-      const force = std.mul(gravity, density);
-      const newVelocity = particle.physics.velocity.add(force.mul(deltaTime));
-      const newPosition = particle.physics.position.add(
-        newVelocity.mul(deltaTime),
-      );
+      const force = gravity * density;
+      const newVelocity = particle.physics.velocity + force * deltaTime;
+      const newPosition = particle.physics.position + newVelocity * deltaTime;
+
       return Particle({
         id: particle.id,
         physics: PhysicsData({
@@ -178,9 +161,7 @@ describe('indents', () => {
     const main = tgpu.fn([])(() => {
       incrementCounter();
       for (let i = 0; i < layout.$.systemData.particles.length; i++) {
-        const particle = layout.$.systemData.particles[i] as d.Infer<
-          typeof Particle
-        >;
+        const particle = layout.$.systemData.particles[i]!;
         layout.$.systemData.particles[i] = updateParticle(
           particle,
           layout.$.systemData.gravity,
@@ -249,11 +230,12 @@ describe('indents', () => {
       [Particle, d.vec3f],
       Particle,
     )((particle, gravity) => {
+      'use gpu';
       const newParticle = Particle(particle);
       if (newParticle.velocity.x > 0) {
-        newParticle.position = newParticle.position.add(newParticle.velocity);
+        newParticle.position += newParticle.velocity;
       } else {
-        newParticle.position = newParticle.position.add(gravity);
+        newParticle.position += gravity;
       }
       return newParticle;
     });
@@ -267,10 +249,10 @@ describe('indents', () => {
       fn updateParticle(particle: Particle, gravity: vec3f) -> Particle {
         var newParticle = particle;
         if ((newParticle.velocity.x > 0f)) {
-          newParticle.position = (newParticle.position + newParticle.velocity);
+          newParticle.position += newParticle.velocity;
         }
         else {
-          newParticle.position = (newParticle.position + gravity);
+          newParticle.position += gravity;
         }
         return newParticle;
       }"
@@ -287,15 +269,14 @@ describe('indents', () => {
       [Particle, d.vec3f],
       Particle,
     )((particle, gravity) => {
+      'use gpu';
       const newParticle = Particle(particle);
       let iterations = 0;
       while (iterations < 10) {
-        newParticle.position = newParticle.position.add(
-          newParticle.velocity,
-        );
+        newParticle.position += newParticle.velocity;
         iterations += 1;
         while (newParticle.position.x < 0) {
-          newParticle.position = newParticle.position.add(gravity);
+          newParticle.position += gravity;
         }
       }
       return newParticle;
@@ -311,10 +292,10 @@ describe('indents', () => {
         var newParticle = particle;
         var iterations = 0;
         while ((iterations < 10i)) {
-          newParticle.position = (newParticle.position + newParticle.velocity);
+          newParticle.position += newParticle.velocity;
           iterations += 1i;
           while ((newParticle.position.x < 0f)) {
-            newParticle.position = (newParticle.position + gravity);
+            newParticle.position += gravity;
           }
         }
         return newParticle;
@@ -347,6 +328,7 @@ describe('indents', () => {
         uv: d.interpolate('flat, either', d.vec2f),
       },
     })((input) => {
+      'use gpu';
       const uniBoid = layout.$.boids;
       for (let i = d.u32(); i < std.floor(std.sin(Math.PI / 2)); i++) {
         const sampled = std.textureSample(
@@ -361,12 +343,12 @@ describe('indents', () => {
           0,
         );
         if (someVal.x + sampled.x > 0.5) {
-          const newPos = std.add(uniBoid.position, d.vec4f(1, 2, 3, 4));
+          const newPos = uniBoid.position + d.vec4f(1, 2, 3, 4);
         } else {
           while (std.allEq(d.vec2f(1, 2), d.vec2f(1, 2))) {
-            const newPos = std.add(uniBoid.position, d.vec4f(1, 2, 3, 4));
+            const newPos = uniBoid.position + d.vec4f(1, 2, 3, 4);
             if (newPos.x > 0) {
-              const evenNewer = std.add(newPos, input.position);
+              const evenNewer = newPos + input.position;
             }
           }
         }
