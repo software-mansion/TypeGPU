@@ -30,15 +30,23 @@ export const invalidAssignment = createRule({
 
         // look for the definition of the variable we assign to
         const assignee = getBaseFromAccessChain(node.left);
-        const variable = ASTUtils.findVariable(
+        if (assignee.type !== 'Identifier') {
+          return;
+        }
+
+        // look for a scope that contains at least one
+        const defs = ASTUtils.findVariable(
           context.sourceCode.getScope(assignee),
           assignee.name,
-        );
-        if (variable && variable.defs.length > 0) {
-          const def = variable.defs[0]; // first definition in this scope
+        )?.defs;
 
-          // was it defined as a parameter?
+        if (defs && defs.length > 0) {
+          // def[0] points to the correct scope
+          // defs is an array because there may be multiple definitions with `var`
+          const def = defs[0];
+
           if (def?.type === 'Parameter') {
+            // either 'use gpu' or other parameter, either way invalid
             context.report({
               messageId: 'parameterAssignment',
               node,
