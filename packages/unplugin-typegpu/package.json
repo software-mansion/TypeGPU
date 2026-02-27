@@ -190,7 +190,7 @@
     "@types/picomatch": "^4.0.1",
     "acorn": "^8.14.1",
     "rolldown": "1.0.0-beta.33",
-    "rollup": "~4.37.0",
+    "rollup": "~4.59.0",
     "tsdown": "catalog:build",
     "typescript": "catalog:types"
   }
