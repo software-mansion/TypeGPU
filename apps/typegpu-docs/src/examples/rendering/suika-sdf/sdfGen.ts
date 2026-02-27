@@ -121,7 +121,7 @@ export async function createAtlases(): Promise<{
   sdfAtlas: ImageBitmap[];
   contours: Float32Array[];
 }> {
-  const fruits = await loadImage('./assets/suika-sdf/fruitsNew.png');
+  const fruits = await loadImage('./assets/suika-sdf/fruits.png');
 
   const tmpCanvas = new OffscreenCanvas(SPRITE_SIZE, SPRITE_SIZE);
   const tmpCtx = tmpCanvas.getContext('2d', { willReadFrequently: true });
