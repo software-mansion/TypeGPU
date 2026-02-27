@@ -1,7 +1,7 @@
 import type NodeFunction from 'three/src/nodes/core/NodeFunction.js';
 import * as THREE from 'three/webgpu';
 import * as TSL from 'three/tsl';
-import tgpu, { isVariable, type Namespace, type TgpuVar } from 'typegpu';
+import tgpu, { type Namespace, type TgpuVar } from 'typegpu';
 import * as d from 'typegpu/data';
 import WGSLNodeBuilder from 'three/src/renderers/webgpu/nodes/WGSLNodeBuilder.js';
 
@@ -37,12 +37,6 @@ class GenerateStageData extends StageData {
     super(stage);
     this.names = new WeakMap();
     this.codeGeneratedThusFar = '';
-
-    this.namespace.on('name', (event) => {
-      if (isVariable(event.target)) {
-        this.names.set(event.target, event.name);
-      }
-    });
   }
 }
 
@@ -255,11 +249,17 @@ class TgpuFnNode<T> extends THREE.Node {
         continue;
       }
 
-      const varName = stageData.names.get(dep.var);
       const varValue = dep.node.build(builder);
-      // @ts-expect-error: It's there
-      // oxlint-disable-next-line typescript/no-base-to-string
-      builder.addLineFlowCode(`${varName} = ${varValue};\n`, this);
+      // @ts-expect-error: it's there
+      builder.addLineFlowCode(
+        tgpu.resolve({
+          names: stageData.namespace,
+          // oxlint-disable-next-line typescript/no-base-to-string
+          template: `$var$ = ${varValue};\n`,
+          externals: { '$var$': dep.var },
+        }),
+        this,
+      );
     }
 
     return output === 'property'
