@@ -26,7 +26,7 @@ import {
 import type { BallState } from './physics.ts';
 import { createPhysicsWorld } from './physics.ts';
 import { createAtlases, SPRITE_SIZE } from './sdf-gen.ts';
-import { skyColor } from './sky.ts';
+import { bucketBg, computeDaylight, skyColor } from './sky.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -56,14 +56,15 @@ const uvToScene = (uv: d.v2f) => {
   return d.vec2f(uv.x * 2 - 1, 1 - uv.y * 2);
 };
 
-const wallColor = (local: d.v2f, dist: number) => {
+const wallColor = (local: d.v2f, dist: number, daylight: number) => {
   'use gpu';
   const stripe = std.abs(std.fract(local.x * 18.0 + local.y * 6.0) - 0.5);
   const stripeMask = std.clamp(0.55 - stripe * 1.6, 0, 1);
   const speck = std.abs(std.sin((local.x + local.y * 3.0) * 45.0)) * 0.04;
   const texture = stripeMask * 0.08 + speck;
   const edgeShade = std.clamp(0.35 - dist * 12.0, 0, 0.35);
-  return WALL_COLOR + d.vec3f(1, 0.8, 0.6) * (edgeShade + texture);
+  const baseColor = WALL_COLOR + d.vec3f(1, 0.8, 0.6) * (edgeShade + texture);
+  return std.mix(baseColor * 0.12, baseColor, daylight);
 };
 
 interface ActiveFruit {
@@ -125,6 +126,14 @@ const mergedFieldTexture = root['~unstable']
   .$usage('sampled', 'render');
 const mergedFieldView = mergedFieldTexture.createView(d.texture2d());
 
+const glowTexture = root['~unstable']
+  .createTexture({
+    size: [canvas.width, canvas.height],
+    format: 'rgba16float',
+  })
+  .$usage('sampled', 'render');
+const glowView = glowTexture.createView(d.texture2d());
+
 const SdRect = d.struct({ center: d.vec2f, size: d.vec2f });
 const rectUniform = root.createUniform(
   d.arrayOf(SdRect, WALL_DEFS.length),
@@ -135,7 +144,7 @@ const rectUniform = root.createUniform(
 );
 
 const SdCircle = d.struct({
-  center: d.vec2f,
+  center: d.align(16, d.vec2f),
   radius: d.f32,
   level: d.i32,
   angle: d.f32,
@@ -155,9 +164,9 @@ const circleUniform = root.createUniform(
 );
 
 const Frame = d.struct({
-  ghostCircle: SdCircle,
   time: d.f32,
   activeCount: d.u32,
+  ghostCircle: SdCircle,
 });
 const frameUniform = root.createUniform(Frame, {
   ghostCircle: INACTIVE_CIRCLE,
@@ -201,6 +210,11 @@ const sampleMergedField = (uv: d.v2f) => {
   return std.textureSample(mergedFieldView.$, linSampler.$, uv);
 };
 
+const sampleGlow = (uv: d.v2f) => {
+  'use gpu';
+  return std.textureSample(glowView.$, linSampler.$, uv).xyz;
+};
+
 const blendSprite = (uv: d.v2f, level: number) => {
   'use gpu';
   const sprite = sampleSprite(uv, level);
@@ -225,7 +239,11 @@ const evalFruits = (scenePos: d.v2f, activeCount: number) => {
   return SceneHit({ dist, color: d.vec3f(spriteColor) });
 };
 
-const evalWalls = (scenePos: d.v2f, hit: d.Infer<typeof SceneHit>) => {
+const evalWalls = (
+  scenePos: d.v2f,
+  hit: d.Infer<typeof SceneHit>,
+  daylight: number,
+) => {
   'use gpu';
   let closestDist = hit.dist;
   let outColor = d.vec3f(hit.color);
@@ -237,7 +255,7 @@ const evalWalls = (scenePos: d.v2f, hit: d.Infer<typeof SceneHit>) => {
     );
     if (dist < closestDist) {
       closestDist = dist;
-      outColor = d.vec3f(wallColor(scenePos - rect.center, dist));
+      outColor = d.vec3f(wallColor(scenePos - rect.center, dist, daylight));
     }
   }
   return SceneHit({ dist: closestDist, color: outColor });
@@ -312,16 +330,54 @@ const mergedFieldPipeline = root.createRenderPipeline({
   targets: { format: 'rgba16float' },
 });
 
+// Nearest-fruit Voronoi glow: each pixel is colored by its closest fruit,
+// fading out exponentially with distance from the fruit surface.
+const glowPipeline = root.createRenderPipeline({
+  vertex: fullScreenTriangle,
+  fragment: ({ uv }) => {
+    'use gpu';
+    const scenePos = uvToScene(uv);
+    const screenUv = d.vec2f(scenePos.x * 0.5 + 0.5, 0.5 - scenePos.y * 0.5);
+    const field = sampleMergedField(screenUv);
+    const falloff = std.exp(-std.max(field.x, 0) * 12);
+    const glow = blendSprite(d.vec2f(field.y, field.z), d.i32(field.w)) *
+      falloff;
+    return d.vec4f(glow, 1);
+  },
+  targets: { format: 'rgba16float' },
+});
+
 const renderPipeline = root.createRenderPipeline({
   vertex: fullScreenTriangle,
   fragment: ({ uv }) => {
     'use gpu';
     const scenePos = uvToScene(uv);
     const frame = frameUniform.$;
-    const bgColor = skyColor(uv, scenePos, frame.time);
-    const hit = evalWalls(scenePos, evalFruits(scenePos, frame.activeCount));
+    const daylight = computeDaylight(frame.time);
+
+    // Bucket interior mask — inside the side walls, above the floor, below the open top
+    const xInside = std.smoothstep(0.52, 0.48, std.abs(scenePos.x));
+    const yAboveFloor = std.smoothstep(-0.47, -0.43, scenePos.y);
+    const yBelowTop = std.smoothstep(0.52, 0.48, scenePos.y);
+    const bucketMask = xInside * yAboveFloor * yBelowTop;
+
+    let bg = std.mix(
+      skyColor(uv, scenePos, frame.time),
+      bucketBg(scenePos, daylight),
+      bucketMask,
+    );
+
+    // Fruit glow on bucket interior back wall (blended from all fruits via prepass)
+    const screenUv = d.vec2f(scenePos.x * 0.5 + 0.5, 0.5 - scenePos.y * 0.5);
+    bg = bg + sampleGlow(screenUv) * bucketMask * 0.4;
+
+    const hit = evalWalls(
+      scenePos,
+      evalFruits(scenePos, frame.activeCount),
+      daylight,
+    );
     const alpha = std.smoothstep(EDGE_WIDTH, 0, hit.dist);
-    const sceneColor = std.mix(bgColor, hit.color, alpha);
+    const sceneColor = std.mix(bg, hit.color, alpha);
     return d.vec4f(applyGhost(sceneColor, frame.ghostCircle, scenePos), 1);
   },
   targets: { format: presentationFormat },
@@ -329,10 +385,34 @@ const renderPipeline = root.createRenderPipeline({
 
 // Event handlers
 
+canvas.addEventListener('touchstart', (e) => e.preventDefault(), {
+  passive: false,
+});
+canvas.addEventListener('touchmove', (e) => e.preventDefault(), {
+  passive: false,
+});
+canvas.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
+
 canvas.addEventListener('pointermove', (e) => {
   const rect = canvas.getBoundingClientRect();
   const sceneX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
   ghostX = clampSpawnX(sceneX, LEVEL_RADII[ghostLevel]);
+});
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  const touch = e.changedTouches[0];
+  if (!touch) return;
+  const rect = canvas.getBoundingClientRect();
+  const sceneX = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+  ghostX = clampSpawnX(sceneX, LEVEL_RADII[ghostLevel]);
+  const now = performance.now() * 0.001;
+  if (now - lastSpawnTime < SPAWN_COOLDOWN) return;
+  if (activeFruits.length >= MAX_FRUITS) return;
+  spawnFruit(ghostLevel, ghostX);
+  lastSpawnTime = now;
+  ghostLevel = randomLevel();
+  ghostX = clampSpawnX(ghostX, LEVEL_RADII[ghostLevel]);
 });
 
 canvas.addEventListener('click', () => {
@@ -506,12 +586,25 @@ function frame() {
     },
   });
 
+  root.device.pushErrorScope('validation');
+  root.device.pushErrorScope('out-of-memory');
+  root.device.pushErrorScope('internal');
+
   mergedFieldPipeline
     .withColorAttachment({
       view: mergedFieldView,
       loadOp: 'clear',
       storeOp: 'store',
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    })
+    .draw(3);
+
+  glowPipeline
+    .withColorAttachment({
+      view: glowView,
+      loadOp: 'clear',
+      storeOp: 'store',
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
     })
     .draw(3);
 
@@ -523,6 +616,24 @@ function frame() {
       clearValue: { r: 0, g: 0, b: 0, a: 1 },
     })
     .draw(3);
+
+  const validationError = root.device.popErrorScope();
+  const oomError = root.device.popErrorScope();
+  const internalError = root.device.popErrorScope();
+
+  Promise.all([validationError, oomError, internalError]).then(
+    ([validation, oom, internal]) => {
+      if (validation) {
+        console.error('Validation error:', validation.message);
+      }
+      if (oom) {
+        console.error('Out of memory error:', oom.message);
+      }
+      if (internal) {
+        console.error('Internal error:', internal.message);
+      }
+    },
+  );
 
   if (checkMerges()) {
     pruneDead();
