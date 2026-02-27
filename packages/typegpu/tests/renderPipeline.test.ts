@@ -105,7 +105,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
       .withVertex(vertexFn, {})
       .withFragment(fragmentFn, { out: { format: 'rgba8unorm' } })
       .createPipeline()
-      // oxlint-disable-next-line typescript/no-explicit-any <not testing color attachment at this time>
+      // oxlint-disable-next-line typescript/no-explicit-any -- not testing color attachment at this time
       .withColorAttachment({ out: {} } as any);
 
     expect(() => pipeline.draw(6)).toThrowError(

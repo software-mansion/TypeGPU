@@ -242,7 +242,7 @@ class WithBindingImpl implements WithBinding {
 
   createRenderPipeline(
     descriptor: TgpuRenderPipeline.Descriptor,
-    // oxlint-disable-next-line typescript/no-explicit-any required to be compatible with overloads
+    // oxlint-disable-next-line typescript/no-explicit-any -- required to be compatible with overloads
   ): TgpuRenderPipeline<any> {
     return INTERNAL_createRenderPipeline({
       root: this._getRoot(),
@@ -520,7 +520,7 @@ class TgpuRootImpl extends WithBindingImpl
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuUniform<TData> {
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
-      // oxlint-disable-next-line typescript/no-explicit-any i'm sure it's fine
+      // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
       .$usage('uniform' as any);
 
     return new TgpuBufferShorthandImpl('uniform', buffer);
@@ -531,7 +531,7 @@ class TgpuRootImpl extends WithBindingImpl
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuMutable<TData> {
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
-      // oxlint-disable-next-line typescript/no-explicit-any i'm sure it's fine
+      // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
       .$usage('storage' as any);
 
     return new TgpuBufferShorthandImpl('mutable', buffer);
@@ -542,7 +542,7 @@ class TgpuRootImpl extends WithBindingImpl
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuReadonly<TData> {
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
-      // oxlint-disable-next-line typescript/no-explicit-any i'm sure it's fine
+      // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
       .$usage('storage' as any);
 
     return new TgpuBufferShorthandImpl('readonly', buffer);
@@ -609,7 +609,7 @@ class TgpuRootImpl extends WithBindingImpl
     >
   > {
     const texture = INTERNAL_createTexture(props, this);
-    // oxlint-disable-next-line typescript/no-explicit-any <too much type wrangling>
+    // oxlint-disable-next-line typescript/no-explicit-any -- too much type wrangling
     return texture as any;
   }
 

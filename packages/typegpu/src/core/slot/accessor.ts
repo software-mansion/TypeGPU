@@ -99,7 +99,7 @@ abstract class AccessorBase<
    * @returns A snippet representing the accessor.
    */
   #createSnippet() {
-    // oxlint-disable-next-line typescript/no-non-null-assertion it's there
+    // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there
     const ctx = getResolutionCtx()!;
     let value = getGpuValueRecursively(ctx.unwrap(this.slot));
 

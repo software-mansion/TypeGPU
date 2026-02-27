@@ -1,4 +1,4 @@
-// oxlint-disable typescript/no-unnecessary-boolean-literal-compare this is a test
+// oxlint-disable typescript/no-unnecessary-boolean-literal-compare -- this is a test
 import tgpu, { d, std } from 'typegpu';
 
 const Schema = d.struct({

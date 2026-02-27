@@ -168,7 +168,6 @@ describe('createCompileInstructions', () => {
       b: d.vec3f,
     });
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(struct)!;
 
     const arr = new ArrayBuffer(sizeOf(struct));
@@ -187,7 +186,6 @@ describe('createCompileInstructions', () => {
       c: d.arrayOf(d.u32, 3),
     });
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(struct)!;
 
     const arr = new ArrayBuffer(sizeOf(struct));
@@ -214,7 +212,6 @@ describe('createCompileInstructions', () => {
       c: d.arrayOf(d.struct({ d: d.u32 }), 3),
     });
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(struct)!;
 
     const arr = new ArrayBuffer(sizeOf(struct));
@@ -234,7 +231,6 @@ describe('createCompileInstructions', () => {
   it('should compile a writer for an array', () => {
     const array = d.arrayOf(d.vec3f, 5);
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(array)!;
 
     const arr = new ArrayBuffer(sizeOf(array));
@@ -260,7 +256,6 @@ describe('createCompileInstructions', () => {
   it('should compile a writer for nested arrays', () => {
     const nestedArray = d.arrayOf(d.arrayOf(d.u32, 3), 2);
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(nestedArray)!;
 
     const arr = new ArrayBuffer(sizeOf(nestedArray));
@@ -281,7 +276,6 @@ describe('createCompileInstructions', () => {
       b: d.arrayOf(d.arrayOf(d.vec2f, 2), 2),
     });
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(struct)!;
 
     const arr = new ArrayBuffer(sizeOf(struct));
@@ -311,7 +305,6 @@ describe('createCompileInstructions', () => {
   it('should compile a writer for deeply nested arrays', () => {
     const deeplyNested = d.arrayOf(d.arrayOf(d.arrayOf(d.u32, 2), 2), 2);
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(deeplyNested)!;
 
     const arr = new ArrayBuffer(sizeOf(deeplyNested));
@@ -357,7 +350,6 @@ describe('createCompileInstructions', () => {
       "
     `);
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(nestedArray)!;
 
     expect;
@@ -402,7 +394,6 @@ describe('createCompileInstructions', () => {
       transform: d.mat4x4f,
     });
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(Schema)!;
 
     const arr = new ArrayBuffer(sizeOf(Schema));
@@ -423,7 +414,6 @@ describe('createCompileInstructions', () => {
       transform: d.mat3x3f,
     });
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(Schema)!;
 
     const arr = new ArrayBuffer(sizeOf(Schema));
@@ -443,7 +433,6 @@ describe('createCompileInstructions', () => {
       transform: d.mat2x2f,
     });
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(Schema)!;
 
     const arr = new ArrayBuffer(sizeOf(Schema));
@@ -468,7 +457,6 @@ describe('createCompileInstructions', () => {
       "
     `);
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(array)!;
 
     const arr = new ArrayBuffer(sizeOf(array));
@@ -494,7 +482,6 @@ describe('createCompileInstructions', () => {
       "
     `);
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(schema)!;
 
     const arr = new ArrayBuffer(sizeOf(schema));
@@ -520,7 +507,6 @@ describe('createCompileInstructions', () => {
       "
     `);
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(schema)!;
 
     const arr = new ArrayBuffer(sizeOf(schema));
@@ -555,7 +541,6 @@ describe('createCompileInstructions', () => {
       "
     `);
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(unstruct)!;
 
     const arr = new ArrayBuffer(sizeOf(unstruct));
@@ -582,7 +567,6 @@ describe('createCompileInstructions', () => {
       "
     `);
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(disarray)!;
 
     const arr = new ArrayBuffer(sizeOf(disarray));
@@ -624,7 +608,6 @@ describe('createCompileInstructions', () => {
       "
     `);
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(disarray)!;
 
     const arr = new ArrayBuffer(sizeOf(disarray));
@@ -674,7 +657,6 @@ describe('createCompileInstructions', () => {
       output.setUint8(((offset + 10) + 3), Math.round(value.d.w * 255), littleEndian);
       "
     `);
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const writer = getCompiledWriterForSchema(unstruct)!;
 
     const arr = new ArrayBuffer(sizeOf(unstruct));
@@ -758,7 +740,6 @@ describe('createCompileInstructions', () => {
       "
     `);
 
-    // oxlint-disable-next-line typescript/no-non-null-assertion <it's a test>
     const compiled = getCompiledWriterForSchema(disarray)!;
 
     const arr = new ArrayBuffer(sizeOf(disarray));
@@ -821,9 +802,7 @@ describe('createCompileInstructions', () => {
     }
 
     for (let i = 0; i < 2; i++) {
-      // oxlint-disable-next-line typescript/no-non-null-assertion it's a test
       const result = decoded[i]!;
-      // oxlint-disable-next-line typescript/no-non-null-assertion it's a test
       const expected = inputData[i]!;
       expect(result.a.x).toBeCloseTo(expected.a.x, 4);
       expect(result.a.y).toBeCloseTo(expected.a.y, 4);

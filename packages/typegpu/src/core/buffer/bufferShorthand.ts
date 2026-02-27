@@ -103,7 +103,7 @@ export class TgpuBufferShorthandImpl<
       & (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag),
   ) {
     this[$getNameForward] = buffer;
-    // oxlint-disable-next-line typescript/no-explicit-any too complex a type
+    // oxlint-disable-next-line typescript/no-explicit-any -- too complex a type
     this.#usage = (this.buffer as any).as(this.resourceType);
   }
 

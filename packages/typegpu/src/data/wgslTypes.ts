@@ -1817,6 +1817,6 @@ export function WORKAROUND_getSchema<T extends AnyVecInstance | AnyMatInstance>(
   // TODO: Remove workaround
   // it's a workaround for circular dependencies caused by us using schemas in the shader generator
   // these schema properties are assigned on the prototype of vector and matrix instances
-  // oxlint-disable-next-line typescript/no-explicit-any explained above
+  // oxlint-disable-next-line typescript/no-explicit-any -- explained above
   return (vec as any).schema;
 }

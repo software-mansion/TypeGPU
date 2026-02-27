@@ -60,7 +60,7 @@ describe('Mixed swizzle validation', () => {
       const main = () => {
         'use gpu';
         const vec = d.vec4f(1, 2, 3, 4);
-        // oxlint-disable-next-line typescript/no-explicit-any Accessing a mixed swizzle should cause an error
+        // oxlint-disable-next-line typescript/no-explicit-any -- Accessing a mixed swizzle should cause an error
         const mixed = (vec as any).xrgy;
         return mixed;
       };
@@ -78,7 +78,7 @@ describe('Mixed swizzle validation', () => {
       const main = () => {
         'use gpu';
         const vec = d.vec4f(1, 2, 3, 4);
-        // oxlint-disable-next-line typescript/no-explicit-any Accessing a mixed swizzle should cause an error
+        // oxlint-disable-next-line typescript/no-explicit-any -- Accessing a mixed swizzle should cause an error
         const mixed = (vec as any).rgxw;
         return mixed;
       };

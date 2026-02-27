@@ -316,7 +316,7 @@ export class TSLAccessor<T extends d.AnyWgslData, TNode extends THREE.Node> {
       return tgpu['~unstable'].rawCodeSnippet('', this.#dataType, 'runtime').$;
     }
 
-    // oxlint-disable-next-line typescript/no-explicit-any smh
+    // oxlint-disable-next-line typescript/no-explicit-any -- smh
     ctx.dependencies.push(this as any);
 
     const builtNode = this.node.build(ctx.builder) as string;

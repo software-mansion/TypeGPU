@@ -148,7 +148,7 @@ type CopyCompatibleTexture<T extends TextureProps> = TgpuTexture<{
   sampleCount?: T['sampleCount'];
 }>;
 
-// oxlint-disable-next-line typescript/no-explicit-any we can't tame the validation otherwise
+// oxlint-disable-next-line typescript/no-explicit-any -- we can't tame the validation otherwise
 export interface TgpuTexture<TProps extends TextureProps = any>
   extends TgpuNamable {
   readonly [$internal]: TextureInternals;

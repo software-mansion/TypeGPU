@@ -7,7 +7,7 @@ import { useCallback, useLayoutEffect, useRef } from 'react';
  * @returns A stable reference of the passed in function.
  */
 
-// oxlint-disable-next-line typescript/no-explicit-any <makes the generic infer properly>
+// oxlint-disable-next-line typescript/no-explicit-any -- makes the generic infer properly
 function useEvent<TFunction extends (...params: any[]) => any>(
   handler: TFunction,
 ) {

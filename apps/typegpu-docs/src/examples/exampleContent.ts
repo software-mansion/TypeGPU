@@ -1,4 +1,4 @@
-// oxlint-disable typescript/no-unnecessary-type-assertion import.meta.glob is inferred incorrectly by oxlint
+// oxlint-disable typescript/no-unnecessary-type-assertion -- import.meta.glob is inferred incorrectly by oxlint
 import pathe from 'pathe';
 import * as R from 'remeda';
 import type {

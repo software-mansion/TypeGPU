@@ -292,7 +292,6 @@ describe('d.ref', () => {
 
     const main = () => {
       'use gpu';
-      // oxlint-disable-next-line typescript/no-non-null-assertion it's there
       const pos = layout.$.positions[0]!;
       advance(d.ref(pos));
       d.ref(pos);

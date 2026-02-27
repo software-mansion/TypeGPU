@@ -70,7 +70,7 @@ export function accessIndex(
 
     return snip(
       isKnownAtComptime(target) && isKnownAtComptime(index)
-        // oxlint-disable-next-line typescript/no-explicit-any it's fine, it's there
+        // oxlint-disable-next-line typescript/no-explicit-any -- it's fine, it's there
         ? (target.value as any)[index.value as number]
         : stitch`${target}[${index}]`,
       elementType,
@@ -82,7 +82,7 @@ export function accessIndex(
   if (isVec(target.dataType)) {
     return snip(
       isKnownAtComptime(target) && isKnownAtComptime(index)
-        // oxlint-disable-next-line typescript/no-explicit-any it's fine, it's there
+        // oxlint-disable-next-line typescript/no-explicit-any -- it's fine, it's there
         ? (target.value as any)[index.value as any]
         : stitch`${target}[${index}]`,
       target.dataType.primitive,
@@ -126,7 +126,7 @@ export function accessIndex(
   ) {
     // No idea what the type is, so we act on the snippet's value and try to guess
     return coerceToSnippet(
-      // oxlint-disable-next-line typescript/no-explicit-any we're inspecting the value, and it could be any value
+      // oxlint-disable-next-line typescript/no-explicit-any -- we're inspecting the value, and it could be any value
       (target.value as any)[index.value as number],
     );
   }

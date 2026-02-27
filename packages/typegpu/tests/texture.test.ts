@@ -10,7 +10,7 @@ import type {
 import type { ExperimentalTgpuRoot } from '../src/core/root/rootTypes.ts';
 import { it } from './utils/extendedIt.ts';
 import * as d from '../src/data/index.ts';
-// oxlint-disable-next-line import/no-unassigned-import imported for side effects
+// oxlint-disable-next-line import/no-unassigned-import -- imported for side effects
 import './utils/webgpuGlobals.ts';
 import { attest } from '@ark/attest';
 import tgpu from '../src/index.js';
