@@ -2,7 +2,6 @@ import { ASTUtils, type TSESTree } from '@typescript-eslint/utils';
 import { createRule } from '../ruleCreator.ts';
 import { enhanceRule } from '../enhanceRule.ts';
 import { directiveTracking } from '../enhancers/directiveTracking.ts';
-import { getBaseFromAccessChain } from '../utils/nodeUtils.ts';
 
 export const invalidAssignment = createRule({
   name: 'invalid-assignment',
@@ -13,7 +12,7 @@ export const invalidAssignment = createRule({
     },
     messages: {
       parameterAssignment:
-        "Cannot assign to '{{snippet}}' since WGSL parameters are immutable.",
+        "Cannot assign to '{{snippet}}' since WGSL parameters are immutable. If you're using d.ref, please either use '.$' or disable this rule.",
     },
     schema: [],
   },
@@ -29,7 +28,17 @@ export const invalidAssignment = createRule({
         }
 
         // look for the definition of the variable we assign to
-        const assignee = getBaseFromAccessChain(node.left);
+        let assignee = node.left;
+        while (assignee.type === 'MemberExpression') {
+          if (
+            assignee.property.type === 'Identifier' &&
+            assignee.property.name === '$'
+          ) {
+            // a dollar was used so we assume this assignment is fine
+            return;
+          }
+          assignee = assignee.object;
+        }
         if (assignee.type !== 'Identifier') {
           return;
         }

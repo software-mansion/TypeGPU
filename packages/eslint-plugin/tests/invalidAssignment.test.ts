@@ -15,6 +15,7 @@ describe('invalidAssignment', () => {
       'const fn = (a) => { a = {}; a.prop = 1; }',
       "const fn = (a) => { 'use gpu'; let x = 0; x = 1; }",
       "const fn = (a) => { 'use gpu'; { let a = 1; a = 2; } }",
+      "const fn = (a) => { 'use gpu'; a.$ = 1 }",
     ],
     invalid: [
       {
