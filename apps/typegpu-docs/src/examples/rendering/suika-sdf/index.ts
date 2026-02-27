@@ -11,7 +11,6 @@ import {
   MAX_LEVEL_RADIUS,
   MERGE_DISTANCE_FACTOR,
   MIN_RADIUS,
-  OFFSCREEN,
   PLAYFIELD_HALF_WIDTH,
   SCENE_SCALE,
   SHARP_FACTOR,
@@ -20,75 +19,37 @@ import {
   SPAWN_WEIGHT_TOTAL,
   SPAWN_WEIGHTS,
   SPEED_BLEND_MAX,
-  WALL_COLOR,
   WALL_DEFS,
   WALL_ROUNDNESS,
 } from './constants.ts';
 import type { BallState } from './physics.ts';
 import { createPhysicsWorld } from './physics.ts';
-import { createAtlases, SPRITE_SIZE } from './sdf-gen.ts';
-import { createSmoothedSdf } from './sdf-smooth.ts';
+import { createAtlases, createSmoothedSdf, SPRITE_SIZE } from './sdfGen.ts';
 import { bucketBg, computeDaylight, skyColor } from './sky.ts';
+import type { ActiveFruit } from './schemas.ts';
+import {
+  Frame,
+  INACTIVE_CIRCLE,
+  LEVEL_F32_ZEROS,
+  LEVEL_V2F_ZEROS,
+  SceneHit,
+  SdCircle,
+  SdRect,
+} from './schemas.ts';
+import {
+  canvasToGameUv,
+  circleUv,
+  clampRadial,
+  rotate2d,
+  uvToScene,
+  wallColor,
+} from './shaderHelpers.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-const rotate2d = (p: d.v2f, angle: number) => {
-  'use gpu';
-  const cosA = std.cos(angle);
-  const sinA = std.sin(angle);
-  return d.vec2f(cosA * p.x - sinA * p.y, sinA * p.x + cosA * p.y);
-};
-
-const clampRadial = (p: d.v2f, clampRadius: number, minRadius: number) => {
-  'use gpu';
-  const len = std.max(std.length(p), minRadius);
-  return p * std.min(clampRadius / len, 1);
-};
-
-const circleUv = (p: d.v2f) => {
-  'use gpu';
-  return d.vec2f(p.x + 0.5, 0.5 - p.y);
-};
-
-const uvToScene = (uv: d.v2f) => {
-  'use gpu';
-  return d.vec2f((uv.x * 2 - 1) * SCENE_SCALE, (1 - uv.y * 2) * SCENE_SCALE);
-};
-
-const canvasToGameUv = (uv: d.v2f, canvasAspect: number) => {
-  'use gpu';
-  const scale = std.select(
-    d.vec2f(1, canvasAspect / GAME_ASPECT),
-    d.vec2f(GAME_ASPECT / canvasAspect, 1),
-    canvasAspect > GAME_ASPECT,
-  );
-  const offset = (d.vec2f(1) - scale) * 0.5;
-  return (uv - offset) / scale;
-};
-
-const wallColor = (local: d.v2f, dist: number, daylight: number) => {
-  'use gpu';
-  const stripe = std.abs(std.fract(local.x * 18.0 + local.y * 6.0) - 0.5);
-  const stripeMask = std.clamp(0.55 - stripe * 1.6, 0, 1);
-  const speck = std.abs(std.sin((local.x + local.y * 3.0) * 45.0)) * 0.04;
-  const texture = stripeMask * 0.08 + speck;
-  const edgeShade = std.clamp(0.35 - dist * 12.0, 0, 0.35);
-  const baseColor = WALL_COLOR + d.vec3f(1, 0.8, 0.6) * (edgeShade + texture);
-  return std.mix(baseColor * 0.12, baseColor, daylight);
-};
-
-interface ActiveFruit {
-  level: number;
-  radius: number;
-  bodyIndex: number;
-  dead: boolean;
-  spawnTime: number;
-  isMerge: boolean;
-}
 
 function randomLevel(): number {
   let r = Math.random() * SPAWN_WEIGHT_TOTAL;
@@ -161,7 +122,6 @@ let mergedFieldBindGroup = root.createBindGroup(mergedFieldLayout, {
   mergedField: mergedFieldView,
 });
 
-const SdRect = d.struct({ center: d.vec2f, size: d.vec2f });
 const rectUniform = root.createUniform(
   d.arrayOf(SdRect, WALL_DEFS.length),
   WALL_DEFS.map((w) => ({
@@ -170,32 +130,11 @@ const rectUniform = root.createUniform(
   })),
 );
 
-const SdCircle = d.struct({
-  center: d.align(16, d.vec2f),
-  radius: d.f32,
-  level: d.i32,
-  angle: d.f32,
-  speed: d.f32,
-});
-const INACTIVE_CIRCLE = {
-  center: d.vec2f(OFFSCREEN, OFFSCREEN),
-  radius: 0,
-  level: 0,
-  angle: 0,
-  speed: 0,
-};
-
 const circleUniform = root.createUniform(
   d.arrayOf(SdCircle, MAX_FRUITS),
   Array.from({ length: MAX_FRUITS }, () => INACTIVE_CIRCLE),
 );
 
-const Frame = d.struct({
-  time: d.f32,
-  canvasAspect: d.f32,
-  activeCount: d.u32,
-  ghostCircle: SdCircle,
-});
 const frameUniform = root.createUniform(Frame, {
   ghostCircle: INACTIVE_CIRCLE,
   time: 0,
@@ -208,8 +147,6 @@ const circleData = Array.from(
   () => ({ ...INACTIVE_CIRCLE }),
 );
 const frameStates: (BallState | null)[] = [];
-
-const SceneHit = d.struct({ dist: d.f32, color: d.vec3f });
 
 const sampleSdf = (
   uv: d.v2f,
@@ -299,11 +236,6 @@ const applyGhost = (
   return std.mix(baseColor, spriteColor, alpha);
 };
 
-// Render pipeline
-
-const LEVEL_F32_ZEROS = Array.from({ length: LEVEL_COUNT }, () => 0);
-const LEVEL_V2F_ZEROS = Array.from({ length: LEVEL_COUNT }, () => d.vec2f());
-
 const mergedFieldPipeline = root.createRenderPipeline({
   vertex: fullScreenTriangle,
   fragment: ({ uv }) => {
@@ -375,7 +307,6 @@ const renderPipeline = root.createRenderPipeline({
       bucketMask,
     );
 
-    // Merged field: sampled once for both fruit hit and glow
     const field = std.textureSampleLevel(
       mergedFieldLayout.$.mergedField,
       linSampler.$,
@@ -408,8 +339,6 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
-// Event handlers
-
 canvas.addEventListener('touchstart', (e) => e.preventDefault(), {
   passive: false,
 });
@@ -432,6 +361,13 @@ canvas.addEventListener('pointermove', (e) => {
   ghostX = clampSpawnX(sceneX, LEVEL_RADII[ghostLevel]);
 });
 
+function spawnAndAdvance(now: number) {
+  spawnFruit(ghostLevel, ghostX);
+  lastSpawnTime = now;
+  ghostLevel = randomLevel();
+  ghostX = clampSpawnX(ghostX, LEVEL_RADII[ghostLevel]);
+}
+
 canvas.addEventListener('touchend', (e) => {
   e.preventDefault();
   const touch = e.changedTouches[0];
@@ -439,38 +375,28 @@ canvas.addEventListener('touchend', (e) => {
     return;
   }
   const rect = canvas.getBoundingClientRect();
-  const sceneX = pointerToSceneX(touch.clientX, rect);
-  ghostX = clampSpawnX(sceneX, LEVEL_RADII[ghostLevel]);
+  ghostX = clampSpawnX(
+    pointerToSceneX(touch.clientX, rect),
+    LEVEL_RADII[ghostLevel],
+  );
   const now = performance.now() * 0.001;
-  if (now - lastSpawnTime < SPAWN_COOLDOWN) {
+  if (
+    now - lastSpawnTime < SPAWN_COOLDOWN || activeFruits.length >= MAX_FRUITS
+  ) {
     return;
   }
-  if (activeFruits.length >= MAX_FRUITS) {
-    return;
-  }
-  spawnFruit(ghostLevel, ghostX);
-  lastSpawnTime = now;
-  ghostLevel = randomLevel();
-  ghostX = clampSpawnX(ghostX, LEVEL_RADII[ghostLevel]);
+  spawnAndAdvance(now);
 });
 
 canvas.addEventListener('click', () => {
   const now = performance.now() * 0.001;
-
   if (
-    now - lastSpawnTime < SPAWN_COOLDOWN ||
-    activeFruits.length >= MAX_FRUITS
+    now - lastSpawnTime < SPAWN_COOLDOWN || activeFruits.length >= MAX_FRUITS
   ) {
     return;
   }
-
-  spawnFruit(ghostLevel, ghostX);
-  lastSpawnTime = now;
-  ghostLevel = randomLevel();
-  ghostX = clampSpawnX(ghostX, LEVEL_RADII[ghostLevel]);
+  spawnAndAdvance(now);
 });
-
-// Game logic
 
 function markDead(fruit: ActiveFruit) {
   if (fruit.dead) {
