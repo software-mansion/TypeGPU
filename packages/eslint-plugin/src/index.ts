@@ -1,4 +1,4 @@
-import pkg from '../package.json';
+import pkg from '../package.json' with { type: 'json' };
 import type { TSESLint } from '@typescript-eslint/utils';
 import { allRules, recommendedRules, rules } from './configs.ts';
 
