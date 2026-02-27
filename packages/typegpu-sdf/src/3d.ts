@@ -1,6 +1,20 @@
 import tgpu from 'typegpu';
-import { f32, vec3f } from 'typegpu/data';
-import { abs, add, dot, length, max, min, saturate, sub } from 'typegpu/std';
+import { f32, v2f, type v3f, vec2f, vec3f } from 'typegpu/data';
+import {
+  abs,
+  add,
+  clamp,
+  cross,
+  dot,
+  length,
+  max,
+  min,
+  saturate,
+  select,
+  sign,
+  sqrt,
+  sub,
+} from 'typegpu/std';
 
 /**
  * Signed distance function for a sphere
@@ -98,3 +112,64 @@ export const sdCapsule = tgpu
     const h = saturate(dot(pa, ba) / dot(ba, ba));
     return length(sub(pa, ba.mul(h))) - radius;
   });
+
+const dot2 = (a: v2f | v3f) => {
+  'use gpu';
+  return dot(a, a);
+};
+
+export const sdTriangle3d = (p: v3f, a: v3f, b: v3f, c: v3f) => {
+  'use gpu';
+  const ba = b.sub(a);
+  const pa = p.sub(a);
+  const cb = c.sub(b);
+  const pb = p.sub(b);
+  const ac = a.sub(c);
+  const pc = p.sub(c);
+  const nor = cross(ba, ac);
+
+  const cond = sign(dot(cross(ba, nor), pa)) +
+      sign(dot(cross(cb, nor), pb)) +
+      sign(dot(cross(ac, nor), pc)) < 2;
+
+  return sqrt(
+    select(
+      // false
+      dot(nor, pa) * dot(nor, pa) / dot2(nor),
+      // true
+      min(
+        min(
+          dot2(ba.mul(saturate(dot(ba, pa) / dot2(ba))).sub(pa)),
+          dot2(cb.mul(saturate(dot(cb, pb) / dot2(cb))).sub(pb)),
+        ),
+        dot2(ac.mul(saturate(dot(ac, pc) / dot2(ac))).sub(pc)),
+      ),
+      cond,
+    ),
+  );
+};
+
+export const sdCappedCylinder = tgpu.fn([vec3f, f32, f32], f32)((p, r, h) => {
+  const dd = abs(vec2f(length(p.xz), p.y)).sub(vec2f(r, h));
+  return min(max(dd.x, dd.y), 0.0) + length(max(dd, vec2f()));
+});
+
+const ndot = (a: v2f, b: v2f) => {
+  'use gpu';
+  return a.x * b.x - a.y * b.y;
+};
+
+export const sdRhombus = tgpu.fn([vec3f, f32, f32, f32, f32], f32)(
+  (p, la, lb, h, ra) => {
+    const ap = abs(p);
+    const b = vec2f(la, lb);
+    const f = clamp(ndot(b, b.sub(ap.xz.mul(2))) / dot2(b), -1, 1);
+    const q = vec2f(
+      length(ap.xz.sub(b.mul(vec2f(1 - f, 1 + f)).mul(0.5))) *
+          sign(ap.x * b.y + ap.z * b.x - b.x * b.y) -
+        ra,
+      ap.y - h,
+    );
+    return min(max(q.x, q.y), 0.0) + length(max(q, vec2f()));
+  },
+);
