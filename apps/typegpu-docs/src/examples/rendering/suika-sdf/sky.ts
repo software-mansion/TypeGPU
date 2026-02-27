@@ -1,7 +1,6 @@
 import { randf } from '@typegpu/noise';
 import { d, std } from 'typegpu';
 
-// Exported so the render pipeline can use the same daylight value for the bucket bg
 export const computeDaylight = (time: number) => {
   'use gpu';
   // theta=π/2 at time=0 → start at noon, full cycle every 120s
@@ -9,7 +8,6 @@ export const computeDaylight = (time: number) => {
   return std.smoothstep(-0.15, 0.4, std.sin(theta));
 };
 
-// Ambient color for the inside of the bucket — ready for future lighting passes
 export const bucketBg = (scenePos: d.v2f, daylight: number) => {
   'use gpu';
   const heightGrad = std.clamp(scenePos.y * 0.25 + 0.9, 0.75, 1.0);
@@ -21,15 +19,14 @@ export const bucketBg = (scenePos: d.v2f, daylight: number) => {
   return color * heightGrad;
 };
 
-export const skyColor = (uv: d.v2f, scenePos: d.v2f, time: number) => {
+export const skyColor = (uv: d.v2f, daylight: number, time: number) => {
   'use gpu';
   const theta = std.fract(time / 120) * (2 * Math.PI) + Math.PI * 0.5;
   const sinT = std.sin(theta);
   const cosT = std.cos(theta);
-  const daylight = std.smoothstep(-0.15, 0.4, sinT);
 
   // Sky gradient blended between night and day palettes
-  const skyMix = std.clamp(scenePos.y * 0.5 + 0.5, 0, 1);
+  const skyMix = std.clamp(1 - uv.y, 0, 1);
   const daySky = std.mix(
     d.vec3f(0.98, 0.93, 0.78),
     d.vec3f(0.62, 0.86, 1.0),
@@ -42,7 +39,7 @@ export const skyColor = (uv: d.v2f, scenePos: d.v2f, time: number) => {
   );
   let bgColor = std.mix(nightSky, daySky, daylight);
 
-  // Stars — per-cell soft circular dot using randf
+  // Stars
   const STAR_N = 50;
   const starCell = std.floor(uv * STAR_N);
   const cellUv = std.fract(uv * STAR_N);
@@ -60,7 +57,7 @@ export const skyColor = (uv: d.v2f, scenePos: d.v2f, time: number) => {
         twinkle * 2.5,
     );
 
-  // Sun: arc from right (east/dawn) overhead at noon to left (west/dusk)
+  // Sun
   const sunX = 0.5 + cosT * 0.38;
   const sunY = 0.52 - sinT * 0.48;
   const sunDist = std.length(uv - d.vec2f(sunX, sunY));
@@ -68,7 +65,7 @@ export const skyColor = (uv: d.v2f, scenePos: d.v2f, time: number) => {
     std.clamp(sinT * 6, 0, 1);
   bgColor = std.mix(bgColor, d.vec3f(1.0, 0.97, 0.78), sunMask);
 
-  // Moon: opposite the sun
+  // Moon
   const moonX = 0.5 - cosT * 0.32;
   const moonY = 0.52 + sinT * 0.4;
   const moonDist = std.length(uv - d.vec2f(moonX, moonY));
@@ -86,7 +83,7 @@ export const skyColor = (uv: d.v2f, scenePos: d.v2f, time: number) => {
     dawnDusk * horizonBand * 0.65,
   );
 
-  // Hills — darker at night
+  // Hills
   const hillX = uv.x + time * 0.025;
   const hillLine = 0.8 + std.sin(hillX * 4.5) * 0.07 +
     std.sin(hillX * 1.8) * 0.04;

@@ -120,7 +120,6 @@ function computeJfaSdf(
 export async function createAtlases(): Promise<{
   spriteAtlas: ImageBitmap[];
   sdfAtlas: ImageBitmap[];
-  /** Boundary points per level, normalized to [-1, 1] relative to sprite center. */
   contours: Float32Array[];
 }> {
   const fruits = await loadImage('./assets/suika-sdf/fruits.png');
@@ -144,19 +143,23 @@ export async function createAtlases(): Promise<{
     const imgData = tmpCtx.getImageData(0, 0, SPRITE_SIZE, SPRITE_SIZE);
     const alpha = imgData.data;
 
+    // 32 rays from center, each finds the outermost opaque pixel.
+    const N_HULL = 32;
     const pts: number[] = [];
-    for (let y = 0; y < SPRITE_SIZE; y++) {
-      for (let x = 0; x < SPRITE_SIZE; x++) {
-        const idx = y * SPRITE_SIZE + x;
-        if (alpha[idx * 4 + 3] <= 128) {
+    for (let i = 0; i < N_HULL; i++) {
+      const angle = (i / N_HULL) * Math.PI * 2;
+      const cosA = Math.cos(angle);
+      const sinA = Math.sin(angle);
+      for (let r = halfSize - 1; r > 0; r--) {
+        const px = Math.round(halfSize + cosA * r);
+        const py = Math.round(halfSize - sinA * r);
+        if (px < 0 || px >= SPRITE_SIZE || py < 0 || py >= SPRITE_SIZE) {
           continue;
         }
-        const isBoundary = (x > 0 && alpha[(idx - 1) * 4 + 3] <= 128) ||
-          (x < SPRITE_SIZE - 1 && alpha[(idx + 1) * 4 + 3] <= 128) ||
-          (y > 0 && alpha[(idx - SPRITE_SIZE) * 4 + 3] <= 128) ||
-          (y < SPRITE_SIZE - 1 && alpha[(idx + SPRITE_SIZE) * 4 + 3] <= 128);
-        if (isBoundary) {
-          pts.push((x - halfSize) / halfSize, -(y - halfSize) / halfSize);
+        if (alpha[(py * SPRITE_SIZE + px) * 4 + 3] > 128) {
+          // Normalize to scene space: x = cosA*r/halfSize, y = sinA*r/halfSize
+          pts.push(cosA * r / halfSize, sinA * r / halfSize);
+          break;
         }
       }
     }

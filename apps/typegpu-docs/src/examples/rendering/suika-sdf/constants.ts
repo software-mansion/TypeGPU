@@ -15,11 +15,11 @@ export const WALL_DEFS = [
 // Rendering
 export const WALL_COLOR = d.vec3f(0.55, 0.5, 0.45);
 export const WALL_ROUNDNESS = 0.035;
-export const EDGE_WIDTH = 0.003;
+export const EDGE_WIDTH = 0.004;
 export const MIN_RADIUS = 0.001;
 export const GHOST_ALPHA = 0.45;
 export const SMOOTH_MIN_K = 16.0;
-export const SHARP_FACTOR = 3.0;
+export const SHARP_FACTOR = 4.0;
 export const SPEED_BLEND_MAX = 0.5;
 
 // Game logic
