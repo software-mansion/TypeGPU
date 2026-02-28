@@ -1,8 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import {
-  type IOLayoutToSchema,
-  withLocations,
-} from '../src/core/function/ioSchema.ts';
+import { type IOLayoutToSchema, withLocations } from '../src/core/function/ioSchema.ts';
 import * as d from '../src/data/index.ts';
 
 describe('withLocations', () => {
@@ -34,12 +31,15 @@ describe('withLocations', () => {
 
   it('uses passed locations map, if no custom location specified', () => {
     expect(
-      withLocations({
-        a: d.location(5, d.vec4f),
-        b: d.vec4f,
-        c: d.vec4f,
-        pos: d.builtin.position,
-      }, { b: 1 }),
+      withLocations(
+        {
+          a: d.location(5, d.vec4f),
+          b: d.vec4f,
+          c: d.vec4f,
+          pos: d.builtin.position,
+        },
+        { b: 1 },
+      ),
     ).toStrictEqual({
       a: d.location(5, d.vec4f),
       b: d.location(1, d.vec4f),

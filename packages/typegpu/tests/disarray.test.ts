@@ -25,22 +25,8 @@ describe('disarray', () => {
     const buffer = new ArrayBuffer(d.sizeOf(TestArray));
     const writer = new BufferWriter(buffer);
 
-    writeData(writer, TestArray, [
-      d.vec3u(1, 2, 3),
-      d.vec3u(4, 5, 6),
-      d.vec3u(7, 8, 9),
-    ]);
-    expect([...new Uint32Array(buffer)]).toStrictEqual([
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-    ]);
+    writeData(writer, TestArray, [d.vec3u(1, 2, 3), d.vec3u(4, 5, 6), d.vec3u(7, 8, 9)]);
+    expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
   it('aligns array elements when writing with custom aligned elements', () => {
@@ -48,11 +34,7 @@ describe('disarray', () => {
     const buffer = new ArrayBuffer(d.sizeOf(TestArray));
     const writer = new BufferWriter(buffer);
 
-    writeData(writer, TestArray, [
-      d.vec3u(1, 2, 3),
-      d.vec3u(4, 5, 6),
-      d.vec3u(7, 8, 9),
-    ]);
+    writeData(writer, TestArray, [d.vec3u(1, 2, 3), d.vec3u(4, 5, 6), d.vec3u(7, 8, 9)]);
     expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
   });
 
@@ -128,9 +110,9 @@ describe('disarray', () => {
     const DisarraySchema = d.disarrayOf(d.unorm16x2, 2);
 
     // @ts-expect-error
-    (() => DisarraySchema([d.vec2f(), d.vec3f()]));
+    () => DisarraySchema([d.vec2f(), d.vec3f()]);
     // @ts-expect-error
-    (() => DisarraySchema([d.vec3f(), d.vec3f()]));
+    () => DisarraySchema([d.vec3f(), d.vec3f()]);
   });
 
   it('can be called to create a deep copy of other disarray', () => {
@@ -151,14 +133,14 @@ describe('disarray', () => {
   it('throws when invalid number of arguments', () => {
     const DisarraySchema = d.disarrayOf(d.float32x2, 2);
 
-    expect(() => DisarraySchema([d.vec2f()]))
-      .toThrowErrorMatchingInlineSnapshot(
-        '[Error: Disarray schema of 2 elements of type float32x2 called with 1 argument(s).]',
-      );
-    expect(() => DisarraySchema([d.vec2f(), d.vec2f(), d.vec2f()]))
-      .toThrowErrorMatchingInlineSnapshot(
-        '[Error: Disarray schema of 2 elements of type float32x2 called with 3 argument(s).]',
-      );
+    expect(() => DisarraySchema([d.vec2f()])).toThrowErrorMatchingInlineSnapshot(
+      '[Error: Disarray schema of 2 elements of type float32x2 called with 1 argument(s).]',
+    );
+    expect(() =>
+      DisarraySchema([d.vec2f(), d.vec2f(), d.vec2f()]),
+    ).toThrowErrorMatchingInlineSnapshot(
+      '[Error: Disarray schema of 2 elements of type float32x2 called with 3 argument(s).]',
+    );
   });
 
   it('can be called to create a default value', () => {
@@ -175,10 +157,7 @@ describe('disarray', () => {
 
     const defaultDisarray = DisarraySchema();
 
-    expect(defaultDisarray).toStrictEqual([
-      { vec: d.vec3f() },
-      { vec: d.vec3f() },
-    ]);
+    expect(defaultDisarray).toStrictEqual([{ vec: d.vec3f() }, { vec: d.vec3f() }]);
   });
 
   it('can be partially called', () => {
@@ -189,11 +168,7 @@ describe('disarray', () => {
       d.vec3u(4, 5, 6),
       d.vec3u(7, 8, 9),
     ]);
-    expect(disarray3).toStrictEqual([
-      d.vec3u(1, 2, 3),
-      d.vec3u(4, 5, 6),
-      d.vec3u(7, 8, 9),
-    ]);
+    expect(disarray3).toStrictEqual([d.vec3u(1, 2, 3), d.vec3u(4, 5, 6), d.vec3u(7, 8, 9)]);
 
     const disarray7 = DisarrayPartialSchema(7)([
       d.vec3u(1, 1, 1),

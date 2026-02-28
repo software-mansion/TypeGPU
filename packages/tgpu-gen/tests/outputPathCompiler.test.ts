@@ -13,10 +13,7 @@ const test = ({
   expected: string;
 }) =>
   expect(
-    createOutputPathCompiler(
-      inputPattern ?? '**/*.wgsl',
-      outputPattern,
-    )(fileName),
+    createOutputPathCompiler(inputPattern ?? '**/*.wgsl', outputPattern)(fileName),
   ).toStrictEqual(expected);
 
 describe('createOutputPathCompiler', () => {

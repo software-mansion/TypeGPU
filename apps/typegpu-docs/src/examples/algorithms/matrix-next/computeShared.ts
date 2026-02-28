@@ -5,13 +5,17 @@ import { computeLayout } from './types.ts';
 const tileA = tgpu.workgroupVar(d.arrayOf(d.i32, TILE_SIZE ** 2));
 const tileB = tgpu.workgroupVar(d.arrayOf(d.i32, TILE_SIZE ** 2));
 
-export const getIndex = tgpu.fn([d.u32, d.u32, d.u32], d.u32)(
-  (row, col, columns) => {
-    return col + row * columns;
-  },
-);
+export const getIndex = tgpu.fn(
+  [d.u32, d.u32, d.u32],
+  d.u32,
+)((row, col, columns) => {
+  return col + row * columns;
+});
 
-const getTileIndex = tgpu.fn([d.u32, d.u32], d.u32)((row, col) => {
+const getTileIndex = tgpu.fn(
+  [d.u32, d.u32],
+  d.u32,
+)((row, col) => {
   return col + row * TILE_SIZE;
 });
 
@@ -24,9 +28,7 @@ export const computeSharedMemory = tgpu.computeFn({
   },
 })((input) => {
   const dimensions = computeLayout.$.dimensions;
-  const numTiles = d.u32(
-    (dimensions.firstColumnCount + TILE_SIZE - 1) / TILE_SIZE,
-  );
+  const numTiles = d.u32((dimensions.firstColumnCount + TILE_SIZE - 1) / TILE_SIZE);
 
   const globalRow = input.wid.x * TILE_SIZE + input.lid.x;
   const globalCol = input.wid.y * TILE_SIZE + input.lid.y;
@@ -40,15 +42,8 @@ export const computeSharedMemory = tgpu.computeFn({
     const matrixACol = tileIndex * TILE_SIZE + localCol;
     let valueA = 0;
 
-    if (
-      globalRow < dimensions.firstRowCount &&
-      matrixACol < dimensions.firstColumnCount
-    ) {
-      const indexA = getIndex(
-        globalRow,
-        matrixACol,
-        dimensions.firstColumnCount,
-      );
+    if (globalRow < dimensions.firstRowCount && matrixACol < dimensions.firstColumnCount) {
+      const indexA = getIndex(globalRow, matrixACol, dimensions.firstColumnCount);
       valueA = computeLayout.$.firstMatrix[indexA];
     }
     tileA.$[tileIdx] = valueA;
@@ -56,15 +51,8 @@ export const computeSharedMemory = tgpu.computeFn({
     const matrixBRow = tileIndex * TILE_SIZE + localRow;
     let valueB = 0;
 
-    if (
-      matrixBRow < dimensions.firstColumnCount &&
-      globalCol < dimensions.secondColumnCount
-    ) {
-      const indexB = getIndex(
-        matrixBRow,
-        globalCol,
-        dimensions.secondColumnCount,
-      );
+    if (matrixBRow < dimensions.firstColumnCount && globalCol < dimensions.secondColumnCount) {
+      const indexB = getIndex(matrixBRow, globalCol, dimensions.secondColumnCount);
       valueB = computeLayout.$.secondMatrix[indexB];
     }
     tileB.$[tileIdx] = valueB;
@@ -85,15 +73,8 @@ export const computeSharedMemory = tgpu.computeFn({
     std.workgroupBarrier();
   }
 
-  if (
-    globalRow < dimensions.firstRowCount &&
-    globalCol < dimensions.secondColumnCount
-  ) {
-    const outputIndex = getIndex(
-      globalRow,
-      globalCol,
-      dimensions.secondColumnCount,
-    );
+  if (globalRow < dimensions.firstRowCount && globalCol < dimensions.secondColumnCount) {
+    const outputIndex = getIndex(globalRow, globalCol, dimensions.secondColumnCount);
     computeLayout.$.resultMatrix[outputIndex] = accumulatedResult;
   }
 });

@@ -10,27 +10,30 @@ describe('console log example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'tests',
-      name: 'log-test',
-      controlTriggers: [
-        'One argument',
-        'Multiple arguments',
-        'String literals',
-        'Different types',
-        'Compound types',
-        'Two logs',
-        'Two threads',
-        '100 dispatches',
-        'Varying size logs',
-        'String interpolation',
-        'Different log functionalities',
-        'Render pipeline',
-        'Draw indexed',
-        'Too many logs',
-      ],
-      expectedCalls: 14,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'tests',
+        name: 'log-test',
+        controlTriggers: [
+          'One argument',
+          'Multiple arguments',
+          'String literals',
+          'Different types',
+          'Compound types',
+          'Two logs',
+          'Two threads',
+          '100 dispatches',
+          'Varying size logs',
+          'String interpolation',
+          'Different log functionalities',
+          'Render pipeline',
+          'Draw indexed',
+          'Too many logs',
+        ],
+        expectedCalls: 14,
+      },
+      device,
+    );
 
     // the resolution variant for when 'shader-f16' is not enabled
     expect(shaderCodes).toMatchInlineSnapshot(`

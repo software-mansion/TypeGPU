@@ -1,10 +1,5 @@
 import { $cast, $gpuCallable } from '../shared/symbols.ts';
-import {
-  type GPUCallable,
-  hasCast,
-  isGPUCallable,
-  type ResolutionCtx,
-} from '../types.ts';
+import { type GPUCallable, hasCast, isGPUCallable, type ResolutionCtx } from '../types.ts';
 import type { Snippet } from './snippet.ts';
 import type { BaseData } from './wgslTypes.ts';
 
@@ -16,7 +11,7 @@ import type { BaseData } from './wgslTypes.ts';
  * Otherwise, returns `schema(item)` or `schema()`.
  */
 export function schemaCallWrapper<T>(schema: BaseData, item?: T): T {
-  const callSchema = schema as unknown as ((item?: T) => T);
+  const callSchema = schema as unknown as (item?: T) => T;
 
   if (hasCast(callSchema)) {
     return callSchema[$cast](item) as T;

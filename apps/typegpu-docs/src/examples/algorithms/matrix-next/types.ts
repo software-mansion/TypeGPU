@@ -8,8 +8,7 @@ export const MatrixInfo = d.struct({
   secondColumnCount: d.u32,
 });
 
-export const createMatrixData = (capacity: number) =>
-  d.arrayOf(d.i32, capacity);
+export const createMatrixData = (capacity: number) => d.arrayOf(d.i32, capacity);
 
 export const computeLayout = tgpu.bindGroupLayout({
   firstMatrix: {

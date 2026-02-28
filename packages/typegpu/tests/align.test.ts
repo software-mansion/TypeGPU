@@ -9,9 +9,7 @@ describe('d.align', () => {
       c: d.u32,
     });
 
-    expect(tgpu.resolve([s1])).toContain(
-      '@align(16) b: u32,',
-    );
+    expect(tgpu.resolve([s1])).toContain('@align(16) b: u32,');
   });
 
   it('changes alignment of a struct containing aligned member', () => {
@@ -106,9 +104,7 @@ describe('d.align', () => {
     const disarray = d.disarrayOf(d.vec3f, 2);
     const alignedDisarray = d.align(16, disarray);
 
-    expectTypeOf(alignedArray).toEqualTypeOf<
-      d.Decorated<d.WgslArray<d.Vec3f>, [d.Align<16>]>
-    >();
+    expectTypeOf(alignedArray).toEqualTypeOf<d.Decorated<d.WgslArray<d.Vec3f>, [d.Align<16>]>>();
     expect(d.isLooseData(alignedArray)).toBe(false);
 
     expectTypeOf(alignedDisarray).toEqualTypeOf<

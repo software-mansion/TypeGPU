@@ -1,10 +1,5 @@
 import { randf } from '@typegpu/noise';
-import tgpu, {
-  d,
-  std,
-  type TgpuBufferMutable,
-  type TgpuBufferReadonly,
-} from 'typegpu';
+import tgpu, { d, std, type TgpuBufferMutable, type TgpuBufferReadonly } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const MAX_GRID_SIZE = 1024;
@@ -27,9 +22,7 @@ const BoxObstacle = d.struct({
 
 const gridSize = 256;
 
-const inputGridSlot = tgpu.slot<
-  TgpuBufferReadonly<GridData> | TgpuBufferMutable<GridData>
->();
+const inputGridSlot = tgpu.slot<TgpuBufferReadonly<GridData> | TgpuBufferMutable<GridData>>();
 const outputGridSlot = tgpu.slot<TgpuBufferMutable<GridData>>();
 
 const MAX_OBSTACLES = 4;
@@ -142,22 +135,12 @@ const computeVelocity = (x: number, y: number): d.v2f => {
   'use gpu';
   const gravityCost = 0.5;
 
-  const neighborOffsets = [
-    d.vec2i(0, 1),
-    d.vec2i(0, -1),
-    d.vec2i(1, 0),
-    d.vec2i(-1, 0),
-  ];
+  const neighborOffsets = [d.vec2i(0, 1), d.vec2i(0, -1), d.vec2i(1, 0), d.vec2i(-1, 0)];
 
   const cell = getCell(x, y);
   let leastCost = cell.z;
 
-  const dirChoices = [
-    d.vec2f(0, 0),
-    d.vec2f(0, 0),
-    d.vec2f(0, 0),
-    d.vec2f(0, 0),
-  ];
+  const dirChoices = [d.vec2f(0, 0), d.vec2f(0, 0), d.vec2f(0, 0), d.vec2f(0, 0)];
   let dirChoiceCount = 1;
 
   for (const offset of tgpu.unroll(neighborOffsets)) {
@@ -176,8 +159,7 @@ const computeVelocity = (x: number, y: number): d.v2f => {
     }
   }
 
-  const leastCostDir =
-    dirChoices[d.u32(randf.sample() * d.f32(dirChoiceCount))];
+  const leastCostDir = dirChoices[d.u32(randf.sample() * d.f32(dirChoiceCount))];
   return d.vec2f(leastCostDir);
 };
 
@@ -199,18 +181,9 @@ const moveObstacles = () => {
     const maxY = std.min(gridSize, obs.center.y + d.i32(obs.size.y / 2));
 
     const nextMinX = std.max(0, nextObs.center.x - d.i32(obs.size.x / 2));
-    const nextMaxX = std.min(
-      gridSize,
-      nextObs.center.x + d.i32(obs.size.x / 2),
-    );
-    const nextMinY = std.max(
-      0,
-      nextObs.center.y - d.i32(obs.size.y / 2),
-    );
-    const nextMaxY = std.min(
-      gridSize,
-      nextObs.center.y + d.i32(obs.size.y / 2),
-    );
+    const nextMaxX = std.min(gridSize, nextObs.center.x + d.i32(obs.size.x / 2));
+    const nextMinY = std.max(0, nextObs.center.y - d.i32(obs.size.y / 2));
+    const nextMaxY = std.min(gridSize, nextObs.center.y + d.i32(obs.size.y / 2));
 
     // does it move right
     if (diff.x > 0) {
@@ -279,11 +252,7 @@ const moveObstacles = () => {
     }
 
     // right column
-    for (
-      let y = std.max(1, nextMinY);
-      y <= std.min(nextMaxY, gridSize - 2);
-      y++
-    ) {
+    for (let y = std.max(1, nextMinY); y <= std.min(nextMaxY, gridSize - 2); y++) {
       const newVel = computeVelocity(nextMaxX + 2, y);
       setVelocity(nextMaxX + 2, y, newVel);
     }
@@ -293,11 +262,13 @@ const moveObstacles = () => {
 let sourceIntensity = 0.1;
 let sourceRadius = 0.01;
 
-const sourceParams = root.createUniform(d.struct({
-  center: d.vec2f,
-  radius: d.f32,
-  intensity: d.f32,
-}));
+const sourceParams = root.createUniform(
+  d.struct({
+    center: d.vec2f,
+    radius: d.f32,
+    intensity: d.f32,
+  }),
+);
 
 const getMinimumInFlow = (x: number, y: number): number => {
   'use gpu';
@@ -431,11 +402,7 @@ const fragmentMain = tgpu.fragmentFn({
     );
   }
 
-  return std.mix(
-    secondColor,
-    thirdColor,
-    std.min((density - secondThreshold) / thirdThreshold, 1),
-  );
+  return std.mix(secondColor, thirdColor, std.min((density - secondThreshold) / thirdThreshold, 1));
 });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -478,14 +445,12 @@ function makePipelines(
     .with(outputGridSlot, outputGridMutable)
     .createGuardedComputePipeline(moveObstacles);
 
-  const renderPipeline = root
-    .with(inputGridSlot, inputGridReadonly)
-    .createRenderPipeline({
-      vertex: vertexMain,
-      fragment: fragmentMain,
+  const renderPipeline = root.with(inputGridSlot, inputGridReadonly).createRenderPipeline({
+    vertex: vertexMain,
+    fragment: fragmentMain,
 
-      primitive: { topology: 'triangle-strip' },
-    });
+    primitive: { topology: 'triangle-strip' },
+  });
 
   return {
     init() {

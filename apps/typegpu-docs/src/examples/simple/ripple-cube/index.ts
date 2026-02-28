@@ -3,23 +3,10 @@ import * as sdf from '@typegpu/sdf';
 import tgpu, { d, std } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { createBackgroundCubemap } from './background.ts';
-import {
-  GRID_SIZE,
-  halton,
-  LIGHT_COUNT,
-  MAX_DIST,
-  MAX_STEPS,
-  SURF_DIST,
-} from './constants.ts';
+import { GRID_SIZE, halton, LIGHT_COUNT, MAX_DIST, MAX_STEPS, SURF_DIST } from './constants.ts';
 import { envMapLayout, lightsAccess, materialAccess, shade } from './pbr.ts';
 import { createPostProcessingPipelines } from './post-processing.ts';
-import {
-  blendFactorAccess,
-  getNormal,
-  sceneSDF,
-  sdfLayout,
-  timeAccess,
-} from './sdf-scene.ts';
+import { blendFactorAccess, getNormal, sceneSDF, sdfLayout, timeAccess } from './sdf-scene.ts';
 import { Light, Material, Ray } from './types.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
@@ -75,10 +62,7 @@ const sdfBindGroup = root.createBindGroup(sdfLayout, {
   }),
 });
 
-const pointOffsets = tgpu.const(
-  d.arrayOf(d.f32, 11),
-  [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
-);
+const pointOffsets = tgpu.const(d.arrayOf(d.f32, 11), [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
 
 const extendedRippleUniform = root.createUniform(d.u32);
 const sdfPrecalcPipeline = root
@@ -115,11 +99,7 @@ const sdfPrecalcPipeline = root
       }
     }
 
-    std.textureStore(
-      sdfWriteView.$,
-      d.vec3u(x, y, z),
-      d.vec4f(shellD, 0, 0, 1),
-    );
+    std.textureStore(sdfWriteView.$, d.vec3u(x, y, z), d.vec4f(shellD, 0, 0, 1));
   });
 
 const backgroundCubemap = createBackgroundCubemap(root);
@@ -132,12 +112,7 @@ const envMapBindGroup = root.createBindGroup(envMapLayout, {
   }),
 });
 
-const postProcessing = createPostProcessingPipelines(
-  root,
-  width,
-  height,
-  initialBloom,
-);
+const postProcessing = createPostProcessingPipelines(root, width, height, initialBloom);
 
 const cameraResult = setupOrbitCamera(
   canvas,
@@ -151,9 +126,7 @@ const getRayForUV = (uv: d.v2f) => {
   const jitteredUV = uv.add(jitterUniform.$);
   const ndc = jitteredUV.mul(2).sub(1).mul(d.vec2f(1, -1));
   const farView = camera.projectionInverse.mul(d.vec4f(ndc.xy, 1, 1));
-  const farWorld = camera.viewInverse.mul(
-    d.vec4f(farView.xyz.div(farView.w), 1),
-  );
+  const farWorld = camera.viewInverse.mul(d.vec4f(farView.xyz.div(farView.w), 1));
   const direction = std.normalize(farWorld.xyz.sub(camera.position.xyz));
   return Ray({ origin: camera.position, direction: d.vec4f(direction, 0) });
 };
@@ -165,9 +138,7 @@ const rayMarchPipeline = root
   .createGuardedComputePipeline((x, y) => {
     'use gpu';
     randf.seed2(d.vec2f(d.f32(x), d.f32(y)).add(timeUniform.$));
-    const textureSize = std.textureDimensions(
-      postProcessing.result.writeView.$,
-    );
+    const textureSize = std.textureDimensions(postProcessing.result.writeView.$);
     const uv = d.vec2f(x, y).add(0.5).div(d.vec2f(textureSize));
     const ray = getRayForUV(uv);
 
@@ -215,11 +186,7 @@ const rayMarchPipeline = root
       finalColor = std.mix(fogColor, sceneColor, fog);
     }
 
-    std.textureStore(
-      postProcessing.result.writeView.$,
-      d.vec2u(x, y),
-      d.vec4f(finalColor, 1),
-    );
+    std.textureStore(postProcessing.result.writeView.$, d.vec2u(x, y), d.vec4f(finalColor, 1));
   });
 
 let animationFrame: number;
@@ -230,15 +197,10 @@ let lastTimestamp = 0;
 let isExtendedRipplesEnabled = false;
 
 function run(timestamp: number) {
-  const deltaTime = lastTimestamp === 0
-    ? 0
-    : (timestamp - lastTimestamp) / 1000;
+  const deltaTime = lastTimestamp === 0 ? 0 : (timestamp - lastTimestamp) / 1000;
   lastTimestamp = timestamp;
   const maxTime = isExtendedRipplesEnabled ? 62 : 28;
-  accumulatedTime = Math.min(
-    maxTime,
-    Math.max(0, accumulatedTime + deltaTime * timeScale),
-  );
+  accumulatedTime = Math.min(maxTime, Math.max(0, accumulatedTime + deltaTime * timeScale));
   timeUniform.write(accumulatedTime);
 
   const jitterX = (halton(frameIndex % 16, 2) - 0.5) / width;
@@ -246,16 +208,9 @@ function run(timestamp: number) {
   jitterUniform.write(d.vec2f(jitterX, jitterY));
   frameIndex++;
 
-  sdfPrecalcPipeline.dispatchThreads(
-    GRID_SIZE / 2,
-    GRID_SIZE / 2,
-    GRID_SIZE / 2,
-  );
+  sdfPrecalcPipeline.dispatchThreads(GRID_SIZE / 2, GRID_SIZE / 2, GRID_SIZE / 2);
 
-  rayMarchPipeline
-    .with(envMapBindGroup)
-    .with(sdfBindGroup)
-    .dispatchThreads(width, height);
+  rayMarchPipeline.with(envMapBindGroup).with(sdfBindGroup).dispatchThreads(width, height);
 
   postProcessing.runTaa();
 

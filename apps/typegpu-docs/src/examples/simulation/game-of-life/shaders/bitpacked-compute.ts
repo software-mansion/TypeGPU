@@ -31,18 +31,8 @@ const gatherNeighborhood = (
   // Gather 4 texels at a time
   // .w=(x,y) .z=(x+1,y) .x=(x,y+1) .y=(x+1,y+1)
   const g1 = std.textureGather(0, texture, sampler, uv);
-  const g2 = std.textureGather(
-    0,
-    texture,
-    sampler,
-    uv.add(d.vec2f(texelSize.x, 0)),
-  );
-  const g3 = std.textureGather(
-    0,
-    texture,
-    sampler,
-    uv.add(d.vec2f(0, texelSize.y)),
-  );
+  const g2 = std.textureGather(0, texture, sampler, uv.add(d.vec2f(texelSize.x, 0)));
+  const g3 = std.textureGather(0, texture, sampler, uv.add(d.vec2f(0, texelSize.y)));
   const g4 = std.textureGather(0, texture, sampler, uv.add(texelSize));
 
   // oxfmt-ignore
@@ -63,9 +53,7 @@ const shiftRight = (center: number, right: number): number => {
   return (center >> 1) | (right << 31);
 };
 
-const bitpackedNeighbors = (
-  n: d.Infer<typeof Neighborhood3x3>,
-): d.Infer<typeof Neighbors8> => {
+const bitpackedNeighbors = (n: d.Infer<typeof Neighborhood3x3>): d.Infer<typeof Neighbors8> => {
   'use gpu';
   // oxfmt-ignore
   return Neighbors8({

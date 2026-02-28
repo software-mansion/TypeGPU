@@ -1,8 +1,5 @@
 import { describe, expect } from 'vitest';
-import {
-  buildWriter,
-  getCompiledWriterForSchema,
-} from '../src/data/compiledIO.ts';
+import { buildWriter, getCompiledWriterForSchema } from '../src/data/compiledIO.ts';
 import * as d from '../src/data/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
 import { it } from './utils/extendedIt.ts';
@@ -245,11 +242,7 @@ describe('createCompileInstructions', () => {
     ]);
 
     for (let i = 0; i < 5; i++) {
-      expect([...new Float32Array(arr, i * 16, 3)]).toStrictEqual([
-        i * 3,
-        i * 3 + 1,
-        i * 3 + 2,
-      ]);
+      expect([...new Float32Array(arr, i * 16, 3)]).toStrictEqual([i * 3, i * 3 + 1, i * 3 + 2]);
     }
   });
 
@@ -290,16 +283,7 @@ describe('createCompileInstructions', () => {
     });
 
     expect(new Uint32Array(arr, 0, 1)[0]).toBe(42);
-    expect([...new Float32Array(arr, 8, 8)]).toStrictEqual([
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-    ]);
+    expect([...new Float32Array(arr, 8, 8)]).toStrictEqual([1, 2, 3, 4, 5, 6, 7, 8]);
   });
 
   it('should compile a writer for deeply nested arrays', () => {
@@ -330,10 +314,7 @@ describe('createCompileInstructions', () => {
   });
 
   it('should compile a writer for a nested array with element type which size is not equal to its alignment', () => {
-    const nestedArray = d.arrayOf(
-      d.arrayOf(d.arrayOf(d.arrayOf(d.vec3f, 2), 2), 2),
-      2,
-    );
+    const nestedArray = d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.vec3f, 2), 2), 2), 2);
 
     expect(buildWriter(nestedArray, 'offset', 'value')).toMatchInlineSnapshot(`
       "for (let i = 0; i < 2; i++) {
@@ -359,16 +340,12 @@ describe('createCompileInstructions', () => {
     writer(
       dataView,
       0,
-      Array.from(
-        { length: 2 },
-        (_, i) =>
-          Array.from(
-            { length: 2 },
-            (_, j) =>
-              Array.from({ length: 2 }, (_, k) =>
-                Array.from({ length: 2 }, (_, l) =>
-                  d.vec3f(i * 8 + j * 4 + k * 2 + l, 0, 0))),
+      Array.from({ length: 2 }, (_, i) =>
+        Array.from({ length: 2 }, (_, j) =>
+          Array.from({ length: 2 }, (_, k) =>
+            Array.from({ length: 2 }, (_, l) => d.vec3f(i * 8 + j * 4 + k * 2 + l, 0, 0)),
           ),
+        ),
       ),
     );
 
@@ -376,13 +353,9 @@ describe('createCompileInstructions', () => {
       for (let j = 0; j < 2; j++) {
         for (let k = 0; k < 2; k++) {
           for (let l = 0; l < 2; l++) {
-            expect([
-              ...new Float32Array(
-                arr,
-                (i * 128) + (j * 64) + (k * 32) + (l * 16),
-                3,
-              ),
-            ]).toStrictEqual([i * 8 + j * 4 + k * 2 + l, 0, 0]);
+            expect([...new Float32Array(arr, i * 128 + j * 64 + k * 32 + l * 16, 3)]).toStrictEqual(
+              [i * 8 + j * 4 + k * 2 + l, 0, 0],
+            );
           }
         }
       }
@@ -403,9 +376,7 @@ describe('createCompileInstructions', () => {
       transform: d.mat4x4f(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15),
     });
 
-    expect([...new Float32Array(arr)]).toStrictEqual(
-      Array.from({ length: 16 }).map((_, i) => i),
-    );
+    expect([...new Float32Array(arr)]).toStrictEqual(Array.from({ length: 16 }).map((_, i) => i));
   });
 
   it('should compile a writer for a mat3x3f', () => {
@@ -572,17 +543,7 @@ describe('createCompileInstructions', () => {
 
     writer(dataView, 0, [d.vec3f(1, 2, 3), d.vec3f(4, 5, 6), d.vec3f(7, 8, 9)]);
 
-    expect([...new Float32Array(arr)]).toStrictEqual([
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-    ]);
+    expect([...new Float32Array(arr)]).toStrictEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
   it('should compile for a disarray of unstructs', () => {
@@ -617,20 +578,7 @@ describe('createCompileInstructions', () => {
     ]);
 
     expect([...new Float32Array(arr)]).toStrictEqual([
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13,
-      14,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
     ]);
   });
 
@@ -674,16 +622,13 @@ describe('createCompileInstructions', () => {
       b: (() => {
         const packed = dataView.getUint32(4, true);
         return d.vec4f(
-          ((packed >> 22) & 0x3FF) / 1023,
-          ((packed >> 12) & 0x3FF) / 1023,
-          ((packed >> 2) & 0x3FF) / 1023,
+          ((packed >> 22) & 0x3ff) / 1023,
+          ((packed >> 12) & 0x3ff) / 1023,
+          ((packed >> 2) & 0x3ff) / 1023,
           (packed & 3) / 3,
         );
       })(),
-      c: d.vec2u(
-        dataView.getUint8(8),
-        dataView.getUint8(9),
-      ),
+      c: d.vec2u(dataView.getUint8(8), dataView.getUint8(9)),
       d: d.vec4f(
         dataView.getUint8(10) / 255,
         dataView.getUint8(11) / 255,
@@ -788,14 +733,8 @@ describe('createCompileInstructions', () => {
           dataView.getInt16(offset + 12, true) / 32767,
           dataView.getInt16(offset + 14, true) / 32767,
         ),
-        e: d.vec2i(
-          dataView.getInt8(offset + 16),
-          dataView.getInt8(offset + 17),
-        ),
-        f: d.vec2i(
-          dataView.getInt16(offset + 18, true),
-          dataView.getInt16(offset + 20, true),
-        ),
+        e: d.vec2i(dataView.getInt8(offset + 16), dataView.getInt8(offset + 17)),
+        f: d.vec2i(dataView.getInt16(offset + 18, true), dataView.getInt16(offset + 20, true)),
       });
     }
 

@@ -1,8 +1,4 @@
-export const smoothstepScalar = (
-  edge0: number,
-  edge1: number,
-  x: number,
-): number => {
+export const smoothstepScalar = (edge0: number, edge1: number, x: number): number => {
   if (edge0 === edge1) {
     return 0; // WGSL spec says this is an indeterminate value
   }

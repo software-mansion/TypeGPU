@@ -19,10 +19,9 @@ import { it } from './utils/extendedIt.ts';
 // oxlint-disable-next-line import/no-unassigned-import -- imported for side effects
 import './utils/webgpuGlobals.ts';
 
-const DEFAULT_READONLY_VISIBILITY_FLAGS = GPUShaderStage.COMPUTE |
-  GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
-const DEFAULT_MUTABLE_VISIBILITY_FLAGS = GPUShaderStage.COMPUTE |
-  GPUShaderStage.FRAGMENT;
+const DEFAULT_READONLY_VISIBILITY_FLAGS =
+  GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
+const DEFAULT_MUTABLE_VISIBILITY_FLAGS = GPUShaderStage.COMPUTE | GPUShaderStage.FRAGMENT;
 
 describe('TgpuBindGroupLayout', () => {
   it('works for entries passed as functions returning TgpuData', ({ root }) => {
@@ -159,8 +158,7 @@ describe('TgpuBindGroupLayout', () => {
       fooTexture: { texture: d.texture1d(d.f32) },
     });
 
-    const main = tgpu.fn([])`() { textureLoad(layout.$.fooTexture); }`
-      .$uses({ layout });
+    const main = tgpu.fn([])`() { textureLoad(layout.$.fooTexture); }`.$uses({ layout });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var fooTexture: texture_1d<f32>;
@@ -280,15 +278,9 @@ describe('TgpuBindGroup', () => {
 
     it('populates a simple layout with a raw buffer', ({ root }) => {
       const scalarBuffer = root.createBuffer(d.u32).$usage('uniform');
-      const arrayBuffer = root
-        .createBuffer(d.arrayOf(d.i32, 4))
-        .$usage('storage');
-      const structBuffer = root
-        .createBuffer(d.struct({ a: d.u32, b: d.i32 }))
-        .$usage('uniform');
-      const runtimeArrayBuffer = root
-        .createBuffer(d.arrayOf(d.i32, 4))
-        .$usage('storage');
+      const arrayBuffer = root.createBuffer(d.arrayOf(d.i32, 4)).$usage('storage');
+      const structBuffer = root.createBuffer(d.struct({ a: d.u32, b: d.i32 })).$usage('uniform');
+      const runtimeArrayBuffer = root.createBuffer(d.arrayOf(d.i32, 4)).$usage('storage');
       const bindGroup = root.createBindGroup(layout, {
         foo: root.unwrap(scalarBuffer),
         bar: root.unwrap(arrayBuffer),
@@ -333,12 +325,8 @@ describe('TgpuBindGroup', () => {
     });
 
     it('populates a simple layout with an atomic version of a primitive buffer', ({ root }) => {
-      const atomicScalarBuffer = root
-        .createBuffer(d.atomic(d.u32))
-        .$usage('uniform');
-      const atomicArrayBuffer = root
-        .createBuffer(d.arrayOf(d.atomic(d.i32), 4))
-        .$usage('uniform');
+      const atomicScalarBuffer = root.createBuffer(d.atomic(d.u32)).$usage('uniform');
+      const atomicArrayBuffer = root.createBuffer(d.arrayOf(d.atomic(d.i32), 4)).$usage('uniform');
       const atomicStructBuffer = root
         .createBuffer(d.struct({ a: d.atomic(d.u32), b: d.atomic(d.i32) }))
         .$usage('storage');
@@ -449,7 +437,9 @@ describe('TgpuBindGroup', () => {
       });
     });
 
-    it('accepts filtering/non-filtering sampler when creating bind group, but not comparison', ({ root }) => {
+    it('accepts filtering/non-filtering sampler when creating bind group, but not comparison', ({
+      root,
+    }) => {
       root.createBindGroup(layout, {
         foo: root.createSampler({ minFilter: 'linear' }),
       });
@@ -528,7 +518,9 @@ describe('TgpuBindGroup', () => {
       });
     });
 
-    it('accepts comparison sampler when creating bind group, but not filtering/non-filtering', ({ root }) => {
+    it('accepts comparison sampler when creating bind group, but not filtering/non-filtering', ({
+      root,
+    }) => {
       root.createBindGroup(layout, {
         foo: root.createComparisonSampler({ compare: 'equal' }),
       });
@@ -537,19 +529,19 @@ describe('TgpuBindGroup', () => {
         foo: root.device.createSampler(),
       });
 
-      (() => {
+      () => {
         root.createBindGroup(layout, {
           // @ts-expect-error
           foo: root.createSampler({ minFilter: 'linear' }),
         });
-      });
+      };
 
-      (() => {
+      () => {
         root.createBindGroup(layout, {
           // @ts-expect-error
           foo: root.createSampler({ minFilter: 'nearest' }),
         });
-      });
+      };
     });
   });
 
@@ -561,22 +553,24 @@ describe('TgpuBindGroup', () => {
       });
 
       const bg = root.createBindGroup(layout, {
-        foo: root['~unstable'].createTexture({
-          size: [64, 64],
-          format: 'rgba8unorm',
-        }).$usage('sampled'),
-        bar: root['~unstable'].createTexture({
-          size: [64, 64],
-          format: 'bgra8unorm',
-        }).$usage('storage'),
+        foo: root['~unstable']
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('sampled'),
+        bar: root['~unstable']
+          .createTexture({
+            size: [64, 64],
+            format: 'bgra8unorm',
+          })
+          .$usage('storage'),
       });
 
       expect(bg).toBeDefined();
 
       const { foo, bar } = layout.bound;
-      expectTypeOf(foo).toEqualTypeOf<
-        TgpuTextureView<d.WgslTexture2d<d.F32>>
-      >();
+      expectTypeOf(foo).toEqualTypeOf<TgpuTextureView<d.WgslTexture2d<d.F32>>>();
       expectTypeOf(bar).toEqualTypeOf<
         TgpuTextureView<d.WgslStorageTexture2d<'bgra8unorm', 'read-only'>>
       >();
@@ -753,12 +747,8 @@ describe('TgpuBindGroup', () => {
 
       const { foo, bar } = layout.bound;
 
-      expectTypeOf(foo).toEqualTypeOf<
-        TgpuTextureView<d.WgslTexture2d<d.F32>>
-      >();
-      expectTypeOf(bar).toEqualTypeOf<
-        TgpuTextureView<d.WgslTextureCubeArray<d.F32>>
-      >();
+      expectTypeOf(foo).toEqualTypeOf<TgpuTextureView<d.WgslTexture2d<d.F32>>>();
+      expectTypeOf(bar).toEqualTypeOf<TgpuTextureView<d.WgslTextureCubeArray<d.F32>>>();
     });
   });
 
@@ -1025,7 +1015,9 @@ describe('TgpuBindGroup', () => {
       }).toThrow(new MissingBindingError('example', 'd'));
     });
 
-    it('creates bind group in layout-defined order, not the insertion order of the populate parameter', ({ root }) => {
+    it('creates bind group in layout-defined order, not the insertion order of the populate parameter', ({
+      root,
+    }) => {
       const aBuffer = root.createBuffer(d.vec3f).$usage('uniform');
       const bBuffer = root.createBuffer(d.u32).$usage('storage');
       const dBuffer = root.createBuffer(d.f32).$usage('storage');
@@ -1080,9 +1072,8 @@ describe('TgpuBindGroup', () => {
     it('accepts wide uniform buffer', ({ root }) => {
       const layout = tgpu.bindGroupLayout({}) as TgpuBindGroupLayout;
 
-      const buffer = root
-        .createBuffer(d.f32)
-        .$usage('uniform') as TgpuBuffer<d.AnyWgslData> & UniformFlag;
+      const buffer = root.createBuffer(d.f32).$usage('uniform') as TgpuBuffer<d.AnyWgslData> &
+        UniformFlag;
 
       root.createBindGroup(layout, {
         foo: buffer,
@@ -1126,15 +1117,15 @@ describe('TgpuBindGroup', () => {
 describe('UnwrapRuntimeConstructor', () => {
   it('unwraps return types of functions returning TgpuData', () => {
     expectTypeOf<UnwrapRuntimeConstructor<d.U32>>().toEqualTypeOf<d.U32>();
-    expectTypeOf<
-      UnwrapRuntimeConstructor<d.WgslArray<d.Vec3f>>
-    >().toEqualTypeOf<d.WgslArray<d.Vec3f>>();
-    expectTypeOf<
-      UnwrapRuntimeConstructor<(_: number) => d.WgslArray<d.Vec3f>>
-    >().toEqualTypeOf<d.WgslArray<d.Vec3f>>();
+    expectTypeOf<UnwrapRuntimeConstructor<d.WgslArray<d.Vec3f>>>().toEqualTypeOf<
+      d.WgslArray<d.Vec3f>
+    >();
+    expectTypeOf<UnwrapRuntimeConstructor<(_: number) => d.WgslArray<d.Vec3f>>>().toEqualTypeOf<
+      d.WgslArray<d.Vec3f>
+    >();
 
-    expectTypeOf<
-      UnwrapRuntimeConstructor<d.F32 | ((_: number) => d.U32)>
-    >().toEqualTypeOf<d.F32 | d.U32>();
+    expectTypeOf<UnwrapRuntimeConstructor<d.F32 | ((_: number) => d.U32)>>().toEqualTypeOf<
+      d.F32 | d.U32
+    >();
   });
 });

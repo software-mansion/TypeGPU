@@ -16,17 +16,20 @@ describe('gravity example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'simulation',
-      name: 'gravity',
-      setupMocks: () => {
-        mockImageLoading();
-        mock3DModelLoading();
-        mockCreateImageBitmap();
-        mockResizeObserver();
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'simulation',
+        name: 'gravity',
+        setupMocks: () => {
+          mockImageLoading();
+          mock3DModelLoading();
+          mockCreateImageBitmap();
+          mockResizeObserver();
+        },
+        expectedCalls: 6,
       },
-      expectedCalls: 6,
-    }, device);
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "

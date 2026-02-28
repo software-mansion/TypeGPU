@@ -10,11 +10,14 @@ describe('matrix multiplication example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'algorithms',
-      name: 'matrix-multiplication',
-      expectedCalls: 1,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'algorithms',
+        name: 'matrix-multiplication',
+        expectedCalls: 1,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct MatrixStruct {

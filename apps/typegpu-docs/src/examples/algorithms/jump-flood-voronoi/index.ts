@@ -52,10 +52,9 @@ const colorSampleLayout = tgpu.bindGroupLayout({
   sampler: { sampler: 'filtering' },
 });
 
-type FloodTexture =
-  & TgpuTexture<{ size: [number, number, 2]; format: 'rgba16float' }>
-  & SampledFlag
-  & StorageFlag;
+type FloodTexture = TgpuTexture<{ size: [number, number, 2]; format: 'rgba16float' }> &
+  SampledFlag &
+  StorageFlag;
 
 const filteringSampler = root['~unstable'].createSampler({
   magFilter: 'linear',
@@ -69,18 +68,18 @@ function createResources() {
         size: [canvas.width, canvas.height, 2],
         format: 'rgba16float',
       })
-      .$usage('sampled', 'storage')
+      .$usage('sampled', 'storage'),
   ) as [FloodTexture, FloodTexture];
 
   const initBindGroups = textures.map((tex) =>
-    root.createBindGroup(initLayout, { writeView: tex })
+    root.createBindGroup(initLayout, { writeView: tex }),
   );
 
   const pingPongBindGroups = [0, 1].map((i) =>
     root.createBindGroup(pingPongLayout, {
       readView: textures[i],
       writeView: textures[1 - i],
-    })
+    }),
   );
 
   const renderBindGroups = textures.map((tex) =>
@@ -90,7 +89,7 @@ function createResources() {
         arrayLayerCount: 1,
       }),
       sampler: filteringSampler,
-    })
+    }),
   );
 
   return { textures, initBindGroups, pingPongBindGroups, renderBindGroups };
@@ -107,30 +106,19 @@ const initializeRandom = root.createGuardedComputePipeline((x, y) => {
   const isSeed = randomVal >= seedThresholdUniform.$;
 
   const paletteColor = palette.$[d.u32(std.floor(randf.sample() * 4))];
-  const variation = d.vec3f(
-    randf.sample() - 0.5,
-    randf.sample() - 0.5,
-    randf.sample() - 0.5,
-  ).mul(0.15);
+  const variation = d
+    .vec3f(randf.sample() - 0.5, randf.sample() - 0.5, randf.sample() - 0.5)
+    .mul(0.15);
 
   const color = std.select(
     d.vec4f(),
     d.vec4f(std.saturate(paletteColor.add(variation)), 1),
     isSeed,
   );
-  const coord = std.select(
-    d.vec2f(-1),
-    d.vec2f(x, y).div(d.vec2f(size)),
-    isSeed,
-  );
+  const coord = std.select(d.vec2f(-1), d.vec2f(x, y).div(d.vec2f(size)), isSeed);
 
   std.textureStore(initLayout.$.writeView, d.vec2i(x, y), 0, color);
-  std.textureStore(
-    initLayout.$.writeView,
-    d.vec2i(x, y),
-    1,
-    d.vec4f(coord, 0, 0),
-  );
+  std.textureStore(initLayout.$.writeView, d.vec2i(x, y), 1, d.vec4f(coord, 0, 0));
 });
 
 const sampleWithOffset = (
@@ -142,7 +130,8 @@ const sampleWithOffset = (
   const dims = std.textureDimensions(tex);
   const samplePos = pos.add(offset);
 
-  const outOfBounds = samplePos.x < 0 ||
+  const outOfBounds =
+    samplePos.x < 0 ||
     samplePos.y < 0 ||
     samplePos.x >= d.i32(dims.x) ||
     samplePos.y >= d.i32(dims.y);
@@ -174,10 +163,7 @@ const jumpFlood = root.createGuardedComputePipeline((x, y) => {
       );
 
       if (sample.coord.x >= 0) {
-        const dist = std.distance(
-          d.vec2f(x, y),
-          sample.coord.mul(d.vec2f(size)),
-        );
+        const dist = std.distance(d.vec2f(x, y), sample.coord.mul(d.vec2f(size)));
         if (dist < minDist) {
           minDist = dist;
           bestSample = SampleResult(sample);
@@ -186,29 +172,15 @@ const jumpFlood = root.createGuardedComputePipeline((x, y) => {
     }
   }
 
-  std.textureStore(
-    pingPongLayout.$.writeView,
-    d.vec2i(x, y),
-    0,
-    bestSample.color,
-  );
-  std.textureStore(
-    pingPongLayout.$.writeView,
-    d.vec2i(x, y),
-    1,
-    d.vec4f(bestSample.coord, 0, 0),
-  );
+  std.textureStore(pingPongLayout.$.writeView, d.vec2i(x, y), 0, bestSample.color);
+  std.textureStore(pingPongLayout.$.writeView, d.vec2i(x, y), 1, d.vec4f(bestSample.coord, 0, 0));
 });
 
 const voronoiFrag = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) =>
-  std.textureSample(
-    colorSampleLayout.$.floodTexture,
-    colorSampleLayout.$.sampler,
-    uv,
-  )
+  std.textureSample(colorSampleLayout.$.floodTexture, colorSampleLayout.$.sampler, uv),
 );
 
 const voronoiPipeline = root.createRenderPipeline({
@@ -242,10 +214,9 @@ async function runFloodAnimated(runId: number) {
     if (runId !== currentRunId) return;
 
     offsetUniform.write(offset);
-    jumpFlood.with(resources.pingPongBindGroups[sourceIdx]).dispatchThreads(
-      canvas.width,
-      canvas.height,
-    );
+    jumpFlood
+      .with(resources.pingPongBindGroups[sourceIdx])
+      .dispatchThreads(canvas.width, canvas.height);
     swap();
     render();
     await sleep(stepDelayMs);
@@ -264,10 +235,7 @@ function recreateResources() {
 
 function initRandom() {
   timeUniform.write((performance.now() % 10000) / 10000 - 1);
-  initializeRandom.with(resources.initBindGroups[0]).dispatchThreads(
-    canvas.width,
-    canvas.height,
-  );
+  initializeRandom.with(resources.initBindGroups[0]).dispatchThreads(canvas.width, canvas.height);
   sourceIdx = 0;
 }
 

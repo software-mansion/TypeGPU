@@ -10,12 +10,15 @@ describe('disco example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'rendering',
-      name: 'disco',
-      controlTriggers: ['Test Resolution'],
-      expectedCalls: 7,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'rendering',
+        name: 'disco',
+        controlTriggers: ['Test Resolution'],
+        expectedCalls: 7,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct mainVertex_Output {

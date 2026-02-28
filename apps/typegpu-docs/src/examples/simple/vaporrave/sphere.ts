@@ -9,24 +9,30 @@ import { Ray } from './types.ts';
  * Returns a transformation matrix that represents an `angle` rotation
  * in XY plane (around the Z axis)
  */
-const rotateAroundZ = tgpu.fn([d.f32], d.mat3x3f)((angle) =>
+const rotateAroundZ = tgpu.fn(
+  [d.f32],
+  d.mat3x3f,
+)((angle) =>
   d.mat3x3f(
     d.vec3f(std.cos(angle), std.sin(angle), 0),
     d.vec3f(-std.sin(angle), std.cos(angle), 0),
     d.vec3f(0, 0, 1),
-  )
+  ),
 );
 
 /**
  * Returns a transformation matrix that represents an `angle` rotation
  * in YZ plane (around the X axis)
  */
-const rotateAroundX = tgpu.fn([d.f32], d.mat3x3f)((angle) =>
+const rotateAroundX = tgpu.fn(
+  [d.f32],
+  d.mat3x3f,
+)((angle) =>
   d.mat3x3f(
     d.vec3f(1, 0, 0),
     d.vec3f(0, std.cos(angle), std.sin(angle)),
     d.vec3f(0, -std.sin(angle), std.cos(angle)),
-  )
+  ),
 );
 
 export const getSphere = tgpu.fn(

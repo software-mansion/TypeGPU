@@ -1,9 +1,4 @@
-import type {
-  TgpuBindGroup,
-  TgpuBindGroupLayout,
-  TgpuRenderPipeline,
-  TgpuRoot,
-} from 'typegpu';
+import type { TgpuBindGroup, TgpuBindGroupLayout, TgpuRenderPipeline, TgpuRoot } from 'typegpu';
 import { d } from 'typegpu';
 import { BoxGeometry } from './box-geometry.ts';
 import { Camera } from './camera.ts';
@@ -48,9 +43,7 @@ export class PointLight {
       .$usage('render', 'sampled');
 
     this.#positionUniform = root.createUniform(d.vec3f, position);
-    this.#shadowCameras = FACE_CONFIGS.map(
-      () => new Camera(root, 90, 0.1, this.far),
-    );
+    this.#shadowCameras = FACE_CONFIGS.map(() => new Camera(root, 90, 0.1, this.far));
     this.#configureCameras();
   }
 

@@ -1,7 +1,7 @@
 {
   "name": "treeshake-test",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "description": "Treeshake testing app for TypeGPU",
   "type": "module",
   "scripts": {

@@ -12,7 +12,10 @@ type TgslModule = Record<string, unknown>;
 async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
   const result = await bundle(
     {
-      ...pipe(SANDBOX_MODULES, mapValues((val) => val.import)),
+      ...pipe(
+        SANDBOX_MODULES,
+        mapValues((val) => val.import),
+      ),
       '/shader.ts': { content: tgslCode },
       '/index.ts': {
         content: `
@@ -59,9 +62,7 @@ export async function executeTgslCode(tgslCode: string): Promise<string> {
   } catch (error) {
     console.error(error);
     throw new Error(
-      `Failed to execute TGSL code: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
+      `Failed to execute TGSL code: ${error instanceof Error ? error.message : String(error)}`,
       { cause: error },
     );
   }

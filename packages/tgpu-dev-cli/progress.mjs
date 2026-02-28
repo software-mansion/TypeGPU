@@ -13,8 +13,8 @@
  * @returns {Promise<T>}
  */
 export async function progress(initial, task) {
-  const ciMode = typeof process.stdout.clearLine !== 'function' ||
-    typeof process.stdout.cursorTo !== 'function';
+  const ciMode =
+    typeof process.stdout.clearLine !== 'function' || typeof process.stdout.cursorTo !== 'function';
 
   if (ciMode) {
     console.log(initial);
@@ -27,10 +27,7 @@ export async function progress(initial, task) {
 
   try {
     return await task((val) => {
-      if (
-        process.stdout.clearLine &&
-        typeof process.stdout.clearLine === 'function'
-      ) {
+      if (process.stdout.clearLine && typeof process.stdout.clearLine === 'function') {
         process.stdout.clearLine(0);
       }
       process.stdout.cursorTo(0);

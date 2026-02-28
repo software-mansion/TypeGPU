@@ -19,10 +19,7 @@ export const babelTransform = (code: string, options?: Options) =>
 export const rollupTransform = (code: string, options?: Options) =>
   rollup({
     input: 'code',
-    plugins: [
-      virtual({ code }),
-      rollupPlugin({ ...defaultOptions, ...options }),
-    ],
+    plugins: [virtual({ code }), rollupPlugin({ ...defaultOptions, ...options })],
     external: ['typegpu', /^typegpu\/.*$/],
   })
     .then((build) => build.generate({}))

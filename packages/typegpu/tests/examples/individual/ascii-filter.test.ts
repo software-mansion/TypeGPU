@@ -10,11 +10,14 @@ describe('ascii filter example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'image-processing',
-      name: 'ascii-filter',
-      expectedCalls: 1,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'image-processing',
+        name: 'ascii-filter',
+        expectedCalls: 1,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct fullScreenTriangle_Input {

@@ -56,13 +56,7 @@ export class CameraController {
     this.#height = height;
 
     this.#view = m.mat4.lookAt(position, target, up, d.mat4x4f());
-    this.#baseProj = m.mat4.perspective(
-      fov,
-      width / height,
-      near,
-      far,
-      d.mat4x4f(),
-    );
+    this.#baseProj = m.mat4.perspective(fov, width / height, near, far, d.mat4x4f());
     this.#proj = this.#baseProj;
 
     this.#viewInv = m.mat4.invert(this.#view, d.mat4x4f());
@@ -81,13 +75,7 @@ export class CameraController {
   }
 
   jitter() {
-    const [jx, jy] = [
-      this.#haltonX.next().value,
-      this.#haltonY.next().value,
-    ] as [
-      number,
-      number,
-    ];
+    const [jx, jy] = [this.#haltonX.next().value, this.#haltonY.next().value] as [number, number];
 
     const jitterX = ((jx - 0.5) * 2.0) / this.#width;
     const jitterY = ((jy - 0.5) * 2.0) / this.#height;
@@ -115,23 +103,11 @@ export class CameraController {
     });
   }
 
-  updateProjection(
-    fov: number,
-    width: number,
-    height: number,
-    near = 0.1,
-    far = 100,
-  ) {
+  updateProjection(fov: number, width: number, height: number, near = 0.1, far = 100) {
     this.#width = width;
     this.#height = height;
 
-    this.#baseProj = m.mat4.perspective(
-      fov,
-      width / height,
-      near,
-      far,
-      d.mat4x4f(),
-    );
+    this.#baseProj = m.mat4.perspective(fov, width / height, near, far, d.mat4x4f());
     this.#baseProjInv = m.mat4.invert(this.#baseProj, d.mat4x4f());
 
     this.#uniform.writePartial({

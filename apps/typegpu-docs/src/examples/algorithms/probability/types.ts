@@ -7,7 +7,7 @@ export const PlotType = {
   DISCRETE: 2,
 } as const;
 
-export type PlotType = typeof PlotType[keyof typeof PlotType];
+export type PlotType = (typeof PlotType)[keyof typeof PlotType];
 
 export interface BaseData {
   count: number;
@@ -55,7 +55,7 @@ export const Distribution = {
   CAUCHY: 'cauchy',
 } as const;
 
-export type Distribution = typeof Distribution[keyof typeof Distribution];
+export type Distribution = (typeof Distribution)[keyof typeof Distribution];
 
 export type PRNG = GeometricPRNG | SimplePRNG;
 

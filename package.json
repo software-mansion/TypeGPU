@@ -1,10 +1,23 @@
 {
   "name": "typegpu-monorepo",
-  "private": true,
-  "type": "module",
   "version": "0.0.0",
+  "private": true,
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
+  "keywords": [
+    "webgpu",
+    "wgpu",
+    "wgsl"
+  ],
+  "homepage": "https://docs.swmansion.com/TypeGPU",
+  "bugs": {
+    "url": "https://github.com/software-mansion/TypeGPU/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion/TypeGPU.git"
+  },
+  "type": "module",
   "scripts": {
     "dev": "DEV=true pnpm --parallel -r dev",
     "dev:host": "DEV=true pnpm --parallel -r dev --host --mode https",
@@ -22,22 +35,6 @@
     "nightly-build": "pnpm --filter typegpu --filter @typegpu/noise --filter unplugin-typegpu prepublishOnly --skip-all-checks",
     "changes": "tgpu-dev-cli changes"
   },
-  "engines": {
-    "node": ">=24.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/software-mansion/TypeGPU.git"
-  },
-  "keywords": [
-    "webgpu",
-    "wgpu",
-    "wgsl"
-  ],
-  "bugs": {
-    "url": "https://github.com/software-mansion/TypeGPU/issues"
-  },
-  "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@vitest/browser": "^3.2.4",
@@ -54,6 +51,9 @@
     "unplugin-typegpu": "workspace:*",
     "vite-imagetools": "catalog:frontend",
     "vitest": "catalog:test"
+  },
+  "engines": {
+    "node": ">=24.0.0"
   },
   "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67",
   "pnpm": {

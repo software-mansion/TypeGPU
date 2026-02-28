@@ -3,18 +3,9 @@ import { type Origin, type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import type { InferGPU } from '../../shared/repr.ts';
-import {
-  $gpuValueOf,
-  $internal,
-  $ownSnippet,
-  $resolve,
-} from '../../shared/symbols.ts';
+import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import {
-  applyExternals,
-  type ExternalMap,
-  replaceExternalsInWgsl,
-} from '../resolve/externals.ts';
+import { applyExternals, type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 
 // ----------
@@ -94,7 +85,8 @@ export function rawCodeSnippet<TDataType extends AnyData>(
 // --------------
 
 class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
-  implements TgpuRawCodeSnippet<TDataType>, SelfResolvable {
+  implements TgpuRawCodeSnippet<TDataType>, SelfResolvable
+{
   readonly [$internal]: true;
   readonly dataType: TDataType;
   readonly origin: RawCodeSnippetOrigin;
@@ -102,11 +94,7 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
   #expression: string;
   #externalsToApply: ExternalMap[];
 
-  constructor(
-    expression: string,
-    type: TDataType,
-    origin: RawCodeSnippetOrigin,
-  ) {
+  constructor(expression: string, type: TDataType, origin: RawCodeSnippetOrigin) {
     this[$internal] = true;
     this.dataType = type;
     this.origin = origin;
@@ -127,11 +115,7 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
       applyExternals(externalMap, externals);
     }
 
-    const replacedExpression = replaceExternalsInWgsl(
-      ctx,
-      externalMap,
-      this.#expression,
-    );
+    const replacedExpression = replaceExternalsInWgsl(ctx, externalMap, this.#expression);
 
     return snip(replacedExpression, this.dataType, this.origin);
   }
@@ -144,14 +128,17 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
     const dataType = this.dataType;
     const origin = this.origin;
 
-    return new Proxy({
-      [$internal]: true,
-      get [$ownSnippet]() {
-        return snip(this, dataType, origin);
+    return new Proxy(
+      {
+        [$internal]: true,
+        get [$ownSnippet]() {
+          return snip(this, dataType, origin);
+        },
+        [$resolve]: (ctx) => ctx.resolve(this),
+        toString: () => `raw(${String(this.dataType)}): "${this.#expression}".$`,
       },
-      [$resolve]: (ctx) => ctx.resolve(this),
-      toString: () => `raw(${String(this.dataType)}): "${this.#expression}".$`,
-    }, valueProxyHandler) as InferGPU<TDataType>;
+      valueProxyHandler,
+    ) as InferGPU<TDataType>;
   }
 
   get $(): InferGPU<TDataType> {

@@ -9,21 +9,20 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 const result = root.createMutable(d.i32, 0);
 
-const computeRunTests = tgpu
-  .computeFn({ workgroupSize: [1] })(() => {
-    let s = true;
-    s = s && logicalExpressionTests();
-    s = s && matrixOpsTests();
-    s = s && infixOperatorsTests();
-    s = s && arrayAndStructConstructorsTest();
-    s = s && pointersTest();
+const computeRunTests = tgpu.computeFn({ workgroupSize: [1] })(() => {
+  let s = true;
+  s = s && logicalExpressionTests();
+  s = s && matrixOpsTests();
+  s = s && infixOperatorsTests();
+  s = s && arrayAndStructConstructorsTest();
+  s = s && pointersTest();
 
-    if (s) {
-      result.$ = 1;
-    } else {
-      result.$ = 0;
-    }
-  });
+  if (s) {
+    result.$ = 1;
+  } else {
+    result.$ = 0;
+  }
+});
 
 const pipeline = root.createComputePipeline({
   compute: computeRunTests,

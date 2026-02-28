@@ -32,14 +32,10 @@ describe('d.location', () => {
 describe('d.HasCustomLocation', () => {
   it('determines if a type has any location attributes', () => {
     const schemaWithLocation = d.location(5, d.u32);
-    expectTypeOf<
-      d.HasCustomLocation<typeof schemaWithLocation>
-    >().toEqualTypeOf<true>();
+    expectTypeOf<d.HasCustomLocation<typeof schemaWithLocation>>().toEqualTypeOf<true>();
 
     const schemaWithoutLocation = d.size(32, d.u32);
-    expectTypeOf<
-      d.HasCustomLocation<typeof schemaWithoutLocation>
-    >().toEqualTypeOf<false>();
+    expectTypeOf<d.HasCustomLocation<typeof schemaWithoutLocation>>().toEqualTypeOf<false>();
 
     const builtin = d.builtin.clipDistances;
     expectTypeOf<d.HasCustomLocation<typeof builtin>>().toEqualTypeOf<false>();

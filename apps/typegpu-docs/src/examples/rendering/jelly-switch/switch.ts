@@ -52,36 +52,31 @@ export class SwitchBehavior {
   }
 
   async init() {
-    const [backgroundResponse, switchOnResponse, switchOffResponse] =
-      await Promise.all([
-        fetch('/TypeGPU/assets/jelly-switch/drag-noise.ogg'),
-        fetch('/TypeGPU/assets/jelly-switch/switch-on.ogg'),
-        fetch('/TypeGPU/assets/jelly-switch/switch-off.ogg'),
-      ]);
+    const [backgroundResponse, switchOnResponse, switchOffResponse] = await Promise.all([
+      fetch('/TypeGPU/assets/jelly-switch/drag-noise.ogg'),
+      fetch('/TypeGPU/assets/jelly-switch/switch-on.ogg'),
+      fetch('/TypeGPU/assets/jelly-switch/switch-off.ogg'),
+    ]);
 
     this.#squelchBuffers = await Promise.all(
-      Array.from(
-        { length: 6 },
-        (_, idx) =>
-          fetch(`/TypeGPU/assets/jelly-switch/squelch${idx + 1}.wav`)
-            .then((res) => res.arrayBuffer())
-            .then((buffer) => this.#audioContext.decodeAudioData(buffer)),
+      Array.from({ length: 6 }, (_, idx) =>
+        fetch(`/TypeGPU/assets/jelly-switch/squelch${idx + 1}.wav`)
+          .then((res) => res.arrayBuffer())
+          .then((buffer) => this.#audioContext.decodeAudioData(buffer)),
       ),
     );
 
-    const [backgroundArrayBuffer, switchOnArrayBuffer, switchOffArrayBuffer] =
-      await Promise.all([
-        backgroundResponse.arrayBuffer(),
-        switchOnResponse.arrayBuffer(),
-        switchOffResponse.arrayBuffer(),
-      ]);
+    const [backgroundArrayBuffer, switchOnArrayBuffer, switchOffArrayBuffer] = await Promise.all([
+      backgroundResponse.arrayBuffer(),
+      switchOnResponse.arrayBuffer(),
+      switchOffResponse.arrayBuffer(),
+    ]);
 
-    const [backgroundBuffer, switchOnBuffer, switchOffBuffer] = await Promise
-      .all([
-        this.#audioContext.decodeAudioData(backgroundArrayBuffer),
-        this.#audioContext.decodeAudioData(switchOnArrayBuffer),
-        this.#audioContext.decodeAudioData(switchOffArrayBuffer),
-      ]);
+    const [backgroundBuffer, switchOnBuffer, switchOffBuffer] = await Promise.all([
+      this.#audioContext.decodeAudioData(backgroundArrayBuffer),
+      this.#audioContext.decodeAudioData(switchOnArrayBuffer),
+      this.#audioContext.decodeAudioData(switchOffArrayBuffer),
+    ]);
 
     this.#switchOnBuffer = switchOnBuffer;
     this.#switchOffBuffer = switchOffBuffer;
@@ -144,9 +139,7 @@ export class SwitchBehavior {
     this.#squashZSpring.update(dt);
     this.#wiggleXSpring.update(dt);
 
-    this.#backgroundGainNode.gain.value = std.saturate(
-      std.abs(this.#velocity * 0.1),
-    ) * 5;
+    this.#backgroundGainNode.gain.value = std.saturate(std.abs(this.#velocity * 0.1)) * 5;
     this.#backgroundSource?.playbackRate.setTargetAtTime(
       std.abs(this.#velocity) * 0.02 + 0.8,
       0,
@@ -184,9 +177,7 @@ export class SwitchBehavior {
 
   playSquelch() {
     const buffer = this.#squelchBuffers
-      ? this.#squelchBuffers[
-        Math.floor(Math.random() * (this.#squelchBuffers.length))
-      ]
+      ? this.#squelchBuffers[Math.floor(Math.random() * this.#squelchBuffers.length)]
       : undefined;
 
     if (!buffer) return;

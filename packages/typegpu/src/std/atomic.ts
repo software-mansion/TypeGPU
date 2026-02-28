@@ -32,8 +32,7 @@ export const textureBarrier = dualImpl({
   codegenImpl: () => 'textureBarrier()',
 });
 
-const atomicNormalError =
-  'Atomic operations are not supported outside of CODEGEN mode.';
+const atomicNormalError = 'Atomic operations are not supported outside of CODEGEN mode.';
 
 export const atomicLoad = dualImpl<<T extends AnyAtomic>(a: T) => number>({
   name: 'atomicLoad',
@@ -68,72 +67,56 @@ const atomicOpSignature = (a: BaseData) => {
   };
 };
 
-export const atomicStore = dualImpl<
-  <T extends AnyAtomic>(a: T, value: number) => void
->({
+export const atomicStore = dualImpl<<T extends AnyAtomic>(a: T, value: number) => void>({
   name: 'atomicStore',
   normalImpl: atomicNormalError,
   signature: atomicActionSignature,
   codegenImpl: (_ctx, [a, value]) => stitch`atomicStore(&${a}, ${value})`,
 });
 
-export const atomicAdd = dualImpl<
-  <T extends AnyAtomic>(a: T, value: number) => number
->({
+export const atomicAdd = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
   name: 'atomicAdd',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
   codegenImpl: (_ctx, [a, value]) => stitch`atomicAdd(&${a}, ${value})`,
 });
 
-export const atomicSub = dualImpl<
-  <T extends AnyAtomic>(a: T, value: number) => number
->({
+export const atomicSub = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
   name: 'atomicSub',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
   codegenImpl: (_ctx, [a, value]) => stitch`atomicSub(&${a}, ${value})`,
 });
 
-export const atomicMax = dualImpl<
-  <T extends AnyAtomic>(a: T, value: number) => number
->({
+export const atomicMax = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
   name: 'atomicMax',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
   codegenImpl: (_ctx, [a, value]) => stitch`atomicMax(&${a}, ${value})`,
 });
 
-export const atomicMin = dualImpl<
-  <T extends AnyAtomic>(a: T, value: number) => number
->({
+export const atomicMin = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
   name: 'atomicMin',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
   codegenImpl: (_ctx, [a, value]) => stitch`atomicMin(&${a}, ${value})`,
 });
 
-export const atomicAnd = dualImpl<
-  <T extends AnyAtomic>(a: T, value: number) => number
->({
+export const atomicAnd = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
   name: 'atomicAnd',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
   codegenImpl: (_ctx, [a, value]) => stitch`atomicAnd(&${a}, ${value})`,
 });
 
-export const atomicOr = dualImpl<
-  <T extends AnyAtomic>(a: T, value: number) => number
->({
+export const atomicOr = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
   name: 'atomicOr',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,
   codegenImpl: (_ctx, [a, value]) => stitch`atomicOr(&${a}, ${value})`,
 });
 
-export const atomicXor = dualImpl<
-  <T extends AnyAtomic>(a: T, value: number) => number
->({
+export const atomicXor = dualImpl<<T extends AnyAtomic>(a: T, value: number) => number>({
   name: 'atomicXor',
   normalImpl: atomicNormalError,
   signature: atomicOpSignature,

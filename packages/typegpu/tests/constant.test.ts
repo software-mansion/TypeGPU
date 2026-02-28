@@ -92,11 +92,7 @@ describe('tgpu.const', () => {
   });
 
   it('looses its `constant` origin when indexing with runtime value', () => {
-    const positions = tgpu.const(d.arrayOf(d.vec3f, 3), [
-      d.vec3f(0),
-      d.vec3f(1),
-      d.vec3f(2),
-    ]);
+    const positions = tgpu.const(d.arrayOf(d.vec3f, 3), [d.vec3f(0), d.vec3f(1), d.vec3f(2)]);
 
     const foo = (idx: number) => {
       'use gpu';

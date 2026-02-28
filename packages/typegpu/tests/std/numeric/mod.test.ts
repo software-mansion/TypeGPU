@@ -40,16 +40,12 @@ describe('mod', () => {
 
   it('computes component-wise modulo of vec2f vectors', () => {
     expect(mod(vec2f(5, 10), vec2f(3, 4))).toEqual(vec2f(2, 2));
-    expect(isCloseTo(mod(vec2f(7.5, 3.5), vec2f(2, 2)), vec2f(1.5, 1.5))).toBe(
-      true,
-    );
+    expect(isCloseTo(mod(vec2f(7.5, 3.5), vec2f(2, 2)), vec2f(1.5, 1.5))).toBe(true);
   });
 
   it('computes component-wise modulo of vec2h vectors', () => {
     expect(mod(vec2h(5, 10), vec2h(3, 4))).toEqual(vec2h(2, 2));
-    expect(isCloseTo(mod(vec2h(7.5, 3.5), vec2h(2, 2)), vec2h(1.5, 1.5))).toBe(
-      true,
-    );
+    expect(isCloseTo(mod(vec2h(7.5, 3.5), vec2h(2, 2)), vec2h(1.5, 1.5))).toBe(true);
   });
 
   it('computes component-wise modulo of vec2i vectors', () => {
@@ -64,22 +60,12 @@ describe('mod', () => {
 
   it('computes component-wise modulo of vec3f vectors', () => {
     expect(mod(vec3f(5, 10, 15), vec3f(3, 4, 5))).toEqual(vec3f(2, 2, 0));
-    expect(
-      isCloseTo(
-        mod(vec3f(7.5, 3.5, 9.3), vec3f(2, 2, 3)),
-        vec3f(1.5, 1.5, 0.3),
-      ),
-    ).toBe(true);
+    expect(isCloseTo(mod(vec3f(7.5, 3.5, 9.3), vec3f(2, 2, 3)), vec3f(1.5, 1.5, 0.3))).toBe(true);
   });
 
   it('computes component-wise modulo of vec3h vectors', () => {
     expect(mod(vec3h(5, 10, 15), vec3h(3, 4, 5))).toEqual(vec3h(2, 2, 0));
-    expect(
-      isCloseTo(
-        mod(vec3h(7.5, 3.5, 9.3), vec3h(2, 2, 3)),
-        vec3h(1.5, 1.5, 0.3),
-      ),
-    ).toBe(true);
+    expect(isCloseTo(mod(vec3h(7.5, 3.5, 9.3), vec3h(2, 2, 3)), vec3h(1.5, 1.5, 0.3))).toBe(true);
   });
 
   it('computes component-wise modulo of vec3i vectors', () => {
@@ -93,45 +79,27 @@ describe('mod', () => {
   });
 
   it('computes component-wise modulo of vec4f vectors', () => {
-    expect(mod(vec4f(5, 10, 15, 20), vec4f(3, 4, 5, 6))).toEqual(
-      vec4f(2, 2, 0, 2),
-    );
+    expect(mod(vec4f(5, 10, 15, 20), vec4f(3, 4, 5, 6))).toEqual(vec4f(2, 2, 0, 2));
     expect(
-      isCloseTo(
-        mod(vec4f(7.5, 3.5, 9.3, 12.7), vec4f(2, 2, 3, 5)),
-        vec4f(1.5, 1.5, 0.3, 2.7),
-      ),
+      isCloseTo(mod(vec4f(7.5, 3.5, 9.3, 12.7), vec4f(2, 2, 3, 5)), vec4f(1.5, 1.5, 0.3, 2.7)),
     ).toBe(true);
   });
 
   it('computes component-wise modulo of vec4h vectors', () => {
-    expect(mod(vec4h(5, 10, 15, 20), vec4h(3, 4, 5, 6))).toEqual(
-      vec4h(2, 2, 0, 2),
-    );
+    expect(mod(vec4h(5, 10, 15, 20), vec4h(3, 4, 5, 6))).toEqual(vec4h(2, 2, 0, 2));
     expect(
-      isCloseTo(
-        mod(vec4h(7.5, 3.5, 9.3, 12.7), vec4h(2, 2, 3, 5)),
-        vec4h(1.5, 1.5, 0.3, 2.7),
-      ),
+      isCloseTo(mod(vec4h(7.5, 3.5, 9.3, 12.7), vec4h(2, 2, 3, 5)), vec4h(1.5, 1.5, 0.3, 2.7)),
     ).toBe(true);
   });
 
   it('computes component-wise modulo of vec4i vectors', () => {
-    expect(mod(vec4i(5, 10, 15, 20), vec4i(3, 4, 5, 6))).toEqual(
-      vec4i(2, 2, 0, 2),
-    );
-    expect(mod(vec4i(-5, 10, -15, 20), vec4i(3, 4, 5, 6))).toEqual(
-      vec4i(-2, 2, 0, 2),
-    );
+    expect(mod(vec4i(5, 10, 15, 20), vec4i(3, 4, 5, 6))).toEqual(vec4i(2, 2, 0, 2));
+    expect(mod(vec4i(-5, 10, -15, 20), vec4i(3, 4, 5, 6))).toEqual(vec4i(-2, 2, 0, 2));
   });
 
   it('computes component-wise modulo of vec4u vectors', () => {
-    expect(mod(vec4u(5, 10, 15, 20), vec4u(3, 4, 5, 6))).toEqual(
-      vec4u(2, 2, 0, 2),
-    );
-    expect(mod(vec4u(0, 10, 7, 16), vec4u(3, 3, 4, 5))).toEqual(
-      vec4u(0, 1, 3, 1),
-    );
+    expect(mod(vec4u(5, 10, 15, 20), vec4u(3, 4, 5, 6))).toEqual(vec4u(2, 2, 0, 2));
+    expect(mod(vec4u(0, 10, 7, 16), vec4u(3, 3, 4, 5))).toEqual(vec4u(0, 1, 3, 1));
   });
 });
 
@@ -155,27 +123,23 @@ describe('mod overload', () => {
 
   it('rejects when incompatible types', () => {
     // @ts-expect-error
-    (() => mod(vec2f(), vec2i()));
+    () => mod(vec2f(), vec2i());
     // @ts-expect-error
-    (() => mod(vec2f(), vec3f()));
+    () => mod(vec2f(), vec3f());
     // @ts-expect-error
-    (() => mod(vec3i(), vec4i()));
+    () => mod(vec3i(), vec4i());
   });
 });
 
 describe('modnd scalar', () => {
   it('computes modulo of vec2f and a scalar', () => {
     expect(mod(vec2f(5, 10), 3)).toEqual(vec2f(2, 1));
-    expect(
-      isCloseTo(mod(vec2f(7.5, 3.5), 2), vec2f(1.5, 1.5)),
-    ).toBe(true);
+    expect(isCloseTo(mod(vec2f(7.5, 3.5), 2), vec2f(1.5, 1.5))).toBe(true);
   });
 
   it('computes modulo of vec2h and a scalar', () => {
     expect(mod(vec2h(5, 10), 3)).toEqual(vec2h(2, 1));
-    expect(
-      isCloseTo(mod(vec2h(7.5, 3.5), 2), vec2h(1.5, 1.5)),
-    ).toBe(true);
+    expect(isCloseTo(mod(vec2h(7.5, 3.5), 2), vec2h(1.5, 1.5))).toBe(true);
   });
 
   it('computes modulo of vec2i and a scalar', () => {
@@ -189,43 +153,25 @@ describe('modnd scalar', () => {
   });
 
   it('computes modulo of vec3f and a scalar', () => {
-    expect(mod(vec3f(5, 10, 15), 3)).toEqual(
-      vec3f(2, 1, 0),
-    );
-    expect(
-      isCloseTo(
-        mod(vec3f(7.5, 3.5, 9.3), 2),
-        vec3f(1.5, 1.5, 1.3),
-      ),
-    ).toBe(true);
+    expect(mod(vec3f(5, 10, 15), 3)).toEqual(vec3f(2, 1, 0));
+    expect(isCloseTo(mod(vec3f(7.5, 3.5, 9.3), 2), vec3f(1.5, 1.5, 1.3))).toBe(true);
   });
 
   it('computes modulo of vec4f and a scalar', () => {
-    expect(mod(vec4f(5, 10, 15, 20), 3)).toEqual(
-      vec4f(2, 1, 0, 2),
-    );
-    expect(
-      isCloseTo(
-        mod(vec4f(7.5, 3.5, 9.3, 12.7), 2),
-        vec4f(1.5, 1.5, 1.3, 0.7),
-      ),
-    ).toBe(true);
+    expect(mod(vec4f(5, 10, 15, 20), 3)).toEqual(vec4f(2, 1, 0, 2));
+    expect(isCloseTo(mod(vec4f(7.5, 3.5, 9.3, 12.7), 2), vec4f(1.5, 1.5, 1.3, 0.7))).toBe(true);
   });
 });
 
 describe('VectorOps.modMixed scalar and vec', () => {
   it('computes modulo of a scalar and vec2f', () => {
     expect(mod(10, vec2f(3, 4))).toEqual(vec2f(1, 2));
-    expect(
-      isCloseTo(mod(7.5, vec2f(2, 3)), vec2f(1.5, 1.5)),
-    ).toBe(true);
+    expect(isCloseTo(mod(7.5, vec2f(2, 3)), vec2f(1.5, 1.5))).toBe(true);
   });
 
   it('computes modulo of a scalar and vec2h', () => {
     expect(mod(10, vec2h(3, 4))).toEqual(vec2h(1, 2));
-    expect(
-      isCloseTo(mod(7.5, vec2h(2, 3)), vec2h(1.5, 1.5)),
-    ).toBe(true);
+    expect(isCloseTo(mod(7.5, vec2h(2, 3)), vec2h(1.5, 1.5))).toBe(true);
   });
 
   it('computes modulo of a scalar and vec2i', () => {
@@ -239,93 +185,52 @@ describe('VectorOps.modMixed scalar and vec', () => {
   });
 
   it('computes modulo of a scalar and vec3f', () => {
-    expect(mod(15, vec3f(3, 4, 5))).toEqual(
-      vec3f(0, 3, 0),
-    );
-    expect(
-      isCloseTo(
-        mod(9.3, vec3f(2, 3, 4)),
-        vec3f(1.3, 0.3, 1.3),
-      ),
-    ).toBe(true);
+    expect(mod(15, vec3f(3, 4, 5))).toEqual(vec3f(0, 3, 0));
+    expect(isCloseTo(mod(9.3, vec3f(2, 3, 4)), vec3f(1.3, 0.3, 1.3))).toBe(true);
   });
 
   it('computes modulo of a scalar and vec3h', () => {
-    expect(mod(15, vec3h(3, 4, 5))).toEqual(
-      vec3h(0, 3, 0),
-    );
-    expect(
-      isCloseTo(
-        mod(9.3, vec3h(2, 3, 4)),
-        vec3h(1.3, 0.3, 1.3),
-      ),
-    ).toBe(true);
+    expect(mod(15, vec3h(3, 4, 5))).toEqual(vec3h(0, 3, 0));
+    expect(isCloseTo(mod(9.3, vec3h(2, 3, 4)), vec3h(1.3, 0.3, 1.3))).toBe(true);
   });
 
   it('computes modulo of a scalar and vec3i', () => {
-    expect(mod(15, vec3i(3, 4, 5))).toEqual(
-      vec3i(0, 3, 0),
-    );
-    expect(mod(-15, vec3i(3, 4, 5))).toEqual(
-      vec3i(0, -3, 0),
-    );
+    expect(mod(15, vec3i(3, 4, 5))).toEqual(vec3i(0, 3, 0));
+    expect(mod(-15, vec3i(3, 4, 5))).toEqual(vec3i(0, -3, 0));
   });
 
   it('computes modulo of a scalar and vec3u', () => {
-    expect(mod(15, vec3u(3, 4, 5))).toEqual(
-      vec3u(0, 3, 0),
-    );
-    expect(mod(20, vec3u(6, 7, 8))).toEqual(
-      vec3u(2, 6, 4),
-    );
+    expect(mod(15, vec3u(3, 4, 5))).toEqual(vec3u(0, 3, 0));
+    expect(mod(20, vec3u(6, 7, 8))).toEqual(vec3u(2, 6, 4));
   });
 
   it('computes modulo of a scalar and vec4f', () => {
-    expect(mod(20, vec4f(3, 4, 5, 6))).toEqual(
-      vec4f(2, 0, 0, 2),
-    );
-    expect(
-      isCloseTo(
-        mod(12.7, vec4f(2, 3, 4, 5)),
-        vec4f(0.7, 0.7, 0.7, 2.7),
-      ),
-    ).toBe(true);
+    expect(mod(20, vec4f(3, 4, 5, 6))).toEqual(vec4f(2, 0, 0, 2));
+    expect(isCloseTo(mod(12.7, vec4f(2, 3, 4, 5)), vec4f(0.7, 0.7, 0.7, 2.7))).toBe(true);
   });
 
   it('computes modulo of a scalar and vec4h', () => {
-    expect(mod(20, vec4h(3, 4, 5, 6))).toEqual(
-      vec4h(2, 0, 0, 2),
-    );
-    expect(
-      isCloseTo(
-        mod(12.7, vec4h(2, 3, 4, 5)),
-        vec4h(0.7, 0.7, 0.7, 2.7),
-      ),
-    ).toBe(true);
+    expect(mod(20, vec4h(3, 4, 5, 6))).toEqual(vec4h(2, 0, 0, 2));
+    expect(isCloseTo(mod(12.7, vec4h(2, 3, 4, 5)), vec4h(0.7, 0.7, 0.7, 2.7))).toBe(true);
   });
 
   it('computes modulo of a scalar and vec4i', () => {
-    expect(mod(20, vec4i(3, 4, 5, 6))).toEqual(
-      vec4i(2, 0, 0, 2),
-    );
-    expect(mod(-20, vec4i(3, 4, 5, 6))).toEqual(
-      vec4i(-2, 0, 0, -2),
-    );
+    expect(mod(20, vec4i(3, 4, 5, 6))).toEqual(vec4i(2, 0, 0, 2));
+    expect(mod(-20, vec4i(3, 4, 5, 6))).toEqual(vec4i(-2, 0, 0, -2));
   });
 
   it('computes modulo of a scalar and vec4u', () => {
-    expect(mod(20, vec4u(3, 4, 5, 6))).toEqual(
-      vec4u(2, 0, 0, 2),
-    );
-    expect(mod(25, vec4u(6, 7, 8, 9))).toEqual(
-      vec4u(1, 4, 1, 7),
-    );
+    expect(mod(20, vec4u(3, 4, 5, 6))).toEqual(vec4u(2, 0, 0, 2));
+    expect(mod(25, vec4u(6, 7, 8, 9))).toEqual(vec4u(1, 4, 1, 7));
   });
 });
 
 describe('mod parseResolved test', () => {
   it('resolves mod operation to WGSL correctly', () => {
-    const modFunction = tgpu.fn([d.vec2f, d.vec2f], d.vec2f)((a, b) => {
+    const modFunction = tgpu.fn(
+      [d.vec2f, d.vec2f],
+      d.vec2f,
+    )((a, b) => {
       return mod(a, b);
     });
 
@@ -337,7 +242,10 @@ describe('mod parseResolved test', () => {
   });
 
   it('resolves scalar-vector mod operation to WGSL correctly', () => {
-    const modScalarVec = tgpu.fn([d.f32, d.vec3f], d.vec3f)((scalar, vec) => {
+    const modScalarVec = tgpu.fn(
+      [d.f32, d.vec3f],
+      d.vec3f,
+    )((scalar, vec) => {
       return mod(scalar, vec);
     });
     expect(tgpu.resolve([modScalarVec])).toMatchInlineSnapshot(`

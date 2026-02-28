@@ -40,11 +40,7 @@ t3.fromTSL(instancedArray(5, 'uvec4'), d.mat2x2f);
 
 t3.fromTSL(uniformArray([1, 2, 3, 4, 5], 'float'), d.f32); // !!
 t3.fromTSL(
-  uniformArray([
-    new THREE.Vector2(1, 2),
-    new THREE.Vector2(3, 4),
-    new THREE.Vector2(5, 6),
-  ]),
+  uniformArray([new THREE.Vector2(1, 2), new THREE.Vector2(3, 4), new THREE.Vector2(5, 6)]),
   d.vec2f,
 ); // !!
 t3.fromTSL(

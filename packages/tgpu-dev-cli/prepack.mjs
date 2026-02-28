@@ -79,11 +79,7 @@ async function transformPackageJSON() {
   });
 
   // Erroring out on any wildcard dependencies
-  for (
-    const [moduleKey, versionSpec] of entries(
-      distPackageJson.dependencies ?? {},
-    )
-  ) {
+  for (const [moduleKey, versionSpec] of entries(distPackageJson.dependencies ?? {})) {
     if (versionSpec === '*' || versionSpec === 'workspace:*') {
       throw new Error(
         `Cannot depend on a module with a wildcard version. (${moduleKey}: ${versionSpec})`,
@@ -105,11 +101,7 @@ async function transformPackageJSON() {
     (/** @type {string} */ value) => value.replace(/^workspace:/, ''),
   );
 
-  await fs.writeFile(
-    distPackageJsonUrl,
-    JSON.stringify(distPackageJson, undefined, 2),
-    'utf-8',
-  );
+  await fs.writeFile(distPackageJsonUrl, JSON.stringify(distPackageJson, undefined, 2), 'utf-8');
 }
 
 async function transformReadme() {
@@ -172,11 +164,11 @@ async function main() {
 
     const updateMsg = () =>
       update(
-        `${color.BgBrightMagenta}${color.Black}${Frog}📋 working on tasks...${color.Reset}  ${
-          taskString('build')
-        }, ${taskString('style')}, ${taskString('unit')}, ${
-          taskString('types')
-        }, ${taskString('circular-deps')}`,
+        `${color.BgBrightMagenta}${color.Black}${Frog}📋 working on tasks...${color.Reset}  ${taskString(
+          'build',
+        )}, ${taskString('style')}, ${taskString('unit')}, ${taskString(
+          'types',
+        )}, ${taskString('circular-deps')}`,
       );
 
     /**
@@ -185,45 +177,44 @@ async function main() {
      * @param {T} promise
      * @returns {T}
      */
-    const withStatusUpdate = (name, promise) => /** @type {T} */ (
-      promise
-        .then((result) => {
-          status[name] = 'success';
-          updateMsg();
-          return result;
-        })
-        .catch((err) => {
-          status[name] = 'fail';
-          updateMsg();
-          err.taskName = name;
-          throw err;
-        })
-    );
+    const withStatusUpdate = (name, promise) =>
+      /** @type {T} */ (
+        promise
+          .then((result) => {
+            status[name] = 'success';
+            updateMsg();
+            return result;
+          })
+          .catch((err) => {
+            status[name] = 'fail';
+            updateMsg();
+            err.taskName = name;
+            throw err;
+          })
+      );
 
     const $ = execa({ all: true });
 
     const results = [
       // First build
-      ...await Promise.allSettled([
-        withStatusUpdate('build', $`pnpm build`),
-      ]),
+      ...(await Promise.allSettled([withStatusUpdate('build', $`pnpm build`)])),
       // Then the rest
-      ...(args['--skip-all-checks'] ? [] : await Promise.allSettled([
-        withStatusUpdate('style', $`pnpm -w test:style`),
-        withStatusUpdate('unit', $`pnpm -w test:unit`),
-        withStatusUpdate('types', $`pnpm -w test:types`),
-        withStatusUpdate('circular-deps', $`pnpm -w test:circular-deps`),
-      ])),
+      ...(args['--skip-all-checks']
+        ? []
+        : await Promise.allSettled([
+            withStatusUpdate('style', $`pnpm -w test:style`),
+            withStatusUpdate('unit', $`pnpm -w test:unit`),
+            withStatusUpdate('types', $`pnpm -w test:types`),
+            withStatusUpdate('circular-deps', $`pnpm -w test:circular-deps`),
+          ])),
     ];
 
     update(
       `${color.BgBrightMagenta}${color.Black}${Frog}${
         Object.values(status).includes('fail') ? '👎' : '👍'
-      } finished!${color.Reset}  ${taskString('build')}, ${
-        taskString('style')
-      }, ${taskString('unit')}, ${taskString('types')}, ${
-        taskString('circular-deps')
-      }`,
+      } finished!${color.Reset}  ${taskString('build')}, ${taskString(
+        'style',
+      )}, ${taskString('unit')}, ${taskString('types')}, ${taskString('circular-deps')}`,
     );
 
     return results;

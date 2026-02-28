@@ -25,11 +25,9 @@ export function niceStringify(item: unknown): string {
   }
 
   if (item && typeof item === 'object') {
-    return `{ ${
-      Object.entries(item).map(([key, value]) =>
-        `${key}: ${niceStringify(value)}`
-      ).join(', ')
-    } }`;
+    return `{ ${Object.entries(item)
+      .map(([key, value]) => `${key}: ${niceStringify(value)}`)
+      .join(', ')} }`;
   }
 
   return String(item);

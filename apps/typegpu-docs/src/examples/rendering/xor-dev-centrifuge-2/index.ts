@@ -117,9 +117,7 @@ function draw(timestamp: number) {
     time: (timestamp * 0.001) % 1000,
   });
 
-  pipeline
-    .withColorAttachment({ view: context })
-    .draw(3);
+  pipeline.withColorAttachment({ view: context }).draw(3);
 
   requestAnimationFrame(draw);
 }

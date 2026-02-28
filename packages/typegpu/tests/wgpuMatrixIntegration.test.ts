@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as m from 'wgpu-matrix';
-import {
-  mat3x3f,
-  mat4x4f,
-  matToArray,
-  vec2f,
-  vec3f,
-  vec4f,
-} from '../src/data/index.ts';
+import { mat3x3f, mat4x4f, matToArray, vec2f, vec3f, vec4f } from '../src/data/index.ts';
 
 describe('mat4x4f', () => {
   it('can interact with wgpu-matrix library', () => {

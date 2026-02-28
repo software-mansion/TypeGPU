@@ -18,10 +18,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // Uniforms
 const time = root.createUniform(d.f32, 0);
-const resolutionUniform = root.createUniform(
-  d.vec2f,
-  d.vec2f(canvas.width, canvas.height),
-);
+const resolutionUniform = root.createUniform(d.vec2f, d.vec2f(canvas.width, canvas.height));
 
 const fragmentShaders = [
   mainFragment1,
@@ -34,13 +31,10 @@ const fragmentShaders = [
 ];
 
 const pipelines = fragmentShaders.map((fragment) =>
-  root
-    .with(timeAccess, time)
-    .with(resolutionAccess, resolutionUniform)
-    .createRenderPipeline({
-      vertex: mainVertex,
-      fragment: fragment,
-    })
+  root.with(timeAccess, time).with(resolutionAccess, resolutionUniform).createRenderPipeline({
+    vertex: mainVertex,
+    fragment: fragment,
+  }),
 );
 
 let currentPipeline = pipelines[0];
@@ -74,15 +68,7 @@ export function onCleanup() {
 export const controls = defineControls({
   Pattern: {
     initial: 'pattern1',
-    options: [
-      'pattern1',
-      'pattern2',
-      'pattern3',
-      'pattern4',
-      'pattern5',
-      'pattern6',
-      'pattern7',
-    ],
+    options: ['pattern1', 'pattern2', 'pattern3', 'pattern4', 'pattern5', 'pattern6', 'pattern7'],
     onSelectChange(value) {
       const patternIndex = {
         pattern1: 0,
@@ -104,7 +90,7 @@ export const controls = defineControls({
       Array.from({ length: 6 }).map((_, i) =>
         root.device.createShaderModule({
           code: tgpu.resolve([pipelines[i + 1]], { names: namespace }),
-        })
+        }),
       );
     },
   },

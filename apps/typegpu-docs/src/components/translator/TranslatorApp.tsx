@@ -40,24 +40,19 @@ function EditorSection({
   onMount,
 }: EditorSectionProps) {
   return (
-    <section className='flex min-h-[24rem] flex-col lg:min-h-0'>
-      <h2
-        id={id}
-        className='mb-2 font-medium text-gray-300 text-sm'
-      >
+    <section className="flex min-h-[24rem] flex-col lg:min-h-0">
+      <h2 id={id} className="mb-2 font-medium text-gray-300 text-sm">
         {title}
       </h2>
       <Editor
         language={language}
         value={value}
         onChange={onChange ? (v) => onChange(v || '') : undefined}
-        theme='vs-dark'
+        theme="vs-dark"
         beforeMount={language === 'typescript' ? setupMonacoEditor : undefined}
         onMount={onMount}
         loading={
-          <div className='flex items-center justify-center text-gray-400'>
-            Loading editor...
-          </div>
+          <div className="flex items-center justify-center text-gray-400">Loading editor...</div>
         }
         options={readOnly ? readOnlyEditorOptions : editableEditorOptions}
       />
@@ -87,22 +82,18 @@ export default function TranslatorApp() {
   const handleEditorLoaded = () => setEditorLoaded(false);
 
   const isTgslMode = mode === TRANSLATOR_MODES.TGSL;
-  const gridCols = isTgslMode
-    ? 'grid-cols-1 lg:grid-cols-3'
-    : 'grid-cols-1 lg:grid-cols-2';
+  const gridCols = isTgslMode ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1 lg:grid-cols-2';
 
   return (
-    <div className='flex flex-1 flex-col overflow-hidden'>
+    <div className="flex flex-1 flex-col overflow-hidden">
       <TranslatorHeader />
 
-      <main
-        className={`grid flex-1 gap-4 overflow-y-auto p-4 ${gridCols}`}
-      >
+      <main className={`grid flex-1 gap-4 overflow-y-auto p-4 ${gridCols}`}>
         {isTgslMode && (
           <EditorSection
             id={tgslInputLabelId}
-            title='TypeScript Shader Code (TGSL):'
-            language='typescript'
+            title="TypeScript Shader Code (TGSL):"
+            language="typescript"
             value={tgslCode}
             onChange={setTgslCode}
             onMount={handleEditorLoaded}
@@ -112,7 +103,7 @@ export default function TranslatorApp() {
         <EditorSection
           id={wgslInputLabelId}
           title={isTgslMode ? 'Generated WGSL:' : 'WGSL Shader Code:'}
-          language='wgsl'
+          language="wgsl"
           value={wgslCode}
           onChange={!isTgslMode ? setWgslCode : undefined}
           readOnly={isTgslMode}

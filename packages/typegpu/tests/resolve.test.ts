@@ -1,12 +1,7 @@
 import { describe, expect, vi } from 'vitest';
 import tgpu, { d } from '../src/index.js';
 import { setName } from '../src/shared/meta.ts';
-import {
-  $gpuValueOf,
-  $internal,
-  $ownSnippet,
-  $resolve,
-} from '../src/shared/symbols.ts';
+import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { it } from './utils/extendedIt.ts';
 import { snip } from '../src/data/snippet.ts';
@@ -44,9 +39,7 @@ describe('tgpu resolve', () => {
       },
       names: 'strict',
     });
-    expect(resolved).toMatchInlineSnapshot(
-      `"fn foo() { var g = 1000; }"`,
-    );
+    expect(resolved).toMatchInlineSnapshot(`"fn foo() { var g = 1000; }"`);
   });
 
   it('should deduplicate dependencies', () => {
@@ -63,9 +56,7 @@ describe('tgpu resolve', () => {
 
       [$resolve](ctx: ResolutionCtx) {
         const name = ctx.getUniqueName(this);
-        ctx.addDeclaration(
-          `@group(0) @binding(0) var<uniform> ${name}: f32;`,
-        );
+        ctx.addDeclaration(`@group(0) @binding(0) var<uniform> ${name}: f32;`);
         return snip(name, d.f32, /* origin */ 'runtime');
       },
 
@@ -75,11 +66,9 @@ describe('tgpu resolve', () => {
     };
     setName(intensity, 'intensity');
 
-    const fragment1 = tgpu
-      .fragmentFn({ out: d.vec4f })(() => d.vec4f(0, intensity.$, 0, 1));
+    const fragment1 = tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f(0, intensity.$, 0, 1));
 
-    const fragment2 = tgpu
-      .fragmentFn({ out: d.vec4f })(() => d.vec4f(intensity.$, 0, 0, 1));
+    const fragment2 = tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f(intensity.$, 0, 0, 1));
 
     const resolved = tgpu.resolve([fragment1, fragment2], { names: 'strict' });
 
@@ -103,7 +92,10 @@ describe('tgpu resolve', () => {
       health: d.f32,
     });
 
-    const getPlayerHealth = tgpu.fn([PlayerData], d.f32)((pInfo) => {
+    const getPlayerHealth = tgpu.fn(
+      [PlayerData],
+      d.f32,
+    )((pInfo) => {
       return pInfo.health;
     });
 
@@ -156,8 +148,7 @@ fn main() {
         r.seed.x = fract(cos(dot(r.seed, vec2f(23.14077926, 232.61690225))) * 136.8168);
         r.seed.y = fract(cos(dot(r.seed, vec2f(54.47856553, 345.84153136))) * 534.7645);
         return clamp(r.seed.y, r.range.x, r.range.y);
-      }`
-      .$uses({ Random });
+      }`.$uses({ Random });
 
     const shaderLogic = `
       @compute @workgroup_size(1)
@@ -292,7 +283,11 @@ fn main() {
   });
 
   it('should resolve object externals and replace their usages in template', () => {
-    const getColor = tgpu.fn([], d.vec3f)(`() -> vec3f {
+    const getColor = tgpu
+      .fn(
+        [],
+        d.vec3f,
+      )(`() -> vec3f {
         let color = vec3f();
         return color;
       }`)
@@ -359,37 +354,41 @@ fn main() {
   });
 
   it('should resolve deeply nested objects', () => {
-    expect(tgpu.resolve({
-      template: 'fn main () { let x = a.b.c.d + a.e; }',
-      externals: {
-        a: {
-          b: {
-            c: {
-              d: 2,
+    expect(
+      tgpu.resolve({
+        template: 'fn main () { let x = a.b.c.d + a.e; }',
+        externals: {
+          a: {
+            b: {
+              c: {
+                d: 2,
+              },
             },
+            e: 3,
           },
-          e: 3,
         },
-      },
-      names: 'strict',
-    })).toMatchInlineSnapshot(`"fn main () { let x = 2 + 3; }"`);
+        names: 'strict',
+      }),
+    ).toMatchInlineSnapshot(`"fn main () { let x = 2 + 3; }"`);
   });
 
   it('should treat dot as a regular character in regex when resolving object access externals and not a wildcard', () => {
-    expect(tgpu.resolve({
-      template: `
+    expect(
+      tgpu.resolve({
+        template: `
 fn main () {
   let x = a.b;
   let y = axb;
 }`,
-      externals: {
-        a: {
-          b: 3,
+        externals: {
+          a: {
+            b: 3,
+          },
+          axb: 2,
         },
-        axb: 2,
-      },
-      names: 'strict',
-    })).toMatchInlineSnapshot(`
+        names: 'strict',
+      }),
+    ).toMatchInlineSnapshot(`
       "
       fn main () {
         let x = 3;
@@ -493,15 +492,11 @@ describe('tgpu resolveWithContext', () => {
               "
     `);
     // verify resolveWithContext::config impl is actually working
-    expect(configSpy.mock.lastCall?.[0].bindings).toEqual(
-      [[colorSlot, v]],
-    );
+    expect(configSpy.mock.lastCall?.[0].bindings).toEqual([[colorSlot, v]]);
   });
 
   it('should warn when external WGSL is not used', () => {
-    using consoleWarnSpy = vi
-      .spyOn(console, 'warn')
-      .mockImplementation(() => {});
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     tgpu.resolveWithContext({
       template: 'fn testFn() { return; }',
@@ -520,9 +515,7 @@ describe('tgpu resolveWithContext', () => {
   });
 
   it('should warn when external is neither wgsl nor an object', () => {
-    using consoleWarnSpy = vi
-      .spyOn(console, 'warn')
-      .mockImplementation(() => {});
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     tgpu.resolve({
       template: 'fn testFn() { var a = identity(1); return; }',
@@ -535,9 +528,7 @@ describe('tgpu resolveWithContext', () => {
   });
 
   it('should not warn when In/Out are unused', () => {
-    using consoleWarnSpy = vi
-      .spyOn(console, 'warn')
-      .mockImplementation(() => {});
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     tgpu.resolve({
       template: 'fn testFn() { return; }',
@@ -548,18 +539,14 @@ describe('tgpu resolveWithContext', () => {
   });
 
   it('does not resolve the same nested property twice', () => {
-    using consoleWarnSpy = vi
-      .spyOn(console, 'warn')
-      .mockImplementation(() => {});
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const resolved = tgpu.resolve({
       template: 'fn testFn() { return _EXT_.n + _EXT_.n; }',
       externals: { _EXT_: { n: 100 } },
     });
 
-    expect(resolved).toMatchInlineSnapshot(
-      `"fn testFn() { return 100 + 100; }"`,
-    );
+    expect(resolved).toMatchInlineSnapshot(`"fn testFn() { return 100 + 100; }"`);
 
     expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
   });
@@ -567,9 +554,7 @@ describe('tgpu resolveWithContext', () => {
 
 describe('resolve without template', () => {
   it('warns when using deprecated resolve API', () => {
-    using consoleWarnSpy = vi
-      .spyOn(console, 'warn')
-      .mockImplementation(() => {});
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 
     tgpu.resolve({ externals: { Boid }, template: '' });
@@ -593,7 +578,10 @@ describe('resolve without template', () => {
   it('resolves items with dependencies', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 
-    const myFn = tgpu.fn([], Boid)(() => {
+    const myFn = tgpu.fn(
+      [],
+      Boid,
+    )(() => {
       return Boid({ pos: d.vec2f(1, 2), vel: d.vec2f(3, 4) });
     });
 
@@ -629,11 +617,17 @@ describe('resolve without template', () => {
   it('does not duplicate dependencies', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 
-    const myFn1 = tgpu.fn([], Boid)(() => {
+    const myFn1 = tgpu.fn(
+      [],
+      Boid,
+    )(() => {
       return Boid({ pos: d.vec2f(1, 2), vel: d.vec2f(3, 4) });
     });
 
-    const myFn2 = tgpu.fn([], Boid)(() => {
+    const myFn2 = tgpu.fn(
+      [],
+      Boid,
+    )(() => {
       return Boid({ pos: d.vec2f(10, 20), vel: d.vec2f(30, 40) });
     });
 
@@ -654,8 +648,7 @@ describe('resolve without template', () => {
   });
 
   it('resolves unnamed items', () => {
-    expect(tgpu.resolve([d.struct({ pos: d.vec2f, vel: d.vec2f })]))
-      .toMatchInlineSnapshot(`
+    expect(tgpu.resolve([d.struct({ pos: d.vec2f, vel: d.vec2f })])).toMatchInlineSnapshot(`
         "struct item {
           pos: vec2f,
           vel: vec2f,

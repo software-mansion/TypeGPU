@@ -37,7 +37,10 @@ describe('Mixed swizzle validation', () => {
 
   describe('GPU code validation', () => {
     it('should resolve pure xyzw swizzles in GPU code', () => {
-      const main = tgpu.fn([], d.vec3f)(() => {
+      const main = tgpu.fn(
+        [],
+        d.vec3f,
+      )(() => {
         const vec = d.vec4f(1, 2, 3, 4);
         return vec.xyz;
       });
@@ -47,7 +50,10 @@ describe('Mixed swizzle validation', () => {
     });
 
     it('should resolve pure rgba swizzles in GPU code', () => {
-      const main = tgpu.fn([], d.vec3f)(() => {
+      const main = tgpu.fn(
+        [],
+        d.vec3f,
+      )(() => {
         const vec = d.vec4f(1, 2, 3, 4);
         return vec.rgb;
       });

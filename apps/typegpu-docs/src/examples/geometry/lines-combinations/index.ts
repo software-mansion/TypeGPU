@@ -85,10 +85,7 @@ const uniformsBindGroup = root.createBindGroup(bindGroupLayout, {
 });
 
 const indexBuffer = root
-  .createBuffer(
-    arrayOf(u16, lineSegmentIndicesCapLevel3.length),
-    lineSegmentIndicesCapLevel3,
-  )
+  .createBuffer(arrayOf(u16, lineSegmentIndicesCapLevel3.length), lineSegmentIndicesCapLevel3)
   .$usage('index');
 
 const outlineIndexBuffer = root
@@ -159,63 +156,45 @@ const mainFragment = tgpu.fragmentFn({
     uv: vec2f,
   },
   out: vec4f,
-})(
-  ({
-    instanceIndex,
-    vertexIndex,
-    situationIndex,
-    frontFacing,
-    screenPosition,
-    position,
-    uv,
-  }) => {
-    'use gpu';
-    const fillType = bindGroupLayout.$.uniforms.fillType;
-    if (fillType === 1) {
-      // typegpu gradient
-      return mix(
-        vec4f(0.77, 0.39, 1, 0.5),
-        vec4f(0.11, 0.44, 0.94, 0.5),
-        position.x * 0.5 + 0.5,
-      );
-    }
-    let color = vec3f();
-    const colors = [
-      vec3f(1, 0, 0), // 0
-      vec3f(0, 1, 0), // 1
-      vec3f(0, 0, 1), // 2
-      vec3f(1, 0, 1), // 3
-      vec3f(1, 1, 0), // 4
-      vec3f(0, 1, 1), // 5
-      vec3f(0.75, 0.25, 0.25), // 6
-      vec3f(0.25, 0.75, 0.25), // 7
-      vec3f(0.25, 0.25, 0.75), // 8
-    ];
-    if (fillType === 2) {
-      color = colors[instanceIndex % colors.length];
-    }
-    if (fillType === 3) {
-      color = colors[vertexIndex % colors.length];
-    }
-    if (fillType === 4) {
-      color = colors[situationIndex % colors.length];
-    }
-    if (fillType === 5) {
-      color = vec3f(uv.x, cos(uv.y * 100), 0);
-    }
-    if (frontFacing) {
-      return vec4f(color, 0.5);
-    }
-    return vec4f(
-      color,
-      select(
-        f32(0),
-        f32(1),
-        (u32(screenPosition.x) >> 3) % 2 !== (u32(screenPosition.y) >> 3) % 2,
-      ),
-    );
-  },
-);
+})(({ instanceIndex, vertexIndex, situationIndex, frontFacing, screenPosition, position, uv }) => {
+  'use gpu';
+  const fillType = bindGroupLayout.$.uniforms.fillType;
+  if (fillType === 1) {
+    // typegpu gradient
+    return mix(vec4f(0.77, 0.39, 1, 0.5), vec4f(0.11, 0.44, 0.94, 0.5), position.x * 0.5 + 0.5);
+  }
+  let color = vec3f();
+  const colors = [
+    vec3f(1, 0, 0), // 0
+    vec3f(0, 1, 0), // 1
+    vec3f(0, 0, 1), // 2
+    vec3f(1, 0, 1), // 3
+    vec3f(1, 1, 0), // 4
+    vec3f(0, 1, 1), // 5
+    vec3f(0.75, 0.25, 0.25), // 6
+    vec3f(0.25, 0.75, 0.25), // 7
+    vec3f(0.25, 0.25, 0.75), // 8
+  ];
+  if (fillType === 2) {
+    color = colors[instanceIndex % colors.length];
+  }
+  if (fillType === 3) {
+    color = colors[vertexIndex % colors.length];
+  }
+  if (fillType === 4) {
+    color = colors[situationIndex % colors.length];
+  }
+  if (fillType === 5) {
+    color = vec3f(uv.x, cos(uv.y * 100), 0);
+  }
+  if (frontFacing) {
+    return vec4f(color, 0.5);
+  }
+  return vec4f(
+    color,
+    select(f32(0), f32(1), (u32(screenPosition.x) >> 3) % 2 !== (u32(screenPosition.y) >> 3) % 2),
+  );
+});
 
 const centerlineVertex = tgpu.vertexFn({
   in: {
@@ -276,11 +255,7 @@ const circlesVertex = tgpu.vertexFn({
       outPos: vec4f(),
     };
   }
-  const step = clamp(
-    CIRCLE_DASH_LEN / vertex.radius,
-    CIRCLE_MIN_STEP,
-    CIRCLE_MAX_STEP,
-  );
+  const step = clamp(CIRCLE_DASH_LEN / vertex.radius, CIRCLE_MIN_STEP, CIRCLE_MAX_STEP);
   const angle = min(2 * Math.PI, step * f32(vertexIndex));
   const unit = vec2f(cos(angle), sin(angle));
   return {
@@ -324,27 +299,23 @@ function createPipelines() {
     })
     .withIndexBuffer(outlineIndexBuffer);
 
-  const centerline = root
-    .with(testCaseSlot, testCase)
-    .createRenderPipeline({
-      vertex: centerlineVertex,
-      fragment: outlineFragment,
-      targets: { format: presentationFormat, blend: alphaBlend },
-      primitive: {
-        topology: 'line-strip',
-      },
-    });
+  const centerline = root.with(testCaseSlot, testCase).createRenderPipeline({
+    vertex: centerlineVertex,
+    fragment: outlineFragment,
+    targets: { format: presentationFormat, blend: alphaBlend },
+    primitive: {
+      topology: 'line-strip',
+    },
+  });
 
-  const circles = root
-    .with(testCaseSlot, testCase)
-    .createRenderPipeline({
-      vertex: circlesVertex,
-      fragment: outlineFragment,
-      targets: { format: presentationFormat, blend: alphaBlend },
-      primitive: {
-        topology: 'line-list',
-      },
-    });
+  const circles = root.with(testCaseSlot, testCase).createRenderPipeline({
+    vertex: circlesVertex,
+    fragment: outlineFragment,
+    targets: { format: presentationFormat, blend: alphaBlend },
+    primitive: {
+      topology: 'line-list',
+    },
+  });
 
   return {
     fill,

@@ -1,21 +1,12 @@
 import { getAttributesString } from '../../data/attributes.ts';
 import { undecorate } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import {
-  type BaseData,
-  isWgslData,
-  isWgslStruct,
-  Void,
-} from '../../data/wgslTypes.ts';
+import { type BaseData, isWgslData, isWgslStruct, Void } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
 import { getMetaData, getName } from '../../shared/meta.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx } from '../../types.ts';
-import {
-  applyExternals,
-  type ExternalMap,
-  replaceExternalsInWgsl,
-} from '../resolve/externals.ts';
+import { applyExternals, type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
 import { extractArgs } from './extractArgs.ts';
 import type { Implementation } from './fnTypes.ts';
 
@@ -36,10 +27,7 @@ export interface FnCore {
   ): ResolvedSnippet;
 }
 
-export function createFnCore(
-  implementation: Implementation,
-  fnAttribute = '',
-): FnCore {
+export function createFnCore(implementation: Implementation, fnAttribute = ''): FnCore {
   /**
    * External application has to be deferred until resolution because
    * some externals can reference the owner function which has not been
@@ -51,9 +39,7 @@ export function createFnCore(
   const core = {
     // Making the implementation the holder of the name, as long as it's
     // a function (and not a string implementation)
-    [$getNameForward]: typeof implementation === 'function'
-      ? implementation
-      : undefined,
+    [$getNameForward]: typeof implementation === 'function' ? implementation : undefined,
     applyExternals(newExternals: ExternalMap): void {
       externalsToApply.push(newExternals);
     },
@@ -73,16 +59,10 @@ export function createFnCore(
 
       if (typeof implementation === 'string') {
         if (!returnType) {
-          throw new Error(
-            'Explicit return type is required for string implementation',
-          );
+          throw new Error('Explicit return type is required for string implementation');
         }
 
-        const replacedImpl = replaceExternalsInWgsl(
-          ctx,
-          externalMap,
-          implementation,
-        );
+        const replacedImpl = replaceExternalsInWgsl(ctx, externalMap, implementation);
 
         let header = '';
         let body = '';
@@ -92,16 +72,15 @@ export function createFnCore(
             ? `(in: ${ctx.resolve(argTypes[0]).value})`
             : '()';
 
-          const attributes = isWgslData(returnType)
-            ? getAttributesString(returnType)
-            : '';
-          const output = returnType !== Void
-            ? isWgslStruct(returnType)
-              ? `-> ${ctx.resolve(returnType).value}`
-              : `-> ${attributes !== '' ? attributes : '@location(0)'} ${
-                ctx.resolve(returnType).value
-              }`
-            : '';
+          const attributes = isWgslData(returnType) ? getAttributesString(returnType) : '';
+          const output =
+            returnType !== Void
+              ? isWgslStruct(returnType)
+                ? `-> ${ctx.resolve(returnType).value}`
+                : `-> ${attributes !== '' ? attributes : '@location(0)'} ${
+                    ctx.resolve(returnType).value
+                  }`
+              : '';
 
           header = `${input} ${output} `;
           body = replacedImpl;
@@ -114,25 +93,22 @@ export function createFnCore(
             );
           }
 
-          const input = providedArgs.args.map((argInfo, i) =>
-            `${argInfo.identifier}: ${
-              checkAndReturnType(
-                ctx,
-                `parameter ${argInfo.identifier}`,
-                argInfo.type,
-                argTypes[i],
-              )
-            }`
-          ).join(', ');
-
-          const output = returnType === Void ? '' : `-> ${
-            checkAndReturnType(
-              ctx,
-              'return type',
-              providedArgs.ret?.type,
-              returnType,
+          const input = providedArgs.args
+            .map(
+              (argInfo, i) =>
+                `${argInfo.identifier}: ${checkAndReturnType(
+                  ctx,
+                  `parameter ${argInfo.identifier}`,
+                  argInfo.type,
+                  argTypes[i],
+                )}`,
             )
-          }`;
+            .join(', ');
+
+          const output =
+            returnType === Void
+              ? ''
+              : `-> ${checkAndReturnType(ctx, 'return type', providedArgs.ret?.type, returnType)}`;
 
           header = `(${input}) ${output}`;
 
@@ -148,15 +124,14 @@ export function createFnCore(
 
       // Passing a record happens prior to version 0.9.0
       // TODO: Support for this can be removed down the line
-      const pluginExternals = typeof pluginData?.externals === 'function'
-        ? pluginData.externals()
-        : pluginData?.externals;
+      const pluginExternals =
+        typeof pluginData?.externals === 'function'
+          ? pluginData.externals()
+          : pluginData?.externals;
 
       if (pluginExternals) {
         const missing = Object.fromEntries(
-          Object.entries(pluginExternals).filter(
-            ([name]) => !(name in externalMap),
-          ),
+          Object.entries(pluginExternals).filter(([name]) => !(name in externalMap)),
         );
 
         applyExternals(externalMap, missing);
@@ -170,9 +145,7 @@ export function createFnCore(
       }
 
       // verify all required externals are present
-      const missingExternals = ast.externalNames.filter(
-        (name) => !(name in externalMap),
-      );
+      const missingExternals = ast.externalNames.filter((name) => !(name in externalMap));
       if (missingExternals.length > 0) {
         throw new MissingLinksError(getName(this), missingExternals);
       }
@@ -180,28 +153,27 @@ export function createFnCore(
       // If an entrypoint implementation has a second argument, it represents the output schema.
       // We look at the identifier chosen by the user and add it to externals.
       const maybeSecondArg = ast.params[1];
-      if (
-        maybeSecondArg && maybeSecondArg.type === 'i' && fnAttribute !== ''
-      ) {
-        applyExternals(
-          externalMap,
-          {
-            // oxlint-disable-next-line typescript/no-non-null-assertion -- entry functions cannot be shellless
-            [maybeSecondArg.name]: undecorate(returnType!),
-          },
-        );
+      if (maybeSecondArg && maybeSecondArg.type === 'i' && fnAttribute !== '') {
+        applyExternals(externalMap, {
+          // oxlint-disable-next-line typescript/no-non-null-assertion -- entry functions cannot be shellless
+          [maybeSecondArg.name]: undecorate(returnType!),
+        });
       }
 
       // generate wgsl string
 
-      const { head, body, returnType: actualReturnType } = ctx.fnToWgsl({
+      const {
+        head,
+        body,
+        returnType: actualReturnType,
+      } = ctx.fnToWgsl({
         functionType: fnAttribute.includes('@compute')
           ? 'compute'
           : fnAttribute.includes('@vertex')
-          ? 'vertex'
-          : fnAttribute.includes('@fragment')
-          ? 'fragment'
-          : 'normal',
+            ? 'vertex'
+            : fnAttribute.includes('@fragment')
+              ? 'fragment'
+              : 'normal',
         argTypes,
         params: ast.params,
         returnType,
@@ -210,9 +182,7 @@ export function createFnCore(
       });
 
       ctx.addDeclaration(
-        `${fnAttribute}fn ${id}${ctx.resolve(head).value}${
-          ctx.resolve(body).value
-        }`,
+        `${fnAttribute}fn ${id}${ctx.resolve(head).value}${ctx.resolve(body).value}`,
       );
 
       return snip(id, actualReturnType, /* origin */ 'runtime');

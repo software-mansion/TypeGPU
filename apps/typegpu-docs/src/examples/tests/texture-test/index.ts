@@ -6,9 +6,7 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const imageBitmap = await createImageBitmap(
-  await (await fetch('/TypeGPU/plums.jpg')).blob(),
-);
+const imageBitmap = await createImageBitmap(await (await fetch('/TypeGPU/plums.jpg')).blob());
 
 const testFormats = [
   'rgba8unorm',
@@ -44,10 +42,7 @@ function calculateMipLevels(width: number, height: number): number {
   return Math.floor(Math.log2(Math.min(width, height))) + 1;
 }
 
-function createTestTexture(
-  format: TestFormat,
-  size: readonly [number, number],
-) {
+function createTestTexture(format: TestFormat, size: readonly [number, number]) {
   const mipLevels = calculateMipLevels(size[0], size[1]);
   console.log(
     `Creating texture: ${format}, size: ${size[0]}x${
@@ -134,10 +129,7 @@ function recreateTexture() {
 }
 
 function render() {
-  pipeline
-    .with(bindGroup)
-    .withColorAttachment({ view: context })
-    .draw(3);
+  pipeline.with(bindGroup).withColorAttachment({ view: context }).draw(3);
 
   requestAnimationFrame(render);
 }
@@ -162,11 +154,7 @@ export const controls = defineControls({
         currentSize = [randomWidth, randomHeight];
         console.log(`Random size selected: ${randomWidth}x${randomHeight}`);
       } else {
-        currentSize =
-          sizePresets[value as keyof typeof sizePresets] as readonly [
-            number,
-            number,
-          ];
+        currentSize = sizePresets[value as keyof typeof sizePresets] as readonly [number, number];
       }
       recreateTexture();
     },

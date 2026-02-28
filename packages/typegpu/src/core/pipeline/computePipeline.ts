@@ -20,20 +20,14 @@ import { isGPUCommandEncoder, isGPUComputePassEncoder } from './typeGuards.ts';
 import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import {
-  wgslExtensions,
-  wgslExtensionToFeatureName,
-} from '../../wgslExtensions.ts';
+import { wgslExtensions, wgslExtensionToFeatureName } from '../../wgslExtensions.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 
-import {
-  memoryLayoutOf,
-  type PrimitiveOffsetInfo,
-} from '../../data/offsetUtils.ts';
+import { memoryLayoutOf, type PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
@@ -54,8 +48,7 @@ interface ComputePipelineInternals {
 // Public API
 // ----------
 
-export interface TgpuComputePipeline
-  extends TgpuNamable, SelfResolvable, Timeable {
+export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeable {
   readonly [$internal]: ComputePipelineInternals;
   readonly resourceType: 'compute-pipeline';
 
@@ -67,19 +60,12 @@ export interface TgpuComputePipeline
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
     bindGroup: TgpuBindGroup<Entries>,
   ): this;
-  with(
-    bindGroupLayout: TgpuBindGroupLayout,
-    bindGroup: GPUBindGroup,
-  ): this;
+  with(bindGroupLayout: TgpuBindGroupLayout, bindGroup: GPUBindGroup): this;
   with(bindGroup: TgpuBindGroup): this;
   with(encoder: GPUCommandEncoder): this;
   with(pass: GPUComputePassEncoder): this;
 
-  dispatchWorkgroups(
-    x: number,
-    y?: number,
-    z?: number,
-  ): void;
+  dispatchWorkgroups(x: number, y?: number, z?: number): void;
 
   /**
    * Dispatches compute workgroups using parameters read from a buffer.
@@ -96,11 +82,10 @@ export interface TgpuComputePipeline
 }
 
 export declare namespace TgpuComputePipeline {
-  export type Descriptor<
-    Input extends IORecord<AnyComputeBuiltin> = IORecord<AnyComputeBuiltin>,
-  > = {
-    compute: TgpuComputeFn<Input>;
-  };
+  export type Descriptor<Input extends IORecord<AnyComputeBuiltin> = IORecord<AnyComputeBuiltin>> =
+    {
+      compute: TgpuComputeFn<Input>;
+    };
 }
 
 export function INTERNAL_createComputePipeline(
@@ -108,10 +93,7 @@ export function INTERNAL_createComputePipeline(
   slotBindings: [TgpuSlot<unknown>, unknown][],
   descriptor: TgpuComputePipeline.Descriptor,
 ) {
-  return new TgpuComputePipelineImpl(
-    new ComputePipelineCore(branch, slotBindings, descriptor),
-    {},
-  );
+  return new TgpuComputePipelineImpl(new ComputePipelineCore(branch, slotBindings, descriptor), {});
 }
 
 // --------------
@@ -119,10 +101,7 @@ export function INTERNAL_createComputePipeline(
 // --------------
 
 type TgpuComputePipelinePriors = {
-  readonly bindGroupLayoutMap?: Map<
-    TgpuBindGroupLayout,
-    TgpuBindGroup | GPUBindGroup
-  >;
+  readonly bindGroupLayoutMap?: Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup>;
   readonly externalEncoder?: GPUCommandEncoder | undefined;
   readonly externalPass?: GPUComputePassEncoder | undefined;
 } & TimestampWritesPriors;
@@ -149,16 +128,11 @@ function validateIndirectBufferSize(
   }
 
   if (offset % 4 !== 0) {
-    throw new Error(
-      `Indirect buffer offset must be a multiple of 4. Got: ${offset}`,
-    );
+    throw new Error(`Indirect buffer offset must be a multiple of 4. Got: ${offset}`);
   }
 }
 
-const _lastAppliedCompute = new WeakMap<
-  GPUComputePassEncoder,
-  TgpuComputePipelineImpl
->();
+const _lastAppliedCompute = new WeakMap<GPUComputePassEncoder, TgpuComputePipelineImpl>();
 
 class TgpuComputePipelineImpl implements TgpuComputePipeline {
   public readonly [$internal]: ComputePipelineInternals;
@@ -199,19 +173,12 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     bindGroupLayout: TgpuBindGroupLayout<Entries>,
     bindGroup: TgpuBindGroup<Entries>,
   ): this;
-  with(
-    bindGroupLayout: TgpuBindGroupLayout,
-    bindGroup: GPUBindGroup,
-  ): this;
+  with(bindGroupLayout: TgpuBindGroupLayout, bindGroup: GPUBindGroup): this;
   with(bindGroup: TgpuBindGroup): this;
   with(encoder: GPUCommandEncoder): this;
   with(pass: GPUComputePassEncoder): this;
   with(
-    first:
-      | TgpuBindGroupLayout
-      | TgpuBindGroup
-      | GPUCommandEncoder
-      | GPUComputePassEncoder,
+    first: TgpuBindGroupLayout | TgpuBindGroup | GPUCommandEncoder | GPUComputePassEncoder,
     bindGroup?: TgpuBindGroup | GPUBindGroup,
   ): this {
     if (isGPUComputePassEncoder(first)) {
@@ -249,14 +216,8 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     }) as this;
   }
 
-  withPerformanceCallback(
-    callback: (start: bigint, end: bigint) => void | Promise<void>,
-  ): this {
-    const newPriors = createWithPerformanceCallback(
-      this._priors,
-      callback,
-      this._core.root,
-    );
+  withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this {
+    const newPriors = createWithPerformanceCallback(this._priors, callback, this._core.root);
     return new TgpuComputePipelineImpl(this._core, newPriors) as this;
   }
 
@@ -265,19 +226,11 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     beginningOfPassWriteIndex?: number;
     endOfPassWriteIndex?: number;
   }): this {
-    const newPriors = createWithTimestampWrites(
-      this._priors,
-      options,
-      this._core.root,
-    );
+    const newPriors = createWithTimestampWrites(this._priors, options, this._core.root);
     return new TgpuComputePipelineImpl(this._core, newPriors) as this;
   }
 
-  dispatchWorkgroups(
-    x: number,
-    y?: number,
-    z?: number,
-  ): void {
+  dispatchWorkgroups(x: number, y?: number, z?: number): void {
     this._executeComputePass((pass) => pass.dispatchWorkgroups(x, y, z));
   }
 
@@ -320,7 +273,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     }
 
     this._executeComputePass((pass) =>
-      pass.dispatchWorkgroupsIndirect(indirectBuffer.buffer, offset)
+      pass.dispatchWorkgroupsIndirect(indirectBuffer.buffer, offset),
     );
   }
 
@@ -329,18 +282,12 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     const { root } = this._core;
     pass.setPipeline(memo.pipeline);
 
-    applyBindGroups(
-      pass,
-      root,
-      memo.usedBindGroupLayouts,
-      memo.catchall,
-      (layout) => this._priors.bindGroupLayoutMap?.get(layout),
+    applyBindGroups(pass, root, memo.usedBindGroupLayouts, memo.catchall, (layout) =>
+      this._priors.bindGroupLayoutMap?.get(layout),
     );
   }
 
-  private _executeComputePass(
-    dispatch: (pass: GPUComputePassEncoder) => void,
-  ): void {
+  private _executeComputePass(dispatch: (pass: GPUComputePassEncoder) => void): void {
     const { root } = this._core;
 
     if (this._priors.externalPass) {
@@ -357,9 +304,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
         label: getName(this._core) ?? '<unnamed>',
         ...setupTimestampWrites(this._priors, root),
       };
-      const pass = this._priors.externalEncoder.beginComputePass(
-        passDescriptor,
-      );
+      const pass = this._priors.externalEncoder.beginComputePass(passDescriptor);
       this._applyComputeState(pass);
       dispatch(pass);
       pass.end();
@@ -429,7 +374,7 @@ class ComputePipelineCore implements SelfResolvable {
     if (this._memo === undefined) {
       const device = this.root.device;
       const enableExtensions = wgslExtensions.filter((extension) =>
-        this.root.enabledFeatures.has(wgslExtensionToFeatureName[extension])
+        this.root.enabledFeatures.has(wgslExtensionToFeatureName[extension]),
       );
 
       // Resolving code
@@ -457,8 +402,7 @@ class ComputePipelineCore implements SelfResolvable {
         });
       }
 
-      const { code, usedBindGroupLayouts, catchall, logResources } =
-        resolutionResult;
+      const { code, usedBindGroupLayouts, catchall, logResources } = resolutionResult;
 
       if (catchall !== undefined) {
         usedBindGroupLayouts[catchall[0]]?.$name(
@@ -476,9 +420,7 @@ class ComputePipelineCore implements SelfResolvable {
           label: getName(this) ?? '<unnamed>',
           layout: device.createPipelineLayout({
             label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
-            bindGroupLayouts: usedBindGroupLayouts.map((l) =>
-              this.root.unwrap(l)
-            ),
+            bindGroupLayouts: usedBindGroupLayouts.map((l) => this.root.unwrap(l)),
           }),
           compute: { module },
         }),

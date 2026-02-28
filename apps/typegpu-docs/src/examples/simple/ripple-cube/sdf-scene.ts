@@ -12,12 +12,7 @@ export const sdfLayout = tgpu.bindGroupLayout({
 export const sceneSDF = (p: d.v3f): number => {
   'use gpu';
   const uv = std.abs(p) * 2;
-  const sdfValue = std.textureSampleLevel(
-    sdfLayout.$.sdfTexture,
-    sdfLayout.$.sdfSampler,
-    uv,
-    0,
-  ).x;
+  const sdfValue = std.textureSampleLevel(sdfLayout.$.sdfTexture, sdfLayout.$.sdfSampler, uv, 0).x;
 
   const interior = std.max(sdf.sdBox3d(p, d.vec3f(0.5)), sdfValue);
   return std.min(sdf.sdBoxFrame3d(p, d.vec3f(0.5), 0.005), interior);

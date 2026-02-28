@@ -4,9 +4,12 @@ import tgpu, { d, std } from 'typegpu';
 export const LCG: StatefulGenerator = (() => {
   const seed = tgpu.privateVar(d.u32);
 
-  const u32To01Float = tgpu.fn([d.u32], d.f32)((value) => {
+  const u32To01Float = tgpu.fn(
+    [d.u32],
+    d.f32,
+  )((value) => {
     const mantissa = value >> 9;
-    const bits = 0x3F800000 | mantissa;
+    const bits = 0x3f800000 | mantissa;
     const f = std.bitcastU32toF32(bits);
     return f - 1;
   });

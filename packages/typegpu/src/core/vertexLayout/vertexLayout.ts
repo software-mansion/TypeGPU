@@ -1,10 +1,6 @@
 import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf.ts';
 import type { Disarray } from '../../data/dataTypes.ts';
-import {
-  getCustomLocation,
-  isLooseDecorated,
-  isUnstruct,
-} from '../../data/dataTypes.ts';
+import { getCustomLocation, isLooseDecorated, isUnstruct } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData, WgslArray } from '../../data/wgslTypes.ts';
 import { isDecorated, isWgslStruct } from '../../data/wgslTypes.ts';
@@ -18,10 +14,7 @@ import {
   type VertexFormat,
   vertexFormats,
 } from '../../shared/vertexFormat.ts';
-import type {
-  ArrayToContainedAttribs,
-  DataToContainedAttribs,
-} from './vertexAttribute.ts';
+import type { ArrayToContainedAttribs, DataToContainedAttribs } from './vertexAttribute.ts';
 
 // ----------
 // Public API
@@ -60,10 +53,7 @@ export function isVertexLayout(value: unknown): value is TgpuVertexLayout {
 
 const defaultAttribEntry = Symbol('defaultAttribEntry');
 
-function dataToContainedAttribs<
-  TLayoutData extends WgslArray | Disarray,
-  TData extends BaseData,
->(
+function dataToContainedAttribs<TLayoutData extends WgslArray | Disarray, TData extends BaseData>(
   layout: TgpuVertexLayout<TLayoutData>,
   data: TData,
   offset: number,
@@ -93,13 +83,7 @@ function dataToContainedAttribs<
         memberOffset = roundUp(memberOffset, alignmentOf(value));
         const attrib = [
           key,
-          dataToContainedAttribs(
-            layout,
-            value,
-            memberOffset,
-            customLocationMap,
-            key,
-          ),
+          dataToContainedAttribs(layout, value, memberOffset, customLocationMap, key),
         ];
         memberOffset += sizeOf(value);
         return attrib;
@@ -116,13 +100,7 @@ function dataToContainedAttribs<
         memberOffset = roundUp(memberOffset, customAlignmentOf(value));
         const attrib = [
           key,
-          dataToContainedAttribs(
-            layout,
-            value,
-            memberOffset,
-            customLocationMap,
-            key,
-          ),
+          dataToContainedAttribs(layout, value, memberOffset, customLocationMap, key),
         ];
         memberOffset += sizeOf(value);
         return attrib;
@@ -140,9 +118,7 @@ function dataToContainedAttribs<
       } satisfies TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib as any;
     }
 
-    const format = (kindToDefaultFormatMap as Record<string, VertexFormat>)[
-      data.type
-    ];
+    const format = (kindToDefaultFormatMap as Record<string, VertexFormat>)[data.type];
 
     if (format) {
       return {
@@ -157,8 +133,7 @@ function dataToContainedAttribs<
   throw new Error(`Unsupported data used in vertex layout: ${String(data)}`);
 }
 
-class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
-  implements TgpuVertexLayout<TData> {
+class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray> implements TgpuVertexLayout<TData> {
   public readonly [$internal] = true;
   public readonly resourceType = 'vertex-layout';
   public readonly stride: number;
@@ -172,29 +147,16 @@ class TgpuVertexLayoutImpl<TData extends WgslArray | Disarray>
     // `0` signals that the data-type is runtime-sized, and should not be used to create buffers.
     const arraySchema = schemaForCount(0);
 
-    this.stride = roundUp(
-      sizeOf(arraySchema.elementType),
-      alignmentOf(arraySchema),
-    );
-    this.attrib = dataToContainedAttribs(
-      this,
-      arraySchema.elementType,
-      0,
-      this._customLocationMap,
-    );
+    this.stride = roundUp(sizeOf(arraySchema.elementType), alignmentOf(arraySchema));
+    this.attrib = dataToContainedAttribs(this, arraySchema.elementType, 0, this._customLocationMap);
   }
 
   get vertexLayout(): GPUVertexBufferLayout {
     // If defaultAttribEntry is in the custom location map,
     // it means that the vertex layout is based on a single attribute
     if (this._customLocationMap[defaultAttribEntry] !== undefined) {
-      if (
-        typeof this.attrib.format !== 'string' ||
-        typeof this.attrib.offset !== 'number'
-      ) {
-        throw new Error(
-          'Single attribute vertex layouts must have a format and offset.',
-        );
+      if (typeof this.attrib.format !== 'string' || typeof this.attrib.offset !== 'number') {
+        throw new Error('Single attribute vertex layouts must have a format and offset.');
       }
 
       return {

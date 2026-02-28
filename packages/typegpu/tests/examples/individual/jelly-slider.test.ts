@@ -16,17 +16,20 @@ describe('jelly-slider example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'rendering',
-      name: 'jelly-slider',
-      setupMocks: () => {
-        mockFonts();
-        mockImageLoading();
-        mockResizeObserver();
-        mockCreateImageBitmap();
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'rendering',
+        name: 'jelly-slider',
+        setupMocks: () => {
+          mockFonts();
+          mockImageLoading();
+          mockResizeObserver();
+          mockCreateImageBitmap();
+        },
+        expectedCalls: 6,
       },
-      expectedCalls: 6,
-    }, device);
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "

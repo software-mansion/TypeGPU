@@ -5,7 +5,10 @@ import tgpu, { d, std } from '../../src/index.js';
 describe('ternary operator', () => {
   it('should resolve to one of the branches', () => {
     const mySlot = tgpu.slot<boolean>();
-    const myFn = tgpu.fn([], d.u32)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
       return mySlot.$ ? 10 : 20;
     });
 
@@ -14,8 +17,7 @@ describe('ternary operator', () => {
         myFn.with(mySlot, true).$name('trueFn'),
         myFn.with(mySlot, false).$name('falseFn'),
       ]),
-    )
-      .toMatchInlineSnapshot(`
+    ).toMatchInlineSnapshot(`
         "fn trueFn() -> u32 {
           return 10u;
         }
@@ -55,14 +57,11 @@ describe('ternary operator', () => {
 
   it('should resolve nested operators', () => {
     const mySlot = tgpu.slot<number>(0);
-    const myFn = tgpu.fn([], d.u32)(() => {
-      return mySlot.$ === 1
-        ? 10
-        : mySlot.$ === 2
-        ? 20
-        : mySlot.$ === 3
-        ? 30
-        : -1;
+    const myFn = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
+      return mySlot.$ === 1 ? 10 : mySlot.$ === 2 ? 20 : mySlot.$ === 3 ? 30 : -1;
     });
 
     expect(
@@ -72,8 +71,7 @@ describe('ternary operator', () => {
         myFn.with(mySlot, 2).$name('twoFn'),
         myFn.with(mySlot, 3).$name('threeFn'),
       ]),
-    )
-      .toMatchInlineSnapshot(`
+    ).toMatchInlineSnapshot(`
         "fn myFn() -> u32 {
           return -1u;
         }
@@ -97,12 +95,14 @@ describe('ternary operator', () => {
     const myUniform = root.createUniform(d.u32);
     const myReadonly = root.createReadonly(d.u32);
 
-    const myFn = tgpu.fn([], d.u32)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
       return mySlot.$ ? myUniform.$ : myReadonly.$;
     });
 
-    expect(tgpu.resolve([myFn.with(mySlot, true).$name('trueFn')]))
-      .toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn.with(mySlot, true).$name('trueFn')])).toMatchInlineSnapshot(`
         "@group(0) @binding(0) var<uniform> myUniform: u32;
 
         fn trueFn() -> u32 {
@@ -110,8 +110,7 @@ describe('ternary operator', () => {
         }"
       `);
 
-    expect(tgpu.resolve([myFn.with(mySlot, false).$name('falseFn')]))
-      .toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn.with(mySlot, false).$name('falseFn')])).toMatchInlineSnapshot(`
         "@group(0) @binding(0) var<storage, read> myReadonly: u32;
 
         fn falseFn() -> u32 {
@@ -134,7 +133,10 @@ describe('ternary operator', () => {
   });
 
   it('should throw when test is not comptime known', () => {
-    const myFn = tgpu.fn([d.u32], d.u32)((n) => {
+    const myFn = tgpu.fn(
+      [d.u32],
+      d.u32,
+    )((n) => {
       return n > 0 ? n : -n;
     });
 

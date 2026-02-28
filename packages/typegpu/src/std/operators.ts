@@ -21,59 +21,53 @@ import { unify } from '../tgsl/conversion.ts';
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
 
-const getPrimitive = (t: BaseData): BaseData =>
-  'primitive' in t ? (t.primitive as BaseData) : t;
+const getPrimitive = (t: BaseData): BaseData => ('primitive' in t ? (t.primitive as BaseData) : t);
 
-const makeBinarySignature = (opts?: {
-  matVecProduct?: boolean;
-  noMat?: boolean;
-  restrict?: BaseData[];
-}) =>
-(lhs: BaseData, rhs: BaseData) => {
-  const { restrict } = opts ?? {};
-  const fail = (msg: string): never => {
-    if (restrict) {
-      throw new SignatureNotSupportedError([lhs, rhs], restrict);
+const makeBinarySignature =
+  (opts?: { matVecProduct?: boolean; noMat?: boolean; restrict?: BaseData[] }) =>
+  (lhs: BaseData, rhs: BaseData) => {
+    const { restrict } = opts ?? {};
+    const fail = (msg: string): never => {
+      if (restrict) {
+        throw new SignatureNotSupportedError([lhs, rhs], restrict);
+      }
+      throw new Error(`Cannot apply operator to ${lhs.type} and ${rhs.type}: ${msg}`);
+    };
+
+    if (opts?.noMat && (isMat(lhs) || isMat(rhs))) {
+      return fail('matrices not supported');
     }
-    throw new Error(
-      `Cannot apply operator to ${lhs.type} and ${rhs.type}: ${msg}`,
-    );
-  };
+    const lhsC = isVec(lhs) || isMat(lhs);
+    const rhsC = isVec(rhs) || isMat(rhs);
 
-  if (opts?.noMat && (isMat(lhs) || isMat(rhs))) {
-    return fail('matrices not supported');
-  }
-  const lhsC = isVec(lhs) || isMat(lhs);
-  const rhsC = isVec(rhs) || isMat(rhs);
-
-  if (!lhsC && !rhsC) {
-    // scalar × scalar
-    const unified = unify([lhs, rhs], restrict);
-    if (!unified) return fail('incompatible scalar types');
-    return { argTypes: unified, returnType: unified[0] };
-  }
-
-  if (lhsC && rhsC) {
-    // vec × mat or mat × vec
-    if (opts?.matVecProduct && isVec(lhs) !== isVec(rhs)) {
-      return { argTypes: [lhs, rhs], returnType: isVec(lhs) ? lhs : rhs };
+    if (!lhsC && !rhsC) {
+      // scalar × scalar
+      const unified = unify([lhs, rhs], restrict);
+      if (!unified) return fail('incompatible scalar types');
+      return { argTypes: unified, returnType: unified[0] };
     }
-    // composite × composite (same kind)
-    if (lhs.type !== rhs.type) return fail('operands must have the same type');
-    return { argTypes: [lhs, rhs], returnType: lhs };
-  }
 
-  // scalar × composite
-  const [scalar, composite] = lhsC ? [rhs, lhs] : [lhs, rhs];
-  const unified = unify([scalar], [getPrimitive(composite)]);
-  if (!unified) {
-    return fail(`scalar not convertible to ${getPrimitive(composite).type}`);
-  }
-  return {
-    argTypes: lhsC ? [lhs, unified[0]] : [unified[0], rhs],
-    returnType: composite,
+    if (lhsC && rhsC) {
+      // vec × mat or mat × vec
+      if (opts?.matVecProduct && isVec(lhs) !== isVec(rhs)) {
+        return { argTypes: [lhs, rhs], returnType: isVec(lhs) ? lhs : rhs };
+      }
+      // composite × composite (same kind)
+      if (lhs.type !== rhs.type) return fail('operands must have the same type');
+      return { argTypes: [lhs, rhs], returnType: lhs };
+    }
+
+    // scalar × composite
+    const [scalar, composite] = lhsC ? [rhs, lhs] : [lhs, rhs];
+    const unified = unify([scalar], [getPrimitive(composite)]);
+    if (!unified) {
+      return fail(`scalar not convertible to ${getPrimitive(composite).type}`);
+    }
+    return {
+      argTypes: lhsC ? [lhs, unified[0]] : [unified[0], rhs],
+      returnType: composite,
+    };
   };
-};
 
 const binaryArithmeticSignature = makeBinarySignature();
 const binaryMulSignature = makeBinarySignature({ matVecProduct: true });
@@ -89,10 +83,13 @@ function cpuAdd<T extends NumVec | Mat>(lhs: T, rhs: T): T; // component-wise ad
 function cpuAdd<
   // union overload
   Lhs extends number | NumVec | Mat,
-  Rhs extends Lhs extends number ? number | NumVec
-    : Lhs extends NumVec ? number | Lhs
-    : Lhs extends Mat ? Lhs
-    : never,
+  Rhs extends Lhs extends number
+    ? number | NumVec
+    : Lhs extends NumVec
+      ? number | Lhs
+      : Lhs extends Mat
+        ? Lhs
+        : never,
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
@@ -104,10 +101,7 @@ function cpuAdd(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   if (isVecInstance(lhs) && typeof rhs === 'number') {
     return VectorOps.addMixed[lhs.kind](lhs, rhs); // mixed addition
   }
-  if (
-    (isVecInstance(lhs) && isVecInstance(rhs)) ||
-    (isMatInstance(lhs) && isMatInstance(rhs))
-  ) {
+  if ((isVecInstance(lhs) && isVecInstance(rhs)) || (isMatInstance(lhs) && isMatInstance(rhs))) {
     return VectorOps.add[lhs.kind](lhs, rhs); // component-wise addition
   }
 
@@ -128,10 +122,13 @@ function cpuSub<T extends NumVec | Mat>(lhs: T, rhs: T): T; // component-wise su
 function cpuSub<
   // union overload
   Lhs extends number | NumVec | Mat,
-  Rhs extends Lhs extends number ? number | NumVec
-    : Lhs extends NumVec ? number | Lhs
-    : Lhs extends Mat ? Lhs
-    : never,
+  Rhs extends Lhs extends number
+    ? number | NumVec
+    : Lhs extends NumVec
+      ? number | Lhs
+      : Lhs extends Mat
+        ? Lhs
+        : never,
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuSub(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   // while illegal on the wgsl side, we can do this in js
@@ -155,10 +152,13 @@ function cpuMul<M extends Mat>(lhs: M, rhs: M): M; // matrix multiplication
 function cpuMul<
   // union overload
   Lhs extends number | NumVec | Mat,
-  Rhs extends Lhs extends number ? number | NumVec | Mat
-    : Lhs extends NumVec ? number | Lhs | mBaseForVec<Lhs>
-    : Lhs extends Mat ? number | vBaseForMat<Lhs> | Lhs
-    : never,
+  Rhs extends Lhs extends number
+    ? number | NumVec | Mat
+    : Lhs extends NumVec
+      ? number | Lhs | mBaseForVec<Lhs>
+      : Lhs extends Mat
+        ? number | vBaseForMat<Lhs> | Lhs
+        : never,
 >(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
@@ -256,9 +256,7 @@ export const mod = dualImpl({
       // vector % vector
       return VectorOps.mod[a.kind](a, b) as T;
     }
-    throw new Error(
-      'Mod called with invalid arguments, expected types: number or vector.',
-    );
+    throw new Error('Mod called with invalid arguments, expected types: number or vector.');
   }) as ModOverload,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} % ${rhs})`,
 });

@@ -166,8 +166,7 @@ bench
           () =>
             ({
               // oxlint-disable-next-line typescript/no-non-null-assertion
-              [SYMBOL_TAGS[Math.floor(Math.random() * SYMBOL_TAGS.length)]!]:
-                true,
+              [SYMBOL_TAGS[Math.floor(Math.random() * SYMBOL_TAGS.length)]!]: true,
             }) as { [K in (typeof SYMBOL_TAGS)[number]]: boolean },
         );
       },

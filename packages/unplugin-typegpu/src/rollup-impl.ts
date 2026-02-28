@@ -28,10 +28,7 @@ export type FunctionNode =
 export function containsUseGpuDirective(node: FunctionNode): boolean {
   if (node.body.type === 'BlockStatement') {
     for (const statement of node.body.body) {
-      if (
-        statement.type === 'ExpressionStatement' &&
-        statement.directive === useGpuDirective
-      ) {
+      if (statement.type === 'ExpressionStatement' && statement.directive === useGpuDirective) {
         return true;
       }
     }
@@ -45,40 +42,22 @@ export function removeUseGpuDirective(node: FunctionNode) {
   if (cloned.body.type === 'BlockStatement') {
     cloned.body.body = cloned.body.body.filter(
       (statement) =>
-        !(
-          statement.type === 'ExpressionStatement' &&
-          statement.directive === useGpuDirective
-        ),
+        !(statement.type === 'ExpressionStatement' && statement.directive === useGpuDirective),
     );
   }
 
   return cloned;
 }
 
-export function assignMetadata(
-  magicString: MagicStringAST,
-  node: acorn.AnyNode,
-  metadata: string,
-) {
-  magicString.prependLeft(
-    node.start,
-    '(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (',
-  ).appendRight(
-    node.end,
-    `), ${metadata}) && $.f)({}))`,
-  );
+export function assignMetadata(magicString: MagicStringAST, node: acorn.AnyNode, metadata: string) {
+  magicString
+    .prependLeft(node.start, '(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (')
+    .appendRight(node.end, `), ${metadata}) && $.f)({}))`);
 }
 
-export function wrapInAutoName(
-  magicString: MagicStringAST,
-  node: acorn.Node,
-  name: string,
-) {
+export function wrapInAutoName(magicString: MagicStringAST, node: acorn.Node, name: string) {
   magicString
-    .prependLeft(
-      node.start,
-      '((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(',
-    )
+    .prependLeft(node.start, '((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(')
     .appendRight(node.end, `, "${name}"))`);
 }
 
@@ -91,21 +70,15 @@ export const rollUpImpl = (rawOptions: Options) => {
     transform: {
       filter: options.earlyPruning
         ? {
-          id: options,
-          code: earlyPruneRegex,
-        }
+            id: options,
+            code: earlyPruneRegex,
+          }
         : {
-          id: options,
-        },
-      handler(
-        this: UnpluginBuildContext & UnpluginContext,
-        code: string,
-        id: string,
-      ) {
+            id: options,
+          },
+      handler(this: UnpluginBuildContext & UnpluginContext, code: string, id: string) {
         const ctx: Context = {
-          tgpuAliases: new Set<string>(
-            options.forceTgpuAlias ? [options.forceTgpuAlias] : [],
-          ),
+          tgpuAliases: new Set<string>(options.forceTgpuAlias ? [options.forceTgpuAlias] : []),
           fileId: id,
           autoNamingEnabled: options.autoNamingEnabled,
         };
@@ -119,9 +92,7 @@ export const rollUpImpl = (rawOptions: Options) => {
         } catch (cause) {
           console.warn(
             `[unplugin-typegpu] Failed to parse ${id}. Cause: ${
-              typeof cause === 'object' && cause && 'message' in cause
-                ? cause.message
-                : cause
+              typeof cause === 'object' && cause && 'message' in cause ? cause.message : cause
             }`,
           );
           return undefined;
@@ -189,8 +160,7 @@ export const rollUpImpl = (rawOptions: Options) => {
               const node = _node as acorn.AnyNode;
 
               if (node.type === 'AssignmentExpression') {
-                const runtimeFn =
-                  operators[node.operator as keyof typeof operators];
+                const runtimeFn = operators[node.operator as keyof typeof operators];
 
                 if (runtimeFn) {
                   const left = node.left;
@@ -198,14 +168,10 @@ export const rollUpImpl = (rawOptions: Options) => {
 
                   const lhs = magicString.sliceNode(left);
                   const rhs = magicString.sliceNode(right);
-                  magicString.overwriteNode(
-                    node,
-                    `${lhs} = ${runtimeFn}(${lhs}, ${rhs})`,
-                  );
+                  magicString.overwriteNode(node, `${lhs} = ${runtimeFn}(${lhs}, ${rhs})`);
                 }
               } else if (node.type === 'BinaryExpression') {
-                const runtimeFn =
-                  operators[node.operator as keyof typeof operators];
+                const runtimeFn = operators[node.operator as keyof typeof operators];
 
                 if (runtimeFn) {
                   const left = node.left;
@@ -213,10 +179,7 @@ export const rollUpImpl = (rawOptions: Options) => {
 
                   const lhs = magicString.sliceNode(left);
                   const rhs = magicString.sliceNode(right);
-                  magicString.overwriteNode(
-                    node,
-                    `${runtimeFn}(${lhs}, ${rhs})`,
-                  );
+                  magicString.overwriteNode(node, `${runtimeFn}(${lhs}, ${rhs})`);
                 }
               }
             },
@@ -225,8 +188,7 @@ export const rollUpImpl = (rawOptions: Options) => {
           if (
             isFunctionStatement &&
             name &&
-            code.slice(0, def.start)
-                .search(new RegExp(`(?<![\\w_.])${name}(?![\\w_])`)) !== -1
+            code.slice(0, def.start).search(new RegExp(`(?<![\\w_.])${name}(?![\\w_])`)) !== -1
           ) {
             console.warn(
               `File ${id}: function "${name}" might have been referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
@@ -237,11 +199,9 @@ export const rollUpImpl = (rawOptions: Options) => {
               v: ${FORMAT_VERSION},
               name: ${name ? `"${name}"` : 'undefined'},
               ast: ${embedJSON({ params, body, externalNames })},
-              externals: () => ({${
-            externalNames.map((e) => e === 'this' ? '"this": this' : e).join(
-              ', ',
-            )
-          }}),
+              externals: () => ({${externalNames
+                .map((e) => (e === 'this' ? '"this": this' : e))
+                .join(', ')}}),
             }`;
 
           assignMetadata(magicString, def, metadata);

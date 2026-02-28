@@ -16,8 +16,7 @@ describe('TgpuBufferUniform', () => {
     const buffer = root.createBuffer(d.f32).$usage('uniform').$name('param');
     const uniform = buffer.as('uniform');
 
-    const main = tgpu.fn([])`() { let y = hello; }`
-      .$uses({ hello: uniform });
+    const main = tgpu.fn([])`() { let y = hello; }`.$uses({ hello: uniform });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> param: f32;
@@ -83,7 +82,7 @@ describe('TgpuBufferUniform', () => {
         .createBuffer(d.u32, 2)
         .$usage('storage')
         // @ts-expect-error
-        .as('uniform')
+        .as('uniform'),
     ).toThrow();
   });
 });
@@ -100,8 +99,7 @@ describe('TgpuBufferMutable', () => {
     const buffer = root.createBuffer(d.f32).$usage('storage').$name('param');
     const mutable = buffer.as('mutable');
 
-    const main = tgpu.fn([])`() { let y = hello; }`
-      .$uses({ hello: mutable });
+    const main = tgpu.fn([])`() { let y = hello; }`.$uses({ hello: mutable });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> param: f32;
@@ -188,7 +186,7 @@ describe('TgpuBufferMutable', () => {
         .createBuffer(d.u32, 2)
         .$usage('uniform')
         // @ts-expect-error
-        .as('mutable')
+        .as('mutable'),
     ).toThrow();
   });
 });
@@ -205,8 +203,7 @@ describe('TgpuBufferReadonly', () => {
     const buffer = root.createBuffer(d.f32).$usage('storage').$name('param');
     const readonly = buffer.as('readonly');
 
-    const main = tgpu.fn([])`() { let y = hello; }`
-      .$uses({ hello: readonly });
+    const main = tgpu.fn([])`() { let y = hello; }`.$uses({ hello: readonly });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read> param: f32;
@@ -233,11 +230,10 @@ describe('TgpuBufferReadonly', () => {
   });
 
   it('allows accessing fields in a struct stored in its buffer', ({ root }) => {
-    const Boid = d
-      .struct({
-        pos: d.vec3f,
-        vel: d.vec3u,
-      });
+    const Boid = d.struct({
+      pos: d.vec3f,
+      vel: d.vec3u,
+    });
 
     const boidBuffer = root.createBuffer(Boid).$usage('storage').$name('boid');
     const boidReadonly = boidBuffer.as('readonly');
@@ -275,7 +271,10 @@ describe('TgpuBufferReadonly', () => {
     const fooBuffer = root.createBuffer(d.f32).$usage('storage');
     const readonly = fooBuffer.as('readonly');
 
-    const foo = tgpu.fn([], d.f32)(() => {
+    const foo = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       return readonly.$; // accessing GPU resource
     });
 
@@ -310,7 +309,7 @@ describe('TgpuBufferReadonly', () => {
         .createBuffer(d.u32, 2)
         .$usage('uniform')
         // @ts-expect-error
-        .as('readonly')
+        .as('readonly'),
     ).toThrow();
   });
 });

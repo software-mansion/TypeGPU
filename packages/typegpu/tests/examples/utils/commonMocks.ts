@@ -5,15 +5,13 @@ export function setupCommonMocks() {
   beforeEach(() => {
     vi.resetAllMocks();
 
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(
-      () => {
-        return createDeepNoopProxy(
-          {} as unknown as CanvasRenderingContext2D,
-          new Set(),
-          // oxlint-disable-next-line typescript/no-explicit-any -- we testing here
-        ) as any;
-      },
-    );
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => {
+      return createDeepNoopProxy(
+        {} as unknown as CanvasRenderingContext2D,
+        new Set(),
+        // oxlint-disable-next-line typescript/no-explicit-any -- we testing here
+      ) as any;
+    });
 
     Object.defineProperty(HTMLCanvasElement.prototype, 'width', {
       get: () => 256,
@@ -42,24 +40,20 @@ export function setupCommonMocks() {
 
     let callbackInvoked = false;
 
-    Object.defineProperty(
-      HTMLVideoElement.prototype,
-      'requestVideoFrameCallback',
-      {
-        value: (callback: VideoFrameRequestCallback) => {
-          if (!callbackInvoked) {
-            callbackInvoked = true;
-            callback(0, {
-              width: 640,
-              height: 480,
-            } as VideoFrameCallbackMetadata);
-          }
-          return 0; // Mock ID
-        },
-        writable: true,
-        configurable: true,
+    Object.defineProperty(HTMLVideoElement.prototype, 'requestVideoFrameCallback', {
+      value: (callback: VideoFrameRequestCallback) => {
+        if (!callbackInvoked) {
+          callbackInvoked = true;
+          callback(0, {
+            width: 640,
+            height: 480,
+          } as VideoFrameCallbackMetadata);
+        }
+        return 0; // Mock ID
       },
-    );
+      writable: true,
+      configurable: true,
+    });
 
     Object.defineProperty(HTMLVideoElement.prototype, 'readyState', {
       get: () => 4, // HAVE_ENOUGH_DATA
@@ -138,8 +132,7 @@ export function mockMnistWeights() {
   if (fetchMockMap.has(mnistRegExp)) return;
 
   // https://numpy.org/devdocs/reference/generated/numpy.lib.format.html
-  const mockHeader =
-    "{'descr': '<f4', 'fortran_order': False, 'shape': (0, 0)}";
+  const mockHeader = "{'descr': '<f4', 'fortran_order': False, 'shape': (0, 0)}";
   const headerBuffer = new TextEncoder().encode(mockHeader);
   const totalBuffer = new ArrayBuffer(headerBuffer.length + 100);
   const view = new Uint8Array(totalBuffer);
@@ -208,10 +201,13 @@ export function mock3DModelLoading() {
 
   mockImageLoading();
   if (fetchMockMap.has(objRegExp)) return;
-  fetchMockMap.set(objRegExp, () =>
-    new Response('', {
-      headers: {
-        'Content-Type': 'text/plain',
-      },
-    }));
+  fetchMockMap.set(
+    objRegExp,
+    () =>
+      new Response('', {
+        headers: {
+          'Content-Type': 'text/plain',
+        },
+      }),
+  );
 }

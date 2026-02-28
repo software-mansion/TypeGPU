@@ -16,7 +16,7 @@ const settings = {
   filterDim: 3,
   iterations: 1,
   get blockDim() {
-    return 128 - (this.filterDim) + 1;
+    return 128 - this.filterDim + 1;
   },
 };
 
@@ -68,9 +68,9 @@ const computeFn = tgpu.computeFn({
   const settings = settingsUniform.$;
   const filterOffset = d.i32((settings.filterDim - 1) / 2);
   const dims = d.vec2i(std.textureDimensions(ioLayout.$.inTexture));
-  const baseIndex = d.vec2i(
-    wid.xy.mul(d.vec2u(settings.blockDim, 4)).add(lid.xy.mul(d.vec2u(4, 1))),
-  ).sub(d.vec2i(filterOffset, 0));
+  const baseIndex = d
+    .vec2i(wid.xy.mul(d.vec2u(settings.blockDim, 4)).add(lid.xy.mul(d.vec2u(4, 1))))
+    .sub(d.vec2i(filterOffset, 0));
 
   // Load a tile of pixels into shared memory
   for (const r of tgpu.unroll([0, 1, 2, 3])) {
@@ -119,13 +119,7 @@ const computeFn = tgpu.computeFn({
 const renderFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
-})((input) =>
-  std.textureSample(
-    renderView.$,
-    sampler.$,
-    input.uv,
-  )
-);
+})((input) => std.textureSample(renderView.$, sampler.$, input.uv));
 
 const zeroBuffer = root.createBuffer(d.u32, 0).$usage('uniform');
 const oneBuffer = root.createBuffer(d.u32, 1).$usage('uniform');
@@ -161,20 +155,21 @@ function render() {
     blockDim: settings.blockDim,
   });
 
-  const indices = [0, 1, ...Array(settings.iterations - 1).fill([2, 1]).flat()];
+  const indices = [
+    0,
+    1,
+    ...Array(settings.iterations - 1)
+      .fill([2, 1])
+      .flat(),
+  ];
 
   for (const i of indices) {
     computePipeline
       .with(ioBindGroups[i])
-      .dispatchWorkgroups(
-        Math.ceil(srcWidth / settings.blockDim),
-        Math.ceil(srcHeight / 4),
-      );
+      .dispatchWorkgroups(Math.ceil(srcWidth / settings.blockDim), Math.ceil(srcHeight / 4));
   }
 
-  renderPipeline
-    .withColorAttachment({ view: context })
-    .draw(3);
+  renderPipeline.withColorAttachment({ view: context }).draw(3);
 }
 render();
 

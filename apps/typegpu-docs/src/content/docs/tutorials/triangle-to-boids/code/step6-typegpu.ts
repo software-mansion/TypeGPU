@@ -127,7 +127,7 @@ const computePipelines = [-1, 1].map((direction) =>
 
     ${trianglePos.asMutable()}[index] = instanceInfo;
   `.with(rotationDirection, direction),
-  })
+  }),
 );
 
 let invertRotation = false;

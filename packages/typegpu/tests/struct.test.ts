@@ -42,9 +42,7 @@ describe('struct', () => {
     const writer = new BufferWriter(buffer);
 
     writeData(writer, TestStruct, { x: 1, y: vec3u(1, 2, 3) });
-    expect([...new Uint32Array(buffer)]).toStrictEqual([
-      1, 0, 0, 0, 1, 2, 3, 0,
-    ]);
+    expect([...new Uint32Array(buffer)]).toStrictEqual([1, 0, 0, 0, 1, 2, 3, 0]);
   });
 
   it('aligns struct properties when reading', () => {
@@ -232,9 +230,7 @@ describe('struct', () => {
     };
 
     writeData(new BufferWriter(buffer2), TestStruct2, value2);
-    expect(readData(new BufferReader(buffer2), TestStruct2)).toStrictEqual(
-      value2,
-    );
+    expect(readData(new BufferReader(buffer2), TestStruct2)).toStrictEqual(value2);
   });
 
   it('can be called to create an object', () => {
@@ -256,7 +252,7 @@ describe('struct', () => {
     });
 
     // @ts-expect-error
-    (() => TestStruct({ x: 1, z: 2 }));
+    () => TestStruct({ x: 1, z: 2 });
   });
 
   it('can be called to create a deep copy of other struct', () => {
@@ -377,17 +373,15 @@ describe('struct', () => {
   });
 
   it('throws when struct prop has whitespace in name', () => {
-    expect(() => struct({ 'my prop': f32 }))
-      .toThrowErrorMatchingInlineSnapshot(
-        `[Error: Invalid identifier 'my prop'. Choose an identifier without whitespaces or leading underscores.]`,
-      );
+    expect(() => struct({ 'my prop': f32 })).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Invalid identifier 'my prop'. Choose an identifier without whitespaces or leading underscores.]`,
+    );
   });
 
   it('throws when struct prop uses a reserved word', () => {
-    expect(() => struct({ struct: f32 }))
-      .toThrowErrorMatchingInlineSnapshot(
-        `[Error: Property key 'struct' is a reserved WGSL word. Choose a different name.]`,
-      );
+    expect(() => struct({ struct: f32 })).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Property key 'struct' is a reserved WGSL word. Choose a different name.]`,
+    );
   });
 
   it('throws when invalid number of arguments during code generation', () => {
@@ -452,7 +446,7 @@ describe('WgslStruct', () => {
     };
 
     // @ts-expect-error: It doesn't have the 'a' property
-    (() => foo(d.struct({})));
+    () => foo(d.struct({}));
     // Exact match
     foo(d.struct({ a: d.f32 }));
     // Extra properties
@@ -462,7 +456,10 @@ describe('WgslStruct', () => {
 
 describe('abstruct', () => {
   it('gets correctly resolved when returned from an std function', () => {
-    const testFn = tgpu.fn([f32], f32)((x) => {
+    const testFn = tgpu.fn(
+      [f32],
+      f32,
+    )((x) => {
       const result = frexp(x);
       // It should know that exp is an u32 and cast it to f32
       return result.exp;

@@ -1,19 +1,10 @@
 import { roundUp } from '../mathUtils.ts';
 import { alignmentOf } from './alignmentOf.ts';
-import {
-  type OffsetInfo as PropOffsetInfo,
-  offsetsForProps,
-} from './offsets.ts';
+import { type OffsetInfo as PropOffsetInfo, offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
 import { isContiguous } from './isContiguous.ts';
 import { getLongestContiguousPrefix } from './getLongestContiguousPrefix.ts';
-import type {
-  AnyWgslData,
-  BaseData,
-  VecData,
-  WgslArray,
-  WgslStruct,
-} from './wgslTypes.ts';
+import type { AnyWgslData, BaseData, VecData, WgslArray, WgslStruct } from './wgslTypes.ts';
 import { isVec, isWgslArray, isWgslStruct } from './wgslTypes.ts';
 import { undecorate } from './dataTypes.ts';
 import type { Infer } from '../shared/repr.ts';
@@ -49,24 +40,14 @@ function getMarker(target: OffsetProxy, prop: PropertyKey): number | undefined {
   return undefined;
 }
 
-function makeProxy(
-  schema: AnyWgslData,
-  baseOffset: number,
-  contiguous = sizeOf(schema),
-): unknown {
+function makeProxy(schema: AnyWgslData, baseOffset: number, contiguous = sizeOf(schema)): unknown {
   const unwrapped = undecorate(schema);
 
-  const vecComponentCount = isVec(unwrapped)
-    ? unwrapped.componentCount
-    : undefined;
+  const vecComponentCount = isVec(unwrapped) ? unwrapped.componentCount : undefined;
 
   if (vecComponentCount !== undefined) {
     const componentSize = sizeOf((unwrapped as VecData).primitive);
-    return makeVecProxy(
-      scalarNode(baseOffset, contiguous),
-      componentSize,
-      vecComponentCount,
-    );
+    return makeVecProxy(scalarNode(baseOffset, contiguous), componentSize, vecComponentCount);
   }
 
   if (isWgslStruct(unwrapped)) {
@@ -80,10 +61,7 @@ function makeProxy(
   return scalarNode(baseOffset, contiguous);
 }
 
-export function createOffsetProxy<T extends BaseData>(
-  schema: T,
-  baseOffset = 0,
-): unknown {
+export function createOffsetProxy<T extends BaseData>(schema: T, baseOffset = 0): unknown {
   return makeProxy(schema as AnyWgslData, baseOffset, sizeOf(schema));
 }
 
@@ -101,15 +79,16 @@ function makeVecProxy(
         return marker;
       }
 
-      const idx = prop === 'x' || prop === '0'
-        ? 0
-        : prop === 'y' || prop === '1'
-        ? 1
-        : prop === 'z' || prop === '2'
-        ? 2
-        : prop === 'w' || prop === '3'
-        ? 3
-        : -1;
+      const idx =
+        prop === 'x' || prop === '0'
+          ? 0
+          : prop === 'y' || prop === '1'
+            ? 1
+            : prop === 'z' || prop === '2'
+              ? 2
+              : prop === 'w' || prop === '3'
+                ? 3
+                : -1;
 
       if (idx < 0 || idx >= componentCount) {
         return undefined;
@@ -145,30 +124,20 @@ function makeArrayProxy(array: WgslArray, target: OffsetProxy): unknown {
       }
 
       const index = Number(prop);
-      if (
-        !Number.isInteger(index) ||
-        index < 0 || index >= array.elementCount
-      ) {
+      if (!Number.isInteger(index) || index < 0 || index >= array.elementCount) {
         return undefined;
       }
 
       const elementOffset = index * stride;
       const remainingFromHere = !isContiguous(elementType)
         ? elementSize + getLongestContiguousPrefix(elementType) // it is too much, but we correct it later
-        : Math.max(
-          0,
-          t[CONTIGUOUS_MARKER] - elementOffset,
-        );
+        : Math.max(0, t[CONTIGUOUS_MARKER] - elementOffset);
 
       const childContiguous = hasPadding
         ? Math.min(remainingFromHere, elementSize)
         : remainingFromHere;
 
-      return makeProxy(
-        elementType,
-        t[OFFSET_MARKER] + elementOffset,
-        childContiguous,
-      );
+      return makeProxy(elementType, t[OFFSET_MARKER] + elementOffset, childContiguous);
     },
   });
 }
@@ -200,14 +169,12 @@ function makeStructProxy(struct: WgslStruct, target: OffsetProxy): unknown {
     const padding = info.padding ?? 0;
 
     const typeContiguous = isContiguous(type);
-    const isRunEnd = i === propNames.length - 1 || padding > 0 ||
-      !typeContiguous;
+    const isRunEnd = i === propNames.length - 1 || padding > 0 || !typeContiguous;
     if (!isRunEnd) {
       continue;
     }
 
-    const runEnd = info.offset +
-      (typeContiguous ? info.size : getLongestContiguousPrefix(type));
+    const runEnd = info.offset + (typeContiguous ? info.size : getLongestContiguousPrefix(type));
     for (let j = runStart; j <= i; j++) {
       const runName = propNames[j];
       if (!runName) {
@@ -235,10 +202,7 @@ function makeStructProxy(struct: WgslStruct, target: OffsetProxy): unknown {
         return undefined;
       }
 
-      const remainingFromHere = Math.max(
-        0,
-        t[CONTIGUOUS_MARKER] - m.offset,
-      );
+      const remainingFromHere = Math.max(0, t[CONTIGUOUS_MARKER] - m.offset);
       const localLimit = Math.max(0, m.runEnd - m.offset);
       const propSchema = propTypes[prop];
       if (!propSchema) {
@@ -342,7 +306,5 @@ export function memoryLayoutOf<T extends BaseData>(
     };
   }
 
-  throw new Error(
-    'Invalid accessor result. Expected an offset proxy with markers.',
-  );
+  throw new Error('Invalid accessor result. Expected an offset proxy with markers.');
 }

@@ -5,10 +5,12 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-let stencilTexture = root['~unstable'].createTexture({
-  size: [canvas.width, canvas.height],
-  format: 'stencil8',
-}).$usage('render');
+let stencilTexture = root['~unstable']
+  .createTexture({
+    size: [canvas.width, canvas.height],
+    format: 'stencil8',
+  })
+  .$usage('render');
 
 const triangleData = {
   vertices: tgpu.const(d.arrayOf(d.vec2f, 3), [
@@ -16,11 +18,7 @@ const triangleData = {
     d.vec2f(-0.5, -0.5),
     d.vec2f(0.5, -0.5),
   ]),
-  uvs: tgpu.const(d.arrayOf(d.vec2f, 3), [
-    d.vec2f(0.5, 1),
-    d.vec2f(0, 0),
-    d.vec2f(1, 0),
-  ]),
+  uvs: tgpu.const(d.arrayOf(d.vec2f, 3), [d.vec2f(0.5, 1), d.vec2f(0, 0), d.vec2f(1, 0)]),
 };
 
 const rotationUniform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
@@ -82,7 +80,8 @@ writeStencilPipeline
     stencilClearValue: 0,
     stencilLoadOp: 'clear',
     stencilStoreOp: 'store',
-  }).draw(3);
+  })
+  .draw(3);
 
 let frameId: number;
 function frame(timestamp: number) {
@@ -105,19 +104,23 @@ function frame(timestamp: number) {
 frameId = requestAnimationFrame(frame);
 
 const resizeObserver = new ResizeObserver(() => {
-  stencilTexture = root['~unstable'].createTexture({
-    size: [canvas.width, canvas.height],
-    format: 'stencil8',
-  }).$usage('render');
+  stencilTexture = root['~unstable']
+    .createTexture({
+      size: [canvas.width, canvas.height],
+      format: 'stencil8',
+    })
+    .$usage('render');
 
   rotationUniform.write(d.mat2x2f.identity());
 
-  writeStencilPipeline.withDepthStencilAttachment({
-    view: stencilTexture,
-    stencilClearValue: 0,
-    stencilLoadOp: 'clear',
-    stencilStoreOp: 'store',
-  }).draw(3);
+  writeStencilPipeline
+    .withDepthStencilAttachment({
+      view: stencilTexture,
+      stencilClearValue: 0,
+      stencilLoadOp: 'clear',
+      stencilStoreOp: 'store',
+    })
+    .draw(3);
 });
 resizeObserver.observe(canvas);
 

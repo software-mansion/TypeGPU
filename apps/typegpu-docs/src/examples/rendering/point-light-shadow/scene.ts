@@ -11,9 +11,7 @@ export class Scene {
 
   constructor(root: TgpuRoot) {
     this.#root = root;
-    this.#instanceBuffer = root
-      .createBuffer(d.arrayOf(InstanceData, 0), [])
-      .$usage('vertex');
+    this.#instanceBuffer = root.createBuffer(d.arrayOf(InstanceData, 0), []).$usage('vertex');
   }
 
   add(object: BoxGeometry | BoxGeometry[]) {

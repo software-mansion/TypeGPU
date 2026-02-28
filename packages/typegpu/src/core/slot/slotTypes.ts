@@ -50,8 +50,7 @@ export interface TgpuLazy<out T> extends Withable<TgpuLazy<T>> {
   // ---
 }
 
-export interface TgpuAccessor<T extends BaseData = BaseData>
-  extends TgpuNamable {
+export interface TgpuAccessor<T extends BaseData = BaseData> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'accessor';
 
@@ -87,8 +86,7 @@ export declare namespace TgpuAccessor {
       : DataAccessorIn<UnwrapRuntimeConstructor<T>>;
 }
 
-export interface TgpuMutableAccessor<T extends BaseData = BaseData>
-  extends TgpuNamable {
+export interface TgpuMutableAccessor<T extends BaseData = BaseData> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'mutable-accessor';
 
@@ -138,15 +136,11 @@ export function isLazy<T>(value: unknown): value is TgpuLazy<T> {
   return (value as TgpuLazy<T>)?.resourceType === 'lazy';
 }
 
-export function isProviding(
-  value: unknown,
-): value is { [$providing]: Providing } {
+export function isProviding(value: unknown): value is { [$providing]: Providing } {
   return (value as { [$providing]: Providing })?.[$providing] !== undefined;
 }
 
-export function isAccessor<T extends BaseData>(
-  value: unknown,
-): value is TgpuAccessor<T> {
+export function isAccessor<T extends BaseData>(value: unknown): value is TgpuAccessor<T> {
   return (value as TgpuAccessor<T>)?.resourceType === 'accessor';
 }
 

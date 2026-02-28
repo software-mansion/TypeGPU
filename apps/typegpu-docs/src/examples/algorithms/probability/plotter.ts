@@ -26,8 +26,7 @@ const defaultSize = 0.17;
 export class Plotter {
   readonly #core;
   readonly #palette;
-  #transitionBuffer: MorphCharts.ITransitionBufferVisual | undefined =
-    undefined;
+  #transitionBuffer: MorphCharts.ITransitionBufferVisual | undefined = undefined;
   #count = 0;
 
   constructor() {
@@ -36,9 +35,7 @@ export class Plotter {
     });
     this.#core.renderer = new MorphCharts.Renderers.Basic.Main();
     this.#palette = MorphCharts.Helpers.PaletteHelper.resample(
-      this.#core.paletteResources.palettes[
-        MorphCharts.PaletteName.purples
-      ].colors,
+      this.#core.paletteResources.palettes[MorphCharts.PaletteName.purples].colors,
       defaultColorSpread,
       false,
     );
@@ -56,10 +53,7 @@ export class Plotter {
     switch (prng.plotType) {
       case PlotType.GEOMETRIC:
         {
-          const data = this.#prepareGeometricData(
-            samples,
-            prng as GeometricPRNG,
-          );
+          const data = this.#prepareGeometricData(samples, prng as GeometricPRNG);
 
           await this.#handlePlotting(
             () => this.#plotGeometric(data, this.#core, needNewBuffer),
@@ -139,11 +133,7 @@ export class Plotter {
       const animateTransition = (time: number) => {
         const duration = time - start;
 
-        this.#core.renderer.transitionTime = std.clamp(
-          duration / transitionTime,
-          0,
-          1,
-        );
+        this.#core.renderer.transitionTime = std.clamp(duration / transitionTime, 0, 1);
 
         this.#core.renderer.axesVisibility =
           this.#core.renderer.transitionTime < defaultAxesSwapMoment
@@ -190,15 +180,9 @@ export class Plotter {
     return data;
   }
 
-  #plotGeometric(
-    data: GeometricData,
-    core: MorphCharts.Core,
-    needNewBuffer: boolean,
-  ) {
+  #plotGeometric(data: GeometricData, core: MorphCharts.Core, needNewBuffer: boolean) {
     if (this.#transitionBuffer === undefined || needNewBuffer) {
-      this.#transitionBuffer = this.#core.renderer.createTransitionBuffer(
-        data.ids,
-      );
+      this.#transitionBuffer = this.#core.renderer.createTransitionBuffer(data.ids);
     }
 
     this.#core.renderer.transitionBuffers = [this.#transitionBuffer];
@@ -231,18 +215,16 @@ export class Plotter {
         return value.toFixed(1);
       },
     });
-    core.renderer.currentAxes = [
-      core.renderer.createCartesian3dAxesVisual(axes),
-    ];
+    core.renderer.currentAxes = [core.renderer.createCartesian3dAxesVisual(axes)];
   }
 
   #prepareContinuousData(samples: d.v3f[]): HistogramData {
     // if we want to animate the transition between the old and new plots,
     // we need to have the same number of samples,
     // that's why I clamp them instead of filtering
-    const samplesFiltered = samples.map((
-      sample,
-    ) => (std.clamp(sample.x, defaultMinValue, defaultMaxValue)));
+    const samplesFiltered = samples.map((sample) =>
+      std.clamp(sample.x, defaultMinValue, defaultMaxValue),
+    );
 
     const { minSample, maxSample } = samplesFiltered.reduce(
       (acc, sample) => ({
@@ -286,17 +268,12 @@ export class Plotter {
       binSizes[data.binIdsX[i]]++;
     }
 
-    const maxBinCount = binSizes.reduce(
-      (acc, size) => Math.max(acc, size),
-      0,
-    );
+    const maxBinCount = binSizes.reduce((acc, size) => Math.max(acc, size), 0);
     for (let i = 0; i < this.#count; i++) {
       data.values[i] = binSizes[data.binIdsX[i]] / maxBinCount;
     }
 
-    const guessedBinXZSize = Math.floor(
-      (maxBinCount / heightToBase) ** (1 / 3),
-    );
+    const guessedBinXZSize = Math.floor((maxBinCount / heightToBase) ** (1 / 3));
     data.sizeX = guessedBinXZSize;
     data.sizeZ = guessedBinXZSize;
 
@@ -339,22 +316,16 @@ export class Plotter {
       maxX: maxValue,
     };
 
-    const dominantFreq = uniqueValues.values().reduce(
-      (acc, freq) => Math.max(acc, freq),
-      0,
-    );
+    const dominantFreq = uniqueValues.values().reduce((acc, freq) => Math.max(acc, freq), 0);
 
     for (let i = 0; i < this.#count; i++) {
       data.ids[i] = i;
       data.binIdsZ[i] = 0;
       data.binIdsX[i] = samplesRounded[i] - minValue;
-      data.values[i] = (uniqueValues.get(samplesRounded[i]) as number) /
-        dominantFreq;
+      data.values[i] = (uniqueValues.get(samplesRounded[i]) as number) / dominantFreq;
     }
 
-    const guessedBinXZSize = Math.floor(
-      (dominantFreq / heightToBase) ** (1 / 3),
-    );
+    const guessedBinXZSize = Math.floor((dominantFreq / heightToBase) ** (1 / 3));
     data.sizeX = guessedBinXZSize;
     data.sizeZ = guessedBinXZSize;
 
@@ -368,9 +339,7 @@ export class Plotter {
     needNewBuffer: boolean,
   ) {
     if (this.#transitionBuffer === undefined || needNewBuffer) {
-      this.#transitionBuffer = this.#core.renderer.createTransitionBuffer(
-        data.ids,
-      );
+      this.#transitionBuffer = this.#core.renderer.createTransitionBuffer(data.ids);
     }
 
     core.renderer.transitionBuffers = [this.#transitionBuffer];
@@ -412,8 +381,7 @@ export class Plotter {
       isDiscreteX,
       isDiscreteZ: true,
       labelsX: (value) => {
-        return (value * data.binsWidth + data.minX).toFixed(isDiscreteX ? 0 : 1)
-          .toString();
+        return (value * data.binsWidth + data.minX).toFixed(isDiscreteX ? 0 : 1).toString();
       },
       labelsY: (value) => {
         return Math.round(value).toString();
@@ -424,8 +392,6 @@ export class Plotter {
     });
     axes.zero[0] = -1;
     axes.zero[2] = -1;
-    core.renderer.currentAxes = [
-      core.renderer.createCartesian3dAxesVisual(axes),
-    ];
+    core.renderer.currentAxes = [core.renderer.createCartesian3dAxesVisual(axes)];
   }
 }

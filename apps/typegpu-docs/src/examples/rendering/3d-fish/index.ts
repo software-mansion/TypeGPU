@@ -46,9 +46,7 @@ const presets = {
   },
 } as const;
 
-const spinnerBackground = document.querySelector(
-  '.spinner-background',
-) as HTMLDivElement;
+const spinnerBackground = document.querySelector('.spinner-background') as HTMLDivElement;
 
 // https://sketchfab.com/3d-models/animated-low-poly-fish-64adc2e5a4be471e8279532b9610c878
 const fishModel = await loadModel(
@@ -71,7 +69,8 @@ const fishDataBuffers = Array.from({ length: 2 }, (_, idx) =>
   root
     .createBuffer(ModelDataArray(p.fishAmount))
     .$usage('storage', 'vertex')
-    .$name(`fish data ${idx}`));
+    .$name(`fish data ${idx}`),
+);
 
 function enqueuePresetChanges() {
   speedMultiplier = 3;
@@ -89,30 +88,29 @@ function enqueuePresetChanges() {
 const buffer0mutable = fishDataBuffers[0].as('mutable');
 const buffer1mutable = fishDataBuffers[1].as('mutable');
 const seedUniform = root.createUniform(d.f32);
-const randomizeFishPositionsPipeline = root
-  .createGuardedComputePipeline((x) => {
-    'use gpu';
-    randf.seed2(d.vec2f(x, seedUniform.$));
-    const data = ModelData({
-      position: d.vec3f(
-        randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
-        randf.sample() * p.aquariumSize.y - p.aquariumSize.y / 2,
-        randf.sample() * p.aquariumSize.z - p.aquariumSize.z / 2,
-      ),
-      direction: d.vec3f(
-        randf.sample() * 0.1 - 0.05,
-        randf.sample() * 0.1 - 0.05,
-        randf.sample() * 0.1 - 0.05,
-      ),
-      scale: p.fishModelScale * (1 + (randf.sample() - 0.5) * 0.8),
-      variant: randf.sample(),
-      applySinWave: 1,
-      applySeaFog: 1,
-      applySeaDesaturation: 1,
-    });
-    buffer0mutable.$[x] = ModelData(data);
-    buffer1mutable.$[x] = ModelData(data);
+const randomizeFishPositionsPipeline = root.createGuardedComputePipeline((x) => {
+  'use gpu';
+  randf.seed2(d.vec2f(x, seedUniform.$));
+  const data = ModelData({
+    position: d.vec3f(
+      randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
+      randf.sample() * p.aquariumSize.y - p.aquariumSize.y / 2,
+      randf.sample() * p.aquariumSize.z - p.aquariumSize.z / 2,
+    ),
+    direction: d.vec3f(
+      randf.sample() * 0.1 - 0.05,
+      randf.sample() * 0.1 - 0.05,
+      randf.sample() * 0.1 - 0.05,
+    ),
+    scale: p.fishModelScale * (1 + (randf.sample() - 0.5) * 0.8),
+    variant: randf.sample(),
+    applySinWave: 1,
+    applySeaFog: 1,
+    applySeaDesaturation: 1,
   });
+  buffer0mutable.$[x] = ModelData(data);
+  buffer1mutable.$[x] = ModelData(data);
+});
 
 const randomizeFishPositions = () => {
   seedUniform.write((performance.now() % 10000) / 10000);
@@ -143,9 +141,7 @@ const mouseRayBuffer = root.createBuffer(Line3).$usage('uniform');
 const timePassedBuffer = root.createBuffer(d.f32).$usage('uniform');
 const currentTimeBuffer = root.createBuffer(d.f32).$usage('uniform');
 
-const fishBehaviorBuffer = root
-  .createBuffer(FishBehaviorParams, presets.default)
-  .$usage('uniform');
+const fishBehaviorBuffer = root.createBuffer(FishBehaviorParams, presets.default).$usage('uniform');
 
 const oceanFloorDataBuffer = root
   .createBuffer(ModelDataArray(1), [
@@ -201,7 +197,7 @@ const renderFishBindGroups = [0, 1].map((idx) =>
     modelTexture: fishModel.texture,
     sampler: sampler,
     currentTime: currentTimeBuffer,
-  })
+  }),
 );
 
 const renderOceanFloorBindGroup = root.createBindGroup(renderBindGroupLayout, {
@@ -219,7 +215,7 @@ const computeBindGroups = [0, 1].map((idx) =>
     mouseRay: mouseRayBuffer,
     timePassed: timePassedBuffer,
     fishBehavior: fishBehaviorBuffer,
-  })
+  }),
 );
 
 // frame
@@ -239,19 +235,12 @@ function frame(timestamp: DOMHighResTimeStamp) {
   lastTimestamp = timestamp;
   cameraBuffer.write(camera);
 
-  simulatePipeline
-    .with(computeBindGroups[odd ? 1 : 0])
-    .dispatchThreads(p.fishAmount);
+  simulatePipeline.with(computeBindGroups[odd ? 1 : 0]).dispatchThreads(p.fishAmount);
 
   renderPipeline
     .withColorAttachment({
       view: context,
-      clearValue: [
-        p.backgroundColor.x,
-        p.backgroundColor.y,
-        p.backgroundColor.z,
-        1,
-      ],
+      clearValue: [p.backgroundColor.x, p.backgroundColor.y, p.backgroundColor.z, 1],
     })
     .withDepthStencilAttachment({
       view: depthTexture.createView(),
@@ -267,12 +256,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
   renderPipeline
     .withColorAttachment({
       view: context,
-      clearValue: [
-        p.backgroundColor.x,
-        p.backgroundColor.y,
-        p.backgroundColor.z,
-        1,
-      ],
+      clearValue: [p.backgroundColor.x, p.backgroundColor.y, p.backgroundColor.z, 1],
       loadOp: 'load',
     })
     .withDepthStencilAttachment({
@@ -308,12 +292,9 @@ let previousMouseY = 0;
 let isPopupDiscarded = false;
 const controlsPopup = document.getElementById('help') as HTMLDivElement;
 
-const cameraRadius = std.length(
-  std.sub(p.cameraInitialPosition.xyz, p.cameraInitialTarget.xyz),
-);
+const cameraRadius = std.length(std.sub(p.cameraInitialPosition.xyz, p.cameraInitialTarget.xyz));
 let cameraYaw =
-  (Math.atan2(p.cameraInitialPosition.x, p.cameraInitialPosition.z) + Math.PI) %
-  Math.PI;
+  (Math.atan2(p.cameraInitialPosition.x, p.cameraInitialPosition.z) + Math.PI) % Math.PI;
 let cameraPitch = Math.asin(p.cameraInitialPosition.y / cameraRadius);
 
 function updateCameraTarget(cx: number, cy: number) {
@@ -362,10 +343,12 @@ function updateMouseRay(cx: number, cy: number) {
     worldPos.z / worldPos.w,
   );
 
-  mouseRayBuffer.write(Line3({
-    origin: camera.position.xyz,
-    dir: std.normalize(std.sub(worldPosNonUniform, camera.position.xyz)),
-  }));
+  mouseRayBuffer.write(
+    Line3({
+      origin: camera.position.xyz,
+      dir: std.normalize(std.sub(worldPosNonUniform, camera.position.xyz)),
+    }),
+  );
 }
 
 // Mouse controls

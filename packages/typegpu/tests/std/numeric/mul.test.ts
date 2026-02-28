@@ -17,14 +17,7 @@ import {
   vec4i,
   vec4u,
 } from '../../../src/data/index.ts';
-import type {
-  m2x2f,
-  m3x3f,
-  m4x4f,
-  v2f,
-  v3f,
-  v4f,
-} from '../../../src/data/wgslTypes.ts';
+import type { m2x2f, m3x3f, m4x4f, v2f, v3f, v4f } from '../../../src/data/wgslTypes.ts';
 import { mul } from '../../../src/std/index.ts';
 
 describe('mul', () => {
@@ -98,18 +91,10 @@ describe('mul', () => {
   });
 
   it('computes product of a vec4 and vec4', () => {
-    expect(mul(vec4f(1, 2, 3, 4), vec4f(3, 4, 5, 6))).toEqual(
-      vec4f(3, 8, 15, 24),
-    );
-    expect(mul(vec4h(3, 4, 5, 6), vec4h(5, 6, 7, 8))).toEqual(
-      vec4h(15, 24, 35, 48),
-    );
-    expect(mul(vec4i(5, 6, 7, 8), vec4i(7, 8, 9, 10))).toEqual(
-      vec4i(35, 48, 63, 80),
-    );
-    expect(mul(vec4u(7, 8, 9, 10), vec4u(9, 10, 11, 12))).toEqual(
-      vec4u(63, 80, 99, 120),
-    );
+    expect(mul(vec4f(1, 2, 3, 4), vec4f(3, 4, 5, 6))).toEqual(vec4f(3, 8, 15, 24));
+    expect(mul(vec4h(3, 4, 5, 6), vec4h(5, 6, 7, 8))).toEqual(vec4h(15, 24, 35, 48));
+    expect(mul(vec4i(5, 6, 7, 8), vec4i(7, 8, 9, 10))).toEqual(vec4i(35, 48, 63, 80));
+    expect(mul(vec4u(7, 8, 9, 10), vec4u(9, 10, 11, 12))).toEqual(vec4u(63, 80, 99, 120));
   });
 
   it('computes product of a number and mat2x2f', () => {
@@ -125,30 +110,8 @@ describe('mul', () => {
   });
 
   it('computes product of a number and mat4x4f', () => {
-    expect(
-      mul(
-        -8,
-        mat4x4f(1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12, 13, -14, 15, -16),
-      ),
-    ).toEqual(
-      mat4x4f(
-        -8,
-        16,
-        -24,
-        32,
-        -40,
-        48,
-        -56,
-        64,
-        -72,
-        80,
-        -88,
-        96,
-        -104,
-        112,
-        -120,
-        128,
-      ),
+    expect(mul(-8, mat4x4f(1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12, 13, -14, 15, -16))).toEqual(
+      mat4x4f(-8, 16, -24, 32, -40, 48, -56, 64, -72, 80, -88, 96, -104, 112, -120, 128),
     );
     expect(mul(0, mat4x4f())).toEqual(mat4x4f());
   });
@@ -183,30 +146,8 @@ describe('mul', () => {
   });
 
   it('computes product of mat4x4f and a number', () => {
-    expect(
-      mul(
-        mat4x4f(1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12, 13, -14, 15, -16),
-        -8,
-      ),
-    ).toEqual(
-      mat4x4f(
-        -8,
-        16,
-        -24,
-        32,
-        -40,
-        48,
-        -56,
-        64,
-        -72,
-        80,
-        -88,
-        96,
-        -104,
-        112,
-        -120,
-        128,
-      ),
+    expect(mul(mat4x4f(1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12, 13, -14, 15, -16), -8)).toEqual(
+      mat4x4f(-8, 16, -24, 32, -40, 48, -56, 64, -72, 80, -88, 96, -104, 112, -120, 128),
     );
     expect(mul(mat4x4f(), 0)).toEqual(mat4x4f());
   });
@@ -227,24 +168,7 @@ describe('mul', () => {
 
   it('computes product of a mat4x4 and mat4x4', () => {
     const a = mat4x4f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
-    const b = mat4x4f(
-      17,
-      18,
-      19,
-      20,
-      21,
-      22,
-      23,
-      24,
-      25,
-      26,
-      27,
-      28,
-      29,
-      30,
-      31,
-      32,
-    );
+    const b = mat4x4f(17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32);
     const expected = mat4x4f(
       538,
       612,
@@ -347,14 +271,14 @@ describe('mul overload', () => {
 
   it('rejects when incompatible types', () => {
     // @ts-expect-error
-    (() => mul(vec2f(), vec2u()));
+    () => mul(vec2f(), vec2u());
     // @ts-expect-error
-    (() => mul(vec2f(), vec3f()));
+    () => mul(vec2f(), vec3f());
     // @ts-expect-error
-    (() => mul(mat3x3f(), mat4x4f()));
+    () => mul(mat3x3f(), mat4x4f());
     // @ts-expect-error
-    (() => mul(vec2f(), mat3x3f()));
+    () => mul(vec2f(), mat3x3f());
     // @ts-expect-error
-    (() => mul(mat3x3f(), vec2f()));
+    () => mul(mat3x3f(), vec2f());
   });
 });

@@ -1,15 +1,6 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { $internal } from '../shared/symbols.ts';
-import type {
-  AbstractFloat,
-  AbstractInt,
-  Bool,
-  F16,
-  F32,
-  I32,
-  U16,
-  U32,
-} from './wgslTypes.ts';
+import type { AbstractFloat, AbstractInt, Bool, F16, F32, I32, U16, U32 } from './wgslTypes.ts';
 import { callableSchema } from '../core/function/createCallableSchema.ts';
 
 export const abstractInt = {
@@ -42,8 +33,8 @@ const boolCast = callableSchema({
   },
   codegenImpl: (_ctx, [arg]) =>
     arg?.dataType === bool
-      // Already of type bool
-      ? stitch`${arg}`
+      ? // Already of type bool
+        stitch`${arg}`
       : stitch`bool(${arg})`,
 });
 
@@ -91,8 +82,8 @@ const u32Cast = callableSchema({
   },
   codegenImpl: (_ctx, [arg]) =>
     arg?.dataType === u32
-      // Already of type u32
-      ? stitch`${arg}`
+      ? // Already of type u32
+        stitch`${arg}`
       : stitch`u32(${arg})`,
 });
 
@@ -131,8 +122,8 @@ const i32Cast = callableSchema({
   },
   codegenImpl: (_ctx, [arg]) =>
     arg?.dataType === i32
-      // Already of type i32
-      ? stitch`${arg}`
+      ? // Already of type i32
+        stitch`${arg}`
       : stitch`i32(${arg})`,
 });
 
@@ -174,8 +165,8 @@ const f32Cast = callableSchema({
   },
   codegenImpl: (_ctx, [arg]) =>
     arg?.dataType === f32
-      // Already of type f32
-      ? stitch`${arg}`
+      ? // Already of type f32
+        stitch`${arg}`
       : stitch`f32(${arg})`,
 });
 
@@ -245,7 +236,8 @@ export function toHalfBits(x: number): number {
 
   // 6. Normalised number: round mantissa and pack sign|exp|mant.
   mant = mant + 0x1000; // Add rounding bias at bit 12.
-  if (mant & 0x800000) { // The carry propagated out of the top bit; mantissa overflowed.
+  if (mant & 0x800000) {
+    // The carry propagated out of the top bit; mantissa overflowed.
     mant = 0; // Rounded up to 1.0 × 2^(exp+1).
     ++exp; // Increment exponent (may overflow to ±∞).
     if (exp >= 0x1f) {
@@ -262,7 +254,7 @@ export function toHalfBits(x: number): number {
  * @returns JavaScript number (64-bit float) with same numerical value
  */
 export function fromHalfBits(h: number): number {
-  const sign = (h & 0x8000) ? -1 : 1; // Sign multiplier (preserves −0).
+  const sign = h & 0x8000 ? -1 : 1; // Sign multiplier (preserves −0).
   const exp = (h >> 10) & 0x1f; // 5‑bit exponent.
   const mant = h & 0x03ff; // 10‑bit significand.
 
@@ -274,9 +266,7 @@ export function fromHalfBits(h: number): number {
 
   // 2. Special cases (exp == 31).
   if (exp === 0x1f) {
-    return mant
-      ? Number.NaN
-      : (sign === 1 ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
+    return mant ? Number.NaN : sign === 1 ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
   }
 
   // 3. Normalised numbers.
@@ -302,8 +292,8 @@ const f16Cast = callableSchema({
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
   codegenImpl: (_ctx, [arg]) =>
     arg?.dataType === f16
-      // Already of type f16
-      ? stitch`${arg}`
+      ? // Already of type f16
+        stitch`${arg}`
       : stitch`f16(${arg})`,
 });
 

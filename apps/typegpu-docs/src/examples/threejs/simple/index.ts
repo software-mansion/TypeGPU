@@ -11,12 +11,7 @@ renderer.setPixelRatio(window.devicePixelRatio);
 await renderer.init();
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(
-  75,
-  1,
-  0.1,
-  1000,
-);
+const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
 camera.position.z = 5;
 
 const material = new THREE.MeshBasicNodeMaterial();
@@ -40,10 +35,7 @@ material.positionNode = t3.toTSL(() => {
   return localPos + d.vec3f(patternX, patternY, patternZ) * 0.5;
 });
 
-const mesh = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1, 1),
-  material,
-);
+const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material);
 scene.add(mesh);
 
 const onResize: ResizeObserverCallback = (entries) => {

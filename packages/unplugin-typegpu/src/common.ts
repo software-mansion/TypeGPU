@@ -61,8 +61,7 @@ function isTgpu(ctx: Context, node: babel.Node | acorn.AnyNode): boolean {
   while (true) {
     if (tail.type === 'MemberExpression') {
       if (
-        (tail.property.type === 'Literal' ||
-          tail.property.type === 'StringLiteral') &&
+        (tail.property.type === 'Literal' || tail.property.type === 'StringLiteral') &&
         tail.property.value === '~unstable'
       ) {
         // Bypassing the '~unstable' property.
@@ -122,7 +121,8 @@ export function isShellImplementationCall(
     node.callee.callee.type === 'MemberExpression' &&
     node.callee.callee.property.type === 'Identifier' &&
     fnShellFunctionNames.includes(node.callee.callee.property.name) &&
-    node.arguments.length === 1 && isTgpu(ctx, node.callee.callee.object)
+    node.arguments.length === 1 &&
+    isTgpu(ctx, node.callee.callee.object)
   );
 }
 
@@ -138,11 +138,7 @@ export function isShellImplementationCall(
 function extractLabelledExpression<T extends acorn.AnyNode | babel.Node>(
   node: T,
 ): [string, ExpressionFor<T>] | undefined {
-  if (
-    node.type === 'VariableDeclarator' &&
-    node.id.type === 'Identifier' &&
-    node.init
-  ) {
+  if (node.type === 'VariableDeclarator' && node.id.type === 'Identifier' && node.init) {
     // let id = init;
     return [node.id.name, node.init as ExpressionFor<T>];
   } else if (node.type === 'AssignmentExpression') {
@@ -174,11 +170,12 @@ export function getFunctionName(
   parent: acorn.AnyNode | babel.Node | null,
 ): string | undefined {
   const maybeName = parent ? extractLabelledExpression(parent)?.[0] : undefined;
-  return maybeName ??
-    (node.type === 'FunctionDeclaration' ||
-        node.type === 'FunctionExpression'
+  return (
+    maybeName ??
+    (node.type === 'FunctionDeclaration' || node.type === 'FunctionExpression'
       ? node.id?.name
-      : undefined);
+      : undefined)
+  );
 }
 
 const resourceConstructors: string[] = [
@@ -217,19 +214,13 @@ const resourceConstructors: string[] = [
  * Since it is mostly for debugging and clean WGSL generation,
  * some false positives and false negatives are admissible.
  */
-function containsResourceConstructorCall(
-  node: acorn.AnyNode | babel.Node,
-  ctx: Context,
-) {
+function containsResourceConstructorCall(node: acorn.AnyNode | babel.Node, ctx: Context) {
   if (node.type === 'CallExpression') {
     if (isShellImplementationCall(node, ctx)) {
       return true;
     }
     // struct({...})
-    if (
-      node.callee.type === 'Identifier' &&
-      resourceConstructors.includes(node.callee.name)
-    ) {
+    if (node.callee.type === 'Identifier' && resourceConstructors.includes(node.callee.name)) {
       return true;
     }
     if (node.callee.type === 'MemberExpression') {
@@ -262,9 +253,7 @@ function containsResourceConstructorCall(
  * tryFindIdentifier('this.myBuffer'); // 'myBuffer'
  * tryFindIdentifier('[a, b]'); // undefined
  */
-function tryFindIdentifier(
-  node: acorn.AnyNode | babel.Node,
-): string | undefined {
+function tryFindIdentifier(node: acorn.AnyNode | babel.Node): string | undefined {
   if (node.type === 'Identifier') {
     return node.name;
   }
@@ -279,8 +268,9 @@ function tryFindIdentifier(
   }
 }
 
-type ExpressionFor<T extends acorn.AnyNode | babel.Node> = T extends
-  acorn.AnyNode ? acorn.Expression : babel.Expression;
+type ExpressionFor<T extends acorn.AnyNode | babel.Node> = T extends acorn.AnyNode
+  ? acorn.Expression
+  : babel.Expression;
 
 /**
  * Checks if `node` contains a label and a tgpu expression that could be named.

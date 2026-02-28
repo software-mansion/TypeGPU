@@ -1,27 +1,18 @@
 import { isBuiltin } from '../../data/attributes.ts';
 import { getCustomLocation } from '../../data/dataTypes.ts';
 import { isData } from '../../data/dataTypes.ts';
-import type {
-  AnyVertexAttribs,
-  TgpuVertexAttrib,
-} from '../../shared/vertexFormat.ts';
+import type { AnyVertexAttribs, TgpuVertexAttrib } from '../../shared/vertexFormat.ts';
 import type { IOData } from '../function/fnTypes.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
-import type {
-  INTERNAL_TgpuVertexAttrib,
-  TgpuVertexLayout,
-} from './vertexLayout.ts';
+import type { INTERNAL_TgpuVertexAttrib, TgpuVertexLayout } from './vertexLayout.ts';
 
 export interface ConnectAttributesToShaderResult {
   usedVertexLayouts: TgpuVertexLayout[];
   bufferDefinitions: GPUVertexBufferLayout[];
 }
 
-export function isAttribute(
-  value: unknown,
-): value is TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib {
-  return typeof (value as TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib)
-    ?.format === 'string';
+export function isAttribute(value: unknown): value is TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib {
+  return typeof (value as TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib)?.format === 'string';
 }
 
 export function connectAttributesToShader(
@@ -59,29 +50,20 @@ export function connectAttributesToShader(
   }
 
   const bufferDefinitions: GPUVertexBufferLayout[] = [];
-  const layoutToAttribListMap = new WeakMap<
-    TgpuVertexLayout,
-    GPUVertexAttribute[]
-  >();
+  const layoutToAttribListMap = new WeakMap<TgpuVertexLayout, GPUVertexAttribute[]>();
   let nextShaderLocation = 0;
 
-  for (
-    const [key, member] of Object.entries(
-      shaderInputLayout as Record<string, IOData>,
-    )
-  ) {
+  for (const [key, member] of Object.entries(shaderInputLayout as Record<string, IOData>)) {
     if (isBuiltin(member)) {
       continue;
     }
 
-    const matchingAttribute = (attributes as Record<string, TgpuVertexAttrib>)[
-      key
-    ] as (TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib) | undefined;
+    const matchingAttribute = (attributes as Record<string, TgpuVertexAttrib>)[key] as
+      | (TgpuVertexAttrib & INTERNAL_TgpuVertexAttrib)
+      | undefined;
 
     if (!matchingAttribute) {
-      throw new Error(
-        `An attribute by the name of '${key}' was not provided to the shader.`,
-      );
+      throw new Error(`An attribute by the name of '${key}' was not provided to the shader.`);
     }
 
     const layout = matchingAttribute._layout;

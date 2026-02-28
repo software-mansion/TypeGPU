@@ -58,27 +58,16 @@ const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 
 const NUM_POINTS = 17;
 
-const slider = new Slider(
-  root,
-  d.vec2f(-1, 0),
-  d.vec2f(0.9, 0),
-  NUM_POINTS,
-  -0.03,
-);
+const slider = new Slider(root, d.vec2f(-1, 0), d.vec2f(0.9, 0), NUM_POINTS, -0.03);
 const bezierTexture = slider.bezierTexture.createView();
 const bezierBbox = slider.bbox;
 
 const digitsProvider = new NumberProvider(root);
 await digitsProvider.fillAtlas();
-const digitsTextureView = digitsProvider.digitTextureAtlas.createView(
-  d.texture2dArray(d.f32),
-);
+const digitsTextureView = digitsProvider.digitTextureAtlas.createView(d.texture2dArray(d.f32));
 
 let qualityScale = 0.5;
-let [width, height] = [
-  canvas.width * qualityScale,
-  canvas.height * qualityScale,
-];
+let [width, height] = [canvas.width * qualityScale, canvas.height * qualityScale];
 
 let textures = createTextures(root, width, height);
 let backgroundTexture = createBackgroundTexture(root, width, height);
@@ -104,10 +93,7 @@ const lightUniform = root.createUniform(DirectionalLight, {
   color: d.vec3f(1, 1, 1),
 });
 
-const jellyColorUniform = root.createUniform(
-  d.vec4f,
-  d.vec4f(1.0, 0.45, 0.075, 1.0),
-);
+const jellyColorUniform = root.createUniform(d.vec4f, d.vec4f(1.0, 0.45, 0.075, 1.0));
 
 const randomUniform = root.createUniform(d.vec2f);
 const blurEnabledUniform = root.createUniform(d.u32);
@@ -153,12 +139,7 @@ const sdInflatedPolyline2D = (p: d.v2f) => {
   );
   const clampedUV = std.saturate(uv);
 
-  const sampledColor = std.textureSampleLevel(
-    bezierTexture.$,
-    filteringSampler.$,
-    clampedUV,
-    0,
-  );
+  const sampledColor = std.textureSampleLevel(bezierTexture.$, filteringSampler.$, clampedUV, 0);
   const segUnsigned = sampledColor.x;
   const progress = sampledColor.y;
   const normal = sampledColor.zw;
@@ -176,25 +157,13 @@ const cap3D = (position: d.v3f) => {
   const secondLastPoint = d.vec2f(endCap.x, endCap.y);
   const lastPoint = d.vec2f(endCap.z, endCap.w);
 
-  const angle = std.atan2(
-    lastPoint.y - secondLastPoint.y,
-    lastPoint.x - secondLastPoint.x,
-  );
-  const rot = d.mat2x2f(
-    std.cos(angle),
-    -std.sin(angle),
-    std.sin(angle),
-    std.cos(angle),
-  );
+  const angle = std.atan2(lastPoint.y - secondLastPoint.y, lastPoint.x - secondLastPoint.x);
+  const rot = d.mat2x2f(std.cos(angle), -std.sin(angle), std.sin(angle), std.cos(angle));
 
   let pieP = position.sub(d.vec3f(secondLastPoint, 0));
   pieP = d.vec3f(rot.mul(pieP.xy), pieP.z);
   const hmm = sdf.sdPie(pieP.zx, d.vec2f(1, 0), LINE_HALF_THICK);
-  const extrudeEnd = sdf.opExtrudeY(
-    pieP,
-    hmm,
-    0.001,
-  ) - LINE_RADIUS;
+  const extrudeEnd = sdf.opExtrudeY(pieP, hmm, 0.001) - LINE_RADIUS;
   return extrudeEnd;
 };
 
@@ -206,8 +175,7 @@ const sliderSdf3D = (position: d.v3f) => {
   if (poly2D.t > 0.94) {
     finalDist = cap3D(position);
   } else {
-    const body = sdf.opExtrudeZ(position, poly2D.distance, LINE_HALF_THICK) -
-      LINE_RADIUS;
+    const body = sdf.opExtrudeZ(position, poly2D.distance, LINE_HALF_THICK) - LINE_RADIUS;
     finalDist = body;
   }
 
@@ -241,11 +209,8 @@ const getMainSceneDist = (position: d.v3f) => {
 
   return sdf.opUnion(
     sdf.sdPlane(position, d.vec3f(0, 1, 0), 0.06),
-    sdf.opExtrudeY(
-      position,
-      -rectangleCutoutDist(position.xz),
-      groundThickness - groundRoundness,
-    ) - groundRoundness,
+    sdf.opExtrudeY(position, -rectangleCutoutDist(position.xz), groundThickness - groundRoundness) -
+      groundRoundness,
   );
 };
 
@@ -254,15 +219,12 @@ const sliderApproxDist = (position: d.v3f) => {
   const bbox = getSliderBbox();
 
   const p = position.xy;
-  if (
-    p.x < bbox.left || p.x > bbox.right || p.y < bbox.bottom || p.y > bbox.top
-  ) {
+  if (p.x < bbox.left || p.x > bbox.right || p.y < bbox.bottom || p.y > bbox.top) {
     return 1e9;
   }
 
   const poly2D = sdInflatedPolyline2D(p);
-  const dist3D = sdf.opExtrudeZ(position, poly2D.distance, LINE_HALF_THICK) -
-    LINE_RADIUS;
+  const dist3D = sdf.opExtrudeZ(position, poly2D.distance, LINE_HALF_THICK) - LINE_RADIUS;
 
   return dist3D;
 };
@@ -294,26 +256,27 @@ const getSceneDistForAO = (position: d.v3f) => {
 
 const sdfSlot = tgpu.slot<(pos: d.v3f) => number>();
 
-const getNormalFromSdf = tgpu.fn([d.vec3f, d.f32], d.vec3f)(
-  (position, epsilon) => {
-    'use gpu';
-    const k = d.vec3f(1, -1, 0);
+const getNormalFromSdf = tgpu.fn(
+  [d.vec3f, d.f32],
+  d.vec3f,
+)((position, epsilon) => {
+  'use gpu';
+  const k = d.vec3f(1, -1, 0);
 
-    const offset1 = k.xyy.mul(epsilon);
-    const offset2 = k.yyx.mul(epsilon);
-    const offset3 = k.yxy.mul(epsilon);
-    const offset4 = k.xxx.mul(epsilon);
+  const offset1 = k.xyy.mul(epsilon);
+  const offset2 = k.yyx.mul(epsilon);
+  const offset3 = k.yxy.mul(epsilon);
+  const offset4 = k.xxx.mul(epsilon);
 
-    const sample1 = offset1.mul(sdfSlot.$(position.add(offset1)));
-    const sample2 = offset2.mul(sdfSlot.$(position.add(offset2)));
-    const sample3 = offset3.mul(sdfSlot.$(position.add(offset3)));
-    const sample4 = offset4.mul(sdfSlot.$(position.add(offset4)));
+  const sample1 = offset1.mul(sdfSlot.$(position.add(offset1)));
+  const sample2 = offset2.mul(sdfSlot.$(position.add(offset2)));
+  const sample3 = offset3.mul(sdfSlot.$(position.add(offset3)));
+  const sample4 = offset4.mul(sdfSlot.$(position.add(offset4)));
 
-    const gradient = sample1.add(sample2).add(sample3).add(sample4);
+  const gradient = sample1.add(sample2).add(sample3).add(sample4);
 
-    return std.normalize(gradient);
-  },
-);
+  return std.normalize(gradient);
+});
 
 const getNormalCapSdf = getNormalFromSdf.with(sdfSlot, cap3D);
 const getNormalMainSdf = getNormalFromSdf.with(sdfSlot, getMainSceneDist);
@@ -331,10 +294,7 @@ const getNormalMain = (position: d.v3f) => {
   return getNormalMainSdf(position, 0.0001);
 };
 
-const getSliderNormal = (
-  position: d.v3f,
-  hitInfo: d.Infer<typeof HitInfo>,
-) => {
+const getSliderNormal = (position: d.v3f, hitInfo: d.Infer<typeof HitInfo>) => {
   'use gpu';
   const poly2D = sdInflatedPolyline2D(position.xy);
   const gradient2D = poly2D.normal;
@@ -343,7 +303,7 @@ const getSliderNormal = (
   const absZ = std.abs(position.z);
   const zDistance = std.max(
     0,
-    (absZ - threshold) * LINE_HALF_THICK / (LINE_HALF_THICK - threshold),
+    ((absZ - threshold) * LINE_HALF_THICK) / (LINE_HALF_THICK - threshold),
   );
   const edgeDistance = LINE_RADIUS - poly2D.distance;
 
@@ -353,8 +313,7 @@ const getSliderNormal = (
   const zDirection = std.sign(position.z);
   const zAxisVector = d.vec3f(0, 0, zDirection);
 
-  const edgeBlendDistance = edgeContrib * LINE_RADIUS +
-    zContrib * LINE_HALF_THICK;
+  const edgeBlendDistance = edgeContrib * LINE_RADIUS + zContrib * LINE_HALF_THICK;
 
   const blendFactor = std.smoothstep(
     edgeBlendDistance,
@@ -363,11 +322,7 @@ const getSliderNormal = (
   );
 
   const normal2D = d.vec3f(gradient2D.xy, 0);
-  const blendedNormal = std.mix(
-    zAxisVector,
-    normal2D,
-    blendFactor * 0.5 + 0.5,
-  );
+  const blendedNormal = std.mix(zAxisVector, normal2D, blendFactor * 0.5 + 0.5);
 
   let normal = std.normalize(blendedNormal);
 
@@ -380,10 +335,7 @@ const getSliderNormal = (
   return normal;
 };
 
-const getNormal = (
-  position: d.v3f,
-  hitInfo: d.Infer<typeof HitInfo>,
-) => {
+const getNormal = (position: d.v3f, hitInfo: d.Infer<typeof HitInfo>) => {
   'use gpu';
   if (hitInfo.objectType === ObjectType.SLIDER && hitInfo.t < 0.96) {
     return getSliderNormal(position, hitInfo);
@@ -401,10 +353,7 @@ const sqLength = (a: d.v3f) => {
   return std.dot(a, a);
 };
 
-const getFakeShadow = (
-  position: d.v3f,
-  lightDir: d.v3f,
-): d.v3f => {
+const getFakeShadow = (position: d.v3f, lightDir: d.v3f): d.v3f => {
   'use gpu';
   const jellyColor = jellyColorUniform.$;
   const endCapX = slider.endCapUniform.$.x;
@@ -419,48 +368,34 @@ const getFakeShadow = (
     // Applying a slight gradient based on the light direction
     const lightGradient = std.saturate(-position.z * 4 * lightDir.z + 1);
 
-    return d.vec3f(1).mul(edgeDarkening).mul(lightGradient * 0.5);
+    return d
+      .vec3f(1)
+      .mul(edgeDarkening)
+      .mul(lightGradient * 0.5);
   } else {
     const finalUV = d.vec2f(
-      (position.x - position.z * lightDir.x * std.sign(lightDir.z)) *
-          0.5 + 0.5,
-      1 - (-position.z / lightDir.z * 0.5) - 0.2,
+      (position.x - position.z * lightDir.x * std.sign(lightDir.z)) * 0.5 + 0.5,
+      1 - (-position.z / lightDir.z) * 0.5 - 0.2,
     );
-    const data = std.textureSampleLevel(
-      bezierTexture.$,
-      filteringSampler.$,
-      finalUV,
-      0,
-    );
+    const data = std.textureSampleLevel(bezierTexture.$, filteringSampler.$, finalUV, 0);
 
     // Normally it would be just data.y, but there transition is too sudden when the jelly is bunched up.
     // To mitigate this, we transition into a position-based transition.
-    const jellySaturation = std.mix(
-      0,
-      data.y,
-      std.saturate(position.x * 1.5 + 1.1),
-    );
-    const shadowColor = std.mix(
-      d.vec3f(0, 0, 0),
-      jellyColor.rgb,
-      jellySaturation,
-    );
+    const jellySaturation = std.mix(0, data.y, std.saturate(position.x * 1.5 + 1.1));
+    const shadowColor = std.mix(d.vec3f(0, 0, 0), jellyColor.rgb, jellySaturation);
 
     const contrast = 20 * std.saturate(finalUV.y) * (0.8 + endCapX * 0.2);
     const shadowOffset = -0.3;
     const featherSharpness = 10;
-    const uvEdgeFeather = std.saturate(finalUV.x * featherSharpness) *
+    const uvEdgeFeather =
+      std.saturate(finalUV.x * featherSharpness) *
       std.saturate((1 - finalUV.x) * featherSharpness) *
       std.saturate((1 - finalUV.y) * featherSharpness) *
       std.saturate(finalUV.y);
     const influence = std.saturate((1 - lightDir.y) * 2) * uvEdgeFeather;
     return std.mix(
       d.vec3f(1),
-      std.mix(
-        shadowColor,
-        d.vec3f(1),
-        std.saturate(data.x * contrast + shadowOffset),
-      ),
+      std.mix(shadowColor, d.vec3f(1), std.saturate(data.x * contrast + shadowOffset)),
       influence,
     );
   }
@@ -476,10 +411,7 @@ const calculateAO = (position: d.v3f, normal: d.v3f) => {
     const sampleHeight = stepDistance * d.f32(i);
     const samplePosition = position.add(normal.mul(sampleHeight));
     const distanceToSurface = getSceneDistForAO(samplePosition) - AO_BIAS;
-    const occlusionContribution = std.max(
-      0.0,
-      sampleHeight - distanceToSurface,
-    );
+    const occlusionContribution = std.max(0.0, sampleHeight - distanceToSurface);
     totalOcclusion += occlusionContribution * sampleWeight;
     sampleWeight *= 0.5;
     if (totalOcclusion > AO_RADIUS / AO_INTENSITY) {
@@ -491,11 +423,7 @@ const calculateAO = (position: d.v3f, normal: d.v3f) => {
   return std.saturate(rawAO);
 };
 
-const calculateLighting = (
-  hitPosition: d.v3f,
-  normal: d.v3f,
-  rayOrigin: d.v3f,
-) => {
+const calculateLighting = (hitPosition: d.v3f, normal: d.v3f, rayOrigin: d.v3f) => {
   'use gpu';
   const lightDir = std.neg(lightUniform.$.direction);
 
@@ -504,18 +432,12 @@ const calculateLighting = (
 
   const viewDir = std.normalize(rayOrigin.sub(hitPosition));
   const reflectDir = std.reflect(std.neg(lightDir), normal);
-  const specularFactor = std.max(std.dot(viewDir, reflectDir), 0) **
-    SPECULAR_POWER;
-  const specular = lightUniform.$.color.mul(
-    specularFactor * SPECULAR_INTENSITY,
-  );
+  const specularFactor = std.max(std.dot(viewDir, reflectDir), 0) ** SPECULAR_POWER;
+  const specular = lightUniform.$.color.mul(specularFactor * SPECULAR_INTENSITY);
 
   const baseColor = d.vec3f(0.9);
 
-  const directionalLight = baseColor
-    .mul(lightUniform.$.color)
-    .mul(diffuse)
-    .mul(fakeShadow);
+  const directionalLight = baseColor.mul(lightUniform.$.color).mul(diffuse).mul(fakeShadow);
   const ambientLight = baseColor.mul(AMBIENT_COLOR).mul(AMBIENT_INTENSITY);
 
   const finalSpecular = specular.mul(fakeShadow);
@@ -523,11 +445,7 @@ const calculateLighting = (
   return std.saturate(directionalLight.add(ambientLight).add(finalSpecular));
 };
 
-const applyAO = (
-  litColor: d.v3f,
-  hitPosition: d.v3f,
-  normal: d.v3f,
-) => {
+const applyAO = (litColor: d.v3f, hitPosition: d.v3f, normal: d.v3f) => {
   'use gpu';
   const ao = calculateAO(hitPosition, normal);
   const finalColor = litColor.mul(ao);
@@ -559,11 +477,7 @@ const rayMarchNoJelly = (rayOrigin: d.v3f, rayDirection: d.v3f) => {
   return d.vec3f();
 };
 
-const renderPercentageOnGround = (
-  hitPosition: d.v3f,
-  center: d.v3f,
-  percentage: number,
-) => {
+const renderPercentageOnGround = (hitPosition: d.v3f, center: d.v3f, percentage: number) => {
   'use gpu';
 
   const textWidth = 0.38;
@@ -629,21 +543,15 @@ const renderBackground = (
     std.abs(hitPosition.x + offsetX) < highlightWidth &&
     std.abs(hitPosition.z + offsetZ) < highlightHeight
   ) {
-    const uvX_orig = (hitPosition.x + offsetX + highlightWidth * 2) /
-      highlightWidth * 0.5;
-    const uvZ_orig = (hitPosition.z + offsetZ + highlightHeight * 2) /
-      highlightHeight * 0.5;
+    const uvX_orig = ((hitPosition.x + offsetX + highlightWidth * 2) / highlightWidth) * 0.5;
+    const uvZ_orig = ((hitPosition.z + offsetZ + highlightHeight * 2) / highlightHeight) * 0.5;
 
     const centeredUV = d.vec2f(uvX_orig - 0.5, uvZ_orig - 0.5);
-    const finalUV = d.vec2f(
-      centeredUV.x,
-      1 - ((std.abs(centeredUV.y - 0.5) * 2) ** 2) * 0.3,
-    );
+    const finalUV = d.vec2f(centeredUV.x, 1 - (std.abs(centeredUV.y - 0.5) * 2) ** 2 * 0.3);
 
     const density = std.max(
       0,
-      (std.textureSampleLevel(bezierTexture.$, filteringSampler.$, finalUV, 0)
-        .x - 0.25) * 8,
+      (std.textureSampleLevel(bezierTexture.$, filteringSampler.$, finalUV, 0).x - 0.25) * 8,
     );
 
     const fadeX = std.smoothstep(0, -0.2, hitPosition.x - endCapX);
@@ -651,42 +559,32 @@ const renderBackground = (
     const fadeStretch = std.saturate(1 - sliderStretch);
     const edgeFade = std.saturate(fadeX) * std.saturate(fadeZ) * fadeStretch;
 
-    highlights = density ** 3 * edgeFade * 3 * (1 + lightDir.z) / 1.5;
+    highlights = (density ** 3 * edgeFade * 3 * (1 + lightDir.z)) / 1.5;
   }
 
   const originYBound = std.saturate(rayOrigin.y + 0.01);
   const posOffset = hitPosition.add(
-    d.vec3f(0, 1, 0).mul(
-      offset *
-        (originYBound / (1.0 + originYBound)) *
-        (1 + randf.sample() / 2),
-    ),
+    d.vec3f(0, 1, 0).mul(offset * (originYBound / (1.0 + originYBound)) * (1 + randf.sample() / 2)),
   );
   const newNormal = getNormalMain(posOffset);
 
   // Calculate fake bounce lighting
   const jellyColor = jellyColorUniform.$;
   const sqDist = sqLength(hitPosition.sub(d.vec3f(endCapX, 0, 0)));
-  const bounceLight = jellyColor.rgb.mul(1 / (sqDist * 15 + 1) * 0.4);
+  const bounceLight = jellyColor.rgb.mul((1 / (sqDist * 15 + 1)) * 0.4);
   const sideBounceLight = jellyColor.rgb
-    .mul(1 / (sqDist * 40 + 1) * 0.3)
+    .mul((1 / (sqDist * 40 + 1)) * 0.3)
     .mul(std.abs(newNormal.z));
 
   const litColor = calculateLighting(posOffset, newNormal, rayOrigin);
-  const backgroundColor = applyAO(
-    GROUND_ALBEDO.mul(litColor),
-    posOffset,
-    newNormal,
-  )
+  const backgroundColor = applyAO(GROUND_ALBEDO.mul(litColor), posOffset, newNormal)
     .add(d.vec4f(bounceLight, 0))
     .add(d.vec4f(sideBounceLight, 0));
 
   const textColor = std.saturate(backgroundColor.rgb.mul(d.vec3f(0.5)));
 
   return d.vec4f(
-    std.mix(backgroundColor.rgb, textColor, percentageSample.x).mul(
-      1.0 + highlights,
-    ),
+    std.mix(backgroundColor.rgb, textColor, percentageSample.x).mul(1.0 + highlights),
     1.0,
   );
 };
@@ -704,12 +602,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, _uv: d.v2f) => {
       break;
     }
   }
-  const background = renderBackground(
-    rayOrigin,
-    rayDirection,
-    backgroundDist,
-    d.f32(),
-  );
+  const background = renderBackground(rayOrigin, rayDirection, backgroundDist, d.f32());
 
   const bbox = getSliderBbox();
   const zDepth = d.f32(0.25);
@@ -717,12 +610,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, _uv: d.v2f) => {
   const sliderMin = d.vec3f(bbox.left, bbox.bottom, -zDepth);
   const sliderMax = d.vec3f(bbox.right, bbox.top, zDepth);
 
-  const intersection = intersectBox(
-    rayOrigin,
-    rayDirection,
-    sliderMin,
-    sliderMax,
-  );
+  const intersection = intersectBox(rayOrigin, rayDirection, sliderMin, sliderMax);
 
   if (!intersection.hit) {
     return background;
@@ -750,10 +638,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, _uv: d.v2f) => {
 
       const N = getNormal(hitPosition, hitInfo);
       const I = rayDirection;
-      const cosi = std.min(
-        1.0,
-        std.max(0.0, std.dot(std.neg(I), N)),
-      );
+      const cosi = std.min(1.0, std.max(0.0, std.dot(std.neg(I), N)));
       const F = fresnelSchlick(cosi, d.f32(1.0), d.f32(JELLY_IOR));
 
       const reflection = std.saturate(d.vec3f(hitPosition.y + 0.2));
@@ -762,12 +647,7 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, _uv: d.v2f) => {
       const k = 1.0 - eta * eta * (1.0 - cosi * cosi);
       let refractedColor = d.vec3f();
       if (k > 0.0) {
-        const refrDir = std.normalize(
-          std.add(
-            I.mul(eta),
-            N.mul(eta * cosi - std.sqrt(k)),
-          ),
-        );
+        const refrDir = std.normalize(std.add(I.mul(eta), N.mul(eta * cosi - std.sqrt(k))));
         const p = hitPosition.add(refrDir.mul(SURF_DIST * 2.0));
         const exitPos = p.add(refrDir.mul(SURF_DIST * 2.0));
 
@@ -784,16 +664,11 @@ const rayMarch = (rayOrigin: d.v3f, rayDirection: d.v3f, _uv: d.v2f) => {
         const lightDir = std.neg(lightUniform.$.direction);
 
         const forward = std.max(0.0, std.dot(lightDir, refrDir));
-        const scatter = scatterTint.mul(
-          JELLY_SCATTER_STRENGTH * forward * progress ** 3,
-        );
+        const scatter = scatterTint.mul(JELLY_SCATTER_STRENGTH * forward * progress ** 3);
         refractedColor = env.mul(T).add(scatter);
       }
 
-      const jelly = std.add(
-        reflection.mul(F),
-        refractedColor.mul(1 - F),
-      );
+      const jelly = std.add(reflection.mul(F), refractedColor.mul(1 - F));
 
       return d.vec4f(jelly, 1.0);
     }
@@ -815,11 +690,7 @@ const raymarchFn = tgpu.fragmentFn({
   const ndc = d.vec2f(uv.x * 2 - 1, -(uv.y * 2 - 1));
   const ray = getRay(ndc);
 
-  const color = rayMarch(
-    ray.origin,
-    ray.direction,
-    uv,
-  );
+  const color = rayMarch(ray.origin, ray.direction, uv);
   return d.vec4f(std.tanh(color.rgb.mul(1.3)), 1);
 });
 
@@ -827,11 +698,7 @@ const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  return std.textureSample(
-    sampleLayout.$.currentTexture,
-    filteringSampler.$,
-    input.uv,
-  );
+  return std.textureSample(sampleLayout.$.currentTexture, filteringSampler.$, input.uv);
 });
 
 const rayMarchPipeline = root.createRenderPipeline({
@@ -852,9 +719,7 @@ let frameCount = 0;
 const taaResolver = new TAAResolver(root, width, height);
 
 let attributionDismissed = false;
-const attributionElement = document.getElementById(
-  'attribution',
-) as HTMLDivElement;
+const attributionElement = document.getElementById('attribution') as HTMLDivElement;
 
 function dismissAttribution() {
   if (!attributionDismissed && attributionElement) {
@@ -876,7 +741,7 @@ function createBindGroups() {
     render: [0, 1].map((frame) =>
       root.createBindGroup(sampleLayout, {
         currentTexture: taaResolver.getResolvedTexture(frame),
-      })
+      }),
     ),
   };
 }
@@ -890,9 +755,7 @@ function render(timestamp: number) {
   const deltaTime = Math.min((timestamp - lastTimeStamp) * 0.001, 0.1);
   lastTimeStamp = timestamp;
 
-  randomUniform.write(
-    d.vec2f((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2),
-  );
+  randomUniform.write(d.vec2f((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2));
 
   eventHandler.update();
   slider.setDragX(eventHandler.currentMouseX);
@@ -908,11 +771,7 @@ function render(timestamp: number) {
     })
     .draw(3);
 
-  taaResolver.resolve(
-    textures[currentFrame].sampled,
-    frameCount,
-    currentFrame,
-  );
+  taaResolver.resolve(textures[currentFrame].sampled, frameCount, currentFrame);
 
   renderPipeline
     .withColorAttachment({ view: context })
@@ -923,10 +782,7 @@ function render(timestamp: number) {
 }
 
 function handleResize() {
-  [width, height] = [
-    canvas.width * qualityScale,
-    canvas.height * qualityScale,
-  ];
+  [width, height] = [canvas.width * qualityScale, canvas.height * qualityScale];
   camera.updateProjection(Math.PI / 4, width, height);
   textures = createTextures(root, width, height);
   backgroundTexture = createBackgroundTexture(root, width, height);
@@ -955,16 +811,17 @@ async function autoSetQuaility() {
   let resolutionScale = 0.3;
   let lastTimeMs = 0;
 
-  const measurePipeline = rayMarchPipeline
-    .withPerformanceCallback((start, end) => {
-      lastTimeMs = Number(end - start) / 1e6;
-    });
+  const measurePipeline = rayMarchPipeline.withPerformanceCallback((start, end) => {
+    lastTimeMs = Number(end - start) / 1e6;
+  });
 
   for (let i = 0; i < 8; i++) {
-    const testTexture = root['~unstable'].createTexture({
-      size: [canvas.width * resolutionScale, canvas.height * resolutionScale],
-      format: 'rgba8unorm',
-    }).$usage('render');
+    const testTexture = root['~unstable']
+      .createTexture({
+        size: [canvas.width * resolutionScale, canvas.height * resolutionScale],
+        format: 'rgba8unorm',
+      })
+      .$usage('render');
 
     measurePipeline
       .withColorAttachment({
@@ -987,10 +844,7 @@ async function autoSetQuaility() {
     }
 
     const adjustment = lastTimeMs > targetFrameTime ? -0.1 : 0.1;
-    resolutionScale = Math.max(
-      0.3,
-      Math.min(1.0, resolutionScale + adjustment),
-    );
+    resolutionScale = Math.max(0.3, Math.min(1.0, resolutionScale + adjustment));
   }
 
   console.log(`Auto-selected quality scale: ${resolutionScale.toFixed(2)}`);
@@ -998,16 +852,9 @@ async function autoSetQuaility() {
 }
 
 export const controls = defineControls({
-  'Quality': {
+  Quality: {
     initial: 'Auto',
-    options: [
-      'Auto',
-      'Very Low',
-      'Low',
-      'Medium',
-      'High',
-      'Ultra',
-    ],
+    options: ['Auto', 'Very Low', 'Low', 'Medium', 'High', 'Ultra'],
     onSelectChange: (value) => {
       if (value === 'Auto') {
         void autoSetQuaility().then((scale) => {
@@ -1019,10 +866,10 @@ export const controls = defineControls({
 
       const qualityMap: { [key: string]: number } = {
         'Very Low': 0.3,
-        'Low': 0.5,
-        'Medium': 0.7,
-        'High': 0.85,
-        'Ultra': 1.0,
+        Low: 0.5,
+        Medium: 0.7,
+        High: 0.85,
+        Ultra: 1.0,
       };
 
       qualityScale = qualityMap[value] || 0.5;
@@ -1035,7 +882,7 @@ export const controls = defineControls({
     max: 1,
     step: 0.01,
     onSliderChange: (v) => {
-      const dir1 = std.normalize(d.vec3f(0.18, -0.30, 0.64));
+      const dir1 = std.normalize(d.vec3f(0.18, -0.3, 0.64));
       const dir2 = std.normalize(d.vec3f(-0.5, -0.14, -0.8));
       const finalDir = std.normalize(std.mix(dir1, dir2, v));
       lightUniform.writePartial({
@@ -1049,7 +896,7 @@ export const controls = defineControls({
       jellyColorUniform.write(d.vec4f(c, 1.0));
     },
   },
-  'Blur': {
+  Blur: {
     initial: false,
     onToggleChange: (v) => {
       blurEnabledUniform.write(d.u32(v));
