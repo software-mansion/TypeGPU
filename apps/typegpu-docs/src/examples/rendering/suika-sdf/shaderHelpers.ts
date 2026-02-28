@@ -47,5 +47,5 @@ export const wallColor = (local: d.v2f, dist: number, daylight: number) => {
   const texture = stripeMask * 0.08 + speck;
   const edgeShade = std.clamp(0.35 - dist * 12.0, 0, 0.35);
   const baseColor = WALL_COLOR + d.vec3f(1, 0.8, 0.6) * (edgeShade + texture);
-  return std.mix(baseColor * 0.12, baseColor, daylight);
+  return std.mix(baseColor * 0.35, baseColor, daylight);
 };

@@ -23,6 +23,7 @@ export const Frame = d.struct({
   time: d.f32,
   canvasAspect: d.f32,
   activeCount: d.u32,
+  nextLevel: d.i32,
   ghostCircle: SdCircle,
 });
 

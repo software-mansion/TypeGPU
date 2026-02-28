@@ -18,11 +18,14 @@ export const WALL_ROUNDNESS = 0.035;
 export const MIN_RADIUS = 0.001;
 export const GHOST_ALPHA = 0.45;
 export const SMOOTH_MIN_K = 16.0;
-export const SHARP_FACTOR = 4.0;
+export const SHARP_FACTOR = 2.4;
 export const SPEED_BLEND_MAX = 0.5;
 
+// deno-fmt-ignore: better readability
+export const MERGE_SCORES = Array.from({ length: LEVEL_COUNT }, (_, n) => ((n + 1) * (n + 2)) / 2);
+
 // Game logic
-export const MAX_FRUITS = 128;
+export const MAX_FRUITS = 256;
 export const OFFSCREEN = 10;
 export const DROP_Y = 0.65;
 export const SPAWN_WEIGHTS = [4, 3, 2, 1];

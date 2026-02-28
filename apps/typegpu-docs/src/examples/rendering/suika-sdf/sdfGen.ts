@@ -121,7 +121,7 @@ export async function createAtlases(): Promise<{
   sdfAtlas: ImageBitmap[];
   contours: Float32Array[];
 }> {
-  const fruits = await loadImage('./assets/suika-sdf/fruits.png');
+  const fruits = await loadImage('./assets/suika-sdf/fruitsTgpu.png');
 
   const tmpCanvas = new OffscreenCanvas(SPRITE_SIZE, SPRITE_SIZE);
   const tmpCtx = tmpCanvas.getContext('2d', { willReadFrequently: true });
@@ -212,7 +212,7 @@ export function createSmoothedSdf(
       'use gpu';
       const lv = levelUniform.$;
       const uv = (d.vec2f(x, y) + 0.5) / SPRITE_SIZE;
-      const t = 5 / SPRITE_SIZE;
+      const t = 3 / SPRITE_SIZE;
 
       // 3×3 Gaussian [1,2,1; 2,4,2; 1,2,1] / 16
       let accum = d.f32(0);
