@@ -8,9 +8,7 @@ describe('scale', () => {
     const M = mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
     const T = vec3f(2, 3, 4);
     const result = scale4(M, T);
-    expect(result).toEqual(
-      mat4x4f(2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 0, 0, 0, 1),
-    );
+    expect(result).toEqual(mat4x4f(2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 0, 0, 0, 1));
   });
 
   it('generates correct WGSL for scale4 with custom matrix', () => {
@@ -30,17 +28,13 @@ describe('scale', () => {
 
   it('scales correctly', () => {
     const result = scale4(mat4x4f.identity(), vec3f(3, 4, 5));
-    expect(isCloseTo(mul(result, vec4f(1, 2, 3, 1)), vec4f(3, 8, 15, 1))).toBe(
-      true,
-    );
+    expect(isCloseTo(mul(result, vec4f(1, 2, 3, 1)), vec4f(3, 8, 15, 1))).toBe(true);
   });
 
   it('applies order correctly', () => {
     let transformation = mat4x4f.identity();
     transformation = translate4(transformation, vec3f(0, 1, 0));
     transformation = scale4(transformation, vec3f(2, 3, 4));
-    expect(
-      isCloseTo(mul(transformation, vec4f(0, 0, 0, 1)), vec4f(0, 3, 0, 1)),
-    ).toBe(true);
+    expect(isCloseTo(mul(transformation, vec4f(0, 0, 0, 1)), vec4f(0, 3, 0, 1))).toBe(true);
   });
 });

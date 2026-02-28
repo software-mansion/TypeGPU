@@ -15,17 +15,7 @@ import {
 } from './schemas.ts';
 import { fragmentFn, vertexFn } from './shaders.ts';
 
-const CUBE_COUNTS = [
-  1024,
-  4096,
-  8192,
-  16384,
-  32768,
-  65536,
-  131072,
-  262144,
-  524288,
-];
+const CUBE_COUNTS = [1024, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288];
 const INITIAL_CUBE_COUNT = CUBE_COUNTS[0];
 const TERRAIN_SIZE = 50;
 const TERRAIN_HEIGHT = 6;
@@ -73,19 +63,17 @@ const terrainBindGroup = root.createBindGroup(terrainLayout, {
   terrain: terrainBuffer,
 });
 
-const pipeline = root['~unstable']
-  .pipe(perlinCache.inject())
-  .createRenderPipeline({
-    attribs: vertexLayout.attrib,
-    vertex: vertexFn,
-    fragment: fragmentFn,
-    targets: { format: presentationFormat },
-    depthStencil: {
-      format: 'depth24plus',
-      depthWriteEnabled: true,
-      depthCompare: 'less',
-    },
-  });
+const pipeline = root['~unstable'].pipe(perlinCache.inject()).createRenderPipeline({
+  attribs: vertexLayout.attrib,
+  vertex: vertexFn,
+  fragment: fragmentFn,
+  targets: { format: presentationFormat },
+  depthStencil: {
+    format: 'depth24plus',
+    depthWriteEnabled: true,
+    depthCompare: 'less',
+  },
+});
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height],
@@ -95,9 +83,7 @@ let depthTexture = root.device.createTexture({
 
 let cubeCount = INITIAL_CUBE_COUNT;
 let cubeData: d.Infer<typeof Cube>[] = [];
-let cubeBuffer = root
-  .createBuffer(d.arrayOf(Cube, INITIAL_CUBE_COUNT))
-  .$usage('storage');
+let cubeBuffer = root.createBuffer(d.arrayOf(Cube, INITIAL_CUBE_COUNT)).$usage('storage');
 let cubeBindGroup = root.createBindGroup(cubeLayout, { cubes: cubeBuffer });
 let renderBundle: GPURenderBundle;
 
@@ -147,9 +133,7 @@ function setCubeCount(count: number) {
   generateCubes(count);
 
   cubeBuffer.destroy();
-  cubeBuffer = root
-    .createBuffer(d.arrayOf(Cube, count), cubeData)
-    .$usage('storage');
+  cubeBuffer = root.createBuffer(d.arrayOf(Cube, count), cubeData).$usage('storage');
 
   cubeBindGroup = root.createBindGroup(cubeLayout, { cubes: cubeBuffer });
 
@@ -166,10 +150,7 @@ let disposed = false;
 function frame() {
   if (disposed) return;
 
-  if (
-    depthTexture.width !== canvas.width ||
-    depthTexture.height !== canvas.height
-  ) {
+  if (depthTexture.width !== canvas.width || depthTexture.height !== canvas.height) {
     depthTexture.destroy();
     depthTexture = root.device.createTexture({
       size: [canvas.width, canvas.height],

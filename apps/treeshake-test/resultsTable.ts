@@ -57,9 +57,7 @@ export class ResultsTable {
         const prSize = row.get(bundler)?.pr;
         const targetSize = row.get(bundler)?.target;
 
-        output += ` | ${prettifySize(prSize)} ${
-          calculateTrendMessage(prSize, targetSize)
-        }`;
+        output += ` | ${prettifySize(prSize)} ${calculateTrendMessage(prSize, targetSize)}`;
       }
       output += ' |\n';
     }
@@ -87,10 +85,7 @@ ${output}
       if (pr && target === undefined) {
         return true;
       }
-      if (
-        pr && target &&
-        Math.max(pr / target, target / pr) >= 1 + this.#threshold
-      ) {
+      if (pr && target && Math.max(pr / target, target / pr) >= 1 + this.#threshold) {
         return true;
       }
     }
@@ -114,10 +109,7 @@ function prettifySize(size: number | undefined) {
   } ${units[unitIndex]}`;
 }
 
-function calculateTrendMessage(
-  prSize: number | undefined,
-  targetSize: number | undefined,
-): string {
+function calculateTrendMessage(prSize: number | undefined, targetSize: number | undefined): string {
   if (prSize === undefined || targetSize === undefined) {
     return '';
   }

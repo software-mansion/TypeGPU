@@ -49,6 +49,4 @@ export const BPETER: StatefulGenerator = (() => {
 // The default (Can change between releases to improve uniformity).
 export const DefaultGenerator: StatefulGenerator = BPETER;
 
-export const randomGeneratorSlot: TgpuSlot<StatefulGenerator> = tgpu.slot(
-  DefaultGenerator,
-);
+export const randomGeneratorSlot: TgpuSlot<StatefulGenerator> = tgpu.slot(DefaultGenerator);

@@ -4,9 +4,7 @@ export function stripTemplate(
   arg: Implementation | TemplateStringsArray,
   ...values: unknown[]
 ): Implementation {
-  return isTemplateStringsArray(arg)
-    ? templateLiteralIdentity(arg, ...values)
-    : arg;
+  return isTemplateStringsArray(arg) ? templateLiteralIdentity(arg, ...values) : arg;
 }
 
 function isTemplateStringsArray(value: unknown): value is TemplateStringsArray {
@@ -18,14 +16,8 @@ function isTemplateStringsArray(value: unknown): value is TemplateStringsArray {
   );
 }
 
-function templateLiteralIdentity(
-  strings: TemplateStringsArray,
-  ...values: unknown[]
-): string {
+function templateLiteralIdentity(strings: TemplateStringsArray, ...values: unknown[]): string {
   return strings
     .slice(1)
-    .reduce(
-      (acc, elem, index) => `${acc}${values[index]}${elem}`,
-      strings[0] as string,
-    );
+    .reduce((acc, elem, index) => `${acc}${values[index]}${elem}`, strings[0] as string);
 }

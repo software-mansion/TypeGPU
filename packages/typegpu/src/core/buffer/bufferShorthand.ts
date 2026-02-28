@@ -3,12 +3,7 @@ import type { BaseData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import { getName, setName, type TgpuNamable } from '../../shared/meta.ts';
 import type { Infer, InferGPU, InferPartial } from '../../shared/repr.ts';
-import {
-  $getNameForward,
-  $gpuValueOf,
-  $internal,
-  $resolve,
-} from '../../shared/symbols.ts';
+import { $getNameForward, $gpuValueOf, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { TgpuBuffer, UniformFlag } from './buffer.ts';
 import type { TgpuBufferUsage } from './bufferUsage.ts';
@@ -31,8 +26,7 @@ interface TgpuBufferShorthandBase<TData extends BaseData> extends TgpuNamable {
   // ---
 }
 
-export interface TgpuMutable<out TData extends BaseData>
-  extends TgpuBufferShorthandBase<TData> {
+export interface TgpuMutable<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
   readonly resourceType: 'mutable';
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
 
@@ -45,8 +39,7 @@ export interface TgpuMutable<out TData extends BaseData>
   // ---
 }
 
-export interface TgpuReadonly<out TData extends BaseData>
-  extends TgpuBufferShorthandBase<TData> {
+export interface TgpuReadonly<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
   readonly resourceType: 'readonly';
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
 
@@ -59,8 +52,7 @@ export interface TgpuReadonly<out TData extends BaseData>
   // ---
 }
 
-export interface TgpuUniform<out TData extends BaseData>
-  extends TgpuBufferShorthandBase<TData> {
+export interface TgpuUniform<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
   readonly resourceType: 'uniform';
   readonly buffer: TgpuBuffer<TData> & UniformFlag;
 
@@ -98,9 +90,8 @@ export class TgpuBufferShorthandImpl<
 
   constructor(
     public readonly resourceType: TType,
-    public readonly buffer:
-      & TgpuBuffer<TData>
-      & (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag),
+    public readonly buffer: TgpuBuffer<TData> &
+      (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag),
   ) {
     this[$getNameForward] = buffer;
     // oxlint-disable-next-line typescript/no-explicit-any -- too complex a type
@@ -137,9 +128,7 @@ export class TgpuBufferShorthandImpl<
   }
 
   toString(): string {
-    return `${this.resourceType}BufferShorthand:${
-      getName(this) ?? '<unnamed>'
-    }`;
+    return `${this.resourceType}BufferShorthand:${getName(this) ?? '<unnamed>'}`;
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {

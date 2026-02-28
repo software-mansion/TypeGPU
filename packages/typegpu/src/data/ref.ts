@@ -1,22 +1,12 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { WgslTypeError } from '../errors.ts';
 import { setName } from '../shared/meta.ts';
-import {
-  $gpuCallable,
-  $internal,
-  $ownSnippet,
-  $resolve,
-} from '../shared/symbols.ts';
+import { $gpuCallable, $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
 import type { DualFn, SelfResolvable } from '../types.ts';
 import { UnknownData } from './dataTypes.ts';
 import { createPtrFromOrigin, explicitFrom } from './ptr.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './snippet.ts';
-import {
-  isNaturallyEphemeral,
-  isPtr,
-  type Ptr,
-  type StorableData,
-} from './wgslTypes.ts';
+import { isNaturallyEphemeral, isPtr, type Ptr, type StorableData } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -48,7 +38,7 @@ interface ref<T> {
  */
 export type _ref<T> = T extends object ? T & ref<T> : ref<T>;
 
-type RefFn = DualFn<(<T>(value: T) => _ref<T>)> & { [$internal]: true };
+type RefFn = DualFn<<T>(value: T) => _ref<T>> & { [$internal]: true };
 
 export const _ref = (() => {
   const impl = (<T>(value: T) => INTERNAL_createRef(value)) as unknown as RefFn;
@@ -79,15 +69,8 @@ export const _ref = (() => {
        * const boid = ref(layout.$.boids[0]); // created from a reference
        * ```
        */
-      const ptrType = createPtrFromOrigin(
-        value.origin,
-        value.dataType as StorableData,
-      );
-      return snip(
-        new RefOperator(value, ptrType),
-        ptrType ?? UnknownData,
-        /* origin */ 'runtime',
-      );
+      const ptrType = createPtrFromOrigin(value.origin, value.dataType as StorableData);
+      return snip(new RefOperator(value, ptrType), ptrType ?? UnknownData, /* origin */ 'runtime');
     },
   };
 

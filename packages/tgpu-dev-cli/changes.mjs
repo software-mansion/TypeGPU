@@ -13,8 +13,7 @@ async function main() {
   consola.start('Estimating change between release and main branches...');
   consola.log('');
 
-  const diffMsg =
-    (await $`git diff --name-only release..main`.pipe('sort')).stdout;
+  const diffMsg = (await $`git diff --name-only release..main`.pipe('sort')).stdout;
   const filesChanged = diffMsg.split('\n');
 
   consola.info(`${colors.Bold}Files changed:${colors.Reset}`);

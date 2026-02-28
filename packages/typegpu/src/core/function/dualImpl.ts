@@ -3,12 +3,7 @@ import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
 import { concretize } from '../../tgsl/generationHelpers.ts';
-import {
-  type DualFn,
-  isKnownAtComptime,
-  NormalState,
-  type ResolutionCtx,
-} from '../../types.ts';
+import { type DualFn, isKnownAtComptime, NormalState, type ResolutionCtx } from '../../types.ts';
 import { type BaseData, isPtr } from '../../data/wgslTypes.ts';
 
 type MapValueToDataType<T> = { [K in keyof T]: BaseData };
@@ -17,18 +12,16 @@ type AnyFn = (...args: never[]) => unknown;
 interface DualImplOptions<T extends AnyFn> {
   readonly name: string | undefined;
   readonly normalImpl: T | string;
-  readonly codegenImpl: (
-    ctx: ResolutionCtx,
-    args: MapValueToSnippet<Parameters<T>>,
-  ) => string;
+  readonly codegenImpl: (ctx: ResolutionCtx, args: MapValueToSnippet<Parameters<T>>) => string;
   readonly signature:
     | {
-      argTypes: (BaseData | BaseData[])[];
-      returnType: BaseData;
-    }
-    | ((
-      ...inArgTypes: MapValueToDataType<Parameters<T>>
-    ) => { argTypes: (BaseData | BaseData[])[]; returnType: BaseData });
+        argTypes: (BaseData | BaseData[])[];
+        returnType: BaseData;
+      }
+    | ((...inArgTypes: MapValueToDataType<Parameters<T>>) => {
+        argTypes: (BaseData | BaseData[])[];
+        returnType: BaseData;
+      });
   /**
    * Whether the function should skip trying to execute the "normal" implementation if
    * all arguments are known at compile time.
@@ -45,9 +38,7 @@ export class MissingCpuImplError extends Error {
   }
 }
 
-export function dualImpl<T extends AnyFn>(
-  options: DualImplOptions<T>,
-): DualFn<T> {
+export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T> {
   const impl = ((...args: Parameters<T>) => {
     if (typeof options.normalImpl === 'string') {
       throw new MissingCpuImplError(options.normalImpl);
@@ -59,34 +50,28 @@ export function dualImpl<T extends AnyFn>(
   impl.toString = () => options.name ?? '<unknown>';
   impl[$gpuCallable] = {
     get strictSignature() {
-      return typeof options.signature !== 'function'
-        ? options.signature
-        : undefined;
+      return typeof options.signature !== 'function' ? options.signature : undefined;
     },
     call(ctx, args) {
-      const { argTypes, returnType } = typeof options.signature === 'function'
-        ? options.signature(
-          ...args.map((s) => {
-            // Dereference implicit pointers
-            if (isPtr(s.dataType) && s.dataType.implicit) {
-              return s.dataType.inner;
-            }
-            return s.dataType;
-          }) as MapValueToDataType<Parameters<T>>,
-        )
-        : options.signature;
+      const { argTypes, returnType } =
+        typeof options.signature === 'function'
+          ? options.signature(
+              ...(args.map((s) => {
+                // Dereference implicit pointers
+                if (isPtr(s.dataType) && s.dataType.implicit) {
+                  return s.dataType.inner;
+                }
+                return s.dataType;
+              }) as MapValueToDataType<Parameters<T>>),
+            )
+          : options.signature;
 
       const converted = args.map((s, idx) => {
         const argType = argTypes[idx];
         if (!argType) {
           throw new Error('Function called with invalid arguments');
         }
-        return tryConvertSnippet(
-          ctx,
-          s,
-          argType,
-          !options.ignoreImplicitCastWarning,
-        );
+        return tryConvertSnippet(ctx, s, argType, !options.ignoreImplicitCastWarning);
       }) as MapValueToSnippet<Parameters<T>>;
 
       if (
@@ -97,7 +82,7 @@ export function dualImpl<T extends AnyFn>(
         ctx.pushMode(new NormalState());
         try {
           return snip(
-            options.normalImpl(...converted.map((s) => s.value) as never[]),
+            options.normalImpl(...(converted.map((s) => s.value) as never[])),
             returnType,
             // Functions give up ownership of their return value
             /* origin */ 'constant',

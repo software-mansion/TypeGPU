@@ -1,24 +1,19 @@
 import tgpu from 'typegpu';
 import { f32, struct, vec3f } from 'typegpu/data';
-import {
-  abs,
-  clamp,
-  length,
-  max,
-  min,
-  mix,
-  pow,
-  select,
-  sign,
-  sqrt,
-} from 'typegpu/std';
+import { abs, clamp, length, max, min, mix, pow, select, sign, sqrt } from 'typegpu/std';
 import { linearToSrgb, srgbToLinear } from './srgb.ts';
 
-const cbrt = tgpu.fn([f32], f32)((x) => {
+const cbrt = tgpu.fn(
+  [f32],
+  f32,
+)((x) => {
   return sign(x) * pow(abs(x), f32(1) / 3);
 });
 
-export const linearRgbToOklab = tgpu.fn([vec3f], vec3f)((rgb) => {
+export const linearRgbToOklab = tgpu.fn(
+  [vec3f],
+  vec3f,
+)((rgb) => {
   const l = 0.4122214708 * rgb.x + 0.5363325363 * rgb.y + 0.0514459929 * rgb.z;
   const m = 0.2119034982 * rgb.x + 0.6806995451 * rgb.y + 0.1073969566 * rgb.z;
   const s = 0.0883024619 * rgb.x + 0.2817188376 * rgb.y + 0.6299787005 * rgb.z;
@@ -34,7 +29,10 @@ export const linearRgbToOklab = tgpu.fn([vec3f], vec3f)((rgb) => {
   );
 });
 
-export const oklabToLinearRgb = tgpu.fn([vec3f], vec3f)((lab) => {
+export const oklabToLinearRgb = tgpu.fn(
+  [vec3f],
+  vec3f,
+)((lab) => {
   const l_ = lab.x + 0.3963377774 * lab.y + 0.2158037573 * lab.z;
   const m_ = lab.x - 0.1055613458 * lab.y - 0.0638541728 * lab.z;
   const s_ = lab.x - 0.0894841775 * lab.y - 1.291485548 * lab.z;
@@ -56,7 +54,10 @@ export const oklabToLinearRgb = tgpu.fn([vec3f], vec3f)((lab) => {
  * a and b must be normalized so a^2 + b^2 == 1
  */
 
-const computeMaxSaturation = tgpu.fn([f32, f32], f32)((a, b) => {
+const computeMaxSaturation = tgpu.fn(
+  [f32, f32],
+  f32,
+)((a, b) => {
   // Max saturation will be when one of r, g or b goes below zero.
 
   // Select different coefficients depending on which component goes below zero first
@@ -147,7 +148,10 @@ const LC = struct({
  * Finds L_cusp and C_cusp for a given hue
  * a and b must be normalized so a^2 + b^2 == 1
  */
-const findCusp = tgpu.fn([f32, f32], LC)((a, b) => {
+const findCusp = tgpu.fn(
+  [f32, f32],
+  LC,
+)((a, b) => {
   // First, find the maximum saturation (saturation S = C/L)
   const S_cusp = computeMaxSaturation(a, b);
 
@@ -220,25 +224,21 @@ const findGamutIntersection = tgpu.fn(
 
         const r = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s - 1;
         const r1 = 4.0767416621 * ldt - 3.3077115913 * mdt + 0.2309699292 * sdt;
-        const r2 = 4.0767416621 * ldt2 - 3.3077115913 * mdt2 +
-          0.2309699292 * sdt2;
+        const r2 = 4.0767416621 * ldt2 - 3.3077115913 * mdt2 + 0.2309699292 * sdt2;
 
         const u_r = r1 / (r1 * r1 - 0.5 * r * r2);
         let t_r = -r * u_r;
 
         const g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s - 1;
-        const g1 = -1.2684380046 * ldt + 2.6097574011 * mdt -
-          0.3413193965 * sdt;
-        const g2 = -1.2684380046 * ldt2 + 2.6097574011 * mdt2 -
-          0.3413193965 * sdt2;
+        const g1 = -1.2684380046 * ldt + 2.6097574011 * mdt - 0.3413193965 * sdt;
+        const g2 = -1.2684380046 * ldt2 + 2.6097574011 * mdt2 - 0.3413193965 * sdt2;
 
         const u_g = g1 / (g1 * g1 - 0.5 * g * g2);
         let t_g = -g * u_g;
 
         const b = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s - 1;
         const b1 = -0.0041960863 * ldt - 0.7034186147 * mdt + 1.707614701 * sdt;
-        const b2 = -0.0041960863 * ldt2 - 0.7034186147 * mdt2 +
-          1.707614701 * sdt2;
+        const b2 = -0.0041960863 * ldt2 - 0.7034186147 * mdt2 + 1.707614701 * sdt2;
 
         const u_b = b1 / (b1 * b1 - 0.5 * b * b2);
         let t_b = -b * u_b;
@@ -255,7 +255,10 @@ const findGamutIntersection = tgpu.fn(
   return t;
 });
 
-const gamutClipPreserveChroma = tgpu.fn([vec3f], vec3f)((lab) => {
+const gamutClipPreserveChroma = tgpu.fn(
+  [vec3f],
+  vec3f,
+)((lab) => {
   const L = lab.x;
   const eps = 0.00001;
   const C = max(eps, length(lab.yz));
@@ -272,7 +275,10 @@ const gamutClipPreserveChroma = tgpu.fn([vec3f], vec3f)((lab) => {
 
 export const oklabGamutClipAlphaAccess = tgpu.accessor(f32, 0.2);
 
-const gamutClipAdaptiveL05 = tgpu.fn([vec3f], vec3f)((lab) => {
+const gamutClipAdaptiveL05 = tgpu.fn(
+  [vec3f],
+  vec3f,
+)((lab) => {
   const alpha = oklabGamutClipAlphaAccess.$;
   const L = lab.x;
   const eps = 0.00001;
@@ -292,7 +298,10 @@ const gamutClipAdaptiveL05 = tgpu.fn([vec3f], vec3f)((lab) => {
   return vec3f(L_clipped, C_clipped * a_, C_clipped * b_);
 });
 
-const gamutClipAdaptiveL0cusp = tgpu.fn([vec3f], vec3f)((lab) => {
+const gamutClipAdaptiveL0cusp = tgpu.fn(
+  [vec3f],
+  vec3f,
+)((lab) => {
   const alpha = oklabGamutClipAlphaAccess.$;
   const L = lab.x;
   const eps = 0.00001;
@@ -305,8 +314,7 @@ const gamutClipAdaptiveL0cusp = tgpu.fn([vec3f], vec3f)((lab) => {
   const k = 2 * select(cusp.L, 1 - cusp.L, Ld > 0);
 
   const e1 = 0.5 * k + abs(Ld) + (alpha * C) / k;
-  const L0 = cusp.L +
-    0.5 * (sign(Ld) * (e1 - sqrt(max(0, e1 * e1 - 2 * k * abs(Ld)))));
+  const L0 = cusp.L + 0.5 * (sign(Ld) * (e1 - sqrt(max(0, e1 * e1 - 2 * k * abs(Ld)))));
 
   const t = clamp(findGamutIntersection(a_, b_, L, C, L0, cusp), 0, 1);
   const L_clipped = mix(L0, L, t);
@@ -322,10 +330,16 @@ export const oklabGamutClip = {
   adaptiveL0Cusp: gamutClipAdaptiveL0cusp,
 };
 
-export const oklabToRgb = tgpu.fn([vec3f], vec3f)((lab) => {
+export const oklabToRgb = tgpu.fn(
+  [vec3f],
+  vec3f,
+)((lab) => {
   return linearToSrgb(oklabToLinearRgb(oklabGamutClipSlot.$(lab)));
 });
 
-export const rgbToOklab = tgpu.fn([vec3f], vec3f)((rgb) => {
+export const rgbToOklab = tgpu.fn(
+  [vec3f],
+  vec3f,
+)((rgb) => {
   return linearRgbToOklab(srgbToLinear(rgb));
 });

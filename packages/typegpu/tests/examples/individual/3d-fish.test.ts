@@ -15,16 +15,19 @@ describe('3d fish example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'rendering',
-      name: '3d-fish',
-      setupMocks: () => {
-        mockResizeObserver();
-        mock3DModelLoading();
-        mockCreateImageBitmap();
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'rendering',
+        name: '3d-fish',
+        setupMocks: () => {
+          mockResizeObserver();
+          mock3DModelLoading();
+          mockCreateImageBitmap();
+        },
+        expectedCalls: 3,
       },
-      expectedCalls: 3,
-    }, device);
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;

@@ -60,11 +60,7 @@ export function concretize<T extends BaseData>(type: T): T | F32 | I32 {
 }
 
 export function concretizeSnippet(snippet: Snippet): Snippet {
-  return snip(
-    snippet.value,
-    concretize(snippet.dataType as AnyWgslData),
-    snippet.origin,
-  );
+  return snip(snippet.value, concretize(snippet.dataType as AnyWgslData), snippet.origin);
 }
 
 export function concretizeSnippets(args: Snippet[]): Snippet[] {
@@ -126,9 +122,12 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   if (
-    typeof value === 'string' || typeof value === 'function' ||
-    typeof value === 'object' || typeof value === 'symbol' ||
-    typeof value === 'undefined' || value === null
+    typeof value === 'string' ||
+    typeof value === 'function' ||
+    typeof value === 'object' ||
+    typeof value === 'symbol' ||
+    typeof value === 'undefined' ||
+    value === null
   ) {
     // Nothing representable in WGSL as-is, so unknown
     return snip(value, UnknownData, /* origin */ 'constant');
@@ -156,8 +155,7 @@ export class ArrayExpression implements SelfResolvable {
   constructor(
     public readonly type: WgslArray<AnyWgslData>,
     public readonly elements: Snippet[],
-  ) {
-  }
+  ) {}
 
   toString(): string {
     return 'ArrayExpression';
@@ -167,27 +165,19 @@ export class ArrayExpression implements SelfResolvable {
     for (const elem of this.elements) {
       // We check if there are no references among the elements
       if (
-        (elem.origin === 'argument' &&
-          !isNaturallyEphemeral(elem.dataType)) ||
+        (elem.origin === 'argument' && !isNaturallyEphemeral(elem.dataType)) ||
         !isEphemeralSnippet(elem)
       ) {
         const snippetStr = ctx.resolve(elem.value, elem.dataType).value;
-        const snippetType =
-          ctx.resolve(concretize(elem.dataType as BaseData)).value;
+        const snippetType = ctx.resolve(concretize(elem.dataType as BaseData)).value;
         throw new WgslTypeError(
           `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,
         );
       }
     }
 
-    const arrayType = `array<${
-      ctx.resolve(this.type.elementType).value
-    }, ${this.elements.length}>`;
+    const arrayType = `array<${ctx.resolve(this.type.elementType).value}, ${this.elements.length}>`;
 
-    return snip(
-      stitch`${arrayType}(${this.elements})`,
-      this.type,
-      /* origin */ 'runtime',
-    );
+    return snip(stitch`${arrayType}(${this.elements})`, this.type, /* origin */ 'runtime');
   }
 }

@@ -11,12 +11,15 @@ describe('stencil example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'simple',
-      name: 'stencil',
-      expectedCalls: 2,
-      setupMocks: mockResizeObserver,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'simple',
+        name: 'stencil',
+        expectedCalls: 2,
+        setupMocks: mockResizeObserver,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "const vertices: array<vec2f, 3> = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));

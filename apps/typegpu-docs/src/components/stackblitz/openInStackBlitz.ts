@@ -1,26 +1,14 @@
 import StackBlitzSDK from '@stackblitz/sdk';
 import { parse } from 'yaml';
 import { type } from 'arktype';
-import typegpuColorPackageJson from '@typegpu/color/package.json' with {
-  type: 'json',
-};
-import typegpuNoisePackageJson from '@typegpu/noise/package.json' with {
-  type: 'json',
-};
-import typegpuSdfPackageJson from '@typegpu/sdf/package.json' with {
-  type: 'json',
-};
-import typegpuThreePackageJson from '@typegpu/three/package.json' with {
-  type: 'json',
-};
+import typegpuColorPackageJson from '@typegpu/color/package.json' with { type: 'json' };
+import typegpuNoisePackageJson from '@typegpu/noise/package.json' with { type: 'json' };
+import typegpuSdfPackageJson from '@typegpu/sdf/package.json' with { type: 'json' };
+import typegpuThreePackageJson from '@typegpu/three/package.json' with { type: 'json' };
 import typegpuPackageJson from 'typegpu/package.json' with { type: 'json' };
-import unpluginPackageJson from 'unplugin-typegpu/package.json' with {
-  type: 'json',
-};
+import unpluginPackageJson from 'unplugin-typegpu/package.json' with { type: 'json' };
 import pnpmWorkspace from '../../../../../pnpm-workspace.yaml?raw';
-import typegpuDocsPackageJson from '../../../package.json' with {
-  type: 'json',
-};
+import typegpuDocsPackageJson from '../../../package.json' with { type: 'json' };
 import type { Example, ExampleCommonFile } from '../../utils/examples/types.ts';
 // oxlint-disable-next-line import/default
 import index from './stackBlitzIndex.ts?raw';
@@ -41,7 +29,7 @@ const pnpmWorkspaceYaml = type({
     },
     example: {
       'wgpu-matrix': 'string',
-      'three': 'string',
+      three: 'string',
     },
   },
 })(parse(pnpmWorkspace));
@@ -50,10 +38,7 @@ if (pnpmWorkspaceYaml instanceof type.errors) {
   throw new Error(pnpmWorkspaceYaml.summary);
 }
 
-export const openInStackBlitz = (
-  example: Example,
-  common: ExampleCommonFile[],
-) => {
+export const openInStackBlitz = (example: Example, common: ExampleCommonFile[]) => {
   const tsFiles: Record<string, string> = {};
 
   for (const file of example.tsFiles) {
@@ -65,13 +50,9 @@ export const openInStackBlitz = (
 
   for (const key of Object.keys(tsFiles)) {
     const content = tsFiles[key];
-    tsFiles[key] = content.replaceAll(
-      '/TypeGPU',
-      'https://docs.swmansion.com/TypeGPU',
-    ).replaceAll(
-      '../../common',
-      './common',
-    );
+    tsFiles[key] = content
+      .replaceAll('/TypeGPU', 'https://docs.swmansion.com/TypeGPU')
+      .replaceAll('../../common', './common');
   }
 
   StackBlitzSDK.openProject(
@@ -133,12 +114,8 @@ ${example.htmlFile.content}
       "typegpu": "^${typegpuPackageJson.version}",
       "unplugin-typegpu": "^${unpluginPackageJson.version}",
       "wgpu-matrix": "${pnpmWorkspaceYaml.catalogs.example['wgpu-matrix']}",
-      "@loaders.gl/core": "${
-          typegpuDocsPackageJson.dependencies['@loaders.gl/core']
-        }",
-      "@loaders.gl/obj": "${
-          typegpuDocsPackageJson.dependencies['@loaders.gl/obj']
-        }",
+      "@loaders.gl/core": "${typegpuDocsPackageJson.dependencies['@loaders.gl/core']}",
+      "@loaders.gl/obj": "${typegpuDocsPackageJson.dependencies['@loaders.gl/obj']}",
       "three": "${pnpmWorkspaceYaml.catalogs.example.three}",
       "@typegpu/noise": "${typegpuNoisePackageJson.version}",
       "@typegpu/color": "${typegpuColorPackageJson.version}",

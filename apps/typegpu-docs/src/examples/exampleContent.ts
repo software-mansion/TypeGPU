@@ -9,9 +9,7 @@ import type {
   ThumbnailPair,
 } from '../utils/examples/types.ts';
 
-function extractUrlFromViteImport(
-  importFn: () => void,
-): [URL | undefined, boolean] {
+function extractUrlFromViteImport(importFn: () => void): [URL | undefined, boolean] {
   const filePath = String(importFn);
   const match = filePath.match(/\(\)\s*=>\s*import\("([^"]+)"\)/);
 
@@ -23,9 +21,7 @@ function extractUrlFromViteImport(
   return [undefined, false];
 }
 
-function noCacheImport<T>(
-  importFn: () => Promise<T>,
-): Promise<T> {
+function noCacheImport<T>(importFn: () => Promise<T>): Promise<T> {
   const [url, isRelative] = extractUrlFromViteImport(importFn);
 
   if (!url) {
@@ -33,9 +29,7 @@ function noCacheImport<T>(
   }
 
   url.searchParams.append('update', Date.now().toString());
-  return import(
-    /* @vite-ignore */ `${isRelative ? '.' : ''}${url.pathname}${url.search}`
-  );
+  return import(/* @vite-ignore */ `${isRelative ? '.' : ''}${url.pathname}${url.search}`);
 }
 
 function pathToExampleKey(path: string): string {
@@ -81,20 +75,19 @@ const exampleTsFiles = R.pipe(
   }) as Record<string, string>,
   R.entries(),
   R.filter(([key]) => !key.endsWith('.tsnotover.ts')),
-  R.map(([key, content]): ExampleSrcFile => ({
-    exampleKey: pathToExampleKey(key),
-    path: pathToRelativePath(key),
-    content,
-    tsnotoverContent: exampleTsnotoverFiles[`${key}notover.ts`],
-  })),
+  R.map(
+    ([key, content]): ExampleSrcFile => ({
+      exampleKey: pathToExampleKey(key),
+      path: pathToRelativePath(key),
+      content,
+      tsnotoverContent: exampleTsnotoverFiles[`${key}notover.ts`],
+    }),
+  ),
   R.groupBy(R.prop('exampleKey')),
 );
 
 const tsFilesImportFunctions = R.pipe(
-  import.meta.glob('./**/index.ts') as Record<
-    string,
-    () => Promise<unknown>
-  >,
+  import.meta.glob('./**/index.ts') as Record<string, () => Promise<unknown>>,
   R.mapKeys(pathToExampleKey),
 );
 
@@ -105,11 +98,13 @@ const htmlFiles = R.pipe(
     import: 'default',
   }) as Record<string, string>,
   R.entries(),
-  R.map(([key, content]): ExampleSrcFile => ({
-    exampleKey: pathToExampleKey(key),
-    path: pathToRelativePath(key),
-    content,
-  })),
+  R.map(
+    ([key, content]): ExampleSrcFile => ({
+      exampleKey: pathToExampleKey(key),
+      path: pathToRelativePath(key),
+      content,
+    }),
+  ),
   R.groupBy(R.prop('exampleKey')),
 );
 
@@ -120,10 +115,7 @@ const thumbnailFiles = R.pipe(
     query: 'w=512;1024',
   }) as Record<string, string | [string, string]>,
   R.mapKeys(pathToExampleKey),
-  R.mapValues((
-    value,
-    key,
-  ): ThumbnailPair => {
+  R.mapValues((value, key): ThumbnailPair => {
     if (typeof value === 'string') {
       throw new Error(
         `Thumbnail for example "${key}" is too small (required width is at least 513 pixels).`,
@@ -135,15 +127,16 @@ const thumbnailFiles = R.pipe(
 
 export const examples = R.pipe(
   metaFiles,
-  R.mapValues((value, key) =>
-    ({
-      key,
-      metadata: value,
-      tsFiles: exampleTsFiles[key] ?? [],
-      tsImport: () => noCacheImport(tsFilesImportFunctions[key]),
-      htmlFile: htmlFiles[key]?.[0] ?? '',
-      thumbnails: thumbnailFiles[key],
-    }) satisfies Example
+  R.mapValues(
+    (value, key) =>
+      ({
+        key,
+        metadata: value,
+        tsFiles: exampleTsFiles[key] ?? [],
+        tsImport: () => noCacheImport(tsFilesImportFunctions[key]),
+        htmlFile: htmlFiles[key]?.[0] ?? '',
+        thumbnails: thumbnailFiles[key],
+      }) satisfies Example,
   ),
 );
 
@@ -158,11 +151,13 @@ export const common = R.pipe(
     eager: true,
     import: 'default',
   }) as Record<string, string>,
-  R.mapValues((content: string, key: string): ExampleCommonFile => ({
-    common: true,
-    path: pathe.basename(key),
-    content,
-  })),
+  R.mapValues(
+    (content: string, key: string): ExampleCommonFile => ({
+      common: true,
+      path: pathe.basename(key),
+      content,
+    }),
+  ),
   R.values(),
 );
 

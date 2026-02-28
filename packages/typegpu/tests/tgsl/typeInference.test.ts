@@ -41,7 +41,10 @@ describe('wgsl generator type inference', () => {
 
   it('coerces return value to a struct', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
-    const myFn = tgpu.fn([], Boid)(() => {
+    const myFn = tgpu.fn(
+      [],
+      Boid,
+    )(() => {
       return { vel: d.vec2f(), pos: d.vec2f(1, 1) };
     });
 
@@ -61,7 +64,10 @@ describe('wgsl generator type inference', () => {
     const Inner = d.struct({ prop: d.vec2f });
     const Outer = d.struct({ inner: Inner });
 
-    const myFn = tgpu.fn([], Outer)(() => {
+    const myFn = tgpu.fn(
+      [],
+      Outer,
+    )(() => {
       return { inner: { prop: d.vec2f() } };
     });
 
@@ -123,9 +129,12 @@ describe('wgsl generator type inference', () => {
     const StructArray = d.arrayOf(Struct, 2);
 
     const myFn = tgpu.fn([])(() => {
-      const myStructArray = StructArray([{ prop: d.vec2f(1, 2) }, {
-        prop: d.vec2f(3, 4),
-      }]);
+      const myStructArray = StructArray([
+        { prop: d.vec2f(1, 2) },
+        {
+          prop: d.vec2f(3, 4),
+        },
+      ]);
     });
 
     expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
@@ -172,11 +181,9 @@ describe('wgsl generator type inference', () => {
       return;
     });
     const myFn = tgpu.fn([])(() => {
-      nop(
-        { x: 1, y: 2 },
-        { vel: d.vec2f(), pos: { x: 3, y: 4 } },
-        [{ vel: d.vec2f(), pos: { x: 5, y: 6 } }],
-      );
+      nop({ x: 1, y: 2 }, { vel: d.vec2f(), pos: { x: 3, y: 4 } }, [
+        { vel: d.vec2f(), pos: { x: 5, y: 6 } },
+      ]);
     });
 
     expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
@@ -201,9 +208,7 @@ describe('wgsl generator type inference', () => {
   });
 
   it('throws when returning a value from void function', () => {
-    const add = tgpu.fn([d.u32, d.u32])(
-      (x, y) => x + y,
-    );
+    const add = tgpu.fn([d.u32, d.u32])((x, y) => x + y);
 
     expect(() => tgpu.resolve([add])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
@@ -213,7 +218,10 @@ describe('wgsl generator type inference', () => {
   });
 
   it('throws when returning an unconvertible value', () => {
-    const add = tgpu.fn([], d.vec3f)(() => {
+    const add = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
       return 1 as unknown as d.v3f;
     });
 
@@ -227,7 +235,10 @@ describe('wgsl generator type inference', () => {
   it('converts float to int implicitly with a warning', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    const myFn = tgpu.fn([], d.u32)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
       return 1.1;
     });
 
@@ -245,7 +256,10 @@ describe('wgsl generator type inference', () => {
   it('throws when no info about what to coerce to', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 
-    const myFn = tgpu.fn([], Boid)(() => {
+    const myFn = tgpu.fn(
+      [],
+      Boid,
+    )(() => {
       const unrelated = { pos: d.vec2f(), vel: d.vec2f() };
       return Boid({ pos: d.vec2f(), vel: d.vec2f() });
     });
@@ -258,7 +272,10 @@ describe('wgsl generator type inference', () => {
   });
 
   it('throws when if condition is not boolean', () => {
-    const myFn = tgpu.fn([], d.bool)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.bool,
+    )(() => {
       if (d.vec2b()) {
         return true;
       }
@@ -273,7 +290,10 @@ describe('wgsl generator type inference', () => {
   });
 
   it('throws when while condition is not boolean', () => {
-    const myFn = tgpu.fn([], d.bool)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.bool,
+    )(() => {
       while (d.mat2x2f()) {
         return true;
       }
@@ -288,7 +308,10 @@ describe('wgsl generator type inference', () => {
   });
 
   it('throws when for condition is not boolean', () => {
-    const myFn = tgpu.fn([], d.bool)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.bool,
+    )(() => {
       for (let i = 0; 1; i < 10) {
         return true;
       }
@@ -397,7 +420,10 @@ describe('wgsl generator js type inference', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 
     const structValue = { vel: d.vec2f(), pos: d.vec2f(1, 1) };
-    const myFn = tgpu.fn([], Boid)(() => {
+    const myFn = tgpu.fn(
+      [],
+      Boid,
+    )(() => {
       return structValue;
     });
 
@@ -418,7 +444,10 @@ describe('wgsl generator js type inference', () => {
     const Outer = d.struct({ inner: Inner });
 
     const structValue = { inner: { prop: d.vec2f() } };
-    const myFn = tgpu.fn([], Outer)(() => {
+    const myFn = tgpu.fn(
+      [],
+      Outer,
+    )(() => {
       return structValue;
     });
 
@@ -565,7 +594,10 @@ describe('wgsl generator js type inference', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 
     const structValue = { pos: d.vec2f(), vel: d.vec2f() };
-    const myFn = tgpu.fn([], Boid)(() => {
+    const myFn = tgpu.fn(
+      [],
+      Boid,
+    )(() => {
       const unrelated = structValue;
       return Boid({ pos: d.vec2f(), vel: d.vec2f() });
     });

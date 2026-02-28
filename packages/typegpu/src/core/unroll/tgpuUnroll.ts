@@ -1,17 +1,9 @@
 import { stitch } from '../resolve/stitch.ts';
-import {
-  $gpuCallable,
-  $internal,
-  $resolve,
-} from '../../../src/shared/symbols.ts';
+import { $gpuCallable, $internal, $resolve } from '../../../src/shared/symbols.ts';
 import { setName } from '../../../src/shared/meta.ts';
 import type { DualFn } from '../../../src/types.ts';
 import type { AnyData } from '../../../src/data/dataTypes.ts';
-import {
-  type ResolvedSnippet,
-  snip,
-  type Snippet,
-} from '../../../src/data/snippet.ts';
+import { type ResolvedSnippet, snip, type Snippet } from '../../../src/data/snippet.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../../src/types.ts';
 
 /**
@@ -25,11 +17,7 @@ export class UnrollableIterable implements SelfResolvable {
   constructor(public readonly snippet: Snippet) {}
 
   [$resolve](_ctx: ResolutionCtx): ResolvedSnippet {
-    return snip(
-      stitch`${this.snippet}`,
-      this.snippet.dataType as AnyData,
-      this.snippet.origin,
-    );
+    return snip(stitch`${this.snippet}`, this.snippet.dataType as AnyData, this.snippet.origin);
   }
 }
 
@@ -37,9 +25,9 @@ export class UnrollableIterable implements SelfResolvable {
  * Marks an iterable to be unrolled by the wgslGenerator.
  */
 export const unroll = (() => {
-  const impl = (<T extends Iterable<unknown>>(value: T) => value) as unknown as
-    & DualFn<(<T extends Iterable<unknown>>(value: T) => T)>
-    & { [$internal]: true };
+  const impl = (<T extends Iterable<unknown>>(value: T) => value) as unknown as DualFn<
+    <T extends Iterable<unknown>>(value: T) => T
+  > & { [$internal]: true };
 
   setName(impl, 'unroll');
   impl.toString = () => 'unroll';

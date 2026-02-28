@@ -59,14 +59,13 @@ it('has correct default values', () => {
 
 describe('TGSL', () => {
   it('works for default constructors', () => {
-    const main = tgpu
-      .fn([])(() => {
-        const f = d.f32();
-        const h = d.f16();
-        const i = d.i32();
-        const u = d.u32();
-        const b = d.bool();
-      });
+    const main = tgpu.fn([])(() => {
+      const f = d.f32();
+      const h = d.f16();
+      const i = d.i32();
+      const u = d.u32();
+      const b = d.bool();
+    });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() {

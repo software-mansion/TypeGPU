@@ -12,16 +12,8 @@ const heightColor = tgpu.fn(
 )((t) => {
   const clamped = std.clamp(t, 0, 1);
 
-  const lowToMid = std.mix(
-    LOW_COLOR,
-    MID_COLOR,
-    std.smoothstep(0, 0.4, clamped),
-  );
-  const midToHigh = std.mix(
-    lowToMid,
-    HIGH_COLOR,
-    std.smoothstep(0.4, 1, clamped),
-  );
+  const lowToMid = std.mix(LOW_COLOR, MID_COLOR, std.smoothstep(0, 0.4, clamped));
+  const midToHigh = std.mix(lowToMid, HIGH_COLOR, std.smoothstep(0.4, 1, clamped));
 
   return midToHigh;
 });
@@ -62,9 +54,7 @@ export const vertexFn = tgpu.vertexFn({
 
   const displaced = d.vec4f(worldPos.x, worldPos.y + height, worldPos.z, 1);
 
-  const worldNormal = std.normalize(
-    (cube.model * d.vec4f(input.normal, 0)).xyz,
-  );
+  const worldNormal = std.normalize((cube.model * d.vec4f(input.normal, 0)).xyz);
 
   const t = height / params.terrainHeight + 0.5;
   const color = heightColor(t);

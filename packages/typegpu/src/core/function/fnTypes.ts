@@ -57,10 +57,7 @@ type InheritTupleValues<T, From> = {
 export type InheritArgNames<T extends AnyFn, From extends AnyFn> = {
   result: (
     ...args: Parameters<
-      & ((
-        ...args: InheritTupleValues<Parameters<From>, Parameters<T>>
-      ) => ReturnType<T>)
-      & T
+      ((...args: InheritTupleValues<Parameters<From>, Parameters<T>>) => ReturnType<T>) & T
     >
   ) => ReturnType<T>;
 };
@@ -69,9 +66,7 @@ export type InferImplSchema<ImplSchema extends AnyFn> = (
   ...args: InferArgs<Parameters<ImplSchema>>
 ) => Infer<ReturnType<ImplSchema>>;
 
-export type Implementation<ImplSchema extends AnyFn = AnyFn> =
-  | string
-  | InferImplSchema<ImplSchema>;
+export type Implementation<ImplSchema extends AnyFn = AnyFn> = string | InferImplSchema<ImplSchema>;
 
 export type BaseIOData =
   | Bool
@@ -92,15 +87,9 @@ export type BaseIOData =
   | Vec3u
   | Vec4u;
 
-export type IOData =
-  | BaseIOData
-  | Decorated<BaseIOData, AnyAttribute[]>
-  | BuiltinClipDistances;
+export type IOData = BaseIOData | Decorated<BaseIOData, AnyAttribute[]> | BuiltinClipDistances;
 
-export type IORecord<TElementType extends IOData = IOData> = Record<
-  string,
-  TElementType
->;
+export type IORecord<TElementType extends IOData = IOData> = Record<string, TElementType>;
 
 /**
  * Used for I/O definitions of entry functions.
@@ -110,6 +99,8 @@ export type IOLayout<TElementType extends IOData = IOData> =
   | IORecord<TElementType>
   | Void;
 
-export type InferIO<T> = T extends { type: string } ? Infer<T>
-  : T extends Record<string, unknown> ? { [K in keyof T]: Infer<T[K]> }
-  : T;
+export type InferIO<T> = T extends { type: string }
+  ? Infer<T>
+  : T extends Record<string, unknown>
+    ? { [K in keyof T]: Infer<T[K]> }
+    : T;

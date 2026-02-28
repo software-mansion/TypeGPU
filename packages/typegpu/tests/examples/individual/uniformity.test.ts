@@ -11,13 +11,16 @@ describe('uniformity test example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'tests',
-      name: 'uniformity',
-      setupMocks: mockResizeObserver,
-      controlTriggers: ['Test Resolution'],
-      expectedCalls: 2,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'tests',
+        name: 'uniformity',
+        setupMocks: mockResizeObserver,
+        controlTriggers: ['Test Resolution'],
+        expectedCalls: 2,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct fullScreenTriangle_Input {

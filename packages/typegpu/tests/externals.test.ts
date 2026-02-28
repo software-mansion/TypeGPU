@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  addArgTypesToExternals,
-  type ExternalMap,
-} from '../src/core/resolve/externals.ts';
+import { addArgTypesToExternals, type ExternalMap } from '../src/core/resolve/externals.ts';
 import * as d from '../src/data/index.ts';
 
 describe('addArgTypesToExternals', () => {
@@ -28,10 +25,8 @@ describe('addArgTypesToExternals', () => {
 
   it('gets the names from argument list in WGSL implementation', () => {
     const externals: ExternalMap[] = [];
-    addArgTypesToExternals(
-      '(b: P, a: vec4f, c: L) -> L {}',
-      [Particle, d.vec4f, Light],
-      (result) => externals.push(result),
+    addArgTypesToExternals('(b: P, a: vec4f, c: L) -> L {}', [Particle, d.vec4f, Light], (result) =>
+      externals.push(result),
     );
     expect(externals).toStrictEqual([{ P: Particle, L: Light }]);
   });
@@ -61,8 +56,6 @@ describe('addArgTypesToExternals', () => {
       [d.vec3u, Particle, Particle, Particle],
       (result) => externals.push(result),
     );
-    expect(externals).toStrictEqual([
-      { A: Particle, B: Particle, C: Particle },
-    ]);
+    expect(externals).toStrictEqual([{ A: Particle, B: Particle, C: Particle }]);
   });
 });

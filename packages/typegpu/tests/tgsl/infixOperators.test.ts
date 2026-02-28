@@ -71,7 +71,10 @@ describe('wgslGenerator', () => {
   });
 
   it('resolves mul infix operator on a function return value', () => {
-    const getVec = tgpu.fn([], d.vec3f)(() => {
+    const getVec = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
       'use gpu';
       return d.vec3f(1, 2, 3);
     });

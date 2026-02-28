@@ -5,24 +5,24 @@
 import { describe, expect } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
-import {
-  mockCreateImageBitmap,
-  mockImageLoading,
-} from '../utils/commonMocks.ts';
+import { mockCreateImageBitmap, mockImageLoading } from '../utils/commonMocks.ts';
 
 describe('stable-fluid example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'simulation',
-      name: 'stable-fluid',
-      setupMocks: () => {
-        mockImageLoading();
-        mockCreateImageBitmap();
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'simulation',
+        name: 'stable-fluid',
+        setupMocks: () => {
+          mockImageLoading();
+          mockCreateImageBitmap();
+        },
+        expectedCalls: 7,
       },
-      expectedCalls: 7,
-    }, device);
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var src: texture_2d<f32>;

@@ -9,8 +9,7 @@ export declare const tgpu: {
   fn: typeof import('./core/function/tgpuFn.ts').fn;
   comptime: typeof import('./core/function/comptime.ts').comptime;
   resolve: typeof import('./core/resolve/tgpuResolve.ts').resolve;
-  resolveWithContext:
-    typeof import('./core/resolve/tgpuResolve.ts').resolveWithContext;
+  resolveWithContext: typeof import('./core/resolve/tgpuResolve.ts').resolveWithContext;
   init: typeof import('./core/root/init.ts').init;
   initFromDevice: typeof import('./core/root/init.ts').initFromDevice;
   slot: typeof import('./core/slot/slot.ts').slot;
@@ -19,8 +18,7 @@ export declare const tgpu: {
   mutableAccessor: typeof import('./core/slot/accessor.ts').mutableAccessor;
   privateVar: typeof import('./core/variable/tgpuVariable.ts').privateVar;
   workgroupVar: typeof import('./core/variable/tgpuVariable.ts').workgroupVar;
-  vertexLayout:
-    typeof import('./core/vertexLayout/vertexLayout.ts').vertexLayout;
+  vertexLayout: typeof import('./core/vertexLayout/vertexLayout.ts').vertexLayout;
   bindGroupLayout: typeof import('./tgpuBindGroupLayout.ts').bindGroupLayout;
   computeFn: typeof import('./core/function/tgpuComputeFn.ts').computeFn;
   fragmentFn: typeof import('./core/function/tgpuFragmentFn.ts').fragmentFn;

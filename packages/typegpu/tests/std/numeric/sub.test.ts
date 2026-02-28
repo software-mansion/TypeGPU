@@ -36,9 +36,7 @@ describe('sub', () => {
   });
 
   it('computes difference of two vec3f', () => {
-    expect(sub(vec3f(1.5, 2, 3), vec3f(-1.5, -2, -3))).toStrictEqual(
-      vec3f(3, 4, 6),
-    );
+    expect(sub(vec3f(1.5, 2, 3), vec3f(-1.5, -2, -3))).toStrictEqual(vec3f(3, 4, 6));
     expect(sub(vec3f(1, 1, 1), vec3f(1))).toStrictEqual(vec3f());
     expect(sub(vec3f(1.5), vec3f(2))).toStrictEqual(vec3f(-0.5));
   });
@@ -49,36 +47,24 @@ describe('sub', () => {
   });
 
   it('computes difference of two vec3i', () => {
-    expect(sub(vec3i(1, 2, 3), vec3i(-1, -2, -3))).toStrictEqual(
-      vec3i(2, 4, 6),
-    );
-    expect(sub(vec3i(1, 1, 1), vec3i(2, 3, 4))).toStrictEqual(
-      vec3i(-1, -2, -3),
-    );
+    expect(sub(vec3i(1, 2, 3), vec3i(-1, -2, -3))).toStrictEqual(vec3i(2, 4, 6));
+    expect(sub(vec3i(1, 1, 1), vec3i(2, 3, 4))).toStrictEqual(vec3i(-1, -2, -3));
     expect(sub(vec3i(1), vec3i(2))).toStrictEqual(vec3i(-1));
   });
 
   it('computes difference of two vec4f', () => {
-    expect(sub(vec4f(1.5, 2, 3, 4), vec4f(1.5, 2, 3, 4))).toStrictEqual(
-      vec4f(),
-    );
-    expect(sub(vec4f(1, 1, 1, 1), vec4f(2, 3.5, 4, 5))).toStrictEqual(
-      vec4f(-1, -2.5, -3, -4),
-    );
+    expect(sub(vec4f(1.5, 2, 3, 4), vec4f(1.5, 2, 3, 4))).toStrictEqual(vec4f());
+    expect(sub(vec4f(1, 1, 1, 1), vec4f(2, 3.5, 4, 5))).toStrictEqual(vec4f(-1, -2.5, -3, -4));
     expect(sub(vec4f(1), vec4f(2.5))).toStrictEqual(vec4f(-1.5));
   });
 
   it('computes difference of two vec4u', () => {
-    expect(sub(vec4u(2, 3, 4, 5), vec4u(1, 1, 1, 1))).toStrictEqual(
-      vec4u(1, 2, 3, 4),
-    );
+    expect(sub(vec4u(2, 3, 4, 5), vec4u(1, 1, 1, 1))).toStrictEqual(vec4u(1, 2, 3, 4));
     expect(sub(vec4u(1), vec4u(1))).toStrictEqual(vec4u());
   });
 
   it('computes difference of two vec4i', () => {
-    expect(sub(vec4i(1, 2, 3, 4), vec4i(-1, -2, -3, -4))).toStrictEqual(
-      vec4i(2, 4, 6, 8),
-    );
+    expect(sub(vec4i(1, 2, 3, 4), vec4i(-1, -2, -3, -4))).toStrictEqual(vec4i(2, 4, 6, 8));
     expect(sub(vec4i(1, 1, 1, 1), vec4i(1))).toStrictEqual(vec4i());
     expect(sub(vec4i(1), vec4i(2))).toStrictEqual(vec4i(-1));
   });
@@ -104,9 +90,7 @@ describe('sub', () => {
     expect(sub(mat3x3f(), mat3x3f(1, 2, 3, 4, 5, 6, 7, 8, 9))).toEqual(
       mat3x3f(-1, -2, -3, -4, -5, -6, -7, -8, -9),
     );
-    expect(sub(mat2x2f(1, 2, 3, 4), mat2x2f(8, 7, 6, 5))).toEqual(
-      mat2x2f(-7, -5, -3, -1),
-    );
+    expect(sub(mat2x2f(1, 2, 3, 4), mat2x2f(8, 7, 6, 5))).toEqual(mat2x2f(-7, -5, -3, -1));
     expect(
       sub(
         mat4x4f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16),
@@ -133,18 +117,18 @@ describe('sub overload', () => {
 
   it('rejects when incompatible types', () => {
     // @ts-expect-error
-    (() => sub(vec2f(), vec2u()));
+    () => sub(vec2f(), vec2u());
     // @ts-expect-error
-    (() => sub(vec2f(), vec3f()));
+    () => sub(vec2f(), vec3f());
     // @ts-expect-error
-    (() => sub(mat3x3f(), mat4x4f()));
+    () => sub(mat3x3f(), mat4x4f());
     // @ts-expect-error
-    (() => sub(vec2f(), mat3x3f()));
+    () => sub(vec2f(), mat3x3f());
     // @ts-expect-error
-    (() => sub(mat3x3f(), vec2f()));
+    () => sub(mat3x3f(), vec2f());
     // @ts-expect-error
-    (() => sub(1, mat2x2f()));
+    () => sub(1, mat2x2f());
     // @ts-expect-error
-    (() => sub(mat3x3f(), 1));
+    () => sub(mat3x3f(), 1);
   });
 });

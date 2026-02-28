@@ -4,20 +4,29 @@ import { add, dot, floor, mix, mul, sub } from 'typegpu/std';
 import { randOnUnitSphere, randSeed3 } from '../random.ts';
 import { quinticInterpolation3 } from '../utils.ts';
 
-export const computeJunctionGradient = tgpu.fn([d.vec3i], d.vec3f)((pos) => {
+export const computeJunctionGradient = tgpu.fn(
+  [d.vec3i],
+  d.vec3f,
+)((pos) => {
   randSeed3(mul(0.001, d.vec3f(pos)));
   return randOnUnitSphere();
 });
 
 export const getJunctionGradientSlot = tgpu.slot(computeJunctionGradient);
 
-const dotProdGrid = tgpu.fn([d.vec3f, d.vec3f], d.f32)((pos, junction) => {
+const dotProdGrid = tgpu.fn(
+  [d.vec3f, d.vec3f],
+  d.f32,
+)((pos, junction) => {
   const relative = sub(pos, junction);
   const gridVector = getJunctionGradientSlot.value(d.vec3i(junction));
   return dot(relative, gridVector);
 });
 
-export const sample = tgpu.fn([d.vec3f], d.f32)((pos) => {
+export const sample = tgpu.fn(
+  [d.vec3f],
+  d.f32,
+)((pos) => {
   const minJunction = floor(pos);
 
   const xyz = dotProdGrid(pos, minJunction);

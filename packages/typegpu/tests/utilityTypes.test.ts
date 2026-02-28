@@ -7,15 +7,11 @@ describe('Default', () => {
   });
 
   it('turns an undefined union member into the default', () => {
-    expectTypeOf<Default<undefined | number, 'example'>>().toEqualTypeOf<
-      'example' | number
-    >();
+    expectTypeOf<Default<undefined | number, 'example'>>().toEqualTypeOf<'example' | number>();
   });
 
   it('leaves a defined value untouched', () => {
-    expectTypeOf<Default<number | string, 'example'>>().toEqualTypeOf<
-      number | string
-    >();
+    expectTypeOf<Default<number | string, 'example'>>().toEqualTypeOf<number | string>();
   });
 });
 
@@ -25,8 +21,8 @@ describe('Mutable', () => {
   });
 
   it('works on unions of tuples', () => {
-    expectTypeOf<
-      Mutable<readonly [1, 2, 3] | readonly [1, 2, 3, 4]>
-    >().toEqualTypeOf<[1, 2, 3] | [1, 2, 3, 4]>();
+    expectTypeOf<Mutable<readonly [1, 2, 3] | readonly [1, 2, 3, 4]>>().toEqualTypeOf<
+      [1, 2, 3] | [1, 2, 3, 4]
+    >();
   });
 });

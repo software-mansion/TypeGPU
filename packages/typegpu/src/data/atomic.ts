@@ -23,9 +23,7 @@ import type { Atomic, atomicI32, atomicU32, I32, U32 } from './wgslTypes.ts';
  *
  * @param data Underlying type schema.
  */
-export function atomic<TSchema extends U32 | I32>(
-  data: TSchema,
-): Atomic<TSchema> {
+export function atomic<TSchema extends U32 | I32>(data: TSchema): Atomic<TSchema> {
   return new AtomicImpl(data);
 }
 

@@ -6,9 +6,11 @@ import { f32 } from '../src/data/numeric.ts';
 
 describe('TgpuGuardedComputePipeline', () => {
   it('can be named', ({ root }) => {
-    const pipeline = root.createGuardedComputePipeline(() => {
-      'use gpu';
-    }).$name('myPipeline');
+    const pipeline = root
+      .createGuardedComputePipeline(() => {
+        'use gpu';
+      })
+      .$name('myPipeline');
 
     expect(getName(pipeline)).toBe('myPipeline');
     expect(getName(pipeline.pipeline)).toBe('myPipeline');
@@ -19,9 +21,10 @@ describe('TgpuGuardedComputePipeline', () => {
     const myBindGroup = root.createBindGroup(myBindGroupLayout, {
       a: root.createBuffer(f32).$usage('uniform'),
     });
-    const pipeline = root.createGuardedComputePipeline(() => {
-      'use gpu';
-    })
+    const pipeline = root
+      .createGuardedComputePipeline(() => {
+        'use gpu';
+      })
       .with(myBindGroup)
       .$name('myPipeline');
 

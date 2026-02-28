@@ -1,4 +1,4 @@
-// deno-fmt-ignore
+// oxfmt-ignore
 export const lineSegmentIndicesCapLevel0 = [
   0, 4, 5,
   1, 2, 0,
@@ -10,7 +10,7 @@ export const lineSegmentIndicesCapLevel0 = [
   9, 5, 7,
 ]
 
-// deno-fmt-ignore
+// oxfmt-ignore
 export const lineSegmentIndicesCapLevel1 = [
   ...lineSegmentIndicesCapLevel0,
   10, 1, 0,
@@ -19,7 +19,7 @@ export const lineSegmentIndicesCapLevel1 = [
   13, 9, 8,
 ]
 
-// deno-fmt-ignore
+// oxfmt-ignore
 export const lineSegmentIndicesCapLevel2 = [
   ...lineSegmentIndicesCapLevel1,
   14, 10, 0,
@@ -32,7 +32,7 @@ export const lineSegmentIndicesCapLevel2 = [
   21, 9, 13,
 ];
 
-// deno-fmt-ignore
+// oxfmt-ignore
 export const lineSegmentIndicesCapLevel3 = [
   ...lineSegmentIndicesCapLevel2,
   22, 14, 0,
@@ -53,7 +53,7 @@ export const lineSegmentIndicesCapLevel3 = [
   37, 9, 21,
 ];
 
-// deno-fmt-ignore
+// oxfmt-ignore
 export const lineSegmentWireframeIndicesCapLevel0 = [
   0, 1,
   0, 2,
@@ -74,7 +74,7 @@ export const lineSegmentWireframeIndicesCapLevel0 = [
   8, 9,
 ];
 
-// deno-fmt-ignore
+// oxfmt-ignore
 export const lineSegmentWireframeIndicesCapLevel1 = [
   ...lineSegmentWireframeIndicesCapLevel0,
   0, 10,
@@ -87,7 +87,7 @@ export const lineSegmentWireframeIndicesCapLevel1 = [
   9, 13,
 ]
 
-// deno-fmt-ignore
+// oxfmt-ignore
 export const lineSegmentWireframeIndicesCapLevel2 = [
   ...lineSegmentWireframeIndicesCapLevel1,
   0, 14,
@@ -108,7 +108,7 @@ export const lineSegmentWireframeIndicesCapLevel2 = [
   21, 9,
 ];
 
-// deno-fmt-ignore
+// oxfmt-ignore
 export const lineSegmentWireframeIndicesCapLevel3 = [
   ...lineSegmentWireframeIndicesCapLevel2,
   0, 22,

@@ -1,33 +1,14 @@
-import type {
-  AnyVertexInputBuiltin,
-  AnyVertexOutputBuiltin,
-  OmitBuiltins,
-} from '../../builtin.ts';
+import type { AnyVertexInputBuiltin, AnyVertexOutputBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { UndecorateRecord } from '../../data/dataTypes.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
-import type {
-  BaseData,
-  Decorated,
-  Interpolate,
-  Location,
-} from '../../data/wgslTypes.ts';
-import {
-  getName,
-  isNamable,
-  setName,
-  type TgpuNamable,
-} from '../../shared/meta.ts';
+import type { BaseData, Decorated, Interpolate, Location } from '../../data/wgslTypes.ts';
+import { getName, isNamable, setName, type TgpuNamable } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { shaderStageSlot } from '../slot/internalSlots.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
-import type {
-  BaseIOData,
-  Implementation,
-  InferIO,
-  IORecord,
-} from './fnTypes.ts';
+import type { BaseIOData, Implementation, InferIO, IORecord } from './fnTypes.ts';
 import { createIoSchema, type IOLayoutToSchema } from './ioSchema.ts';
 import { stripTemplate } from './templateUtils.ts';
 
@@ -40,9 +21,7 @@ type VertexInConstrained = IORecord<
 >;
 
 type VertexOutConstrained = IORecord<
-  | BaseIOData
-  | Decorated<BaseIOData, (Location | Interpolate)[]>
-  | AnyVertexOutputBuiltin
+  BaseIOData | Decorated<BaseIOData, (Location | Interpolate)[]> | AnyVertexOutputBuiltin
 >;
 
 /**
@@ -58,11 +37,12 @@ type TgpuVertexFnShellHeader<
   readonly entryPoint: 'vertex';
 };
 
-type CleanIO<T> = T extends Record<string, BaseData>
-  ? Prettify<UndecorateRecord<OmitBuiltins<T>>>
-  : Prettify<UndecorateRecord<OmitBuiltins<{ a: T }>>> extends
-    { a: infer Result } ? Result
-  : never;
+type CleanIO<T> =
+  T extends Record<string, BaseData>
+    ? Prettify<UndecorateRecord<OmitBuiltins<T>>>
+    : Prettify<UndecorateRecord<OmitBuiltins<{ a: T }>>> extends { a: infer Result }
+      ? Result
+      : never;
 
 /**
  * Describes a vertex entry function signature (its arguments, return type and attributes).
@@ -78,18 +58,10 @@ export interface TgpuVertexFnShell<
   out TOut extends TgpuVertexFn.Out,
 > extends TgpuVertexFnShellHeader<TIn, TOut> {
   (
-    implementation: (
-      input: InferIO<TIn>,
-      out: IOLayoutToSchema<TOut>,
-    ) => InferIO<TOut>,
+    implementation: (input: InferIO<TIn>, out: IOLayoutToSchema<TOut>) => InferIO<TOut>,
   ): TgpuVertexFn<CleanIO<TIn>, CleanIO<TOut>>;
-  (
-    implementation: string,
-  ): TgpuVertexFn<CleanIO<TIn>, CleanIO<TOut>>;
-  (
-    strings: TemplateStringsArray,
-    ...values: unknown[]
-  ): TgpuVertexFn<CleanIO<TIn>, CleanIO<TOut>>;
+  (implementation: string): TgpuVertexFn<CleanIO<TIn>, CleanIO<TOut>>;
+  (strings: TemplateStringsArray, ...values: unknown[]): TgpuVertexFn<CleanIO<TIn>, CleanIO<TOut>>;
 }
 
 export interface TgpuVertexFn<
@@ -116,10 +88,7 @@ export function vertexFn<
   // Not allowing single-value output, as it is better practice
   // to properly label what the vertex shader is outputting.
   VertexOut extends VertexOutConstrained,
->(options: {
-  in: VertexIn;
-  out: VertexOut;
-}): TgpuVertexFnShell<VertexIn, VertexOut>;
+>(options: { in: VertexIn; out: VertexOut }): TgpuVertexFnShell<VertexIn, VertexOut>;
 
 /**
  * Creates a shell of a typed entry function for the vertex shader stage. Any function
@@ -137,10 +106,7 @@ export function vertexFn<
   // Not allowing single-value output, as it is better practice
   // to properly label what the vertex shader is outputting.
   VertexOut extends VertexOutConstrained,
->(options: {
-  in?: VertexIn;
-  out: VertexOut;
-}): TgpuVertexFnShell<VertexIn, VertexOut> {
+>(options: { in?: VertexIn; out: VertexOut }): TgpuVertexFnShell<VertexIn, VertexOut> {
   if (Object.keys(options.out).length === 0) {
     throw new Error(
       `A vertexFn output cannot be empty since it must include the 'position' builtin.`,
@@ -149,31 +115,22 @@ export function vertexFn<
   const shell: TgpuVertexFnShellHeader<VertexIn, VertexOut> = {
     in: options.in,
     out: options.out,
-    argTypes: options.in && Object.keys(options.in).length !== 0
-      ? [createIoSchema(options.in)]
-      : [],
+    argTypes:
+      options.in && Object.keys(options.in).length !== 0 ? [createIoSchema(options.in)] : [],
     entryPoint: 'vertex',
   };
 
-  const call = (
-    arg: Implementation | TemplateStringsArray,
-    ...values: unknown[]
-  ) => createVertexFn(shell, stripTemplate(arg, ...values));
+  const call = (arg: Implementation | TemplateStringsArray, ...values: unknown[]) =>
+    createVertexFn(shell, stripTemplate(arg, ...values));
 
-  return Object.assign(call, shell) as unknown as TgpuVertexFnShell<
-    VertexIn,
-    VertexOut
-  >;
+  return Object.assign(call, shell) as unknown as TgpuVertexFnShell<VertexIn, VertexOut>;
 }
 
 export function isTgpuVertexFn<
   VertexIn extends VertexInConstrained,
   VertexOut extends VertexOutConstrained,
->(
-  value: unknown,
-): value is TgpuVertexFn<VertexIn, VertexOut> {
-  return (value as TgpuVertexFn<VertexIn, VertexOut>)?.shell?.entryPoint ===
-    'vertex';
+>(value: unknown): value is TgpuVertexFn<VertexIn, VertexOut> {
+  return (value as TgpuVertexFn<VertexIn, VertexOut>)?.shell?.entryPoint === 'vertex';
 }
 
 // --------------
@@ -184,10 +141,8 @@ function createVertexFn(
   shell: TgpuVertexFnShellHeader<VertexInConstrained, VertexOutConstrained>,
   implementation: Implementation,
 ): TgpuVertexFn<VertexInConstrained, VertexOutConstrained> {
-  type This =
-    & TgpuVertexFn<VertexInConstrained, VertexOutConstrained>
-    & SelfResolvable
-    & {
+  type This = TgpuVertexFn<VertexInConstrained, VertexOutConstrained> &
+    SelfResolvable & {
       [$internal]: true;
       [$getNameForward]: FnCore;
     };
@@ -214,10 +169,9 @@ function createVertexFn(
     },
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-      const outputWithLocation = createIoSchema(
-        shell.out,
-        ctx.varyingLocations,
-      ).$name(`${getName(this) ?? ''}_Output`);
+      const outputWithLocation = createIoSchema(shell.out, ctx.varyingLocations).$name(
+        `${getName(this) ?? ''}_Output`,
+      );
 
       if (typeof implementation === 'string') {
         if (inputType) {
@@ -227,11 +181,8 @@ function createVertexFn(
       }
 
       return ctx.withSlots([[shaderStageSlot, 'vertex']], () =>
-        core.resolve(
-          ctx,
-          shell.argTypes,
-          outputWithLocation,
-        ));
+        core.resolve(ctx, shell.argTypes, outputWithLocation),
+      );
     },
 
     toString() {

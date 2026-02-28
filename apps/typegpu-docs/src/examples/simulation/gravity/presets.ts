@@ -36,15 +36,8 @@ function randInBall(maxRadius: number) {
 }
 
 // this function is only applicable when the currentMass is negligible when compared to otherMass
-function stableOrbitVelocity(
-  otherMass: number,
-  currentRadius: number,
-  averageRadius?: number,
-) {
-  return (
-    (otherMass * (2 / currentRadius - 1 / (averageRadius ?? currentRadius))) **
-      0.5
-  );
+function stableOrbitVelocity(otherMass: number, currentRadius: number, averageRadius?: number) {
+  return (otherMass * (2 / currentRadius - 1 / (averageRadius ?? currentRadius))) ** 0.5;
 }
 
 export const examplePresets: Record<Preset, PresetData> = {
@@ -189,10 +182,7 @@ export const examplePresets: Record<Preset, PresetData> = {
           const z = r * Math.sin(theta);
           return {
             position: d.vec3f(x, rand(-0.5, 0.5), z),
-            velocity: std.mul(
-              stableOrbitVelocity(1000, r),
-              std.normalize(d.vec3f(-z, 0, x)),
-            ),
+            velocity: std.mul(stableOrbitVelocity(1000, r), std.normalize(d.vec3f(-z, 0, x))),
             mass: rand(0.008, 0.012),
           };
         }),
@@ -222,10 +212,7 @@ export const examplePresets: Record<Preset, PresetData> = {
           const z = r * Math.sin(theta);
           return {
             position: d.vec3f(x, rand(-0.5, 0.5), z),
-            velocity: std.mul(
-              stableOrbitVelocity(100, r),
-              std.normalize(d.vec3f(z, 0, -x)),
-            ),
+            velocity: std.mul(stableOrbitVelocity(100, r), std.normalize(d.vec3f(z, 0, -x))),
             mass: rand(0.0008, 0.0012),
             collisionBehavior: 'bounce',
           };

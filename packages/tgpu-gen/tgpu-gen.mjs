@@ -74,21 +74,16 @@ const execute = async () => {
   const existingFileStrategy = args['--overwrite']
     ? 'overwrite'
     : args['--keep']
-    ? 'keep'
-    : undefined;
+      ? 'keep'
+      : undefined;
 
   const extension = path.extname(output);
 
-  if (
-    extension === '' ||
-    !ALLOWED_EXTENSIONS.includes(extension.toLowerCase())
-  ) {
+  if (extension === '' || !ALLOWED_EXTENSIONS.includes(extension.toLowerCase())) {
     console.error(
-      `${color.Red}Error: output pattern: ${output} has unsupported extension. Allowed: ${
-        ALLOWED_EXTENSIONS.join(
-          ', ',
-        )
-      }`,
+      `${color.Red}Error: output pattern: ${output} has unsupported extension. Allowed: ${ALLOWED_EXTENSIONS.join(
+        ', ',
+      )}`,
     );
     exit(1);
   }
@@ -97,80 +92,63 @@ const execute = async () => {
   const allMatchedFiles = await glob(input);
 
   if (allMatchedFiles.length === 0) {
-    console.warn(
-      `${color.Yellow}Warning: No files found for pattern: "${input}"${color.Reset}`,
-    );
+    console.warn(`${color.Yellow}Warning: No files found for pattern: "${input}"${color.Reset}`);
     exit(0);
   }
 
   if (allMatchedFiles.length > 1 && !output.includes('*')) {
     console.error(
-      `${color.Red}Error: More than one file found (${
-        allMatchedFiles.join(
-          ', ',
-        )
-      }), while a non-pattern output name was provided ${color.Reset}`,
+      `${color.Red}Error: More than one file found (${allMatchedFiles.join(
+        ', ',
+      )}), while a non-pattern output name was provided ${color.Reset}`,
     );
     exit(1);
   }
 
   const fileNames = allMatchedFiles.map((file) => path.parse(file).name);
-  const duplicates = fileNames.filter(
-    (name, index) => fileNames.indexOf(name) !== index,
-  );
-  if (
-    duplicates.length > 0 &&
-    output.includes(path.sep) &&
-    !/\*\*\/.*\*.*/.test(output)
-  ) {
+  const duplicates = fileNames.filter((name, index) => fileNames.indexOf(name) !== index);
+  if (duplicates.length > 0 && output.includes(path.sep) && !/\*\*\/.*\*.*/.test(output)) {
     console.error(
-      `${color.Red}Error: Duplicates found with name(s): [${
-        duplicates.join(
-          ', ',
-        )
-      }], while a single directory output pattern was provided. Make sure your pattern contains "**/*" to keep the original directory structure. ${color.Reset}`,
+      `${color.Red}Error: Duplicates found with name(s): [${duplicates.join(
+        ', ',
+      )}], while a single directory output pattern was provided. Make sure your pattern contains "**/*" to keep the original directory structure. ${color.Reset}`,
     );
     exit(1);
   }
 
   const outputPathCompiler = createOutputPathCompiler(input, output);
 
-  const existingFilesIO = existingFileStrategy === 'overwrite'
-    ? []
-    : await Promise.all(
-      allMatchedFiles
-        .map((input) => ({ input, output: outputPathCompiler(input) }))
-        .map(({ input, output }) =>
-          access(output)
-            .then(() => ({ input, output }))
-            .catch(() => null)
-        ),
-    ).then((existsResultsIO) =>
-      existsResultsIO.filter(
-        /** @returns {file is {input: string, output: string}} */ (file) =>
-          !!file,
-      )
-    );
+  const existingFilesIO =
+    existingFileStrategy === 'overwrite'
+      ? []
+      : await Promise.all(
+          allMatchedFiles
+            .map((input) => ({ input, output: outputPathCompiler(input) }))
+            .map(({ input, output }) =>
+              access(output)
+                .then(() => ({ input, output }))
+                .catch(() => null),
+            ),
+        ).then((existsResultsIO) =>
+          existsResultsIO.filter(
+            /** @returns {file is {input: string, output: string}} */ (file) => !!file,
+          ),
+        );
 
   if (existingFilesIO.length > 0 && existingFileStrategy === undefined) {
     console.error(
-      `Error: The following file(s) already exist: [${
-        existingFilesIO
-          .map(({ output }) => output)
-          .join(
-            ', ',
-          )
-      }]. Use --overwrite option to replace existing files or --keep to skip them.`,
+      `Error: The following file(s) already exist: [${existingFilesIO
+        .map(({ output }) => output)
+        .join(', ')}]. Use --overwrite option to replace existing files or --keep to skip them.`,
     );
 
     exit(1);
   }
 
-  const inputFiles = existingFileStrategy === 'keep'
-    ? allMatchedFiles.filter(
-      (file) => !existingFilesIO.map(({ input }) => input).includes(file),
-    )
-    : allMatchedFiles;
+  const inputFiles =
+    existingFileStrategy === 'keep'
+      ? allMatchedFiles.filter((file) => !existingFilesIO.map(({ input }) => input).includes(file))
+      : allMatchedFiles;
 
   if (inputFiles.length === 0) {
     console.warn(
@@ -201,7 +179,7 @@ const execute = async () => {
     );
 
     const errors = results.flatMap((result) =>
-      result.status === 'rejected' ? [result.reason] : []
+      result.status === 'rejected' ? [result.reason] : [],
     );
 
     if (errors.length > 0) {
@@ -237,14 +215,10 @@ function printVersion() {
     const packageJson = JSON.parse(
       readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
     );
-    console.log(
-      `${color.Green}TypeGPU Generator CLI version ${packageJson.version}${color.Reset}`,
-    );
+    console.log(`${color.Green}TypeGPU Generator CLI version ${packageJson.version}${color.Reset}`);
   } catch (error) {
     console.error(
-      `${color.Red}Error reading version: ${
-        /** @type Error */ (error).message
-      }${color.Reset}`,
+      `${color.Red}Error reading version: ${/** @type Error */ (error).message}${color.Reset}`,
     );
     exit(1);
   }
@@ -261,9 +235,7 @@ if (args['--version']) {
 }
 
 if (!args._[0]) {
-  console.error(
-    `${color.Red}Error: Missing required positional argument (<input>)${color.Reset}`,
-  );
+  console.error(`${color.Red}Error: Missing required positional argument (<input>)${color.Reset}`);
 
   printHelp();
   exit(1);

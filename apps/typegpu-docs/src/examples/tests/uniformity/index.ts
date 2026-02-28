@@ -12,17 +12,14 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const gridSizeUniform = root.createUniform(d.f32, c.initialGridSize);
-const canvasRatioUniform = root.createUniform(
-  d.f32,
-  canvas.width / canvas.height,
-);
+const canvasRatioUniform = root.createUniform(d.f32, canvas.width / canvas.height);
 
 const fragmentShader = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
   'use gpu';
-  const uv = (input.uv + 1) / 2 * d.vec2f(canvasRatioUniform.$, 1);
+  const uv = ((input.uv + 1) / 2) * d.vec2f(canvasRatioUniform.$, 1);
   const gridedUV = std.floor(uv * gridSizeUniform.$);
 
   randf.seed2(gridedUV);
@@ -36,24 +33,20 @@ let prng: PRNG = c.initialPRNG;
 const redraw = () => {
   let pipeline = pipelineCache.get(prng);
   if (!pipeline) {
-    pipeline = root
-      .with(randomGeneratorSlot, getPRNG(prng))
-      .createRenderPipeline({
-        vertex: common.fullScreenTriangle,
-        fragment: fragmentShader,
-        targets: { format: presentationFormat },
-      });
+    pipeline = root.with(randomGeneratorSlot, getPRNG(prng)).createRenderPipeline({
+      vertex: common.fullScreenTriangle,
+      fragment: fragmentShader,
+      targets: { format: presentationFormat },
+    });
     pipelineCache.set(prng, pipeline);
   }
 
-  pipeline
-    .withColorAttachment({ view: context })
-    .draw(3);
+  pipeline.withColorAttachment({ view: context }).draw(3);
 };
 
 // #region Example controls & Cleanup
 export const controls = defineControls({
-  'PRNG': {
+  PRNG: {
     initial: c.initialPRNG,
     options: c.prngs,
     onSelectChange: (value) => {
@@ -74,15 +67,16 @@ export const controls = defineControls({
       const namespace = tgpu['~unstable'].namespace();
       c.prngs
         .map((prng) =>
-          tgpu.resolve([
-            root
-              .with(randomGeneratorSlot, getPRNG(prng))
-              .createRenderPipeline({
+          tgpu.resolve(
+            [
+              root.with(randomGeneratorSlot, getPRNG(prng)).createRenderPipeline({
                 vertex: common.fullScreenTriangle,
                 fragment: fragmentShader,
                 targets: { format: presentationFormat },
               }),
-          ], { names: namespace })
+            ],
+            { names: namespace },
+          ),
         )
         .map((r) => root.device.createShaderModule({ code: r }));
     },

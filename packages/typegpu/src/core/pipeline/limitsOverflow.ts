@@ -1,9 +1,6 @@
 import type { TgpuBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
 
-export function warnIfOverflow(
-  layouts: TgpuBindGroupLayout[],
-  limits: GPUSupportedLimits,
-) {
+export function warnIfOverflow(layouts: TgpuBindGroupLayout[], limits: GPUSupportedLimits) {
   const entries = Object.values(layouts)
     .flatMap((layout) => Object.values(layout.entries))
     .filter((entry) => entry !== null);

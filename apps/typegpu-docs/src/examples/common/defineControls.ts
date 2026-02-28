@@ -41,24 +41,22 @@ type TextAreaControlParam = {
   onTextChange: (newValue: string) => void;
 };
 
-export function defineControls<const T extends Record<string, unknown>>(
-  controls: {
-    [Key in keyof T]:
-      | false // short-circuit controls
-      | SelectControlParam<
-        T[Key] extends readonly string[] | readonly number[] ? T[Key]
-          : T[Key] extends string[] ? string[]
-          : number[]
+export function defineControls<const T extends Record<string, unknown>>(controls: {
+  [Key in keyof T]:
+    | false // short-circuit controls
+    | SelectControlParam<
+        T[Key] extends readonly string[] | readonly number[]
+          ? T[Key]
+          : T[Key] extends string[]
+            ? string[]
+            : number[]
       >
-      | ToggleControlParam
-      | SliderControlParam
-      | VectorSliderControlParam<
-        T[Key] extends d.v2f | d.v3f | d.v4f ? T[Key] : never
-      >
-      | ColorPickerControlParam
-      | ButtonControlParam
-      | TextAreaControlParam;
-  },
-) {
+    | ToggleControlParam
+    | SliderControlParam
+    | VectorSliderControlParam<T[Key] extends d.v2f | d.v3f | d.v4f ? T[Key] : never>
+    | ColorPickerControlParam
+    | ButtonControlParam
+    | TextAreaControlParam;
+}) {
   return controls;
 }

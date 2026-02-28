@@ -48,9 +48,7 @@ if (!command) {
 }
 
 if (!(command in COMMANDS)) {
-  console.log(
-    `\n${Frog}: Unknown command: ${color.Yellow}${command}${color.Reset}\n`,
-  );
+  console.log(`\n${Frog}: Unknown command: ${color.Yellow}${command}${color.Reset}\n`);
   exit(1);
 }
 

@@ -24,9 +24,7 @@ const spaceNebula = (rd: d.v3f): d.v3f => {
     .add(gold);
 
   color = color.add(
-    std
-      .mix(d.vec3f(0.8, 0.4, 1), d.vec3f(0.4, 0.8, 1), colorShift)
-      .mul((n1 * n2 * n3) ** 4 * 2),
+    std.mix(d.vec3f(0.8, 0.4, 1), d.vec3f(0.4, 0.8, 1), colorShift).mul((n1 * n2 * n3) ** 4 * 2),
   );
 
   return color;
@@ -39,10 +37,7 @@ export const spaceBackground = (rd: d.v3f): d.v3f => {
   // Small stars
   const starPos = rd.mul(50);
   randf.seed3(std.floor(starPos));
-  const starCenter = d
-    .vec3f(randf.sample(), randf.sample(), randf.sample())
-    .mul(0.6)
-    .add(0.2);
+  const starCenter = d.vec3f(randf.sample(), randf.sample(), randf.sample()).mul(0.6).add(0.2);
   const starDist = std.length(std.fract(starPos).sub(starCenter));
   const starHash = randf.sample();
   color = color.add(
@@ -54,18 +49,12 @@ export const spaceBackground = (rd: d.v3f): d.v3f => {
   // Big stars
   const bigStarPos = rd.mul(20);
   randf.seed3(std.floor(bigStarPos));
-  const bigStarCenter = d
-    .vec3f(randf.sample(), randf.sample(), randf.sample())
-    .mul(0.5)
-    .add(0.25);
+  const bigStarCenter = d.vec3f(randf.sample(), randf.sample(), randf.sample()).mul(0.5).add(0.25);
   const bigStarDist = std.length(std.fract(bigStarPos).sub(bigStarCenter));
   color = color.add(
     d
       .vec3f(1, 0.95, 0.9)
-      .mul(
-        std.max(1 - bigStarDist * 3, 0) ** 3 * std.step(0.95, randf.sample()) *
-          8,
-      ),
+      .mul(std.max(1 - bigStarDist * 3, 0) ** 3 * std.step(0.95, randf.sample()) * 8),
   );
 
   return color;
@@ -136,17 +125,11 @@ export function createBackgroundCubemap(root: TgpuRoot): BackgroundCubemap {
       const v = ((d.f32(y) + 0.5) / CUBEMAP_SIZE) * 2 - 1;
       const basis = faceBasisUniform.$;
 
-      const direction = std.normalize(
-        basis.forward.add(basis.right.mul(u)).add(basis.up.mul(v)),
-      );
+      const direction = std.normalize(basis.forward.add(basis.right.mul(u)).add(basis.up.mul(v)));
 
       const color = spaceBackground(direction);
 
-      std.textureStore(
-        faceOutputLayout.$.outputTexture,
-        d.vec2u(x, y),
-        d.vec4f(color, 1),
-      );
+      std.textureStore(faceOutputLayout.$.outputTexture, d.vec2u(x, y), d.vec4f(color, 1));
     });
 
   for (let face = 0; face < 6; face++) {
@@ -163,9 +146,7 @@ export function createBackgroundCubemap(root: TgpuRoot): BackgroundCubemap {
       outputTexture: faceView,
     });
 
-    renderFacePipeline
-      .with(faceBindGroup)
-      .dispatchThreads(CUBEMAP_SIZE, CUBEMAP_SIZE);
+    renderFacePipeline.with(faceBindGroup).dispatchThreads(CUBEMAP_SIZE, CUBEMAP_SIZE);
   }
 
   perlinCache.destroy();

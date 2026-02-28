@@ -71,15 +71,17 @@ const bindGroupLayout = tgpu.bindGroupLayout({
 // );
 
 const circleCount = 1000;
-const circles = root.createBuffer(
-  d.arrayOf(Circle, circleCount),
-  Array.from({ length: circleCount }).map(() =>
-    Circle({
-      position: d.vec2f(Math.random() * 2 - 1, Math.random() * 2 - 1),
-      radius: 0.05 * Math.random() + 0.01,
-    })
-  ),
-).$usage('storage');
+const circles = root
+  .createBuffer(
+    d.arrayOf(Circle, circleCount),
+    Array.from({ length: circleCount }).map(() =>
+      Circle({
+        position: d.vec2f(Math.random() * 2 - 1, Math.random() * 2 - 1),
+        radius: 0.05 * Math.random() + 0.01,
+      }),
+    ),
+  )
+  .$usage('storage');
 
 const uniformsBindGroup = root.createBindGroup(bindGroupLayout, {
   // uniforms,
@@ -114,16 +116,9 @@ const mainFragment = tgpu.fragmentFn({
   },
   out: d.vec4f,
 })(({ uv, instanceIndex }) => {
-  const color = d.vec3f(
-    1,
-    s.cos(d.f32(instanceIndex)),
-    s.sin(5 * d.f32(instanceIndex)),
-  );
+  const color = d.vec3f(1, s.cos(d.f32(instanceIndex)), s.sin(5 * d.f32(instanceIndex)));
   const r = s.length(uv);
-  return d.vec4f(
-    s.mix(color, d.vec3f(), s.clamp((r - 0.9) * 20, 0, 0.5)),
-    1,
-  );
+  return d.vec4f(s.mix(color, d.vec3f(), s.clamp((r - 0.9) * 20, 0, 0.5)), 1);
 });
 
 const pipeline = root.createRenderPipeline({
@@ -139,9 +134,9 @@ setTimeout(() => {
     .withColorAttachment({
       ...(multisample
         ? {
-          view: msaaTextureView,
-          resolveTarget: context,
-        }
+            view: msaaTextureView,
+            resolveTarget: context,
+          }
         : { view: context }),
       clearValue: [0, 0, 0, 0],
       loadOp: 'clear',

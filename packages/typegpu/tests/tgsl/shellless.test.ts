@@ -22,7 +22,10 @@ describe('shellless', () => {
       return dot2(d.vec2f(1, 2)) + dot2(d.vec2f(3, 4));
     };
 
-    const main = tgpu.fn([], d.f32)(() => {
+    const main = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       return foo();
     });
 
@@ -144,7 +147,10 @@ describe('shellless', () => {
       return fn1();
     };
 
-    const main = tgpu.fn([], d.f32)(() => {
+    const main = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       return fn2();
     });
 
@@ -191,7 +197,9 @@ describe('shellless', () => {
     `);
   });
 
-  it('generates private pointer params when passing a private variable ref to a function', ({ root }) => {
+  it('generates private pointer params when passing a private variable ref to a function', ({
+    root,
+  }) => {
     const foo = tgpu.privateVar(d.vec3f);
 
     const sumComponents = (vec: d.ref<d.v3f>) => {
@@ -217,7 +225,9 @@ describe('shellless', () => {
     `);
   });
 
-  it('generates uniform pointer params when passing a fixed uniform ref to a function', ({ root }) => {
+  it('generates uniform pointer params when passing a fixed uniform ref to a function', ({
+    root,
+  }) => {
     const posUniform = root.createUniform(d.vec3f);
 
     const sumComponents = (vec: d.ref<d.v3f>) => {
@@ -320,10 +330,12 @@ describe('shellless', () => {
   });
 
   it('allows passing texture views in arguments', ({ root }) => {
-    const myTexture = root.createTexture({
-      format: 'rgba8unorm',
-      size: [16, 16],
-    }).$usage('sampled');
+    const myTexture = root
+      .createTexture({
+        format: 'rgba8unorm',
+        size: [16, 16],
+      })
+      .$usage('sampled');
     const myView = myTexture.createView();
     const fn = (view: d.texture2d<d.F32>) => {
       'use gpu';
@@ -368,10 +380,12 @@ describe('shellless', () => {
   });
 
   it('throws a descriptive error when a texture argument is used', ({ root }) => {
-    const myTexture = root.createTexture({
-      format: 'rgba8unorm',
-      size: [16, 16],
-    }).$usage('sampled');
+    const myTexture = root
+      .createTexture({
+        format: 'rgba8unorm',
+        size: [16, 16],
+      })
+      .$usage('sampled');
     const fn = (texture: typeof myTexture) => {
       'use gpu';
       return 0;
@@ -431,10 +445,12 @@ describe('shellless', () => {
   });
 
   it('throws a descriptive error when a texture view argument is not dereferenced', ({ root }) => {
-    const myTexture = root.createTexture({
-      format: 'rgba8unorm',
-      size: [16, 16],
-    }).$usage('sampled');
+    const myTexture = root
+      .createTexture({
+        format: 'rgba8unorm',
+        size: [16, 16],
+      })
+      .$usage('sampled');
     const myView = myTexture.createView();
     const fn = (view: TgpuTextureView<d.WgslTexture2d<d.F32>>) => {
       'use gpu';

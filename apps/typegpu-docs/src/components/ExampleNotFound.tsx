@@ -7,10 +7,8 @@ export function ExampleNotFound() {
   const setCurrentExample = useSetAtom(currentExampleAtom);
 
   return (
-    <div className='flex h-full flex-1 flex-col items-center justify-center gap-4'>
-      <h1 className='font-bold text-3xl'>
-        Example Not Found
-      </h1>
+    <div className="flex h-full flex-1 flex-col items-center justify-center gap-4">
+      <h1 className="font-bold text-3xl">Example Not Found</h1>
       <Button
         accent
         onClick={useEvent(() => {

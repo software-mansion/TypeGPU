@@ -44,9 +44,7 @@ async function main() {
       bundlers.push([bundlerName, bundler]);
     } else {
       console.error(`Bundler '${bundlerName}' is unavailable.`);
-      console.error(
-        `Available bundlers: ${Object.keys(availableBundlers).join(', ')}`,
-      );
+      console.error(`Available bundlers: ${Object.keys(availableBundlers).join(', ')}`);
       process.exit(1);
     }
   }
@@ -57,9 +55,7 @@ async function main() {
 
   const results = await Promise.allSettled(
     tests.flatMap((test) =>
-      bundlers.map(([bundlerName, bundler]) =>
-        bundleTest(test, bundlerName, bundler)
-      )
+      bundlers.map(([bundlerName, bundler]) => bundleTest(test, bundlerName, bundler)),
     ),
   );
 
@@ -73,14 +69,11 @@ async function main() {
     process.exit(1);
   }
 
-  const successfulResults = (
-    results as PromiseFulfilledResult<ResultRecord>[]
-  ).map((result) => result.value);
-  // Save results as JSON
-  await fs.writeFile(
-    'results.json',
-    JSON.stringify(successfulResults, null, 2),
+  const successfulResults = (results as PromiseFulfilledResult<ResultRecord>[]).map(
+    (result) => result.value,
   );
+  // Save results as JSON
+  await fs.writeFile('results.json', JSON.stringify(successfulResults, null, 2));
 
   console.log('\nMeasurement complete. Results saved to results.json');
 }

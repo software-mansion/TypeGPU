@@ -38,8 +38,7 @@ for (const canvas of document.querySelectorAll('canvas')) {
   } else {
     const aspectRatio = canvas.dataset.aspectRatio ?? '1';
     frame.style.aspectRatio = aspectRatio;
-    frame.style.height =
-      `min(calc(min(100cqw, 100cqh)/(${aspectRatio})), min(100cqw, 100cqh))`;
+    frame.style.height = `min(calc(min(100cqw, 100cqh)/(${aspectRatio})), min(100cqw, 100cqh))`;
   }
 
   canvas.style.position = 'absolute';
@@ -75,11 +74,7 @@ for (const controls of Object.values(example)) {
     continue;
   }
 
-  for (
-    const [label, params] of Object.entries(
-      controls as Record<string, ExampleControlParam>,
-    )
-  ) {
+  for (const [label, params] of Object.entries(controls as Record<string, ExampleControlParam>)) {
     if ('onButtonClick' in params) {
       const button = document.createElement('button');
       button.innerText = label;

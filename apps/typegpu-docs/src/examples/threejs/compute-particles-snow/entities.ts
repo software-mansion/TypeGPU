@@ -26,11 +26,7 @@ export const dirLight = (() => {
 
 export const fog = new THREE.Fog(0x0f3c37, 4, 40);
 
-export const hemisphereLight = new THREE.HemisphereLight(
-  0x0f3c37,
-  0x080d10,
-  100,
-);
+export const hemisphereLight = new THREE.HemisphereLight(0x0f3c37, 0x080d10, 100);
 
 export const floor = (() => {
   const floorGeometry = new THREE.PlaneGeometry(100, 100);
@@ -70,15 +66,11 @@ export const xmasTree = (() => {
   for (let i = 0; i < count; i++) {
     const radius = 1 + i;
 
-    const coneGeometry = new THREE.ConeGeometry(
-      radius * 0.95,
-      radius * 1.25,
-      32,
-    );
+    const coneGeometry = new THREE.ConeGeometry(radius * 0.95, radius * 1.25, 32);
 
     const cone = new THREE.Mesh(coneGeometry, coneMaterial);
     cone.castShadow = true;
-    cone.position.y = ((count - i) * 1.5) + (count * 0.6);
+    cone.position.y = (count - i) * 1.5 + count * 0.6;
     object.add(cone);
   }
 

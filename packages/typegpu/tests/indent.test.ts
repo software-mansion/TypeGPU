@@ -14,14 +14,8 @@ describe('indents', () => {
       [Particle, d.vec3f, d.f32],
       Particle,
     )((particle, gravity, deltaTime) => {
-      const newVelocity = std.mul(
-        particle.velocity,
-        std.mul(gravity, deltaTime),
-      );
-      const newPosition = std.add(
-        particle.position,
-        std.mul(newVelocity, deltaTime),
-      );
+      const newVelocity = std.mul(particle.velocity, std.mul(gravity, deltaTime));
+      const newPosition = std.add(particle.position, std.mul(newVelocity, deltaTime));
       return Particle({
         position: newPosition,
         velocity: newVelocity,
@@ -62,14 +56,8 @@ describe('indents', () => {
       [Particle, d.vec3f, d.f32],
       Particle,
     )((particle, gravity, deltaTime) => {
-      const newVelocity = std.mul(
-        particle.velocity,
-        std.mul(gravity, deltaTime),
-      );
-      const newPosition = std.add(
-        particle.position,
-        std.mul(newVelocity, deltaTime),
-      );
+      const newVelocity = std.mul(particle.velocity, std.mul(gravity, deltaTime));
+      const newPosition = std.add(particle.position, std.mul(newVelocity, deltaTime));
       return Particle({
         position: newPosition,
         velocity: newVelocity,
@@ -78,9 +66,7 @@ describe('indents', () => {
 
     const main = tgpu.fn([])(() => {
       for (let i = 0; i < layout.$.systemData.particles.length; i++) {
-        const particle = layout.$.systemData.particles[i] as d.Infer<
-          typeof Particle
-        >;
+        const particle = layout.$.systemData.particles[i] as d.Infer<typeof Particle>;
         layout.$.systemData.particles[i] = updateParicle(
           particle,
           layout.$.systemData.gravity,
@@ -162,9 +148,7 @@ describe('indents', () => {
       const density = getDensityAt(particle.physics.position);
       const force = std.mul(gravity, density);
       const newVelocity = particle.physics.velocity.add(force.mul(deltaTime));
-      const newPosition = particle.physics.position.add(
-        newVelocity.mul(deltaTime),
-      );
+      const newPosition = particle.physics.position.add(newVelocity.mul(deltaTime));
       return Particle({
         id: particle.id,
         physics: PhysicsData({
@@ -178,9 +162,7 @@ describe('indents', () => {
     const main = tgpu.fn([])(() => {
       incrementCounter();
       for (let i = 0; i < layout.$.systemData.particles.length; i++) {
-        const particle = layout.$.systemData.particles[i] as d.Infer<
-          typeof Particle
-        >;
+        const particle = layout.$.systemData.particles[i] as d.Infer<typeof Particle>;
         layout.$.systemData.particles[i] = updateParticle(
           particle,
           layout.$.systemData.gravity,
@@ -290,9 +272,7 @@ describe('indents', () => {
       const newParticle = Particle(particle);
       let iterations = 0;
       while (iterations < 10) {
-        newParticle.position = newParticle.position.add(
-          newParticle.velocity,
-        );
+        newParticle.position = newParticle.position.add(newParticle.velocity);
         iterations += 1;
         while (newParticle.position.x < 0) {
           newParticle.position = newParticle.position.add(gravity);
@@ -349,17 +329,8 @@ describe('indents', () => {
     })((input) => {
       const uniBoid = layout.$.boids;
       for (let i = d.u32(); i < std.floor(std.sin(Math.PI / 2)); i++) {
-        const sampled = std.textureSample(
-          layout.$.sampled,
-          layout.$.sampler,
-          d.vec2f(0.5, 0.5),
-          i,
-        );
-        const someVal = std.textureLoad(
-          layout.$.smoothRender,
-          d.vec2i(),
-          0,
-        );
+        const sampled = std.textureSample(layout.$.sampled, layout.$.sampler, d.vec2f(0.5, 0.5), i);
+        const someVal = std.textureLoad(layout.$.smoothRender, d.vec2i(), 0);
         if (someVal.x + sampled.x > 0.5) {
           const newPos = std.add(uniBoid.position, d.vec4f(1, 2, 3, 4));
         } else {

@@ -1,18 +1,9 @@
-import type {
-  WgslComparisonSamplerProps,
-  WgslSamplerProps,
-} from '../../data/sampler.ts';
+import type { WgslComparisonSamplerProps, WgslSamplerProps } from '../../data/sampler.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer } from '../../shared/repr.ts';
-import {
-  $gpuValueOf,
-  $internal,
-  $ownSnippet,
-  $repr,
-  $resolve,
-} from '../../shared/symbols.ts';
+import { $gpuValueOf, $internal, $ownSnippet, $repr, $resolve } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
@@ -55,18 +46,13 @@ export interface TgpuComparisonSampler {
 
 export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {}
 
-export interface TgpuFixedComparisonSampler
-  extends TgpuComparisonSampler, TgpuNamable {}
+export interface TgpuFixedComparisonSampler extends TgpuComparisonSampler, TgpuNamable {}
 
 export function INTERNAL_createSampler(
   props: WgslSamplerProps,
   branch: Unwrapper,
 ): TgpuFixedSampler {
-  return new TgpuFixedSamplerImpl(
-    wgslSampler(),
-    props,
-    branch,
-  ) as TgpuFixedSampler;
+  return new TgpuFixedSamplerImpl(wgslSampler(), props, branch) as TgpuFixedSampler;
 }
 
 export function INTERNAL_createComparisonSampler(
@@ -85,9 +71,7 @@ export function isSampler(resource: unknown): resource is TgpuSampler {
   return maybe?.resourceType === 'sampler' && !!maybe[$internal];
 }
 
-export function isComparisonSampler(
-  resource: unknown,
-): resource is TgpuComparisonSampler {
+export function isComparisonSampler(resource: unknown): resource is TgpuComparisonSampler {
   const maybe = resource as TgpuComparisonSampler | undefined;
   return maybe?.resourceType === 'sampler-comparison' && !!maybe[$internal];
 }
@@ -101,9 +85,7 @@ export class TgpuLaidOutSamplerImpl<
 > implements SelfResolvable {
   declare readonly [$repr]: Infer<T>;
   public readonly [$internal]: SamplerInternals = { unwrap: undefined };
-  public readonly resourceType: T extends WgslComparisonSampler
-    ? 'sampler-comparison'
-    : 'sampler';
+  public readonly resourceType: T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
   readonly #membership: LayoutMembership;
 
   constructor(
@@ -111,11 +93,9 @@ export class TgpuLaidOutSamplerImpl<
     membership: LayoutMembership,
   ) {
     this.#membership = membership;
-    this.resourceType =
-      (schema.type === 'sampler_comparison'
-        ? 'sampler-comparison'
-        : 'sampler') as T extends WgslComparisonSampler ? 'sampler-comparison'
-          : 'sampler';
+    this.resourceType = (
+      schema.type === 'sampler_comparison' ? 'sampler-comparison' : 'sampler'
+    ) as T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
     setName(this, membership.key);
   }
 
@@ -167,12 +147,11 @@ export class TgpuLaidOutSamplerImpl<
 }
 
 class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
-  implements SelfResolvable, TgpuNamable {
+  implements SelfResolvable, TgpuNamable
+{
   declare readonly [$repr]: Infer<T>;
   public readonly [$internal]: SamplerInternals;
-  public readonly resourceType: T extends WgslComparisonSampler
-    ? 'sampler-comparison'
-    : 'sampler';
+  public readonly resourceType: T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
 
   #filtering: boolean;
   #sampler: GPUSampler | null = null;
@@ -186,11 +165,9 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
   ) {
     this.#props = props;
     this.#branch = branch;
-    this.resourceType =
-      (schema.type === 'sampler_comparison'
-        ? 'sampler-comparison'
-        : 'sampler') as T extends WgslComparisonSampler ? 'sampler-comparison'
-          : 'sampler';
+    this.resourceType = (
+      schema.type === 'sampler_comparison' ? 'sampler-comparison' : 'sampler'
+    ) as T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
     this[$internal] = {
       unwrap: () => {
         if (!this.#sampler) {
@@ -205,7 +182,8 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
     };
 
     // Based on https://www.w3.org/TR/webgpu/#sampler-creation
-    this.#filtering = props.minFilter === 'linear' ||
+    this.#filtering =
+      props.minFilter === 'linear' ||
       props.magFilter === 'linear' ||
       props.mipmapFilter === 'linear';
   }
@@ -221,9 +199,7 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
     );
 
     ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var ${id}: ${
-        ctx.resolve(this.schema).value
-      };`,
+      `@group(${group}) @binding(${binding}) var ${id}: ${ctx.resolve(this.schema).value};`,
     );
 
     return snip(id, this.schema, /* origin */ 'handle');

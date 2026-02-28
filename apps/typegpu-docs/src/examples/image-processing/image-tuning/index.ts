@@ -81,18 +81,11 @@ const fragment = tgpu.fragmentFn({
 })(({ uv }) => {
   const color = std.textureSample(imageView.$, imageSampler.$, uv).rgb;
   const inputLuminance = std.dot(color, d.vec3f(0.299, 0.587, 0.114));
-  const normColor = std.saturate(
-    std.div(color.sub(lut.$.min), lut.$.max.sub(lut.$.min)),
-  );
+  const normColor = std.saturate(std.div(color.sub(lut.$.min), lut.$.max.sub(lut.$.min)));
 
   const lutColor = std.select(
     color,
-    std.textureSampleLevel(
-      layout.$.currentLUTTexture,
-      lutSampler.$,
-      normColor,
-      0,
-    ).rgb,
+    std.textureSampleLevel(layout.$.currentLUTTexture, lutSampler.$, normColor, 0).rgb,
     d.bool(lut.$.enabled),
   );
   const lutColorNormalized = std.saturate(lutColor);
@@ -103,23 +96,13 @@ const fragment = tgpu.fragmentFn({
     d.vec3f(0),
     d.vec3f(2),
   );
-  const exposureLuminance = std.clamp(
-    inputLuminance * (2 ** exposureBiased),
-    0,
-    2,
-  );
+  const exposureLuminance = std.clamp(inputLuminance * 2 ** exposureBiased, 0, 2);
 
-  const contrastColor = (exposureColor.sub(0.5))
-    .mul(adjustments.$.contrast)
-    .add(0.5);
+  const contrastColor = exposureColor.sub(0.5).mul(adjustments.$.contrast).add(0.5);
 
-  const contrastLuminance = (exposureLuminance - 0.5) * adjustments.$.contrast +
-    0.5;
+  const contrastLuminance = (exposureLuminance - 0.5) * adjustments.$.contrast + 0.5;
 
-  const contrastColorLuminance = std.dot(
-    contrastColor,
-    d.vec3f(0.299, 0.587, 0.114),
-  );
+  const contrastColorLuminance = std.dot(contrastColor, d.vec3f(0.299, 0.587, 0.114));
 
   const highlightShift = adjustments.$.highlights - 1;
   const highlightBiased = std.select(
@@ -142,27 +125,15 @@ const fragment = tgpu.fragmentFn({
   );
 
   const shadowWeight = 1 - contrastColorLuminance;
-  const shadowAdjust = std.pow(
-    highlightColor,
-    d.vec3f(1 / adjustments.$.shadows),
-  );
-  const shadowLuminanceAdjust = highlightLuminance **
-    (1 / adjustments.$.shadows);
+  const shadowAdjust = std.pow(highlightColor, d.vec3f(1 / adjustments.$.shadows));
+  const shadowLuminanceAdjust = highlightLuminance ** (1 / adjustments.$.shadows);
 
   const toneColor = std.mix(highlightColor, shadowAdjust, shadowWeight);
-  const toneLuminance = std.mix(
-    highlightLuminance,
-    shadowLuminanceAdjust,
-    shadowWeight,
-  );
+  const toneLuminance = std.mix(highlightLuminance, shadowLuminanceAdjust, shadowWeight);
 
   const finalToneColor = std.saturate(toneColor);
   const grayscaleColor = d.vec3f(toneLuminance);
-  const finalColor = std.mix(
-    grayscaleColor,
-    finalToneColor,
-    adjustments.$.saturation,
-  );
+  const finalColor = std.mix(grayscaleColor, finalToneColor, adjustments.$.saturation);
 
   return d.vec4f(finalColor, 1);
 });
@@ -201,7 +172,10 @@ async function fetchLUT(file: string): Promise<LUTData> {
   let title = '';
   let type = '';
   let size = 0;
-  const domain: [number, number, number][] = [[0.0, 0.0, 0.0], [1.0, 1.0, 1.0]];
+  const domain: [number, number, number][] = [
+    [0.0, 0.0, 0.0],
+    [1.0, 1.0, 1.0],
+  ];
   let data: Float16Array | undefined;
   let index = 0;
 

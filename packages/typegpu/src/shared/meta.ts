@@ -7,17 +7,17 @@ import { $getNameForward, isMarkedInternal } from './symbols.ts';
 export interface MetaData {
   v?: number;
   name?: string | undefined;
-  ast?: {
-    params: FuncParameter[];
-    body: Block;
-    externalNames: string[];
-  } | undefined;
+  ast?:
+    | {
+        params: FuncParameter[];
+        body: Block;
+        externalNames: string[];
+      }
+    | undefined;
   externals?:
     // Passing a record happens prior to version 0.9.0
     // TODO: Support for this can be removed down the line
-    | Record<string, unknown>
-    | (() => Record<string, unknown>)
-    | undefined;
+    Record<string, unknown> | (() => Record<string, unknown>) | undefined;
 }
 
 /**
@@ -47,27 +47,27 @@ if (globalWithMeta.__TYPEGPU_VERSION__ !== undefined) {
 
 globalWithMeta.__TYPEGPU_VERSION__ = version;
 globalWithMeta.__TYPEGPU_AUTONAME__ = <T>(exp: T, label: string): T =>
-  isNamable(exp) && isMarkedInternal(exp) && !getName(exp)
-    ? exp.$name(label)
-    : exp;
+  isNamable(exp) && isMarkedInternal(exp) && !getName(exp) ? exp.$name(label) : exp;
 
 /**
  * Performance measurements are only enabled in dev & test environments for now
  */
-export const PERF = (DEV || TEST) && ({
-      get enabled() {
-        return !!globalWithMeta.__TYPEGPU_MEASURE_PERF__;
-      },
-      record(name: string, data: unknown) {
-        const records = (globalWithMeta.__TYPEGPU_PERF_RECORDS__ ??= new Map());
-        let entries = records.get(name);
-        if (!entries) {
-          entries = [];
-          records.set(name, entries);
-        }
-        entries.push(data);
-      },
-    }) || undefined;
+export const PERF =
+  ((DEV || TEST) && {
+    get enabled() {
+      return !!globalWithMeta.__TYPEGPU_MEASURE_PERF__;
+    },
+    record(name: string, data: unknown) {
+      const records = (globalWithMeta.__TYPEGPU_PERF_RECORDS__ ??= new Map());
+      let entries = records.get(name);
+      if (!entries) {
+        entries = [];
+        records.set(name, entries);
+      }
+      entries.push(data);
+    },
+  }) ||
+  undefined;
 
 function isForwarded(value: unknown): value is { [$getNameForward]: unknown } {
   return !!(value as { [$getNameForward]?: unknown })?.[$getNameForward];
@@ -104,15 +104,11 @@ export function isNamable(value: unknown): value is TgpuNamable {
 /**
  * AST's are given to functions with a 'use gpu' directive, which this function checks for.
  */
-export function hasTinyestMetadata(
-  value: unknown,
-): value is (...args: never[]) => unknown {
+export function hasTinyestMetadata(value: unknown): value is (...args: never[]) => unknown {
   return !!getMetaData(value)?.ast;
 }
 
-export function getMetaData(
-  definition: unknown,
-): MetaData | undefined {
+export function getMetaData(definition: unknown): MetaData | undefined {
   return globalWithMeta.__TYPEGPU_META__.get(
     // it's fine, if it's not an object, the get will return undefined
     definition as object,

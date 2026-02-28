@@ -14,9 +14,7 @@ describe('wgslGenerator with console.log', () => {
   });
 
   it('Parses console.log in a stray function to a comment and warns', () => {
-    using consoleWarnSpy = vi
-      .spyOn(console, 'warn')
-      .mockImplementation(() => {});
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const fn = tgpu.fn([])(() => {
       console.log(987);
@@ -40,13 +38,11 @@ describe('wgslGenerator with console.log', () => {
       console.log(n);
     };
 
-    const vs = tgpu.vertexFn({ out: { pos: d.builtin.position } })(
-      () => {
-        myLog(5);
-        console.log(6);
-        return { pos: d.vec4f() };
-      },
-    );
+    const vs = tgpu.vertexFn({ out: { pos: d.builtin.position } })(() => {
+      myLog(5);
+      console.log(6);
+      return { pos: d.vec4f() };
+    });
     expect(tgpu.resolve([vs])).toMatchInlineSnapshot(`
       "fn myLog(n: i32) {
         /* console.log() */;
@@ -65,11 +61,10 @@ describe('wgslGenerator with console.log', () => {
   });
 
   it('Ignores console.log in a fragment shader resolved without a pipeline', () => {
-    const fs = tgpu
-      .fragmentFn({ out: d.vec4f })(() => {
-        console.log(d.u32(321));
-        return d.vec4f();
-      });
+    const fs = tgpu.fragmentFn({ out: d.vec4f })(() => {
+      console.log(d.u32(321));
+      return d.vec4f();
+    });
 
     expect(tgpu.resolve([fs])).toMatchInlineSnapshot(`
       "@fragment fn fs() -> @location(0) vec4f {
@@ -80,20 +75,15 @@ describe('wgslGenerator with console.log', () => {
   });
 
   it('Parses a single console.log in a render pipeline', ({ root }) => {
-    const vs = tgpu
-      .vertexFn({ out: { pos: d.builtin.position } })(() => {
-        return { pos: d.vec4f() };
-      });
-    const fs = tgpu
-      .fragmentFn({ out: d.vec4f })(() => {
-        console.log(d.u32(321));
-        return d.vec4f();
-      });
+    const vs = tgpu.vertexFn({ out: { pos: d.builtin.position } })(() => {
+      return { pos: d.vec4f() };
+    });
+    const fs = tgpu.fragmentFn({ out: d.vec4f })(() => {
+      console.log(d.u32(321));
+      return d.vec4f();
+    });
 
-    const pipeline = root
-      .withVertex(vs)
-      .withFragment(fs, { format: 'rg8unorm' })
-      .createPipeline();
+    const pipeline = root.withVertex(vs).withFragment(fs, { format: 'rg8unorm' }).createPipeline();
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct vs_Output {
@@ -155,12 +145,10 @@ describe('wgslGenerator with console.log', () => {
       console.log(n);
     };
 
-    const vs = tgpu.vertexFn({ out: { pos: d.builtin.position } })(
-      () => {
-        myLog(6);
-        return { pos: d.vec4f() };
-      },
-    );
+    const vs = tgpu.vertexFn({ out: { pos: d.builtin.position } })(() => {
+      myLog(6);
+      return { pos: d.vec4f() };
+    });
     const fs = tgpu.fragmentFn({ out: d.vec4f })(() => {
       myLog(7);
       return d.vec4f();
@@ -604,9 +592,7 @@ describe('wgslGenerator with console.log', () => {
   });
 
   it('Fallbacks and warns when using an unsupported feature', ({ root }) => {
-    using consoleWarnSpy = vi
-      .spyOn(console, 'warn')
-      .mockImplementation(() => {});
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const fn = tgpu.computeFn({
       workgroupSize: [1],
@@ -627,9 +613,7 @@ describe('wgslGenerator with console.log', () => {
       }"
     `);
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "Unsupported log method 'trace'.",
-    );
+    expect(consoleWarnSpy).toHaveBeenCalledWith("Unsupported log method 'trace'.");
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
 });
@@ -690,12 +674,7 @@ describe('deserializeAndStringify', () => {
 
   it('works for multiple arguments', () => {
     const data = new Uint32Array([1, 2, 3, 456]);
-    const logInfo: (string | d.AnyWgslData)[] = [
-      'GID:',
-      d.vec3u,
-      'Result:',
-      d.u32,
-    ];
+    const logInfo: (string | d.AnyWgslData)[] = ['GID:', d.vec3u, 'Result:', d.u32];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
       `
@@ -724,9 +703,7 @@ describe('deserializeAndStringify', () => {
 
   it('works for nested arrays', () => {
     const data = new Uint32Array([1, 2, 3, 4]);
-    const logInfo: (string | d.AnyWgslData)[] = [
-      d.arrayOf(d.arrayOf(d.u32, 2), 2),
-    ];
+    const logInfo: (string | d.AnyWgslData)[] = [d.arrayOf(d.arrayOf(d.u32, 2), 2)];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
       `
@@ -739,9 +716,7 @@ describe('deserializeAndStringify', () => {
 
   it('works for structs', () => {
     const data = new Uint32Array([1, 2, 3, 4]);
-    const logInfo: (string | d.AnyWgslData)[] = [
-      d.struct({ vec: d.vec3u, num: d.u32 }),
-    ];
+    const logInfo: (string | d.AnyWgslData)[] = [d.struct({ vec: d.vec3u, num: d.u32 })];
 
     expect(deserializeAndStringify(data, logInfo)).toMatchInlineSnapshot(
       `

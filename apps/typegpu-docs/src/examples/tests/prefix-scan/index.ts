@@ -2,41 +2,29 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { type BinaryOp, prefixScan, scan } from '@typegpu/concurrent-scan';
 import * as std from 'typegpu/std';
-import {
-  addFn,
-  concat10,
-  isArrayEqual,
-  mulFn,
-  prefixScanJS,
-  scanJS,
-} from './functions.ts';
+import { addFn, concat10, isArrayEqual, mulFn, prefixScanJS, scanJS } from './functions.ts';
 
 const root = await tgpu.init({
   device: { requiredFeatures: ['timestamp-query'] },
 });
 
 async function runAndCompare(arr: number[], op: BinaryOp, scanOnly: boolean) {
-  const input = root
-    .createBuffer(d.arrayOf(d.f32, arr.length), arr)
-    .$usage('storage');
+  const input = root.createBuffer(d.arrayOf(d.f32, arr.length), arr).$usage('storage');
 
   const output = scanOnly
     ? scan(root, {
-      inputBuffer: input,
-      operation: op.operation,
-      identityElement: op.identityElement,
-    })
+        inputBuffer: input,
+        operation: op.operation,
+        identityElement: op.identityElement,
+      })
     : prefixScan(root, {
-      inputBuffer: input,
-      outputBuffer: input,
-      operation: op.operation,
-      identityElement: op.identityElement,
-    });
+        inputBuffer: input,
+        outputBuffer: input,
+        operation: op.operation,
+        identityElement: op.identityElement,
+      });
 
-  return isArrayEqual(
-    await output.read(),
-    scanOnly ? scanJS(arr, op) : prefixScanJS(arr, op),
-  );
+  return isArrayEqual(await output.read(), scanOnly ? scanJS(arr, op) : prefixScanJS(arr, op));
 }
 
 // single element f32 tests
@@ -92,9 +80,7 @@ async function testLength16777217(): Promise<boolean> {
 }
 
 async function testDoesNotDestroyBuffer(): Promise<boolean> {
-  const input = root
-    .createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8])
-    .$usage('storage');
+  const input = root.createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8]).$usage('storage');
 
   scan(root, {
     inputBuffer: input,
@@ -108,9 +94,7 @@ async function testDoesNotDestroyBuffer(): Promise<boolean> {
 async function testDoesNotCacheBuffers(): Promise<boolean> {
   const op = { operation: addFn, identityElement: 0 };
 
-  const input1 = root
-    .createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8])
-    .$usage('storage');
+  const input1 = root.createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8]).$usage('storage');
 
   const output1 = scan(root, {
     inputBuffer: input1,
@@ -119,7 +103,10 @@ async function testDoesNotCacheBuffers(): Promise<boolean> {
   });
 
   const input2 = root
-    .createBuffer(d.arrayOf(d.f32, 10), Array.from({ length: 10 }, () => 1))
+    .createBuffer(
+      d.arrayOf(d.f32, 10),
+      Array.from({ length: 10 }, () => 1),
+    )
     .$usage('storage');
 
   const output2 = scan(root, {
@@ -128,8 +115,7 @@ async function testDoesNotCacheBuffers(): Promise<boolean> {
     identityElement: op.identityElement,
   });
 
-  return isArrayEqual(await output1.read(), [36]) &&
-    isArrayEqual(await output2.read(), [10]);
+  return isArrayEqual(await output1.read(), [36]) && isArrayEqual(await output2.read(), [10]);
 }
 
 // prefix f32 tests
@@ -185,9 +171,7 @@ async function testPrefixLength16777217(): Promise<boolean> {
 }
 
 async function testPrefixDoesNotDestroyBuffer(): Promise<boolean> {
-  const input = root
-    .createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8])
-    .$usage('storage');
+  const input = root.createBuffer(d.arrayOf(d.f32, 8), [1, 2, 3, 4, 5, 6, 7, 8]).$usage('storage');
   const output = root.createBuffer(d.arrayOf(d.f32, 8)).$usage('storage');
   prefixScan(root, {
     inputBuffer: input,
@@ -203,9 +187,7 @@ async function testPrefixDoesNotCacheBuffers(): Promise<boolean> {
   const arr2 = Array.from({ length: 10 }, () => 1);
   const op = { operation: addFn, identityElement: 0 };
 
-  const input1 = root
-    .createBuffer(d.arrayOf(d.f32, arr1.length), arr1)
-    .$usage('storage');
+  const input1 = root.createBuffer(d.arrayOf(d.f32, arr1.length), arr1).$usage('storage');
 
   const output1 = prefixScan(root, {
     inputBuffer: input1,
@@ -214,9 +196,7 @@ async function testPrefixDoesNotCacheBuffers(): Promise<boolean> {
     identityElement: op.identityElement,
   });
 
-  const input2 = root
-    .createBuffer(d.arrayOf(d.f32, arr2.length), arr2)
-    .$usage('storage');
+  const input2 = root.createBuffer(d.arrayOf(d.f32, arr2.length), arr2).$usage('storage');
 
   const output2 = prefixScan(root, {
     inputBuffer: input2,
@@ -225,8 +205,10 @@ async function testPrefixDoesNotCacheBuffers(): Promise<boolean> {
     identityElement: op.identityElement,
   });
 
-  return isArrayEqual(await output1.read(), prefixScanJS(arr1, op)) &&
-    isArrayEqual(await output2.read(), prefixScanJS(arr2, op));
+  return (
+    isArrayEqual(await output1.read(), prefixScanJS(arr1, op)) &&
+    isArrayEqual(await output2.read(), prefixScanJS(arr2, op))
+  );
 }
 
 // running the tests
@@ -234,27 +216,27 @@ async function testPrefixDoesNotCacheBuffers(): Promise<boolean> {
 async function runTests(): Promise<boolean> {
   let result = true;
 
-  result = await testAdd8() && result;
-  result = await testAdd123() && result;
-  result = await testMul() && result;
-  result = await testStdMax() && result;
-  result = await testConcat() && result;
-  result = await testLength1() && result;
-  result = await testLength65537() && result;
-  result = await testLength16777217() && result;
-  result = await testDoesNotDestroyBuffer() && result;
-  result = await testDoesNotCacheBuffers() && result;
+  result = (await testAdd8()) && result;
+  result = (await testAdd123()) && result;
+  result = (await testMul()) && result;
+  result = (await testStdMax()) && result;
+  result = (await testConcat()) && result;
+  result = (await testLength1()) && result;
+  result = (await testLength65537()) && result;
+  result = (await testLength16777217()) && result;
+  result = (await testDoesNotDestroyBuffer()) && result;
+  result = (await testDoesNotCacheBuffers()) && result;
 
-  result = await testPrefixAdd8() && result;
-  result = await testPrefixAdd123() && result;
-  result = await testPrefixMul() && result;
-  result = await testPrefixStdMax() && result;
-  result = await testPrefixConcat() && result;
-  result = await testPrefixLength1() && result;
-  result = await testPrefixLength65537() && result;
-  result = await testPrefixLength16777217() && result;
-  result = await testPrefixDoesNotDestroyBuffer() && result;
-  result = await testPrefixDoesNotCacheBuffers() && result;
+  result = (await testPrefixAdd8()) && result;
+  result = (await testPrefixAdd123()) && result;
+  result = (await testPrefixMul()) && result;
+  result = (await testPrefixStdMax()) && result;
+  result = (await testPrefixConcat()) && result;
+  result = (await testPrefixLength1()) && result;
+  result = (await testPrefixLength65537()) && result;
+  result = (await testPrefixLength16777217()) && result;
+  result = (await testPrefixDoesNotDestroyBuffer()) && result;
+  result = (await testPrefixDoesNotCacheBuffers()) && result;
 
   return result;
 }

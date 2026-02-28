@@ -1,11 +1,7 @@
 // @ts-nocheck
 // TODO: ^ REMOVE WHEN CODE WORKS AGAIN
 
-import {
-  addElement,
-  addSliderPlumParameter,
-  onFrame,
-} from '@typegpu/example-toolkit';
+import { addElement, addSliderPlumParameter, onFrame } from '@typegpu/example-toolkit';
 import { builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, f32, vec2f } from 'typegpu/data';
 

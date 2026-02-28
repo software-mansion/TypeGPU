@@ -1,17 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { extractArgs } from '../src/core/function/extractArgs.ts';
 
-function createArg(
-  identifier: string,
-  attributes: string[],
-  type: string | undefined,
-) {
+function createArg(identifier: string, attributes: string[], type: string | undefined) {
   return { identifier, attributes, type };
 }
-function createReturn(
-  attributes: string[],
-  type: string,
-) {
+function createReturn(attributes: string[], type: string) {
   return { attributes, type };
 }
 
@@ -71,10 +64,7 @@ describe('extract args', () => {
 
     const { args, ret, range } = extractArgs(wgslFn);
 
-    expect(args).toStrictEqual([
-      createArg('a', [], 'i32'),
-      createArg('b', [], 'i32'),
-    ]);
+    expect(args).toStrictEqual([createArg('a', [], 'i32'), createArg('b', [], 'i32')]);
     expect(ret).toStrictEqual(createReturn([], 'i32'));
     expect(range).toStrictEqual({ begin: 13, end: 38 });
   });
@@ -88,12 +78,8 @@ describe('extract args', () => {
 
     const { args, ret, range } = extractArgs(wgslFn);
 
-    expect(args).toStrictEqual([
-      createArg('pos', ['@location(0)'], 'vec4f'),
-    ]);
-    expect(ret).toStrictEqual(
-      createReturn(['@location(0)', '@interpolate(flat)'], 'vec4f'),
-    );
+    expect(args).toStrictEqual([createArg('pos', ['@location(0)'], 'vec4f')]);
+    expect(ret).toStrictEqual(createReturn(['@location(0)', '@interpolate(flat)'], 'vec4f'));
     expect(range).toStrictEqual({ begin: 24, end: 91 });
   });
 
@@ -160,10 +146,7 @@ describe('extract args', () => {
 
     const { args, ret, range } = extractArgs(wgslFn);
 
-    expect(args).toStrictEqual([
-      createArg('a', [], 'array<f32,4>'),
-      createArg('b', [], 'f32'),
-    ]);
+    expect(args).toStrictEqual([createArg('a', [], 'array<f32,4>'), createArg('b', [], 'f32')]);
     expect(ret).toStrictEqual(createReturn([], 'f32'));
     expect(range).toStrictEqual({ begin: 13, end: 47 });
   });
@@ -177,9 +160,7 @@ describe('extract args', () => {
 
     const { args, ret, range } = extractArgs(wgslFn);
 
-    expect(args).toStrictEqual([
-      createArg('a', [], 'array<array<f32,4>,4>'),
-    ]);
+    expect(args).toStrictEqual([createArg('a', [], 'array<array<f32,4>,4>')]);
     expect(ret).toStrictEqual(createReturn([], 'array<array<f32,4>,4>'));
     expect(range).toStrictEqual({ begin: 15, end: 71 });
   });
@@ -196,10 +177,7 @@ describe('extract args', () => {
 
     const { args, ret, range } = extractArgs(wgslFn);
 
-    expect(args).toStrictEqual([
-      createArg('a', [], 'f32'),
-      createArg('b', [], 'f32'),
-    ]);
+    expect(args).toStrictEqual([createArg('a', [], 'f32'), createArg('b', [], 'f32')]);
     expect(ret).toStrictEqual(createReturn([], 'f32'));
     expect(range).toStrictEqual({ begin: 18, end: 97 });
   });
@@ -213,10 +191,7 @@ describe('extract args', () => {
 
     const { args, ret, range } = extractArgs(wgslFn);
 
-    expect(args).toStrictEqual([
-      createArg('a', [], 'f32'),
-      createArg('b', [], 'f32'),
-    ]);
+    expect(args).toStrictEqual([createArg('a', [], 'f32'), createArg('b', [], 'f32')]);
     expect(ret).toStrictEqual(createReturn([], 'f32'));
     expect(range).toStrictEqual({ begin: 13, end: 54 });
   });
@@ -230,10 +205,7 @@ describe('extract args', () => {
 
     const { args, ret, range } = extractArgs(wgslFn);
 
-    expect(args).toStrictEqual([
-      createArg('a', [], 'f32'),
-      createArg('b', [], 'f32'),
-    ]);
+    expect(args).toStrictEqual([createArg('a', [], 'f32'), createArg('b', [], 'f32')]);
     expect(ret).toStrictEqual(createReturn([], 'f32'));
     expect(range).toStrictEqual({ begin: 13, end: 85 });
   });
@@ -247,10 +219,7 @@ describe('extract args', () => {
 
     const { args, ret, range } = extractArgs(wgslFn);
 
-    expect(args).toStrictEqual([
-      createArg('a', [], undefined),
-      createArg('b', [], 'f32'),
-    ]);
+    expect(args).toStrictEqual([createArg('a', [], undefined), createArg('b', [], 'f32')]);
     expect(ret).toStrictEqual(createReturn([], 'f32'));
     expect(range).toStrictEqual({ begin: 13, end: 32 });
   });
@@ -264,10 +233,7 @@ describe('extract args', () => {
 
     const { args, ret, range } = extractArgs(wgslFn);
 
-    expect(args).toStrictEqual([
-      createArg('a', [], undefined),
-      createArg('b', [], undefined),
-    ]);
+    expect(args).toStrictEqual([createArg('a', [], undefined), createArg('b', [], undefined)]);
     expect(ret).toBeUndefined();
     expect(range).toStrictEqual({ begin: 13, end: 20 });
   });
@@ -304,10 +270,7 @@ describe('extract args', () => {
 
     const { args, ret, range } = extractArgs(wgslFn);
 
-    expect(args).toStrictEqual([
-      createArg('a', [], undefined),
-      createArg('b', [], undefined),
-    ]);
+    expect(args).toStrictEqual([createArg('a', [], undefined), createArg('b', [], undefined)]);
     expect(ret).toBeUndefined();
     expect(range).toStrictEqual({ begin: 21, end: 28 });
   });

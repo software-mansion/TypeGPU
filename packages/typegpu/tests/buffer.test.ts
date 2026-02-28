@@ -3,10 +3,7 @@ import { describe, expect, expectTypeOf } from 'vitest';
 import * as d from '../src/data/index.ts';
 import type { ValidateBufferSchema, ValidUsagesFor } from '../src/index.js';
 import { getName } from '../src/shared/meta.ts';
-import type {
-  IsValidBufferSchema,
-  IsValidUniformSchema,
-} from '../src/shared/repr.ts';
+import type { IsValidBufferSchema, IsValidUniformSchema } from '../src/shared/repr.ts';
 import type { TypedArray } from '../src/shared/utilityTypes.ts';
 import { it } from './utils/extendedIt.ts';
 
@@ -19,10 +16,7 @@ function toUint8Array(...arrays: Array<TypedArray>): Uint8Array {
   const merged = new Uint8Array(totalByteLength);
   let offset = 0;
   for (const arr of arrays) {
-    merged.set(
-      new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength),
-      offset,
-    );
+    merged.set(new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength), offset);
     offset += arr.byteLength;
   }
 
@@ -48,8 +42,7 @@ describe('TgpuBuffer', () => {
     const rawBuffer = root.unwrap(buffer);
     expect(rawBuffer).toBeDefined();
 
-    expect(commandEncoder.mock.clearBuffer)
-      .toHaveBeenCalledExactlyOnceWith(rawBuffer);
+    expect(commandEncoder.mock.clearBuffer).toHaveBeenCalledExactlyOnceWith(rawBuffer);
   });
 
   it('should clear a mapped buffer', ({ root }) => {
@@ -90,9 +83,7 @@ describe('TgpuBuffer', () => {
       label: 'dataBuffer',
       mappedAtCreation: false,
       size: 64,
-      usage: GPUBufferUsage.UNIFORM |
-        GPUBufferUsage.COPY_DST |
-        GPUBufferUsage.COPY_SRC,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     });
 
     dataBuffer.write({
@@ -104,13 +95,7 @@ describe('TgpuBuffer', () => {
     const mockBuffer = root.unwrap(dataBuffer);
     expect(mockBuffer).toBeDefined();
 
-    expect(root.device.queue.writeBuffer).toBeCalledWith(
-      mockBuffer,
-      0,
-      new ArrayBuffer(64),
-      0,
-      64,
-    );
+    expect(root.device.queue.writeBuffer).toBeCalledWith(mockBuffer, 0, new ArrayBuffer(64), 0, 64);
   });
 
   it('should write to a mapped buffer', ({ root }) => {
@@ -193,8 +178,7 @@ describe('TgpuBuffer', () => {
       ],
     ]);
 
-    const stagingBuffer = device.mock.createBuffer.mock.results[1]
-      ?.value as GPUBuffer;
+    const stagingBuffer = device.mock.createBuffer.mock.results[1]?.value as GPUBuffer;
 
     expect(commandEncoder.copyBufferToBuffer).toHaveBeenCalledWith(
       buffer.buffer,
@@ -322,13 +306,7 @@ describe('TgpuBuffer', () => {
       [rawBuffer, 8, toUint8Array(new Float32Array([1, 2])), 0, 8],
       [rawBuffer, 16, toUint8Array(new Uint32Array([1])), 0, 4],
       [rawBuffer, 24, toUint8Array(new Uint32Array([3])), 0, 4],
-      [
-        rawBuffer,
-        8,
-        toUint8Array(new Float32Array([3, 4]), new Uint32Array([2, 3])),
-        0,
-        16,
-      ],
+      [rawBuffer, 8, toUint8Array(new Float32Array([3, 4]), new Uint32Array([2, 3])), 0, 16],
     ]);
   });
 
@@ -487,7 +465,9 @@ describe('TgpuBuffer', () => {
     ]);
   });
 
-  it('should throw an error on the type level when using a schema containing boolean', ({ root }) => {
+  it('should throw an error on the type level when using a schema containing boolean', ({
+    root,
+  }) => {
     const boolSchema = d.struct({
       a: d.u32,
       b: d.bool,
@@ -514,7 +494,9 @@ describe('TgpuBuffer', () => {
     );
   });
 
-  it('should throw an error on the type level when using a u16 schema outside of an array', ({ root }) => {
+  it('should throw an error on the type level when using a u16 schema outside of an array', ({
+    root,
+  }) => {
     const fine = d.arrayOf(d.u16, 32);
     root.createBuffer(fine);
 
@@ -548,7 +530,9 @@ describe('TgpuBuffer', () => {
     >();
   });
 
-  it('should allow an array of u32 to be used as an index buffer as well as any other usage', ({ root }) => {
+  it('should allow an array of u32 to be used as an index buffer as well as any other usage', ({
+    root,
+  }) => {
     const validSchema = d.arrayOf(d.u32, 32);
     const buffer = root.createBuffer(validSchema);
 
@@ -584,12 +568,9 @@ describe('IsValidUniformSchema', () => {
   });
 
   it('it treats union schemas as valid (even if they contain booleans)', () => {
-    expectTypeOf<IsValidUniformSchema<d.U32 | d.Bool>>()
-      .toEqualTypeOf<true>();
-    expectTypeOf<IsValidUniformSchema<d.U32 | d.WgslArray<d.Bool>>>()
-      .toEqualTypeOf<true>();
-    expectTypeOf<IsValidUniformSchema<d.WgslArray<d.Bool | d.U32>>>()
-      .toEqualTypeOf<true>();
+    expectTypeOf<IsValidUniformSchema<d.U32 | d.Bool>>().toEqualTypeOf<true>();
+    expectTypeOf<IsValidUniformSchema<d.U32 | d.WgslArray<d.Bool>>>().toEqualTypeOf<true>();
+    expectTypeOf<IsValidUniformSchema<d.WgslArray<d.Bool | d.U32>>>().toEqualTypeOf<true>();
   });
 });
 
@@ -599,10 +580,8 @@ describe('IsValidBufferSchema', () => {
   });
 
   it('treats schemas holding booleans as invalid', () => {
-    expectTypeOf<IsValidBufferSchema<d.WgslArray<d.Bool>>>()
-      .toEqualTypeOf<false>();
-    expectTypeOf<IsValidBufferSchema<d.WgslStruct<{ a: d.Bool }>>>()
-      .toEqualTypeOf<false>();
+    expectTypeOf<IsValidBufferSchema<d.WgslArray<d.Bool>>>().toEqualTypeOf<false>();
+    expectTypeOf<IsValidBufferSchema<d.WgslStruct<{ a: d.Bool }>>>().toEqualTypeOf<false>();
   });
 
   it('treats other schemas as valid', () => {
@@ -610,40 +589,34 @@ describe('IsValidBufferSchema', () => {
   });
 
   it('it treats arrays of valid schemas as valid', () => {
-    expectTypeOf<IsValidBufferSchema<d.WgslArray<d.U32>>>()
-      .toEqualTypeOf<true>();
+    expectTypeOf<IsValidBufferSchema<d.WgslArray<d.U32>>>().toEqualTypeOf<true>();
   });
 
   it('it treats union schemas as valid (even if they contain booleans)', () => {
-    expectTypeOf<IsValidBufferSchema<d.U32 | d.Bool>>()
-      .toEqualTypeOf<true>();
-    expectTypeOf<IsValidBufferSchema<d.U32 | d.WgslArray<d.Bool>>>()
-      .toEqualTypeOf<true>();
-    expectTypeOf<IsValidBufferSchema<d.WgslArray<d.Bool | d.U32>>>()
-      .toEqualTypeOf<true>();
+    expectTypeOf<IsValidBufferSchema<d.U32 | d.Bool>>().toEqualTypeOf<true>();
+    expectTypeOf<IsValidBufferSchema<d.U32 | d.WgslArray<d.Bool>>>().toEqualTypeOf<true>();
+    expectTypeOf<IsValidBufferSchema<d.WgslArray<d.Bool | d.U32>>>().toEqualTypeOf<true>();
   });
 });
 
 describe('ValidateBufferSchema', () => {
   it('is strict for exact types', () => {
     expectTypeOf<ValidateBufferSchema<d.U32>>().toEqualTypeOf<d.U32>();
-    expectTypeOf<ValidateBufferSchema<d.Bool>>().toEqualTypeOf<
-      '(Error) Bool is not host-shareable, use U32 or I32 instead'
-    >();
+    expectTypeOf<
+      ValidateBufferSchema<d.Bool>
+    >().toEqualTypeOf<'(Error) Bool is not host-shareable, use U32 or I32 instead'>();
   });
 
   // Could be not host-shareable, but we let it go to not be annoying
   it('is lenient for union types', () => {
-    expectTypeOf<ValidateBufferSchema<d.U32 | d.Bool>>().toEqualTypeOf<
-      d.U32 | d.Bool
-    >();
+    expectTypeOf<ValidateBufferSchema<d.U32 | d.Bool>>().toEqualTypeOf<d.U32 | d.Bool>();
 
-    expectTypeOf<ValidateBufferSchema<d.AnyData>>().toEqualTypeOf<
-      d.AnyData
-    >();
+    expectTypeOf<ValidateBufferSchema<d.AnyData>>().toEqualTypeOf<d.AnyData>();
   });
 
-  it('can be used to wrap `createBuffer` in a generic function (schema and usages customizable)', ({ root }) => {
+  it('can be used to wrap `createBuffer` in a generic function (schema and usages customizable)', ({
+    root,
+  }) => {
     function createMyBuffer<T extends d.AnyData>(
       schema: ValidateBufferSchema<T>,
       usages: [ValidUsagesFor<T>, ...ValidUsagesFor<T>[]],
@@ -654,9 +627,9 @@ describe('ValidateBufferSchema', () => {
 
     // Invalid
     // @ts-expect-error: Cannot create buffers with bools in them
-    (() => createMyBuffer(d.bool, ['']));
+    () => createMyBuffer(d.bool, ['']);
     // @ts-expect-error: Cannot create uniform buffers with vertex formats in them
-    (() => createMyBuffer(d.unorm8x4, ['uniform']));
+    () => createMyBuffer(d.unorm8x4, ['uniform']);
 
     // Valid
     createMyBuffer(d.f32, ['uniform']);

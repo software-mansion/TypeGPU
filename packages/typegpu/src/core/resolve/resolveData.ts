@@ -1,10 +1,5 @@
 import { getAttributesString } from '../../data/attributes.ts';
-import {
-  type AnyData,
-  type Disarray,
-  isLooseData,
-  type Unstruct,
-} from '../../data/dataTypes.ts';
+import { type AnyData, type Disarray, isLooseData, type Unstruct } from '../../data/dataTypes.ts';
 import { isWgslComparisonSampler, isWgslSampler } from '../../data/sampler.ts';
 import {
   accessModeMap,
@@ -117,13 +112,8 @@ function isIdentityType(data: BaseData): data is IdentityType {
  *
  * @returns The resolved property string.
  */
-function resolveStructProperty(
-  ctx: ResolutionCtx,
-  [key, property]: [string, BaseData],
-) {
-  return `  ${getAttributesString(property)}${key}: ${
-    ctx.resolve(property).value
-  },\n`;
+function resolveStructProperty(ctx: ResolutionCtx, [key, property]: [string, BaseData]) {
+  return `  ${getAttributesString(property)}${key}: ${ctx.resolve(property).value},\n`;
 }
 
 /**
@@ -141,11 +131,9 @@ function resolveStruct(ctx: ResolutionCtx, struct: WgslStruct) {
 
   ctx.addDeclaration(`\
 struct ${id} {
-${
-    Object.entries(struct.propTypes)
-      .map((prop) => resolveStructProperty(ctx, prop))
-      .join('')
-  }\
+${Object.entries(struct.propTypes)
+  .map((prop) => resolveStructProperty(ctx, prop))
+  .join('')}\
 }`);
 
   return id;
@@ -171,18 +159,13 @@ function resolveUnstruct(ctx: ResolutionCtx, unstruct: Unstruct) {
 
   ctx.addDeclaration(`\
 struct ${id} {
-${
-    Object.entries(unstruct.propTypes)
-      .map((prop) =>
-        isAttribute(prop[1])
-          ? resolveStructProperty(ctx, [
-            prop[0],
-            formatToWGSLType[prop[1].format],
-          ])
-          : resolveStructProperty(ctx, prop)
-      )
-      .join('')
-  }
+${Object.entries(unstruct.propTypes)
+  .map((prop) =>
+    isAttribute(prop[1])
+      ? resolveStructProperty(ctx, [prop[0], formatToWGSLType[prop[1].format]])
+      : resolveStructProperty(ctx, prop),
+  )
+  .join('')}
 }`);
 
   return id;
@@ -239,11 +222,8 @@ export function resolveData(ctx: ResolutionCtx, data: AnyData): string {
     }
 
     if (data.type === 'loose-decorated') {
-      return ctx.resolve(
-        isAttribute(data.inner)
-          ? formatToWGSLType[data.inner.format]
-          : data.inner,
-      ).value;
+      return ctx.resolve(isAttribute(data.inner) ? formatToWGSLType[data.inner.format] : data.inner)
+        .value;
     }
 
     return ctx.resolve(formatToWGSLType[data.type]).value;

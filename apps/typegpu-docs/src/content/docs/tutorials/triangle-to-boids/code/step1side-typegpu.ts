@@ -1,11 +1,7 @@
 // @ts-nocheck
 // TODO: ^ REMOVE WHEN CODE WORKS AGAIN
 
-import {
-  addButtonParameter,
-  addElement,
-  onFrame,
-} from '@typegpu/example-toolkit';
+import { addButtonParameter, addElement, onFrame } from '@typegpu/example-toolkit';
 import { builtin, createRuntime, wgsl } from 'typegpu';
 import { arrayOf, vec2f } from 'typegpu/data';
 

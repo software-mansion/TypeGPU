@@ -37,7 +37,10 @@ describe('tgpu.namespace', () => {
       pos: d.vec3f,
     });
 
-    const createBoid = tgpu.fn([], Boid)(() => {
+    const createBoid = tgpu.fn(
+      [],
+      Boid,
+    )(() => {
       return Boid();
     });
 
@@ -103,7 +106,10 @@ describe('tgpu.namespace', () => {
       const Boid = d.struct({
         pos: d.vec3f,
       });
-      const createBoid = tgpu.fn([], Boid)(() => {
+      const createBoid = tgpu.fn(
+        [],
+        Boid,
+      )(() => {
         return Boid();
       });
       code1 = tgpu.resolve([createBoid], { names });
@@ -113,7 +119,10 @@ describe('tgpu.namespace', () => {
       const Boid = d.struct({
         pos: d.vec3i,
       });
-      const createBoid = tgpu.fn([], Boid)(() => {
+      const createBoid = tgpu.fn(
+        [],
+        Boid,
+      )(() => {
         return Boid();
       });
       code2 = tgpu.resolve([createBoid], { names });

@@ -1,11 +1,6 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
-import {
-  d,
-  MissingBindGroupsError,
-  tgpu,
-  type TgpuComputePipeline,
-} from '../src/index.js';
+import { d, MissingBindGroupsError, tgpu, type TgpuComputePipeline } from '../src/index.js';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from './utils/extendedIt.ts';
 import { extensionEnabled } from '../src/std/extensions.ts';
@@ -44,21 +39,17 @@ describe('TgpuComputePipeline', () => {
       compute: entryFn,
     });
 
-    expect(() => pipeline.dispatchWorkgroups(1)).toThrowError(
-      new MissingBindGroupsError([layout]),
-    );
+    expect(() => pipeline.dispatchWorkgroups(1)).toThrowError(new MissingBindGroupsError([layout]));
 
-    expect(() => pipeline.dispatchWorkgroups(1))
-      .toThrowErrorMatchingInlineSnapshot(
-        `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(bindGroup).(...)]`,
-      );
+    expect(() => pipeline.dispatchWorkgroups(1)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Missing bind groups for layouts: 'layout'. Please provide it using pipeline.with(bindGroup).(...)]`,
+    );
   });
 
   it('is resolvable', ({ root }) => {
-    const main = tgpu
-      .computeFn({ workgroupSize: [32] })(() => {
-        // do something
-      });
+    const main = tgpu.computeFn({ workgroupSize: [32] })(() => {
+      // do something
+    });
 
     const computePipeline = root.createComputePipeline({
       compute: main,
@@ -72,10 +63,9 @@ describe('TgpuComputePipeline', () => {
   });
 
   it('type checks passed bind groups', ({ root }) => {
-    const main = tgpu
-      .computeFn({ workgroupSize: [32] })(() => {
-        // do something
-      });
+    const main = tgpu.computeFn({ workgroupSize: [32] })(() => {
+      // do something
+    });
     const computePipeline = root.createComputePipeline({
       compute: main,
     });
@@ -92,14 +82,12 @@ describe('TgpuComputePipeline', () => {
     computePipeline.with(layout1, bindGroup1);
     computePipeline.with(layout2, bindGroup2);
     //@ts-expect-error
-    (() => computePipeline.with(layout1, bindGroup2));
+    () => computePipeline.with(layout1, bindGroup2);
   });
 
   describe('Performance Callbacks', () => {
     it('should add performance callback with automatic query set', ({ root }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
-        () => {},
-      );
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 
       const callback = vi.fn();
       const pipeline = root
@@ -118,9 +106,7 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should create automatic query set when adding performance callback', ({ root, device }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
-        () => {},
-      );
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 
       const callback = vi.fn();
       const pipeline = root
@@ -139,9 +125,7 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should replace previous performance callback', ({ root }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
-        () => {},
-      );
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 
       const callback1 = vi.fn();
       const callback2 = vi.fn();
@@ -153,12 +137,8 @@ describe('TgpuComputePipeline', () => {
 
       expect(pipeline).toBeDefined();
 
-      expect(pipeline[$internal].priors.performanceCallback).toBe(
-        callback2,
-      );
-      expect(pipeline[$internal].priors.performanceCallback).not.toBe(
-        callback1,
-      );
+      expect(pipeline[$internal].priors.performanceCallback).toBe(callback2);
+      expect(pipeline[$internal].priors.performanceCallback).not.toBe(callback1);
     });
 
     it('should throw error if timestamp-query feature is not enabled', ({ root, device }) => {
@@ -166,16 +146,12 @@ describe('TgpuComputePipeline', () => {
       //@ts-expect-error
       device.features = new Set();
 
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
-        () => {},
-      );
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 
       const callback = vi.fn();
 
       expect(() => {
-        root
-          .createComputePipeline({ compute: entryFn })
-          .withPerformanceCallback(callback);
+        root.createComputePipeline({ compute: entryFn }).withPerformanceCallback(callback);
       }).toThrow(
         'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
       );
@@ -187,19 +163,15 @@ describe('TgpuComputePipeline', () => {
 
   describe('Timestamp Writes', () => {
     it('should add timestamp writes with custom query set', ({ root }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
-        () => {},
-      );
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 
       const querySet = root.createQuerySet('timestamp', 4);
 
-      const pipeline = root
-        .createComputePipeline({ compute: entryFn })
-        .withTimestampWrites({
-          querySet,
-          beginningOfPassWriteIndex: 0,
-          endOfPassWriteIndex: 1,
-        });
+      const pipeline = root.createComputePipeline({ compute: entryFn }).withTimestampWrites({
+        querySet,
+        beginningOfPassWriteIndex: 0,
+        endOfPassWriteIndex: 1,
+      });
 
       expect(pipeline).toBeDefined();
       expectTypeOf(pipeline).toEqualTypeOf<TgpuComputePipeline>();
@@ -211,22 +183,18 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should add timestamp writes with raw GPU query set', ({ root, device }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
-        () => {},
-      );
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 
       const rawQuerySet = device.createQuerySet({
         type: 'timestamp',
         count: 4,
       });
 
-      const pipeline = root
-        .createComputePipeline({ compute: entryFn })
-        .withTimestampWrites({
-          querySet: rawQuerySet,
-          beginningOfPassWriteIndex: 2,
-          endOfPassWriteIndex: 3,
-        });
+      const pipeline = root.createComputePipeline({ compute: entryFn }).withTimestampWrites({
+        querySet: rawQuerySet,
+        beginningOfPassWriteIndex: 2,
+        endOfPassWriteIndex: 3,
+      });
 
       expect(pipeline).toBeDefined();
 
@@ -237,69 +205,52 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should handle optional timestamp write indices', ({ root }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
-        () => {},
-      );
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 
       const querySet = root.createQuerySet('timestamp', 4);
 
-      const pipeline1 = root
-        .createComputePipeline({ compute: entryFn })
-        .withTimestampWrites({
-          querySet,
-          beginningOfPassWriteIndex: 0,
-        });
+      const pipeline1 = root.createComputePipeline({ compute: entryFn }).withTimestampWrites({
+        querySet,
+        beginningOfPassWriteIndex: 0,
+      });
 
-      const pipeline2 = root
-        .createComputePipeline({ compute: entryFn })
-        .withTimestampWrites({
-          querySet,
-          endOfPassWriteIndex: 1,
-        });
+      const pipeline2 = root.createComputePipeline({ compute: entryFn }).withTimestampWrites({
+        querySet,
+        endOfPassWriteIndex: 1,
+      });
 
-      const pipeline3 = root
-        .createComputePipeline({ compute: entryFn })
-        .withTimestampWrites({
-          querySet,
-        });
+      const pipeline3 = root.createComputePipeline({ compute: entryFn }).withTimestampWrites({
+        querySet,
+      });
 
       expect(pipeline1).toBeDefined();
       expect(pipeline2).toBeDefined();
       expect(pipeline3).toBeDefined();
 
-      expect(
-        pipeline1[$internal].priors.timestampWrites?.beginningOfPassWriteIndex,
-      ).toBe(0);
-      expect(pipeline1[$internal].priors.timestampWrites?.endOfPassWriteIndex)
-        .toBeUndefined();
+      expect(pipeline1[$internal].priors.timestampWrites?.beginningOfPassWriteIndex).toBe(0);
+      expect(pipeline1[$internal].priors.timestampWrites?.endOfPassWriteIndex).toBeUndefined();
 
       expect(
         pipeline2[$internal].priors.timestampWrites?.beginningOfPassWriteIndex,
       ).toBeUndefined();
-      expect(pipeline2[$internal].priors.timestampWrites?.endOfPassWriteIndex)
-        .toBe(1);
+      expect(pipeline2[$internal].priors.timestampWrites?.endOfPassWriteIndex).toBe(1);
 
       expect(
         pipeline3[$internal].priors.timestampWrites?.beginningOfPassWriteIndex,
       ).toBeUndefined();
-      expect(pipeline3[$internal].priors.timestampWrites?.endOfPassWriteIndex)
-        .toBeUndefined();
+      expect(pipeline3[$internal].priors.timestampWrites?.endOfPassWriteIndex).toBeUndefined();
     });
 
     it('should setup timestamp writes in compute pass descriptor', ({ root, commandEncoder }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
-        () => {},
-      );
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 
       const querySet = root.createQuerySet('timestamp', 4);
 
-      const pipeline = root
-        .createComputePipeline({ compute: entryFn })
-        .withTimestampWrites({
-          querySet,
-          beginningOfPassWriteIndex: 1,
-          endOfPassWriteIndex: 2,
-        });
+      const pipeline = root.createComputePipeline({ compute: entryFn }).withTimestampWrites({
+        querySet,
+        beginningOfPassWriteIndex: 1,
+        endOfPassWriteIndex: 2,
+      });
 
       pipeline.dispatchWorkgroups(1);
 
@@ -313,7 +264,10 @@ describe('TgpuComputePipeline', () => {
       });
     });
 
-    it('should work with bind groups and timestamp writes regardless of call order', ({ root, commandEncoder }) => {
+    it('should work with bind groups and timestamp writes regardless of call order', ({
+      root,
+      commandEncoder,
+    }) => {
       const layout = tgpu.bindGroupLayout({
         data: { uniform: d.f32 },
       });
@@ -375,10 +329,11 @@ describe('TgpuComputePipeline', () => {
   });
 
   describe('Combined Performance callback and Timestamp Writes', () => {
-    it('should work with both performance callback and custom timestamp writes', ({ root, commandEncoder }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
-        () => {},
-      );
+    it('should work with both performance callback and custom timestamp writes', ({
+      root,
+      commandEncoder,
+    }) => {
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 
       const querySet = root.createQuerySet('timestamp', 10);
       const callback = vi.fn();
@@ -418,10 +373,11 @@ describe('TgpuComputePipeline', () => {
       );
     });
 
-    it('should prioritize custom timestamp writes over automatic ones', ({ root, commandEncoder }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(
-        () => {},
-      );
+    it('should prioritize custom timestamp writes over automatic ones', ({
+      root,
+      commandEncoder,
+    }) => {
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 
       const querySet = root.createQuerySet('timestamp', 8);
       const callback = vi.fn();
@@ -459,7 +415,10 @@ describe('TgpuComputePipeline', () => {
     });
   });
 
-  it('enables language extensions when their corresponding feature is enabled', ({ root, device }) => {
+  it('enables language extensions when their corresponding feature is enabled', ({
+    root,
+    device,
+  }) => {
     Object.defineProperty(root, 'enabledFeatures', {
       value: new Set<GPUFeatureName>(['shader-f16', 'subgroups']),
       writable: true,
@@ -477,10 +436,12 @@ describe('TgpuComputePipeline', () => {
     pipeline.dispatchWorkgroups(1);
 
     expect(
-      (device.mock.createShaderModule.mock.calls[0] as {
-        label?: string;
-        code: string;
-      }[])[0]?.code,
+      (
+        device.mock.createShaderModule.mock.calls[0] as {
+          label?: string;
+          code: string;
+        }[]
+      )[0]?.code,
     ).toMatchInlineSnapshot(`
       "enable f16;
       enable subgroups;
@@ -522,10 +483,12 @@ describe('TgpuComputePipeline', () => {
     pipeline.dispatchWorkgroups(1);
 
     expect(
-      (device.mock.createShaderModule.mock.calls[0] as {
-        label?: string;
-        code: string;
-      }[])[0]?.code,
+      (
+        device.mock.createShaderModule.mock.calls[0] as {
+          label?: string;
+          code: string;
+        }[]
+      )[0]?.code,
     ).toMatchInlineSnapshot(`
       "enable f16;
       enable subgroups;
@@ -547,9 +510,7 @@ describe('TgpuComputePipeline', () => {
   });
 
   it('warns when buffer limits are exceeded', ({ root }) => {
-    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(
-      () => {},
-    );
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const uniform1 = root.createUniform(d.u32);
     const uniform2 = root.createUniform(d.u32);
@@ -666,10 +627,7 @@ describe('TgpuComputePipeline', () => {
 
       pipeline.dispatchWorkgroupsIndirect(
         deepBuffer,
-        d.memoryLayoutOf(
-          DeepStruct,
-          (s) => s.nested.innerNested[0]?.yy as number,
-        ),
+        d.memoryLayoutOf(DeepStruct, (s) => s.nested.innerNested[0]?.yy as number),
       );
 
       expect(warnSpy.mock.calls[2]![0]).toMatchInlineSnapshot(
@@ -680,8 +638,7 @@ describe('TgpuComputePipeline', () => {
     it('does not warn when dispatch has sufficient contiguous data', ({ root }) => {
       using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const entryFn = tgpu
-        .computeFn({ workgroupSize: [1] })(() => {});
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
       const pipeline = root.createComputePipeline({ compute: entryFn });
 
       // vec3u has exactly 12 contiguous bytes - no warning needed

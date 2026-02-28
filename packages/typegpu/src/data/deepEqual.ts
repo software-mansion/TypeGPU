@@ -1,13 +1,7 @@
 import type { AnyAttribute } from './attributes.ts';
 import { isDisarray, isLooseDecorated, isUnstruct } from './dataTypes.ts';
 import type { AnyData } from './dataTypes.ts';
-import {
-  isAtomic,
-  isDecorated,
-  isPtr,
-  isWgslArray,
-  isWgslStruct,
-} from './wgslTypes.ts';
+import { isAtomic, isDecorated, isPtr, isWgslArray, isWgslStruct } from './wgslTypes.ts';
 
 /**
  * Performs a deep comparison of two TypeGPU data schemas.
@@ -37,10 +31,7 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
     return false;
   }
 
-  if (
-    (isWgslStruct(a) && isWgslStruct(b)) ||
-    (isUnstruct(a) && isUnstruct(b))
-  ) {
+  if ((isWgslStruct(a) && isWgslStruct(b)) || (isUnstruct(a) && isUnstruct(b))) {
     const aProps = a.propTypes;
     const bProps = b.propTypes;
     const aKeys = Object.keys(aProps);
@@ -54,7 +45,9 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
       const keyA = aKeys[i];
       const keyB = bKeys[i];
       if (
-        keyA !== keyB || !keyA || !keyB ||
+        keyA !== keyB ||
+        !keyA ||
+        !keyB ||
         !deepEqual(aProps[keyA] as AnyData, bProps[keyB] as AnyData)
       ) {
         return false;
@@ -82,10 +75,7 @@ export function deepEqual(a: AnyData, b: AnyData): boolean {
     return deepEqual(a.inner, b.inner);
   }
 
-  if (
-    (isDecorated(a) && isDecorated(b)) ||
-    (isLooseDecorated(a) && isLooseDecorated(b))
-  ) {
+  if ((isDecorated(a) && isDecorated(b)) || (isLooseDecorated(a) && isLooseDecorated(b))) {
     if (!deepEqual(a.inner as AnyData, b.inner as AnyData)) {
       return false;
     }

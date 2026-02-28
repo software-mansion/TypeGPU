@@ -81,9 +81,7 @@ export const builtinNames = [
 
 export type BuiltinName = (typeof builtinNames)[number];
 
-export type AnyAttribute<
-  AllowedBuiltins extends Builtin<BuiltinName> = Builtin<BuiltinName>,
-> =
+export type AnyAttribute<AllowedBuiltins extends Builtin<BuiltinName> = Builtin<BuiltinName>> =
   | Align<number>
   | Size<number>
   | Location
@@ -93,7 +91,8 @@ export type AnyAttribute<
 
 export type ExtractAttributes<T> = T extends {
   readonly attribs: unknown[];
-} ? T['attribs']
+}
+  ? T['attribs']
   : [];
 
 /**
@@ -110,28 +109,26 @@ export type ExtractAttributes<T> = T extends {
  *   - else
  *     - Wrap `TData` with `Decorated` and a single attribute `[TAttrib]`
  */
-export type Decorate<
-  TData extends BaseData,
-  TAttrib extends AnyAttribute,
-> = IsWgslData<TData> extends true
-  ? Decorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
-  : IsLooseData<TData> extends true
-    ? LooseDecorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
-  : never;
+export type Decorate<TData extends BaseData, TAttrib extends AnyAttribute> =
+  IsWgslData<TData> extends true
+    ? Decorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
+    : IsLooseData<TData> extends true
+      ? LooseDecorated<Undecorate<TData>, [TAttrib, ...ExtractAttributes<TData>]>
+      : never;
 
-export type IsBuiltin<T> = ExtractAttributes<T>[number] extends [] ? false
-  : ExtractAttributes<T>[number] extends Builtin<BuiltinName> ? true
-  : false;
+export type IsBuiltin<T> = ExtractAttributes<T>[number] extends []
+  ? false
+  : ExtractAttributes<T>[number] extends Builtin<BuiltinName>
+    ? true
+    : false;
 
 export type HasCustomLocation<T> = ExtractAttributes<T>[number] extends []
   ? false
-  : ExtractAttributes<T>[number] extends Location ? true
-  : false;
+  : ExtractAttributes<T>[number] extends Location
+    ? true
+    : false;
 
-export function attribute(
-  data: BaseData,
-  attrib: AnyAttribute,
-): Decorated | LooseDecorated {
+export function attribute(data: BaseData, attrib: AnyAttribute): Decorated | LooseDecorated {
   if (isDecorated(data)) {
     return new DecoratedImpl(data.inner, [attrib, ...data.attribs]);
   }
@@ -240,10 +237,7 @@ export function location<TLocation extends number, TData extends BaseData>(
 export function interpolate<
   TInterpolation extends PerspectiveOrLinearInterpolationType,
   TData extends PerspectiveOrLinearInterpolatableData,
->(
-  interpolationType: TInterpolation,
-  data: TData,
-): Decorate<TData, Interpolate<TInterpolation>>;
+>(interpolationType: TInterpolation, data: TData): Decorate<TData, Interpolate<TInterpolation>>;
 
 /**
  * Specifies how user-defined vertex shader output (fragment shader input)
@@ -265,15 +259,9 @@ export function interpolate<
 export function interpolate<
   TInterpolation extends FlatInterpolationType,
   TData extends FlatInterpolatableData,
->(
-  interpolationType: TInterpolation,
-  data: TData,
-): Decorate<TData, Interpolate<TInterpolation>>;
+>(interpolationType: TInterpolation, data: TData): Decorate<TData, Interpolate<TInterpolation>>;
 
-export function interpolate<
-  TInterpolation extends InterpolationType,
-  TData extends AnyData,
->(
+export function interpolate<TInterpolation extends InterpolationType, TData extends AnyData>(
   interpolationType: TInterpolation,
   data: TData,
 ): Decorate<TData, Interpolate<TInterpolation>> {
@@ -310,9 +298,8 @@ export function invariant(
   }
 
   // Find the builtin attribute to check if it's position
-  const builtinAttrib = (isDecorated(data) || isLooseDecorated(data))
-    ? data.attribs.find(isBuiltinAttrib)
-    : undefined;
+  const builtinAttrib =
+    isDecorated(data) || isLooseDecorated(data) ? data.attribs.find(isBuiltinAttrib) : undefined;
 
   if (!builtinAttrib || builtinAttrib.params[0] !== 'position') {
     throw new Error(
@@ -328,9 +315,9 @@ export function invariant(
   }) as any;
 }
 
-export function isBuiltin(value: unknown): value is
-  | Decorated<AnyWgslData, AnyAttribute[]>
-  | LooseDecorated<AnyLooseData, AnyAttribute[]> {
+export function isBuiltin(
+  value: unknown,
+): value is Decorated<AnyWgslData, AnyAttribute[]> | LooseDecorated<AnyLooseData, AnyAttribute[]> {
   return (
     (isDecorated(value) || isLooseDecorated(value)) &&
     value.attribs.find(isBuiltinAttrib) !== undefined
@@ -374,23 +361,19 @@ class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
 
     if (alignAttrib !== undefined) {
       if (alignAttrib <= 0) {
-        throw new Error(
-          `Custom data alignment must be a positive number, got: ${alignAttrib}.`,
-        );
+        throw new Error(`Custom data alignment must be a positive number, got: ${alignAttrib}.`);
       }
 
       if (Math.log2(alignAttrib) % 1 !== 0) {
-        throw new Error(
-          `Alignment has to be a power of 2, got: ${alignAttrib}.`,
-        );
+        throw new Error(`Alignment has to be a power of 2, got: ${alignAttrib}.`);
       }
 
       if (isWgslData(this.inner)) {
         if (alignAttrib % alignmentOf(this.inner) !== 0) {
           throw new Error(
-            `Custom alignment has to be a multiple of the standard data alignment. Got: ${alignAttrib}, expected multiple of: ${
-              alignmentOf(this.inner)
-            }.`,
+            `Custom alignment has to be a multiple of the standard data alignment. Got: ${alignAttrib}, expected multiple of: ${alignmentOf(
+              this.inner,
+            )}.`,
           );
         }
       }
@@ -399,16 +382,14 @@ class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
     if (sizeAttrib !== undefined) {
       if (sizeAttrib < sizeOf(this.inner)) {
         throw new Error(
-          `Custom data size cannot be smaller then the standard data size. Got: ${sizeAttrib}, expected at least: ${
-            sizeOf(this.inner)
-          }.`,
+          `Custom data size cannot be smaller then the standard data size. Got: ${sizeAttrib}, expected at least: ${sizeOf(
+            this.inner,
+          )}.`,
         );
       }
 
       if (sizeAttrib <= 0) {
-        throw new Error(
-          `Custom data size must be a positive number. Got: ${sizeAttrib}.`,
-        );
+        throw new Error(`Custom data size must be a positive number. Got: ${sizeAttrib}.`);
       }
     }
   }
@@ -416,7 +397,8 @@ class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
 
 class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
-  implements Decorated<TInner, TAttribs> {
+  implements Decorated<TInner, TAttribs>
+{
   public readonly [$internal] = {};
   public readonly type = 'decorated';
 
@@ -424,8 +406,7 @@ class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   declare readonly [$memIdent]: TAttribs extends Location[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;
-  declare readonly [$invalidSchemaReason]:
-    Decorated[typeof $invalidSchemaReason];
+  declare readonly [$invalidSchemaReason]: Decorated[typeof $invalidSchemaReason];
   declare readonly [$validStorageSchema]: IsValidStorageSchema<TInner>;
   declare readonly [$validUniformSchema]: IsValidUniformSchema<TInner>;
   declare readonly [$validVertexSchema]: IsValidVertexSchema<TInner>;
@@ -434,13 +415,13 @@ class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
 
 class LooseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   extends BaseDecoratedImpl<TInner, TAttribs>
-  implements LooseDecorated<TInner, TAttribs> {
+  implements LooseDecorated<TInner, TAttribs>
+{
   public readonly [$internal] = {};
   public readonly type = 'loose-decorated';
 
   // Type-tokens, not available at runtime
-  declare readonly [$invalidSchemaReason]:
-    LooseDecorated[typeof $invalidSchemaReason];
+  declare readonly [$invalidSchemaReason]: LooseDecorated[typeof $invalidSchemaReason];
   declare readonly [$validVertexSchema]: IsValidVertexSchema<TInner>;
   // ---
 }

@@ -16,10 +16,7 @@ function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
 ) {
   // oxlint-disable-next-line typescript/no-explicit-any -- anything is possible
   const proto = object.prototype as any;
-  const opImpl = infixOperators[operator] as (
-    lhs: unknown,
-    rhs: unknown,
-  ) => unknown;
+  const opImpl = infixOperators[operator] as (lhs: unknown, rhs: unknown) => unknown;
 
   proto[operator] = function (this: unknown, other: unknown): unknown {
     return opImpl(this, other);
@@ -115,21 +112,8 @@ export type {
 } from './wgslTypes.ts';
 export { struct } from './struct.ts';
 export { arrayOf } from './array.ts';
-export {
-  ptrFn,
-  ptrHandle,
-  ptrPrivate,
-  ptrStorage,
-  ptrUniform,
-  ptrWorkgroup,
-} from './ptr.ts';
-export type {
-  AnyData,
-  AnyLooseData,
-  Disarray,
-  LooseDecorated,
-  Unstruct,
-} from './dataTypes.ts';
+export { ptrFn, ptrHandle, ptrPrivate, ptrStorage, ptrUniform, ptrWorkgroup } from './ptr.ts';
+export type { AnyData, AnyLooseData, Disarray, LooseDecorated, Unstruct } from './dataTypes.ts';
 export {
   texture1d,
   texture2d,
@@ -209,18 +193,10 @@ export {
   location,
   size,
 } from './attributes.ts';
-export {
-  isData,
-  isDisarray,
-  isLooseData,
-  isLooseDecorated,
-  isUnstruct,
-} from './dataTypes.ts';
+export { isData, isDisarray, isLooseData, isLooseDecorated, isUnstruct } from './dataTypes.ts';
 export { PUBLIC_sizeOf as sizeOf } from './sizeOf.ts';
 export { PUBLIC_isContiguous as isContiguous } from './isContiguous.ts';
-export {
-  PUBLIC_getLongestContiguousPrefix as getLongestContiguousPrefix,
-} from './getLongestContiguousPrefix.ts';
+export { PUBLIC_getLongestContiguousPrefix as getLongestContiguousPrefix } from './getLongestContiguousPrefix.ts';
 export { memoryLayoutOf } from './offsetUtils.ts';
 export { PUBLIC_alignmentOf as alignmentOf } from './alignmentOf.ts';
 export { builtin } from '../builtin.ts';

@@ -46,9 +46,7 @@ const context = root.configureContext({
   alphaMode: 'premultiplied',
 });
 
-pipeline
-  .withColorAttachment({ view: context })
-  .draw(3);
+pipeline.withColorAttachment({ view: context }).draw(3);
 
 // #region Cleanup
 

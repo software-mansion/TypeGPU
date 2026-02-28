@@ -35,10 +35,7 @@ export function INTERNAL_setCtx(ctx: ResolutionCtx | undefined) {
 }
 
 export function provideCtx<T>(ctx: ResolutionCtx, callback: () => T): T {
-  invariant(
-    resolutionCtx === undefined || resolutionCtx === ctx,
-    'Cannot nest context providers',
-  );
+  invariant(resolutionCtx === undefined || resolutionCtx === ctx, 'Cannot nest context providers');
 
   if (resolutionCtx === ctx) {
     return callback();

@@ -10,11 +10,7 @@ import * as TSL from 'three/tsl';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { UltraHDRLoader } from 'three/addons/loaders/UltraHDRLoader.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
-import {
-  clothNumSegmentsX,
-  clothNumSegmentsY,
-  VerletSimulation,
-} from './verlet.ts';
+import { clothNumSegmentsX, clothNumSegmentsY, VerletSimulation } from './verlet.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
 const sphereRadius = 0.15;
@@ -72,12 +68,7 @@ const material = new THREE.MeshStandardNodeMaterial();
 const sphere = new THREE.Mesh(geometry, material);
 scene.add(sphere);
 
-const camera = new THREE.PerspectiveCamera(
-  40,
-  1,
-  0.01,
-  10,
-);
+const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 10);
 camera.position.set(-1.6, -0.1, -1.6);
 
 const cameraControls = new OrbitControls(camera, canvas);
@@ -106,8 +97,9 @@ function setupWireframe() {
 
   // verlet vertex visualizer
   const vertexWireframeMaterial = new THREE.SpriteNodeMaterial();
-  vertexWireframeMaterial.positionNode = verletSim.vertexPositionBuffer.node
-    .element(TSL.instanceIndex);
+  vertexWireframeMaterial.positionNode = verletSim.vertexPositionBuffer.node.element(
+    TSL.instanceIndex,
+  );
   vertexWireframeObject = new THREE.Mesh(
     new THREE.PlaneGeometry(0.01, 0.01),
     vertexWireframeMaterial,
@@ -117,16 +109,8 @@ function setupWireframe() {
   scene.add(vertexWireframeObject);
 
   // verlet spring visualizer
-  const springWireframePositionBuffer = new THREE.BufferAttribute(
-    new Float32Array(6),
-    3,
-    false,
-  );
-  const springWireframeIndexBuffer = new THREE.BufferAttribute(
-    new Uint32Array([0, 1]),
-    1,
-    false,
-  );
+  const springWireframePositionBuffer = new THREE.BufferAttribute(new Float32Array(6), 3, false);
+  const springWireframeIndexBuffer = new THREE.BufferAttribute(new Uint32Array([0, 1]), 1, false);
   const springWireframeMaterial = new THREE.LineBasicNodeMaterial();
   const vertexIndex = t3.fromTSL(TSL.attribute('vertexIndex'), d.f32);
   springWireframeMaterial.positionNode = t3.toTSL(() => {
@@ -137,20 +121,11 @@ function setupWireframe() {
   });
 
   const springWireframeGeometry = new THREE.InstancedBufferGeometry();
-  springWireframeGeometry.setAttribute(
-    'position',
-    springWireframePositionBuffer,
-  );
-  springWireframeGeometry.setAttribute(
-    'vertexIndex',
-    springWireframeIndexBuffer,
-  );
+  springWireframeGeometry.setAttribute('position', springWireframePositionBuffer);
+  springWireframeGeometry.setAttribute('vertexIndex', springWireframeIndexBuffer);
   springWireframeGeometry.instanceCount = verletSim.springs.length;
 
-  springWireframeObject = new THREE.Line(
-    springWireframeGeometry,
-    springWireframeMaterial,
-  );
+  springWireframeObject = new THREE.Line(springWireframeGeometry, springWireframeMaterial);
   springWireframeObject.frustumCulled = false;
   springWireframeObject.count = verletSim.springs.length;
   scene.add(springWireframeObject);
@@ -178,42 +153,21 @@ function setupClothMesh(): THREE.Mesh {
       verletVertexIdArray[index * 4] = verletSim.vertexColumns[x][y].id;
       verletVertexIdArray[index * 4 + 1] = verletSim.vertexColumns[x + 1][y].id;
       verletVertexIdArray[index * 4 + 2] = verletSim.vertexColumns[x][y + 1].id;
-      verletVertexIdArray[index * 4 + 3] =
-        verletSim.vertexColumns[x + 1][y + 1].id;
+      verletVertexIdArray[index * 4 + 3] = verletSim.vertexColumns[x + 1][y + 1].id;
 
       vertexUvArray[index * 2] = x / clothNumSegmentsX;
       vertexUvArray[index * 2 + 1] = y / clothNumSegmentsY;
 
       if (x > 0 && y > 0) {
-        indices.push(
-          getIndex(x, y),
-          getIndex(x - 1, y),
-          getIndex(x - 1, y - 1),
-        );
-        indices.push(
-          getIndex(x, y),
-          getIndex(x - 1, y - 1),
-          getIndex(x, y - 1),
-        );
+        indices.push(getIndex(x, y), getIndex(x - 1, y), getIndex(x - 1, y - 1));
+        indices.push(getIndex(x, y), getIndex(x - 1, y - 1), getIndex(x, y - 1));
       }
     }
   }
 
-  const verletVertexIdBuffer = new THREE.BufferAttribute(
-    verletVertexIdArray,
-    4,
-    false,
-  );
-  const positionBuffer = new THREE.BufferAttribute(
-    new Float32Array(vertexCount * 3),
-    3,
-    false,
-  );
-  const uvBuffer = new THREE.BufferAttribute(
-    vertexUvArray,
-    2,
-    false,
-  );
+  const verletVertexIdBuffer = new THREE.BufferAttribute(verletVertexIdArray, 4, false);
+  const positionBuffer = new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3, false);
+  const uvBuffer = new THREE.BufferAttribute(vertexUvArray, 2, false);
   geometry.setAttribute('position', positionBuffer);
   geometry.setAttribute('uv', uvBuffer);
   geometry.setAttribute('vertexIds', verletVertexIdBuffer);
@@ -273,11 +227,7 @@ function setupClothMesh(): THREE.Mesh {
 }
 
 function updateSphere() {
-  sphere.position.set(
-    Math.sin(timestamp * 2.1) * 0.1,
-    0,
-    Math.sin(timestamp * 0.8),
-  );
+  sphere.position.set(Math.sin(timestamp * 2.1) * 0.1, 0, Math.sin(timestamp * 0.8));
   spherePositionUniform.node.value.copy(sphere.position);
 }
 

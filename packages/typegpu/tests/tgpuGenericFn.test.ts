@@ -190,10 +190,12 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
   it('allows for shellless inline usage', () => {
     const valueAccess = tgpu.accessor(d.f32);
 
-    const getValueGeneric = tgpu.fn(() => {
-      'use gpu';
-      return valueAccess.$;
-    }).with(valueAccess, 2);
+    const getValueGeneric = tgpu
+      .fn(() => {
+        'use gpu';
+        return valueAccess.$;
+      })
+      .with(valueAccess, 2);
 
     const main = () => {
       'use gpu';
@@ -215,19 +217,24 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
     const valueAccess = tgpu.accessor(d.f32);
     const slot = tgpu.slot<number>();
 
-    const getValue = tgpu.fn(() => {
-      'use gpu';
-      return valueAccess.$ * slot.$;
-    })
+    const getValue = tgpu
+      .fn(() => {
+        'use gpu';
+        return valueAccess.$ * slot.$;
+      })
       .with(valueAccess, 2)
       .with(valueAccess, 4)
       .with(slot, 7)
       .with(slot, 5);
 
-    const getValueShelled = tgpu.fn([], d.f32)(() => {
-      'use gpu';
-      return valueAccess.$ * slot.$;
-    })
+    const getValueShelled = tgpu
+      .fn(
+        [],
+        d.f32,
+      )(() => {
+        'use gpu';
+        return valueAccess.$ * slot.$;
+      })
       .with(valueAccess, 2)
       .with(valueAccess, 4)
       .with(slot, 7)
@@ -299,10 +306,12 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
 
   it('can be passed into .createGuardedComputePipeline', ({ root }) => {
     const offsetSlot = tgpu.slot<number>();
-    const f = tgpu.fn((x: number, y: number, z: number) => {
-      'use gpu';
-      console.log(x + y + z + offsetSlot.$);
-    }).with(offsetSlot, 1);
+    const f = tgpu
+      .fn((x: number, y: number, z: number) => {
+        'use gpu';
+        console.log(x + y + z + offsetSlot.$);
+      })
+      .with(offsetSlot, 1);
 
     const pipeline = root.createGuardedComputePipeline(f);
 

@@ -11,13 +11,16 @@ describe('mnist inference example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'algorithms',
-      name: 'mnist-inference',
-      setupMocks: mockMnistWeights,
-      controlTriggers: ['Test Resolution'],
-      expectedCalls: 2,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'algorithms',
+        name: 'mnist-inference',
+        setupMocks: mockMnistWeights,
+        controlTriggers: ['Test Resolution'],
+        expectedCalls: 2,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "enable subgroups;

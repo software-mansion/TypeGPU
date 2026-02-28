@@ -19,10 +19,7 @@ import type {
   MemIdentity,
 } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
-import type {
-  Prettify,
-  UnionToIntersection,
-} from '../../shared/utilityTypes.ts';
+import type { Prettify, UnionToIntersection } from '../../shared/utilityTypes.ts';
 import { isGPUBuffer } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import {
@@ -69,16 +66,19 @@ type UsageLiteral = 'uniform' | 'storage' | 'vertex' | 'index' | 'indirect';
 
 type LiteralToUsageType<T extends UsageLiteral> = T extends 'uniform'
   ? UniformFlag
-  : T extends 'storage' ? StorageFlag
-  : T extends 'vertex' ? VertexFlag
-  : T extends 'index' ? IndexFlag
-  : T extends 'indirect' ? IndirectFlag
-  : never;
+  : T extends 'storage'
+    ? StorageFlag
+    : T extends 'vertex'
+      ? VertexFlag
+      : T extends 'index'
+        ? IndexFlag
+        : T extends 'indirect'
+          ? IndirectFlag
+          : never;
 
 type ViewUsages<TBuffer extends TgpuBuffer<BaseData>> =
   | (boolean extends TBuffer['usableAsUniform'] ? never : 'uniform')
-  | (boolean extends TBuffer['usableAsStorage'] ? never
-    : 'readonly' | 'mutable');
+  | (boolean extends TBuffer['usableAsStorage'] ? never : 'readonly' | 'mutable');
 
 type UsageTypeToBufferUsage<TData extends BaseData> = {
   uniform: TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData>;
@@ -146,10 +146,7 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
   initialOrBuffer?: Infer<TData> | GPUBuffer,
 ): TgpuBuffer<TData> {
   if (!isWgslData(typeSchema)) {
-    return new TgpuBufferImpl(group, typeSchema, initialOrBuffer, [
-      'storage',
-      'uniform',
-    ]);
+    return new TgpuBufferImpl(group, typeSchema, initialOrBuffer, ['storage', 'uniform']);
   }
 
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
@@ -179,8 +176,7 @@ const endianness = getSystemEndianness();
 class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   public readonly [$internal] = true;
   public readonly resourceType = 'buffer';
-  public flags: GPUBufferUsageFlags = GPUBufferUsage.COPY_DST |
-    GPUBufferUsage.COPY_SRC;
+  public flags: GPUBufferUsageFlags = GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
 
   readonly #device: GPUDevice;
   private _buffer: GPUBuffer | null = null;
@@ -251,9 +247,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>> {
     for (const usage of usages) {
       if (this._disallowedUsages?.includes(usage)) {
-        throw new Error(
-          `Buffer of type ${this.dataType.type} cannot be used as ${usage}`,
-        );
+        throw new Error(`Buffer of type ${this.dataType.type} cannot be used as ${usage}`);
       }
 
       this.flags |= usage === 'uniform' ? GPUBufferUsage.UNIFORM : 0;
@@ -272,9 +266,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
 
   $addFlags(flags: GPUBufferUsageFlags) {
     if (!this._ownBuffer) {
-      throw new Error(
-        'Cannot add flags to a buffer that is not managed by TypeGPU.',
-      );
+      throw new Error('Cannot add flags to a buffer that is not managed by TypeGPU.');
     }
 
     if (flags & GPUBufferUsage.MAP_READ) {
@@ -295,20 +287,12 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     getCompiledWriterForSchema(this.dataType);
   }
 
-  private _writeToTarget(
-    target: ArrayBuffer,
-    data: Infer<TData>,
-  ): void {
+  private _writeToTarget(target: ArrayBuffer, data: Infer<TData>): void {
     const compiledWriter = getCompiledWriterForSchema(this.dataType);
 
     if (compiledWriter) {
       try {
-        compiledWriter(
-          new DataView(target),
-          0,
-          data,
-          endianness === 'little',
-        );
+        compiledWriter(new DataView(target), 0, data, endianness === 'little');
         return;
       } catch (error) {
         console.error(
@@ -412,21 +396,12 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     });
 
     const commandEncoder = this.#device.createCommandEncoder();
-    commandEncoder.copyBufferToBuffer(
-      gpuBuffer,
-      0,
-      stagingBuffer,
-      0,
-      sizeOf(this.dataType),
-    );
+    commandEncoder.copyBufferToBuffer(gpuBuffer, 0, stagingBuffer, 0, sizeOf(this.dataType));
 
     this.#device.queue.submit([commandEncoder.finish()]);
     await stagingBuffer.mapAsync(GPUMapMode.READ, 0, sizeOf(this.dataType));
 
-    const res = readData(
-      new BufferReader(stagingBuffer.getMappedRange()),
-      this.dataType,
-    );
+    const res = readData(new BufferReader(stagingBuffer.getMappedRange()), this.dataType);
 
     stagingBuffer.unmap();
     stagingBuffer.destroy();
@@ -435,9 +410,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   }
 
   as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T] {
-    return usageToUsageConstructor[usage]?.(
-      this as never,
-    ) as UsageTypeToBufferUsage<TData>[T];
+    return usageToUsageConstructor[usage]?.(this as never) as UsageTypeToBufferUsage<TData>[T];
   }
 
   destroy() {

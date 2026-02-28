@@ -10,12 +10,15 @@ describe('matrix(next) example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'algorithms',
-      name: 'matrix-next',
-      controlTriggers: ['Compute'],
-      expectedCalls: 1,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'algorithms',
+        name: 'matrix-next',
+        controlTriggers: ['Compute'],
+        expectedCalls: 1,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct MatrixInfo {

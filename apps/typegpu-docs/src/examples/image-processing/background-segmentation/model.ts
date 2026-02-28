@@ -16,46 +16,38 @@ export const MODELS: ModelConfig[] = [
   },
   {
     name: 'mobileV2 - [11mb]',
-    path:
-      'https://huggingface.co/lursz/bg-segm/resolve/main/mobileNetv2-lightAug/model_178.onnx',
+    path: 'https://huggingface.co/lursz/bg-segm/resolve/main/mobileNetv2-lightAug/model_178.onnx',
     inputName: 'input',
     outputName: 'output',
     externalData: [
       {
-        data:
-          'https://huggingface.co/lursz/bg-segm/resolve/main/mobileNetv2-lightAug/model_178.onnx.data',
+        data: 'https://huggingface.co/lursz/bg-segm/resolve/main/mobileNetv2-lightAug/model_178.onnx.data',
         path: 'model_178.onnx.data',
       },
     ],
-    description:
-      'MobileNetV2 based lightweight model, light augmentation, 200 epochs',
+    description: 'MobileNetV2 based lightweight model, light augmentation, 200 epochs',
   },
   {
     name: 'mobileV4 - cutting [7mb]',
-    path:
-      'https://huggingface.co/lursz/bg-segm/resolve/main/mobileNetv4-cutAug/model_91.onnx',
+    path: 'https://huggingface.co/lursz/bg-segm/resolve/main/mobileNetv4-cutAug/model_91.onnx',
     inputName: 'input',
     outputName: 'output',
     externalData: [
       {
-        data:
-          'https://huggingface.co/lursz/bg-segm/resolve/main/mobileNetv4-cutAug/model_91.onnx.data',
+        data: 'https://huggingface.co/lursz/bg-segm/resolve/main/mobileNetv4-cutAug/model_91.onnx.data',
         path: 'model_91.onnx.data',
       },
     ],
-    description:
-      'MobileNetV4 based lightweight model, was fed only parts of pictures, 200 epochs',
+    description: 'MobileNetV4 based lightweight model, was fed only parts of pictures, 200 epochs',
   },
   {
     name: 'mobileV2 - anti-noise [11mb]',
-    path:
-      'https://huggingface.co/lursz/bg-segm/resolve/main/mobileNetv2-heavyAug/model_197.onnx',
+    path: 'https://huggingface.co/lursz/bg-segm/resolve/main/mobileNetv2-heavyAug/model_197.onnx',
     inputName: 'input',
     outputName: 'output',
     externalData: [
       {
-        data:
-          'https://huggingface.co/lursz/bg-segm/resolve/main/mobileNetv2-heavyAug/model_197.onnx.data',
+        data: 'https://huggingface.co/lursz/bg-segm/resolve/main/mobileNetv2-heavyAug/model_197.onnx.data',
         path: 'model_197.onnx.data',
       },
     ],
@@ -64,14 +56,12 @@ export const MODELS: ModelConfig[] = [
   },
   {
     name: 'autoencoder - [17mb]',
-    path:
-      'https://huggingface.co/lursz/bg-segm/resolve/main/autoencoder-heavyAug/model_37.onnx',
+    path: 'https://huggingface.co/lursz/bg-segm/resolve/main/autoencoder-heavyAug/model_37.onnx',
     inputName: 'input',
     outputName: 'output',
     externalData: [
       {
-        data:
-          'https://huggingface.co/lursz/bg-segm/resolve/main/autoencoder-heavyAug/model_37.onnx.data',
+        data: 'https://huggingface.co/lursz/bg-segm/resolve/main/autoencoder-heavyAug/model_37.onnx.data',
         path: 'model_37.onnx.data',
       },
     ],

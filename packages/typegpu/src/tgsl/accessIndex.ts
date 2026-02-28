@@ -1,16 +1,7 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import {
-  isDisarray,
-  MatrixColumnsAccess,
-  UnknownData,
-} from '../data/dataTypes.ts';
+import { isDisarray, MatrixColumnsAccess, UnknownData } from '../data/dataTypes.ts';
 import { derefSnippet } from '../data/ref.ts';
-import {
-  isEphemeralSnippet,
-  type Origin,
-  snip,
-  type Snippet,
-} from '../data/snippet.ts';
+import { isEphemeralSnippet, type Origin, snip, type Snippet } from '../data/snippet.ts';
 import { vec2f, vec3f, vec4f } from '../data/vector.ts';
 import {
   type BaseData,
@@ -30,13 +21,8 @@ const indexableTypeToResult = {
   mat4x4f: vec4f,
 } as const;
 
-export function accessIndex(
-  target: Snippet,
-  indexArg: Snippet | number,
-): Snippet | undefined {
-  const index = typeof indexArg === 'number'
-    ? coerceToSnippet(indexArg)
-    : indexArg;
+export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippet | undefined {
+  const index = typeof indexArg === 'number' ? coerceToSnippet(indexArg) : indexArg;
 
   // array
   if (isWgslArray(target.dataType) || isDisarray(target.dataType)) {
@@ -70,8 +56,8 @@ export function accessIndex(
 
     return snip(
       isKnownAtComptime(target) && isKnownAtComptime(index)
-        // oxlint-disable-next-line typescript/no-explicit-any -- it's fine, it's there
-        ? (target.value as any)[index.value as number]
+        ? // oxlint-disable-next-line typescript/no-explicit-any -- it's fine, it's there
+          (target.value as any)[index.value as number]
         : stitch`${target}[${index}]`,
       elementType,
       /* origin */ origin,
@@ -82,12 +68,11 @@ export function accessIndex(
   if (isVec(target.dataType)) {
     return snip(
       isKnownAtComptime(target) && isKnownAtComptime(index)
-        // oxlint-disable-next-line typescript/no-explicit-any -- it's fine, it's there
-        ? (target.value as any)[index.value as any]
+        ? // oxlint-disable-next-line typescript/no-explicit-any -- it's fine, it's there
+          (target.value as any)[index.value as any]
         : stitch`${target}[${index}]`,
       target.dataType.primitive,
-      /* origin */ target.origin === 'constant' ||
-          target.origin === 'constant-tgpu-const-ref'
+      /* origin */ target.origin === 'constant' || target.origin === 'constant-tgpu-const-ref'
         ? 'constant'
         : 'runtime',
     );
@@ -101,16 +86,12 @@ export function accessIndex(
 
   // matrix.columns
   if (target.value instanceof MatrixColumnsAccess) {
-    const propType = indexableTypeToResult[
-      (target.value.matrix.dataType as BaseData)
-        .type as keyof typeof indexableTypeToResult
-    ];
+    const propType =
+      indexableTypeToResult[
+        (target.value.matrix.dataType as BaseData).type as keyof typeof indexableTypeToResult
+      ];
 
-    return snip(
-      stitch`${target.value.matrix}[${index}]`,
-      propType,
-      /* origin */ target.origin,
-    );
+    return snip(stitch`${target.value.matrix}[${index}]`, propType, /* origin */ target.origin);
   }
 
   // matrix
@@ -120,10 +101,7 @@ export function accessIndex(
     );
   }
 
-  if (
-    (isKnownAtComptime(target) && isKnownAtComptime(index)) ||
-    target.dataType === UnknownData
-  ) {
+  if ((isKnownAtComptime(target) && isKnownAtComptime(index)) || target.dataType === UnknownData) {
     // No idea what the type is, so we act on the snippet's value and try to guess
     return coerceToSnippet(
       // oxlint-disable-next-line typescript/no-explicit-any -- we're inspecting the value, and it could be any value
@@ -132,7 +110,8 @@ export function accessIndex(
   }
 
   if (
-    isWgslStruct(target.dataType) && isKnownAtComptime(index) &&
+    isWgslStruct(target.dataType) &&
+    isKnownAtComptime(index) &&
     typeof index.value === 'string'
   ) {
     return accessProp(target, index.value);

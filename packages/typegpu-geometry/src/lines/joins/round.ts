@@ -5,20 +5,7 @@ import { intersectLines } from '../utils.ts';
 import { joinShell } from './common.ts';
 
 export const roundJoin = joinShell(
-  (
-    situationIndex,
-    vertexIndex,
-    joinPath,
-    V,
-    vu,
-    vd,
-    ul,
-    ur,
-    dl,
-    dr,
-    joinU,
-    joinD,
-  ) => {
+  (situationIndex, vertexIndex, joinPath, V, vu, vd, ul, ur, dl, dr, joinU, joinD) => {
     'use gpu';
     const midU = bisectCcw(ur, ul);
     const midD = bisectCcw(dl, dr);
@@ -27,13 +14,7 @@ export const roundJoin = joinShell(
 
     const shouldCross = situationIndex === 1 || situationIndex === 4;
     const crossCenter = intersectLines(ul, dl, ur, dr).point;
-    const averageCenter = mul(
-      add(
-        add(ur, ul),
-        add(dl, dr),
-      ),
-      0.25,
-    );
+    const averageCenter = mul(add(add(ur, ul), add(dl, dr)), 0.25);
 
     let uR = ur;
     let u = midU;

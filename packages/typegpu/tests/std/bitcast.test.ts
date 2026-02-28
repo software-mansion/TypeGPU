@@ -44,18 +44,11 @@ describe('bitcast', () => {
 
     const v3 = vec3u(0, 1065353216, 3212836864); // 0.0f, 1.0f, -1.0f
     const cast3 = std.bitcastU32toF32(v3);
-    expect(
-      std.isCloseTo(cast3, vec3f(0.0, 1.0, -1.0)),
-    ).toBe(true);
+    expect(std.isCloseTo(cast3, vec3f(0.0, 1.0, -1.0))).toBe(true);
 
     const v4 = vec4u(0, 1065353216, 3212836864, 0); // 0,1,-1,0
     const cast4 = std.bitcastU32toF32(v4);
-    expect(
-      std.isCloseTo(
-        cast4,
-        vec4f(0.0, 1.0, -1.0, 0.0),
-      ),
-    ).toBe(true);
+    expect(std.isCloseTo(cast4, vec4f(0.0, 1.0, -1.0, 0.0))).toBe(true);
   });
 
   it('bitcastU32toI32 vectors', () => {
@@ -149,12 +142,8 @@ describe('bitcast in shaders', () => {
   });
 
   it('works for vectors', () => {
-    const fnvec4i = tgpu.fn([], d.vec4i)(() =>
-      std.bitcastU32toI32(vec4u(1, 2, 3, 4))
-    );
-    const fnvec4f = tgpu.fn([], d.vec4f)(() =>
-      std.bitcastU32toF32(vec4u(1, 2, 3, 4))
-    );
+    const fnvec4i = tgpu.fn([], d.vec4i)(() => std.bitcastU32toI32(vec4u(1, 2, 3, 4)));
+    const fnvec4f = tgpu.fn([], d.vec4f)(() => std.bitcastU32toF32(vec4u(1, 2, 3, 4)));
 
     expect(tgpu.resolve([fnvec4i])).toMatchInlineSnapshot(`
     "fn fnvec4i() -> vec4i {

@@ -10,12 +10,8 @@ const root = await tgpu.init({
   },
 });
 
-const dataGroups = Array.from(
-  document.querySelectorAll<HTMLDivElement>('.data-group'),
-);
-const yAxisLabels = Array.from(
-  document.querySelectorAll<HTMLSpanElement>('.y-axis-labels span'),
-);
+const dataGroups = Array.from(document.querySelectorAll<HTMLDivElement>('.data-group'));
+const yAxisLabels = Array.from(document.querySelectorAll<HTMLSpanElement>('.y-axis-labels span'));
 
 const results = SIZES.map(() => ({ jsTime: 0, gpuTime: 0, gpuShaderTime: 0 }));
 
@@ -25,9 +21,8 @@ function drawCharts() {
   );
 
   // Update y-axis
-  const ticks = overallMax <= 0
-    ? [0, 0, 0, 0, 0]
-    : Array.from({ length: 5 }, (_, i) => (i / 4) * overallMax);
+  const ticks =
+    overallMax <= 0 ? [0, 0, 0, 0, 0] : Array.from({ length: 5 }, (_, i) => (i / 4) * overallMax);
   for (const [i, label] of yAxisLabels.toReversed().entries()) {
     label.textContent = ticks[i].toFixed(1);
   }
@@ -42,11 +37,8 @@ function drawCharts() {
     const r = results[i];
 
     // Update speedup label
-    const speedup = r.gpuShaderTime > 0
-      ? (r.jsTime / r.gpuShaderTime).toFixed(1)
-      : '-';
-    (group.querySelector('.speedup-label') as HTMLDivElement).textContent =
-      `${speedup}x`;
+    const speedup = r.gpuShaderTime > 0 ? (r.jsTime / r.gpuShaderTime).toFixed(1) : '-';
+    (group.querySelector('.speedup-label') as HTMLDivElement).textContent = `${speedup}x`;
 
     // Update bars and tooltips
     for (const m of metrics) {

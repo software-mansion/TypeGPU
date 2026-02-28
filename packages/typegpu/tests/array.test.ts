@@ -24,12 +24,7 @@ describe('array', () => {
     const buffer = new ArrayBuffer(d.sizeOf(TestArray));
     const writer = new BufferWriter(buffer);
 
-    writeData(writer, TestArray, [
-      d.vec3u(1, 2, 3),
-      d.vec3u(4, 5, 6),
-      d.vec3u(7, 8, 9),
-    ]);
-    // deno-fmt-ignore
+    writeData(writer, TestArray, [d.vec3u(1, 2, 3), d.vec3u(4, 5, 6), d.vec3u(7, 8, 9)]);
     expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
   });
 
@@ -70,14 +65,10 @@ describe('array', () => {
     expect(d.sizeOf(TestArray)).toBeNaN();
 
     expect(() =>
-      writeData(new BufferWriter(new ArrayBuffer(0)), TestArray, [
-        d.vec3f(),
-        d.vec3f(),
-      ])
+      writeData(new BufferWriter(new ArrayBuffer(0)), TestArray, [d.vec3f(), d.vec3f()]),
     ).toThrow();
 
-    expect(() => readData(new BufferReader(new ArrayBuffer(0)), TestArray))
-      .toThrow();
+    expect(() => readData(new BufferReader(new ArrayBuffer(0)), TestArray)).toThrow();
 
     const opts = { namespace: namespace({ names: 'strict' }) };
 
@@ -85,10 +76,9 @@ describe('array', () => {
   });
 
   it('throws when trying to nest runtime sized arrays', () => {
-    expect(() => d.arrayOf(d.arrayOf(d.vec3f, 0), 0))
-      .toThrowErrorMatchingInlineSnapshot(
-        '[Error: Cannot nest runtime sized arrays.]',
-      );
+    expect(() => d.arrayOf(d.arrayOf(d.vec3f, 0), 0)).toThrowErrorMatchingInlineSnapshot(
+      '[Error: Cannot nest runtime sized arrays.]',
+    );
   });
 
   it('can be called to create an array', () => {
@@ -104,9 +94,9 @@ describe('array', () => {
     const ArraySchema = d.arrayOf(d.u32, 4);
 
     // @ts-expect-error
-    (() => ArraySchema([1, 2, 3, d.vec3f()]));
+    () => ArraySchema([1, 2, 3, d.vec3f()]);
     // @ts-expect-error
-    (() => ArraySchema([d.vec3f(), d.vec3f(), d.vec3f(), d.vec3f()]));
+    () => ArraySchema([d.vec3f(), d.vec3f(), d.vec3f(), d.vec3f()]);
   });
 
   it('can be called to create a deep copy of other array', () => {
@@ -171,10 +161,7 @@ describe('array', () => {
 
     const defaultArray = ArraySchema();
 
-    expect(defaultArray).toStrictEqual([
-      { vec: d.vec3f() },
-      { vec: d.vec3f() },
-    ]);
+    expect(defaultArray).toStrictEqual([{ vec: d.vec3f() }, { vec: d.vec3f() }]);
   });
 
   it('can be partially called', () => {
@@ -397,14 +384,10 @@ describe('array', () => {
   it('can be immediately-invoked and initialized in TGSL in combination with slots and lazy', () => {
     const arraySizeSlot = tgpu.slot(4);
     const lazyArraySizeSlot = tgpu.lazy(() => arraySizeSlot.$ * 2);
-    const lazyInitializer = tgpu.lazy(
-      () => [...Array(lazyArraySizeSlot.$).keys()],
-    );
+    const lazyInitializer = tgpu.lazy(() => [...Array(lazyArraySizeSlot.$).keys()]);
 
     const foo = tgpu.fn([])(() => {
-      const result = d.arrayOf(d.f32, lazyArraySizeSlot.$)(
-        lazyInitializer.$,
-      );
+      const result = d.arrayOf(d.f32, lazyArraySizeSlot.$)(lazyInitializer.$);
     });
 
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
@@ -531,7 +514,10 @@ describe('array.length', () => {
         },
       });
 
-      const testFn = tgpu.fn([], d.i32)(() => {
+      const testFn = tgpu.fn(
+        [],
+        d.i32,
+      )(() => {
         return arrayLength(layout.$.values);
       });
 
@@ -551,7 +537,10 @@ describe('array.length', () => {
         },
       });
 
-      const testFn = tgpu.fn([], d.u32)(() => {
+      const testFn = tgpu.fn(
+        [],
+        d.u32,
+      )(() => {
         return arrayLength(layout.$.values);
       });
 

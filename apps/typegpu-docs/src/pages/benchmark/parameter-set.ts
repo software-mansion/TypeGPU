@@ -4,26 +4,23 @@ import { atomWithUrl } from './atom-with-url.ts';
 
 export type PackageLocator =
   | {
-    type: 'npm';
-    version?: string;
-  }
+      type: 'npm';
+      version?: string;
+    }
   | {
-    type: 'pr';
-    commit?: string;
-  }
+      type: 'pr';
+      commit?: string;
+    }
   | {
-    type: 'local';
-  };
+      type: 'local';
+    };
 
 export interface BenchParameterSet {
   key: number;
   typegpu: PackageLocator;
 }
 
-export function stringifyLocator(
-  name: string,
-  locator: PackageLocator,
-): string {
+export function stringifyLocator(name: string, locator: PackageLocator): string {
   if (locator.type === 'npm') {
     return `${name}@${locator.version}`;
   }
@@ -52,11 +49,10 @@ export const parameterSetsAtom = atomWithUrl<BenchParameterSet[]>(
   {
     encode: (values) =>
       values
-        .map(
-          (value) =>
-            value.typegpu.type === 'npm'
-              ? `npm-${value.typegpu.version ?? ''}`
-              : value.typegpu.type === 'pr'
+        .map((value) =>
+          value.typegpu.type === 'npm'
+            ? `npm-${value.typegpu.version ?? ''}`
+            : value.typegpu.type === 'pr'
               ? `pr-${value.typegpu.commit ?? ''}`
               : 'local',
         )
@@ -66,38 +62,32 @@ export const parameterSetsAtom = atomWithUrl<BenchParameterSet[]>(
       encoded.split('_').map((value, i) =>
         value.startsWith('npm-')
           ? {
-            key: i + 1,
-            typegpu: {
-              type: 'npm',
-              version: value.slice('npm-'.length) ?? '',
-            },
-          }
+              key: i + 1,
+              typegpu: {
+                type: 'npm',
+                version: value.slice('npm-'.length) ?? '',
+              },
+            }
           : value.startsWith('pr-')
-          ? {
-            key: i + 1,
-            typegpu: {
-              type: 'pr',
-              commit: value.slice('pr-'.length) ?? '',
-            },
-          }
-          : { key: i + 1, typegpu: { type: 'local' } }
+            ? {
+                key: i + 1,
+                typegpu: {
+                  type: 'pr',
+                  commit: value.slice('pr-'.length) ?? '',
+                },
+              }
+            : { key: i + 1, typegpu: { type: 'local' } },
       ),
   },
 );
 
-export const parameterSetAtomsAtom = splitAtom(
-  parameterSetsAtom,
-  (params) => params.key,
-);
+export const parameterSetAtomsAtom = splitAtom(parameterSetsAtom, (params) => params.key);
 
 export const createParameterSetAtom = atom(null, (get, set) => {
   const prev = get(parameterSetsAtom);
   const key = getFreeKey(get);
 
-  set(parameterSetsAtom, [
-    ...prev,
-    { key, typegpu: { type: 'npm', version: 'latest' } },
-  ]);
+  set(parameterSetsAtom, [...prev, { key, typegpu: { type: 'npm', version: 'latest' } }]);
 });
 
 export const deleteParameterSetAtom = atom(null, (get, set, key: number) => {

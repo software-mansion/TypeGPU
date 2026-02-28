@@ -1,9 +1,6 @@
 import { isBuiltin } from '../../data/attributes.ts';
 import { type BaseData, isVoid, isWgslStruct } from '../../data/wgslTypes.ts';
-import type {
-  AnyFragmentTargets,
-  TgpuColorTargetState,
-} from './renderPipeline.ts';
+import type { AnyFragmentTargets, TgpuColorTargetState } from './renderPipeline.ts';
 
 export function connectTargetsToShader(
   fragmentOut: BaseData,
@@ -24,13 +21,12 @@ export function connectTargetsToShader(
         continue;
       }
 
-      const matchingTarget = (targets as Record<string, TgpuColorTargetState>)[
-        key
-      ];
+      const matchingTarget = (targets as Record<string, TgpuColorTargetState>)[key];
 
       result.push({
         ...matchingTarget,
-        format: matchingTarget?.format ??
+        format:
+          matchingTarget?.format ??
           (presentationFormat ??= navigator.gpu.getPreferredCanvasFormat()),
       });
     }
@@ -38,9 +34,11 @@ export function connectTargetsToShader(
   }
 
   const singleTarget = targets as TgpuColorTargetState;
-  return [{
-    ...singleTarget,
-    format: singleTarget?.format ??
-      (presentationFormat ??= navigator.gpu.getPreferredCanvasFormat()),
-  }];
+  return [
+    {
+      ...singleTarget,
+      format:
+        singleTarget?.format ?? (presentationFormat ??= navigator.gpu.getPreferredCanvasFormat()),
+    },
+  ];
 }

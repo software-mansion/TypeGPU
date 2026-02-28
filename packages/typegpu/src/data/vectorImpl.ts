@@ -9,28 +9,15 @@ type VecSchema<S> = BaseData & ((v?: S) => S);
 const XYZW = ['x', 'y', 'z', 'w'];
 const RGBA = ['r', 'g', 'b', 'a'];
 
-// deno-fmt-ignore
 export abstract class VecBase<S> extends Array implements SelfResolvable {
   abstract readonly [$internal]: {
     elementSchema: VecSchema<S>;
   };
   abstract get kind(): VecKind;
 
-  abstract get _Vec2(): new (
-    x: S,
-    y: S,
-  ) => Vec2<S>;
-  abstract get _Vec3(): new (
-    x: S,
-    y: S,
-    z: S,
-  ) => Vec3<S>;
-  abstract get _Vec4(): new (
-    x: S,
-    y: S,
-    z: S,
-    w: S,
-  ) => Vec4<S>;
+  abstract get _Vec2(): new (x: S, y: S) => Vec2<S>;
+  abstract get _Vec3(): new (x: S, y: S, z: S) => Vec3<S>;
+  abstract get _Vec4(): new (x: S, y: S, z: S, w: S) => Vec4<S>;
 
   static {
     // Defining 4-length swizzles

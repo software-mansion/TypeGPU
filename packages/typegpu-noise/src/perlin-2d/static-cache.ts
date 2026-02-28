@@ -1,9 +1,6 @@
 import tgpu, { type Configurable, type TgpuFn, type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
-import {
-  computeJunctionGradient,
-  getJunctionGradientSlot,
-} from './algorithm.ts';
+import { computeJunctionGradient, getJunctionGradientSlot } from './algorithm.ts';
 
 const MemorySchema = d.arrayOf(d.vec2f);
 
@@ -58,27 +55,27 @@ export function staticCache(options: {
 }): StaticPerlin2DCache {
   const { root, size } = options;
 
-  const memoryBuffer = root
-    .createBuffer(MemorySchema(size.x * size.y))
-    .$usage('storage');
+  const memoryBuffer = root.createBuffer(MemorySchema(size.x * size.y)).$usage('storage');
 
   const memoryReadonly = memoryBuffer.as('readonly');
   const memoryMutable = memoryBuffer.as('mutable');
 
-  const computePipeline = root
-    .createGuardedComputePipeline((x, y) => {
-      'use gpu';
-      const idx = x + y * size.x;
+  const computePipeline = root.createGuardedComputePipeline((x, y) => {
+    'use gpu';
+    const idx = x + y * size.x;
 
-      memoryMutable.$[idx] = computeJunctionGradient(d.vec2i(x, y));
-    });
+    memoryMutable.$[idx] = computeJunctionGradient(d.vec2i(x, y));
+  });
 
   computePipeline.dispatchThreads(size.x, size.y);
 
-  const getJunctionGradient = tgpu.fn([d.vec2i], d.vec2f)((pos) => {
+  const getJunctionGradient = tgpu.fn(
+    [d.vec2i],
+    d.vec2f,
+  )((pos) => {
     const size_i = d.vec2i(size);
-    const x = (pos.x % size_i.x + size_i.x) % size_i.x;
-    const y = (pos.y % size_i.y + size_i.y) % size_i.y;
+    const x = ((pos.x % size_i.x) + size_i.x) % size_i.x;
+    const y = ((pos.y % size_i.y) + size_i.y) % size_i.y;
 
     return memoryReadonly.$[x + y * size_i.x] as d.v2f;
   });
@@ -93,7 +90,6 @@ export function staticCache(options: {
       memoryBuffer.destroy();
     },
 
-    inject: () => (cfg) =>
-      cfg.with(getJunctionGradientSlot, getJunctionGradient),
+    inject: () => (cfg) => cfg.with(getJunctionGradientSlot, getJunctionGradient),
   };
 }

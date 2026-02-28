@@ -1,8 +1,4 @@
-export {
-  computeJunctionGradient,
-  getJunctionGradientSlot,
-  sample,
-} from './algorithm.ts';
+export { computeJunctionGradient, getJunctionGradientSlot, sample } from './algorithm.ts';
 export {
   dynamicCacheConfig,
   type DynamicPerlin3DCache,

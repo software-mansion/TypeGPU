@@ -41,9 +41,7 @@ export function INTERNAL_createStruct<TProps extends Record<string, BaseData>>(
 ): WgslStruct<TProps> {
   Object.keys(props).forEach((key) => {
     if (!isValidProp(key)) {
-      throw new Error(
-        `Property key '${key}' is a reserved WGSL word. Choose a different name.`,
-      );
+      throw new Error(`Property key '${key}' is a reserved WGSL word. Choose a different name.`);
     }
   });
 

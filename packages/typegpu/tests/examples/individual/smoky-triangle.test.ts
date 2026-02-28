@@ -10,11 +10,14 @@ describe('smoky triangle', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'rendering',
-      name: 'smoky-triangle',
-      expectedCalls: 2,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'rendering',
+        name: 'smoky-triangle',
+        expectedCalls: 2,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;

@@ -109,30 +109,21 @@ describe('d.memoryLayoutOf (nested layouts)', () => {
   });
 
   it('tracks offsets and contiguous bytes within nested arrays', () => {
-    const info = d.memoryLayoutOf(
-      DeepStruct,
-      (s) => s.someData[11] as number,
-    );
+    const info = d.memoryLayoutOf(DeepStruct, (s) => s.someData[11] as number);
 
     expect(info.offset).toBe(44);
     expect(info.contiguous).toBe(8);
   });
 
   it('tracks offsets for nested structs inside arrays', () => {
-    const info = d.memoryLayoutOf(
-      DeepStruct,
-      (s) => s.nested.innerNested[1]?.myVec.x as number,
-    );
+    const info = d.memoryLayoutOf(DeepStruct, (s) => s.nested.innerNested[1]?.myVec.x as number);
 
     expect(info.offset).toBe(128);
     expect(info.contiguous).toBe(28);
   });
 
   it('tracks offsets inside a later struct run', () => {
-    const info = d.memoryLayoutOf(
-      DeepStruct,
-      (s) => s.nested.additionalData[1] as number,
-    );
+    const info = d.memoryLayoutOf(DeepStruct, (s) => s.nested.additionalData[1] as number);
 
     expect(info.offset).toBe(184);
     expect(info.contiguous).toBe(124);
@@ -150,10 +141,7 @@ describe('d.memoryLayoutOf (edge cases)', () => {
       arr: d.arrayOf(E, 3),
     });
 
-    const info = d.memoryLayoutOf(
-      S,
-      (s) => s.arr[1]?.vec.x as number,
-    );
+    const info = d.memoryLayoutOf(S, (s) => s.arr[1]?.vec.x as number);
 
     expect(info.offset).toBe(48);
     expect(info.contiguous).toBe(20);
@@ -169,10 +157,7 @@ describe('d.memoryLayoutOf (edge cases)', () => {
       r: I,
     });
 
-    const info = d.memoryLayoutOf(
-      S,
-      (s) => s.l.vec.z,
-    );
+    const info = d.memoryLayoutOf(S, (s) => s.l.vec.z);
 
     expect(info.offset).toBe(8);
     expect(info.contiguous).toBe(24);
@@ -190,10 +175,7 @@ describe('d.memoryLayoutOf (edge cases)', () => {
       arr: d.arrayOf(E, 4),
     });
 
-    const info = d.memoryLayoutOf(
-      S,
-      (s) => s.arr[1]?.x.x as number,
-    );
+    const info = d.memoryLayoutOf(S, (s) => s.arr[1]?.x.x as number);
 
     expect(info.offset).toBe(64);
     expect(info.contiguous).toBe(192);
@@ -209,10 +191,7 @@ describe('d.memoryLayoutOf (edge cases)', () => {
       s: I,
     });
 
-    const info = d.memoryLayoutOf(
-      S,
-      (s) => s.arr[0]?.y as number,
-    );
+    const info = d.memoryLayoutOf(S, (s) => s.arr[0]?.y as number);
 
     expect(info.offset).toBe(4);
     expect(info.contiguous).toBe(16);

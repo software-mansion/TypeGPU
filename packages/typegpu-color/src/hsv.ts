@@ -2,7 +2,10 @@ import tgpu from 'typegpu';
 import { f32, vec3f } from 'typegpu/data';
 import { floor, max, min } from 'typegpu/std';
 
-export const hsvToRgb = tgpu.fn([vec3f], vec3f)((hsv) => {
+export const hsvToRgb = tgpu.fn(
+  [vec3f],
+  vec3f,
+)((hsv) => {
   const h = hsv.x;
   const s = hsv.y;
   const v = hsv.z;
@@ -44,7 +47,10 @@ export const hsvToRgb = tgpu.fn([vec3f], vec3f)((hsv) => {
   return vec3f(r, g, b);
 });
 
-export const rgbToHsv = tgpu.fn([vec3f], vec3f)((rgb) => {
+export const rgbToHsv = tgpu.fn(
+  [vec3f],
+  vec3f,
+)((rgb) => {
   const r = rgb.x;
   const g = rgb.y;
   const b = rgb.z;

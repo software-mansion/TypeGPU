@@ -30,10 +30,6 @@ jobs:
           node-version: 24.x
           cache: 'pnpm'
 
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x # Run with latest stable Deno.
-
       - name: Install dependencies
         run: pnpm install --recursive --frozen-lockfile
 

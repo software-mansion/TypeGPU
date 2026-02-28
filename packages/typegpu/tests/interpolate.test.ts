@@ -50,8 +50,6 @@ describe('d.interpolate', () => {
       namespace: namespace({ names: 'strict' }),
     };
 
-    expect(resolve(s1, opts).code).toContain(
-      '@interpolate(linear, sample) b: f32,',
-    );
+    expect(resolve(s1, opts).code).toContain('@interpolate(linear, sample) b: f32,');
   });
 });

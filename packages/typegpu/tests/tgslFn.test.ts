@@ -7,7 +7,12 @@ import { it } from './utils/extendedIt.ts';
 
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {
-    const getX = tgpu.fn([], d.f32)(() => 3).$name('get_x');
+    const getX = tgpu
+      .fn(
+        [],
+        d.f32,
+      )(() => 3)
+      .$name('get_x');
 
     expect(getName(getX)).toBe('get_x');
   });
@@ -23,23 +28,35 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves externals', () => {
-    const getColor = tgpu.fn([], d.vec3f)(() => {
-      const color = d.vec3f();
-      const color2 = d.vec3f(1, 2, 3);
-      return color;
-    })
+    const getColor = tgpu
+      .fn(
+        [],
+        d.vec3f,
+      )(() => {
+        const color = d.vec3f();
+        const color2 = d.vec3f(1, 2, 3);
+        return color;
+      })
       .$uses({ v: d.vec3f });
 
-    const getX = tgpu.fn([], d.f32)(() => {
-      const color = getColor();
-      return 3;
-    })
+    const getX = tgpu
+      .fn(
+        [],
+        d.f32,
+      )(() => {
+        const color = getColor();
+        return 3;
+      })
       .$uses({ getColor });
 
-    const getY = tgpu.fn([], d.f32)(() => {
-      const c = getColor();
-      return getX();
-    })
+    const getY = tgpu
+      .fn(
+        [],
+        d.f32,
+      )(() => {
+        const c = getColor();
+        return getX();
+      })
       .$uses({ getX, getColor });
 
     expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`
@@ -67,7 +84,10 @@ describe('TGSL tgpu.fn function', () => {
       end: d.vec3f,
     });
 
-    const createGradient = tgpu.fn([], Gradient)(() => {
+    const createGradient = tgpu.fn(
+      [],
+      Gradient,
+    )(() => {
       return Gradient({ end: d.vec3f(1, 2, 3), start: d.vec3f(4, 5, 6) });
     });
 
@@ -98,7 +118,10 @@ describe('TGSL tgpu.fn function', () => {
       a: A,
     });
 
-    const pureConfusion = tgpu.fn([], A)(() => {
+    const pureConfusion = tgpu.fn(
+      [],
+      A,
+    )(() => {
       return C({ a: A({ b: 3 }), b: B({ a: A({ b: 4 }), c: 5 }) }).a;
     });
 
@@ -189,7 +212,7 @@ describe('TGSL tgpu.fn function', () => {
       tgpu.vertexFn({
         in: { vi: builtin.vertexIndex },
         out: {},
-      })
+      }),
     ).toThrowErrorMatchingInlineSnapshot(
       `[Error: A vertexFn output cannot be empty since it must include the 'position' builtin.]`,
     );
@@ -247,12 +270,7 @@ describe('TGSL tgpu.fn function', () => {
         },
       })((input, Out) => {
         const myOutput = Out({
-          pos: d.vec4f(
-            d.f32(input.color.w),
-            d.f32(input.ii),
-            d.f32(input.vi),
-            1,
-          ),
+          pos: d.vec4f(d.f32(input.color.w), d.f32(input.ii), d.f32(input.vi), 1),
           uv: d.vec2f(d.f32(input.color.w), input.vi),
         });
         return myOutput;
@@ -335,9 +353,7 @@ describe('TGSL tgpu.fn function', () => {
 
   it('rejects invalid arguments for computeFn', () => {
     // @ts-expect-error
-    tgpu.computeFn({ in: { vid: builtin.vertexIndex }, workgroupSize: [24] })(
-      () => {},
-    );
+    tgpu.computeFn({ in: { vid: builtin.vertexIndex }, workgroupSize: [24] })(() => {});
 
     // @ts-expect-error
     tgpu.computeFn({
@@ -347,31 +363,30 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves fragmentFn', () => {
-    const fragmentFn = tgpu
-      .fragmentFn({
-        in: {
-          pos: builtin.position,
-          uv: d.vec2f,
-          sampleMask: builtin.sampleMask,
-        },
-        out: {
-          sampleMask: builtin.sampleMask,
-          fragDepth: builtin.fragDepth,
-          out: d.location(0, d.vec4f),
-        },
-      })((input) => {
-        const pos = input.pos;
-        let sampleMask = 0;
-        if (input.sampleMask > 0 && pos.x > 0) {
-          sampleMask = 1;
-        }
+    const fragmentFn = tgpu.fragmentFn({
+      in: {
+        pos: builtin.position,
+        uv: d.vec2f,
+        sampleMask: builtin.sampleMask,
+      },
+      out: {
+        sampleMask: builtin.sampleMask,
+        fragDepth: builtin.fragDepth,
+        out: d.location(0, d.vec4f),
+      },
+    })((input) => {
+      const pos = input.pos;
+      let sampleMask = 0;
+      if (input.sampleMask > 0 && pos.x > 0) {
+        sampleMask = 1;
+      }
 
-        return {
-          out: d.vec4f(0, 0, 0, 0),
-          fragDepth: 1,
-          sampleMask: d.u32(sampleMask),
-        };
-      });
+      return {
+        out: d.vec4f(0, 0, 0, 0),
+        fragDepth: 1,
+        sampleMask: d.u32(sampleMask),
+      };
+    });
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
       "struct fragmentFn_Output {
@@ -398,30 +413,29 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('allows accessing the output struct as second argument in fragmentFn', () => {
-    const fragmentFn = tgpu
-      .fragmentFn({
-        in: {
-          pos: builtin.position,
-          uv: d.vec2f,
-          sampleMask: builtin.sampleMask,
-        },
-        out: {
-          sampleMask: builtin.sampleMask,
-          fragDepth: builtin.fragDepth,
-          out: d.location(0, d.vec4f),
-        },
-      })((input, Out) => {
-        const myOutput = Out({
-          out: d.vec4f(0, 0, 0, 0),
-          fragDepth: 1,
-          sampleMask: 0,
-        });
-        if (input.sampleMask > 0 && input.pos.x > 0) {
-          myOutput.sampleMask = 1;
-        }
-
-        return myOutput;
+    const fragmentFn = tgpu.fragmentFn({
+      in: {
+        pos: builtin.position,
+        uv: d.vec2f,
+        sampleMask: builtin.sampleMask,
+      },
+      out: {
+        sampleMask: builtin.sampleMask,
+        fragDepth: builtin.fragDepth,
+        out: d.location(0, d.vec4f),
+      },
+    })((input, Out) => {
+      const myOutput = Out({
+        out: d.vec4f(0, 0, 0, 0),
+        fragDepth: 1,
+        sampleMask: 0,
       });
+      if (input.sampleMask > 0 && input.pos.x > 0) {
+        myOutput.sampleMask = 1;
+      }
+
+      return myOutput;
+    });
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
       "struct fragmentFn_Output {
@@ -447,18 +461,17 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('allows accessing fragment output even when it is not a struct', () => {
-    const fragmentFn = tgpu
-      .fragmentFn({
-        in: {
-          pos: builtin.position,
-          uv: d.vec2f,
-          sampleMask: builtin.sampleMask,
-        },
-        out: d.vec4f,
-      })((input, Out) => {
-        const hmm = Out(1.25);
-        return hmm;
-      });
+    const fragmentFn = tgpu.fragmentFn({
+      in: {
+        pos: builtin.position,
+        uv: d.vec2f,
+        sampleMask: builtin.sampleMask,
+      },
+      out: d.vec4f,
+    })((input, Out) => {
+      const hmm = Out(1.25);
+      return hmm;
+    });
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
       "struct fragmentFn_Input {
@@ -475,30 +488,29 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('allows destructuring the input argument in fragmentFn', () => {
-    const fragmentFn = tgpu
-      .fragmentFn({
-        in: {
-          pos: builtin.position,
-          uv: d.vec2f,
-          sampleMask: builtin.sampleMask,
-        },
-        out: {
-          sampleMask: builtin.sampleMask,
-          fragDepth: builtin.fragDepth,
-          out: d.location(0, d.vec4f),
-        },
-      })(({ pos: position, sampleMask }, Out) => {
-        const out = Out({
-          out: d.vec4f(),
-          fragDepth: 1,
-          sampleMask: 0,
-        });
-        if (sampleMask > 0 && position.x > 0) {
-          out.sampleMask = 1;
-        }
-
-        return out;
+    const fragmentFn = tgpu.fragmentFn({
+      in: {
+        pos: builtin.position,
+        uv: d.vec2f,
+        sampleMask: builtin.sampleMask,
+      },
+      out: {
+        sampleMask: builtin.sampleMask,
+        fragDepth: builtin.fragDepth,
+        out: d.location(0, d.vec4f),
+      },
+    })(({ pos: position, sampleMask }, Out) => {
+      const out = Out({
+        out: d.vec4f(),
+        fragDepth: 1,
+        sampleMask: 0,
       });
+      if (sampleMask > 0 && position.x > 0) {
+        out.sampleMask = 1;
+      }
+
+      return out;
+    });
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
       "struct fragmentFn_Output {
@@ -524,10 +536,9 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves fragmentFn with a single output', () => {
-    const fragmentFn = tgpu
-      .fragmentFn({ in: { pos: builtin.position }, out: d.vec4f })((input) => {
-        return input.pos;
-      });
+    const fragmentFn = tgpu.fragmentFn({ in: { pos: builtin.position }, out: d.vec4f })((input) => {
+      return input.pos;
+    });
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
       "struct fragmentFn_Input {
@@ -541,14 +552,16 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('allows for an object based on return type struct to be returned', () => {
-    const TestStruct = d
-      .struct({
-        a: d.f32,
-        b: d.f32,
-        c: d.vec2f,
-      });
+    const TestStruct = d.struct({
+      a: d.f32,
+      b: d.f32,
+      c: d.vec2f,
+    });
 
-    const getTestStruct = tgpu.fn([], TestStruct)(() => {
+    const getTestStruct = tgpu.fn(
+      [],
+      TestStruct,
+    )(() => {
       return {
         a: 1,
         b: 2,
@@ -570,14 +583,16 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('correctly handles object based on return type struct with a function call inside another function', () => {
-    const TestStruct = d
-      .struct({
-        a: d.f32,
-        b: d.f32,
-        c: d.vec2f,
-      });
+    const TestStruct = d.struct({
+      a: d.f32,
+      b: d.f32,
+      c: d.vec2f,
+    });
 
-    const getTestStruct = tgpu.fn([], TestStruct)(() => {
+    const getTestStruct = tgpu.fn(
+      [],
+      TestStruct,
+    )(() => {
       return {
         a: 1,
         b: 2,
@@ -755,7 +770,10 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('maintains argument names in the type', () => {
-    const fun = tgpu.fn([d.f32, d.f32], d.f32)((x, y) => {
+    const fun = tgpu.fn(
+      [d.f32, d.f32],
+      d.f32,
+    )((x, y) => {
       return x + y;
     });
 
@@ -763,7 +781,10 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('falls back to args_N naming when not every argument is used in the implementation', () => {
-    const fun = tgpu.fn([d.f32, d.f32], d.f32)((x) => {
+    const fun = tgpu.fn(
+      [d.f32, d.f32],
+      d.f32,
+    )((x) => {
       return x * 2;
     });
 
@@ -812,10 +833,7 @@ describe('tgpu.fn arguments', () => {
 
   it('returns a deep copy of a struct', () => {
     const struct = { prop: d.vec2f(1, 2) };
-    const fn = tgpu.fn(
-      [d.struct({ prop: d.vec2f })],
-      d.struct({ prop: d.vec2f }),
-    )((e) => e);
+    const fn = tgpu.fn([d.struct({ prop: d.vec2f })], d.struct({ prop: d.vec2f }))((e) => e);
 
     const clone = fn(struct);
 
@@ -875,7 +893,10 @@ describe('tgpu.fn called top-level', () => {
 
   it('throws helpful error when reading a uniform', ({ root }) => {
     const uniform = root.createUniform(d.f32, 0);
-    const foo = tgpu.fn([], d.f32)(() => {
+    const foo = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       return uniform.$; // accessing GPU resource
     });
 
@@ -905,9 +926,7 @@ describe('tgsl fn when using plugin', () => {
   });
 
   it('can be invoked for inline function with no directive', () => {
-    const add = tgpu.fn([d.u32, d.u32], d.u32)(
-      (x, y) => x + y,
-    );
+    const add = tgpu.fn([d.u32, d.u32], d.u32)((x, y) => x + y);
 
     expect(add(2, 3)).toBe(5);
     expect(tgpu.resolve([add])).toMatchInlineSnapshot(`
@@ -953,7 +972,14 @@ describe('tgsl fn when using plugin', () => {
     let three: TgpuFn;
     let two: TgpuFn;
     one = tgpu.fn([], d.f32)(() => two() + 2);
-    fnSlot = tgpu.slot(tgpu.fn([], d.f32)(() => one() + 2).$name('inner'));
+    fnSlot = tgpu.slot(
+      tgpu
+        .fn(
+          [],
+          d.f32,
+        )(() => one() + 2)
+        .$name('inner'),
+    );
     three = tgpu.fn([], d.f32)(() => fnSlot.$() + 1);
     two = tgpu.fn([], d.f32)(() => three() + 2);
     expect(() => tgpu.resolve([one])).toThrowErrorMatchingInlineSnapshot(`
@@ -975,12 +1001,14 @@ describe('tgsl fn when using plugin', () => {
     const mainFn = tgpu.fn([], d.f32)(() => 1000);
     const fallbackFn = tgpu.fn([], d.f32)(() => one());
 
-    const lazyFn = tgpu.lazy(() => {
-      if (flagSlot.$) {
-        return fnSlot.$;
-      }
-      return fallbackFn;
-    }).with(fnSlot, mainFn);
+    const lazyFn = tgpu
+      .lazy(() => {
+        if (flagSlot.$) {
+          return fnSlot.$;
+        }
+        return fallbackFn;
+      })
+      .with(fnSlot, mainFn);
 
     one = tgpu.fn([], d.f32)(() => lazyFn.$() + 2);
 
@@ -1007,7 +1035,10 @@ describe('tgsl fn when using plugin', () => {
 
   it('allows .with to be called at comptime', () => {
     const multiplierSlot = tgpu.slot(1);
-    const scale = tgpu.fn([d.f32], d.f32)((v) => {
+    const scale = tgpu.fn(
+      [d.f32],
+      d.f32,
+    )((v) => {
       'use gpu';
       return v * multiplierSlot.$;
     });

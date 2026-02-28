@@ -23,12 +23,7 @@ describe('cosh', () => {
 
   it('computes cosh of vec4f', () => {
     const input = vec4f(0, 1, -1, 2);
-    const expected = vec4f(
-      Math.cosh(0),
-      Math.cosh(1),
-      Math.cosh(-1),
-      Math.cosh(2),
-    );
+    const expected = vec4f(Math.cosh(0), Math.cosh(1), Math.cosh(-1), Math.cosh(2));
     expect(isCloseTo(cosh(input), expected)).toBe(true);
   });
 });
