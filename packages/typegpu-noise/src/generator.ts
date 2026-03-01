@@ -1,5 +1,5 @@
 import tgpu, { d, type TgpuFnShell, type TgpuSlot } from 'typegpu';
-import { bitcastU32toF32, cos, dot, fract, pow } from 'typegpu/std';
+import { bitcastU32toF32, cos, dot, fract } from 'typegpu/std';
 
 export interface StatefulGenerator {
   seed?: (seed: number) => void;
@@ -66,21 +66,19 @@ export const LCG: StatefulGenerator = (() => {
 
   return {
     seed: tgpu.fn([d.f32])((value) => {
-      seed.$ = d.u32(value * pow(32, 3));
+      seed.$ = d.u32(value * 32768);
     }),
 
     seed2: tgpu.fn([d.vec2f])((value) => {
-      seed.$ = d.u32(value.x * pow(32, 3) + value.y * pow(32, 2));
+      seed.$ = d.u32(value.x * 32768 + value.y * 1024);
     }),
 
     seed3: tgpu.fn([d.vec3f])((value) => {
-      seed.$ = d.u32(value.x * pow(32, 3) + value.y * pow(32, 2) + value.z * pow(32, 1));
+      seed.$ = d.u32(value.x * 32768 + value.y * 1024 + value.z * 32);
     }),
 
     seed4: tgpu.fn([d.vec4f])((value) => {
-      seed.$ = d.u32(
-        value.x * pow(32, 3) + value.y * pow(32, 2) + value.z * pow(32, 1) + value.w * pow(32, 0),
-      );
+      seed.$ = d.u32(value.x * 32768 + value.y * 1024 + value.z * 32 + value.w);
     }),
 
     sample: randomGeneratorShell(() => {
