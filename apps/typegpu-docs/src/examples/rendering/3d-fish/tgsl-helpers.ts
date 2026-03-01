@@ -14,11 +14,7 @@ export const PosAndNormal = d.struct({
   normal: d.vec3f,
 });
 
-export const applySinWave = (
-  index: number,
-  vertex: PosAndNormal,
-  time: number,
-) => {
+export const applySinWave = (index: number, vertex: PosAndNormal, time: number) => {
   'use gpu';
   const a = -60.1;
   const b = 0.8;

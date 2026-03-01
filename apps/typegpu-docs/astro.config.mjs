@@ -46,10 +46,7 @@ export default defineConfig({
       'process.env.NODE_DEBUG_NATIVE': '""',
     },
     optimizeDeps: {
-      exclude: [
-        '@rolldown/browser',
-        'onnxruntime-web',
-      ],
+      exclude: ['@rolldown/browser', 'onnxruntime-web'],
     },
     // Allowing query params, for invalidation
     plugins: [
@@ -65,28 +62,20 @@ export default defineConfig({
       },
     ],
     ssr: {
-      noExternal: [
-        'wgsl-wasm-transpiler-bundler',
-        '@rolldown/browser',
-        'onnxruntime-web',
-      ],
+      noExternal: ['wgsl-wasm-transpiler-bundler', '@rolldown/browser', 'onnxruntime-web'],
     },
   },
   integrations: [
     starlight({
       title: 'TypeGPU',
-      customCss: [
-        './src/tailwind.css',
-        './src/fonts/font-face.css',
-        './src/mathjax.css',
-      ],
+      customCss: ['./src/tailwind.css', './src/fonts/font-face.css', './src/mathjax.css'],
       plugins: stripFalsy([
         starlightBlog({
           navigation: 'none',
         }),
         starlightTypeDoc({
           entryPoints: [
-            '../../packages/typegpu/src/index.ts',
+            '../../packages/typegpu/src/index.d.ts',
             '../../packages/typegpu/src/data/index.ts',
             '../../packages/typegpu/src/std/index.ts',
           ],
@@ -263,8 +252,7 @@ export default defineConfig({
           label: 'Tutorials',
           items: [
             {
-              label:
-                'From a Triangle to Simulating Boids: Step-by-step Tutorial',
+              label: 'From a Triangle to Simulating Boids: Step-by-step Tutorial',
               slug: 'tutorials/triangle-to-boids',
             },
             {

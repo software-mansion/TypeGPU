@@ -4,11 +4,8 @@ import type { GeometryData } from './types.ts';
 import { InstanceData, VertexData } from './types.ts';
 
 export class BoxGeometry {
-  static #vertexBuffer:
-    | (TgpuBuffer<d.WgslArray<VertexData>> & VertexFlag)
-    | null = null;
-  static #indexBuffer: (TgpuBuffer<d.WgslArray<d.U16>> & IndexFlag) | null =
-    null;
+  static #vertexBuffer: (TgpuBuffer<d.WgslArray<VertexData>> & VertexFlag) | null = null;
+  static #indexBuffer: (TgpuBuffer<d.WgslArray<d.U16>> & IndexFlag) | null = null;
   static #indexCount = 0;
 
   #modelMatrix = d.mat4x4f.identity();
@@ -45,13 +42,11 @@ export class BoxGeometry {
           const norm = [0, 0, 0];
           norm[w] = Math.sign(depth);
 
-          vertices.push(
-            {
-              position: d.vec3f(pos[0], pos[1], pos[2]),
-              normal: d.vec3f(norm[0], norm[1], norm[2]),
-              uv: d.vec2f(ix, 1 - iy),
-            },
-          );
+          vertices.push({
+            position: d.vec3f(pos[0], pos[1], pos[2]),
+            normal: d.vec3f(norm[0], norm[1], norm[2]),
+            uv: d.vec2f(ix, 1 - iy),
+          });
         }
       }
 

@@ -65,22 +65,19 @@ const particleDataStorage = particleDataBuffer.as('mutable');
 
 // layouts
 
-const geometryLayout = tgpu.vertexLayout(
-  d.arrayOf(ParticleGeometry),
-  'instance',
-);
+const geometryLayout = tgpu.vertexLayout(d.arrayOf(ParticleGeometry), 'instance');
 
-const dataLayout = tgpu.vertexLayout(
-  d.arrayOf(ParticleData),
-  'instance',
-);
+const dataLayout = tgpu.vertexLayout(d.arrayOf(ParticleData), 'instance');
 
 // functions
 
-const rotate = tgpu.fn([d.vec2f, d.f32], d.vec2f)((v, angle) => {
+const rotate = tgpu.fn(
+  [d.vec2f, d.f32],
+  d.vec2f,
+)((v, angle) => {
   const pos = d.vec2f(
-    (v.x * std.cos(angle)) - (v.y * std.sin(angle)),
-    (v.x * std.sin(angle)) + (v.y * std.cos(angle)),
+    v.x * std.cos(angle) - v.y * std.sin(angle),
+    v.x * std.sin(angle) + v.y * std.cos(angle),
   );
 
   return pos;
@@ -95,7 +92,7 @@ const mainVert = tgpu.vertexFn({
     index: d.builtin.vertexIndex,
   },
   out: VertexOutput,
-}) /* wgsl */`{
+}) /* wgsl */ `{
   let width = in.tilt;
   let height = in.tilt / 2;
 
@@ -121,12 +118,12 @@ const mainVert = tgpu.vertexFn({
 const mainFrag = tgpu.fragmentFn({
   in: VertexOutput,
   out: d.vec4f,
-}) /* wgsl */`{ return in.color; }`;
+}) /* wgsl */ `{ return in.color; }`;
 
 const mainCompute = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [1],
-}) /* wgsl */`{
+}) /* wgsl */ `{
   let index = in.gid.x;
   if index == 0 {
     time += deltaTime;
@@ -169,10 +166,7 @@ function randomizePositions() {
       .fill(0)
       .map(() => ({
         position: d.vec2f(Math.random() * 2 - 1, Math.random() * 2 + 1),
-        velocity: d.vec2f(
-          (Math.random() * 2 - 1) / 50,
-          -(Math.random() / 25 + 0.01),
-        ),
+        velocity: d.vec2f((Math.random() * 2 - 1) / 50, -(Math.random() / 25 + 0.01)),
         seed: Math.random(),
       })),
   );
@@ -203,9 +197,7 @@ onFrame((dt) => {
 
   computePipeline.dispatchWorkgroups(PARTICLE_AMOUNT);
 
-  renderPipeline
-    .withColorAttachment({ view: context })
-    .draw(4, PARTICLE_AMOUNT);
+  renderPipeline.withColorAttachment({ view: context }).draw(4, PARTICLE_AMOUNT);
 });
 
 // example controls and cleanup

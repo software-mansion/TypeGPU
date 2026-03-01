@@ -1,7 +1,7 @@
 import { it as base, vi } from 'vitest';
 import type { ExperimentalTgpuRoot } from '../../src/core/root/rootTypes.ts';
 import tgpu from '../../src/index.js';
-// oxlint-disable-next-line import/no-unassigned-import imported for side effects
+// oxlint-disable-next-line import/no-unassigned-import -- imported for side effects
 import './webgpuGlobals.ts';
 
 const adapterMock = {
@@ -64,6 +64,18 @@ const mockRenderPassEncoder = {
   setVertexBuffer: vi.fn(),
   setIndexBuffer: vi.fn(),
   setStencilReference: vi.fn(),
+  executeBundles: vi.fn(),
+};
+
+const mockRenderBundleEncoder = {
+  draw: vi.fn(),
+  drawIndexed: vi.fn(),
+  setBindGroup: vi.fn(),
+  setPipeline: vi.fn(),
+  setVertexBuffer: vi.fn(),
+  setIndexBuffer: vi.fn(),
+  finish: vi.fn(() => 'mockRenderBundle'),
+  label: '<unnamed>',
 };
 
 const mockQuerySet = {
@@ -89,44 +101,38 @@ const mockDevice = {
     return mockDevice;
   },
   features: new Set(['timestamp-query']),
-  createBindGroup: vi.fn(
-    (_descriptor: GPUBindGroupDescriptor) => 'mockBindGroup',
-  ),
+  createBindGroup: vi.fn((_descriptor: GPUBindGroupDescriptor) => 'mockBindGroup'),
   createBindGroupLayout: vi.fn(
     (_descriptor: GPUBindGroupLayoutDescriptor) => 'mockBindGroupLayout',
   ),
-  createBuffer: vi.fn(
-    ({ size, usage, mappedAtCreation, label }: GPUBufferDescriptor) => {
-      const mockBuffer = {
-        mapState: mappedAtCreation ? 'mapped' : 'unmapped',
-        size,
-        usage,
-        label: label ?? '<unnamed>',
-        getMappedRange: vi.fn(() => new ArrayBuffer(size)),
-        unmap: vi.fn(() => {
-          mockBuffer.mapState = 'unmapped';
-        }),
-        mapAsync: vi.fn(() => {
-          mockBuffer.mapState = 'mapped';
-        }),
-        destroy: vi.fn(),
-      };
+  createBuffer: vi.fn(({ size, usage, mappedAtCreation, label }: GPUBufferDescriptor) => {
+    const mockBuffer = {
+      mapState: mappedAtCreation ? 'mapped' : 'unmapped',
+      size,
+      usage,
+      label: label ?? '<unnamed>',
+      getMappedRange: vi.fn(() => new ArrayBuffer(size)),
+      unmap: vi.fn(() => {
+        mockBuffer.mapState = 'unmapped';
+      }),
+      mapAsync: vi.fn(() => {
+        mockBuffer.mapState = 'mapped';
+      }),
+      destroy: vi.fn(),
+    };
 
-      return mockBuffer;
-    },
-  ),
+    return mockBuffer;
+  }),
   createCommandEncoder: vi.fn(() => mockCommandEncoder),
   createComputePipeline: vi.fn(() => mockComputePipeline),
   createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),
-  createQuerySet: vi.fn(
-    ({ type, count }: GPUQuerySetDescriptor) => {
-      const querySet = Object.create(mockQuerySet);
-      querySet.type = type;
-      querySet.count = count;
-      querySet._label = '<unnamed>';
-      return querySet;
-    },
-  ),
+  createQuerySet: vi.fn(({ type, count }: GPUQuerySetDescriptor) => {
+    const querySet = Object.create(mockQuerySet);
+    querySet.type = type;
+    querySet.count = count;
+    querySet._label = '<unnamed>';
+    return querySet;
+  }),
   createRenderPipeline: vi.fn(() => 'mockRenderPipeline'),
   createSampler: vi.fn(() => 'mockSampler'),
   createShaderModule: vi.fn(() => 'mockShaderModule'),
@@ -150,6 +156,9 @@ export const it = base.extend<{
   _global: undefined;
   commandEncoder: GPUCommandEncoder & { mock: typeof mockCommandEncoder };
   device: GPUDevice & { mock: typeof mockDevice };
+  renderBundleEncoder: GPURenderBundleEncoder & {
+    mock: typeof mockRenderBundleEncoder;
+  };
   root: ExperimentalTgpuRoot;
 }>({
   _global: [
@@ -168,6 +177,14 @@ export const it = base.extend<{
     await use(
       mockCommandEncoder as unknown as GPUCommandEncoder & {
         mock: typeof mockCommandEncoder;
+      },
+    );
+  },
+
+  renderBundleEncoder: async ({ task }, use) => {
+    await use(
+      mockRenderBundleEncoder as unknown as GPURenderBundleEncoder & {
+        mock: typeof mockRenderBundleEncoder;
       },
     );
   },

@@ -1,12 +1,4 @@
-export {
-  sdBezier,
-  sdBezierApprox,
-  sdBox2d,
-  sdDisk,
-  sdLine,
-  sdPie,
-  sdRoundedBox2d,
-} from './2d.ts';
+export { sdBezier, sdBezierApprox, sdBox2d, sdDisk, sdLine, sdPie, sdRoundedBox2d } from './2d.ts';
 
 export {
   sdBox3d,

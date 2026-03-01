@@ -10,9 +10,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { downsweep, upsweep, workgroupMemory } from './shared.ts';
 
-const fillIdentityArray = tgpu.comptime(() =>
-  Array.from({ length: 8 }, () => identitySlot.$)
-);
+const fillIdentityArray = tgpu.comptime(() => Array.from({ length: 8 }, () => identitySlot.$));
 
 export const computeBlock = tgpu['~unstable'].computeFn({
   workgroupSize: [WORKGROUP_SIZE],
@@ -37,10 +35,7 @@ export const computeBlock = tgpu['~unstable'].computeFn({
   // TODO: use `tgpu.unroll(8)`
   for (let i = d.u32(); i < 8; i++) {
     if (baseIdx + i < scanLayout.$.input.length) {
-      partialSums[i] = operatorSlot.$(
-        prev,
-        scanLayout.$.input[baseIdx + i] as number,
-      );
+      partialSums[i] = operatorSlot.$(prev, scanLayout.$.input[baseIdx + i] as number);
       prev = partialSums[i] as number;
       lastIdx = i;
     }
@@ -50,8 +45,7 @@ export const computeBlock = tgpu['~unstable'].computeFn({
   upsweep(localIdx);
 
   if (localIdx === 0) {
-    scanLayout.$.sums[workgroupId] = workgroupMemory
-      .$[WORKGROUP_SIZE - 1] as number;
+    scanLayout.$.sums[workgroupId] = workgroupMemory.$[WORKGROUP_SIZE - 1] as number;
     if (!onlyGreatestElementSlot.$) {
       workgroupMemory.$[WORKGROUP_SIZE - 1] = d.f32(identitySlot.$);
     }

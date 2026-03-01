@@ -41,9 +41,7 @@ import type { LogGeneratorOptions, SerializedLogCallData } from './types.ts';
 // --------------
 
 type SerializerMap = {
-  [K in AnyWgslData['type']]?: TgpuFn<
-    (args_0: Extract<AnyWgslData, { type: K }>) => Void
-  >;
+  [K in AnyWgslData['type']]?: TgpuFn<(args_0: Extract<AnyWgslData, { type: K }>) => Void>;
 };
 
 const dataBlockIndex = privateVar(u32, 0).$name('dataBlockIndex');
@@ -53,7 +51,8 @@ const nextByteIndex = fn([], u32)`() {
   let i = dataByteIndex;
   dataByteIndex = dataByteIndex + 1u;
   return i;
-}`.$uses({ dataByteIndex })
+}`
+  .$uses({ dataByteIndex })
   .$name('nextByteIndex');
 
 const nextU32 = 'dataBuffer[dataBlockIndex].serializedData[nextByteIndex()]';
@@ -188,9 +187,7 @@ export const serializerMap: SerializerMap = {
 // rename the functions and add externals
 for (const [name, serializer] of Object.entries(serializerMap)) {
   serializer
-    .$name(
-      `serialize${(name[0] as string).toLocaleUpperCase()}${name.slice(1)}`,
-    )
+    .$name(`serialize${(name[0] as string).toLocaleUpperCase()}${name.slice(1)}`)
     .$uses({ dataBlockIndex, nextByteIndex, dataBuffer: dataBufferSlot });
 }
 
@@ -216,18 +213,15 @@ function getSerializer<T extends BaseData>(
 ): TgpuFn<(args_0: T) => Void> {
   const maybeSerializer = serializerMap[dataType.type as AnyWgslData['type']];
   if (maybeSerializer) {
-    return (maybeSerializer as TgpuFn<(args_0: T) => Void>).with(
-      dataBufferSlot,
-      dataBuffer,
-    );
+    return (maybeSerializer as TgpuFn<(args_0: T) => Void>).with(dataBufferSlot, dataBuffer);
   }
   if (isWgslStruct(dataType)) {
     const props = Object.keys(dataType.propTypes);
     const propTypes = Object.values(dataType.propTypes);
     const propsSerializer = createCompoundSerializer(propTypes, dataBuffer);
-    return fn([dataType])`(arg) {\n  propsSerializer(${
-      props.map((prop) => `arg.${prop}`).join(', ')
-    });\n}`
+    return fn([dataType])`(arg) {\n  propsSerializer(${props
+      .map((prop) => `arg.${prop}`)
+      .join(', ')});\n}`
       .$uses({ propsSerializer })
       .$name(`${getName(dataType) ?? 'struct'}Serializer`);
   }
@@ -235,11 +229,10 @@ function getSerializer<T extends BaseData>(
     const elementType = dataType.elementType as AnyWgslData;
     const length = dataType.elementCount;
     const elementSerializer = getSerializer(elementType, dataBuffer);
-    return fn([dataType])`(arg) {\n${
-      Array
-        .from({ length }, (_, i) => `  elementSerializer(arg[${i}]);`)
-        .join('\n')
-    }\n}`
+    return fn([dataType])`(arg) {\n${Array.from(
+      { length },
+      (_, i) => `  elementSerializer(arg[${i}]);`,
+    ).join('\n')}\n}`
       .$uses({ elementSerializer })
       .$name('arraySerializer');
   }
@@ -260,14 +253,14 @@ function createCompoundSerializer(
 
   const shell = fn(dataTypes as AnyData[]);
   const header = generateHeader(dataTypes);
-  const body = dataTypes.map((arg, i) => {
-    usedSerializers[`serializer${i}`] = getSerializer(arg, dataBuffer);
-    return `  serializer${i}(_arg_${i});`;
-  }).join('\n');
+  const body = dataTypes
+    .map((arg, i) => {
+      usedSerializers[`serializer${i}`] = getSerializer(arg, dataBuffer);
+      return `  serializer${i}(_arg_${i});`;
+    })
+    .join('\n');
 
-  return shell`${header} {\n${body}\n}`
-    .$uses(usedSerializers)
-    .$name('compoundSerializer');
+  return shell`${header} {\n${body}\n}`.$uses(usedSerializers).$name('compoundSerializer');
 }
 
 /**
@@ -293,8 +286,9 @@ export function createLoggingFunction(
     );
   }
 
-  const compoundSerializer = createCompoundSerializer(dataTypes, dataBuffer)
-    .$name(`log${id}serializer`);
+  const compoundSerializer = createCompoundSerializer(dataTypes, dataBuffer).$name(
+    `log${id}serializer`,
+  );
   const header = generateHeader(dataTypes);
 
   return fn(dataTypes)`${header} {
@@ -306,11 +300,13 @@ export function createLoggingFunction(
   dataByteIndex = 0;
 
   compoundSerializer${header};
-}`.$uses({
+}`
+    .$uses({
       indexBuffer,
       dataBuffer,
       dataBlockIndex,
       dataByteIndex,
       compoundSerializer,
-    }).$name(`log${id}`);
+    })
+    .$name(`log${id}`);
 }

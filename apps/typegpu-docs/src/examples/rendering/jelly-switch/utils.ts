@@ -1,11 +1,7 @@
 import { d, std, type TgpuRoot } from 'typegpu';
 import { type BoundingBox, BoxIntersection } from './dataTypes.ts';
 
-export const fresnelSchlick = (
-  cosTheta: number,
-  ior1: number,
-  ior2: number,
-) => {
+export const fresnelSchlick = (cosTheta: number, ior1: number, ior2: number) => {
   'use gpu';
   const r0 = std.pow((ior1 - ior2) / (ior1 + ior2), 2.0);
   return r0 + (1.0 - r0) * std.pow(1.0 - cosTheta, 5.0);
@@ -16,11 +12,7 @@ export const beerLambert = (sigma: d.v3f, dist: number) => {
   return std.exp(std.mul(sigma, -dist));
 };
 
-export const intersectBox = (
-  rayOrigin: d.v3f,
-  rayDirection: d.v3f,
-  box: BoundingBox,
-) => {
+export const intersectBox = (rayOrigin: d.v3f, rayDirection: d.v3f, box: BoundingBox) => {
   'use gpu';
   const invDir = d.vec3f(1.0).div(rayDirection);
 
@@ -57,11 +49,7 @@ export function createTextures(root: TgpuRoot, width: number, height: number) {
   });
 }
 
-export function createBackgroundTexture(
-  root: TgpuRoot,
-  width: number,
-  height: number,
-) {
+export function createBackgroundTexture(root: TgpuRoot, width: number, height: number) {
   const texture = root['~unstable']
     .createTexture({
       size: [width, height],

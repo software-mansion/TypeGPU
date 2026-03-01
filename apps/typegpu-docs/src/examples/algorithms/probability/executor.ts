@@ -19,12 +19,8 @@ import tgpu, { d } from 'typegpu';
 export class Executor {
   // don't exceed max workgroup grid X dimension size
   #count!: number;
-  #samplesBuffer!:
-    & TgpuBuffer<d.WgslArray<d.Vec3f>>
-    & StorageFlag;
-  #seedBuffer!:
-    & TgpuBuffer<d.WgslArray<d.F32>>
-    & StorageFlag;
+  #samplesBuffer!: TgpuBuffer<d.WgslArray<d.Vec3f>> & StorageFlag;
+  #seedBuffer!: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
   #bindGroup!: TgpuBindGroup;
   readonly #root: TgpuRoot;
   readonly #dataMoreWorkersFunc: TgpuComputeFn;
@@ -33,10 +29,8 @@ export class Executor {
   readonly #bufferCache: Map<
     number,
     [
-      & TgpuBuffer<d.WgslArray<d.Vec3f>>
-      & StorageFlag,
-      & TgpuBuffer<d.WgslArray<d.F32>>
-      & StorageFlag,
+      TgpuBuffer<d.WgslArray<d.Vec3f>> & StorageFlag,
+      TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
     ]
   >;
   // they can be WeakMaps, because we always have reference to distribution and PRNG
@@ -83,14 +77,14 @@ export class Executor {
     if (cacheEntry) {
       [this.#samplesBuffer, this.#seedBuffer] = cacheEntry;
     } else {
-      this.#samplesBuffer = this.#root
-        .createBuffer(d.arrayOf(d.vec3f, value))
+      this.#samplesBuffer = this.#root.createBuffer(d.arrayOf(d.vec3f, value))
         .$usage('storage');
       this.#seedBuffer = this.#root
         .createBuffer(
           d.arrayOf(d.f32, value),
           Array.from({ length: value }, () => Math.random()),
-        ).$usage('storage');
+        )
+        .$usage('storage');
       this.#bufferCache.set(value, [this.#samplesBuffer, this.#seedBuffer]);
     }
 
@@ -136,9 +130,9 @@ export class Executor {
   ): Promise<d.v3f[]> {
     const pipeline = this.pipelineCacheGet(distribution, generator);
 
-    pipeline
-      .with(this.#bindGroup)
-      .dispatchWorkgroups(Math.ceil(this.#count / 64));
+    pipeline.with(this.#bindGroup).dispatchWorkgroups(
+      Math.ceil(this.#count / 64),
+    );
 
     return await this.#samplesBuffer.read();
   }

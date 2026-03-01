@@ -11,11 +11,7 @@ const mainFrag = tgpu.fragmentFn({
   out: d.vec4f,
 })((input) => {
   const uv2 = uvTransformUniform.$.mul(input.uv.sub(0.5)).add(0.5);
-  let col = std.textureSampleBaseClampToEdge(
-    textureLayout.$.inputTexture,
-    sampler.$,
-    uv2,
-  );
+  let col = std.textureSampleBaseClampToEdge(textureLayout.$.inputTexture, sampler.$, uv2);
   const ycbcr = col.rgb.mul(rgbToYcbcrMatrix.$);
   const colycbcr = colorUniform.$.mul(rgbToYcbcrMatrix.$);
 
@@ -73,8 +69,7 @@ function onVideoChange(size: { width: number; height: number }) {
   video.style.height = `${video.clientWidth / aspectRatio}px`;
   if (canvas.parentElement) {
     canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
-    canvas.parentElement.style.height =
-      `min(100cqh, calc(100cqw/(${aspectRatio})))`;
+    canvas.parentElement.style.height = `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
 }
 
@@ -102,10 +97,7 @@ if (isIOS) {
 let videoFrameCallbackId: number | undefined;
 let lastFrameSize: { width: number; height: number } | undefined;
 
-function processVideoFrame(
-  _: number,
-  metadata: VideoFrameCallbackMetadata,
-) {
+function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   if (video.readyState < 2) {
     videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
     return;
@@ -128,9 +120,11 @@ function processVideoFrame(
       view: context,
       clearValue: [1, 1, 1, 1],
     })
-    .with(root.createBindGroup(textureLayout, {
-      inputTexture: device.importExternalTexture({ source: video }),
-    }))
+    .with(
+      root.createBindGroup(textureLayout, {
+        inputTexture: device.importExternalTexture({ source: video }),
+      }),
+    )
     .draw(3);
 
   spinner.style.display = 'none';

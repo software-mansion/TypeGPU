@@ -15,16 +15,19 @@ describe('liquid-glass example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'simple',
-      name: 'liquid-glass',
-      setupMocks: () => {
-        mockResizeObserver();
-        mockImageLoading();
-        mockCreateImageBitmap();
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'simple',
+        name: 'liquid-glass',
+        setupMocks: () => {
+          mockResizeObserver();
+          mockImageLoading();
+          mockCreateImageBitmap();
+        },
+        expectedCalls: 3,
       },
-      expectedCalls: 3,
-    }, device);
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "

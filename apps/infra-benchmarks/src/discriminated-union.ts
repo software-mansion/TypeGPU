@@ -10,7 +10,7 @@ const bench = new Bench({
   name: 'discriminated union',
   time: 100,
   async setup() {
-    // oxlint-disable-next-line typescript/no-explicit-any making sure GC has no impact on the results
+    // oxlint-disable-next-line typescript/no-explicit-any -- making sure GC has no impact on the results
     (globalThis as any).gc();
   },
 });
@@ -166,8 +166,7 @@ bench
           () =>
             ({
               // oxlint-disable-next-line typescript/no-non-null-assertion
-              [SYMBOL_TAGS[Math.floor(Math.random() * SYMBOL_TAGS.length)]!]:
-                true,
+              [SYMBOL_TAGS[Math.floor(Math.random() * SYMBOL_TAGS.length)]!]: true,
             }) as { [K in (typeof SYMBOL_TAGS)[number]]: boolean },
         );
       },

@@ -451,17 +451,13 @@ abstract class NameRegistryImpl implements NameRegistry {
   readonly #scopeStack: ScopeLayer[];
 
   constructor() {
-    this.#usedNames = new Set<string>([
-      ...bannedTokens,
-      ...builtins,
-    ]);
+    this.#usedNames = new Set<string>([...bannedTokens, ...builtins]);
     this.#scopeStack = [];
   }
 
   get #usedBlockScopeNames(): Set<string> | undefined {
-    return (this.#scopeStack[this.#scopeStack.length - 1] as
-      | BlockScopeLayer
-      | undefined)?.usedBlockScopeNames;
+    return (this.#scopeStack[this.#scopeStack.length - 1] as BlockScopeLayer | undefined)
+      ?.usedBlockScopeNames;
   }
 
   makeUnique(primer: string | undefined, global: boolean): string {
@@ -478,17 +474,18 @@ abstract class NameRegistryImpl implements NameRegistry {
   }
 
   #isUsedInBlocksBefore(name: string): boolean {
-    const functionScopeIndex = this.#scopeStack.findLastIndex((scope) =>
-      scope.type === 'functionScope'
+    const functionScopeIndex = this.#scopeStack.findLastIndex(
+      (scope) => scope.type === 'functionScope',
     );
-    return this.#scopeStack.slice(functionScopeIndex + 1).some((scope) =>
-      (scope as BlockScopeLayer).usedBlockScopeNames.has(name)
-    );
+    return this.#scopeStack
+      .slice(functionScopeIndex + 1)
+      .some((scope) => (scope as BlockScopeLayer).usedBlockScopeNames.has(name));
   }
 
   makeValid(primer: string): string {
     if (
-      isValidIdentifier(primer) && !this.#usedNames.has(primer) &&
+      isValidIdentifier(primer) &&
+      !this.#usedNames.has(primer) &&
       !this.#isUsedInBlocksBefore(primer)
     ) {
       this.#usedBlockScopeNames?.add(primer);
@@ -510,8 +507,8 @@ abstract class NameRegistryImpl implements NameRegistry {
   }
 
   popFunctionScope(): void {
-    const functionScopeIndex = this.#scopeStack.findLastIndex((scope) =>
-      scope.type === 'functionScope'
+    const functionScopeIndex = this.#scopeStack.findLastIndex(
+      (scope) => scope.type === 'functionScope',
     );
 
     if (functionScopeIndex === -1) {

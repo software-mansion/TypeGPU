@@ -13,10 +13,7 @@ export type ResultRecord = {
   size: number;
 };
 
-export async function bundleWithEsbuild(
-  entryUrl: URL,
-  outDir: URL,
-): Promise<URL> {
+export async function bundleWithEsbuild(entryUrl: URL, outDir: URL): Promise<URL> {
   const entryFileName = path.basename(entryUrl.pathname, '.ts');
   const outPath = new URL(`${entryFileName}.esbuild.js`, outDir);
   await esbuild({
@@ -31,10 +28,7 @@ export async function bundleWithEsbuild(
   return outPath;
 }
 
-export async function bundleWithWebpack(
-  entryPath: URL,
-  outDir: URL,
-): Promise<URL> {
+export async function bundleWithWebpack(entryPath: URL, outDir: URL): Promise<URL> {
   const entryFileName = path.basename(entryPath.pathname, '.ts');
   const outPath = new URL(`./${entryFileName}.webpack.js`, outDir);
 
@@ -84,10 +78,7 @@ export async function bundleWithWebpack(
   });
 }
 
-export async function bundleWithTsdown(
-  entryUrl: URL,
-  outDir: URL,
-): Promise<URL> {
+export async function bundleWithTsdown(entryUrl: URL, outDir: URL): Promise<URL> {
   const entryFileName = path.basename(entryUrl.pathname, '.ts');
   const outPath = new URL(`./${entryFileName}.tsdown.js`, outDir);
 

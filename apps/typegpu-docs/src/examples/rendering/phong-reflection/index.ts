@@ -33,10 +33,7 @@ const { cleanupCamera } = setupOrbitCamera(
 );
 
 // shaders
-const exampleControlsUniform = root.createUniform(
-  ExampleControls,
-  p.initialControls,
-);
+const exampleControlsUniform = root.createUniform(ExampleControls, p.initialControls);
 
 const vertexShader = tgpu.vertexFn({
   in: { ...ModelVertexInput.propTypes, instanceIndex: d.builtin.instanceIndex },
@@ -74,18 +71,10 @@ const fragmentShader = tgpu.fragmentFn({
   const diffuse = lightColor.mul(std.max(0, cosTheta));
 
   // specular component
-  const reflectionDirection = std.reflect(
-    lightDirection.mul(-1),
-    input.worldNormal,
-  );
-  const viewDirection = std.normalize(
-    cameraUniform.$.position.xyz.sub(input.worldPosition),
-  );
+  const reflectionDirection = std.reflect(lightDirection.mul(-1), input.worldNormal);
+  const viewDirection = std.normalize(cameraUniform.$.position.xyz.sub(input.worldPosition));
   const specular = lightColor.mul(
-    std.pow(
-      std.max(0, std.dot(reflectionDirection, viewDirection)),
-      specularStrength,
-    ),
+    std.pow(std.max(0, std.dot(reflectionDirection, viewDirection)), specularStrength),
   );
 
   // add the components up
@@ -118,12 +107,7 @@ function frame() {
   renderPipeline
     .withColorAttachment({
       view: context,
-      clearValue: [
-        p.backgroundColor.x,
-        p.backgroundColor.y,
-        p.backgroundColor.z,
-        1,
-      ],
+      clearValue: [p.backgroundColor.x, p.backgroundColor.y, p.backgroundColor.z, 1],
     })
     .withDepthStencilAttachment({
       view: depthTexture.createView(),

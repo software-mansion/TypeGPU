@@ -9,9 +9,7 @@ describe('constructors', () => {
   it('casts floats to signed integers', () => {
     expect(d.vec2i(1.1, -1.1)).toStrictEqual(d.vec2i(1, -1));
     expect(d.vec3i(1.7, 2.6, 0.0)).toStrictEqual(d.vec3i(1, 2, 0));
-    expect(d.vec4i(1.1, -1.1, -10.2, -1.0)).toStrictEqual(
-      d.vec4i(1, -1, -10, -1),
-    );
+    expect(d.vec4i(1.1, -1.1, -10.2, -1.0)).toStrictEqual(d.vec4i(1, -1, -10, -1));
   });
 
   it('casts floats to unsigned integers', () => {
@@ -224,8 +222,7 @@ describe('vec2<bool>', () => {
   it('is not host shareable', () => {
     const buffer = new ArrayBuffer(8);
 
-    expect(() => writeData(new BufferWriter(buffer), d.vec2b, d.vec2b()))
-      .toThrow();
+    expect(() => writeData(new BufferWriter(buffer), d.vec2b, d.vec2b())).toThrow();
     expect(() => readData(new BufferReader(buffer), d.vec2b)).toThrow();
   });
 
@@ -502,8 +499,7 @@ describe('vec3<bool>', () => {
   it('is not host shareable', () => {
     const buffer = new ArrayBuffer(16);
 
-    expect(() => writeData(new BufferWriter(buffer), d.vec3b, d.vec3b()))
-      .toThrow();
+    expect(() => writeData(new BufferWriter(buffer), d.vec3b, d.vec3b())).toThrow();
     expect(() => readData(new BufferReader(buffer), d.vec3b)).toThrow();
   });
 
@@ -714,9 +710,7 @@ describe('vec2h', () => {
     const buffer = new ArrayBuffer(sizeOf(d.vec2h));
 
     writeData(new BufferWriter(buffer), d.vec2h, vec);
-    expect(readData(new BufferReader(buffer), d.vec2h)).toStrictEqual(
-      d.vec2h(1, 4096),
-    );
+    expect(readData(new BufferReader(buffer), d.vec2h)).toStrictEqual(d.vec2h(1, 4096));
   });
 
   it('differs in type from other vector schemas', () => {
@@ -921,7 +915,10 @@ describe('v4f', () => {
 
   describe('swizzling', () => {
     it('works in TGSL on compile-time known vectors', () => {
-      const foo = tgpu.fn([], d.vec3f)(() => {
+      const foo = tgpu.fn(
+        [],
+        d.vec3f,
+      )(() => {
         return d.vec4f(1, 2, 3, 4).zyx;
       });
 
@@ -1196,7 +1193,10 @@ describe('RGBA swizzles', () => {
 
   describe('GPU functions', () => {
     it('should work with rgba swizzles in GPU code', () => {
-      const main = tgpu.fn([], d.vec3f)(() => {
+      const main = tgpu.fn(
+        [],
+        d.vec3f,
+      )(() => {
         const color = d.vec4f(1, 0.5, 0.25, 1);
         return color.rgb;
       });
@@ -1210,7 +1210,10 @@ describe('RGBA swizzles', () => {
     });
 
     it('should work with complex rgba swizzles in GPU code', () => {
-      const main = tgpu.fn([], d.vec4f)(() => {
+      const main = tgpu.fn(
+        [],
+        d.vec4f,
+      )(() => {
         const color = d.vec4f(1, 0.5, 0.25, 1);
         return color.bgra;
       });
@@ -1224,7 +1227,10 @@ describe('RGBA swizzles', () => {
     });
 
     it('should work with rgba on compile-time known vectors', () => {
-      const foo = tgpu.fn([], d.vec3f)(() => {
+      const foo = tgpu.fn(
+        [],
+        d.vec3f,
+      )(() => {
         return d.vec4f(1, 2, 3, 4).bgr;
       });
 
@@ -1236,7 +1242,10 @@ describe('RGBA swizzles', () => {
     });
 
     it('should support individual rgba component access', () => {
-      const main = tgpu.fn([], d.f32)(() => {
+      const main = tgpu.fn(
+        [],
+        d.f32,
+      )(() => {
         const color = d.vec4f(1, 0.5, 0.25, 0.75);
         return color.a;
       });

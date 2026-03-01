@@ -13,12 +13,7 @@ await renderer.init();
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xe8abbf);
 
-const camera = new THREE.PerspectiveCamera(
-  45,
-  canvas.clientWidth / canvas.clientHeight,
-  0.1,
-  100,
-);
+const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
 camera.position.set(0, 7, 7);
 camera.lookAt(0, 0, 0);
 
@@ -41,8 +36,7 @@ const positionNode = t3.toTSL(() => {
 
   posAccessor.$.y += wave * amplitude;
 
-  const derivative = std.cos(posAccessor.$.x * frequency + t3.time.$) *
-    amplitude * frequency;
+  const derivative = std.cos(posAccessor.$.x * frequency + t3.time.$) * amplitude * frequency;
 
   const newNormalLocal = d.vec3f(-derivative, 1.0, 0);
 
@@ -51,10 +45,7 @@ const positionNode = t3.toTSL(() => {
   return d.vec3f(posAccessor.$);
 });
 
-const transformedNormalAccessor = t3.fromTSL(
-  TSL.transformNormalToView(vNormal),
-  d.vec3f,
-);
+const transformedNormalAccessor = t3.fromTSL(TSL.transformNormalToView(vNormal), d.vec3f);
 
 const normalNode = t3.toTSL(() => {
   'use gpu';

@@ -36,9 +36,7 @@ export async function performCalculationsWithTime(
   inputArray: number[],
 ): Promise<SumResult> {
   const arraySize = inputArray.length;
-  const inputBuffer = root
-    .createBuffer(d.arrayOf(d.f32, arraySize))
-    .$usage('storage');
+  const inputBuffer = root.createBuffer(d.arrayOf(d.f32, arraySize)).$usage('storage');
   inputBuffer.write(inputArray);
 
   // JS version

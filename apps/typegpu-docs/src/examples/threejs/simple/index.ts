@@ -11,19 +11,14 @@ renderer.setPixelRatio(window.devicePixelRatio);
 await renderer.init();
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(
-  75,
-  1,
-  0.1,
-  1000,
-);
+const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
 camera.position.z = 5;
 
 const material = new THREE.MeshBasicNodeMaterial();
 
 material.colorNode = t3.toTSL(() => {
   'use gpu';
-  const coords = t3.uv().$.mul(2);
+  const coords = t3.uv().$ * 2;
   const pattern = perlin3d.sample(d.vec3f(coords, t3.time.$ * 0.2));
   return d.vec4f(std.tanh(pattern * 5), 0.2, 0.4, 1);
 });
@@ -34,18 +29,13 @@ material.positionNode = t3.toTSL(() => {
   'use gpu';
   const localPos = positionAttrib.$;
   const t = t3.time.$;
-  const patternX = perlin3d.sample(localPos.add(d.vec3f(t, 0, 0)));
-  const patternY = perlin3d.sample(localPos.add(d.vec3f(t, 0, 1)));
-  const patternZ = perlin3d.sample(localPos.add(d.vec3f(t, 0, 2)));
-  return localPos.add(
-    d.vec3f(patternX, patternY, patternZ).mul(0.5),
-  );
+  const patternX = perlin3d.sample(localPos + d.vec3f(t, 0, 0));
+  const patternY = perlin3d.sample(localPos + d.vec3f(t, 0, 1));
+  const patternZ = perlin3d.sample(localPos + d.vec3f(t, 0, 2));
+  return localPos + d.vec3f(patternX, patternY, patternZ) * 0.5;
 });
 
-const mesh = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1, 1),
-  material,
-);
+const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material);
 scene.add(mesh);
 
 const onResize: ResizeObserverCallback = (entries) => {

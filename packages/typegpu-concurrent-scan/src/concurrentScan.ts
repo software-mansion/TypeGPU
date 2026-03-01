@@ -21,10 +21,7 @@ import { uniformOp } from './compute/applySums.ts';
 
 const cache = new WeakMap<
   TgpuRoot,
-  WeakMap<
-    BinaryOp['operation'],
-    Map<BinaryOp['identityElement'], PrefixScanComputer>
-  >
+  WeakMap<BinaryOp['operation'], Map<BinaryOp['identityElement'], PrefixScanComputer>>
 >();
 
 export class PrefixScanComputer {
@@ -38,12 +35,8 @@ export class PrefixScanComputer {
     private identityElement: BinaryOp['identityElement'],
   ) {}
 
-  private getScanPipeline(
-    onlyGreatestElement: boolean,
-  ): TgpuComputePipeline {
-    const cached = onlyGreatestElement
-      ? this.#reducePipeline
-      : this.#scanPipeline;
+  private getScanPipeline(onlyGreatestElement: boolean): TgpuComputePipeline {
+    const cached = onlyGreatestElement ? this.#reducePipeline : this.#scanPipeline;
 
     if (cached) {
       return cached;
@@ -73,9 +66,7 @@ export class PrefixScanComputer {
     return this.#opPipeline;
   }
 
-  private getScratchBuffer(
-    size: number,
-  ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
+  private getScratchBuffer(size: number): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
     return this.root.createBuffer(d.arrayOf(d.f32, size)).$usage('storage');
   }
 
@@ -321,10 +312,7 @@ function runScan(
  * @param binaryOp - The binary operation used by the computer.
  * @returns A `PrefixScanComputer` instance associated with the provided `root` and `binaryOp`.
  */
-export function initCache(
-  root: TgpuRoot,
-  binaryOp: BinaryOp,
-): PrefixScanComputer {
+export function initCache(root: TgpuRoot, binaryOp: BinaryOp): PrefixScanComputer {
   let rootCache = cache.get(root);
   if (!rootCache) {
     rootCache = new WeakMap();
@@ -339,11 +327,7 @@ export function initCache(
 
   let computer = opCache.get(binaryOp.identityElement);
   if (!computer) {
-    computer = new PrefixScanComputer(
-      root,
-      binaryOp.operation,
-      binaryOp.identityElement,
-    );
+    computer = new PrefixScanComputer(root, binaryOp.operation, binaryOp.identityElement);
     opCache.set(binaryOp.identityElement, computer);
   }
   return computer;

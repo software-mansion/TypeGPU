@@ -2,8 +2,8 @@ import { d, std } from 'typegpu';
 
 export const palette = (t: number): d.v3f => {
   'use gpu';
-  const a = d.vec3f(0.50, 0.59, 0.85);
-  const b = d.vec3f(0.18, 0.42, 0.40);
+  const a = d.vec3f(0.5, 0.59, 0.85);
+  const b = d.vec3f(0.18, 0.42, 0.4);
   const c = d.vec3f(0.18, 0.48, 0.41);
   const e = d.vec3f(0.35, 0.13, 0.32);
 

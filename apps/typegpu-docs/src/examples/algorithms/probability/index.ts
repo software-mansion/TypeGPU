@@ -45,9 +45,13 @@ canvas.addEventListener('mouseout', () => {
 
 // handle mobile devices
 
-canvas.addEventListener('touchstart', () => {
-  helpInfo.style.opacity = '0';
-}, { passive: true });
+canvas.addEventListener(
+  'touchstart',
+  () => {
+    helpInfo.style.opacity = '0';
+  },
+  { passive: true },
+);
 
 canvas.addEventListener('touchend', () => {
   setTimeout(() => {
@@ -63,7 +67,7 @@ export const controls = defineControls({
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
-  'Reseed': {
+  Reseed: {
     async onButtonClick() {
       executor.reseed();
       await replot(
@@ -90,7 +94,7 @@ export const controls = defineControls({
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
-  'Distribution': {
+  Distribution: {
     initial: c.initialDistribution,
     options: c.distributions,
     async onSelectChange(value) {

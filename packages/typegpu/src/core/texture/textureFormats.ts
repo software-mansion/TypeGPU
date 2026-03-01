@@ -1,13 +1,6 @@
 import { f32, i32, u32 } from '../../data/numeric.ts';
 import { vec4f, vec4i, vec4u } from '../../data/vector.ts';
-import type {
-  F32,
-  I32,
-  U32,
-  Vec4f,
-  Vec4i,
-  Vec4u,
-} from '../../data/wgslTypes.ts';
+import type { F32, I32, U32, Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
 
 export type ViewDimensionToDimension = {
   '1d': '1d';
@@ -60,10 +53,11 @@ export type StorageTextureFormats =
   | 'rgb10a2uint'
   | 'rg11b10ufloat';
 
-type ParseChannelType<T extends GPUTextureFormat> = T extends
-  `${string}uint${string}` ? 'u32'
-  : T extends `${string}sint${string}` ? 'i32'
-  : 'f32';
+type ParseChannelType<T extends GPUTextureFormat> = T extends `${string}uint${string}`
+  ? 'u32'
+  : T extends `${string}sint${string}`
+    ? 'i32'
+    : 'f32';
 
 type ChannelTypeToSampleType<T extends 'f32' | 'i32' | 'u32'> = {
   f32: F32;
@@ -134,9 +128,7 @@ const STENCIL_ASPECT = {
 
 const formatInfoCache = new Map<GPUTextureFormat, TextureFormatInfo>();
 
-export function getTextureFormatInfo(
-  format: GPUTextureFormat,
-): TextureFormatInfo {
+export function getTextureFormatInfo(format: GPUTextureFormat): TextureFormatInfo {
   let info = formatInfoCache.get(format);
   if (info === undefined) {
     info = createFormatInfo(format);
@@ -152,11 +144,7 @@ function createFormatInfo(format: GPUTextureFormat): TextureFormatInfo {
 
   return {
     channelType,
-    vectorType: channelType === u32
-      ? vec4u
-      : channelType === i32
-      ? vec4i
-      : vec4f,
+    vectorType: channelType === u32 ? vec4u : channelType === i32 ? vec4i : vec4f,
     texelSize: parseTexelSize(format),
     sampleTypes: parseSampleTypes(format),
     canRenderAttachment: canRenderAttachment(format),
@@ -237,9 +225,7 @@ export function getEffectiveSampleTypes(
   device: GPUDevice,
   format: GPUTextureFormat,
 ): readonly GPUTextureSampleType[] {
-  if (
-    FLOAT32_FORMATS.has(format) && !device.features.has('float32-filterable')
-  ) {
+  if (FLOAT32_FORMATS.has(format) && !device.features.has('float32-filterable')) {
     return ['unfilterable-float'];
   }
   return getTextureFormatInfo(format).sampleTypes;

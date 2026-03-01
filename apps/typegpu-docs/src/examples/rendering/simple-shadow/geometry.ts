@@ -1,23 +1,9 @@
-import type {
-  IndexFlag,
-  TgpuBindGroup,
-  TgpuBuffer,
-  TgpuRoot,
-  VertexFlag,
-} from 'typegpu';
+import type { IndexFlag, TgpuBindGroup, TgpuBuffer, TgpuRoot, VertexFlag } from 'typegpu';
 import { d } from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
-import {
-  bindGroupLayout,
-  InstanceInfo,
-  type Material,
-  VertexInfo,
-} from './schema.ts';
+import { bindGroupLayout, InstanceInfo, type Material, VertexInfo } from './schema.ts';
 
-function createVertex(
-  position: d.v3f,
-  normal: d.v3f,
-) {
+function createVertex(position: d.v3f, normal: d.v3f) {
   return VertexInfo({
     position: d.vec4f(position, 1),
     normal: d.vec4f(normal, 0),
@@ -28,9 +14,7 @@ function createFaceVertices(
   positions: [number, number, number][],
   normal: [number, number, number],
 ) {
-  return positions.map((pos) =>
-    createVertex(d.vec3f(...pos), d.vec3f(...normal))
-  );
+  return positions.map((pos) => createVertex(d.vec3f(...pos), d.vec3f(...normal)));
 }
 
 function createModelMatrix(position: d.v3f, rotation: d.v3f) {
@@ -59,14 +43,10 @@ function createGeometry(
   const vertexBuffer = root
     .createBuffer(d.arrayOf(VertexInfo, vertices.length), vertices)
     .$usage('vertex');
-  const indexBuffer = root
-    .createBuffer(d.arrayOf(d.u16, indices.length), indices)
-    .$usage('index');
+  const indexBuffer = root.createBuffer(d.arrayOf(d.u16, indices.length), indices).$usage('index');
 
   const bindGroup = root.createBindGroup(bindGroupLayout, {
-    instanceInfo: root
-      .createBuffer(InstanceInfo, { modelMatrix, material })
-      .$usage('uniform'),
+    instanceInfo: root.createBuffer(InstanceInfo, { modelMatrix, material }).$usage('uniform'),
   });
 
   return { vertexBuffer, indexBuffer, instanceInfo: bindGroup };
@@ -95,25 +75,20 @@ export function createPlane({
   const w = size[0] / 2;
   const h = size[1] / 2;
 
-  // deno-fmt-ignore
-  const vertices = createFaceVertices([
-    [-w, h, 0], [-w, -h, 0], [w, -h, 0], [w, h, 0],
-  ], [0, 0, 1]);
+  // oxfmt-ignore
+  const vertices = createFaceVertices(
+    [[-w, h, 0], [-w, -h, 0], [w, -h, 0], [w, h, 0]],
+    [0, 0, 1],
+  );
 
-  // deno-fmt-ignore
+  // oxfmt-ignore
   const indices = [
     0, 1, 3,
     1, 2, 3
   ];
 
   const modelMatrix = createModelMatrix(position, rotation);
-  const geometry = createGeometry(
-    root,
-    vertices,
-    indices,
-    material,
-    modelMatrix,
-  );
+  const geometry = createGeometry(root, vertices, indices, material, modelMatrix);
 
   return {
     ...geometry,
@@ -145,7 +120,7 @@ export function createCuboid({
   const h = size[1] / 2; // height
   const d = size[2] / 2; // depth
 
-  // deno-fmt-ignore
+  // oxfmt-ignore
   const vertices = [
     // Front face
     ...createFaceVertices([[-w, -h, d], [w, -h, d], [w, h, d], [-w, h, d]], [0, 0, 1]),
@@ -161,30 +136,23 @@ export function createCuboid({
     ...createFaceVertices([[-w, -h, -d], [w, -h, -d], [w, -h, d], [-w, -h, d]], [0, -1, 0]),
   ];
 
-  // deno-fmt-ignore
   const indices = [
     // Front face
-    0, 1, 2,  0, 2, 3,
+    0, 1, 2, 0, 2, 3,
     // Back face
-    4, 5, 6,  4, 6, 7,
+    4, 5, 6, 4, 6, 7,
     // Left face
-    8, 9, 10,  8, 10, 11,
+    8, 9, 10, 8, 10, 11,
     // Right face
-    12, 13, 14,  12, 14, 15,
+    12, 13, 14, 12, 14, 15,
     // Top face
-    16, 17, 18,  16, 18, 19,
+    16, 17, 18, 16, 18, 19,
     // Bottom face
-    20, 21, 22,  20, 22, 23,
+    20, 21, 22, 20, 22, 23,
   ];
 
   const modelMatrix = createModelMatrix(position, rotation);
-  const geometry = createGeometry(
-    root,
-    vertices,
-    indices,
-    material,
-    modelMatrix,
-  );
+  const geometry = createGeometry(root, vertices, indices, material, modelMatrix);
 
   return {
     ...geometry,

@@ -11,12 +11,15 @@ describe('jump flood (distance) example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'algorithms',
-      name: 'jump-flood-distance',
-      expectedCalls: 4,
-      setupMocks: mockResizeObserver,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'algorithms',
+        name: 'jump-flood-distance',
+        expectedCalls: 4,
+        setupMocks: mockResizeObserver,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;

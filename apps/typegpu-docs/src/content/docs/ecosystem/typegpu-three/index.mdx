@@ -148,7 +148,7 @@ const material = new THREE.MeshBasicNodeMaterial();
 
 material.colorNode = t3.toTSL(() => {
   'use gpu';
-  const coords = t3.uv().$.mul(2);
+  const coords = t3.uv().$ * 2;
   const pattern = perlin3d.sample(d.vec3f(coords, t3.time.$ * 0.2));
   return d.vec4f(std.tanh(pattern * 5), 0.2, 0.4, 1);
 });
@@ -244,12 +244,28 @@ Loop({ start: ptrStart, end: ptrEnd, type: 'uint', condition: '<' }, ({ i }) => 
 ```
 
 TypeGPU:
-```ts
+```ts twoslash
+'use tsover';
+import * as t3 from '@typegpu/three';
+import * as THREE from 'three/webgpu';
+import { d, std } from 'typegpu';
+type TSLStorageAccessor<T extends d.AnyWgslData> = t3.TSLAccessor<
+  T,
+  THREE.StorageBufferNode
+>;
+declare const springListBuffer: TSLStorageAccessor<d.WgslArray<d.U32>>;
+declare const springForceBuffer: TSLStorageAccessor<d.WgslArray<d.Vec3f>>;
+declare const springVertexIdBuffer: TSLStorageAccessor<d.WgslArray<d.Vec2u>>
+declare const ptrStart: number;
+declare const ptrEnd: number;
+declare const idx: number;
+declare let force: d.v3f;
+// ---cut---
 for (let i = ptrStart; i < ptrEnd; i++) {
   const springId = springListBuffer.$[i];
   const springForce = springForceBuffer.$[springId];
   const springVertexIds = springVertexIdBuffer.$[springId];
   const factor = std.select(-1, 1, springVertexIds.x === idx);
-  force = force.add(springForce.mul(d.f32(factor)));
+  force += springForce * factor;
 }
 ```
