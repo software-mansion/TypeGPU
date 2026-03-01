@@ -9,8 +9,8 @@ export function multiplyMatricesCPU(
   for (let i = 0; i < firstRowCount; i++) {
     for (let j = 0; j < secondColumnCount; j++) {
       for (let k = 0; k < firstColumnCount; k++) {
-        result[i * secondColumnCount + j] += matA[i * firstColumnCount + k] *
-          matB[k * secondColumnCount + j];
+        result[i * secondColumnCount + j] +=
+          matA[i * firstColumnCount + k] * matB[k * secondColumnCount + j];
       }
     }
   }

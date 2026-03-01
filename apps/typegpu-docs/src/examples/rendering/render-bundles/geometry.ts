@@ -3,23 +3,37 @@ import { Vertex } from './schemas.ts';
 
 export function createCubeGeometry(): d.Infer<typeof Vertex>[] {
   const faces: [number[], number[]][] = [
-    [[0, 0, 1], [0, 0, 1]],
-    [[0, 0, -1], [0, 0, -1]],
-    [[0, 1, 0], [0, 1, 0]],
-    [[0, -1, 0], [0, -1, 0]],
-    [[1, 0, 0], [1, 0, 0]],
-    [[-1, 0, 0], [-1, 0, 0]],
+    [
+      [0, 0, 1],
+      [0, 0, 1],
+    ],
+    [
+      [0, 0, -1],
+      [0, 0, -1],
+    ],
+    [
+      [0, 1, 0],
+      [0, 1, 0],
+    ],
+    [
+      [0, -1, 0],
+      [0, -1, 0],
+    ],
+    [
+      [1, 0, 0],
+      [1, 0, 0],
+    ],
+    [
+      [-1, 0, 0],
+      [-1, 0, 0],
+    ],
   ];
 
   const verts: d.Infer<typeof Vertex>[] = [];
 
   for (const [_offset, normal] of faces) {
     const n = d.vec3f(normal[0], normal[1], normal[2]);
-    const absN = [
-      Math.abs(normal[0]),
-      Math.abs(normal[1]),
-      Math.abs(normal[2]),
-    ];
+    const absN = [Math.abs(normal[0]), Math.abs(normal[1]), Math.abs(normal[2])];
 
     let tangent: number[];
     let bitangent: number[];

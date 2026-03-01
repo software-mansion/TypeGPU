@@ -1,16 +1,34 @@
 {
   "name": "tinyest-for-wgsl",
-  "private": true,
   "version": "0.3.0",
+  "private": true,
   "description": "Transforms JavaScript into its 'tinyest' form, to be used in generating equivalent (or close to) WGSL code.",
+  "keywords": [
+    "compute",
+    "gpgpu",
+    "shader",
+    "shaders",
+    "tinyest",
+    "typegpu",
+    "typescript",
+    "webgpu",
+    "wgpu",
+    "wgsl"
+  ],
+  "homepage": "https://docs.swmansion.com/TypeGPU",
+  "bugs": {
+    "url": "https://github.com/software-mansion/TypeGPU/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion/TypeGPU.git"
+  },
   "type": "module",
+  "sideEffects": false,
   "exports": "./src/index.ts",
   "publishConfig": {
     "directory": "dist",
-    "linkDirectory": false,
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
     "exports": {
       "./package.json": "./package.json",
       ".": {
@@ -19,37 +37,19 @@
         "import": "./dist/index.js",
         "default": "./dist/index.cjs"
       }
-    }
+    },
+    "linkDirectory": false,
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
   },
-  "sideEffects": false,
   "scripts": {
     "build": "tsdown",
     "test:types": "pnpm tsc --p ./tsconfig.test.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
-  "engines": {
-    "node": ">=12.20.0"
+  "dependencies": {
+    "tinyest": "workspace:~0.3.0"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/software-mansion/TypeGPU.git"
-  },
-  "keywords": [
-    "webgpu",
-    "wgpu",
-    "wgsl",
-    "typescript",
-    "compute",
-    "shader",
-    "shaders",
-    "gpgpu",
-    "typegpu",
-    "tinyest"
-  ],
-  "bugs": {
-    "url": "https://github.com/software-mansion/TypeGPU/issues"
-  },
-  "homepage": "https://docs.swmansion.com/TypeGPU",
   "devDependencies": {
     "@babel/parser": "^7.27.0",
     "@babel/types": "7.26.5",
@@ -58,8 +58,8 @@
     "tsdown": "catalog:build",
     "typescript": "catalog:types"
   },
-  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67",
-  "dependencies": {
-    "tinyest": "workspace:~0.3.0"
-  }
+  "engines": {
+    "node": ">=12.20.0"
+  },
+  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67"
 }

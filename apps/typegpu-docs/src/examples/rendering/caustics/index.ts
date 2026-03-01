@@ -22,9 +22,9 @@ const mainVertex = tgpu.vertexFn({
 const tilePattern = (uv: d.v2f): number => {
   'use gpu';
   const tiledUv = std.fract(uv);
-  const proximity = std.abs((tiledUv * 2) - 1);
+  const proximity = std.abs(tiledUv * 2 - 1);
   const maxProximity = std.max(proximity.x, proximity.y);
-  return std.saturate(((1 - maxProximity) ** 0.6) * 5);
+  return std.saturate((1 - maxProximity) ** 0.6 * 5);
 };
 
 const caustics = (uv: d.v2f, time: number, profile: d.v3f): d.v3f => {
@@ -84,10 +84,12 @@ const mainFragment = tgpu.fragmentFn({
     std.pow((uv.y * 1.5 + 0.1) * 1.5, 3) * 1,
   );
   // Generating two layers of caustics (large scale, and small scale)
-  const c1 = caustics(cuv, time.$ * 0.2, /* profile */ d.vec3f(4, 4, 1)) *
+  const c1 =
+    caustics(cuv, time.$ * 0.2, /* profile */ d.vec3f(4, 4, 1)) *
     // Tinting
     d.vec3f(0.4, 0.65, 1);
-  const c2 = caustics(cuv * 2, time.$ * 0.4, /* profile */ d.vec3f(16, 1, 4)) *
+  const c2 =
+    caustics(cuv * 2, time.$ * 0.4, /* profile */ d.vec3f(16, 1, 4)) *
     // Tinting
     d.vec3f(0.18, 0.3, 0.5);
 
@@ -101,18 +103,23 @@ const mainFragment = tgpu.fragmentFn({
 
   const noFogColor = albedo * std.mix(ambientColor, c1 + c2, blend);
   // Fog blending factor, based on the height of the pixels
-  const fog = std.min((uv.y ** 0.5) * 1.2, 1);
+  const fog = std.min(uv.y ** 0.5 * 1.2, 1);
 
   // -- GOD RAYS --
 
   const godRayUv = rotateXY(-0.3) * uv * d.vec2f(15, 3);
   const godRayFactor = uv.y;
-  const godRay1 = (perlin3d.sample(d.vec3f(godRayUv, time.$ * 0.5)) + 1) *
+  const godRay1 =
+    (perlin3d.sample(d.vec3f(godRayUv, time.$ * 0.5)) + 1) *
     // Tinting
-    d.vec3f(0.18, 0.3, 0.5) * godRayFactor;
-  const godRay2 = (perlin3d.sample(d.vec3f(godRayUv * 2, time.$ * 0.3)) + 1) *
+    d.vec3f(0.18, 0.3, 0.5) *
+    godRayFactor;
+  const godRay2 =
+    (perlin3d.sample(d.vec3f(godRayUv * 2, time.$ * 0.3)) + 1) *
     // Tinting
-    d.vec3f(0.18, 0.3, 0.5) * godRayFactor * 0.4;
+    d.vec3f(0.18, 0.3, 0.5) *
+    godRayFactor *
+    0.4;
   const godRays = godRay1 + godRay2;
 
   return d.vec4f(std.mix(noFogColor, fogColor, fog) + godRays, 1);
@@ -133,9 +140,7 @@ function draw(timestamp: number) {
 
   time.write((timestamp * 0.001) % 1000);
 
-  pipeline
-    .withColorAttachment({ view: context })
-    .draw(3);
+  pipeline.withColorAttachment({ view: context }).draw(3);
 
   requestAnimationFrame(draw);
 }

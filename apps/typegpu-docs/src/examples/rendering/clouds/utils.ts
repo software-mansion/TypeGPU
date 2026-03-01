@@ -18,7 +18,10 @@ import {
 } from './consts.ts';
 import { cloudsLayout } from './types.ts';
 
-const sampleDensity = tgpu.fn([d.vec3f], d.f32)((pos) => {
+const sampleDensity = tgpu.fn(
+  [d.vec3f],
+  d.f32,
+)((pos) => {
   const coverage = CLOUD_COVERAGE - std.abs(pos.y) * 0.25;
   return std.saturate(fbm(pos) + coverage) - 0.5;
 });
@@ -29,49 +32,51 @@ const sampleDensityCheap = (pos: d.v3f): number => {
   return std.saturate(noise + CLOUD_COVERAGE - 0.5);
 };
 
-export const raymarch = tgpu.fn([d.vec3f, d.vec3f, d.vec3f], d.vec4f)(
-  (rayOrigin, rayDir, sunDir) => {
-    'use gpu';
-    let accum = d.vec4f();
+export const raymarch = tgpu.fn(
+  [d.vec3f, d.vec3f, d.vec3f],
+  d.vec4f,
+)((rayOrigin, rayDir, sunDir) => {
+  'use gpu';
+  let accum = d.vec4f();
 
-    const params = cloudsLayout.$.params;
-    const maxSteps = params.maxSteps;
-    const maxDepth = params.maxDistance;
+  const params = cloudsLayout.$.params;
+  const maxSteps = params.maxSteps;
+  const maxDepth = params.maxDistance;
 
-    const stepSize = 1 / maxSteps;
-    let dist = randf.sample() * stepSize;
+  const stepSize = 1 / maxSteps;
+  let dist = randf.sample() * stepSize;
 
-    for (let i = 0; i < maxSteps; i++) {
-      const samplePos = rayOrigin + rayDir * dist * maxDepth;
-      const cloudDensity = sampleDensity(samplePos);
+  for (let i = 0; i < maxSteps; i++) {
+    const samplePos = rayOrigin + rayDir * dist * maxDepth;
+    const cloudDensity = sampleDensity(samplePos);
 
-      if (cloudDensity > 0.0) {
-        const shadowPos = samplePos + sunDir;
-        const shadowDensity = sampleDensityCheap(shadowPos);
-        const shadow = std.saturate(cloudDensity - shadowDensity);
-        const lightVal = std.mix(0.3, 1.0, shadow);
+    if (cloudDensity > 0.0) {
+      const shadowPos = samplePos + sunDir;
+      const shadowDensity = sampleDensityCheap(shadowPos);
+      const shadow = std.saturate(cloudDensity - shadowDensity);
+      const lightVal = std.mix(0.3, 1.0, shadow);
 
-        const light = SKY_AMBIENT * 1.1 +
-          SUN_COLOR * lightVal * SUN_BRIGHTNESS;
-        const color = std.mix(CLOUD_BRIGHT, CLOUD_DARK, cloudDensity);
-        const lit = color * light;
+      const light = SKY_AMBIENT * 1.1 + SUN_COLOR * lightVal * SUN_BRIGHTNESS;
+      const color = std.mix(CLOUD_BRIGHT, CLOUD_DARK, cloudDensity);
+      const lit = color * light;
 
-        const contrib = d.vec4f(lit, 1) * cloudDensity *
-          (LIGHT_ABSORPTION - accum.a);
-        accum += contrib;
+      const contrib = d.vec4f(lit, 1) * cloudDensity * (LIGHT_ABSORPTION - accum.a);
+      accum += contrib;
 
-        if (accum.a >= LIGHT_ABSORPTION - 0.001) {
-          break;
-        }
+      if (accum.a >= LIGHT_ABSORPTION - 0.001) {
+        break;
       }
-      dist += stepSize;
     }
-    return accum;
-  },
-);
+    dist += stepSize;
+  }
+  return accum;
+});
 
 const iterations = Array.from({ length: FBM_OCTAVES }, (_, i) => i);
-const fbm = tgpu.fn([d.vec3f], d.f32)((pos) => {
+const fbm = tgpu.fn(
+  [d.vec3f],
+  d.f32,
+)((pos) => {
   'use gpu';
   let sum = d.f32();
   let amp = d.f32(CLOUD_AMPLITUDE);
@@ -85,15 +90,16 @@ const fbm = tgpu.fn([d.vec3f], d.f32)((pos) => {
   return sum;
 });
 
-const noise3d = tgpu.fn([d.vec3f], d.f32)((pos) => {
+const noise3d = tgpu.fn(
+  [d.vec3f],
+  d.f32,
+)((pos) => {
   'use gpu';
   const idx = std.floor(pos);
   const frac = std.fract(pos);
   const smooth = frac * frac * (3 - 2 * frac);
 
-  const texCoord0 = std.fract(
-    (idx.xy + frac.xy + NOISE_Z_OFFSET * idx.z) / NOISE_TEXTURE_SIZE,
-  );
+  const texCoord0 = std.fract((idx.xy + frac.xy + NOISE_Z_OFFSET * idx.z) / NOISE_TEXTURE_SIZE);
   const texCoord1 = std.fract(
     (idx.xy + frac.xy + NOISE_Z_OFFSET * (idx.z + 1)) / NOISE_TEXTURE_SIZE,
   );

@@ -14,10 +14,7 @@ const plotter = new Plotter();
 
 let currentDistribution = c.initialDistribution;
 
-const replot = async (
-  currentDistribution: Distribution,
-  animate = false,
-) => {
+const replot = async (currentDistribution: Distribution, animate = false) => {
   const prng = getPRNG(currentDistribution);
 
   const samples = await executor.executeMoreWorkers(prng.prng);
@@ -42,9 +39,13 @@ canvas.addEventListener('mouseout', () => {
 
 // handle mobile devices
 
-canvas.addEventListener('touchstart', () => {
-  helpInfo.style.opacity = '0';
-}, { passive: true });
+canvas.addEventListener(
+  'touchstart',
+  () => {
+    helpInfo.style.opacity = '0';
+  },
+  { passive: true },
+);
 
 canvas.addEventListener('touchend', () => {
   setTimeout(() => {
@@ -60,14 +61,14 @@ export const controls = defineControls({
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
-  'Reseed': {
+  Reseed: {
     async onButtonClick() {
       executor.reseed();
       await replot(currentDistribution, true);
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
-  'Distribution': {
+  Distribution: {
     initial: c.initialDistribution,
     options: c.distributions,
     async onSelectChange(value) {
@@ -76,10 +77,7 @@ export const controls = defineControls({
       }
 
       currentDistribution = value;
-      await replot(
-        currentDistribution,
-        true,
-      );
+      await replot(currentDistribution, true);
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
@@ -88,17 +86,13 @@ export const controls = defineControls({
     options: c.numSamplesOptions,
     async onSelectChange(value) {
       executor.count = value;
-      await replot(
-        currentDistribution,
-      );
+      await replot(currentDistribution);
     },
   },
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick() {
       c.distributions
-        .map((dist) =>
-          tgpu.resolve([executor.cachedPipeline(getPRNG(dist).prng)])
-        )
+        .map((dist) => tgpu.resolve([executor.cachedPipeline(getPRNG(dist).prng)]))
         .map((r) => root.device.createShaderModule({ code: r }));
     },
   },

@@ -99,10 +99,7 @@ const mainVert = tgpu.vertexFn({
   const rotated = rotate(input.v, angle);
   const pos = d.vec4f(rotated + input.center, 0, 1);
 
-  const color = d.vec4f(
-    std.sin(colorPalette.$ + angle) * 0.45 + 0.45,
-    1,
-  );
+  const color = d.vec4f(std.sin(colorPalette.$ + angle) * 0.45 + 0.45, 1);
 
   return { position: pos, color };
 });
@@ -116,9 +113,7 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const paramsBuffer = root
-  .createBuffer(Params, presets.default)
-  .$usage('uniform');
+const paramsBuffer = root.createBuffer(Params, presets.default).$usage('uniform');
 const params = paramsBuffer.as('uniform');
 
 const triangleVertexBuffer = root
@@ -130,9 +125,8 @@ const triangleVertexBuffer = root
   .$usage('vertex');
 
 const trianglePosBuffers = Array.from({ length: 2 }, () =>
-  root
-    .createBuffer(d.arrayOf(TriangleData, triangleAmount))
-    .$usage('storage', 'uniform', 'vertex'));
+  root.createBuffer(d.arrayOf(TriangleData, triangleAmount)).$usage('storage', 'uniform', 'vertex'),
+);
 
 const randomizePositions = () => {
   const positions = Array.from({ length: triangleAmount }, () => ({
@@ -201,13 +195,13 @@ const simulate = (index: number) => {
     cohesion -= self.position;
   }
 
-  const velocity = params.$.separationStrength * separation +
+  const velocity =
+    params.$.separationStrength * separation +
     params.$.alignmentStrength * alignment +
     params.$.cohesionStrength * cohesion;
 
   self.velocity += velocity;
-  self.velocity = std.clamp(std.length(self.velocity), 0, 0.01) *
-    std.normalize(self.velocity);
+  self.velocity = std.clamp(std.length(self.velocity), 0, 0.01) * std.normalize(self.velocity);
 
   self.position += self.velocity;
 
@@ -224,7 +218,7 @@ const computeBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(layout, {
     currentTrianglePos: trianglePosBuffers[idx],
     nextTrianglePos: trianglePosBuffers[1 - idx],
-  })
+  }),
 );
 
 let even = false;
@@ -237,9 +231,7 @@ function frame() {
 
   even = !even;
 
-  simulatePipeline
-    .with(computeBindGroups[even ? 0 : 1])
-    .dispatchThreads(triangleAmount);
+  simulatePipeline.with(computeBindGroups[even ? 0 : 1]).dispatchThreads(triangleAmount);
 
   renderPipeline
     .withColorAttachment({

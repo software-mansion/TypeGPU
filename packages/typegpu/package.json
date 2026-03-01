@@ -1,10 +1,29 @@
 {
   "name": "typegpu",
-  "private": true,
   "version": "0.10.1",
+  "private": true,
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
+  "keywords": [
+    "compute",
+    "gpgpu",
+    "shader",
+    "shaders",
+    "typescript",
+    "webgpu",
+    "wgpu",
+    "wgsl"
+  ],
+  "homepage": "https://typegpu.com",
+  "bugs": {
+    "url": "https://github.com/software-mansion/TypeGPU/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion/TypeGPU.git"
+  },
   "type": "module",
+  "sideEffects": false,
   "exports": {
     "./package.json": "./package.json",
     ".": {
@@ -17,9 +36,6 @@
   },
   "publishConfig": {
     "directory": "dist",
-    "linkDirectory": false,
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
     "exports": {
       "./package.json": "./dist/package.json",
       ".": {
@@ -38,35 +54,21 @@
         "types": "./dist/common/index.d.ts",
         "default": "./dist/common/index.js"
       }
-    }
+    },
+    "linkDirectory": false,
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
   },
-  "sideEffects": false,
   "scripts": {
     "build": "tsdown",
     "test:types": "pnpm tsc --p ./tsconfig.test.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
-  "engines": {
-    "node": ">=12.20.0"
+  "dependencies": {
+    "tinyest": "workspace:~0.3.0",
+    "tsover-runtime": "^0.0.5",
+    "typed-binary": "^4.3.1"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/software-mansion/TypeGPU.git"
-  },
-  "keywords": [
-    "webgpu",
-    "wgpu",
-    "wgsl",
-    "typescript",
-    "compute",
-    "shader",
-    "shaders",
-    "gpgpu"
-  ],
-  "bugs": {
-    "url": "https://github.com/software-mansion/TypeGPU/issues"
-  },
-  "homepage": "https://typegpu.com",
   "devDependencies": {
     "@ark/attest": "^0.56.0",
     "@typegpu/tgpu-dev-cli": "workspace:*",
@@ -79,10 +81,8 @@
     "unplugin-typegpu": "workspace:*",
     "wgpu-matrix": "catalog:example"
   },
-  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67",
-  "dependencies": {
-    "tinyest": "workspace:~0.3.0",
-    "tsover-runtime": "^0.0.5",
-    "typed-binary": "^4.3.1"
-  }
+  "engines": {
+    "node": ">=12.20.0"
+  },
+  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67"
 }

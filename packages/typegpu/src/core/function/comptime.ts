@@ -1,19 +1,13 @@
 import { WgslTypeError } from '../../errors.ts';
 import { setName, type TgpuNamable } from '../../shared/meta.ts';
-import {
-  $getNameForward,
-  $gpuCallable,
-  $internal,
-} from '../../shared/symbols.ts';
+import { $getNameForward, $gpuCallable, $internal } from '../../shared/symbols.ts';
 import { coerceToSnippet } from '../../tgsl/generationHelpers.ts';
 import { type DualFn, isKnownAtComptime } from '../../types.ts';
 
 type AnyFn = (...args: never[]) => unknown;
 
-export type TgpuComptime<T extends AnyFn = AnyFn> =
-  & DualFn<T>
-  & TgpuNamable
-  & {
+export type TgpuComptime<T extends AnyFn = AnyFn> = DualFn<T> &
+  TgpuNamable & {
     [$getNameForward]: unknown;
     [$internal]: { isComptime: true };
   };
@@ -46,9 +40,7 @@ export function isComptimeFn(value: unknown): value is TgpuComptime {
  * };
  * ```
  */
-export function comptime<T extends (...args: never[]) => unknown>(
-  func: T,
-): TgpuComptime<T> {
+export function comptime<T extends (...args: never[]) => unknown>(func: T): TgpuComptime<T> {
   const impl = ((...args: Parameters<T>) => {
     return func(...args);
   }) as TgpuComptime<T>;
@@ -59,14 +51,14 @@ export function comptime<T extends (...args: never[]) => unknown>(
     call(_ctx, args) {
       if (!args.every((s) => isKnownAtComptime(s))) {
         throw new WgslTypeError(
-          `Called comptime function with runtime-known values: ${
-            args.filter((s) => !isKnownAtComptime(s)).map((s) => `'${s.value}'`)
-              .join(', ')
-          }`,
+          `Called comptime function with runtime-known values: ${args
+            .filter((s) => !isKnownAtComptime(s))
+            .map((s) => `'${s.value}'`)
+            .join(', ')}`,
         );
       }
 
-      return coerceToSnippet(func(...args.map((s) => s.value) as never[]));
+      return coerceToSnippet(func(...(args.map((s) => s.value) as never[])));
     },
   };
   impl.$name = (label: string) => {

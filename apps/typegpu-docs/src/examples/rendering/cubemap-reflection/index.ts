@@ -1,13 +1,7 @@
 import tgpu, { d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { type CubemapNames, cubeVertices, loadCubemap } from './cubemap.ts';
-import {
-  Camera,
-  CubeVertex,
-  DirectionalLight,
-  Material,
-  Vertex,
-} from './dataTypes.ts';
+import { Camera, CubeVertex, DirectionalLight, Material, Vertex } from './dataTypes.ts';
 import { IcosphereGenerator } from './icosphere.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
@@ -48,10 +42,7 @@ const materialProps = {
 };
 
 const icosphereGenerator = new IcosphereGenerator(root, maxSize);
-let vertexBuffer = icosphereGenerator.createIcosphere(
-  subdivisions,
-  smoothNormals,
-);
+let vertexBuffer = icosphereGenerator.createIcosphere(subdivisions, smoothNormals);
 const cubeVertexBuffer = root
   .createBuffer(d.arrayOf(CubeVertex, cubeVertices.length), cubeVertices)
   .$usage('vertex');
@@ -83,9 +74,7 @@ const lightBuffer = root
   })
   .$usage('uniform');
 
-const materialBuffer = root
-  .createBuffer(Material, materialProps)
-  .$usage('uniform');
+const materialBuffer = root.createBuffer(Material, materialProps).$usage('uniform');
 
 // Textures & Samplers
 
@@ -131,9 +120,7 @@ const textureBindGroup = root.createBindGroup(textureLayout, {
 });
 
 const vertexLayout = tgpu.vertexLayout(d.disarrayOf(Vertex));
-const cubeVertexLayout = tgpu.vertexLayout((n: number) =>
-  d.arrayOf(CubeVertex, n)
-);
+const cubeVertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(CubeVertex, n));
 
 // Shader Functions
 
@@ -170,35 +157,23 @@ const fragmentFn = tgpu.fragmentFn({
     .mul(renderLayout.$.light.color)
     .mul(renderLayout.$.light.intensity);
 
-  const diffuseFactor = std.max(
-    std.dot(normalizedNormal, normalizedLightDir),
-    0,
-  );
+  const diffuseFactor = std.max(std.dot(normalizedNormal, normalizedLightDir), 0);
   const diffuseLight = renderLayout.$.material.diffuse
     .mul(renderLayout.$.light.color)
     .mul(renderLayout.$.light.intensity)
     .mul(diffuseFactor);
 
-  const viewDirection = std.normalize(
-    renderLayout.$.camera.position.xyz.sub(input.worldPos.xyz),
-  );
-  const reflectionDirection = std.reflect(
-    std.neg(normalizedLightDir),
-    normalizedNormal,
-  );
+  const viewDirection = std.normalize(renderLayout.$.camera.position.xyz.sub(input.worldPos.xyz));
+  const reflectionDirection = std.reflect(std.neg(normalizedLightDir), normalizedNormal);
 
   const specularFactor =
-    std.max(std.dot(viewDirection, reflectionDirection), 0) **
-      renderLayout.$.material.shininess;
+    std.max(std.dot(viewDirection, reflectionDirection), 0) ** renderLayout.$.material.shininess;
   const specularLight = renderLayout.$.material.specular
     .mul(renderLayout.$.light.color)
     .mul(renderLayout.$.light.intensity)
     .mul(specularFactor);
 
-  const reflectionVector = std.reflect(
-    std.neg(viewDirection),
-    normalizedNormal,
-  );
+  const reflectionVector = std.reflect(std.neg(viewDirection), normalizedNormal);
   const environmentColor = std.textureSample(
     textureLayout.$.cubemap,
     textureLayout.$.texSampler,
@@ -226,8 +201,7 @@ const cubeVertexFn = tgpu.vertexFn({
     texCoord: d.vec3f,
   },
 })((input) => {
-  const viewPos =
-    renderLayout.$.camera.view.mul(d.vec4f(input.position.xyz, 0)).xyz;
+  const viewPos = renderLayout.$.camera.view.mul(d.vec4f(input.position.xyz, 0)).xyz;
 
   return {
     pos: renderLayout.$.camera.projection.mul(d.vec4f(viewPos, 1)),
@@ -335,22 +309,13 @@ function updateCameraPosition() {
   const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
   const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
 
-  const newView = m.mat4.lookAt(
-    newCameraPos,
-    d.vec3f(0, 0, 0),
-    d.vec3f(0, 1, 0),
-    d.mat4x4f(),
-  );
+  const newView = m.mat4.lookAt(newCameraPos, d.vec3f(0, 0, 0), d.vec3f(0, 1, 0), d.mat4x4f());
   cameraBuffer.writePartial({ view: newView, position: newCameraPos });
 }
 
 function updateCameraOrbit(dx: number, dy: number) {
   orbitYaw += -dx * 0.005;
-  orbitPitch = std.clamp(
-    orbitPitch + dy * 0.005,
-    -Math.PI / 2 + 0.01,
-    Math.PI / 2 - 0.01,
-  );
+  orbitPitch = std.clamp(orbitPitch + dy * 0.005, -Math.PI / 2 + 0.01, Math.PI / 2 - 0.01);
   updateCameraPosition();
 }
 
@@ -359,10 +324,14 @@ function zoomCamera(delta: number) {
   updateCameraPosition();
 }
 
-canvas.addEventListener('wheel', (e: WheelEvent) => {
-  e.preventDefault();
-  zoomCamera(e.deltaY * 0.05);
-}, { passive: false });
+canvas.addEventListener(
+  'wheel',
+  (e: WheelEvent) => {
+    e.preventDefault();
+    zoomCamera(e.deltaY * 0.05);
+  },
+  { passive: false },
+);
 
 canvas.addEventListener('mousedown', (event) => {
   isDragging = true;
@@ -370,19 +339,23 @@ canvas.addEventListener('mousedown', (event) => {
   prevY = event.clientY;
 });
 
-canvas.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  if (e.touches.length === 1) {
-    isDragging = true;
-    prevX = e.touches[0].clientX;
-    prevY = e.touches[0].clientY;
-  } else if (e.touches.length === 2) {
-    isDragging = false;
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    lastPinchDist = Math.sqrt(dx * dx + dy * dy);
-  }
-}, { passive: false });
+canvas.addEventListener(
+  'touchstart',
+  (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      isDragging = true;
+      prevX = e.touches[0].clientX;
+      prevY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastPinchDist = Math.sqrt(dx * dx + dy * dy);
+    }
+  },
+  { passive: false },
+);
 
 const mouseUpEventListener = () => {
   isDragging = false;
@@ -426,16 +399,20 @@ window.addEventListener('touchmove', touchMoveEventListener, {
   passive: false,
 });
 
-canvas.addEventListener('touchmove', (e) => {
-  if (e.touches.length === 2) {
-    e.preventDefault();
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    const pinchDist = Math.sqrt(dx * dx + dy * dy);
-    zoomCamera((lastPinchDist - pinchDist) * 0.05);
-    lastPinchDist = pinchDist;
-  }
-}, { passive: false });
+canvas.addEventListener(
+  'touchmove',
+  (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const pinchDist = Math.sqrt(dx * dx + dy * dy);
+      zoomCamera((lastPinchDist - pinchDist) * 0.05);
+      lastPinchDist = pinchDist;
+    }
+  },
+  { passive: false },
+);
 
 function hideHelp() {
   const helpElem = document.getElementById('help');
@@ -455,20 +432,14 @@ export const controls = defineControls({
     step: 1,
     onSliderChange(value) {
       subdivisions = value;
-      vertexBuffer = icosphereGenerator.createIcosphere(
-        subdivisions,
-        smoothNormals,
-      );
+      vertexBuffer = icosphereGenerator.createIcosphere(subdivisions, smoothNormals);
     },
   },
   'smooth normals': {
     initial: false,
     onToggleChange: (value) => {
       smoothNormals = value;
-      vertexBuffer = icosphereGenerator.createIcosphere(
-        subdivisions,
-        smoothNormals,
-      );
+      vertexBuffer = icosphereGenerator.createIcosphere(subdivisions, smoothNormals);
     },
   },
   'cubemap texture': {

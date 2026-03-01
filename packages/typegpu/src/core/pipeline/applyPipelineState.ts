@@ -3,15 +3,8 @@ import {
   type TgpuBindGroup,
   type TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout.ts';
-import {
-  isBuffer,
-  type TgpuBuffer,
-  type VertexFlag,
-} from '../buffer/buffer.ts';
-import {
-  MissingBindGroupsError,
-  MissingVertexBuffersError,
-} from '../../errors.ts';
+import { isBuffer, type TgpuBuffer, type VertexFlag } from '../buffer/buffer.ts';
+import { MissingBindGroupsError, MissingVertexBuffersError } from '../../errors.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
@@ -32,15 +25,10 @@ export interface VertexBufferEntry {
   size?: number | undefined;
 }
 
-export type VertexBufferResolver = (
-  layout: TgpuVertexLayout,
-) => VertexBufferEntry | undefined;
+export type VertexBufferResolver = (layout: TgpuVertexLayout) => VertexBufferEntry | undefined;
 
 export function applyBindGroups(
-  encoder:
-    | GPURenderPassEncoder
-    | GPURenderBundleEncoder
-    | GPUComputePassEncoder,
+  encoder: GPURenderPassEncoder | GPURenderBundleEncoder | GPUComputePassEncoder,
   root: ExperimentalTgpuRoot,
   usedBindGroupLayouts: TgpuBindGroupLayout[],
   catchall: [number, TgpuBindGroup] | undefined,
@@ -85,12 +73,7 @@ export function applyVertexBuffers(
     if (!entry || !entry.buffer) {
       missingVertexLayouts.add(vertexLayout);
     } else if (isBuffer(entry.buffer)) {
-      encoder.setVertexBuffer(
-        idx,
-        root.unwrap(entry.buffer),
-        entry.offset,
-        entry.size,
-      );
+      encoder.setVertexBuffer(idx, root.unwrap(entry.buffer), entry.offset, entry.size);
     } else {
       encoder.setVertexBuffer(idx, entry.buffer, entry.offset, entry.size);
     }

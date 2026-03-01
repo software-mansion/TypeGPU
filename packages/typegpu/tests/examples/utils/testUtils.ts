@@ -1,12 +1,13 @@
-export function getExampleURLs(category: string, name: string): {
+export function getExampleURLs(
+  category: string,
+  name: string,
+): {
   html: string;
   ts: string;
 } {
   return {
-    html:
-      `../../../../../apps/typegpu-docs/src/examples/${category}/${name}/index.html?raw`,
-    ts:
-      `../../../../../apps/typegpu-docs/src/examples/${category}/${name}/index.ts`,
+    html: `../../../../../apps/typegpu-docs/src/examples/${category}/${name}/index.html?raw`,
+    ts: `../../../../../apps/typegpu-docs/src/examples/${category}/${name}/index.ts`,
   };
 }
 
@@ -73,8 +74,7 @@ export async function waitForExpectedCalls(
   let elapsed = 0;
 
   while (elapsed < maxWaitTime) {
-    const currentCalls = device.mock?.createShaderModule?.mock?.calls?.length ||
-      0;
+    const currentCalls = device.mock?.createShaderModule?.mock?.calls?.length || 0;
     if (currentCalls >= expectedCalls) {
       return;
     }

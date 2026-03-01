@@ -7,7 +7,10 @@ import { abs, add, dot, length, max, min, saturate, sub } from 'typegpu/std';
  * @param point Point to evaluate
  * @param radius Radius of the sphere
  */
-export const sdSphere = tgpu.fn([vec3f, f32], f32)((point, radius) => {
+export const sdSphere = tgpu.fn(
+  [vec3f, f32],
+  f32,
+)((point, radius) => {
   return length(point) - radius;
 });
 
@@ -16,7 +19,10 @@ export const sdSphere = tgpu.fn([vec3f, f32], f32)((point, radius) => {
  * @param point Point to evaluate
  * @param size Half-dimensions of the box
  */
-export const sdBox3d = tgpu.fn([vec3f, vec3f], f32)((point, size) => {
+export const sdBox3d = tgpu.fn(
+  [vec3f, vec3f],
+  f32,
+)((point, size) => {
   const d = sub(abs(point), size);
   return length(max(d, vec3f(0))) + min(max(max(d.x, d.y), d.z), 0);
 });
@@ -27,12 +33,13 @@ export const sdBox3d = tgpu.fn([vec3f, vec3f], f32)((point, size) => {
  * @param size Half-dimensions of the box
  * @param cornerRadius Box corner radius
  */
-export const sdRoundedBox3d = tgpu
-  .fn([vec3f, vec3f, f32], f32)((point, size, cornerRadius) => {
-    const d = add(sub(abs(point), size), vec3f(cornerRadius));
-    return length(max(d, vec3f(0))) + min(max(max(d.x, d.y), d.z), 0) -
-      cornerRadius;
-  });
+export const sdRoundedBox3d = tgpu.fn(
+  [vec3f, vec3f, f32],
+  f32,
+)((point, size, cornerRadius) => {
+  const d = add(sub(abs(point), size), vec3f(cornerRadius));
+  return length(max(d, vec3f(0))) + min(max(max(d.x, d.y), d.z), 0) - cornerRadius;
+});
 
 /**
  * Signed distance function for a hollow box frame
@@ -40,24 +47,23 @@ export const sdRoundedBox3d = tgpu
  * @param size Half-dimensions of the box
  * @param thickness Frame thickness
  */
-export const sdBoxFrame3d = tgpu
-  .fn([vec3f, vec3f, f32], f32)((point, size, thickness) => {
-    const p1 = sub(abs(point), size);
-    const q = sub(abs(add(p1, thickness)), vec3f(thickness));
+export const sdBoxFrame3d = tgpu.fn(
+  [vec3f, vec3f, f32],
+  f32,
+)((point, size, thickness) => {
+  const p1 = sub(abs(point), size);
+  const q = sub(abs(add(p1, thickness)), vec3f(thickness));
 
-    // Calculate three possible distances for each main axis being the outer one
-    const d1 = length(max(vec3f(p1.x, q.y, q.z), vec3f(0))) +
-      min(max(p1.x, max(q.y, q.z)), 0);
+  // Calculate three possible distances for each main axis being the outer one
+  const d1 = length(max(vec3f(p1.x, q.y, q.z), vec3f(0))) + min(max(p1.x, max(q.y, q.z)), 0);
 
-    const d2 = length(max(vec3f(q.x, p1.y, q.z), vec3f(0))) +
-      min(max(q.x, max(p1.y, q.z)), 0);
+  const d2 = length(max(vec3f(q.x, p1.y, q.z), vec3f(0))) + min(max(q.x, max(p1.y, q.z)), 0);
 
-    const d3 = length(max(vec3f(q.x, q.y, p1.z), vec3f(0))) +
-      min(max(q.x, max(q.y, p1.z)), 0);
+  const d3 = length(max(vec3f(q.x, q.y, p1.z), vec3f(0))) + min(max(q.x, max(q.y, p1.z)), 0);
 
-    // Return minimum of the three distances
-    return min(min(d1, d2), d3);
-  });
+  // Return minimum of the three distances
+  return min(min(d1, d2), d3);
+});
 
 /**
  * Signed distance function for a 3D line segment
@@ -65,7 +71,10 @@ export const sdBoxFrame3d = tgpu
  * @param A First endpoint of the line
  * @param B Second endpoint of the line
  */
-export const sdLine3d = tgpu.fn([vec3f, vec3f, vec3f], f32)((point, A, B) => {
+export const sdLine3d = tgpu.fn(
+  [vec3f, vec3f, vec3f],
+  f32,
+)((point, A, B) => {
   const pa = sub(point, A);
   const ba = sub(B, A);
   const h = max(0, min(1, dot(pa, ba) / dot(ba, ba)));
@@ -78,11 +87,12 @@ export const sdLine3d = tgpu.fn([vec3f, vec3f, vec3f], f32)((point, A, B) => {
  * @param normal Normal vector of the plane (must be normalized)
  * @param height Height/offset of the plane along the normal
  */
-export const sdPlane = tgpu.fn([vec3f, vec3f, f32], f32)(
-  (point, normal, height) => {
-    return dot(point, normal) + height;
-  },
-);
+export const sdPlane = tgpu.fn(
+  [vec3f, vec3f, f32],
+  f32,
+)((point, normal, height) => {
+  return dot(point, normal) + height;
+});
 
 /**
  * Signed distance function for a 3D capsule
@@ -91,10 +101,12 @@ export const sdPlane = tgpu.fn([vec3f, vec3f, f32], f32)(
  * @param B Second endpoint of the capsule segment
  * @param radius Radius of the capsule
  */
-export const sdCapsule = tgpu
-  .fn([vec3f, vec3f, vec3f, f32], f32)((point, A, B, radius) => {
-    const pa = sub(point, A);
-    const ba = sub(B, A);
-    const h = saturate(dot(pa, ba) / dot(ba, ba));
-    return length(sub(pa, ba.mul(h))) - radius;
-  });
+export const sdCapsule = tgpu.fn(
+  [vec3f, vec3f, vec3f, f32],
+  f32,
+)((point, A, B, radius) => {
+  const pa = sub(point, A);
+  const ba = sub(B, A);
+  const h = saturate(dot(pa, ba) / dot(ba, ba));
+  return length(sub(pa, ba.mul(h))) - radius;
+});

@@ -49,12 +49,12 @@ export const simulate = (fishIndex: number) => {
 
     if (axisPosition > axisAquariumSize - distance) {
       const str = axisPosition - (axisAquariumSize - distance);
-      wallRepulsion = wallRepulsion - (repulsion * str);
+      wallRepulsion = wallRepulsion - repulsion * str;
     }
 
     if (axisPosition < -axisAquariumSize + distance) {
       const str = -axisAquariumSize + distance - axisPosition;
-      wallRepulsion = wallRepulsion + (repulsion * str);
+      wallRepulsion = wallRepulsion + repulsion * str;
     }
   }
 
@@ -71,8 +71,7 @@ export const simulate = (fishIndex: number) => {
   direction += cohesion * layout.$.fishBehavior.cohesionStr;
   direction += wallRepulsion * p.fishWallRepulsionStrength;
   direction += rayRepulsion * p.fishMouseRayRepulsionStrength;
-  direction = std.normalize(direction) *
-    (std.clamp(std.length(fishData.direction), 0, 0.01));
+  direction = std.normalize(direction) * std.clamp(std.length(fishData.direction), 0, 0.01);
 
   const translation = direction * (std.min(999, layout.$.timePassed) / 8);
 

@@ -1,10 +1,7 @@
 import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
 import { offsetsForProps } from '../src/data/offsets.ts';
-import {
-  getWriteInstructions,
-  type WriteInstruction,
-} from '../src/data/partialIO.ts';
+import { getWriteInstructions, type WriteInstruction } from '../src/data/partialIO.ts';
 import type { TypedArray } from '../src/shared/utilityTypes.ts';
 import { it } from './utils/extendedIt.ts';
 
@@ -23,22 +20,14 @@ function expectInstruction(
   expect(instruction.data.byteOffset).toBe(start);
   expect(instruction.data.byteLength).toBe(length);
 
-  const dataArrays = Array.isArray(expectedData)
-    ? expectedData
-    : [expectedData];
+  const dataArrays = Array.isArray(expectedData) ? expectedData : [expectedData];
 
-  const totalByteLength = dataArrays.reduce(
-    (acc, arr) => acc + arr.byteLength,
-    0,
-  );
+  const totalByteLength = dataArrays.reduce((acc, arr) => acc + arr.byteLength, 0);
 
   const mergedExpected = new Uint8Array(totalByteLength);
   let offset = 0;
   for (const arr of dataArrays) {
-    mergedExpected.set(
-      new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength),
-      offset,
-    );
+    mergedExpected.set(new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength), offset);
     offset += arr.byteLength;
   }
 
@@ -142,9 +131,7 @@ describe('getWriteInstructions', () => {
       c: { d: 4 },
     };
 
-    const instructions = getWriteInstructions(struct, data) as [
-      WriteInstruction,
-    ];
+    const instructions = getWriteInstructions(struct, data) as [WriteInstruction];
     expect(instructions).toHaveLength(1);
 
     expectInstruction(instructions[0], {
@@ -176,9 +163,7 @@ describe('getWriteInstructions', () => {
       ],
     };
 
-    const instructions = getWriteInstructions(struct, data) as [
-      WriteInstruction,
-    ];
+    const instructions = getWriteInstructions(struct, data) as [WriteInstruction];
     expect(instructions).toHaveLength(1);
 
     expectInstruction(instructions[0], {
@@ -211,10 +196,7 @@ describe('getWriteInstructions', () => {
       c: { d: 4 },
     };
 
-    const instructions = getWriteInstructions(struct, data) as [
-      WriteInstruction,
-      WriteInstruction,
-    ];
+    const instructions = getWriteInstructions(struct, data) as [WriteInstruction, WriteInstruction];
     expect(instructions).toHaveLength(2);
 
     expectInstruction(instructions[0], {

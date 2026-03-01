@@ -16,12 +16,7 @@ await renderer.init();
 renderer.setPixelRatio(window.devicePixelRatio);
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(
-  75,
-  1,
-  0.1,
-  1000,
-);
+const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
 camera.position.z = 5;
 
 scene.add(getCubeTwoDifferentFunctions());

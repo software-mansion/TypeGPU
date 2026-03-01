@@ -24,10 +24,7 @@ const paramsUniform = root.createUniform(CloudsParams, {
   maxSteps: 50,
   maxDistance: 10.0,
 });
-const resolutionUniform = root.createUniform(
-  d.vec2f,
-  d.vec2f(canvas.width, canvas.height),
-);
+const resolutionUniform = root.createUniform(d.vec2f, d.vec2f(canvas.width, canvas.height));
 
 const noiseData = new Uint8Array(NOISE_TEXTURE_SIZE * NOISE_TEXTURE_SIZE);
 for (let i = 0; i < noiseData.length; i += 1) {
@@ -64,10 +61,7 @@ const pipeline = root.createRenderPipeline({
     const aspect = screenRes.x / screenRes.y;
 
     let screenPos = (uv - 0.5) * 2;
-    screenPos = d.vec2f(
-      screenPos.x * std.max(aspect, 1),
-      screenPos.y * std.max(1 / aspect, 1),
-    );
+    screenPos = d.vec2f(screenPos.x * std.max(aspect, 1), screenPos.y * std.max(1 / aspect, 1));
 
     const sunDir = std.normalize(SUN_DIRECTION);
     const time = cloudsLayout.$.params.time;

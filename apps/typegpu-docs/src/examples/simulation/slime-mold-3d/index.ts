@@ -47,17 +47,19 @@ const aspect = canvas.width / canvas.height;
 const near = 0.1;
 const far = 1000.0;
 
-let cameraDistance = Math.max(resolution.x, resolution.y, resolution.z) *
-  CAMERA_DISTANCE_MULTIPLIER;
+let cameraDistance =
+  Math.max(resolution.x, resolution.y, resolution.z) * CAMERA_DISTANCE_MULTIPLIER;
 let cameraTheta = CAMERA_INITIAL_ANGLE; // azimuth
 let cameraPhi = CAMERA_INITIAL_ANGLE; // elevation
 
 const updateCamera = () => {
-  const cameraPos = cameraTarget.add(d.vec3f(
-    cameraDistance * Math.sin(cameraPhi) * Math.cos(cameraTheta),
-    cameraDistance * Math.cos(cameraPhi),
-    cameraDistance * Math.sin(cameraPhi) * Math.sin(cameraTheta),
-  ));
+  const cameraPos = cameraTarget.add(
+    d.vec3f(
+      cameraDistance * Math.sin(cameraPhi) * Math.cos(cameraTheta),
+      cameraDistance * Math.cos(cameraPhi),
+      cameraDistance * Math.sin(cameraPhi) * Math.sin(cameraTheta),
+    ),
+  );
 
   const view = m.mat4.lookAt(cameraPos, cameraTarget, cameraUp, d.mat4x4f());
   const proj = m.mat4.perspective(fov, aspect, near, far, d.mat4x4f());
@@ -94,19 +96,21 @@ const Params = d.struct({
 });
 
 const agentsDataBuffers = [0, 1].map(() =>
-  root.createBuffer(d.arrayOf(Agent, NUM_AGENTS)).$usage('storage')
+  root.createBuffer(d.arrayOf(Agent, NUM_AGENTS)).$usage('storage'),
 );
 
 const mutableAgentsDataBuffers = agentsDataBuffers.map((b) => b.as('mutable'));
-root.createGuardedComputePipeline((x) => {
-  'use gpu';
-  randf.seed(x / NUM_AGENTS);
-  const pos = randf.inUnitSphere() * (resolution.x / 4) + (resolution / 2);
-  const center = resolution / 2;
-  const dir = std.normalize(center - pos);
-  mutableAgentsDataBuffers[0].$[x] = Agent({ position: pos, direction: dir });
-  mutableAgentsDataBuffers[1].$[x] = Agent({ position: pos, direction: dir });
-}).dispatchThreads(NUM_AGENTS);
+root
+  .createGuardedComputePipeline((x) => {
+    'use gpu';
+    randf.seed(x / NUM_AGENTS);
+    const pos = randf.inUnitSphere() * (resolution.x / 4) + resolution / 2;
+    const center = resolution / 2;
+    const dir = std.normalize(center - pos);
+    mutableAgentsDataBuffers[0].$[x] = Agent({ position: pos, direction: dir });
+    mutableAgentsDataBuffers[1].$[x] = Agent({ position: pos, direction: dir });
+  })
+  .dispatchThreads(NUM_AGENTS);
 
 const params = root.createUniform(Params, {
   deltaTime: 0,
@@ -124,7 +128,7 @@ const textures = [0, 1].map(() =>
       format: 'r32float',
       dimension: '3d',
     })
-    .$usage('sampled', 'storage')
+    .$usage('sampled', 'storage'),
 );
 
 const computeLayout = tgpu.bindGroupLayout({
@@ -193,14 +197,10 @@ const sense3D = (pos: d.v3f, direction: d.v3f) => {
     const theta = (i / numSamples) * 2 * Math.PI;
 
     const coneOffset = perp1 * std.cos(theta) + perp2 * std.sin(theta);
-    const sensorDir = std.normalize(
-      direction + coneOffset * std.sin(params.$.sensorAngle),
-    );
+    const sensorDir = std.normalize(direction + coneOffset * std.sin(params.$.sensorAngle));
 
     const sensorPos = pos + sensorDir * params.$.sensorDistance;
-    const sensorPosInt = d.vec3u(
-      std.clamp(sensorPos, d.vec3f(), dimsf - 1),
-    );
+    const sensorPosInt = d.vec3u(std.clamp(sensorPos, d.vec3f(), dimsf - 1));
 
     const weight = std.textureLoad(computeLayout.$.oldState, sensorPosInt).x;
 
@@ -234,12 +234,9 @@ const updateAgents = tgpu.computeFn({
     std.normalize(senseResult.weightedDir),
     senseResult.totalWeight > 0.01,
   );
-  direction = std.normalize(
-    direction + (targetDirection * params.$.turnSpeed * params.$.deltaTime),
-  );
+  direction = std.normalize(direction + targetDirection * params.$.turnSpeed * params.$.deltaTime);
 
-  const newPos = agent.position +
-    (direction * params.$.moveSpeed * params.$.deltaTime);
+  const newPos = agent.position + direction * params.$.moveSpeed * params.$.deltaTime;
 
   const center = dimsf / 2;
 
@@ -252,9 +249,7 @@ const updateAgents = tgpu.computeFn({
     const randomDir = randf.inHemisphere(normal);
     const toCenter = std.normalize(center - newPos);
 
-    direction = std.normalize(
-      randomDir * RANDOM_DIRECTION_WEIGHT + toCenter * CENTER_BIAS_WEIGHT,
-    );
+    direction = std.normalize(randomDir * RANDOM_DIRECTION_WEIGHT + toCenter * CENTER_BIAS_WEIGHT);
   }
   if (newPos.y < 0 || newPos.y >= dimsf.y) {
     newPos.y = std.clamp(newPos.y, 0, dimsf.y - 1);
@@ -264,9 +259,7 @@ const updateAgents = tgpu.computeFn({
     }
     const randomDir = randf.inHemisphere(normal);
     const toCenter = std.normalize(center - newPos);
-    direction = std.normalize(
-      randomDir * RANDOM_DIRECTION_WEIGHT + toCenter * CENTER_BIAS_WEIGHT,
-    );
+    direction = std.normalize(randomDir * RANDOM_DIRECTION_WEIGHT + toCenter * CENTER_BIAS_WEIGHT);
   }
   if (newPos.z < 0 || newPos.z >= dimsf.z) {
     newPos.z = std.clamp(newPos.z, 0, dimsf.z - 1);
@@ -276,9 +269,7 @@ const updateAgents = tgpu.computeFn({
     }
     const randomDir = randf.inHemisphere(normal);
     const toCenter = std.normalize(center - newPos);
-    direction = std.normalize(
-      randomDir * RANDOM_DIRECTION_WEIGHT + toCenter * CENTER_BIAS_WEIGHT,
-    );
+    direction = std.normalize(randomDir * RANDOM_DIRECTION_WEIGHT + toCenter * CENTER_BIAS_WEIGHT);
   }
 
   computeLayout.$.newAgents[gid.x] = Agent({
@@ -288,11 +279,7 @@ const updateAgents = tgpu.computeFn({
 
   const oldState = std.textureLoad(computeLayout.$.oldState, d.vec3u(newPos)).x;
   const newState = oldState + 1;
-  std.textureStore(
-    computeLayout.$.newState,
-    d.vec3u(newPos),
-    d.vec4f(newState, 0, 0, 1),
-  );
+  std.textureStore(computeLayout.$.newState, d.vec3u(newPos), d.vec4f(newState, 0, 0, 1));
 });
 
 const sampler = root['~unstable'].createSampler({
@@ -300,13 +287,12 @@ const sampler = root['~unstable'].createSampler({
   minFilter: canFilter ? 'linear' : 'nearest',
 });
 
-const getSummand = tgpu.fn([d.vec3f, d.vec3f], d.f32)((uv, offset) =>
-  std.textureSampleLevel(
-    blurLayout.$.oldState,
-    blurLayout.$.sampler,
-    uv.add(offset),
-    0,
-  ).x
+const getSummand = tgpu.fn(
+  [d.vec3f, d.vec3f],
+  d.f32,
+)(
+  (uv, offset) =>
+    std.textureSampleLevel(blurLayout.$.oldState, blurLayout.$.sampler, uv.add(offset), 0).x,
 );
 
 const blur = tgpu.computeFn({
@@ -334,12 +320,7 @@ const blur = tgpu.computeFn({
 });
 
 // Ray-box intersection
-const rayBoxIntersection = (
-  rayOrigin: d.v3f,
-  rayDir: d.v3f,
-  boxMin: d.v3f,
-  boxMax: d.v3f,
-) => {
+const rayBoxIntersection = (rayOrigin: d.v3f, rayDir: d.v3f, boxMin: d.v3f, boxMax: d.v3f) => {
   'use gpu';
   const invDir = 1 / rayDir;
   const t0 = (boxMin - rayOrigin) * invDir;
@@ -385,11 +366,7 @@ const fragmentShader = tgpu.fragmentFn({
   const minSteps = d.i32(8);
   const maxSteps = d.i32(RAYMARCH_STEPS);
 
-  const adaptiveSteps = std.clamp(
-    d.i32(intersectionLength * baseStepsPerUnit),
-    minSteps,
-    maxSteps,
-  );
+  const adaptiveSteps = std.clamp(d.i32(intersectionLength * baseStepsPerUnit), minSteps, maxSteps);
 
   const numSteps = adaptiveSteps;
   const stepSize = intersectionLength / d.f32(numSteps);
@@ -412,9 +389,7 @@ const fragmentShader = tgpu.fragmentFn({
     const pos = rayOrigin + rayDir * t;
     const texCoord = pos / resolution;
 
-    const sampleValue = std
-      .textureSampleLevel(renderLayout.$.state, sampler.$, texCoord, 0)
-      .x;
+    const sampleValue = std.textureSampleLevel(renderLayout.$.state, sampler.$, texCoord, 0).x;
 
     const d0 = std.smoothstep(thresholdLo, thresholdHi, sampleValue);
     const density = d0 ** gamma;
@@ -448,7 +423,7 @@ const bindGroups = [0, 1].map((i) =>
     oldState: textures[i],
     newAgents: agentsDataBuffers[1 - i],
     newState: textures[1 - i],
-  })
+  }),
 );
 
 const blurBindGroups = [0, 1].map((i) =>
@@ -456,13 +431,13 @@ const blurBindGroups = [0, 1].map((i) =>
     oldState: textures[i],
     newState: textures[1 - i],
     sampler: sampler,
-  })
+  }),
 );
 
 const renderBindGroups = [0, 1].map((i) =>
   root.createBindGroup(renderLayout, {
     state: textures[i],
-  })
+  }),
 );
 
 let lastTime = performance.now();
@@ -485,9 +460,7 @@ function frame() {
 
   computePipeline
     .with(bindGroups[currentTexture])
-    .dispatchWorkgroups(
-      Math.ceil(NUM_AGENTS / AGENT_WORKGROUP_SIZE),
-    );
+    .dispatchWorkgroups(Math.ceil(NUM_AGENTS / AGENT_WORKGROUP_SIZE));
 
   renderPipeline
     .withColorAttachment({ view: context })
@@ -538,50 +511,67 @@ canvas.addEventListener('mouseleave', () => {
   isDragging = false;
 });
 
-canvas.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  cameraDistance *= 1 + e.deltaY * 0.001;
-  cameraDistance = Math.max(
-    100,
-    Math.min(
-      cameraDistance,
-      Math.max(resolution.x, resolution.y, resolution.z) * 3,
-    ),
-  );
-  updateCamera();
-}, { passive: false });
+canvas.addEventListener(
+  'wheel',
+  (e) => {
+    e.preventDefault();
+    cameraDistance *= 1 + e.deltaY * 0.001;
+    cameraDistance = Math.max(
+      100,
+      Math.min(cameraDistance, Math.max(resolution.x, resolution.y, resolution.z) * 3),
+    );
+    updateCamera();
+  },
+  { passive: false },
+);
 
-canvas.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  if (e.touches.length === 1) {
-    isDragging = true;
+canvas.addEventListener(
+  'touchstart',
+  (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      isDragging = true;
+      lastMouseX = e.touches[0].clientX;
+      lastMouseY = e.touches[0].clientY;
+    }
+  },
+  { passive: false },
+);
+
+canvas.addEventListener(
+  'touchmove',
+  (e) => {
+    e.preventDefault();
+    if (!isDragging || e.touches.length !== 1) return;
+
+    const deltaX = e.touches[0].clientX - lastMouseX;
+    const deltaY = e.touches[0].clientY - lastMouseY;
+
+    handleCameraRotation(deltaX, deltaY);
+
     lastMouseX = e.touches[0].clientX;
     lastMouseY = e.touches[0].clientY;
-  }
-}, { passive: false });
+  },
+  { passive: false },
+);
 
-canvas.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  if (!isDragging || e.touches.length !== 1) return;
+canvas.addEventListener(
+  'touchend',
+  (e) => {
+    e.preventDefault();
+    isDragging = false;
+  },
+  { passive: false },
+);
 
-  const deltaX = e.touches[0].clientX - lastMouseX;
-  const deltaY = e.touches[0].clientY - lastMouseY;
-
-  handleCameraRotation(deltaX, deltaY);
-
-  lastMouseX = e.touches[0].clientX;
-  lastMouseY = e.touches[0].clientY;
-}, { passive: false });
-
-canvas.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  isDragging = false;
-}, { passive: false });
-
-canvas.addEventListener('touchcancel', (e) => {
-  e.preventDefault();
-  isDragging = false;
-}, { passive: false });
+canvas.addEventListener(
+  'touchcancel',
+  (e) => {
+    e.preventDefault();
+    isDragging = false;
+  },
+  { passive: false },
+);
 
 export const controls = defineControls({
   'Move Speed': {

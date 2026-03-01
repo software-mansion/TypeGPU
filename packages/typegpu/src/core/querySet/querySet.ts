@@ -30,9 +30,7 @@ export function INTERNAL_createQuerySet<T extends GPUQueryType>(
   return new TgpuQuerySetImpl(group, type, count, rawQuerySet);
 }
 
-export function isQuerySet<T extends GPUQueryType>(
-  value: unknown,
-): value is TgpuQuerySet<T> {
+export function isQuerySet<T extends GPUQueryType>(value: unknown): value is TgpuQuerySet<T> {
   const maybe = value as TgpuQuerySet<T>;
   return maybe?.resourceType === 'query-set' && !!maybe[$internal];
 }
@@ -127,13 +125,7 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
     }
 
     const commandEncoder = this.#device.createCommandEncoder();
-    commandEncoder.resolveQuerySet(
-      this.querySet,
-      0,
-      this.count,
-      this[$internal].resolveBuffer,
-      0,
-    );
+    commandEncoder.resolveQuerySet(this.querySet, 0, this.count, this[$internal].resolveBuffer, 0);
     this.#device.queue.submit([commandEncoder.finish()]);
   }
 

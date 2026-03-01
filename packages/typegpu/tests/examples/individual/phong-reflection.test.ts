@@ -15,16 +15,19 @@ describe('phong reflection example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'rendering',
-      name: 'phong-reflection',
-      setupMocks: () => {
-        mockResizeObserver();
-        mockCreateImageBitmap();
-        mock3DModelLoading();
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'rendering',
+        name: 'phong-reflection',
+        setupMocks: () => {
+          mockResizeObserver();
+          mockCreateImageBitmap();
+          mock3DModelLoading();
+        },
+        expectedCalls: 1,
       },
-      expectedCalls: 1,
-    }, device);
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct Camera {

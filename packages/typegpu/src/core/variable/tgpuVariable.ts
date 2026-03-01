@@ -6,12 +6,7 @@ import { getExecMode, isInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
-import {
-  $gpuValueOf,
-  $internal,
-  $ownSnippet,
-  $resolve,
-} from '../../shared/symbols.ts';
+import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
@@ -76,18 +71,15 @@ export function isVariable(value: unknown): value is TgpuVar {
 // --------------
 
 class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
-  implements TgpuVar<TScope, TDataType>, SelfResolvable {
+  implements TgpuVar<TScope, TDataType>, SelfResolvable
+{
   readonly [$internal] = {};
   readonly resourceType: 'var';
   readonly #scope: TScope;
   readonly #dataType: TDataType;
   readonly #initialValue: InferGPU<TDataType> | undefined;
 
-  constructor(
-    scope: TScope,
-    dataType: TDataType,
-    initialValue?: InferGPU<TDataType>,
-  ) {
+  constructor(scope: TScope, dataType: TDataType, initialValue?: InferGPU<TDataType>) {
     this.resourceType = 'var';
     this.#scope = scope;
     this.#dataType = dataType;
@@ -96,23 +88,15 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.getUniqueName(this);
-    const pre = `var<${this.#scope}> ${id}: ${
-      ctx.resolve(this.#dataType).value
-    }`;
+    const pre = `var<${this.#scope}> ${id}: ${ctx.resolve(this.#dataType).value}`;
 
     if (this.#initialValue) {
-      ctx.addDeclaration(
-        `${pre} = ${ctx.resolve(this.#initialValue, this.#dataType).value};`,
-      );
+      ctx.addDeclaration(`${pre} = ${ctx.resolve(this.#initialValue, this.#dataType).value};`);
     } else {
       ctx.addDeclaration(`${pre};`);
     }
 
-    return snip(
-      id,
-      this.#dataType,
-      isNaturallyEphemeral(this.#dataType) ? 'runtime' : this.#scope,
-    );
+    return snip(id, this.#dataType, isNaturallyEphemeral(this.#dataType) ? 'runtime' : this.#scope);
   }
 
   $name(label: string) {
@@ -128,14 +112,17 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
     const dataType = this.#dataType;
     const origin = isNaturallyEphemeral(dataType) ? 'runtime' : this.#scope;
 
-    return new Proxy({
-      [$internal]: true,
-      get [$ownSnippet]() {
-        return snip(this, dataType, origin);
+    return new Proxy(
+      {
+        [$internal]: true,
+        get [$ownSnippet]() {
+          return snip(this, dataType, origin);
+        },
+        [$resolve]: (ctx) => ctx.resolve(this),
+        toString: () => `var:${getName(this) ?? '<unnamed>'}.$`,
       },
-      [$resolve]: (ctx) => ctx.resolve(this),
-      toString: () => `var:${getName(this) ?? '<unnamed>'}.$`,
-    }, valueProxyHandler) as InferGPU<TDataType>;
+      valueProxyHandler,
+    ) as InferGPU<TDataType>;
   }
 
   get $(): InferGPU<TDataType> {
@@ -146,8 +133,8 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
       throw new IllegalVarAccessError(
         insideTgpuFn
           ? `Cannot access variable '${
-            getName(this) ?? '<unnamed>'
-          }'. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+              getName(this) ?? '<unnamed>'
+            }'. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
           : 'TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
       );
     }
@@ -157,7 +144,8 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
     }
 
     if (mode.type === 'simulate') {
-      if (!mode.vars[this.#scope].has(this)) { // Not initialized yet
+      if (!mode.vars[this.#scope].has(this)) {
+        // Not initialized yet
         mode.vars[this.#scope].set(this, this.#initialValue);
       }
       return mode.vars[this.#scope].get(this) as InferGPU<TDataType>;
@@ -173,9 +161,9 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
     if (mode.type === 'normal') {
       throw new IllegalVarAccessError(
         insideTgpuFn
-          ? `Cannot access ${
-            String(this)
-          }. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+          ? `Cannot access ${String(
+              this,
+            )}. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
           : 'TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
       );
     }

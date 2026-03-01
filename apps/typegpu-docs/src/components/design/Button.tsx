@@ -18,7 +18,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>((props, ref) => {
           ? 'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
           : 'border-2 border-tameplum-100 bg-white hover:bg-tameplum-20',
       )}
-      type='button'
+      type="button"
       ref={ref}
       onClick={onClick}
     >

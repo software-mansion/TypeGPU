@@ -23,6 +23,5 @@ export const loadTexAt = (pos: d.v2u): number => {
 
 export const golNextState = (alive: boolean, neighbors: number): boolean => {
   'use gpu';
-  return (alive && (neighbors === 2 || neighbors === 3)) ||
-    (!alive && neighbors === 3);
+  return (alive && (neighbors === 2 || neighbors === 3)) || (!alive && neighbors === 3);
 };

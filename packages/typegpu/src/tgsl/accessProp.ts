@@ -72,10 +72,7 @@ export type InfixOperator = keyof typeof infixOperators;
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
 
-const swizzleLenToType: Record<
-  SwizzleableType,
-  Record<SwizzleLength, BaseData>
-> = {
+const swizzleLenToType: Record<SwizzleableType, Record<SwizzleLength, BaseData>> = {
   f: {
     1: f32,
     2: vec2f,
@@ -108,21 +105,11 @@ const swizzleLenToType: Record<
   },
 } as const;
 
-export function accessProp(
-  target: Snippet,
-  propName: string,
-): Snippet | undefined {
-  if (
-    infixKinds.includes((target.dataType as BaseData).type) &&
-    propName in infixOperators
-  ) {
+export function accessProp(target: Snippet, propName: string): Snippet | undefined {
+  if (infixKinds.includes((target.dataType as BaseData).type) && propName in infixOperators) {
     const operator = infixOperators[propName as InfixOperator];
     return snip(
-      new InfixDispatch(
-        propName,
-        target,
-        operator[$gpuCallable].call.bind(operator),
-      ),
+      new InfixDispatch(propName, target, operator[$gpuCallable].call.bind(operator)),
       UnknownData,
       /* origin */ target.origin,
     );
@@ -134,19 +121,11 @@ export function accessProp(
       return snip(stitch`arrayLength(&${target})`, u32, /* origin */ 'runtime');
     }
 
-    return snip(
-      target.dataType.elementCount,
-      abstractInt,
-      /* origin */ 'constant',
-    );
+    return snip(target.dataType.elementCount, abstractInt, /* origin */ 'constant');
   }
 
   if (isMat(target.dataType) && propName === 'columns') {
-    return snip(
-      new MatrixColumnsAccess(target),
-      UnknownData,
-      /* origin */ target.origin,
-    );
+    return snip(new MatrixColumnsAccess(target), UnknownData, /* origin */ target.origin);
   }
 
   if (isWgslStruct(target.dataType) || isUnstruct(target.dataType)) {
@@ -162,11 +141,10 @@ export function accessProp(
       /* origin */ target.origin === 'argument'
         ? 'argument'
         : !isEphemeralSnippet(target) && !isNaturallyEphemeral(propType)
-        ? target.origin
-        : target.origin === 'constant' ||
-            target.origin === 'constant-tgpu-const-ref'
-        ? 'constant'
-        : 'runtime',
+          ? target.origin
+          : target.origin === 'constant' || target.origin === 'constant-tgpu-const-ref'
+            ? 'constant'
+            : 'runtime',
     );
   }
 
@@ -211,25 +189,23 @@ export function accessProp(
     const swizzleTypeChar = target.dataType.type.includes('bool')
       ? 'b'
       : (target.dataType.type[4] as SwizzleableType);
-    const swizzleType =
-      swizzleLenToType[swizzleTypeChar][propLength as SwizzleLength];
+    const swizzleType = swizzleLenToType[swizzleTypeChar][propLength as SwizzleLength];
     if (!swizzleType) {
       return undefined;
     }
 
     return snip(
       isKnownAtComptime(target)
-        // oxlint-disable-next-line typescript/no-explicit-any -- it's fine, the prop is there
-        ? (target.value as any)[propName]
+        ? // oxlint-disable-next-line typescript/no-explicit-any -- it's fine, the prop is there
+          (target.value as any)[propName]
         : stitch`${target}.${propName}`,
       swizzleType,
       // Swizzling creates new vectors (unless they're on the lhs of an assignment, but that's not yet supported in WGSL)
       /* origin */ target.origin === 'argument' && propLength === 1
         ? 'argument'
-        : target.origin === 'constant' ||
-            target.origin === 'constant-tgpu-const-ref'
-        ? 'constant'
-        : 'runtime',
+        : target.origin === 'constant' || target.origin === 'constant-tgpu-const-ref'
+          ? 'constant'
+          : 'runtime',
     );
   }
 

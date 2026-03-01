@@ -1,33 +1,11 @@
-import {
-  $cast,
-  $gpuCallable,
-  $internal,
-  isMarkedInternal,
-} from '../shared/symbols.ts';
+import { $cast, $gpuCallable, $internal, isMarkedInternal } from '../shared/symbols.ts';
 import type { Infer } from '../shared/repr.ts';
-import type {
-  $invalidSchemaReason,
-  $repr,
-  $validVertexSchema,
-} from '../shared/symbols.ts';
+import type { $invalidSchemaReason, $repr, $validVertexSchema } from '../shared/symbols.ts';
 import type { VertexFormat } from '../shared/vertexFormat.ts';
 import { f32, i32, u32 } from './numeric.ts';
-import {
-  vec2f,
-  vec2i,
-  vec2u,
-  vec3f,
-  vec3i,
-  vec3u,
-  vec4f,
-  vec4i,
-  vec4u,
-} from './vector.ts';
+import { vec2f, vec2i, vec2u, vec3f, vec3i, vec3u, vec4f, vec4i, vec4u } from './vector.ts';
 import type { WithCast } from '../types.ts';
-import {
-  schemaCallWrapper,
-  schemaCallWrapperGPU,
-} from './schemaCallWrapper.ts';
+import { schemaCallWrapper, schemaCallWrapperGPU } from './schemaCallWrapper.ts';
 import type { Snippet } from './snippet.ts';
 import type {
   BaseData,
@@ -49,8 +27,7 @@ import type {
   Vec4u,
 } from './wgslTypes.ts';
 
-export type FormatToWGSLType<T extends VertexFormat> =
-  (typeof formatToWGSLType)[T];
+export type FormatToWGSLType<T extends VertexFormat> = (typeof formatToWGSLType)[T];
 
 export interface TgpuVertexFormatData<T extends VertexFormat>
   extends BaseData, WithCast<FormatToWGSLType<T>> {
@@ -59,21 +36,18 @@ export interface TgpuVertexFormatData<T extends VertexFormat>
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<FormatToWGSLType<T>>;
   readonly [$validVertexSchema]: true;
-  readonly [$invalidSchemaReason]:
-    'Vertex formats are not host-shareable, use concrete types instead';
+  readonly [$invalidSchemaReason]: 'Vertex formats are not host-shareable, use concrete types instead';
   // ---
 }
 
-class TgpuVertexFormatDataImpl<T extends VertexFormat>
-  implements TgpuVertexFormatData<T> {
+class TgpuVertexFormatDataImpl<T extends VertexFormat> implements TgpuVertexFormatData<T> {
   public readonly [$internal] = {};
   [$gpuCallable]: TgpuVertexFormatData<T>[typeof $gpuCallable];
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<FormatToWGSLType<T>>;
   declare readonly [$validVertexSchema]: true;
-  declare readonly [$invalidSchemaReason]:
-    'Vertex formats are not host-shareable, use concrete types instead';
+  declare readonly [$invalidSchemaReason]: 'Vertex formats are not host-shareable, use concrete types instead';
   // ---
 
   constructor(public readonly type: T) {
@@ -84,9 +58,7 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat>
     };
   }
 
-  [$cast](
-    v?: Infer<FormatToWGSLType<T>>,
-  ): Infer<FormatToWGSLType<T>> {
+  [$cast](v?: Infer<FormatToWGSLType<T>>): Infer<FormatToWGSLType<T>> {
     return schemaCallWrapper(formatToWGSLType[this.type], v);
   }
 }
@@ -255,14 +227,10 @@ export type sint32x4 = TgpuVertexFormatData<'sint32x4'>;
 export const sint32x4 = new TgpuVertexFormatDataImpl('sint32x4') as sint32x4;
 
 export type unorm10_10_10_2 = TgpuVertexFormatData<'unorm10-10-10-2'>;
-export const unorm10_10_10_2 = new TgpuVertexFormatDataImpl(
-  'unorm10-10-10-2',
-) as unorm10_10_10_2;
+export const unorm10_10_10_2 = new TgpuVertexFormatDataImpl('unorm10-10-10-2') as unorm10_10_10_2;
 
 export type unorm8x4_bgra = TgpuVertexFormatData<'unorm8x4-bgra'>;
-export const unorm8x4_bgra = new TgpuVertexFormatDataImpl(
-  'unorm8x4-bgra',
-) as unorm8x4_bgra;
+export const unorm8x4_bgra = new TgpuVertexFormatDataImpl('unorm8x4-bgra') as unorm8x4_bgra;
 
 export type PackedData =
   | uint8
@@ -308,9 +276,7 @@ export type PackedData =
   | unorm8x4_bgra;
 
 export function isPackedData(value: unknown): value is PackedData {
-  return (
-    isMarkedInternal(value) && packedFormats.has((value as PackedData)?.type)
-  );
+  return isMarkedInternal(value) && packedFormats.has((value as PackedData)?.type);
 }
 
 type U32Data = U32 | Vec2u | Vec3u | Vec4u;
