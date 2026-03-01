@@ -241,7 +241,7 @@ class TgpuFnNode<T> extends THREE.Node {
           names: stageData.namespace,
           // oxlint-disable-next-line typescript/no-base-to-string
           template: `$var$ = ${varValue};\n`,
-          externals: { '$var$': dep.var },
+          externals: { $var$: dep.var },
         }),
         this,
       );
