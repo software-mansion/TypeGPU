@@ -1,0 +1,352 @@
+[
+  {
+    "maxDepth": 1,
+    "timeMs": 0.839917000000014,
+    "wgslLength": 684
+  },
+  {
+    "maxDepth": 1,
+    "timeMs": 0.506832999999915,
+    "wgslLength": 684
+  },
+  {
+    "maxDepth": 1,
+    "timeMs": 0.42995799999994233,
+    "wgslLength": 684
+  },
+  {
+    "maxDepth": 1,
+    "timeMs": 0.39883399999996527,
+    "wgslLength": 684
+  },
+  {
+    "maxDepth": 1,
+    "timeMs": 0.33170800000004874,
+    "wgslLength": 684
+  },
+  {
+    "maxDepth": 1,
+    "timeMs": 0.3347079999999778,
+    "wgslLength": 684
+  },
+  {
+    "maxDepth": 1,
+    "timeMs": 0.32095800000001873,
+    "wgslLength": 684
+  },
+  {
+    "maxDepth": 1,
+    "timeMs": 0.3144170000000486,
+    "wgslLength": 684
+  },
+  {
+    "maxDepth": 1,
+    "timeMs": 0.3354580000000169,
+    "wgslLength": 684
+  },
+  {
+    "maxDepth": 1,
+    "timeMs": 0.2958340000000135,
+    "wgslLength": 684
+  },
+  {
+    "maxDepth": 2,
+    "timeMs": 1.359124999999949,
+    "wgslLength": 1838
+  },
+  {
+    "maxDepth": 2,
+    "timeMs": 0.8083750000000691,
+    "wgslLength": 1838
+  },
+  {
+    "maxDepth": 2,
+    "timeMs": 0.7196250000000646,
+    "wgslLength": 1838
+  },
+  {
+    "maxDepth": 2,
+    "timeMs": 0.7251669999999422,
+    "wgslLength": 1838
+  },
+  {
+    "maxDepth": 2,
+    "timeMs": 0.6620410000000447,
+    "wgslLength": 1838
+  },
+  {
+    "maxDepth": 2,
+    "timeMs": 0.5340830000000096,
+    "wgslLength": 1838
+  },
+  {
+    "maxDepth": 2,
+    "timeMs": 0.5739170000000513,
+    "wgslLength": 1838
+  },
+  {
+    "maxDepth": 2,
+    "timeMs": 0.6353340000000571,
+    "wgslLength": 1838
+  },
+  {
+    "maxDepth": 2,
+    "timeMs": 0.6276249999999663,
+    "wgslLength": 1838
+  },
+  {
+    "maxDepth": 2,
+    "timeMs": 0.5951670000000604,
+    "wgslLength": 1838
+  },
+  {
+    "maxDepth": 3,
+    "timeMs": 1.8169169999999895,
+    "wgslLength": 4290
+  },
+  {
+    "maxDepth": 3,
+    "timeMs": 1.3996669999999085,
+    "wgslLength": 4290
+  },
+  {
+    "maxDepth": 3,
+    "timeMs": 1.4750000000000227,
+    "wgslLength": 4290
+  },
+  {
+    "maxDepth": 3,
+    "timeMs": 1.4225410000000238,
+    "wgslLength": 4290
+  },
+  {
+    "maxDepth": 3,
+    "timeMs": 1.3452919999999722,
+    "wgslLength": 4290
+  },
+  {
+    "maxDepth": 3,
+    "timeMs": 1.2571249999999736,
+    "wgslLength": 4290
+  },
+  {
+    "maxDepth": 3,
+    "timeMs": 1.2472500000000082,
+    "wgslLength": 4290
+  },
+  {
+    "maxDepth": 3,
+    "timeMs": 1.7789999999999964,
+    "wgslLength": 4290
+  },
+  {
+    "maxDepth": 3,
+    "timeMs": 1.0292499999999336,
+    "wgslLength": 4290
+  },
+  {
+    "maxDepth": 3,
+    "timeMs": 0.8892499999999472,
+    "wgslLength": 4290
+  },
+  {
+    "maxDepth": 4,
+    "timeMs": 2.3198750000000246,
+    "wgslLength": 8607
+  },
+  {
+    "maxDepth": 4,
+    "timeMs": 2.2398749999999836,
+    "wgslLength": 8607
+  },
+  {
+    "maxDepth": 4,
+    "timeMs": 2.298708999999917,
+    "wgslLength": 8607
+  },
+  {
+    "maxDepth": 4,
+    "timeMs": 1.9982919999999922,
+    "wgslLength": 8607
+  },
+  {
+    "maxDepth": 4,
+    "timeMs": 1.868208999999979,
+    "wgslLength": 8607
+  },
+  {
+    "maxDepth": 4,
+    "timeMs": 3.7175829999999905,
+    "wgslLength": 8607
+  },
+  {
+    "maxDepth": 4,
+    "timeMs": 1.955959000000007,
+    "wgslLength": 8607
+  },
+  {
+    "maxDepth": 4,
+    "timeMs": 1.7312079999999241,
+    "wgslLength": 8607
+  },
+  {
+    "maxDepth": 4,
+    "timeMs": 1.8808749999999463,
+    "wgslLength": 8607
+  },
+  {
+    "maxDepth": 4,
+    "timeMs": 1.9858750000000782,
+    "wgslLength": 8607
+  },
+  {
+    "maxDepth": 5,
+    "timeMs": 3.7923749999999927,
+    "wgslLength": 16995
+  },
+  {
+    "maxDepth": 5,
+    "timeMs": 4.491250000000036,
+    "wgslLength": 16995
+  },
+  {
+    "maxDepth": 5,
+    "timeMs": 3.729708999999957,
+    "wgslLength": 16995
+  },
+  {
+    "maxDepth": 5,
+    "timeMs": 3.3888330000000906,
+    "wgslLength": 16995
+  },
+  {
+    "maxDepth": 5,
+    "timeMs": 3.5618749999999864,
+    "wgslLength": 16995
+  },
+  {
+    "maxDepth": 5,
+    "timeMs": 4.374125000000049,
+    "wgslLength": 16995
+  },
+  {
+    "maxDepth": 5,
+    "timeMs": 3.497500000000059,
+    "wgslLength": 16995
+  },
+  {
+    "maxDepth": 5,
+    "timeMs": 3.3729170000000295,
+    "wgslLength": 16995
+  },
+  {
+    "maxDepth": 5,
+    "timeMs": 4.283792000000062,
+    "wgslLength": 16995
+  },
+  {
+    "maxDepth": 5,
+    "timeMs": 3.4111669999999776,
+    "wgslLength": 16995
+  },
+  {
+    "maxDepth": 6,
+    "timeMs": 7.030166000000008,
+    "wgslLength": 33183
+  },
+  {
+    "maxDepth": 6,
+    "timeMs": 7.124333999999976,
+    "wgslLength": 33183
+  },
+  {
+    "maxDepth": 6,
+    "timeMs": 6.223416000000043,
+    "wgslLength": 33183
+  },
+  {
+    "maxDepth": 6,
+    "timeMs": 7.318957999999952,
+    "wgslLength": 33183
+  },
+  {
+    "maxDepth": 6,
+    "timeMs": 6.677583000000027,
+    "wgslLength": 33183
+  },
+  {
+    "maxDepth": 6,
+    "timeMs": 7.930333000000019,
+    "wgslLength": 33183
+  },
+  {
+    "maxDepth": 6,
+    "timeMs": 6.613749999999982,
+    "wgslLength": 33183
+  },
+  {
+    "maxDepth": 6,
+    "timeMs": 7.2466249999999945,
+    "wgslLength": 33183
+  },
+  {
+    "maxDepth": 6,
+    "timeMs": 6.580124999999953,
+    "wgslLength": 33183
+  },
+  {
+    "maxDepth": 6,
+    "timeMs": 6.854207999999971,
+    "wgslLength": 33183
+  },
+  {
+    "maxDepth": 7,
+    "timeMs": 13.88487500000008,
+    "wgslLength": 67524
+  },
+  {
+    "maxDepth": 7,
+    "timeMs": 14.481834000000049,
+    "wgslLength": 67524
+  },
+  {
+    "maxDepth": 7,
+    "timeMs": 17.535875000000033,
+    "wgslLength": 67524
+  },
+  {
+    "maxDepth": 7,
+    "timeMs": 13.93629199999998,
+    "wgslLength": 67524
+  },
+  {
+    "maxDepth": 7,
+    "timeMs": 18.075208999999973,
+    "wgslLength": 67524
+  },
+  {
+    "maxDepth": 7,
+    "timeMs": 14.299000000000092,
+    "wgslLength": 67524
+  },
+  {
+    "maxDepth": 7,
+    "timeMs": 14.290040999999974,
+    "wgslLength": 67524
+  },
+  {
+    "maxDepth": 7,
+    "timeMs": 13.945542000000046,
+    "wgslLength": 67524
+  },
+  {
+    "maxDepth": 7,
+    "timeMs": 14.76604199999997,
+    "wgslLength": 67524
+  },
+  {
+    "maxDepth": 7,
+    "timeMs": 13.165750000000003,
+    "wgslLength": 67524
+  }
+]

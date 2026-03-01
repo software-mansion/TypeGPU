@@ -1,0 +1,16 @@
+{
+  "name": "resolution-time",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "resolution-time": "vitest run",
+    "dev": "vitest run -w"
+  },
+  "dependencies": {
+    "typegpu": "workspace:*",
+    "unplugin-typegpu": "workspace:*",
+    "vitest": "catalog:test",
+    "jiti": "catalog:build"
+  }
+}
