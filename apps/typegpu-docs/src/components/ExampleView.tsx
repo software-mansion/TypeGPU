@@ -7,11 +7,7 @@ import { ExecutionCancelledError } from '../utils/examples/errors.ts';
 import { exampleControlsAtom } from '../utils/examples/exampleControlAtom.ts';
 import { executeExample } from '../utils/examples/exampleRunner.ts';
 import type { ExampleState } from '../utils/examples/exampleState.ts';
-import type {
-  Example,
-  ExampleCommonFile,
-  ExampleSrcFile,
-} from '../utils/examples/types.ts';
+import type { Example, ExampleCommonFile, ExampleSrcFile } from '../utils/examples/types.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { HtmlCodeEditor, TsCodeEditor } from './CodeEditor.tsx';
 import { ControlPanel } from './ControlPanel.tsx';
@@ -98,38 +94,38 @@ export function ExampleView({ example, common }: Props) {
     <>
       {snackbarText && isGPUSupported && <Snackbar text={snackbarText} />}
 
-      <div className='flex h-full flex-col gap-4 md:grid md:grid-cols-[1fr_18.75rem]'>
+      <div className="flex h-full flex-col gap-4 md:grid md:grid-cols-[1fr_18.75rem]">
         <div
           className={cs(
             'grid flex-1 gap-4 overflow-auto',
             codeEditorShown ? 'md:grid-rows-[2fr_3fr]' : '',
           )}
         >
-          {isGPUSupported
-            ? (
-              <div
-                style={{ scrollbarGutter: 'stable both-edges' }}
-                className={cs(
-                  'relative box-border flex h-full flex-col flex-wrap items-center justify-evenly gap-4 overflow-auto md:flex-row',
-                  codeEditorShown
-                    ? 'max-md:hidden md:max-h-[calc(40vh-1.25rem)] md:overflow-auto'
-                    : '',
-                )}
-              >
-                <div ref={exampleHtmlRef} className='contents' />
-              </div>
-            )
-            : <GPUUnsupportedPanel />}
+          {isGPUSupported ? (
+            <div
+              style={{ scrollbarGutter: 'stable both-edges' }}
+              className={cs(
+                'relative box-border flex h-full flex-col flex-wrap items-center justify-evenly gap-4 overflow-auto md:flex-row',
+                codeEditorShown
+                  ? 'max-md:hidden md:max-h-[calc(40vh-1.25rem)] md:overflow-auto'
+                  : '',
+              )}
+            >
+              <div ref={exampleHtmlRef} className="contents" />
+            </div>
+          ) : (
+            <GPUUnsupportedPanel />
+          )}
 
           {codeEditorShown && (
-            <div className='absolute z-20 h-[calc(100%-2rem)] w-[calc(100%-2rem)] bg-tameplum-50 md:relative md:h-full md:w-full'>
-              <div className='absolute inset-0 flex flex-col justify-between'>
-                <div className='h-12 pt-16 md:pt-0'>
-                  <div className='flex h-full overflow-x-auto border-gray-300'>
+            <div className="absolute z-20 h-[calc(100%-2rem)] w-[calc(100%-2rem)] bg-tameplum-50 md:relative md:h-full md:w-full">
+              <div className="absolute inset-0 flex flex-col justify-between">
+                <div className="h-12 pt-16 md:pt-0">
+                  <div className="flex h-full overflow-x-auto border-gray-300">
                     {editorTabsList.map((fileName) => (
                       <button
                         key={fileName}
-                        type='button'
+                        type="button"
                         onClick={() => setCurrentFilePath(fileName)}
                         className={cs(
                           'text-nowrap rounded-t-lg rounded-b-none px-4 text-sm',
@@ -144,27 +140,20 @@ export function ExampleView({ example, common }: Props) {
                   </div>
                 </div>
 
-                <HtmlCodeEditor
-                  shown={currentFilePath === 'index.html'}
-                  file={htmlFile}
-                />
+                <HtmlCodeEditor shown={currentFilePath === 'index.html'} file={htmlFile} />
 
                 {tsFiles.map((file) => (
-                  <TsCodeEditor
-                    key={file.path}
-                    shown={file.path === currentFilePath}
-                    file={file}
-                  />
+                  <TsCodeEditor key={file.path} shown={file.path === currentFilePath} file={file} />
                 ))}
               </div>
 
-              <div className='absolute right-0 z-5 md:top-15 md:right-8'>
+              <div className="absolute right-0 z-5 md:top-15 md:right-8">
                 <Button onClick={() => openInStackBlitz(example, common)}>
-                  <span className='font-bold'>Edit on</span>
+                  <span className="font-bold">Edit on</span>
                   <img
-                    src='https://developer.stackblitz.com/img/logo/stackblitz-logo-black_blue.svg'
-                    alt='stackblitz logo'
-                    className='h-4'
+                    src="https://developer.stackblitz.com/img/logo/stackblitz-logo-black_blue.svg"
+                    alt="stackblitz logo"
+                    className="h-4"
                   />
                 </Button>
               </div>
@@ -179,15 +168,13 @@ export function ExampleView({ example, common }: Props) {
 
 function GPUUnsupportedPanel() {
   return (
-    <div className='grid place-content-center gap-6 text-center text-xl leading-tight'>
-      <div className='text-3xl'>
-        WebGPU is not enabled/supported in this browser 😔
-      </div>
+    <div className="grid place-content-center gap-6 text-center text-xl leading-tight">
+      <div className="text-3xl">WebGPU is not enabled/supported in this browser 😔</div>
       <div>Maybe it's hidden under an experimental flag? 🤔</div>
 
       <a
-        href='/TypeGPU/blog/troubleshooting'
-        className='bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent underline'
+        href="/TypeGPU/blog/troubleshooting"
+        className="bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent underline"
       >
         Read more about the availability
       </a>
@@ -214,8 +201,7 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
       frame.appendChild(newCanvas);
       container.appendChild(frame);
 
-      container.className =
-        'flex flex-1 justify-center items-center w-full h-full md:w-auto';
+      container.className = 'flex flex-1 justify-center items-center w-full h-full md:w-auto';
       container.style.containerType = 'size';
 
       frame.className = 'relative';
@@ -247,15 +233,12 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
         }
 
         // Despite what the types say this property does not exist in Safari (hence the optional chaining).
-        const dpcb = entry.devicePixelContentBoxSize?.[0] as
-          | ResizeObserverSize
-          | undefined;
+        const dpcb = entry.devicePixelContentBoxSize?.[0] as ResizeObserverSize | undefined;
 
         const dpr = dpcb ? 1 : window.devicePixelRatio || 1;
-        const box = dpcb ??
-          (Array.isArray(entry.contentBoxSize)
-            ? entry.contentBoxSize[0]
-            : entry.contentBoxSize);
+        const box =
+          dpcb ??
+          (Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize);
 
         if (!box) {
           return;
@@ -282,13 +265,8 @@ function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
  * NOTE: this function only filters common files used in src files.
  * Common files used in other common files will not be included.
  */
-function filterRelevantTsFiles(
-  srcFiles: ExampleSrcFile[],
-  commonFiles: ExampleCommonFile[],
-) {
-  const tsFiles: (ExampleSrcFile | ExampleCommonFile)[] = [
-    ...srcFiles,
-  ];
+function filterRelevantTsFiles(srcFiles: ExampleSrcFile[], commonFiles: ExampleCommonFile[]) {
+  const tsFiles: (ExampleSrcFile | ExampleCommonFile)[] = [...srcFiles];
 
   for (const common of commonFiles) {
     for (const src of srcFiles) {

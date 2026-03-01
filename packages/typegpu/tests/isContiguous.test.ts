@@ -230,23 +230,29 @@ it('disarrays and unstructs - simple', () => {
   expect(d.isContiguous(d.disarrayOf(d.vec4f, 3))).toBe(true);
   expect(d.isContiguous(d.disarrayOf(d.mat3x3f, 7))).toBe(false);
 
-  expect(d.isContiguous(
-    d.unstruct({
-      x: d.u32,
-      y: d.u32,
-    }),
-  )).toBe(true);
-  expect(d.isContiguous(
-    d.unstruct({
-      v: d.vec3f,
-      x: d.u32,
-    }),
-  )).toBe(true);
-  expect(d.isContiguous(
-    d.unstruct({
-      m: d.mat3x3f,
-    }),
-  )).toBe(false);
+  expect(
+    d.isContiguous(
+      d.unstruct({
+        x: d.u32,
+        y: d.u32,
+      }),
+    ),
+  ).toBe(true);
+  expect(
+    d.isContiguous(
+      d.unstruct({
+        v: d.vec3f,
+        x: d.u32,
+      }),
+    ),
+  ).toBe(true);
+  expect(
+    d.isContiguous(
+      d.unstruct({
+        m: d.mat3x3f,
+      }),
+    ),
+  ).toBe(false);
 });
 
 it('disarrays and unstructs - decorated elements and fields', () => {
@@ -255,39 +261,49 @@ it('disarrays and unstructs - decorated elements and fields', () => {
   expect(d.isContiguous(d.disarrayOf(d.size(8, d.u32), 7))).toBe(false);
   expect(d.isContiguous(d.disarrayOf(d.align(8, d.u32), 7))).toBe(false);
 
-  expect(d.isContiguous(
-    d.unstruct({
-      x: d.size(16, d.u32),
-      y: d.u32,
-    }),
-  )).toBe(false);
-
-  expect(d.isContiguous(
-    d.unstruct({
-      x: d.align(8, d.u32),
-      y: d.u32,
-    }),
-  )).toBe(true);
-
-  expect(d.isContiguous(
-    d.unstruct({
-      x: d.u32,
-      y: d.align(8, d.u32),
-    }),
-  )).toBe(false);
-
-  expect(d.isContiguous(
-    d.unstruct({
-      arr: d.disarrayOf(d.vec3f, 7),
-    }),
-  )).toBe(true);
-
-  expect(d.isContiguous(
-    d.disarrayOf(
+  expect(
+    d.isContiguous(
       d.unstruct({
-        x: d.vec3f,
+        x: d.size(16, d.u32),
+        y: d.u32,
       }),
-      7,
     ),
-  )).toBe(true);
+  ).toBe(false);
+
+  expect(
+    d.isContiguous(
+      d.unstruct({
+        x: d.align(8, d.u32),
+        y: d.u32,
+      }),
+    ),
+  ).toBe(true);
+
+  expect(
+    d.isContiguous(
+      d.unstruct({
+        x: d.u32,
+        y: d.align(8, d.u32),
+      }),
+    ),
+  ).toBe(false);
+
+  expect(
+    d.isContiguous(
+      d.unstruct({
+        arr: d.disarrayOf(d.vec3f, 7),
+      }),
+    ),
+  ).toBe(true);
+
+  expect(
+    d.isContiguous(
+      d.disarrayOf(
+        d.unstruct({
+          x: d.vec3f,
+        }),
+        7,
+      ),
+    ),
+  ).toBe(true);
 });

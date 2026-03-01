@@ -27,12 +27,7 @@ describe('textureGather', () => {
       const idx = d.f32(1.2); // f32 to verify proper conversion (implicit in this case)
       const component = d.i32(0);
 
-      const gather2d = textureGather(
-        component,
-        testLayout.$.tex2d,
-        testLayout.$.sampler,
-        uv2d,
-      );
+      const gather2d = textureGather(component, testLayout.$.tex2d, testLayout.$.sampler, uv2d);
       const gather2d_u32 = textureGather(
         component,
         testLayout.$.tex2d_u32,
@@ -53,11 +48,7 @@ describe('textureGather', () => {
         uv3d,
         idx,
       );
-      const gatherdepth2d = textureGather(
-        testLayout.$.texdepth2d,
-        testLayout.$.sampler,
-        uv2d,
-      );
+      const gatherdepth2d = textureGather(testLayout.$.texdepth2d, testLayout.$.sampler, uv2d);
       const gatherdepth2d_array = textureGather(
         testLayout.$.texdepth2d_array,
         testLayout.$.sampler,

@@ -11,9 +11,7 @@ function getLayerData(layer: ArrayBuffer): {
 } {
   const headerLen = new Uint16Array(layer.slice(8, 10));
 
-  const header = new TextDecoder().decode(
-    new Uint8Array(layer.slice(10, 10 + headerLen[0])),
-  );
+  const header = new TextDecoder().decode(new Uint8Array(layer.slice(10, 10 + headerLen[0])));
 
   // shape can be found in the header in the format: 'shape': (x, y) or 'shape': (x,) for bias
   const shapeMatch = header.match(/'shape': \((\d+), ?(\d+)?\)/);
@@ -39,13 +37,11 @@ function getLayerData(layer: ArrayBuffer): {
   };
 }
 
-export function downloadLayers(
-  root: TgpuRoot,
-): Promise<[LayerData, LayerData][]> {
+export function downloadLayers(root: TgpuRoot): Promise<[LayerData, LayerData][]> {
   const downloadLayer = async (fileName: string): Promise<LayerData> => {
-    const buffer = await fetch(
-      `/TypeGPU/assets/mnist-weights/${fileName}`,
-    ).then((res) => res.arrayBuffer());
+    const buffer = await fetch(`/TypeGPU/assets/mnist-weights/${fileName}`).then((res) =>
+      res.arrayBuffer(),
+    );
 
     const { shape, data } = getLayerData(buffer);
 
@@ -64,7 +60,7 @@ export function downloadLayers(
       Promise.all([
         downloadLayer(`layer${layer}.weight.npy`),
         downloadLayer(`layer${layer}.bias.npy`),
-      ])
+      ]),
     ),
   );
 }

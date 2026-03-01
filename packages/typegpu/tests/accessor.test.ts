@@ -68,10 +68,7 @@ describe('tgpu.accessor', () => {
   it('resolves to provided buffer usage', ({ root }) => {
     const colorAccess = tgpu.accessor(d.vec3f);
 
-    const redUniform = root
-      .createBuffer(d.vec3f, RED)
-      .$usage('uniform')
-      .as('uniform');
+    const redUniform = root.createBuffer(d.vec3f, RED).$usage('uniform').as('uniform');
 
     const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`
       .$uses({ colorAccess })
@@ -88,10 +85,7 @@ describe('tgpu.accessor', () => {
     const colorAccess = tgpu.accessor(d.vec3f);
     const multiplierAccess = tgpu.accessor(d.f32);
 
-    const getColor = tgpu.fn(
-      [],
-      d.vec3f,
-    )`() { return colorAccess * multiplierAccess; }`
+    const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess * multiplierAccess; }`
       .$uses({ colorAccess, multiplierAccess })
       .with(colorAccess, RED)
       .with(multiplierAccess, 2);
@@ -104,8 +98,7 @@ describe('tgpu.accessor', () => {
   it('resolves to default value if no value provided', () => {
     const colorAccess = tgpu.accessor(d.vec3f, RED); // red by default
 
-    const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`
-      .$uses({ colorAccess });
+    const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`.$uses({ colorAccess });
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(
       `"fn getColor() -> vec3f{ return vec3f(1, 0, 0); }"`,
@@ -115,14 +108,12 @@ describe('tgpu.accessor', () => {
   it('resolves to provided value rather than default value', () => {
     const colorAccess = tgpu.accessor(d.vec3f, RED); // red by default
 
-    const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`
-      .$uses({ colorAccess });
+    const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`.$uses({ colorAccess });
 
     // overriding to green
     const getColorWithGreen = getColor.with(colorAccess, d.vec3f(0, 1, 0));
 
-    const main = tgpu.fn([])`() { return getColorWithGreen(); }`
-      .$uses({ getColorWithGreen });
+    const main = tgpu.fn([])`() { return getColorWithGreen(); }`.$uses({ getColorWithGreen });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f{ return vec3f(0, 1, 0); }
@@ -134,11 +125,9 @@ describe('tgpu.accessor', () => {
   it('throws error when no default nor value provided', () => {
     const colorAccess = tgpu.accessor(d.vec3f).$name('color');
 
-    const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`
-      .$uses({ colorAccess });
+    const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`.$uses({ colorAccess });
 
-    expect(() => tgpu.resolve([getColor]))
-      .toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([getColor])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:getColor
@@ -147,10 +136,7 @@ describe('tgpu.accessor', () => {
   });
 
   it('resolves in tgsl functions, using .$', ({ root }) => {
-    const redUniform = root
-      .createBuffer(d.vec3f, RED)
-      .$usage('uniform')
-      .as('uniform');
+    const redUniform = root.createBuffer(d.vec3f, RED).$usage('uniform').as('uniform');
 
     const colorValueAccess = tgpu.accessor(d.vec3f, RED);
     const colorUsageAccess = tgpu.accessor(d.vec3f, redUniform);
@@ -256,7 +242,10 @@ describe('tgpu.accessor', () => {
   it('can provide a variable', () => {
     const colorAccess = tgpu.accessor(d.vec3f);
 
-    const getColor = tgpu.fn([], d.vec3f)(() => {
+    const getColor = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
       'use gpu';
       return colorAccess.$;
     });
@@ -296,7 +285,10 @@ describe('tgpu.accessor', () => {
   it('can provide a constant', () => {
     const colorAccess = tgpu.accessor(d.vec3f);
 
-    const getColor = tgpu.fn([], d.vec3f)(() => {
+    const getColor = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
       'use gpu';
       return colorAccess.$;
     });
@@ -336,10 +328,7 @@ describe('tgpu.accessor', () => {
       two: { storage: ImageStruct, access: 'mutable' },
     });
 
-    const imageSlot = tgpu.accessor(
-      ImageStruct,
-      () => layout.$.one,
-    );
+    const imageSlot = tgpu.accessor(ImageStruct, () => layout.$.one);
 
     const getPixel = (x: number, y: number) => {
       'use gpu';
@@ -451,17 +440,16 @@ describe('tgpu.accessor', () => {
   });
 
   it('can provide texture views', ({ root }) => {
-    const texture = root.createTexture({
-      format: 'rgba8unorm',
-      size: [100, 100],
-    }).$usage('storage');
+    const texture = root
+      .createTexture({
+        format: 'rgba8unorm',
+        size: [100, 100],
+      })
+      .$usage('storage');
 
     const storageView = texture.createView(d.textureStorage2d('rgba8unorm'));
 
-    const textureAccess = tgpu.accessor(
-      d.textureStorage2d('rgba8unorm'),
-      storageView,
-    );
+    const textureAccess = tgpu.accessor(d.textureStorage2d('rgba8unorm'), storageView);
 
     const main = () => {
       'use gpu';
@@ -488,15 +476,14 @@ describe('tgpu.accessor', () => {
     });
 
     const pixelIdx = tgpu.slot(0);
-    const pixelAccess = tgpu.accessor(
-      d.f32,
-      () => layout.$.image.pixels[pixelIdx.$]!.x,
-    );
+    const pixelAccess = tgpu.accessor(d.f32, () => layout.$.image.pixels[pixelIdx.$]!.x);
 
-    const main = tgpu.fn([])(() => {
-      'use gpu';
-      const hello = pixelAccess.$;
-    }).with(pixelIdx, 4);
+    const main = tgpu
+      .fn([])(() => {
+        'use gpu';
+        const hello = pixelAccess.$;
+      })
+      .with(pixelIdx, 4);
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "struct item {
@@ -514,10 +501,7 @@ describe('tgpu.accessor', () => {
   it('allows for arbitrarily nested access functions', ({ root }) => {
     const counterMutable = root.createMutable(d.u32);
 
-    const counterAccess = tgpu.accessor(
-      d.u32,
-      () => () => () => counterMutable.$,
-    );
+    const counterAccess = tgpu.accessor(d.u32, () => () => () => counterMutable.$);
 
     const main = () => {
       'use gpu';

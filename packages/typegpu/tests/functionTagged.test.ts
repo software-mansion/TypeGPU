@@ -7,9 +7,7 @@ describe('tagged syntax', () => {
     it('parses template literal without arguments', () => {
       const getConst = tgpu.fn([], d.i32)`() { return 3; }`;
 
-      expect(tgpu.resolve([getConst])).toMatchInlineSnapshot(
-        `"fn getConst() -> i32{ return 3; }"`,
-      );
+      expect(tgpu.resolve([getConst])).toMatchInlineSnapshot(`"fn getConst() -> i32{ return 3; }"`);
     });
 
     it('parses template literal with arguments of different types', () => {

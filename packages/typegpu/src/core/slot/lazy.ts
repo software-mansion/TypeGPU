@@ -19,9 +19,7 @@ import {
 
 export function lazy<T>(compute: () => T): TgpuLazy<T> {
   if (getResolutionCtx()) {
-    throw new Error(
-      'Cannot create tgpu.lazy objects during shader resolution.',
-    );
+    throw new Error('Cannot create tgpu.lazy objects during shader resolution.');
   }
 
   return new TgpuLazyImpl(compute, undefined);
@@ -48,9 +46,7 @@ class TgpuLazyImpl<out T> implements TgpuLazy<T> {
   get [$gpuValueOf](): GPUValueOf<T> {
     const ctx = getResolutionCtx();
     if (!ctx) {
-      throw new Error(
-        `Cannot access tgpu.lazy's value outside of resolution.`,
-      );
+      throw new Error(`Cannot access tgpu.lazy's value outside of resolution.`);
     }
     return getGpuValueRecursively(ctx.unwrap(this));
   }
@@ -73,10 +69,10 @@ class TgpuLazyImpl<out T> implements TgpuLazy<T> {
   ): TgpuLazy<T> {
     return new TgpuLazyImpl(this[$internal].compute.bind(this), {
       inner: this[$providing]?.inner ?? this,
-      pairs: [...this[$providing]?.pairs ?? [], [
-        isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot,
-        value,
-      ]],
+      pairs: [
+        ...(this[$providing]?.pairs ?? []),
+        [isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot, value],
+      ],
     });
   }
 }

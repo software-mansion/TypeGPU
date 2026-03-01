@@ -30,8 +30,6 @@ describe('pow', () => {
   });
 
   it('should return correct power for half precision vectors', () => {
-    expect(pow(vec4h(2, 3, 4, 5), vec4h(2, 3, 0, 1))).toStrictEqual(
-      vec4h(4, 27, 1, 5),
-    );
+    expect(pow(vec4h(2, 3, 4, 5), vec4h(2, 3, 0, 1))).toStrictEqual(vec4h(4, 27, 1, 5));
   });
 });

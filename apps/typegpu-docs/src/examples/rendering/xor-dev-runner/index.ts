@@ -13,13 +13,9 @@
  */
 
 import tgpu, { d, std } from 'typegpu';
-// deno-fmt-ignore: just a list of standard functions
 import { abs, add, cos, max, min, mul, select, sign, sin, sub, tanh } from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';
-import {
-  Camera,
-  setupFirstPersonCamera,
-} from '../../common/setup-first-person-camera.ts';
+import { Camera, setupFirstPersonCamera } from '../../common/setup-first-person-camera.ts';
 
 // NOTE: Some APIs are still unstable (are being finalized based on feedback), but
 //       we can still access them if we know what we're doing.
@@ -48,12 +44,15 @@ const mod = tgpu.fn([d.vec3f, d.f32], d.vec3f)`(v, a) {
  * Returns a transformation matrix that represents an `angle` rotation
  * in the XZ plane (around the Y axis)
  */
-const rotateXZ = tgpu.fn([d.f32], d.mat3x3f)((angle) =>
+const rotateXZ = tgpu.fn(
+  [d.f32],
+  d.mat3x3f,
+)((angle) =>
   d.mat3x3f(
     /* right   */ d.vec3f(cos(angle), 0, sin(angle)),
     /* up      */ d.vec3f(0, 1, 0),
     /* forward */ d.vec3f(-sin(angle), 0, cos(angle)),
-  )
+  ),
 );
 
 export const Ray = d.struct({
@@ -69,9 +68,7 @@ const getRayForUV = (uv: d.v2f) => {
   'use gpu';
   const camera = cameraUniform.$;
   const farView = camera.projectionInverse.mul(d.vec4f(uv, 1, 1));
-  const farWorld = camera.viewInverse.mul(
-    d.vec4f(farView.xyz.div(farView.w), 1),
-  );
+  const farWorld = camera.viewInverse.mul(d.vec4f(farView.xyz.div(farView.w), 1));
   const direction = std.normalize(farWorld.xyz.sub(camera.pos.xyz));
   return Ray({ origin: camera.pos, direction: d.vec4f(direction, 0) });
 };
@@ -99,7 +96,8 @@ const fragmentMain = tgpu.fragmentFn({
   let acc = d.vec3f();
   let z = d.f32(0);
   for (let l = 0; l < 30; l++) {
-    const p = d.vec3f(3, 0, 3)
+    const p = d
+      .vec3f(3, 0, 3)
       .add(controlsOffsetUniform.$)
       .add(autoMoveOffsetUniform.$)
       .add(ray.origin.xyz)
@@ -113,7 +111,7 @@ const fragmentMain = tgpu.fragmentFn({
       q = mul(q, rotateXZ(shiftUniform.$));
     }
     z += prox;
-    acc = add(acc, mul(sub(icolor, safeTanh(p.y + 4)), 0.1 * prox / (1 + z)));
+    acc = add(acc, mul(sub(icolor, safeTanh(p.y + 4)), (0.1 * prox) / (1 + z)));
   }
 
   // Tone mapping
@@ -141,11 +139,15 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const cameraUniform = root.createUniform(Camera);
-const { cleanupCamera, updatePosition } = setupFirstPersonCamera(canvas, {
-  speed: d.vec3f(0.001, 0.1, 1),
-}, (props) => {
-  cameraUniform.writePartial(props);
-});
+const { cleanupCamera, updatePosition } = setupFirstPersonCamera(
+  canvas,
+  {
+    speed: d.vec3f(0.001, 0.1, 1),
+  },
+  (props) => {
+    cameraUniform.writePartial(props);
+  },
+);
 
 const pipeline = root.createRenderPipeline({
   vertex: vertexMain,
@@ -167,9 +169,7 @@ function draw() {
   }
   updatePosition();
 
-  pipeline
-    .withColorAttachment({ view: context })
-    .draw(3);
+  pipeline.withColorAttachment({ view: context }).draw(3);
 
   requestAnimationFrame(draw);
 }
@@ -200,7 +200,7 @@ export const controls = defineControls({
     max: 200,
     step: 0.001,
     onSliderChange(v) {
-      shiftUniform.write(v / 180 * Math.PI);
+      shiftUniform.write((v / 180) * Math.PI);
     },
   },
   color: {

@@ -1,11 +1,7 @@
 import { hsvToRgb, rgbToHsv } from '@typegpu/color';
 import tgpu, { d, std } from 'typegpu';
 import * as p from './params.ts';
-import {
-  ModelVertexInput,
-  ModelVertexOutput,
-  renderBindGroupLayout as layout,
-} from './schemas.ts';
+import { ModelVertexInput, ModelVertexOutput, renderBindGroupLayout as layout } from './schemas.ts';
 import { applySinWave, PosAndNormal } from './tgsl-helpers.ts';
 
 export const vertexShader = tgpu.vertexFn({
@@ -43,18 +39,15 @@ export const vertexShader = tgpu.vertexFn({
   const yawMatrix = d.mat4x4f.rotationY(yaw);
   const translationMatrix = d.mat4x4f.translation(currentModelData.position);
 
-  const worldPosition = translationMatrix * yawMatrix * pitchMatrix *
-    scaleMatrix * d.vec4f(wavedVertex.position, 1);
+  const worldPosition =
+    translationMatrix * yawMatrix * pitchMatrix * scaleMatrix * d.vec4f(wavedVertex.position, 1);
 
   // calculate where the normal vector points to
-  const worldNormal = std.normalize(
-    (yawMatrix * pitchMatrix * d.vec4f(wavedVertex.normal, 1)).xyz,
-  );
+  const worldNormal = std.normalize((yawMatrix * pitchMatrix * d.vec4f(wavedVertex.normal, 1)).xyz);
 
   // project the world position into the camera
   const worldPositionUniform = worldPosition;
-  const canvasPosition = layout.$.camera.projection * layout.$.camera.view *
-    worldPositionUniform;
+  const canvasPosition = layout.$.camera.projection * layout.$.camera.view * worldPositionUniform;
 
   return {
     canvasPosition: canvasPosition,
@@ -87,24 +80,15 @@ export const fragmentShader = tgpu.fragmentFn({
   const cosTheta = std.dot(input.worldNormal, p.lightDirection);
   const diffuse = std.max(0, cosTheta) * textureColor * p.lightColor;
 
-  const viewSource = std.normalize(
-    layout.$.camera.position.xyz - input.worldPosition,
-  );
-  const reflectSource = std.normalize(
-    std.reflect(-1 * p.lightDirection, input.worldNormal),
-  );
-  const specularStrength = std.pow(
-    std.max(0, std.dot(viewSource, reflectSource)),
-    16,
-  );
+  const viewSource = std.normalize(layout.$.camera.position.xyz - input.worldPosition);
+  const reflectSource = std.normalize(std.reflect(-1 * p.lightDirection, input.worldNormal));
+  const specularStrength = std.pow(std.max(0, std.dot(viewSource, reflectSource)), 16);
   const specular = specularStrength * p.lightColor;
 
   const lightedColor = ambient + diffuse + specular;
 
   // apply desaturation
-  const distanceFromCamera = std.length(
-    layout.$.camera.position.xyz - input.worldPosition,
-  );
+  const distanceFromCamera = std.length(layout.$.camera.position.xyz - input.worldPosition);
 
   let desaturatedColor = d.vec3f(lightedColor);
   if (input.applySeaDesaturation === 1) {

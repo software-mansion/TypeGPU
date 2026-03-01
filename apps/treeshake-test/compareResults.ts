@@ -19,7 +19,7 @@ function groupResultsByTest(results: typeof BenchmarkResults.infer) {
     if (!grouped[result.testFilename]) {
       grouped[result.testFilename] = {};
     }
-    // oxlint-disable-next-line typescript/no-non-null-assertion it's there...
+    // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there...
     grouped[result.testFilename]![result.bundler] = result.size;
   }
   return grouped;
@@ -39,16 +39,11 @@ async function generateReport(
   ]);
 
   // All unique tests from both branches
-  const allTests = new Set([
-    ...Object.keys(prGrouped),
-    ...Object.keys(targetGrouped),
-  ]);
+  const allTests = new Set([...Object.keys(prGrouped), ...Object.keys(targetGrouped)]);
 
   // Split tests into static and dynamic
-  const staticTests = [...allTests].filter((t) => !t.includes('_from_'))
-    .toSorted();
-  const dynamicTests = [...allTests].filter((t) => t.includes('_from_'))
-    .toSorted();
+  const staticTests = [...allTests].filter((t) => !t.includes('_from_')).toSorted();
+  const dynamicTests = [...allTests].filter((t) => t.includes('_from_')).toSorted();
 
   // Summary statistics
   let totalDecreased = 0;
@@ -93,8 +88,7 @@ async function generateReport(
   output += '## 📊 Bundle Size Comparison\n\n';
   output += '| 🟢 Decreased | ➖ Unchanged | 🔴 Increased | ❔ Unknown |\n';
   output += '| :---: | :---: | :---: | :---: |\n';
-  output +=
-    `| **${totalDecreased}** | **${totalUnchanged}** | **${totalIncreased}** | **${totalUnknown}** |\n\n`;
+  output += `| **${totalDecreased}** | **${totalUnchanged}** | **${totalIncreased}** | **${totalUnknown}** |\n\n`;
 
   output += `## 👀 Notable results\n\n`;
   output += `### Static test results:\n${staticTable}\n\n`;
@@ -104,8 +98,7 @@ async function generateReport(
   output += `${allTable}\n\n`;
 
   if (allBundlers.size === 1) {
-    output +=
-      `If you wish to run a comparison for other, slower bundlers, run the 'Tree-shake test' from the GitHub Actions menu.\n`;
+    output += `If you wish to run a comparison for other, slower bundlers, run the 'Tree-shake test' from the GitHub Actions menu.\n`;
   }
 
   return output;
@@ -115,9 +108,7 @@ async function main() {
   const [prFile, targetFile] = process.argv.slice(2);
 
   if (!prFile || !targetFile) {
-    console.error(
-      'Usage: compare-results.js <pr-results.json> [target-results.json]',
-    );
+    console.error('Usage: compare-results.js <pr-results.json> [target-results.json]');
     process.exit(1);
   }
 
@@ -142,10 +133,7 @@ async function main() {
   }
 
   // Generate appropriate report
-  const markdownReport = await generateReport(
-    prResults,
-    targetResults,
-  );
+  const markdownReport = await generateReport(prResults, targetResults);
   console.log(markdownReport);
 }
 

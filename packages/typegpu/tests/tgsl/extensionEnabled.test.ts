@@ -5,7 +5,10 @@ import tgpu, { d, std } from '../../src/index.js';
 
 describe('extension based pruning', () => {
   it('should include extension code when the feature is used', () => {
-    const someFn = tgpu.fn([], d.f32)(() => {
+    const someFn = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       if (std.extensionEnabled('f16')) {
         return d.f16(1.1) + d.f16(2.2) + d.f16(3.3);
       } else {
@@ -13,8 +16,7 @@ describe('extension based pruning', () => {
       }
     });
 
-    expect(tgpu.resolve([someFn], { enableExtensions: ['f16'] }))
-      .toMatchInlineSnapshot(`
+    expect(tgpu.resolve([someFn], { enableExtensions: ['f16'] })).toMatchInlineSnapshot(`
         "enable f16;
 
         fn someFn() -> f32 {

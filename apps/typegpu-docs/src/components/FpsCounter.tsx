@@ -34,12 +34,8 @@ export function FPSCounter() {
         metrics.frames.shift();
       }
 
-      if (
-        time - metrics.lastUpdate >= AVG_FRAME_WINDOW &&
-        metrics.frames.length > 0
-      ) {
-        const avg = metrics.frames.reduce((a, b) => a + b, 0) /
-          metrics.frames.length;
+      if (time - metrics.lastUpdate >= AVG_FRAME_WINDOW && metrics.frames.length > 0) {
+        const avg = metrics.frames.reduce((a, b) => a + b, 0) / metrics.frames.length;
 
         if (fpsRef.current) {
           fpsRef.current.innerText = Math.round(1000 / avg).toString();
@@ -58,14 +54,12 @@ export function FPSCounter() {
 
   return (
     <div
-      className={'flex items-center gap-3 rounded-xl bg-grayscale-20/80 px-4 py-2 font-mono text-grayscale-80 text-xs'}
+      className={
+        'flex items-center gap-3 rounded-xl bg-grayscale-20/80 px-4 py-2 font-mono text-grayscale-80 text-xs'
+      }
     >
-      <ChartNoAxesColumn
-        size={14}
-        strokeWidth={2.5}
-        className='text-grayscale-60'
-      />
-      <div className='flex gap-4'>
+      <ChartNoAxesColumn size={14} strokeWidth={2.5} className="text-grayscale-60" />
+      <div className="flex gap-4">
         <span>
           FPS: <span ref={fpsRef}>--</span>
         </span>

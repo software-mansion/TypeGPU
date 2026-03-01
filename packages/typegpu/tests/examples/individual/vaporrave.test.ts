@@ -10,11 +10,14 @@ describe('vaporrave example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'simple',
-      name: 'vaporrave',
-      expectedCalls: 2,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'simple',
+        name: 'vaporrave',
+        expectedCalls: 2,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -137,8 +140,8 @@ describe('vaporrave example', () => {
         return dot(relative, gridVector);
       }
 
-      fn quinticInterpolationImpl(t: vec3f) -> vec3f {
-        return ((t * (t * t)) * ((t * ((t * 6f) - 15f)) + 10f));
+      fn quinticInterpolation(t: vec3f) -> vec3f {
+        return (((t * t) * t) * ((t * ((t * 6f) - 15f)) + 10f));
       }
 
       fn sample(pos: vec3f) -> f32 {
@@ -152,7 +155,7 @@ describe('vaporrave example', () => {
         let XYz = dotProdGrid(pos, (minJunction + vec3f(1, 1, 0)));
         let XYZ = dotProdGrid(pos, (minJunction + vec3f(1)));
         var partial = (pos - minJunction);
-        var smoothPartial = quinticInterpolationImpl(partial);
+        var smoothPartial = quinticInterpolation(partial);
         let xy = mix(xyz, xyZ, smoothPartial.z);
         let xY = mix(xYz, xYZ, smoothPartial.z);
         let Xy = mix(Xyz, XyZ, smoothPartial.z);
@@ -203,7 +206,7 @@ describe('vaporrave example', () => {
           var p = ((rd * distOrigin) + ro);
           var scene = getSceneRay(p);
           var sphereDist = getSphere(p, sphereColorUniform, vec3f(0, 6, 12), sphereAngleUniform);
-          glow = ((sphereColorUniform * exp(-(sphereDist.dist))) + glow);
+          glow += (sphereColorUniform * exp(-(sphereDist.dist)));
           distOrigin += scene.dist;
           if ((distOrigin > 19f)) {
             result.dist = 19f;
@@ -230,7 +233,7 @@ describe('vaporrave example', () => {
         var ro = vec3f(0, 2, -1);
         var rd = normalize(vec3f(uv.x, uv.y, 1f));
         var march = rayMarch(ro, rd);
-        let y = (((rd * march.ray.dist) + ro).y - 2f);
+        let y = (((rd.y * march.ray.dist) + ro.y) - 2f);
         var sky = mix(vec4f(0.10000000149011612, 0, 0.20000000298023224, 1), vec4f(0.2800000011920929, 0, 0.5400000214576721, 1), (y / 19f));
         let fog = min((march.ray.dist / 19f), 1f);
         return mix(mix(vec4f(march.ray.color, 1f), sky, fog), vec4f(march.glow, 1f), glowIntensityUniform);

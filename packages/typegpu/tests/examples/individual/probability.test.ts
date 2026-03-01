@@ -10,12 +10,15 @@ describe('probability distribution plot example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'algorithms',
-      name: 'probability',
-      controlTriggers: ['Test Resolution'],
-      expectedCalls: 13,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'algorithms',
+        name: 'probability',
+        controlTriggers: ['Test Resolution'],
+        expectedCalls: 13,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(1) var<storage, read_write> samplesBuffer: array<vec3f>;

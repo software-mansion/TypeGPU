@@ -69,14 +69,10 @@ describe('d.getLongestContiguousPrefix', () => {
     });
     expect(d.getLongestContiguousPrefix(d.arrayOf(NCS, 2))).toBe(4);
 
-    expect(d.getLongestContiguousPrefix(d.arrayOf(d.arrayOf(d.u32, 2), 2)))
-      .toBe(16);
-    expect(d.getLongestContiguousPrefix(d.arrayOf(d.arrayOf(CS, 2), 2)))
-      .toBe(64);
-    expect(d.getLongestContiguousPrefix(d.arrayOf(d.arrayOf(d.vec3f, 2), 2)))
-      .toBe(12);
-    expect(d.getLongestContiguousPrefix(d.arrayOf(d.arrayOf(NCS, 2), 2)))
-      .toBe(4);
+    expect(d.getLongestContiguousPrefix(d.arrayOf(d.arrayOf(d.u32, 2), 2))).toBe(16);
+    expect(d.getLongestContiguousPrefix(d.arrayOf(d.arrayOf(CS, 2), 2))).toBe(64);
+    expect(d.getLongestContiguousPrefix(d.arrayOf(d.arrayOf(d.vec3f, 2), 2))).toBe(12);
+    expect(d.getLongestContiguousPrefix(d.arrayOf(d.arrayOf(NCS, 2), 2))).toBe(4);
   });
 
   it('structs', () => {
@@ -227,72 +223,84 @@ describe('d.getLongestContiguousPrefix', () => {
     expect(d.getLongestContiguousPrefix(d.disarrayOf(d.vec4f, 3))).toBe(48);
     expect(d.getLongestContiguousPrefix(d.disarrayOf(d.mat3x3f, 7))).toBe(12);
 
-    expect(d.getLongestContiguousPrefix(
-      d.unstruct({
-        x: d.u32,
-        y: d.u32,
-      }),
-    )).toBe(8);
+    expect(
+      d.getLongestContiguousPrefix(
+        d.unstruct({
+          x: d.u32,
+          y: d.u32,
+        }),
+      ),
+    ).toBe(8);
 
-    expect(d.getLongestContiguousPrefix(
-      d.unstruct({
-        v: d.vec3f,
-        x: d.u32,
-      }),
-    )).toBe(16);
+    expect(
+      d.getLongestContiguousPrefix(
+        d.unstruct({
+          v: d.vec3f,
+          x: d.u32,
+        }),
+      ),
+    ).toBe(16);
 
-    expect(d.getLongestContiguousPrefix(
-      d.unstruct({
-        m: d.mat3x3f,
-      }),
-    )).toBe(12);
+    expect(
+      d.getLongestContiguousPrefix(
+        d.unstruct({
+          m: d.mat3x3f,
+        }),
+      ),
+    ).toBe(12);
   });
 
   it('disarrays and unstructs - decorated elements and fields', () => {
-    expect(d.getLongestContiguousPrefix(d.disarrayOf(d.size(4, d.u32), 2)))
-      .toBe(8);
-    expect(d.getLongestContiguousPrefix(d.disarrayOf(d.align(4, d.u32), 2)))
-      .toBe(8);
-    expect(d.getLongestContiguousPrefix(d.disarrayOf(d.size(8, d.u32), 2)))
-      .toBe(4);
-    expect(d.getLongestContiguousPrefix(d.disarrayOf(d.align(8, d.u32), 2)))
-      .toBe(4);
+    expect(d.getLongestContiguousPrefix(d.disarrayOf(d.size(4, d.u32), 2))).toBe(8);
+    expect(d.getLongestContiguousPrefix(d.disarrayOf(d.align(4, d.u32), 2))).toBe(8);
+    expect(d.getLongestContiguousPrefix(d.disarrayOf(d.size(8, d.u32), 2))).toBe(4);
+    expect(d.getLongestContiguousPrefix(d.disarrayOf(d.align(8, d.u32), 2))).toBe(4);
 
-    expect(d.getLongestContiguousPrefix(
-      d.unstruct({
-        x: d.size(16, d.u32),
-        y: d.u32,
-      }),
-    )).toBe(4);
-
-    expect(d.getLongestContiguousPrefix(
-      d.unstruct({
-        x: d.align(8, d.u32),
-        y: d.u32,
-      }),
-    )).toBe(8);
-
-    expect(d.getLongestContiguousPrefix(
-      d.unstruct({
-        x: d.u32,
-        y: d.align(8, d.u32),
-      }),
-    )).toBe(4);
-
-    expect(d.getLongestContiguousPrefix(
-      d.unstruct({
-        arr: d.disarrayOf(d.vec3f, 7),
-      }),
-    )).toBe(84);
-
-    expect(d.getLongestContiguousPrefix(
-      d.disarrayOf(
+    expect(
+      d.getLongestContiguousPrefix(
         d.unstruct({
-          x: d.vec3f,
+          x: d.size(16, d.u32),
+          y: d.u32,
         }),
-        7,
       ),
-    )).toBe(84);
+    ).toBe(4);
+
+    expect(
+      d.getLongestContiguousPrefix(
+        d.unstruct({
+          x: d.align(8, d.u32),
+          y: d.u32,
+        }),
+      ),
+    ).toBe(8);
+
+    expect(
+      d.getLongestContiguousPrefix(
+        d.unstruct({
+          x: d.u32,
+          y: d.align(8, d.u32),
+        }),
+      ),
+    ).toBe(4);
+
+    expect(
+      d.getLongestContiguousPrefix(
+        d.unstruct({
+          arr: d.disarrayOf(d.vec3f, 7),
+        }),
+      ),
+    ).toBe(84);
+
+    expect(
+      d.getLongestContiguousPrefix(
+        d.disarrayOf(
+          d.unstruct({
+            x: d.vec3f,
+          }),
+          7,
+        ),
+      ),
+    ).toBe(84);
   });
 
   describe('edge cases', () => {

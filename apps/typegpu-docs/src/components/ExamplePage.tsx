@@ -42,11 +42,7 @@ function ExamplePage() {
 
     if (currentExample in examples) {
       return (
-        <ExampleView
-          key={currentExample}
-          example={examples[currentExample]}
-          common={common}
-        />
+        <ExampleView key={currentExample} example={examples[currentExample]} common={common} />
       );
     }
 
@@ -54,7 +50,7 @@ function ExamplePage() {
   })();
 
   return (
-    <main className='max-w-full flex-1'>
+    <main className="max-w-full flex-1">
       <Suspense fallback={'Loading...'}>{content}</Suspense>
     </main>
   );

@@ -21,9 +21,7 @@ export function instancedArray<TDataType extends d.AnyWgslData>(
   count: number | TypedArray,
   elementType: TDataType,
 ): TSLAccessor<d.WgslArray<TDataType>, StorageBufferNode> {
-  const glslType = wgslTypeToGlslType[
-    elementType.type as keyof typeof wgslTypeToGlslType
-  ];
+  const glslType = wgslTypeToGlslType[elementType.type as keyof typeof wgslTypeToGlslType];
 
   return fromTSL(instancedArrayImpl(count, glslType), d.arrayOf(elementType));
 }

@@ -16,65 +16,54 @@ export function extractSnippetFromFn(cb: () => unknown): Snippet {
     namespace: namespace({ names: 'strict' }),
   });
 
-  return provideCtx(
-    ctx,
-    () => {
-      let pushedFnScope = false;
-      try {
-        const meta = getMetaData(cb);
+  return provideCtx(ctx, () => {
+    let pushedFnScope = false;
+    try {
+      const meta = getMetaData(cb);
 
-        if (!meta || !meta.ast) {
-          throw new Error('No metadata found for the function');
-        }
-
-        ctx.pushMode(new CodegenState());
-        ctx[$internal].itemStateStack.pushItem();
-        ctx[$internal].itemStateStack.pushFunctionScope(
-          'normal',
-          [],
-          {},
-          undefined,
-          (meta.externals as () => Record<string, string>)() ?? {},
-        );
-        ctx.pushBlockScope();
-        pushedFnScope = true;
-
-        // Extracting the last expression from the block
-        const statements = meta.ast.body[1] ?? [];
-        if (statements.length === 0) {
-          throw new Error(
-            `Expected at least one expression, got ${statements.length}`,
-          );
-        }
-
-        wgslGenerator.initGenerator(ctx);
-        // Prewarming statements
-        for (const statement of statements) {
-          wgslGenerator.statement(statement);
-        }
-        return wgslGenerator.expression(
-          statements[statements.length - 1] as tinyest.Expression,
-        );
-      } finally {
-        if (pushedFnScope) {
-          ctx.popBlockScope();
-          ctx[$internal].itemStateStack.pop('functionScope');
-          ctx[$internal].itemStateStack.pop('item');
-        }
-        ctx.popMode('codegen');
+      if (!meta || !meta.ast) {
+        throw new Error('No metadata found for the function');
       }
-    },
-  );
+
+      ctx.pushMode(new CodegenState());
+      ctx[$internal].itemStateStack.pushItem();
+      ctx[$internal].itemStateStack.pushFunctionScope(
+        'normal',
+        [],
+        {},
+        undefined,
+        (meta.externals as () => Record<string, string>)() ?? {},
+      );
+      ctx.pushBlockScope();
+      pushedFnScope = true;
+
+      // Extracting the last expression from the block
+      const statements = meta.ast.body[1] ?? [];
+      if (statements.length === 0) {
+        throw new Error(`Expected at least one expression, got ${statements.length}`);
+      }
+
+      wgslGenerator.initGenerator(ctx);
+      // Prewarming statements
+      for (const statement of statements) {
+        wgslGenerator.statement(statement);
+      }
+      return wgslGenerator.expression(statements[statements.length - 1] as tinyest.Expression);
+    } finally {
+      if (pushedFnScope) {
+        ctx.popBlockScope();
+        ctx[$internal].itemStateStack.pop('functionScope');
+        ctx[$internal].itemStateStack.pop('item');
+      }
+      ctx.popMode('codegen');
+    }
+  });
 }
 
-export function expectSnippetOf(
-  cb: () => unknown,
-): Assertion<Snippet> {
+export function expectSnippetOf(cb: () => unknown): Assertion<Snippet> {
   return expect(extractSnippetFromFn(cb));
 }
 
-export function expectDataTypeOf(
-  cb: () => unknown,
-): Assertion<BaseData | UnknownData> {
+export function expectDataTypeOf(cb: () => unknown): Assertion<BaseData | UnknownData> {
   return expect<BaseData | UnknownData>(extractSnippetFromFn(cb).dataType);
 }

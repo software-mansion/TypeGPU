@@ -17,15 +17,13 @@ describe('schemaCallWrapper', () => {
     const TestStruct = d.struct({ v: d.vec2f });
     const testInstance = { v: d.vec2f(1, 2), u: d.vec3u() };
 
-    expect(schemaCallWrapper(TestStruct, testInstance))
-      .toStrictEqual({ v: d.vec2f(1, 2) });
+    expect(schemaCallWrapper(TestStruct, testInstance)).toStrictEqual({ v: d.vec2f(1, 2) });
   });
 
   it('works with loose data', () => {
     const TestUnstruct = d.unstruct({ v: d.float32x3 });
     const testInstance = { v: d.vec3f(1, 2, 3), u: d.vec3u() };
 
-    expect(schemaCallWrapper(TestUnstruct, testInstance))
-      .toStrictEqual({ v: d.vec3f(1, 2, 3) });
+    expect(schemaCallWrapper(TestUnstruct, testInstance)).toStrictEqual({ v: d.vec3f(1, 2, 3) });
   });
 });
