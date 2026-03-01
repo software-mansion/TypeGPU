@@ -70,15 +70,11 @@ export const controls = defineControls({
   Reseed: {
     async onButtonClick() {
       executor.reseed();
-      await replot(
-        currentDistribution,
-        currentGenerator,
-        true,
-      );
+      await replot(currentDistribution, currentGenerator, true);
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
-  'Generator': {
+  Generator: {
     initial: c.initialGenerator,
     options: c.generators,
     onSelectChange: async (value: Generator) => {
@@ -86,11 +82,7 @@ export const controls = defineControls({
         return;
       }
       currentGenerator = value;
-      await replot(
-        currentDistribution,
-        currentGenerator,
-        true,
-      );
+      await replot(currentDistribution, currentGenerator, true);
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
@@ -103,11 +95,7 @@ export const controls = defineControls({
       }
 
       currentDistribution = value;
-      await replot(
-        currentDistribution,
-        currentGenerator,
-        true,
-      );
+      await replot(currentDistribution, currentGenerator, true);
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
@@ -116,15 +104,16 @@ export const controls = defineControls({
     options: c.numSamplesOptions,
     async onSelectChange(value) {
       executor.count = value;
-      await replot(
-        currentDistribution,
-        currentGenerator,
-      );
+      await replot(currentDistribution, currentGenerator);
     },
   },
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick() {
-      for (const [i, j] of [[0, 0], [8, 1], [10, 0]]) {
+      for (const [i, j] of [
+        [0, 0],
+        [8, 1],
+        [10, 0],
+      ]) {
         const code = tgpu.resolve({
           externals: {
             p: executor.pipelineCacheGet(

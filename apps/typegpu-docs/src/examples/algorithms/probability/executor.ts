@@ -1,8 +1,4 @@
-import {
-  randf,
-  randomGeneratorSlot,
-  type StatefulGenerator,
-} from '@typegpu/noise';
+import { randf, randomGeneratorSlot, type StatefulGenerator } from '@typegpu/noise';
 import type {
   StorageFlag,
   TgpuBindGroup,
@@ -28,16 +24,10 @@ export class Executor {
   readonly #bindGroupLayout: TgpuBindGroupLayout;
   readonly #bufferCache: Map<
     number,
-    [
-      TgpuBuffer<d.WgslArray<d.Vec3f>> & StorageFlag,
-      TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag,
-    ]
+    [TgpuBuffer<d.WgslArray<d.Vec3f>> & StorageFlag, TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag]
   >;
   // they can be WeakMaps, because we always have reference to distribution and PRNG
-  readonly #pipelineCache: WeakMap<
-    TgpuFn,
-    WeakMap<StatefulGenerator, TgpuComputePipeline>
-  >;
+  readonly #pipelineCache: WeakMap<TgpuFn, WeakMap<StatefulGenerator, TgpuComputePipeline>>;
 
   constructor(root: TgpuRoot) {
     this.#root = root;
@@ -60,15 +50,12 @@ export class Executor {
       const id = input.gid.x;
       if (id >= bindGroupLayoutTempAlias.$.samplesBuffer.length) return;
       randf.seed(bindGroupLayoutTempAlias.$.seedBuffer[id]);
-      bindGroupLayoutTempAlias.$.samplesBuffer[id] = distributionSlotTempAlias
-        .$();
+      bindGroupLayoutTempAlias.$.samplesBuffer[id] = distributionSlotTempAlias.$();
     });
   }
 
   reseed() {
-    this.#seedBuffer.write(
-      Array.from({ length: this.#count }, () => Math.random()),
-    );
+    this.#seedBuffer.write(Array.from({ length: this.#count }, () => Math.random()));
   }
 
   set count(value: number) {
@@ -77,8 +64,7 @@ export class Executor {
     if (cacheEntry) {
       [this.#samplesBuffer, this.#seedBuffer] = cacheEntry;
     } else {
-      this.#samplesBuffer = this.#root.createBuffer(d.arrayOf(d.vec3f, value))
-        .$usage('storage');
+      this.#samplesBuffer = this.#root.createBuffer(d.arrayOf(d.vec3f, value)).$usage('storage');
       this.#seedBuffer = this.#root
         .createBuffer(
           d.arrayOf(d.f32, value),
@@ -130,9 +116,7 @@ export class Executor {
   ): Promise<d.v3f[]> {
     const pipeline = this.pipelineCacheGet(distribution, generator);
 
-    pipeline.with(this.#bindGroup).dispatchWorkgroups(
-      Math.ceil(this.#count / 64),
-    );
+    pipeline.with(this.#bindGroup).dispatchWorkgroups(Math.ceil(this.#count / 64));
 
     return await this.#samplesBuffer.read();
   }

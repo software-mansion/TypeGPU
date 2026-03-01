@@ -100,5 +100,4 @@ const GENERATOR_MAP = {
   [Generator.LCG]: LCG,
 };
 
-export const getGenerator = (gen: Generator): StatefulGenerator =>
-  GENERATOR_MAP[gen];
+export const getGenerator = (gen: Generator): StatefulGenerator => GENERATOR_MAP[gen];

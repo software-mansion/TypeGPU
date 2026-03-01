@@ -75,4 +75,4 @@ export const Generator = {
   LCG: 'lcg',
 } as const;
 
-export type Generator = typeof Generator[keyof typeof Generator];
+export type Generator = (typeof Generator)[keyof typeof Generator];

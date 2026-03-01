@@ -54,9 +54,12 @@ export const BPETER: StatefulGenerator = (() => {
 export const LCG: StatefulGenerator = (() => {
   const seed = tgpu.privateVar(d.u32);
 
-  const u32To01Float = tgpu.fn([d.u32], d.f32)((value) => {
+  const u32To01Float = tgpu.fn(
+    [d.u32],
+    d.f32,
+  )((value) => {
     const mantissa = value >> 9;
-    const bits = 0x3F800000 | mantissa;
+    const bits = 0x3f800000 | mantissa;
     const f = bitcastU32toF32(bits);
     return f - 1;
   });
@@ -71,16 +74,12 @@ export const LCG: StatefulGenerator = (() => {
     }),
 
     seed3: tgpu.fn([d.vec3f])((value) => {
-      seed.$ = d.u32(
-        value.x * pow(32, 3) + value.y * pow(32, 2) +
-          value.z * pow(32, 1),
-      );
+      seed.$ = d.u32(value.x * pow(32, 3) + value.y * pow(32, 2) + value.z * pow(32, 1));
     }),
 
     seed4: tgpu.fn([d.vec4f])((value) => {
       seed.$ = d.u32(
-        value.x * pow(32, 3) + value.y * pow(32, 2) +
-          value.z * pow(32, 1) + value.w * pow(32, 0),
+        value.x * pow(32, 3) + value.y * pow(32, 2) + value.z * pow(32, 1) + value.w * pow(32, 0),
       );
     }),
 
@@ -95,6 +94,4 @@ export const LCG: StatefulGenerator = (() => {
 // The default (Can change between releases to improve uniformity).
 export const DefaultGenerator: StatefulGenerator = BPETER;
 
-export const randomGeneratorSlot: TgpuSlot<StatefulGenerator> = tgpu.slot(
-  DefaultGenerator,
-);
+export const randomGeneratorSlot: TgpuSlot<StatefulGenerator> = tgpu.slot(DefaultGenerator);
