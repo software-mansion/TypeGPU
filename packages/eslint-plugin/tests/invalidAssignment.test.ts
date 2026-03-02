@@ -2,7 +2,6 @@ import { describe } from 'vitest';
 import { ruleTester } from './ruleTester.ts';
 import { invalidAssignment } from '../src/rules/invalidAssignment.ts';
 
-// TODO: non-param assign
 describe('invalidAssignment', () => {
   ruleTester.run('parameterAssignment', invalidAssignment, {
     valid: [
@@ -165,6 +164,13 @@ describe('invalidAssignment', () => {
         errors: [{
           messageId: 'jsAssignment',
           data: { snippet: 'a.$prop' },
+        }],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; globalThis.prop = 1 }",
+        errors: [{
+          messageId: 'jsAssignment',
+          data: { snippet: 'globalThis.prop' },
         }],
       },
     ],

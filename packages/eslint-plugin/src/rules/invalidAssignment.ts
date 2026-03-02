@@ -2,7 +2,7 @@ import { ASTUtils, type TSESTree } from '@typescript-eslint/utils';
 import { createRule } from '../ruleCreator.ts';
 import { enhanceRule } from '../enhanceRule.ts';
 import { directiveTracking } from '../enhancers/directiveTracking.ts';
-import { RuleContext } from '@typescript-eslint/utils/ts-eslint';
+import type { RuleContext } from '@typescript-eslint/utils/ts-eslint';
 
 export const invalidAssignment = createRule({
   name: 'invalid-assignment',
@@ -27,18 +27,18 @@ export const invalidAssignment = createRule({
     return {
       UpdateExpression(node) {
         const enclosingFn = directives.getEnclosingTypegpuFunction();
-        checkAssignment(context, node, enclosingFn, node.argument);
+        validateAssignment(context, node, enclosingFn, node.argument);
       },
 
       AssignmentExpression(node) {
         const enclosingFn = directives.getEnclosingTypegpuFunction();
-        checkAssignment(context, node, enclosingFn, node.left);
+        validateAssignment(context, node, enclosingFn, node.left);
       },
     };
   }),
 });
 
-function checkAssignment(
+function validateAssignment(
   context: Readonly<RuleContext<'parameterAssignment' | 'jsAssignment', []>>,
   node: TSESTree.Node,
   enclosingFn: TSESTree.Node | undefined,
@@ -48,7 +48,7 @@ function checkAssignment(
     return;
   }
 
-  // look for the definition of the variable we assign to
+  // follow the member expression chain
   let assignee = leftNode;
   while (assignee.type === 'MemberExpression') {
     if (
@@ -64,39 +64,36 @@ function checkAssignment(
     return;
   }
 
-  // look for a scope that contains at least one
+  // look for a scope that defines the variable
   const variable = ASTUtils.findVariable(
     context.sourceCode.getScope(assignee),
-    assignee.name,
+    assignee,
   );
+  // defs is an array because there may be multiple definitions with `var`
+  const def = variable?.defs[0];
 
-  // TODO: handle variables with no defs (globalThis, Math etc.)
-  if (variable?.defs && variable.defs[0]) {
-    // def[0] points to the correct scope
-    // defs is an array because there may be multiple definitions with `var`
-    const def = variable.defs[0];
+  // check if variable is global or was defined outside of current function by checking ranges
+  // NOTE: if the variable is an outer function parameter, then the enclosingFn range will be encompassed by node range
+  if (
+    !def ||
+    def && (
+        def.node.range[0] < enclosingFn.range[0] ||
+        enclosingFn.range[1] < def.node.range[1]
+      )
+  ) {
+    context.report({
+      messageId: 'jsAssignment',
+      node,
+      data: { snippet: context.sourceCode.getText(leftNode) },
+    });
+    return;
+  }
 
-    // we check if it was defined outside of current function by checking ranges
-    // NOTE: if the variable is an outer function parameter, then the enclosingFn range will be encompassed by node range
-    if (
-      def.node.range[0] < enclosingFn.range[0] ||
-      enclosingFn.range[1] < def.node.range[1]
-    ) {
-      context.report({
-        messageId: 'jsAssignment',
-        node,
-        data: { snippet: context.sourceCode.getText(leftNode) },
-      });
-      return;
-    }
-
-    if (def.type === 'Parameter') {
-      // either 'use gpu' or other parameter, either way invalid
-      context.report({
-        messageId: 'parameterAssignment',
-        node,
-        data: { snippet: context.sourceCode.getText(leftNode) },
-      });
-    }
+  if (def.type === 'Parameter') {
+    context.report({
+      messageId: 'parameterAssignment',
+      node,
+      data: { snippet: context.sourceCode.getText(leftNode) },
+    });
   }
 }
