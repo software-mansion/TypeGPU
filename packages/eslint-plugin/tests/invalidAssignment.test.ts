@@ -3,9 +3,6 @@ import { ruleTester } from './ruleTester.ts';
 import { invalidAssignment } from '../src/rules/invalidAssignment.ts';
 
 // TODO: non-param assign
-// TODO: +=, ++, -- etc
-// TODO: check default params
-// TODO: allow js
 describe('invalidAssignment', () => {
   ruleTester.run('parameterAssignment', invalidAssignment, {
     valid: [
@@ -16,6 +13,8 @@ describe('invalidAssignment', () => {
       "const fn = (a) => { 'use gpu'; let x = 0; x = 1; }",
       "const fn = (a) => { 'use gpu'; { let a = 1; a = 2; } }",
       "const fn = (a) => { 'use gpu'; a.$ = 1 }",
+      "const fn = (a) => { 'use gpu'; a.$++; }",
+      "const fn = (a) => { 'use gpu'; a.$ += 1; }",
     ],
     invalid: [
       {
@@ -23,14 +22,22 @@ describe('invalidAssignment', () => {
         errors: [{ messageId: 'parameterAssignment', data: { snippet: 'a' } }],
       },
       {
+        code: "const fn = (a) => { 'use gpu'; a++; }",
+        errors: [{ messageId: 'parameterAssignment', data: { snippet: 'a' } }],
+      },
+      {
+        code: "const fn = (a) => { 'use gpu'; a += 1; }",
+        errors: [{ messageId: 'parameterAssignment', data: { snippet: 'a' } }],
+      },
+      {
         code: "let a; const fn = (a) => { 'use gpu'; a = 1; }",
         errors: [{ messageId: 'parameterAssignment', data: { snippet: 'a' } }],
       },
       {
-        code: "const fn = (a) => { 'use gpu'; a.x = 1; }",
+        code: "const fn = (a) => { 'use gpu'; a.prop = 1; }",
         errors: [{
           messageId: 'parameterAssignment',
-          data: { snippet: 'a.x' },
+          data: { snippet: 'a.prop' },
         }],
       },
       {
@@ -48,10 +55,10 @@ describe('invalidAssignment', () => {
         }],
       },
       {
-        code: "const fn = (a) => { 'use gpu'; a.x.y = 1; }",
+        code: "const fn = (a) => { 'use gpu'; a.prop1.prop2 = 1; }",
         errors: [{
           messageId: 'parameterAssignment',
-          data: { snippet: 'a.x.y' },
+          data: { snippet: 'a.prop1.prop2' },
         }],
       },
       {
@@ -72,10 +79,6 @@ describe('invalidAssignment', () => {
       },
       {
         code: "const fn = (a) => { 'use gpu'; a = 1; { let a; } }",
-        errors: [{ messageId: 'parameterAssignment', data: { snippet: 'a' } }],
-      },
-      {
-        code: "const fn = (a) => { 'use gpu'; a = 1; let a; }",
         errors: [{ messageId: 'parameterAssignment', data: { snippet: 'a' } }],
       },
       {
