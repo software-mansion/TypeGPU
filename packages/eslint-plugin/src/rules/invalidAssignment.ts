@@ -23,7 +23,7 @@ export const invalidAssignment = createRule({
 
     return {
       UpdateExpression(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
 
@@ -66,7 +66,7 @@ export const invalidAssignment = createRule({
       },
 
       AssignmentExpression(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
 
