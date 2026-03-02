@@ -4,15 +4,15 @@ import { invalidAssignment } from '../src/rules/invalidAssignment.ts';
 
 // TODO: non-param assign
 // TODO: +=, ++, -- etc
-// TODO: array access
-// TODO: props
 // TODO: check default params
 // TODO: allow js
-// TODO: allow .$ (?)
 describe('invalidAssignment', () => {
   ruleTester.run('parameterAssignment', invalidAssignment, {
     valid: [
-      'const fn = (a) => { a = {}; a.prop = 1; }',
+      'const fn = (a) => { a = {}; }',
+      'const fn = (a) => { a.prop = 1; }',
+      "const fn = (a) => { a['prop'] = 1; }",
+      'const fn = (a) => { a[0] = 1; }',
       "const fn = (a) => { 'use gpu'; let x = 0; x = 1; }",
       "const fn = (a) => { 'use gpu'; { let a = 1; a = 2; } }",
       "const fn = (a) => { 'use gpu'; a.$ = 1 }",
@@ -31,6 +31,20 @@ describe('invalidAssignment', () => {
         errors: [{
           messageId: 'parameterAssignment',
           data: { snippet: 'a.x' },
+        }],
+      },
+      {
+        code: "const fn = (a) => { 'use gpu'; a['prop'] = 1; }",
+        errors: [{
+          messageId: 'parameterAssignment',
+          data: { snippet: "a['prop']" },
+        }],
+      },
+      {
+        code: "const fn = (a) => { 'use gpu'; a[0] = 1; }",
+        errors: [{
+          messageId: 'parameterAssignment',
+          data: { snippet: 'a[0]' },
         }],
       },
       {
@@ -63,6 +77,13 @@ describe('invalidAssignment', () => {
       {
         code: "const fn = (a) => { 'use gpu'; a = 1; let a; }",
         errors: [{ messageId: 'parameterAssignment', data: { snippet: 'a' } }],
+      },
+      {
+        code: "const fn = (a) => { 'use gpu'; a.$prop = 1; }",
+        errors: [{
+          messageId: 'parameterAssignment',
+          data: { snippet: 'a.$prop' },
+        }],
       },
     ],
   });
