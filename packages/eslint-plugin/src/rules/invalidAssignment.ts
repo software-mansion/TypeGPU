@@ -77,15 +77,17 @@ function checkAssignment(
     const def = variable.defs[0];
 
     // we check if it was defined outside of current function by checking ranges
+    // NOTE: if the variable is an outer function parameter, then the enclosingFn range will be encompassed by node range
     if (
-      def.node.range[1] < enclosingFn.range[0] ||
-      enclosingFn.range[1] < def.node.range[0]
+      def.node.range[0] < enclosingFn.range[0] ||
+      enclosingFn.range[1] < def.node.range[1]
     ) {
       context.report({
         messageId: 'jsAssignment',
         node,
         data: { snippet: context.sourceCode.getText(leftNode) },
       });
+      return;
     }
 
     if (def.type === 'Parameter') {
