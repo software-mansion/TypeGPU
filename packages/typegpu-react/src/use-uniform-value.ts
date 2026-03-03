@@ -42,7 +42,6 @@ export function useUniformValue<TSchema extends d.AnyWgslData, TValue extends d.
     };
   }, [uniformBuffer]);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: This value needs to be stable
   const uniformValue = useMemo(() => {
     let currentValue = initialValue ?? (initialValueFromSchema(schema) as TValue);
     return {
