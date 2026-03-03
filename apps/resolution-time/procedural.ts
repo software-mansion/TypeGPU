@@ -11,7 +11,17 @@ interface ProcGenConfig {
   seed: number;
   samples?: number;
 }
+
+// default config
 const SAMPLES = 10;
+const config: ProcGenConfig & { samples: number } = {
+  mainBranching: 2,
+  branching: 2,
+  maxDepth: 3,
+  recurseProb: 0.77,
+  seed: 0.1882 * 2 ** 32,
+  samples: SAMPLES,
+};
 
 // simple stateful PRNG
 // https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript
@@ -27,16 +37,7 @@ function splitmix32(seed: number) {
   };
 }
 
-const config: ProcGenConfig & { samples: number } = {
-  mainBranching: 2,
-  branching: 2,
-  maxDepth: 1,
-  recurseProb: 1,
-  seed: 0.1882 * 2 ** 32,
-  samples: SAMPLES,
-};
-
-let rand = splitmix32(0.1882 * 2 ** 32);
+let rand = splitmix32(config.seed);
 
 const state = tgpu.lazy(() => ({
   stackDepth: 0,
@@ -47,10 +48,10 @@ const LEAF_COUNT = 3;
 
 // TODO: replace it with number, when unroll supports that
 const arrayForUnroll = tgpu.comptime((n: number) => Array.from({ length: n }));
-let branchichUnrollArray = arrayForUnroll(config.branching);
+let branchingUnrollArray = arrayForUnroll(config.branching);
 
 const choice = tgpu.comptime((): number => {
-  if (state.$.stackDepth == config.maxDepth - 1 /*|| rand() > config.recurseProb*/) {
+  if (state.$.stackDepth == config.maxDepth - 1 || rand() > config.recurseProb) {
     state.$.stackDepth++;
     return Math.floor(rand() * LEAF_COUNT);
   }
@@ -128,7 +129,7 @@ const waveFn = tgpu.comptime(() => {
       v = d.vec2f(std.sin(v.x * Math.PI), std.cos(v.y * Math.PI));
       const _energy = v.x * v.x + v.y * v.y;
 
-      for (const _i of tgpu.unroll(branchichUnrollArray)) {
+      for (const _i of tgpu.unroll(branchingUnrollArray)) {
         // @ts-expect-error trust me
         instructions[choice()]()();
       }
@@ -148,7 +149,7 @@ const accFn = tgpu.comptime(() => {
       let acc = d.vec2f();
       acc = d.vec2f(acc.x + offset.x * scale, acc.y + offset.y * scale);
 
-      for (const _i of tgpu.unroll(branchichUnrollArray)) {
+      for (const _i of tgpu.unroll(branchingUnrollArray)) {
         // @ts-expect-error trust me
         instructions[choice()]()();
       }
@@ -170,7 +171,7 @@ const rotateFn = tgpu.comptime(() => {
       const s = Math.sin(angle);
       v = d.vec2f(v.x * c - v.y * s, v.x * s + v.y * c);
 
-      for (const _i of tgpu.unroll(branchichUnrollArray)) {
+      for (const _i of tgpu.unroll(branchingUnrollArray)) {
         // @ts-expect-error trust me
         instructions[choice()]()();
       }
@@ -192,7 +193,7 @@ const spiralFn = tgpu.comptime(() => {
       const pos = d.vec2f(center.x + radius * Math.cos(angle), center.y + radius * Math.sin(angle));
       const _dist = std.length(pos);
 
-      for (const _i of tgpu.unroll(branchichUnrollArray)) {
+      for (const _i of tgpu.unroll(branchingUnrollArray)) {
         // @ts-expect-error trust me
         instructions[choice()]()();
       }
@@ -231,8 +232,7 @@ const outDir = resolve(import.meta.dirname ?? '.', '.');
 
 function runBenchmark(input: ProcGenConfig, output: BenchmarkResult[]) {
   Object.assign(config, { samples: input.samples ?? SAMPLES }, input);
-  branchichUnrollArray = arrayForUnroll(config.branching);
-  rand = splitmix32(config.seed);
+  branchingUnrollArray = arrayForUnroll(config.branching);
 
   for (let i = 0; i < config.samples; i++) {
     rand = splitmix32(config.maxDepth * 2 ** 32);
@@ -252,14 +252,14 @@ function warmupJIT() {
       mainBranching: 1,
       branching: 1,
       maxDepth: 1,
-      recurseProb: 1,
+      recurseProb: 0,
       seed: 0.1882 * 2 ** 32,
     },
     [],
   );
 }
 
-test('resolution time vs max depth', () => {
+test('resolution time vs max depth (full tree)', () => {
   const results: BenchmarkResult[] = [];
   const DEPTHS = Array.from({ length: 8 }, (_, i) => i + 1);
 
@@ -280,7 +280,7 @@ test('resolution time vs max depth', () => {
   writeFileSync(resolve(outDir, 'results-max-depth.json'), JSON.stringify(results, null, 2));
 });
 
-test('resolution time vs linear recursion', () => {
+test('resolution time vs linear recursion (path)', () => {
   const results: BenchmarkResult[] = [];
   const DEPTHS = Array.from({ length: 8 }, (_, i) => i + 1);
 

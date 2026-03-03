@@ -1,16 +1,16 @@
 {
   "name": "resolution-time",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
+  "description": "Resolution time benchmark app for TypeGPU",
   "type": "module",
   "scripts": {
-    "resolution-time": "vitest run",
-    "dev": "vitest run -w"
+    "resolution-time": "vitest run procedural.ts"
   },
   "dependencies": {
+    "jiti": "catalog:build",
     "typegpu": "workspace:*",
     "unplugin-typegpu": "workspace:*",
-    "vitest": "catalog:test",
-    "jiti": "catalog:build"
+    "vitest": "catalog:test"
   }
 }

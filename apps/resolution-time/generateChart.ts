@@ -31,7 +31,7 @@ for (let i = 0; i < args.length; i++) {
     title = args[++i]!;
   } else if (args[i] === '--output') {
     if (output !== '') {
-      throw new Error('Ambiguous title');
+      throw new Error('Ambiguous output');
     }
     // oxlint-disable-next-line typescript/no-non-null-assertion
     output = args[++i]!;
