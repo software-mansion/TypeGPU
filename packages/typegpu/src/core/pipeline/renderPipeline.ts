@@ -1056,7 +1056,7 @@ class RenderPipelineCore implements SelfResolvable {
 
     const { vertex, fragment, attribs = {}, targets } = this.options.descriptor;
     const connectedAttribs = connectAttributesToShader(
-      (vertex as TgpuVertexFn | undefined)?.shell?.in ?? {},
+      (vertex as TgpuVertexFn | undefined)?.shell?.in,
       attribs,
     );
 
