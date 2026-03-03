@@ -214,7 +214,7 @@ const main = () => {
   }
 };
 
-interface BenchmarkResult {
+export interface BenchmarkResult {
   maxDepth: number;
   timeMs: number;
   wgslLength: number;
