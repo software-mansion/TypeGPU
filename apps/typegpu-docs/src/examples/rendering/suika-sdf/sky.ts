@@ -31,7 +31,7 @@ export const skyColor = (uv: d.v2f, daylight: number, time: number) => {
   let bgColor = std.mix(nightSky, daySky, daylight);
 
   // Stars
-  const STAR_N = 50;
+  const STAR_N = d.f32(50);
   const starCell = std.floor(uv * STAR_N);
   const cellUv = std.fract(uv * STAR_N);
   randf.seed2(starCell);
