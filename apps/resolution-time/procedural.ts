@@ -48,7 +48,7 @@ const LEAF_COUNT = 3;
 
 // TODO: replace it with number, when unroll supports that
 const arrayForUnroll = tgpu.comptime((n: number) => Array.from({ length: n }));
-let branchichUnrollArray = arrayForUnroll(config.branching);
+let branchingUnrollArray = arrayForUnroll(config.branching);
 
 const choice = tgpu.comptime((): number => {
   if (state.$.stackDepth == config.maxDepth - 1 || rand() > config.recurseProb) {
@@ -129,7 +129,7 @@ const waveFn = tgpu.comptime(() => {
       v = d.vec2f(std.sin(v.x * Math.PI), std.cos(v.y * Math.PI));
       const _energy = v.x * v.x + v.y * v.y;
 
-      for (const _i of tgpu.unroll(branchichUnrollArray)) {
+      for (const _i of tgpu.unroll(branchingUnrollArray)) {
         // @ts-expect-error trust me
         instructions[choice()]()();
       }
@@ -149,7 +149,7 @@ const accFn = tgpu.comptime(() => {
       let acc = d.vec2f();
       acc = d.vec2f(acc.x + offset.x * scale, acc.y + offset.y * scale);
 
-      for (const _i of tgpu.unroll(branchichUnrollArray)) {
+      for (const _i of tgpu.unroll(branchingUnrollArray)) {
         // @ts-expect-error trust me
         instructions[choice()]()();
       }
@@ -171,7 +171,7 @@ const rotateFn = tgpu.comptime(() => {
       const s = Math.sin(angle);
       v = d.vec2f(v.x * c - v.y * s, v.x * s + v.y * c);
 
-      for (const _i of tgpu.unroll(branchichUnrollArray)) {
+      for (const _i of tgpu.unroll(branchingUnrollArray)) {
         // @ts-expect-error trust me
         instructions[choice()]()();
       }
@@ -193,7 +193,7 @@ const spiralFn = tgpu.comptime(() => {
       const pos = d.vec2f(center.x + radius * Math.cos(angle), center.y + radius * Math.sin(angle));
       const _dist = std.length(pos);
 
-      for (const _i of tgpu.unroll(branchichUnrollArray)) {
+      for (const _i of tgpu.unroll(branchingUnrollArray)) {
         // @ts-expect-error trust me
         instructions[choice()]()();
       }
@@ -232,8 +232,7 @@ const outDir = resolve(import.meta.dirname ?? '.', '.');
 
 function runBenchmark(input: ProcGenConfig, output: BenchmarkResult[]) {
   Object.assign(config, { samples: input.samples ?? SAMPLES }, input);
-  branchichUnrollArray = arrayForUnroll(config.branching);
-  rand = splitmix32(config.seed);
+  branchingUnrollArray = arrayForUnroll(config.branching);
 
   for (let i = 0; i < config.samples; i++) {
     rand = splitmix32(config.maxDepth * 2 ** 32);
