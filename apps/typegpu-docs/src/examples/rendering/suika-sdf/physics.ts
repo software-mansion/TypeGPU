@@ -65,17 +65,16 @@ export async function createPhysicsWorld(
 
     addBall(x, y, radius, contour, level, vx = 0, vy = 0, angle = 0): number {
       const body = world.createRigidBody(
-        RAPIER.RigidBodyDesc.dynamic()
-          .setTranslation(x, y)
-          .setLinvel(vx, vy)
-          .setRotation(angle),
+        RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y).setLinvel(vx, vy).setRotation(angle),
       );
 
       // Same-level fruits don't collide with each other
       const group = ((1 << level) << 16) | (0xffff ^ (1 << level));
       world.createCollider(
-        (RAPIER.ColliderDesc.convexHull(contour.map((v) => v * radius)) ??
-          RAPIER.ColliderDesc.ball(radius))
+        (
+          RAPIER.ColliderDesc.convexHull(contour.map((v) => v * radius)) ??
+          RAPIER.ColliderDesc.ball(radius)
+        )
           .setRestitution(0.2)
           .setFriction(0.1)
           .setCollisionGroups(group),

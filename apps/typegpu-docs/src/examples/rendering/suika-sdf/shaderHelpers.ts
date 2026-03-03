@@ -8,11 +8,7 @@ export const rotate2d = (p: d.v2f, angle: number) => {
   return d.mat2x2f(cosA, sinA, -sinA, cosA) * p;
 };
 
-export const clampRadial = (
-  p: d.v2f,
-  clampRadius: number,
-  minRadius: number,
-) => {
+export const clampRadial = (p: d.v2f, clampRadius: number, minRadius: number) => {
   'use gpu';
   const len = std.max(std.length(p), minRadius);
   return p * std.min(clampRadius / len, 1);

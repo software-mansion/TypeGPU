@@ -39,7 +39,4 @@ export interface ActiveFruit {
 }
 
 export const LEVEL_F32_ZEROS = Array.from({ length: LEVEL_COUNT }, () => 0);
-export const LEVEL_V2F_ZEROS = Array.from(
-  { length: LEVEL_COUNT },
-  () => d.vec2f(),
-);
+export const LEVEL_V2F_ZEROS = Array.from({ length: LEVEL_COUNT }, () => d.vec2f());

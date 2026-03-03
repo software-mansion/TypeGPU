@@ -28,11 +28,7 @@ function drawFruitSlice(
   );
 }
 
-function computeJfaSdf(
-  rgba: Uint8ClampedArray,
-  width: number,
-  height: number,
-): Float32Array {
+function computeJfaSdf(rgba: Uint8ClampedArray, width: number, height: number): Float32Array {
   const size = width * height;
   const maxDim = Math.max(width, height);
 
@@ -60,20 +56,14 @@ function computeJfaSdf(
     }
   }
 
-  for (
-    let offset = Math.floor(maxDim / 2);
-    offset >= 1;
-    offset = Math.floor(offset / 2)
-  ) {
+  for (let offset = Math.floor(maxDim / 2); offset >= 1; offset = Math.floor(offset / 2)) {
     const readX = seedX.slice();
     const readY = seedY.slice();
 
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = y * width + x;
-        let bestDist = seedX[idx] >= 0
-          ? Math.hypot(x - seedX[idx], y - seedY[idx])
-          : Infinity;
+        let bestDist = seedX[idx] >= 0 ? Math.hypot(x - seedX[idx], y - seedY[idx]) : Infinity;
 
         for (let dy = -1; dy <= 1; dy++) {
           for (let dx = -1; dx <= 1; dx++) {
@@ -107,9 +97,7 @@ function computeJfaSdf(
   for (let i = 0; i < size; i++) {
     const x = i % width;
     const y = Math.floor(i / width);
-    const dist = seedX[i] >= 0
-      ? Math.hypot(x - seedX[i], y - seedY[i])
-      : maxDim;
+    const dist = seedX[i] >= 0 ? Math.hypot(x - seedX[i], y - seedY[i]) : maxDim;
     sdf[i] = inside[i] ? -dist : dist;
   }
 
@@ -156,7 +144,7 @@ export async function createAtlases(): Promise<{
           continue;
         }
         if (alpha[(py * SPRITE_SIZE + px) * 4 + 3] > 128) {
-          pts.push(cosA * r / halfSize, sinA * r / halfSize);
+          pts.push((cosA * r) / halfSize, (sinA * r) / halfSize);
           break;
         }
       }
@@ -166,9 +154,7 @@ export async function createAtlases(): Promise<{
     const sdf = computeJfaSdf(imgData.data, SPRITE_SIZE, SPRITE_SIZE);
     const levelSdfData = new ImageData(SPRITE_SIZE, SPRITE_SIZE);
     for (let j = 0; j < SPRITE_SIZE * SPRITE_SIZE; j++) {
-      const byte = Math.round(
-        Math.max(0, Math.min(1, (sdf[j] / MAX_DIST + 1) * 0.5)) * 255,
-      );
+      const byte = Math.round(Math.max(0, Math.min(1, (sdf[j] / MAX_DIST + 1) * 0.5)) * 255);
       const idx = j * 4;
       levelSdfData.data[idx] = byte;
       levelSdfData.data[idx + 1] = byte;
@@ -203,34 +189,26 @@ export function createSmoothedSdf(
 
   const sampleSdfRaw = (uv: d.v2f, level: number) => {
     'use gpu';
-    return std.textureSampleLevel(sdfView.$, linSampler.$, uv, level, d.f32(0))
-      .x;
+    return std.textureSampleLevel(sdfView.$, linSampler.$, uv, level, d.f32(0)).x;
   };
 
-  const smoothSdfPipeline = root.createGuardedComputePipeline(
-    (x: number, y: number) => {
-      'use gpu';
-      const lv = levelUniform.$;
-      const uv = (d.vec2f(x, y) + 0.5) / SPRITE_SIZE;
-      const t = 3 / SPRITE_SIZE;
+  const smoothSdfPipeline = root.createGuardedComputePipeline((x: number, y: number) => {
+    'use gpu';
+    const lv = levelUniform.$;
+    const uv = (d.vec2f(x, y) + 0.5) / SPRITE_SIZE;
+    const t = 3 / SPRITE_SIZE;
 
-      // 3×3 Gaussian [1,2,1; 2,4,2; 1,2,1] / 16
-      let accum = d.f32(0);
-      for (const dy of tgpu.unroll([-1, 0, 1])) {
-        for (const dx of tgpu.unroll([-1, 0, 1])) {
-          const w = d.f32((2 - std.abs(dy)) * (2 - std.abs(dx)));
-          accum += sampleSdfRaw(uv + d.vec2f(dx, dy) * t, lv) * w;
-        }
+    // 3×3 Gaussian [1,2,1; 2,4,2; 1,2,1] / 16
+    let accum = d.f32(0);
+    for (const dy of tgpu.unroll([-1, 0, 1])) {
+      for (const dx of tgpu.unroll([-1, 0, 1])) {
+        const w = d.f32((2 - std.abs(dy)) * (2 - std.abs(dx)));
+        accum += sampleSdfRaw(uv + d.vec2f(dx, dy) * t, lv) * w;
       }
+    }
 
-      std.textureStore(
-        smoothSdfWriteView.$,
-        d.vec2i(x, y),
-        lv,
-        d.vec4f(accum / 16, 0, 0, 1),
-      );
-    },
-  );
+    std.textureStore(smoothSdfWriteView.$, d.vec2i(x, y), lv, d.vec4f(accum / 16, 0, 0, 1));
+  });
 
   for (let level = 0; level < LEVEL_COUNT; level++) {
     levelUniform.write(level);
