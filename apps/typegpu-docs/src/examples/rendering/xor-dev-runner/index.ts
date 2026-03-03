@@ -17,10 +17,6 @@ import { abs, add, cos, max, min, mul, select, sign, sin, sub, tanh } from 'type
 import { defineControls } from '../../common/defineControls.ts';
 import { Camera, setupFirstPersonCamera } from '../../common/setup-first-person-camera.ts';
 
-// NOTE: Some APIs are still unstable (are being finalized based on feedback), but
-//       we can still access them if we know what we're doing.
-//       They're going to be moved into `tgpu.` and `root.` in a future version.
-
 /**
  * For some reason, tanh in WebGPU breaks down hard outside
  * of the <10, -10> range.
