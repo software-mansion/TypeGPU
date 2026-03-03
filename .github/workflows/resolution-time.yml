@@ -5,9 +5,9 @@ on:
   workflow_dispatch:
     inputs:
       target_branch:
-        description: "Target branch to compare against"
+        description: 'Target branch to compare against'
         required: true
-        default: "main"
+        default: 'main'
 
 jobs:
   resolution-time:
@@ -61,7 +61,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24.x
-          cache: "pnpm"
+          cache: 'pnpm'
           cache-dependency-path: |
             pr-branch/pnpm-lock.yaml
             target-branch/pnpm-lock.yaml
