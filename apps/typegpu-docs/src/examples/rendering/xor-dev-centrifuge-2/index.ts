@@ -14,10 +14,6 @@ import tgpu, { d } from 'typegpu';
 import { abs, atan2, cos, gt, length, normalize, select, sign, tanh } from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';
 
-// NOTE: Some APIs are still unstable (are being finalized based on feedback), but
-//       we can still access them if we know what we're doing.
-//       They're going to be moved into `tgpu.` and `root.` in a future version.
-
 /**
  * For some reason, tanh in WebGPU breaks down hard outside
  * of the <10, -10> range.
