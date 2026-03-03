@@ -1,4 +1,4 @@
-# Procedural TypeGPU function generator for benchmarking WGSL resolution time
+# Procedural TypeGPU function generator for benchmarking resolution time
 
 ## Adding a new instruction
 
@@ -33,15 +33,6 @@ const myRecursiveFn = tgpu.comptime(() => {
 });
 ```
 
-### Registering
-
-Add your function to the `instructions.push(...)` call. **Leaves must come first**, followed by recursive functions. Update `LEAF_COUNT` if you add a new leaf.
-
-### Rules
-
-- Every instruction **must** call `popDepth()` exactly once, as the last statement
-- No direct function calls inside instructions — branching happens only via the `tgpu.unroll` + `choice()` pattern
-
 ## Generating Mermaid charts
 
 `generateChart.ts` reads benchmark result JSON files and outputs a Mermaid xychart comparing up to 3 datasets.
@@ -50,8 +41,8 @@ Add your function to the `instructions.push(...)` call. **Leaves must come first
 
 ```sh
 node generateChart.ts \
-  --input "PR:results-max-depth.json" \
-  --input "main:../other/results-max-depth.json" \
+  --input "PR:pr-branch/results-max-depth.json" \
+  --input "main:main-branch/results-max-depth.json" \
   --title "Resolution Time vs Max Depth" \
   --xAxisTitle "max depth" \
   --yAxisTitle "time (ms)" \
