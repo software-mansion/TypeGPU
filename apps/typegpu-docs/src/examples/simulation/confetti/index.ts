@@ -196,7 +196,6 @@ onFrame((dt) => {
   aspectRatio.write(canvas.width / canvas.height);
 
   computePipeline.dispatchWorkgroups(PARTICLE_AMOUNT);
-
   renderPipeline.withColorAttachment({ view: context }).draw(4, PARTICLE_AMOUNT);
 });
 
