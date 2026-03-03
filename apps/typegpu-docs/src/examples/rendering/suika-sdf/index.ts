@@ -81,6 +81,16 @@ let timeScale = 1;
 let score = 0;
 
 const scoreEl = document.getElementById('score') as HTMLElement;
+const attributionEl = document.getElementById('attribution') as HTMLElement;
+
+canvas.addEventListener(
+  'click',
+  () => {
+    attributionEl.style.opacity = '0';
+    attributionEl.style.pointerEvents = 'none';
+  },
+  { once: true },
+);
 
 const { spriteAtlas, sdfAtlas, contours } = await createAtlases();
 const physics = await createPhysicsWorld(WALL_DEFS);
