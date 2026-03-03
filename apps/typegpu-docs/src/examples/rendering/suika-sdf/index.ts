@@ -113,8 +113,10 @@ const mergedFieldLayout = tgpu.bindGroupLayout({
 });
 
 function createMergedFieldResources() {
-  const size = [canvas.width, canvas.height]
-    .map((v) => Math.ceil(v / 2)) as [number, number];
+  const size = [canvas.width, canvas.height].map((v) => Math.ceil(v / 2)) as [
+    number,
+    number,
+  ];
   return root['~unstable']
     .createTexture({ size, format: 'rgba16float' })
     .$usage('sampled', 'render');
@@ -252,7 +254,7 @@ const applyNextPreview = (
 ) => {
   'use gpu';
   const pvHalf = 0.085;
-  const pvCorner = 0.020;
+  const pvCorner = 0.02;
   const pvBorder = 0.013;
   const pvFruitR = pvHalf * 0.82;
   const pad = 0.02;
@@ -282,7 +284,7 @@ const applyNextPreview = (
   );
 
   const fruitDist = std.length(pvLocal) - pvFruitR;
-  const pvSpriteUv = pvLocal / pvFruitR * 0.5 + d.vec2f(0.5);
+  const pvSpriteUv = (pvLocal / pvFruitR) * 0.5 + d.vec2f(0.5);
   const pvSprite = sampleSprite(pvSpriteUv, nextLevel);
   const fruitAlpha = pvSprite.w *
     std.smoothstep(std.fwidth(uv.x), 0, fruitDist) * interiorMask;
@@ -368,7 +370,9 @@ const renderPipeline = root.createRenderPipeline({
     );
     // Fruit glow on bucket interior back wall
     bg += blendSprite(d.vec2f(0.5), d.i32(field.w)) *
-      std.exp(-std.max(field.x, 0) * 12) * bucketMask * 0.4;
+      std.exp(-std.max(field.x, 0) * 12) *
+      bucketMask *
+      0.4;
 
     const hit = evalWalls(
       scenePos,
@@ -381,15 +385,17 @@ const renderPipeline = root.createRenderPipeline({
       applyGhost(sceneColor, frame.ghostCircle, scenePos),
     );
 
-    finalColor = d.vec3f(applyNextPreview(
-      finalColor,
-      uv,
-      gameUv,
-      frame.canvasAspect,
-      frame.nextLevel,
-      daylight,
-      frame.time,
-    ));
+    finalColor = d.vec3f(
+      applyNextPreview(
+        finalColor,
+        uv,
+        gameUv,
+        frame.canvasAspect,
+        frame.nextLevel,
+        daylight,
+        frame.time,
+      ),
+    );
 
     return d.vec4f(finalColor, 1);
   },
@@ -679,7 +685,7 @@ function frame(now: number) {
 requestAnimationFrame(frame);
 
 export const controls = defineControls({
-  'Restart': {
+  Restart: {
     onButtonClick: restart,
   },
   'Time Scale': {
