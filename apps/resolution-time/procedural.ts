@@ -3,48 +3,54 @@ import { resolve } from 'node:path';
 import { test } from 'vitest';
 import tgpu, { d, std, type TgpuComptime, type TgpuGenericFn } from 'typegpu';
 
+interface ProcGenConfig {
+  mainBranching: number;
+  branching: number;
+  maxDepth: number;
+  recurseProb: number;
+  seed: number;
+  samples?: number;
+}
+const SAMPLES = 10;
+
 // simple stateful PRNG
 // https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript
 function splitmix32(seed: number) {
   return function (): number {
     seed |= 0;
-    seed = seed + 0x9e3779b9 | 0;
-    let t = seed ^ seed >>> 16;
+    seed = (seed + 0x9e3779b9) | 0;
+    let t = seed ^ (seed >>> 16);
     t = Math.imul(t, 0x21f0aaad);
-    t = t ^ t >>> 15;
+    t = t ^ (t >>> 15);
     t = Math.imul(t, 0x735a2d97);
-    return ((t = t ^ t >>> 15) >>> 0) / 4294967296;
+    return ((t = t ^ (t >>> 15)) >>> 0) / 4294967296;
   };
 }
 
-const config = {
-  mainBranching: 2, // top-level calls from main (tgpu.unroll blocks)
-  branching: 2, // fan-out in functions from instruction list (tgpu.unroll blocks)
+const config: ProcGenConfig & { samples: number } = {
+  mainBranching: 2,
+  branching: 2,
   maxDepth: 1,
-  recurseProb: 1, // seeded probability of recursing at each node
+  recurseProb: 1,
   seed: 0.1882 * 2 ** 32,
-  iterations: 10,
+  samples: SAMPLES,
 };
 
-let rand = splitmix32(config.seed);
+let rand = splitmix32(0.1882 * 2 ** 32);
 
-const state = tgpu.lazy(() => (
-  {
-    stackDepth: 0,
-  }
-));
+const state = tgpu.lazy(() => ({
+  stackDepth: 0,
+}));
 
 const instructions: TgpuComptime<() => TgpuGenericFn<() => void>>[] = [];
 const LEAF_COUNT = 3;
 
 // TODO: replace it with number, when unroll supports that
 const arrayForUnroll = tgpu.comptime((n: number) => Array.from({ length: n }));
-const branchichUnrollArray = arrayForUnroll(config.branching);
+let branchichUnrollArray = arrayForUnroll(config.branching);
 
 const choice = tgpu.comptime((): number => {
-  if (
-    state.$.stackDepth == config.maxDepth - 1 /*|| rand() > config.recurseProb*/
-  ) {
+  if (state.$.stackDepth == config.maxDepth - 1 /*|| rand() > config.recurseProb*/) {
     state.$.stackDepth++;
     return Math.floor(rand() * LEAF_COUNT);
   }
@@ -69,132 +75,135 @@ const dataLayout = tgpu.bindGroupLayout({
 });
 
 const baseFn = tgpu.comptime(() => {
-  return tgpu.fn(() => {
-    'use gpu';
+  return tgpu
+    .fn(() => {
+      'use gpu';
 
-    let v = d.vec2f(0.5, 0.5);
-    v.x += 0.1;
+      let v = d.vec2f(0.5, 0.5);
+      v.x += 0.1;
 
-    popDepth();
-  }).$name('baseFn');
+      popDepth();
+    })
+    .$name('baseFn');
 });
 
 const blendFn = tgpu.comptime(() => {
-  return tgpu.fn(() => {
-    'use gpu';
+  return tgpu
+    .fn(() => {
+      'use gpu';
 
-    const base = d.vec3f(0.2, 0.4, 0.8);
-    const target = colorAccessor.$;
-    const t = std.fract(timeAccessor.$);
-    const blended = std.mix(base, target, t);
-    const luma = std.dot(blended, d.vec3f(0.299, 0.587, 0.114));
+      const base = d.vec3f(0.2, 0.4, 0.8);
+      const target = colorAccessor.$;
+      const t = std.fract(timeAccessor.$);
+      const blended = std.mix(base, target, t);
+      const _luma = std.dot(blended, d.vec3f(0.299, 0.587, 0.114));
 
-    popDepth();
-  }).$name('blendFn');
+      popDepth();
+    })
+    .$name('blendFn');
 });
 
 const thresholdFn = tgpu.comptime(() => {
-  return tgpu.fn(() => {
-    'use gpu';
+  return tgpu
+    .fn(() => {
+      'use gpu';
 
-    const tint = tintSlot.$;
-    const v = d.vec2f(tint.x, tint.y);
-    const len = std.length(v);
-    const edge = std.smoothstep(0.2, 0.8, len);
-    const result = d.vec3f(tint.x * edge, tint.y * edge, tint.z);
+      const tint = tintSlot.$;
+      const v = d.vec2f(tint.x, tint.y);
+      const len = std.length(v);
+      const edge = std.smoothstep(0.2, 0.8, len);
+      const _result = d.vec3f(tint.x * edge, tint.y * edge, tint.z);
 
-    popDepth();
-  }).$name('thresholdFn');
+      popDepth();
+    })
+    .$name('thresholdFn');
 });
 
 const waveFn = tgpu.comptime(() => {
-  return tgpu.fn(() => {
-    'use gpu';
+  return tgpu
+    .fn(() => {
+      'use gpu';
 
-    let v = d.vec2f(0.3, 0.7);
-    v = d.vec2f(std.sin(v.x * 3.14159), std.cos(v.y * 3.14159));
-    const energy = v.x * v.x + v.y * v.y;
+      let v = d.vec2f(0.3, 0.7);
+      v = d.vec2f(std.sin(v.x * Math.PI), std.cos(v.y * Math.PI));
+      const _energy = v.x * v.x + v.y * v.y;
 
-    for (const _i of tgpu.unroll(branchichUnrollArray)) {
-      // @ts-expect-error trust me
-      instructions[choice()]()();
-    }
+      for (const _i of tgpu.unroll(branchichUnrollArray)) {
+        // @ts-expect-error trust me
+        instructions[choice()]()();
+      }
 
-    popDepth();
-  }).$name('waveFn');
+      popDepth();
+    })
+    .$name('waveFn');
 });
 
 const accFn = tgpu.comptime(() => {
-  return tgpu.fn(() => {
-    'use gpu';
+  return tgpu
+    .fn(() => {
+      'use gpu';
 
-    const offset = dataLayout.$.offset;
-    const scale = dataLayout.$.scale;
-    let acc = d.vec2f();
-    acc = d.vec2f(acc.x + offset.x * scale, acc.y + offset.y * scale);
+      const offset = dataLayout.$.offset;
+      const scale = dataLayout.$.scale;
+      let acc = d.vec2f();
+      acc = d.vec2f(acc.x + offset.x * scale, acc.y + offset.y * scale);
 
-    for (const _i of tgpu.unroll(branchichUnrollArray)) {
-      // @ts-expect-error trust me
-      instructions[choice()]()();
-    }
+      for (const _i of tgpu.unroll(branchichUnrollArray)) {
+        // @ts-expect-error trust me
+        instructions[choice()]()();
+      }
 
-    popDepth();
-  }).$name('accFn');
+      popDepth();
+    })
+    .$name('accFn');
 });
 
 const rotateFn = tgpu.comptime(() => {
-  return tgpu.fn(() => {
-    'use gpu';
+  return tgpu
+    .fn(() => {
+      'use gpu';
 
-    const phase = phaseSlot.$;
-    const angle = phase.x + timeAccessor.$ * phase.y;
-    let v = d.vec2f(1, 0);
-    const c = Math.cos(angle);
-    const s = Math.sin(angle);
-    v = d.vec2f(v.x * c - v.y * s, v.x * s + v.y * c);
+      const phase = phaseSlot.$;
+      const angle = phase.x + timeAccessor.$ * phase.y;
+      let v = d.vec2f(1, 0);
+      const c = Math.cos(angle);
+      const s = Math.sin(angle);
+      v = d.vec2f(v.x * c - v.y * s, v.x * s + v.y * c);
 
-    for (const _i of tgpu.unroll(branchichUnrollArray)) {
-      // @ts-expect-error trust me
-      instructions[choice()]()();
-    }
+      for (const _i of tgpu.unroll(branchichUnrollArray)) {
+        // @ts-expect-error trust me
+        instructions[choice()]()();
+      }
 
-    popDepth();
-  }).$name('rotateFn');
+      popDepth();
+    })
+    .$name('rotateFn');
 });
 
 const spiralFn = tgpu.comptime(() => {
-  return tgpu.fn(() => {
-    'use gpu';
+  return tgpu
+    .fn(() => {
+      'use gpu';
 
-    const t = timeAccessor.$;
-    const center = dataLayout.$.offset;
-    const radius = 0.5 * std.sin(t * 2.0);
-    const angle = t * 3.14159;
-    const pos = d.vec2f(
-      center.x + radius * Math.cos(angle),
-      center.y + radius * Math.sin(angle),
-    );
-    const dist = std.length(pos);
+      const t = timeAccessor.$;
+      const center = dataLayout.$.offset;
+      const radius = 0.5 * std.sin(t * 2.0);
+      const angle = t * Math.PI;
+      const pos = d.vec2f(center.x + radius * Math.cos(angle), center.y + radius * Math.sin(angle));
+      const _dist = std.length(pos);
 
-    for (const _i of tgpu.unroll(branchichUnrollArray)) {
-      // @ts-expect-error trust me
-      instructions[choice()]()();
-    }
+      for (const _i of tgpu.unroll(branchichUnrollArray)) {
+        // @ts-expect-error trust me
+        instructions[choice()]()();
+      }
 
-    popDepth();
-  }).$name('spiralFn');
+      popDepth();
+    })
+    .$name('spiralFn');
 });
 
 // leaves first, then recursive
-instructions.push(
-  baseFn,
-  blendFn,
-  thresholdFn,
-  waveFn,
-  accFn,
-  rotateFn,
-  spiralFn,
-);
+instructions.push(baseFn, blendFn, thresholdFn, waveFn, accFn, rotateFn, spiralFn);
 
 const main = () => {
   'use gpu';
@@ -205,11 +214,11 @@ const main = () => {
   }
 };
 
-type BenchmarkResult = {
+interface BenchmarkResult {
   maxDepth: number;
   timeMs: number;
   wgslLength: number;
-};
+}
 
 function benchmarkResolve(): BenchmarkResult {
   const start = performance.now();
@@ -218,32 +227,76 @@ function benchmarkResolve(): BenchmarkResult {
   return { maxDepth: config.maxDepth, timeMs, wgslLength: wgsl.length };
 }
 
-const DEPTH_RANGE = [1, 2, 3, 4, 5, 6, 7];
 const outDir = resolve(import.meta.dirname ?? '.', '.');
 
-test('resolution time vs maxDepth', () => {
-  // one resolve on default depth to minimize JIT warmup bias
-  const _ = benchmarkResolve();
+function runBenchmark(input: ProcGenConfig, output: BenchmarkResult[]) {
+  Object.assign(config, { samples: input.samples ?? SAMPLES }, input);
+  branchichUnrollArray = arrayForUnroll(config.branching);
+  rand = splitmix32(config.seed);
 
-  const results: BenchmarkResult[] = [];
-
-  for (const depth of DEPTH_RANGE) {
-    config.maxDepth = depth;
-    for (let i = 0; i < config.iterations; i++) {
-      rand = splitmix32(depth * 2 ** 32);
-      const result = benchmarkResolve();
-      results.push(result);
-      console.log(
-        `iteration=${i}  maxDepth=${depth}  time=${
-          result.timeMs.toFixed(2)
-        }ms  wgsl=${result.wgslLength} chars`,
-      );
-    }
+  for (let i = 0; i < config.samples; i++) {
+    rand = splitmix32(config.maxDepth * 2 ** 32);
+    const result = benchmarkResolve();
+    output.push(result);
+    console.log(
+      `iteration=${i}  maxDepth=${config.maxDepth}  time=${result.timeMs.toFixed(
+        2,
+      )}ms  wgsl=${result.wgslLength} chars`,
+    );
   }
+}
 
-  writeFileSync(
-    resolve(outDir, 'results.json'),
-    JSON.stringify(results, null, 2),
+function warmupJIT() {
+  runBenchmark(
+    {
+      mainBranching: 1,
+      branching: 1,
+      maxDepth: 1,
+      recurseProb: 1,
+      seed: 0.1882 * 2 ** 32,
+    },
+    [],
   );
-  console.log(`\nResults written to results.json`);
+}
+
+test('resolution time vs max depth', () => {
+  const results: BenchmarkResult[] = [];
+  const DEPTHS = Array.from({ length: 8 }, (_, i) => i + 1);
+
+  warmupJIT();
+
+  for (const depth of DEPTHS) {
+    runBenchmark(
+      {
+        mainBranching: 2,
+        branching: 2,
+        maxDepth: depth,
+        recurseProb: 1,
+        seed: 0.1882 * 2 ** 32,
+      },
+      results,
+    );
+  }
+  writeFileSync(resolve(outDir, 'results-max-depth.json'), JSON.stringify(results, null, 2));
+});
+
+test('resolution time vs linear recursion', () => {
+  const results: BenchmarkResult[] = [];
+  const DEPTHS = Array.from({ length: 8 }, (_, i) => i + 1);
+
+  warmupJIT();
+
+  for (const depth of DEPTHS) {
+    runBenchmark(
+      {
+        mainBranching: 1,
+        branching: 1,
+        maxDepth: depth,
+        recurseProb: 1,
+        seed: 0.1882 * 2 ** 32,
+      },
+      results,
+    );
+  }
+  writeFileSync(resolve(outDir, 'results-linear-recursion.json'), JSON.stringify(results, null, 2));
 });
