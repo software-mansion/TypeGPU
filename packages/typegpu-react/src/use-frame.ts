@@ -1,6 +1,10 @@
 import { useEffect, useRef } from 'react';
 
-export function useFrame(cb: () => void) {
+interface FrameCtx {
+  readonly deltaSeconds: number;
+}
+
+export function useFrame(cb: (ctx: FrameCtx) => void) {
   const latestCb = useRef(cb);
 
   useEffect(() => {
@@ -9,10 +13,17 @@ export function useFrame(cb: () => void) {
 
   useEffect(() => {
     let frameId: number | undefined;
+    let lastTime: number | undefined;
 
     const loop = () => {
       frameId = requestAnimationFrame(loop);
-      latestCb.current();
+
+      const now = performance.now();
+      if (lastTime === undefined) {
+        lastTime = now;
+      }
+      latestCb.current({ deltaSeconds: (now - lastTime) / 1000 });
+      lastTime = now;
     };
 
     loop();
