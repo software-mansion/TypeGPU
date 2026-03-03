@@ -6,7 +6,10 @@ describe('comptime', () => {
   it('should work in JS', () => {
     const myComptime = tgpu.comptime(() => 0.5);
 
-    const myFn = tgpu.fn([], d.f32)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       return myComptime();
     });
 
@@ -16,7 +19,10 @@ describe('comptime', () => {
   it('should work when returning a constant', () => {
     const myComptime = tgpu.comptime(() => 0.5);
 
-    const myFn = tgpu.fn([], d.f32)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       return myComptime();
     });
 
@@ -30,7 +36,10 @@ describe('comptime', () => {
   it('should work when returning a reference', () => {
     let a = 0;
     const myComptime = tgpu.comptime(() => a);
-    const myFn = tgpu.fn([], d.f32)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       return myComptime();
     });
 
@@ -53,7 +62,10 @@ describe('comptime', () => {
       return v.add(d.vec3f(0, 1, 2));
     });
 
-    const myFn = tgpu.fn([], d.f32)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       return stagger(d.vec3f(2)).z;
     });
 

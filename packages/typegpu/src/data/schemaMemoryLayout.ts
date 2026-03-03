@@ -8,12 +8,7 @@ import {
   isUnstruct,
   undecorate,
 } from './dataTypes.ts';
-import type {
-  BaseData,
-  WgslArray,
-  WgslStruct,
-  WgslTypeLiteral,
-} from './wgslTypes.ts';
+import type { BaseData, WgslArray, WgslStruct, WgslTypeLiteral } from './wgslTypes.ts';
 import { isDecorated, isWgslArray, isWgslStruct } from './wgslTypes.ts';
 
 const knownSizesMap: Record<string, number> = {
@@ -188,9 +183,7 @@ function computeMLOfWgslArray(data: WgslArray): SchemaMemoryLayout {
   const hasPadding = stride > elementSize;
   const isContiguous = !hasPadding && elementMemoryLayout.isContiguous;
 
-  const size = data.elementCount === 0
-    ? Number.NaN
-    : data.elementCount * stride;
+  const size = data.elementCount === 0 ? Number.NaN : data.elementCount * stride;
 
   let longestContiguousPrefix: number;
   if (isContiguous) {
@@ -255,8 +248,7 @@ function computeMemoryLayout(data: BaseData): SchemaMemoryLayout {
     const undecoratedLayout = computeMemoryLayout(undecorate(data));
 
     if (size) {
-      const isContiguous = size === undecoratedLayout.size &&
-        undecoratedLayout.isContiguous;
+      const isContiguous = size === undecoratedLayout.size && undecoratedLayout.isContiguous;
 
       return {
         isContiguous,

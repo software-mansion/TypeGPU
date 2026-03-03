@@ -11,12 +11,15 @@ describe('ripple-cube example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'simple',
-      name: 'ripple-cube',
-      setupMocks: () => mockResizeObserver(),
-      expectedCalls: 11,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'simple',
+        name: 'ripple-cube',
+        setupMocks: () => mockResizeObserver(),
+        expectedCalls: 11,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -149,8 +152,8 @@ describe('ripple-cube example', () => {
         return dot(relative, gridVector);
       }
 
-      fn quinticInterpolationImpl(t: vec3f) -> vec3f {
-        return ((t * (t * t)) * ((t * ((t * 6f) - 15f)) + 10f));
+      fn quinticInterpolation(t: vec3f) -> vec3f {
+        return (((t * t) * t) * ((t * ((t * 6f) - 15f)) + 10f));
       }
 
       fn sample(pos: vec3f) -> f32 {
@@ -164,7 +167,7 @@ describe('ripple-cube example', () => {
         let XYz = dotProdGrid(pos, (minJunction + vec3f(1, 1, 0)));
         let XYZ = dotProdGrid(pos, (minJunction + vec3f(1)));
         var partial = (pos - minJunction);
-        var smoothPartial = quinticInterpolationImpl(partial);
+        var smoothPartial = quinticInterpolation(partial);
         let xy = mix(xyz, xyZ, smoothPartial.z);
         let xY = mix(xYz, xYZ, smoothPartial.z);
         let Xy = mix(Xyz, XyZ, smoothPartial.z);
@@ -413,7 +416,7 @@ describe('ripple-cube example', () => {
       }
 
       fn fresnelSchlick(cosTheta: f32, f0: vec3f) -> vec3f {
-        return (f0 + ((vec3f(1) - f0) * pow((1f - cosTheta), 5f)));
+        return (f0 + ((1f - f0) * pow((1f - cosTheta), 5f)));
       }
 
       fn evaluateLight(p: vec3f, n: vec3f, v: vec3f, light: Light, material: Material, f0: vec3f) -> vec3f {
@@ -428,8 +431,8 @@ describe('ripple-cube example', () => {
         let ndf = distributionGGX(ndoth, material.roughness);
         let g = geometrySmith(ndotv, ndotl, material.roughness);
         var fresnel = fresnelSchlick(ndoth, f0);
-        var specular = (fresnel * ((ndf * g) / (((4f * ndotv) * ndotl) + 1e-3f)));
-        var kd = ((vec3f(1) - fresnel) * (1f - material.metallic));
+        var specular = ((fresnel * (ndf * g)) / (((4f * ndotv) * ndotl) + 1e-3f));
+        var kd = ((1f - fresnel) * (1f - material.metallic));
         return (((((kd * material.albedo) / 3.141592653589793f) + specular) * radiance) * ndotl);
       }
 
@@ -449,8 +452,8 @@ describe('ripple-cube example', () => {
         return dot(relative, gridVector);
       }
 
-      fn quinticInterpolationImpl(t: vec3f) -> vec3f {
-        return ((t * (t * t)) * ((t * ((t * 6f) - 15f)) + 10f));
+      fn quinticInterpolation(t: vec3f) -> vec3f {
+        return (((t * t) * t) * ((t * ((t * 6f) - 15f)) + 10f));
       }
 
       fn sample(pos: vec3f) -> f32 {
@@ -464,7 +467,7 @@ describe('ripple-cube example', () => {
         let XYz = dotProdGrid(pos, (minJunction + vec3f(1, 1, 0)));
         let XYZ = dotProdGrid(pos, (minJunction + vec3f(1)));
         var partial = (pos - minJunction);
-        var smoothPartial = quinticInterpolationImpl(partial);
+        var smoothPartial = quinticInterpolation(partial);
         let xy = mix(xyz, xyZ, smoothPartial.z);
         let xY = mix(xYz, xYZ, smoothPartial.z);
         let Xy = mix(Xyz, XyZ, smoothPartial.z);
@@ -480,15 +483,15 @@ describe('ripple-cube example', () => {
         var lo = vec3f();
         // unrolled iteration #0
         {
-          lo = (lo + evaluateLight(p, n, v, lightsUniform[0i], (*material), f0));
+          lo += evaluateLight(p, n, v, lightsUniform[0i], (*material), f0);
         }
         // unrolled iteration #1
         {
-          lo = (lo + evaluateLight(p, n, v, lightsUniform[1i], (*material), f0));
+          lo += evaluateLight(p, n, v, lightsUniform[1i], (*material), f0);
         }
         var reflectDir = reflect(v, n);
         var pScaled = (p * 50f);
-        var roughOffset = (vec3f(sample(pScaled), sample((pScaled + 100f)), sample((pScaled + 200f))) * ((*material).roughness * 0.3f));
+        var roughOffset = ((vec3f(sample(pScaled), sample((pScaled + 100f)), sample((pScaled + 200f))) * (*material).roughness) * 0.3f);
         var blurredReflectDir = normalize((reflectDir + roughOffset));
         var envColor = textureSampleLevel(envMap, envSampler, blurredReflectDir, ((*material).roughness * 4f));
         let ndotv = max(dot(n, v), 0f);
@@ -730,7 +733,7 @@ describe('ripple-cube example', () => {
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
         var dimensions = textureDimensions(inputTexture);
-        var texelSize = (vec2f(1) / vec2f(dimensions));
+        var texelSize = (1f / vec2f(dimensions));
         var uv = ((vec2f(f32(x), f32(y)) + 0.5f) / vec2f(dimensions));
         var offsetDir = vec2f(1, 0);
         var result = vec3f();
@@ -738,7 +741,7 @@ describe('ripple-cube example', () => {
         for (var i = -8; (i <= 8i); i++) {
           var offset = ((offsetDir * f32(i)) * texelSize);
           let weight = exp((-(f32((i * i))) / 16f));
-          result = (result + (textureSampleLevel(inputTexture, sampler_1, (uv + offset), 0).rgb * weight));
+          result += (textureSampleLevel(inputTexture, sampler_1, (uv + offset), 0).rgb * weight);
           totalWeight += weight;
         }
         textureStore(outputTexture, vec2u(x, y), vec4f((result / totalWeight), 1f));
@@ -765,7 +768,7 @@ describe('ripple-cube example', () => {
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
         var dimensions = textureDimensions(inputTexture);
-        var texelSize = (vec2f(1) / vec2f(dimensions));
+        var texelSize = (1f / vec2f(dimensions));
         var uv = ((vec2f(f32(x), f32(y)) + 0.5f) / vec2f(dimensions));
         var offsetDir = vec2f(0, 1);
         var result = vec3f();
@@ -773,7 +776,7 @@ describe('ripple-cube example', () => {
         for (var i = -8; (i <= 8i); i++) {
           var offset = ((offsetDir * f32(i)) * texelSize);
           let weight = exp((-(f32((i * i))) / 16f));
-          result = (result + (textureSampleLevel(inputTexture, sampler_1, (uv + offset), 0).rgb * weight));
+          result += (textureSampleLevel(inputTexture, sampler_1, (uv + offset), 0).rgb * weight);
           totalWeight += weight;
         }
         textureStore(outputTexture, vec2u(x, y), vec4f((result / totalWeight), 1f));
@@ -829,7 +832,7 @@ describe('ripple-cube example', () => {
         var final_1 = (color.rgb + (bloomColor.rgb * bloomUniform.intensity));
         var centeredUV = ((_arg_0.uv - 0.5f) * 2f);
         let vignette = (1f - (dot(centeredUV, centeredUV) * 0.15f));
-        final_1 = (final_1 * vignette);
+        final_1 *= vignette;
         return vec4f(final_1, 1f);
       }"
     `);

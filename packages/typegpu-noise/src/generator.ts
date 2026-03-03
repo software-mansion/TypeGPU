@@ -1,5 +1,5 @@
 import tgpu, { d, type TgpuFnShell, type TgpuSlot } from 'typegpu';
-import { add, cos, dot, fract } from 'typegpu/std';
+import { cos, dot, fract } from 'typegpu/std';
 
 export interface StatefulGenerator {
   seed?: (seed: number) => void;
@@ -28,11 +28,13 @@ export const BPETER: StatefulGenerator = (() => {
     }),
 
     seed3: tgpu.fn([d.vec3f])((value) => {
-      seed.$ = add(value.xy, d.vec2f(value.z));
+      'use gpu';
+      seed.$ = value.xy + d.vec2f(value.z);
     }),
 
     seed4: tgpu.fn([d.vec4f])((value) => {
-      seed.$ = add(value.xy, value.zw);
+      'use gpu';
+      seed.$ = value.xy + value.zw;
     }),
 
     sample: randomGeneratorShell(() => {
@@ -49,6 +51,4 @@ export const BPETER: StatefulGenerator = (() => {
 // The default (Can change between releases to improve uniformity).
 export const DefaultGenerator: StatefulGenerator = BPETER;
 
-export const randomGeneratorSlot: TgpuSlot<StatefulGenerator> = tgpu.slot(
-  DefaultGenerator,
-);
+export const randomGeneratorSlot: TgpuSlot<StatefulGenerator> = tgpu.slot(DefaultGenerator);

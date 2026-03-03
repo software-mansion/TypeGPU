@@ -24,11 +24,7 @@ const compositeLayout = tgpu.bindGroupLayout({
   sampler: { sampler: 'filtering' },
 });
 
-function createProcessingTexture(
-  root: TgpuRoot,
-  width: number,
-  height: number,
-) {
+function createProcessingTexture(root: TgpuRoot, width: number, height: number) {
   const texture = root['~unstable']
     .createTexture({
       size: [width, height],
@@ -67,33 +63,21 @@ export function createPostProcessingPipelines(
   const taaResolve = root.createGuardedComputePipeline((x, y) => {
     'use gpu';
     const coord = d.vec2i(d.i32(x), d.i32(y));
-    const current = std.textureLoad(
-      taaResolveLayout.$.currentTexture,
-      coord,
-      0,
-    );
-    const historyColor = std.textureLoad(
-      taaResolveLayout.$.historyTexture,
-      coord,
-      0,
-    );
+    const current = std.textureLoad(taaResolveLayout.$.currentTexture, coord, 0);
+    const historyColor = std.textureLoad(taaResolveLayout.$.historyTexture, coord, 0);
 
     let minColor = d.vec3f(9999);
     let maxColor = d.vec3f(-9999);
 
     for (const ox of tgpu.unroll([-1, 0, 1])) {
       for (const oy of tgpu.unroll([-1, 0, 1])) {
-        const sampleCoord = coord.add(d.vec2i(ox, oy));
+        const sampleCoord = coord + d.vec2i(ox, oy);
         const clampedCoord = std.clamp(
           sampleCoord,
           d.vec2i(0, 0),
           d.vec2i(d.i32(width) - 1, d.i32(height) - 1),
         );
-        const neighbor = std.textureLoad(
-          taaResolveLayout.$.currentTexture,
-          clampedCoord,
-          0,
-        ).rgb;
+        const neighbor = std.textureLoad(taaResolveLayout.$.currentTexture, clampedCoord, 0).rgb;
         minColor = std.min(minColor, neighbor);
         maxColor = std.max(maxColor, neighbor);
       }
@@ -102,52 +86,33 @@ export function createPostProcessingPipelines(
     const clampedHistory = std.clamp(historyColor.rgb, minColor, maxColor);
     const blended = std.mix(current.rgb, clampedHistory, TAA_BLEND);
 
-    std.textureStore(
-      taaResolveLayout.$.outputTexture,
-      d.vec2u(x, y),
-      d.vec4f(blended, 1),
-    );
+    std.textureStore(taaResolveLayout.$.outputTexture, d.vec2u(x, y), d.vec4f(blended, 1));
   });
 
-  const copyToHistory = root.createGuardedComputePipeline(
-    (x, y) => {
-      'use gpu';
-      const color = std.textureLoad(
-        processLayout.$.inputTexture,
-        d.vec2i(d.i32(x), d.i32(y)),
-        0,
-      );
-      std.textureStore(processLayout.$.outputTexture, d.vec2u(x, y), color);
-    },
-  );
+  const copyToHistory = root.createGuardedComputePipeline((x, y) => {
+    'use gpu';
+    const color = std.textureLoad(processLayout.$.inputTexture, d.vec2i(d.i32(x), d.i32(y)), 0);
+    std.textureStore(processLayout.$.outputTexture, d.vec2u(x, y), color);
+  });
 
   const extractBright = root
     .with(bloomParamsAccess, bloomUniform)
-    .createGuardedComputePipeline(
-      (x, y) => {
-        'use gpu';
-        const dimensions = std.textureDimensions(
-          processLayout.$.outputTexture,
-        );
-        const uv = d.vec2f(x, y).add(0.5).div(d.vec2f(dimensions));
-        const color = std.textureSampleLevel(
-          processLayout.$.inputTexture,
-          processLayout.$.sampler,
-          uv,
-          0,
-        );
-        const brightness = std.dot(color.rgb, d.vec3f(0.2126, 0.7152, 0.0722));
-        const threshold = bloomParamsAccess.$.threshold;
-        const bright = std.max(brightness - threshold, 0) /
-          std.max(brightness, 1e-4);
-        const bloomColor = color.rgb.mul(bright);
-        std.textureStore(
-          processLayout.$.outputTexture,
-          d.vec2u(x, y),
-          d.vec4f(bloomColor, 1),
-        );
-      },
-    );
+    .createGuardedComputePipeline((x, y) => {
+      'use gpu';
+      const dimensions = std.textureDimensions(processLayout.$.outputTexture);
+      const uv = (d.vec2f(x, y) + 0.5) / d.vec2f(dimensions);
+      const color = std.textureSampleLevel(
+        processLayout.$.inputTexture,
+        processLayout.$.sampler,
+        uv,
+        0,
+      );
+      const brightness = std.dot(color.rgb, d.vec3f(0.2126, 0.7152, 0.0722));
+      const threshold = bloomParamsAccess.$.threshold;
+      const bright = std.max(brightness - threshold, 0) / std.max(brightness, 1e-4);
+      const bloomColor = color.rgb * bright;
+      std.textureStore(processLayout.$.outputTexture, d.vec2u(x, y), d.vec4f(bloomColor, 1));
+    });
 
   const blurHorizontal = createBlurPass(root, 'horizontal');
 
@@ -157,34 +122,27 @@ export function createPostProcessingPipelines(
     in: { uv: d.vec2f },
     out: d.vec4f,
   })(({ uv }) => {
-    const color = std.textureSample(
-      compositeLayout.$.colorTexture,
-      compositeLayout.$.sampler,
-      uv,
-    );
+    'use gpu';
+    const color = std.textureSample(compositeLayout.$.colorTexture, compositeLayout.$.sampler, uv);
     const bloomColor = std.textureSample(
       compositeLayout.$.bloomTexture,
       compositeLayout.$.sampler,
       uv,
     );
 
-    let final = color.rgb.add(
-      bloomColor.rgb.mul(bloomParamsAccess.$.intensity),
-    );
+    let final = color.rgb + bloomColor.rgb * bloomParamsAccess.$.intensity;
 
-    const centeredUV = uv.sub(0.5).mul(2);
+    const centeredUV = (uv - 0.5) * 2;
     const vignette = 1 - std.dot(centeredUV, centeredUV) * 0.15;
-    final = final.mul(vignette);
+    final *= vignette;
 
     return d.vec4f(final, 1);
   });
 
-  const renderPipeline = root
-    .with(bloomParamsAccess, bloomUniform)
-    .createRenderPipeline({
-      vertex: fullScreenTriangle,
-      fragment: fragmentMain,
-    });
+  const renderPipeline = root.with(bloomParamsAccess, bloomUniform).createRenderPipeline({
+    vertex: fullScreenTriangle,
+    fragment: fragmentMain,
+  });
 
   const taaBindGroup = root.createBindGroup(taaResolveLayout, {
     currentTexture: result.sampleView,
@@ -230,62 +188,45 @@ export function createPostProcessingPipelines(
       copyToHistory.with(copyBindGroup).dispatchThreads(width, height);
     },
     runBloom: () => {
-      extractBright
-        .with(extractBindGroup)
-        .dispatchThreads(bloomWidth, bloomHeight);
-      blurHorizontal
-        .with(blurHorizontalBindGroup)
-        .dispatchThreads(bloomWidth, bloomHeight);
-      blurVertical
-        .with(blurVerticalBindGroup)
-        .dispatchThreads(bloomWidth, bloomHeight);
+      extractBright.with(extractBindGroup).dispatchThreads(bloomWidth, bloomHeight);
+      blurHorizontal.with(blurHorizontalBindGroup).dispatchThreads(bloomWidth, bloomHeight);
+      blurVertical.with(blurVerticalBindGroup).dispatchThreads(bloomWidth, bloomHeight);
     },
     render: (targetView: ColorAttachment['view']) => {
-      renderPipeline
-        .with(compositeBindGroup)
-        .withColorAttachment({ view: targetView })
-        .draw(3);
+      renderPipeline.with(compositeBindGroup).withColorAttachment({ view: targetView }).draw(3);
     },
   };
 }
 
-function createBlurPass(
-  root: TgpuRoot,
-  direction: 'horizontal' | 'vertical',
-) {
+function createBlurPass(root: TgpuRoot, direction: 'horizontal' | 'vertical') {
   return root.createGuardedComputePipeline((x, y) => {
     'use gpu';
     const dimensions = std.textureDimensions(processLayout.$.inputTexture);
-    const texelSize = d.vec2f(1).div(d.vec2f(dimensions));
-    const uv = d.vec2f(x, y).add(0.5).div(d.vec2f(dimensions));
+    const texelSize = 1 / d.vec2f(dimensions);
+    const uv = (d.vec2f(x, y) + 0.5) / d.vec2f(dimensions);
 
-    const offsetDir = direction === 'horizontal'
-      ? d.vec2f(1, 0)
-      : d.vec2f(0, 1);
+    const offsetDir = direction === 'horizontal' ? d.vec2f(1, 0) : d.vec2f(0, 1);
 
     let result = d.vec3f(0);
     let totalWeight = d.f32(0);
 
     for (let i = -BLUR_RADIUS; i <= BLUR_RADIUS; i++) {
-      const offset = offsetDir.mul(d.f32(i)).mul(texelSize);
+      const offset = offsetDir * i * texelSize;
       const weight = std.exp(-d.f32(i * i) / (2 * BLUR_RADIUS));
-      result = result.add(
-        std
-          .textureSampleLevel(
-            processLayout.$.inputTexture,
-            processLayout.$.sampler,
-            uv.add(offset),
-            0,
-          )
-          .rgb.mul(weight),
-      );
+      result +=
+        std.textureSampleLevel(
+          processLayout.$.inputTexture,
+          processLayout.$.sampler,
+          uv + offset,
+          0,
+        ).rgb * weight;
       totalWeight += weight;
     }
 
     std.textureStore(
       processLayout.$.outputTexture,
       d.vec2u(x, y),
-      d.vec4f(result.div(totalWeight), 1),
+      d.vec4f(result / totalWeight, 1),
     );
   });
 }

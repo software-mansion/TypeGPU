@@ -17,10 +17,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 // == BUFFERS ==
 const floorAngleUniform = root.createUniform(d.f32);
 const sphereAngleUniform = root.createUniform(d.f32);
-const glowIntensityUniform = root.createUniform(
-  d.f32,
-  c.INITIAL_GLOW_INTENSITY,
-);
+const glowIntensityUniform = root.createUniform(d.f32, c.INITIAL_GLOW_INTENSITY);
 const resolutionUniform = root.createUniform(d.vec2f);
 const sphereColorUniform = root.createUniform(d.vec3f, c.initialSphereColor);
 
@@ -32,25 +29,21 @@ const floorPatternSlot = tgpu.slot(circles);
 // == RAYMARCHING ==
 
 // returns smallest distance to some object in the scene
-const getSceneRay = tgpu.fn([d.vec3f], Ray)((p) => {
+const getSceneRay = tgpu.fn(
+  [d.vec3f],
+  Ray,
+)((p) => {
   const floor = Ray({
     dist: sdPlane(p, c.planeOrthonormal, c.PLANE_OFFSET),
     color: floorPatternSlot.$(p.xz, floorAngleUniform.$),
   });
-  const sphere = getSphere(
-    p,
-    sphereColorUniform.$,
-    c.sphereCenter,
-    sphereAngleUniform.$,
-  );
+  const sphere = getSphere(p, sphereColorUniform.$, c.sphereCenter, sphereAngleUniform.$);
 
   return rayUnion(floor, sphere);
 });
 
-const rayMarch = tgpu.fn(
-  [d.vec3f, d.vec3f],
-  LightRay,
-)((ro, rd) => {
+const rayMarch = (ro: d.v3f, rd: d.v3f) => {
+  'use gpu';
   let distOrigin = d.f32();
   const result = Ray({
     dist: d.f32(c.MAX_DIST),
@@ -60,18 +53,11 @@ const rayMarch = tgpu.fn(
   let glow = d.vec3f();
 
   for (let i = 0; i < c.MAX_STEPS; i++) {
-    const p = rd.mul(distOrigin).add(ro);
+    const p = rd * distOrigin + ro;
     const scene = getSceneRay(p);
-    const sphereDist = getSphere(
-      p,
-      sphereColorUniform.$,
-      c.sphereCenter,
-      sphereAngleUniform.$,
-    );
+    const sphereDist = getSphere(p, sphereColorUniform.$, c.sphereCenter, sphereAngleUniform.$);
 
-    glow = d.vec3f(sphereColorUniform.$)
-      .mul(std.exp(-sphereDist.dist))
-      .add(glow);
+    glow += d.vec3f(sphereColorUniform.$) * std.exp(-sphereDist.dist);
 
     distOrigin += scene.dist;
 
@@ -87,8 +73,8 @@ const rayMarch = tgpu.fn(
     }
   }
 
-  return { ray: result, glow };
-});
+  return LightRay({ ray: result, glow });
+};
 
 const vertexMain = tgpu.vertexFn({
   in: { idx: d.builtin.vertexIndex },
@@ -107,7 +93,8 @@ const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  const uv = input.uv.mul(2).sub(1);
+  'use gpu';
+  const uv = input.uv * 2 - 1;
   uv.x *= resolutionUniform.$.x / resolutionUniform.$.y;
 
   // ray origin and direction
@@ -118,7 +105,7 @@ const fragmentMain = tgpu.fragmentFn({
   const march = rayMarch(ro, rd);
 
   // sky gradient
-  const y = rd.mul(march.ray.dist).add(ro).y - 2; // camera at level 2
+  const y = rd.y * march.ray.dist + ro.y - 2; // camera at level 2
   const sky = std.mix(c.skyColor1, c.skyColor2, y / c.MAX_DIST);
 
   // fog coefficient
@@ -150,7 +137,7 @@ let floorAngle = 0;
 let sphereAngle = 0;
 let prevAngle = 0;
 function run(timestamp: number) {
-  const curAngle = (timestamp / 1000) % c.PERIOD / c.PERIOD * 2 * Math.PI;
+  const curAngle = (((timestamp / 1000) % c.PERIOD) / c.PERIOD) * 2 * Math.PI;
   const delta = (curAngle + 2 * Math.PI - prevAngle) % (2 * Math.PI);
   prevAngle = curAngle;
 
@@ -163,9 +150,7 @@ function run(timestamp: number) {
   sphereAngleUniform.write(sphereAngle);
   resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
 
-  renderPipeline
-    .withColorAttachment({ view: context })
-    .draw(3);
+  renderPipeline.withColorAttachment({ view: context }).draw(3);
 
   animationFrame = requestAnimationFrame(run);
 }

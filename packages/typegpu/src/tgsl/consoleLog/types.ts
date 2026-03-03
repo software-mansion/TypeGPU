@@ -1,12 +1,6 @@
 import type { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
 import type { Snippet } from '../../data/snippet.ts';
-import type {
-  AnyWgslData,
-  Atomic,
-  U32,
-  WgslArray,
-  WgslStruct,
-} from '../../data/wgslTypes.ts';
+import type { AnyWgslData, Atomic, U32, WgslArray, WgslStruct } from '../../data/wgslTypes.ts';
 import type { GenerationCtx } from '../generationHelpers.ts';
 
 /**
@@ -58,21 +52,10 @@ export interface LogResources {
 }
 
 export interface LogGenerator {
-  generateLog(
-    ctx: GenerationCtx,
-    op: string,
-    args: Snippet[],
-  ): Snippet;
+  generateLog(ctx: GenerationCtx, op: string, args: Snippet[]): Snippet;
   get logResources(): LogResources | undefined;
 }
 
-export const supportedLogOps = [
-  'log',
-  'debug',
-  'info',
-  'warn',
-  'error',
-  'clear',
-] as const;
+export const supportedLogOps = ['log', 'debug', 'info', 'warn', 'error', 'clear'] as const;
 
 export type SupportedLogOps = (typeof supportedLogOps)[number];

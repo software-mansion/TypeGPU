@@ -11,12 +11,15 @@ describe('simple shadow example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'rendering',
-      name: 'simple-shadow',
-      setupMocks: mockResizeObserver,
-      expectedCalls: 2,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'rendering',
+        name: 'simple-shadow',
+        setupMocks: mockResizeObserver,
+        expectedCalls: 2,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct Material {

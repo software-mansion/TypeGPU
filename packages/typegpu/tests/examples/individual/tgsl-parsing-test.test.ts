@@ -10,12 +10,15 @@ describe('tgsl parsing test example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'tests',
-      name: 'tgsl-parsing-test',
-      controlTriggers: ['Run tests'],
-      expectedCalls: 1,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'tests',
+        name: 'tgsl-parsing-test',
+        controlTriggers: ['Run tests'],
+        expectedCalls: 1,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "fn negate(input: vec3<bool>) -> vec3<bool> {

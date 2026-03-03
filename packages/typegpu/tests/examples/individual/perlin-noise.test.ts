@@ -10,11 +10,14 @@ describe('perlin noise example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'rendering',
-      name: 'perlin-noise',
-      expectedCalls: 2,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'rendering',
+        name: 'perlin-noise',
+        expectedCalls: 2,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -110,8 +113,8 @@ describe('perlin noise example', () => {
         return dot(relative, gridVector);
       }
 
-      fn quinticInterpolationImpl(t: vec3f) -> vec3f {
-        return ((t * (t * t)) * ((t * ((t * 6f) - 15f)) + 10f));
+      fn quinticInterpolation(t: vec3f) -> vec3f {
+        return (((t * t) * t) * ((t * ((t * 6f) - 15f)) + 10f));
       }
 
       fn sample(pos: vec3f) -> f32 {
@@ -125,7 +128,7 @@ describe('perlin noise example', () => {
         let XYz = dotProdGrid(pos, (minJunction + vec3f(1, 1, 0)));
         let XYZ = dotProdGrid(pos, (minJunction + vec3f(1)));
         var partial = (pos - minJunction);
-        var smoothPartial = quinticInterpolationImpl(partial);
+        var smoothPartial = quinticInterpolation(partial);
         let xy = mix(xyz, xyZ, smoothPartial.z);
         let xY = mix(xYz, xYZ, smoothPartial.z);
         let Xy = mix(Xyz, XyZ, smoothPartial.z);

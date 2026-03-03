@@ -11,32 +11,19 @@ export const miterJoinLimitSlot = tgpu.slot(2);
  * Limits the miter point to the given limit ratio, which is
  * a length relative to the line vertex radius.
  */
-export const miterLimit = tgpu.fn([vec2f, f32], vec2f)((miter, limitRatio) => {
+export const miterLimit = tgpu.fn(
+  [vec2f, f32],
+  vec2f,
+)((miter, limitRatio) => {
   const m2 = dot(miter, miter);
   if (m2 > limitRatio * limitRatio) {
-    return mul(
-      normalize(miter),
-      (limitRatio - 1) * (limitRatio * limitRatio - 1) / (m2 - 1) + 1,
-    );
+    return mul(normalize(miter), ((limitRatio - 1) * (limitRatio * limitRatio - 1)) / (m2 - 1) + 1);
   }
   return miter;
 });
 
 export const miterJoin = joinShell(
-  (
-    situationIndex,
-    vertexIndex,
-    joinPath,
-    V,
-    vu,
-    vd,
-    ul,
-    ur,
-    dl,
-    dr,
-    joinU,
-    joinD,
-  ) => {
+  (situationIndex, vertexIndex, joinPath, V, vu, vd, ul, ur, dl, dr, joinU, joinD) => {
     'use gpu';
     let miterU = miterPoint(ur, ul);
     let miterD = miterPoint(dl, dr);
@@ -45,13 +32,7 @@ export const miterJoin = joinShell(
 
     const shouldCross = situationIndex === 1 || situationIndex === 4;
     const crossCenter = intersectLines(ul, dl, ur, dr).point;
-    const averageCenter = mul(
-      add(
-        normalize(miterU),
-        normalize(miterD),
-      ),
-      0.5,
-    );
+    const averageCenter = mul(add(normalize(miterU), normalize(miterD)), 0.5);
 
     let uR = ur;
     let u = miterU;

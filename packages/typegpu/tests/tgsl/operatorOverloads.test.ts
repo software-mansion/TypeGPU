@@ -83,9 +83,7 @@ test('vec3f() /', () => {
     }"
   `);
 
-  expect(String(main())).toMatchInlineSnapshot(
-    `"vec3f(0.25, 0.5, 0.5)"`,
-  );
+  expect(String(main())).toMatchInlineSnapshot(`"vec3f(0.25, 0.5, 0.5)"`);
 });
 
 test('vec3f() %', () => {
@@ -106,9 +104,7 @@ test('vec3f() %', () => {
     }"
   `);
 
-  expect(String(main())).toMatchInlineSnapshot(
-    `"vec3f(1, 2, 1)"`,
-  );
+  expect(String(main())).toMatchInlineSnapshot(`"vec3f(1, 2, 1)"`);
 });
 
 test('+= refOfVec3f', () => {

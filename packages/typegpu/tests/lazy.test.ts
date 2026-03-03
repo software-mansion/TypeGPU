@@ -30,7 +30,10 @@ describe('TgpuLazy', () => {
     const foo = tgpu.slot<number>();
     const double = tgpu.lazy(() => foo.$ * 2);
 
-    const getDouble = tgpu.fn([], d.f32)(() => {
+    const getDouble = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       return double.$;
     });
 
@@ -68,9 +71,11 @@ describe('TgpuLazy', () => {
     const fill = tgpu.lazy(() => {
       const gridSize = gridSizeSlot.$;
 
-      return tgpu.fn([d.arrayOf(d.f32, gridSize)])((arr) => {
-        /* do something */
-      }).$name('fill');
+      return tgpu
+        .fn([d.arrayOf(d.f32, gridSize)])((arr) => {
+          /* do something */
+        })
+        .$name('fill');
     });
 
     const fill2 = fill.with(gridSizeSlot, 2);
@@ -80,11 +85,12 @@ describe('TgpuLazy', () => {
     const twoArray: number[] = [1, 2];
     const threeArray: number[] = [1, 2, 3];
 
-    const main = tgpu.fn([])(() => {
-      fill.$(oneArray);
-      fill2.$(twoArray);
-      fill3.$(threeArray);
-    })
+    const main = tgpu
+      .fn([])(() => {
+        fill.$(oneArray);
+        fill2.$(twoArray);
+        fill3.$(threeArray);
+      })
       .with(gridSizeSlot, 1);
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
@@ -160,11 +166,17 @@ describe('TgpuLazy', () => {
     const valueSlot = tgpu.slot(1);
 
     const foo = tgpu.lazy(() => {
-      return tgpu.fn([], d.f32)(() => {
-        return valueSlot.$;
-      })
-        // Making the function inherit values bound to this lazy
-        .with(valueSlot, valueSlot.$);
+      return (
+        tgpu
+          .fn(
+            [],
+            d.f32,
+          )(() => {
+            return valueSlot.$;
+          })
+          // Making the function inherit values bound to this lazy
+          .with(valueSlot, valueSlot.$)
+      );
     });
 
     const foo2 = foo.with(valueSlot, 2);
@@ -192,9 +204,7 @@ describe('TgpuLazy', () => {
   it('does not allow defining lazy values at resolution', () => {
     const gridSizeSlot = tgpu.slot<number>(2);
     const absGridSize = tgpu.lazy(() =>
-      gridSizeSlot.$ > 0
-        ? tgpu.lazy(() => gridSizeSlot.$).$
-        : tgpu.lazy(() => -gridSizeSlot.$).$
+      gridSizeSlot.$ > 0 ? tgpu.lazy(() => gridSizeSlot.$).$ : tgpu.lazy(() => -gridSizeSlot.$).$,
     );
     const fn = tgpu.fn([], d.u32)(() => absGridSize.$);
 
@@ -209,9 +219,7 @@ describe('TgpuLazy', () => {
   it('can return dynamic schemas, which can be used in function bodies', () => {
     const halfPrecisionSlot = tgpu.slot(false);
 
-    const ResultArray = tgpu.lazy(() =>
-      d.arrayOf(halfPrecisionSlot.$ ? d.f16 : d.f32, 4)
-    );
+    const ResultArray = tgpu.lazy(() => d.arrayOf(halfPrecisionSlot.$ ? d.f16 : d.f32, 4));
 
     const foo = tgpu.fn([])(() => {
       const array = ResultArray.$();
@@ -225,9 +233,7 @@ describe('TgpuLazy', () => {
       fooHalf();
     };
 
-    expectTypeOf(ResultArray).toEqualTypeOf<
-      TgpuLazy<d.WgslArray<d.F16 | d.F32>>
-    >();
+    expectTypeOf(ResultArray).toEqualTypeOf<TgpuLazy<d.WgslArray<d.F16 | d.F32>>>();
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn foo() {

@@ -5,11 +5,17 @@ import type { BinaryOp } from '@typegpu/concurrent-scan';
 
 // tgpu functions
 
-export const addFn = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
+export const addFn = tgpu.fn(
+  [d.f32, d.f32],
+  d.f32,
+)((a, b) => {
   return a + b;
 });
 
-export const mulFn = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
+export const mulFn = tgpu.fn(
+  [d.f32, d.f32],
+  d.f32,
+)((a, b) => {
   return a * b;
 });
 
@@ -20,7 +26,10 @@ export const mulFn = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
  * concat10(123, 456); // 123456
  * concat10(123, 0); // 123, since 0 is considered to have 0 digits
  */
-export const concat10 = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
+export const concat10 = tgpu.fn(
+  [d.f32, d.f32],
+  d.f32,
+)((a, b) => {
   if (a === 0) return b;
   if (b === 0) return a;
   if (b === 1) return a * 10 + b;
@@ -32,11 +41,7 @@ export const concat10 = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
 
 // JS helpers
 
-function applyOp(
-  op: BinaryOp,
-  a: number | undefined,
-  b: number | undefined,
-): number {
+function applyOp(op: BinaryOp, a: number | undefined, b: number | undefined): number {
   return op.operation(a as number & d.F32, b as number & d.F32);
 }
 
@@ -57,6 +62,5 @@ export function scanJS(arr: number[], op: BinaryOp) {
 }
 
 export function isArrayEqual(arr1: number[], arr2: number[]): boolean {
-  return arr1.length === arr2.length &&
-    arr1.every((elem, i) => elem === arr2[i]);
+  return arr1.length === arr2.length && arr1.every((elem, i) => elem === arr2[i]);
 }

@@ -3,7 +3,7 @@ import tgpu, { d } from 'typegpu';
 const purple = d.vec4f(0.769, 0.392, 1.0, 1);
 const blue = d.vec4f(0.114, 0.447, 0.941, 1);
 
-const getGradientColor = tgpu.fn([d.f32], d.vec4f) /* wgsl */`(ratio) {
+const getGradientColor = tgpu.fn([d.f32], d.vec4f) /* wgsl */ `(ratio) {
   return mix(purple, blue, ratio);
 }
 `.$uses({ purple, blue });
@@ -11,7 +11,7 @@ const getGradientColor = tgpu.fn([d.f32], d.vec4f) /* wgsl */`(ratio) {
 const mainVertex = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { outPos: d.builtin.position, uv: d.vec2f },
-}) /* wgsl */`{
+}) /* wgsl */ `{
   var pos = array<vec2f, 3>(
     vec2(0.0, 0.5),
     vec2(-0.5, -0.5),
@@ -30,7 +30,7 @@ const mainVertex = tgpu.vertexFn({
 const mainFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
-}) /* wgsl */`{
+}) /* wgsl */ `{
   return getGradientColor((in.uv[0] + in.uv[1]) / 2);
 }
 `.$uses({ getGradientColor });
@@ -46,9 +46,7 @@ const pipeline = root.createRenderPipeline({
 });
 
 setTimeout(() => {
-  pipeline
-    .withColorAttachment({ view: context })
-    .draw(3);
+  pipeline.withColorAttachment({ view: context }).draw(3);
 }, 100);
 
 export function onCleanup() {

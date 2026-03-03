@@ -65,9 +65,7 @@ describe('resolve', () => {
   });
 
   it('can resolve a compute pipeline', ({ root }) => {
-    const pipeline = root
-      .withCompute(computeFn)
-      .createPipeline();
+    const pipeline = root.withCompute(computeFn).createPipeline();
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct Boid {
@@ -94,8 +92,7 @@ describe('resolve', () => {
       });
     });
 
-    expect(tgpu.resolve([pipelineGuard.pipeline]))
-      .toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pipelineGuard.pipeline])).toMatchInlineSnapshot(`
         "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
         struct Boid {
@@ -126,13 +123,12 @@ describe('resolve', () => {
       .withFragment(fragmentFn, { format: 'rgba8unorm' })
       .createPipeline();
 
-    const computePipeline = root
-      .withCompute(computeFn)
-      .createPipeline();
+    const computePipeline = root.withCompute(computeFn).createPipeline();
 
-    expect(() => tgpu.resolve([renderPipeline, computePipeline]))
-      .toThrowErrorMatchingInlineSnapshot(
-        `[Error: Found 2 pipelines but can only resolve one at a time.]`,
-      );
+    expect(() =>
+      tgpu.resolve([renderPipeline, computePipeline]),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Found 2 pipelines but can only resolve one at a time.]`,
+    );
   });
 });

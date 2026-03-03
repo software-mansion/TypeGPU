@@ -256,7 +256,7 @@ describe('d.unstruct', () => {
     });
 
     // @ts-expect-error
-    (() => TestUnstruct({ x: 1, z: 2 }));
+    () => TestUnstruct({ x: 1, z: 2 });
   });
 
   it('can be called to create a deep copy of other unstruct', () => {

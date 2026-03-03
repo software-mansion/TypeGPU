@@ -34,10 +34,7 @@ const INFINITE_RANK: ConversionRankInfo = {
   action: 'none',
 };
 
-function getAutoConversionRank(
-  src: BaseData,
-  dest: BaseData,
-): ConversionRankInfo {
+function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInfo {
   const trueSrc = undecorate(src);
   const trueDst = undecorate(dest);
 
@@ -59,7 +56,8 @@ function getAutoConversionRank(
   }
 
   if (
-    isVec(trueSrc) && isVec(trueDst) &&
+    isVec(trueSrc) &&
+    isVec(trueDst) &&
     // Same length vectors
     trueSrc.type[3] === trueDst.type[3]
   ) {
@@ -67,7 +65,8 @@ function getAutoConversionRank(
   }
 
   if (
-    isMat(trueSrc) && isMat(trueDst) &&
+    isMat(trueSrc) &&
+    isMat(trueDst) &&
     // Same dimensions
     trueSrc.type[3] === trueDst.type[3]
   ) {
@@ -78,10 +77,7 @@ function getAutoConversionRank(
   return INFINITE_RANK;
 }
 
-function getImplicitConversionRank(
-  src: BaseData,
-  dest: BaseData,
-): ConversionRankInfo {
+function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRankInfo {
   const trueSrc = undecorate(src);
   const trueDst = undecorate(dest);
 
@@ -89,16 +85,14 @@ function getImplicitConversionRank(
     isPtr(trueSrc) &&
     // Only dereferencing implicit pointers, otherwise we'd have a types mismatch between TS and WGSL
     trueSrc.implicit &&
-    getAutoConversionRank(trueSrc.inner, trueDst).rank <
-      Number.POSITIVE_INFINITY
+    getAutoConversionRank(trueSrc.inner, trueDst).rank < Number.POSITIVE_INFINITY
   ) {
     return { rank: 0, action: 'deref' };
   }
 
   if (
     isPtr(trueDst) &&
-    getAutoConversionRank(trueSrc, trueDst.inner).rank <
-      Number.POSITIVE_INFINITY
+    getAutoConversionRank(trueSrc, trueDst.inner).rank < Number.POSITIVE_INFINITY
   ) {
     return { rank: 1, action: 'ref' };
   }
@@ -112,10 +106,7 @@ function getImplicitConversionRank(
   } as const;
   type PrimitiveType = keyof typeof primitivePreference;
 
-  if (
-    trueSrc.type in primitivePreference &&
-    trueDst.type in primitivePreference
-  ) {
+  if (trueSrc.type in primitivePreference && trueDst.type in primitivePreference) {
     const srcType = trueSrc.type as PrimitiveType;
     const destType = trueDst.type as PrimitiveType;
 
@@ -173,19 +164,13 @@ function findBestType(
   uniqueTypes: BaseData[],
   allowImplicit: boolean,
 ): ConversionResult | undefined {
-  let bestResult:
-    | { type: BaseData; details: ConversionRankInfo[]; sum: number }
-    | undefined;
+  let bestResult: { type: BaseData; details: ConversionRankInfo[]; sum: number } | undefined;
 
   for (const targetType of uniqueTypes) {
     const details: ConversionRankInfo[] = [];
     let sum = 0;
     for (const sourceType of types) {
-      const conversion = getConversionRank(
-        sourceType,
-        targetType,
-        allowImplicit,
-      );
+      const conversion = getConversionRank(sourceType, targetType, allowImplicit);
       sum += conversion.rank;
       if (conversion.rank === Number.POSITIVE_INFINITY) {
         break;
@@ -199,15 +184,13 @@ function findBestType(
   if (!bestResult) {
     return undefined;
   }
-  const actions: ConversionResultAction[] = bestResult.details.map(
-    (detail, index) => ({
-      sourceIndex: index,
-      action: detail.action,
-      ...(detail.action === 'cast' && {
-        targetType: detail.targetType as U32 | F32 | I32 | F16,
-      }),
+  const actions: ConversionResultAction[] = bestResult.details.map((detail, index) => ({
+    sourceIndex: index,
+    action: detail.action,
+    ...(detail.action === 'cast' && {
+      targetType: detail.targetType as U32 | F32 | I32 | F16,
     }),
-  );
+  }));
 
   return {
     targetType: bestResult.type,
@@ -222,9 +205,7 @@ export function getBestConversion(
 ): ConversionResult | undefined {
   if (types.length === 0) return undefined;
 
-  const uniqueTargetTypes = [
-    ...new Set((targetTypes || types).map(undecorate)),
-  ];
+  const uniqueTargetTypes = [...new Set((targetTypes || types).map(undecorate))];
 
   const explicitResult = findBestType(types, uniqueTargetTypes, false);
   if (explicitResult) {
@@ -256,11 +237,7 @@ function applyActionToSnippet(
 
   switch (action.action) {
     case 'ref':
-      return snip(
-        new RefOperator(snippet, targetType as Ptr),
-        targetType,
-        snippet.origin,
-      );
+      return snip(new RefOperator(snippet, targetType as Ptr), targetType, snippet.origin);
     case 'deref':
       return derefSnippet(snippet);
     case 'cast': {
@@ -286,9 +263,9 @@ export function unify<T extends (BaseData | UnknownData)[] | []>(
     return undefined;
   }
 
-  return inTypes.map((type) =>
-    isVec(type) || isMat(type) ? type : conversion.targetType
-  ) as { [K in keyof T]: BaseData };
+  return inTypes.map((type) => (isVec(type) || isMat(type) ? type : conversion.targetType)) as {
+    [K in keyof T]: BaseData;
+  };
 }
 
 export function convertToCommonType<T extends Snippet[]>(
@@ -316,13 +293,9 @@ export function convertToCommonType<T extends Snippet[]>(
 
   if ((TEST || DEV) && verbose && conversion.hasImplicitConversions) {
     console.warn(
-      `Implicit conversions from [\n${
-        values
-          .map((v) => `  ${v.value}: ${safeStringify(v.dataType)}`)
-          .join(
-            ',\n',
-          )
-      }\n] to ${conversion.targetType.type} are supported, but not recommended.
+      `Implicit conversions from [\n${values
+        .map((v) => `  ${v.value}: ${safeStringify(v.dataType)}`)
+        .join(',\n')}\n] to ${conversion.targetType.type} are supported, but not recommended.
 Consider using explicit conversions instead.`,
     );
   }
@@ -340,9 +313,7 @@ export function tryConvertSnippet(
   targetDataTypes: BaseData | BaseData[],
   verbose = true,
 ): Snippet {
-  const targets = Array.isArray(targetDataTypes)
-    ? targetDataTypes
-    : [targetDataTypes];
+  const targets = Array.isArray(targetDataTypes) ? targetDataTypes : [targetDataTypes];
 
   const { value, dataType, origin } = snippet;
 
@@ -365,11 +336,9 @@ export function tryConvertSnippet(
   }
 
   throw new WgslTypeError(
-    `Cannot convert value of type '${
-      String(
-        dataType,
-      )
-    }' to any of the target types: [${targets.map((t) => t.type).join(', ')}]`,
+    `Cannot convert value of type '${String(
+      dataType,
+    )}' to any of the target types: [${targets.map((t) => t.type).join(', ')}]`,
   );
 }
 
