@@ -30,6 +30,8 @@
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@types/react": "^19.0.0",
     "@webgpu/types": "catalog:types",
