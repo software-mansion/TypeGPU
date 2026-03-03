@@ -1,5 +1,6 @@
 {
   "title": "Suika SDF",
   "category": "rendering",
-  "tags": ["experimental", "sdf", "ray marching"]
+  "tags": ["ecosystem", "interaction", "ray marching", "sdf"],
+  "coolFactor": 10
 }

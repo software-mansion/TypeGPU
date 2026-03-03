@@ -20,23 +20,8 @@ export function ExampleCard({ example }: { example: Example }) {
           <span className="font-semibold text-gray-400 text-lg">No thumbnail</span>
         )}
       </div>
-      <div className="p-3">
-        <h3 className="mb-2 font-semibold text-black text-lg">{example.metadata.title}</h3>
-        {((example.metadata.tags && example.metadata.tags.length > 0) || example.metadata.dev) && (
-          <div className="flex flex-wrap gap-1">
-            {example.metadata.dev && (
-              <span className="rounded-full bg-rose-700 px-2 py-1 text-white text-xs">DEV</span>
-            )}
-            {(example.metadata.tags ?? []).map((tag: string) => (
-              <span
-                key={tag}
-                className="rounded-full bg-indigo-100 px-2 py-1 text-indigo-800 text-xs"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
+      <div className="p-3 text-center">
+        <h3 className="font-semibold text-black text-lg">{example.metadata.title}</h3>
       </div>
     </ExampleLink>
   );

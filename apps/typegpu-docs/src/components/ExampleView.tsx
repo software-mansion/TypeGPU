@@ -118,20 +118,20 @@ export function ExampleView({ example, common }: Props) {
           )}
 
           {codeEditorShown && (
-            <div className="absolute z-20 h-[calc(100%-2rem)] w-[calc(100%-2rem)] bg-tameplum-50 md:relative md:h-full md:w-full">
+            <div className="absolute z-20 h-[calc(100%-2rem)] w-[calc(100%-2rem)] overflow-hidden rounded-tl-xl bg-tameplum-50 md:relative md:h-full md:w-full">
               <div className="absolute inset-0 flex flex-col justify-between">
                 <div className="h-12 pt-16 md:pt-0">
-                  <div className="flex h-full overflow-x-auto border-gray-300">
+                  <div className="flex h-full gap-1 overflow-x-auto border-b border-tameplum-100 px-1">
                     {editorTabsList.map((fileName) => (
                       <button
                         key={fileName}
                         type="button"
                         onClick={() => setCurrentFilePath(fileName)}
                         className={cs(
-                          'text-nowrap rounded-t-lg rounded-b-none px-4 text-sm',
+                          'shrink-0 -mb-px h-full rounded-t-lg border-b-2 px-4 text-sm font-medium transition-colors',
                           currentFilePath === fileName
-                            ? 'bg-gradient-to-br from-gradient-purple to-gradient-blue text-white hover:from-gradient-purple-dark hover:to-gradient-blue-dark'
-                            : 'border-2 border-tameplum-100 bg-white hover:bg-tameplum-20',
+                            ? 'border-purple-500 bg-purple-50 text-purple-700'
+                            : 'border-transparent bg-tameplum-100/50 text-tameplum-400 hover:border-tameplum-200 hover:bg-tameplum-100 hover:text-tameplum-700',
                         )}
                       >
                         {fileName}

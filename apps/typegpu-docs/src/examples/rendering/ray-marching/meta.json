@@ -1,5 +1,6 @@
 {
   "title": "Ray Marching",
   "category": "rendering",
-  "tags": ["fragment shader", "shadows", "sdf", "ray marching", "sphere tracing"]
+  "tags": ["ecosystem", "ray marching", "sdf", "shadows"],
+  "coolFactor": 7
 }

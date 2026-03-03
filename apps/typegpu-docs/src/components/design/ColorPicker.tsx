@@ -27,11 +27,16 @@ type Props = {
 
 export function ColorPicker({ value, onChange }: Props) {
   return (
-    <input
-      value={rgbToHex(value)}
-      className="h-10 w-full rounded bg-tameplum-50 p-1"
-      type="color"
-      onChange={(e) => onChange(hexToRgb(e.target.value))}
-    />
+    <div
+      className="relative h-10 w-full cursor-pointer overflow-hidden rounded-full"
+      style={{ backgroundColor: rgbToHex(value) }}
+    >
+      <input
+        value={rgbToHex(value)}
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        type="color"
+        onChange={(e) => onChange(hexToRgb(e.target.value))}
+      />
+    </div>
   );
 }

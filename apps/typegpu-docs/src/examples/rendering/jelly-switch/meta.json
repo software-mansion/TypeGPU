@@ -1,5 +1,6 @@
 {
   "title": "Jelly Switch",
   "category": "rendering",
-  "tags": ["experimental"]
+  "tags": ["interaction", "ui"],
+  "coolFactor": 10
 }

@@ -1,6 +1,7 @@
 {
   "title": "TGSL Parsing Tests",
   "category": "tests",
-  "tags": ["experimental"],
-  "dev": true
+  "tags": ["test"],
+  "dev": true,
+  "coolFactor": 1
 }

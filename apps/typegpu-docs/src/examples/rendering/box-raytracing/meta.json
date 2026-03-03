@@ -1,5 +1,6 @@
 {
   "title": "Box Raytracing",
   "category": "rendering",
-  "tags": ["3d", "raytracing"]
+  "tags": ["3d", "raytracing"],
+  "coolFactor": 6
 }
