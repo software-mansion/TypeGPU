@@ -47,8 +47,8 @@ const instructions: TgpuComptime<() => TgpuGenericFn<() => void>>[] = [];
 const LEAF_COUNT = 3;
 
 // TODO: replace it with number, when unroll supports that
-const arrayForUnroll = tgpu.comptime((n: number) => Array.from({ length: n }));
-let branchingUnrollArray = arrayForUnroll(config.branching);
+const getArrayForUnroll = tgpu.comptime((n: number) => Array.from({ length: n }));
+let branchingUnrollArray = getArrayForUnroll(config.branching);
 
 const choice = tgpu.comptime((): number => {
   if (state.$.stackDepth == config.maxDepth - 1 || rand() > config.recurseProb) {
@@ -209,7 +209,7 @@ instructions.push(baseFn, blendFn, thresholdFn, waveFn, accFn, rotateFn, spiralF
 const main = () => {
   'use gpu';
 
-  for (const _i of tgpu.unroll(arrayForUnroll(config.mainBranching))) {
+  for (const _i of tgpu.unroll(getArrayForUnroll(config.mainBranching))) {
     // @ts-expect-error trust me
     instructions[choice()]()();
   }
@@ -232,7 +232,7 @@ const outDir = resolve(import.meta.dirname ?? '.', '.');
 
 function runBenchmark(input: ProcGenConfig, output: BenchmarkResult[]) {
   Object.assign(config, { samples: input.samples ?? SAMPLES }, input);
-  branchingUnrollArray = arrayForUnroll(config.branching);
+  branchingUnrollArray = getArrayForUnroll(config.branching);
 
   for (let i = 0; i < config.samples; i++) {
     rand = splitmix32(config.maxDepth * 2 ** 32);
