@@ -21,7 +21,7 @@ function initialValueFromSchema<T extends d.AnyWgslData>(
 
 export function useUniformValue<TSchema extends d.AnyWgslData, TValue extends d.Infer<TSchema>>(
   schema: ValidateUniformSchema<TSchema>,
-  initialValue?: TValue | undefined,
+  initialValue?: TValue,
 ): UniformValue<TSchema, TValue> {
   const root = useRoot();
 
