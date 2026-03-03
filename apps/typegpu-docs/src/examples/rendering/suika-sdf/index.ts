@@ -12,6 +12,7 @@ import {
   MERGE_DISTANCE_FACTOR,
   MERGE_SCORES,
   MIN_RADIUS,
+  OFFSCREEN,
   PLAYFIELD_HALF_WIDTH,
   SCENE_SCALE,
   SHARP_FACTOR,
@@ -64,7 +65,10 @@ function randomLevel(): number {
 }
 
 function clampSpawnX(x: number, radius: number) {
-  return Math.max(-PLAYFIELD_HALF_WIDTH + radius, Math.min(PLAYFIELD_HALF_WIDTH - radius, x));
+  return Math.max(
+    -PLAYFIELD_HALF_WIDTH + radius * 0.5,
+    Math.min(PLAYFIELD_HALF_WIDTH - radius * 0.5, x),
+  );
 }
 
 let activeFruits: ActiveFruit[] = [];
@@ -106,7 +110,7 @@ const linSampler = root['~unstable'].createSampler({
 const smoothSdfReadView = createSmoothedSdf(root, sdfTexture, linSampler);
 
 const mergedFieldLayout = tgpu.bindGroupLayout({
-  mergedField: { texture: d.texture2d(d.f32) },
+  mergedField: { texture: d.texture2d() },
 });
 
 function createMergedFieldResources() {
@@ -343,12 +347,8 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
-canvas.addEventListener('touchstart', (e) => e.preventDefault(), {
-  passive: false,
-});
-canvas.addEventListener('touchmove', (e) => e.preventDefault(), {
-  passive: false,
-});
+canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
 canvas.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
 
 function pointerToSceneX(clientX: number, rect: DOMRect): number {
@@ -519,7 +519,7 @@ function frame(now: number) {
       continue;
     }
     const state = physics.getBallState(f.bodyIndex);
-    if (!state) {
+    if (!state || Math.abs(state.pos.x) > OFFSCREEN || state.pos.y < -OFFSCREEN) {
       frameStates[i] = null;
       markDead(f);
       continue;
@@ -568,28 +568,15 @@ function frame(now: number) {
     },
   });
 
-  mergedFieldPipeline
-    .withColorAttachment({
-      view: mergedFieldView,
-      loadOp: 'clear',
-      storeOp: 'store',
-      clearValue: { r: 0, g: 0, b: 0, a: 0 },
-    })
-    .draw(3);
+  mergedFieldPipeline.withColorAttachment({ view: mergedFieldView }).draw(3);
 
   renderPipeline
     .with(mergedFieldBindGroup)
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-      clearValue: { r: 0, g: 0, b: 0, a: 1 },
-    })
+    .withColorAttachment({ view: context, clearValue: { r: 0, g: 0, b: 0, a: 1 } })
     .draw(3);
 
-  if (checkMerges()) {
-    pruneDead();
-  }
+  checkMerges();
+  pruneDead();
 
   requestAnimationFrame(frame);
 }
