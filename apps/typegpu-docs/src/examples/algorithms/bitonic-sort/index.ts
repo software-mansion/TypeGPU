@@ -87,7 +87,7 @@ const initLayout = tgpu.bindGroupLayout({
 const initLength = root.createUniform(d.u32, state.arraySize);
 const initSeed = root.createUniform(d.f32, 0);
 
-const fragmentFn = tgpu['~unstable'].fragmentFn({
+const fragmentFn = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -110,7 +110,7 @@ const fragmentFn = tgpu['~unstable'].fragmentFn({
   return d.vec4f(normalized, normalized, normalized, 1);
 });
 
-const initKernel = tgpu['~unstable'].computeFn({
+const initKernel = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE],
   in: {
     gid: d.builtin.globalInvocationId,
