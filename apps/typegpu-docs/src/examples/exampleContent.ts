@@ -126,7 +126,7 @@ const thumbnailFiles = R.pipe(
 );
 
 const API_RULES: { id: string; pattern: RegExp }[] = [
-  { id: 'compute', pattern: /\.computeFn/ },
+  { id: 'compute', pattern: /\.computeFn|\.createComputePipeline|\.createGuardedComputePipeline/ },
   { id: 'textures', pattern: /d\.texture[^S]/ },
   { id: 'storage textures', pattern: /d\.textureStorage|storageTexture:/ },
   { id: 'samplers', pattern: /createSampler|d\.sampler/ },
