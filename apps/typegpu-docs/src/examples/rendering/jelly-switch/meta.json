@@ -1,6 +1,6 @@
 {
   "title": "Jelly Switch",
   "category": "rendering",
-  "tags": ["interaction", "ui"],
+  "tags": ["interaction", "ray marching", "sdf", "ui"],
   "coolFactor": 10
 }

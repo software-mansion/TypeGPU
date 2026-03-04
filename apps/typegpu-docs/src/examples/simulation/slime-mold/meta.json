@@ -1,6 +1,6 @@
 {
   "title": "Slime Mold",
   "category": "simulation",
-  "tags": ["double buffering", "particles"],
+  "tags": ["double buffering", "ecosystem", "particles"],
   "coolFactor": 6
 }

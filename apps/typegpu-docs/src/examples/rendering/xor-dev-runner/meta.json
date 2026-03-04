@@ -1,6 +1,6 @@
 {
   "title": "XorDev \"Runner\"",
   "category": "rendering",
-  "tags": ["fractal", "math"],
+  "tags": ["camera", "fractal", "interaction", "math"],
   "coolFactor": 7
 }
