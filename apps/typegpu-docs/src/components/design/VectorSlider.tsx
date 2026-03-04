@@ -11,9 +11,14 @@ type Props<T extends d.v2f | d.v3f | d.v4f> = {
 
 export function VectorSlider({ min, max, step, value, onChange }: Props<d.v2f | d.v3f | d.v4f>) {
   const handleComponentChange = (index: number, newValue: number) => {
-    const newVec = value.kind === 'vec2f' ? d.vec2f(value) : value.kind === 'vec3f' ? d.vec3f(value) : d.vec4f(value);
+    const newVec =
+      value.kind === 'vec2f'
+        ? d.vec2f(value)
+        : value.kind === 'vec3f'
+          ? d.vec3f(value)
+          : d.vec4f(value);
     newVec[index] = newValue;
-    onChange(newVec);  
+    onChange(newVec);
   };
 
   const renderSlider = (index: number) => (
