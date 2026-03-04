@@ -1,8 +1,12 @@
 import tgpu, { d, std } from 'typegpu';
-import { type BitonicSorter, type BitonicSorterOptions, createBitonicSorter } from '@typegpu/sort';
+import {
+  type BitonicSorter,
+  type BitonicSorterOptions,
+  createBitonicSorter,
+  decomposeWorkgroups,
+} from '@typegpu/sort';
 import { randf } from '@typegpu/noise';
 import { fullScreenTriangle } from 'typegpu/common';
-import { decomposeWorkgroups } from './decomposeWorkgroups.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
 const maxBufferSize = await navigator.gpu.requestAdapter().then((adapter) => {

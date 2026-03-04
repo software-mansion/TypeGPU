@@ -1,4 +1,9 @@
-export { compareSlot, createBitonicSorter, defaultCompare } from './bitonic/index.ts';
+export {
+  compareSlot,
+  createBitonicSorter,
+  defaultCompare,
+  decomposeWorkgroups,
+} from './bitonic/index.ts';
 export type {
   BitonicSorter,
   BitonicSorterOptions,

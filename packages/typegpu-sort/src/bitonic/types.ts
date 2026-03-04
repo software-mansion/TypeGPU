@@ -4,14 +4,19 @@ export interface BitonicSorterOptions {
   /** Custom comparison function. Returns true if first argument should come before second.
    * Default: ascending order (a < b) */
   compare?: (a: number, b: number) => boolean;
-  /** Value used to pad arrays to power-of-2 length.
-   * Default: 0xFFFFFFFF (MAX_UINT) for ascending, use 0 for descending */
+  /**
+   * Value used to pad arrays to power-of-2 length. Must sort to the end with your comparator.
+   * Default: `0xFFFFFFFF` (works for ascending). For descending order, use `0`.
+   */
   paddingValue?: number;
 }
 
 export interface BitonicSorterRunOptions {
-  /** Optional timestamp query set for GPU timing.
-   * Must have at least 2 entries. Timestamps are written to indices 0 and 1. */
+  /**
+   * Optional timestamp query set for GPU timing. Must have at least 2 entries.
+   * Timestamps are written to indices 0 and 1. For non-power-of-2 arrays, timing
+   * includes the padding copy passes.
+   */
   querySet?: TgpuQuerySet<'timestamp'>;
 }
 
