@@ -1,14 +1,14 @@
-import type {
-  StorageFlag,
-  TgpuBuffer,
-  TgpuComputePipeline,
-  TgpuFn,
-  TgpuQuerySet,
-  TgpuRoot,
-} from 'typegpu';
-import * as d from 'typegpu/data';
 import {
-  type BinaryOp,
+  type StorageFlag,
+  type TgpuBuffer,
+  type TgpuComputePipeline,
+  type TgpuFn,
+  type TgpuQuerySet,
+  type TgpuRoot,
+  d,
+} from 'typegpu';
+import type { BinaryOp } from './types.ts';
+import {
   identitySlot,
   onlyGreatestElementSlot,
   operatorSlot,
@@ -224,7 +224,7 @@ export function prefixScan(
 /**
  * Compute only the aggregated reduction result for `inputBuffer` using the provided operation.
  * Returns only the top-level sums/reductions instead of the full scan. This is useful when
- * you only need the final reduction - for instance, the sum of the whole array).
+ * you only need the final reduction - for instance, the sum of the whole array.
  *
  * @param root - The TypeGPU root/context used to create pipelines, bind groups and buffers.
  * @param options - Configuration object containing:
@@ -288,7 +288,7 @@ function runScan(
   onlyGreatestElement: boolean,
   querySet?: TgpuQuerySet<'timestamp'>,
 ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-  const computer = initCache(root, {
+  const computer = createPrefixScanComputer(root, {
     operation: options.operation,
     identityElement: options.identityElement,
   });
@@ -312,7 +312,7 @@ function runScan(
  * @param binaryOp - The binary operation used by the computer.
  * @returns A `PrefixScanComputer` instance associated with the provided `root` and `binaryOp`.
  */
-export function initCache(root: TgpuRoot, binaryOp: BinaryOp): PrefixScanComputer {
+export function createPrefixScanComputer(root: TgpuRoot, binaryOp: BinaryOp): PrefixScanComputer {
   let rootCache = cache.get(root);
   if (!rootCache) {
     rootCache = new WeakMap();
@@ -332,5 +332,3 @@ export function initCache(root: TgpuRoot, binaryOp: BinaryOp): PrefixScanCompute
   }
   return computer;
 }
-
-export type { BinaryOp };

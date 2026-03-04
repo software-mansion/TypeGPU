@@ -1,6 +1,6 @@
 import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
-import { type BinaryOp, prefixScan, scan } from '@typegpu/concurrent-scan';
+import { type BinaryOp, prefixScan, scan } from '@typegpu/sort';
 import * as std from 'typegpu/std';
 import { addFn, concat10, isArrayEqual, mulFn, prefixScanJS, scanJS } from './functions.ts';
 
