@@ -42,8 +42,7 @@ describe('unwrappedPojos', () => {
         ],
       },
       {
-        code:
-          "const func = function() { 'use gpu'; const unwrapped = { a: 1 }; }",
+        code: "const func = function() { 'use gpu'; const unwrapped = { a: 1 }; }",
         errors: [
           {
             messageId: 'unwrappedPojo',
@@ -61,8 +60,7 @@ describe('unwrappedPojos', () => {
         ],
       },
       {
-        code:
-          "function func() { 'unknown directive'; 'use gpu'; const unwrapped = { a: 1 }; }",
+        code: "function func() { 'unknown directive'; 'use gpu'; const unwrapped = { a: 1 }; }",
         errors: [
           {
             messageId: 'unwrappedPojo',
