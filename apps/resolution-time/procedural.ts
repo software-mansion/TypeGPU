@@ -44,7 +44,6 @@ const state = tgpu.lazy(() => ({
 }));
 
 const instructions: TgpuComptime<() => TgpuGenericFn<() => void>>[] = [];
-const LEAF_COUNT = 3;
 
 // TODO: replace it with number, when unroll supports that
 const getArrayForUnroll = tgpu.comptime((n: number) => Array.from({ length: n }));
@@ -73,6 +72,14 @@ const tintSlot = tgpu.slot(d.vec3f(0.2, 0.8, 0.4));
 const dataLayout = tgpu.bindGroupLayout({
   offset: { uniform: d.vec2f },
   scale: { uniform: d.f32 },
+});
+
+const Cell = d.struct({
+  col: d.vec3f,
+});
+
+const cellsLayout = tgpu.bindGroupLayout({
+  grid: { storage: d.arrayOf(d.arrayOf(Cell, 7), 7) },
 });
 
 const baseFn = tgpu.comptime(() => {
@@ -118,6 +125,26 @@ const thresholdFn = tgpu.comptime(() => {
       popDepth();
     })
     .$name('thresholdFn');
+});
+
+const filterFn = tgpu.comptime(() => {
+  return tgpu
+    .fn(() => {
+      'use gpu';
+
+      const xy = d.vec2u(7, 8);
+
+      let _result = d.vec3f();
+      for (const dy of tgpu.unroll([-1, 0, 1])) {
+        for (const dx of tgpu.unroll([-1, 0, 1])) {
+          // oxlint-disable-next-line typescript-eslint(no-non-null-assertion
+          _result += cellsLayout.$.grid[xy.x + dx]![xy.y + dy]!.col;
+        }
+      }
+
+      popDepth();
+    })
+    .$name('filterFn');
 });
 
 const waveFn = tgpu.comptime(() => {
@@ -204,7 +231,8 @@ const spiralFn = tgpu.comptime(() => {
 });
 
 // leaves first, then recursive
-instructions.push(baseFn, blendFn, thresholdFn, waveFn, accFn, rotateFn, spiralFn);
+instructions.push(baseFn, blendFn, thresholdFn, filterFn, waveFn, accFn, rotateFn, spiralFn);
+const LEAF_COUNT = 4;
 
 const main = () => {
   'use gpu';
