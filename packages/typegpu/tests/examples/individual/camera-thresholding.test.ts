@@ -10,11 +10,14 @@ describe('camera thresholding example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'image-processing',
-      name: 'camera-thresholding',
-      expectedCalls: 1,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'image-processing',
+        name: 'camera-thresholding',
+        expectedCalls: 1,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct fullScreenTriangle_Input {
@@ -52,7 +55,7 @@ describe('camera thresholding example', () => {
       @fragment fn mainFrag(input: mainFrag_Input) -> @location(0) vec4f {
         var uv2 = ((uvTransformUniform * (input.uv - 0.5f)) + 0.5f);
         var col = textureSampleBaseClampToEdge(inputTexture, sampler_1, uv2);
-        var ycbcr = (col.xyz * rgbToYcbcrMatrix);
+        var ycbcr = (col.rgb * rgbToYcbcrMatrix);
         var colycbcr = (colorUniform * rgbToYcbcrMatrix);
         let crDiff = abs((ycbcr.y - colycbcr.y));
         let cbDiff = abs((ycbcr.z - colycbcr.z));

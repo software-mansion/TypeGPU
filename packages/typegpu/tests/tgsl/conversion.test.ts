@@ -32,19 +32,9 @@ afterAll(() => {
 
 describe('getBestConversion', () => {
   // d.ptrPrivate(d.f32)
-  const ptrF32 = INTERNAL_createPtr(
-    'private',
-    d.f32,
-    'read-write',
-    /* implicit */ true,
-  );
+  const ptrF32 = INTERNAL_createPtr('private', d.f32, 'read-write', /* implicit */ true);
   // d.ptrPrivate(d.i32)
-  const ptrI32 = INTERNAL_createPtr(
-    'private',
-    d.i32,
-    'read-write',
-    /* implicit */ true,
-  );
+  const ptrI32 = INTERNAL_createPtr('private', d.i32, 'read-write', /* implicit */ true);
 
   it('returns result for identical types', () => {
     const res = getBestConversion([d.f32, d.f32]);
@@ -221,11 +211,7 @@ describe('convertToCommonType', () => {
   });
 
   it('handles abstract types automatically', () => {
-    const result = convertToCommonType(ctx, [
-      snippetAbsFloat,
-      snippetF32,
-      snippetAbsInt,
-    ]);
+    const result = convertToCommonType(ctx, [snippetAbsFloat, snippetF32, snippetAbsInt]);
     // since WGSL handles all abstract types automatically, this should be basically identity
     expect(result).toBeDefined();
     expect(result?.length).toBe(3);
@@ -276,9 +262,7 @@ describe('convertToCommonType', () => {
   it('respects restrictTo types', () => {
     // [abstractInt, i32] -> common type i32
     // Restrict to f32: requires cast for i32
-    const result = convertToCommonType(ctx, [snippetAbsInt, snippetI32], [
-      d.f32,
-    ]);
+    const result = convertToCommonType(ctx, [snippetAbsInt, snippetI32], [d.f32]);
     expect(result).toBeDefined();
     expect(result?.length).toBe(2);
     expect(result?.[0]?.dataType).toBe(d.f32);
@@ -295,9 +279,7 @@ describe('convertToCommonType', () => {
   });
 
   it('fails if restrictTo is incompatible', () => {
-    const result = convertToCommonType(ctx, [snippetAbsInt, snippetI32], [
-      d.vec2f,
-    ]);
+    const result = convertToCommonType(ctx, [snippetAbsInt, snippetI32], [d.vec2f]);
     expect(result).toBeUndefined();
   });
 
@@ -360,8 +342,6 @@ describe('convertStructValues', () => {
       c: snip('vec2f(1.0, 1.0)', d.vec2f, /* origin */ 'runtime'),
       d: snip('true', d.bool, /* origin */ 'runtime'),
     };
-    expect(() => convertStructValues(ctx, structType, snippets)).toThrow(
-      /Missing property b/,
-    );
+    expect(() => convertStructValues(ctx, structType, snippets)).toThrow(/Missing property b/);
   });
 });

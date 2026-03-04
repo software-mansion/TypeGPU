@@ -5,18 +5,19 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const mousePosUniform = root.createUniform(d.vec2f, d.vec2f(0.5, 0.5));
 
 const response = await fetch('/TypeGPU/plums.jpg');
 const imageBitmap = await createImageBitmap(await response.blob());
 
-const imageTexture = root['~unstable'].createTexture({
-  size: [imageBitmap.width, imageBitmap.height, 1],
-  format: 'rgba8unorm',
-  mipLevelCount: 6,
-}).$usage('sampled', 'render');
+const imageTexture = root['~unstable']
+  .createTexture({
+    size: [imageBitmap.width, imageBitmap.height, 1],
+    format: 'rgba8unorm',
+    mipLevelCount: 6,
+  })
+  .$usage('sampled', 'render');
 imageTexture.write(imageBitmap);
 imageTexture.generateMipmaps();
 
@@ -67,15 +68,9 @@ const TintParams = d.struct({
   strength: d.f32,
 });
 
-const calculateWeights = (
-  sdfDist: number,
-  start: number,
-  end: number,
-  featherUV: number,
-) => {
+const calculateWeights = (sdfDist: number, start: number, end: number, featherUV: number) => {
   'use gpu';
-  const inside = 1 -
-    std.smoothstep(start - featherUV, start + featherUV, sdfDist);
+  const inside = 1 - std.smoothstep(start - featherUV, start + featherUV, sdfDist);
   const outside = std.smoothstep(end - featherUV, end + featherUV, sdfDist);
   const ring = std.max(0, 1 - inside - outside);
   return Weights({ inside, ring, outside });
@@ -96,43 +91,28 @@ const sampleWithChromaticAberration = (
 ) => {
   'use gpu';
   const samples = d.arrayOf(d.vec3f, 3)();
-  for (let i = 0; i < 3; i++) {
+  for (const i of tgpu.unroll([0, 1, 2])) {
     const channelOffset = dir.mul((d.f32(i) - 1.0) * offset);
-    samples[i] =
-      std.textureSampleBias(tex, sampler, uv.sub(channelOffset), blur).xyz;
+    samples[i] = std.textureSampleBias(tex, sampler, uv.sub(channelOffset), blur).rgb;
   }
   return d.vec3f(samples[0].x, samples[1].y, samples[2].z);
 };
 
-const fragmentShader = tgpu['~unstable'].fragmentFn({
+const fragmentShader = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
   const posInBoxSpace = uv.sub(mousePosUniform.$);
-  const sdfDist = sdRoundedBox2d(
-    posInBoxSpace,
-    paramsUniform.$.rectDims,
-    paramsUniform.$.radius,
-  );
+  const sdfDist = sdRoundedBox2d(posInBoxSpace, paramsUniform.$.rectDims, paramsUniform.$.radius);
   const dir = std.normalize(posInBoxSpace.mul(paramsUniform.$.rectDims.yx));
-  const normalizedDist = (sdfDist - paramsUniform.$.start) /
-    (paramsUniform.$.end - paramsUniform.$.start);
+  const normalizedDist =
+    (sdfDist - paramsUniform.$.start) / (paramsUniform.$.end - paramsUniform.$.start);
 
   const texDim = std.textureDimensions(sampledView.$, 0);
   const featherUV = paramsUniform.$.edgeFeather / std.max(texDim.x, texDim.y);
-  const weights = calculateWeights(
-    sdfDist,
-    paramsUniform.$.start,
-    paramsUniform.$.end,
-    featherUV,
-  );
+  const weights = calculateWeights(sdfDist, paramsUniform.$.start, paramsUniform.$.end, featherUV);
 
-  const blurSample = std.textureSampleBias(
-    sampledView.$,
-    sampler.$,
-    uv,
-    paramsUniform.$.blur,
-  );
+  const blurSample = std.textureSampleBias(sampledView.$, sampler.$, uv, paramsUniform.$.blur);
   const refractedSample = sampleWithChromaticAberration(
     sampledView.$,
     sampler.$,
@@ -148,18 +128,18 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
     strength: paramsUniform.$.tintStrength,
   });
 
-  const tintedBlur = applyTint(blurSample.xyz, tint);
+  const tintedBlur = applyTint(blurSample.rgb, tint);
   const tintedRing = applyTint(refractedSample, tint);
 
-  return tintedBlur.mul(weights.inside)
+  return tintedBlur
+    .mul(weights.inside)
     .add(tintedRing.mul(weights.ring))
     .add(normalSample.mul(weights.outside));
 });
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: fragmentShader,
-  targets: { format: presentationFormat },
 });
 
 let isRectangleFixed = false;
@@ -171,9 +151,7 @@ function updatePosition(clientX: number, clientY: number) {
   const rect = canvas.getBoundingClientRect();
   const x = (clientX - rect.left) / rect.width;
   const y = (clientY - rect.top) / rect.height;
-  mousePosUniform.write(
-    std.clamp(d.vec2f(x, y), d.vec2f(), d.vec2f(1)),
-  );
+  mousePosUniform.write(std.clamp(d.vec2f(x, y), d.vec2f(), d.vec2f(1)));
 }
 
 function handleMouseMove(event: MouseEvent) {
@@ -205,11 +183,7 @@ canvas.addEventListener('click', handleClick);
 let frameId: number;
 function render() {
   frameId = requestAnimationFrame(render);
-  pipeline.withColorAttachment({
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear',
-    storeOp: 'store',
-  }).draw(3);
+  pipeline.withColorAttachment({ view: context }).draw(3);
 }
 frameId = requestAnimationFrame(render);
 

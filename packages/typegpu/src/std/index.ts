@@ -72,10 +72,8 @@ export {
 
 export { add, div, mod, mul, neg, sub } from './operators.ts';
 
-// deno-fmt-ingore
 export { rotateX4, rotateY4, rotateZ4, scale4, translate4 } from './matrix.ts';
 
-// deno-fmt-ingore
 export {
   identity2,
   identity3,
@@ -87,7 +85,6 @@ export {
   translation4,
 } from '../data/matrix.ts';
 
-// deno-fmt-ignore
 export {
   // comparison
   allEq,
@@ -109,7 +106,6 @@ export {
   select,
 } from './boolean.ts';
 
-// deno-fmt-ignore
 export {
   atomicAdd,
   atomicAnd,
@@ -140,7 +136,7 @@ export {
 
 export { arrayLength } from './array.ts';
 
-// deno-fmt-ignore
+// oxfmt-ignore
 export {
   pack4x8unorm,
   pack2x16float,

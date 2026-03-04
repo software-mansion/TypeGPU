@@ -16,12 +16,7 @@ await renderer.init();
 renderer.setPixelRatio(window.devicePixelRatio);
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(
-  75,
-  1,
-  0.1,
-  1000,
-);
+const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
 camera.position.z = 5;
 
 scene.add(getCubeTwoDifferentFunctions());
@@ -44,7 +39,7 @@ const observer = new ResizeObserver(onResize);
 observer.observe(canvas);
 
 let prevTime: number | undefined;
-renderer.setAnimationLoop((time) => {
+void renderer.setAnimationLoop((time) => {
   const deltaTime = (time - (prevTime ?? time)) * 0.001;
   prevTime = time;
   scene.children.forEach((mesh) => {

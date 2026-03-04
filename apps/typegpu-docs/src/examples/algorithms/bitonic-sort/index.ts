@@ -1,9 +1,5 @@
 import tgpu, { d, std } from 'typegpu';
-import {
-  type BitonicSorter,
-  type BitonicSorterOptions,
-  createBitonicSorter,
-} from '@typegpu/sort';
+import { type BitonicSorter, type BitonicSorterOptions, createBitonicSorter } from '@typegpu/sort';
 import { randf } from '@typegpu/noise';
 import { fullScreenTriangle } from 'typegpu/common';
 import { decomposeWorkgroups } from './decomposeWorkgroups.ts';
@@ -42,11 +38,7 @@ const arraySizeOptions = Array.from({ length: 8 }, (_, i) => {
   return side * side;
 });
 
-type SortOrderKey =
-  | 'ascending'
-  | 'descending'
-  | 'bit-reversed'
-  | 'xor-scatter';
+type SortOrderKey = 'ascending' | 'descending' | 'bit-reversed' | 'xor-scatter';
 
 const sortOrders: Record<SortOrderKey, BitonicSorterOptions> = {
   ascending: {},
@@ -133,9 +125,7 @@ const initKernel = tgpu['~unstable'].computeFn({
     return;
   }
 
-  randf.seed3(
-    d.vec3f(d.f32(idx & 0xffff), d.f32(idx >> 16), initSeed.$),
-  );
+  randf.seed3(d.vec3f(d.f32(idx & 0xffff), d.f32(idx >> 16), initSeed.$));
   const n = randf.sample();
   initLayout.$.data[idx] = d.u32(std.floor(n * 256.0));
 });
@@ -148,9 +138,7 @@ const renderPipeline = root['~unstable'].createRenderPipeline({
 
 const initPipeline = root['~unstable'].withCompute(initKernel).createPipeline();
 
-let buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage(
-  'storage',
-);
+let buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage('storage');
 
 let bindGroup = root.createBindGroup(renderLayout, {
   data: buffer,
@@ -162,10 +150,7 @@ let initBindGroup = root.createBindGroup(initLayout, {
 
 function createSorters(buf: typeof buffer) {
   return Object.fromEntries(
-    Object.entries(sortOrders).map(([key, opts]) => [
-      key,
-      createBitonicSorter(root, buf, opts),
-    ]),
+    Object.entries(sortOrders).map(([key, opts]) => [key, createBitonicSorter(root, buf, opts)]),
   ) as Record<SortOrderKey, BitonicSorter>;
 }
 
@@ -177,8 +162,7 @@ function recreateBuffer() {
   }
   buffer.destroy();
 
-  buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize))
-    .$usage('storage');
+  buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage('storage');
 
   bindGroup = root.createBindGroup(renderLayout, {
     data: buffer,
@@ -193,16 +177,12 @@ function recreateBuffer() {
 
 function generateRandomArray() {
   const workgroupsTotal = Math.ceil(state.arraySize / WORKGROUP_SIZE);
-  const [workgroupsX, workgroupsY, workgroupsZ] = decomposeWorkgroups(
-    workgroupsTotal,
-  );
+  const [workgroupsX, workgroupsY, workgroupsZ] = decomposeWorkgroups(workgroupsTotal);
 
   initLength.write(state.arraySize);
   initSeed.write(Math.random() * 1000);
 
-  initPipeline
-    .with(initBindGroup)
-    .dispatchWorkgroups(workgroupsX, workgroupsY, workgroupsZ);
+  initPipeline.with(initBindGroup).dispatchWorkgroups(workgroupsX, workgroupsY, workgroupsZ);
 
   render();
 }
@@ -254,13 +234,12 @@ async function sort() {
 
   render();
 
-  const timeStr = gpuTimeMs !== null
-    ? ` in ${
-      gpuTimeMs >= 1000
-        ? `${(gpuTimeMs / 1000).toFixed(2)}s`
-        : `${gpuTimeMs.toFixed(2)}ms`
-    }`
-    : '';
+  const timeStr =
+    gpuTimeMs !== null
+      ? ` in ${
+          gpuTimeMs >= 1000 ? `${(gpuTimeMs / 1000).toFixed(2)}s` : `${gpuTimeMs.toFixed(2)}ms`
+        }`
+      : '';
   showOverlay(`\u2714 Sorted${timeStr}`, false);
   hideOverlay();
 }

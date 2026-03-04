@@ -14,11 +14,13 @@ export interface SourceFile {
 
 export type FileMap = Record<
   string,
-  {
-    content: string;
-  } | {
-    reroute: string;
-  } | undefined
+  | {
+      content: string;
+    }
+  | {
+      reroute: string;
+    }
+  | undefined
 >;
 
 export async function bundle(
@@ -35,6 +37,7 @@ export async function bundle(
     cwd: '/',
     onLog(level, log, logger) {
       if (level === 'warn') {
+        // oxlint-disable-next-line typescript/no-base-to-string
         warnings.push(String(log));
       } else {
         logger(level, log);
@@ -46,9 +49,7 @@ export async function bundle(
       {
         name: 'virtual-fs',
         resolveId(source, importer) {
-          const id = source[0] === '.'
-            ? join(importer || '/', '..', source)
-            : source;
+          const id = source[0] === '.' ? join(importer || '/', '..', source) : source;
 
           if (files[id] && 'reroute' in files[id]) {
             // Rerouting
@@ -70,9 +71,7 @@ export async function bundle(
           return files[id].content;
         },
       },
-      ...(Array.isArray(config?.plugins)
-        ? config.plugins
-        : [config?.plugins].filter(Boolean)),
+      ...(Array.isArray(config?.plugins) ? config.plugins : [config?.plugins].filter(Boolean)),
     ],
   };
 
@@ -88,7 +87,7 @@ export async function bundle(
     result.output.map((chunk) =>
       chunk.type === 'chunk'
         ? [chunk.fileName, chunk.code]
-        : [chunk.fileName, chunk.source.slice()]
+        : [chunk.fileName, chunk.source.slice()],
     ),
   );
 

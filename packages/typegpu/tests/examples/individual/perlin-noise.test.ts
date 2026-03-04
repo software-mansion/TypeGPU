@@ -10,11 +10,14 @@ describe('perlin noise example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'rendering',
-      name: 'perlin-noise',
-      expectedCalls: 2,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'rendering',
+        name: 'perlin-noise',
+        expectedCalls: 2,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -110,8 +113,8 @@ describe('perlin noise example', () => {
         return dot(relative, gridVector);
       }
 
-      fn quinticInterpolationImpl(t: vec3f) -> vec3f {
-        return ((t * (t * t)) * ((t * ((t * 6f) - 15f)) + 10f));
+      fn quinticInterpolation(t: vec3f) -> vec3f {
+        return (((t * t) * t) * ((t * ((t * 6f) - 15f)) + 10f));
       }
 
       fn sample(pos: vec3f) -> f32 {
@@ -125,7 +128,7 @@ describe('perlin noise example', () => {
         let XYz = dotProdGrid(pos, (minJunction + vec3f(1, 1, 0)));
         let XYZ = dotProdGrid(pos, (minJunction + vec3f(1)));
         var partial = (pos - minJunction);
-        var smoothPartial = quinticInterpolationImpl(partial);
+        var smoothPartial = quinticInterpolation(partial);
         let xy = mix(xyz, xyZ, smoothPartial.z);
         let xY = mix(xYz, xYZ, smoothPartial.z);
         let Xy = mix(Xyz, XyZ, smoothPartial.z);
@@ -141,13 +144,13 @@ describe('perlin noise example', () => {
 
       @group(0) @binding(2) var<uniform> sharpness: f32;
 
-      struct mainFragment_Input {
+      struct FragmentIn {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn mainFragment(input: mainFragment_Input) -> @location(0) vec4f {
-        var uv = (gridSize * input.uv);
-        let n = sample(vec3f(uv, time));
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
+        var suv = (gridSize * _arg_0.uv);
+        let n = sample(vec3f(suv, time));
         let sharp = exponentialSharpen(n, sharpness);
         let n01 = ((sharp * 0.5f) + 0.5f);
         var dark = vec3f(0, 0.20000000298023224, 1);

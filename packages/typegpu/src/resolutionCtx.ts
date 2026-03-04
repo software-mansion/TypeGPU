@@ -1,16 +1,9 @@
 import { isTgpuFn } from './core/function/tgpuFn.ts';
-import {
-  getUniqueName,
-  type Namespace,
-  type NamespaceInternal,
-} from './core/resolve/namespace.ts';
+import { getUniqueName, type Namespace, type NamespaceInternal } from './core/resolve/namespace.ts';
 import { resolveData } from './core/resolve/resolveData.ts';
 import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
-import type {
-  Configurable,
-  ExperimentalTgpuRoot,
-} from './core/root/rootTypes.ts';
+import type { Configurable, ExperimentalTgpuRoot } from './core/root/rootTypes.ts';
 import {
   type Eventual,
   isLazy,
@@ -24,19 +17,8 @@ import { getAttributesString } from './data/attributes.ts';
 import { isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
-import {
-  type BaseData,
-  isPtr,
-  isWgslArray,
-  isWgslStruct,
-  Void,
-} from './data/wgslTypes.ts';
-import {
-  invariant,
-  MissingSlotValueError,
-  ResolutionError,
-  WgslTypeError,
-} from './errors.ts';
+import { type BaseData, isPtr, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
+import { invariant, MissingSlotValueError, ResolutionError, WgslTypeError } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
 import { naturalsExcept } from './shared/generators.ts';
 import { isMarkedInternal } from './shared/symbols.ts';
@@ -50,17 +32,10 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
-import {
-  LogGeneratorImpl,
-  LogGeneratorNullImpl,
-} from './tgsl/consoleLog/logGenerator.ts';
+import { LogGeneratorImpl, LogGeneratorNullImpl } from './tgsl/consoleLog/logGenerator.ts';
 import type { LogGenerator, LogResources } from './tgsl/consoleLog/types.ts';
 import { getBestConversion } from './tgsl/conversion.ts';
-import {
-  coerceToSnippet,
-  concretize,
-  numericLiteralToSnippet,
-} from './tgsl/generationHelpers.ts';
+import { coerceToSnippet, concretize, numericLiteralToSnippet } from './tgsl/generationHelpers.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 import wgslGenerator from './tgsl/wgslGenerator.ts';
 import type {
@@ -131,7 +106,7 @@ class ItemStateStackImpl implements ItemStateStack {
     });
   }
 
-  pushSlotBindings(pairs: SlotValuePair<unknown>[]) {
+  pushSlotBindings(pairs: SlotValuePair[]) {
     this._stack.push({
       type: 'slotBinding',
       bindingMap: new WeakMap(pairs),
@@ -163,6 +138,7 @@ class ItemStateStackImpl implements ItemStateStack {
     this._stack.push({
       type: 'blockScope',
       declarations: new Map(),
+      externals: new Map(),
     });
   }
 
@@ -193,10 +169,7 @@ class ItemStateStackImpl implements ItemStateStack {
         if (boundValue !== undefined) {
           return boundValue as T;
         }
-      } else if (
-        layer?.type === 'functionScope' ||
-        layer?.type === 'blockScope'
-      ) {
+      } else if (layer?.type === 'functionScope' || layer?.type === 'blockScope') {
         // Skip
       } else {
         throw new Error('Unknown layer type.');
@@ -232,7 +205,8 @@ class ItemStateStackImpl implements ItemStateStack {
       }
 
       if (layer?.type === 'blockScope') {
-        const snippet = layer.declarations.get(id);
+        // the order matters
+        const snippet = layer.declarations.get(id) ?? layer.externals.get(id);
         if (snippet !== undefined) {
           return snippet;
         }
@@ -260,6 +234,30 @@ class ItemStateStackImpl implements ItemStateStack {
 
     throw new Error('No block scope found to define a variable in.');
   }
+
+  setBlockExternals(externals: Record<string, Snippet>) {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+      if (layer?.type === 'blockScope') {
+        Object.entries(externals).forEach(([id, snippet]) => {
+          layer.externals.set(id, snippet);
+        });
+        return;
+      }
+    }
+    throw new Error('No block scope found to set externals in.');
+  }
+
+  clearBlockExternals() {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+      if (layer?.type === 'blockScope') {
+        layer.externals.clear();
+        return;
+      }
+    }
+    throw new Error('No block scope found to clear externals in.');
+  }
 }
 
 const INDENT = [
@@ -282,8 +280,7 @@ export class IndentController {
   get pre(): string {
     return (
       INDENT[this.identLevel] ??
-        (INDENT[N] as string).repeat(this.identLevel / N) +
-          INDENT[this.identLevel % N]
+      (INDENT[N] as string).repeat(this.identLevel / N) + INDENT[this.identLevel % N]
     );
   }
 
@@ -341,10 +338,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
    * collect every use of a typed bind group layout, since they can be
    * explicitly imposed group indices, and they cannot collide.
    */
-  public readonly bindGroupLayoutsToPlaceholderMap = new Map<
-    TgpuBindGroupLayout,
-    string
-  >();
+  public readonly bindGroupLayoutsToPlaceholderMap = new Map<TgpuBindGroupLayout, string>();
   private _nextFreeLayoutPlaceholderIdx = 0;
   public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
@@ -355,9 +349,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   constructor(opts: ResolutionCtxImplOptions) {
     this.enableExtensions = opts.enableExtensions;
     this.#shaderGenerator = opts.shaderGenerator ?? wgslGenerator;
-    this.#logGenerator = opts.root
-      ? new LogGeneratorImpl(opts.root)
-      : new LogGeneratorNullImpl();
+    this.#logGenerator = opts.root ? new LogGeneratorImpl(opts.root) : new LogGeneratorNullImpl();
     this.#namespaceInternal = opts.namespace[$internal];
   }
 
@@ -420,11 +412,21 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   pushBlockScope() {
+    this.#namespaceInternal.nameRegistry.pushBlockScope();
     this._itemStateStack.pushBlockScope();
   }
 
   popBlockScope() {
+    this.#namespaceInternal.nameRegistry.popBlockScope();
     this._itemStateStack.pop('blockScope');
+  }
+
+  setBlockExternals(externals: Record<string, Snippet>) {
+    this._itemStateStack.setBlockExternals(externals);
+  }
+
+  clearBlockExternals() {
+    this._itemStateStack.clearBlockExternals();
   }
 
   generateLog(op: string, args: Snippet[]): Snippet {
@@ -435,9 +437,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this.#logGenerator.logResources;
   }
 
-  fnToWgsl(
-    options: FnToWgslOptions,
-  ): { head: Wgsl; body: Wgsl; returnType: BaseData } {
+  fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl; returnType: BaseData } {
     let fnScopePushed = false;
 
     try {
@@ -456,7 +456,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         // otherwise it's typed as a value.
         const origin = isPtr(argType)
           ? argType.addressSpace === 'storage'
-            ? argType.access === 'read' ? 'readonly' : 'mutable'
+            ? argType.access === 'read'
+              ? 'readonly'
+              : 'mutable'
             : argType.addressSpace
           : 'argument';
 
@@ -474,8 +476,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
             const objSnippet = snip(`_arg_${i}`, argType, origin);
             args.push(objSnippet);
             argAliases.push(
-              ...astParam.props.map(({ name, alias }) =>
-                [alias, accessProp(objSnippet, name)] as [string, Snippet]
+              ...astParam.props.map(
+                ({ name, alias }) => [alias, accessProp(objSnippet, name)] as [string, Snippet],
               ),
             );
             break;
@@ -528,18 +530,15 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
         if (!returnType) {
           throw new Error(
-            `Expected function to have a single return type, got [${
-              returnTypes.join(', ')
-            }]. Cast explicitly to the desired type.`,
+            `Expected function to have a single return type, got [${returnTypes.join(
+              ', ',
+            )}]. Cast explicitly to the desired type.`,
           );
         }
 
         returnType = concretize(returnType);
 
-        if (
-          options.functionType === 'vertex' ||
-          options.functionType === 'fragment'
-        ) {
+        if (options.functionType === 'vertex' || options.functionType === 'fragment') {
           returnType = createIoSchema(returnType as IOData);
         }
       }
@@ -566,8 +565,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     let placeholderKey = memoMap.get(layout);
 
     if (!placeholderKey) {
-      placeholderKey = `#BIND_GROUP_LAYOUT_${this
-        ._nextFreeLayoutPlaceholderIdx++}#`;
+      placeholderKey = `#BIND_GROUP_LAYOUT_${this._nextFreeLayoutPlaceholderIdx++}#`;
       memoMap.set(layout, placeholderKey);
     }
 
@@ -597,7 +595,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return value;
   }
 
-  withSlots<T>(pairs: SlotValuePair<unknown>[], callback: () => T): T {
+  withSlots<T>(pairs: SlotValuePair[], callback: () => T): T {
+    if (pairs.length === 0) {
+      return callback();
+    }
+
     this._itemStateStack.pushSlotBindings(pairs);
 
     try {
@@ -607,10 +609,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  withVaryingLocations<T>(
-    locations: Record<string, number>,
-    callback: () => T,
-  ): T {
+  withVaryingLocations<T>(locations: Record<string, number>, callback: () => T): T {
     this._varyingLocations = locations;
 
     try {
@@ -625,17 +624,21 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return callback();
     }
     const oldName = getName(item);
-    setName(item, name);
-    const result = callback();
-    setName(item, oldName);
-    return result;
+    try {
+      setName(item, name);
+      return callback();
+    } finally {
+      setName(item, oldName);
+    }
   }
 
   unwrap<T>(eventual: Eventual<T>): T {
     if (isProviding(eventual)) {
-      return this.withSlots(
-        eventual[$providing].pairs,
-        () => this.unwrap(eventual[$providing].inner) as T,
+      return this.withRenamed(eventual[$providing].inner, getName(eventual), () =>
+        this.withSlots(
+          eventual[$providing].pairs,
+          () => this.unwrap(eventual[$providing].inner) as T,
+        ),
       );
     }
 
@@ -657,8 +660,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   _getOrCompute<T>(lazy: TgpuLazy<T>): T {
     // All memoized versions of `lazy`
-    const instances = this.#namespaceInternal.memoizedLazy.get(lazy) ??
-      [];
+    const instances = this.#namespaceInternal.memoizedLazy.get(lazy) ?? [];
 
     this._itemStateStack.pushItem();
 
@@ -668,7 +670,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
         if (
           slotValuePairs.every(([slot, expectedValue]) =>
-            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue)
+            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
           )
         ) {
           return instance.result as T;
@@ -721,7 +723,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
         if (
           slotValuePairs.every(([slot, expectedValue]) =>
-            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue)
+            slot.areEqual(this._itemStateStack.readSlot(slot), expectedValue),
           )
         ) {
           return instance.result;
@@ -752,9 +754,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
         return this.withResetIndentLevel(() => this.resolve(shellless));
       } else {
-        throw new TypeError(
-          `Unresolvable internal value: ${safeStringify(item)}`,
-        );
+        throw new TypeError(`Unresolvable internal value: ${safeStringify(item)}`);
       }
 
       // We know which slots the item used while resolving
@@ -778,10 +778,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  resolve(
-    item: unknown,
-    schema?: BaseData | UnknownData | undefined,
-  ): ResolvedSnippet {
+  resolve(item: unknown, schema?: BaseData | UnknownData): ResolvedSnippet {
     if (isTgpuFn(item) || hasTinyestMetadata(item)) {
       if (
         this.#currentlyResolvedItems.has(item) &&
@@ -795,14 +792,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     if (isProviding(item)) {
-      return this.withRenamed(
-        item[$providing].inner,
-        getName(item),
-        () =>
-          this.withSlots(
-            item[$providing].pairs,
-            () => this.resolve(item[$providing].inner, schema),
-          ),
+      return this.withRenamed(item[$providing].inner, getName(item), () =>
+        this.withSlots(item[$providing].pairs, () => this.resolve(item[$providing].inner, schema)),
       );
     }
 
@@ -828,10 +819,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     // This is a value that comes from the outside, maybe we can coerce it
     if (typeof item === 'number') {
       const realSchema = schema ?? numericLiteralToSnippet(item).dataType;
-      invariant(
-        realSchema !== UnknownData,
-        'Schema has to be known for resolving numbers',
-      );
+      invariant(realSchema !== UnknownData, 'Schema has to be known for resolving numbers');
 
       if (realSchema.type === 'abstractInt') {
         return snip(`${item}`, realSchema, /* origin */ 'constant');
@@ -845,9 +833,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       const exp = item.toExponential();
       const decimal =
-        realSchema.type === 'abstractFloat' && Number.isInteger(item)
-          ? `${item}.`
-          : `${item}`;
+        realSchema.type === 'abstractFloat' && Number.isInteger(item) ? `${item}.` : `${item}`;
 
       // Just picking the shorter one
       const base = exp.length < decimal.length ? exp : decimal;
@@ -871,9 +857,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     if (schema && isWgslArray(schema)) {
       if (!Array.isArray(item)) {
-        throw new WgslTypeError(
-          `Cannot coerce ${item} into value of type '${schema}'`,
-        );
+        throw new WgslTypeError(`Cannot coerce ${item} into value of type '${schema}'`);
       }
 
       if (schema.elementCount !== item.length) {
@@ -884,11 +868,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       const elementTypeString = this.resolve(schema.elementType);
       return snip(
-        stitch`array<${elementTypeString}, ${schema.elementCount}>(${
-          item.map((element) =>
-            snip(element, schema.elementType, /* origin */ 'runtime')
-          )
-        })`,
+        stitch`array<${elementTypeString}, ${schema.elementCount}>(${item.map((element) =>
+          snip(element, schema.elementType, /* origin */ 'runtime'),
+        )})`,
         schema,
         /* origin */ 'runtime',
       );
@@ -904,15 +886,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     if (schema && isWgslStruct(schema)) {
       return snip(
-        stitch`${this.resolve(schema)}(${
-          Object.entries(schema.propTypes).map(([key, propType]) =>
-            snip(
-              (item as Infer<typeof schema>)[key],
-              propType,
-              /* origin */ 'runtime',
-            )
-          )
-        })`,
+        stitch`${this.resolve(schema)}(${Object.entries(schema.propTypes).map(([key, propType]) =>
+          snip((item as Infer<typeof schema>)[key], propType, /* origin */ 'runtime'),
+        )})`,
         schema,
         /* origin */ 'runtime', // a new struct, not referenced from anywhere
       );
@@ -956,32 +932,23 @@ export interface ResolutionResult {
   logResources: LogResources | undefined;
 }
 
-export function resolve(
-  item: Wgsl,
-  options: ResolutionCtxImplOptions,
-): ResolutionResult {
+export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): ResolutionResult {
   const ctx = new ResolutionCtxImpl(options);
   const snippet = options.config
-    ? ctx.withSlots(
-      options.config(new ConfigurableImpl([])).bindings,
-      () => ctx.resolve(item),
-    )
+    ? ctx.withSlots(options.config(new ConfigurableImpl([])).bindings, () => ctx.resolve(item))
     : ctx.resolve(item);
   let code = snippet.value;
 
   const memoMap = ctx.bindGroupLayoutsToPlaceholderMap;
   const usedBindGroupLayouts: TgpuBindGroupLayout[] = [];
   const takenIndices = new Set<number>(
-    [...memoMap.keys()]
-      .map((layout) => layout.index)
-      .filter((v): v is number => v !== undefined),
+    [...memoMap.keys()].map((layout) => layout.index).filter((v): v is number => v !== undefined),
   );
 
   const automaticIds = naturalsExcept(takenIndices);
 
   const layoutEntries = ctx.fixedBindings.map(
-    (binding, idx) =>
-      [String(idx), binding.layoutEntry] as [string, TgpuLayoutEntry],
+    (binding, idx) => [String(idx), binding.layoutEntry] as [string, TgpuLayoutEntry],
   );
 
   const createCatchallGroup = () => {
@@ -997,7 +964,7 @@ export function resolve(
         Object.fromEntries(
           ctx.fixedBindings.map(
             (binding, idx) =>
-              // oxlint-disable-next-line typescript/no-explicit-any <it's fine>
+              // oxlint-disable-next-line typescript/no-explicit-any -- it's fine
               [String(idx), binding.resource] as [string, any],
           ),
         ),
@@ -1028,20 +995,12 @@ export function resolve(
   };
 }
 
-function resolveFunctionHeader(
-  ctx: ResolutionCtx,
-  args: Snippet[],
-  returnType: BaseData,
-) {
+function resolveFunctionHeader(ctx: ResolutionCtx, args: Snippet[], returnType: BaseData) {
   const argList = args
-    .map((arg) =>
-      `${arg.value}: ${ctx.resolve(arg.dataType as BaseData).value}`
-    )
+    .map((arg) => `${arg.value}: ${ctx.resolve(arg.dataType as BaseData).value}`)
     .join(', ');
 
   return returnType.type !== 'void'
-    ? `(${argList}) -> ${getAttributesString(returnType)}${
-      ctx.resolve(returnType).value
-    } `
+    ? `(${argList}) -> ${getAttributesString(returnType)}${ctx.resolve(returnType).value} `
     : `(${argList}) `;
 }

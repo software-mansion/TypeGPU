@@ -304,22 +304,18 @@ function makeVecSchema<TValue, S extends number | boolean>(
       return new VecImpl(...values) as TValue;
     }
 
-    throw new Error(
-      `'${type}' constructor called with invalid number of arguments.`,
-    );
+    throw new Error(`'${type}' constructor called with invalid number of arguments.`);
   };
 
   const construct = callableSchema({
     name: type,
     signature: (...args) => ({
-      argTypes: args.map((arg) => isVec(arg) ? arg : primitive),
+      argTypes: args.map((arg) => (isVec(arg) ? arg : primitive)),
       returnType: schema as unknown as BaseData,
     }),
     normalImpl: cpuConstruct,
     codegenImpl: (_ctx, args) => {
-      if (
-        args.length === 1 && args[0]?.dataType === schema as unknown as BaseData
-      ) {
+      if (args.length === 1 && args[0]?.dataType === (schema as unknown as BaseData)) {
         // Already typed as the schema
         return stitch`${args[0]}`;
       }
@@ -327,9 +323,8 @@ function makeVecSchema<TValue, S extends number | boolean>(
     },
   });
 
-  const schema:
-    & VecSchemaBase<TValue>
-    & ((...args: (S | AnyVecInstance)[]) => TValue) = Object.assign(construct, {
+  const schema: VecSchemaBase<TValue> & ((...args: (S | AnyVecInstance)[]) => TValue) =
+    Object.assign(construct, {
       [$internal]: {},
       type,
       primitive,
@@ -339,8 +334,7 @@ function makeVecSchema<TValue, S extends number | boolean>(
 
   // TODO: Remove workaround
   // it's a workaround for circular dependencies caused by us using schemas in the shader generator
-  // oxlint-disable-next-line typescript/no-explicit-any explained above
-  (VecImpl.prototype as any).schema = schema;
+  VecImpl.prototype.schema = schema;
 
   return schema;
 }

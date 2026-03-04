@@ -16,17 +16,20 @@ describe('gravity example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'simulation',
-      name: 'gravity',
-      setupMocks: () => {
-        mockImageLoading();
-        mock3DModelLoading();
-        mockCreateImageBitmap();
-        mockResizeObserver();
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'simulation',
+        name: 'gravity',
+        setupMocks: () => {
+          mockImageLoading();
+          mock3DModelLoading();
+          mockCreateImageBitmap();
+          mockResizeObserver();
+        },
+        expectedCalls: 6,
       },
-      expectedCalls: 6,
-    }, device);
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "
@@ -169,9 +172,9 @@ describe('gravity example', () => {
             let dist = max((radiusOf(current) + radiusOf((*other))), distance(current.position, (*other).position));
             let gravityForce = (((current.mass * (*other).mass) / dist) / dist);
             var direction = normalize(((*other).position - current.position));
-            current.velocity = (current.velocity + (direction * ((gravityForce / current.mass) * dt)));
+            current.velocity += ((direction * (gravityForce / current.mass)) * dt);
           }
-          current.position = (current.position + (current.velocity * dt));
+          current.position += (current.velocity * dt);
         }
         outState[currentId] = current;
       }
@@ -288,14 +291,13 @@ describe('gravity example', () => {
           discard;;
         }
         var lightColor = vec3f(1, 0.8999999761581421, 0.8999999761581421);
-        var textureColor = textureSample(celestialBodyTextures, sampler_1, input.uv, input.sphereTextureIndex).xyz;
+        var textureColor = textureSample(celestialBodyTextures, sampler_1, input.uv, input.sphereTextureIndex).rgb;
         var ambient = ((textureColor * lightColor) * input.ambientLightFactor);
         let normal = input.normals;
         var lightDirection = normalize((lightSource - input.worldPosition));
         let cosTheta = dot(normal, lightDirection);
         var diffuse = ((textureColor * lightColor) * max(0f, cosTheta));
-        var litColor = (ambient + diffuse);
-        return vec4f(litColor.xyz, 1f);
+        return vec4f((ambient + diffuse), 1f);
       }"
     `);
   });

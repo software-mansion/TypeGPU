@@ -1,12 +1,10 @@
-import {
-  getEffectiveSampleTypes,
-  getTextureFormatInfo,
-} from './textureFormats.ts';
+import { getEffectiveSampleTypes, getTextureFormatInfo } from './textureFormats.ts';
 import type { ExternalImageSource } from './texture.ts';
 
-export function getImageSourceDimensions(
-  source: ExternalImageSource,
-): { width: number; height: number } {
+export function getImageSourceDimensions(source: ExternalImageSource): {
+  width: number;
+  height: number;
+} {
   const { videoWidth, videoHeight } = source as HTMLVideoElement;
   if (videoWidth && videoHeight) {
     return { width: videoWidth, height: videoHeight };
@@ -75,10 +73,7 @@ type BlitResources = {
 
 type DeviceCache = {
   vertexModule: GPUShaderModule;
-  filterableResources: Map<
-    boolean,
-    { fragmentModule: GPUShaderModule; sampler: GPUSampler }
-  >;
+  filterableResources: Map<boolean, { fragmentModule: GPUShaderModule; sampler: GPUSampler }>;
   layoutResources: Map<
     string,
     { bindGroupLayout: GPUBindGroupLayout; pipelineLayout: GPUPipelineLayout }
@@ -115,9 +110,7 @@ function getBlitResources(
       fragmentModule: device.createShaderModule({
         code: filterable ? SAMPLE_FRAGMENT_SHADER : GATHER_FRAGMENT_SHADER,
       }),
-      sampler: device.createSampler(
-        filterable ? { magFilter: 'linear', minFilter: 'linear' } : {},
-      ),
+      sampler: device.createSampler(filterable ? { magFilter: 'linear', minFilter: 'linear' } : {}),
     };
     cache.filterableResources.set(filterable, filterableRes);
   }
@@ -166,8 +159,7 @@ type BlitOptions = {
 };
 
 function blit(options: BlitOptions): void {
-  const { device, source, destination, format, filterable, sampleType } =
-    options;
+  const { device, source, destination, format, filterable, sampleType } = options;
   const resources = getBlitResources(device, filterable, sampleType);
 
   const pipeline = device.createRenderPipeline({
@@ -189,11 +181,13 @@ function blit(options: BlitOptions): void {
   const encoder = options.encoder ?? device.createCommandEncoder();
 
   const pass = encoder.beginRenderPass({
-    colorAttachments: [{
-      view: destination,
-      loadOp: 'clear',
-      storeOp: 'store',
-    }],
+    colorAttachments: [
+      {
+        view: destination,
+        loadOp: 'clear',
+        storeOp: 'store',
+      },
+    ],
   });
   pass.setPipeline(pipeline);
   pass.setBindGroup(0, bindGroup);
@@ -221,9 +215,7 @@ function validateBlitFormat(
   const effectiveSampleTypes = getEffectiveSampleTypes(device, format);
 
   const isFloat = effectiveSampleTypes.includes('float');
-  const isUnfilterableFloat = effectiveSampleTypes.includes(
-    'unfilterable-float',
-  );
+  const isUnfilterableFloat = effectiveSampleTypes.includes('unfilterable-float');
 
   if (!isFloat && !isUnfilterableFloat) {
     throw new Error(
@@ -253,11 +245,7 @@ export function generateTextureMipmaps(
     throw new Error('Mipmap generation only supports 2D textures.');
   }
 
-  const { filterable, sampleType } = validateBlitFormat(
-    device,
-    texture.format,
-    'generate mipmaps',
-  );
+  const { filterable, sampleType } = validateBlitFormat(device, texture.format, 'generate mipmaps');
   const levels = mipLevels ?? texture.mipLevelCount - baseMipLevel;
 
   for (let layer = 0; layer < texture.depthOrArrayLayers; layer++) {
@@ -292,26 +280,25 @@ export function resampleImage(
     throw new Error('Resampling only supports 2D textures.');
   }
 
-  const { filterable } = validateBlitFormat(
-    device,
-    targetTexture.format,
-    'resample',
-  );
+  const { filterable } = validateBlitFormat(device, targetTexture.format, 'resample');
   const { width, height } = getImageSourceDimensions(image);
 
   const inputTexture = device.createTexture({
     size: [width, height],
     format: 'rgba8unorm',
-    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST |
+    usage:
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.COPY_DST |
       GPUTextureUsage.RENDER_ATTACHMENT,
   });
 
-  device.queue.copyExternalImageToTexture({ source: image }, {
-    texture: inputTexture,
-  }, [
-    width,
-    height,
-  ]);
+  device.queue.copyExternalImageToTexture(
+    { source: image },
+    {
+      texture: inputTexture,
+    },
+    [width, height],
+  );
 
   const renderTexture = device.createTexture({
     size: [targetTexture.width, targetTexture.height],

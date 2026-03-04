@@ -7,11 +7,11 @@ catalog:
 
 catalogs:
   build:
-    tsup: ^8.5.0
+    tsdown: ^0.20.3
     unbuild: ^3.5.0
     jiti: ^2.6.0
   types:
-    typescript: ^5.9.3
+    typescript: npm:tsover@^5.9.11
     '@webgpu/types': ^0.1.66
     '@types/three': '^0.181.0'
   test:

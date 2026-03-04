@@ -1,18 +1,15 @@
 {
   "name": "@typegpu/tgpu-dev-cli",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "description": "A set of tools used to aid in developing TypeGPU.",
   "license": "MIT",
   "bin": {
     "tgpu-dev-cli": "./tgpu-dev-cli.mjs"
   },
   "type": "module",
-  "main": "./index.mjs",
   "sideEffects": false,
-  "engines": {
-    "node": ">=12.20.0"
-  },
+  "main": "./index.mjs",
   "dependencies": {
     "arg": "^5.0.2",
     "arktype": "catalog:",
@@ -21,6 +18,9 @@
     "is-unicode-supported": "^2.1.0",
     "pkg-types": "^2.1.0",
     "remeda": "^2.21.2"
+  },
+  "engines": {
+    "node": ">=12.20.0"
   },
   "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67"
 }

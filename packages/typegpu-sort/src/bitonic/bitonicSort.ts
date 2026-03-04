@@ -8,11 +8,7 @@ import tgpu, {
   type UniformFlag,
 } from 'typegpu';
 import { compareSlot, defaultCompare } from './slots.ts';
-import type {
-  BitonicSorter,
-  BitonicSorterOptions,
-  BitonicSorterRunOptions,
-} from './types.ts';
+import type { BitonicSorter, BitonicSorterOptions, BitonicSorterRunOptions } from './types.ts';
 import { nextPowerOf2 } from './utils.ts';
 
 const WORKGROUP_SIZE = 256;
@@ -185,18 +181,14 @@ export function createBitonicSorter(
     decomposeWorkgroups(sortWorkgroupsTotal);
 
   const padWorkgroupsTotal = Math.ceil(paddedSize / WORKGROUP_SIZE);
-  const [padWorkgroupsX, padWorkgroupsY, padWorkgroupsZ] = decomposeWorkgroups(
-    padWorkgroupsTotal,
-  );
+  const [padWorkgroupsX, padWorkgroupsY, padWorkgroupsZ] = decomposeWorkgroups(padWorkgroupsTotal);
 
   const copyBackWorkgroupsTotal = Math.ceil(originalSize / WORKGROUP_SIZE);
   const [copyBackWorkgroupsX, copyBackWorkgroupsY, copyBackWorkgroupsZ] =
     decomposeWorkgroups(copyBackWorkgroupsTotal);
 
   if (wasPadded) {
-    const paddedWorkBuffer = root
-      .createBuffer(d.arrayOf(d.u32, paddedSize))
-      .$usage('storage');
+    const paddedWorkBuffer = root.createBuffer(d.arrayOf(d.u32, paddedSize)).$usage('storage');
 
     const copyPadParams = root
       .createBuffer(copyParamsType, {
@@ -247,13 +239,9 @@ export function createBitonicSorter(
     .withCompute(bitonicStepKernel)
     .createPipeline();
 
-  const copyPadPipeline = root['~unstable']
-    .withCompute(copyPadKernel)
-    .createPipeline();
+  const copyPadPipeline = root['~unstable'].withCompute(copyPadKernel).createPipeline();
 
-  const copyBackPipeline = root['~unstable']
-    .withCompute(copyBackKernel)
-    .createPipeline();
+  const copyBackPipeline = root['~unstable'].withCompute(copyBackKernel).createPipeline();
 
   const log2N = Math.log2(paddedSize);
   const totalSteps = (log2N * (log2N + 1)) / 2;
@@ -269,11 +257,7 @@ export function createBitonicSorter(
           beginningOfPassWriteIndex: 0,
         });
       }
-      pipeline.dispatchWorkgroups(
-        padWorkgroupsX,
-        padWorkgroupsY,
-        padWorkgroupsZ,
-      );
+      pipeline.dispatchWorkgroups(padWorkgroupsX, padWorkgroupsY, padWorkgroupsZ);
     }
 
     let stepIndex = 0;
@@ -296,11 +280,7 @@ export function createBitonicSorter(
           }
         }
 
-        pipeline.dispatchWorkgroups(
-          sortWorkgroupsX,
-          sortWorkgroupsY,
-          sortWorkgroupsZ,
-        );
+        pipeline.dispatchWorkgroups(sortWorkgroupsX, sortWorkgroupsY, sortWorkgroupsZ);
         stepIndex++;
       }
     }
@@ -313,11 +293,7 @@ export function createBitonicSorter(
           endOfPassWriteIndex: 1,
         });
       }
-      pipeline.dispatchWorkgroups(
-        copyBackWorkgroupsX,
-        copyBackWorkgroupsY,
-        copyBackWorkgroupsZ,
-      );
+      pipeline.dispatchWorkgroups(copyBackWorkgroupsX, copyBackWorkgroupsY, copyBackWorkgroupsZ);
     }
   }
 

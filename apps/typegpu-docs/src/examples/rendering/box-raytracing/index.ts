@@ -1,16 +1,6 @@
 import { linearToSrgb, srgbToLinear } from '@typegpu/color';
 import tgpu, { d } from 'typegpu';
-import {
-  add,
-  discard,
-  div,
-  max,
-  min,
-  mul,
-  normalize,
-  pow,
-  sub,
-} from 'typegpu/std';
+import { add, discard, div, max, min, mul, normalize, pow, sub } from 'typegpu/std';
 import { mat4 } from 'wgpu-matrix';
 import { defineControls } from '../../common/defineControls.ts';
 
@@ -30,7 +20,6 @@ let frame = 0;
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // structs
 
@@ -66,19 +55,13 @@ const IntersectionStruct = d.struct({
 
 const boxMatrix = root.createReadonly(
   d.arrayOf(d.arrayOf(d.arrayOf(BoxStruct, Z), Y), X),
-  Array.from(
-    { length: X },
-    (_, i) =>
-      Array.from(
-        { length: Y },
-        (_, j) =>
-          Array.from({ length: Z }, (_, k) => ({
-            isActive: X - i + j + (Z - k) > 6 ? 1 : 0,
-            albedo: srgbToLinear(
-              d.vec3f(i / X, j / Y, k / Z * 0.8 + 0.1 + (X - i) / X * 0.6),
-            ),
-          })),
-      ),
+  Array.from({ length: X }, (_, i) =>
+    Array.from({ length: Y }, (_, j) =>
+      Array.from({ length: Z }, (_, k) => ({
+        isActive: X - i + j + (Z - k) > 6 ? 1 : 0,
+        albedo: srgbToLinear(d.vec3f(i / X, j / Y, (k / Z) * 0.8 + 0.1 + ((X - i) / X) * 0.6)),
+      })),
+    ),
   ),
 );
 
@@ -86,10 +69,11 @@ const uniforms = root.createUniform(Uniforms);
 
 // functions
 
-const getBoxIntersection = tgpu.fn(
-  [AxisAlignedBounds, Ray],
-  IntersectionStruct,
-) /* wgsl */`(bounds, ray) {
+const getBoxIntersection = tgpu
+  .fn(
+    [AxisAlignedBounds, Ray],
+    IntersectionStruct,
+  )(/* wgsl */ `(bounds, ray) {
   var tMin: f32;
   var tMax: f32;
   var tMinY: f32;
@@ -146,29 +130,25 @@ const getBoxIntersection = tgpu.fn(
   }
 
   return IntersectionStruct(tMin > 0 && tMax > 0, tMin, tMax);
-}`
+}`)
   .$uses({ IntersectionStruct });
 
 const Varying = {
   rayWorldOrigin: d.vec3f,
 };
 
-const mainVertex = tgpu['~unstable'].vertexFn({
+const mainVertex = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, ...Varying },
 })((input) => {
-  const pos = [
-    d.vec2f(-1, -1),
-    d.vec2f(3, -1),
-    d.vec2f(-1, 3),
-  ];
+  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
 
   const rayWorldOrigin = mul(uniforms.$.invViewMatrix, d.vec4f(0, 0, 0, 1)).xyz;
 
   return { pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0), rayWorldOrigin };
 });
 
-const fragmentFunction = tgpu['~unstable'].fragmentFn({
+const fragmentFunction = tgpu.fragmentFn({
   in: { position: d.builtin.position, ...Varying },
   out: d.vec4f,
 })((input) => {
@@ -181,10 +161,7 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
 
   const ray = Ray({
     origin: input.rayWorldOrigin,
-    direction: mul(
-      uniforms.$.invViewMatrix,
-      d.vec4f(normalize(d.vec3f(viewCoords, 1)), 0),
-    ).xyz,
+    direction: mul(uniforms.$.invViewMatrix, d.vec4f(normalize(d.vec3f(viewCoords, 1)), 0)).xyz,
   });
 
   const bigBoxIntersection = getBoxIntersection(
@@ -222,16 +199,10 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
         );
 
         if (intersection.intersects) {
-          const boxDensity = max(0, intersection.tMax - intersection.tMin) *
-            pow(uniforms.$.materialDensity, 2);
+          const boxDensity =
+            max(0, intersection.tMax - intersection.tMin) * pow(uniforms.$.materialDensity, 2);
           density += boxDensity;
-          invColor = add(
-            invColor,
-            mul(
-              boxDensity,
-              div(d.vec3f(1), boxMatrix.$[i][j][k].albedo),
-            ),
-          );
+          invColor = add(invColor, mul(boxDensity, div(d.vec3f(1), boxMatrix.$[i][j][k].albedo)));
           intersectionFound = true;
         }
       }
@@ -244,10 +215,7 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
   const corrected = pow(srgb, d.vec3f(1.0 / gamma));
 
   if (intersectionFound) {
-    return mul(
-      min(density, 1),
-      d.vec4f(min(corrected, d.vec3f(1)), 1),
-    );
+    return mul(min(density, 1), d.vec4f(min(corrected, d.vec3f(1)), 1));
   }
 
   discard();
@@ -256,14 +224,13 @@ const fragmentFunction = tgpu['~unstable'].fragmentFn({
 
 // pipeline
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   primitive: {
     topology: 'triangle-strip',
   },
   vertex: mainVertex,
   fragment: fragmentFunction,
   targets: {
-    format: presentationFormat,
     blend: {
       color: {
         srcFactor: 'one',
@@ -310,25 +277,12 @@ onFrame((deltaTime) => {
 
   uniforms.writePartial({
     canvasDims: d.vec2f(width, height),
-    invViewMatrix: mat4.aim(
-      cameraPosition,
-      cameraAnchor,
-      d.vec3f(0, 1, 0),
-      d.mat4x4f(),
-    ),
+    invViewMatrix: mat4.aim(cameraPosition, cameraAnchor, d.vec3f(0, 1, 0), d.mat4x4f()),
   });
 
   frame += (rotationSpeed * deltaTime) / 1000;
 
-  const textureView = context.getCurrentTexture().createView();
-  pipeline
-    .withColorAttachment({
-      view: textureView,
-      clearValue: [0, 0, 0, 0],
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .draw(3);
+  pipeline.withColorAttachment({ view: context }).draw(3);
 });
 
 // #region Example controls and cleanup

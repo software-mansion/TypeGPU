@@ -15,16 +15,14 @@ export type ExternalMap = Record<string, unknown>;
  * @param existing - The existing external map.
  * @param newExternals - The new external map.
  */
-export function applyExternals(
-  existing: ExternalMap,
-  newExternals: ExternalMap,
-) {
+export function applyExternals(existing: ExternalMap, newExternals: ExternalMap) {
   for (const [key, value] of Object.entries(newExternals)) {
     existing[key] = value;
 
     // Giving name to external value, if it does not already have one.
     if (
-      value && (typeof value === 'object' || typeof value === 'function') &&
+      value &&
+      (typeof value === 'object' || typeof value === 'function') &&
       getName(value) === undefined
     ) {
       setName(value, key);
@@ -37,17 +35,15 @@ export function addArgTypesToExternals(
   argTypes: unknown[],
   applyExternals: (externals: ExternalMap) => void,
 ) {
-  const argTypeNames = [
-    ...implementation.matchAll(/:\s*(?<arg>.*?)\s*[,)]/g),
-  ].map((found) => (found ? found[1] : undefined));
+  const argTypeNames = [...implementation.matchAll(/:\s*(?<arg>.*?)\s*[,)]/g)].map((found) =>
+    found ? found[1] : undefined,
+  );
 
   applyExternals(
     Object.fromEntries(
       argTypes.flatMap((argType, i) => {
         const argTypeName = argTypeNames ? argTypeNames[i] : undefined;
-        return isWgslStruct(argType) && argTypeName !== undefined
-          ? [[argTypeName, argType]]
-          : [];
+        return isWgslStruct(argType) && argTypeName !== undefined ? [[argTypeName, argType]] : [];
       }),
     ),
   );
@@ -68,9 +64,7 @@ export function addReturnTypeToExternals(
 
 function identifierRegex(name: string) {
   return new RegExp(
-    `(?<![\\w\\$_.])${
-      name.replaceAll('.', '\\.').replaceAll('$', '\\$')
-    }(?![\\w\\$_])`,
+    `(?<![\\w\\$_.])${name.replaceAll('.', '\\.').replaceAll('$', '\\$')}(?![\\w\\$_])`,
     'g',
   );
 }
@@ -91,21 +85,12 @@ export function replaceExternalsInWgsl(
 ): string {
   return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
     const externalRegex = identifierRegex(externalName);
-    if (
-      wgsl &&
-      externalName !== 'Out' &&
-      externalName !== 'In' &&
-      !externalRegex.test(wgsl)
-    ) {
-      console.warn(
-        `The external '${externalName}' wasn't used in the resolved template.`,
-      );
+    if (wgsl && externalName !== 'Out' && externalName !== 'In' && !externalRegex.test(wgsl)) {
+      console.warn(`The external '${externalName}' wasn't used in the resolved template.`);
       // continue anyway, we still might need to resolve the external
     }
 
-    if (
-      isWgsl(external) || isLooseData(external) || hasTinyestMetadata(external)
-    ) {
+    if (isWgsl(external) || isLooseData(external) || hasTinyestMetadata(external)) {
       return acc.replaceAll(externalRegex, ctx.resolve(external).value);
     }
 
@@ -113,9 +98,9 @@ export function replaceExternalsInWgsl(
       const foundProperties = [
         ...wgsl.matchAll(
           new RegExp(
-            `${
-              externalName.replaceAll('.', '\\.').replaceAll('$', '\\$')
-            }\\.(?<prop>.*?)(?![\\w\\$_])`,
+            `${externalName
+              .replaceAll('.', '\\.')
+              .replaceAll('$', '\\$')}\\.(?<prop>.*?)(?![\\w\\$_])`,
             'g',
           ),
         ),
@@ -126,13 +111,12 @@ export function replaceExternalsInWgsl(
         (innerAcc: string, prop) =>
           prop && prop in external
             ? replaceExternalsInWgsl(
-              ctx,
-              {
-                [`${externalName}.${prop}`]:
-                  external[prop as keyof typeof external],
-              },
-              innerAcc,
-            )
+                ctx,
+                {
+                  [`${externalName}.${prop}`]: external[prop as keyof typeof external],
+                },
+                innerAcc,
+              )
             : innerAcc,
         acc,
       );

@@ -10,11 +10,14 @@ describe('ascii filter example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'image-processing',
-      name: 'ascii-filter',
-      expectedCalls: 1,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'image-processing',
+        name: 'ascii-filter',
+        expectedCalls: 1,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct fullScreenTriangle_Input {
@@ -226,7 +229,7 @@ describe('ascii filter example', () => {
         let charValue = characterFn(n, p);
         var resultColor = vec3f(1);
         if ((displayMode == 0u)) {
-          resultColor = (color * charValue).xyz;
+          resultColor = (color.rgb * charValue);
         }
         if ((displayMode == 1u)) {
           resultColor = vec3f((gray * charValue));

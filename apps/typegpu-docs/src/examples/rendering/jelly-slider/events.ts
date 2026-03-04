@@ -74,7 +74,8 @@ export class EventHandler {
     const clampedX = Math.max(MOUSE_MIN_X, Math.min(MOUSE_MAX_X, normalizedX));
     this.targetMouseX =
       ((clampedX - MOUSE_RANGE_MIN) / (MOUSE_RANGE_MAX - MOUSE_RANGE_MIN)) *
-        (TARGET_MAX - TARGET_MIN) + TARGET_OFFSET;
+        (TARGET_MAX - TARGET_MIN) +
+      TARGET_OFFSET;
   }
 
   update() {

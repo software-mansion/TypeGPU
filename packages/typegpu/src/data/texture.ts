@@ -19,13 +19,15 @@ export type WgslStorageTextureProps = {
   access: GPUStorageTextureAccess;
 };
 
-type ResolvedTextureProps<
-  TProps extends Partial<WgslTextureProps>,
-> = WithDefaults<TProps, WgslTextureProps>;
+type ResolvedTextureProps<TProps extends Partial<WgslTextureProps>> = WithDefaults<
+  TProps,
+  WgslTextureProps
+>;
 
-type ResolvedStorageTextureProps<
-  TProps extends Partial<WgslStorageTextureProps>,
-> = WithDefaults<TProps, WgslStorageTextureProps>;
+type ResolvedStorageTextureProps<TProps extends Partial<WgslStorageTextureProps>> = WithDefaults<
+  TProps,
+  WgslStorageTextureProps
+>;
 
 type SampledTextureLiteral = `texture_${
   | '1d'
@@ -40,11 +42,7 @@ type SampledTextureLiteral = `texture_${
   | 'depth_2d_array'
   | 'depth_cube'
   | 'depth_cube_array'}`;
-type StorageTextureLiteral = `texture_storage_${
-  | '1d'
-  | '2d'
-  | '2d_array'
-  | '3d'}`;
+type StorageTextureLiteral = `texture_storage_${'1d' | '2d' | '2d_array' | '3d'}`;
 
 export interface WgslTexture<
   TProps extends Partial<WgslTextureProps> = WgslTextureProps,
@@ -78,135 +76,123 @@ export interface WgslExternalTexture extends BaseData {
 
 export interface WgslTexture1d<
   TSample extends TextureSampleTypes = TextureSampleTypes,
-> extends
-  WgslTexture<{
-    dimension: '1d';
-    sampleType: TSample;
-    multisampled: false;
-  }> {
+> extends WgslTexture<{
+  dimension: '1d';
+  sampleType: TSample;
+  multisampled: false;
+}> {
   readonly type: 'texture_1d';
   readonly [$repr]: texture1d<TSample>;
 }
 
 export interface WgslTexture2d<
   TSample extends TextureSampleTypes = TextureSampleTypes,
-> extends
-  WgslTexture<{
-    dimension: '2d';
-    sampleType: TSample;
-    multisampled: false;
-  }> {
+> extends WgslTexture<{
+  dimension: '2d';
+  sampleType: TSample;
+  multisampled: false;
+}> {
   readonly type: 'texture_2d';
   readonly [$repr]: texture2d<TSample>;
 }
 
 export interface WgslTextureMultisampled2d<
   TSample extends TextureSampleTypes = TextureSampleTypes,
-> extends
-  WgslTexture<{
-    dimension: '2d';
-    sampleType: TSample;
-    multisampled: true;
-  }> {
+> extends WgslTexture<{
+  dimension: '2d';
+  sampleType: TSample;
+  multisampled: true;
+}> {
   readonly type: 'texture_multisampled_2d';
   readonly [$repr]: textureMultisampled2d<TSample>;
 }
 
 export interface WgslTexture2dArray<
   TSample extends TextureSampleTypes = TextureSampleTypes,
-> extends
-  WgslTexture<{
-    dimension: '2d-array';
-    sampleType: TSample;
-    multisampled: false;
-  }> {
+> extends WgslTexture<{
+  dimension: '2d-array';
+  sampleType: TSample;
+  multisampled: false;
+}> {
   readonly type: 'texture_2d_array';
   readonly [$repr]: texture2dArray<TSample>;
 }
 
 export interface WgslTextureCube<
   TSample extends TextureSampleTypes = TextureSampleTypes,
-> extends
-  WgslTexture<{
-    dimension: 'cube';
-    sampleType: TSample;
-    multisampled: false;
-  }> {
+> extends WgslTexture<{
+  dimension: 'cube';
+  sampleType: TSample;
+  multisampled: false;
+}> {
   readonly type: 'texture_cube';
   readonly [$repr]: textureCube<TSample>;
 }
 
 export interface WgslTextureCubeArray<
   TSample extends TextureSampleTypes = TextureSampleTypes,
-> extends
-  WgslTexture<{
-    dimension: 'cube-array';
-    sampleType: TSample;
-    multisampled: false;
-  }> {
+> extends WgslTexture<{
+  dimension: 'cube-array';
+  sampleType: TSample;
+  multisampled: false;
+}> {
   readonly type: 'texture_cube_array';
   readonly [$repr]: textureCubeArray<TSample>;
 }
 
 export interface WgslTexture3d<
   TSample extends TextureSampleTypes = TextureSampleTypes,
-> extends
-  WgslTexture<{
-    dimension: '3d';
-    sampleType: TSample;
-    multisampled: false;
-  }> {
+> extends WgslTexture<{
+  dimension: '3d';
+  sampleType: TSample;
+  multisampled: false;
+}> {
   readonly type: 'texture_3d';
   readonly [$repr]: texture3d<TSample>;
 }
 
 // Depth textures (sample type is always f32)
-export interface WgslTextureDepth2d extends
-  WgslTexture<{
-    dimension: '2d';
-    sampleType: F32;
-    multisampled: false;
-  }> {
+export interface WgslTextureDepth2d extends WgslTexture<{
+  dimension: '2d';
+  sampleType: F32;
+  multisampled: false;
+}> {
   readonly type: 'texture_depth_2d';
   readonly [$repr]: textureDepth2d;
 }
 
-export interface WgslTextureDepthMultisampled2d extends
-  WgslTexture<{
-    dimension: '2d';
-    sampleType: F32;
-    multisampled: true;
-  }> {
+export interface WgslTextureDepthMultisampled2d extends WgslTexture<{
+  dimension: '2d';
+  sampleType: F32;
+  multisampled: true;
+}> {
   readonly type: 'texture_depth_multisampled_2d';
   readonly [$repr]: textureDepthMultisampled2d;
 }
 
-export interface WgslTextureDepth2dArray extends
-  WgslTexture<{
-    dimension: '2d-array';
-    sampleType: F32;
-    multisampled: false;
-  }> {
+export interface WgslTextureDepth2dArray extends WgslTexture<{
+  dimension: '2d-array';
+  sampleType: F32;
+  multisampled: false;
+}> {
   readonly type: 'texture_depth_2d_array';
   readonly [$repr]: textureDepth2dArray;
 }
 
-export interface WgslTextureDepthCube extends
-  WgslTexture<{
-    dimension: 'cube';
-    sampleType: F32;
-    multisampled: false;
-  }> {
+export interface WgslTextureDepthCube extends WgslTexture<{
+  dimension: 'cube';
+  sampleType: F32;
+  multisampled: false;
+}> {
   readonly type: 'texture_depth_cube';
   readonly [$repr]: textureDepthCube;
 }
 
-export interface WgslTextureDepthCubeArray extends
-  WgslTexture<{
-    dimension: 'cube-array';
-    sampleType: F32;
-    multisampled: false;
-  }> {
+export interface WgslTextureDepthCubeArray extends WgslTexture<{
+  dimension: 'cube-array';
+  sampleType: F32;
+  multisampled: false;
+}> {
   readonly type: 'texture_depth_cube_array';
   readonly [$repr]: textureDepthCubeArray;
 }
@@ -215,12 +201,11 @@ export interface WgslTextureDepthCubeArray extends
 export interface WgslStorageTexture1d<
   TFormat extends StorageTextureFormats = StorageTextureFormats,
   TAccess extends GPUStorageTextureAccess = GPUStorageTextureAccess,
-> extends
-  WgslStorageTexture<{
-    dimension: '1d';
-    format: TFormat;
-    access: TAccess;
-  }> {
+> extends WgslStorageTexture<{
+  dimension: '1d';
+  format: TFormat;
+  access: TAccess;
+}> {
   readonly type: 'texture_storage_1d';
   readonly [$repr]: textureStorage1d<TFormat, TAccess>;
 }
@@ -228,12 +213,11 @@ export interface WgslStorageTexture1d<
 export interface WgslStorageTexture2d<
   TFormat extends StorageTextureFormats = StorageTextureFormats,
   TAccess extends GPUStorageTextureAccess = GPUStorageTextureAccess,
-> extends
-  WgslStorageTexture<{
-    dimension: '2d';
-    format: TFormat;
-    access: TAccess;
-  }> {
+> extends WgslStorageTexture<{
+  dimension: '2d';
+  format: TFormat;
+  access: TAccess;
+}> {
   readonly type: 'texture_storage_2d';
   readonly [$repr]: textureStorage2d<TFormat, TAccess>;
 }
@@ -241,12 +225,11 @@ export interface WgslStorageTexture2d<
 export interface WgslStorageTexture2dArray<
   TFormat extends StorageTextureFormats = StorageTextureFormats,
   TAccess extends GPUStorageTextureAccess = GPUStorageTextureAccess,
-> extends
-  WgslStorageTexture<{
-    dimension: '2d-array';
-    format: TFormat;
-    access: TAccess;
-  }> {
+> extends WgslStorageTexture<{
+  dimension: '2d-array';
+  format: TFormat;
+  access: TAccess;
+}> {
   readonly type: 'texture_storage_2d_array';
   readonly [$repr]: textureStorage2dArray<TFormat, TAccess>;
 }
@@ -254,12 +237,11 @@ export interface WgslStorageTexture2dArray<
 export interface WgslStorageTexture3d<
   TFormat extends StorageTextureFormats = StorageTextureFormats,
   TAccess extends GPUStorageTextureAccess = GPUStorageTextureAccess,
-> extends
-  WgslStorageTexture<{
-    dimension: '3d';
-    format: TFormat;
-    access: TAccess;
-  }> {
+> extends WgslStorageTexture<{
+  dimension: '3d';
+  format: TFormat;
+  access: TAccess;
+}> {
   readonly type: 'texture_storage_3d';
   readonly [$repr]: textureStorage3d<TFormat, TAccess>;
 }
@@ -290,29 +272,24 @@ type StorageTextureSchemaMap<T extends WgslStorageTextureProps> = {
   '3d': WgslStorageTexture3d<T['format'], T['access']>;
 };
 
-export type TextureSchemaForDescriptor<
-  T extends WgslTextureProps | WgslStorageTextureProps,
-> = T extends WgslTextureProps
-  ? T['multisampled'] extends true
-    ? SampledTextureSchemaMap<T>['multisampled'][T['dimension']]
-  : SampledTextureSchemaMap<T>['sampled'][T['dimension']]
-  : T extends WgslStorageTextureProps
-    ? StorageTextureSchemaMap<T>[T['dimension']]
-  : never;
+export type TextureSchemaForDescriptor<T extends WgslTextureProps | WgslStorageTextureProps> =
+  T extends WgslTextureProps
+    ? T['multisampled'] extends true
+      ? SampledTextureSchemaMap<T>['multisampled'][T['dimension']]
+      : SampledTextureSchemaMap<T>['sampled'][T['dimension']]
+    : T extends WgslStorageTextureProps
+      ? StorageTextureSchemaMap<T>[T['dimension']]
+      : never;
 
-export function textureDescriptorToSchema<
-  T extends WgslTextureProps | WgslStorageTextureProps,
->(desc: T): TextureSchemaForDescriptor<T> {
+export function textureDescriptorToSchema<T extends WgslTextureProps | WgslStorageTextureProps>(
+  desc: T,
+): TextureSchemaForDescriptor<T> {
   if ('multisampled' in desc) {
     if (desc.multisampled) {
       if (desc.dimension === '2d') {
-        return textureMultisampled2d(
-          desc.sampleType,
-        ) as TextureSchemaForDescriptor<T>;
+        return textureMultisampled2d(desc.sampleType) as TextureSchemaForDescriptor<T>;
       }
-      throw new Error(
-        `Multisampled textures only support '2d' dimension, got '${desc.dimension}'`,
-      );
+      throw new Error(`Multisampled textures only support '2d' dimension, got '${desc.dimension}'`);
     }
 
     switch (desc.dimension) {
@@ -321,19 +298,13 @@ export function textureDescriptorToSchema<
       case '2d':
         return texture2d(desc.sampleType) as TextureSchemaForDescriptor<T>;
       case '2d-array':
-        return texture2dArray(
-          desc.sampleType,
-        ) as TextureSchemaForDescriptor<T>;
+        return texture2dArray(desc.sampleType) as TextureSchemaForDescriptor<T>;
       case '3d':
         return texture3d(desc.sampleType) as TextureSchemaForDescriptor<T>;
       case 'cube':
-        return textureCube(
-          desc.sampleType,
-        ) as TextureSchemaForDescriptor<T>;
+        return textureCube(desc.sampleType) as TextureSchemaForDescriptor<T>;
       case 'cube-array':
-        return textureCubeArray(
-          desc.sampleType,
-        ) as TextureSchemaForDescriptor<T>;
+        return textureCubeArray(desc.sampleType) as TextureSchemaForDescriptor<T>;
       default:
         throw new Error(
           // @ts-expect-error
@@ -347,25 +318,13 @@ export function textureDescriptorToSchema<
 
   switch (desc.dimension) {
     case '1d':
-      return textureStorage1d(
-        desc.format,
-        desc.access,
-      ) as TextureSchemaForDescriptor<T>;
+      return textureStorage1d(desc.format, desc.access) as TextureSchemaForDescriptor<T>;
     case '2d':
-      return textureStorage2d(
-        desc.format,
-        desc.access,
-      ) as TextureSchemaForDescriptor<T>;
+      return textureStorage2d(desc.format, desc.access) as TextureSchemaForDescriptor<T>;
     case '2d-array':
-      return textureStorage2dArray(
-        desc.format,
-        desc.access,
-      ) as TextureSchemaForDescriptor<T>;
+      return textureStorage2dArray(desc.format, desc.access) as TextureSchemaForDescriptor<T>;
     case '3d':
-      return textureStorage3d(
-        desc.format,
-        desc.access,
-      ) as TextureSchemaForDescriptor<T>;
+      return textureStorage3d(desc.format, desc.access) as TextureSchemaForDescriptor<T>;
     default:
       throw new Error(
         // @ts-expect-error
@@ -382,10 +341,10 @@ function createTexture<TProps extends WgslTextureProps>(
   const sampleTypes: [GPUTextureSampleType, ...GPUTextureSampleType[]] = isDepth
     ? ['depth', 'float', 'unfilterable-float']
     : props.sampleType.type === 'i32'
-    ? ['sint']
-    : props.sampleType.type === 'u32'
-    ? ['uint']
-    : ['float', 'unfilterable-float'];
+      ? ['sint']
+      : props.sampleType.type === 'u32'
+        ? ['uint']
+        : ['float', 'unfilterable-float'];
 
   return {
     [$internal]: {},
@@ -408,10 +367,7 @@ function createStorageTexture<TProps extends WgslStorageTextureProps>(
   };
 }
 
-const textureCache = new Map<
-  string,
-  WgslTexture | WgslStorageTexture | WgslExternalTexture
->();
+const textureCache = new Map<string, WgslTexture | WgslStorageTexture | WgslExternalTexture>();
 
 export const accessModeMap: Record<GPUStorageTextureAccess, string> = {
   'write-only': 'write',
@@ -419,9 +375,10 @@ export const accessModeMap: Record<GPUStorageTextureAccess, string> = {
   'read-write': 'read_write',
 };
 
-function getOrCreate<
-  T extends WgslTexture | WgslStorageTexture | WgslExternalTexture,
->(key: string, factory: () => T): T {
+function getOrCreate<T extends WgslTexture | WgslStorageTexture | WgslExternalTexture>(
+  key: string,
+  factory: () => T,
+): T {
   let cached = textureCache.get(key) as T | undefined;
   if (!cached) {
     cached = factory();
@@ -435,9 +392,7 @@ export interface texture1d<T extends TextureSampleTypes = TextureSampleTypes> {
   [$internal]: T;
 }
 
-export function texture1d<T extends TextureSampleTypes>(
-  sampleType: T,
-): WgslTexture1d<T>;
+export function texture1d<T extends TextureSampleTypes>(sampleType: T): WgslTexture1d<T>;
 export function texture1d(): WgslTexture1d<F32>;
 export function texture1d<T extends TextureSampleTypes>(sampleType?: T) {
   const actualSampleType = (sampleType || f32) as Default<T, F32>;
@@ -447,7 +402,8 @@ export function texture1d<T extends TextureSampleTypes>(sampleType?: T) {
       dimension: '1d',
       sampleType: actualSampleType,
       multisampled: false,
-    }));
+    }),
+  );
 }
 
 export interface texture2d<T extends TextureSampleTypes = TextureSampleTypes> {
@@ -455,9 +411,7 @@ export interface texture2d<T extends TextureSampleTypes = TextureSampleTypes> {
   [$internal]: T;
 }
 
-export function texture2d<T extends TextureSampleTypes>(
-  sampleType: T,
-): WgslTexture2d<T>;
+export function texture2d<T extends TextureSampleTypes>(sampleType: T): WgslTexture2d<T>;
 export function texture2d(): WgslTexture2d<F32>;
 export function texture2d<T extends TextureSampleTypes>(sampleType?: T) {
   const actualSampleType = (sampleType || f32) as Default<T, F32>;
@@ -467,12 +421,11 @@ export function texture2d<T extends TextureSampleTypes>(sampleType?: T) {
       dimension: '2d',
       sampleType: actualSampleType,
       multisampled: false,
-    }));
+    }),
+  );
 }
 
-export interface textureMultisampled2d<
-  T extends TextureSampleTypes = TextureSampleTypes,
-> {
+export interface textureMultisampled2d<T extends TextureSampleTypes = TextureSampleTypes> {
   readonly kind: `texture_multisampled_2d<${T['type']}>`;
   [$internal]: T;
 }
@@ -481,9 +434,7 @@ export function textureMultisampled2d<T extends TextureSampleTypes>(
   sampleType: T,
 ): WgslTextureMultisampled2d<T>;
 export function textureMultisampled2d(): WgslTextureMultisampled2d<F32>;
-export function textureMultisampled2d<T extends TextureSampleTypes>(
-  sampleType?: T,
-) {
+export function textureMultisampled2d<T extends TextureSampleTypes>(sampleType?: T) {
   const actualSampleType = (sampleType || f32) as Default<T, F32>;
   const key = `texture_multisampled_2d<${actualSampleType.type}>`;
   return getOrCreate(key, () =>
@@ -491,19 +442,16 @@ export function textureMultisampled2d<T extends TextureSampleTypes>(
       dimension: '2d',
       sampleType: actualSampleType,
       multisampled: true,
-    }));
+    }),
+  );
 }
 
-export interface texture2dArray<
-  T extends TextureSampleTypes = TextureSampleTypes,
-> {
+export interface texture2dArray<T extends TextureSampleTypes = TextureSampleTypes> {
   readonly kind: `texture_2d_array<${T['type']}>`;
   [$internal]: T;
 }
 
-export function texture2dArray<T extends TextureSampleTypes>(
-  sampleType: T,
-): WgslTexture2dArray<T>;
+export function texture2dArray<T extends TextureSampleTypes>(sampleType: T): WgslTexture2dArray<T>;
 export function texture2dArray(): WgslTexture2dArray<F32>;
 export function texture2dArray<T extends TextureSampleTypes>(sampleType?: T) {
   const actualSampleType = (sampleType || f32) as Default<T, F32>;
@@ -513,19 +461,16 @@ export function texture2dArray<T extends TextureSampleTypes>(sampleType?: T) {
       dimension: '2d-array',
       sampleType: actualSampleType,
       multisampled: false,
-    }));
+    }),
+  );
 }
 
-export interface textureCube<
-  T extends TextureSampleTypes = TextureSampleTypes,
-> {
+export interface textureCube<T extends TextureSampleTypes = TextureSampleTypes> {
   readonly kind: `texture_cube<${T['type']}>`;
   [$internal]: T;
 }
 
-export function textureCube<T extends TextureSampleTypes>(
-  sampleType: T,
-): WgslTextureCube<T>;
+export function textureCube<T extends TextureSampleTypes>(sampleType: T): WgslTextureCube<T>;
 export function textureCube(): WgslTextureCube<F32>;
 export function textureCube<T extends TextureSampleTypes>(sampleType?: T) {
   const actualSampleType = (sampleType || f32) as Default<T, F32>;
@@ -535,12 +480,11 @@ export function textureCube<T extends TextureSampleTypes>(sampleType?: T) {
       dimension: 'cube',
       sampleType: actualSampleType,
       multisampled: false,
-    }));
+    }),
+  );
 }
 
-export interface textureCubeArray<
-  T extends TextureSampleTypes = TextureSampleTypes,
-> {
+export interface textureCubeArray<T extends TextureSampleTypes = TextureSampleTypes> {
   readonly kind: `texture_cube_array<${T['type']}>`;
   [$internal]: T;
 }
@@ -549,9 +493,7 @@ export function textureCubeArray<T extends TextureSampleTypes>(
   sampleType: T,
 ): WgslTextureCubeArray<T>;
 export function textureCubeArray(): WgslTextureCubeArray<F32>;
-export function textureCubeArray<T extends TextureSampleTypes>(
-  sampleType?: T,
-) {
+export function textureCubeArray<T extends TextureSampleTypes>(sampleType?: T) {
   const actualSampleType = (sampleType || f32) as Default<T, F32>;
   const key = `texture_cube_array<${actualSampleType.type}>`;
   return getOrCreate(key, () =>
@@ -559,7 +501,8 @@ export function textureCubeArray<T extends TextureSampleTypes>(
       dimension: 'cube-array',
       sampleType: actualSampleType,
       multisampled: false,
-    }));
+    }),
+  );
 }
 
 export interface texture3d<T extends TextureSampleTypes = TextureSampleTypes> {
@@ -567,9 +510,7 @@ export interface texture3d<T extends TextureSampleTypes = TextureSampleTypes> {
   [$internal]: T;
 }
 
-export function texture3d<T extends TextureSampleTypes>(
-  sampleType: T,
-): WgslTexture3d<T>;
+export function texture3d<T extends TextureSampleTypes>(sampleType: T): WgslTexture3d<T>;
 export function texture3d(): WgslTexture3d<F32>;
 export function texture3d<T extends TextureSampleTypes>(sampleType?: T) {
   const actualSampleType = (sampleType || f32) as Default<T, F32>;
@@ -579,7 +520,8 @@ export function texture3d<T extends TextureSampleTypes>(sampleType?: T) {
       dimension: '3d',
       sampleType: actualSampleType,
       multisampled: false,
-    }));
+    }),
+  );
 }
 
 export interface textureStorage1d<
@@ -601,17 +543,15 @@ export function textureStorage1d<
   TFormat extends StorageTextureFormats,
   TAccess extends GPUStorageTextureAccess,
 >(format: TFormat, access?: TAccess) {
-  const actualAccess = (access || 'write-only') as Default<
-    TAccess,
-    'write-only'
-  >;
+  const actualAccess = (access || 'write-only') as Default<TAccess, 'write-only'>;
   const key = `texture_storage_1d<${format}, ${accessModeMap[actualAccess]}>`;
   return getOrCreate(key, () =>
     createStorageTexture('texture_storage_1d', {
       dimension: '1d',
       format,
       access: actualAccess,
-    }));
+    }),
+  );
 }
 
 export interface textureStorage2d<
@@ -633,17 +573,15 @@ export function textureStorage2d<
   TFormat extends StorageTextureFormats,
   TAccess extends GPUStorageTextureAccess,
 >(format: TFormat, access?: TAccess) {
-  const actualAccess = (access || 'write-only') as Default<
-    TAccess,
-    'write-only'
-  >;
+  const actualAccess = (access || 'write-only') as Default<TAccess, 'write-only'>;
   const key = `texture_storage_2d<${format}, ${accessModeMap[actualAccess]}>`;
   return getOrCreate(key, () =>
     createStorageTexture('texture_storage_2d', {
       dimension: '2d',
       format,
       access: actualAccess,
-    }));
+    }),
+  );
 }
 
 export interface textureStorage2dArray<
@@ -657,10 +595,7 @@ export interface textureStorage2dArray<
 export function textureStorage2dArray<
   TFormat extends StorageTextureFormats,
   TAccess extends GPUStorageTextureAccess,
->(
-  format: TFormat,
-  access: TAccess,
-): WgslStorageTexture2dArray<TFormat, TAccess>;
+>(format: TFormat, access: TAccess): WgslStorageTexture2dArray<TFormat, TAccess>;
 export function textureStorage2dArray<TFormat extends StorageTextureFormats>(
   format: TFormat,
 ): WgslStorageTexture2dArray<TFormat, 'write-only'>;
@@ -668,21 +603,14 @@ export function textureStorage2dArray<
   TFormat extends StorageTextureFormats,
   TAccess extends GPUStorageTextureAccess,
 >(format: TFormat, access?: TAccess) {
-  const actualAccess = (access || 'write-only') as Default<
-    TAccess,
-    'write-only'
-  >;
-  const key = `texture_storage_2d_array<${format}, ${
-    accessModeMap[actualAccess]
-  }>`;
-  return getOrCreate(
-    key,
-    () =>
-      createStorageTexture('texture_storage_2d_array', {
-        dimension: '2d-array',
-        format,
-        access: actualAccess,
-      }),
+  const actualAccess = (access || 'write-only') as Default<TAccess, 'write-only'>;
+  const key = `texture_storage_2d_array<${format}, ${accessModeMap[actualAccess]}>`;
+  return getOrCreate(key, () =>
+    createStorageTexture('texture_storage_2d_array', {
+      dimension: '2d-array',
+      format,
+      access: actualAccess,
+    }),
   );
 }
 
@@ -705,17 +633,15 @@ export function textureStorage3d<
   TFormat extends StorageTextureFormats,
   TAccess extends GPUStorageTextureAccess,
 >(format: TFormat, access?: TAccess) {
-  const actualAccess = (access || 'write-only') as Default<
-    TAccess,
-    'write-only'
-  >;
+  const actualAccess = (access || 'write-only') as Default<TAccess, 'write-only'>;
   const key = `texture_storage_3d<${format}, ${accessModeMap[actualAccess]}>`;
   return getOrCreate(key, () =>
     createStorageTexture('texture_storage_3d', {
       dimension: '3d',
       format,
       access: actualAccess,
-    }));
+    }),
+  );
 }
 
 export interface textureDepth2d {
@@ -730,7 +656,8 @@ export function textureDepth2d() {
       dimension: '2d',
       sampleType: f32,
       multisampled: false,
-    })) as WgslTextureDepth2d;
+    }),
+  ) as WgslTextureDepth2d;
 }
 
 export interface textureDepthMultisampled2d {
@@ -745,7 +672,8 @@ export function textureDepthMultisampled2d() {
       dimension: '2d',
       sampleType: f32,
       multisampled: true,
-    })) as WgslTextureDepthMultisampled2d;
+    }),
+  ) as WgslTextureDepthMultisampled2d;
 }
 
 export interface textureDepth2dArray {
@@ -760,7 +688,8 @@ export function textureDepth2dArray() {
       dimension: '2d-array',
       sampleType: f32,
       multisampled: false,
-    })) as WgslTextureDepth2dArray;
+    }),
+  ) as WgslTextureDepth2dArray;
 }
 
 export interface textureDepthCube {
@@ -775,7 +704,8 @@ export function textureDepthCube() {
       dimension: 'cube',
       sampleType: f32,
       multisampled: false,
-    })) as WgslTextureDepthCube;
+    }),
+  ) as WgslTextureDepthCube;
 }
 
 export interface textureDepthCubeArray {
@@ -790,7 +720,8 @@ export function textureDepthCubeArray() {
       dimension: 'cube-array',
       sampleType: f32,
       multisampled: false,
-    })) as WgslTextureDepthCubeArray;
+    }),
+  ) as WgslTextureDepthCubeArray;
 }
 
 export interface textureExternal {
@@ -810,14 +741,11 @@ export function textureExternal() {
 
 export function isWgslTexture(value: unknown): value is WgslTexture {
   return (
-    !!(value as WgslTexture)[$internal] &&
-    typeof (value as WgslTexture).multisampled === 'boolean'
+    !!(value as WgslTexture)[$internal] && typeof (value as WgslTexture).multisampled === 'boolean'
   );
 }
 
-export function isWgslStorageTexture(
-  value: unknown,
-): value is WgslStorageTexture {
+export function isWgslStorageTexture(value: unknown): value is WgslStorageTexture {
   return (
     !!(value as WgslStorageTexture)[$internal] &&
     typeof (value as WgslStorageTexture).format === 'string' &&
@@ -825,9 +753,7 @@ export function isWgslStorageTexture(
   );
 }
 
-export function isWgslExternalTexture(
-  value: unknown,
-): value is WgslExternalTexture {
+export function isWgslExternalTexture(value: unknown): value is WgslExternalTexture {
   return (
     !!(value as WgslExternalTexture)[$internal] &&
     (value as WgslExternalTexture).type === 'texture_external'
