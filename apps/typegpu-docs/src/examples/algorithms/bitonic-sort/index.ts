@@ -130,20 +130,19 @@ const initKernel = tgpu['~unstable'].computeFn({
   initLayout.$.data[idx] = d.u32(std.floor(n * 256.0));
 });
 
-const renderPipeline = root['~unstable'].createRenderPipeline({
+const renderPipeline = root.createRenderPipeline({
   vertex: fullScreenTriangle,
   fragment: fragmentFn,
   targets: { format: presentationFormat },
 });
 
-const initPipeline = root['~unstable'].withCompute(initKernel).createPipeline();
+const initPipeline = root.createComputePipeline({ compute: initKernel });
 
 let buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage('storage');
 
 let bindGroup = root.createBindGroup(renderLayout, {
   data: buffer,
 });
-
 let initBindGroup = root.createBindGroup(initLayout, {
   data: buffer,
 });
