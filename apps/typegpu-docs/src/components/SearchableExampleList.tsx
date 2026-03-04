@@ -31,7 +31,7 @@ export function SearchableExampleList({
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   const [query, setQuery] = useState('');
-  const [groupByCategory] = useHydratedAtom(groupExamplesByCategoryAtom, true);
+  const [groupByCategory] = useHydratedAtom(groupExamplesByCategoryAtom, false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedApis, setSelectedApis] = useState<string[]>([]);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -130,6 +130,8 @@ export function SearchableExampleList({
   );
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const filterContainerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const listener = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -142,6 +144,19 @@ export function SearchableExampleList({
     return () => window.removeEventListener('keydown', listener);
   }, []);
 
+  useEffect(() => {
+    if (!filterOpen) {
+      return;
+    }
+    const listener = (e: MouseEvent) => {
+      if (filterContainerRef.current && !filterContainerRef.current.contains(e.target as Node)) {
+        setFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', listener);
+    return () => document.removeEventListener('mousedown', listener);
+  }, [filterOpen]);
+
   return (
     <div className="flex w-full flex-col">
       <div
@@ -150,7 +165,7 @@ export function SearchableExampleList({
           background: 'linear-gradient(to bottom, white 60%, transparent 100%)',
         }}
       >
-        <div className="relative">
+        <div className="relative" ref={filterContainerRef}>
           <div className="flex gap-2">
             <input
               ref={inputRef}
@@ -200,35 +215,34 @@ export function SearchableExampleList({
               className="absolute left-0 right-0 top-full z-30 mt-1 overflow-y-auto rounded-2xl border border-purple-100 bg-white p-3 shadow-lg"
               style={{ maxHeight: '60vh' }}
             >
-              {(selectedTags.length > 0 || selectedApis.length > 0) && (
-                <div className="mb-2.5 border-b border-tameplum-50 pb-2.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedTags([]);
-                      setSelectedApis([]);
-                    }}
-                    className="flex items-center gap-1.5 rounded-full border border-tameplum-200 px-2.5 py-1 text-xs text-tameplum-600 transition-colors hover:border-tameplum-300 hover:bg-tameplum-50"
-                  >
-                    <svg
-                      className="h-3 w-3"
-                      viewBox="0 0 12 12"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    >
-                      <path d="M2 2l8 8M10 2l-8 8" />
-                    </svg>
-                    Clear all
-                  </button>
-                </div>
-              )}
               {availableTags.length > 0 && (
                 <>
-                  <p className="mb-1.5 px-0.5 text-[10px] font-semibold uppercase tracking-wide text-tameplum-400">
-                    Tags
-                  </p>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <p className="px-0.5 text-[10px] font-semibold uppercase tracking-wide text-tameplum-400">
+                      Tags
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedTags([]);
+                        setSelectedApis([]);
+                      }}
+                      disabled={selectedTags.length === 0 && selectedApis.length === 0}
+                      className={`flex items-center gap-1 rounded-full border border-tameplum-200 px-2 py-0.5 text-[10px] text-tameplum-600 transition-colors hover:border-tameplum-300 hover:bg-tameplum-50 ${selectedTags.length === 0 && selectedApis.length === 0 ? 'invisible' : ''}`}
+                    >
+                      <svg
+                        className="h-2.5 w-2.5"
+                        viewBox="0 0 12 12"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      >
+                        <path d="M2 2l8 8M10 2l-8 8" />
+                      </svg>
+                      Clear all
+                    </button>
+                  </div>
                   <div className="flex flex-wrap gap-x-1.5 gap-y-1.5">
                     {availableTags.map((tag) => {
                       const isSelected = selectedTags.includes(tag);
@@ -298,9 +312,9 @@ export function SearchableExampleList({
       </div>
       <div className="flex flex-1 flex-col gap-10">
         {query.trim() ? (
-          sortedExamples.length > 0 ? (
+          filteredExamples.length > 0 ? (
             <div className="flex flex-col gap-5">
-              <ExamplesGrid examples={sortedExamples} />
+              <ExamplesGrid examples={filteredExamples} />
             </div>
           ) : (
             <div className="text-center text-gray-500">No examples match your search.</div>

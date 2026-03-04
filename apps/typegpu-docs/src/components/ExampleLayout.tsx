@@ -51,7 +51,7 @@ function SideMenu() {
     experimentalExamplesShownAtom,
     true,
   );
-  const [groupByCategory, setGroupByCategory] = useHydratedAtom(groupExamplesByCategoryAtom, true);
+  const [groupByCategory, setGroupByCategory] = useHydratedAtom(groupExamplesByCategoryAtom, false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const experimentalExamplesToggleId = useId();
   const groupByCategoryToggleId = useId();
@@ -103,7 +103,7 @@ function SideMenu() {
           htmlFor={groupByCategoryToggleId}
           className="flex flex-1 cursor-pointer items-center justify-between gap-2"
         >
-          <span className="whitespace-nowrap">Group by cat.</span>
+          <span className="whitespace-nowrap">Grouped</span>
           <Toggle
             id={groupByCategoryToggleId}
             checked={groupByCategory}

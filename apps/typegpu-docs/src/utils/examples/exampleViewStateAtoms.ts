@@ -20,7 +20,7 @@ export const experimentalExamplesShownAtom = atomWithStorage(
 
 export const groupExamplesByCategoryAtom = atomWithStorage(
   'examples-group-by-category',
-  true,
+  false,
   undefined,
   storageOptions,
 );
