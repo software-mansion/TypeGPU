@@ -61,15 +61,11 @@ jobs:
 
       - name: Run tree-shake test on PR branch
         working-directory: pr-branch
-        run: |
-          pnpm --filter typegpu build
-          pnpm --filter treeshake-test test --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
+        run: pnpm --filter treeshake-test test --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
 
       - name: Run tree-shake test on target branch
         working-directory: target-branch
-        run: |
-          pnpm --filter typegpu build
-          pnpm --filter treeshake-test test --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
+        run: pnpm --filter treeshake-test test --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
 
       - name: Compare results
         run: |

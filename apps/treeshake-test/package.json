@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "generate-tests": "tsx generateTests.ts",
-    "test": "node runTests.ts"
+    "test": "pnpm run --filter typegpu build && node runTests.ts"
   },
   "dependencies": {
     "typegpu": "workspace:*",
