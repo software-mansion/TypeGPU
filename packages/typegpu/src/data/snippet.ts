@@ -86,16 +86,8 @@ export function isSnippetNumeric(snippet: Snippet) {
   return isNumericSchema(snippet.dataType);
 }
 
-export function snip(
-  value: string,
-  dataType: BaseData,
-  origin: Origin,
-): ResolvedSnippet;
-export function snip(
-  value: unknown,
-  dataType: BaseData | UnknownData,
-  origin: Origin,
-): Snippet;
+export function snip(value: string, dataType: BaseData, origin: Origin): ResolvedSnippet;
+export function snip(value: unknown, dataType: BaseData | UnknownData, origin: Origin): Snippet;
 export function snip(
   value: unknown,
   dataType: BaseData | UnknownData,

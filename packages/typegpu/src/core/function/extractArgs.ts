@@ -107,9 +107,7 @@ export function extractArgs(rawCode: string): FunctionArgsInfo {
  *
  * strip(code); // "(a,@location(0)b:i32)->i32"
  */
-function strip(
-  rawCode: string,
-): { strippedCode: string; argRange: [number, number] } {
+function strip(rawCode: string): { strippedCode: string; argRange: [number, number] } {
   const code = new ParsableString(rawCode);
   let strippedCode = '';
   let argsStart: number | undefined;
@@ -212,10 +210,7 @@ class ParsableString {
    * // '(@attribute(0) identifier: type)'
    * //               ^
    */
-  parseUntil(
-    toFind: Set<string>,
-    brackets?: readonly [string, string],
-  ): number {
+  parseUntil(toFind: Set<string>, brackets?: readonly [string, string]): number {
     this.#parseStartPos = this.#pos;
     let openedBrackets = 0;
     while (this.#pos < this.str.length) {
@@ -242,9 +237,10 @@ class ParsableString {
   consume(str: string): void {
     if (!this.isAt(str)) {
       throw new Error(
-        `Expected '${str}' at position ${this.#pos}, but found '${
-          this.str.slice(this.#pos, this.#pos + str.length)
-        }'`,
+        `Expected '${str}' at position ${this.#pos}, but found '${this.str.slice(
+          this.#pos,
+          this.#pos + str.length,
+        )}'`,
       );
     }
     this.advanceBy(str.length);

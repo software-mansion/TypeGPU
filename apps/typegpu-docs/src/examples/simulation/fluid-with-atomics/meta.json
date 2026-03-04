@@ -1,5 +1,5 @@
 {
   "title": "Fluid (with atomics)",
   "category": "simulation",
-  "tags": ["experimental", "compute", "cellular automata", "atomic operations"]
+  "tags": ["compute", "cellular automata", "atomic operations"]
 }

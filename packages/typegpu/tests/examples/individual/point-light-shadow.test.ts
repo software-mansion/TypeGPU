@@ -11,12 +11,15 @@ describe('point light shadow example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'rendering',
-      name: 'point-light-shadow',
-      setupMocks: mockResizeObserver,
-      expectedCalls: 3,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'rendering',
+        name: 'point-light-shadow',
+        setupMocks: mockResizeObserver,
+        expectedCalls: 3,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct CameraData {

@@ -10,8 +10,6 @@ describe('acos', () => {
   });
 
   it('computes acos for two vectors', () => {
-    expect(
-      isCloseTo(acos(vec3f(-1, 0, 1)), vec3f(Math.PI, Math.PI / 2, 0)),
-    ).toBe(true);
+    expect(isCloseTo(acos(vec3f(-1, 0, 1)), vec3f(Math.PI, Math.PI / 2, 0))).toBe(true);
   });
 });

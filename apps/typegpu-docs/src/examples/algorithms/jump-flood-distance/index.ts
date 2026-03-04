@@ -32,8 +32,7 @@ let resolutionScale = 0.5;
 let [width, height] = [0, 0];
 
 function updateDimensions() {
-  [width, height] = [canvas.width, canvas.height]
-    .map((v) => Math.floor(v * resolutionScale));
+  [width, height] = [canvas.width, canvas.height].map((v) => Math.floor(v * resolutionScale));
 }
 updateDimensions();
 
@@ -62,7 +61,7 @@ function createResources() {
         size: [width, height],
         format: 'rgba16float',
       })
-      .$usage('storage')
+      .$usage('storage'),
   ) as [FloodTexture, FloodTexture];
 
   const maskTexture = root['~unstable']
@@ -80,21 +79,21 @@ function createResources() {
     .$usage('storage', 'sampled') as DistanceTexture;
 
   const initBindGroups = textures.map((tex) =>
-    root.createBindGroup(initLayout, { writeView: tex })
+    root.createBindGroup(initLayout, { writeView: tex }),
   );
 
   const pingPongBindGroups = [0, 1].map((i) =>
     root.createBindGroup(pingPongLayout, {
       readView: textures[i],
       writeView: textures[1 - i],
-    })
+    }),
   );
 
   const renderBindGroups = [0].map(() =>
     root.createBindGroup(distSampleLayout, {
       distTexture: distanceTexture.createView(),
       sampler: filteringSampler,
-    })
+    }),
   );
 
   const maskBindGroup = root.createBindGroup(maskLayout, {
@@ -134,7 +133,8 @@ const sampleWithOffset = (
   const dims = std.textureDimensions(tex);
   const samplePos = pos.add(offset);
 
-  const outOfBounds = samplePos.x < 0 ||
+  const outOfBounds =
+    samplePos.x < 0 ||
     samplePos.y < 0 ||
     samplePos.x >= d.i32(dims.x) ||
     samplePos.y >= d.i32(dims.y);
@@ -157,10 +157,7 @@ const initFromMask = root.createGuardedComputePipeline((x, y) => {
   const pos = d.vec2f(x, y);
   const uv = pos.div(d.vec2f(size));
 
-  const mask = std.textureLoad(
-    initFromMaskLayout.$.maskTexture,
-    d.vec2i(x, y),
-  ).x;
+  const mask = std.textureLoad(initFromMaskLayout.$.maskTexture, d.vec2i(x, y)).x;
 
   const inside = mask > 0;
   const invalid = d.vec2f(-1);
@@ -195,10 +192,7 @@ const jumpFlood = root.createGuardedComputePipeline((x, y) => {
       );
 
       if (sample.inside.x >= 0) {
-        const dInside = std.distance(
-          pos,
-          sample.inside.mul(d.vec2f(size)),
-        );
+        const dInside = std.distance(pos, sample.inside.mul(d.vec2f(size)));
         if (dInside < bestInsideDist) {
           bestInsideDist = dInside;
           bestInsideCoord = d.vec2f(sample.inside);
@@ -206,10 +200,7 @@ const jumpFlood = root.createGuardedComputePipeline((x, y) => {
       }
 
       if (sample.outside.x >= 0) {
-        const dOutside = std.distance(
-          pos,
-          sample.outside.mul(d.vec2f(size)),
-        );
+        const dOutside = std.distance(pos, sample.outside.mul(d.vec2f(size)));
         if (dOutside < bestOutsideDist) {
           bestOutsideDist = dOutside;
           bestOutsideCoord = d.vec2f(sample.outside);
@@ -246,10 +237,7 @@ const createDistanceField = root.createGuardedComputePipeline((x, y) => {
   'use gpu';
   const pos = d.vec2f(x, y);
   const size = std.textureDimensions(pingPongLayout.$.readView);
-  const texel = std.textureLoad(
-    pingPongLayout.$.readView,
-    d.vec2i(x, y),
-  );
+  const texel = std.textureLoad(pingPongLayout.$.readView, d.vec2i(x, y));
 
   const insideCoord = texel.xy;
   const outsideCoord = texel.zw;
@@ -267,20 +255,14 @@ const createDistanceField = root.createGuardedComputePipeline((x, y) => {
 
   const signedDist = insideDist - outsideDist;
 
-  std.textureStore(
-    distWriteLayout.$.distTexture,
-    d.vec2i(x, y),
-    d.vec4f(signedDist, 0, 0, 0),
-  );
+  std.textureStore(distWriteLayout.$.distTexture, d.vec2i(x, y), d.vec4f(signedDist, 0, 0, 0));
 });
 
-const distancePipeline = root
-  .with(paramsAccess, paramsUniform)
-  .createRenderPipeline({
-    vertex: common.fullScreenTriangle,
-    fragment: distanceFrag,
-    targets: { format: presentationFormat },
-  });
+const distancePipeline = root.with(paramsAccess, paramsUniform).createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: distanceFrag,
+  targets: { format: presentationFormat },
+});
 
 function swap() {
   sourceIdx ^= 1;
@@ -294,9 +276,7 @@ function render() {
 }
 
 function runFlood() {
-  initFromMask
-    .with(resources.initFromMaskBindGroup)
-    .dispatchThreads(width, height);
+  initFromMask.with(resources.initFromMaskBindGroup).dispatchThreads(width, height);
 
   sourceIdx = 0;
 
@@ -305,12 +285,7 @@ function runFlood() {
 
   while (offset >= 1) {
     offsetUniform.write(offset);
-    jumpFlood
-      .with(resources.pingPongBindGroups[sourceIdx])
-      .dispatchThreads(
-        width,
-        height,
-      );
+    jumpFlood.with(resources.pingPongBindGroups[sourceIdx]).dispatchThreads(width, height);
     swap();
     offset = Math.floor(offset / 2);
   }
@@ -323,16 +298,10 @@ function runFlood() {
   render();
 }
 
-function drawAtPosition(
-  canvasX: number,
-  canvasY: number,
-) {
+function drawAtPosition(canvasX: number, canvasY: number) {
   const rect = canvas.getBoundingClientRect();
   brushUniform.writePartial({
-    center: d.vec2f(
-      canvasX * width / rect.width,
-      canvasY * height / rect.height,
-    ),
+    center: d.vec2f((canvasX * width) / rect.width, (canvasY * height) / rect.height),
   });
   drawSeed.with(resources.maskBindGroup).dispatchThreads(width, height);
 }

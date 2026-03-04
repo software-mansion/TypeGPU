@@ -12,9 +12,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   it('resolves to WGSL', () => {
     const getY = tgpu.fn([], d.f32)`() { return 3.0f; }`;
 
-    expect(tgpu.resolve([getY])).toMatchInlineSnapshot(
-      `"fn getY() -> f32{ return 3.0f; }"`,
-    );
+    expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`"fn getY() -> f32{ return 3.0f; }"`);
   });
 
   it('resolves externals and replaces their usages in code', () => {
@@ -26,10 +24,13 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
     const getX = tgpu.fn([], d.f32)`() -> f32 {
         let color = get_color();
         return 3.0f;
-      }`
-      .$uses({ get_color: getColor });
+      }`.$uses({ get_color: getColor });
 
-    const getY = tgpu.fn([], d.f32)(`() -> f32 {
+    const getY = tgpu
+      .fn(
+        [],
+        d.f32,
+      )(`() -> f32 {
         let c = color();
         return get_x();
       }`)
@@ -135,7 +136,8 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
     var output: Out;
     output.outPos = vec4f(pos[vertexIndex], 0, 1);
     return output;
-  }`).$name('vertex_fn');
+  }`)
+      .$name('vertex_fn');
 
     const resolved = tgpu.resolve([vertexFunction]);
 
@@ -198,7 +200,8 @@ struct fragment_Output {
       b: d.u32,
     });
 
-    const func = tgpu.fn([d.vec4f, Point])(/* wgsl */ `(a: vec4f, b: Point) {
+    const func = tgpu
+      .fn([d.vec4f, Point])(/* wgsl */ `(a: vec4f, b: Point) {
         var newPoint: Point;
         newPoint = b;
       }`)
@@ -225,7 +228,11 @@ struct fragment_Output {
       })
       .$name('P');
 
-    const func = tgpu.fn([d.vec4f, Point], d.vec2f)(/* wgsl */ `(
+    const func = tgpu
+      .fn(
+        [d.vec4f, Point],
+        d.vec2f,
+      )(/* wgsl */ `(
         a: vec4f,
         b: PointStruct
       ) -> vec2f {
@@ -255,13 +262,16 @@ struct fragment_Output {
       })
       .$name('P');
 
-    const func = tgpu.fn([d.vec4f], Point)(
-      /* wgsl */ `(a: vec4f) -> PointStruct {
+    const func = tgpu
+      .fn(
+        [d.vec4f],
+        Point,
+      )(/* wgsl */ `(a: vec4f) -> PointStruct {
         var newPoint: PointStruct;
         newPoint = b;
         return newPoint;
-      }`,
-    ).$name('newPointF');
+      }`)
+      .$name('newPointF');
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
       "struct P {
@@ -300,13 +310,21 @@ struct fragment_Output {
   // });
 
   it('resolves object externals and replaces their usages in code', () => {
-    const getColor = tgpu.fn([], d.vec3f)(`() -> vec3f {
+    const getColor = tgpu
+      .fn(
+        [],
+        d.vec3f,
+      )(`() -> vec3f {
         let color = vec3f();
         return color;
       }`)
       .$name('get_color');
 
-    const main = tgpu.fn([], d.f32)(`() -> f32 {
+    const main = tgpu
+      .fn(
+        [],
+        d.f32,
+      )(`() -> f32 {
         let c = functions.getColor();
         return c.x;
       }`)
@@ -329,12 +347,16 @@ struct fragment_Output {
   it('resolves compound types with structs provided in externals', () => {
     const Point = d.struct({ a: d.u32 }).$name('P');
 
-    const getColor = tgpu.fn([d.arrayOf(Point, 4)], d.u32)(
-      `(a: array<MyPoint, 4>) {
+    const getColor = tgpu
+      .fn(
+        [d.arrayOf(Point, 4)],
+        d.u32,
+      )(
+        `(a: array<MyPoint, 4>) {
         var b: MyPoint = a[0];
         return b.a;
       }`,
-    )
+      )
       .$name('get_color')
       .$uses({ MyPoint: Point });
 
@@ -353,10 +375,11 @@ struct fragment_Output {
 
 describe('tgpu.fn with raw wgsl and missing types', () => {
   it('resolves missing base types', () => {
-    const getColor = tgpu.fn(
-      [d.vec3f, d.u32, d.mat2x2f, d.bool, d.vec2b],
-      d.vec4u,
-    )(`(a, b: u32, c, d, e) {
+    const getColor = tgpu
+      .fn(
+        [d.vec3f, d.u32, d.mat2x2f, d.bool, d.vec2b],
+        d.vec4u,
+      )(`(a, b: u32, c, d, e) {
         return vec4u();
       }`)
       .$name('get_color');
@@ -381,7 +404,10 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
   });
 
   it('resolves compound types', () => {
-    const getColor = tgpu.fn([d.arrayOf(d.u32, 4)], d.u32)(`(a) {
+    const getColor = tgpu.fn(
+      [d.arrayOf(d.u32, 4)],
+      d.u32,
+    )(`(a) {
       return a[0];
     }`);
 
@@ -395,7 +421,11 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
   it('resolves compound types with structs provided in externals', () => {
     const Point = d.struct({ a: d.u32 }).$name('P');
 
-    const getColor = tgpu.fn([d.arrayOf(Point, 4)], d.u32)(`(a) {
+    const getColor = tgpu
+      .fn(
+        [d.arrayOf(Point, 4)],
+        d.u32,
+      )(`(a) {
         var b: MyPoint = a[0];
         return b.a;
       }`)
@@ -421,7 +451,11 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       })
       .$name('P');
 
-    const func = tgpu.fn([Point, Point], Point)(`(a, b: PointStruct) {
+    const func = tgpu
+      .fn(
+        [Point, Point],
+        Point,
+      )(`(a, b: PointStruct) {
         return b;
       }`)
       .$name('newPointF');
@@ -453,7 +487,8 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
   it('throws when compound parameter type mismatch', () => {
     const Point = d.struct({ a: d.u32 }).$name('P');
 
-    const getColor = tgpu.fn([d.arrayOf(Point, 4)])(`(a: arrayOf<MyPoint, 3>) {
+    const getColor = tgpu
+      .fn([d.arrayOf(Point, 4)])(`(a: arrayOf<MyPoint, 3>) {
       return;
     }`)
       .$uses({ MyPoint: Point });
@@ -466,7 +501,10 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
   });
 
   it('throws when return type mismatch', () => {
-    const getColor = tgpu.fn([], d.vec4f)(`() -> vec2f {
+    const getColor = tgpu.fn(
+      [],
+      d.vec4f,
+    )(`() -> vec2f {
       return;
     }`);
 

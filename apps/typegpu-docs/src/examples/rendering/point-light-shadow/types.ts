@@ -22,9 +22,6 @@ export const InstanceData = d.struct({
 export type InstanceData = typeof InstanceData;
 
 export const vertexLayout = tgpu.vertexLayout(d.arrayOf(VertexData));
-export const instanceLayout = tgpu.vertexLayout(
-  d.arrayOf(InstanceData),
-  'instance',
-);
+export const instanceLayout = tgpu.vertexLayout(d.arrayOf(InstanceData), 'instance');
 
 export type GeometryData = d.Infer<typeof VertexData>[];

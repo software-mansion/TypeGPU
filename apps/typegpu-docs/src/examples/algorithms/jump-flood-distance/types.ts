@@ -1,9 +1,4 @@
-import tgpu, {
-  d,
-  type SampledFlag,
-  type StorageFlag,
-  type TgpuTexture,
-} from 'typegpu';
+import tgpu, { d, type SampledFlag, type StorageFlag, type TgpuTexture } from 'typegpu';
 
 export const VisualizationParams = d.struct({
   showInside: d.u32,
@@ -64,15 +59,11 @@ export const initFromMaskLayout = tgpu.bindGroupLayout({
   },
 });
 
-export type FloodTexture =
-  & TgpuTexture<{ size: [number, number]; format: 'rgba16float' }>
-  & StorageFlag;
+export type FloodTexture = TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> &
+  StorageFlag;
 
-export type MaskTexture =
-  & TgpuTexture<{ size: [number, number]; format: 'r32uint' }>
-  & StorageFlag;
+export type MaskTexture = TgpuTexture<{ size: [number, number]; format: 'r32uint' }> & StorageFlag;
 
-export type DistanceTexture =
-  & TgpuTexture<{ size: [number, number]; format: 'rgba16float' }>
-  & SampledFlag
-  & StorageFlag;
+export type DistanceTexture = TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> &
+  SampledFlag &
+  StorageFlag;

@@ -15,16 +15,19 @@ describe('cubemap reflection example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'rendering',
-      name: 'cubemap-reflection',
-      setupMocks: () => {
-        mockImageLoading();
-        mockCreateImageBitmap({ width: 2048, height: 2048 });
-        mockResizeObserver();
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'rendering',
+        name: 'cubemap-reflection',
+        setupMocks: () => {
+          mockImageLoading();
+          mockCreateImageBitmap({ width: 2048, height: 2048 });
+          mockResizeObserver();
+        },
+        expectedCalls: 3,
       },
-      expectedCalls: 3,
-    }, device);
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct ComputeVertex {

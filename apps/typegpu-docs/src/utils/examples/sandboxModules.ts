@@ -6,13 +6,8 @@ import dtsWebGPU from '@webgpu/types/dist/index.d.ts?raw';
 import dtsWgpuMatrix from 'wgpu-matrix/dist/3.x/wgpu-matrix.d.ts?raw';
 
 interface SandboxModuleDefinition {
-  typeDef:
-    | { filename?: string; content: string }
-    | { reroute: string };
-  import?:
-    | { filename?: string; content: string }
-    | { reroute: string }
-    | undefined;
+  typeDef: { filename?: string; content: string } | { reroute: string };
+  import?: { filename?: string; content: string } | { reroute: string } | undefined;
 }
 
 function srcFileToModule(
@@ -53,15 +48,18 @@ function dtsFileToModule(
 
 const allPackagesSrcFiles = pipe(
   entries(
-    import.meta.glob([
-      '../../../../../packages/*/src/**/*.js',
-      '../../../../../packages/*/src/**/*.ts',
-      '../../../../../packages/*/package.json',
-    ], {
-      query: 'raw',
-      eager: true,
-      import: 'default',
-    }) as Record<string, string>,
+    import.meta.glob(
+      [
+        '../../../../../packages/*/src/**/*.js',
+        '../../../../../packages/*/src/**/*.ts',
+        '../../../../../packages/*/package.json',
+      ],
+      {
+        query: 'raw',
+        eager: true,
+        import: 'default',
+      },
+    ) as Record<string, string>,
   ),
   map((dtsFile) => srcFileToModule(dtsFile, '../../../../../packages/')),
   fromEntries(),
@@ -69,14 +67,11 @@ const allPackagesSrcFiles = pipe(
 
 const threeModules = pipe(
   entries(
-    import.meta.glob(
-      '../../../node_modules/@types/three/**/*.d.ts',
-      {
-        query: 'raw',
-        eager: true,
-        import: 'default',
-      },
-    ) as Record<string, string>,
+    import.meta.glob('../../../node_modules/@types/three/**/*.d.ts', {
+      query: 'raw',
+      eager: true,
+      import: 'default',
+    }) as Record<string, string>,
   ),
   map((dtsFile) => dtsFileToModule(dtsFile, '../../../node_modules/')),
   fromEntries(),
@@ -84,14 +79,11 @@ const threeModules = pipe(
 
 const mediacaptureModules = pipe(
   entries(
-    import.meta.glob(
-      '../../../node_modules/@types/dom-mediacapture-transform/**/*.d.ts',
-      {
-        query: 'raw',
-        eager: true,
-        import: 'default',
-      },
-    ) as Record<string, string>,
+    import.meta.glob('../../../node_modules/@types/dom-mediacapture-transform/**/*.d.ts', {
+      query: 'raw',
+      eager: true,
+      import: 'default',
+    }) as Record<string, string>,
   ),
   map((dtsFile) => dtsFileToModule(dtsFile, '../../../node_modules/')),
   fromEntries(),
@@ -126,7 +118,7 @@ export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
   },
 
   // Three.js, for examples of @typegpu/three
-  'three': {
+  three: {
     typeDef: { reroute: '@types/three/build/three.module.d.ts' },
   },
   'three/webgpu': {

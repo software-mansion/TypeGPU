@@ -2,9 +2,7 @@ import { defineConfig } from 'oxlint';
 import typegpu from 'eslint-plugin-typegpu';
 
 const typegpuPreset = typegpu.configs?.recommended;
-const typegpuRules = typegpuPreset && 'rules' in typegpuPreset
-  ? typegpuPreset.rules
-  : {};
+const typegpuRules = typegpuPreset && 'rules' in typegpuPreset ? typegpuPreset.rules : {};
 
 export default defineConfig({
   plugins: ['eslint', 'typescript', 'import', 'unicorn', 'oxc'],
@@ -24,11 +22,7 @@ export default defineConfig({
     'eslint-plugin-unicorn/prefer-add-event-listener': 'off',
     'eslint-plugin-import/no-named-as-default': 'off',
     'eslint-plugin-import/no-named-as-default-member': 'off',
-    'eslint-plugin-import/extensions': [
-      'error',
-      'always',
-      { ignorePackages: true },
-    ],
+    'eslint-plugin-import/extensions': ['error', 'always', { ignorePackages: true }],
   },
   ignorePatterns: ['**/*.astro', '**/*.mjs'],
   overrides: [

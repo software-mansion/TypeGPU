@@ -1,10 +1,6 @@
 import { describe, it } from 'vitest';
 import * as d from '../src/data/index.ts';
-import tgpu, {
-  type TgpuComputeFn,
-  type TgpuFragmentFn,
-  type TgpuVertexFn,
-} from '../src/index.js';
+import tgpu, { type TgpuComputeFn, type TgpuFragmentFn, type TgpuVertexFn } from '../src/index.js';
 import { attest } from '@ark/attest';
 
 describe('entry functions accepting only the allowed subset of builtins', () => {
@@ -140,8 +136,6 @@ describe('@location and @interpolate type stripping (irrelevant when verifying e
       out: d.vec4f,
     })(() => d.vec4f());
 
-    attest(fragmentMain).type.toString.snap(
-      'TgpuFragmentFn<{ bar: Vec3f }, Vec4f>',
-    );
+    attest(fragmentMain).type.toString.snap('TgpuFragmentFn<{ bar: Vec3f }, Vec4f>');
   });
 });

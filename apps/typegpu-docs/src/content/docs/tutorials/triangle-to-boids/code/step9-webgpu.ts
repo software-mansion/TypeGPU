@@ -25,14 +25,7 @@ const parametersBuffer = device.createBuffer({
   usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   mappedAtCreation: true,
 });
-new Float32Array(parametersBuffer.getMappedRange()).set([
-  0.09,
-  0.005,
-  0.3,
-  0.005,
-  0.3,
-  0.001,
-]);
+new Float32Array(parametersBuffer.getMappedRange()).set([0.09, 0.005, 0.3, 0.005, 0.3, 0.001]);
 parametersBuffer.unmap();
 
 const triangleSize = 0.04;
@@ -49,9 +42,9 @@ const triangleAmount = 500;
 const trianglePosBuffers = Array.from({ length: 2 }, () =>
   device.createBuffer({
     size: triangleAmount * 8 * 2,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.STORAGE |
-      GPUBufferUsage.COPY_DST,
-  }));
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  }),
+);
 
 const triangleVertexBuffer = device.createBuffer({
   size: triangleVertexData.byteLength,
@@ -261,7 +254,7 @@ const renderBindGroups = [0, 1].map((idx) =>
         },
       },
     ],
-  })
+  }),
 );
 
 const computeBindGroups = [0, 1].map((idx) =>
@@ -287,7 +280,7 @@ const computeBindGroups = [0, 1].map((idx) =>
         },
       },
     ],
-  })
+  }),
 );
 
 randomizeTriangles();
@@ -310,10 +303,7 @@ onFrame(() => {
 
   const computePass = commandEncoder.beginComputePass();
   computePass.setPipeline(computePipeline);
-  computePass.setBindGroup(
-    0,
-    even ? computeBindGroups[0] : computeBindGroups[1],
-  );
+  computePass.setBindGroup(0, even ? computeBindGroups[0] : computeBindGroups[1]);
   computePass.dispatchWorkgroups(triangleAmount);
   computePass.end();
 

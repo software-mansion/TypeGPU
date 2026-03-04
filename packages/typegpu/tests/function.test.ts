@@ -1,10 +1,6 @@
 import { attest } from '@ark/attest';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import type {
-  InferIO,
-  InheritArgNames,
-  IOLayout,
-} from '../src/core/function/fnTypes.ts';
+import type { InferIO, InheritArgNames, IOLayout } from '../src/core/function/fnTypes.ts';
 import * as d from '../src/data/index.ts';
 import { Void } from '../src/data/wgslTypes.ts';
 import tgpu, { type TgpuFn, type TgpuFnShell } from '../src/index.js';
@@ -24,8 +20,7 @@ describe('tgpu.fn', () => {
   });
 
   it('should inject function declaration only once', () => {
-    const main = tgpu.fn([])`() { empty(); empty(); }`
-      .$uses({ empty });
+    const main = tgpu.fn([])`() { empty(); empty(); }`.$uses({ empty });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn empty() {
@@ -40,8 +35,7 @@ describe('tgpu.fn', () => {
     const nestedA = tgpu.fn([])`() { empty(); }`.$uses({ empty });
     const nestedB = tgpu.fn([])`() { empty(); }`.$uses({ empty });
 
-    const main = tgpu.fn([])`() { nestedA(); nestedB(); }`
-      .$uses({ nestedA, nestedB });
+    const main = tgpu.fn([])`() { nestedA(); nestedB(); }`.$uses({ nestedA, nestedB });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn empty() {
@@ -62,14 +56,10 @@ describe('tgpu.fn', () => {
     const two = tgpu.fn([d.f32, d.u32]);
 
     expectTypeOf(proc).toEqualTypeOf<TgpuFnShell<[], d.Void>>();
-    expectTypeOf<ReturnType<typeof proc>>().toEqualTypeOf<
-      TgpuFn<() => d.Void>
-    >();
+    expectTypeOf<ReturnType<typeof proc>>().toEqualTypeOf<TgpuFn<() => d.Void>>();
 
     expectTypeOf(one).toEqualTypeOf<TgpuFnShell<[d.F32], d.Void>>();
-    expectTypeOf<ReturnType<typeof one>>().toEqualTypeOf<
-      TgpuFn<(arg_0: d.F32) => d.Void>
-    >();
+    expectTypeOf<ReturnType<typeof one>>().toEqualTypeOf<TgpuFn<(arg_0: d.F32) => d.Void>>();
 
     expectTypeOf(two).toEqualTypeOf<TgpuFnShell<[d.F32, d.U32], d.Void>>();
     expectTypeOf<ReturnType<typeof two>>().toEqualTypeOf<
@@ -83,14 +73,10 @@ describe('tgpu.fn', () => {
     const two = tgpu.fn([d.f32, d.u32], d.bool);
 
     expectTypeOf(proc).toEqualTypeOf<TgpuFnShell<[], d.Bool>>();
-    expectTypeOf<ReturnType<typeof proc>>().toEqualTypeOf<
-      TgpuFn<() => d.Bool>
-    >();
+    expectTypeOf<ReturnType<typeof proc>>().toEqualTypeOf<TgpuFn<() => d.Bool>>();
 
     expectTypeOf(one).toEqualTypeOf<TgpuFnShell<[d.F32], d.Bool>>();
-    expectTypeOf<ReturnType<typeof one>>().toEqualTypeOf<
-      TgpuFn<(arg_0: d.F32) => d.Bool>
-    >();
+    expectTypeOf<ReturnType<typeof one>>().toEqualTypeOf<TgpuFn<(arg_0: d.F32) => d.Bool>>();
 
     expectTypeOf(two).toEqualTypeOf<TgpuFnShell<[d.F32, d.U32], d.Bool>>();
     expectTypeOf<ReturnType<typeof two>>().toEqualTypeOf<
@@ -110,11 +96,9 @@ describe('tgpu.computeFn', () => {
   });
 
   it('does not create In struct when there is empty object for arguments', () => {
-    const foo = tgpu.computeFn({ in: {}, workgroupSize: [1] })(
-      () => {
-        const x = 2;
-      },
-    );
+    const foo = tgpu.computeFn({ in: {}, workgroupSize: [1] })(() => {
+      const x = 2;
+    });
 
     expect(tgpu.resolve([foo])).not.toContain('struct');
     expect(foo.shell.argTypes).toStrictEqual([]);
@@ -178,10 +162,7 @@ describe('InheritArgNames', () => {
     const identity = (num: number) => num;
     // Should have the same argument names as `identity`, but the signature of `isEven`
     const isEvenWithNames = undefined as unknown as Prettify<
-      InheritArgNames<
-        typeof isEven,
-        typeof identity
-      >
+      InheritArgNames<typeof isEven, typeof identity>
     >['result'];
 
     attest(isEven).type.toString.snap('(x: number) => boolean');

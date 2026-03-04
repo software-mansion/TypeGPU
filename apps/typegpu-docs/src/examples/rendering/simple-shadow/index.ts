@@ -20,10 +20,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // Utility functions
-function makeLightViewProj(
-  lightDir: d.v3f,
-  center: d.v3f = d.vec3f(),
-) {
+function makeLightViewProj(lightDir: d.v3f, center: d.v3f = d.vec3f()) {
   const dir = std.normalize(lightDir);
   const dist = 10;
   const eye = center.add(dir.mul(-dist));
@@ -34,16 +31,20 @@ function makeLightViewProj(
 
 function createCanvasTextures() {
   return {
-    msaa: root['~unstable'].createTexture({
-      size: [canvas.width, canvas.height],
-      format: presentationFormat,
-      sampleCount: 4,
-    }).$usage('render'),
-    depth: root['~unstable'].createTexture({
-      size: [canvas.width, canvas.height],
-      format: 'depth32float',
-      sampleCount: 4,
-    }).$usage('render'),
+    msaa: root['~unstable']
+      .createTexture({
+        size: [canvas.width, canvas.height],
+        format: presentationFormat,
+        sampleCount: 4,
+      })
+      .$usage('render'),
+    depth: root['~unstable']
+      .createTexture({
+        size: [canvas.width, canvas.height],
+        format: 'depth32float',
+        sampleCount: 4,
+      })
+      .$usage('render'),
   };
 }
 
@@ -52,10 +53,12 @@ function createShadowTextures(
   sampleCompare: 'less-equal' | 'greater' = 'less-equal',
   pcf = true,
 ) {
-  const shadowMap = root['~unstable'].createTexture({
-    size: [size, size],
-    format: 'depth32float',
-  }).$usage('render', 'sampled');
+  const shadowMap = root['~unstable']
+    .createTexture({
+      size: [size, size],
+      format: 'depth32float',
+    })
+    .$usage('render', 'sampled');
 
   const comparisonSampler = root['~unstable'].createComparisonSampler({
     compare: sampleCompare,
@@ -75,13 +78,7 @@ function createShadowTextures(
 let currentLightDirection = d.vec3f(0, -1, -1);
 
 const camera = Camera({
-  projection: mat4.perspective(
-    Math.PI / 4,
-    canvas.width / canvas.height,
-    0.1,
-    100,
-    d.mat4x4f(),
-  ),
+  projection: mat4.perspective(Math.PI / 4, canvas.width / canvas.height, 0.1, 100, d.mat4x4f()),
   view: mat4.lookAt([0, 2, 5], [0, 0, 0], [0, 1, 0], d.mat4x4f()),
   position: d.vec3f(0, 2, 5),
 });
@@ -199,8 +196,7 @@ const mainFrag = tgpu.fragmentFn({
   uv = d.vec2f(uv.x, 1.0 - uv.y);
   const currentDepth = ndc.z;
 
-  const inBounds = std.all(std.ge(uv, d.vec2f(0.0, 0.0))) &&
-    std.all(std.le(uv, d.vec2f(1.0, 1.0)));
+  const inBounds = std.all(std.ge(uv, d.vec2f(0.0, 0.0))) && std.all(std.le(uv, d.vec2f(1.0, 1.0)));
 
   let shadowFactor = std.textureSampleCompare(
     shadowSampleLayout.$.shadowMap,
@@ -218,10 +214,7 @@ const mainFrag = tgpu.fragmentFn({
   const diff = std.max(0.0, std.dot(N, L));
   const diffuse = instanceInfo.material.diffuse.mul(light.$.color).mul(diff);
 
-  const spec = std.pow(
-    std.max(0.0, std.dot(V, R)),
-    instanceInfo.material.shininess,
-  );
+  const spec = std.pow(std.max(0.0, std.dot(V, R)), instanceInfo.material.shininess);
   const specular = instanceInfo.material.specular.mul(light.$.color).mul(spec);
 
   const lit = diffuse.add(specular).mul(shadowFactor);
@@ -230,11 +223,7 @@ const mainFrag = tgpu.fragmentFn({
     return d.vec4f(d.vec3f(shadowFactor), 1.0);
   }
   if (paramsUniform.$.lightDepth === 1) {
-    const remappedDepth = std.clamp(
-      (currentDepth - 0.2) / (0.7 - 0.2),
-      0,
-      1,
-    );
+    const remappedDepth = std.clamp((currentDepth - 0.2) / (0.7 - 0.2), 0, 1);
     return d.vec4f(d.vec3f(remappedDepth), 1.0);
   }
   return d.vec4f(finalColor, 1.0);
@@ -401,9 +390,7 @@ export const controls = defineControls({
     max: -0.1,
     step: 0.01,
     onSliderChange: (value: number) => {
-      updateLightDirection(
-        d.vec3f(currentLightDirection.x, value, currentLightDirection.z),
-      );
+      updateLightDirection(d.vec3f(currentLightDirection.x, value, currentLightDirection.z));
     },
   },
   'light Z': {
@@ -443,11 +430,7 @@ export const controls = defineControls({
     initial: true,
     onToggleChange: (value) => {
       pcf = value;
-      shadowTextures = createShadowTextures(
-        currentShadowMapSize,
-        currentSampleCompare,
-        pcf,
-      );
+      shadowTextures = createShadowTextures(currentShadowMapSize, currentSampleCompare, pcf);
     },
   },
   'display mode': {
@@ -458,14 +441,8 @@ export const controls = defineControls({
         shadowOnly: value === 'shadow' || value === 'inverse shadow' ? 1 : 0,
         lightDepth: value === 'light depth' ? 1 : 0,
       });
-      currentSampleCompare = value === 'inverse shadow'
-        ? 'greater'
-        : 'less-equal';
-      shadowTextures = createShadowTextures(
-        currentShadowMapSize,
-        currentSampleCompare,
-        pcf,
-      );
+      currentSampleCompare = value === 'inverse shadow' ? 'greater' : 'less-equal';
+      shadowTextures = createShadowTextures(currentShadowMapSize, currentSampleCompare, pcf);
     },
   },
 });

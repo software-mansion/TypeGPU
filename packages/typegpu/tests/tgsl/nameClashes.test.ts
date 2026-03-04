@@ -3,10 +3,15 @@ import tgpu, { d, std } from '../../src/index.js';
 import { test } from '../utils/extendedIt.ts';
 
 test('should differentiate parameter names from existing declarations', () => {
-  const fooFn = tgpu.fn([d.f32], d.f32)((a: number) => {
-    'use gpu';
-    return a * 2;
-  }).$name('foo');
+  const fooFn = tgpu
+    .fn(
+      [d.f32],
+      d.f32,
+    )((a: number) => {
+      'use gpu';
+      return a * 2;
+    })
+    .$name('foo');
 
   const bar = (foo: number) => {
     'use gpu';
@@ -36,10 +41,15 @@ test('should differentiate parameter names from existing declarations', () => {
 
 test('should give new global declarations a unique name if it would clash with a parameter name', () => {
   const utils = {
-    foo: tgpu.fn([d.f32], d.f32)((a: number) => {
-      'use gpu';
-      return a * 2;
-    }).$name('foo'),
+    foo: tgpu
+      .fn(
+        [d.f32],
+        d.f32,
+      )((a: number) => {
+        'use gpu';
+        return a * 2;
+      })
+      .$name('foo'),
   };
 
   const bar = (foo: number) => {
@@ -68,10 +78,15 @@ test('should give new global declarations a unique name if it would clash with a
 });
 
 test('should give variables new names if they clash with a global declaration already used in the scope', () => {
-  const fooFn = tgpu.fn([d.f32], d.f32)((a: number) => {
-    'use gpu';
-    return a * 2;
-  }).$name('foo');
+  const fooFn = tgpu
+    .fn(
+      [d.f32],
+      d.f32,
+    )((a: number) => {
+      'use gpu';
+      return a * 2;
+    })
+    .$name('foo');
 
   const main = () => {
     'use gpu';
@@ -94,10 +109,15 @@ test('should give variables new names if they clash with a global declaration al
 });
 
 test('should give declarations new names if they clash with a name in a function scope the declaration is meant to be referenced in', () => {
-  const fooFn = tgpu.fn([d.f32], d.f32)((a: number) => {
-    'use gpu';
-    return a * 2;
-  }).$name('foo');
+  const fooFn = tgpu
+    .fn(
+      [d.f32],
+      d.f32,
+    )((a: number) => {
+      'use gpu';
+      return a * 2;
+    })
+    .$name('foo');
 
   const main = () => {
     'use gpu';
@@ -162,9 +182,14 @@ test('duplicate names across function scopes', ({ root }) => {
 });
 
 test('should give new names to functions that collide with builtins', () => {
-  const min = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
-    return std.max(0, std.min(a, b));
-  }).$name('min');
+  const min = tgpu
+    .fn(
+      [d.f32, d.f32],
+      d.f32,
+    )((a, b) => {
+      return std.max(0, std.min(a, b));
+    })
+    .$name('min');
 
   const main = tgpu.fn([])(() => {
     const a = -1;

@@ -24,9 +24,7 @@ function initializeParam(param: ExampleControlParam) {
   }
 }
 
-export async function executeExample(
-  tsImport: () => unknown,
-): Promise<ExampleState> {
+export async function executeExample(tsImport: () => unknown): Promise<ExampleState> {
   const cleanupCallbacks: (() => unknown)[] = [];
   let disposed = false;
   const controlParams: ExampleControlParam[] = [];
@@ -41,9 +39,7 @@ export async function executeExample(
     }
   };
 
-  function addParameters(
-    options: Record<string, Labelless<ExampleControlParam> | false>,
-  ) {
+  function addParameters(options: Record<string, Labelless<ExampleControlParam> | false>) {
     for (const [label, value] of Object.entries(options)) {
       if (!value) {
         continue;
@@ -63,9 +59,7 @@ export async function executeExample(
 
   const entryExampleFile = await tsImport();
   const { controls, onCleanup } = entryExampleFile as {
-    controls?:
-      | Record<string, Labelless<ExampleControlParam> | false>
-      | undefined;
+    controls?: Record<string, Labelless<ExampleControlParam> | false> | undefined;
     onCleanup?: () => void;
   };
 

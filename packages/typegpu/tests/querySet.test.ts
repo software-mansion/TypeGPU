@@ -97,9 +97,7 @@ describe('TgpuQuerySet', () => {
   it('should throw when reading before resolving', async ({ root }) => {
     const querySet = root.createQuerySet('timestamp', 2);
 
-    await expect(querySet.read()).rejects.toThrow(
-      'QuerySet must be resolved before reading.',
-    );
+    await expect(querySet.read()).rejects.toThrow('QuerySet must be resolved before reading.');
   });
 
   it('should throw when using destroyed query set', ({ root }) => {
@@ -107,9 +105,7 @@ describe('TgpuQuerySet', () => {
     querySet.destroy();
 
     expect(() => querySet.querySet).toThrow('QuerySet has been destroyed.');
-    expect(() => querySet.resolve()).toThrow(
-      'This QuerySet has been destroyed.',
-    );
+    expect(() => querySet.resolve()).toThrow('This QuerySet has been destroyed.');
   });
 
   it('should track availability state', ({ root }) => {
@@ -126,9 +122,7 @@ describe('TgpuQuerySet', () => {
     // oxlint-disable-next-line typescript/no-explicit-any -- we testing here
     (querySet as any)._available = false;
 
-    expect(() => querySet.resolve()).toThrow(
-      'This QuerySet is busy resolving or reading.',
-    );
+    expect(() => querySet.resolve()).toThrow('This QuerySet is busy resolving or reading.');
   });
 
   it('should work with external query set', ({ root, device }) => {
