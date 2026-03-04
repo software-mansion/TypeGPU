@@ -329,7 +329,11 @@ function createGenericFn<T extends AnyFn>(inner: T, pairs: SlotValuePair[]): Tgp
       if (!getName(inner)) {
         setName(inner, label);
       }
-      return this as TgpuGenericFn<T>;
+      return this as TgpuGenericFn<T> & SelfResolvable;
+    },
+
+    [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+      return ctx.resolve(inner);
     },
 
     with(
