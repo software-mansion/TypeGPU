@@ -1,3 +1,5 @@
+import type { d } from 'typegpu';
+
 const body = document.querySelector('body') as HTMLBodyElement;
 body.style.display = 'flex';
 body.style.flexDirection = 'column';
@@ -222,17 +224,17 @@ type SliderControlParam = {
   step?: number;
 };
 
-type VectorSliderControlParam = {
-  onVectorSliderChange: (newValue: number[]) => void;
-  initial: number[];
-  min: number[];
-  max: number[];
-  step: number[];
+type VectorSliderControlParam<T extends d.v2f | d.v3f | d.v4f> = {
+  onVectorSliderChange: (newValue: T) => void;
+  initial: T;
+  min: T;
+  max: T;
+  step: T;
 };
 
 type ColorPickerControlParam = {
-  onColorChange: (newValue: readonly [number, number, number]) => void;
-  initial: readonly [number, number, number];
+  onColorChange: (newValue: d.v3f) => void;
+  initial: d.v3f;
 };
 
 type ButtonControlParam = {
@@ -250,7 +252,9 @@ type ExampleControlParam =
   | SliderControlParam
   | ButtonControlParam
   | TextAreaControlParam
-  | VectorSliderControlParam
+  | VectorSliderControlParam<d.v2f>
+  | VectorSliderControlParam<d.v3f>
+  | VectorSliderControlParam<d.v4f>
   | ColorPickerControlParam;
 
 function hexToRgb(hex: string): readonly [number, number, number] {
