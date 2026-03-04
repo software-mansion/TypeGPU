@@ -31,7 +31,7 @@ const context = root.configureContext({ canvas });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const maxSide = Math.floor(Math.sqrt(maxBufferSize / 4));
-const minLog = Math.log2(4);
+const minLog = 2; // log_2(4)
 const maxLog = Math.floor(Math.log2(maxSide));
 const arraySizeOptions = Array.from({ length: 8 }, (_, i) => {
   const side = Math.round(2 ** (minLog + (i * (maxLog - minLog)) / 7));

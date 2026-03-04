@@ -13,7 +13,7 @@ export function decomposeWorkgroups(total: number): [number, number, number] {
 
   const z = Math.min(remainingAfterY, MAX_WORKGROUPS_PER_DIMENSION);
 
-  if (Math.ceil(total / (x * y * z)) > 1) {
+  if (total / (x * y * z) > 1) {
     throw new Error(
       `Required workgroups (${total}) exceed device dispatch limits (${MAX_WORKGROUPS_PER_DIMENSION} per dimension)`,
     );
