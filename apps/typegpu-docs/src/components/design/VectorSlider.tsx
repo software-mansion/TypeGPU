@@ -2,9 +2,9 @@ import * as RadixSlider from '@radix-ui/react-slider';
 import { d } from 'typegpu';
 
 type Props<T extends d.v2f | d.v3f | d.v4f> = {
-  min: number[];
-  max: number[];
-  step: number[];
+  min: T;
+  max: T;
+  step: T;
   value: T;
   onChange: (value: T) => void;
 };

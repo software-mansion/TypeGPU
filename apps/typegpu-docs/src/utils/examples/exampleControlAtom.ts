@@ -24,7 +24,7 @@ export type SliderControlParam = {
 };
 
 export type VectorSliderControlParam<T extends d.v2f | d.v3f | d.v4f> = {
-  onVectorSliderChange: (newValue: number[]) => void;
+  onVectorSliderChange: (newValue: T) => void;
   initial: T;
   min: T;
   max: T;

@@ -246,7 +246,7 @@ function paramToControlRow(param: ExampleControlParam) {
     <VectorSliderRow
       key={param.label}
       label={param.label}
-      onChange={param.onVectorSliderChange}
+      onChange={param.onVectorSliderChange as (value: d.v2f | d.v3f | d.v4f) => void}
       min={param.min}
       max={param.max}
       step={param.step}
