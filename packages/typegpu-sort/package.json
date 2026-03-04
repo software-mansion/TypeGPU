@@ -1,7 +1,7 @@
 {
-  "name": "@typegpu/concurrent-scan",
-  "version": "0.10.0",
-  "description": "A concurrent scan module.",
+  "name": "@typegpu/sort",
+  "version": "0.9.0",
+  "description": "GPU sorting and scanning algorithms implemented using TypeGPU.",
   "keywords": [],
   "license": "MIT",
   "type": "module",

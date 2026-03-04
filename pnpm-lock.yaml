@@ -212,9 +212,6 @@ importers:
       '@typegpu/color':
         specifier: workspace:*
         version: link:../../packages/typegpu-color
-      '@typegpu/concurrent-scan':
-        specifier: workspace:*
-        version: link:../../packages/typegpu-concurrent-scan
       '@typegpu/geometry':
         specifier: workspace:*
         version: link:../../packages/typegpu-geometry
@@ -224,6 +221,9 @@ importers:
       '@typegpu/sdf':
         specifier: workspace:*
         version: link:../../packages/typegpu-sdf
+      '@typegpu/sort':
+        specifier: workspace:*
+        version: link:../../packages/typegpu-sort
       '@typegpu/three':
         specifier: workspace:*
         version: link:../../packages/typegpu-three
@@ -558,28 +558,6 @@ importers:
         version: link:../unplugin-typegpu
     publishDirectory: dist
 
-  packages/typegpu-concurrent-scan:
-    devDependencies:
-      '@typegpu/tgpu-dev-cli':
-        specifier: workspace:*
-        version: link:../tgpu-dev-cli
-      '@webgpu/types':
-        specifier: catalog:types
-        version: 0.1.66
-      typegpu:
-        specifier: workspace:*
-        version: link:../typegpu
-      typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
-      unbuild:
-        specifier: catalog:build
-        version: 3.5.0(tsover@5.9.11)
-      unplugin-typegpu:
-        specifier: workspace:*
-        version: link:../unplugin-typegpu
-    publishDirectory: dist
-
   packages/typegpu-geometry:
     devDependencies:
       '@typegpu/tgpu-dev-cli':
@@ -625,6 +603,28 @@ importers:
     publishDirectory: dist
 
   packages/typegpu-sdf:
+    devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
+      '@webgpu/types':
+        specifier: catalog:types
+        version: 0.1.66
+      typegpu:
+        specifier: workspace:*
+        version: link:../typegpu
+      typescript:
+        specifier: npm:tsover@^5.9.11
+        version: tsover@5.9.11
+      unbuild:
+        specifier: catalog:build
+        version: 3.5.0(tsover@5.9.11)
+      unplugin-typegpu:
+        specifier: workspace:*
+        version: link:../unplugin-typegpu
+    publishDirectory: dist
+
+  packages/typegpu-sort:
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
