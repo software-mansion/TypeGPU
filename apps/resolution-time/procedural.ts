@@ -44,6 +44,7 @@ const state = tgpu.lazy(() => ({
 }));
 
 const instructions: TgpuComptime<() => TgpuGenericFn<() => void>>[] = [];
+const LEAF_COUNT = 4;
 
 // TODO: replace it with number, when unroll supports that
 const getArrayForUnroll = tgpu.comptime((n: number) => Array.from({ length: n }));
@@ -232,7 +233,6 @@ const spiralFn = tgpu.comptime(() => {
 
 // leaves first, then recursive
 instructions.push(baseFn, blendFn, thresholdFn, filterFn, waveFn, accFn, rotateFn, spiralFn);
-const LEAF_COUNT = 4;
 
 const main = () => {
   'use gpu';
@@ -327,4 +327,25 @@ test('resolution time vs linear recursion (path)', () => {
     );
   }
   writeFileSync(resolve(outDir, 'results-linear-recursion.json'), JSON.stringify(results, null, 2));
+});
+
+test('resolution time vs random', () => {
+  const results: BenchmarkResult[] = [];
+  const DEPTHS = Array.from({ length: 8 }, (_, i) => i + 1);
+
+  warmupJIT();
+
+  for (const depth of DEPTHS) {
+    runBenchmark(
+      {
+        mainBranching: 3,
+        branching: 3,
+        maxDepth: depth,
+        recurseProb: 0.5,
+        seed: 0.1882 * 2 ** 32,
+      },
+      results,
+    );
+  }
+  writeFileSync(resolve(outDir, 'results-random.json'), JSON.stringify(results, null, 2));
 });
