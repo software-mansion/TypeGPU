@@ -141,7 +141,10 @@ const simulatePipeline = root.createGuardedComputePipeline((i) => {
 
   const carForward = d.vec2f(std.cos(car.angle), std.sin(car.angle));
   const trackHere = sampleTrack(car.position, nearestSampler.$);
-  const trackAlignment = std.dot(carForward, trackHere.xy); // +1 = aligned, -1 = backwards
+
+  // +1 = aligned, -1 = backwards
+  const trackAlignment = std.dot(carForward, trackHere.xy);
+
   const aheadPos = car.position + carForward * params.$.sensorDistance;
   const trackAhead = sampleTrack(aheadPos, nearestSampler.$);
   // positive = track turns left ahead, negative = right
@@ -177,7 +180,6 @@ const simulatePipeline = root.createGuardedComputePipeline((i) => {
   const sampleA = sampleTrack(car.position + step * 0.33, nearestSampler.$);
   const sampleB = sampleTrack(car.position + step * 0.66, nearestSampler.$);
   const stallSteps = std.select(d.u32(0), car.stallSteps + 1, speed < slowThreshold);
-  // Gate onTrack by wasAlive so dead cars stay dead and their state stays frozen
   const onTrack = wasAlive && stallSteps < 120 && onTrackEnd && sampleA.z > 0.5 && sampleB.z > 0.5;
 
   const aliveMask = std.select(0, d.f32(1), onTrack);
@@ -200,6 +202,12 @@ const simulatePipeline = root.createGuardedComputePipeline((i) => {
   });
 });
 
+const colors = {
+  grass: tgpu.const(d.vec3f, d.vec3f(0.05, 0.06, 0.08)),
+  road: tgpu.const(d.vec3f, d.vec3f(0.14, 0.16, 0.2)),
+  paint: tgpu.const(d.vec3f, d.vec3f(0.2, 0.22, 0.3)),
+};
+
 const trackFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
@@ -209,12 +217,10 @@ const trackFragment = tgpu.fragmentFn({
   const p = d.vec2f(ndc.x * params.$.aspect, ndc.y);
   const sample = sampleTrack(p, linearSampler.$);
 
-  const grass = d.vec3f(0.05, 0.06, 0.08);
-  const road = d.vec3f(0.14, 0.16, 0.2);
   const mask = sample.z;
-  const color = std.mix(grass, road, mask);
+  const color = std.mix(colors.grass.$, colors.road.$, mask);
   const edge = 1 - std.smoothstep(0.6, 0.95, mask);
-  const painted = color + d.vec3f(0.2, 0.22, 0.3) * edge * mask;
+  const painted = color + colors.paint.$ * edge * mask;
 
   return d.vec4f(painted, 1);
 });
