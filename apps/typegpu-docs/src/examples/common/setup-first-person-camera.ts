@@ -12,7 +12,6 @@ export const Camera = d.struct({
 
 export interface CameraOptions {
   initPos?: d.v3f;
-  target?: d.v3f;
   /**
    * Scrolling accelerates/decelerates the movement.
    * `d.vec3f(minimum, initial, maximum)`
@@ -22,7 +21,6 @@ export interface CameraOptions {
 
 const cameraDefaults: Partial<CameraOptions> = {
   initPos: d.vec3f(0, 0, 0),
-  target: d.vec3f(0, 1, 0),
   speed: d.vec3f(1, 1, 1),
 };
 
