@@ -10,7 +10,4 @@ export const CubeVertex = d.unstruct({
   uv: d.vec2f,
 });
 
-export const vertexCubeLayout = tgpu.vertexLayout(
-  d.disarrayOf(CubeVertex),
-  'vertex',
-);
+export const vertexCubeLayout = tgpu.vertexLayout(d.disarrayOf(CubeVertex), 'vertex');
