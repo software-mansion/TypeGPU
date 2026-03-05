@@ -112,10 +112,10 @@ function toVec3(arr: readonly (number | undefined)[]): v3u {
 }
 
 const workgroupSizeConfigs = [
-  vec3u(1, 1, 1),
-  vec3u(256, 1, 1),
-  vec3u(16, 16, 1),
-  vec3u(8, 8, 4),
+  [1, 1, 1],
+  [256, 1, 1],
+  [16, 16, 1],
+  [8, 8, 4],
 ] as const;
 
 export class TgpuGuardedComputePipelineImpl<
@@ -124,15 +124,15 @@ export class TgpuGuardedComputePipelineImpl<
   #root: ExperimentalTgpuRoot;
   #pipeline: TgpuComputePipeline;
   #sizeUniform: TgpuUniform<Vec3u>;
-  #workgroupSize: v3u;
+  #workgroupSize: [number, number, number];
 
-  #lastSize: v3u;
+  #lastSize: [number, number, number];
 
   constructor(
     root: ExperimentalTgpuRoot,
     pipeline: TgpuComputePipeline,
     sizeUniform: TgpuUniform<Vec3u>,
-    workgroupSize: v3u,
+    workgroupSize: [number, number, number],
   ) {
     this.#root = root;
     this.#pipeline = pipeline;
@@ -228,7 +228,7 @@ class WithBindingImpl implements WithBinding {
       throw new Error('Guarded compute callback only supports up to three dimensions.');
     }
 
-    const workgroupSize = workgroupSizeConfigs[callback.length] as v3u;
+    const workgroupSize = workgroupSizeConfigs[callback.length] as [number, number, number];
     const wrappedCallback = fn([u32, u32, u32])(callback as (...args: number[]) => void);
 
     const sizeUniform = root.createUniform(vec3u);

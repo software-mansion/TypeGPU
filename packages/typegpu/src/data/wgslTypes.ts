@@ -160,9 +160,9 @@ type Swizzle4<T2, T3, T4> = {
   readonly [K in `${XYZW}${XYZW}${XYZW}${XYZW}` | `${RGBA}${RGBA}${RGBA}${RGBA}`]: T4;
 };
 
-type Tuple2<S> = [S, S];
-type Tuple3<S> = [S, S, S];
-type Tuple4<S> = [S, S, S, S];
+type Tuple2<S> = { 0: S; 1: S };
+type Tuple3<S> = { 0: S; 1: S; 2: S };
+type Tuple4<S> = { 0: S; 1: S; 2: S; 3: S };
 
 /**
  * A type which every numeric vector is assignable to. In most cases the union v2f | v3f | v4f | v2h | v3h | v4h | v2i | v3i | v4i | v2u | v3u | v4u
