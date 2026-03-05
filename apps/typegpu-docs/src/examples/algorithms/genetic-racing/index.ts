@@ -395,6 +395,8 @@ applyGridSize(...GRID_SIZES[gridSizeKey]);
 applyTrack(generateGridTrack(trackSeed, ...GRID_SIZES[gridSizeKey]));
 startSimulation();
 
+// #region Example controls & Cleanup
+
 export const controls = defineControls({
   'New Track': { onButtonClick: newTrack },
   'Grid size': {
@@ -462,3 +464,5 @@ export function onCleanup() {
   cancelAnimationFrame(rafHandle);
   root.destroy();
 }
+
+// #endregion
