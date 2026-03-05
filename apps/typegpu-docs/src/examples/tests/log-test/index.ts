@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { d, std, type AutoVertexIn } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
@@ -247,6 +247,32 @@ export const controls = defineControls({
       const indexBuffer = root.createBuffer(d.arrayOf(d.u32, 3), [0, 1, 2]).$usage('index');
 
       pipeline.withIndexBuffer(indexBuffer).withColorAttachment({ view: context }).drawIndexed(3);
+    },
+  },
+  'Shellless entry': {
+    onButtonClick: () => {
+      const myLog = (n: number) => {
+        'use gpu';
+        console.log(n);
+      };
+
+      const vs = ({ $vertexIndex }: AutoVertexIn<{}>) => {
+        'use gpu';
+        const positions = [d.vec2f(0, 0.5), d.vec2f(-0.5, -0.5), d.vec2f(0.5, -0.5)];
+        myLog(6);
+        return { $position: d.vec4f(positions[$vertexIndex], 0, 1) };
+      };
+      const fs = () => {
+        'use gpu';
+        myLog(7);
+        return d.vec4f();
+      };
+
+      const pipeline = root.createRenderPipeline({
+        vertex: vs,
+        fragment: fs,
+      });
+      pipeline.withColorAttachment({ view: context }).draw(3);
     },
   },
   'Too many logs': {
