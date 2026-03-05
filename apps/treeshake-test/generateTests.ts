@@ -45,8 +45,8 @@ async function generateTestFiles() {
 
   for (const { export: exportName, from, log } of imports) {
     const testContent = `
-import { ${exportName} } from '${from}';
-console.log(typeof ${log});
+import { ${exportName} } from '${from}/$built$';
+console.log(${log});
     `;
 
     const fileName = `${log}_from_${from.replaceAll('/', '')}.ts`;
