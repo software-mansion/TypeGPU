@@ -11,7 +11,7 @@ export const unwrappedPojos = createRule({
     },
     messages: {
       unwrappedPojo:
-        '{{snippet}} is a POJO that is not wrapped in a schema. To allow WGSL resolution, wrap it in a schema call. You only need to wrap the outermost object.',
+        "'{{snippet}}' is a POJO that is not wrapped in a schema. To allow WGSL resolution, wrap it in a schema call. You only need to wrap the outermost object.",
     },
     schema: [],
   },
