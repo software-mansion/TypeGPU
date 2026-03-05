@@ -140,14 +140,34 @@ const mainCompute = tgpu.computeFn({
 
 const renderPipeline = root
   .createRenderPipeline({
-    vertex: mainVert,
-    fragment: mainFrag,
     attribs: {
       tilt: geometryLayout.attrib.tilt,
       angle: geometryLayout.attrib.angle,
       color: geometryLayout.attrib.color,
       center: dataLayout.attrib.position,
     },
+    vertex: ({ tilt, angle, color, center, $vertexIndex }) => {
+      'use gpu';
+      const width = tilt;
+      const height = tilt / 2;
+
+      const pos =
+        rotate(
+          [d.vec2f(0, 0), d.vec2f(width, 0), d.vec2f(0, height), d.vec2f(width, height)][
+            $vertexIndex
+          ] / 350,
+          angle,
+        ) + center;
+
+      if (aspectRatio.$ < 1) {
+        pos.x /= aspectRatio.$;
+      } else {
+        pos.y *= aspectRatio.$;
+      }
+
+      return { $position: d.vec4f(pos, 0.0, 1.0), color };
+    },
+    fragment: mainFrag,
 
     primitive: {
       topology: 'triangle-strip',

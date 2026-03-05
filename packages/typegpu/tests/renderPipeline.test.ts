@@ -1599,6 +1599,126 @@ describe('root.createRenderPipeline', () => {
       - autoFragmentFn: Property name 'frontFacing' causes naming clashes. Choose a different name.]
     `);
   });
+
+  it('generates proper vertex layout for shell-less attributes', ({
+    root,
+    device,
+    renderPassEncoder,
+  }) => {
+    const Boid = d.struct({
+      velocity: d.vec3f,
+      life: d.f32,
+    });
+    const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec3f));
+    const instanceLayout = tgpu.vertexLayout(d.arrayOf(Boid));
+    const pipeline = root.createRenderPipeline({
+      attribs: { vertexPos: vertexLayout.attrib, ...instanceLayout.attrib },
+      vertex: ({ vertexPos, velocity, life }) => {
+        'use gpu';
+        return { $position: d.vec4f(vertexPos + velocity, 1), life };
+      },
+      fragment: ({ life }) => {
+        'use gpu';
+        return d.vec4f(1, life, 0, 1);
+      },
+      targets: { format: 'rgba8unorm' },
+    });
+
+    const vertexBuffer = root.createBuffer(vertexLayout.schemaForCount(3)).$usage('vertex');
+    const instanceBuffer = root.createBuffer(instanceLayout.schemaForCount(1)).$usage('vertex');
+
+    pipeline
+      .with(vertexLayout, vertexBuffer)
+      .with(instanceLayout, instanceBuffer)
+      .withColorAttachment({ view: {} as unknown as GPUTextureView })
+      .draw(3);
+
+    expect(device.mock.createRenderPipeline.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          {
+            "fragment": {
+              "module": "mockShaderModule",
+              "targets": [
+                {
+                  "format": "rgba8unorm",
+                },
+              ],
+            },
+            "label": "pipeline",
+            "layout": "mockPipelineLayout",
+            "vertex": {
+              "buffers": [
+                {
+                  "arrayStride": 16,
+                  "attributes": [
+                    {
+                      "format": "float32x3",
+                      "offset": 0,
+                      "shaderLocation": 0,
+                    },
+                  ],
+                  "stepMode": "vertex",
+                },
+                {
+                  "arrayStride": 16,
+                  "attributes": [
+                    {
+                      "format": "float32x3",
+                      "offset": 0,
+                      "shaderLocation": 1,
+                    },
+                    {
+                      "format": "float32",
+                      "offset": 12,
+                      "shaderLocation": 2,
+                    },
+                  ],
+                  "stepMode": "vertex",
+                },
+              ],
+              "module": "mockShaderModule",
+            },
+          },
+        ],
+      ]
+    `);
+
+    expect(renderPassEncoder.mock.setVertexBuffer.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          0,
+          {
+            "destroy": [MockFunction spy],
+            "getMappedRange": [MockFunction spy],
+            "label": "vertexBuffer",
+            "mapAsync": [MockFunction spy],
+            "mapState": "unmapped",
+            "size": 48,
+            "unmap": [MockFunction spy],
+            "usage": 44,
+          },
+          undefined,
+          undefined,
+        ],
+        [
+          1,
+          {
+            "destroy": [MockFunction spy],
+            "getMappedRange": [MockFunction spy],
+            "label": "instanceBuffer",
+            "mapAsync": [MockFunction spy],
+            "mapState": "unmapped",
+            "size": 16,
+            "unmap": [MockFunction spy],
+            "usage": 44,
+          },
+          undefined,
+          undefined,
+        ],
+      ]
+    `);
+  });
 });
 
 describe('matchUpVaryingLocations', () => {
