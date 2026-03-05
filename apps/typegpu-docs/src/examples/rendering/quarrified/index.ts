@@ -21,7 +21,7 @@ const cubeVertexBuffer = root
   .createBuffer(d.disarrayOf(CubeVertex, 36), cubeVertices)
   .$usage('vertex');
 
-const renderPipeline = root['~unstable'].createRenderPipeline({
+const renderPipeline = root.createRenderPipeline({
   attribs: { ...vertexCubeLayout.attrib },
   vertex: tgpu['~unstable'].vertexFn({
     in: { position: d.vec4f, uv: d.vec2f },
