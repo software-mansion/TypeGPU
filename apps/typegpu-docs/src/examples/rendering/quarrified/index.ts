@@ -46,11 +46,10 @@ const pipeline = root.createRenderPipeline({
     in: { position: d.vec4f, uv: d.vec2f, blockPos: d.vec4i },
     out: { pos: d.builtin.position, worldPos: d.vec4f },
   })((input) => {
-    const worldPos = input.position.add(
-      d.vec4f(d.f32(input.blockPos.x), d.f32(input.blockPos.y), d.f32(input.blockPos.z), 0),
-    );
+    'use gpu';
+    const worldPos = d.vec4f(input.position.xyz + d.vec3f(input.blockPos.xyz), 1);
     return {
-      pos: cameraUniform.$.projection.mul(cameraUniform.$.view).mul(worldPos),
+      pos: cameraUniform.$.projection * cameraUniform.$.view * worldPos,
       worldPos,
     };
   }),
@@ -58,12 +57,13 @@ const pipeline = root.createRenderPipeline({
     in: { worldPos: d.vec4f },
     out: d.vec4f,
   })(({ worldPos }) => {
+    'use gpu';
     const localPos = std.fract(worldPos.xyz);
-    const nearEdge = std.min(localPos, d.vec3f(1).sub(localPos));
+    const nearEdge = std.min(localPos, 1 - localPos);
     const highest = std.max(nearEdge.x, nearEdge.y, nearEdge.z);
     const secondHighest = nearEdge.x + nearEdge.y + nearEdge.z - highest;
     const distFromEdge = std.min(highest, secondHighest);
-    const color = std.select(d.vec3f(0.5, 0.5, 0.5), d.vec3f(0.3, 0.3, 0.3), distFromEdge < 0.05);
+    const color = std.select(d.vec3f(0.5), d.vec3f(0.3), distFromEdge < 0.05);
     return d.vec4f(color, 1);
   }),
   targets: { format: presentationFormat },
