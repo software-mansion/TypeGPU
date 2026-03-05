@@ -14,5 +14,7 @@ export default defineConfig({
   format: 'esm',
   dts: true,
   platform: 'neutral',
+  unbundle: true,
+  sourcemap: false,
   target: false,
 });
