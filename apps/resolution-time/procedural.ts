@@ -89,7 +89,7 @@ const baseFn = tgpu.comptime(() => {
       'use gpu';
 
       let v = d.vec2f(0.5, 0.5);
-      v.x += 0.1;
+      v += 0.1;
 
       popDepth();
     })
@@ -118,7 +118,7 @@ const thresholdFn = tgpu.comptime(() => {
       'use gpu';
 
       const tint = tintSlot.$;
-      const v = d.vec2f(tint.x, tint.y);
+      const v = tint.xy;
       const len = std.length(v);
       const edge = std.smoothstep(0.2, 0.8, len);
       const _result = d.vec3f(tint.x * edge, tint.y * edge, tint.z);
@@ -155,7 +155,7 @@ const waveFn = tgpu.comptime(() => {
 
       let v = d.vec2f(0.3, 0.7);
       v = d.vec2f(std.sin(v.x * Math.PI), std.cos(v.y * Math.PI));
-      const _energy = v.x * v.x + v.y * v.y;
+      const _energy = std.dot(v, v);
 
       for (const _i of tgpu.unroll(branchingUnrollArray)) {
         // @ts-expect-error trust me
@@ -195,8 +195,8 @@ const rotateFn = tgpu.comptime(() => {
       const phase = phaseSlot.$;
       const angle = phase.x + timeAccessor.$ * phase.y;
       let v = d.vec2f(1, 0);
-      const c = Math.cos(angle);
-      const s = Math.sin(angle);
+      const c = std.cos(angle);
+      const s = std.sin(angle);
       v = d.vec2f(v.x * c - v.y * s, v.x * s + v.y * c);
 
       for (const _i of tgpu.unroll(branchingUnrollArray)) {
@@ -218,7 +218,7 @@ const spiralFn = tgpu.comptime(() => {
       const center = dataLayout.$.offset;
       const radius = 0.5 * std.sin(t * 2.0);
       const angle = t * Math.PI;
-      const pos = d.vec2f(center.x + radius * Math.cos(angle), center.y + radius * Math.sin(angle));
+      const pos = d.vec2f(center.x + radius * std.cos(angle), center.y + radius * std.sin(angle));
       const _dist = std.length(pos);
 
       for (const _i of tgpu.unroll(branchingUnrollArray)) {
@@ -263,7 +263,7 @@ function runBenchmark(input: ProcGenConfig, output: BenchmarkResult[]) {
   branchingUnrollArray = getArrayForUnroll(config.branching);
 
   for (let i = 0; i < config.samples; i++) {
-    rand = splitmix32(config.maxDepth * 2 ** 32);
+    rand = splitmix32(config.seed);
     const result = benchmarkResolve();
     output.push(result);
     console.log(
@@ -300,7 +300,7 @@ test('resolution time vs max depth (full tree)', () => {
         branching: 2,
         maxDepth: depth,
         recurseProb: 1,
-        seed: 0.1882 * 2 ** 32,
+        seed: depth * 2 ** 24,
       },
       results,
     );
@@ -321,7 +321,7 @@ test('resolution time vs linear recursion (path)', () => {
         branching: 1,
         maxDepth: depth,
         recurseProb: 1,
-        seed: 0.1882 * 2 ** 32,
+        seed: depth * 2 ** 24,
       },
       results,
     );
@@ -342,7 +342,7 @@ test('resolution time vs random', () => {
         branching: 3,
         maxDepth: depth,
         recurseProb: 0.5,
-        seed: 0.1882 * 2 ** 32,
+        seed: depth * 2 ** 24,
       },
       results,
     );
