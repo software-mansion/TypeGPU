@@ -842,7 +842,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
 
     //@ts-expect-error: No index buffer assigned
     expect(() => pipeline.drawIndexed(3)).toThrowErrorMatchingInlineSnapshot(
-      '[Error: No index buffer set for this render pipeline.]',
+      `[Error: No index buffer set for this render pipeline.]`,
     );
 
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
@@ -1613,7 +1613,7 @@ describe('root.createRenderPipeline', () => {
     const instanceLayout = tgpu.vertexLayout(d.arrayOf(Boid));
     const pipeline = root.createRenderPipeline({
       attribs: { vertexPos: vertexLayout.attrib, ...instanceLayout.attrib },
-      vertex: ({ vertexPos, velocity, life }) => {
+      vertex: ({ life, velocity, vertexPos }) => {
         'use gpu';
         return { $position: d.vec4f(vertexPos + velocity, 1), life };
       },
@@ -1653,9 +1653,14 @@ describe('root.createRenderPipeline', () => {
                   "arrayStride": 16,
                   "attributes": [
                     {
+                      "format": "float32",
+                      "offset": 12,
+                      "shaderLocation": 0,
+                    },
+                    {
                       "format": "float32x3",
                       "offset": 0,
-                      "shaderLocation": 0,
+                      "shaderLocation": 1,
                     },
                   ],
                   "stepMode": "vertex",
@@ -1666,11 +1671,6 @@ describe('root.createRenderPipeline', () => {
                     {
                       "format": "float32x3",
                       "offset": 0,
-                      "shaderLocation": 1,
-                    },
-                    {
-                      "format": "float32",
-                      "offset": 12,
                       "shaderLocation": 2,
                     },
                   ],
@@ -1691,10 +1691,10 @@ describe('root.createRenderPipeline', () => {
           {
             "destroy": [MockFunction spy],
             "getMappedRange": [MockFunction spy],
-            "label": "vertexBuffer",
+            "label": "instanceBuffer",
             "mapAsync": [MockFunction spy],
             "mapState": "unmapped",
-            "size": 48,
+            "size": 16,
             "unmap": [MockFunction spy],
             "usage": 44,
           },
@@ -1706,10 +1706,10 @@ describe('root.createRenderPipeline', () => {
           {
             "destroy": [MockFunction spy],
             "getMappedRange": [MockFunction spy],
-            "label": "instanceBuffer",
+            "label": "vertexBuffer",
             "mapAsync": [MockFunction spy],
             "mapState": "unmapped",
-            "size": 16,
+            "size": 48,
             "unmap": [MockFunction spy],
             "usage": 44,
           },
