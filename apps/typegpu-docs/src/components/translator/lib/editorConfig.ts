@@ -54,19 +54,10 @@ export function setupMonacoEditor(monaco: Monaco) {
 
   for (const [moduleKey, moduleDef] of entries(SANDBOX_MODULES)) {
     if ('content' in moduleDef.typeDef) {
-      tsDefaults.addExtraLib(
-        moduleDef.typeDef.content,
-        moduleDef.typeDef.filename,
-      );
+      tsDefaults.addExtraLib(moduleDef.typeDef.content, moduleDef.typeDef.filename);
 
-      if (
-        moduleDef.typeDef.filename &&
-        moduleDef.typeDef.filename !== moduleKey
-      ) {
-        reroutes[moduleKey] = [
-          ...(reroutes[moduleKey] ?? []),
-          moduleDef.typeDef.filename,
-        ];
+      if (moduleDef.typeDef.filename && moduleDef.typeDef.filename !== moduleKey) {
+        reroutes[moduleKey] = [...(reroutes[moduleKey] ?? []), moduleDef.typeDef.filename];
       }
     }
   }

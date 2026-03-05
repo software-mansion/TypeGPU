@@ -6,7 +6,7 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const spanUniform = root.createUniform(d.vec2f);
 
-const fragment = tgpu['~unstable'].fragmentFn({
+const fragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -15,10 +15,11 @@ const fragment = tgpu['~unstable'].fragmentFn({
   return d.vec4f(red, green, 0.5, 1.0);
 });
 
-const pipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle)
-  .withFragment(fragment, { format: presentationFormat })
-  .createPipeline();
+const pipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment,
+  targets: { format: presentationFormat },
+});
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
@@ -26,13 +27,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 function draw(spanXValue: number, spanYValue: number) {
   spanUniform.write(d.vec2f(spanXValue, spanYValue));
 
-  pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .draw(3);
+  pipeline.withColorAttachment({ view: context }).draw(3);
 }
 
 let spanX = 10;

@@ -1,13 +1,16 @@
 import { describe, expect } from 'vitest';
 import { it } from '../utils/extendedIt.ts';
 
-import tgpu, { d } from '../../src/index.ts';
+import tgpu, { d } from '../../src/index.js';
 
 describe('codeGen', () => {
   describe('vectors', () => {
     it('handles member access for external vectors', () => {
       const size = d.vec3f(1, 2, 3);
-      const main = tgpu.fn([], d.f32)(() => {
+      const main = tgpu.fn(
+        [],
+        d.f32,
+      )(() => {
         return size.x * size.y * size.z;
       });
 
@@ -19,7 +22,10 @@ describe('codeGen', () => {
     });
 
     it('handles member access for local vectors', () => {
-      const main = tgpu.fn([], d.f32)(() => {
+      const main = tgpu.fn(
+        [],
+        d.f32,
+      )(() => {
         const size = d.vec3f(1, 2, 3);
         return size.x * size.y * size.z;
       });
@@ -36,7 +42,10 @@ describe('codeGen', () => {
   it('should properly resolve the "this" keyword', ({ root }) => {
     class MyController {
       myBuffer = root.createUniform(d.u32);
-      myFn = tgpu.fn([], d.u32)(() => {
+      myFn = tgpu.fn(
+        [],
+        d.u32,
+      )(() => {
         return this.myBuffer.$;
       });
     }

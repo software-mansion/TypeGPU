@@ -1,10 +1,5 @@
 import tgpu, { d, std } from 'typegpu';
-import {
-  ioLayout,
-  type LayerData,
-  type Network,
-  weightsBiasesLayout,
-} from './data.ts';
+import { ioLayout, type LayerData, type Network, weightsBiasesLayout } from './data.ts';
 import { downloadLayers } from './helpers.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
@@ -19,13 +14,13 @@ const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 const hasSubgroups = root.enabledFeatures.has('subgroups');
 let useSubgroups = hasSubgroups;
 
-const canvasData = Array.from({ length: (SIZE ** 2) }, () => 0);
+const canvasData = Array.from({ length: SIZE ** 2 }, () => 0);
 
 // Shaders
 
 const relu = tgpu.fn([d.f32], d.f32)((x) => std.max(0, x));
 
-const defaultCompute = tgpu['~unstable'].computeFn({
+const defaultCompute = tgpu.computeFn({
   in: {
     gid: d.builtin.globalInvocationId,
   },
@@ -38,11 +33,7 @@ const defaultCompute = tgpu['~unstable'].computeFn({
   let sum = d.f32();
 
   for (let j = d.u32(); j < inputSize; j++) {
-    sum = std.fma(
-      ioLayout.$.input[j],
-      weightsBiasesLayout.$.weights[weightsOffset + j],
-      sum,
-    );
+    sum = std.fma(ioLayout.$.input[j], weightsBiasesLayout.$.weights[weightsOffset + j], sum);
   }
 
   const total = sum + weightsBiasesLayout.$.biases[i];
@@ -50,7 +41,7 @@ const defaultCompute = tgpu['~unstable'].computeFn({
 });
 
 const workgroupSize = tgpu.const(d.u32, 128);
-const subgroupCompute = tgpu['~unstable'].computeFn({
+const subgroupCompute = tgpu.computeFn({
   in: {
     lid: d.builtin.localInvocationId,
     wid: d.builtin.workgroupId,
@@ -84,16 +75,14 @@ const subgroupCompute = tgpu['~unstable'].computeFn({
   const sum = std.subgroupAdd(partial);
 
   if (valid && sid === 0) {
-    ioLayout.$.output[neuronIndex] = relu(
-      sum + weightsBiasesLayout.$.biases[neuronIndex],
-    );
+    ioLayout.$.output[neuronIndex] = relu(sum + weightsBiasesLayout.$.biases[neuronIndex]);
   }
 });
 
 const pipelines = {
-  default: root['~unstable'].createComputePipeline({ compute: defaultCompute }),
+  default: root.createComputePipeline({ compute: defaultCompute }),
   subgroup: root.enabledFeatures.has('subgroups')
-    ? root['~unstable'].createComputePipeline({ compute: subgroupCompute })
+    ? root.createComputePipeline({ compute: subgroupCompute })
     : null,
 };
 
@@ -118,54 +107,44 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
     return {
       weights: weights.buffer,
       biases: biases.buffer,
-      state: root
-        .createBuffer(d.arrayOf(d.f32, biases.shape[0]))
-        .$usage('storage'),
+      state: root.createBuffer(d.arrayOf(d.f32, biases.shape[0])).$usage('storage'),
     };
   });
 
-  const input = root
-    .createBuffer(d.arrayOf(d.f32, layers[0][0].shape[0]))
-    .$usage('storage');
+  const input = root.createBuffer(d.arrayOf(d.f32, layers[0][0].shape[0])).$usage('storage');
   const output = buffers[buffers.length - 1].state;
 
   const ioBindGroups = buffers.map((_, i) =>
     root.createBindGroup(ioLayout, {
       input: i === 0 ? input : buffers[i - 1].state,
       output: buffers[i].state,
-    })
+    }),
   );
 
   const weightsBindGroups = buffers.map((layer) =>
     root.createBindGroup(weightsBiasesLayout, {
       weights: layer.weights,
       biases: layer.biases,
-    })
+    }),
   );
 
   async function inference(data: number[]): Promise<number[]> {
     // verify the length of the data matches the input layer
     if (data.length !== layers[0][0].shape[0]) {
       throw new Error(
-        `Data length ${data.length} does not match input shape ${
-          layers[0][0].shape[0]
-        }`,
+        `Data length ${data.length} does not match input shape ${layers[0][0].shape[0]}`,
       );
     }
     input.write(data);
 
-    const pipeline = useSubgroups && pipelines.subgroup
-      ? pipelines.subgroup
-      : pipelines.default;
+    const pipeline = useSubgroups && pipelines.subgroup ? pipelines.subgroup : pipelines.default;
 
     // Run the network
     for (let i = 0; i < buffers.length; i++) {
       const isFirstLayer = i === 0;
       const isLastLayer = i === buffers.length - 1;
 
-      let boundPipeline = pipeline
-        .with(ioBindGroups[i])
-        .with(weightsBindGroups[i]);
+      let boundPipeline = pipeline.with(ioBindGroups[i]).with(weightsBindGroups[i]);
 
       if (querySet && (isFirstLayer || isLastLayer)) {
         const descriptor = {
@@ -208,14 +187,10 @@ const network = createNetwork(await downloadLayers(root));
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
-// oxlint-disable-next-line typescript/no-unnecessary-type-assertion not really unnecessary
+// oxlint-disable-next-line typescript/no-unnecessary-type-assertion -- not really unnecessary
 const bars = Array.from(document.querySelectorAll('.bar')) as HTMLDivElement[];
-const subgroupsEl = document.getElementById(
-  'subgroups-status',
-) as HTMLSpanElement;
-const inferenceTimeEl = document.getElementById(
-  'inference-time',
-) as HTMLSpanElement;
+const subgroupsEl = document.getElementById('subgroups-status') as HTMLSpanElement;
+const inferenceTimeEl = document.getElementById('inference-time') as HTMLSpanElement;
 
 const uiState = {
   isDrawing: false,
@@ -275,11 +250,7 @@ function run() {
 document.querySelector('.loading')?.classList.add('loaded');
 
 function updateSubgroupsStatus() {
-  const text = !hasSubgroups
-    ? 'Not Supported'
-    : useSubgroups
-    ? 'Enabled'
-    : 'Disabled';
+  const text = !hasSubgroups ? 'Not Supported' : useSubgroups ? 'Enabled' : 'Disabled';
   const cls = !hasSubgroups || !useSubgroups ? 'disabled' : 'enabled';
   subgroupsEl.textContent = text;
   subgroupsEl.className = cls;
@@ -307,14 +278,12 @@ window.addEventListener('touchend', touchEndEventListener);
 function centerImage(data: number[]) {
   const mass = data.reduce((acc, value) => acc + value, 0);
   const x = data.reduce((acc, value, i) => acc + value * (i % SIZE), 0) / mass;
-  const y =
-    data.reduce((acc, value, i) => acc + value * Math.floor(i / SIZE), 0) /
-    mass;
+  const y = data.reduce((acc, value, i) => acc + value * Math.floor(i / SIZE), 0) / mass;
 
   const offsetX = Math.round(SIZE / 2 - x);
   const offsetY = Math.round(SIZE / 2 - y);
 
-  const newData = Array.from({ length: (SIZE * SIZE) }, () => 0);
+  const newData = Array.from({ length: SIZE * SIZE }, () => 0);
   for (let i = 0; i < SIZE; i++) {
     for (let j = 0; j < SIZE; j++) {
       const index = i * SIZE + j;
@@ -344,10 +313,7 @@ async function handleDrawing(x: number, y: number): Promise<void> {
     return;
   }
 
-  const steps = Math.max(
-    Math.abs(x - uiState.lastPos.x),
-    Math.abs(y - uiState.lastPos.y),
-  );
+  const steps = Math.max(Math.abs(x - uiState.lastPos.x), Math.abs(y - uiState.lastPos.y));
   const xPoints = interpolate(uiState.lastPos.x, x, steps);
   const yPoints = interpolate(uiState.lastPos.y, y, steps);
 
@@ -397,19 +363,19 @@ canvas.addEventListener('mousemove', (event) => {
   void handleDrawing(x, y);
 });
 
-canvas.addEventListener('touchmove', (event) => {
-  event.preventDefault();
-  const canvasPos = canvas.getBoundingClientRect();
-  const touch = event.touches[0];
-  const cellSize = canvas.width / SIZE;
-  const x = Math.floor(
-    ((touch.clientX - canvasPos.left) * window.devicePixelRatio) / cellSize,
-  );
-  const y = Math.floor(
-    ((touch.clientY - canvasPos.top) * window.devicePixelRatio) / cellSize,
-  );
-  void handleDrawing(x, y);
-}, { passive: false });
+canvas.addEventListener(
+  'touchmove',
+  (event) => {
+    event.preventDefault();
+    const canvasPos = canvas.getBoundingClientRect();
+    const touch = event.touches[0];
+    const cellSize = canvas.width / SIZE;
+    const x = Math.floor(((touch.clientX - canvasPos.left) * window.devicePixelRatio) / cellSize);
+    const y = Math.floor(((touch.clientY - canvasPos.top) * window.devicePixelRatio) / cellSize);
+    void handleDrawing(x, y);
+  },
+  { passive: false },
+);
 
 export const controls = defineControls({
   Reset: {

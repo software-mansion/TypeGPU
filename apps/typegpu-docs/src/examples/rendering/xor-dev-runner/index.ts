@@ -1,7 +1,7 @@
 /**
  * This is a port of XorDev's "Runner" example using TypeGPU. Most of the shader is
- * written in TGSL (TypeScript + Standard Library), but parts of it are implemented
- * in WGSL to showcase the flexibility of TypeGPU.
+ * written in TypeScript, but parts of it are implemented in WGSL to showcase the
+ * flexibility of TypeGPU.
  *
  * ## Credits
  * XorDev (xordev.com) for the idea and original implementation
@@ -13,17 +13,9 @@
  */
 
 import tgpu, { d, std } from 'typegpu';
-// deno-fmt-ignore: just a list of standard functions
 import { abs, add, cos, max, min, mul, select, sign, sin, sub, tanh } from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';
-import {
-  Camera,
-  setupFirstPersonCamera,
-} from '../../common/setup-first-person-camera.ts';
-
-// NOTE: Some APIs are still unstable (are being finalized based on feedback), but
-//       we can still access them if we know what we're doing.
-//       They're going to be moved into `tgpu.` and `root.` in a future version.
+import { Camera, setupFirstPersonCamera } from '../../common/setup-first-person-camera.ts';
 
 /**
  * For some reason, tanh in WebGPU breaks down hard outside
@@ -48,12 +40,15 @@ const mod = tgpu.fn([d.vec3f, d.f32], d.vec3f)`(v, a) {
  * Returns a transformation matrix that represents an `angle` rotation
  * in the XZ plane (around the Y axis)
  */
-const rotateXZ = tgpu.fn([d.f32], d.mat3x3f)((angle) =>
+const rotateXZ = tgpu.fn(
+  [d.f32],
+  d.mat3x3f,
+)((angle) =>
   d.mat3x3f(
     /* right   */ d.vec3f(cos(angle), 0, sin(angle)),
     /* up      */ d.vec3f(0, 1, 0),
     /* forward */ d.vec3f(-sin(angle), 0, cos(angle)),
-  )
+  ),
 );
 
 export const Ray = d.struct({
@@ -69,9 +64,7 @@ const getRayForUV = (uv: d.v2f) => {
   'use gpu';
   const camera = cameraUniform.$;
   const farView = camera.projectionInverse.mul(d.vec4f(uv, 1, 1));
-  const farWorld = camera.viewInverse.mul(
-    d.vec4f(farView.xyz.div(farView.w), 1),
-  );
+  const farWorld = camera.viewInverse.mul(d.vec4f(farView.xyz.div(farView.w), 1));
   const direction = std.normalize(farWorld.xyz.sub(camera.pos.xyz));
   return Ray({ origin: camera.pos, direction: d.vec4f(direction, 0) });
 };
@@ -86,7 +79,7 @@ const controlsOffsetUniform = root.createUniform(d.f32);
 const colorUniform = root.createUniform(d.vec3f);
 const shiftUniform = root.createUniform(d.f32);
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
@@ -99,7 +92,8 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   let acc = d.vec3f();
   let z = d.f32(0);
   for (let l = 0; l < 30; l++) {
-    const p = d.vec3f(3, 0, 3)
+    const p = d
+      .vec3f(3, 0, 3)
       .add(controlsOffsetUniform.$)
       .add(autoMoveOffsetUniform.$)
       .add(ray.origin.xyz)
@@ -113,7 +107,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
       q = mul(q, rotateXZ(shiftUniform.$));
     }
     z += prox;
-    acc = add(acc, mul(sub(icolor, safeTanh(p.y + 4)), 0.1 * prox / (1 + z)));
+    acc = add(acc, mul(sub(icolor, safeTanh(p.y + 4)), (0.1 * prox) / (1 + z)));
   }
 
   // Tone mapping
@@ -125,7 +119,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
 /**
  * A full-screen triangle vertex shader
  */
-const vertexMain = tgpu['~unstable'].vertexFn({
+const vertexMain = tgpu.vertexFn({
   in: { vertexIndex: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })((input) => {
@@ -137,21 +131,23 @@ const vertexMain = tgpu['~unstable'].vertexFn({
   };
 });
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const cameraUniform = root.createUniform(Camera);
-const { cleanupCamera, updatePosition } = setupFirstPersonCamera(canvas, {
-  speed: d.vec3f(0.001, 0.1, 1),
-}, (props) => {
-  cameraUniform.writePartial(props);
-});
+const { cleanupCamera, updatePosition } = setupFirstPersonCamera(
+  canvas,
+  {
+    speed: d.vec3f(0.001, 0.1, 1),
+  },
+  (props) => {
+    cameraUniform.writePartial(props);
+  },
+);
 
-const pipeline = root['~unstable'].createRenderPipeline({
+const pipeline = root.createRenderPipeline({
   vertex: vertexMain,
   fragment: fragmentMain,
-  targets: { format: presentationFormat },
 });
 
 let isRunning = true;
@@ -169,13 +165,7 @@ function draw() {
   }
   updatePosition();
 
-  pipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .draw(3);
+  pipeline.withColorAttachment({ view: context }).draw(3);
 
   requestAnimationFrame(draw);
 }
@@ -206,7 +196,7 @@ export const controls = defineControls({
     max: 200,
     step: 0.001,
     onSliderChange(v) {
-      shiftUniform.write(v / 180 * Math.PI);
+      shiftUniform.write((v / 180) * Math.PI);
     },
   },
   color: {

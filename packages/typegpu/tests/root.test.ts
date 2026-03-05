@@ -1,6 +1,6 @@
 import { describe, expect, vi } from 'vitest';
 import { Void } from '../src/data/wgslTypes.ts';
-import tgpu, { d } from '../src/index.ts';
+import tgpu, { d } from '../src/index.js';
 import { it } from './utils/extendedIt.ts';
 
 describe('TgpuRoot', () => {
@@ -16,16 +16,12 @@ describe('TgpuRoot', () => {
         label: 'dataBuffer',
         mappedAtCreation: false,
         size: 4,
-        usage: GPUBufferUsage.UNIFORM |
-          GPUBufferUsage.COPY_DST |
-          GPUBufferUsage.COPY_SRC,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
       });
     });
 
     it('should create buffer with initialization', ({ root }) => {
-      const dataBuffer = root
-        .createBuffer(d.vec3i, d.vec3i(0, 0, 0))
-        .$usage('uniform');
+      const dataBuffer = root.createBuffer(d.vec3i, d.vec3i(0, 0, 0)).$usage('uniform');
 
       const mockBuffer = root.unwrap(dataBuffer);
       expect(mockBuffer).toBeDefined();
@@ -35,9 +31,7 @@ describe('TgpuRoot', () => {
         label: 'dataBuffer',
         mappedAtCreation: true,
         size: 12,
-        usage: GPUBufferUsage.UNIFORM |
-          GPUBufferUsage.COPY_DST |
-          GPUBufferUsage.COPY_SRC,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
       });
     });
 
@@ -51,9 +45,7 @@ describe('TgpuRoot', () => {
         label: 'dataBuffer',
         mappedAtCreation: false,
         size: 12,
-        usage: GPUBufferUsage.UNIFORM |
-          GPUBufferUsage.COPY_DST |
-          GPUBufferUsage.COPY_SRC,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
       });
     });
   });
@@ -97,10 +89,7 @@ describe('TgpuRoot', () => {
     });
 
     it('should return the correct GPUVertexBufferLayout for a simple vertex layout', ({ root }) => {
-      const vertexLayout = tgpu.vertexLayout(
-        d.arrayOf(d.location(0, d.vec2u)),
-        'vertex',
-      );
+      const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.location(0, d.vec2u)), 'vertex');
 
       expect(root.unwrap(vertexLayout)).toStrictEqual({
         arrayStride: 8,
@@ -115,17 +104,16 @@ describe('TgpuRoot', () => {
       });
     });
 
-    it('should return the correct GPUVertexBufferLayout for a complex vertex layout', ({ root }) => {
+    it('should return the correct GPUVertexBufferLayout for a complex vertex layout', ({
+      root,
+    }) => {
       const VertexData = d.unstruct({
         position: d.location(0, d.float32x3),
         color: d.location(1, d.unorm10_10_10_2),
         something: d.location(2, d.u32),
       });
 
-      const vertexLayout = tgpu.vertexLayout(
-        d.disarrayOf(VertexData),
-        'instance',
-      );
+      const vertexLayout = tgpu.vertexLayout(d.disarrayOf(VertexData), 'instance');
 
       expect(root.unwrap(vertexLayout)).toStrictEqual({
         arrayStride: 20,
@@ -160,13 +148,13 @@ describe('TgpuRoot', () => {
         root
           .createBuffer(d.disarrayOf(d.f32, 1))
           //@ts-expect-error
-          .$usage('storage')
+          .$usage('storage'),
       ).toThrow();
       expect(() =>
         root
           .createBuffer(d.disarrayOf(d.f32, 1))
           //@ts-expect-error
-          .$usage('uniform')
+          .$usage('uniform'),
       ).toThrow();
 
       root.createBuffer(d.unstruct({ a: d.u32 })).$usage('vertex');
@@ -174,13 +162,13 @@ describe('TgpuRoot', () => {
         root
           .createBuffer(d.unstruct({ a: d.u32 }))
           //@ts-expect-error
-          .$usage('storage')
+          .$usage('storage'),
       ).toThrow();
       expect(() =>
         root
           .createBuffer(d.unstruct({ a: d.u32 }))
           //@ts-expect-error
-          .$usage('uniform')
+          .$usage('uniform'),
       ).toThrow();
     });
   });
@@ -189,7 +177,7 @@ describe('TgpuRoot', () => {
     const layout = tgpu.bindGroupLayout({ foo: { uniform: d.f32 } });
 
     // A vertex function that is using entries from the layout
-    const mainVertexUsing = tgpu['~unstable'].vertexFn({
+    const mainVertexUsing = tgpu.vertexFn({
       out: { pos: d.builtin.position },
     })(() => {
       layout.$.foo;
@@ -199,7 +187,7 @@ describe('TgpuRoot', () => {
     });
 
     // A vertex function that is using none of the layout's entries
-    const mainVertexNotUsing = tgpu['~unstable'].vertexFn({
+    const mainVertexNotUsing = tgpu.vertexFn({
       out: {
         pos: d.builtin.position,
       },
@@ -207,7 +195,7 @@ describe('TgpuRoot', () => {
       pos: d.vec4f(),
     }));
 
-    const mainFragment = tgpu['~unstable'].fragmentFn({ out: Void })(() => {});
+    const mainFragment = tgpu.fragmentFn({ out: Void })(() => {});
 
     it('ignores bind groups that are not used in the shader', ({ root, commandEncoder }) => {
       const group = root.createBindGroup(layout, {
@@ -269,10 +257,12 @@ describe('TgpuRoot', () => {
         foo: root.createBuffer(d.f32).$usage('uniform'),
       });
 
-      const pipeline = root.createRenderPipeline({
-        vertex: mainVertexUsing,
-        fragment: mainFragment,
-      }).with(group);
+      const pipeline = root
+        .createRenderPipeline({
+          vertex: mainVertexUsing,
+          fragment: mainFragment,
+        })
+        .with(group);
 
       root.beginRenderPass(
         {

@@ -15,16 +15,19 @@ describe('liquid-glass example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'simple',
-      name: 'liquid-glass',
-      setupMocks: () => {
-        mockResizeObserver();
-        mockImageLoading();
-        mockCreateImageBitmap();
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'simple',
+        name: 'liquid-glass',
+        setupMocks: () => {
+          mockResizeObserver();
+          mockImageLoading();
+          mockCreateImageBitmap();
+        },
+        expectedCalls: 3,
       },
-      expectedCalls: 3,
-    }, device);
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "
@@ -107,9 +110,20 @@ describe('liquid-glass example', () => {
 
       fn sampleWithChromaticAberration(tex: texture_2d<f32>, sampler2: sampler, uv: vec2f, offset: f32, dir: vec2f, blur: f32) -> vec3f {
         var samples = array<vec3f, 3>();
-        for (var i = 0; (i < 3i); i++) {
-          var channelOffset = (dir * ((f32(i) - 1f) * offset));
-          samples[i] = textureSampleBias(tex, sampler2, (uv - channelOffset), blur).rgb;
+        // unrolled iteration #0
+        {
+          var channelOffset = (dir * (-1f * offset));
+          samples[0i] = textureSampleBias(tex, sampler2, (uv - channelOffset), blur).rgb;
+        }
+        // unrolled iteration #1
+        {
+          var channelOffset = (dir * (0f * offset));
+          samples[1i] = textureSampleBias(tex, sampler2, (uv - channelOffset), blur).rgb;
+        }
+        // unrolled iteration #2
+        {
+          var channelOffset = (dir * (1f * offset));
+          samples[2i] = textureSampleBias(tex, sampler2, (uv - channelOffset), blur).rgb;
         }
         return vec3f(samples[0i].x, samples[1i].y, samples[2i].z);
       }

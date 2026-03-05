@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import { struct } from '../../src/data/index.ts';
-import tgpu, { d, type TgpuBindGroupLayout } from '../../src/index.ts';
+import tgpu, { d, type TgpuBindGroupLayout } from '../../src/index.js';
 import { getName } from '../../src/shared/meta.ts';
 import { it } from '../utils/extendedIt.ts';
 
@@ -8,9 +8,7 @@ describe('autonaming', () => {
   it('autonames resources created using tgpu', () => {
     const mySlot = tgpu.slot<number>();
     const myLayout = tgpu.bindGroupLayout({ foo: { uniform: d.vec3f } });
-    const myVertexLayout = tgpu.vertexLayout((n: number) =>
-      d.arrayOf(d.i32, n)
-    );
+    const myVertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(d.i32, n));
     const myAccessor = tgpu.accessor(d.f32);
     const myPrivateVar = tgpu.privateVar(d.vec2f);
     const myWorkgroupVar = tgpu.workgroupVar(d.f32);
@@ -39,13 +37,12 @@ describe('autonaming', () => {
     const myReadonly = root.createReadonly(d.u32);
     const myUniform = root.createUniform(d.u32);
     const myQuerySet = root.createQuerySet('timestamp', 2);
-    const myPipeline = root['~unstable'].createComputePipeline({
-      compute: tgpu['~unstable'].computeFn({ workgroupSize: [1] })(() => {}),
+    const myPipeline = root.createComputePipeline({
+      compute: tgpu.computeFn({ workgroupSize: [1] })(() => {}),
     });
-    const myGuardedPipeline = root['~unstable']
-      .createGuardedComputePipeline(() => {
-        'use gpu';
-      });
+    const myGuardedPipeline = root.createGuardedComputePipeline(() => {
+      'use gpu';
+    });
     const myTexture = root['~unstable'].createTexture({
       size: [1, 1],
       format: 'rgba8unorm',
@@ -71,18 +68,10 @@ describe('autonaming', () => {
   });
 
   it('autonames when the constructor is hidden behind other methods', ({ root }) => {
-    const myBuffer = root.createBuffer(d.u32)
-      .$usage('storage')
-      .$addFlags(GPUBufferUsage.STORAGE);
+    const myBuffer = root.createBuffer(d.u32).$usage('storage').$addFlags(GPUBufferUsage.STORAGE);
     const Item = d.struct({ a: d.u32 });
-    const myFn = tgpu.fn(
-      [Item],
-      Item,
-    ) /* wgsl */`(item) { return item; }`
-      .$uses({ Item });
-    const myLayout = tgpu
-      .bindGroupLayout({ foo: { uniform: d.vec3f } })
-      .$idx(0);
+    const myFn = tgpu.fn([Item], Item) /* wgsl */ `(item) { return item; }`.$uses({ Item });
+    const myLayout = tgpu.bindGroupLayout({ foo: { uniform: d.vec3f } }).$idx(0);
 
     expect(getName(myBuffer)).toBe('myBuffer');
     expect(getName(myFn)).toBe('myFn');
@@ -90,15 +79,15 @@ describe('autonaming', () => {
   });
 
   it('names views', ({ root }) => {
-    const texture = root['~unstable'].createTexture({
-      size: [256, 256],
-      format: 'rgba8unorm',
-    }).$usage('sampled', 'storage');
+    const texture = root['~unstable']
+      .createTexture({
+        size: [256, 256],
+        format: 'rgba8unorm',
+      })
+      .$usage('sampled', 'storage');
 
     const sampledView = texture.createView(d.texture2d(d.f32));
-    const storageView = texture.createView(
-      d.textureStorage2d('rgba8unorm', 'read-only'),
-    );
+    const storageView = texture.createView(d.textureStorage2d('rgba8unorm', 'read-only'));
 
     expect(getName(sampledView)).toBe('sampledView');
     expect(getName(storageView)).toBe('storageView');
@@ -106,7 +95,9 @@ describe('autonaming', () => {
 
   it('does not rename already named resources', () => {
     const myStruct = d.struct({ a: d.u32 }).$name('IntStruct');
-    const myFunction = tgpu.fn([])(() => 0).$name('ConstFunction');
+    const myFunction = tgpu
+      .fn([])(() => 0)
+      .$name('ConstFunction');
 
     expect(getName(myStruct)).toBe('IntStruct');
     expect(getName(myFunction)).toBe('ConstFunction');
@@ -114,18 +105,12 @@ describe('autonaming', () => {
 
   it('names TGPU functions', () => {
     const myFunction = tgpu.fn([])(() => 0);
-    const myComputeFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
-      () => {},
-    );
-    const myVertexFn = tgpu['~unstable'].vertexFn({ out: { ret: d.i32 } })(
-      () => ({ ret: 0 }),
-    );
-    const myFragmentFn = tgpu['~unstable'].fragmentFn({
+    const myComputeFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    const myVertexFn = tgpu.vertexFn({ out: { ret: d.i32 } })(() => ({ ret: 0 }));
+    const myFragmentFn = tgpu.fragmentFn({
       in: { position: d.builtin.position },
       out: d.vec4f,
-    })(
-      () => d.vec4f(),
-    );
+    })(() => d.vec4f());
 
     expect(getName(myFunction)).toBe('myFunction');
     expect(getName(myComputeFn)).toBe('myComputeFn');
@@ -135,10 +120,9 @@ describe('autonaming', () => {
 
   it('autonames assignment expressions', () => {
     let layout: TgpuBindGroupLayout;
-    layout = tgpu
-      .bindGroupLayout({
-        foo: { uniform: d.vec3f },
-      });
+    layout = tgpu.bindGroupLayout({
+      foo: { uniform: d.vec3f },
+    });
 
     expect(getName(layout)).toBe('layout');
   });

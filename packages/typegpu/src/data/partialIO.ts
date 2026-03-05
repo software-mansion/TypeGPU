@@ -73,8 +73,7 @@ export function getWriteInstructions<TData extends wgsl.BaseData>(
       if (!Array.isArray(partialValue)) {
         throw new Error('Partial value for array must be an array');
       }
-      const arrayPartialValue =
-        (partialValue as InferPartial<wgsl.WgslArray>) ?? [];
+      const arrayPartialValue = (partialValue as InferPartial<wgsl.WgslArray>) ?? [];
 
       arrayPartialValue.sort((a, b) => a.idx - b.idx);
 
@@ -114,11 +113,7 @@ export function getWriteInstructions<TData extends wgsl.BaseData>(
       current.padding = next.padding;
     } else {
       instructions.push({
-        data: new Uint8Array(
-          bigBuffer,
-          current.start,
-          current.end - current.start,
-        ),
+        data: new Uint8Array(bigBuffer, current.start, current.end - current.start),
       });
       current = next;
     }

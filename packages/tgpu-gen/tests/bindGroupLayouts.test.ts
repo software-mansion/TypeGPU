@@ -214,9 +214,7 @@ export const layout3 = tgpu.bindGroupLayout({
   it('adds typegpu import to the generated code', () => {
     const importStatement = "import tgpu from 'typegpu';";
 
-    expect(generate('@binding(0) @group(0) var<uniform> a : f32;')).toContain(
-      importStatement,
-    );
+    expect(generate('@binding(0) @group(0) var<uniform> a : f32;')).toContain(importStatement);
     expect(generate('')).not.toContain(importStatement);
   });
 });

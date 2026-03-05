@@ -16,17 +16,20 @@ describe('jelly-slider example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'rendering',
-      name: 'jelly-slider',
-      setupMocks: () => {
-        mockFonts();
-        mockImageLoading();
-        mockResizeObserver();
-        mockCreateImageBitmap();
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'rendering',
+        name: 'jelly-slider',
+        setupMocks: () => {
+          mockFonts();
+          mockImageLoading();
+          mockResizeObserver();
+          mockCreateImageBitmap();
+        },
+        expectedCalls: 6,
       },
-      expectedCalls: 6,
-    }, device);
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "
@@ -383,7 +386,7 @@ describe('jelly-slider example', () => {
         var p_w = point;
         p_w.x = abs(point.x);
         let l = (length(p_w) - radius);
-        let m = length((p_w - (sc * clamp(dot(p_w, sc), 0f, radius))));
+        let m = distance(p_w, (sc * clamp(dot(p_w, sc), 0f, radius)));
         return max(l, (m * sign(((sc.y * p_w.x) - (sc.x * p_w.y)))));
       }
 
@@ -608,9 +611,81 @@ describe('jelly-slider example', () => {
         var minColor = vec3f(9999);
         var maxColor = vec3f(-9999);
         var dimensions = textureDimensions(currentTexture);
-        for (var x = -1; (x <= 1i); x++) {
-          for (var y = -1; (y <= 1i); y++) {
-            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(x, y));
+        // unrolled iteration #0
+        {
+          // unrolled iteration #0
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(-1));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #1
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(-1, 0));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #2
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(-1, 1));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+        }
+        // unrolled iteration #1
+        {
+          // unrolled iteration #0
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(0, -1));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #1
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i());
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #2
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(0, 1));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+        }
+        // unrolled iteration #2
+        {
+          // unrolled iteration #0
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(1, -1));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #1
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(1, 0));
+            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            minColor = min(minColor, neighborColor.rgb);
+            maxColor = max(maxColor, neighborColor.rgb);
+          }
+          // unrolled iteration #2
+          {
+            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(1));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
             var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
@@ -693,7 +768,7 @@ describe('jelly-slider example', () => {
           h = sqrt(h);
           var x = ((vec2f(h, -(h)) - q) * 0.5f);
           var uv = (sign(x) * pow(abs(x), vec2f(0.3333333432674408)));
-          let t = clamp(((uv.x + uv.y) - kx), 0f, 1f);
+          let t = saturate(((uv.x + uv.y) - kx));
           res = dot2((d + ((c + (b * t)) * t)));
         }
         else {

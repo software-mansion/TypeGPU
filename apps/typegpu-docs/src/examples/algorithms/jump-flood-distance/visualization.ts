@@ -17,17 +17,13 @@ const insideGradient = tgpu.const(d.arrayOf(d.vec3f, 5), [
   d.vec3f(0.9, 1.0, 0.95),
 ]);
 
-export const distanceFrag = tgpu['~unstable'].fragmentFn({
+export const distanceFrag = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
   'use gpu';
   const size = std.textureDimensions(distSampleLayout.$.distTexture);
-  let dist = std.textureSample(
-    distSampleLayout.$.distTexture,
-    distSampleLayout.$.sampler,
-    uv,
-  ).x;
+  let dist = std.textureSample(distSampleLayout.$.distTexture, distSampleLayout.$.sampler, uv).x;
 
   if (paramsAccess.$.showInside === 0 && dist < 0) {
     dist = 0;
@@ -63,11 +59,7 @@ export const distanceFrag = tgpu['~unstable'].fragmentFn({
   }
 
   const contourFreq = maxDist / 12.0;
-  const contour = std.smoothstep(
-    0.0,
-    0.15,
-    std.abs(std.fract(unsigned / contourFreq) - 0.5),
-  );
+  const contour = std.smoothstep(0.0, 0.15, std.abs(std.fract(unsigned / contourFreq) - 0.5));
 
   const color = baseColor.mul(0.7 + 0.3 * contour);
   return d.vec4f(color, 1.0);

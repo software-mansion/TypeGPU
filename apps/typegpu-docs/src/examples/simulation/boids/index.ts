@@ -90,23 +90,21 @@ const VertexOutput = {
   color: d.vec4f,
 };
 
-const mainVert = tgpu['~unstable'].vertexFn({
+const mainVert = tgpu.vertexFn({
   in: { v: d.vec2f, center: d.vec2f, velocity: d.vec2f },
   out: VertexOutput,
 })((input) => {
+  'use gpu';
   const angle = getRotationFromVelocity(input.velocity);
   const rotated = rotate(input.v, angle);
-  const pos = d.vec4f(rotated.add(input.center), 0, 1);
+  const pos = d.vec4f(rotated + input.center, 0, 1);
 
-  const color = d.vec4f(
-    std.sin(colorPalette.$.add(angle)).mul(0.45).add(0.45),
-    1,
-  );
+  const color = d.vec4f(std.sin(colorPalette.$ + angle) * 0.45 + 0.45, 1);
 
   return { position: pos, color };
 });
 
-const mainFrag = tgpu['~unstable'].fragmentFn({
+const mainFrag = tgpu.fragmentFn({
   in: VertexOutput,
   out: d.vec4f,
 })((input) => input.color);
@@ -115,9 +113,7 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const paramsBuffer = root
-  .createBuffer(Params, presets.default)
-  .$usage('uniform');
+const paramsBuffer = root.createBuffer(Params, presets.default).$usage('uniform');
 const params = paramsBuffer.as('uniform');
 
 const triangleVertexBuffer = root
@@ -129,9 +125,8 @@ const triangleVertexBuffer = root
   .$usage('vertex');
 
 const trianglePosBuffers = Array.from({ length: 2 }, () =>
-  root
-    .createBuffer(d.arrayOf(TriangleData, triangleAmount))
-    .$usage('storage', 'uniform', 'vertex'));
+  root.createBuffer(d.arrayOf(TriangleData, triangleAmount)).$usage('storage', 'uniform', 'vertex'),
+);
 
 const randomizePositions = () => {
   const positions = Array.from({ length: triangleAmount }, () => ({
@@ -148,16 +143,17 @@ const TriangleDataArray = d.arrayOf(TriangleData);
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2f));
 const instanceLayout = tgpu.vertexLayout(TriangleDataArray, 'instance');
 
-const renderPipeline = root['~unstable']
-  .withVertex(mainVert, {
-    v: vertexLayout.attrib,
-    center: instanceLayout.attrib.position,
-    velocity: instanceLayout.attrib.velocity,
+const renderPipeline = root
+  .createRenderPipeline({
+    attribs: {
+      v: vertexLayout.attrib,
+      center: instanceLayout.attrib.position,
+      velocity: instanceLayout.attrib.velocity,
+    },
+    vertex: mainVert,
+    fragment: mainFrag,
+    targets: { format: presentationFormat },
   })
-  .withFragment(mainFrag, {
-    format: presentationFormat,
-  })
-  .createPipeline()
   .with(vertexLayout, triangleVertexBuffer);
 
 const layout = tgpu.bindGroupLayout({
@@ -170,7 +166,7 @@ const layout = tgpu.bindGroupLayout({
 
 const simulate = (index: number) => {
   'use gpu';
-  const instanceInfo = TriangleData(layout.$.currentTrianglePos[index]);
+  const self = TriangleData(layout.$.currentTrianglePos[index]);
   let separation = d.vec2f();
   let alignment = d.vec2f();
   let cohesion = d.vec2f();
@@ -178,72 +174,51 @@ const simulate = (index: number) => {
   let cohesionCount = 0;
 
   for (const other of layout.$.currentTrianglePos) {
-    const dist = std.distance(instanceInfo.position, other.position);
+    const dist = std.distance(self.position, other.position);
     if (dist < params.$.separationDistance) {
-      separation = std.add(
-        separation,
-        std.sub(instanceInfo.position, other.position),
-      );
+      separation += self.position - other.position;
     }
     if (dist < params.$.alignmentDistance) {
-      alignment = std.add(alignment, other.velocity);
+      alignment += other.velocity;
       alignmentCount++;
     }
     if (dist < params.$.cohesionDistance) {
-      cohesion = std.add(cohesion, other.position);
+      cohesion += other.position;
       cohesionCount++;
     }
   }
   if (alignmentCount > 0) {
-    alignment = std.mul(1.0 / d.f32(alignmentCount), alignment);
+    alignment /= d.f32(alignmentCount);
   }
   if (cohesionCount > 0) {
-    cohesion = std.mul(1.0 / d.f32(cohesionCount), cohesion);
-    cohesion = std.sub(cohesion, instanceInfo.position);
+    cohesion /= d.f32(cohesionCount);
+    cohesion -= self.position;
   }
 
-  let velocity = std.mul(params.$.separationStrength, separation);
-  velocity = std.add(
-    velocity,
-    std.mul(params.$.alignmentStrength, alignment),
-  );
-  velocity = std.add(
-    velocity,
-    std.mul(params.$.cohesionStrength, cohesion),
-  );
+  const velocity =
+    params.$.separationStrength * separation +
+    params.$.alignmentStrength * alignment +
+    params.$.cohesionStrength * cohesion;
 
-  instanceInfo.velocity = std.add(instanceInfo.velocity, velocity);
-  instanceInfo.velocity = std.mul(
-    std.clamp(std.length(instanceInfo.velocity), 0, 0.01),
-    std.normalize(instanceInfo.velocity),
-  );
+  self.velocity += velocity;
+  self.velocity = std.clamp(std.length(self.velocity), 0, 0.01) * std.normalize(self.velocity);
 
-  if (instanceInfo.position.x > 1.0 + triangleSize) {
-    instanceInfo.position.x = -1.0 - triangleSize;
-  }
-  if (instanceInfo.position.y > 1.0 + triangleSize) {
-    instanceInfo.position.y = -1.0 - triangleSize;
-  }
-  if (instanceInfo.position.x < -1.0 - triangleSize) {
-    instanceInfo.position.x = 1.0 + triangleSize;
-  }
-  if (instanceInfo.position.y < -1.0 - triangleSize) {
-    instanceInfo.position.y = 1.0 + triangleSize;
-  }
+  self.position += self.velocity;
 
-  instanceInfo.position = std.add(instanceInfo.position, instanceInfo.velocity);
+  // Wrap the domain
+  const domain = (1 + triangleSize) * 2;
+  self.position = (std.fract(self.position / domain + 0.5) - 0.5) * domain;
 
-  layout.$.nextTrianglePos[index] = TriangleData(instanceInfo);
+  layout.$.nextTrianglePos[index] = TriangleData(self);
 };
 
-const simulatePipeline = root['~unstable']
-  .createGuardedComputePipeline(simulate);
+const simulatePipeline = root.createGuardedComputePipeline(simulate);
 
 const computeBindGroups = [0, 1].map((idx) =>
   root.createBindGroup(layout, {
     currentTrianglePos: trianglePosBuffers[idx],
     nextTrianglePos: trianglePosBuffers[1 - idx],
-  })
+  }),
 );
 
 let even = false;
@@ -256,16 +231,12 @@ function frame() {
 
   even = !even;
 
-  simulatePipeline
-    .with(computeBindGroups[even ? 0 : 1])
-    .dispatchThreads(triangleAmount);
+  simulatePipeline.with(computeBindGroups[even ? 0 : 1]).dispatchThreads(triangleAmount);
 
   renderPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [1, 1, 1, 1],
-      loadOp: 'clear' as const,
-      storeOp: 'store' as const,
     })
     .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
     .draw(3, triangleAmount);

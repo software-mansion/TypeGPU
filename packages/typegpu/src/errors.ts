@@ -49,10 +49,8 @@ export class ResolutionError extends Error {
     public readonly cause: unknown,
     public readonly trace: unknown[],
   ) {
-    let entries = trace.map((ancestor) =>
-      `- ${
-        hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : ancestor
-      }`
+    let entries = trace.map(
+      (ancestor) => `- ${hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : ancestor}`,
     );
 
     // Showing only the root and leaf nodes.
@@ -62,9 +60,7 @@ export class ResolutionError extends Error {
 
     super(
       `Resolution of the following tree failed:\n${entries.join('\n')}: ${
-        cause && typeof cause === 'object' && 'message' in cause
-          ? cause.message
-          : cause
+        cause && typeof cause === 'object' && 'message' in cause ? cause.message : cause
       }`,
     );
 
@@ -99,9 +95,7 @@ export class ExecutionError extends Error {
 
     super(
       `Execution of the following tree failed:\n${entries.join('\n')}: ${
-        cause && typeof cause === 'object' && 'message' in cause
-          ? cause.message
-          : cause
+        cause && typeof cause === 'object' && 'message' in cause ? cause.message : cause
       }`,
     );
 
@@ -160,9 +154,9 @@ export class MissingLinksError extends Error {
 export class MissingBindGroupsError extends Error {
   constructor(layouts: Iterable<TgpuBindGroupLayout>) {
     super(
-      `Missing bind groups for layouts: '${
-        [...layouts].map((layout) => getName(layout) ?? '<unnamed>').join(', ')
-      }'. Please provide it using pipeline.with(bindGroup).(...)`,
+      `Missing bind groups for layouts: '${[...layouts]
+        .map((layout) => getName(layout) ?? '<unnamed>')
+        .join(', ')}'. Please provide it using pipeline.with(bindGroup).(...)`,
     );
 
     // Set the prototype explicitly.
@@ -173,9 +167,9 @@ export class MissingBindGroupsError extends Error {
 export class MissingVertexBuffersError extends Error {
   constructor(layouts: Iterable<TgpuVertexLayout>) {
     super(
-      `Missing vertex buffers for layouts: '${
-        [...layouts].map((layout) => getName(layout) ?? '<unnamed>').join(', ')
-      }'. Please provide it using pipeline.with(layout, buffer).(...)`,
+      `Missing vertex buffers for layouts: '${[...layouts]
+        .map((layout) => getName(layout) ?? '<unnamed>')
+        .join(', ')}'. Please provide it using pipeline.with(layout, buffer).(...)`,
     );
 
     // Set the prototype explicitly.
@@ -213,13 +207,9 @@ export class WgslTypeError extends Error {
 export class SignatureNotSupportedError extends Error {
   constructor(actual: BaseData[], candidates: BaseData[]) {
     super(
-      `Unsupported data types: ${
-        actual.map((a) => a.type).join(', ')
-      }. Supported types are: ${
-        candidates
-          .map((r) => r.type)
-          .join(', ')
-      }.`,
+      `Unsupported data types: ${actual
+        .map((a) => a.type)
+        .join(', ')}. Supported types are: ${candidates.map((r) => r.type).join(', ')}.`,
     );
 
     // Set the prototype explicitly.

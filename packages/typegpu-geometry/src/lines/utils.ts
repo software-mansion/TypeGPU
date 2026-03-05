@@ -1,22 +1,13 @@
 import tgpu from 'typegpu';
 import { arrayOf, bool, f32, struct, u32, vec2f } from 'typegpu/data';
-import {
-  add,
-  clamp,
-  dot,
-  length,
-  max,
-  mix,
-  mul,
-  normalize,
-  select,
-  sqrt,
-  sub,
-} from 'typegpu/std';
+import { add, clamp, dot, length, max, mix, mul, normalize, select, sqrt, sub } from 'typegpu/std';
 import { addMul, bisectCcw, cross2d, midPoint, rot90ccw } from '../utils.ts';
 
 /** Intersects tangent to point on a circle `a` with line from center in direction `n`. */
-export const intersectTangent = tgpu.fn([vec2f, vec2f], vec2f)((a, n) => {
+export const intersectTangent = tgpu.fn(
+  [vec2f, vec2f],
+  vec2f,
+)((a, n) => {
   const cos_ = dot(a, n);
   return mul(n, 1 / cos_);
 });
@@ -25,7 +16,10 @@ export const intersectTangent = tgpu.fn([vec2f, vec2f], vec2f)((a, n) => {
  * Finds the miter point of tangents to two points on a circle.
  * The miter point is on the smaller arc.
  */
-export const miterPointNoCheck = tgpu.fn([vec2f, vec2f], vec2f)((a, b) => {
+export const miterPointNoCheck = tgpu.fn(
+  [vec2f, vec2f],
+  vec2f,
+)((a, b) => {
   const ab = add(a, b);
   return mul(ab, 2 / dot(ab, ab));
 });
@@ -35,7 +29,10 @@ export const miterPointNoCheck = tgpu.fn([vec2f, vec2f], vec2f)((a, b) => {
  * The miter point is on the counter-clockwise arc between the circles if possible,
  * otherwise at "infinity".
  */
-export const miterPoint = tgpu.fn([vec2f, vec2f], vec2f)((a, b) => {
+export const miterPoint = tgpu.fn(
+  [vec2f, vec2f],
+  vec2f,
+)((a, b) => {
   const sin_ = cross2d(a, b);
   const bisection = bisectCcw(a, b);
   const b2 = dot(b, b);
@@ -88,20 +85,18 @@ const Intersection = struct({
 export const intersectLines = tgpu.fn(
   [vec2f, vec2f, vec2f, vec2f],
   Intersection,
-)(
-  (A1, A2, B1, B2) => {
-    const a = sub(A2, A1);
-    const b = sub(B2, B1);
-    const axb = cross2d(a, b);
-    const AB = sub(B1, A1);
-    const t = cross2d(AB, b) / axb;
-    return {
-      valid: axb !== 0,
-      t,
-      point: addMul(A1, a, t),
-    };
-  },
-);
+)((A1, A2, B1, B2) => {
+  const a = sub(A2, A1);
+  const b = sub(B2, B1);
+  const axb = cross2d(a, b);
+  const AB = sub(B1, A1);
+  const t = cross2d(AB, b) / axb;
+  return {
+    valid: axb !== 0,
+    t,
+    point: addMul(A1, a, t),
+  };
+});
 
 const LimitAlongResult = struct({
   a: vec2f,
@@ -115,41 +110,38 @@ const LimitAlongResult = struct({
 export const limitTowardsMiddle = tgpu.fn(
   [vec2f, vec2f, vec2f, vec2f],
   LimitAlongResult,
-)(
-  (middle, dir, p1, p2) => {
-    const t1 = dot(sub(p1, middle), dir);
-    const t2 = dot(sub(p2, middle), dir);
-    if (t1 <= t2) {
-      return LimitAlongResult({ a: p1, b: p2, limitWasHit: false });
-    }
-    const t = clamp(t1 / (t1 - t2), 0, 1);
-    const p = mix(p1, p2, t);
-    return LimitAlongResult({ a: p, b: p, limitWasHit: true });
-  },
-);
+)((middle, dir, p1, p2) => {
+  const t1 = dot(sub(p1, middle), dir);
+  const t2 = dot(sub(p2, middle), dir);
+  if (t1 <= t2) {
+    return LimitAlongResult({ a: p1, b: p2, limitWasHit: false });
+  }
+  const t = clamp(t1 / (t1 - t2), 0, 1);
+  const p = mix(p1, p2, t);
+  return LimitAlongResult({ a: p, b: p, limitWasHit: true });
+});
 
-export const projectToLineSegment = tgpu.fn([vec2f, vec2f, vec2f], vec2f)(
-  (A, B, point) => {
-    const p = sub(point, A);
-    const AB = sub(B, A);
-    const t = clamp(dot(p, AB) / dot(AB, AB), 0, 1);
-    const projP = addMul(A, AB, t);
-    return projP;
-  },
-);
+export const projectToLineSegment = tgpu.fn(
+  [vec2f, vec2f, vec2f],
+  vec2f,
+)((A, B, point) => {
+  const p = sub(point, A);
+  const AB = sub(B, A);
+  const t = clamp(dot(p, AB) / dot(AB, AB), 0, 1);
+  const projP = addMul(A, AB, t);
+  return projP;
+});
 
 export const uvToLineSegment = tgpu.fn(
   [vec2f, vec2f, vec2f],
   vec2f,
-)(
-  (A, B, point) => {
-    const p = sub(point, A);
-    const AB = sub(B, A);
-    const x = dot(p, AB) / dot(AB, AB);
-    const y = cross2d(normalize(AB), p);
-    return vec2f(x, y);
-  },
-);
+)((A, B, point) => {
+  const p = sub(point, A);
+  const AB = sub(B, A);
+  const x = dot(p, AB) / dot(AB, AB);
+  const y = cross2d(normalize(AB), p);
+  return vec2f(x, y);
+});
 
 const lookup = tgpu.const(arrayOf(u32, 8), [
   5, // 000 c >= b >= a
@@ -162,14 +154,18 @@ const lookup = tgpu.const(arrayOf(u32, 8), [
   0, // 111 a > b > c
 ]);
 
-export const rank3 = tgpu.fn([bool, bool, bool], u32)((aGb, bGc, aGc) => {
+export const rank3 = tgpu.fn(
+  [bool, bool, bool],
+  u32,
+)((aGb, bGc, aGc) => {
   const code = (u32(aGb) << 2) | (u32(bGc) << 1) | u32(aGc);
   return lookup.$[code] as number;
 });
 
-export const isCCW = tgpu.fn([f32, bool, f32, bool], bool)(
-  (aX, aYSign, bX, bYSign) => {
-    const sameSide = aYSign === bYSign;
-    return select(aYSign, aYSign === (aX >= bX), sameSide);
-  },
-);
+export const isCCW = tgpu.fn(
+  [f32, bool, f32, bool],
+  bool,
+)((aX, aYSign, bX, bYSign) => {
+  const sameSide = aYSign === bYSign;
+  return select(aYSign, aYSign === aX >= bX, sameSide);
+});

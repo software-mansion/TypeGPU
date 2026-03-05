@@ -1,18 +1,7 @@
-import type {
-  TgpuBuffer,
-  TgpuComputePipeline,
-  TgpuRoot,
-  UniformFlag,
-  VertexFlag,
-} from 'typegpu';
+import type { TgpuBuffer, TgpuComputePipeline, TgpuRoot, UniformFlag, VertexFlag } from 'typegpu';
 import tgpu, { d, std } from 'typegpu';
 import { ComputeVertex, Vertex } from './dataTypes.ts';
-import {
-  calculateMidpoint,
-  getAverageNormal,
-  packVec2u,
-  unpackVec2u,
-} from './helpers.ts';
+import { calculateMidpoint, getAverageNormal, packVec2u, unpackVec2u } from './helpers.ts';
 
 type IcosphereBuffer = TgpuBuffer<d.Disarray<typeof Vertex>> & VertexFlag;
 type VertexType = d.Infer<typeof Vertex>;
@@ -82,19 +71,11 @@ function createBaseIcosphere(smooth: boolean): VertexType[] {
     const faceVertices = indices.map((i) => initialVertices[i]);
 
     if (smooth) {
-      vertices.push(
-        ...faceVertices.map((v) => Vertex({ position: v, normal: v })),
-      );
+      vertices.push(...faceVertices.map((v) => Vertex({ position: v, normal: v })));
     } else {
-      const normal = getAverageNormal(
-        faceVertices[0],
-        faceVertices[1],
-        faceVertices[2],
-      );
+      const normal = getAverageNormal(faceVertices[0], faceVertices[1], faceVertices[2]);
 
-      vertices.push(
-        ...faceVertices.map((v) => Vertex({ position: v, normal })),
-      );
+      vertices.push(...faceVertices.map((v) => Vertex({ position: v, normal })));
     }
   }
 
@@ -127,7 +108,7 @@ export class IcosphereGenerator {
   ) {
     this.smoothBuffer = this.root.createBuffer(d.u32).$usage('uniform');
 
-    const computeFn = tgpu['~unstable'].computeFn({
+    const computeFn = tgpu.computeFn({
       in: { gid: d.builtin.globalInvocationId },
       workgroupSize: [WORKGROUP_SIZE, 1, 1],
     })((input) => {
@@ -151,7 +132,10 @@ export class IcosphereGenerator {
       const v23 = d.vec4f(std.normalize(calculateMidpoint(v2, v3).xyz), 1);
       const v31 = d.vec4f(std.normalize(calculateMidpoint(v3, v1).xyz), 1);
 
-      const newVertices = d.arrayOf(d.vec4f, 12)([
+      const newVertices = d.arrayOf(
+        d.vec4f,
+        12,
+      )([
         // Triangle A: [v1, v12, v31]
         v1,
         v12,
@@ -171,7 +155,7 @@ export class IcosphereGenerator {
       ]);
 
       const baseIndexNext = triangleIndex * 12;
-      for (let i = d.u32(0); i < 12; i++) {
+      for (const i of tgpu.unroll([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])) {
         const reprojectedVertex = newVertices[i];
 
         const triBase = i - (i % 3);
@@ -191,17 +175,13 @@ export class IcosphereGenerator {
       }
     });
 
-    this.pipeline = this.root['~unstable'].createComputePipeline({
-      compute: computeFn,
-    });
+    this.pipeline = this.root.createComputePipeline({ compute: computeFn });
   }
 
   createIcosphere(subdivisions: number, smooth: boolean): IcosphereBuffer {
     if (this.maxBufferSize) {
       let safeSize = subdivisions;
-      while (
-        getVertexAmount(safeSize) * d.sizeOf(Vertex) > this.maxBufferSize
-      ) {
+      while (getVertexAmount(safeSize) * d.sizeOf(Vertex) > this.maxBufferSize) {
         safeSize--;
       }
       if (safeSize < subdivisions) {
@@ -225,10 +205,7 @@ export class IcosphereGenerator {
     return buffer;
   }
 
-  private subdivide(
-    wantedSubdivisions: number,
-    smooth: boolean,
-  ): IcosphereBuffer {
+  private subdivide(wantedSubdivisions: number, smooth: boolean): IcosphereBuffer {
     if (wantedSubdivisions === 0) {
       const key = `${wantedSubdivisions}-${smooth}`;
       const cached = this.cache.get(key);
@@ -237,10 +214,7 @@ export class IcosphereGenerator {
       }
 
       const initialVertices = this.root
-        .createBuffer(
-          d.disarrayOf(Vertex, getVertexAmount(0)),
-          createBaseIcosphere(smooth),
-        )
+        .createBuffer(d.disarrayOf(Vertex, getVertexAmount(0)), createBaseIcosphere(smooth))
         .$usage('vertex')
         .$addFlags(GPUBufferUsage.STORAGE);
       this.cache.set(key, initialVertices);
@@ -284,14 +258,9 @@ export class IcosphereGenerator {
     const totalWorkgroups = Math.ceil(triangleCount / WORKGROUP_SIZE);
 
     const xGroups = Math.min(MAX_DISPATCH, totalWorkgroups);
-    const yGroups = Math.min(
-      MAX_DISPATCH,
-      Math.ceil(totalWorkgroups / MAX_DISPATCH),
-    );
+    const yGroups = Math.min(MAX_DISPATCH, Math.ceil(totalWorkgroups / MAX_DISPATCH));
 
-    this.pipeline
-      .with(bindGroup)
-      .dispatchWorkgroups(xGroups, yGroups, 1);
+    this.pipeline.with(bindGroup).dispatchWorkgroups(xGroups, yGroups, 1);
 
     return nextBuffer;
   }

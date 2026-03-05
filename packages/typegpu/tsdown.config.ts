@@ -1,7 +1,8 @@
 import { defineConfig } from 'tsdown';
 
 const entry = [
-  'src/index.ts',
+  'src/index.js',
+  'src/index.d.ts',
   'src/data/index.ts',
   'src/std/index.ts',
   'src/common/index.ts',
@@ -13,5 +14,7 @@ export default defineConfig({
   format: 'esm',
   dts: true,
   platform: 'neutral',
+  unbundle: true,
+  sourcemap: false,
   target: false,
 });

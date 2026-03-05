@@ -16,19 +16,17 @@ async function generateTestFiles() {
       log: exportName,
     }));
 
-  const dAllImports = Object.keys(dAll)
-    .map((exportName) => ({
-      export: exportName,
-      from: 'typegpu/data',
-      log: exportName,
-    }));
+  const dAllImports = Object.keys(dAll).map((exportName) => ({
+    export: exportName,
+    from: 'typegpu/data',
+    log: exportName,
+  }));
 
-  const stdAllImports = Object.keys(stdAll)
-    .map((exportName) => ({
-      export: exportName,
-      from: 'typegpu/std',
-      log: exportName,
-    }));
+  const stdAllImports = Object.keys(stdAll).map((exportName) => ({
+    export: exportName,
+    from: 'typegpu/std',
+    log: exportName,
+  }));
 
   const tgpuImports = Object.keys(tgpuAll.tgpu)
     .filter((key) => key !== '~unstable')
@@ -47,8 +45,8 @@ async function generateTestFiles() {
 
   for (const { export: exportName, from, log } of imports) {
     const testContent = `
-import { ${exportName} } from '${from}';
-console.log(typeof ${log});
+import { ${exportName} } from '${from}/$built$';
+console.log(${log});
     `;
 
     const fileName = `${log}_from_${from.replaceAll('/', '')}.ts`;

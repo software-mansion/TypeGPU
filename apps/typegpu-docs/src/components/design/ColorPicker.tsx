@@ -9,7 +9,7 @@ function hexToRgb(hex: string) {
 }
 
 function componentToHex(c: number) {
-  const hex = (Math.floor(c * 255)).toString(16);
+  const hex = Math.floor(c * 255).toString(16);
   return hex.length === 1 ? `0${hex}` : hex;
 }
 
@@ -29,8 +29,8 @@ export function ColorPicker({ value, onChange }: Props) {
   return (
     <input
       value={rgbToHex(value)}
-      className='h-10 w-full rounded bg-tameplum-50 p-1'
-      type='color'
+      className="h-10 w-full rounded bg-tameplum-50 p-1"
+      type="color"
       onChange={(e) => onChange(hexToRgb(e.target.value))}
     />
   );

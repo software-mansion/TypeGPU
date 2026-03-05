@@ -7,12 +7,7 @@ import {
   isUnstruct,
 } from './dataTypes.ts';
 import { packedFormats } from './vertexFormatData.ts';
-import {
-  type BaseData,
-  isDecorated,
-  isWgslArray,
-  isWgslStruct,
-} from './wgslTypes.ts';
+import { type BaseData, isDecorated, isWgslArray, isWgslStruct } from './wgslTypes.ts';
 
 const knownAlignmentMap: Record<string, number> = {
   f32: 4,
@@ -25,17 +20,17 @@ const knownAlignmentMap: Record<string, number> = {
   vec2h: 4,
   vec2i: 8,
   vec2u: 8,
-  vec2b: 8,
+  'vec2<bool>': 8,
   vec3f: 16,
   vec3h: 8,
   vec3i: 16,
   vec3u: 16,
-  vec3b: 16,
+  'vec3<bool>': 16,
   vec4f: 16,
   vec4h: 8,
   vec4i: 16,
   vec4u: 16,
-  vec4b: 16,
+  'vec4<bool>': 16,
   mat2x2f: 8,
   mat3x3f: 16,
   mat4x4f: 16,
@@ -77,9 +72,7 @@ function computeAlignment(data: object): number {
     return 1;
   }
 
-  throw new Error(
-    `Cannot determine alignment of data: ${safeStringify(data)}`,
-  );
+  throw new Error(`Cannot determine alignment of data: ${safeStringify(data)}`);
 }
 
 function computeCustomAlignment(data: BaseData): number {

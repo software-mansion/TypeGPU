@@ -44,9 +44,7 @@ export function createShelllessImpl(
     },
 
     toString(): string {
-      return `fn*:${getName(core) ?? '<unnamed>'}(${
-        argTypes.map((t) => t.toString()).join(', ')
-      })`;
+      return `fn*:${getName(core) ?? '<unnamed>'}(${argTypes.map((t) => t.toString()).join(', ')})`;
     },
   };
 }

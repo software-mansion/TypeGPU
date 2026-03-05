@@ -34,33 +34,27 @@ const perlinCache = perlinCacheConfig.instance(root, d.vec3u(4, 4, DEPTH));
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const createRenderPipeline = (
-  sharpenFn: (n: number, sharpness: number) => number,
-) =>
-  root['~unstable']
-    .pipe(perlinCacheConfig.inject(dynamicLayout.$))
-    .createRenderPipeline({
-      vertex: common.fullScreenTriangle,
-      fragment: ({ uv }) => {
-        'use gpu';
-        const suv = mul(gridSize.$, uv);
-        const n = perlin3d.sample(d.vec3f(suv, time.$));
+const createRenderPipeline = (sharpenFn: (n: number, sharpness: number) => number) =>
+  root.pipe(perlinCacheConfig.inject(dynamicLayout.$)).createRenderPipeline({
+    vertex: common.fullScreenTriangle,
+    fragment: ({ uv }) => {
+      'use gpu';
+      const suv = mul(gridSize.$, uv);
+      const n = perlin3d.sample(d.vec3f(suv, time.$));
 
-        // Apply sharpening function
-        const sharp = sharpenFn(n, sharpness.$);
+      // Apply sharpening function
+      const sharp = sharpenFn(n, sharpness.$);
 
-        // Map to 0-1 range
-        const n01 = sharp * 0.5 + 0.5;
+      // Map to 0-1 range
+      const n01 = sharp * 0.5 + 0.5;
 
-        // Gradient map
-        const dark = d.vec3f(0, 0.2, 1);
-        const light = d.vec3f(1, 0.3, 0.5);
-        return d.vec4f(mix(dark, light, n01), 1);
-      },
-      targets: { format: presentationFormat },
-    });
+      // Gradient map
+      const dark = d.vec3f(0, 0.2, 1);
+      const light = d.vec3f(1, 0.3, 0.5);
+      return d.vec4f(mix(dark, light, n01), 1);
+    },
+  });
 
 const renderPipelines = {
   exponential: createRenderPipeline(exponentialSharpen),
@@ -77,16 +71,9 @@ function draw(timestamp: number) {
     return;
   }
 
-  time.write(timestamp * 0.0002 % DEPTH);
+  time.write((timestamp * 0.0002) % DEPTH);
 
-  renderPipelines[activeSharpenFn]
-    .with(bindGroup)
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .draw(3);
+  renderPipelines[activeSharpenFn].with(bindGroup).withColorAttachment({ view: context }).draw(3);
 
   requestAnimationFrame(draw);
 }
@@ -104,7 +91,7 @@ export const controls = defineControls({
       bindGroup = root.createBindGroup(dynamicLayout, perlinCache.bindings);
     },
   },
-  'sharpness': {
+  sharpness: {
     initial: 0.5,
     min: 0,
     max: 0.99,
