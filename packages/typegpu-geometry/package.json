@@ -39,6 +39,6 @@
     "unplugin-typegpu": "workspace:*"
   },
   "peerDependencies": {
-    "typegpu": "^0.10.1"
+    "typegpu": "^0.10.2"
   }
 }
