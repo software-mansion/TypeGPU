@@ -5,12 +5,13 @@
   "description": "Resolution time benchmark app for TypeGPU",
   "type": "module",
   "scripts": {
-    "resolution-time": "vitest run procedural.ts"
+    "resolution-time": "bun procedural.ts"
   },
   "dependencies": {
-    "jiti": "catalog:build",
-    "typegpu": "workspace:*",
-    "unplugin-typegpu": "workspace:*",
-    "vitest": "catalog:test"
+    "typegpu": "workspace:*"
+  },
+  "devDependencies": {
+    "bun": "latest",
+    "unplugin-typegpu": "workspace:*"
   }
 }

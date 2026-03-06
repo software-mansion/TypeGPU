@@ -1,7 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { test } from 'vitest';
-import tgpu, { d, std, type TgpuComptime, type TgpuGenericFn } from 'typegpu';
+import tgpu, { d, std, type TgpuComptime } from 'typegpu';
 
 interface ProcGenConfig {
   mainBranching: number;
@@ -43,7 +42,7 @@ const state = tgpu.lazy(() => ({
   stackDepth: 0,
 }));
 
-const instructions: TgpuComptime<() => TgpuGenericFn<() => void>>[] = [];
+const instructions: TgpuComptime<() => () => void>[] = [];
 const LEAF_COUNT = 4;
 
 // TODO: replace it with number, when unroll supports that
@@ -138,7 +137,7 @@ const filterFn = tgpu.comptime(() => {
       let _result = d.vec3f();
       for (const dy of tgpu.unroll([-1, 0, 1])) {
         for (const dx of tgpu.unroll([-1, 0, 1])) {
-          // oxlint-disable-next-line typescript-eslint(no-non-null-assertion
+          // oxlint-disable-next-line typescript-eslint(no-non-null-assertion)
           _result += cellsLayout.$.grid[xy.x + dx]![xy.y + dy]!.col;
         }
       }
@@ -287,65 +286,55 @@ function warmupJIT() {
   );
 }
 
-test('resolution time vs max depth (full tree)', () => {
-  const results: BenchmarkResult[] = [];
-  const DEPTHS = Array.from({ length: 8 }, (_, i) => i + 1);
+warmupJIT();
 
-  warmupJIT();
+const results: BenchmarkResult[] = [];
+const DEPTHS = Array.from({ length: 8 }, (_, i) => i + 1);
 
-  for (const depth of DEPTHS) {
-    runBenchmark(
-      {
-        mainBranching: 2,
-        branching: 2,
-        maxDepth: depth,
-        recurseProb: 1,
-        seed: depth * 2 ** 24,
-      },
-      results,
-    );
-  }
-  writeFileSync(resolve(outDir, 'results-max-depth.json'), JSON.stringify(results, null, 2));
-});
+// resolution time vs max depth (full tree)
+for (const depth of DEPTHS) {
+  runBenchmark(
+    {
+      mainBranching: 2,
+      branching: 2,
+      maxDepth: depth,
+      recurseProb: 1,
+      seed: depth * 2 ** 24,
+    },
+    results,
+  );
+}
+writeFileSync(resolve(outDir, 'results-max-depth.json'), JSON.stringify(results, null, 2));
+results.length = 0;
 
-test('resolution time vs linear recursion (path)', () => {
-  const results: BenchmarkResult[] = [];
-  const DEPTHS = Array.from({ length: 8 }, (_, i) => i + 1);
+// resolution time vs linear recursion (path)
+for (const depth of DEPTHS) {
+  runBenchmark(
+    {
+      mainBranching: 1,
+      branching: 1,
+      maxDepth: depth,
+      recurseProb: 1,
+      seed: depth * 2 ** 24,
+    },
+    results,
+  );
+}
+writeFileSync(resolve(outDir, 'results-linear-recursion.json'), JSON.stringify(results, null, 2));
+results.length = 0;
 
-  warmupJIT();
-
-  for (const depth of DEPTHS) {
-    runBenchmark(
-      {
-        mainBranching: 1,
-        branching: 1,
-        maxDepth: depth,
-        recurseProb: 1,
-        seed: depth * 2 ** 24,
-      },
-      results,
-    );
-  }
-  writeFileSync(resolve(outDir, 'results-linear-recursion.json'), JSON.stringify(results, null, 2));
-});
-
-test('resolution time vs random', () => {
-  const results: BenchmarkResult[] = [];
-  const DEPTHS = Array.from({ length: 8 }, (_, i) => i + 1);
-
-  warmupJIT();
-
-  for (const depth of DEPTHS) {
-    runBenchmark(
-      {
-        mainBranching: 3,
-        branching: 3,
-        maxDepth: depth,
-        recurseProb: 0.5,
-        seed: depth * 2 ** 24,
-      },
-      results,
-    );
-  }
-  writeFileSync(resolve(outDir, 'results-random.json'), JSON.stringify(results, null, 2));
-});
+// resolution time vs random
+for (const depth of DEPTHS) {
+  runBenchmark(
+    {
+      mainBranching: 3,
+      branching: 3,
+      maxDepth: depth,
+      recurseProb: 0.5,
+      seed: depth * 2 ** 24,
+    },
+    results,
+  );
+}
+writeFileSync(resolve(outDir, 'results-random.json'), JSON.stringify(results, null, 2));
+results.length = 0;
