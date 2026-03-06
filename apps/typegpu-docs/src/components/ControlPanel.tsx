@@ -86,7 +86,7 @@ function SliderRow({
   );
 }
 
-function VectorSliderRow({
+function VectorSliderRow<T extends d.v2f | d.v3f | d.v4f>({
   label,
   initial,
   min,
@@ -95,13 +95,13 @@ function VectorSliderRow({
   onChange,
 }: {
   label: string;
-  initial: number[];
-  min: number[];
-  max: number[];
-  step: number[];
-  onChange: (value: number[]) => void;
+  initial: T;
+  min: T;
+  max: T;
+  step: T;
+  onChange: (value: T) => void;
 }) {
-  const [value, setValue] = useState<number[]>(initial ?? min);
+  const [value, setValue] = useState<T>(initial);
   const runWithCatch = useSetAtom(runWithCatchAtom);
 
   return (
@@ -114,8 +114,8 @@ function VectorSliderRow({
         step={step}
         value={value}
         onChange={(newValue) => {
-          setValue(newValue);
-          void runWithCatch(() => onChange(newValue));
+          setValue(newValue as T);
+          void runWithCatch(() => onChange(newValue as T));
         }}
       />
     </>
@@ -246,7 +246,7 @@ function paramToControlRow(param: ExampleControlParam) {
     <VectorSliderRow
       key={param.label}
       label={param.label}
-      onChange={param.onVectorSliderChange}
+      onChange={param.onVectorSliderChange as (value: d.v2f | d.v3f | d.v4f) => void}
       min={param.min}
       max={param.max}
       step={param.step}
