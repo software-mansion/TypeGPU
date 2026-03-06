@@ -162,12 +162,14 @@ const simulatePipeline = root.createGuardedComputePipeline((i) => {
   const throttle = std.clamp(throttleRaw, -1, 1);
 
   let speed = car.speed + throttle * params.$.accel * params.$.dt;
-  speed = speed * (1 - params.$.drag * params.$.dt);
+  speed = speed * (1 - params.$.drag * speed * params.$.dt);
   speed = std.clamp(speed, 0, params.$.maxSpeed);
 
   const slowThreshold = params.$.maxSpeed * 0.04;
   const canTurn = speed > slowThreshold;
-  const targetAngVel = std.select(0, steer * params.$.turnRate, canTurn);
+  const postPhysicsNormSpeed = speed / params.$.maxSpeed;
+  const turnFactor = (1 - postPhysicsNormSpeed) * (1 - postPhysicsNormSpeed);
+  const targetAngVel = std.select(0, steer * params.$.turnRate * turnFactor, canTurn);
   const angVel = car.angVel * 0.75 + targetAngVel * 0.25;
   const angle = car.angle + angVel * params.$.dt;
 
