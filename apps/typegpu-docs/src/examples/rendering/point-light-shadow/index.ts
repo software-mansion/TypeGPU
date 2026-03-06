@@ -352,11 +352,11 @@ const lightIndicatorBindGroup = root.createBindGroup(lightIndicatorLayout, {
 
 let showDepthPreview = false;
 let showDistanceView = false;
-let lastTime = performance.now();
+let lastTime: number | null = null;
 let time = 0;
 
 function render(timestamp: number) {
-  const dt = (timestamp - lastTime) / 1000;
+  const dt = lastTime !== null ? (timestamp - lastTime) / 1000 : 0;
   lastTime = timestamp;
   time += dt;
 

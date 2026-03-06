@@ -484,7 +484,7 @@ const renderPipeline = root.createRenderPipeline({
   targets: { format: presentationFormat },
 });
 
-let lastTimeStamp = performance.now();
+let lastTimestamp: number | null = null;
 let frameCount = 0;
 const taaResolver = new TAAResolver(root, width, height);
 
@@ -507,8 +507,8 @@ let animationFrameHandle: number;
 function render(timestamp: number) {
   frameCount++;
   camera.jitter();
-  const deltaTime = Math.min((timestamp - lastTimeStamp) * 0.001, 0.1);
-  lastTimeStamp = timestamp;
+  const deltaTime = Math.min(lastTimestamp !== null ? (timestamp - lastTimestamp) * 0.001 : 0, 0.1);
+  lastTimestamp = timestamp;
 
   randomUniform.write(d.vec2f((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2));
 
