@@ -160,8 +160,8 @@ const fragmentMain = tgpu.fragmentFn({
   const PCF_SAMPLES = shadowParams.$.pcfSamples;
   const diskRadius = shadowParams.$.diskRadius;
 
-  let visibilityAcc = 0.0;
-  for (let i = 0; i < PCF_SAMPLES; i++) {
+  let visibilityAcc = d.f32(0);
+  for (let i = d.u32(0); i < PCF_SAMPLES; i++) {
     const o = samplesUniform.$[i].xy.mul(diskRadius);
 
     const sampleDir = dir.add(right.mul(o.x)).add(realUp.mul(o.y));
@@ -354,6 +354,7 @@ let showDepthPreview = false;
 let showDistanceView = false;
 let lastTime: number | null = null;
 let time = 0;
+let animationFrameId: number;
 
 function render(timestamp: number) {
   const dt = lastTime !== null ? (timestamp - lastTime) / 1000 : 0;
@@ -415,9 +416,9 @@ function render(timestamp: number) {
     .with(vertexLayout, BoxGeometry.vertexBuffer)
     .drawIndexed(BoxGeometry.indexCount);
 
-  requestAnimationFrame(render);
+  animationFrameId = requestAnimationFrame(render);
 }
-requestAnimationFrame(render);
+animationFrameId = requestAnimationFrame(render);
 
 const resizeObserver = new ResizeObserver((entries) => {
   for (const entry of entries) {
@@ -644,6 +645,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  cancelAnimationFrame(animationFrameId);
   BoxGeometry.clearBuffers();
   window.removeEventListener('mouseup', mouseUpEventListener);
   window.removeEventListener('mousemove', mouseMoveEventListener);

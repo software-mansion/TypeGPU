@@ -241,7 +241,7 @@ const getFakeShadow = (position: d.v3f, lightDir: d.v3f): d.v3f => {
   'use gpu';
   if (position.y < -GroundParams.groundThickness) {
     // Applying darkening under the ground (the shadow cast by the upper ground layer)
-    const fadeSharpness = 30;
+    const fadeSharpness = d.f32(30);
     const inset = 0.02;
     const cutout = rectangleCutoutDist(position.xz) + inset;
     const edgeDarkening = std.saturate(1 - cutout * fadeSharpness);

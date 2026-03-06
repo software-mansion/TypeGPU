@@ -360,7 +360,7 @@ const getFakeShadow = (position: d.v3f, lightDir: d.v3f): d.v3f => {
 
   if (position.y < -GroundParams.groundThickness) {
     // Applying darkening under the ground (the shadow cast by the upper ground layer)
-    const fadeSharpness = 30;
+    const fadeSharpness = d.f32(30);
     const inset = 0.02;
     const cutout = rectangleCutoutDist(position.xz) + inset;
     const edgeDarkening = std.saturate(1 - cutout * fadeSharpness);
@@ -386,7 +386,7 @@ const getFakeShadow = (position: d.v3f, lightDir: d.v3f): d.v3f => {
 
     const contrast = 20 * std.saturate(finalUV.y) * (0.8 + endCapX * 0.2);
     const shadowOffset = -0.3;
-    const featherSharpness = 10;
+    const featherSharpness = d.f32(10);
     const uvEdgeFeather =
       std.saturate(finalUV.x * featherSharpness) *
       std.saturate((1 - finalUV.x) * featherSharpness) *
