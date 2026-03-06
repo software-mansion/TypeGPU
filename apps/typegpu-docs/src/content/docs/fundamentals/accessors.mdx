@@ -3,11 +3,25 @@ title: Accessors
 description: Accessors are schema-aware typed placeholders for GPU resources, allowing reusable GPU functions to reference buffers, variables, textures, and more without coupling to a specific resource.
 ---
 
-When writing reusable GPU functions in TypeGPU, you often need to reference "some resource" — a buffer, a variable, a texture — without knowing in advance which specific resource will be used.
-[Slots](/fundamentals/slots) solve this for arbitrary JavaScript values, but GPU resources require more: they must be declared with a data schema, produce correct WGSL bindings, and support field access through struct types.
+When writing reusable GPU functions in TypeGPU, you often need to reference "some global value" without coupling to a specific buffer, texture or variable. [Slots](/fundamentals/slots) seem like the right tool for the job, but they encode the delivery mechanism into the slot type (e.g. a buffer or texture), making it inflexible for reusable functions.
 
-**Accessors** fill this role. They are schema-aware, typed placeholders specifically designed for GPU resources.
-An accessor knows the data type of the resource it represents (`d.vec3f`, `d.struct(...)`, etc.), and TypeGPU validates that whatever is bound to it matches that schema.
+```ts twoslash
+import tgpu, { type TgpuUniform, d } from 'typegpu';
+// ---cut---
+// 👎 only works with JS literals
+const staticColorSlot = tgpu.slot<d.v3f>();
+
+// 👎 requires a uniform binding that only carries that value
+const uniformColorSlot = tgpu.slot<TgpuUniform<d.Vec3f>>();
+
+// 👎 requires the value to be returned from a function
+const getColorSlot = tgpu.slot<() => d.v3f>();
+
+// 💜 works with any value that matches the schema
+const colorAccess = tgpu.accessor(d.vec3f);
+```
+
+**Accessors** fill this gap. They allow code to care only about the type of a value, delegating the delivery mechanism of the actual value to the caller. An accessor knows the data type of the resource it represents (`d.vec3f`, `d.struct(...)`, etc.), and TypeGPU validates that whatever is bound to it matches that schema.
 
 ## Basic usage
 
@@ -43,17 +57,21 @@ Accessing it outside GPU context throws a runtime error.
 
 If no default is set and no binding is provided at resolution time, TypeGPU throws a descriptive error:
 
-```ts
-const colorAccess = tgpu.accessor(d.vec3f).$name('color');
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+// ---cut---
+const colorAccess = tgpu.accessor(d.vec3f);
 
-const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`
-  .$uses({ colorAccess });
+function getColor() {
+  'use gpu';
+  return colorAccess.$;
+}
 
 tgpu.resolve([getColor]);
 // Error: Resolution of the following tree failed:
 // - <root>
 // - fn:getColor
-// - accessor:color: Missing value for 'slot:color'
+// - accessor:colorAccess: Missing value for 'slot:colorAccess'
 ```
 
 ## Overriding the binding
@@ -64,24 +82,31 @@ Use `.with(accessor, value)` on a function or pipeline — the same pattern as [
 import tgpu, { d } from 'typegpu';
 
 const RED = d.vec3f(1, 0, 0);
+const GREEN = d.vec3f(0, 1, 0);
 // ---cut---
 const colorAccess = tgpu.accessor(d.vec3f, RED); // red by default
 
-const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`
-  .$uses({ colorAccess });
+function getColor() {
+  'use gpu';
+  return colorAccess.$;
+}
 
 // Override the default with green for a specific variant.
-const getGreenColor = getColor.with(colorAccess, d.vec3f(0, 1, 0));
+const getGreenColor = tgpu.fn(getColor).with(colorAccess, GREEN);
 ```
 
 The two functions resolve to separate WGSL:
 
 ```wgsl
 // getColor (uses default)
-fn getColor() -> vec3f{ return vec3f(1, 0, 0); }
+fn getColor() -> vec3f {
+  return vec3f(1, 0, 0);
+}
 
 // getGreenColor (overridden)
-fn getColor() -> vec3f{ return vec3f(0, 1, 0); }
+fn getGreenColor() -> vec3f {
+  return vec3f(0, 1, 0);
+}
 ```
 
 You can also override on a pipeline:
@@ -116,14 +141,21 @@ import tgpu, { d } from 'typegpu';
 const colorAccess = tgpu.accessor(d.vec3f);
 const multiplierAccess = tgpu.accessor(d.f32);
 
-const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess * multiplierAccess; }`
-  .$uses({ colorAccess, multiplierAccess })
+function getColor() {
+  'use gpu';
+  return colorAccess.$ * multiplierAccess.$;
+}
+
+const getDoubleRed = tgpu
+  .fn(getColor)
   .with(colorAccess, d.vec3f(1, 0, 0))
   .with(multiplierAccess, 2);
 ```
 
 ```wgsl
-fn getColor() -> vec3f{ return vec3f(1, 0, 0) * 2f; }
+fn getColor() -> vec3f {
+  return vec3f(1, 0, 0) * 2f;
+}
 ```
 
 ### GPU function or shellless callback
@@ -138,10 +170,10 @@ const colorAccess = tgpu.accessor(d.vec3f, () => {
   return d.vec3f(1, 2, 3);
 });
 
-const getColor = () => {
+function getColor() {
   'use gpu';
   return colorAccess.$;
-};
+}
 ```
 
 ```wgsl
@@ -166,17 +198,21 @@ const RED = d.vec3f(1, 0, 0);
 // ---cut---
 const colorAccess = tgpu.accessor(d.vec3f);
 
-const redUniform = root.createBuffer(d.vec3f, RED).$usage('uniform').as('uniform');
+function getColor() {
+  'use gpu';
+  return colorAccess.$;
+}
 
-const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`
-  .$uses({ colorAccess })
-  .with(colorAccess, redUniform);
+const redUniform = root.createUniform(d.vec3f, RED);
+const getRed = tgpu.fn(getColor).with(colorAccess, redUniform);
 ```
 
 ```wgsl
 @group(0) @binding(0) var<uniform> redUniform: vec3f;
 
-fn getColor() -> vec3f{ return redUniform; }
+fn getColor() -> vec3f {
+  return redUniform;
+}
 ```
 
 ### Bind group layout entry
@@ -275,10 +311,10 @@ const storageView = texture.createView(d.textureStorage2d('rgba8unorm'));
 
 const textureAccess = tgpu.accessor(d.textureStorage2d('rgba8unorm'), storageView);
 
-const main = () => {
+function main() {
   'use gpu';
   std.textureStore(textureAccess.$, d.vec2u(), d.vec4f(1));
-};
+}
 ```
 
 ```wgsl
@@ -350,10 +386,10 @@ const boids = root.createReadonly(BoidArray);
 // Access the first boid's position through the accessor.
 const anyBoidPosAccess = tgpu.accessor(d.vec3f, () => boids.$[0]!.pos);
 
-const main = () => {
+function main() {
   'use gpu';
   const firstX = anyBoidPosAccess.$.x;
-};
+}
 ```
 
 ```wgsl
@@ -382,10 +418,10 @@ const ctx = root.createMutable(Ctx);
 
 const counterAccess = tgpu.mutableAccessor(d.f32, () => ctx.$.counter);
 
-const main = () => {
+function main() {
   'use gpu';
   counterAccess.$ += 1; // write through the accessor
-};
+}
 ```
 
 ```wgsl
@@ -416,10 +452,10 @@ const boids = root.createMutable(BoidArray);
 
 const boidAccess = tgpu.mutableAccessor(Boid, () => boids.$[0]!);
 
-const main = () => {
+function main() {
   'use gpu';
   boidAccess.$.pos.x += 1;
-};
+}
 ```
 
 ```wgsl
