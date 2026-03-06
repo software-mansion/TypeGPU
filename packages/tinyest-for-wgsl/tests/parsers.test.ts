@@ -6,7 +6,7 @@ import { transpileFn } from '../src/parsers.ts';
 
 const parseRollup = (code: string) => acorn.parse(code, { ecmaVersion: 'latest' });
 const parseBabel = (code: string) =>
-  babel.parse(code, { sourceType: 'module' }).program.body[0] as Node;
+  babel.parse(code, { sourceType: 'module', plugins: ['typescript'] }).program.body[0] as Node;
 
 function dualTest(test: (p: (code: string) => Node | acorn.AnyNode) => void) {
   return () => {
@@ -189,4 +189,10 @@ describe('transpileFn', () => {
       expect(externalNames).toStrictEqual([]);
     }),
   );
+
+  it('handles TSNonNullExpression', () => {
+    const { body } = transpileFn(parseBabel('() => x!.y'));
+
+    expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[7,"x","y"]]]]"`);
+  });
 });

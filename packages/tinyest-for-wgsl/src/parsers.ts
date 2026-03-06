@@ -299,6 +299,10 @@ const Transpilers: Partial<{
   TSSatisfiesExpression(ctx, node) {
     return transpile(ctx, node.expression);
   },
+
+  TSNonNullExpression(ctx, node) {
+    return transpile(ctx, node.expression);
+  },
 };
 
 function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
