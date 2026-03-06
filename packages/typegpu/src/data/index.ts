@@ -57,6 +57,8 @@ export type {
   AnyWgslData,
   AnyWgslStruct,
   Atomic,
+  atomicI32,
+  atomicU32,
   BaseData,
   BaseData as BaseWgslData,
   Bool,
