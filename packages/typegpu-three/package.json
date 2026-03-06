@@ -41,6 +41,6 @@
   },
   "peerDependencies": {
     "three": ">0.126.0",
-    "typegpu": "^0.10.1"
+    "typegpu": "^0.10.2"
   }
 }
