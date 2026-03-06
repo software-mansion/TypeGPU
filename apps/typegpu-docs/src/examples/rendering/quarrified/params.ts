@@ -2,7 +2,7 @@ import { d } from 'typegpu';
 import type { Config } from './state.ts';
 
 export const INIT_CONFIG: Config = {
-  playerPos: d.vec3f(),
+  playerPos: d.vec3f(8, 8, -100),
   chunks: {
     xRange: d.vec2i(-1, 1),
     yRange: d.vec2i(-1, 1),

@@ -9,11 +9,17 @@ export class Player {
 
 export class Map {
   chunks: Chunk[] = [];
-  constructor(xRange: d.v2i, yRange: d.v2i, zRange: d.v2i) {
-    for (let x = xRange[0]; x <= xRange[1]; x++) {
-      for (let y = yRange[0]; y <= yRange[1]; y++) {
-        for (let z = zRange[0]; z <= zRange[1]; z++) {
-          this.chunks.push(generateChunk(d.vec3i(x, y, z)));
+  constructor(
+    public readonly xRange: d.v2i,
+    public readonly yRange: d.v2i,
+    public readonly zRange: d.v2i,
+  ) {}
+
+  async initChunks() {
+    for (let x = this.xRange[0]; x <= this.xRange[1]; x++) {
+      for (let y = this.yRange[0]; y <= this.yRange[1]; y++) {
+        for (let z = this.zRange[0]; z <= this.zRange[1]; z++) {
+          this.chunks.push(await generateChunk(d.vec3i(x, y, z)));
         }
       }
     }
@@ -30,6 +36,8 @@ export interface Config {
 }
 
 export class State {
+  #initialized = false;
+
   player: Player;
   map: Map;
 
@@ -55,7 +63,15 @@ export class State {
     this.playerPidController = world.createPidController(60.0, 0.0, 1.0, RAPIER.PidAxesMask.AllAng);
   }
 
+  async init() {
+    await this.map.initChunks();
+    this.#initialized = true;
+  }
+
   getVoxelsData(): d.Infer<typeof VoxelInstance>[] {
+    if (!this.#initialized) {
+      throw new Error('State not initialized. Call `.init()` before.');
+    }
     return this.map.chunks.flatMap(chunkToInstanceData);
   }
 
