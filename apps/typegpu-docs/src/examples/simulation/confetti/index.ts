@@ -175,12 +175,11 @@ function randomizePositions() {
 randomizePositions();
 
 let animationFrameId: number;
-let lastTime = Date.now();
+let lastTime: number | null = null;
 
-const runner = () => {
-  const now = Date.now();
-  const dt = now - lastTime;
-  lastTime = now;
+const runner = (timestamp: number) => {
+  const dt = lastTime !== null ? timestamp - lastTime : 0;
+  lastTime = timestamp;
 
   deltaTime.write(dt);
   aspectRatio.write(canvas.width / canvas.height);

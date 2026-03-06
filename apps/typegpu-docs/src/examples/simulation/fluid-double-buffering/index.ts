@@ -502,8 +502,8 @@ let msSinceLastTick = 0;
 const timestep = 15;
 const stepsPerTick = 64;
 
-function tick() {
-  time.write(Date.now() % 1000);
+function tick(timestamp: number) {
+  time.write(timestamp % 1000);
 
   sourceParams.write({
     center: d.vec2f(0.5, 0.9),
@@ -516,18 +516,17 @@ function tick() {
 }
 
 let animationFrameId: number;
-let lastTime = Date.now();
+let lastTime: number | null = null;
 
-const runner = () => {
-  const now = Date.now();
-  const deltaTime = now - lastTime;
-  lastTime = now;
+const runner = (timestamp: number) => {
+  const deltaTime = lastTime !== null ? timestamp - lastTime : 0;
+  lastTime = timestamp;
 
   msSinceLastTick += deltaTime;
 
   if (msSinceLastTick >= timestep) {
     for (let i = 0; i < stepsPerTick; ++i) {
-      tick();
+      tick(timestamp);
     }
     primary.render();
     msSinceLastTick -= timestep;

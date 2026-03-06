@@ -249,12 +249,11 @@ const pipeline = root.createRenderPipeline({
 // UI
 
 let animationFrameId: number;
-let lastTime = Date.now();
+let lastTime: number | null = null;
 
-const runner = () => {
-  const now = Date.now();
-  const deltaTime = now - lastTime;
-  lastTime = now;
+const runner = (timestamp: number) => {
+  const deltaTime = lastTime !== null ? timestamp - lastTime : 0;
+  lastTime = timestamp;
 
   const width = canvas.width;
   const height = canvas.height;
