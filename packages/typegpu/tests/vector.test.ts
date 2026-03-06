@@ -198,6 +198,13 @@ describe('vec2i', () => {
     expectTypeOf(x).toBeNumber();
     expectTypeOf(y).toBeNumber();
   });
+
+  it('can be spread', () => {
+    const vec = d.vec2i(5, 6);
+    const result = [...vec];
+    expectTypeOf(result).toEqualTypeOf<number[]>();
+    expect(result).toStrictEqual([5, 6]);
+  });
 });
 
 describe('vec2<bool>', () => {

@@ -618,7 +618,7 @@ describe('createCompileInstructions', () => {
     writer(dataView, 0, inputData);
 
     const decoded = {
-      a: d.vec2f(dataView.getUint16(0, true), dataView.getUint16(2, true)),
+      a: d.vec2u(dataView.getUint16(0, true), dataView.getUint16(2, true)),
       b: (() => {
         const packed = dataView.getUint32(4, true);
         return d.vec4f(

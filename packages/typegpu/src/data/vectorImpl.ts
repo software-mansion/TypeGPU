@@ -9,7 +9,7 @@ type VecSchema<S> = BaseData & ((v?: S) => S);
 const XYZW = ['x', 'y', 'z', 'w'];
 const RGBA = ['r', 'g', 'b', 'a'];
 
-export abstract class VecBase<S> extends Array implements SelfResolvable {
+export abstract class VecBase<S> implements SelfResolvable {
   abstract readonly [$internal]: {
     elementSchema: VecSchema<S>;
   };
@@ -18,6 +18,9 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
   abstract get _Vec2(): new (x: S, y: S) => Vec2<S>;
   abstract get _Vec3(): new (x: S, y: S, z: S) => Vec3<S>;
   abstract get _Vec4(): new (x: S, y: S, z: S, w: S) => Vec4<S>;
+
+  abstract readonly length: number;
+  [n: number]: S;
 
   static {
     // Defining 4-length swizzles
@@ -85,15 +88,22 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
     return this[$internal].elementSchema;
   }
 
+  *[Symbol.iterator]() {
+    for (let i = 0; i < this.length; i++) {
+      yield this[i];
+    }
+  }
+
   [$resolve](): ResolvedSnippet {
     const schema = this[$internal].elementSchema;
-    if (this.every((e) => !e)) {
+    const arr = [...this];
+    if (arr.every((e) => !e)) {
       return snip(`${this.kind}()`, schema, /* origin */ 'constant');
     }
-    if (this.every((e) => this[0] === e)) {
-      return snip(`${this.kind}(${this[0]})`, schema, /* origin */ 'runtime');
+    if (arr.every((e) => arr[0] === e)) {
+      return snip(`${this.kind}(${arr[0]})`, schema, /* origin */ 'runtime');
     }
-    return snip(`${this.kind}(${this.join(', ')})`, schema, /* origin */ 'runtime');
+    return snip(`${this.kind}(${arr.join(', ')})`, schema, /* origin */ 'runtime');
   }
 
   toString() {
@@ -101,228 +111,145 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
   }
 }
 
-type Tuple2<S> = [S, S];
-type Tuple3<S> = [S, S, S];
-type Tuple4<S> = [S, S, S, S];
-
-abstract class Vec2<S> extends VecBase<S> implements Tuple2<S> {
+abstract class Vec2<S> extends VecBase<S> {
   declare readonly length: 2;
+  static {
+    Object.defineProperty(Vec2.prototype, 'length', { value: 2 });
+  }
 
-  e0: S;
-  e1: S;
+  #e0: S;
+  #e1: S;
 
   constructor(x?: S, y?: S) {
-    super(2);
-    this.e0 = this.castElement()(x);
-    this.e1 = this.castElement()(y ?? x);
+    super();
+    this.#e0 = this.castElement()(x);
+    this.#e1 = this.castElement()(y ?? x);
   }
 
   get 0() {
-    return this.e0;
+    return this.#e0;
   }
 
   get 1() {
-    return this.e1;
+    return this.#e1;
   }
 
   set 0(value: S) {
-    this.e0 = this.castElement()(value);
+    this.#e0 = this.castElement()(value);
   }
 
   set 1(value: S) {
-    this.e1 = this.castElement()(value);
+    this.#e1 = this.castElement()(value);
   }
 
   get x() {
-    return this[0];
+    return this.#e0;
   }
 
   get y() {
-    return this[1];
+    return this.#e1;
   }
 
   set x(value: S) {
-    this[0] = this.castElement()(value);
+    this[0] = value;
   }
 
   set y(value: S) {
-    this[1] = this.castElement()(value);
+    this[1] = value;
   }
 
   get r() {
-    return this[0];
+    return this.#e0;
   }
 
   get g() {
-    return this[1];
+    return this.#e1;
   }
 
   set r(value: S) {
-    this[0] = this.castElement()(value);
+    this[0] = value;
   }
 
   set g(value: S) {
-    this[1] = this.castElement()(value);
+    this[1] = value;
   }
 }
 
-abstract class Vec3<S> extends VecBase<S> implements Tuple3<S> {
+abstract class Vec3<S> extends VecBase<S> {
   declare readonly length: 3;
+  static {
+    Object.defineProperty(Vec3.prototype, 'length', { value: 3 });
+  }
 
-  e0: S;
-  e1: S;
-  e2: S;
+  #e0: S;
+  #e1: S;
+  #e2: S;
 
   constructor(x?: S, y?: S, z?: S) {
-    super(3);
-    this.e0 = this.castElement()(x);
-    this.e1 = this.castElement()(y ?? x);
-    this.e2 = this.castElement()(z ?? x);
+    super();
+    this.#e0 = this.castElement()(x);
+    this.#e1 = this.castElement()(y ?? x);
+    this.#e2 = this.castElement()(z ?? x);
   }
 
   get 0() {
-    return this.e0;
+    return this.#e0;
   }
 
   get 1() {
-    return this.e1;
+    return this.#e1;
   }
 
   get 2() {
-    return this.e2;
+    return this.#e2;
   }
 
   set 0(value: S) {
-    this.e0 = this.castElement()(value);
+    this.#e0 = this.castElement()(value);
   }
 
   set 1(value: S) {
-    this.e1 = this.castElement()(value);
+    this.#e1 = this.castElement()(value);
   }
 
   set 2(value: S) {
-    this.e2 = this.castElement()(value);
+    this.#e2 = this.castElement()(value);
   }
 
   get x() {
-    return this[0];
+    return this.#e0;
   }
 
   get y() {
-    return this[1];
+    return this.#e1;
   }
 
   get z() {
-    return this[2];
+    return this.#e2;
   }
 
   set x(value: S) {
-    this[0] = this.castElement()(value);
+    this[0] = value;
   }
 
   set y(value: S) {
-    this[1] = this.castElement()(value);
+    this[1] = value;
   }
 
   set z(value: S) {
-    this[2] = this.castElement()(value);
+    this[2] = value;
   }
 
   get r() {
-    return this[0];
+    return this.#e0;
   }
 
   get g() {
-    return this[1];
+    return this.#e1;
   }
 
   get b() {
-    return this[2];
-  }
-
-  set r(value: S) {
-    this[0] = this.castElement()(value);
-  }
-
-  set g(value: S) {
-    this[1] = this.castElement()(value);
-  }
-
-  set b(value: S) {
-    this[2] = this.castElement()(value);
-  }
-}
-
-abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
-  declare readonly length: 4;
-
-  e0: S;
-  e1: S;
-  e2: S;
-  e3: S;
-
-  constructor(x?: S, y?: S, z?: S, w?: S) {
-    super(4);
-    this.e0 = this.castElement()(x);
-    this.e1 = this.castElement()(y ?? x);
-    this.e2 = this.castElement()(z ?? x);
-    this.e3 = this.castElement()(w ?? x);
-  }
-
-  get 0() {
-    return this.e0;
-  }
-
-  get 1() {
-    return this.e1;
-  }
-
-  get 2() {
-    return this.e2;
-  }
-
-  get 3() {
-    return this.e3;
-  }
-
-  set 0(value: S) {
-    this.e0 = this.castElement()(value);
-  }
-
-  set 1(value: S) {
-    this.e1 = this.castElement()(value);
-  }
-
-  set 2(value: S) {
-    this.e2 = this.castElement()(value);
-  }
-
-  set 3(value: S) {
-    this.e3 = this.castElement()(value);
-  }
-
-  get x() {
-    return this[0];
-  }
-
-  get y() {
-    return this[1];
-  }
-
-  get r() {
-    return this[0];
-  }
-
-  get g() {
-    return this[1];
-  }
-
-  get b() {
-    return this[2];
-  }
-
-  get a() {
-    return this[3];
+    return this.#e2;
   }
 
   set r(value: S) {
@@ -336,17 +263,73 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
   set b(value: S) {
     this[2] = value;
   }
+}
 
-  set a(value: S) {
-    this[3] = value;
+abstract class Vec4<S> extends VecBase<S> {
+  declare readonly length: 4;
+  static {
+    Object.defineProperty(Vec4.prototype, 'length', { value: 4 });
+  }
+
+  #e0: S;
+  #e1: S;
+  #e2: S;
+  #e3: S;
+
+  constructor(x?: S, y?: S, z?: S, w?: S) {
+    super();
+    this.#e0 = this.castElement()(x);
+    this.#e1 = this.castElement()(y ?? x);
+    this.#e2 = this.castElement()(z ?? x);
+    this.#e3 = this.castElement()(w ?? x);
+  }
+
+  get 0() {
+    return this.#e0;
+  }
+
+  get 1() {
+    return this.#e1;
+  }
+
+  get 2() {
+    return this.#e2;
+  }
+
+  get 3() {
+    return this.#e3;
+  }
+
+  set 0(value: S) {
+    this.#e0 = this.castElement()(value);
+  }
+
+  set 1(value: S) {
+    this.#e1 = this.castElement()(value);
+  }
+
+  set 2(value: S) {
+    this.#e2 = this.castElement()(value);
+  }
+
+  set 3(value: S) {
+    this.#e3 = this.castElement()(value);
+  }
+
+  get x() {
+    return this.#e0;
+  }
+
+  get y() {
+    return this.#e1;
   }
 
   get z() {
-    return this[2];
+    return this.#e2;
   }
 
   get w() {
-    return this[3];
+    return this.#e3;
   }
 
   set x(value: S) {
@@ -362,6 +345,38 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
   }
 
   set w(value: S) {
+    this[3] = value;
+  }
+
+  get r() {
+    return this.#e0;
+  }
+
+  get g() {
+    return this.#e1;
+  }
+
+  get b() {
+    return this.#e2;
+  }
+
+  get a() {
+    return this.#e3;
+  }
+
+  set r(value: S) {
+    this[0] = value;
+  }
+
+  set g(value: S) {
+    this[1] = value;
+  }
+
+  set b(value: S) {
+    this[2] = value;
+  }
+
+  set a(value: S) {
     this[3] = value;
   }
 }
