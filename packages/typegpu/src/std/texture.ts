@@ -6,7 +6,6 @@ import {
   type WgslStorageTexture,
   type WgslTexture,
 } from '../data/texture.ts';
-
 import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
 import { f32, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
@@ -48,7 +47,6 @@ import type {
   textureStorage2dArray,
   textureStorage3d,
 } from '../data/texture.ts';
-
 import type { comparisonSampler, sampler } from '../data/sampler.ts';
 
 function sampleCpu<T extends texture1d>(texture: T, sampler: sampler, coords: number): v4f;
