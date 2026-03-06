@@ -2,5 +2,5 @@
   "title": "Background Segmentation",
   "category": "image-processing",
   "tags": ["ai", "camera", "inference", "machine learning", "onnx", "segmentation"],
-  "coolFactor": 8
+  "coolFactor": 6
 }

@@ -22,11 +22,9 @@ const TEST = process.env.NODE_ENV === 'test';
 const HIDDEN_API_IDS = new Set(['~unstable']);
 
 export function SearchableExampleList({
-  excludeTags = [],
   excludeApis = [],
   scrollContainerRef,
 }: {
-  excludeTags?: string[];
   excludeApis?: string[];
   scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
 }) {
@@ -40,11 +38,10 @@ export function SearchableExampleList({
     () =>
       Object.values(examples).filter(
         (ex) =>
-          !ex.metadata.tags?.some((tag) => excludeTags.includes(tag)) &&
           !ex.usedApis.some((api) => excludeApis.includes(api)) &&
           (DEV || TEST || !ex.metadata.dev),
       ),
-    [excludeTags, excludeApis],
+    [excludeApis],
   );
 
   const availableTags = useMemo(
