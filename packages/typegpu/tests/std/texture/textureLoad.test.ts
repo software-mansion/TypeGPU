@@ -6,11 +6,11 @@ import * as d from '../../../src/data/index.ts';
 import { bindGroupLayout } from '../../../src/tgpuBindGroupLayout.ts';
 import { resolve } from '../../../src/core/resolve/tgpuResolve.ts';
 
+// we need this since all other usages will be removed by plugin
+expectTypeOf(() => {});
+
 describe('textureLoad', () => {
   it('Has correct signatures for sampled and depth textures', () => {
-    // we need this since all other usages will be removed  by plugin
-    expectTypeOf(() => {});
-
     const testLayout = bindGroupLayout({
       tex1d: { texture: d.texture1d() },
       tex2d: { texture: d.texture2d() },
@@ -105,8 +105,6 @@ describe('textureLoad', () => {
   });
 
   it('Has correct signatures for storage textures', () => {
-    expectTypeOf(() => {});
-
     const testLayout = bindGroupLayout({
       store1d: { storageTexture: d.textureStorage1d('rgba32float', 'read-only') },
       store2d: { storageTexture: d.textureStorage2d('rgba32float', 'read-only') },
@@ -168,8 +166,6 @@ describe('textureLoad', () => {
   });
 
   it('Has correct signatures for external textures', () => {
-    expectTypeOf(() => {});
-
     const testLayout = bindGroupLayout({
       texExternal: { externalTexture: d.textureExternal() },
     });
