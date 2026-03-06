@@ -130,8 +130,8 @@ export function ExampleView({ example, common }: Props) {
                         className={cs(
                           'shrink-0 -mb-px h-full rounded-t-lg border-b-2 px-4 text-sm font-medium transition-colors',
                           currentFilePath === fileName
-                            ? 'border-purple-500 bg-purple-50 text-purple-700'
-                            : 'border-transparent bg-tameplum-100/50 text-tameplum-400 hover:border-tameplum-200 hover:bg-tameplum-100 hover:text-tameplum-700',
+                            ? 'border-purple-500 bg-white text-purple-700 shadow-sm'
+                            : 'border-transparent bg-tameplum-100 text-tameplum-600 hover:border-tameplum-300 hover:bg-tameplum-200 hover:text-tameplum-900',
                         )}
                       >
                         {fileName}

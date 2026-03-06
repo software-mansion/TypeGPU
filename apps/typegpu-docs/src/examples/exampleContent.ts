@@ -139,6 +139,7 @@ const API_RULES: { id: string; pattern: RegExp }[] = [
     id: 'instancing',
     pattern: /instanceCount|drawInstanced|builtin\.instanceIndex|vertexLayout[^\n]*'instance'/,
   },
+  { id: 'bindless buffers', pattern: /\.createUniform|\.createReadonly|\.createMutable/ },
   { id: 'subgroups', pattern: /subgroups/ },
   { id: 'timestamp query', pattern: /timestamp-query|createQuerySet/ },
   { id: 'external texture', pattern: /importExternalTexture|externalTexture/ },

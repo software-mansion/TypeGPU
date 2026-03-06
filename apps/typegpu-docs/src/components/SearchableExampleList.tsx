@@ -260,8 +260,8 @@ export function SearchableExampleList({
                           }}
                           className={
                             isSelected
-                              ? 'rounded-full bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark px-2.5 py-0.5 text-[11px] text-white transition-opacity hover:opacity-90'
-                              : 'rounded-full bg-tameplum-50 px-2.5 py-0.5 text-[11px] text-tameplum-700 transition-colors hover:bg-tameplum-100'
+                              ? 'rounded-full bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-white transition-opacity hover:opacity-90'
+                              : 'rounded-full bg-tameplum-50 px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-tameplum-700 transition-colors hover:bg-tameplum-100'
                           }
                         >
                           {tag}
@@ -295,8 +295,8 @@ export function SearchableExampleList({
                           }}
                           className={
                             isSelected
-                              ? 'rounded-full bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark px-2.5 py-0.5 text-[11px] text-white transition-opacity hover:opacity-90'
-                              : 'rounded-full bg-tameplum-50 px-2.5 py-0.5 text-[11px] text-tameplum-700 transition-colors hover:bg-tameplum-100'
+                              ? 'rounded-full bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-white transition-opacity hover:opacity-90'
+                              : 'rounded-full bg-tameplum-50 px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-tameplum-700 transition-colors hover:bg-tameplum-100'
                           }
                         >
                           {api}
