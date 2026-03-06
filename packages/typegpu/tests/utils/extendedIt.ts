@@ -56,6 +56,9 @@ const mockComputePassEncoder = {
 };
 
 const mockRenderPassEncoder = {
+  get mock() {
+    return mockRenderPassEncoder;
+  },
   draw: vi.fn(),
   drawIndexed: vi.fn(),
   end: vi.fn(),
@@ -156,6 +159,9 @@ export const it = base.extend<{
   _global: undefined;
   commandEncoder: GPUCommandEncoder & { mock: typeof mockCommandEncoder };
   device: GPUDevice & { mock: typeof mockDevice };
+  renderPassEncoder: GPURenderPassEncoder & {
+    mock: typeof mockRenderPassEncoder;
+  };
   renderBundleEncoder: GPURenderBundleEncoder & {
     mock: typeof mockRenderBundleEncoder;
   };
@@ -177,6 +183,14 @@ export const it = base.extend<{
     await use(
       mockCommandEncoder as unknown as GPUCommandEncoder & {
         mock: typeof mockCommandEncoder;
+      },
+    );
+  },
+
+  renderPassEncoder: async ({ task }, use) => {
+    await use(
+      mockRenderPassEncoder as unknown as GPURenderPassEncoder & {
+        mock: typeof mockRenderPassEncoder;
       },
     );
   },

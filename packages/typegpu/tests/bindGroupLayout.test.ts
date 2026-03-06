@@ -167,6 +167,18 @@ describe('TgpuBindGroupLayout', () => {
     `);
   });
 
+  it('infers atomics as GPU atomic types in layout.$', () => {
+    const layout = tgpu.bindGroupLayout({
+      counter: { storage: d.atomic(d.u32), access: 'mutable' },
+      signedCounter: { storage: d.atomic(d.i32), access: 'mutable' },
+      atomicArray: { storage: d.arrayOf(d.atomic(d.u32)), access: 'mutable' },
+    });
+
+    expectTypeOf<typeof layout.$.counter>().toEqualTypeOf<d.atomicU32>();
+    expectTypeOf<typeof layout.$.signedCounter>().toEqualTypeOf<d.atomicI32>();
+    expectTypeOf<typeof layout.$.atomicArray>().toEqualTypeOf<d.atomicU32[]>();
+  });
+
   it('takes a pointer to layout.$... if assigned to a const variable', () => {
     const Boid = d.struct({
       pos: d.vec3f,
