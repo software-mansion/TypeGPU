@@ -1,5 +1,6 @@
 {
   "title": "Gravity",
   "category": "simulation",
-  "tags": ["experimental"]
+  "tags": ["3d", "interaction", "particles", "physics", "rasterization"],
+  "coolFactor": 8
 }
