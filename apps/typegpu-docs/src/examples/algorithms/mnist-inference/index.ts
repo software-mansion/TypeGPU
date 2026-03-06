@@ -208,13 +208,9 @@ function resetDrawing() {
   }
 }
 
-let disposed = false;
+let animationFrameId: number;
 
 function run() {
-  if (disposed) {
-    return;
-  }
-
   const scale = canvas.width / SIZE;
 
   context.clearRect(0, 0, canvas.width, canvas.height);
@@ -244,7 +240,7 @@ function run() {
     context.fillStyle = '#000';
     context.fillText('draw here 🖌️', canvas.width / 2, canvas.height / 2);
   }
-  requestAnimationFrame(run);
+  animationFrameId = requestAnimationFrame(run);
 }
 
 document.querySelector('.loading')?.classList.add('loaded');
@@ -397,7 +393,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  disposed = true;
+  cancelAnimationFrame(animationFrameId);
   window.removeEventListener('mouseup', mouseUpEventListener);
   window.removeEventListener('touchend', touchEndEventListener);
   root.destroy();

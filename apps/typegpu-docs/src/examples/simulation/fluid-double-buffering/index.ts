@@ -515,24 +515,14 @@ function tick() {
   primary.compute();
 }
 
-let disposed = false;
+let animationFrameId: number;
+let lastTime = Date.now();
 
-const onFrame = (loop: (deltaTime: number) => unknown) => {
-  let lastTime = Date.now();
-  const runner = () => {
-    if (disposed) {
-      return;
-    }
-    const now = Date.now();
-    const dt = now - lastTime;
-    lastTime = now;
-    loop(dt);
-    requestAnimationFrame(runner);
-  };
-  requestAnimationFrame(runner);
-};
+const runner = () => {
+  const now = Date.now();
+  const deltaTime = now - lastTime;
+  lastTime = now;
 
-onFrame((deltaTime) => {
   msSinceLastTick += deltaTime;
 
   if (msSinceLastTick >= timestep) {
@@ -542,7 +532,11 @@ onFrame((deltaTime) => {
     primary.render();
     msSinceLastTick -= timestep;
   }
-});
+
+  animationFrameId = requestAnimationFrame(runner);
+};
+
+animationFrameId = requestAnimationFrame(runner);
 
 export const controls = defineControls({
   'source intensity': {
@@ -604,6 +598,6 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  disposed = true;
+  cancelAnimationFrame(animationFrameId);
   root.destroy();
 }
