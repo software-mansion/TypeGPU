@@ -7,6 +7,7 @@ import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU, InferGPURecord, InferRecord } from '../../shared/repr.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { shaderStageSlot } from '../slot/internalSlots.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { BaseIOData } from './fnTypes.ts';
 
@@ -85,7 +86,9 @@ export class AutoFragmentFn implements SelfResolvable {
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    return this.#core.resolve(ctx, [this.#autoIn], this.#autoOut);
+    return ctx.withSlots([[shaderStageSlot, 'fragment']], () =>
+      this.#core.resolve(ctx, [this.#autoIn], this.#autoOut),
+    );
   }
 }
 
@@ -129,7 +132,9 @@ export class AutoVertexFn implements SelfResolvable {
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    return this.#core.resolve(ctx, [this.#autoIn], this.#autoOut);
+    return ctx.withSlots([[shaderStageSlot, 'vertex']], () =>
+      this.#core.resolve(ctx, [this.#autoIn], this.#autoOut),
+    );
   }
 }
 
