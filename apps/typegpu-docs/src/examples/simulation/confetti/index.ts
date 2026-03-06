@@ -174,31 +174,23 @@ function randomizePositions() {
 
 randomizePositions();
 
-let disposed = false;
+let animationFrameId: number;
+let lastTime: number | null = null;
 
-function onFrame(loop: (deltaTime: number) => unknown) {
-  let lastTime = Date.now();
-  const runner = () => {
-    if (disposed) {
-      return;
-    }
-    const now = Date.now();
-    const dt = now - lastTime;
-    lastTime = now;
-    loop(dt);
-    requestAnimationFrame(runner);
-  };
-  requestAnimationFrame(runner);
-}
+const runner = (timestamp: number) => {
+  const dt = lastTime !== null ? timestamp - lastTime : 0;
+  lastTime = timestamp;
 
-onFrame((dt) => {
   deltaTime.write(dt);
   aspectRatio.write(canvas.width / canvas.height);
 
   computePipeline.dispatchWorkgroups(PARTICLE_AMOUNT);
 
   renderPipeline.withColorAttachment({ view: context }).draw(4, PARTICLE_AMOUNT);
-});
+  animationFrameId = requestAnimationFrame(runner);
+};
+
+animationFrameId = requestAnimationFrame(runner);
 
 // example controls and cleanup
 
@@ -209,6 +201,6 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  disposed = true;
+  cancelAnimationFrame(animationFrameId);
   root.destroy();
 }

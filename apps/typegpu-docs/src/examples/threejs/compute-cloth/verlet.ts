@@ -228,7 +228,7 @@ export class VerletSimulation {
         const springCount = params.y;
         const springPointer = params.z;
 
-        if (isFixed) {
+        if (isFixed === 1) {
           // don't need to calculate vertex forces if the vertex is set as immovable
           return;
         }
