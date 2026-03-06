@@ -112,7 +112,7 @@ const backgroundVertex = tgpu.vertexFn({
   ];
 
   const currentPoint = properties.inverseTransformation.mul(
-    d.vec4f(transformedPoints[d.f32(2 * iid) + vid / 2].xy, 0, 1),
+    d.vec4f(transformedPoints[2 * iid + d.u32(vid / 2)].xy, 0, 1),
   );
 
   return {

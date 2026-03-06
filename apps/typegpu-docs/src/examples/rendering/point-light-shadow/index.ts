@@ -377,7 +377,7 @@ function render(timestamp: number) {
 
   if (showDepthPreview) {
     pipelinePreview.withColorAttachment({ view: context }).draw(3);
-    requestAnimationFrame(render);
+    animationFrameId = requestAnimationFrame(render);
     return;
   }
 
