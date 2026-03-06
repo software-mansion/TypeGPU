@@ -21,10 +21,10 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const STEPS_PER_GENERATION = 480;
 
 const BASE_SPATIAL_PARAMS = {
-  maxSpeed: 0.6,
-  accel: 1.6,
-  turnRate: 3.5,
-  drag: 0.6,
+  maxSpeed: 1.6,
+  accel: 0.2,
+  turnRate: 5.5,
+  drag: 0.3,
   sensorDistance: 0.28,
   carSize: 0.02,
 };
