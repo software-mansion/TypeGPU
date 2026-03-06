@@ -1610,7 +1610,7 @@ describe('root.createRenderPipeline', () => {
       life: d.f32,
     });
     const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec3f));
-    const instanceLayout = tgpu.vertexLayout(d.arrayOf(Boid));
+    const instanceLayout = tgpu.vertexLayout(d.arrayOf(Boid), 'instance');
     const pipeline = root.createRenderPipeline({
       attribs: { vertexPos: vertexLayout.attrib, ...instanceLayout.attrib },
       vertex: ({ life, velocity, vertexPos }) => {
@@ -1663,7 +1663,7 @@ describe('root.createRenderPipeline', () => {
                       "shaderLocation": 1,
                     },
                   ],
-                  "stepMode": "vertex",
+                  "stepMode": "instance",
                 },
                 {
                   "arrayStride": 16,
