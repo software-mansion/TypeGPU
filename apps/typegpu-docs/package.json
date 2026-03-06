@@ -20,6 +20,7 @@
     "@astrojs/tailwind": "^6.0.2",
     "@babel/standalone": "^7.28.6",
     "@dimforge/rapier2d-compat": "^0.19.3",
+    "@dimforge/rapier3d-compat": "^0.19.3",
     "@loaders.gl/core": "^4.3.4",
     "@loaders.gl/obj": "^4.3.4",
     "@monaco-editor/react": "^4.7.0",

@@ -1,22 +1,30 @@
 import tgpu, { d, std } from 'typegpu';
+import RAPIER from '@dimforge/rapier3d-compat';
+
 import { Camera, setupFirstPersonCamera } from '../../common/setup-first-person-camera.ts';
-import { BlockInstance, CubeVertex, InstanceLayout, VertexCubeLayout } from './schemas.ts';
+import { VoxelInstance, CubeVertex, VoxelInstanceLayout, CubeVertexLayout } from './schemas.ts';
 import { cubeVertices } from './cubeVertices.ts';
-import { chunkToInstanceData, generate } from './chunkGenerator.ts';
+import { chunkToInstanceData, generateChunk } from './chunkGenerator.ts';
+import { State } from './state.ts';
+import { INIT_CONFIG } from './params.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
+await RAPIER.init();
+const world = new RAPIER.World(new RAPIER.Vector3(0, -9.81, 0));
+const state = new State(INIT_CONFIG, world);
+
 const cubeVertexBuffer = root
   .createBuffer(d.disarrayOf(CubeVertex, 36), cubeVertices)
   .$usage('vertex');
 
-const chunkData = generate(d.vec3i(0, 0, 0));
-const instanceData = chunkToInstanceData(chunkData);
+const instanceData = state.getVoxelsData();
+
 const instanceBuffer = root
-  .createBuffer(d.disarrayOf(BlockInstance, instanceData.length), instanceData)
+  .createBuffer(d.disarrayOf(VoxelInstance, instanceData.length), instanceData)
   .$usage('vertex');
 
 const cameraUniform = root.createUniform(Camera);
@@ -41,7 +49,7 @@ const resizeObserver = new ResizeObserver(() => {
 resizeObserver.observe(canvas);
 
 const pipeline = root.createRenderPipeline({
-  attribs: { ...VertexCubeLayout.attrib, ...InstanceLayout.attrib },
+  attribs: { ...CubeVertexLayout.attrib, ...VoxelInstanceLayout.attrib },
   vertex: tgpu.vertexFn({
     in: { position: d.vec4f, uv: d.vec2f, blockPos: d.vec4i },
     out: { pos: d.builtin.position, worldPos: d.vec4f },
@@ -87,8 +95,8 @@ function draw() {
       view: context.getCurrentTexture().createView(),
       clearValue: [0.5, 0.7, 0.9, 1],
     })
-    .with(VertexCubeLayout, cubeVertexBuffer)
-    .with(InstanceLayout, instanceBuffer)
+    .with(CubeVertexLayout, cubeVertexBuffer)
+    .with(VoxelInstanceLayout, instanceBuffer)
     .draw(36, instanceData.length);
 
   frameId = requestAnimationFrame(draw);
