@@ -1,5 +1,6 @@
 {
   "title": "Jump Flood (Distance)",
   "category": "algorithms",
-  "tags": ["experimental", "compute"]
+  "tags": ["interaction", "sdf", "spatial"],
+  "coolFactor": 7
 }

@@ -1,5 +1,7 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import DiscordIconSvg from '../assets/discord-icon.svg';
+import GithubIconSvg from '../assets/github-icon.svg';
 import { useId, useState } from 'react';
 import { runWithCatchAtom } from '../utils/examples/currentSnackbarAtom.ts';
 import {
@@ -328,6 +330,18 @@ export function ControlPanel() {
           </div>
         </>
       )}
+
+      <div className="mt-auto hidden items-center justify-between pt-2 text-tameplum-800 text-xs md:flex">
+        <div>&copy; {new Date().getFullYear()} Software Mansion S.A.</div>
+        <div className="flex items-center gap-3">
+          <a href="https://discord.gg/8jpfgDqPcM" target="_blank" rel="noreferrer">
+            <img src={DiscordIconSvg.src} className="opacity-75" alt="discord logo" />
+          </a>
+          <a href="https://github.com/software-mansion/TypeGPU" target="_blank" rel="noreferrer">
+            <img src={GithubIconSvg.src} className="opacity-75" alt="github logo" />
+          </a>
+        </div>
+      </div>
     </div>
   );
 }

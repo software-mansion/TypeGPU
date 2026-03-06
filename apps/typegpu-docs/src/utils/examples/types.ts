@@ -5,6 +5,7 @@ export const ExampleMetadata = type({
   title: 'string',
   category: 'string',
   'tags?': 'string[]',
+  coolFactor: 'number',
   'dev?': 'boolean',
 });
 
@@ -59,4 +60,5 @@ export type Example = {
   htmlFile: ExampleSrcFile;
   metadata: ExampleMetadata;
   thumbnails?: ThumbnailPair;
+  usedApis: string[];
 };
