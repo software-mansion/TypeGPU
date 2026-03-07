@@ -15,8 +15,8 @@ import {
 } from './ga.ts';
 
 const DEG_90 = Math.PI / 2;
-const DEG_60 = 1.05;
-const DEG_30 = 0.52;
+const DEG_60 = Math.PI / 3;
+const DEG_30 = Math.PI / 6;
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
