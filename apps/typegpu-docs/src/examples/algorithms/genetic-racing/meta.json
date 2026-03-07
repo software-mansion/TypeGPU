@@ -1,5 +1,6 @@
 {
-  "title": "Genetic Racing (2D)",
+  "title": "Genetic Racing",
   "category": "algorithms",
-  "tags": ["compute", "render", "genetic", "simulation"]
+  "tags": ["genetic algorithm", "ai"],
+  "coolFactor": 7
 }
