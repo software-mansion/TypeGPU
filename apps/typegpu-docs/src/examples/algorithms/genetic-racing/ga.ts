@@ -16,12 +16,30 @@ export const CarState = d.struct({
   stallSteps: d.u32,
 });
 
-export const Genome = d.struct({
+export const FitnessArray = d.arrayOf(d.f32, MAX_POP);
+
+export const InputLayer = d.struct({
+  wA: d.mat4x4f, // inputs[0..3]
+  wB: d.mat4x4f, // inputs[4..7]
+  wC: d.mat4x4f, // inputs[8..11]
+  bias: d.vec4f,
+});
+
+export const DenseLayer = d.struct({
+  w: d.mat4x4f,
+  bias: d.vec4f,
+});
+
+export const OutputLayer = d.struct({
   steer: d.vec4f,
   throttle: d.vec4f,
-  steerExtra: d.vec4f,
-  throttleExtra: d.vec4f,
   bias: d.vec2f,
+});
+
+export const Genome = d.struct({
+  h1: InputLayer,
+  h2: DenseLayer,
+  out: OutputLayer,
 });
 
 export const SimParams = d.struct({
@@ -50,13 +68,18 @@ export const CarStateLayout = d.arrayOf(CarState);
 
 export const paramsAccess = tgpu.accessor(SimParams);
 
+const fitLayout = tgpu.bindGroupLayout({
+  state: { storage: CarStateArray },
+  fitness: { storage: FitnessArray, access: 'mutable' },
+});
+
 const initLayout = tgpu.bindGroupLayout({
   state: { storage: CarStateArray, access: 'mutable' },
   genome: { storage: GenomeArray, access: 'mutable' },
 });
 
 const evolveLayout = tgpu.bindGroupLayout({
-  state: { storage: CarStateArray },
+  fitness: { storage: FitnessArray },
   genome: { storage: GenomeArray },
   nextState: { storage: CarStateArray, access: 'mutable' },
   nextGenome: { storage: GenomeArray, access: 'mutable' },
@@ -65,6 +88,11 @@ const evolveLayout = tgpu.bindGroupLayout({
 const randSignedVec4 = () => {
   'use gpu';
   return (d.vec4f(randf.sample(), randf.sample(), randf.sample(), randf.sample()) * 2 - 1) * 0.8;
+};
+
+const randSignedMat4x4 = () => {
+  'use gpu';
+  return d.mat4x4f(randSignedVec4(), randSignedVec4(), randSignedVec4(), randSignedVec4());
 };
 
 const makeSpawnState = () => {
@@ -82,19 +110,14 @@ const makeSpawnState = () => {
   });
 };
 
-const computeFitness = (idx: number) => {
-  'use gpu';
-  const s = evolveLayout.$.state[idx];
-  return s.progress * 10 + d.f32(s.aliveSteps) * 0.003;
-};
-
 const tournamentSelect = () => {
   'use gpu';
+  const population = d.f32(paramsAccess.$.population);
   let best = d.u32(0);
   let bestFitness = d.f32(-1);
   for (let j = 0; j < 8; j++) {
-    const idx = d.u32(randf.sample() * d.f32(paramsAccess.$.population));
-    const f = computeFitness(idx);
+    const idx = d.u32(randf.sample() * population);
+    const f = evolveLayout.$.fitness[idx];
     const better = f > bestFitness;
     bestFitness = std.select(bestFitness, f, better);
     best = std.select(best, idx, better);
@@ -102,32 +125,66 @@ const tournamentSelect = () => {
   return best;
 };
 
-const evolveScalar = (a: number, b: number) => {
+const evolveVec = <T extends d.v2f | d.v4f>(a: T, b: T): T => {
   'use gpu';
+  const strength = paramsAccess.$.mutationStrength;
   const crossed = std.select(a, b, randf.sample() > 0.5);
-  return (
-    crossed +
-    std.select(
-      0,
-      randf.normal(0, paramsAccess.$.mutationStrength),
-      randf.sample() < paramsAccess.$.mutationRate,
-    )
+  const doMutate = randf.sample() < paramsAccess.$.mutationRate;
+  if (a.kind === 'vec2f') {
+    const delta = d.vec2f(randf.normal(0, strength), randf.normal(0, strength));
+    return ((crossed as d.v2f) + std.select(d.vec2f(0), delta, doMutate)) as T;
+  } else {
+    const delta = d.vec4f(
+      randf.normal(0, strength),
+      randf.normal(0, strength),
+      randf.normal(0, strength),
+      randf.normal(0, strength),
+    );
+    return ((crossed as d.v4f) + std.select(d.vec4f(0), delta, doMutate)) as T;
+  }
+};
+
+const evolveMat4x4 = (a: d.m4x4f, b: d.m4x4f) => {
+  'use gpu';
+  return d.mat4x4f(
+    evolveVec(a.columns[0], b.columns[0]),
+    evolveVec(a.columns[1], b.columns[1]),
+    evolveVec(a.columns[2], b.columns[2]),
+    evolveVec(a.columns[3], b.columns[3]),
   );
 };
 
-const evolveVec4 = (a: d.v4f, b: d.v4f) => {
+const evolveInputLayer = (a: d.Infer<typeof InputLayer>, b: d.Infer<typeof InputLayer>) => {
   'use gpu';
-  return d.vec4f(
-    evolveScalar(a.x, b.x),
-    evolveScalar(a.y, b.y),
-    evolveScalar(a.z, b.z),
-    evolveScalar(a.w, b.w),
-  );
+  return InputLayer({
+    wA: evolveMat4x4(a.wA, b.wA),
+    wB: evolveMat4x4(a.wB, b.wB),
+    wC: evolveMat4x4(a.wC, b.wC),
+    bias: evolveVec(a.bias, b.bias),
+  });
 };
 
-const evolveVec2 = (a: d.v2f, b: d.v2f) => {
+const evolveDenseLayer = (a: d.Infer<typeof DenseLayer>, b: d.Infer<typeof DenseLayer>) => {
   'use gpu';
-  return d.vec2f(evolveScalar(a.x, b.x), evolveScalar(a.y, b.y));
+  return DenseLayer({ w: evolveMat4x4(a.w, b.w), bias: evolveVec(a.bias, b.bias) });
+};
+
+const evolveOutputLayer = (a: d.Infer<typeof OutputLayer>, b: d.Infer<typeof OutputLayer>) => {
+  'use gpu';
+  return OutputLayer({
+    steer: evolveVec(a.steer, b.steer),
+    throttle: evolveVec(a.throttle, b.throttle),
+    bias: evolveVec(a.bias, b.bias),
+  });
+};
+
+const fitShader = (i: number) => {
+  'use gpu';
+  if (d.u32(i) >= paramsAccess.$.population) {
+    return;
+  }
+  const s = CarState(fitLayout.$.state[i]);
+  fitLayout.$.fitness[i] = s.progress * 10 + d.f32(s.aliveSteps) * 0.003;
 };
 
 const initShader = (i: number) => {
@@ -138,11 +195,14 @@ const initShader = (i: number) => {
   randf.seed2(d.vec2f(d.f32(i) + 1, paramsAccess.$.generation + 11));
 
   initLayout.$.genome[i] = Genome({
-    steer: randSignedVec4(),
-    throttle: randSignedVec4(),
-    steerExtra: randSignedVec4(),
-    throttleExtra: randSignedVec4(),
-    bias: (d.vec2f(randf.sample(), randf.sample()) * 2 - 1) * 0.2,
+    h1: InputLayer({
+      wA: randSignedMat4x4(),
+      wB: randSignedMat4x4(),
+      wC: randSignedMat4x4(),
+      bias: d.vec4f(),
+    }),
+    h2: DenseLayer({ w: randSignedMat4x4(), bias: d.vec4f() }),
+    out: OutputLayer({ steer: randSignedVec4(), throttle: randSignedVec4(), bias: d.vec2f() }),
   });
   initLayout.$.state[i] = makeSpawnState();
 };
@@ -156,11 +216,9 @@ const evolveShader = (i: number) => {
   const parentB = Genome(evolveLayout.$.genome[tournamentSelect()]);
 
   evolveLayout.$.nextGenome[i] = Genome({
-    steer: evolveVec4(parentA.steer, parentB.steer),
-    throttle: evolveVec4(parentA.throttle, parentB.throttle),
-    steerExtra: evolveVec4(parentA.steerExtra, parentB.steerExtra),
-    throttleExtra: evolveVec4(parentA.throttleExtra, parentB.throttleExtra),
-    bias: evolveVec2(parentA.bias, parentB.bias),
+    h1: evolveInputLayer(parentA.h1, parentB.h1),
+    h2: evolveDenseLayer(parentA.h2, parentB.h2),
+    out: evolveOutputLayer(parentA.out, parentB.out),
   });
 
   evolveLayout.$.nextState[i] = makeSpawnState();
@@ -171,6 +229,7 @@ export function createGeneticPopulation(root: TgpuRoot, params: TgpuUniform<type
     root.createBuffer(CarStateArray).$usage('storage', 'vertex'),
   );
   const genomeBuffers = [0, 1].map(() => root.createBuffer(GenomeArray).$usage('storage'));
+  const fitnessBuffer = root.createBuffer(FitnessArray).$usage('storage');
 
   const initBindGroups = [0, 1].map((i) =>
     root.createBindGroup(initLayout, {
@@ -179,9 +238,16 @@ export function createGeneticPopulation(root: TgpuRoot, params: TgpuUniform<type
     }),
   );
 
+  const fitBindGroups = [0, 1].map((i) =>
+    root.createBindGroup(fitLayout, {
+      state: stateBuffers[i],
+      fitness: fitnessBuffer,
+    }),
+  );
+
   const evolveBindGroups = [0, 1].map((i) =>
     root.createBindGroup(evolveLayout, {
-      state: stateBuffers[i],
+      fitness: fitnessBuffer,
       genome: genomeBuffers[i],
       nextState: stateBuffers[1 - i],
       nextGenome: genomeBuffers[1 - i],
@@ -189,7 +255,7 @@ export function createGeneticPopulation(root: TgpuRoot, params: TgpuUniform<type
   );
 
   const initPipeline = root.with(paramsAccess, params).createGuardedComputePipeline(initShader);
-
+  const fitPipeline = root.with(paramsAccess, params).createGuardedComputePipeline(fitShader);
   const evolvePipeline = root.with(paramsAccess, params).createGuardedComputePipeline(evolveShader);
 
   let current = 0;
@@ -198,6 +264,7 @@ export function createGeneticPopulation(root: TgpuRoot, params: TgpuUniform<type
   return {
     stateBuffers,
     genomeBuffers,
+    fitnessBuffer,
     get current() {
       return current;
     },
@@ -220,6 +287,10 @@ export function createGeneticPopulation(root: TgpuRoot, params: TgpuUniform<type
 
     reinitCurrent(population: number) {
       initPipeline.with(initBindGroups[current]).dispatchThreads(population);
+    },
+
+    precomputeFitness(population: number) {
+      fitPipeline.with(fitBindGroups[current]).dispatchThreads(population);
     },
 
     evolve(population: number) {
