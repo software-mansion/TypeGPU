@@ -6,6 +6,7 @@ import {
   CarStateArray,
   CarStateLayout,
   DEFAULT_POP,
+  FitnessArray,
   Genome,
   GenomeArray,
   MAX_POP,
@@ -13,12 +14,14 @@ import {
   createGeneticPopulation,
 } from './ga.ts';
 
+const DEG_90 = Math.PI / 2;
+const DEG_60 = 1.05;
+const DEG_30 = 0.52;
+
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-const STEPS_PER_GENERATION = 480;
 
 const BASE_SPATIAL_PARAMS = {
   maxSpeed: 1.6,
@@ -62,7 +65,6 @@ const carSpriteTexture = root['~unstable']
   })
   .$usage('sampled', 'render');
 carSpriteTexture.write(carBitmap);
-
 const carSpriteView = carSpriteTexture.createView();
 
 const linearSampler = root['~unstable'].createSampler({
@@ -98,6 +100,17 @@ const rotate = (v: d.v2f, angle: number) => {
   return d.vec2f(v.x * c - v.y * s, v.x * s + v.y * c);
 };
 
+const isOnTrack = (pos: d.v2f) => {
+  'use gpu';
+  return sampleTrack(pos, nearestSampler.$).z > 0.5;
+};
+
+const trackCross = (forward: d.v2f, pos: d.v2f) => {
+  'use gpu';
+  const t = sampleTrack(pos, nearestSampler.$);
+  return forward.x * t.y - forward.y * t.x;
+};
+
 const senseRaycast = (pos: d.v2f, angle: number, offset: number) => {
   'use gpu';
   const dir = d.vec2f(std.cos(angle + offset), std.sin(angle + offset));
@@ -109,6 +122,22 @@ const senseRaycast = (pos: d.v2f, angle: number, offset: number) => {
     hitT = std.select(hitT, std.select(t, hitT, hitT < t), s.z < 0.5);
   }
   return hitT;
+};
+
+const evalNetwork = (genome: d.Infer<typeof Genome>, a: d.v4f, b: d.v4f, c: d.v4f) => {
+  'use gpu';
+  const h1 = std.tanh(
+    std.transpose(genome.h1.wA) * a +
+      std.transpose(genome.h1.wB) * b +
+      std.transpose(genome.h1.wC) * c +
+      genome.h1.bias,
+  );
+  const h2 = std.tanh(std.transpose(genome.h2.w) * h1 + genome.h2.bias);
+  return std.clamp(
+    d.vec2f(std.dot(genome.out.steer, h2), std.dot(genome.out.throttle, h2)) + genome.out.bias,
+    d.vec2f(-1),
+    d.vec2f(1),
+  );
 };
 
 const simLayout = tgpu.bindGroupLayout({
@@ -132,34 +161,31 @@ const simulatePipeline = root.createGuardedComputePipeline((i) => {
   const genome = Genome(simLayout.$.genome[i]);
   const wasAlive = car.alive === 1;
 
-  const sLL = senseRaycast(car.position, car.angle, 1.05);
-  const sL = senseRaycast(car.position, car.angle, 0.52);
-  const sF = senseRaycast(car.position, car.angle, 0);
-  const sR = senseRaycast(car.position, car.angle, -0.52);
-  const sRR = senseRaycast(car.position, car.angle, -1.05);
-  const normSpeed = car.speed / params.$.maxSpeed;
-
   const carForward = d.vec2f(std.cos(car.angle), std.sin(car.angle));
-  const trackHere = sampleTrack(car.position, nearestSampler.$);
-
-  // +1 = aligned, -1 = backwards
-  const trackAlignment = std.dot(carForward, trackHere.xy);
-
   const aheadPos = car.position + carForward * params.$.sensorDistance;
-  const trackAhead = sampleTrack(aheadPos, nearestSampler.$);
-  // positive = track turns left ahead, negative = right
-  const trackCurvature = carForward.x * trackAhead.y - carForward.y * trackAhead.x;
 
-  const inputs4 = d.vec4f(sLL, sL, sF, sR);
-  const inputsExtra = d.vec4f(sRR, normSpeed, trackAlignment, trackCurvature);
+  const inputs4 = d.vec4f(
+    senseRaycast(car.position, car.angle, DEG_60),
+    senseRaycast(car.position, car.angle, DEG_30),
+    senseRaycast(car.position, car.angle, 0),
+    senseRaycast(car.position, car.angle, -DEG_30),
+  );
+  const inputsB = d.vec4f(
+    senseRaycast(car.position, car.angle, -DEG_60),
+    car.speed / params.$.maxSpeed,
+    std.dot(carForward, sampleTrack(car.position, nearestSampler.$).xy),
+    trackCross(carForward, aheadPos),
+  );
+  const inputsC = d.vec4f(
+    car.angVel / params.$.turnRate,
+    senseRaycast(car.position, car.angle, DEG_90),
+    senseRaycast(car.position, car.angle, -DEG_90),
+    trackCross(carForward, car.position + carForward * params.$.sensorDistance * 2),
+  );
 
-  const steerRaw =
-    std.dot(genome.steer, inputs4) + std.dot(genome.steerExtra, inputsExtra) + genome.bias.x;
-  const throttleRaw =
-    std.dot(genome.throttle, inputs4) + std.dot(genome.throttleExtra, inputsExtra) + genome.bias.y;
-
-  const steer = std.clamp(steerRaw, -1, 1);
-  const throttle = std.clamp(throttleRaw, -1, 1);
+  const control = evalNetwork(genome, inputs4, inputsB, inputsC);
+  const steer = control.x;
+  const throttle = control.y;
 
   let speed = car.speed + throttle * params.$.accel * params.$.dt;
   speed = speed * (1 - params.$.drag * speed * params.$.dt);
@@ -167,30 +193,30 @@ const simulatePipeline = root.createGuardedComputePipeline((i) => {
 
   const slowThreshold = params.$.maxSpeed * 0.04;
   const canTurn = speed > slowThreshold;
-  const postPhysicsNormSpeed = speed / params.$.maxSpeed;
-  const turnFactor = (1 - postPhysicsNormSpeed) * (1 - postPhysicsNormSpeed);
+  const normSpeed = speed / params.$.maxSpeed;
+  const turnFactor = (1 - normSpeed) * (1 - normSpeed);
   const targetAngVel = std.select(0, steer * params.$.turnRate * turnFactor, canTurn);
   const angVel = car.angVel * 0.75 + targetAngVel * 0.25;
   const angle = car.angle + angVel * params.$.dt;
 
   const dir = d.vec2f(std.cos(angle), std.sin(angle));
   const position = car.position + dir * speed * params.$.dt;
-
-  const sampleEnd = sampleTrack(position, nearestSampler.$);
-  const onTrackEnd = sampleEnd.z > 0.5;
   const step = position - car.position;
-  const sampleA = sampleTrack(car.position + step * 0.33, nearestSampler.$);
-  const sampleB = sampleTrack(car.position + step * 0.66, nearestSampler.$);
+
   const stallSteps = std.select(d.u32(0), car.stallSteps + 1, speed < slowThreshold);
-  const onTrack = wasAlive && stallSteps < 120 && onTrackEnd && sampleA.z > 0.5 && sampleB.z > 0.5;
+  const trackEnd = sampleTrack(position, nearestSampler.$);
+  const onTrack =
+    wasAlive &&
+    stallSteps < 120 &&
+    trackEnd.z > 0.5 &&
+    isOnTrack(car.position + step * 0.33) &&
+    isOnTrack(car.position + step * 0.66);
 
-  const aliveMask = std.select(0, d.f32(1), onTrack);
   const alive = std.select(d.u32(0), d.u32(1), onTrack);
-  const forward = std.dot(dir, sampleEnd.xy);
-
+  const forward = std.dot(dir, trackEnd.xy);
   const lapLength = params.$.trackLength * params.$.trackScale;
   const progress =
-    car.progress + (speed * std.max(0, forward) * params.$.dt * aliveMask) / lapLength;
+    car.progress + (speed * std.max(0, forward) * params.$.dt * d.f32(alive)) / lapLength;
 
   simLayout.$.state[i] = CarState({
     position: std.select(car.position, position, onTrack),
@@ -202,6 +228,48 @@ const simulatePipeline = root.createGuardedComputePipeline((i) => {
     aliveSteps: car.aliveSteps + std.select(d.u32(0), d.u32(1), wasAlive),
     stallSteps,
   });
+});
+
+// upper 16 bits = quantized fitness [0,65535], lower 16 bits = car index
+const reductionPackedBuffer = root.createBuffer(d.atomic(d.u32), 0).$usage('storage');
+const championGenomeBuffer = root.createBuffer(Genome).$usage('storage');
+const bestFitnessBuffer = root.createBuffer(d.f32).$usage('storage');
+
+const reductionLayout = tgpu.bindGroupLayout({
+  fitness: { storage: FitnessArray },
+  genome: { storage: GenomeArray },
+  packed: { storage: d.atomic(d.u32), access: 'mutable' },
+  championGenome: { storage: Genome, access: 'mutable' },
+  bestFitness: { storage: d.f32, access: 'mutable' },
+});
+
+const reductionBindGroups = [0, 1].map((i) =>
+  root.createBindGroup(reductionLayout, {
+    fitness: ga.fitnessBuffer,
+    genome: ga.genomeBuffers[i],
+    packed: reductionPackedBuffer,
+    championGenome: championGenomeBuffer,
+    bestFitness: bestFitnessBuffer,
+  }),
+);
+
+const reductionPipeline = root.createGuardedComputePipeline((i) => {
+  'use gpu';
+  if (d.u32(i) >= params.$.population) {
+    return;
+  }
+  const fitness = reductionLayout.$.fitness[i];
+  const quantized = d.u32(std.clamp(fitness / 64, 0, 1) * 65535);
+  const packed = (quantized << 16) | (d.u32(i) & 0xffff);
+  std.atomicMax(reductionLayout.$.packed, packed);
+});
+
+const finalizeReductionPipeline = root.createGuardedComputePipeline((_x) => {
+  'use gpu';
+  const packed = std.atomicLoad(reductionLayout.$.packed);
+  const bestIdx = packed & 0xffff;
+  reductionLayout.$.championGenome = Genome(reductionLayout.$.genome[bestIdx]);
+  reductionLayout.$.bestFitness = (d.f32(packed >> 16) / 65535) * 64;
 });
 
 const colors = {
@@ -225,6 +293,12 @@ const trackFragment = tgpu.fragmentFn({
   const painted = color + colors.paint.$ * edge * mask;
 
   return d.vec4f(painted, 1);
+});
+
+const trackPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: trackFragment,
+  targets: { format: presentationFormat },
 });
 
 const carQuad = tgpu.const(d.arrayOf(d.vec4f, 4), [
@@ -268,12 +342,6 @@ const carFragment = tgpu.fragmentFn({
   return d.vec4f(rgb * a, a);
 });
 
-const trackPipeline = root.createRenderPipeline({
-  vertex: common.fullScreenTriangle,
-  fragment: trackFragment,
-  targets: { format: presentationFormat },
-});
-
 const instanceLayout = tgpu.vertexLayout(CarStateLayout, 'instance');
 
 const carPipeline = root.createRenderPipeline({
@@ -296,14 +364,94 @@ const carPipeline = root.createRenderPipeline({
 });
 
 let steps = 0;
-let stepsPerFrame = 4;
-let stepsPerGeneration = STEPS_PER_GENERATION;
+let stepsPerFrame = 1;
+let stepsPerGeneration = 2048;
 let paused = false;
 let lastAspect = 1;
 let population = DEFAULT_POP;
 let rafHandle = 0;
+let pendingEvolve = false;
+let showBestOnly = false;
+let hasChampion = false;
+let displayedBestFitness = 0;
 
 const statsDiv = document.querySelector('.stats') as HTMLDivElement;
+
+function updateAspect() {
+  if (!canvas.width || !canvas.height) {
+    return;
+  }
+  const nextAspect = canvas.width / canvas.height;
+  if (Math.abs(nextAspect - lastAspect) < 0.001) {
+    return;
+  }
+  lastAspect = nextAspect;
+  params.writePartial({ aspect: nextAspect });
+}
+
+function updatePopulation(nextPopulation: number) {
+  const clamped = Math.max(128, Math.min(MAX_POP, Math.floor(nextPopulation)));
+  if (clamped === population) {
+    return;
+  }
+  population = clamped;
+  params.writePartial({ population: clamped });
+  ga.reinitCurrent(population);
+}
+
+function frame() {
+  updateAspect();
+
+  if (!paused) {
+    if (pendingEvolve) {
+      ga.evolve(population);
+      if (hasChampion) {
+        const src = root.unwrap(championGenomeBuffer);
+        const encoder = root.device.createCommandEncoder();
+        encoder.copyBufferToBuffer(src, 0, root.unwrap(ga.genomeBuffers[ga.current]), 0, src.size);
+        root.device.queue.submit([encoder.finish()]);
+      }
+      steps = 0;
+      params.writePartial({ generation: ga.generation });
+      pendingEvolve = false;
+    }
+
+    const stepsToRun = Math.min(stepsPerFrame, stepsPerGeneration - steps);
+    for (let i = 0; i < stepsToRun; i++) {
+      simulatePipeline.with(simBindGroups[ga.current]).dispatchThreads(population);
+    }
+    steps += stepsToRun;
+
+    if (steps >= stepsPerGeneration) {
+      pendingEvolve = true;
+      ga.precomputeFitness(population);
+      reductionPackedBuffer.clear();
+      const bg = reductionBindGroups[ga.current];
+      reductionPipeline.with(bg).dispatchThreads(population);
+      finalizeReductionPipeline.with(bg).dispatchThreads(1);
+      hasChampion = true;
+      void bestFitnessBuffer.read().then((fitness) => {
+        displayedBestFitness = fitness;
+      });
+    }
+  }
+
+  const genStr = String(ga.generation).padStart(5);
+  const stepStr = String(Math.min(steps, stepsPerGeneration)).padStart(
+    String(stepsPerGeneration).length,
+  );
+  const bestStr = displayedBestFitness.toFixed(2).padStart(6);
+  statsDiv.textContent = `Gen ${genStr}  Step ${stepStr}/${stepsPerGeneration}  Pop ${population}  Best ${bestStr}`;
+
+  trackPipeline.withColorAttachment({ view: context, clearValue: [0.04, 0.05, 0.07, 1] }).draw(3);
+
+  carPipeline
+    .withColorAttachment({ view: context, loadOp: 'load', storeOp: 'store' })
+    .with(instanceLayout, ga.currentStateBuffer)
+    .draw(4, showBestOnly && hasChampion ? 1 : population);
+
+  rafHandle = requestAnimationFrame(frame);
+}
 
 function applyTrack(result: TrackResult) {
   trackTexture.write(
@@ -317,59 +465,13 @@ function applyTrack(result: TrackResult) {
   });
 }
 
-function updateAspect() {
-  if (!canvas.width || !canvas.height) return;
-  const nextAspect = canvas.width / canvas.height;
-  if (Math.abs(nextAspect - lastAspect) < 0.001) return;
-  lastAspect = nextAspect;
-  params.writePartial({ aspect: nextAspect });
-}
-
-function updatePopulation(nextPopulation: number) {
-  const clamped = Math.max(128, Math.min(MAX_POP, Math.floor(nextPopulation)));
-  if (clamped === population) return;
-  population = clamped;
-  params.writePartial({ population: clamped });
-  ga.reinitCurrent(population);
-}
-
-function frame() {
-  updateAspect();
-
-  if (!paused) {
-    for (let i = 0; i < stepsPerFrame; i++) {
-      simulatePipeline.with(simBindGroups[ga.current]).dispatchThreads(population);
-    }
-    steps += stepsPerFrame;
-
-    if (steps >= stepsPerGeneration) {
-      ga.evolve(population);
-      steps = 0;
-      params.writePartial({ generation: ga.generation });
-    }
-  }
-
-  statsDiv.textContent = `Gen ${ga.generation}  Step ${Math.min(steps, stepsPerGeneration)}/${stepsPerGeneration}  Pop ${population}`;
-
-  trackPipeline.withColorAttachment({ view: context, clearValue: [0.04, 0.05, 0.07, 1] }).draw(3);
-
-  carPipeline
-    .withColorAttachment({ view: context, loadOp: 'load', storeOp: 'store' })
-    .with(instanceLayout, ga.currentStateBuffer)
-    .draw(4, population);
-
-  rafHandle = requestAnimationFrame(frame);
-}
-
-function startSimulation() {
-  steps = 0;
-  params.writePartial({ generation: 0 });
-  ga.init();
-
-  updateAspect();
-  updatePopulation(population);
-  cancelAnimationFrame(rafHandle);
-  rafHandle = requestAnimationFrame(frame);
+function applyGridSize(W: number, H: number) {
+  const scale = 5 / Math.max(W, H);
+  params.writePartial(
+    Object.fromEntries(
+      Object.entries(BASE_SPATIAL_PARAMS).map(([k, v]) => [k, v * scale]),
+    ) as typeof BASE_SPATIAL_PARAMS,
+  );
 }
 
 const GRID_SIZES: Record<string, [number, number]> = {
@@ -382,13 +484,18 @@ const GRID_SIZES: Record<string, [number, number]> = {
 let trackSeed = (Math.random() * 100_000) | 0;
 let gridSizeKey = 'S';
 
-function applyGridSize(W: number, H: number) {
-  const scale = 5 / Math.max(W, H);
-  params.writePartial(
-    Object.fromEntries(
-      Object.entries(BASE_SPATIAL_PARAMS).map(([k, v]) => [k, v * scale]),
-    ) as typeof BASE_SPATIAL_PARAMS,
-  );
+function startSimulation() {
+  steps = 0;
+  pendingEvolve = false;
+  hasChampion = false;
+  displayedBestFitness = 0;
+  params.writePartial({ generation: 0 });
+  ga.init();
+
+  updateAspect();
+  updatePopulation(population);
+  cancelAnimationFrame(rafHandle);
+  rafHandle = requestAnimationFrame(frame);
 }
 
 function newTrack() {
@@ -419,6 +526,12 @@ export const controls = defineControls({
     initial: false,
     onToggleChange: (value: boolean) => {
       paused = value;
+    },
+  },
+  'Best car only': {
+    initial: false,
+    onToggleChange: (value: boolean) => {
+      showBestOnly = value;
     },
   },
   'Steps per frame': {
