@@ -50,7 +50,11 @@ export class ResultsTable {
     }
     output += ' |\n';
 
-    for (const [test, row] of this.#results.entries()) {
+    const sortedResults = [...this.#results.entries()].toSorted(
+      ([, a], [, b]) => this.#maxAbsoluteChange(b) - this.#maxAbsoluteChange(a),
+    );
+
+    for (const [test, row] of sortedResults) {
       output += `| ${test.replaceAll('_', ' ')}`;
 
       for (const bundler of this.#bundlers) {
@@ -76,6 +80,16 @@ ${output}
     }
 
     return output;
+  }
+
+  #maxAbsoluteChange(row: Row): number {
+    let max = 0;
+    for (const { pr, target } of row.values()) {
+      if (pr !== undefined && target !== undefined && target !== 0) {
+        max = Math.max(max, Math.abs((pr - target) / target));
+      }
+    }
+    return max;
   }
 
   #isInteresting(row: Row) {
