@@ -74,6 +74,13 @@ export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> e
   with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs>;
 
   /**
+   * Returns a pipeline wrapper that encodes dispatches into the provided
+   * command encoder instead of submitting them immediately.
+   * Analogous to `TgpuComputePipeline.with(encoder)`.
+   */
+  with(encoder: GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs>;
+
+  /**
    * Dispatches the pipeline.
    * Unlike `TgpuComputePipeline.dispatchWorkgroups()`, this method takes in the
    * number of threads to run in each dimension.
