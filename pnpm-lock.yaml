@@ -727,7 +727,7 @@ importers:
         specifier: workspace:~0.3.0
         version: link:../tinyest
       tinyest-for-wgsl:
-        specifier: workspace:~0.3.1
+        specifier: workspace:~0.3.2
         version: link:../tinyest-for-wgsl
       typegpu:
         specifier: workspace:^0.10.2

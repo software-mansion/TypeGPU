@@ -1,6 +1,6 @@
 {
   "name": "tinyest-for-wgsl",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "description": "Transforms JavaScript into its 'tinyest' form, to be used in generating equivalent (or close to) WGSL code.",
   "keywords": [
@@ -33,9 +33,7 @@
       "./package.json": "./package.json",
       ".": {
         "types": "./dist/index.d.ts",
-        "module": "./dist/index.js",
-        "import": "./dist/index.js",
-        "default": "./dist/index.cjs"
+        "default": "./dist/index.js"
       }
     },
     "linkDirectory": false,
