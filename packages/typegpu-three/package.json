@@ -1,6 +1,6 @@
 {
   "name": "@typegpu/three",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Utilities for integrating TypeGPU with Three.js",
   "keywords": [],
   "license": "MIT",
@@ -41,6 +41,6 @@
   },
   "peerDependencies": {
     "three": ">0.126.0",
-    "typegpu": "^0.10.1"
+    "typegpu": "^0.10.2"
   }
 }

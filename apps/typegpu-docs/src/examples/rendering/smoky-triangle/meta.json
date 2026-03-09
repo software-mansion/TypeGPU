@@ -1,5 +1,6 @@
 {
   "title": "Smoky Triangle",
   "category": "rendering",
-  "tags": ["noise"]
+  "tags": ["ecosystem", "noise", "primitives"],
+  "coolFactor": 8
 }

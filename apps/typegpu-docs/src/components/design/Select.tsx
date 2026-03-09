@@ -11,14 +11,14 @@ export function Select({
 }) {
   return (
     <RadixSelect.Root value={value} onValueChange={onChange}>
-      <RadixSelect.Trigger className="flex h-10 w-full items-center justify-between rounded border border-tameplum-100 bg-tameplum-50 px-3 text-sm hover:border-tameplum-600">
+      <RadixSelect.Trigger className="flex h-10 w-full items-center justify-between rounded-full border border-tameplum-100 bg-tameplum-50 px-3 text-sm hover:border-tameplum-600">
         <RadixSelect.Value>{value}</RadixSelect.Value>
         <RadixSelect.Icon />
       </RadixSelect.Trigger>
 
       <RadixSelect.Portal>
         <RadixSelect.Content position="popper" className="-top-4 relative min-w-30">
-          <RadixSelect.Viewport className="max-h-[50vh] rounded bg-tameplum-50">
+          <RadixSelect.Viewport className="max-h-[50vh] rounded-xl bg-tameplum-50">
             {options.map((option) => (
               <RadixSelect.Item
                 key={option}

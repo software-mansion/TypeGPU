@@ -1,5 +1,6 @@
 {
   "title": "Function Visualizer",
   "category": "rendering",
-  "tags": ["compute"]
+  "tags": ["interaction", "line-rendering", "math"],
+  "coolFactor": 6
 }
