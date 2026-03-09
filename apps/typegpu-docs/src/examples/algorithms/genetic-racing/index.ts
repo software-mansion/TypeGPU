@@ -283,8 +283,7 @@ const trackFragment = tgpu.fragmentFn({
   out: d.vec4f,
 })(({ uv }) => {
   'use gpu';
-  const ndc = d.vec2f(uv.x * 2 - 1, 1 - uv.y * 2);
-  const p = d.vec2f(ndc.x * params.$.aspect, ndc.y);
+  const p = d.vec2f((uv.x * 2 - 1) * params.$.aspect, 1 - uv.y * 2);
   const sample = sampleTrack(p, linearSampler.$);
 
   const mask = sample.z;
@@ -437,9 +436,7 @@ function frame() {
   }
 
   const genStr = String(ga.generation).padStart(5);
-  const stepStr = String(Math.min(steps, stepsPerGeneration)).padStart(
-    String(stepsPerGeneration).length,
-  );
+  const stepStr = String(steps).padStart(String(stepsPerGeneration).length);
   const bestStr = displayedBestFitness.toFixed(2).padStart(6);
   statsDiv.textContent = `Gen ${genStr}  Step ${stepStr}/${stepsPerGeneration}  Pop ${population}  Best ${bestStr}`;
 
