@@ -60,6 +60,7 @@ export const SimParams = d.struct({
   spawnX: d.f32,
   spawnY: d.f32,
   spawnAngle: d.f32,
+  stepsPerDispatch: d.u32,
 });
 
 export const CarStateArray = d.arrayOf(CarState, MAX_POP);
