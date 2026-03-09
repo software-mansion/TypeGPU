@@ -4,7 +4,7 @@ import { CHUNK_SIZE, CHUNK_SIZE_BITS } from './params.ts';
 import { blockTypes } from './blockTypes.ts';
 import { VoxelInstance, type Chunk } from './schemas.ts';
 
-const coordToIndex = tgpu.fn([d.vec3i], d.i32)`(coord) => {
+export const coordToIndex = tgpu.fn([d.vec3i], d.i32)`(coord) => {
   return (coord.z << (CHUNK_SIZE_BITS * 2)) |
       (coord.y << CHUNK_SIZE_BITS) |
       coord.x;
