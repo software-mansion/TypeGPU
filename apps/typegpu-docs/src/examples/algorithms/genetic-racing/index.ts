@@ -23,6 +23,8 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
+const STEPS_PER_DISPATCH = 32;
+
 const BASE_SPATIAL_PARAMS = {
   maxSpeed: 1.6,
   accel: 0.2,
@@ -44,6 +46,7 @@ const params = root.createUniform(SimParams, {
   spawnX: 0,
   spawnY: 0,
   spawnAngle: 0,
+  stepsPerDispatch: STEPS_PER_DISPATCH,
   ...BASE_SPATIAL_PARAMS,
 });
 
@@ -157,76 +160,98 @@ const simulatePipeline = root.createGuardedComputePipeline((i) => {
   if (d.u32(i) >= params.$.population) {
     return;
   }
-  const car = CarState(simLayout.$.state[i]);
+
   const genome = Genome(simLayout.$.genome[i]);
-  const wasAlive = car.alive === 1;
+  const initCar = CarState(simLayout.$.state[i]);
 
-  const carForward = d.vec2f(std.cos(car.angle), std.sin(car.angle));
-  const aheadPos = car.position + carForward * params.$.sensorDistance;
+  let curPosition = d.vec2f(initCar.position);
+  let curAngle = initCar.angle;
+  let curSpeed = initCar.speed;
+  let curAlive = initCar.alive;
+  let curProgress = initCar.progress;
+  let curAngVel = initCar.angVel;
+  let curAliveSteps = initCar.aliveSteps;
+  let curStallSteps = initCar.stallSteps;
 
-  const inputs4 = d.vec4f(
-    senseRaycast(car.position, car.angle, DEG_60),
-    senseRaycast(car.position, car.angle, DEG_30),
-    senseRaycast(car.position, car.angle, 0),
-    senseRaycast(car.position, car.angle, -DEG_30),
-  );
-  const inputsB = d.vec4f(
-    senseRaycast(car.position, car.angle, -DEG_60),
-    car.speed / params.$.maxSpeed,
-    std.dot(carForward, sampleTrack(car.position, nearestSampler.$).xy),
-    trackCross(carForward, aheadPos),
-  );
-  const inputsC = d.vec4f(
-    car.angVel / params.$.turnRate,
-    senseRaycast(car.position, car.angle, DEG_90),
-    senseRaycast(car.position, car.angle, -DEG_90),
-    trackCross(carForward, car.position + carForward * params.$.sensorDistance * 2),
-  );
+  for (let s = d.u32(0); s < params.$.stepsPerDispatch; s++) {
+    if (curAlive === 0) {
+      break;
+    }
 
-  const control = evalNetwork(genome, inputs4, inputsB, inputsC);
-  const steer = control.x;
-  const throttle = control.y;
+    const carForward = d.vec2f(std.cos(curAngle), std.sin(curAngle));
+    const aheadPos = curPosition + carForward * params.$.sensorDistance;
 
-  let speed = car.speed + throttle * params.$.accel * params.$.dt;
-  speed = speed * (1 - params.$.drag * speed * params.$.dt);
-  speed = std.clamp(speed, 0, params.$.maxSpeed);
+    const inputs4 = d.vec4f(
+      senseRaycast(curPosition, curAngle, DEG_60),
+      senseRaycast(curPosition, curAngle, DEG_30),
+      senseRaycast(curPosition, curAngle, 0),
+      senseRaycast(curPosition, curAngle, -DEG_30),
+    );
+    const inputsB = d.vec4f(
+      senseRaycast(curPosition, curAngle, -DEG_60),
+      curSpeed / params.$.maxSpeed,
+      std.dot(carForward, sampleTrack(curPosition, nearestSampler.$).xy),
+      trackCross(carForward, aheadPos),
+    );
+    const inputsC = d.vec4f(
+      curAngVel / params.$.turnRate,
+      senseRaycast(curPosition, curAngle, DEG_90),
+      senseRaycast(curPosition, curAngle, -DEG_90),
+      trackCross(carForward, curPosition + carForward * params.$.sensorDistance * 2),
+    );
 
-  const slowThreshold = params.$.maxSpeed * 0.04;
-  const canTurn = speed > slowThreshold;
-  const normSpeed = speed / params.$.maxSpeed;
-  const turnFactor = (1 - normSpeed) * (1 - normSpeed);
-  const targetAngVel = std.select(0, steer * params.$.turnRate * turnFactor, canTurn);
-  const angVel = car.angVel * 0.75 + targetAngVel * 0.25;
-  const angle = car.angle + angVel * params.$.dt;
+    const control = evalNetwork(genome, inputs4, inputsB, inputsC);
+    const steer = control.x;
+    const throttle = control.y;
 
-  const dir = d.vec2f(std.cos(angle), std.sin(angle));
-  const position = car.position + dir * speed * params.$.dt;
-  const step = position - car.position;
+    let speed = curSpeed + throttle * params.$.accel * params.$.dt;
+    speed = speed * (1 - params.$.drag * speed * params.$.dt);
+    speed = std.clamp(speed, 0, params.$.maxSpeed);
 
-  const stallSteps = std.select(d.u32(0), car.stallSteps + 1, speed < slowThreshold);
-  const trackEnd = sampleTrack(position, nearestSampler.$);
-  const onTrack =
-    wasAlive &&
-    stallSteps < 120 &&
-    trackEnd.z > 0.5 &&
-    isOnTrack(car.position + step * 0.33) &&
-    isOnTrack(car.position + step * 0.66);
+    const slowThreshold = params.$.maxSpeed * 0.04;
+    const canTurn = speed > slowThreshold;
+    const normSpeed = speed / params.$.maxSpeed;
+    const turnFactor = (1 - normSpeed) * (1 - normSpeed);
+    const targetAngVel = std.select(0, steer * params.$.turnRate * turnFactor, canTurn);
+    const angVel = curAngVel * 0.75 + targetAngVel * 0.25;
+    const angle = curAngle + angVel * params.$.dt;
 
-  const alive = std.select(d.u32(0), d.u32(1), onTrack);
-  const forward = std.dot(dir, trackEnd.xy);
-  const lapLength = params.$.trackLength * params.$.trackScale;
-  const progress =
-    car.progress + (speed * std.max(0, forward) * params.$.dt * d.f32(alive)) / lapLength;
+    const dir = d.vec2f(std.cos(angle), std.sin(angle));
+    const position = curPosition + dir * speed * params.$.dt;
+    const stepVec = position - curPosition;
+
+    const stallSteps = std.select(d.u32(0), curStallSteps + 1, speed < slowThreshold);
+    const trackEnd = sampleTrack(position, nearestSampler.$);
+    const onTrack =
+      stallSteps < 120 &&
+      trackEnd.z > 0.5 &&
+      isOnTrack(curPosition + stepVec * 0.33) &&
+      isOnTrack(curPosition + stepVec * 0.66);
+
+    const alive = std.select(d.u32(0), d.u32(1), onTrack);
+    const forward = std.dot(dir, trackEnd.xy);
+    const lapLength = params.$.trackLength * params.$.trackScale;
+
+    curPosition = std.select(curPosition, position, onTrack);
+    curAngle = std.select(curAngle, angle, onTrack);
+    curSpeed = std.select(0, speed, onTrack);
+    curAlive = alive;
+    curProgress =
+      curProgress + (speed * std.max(0, forward) * params.$.dt * d.f32(alive)) / lapLength;
+    curAngVel = std.select(0, angVel, onTrack);
+    curAliveSteps = curAliveSteps + 1;
+    curStallSteps = stallSteps;
+  }
 
   simLayout.$.state[i] = CarState({
-    position: std.select(car.position, position, onTrack),
-    angle: std.select(car.angle, angle, onTrack),
-    speed: std.select(0, speed, onTrack),
-    alive,
-    progress,
-    angVel: std.select(0, angVel, onTrack),
-    aliveSteps: car.aliveSteps + std.select(d.u32(0), d.u32(1), wasAlive),
-    stallSteps,
+    position: curPosition,
+    angle: curAngle,
+    speed: curSpeed,
+    alive: curAlive,
+    progress: curProgress,
+    angVel: curAngVel,
+    aliveSteps: curAliveSteps,
+    stallSteps: curStallSteps,
   });
 });
 
@@ -363,7 +388,7 @@ const carPipeline = root.createRenderPipeline({
 });
 
 let steps = 0;
-let stepsPerFrame = 1;
+let stepsPerFrame = STEPS_PER_DISPATCH;
 let stepsPerGeneration = 2048;
 let paused = false;
 let lastAspect = 1;
@@ -416,18 +441,29 @@ function frame() {
     }
 
     const stepsToRun = Math.min(stepsPerFrame, stepsPerGeneration - steps);
-    for (let i = 0; i < stepsToRun; i++) {
-      simulatePipeline.with(simBindGroups[ga.current]).dispatchThreads(population);
+    const innerSteps = Math.min(stepsToRun, STEPS_PER_DISPATCH);
+    params.writePartial({ stepsPerDispatch: innerSteps });
+    const dispatchCount = Math.ceil(stepsToRun / innerSteps);
+
+    const simEncoder = root.device.createCommandEncoder();
+    for (let dispatch = 0; dispatch < dispatchCount; dispatch++) {
+      simulatePipeline.with(simBindGroups[ga.current]).with(simEncoder).dispatchThreads(population);
     }
-    steps += stepsToRun;
+    root.device.queue.submit([simEncoder.finish()]);
+
+    steps += dispatchCount * innerSteps;
 
     if (steps >= stepsPerGeneration) {
       pendingEvolve = true;
       ga.precomputeFitness(population);
-      reductionPackedBuffer.clear();
       const bg = reductionBindGroups[ga.current];
-      reductionPipeline.with(bg).dispatchThreads(population);
-      finalizeReductionPipeline.with(bg).dispatchThreads(1);
+
+      const reductionEncoder = root.device.createCommandEncoder();
+      reductionEncoder.clearBuffer(root.unwrap(reductionPackedBuffer));
+      reductionPipeline.with(bg).with(reductionEncoder).dispatchThreads(population);
+      finalizeReductionPipeline.with(bg).with(reductionEncoder).dispatchThreads(1);
+      root.device.queue.submit([reductionEncoder.finish()]);
+
       hasChampion = true;
       void bestFitnessBuffer.read().then((fitness) => {
         displayedBestFitness = fitness;
@@ -534,7 +570,7 @@ export const controls = defineControls({
   'Steps per frame': {
     initial: stepsPerFrame,
     min: 1,
-    max: 1024,
+    max: 8192,
     step: 1,
     onSliderChange: (value: number) => {
       stepsPerFrame = value;
