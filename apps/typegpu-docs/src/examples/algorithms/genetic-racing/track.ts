@@ -67,7 +67,7 @@ function catmullRomResample(points: Pt[], numSamples: number): Pt[] {
     const t = tTotal * n - seg;
 
     const i0 = (seg - 1 + n) % n;
-    const i1 = seg % n;
+    const i1 = seg;
     const i2 = (seg + 1) % n;
     const i3 = (seg + 2) % n;
 
@@ -114,19 +114,17 @@ function buildTrackTexture(
     return {
       ax: cell.x,
       ay: cell.y,
-      bx: next.x,
-      by: next.y,
+      ux: dx,
+      uy: dy,
       dx: dx / len,
       dy: dy / len,
       len,
       len2: dx * dx + dy * dy,
-      cum: 0,
     };
   });
 
   let totalLen = 0;
   for (const segment of segments) {
-    segment.cum = totalLen;
     totalLen += segment.len;
   }
 
@@ -142,15 +140,9 @@ function buildTrackTexture(
       for (const segment of segments) {
         const px = tx - segment.ax;
         const py = ty - segment.ay;
-        const t = Math.max(
-          0,
-          Math.min(
-            1,
-            (px * (segment.bx - segment.ax) + py * (segment.by - segment.ay)) / segment.len2,
-          ),
-        );
-        const cx = segment.ax + (segment.bx - segment.ax) * t;
-        const cy = segment.ay + (segment.by - segment.ay) * t;
+        const t = Math.max(0, Math.min(1, (px * segment.ux + py * segment.uy) / segment.len2));
+        const cx = segment.ax + segment.ux * t;
+        const cy = segment.ay + segment.uy * t;
         const dx = tx - cx;
         const dy = ty - cy;
         const dist = dx * dx + dy * dy;
