@@ -24,6 +24,10 @@ function isDeclared(ctx: Context, name: string) {
   return ctx.stack.some((scope) => scope.declaredNames.includes(name));
 }
 
+const tsFallthrough = (ctx: Context, node: { expression: babel.Expression }): tinyest.AnyNode => {
+  return transpile(ctx, node.expression);
+};
+
 const Transpilers: Partial<{
   [Type in JsNode['type']]: (
     ctx: Context,
@@ -292,13 +296,9 @@ const Transpilers: Partial<{
     return [NODE.break];
   },
 
-  TSAsExpression(ctx, node) {
-    return transpile(ctx, node.expression);
-  },
-
-  TSSatisfiesExpression(ctx, node) {
-    return transpile(ctx, node.expression);
-  },
+  TSAsExpression: tsFallthrough,
+  TSSatisfiesExpression: tsFallthrough,
+  TSNonNullExpression: tsFallthrough,
 };
 
 function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {

@@ -1,5 +1,6 @@
 {
   "title": "XorDev \"Centrifuge 2\"",
   "category": "rendering",
-  "tags": ["fragment shader"]
+  "tags": ["math"],
+  "coolFactor": 7
 }

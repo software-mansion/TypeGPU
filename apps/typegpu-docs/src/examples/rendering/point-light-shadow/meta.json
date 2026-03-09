@@ -1,5 +1,6 @@
 {
   "title": "Point Light Shadow",
   "category": "rendering",
-  "tags": ["3d"]
+  "tags": ["3d", "lighting", "rasterization", "shadows"],
+  "coolFactor": 7
 }

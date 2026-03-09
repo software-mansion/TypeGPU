@@ -4,7 +4,7 @@ import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation, type UndecorateRecord } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
-import { type ResolvedSnippet, snip, type Snippet } from '../../data/snippet.ts';
+import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type {
   WgslTexture,
   WgslTextureDepth2d,
@@ -951,14 +951,16 @@ class RenderPipelineCore implements SelfResolvable {
   readonly [$internal] = true;
   private _memo: Memo | undefined;
 
-  #latestFragmentOut: BaseData | undefined;
+  #latestAutoVertexIn: TgpuVertexFn.In | undefined;
+  #latestAutoFragmentOut: BaseData | undefined;
 
   constructor(public readonly options: RenderPipelineCoreOptions) {}
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const { slotBindings } = this.options;
     const { vertex, fragment, attribs = {} } = this.options.descriptor;
-    this.#latestFragmentOut = undefined;
+    this.#latestAutoVertexIn = undefined;
+    this.#latestAutoFragmentOut = undefined;
 
     const locations = matchUpVaryingLocations(
       (vertex as TgpuVertexFn | undefined)?.shell?.out,
@@ -977,24 +979,24 @@ class RenderPipelineCore implements SelfResolvable {
               formatToWGSLType[value.format],
             ]),
           );
-          vertexOut = ctx.resolve(new AutoVertexFn(vertex, defaultAttribData, locations))
-            .dataType as WgslStruct;
+          const autoFn = new AutoVertexFn(vertex, defaultAttribData, locations);
+          ctx.resolve(autoFn);
+          this.#latestAutoVertexIn = autoFn.autoIn.completeStruct.propTypes;
+          vertexOut = autoFn.autoOut.completeStruct;
         } else {
           vertexOut = ctx.resolve(vertex).dataType as WgslStruct;
         }
 
         if (fragment) {
-          let fragOut: Snippet;
           if (typeof fragment === 'function') {
             const varyings = Object.fromEntries(
               Object.entries(vertexOut.propTypes).filter(([, dataType]) => !isBuiltin(dataType)),
             );
-            fragOut = ctx.resolve(new AutoFragmentFn(fragment, varyings, locations));
+            const fragOut = ctx.resolve(new AutoFragmentFn(fragment, varyings, locations));
+            this.#latestAutoFragmentOut = fragOut.dataType;
           } else {
-            fragOut = ctx.resolve(fragment);
+            ctx.resolve(fragment);
           }
-
-          this.#latestFragmentOut = fragOut.dataType as BaseData;
         }
         return snip('', Void, /* origin */ 'runtime');
       }),
@@ -1056,11 +1058,16 @@ class RenderPipelineCore implements SelfResolvable {
 
     const { vertex, fragment, attribs = {}, targets } = this.options.descriptor;
     const connectedAttribs = connectAttributesToShader(
-      (vertex as TgpuVertexFn | undefined)?.shell?.in ?? {},
+      (vertex as TgpuVertexFn)?.shell?.in ?? this.#latestAutoVertexIn ?? {},
       attribs,
     );
 
-    const fragmentOut = (fragment as TgpuFragmentFn)?.shell?.returnType ?? this.#latestFragmentOut;
+    // If the fragment output is a single builtin, then this.#latestAutoFragmentOut doesn't
+    // retain that information, that's why we use that here and fallback to this.#latestAutoFragmentOut.
+    // One other reason is that if the shelled fragment has already been resolved in this namespace,
+    // then this.#latestAutoFragmentOut will be undefined.
+    const fragmentOut =
+      (fragment as TgpuFragmentFn)?.shell?.returnType ?? this.#latestAutoFragmentOut;
     const connectedTargets = fragmentOut ? connectTargetsToShader(fragmentOut, targets) : [null];
 
     const descriptor: GPURenderPipelineDescriptor = {
@@ -1114,7 +1121,7 @@ class RenderPipelineCore implements SelfResolvable {
       catchall,
       logResources,
       usedVertexLayouts: connectedAttribs.usedVertexLayouts,
-      fragmentOut: this.#latestFragmentOut as BaseData,
+      fragmentOut: this.#latestAutoFragmentOut as BaseData,
     };
 
     if (PERF?.enabled) {

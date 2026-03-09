@@ -1,6 +1,7 @@
 {
   "title": "Global Wind Map",
   "category": "simulation",
-  "tags": ["wind", "particles", "line-rendering"],
-  "dev": true
+  "tags": ["ecosystem", "line-rendering", "particles", "vector field"],
+  "dev": true,
+  "coolFactor": 7
 }
