@@ -21,11 +21,11 @@
   "scripts": {
     "dev": "DEV=true pnpm --parallel -r dev",
     "dev:host": "DEV=true pnpm --parallel -r dev --host --mode https",
-    "fix": "oxlint --fix && oxfmt",
+    "fix": "oxlint -c oxlint.config.ts --fix && oxfmt",
     "test": "pnpm run test:types && pnpm run test:style && pnpm run test:unit-and-attest && pnpm run test:circular-deps",
     "test:circular-deps": "pnpm dpdm -T --exit-code circular:1 packages/**/src/index.ts packages/**/src/index.js !packages/**/node_modules",
     "test:types": "pnpm run -r --parallel test:types",
-    "test:style": "oxlint --max-warnings=0 --type-aware --report-unused-disable-directives && oxfmt --check",
+    "test:style": "oxlint -c oxlint.config.ts --max-warnings=0 --type-aware --report-unused-disable-directives && oxfmt --check",
     "test:unit-and-attest": "vitest run --project=!browser",
     "test:unit": "ATTEST_skipTypes=1 vitest run --project=!browser",
     "test:unit:watch": "ATTEST_skipTypes=1 vitest --project=!browser",
