@@ -42,7 +42,7 @@ export class Renderer {
         return d.vec4f(color, 1);
       },
       depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
-      primitive: { cullMode: 'back' },
+      primitive: { cullMode: 'none' }, // for debugging meshes
     });
   }
 
