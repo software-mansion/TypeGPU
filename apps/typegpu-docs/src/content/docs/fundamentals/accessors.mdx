@@ -3,7 +3,7 @@ title: Accessors
 description: Accessors are schema-aware typed placeholders for GPU resources, allowing reusable GPU functions to reference buffers, variables, textures, and more without coupling to a specific resource.
 ---
 
-When writing reusable GPU functions in TypeGPU, you often need to reference "some global value" without coupling to a specific buffer, texture or variable. [Slots](/fundamentals/slots) seem like the right tool for the job, but they encode the delivery mechanism into the slot type (e.g. a buffer or texture), making it inflexible for reusable functions.
+When writing reusable GPU functions in TypeGPU, you often need to reference "some global value" without coupling to a specific buffer, texture or variable. [Slots](/TypeGPU/fundamentals/slots) seem like the right tool for the job, but they encode the delivery mechanism into the slot type (e.g. a buffer or texture), making it inflexible for reusable functions.
 
 ```ts twoslash
 import tgpu, { type TgpuUniform, d } from 'typegpu';
