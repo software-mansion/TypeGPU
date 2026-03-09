@@ -143,9 +143,7 @@ export class TgpuGuardedComputePipelineImpl<
 
   with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs>;
   with(encoder: GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs>;
-  with(
-    bindGroupOrEncoder: TgpuBindGroup | GPUCommandEncoder,
-  ): TgpuGuardedComputePipeline<TArgs> {
+  with(bindGroupOrEncoder: TgpuBindGroup | GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs> {
     return new TgpuGuardedComputePipelineImpl(
       this.#root,
       this.#pipeline.with(bindGroupOrEncoder as TgpuBindGroup & GPUCommandEncoder),
