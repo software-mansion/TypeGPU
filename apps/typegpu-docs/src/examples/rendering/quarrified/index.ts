@@ -21,16 +21,6 @@ await state.init();
 const mesher = new Mesher(root);
 mesher.recalculateMeshesFor(state.map.chunks);
 
-const cubeVertexBuffer = root
-  .createBuffer(d.disarrayOf(CubeVertex, 36), cubeVertices)
-  .$usage('vertex');
-
-const instanceData = state.getVoxelsData();
-
-const instanceBuffer = root
-  .createBuffer(d.disarrayOf(VoxelInstance, instanceData.length), instanceData)
-  .$usage('vertex');
-
 const cameraUniform = root.createUniform(Camera);
 const { cleanupCamera, updatePosition } = setupFirstPersonCamera(
   canvas,
@@ -52,24 +42,17 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
-// TODO: use shellless
 const pipeline = root.createRenderPipeline({
   attribs: { position: MeshLayout.attrib },
-  vertex: tgpu.vertexFn({
-    in: { position: d.vec4f },
-    out: { pos: d.builtin.position, worldPos: d.vec4f },
-  })((input) => {
+  vertex: (input) => {
     'use gpu';
     const worldPos = input.position;
     return {
-      pos: cameraUniform.$.projection * cameraUniform.$.view * worldPos,
+      $position: cameraUniform.$.projection * cameraUniform.$.view * worldPos,
       worldPos,
     };
-  }),
-  fragment: tgpu.fragmentFn({
-    in: { worldPos: d.vec4f },
-    out: d.vec4f,
-  })(({ worldPos }) => {
+  },
+  fragment: ({ worldPos }) => {
     'use gpu';
     const localPos = std.fract(worldPos.xyz);
     const nearEdge = std.min(localPos, 1 - localPos);
@@ -78,8 +61,7 @@ const pipeline = root.createRenderPipeline({
     const distFromEdge = std.min(highest, secondHighest);
     const color = std.select(d.vec3f(0.5), d.vec3f(0.3), distFromEdge < 0.05);
     return d.vec4f(color, 1);
-  }),
-  targets: { format: presentationFormat },
+  },
   depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
   primitive: { cullMode: 'back' },
 });
