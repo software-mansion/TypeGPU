@@ -141,10 +141,12 @@ export class TgpuGuardedComputePipelineImpl<
     this.#lastSize = vec3u();
   }
 
-  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs> {
+  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs>;
+  with(encoder: GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs>;
+  with(bindGroupOrEncoder: TgpuBindGroup | GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs> {
     return new TgpuGuardedComputePipelineImpl(
       this.#root,
-      this.#pipeline.with(bindGroup),
+      this.#pipeline.with(bindGroupOrEncoder as TgpuBindGroup & GPUCommandEncoder),
       this.#sizeUniform,
       this.#workgroupSize,
     );

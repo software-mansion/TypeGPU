@@ -1,5 +1,6 @@
 {
   "title": "Image Tuning",
   "category": "image-processing",
-  "tags": ["filtering"]
+  "tags": ["color", "filtering", "interaction"],
+  "coolFactor": 5
 }

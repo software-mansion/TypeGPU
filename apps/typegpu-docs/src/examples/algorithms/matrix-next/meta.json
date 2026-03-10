@@ -1,5 +1,6 @@
 {
   "title": "Matrix Multiplication (next)",
   "category": "algorithms",
-  "tags": ["compute", "timestamp query"]
+  "tags": ["linear algebra"],
+  "coolFactor": 5
 }

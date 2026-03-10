@@ -1,6 +1,7 @@
 {
   "title": "Lines Combinations",
   "category": "geometry",
-  "tags": ["experimental"],
-  "dev": true
+  "tags": ["ecosystem", "line-rendering"],
+  "dev": true,
+  "coolFactor": 6
 }
