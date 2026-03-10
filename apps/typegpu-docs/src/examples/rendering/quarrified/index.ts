@@ -14,7 +14,7 @@ const context = root.configureContext({ canvas });
 await RAPIER.init();
 const world = new RAPIER.World(new RAPIER.Vector3(0, -9.81, 0));
 const state = new State(INIT_CONFIG, world);
-await state.init();
+await state.init(root);
 
 const cameraUniform = root.createUniform(Camera);
 const { cleanupCamera, updatePosition } = setupFirstPersonCamera(
