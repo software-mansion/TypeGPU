@@ -9,6 +9,8 @@ export { discard } from './discard.ts';
 export {
   abs,
   acos,
+  bitShiftLeft,
+  bitShiftRight,
   acosh,
   asin,
   asinh,

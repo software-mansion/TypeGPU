@@ -29,6 +29,7 @@ import {
   type AnySignedVecInstance,
   type BaseData,
   isHalfPrecisionSchema,
+  isVec,
   isVecInstance,
   type v2f,
   type v2h,
@@ -978,6 +979,80 @@ export const reverseBits = dualImpl<typeof cpuReverseBits>({
   normalImpl:
     'CPU implementation for reverseBits not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (_ctx, [value]) => stitch`reverseBits(${value})`,
+});
+
+const bitShiftSignature = (lhs: BaseData, rhs: BaseData) => {
+  const lhsRestricted = unify([lhs], anyConcreteInteger)?.[0];
+  if (!lhsRestricted) {
+    throw new SignatureNotSupportedError([lhs, rhs], anyConcreteInteger);
+  }
+
+  // rhs is always u32-based; for vector lhs accept both scalar u32 and vecN<u32>
+  let rhsType: BaseData;
+  if (isVec(lhsRestricted)) {
+    const cc = lhsRestricted.componentCount;
+    const vecU = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;
+    const rhsUnified = unify([rhs], [u32, vecU])?.[0];
+    if (!rhsUnified) {
+      throw new SignatureNotSupportedError([lhs, rhs], [u32, vecU]);
+    }
+    rhsType = rhsUnified;
+  } else {
+    rhsType = u32;
+  }
+
+  return {
+    argTypes: [lhsRestricted, rhsType],
+    returnType: lhsRestricted,
+  };
+};
+
+function cpuBitShiftLeft(lhs: number, rhs: number): number;
+function cpuBitShiftLeft<T extends AnyIntegerVecInstance>(
+  lhs: T,
+  rhs: AnyIntegerVecInstance,
+): T;
+function cpuBitShiftLeft(
+  lhs: number | AnyIntegerVecInstance,
+  rhs: number | AnyIntegerVecInstance,
+) {
+  if (typeof lhs === 'number' && typeof rhs === 'number') {
+    return lhs << rhs;
+  }
+  throw new MissingCpuImplError(
+    'CPU implementation for bitShiftLeft on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
+export const bitShiftLeft = dualImpl({
+  name: 'bitShiftLeft',
+  signature: bitShiftSignature,
+  normalImpl: cpuBitShiftLeft,
+  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} << ${rhs})`,
+});
+
+function cpuBitShiftRight(lhs: number, rhs: number): number;
+function cpuBitShiftRight<T extends AnyIntegerVecInstance>(
+  lhs: T,
+  rhs: AnyIntegerVecInstance,
+): T;
+function cpuBitShiftRight(
+  lhs: number | AnyIntegerVecInstance,
+  rhs: number | AnyIntegerVecInstance,
+) {
+  if (typeof lhs === 'number' && typeof rhs === 'number') {
+    return lhs >> rhs;
+  }
+  throw new MissingCpuImplError(
+    'CPU implementation for bitShiftRight on vectors not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  );
+}
+
+export const bitShiftRight = dualImpl({
+  name: 'bitShiftRight',
+  signature: bitShiftSignature,
+  normalImpl: cpuBitShiftRight,
+  codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} >> ${rhs})`,
 });
 
 function cpuRound(value: number): number;
