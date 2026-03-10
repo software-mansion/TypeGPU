@@ -10,7 +10,6 @@ import { Renderer } from './renderer.ts';
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 await RAPIER.init();
 const world = new RAPIER.World(new RAPIER.Vector3(0, -9.81, 0));
@@ -35,7 +34,7 @@ function draw() {
   updatePosition();
 
   const mesherResources = mesher.getResources();
-  renderer.render(context, presentationFormat, mesherResources);
+  renderer.render(context, mesherResources);
 
   frameId = requestAnimationFrame(draw);
 }

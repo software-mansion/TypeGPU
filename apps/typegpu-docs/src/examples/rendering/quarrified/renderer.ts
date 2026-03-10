@@ -8,7 +8,7 @@ import {
   type TgpuUniform,
 } from 'typegpu';
 import { Camera, MeshLayout } from './schemas.ts';
-import { MAX_CHUNKS_AT_ONCE, type Mesher } from './mesher.ts';
+import { type Mesher } from './mesher.ts';
 
 export class Renderer {
   #root: TgpuRoot;
@@ -18,7 +18,6 @@ export class Renderer {
     format: 'depth24plus';
   }> &
     RenderFlag;
-  #renderBundle?: GPURenderBundle;
   constructor(root: TgpuRoot, cameraUniform: TgpuUniform<typeof Camera>) {
     this.#root = root;
     this.pipeline = root.createRenderPipeline({
@@ -46,11 +45,7 @@ export class Renderer {
     });
   }
 
-  render(
-    context: GPUCanvasContext,
-    presentationFormat: GPUTextureFormat,
-    mesherResources: ReturnType<Mesher['getResources']>,
-  ) {
+  render(context: GPUCanvasContext, mesherResources: ReturnType<Mesher['getResources']>) {
     const currentTexture = context.getCurrentTexture();
     if (
       !this.#depthTexture ||
@@ -63,20 +58,6 @@ export class Renderer {
           format: 'depth24plus',
         })
         .$usage('render');
-      this.#renderBundle = this.#root['~unstable'].beginRenderBundleEncoder(
-        {
-          colorFormats: [presentationFormat],
-          depthStencilFormat: 'depth24plus',
-        },
-        (pass) => {
-          pass.setPipeline(this.pipeline);
-          pass.setVertexBuffer(MeshLayout, mesherResources.vertexBuffer);
-
-          for (let i = 0; i < MAX_CHUNKS_AT_ONCE; i++) {
-            pass.drawIndirect(this.#root.unwrap(mesherResources.indirectBuffer), 16 * i);
-          }
-        },
-      );
     }
 
     const passDescriptor = {
@@ -96,8 +77,10 @@ export class Renderer {
       },
     } as const;
 
-    this.#root['~unstable'].beginRenderPass(passDescriptor, (pass) => {
-      pass.executeBundles([this.#renderBundle as GPURenderBundle]);
-    });
+    this.pipeline
+      .withColorAttachment(passDescriptor.colorAttachments[0])
+      .withDepthStencilAttachment(passDescriptor.depthStencilAttachment)
+      .with(MeshLayout, mesherResources.vertexBuffer)
+      .draw(mesherResources.vertexCount);
   }
 }

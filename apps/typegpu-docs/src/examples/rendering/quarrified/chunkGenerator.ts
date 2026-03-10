@@ -28,7 +28,7 @@ export async function generateChunk(chunkIndex: d.v3i): Promise<Chunk> {
     'use gpu';
     const arrayIndex = coordToIndex(d.vec3i(x, y, z));
     const sampleIndex = d.vec3f(x, y, z) + d.vec3f(chunkIndex) * CHUNK_SIZE;
-    const result = perlin3d.sample(sampleIndex * 0.2) ** 3 + chunkIndex.y / 64;
+    const result = perlin3d.sample(sampleIndex * 0.2) ** 3;
     if (result > 0) {
       blocksBuffer.$[arrayIndex] = blockTypes.air;
     } else {
