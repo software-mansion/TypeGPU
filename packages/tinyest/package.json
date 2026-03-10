@@ -24,16 +24,24 @@
     "exports": {
       "./package.json": "./package.json",
       ".": {
-        "types": "./dist/index.d.ts",
-        "module": "./dist/index.js",
-        "import": "./dist/index.js",
-        "default": "./dist/index.cjs"
+        "require": {
+          "types": "./dist/index.d.cts",
+          "default": "./dist/index.cjs"
+        },
+        "import": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        }
       },
       "./*": {
-        "types": "./dist/*.d.ts",
-        "module": "./dist/*.js",
-        "import": "./dist/*.js",
-        "default": "./dist/*.cjs"
+        "require": {
+          "types": "./dist/*.d.cts",
+          "default": "./dist/*.cjs"
+        },
+        "import": {
+          "types": "./dist/*.d.ts",
+          "default": "./dist/*.js"
+        }
       }
     },
     "linkDirectory": false,
