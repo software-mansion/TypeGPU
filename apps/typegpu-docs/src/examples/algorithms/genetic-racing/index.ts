@@ -441,17 +441,24 @@ function frame() {
     }
 
     const stepsToRun = Math.min(stepsPerFrame, stepsPerGeneration - steps);
-    const innerSteps = Math.min(stepsToRun, STEPS_PER_DISPATCH);
-    params.writePartial({ stepsPerDispatch: innerSteps });
-    const dispatchCount = Math.ceil(stepsToRun / innerSteps);
+    if (stepsToRun <= 0) {
+      pendingEvolve = true;
+    } else {
+      const innerSteps = Math.min(stepsToRun, STEPS_PER_DISPATCH);
+      params.writePartial({ stepsPerDispatch: innerSteps });
+      const dispatchCount = Math.ceil(stepsToRun / innerSteps);
 
-    const simEncoder = root.device.createCommandEncoder();
-    for (let dispatch = 0; dispatch < dispatchCount; dispatch++) {
-      simulatePipeline.with(simBindGroups[ga.current]).with(simEncoder).dispatchThreads(population);
+      const simEncoder = root.device.createCommandEncoder();
+      for (let dispatch = 0; dispatch < dispatchCount; dispatch++) {
+        simulatePipeline
+          .with(simBindGroups[ga.current])
+          .with(simEncoder)
+          .dispatchThreads(population);
+      }
+      root.device.queue.submit([simEncoder.finish()]);
+
+      steps += dispatchCount * innerSteps;
     }
-    root.device.queue.submit([simEncoder.finish()]);
-
-    steps += dispatchCount * innerSteps;
 
     if (steps >= stepsPerGeneration) {
       pendingEvolve = true;
