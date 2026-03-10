@@ -62,20 +62,24 @@ function calculateMeshForChunk(chunk: Chunk): d.v4f[] {
   return vertices;
 }
 
+// TODO: implement defragmentation (recreating the buffer and FreeList?)
 export class Mesher {
   #root: TgpuRoot;
-  freeIds: Set<number>;
-  chunkToId: Map<Chunk, number>;
   vertexBuffer: TgpuBuffer<d.WgslArray<d.Vec4f>> & StorageFlag & VertexFlag;
+  // TODO: remove this
   indirectBuffer: TgpuBuffer<d.WgslArray<d.Vec4u>> & IndirectFlag;
   totalVertices: number;
 
+  freeList: FreeList;
+  chunkToId: Map<Chunk, SlotId>;
+
   constructor(root: TgpuRoot) {
     this.#root = root;
-    this.freeIds = new Set(Array.from({ length: MAX_CHUNKS_AT_ONCE }, (_, i) => i));
+    const size = 256 * 1024 * 1024 - 16; // 256MB rounded down to a multiple of 48
+    this.freeList = new FreeList(size, 0.05);
     this.chunkToId = new Map();
     this.vertexBuffer = this.#root
-      .createBuffer(d.arrayOf(d.vec4f, (256 * 1024 * 1024) / 4 / 4))
+      .createBuffer(d.arrayOf(d.vec4f, size / 16))
       .$usage('vertex', 'storage');
     this.indirectBuffer = this.#root
       .createBuffer(d.arrayOf(d.vec4u, MAX_CHUNKS_AT_ONCE))
@@ -83,67 +87,157 @@ export class Mesher {
     this.totalVertices = 0;
   }
 
-  // TODO: support chunk rerendering
   recalculateMeshesFor(chunks: Chunk[]) {
-    const vertexData: d.v4f[] = [];
-    for (let id = 0; id < chunks.length; id++) {
-      const chunk = chunks[id];
+    const unwrappedBuffer = this.#root.unwrap(this.vertexBuffer);
+
+    for (const chunk of chunks) {
       const vertices = calculateMeshForChunk(chunk);
-      this.indirectBuffer.writePartial([
-        { idx: id, value: d.vec4u(vertices.length * 16, 1, vertexData.length * 16, 0) },
-      ]);
-      vertexData.push(...vertices);
+      const newSize = vertices.length * 4 * 4;
+
+      let slotId = this.chunkToId.get(chunk);
+      if (slotId === undefined) {
+        slotId = this.freeList.allocate(newSize).id;
+        this.chunkToId.set(chunk, slotId);
+      }
+
+      if (this.freeList.check(slotId, newSize)) {
+        // TODO: support chunk modifying
+        // shouldn't happen when we do not modify chunks
+        throw new Error('THIS SHOULD NOT HAPPEN');
+      }
+
+      const offset = this.freeList.slotInfoFor(slotId).offset;
+
+      // TODO: pass the block type info so we can draw appropriate textures
+      // TODO: use Float32Array in mesh calculation
+      const float32 = new Float32Array(vertices.length * 4);
+      for (let i = 0; i < vertices.length; i++) {
+        const v = vertices[i];
+        float32[i * 4 + 0] = v.x;
+        float32[i * 4 + 1] = v.y;
+        float32[i * 4 + 2] = v.z;
+        float32[i * 4 + 3] = v.w;
+      }
+      this.#root.device.queue.writeBuffer(unwrappedBuffer, offset, float32);
+      this.totalVertices += vertices.length;
     }
-    // TODO: use float32Array and unwrap
-    this.vertexBuffer.write(vertexData);
-    this.totalVertices = vertexData.length;
   }
 
   getResources() {
     return {
       vertexBuffer: this.vertexBuffer,
       indirectBuffer: this.indirectBuffer,
-      vertexCount: this.totalVertices,
+      // TODO: return the number of the last non-zero vertex
+      vertexCount: (256 * 1024 * 1024 - 16) / 16,
     };
   }
 }
 
 type SlotId = number;
 
+function roundUp(value: number, alignment: number): number {
+  return Math.ceil(value / alignment) * alignment;
+}
+
+// TODO: review and fix this AI implementation
 class FreeList {
+  ALIGNMENT = 4 * 4 * 3; // 4 bytes * 4 elements * 3 vectors
+  #marginPercent: number;
+  #slots: Map<SlotId, { offset: number; size: number; capacity: number }>;
+  #freeBlocks: Array<{ offset: number; size: number }>;
+  #nextId: number;
+
   /**
    * Creates a free list.
    * At any point, all margins and offsets are rounded up to 4 * 3.
    * Throws if an allocation fails.
    */
-  constructor(size: number, marginPercent: number) {}
+  constructor(size: number, marginPercent: number) {
+    this.#marginPercent = marginPercent;
+    this.#slots = new Map();
+    this.#nextId = 0;
+    const alignedSize = roundUp(size, this.ALIGNMENT);
+    this.#freeBlocks = [{ offset: 0, size: alignedSize }];
+  }
 
   /**
    * Creates a slot of size `size*(1+marginPercent)`, and sets it current size to `size`.
    */
-  allocate(size: number): { id: SlotId; offset: number } {}
+  allocate(size: number): { id: SlotId; offset: number } {
+    const capacity = roundUp(size * (1 + this.#marginPercent), this.ALIGNMENT);
+
+    for (let i = 0; i < this.#freeBlocks.length; i++) {
+      const block = this.#freeBlocks[i];
+      if (block.size >= capacity) {
+        const offset = block.offset;
+        const remainder = block.size - capacity;
+        if (remainder > 0) {
+          this.#freeBlocks[i] = { offset: offset + capacity, size: remainder };
+        } else {
+          this.#freeBlocks.splice(i, 1);
+        }
+        const id = this.#nextId++;
+        this.#slots.set(id, { offset, size, capacity });
+        return { id, offset };
+      }
+    }
+
+    throw new Error(`FreeList: allocation of ${capacity} bytes failed — out of space`);
+  }
 
   /**
    * Deallocates a slot
    */
-  deallocate(id: SlotId) {}
+  deallocate(id: SlotId) {
+    const slot = this.#slots.get(id);
+    if (!slot) throw new Error(`FreeList: unknown slot id ${id}`);
+    this.#slots.delete(id);
+
+    this.#freeBlocks.push({ offset: slot.offset, size: slot.capacity });
+    this.#freeBlocks.sort((a, b) => a.offset - b.offset);
+
+    // Coalesce adjacent free blocks
+    for (let i = this.#freeBlocks.length - 1; i > 0; i--) {
+      const prev = this.#freeBlocks[i - 1];
+      const curr = this.#freeBlocks[i];
+      if (prev.offset + prev.size === curr.offset) {
+        prev.size += curr.size;
+        this.#freeBlocks.splice(i, 1);
+      }
+    }
+  }
 
   /**
-   * Returns whether the bloch needs to be moved (deallocated and reallocated).
+   * Returns whether the block needs to be moved (deallocated and reallocated).
    */
-  check(id: SlotId, newSize: number): boolean {}
+  check(id: SlotId, newSize: number): boolean {
+    const slot = this.#slots.get(id);
+    if (!slot) throw new Error(`FreeList: unknown slot id ${id}`);
+    return newSize > slot.capacity;
+  }
 
   /**
    * Returns all relevant info for given slot
    */
-  slotInfoFor(id: SlotId): { offset: number; size: number; margin: number } {}
+  slotInfoFor(id: SlotId): { offset: number; size: number; margin: number } {
+    const slot = this.#slots.get(id);
+    if (!slot) throw new Error(`FreeList: unknown slot id ${id}`);
+    return { offset: slot.offset, size: slot.size, margin: slot.capacity - slot.size };
+  }
 
   /**
    * Stats for debugging, computed lazily.
    */
   getStats(): {
     totalFreeSpace: number;
-    largestFreeBlock: number; // If this is much smaller than totalFreeSpace, you are heavily fragmented
-    fragmentationRatio: number;
-  } {}
+    largestFreeBlock: number;
+  } {
+    let totalFreeSpace = 0;
+    let largestFreeBlock = 0;
+    for (const block of this.#freeBlocks) {
+      totalFreeSpace += block.size;
+      if (block.size > largestFreeBlock) largestFreeBlock = block.size;
+    }
+    return { totalFreeSpace, largestFreeBlock };
+  }
 }
