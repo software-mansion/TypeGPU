@@ -101,9 +101,23 @@ export class Mesher {
       }
 
       if (this.freeList.check(slotId, newSize)) {
-        // TODO: support chunk modifying
-        // shouldn't happen when we do not modify chunks
-        throw new Error('THIS SHOULD NOT HAPPEN');
+        // We need to:
+        // - clear the old vertex buffer slot
+        // - deallocate the slot from freeList
+        // - reallocate it
+        // - update the slotId map
+        // TODO: maybe we can keep the slotId of a chunk?
+        console.log('REALLOCATING', ...chunk.chunkIndex, 'SIZE', newSize);
+
+        const info = this.freeList.slotInfoFor(slotId);
+        const float32 = new Float32Array(info.size);
+        this.#root.device.queue.writeBuffer(unwrappedBuffer, info.offset, float32);
+
+        this.freeList.deallocate(slotId);
+
+        slotId = this.freeList.allocate(newSize).id;
+
+        this.chunkToId.set(chunk, slotId);
       }
 
       const offset = this.freeList.slotInfoFor(slotId).offset;

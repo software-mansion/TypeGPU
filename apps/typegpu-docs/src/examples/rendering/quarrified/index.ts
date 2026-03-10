@@ -6,6 +6,7 @@ import { State } from './state.ts';
 import { INIT_CONFIG } from './params.ts';
 import { Mesher } from './mesher.ts';
 import { Renderer } from './renderer.ts';
+import { coordToIndex } from './chunkGenerator.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -32,6 +33,12 @@ const renderer = new Renderer(root, cameraUniform);
 let frameId = requestAnimationFrame(draw);
 function draw() {
   updatePosition();
+
+  // for testing purposes, let's modify one block from a random chunk each frame
+  // const randomChunk = state.map.chunks[Math.floor(Math.random() * state.map.chunks.length)];
+  // const randomBlock = Math.floor(Math.random() * 16 ** 3);
+  // randomChunk.blocks[randomBlock] = 1 - randomChunk.blocks[randomBlock];
+  // mesher.recalculateMeshesFor([randomChunk]);
 
   const mesherResources = mesher.getResources();
   renderer.render(context, mesherResources);
