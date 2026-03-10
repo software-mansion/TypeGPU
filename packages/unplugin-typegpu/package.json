@@ -171,7 +171,7 @@
     "magic-string-ast": "^1.0.0",
     "pathe": "^2.0.3",
     "picomatch": "^4.0.3",
-    "tinyest": "workspace:~0.3.0",
+    "tinyest": "workspace:~0.3.1",
     "tinyest-for-wgsl": "workspace:~0.3.2",
     "unplugin": "^2.3.5"
   },

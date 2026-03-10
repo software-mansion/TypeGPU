@@ -469,7 +469,7 @@ importers:
   packages/tinyest-for-wgsl:
     dependencies:
       tinyest:
-        specifier: workspace:~0.3.0
+        specifier: workspace:~0.3.1
         version: link:../tinyest
     devDependencies:
       '@babel/parser':
@@ -495,7 +495,7 @@ importers:
   packages/typegpu:
     dependencies:
       tinyest:
-        specifier: workspace:~0.3.0
+        specifier: workspace:~0.3.1
         version: link:../tinyest
       tsover-runtime:
         specifier: ^0.0.5
@@ -724,7 +724,7 @@ importers:
         specifier: ^4.0.3
         version: 4.0.3
       tinyest:
-        specifier: workspace:~0.3.0
+        specifier: workspace:~0.3.1
         version: link:../tinyest
       tinyest-for-wgsl:
         specifier: workspace:~0.3.2
