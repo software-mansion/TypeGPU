@@ -107,3 +107,43 @@ export class Mesher {
     };
   }
 }
+
+type SlotId = number;
+
+class FreeList {
+  /**
+   * Creates a free list.
+   * At any point, all margins and offsets are rounded up to 4 * 3.
+   * Throws if an allocation fails.
+   */
+  constructor(size: number, marginPercent: number) {}
+
+  /**
+   * Creates a slot of size `size*(1+marginPercent)`, and sets it current size to `size`.
+   */
+  allocate(size: number): { id: SlotId; offset: number } {}
+
+  /**
+   * Deallocates a slot
+   */
+  deallocate(id: SlotId) {}
+
+  /**
+   * Returns whether the bloch needs to be moved (deallocated and reallocated).
+   */
+  check(id: SlotId, newSize: number): boolean {}
+
+  /**
+   * Returns all relevant info for given slot
+   */
+  slotInfoFor(id: SlotId): { offset: number; size: number; margin: number } {}
+
+  /**
+   * Stats for debugging, computed lazily.
+   */
+  getStats(): {
+    totalFreeSpace: number;
+    largestFreeBlock: number; // If this is much smaller than totalFreeSpace, you are heavily fragmented
+    fragmentationRatio: number;
+  } {}
+}
