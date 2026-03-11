@@ -1,12 +1,5 @@
-import {
-  d,
-  type IndirectFlag,
-  type StorageFlag,
-  type TgpuBuffer,
-  type TgpuRoot,
-  type VertexFlag,
-} from 'typegpu';
-import { CHUNK_SIZE, CHUNK_SIZE_BITS, INIT_CONFIG } from './params.ts';
+import { d, type StorageFlag, type TgpuBuffer, type TgpuRoot, type VertexFlag } from 'typegpu';
+import { CHUNK_SIZE, INIT_CONFIG } from './params.ts';
 import { faces } from './cubeVertices.ts';
 import type { Chunk } from './schemas.ts';
 import { coordToIndexCPU } from './chunkGenerator.ts';
@@ -15,56 +8,7 @@ export const MAX_CHUNKS_AT_ONCE = Object.values(INIT_CONFIG.chunks)
   .map((v) => v[1] - v[0] + 1)
   .reduce((a, b) => a * b, 1);
 
-const isAir = (chunk: Chunk, x: number, y: number, z: number): boolean => {
-  if (x < 0 || x >= CHUNK_SIZE || y < 0 || y >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) {
-    return true;
-  }
-  return chunk.blocks[coordToIndexCPU(x, y, z)] === 0;
-};
-
-// TODO: rewrite this AI slop
-function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Float32Array): number {
-  let verticesCount = 0;
-  const { chunkIndex, blocks } = chunk;
-
-  const wx0 = chunkIndex.x * CHUNK_SIZE;
-  const wy0 = chunkIndex.y * CHUNK_SIZE;
-  const wz0 = chunkIndex.z * CHUNK_SIZE;
-
-  for (let z = 0; z < CHUNK_SIZE; z++) {
-    for (let y = 0; y < CHUNK_SIZE; y++) {
-      for (let x = 0; x < CHUNK_SIZE; x++) {
-        if (blocks[coordToIndexCPU(x, y, z)] === 0) continue;
-
-        const wx = wx0 + x;
-        const wy = wy0 + y;
-        const wz = wz0 + z;
-
-        const addFace = (faceVertices: (typeof faces)[keyof typeof faces]) => {
-          for (const v of faceVertices) {
-            const p = v.position;
-            arrayBuffer[4 * verticesCount] = p.x + wx;
-            arrayBuffer[4 * verticesCount + 1] = p.y + wy;
-            arrayBuffer[4 * verticesCount + 2] = p.z + wz;
-            arrayBuffer[4 * verticesCount + 3] = 1;
-            verticesCount += 1;
-          }
-        };
-
-        if (isAir(chunk, x, y - 1, z)) addFace(faces.bottom);
-        if (isAir(chunk, x, y + 1, z)) addFace(faces.top);
-        if (isAir(chunk, x - 1, y, z)) addFace(faces.left);
-        if (isAir(chunk, x + 1, y, z)) addFace(faces.right);
-        if (isAir(chunk, x, y, z + 1)) addFace(faces.front);
-        if (isAir(chunk, x, y, z - 1)) addFace(faces.back);
-      }
-    }
-  }
-
-  return verticesCount;
-}
-
-// TODO: implement defragmentation (recreating the buffer and FreeList?)
+// TODO: implement defragmentation (recreating the buffer and FreeList? or maybe just recreating the entire Mesher?)
 export class Mesher {
   #root: TgpuRoot;
   vertexBuffer: TgpuBuffer<d.WgslArray<d.Vec4f>> & StorageFlag & VertexFlag;
@@ -138,6 +82,55 @@ export class Mesher {
       vertexCount: (256 * 1024 * 1024 - 16) / 16,
     };
   }
+}
+
+const isAir = (chunk: Chunk, x: number, y: number, z: number): boolean => {
+  if (x < 0 || x >= CHUNK_SIZE || y < 0 || y >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) {
+    return true;
+  }
+  return chunk.blocks[coordToIndexCPU(x, y, z)] === 0;
+};
+
+function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Float32Array): number {
+  let verticesCount = 0;
+  const { chunkIndex, blocks } = chunk;
+
+  const wx0 = chunkIndex.x * CHUNK_SIZE;
+  const wy0 = chunkIndex.y * CHUNK_SIZE;
+  const wz0 = chunkIndex.z * CHUNK_SIZE;
+
+  for (let z = 0; z < CHUNK_SIZE; z++) {
+    for (let y = 0; y < CHUNK_SIZE; y++) {
+      for (let x = 0; x < CHUNK_SIZE; x++) {
+        if (blocks[coordToIndexCPU(x, y, z)] === 0) continue;
+
+        const wx = wx0 + x;
+        const wy = wy0 + y;
+        const wz = wz0 + z;
+
+        // This function makes things cleaner and doesn't slow down things too much (less than 3%)
+        function addFace(faceVertices: (typeof faces)[keyof typeof faces]) {
+          for (const v of faceVertices) {
+            const p = v.position;
+            arrayBuffer[4 * verticesCount] = p.x + wx;
+            arrayBuffer[4 * verticesCount + 1] = p.y + wy;
+            arrayBuffer[4 * verticesCount + 2] = p.z + wz;
+            arrayBuffer[4 * verticesCount + 3] = 1;
+            verticesCount += 1;
+          }
+        }
+
+        if (isAir(chunk, x, y - 1, z)) addFace(faces.bottom);
+        if (isAir(chunk, x, y + 1, z)) addFace(faces.top);
+        if (isAir(chunk, x - 1, y, z)) addFace(faces.left);
+        if (isAir(chunk, x + 1, y, z)) addFace(faces.right);
+        if (isAir(chunk, x, y, z + 1)) addFace(faces.front);
+        if (isAir(chunk, x, y, z - 1)) addFace(faces.back);
+      }
+    }
+  }
+
+  return verticesCount;
 }
 
 type SlotId = number;
