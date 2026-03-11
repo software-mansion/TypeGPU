@@ -215,11 +215,11 @@ For vector fields and buffers, `.write()` accepts three equivalent forms - you d
 
 | Input form | Example for `vec3f` | Notes |
 |---|---|---|
-| Typed vec instance | `d.vec3f(1, 2, 3)` | Allocates a new object |
-| Plain JS tuple | `[1, 2, 3]` | No extra allocation |
-| TypedArray | `new Float32Array([1, 2, 3])` | Best for bulk data |
+| Typed vec instance | `d.vec3f(1, 2, 3)` | Allocates a TypeGPU wrapper object |
+| Plain JS tuple | `[1, 2, 3]` | No TypeGPU wrapper allocated |
+| TypedArray | `new Float32Array([1, 2, 3])` | No TypeGPU wrapper allocated |
 
-Avoiding vec construction can meaningfully reduce garbage-collector pressure in hot paths such as per-frame updates or simulation ticks.
+When the data already lives in tuples or typed arrays, skipping vec construction avoids allocating TypeGPU wrapper objects, which can reduce garbage-collector pressure in hot paths such as per-frame updates or simulation ticks.
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
@@ -228,11 +228,11 @@ const root = await tgpu.init();
 const vecBuffer = root.createBuffer(d.vec3f);
 
 vecBuffer.write(d.vec3f(1, 2, 3));            // typed instance
-vecBuffer.write([1, 2, 3]);                   // plain tuple - no object construction
+vecBuffer.write([1, 2, 3]);                   // plain tuple
 vecBuffer.write(new Float32Array([1, 2, 3])); // TypedArray
 ```
 
-For **arrays of vectors**, a single flat TypedArray is also accepted. TypeGPU automatically handles the stride difference between the packed input and the padded GPU layout (e.g. `vec3f` occupies 16 bytes in a buffer, but only 3 floats in the TypedArray). This is the most efficient option when the data already lives in a TypedArray - no per-element object allocation is needed:
+For **arrays of vectors**, a single flat TypedArray is also accepted. TypeGPU automatically handles the stride difference between the packed input and the padded GPU layout (e.g. `vec3f` occupies 16 bytes in a buffer, but only 3 floats in the TypedArray). When your data already lives in a flat TypedArray, this avoids both per-element wrapper allocation and array construction overhead:
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
@@ -244,7 +244,7 @@ const arrBuffer = root.createBuffer(d.arrayOf(d.vec3f, 2));
 arrBuffer.write([d.vec3f(1, 2, 3), d.vec3f(4, 5, 6)]);
 arrBuffer.write([[1, 2, 3], [4, 5, 6]]);
 
-// Flat Float32Array - most efficient, no per-element object allocation:
+// Flat Float32Array - no per-element wrapper construction:
 arrBuffer.write(new Float32Array([1, 2, 3, 4, 5, 6]));
 ```
 
@@ -283,6 +283,10 @@ const data = await buffer.read(); // will be [0, 1, 2, 4, 5, 6]
 
 An optional `endOffset` specifies the byte offset at which writing stops entirely.
 Combined with `startOffset` and `d.memoryLayoutOf`, this lets you write to a precise region of the buffer.
+
+:::note
+Both offsets are **byte-based**. Any component whose byte position falls at or beyond `endOffset` is not written, which means offsets that do not align to schema element boundaries can result in partial elements being written. Use `d.memoryLayoutOf` to target whole elements safely.
+:::
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
