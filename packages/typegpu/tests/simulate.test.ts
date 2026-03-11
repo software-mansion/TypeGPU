@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import tgpu, { d } from '../src/index.ts';
+import tgpu, { d } from '../src/index.js';
 import { it } from './utils/extendedIt.ts';
 
 describe('tgpu.simulate()', () => {
@@ -12,7 +12,10 @@ describe('tgpu.simulate()', () => {
     const seed = tgpu.privateVar(d.u32, 1);
 
     // A stateful function
-    const hash = tgpu.fn([], d.u32)(() => {
+    const hash = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
       return seed.$++;
     });
 

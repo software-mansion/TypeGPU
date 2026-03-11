@@ -11,7 +11,7 @@ export class TaskQueue {
           reject(e);
         }
       });
-      this._processQueue();
+      void this._processQueue();
     });
   }
 

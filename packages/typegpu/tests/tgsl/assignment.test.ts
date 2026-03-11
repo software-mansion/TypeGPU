@@ -1,6 +1,6 @@
 import { beforeEach, expect, type MockInstance, vi } from 'vitest';
 import { it } from '../utils/extendedIt.ts';
-import tgpu, { d } from '../../src/index.ts';
+import tgpu, { d } from '../../src/index.js';
 
 let warnSpy: MockInstance<typeof console.warn>;
 
@@ -9,7 +9,10 @@ beforeEach(() => {
 });
 
 it('implicitly casts right-hand side, with a warning', () => {
-  const foo = tgpu.fn([d.f32], d.i32)((arg) => {
+  const foo = tgpu.fn(
+    [d.f32],
+    d.i32,
+  )((arg) => {
     let a = 12; // inferred to be i32
     a = arg;
     return a;

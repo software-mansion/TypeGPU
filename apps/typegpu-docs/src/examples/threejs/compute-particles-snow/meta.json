@@ -1,5 +1,6 @@
 {
   "title": "Three.js - compute / particles / snow",
   "category": "threejs",
-  "tags": ["experimental"]
+  "tags": ["3d", "ecosystem", "particles", "physics"],
+  "coolFactor": 5
 }

@@ -2,5 +2,6 @@
   "title": "Three.js - Test Reused Functions",
   "category": "threejs",
   "dev": true,
-  "tags": ["experimental", "three.js"]
+  "tags": ["math", "test"],
+  "coolFactor": 1
 }

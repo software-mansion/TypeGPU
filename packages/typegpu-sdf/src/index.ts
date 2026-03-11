@@ -1,12 +1,4 @@
-export {
-  sdBezier,
-  sdBezierApprox,
-  sdBox2d,
-  sdDisk,
-  sdLine,
-  sdPie,
-  sdRoundedBox2d,
-} from './2d.ts';
+export { sdBezier, sdBezierApprox, sdBox2d, sdDisk, sdLine, sdPie, sdRoundedBox2d } from './2d.ts';
 
 export {
   sdBox3d,
@@ -28,8 +20,4 @@ export {
 } from './operators.ts';
 
 export { classifySlot, createJumpFlood } from './jumpFlood.ts';
-export type {
-  ColorTexture,
-  JumpFloodExecutor,
-  SdfTexture,
-} from './jumpFlood.ts';
+export type { ColorTexture, JumpFloodExecutor, SdfTexture } from './jumpFlood.ts';

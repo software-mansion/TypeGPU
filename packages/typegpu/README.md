@@ -37,7 +37,7 @@ const wgsl = tgpu.resolve([main]);
 //
 // #3) Executed on the GPU (generates WGSL underneath)
 //
-root['~unstable']
+root
   .createGuardedComputePipeline(main)
   .dispatchThreads();
 ```

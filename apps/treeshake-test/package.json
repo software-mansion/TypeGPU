@@ -1,16 +1,16 @@
 {
   "name": "treeshake-test",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "description": "Treeshake testing app for TypeGPU",
   "type": "module",
   "scripts": {
     "generate-tests": "tsx generateTests.ts",
-    "test": "node runTests.ts"
+    "test": "pnpm run --filter typegpu build && node runTests.ts"
   },
   "dependencies": {
     "typegpu": "workspace:*",
-    "unplugin-typegpu": "^0.9.0"
+    "unplugin-typegpu": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

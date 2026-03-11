@@ -4,10 +4,9 @@ import * as acorn from 'acorn';
 import { describe, expect, it } from 'vitest';
 import { transpileFn } from '../src/parsers.ts';
 
-const parseRollup = (code: string) =>
-  acorn.parse(code, { ecmaVersion: 'latest' });
+const parseRollup = (code: string) => acorn.parse(code, { ecmaVersion: 'latest' });
 const parseBabel = (code: string) =>
-  babel.parse(code, { sourceType: 'module' }).program.body[0] as Node;
+  babel.parse(code, { sourceType: 'module', plugins: ['typescript'] }).program.body[0] as Node;
 
 function dualTest(test: (p: (code: string) => Node | acorn.AnyNode) => void) {
   return () => {
@@ -38,9 +37,7 @@ describe('transpileFn', () => {
   it(
     'parses an empty named function',
     dualTest((p) => {
-      const { params, body, externalNames } = transpileFn(
-        p('function example() {}'),
-      );
+      const { params, body, externalNames } = transpileFn(p('function example() {}'));
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
@@ -51,9 +48,7 @@ describe('transpileFn', () => {
   it(
     'gathers external names',
     dualTest((p) => {
-      const { params, body, externalNames } = transpileFn(
-        p('(a, b) => a + b - c'),
-      );
+      const { params, body, externalNames } = transpileFn(p('(a, b) => a + b - c'));
 
       expect(params).toStrictEqual([
         { type: 'i', name: 'a' },
@@ -109,9 +104,7 @@ describe('transpileFn', () => {
   it(
     'treats the object as a possible external value when accessing a member',
     dualTest((p) => {
-      const { params, body, externalNames } = transpileFn(
-        p('() => external.outside.prop'),
-      );
+      const { params, body, externalNames } = transpileFn(p('() => external.outside.prop'));
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
@@ -131,8 +124,8 @@ describe('transpileFn', () => {
         }`),
       );
 
-      expect(params).toStrictEqual(
-        [{
+      expect(params).toStrictEqual([
+        {
           type: 'd',
           props: [
             {
@@ -144,8 +137,8 @@ describe('transpileFn', () => {
               name: 'a',
             },
           ],
-        }],
-      );
+        },
+      ]);
 
       expect(externalNames).toStrictEqual([]);
     }),
@@ -196,4 +189,10 @@ describe('transpileFn', () => {
       expect(externalNames).toStrictEqual([]);
     }),
   );
+
+  it('handles TSNonNullExpression', () => {
+    const { body } = transpileFn(parseBabel('() => x!.y'));
+
+    expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[7,"x","y"]]]]"`);
+  });
 });

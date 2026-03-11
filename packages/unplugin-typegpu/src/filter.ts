@@ -3,12 +3,7 @@
 
 import { resolve } from 'pathe';
 import picomatch from 'picomatch';
-import type {
-  Arrayable,
-  Nullable,
-  StringFilter,
-  StringOrRegExp,
-} from 'unplugin';
+import type { Arrayable, Nullable, StringFilter, StringOrRegExp } from 'unplugin';
 
 function toArray<T>(array?: Nullable<Arrayable<T>>): Array<T> {
   const result = array || [];
@@ -97,9 +92,7 @@ function normalizeFilter(filter: StringFilter): NormalizedStringFilter {
   };
 }
 
-function createIdFilter(
-  filter: StringFilter | undefined,
-): PluginFilter | undefined {
+function createIdFilter(filter: StringFilter | undefined): PluginFilter | undefined {
   if (!filter) return;
   const { exclude, include } = normalizeFilter(filter);
   const excludeFilter = exclude?.map(patternToIdFilter);
@@ -107,9 +100,7 @@ function createIdFilter(
   return createFilter(excludeFilter, includeFilter);
 }
 
-export function createFilterForId(
-  filter: StringFilter | undefined,
-): PluginFilter | undefined {
+export function createFilterForId(filter: StringFilter | undefined): PluginFilter | undefined {
   const filterFunction = createIdFilter(filter);
   return filterFunction ? (id) => !!filterFunction(id) : undefined;
 }

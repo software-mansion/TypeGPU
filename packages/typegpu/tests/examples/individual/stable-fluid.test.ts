@@ -5,24 +5,24 @@
 import { describe, expect } from 'vitest';
 import { it } from '../../utils/extendedIt.ts';
 import { runExampleTest, setupCommonMocks } from '../utils/baseTest.ts';
-import {
-  mockCreateImageBitmap,
-  mockImageLoading,
-} from '../utils/commonMocks.ts';
+import { mockCreateImageBitmap, mockImageLoading } from '../utils/commonMocks.ts';
 
 describe('stable-fluid example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'simulation',
-      name: 'stable-fluid',
-      setupMocks: () => {
-        mockImageLoading();
-        mockCreateImageBitmap();
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'simulation',
+        name: 'stable-fluid',
+        setupMocks: () => {
+          mockImageLoading();
+          mockCreateImageBitmap();
+        },
+        expectedCalls: 7,
       },
-      expectedCalls: 7,
-    }, device);
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var src: texture_2d<f32>;
@@ -62,8 +62,21 @@ describe('stable-fluid example', () => {
 
       fn getNeighbors(coords: vec2i, bounds: vec2i) -> array<vec2i, 4> {
         var adjacentOffsets = array<vec2i, 4>(vec2i(-1, 0), vec2i(0, -1), vec2i(1, 0), vec2i(0, 1));
-        for (var i = 0; (i < 4i); i++) {
-          adjacentOffsets[i] = clamp((coords + adjacentOffsets[i]), vec2i(), (bounds - vec2i(1)));
+        // unrolled iteration #0
+        {
+          adjacentOffsets[0i] = clamp((coords + adjacentOffsets[0i]), vec2i(), (bounds - vec2i(1)));
+        }
+        // unrolled iteration #1
+        {
+          adjacentOffsets[1i] = clamp((coords + adjacentOffsets[1i]), vec2i(), (bounds - vec2i(1)));
+        }
+        // unrolled iteration #2
+        {
+          adjacentOffsets[2i] = clamp((coords + adjacentOffsets[2i]), vec2i(), (bounds - vec2i(1)));
+        }
+        // unrolled iteration #3
+        {
+          adjacentOffsets[3i] = clamp((coords + adjacentOffsets[3i]), vec2i(), (bounds - vec2i(1)));
         }
         return adjacentOffsets;
       }
@@ -94,7 +107,7 @@ describe('stable-fluid example', () => {
         let viscosity = simParams.viscosity;
         let diffuseRate = (viscosity * timeStep);
         let blendFactor = (1f / (4f + diffuseRate));
-        var diffusedVal = (vec4f(blendFactor) * (((leftVal + rightVal) + (upVal + downVal)) + (diffuseRate * centerVal)));
+        var diffusedVal = (vec4f(blendFactor) * ((((leftVal + rightVal) + upVal) + downVal) + (centerVal * diffuseRate)));
         textureStore(out, pixelPos, diffusedVal);
       }
 
@@ -102,8 +115,21 @@ describe('stable-fluid example', () => {
 
       fn getNeighbors(coords: vec2i, bounds: vec2i) -> array<vec2i, 4> {
         var adjacentOffsets = array<vec2i, 4>(vec2i(-1, 0), vec2i(0, -1), vec2i(1, 0), vec2i(0, 1));
-        for (var i = 0; (i < 4i); i++) {
-          adjacentOffsets[i] = clamp((coords + adjacentOffsets[i]), vec2i(), (bounds - vec2i(1)));
+        // unrolled iteration #0
+        {
+          adjacentOffsets[0i] = clamp((coords + adjacentOffsets[0i]), vec2i(), (bounds - vec2i(1)));
+        }
+        // unrolled iteration #1
+        {
+          adjacentOffsets[1i] = clamp((coords + adjacentOffsets[1i]), vec2i(), (bounds - vec2i(1)));
+        }
+        // unrolled iteration #2
+        {
+          adjacentOffsets[2i] = clamp((coords + adjacentOffsets[2i]), vec2i(), (bounds - vec2i(1)));
+        }
+        // unrolled iteration #3
+        {
+          adjacentOffsets[3i] = clamp((coords + adjacentOffsets[3i]), vec2i(), (bounds - vec2i(1)));
         }
         return adjacentOffsets;
       }
@@ -130,8 +156,21 @@ describe('stable-fluid example', () => {
 
       fn getNeighbors(coords: vec2i, bounds: vec2i) -> array<vec2i, 4> {
         var adjacentOffsets = array<vec2i, 4>(vec2i(-1, 0), vec2i(0, -1), vec2i(1, 0), vec2i(0, 1));
-        for (var i = 0; (i < 4i); i++) {
-          adjacentOffsets[i] = clamp((coords + adjacentOffsets[i]), vec2i(), (bounds - vec2i(1)));
+        // unrolled iteration #0
+        {
+          adjacentOffsets[0i] = clamp((coords + adjacentOffsets[0i]), vec2i(), (bounds - vec2i(1)));
+        }
+        // unrolled iteration #1
+        {
+          adjacentOffsets[1i] = clamp((coords + adjacentOffsets[1i]), vec2i(), (bounds - vec2i(1)));
+        }
+        // unrolled iteration #2
+        {
+          adjacentOffsets[2i] = clamp((coords + adjacentOffsets[2i]), vec2i(), (bounds - vec2i(1)));
+        }
+        // unrolled iteration #3
+        {
+          adjacentOffsets[3i] = clamp((coords + adjacentOffsets[3i]), vec2i(), (bounds - vec2i(1)));
         }
         return adjacentOffsets;
       }
@@ -161,8 +200,21 @@ describe('stable-fluid example', () => {
 
       fn getNeighbors(coords: vec2i, bounds: vec2i) -> array<vec2i, 4> {
         var adjacentOffsets = array<vec2i, 4>(vec2i(-1, 0), vec2i(0, -1), vec2i(1, 0), vec2i(0, 1));
-        for (var i = 0; (i < 4i); i++) {
-          adjacentOffsets[i] = clamp((coords + adjacentOffsets[i]), vec2i(), (bounds - vec2i(1)));
+        // unrolled iteration #0
+        {
+          adjacentOffsets[0i] = clamp((coords + adjacentOffsets[0i]), vec2i(), (bounds - vec2i(1)));
+        }
+        // unrolled iteration #1
+        {
+          adjacentOffsets[1i] = clamp((coords + adjacentOffsets[1i]), vec2i(), (bounds - vec2i(1)));
+        }
+        // unrolled iteration #2
+        {
+          adjacentOffsets[2i] = clamp((coords + adjacentOffsets[2i]), vec2i(), (bounds - vec2i(1)));
+        }
+        // unrolled iteration #3
+        {
+          adjacentOffsets[3i] = clamp((coords + adjacentOffsets[3i]), vec2i(), (bounds - vec2i(1)));
         }
         return adjacentOffsets;
       }
@@ -215,7 +267,7 @@ describe('stable-fluid example', () => {
         let timeStep = simParams.dt;
         var prevPos = (vec2f(pixelPos) - (timeStep * velocity));
         var clampedPos = clamp(prevPos, vec2f(-0.5), (vec2f(texSize.xy) - vec2f(0.5)));
-        var normalizedPos = ((clampedPos + vec2f(0.5)) / vec2f(texSize.xy));
+        var normalizedPos = ((clampedPos + 0.5f) / vec2f(texSize.xy));
         var inkVal = textureSampleLevel(src, linSampler, normalizedPos, 0);
         textureStore(dst, pixelPos, inkVal);
       }

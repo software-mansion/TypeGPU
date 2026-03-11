@@ -77,9 +77,7 @@ export const sceneData = {
     })),
 };
 
-const elementById = new Map<string, AnySceneElement>(
-  sceneElements.map((el) => [el.id, el]),
-);
+const elementById = new Map<string, AnySceneElement>(sceneElements.map((el) => [el.id, el]));
 
 export function updateElementPosition(id: string, position: d.v2f): void {
   const element = elementById.get(id);
@@ -118,7 +116,7 @@ export const SceneData = d.struct({
   boxes: d.arrayOf(BoxData, sceneData.boxes.length),
 });
 
-export const sceneDataAccess = tgpu['~unstable'].accessor(SceneData);
+export const sceneDataAccess = tgpu.accessor(SceneData);
 export const sceneSDF = (p: d.v2f) => {
   'use gpu';
   const scene = sceneDataAccess.$;
@@ -128,7 +126,7 @@ export const sceneSDF = (p: d.v2f) => {
 
   for (let i = 0; i < scene.disks.length; i++) {
     const disk = scene.disks[i];
-    const dist = sdf.sdDisk(p.sub(disk.pos), disk.radius);
+    const dist = sdf.sdDisk(p - disk.pos, disk.radius);
 
     if (dist < minDist) {
       minDist = dist;
@@ -138,7 +136,7 @@ export const sceneSDF = (p: d.v2f) => {
 
   for (let i = 0; i < scene.boxes.length; i++) {
     const box = scene.boxes[i];
-    const dist = sdf.sdBox2d(p.sub(box.pos), box.size);
+    const dist = sdf.sdBox2d(p - box.pos, box.size);
 
     if (dist < minDist) {
       minDist = dist;

@@ -10,11 +10,14 @@ describe('camera thresholding example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'image-processing',
-      name: 'camera-thresholding',
-      expectedCalls: 1,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'image-processing',
+        name: 'camera-thresholding',
+        expectedCalls: 1,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct fullScreenTriangle_Input {

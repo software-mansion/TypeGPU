@@ -2,16 +2,10 @@ import type { TgpuQuerySet } from './core/querySet/querySet.ts';
 import type { TgpuBuffer } from './core/buffer/buffer.ts';
 import type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
 import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
-import type {
-  TgpuComparisonSampler,
-  TgpuSampler,
-} from './core/sampler/sampler.ts';
+import type { TgpuComparisonSampler, TgpuSampler } from './core/sampler/sampler.ts';
 import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
-import type {
-  TgpuBindGroup,
-  TgpuBindGroupLayout,
-} from './tgpuBindGroupLayout.ts';
+import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 import type { BaseData } from './data/wgslTypes.ts';
 
 export interface Unwrapper {
@@ -26,6 +20,5 @@ export interface Unwrapper {
   unwrap(resource: TgpuSampler): GPUSampler;
   unwrap(resource: TgpuComparisonSampler): GPUSampler;
   unwrap(resource: TgpuQuerySet<GPUQueryType>): GPUQuerySet;
-  // oxlint-disable-next-line typescript/no-explicit-any we need to supress validation
-  unwrap(resource: TgpuTexture<any>): GPUTexture;
+  unwrap(resource: TgpuTexture): GPUTexture;
 }

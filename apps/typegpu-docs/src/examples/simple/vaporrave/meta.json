@@ -1,9 +1,6 @@
 {
   "title": "Vaporrave",
-  "category": "rendering",
-  "tags": [
-    "experimental",
-    "sdf",
-    "ray marching"
-  ]
+  "category": "simple",
+  "tags": ["ecosystem", "noise", "ray marching", "sdf"],
+  "coolFactor": 8
 }

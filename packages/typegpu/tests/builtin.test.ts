@@ -14,9 +14,7 @@ describe('builtin', () => {
       namespace: namespace({ names: 'strict' }),
     };
 
-    expect(resolve(s1, opts).code).toContain(
-      '@builtin(position) position: vec4f',
-    );
+    expect(resolve(s1, opts).code).toContain('@builtin(position) position: vec4f');
   });
 
   it('can be omitted from a record type', () => {
@@ -43,13 +41,9 @@ describe('IsBuiltin', () => {
   });
 
   it('treats decorated (other than builtin) as non-builtin', () => {
-    expectTypeOf<
-      d.IsBuiltin<d.Decorated<d.Vec3f, []>>
-    >().toEqualTypeOf<false>();
+    expectTypeOf<d.IsBuiltin<d.Decorated<d.Vec3f, []>>>().toEqualTypeOf<false>();
 
-    expectTypeOf<
-      d.IsBuiltin<d.Decorated<d.Vec3f, [d.Align<16>]>>
-    >().toEqualTypeOf<false>();
+    expectTypeOf<d.IsBuiltin<d.Decorated<d.Vec3f, [d.Align<16>]>>>().toEqualTypeOf<false>();
 
     expectTypeOf<
       d.IsBuiltin<d.Decorated<d.Vec3f, [d.Size<32>, d.Align<16>]>>

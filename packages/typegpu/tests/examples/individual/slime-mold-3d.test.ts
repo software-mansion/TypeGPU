@@ -10,11 +10,14 @@ describe('slime mold 3d example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'simulation',
-      name: 'slime-mold-3d',
-      expectedCalls: 4,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'simulation',
+        name: 'slime-mold-3d',
+        expectedCalls: 4,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -184,13 +187,90 @@ describe('slime mold 3d example', () => {
         var totalWeight = 0f;
         var perp1 = getPerpendicular(direction);
         var perp2 = cross(direction, perp1);
-        const numSamples = 8;
-        for (var i = 0; (i < numSamples); i++) {
-          let theta = (((f32(i) / f32(numSamples)) * 2f) * 3.141592653589793f);
+        // unrolled iteration #0
+        {
+          const theta = 0.;
           var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
           var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
           var sensorPos = (pos + (sensorDir * params.sensorDistance));
-          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - vec3f(1))));
+          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - 1f)));
+          let weight = textureLoad(oldState, sensorPosInt).x;
+          weightedDir = (weightedDir + (sensorDir * weight));
+          totalWeight = (totalWeight + weight);
+        }
+        // unrolled iteration #1
+        {
+          const theta = 0.7853981633974483;
+          var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
+          var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
+          var sensorPos = (pos + (sensorDir * params.sensorDistance));
+          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - 1f)));
+          let weight = textureLoad(oldState, sensorPosInt).x;
+          weightedDir = (weightedDir + (sensorDir * weight));
+          totalWeight = (totalWeight + weight);
+        }
+        // unrolled iteration #2
+        {
+          const theta = 1.5707963267948966;
+          var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
+          var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
+          var sensorPos = (pos + (sensorDir * params.sensorDistance));
+          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - 1f)));
+          let weight = textureLoad(oldState, sensorPosInt).x;
+          weightedDir = (weightedDir + (sensorDir * weight));
+          totalWeight = (totalWeight + weight);
+        }
+        // unrolled iteration #3
+        {
+          const theta = 2.356194490192345;
+          var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
+          var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
+          var sensorPos = (pos + (sensorDir * params.sensorDistance));
+          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - 1f)));
+          let weight = textureLoad(oldState, sensorPosInt).x;
+          weightedDir = (weightedDir + (sensorDir * weight));
+          totalWeight = (totalWeight + weight);
+        }
+        // unrolled iteration #4
+        {
+          const theta = 3.141592653589793;
+          var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
+          var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
+          var sensorPos = (pos + (sensorDir * params.sensorDistance));
+          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - 1f)));
+          let weight = textureLoad(oldState, sensorPosInt).x;
+          weightedDir = (weightedDir + (sensorDir * weight));
+          totalWeight = (totalWeight + weight);
+        }
+        // unrolled iteration #5
+        {
+          const theta = 3.9269908169872414;
+          var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
+          var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
+          var sensorPos = (pos + (sensorDir * params.sensorDistance));
+          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - 1f)));
+          let weight = textureLoad(oldState, sensorPosInt).x;
+          weightedDir = (weightedDir + (sensorDir * weight));
+          totalWeight = (totalWeight + weight);
+        }
+        // unrolled iteration #6
+        {
+          const theta = 4.71238898038469;
+          var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
+          var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
+          var sensorPos = (pos + (sensorDir * params.sensorDistance));
+          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - 1f)));
+          let weight = textureLoad(oldState, sensorPosInt).x;
+          weightedDir = (weightedDir + (sensorDir * weight));
+          totalWeight = (totalWeight + weight);
+        }
+        // unrolled iteration #7
+        {
+          const theta = 5.497787143782138;
+          var coneOffset = ((perp1 * cos(theta)) + (perp2 * sin(theta)));
+          var sensorDir = normalize((direction + (coneOffset * sin(params.sensorAngle))));
+          var sensorPos = (pos + (sensorDir * params.sensorDistance));
+          var sensorPosInt = vec3u(clamp(sensorPos, vec3f(), (dimsf - 1f)));
           let weight = textureLoad(oldState, sensorPosInt).x;
           weightedDir = (weightedDir + (sensorDir * weight));
           totalWeight = (totalWeight + weight);
@@ -263,8 +343,8 @@ describe('slime mold 3d example', () => {
         var direction = normalize((*agent).direction);
         var senseResult = sense3D((*agent).position, direction);
         var targetDirection = select(randOnUnitHemisphere(direction), normalize(senseResult.weightedDir), (senseResult.totalWeight > 0.01f));
-        direction = normalize((direction + (targetDirection * (params.turnSpeed * params.deltaTime))));
-        var newPos = ((*agent).position + (direction * (params.moveSpeed * params.deltaTime)));
+        direction = normalize((direction + ((targetDirection * params.turnSpeed) * params.deltaTime)));
+        var newPos = ((*agent).position + ((direction * params.moveSpeed) * params.deltaTime));
         var center = (dimsf / 2f);
         if (((newPos.x < 0f) || (newPos.x >= dimsf.x))) {
           newPos.x = clamp(newPos.x, 0f, (dimsf.x - 1f));
@@ -343,7 +423,7 @@ describe('slime mold 3d example', () => {
       }
 
       fn rayBoxIntersection(rayOrigin: vec3f, rayDir: vec3f, boxMin: vec3f, boxMax: vec3f) -> RayBoxResult {
-        var invDir = (vec3f(1) / rayDir);
+        var invDir = (1f / rayDir);
         var t0 = ((boxMin - rayOrigin) * invDir);
         var t1 = ((boxMax - rayOrigin) * invDir);
         var tmin = min(t0, t1);
@@ -418,7 +498,7 @@ describe('slime mold 3d example', () => {
           let density = pow(d0, gamma);
           let alphaSrc = (1f - exp(((-(sigmaT) * density) * stepSize)));
           var contrib = (albedo * alphaSrc);
-          accum = (accum + (contrib * transmittance));
+          accum += (contrib * transmittance);
           transmittance = (transmittance * (1f - alphaSrc));
           i += 1i;
         }

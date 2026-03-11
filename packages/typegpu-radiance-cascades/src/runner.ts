@@ -26,10 +26,7 @@ import {
 } from './cascades.ts';
 
 type OutputTexture =
-  | (
-    & TgpuTexture<{ size: [number, number]; format: 'rgba16float' }>
-    & StorageFlag
-  )
+  | (TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> & StorageFlag)
   | TgpuTextureView<d.WgslStorageTexture2d<'rgba16float', 'write-only'>>;
 
 type CascadesOptions = {
@@ -50,13 +47,12 @@ type CascadesOptions = {
   size?: { width: number; height: number };
 };
 
-type OutputTextureProp =
-  & TgpuTexture<{
-    size: [number, number];
-    format: 'rgba16float';
-  }>
-  & StorageFlag
-  & SampledFlag;
+type OutputTextureProp = TgpuTexture<{
+  size: [number, number];
+  format: 'rgba16float';
+}> &
+  StorageFlag &
+  SampledFlag;
 
 export type RadianceCascadesExecutor = {
   run(): void;
@@ -65,13 +61,10 @@ export type RadianceCascadesExecutor = {
   readonly output: OutputTextureProp;
 };
 
-export function createRadianceCascades(
-  options: CascadesOptions,
-): RadianceCascadesExecutor {
+export function createRadianceCascades(options: CascadesOptions): RadianceCascadesExecutor {
   const { root, sdf, color, sdfResolution, output, size, rayMarch } = options;
 
-  const hasOutputProvided = !!output &&
-    (isTexture(output) || isTextureView(output));
+  const hasOutputProvided = !!output && (isTexture(output) || isTextureView(output));
 
   // Determine output dimensions
   let outputWidth: number;
@@ -98,19 +91,18 @@ export function createRadianceCascades(
   }
 
   // Create or use provided output texture
-  const dst = hasOutputProvided ? output : root['~unstable']
-    .createTexture({
-      size: [outputWidth, outputHeight],
-      format: 'rgba16float',
-    })
-    .$usage('storage', 'sampled');
+  const dst = hasOutputProvided
+    ? output
+    : root['~unstable']
+        .createTexture({
+          size: [outputWidth, outputHeight],
+          format: 'rgba16float',
+        })
+        .$usage('storage', 'sampled');
 
   const ownsOutput = !hasOutputProvided;
 
-  const [cascadeDimX, cascadeDimY, cascadeAmount] = getCascadeDim(
-    outputWidth,
-    outputHeight,
-  );
+  const [cascadeDimX, cascadeDimY, cascadeAmount] = getCascadeDim(outputWidth, outputHeight);
 
   const cascadeProbesX = cascadeDimX / 2;
   const cascadeProbesY = cascadeDimY / 2;
@@ -121,19 +113,16 @@ export function createRadianceCascades(
     probes: `${cascadeProbesX}x${cascadeProbesY}`,
     cascadeCount: cascadeAmount,
     sdfResolution: `${sdfResolution.width}x${sdfResolution.height}`,
-    textureMemory: `${
-      ((cascadeDimX * cascadeDimY * cascadeAmount * 8 * 2) / (1024 * 1024))
-        .toFixed(1)
-    } MB (2x cascade textures)`,
-    dispatchesPerRun: `${cascadeAmount} cascade + 1 build = ${
-      cascadeAmount + 1
-    }`,
-    workgroupsPerCascadeDispatch: `${Math.ceil(cascadeDimX / 8)}x${
-      Math.ceil(cascadeDimY / 8)
-    } = ${Math.ceil(cascadeDimX / 8) * Math.ceil(cascadeDimY / 8)}`,
-    workgroupsPerBuildDispatch: `${Math.ceil(outputWidth / 8)}x${
-      Math.ceil(outputHeight / 8)
-    } = ${Math.ceil(outputWidth / 8) * Math.ceil(outputHeight / 8)}`,
+    textureMemory: `${((cascadeDimX * cascadeDimY * cascadeAmount * 8 * 2) / (1024 * 1024)).toFixed(
+      1,
+    )} MB (2x cascade textures)`,
+    dispatchesPerRun: `${cascadeAmount} cascade + 1 build = ${cascadeAmount + 1}`,
+    workgroupsPerCascadeDispatch: `${Math.ceil(cascadeDimX / 8)}x${Math.ceil(
+      cascadeDimY / 8,
+    )} = ${Math.ceil(cascadeDimX / 8) * Math.ceil(cascadeDimY / 8)}`,
+    workgroupsPerBuildDispatch: `${Math.ceil(outputWidth / 8)}x${Math.ceil(
+      outputHeight / 8,
+    )} = ${Math.ceil(outputWidth / 8) * Math.ceil(outputHeight / 8)}`,
   });
 
   // Log per-layer probe/ray breakdown
@@ -145,9 +134,10 @@ export function createRadianceCascades(
     const usedX = probesX * raysDimStored;
     const usedY = probesY * raysDimStored;
     console.debug(
-      `  layer ${l}: probes=${probesX}x${probesY}, rays=${raysDimActual}x${raysDimActual} (stored ${raysDimStored}x${raysDimStored}), used=${usedX}x${usedY} of ${cascadeDimX}x${cascadeDimY} (${
-        ((usedX * usedY) / (cascadeDimX * cascadeDimY) * 100).toFixed(0)
-      }%)`,
+      `  layer ${l}: probes=${probesX}x${probesY}, rays=${raysDimActual}x${raysDimActual} (stored ${raysDimStored}x${raysDimStored}), used=${usedX}x${usedY} of ${cascadeDimX}x${cascadeDimY} (${(
+        ((usedX * usedY) / (cascadeDimX * cascadeDimY)) *
+        100
+      ).toFixed(0)}%)`,
     );
   }
 
@@ -190,28 +180,25 @@ export function createRadianceCascades(
     .withCompute(cascadePassCompute)
     .createPipeline();
 
-  const cascadePassBindGroups = Array.from(
-    { length: cascadeAmount },
-    (_, layer) => {
-      const writeToA = (cascadeAmount - 1 - layer) % 2 === 0;
-      const dstTexture = writeToA ? cascadeTextureA : cascadeTextureB;
-      const srcTexture = writeToA ? cascadeTextureB : cascadeTextureA;
+  const cascadePassBindGroups = Array.from({ length: cascadeAmount }, (_, layer) => {
+    const writeToA = (cascadeAmount - 1 - layer) % 2 === 0;
+    const dstTexture = writeToA ? cascadeTextureA : cascadeTextureB;
+    const srcTexture = writeToA ? cascadeTextureB : cascadeTextureA;
 
-      return root.createBindGroup(cascadePassBGL, {
-        staticParams: staticParamsBuffer,
-        layer: layerBuffer,
-        upper: srcTexture.createView(d.texture2d(d.f32), {
-          baseArrayLayer: Math.min(layer + 1, cascadeAmount - 1),
-          arrayLayerCount: 1,
-        }),
-        upperSampler: cascadeSampler,
-        dst: dstTexture.createView(
-          d.textureStorage2d('rgba16float', 'write-only'),
-          { baseArrayLayer: layer, arrayLayerCount: 1 },
-        ),
-      });
-    },
-  );
+    return root.createBindGroup(cascadePassBGL, {
+      staticParams: staticParamsBuffer,
+      layer: layerBuffer,
+      upper: srcTexture.createView(d.texture2d(d.f32), {
+        baseArrayLayer: Math.min(layer + 1, cascadeAmount - 1),
+        arrayLayerCount: 1,
+      }),
+      upperSampler: cascadeSampler,
+      dst: dstTexture.createView(d.textureStorage2d('rgba16float', 'write-only'), {
+        baseArrayLayer: layer,
+        arrayLayerCount: 1,
+      }),
+    });
+  });
 
   const buildRadianceFieldPipeline = root['~unstable']
     .withCompute(buildRadianceFieldCompute)
@@ -229,10 +216,8 @@ export function createRadianceCascades(
 
   const dstView = isTexture(dst)
     ? (
-      dst as
-        & TgpuTexture<{ size: [number, number]; format: 'rgba16float' }>
-        & StorageFlag
-    ).createView(d.textureStorage2d('rgba16float', 'write-only'))
+        dst as TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> & StorageFlag
+      ).createView(d.textureStorage2d('rgba16float', 'write-only'))
     : dst;
 
   const buildRadianceFieldBG = root.createBindGroup(buildRadianceFieldBGL, {
@@ -258,9 +243,7 @@ export function createRadianceCascades(
     }
   }
 
-  function createExecutor(
-    additionalBindGroups: TgpuBindGroup[] = [],
-  ): RadianceCascadesExecutor {
+  function createExecutor(additionalBindGroups: TgpuBindGroup[] = []): RadianceCascadesExecutor {
     const prebuiltCascadePipelines = cascadePassBindGroups.map((bg) => {
       let p = cascadePassPipeline.with(bg);
       for (const addBg of additionalBindGroups) {
@@ -269,9 +252,7 @@ export function createRadianceCascades(
       return p;
     });
 
-    let prebuiltRadiancePipeline = buildRadianceFieldPipeline.with(
-      buildRadianceFieldBG,
-    );
+    let prebuiltRadiancePipeline = buildRadianceFieldPipeline.with(buildRadianceFieldBG);
     for (const bg of additionalBindGroups) {
       prebuiltRadiancePipeline = prebuiltRadiancePipeline.with(bg);
     }
@@ -279,16 +260,10 @@ export function createRadianceCascades(
     function run() {
       for (let layer = cascadeAmount - 1; layer >= 0; layer--) {
         layerBuffer.write(layer);
-        prebuiltCascadePipelines[layer]?.dispatchWorkgroups(
-          cascadeWorkgroupsX,
-          cascadeWorkgroupsY,
-        );
+        prebuiltCascadePipelines[layer]?.dispatchWorkgroups(cascadeWorkgroupsX, cascadeWorkgroupsY);
       }
 
-      prebuiltRadiancePipeline.dispatchWorkgroups(
-        outputWorkgroupsX,
-        outputWorkgroupsY,
-      );
+      prebuiltRadiancePipeline.dispatchWorkgroups(outputWorkgroupsX, outputWorkgroupsY);
     }
 
     return {

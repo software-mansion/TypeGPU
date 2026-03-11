@@ -9,10 +9,8 @@ export const envMapLayout = tgpu.bindGroupLayout({
   envSampler: { sampler: 'filtering' },
 });
 
-export const materialAccess = tgpu['~unstable'].accessor(Material);
-export const lightsAccess = tgpu['~unstable'].accessor(
-  d.arrayOf(Light, LIGHT_COUNT),
-);
+export const materialAccess = tgpu.accessor(Material);
+export const lightsAccess = tgpu.accessor(d.arrayOf(Light, LIGHT_COUNT));
 
 export const distributionGGX = (ndoth: number, roughness: number): number => {
   'use gpu';
@@ -28,25 +26,14 @@ export const geometrySchlickGGX = (ndot: number, roughness: number): number => {
   return ndot / (ndot * (1 - k) + k);
 };
 
-export const geometrySmith = (
-  ndotv: number,
-  ndotl: number,
-  roughness: number,
-): number => {
+export const geometrySmith = (ndotv: number, ndotl: number, roughness: number): number => {
   'use gpu';
-  return (
-    geometrySchlickGGX(ndotv, roughness) * geometrySchlickGGX(ndotl, roughness)
-  );
+  return geometrySchlickGGX(ndotv, roughness) * geometrySchlickGGX(ndotl, roughness);
 };
 
 export const fresnelSchlick = (cosTheta: number, f0: d.v3f): d.v3f => {
   'use gpu';
-  return f0.add(
-    d
-      .vec3f(1)
-      .sub(f0)
-      .mul((1 - cosTheta) ** 5),
-  );
+  return f0 + (1 - f0) * (1 - cosTheta) ** 5;
 };
 
 export const evaluateLight = (
@@ -58,11 +45,11 @@ export const evaluateLight = (
   f0: d.v3f,
 ): d.v3f => {
   'use gpu';
-  const toLight = light.position.sub(p);
+  const toLight = light.position - p;
   const dist = std.length(toLight);
   const l = std.normalize(toLight);
-  const h = std.normalize(v.add(l));
-  const radiance = light.color.div(dist ** 2);
+  const h = std.normalize(v + l);
+  const radiance = light.color / dist ** 2;
 
   const ndotl = std.max(std.dot(n, l), 0);
   const ndoth = std.max(std.dot(n, h), 0);
@@ -72,41 +59,35 @@ export const evaluateLight = (
   const g = geometrySmith(ndotv, ndotl, material.roughness);
   const fresnel = fresnelSchlick(ndoth, f0);
 
-  const specular = fresnel.mul((ndf * g) / (4 * ndotv * ndotl + 0.001));
-  const kd = d
-    .vec3f(1)
-    .sub(fresnel)
-    .mul(1 - material.metallic);
+  const specular = (fresnel * (ndf * g)) / (4 * ndotv * ndotl + 0.001);
+  const kd = (1 - fresnel) * (1 - material.metallic);
 
-  return kd
-    .mul(material.albedo)
-    .div(PI)
-    .add(specular)
-    .mul(radiance)
-    .mul(ndotl);
+  return ((kd * material.albedo) / PI + specular) * radiance * ndotl;
 };
 
+const lightCountIterations = Array.from({ length: LIGHT_COUNT }, (_, i) => i);
 export const shade = (p: d.v3f, n: d.v3f, v: d.v3f): d.v3f => {
   'use gpu';
   const material = materialAccess.$;
   const f0 = std.mix(d.vec3f(0.04), material.albedo, material.metallic);
 
   let lo = d.vec3f(0);
-  for (let i = 0; i < LIGHT_COUNT; i++) {
-    lo = lo.add(evaluateLight(p, n, v, lightsAccess.$[i], material, f0));
+  for (const i of tgpu.unroll(lightCountIterations)) {
+    lo += evaluateLight(p, n, v, lightsAccess.$[i], material, f0);
   }
 
   const reflectDir = std.reflect(v, n);
 
-  const pScaled = p.mul(50);
-  const roughOffset = d
-    .vec3f(
+  const pScaled = p * 50;
+  const roughOffset =
+    d.vec3f(
       perlin3d.sample(pScaled),
-      perlin3d.sample(pScaled.add(100)),
-      perlin3d.sample(pScaled.add(200)),
-    )
-    .mul(material.roughness * 0.3);
-  const blurredReflectDir = std.normalize(reflectDir.add(roughOffset));
+      perlin3d.sample(pScaled + 100),
+      perlin3d.sample(pScaled + 200),
+    ) *
+    material.roughness *
+    0.3;
+  const blurredReflectDir = std.normalize(reflectDir + roughOffset);
 
   const envColor = std.textureSampleLevel(
     envMapLayout.$.envMap,
@@ -119,18 +100,11 @@ export const shade = (p: d.v3f, n: d.v3f, v: d.v3f): d.v3f => {
 
   const fresnel = fresnelSchlick(ndotv, f0);
 
-  const reflectionTint = std.mix(
-    d.vec3f(1),
-    material.albedo,
-    material.metallic,
-  );
+  const reflectionTint = std.mix(d.vec3f(1), material.albedo, material.metallic);
 
   const reflectionStrength = 1 - material.roughness * 0.85;
 
-  const envContribution = envColor.rgb
-    .mul(fresnel)
-    .mul(reflectionTint)
-    .mul(reflectionStrength);
+  const envContribution = envColor.rgb.mul(fresnel).mul(reflectionTint).mul(reflectionStrength);
 
   const ambient = material.albedo.mul(material.ao * 0.05);
   const color = ambient.add(lo).add(envContribution);

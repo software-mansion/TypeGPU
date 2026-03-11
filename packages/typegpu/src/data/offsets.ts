@@ -12,10 +12,7 @@ export interface OffsetInfo {
   padding?: number | undefined;
 }
 
-const cachedOffsets = new WeakMap<
-  WgslStruct | Unstruct,
-  Record<string, OffsetInfo>
->();
+const cachedOffsets = new WeakMap<WgslStruct | Unstruct, Record<string, OffsetInfo>>();
 
 export function offsetsForProps<T extends WgslStruct | Unstruct>(
   struct: T,
@@ -39,10 +36,7 @@ export function offsetsForProps<T extends WgslStruct | Unstruct>(
 
     const beforeAlignment = measurer.size;
 
-    alignIO(
-      measurer,
-      isUnstruct(struct) ? customAlignmentOf(prop) : alignmentOf(prop),
-    );
+    alignIO(measurer, isUnstruct(struct) ? customAlignmentOf(prop) : alignmentOf(prop));
 
     if (lastEntry) {
       lastEntry.padding = measurer.size - beforeAlignment;
@@ -55,8 +49,7 @@ export function offsetsForProps<T extends WgslStruct | Unstruct>(
   }
 
   if (lastEntry) {
-    lastEntry.padding = roundUp(sizeOf(struct), alignmentOf(struct)) -
-      measurer.size;
+    lastEntry.padding = roundUp(sizeOf(struct), alignmentOf(struct)) - measurer.size;
   }
 
   cachedOffsets.set(struct, offsets);

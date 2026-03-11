@@ -6,16 +6,12 @@ const textureLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
 });
 
-const mainFrag = tgpu['~unstable'].fragmentFn({
+const mainFrag = tgpu.fragmentFn({
   in: { uv: d.location(0, d.vec2f) },
   out: d.vec4f,
 })((input) => {
   const uv2 = uvTransformUniform.$.mul(input.uv.sub(0.5)).add(0.5);
-  let col = std.textureSampleBaseClampToEdge(
-    textureLayout.$.inputTexture,
-    sampler.$,
-    uv2,
-  );
+  let col = std.textureSampleBaseClampToEdge(textureLayout.$.inputTexture, sampler.$, uv2);
   const ycbcr = col.rgb.mul(rgbToYcbcrMatrix.$);
   const colycbcr = colorUniform.$.mul(rgbToYcbcrMatrix.$);
 
@@ -62,18 +58,18 @@ const sampler = root['~unstable'].createSampler({
   minFilter: 'linear',
 });
 
-const renderPipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle, {})
-  .withFragment(mainFrag, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: mainFrag,
+  targets: { format: presentationFormat },
+});
 
 function onVideoChange(size: { width: number; height: number }) {
   const aspectRatio = size.width / size.height;
   video.style.height = `${video.clientWidth / aspectRatio}px`;
   if (canvas.parentElement) {
     canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
-    canvas.parentElement.style.height =
-      `min(100cqh, calc(100cqw/(${aspectRatio})))`;
+    canvas.parentElement.style.height = `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
 }
 
@@ -101,10 +97,7 @@ if (isIOS) {
 let videoFrameCallbackId: number | undefined;
 let lastFrameSize: { width: number; height: number } | undefined;
 
-function processVideoFrame(
-  _: number,
-  metadata: VideoFrameCallbackMetadata,
-) {
+function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   if (video.readyState < 2) {
     videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
     return;
@@ -124,14 +117,14 @@ function processVideoFrame(
 
   renderPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [1, 1, 1, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
-    .with(root.createBindGroup(textureLayout, {
-      inputTexture: device.importExternalTexture({ source: video }),
-    }))
+    .with(
+      root.createBindGroup(textureLayout, {
+        inputTexture: device.importExternalTexture({ source: video }),
+      }),
+    )
     .draw(3);
 
   spinner.style.display = 'none';

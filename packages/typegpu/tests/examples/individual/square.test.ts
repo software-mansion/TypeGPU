@@ -10,11 +10,14 @@ describe('square example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'simple',
-      name: 'square',
-      expectedCalls: 1,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'simple',
+        name: 'square',
+        expectedCalls: 1,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "struct vertex_Output {

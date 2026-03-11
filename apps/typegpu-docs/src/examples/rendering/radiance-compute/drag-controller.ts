@@ -35,9 +35,10 @@ export class DragController {
   private hitTest(clientX: number, clientY: number): DragTarget | null {
     const uv = this.canvasToUV(clientX, clientY);
     for (const el of sceneElements) {
-      const hit = el.type === 'disk'
-        ? this.hitTestDisk(uv, el.position, el.size as number)
-        : this.hitTestBox(uv, el.position, el.size as d.v2f);
+      const hit =
+        el.type === 'disk'
+          ? this.hitTestDisk(uv, el.position, el.size)
+          : this.hitTestBox(uv, el.position, el.size);
       if (hit) {
         return el;
       }

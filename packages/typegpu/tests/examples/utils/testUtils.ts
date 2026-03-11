@@ -1,12 +1,13 @@
-export function getExampleURLs(category: string, name: string): {
+export function getExampleURLs(
+  category: string,
+  name: string,
+): {
   html: string;
   ts: string;
 } {
   return {
-    html:
-      `../../../../../apps/typegpu-docs/src/examples/${category}/${name}/index.html?raw`,
-    ts:
-      `../../../../../apps/typegpu-docs/src/examples/${category}/${name}/index.ts`,
+    html: `../../../../../apps/typegpu-docs/src/examples/${category}/${name}/index.html?raw`,
+    ts: `../../../../../apps/typegpu-docs/src/examples/${category}/${name}/index.ts`,
   };
 }
 
@@ -18,17 +19,15 @@ export function createDeepNoopProxy<T extends object>(
     get(obj, prop, receiver) {
       accessedProperties.add(prop);
 
-      // oxlint-disable-next-line typescript/no-explicit-any we testing here
-      return () => createDeepNoopProxy({} as any, accessedProperties);
+      return () => createDeepNoopProxy({}, accessedProperties);
     },
     set() {
       return true; // No-op set
     },
     apply() {
-      // oxlint-disable-next-line typescript/no-explicit-any we testing here
-      return createDeepNoopProxy({} as any, accessedProperties);
+      return createDeepNoopProxy({}, accessedProperties);
     },
-  }) as T;
+  });
 }
 
 export async function testExampleShaderGeneration(
@@ -50,7 +49,7 @@ export async function testExampleShaderGeneration(
 }
 
 export function extractShaderCodes(
-  // oxlint-disable-next-line typescript/no-explicit-any we testing here
+  // oxlint-disable-next-line typescript/no-explicit-any -- we testing here
   device: any,
   expectedCalls?: number,
 ): string {
@@ -66,7 +65,7 @@ export function extractShaderCodes(
 }
 
 export async function waitForExpectedCalls(
-  // oxlint-disable-next-line typescript/no-explicit-any it's a mock
+  // oxlint-disable-next-line typescript/no-explicit-any -- it's a mock
   device: any,
   expectedCalls: number,
 ): Promise<void> {
@@ -75,8 +74,7 @@ export async function waitForExpectedCalls(
   let elapsed = 0;
 
   while (elapsed < maxWaitTime) {
-    const currentCalls = device.mock?.createShaderModule?.mock?.calls?.length ||
-      0;
+    const currentCalls = device.mock?.createShaderModule?.mock?.calls?.length || 0;
     if (currentCalls >= expectedCalls) {
       return;
     }

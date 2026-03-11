@@ -9,10 +9,7 @@ export function getCascadeDim(width: number, height: number) {
   const diagonal = Math.sqrt(width ** 2 + height ** 2);
 
   const minPow2 = 16;
-  const closestPowerOfTwo = Math.max(
-    minPow2,
-    2 ** Math.floor(Math.log2(diagonal)),
-  );
+  const closestPowerOfTwo = Math.max(minPow2, 2 ** Math.floor(Math.log2(diagonal)));
 
   let cascadeWidth: number;
   let cascadeHeight: number;
@@ -66,10 +63,7 @@ export const defaultRayMarch = tgpu.fn(
       break;
     }
     const pos = probePos.add(rayDir.mul(t));
-    if (
-      std.any(std.lt(pos, d.vec2f(0))) ||
-      std.any(std.gt(pos, d.vec2f(1)))
-    ) {
+    if (std.any(std.lt(pos, d.vec2f(0))) || std.any(std.gt(pos, d.vec2f(1)))) {
       break;
     }
 
@@ -135,17 +129,14 @@ export const cascadePassCompute = tgpu['~unstable'].computeFn({
 
   const probePos = d.vec2f(probe).add(0.5).div(d.vec2f(probes));
   const aspect = d.f32(params.baseProbes.x) / d.f32(params.baseProbes.y);
-  const cascadeProbesMinVal = d.f32(
-    std.min(params.baseProbes.x, params.baseProbes.y),
-  );
+  const cascadeProbesMinVal = d.f32(std.min(params.baseProbes.x, params.baseProbes.y));
   const interval0 = 1.0 / cascadeProbesMinVal;
   const pow4 = d.f32(d.u32(1) << (layer * d.u32(2)));
   const startUv = (interval0 * (pow4 - 1.0)) / 3.0;
   const endUv = startUv + interval0 * pow4;
 
   const sdfDim = sdfResolutionSlot.$;
-  const texelSizeMin = 1.0 /
-    d.f32(std.max(std.min(sdfDim.x, sdfDim.y), d.u32(1)));
+  const texelSizeMin = 1.0 / d.f32(std.max(std.min(sdfDim.x, sdfDim.y), d.u32(1)));
   // Use texel size as minimum threshold to avoid sub-texel stepping
   const eps = std.max(texelSizeMin, 0.25 / cascadeProbesMinVal);
   const minStep = std.max(texelSizeMin * 0.5, 0.125 / cascadeProbesMinVal);
@@ -168,15 +159,7 @@ export const cascadePassCompute = tgpu['~unstable'].computeFn({
       rayDir = d.vec2f(cosA, sinA * aspect);
     }
 
-    const marchResult = rayMarchSlot.$(
-      probePos,
-      rayDir,
-      startUv,
-      endUv,
-      eps,
-      minStep,
-      biasUv,
-    );
+    const marchResult = rayMarchSlot.$(probePos, rayDir, startUv, endUv, eps, minStep, biasUv);
     let rgb = d.vec3f(marchResult.color);
     let T = d.f32(marchResult.transmittance);
 
@@ -260,9 +243,5 @@ export const buildRadianceFieldCompute = tgpu['~unstable'].computeFn({
   const avg = sum.mul(0.25);
   const res = d.vec3f(avg);
 
-  std.textureStore(
-    buildRadianceFieldBGL.$.dst,
-    gid.xy,
-    d.vec4f(res, 1),
-  );
+  std.textureStore(buildRadianceFieldBGL.$.dst, gid.xy, d.vec4f(res, 1));
 });

@@ -5,6 +5,7 @@ export const ExampleMetadata = type({
   title: 'string',
   category: 'string',
   'tags?': 'string[]',
+  coolFactor: 'number',
   'dev?': 'boolean',
 });
 
@@ -26,6 +27,11 @@ export type ExampleSrcFile = {
    */
   path: string;
   content: string;
+  /**
+   * Stripped down version of the content, without
+   * overloaded operators (if they were used)
+   */
+  tsnotoverContent?: string | undefined;
 };
 
 export type ExampleCommonFile = {
@@ -35,6 +41,11 @@ export type ExampleCommonFile = {
    */
   path: string;
   content: string;
+  /**
+   * Stripped down version of the content, without
+   * overloaded operators (if they were used)
+   */
+  tsnotoverContent?: string | undefined;
 };
 
 export interface ThumbnailPair {
@@ -49,4 +60,5 @@ export type Example = {
   htmlFile: ExampleSrcFile;
   metadata: ExampleMetadata;
   thumbnails?: ThumbnailPair;
+  usedApis: string[];
 };

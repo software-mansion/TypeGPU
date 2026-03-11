@@ -5,22 +5,19 @@ const PERCENTAGE_HEIGHT = 128 * 2;
 const PERCENTAGE_COUNT = 101; // 0% to 100%
 
 export class NumberProvider {
-  digitTextureAtlas:
-    & TgpuTexture<{
-      size: [
-        typeof PERCENTAGE_WIDTH,
-        typeof PERCENTAGE_HEIGHT,
-        typeof PERCENTAGE_COUNT,
-      ];
-      format: 'rgba8unorm';
-    }>
-    & SampledFlag;
+  digitTextureAtlas: TgpuTexture<{
+    size: [typeof PERCENTAGE_WIDTH, typeof PERCENTAGE_HEIGHT, typeof PERCENTAGE_COUNT];
+    format: 'rgba8unorm';
+  }> &
+    SampledFlag;
 
   constructor(root: TgpuRoot) {
-    this.digitTextureAtlas = root['~unstable'].createTexture({
-      size: [PERCENTAGE_WIDTH, PERCENTAGE_HEIGHT, PERCENTAGE_COUNT],
-      format: 'rgba8unorm',
-    }).$usage('sampled', 'render');
+    this.digitTextureAtlas = root['~unstable']
+      .createTexture({
+        size: [PERCENTAGE_WIDTH, PERCENTAGE_HEIGHT, PERCENTAGE_COUNT],
+        format: 'rgba8unorm',
+      })
+      .$usage('sampled', 'render');
   }
 
   async fillAtlas() {

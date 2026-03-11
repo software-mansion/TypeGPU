@@ -42,26 +42,16 @@ const distWriteLayout = tgpu.bindGroupLayout({
 export const classifySlot = tgpu.slot<(coord: d.v2u, size: d.v2u) => boolean>();
 
 /** Slot for SDF getter - returns the signed distance value to store. */
-const sdfSlot = tgpu.slot<
-  (
-    coord: d.v2u,
-    size: d.v2u,
-    signedDist: number,
-    insidePx: d.v2u,
-    outsidePx: d.v2u,
-  ) => number
->();
+const sdfSlot =
+  tgpu.slot<
+    (coord: d.v2u, size: d.v2u, signedDist: number, insidePx: d.v2u, outsidePx: d.v2u) => number
+  >();
 
 /** Slot for color getter - returns the color value to store. */
-const colorSlot = tgpu.slot<
-  (
-    coord: d.v2u,
-    size: d.v2u,
-    signedDist: number,
-    insidePx: d.v2u,
-    outsidePx: d.v2u,
-  ) => d.v4f
->();
+const colorSlot =
+  tgpu.slot<
+    (coord: d.v2u, size: d.v2u, signedDist: number, insidePx: d.v2u, outsidePx: d.v2u) => d.v4f
+  >();
 
 const sampleWithOffset = (
   tex: d.textureStorage2d<'rgba16uint', 'read-only'>,
@@ -72,7 +62,8 @@ const sampleWithOffset = (
   'use gpu';
   const samplePos = pos.add(offset);
 
-  const outOfBounds = samplePos.x < 0 ||
+  const outOfBounds =
+    samplePos.x < 0 ||
     samplePos.y < 0 ||
     samplePos.x >= d.i32(dims.x) ||
     samplePos.y >= d.i32(dims.y);
@@ -90,9 +81,9 @@ const sampleWithOffset = (
   );
 };
 
-const offsetAccessor = tgpu['~unstable'].accessor(d.i32);
+const offsetAccessor = tgpu.accessor(d.i32);
 
-const initFromSeedCompute = tgpu['~unstable'].computeFn({
+const initFromSeedCompute = tgpu.computeFn({
   workgroupSize: [8, 8],
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
@@ -111,14 +102,10 @@ const initFromSeedCompute = tgpu['~unstable'].computeFn({
   const insideCoord = std.select(invalid, gid.xy, isInside);
   const outsideCoord = std.select(gid.xy, invalid, isInside);
 
-  std.textureStore(
-    initLayout.$.writeView,
-    d.vec2i(gid.xy),
-    d.vec4u(insideCoord, outsideCoord),
-  );
+  std.textureStore(initLayout.$.writeView, d.vec2i(gid.xy), d.vec4u(insideCoord, outsideCoord));
 });
 
-const jumpFloodCompute = tgpu['~unstable'].computeFn({
+const jumpFloodCompute = tgpu.computeFn({
   workgroupSize: [8, 8],
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
@@ -174,7 +161,7 @@ const jumpFloodCompute = tgpu['~unstable'].computeFn({
   );
 });
 
-const createDistanceFieldCompute = tgpu['~unstable'].computeFn({
+const createDistanceFieldCompute = tgpu.computeFn({
   workgroupSize: [8, 8],
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
@@ -206,57 +193,34 @@ const createDistanceFieldCompute = tgpu['~unstable'].computeFn({
   const signedDist = insideDist - outsideDist;
 
   // Get SDF and color values from slots
-  const sdfValue = sdfSlot.$(
-    gid.xy,
-    size,
-    signedDist,
-    insideCoord,
-    outsideCoord,
-  );
+  const sdfValue = sdfSlot.$(gid.xy, size, signedDist, insideCoord, outsideCoord);
 
-  const colorValue = colorSlot.$(
-    gid.xy,
-    size,
-    signedDist,
-    insideCoord,
-    outsideCoord,
-  );
+  const colorValue = colorSlot.$(gid.xy, size, signedDist, insideCoord, outsideCoord);
 
-  std.textureStore(
-    distWriteLayout.$.sdfTexture,
-    d.vec2i(gid.xy),
-    d.vec4f(sdfValue, 0, 0, 0),
-  );
+  std.textureStore(distWriteLayout.$.sdfTexture, d.vec2i(gid.xy), d.vec4f(sdfValue, 0, 0, 0));
 
-  std.textureStore(
-    distWriteLayout.$.colorTexture,
-    d.vec2i(gid.xy),
-    colorValue,
-  );
+  std.textureStore(distWriteLayout.$.colorTexture, d.vec2i(gid.xy), colorValue);
 });
 
-type FloodTexture =
-  & TgpuTexture<{
-    size: [number, number];
-    format: 'rgba16uint';
-  }>
-  & StorageFlag;
+type FloodTexture = TgpuTexture<{
+  size: [number, number];
+  format: 'rgba16uint';
+}> &
+  StorageFlag;
 
-export type SdfTexture =
-  & TgpuTexture<{
-    size: [number, number];
-    format: 'rgba16float';
-  }>
-  & StorageFlag
-  & SampledFlag;
+export type SdfTexture = TgpuTexture<{
+  size: [number, number];
+  format: 'rgba16float';
+}> &
+  StorageFlag &
+  SampledFlag;
 
-export type ColorTexture =
-  & TgpuTexture<{
-    size: [number, number];
-    format: 'rgba8unorm';
-  }>
-  & StorageFlag
-  & SampledFlag;
+export type ColorTexture = TgpuTexture<{
+  size: [number, number];
+  format: 'rgba8unorm';
+}> &
+  StorageFlag &
+  SampledFlag;
 
 export type JumpFloodExecutor = {
   /** Run the jump flood algorithm. */
@@ -344,55 +308,38 @@ export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
 
   const offsetUniform = root.createUniform(d.i32);
 
-  const initFromSeedPipeline = root['~unstable']
+  const initFromSeedPipeline = root
     .with(classifySlot, classify)
-    .withCompute(initFromSeedCompute)
-    .createPipeline();
+    .createComputePipeline({ compute: initFromSeedCompute });
 
-  const jumpFloodPipeline = root['~unstable']
+  const jumpFloodPipeline = root
     .with(offsetAccessor, offsetUniform)
-    .withCompute(jumpFloodCompute)
-    .createPipeline();
+    .createComputePipeline({ compute: jumpFloodCompute });
 
-  const createDistancePipeline = root['~unstable']
+  const createDistancePipeline = root
     .with(sdfSlot, getSdf)
     .with(colorSlot, getColor)
-    .withCompute(createDistanceFieldCompute)
-    .createPipeline();
+    .createComputePipeline({ compute: createDistanceFieldCompute });
 
   // Create bind groups
   const initBG = root.createBindGroup(initLayout, {
-    writeView: floodTextureA.createView(
-      d.textureStorage2d('rgba16uint', 'write-only'),
-    ),
+    writeView: floodTextureA.createView(d.textureStorage2d('rgba16uint', 'write-only')),
   });
 
   const pingPongBGs = [
     root.createBindGroup(pingPongLayout, {
-      readView: floodTextureA.createView(
-        d.textureStorage2d('rgba16uint', 'read-only'),
-      ),
-      writeView: floodTextureB.createView(
-        d.textureStorage2d('rgba16uint', 'write-only'),
-      ),
+      readView: floodTextureA.createView(d.textureStorage2d('rgba16uint', 'read-only')),
+      writeView: floodTextureB.createView(d.textureStorage2d('rgba16uint', 'write-only')),
     }),
     root.createBindGroup(pingPongLayout, {
-      readView: floodTextureB.createView(
-        d.textureStorage2d('rgba16uint', 'read-only'),
-      ),
-      writeView: floodTextureA.createView(
-        d.textureStorage2d('rgba16uint', 'write-only'),
-      ),
+      readView: floodTextureB.createView(d.textureStorage2d('rgba16uint', 'read-only')),
+      writeView: floodTextureA.createView(d.textureStorage2d('rgba16uint', 'write-only')),
     }),
   ];
 
   const distWriteBG = root.createBindGroup(distWriteLayout, {
-    sdfTexture: sdfTexture.createView(
-      d.textureStorage2d('rgba16float', 'write-only'),
-    ),
-    colorTexture: colorTexture.createView(
-      d.textureStorage2d('rgba8unorm', 'write-only'),
-    ),
+    sdfTexture: sdfTexture.createView(d.textureStorage2d('rgba16float', 'write-only')),
+    colorTexture: colorTexture.createView(d.textureStorage2d('rgba8unorm', 'write-only')),
   });
 
   const workgroupsX = Math.ceil(width / 8);
@@ -420,9 +367,7 @@ export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
   })();
   const finalSourceIdx = iterationCount % 2 === 0 ? 0 : 1;
 
-  function createExecutor(
-    additionalBindGroups: TgpuBindGroup[] = [],
-  ): JumpFloodExecutor {
+  function createExecutor(additionalBindGroups: TgpuBindGroup[] = []): JumpFloodExecutor {
     // Pre-cache pipeline+bindgroup combos to avoid re-chaining per frame.
     let prebuiltInitPipeline = initFromSeedPipeline.with(initBG);
     for (const bg of additionalBindGroups) {
@@ -454,19 +399,13 @@ export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
 
       while (offset >= 1) {
         offsetUniform.write(offset);
-        prebuiltFloodPipelines[sourceIdx]?.dispatchWorkgroups(
-          workgroupsX,
-          workgroupsY,
-        );
+        prebuiltFloodPipelines[sourceIdx]?.dispatchWorkgroups(workgroupsX, workgroupsY);
         sourceIdx ^= 1;
         offset = Math.floor(offset / 2);
       }
 
       // Create final distance field
-      prebuiltDistPipelines[finalSourceIdx]?.dispatchWorkgroups(
-        workgroupsX,
-        workgroupsY,
-      );
+      prebuiltDistPipelines[finalSourceIdx]?.dispatchWorkgroups(workgroupsX, workgroupsY);
     }
 
     return {
