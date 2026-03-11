@@ -34,10 +34,12 @@ export interface TgpuResolveOptions {
    */
   enableExtensions?: WgslExtension[] | undefined;
   /**
+   * **NOTE: This is an unstable API and may change in the future.**
+   *
    * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
-  shaderGenerator?: ShaderGenerator | undefined;
+  unstable_shaderGenerator?: ShaderGenerator | undefined;
 }
 
 export interface TgpuExtendedResolveOptions extends TgpuResolveOptions {
@@ -181,7 +183,7 @@ function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionRes
   const {
     template,
     externals,
-    shaderGenerator,
+    unstable_shaderGenerator: shaderGenerator,
     names = 'strict',
     config,
     enableExtensions,
@@ -221,7 +223,12 @@ function resolveFromArray(
   items: ResolvableObject[],
   options?: TgpuResolveOptions,
 ): ResolutionResult {
-  const { shaderGenerator, names = 'strict', config, enableExtensions } = options ?? {};
+  const {
+    unstable_shaderGenerator: shaderGenerator,
+    names = 'strict',
+    config,
+    enableExtensions,
+  } = options ?? {};
 
   const resolutionObj: SelfResolvable = {
     [$internal]: true,
