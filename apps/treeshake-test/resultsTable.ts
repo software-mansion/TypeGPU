@@ -50,9 +50,10 @@ export class ResultsTable {
     }
     output += ' |\n';
 
-    const sortedResults = [...this.#results.entries()].toSorted(
-      ([, a], [, b]) => this.#maxAbsoluteChange(b) - this.#maxAbsoluteChange(a),
-    );
+    const sortedResults = [...this.#results.entries()]
+      .map(([test, row]) => [test, row, this.#maxAbsoluteChange(row)] as const)
+      .toSorted(([, , scoreA], [, , scoreB]) => scoreB - scoreA)
+      .map(([test, row]) => [test, row] as const);
 
     for (const [test, row] of sortedResults) {
       output += `| ${test.replaceAll('_', ' ')}`;
