@@ -344,7 +344,7 @@ ${this.ctx.pre}}`;
           rhsTarget = u32;
         }
         convRhs = tryConvertSnippet(this.ctx, rhsExpr, rhsTarget, false);
-        // if lhs is an not integer typ, the browser will return a descriptive wgsl error
+        // if lhs is an not integer type, the browser will return a descriptive wgsl error
         convLhs = lhsExpr;
       } else {
         const forcedType = exprType === NODE.assignmentExpr ? [lhsExpr.dataType] : undefined;

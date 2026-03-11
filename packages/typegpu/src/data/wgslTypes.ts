@@ -1444,6 +1444,8 @@ export type AnyFloat32VecData = Vec2f | Vec3f | Vec4f;
 
 export type AnyFloat16VecData = Vec2h | Vec3h | Vec4h;
 
+export type AnyUnsignedVecData = Vec2u | Vec3u | Vec4u;
+
 export type AnyWgslData =
   | Bool
   | F32
@@ -1554,10 +1556,12 @@ export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
   return isMat2x2f(value) || isMat3x3f(value) || isMat4x4f(value);
 }
 
-export function isFloat32VecInstance(
-  element: number | AnyVecInstance | AnyMatInstance,
-): element is AnyFloat32VecInstance {
+export function isFloat32VecInstance(element: unknown): element is AnyFloat32VecInstance {
   return isVecInstance(element) && ['vec2f', 'vec3f', 'vec4f'].includes(element.kind);
+}
+
+export function isInt32VecInstance(value: unknown): value is v2u | v2i | v3u | v3i | v4u | v4i {
+  return isVecInstance(value) && /i|u/.test(value.kind);
 }
 
 export function isWgslData(value: unknown): value is AnyWgslData {

@@ -37,8 +37,7 @@ import {
   isWgslStruct,
 } from '../data/wgslTypes.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
-import { bitShiftLeft, bitShiftRight } from '../std/numeric.ts';
-import { add, div, mod, mul, sub } from '../std/operators.ts';
+import { add, bitShiftLeft, bitShiftRight, div, mod, mul, sub } from '../std/operators.ts';
 import { isKnownAtComptime } from '../types.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
 

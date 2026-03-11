@@ -104,8 +104,8 @@ describe('bit shift', () => {
       "fn f() {
         const shift = 4u;
         var x = vec3i(256);
-        var y = (x << shift);
-        var z = (x >> shift);
+        var y = (x << vec3u(shift));
+        var z = (x >> vec3u(shift));
       }"
     `);
   });
@@ -145,17 +145,6 @@ describe('bit shift', () => {
     `);
   });
 
-  it('bitShiftLeft/Right is available only on integer vectors', () => {
-    const x = vec3f(1, 2, 3);
-    // @ts-expect-error
-    x.bitShiftLeft;
-    // @ts-expect-error
-    x.bitShiftRight;
-
-    const y = vec3i(1, 2, 3);
-    y.bitShiftLeft(2);
-  });
-
   it('>>= works with vectors', () => {
     const f = () => {
       'use gpu';
@@ -172,5 +161,49 @@ describe('bit shift', () => {
         x >>= shift;
       }"
     `);
+  });
+
+  it('computes correct values for number << number', () => {
+    expect(bitShiftLeft(1, 4)).toBe(16);
+    expect(bitShiftRight(256, 4)).toBe(16);
+  });
+
+  it('computes correct values for vector << vector', () => {
+    const result1 = bitShiftLeft(vec3i(1, 2, 3), vec3u(1, 2, 3));
+    expect(Array.from(result1)).toStrictEqual([2, 8, 24]);
+
+    const result2 = bitShiftRight(vec3i(16, 32, 64), vec3u(1, 2, 3));
+    expect(Array.from(result2)).toStrictEqual([8, 8, 8]);
+  });
+
+  it('computes correct values for vector << number', () => {
+    const result1 = bitShiftLeft(vec3i(1, 2, 3), 2);
+    expect(Array.from(result1)).toStrictEqual([4, 8, 12]);
+
+    const result2 = bitShiftRight(vec3i(16, 32, 64), 2);
+    expect(Array.from(result2)).toStrictEqual([4, 8, 16]);
+  });
+
+  it('throws when calling bitShiftLeft/Right on float vectors', () => {
+    const x = vec3f(1, 2, 3);
+    // @ts-expect-error: part of the test
+    expect(() => bitShiftLeft(x, vec3u(1, 2, 3))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: bitShiftLeft called with invalid arguments, expected types: number or integer vector.]`,
+    );
+    // @ts-expect-error: part of the test
+    expect(() => bitShiftRight(x, vec3u(1, 2, 3))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: bitShiftRight called with invalid arguments, expected types: number or integer vector.]`,
+    );
+  });
+
+  it('bitShiftLeft/Right is available only on integer vectors (at type level)', () => {
+    const x = vec3f(1, 2, 3);
+    // @ts-expect-error: part of the test
+    x.bitShiftLeft;
+    // @ts-expect-error: part of the test
+    x.bitShiftRight;
+
+    const y = vec3i(1, 2, 3);
+    y.bitShiftLeft(2);
   });
 });
