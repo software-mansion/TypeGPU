@@ -326,9 +326,20 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
 
   write(data: InferInput<TData>, options?: BufferWriteOptions): void {
     const gpuBuffer = this.buffer;
+    const bufferSize = sizeOf(this.dataType);
     const startOffset = options?.startOffset ?? 0;
-    const endOffset = options?.endOffset ?? sizeOf(this.dataType);
+    const endOffset = options?.endOffset ?? bufferSize;
     const size = endOffset - startOffset;
+
+    if (startOffset < 0 || !Number.isInteger(startOffset)) {
+      throw new Error(`startOffset must be a non-negative integer, got ${startOffset}`);
+    }
+    if (endOffset < startOffset) {
+      throw new Error(`endOffset (${endOffset}) must be >= startOffset (${startOffset})`);
+    }
+    if (endOffset > bufferSize) {
+      throw new Error(`endOffset (${endOffset}) exceeds buffer size (${bufferSize})`);
+    }
 
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = gpuBuffer.getMappedRange();
