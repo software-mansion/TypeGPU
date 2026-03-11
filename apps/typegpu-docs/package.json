@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "transform-overloads": "find . -type f -name '*.tsnotover.ts' -delete && node scripts/transform-overloads.ts",
+    "transform-overloads": "find . -type f -name '*.tsnotover.ts*' -delete && node scripts/transform-overloads.ts",
     "dev": "pnpm run transform-overloads && astro dev",
     "build": "pnpm run transform-overloads && astro check && astro build",
     "test:types": "astro check",
