@@ -9,10 +9,11 @@ import tgpu, {
 } from 'typegpu';
 import { Camera, MeshLayout } from './schemas.ts';
 import { type Mesher } from './mesher.ts';
+import { faceOffsets } from './cubeVertices.ts';
 
 export class Renderer {
   #root: TgpuRoot;
-  pipeline: TgpuRenderPipeline;
+  pipeline: TgpuRenderPipeline<d.Vec4f>;
   #depthTexture?: TgpuTexture<{
     size: [number, number];
     format: 'depth24plus';
@@ -21,20 +22,6 @@ export class Renderer {
   constructor(root: TgpuRoot, cameraUniform: TgpuUniform<typeof Camera>) {
     this.#root = root;
     // prettier-ignore
-    const faceOffsets = tgpu.const(d.arrayOf(d.vec3i, 4 * 6), [
-      // 0: bottom (y-1)
-      d.vec3i(1,0,0), d.vec3i(1,0,1), d.vec3i(0,0,0), d.vec3i(0,0,1),
-      // 1: top (y+1)
-      d.vec3i(1,1,1), d.vec3i(1,1,0), d.vec3i(0,1,1), d.vec3i(0,1,0),
-      // 2: left (x-1)
-      d.vec3i(0,1,1), d.vec3i(0,1,0), d.vec3i(0,0,1), d.vec3i(0,0,0),
-      // 3: right (x+1)
-      d.vec3i(1,0,1), d.vec3i(1,0,0), d.vec3i(1,1,1), d.vec3i(1,1,0),
-      // 4: front (z+1)
-      d.vec3i(0,1,1), d.vec3i(0,0,1), d.vec3i(1,1,1), d.vec3i(1,0,1),
-      // 5: back (z-1)
-      d.vec3i(0,0,0), d.vec3i(0,1,0), d.vec3i(1,0,0), d.vec3i(1,1,0),
-    ])
 
     this.pipeline = root.createRenderPipeline({
       attribs: { position: MeshLayout.attrib },
@@ -85,26 +72,19 @@ export class Renderer {
         .$usage('render');
     }
 
-    const passDescriptor = {
-      colorAttachments: [
-        {
-          view: currentTexture.createView(),
-          clearValue: [1, 0.85, 0.74, 1],
-          loadOp: 'clear',
-          storeOp: 'store',
-        },
-      ],
-      depthStencilAttachment: {
+    this.pipeline
+      .withColorAttachment({
+        view: currentTexture.createView(),
+        clearValue: [1, 0.85, 0.74, 1],
+        loadOp: 'clear',
+        storeOp: 'store',
+      })
+      .withDepthStencilAttachment({
         view: this.#root.unwrap(this.#depthTexture).createView(),
         depthClearValue: 1,
         depthLoadOp: 'clear',
         depthStoreOp: 'store',
-      },
-    } as const;
-
-    this.pipeline
-      .withColorAttachment(passDescriptor.colorAttachments[0])
-      .withDepthStencilAttachment(passDescriptor.depthStencilAttachment)
+      })
       .with(MeshLayout, mesherResources.vertexBuffer)
       .draw(4, mesherResources.instanceCount);
   }
