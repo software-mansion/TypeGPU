@@ -11,6 +11,7 @@ import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type {
   Infer,
+  InferInput,
   InferPartial,
   IsValidIndexSchema,
   IsValidStorageSchema,
@@ -103,6 +104,11 @@ type InnerValidUsagesFor<T> = {
 
 export type ValidUsagesFor<T> = InnerValidUsagesFor<T>['usage'];
 
+export type BufferWriteOptions = {
+  startOffset?: number;
+  endOffset?: number;
+};
+
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'buffer';
@@ -131,7 +137,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T];
 
   compileWriter(): void;
-  write(data: Infer<TData>): void;
+  write(data: InferInput<TData>, options?: BufferWriteOptions): void;
   writePartial(data: InferPartial<TData>): void;
   clear(): void;
   copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void;
@@ -222,7 +228,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       });
 
       if (this.initial) {
-        this._writeToTarget(this._buffer.getMappedRange(), this.initial);
+        this._writeToTarget(this._buffer.getMappedRange(), this.initial as InferInput<TData>);
         this._buffer.unmap();
       }
     }
@@ -287,12 +293,21 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     getCompiledWriterForSchema(this.dataType);
   }
 
-  private _writeToTarget(target: ArrayBuffer, data: Infer<TData>): void {
+  private _writeToTarget(
+    target: ArrayBuffer,
+    data: InferInput<TData>,
+    options?: BufferWriteOptions,
+  ): void {
+    const dataView = new DataView(target);
+    const isLittleEndian = endianness === 'little';
+    const startOffset = options?.startOffset ?? 0;
+    const endOffset = options?.endOffset ?? target.byteLength;
+
     const compiledWriter = getCompiledWriterForSchema(this.dataType);
 
     if (compiledWriter) {
       try {
-        compiledWriter(new DataView(target), 0, data, endianness === 'little');
+        compiledWriter(dataView, startOffset, data, isLittleEndian, endOffset);
         return;
       } catch (error) {
         console.error(
@@ -304,25 +319,29 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       }
     }
 
-    writeData(new BufferWriter(target), this.dataType, data);
+    const writer = new BufferWriter(target);
+    writer.seekTo(startOffset);
+    writeData(writer, this.dataType, data as Infer<TData>);
   }
 
-  write(data: Infer<TData>): void {
+  write(data: InferInput<TData>, options?: BufferWriteOptions): void {
     const gpuBuffer = this.buffer;
+    const startOffset = options?.startOffset ?? 0;
+    const endOffset = options?.endOffset ?? sizeOf(this.dataType);
+    const size = endOffset - startOffset;
 
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = gpuBuffer.getMappedRange();
-      this._writeToTarget(mapped, data);
+      this._writeToTarget(mapped, data, options);
       return;
     }
 
-    const size = sizeOf(this.dataType);
     if (!this._hostBuffer) {
-      this._hostBuffer = new ArrayBuffer(size);
+      this._hostBuffer = new ArrayBuffer(sizeOf(this.dataType));
     }
 
-    this._writeToTarget(this._hostBuffer, data);
-    this.#device.queue.writeBuffer(gpuBuffer, 0, this._hostBuffer, 0, size);
+    this._writeToTarget(this._hostBuffer, data, options);
+    this.#device.queue.writeBuffer(gpuBuffer, startOffset, this._hostBuffer, startOffset, size);
   }
 
   public writePartial(data: InferPartial<TData>): void {

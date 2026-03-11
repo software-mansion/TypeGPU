@@ -14,9 +14,9 @@ describe('buildWriter', () => {
 
     expect(writer).toMatchInlineSnapshot(`
       "output.setUint32((offset + 0), value.a, littleEndian);
-      output.setFloat32(((offset + 16) + 0), value.b.x, littleEndian);
-      output.setFloat32(((offset + 16) + 4), value.b.y, littleEndian);
-      output.setFloat32(((offset + 16) + 8), value.b.z, littleEndian);
+      output.setFloat32(((offset + 16) + 0), value.b[0], littleEndian);
+      output.setFloat32(((offset + 16) + 4), value.b[1], littleEndian);
+      output.setFloat32(((offset + 16) + 8), value.b[2], littleEndian);
       "
     `);
   });
@@ -31,10 +31,11 @@ describe('buildWriter', () => {
 
     expect(writer).toMatchInlineSnapshot(`
       "output.setUint32((offset + 0), value.a, littleEndian);
+      var _ta0 = ArrayBuffer.isView(value.b) && !(value.b instanceof DataView);
       for (let i = 0; i < 2; i++) {
-      output.setFloat32((((offset + 16) + i * 16) + 0), value.b[i].x, littleEndian);
-      output.setFloat32((((offset + 16) + i * 16) + 4), value.b[i].y, littleEndian);
-      output.setFloat32((((offset + 16) + i * 16) + 8), value.b[i].z, littleEndian);
+      output.setFloat32(((offset + 16) + i * 16 + 0), _ta0 ? value.b[i * 3 + 0] : value.b[i][0], littleEndian);
+      output.setFloat32(((offset + 16) + i * 16 + 4), _ta0 ? value.b[i * 3 + 1] : value.b[i][1], littleEndian);
+      output.setFloat32(((offset + 16) + i * 16 + 8), _ta0 ? value.b[i * 3 + 2] : value.b[i][2], littleEndian);
       }
       for (let i = 0; i < 3; i++) {
       output.setUint32(((offset + 48) + i * 4), value.c[i], littleEndian);
@@ -54,9 +55,9 @@ describe('buildWriter', () => {
 
     expect(writer).toMatchInlineSnapshot(`
       "output.setUint32((offset + 0), value.a, littleEndian);
-      output.setFloat32((((offset + 16) + 0) + 0), value.b.d.x, littleEndian);
-      output.setFloat32((((offset + 16) + 0) + 4), value.b.d.y, littleEndian);
-      output.setFloat32((((offset + 16) + 0) + 8), value.b.d.z, littleEndian);
+      output.setFloat32((((offset + 16) + 0) + 0), value.b.d[0], littleEndian);
+      output.setFloat32((((offset + 16) + 0) + 4), value.b.d[1], littleEndian);
+      output.setFloat32((((offset + 16) + 0) + 8), value.b.d[2], littleEndian);
       for (let i = 0; i < 3; i++) {
       output.setUint32((((offset + 32) + i * 4) + 0), value.c[i].d, littleEndian);
       }
@@ -69,10 +70,11 @@ describe('buildWriter', () => {
     const writer = buildWriter(array, 'offset', 'value');
 
     expect(writer).toMatchInlineSnapshot(`
-      "for (let i = 0; i < 5; i++) {
-      output.setFloat32(((offset + i * 16) + 0), value[i].x, littleEndian);
-      output.setFloat32(((offset + i * 16) + 4), value[i].y, littleEndian);
-      output.setFloat32(((offset + i * 16) + 8), value[i].z, littleEndian);
+      "var _ta0 = ArrayBuffer.isView(value) && !(value instanceof DataView);
+      for (let i = 0; i < 5; i++) {
+      output.setFloat32((offset + i * 16 + 0), _ta0 ? value[i * 3 + 0] : value[i][0], littleEndian);
+      output.setFloat32((offset + i * 16 + 4), _ta0 ? value[i * 3 + 1] : value[i][1], littleEndian);
+      output.setFloat32((offset + i * 16 + 8), _ta0 ? value[i * 3 + 2] : value[i][2], littleEndian);
       }
       "
     `);
@@ -104,9 +106,10 @@ describe('buildWriter', () => {
     expect(writer).toMatchInlineSnapshot(`
       "output.setUint32((offset + 0), value.a, littleEndian);
       for (let i = 0; i < 2; i++) {
+      var _ta1 = ArrayBuffer.isView(value.b[i]) && !(value.b[i] instanceof DataView);
       for (let j = 0; j < 2; j++) {
-      output.setFloat32(((((offset + 8) + i * 16) + j * 8) + 0), value.b[i][j].x, littleEndian);
-      output.setFloat32(((((offset + 8) + i * 16) + j * 8) + 4), value.b[i][j].y, littleEndian);
+      output.setFloat32((((offset + 8) + i * 16) + j * 8 + 0), _ta1 ? value.b[i][j * 2 + 0] : value.b[i][j][0], littleEndian);
+      output.setFloat32((((offset + 8) + i * 16) + j * 8 + 4), _ta1 ? value.b[i][j * 2 + 1] : value.b[i][j][1], littleEndian);
       }
       }
       "
@@ -152,6 +155,123 @@ describe('buildWriter', () => {
       }
       }
       }
+      }
+      "
+    `);
+  });
+});
+
+describe('buildWriter (partial mode)', () => {
+  it('should compile a partial writer for a struct', () => {
+    const struct = d.struct({
+      a: d.u32,
+      b: d.vec3f,
+    });
+    const writer = buildWriter(struct, 'offset', 'value', 0, true);
+
+    expect(writer).toMatchInlineSnapshot(`
+      "if (((offset + 0)) < endOffset) {
+      output.setUint32((offset + 0), value.a, littleEndian);
+      }
+      if (((offset + 16) + 0) < endOffset) {
+      output.setFloat32(((offset + 16) + 0), value.b[0], littleEndian);
+      }
+      if (((offset + 16) + 4) < endOffset) {
+      output.setFloat32(((offset + 16) + 4), value.b[1], littleEndian);
+      }
+      if (((offset + 16) + 8) < endOffset) {
+      output.setFloat32(((offset + 16) + 8), value.b[2], littleEndian);
+      }
+      "
+    `);
+  });
+
+  it('should compile a partial writer for a struct with an array', () => {
+    const struct = d.struct({
+      a: d.u32,
+      b: d.arrayOf(d.vec3f, 2),
+      c: d.arrayOf(d.u32, 3),
+    });
+    const writer = buildWriter(struct, 'offset', 'value', 0, true);
+
+    expect(writer).toMatchInlineSnapshot(`
+      "if (((offset + 0)) < endOffset) {
+      output.setUint32((offset + 0), value.a, littleEndian);
+      }
+      var _ta0 = ArrayBuffer.isView(value.b) && !(value.b instanceof DataView);
+      for (let i = 0; i < 2; i++) {
+      if (((offset + 16) + i * 16) >= endOffset) { break; }
+      if (((offset + 16) + i * 16 + 0) < endOffset) {
+      output.setFloat32(((offset + 16) + i * 16 + 0), _ta0 ? value.b[i * 3 + 0] : value.b[i][0], littleEndian);
+      }
+      if (((offset + 16) + i * 16 + 4) < endOffset) {
+      output.setFloat32(((offset + 16) + i * 16 + 4), _ta0 ? value.b[i * 3 + 1] : value.b[i][1], littleEndian);
+      }
+      if (((offset + 16) + i * 16 + 8) < endOffset) {
+      output.setFloat32(((offset + 16) + i * 16 + 8), _ta0 ? value.b[i * 3 + 2] : value.b[i][2], littleEndian);
+      }
+      }
+      for (let i = 0; i < 3; i++) {
+      if (((offset + 48) + i * 4) >= endOffset) return;
+      if ((((offset + 48) + i * 4)) < endOffset) {
+      output.setUint32(((offset + 48) + i * 4), value.c[i], littleEndian);
+      }
+      }
+      "
+    `);
+  });
+
+  it('should compile a partial writer for an array of u16', () => {
+    const array = d.arrayOf(d.u16, 5);
+
+    const builtWriter = buildWriter(array, 'offset', 'value', 0, true);
+    expect(builtWriter).toMatchInlineSnapshot(`
+      "for (let i = 0; i < 5; i++) {
+      if ((offset + i * 2) >= endOffset) return;
+      if (((offset + i * 2)) < endOffset) {
+      output.setUint16((offset + i * 2), value[i], littleEndian);
+      }
+      }
+      "
+    `);
+  });
+
+  it('should compile a partial writer for unstruct with loose data', () => {
+    const unstruct = d.unstruct({
+      a: d.uint16x2,
+      b: d.unorm10_10_10_2,
+      c: d.uint8x2,
+      d: d.unorm8x4,
+    });
+
+    const unstructWriter = buildWriter(unstruct, 'offset', 'value', 0, true);
+    expect(unstructWriter).toMatchInlineSnapshot(`
+      "if (((offset + 0) + 0) < endOffset) {
+      output.setUint16(((offset + 0) + 0), value.a.x, littleEndian);
+      }
+      if (((offset + 0) + 2) < endOffset) {
+      output.setUint16(((offset + 0) + 2), value.a.y, littleEndian);
+      }
+      if (((offset + 4)) < endOffset) {
+      output.setUint32((offset + 4), ((value.b.x*1023&0x3FF)<<22)|((value.b.y*1023&0x3FF)<<12)|((value.b.z*1023&0x3FF)<<2)|(value.b.w*3&3), littleEndian);
+      }
+      if (((offset + 8) + 0) < endOffset) {
+      output.setUint8(((offset + 8) + 0), value.c.x, littleEndian);
+      }
+      if (((offset + 8) + 1) < endOffset) {
+      output.setUint8(((offset + 8) + 1), value.c.y, littleEndian);
+      }
+      if (((offset + 10) + 0) < endOffset) {
+      output.setUint8(((offset + 10) + 0), Math.round(value.d.x * 255), littleEndian);
+      }
+      if (((offset + 10) + 1) < endOffset) {
+      output.setUint8(((offset + 10) + 1), Math.round(value.d.y * 255), littleEndian);
+      }
+      if (((offset + 10) + 2) < endOffset) {
+      output.setUint8(((offset + 10) + 2), Math.round(value.d.z * 255), littleEndian);
+      }
+      if (((offset + 10) + 3) < endOffset) {
+      output.setUint8(((offset + 10) + 3), Math.round(value.d.w * 255), littleEndian);
       }
       "
     `);
@@ -320,10 +440,11 @@ describe('createCompileInstructions', () => {
       "for (let i = 0; i < 2; i++) {
       for (let j = 0; j < 2; j++) {
       for (let k = 0; k < 2; k++) {
+      var _ta3 = ArrayBuffer.isView(value[i][j][k]) && !(value[i][j][k] instanceof DataView);
       for (let i3 = 0; i3 < 2; i3++) {
-      output.setFloat32((((((offset + i * 128) + j * 64) + k * 32) + i3 * 16) + 0), value[i][j][k][i3].x, littleEndian);
-      output.setFloat32((((((offset + i * 128) + j * 64) + k * 32) + i3 * 16) + 4), value[i][j][k][i3].y, littleEndian);
-      output.setFloat32((((((offset + i * 128) + j * 64) + k * 32) + i3 * 16) + 8), value[i][j][k][i3].z, littleEndian);
+      output.setFloat32(((((offset + i * 128) + j * 64) + k * 32) + i3 * 16 + 0), _ta3 ? value[i][j][k][i3 * 3 + 0] : value[i][j][k][i3][0], littleEndian);
+      output.setFloat32(((((offset + i * 128) + j * 64) + k * 32) + i3 * 16 + 4), _ta3 ? value[i][j][k][i3 * 3 + 1] : value[i][j][k][i3][1], littleEndian);
+      output.setFloat32(((((offset + i * 128) + j * 64) + k * 32) + i3 * 16 + 8), _ta3 ? value[i][j][k][i3 * 3 + 2] : value[i][j][k][i3][2], littleEndian);
       }
       }
       }
@@ -360,6 +481,51 @@ describe('createCompileInstructions', () => {
         }
       }
     }
+  });
+
+  it('should stop writing elements at the given endOffset', () => {
+    const schema = d.arrayOf(d.vec3u, 4);
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(sizeOf(schema));
+    const dataView = new DataView(arr);
+    const endLayout = d.memoryLayoutOf(schema, (a) => a[2]);
+
+    writer(dataView, 0, [d.vec3u(1, 2, 3), d.vec3u(4, 5, 6)], true, endLayout.offset);
+
+    expect([...new Uint32Array(arr)]).toStrictEqual([
+      1, 2, 3, 0, 4, 5, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ]);
+  });
+
+  it('should write a padded array chunk from the beginning offset through the end when endOffset is omitted', () => {
+    const schema = d.arrayOf(d.vec3u, 4);
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(sizeOf(schema));
+    const dataView = new DataView(arr);
+    const layout = d.memoryLayoutOf(schema, (a) => a[1]?.x);
+
+    writer(
+      dataView,
+      layout.offset,
+      [d.vec3u(4, 5, 6), d.vec3u(7, 8, 9), d.vec3u(10, 11, 12)],
+      true,
+    );
+
+    expect([...new Uint32Array(arr)]).toStrictEqual([
+      0, 0, 0, 0, 4, 5, 6, 0, 7, 8, 9, 0, 10, 11, 12, 0,
+    ]);
+  });
+
+  it('should write a scalar array chunk from the beginning offset through the end when endOffset is omitted', () => {
+    const schema = d.arrayOf(d.u32, 6);
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(sizeOf(schema));
+    const dataView = new DataView(arr);
+    const layout = d.memoryLayoutOf(schema, (a) => a[3]);
+
+    writer(dataView, layout.offset, [4, 5, 6], true);
+
+    expect([...new Uint32Array(arr)]).toStrictEqual([0, 0, 0, 4, 5, 6]);
   });
 
   it('should compile a writer for a mat4x4f', () => {
@@ -417,14 +583,6 @@ describe('createCompileInstructions', () => {
 
   it('should compile a writer for an array of u16', () => {
     const array = d.arrayOf(d.u16, 5);
-
-    const builtWriter = buildWriter(array, 'offset', 'value');
-    expect(builtWriter).toMatchInlineSnapshot(`
-      "for (let i = 0; i < 5; i++) {
-      output.setUint16((offset + i * 2), value[i], littleEndian);
-      }
-      "
-    `);
 
     const writer = getCompiledWriterForSchema(array)!;
 
@@ -500,13 +658,13 @@ describe('createCompileInstructions', () => {
 
     const builtWriter = buildWriter(unstruct, 'offset', 'value');
     expect(builtWriter).toMatchInlineSnapshot(`
-      "output.setFloat32(((offset + 0) + 0), value.a.x, littleEndian);
-      output.setFloat32(((offset + 0) + 4), value.a.y, littleEndian);
-      output.setFloat32(((offset + 0) + 8), value.a.z, littleEndian);
-      output.setFloat32(((offset + 12) + 0), value.b.x, littleEndian);
-      output.setFloat32(((offset + 12) + 4), value.b.y, littleEndian);
-      output.setFloat32(((offset + 12) + 8), value.b.z, littleEndian);
-      output.setFloat32(((offset + 12) + 12), value.b.w, littleEndian);
+      "output.setFloat32(((offset + 0) + 0), value.a[0], littleEndian);
+      output.setFloat32(((offset + 0) + 4), value.a[1], littleEndian);
+      output.setFloat32(((offset + 0) + 8), value.a[2], littleEndian);
+      output.setFloat32(((offset + 12) + 0), value.b[0], littleEndian);
+      output.setFloat32(((offset + 12) + 4), value.b[1], littleEndian);
+      output.setFloat32(((offset + 12) + 8), value.b[2], littleEndian);
+      output.setFloat32(((offset + 12) + 12), value.b[3], littleEndian);
       "
     `);
 
@@ -528,10 +686,11 @@ describe('createCompileInstructions', () => {
 
     const builtWriter = buildWriter(disarray, 'offset', 'value');
     expect(builtWriter).toMatchInlineSnapshot(`
-      "for (let i = 0; i < 3; i++) {
-      output.setFloat32(((offset + i * 12) + 0), value[i].x, littleEndian);
-      output.setFloat32(((offset + i * 12) + 4), value[i].y, littleEndian);
-      output.setFloat32(((offset + i * 12) + 8), value[i].z, littleEndian);
+      "var _ta0 = ArrayBuffer.isView(value) && !(value instanceof DataView);
+      for (let i = 0; i < 3; i++) {
+      output.setFloat32((offset + i * 12 + 0), _ta0 ? value[i * 3 + 0] : value[i][0], littleEndian);
+      output.setFloat32((offset + i * 12 + 4), _ta0 ? value[i * 3 + 1] : value[i][1], littleEndian);
+      output.setFloat32((offset + i * 12 + 8), _ta0 ? value[i * 3 + 2] : value[i][2], littleEndian);
       }
       "
     `);
@@ -556,13 +715,13 @@ describe('createCompileInstructions', () => {
     const builtWriter = buildWriter(disarray, 'offset', 'value');
     expect(builtWriter).toMatchInlineSnapshot(`
       "for (let i = 0; i < 2; i++) {
-      output.setFloat32((((offset + i * 28) + 0) + 0), value[i].a.x, littleEndian);
-      output.setFloat32((((offset + i * 28) + 0) + 4), value[i].a.y, littleEndian);
-      output.setFloat32((((offset + i * 28) + 0) + 8), value[i].a.z, littleEndian);
-      output.setFloat32((((offset + i * 28) + 12) + 0), value[i].b.x, littleEndian);
-      output.setFloat32((((offset + i * 28) + 12) + 4), value[i].b.y, littleEndian);
-      output.setFloat32((((offset + i * 28) + 12) + 8), value[i].b.z, littleEndian);
-      output.setFloat32((((offset + i * 28) + 12) + 12), value[i].b.w, littleEndian);
+      output.setFloat32((((offset + i * 28) + 0) + 0), value[i].a[0], littleEndian);
+      output.setFloat32((((offset + i * 28) + 0) + 4), value[i].a[1], littleEndian);
+      output.setFloat32((((offset + i * 28) + 0) + 8), value[i].a[2], littleEndian);
+      output.setFloat32((((offset + i * 28) + 12) + 0), value[i].b[0], littleEndian);
+      output.setFloat32((((offset + i * 28) + 12) + 4), value[i].b[1], littleEndian);
+      output.setFloat32((((offset + i * 28) + 12) + 8), value[i].b[2], littleEndian);
+      output.setFloat32((((offset + i * 28) + 12) + 12), value[i].b[3], littleEndian);
       }
       "
     `);
@@ -647,6 +806,124 @@ describe('createCompileInstructions', () => {
     expect(decoded.d.y).toBeCloseTo(inputData.d.y, 2);
     expect(decoded.d.z).toBeCloseTo(inputData.d.z, 2);
     expect(decoded.d.w).toBeCloseTo(inputData.d.w, 2);
+  });
+
+  // ----------
+  // InferInput: plain tuples and TypedArrays as input
+  // ----------
+
+  it('should write a vec3f from a plain tuple', () => {
+    const schema = d.vec3f;
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(16); // vec3f is 12 bytes but align = 16
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, [1, 2, 3]);
+
+    expect([...new Float32Array(arr, 0, 3)]).toStrictEqual([1, 2, 3]);
+  });
+
+  it('should write a vec3f from a Float32Array', () => {
+    const schema = d.vec3f;
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(16);
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, new Float32Array([1, 2, 3]));
+
+    expect([...new Float32Array(arr, 0, 3)]).toStrictEqual([1, 2, 3]);
+  });
+
+  it('should write an array of vec3f from plain tuples', () => {
+    const schema = d.arrayOf(d.vec3f, 3);
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(sizeOf(schema)); // 3 * 16 = 48 bytes (with padding)
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, [
+      [1, 2, 3],
+      [4, 5, 6],
+      [7, 8, 9],
+    ]);
+
+    // GPU layout: each vec3f occupies 16 bytes (12 data + 4 padding)
+    expect([...new Float32Array(arr, 0, 3)]).toStrictEqual([1, 2, 3]);
+    expect([...new Float32Array(arr, 16, 3)]).toStrictEqual([4, 5, 6]);
+    expect([...new Float32Array(arr, 32, 3)]).toStrictEqual([7, 8, 9]);
+  });
+
+  it('should write an array of vec3f from a flat Float32Array (stride correction: packed 3→padded 4)', () => {
+    // GPU layout: vec3f has 16-byte stride (12 bytes + 4 padding)
+    // Input: packed Float32Array with 3 floats per element (no padding)
+    const schema = d.arrayOf(d.vec3f, 3);
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(sizeOf(schema)); // 48 bytes
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9]));
+
+    expect([...new Float32Array(arr, 0, 3)]).toStrictEqual([1, 2, 3]);
+    expect([...new Float32Array(arr, 16, 3)]).toStrictEqual([4, 5, 6]);
+    expect([...new Float32Array(arr, 32, 3)]).toStrictEqual([7, 8, 9]);
+  });
+
+  it('should write an array of vec4f from a flat Float32Array (no stride correction needed)', () => {
+    // GPU layout: vec4f has 16-byte stride (16 bytes, no padding)
+    // Input: Float32Array with 4 floats per element = same layout
+    const schema = d.arrayOf(d.vec4f, 2);
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(sizeOf(schema)); // 32 bytes
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, new Float32Array([1, 2, 3, 4, 5, 6, 7, 8]));
+
+    expect([...new Float32Array(arr, 0, 4)]).toStrictEqual([1, 2, 3, 4]);
+    expect([...new Float32Array(arr, 16, 4)]).toStrictEqual([5, 6, 7, 8]);
+  });
+
+  it('should write an array of vec3u from a flat Uint32Array', () => {
+    const schema = d.arrayOf(d.vec3u, 2);
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(sizeOf(schema)); // 2 * 16 = 32 bytes
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, new Uint32Array([10, 20, 30, 40, 50, 60]));
+
+    expect([...new Uint32Array(arr, 0, 3)]).toStrictEqual([10, 20, 30]);
+    expect([...new Uint32Array(arr, 16, 3)]).toStrictEqual([40, 50, 60]);
+  });
+
+  it('should write an array of vec3f where each element is its own Float32Array', () => {
+    const schema = d.arrayOf(d.vec3f, 3);
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(sizeOf(schema)); // 48 bytes
+    const dataView = new DataView(arr);
+
+    // Three views into a single shared ArrayBuffer
+    const sharedBuffer = new ArrayBuffer(36); // 3 * 3 floats * 4 bytes
+    const v0 = new Float32Array(sharedBuffer, 0, 3);
+    const v1 = new Float32Array(sharedBuffer, 12, 3);
+    const v2 = new Float32Array(sharedBuffer, 24, 3);
+    v0.set([1, 2, 3]);
+    v1.set([4, 5, 6]);
+    v2.set([7, 8, 9]);
+
+    writer(dataView, 0, [v0, v1, v2]);
+
+    expect([...new Float32Array(arr, 0, 3)]).toStrictEqual([1, 2, 3]);
+    expect([...new Float32Array(arr, 16, 3)]).toStrictEqual([4, 5, 6]);
+    expect([...new Float32Array(arr, 32, 3)]).toStrictEqual([7, 8, 9]);
+  });
+
+  it('should write an array of f32 scalars from a Float32Array', () => {
+    const schema = d.arrayOf(d.f32, 4);
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(sizeOf(schema)); // 16 bytes
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, new Float32Array([1.5, 2.5, 3.5, 4.5]));
+
+    expect([...new Float32Array(arr)]).toStrictEqual([1.5, 2.5, 3.5, 4.5]);
   });
 
   it('should work for disarrays of unstructs containing loose data', () => {

@@ -66,23 +66,23 @@ const dataWriters = {
   },
 
   vec2f(output, _, value: wgsl.v2f) {
-    output.writeFloat32(value.x);
-    output.writeFloat32(value.y);
+    output.writeFloat32(value[0]);
+    output.writeFloat32(value[1]);
   },
 
   vec2h(output, _, value: wgsl.v2h) {
-    output.writeFloat16(value.x);
-    output.writeFloat16(value.y);
+    output.writeFloat16(value[0]);
+    output.writeFloat16(value[1]);
   },
 
   vec2i(output, _, value: wgsl.v2i) {
-    output.writeInt32(value.x);
-    output.writeInt32(value.y);
+    output.writeInt32(value[0]);
+    output.writeInt32(value[1]);
   },
 
   vec2u(output, _, value: wgsl.v2u) {
-    output.writeUint32(value.x);
-    output.writeUint32(value.y);
+    output.writeUint32(value[0]);
+    output.writeUint32(value[1]);
   },
 
   'vec2<bool>'() {
@@ -90,27 +90,27 @@ const dataWriters = {
   },
 
   vec3f(output, _, value: wgsl.v3f) {
-    output.writeFloat32(value.x);
-    output.writeFloat32(value.y);
-    output.writeFloat32(value.z);
+    output.writeFloat32(value[0]);
+    output.writeFloat32(value[1]);
+    output.writeFloat32(value[2]);
   },
 
   vec3h(output, _, value: wgsl.v3h) {
-    output.writeFloat16(value.x);
-    output.writeFloat16(value.y);
-    output.writeFloat16(value.z);
+    output.writeFloat16(value[0]);
+    output.writeFloat16(value[1]);
+    output.writeFloat16(value[2]);
   },
 
   vec3i(output, _, value: wgsl.v3i) {
-    output.writeInt32(value.x);
-    output.writeInt32(value.y);
-    output.writeInt32(value.z);
+    output.writeInt32(value[0]);
+    output.writeInt32(value[1]);
+    output.writeInt32(value[2]);
   },
 
   vec3u(output, _, value: wgsl.v3u) {
-    output.writeUint32(value.x);
-    output.writeUint32(value.y);
-    output.writeUint32(value.z);
+    output.writeUint32(value[0]);
+    output.writeUint32(value[1]);
+    output.writeUint32(value[2]);
   },
 
   'vec3<bool>'() {
@@ -118,31 +118,31 @@ const dataWriters = {
   },
 
   vec4f(output, _, value: wgsl.v4f) {
-    output.writeFloat32(value.x);
-    output.writeFloat32(value.y);
-    output.writeFloat32(value.z);
-    output.writeFloat32(value.w);
+    output.writeFloat32(value[0]);
+    output.writeFloat32(value[1]);
+    output.writeFloat32(value[2]);
+    output.writeFloat32(value[3]);
   },
 
   vec4h(output, _, value: wgsl.v4h) {
-    output.writeFloat16(value.x);
-    output.writeFloat16(value.y);
-    output.writeFloat16(value.z);
-    output.writeFloat16(value.w);
+    output.writeFloat16(value[0]);
+    output.writeFloat16(value[1]);
+    output.writeFloat16(value[2]);
+    output.writeFloat16(value[3]);
   },
 
   vec4i(output, _, value: wgsl.v4i) {
-    output.writeInt32(value.x);
-    output.writeInt32(value.y);
-    output.writeInt32(value.z);
-    output.writeInt32(value.w);
+    output.writeInt32(value[0]);
+    output.writeInt32(value[1]);
+    output.writeInt32(value[2]);
+    output.writeInt32(value[3]);
   },
 
   vec4u(output, _, value: wgsl.v4u) {
-    output.writeUint32(value.x);
-    output.writeUint32(value.y);
-    output.writeUint32(value.z);
-    output.writeUint32(value.w);
+    output.writeUint32(value[0]);
+    output.writeUint32(value[1]);
+    output.writeUint32(value[2]);
+    output.writeUint32(value[3]);
   },
 
   'vec4<bool>'() {
