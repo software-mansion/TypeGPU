@@ -1,6 +1,5 @@
 import { d, type StorageFlag, type TgpuBuffer, type TgpuRoot, type VertexFlag } from 'typegpu';
 import { CHUNK_SIZE, INIT_CONFIG } from './params.ts';
-import { faces } from './cubeVertices.ts';
 import type { Chunk } from './schemas.ts';
 import { coordToIndexCPU } from './chunkGenerator.ts';
 
@@ -78,8 +77,8 @@ export class Mesher {
   getResources() {
     return {
       vertexBuffer: this.vertexBuffer,
-      // TODO: return the number of the last non-zero vertex
-      vertexCount: (256 * 1024 * 1024) / 16,
+      // / 4 (to i32s) / 4 (to vec4is) = instance count
+      instanceCount: this.freeList.getFurthestAllocated() / 4 / 4,
     };
   }
 }
@@ -142,6 +141,7 @@ class FreeList {
   #slots: Map<SlotId, { offset: number; capacity: number }>;
   #freeBlocks: { offset: number; size: number }[];
   #nextId: number;
+  #furthestAllocated: number;
 
   /**
    * Creates a free list.
@@ -154,6 +154,7 @@ class FreeList {
     this.#nextId = 0;
     const alignedSize = roundUp(size, this.ALIGNMENT);
     this.#freeBlocks = [{ offset: 0, size: alignedSize }];
+    this.#furthestAllocated = 0;
   }
 
   /**
@@ -186,11 +187,19 @@ class FreeList {
           this.#freeBlocks.splice(i, 1);
         }
         this.#slots.set(id, { offset, capacity });
+        this.#furthestAllocated = Math.max(this.#furthestAllocated, offset + capacity);
         return id;
       }
     }
 
     throw new Error(`FreeList: allocation of ${capacity} bytes failed — out of space`);
+  }
+
+  /**
+   * Returns the number of bits from 0 to the last one ever touched.
+   */
+  getFurthestAllocated(): number {
+    return this.#furthestAllocated;
   }
 
   /**

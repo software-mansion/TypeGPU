@@ -40,9 +40,6 @@ export class Renderer {
       attribs: { position: MeshLayout.attrib },
       vertex: ({ position, $vertexIndex }) => {
         'use gpu';
-        if (std.allEq(position, d.vec4f())) {
-          return { $position: d.vec4f(0), worldPos: d.vec3f() };
-        }
 
         const blockPos = d.vec3i(position.xyz);
         // TODO: replace with bitshifts
@@ -109,6 +106,6 @@ export class Renderer {
       .withColorAttachment(passDescriptor.colorAttachments[0])
       .withDepthStencilAttachment(passDescriptor.depthStencilAttachment)
       .with(MeshLayout, mesherResources.vertexBuffer)
-      .draw(4, mesherResources.vertexCount / 4);
+      .draw(4, mesherResources.instanceCount);
   }
 }
