@@ -70,22 +70,13 @@ export interface vecInfixNotation<T extends vecBase> {
   [Symbol.operatorPercent](lhs: T | number, rhs: T | number): T;
 }
 
-export type vecIToVecU<T extends vecBase> = T extends v2i | v2u
+export type vecIToVecU<T extends AnyIntegerVecInstance> = T extends v2i | v2u
   ? v2u
   : T extends v3i | v3u
     ? v3u
-    : T extends v4i | v4u
-      ? v4u
-      : never;
+    : v4u;
 
-/**
- * Vector bit shift notation.
- *
- * @privateRemarks
- * These functions are not defined on vectors,
- * but are instead assigned to `VecBase` after both `data` and `std` are initialized.
- */
-export interface vecBitShiftNotation<T extends vecBase> {
+export interface vecBitShiftNotation<T extends AnyIntegerVecInstance> {
   bitShiftLeft(rhs: vecIToVecU<T> | number): T;
   bitShiftRight(rhs: vecIToVecU<T> | number): T;
 }
