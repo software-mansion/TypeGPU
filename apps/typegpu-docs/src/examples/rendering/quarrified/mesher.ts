@@ -72,6 +72,7 @@ export class Mesher {
   indirectBuffer: TgpuBuffer<d.WgslArray<d.Vec4u>> & IndirectFlag;
   totalVertices: number;
   arrayBuffer: Float32Array<ArrayBuffer>;
+  emptyArrayBuffer: Float32Array<ArrayBuffer>;
 
   freeList: FreeList;
   chunkToId: Map<Chunk, SlotId>;
@@ -89,6 +90,7 @@ export class Mesher {
       .$usage('indirect');
     this.totalVertices = 0;
     this.arrayBuffer = new Float32Array(CHUNK_SIZE ** 3 * 3 * 4 * 4);
+    this.emptyArrayBuffer = new Float32Array(CHUNK_SIZE ** 3 * 3 * 4 * 4);
   }
 
   recalculateMeshesFor(chunks: Chunk[]) {
@@ -108,24 +110,21 @@ export class Mesher {
         // - clear the old vertex buffer slot
         // - deallocate the slot from freeList
         // - reallocate it
-        // - update the slotId map
-        // TODO: maybe we can keep the slotId of a chunk?
         console.log('REALLOCATING', ...chunk.chunkIndex, 'SIZE', newSize);
 
-        const info = this.freeList.slotInfoFor(slotId);
-        this.#root.device.queue.writeBuffer(
-          unwrappedBuffer,
-          info.offset,
-          this.arrayBuffer,
-          0,
-          newSize / 4,
-        );
-
+        const oldInfo = this.freeList.slotInfoFor(slotId);
         this.freeList.deallocate(slotId);
-
-        slotId = this.freeList.allocate(newSize);
-
-        this.chunkToId.set(chunk, slotId);
+        this.freeList.allocate(newSize, slotId);
+        const newInfo = this.freeList.slotInfoFor(slotId);
+        if (oldInfo.offset !== newInfo.offset) {
+          this.#root.device.queue.writeBuffer(
+            unwrappedBuffer,
+            oldInfo.offset,
+            this.emptyArrayBuffer,
+            0,
+            oldInfo.capacity / 4,
+          );
+        }
       }
 
       const offset = this.freeList.slotInfoFor(slotId).offset;
@@ -180,10 +179,22 @@ class FreeList {
 
   /**
    * Creates a slot of size `size*(1+marginPercent)`, and sets it current size to `size`.
+   * To keep the same `slotId`, one can deallocate it and then allocate while passing `slotId` as the second argument.
    * TODO: This can be optimized by using an ordered map from size to offset
    */
-  allocate(size: number): SlotId {
+  allocate(size: number, slotId?: number): SlotId {
     const capacity = roundUp(size * (1 + this.#marginPercent), this.ALIGNMENT);
+    let id: number;
+    if (slotId !== undefined) {
+      if (this.#slots.has(slotId)) {
+        throw new Error(
+          `FreeList: cannot allocate slotId ${slotId} twice, call 'deallocate' first.`,
+        );
+      }
+      id = slotId;
+    } else {
+      id = this.#nextId++;
+    }
 
     for (let i = 0; i < this.#freeBlocks.length; i++) {
       const block = this.#freeBlocks[i];
@@ -195,7 +206,6 @@ class FreeList {
         } else {
           this.#freeBlocks.splice(i, 1);
         }
-        const id = this.#nextId++;
         this.#slots.set(id, { offset, capacity });
         return id;
       }
