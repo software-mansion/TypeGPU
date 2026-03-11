@@ -9,25 +9,23 @@ import {
 import { CHUNK_SIZE, CHUNK_SIZE_BITS, INIT_CONFIG } from './params.ts';
 import { faces } from './cubeVertices.ts';
 import type { Chunk } from './schemas.ts';
+import { coordToIndexCPU } from './chunkGenerator.ts';
 
 export const MAX_CHUNKS_AT_ONCE = Object.values(INIT_CONFIG.chunks)
   .map((v) => v[1] - v[0] + 1)
   .reduce((a, b) => a * b, 1);
 
+const isAir = (chunk: Chunk, x: number, y: number, z: number): boolean => {
+  if (x < 0 || x >= CHUNK_SIZE || y < 0 || y >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) {
+    return true;
+  }
+  return chunk.blocks[coordToIndexCPU(x, y, z)] === 0;
+};
+
 // TODO: rewrite this AI slop
-function calculateMeshForChunk(chunk: Chunk): d.v4f[] {
-  const vertices: d.v4f[] = [];
+function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Float32Array): number {
+  let verticesCount = 0;
   const { chunkIndex, blocks } = chunk;
-
-  const coordToIndexCPU = (x: number, y: number, z: number) =>
-    (z << (CHUNK_SIZE_BITS * 2)) | (y << CHUNK_SIZE_BITS) | x;
-
-  const isAir = (x: number, y: number, z: number): boolean => {
-    if (x < 0 || x >= CHUNK_SIZE || y < 0 || y >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) {
-      return true;
-    }
-    return blocks[coordToIndexCPU(x, y, z)] === 0;
-  };
 
   const wx0 = chunkIndex.x * CHUNK_SIZE;
   const wy0 = chunkIndex.y * CHUNK_SIZE;
@@ -45,21 +43,25 @@ function calculateMeshForChunk(chunk: Chunk): d.v4f[] {
         const addFace = (faceVertices: (typeof faces)[keyof typeof faces]) => {
           for (const v of faceVertices) {
             const p = v.position;
-            vertices.push(d.vec4f(p.x + wx, p.y + wy, p.z + wz, 1));
+            arrayBuffer[4 * verticesCount] = p.x + wx;
+            arrayBuffer[4 * verticesCount + 1] = p.y + wy;
+            arrayBuffer[4 * verticesCount + 2] = p.z + wz;
+            arrayBuffer[4 * verticesCount + 3] = 1;
+            verticesCount += 1;
           }
         };
 
-        if (isAir(x, y - 1, z)) addFace(faces.bottom);
-        if (isAir(x, y + 1, z)) addFace(faces.top);
-        if (isAir(x - 1, y, z)) addFace(faces.left);
-        if (isAir(x + 1, y, z)) addFace(faces.right);
-        if (isAir(x, y, z + 1)) addFace(faces.front);
-        if (isAir(x, y, z - 1)) addFace(faces.back);
+        if (isAir(chunk, x, y - 1, z)) addFace(faces.bottom);
+        if (isAir(chunk, x, y + 1, z)) addFace(faces.top);
+        if (isAir(chunk, x - 1, y, z)) addFace(faces.left);
+        if (isAir(chunk, x + 1, y, z)) addFace(faces.right);
+        if (isAir(chunk, x, y, z + 1)) addFace(faces.front);
+        if (isAir(chunk, x, y, z - 1)) addFace(faces.back);
       }
     }
   }
 
-  return vertices;
+  return verticesCount;
 }
 
 // TODO: implement defragmentation (recreating the buffer and FreeList?)
@@ -69,6 +71,7 @@ export class Mesher {
   // TODO: remove this
   indirectBuffer: TgpuBuffer<d.WgslArray<d.Vec4u>> & IndirectFlag;
   totalVertices: number;
+  arrayBuffer: Float32Array<ArrayBuffer>;
 
   freeList: FreeList;
   chunkToId: Map<Chunk, SlotId>;
@@ -85,14 +88,14 @@ export class Mesher {
       .createBuffer(d.arrayOf(d.vec4u, MAX_CHUNKS_AT_ONCE))
       .$usage('indirect');
     this.totalVertices = 0;
+    this.arrayBuffer = new Float32Array(CHUNK_SIZE ** 3 * 3 * 4 * 4);
   }
 
   recalculateMeshesFor(chunks: Chunk[]) {
     const unwrappedBuffer = this.#root.unwrap(this.vertexBuffer);
 
     for (const chunk of chunks) {
-      const vertices = calculateMeshForChunk(chunk);
-      const newSize = vertices.length * 4 * 4;
+      const newSize = calculateMeshForChunk(chunk, this.arrayBuffer) * 4 * 4;
 
       let slotId = this.chunkToId.get(chunk);
       if (slotId === undefined) {
@@ -110,8 +113,13 @@ export class Mesher {
         console.log('REALLOCATING', ...chunk.chunkIndex, 'SIZE', newSize);
 
         const info = this.freeList.slotInfoFor(slotId);
-        const float32 = new Float32Array(info.capacity);
-        this.#root.device.queue.writeBuffer(unwrappedBuffer, info.offset, float32);
+        this.#root.device.queue.writeBuffer(
+          unwrappedBuffer,
+          info.offset,
+          this.arrayBuffer,
+          0,
+          newSize / 4,
+        );
 
         this.freeList.deallocate(slotId);
 
@@ -123,17 +131,14 @@ export class Mesher {
       const offset = this.freeList.slotInfoFor(slotId).offset;
 
       // TODO: pass the block type info so we can draw appropriate textures
-      // TODO: use Float32Array in mesh calculation
-      const float32 = new Float32Array(vertices.length * 4);
-      for (let i = 0; i < vertices.length; i++) {
-        const v = vertices[i];
-        float32[i * 4 + 0] = v.x;
-        float32[i * 4 + 1] = v.y;
-        float32[i * 4 + 2] = v.z;
-        float32[i * 4 + 3] = v.w;
-      }
-      this.#root.device.queue.writeBuffer(unwrappedBuffer, offset, float32);
-      this.totalVertices += vertices.length;
+      this.#root.device.queue.writeBuffer(
+        unwrappedBuffer,
+        offset,
+        this.arrayBuffer,
+        0,
+        newSize / 4,
+      );
+      this.totalVertices += newSize / 4;
     }
   }
 

@@ -27,7 +27,13 @@ const { cleanupCamera, updatePosition } = setupFirstPersonCamera(
 );
 
 const mesher = new Mesher(root);
+const time = performance.now();
 mesher.recalculateMeshesFor(state.map.chunks);
+const total = performance.now() - time;
+console.log(
+  `Meshing ${state.map.chunks.length} chunks took ${total.toFixed(0)}ms, agv: ${(total / state.map.chunks.length).toFixed(2)}ms`,
+);
+
 const renderer = new Renderer(root, cameraUniform);
 
 let frameId = requestAnimationFrame(draw);
