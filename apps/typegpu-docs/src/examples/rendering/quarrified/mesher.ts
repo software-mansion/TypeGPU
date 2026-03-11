@@ -68,11 +68,8 @@ function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Float32Array): number 
 export class Mesher {
   #root: TgpuRoot;
   vertexBuffer: TgpuBuffer<d.WgslArray<d.Vec4f>> & StorageFlag & VertexFlag;
-  // TODO: remove this
-  indirectBuffer: TgpuBuffer<d.WgslArray<d.Vec4u>> & IndirectFlag;
-  totalVertices: number;
-  arrayBuffer: Float32Array<ArrayBuffer>;
-  emptyArrayBuffer: Float32Array<ArrayBuffer>;
+  workArray: Float32Array<ArrayBuffer>;
+  emptyArray: Float32Array<ArrayBuffer>;
 
   freeList: FreeList;
   chunkToId: Map<Chunk, SlotId>;
@@ -85,42 +82,36 @@ export class Mesher {
     this.vertexBuffer = this.#root
       .createBuffer(d.arrayOf(d.vec4f, size / 16))
       .$usage('vertex', 'storage');
-    this.indirectBuffer = this.#root
-      .createBuffer(d.arrayOf(d.vec4u, MAX_CHUNKS_AT_ONCE))
-      .$usage('indirect');
-    this.totalVertices = 0;
-    this.arrayBuffer = new Float32Array(CHUNK_SIZE ** 3 * 3 * 4 * 4);
-    this.emptyArrayBuffer = new Float32Array(CHUNK_SIZE ** 3 * 3 * 4 * 4);
+    this.workArray = new Float32Array(CHUNK_SIZE ** 3 * 3 * 4 * 4);
+    this.emptyArray = new Float32Array(CHUNK_SIZE ** 3 * 3 * 4 * 4);
   }
 
   recalculateMeshesFor(chunks: Chunk[]) {
     const unwrappedBuffer = this.#root.unwrap(this.vertexBuffer);
 
     for (const chunk of chunks) {
-      const newSize = calculateMeshForChunk(chunk, this.arrayBuffer) * 4 * 4;
+      const vertexCount = calculateMeshForChunk(chunk, this.workArray);
+      const byteSize = vertexCount * 4 * 4;
 
       let slotId = this.chunkToId.get(chunk);
       if (slotId === undefined) {
-        slotId = this.freeList.allocate(newSize);
+        slotId = this.freeList.allocate(byteSize);
         this.chunkToId.set(chunk, slotId);
       }
 
-      if (this.freeList.check(slotId, newSize)) {
-        // We need to:
-        // - clear the old vertex buffer slot
-        // - deallocate the slot from freeList
-        // - reallocate it
-        console.log('REALLOCATING', ...chunk.chunkIndex, 'SIZE', newSize);
+      if (this.freeList.check(slotId, byteSize)) {
+        console.log('Reallocating chunk', ...chunk.chunkIndex, 'size', byteSize);
 
         const oldInfo = this.freeList.slotInfoFor(slotId);
         this.freeList.deallocate(slotId);
-        this.freeList.allocate(newSize, slotId);
+        this.freeList.allocate(byteSize, slotId);
         const newInfo = this.freeList.slotInfoFor(slotId);
         if (oldInfo.offset !== newInfo.offset) {
+          // only clear the old slot if the chunk actually changed places
           this.#root.device.queue.writeBuffer(
             unwrappedBuffer,
             oldInfo.offset,
-            this.emptyArrayBuffer,
+            this.emptyArray,
             0,
             oldInfo.capacity / 4,
           );
@@ -133,18 +124,16 @@ export class Mesher {
       this.#root.device.queue.writeBuffer(
         unwrappedBuffer,
         offset,
-        this.arrayBuffer,
+        this.workArray,
         0,
-        newSize / 4,
+        vertexCount * 4,
       );
-      this.totalVertices += newSize / 4;
     }
   }
 
   getResources() {
     return {
       vertexBuffer: this.vertexBuffer,
-      indirectBuffer: this.indirectBuffer,
       // TODO: return the number of the last non-zero vertex
       vertexCount: (256 * 1024 * 1024 - 16) / 16,
     };
