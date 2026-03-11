@@ -41,6 +41,8 @@ export function setupFirstPersonCamera(
     pos: options.initPos,
     yaw: 0,
     pitch: 0,
+    targetYaw: 0,
+    targetPitch: 0,
   };
 
   function runCallback() {
@@ -68,9 +70,13 @@ export function setupFirstPersonCamera(
 
   function rotateCamera(dx: number, dy: number) {
     const orbitSensitivity = 0.005;
-    cameraState.yaw += -dx * orbitSensitivity;
-    cameraState.pitch -= dy * orbitSensitivity;
-    cameraState.pitch = std.clamp(cameraState.pitch, -Math.PI / 2 + 0.01, Math.PI / 2 - 0.01);
+    cameraState.targetYaw += -dx * orbitSensitivity;
+    cameraState.targetPitch -= dy * orbitSensitivity;
+    cameraState.targetPitch = std.clamp(
+      cameraState.targetPitch,
+      -Math.PI / 2 + 0.01,
+      Math.PI / 2 - 0.01,
+    );
 
     runCallback();
   }
@@ -130,6 +136,10 @@ export function setupFirstPersonCamera(
     if (document.pointerLockElement !== canvas) {
       return;
     }
+
+    const rotationLerpFactor = 0.2;
+    cameraState.yaw += (cameraState.targetYaw - cameraState.yaw) * rotationLerpFactor;
+    cameraState.pitch += (cameraState.targetPitch - cameraState.pitch) * rotationLerpFactor;
 
     const forward = std
       .normalize(d.vec3f(std.sin(cameraState.yaw), 0, std.cos(cameraState.yaw)))
