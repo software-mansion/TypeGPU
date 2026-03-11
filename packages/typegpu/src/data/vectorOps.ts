@@ -120,20 +120,11 @@ const binaryComponentWise4u = (op: BinaryOp) => (a: wgsl.v4u, b: wgsl.v4u) =>
 const binaryComponentWise2i2u = (op: BinaryOp) => (a: wgsl.v2i, b: wgsl.v2u) =>
   vec2i(op(a.x, b.x), op(a.y, b.y));
 
-const binaryComponentWise2u2u = (op: BinaryOp) => (a: wgsl.v2u, b: wgsl.v2u) =>
-  vec2u(op(a.x, b.x), op(a.y, b.y));
-
 const binaryComponentWise3i3u = (op: BinaryOp) => (a: wgsl.v3i, b: wgsl.v3u) =>
   vec3i(op(a.x, b.x), op(a.y, b.y), op(a.z, b.z));
 
-const binaryComponentWise3u3u = (op: BinaryOp) => (a: wgsl.v3u, b: wgsl.v3u) =>
-  vec3u(op(a.x, b.x), op(a.y, b.y), op(a.z, b.z));
-
 const binaryComponentWise4i4u = (op: BinaryOp) => (a: wgsl.v4i, b: wgsl.v4u) =>
   vec4i(op(a.x, b.x), op(a.y, b.y), op(a.z, b.z), op(a.w, b.w));
-
-const binaryComponentWise4u4u = (op: BinaryOp) => (a: wgsl.v4u, b: wgsl.v4u) =>
-  vec4u(op(a.x, b.x), op(a.y, b.y), op(a.z, b.z), op(a.w, b.w));
 
 const binaryComponentWise2x2f = (op: BinaryOp) => (a: wgsl.m2x2f, b: wgsl.m2x2f) => {
   const a_ = a.columns as [wgsl.v2f, wgsl.v2f];
@@ -1110,13 +1101,13 @@ export const VectorOps = {
 
   bitShiftLeft: {
     vec2i: binaryComponentWise2i2u((a, b) => a << b),
-    vec2u: binaryComponentWise2u2u((a, b) => a << b),
+    vec2u: binaryComponentWise2u((a, b) => a << b),
 
     vec3i: binaryComponentWise3i3u((a, b) => a << b),
-    vec3u: binaryComponentWise3u3u((a, b) => a << b),
+    vec3u: binaryComponentWise3u((a, b) => a << b),
 
     vec4i: binaryComponentWise4i4u((a, b) => a << b),
-    vec4u: binaryComponentWise4u4u((a, b) => a << b),
+    vec4u: binaryComponentWise4u((a, b) => a << b),
   } as Record<
     VecKind,
     <T extends wgsl.AnyIntegerVecInstance, U extends wgsl.AnyUnsignedVecInstance>(a: T, b: U) => T
@@ -1124,13 +1115,13 @@ export const VectorOps = {
 
   bitShiftRight: {
     vec2i: binaryComponentWise2i2u((a, b) => a >> b),
-    vec2u: binaryComponentWise2u2u((a, b) => a >> b),
+    vec2u: binaryComponentWise2u((a, b) => a >> b),
 
     vec3i: binaryComponentWise3i3u((a, b) => a >> b),
-    vec3u: binaryComponentWise3u3u((a, b) => a >> b),
+    vec3u: binaryComponentWise3u((a, b) => a >> b),
 
     vec4i: binaryComponentWise4i4u((a, b) => a >> b),
-    vec4u: binaryComponentWise4u4u((a, b) => a >> b),
+    vec4u: binaryComponentWise4u((a, b) => a >> b),
   } as Record<
     VecKind,
     <T extends wgsl.AnyIntegerVecInstance, U extends wgsl.AnyUnsignedVecInstance>(a: T, b: U) => T

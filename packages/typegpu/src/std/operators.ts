@@ -8,16 +8,16 @@ import {
   type AnyMatInstance,
   type AnyNumericVecInstance,
   type BaseData,
-  isFloat32VecInstance,
-  isMat,
-  isMatInstance,
-  isVec,
-  isVecInstance,
-  isInt32VecInstance,
   type mBaseForVec,
   type vBaseForMat,
-  AnyUnsignedVecInstance,
-  AnyUnsignedVecData,
+  type AnyUnsignedVecInstance,
+  isFloat32VecInstance,
+  isInteger32VecInstance,
+  isMat,
+  isMatInstance,
+  isUnsignedVecInstance,
+  isVec,
+  isVecInstance,
 } from '../data/wgslTypes.ts';
 import { SignatureNotSupportedError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';
@@ -286,14 +286,14 @@ export const neg = dualImpl({
 
 const anyConcreteInteger = [i32, u32, vec2i, vec3i, vec4i, vec2u, vec3u, vec4u] as BaseData[];
 
-const intVecToUnsignedVec: Record<AnyIntegerVecInstance['kind'], AnyUnsignedVecData> = {
+const intVecToUnsignedVec = {
   vec2i: vec2u,
   vec2u: vec2u,
   vec3i: vec3u,
   vec3u: vec3u,
   vec4i: vec4u,
   vec4u: vec4u,
-};
+} as const;
 
 const bitShiftSignature = (lhs: BaseData, rhs: BaseData) => {
   const lhsUnified = unify([lhs], anyConcreteInteger)?.[0];
@@ -330,10 +330,10 @@ function cpuBitShiftLeft(
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs << rhs;
   }
-  if (isInt32VecInstance(lhs) && isInt32VecInstance(rhs)) {
+  if (isInteger32VecInstance(lhs) && isUnsignedVecInstance(rhs)) {
     return VectorOps.bitShiftLeft[lhs.kind](lhs, rhs);
   }
-  if (isInt32VecInstance(lhs) && typeof rhs === 'number') {
+  if (isInteger32VecInstance(lhs) && typeof rhs === 'number') {
     const rhsVec = intVecToUnsignedVec[lhs.kind](rhs);
     return VectorOps.bitShiftLeft[lhs.kind](lhs, rhsVec);
   }
@@ -366,10 +366,10 @@ function cpuBitShiftRight(
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs >> rhs;
   }
-  if (isInt32VecInstance(lhs) && isInt32VecInstance(rhs)) {
+  if (isInteger32VecInstance(lhs) && isUnsignedVecInstance(rhs)) {
     return VectorOps.bitShiftRight[lhs.kind](lhs, rhs);
   }
-  if (isInt32VecInstance(lhs) && typeof rhs === 'number') {
+  if (isInteger32VecInstance(lhs) && typeof rhs === 'number') {
     const rhsVec = intVecToUnsignedVec[lhs.kind](rhs);
     return VectorOps.bitShiftRight[lhs.kind](lhs, rhsVec);
   }
