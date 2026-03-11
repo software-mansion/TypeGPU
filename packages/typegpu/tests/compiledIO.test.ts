@@ -705,6 +705,31 @@ describe('createCompileInstructions', () => {
     expect([...new Float32Array(arr)]).toStrictEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
+  it('should compile a writer for a vec3h with 2-byte component offsets', () => {
+    const writer = buildWriter(d.vec3h, 'offset', 'value');
+
+    expect(writer).toMatchInlineSnapshot(`
+      "output.setFloat16((offset + 0), value[0], littleEndian);
+      output.setFloat16((offset + 2), value[1], littleEndian);
+      output.setFloat16((offset + 4), value[2], littleEndian);
+      "
+    `);
+  });
+
+  it('should compile a writer for an array of vec3h with 2-byte component offsets', () => {
+    const writer = buildWriter(d.arrayOf(d.vec3h, 2), 'offset', 'value');
+
+    expect(writer).toMatchInlineSnapshot(`
+      "var _ta0 = ArrayBuffer.isView(value) && !(value instanceof DataView);
+      for (let i = 0; i < 2; i++) {
+      output.setFloat16((offset + i * 8 + 0), _ta0 ? value[i * 3 + 0] : value[i][0], littleEndian);
+      output.setFloat16((offset + i * 8 + 2), _ta0 ? value[i * 3 + 1] : value[i][1], littleEndian);
+      output.setFloat16((offset + i * 8 + 4), _ta0 ? value[i * 3 + 2] : value[i][2], littleEndian);
+      }
+      "
+    `);
+  });
+
   it('should compile for a disarray of unstructs', () => {
     const unstruct = d.unstruct({
       a: d.vec3f,
@@ -913,6 +938,61 @@ describe('createCompileInstructions', () => {
     expect([...new Float32Array(arr, 0, 3)]).toStrictEqual([1, 2, 3]);
     expect([...new Float32Array(arr, 16, 3)]).toStrictEqual([4, 5, 6]);
     expect([...new Float32Array(arr, 32, 3)]).toStrictEqual([7, 8, 9]);
+  });
+
+  it('should write a vec3h from a plain tuple with correct 2-byte component offsets', () => {
+    const schema = d.vec3h;
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(8); // vec3h alignment = 8 bytes
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, [1.5, 2.5, 3.5]);
+
+    expect(dataView.getFloat16(0, true)).toBeCloseTo(1.5);
+    expect(dataView.getFloat16(2, true)).toBeCloseTo(2.5);
+    expect(dataView.getFloat16(4, true)).toBeCloseTo(3.5);
+  });
+
+  it('should write an arrayOf(vec2h) from plain tuples with correct 2-byte component offsets', () => {
+    const schema = d.arrayOf(d.vec2h, 3);
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(sizeOf(schema)); // 3 * 4 = 12 bytes
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, [
+      [1, 2],
+      [3, 4],
+      [5, 6],
+    ]);
+
+    // Each vec2h: 2 components × 2 bytes = 4 bytes per element (no padding needed)
+    expect(dataView.getFloat16(0, true)).toBeCloseTo(1);
+    expect(dataView.getFloat16(2, true)).toBeCloseTo(2);
+    expect(dataView.getFloat16(4, true)).toBeCloseTo(3);
+    expect(dataView.getFloat16(6, true)).toBeCloseTo(4);
+    expect(dataView.getFloat16(8, true)).toBeCloseTo(5);
+    expect(dataView.getFloat16(10, true)).toBeCloseTo(6);
+  });
+
+  it('should write an arrayOf(vec3h) from plain tuples with stride-corrected 2-byte offsets', () => {
+    // vec3h: 6 bytes data, 8-byte stride (2 bytes padding per element)
+    const schema = d.arrayOf(d.vec3h, 2);
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(sizeOf(schema)); // 2 * 8 = 16 bytes
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, [
+      [1, 2, 3],
+      [4, 5, 6],
+    ]);
+
+    // First element at byte 0, second at byte 8
+    expect(dataView.getFloat16(0, true)).toBeCloseTo(1);
+    expect(dataView.getFloat16(2, true)).toBeCloseTo(2);
+    expect(dataView.getFloat16(4, true)).toBeCloseTo(3);
+    expect(dataView.getFloat16(8, true)).toBeCloseTo(4);
+    expect(dataView.getFloat16(10, true)).toBeCloseTo(5);
+    expect(dataView.getFloat16(12, true)).toBeCloseTo(6);
   });
 
   it('should write an array of f32 scalars from a Float32Array', () => {

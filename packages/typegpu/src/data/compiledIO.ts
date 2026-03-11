@@ -194,6 +194,7 @@ export function buildWriter(
     if (wgsl.isVec(node.elementType)) {
       const N = node.elementType.componentCount;
       const primitive = typeToPrimitive[node.elementType.type as keyof typeof typeToPrimitive];
+      const componentSize = sizeOf(node.elementType.primitive);
       const writeFunc = primitiveToWriteFunction[primitive];
       const taVar = `_ta${depth}`;
 
@@ -203,7 +204,7 @@ export function buildWriter(
         code += `if ((${offsetExpr} + ${loopVar} * ${elementSize}) >= endOffset) { break; }\n`;
       }
       for (let c = 0; c < N; c++) {
-        const byteOff = c * 4;
+        const byteOff = c * componentSize;
         const access = `${taVar} ? ${valueExpr}[${loopVar} * ${N} + ${c}] : ${valueExpr}[${loopVar}][${c}]`;
         if (partial) {
           code += `if ((${offsetExpr} + ${loopVar} * ${elementSize} + ${byteOff}) < endOffset) {\n`;
@@ -239,11 +240,12 @@ export function buildWriter(
     }
 
     const primitive = typeToPrimitive[node.type];
+    const componentSize = sizeOf(node.primitive);
     let code = '';
     const writeFunc = primitiveToWriteFunction[primitive];
 
     for (let i = 0; i < node.componentCount; i++) {
-      const byteOff = i * 4;
+      const byteOff = i * componentSize;
       if (partial) {
         code += `if ((${offsetExpr} + ${byteOff}) < endOffset) {\n`;
         code += `output.${writeFunc}((${offsetExpr} + ${byteOff}), ${valueExpr}[${i}], littleEndian);\n`;

@@ -1,11 +1,11 @@
 import { BufferReader, BufferWriter, getSystemEndianness } from 'typed-binary';
 import { getCompiledWriterForSchema } from '../../data/compiledIO.ts';
 import { readData, writeData } from '../../data/dataIO.ts';
-import type { AnyData } from '../../data/dataTypes.ts';
+import { isDisarray, type AnyData } from '../../data/dataTypes.ts';
 import { getWriteInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
-import { isWgslData } from '../../data/wgslTypes.ts';
+import { isVec, isWgslArray, isWgslData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
@@ -317,6 +317,18 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
           error,
         );
       }
+    }
+
+    if (
+      ArrayBuffer.isView(data) &&
+      !(data instanceof DataView) &&
+      (isWgslArray(this.dataType) || isDisarray(this.dataType)) &&
+      isVec((this.dataType as { elementType?: unknown }).elementType)
+    ) {
+      throw new Error(
+        'Flat TypedArray input for arrays of vectors requires the compiled writer. ' +
+          'This environment does not allow eval - pass an array of vec instances or plain tuples instead.',
+      );
     }
 
     const writer = new BufferWriter(target);
