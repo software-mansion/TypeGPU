@@ -5,6 +5,7 @@ import type { U16, U32, WgslArray } from '../data/wgslTypes.ts';
 import type {
   $gpuRepr,
   $gpuValueOf,
+  $inRepr,
   $invalidSchemaReason,
   $memIdent,
   $repr,
@@ -26,6 +27,18 @@ import type { Default } from './utilityTypes.ts';
  * type C = Infer<Atomic<U32>> // => number
  */
 export type Infer<T> = T extends { readonly [$repr]: infer TRepr } ? TRepr : T;
+
+/**
+ * Extracts the inferred input (write-side) representation of a resource.
+ * More permissive than {@link Infer} — accepts plain arrays and TypedArrays
+ * for vector and array schemas. Falls back to {@link Infer} when $inRepr is not defined.
+ *
+ * @example
+ * type A = InferInput<Vec3f> // => v3f | [number, number, number] | Float32Array
+ * type B = InferInput<WgslArray<Vec3f>> // => (v3f | [number, number, number] | Float32Array)[] | Float32Array
+ * type C = InferInput<F32> // => number (same as Infer<F32>)
+ */
+export type InferInput<T> = T extends { readonly [$inRepr]: infer TRepr } ? TRepr : Infer<T>;
 
 /**
  * Extracts a sparse/partial inferred representation of a resource.

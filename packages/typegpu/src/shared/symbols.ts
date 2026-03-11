@@ -54,6 +54,11 @@ export const $gpuRepr = Symbol(`typegpu:${version}:$gpuRepr`);
  */
 export const $reprPartial = Symbol(`typegpu:${version}:$reprPartial`);
 /**
+ * Type token for the write-side (input) representation of a resource.
+ * More permissive than $repr. If absent, $repr is used as the fallback.
+ */
+export const $inRepr = Symbol(`typegpu:${version}:$inRepr`);
+/**
  * Type token holding schemas that are identical in memory layout.
  */
 export const $memIdent = Symbol(`typegpu:${version}:$memIdent`);

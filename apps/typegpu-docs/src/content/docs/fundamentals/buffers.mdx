@@ -209,11 +209,101 @@ particleBuffer.write({
 });
 ```
 
+### Permissive vector inputs
+
+For vector fields and buffers, `.write()` accepts three equivalent forms - you don't need to construct a typed vec instance:
+
+| Input form | Example for `vec3f` | Notes |
+|---|---|---|
+| Typed vec instance | `d.vec3f(1, 2, 3)` | Allocates a new object |
+| Plain JS tuple | `[1, 2, 3]` | No extra allocation |
+| TypedArray | `new Float32Array([1, 2, 3])` | Best for bulk data |
+
+Avoiding vec construction can meaningfully reduce garbage-collector pressure in hot paths such as per-frame updates or simulation ticks.
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const vecBuffer = root.createBuffer(d.vec3f);
+
+vecBuffer.write(d.vec3f(1, 2, 3));            // typed instance
+vecBuffer.write([1, 2, 3]);                   // plain tuple - no object construction
+vecBuffer.write(new Float32Array([1, 2, 3])); // TypedArray
+```
+
+For **arrays of vectors**, a single flat TypedArray is also accepted. TypeGPU automatically handles the stride difference between the packed input and the padded GPU layout (e.g. `vec3f` occupies 16 bytes in a buffer, but only 3 floats in the TypedArray). This is the most efficient option when the data already lives in a TypedArray - no per-element object allocation is needed:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const arrBuffer = root.createBuffer(d.arrayOf(d.vec3f, 2));
+
+// Array of instances, tuples, or per-element TypedArrays - all equivalent:
+arrBuffer.write([d.vec3f(1, 2, 3), d.vec3f(4, 5, 6)]);
+arrBuffer.write([[1, 2, 3], [4, 5, 6]]);
+
+// Flat Float32Array - most efficient, no per-element object allocation:
+arrBuffer.write(new Float32Array([1, 2, 3, 4, 5, 6]));
+```
+
+The same rules apply to scalar arrays - a `Float32Array` (or `Int32Array` / `Uint32Array`) can be passed directly to a buffer of `arrayOf(d.f32, n)` (or `i32` / `u32`).
+
 :::caution[WebGPU Interoperability]
 If you create a buffer from an existing WebGPU buffer that happens to be mapped, the data will be written directly to the buffer (the buffer will not be unmapped).
 If you pass an unmapped buffer, the data will be written to the buffer using `GPUQueue.writeBuffer`.
 
 If you passed your own buffer to the `root.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the `write` method.
+:::
+
+### Writing a slice
+
+You can write a contiguous slice of data into a buffer using the optional second argument of `.write()`.
+Pass the values to write along with `startOffset` - the byte position at which writing begins.
+
+:::tip
+Use `d.memoryLayoutOf` to obtain the correct byte offset for a given schema element without having to manually calculate it.
+:::
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const schema = d.arrayOf(d.u32, 6);
+const buffer = root.createBuffer(schema, [0, 1, 2, 0, 0, 0]);
+
+// Get the byte offset of element [3]
+const layout = d.memoryLayoutOf(schema, (a) => a[3]);
+
+// Write [4, 5, 6] starting at element [3], leaving [0, 1, 2] untouched
+buffer.write([4, 5, 6], { startOffset: layout.offset });
+const data = await buffer.read(); // will be [0, 1, 2, 4, 5, 6]
+```
+
+An optional `endOffset` specifies the byte offset at which writing stops entirely.
+Combined with `startOffset` and `d.memoryLayoutOf`, this lets you write to a precise region of the buffer.
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const schema = d.arrayOf(d.vec3u, 4);
+const buffer = root.createBuffer(schema);
+
+// Get the byte offsets of element [1] (start) and element [2] (stop)
+const startLayout = d.memoryLayoutOf(schema, (a) => a[1]);
+const endLayout = d.memoryLayoutOf(schema, (a) => a[2]);
+
+// Write one vec3u at element [1], stopping before element [2]
+buffer.write([d.vec3u(4, 5, 6)], {
+  startOffset: startLayout.offset,
+  endOffset: endLayout.offset,
+});
+```
+
+:::note
+In this particular case the `writePartial` method described in the next section would be a more convenient option, but the `startOffset` and `endOffset` options are useful for writing bigger slices of data.
 :::
 
 ### Partial writes
