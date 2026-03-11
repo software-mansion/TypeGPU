@@ -96,7 +96,7 @@ export class Mesher {
 
       let slotId = this.chunkToId.get(chunk);
       if (slotId === undefined) {
-        slotId = this.freeList.allocate(newSize).id;
+        slotId = this.freeList.allocate(newSize);
         this.chunkToId.set(chunk, slotId);
       }
 
@@ -110,12 +110,12 @@ export class Mesher {
         console.log('REALLOCATING', ...chunk.chunkIndex, 'SIZE', newSize);
 
         const info = this.freeList.slotInfoFor(slotId);
-        const float32 = new Float32Array(info.size);
+        const float32 = new Float32Array(info.capacity);
         this.#root.device.queue.writeBuffer(unwrappedBuffer, info.offset, float32);
 
         this.freeList.deallocate(slotId);
 
-        slotId = this.freeList.allocate(newSize).id;
+        slotId = this.freeList.allocate(newSize);
 
         this.chunkToId.set(chunk, slotId);
       }
@@ -153,12 +153,11 @@ function roundUp(value: number, alignment: number): number {
   return Math.ceil(value / alignment) * alignment;
 }
 
-// TODO: review and fix this AI implementation
 class FreeList {
   ALIGNMENT = 4 * 4 * 3; // 4 bytes * 4 elements * 3 vectors
   #marginPercent: number;
-  #slots: Map<SlotId, { offset: number; size: number; capacity: number }>;
-  #freeBlocks: Array<{ offset: number; size: number }>;
+  #slots: Map<SlotId, { offset: number; capacity: number }>;
+  #freeBlocks: { offset: number; size: number }[];
   #nextId: number;
 
   /**
@@ -176,8 +175,9 @@ class FreeList {
 
   /**
    * Creates a slot of size `size*(1+marginPercent)`, and sets it current size to `size`.
+   * TODO: This can be optimized by using an ordered map from size to offset
    */
-  allocate(size: number): { id: SlotId; offset: number } {
+  allocate(size: number): SlotId {
     const capacity = roundUp(size * (1 + this.#marginPercent), this.ALIGNMENT);
 
     for (let i = 0; i < this.#freeBlocks.length; i++) {
@@ -191,8 +191,8 @@ class FreeList {
           this.#freeBlocks.splice(i, 1);
         }
         const id = this.#nextId++;
-        this.#slots.set(id, { offset, size, capacity });
-        return { id, offset };
+        this.#slots.set(id, { offset, capacity });
+        return id;
       }
     }
 
@@ -200,11 +200,14 @@ class FreeList {
   }
 
   /**
-   * Deallocates a slot
+   * Deallocates a slot.
+   * TODO: Currently this is O(n^2), we will need to optimize this when we start dynamically rendering chunks
    */
   deallocate(id: SlotId) {
     const slot = this.#slots.get(id);
-    if (!slot) throw new Error(`FreeList: unknown slot id ${id}`);
+    if (!slot) {
+      throw new Error(`FreeList: unknown slot id ${id}`);
+    }
     this.#slots.delete(id);
 
     this.#freeBlocks.push({ offset: slot.offset, size: slot.capacity });
@@ -226,31 +229,34 @@ class FreeList {
    */
   check(id: SlotId, newSize: number): boolean {
     const slot = this.#slots.get(id);
-    if (!slot) throw new Error(`FreeList: unknown slot id ${id}`);
+    if (!slot) {
+      throw new Error(`FreeList: unknown slot id ${id}`);
+    }
     return newSize > slot.capacity;
   }
 
   /**
-   * Returns all relevant info for given slot
+   * Returns relevant info for given slot.
    */
-  slotInfoFor(id: SlotId): { offset: number; size: number; margin: number } {
+  slotInfoFor(id: SlotId): { offset: number; capacity: number } {
     const slot = this.#slots.get(id);
-    if (!slot) throw new Error(`FreeList: unknown slot id ${id}`);
-    return { offset: slot.offset, size: slot.size, margin: slot.capacity - slot.size };
+    if (!slot) {
+      throw new Error(`FreeList: unknown slot id ${id}`);
+    }
+    return slot;
   }
 
   /**
-   * Stats for debugging, computed lazily.
+   * Stats for debugging, computed on demand (slow).
    */
-  getStats(): {
-    totalFreeSpace: number;
-    largestFreeBlock: number;
-  } {
+  getStats(): { totalFreeSpace: number; largestFreeBlock: number } {
     let totalFreeSpace = 0;
     let largestFreeBlock = 0;
     for (const block of this.#freeBlocks) {
       totalFreeSpace += block.size;
-      if (block.size > largestFreeBlock) largestFreeBlock = block.size;
+      if (block.size > largestFreeBlock) {
+        largestFreeBlock = block.size;
+      }
     }
     return { totalFreeSpace, largestFreeBlock };
   }
