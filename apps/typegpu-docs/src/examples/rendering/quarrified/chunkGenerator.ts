@@ -19,8 +19,7 @@ export const coordToIndex = tgpu.fn([d.vec3i], d.i32)`(coord) => {
 export const coordToIndexCPU = (x: number, y: number, z: number) =>
   (z << (CHUNK_SIZE_BITS * 2)) | (y << CHUNK_SIZE_BITS) | x;
 
-// Chunk info is stored in an one-dimensional array,
-// since one block data can fit in one number, currently it's just the block id.
+// Chunk info is stored in an one-dimensional array. Each block's info fits in one u32
 export class ChunkGenerator {
   #pipeline: TgpuGuardedComputePipeline<[x: number, y: number, z: number]>;
   blocksMutable: TgpuMutable<d.WgslArray<d.U32>>;

@@ -1,4 +1,4 @@
-import {
+import tgpu, {
   d,
   std,
   type RenderFlag,
@@ -20,13 +20,41 @@ export class Renderer {
     RenderFlag;
   constructor(root: TgpuRoot, cameraUniform: TgpuUniform<typeof Camera>) {
     this.#root = root;
+    // prettier-ignore
+    const faceOffsets = tgpu.const(d.arrayOf(d.vec3i, 4 * 6), [
+      // 0: bottom (y-1)
+      d.vec3i(1,0,0), d.vec3i(1,0,1), d.vec3i(0,0,0), d.vec3i(0,0,1),
+      // 1: top (y+1)
+      d.vec3i(1,1,1), d.vec3i(1,1,0), d.vec3i(0,1,1), d.vec3i(0,1,0),
+      // 2: left (x-1)
+      d.vec3i(0,1,1), d.vec3i(0,1,0), d.vec3i(0,0,1), d.vec3i(0,0,0),
+      // 3: right (x+1)
+      d.vec3i(1,0,1), d.vec3i(1,0,0), d.vec3i(1,1,1), d.vec3i(1,1,0),
+      // 4: front (z+1)
+      d.vec3i(0,1,1), d.vec3i(0,0,1), d.vec3i(1,1,1), d.vec3i(1,0,1),
+      // 5: back (z-1)
+      d.vec3i(0,0,0), d.vec3i(0,1,0), d.vec3i(1,0,0), d.vec3i(1,1,0),
+    ])
+
     this.pipeline = root.createRenderPipeline({
       attribs: { position: MeshLayout.attrib },
-      vertex: (input) => {
+      vertex: ({ position, $vertexIndex }) => {
         'use gpu';
-        const worldPos = input.position;
+        if (std.allEq(position, d.vec4f())) {
+          return { $position: d.vec4f(0), worldPos: d.vec3f() };
+        }
+
+        const blockPos = d.vec3i(position.xyz);
+        // TODO: replace with bitshifts
+        const blockType = d.u32(position.w) & (2 ** 8 - 1);
+        const sideNumber = d.u32(position.w / 2 ** 8) & (2 ** 8 - 1);
+        const sideVertex = $vertexIndex;
+        const blockMetadata = d.u32(position.w / 2 ** 16);
+
+        const worldPos = d.vec3f(blockPos + faceOffsets.$[sideNumber * 4 + sideVertex]);
+
         return {
-          $position: cameraUniform.$.projection * cameraUniform.$.view * worldPos,
+          $position: cameraUniform.$.projection * cameraUniform.$.view * d.vec4f(worldPos, 1),
           worldPos,
         };
       },
@@ -41,7 +69,7 @@ export class Renderer {
         return d.vec4f(color, 1);
       },
       depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
-      primitive: { cullMode: 'none' }, // for debugging meshes
+      primitive: { cullMode: /* debug option */ 'none', topology: 'triangle-strip' },
     });
   }
 
@@ -81,6 +109,6 @@ export class Renderer {
       .withColorAttachment(passDescriptor.colorAttachments[0])
       .withDepthStencilAttachment(passDescriptor.depthStencilAttachment)
       .with(MeshLayout, mesherResources.vertexBuffer)
-      .draw(mesherResources.vertexCount);
+      .draw(4, mesherResources.vertexCount / 4);
   }
 }

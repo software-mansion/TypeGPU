@@ -20,14 +20,14 @@ export class Mesher {
 
   constructor(root: TgpuRoot) {
     this.#root = root;
-    const size = 256 * 1024 * 1024 - 16; // 256MB rounded down to a multiple of 48
+    const size = 256 * 1024 * 1024; // 256MB
     this.freeList = new FreeList(size, 0.05);
     this.chunkToId = new Map();
     this.vertexBuffer = this.#root
       .createBuffer(d.arrayOf(d.vec4f, size / 16))
       .$usage('vertex', 'storage');
-    this.workArray = new Float32Array(CHUNK_SIZE ** 3 * 3 * 4 * 4);
-    this.emptyArray = new Float32Array(CHUNK_SIZE ** 3 * 3 * 4 * 4);
+    this.workArray = new Float32Array(CHUNK_SIZE ** 3 * 4 * 4 * 4);
+    this.emptyArray = new Float32Array(CHUNK_SIZE ** 3 * 4 * 4 * 4);
   }
 
   recalculateMeshesFor(chunks: Chunk[]) {
@@ -79,7 +79,7 @@ export class Mesher {
     return {
       vertexBuffer: this.vertexBuffer,
       // TODO: return the number of the last non-zero vertex
-      vertexCount: (256 * 1024 * 1024 - 16) / 16,
+      vertexCount: (256 * 1024 * 1024) / 16,
     };
   }
 }
@@ -109,23 +109,20 @@ function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Float32Array): number 
         const wz = wz0 + z;
 
         // This function makes things cleaner and doesn't slow down things too much (less than 3%)
-        function addFace(faceVertices: (typeof faces)[keyof typeof faces]) {
-          for (const v of faceVertices) {
-            const p = v.position;
-            arrayBuffer[4 * verticesCount] = p.x + wx;
-            arrayBuffer[4 * verticesCount + 1] = p.y + wy;
-            arrayBuffer[4 * verticesCount + 2] = p.z + wz;
-            arrayBuffer[4 * verticesCount + 3] = 1;
-            verticesCount += 1;
-          }
+        function addFace(index: number) {
+          arrayBuffer[4 * verticesCount] = wx;
+          arrayBuffer[4 * verticesCount + 1] = wy;
+          arrayBuffer[4 * verticesCount + 2] = wz;
+          arrayBuffer[4 * verticesCount + 3] = 1 | (index << 8);
+          verticesCount += 1;
         }
 
-        if (isAir(chunk, x, y - 1, z)) addFace(faces.bottom);
-        if (isAir(chunk, x, y + 1, z)) addFace(faces.top);
-        if (isAir(chunk, x - 1, y, z)) addFace(faces.left);
-        if (isAir(chunk, x + 1, y, z)) addFace(faces.right);
-        if (isAir(chunk, x, y, z + 1)) addFace(faces.front);
-        if (isAir(chunk, x, y, z - 1)) addFace(faces.back);
+        if (isAir(chunk, x, y - 1, z)) addFace(0);
+        if (isAir(chunk, x, y + 1, z)) addFace(1);
+        if (isAir(chunk, x - 1, y, z)) addFace(2);
+        if (isAir(chunk, x + 1, y, z)) addFace(3);
+        if (isAir(chunk, x, y, z + 1)) addFace(4);
+        if (isAir(chunk, x, y, z - 1)) addFace(5);
       }
     }
   }
@@ -140,7 +137,7 @@ function roundUp(value: number, alignment: number): number {
 }
 
 class FreeList {
-  ALIGNMENT = 4 * 4 * 3; // 4 bytes * 4 elements * 3 vectors
+  ALIGNMENT = 4 * 4 * 4; // 4 bytes * 4 elements * 4 vectors
   #marginPercent: number;
   #slots: Map<SlotId, { offset: number; capacity: number }>;
   #freeBlocks: { offset: number; size: number }[];
