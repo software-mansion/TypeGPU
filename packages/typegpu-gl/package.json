@@ -1,0 +1,45 @@
+{
+  "name": "@typegpu/gl",
+  "version": "0.10.0-alpha.1",
+  "description": "WebGL and GLSL utilities for TypeGPU",
+  "keywords": [],
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "directory": "dist",
+    "exports": {
+      "./package.json": "./dist/package.json",
+      ".": {
+        "types": "./dist/index.d.ts",
+        "module": "./dist/index.mjs",
+        "import": "./dist/index.mjs"
+      }
+    },
+    "linkDirectory": false,
+    "main": "./dist/index.mjs",
+    "types": "./dist/index.d.ts"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "prepublishOnly": "tgpu-dev-cli prepack"
+  },
+  "devDependencies": {
+    "@typegpu/tgpu-dev-cli": "workspace:*",
+    "@webgpu/types": "catalog:types",
+    "tinyest": "workspace:^0.3.0",
+    "tsdown": "catalog:build",
+    "typegpu": "workspace:*",
+    "typescript": "catalog:types",
+    "unbuild": "catalog:build",
+    "unplugin-typegpu": "workspace:*"
+  },
+  "peerDependencies": {
+    "typegpu": "^0.10.2"
+  }
+}
