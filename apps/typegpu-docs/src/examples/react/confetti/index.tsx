@@ -112,18 +112,18 @@ function App() {
 
   // buffers
 
-  const particleGeometryBuffer = useBuffer(d.arrayOf(ParticleGeometry, PARTICLE_AMOUNT), () =>
-    Array.from({ length: PARTICLE_AMOUNT }, () => ({
-      angle: Math.floor(Math.random() * 50) - 10,
-      tilt: Math.floor(Math.random() * 10) - 10 - 10,
-      color: COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)],
-    })),
-  ).$usage('vertex');
+  const particleGeometryBuffer = useBuffer(d.arrayOf(ParticleGeometry, PARTICLE_AMOUNT), {
+    initial: () =>
+      Array.from({ length: PARTICLE_AMOUNT }, () => ({
+        angle: Math.floor(Math.random() * 50) - 10,
+        tilt: Math.floor(Math.random() * 10) - 10 - 10,
+        color: COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)],
+      })),
+  }).$usage('vertex');
 
-  const particleDataBuffer = useBuffer(
-    d.arrayOf(ParticleData, PARTICLE_AMOUNT),
-    createRandomPositions,
-  ).$usage('storage', 'uniform', 'vertex');
+  const particleDataBuffer = useBuffer(d.arrayOf(ParticleData, PARTICLE_AMOUNT), {
+    initial: createRandomPositions,
+  }).$usage('storage', 'uniform', 'vertex');
 
   const aspectRatio = useUniformValue(d.f32, 1);
   const deltaTime = useUniformValue(d.f32);
