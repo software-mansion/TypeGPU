@@ -1,35 +1,42 @@
-import { d, common } from 'typegpu';
-import { useConfigureContext, useFrame, useRoot } from '@typegpu/react';
+import { d, common, std } from 'typegpu';
+import { useConfigureContext, useFrame, useRoot, useUniformValue } from '@typegpu/react';
+import { hexToRgb, oklabToRgb, hexToOklab, rgbToOklab } from '@typegpu/color';
 
 function App() {
   const root = useRoot();
+  const time = useUniformValue(d.f32, 0);
+
   const renderPipeline = useMemo(
     () =>
       root.createRenderPipeline({
         vertex: common.fullScreenTriangle,
         fragment: ({ uv }) => {
           'use gpu';
-          return d.vec4f(uv.x, uv.y, 1, 1);
+          const fromStart = hexToOklab('#ff0000');
+          const fromEnd = rgbToOklab(hexToRgb('#0000ff'));
+          const from = std.mix(fromStart, fromEnd, std.sin(time.$) * 0.5 + 0.5);
+
+          const toStart = rgbToOklab(hexToRgb('#00ff00'));
+          const toEnd = rgbToOklab(hexToRgb('#ff00ff'));
+          const to = std.mix(toStart, toEnd, std.cos(time.$ * 1.5) * 0.5 + 0.5);
+
+          const mixed = std.mix(from, to, (uv.x * 2 - 1) * 0.5 + std.sin(time.$ + uv.y * 3) * 0.5);
+
+          return d.vec4f(oklabToRgb(mixed), 1);
         },
       }),
-    [root],
+    [root, time],
   );
 
   const { canvasRefCallback, ctxRef } = useConfigureContext();
-  useFrame(() => {
+  useFrame(({ elapsedSeconds }) => {
     if (!ctxRef.current) return;
 
+    time.value = elapsedSeconds;
     renderPipeline.withColorAttachment({ view: ctxRef.current }).draw(3);
   });
 
-  // TODO: Provide a time variable to the shader with useUniformValue
-  // TODO: Make the gradient shift colors over time using hsvToRgb from @typegpu/color
-
-  return (
-    <main>
-      <canvas ref={canvasRefCallback} width="256" height="256" />
-    </main>
-  );
+  return <canvas ref={canvasRefCallback} className="aspect-square h-full max-h-[100vw]" />;
 }
 
 // #region Example controls and cleanup
