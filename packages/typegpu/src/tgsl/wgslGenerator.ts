@@ -716,7 +716,11 @@ ${this.ctx.pre}}`;
                   stitch`Property ${key} in object literal has a value of unknown type: '${expr}'`,
                 );
               }
-              accessed = structType.provideProp(key, concretize(expr.dataType));
+              // Taking care of abstract numerics and implicit pointers
+              accessed = structType.provideProp(
+                key,
+                unptr(concretize(expr.dataType)) as wgsl.BaseData,
+              );
             }
 
             return [accessed.prop, expr];
