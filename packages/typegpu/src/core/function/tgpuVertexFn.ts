@@ -7,7 +7,7 @@ import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { shaderStageSlot } from '../slot/internalSlots.ts';
-import { _AutoVertexIn, AnyAutoCustoms, AutoVertexOut } from './autoIO.ts';
+import type { _AutoVertexIn, AnyAutoCustoms, AutoVertexOut } from './autoIO.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { BaseIOData, Implementation, InferIO, IORecord } from './fnTypes.ts';
 import { createIoSchema, type IOLayoutToSchema } from './ioSchema.ts';
