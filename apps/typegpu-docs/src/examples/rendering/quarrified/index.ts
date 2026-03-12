@@ -1,12 +1,12 @@
-import tgpu, { d } from 'typegpu';
+import tgpu from 'typegpu';
 import RAPIER from '@dimforge/rapier3d-compat';
 
-import { Camera, setupFirstPersonCamera } from '../../common/setup-first-person-camera.ts';
+import { Camera } from './schemas.ts';
 import { State } from './state.ts';
 import { INIT_CONFIG } from './params.ts';
 import { Mesher } from './mesher.ts';
 import { Renderer } from './renderer.ts';
-import { coordToIndex } from './chunkGenerator.ts';
+import { setupThirdPersonCamera } from './thirdPersonCamera.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -18,13 +18,13 @@ const state = new State(INIT_CONFIG, world);
 await state.init(root);
 
 const cameraUniform = root.createUniform(Camera);
-const { cleanupCamera, updatePosition } = setupFirstPersonCamera(
-  canvas,
-  { initPos: state.player.pos, speed: d.vec3f(0.01, 0.1, 1) },
-  (camera) => {
-    cameraUniform.writePartial(camera);
-  },
-);
+
+const {
+  getMovementInput,
+  getYaw,
+  updateCamera,
+  cleanup: cleanupCamera,
+} = setupThirdPersonCamera(canvas);
 
 const mesher = new Mesher(root);
 const time = performance.now();
@@ -34,20 +34,20 @@ console.log(
   `Meshing ${state.map.chunks.length} chunks took ${total.toFixed(0)}ms, agv: ${(total / state.map.chunks.length).toFixed(2)}ms`,
 );
 
-const renderer = new Renderer(root, cameraUniform);
+const renderer = new Renderer(root, cameraUniform, state.player.dims);
 
 let frameId = requestAnimationFrame(draw);
 function draw() {
-  updatePosition();
+  const input = getMovementInput();
+  const yaw = getYaw();
+  state.step(input, yaw);
 
-  // for testing purposes, let's modify one block from a random chunk each frame
-  // const randomChunk = state.map.chunks[Math.floor(Math.random() * state.map.chunks.length)];
-  // const randomBlock = Math.floor(Math.random() * 16 ** 3);
-  // randomChunk.blocks[randomBlock] = 1 - randomChunk.blocks[randomBlock];
-  // mesher.recalculateMeshesFor([randomChunk]);
+  const playerPos = state.player.position;
+  const camera = updateCamera(playerPos);
+  cameraUniform.write(camera);
 
   const mesherResources = mesher.getResources();
-  renderer.render(context, mesherResources);
+  renderer.render(context, mesherResources, playerPos);
 
   frameId = requestAnimationFrame(draw);
 }

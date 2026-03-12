@@ -11,3 +11,5 @@ export const VoxelInstance = d.unstruct({ blockPos: d.vec3i, blockType: d.u32 })
 export const VoxelInstanceLayout = tgpu.vertexLayout(d.disarrayOf(VoxelInstance), 'instance');
 
 export const MeshLayout = tgpu.vertexLayout(d.arrayOf(d.vec4f), 'vertex');
+
+export const PlayerModel = d.struct({ model: d.mat4x4f });

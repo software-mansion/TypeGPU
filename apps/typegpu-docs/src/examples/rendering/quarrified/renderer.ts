@@ -1,4 +1,4 @@
-import {
+import tgpu, {
   d,
   std,
   type RenderFlag,
@@ -9,6 +9,7 @@ import {
 } from 'typegpu';
 import { Camera, MeshLayout } from './schemas.ts';
 import { type Mesher } from './mesher.ts';
+import { getCapsuleVertices } from './helpers.ts';
 
 export class Renderer {
   #root: TgpuRoot;
@@ -18,7 +19,12 @@ export class Renderer {
     format: 'depth24plus';
   }> &
     RenderFlag;
-  constructor(root: TgpuRoot, cameraUniform: TgpuUniform<typeof Camera>) {
+
+  #playerPosUniform: TgpuUniform<typeof d.vec4f>;
+  #playerPipeline;
+  #playerIndexCount: number;
+
+  constructor(root: TgpuRoot, cameraUniform: TgpuUniform<typeof Camera>, playerDims: d.v2f) {
     this.#root = root;
     this.pipeline = root.createRenderPipeline({
       attribs: { position: MeshLayout.attrib },
@@ -43,9 +49,60 @@ export class Renderer {
       depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
       primitive: { cullMode: 'none' }, // for debugging meshes
     });
+
+    const playerPosUniform = root.createUniform(d.vec4f);
+    this.#playerPosUniform = playerPosUniform;
+
+    const [positionArray, indexArray] = getCapsuleVertices(
+      playerDims.x,
+      2 * (playerDims.y + playerDims.x),
+    );
+    this.#playerIndexCount = indexArray.length;
+
+    const playerColliderPositionBuffer = root
+      .createBuffer(d.arrayOf(d.vec4f, positionArray.length), positionArray)
+      .$usage('uniform')
+      .as('uniform');
+    const playerColliderIndexBuffer = root
+      .createBuffer(d.arrayOf(d.u16, indexArray.length), Array.from(indexArray))
+      .$usage('index');
+
+    const playerVertexFn = tgpu.vertexFn({
+      in: { idx: d.builtin.vertexIndex },
+      out: { pos: d.builtin.position, rawCol: d.vec3f },
+    })((input) => {
+      'use gpu';
+      const localPos = playerColliderPositionBuffer.$[input.idx] + playerPosUniform.$;
+      const worldPos = cameraUniform.$.projection * cameraUniform.$.view * localPos;
+      return {
+        pos: worldPos,
+        rawCol: playerColliderPositionBuffer.$[input.idx].xyz,
+      };
+    });
+
+    const playerFragmentFn = tgpu.fragmentFn({
+      in: { rawCol: d.vec3f },
+      out: d.vec4f,
+    })((input) => {
+      'use gpu';
+      return d.vec4f(std.normalize(std.abs(input.rawCol)), 1);
+    });
+
+    this.#playerPipeline = root
+      .createRenderPipeline({
+        vertex: playerVertexFn,
+        fragment: playerFragmentFn,
+        depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
+        primitive: { topology: 'triangle-list', frontFace: 'ccw', cullMode: 'back' },
+      })
+      .withIndexBuffer(playerColliderIndexBuffer);
   }
 
-  render(context: GPUCanvasContext, mesherResources: ReturnType<Mesher['getResources']>) {
+  render(
+    context: GPUCanvasContext,
+    mesherResources: ReturnType<Mesher['getResources']>,
+    playerPos: d.v3f,
+  ) {
     const currentTexture = context.getCurrentTexture();
     if (
       !this.#depthTexture ||
@@ -78,9 +135,23 @@ export class Renderer {
     } as const;
 
     this.pipeline
+      // @ts-expect-error internal error
       .withColorAttachment(passDescriptor.colorAttachments[0])
       .withDepthStencilAttachment(passDescriptor.depthStencilAttachment)
       .with(MeshLayout, mesherResources.vertexBuffer)
       .draw(mesherResources.vertexCount);
+
+    this.#playerPosUniform.write(d.vec4f(playerPos, 0));
+    this.#playerPipeline
+      .withColorAttachment({
+        view: context,
+        loadOp: 'load',
+      })
+      .withDepthStencilAttachment({
+        view: this.#root.unwrap(this.#depthTexture).createView(),
+        depthLoadOp: 'load',
+        depthStoreOp: 'store',
+      })
+      .drawIndexed(this.#playerIndexCount);
   }
 }
