@@ -1,4 +1,4 @@
-import { type MapValueToSnippet, snip } from '../../data/snippet.ts';
+import { type MapValueToSnippet, ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { type BaseData, isPtr } from '../../data/wgslTypes.ts';
 import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
@@ -10,12 +10,15 @@ type MapValueToDataType<T> = { [K in keyof T]: BaseData };
 
 interface CallableSchemaOptions<T extends AnyFn> {
   readonly name: string;
+  readonly schema: () => BaseData;
   readonly normalImpl: T;
-  readonly codegenImpl: (ctx: ResolutionCtx, args: MapValueToSnippet<Parameters<T>>) => string;
-  readonly signature: (...inArgTypes: MapValueToDataType<Parameters<T>>) => {
-    argTypes: (BaseData | BaseData[])[];
-    returnType: BaseData;
-  };
+  readonly codegenImpl: (
+    ctx: ResolutionCtx,
+    args: MapValueToSnippet<Parameters<T>>,
+  ) => ResolvedSnippet;
+  readonly argTypes: (
+    ...inArgTypes: MapValueToDataType<Parameters<T>>
+  ) => (BaseData | BaseData[])[];
 }
 
 export function callableSchema<T extends AnyFn>(options: CallableSchemaOptions<T>): DualFn<T> {
@@ -30,7 +33,7 @@ export function callableSchema<T extends AnyFn>(options: CallableSchemaOptions<T
       return undefined;
     },
     call(ctx, args) {
-      const { argTypes, returnType } = options.signature(
+      const argTypes = options.argTypes(
         ...(args.map((s) => {
           // Dereference implicit pointers
           if (isPtr(s.dataType) && s.dataType.implicit) {
@@ -53,7 +56,7 @@ export function callableSchema<T extends AnyFn>(options: CallableSchemaOptions<T
         try {
           return snip(
             options.normalImpl(...(converted.map((s) => s.value) as never[])),
-            returnType,
+            options.schema(),
             // Functions give up ownership of their return value
             /* origin */ 'constant',
           );
@@ -62,12 +65,7 @@ export function callableSchema<T extends AnyFn>(options: CallableSchemaOptions<T
         }
       }
 
-      return snip(
-        options.codegenImpl(ctx, converted),
-        returnType,
-        // Functions give up ownership of their return value
-        /* origin */ 'runtime',
-      );
+      return options.codegenImpl(ctx, converted);
     },
   };
 

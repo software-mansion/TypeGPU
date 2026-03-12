@@ -20,6 +20,7 @@ const ctx = new ResolutionCtxImpl({
   namespace: namespace({ names: 'strict' }),
   shaderGenerator: wgslGenerator,
 });
+wgslGenerator.initGenerator(ctx);
 ctx.pushMode(new CodegenState());
 
 beforeAll(() => {

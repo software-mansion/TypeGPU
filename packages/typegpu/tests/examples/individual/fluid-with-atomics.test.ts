@@ -103,7 +103,7 @@ describe('fluid with atomics example', () => {
         }
         if (isWaterDrain(x, y)) {
           persistFlags(x, y);
-          updateCell(x, y, (3 << 24));
+          updateCell(x, y, (3 << 24u));
           return true;
         }
         if (((((y == 0u) || (y == (size.y - 1u))) || (x == 0u)) || (x == (size.x - 1u)))) {
