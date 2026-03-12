@@ -22,7 +22,7 @@ import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { shaderStageSlot } from '../slot/internalSlots.ts';
-import { AnyAutoCustoms, AutoFragmentIn, AutoFragmentOut } from './autoIO.ts';
+import type { AnyAutoCustoms, AutoFragmentIn, AutoFragmentOut } from './autoIO.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { BaseIOData, Implementation, InferIO, IOLayout, IORecord } from './fnTypes.ts';
 import { createIoSchema, type IOLayoutToSchema } from './ioSchema.ts';
