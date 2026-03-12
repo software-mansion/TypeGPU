@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { d, std, type TgpuFragmentFn } from 'typegpu';
 import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
 import {
   blockDim,
@@ -94,9 +94,8 @@ export const computeFn = tgpu.computeFn({
   }
 });
 
-export const fragmentFn = (input: { uv: d.v2f }) => {
+export const fragmentFn = ({ uv }: TgpuFragmentFn.AutoIn<{ uv: d.v2f }>) => {
   'use gpu';
-  const uv = input.uv;
   const originalColor = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.inputTexture,
     drawWithMaskLayout.$.sampler,

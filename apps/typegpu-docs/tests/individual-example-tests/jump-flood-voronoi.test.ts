@@ -86,15 +86,15 @@ describe('jump flood (voronoi) example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct voronoiFrag_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var floodTexture: texture_2d<f32>;
 
       @group(0) @binding(1) var sampler_1: sampler;
 
-      @fragment fn voronoiFrag(_arg_0: voronoiFrag_Input) -> @location(0) vec4f {
+      struct FragmentIn {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
         return textureSample(floodTexture, sampler_1, _arg_0.uv);
       }
 
