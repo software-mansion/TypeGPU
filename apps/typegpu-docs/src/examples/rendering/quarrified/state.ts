@@ -8,9 +8,9 @@ export class Player {
 }
 
 export class WorldMap {
-  chunks: Map<string, Chunk> = new Map();
+  #chunks: Map<string, Chunk> = new Map();
   // chunks that were modified and require re-meshing
-  dirtyChunks: Set<Chunk> = new Set();
+  #dirtyChunks: Set<Chunk> = new Set();
   constructor(
     public readonly xRange: d.v2i,
     public readonly yRange: d.v2i,
@@ -24,25 +24,25 @@ export class WorldMap {
         for (let z = this.zRange[0]; z <= this.zRange[1]; z++) {
           const chunkPos = d.vec3i(x, y, z);
           const chunk = await chunkGenerator.generateChunk(chunkPos);
-          this.chunks.set(chunkPos.toString(), chunk);
-          this.dirtyChunks.add(chunk);
+          this.#chunks.set(chunkPos.toString(), chunk);
+          this.#dirtyChunks.add(chunk);
         }
       }
     }
   }
 
   updateBlock(chunkPos: d.v3i, blockPos: d.v3i, newBlock: number) {
-    const chunk = this.chunks.get(chunkPos.toString());
+    const chunk = this.#chunks.get(chunkPos.toString());
     if (!chunk) {
       throw new Error(`World: Tried to modify chunk that has not been generated (${chunkPos}).`);
     }
-    this.dirtyChunks.add(chunk);
+    this.#dirtyChunks.add(chunk);
     chunk.blocks[coordToIndexCPU(blockPos.x, blockPos.y, blockPos.z)] = newBlock;
   }
 
-  getAndCleanDirtyChunks(): Chunk[] {
-    const chunks = [...this.dirtyChunks];
-    this.dirtyChunks.clear();
+  getAndCleanModifiedChunks(): Chunk[] {
+    const chunks = [...this.#dirtyChunks];
+    this.#dirtyChunks.clear();
     return chunks;
   }
 }

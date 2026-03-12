@@ -22,8 +22,8 @@ export const coordToIndexCPU = (x: number, y: number, z: number) =>
 // Chunk info is stored in an one-dimensional array. Each block's info fits in one u32
 export class ChunkGenerator {
   #pipeline: TgpuGuardedComputePipeline<[x: number, y: number, z: number]>;
-  blocksMutable: TgpuMutable<d.WgslArray<d.U32>>;
-  chunkIndexUniform: TgpuUniform<d.Vec3i>;
+  private blocksMutable: TgpuMutable<d.WgslArray<d.U32>>;
+  private chunkIndexUniform: TgpuUniform<d.Vec3i>;
   constructor(root: TgpuRoot) {
     this.blocksMutable = root.createMutable(d.arrayOf(d.u32, CHUNK_SIZE ** 3));
     this.chunkIndexUniform = root.createUniform(d.vec3i);

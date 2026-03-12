@@ -1,4 +1,4 @@
-import tgpu, {
+import {
   d,
   std,
   type RenderFlag,
@@ -13,7 +13,7 @@ import { faceOffsets } from './cubeVertices.ts';
 
 export class Renderer {
   #root: TgpuRoot;
-  pipeline: TgpuRenderPipeline<d.Vec4f>;
+  #pipeline: TgpuRenderPipeline<d.Vec4f>;
   #depthTexture?: TgpuTexture<{
     size: [number, number];
     format: 'depth24plus';
@@ -23,19 +23,19 @@ export class Renderer {
     this.#root = root;
     // prettier-ignore
 
-    this.pipeline = root.createRenderPipeline({
+    this.#pipeline = root.createRenderPipeline({
       attribs: { position: MeshLayout.attrib },
       vertex: ({ position, $vertexIndex }) => {
         'use gpu';
 
         const blockPos = d.vec3i(position.xyz);
         // TODO: replace with bitshifts
-        const blockType = d.u32(position.w) & (2 ** 8 - 1);
+        // const blockType = d.u32(position.w) & (2 ** 8 - 1);
         const sideNumber = d.u32(position.w / 2 ** 8) & (2 ** 8 - 1);
         const sideVertex = $vertexIndex;
-        const blockMetadata = d.u32(position.w / 2 ** 16) & (2 ** 8 - 1);
-        const skyLightLevel = d.u32(position.w / 2 ** 24) & (2 ** 4 - 1);
-        const blockLightLevel = d.u32(position.w / 2 ** 28) & (2 ** 4 - 1);
+        // const blockMetadata = d.u32(position.w / 2 ** 16) & (2 ** 8 - 1);
+        // const skyLightLevel = d.u32(position.w / 2 ** 24) & (2 ** 4 - 1);
+        // const blockLightLevel = d.u32(position.w / 2 ** 28) & (2 ** 4 - 1);
 
         const worldPos = d.vec3f(blockPos + faceOffsets.$[sideNumber * 4 + sideVertex]);
 
@@ -74,10 +74,10 @@ export class Renderer {
         .$usage('render');
     }
 
-    this.pipeline
+    this.#pipeline
       .withColorAttachment({
         view: currentTexture.createView(),
-        clearValue: [1, 0.85, 0.74, 1],
+        clearValue: [1, 0.75, 0.8, 1],
         loadOp: 'clear',
         storeOp: 'store',
       })

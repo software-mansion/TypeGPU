@@ -10,64 +10,63 @@ export const MAX_CHUNKS_AT_ONCE = Object.values(INIT_CONFIG.chunks)
 // TODO: implement defragmentation (recreating the buffer and FreeList? or maybe just recreating the entire Mesher?)
 export class Mesher {
   #root: TgpuRoot;
-  vertexBuffer: TgpuBuffer<d.WgslArray<d.Vec4f>> & StorageFlag & VertexFlag;
-  workArray: Float32Array<ArrayBuffer>;
-  emptyArray: Float32Array<ArrayBuffer>;
+  #vertexBuffer: TgpuBuffer<d.WgslArray<d.Vec4f>> & StorageFlag & VertexFlag;
+  #workArray: Float32Array<ArrayBuffer>;
+  #emptyArray: Float32Array<ArrayBuffer>;
 
-  freeList: FreeList;
-  chunkToId: Map<Chunk, SlotId>;
+  #freeList: FreeList;
+  #chunkToId: Map<Chunk, SlotId>;
 
-  constructor(root: TgpuRoot) {
+  constructor(root: TgpuRoot, vertexBufferSize = /* 256MB */ 256 * 1024 * 1024) {
     this.#root = root;
-    const size = 256 * 1024 * 1024; // 256MB
-    this.freeList = new FreeList(size, 0.05);
-    this.chunkToId = new Map();
-    this.vertexBuffer = this.#root
-      .createBuffer(d.arrayOf(d.vec4f, size / 16))
+    this.#freeList = new FreeList(vertexBufferSize, 0.05);
+    this.#chunkToId = new Map();
+    this.#vertexBuffer = this.#root
+      .createBuffer(d.arrayOf(d.vec4f, vertexBufferSize / 16))
       .$usage('vertex', 'storage');
-    this.workArray = new Float32Array(CHUNK_SIZE ** 3 * 4 * 4 * 4);
-    this.emptyArray = new Float32Array(CHUNK_SIZE ** 3 * 4 * 4 * 4);
+    this.#workArray = new Float32Array(CHUNK_SIZE ** 3 * 4 * 4 * 4);
+    this.#emptyArray = new Float32Array(CHUNK_SIZE ** 3 * 4 * 4 * 4);
   }
 
   recalculateMeshesFor(chunks: Chunk[]) {
-    const unwrappedBuffer = this.#root.unwrap(this.vertexBuffer);
+    const unwrappedBuffer = this.#root.unwrap(this.#vertexBuffer);
 
     for (const chunk of chunks) {
-      const vertexCount = calculateMeshForChunk(chunk, this.workArray);
+      const vertexCount = calculateMeshForChunk(chunk, this.#workArray);
       const byteSize = vertexCount * 4 * 4;
 
-      let slotId = this.chunkToId.get(chunk);
+      let slotId = this.#chunkToId.get(chunk);
       if (slotId === undefined) {
-        slotId = this.freeList.allocate(byteSize);
-        this.chunkToId.set(chunk, slotId);
+        slotId = this.#freeList.allocate(byteSize);
+        this.#chunkToId.set(chunk, slotId);
       }
 
-      if (this.freeList.check(slotId, byteSize)) {
+      if (this.#freeList.check(slotId, byteSize)) {
         console.log('Reallocating chunk', ...chunk.chunkIndex, 'size', byteSize);
 
-        const oldInfo = this.freeList.slotInfoFor(slotId);
-        this.freeList.deallocate(slotId);
-        this.freeList.allocate(byteSize, slotId);
-        const newInfo = this.freeList.slotInfoFor(slotId);
+        const oldInfo = this.#freeList.slotInfoFor(slotId);
+        this.#freeList.deallocate(slotId);
+        this.#freeList.allocate(byteSize, slotId);
+        const newInfo = this.#freeList.slotInfoFor(slotId);
         if (oldInfo.offset !== newInfo.offset) {
           // only clear the old slot if the chunk actually changed places
           this.#root.device.queue.writeBuffer(
             unwrappedBuffer,
             oldInfo.offset,
-            this.emptyArray,
+            this.#emptyArray,
             0,
             oldInfo.capacity / 4,
           );
         }
       }
 
-      const offset = this.freeList.slotInfoFor(slotId).offset;
+      const offset = this.#freeList.slotInfoFor(slotId).offset;
 
       // TODO: pass the block type info so we can draw appropriate textures
       this.#root.device.queue.writeBuffer(
         unwrappedBuffer,
         offset,
-        this.workArray,
+        this.#workArray,
         0,
         vertexCount * 4,
       );
@@ -76,9 +75,9 @@ export class Mesher {
 
   getResources() {
     return {
-      vertexBuffer: this.vertexBuffer,
+      vertexBuffer: this.#vertexBuffer,
       // / 4 (to i32s) / 4 (to vec4is) = instance count
-      instanceCount: this.freeList.getFurthestAllocated() / 4 / 4,
+      instanceCount: this.#freeList.getFurthestAllocated() / 4 / 4,
     };
   }
 }

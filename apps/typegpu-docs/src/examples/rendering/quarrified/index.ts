@@ -6,7 +6,6 @@ import { State } from './state.ts';
 import { INIT_CONFIG } from './params.ts';
 import { Mesher } from './mesher.ts';
 import { Renderer } from './renderer.ts';
-import { coordToIndex } from './chunkGenerator.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -30,7 +29,7 @@ const mesher = new Mesher(root);
 
 // --- This is here only to measure performance and will be removed ---
 const time = performance.now();
-const initialDirtyChunks = state.worldMap.getAndCleanDirtyChunks();
+const initialDirtyChunks = state.worldMap.getAndCleanModifiedChunks();
 mesher.recalculateMeshesFor(initialDirtyChunks);
 const total = performance.now() - time;
 console.log(
@@ -52,7 +51,7 @@ function draw() {
   );
   state.worldMap.updateBlock(d.vec3i(), randomBlockPos, Math.random() < 0.5 ? 0 : 1);
 
-  mesher.recalculateMeshesFor(state.worldMap.getAndCleanDirtyChunks());
+  mesher.recalculateMeshesFor(state.worldMap.getAndCleanModifiedChunks());
 
   const mesherResources = mesher.getResources();
   renderer.render(context, mesherResources);
