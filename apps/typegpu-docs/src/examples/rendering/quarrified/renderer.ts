@@ -28,15 +28,15 @@ export class Renderer {
       vertex: ({ position, $vertexIndex }) => {
         'use gpu';
         // TODO: remove this temporary solution (without this, every "empty" draw creates a face at 0, 0, 0 that has enormous overdraw)
-        if (std.allEq(position.xyz, d.vec3f(0, 0, 0))) {
+        if (std.allEq(position.xyz, d.vec3i(0, 0, 0))) {
           return {
             $position: d.vec4f(),
             worldPos: d.vec3f()
           }
         }
 
-        const blockPos = d.vec3i(position.xyz);
-        // TODO: replace with bitshifts
+        const blockPos = position.xyz;
+        // TODO: replace with bitshifts (also make sure its u32 not i32)
         // const blockType = d.u32(position.w) & (2 ** 8 - 1);
         const sideNumber = d.u32(position.w / 2 ** 8) & (2 ** 8 - 1);
         const sideVertex = $vertexIndex;

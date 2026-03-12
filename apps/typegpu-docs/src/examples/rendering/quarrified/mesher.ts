@@ -10,9 +10,9 @@ export const MAX_CHUNKS_AT_ONCE = Object.values(INIT_CONFIG.chunks)
 // TODO: implement defragmentation (recreating the buffer and FreeList? or maybe just recreating the entire Mesher?)
 export class Mesher {
   #root: TgpuRoot;
-  #vertexBuffer: TgpuBuffer<d.WgslArray<d.Vec4f>> & StorageFlag & VertexFlag;
-  #workArray: Float32Array<ArrayBuffer>;
-  #emptyArray: Float32Array<ArrayBuffer>;
+  #vertexBuffer: TgpuBuffer<d.WgslArray<d.Vec4i>> & StorageFlag & VertexFlag;
+  #workArray: Int32Array<ArrayBuffer>;
+  #emptyArray: Int32Array<ArrayBuffer>;
 
   #freeList: FreeList;
   #chunkToId: Map<Chunk, SlotId>;
@@ -22,10 +22,10 @@ export class Mesher {
     this.#freeList = new FreeList(vertexBufferSize, 0.05);
     this.#chunkToId = new Map();
     this.#vertexBuffer = this.#root
-      .createBuffer(d.arrayOf(d.vec4f, vertexBufferSize / 16))
+      .createBuffer(d.arrayOf(d.vec4i, vertexBufferSize / 16))
       .$usage('vertex', 'storage');
-    this.#workArray = new Float32Array(CHUNK_SIZE ** 3 * 4 * 4 * 4);
-    this.#emptyArray = new Float32Array(CHUNK_SIZE ** 3 * 4 * 4 * 4);
+    this.#workArray = new Int32Array(CHUNK_SIZE ** 3 * 4 * 4 * 4);
+    this.#emptyArray = new Int32Array(CHUNK_SIZE ** 3 * 4 * 4 * 4);
   }
 
   recalculateMeshesFor(chunks: Chunk[]) {
@@ -89,7 +89,7 @@ const isAir = (chunk: Chunk, x: number, y: number, z: number): boolean => {
   return chunk.blocks[coordToIndexCPU(x, y, z)] === 0;
 };
 
-function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Float32Array): number {
+function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Int32Array): number {
   let verticesCount = 0;
   const { chunkIndex, blocks } = chunk;
 
