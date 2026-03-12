@@ -32,7 +32,7 @@ export class ChunkGenerator {
       const arrayIndex = coordToIndex(d.vec3i(x, y, z));
       const sampleIndex = d.vec3f(x, y, z) + d.vec3f(this.chunkIndexUniform.$) * CHUNK_SIZE;
       const result = perlin3d.sample(sampleIndex * 0.2) ** 3;
-      if (result > 0) {
+      if (d.f32(result) > -0.02) {
         this.blocksMutable.$[arrayIndex] = blockTypes.air;
       } else {
         this.blocksMutable.$[arrayIndex] = blockTypes.stone;
