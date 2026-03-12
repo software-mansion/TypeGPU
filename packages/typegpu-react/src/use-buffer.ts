@@ -3,20 +3,26 @@ import { useRoot } from './root-context.tsx';
 import { useEffect, useRef, useState } from 'react';
 import type { TgpuBuffer, ValidateBufferSchema } from 'typegpu';
 
+export interface UseBufferOptions<TSchema extends d.AnyData> {
+  initial?: (() => d.Infer<NoInfer<TSchema>>) | d.Infer<NoInfer<TSchema>>;
+  onInit?: (buffer: TgpuBuffer<TSchema>) => void;
+}
+
 // TODO: Recreate the buffer when the schema changes
-export function useBuffer<TSchema extends d.AnyWgslData>(
+export function useBuffer<TSchema extends d.AnyData>(
   schema: ValidateBufferSchema<TSchema>,
-  initialValue?: (() => d.Infer<NoInfer<TSchema>>) | d.Infer<NoInfer<TSchema>>,
+  options?: UseBufferOptions<TSchema>,
 ): TgpuBuffer<TSchema> {
+  const { initial, onInit } = options ?? {};
   const root = useRoot();
 
   const [buffer] = useState(() => {
-    return root.createBuffer(
+    const buffer = root.createBuffer(
       schema,
-      typeof initialValue === 'function'
-        ? (initialValue as () => d.Infer<NoInfer<TSchema>>)()
-        : initialValue,
+      typeof initial === 'function' ? (initial as () => d.Infer<NoInfer<TSchema>>)() : initial,
     );
+    onInit?.(buffer);
+    return buffer;
   });
 
   const cleanupRef = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -1,32 +1,47 @@
-import { d } from 'typegpu';
-import { useRender } from '@typegpu/react';
+import { d, std } from 'typegpu';
+import { useConfigureContext, useFrame, useRoot, useUniformValue } from '@typegpu/react';
+import { useMemo } from 'react';
+
+function rotate(v: d.v2f, angle: number): d.v2f {
+  'use gpu';
+  const pos = d.vec2f(
+    v.x * std.cos(angle) - v.y * std.sin(angle),
+    v.x * std.sin(angle) + v.y * std.cos(angle),
+  );
+
+  return pos;
+}
 
 function App() {
-  const { ref } = useRender({
-    vertex: ({ vertexIndex }) => {
-      'use gpu';
-      const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-      const uv = [d.vec2f(0, 1), d.vec2f(2, 1), d.vec2f(0, -1)];
+  const root = useRoot();
+  const time = useUniformValue(d.f32, 0);
 
-      return {
-        pos: d.vec4f(pos[vertexIndex], 0, 1),
-        uv: uv[vertexIndex],
-      };
-    },
-    fragment: ({ uv }) => {
-      'use gpu';
-      return d.vec4f(uv.x, uv.y, 1, 1);
-    },
+  const renderPipeline = useMemo(
+    () =>
+      root.createRenderPipeline({
+        vertex: ({ $vertexIndex: vid }) => {
+          'use gpu';
+          const positions = [d.vec2f(0, 1.1), d.vec2f(-1, -0.7), d.vec2f(1, -0.7)];
+          const rotated = rotate(positions[vid], time.$);
+          return { $position: d.vec4f(rotated * 0.7, 0, 1) };
+        },
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(1, 0, 0, 1);
+        },
+      }),
+    [root, time],
+  );
+
+  const { canvasRefCallback, ctxRef } = useConfigureContext();
+  useFrame(({ elapsedSeconds }) => {
+    if (!ctxRef.current) return;
+
+    time.value = elapsedSeconds;
+    renderPipeline.withColorAttachment({ view: ctxRef.current }).draw(3);
   });
 
-  // TODO: Provide a time variable to the shader with useUniformValue
-  // TODO: Make the gradient shift colors over time using hsvToRgb from @typegpu/color
-
-  return (
-    <main>
-      <canvas ref={ref} width="256" height="256" />
-    </main>
-  );
+  return <canvas ref={canvasRefCallback} className="aspect-square h-full max-h-[100vw]" />;
 }
 
 // #region Example controls and cleanup
