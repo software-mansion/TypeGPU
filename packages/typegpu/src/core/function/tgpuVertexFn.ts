@@ -7,6 +7,7 @@ import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { shaderStageSlot } from '../slot/internalSlots.ts';
+import { _AutoVertexIn, AnyAutoCustoms, AutoVertexOut } from './autoIO.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { BaseIOData, Implementation, InferIO, IORecord } from './fnTypes.ts';
 import { createIoSchema, type IOLayoutToSchema } from './ioSchema.ts';
@@ -77,6 +78,8 @@ export interface TgpuVertexFn<
 export declare namespace TgpuVertexFn {
   type In = BaseData | Record<string, BaseData>;
   type Out = Record<string, BaseData>;
+  type AutoIn<T> = _AutoVertexIn<T>;
+  type AutoOut<T extends AnyAutoCustoms = AnyAutoCustoms> = AutoVertexOut<T>;
 }
 
 export function vertexFn<VertexOut extends VertexOutConstrained>(options: {
