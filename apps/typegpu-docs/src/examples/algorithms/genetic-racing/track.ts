@@ -1,5 +1,3 @@
-import { std } from 'typegpu';
-
 export type TrackResult = {
   width: number;
   height: number;
@@ -7,8 +5,6 @@ export type TrackResult = {
   spawn: { position: [number, number]; angle: number };
   trackLength: number;
 };
-
-type Pt = { x: number; y: number };
 
 function mulberry32(seed: number) {
   let t = seed >>> 0;
@@ -21,224 +17,242 @@ function mulberry32(seed: number) {
   };
 }
 
-function findBestSpawnIndex(pts: Pt[], windowSize: number): number {
-  const n = pts.length;
-  const curv = new Float64Array(n);
-  for (let i = 0; i < n; i++) {
-    const prev = pts[(i - 1 + n) % n];
-    const curr = pts[i];
-    const next = pts[(i + 1) % n];
-
-    const t1x = curr.x - prev.x;
-    const t1y = curr.y - prev.y;
-    const t1len = Math.hypot(t1x, t1y) || 1;
-
-    const t2x = next.x - curr.x;
-    const t2y = next.y - curr.y;
-    const t2len = Math.hypot(t2x, t2y) || 1;
-
-    curv[i] = Math.abs((t1x / t1len) * (t2y / t2len) - (t1y / t1len) * (t2x / t2len));
-  }
-
-  let windowSum = 0;
-  for (let i = 0; i < windowSize; i++) windowSum += curv[i];
-
-  let minSum = windowSum;
-  let bestStart = 0;
-
-  for (let i = 1; i < n; i++) {
-    windowSum += curv[(i + windowSize - 1) % n] - curv[i - 1];
-    if (windowSum < minSum) {
-      minSum = windowSum;
-      bestStart = i;
-    }
-  }
-
-  return (bestStart + Math.floor(windowSize / 2)) % n;
-}
-
-function catmullRomResample(points: Pt[], numSamples: number): Pt[] {
-  const n = points.length;
-  const result: Pt[] = [];
+/**
+ * Catmull-Rom spline resampling.
+ * @param points Interleaved Float32Array [x0,y0,x1,y1,…] of control points (closed loop).
+ * @returns Interleaved Float32Array of numSamples evenly-spaced points.
+ */
+function catmullRomResample(points: Float32Array, numSamples: number): Float32Array {
+  const n = points.length >> 1;
+  const result = new Float32Array(numSamples * 2);
 
   for (let s = 0; s < numSamples; s++) {
     const tTotal = s / numSamples;
     const seg = Math.floor(tTotal * n);
     const t = tTotal * n - seg;
 
-    const i0 = (seg - 1 + n) % n;
-    const i1 = seg;
-    const i2 = (seg + 1) % n;
-    const i3 = (seg + 2) % n;
+    const p0 = ((seg - 1 + n) % n) * 2;
+    const p1 = seg * 2;
+    const p2 = ((seg + 1) % n) * 2;
+    const p3 = ((seg + 2) % n) * 2;
 
-    const p0 = points[i0];
-    const p1 = points[i1];
-    const p2 = points[i2];
-    const p3 = points[i3];
+    const t2 = t * t,
+      t3 = t2 * t;
 
-    const t2 = t * t;
-    const t3 = t2 * t;
+    result[s * 2] =
+      0.5 *
+      (2 * points[p1] +
+        (-points[p0] + points[p2]) * t +
+        (2 * points[p0] - 5 * points[p1] + 4 * points[p2] - points[p3]) * t2 +
+        (-points[p0] + 3 * points[p1] - 3 * points[p2] + points[p3]) * t3);
 
-    result.push({
-      x:
-        0.5 *
-        (2 * p1.x +
-          (-p0.x + p2.x) * t +
-          (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
-          (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
-      y:
-        0.5 *
-        (2 * p1.y +
-          (-p0.y + p2.y) * t +
-          (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
-          (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
-    });
+    result[s * 2 + 1] =
+      0.5 *
+      (2 * points[p1 + 1] +
+        (-points[p0 + 1] + points[p2 + 1]) * t +
+        (2 * points[p0 + 1] - 5 * points[p1 + 1] + 4 * points[p2 + 1] - points[p3 + 1]) * t2 +
+        (-points[p0 + 1] + 3 * points[p1 + 1] - 3 * points[p2 + 1] + points[p3 + 1]) * t3);
   }
 
   return result;
 }
 
-function buildTrackTexture(
-  splinedPath: Pt[],
-  textureSize: number,
-  trackHalfWidth: number,
-  spawnIdx?: number,
-): TrackResult {
-  const feather = trackHalfWidth * 0.4;
-
-  const segments = splinedPath.map((cell, idx) => {
-    const next = splinedPath[(idx + 1) % splinedPath.length];
-    const dx = next.x - cell.x;
-    const dy = next.y - cell.y;
-    const len = Math.hypot(dx, dy) || 1;
-    return {
-      ax: cell.x,
-      ay: cell.y,
-      ux: dx,
-      uy: dy,
-      dx: dx / len,
-      dy: dy / len,
-      len,
-      len2: dx * dx + dy * dy,
-    };
-  });
-
-  let totalLen = 0;
-  for (const segment of segments) {
-    totalLen += segment.len;
+/**
+ * Chaikin corner-cutting — smooths a closed polygon over N iterations.
+ * @param pts Interleaved Float32Array [x0,y0,x1,y1,…].
+ * @returns   Interleaved Float32Array with 2^iterations × as many points.
+ */
+function chaikinSmooth(pts: Float32Array, iterations = 2): Float32Array {
+  let cur = pts;
+  for (let it = 0; it < iterations; it++) {
+    const n = cur.length >> 1;
+    const next = new Float32Array(n * 4); // each point becomes 2 → length doubles
+    for (let i = 0; i < n; i++) {
+      const ai = i * 2;
+      const bi = ((i + 1) % n) * 2;
+      next[i * 4] = 0.75 * cur[ai] + 0.25 * cur[bi];
+      next[i * 4 + 1] = 0.75 * cur[ai + 1] + 0.25 * cur[bi + 1];
+      next[i * 4 + 2] = 0.25 * cur[ai] + 0.75 * cur[bi];
+      next[i * 4 + 3] = 0.25 * cur[ai + 1] + 0.75 * cur[bi + 1];
+    }
+    cur = next;
   }
+  return cur;
+}
 
+/**
+ * Rasterizes a splined path into a track texture.
+ * Coordinate system: tx ∈ [-aspect, +aspect], ty ∈ [-1, +1].
+ * Uses per-segment bounding boxes for efficiency.
+ * @param path Interleaved Float32Array [x0,y0,x1,y1,…].
+ */
+function buildTrackTexture(
+  path: Float32Array,
+  textureSize: number,
+  halfWidth: number,
+  aspect: number,
+): TrackResult {
+  const feather = halfWidth * 0.4;
+  const extents = halfWidth + feather;
+  const sz = textureSize - 1;
+  let totalLen = 0;
   const data = new Uint8ClampedArray(textureSize * textureSize * 4);
+  for (let i = 3; i < data.length; i += 4) data[i] = 255;
 
-  for (let y = 0; y < textureSize; y++) {
-    const ty = 1 - (y / (textureSize - 1)) * 2;
-    for (let x = 0; x < textureSize; x++) {
-      const tx = (x / (textureSize - 1)) * 2 - 1;
+  const numPts = path.length >> 1;
+  for (let i = 0; i < numPts; i++) {
+    const ai = i * 2;
+    const bi = ((i + 1) % numPts) * 2;
 
-      let minSegDist = Infinity;
-      let dir = { x: 1, y: 0 };
-      for (const segment of segments) {
-        const px = tx - segment.ax;
-        const py = ty - segment.ay;
-        const t = Math.max(0, Math.min(1, (px * segment.ux + py * segment.uy) / segment.len2));
-        const cx = segment.ax + segment.ux * t;
-        const cy = segment.ay + segment.uy * t;
-        const dx = tx - cx;
-        const dy = ty - cy;
-        const dist = dx * dx + dy * dy;
-        if (dist < minSegDist) {
-          minSegDist = dist;
-          dir = { x: segment.dx, y: segment.dy };
+    const ax = path[ai],
+      ay = path[ai + 1];
+    const bx = path[bi],
+      by = path[bi + 1];
+    const dx = bx - ax,
+      dy = by - ay;
+    const len = Math.hypot(dx, dy) || 1;
+    totalLen += len;
+    const ux = dx / len,
+      uy = dy / len,
+      len2 = dx * dx + dy * dy;
+
+    const minPx = Math.max(0, Math.floor((((Math.min(ax, bx) - extents) / aspect + 1) / 2) * sz));
+    const maxPx = Math.min(sz, Math.ceil((((Math.max(ax, bx) + extents) / aspect + 1) / 2) * sz));
+    const minPy = Math.max(0, Math.floor(((1 - (Math.max(ay, by) + extents)) / 2) * sz));
+    const maxPy = Math.min(sz, Math.ceil(((1 - (Math.min(ay, by) - extents)) / 2) * sz));
+
+    for (let py = minPy; py <= maxPy; py++) {
+      const ty = 1 - (py / sz) * 2;
+      for (let px = minPx; px <= maxPx; px++) {
+        const tx = ((px / sz) * 2 - 1) * aspect;
+        const t = Math.max(0, Math.min(1, ((tx - ax) * dx + (ty - ay) * dy) / len2));
+        const dist = Math.hypot(tx - (ax + dx * t), ty - (ay + dy * t));
+        if (dist > extents) continue;
+        const st = Math.max(0, Math.min(1, (dist - halfWidth) / feather));
+        const mask = Math.round((1 - st * st * (3 - 2 * st)) * 255);
+        const idx = (py * textureSize + px) * 4;
+        if (mask > data[idx + 2]) {
+          data[idx] = Math.round((ux * 0.5 + 0.5) * 255);
+          data[idx + 1] = Math.round((uy * 0.5 + 0.5) * 255);
+          data[idx + 2] = mask;
         }
       }
-
-      const dist = Math.sqrt(minSegDist);
-      const mask = 1 - std.smoothstep(trackHalfWidth, trackHalfWidth + feather, dist);
-
-      const idx = (y * textureSize + x) * 4;
-      data[idx] = Math.round((dir.x * 0.5 + 0.5) * 255);
-      data[idx + 1] = Math.round((dir.y * 0.5 + 0.5) * 255);
-      data[idx + 2] = Math.round(mask * 255);
-      data[idx + 3] = 255;
     }
   }
-
-  const resolvedSpawnIdx = spawnIdx ?? findBestSpawnIndex(splinedPath, 25);
-  const spawnStart = splinedPath[resolvedSpawnIdx];
-  const spawnNext = splinedPath[(resolvedSpawnIdx + 1) % splinedPath.length];
-  const spawnAngle = Math.atan2(spawnNext.y - spawnStart.y, spawnNext.x - spawnStart.x);
 
   return {
     width: textureSize,
     height: textureSize,
     data,
     spawn: {
-      position: [spawnStart.x, spawnStart.y],
-      angle: spawnAngle,
+      position: [path[0], path[1]],
+      angle: Math.atan2(path[3] - path[1], path[2] - path[0]),
     },
     trackLength: totalLen,
   };
 }
 
-function generateLoopPath(W: number, H: number, rand: () => number): number[] {
-  const minLength = Math.max(8, Math.floor(W * H * 0.4));
-  const path: number[] = [0];
-  const inPath = new Map<number, number>([[0, 0]]);
+/**
+ * Random-walk loop path over a W×H grid.
+ * @returns A Uint16Array subarray view of the valid path.
+ */
+function generateLoopPath(W: number, H: number, rand: () => number): Uint16Array {
+  const maxCells = W * H;
+  const minLength = Math.max(8, Math.floor(maxCells * 0.4));
+
+  // Pre-allocate worst-case path length (every cell visited once)
+  const pathBuf = new Uint16Array(maxCells);
+  let pathLen = 1;
+  pathBuf[0] = 0;
+
+  // Direct-address lookup: inPath[cell] = index in pathBuf, or -1 if absent
+  const inPath = new Int32Array(maxCells).fill(-1);
+  inPath[0] = 0;
+
+  const neighbourBuf = new Uint16Array(4);
 
   for (let attempts = 0; attempts < 2_000_000; attempts++) {
-    const current = path[path.length - 1];
-    const x = current % W,
-      y = Math.floor(current / W);
+    const current = pathBuf[pathLen - 1];
+    const x = current % W;
+    const y = (current / W) | 0;
 
-    const neighbors: number[] = [];
-    if (x > 0) neighbors.push(current - 1);
-    if (x < W - 1) neighbors.push(current + 1);
-    if (y > 0) neighbors.push(current - W);
-    if (y < H - 1) neighbors.push(current + W);
+    let nc = 0;
+    if (x > 0) neighbourBuf[nc++] = current - 1;
+    if (x < W - 1) neighbourBuf[nc++] = current + 1;
+    if (y > 0) neighbourBuf[nc++] = current - W;
+    if (y < H - 1) neighbourBuf[nc++] = current + W;
 
-    const next = neighbors[Math.floor(rand() * neighbors.length)];
+    const next = neighbourBuf[(rand() * nc) | 0];
 
-    if (next === 0 && path.length >= minLength) {
-      return path; // closed loop found
+    if (next === 0 && pathLen >= minLength) {
+      return pathBuf.subarray(0, pathLen);
     }
 
-    const existingIdx = inPath.get(next);
-    if (existingIdx !== undefined) {
-      // Erase the loop back to where 'next' was first visited
-      for (let i = existingIdx + 1; i < path.length; i++) {
-        inPath.delete(path[i]);
-      }
-      path.length = existingIdx + 1;
+    const existingIdx = inPath[next];
+    if (existingIdx !== -1) {
+      // Erase the loop: remove all cells after existingIdx from the index
+      for (let i = existingIdx + 1; i < pathLen; i++) inPath[pathBuf[i]] = -1;
+      pathLen = existingIdx + 1;
     } else {
-      inPath.set(next, path.length);
-      path.push(next);
+      inPath[next] = pathLen;
+      pathBuf[pathLen++] = next;
     }
   }
 
-  const perimeter: number[] = [];
-  for (let x = 0; x < W; x++) perimeter.push(x);
-  for (let y = 1; y < H; y++) perimeter.push(y * W + W - 1);
-  for (let x = W - 2; x >= 0; x--) perimeter.push((H - 1) * W + x);
-  for (let y = H - 2; y > 0; y--) perimeter.push(y * W);
-  return perimeter;
+  // Fallback: clockwise perimeter
+  const perim: number[] = [];
+  for (let px = 0; px < W; px++) perim.push(px);
+  for (let py = 1; py < H; py++) perim.push(py * W + W - 1);
+  for (let px = W - 2; px >= 0; px--) perim.push((H - 1) * W + px);
+  for (let py = H - 2; py > 0; py--) perim.push(py * W);
+  return new Uint16Array(perim);
 }
 
-export function generateGridTrack(seed: number, W = 5, H = 4, textureSize = 512): TrackResult {
+export function generateGridTrack(
+  seed: number,
+  W = 5,
+  H = 4,
+  aspect = 1,
+  textureSize = 512,
+): TrackResult {
   const rand = mulberry32(seed);
   const cellPath = generateLoopPath(W, H, rand);
+  const n = cellPath.length;
 
-  const controlPoints = cellPath.map((cell) => {
+  // Build interleaved Float32Array of control points directly
+  const controlPoints = new Float32Array(n * 2);
+  for (let i = 0; i < n; i++) {
+    const cell = cellPath[i];
     const col = cell % W,
-      row = Math.floor(cell / W);
-    const cx = -0.8 + ((col + 0.5) * 1.6) / W;
+      row = (cell / W) | 0;
+    const cx = (-0.8 + ((col + 0.5) * 1.6) / W) * aspect;
     const cy = 0.8 - ((row + 0.5) * 1.6) / H;
-    const jx = (rand() * 2 - 1) * 0.06 * (1.6 / W);
-    const jy = (rand() * 2 - 1) * 0.06 * (1.6 / H);
-    return { x: cx + jx, y: cy + jy };
-  });
+    controlPoints[i * 2] = cx + (rand() * 2 - 1) * 0.06 * (1.6 / W) * aspect;
+    controlPoints[i * 2 + 1] = cy + (rand() * 2 - 1) * 0.06 * (1.6 / H);
+  }
 
   const trackHalfWidth = 0.172 * (1.6 / Math.max(W, H));
-  const numSamples = Math.max(120, cellPath.length * 6);
-  const splinedPath = catmullRomResample(controlPoints, numSamples);
-  return buildTrackTexture(splinedPath, textureSize, trackHalfWidth);
+  const numSamples = Math.max(120, n * 6);
+  return buildTrackTexture(
+    catmullRomResample(controlPoints, numSamples),
+    textureSize,
+    trackHalfWidth,
+    aspect,
+  );
+}
+
+export function generateDrawnTrack(
+  pts: Float32Array,
+  halfWidth: number,
+  aspect: number,
+  textureSize = 512,
+): TrackResult {
+  const n = pts.length >> 1;
+  const numSamples = Math.max(120, n * 6);
+  return buildTrackTexture(
+    catmullRomResample(chaikinSmooth(pts), numSamples),
+    textureSize,
+    halfWidth,
+    aspect,
+  );
 }

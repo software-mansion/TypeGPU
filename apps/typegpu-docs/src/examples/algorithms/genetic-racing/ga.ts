@@ -55,7 +55,6 @@ export const SimParams = d.struct({
   mutationRate: d.f32,
   mutationStrength: d.f32,
   carSize: d.f32,
-  trackScale: d.f32,
   trackLength: d.f32,
   spawnX: d.f32,
   spawnY: d.f32,
@@ -65,7 +64,6 @@ export const SimParams = d.struct({
 
 export const CarStateArray = d.arrayOf(CarState, MAX_POP);
 export const GenomeArray = d.arrayOf(Genome, MAX_POP);
-export const CarStateLayout = d.arrayOf(CarState);
 
 export const paramsAccess = tgpu.accessor(SimParams);
 
@@ -98,7 +96,7 @@ const randSignedMat4x4 = () => {
 
 const makeSpawnState = () => {
   'use gpu';
-  const spawn = d.vec2f(paramsAccess.$.spawnX, paramsAccess.$.spawnY) * paramsAccess.$.trackScale;
+  const spawn = d.vec2f(paramsAccess.$.spawnX, paramsAccess.$.spawnY);
   return CarState({
     position: spawn,
     angle: paramsAccess.$.spawnAngle,
@@ -196,14 +194,14 @@ const initShader = (i: number) => {
   randf.seed2(d.vec2f(d.f32(i) + 1, paramsAccess.$.generation + 11));
 
   initLayout.$.genome[i] = Genome({
-    h1: InputLayer({
+    h1: {
       wA: randSignedMat4x4(),
       wB: randSignedMat4x4(),
       wC: randSignedMat4x4(),
       bias: d.vec4f(),
-    }),
-    h2: DenseLayer({ w: randSignedMat4x4(), bias: d.vec4f() }),
-    out: OutputLayer({ steer: randSignedVec4(), throttle: randSignedVec4(), bias: d.vec2f() }),
+    },
+    h2: { w: randSignedMat4x4(), bias: d.vec4f() },
+    out: { steer: randSignedVec4(), throttle: randSignedVec4(), bias: d.vec2f() },
   });
   initLayout.$.state[i] = makeSpawnState();
 };
@@ -279,11 +277,11 @@ export function createGeneticPopulation(root: TgpuRoot, params: TgpuUniform<type
       return genomeBuffers[current];
     },
 
-    init() {
+    init(population: number) {
       current = 0;
       generation = 0;
-      initPipeline.with(initBindGroups[0]).dispatchThreads(MAX_POP);
-      initPipeline.with(initBindGroups[1]).dispatchThreads(MAX_POP);
+      initPipeline.with(initBindGroups[0]).dispatchThreads(population);
+      initPipeline.with(initBindGroups[1]).dispatchThreads(population);
     },
 
     reinitCurrent(population: number) {
