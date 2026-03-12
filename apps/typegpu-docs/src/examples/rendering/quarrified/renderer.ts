@@ -48,10 +48,10 @@ export class Renderer {
         const blockPos = position.xyz;
         // TODO: replace with bitshifts (also make sure its u32 not i32)
         // const blockType = d.u32(position.w) & (2 ** 8 - 1);
-        const sideNumber = d.u32(position.w / 2 ** 8) & (2 ** 8 - 1);
+        const sideNumber = d.u32(position.w >> 8) & ((1 << 8) - 1);
         const sideVertex = vertexIndex;
         // const blockMetadata = d.u32(position.w / 2 ** 16) & (2 ** 8 - 1);
-        const lightLevel = d.u32(position.w / 2 ** 24) & (2 ** 4 - 1);
+        const lightLevel = d.u32(position.w >> 24) &( (1 << 4) - 1);
 
         const worldPos = d.vec3f(
           blockPos + faceOffsets.$[sideNumber * 4 + sideVertex],

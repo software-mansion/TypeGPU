@@ -1,4 +1,4 @@
-import tgpu, {
+import {
   d,
   std,
   type TgpuGuardedComputePipeline,
@@ -11,14 +11,10 @@ import { CHUNK_SIZE, CHUNK_SIZE_BITS } from './params.ts';
 import { blockTypes } from './blockTypes.ts';
 import { type Chunk } from './schemas.ts';
 
-export const coordToIndex = tgpu.fn([d.vec3i], d.i32)`(coord) => {
-  return (coord.z << (CHUNK_SIZE_BITS * 2)) |
-      (coord.y << CHUNK_SIZE_BITS) |
-      coord.x;
-  }`.$uses({ CHUNK_SIZE_BITS });
-
-export const coordToIndexCPU = (x: number, y: number, z: number) =>
-  (z << (CHUNK_SIZE_BITS * 2)) | (y << CHUNK_SIZE_BITS) | x;
+export const coordToIndex = (x: number, y: number, z: number) => {
+  'use gpu';
+  return (z << (CHUNK_SIZE_BITS * 2)) | (y << CHUNK_SIZE_BITS) | x;
+};
 
 // Chunk info is stored in an one-dimensional array. Each block's info fits in one u32
 export class ChunkGenerator {
@@ -30,15 +26,15 @@ export class ChunkGenerator {
     this.chunkIndexUniform = root.createUniform(d.vec3i);
     this.#pipeline = root.createGuardedComputePipeline((x, y, z) => {
       'use gpu';
-      const arrayIndex = coordToIndex(d.vec3i(x, y, z));
+      const arrayIndex = coordToIndex(x, y, z);
       const sampleIndex = d.vec3f(x, y, z) + d.vec3f(this.chunkIndexUniform.$) * CHUNK_SIZE;
       const result = perlin3d.sample(sampleIndex * 0.2) ** 3;
       if (d.f32(result) > -0.02) {
         this.blocksMutable.$[arrayIndex] =
-          blockTypes.air + std.min(0, 16 + this.chunkIndexUniform.$.y) * 2 ** 24;
+          blockTypes.air | (std.clamp(this.chunkIndexUniform.$.y, 0, 15) << 24);
       } else {
         this.blocksMutable.$[arrayIndex] =
-          blockTypes.stone + std.min(0, 16 + this.chunkIndexUniform.$.y) * 2 ** 24;
+          blockTypes.stone | (std.clamp(this.chunkIndexUniform.$.y, 0, 15) << 24);
       }
     });
   }

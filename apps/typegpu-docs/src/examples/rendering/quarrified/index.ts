@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import tgpu from 'typegpu';
 import RAPIER from '@dimforge/rapier3d-compat';
 
 import { Camera } from './schemas.ts';

@@ -1,7 +1,7 @@
 import { d, std, type TgpuRoot } from 'typegpu';
 import type { Chunk } from './schemas.ts';
 import RAPIER from '@dimforge/rapier3d-compat';
-import { ChunkGenerator, coordToIndexCPU } from './chunkGenerator.ts';
+import { ChunkGenerator, coordToIndex } from './chunkGenerator.ts';
 import { CHUNK_SIZE, INIT_CONFIG } from './params.ts';
 import type { MovementInput } from './thirdPersonCamera.ts';
 
@@ -40,7 +40,7 @@ export class WorldMap {
       throw new Error(`World: Tried to modify chunk that has not been generated (${chunkPos}).`);
     }
     this.#dirtyChunks.add(chunk);
-    chunk.blocks[coordToIndexCPU(blockPos.x, blockPos.y, blockPos.z)] = newBlock;
+    chunk.blocks[coordToIndex(blockPos.x, blockPos.y, blockPos.z)] = newBlock;
   }
 
   getAndCleanModifiedChunks(): Chunk[] {
@@ -183,7 +183,7 @@ export class State {
       for (let y = 0; y < CHUNK_SIZE; y++) {
         for (let x = 0; x < CHUNK_SIZE; x++) {
           // TODO: hardcode somewhere air index
-          if (blocks[coordToIndexCPU(x, y, z)] === 0) continue;
+          if (blocks[coordToIndex(x, y, z)] === 0) continue;
           tempPoints.push(x0 + x + 0.5);
           tempPoints.push(y0 + y + 0.5);
           tempPoints.push(z0 + z + 0.5);
@@ -201,6 +201,7 @@ export class State {
     this.loadedColliderChunks.set(key, body);
   }
 
+  // oxlint-disable-next-line no-unused-private-class-members
   #unloadChunkColliders(key: string) {
     const body = this.loadedColliderChunks.get(key);
     if (!body) return;

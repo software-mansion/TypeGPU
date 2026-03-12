@@ -1,7 +1,7 @@
 import { d, type StorageFlag, type TgpuBuffer, type TgpuRoot, type VertexFlag } from 'typegpu';
 import { CHUNK_SIZE, INIT_CONFIG } from './params.ts';
 import type { Chunk } from './schemas.ts';
-import { coordToIndexCPU } from './chunkGenerator.ts';
+import { coordToIndex } from './chunkGenerator.ts';
 
 export const MAX_CHUNKS_AT_ONCE = Object.values(INIT_CONFIG.chunks)
   .map((v) => v[1] - v[0] + 1)
@@ -92,7 +92,7 @@ const isAir = (chunk: Chunk, x: number, y: number, z: number): boolean => {
   if (x < 0 || x >= CHUNK_SIZE || y < 0 || y >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) {
     return true;
   }
-  return decodeBlockData(chunk.blocks[coordToIndexCPU(x, y, z)]).blockType === 0;
+  return decodeBlockData(chunk.blocks[coordToIndex(x, y, z)]).blockType === 0;
 };
 
 function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Int32Array): number {
@@ -106,7 +106,7 @@ function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Int32Array): number {
   for (let z = 0; z < CHUNK_SIZE; z++) {
     for (let y = 0; y < CHUNK_SIZE; y++) {
       for (let x = 0; x < CHUNK_SIZE; x++) {
-        const blockData = blocks[coordToIndexCPU(x, y, z)];
+        const blockData = blocks[coordToIndex(x, y, z)];
         const { blockType, lightLevel } = decodeBlockData(blockData);
         if (blockType === 0) continue;
 
