@@ -49,13 +49,14 @@ function draw() {
   const playerPos = state.player.position;
   const camera = updateCamera(playerPos);
   cameraUniform.write(camera);
+
   // for testing purposes, let's modify one block chunk 0, 0, 0
-  const randomBlockPos = d.vec3i(
-    Math.floor(Math.random() * 16),
-    Math.floor(Math.random() * 16),
-    Math.floor(Math.random() * 16),
-  );
-  state.worldMap.updateBlock(d.vec3i(), randomBlockPos, Math.random() < 0.5 ? 0 : 1);
+  // const randomBlockPos = d.vec3i(
+  //   Math.floor(Math.random() * 16),
+  //   Math.floor(Math.random() * 16),
+  //   Math.floor(Math.random() * 16),
+  // );
+  // state.worldMap.updateBlock(d.vec3i(), randomBlockPos, Math.random() < 0.5 ? 0 : 1);
 
   mesher.recalculateMeshesFor(state.worldMap.getAndCleanModifiedChunks());
 

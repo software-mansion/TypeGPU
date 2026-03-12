@@ -7,6 +7,7 @@ export interface MovementInput {
   jump: boolean;
 }
 
+// TODO: review this
 export function setupThirdPersonCamera(canvas: HTMLCanvasElement) {
   let yaw = 0;
   let targetYaw = 0;
