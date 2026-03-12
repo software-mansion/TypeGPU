@@ -1,12 +1,14 @@
 import type * as d from 'typegpu/data';
 import { useRoot } from './root-context.tsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ValidateUniformSchema } from 'typegpu';
+import type { TgpuBuffer, ValidateUniformSchema } from 'typegpu';
+import { $buffer } from './symbols.ts';
 
-interface UniformValue<TSchema, TValue extends d.Infer<TSchema>> {
+export interface UniformValue<TSchema extends d.BaseData, TValue extends d.Infer<TSchema>> {
   schema: TSchema;
   value: TValue;
   readonly $: d.InferGPU<TSchema>;
+  readonly [$buffer]: TgpuBuffer<TSchema>;
 }
 
 function initialValueFromSchema<T extends d.AnyWgslData>(
@@ -46,6 +48,7 @@ export function useUniformValue<TSchema extends d.AnyWgslData, TValue extends d.
     let currentValue = initialValue ?? (initialValueFromSchema(schema) as TValue);
     return {
       schema,
+      [$buffer]: uniformBuffer.buffer,
       get value() {
         return currentValue;
       },

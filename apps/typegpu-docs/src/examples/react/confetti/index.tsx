@@ -1,5 +1,12 @@
-import tgpu, { d, std } from 'typegpu';
-import { useFrame, useRoot, useBuffer, useUniformValue, useConfigureContext } from '@typegpu/react';
+import tgpu, { d, std, type TgpuVertexFn } from 'typegpu';
+import {
+  useFrame,
+  useRoot,
+  useBuffer,
+  useUniformValue,
+  useConfigureContext,
+  useBindGroup,
+} from '@typegpu/react';
 import { useMemo } from 'react';
 
 // constants
@@ -52,23 +59,51 @@ function createRandomPositions() {
   }));
 }
 
-const timeAccess = tgpu.accessor(d.f32);
-const deltaTimeAccess = tgpu.accessor(d.f32);
-const particleDataAccess = tgpu.accessor(d.arrayOf(ParticleData));
+const computeLayout = tgpu.bindGroupLayout({
+  time: { uniform: d.f32 },
+  deltaTime: { uniform: d.f32 },
+  particleData: { storage: d.arrayOf(ParticleData), access: 'mutable' },
+});
 
 const simulate = (idx: number) => {
   'use gpu';
-  const particleData = particleDataAccess.$[idx];
-  const phase = timeAccess.$ / 300 + particleData.seed;
+  const particleData = computeLayout.$.particleData[idx];
+  const phase = computeLayout.$.time / 300 + particleData.seed;
 
   particleData.position +=
-    (particleData.velocity * deltaTimeAccess.$) / 20 +
+    (particleData.velocity * computeLayout.$.deltaTime) / 20 +
     d.vec2f(std.sin(phase) / 600, std.cos(phase) / 500);
 };
+
+const renderLayout = tgpu.bindGroupLayout({
+  time: { uniform: d.f32 },
+  aspectRatio: { uniform: d.f32 },
+});
 
 const attribs = {
   ...geometryLayout.attrib,
   center: dataLayout.attrib.position,
+};
+
+const vertexShader = (input: TgpuVertexFn.AutoIn<typeof attribs>) => {
+  'use gpu';
+  const width = input.tilt;
+  const height = input.tilt / 2;
+
+  const verts = [d.vec2f(0, 0), d.vec2f(width, 0), d.vec2f(0, height), d.vec2f(width, height)];
+
+  const pos = rotate(verts[input.$vertexIndex] / 350, input.angle) + input.center;
+
+  if (renderLayout.$.aspectRatio < 1) {
+    pos.x /= renderLayout.$.aspectRatio;
+  } else {
+    pos.y *= renderLayout.$.aspectRatio;
+  }
+
+  return {
+    $position: d.vec4f(pos, 0, 1),
+    color: input.color,
+  } satisfies TgpuVertexFn.AutoOut;
 };
 
 function App() {
@@ -94,36 +129,11 @@ function App() {
   const deltaTime = useUniformValue(d.f32);
   const time = useUniformValue(d.f32);
 
-  const particleDataMutable = particleDataBuffer.as('mutable');
-
-  // pipelines
-  //
   const renderPipeline = useMemo(
     () =>
       root.createRenderPipeline({
         attribs,
-        vertex: (input) => {
-          'use gpu';
-          const width = input.tilt;
-          const height = input.tilt / 2;
-
-          const verts = [
-            d.vec2f(0, 0),
-            d.vec2f(width, 0),
-            d.vec2f(0, height),
-            d.vec2f(width, height),
-          ];
-
-          const pos = rotate(verts[input.$vertexIndex] / 350, input.angle) + input.center;
-
-          if (aspectRatio.$ < 1) {
-            pos.x /= aspectRatio.$;
-          } else {
-            pos.y *= aspectRatio.$;
-          }
-
-          return { $position: d.vec4f(pos, 0, 1), color: input.color };
-        },
+        vertex: vertexShader,
         fragment: ({ color }) => {
           'use gpu';
           return color;
@@ -132,14 +142,18 @@ function App() {
           topology: 'triangle-strip',
         },
       }),
-    [aspectRatio],
+    [],
   );
 
-  const computePipeline = root
-    .with(particleDataAccess, particleDataMutable)
-    .with(timeAccess, () => time.$)
-    .with(deltaTimeAccess, () => deltaTime.$)
-    .createGuardedComputePipeline(simulate);
+  const computePipeline = useMemo(() => root.createGuardedComputePipeline(simulate), []);
+
+  const computeGroup = useBindGroup(computeLayout, {
+    deltaTime,
+    particleData: particleDataBuffer,
+    time,
+  });
+
+  const renderGroup = useBindGroup(renderLayout, { time, aspectRatio });
 
   useFrame(({ deltaSeconds, elapsedSeconds }) => {
     const context = ctxRef.current;
@@ -152,8 +166,9 @@ function App() {
     deltaTime.value = deltaSeconds * 1000;
     aspectRatio.value = canvas.width / canvas.height;
 
-    computePipeline.dispatchThreads(PARTICLE_AMOUNT);
+    computePipeline.with(computeGroup).dispatchThreads(PARTICLE_AMOUNT);
     renderPipeline
+      .with(renderGroup)
       .with(geometryLayout, particleGeometryBuffer)
       .with(dataLayout, particleDataBuffer)
       .withColorAttachment({ view: context })
