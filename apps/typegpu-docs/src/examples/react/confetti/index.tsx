@@ -1,5 +1,6 @@
 import tgpu, { d, std } from 'typegpu';
-import { useFrame, useRoot, useBuffer, useUniformValue, useMutable } from '@typegpu/react';
+import { useFrame, useRoot, useBuffer, useUniformValue, useConfigureContext } from '@typegpu/react';
+import { useMemo } from 'react';
 
 // constants
 
@@ -51,9 +52,28 @@ function createRandomPositions() {
   }));
 }
 
+const timeAccess = tgpu.accessor(d.f32);
+const deltaTimeAccess = tgpu.accessor(d.f32);
+const particleDataAccess = tgpu.accessor(d.arrayOf(ParticleData));
+
+const simulate = (idx: number) => {
+  'use gpu';
+  const particleData = particleDataAccess.$[idx];
+  const phase = timeAccess.$ / 300 + particleData.seed;
+
+  particleData.position +=
+    (particleData.velocity * deltaTimeAccess.$) / 20 +
+    d.vec2f(std.sin(phase) / 600, std.cos(phase) / 500);
+};
+
+const attribs = {
+  ...geometryLayout.attrib,
+  center: dataLayout.attrib.position,
+};
+
 function App() {
   const root = useRoot();
-  const ctxRef = useRef<GPUCanvasContext | null>(null);
+  const { canvasRefCallback, ctxRef } = useConfigureContext();
 
   // buffers
 
@@ -72,104 +92,89 @@ function App() {
 
   const aspectRatio = useUniformValue(d.f32, 1);
   const deltaTime = useUniformValue(d.f32);
-  const time = useMutable(d.f32);
+  const time = useUniformValue(d.f32);
 
-  const particleDataStorage = particleDataBuffer.as('mutable');
-
-  const mainCompute = useMemo(
-    () =>
-      tgpu.computeFn({
-        in: { gid: d.builtin.globalInvocationId },
-        workgroupSize: [1],
-      })(({ gid }) => {
-        'use gpu';
-        let index = gid.x;
-        if (index === 0) {
-          time.$ += deltaTime.$;
-        }
-        let phase = time.$ / 300 + particleDataStorage.$[index].seed;
-        particleDataStorage.$[index].position +=
-          (particleDataStorage.$[index].velocity * deltaTime.$) / 20 +
-          d.vec2f(std.sin(phase) / 600, std.cos(phase) / 500);
-      }),
-    [particleDataStorage, deltaTime, time],
-  );
+  const particleDataMutable = particleDataBuffer.as('mutable');
 
   // pipelines
   //
   const renderPipeline = useMemo(
     () =>
-      root
-        .createRenderPipeline({
-          attribs: {
-            ...geometryLayout.attrib,
-            center: dataLayout.attrib.position,
-          },
-          vertex: (input) => {
-            'use gpu';
-            const width = input.tilt;
-            const height = input.tilt / 2;
+      root.createRenderPipeline({
+        attribs,
+        vertex: (input) => {
+          'use gpu';
+          const width = input.tilt;
+          const height = input.tilt / 2;
 
-            const verts = [
-              d.vec2f(0, 0),
-              d.vec2f(width, 0),
-              d.vec2f(0, height),
-              d.vec2f(width, height),
-            ];
+          const verts = [
+            d.vec2f(0, 0),
+            d.vec2f(width, 0),
+            d.vec2f(0, height),
+            d.vec2f(width, height),
+          ];
 
-            const pos = rotate(verts[input.$vertexIndex] / 350, input.angle) + input.center;
+          const pos = rotate(verts[input.$vertexIndex] / 350, input.angle) + input.center;
 
-            if (aspectRatio.$ < 1) {
-              pos.x /= aspectRatio.$;
-            } else {
-              pos.y *= aspectRatio.$;
-            }
+          if (aspectRatio.$ < 1) {
+            pos.x /= aspectRatio.$;
+          } else {
+            pos.y *= aspectRatio.$;
+          }
 
-            return { $position: d.vec4f(pos, 0, 1), color: input.color };
-          },
-          fragment: ({ color }) => {
-            'use gpu';
-            return color;
-          },
-          primitive: {
-            topology: 'triangle-strip',
-          },
-        })
-        .with(geometryLayout, particleGeometryBuffer)
-        .with(dataLayout, particleDataBuffer),
-    [particleGeometryBuffer, particleDataBuffer, aspectRatio],
+          return { $position: d.vec4f(pos, 0, 1), color: input.color };
+        },
+        fragment: ({ color }) => {
+          'use gpu';
+          return color;
+        },
+        primitive: {
+          topology: 'triangle-strip',
+        },
+      }),
+    [aspectRatio],
   );
 
-  const computePipeline = root.createComputePipeline({ compute: mainCompute });
+  const computePipeline = root
+    .with(particleDataAccess, particleDataMutable)
+    .with(timeAccess, () => time.$)
+    .with(deltaTimeAccess, () => deltaTime.$)
+    .createGuardedComputePipeline(simulate);
 
-  useFrame(({ deltaSeconds }) => {
+  useFrame(({ deltaSeconds, elapsedSeconds }) => {
     const context = ctxRef.current;
     if (!context) {
       return;
     }
 
     const canvas = context.canvas as HTMLCanvasElement;
+    time.value = elapsedSeconds * 1000;
     deltaTime.value = deltaSeconds * 1000;
     aspectRatio.value = canvas.width / canvas.height;
 
-    computePipeline.dispatchWorkgroups(PARTICLE_AMOUNT);
-    renderPipeline.withColorAttachment({ view: context }).draw(4, PARTICLE_AMOUNT);
+    computePipeline.dispatchThreads(PARTICLE_AMOUNT);
+    renderPipeline
+      .with(geometryLayout, particleGeometryBuffer)
+      .with(dataLayout, particleDataBuffer)
+      .withColorAttachment({ view: context })
+      .draw(4, PARTICLE_AMOUNT);
   });
 
-  const canvasRefCallback = useCallback((el: HTMLCanvasElement | null) => {
-    if (el) {
-      ctxRef.current = root.configureContext({ canvas: el, alphaMode: 'premultiplied' });
-    } else {
-      ctxRef.current = null;
-    }
-  }, []);
-
   return (
-    <div>
-      <canvas ref={canvasRefCallback}></canvas>
-      <button type="button" onClick={() => particleDataBuffer.write(createRandomPositions())}>
-        🎉
-      </button>
+    <div className="absolute inset-0">
+      <canvas
+        ref={canvasRefCallback}
+        className="absolute inset-0 w-full h-full pointer-events-none"
+      />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <button
+          type="button"
+          className="text-4xl shadow rounded p-4"
+          onClick={() => particleDataBuffer.write(createRandomPositions())}
+        >
+          🎉
+        </button>
+      </div>
     </div>
   );
 }
@@ -179,7 +184,6 @@ function App() {
 // #region Example controls and cleanup
 
 import { createRoot } from 'react-dom/client';
-import { useCallback, useMemo, useRef } from 'react';
 const reactRoot = createRoot(document.getElementById('example-app') as HTMLDivElement);
 reactRoot.render(<App />);
 
