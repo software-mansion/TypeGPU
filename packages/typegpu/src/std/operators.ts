@@ -15,7 +15,7 @@ import {
   isInteger32VecInstance,
   isMat,
   isMatInstance,
-  isUnsignedVecInstance,
+  isUint32VecInstance,
   isVec,
   isVecInstance,
 } from '../data/wgslTypes.ts';
@@ -330,7 +330,7 @@ function cpuBitShiftLeft(
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs << rhs;
   }
-  if (isInteger32VecInstance(lhs) && isUnsignedVecInstance(rhs)) {
+  if (isInteger32VecInstance(lhs) && isUint32VecInstance(rhs)) {
     return VectorOps.bitShiftLeft[lhs.kind](lhs, rhs);
   }
   if (isInteger32VecInstance(lhs) && typeof rhs === 'number') {
@@ -366,7 +366,7 @@ function cpuBitShiftRight(
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs >> rhs;
   }
-  if (isInteger32VecInstance(lhs) && isUnsignedVecInstance(rhs)) {
+  if (isInteger32VecInstance(lhs) && isUint32VecInstance(rhs)) {
     return VectorOps.bitShiftRight[lhs.kind](lhs, rhs);
   }
   if (isInteger32VecInstance(lhs) && typeof rhs === 'number') {

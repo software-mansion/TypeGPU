@@ -1553,7 +1553,7 @@ export function isInteger32VecInstance(value: unknown): value is v2u | v2i | v3u
   return isVecInstance(value) && /[iu]$/.test(value.kind);
 }
 
-export function isUnsignedVecInstance(value: unknown): value is v2u | v3u | v4u {
+export function isUint32VecInstance(value: unknown): value is v2u | v3u | v4u {
   return isVecInstance(value) && /[u]$/.test(value.kind);
 }
 
