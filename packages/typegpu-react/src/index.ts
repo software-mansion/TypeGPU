@@ -4,3 +4,4 @@ export { useRender } from './use-render.ts';
 export { useMutable } from './use-mutable.ts';
 export { useUniformValue } from './use-uniform-value.ts';
 export { useBuffer } from './use-buffer.ts';
+export { useConfigureContext } from './use-configure-context.ts';
