@@ -1,5 +1,3 @@
-import type { Pt } from './track.ts';
-
 export function createTrackOverlay(canvas: HTMLCanvasElement) {
   const el = document.createElement('canvas');
   el.style.cssText =
@@ -12,9 +10,9 @@ export function createTrackOverlay(canvas: HTMLCanvasElement) {
   }
 
   const aspect = () => (canvas.width && canvas.height ? canvas.width / canvas.height : 1);
-  const toPixel = (p: Pt): [number, number] => [
-    ((p.x / aspect() + 1) / 2) * el.width,
-    ((1 - p.y) / 2) * el.height,
+  const toPixel = (x: number, y: number): [number, number] => [
+    ((x / aspect() + 1) / 2) * el.width,
+    ((1 - y) / 2) * el.height,
   ];
 
   return {
@@ -25,38 +23,42 @@ export function createTrackOverlay(canvas: HTMLCanvasElement) {
       el.style.display = 'none';
     },
 
-    clientToTrack(clientX: number, clientY: number): Pt {
-      const rect = canvas.getBoundingClientRect();
-      return {
-        x: (((clientX - rect.left) / rect.width) * 2 - 1) * aspect(),
-        y: 1 - ((clientY - rect.top) / rect.height) * 2,
-      };
+    destroy() {
+      el.remove();
     },
 
-    findNearest(pts: Pt[], pt: Pt, hitPx = 15): number | null {
+    clientToTrack(clientX: number, clientY: number): [number, number] {
+      const rect = canvas.getBoundingClientRect();
+      return [
+        (((clientX - rect.left) / rect.width) * 2 - 1) * aspect(),
+        1 - ((clientY - rect.top) / rect.height) * 2,
+      ];
+    },
+
+    findNearest(pts: Float32Array, n: number, x: number, y: number, hitPx = 15): number | null {
       const rect = canvas.getBoundingClientRect();
       const w = rect.width || canvas.width,
         h = rect.height || canvas.height;
       const a = aspect();
-      const px = ((pt.x / a + 1) / 2) * w,
-        py = ((1 - pt.y) / 2) * h;
+      const px = ((x / a + 1) / 2) * w,
+        py = ((1 - y) / 2) * h;
       let best: number | null = null,
         bestD = hitPx * hitPx;
-      pts.forEach((cp, i) => {
-        const d2 = (((cp.x / a + 1) / 2) * w - px) ** 2 + (((1 - cp.y) / 2) * h - py) ** 2;
+      for (let i = 0; i < n; i++) {
+        const d2 =
+          (((pts[i * 2] / a + 1) / 2) * w - px) ** 2 + (((1 - pts[i * 2 + 1]) / 2) * h - py) ** 2;
         if (d2 < bestD) {
           bestD = d2;
           best = i;
         }
-      });
+      }
       return best;
     },
 
-    render(pts: Pt[], dragIdx: number | null) {
+    render(pts: Float32Array, n: number, dragIdx: number | null) {
       el.width = canvas.width;
       el.height = canvas.height;
       ctx.clearRect(0, 0, el.width, el.height);
-      const n = pts.length;
       if (n === 0) return;
 
       if (n >= 2) {
@@ -65,18 +67,15 @@ export function createTrackOverlay(canvas: HTMLCanvasElement) {
         ctx.lineJoin = 'round';
         ctx.setLineDash([]);
         ctx.beginPath();
-        pts.forEach((p, i) => {
-          const [x, y] = toPixel(p);
-          if (i === 0) {
-            ctx.moveTo(x, y);
-          } else {
-            ctx.lineTo(x, y);
-          }
-        });
+        for (let i = 0; i < n; i++) {
+          const [x, y] = toPixel(pts[i * 2], pts[i * 2 + 1]);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
         ctx.stroke();
 
-        const [lx, ly] = toPixel(pts[n - 1]),
-          [fx, fy] = toPixel(pts[0]);
+        const [lx, ly] = toPixel(pts[(n - 1) * 2], pts[(n - 1) * 2 + 1]);
+        const [fx, fy] = toPixel(pts[0], pts[1]);
         ctx.setLineDash([6, 6]);
         ctx.strokeStyle = 'rgba(255, 210, 60, 0.35)';
         ctx.beginPath();
@@ -86,8 +85,8 @@ export function createTrackOverlay(canvas: HTMLCanvasElement) {
         ctx.setLineDash([]);
       }
 
-      pts.forEach((p, i) => {
-        const [x, y] = toPixel(p);
+      for (let i = 0; i < n; i++) {
+        const [x, y] = toPixel(pts[i * 2], pts[i * 2 + 1]);
         ctx.beginPath();
         ctx.arc(x, y, i === 0 ? 8 : 6, 0, Math.PI * 2);
         ctx.fillStyle =
@@ -100,7 +99,7 @@ export function createTrackOverlay(canvas: HTMLCanvasElement) {
         ctx.strokeStyle = 'rgba(0,0,0,0.55)';
         ctx.lineWidth = 1.5;
         ctx.stroke();
-      });
+      }
     },
   };
 }

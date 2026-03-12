@@ -3,11 +3,9 @@ export function createStatsDisplay(el: HTMLElement) {
     setDrawMode(nodeCount: number) {
       const need = 4 - nodeCount;
       const ready =
-        nodeCount >= 4
-          ? '— Ready to confirm!  (Enter)'
-          : `— need ${need} more node${need === 1 ? '' : 's'}`;
+        nodeCount >= 4 ? '— ready to confirm!' : `— need ${need} more node${need === 1 ? '' : 's'}`;
       el.textContent =
-        `Draw mode  Click: add node  |  Drag: move  |  RMB / Esc: cancel  |  ` +
+        `Draw mode  |  Click: add node  |  Drag: move node  |  RMB: remove last  |  ` +
         `${nodeCount} node${nodeCount === 1 ? '' : 's'} ${ready}`;
     },
 
