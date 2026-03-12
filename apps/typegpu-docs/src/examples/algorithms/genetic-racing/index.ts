@@ -1,6 +1,8 @@
 import tgpu, { common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
-import { generateGridTrack, type TrackResult } from './track.ts';
+import { generateGridTrack, generateDrawnTrack, type TrackResult, type Pt } from './track.ts';
+import { createTrackOverlay } from './overlay.ts';
+import { createStatsDisplay } from './stats.ts';
 import {
   CarState,
   CarStateArray,
@@ -25,7 +27,7 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const STEPS_PER_DISPATCH = 32;
 
-const BASE_SPATIAL_PARAMS = {
+const BASE_CAR = {
   maxSpeed: 1.6,
   accel: 0.2,
   turnRate: 5.5,
@@ -47,7 +49,7 @@ const params = root.createUniform(SimParams, {
   spawnY: 0,
   spawnAngle: 0,
   stepsPerDispatch: STEPS_PER_DISPATCH,
-  ...BASE_SPATIAL_PARAMS,
+  ...BASE_CAR,
 });
 
 const ga = createGeneticPopulation(root, params);
@@ -79,21 +81,23 @@ const nearestSampler = root['~unstable'].createSampler({
   minFilter: 'nearest',
 });
 
-const toTrackSpace = (p: d.v2f) => {
-  'use gpu';
-  return p / params.$.trackScale;
-};
-
 const toTrackUV = (p: d.v2f) => {
   'use gpu';
-  const uvBase = (toTrackSpace(p) + 1) * 0.5;
+  // Squash x by aspect so UV [0,1] covers the full screen width.
+  // Texture was built with tx = ((px/sz)*2-1)*aspect, so the inverse is:
+  //   UV.x = (p.x / (aspect * trackScale) + 1) / 2
+  //   UV.y = (1 - p.y / trackScale) / 2
+  const sq = d.vec2f(p.x / params.$.aspect, p.y);
+  const uvBase = (sq / params.$.trackScale + 1) * 0.5;
   return d.vec2f(uvBase.x, 1 - uvBase.y);
 };
 
 const sampleTrack = (p: d.v2f, sampler: d.sampler) => {
   'use gpu';
-  const sample = std.textureSampleLevel(trackView.$, sampler, toTrackUV(p), 0);
-  return d.vec3f(sample.xy * 2 - 1, sample.z);
+  const uv = toTrackUV(p);
+  const inBounds = uv.x >= 0 && uv.x <= 1 && uv.y >= 0 && uv.y <= 1;
+  const sample = std.textureSampleLevel(trackView.$, sampler, uv, 0);
+  return d.vec3f(sample.xy * 2 - 1, std.select(d.f32(0), sample.z, inBounds));
 };
 
 const rotate = (v: d.v2f, angle: number) => {
@@ -399,18 +403,149 @@ let showBestOnly = false;
 let hasChampion = false;
 let displayedBestFitness = 0;
 
-const statsDiv = document.querySelector('.stats') as HTMLDivElement;
+let isDrawMode = false;
+let controlPoints: Pt[] = [];
+let dragIndex: number | null = null;
+
+const overlay = createTrackOverlay(canvas);
+
+function getAspect(): number {
+  return canvas.width && canvas.height ? canvas.width / canvas.height : 1;
+}
+
+/** Write an all-grass (mask = 0) texture so the old track disappears immediately. */
+function writeBlankTrackTexture() {
+  const size = 512;
+  const data = new Uint8ClampedArray(size * size * 4);
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = 128; // neutral dir x
+    data[i + 1] = 128; // neutral dir y
+    data[i + 2] = 0; // mask = 0 → off-track
+    data[i + 3] = 255;
+  }
+  trackTexture.write(new ImageData(data, size, size));
+}
+
+function updateTrackPreview() {
+  if (!isDrawMode || controlPoints.length < 4) return;
+  const [W, H] = GRID_SIZES[gridSizeKey];
+  applyTrack(generateDrawnTrack(controlPoints, 0.172 * (1.6 / Math.max(W, H)), getAspect()));
+  overlay.render(controlPoints, dragIndex);
+}
+
+function enterDrawMode() {
+  isDrawMode = true;
+  controlPoints = [];
+  dragIndex = null;
+  paused = true;
+  writeBlankTrackTexture();
+  canvas.style.cursor = 'crosshair';
+  overlay.show();
+  overlay.render(controlPoints, dragIndex);
+}
+
+function exitDrawMode() {
+  isDrawMode = false;
+  dragIndex = null;
+  canvas.style.cursor = '';
+  overlay.hide();
+}
+
+function confirmTrack() {
+  if (!isDrawMode || controlPoints.length < 4) return;
+  const [W, H] = GRID_SIZES[gridSizeKey];
+  applyGridSize(W, H);
+  applyTrack(generateDrawnTrack(controlPoints, 0.172 * (1.6 / Math.max(W, H)), getAspect()));
+  exitDrawMode();
+  paused = false;
+  startSimulation();
+}
+
+function cancelDraw() {
+  if (!isDrawMode) return;
+  exitDrawMode();
+  const [W, H] = GRID_SIZES[gridSizeKey];
+  applyGridSize(W, H);
+  applyTrack(generateGridTrack(trackSeed, W, H, getAspect()));
+  paused = false;
+  startSimulation();
+}
+
+canvas.addEventListener('mousedown', (e: MouseEvent) => {
+  if (!isDrawMode || e.button !== 0) return;
+  e.preventDefault();
+  const pt = overlay.clientToTrack(e.clientX, e.clientY);
+  const hit = overlay.findNearest(controlPoints, pt);
+  if (hit !== null) {
+    dragIndex = hit;
+    canvas.style.cursor = 'grabbing';
+  } else {
+    controlPoints.push(pt);
+    dragIndex = null;
+    updateTrackPreview();
+  }
+});
+
+canvas.addEventListener('mousemove', (e: MouseEvent) => {
+  if (!isDrawMode) return;
+  if (dragIndex !== null) {
+    controlPoints[dragIndex] = overlay.clientToTrack(e.clientX, e.clientY);
+    updateTrackPreview();
+  } else {
+    const pt = overlay.clientToTrack(e.clientX, e.clientY);
+    canvas.style.cursor = overlay.findNearest(controlPoints, pt) !== null ? 'grab' : 'crosshair';
+  }
+});
+
+canvas.addEventListener('mouseup', (e: MouseEvent) => {
+  if (!isDrawMode || e.button !== 0) return;
+  dragIndex = null;
+  canvas.style.cursor = 'crosshair';
+});
+
+canvas.addEventListener('contextmenu', (e: MouseEvent) => {
+  if (!isDrawMode) return;
+  e.preventDefault();
+  if (controlPoints.length === 0) return;
+  controlPoints.pop();
+  updateTrackPreview();
+});
+
+document.addEventListener('keydown', (e: KeyboardEvent) => {
+  if (!isDrawMode) return;
+  if (e.key === 'Enter') {
+    confirmTrack();
+  }
+  if (e.key === 'Escape') {
+    cancelDraw();
+  }
+});
+
+const statsEl = document.querySelector<HTMLElement>('.stats');
+if (!statsEl) {
+  throw new Error('Missing .stats element');
+}
+const stats = createStatsDisplay(statsEl);
 
 function updateAspect() {
-  if (!canvas.width || !canvas.height) {
-    return;
-  }
+  if (!canvas.width || !canvas.height) return;
   const nextAspect = canvas.width / canvas.height;
-  if (Math.abs(nextAspect - lastAspect) < 0.001) {
-    return;
-  }
+  if (Math.abs(nextAspect - lastAspect) < 0.001) return;
   lastAspect = nextAspect;
   params.writePartial({ aspect: nextAspect });
+
+  if (isDrawMode) {
+    // Control points were laid out for the old aspect — clear and let the user redraw.
+    controlPoints = [];
+    dragIndex = null;
+    writeBlankTrackTexture();
+    overlay.render(controlPoints, dragIndex);
+  } else {
+    // Regenerate the random track so it fills the new aspect correctly.
+    const [W, H] = GRID_SIZES[gridSizeKey];
+    applyGridSize(W, H);
+    applyTrack(generateGridTrack(trackSeed, W, H, nextAspect));
+  }
 }
 
 function updatePopulation(nextPopulation: number) {
@@ -478,17 +613,20 @@ function frame() {
     }
   }
 
-  const genStr = String(ga.generation).padStart(5);
-  const stepStr = String(steps).padStart(String(stepsPerGeneration).length);
-  const bestStr = displayedBestFitness.toFixed(2).padStart(6);
-  statsDiv.textContent = `Gen ${genStr}  Step ${stepStr}/${stepsPerGeneration}  Pop ${population}  Best ${bestStr}`;
+  if (isDrawMode) {
+    stats.setDrawMode(controlPoints.length);
+  } else {
+    stats.setSimulation(ga.generation, steps, stepsPerGeneration, population, displayedBestFitness);
+  }
 
   trackPipeline.withColorAttachment({ view: context, clearValue: [0.04, 0.05, 0.07, 1] }).draw(3);
 
-  carPipeline
-    .withColorAttachment({ view: context, loadOp: 'load', storeOp: 'store' })
-    .with(instanceLayout, ga.currentStateBuffer)
-    .draw(4, showBestOnly && hasChampion ? 1 : population);
+  if (!isDrawMode) {
+    carPipeline
+      .withColorAttachment({ view: context, loadOp: 'load' })
+      .with(instanceLayout, ga.currentStateBuffer)
+      .draw(4, showBestOnly && hasChampion ? 1 : population);
+  }
 
   rafHandle = requestAnimationFrame(frame);
 }
@@ -507,11 +645,15 @@ function applyTrack(result: TrackResult) {
 
 function applyGridSize(W: number, H: number) {
   const scale = 5 / Math.max(W, H);
-  params.writePartial(
-    Object.fromEntries(
-      Object.entries(BASE_SPATIAL_PARAMS).map(([k, v]) => [k, v * scale]),
-    ) as typeof BASE_SPATIAL_PARAMS,
-  );
+  const { maxSpeed, accel, turnRate, drag, sensorDistance, carSize } = BASE_CAR;
+  params.writePartial({
+    maxSpeed: maxSpeed * scale,
+    accel: accel * scale,
+    turnRate: turnRate * scale,
+    drag: drag * scale,
+    sensorDistance: sensorDistance * scale,
+    carSize: carSize * scale,
+  });
 }
 
 const GRID_SIZES: Record<string, [number, number]> = {
@@ -542,24 +684,32 @@ function newTrack() {
   trackSeed = (Math.random() * 100_000) | 0;
   const [W, H] = GRID_SIZES[gridSizeKey];
   applyGridSize(W, H);
-  applyTrack(generateGridTrack(trackSeed, W, H));
+  applyTrack(generateGridTrack(trackSeed, W, H, getAspect()));
   startSimulation();
 }
 
 applyGridSize(...GRID_SIZES[gridSizeKey]);
-applyTrack(generateGridTrack(trackSeed, ...GRID_SIZES[gridSizeKey]));
+applyTrack(generateGridTrack(trackSeed, ...GRID_SIZES[gridSizeKey], getAspect()));
 startSimulation();
 
 // #region Example controls & Cleanup
 
 export const controls = defineControls({
-  'New Track': { onButtonClick: newTrack },
+  'Random Track': { onButtonClick: newTrack },
+  'Draw New Track': { onButtonClick: enterDrawMode },
+  'Confirm Track': { onButtonClick: confirmTrack },
+  'Cancel Drawing': { onButtonClick: cancelDraw },
   'Grid size': {
     initial: 'S',
     options: ['S', 'M', 'L', 'XL'],
     onSelectChange: (value: string) => {
       gridSizeKey = value;
-      newTrack();
+      if (isDrawMode) {
+        // Re-preview with the new track width without leaving draw mode
+        updateTrackPreview();
+      } else {
+        newTrack();
+      }
     },
   },
   Pause: {
