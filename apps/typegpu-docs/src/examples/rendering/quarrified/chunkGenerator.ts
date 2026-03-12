@@ -30,11 +30,9 @@ export class ChunkGenerator {
       const sampleIndex = d.vec3f(x, y, z) + d.vec3f(this.chunkIndexUniform.$) * CHUNK_SIZE;
       const result = perlin3d.sample(sampleIndex * 0.2) ** 3;
       if (d.f32(result) > -0.02) {
-        this.blocksMutable.$[arrayIndex] =
-          blockTypes.air | (std.clamp(this.chunkIndexUniform.$.y, 0, 15) << 24);
+        this.blocksMutable.$[arrayIndex] = blockTypes.air;
       } else {
-        this.blocksMutable.$[arrayIndex] =
-          blockTypes.stone | (std.clamp(this.chunkIndexUniform.$.y, 0, 15) << 24);
+        this.blocksMutable.$[arrayIndex] = blockTypes.stone;
       }
     });
   }
@@ -44,6 +42,12 @@ export class ChunkGenerator {
     this.#pipeline.dispatchThreads(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE);
 
     const blocks = await this.blocksMutable.read();
-    return { chunkIndex, blocks };
+    return {
+      chunkIndex,
+      blocks: blocks.map((block) => ({
+        blockType: block,
+        lightLevel: std.clamp(chunkIndex.y, 0, 15),
+      })),
+    };
   }
 }

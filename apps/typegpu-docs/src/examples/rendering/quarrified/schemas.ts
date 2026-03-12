@@ -1,6 +1,7 @@
 import tgpu, { d } from 'typegpu';
 
-export type Chunk = { chunkIndex: d.v3i; blocks: number[] };
+export type Block = { blockType: number; lightLevel: number };
+export type Chunk = { chunkIndex: d.v3i; blocks: Block[] };
 
 export const Camera = d.struct({ view: d.mat4x4f, projection: d.mat4x4f });
 

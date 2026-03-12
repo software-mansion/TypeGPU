@@ -40,7 +40,7 @@ export class WorldMap {
       throw new Error(`World: Tried to modify chunk that has not been generated (${chunkPos}).`);
     }
     this.#dirtyChunks.add(chunk);
-    chunk.blocks[coordToIndex(blockPos.x, blockPos.y, blockPos.z)] = newBlock;
+    chunk.blocks[coordToIndex(blockPos.x, blockPos.y, blockPos.z)].blockType = newBlock;
   }
 
   getAndCleanModifiedChunks(): Chunk[] {
@@ -183,7 +183,7 @@ export class State {
       for (let y = 0; y < CHUNK_SIZE; y++) {
         for (let x = 0; x < CHUNK_SIZE; x++) {
           // TODO: hardcode somewhere air index
-          if (blocks[coordToIndex(x, y, z)] === 0) continue;
+          if (blocks[coordToIndex(x, y, z)].blockType === 0) continue;
           tempPoints.push(x0 + x + 0.5);
           tempPoints.push(y0 + y + 0.5);
           tempPoints.push(z0 + z + 0.5);

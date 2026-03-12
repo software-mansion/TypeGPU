@@ -82,17 +82,11 @@ export class Mesher {
   }
 }
 
-const decodeBlockData = (blockData: number) => {
-  const blockType = blockData & ((1 << 8) - 1);
-  const lightLevel = (blockData >> 24) & ((1 << 4) - 1);
-  return { blockType, lightLevel };
-};
-
 const isAir = (chunk: Chunk, x: number, y: number, z: number): boolean => {
   if (x < 0 || x >= CHUNK_SIZE || y < 0 || y >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) {
     return true;
   }
-  return decodeBlockData(chunk.blocks[coordToIndex(x, y, z)]).blockType === 0;
+  return chunk.blocks[coordToIndex(x, y, z)].blockType === 0;
 };
 
 function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Int32Array): number {
@@ -107,8 +101,7 @@ function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Int32Array): number {
     for (let y = 0; y < CHUNK_SIZE; y++) {
       for (let x = 0; x < CHUNK_SIZE; x++) {
         const blockData = blocks[coordToIndex(x, y, z)];
-        const { blockType, lightLevel } = decodeBlockData(blockData);
-        if (blockType === 0) continue;
+        if (blockData.blockType === 0) continue;
 
         const wx = wx0 + x;
         const wy = wy0 + y;
@@ -123,12 +116,12 @@ function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Int32Array): number {
           verticesCount += 1;
         }
 
-        if (isAir(chunk, x, y - 1, z)) addFace(0, lightLevel);
-        if (isAir(chunk, x, y + 1, z)) addFace(1, lightLevel);
-        if (isAir(chunk, x - 1, y, z)) addFace(2, lightLevel);
-        if (isAir(chunk, x + 1, y, z)) addFace(3, lightLevel);
-        if (isAir(chunk, x, y, z + 1)) addFace(4, lightLevel);
-        if (isAir(chunk, x, y, z - 1)) addFace(5, lightLevel);
+        if (isAir(chunk, x, y - 1, z)) addFace(0, blockData.lightLevel);
+        if (isAir(chunk, x, y + 1, z)) addFace(1, blockData.lightLevel);
+        if (isAir(chunk, x - 1, y, z)) addFace(2, blockData.lightLevel);
+        if (isAir(chunk, x + 1, y, z)) addFace(3, blockData.lightLevel);
+        if (isAir(chunk, x, y, z + 1)) addFace(4, blockData.lightLevel);
+        if (isAir(chunk, x, y, z - 1)) addFace(5, blockData.lightLevel);
       }
     }
   }
