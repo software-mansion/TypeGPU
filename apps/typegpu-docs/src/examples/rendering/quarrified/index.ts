@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import tgpu, { d } from 'typegpu';
 import RAPIER from '@dimforge/rapier3d-compat';
 
 import { Camera } from './schemas.ts';
@@ -27,12 +27,16 @@ const {
 } = setupThirdPersonCamera(canvas);
 
 const mesher = new Mesher(root);
+
+// --- This is here only to measure performance and will be removed ---
 const time = performance.now();
-mesher.recalculateMeshesFor(state.map.chunks);
+const initialDirtyChunks = state.worldMap.getAndCleanModifiedChunks();
+mesher.recalculateMeshesFor(initialDirtyChunks);
 const total = performance.now() - time;
 console.log(
-  `Meshing ${state.map.chunks.length} chunks took ${total.toFixed(0)}ms, agv: ${(total / state.map.chunks.length).toFixed(2)}ms`,
+  `Meshing ${initialDirtyChunks.length} chunks took ${total.toFixed(0)}ms, agv: ${(total / initialDirtyChunks.length).toFixed(2)}ms`,
 );
+// --- End ---
 
 const renderer = new Renderer(root, cameraUniform, state.player.dims);
 
@@ -45,6 +49,15 @@ function draw() {
   const playerPos = state.player.position;
   const camera = updateCamera(playerPos);
   cameraUniform.write(camera);
+  // for testing purposes, let's modify one block chunk 0, 0, 0
+  const randomBlockPos = d.vec3i(
+    Math.floor(Math.random() * 16),
+    Math.floor(Math.random() * 16),
+    Math.floor(Math.random() * 16),
+  );
+  state.worldMap.updateBlock(d.vec3i(), randomBlockPos, Math.random() < 0.5 ? 0 : 1);
+
+  mesher.recalculateMeshesFor(state.worldMap.getAndCleanModifiedChunks());
 
   const mesherResources = mesher.getResources();
   renderer.render(context, mesherResources, playerPos);

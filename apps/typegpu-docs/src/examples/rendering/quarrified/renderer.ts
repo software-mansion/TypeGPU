@@ -10,10 +10,11 @@ import tgpu, {
 import { Camera, MeshLayout } from './schemas.ts';
 import { type Mesher } from './mesher.ts';
 import { getCapsuleVertices } from './helpers.ts';
+import { faceOffsets } from './cubeVertices.ts';
 
 export class Renderer {
   #root: TgpuRoot;
-  pipeline: TgpuRenderPipeline;
+  #pipeline: TgpuRenderPipeline<d.Vec4f>;
   #depthTexture?: TgpuTexture<{
     size: [number, number];
     format: 'depth24plus';
@@ -26,13 +27,33 @@ export class Renderer {
 
   constructor(root: TgpuRoot, cameraUniform: TgpuUniform<typeof Camera>, playerDims: d.v2f) {
     this.#root = root;
-    this.pipeline = root.createRenderPipeline({
+    // prettier-ignore
+
+    this.#pipeline = root.createRenderPipeline({
       attribs: { position: MeshLayout.attrib },
-      vertex: (input) => {
+      vertex: ({ position, $vertexIndex }) => {
         'use gpu';
-        const worldPos = input.position;
+        // TODO: remove this temporary solution (without this, every "empty" draw creates a face at 0, 0, 0 that has enormous overdraw)
+        if (std.allEq(position.xyz, d.vec3i(0, 0, 0))) {
+          return {
+            $position: d.vec4f(),
+            worldPos: d.vec3f()
+          }
+        }
+
+        const blockPos = position.xyz;
+        // TODO: replace with bitshifts (also make sure its u32 not i32)
+        // const blockType = d.u32(position.w) & (2 ** 8 - 1);
+        const sideNumber = d.u32(position.w / 2 ** 8) & (2 ** 8 - 1);
+        const sideVertex = $vertexIndex;
+        // const blockMetadata = d.u32(position.w / 2 ** 16) & (2 ** 8 - 1);
+        // const skyLightLevel = d.u32(position.w / 2 ** 24) & (2 ** 4 - 1);
+        // const blockLightLevel = d.u32(position.w / 2 ** 28) & (2 ** 4 - 1);
+
+        const worldPos = d.vec3f(blockPos + faceOffsets.$[sideNumber * 4 + sideVertex]);
+
         return {
-          $position: cameraUniform.$.projection * cameraUniform.$.view * worldPos,
+          $position: cameraUniform.$.projection * cameraUniform.$.view * d.vec4f(worldPos, 1),
           worldPos,
         };
       },
@@ -47,7 +68,7 @@ export class Renderer {
         return d.vec4f(color, 1);
       },
       depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
-      primitive: { cullMode: 'none' }, // for debugging meshes
+      primitive: { cullMode: /* debug option */ 'none', topology: 'triangle-strip' },
     });
 
     const playerPosUniform = root.createUniform(d.vec4f);
@@ -117,29 +138,21 @@ export class Renderer {
         .$usage('render');
     }
 
-    const passDescriptor = {
-      colorAttachments: [
-        {
-          view: currentTexture.createView(),
-          clearValue: [1, 0.85, 0.74, 1],
-          loadOp: 'clear',
-          storeOp: 'store',
-        },
-      ],
-      depthStencilAttachment: {
+    this.#pipeline
+      .withColorAttachment({
+        view: currentTexture.createView(),
+        clearValue: [1, 0.75, 0.8, 1],
+        loadOp: 'clear',
+        storeOp: 'store',
+      })
+      .withDepthStencilAttachment({
         view: this.#root.unwrap(this.#depthTexture).createView(),
         depthClearValue: 1,
         depthLoadOp: 'clear',
         depthStoreOp: 'store',
-      },
-    } as const;
-
-    this.pipeline
-      // @ts-expect-error internal error
-      .withColorAttachment(passDescriptor.colorAttachments[0])
-      .withDepthStencilAttachment(passDescriptor.depthStencilAttachment)
+      })
       .with(MeshLayout, mesherResources.vertexBuffer)
-      .draw(mesherResources.vertexCount);
+      .draw(4, mesherResources.instanceCount);
 
     this.#playerPosUniform.write(d.vec4f(playerPos, 0));
     this.#playerPipeline

@@ -1,6 +1,5 @@
 import { d, type StorageFlag, type TgpuBuffer, type TgpuRoot, type VertexFlag } from 'typegpu';
 import { CHUNK_SIZE, INIT_CONFIG } from './params.ts';
-import { faces } from './cubeVertices.ts';
 import type { Chunk } from './schemas.ts';
 import { coordToIndexCPU } from './chunkGenerator.ts';
 
@@ -11,64 +10,63 @@ export const MAX_CHUNKS_AT_ONCE = Object.values(INIT_CONFIG.chunks)
 // TODO: implement defragmentation (recreating the buffer and FreeList? or maybe just recreating the entire Mesher?)
 export class Mesher {
   #root: TgpuRoot;
-  vertexBuffer: TgpuBuffer<d.WgslArray<d.Vec4f>> & StorageFlag & VertexFlag;
-  workArray: Float32Array<ArrayBuffer>;
-  emptyArray: Float32Array<ArrayBuffer>;
+  #vertexBuffer: TgpuBuffer<d.WgslArray<d.Vec4i>> & StorageFlag & VertexFlag;
+  #workArray: Int32Array<ArrayBuffer>;
+  #emptyArray: Int32Array<ArrayBuffer>;
 
-  freeList: FreeList;
-  chunkToId: Map<Chunk, SlotId>;
+  #freeList: FreeList;
+  #chunkToId: Map<Chunk, SlotId>;
 
-  constructor(root: TgpuRoot) {
+  constructor(root: TgpuRoot, vertexBufferSize = /* 256MB */ 256 * 1024 * 1024) {
     this.#root = root;
-    const size = 256 * 1024 * 1024 - 16; // 256MB rounded down to a multiple of 48
-    this.freeList = new FreeList(size, 0.05);
-    this.chunkToId = new Map();
-    this.vertexBuffer = this.#root
-      .createBuffer(d.arrayOf(d.vec4f, size / 16))
+    this.#freeList = new FreeList(vertexBufferSize, 0.05);
+    this.#chunkToId = new Map();
+    this.#vertexBuffer = this.#root
+      .createBuffer(d.arrayOf(d.vec4i, vertexBufferSize / 16))
       .$usage('vertex', 'storage');
-    this.workArray = new Float32Array(CHUNK_SIZE ** 3 * 3 * 4 * 4);
-    this.emptyArray = new Float32Array(CHUNK_SIZE ** 3 * 3 * 4 * 4);
+    this.#workArray = new Int32Array(CHUNK_SIZE ** 3 * 4 * 4 * 4);
+    this.#emptyArray = new Int32Array(CHUNK_SIZE ** 3 * 4 * 4 * 4);
   }
 
   recalculateMeshesFor(chunks: Chunk[]) {
-    const unwrappedBuffer = this.#root.unwrap(this.vertexBuffer);
+    const unwrappedBuffer = this.#root.unwrap(this.#vertexBuffer);
 
     for (const chunk of chunks) {
-      const vertexCount = calculateMeshForChunk(chunk, this.workArray);
+      const vertexCount = calculateMeshForChunk(chunk, this.#workArray);
       const byteSize = vertexCount * 4 * 4;
 
-      let slotId = this.chunkToId.get(chunk);
+      let slotId = this.#chunkToId.get(chunk);
       if (slotId === undefined) {
-        slotId = this.freeList.allocate(byteSize);
-        this.chunkToId.set(chunk, slotId);
+        slotId = this.#freeList.allocate(byteSize);
+        this.#chunkToId.set(chunk, slotId);
       }
 
-      if (this.freeList.check(slotId, byteSize)) {
+      if (this.#freeList.check(slotId, byteSize)) {
         console.log('Reallocating chunk', ...chunk.chunkIndex, 'size', byteSize);
 
-        const oldInfo = this.freeList.slotInfoFor(slotId);
-        this.freeList.deallocate(slotId);
-        this.freeList.allocate(byteSize, slotId);
-        const newInfo = this.freeList.slotInfoFor(slotId);
+        const oldInfo = this.#freeList.slotInfoFor(slotId);
+        this.#freeList.deallocate(slotId);
+        this.#freeList.allocate(byteSize, slotId);
+        const newInfo = this.#freeList.slotInfoFor(slotId);
         if (oldInfo.offset !== newInfo.offset) {
           // only clear the old slot if the chunk actually changed places
           this.#root.device.queue.writeBuffer(
             unwrappedBuffer,
             oldInfo.offset,
-            this.emptyArray,
+            this.#emptyArray,
             0,
             oldInfo.capacity / 4,
           );
         }
       }
 
-      const offset = this.freeList.slotInfoFor(slotId).offset;
+      const offset = this.#freeList.slotInfoFor(slotId).offset;
 
       // TODO: pass the block type info so we can draw appropriate textures
       this.#root.device.queue.writeBuffer(
         unwrappedBuffer,
         offset,
-        this.workArray,
+        this.#workArray,
         0,
         vertexCount * 4,
       );
@@ -77,9 +75,9 @@ export class Mesher {
 
   getResources() {
     return {
-      vertexBuffer: this.vertexBuffer,
-      // TODO: return the number of the last non-zero vertex
-      vertexCount: (256 * 1024 * 1024 - 16) / 16,
+      vertexBuffer: this.#vertexBuffer,
+      // / 4 (to i32s) / 4 (to vec4is) = instance count
+      instanceCount: this.#freeList.getFurthestAllocated() / 4 / 4,
     };
   }
 }
@@ -91,7 +89,7 @@ const isAir = (chunk: Chunk, x: number, y: number, z: number): boolean => {
   return chunk.blocks[coordToIndexCPU(x, y, z)] === 0;
 };
 
-function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Float32Array): number {
+function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Int32Array): number {
   let verticesCount = 0;
   const { chunkIndex, blocks } = chunk;
 
@@ -109,23 +107,20 @@ function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Float32Array): number 
         const wz = wz0 + z;
 
         // This function makes things cleaner and doesn't slow down things too much (less than 3%)
-        function addFace(faceVertices: (typeof faces)[keyof typeof faces]) {
-          for (const v of faceVertices) {
-            const p = v.position;
-            arrayBuffer[4 * verticesCount] = p.x + wx;
-            arrayBuffer[4 * verticesCount + 1] = p.y + wy;
-            arrayBuffer[4 * verticesCount + 2] = p.z + wz;
-            arrayBuffer[4 * verticesCount + 3] = 1;
-            verticesCount += 1;
-          }
+        function addFace(index: number) {
+          arrayBuffer[4 * verticesCount] = wx;
+          arrayBuffer[4 * verticesCount + 1] = wy;
+          arrayBuffer[4 * verticesCount + 2] = wz;
+          arrayBuffer[4 * verticesCount + 3] = 1 | (index << 8);
+          verticesCount += 1;
         }
 
-        if (isAir(chunk, x, y - 1, z)) addFace(faces.bottom);
-        if (isAir(chunk, x, y + 1, z)) addFace(faces.top);
-        if (isAir(chunk, x - 1, y, z)) addFace(faces.left);
-        if (isAir(chunk, x + 1, y, z)) addFace(faces.right);
-        if (isAir(chunk, x, y, z + 1)) addFace(faces.front);
-        if (isAir(chunk, x, y, z - 1)) addFace(faces.back);
+        if (isAir(chunk, x, y - 1, z)) addFace(0);
+        if (isAir(chunk, x, y + 1, z)) addFace(1);
+        if (isAir(chunk, x - 1, y, z)) addFace(2);
+        if (isAir(chunk, x + 1, y, z)) addFace(3);
+        if (isAir(chunk, x, y, z + 1)) addFace(4);
+        if (isAir(chunk, x, y, z - 1)) addFace(5);
       }
     }
   }
@@ -140,11 +135,12 @@ function roundUp(value: number, alignment: number): number {
 }
 
 class FreeList {
-  ALIGNMENT = 4 * 4 * 3; // 4 bytes * 4 elements * 3 vectors
+  ALIGNMENT = 4 * 4 * 4; // 4 bytes * 4 elements * 4 vectors
   #marginPercent: number;
   #slots: Map<SlotId, { offset: number; capacity: number }>;
   #freeBlocks: { offset: number; size: number }[];
   #nextId: number;
+  #furthestAllocated: number;
 
   /**
    * Creates a free list.
@@ -157,6 +153,7 @@ class FreeList {
     this.#nextId = 0;
     const alignedSize = roundUp(size, this.ALIGNMENT);
     this.#freeBlocks = [{ offset: 0, size: alignedSize }];
+    this.#furthestAllocated = 0;
   }
 
   /**
@@ -189,11 +186,19 @@ class FreeList {
           this.#freeBlocks.splice(i, 1);
         }
         this.#slots.set(id, { offset, capacity });
+        this.#furthestAllocated = Math.max(this.#furthestAllocated, offset + capacity);
         return id;
       }
     }
 
     throw new Error(`FreeList: allocation of ${capacity} bytes failed — out of space`);
+  }
+
+  /**
+   * Returns the number of bits from 0 to the last one ever touched.
+   */
+  getFurthestAllocated(): number {
+    return this.#furthestAllocated;
   }
 
   /**

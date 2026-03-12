@@ -6,7 +6,9 @@ import { CHUNK_SIZE } from './params.ts';
 import type { MovementInput } from './thirdPersonCamera.ts';
 
 export class WorldMap {
-  chunks: Chunk[] = [];
+  chunks: Map<string, Chunk> = new Map();
+  // chunks that were modified and require re-meshing
+  #dirtyChunks: Set<Chunk> = new Set();
   constructor(
     public readonly xRange: d.v2i,
     public readonly yRange: d.v2i,
@@ -18,10 +20,32 @@ export class WorldMap {
     for (let x = this.xRange[0]; x <= this.xRange[1]; x++) {
       for (let y = this.yRange[0]; y <= this.yRange[1]; y++) {
         for (let z = this.zRange[0]; z <= this.zRange[1]; z++) {
-          this.chunks.push(await chunkGenerator.generateChunk(d.vec3i(x, y, z)));
+          const chunkPos = d.vec3i(x, y, z);
+          const chunk = await chunkGenerator.generateChunk(chunkPos);
+          this.chunks.set(chunkPos.toString(), chunk);
+          this.#dirtyChunks.add(chunk);
         }
       }
     }
+  }
+
+  getChunk(chunkPos: d.v3i): Chunk | undefined {
+    return this.chunks.get(chunkPos.toString());
+  }
+
+  updateBlock(chunkPos: d.v3i, blockPos: d.v3i, newBlock: number) {
+    const chunk = this.chunks.get(chunkPos.toString());
+    if (!chunk) {
+      throw new Error(`World: Tried to modify chunk that has not been generated (${chunkPos}).`);
+    }
+    this.#dirtyChunks.add(chunk);
+    chunk.blocks[coordToIndexCPU(blockPos.x, blockPos.y, blockPos.z)] = newBlock;
+  }
+
+  getAndCleanModifiedChunks(): Chunk[] {
+    const chunks = [...this.#dirtyChunks];
+    this.#dirtyChunks.clear();
+    return chunks;
   }
 }
 
@@ -94,7 +118,7 @@ export class Player {
 }
 
 export class State {
-  map: WorldMap;
+  worldMap: WorldMap;
   config: Config;
   player: Player;
 
@@ -106,13 +130,13 @@ export class State {
   constructor(config: Config, world: RAPIER.World) {
     this.config = config;
     const { xRange, yRange, zRange } = config.chunks;
-    this.map = new WorldMap(xRange, yRange, zRange);
+    this.worldMap = new WorldMap(xRange, yRange, zRange);
     this.world = world;
     this.player = new Player(config, world);
   }
 
   async init(root: TgpuRoot) {
-    await this.map.initChunks(root);
+    await this.worldMap.initChunks(root);
     this.updateNearbyColliders();
   }
 
@@ -127,9 +151,7 @@ export class State {
     const cx = Math.floor(pos.x / CHUNK_SIZE);
     const cy = Math.floor(pos.y / CHUNK_SIZE);
     const cz = Math.floor(pos.z / CHUNK_SIZE);
-    return this.map.chunks.find(
-      (c) => c.chunkIndex.x === cx && c.chunkIndex.y === cy && c.chunkIndex.z === cz,
-    );
+    return this.worldMap.getChunk(d.vec3i(cx, cy, cz));
   }
 
   private chunkKey(x: number, y: number, z: number): string {
@@ -197,7 +219,7 @@ export class State {
       }
     }
 
-    for (const chunk of this.map.chunks) {
+    for (const chunk of this.worldMap.chunks.values()) {
       const chunkKey = this.chunkKey(chunk.chunkIndex.x, chunk.chunkIndex.y, chunk.chunkIndex.z);
       if (neededKeys.has(chunkKey) && !this.loadedColliderChunks.has(chunkKey)) {
         this.loadChunkColliders(chunk);
