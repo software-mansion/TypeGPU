@@ -1,7 +1,7 @@
 import tgpu, {
   d,
-  std,
   type RenderFlag,
+  std,
   type TgpuRenderPipeline,
   type TgpuRoot,
   type TgpuTexture,
@@ -31,44 +31,62 @@ export class Renderer {
 
     this.#pipeline = root.createRenderPipeline({
       attribs: { position: MeshLayout.attrib },
-      vertex: ({ position, $vertexIndex }) => {
-        'use gpu';
+      vertex: tgpu.vertexFn({
+        in: { vertexIndex: d.builtin.vertexIndex, position: d.vec4i },
+        out: { position: d.builtin.position, worldPos: d.vec3f, lightLevel: d.interpolate("flat", d.u32) },
+      })(({ position, vertexIndex }) => {
+        "use gpu";
         // TODO: remove this temporary solution (without this, every "empty" draw creates a face at 0, 0, 0 that has enormous overdraw)
         if (std.allEq(position.xyz, d.vec3i(0, 0, 0))) {
           return {
-            $position: d.vec4f(),
-            worldPos: d.vec3f()
-          }
+            position: d.vec4f(),
+            worldPos: d.vec3f(),
+            lightLevel: 0,
+          };
         }
 
         const blockPos = position.xyz;
         // TODO: replace with bitshifts (also make sure its u32 not i32)
         // const blockType = d.u32(position.w) & (2 ** 8 - 1);
         const sideNumber = d.u32(position.w / 2 ** 8) & (2 ** 8 - 1);
-        const sideVertex = $vertexIndex;
+        const sideVertex = vertexIndex;
         // const blockMetadata = d.u32(position.w / 2 ** 16) & (2 ** 8 - 1);
-        // const skyLightLevel = d.u32(position.w / 2 ** 24) & (2 ** 4 - 1);
-        // const blockLightLevel = d.u32(position.w / 2 ** 28) & (2 ** 4 - 1);
+        const lightLevel = d.u32(position.w / 2 ** 24) & (2 ** 4 - 1);
 
-        const worldPos = d.vec3f(blockPos + faceOffsets.$[sideNumber * 4 + sideVertex]);
+        const worldPos = d.vec3f(
+          blockPos + faceOffsets.$[sideNumber * 4 + sideVertex],
+        );
 
         return {
-          $position: cameraUniform.$.projection * cameraUniform.$.view * d.vec4f(worldPos, 1),
+          position: cameraUniform.$.projection * cameraUniform.$.view *
+            d.vec4f(worldPos, 1),
           worldPos,
+          lightLevel,
         };
-      },
-      fragment: ({ worldPos }) => {
-        'use gpu';
+      }),
+      fragment: ({ worldPos, lightLevel }) => {
+        "use gpu";
         const localPos = std.fract(worldPos.xyz);
         const nearEdge = std.min(localPos, 1 - localPos);
         const highest = std.max(nearEdge.x, nearEdge.y, nearEdge.z);
         const secondHighest = nearEdge.x + nearEdge.y + nearEdge.z - highest;
         const distFromEdge = std.min(highest, secondHighest);
-        const color = std.select(d.vec3f(0.5), d.vec3f(0.3), distFromEdge < 0.05);
-        return d.vec4f(color, 1);
+        const color = std.select(
+          d.vec3f(0.5),
+          d.vec3f(0.3),
+          distFromEdge < 0.05,
+        );
+        return d.vec4f(color, 1) * lightLevel / 15;
       },
-      depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
-      primitive: { cullMode: /* debug option */ 'none', topology: 'triangle-strip' },
+      depthStencil: {
+        format: "depth24plus",
+        depthWriteEnabled: true,
+        depthCompare: "less",
+      },
+      primitive: {
+        cullMode: /* debug option */ "none",
+        topology: "triangle-strip",
+      },
     });
 
     const playerPosUniform = root.createUniform(d.vec4f);
@@ -113,8 +131,16 @@ export class Renderer {
       .createRenderPipeline({
         vertex: playerVertexFn,
         fragment: playerFragmentFn,
-        depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
-        primitive: { topology: 'triangle-list', frontFace: 'ccw', cullMode: 'back' },
+        depthStencil: {
+          format: 'depth24plus',
+          depthWriteEnabled: true,
+          depthCompare: 'less',
+        },
+        primitive: {
+          topology: 'triangle-list',
+          frontFace: 'ccw',
+          cullMode: 'back',
+        },
       })
       .withIndexBuffer(playerColliderIndexBuffer);
   }

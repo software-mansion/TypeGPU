@@ -82,11 +82,17 @@ export class Mesher {
   }
 }
 
+const decodeBlockData = (blockData: number) => {
+  const blockType = blockData & ((1 << 8) - 1);
+  const lightLevel = (blockData >> 24) & ((1 << 4) - 1);
+  return { blockType, lightLevel };
+};
+
 const isAir = (chunk: Chunk, x: number, y: number, z: number): boolean => {
   if (x < 0 || x >= CHUNK_SIZE || y < 0 || y >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) {
     return true;
   }
-  return chunk.blocks[coordToIndexCPU(x, y, z)] === 0;
+  return decodeBlockData(chunk.blocks[coordToIndexCPU(x, y, z)]).blockType === 0;
 };
 
 function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Int32Array): number {
@@ -100,27 +106,29 @@ function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Int32Array): number {
   for (let z = 0; z < CHUNK_SIZE; z++) {
     for (let y = 0; y < CHUNK_SIZE; y++) {
       for (let x = 0; x < CHUNK_SIZE; x++) {
-        if (blocks[coordToIndexCPU(x, y, z)] === 0) continue;
+        const blockData = blocks[coordToIndexCPU(x, y, z)];
+        const { blockType, lightLevel } = decodeBlockData(blockData);
+        if (blockType === 0) continue;
 
         const wx = wx0 + x;
         const wy = wy0 + y;
         const wz = wz0 + z;
 
         // This function makes things cleaner and doesn't slow down things too much (less than 3%)
-        function addFace(index: number) {
+        function addFace(index: number, lightLevel: number) {
           arrayBuffer[4 * verticesCount] = wx;
           arrayBuffer[4 * verticesCount + 1] = wy;
           arrayBuffer[4 * verticesCount + 2] = wz;
-          arrayBuffer[4 * verticesCount + 3] = 1 | (index << 8);
+          arrayBuffer[4 * verticesCount + 3] = 1 | (index << 8) | (lightLevel << 24);
           verticesCount += 1;
         }
 
-        if (isAir(chunk, x, y - 1, z)) addFace(0);
-        if (isAir(chunk, x, y + 1, z)) addFace(1);
-        if (isAir(chunk, x - 1, y, z)) addFace(2);
-        if (isAir(chunk, x + 1, y, z)) addFace(3);
-        if (isAir(chunk, x, y, z + 1)) addFace(4);
-        if (isAir(chunk, x, y, z - 1)) addFace(5);
+        if (isAir(chunk, x, y - 1, z)) addFace(0, lightLevel);
+        if (isAir(chunk, x, y + 1, z)) addFace(1, lightLevel);
+        if (isAir(chunk, x - 1, y, z)) addFace(2, lightLevel);
+        if (isAir(chunk, x + 1, y, z)) addFace(3, lightLevel);
+        if (isAir(chunk, x, y, z + 1)) addFace(4, lightLevel);
+        if (isAir(chunk, x, y, z - 1)) addFace(5, lightLevel);
       }
     }
   }

@@ -1,5 +1,6 @@
 import tgpu, {
   d,
+  std,
   type TgpuGuardedComputePipeline,
   type TgpuMutable,
   type TgpuRoot,
@@ -33,9 +34,11 @@ export class ChunkGenerator {
       const sampleIndex = d.vec3f(x, y, z) + d.vec3f(this.chunkIndexUniform.$) * CHUNK_SIZE;
       const result = perlin3d.sample(sampleIndex * 0.2) ** 3;
       if (d.f32(result) > -0.02) {
-        this.blocksMutable.$[arrayIndex] = blockTypes.air;
+        this.blocksMutable.$[arrayIndex] =
+          blockTypes.air + std.min(0, 16 + this.chunkIndexUniform.$.y) * 2 ** 24;
       } else {
-        this.blocksMutable.$[arrayIndex] = blockTypes.stone;
+        this.blocksMutable.$[arrayIndex] =
+          blockTypes.stone + std.min(0, 16 + this.chunkIndexUniform.$.y) * 2 ** 24;
       }
     });
   }

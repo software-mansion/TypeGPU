@@ -11,6 +11,5 @@ export const PlayerModel = d.struct({ model: d.mat4x4f });
 // - least important 8 bits - block type
 // - next 8 bits - sprite side index
 // - next 8 bits - block metadata (block type specific)
-// - next 4 bits - sky light level (without semi-transparent blocks, this is always either 0 or 15)
-// - last 4 bits - block sky level
+// - next 4 bits - light level
 export const MeshLayout = tgpu.vertexLayout(d.arrayOf(d.vec4i), 'instance');
