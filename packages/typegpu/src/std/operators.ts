@@ -10,7 +10,6 @@ import {
   type BaseData,
   type mBaseForVec,
   type vBaseForMat,
-  type AnyUnsignedVecInstance,
   isFloat32VecInstance,
   isInteger32VecInstance,
   isMat,
@@ -18,6 +17,7 @@ import {
   isUint32VecInstance,
   isVec,
   isVecInstance,
+  vecIToVecU,
 } from '../data/wgslTypes.ts';
 import { SignatureNotSupportedError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';
@@ -322,15 +322,15 @@ const bitShiftSignature = (lhs: BaseData, rhs: BaseData) => {
 
 function cpuBitShiftLeft(lhs: number, rhs: number): number;
 function cpuBitShiftLeft<T extends AnyIntegerVecInstance>(lhs: T, rhs: number): T;
-function cpuBitShiftLeft<T extends AnyIntegerVecInstance>(lhs: T, rhs: AnyUnsignedVecInstance): T;
-function cpuBitShiftLeft(
+function cpuBitShiftLeft<T extends AnyIntegerVecInstance>(lhs: T, rhs: vecIToVecU<T>): T;
+function cpuBitShiftLeft<T extends AnyIntegerVecInstance>(
   lhs: number | AnyIntegerVecInstance,
-  rhs: number | AnyUnsignedVecInstance,
+  rhs: number | vecIToVecU<T>,
 ) {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs << rhs;
   }
-  if (isInteger32VecInstance(lhs) && isUint32VecInstance(rhs)) {
+  if (isInteger32VecInstance(lhs) && isUint32VecInstance(rhs) && lhs.length == rhs.length) {
     return VectorOps.bitShiftLeft[lhs.kind](lhs, rhs);
   }
   if (isInteger32VecInstance(lhs) && typeof rhs === 'number') {
@@ -338,7 +338,7 @@ function cpuBitShiftLeft(
     return VectorOps.bitShiftLeft[lhs.kind](lhs, rhsVec);
   }
   throw new Error(
-    'bitShiftLeft called with invalid arguments, expected types: number or integer vector.',
+    'bitShiftLeft called with invalid arguments, expected types: number or integer vector (rhs must be the same arity as lhs).',
   );
 }
 
@@ -358,15 +358,15 @@ export const bitShiftLeft = dualImpl({
 
 function cpuBitShiftRight(lhs: number, rhs: number): number;
 function cpuBitShiftRight<T extends AnyIntegerVecInstance>(lhs: T, rhs: number): T;
-function cpuBitShiftRight<T extends AnyIntegerVecInstance>(lhs: T, rhs: AnyUnsignedVecInstance): T;
-function cpuBitShiftRight(
+function cpuBitShiftRight<T extends AnyIntegerVecInstance>(lhs: T, rhs: vecIToVecU<T>): T;
+function cpuBitShiftRight<T extends AnyIntegerVecInstance>(
   lhs: number | AnyIntegerVecInstance,
-  rhs: number | AnyUnsignedVecInstance,
+  rhs: number | vecIToVecU<T>,
 ) {
   if (typeof lhs === 'number' && typeof rhs === 'number') {
     return lhs >> rhs;
   }
-  if (isInteger32VecInstance(lhs) && isUint32VecInstance(rhs)) {
+  if (isInteger32VecInstance(lhs) && isUint32VecInstance(rhs) && lhs.length == rhs.length) {
     return VectorOps.bitShiftRight[lhs.kind](lhs, rhs);
   }
   if (isInteger32VecInstance(lhs) && typeof rhs === 'number') {
@@ -374,7 +374,7 @@ function cpuBitShiftRight(
     return VectorOps.bitShiftRight[lhs.kind](lhs, rhsVec);
   }
   throw new Error(
-    'bitShiftRight called with invalid arguments, expected types: number or integer vector.',
+    'bitShiftRight called with invalid arguments, expected types: number or integer vector (rhs must be the same arity as lhs).',
   );
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { u32, i32, vec3f, vec3i, vec3u, f32 } from '../../../src/data/index.ts';
+import { u32, i32, vec3f, vec3i, vec3u, f32, vec2u } from '../../../src/data/index.ts';
 import { bitShiftLeft, bitShiftRight } from '../../../src/std/index.ts';
 import tgpu from '../../../src/index.js';
 
@@ -132,7 +132,7 @@ describe('bit shift', () => {
       'use gpu';
       const shift = vec3u(4);
       const x = vec3i(256);
-      // @ts-expect-error
+      // @ts-expect-error: part of the test
       return x << shift;
     };
 
@@ -150,7 +150,7 @@ describe('bit shift', () => {
       'use gpu';
       const shift = vec3u(4);
       let x = vec3i(256);
-      // @ts-expect-error
+      // @ts-expect-error: part of the test
       x >>= shift;
     };
 
@@ -188,12 +188,52 @@ describe('bit shift', () => {
     const x = vec3f(1, 2, 3);
     // @ts-expect-error: part of the test
     expect(() => bitShiftLeft(x, vec3u(1, 2, 3))).toThrowErrorMatchingInlineSnapshot(
-      `[Error: bitShiftLeft called with invalid arguments, expected types: number or integer vector.]`,
+      `[Error: bitShiftLeft called with invalid arguments, expected types: number or integer vector (rhs must be the same arity as lhs).]`,
     );
     // @ts-expect-error: part of the test
     expect(() => bitShiftRight(x, vec3u(1, 2, 3))).toThrowErrorMatchingInlineSnapshot(
-      `[Error: bitShiftRight called with invalid arguments, expected types: number or integer vector.]`,
+      `[Error: bitShiftRight called with invalid arguments, expected types: number or integer vector (rhs must be the same arity as lhs).]`,
     );
+  });
+
+  it('throws when calling bitShiftLeft/Right with vectors of different arity', () => {
+    const x = vec3i(1, 2, 3);
+    //@ts-expect-error: part of the test
+    expect(() => bitShiftLeft(x, vec2u(1))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: bitShiftLeft called with invalid arguments, expected types: number or integer vector (rhs must be the same arity as lhs).]`,
+    );
+
+    const f = () => {
+      'use gpu';
+      const shift = vec2u(4);
+      let x = vec3i(256);
+      // @ts-expect-error: part of the test
+      x.bitShiftLeft(shift);
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): Unsupported data types: vec2u. Supported types are: u32, vec3u.]
+    `);
+  });
+
+  it('throws when using raw <<  with vectors of different arity', () => {
+    const f = () => {
+      'use gpu';
+      const shift = vec2u(4);
+      let x = vec3i(256);
+      // @ts-expect-error: part of the test
+      x << shift;
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): Cannot convert value of type 'vec2u' to any of the target types: [vec3u]]
+    `);
   });
 
   it('bitShiftLeft/Right is available only on integer vectors (at type level)', () => {
