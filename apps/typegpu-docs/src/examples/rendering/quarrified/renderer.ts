@@ -33,7 +33,9 @@ export class Renderer {
         const blockType = d.u32(position.w) & (2 ** 8 - 1);
         const sideNumber = d.u32(position.w / 2 ** 8) & (2 ** 8 - 1);
         const sideVertex = $vertexIndex;
-        const blockMetadata = d.u32(position.w / 2 ** 16);
+        const blockMetadata = d.u32(position.w / 2 ** 16) & (2 ** 8 - 1);
+        const skyLightLevel = d.u32(position.w / 2 ** 24) & (2 ** 4 - 1);
+        const blockLightLevel = d.u32(position.w / 2 ** 28) & (2 ** 4 - 1);
 
         const worldPos = d.vec3f(blockPos + faceOffsets.$[sideNumber * 4 + sideVertex]);
 

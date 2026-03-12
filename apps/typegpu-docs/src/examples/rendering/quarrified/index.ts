@@ -27,12 +27,16 @@ const { cleanupCamera, updatePosition } = setupFirstPersonCamera(
 );
 
 const mesher = new Mesher(root);
+
+// --- This is here only to measure performance and will be removed ---
 const time = performance.now();
-mesher.recalculateMeshesFor(state.map.chunks);
+const initialDirtyChunks = state.worldMap.getAndCleanDirtyChunks();
+mesher.recalculateMeshesFor(initialDirtyChunks);
 const total = performance.now() - time;
 console.log(
-  `Meshing ${state.map.chunks.length} chunks took ${total.toFixed(0)}ms, agv: ${(total / state.map.chunks.length).toFixed(2)}ms`,
+  `Meshing ${initialDirtyChunks.length} chunks took ${total.toFixed(0)}ms, agv: ${(total / initialDirtyChunks.length).toFixed(2)}ms`,
 );
+// --- End ---
 
 const renderer = new Renderer(root, cameraUniform);
 
@@ -40,11 +44,15 @@ let frameId = requestAnimationFrame(draw);
 function draw() {
   updatePosition();
 
-  // for testing purposes, let's modify one block from a random chunk each frame
-  // const randomChunk = state.map.chunks[Math.floor(Math.random() * state.map.chunks.length)];
-  // const randomBlock = Math.floor(Math.random() * 16 ** 3);
-  // randomChunk.blocks[randomBlock] = 1 - randomChunk.blocks[randomBlock];
-  // mesher.recalculateMeshesFor([randomChunk]);
+  // for testing purposes, let's modify one block chunk 0, 0, 0
+  const randomBlockPos = d.vec3i(
+    Math.floor(Math.random() * 16),
+    Math.floor(Math.random() * 16),
+    Math.floor(Math.random() * 16),
+  );
+  state.worldMap.updateBlock(d.vec3i(), randomBlockPos, Math.random() < 0.5 ? 0 : 1);
+
+  mesher.recalculateMeshesFor(state.worldMap.getAndCleanDirtyChunks());
 
   const mesherResources = mesher.getResources();
   renderer.render(context, mesherResources);
