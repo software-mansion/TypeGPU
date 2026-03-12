@@ -1,4 +1,5 @@
-import { d, std } from 'typegpu';
+import tgpu, { d, std } from 'typegpu';
+import { hexToOklab, oklabToRgb } from '@typegpu/color';
 import { useConfigureContext, useFrame, useRoot, useUniformValue } from '@typegpu/react';
 import { useMemo } from 'react';
 
@@ -12,6 +13,20 @@ function rotate(v: d.v2f, angle: number): d.v2f {
   return pos;
 }
 
+const purple = hexToOklab('#c463ff');
+const blue = hexToOklab('#22ffff');
+
+function getGradientColor(ratio: number) {
+  'use gpu';
+  return oklabToRgb(std.mix(purple, blue, ratio));
+}
+
+const positions = tgpu.const(d.arrayOf(d.vec2f, 3), [
+  d.vec2f(0, 1),
+  rotate(d.vec2f(0, 1), (Math.PI * 2) / 3),
+  rotate(d.vec2f(0, 1), (Math.PI * 4) / 3),
+]);
+
 function App() {
   const root = useRoot();
   const time = useUniformValue(d.f32, 0);
@@ -21,13 +36,20 @@ function App() {
       root.createRenderPipeline({
         vertex: ({ $vertexIndex: vid }) => {
           'use gpu';
-          const positions = [d.vec2f(0, 1.1), d.vec2f(-1, -0.7), d.vec2f(1, -0.7)];
-          const rotated = rotate(positions[vid], time.$);
-          return { $position: d.vec4f(rotated * 0.7, 0, 1) };
+          const local = positions.$[vid];
+          const rotated = rotate(local, time.$ * 0.1);
+          return {
+            $position: d.vec4f(rotated * 0.7, 0, 1),
+            dist0: std.length(local - positions.$[0]),
+            dist1: std.length(local - positions.$[1]),
+            dist2: std.length(local - positions.$[2]),
+          };
         },
-        fragment: () => {
+        fragment: ({ dist0, dist1, dist2 }) => {
           'use gpu';
-          return d.vec4f(1, 0, 0, 1);
+          const dist = 1 / (1.4 - std.min(dist0, dist1, dist2));
+          const albedo = getGradientColor(std.fract(dist * 2 - time.$) * 2 - 1 + std.cos(time.$));
+          return d.vec4f(albedo, 1);
         },
       }),
     [root, time],

@@ -1,6 +1,6 @@
 import { d, common, std } from 'typegpu';
 import { useConfigureContext, useFrame, useRoot, useUniformValue } from '@typegpu/react';
-import { hexToRgb, oklabToRgb, hexToOklab, rgbToOklab } from '@typegpu/color';
+import { oklabToRgb, hexToOklab } from '@typegpu/color';
 
 function App() {
   const root = useRoot();
@@ -13,11 +13,11 @@ function App() {
         fragment: ({ uv }) => {
           'use gpu';
           const fromStart = hexToOklab('#ff0000');
-          const fromEnd = rgbToOklab(hexToRgb('#0000ff'));
+          const fromEnd = hexToOklab('#0000ff');
           const from = std.mix(fromStart, fromEnd, std.sin(time.$) * 0.5 + 0.5);
 
-          const toStart = rgbToOklab(hexToRgb('#00ff00'));
-          const toEnd = rgbToOklab(hexToRgb('#ff00ff'));
+          const toStart = hexToOklab('#00ff00');
+          const toEnd = hexToOklab('#ff00ff');
           const to = std.mix(toStart, toEnd, std.cos(time.$ * 1.5) * 0.5 + 0.5);
 
           const mixed = std.mix(from, to, (uv.x * 2 - 1) * 0.5 + std.sin(time.$ + uv.y * 3) * 0.5);
