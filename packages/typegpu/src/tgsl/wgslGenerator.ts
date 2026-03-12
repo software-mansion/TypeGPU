@@ -10,6 +10,7 @@ import {
   unptr,
 } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
+import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
   fallthroughCopyOrigin,
   isEphemeralOrigin,
@@ -76,6 +77,8 @@ const parenthesizedOps = [
 ];
 
 const binaryLogicalOps = ['&&', '||', '==', '!=', '===', '!==', '<', '<=', '>', '>='];
+
+const bitShiftOps: string[] = ['<<', '>>', '<<=', '>>='];
 
 const OP_MAP = {
   //
@@ -348,12 +351,28 @@ ${this.ctx.pre}}`;
         return codegen(this.ctx, [lhsExpr, rhsExpr]);
       }
 
-      const forcedType = exprType === NODE.assignmentExpr ? [lhsExpr.dataType] : undefined;
+      let convLhs: Snippet;
+      let convRhs: Snippet;
 
-      const [convLhs, convRhs] = convertToCommonType(this.ctx, [lhsExpr, rhsExpr], forcedType) ?? [
-        lhsExpr,
-        rhsExpr,
-      ];
+      if (bitShiftOps.includes(op)) {
+        // rhs must be u32 (or vecN<u32> for vector lhs)
+        let rhsTarget: wgsl.BaseData;
+        if (wgsl.isVec(lhsExpr.dataType)) {
+          const cc = lhsExpr.dataType.componentCount;
+          rhsTarget = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;
+        } else {
+          rhsTarget = u32;
+        }
+        convRhs = tryConvertSnippet(this.ctx, rhsExpr, rhsTarget, false);
+        // if lhs is not an integer type, the browser will return a descriptive wgsl error
+        convLhs = lhsExpr;
+      } else {
+        const forcedType = exprType === NODE.assignmentExpr ? [lhsExpr.dataType] : undefined;
+        [convLhs, convRhs] = convertToCommonType(this.ctx, [lhsExpr, rhsExpr], forcedType) ?? [
+          lhsExpr,
+          rhsExpr,
+        ];
+      }
 
       const lhsStr = this.ctx.resolve(convLhs.value, convLhs.dataType).value;
       const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
