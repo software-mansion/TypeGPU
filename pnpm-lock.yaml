@@ -673,9 +673,18 @@ importers:
       '@types/react':
         specifier: ^19.0.0
         version: 19.1.8
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.1.6(@types/react@19.1.8)
       '@webgpu/types':
         specifier: catalog:types
         version: 0.1.66
+      jiti:
+        specifier: catalog:build
+        version: 2.6.1
+      jsdom:
+        specifier: ^27.0.0
+        version: 27.0.0(canvas@3.2.0)(postcss@8.5.6)
       tsdown:
         specifier: catalog:build
         version: 0.20.3(tsover@5.9.11)
