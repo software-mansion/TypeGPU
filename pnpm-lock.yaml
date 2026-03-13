@@ -369,6 +369,9 @@ importers:
       tailwindcss-motion:
         specifier: ^1.1.1
         version: 1.1.1(tailwindcss@4.1.11)
+      typegpu-testing-utility:
+        specifier: workspace:*
+        version: link:../../packages/typegpu-testing-utility
       vite-imagetools:
         specifier: catalog:frontend
         version: 9.0.0(rollup@4.34.8)
@@ -525,6 +528,9 @@ importers:
       tsdown:
         specifier: catalog:build
         version: 0.20.3(tsover@5.9.11)
+      typegpu-testing-utility:
+        specifier: workspace:*
+        version: link:../typegpu-testing-utility
       typescript:
         specifier: npm:tsover@^5.9.11
         version: tsover@5.9.11
@@ -673,6 +679,16 @@ importers:
         specifier: workspace:*
         version: link:../unplugin-typegpu
     publishDirectory: dist
+
+  packages/typegpu-testing-utility:
+    dependencies:
+      typegpu:
+        specifier: workspace:*
+        version: link:../typegpu
+    devDependencies:
+      typescript:
+        specifier: npm:tsover@^5.9.11
+        version: tsover@5.9.11
 
   packages/typegpu-three:
     dependencies:

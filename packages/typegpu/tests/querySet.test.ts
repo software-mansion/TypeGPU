@@ -1,7 +1,7 @@
 import { describe, expect, vi } from 'vitest';
 import { getName } from '../src/shared/meta.ts';
 import { $internal } from '../src/shared/symbols.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('TgpuQuerySet', () => {
   it('should be namable', ({ root }) => {
