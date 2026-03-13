@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import tgpu, { d, std, type TgpuAccessor } from '../src/index.js';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 const RED = d.vec3f(1, 0, 0);
 const Boid = d.struct({

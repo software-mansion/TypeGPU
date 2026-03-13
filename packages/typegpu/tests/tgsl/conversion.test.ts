@@ -7,7 +7,7 @@ import {
   convertToCommonType,
   getBestConversion,
 } from '../../src/tgsl/conversion.ts';
-import { it } from '../utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import { INTERNAL_setCtx } from '../../src/execMode.ts';
 import { CodegenState } from '../../src/types.ts';
 import { UnknownData } from '../../src/data/dataTypes.ts';

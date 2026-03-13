@@ -11,7 +11,7 @@ import tgpu, {
   type TgpuVertexFnShell,
 } from '../src/index.js';
 import { $internal } from '../src/shared/symbols.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('root.withVertex(...).withFragment(...)', () => {
   const vert = tgpu.vertexFn({

@@ -1,6 +1,6 @@
 import { describe, expect, vi } from 'vitest';
 import tgpu, { d } from '../src/index.js';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('tgpu.namespace', () => {
   it('defines direct dependencies only once', () => {
