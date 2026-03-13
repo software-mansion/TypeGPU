@@ -1,5 +1,5 @@
 import { roundUp } from '../mathUtils.ts';
-import type { Infer } from '../shared/repr.ts';
+import type { InferInput } from '../shared/repr.ts';
 import { alignmentOf } from './alignmentOf.ts';
 import { isDisarray, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
@@ -19,7 +19,13 @@ export const EVAL_ALLOWED_IN_ENV: boolean = (() => {
 
 const compiledWriters = new WeakMap<
   wgsl.BaseData,
-  (output: DataView, offset: number, value: unknown, littleEndian?: boolean) => void
+  (
+    output: DataView,
+    offset: number,
+    value: unknown,
+    littleEndian?: boolean,
+    endOffset?: number,
+  ) => void
 >();
 
 const typeToPrimitive = {
@@ -142,16 +148,24 @@ const specialPackedFormats = {
   },
 } as const;
 
+/**
+ * Builds the body of a compiled writer function.
+ *
+ * @param partial - When `true`, emits `endOffset` upper-bound checks for partial writes
+ *   (preventing out-of-bounds access when fewer elements are passed than the schema expects).
+ *   When `false` (default), emits plain writes for maximum performance on full-buffer writes.
+ */
 export function buildWriter(
   node: wgsl.BaseData,
   offsetExpr: string,
   valueExpr: string,
   depth = 0,
+  partial = false,
 ): string {
   const loopVar = ['i', 'j', 'k'][depth] || `i${depth}`;
 
   if (wgsl.isAtomic(node) || wgsl.isDecorated(node)) {
-    return buildWriter(node.inner, offsetExpr, valueExpr, depth);
+    return buildWriter(node.inner, offsetExpr, valueExpr, depth, partial);
   }
 
   if (wgsl.isWgslStruct(node) || isUnstruct(node)) {
@@ -165,6 +179,7 @@ export function buildWriter(
         `(${offsetExpr} + ${propOffset.offset})`,
         `${valueExpr}.${key}`,
         depth,
+        partial,
       );
     }
     return code;
@@ -174,12 +189,45 @@ export function buildWriter(
     const elementSize = roundUp(sizeOf(node.elementType), alignmentOf(node));
     let code = '';
 
+    // Specialized handler for arrays of numeric vectors: supports TypedArray input
+    // where the flat TypedArray has N*componentCount elements (packed, no padding).
+    if (wgsl.isVec(node.elementType)) {
+      const N = node.elementType.componentCount;
+      const primitive = typeToPrimitive[node.elementType.type as keyof typeof typeToPrimitive];
+      const componentSize = sizeOf(node.elementType.primitive);
+      const writeFunc = primitiveToWriteFunction[primitive];
+      const taVar = `_ta${depth}`;
+
+      code += `var ${taVar} = ArrayBuffer.isView(${valueExpr}) && !(${valueExpr} instanceof DataView);\n`;
+      code += `for (let ${loopVar} = 0; ${loopVar} < ${node.elementCount}; ${loopVar}++) {\n`;
+      if (partial) {
+        code += `if ((${offsetExpr} + ${loopVar} * ${elementSize}) >= endOffset) { break; }\n`;
+      }
+      for (let c = 0; c < N; c++) {
+        const byteOff = c * componentSize;
+        const access = `${taVar} ? ${valueExpr}[${loopVar} * ${N} + ${c}] : ${valueExpr}[${loopVar}][${c}]`;
+        if (partial) {
+          code += `if ((${offsetExpr} + ${loopVar} * ${elementSize} + ${byteOff}) < endOffset) {\n`;
+          code += `output.${writeFunc}((${offsetExpr} + ${loopVar} * ${elementSize} + ${byteOff}), ${access}, littleEndian);\n`;
+          code += '}\n';
+        } else {
+          code += `output.${writeFunc}((${offsetExpr} + ${loopVar} * ${elementSize} + ${byteOff}), ${access}, littleEndian);\n`;
+        }
+      }
+      code += '}\n';
+      return code;
+    }
+
     code += `for (let ${loopVar} = 0; ${loopVar} < ${node.elementCount}; ${loopVar}++) {\n`;
+    if (partial) {
+      code += `if ((${offsetExpr} + ${loopVar} * ${elementSize}) >= endOffset) return;\n`;
+    }
     code += buildWriter(
       node.elementType,
       `(${offsetExpr} + ${loopVar} * ${elementSize})`,
       `${valueExpr}[${loopVar}]`,
       depth + 1,
+      partial,
     );
     code += '}\n';
 
@@ -192,14 +240,19 @@ export function buildWriter(
     }
 
     const primitive = typeToPrimitive[node.type];
+    const componentSize = sizeOf(node.primitive);
     let code = '';
     const writeFunc = primitiveToWriteFunction[primitive];
-    const components = ['x', 'y', 'z', 'w'];
 
     for (let i = 0; i < node.componentCount; i++) {
-      code += `output.${writeFunc}((${offsetExpr} + ${i * 4}), ${valueExpr}.${
-        components[i]
-      }, littleEndian);\n`;
+      const byteOff = i * componentSize;
+      if (partial) {
+        code += `if ((${offsetExpr} + ${byteOff}) < endOffset) {\n`;
+        code += `output.${writeFunc}((${offsetExpr} + ${byteOff}), ${valueExpr}[${i}], littleEndian);\n`;
+        code += '}\n';
+      } else {
+        code += `output.${writeFunc}((${offsetExpr} + ${byteOff}), ${valueExpr}[${i}], littleEndian);\n`;
+      }
     }
     return code;
   }
@@ -218,9 +271,17 @@ export function buildWriter(
       const rowIndex = idx % matSize;
       const byteOffset = colIndex * rowStride + rowIndex * 4;
 
-      code += `output.${writeFunc}((${offsetExpr} + ${byteOffset}), ${valueExpr}.columns[${colIndex}].${
-        ['x', 'y', 'z', 'w'][rowIndex]
-      }, littleEndian);\n`;
+      if (partial) {
+        code += `if ((${offsetExpr} + ${byteOffset}) < endOffset) {\n`;
+        code += `output.${writeFunc}((${offsetExpr} + ${byteOffset}), ${valueExpr}.columns[${colIndex}].${
+          ['x', 'y', 'z', 'w'][rowIndex]
+        }, littleEndian);\n`;
+        code += '}\n';
+      } else {
+        code += `output.${writeFunc}((${offsetExpr} + ${byteOffset}), ${valueExpr}.columns[${colIndex}].${
+          ['x', 'y', 'z', 'w'][rowIndex]
+        }, littleEndian);\n`;
+      }
     }
 
     return code;
@@ -231,6 +292,9 @@ export function buildWriter(
 
     if (formatName in specialPackedFormats) {
       const handler = specialPackedFormats[formatName as keyof typeof specialPackedFormats];
+      if (partial) {
+        return `if ((${offsetExpr}) < endOffset) {\n${handler.generator(offsetExpr, valueExpr)}}\n`;
+      }
       return handler.generator(offsetExpr, valueExpr);
     }
 
@@ -252,9 +316,14 @@ export function buildWriter(
     for (let idx = 0; idx < componentCount; idx++) {
       const accessor = componentCount === 1 ? valueExpr : `${valueExpr}.${components[idx]}`;
       const value = transform ? transform(accessor) : accessor;
-      code += `output.${writeFunc}((${offsetExpr} + ${
-        idx * componentSize
-      }), ${value}, littleEndian);\n`;
+      const byteOff = idx * componentSize;
+      if (partial) {
+        code += `if ((${offsetExpr} + ${byteOff}) < endOffset) {\n`;
+        code += `output.${writeFunc}((${offsetExpr} + ${byteOff}), ${value}, littleEndian);\n`;
+        code += '}\n';
+      } else {
+        code += `output.${writeFunc}((${offsetExpr} + ${byteOff}), ${value}, littleEndian);\n`;
+      }
     }
 
     return code;
@@ -265,15 +334,24 @@ export function buildWriter(
   }
 
   const primitive = typeToPrimitive[node.type as keyof typeof typeToPrimitive];
-  return `output.${
-    primitiveToWriteFunction[primitive]
-  }(${offsetExpr}, ${valueExpr}, littleEndian);\n`;
+  if (partial) {
+    return `if ((${offsetExpr}) < endOffset) {\noutput.${
+      primitiveToWriteFunction[primitive]
+    }(${offsetExpr}, ${valueExpr}, littleEndian);\n}\n`;
+  }
+  return `output.${primitiveToWriteFunction[primitive]}(${offsetExpr}, ${valueExpr}, littleEndian);\n`;
 }
 
 export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
   schema: T,
 ):
-  | ((output: DataView, offset: number, value: Infer<T>, littleEndian?: boolean) => void)
+  | ((
+      output: DataView,
+      offset: number,
+      value: InferInput<T>,
+      littleEndian?: boolean,
+      endOffset?: number,
+    ) => void)
   | undefined {
   if (!EVAL_ALLOWED_IN_ENV) {
     console.warn('This environment does not allow eval - using default writer as fallback');
@@ -284,20 +362,31 @@ export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
     return compiledWriters.get(schema) as (
       output: DataView,
       offset: number,
-      value: Infer<T>,
+      value: InferInput<T>,
       littleEndian?: boolean,
+      endOffset?: number,
     ) => void;
   }
 
   try {
-    const body = buildWriter(schema, 'offset', 'value', 0);
+    const fullBody = buildWriter(schema, 'offset', 'value', 0, false);
+    const partialBody = buildWriter(schema, 'offset', 'value', 0, true);
+    const body = `if (offset > 0 || endOffset < output.byteLength) {\n${partialBody}} else {\n${fullBody}}\n`;
 
     // oxlint-disable-next-line typescript-eslint/no-implied-eval
-    const fn = new Function('output', 'offset', 'value', 'littleEndian=true', body) as (
+    const fn = new Function(
+      'output',
+      'offset',
+      'value',
+      'littleEndian=true',
+      'endOffset=output.byteLength',
+      body,
+    ) as (
       output: DataView,
       offset: number,
       value: unknown,
       littleEndian?: boolean,
+      endOffset?: number,
     ) => void;
 
     compiledWriters.set(schema, fn);

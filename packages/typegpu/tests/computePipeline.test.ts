@@ -618,7 +618,7 @@ describe('TgpuComputePipeline', () => {
       const deepBuffer = root.createBuffer(DeepStruct).$usage('indirect');
       pipeline.dispatchWorkgroupsIndirect(
         deepBuffer,
-        d.memoryLayoutOf(DeepStruct, (s) => s.someData[11] as number),
+        d.memoryLayoutOf(DeepStruct, (s) => s.someData[11]),
       );
 
       expect(warnSpy.mock.calls[1]![0]).toMatchInlineSnapshot(
@@ -627,7 +627,7 @@ describe('TgpuComputePipeline', () => {
 
       pipeline.dispatchWorkgroupsIndirect(
         deepBuffer,
-        d.memoryLayoutOf(DeepStruct, (s) => s.nested.innerNested[0]?.yy as number),
+        d.memoryLayoutOf(DeepStruct, (s) => s.nested.innerNested[0]?.yy),
       );
 
       expect(warnSpy.mock.calls[2]![0]).toMatchInlineSnapshot(
