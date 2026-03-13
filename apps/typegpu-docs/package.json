@@ -32,6 +32,7 @@
     "@typegpu/concurrent-scan": "workspace:*",
     "@typegpu/geometry": "workspace:*",
     "@typegpu/noise": "workspace:*",
+    "@typegpu/react": "workspace:*",
     "@typegpu/sdf": "workspace:*",
     "@typegpu/three": "workspace:*",
     "@types/react": "^19.1.8",
