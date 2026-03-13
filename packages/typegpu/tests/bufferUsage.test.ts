@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf } from 'vitest';
 
 import { d, tgpu } from '../src/index.js';
 import type { Infer } from '../src/shared/repr.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('TgpuBufferUniform', () => {
   it('represents a `number` value', ({ root }) => {

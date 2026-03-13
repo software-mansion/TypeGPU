@@ -93,6 +93,7 @@
     "jiti": "catalog:build",
     "jsdom": "^27.0.0",
     "tsdown": "catalog:build",
+    "typegpu-testing-utility": "workspace:*",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*",
     "wgpu-matrix": "catalog:example"

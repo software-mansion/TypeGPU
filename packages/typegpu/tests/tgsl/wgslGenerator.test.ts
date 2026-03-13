@@ -13,7 +13,7 @@ import { $internal } from '../../src/shared/symbols.ts';
 import * as std from '../../src/std/index.ts';
 import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
-import { it } from '../utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import { ArrayExpression } from '../../src/tgsl/generationHelpers.ts';
 import { extractSnippetFromFn } from '../utils/parseResolved.ts';
 

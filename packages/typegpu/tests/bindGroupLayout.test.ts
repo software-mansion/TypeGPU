@@ -15,9 +15,7 @@ import {
   type TgpuLayoutSampler,
   type UnwrapRuntimeConstructor,
 } from '../src/tgpuBindGroupLayout.ts';
-import { it } from './utils/extendedIt.ts';
-// oxlint-disable-next-line import/no-unassigned-import -- imported for side effects
-import './utils/webgpuGlobals.ts';
+import { it } from 'typegpu-testing-utility';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS =
   GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
