@@ -1,6 +1,4 @@
-import { BPETER, type StatefulGenerator } from '@typegpu/noise';
-
-import { LCG } from './lcg.ts';
+import { BPETER, LCG, type StatefulGenerator } from '@typegpu/noise';
 
 export const PRNG = {
   BPETER: 'bpeter (default)',
