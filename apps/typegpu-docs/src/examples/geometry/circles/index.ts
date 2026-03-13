@@ -14,7 +14,6 @@ if (!context) {
 }
 
 const adapter = await navigator.gpu.requestAdapter();
-console.log(`Using ${adapter?.info.vendor} adapter`);
 const device = await adapter?.requestDevice({
   requiredFeatures: ['timestamp-query'],
 });
@@ -29,7 +28,6 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-// Textures
 let msaaTexture: GPUTexture;
 let msaaTextureView: GPUTextureView;
 
@@ -148,6 +146,10 @@ setTimeout(() => {
     .draw(circleVertexCount(4), circleCount);
 }, 100);
 
+// #region Example controls & Cleanup
+
 export function onCleanup() {
   root.destroy();
 }
+
+// #endregion
