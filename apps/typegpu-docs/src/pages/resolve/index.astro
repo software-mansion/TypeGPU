@@ -1,0 +1,19 @@
+---
+import { Image } from "astro:assets";
+import PageLayout from "../../layouts/PageLayout.astro";
+import PlotGallery from "../../components/resolve/PlotGallery.tsx";
+import TypeGPULogoDark from "../../assets/typegpu-logo-dark.svg";
+---
+
+<PageLayout title="TypeGPU functions resolve complexity | TypeGPU" theme="dark">
+    <main class="h-[100dvh] flex flex-col">
+        <h1 class="flex items-center justify-center">
+            <a href="/TypeGPU">
+                <Image src={TypeGPULogoDark} alt="TypeGPU Logo" class="w-40" />
+            </a>
+            <p class="text-lg font-sans text-gray-300">— resolve complexity</p>
+        </h1>
+
+        <PlotGallery client:only="react" />
+    </main>
+</PageLayout>
