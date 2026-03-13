@@ -1,0 +1,190 @@
+import { colors } from './geometry.ts';
+import { createBezier } from './bezier.ts';
+import {
+  foregroundFragment,
+  foregroundVertex,
+  midgroundFragment,
+  midgroundVertex,
+} from './shaderModules.ts';
+import {
+  getAnimationDuration,
+  getCubicBezierControlPoints,
+  getCubicBezierControlPointsString,
+  getGridParams,
+  INIT_TILE_DENSITY,
+  INITIAL_STEP_ROTATION,
+  parseControlPoints,
+  ROTATION_OPTIONS,
+  updateAnimationDuration,
+  updateAspectRatio,
+  updateCubicBezierControlPoints,
+  updateGridParams,
+  updateStepRotation,
+} from './params.ts';
+import {
+  animationProgressAccess,
+  aspectRatioAccess,
+  createBuffers,
+  drawOverNeighborsAccess,
+  middleSquareScaleAccess,
+  scaleAccess,
+  shiftedColorsAccess,
+  stepRotationAccess,
+} from './buffers.ts';
+import tgpu from 'typegpu';
+
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+let ease = createBezier(getCubicBezierControlPoints());
+
+export const root = await tgpu.init();
+
+const {
+  aspectRatioUniform,
+  animationProgressUniform,
+  drawOverNeighborsUniform,
+  getInstanceInfoBindGroup,
+  scaleUniform,
+  shiftedColorsUniform,
+  middleSquareScaleUniform,
+  updateInstanceInfoBufferAndBindGroup,
+  stepRotationUniform,
+} = createBuffers(root);
+
+updateAspectRatio(canvas.width, canvas.height, aspectRatioUniform);
+
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+
+const pipelineBase = root
+  .with(animationProgressAccess, animationProgressUniform)
+  .with(stepRotationAccess, stepRotationUniform)
+  .with(drawOverNeighborsAccess, drawOverNeighborsUniform)
+  .with(shiftedColorsAccess, shiftedColorsUniform)
+  .with(middleSquareScaleAccess, middleSquareScaleUniform)
+  .with(scaleAccess, scaleUniform)
+  .with(aspectRatioAccess, aspectRatioUniform);
+
+const midgroundPipeline = pipelineBase.createRenderPipeline({
+  vertex: midgroundVertex,
+  fragment: midgroundFragment,
+});
+
+const foregroundPipeline = pipelineBase.createRenderPipeline({
+  vertex: foregroundVertex,
+  fragment: foregroundFragment,
+});
+
+function getShiftedColors(timestamp: number) {
+  const shiftBy = Math.floor(timestamp / getAnimationDuration()) %
+    colors.length;
+  return [...colors.slice(shiftBy), ...colors.slice(0, shiftBy)];
+}
+
+let animationFrame: number;
+
+function draw(timestamp: number) {
+  const shiftedColors = getShiftedColors(timestamp);
+
+  shiftedColorsUniform.write(shiftedColors);
+  animationProgressUniform.write(
+    ease((timestamp % getAnimationDuration()) / getAnimationDuration()),
+  );
+
+  const view = context.getCurrentTexture().createView();
+
+  midgroundPipeline
+    .withColorAttachment({
+      view,
+      loadOp: 'clear',
+      storeOp: 'store',
+      clearValue: shiftedColors[0],
+    })
+    .with(getInstanceInfoBindGroup())
+    .draw(3, getGridParams().triangleCount);
+
+  foregroundPipeline
+    .withColorAttachment({
+      view,
+      loadOp: 'load',
+      storeOp: 'store',
+    })
+    .with(getInstanceInfoBindGroup())
+    .draw(3, getGridParams().triangleCount);
+
+  animationFrame = requestAnimationFrame(draw);
+}
+
+animationFrame = requestAnimationFrame(draw);
+
+// cleanup
+const resizeObserver = new ResizeObserver(() => {
+  updateAspectRatio(canvas.width, canvas.height, aspectRatioUniform);
+  updateGridParams(scaleUniform, updateInstanceInfoBufferAndBindGroup);
+  updateInstanceInfoBufferAndBindGroup();
+});
+
+resizeObserver.observe(canvas);
+
+export function onCleanup() {
+  cancelAnimationFrame(animationFrame);
+  resizeObserver.disconnect();
+  root.destroy();
+}
+
+// Example controls
+
+export const controls = {
+  'Tile density': {
+    initial: INIT_TILE_DENSITY,
+    min: 0.01,
+    max: 1.33,
+    step: 0.01,
+    onSliderChange: (newValue: number) =>
+      updateGridParams(
+        scaleUniform,
+        updateInstanceInfoBufferAndBindGroup,
+        newValue,
+      ),
+  },
+  'Animation duration': {
+    initial: getAnimationDuration(),
+    min: 250,
+    max: 3500,
+    step: 25,
+    onSliderChange: updateAnimationDuration,
+  },
+  'Rotation in degrees': {
+    initial: INITIAL_STEP_ROTATION,
+    options: ROTATION_OPTIONS,
+    onSelectChange: (newValue: number) =>
+      updateStepRotation(
+        newValue,
+        stepRotationUniform,
+        middleSquareScaleUniform,
+      ),
+  },
+  'Draw over neighbors': {
+    initial: false,
+    onToggleChange(value: boolean) {
+      drawOverNeighborsUniform.write(value ? 1 : 0);
+    },
+  },
+  'Cubic Bezier Control Points': {
+    initial: getCubicBezierControlPointsString(),
+    async onTextChange(value: string) {
+      const newPoints = parseControlPoints(value);
+
+      updateCubicBezierControlPoints(newPoints);
+      ease = createBezier(
+        newPoints,
+      );
+    },
+  },
+  'Edit Cubic Bezier Points': {
+    onButtonClick: () => {
+      window.open(
+        `https://cubic-bezier.com/?#${getCubicBezierControlPoints().join()}`,
+        '_blank',
+      );
+    },
+  },
+};
