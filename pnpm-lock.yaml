@@ -308,6 +308,9 @@ importers:
       tinybench:
         specifier: ^3.1.0
         version: 3.1.1
+      typed-binary:
+        specifier: ^4.3.1
+        version: 4.3.2
       typedoc:
         specifier: ^0.27.9
         version: 0.27.9(tsover@5.9.11)
@@ -363,6 +366,9 @@ importers:
       magic-string:
         specifier: ^0.30.21
         version: 0.30.21
+      meshoptimizer:
+        specifier: ^1.0.1
+        version: 1.0.1
       tailwindcss:
         specifier: ^4.1.11
         version: 4.1.11
@@ -5712,6 +5718,9 @@ packages:
 
   meshoptimizer@0.22.0:
     resolution: {integrity: sha512-IebiK79sqIy+E4EgOr+CAw+Ke8hAspXKzBd0JdgEmPHiAwmvEj2S4h1rfvo+o/BnfEYd/jAOg5IeeIjzlzSnDg==}
+
+  meshoptimizer@1.0.1:
+    resolution: {integrity: sha512-Vix+QlA1YYT3FwmBBZ+49cE5y/b+pRrcXKqGpS5ouh33d3lSp2PoTpCw19E0cKDFWalembrHnIaZetf27a+W2g==}
 
   mhchemparser@4.2.1:
     resolution: {integrity: sha512-kYmyrCirqJf3zZ9t/0wGgRZ4/ZJw//VwaRVGA75C4nhE60vtnIzhl9J9ndkX/h6hxSN7pjg/cE0VxbnNM+bnDQ==}
@@ -13285,6 +13294,8 @@ snapshots:
   merge2@1.4.1: {}
 
   meshoptimizer@0.22.0: {}
+
+  meshoptimizer@1.0.1: {}
 
   mhchemparser@4.2.1: {}
 

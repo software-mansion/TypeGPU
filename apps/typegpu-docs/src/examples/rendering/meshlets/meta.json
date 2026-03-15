@@ -1,0 +1,6 @@
+{
+  "title": "Meshlets",
+  "category": "rendering",
+  "tags": ["meshlets", "vertex-pulling", "storage-buffers", "instancing"],
+  "coolFactor": 9
+}
