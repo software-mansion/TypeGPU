@@ -25,7 +25,17 @@ describe('[BABEL] "use gpu" directive', () => {
       }, {
         v: 1,
         name: "addGPU",
-        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+        ast: {
+          params: [{
+            type: "i",
+            name: "a"
+          }, {
+            type: "i",
+            name: "b"
+          }],
+          body: [0, [[10, [1, "a", "+", "b"]]]],
+          externalNames: []
+        },
         externals: () => {
           return {};
         }
@@ -62,7 +72,17 @@ describe('[BABEL] "use gpu" directive', () => {
       }, {
         v: 1,
         name: void 0,
-        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+        ast: {
+          params: [{
+            type: "i",
+            name: "a"
+          }, {
+            type: "i",
+            name: "b"
+          }],
+          body: [0, [[10, [1, "a", "+", "b"]]]],
+          externalNames: []
+        },
         externals: () => {
           return {};
         }
@@ -99,7 +119,17 @@ describe('[BABEL] "use gpu" directive', () => {
       }, {
         v: 1,
         name: void 0,
-        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+        ast: {
+          params: [{
+            type: "i",
+            name: "a"
+          }, {
+            type: "i",
+            name: "b"
+          }],
+          body: [0, [[10, [1, "a", "+", "b"]]]],
+          externalNames: []
+        },
         externals: () => {
           return {};
         }
@@ -136,7 +166,17 @@ describe('[BABEL] "use gpu" directive', () => {
       }, {
         v: 1,
         name: "addGPU",
-        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+        ast: {
+          params: [{
+            type: "i",
+            name: "a"
+          }, {
+            type: "i",
+            name: "b"
+          }],
+          body: [0, [[10, [1, "a", "+", "b"]]]],
+          externalNames: []
+        },
         externals: () => {
           return {};
         }
@@ -148,36 +188,55 @@ describe('[BABEL] "use gpu" directive', () => {
   });
 
   it('makes plugin transpile marked function statements', () => {
-    const code = `\
-      import tgpu from 'typegpu';
-
+    const code = `
+      /**
+       * bruh
+       */
       function addGPU(a, b) {
         'use gpu';
+        // hello there
         return a + b;
       }
+
 
       function addCPU(a, b) {
         return a + b;
       }
+
+      console.log(addGPU(1, 2));
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
-      const addGPU = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function addGPU(a, b) {
+      "const addGPU = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function addGPU(a, b) {
         'use gpu';
 
-        return a + b;
+        // hello there
+        return __tsover_add(a, b);
       }, {
         v: 1,
         name: "addGPU",
-        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+        ast: {
+          params: [{
+            type: "i",
+            name: "a"
+          }, {
+            type: "i",
+            name: "b"
+          }],
+          body: [0, [[10, [1, "a", "+", "b"]]]],
+          externalNames: []
+        },
         externals: () => {
           return {};
         }
       }) && $.f)({});
+      /**
+       * bruh
+       */
       function addCPU(a, b) {
         return a + b;
-      }"
+      }
+      console.log(addGPU(1, 2));"
     `);
   });
 
@@ -214,7 +273,17 @@ describe('[BABEL] "use gpu" directive', () => {
         }, {
           v: 1,
           name: "mod",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","%","b"]]]],"externalNames":[]},
+          ast: {
+            params: [{
+              type: "i",
+              name: "a"
+            }, {
+              type: "i",
+              name: "b"
+            }],
+            body: [0, [[10, [1, "a", "%", "b"]]]],
+            externalNames: []
+          },
           externals: () => {
             return {};
           }
@@ -235,7 +304,14 @@ describe('[BABEL] "use gpu" directive', () => {
       }, {
         v: 1,
         name: "isPrime",
-        ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[11,[1,"n","<=",[5,"1"]],[0,[[10,false]]]],[14,[12,"i",[5,"2"]],[1,"i","<","n"],[102,"++","i"],[0,[[11,[1,[6,[7,"obj","mod"],["n","i"]],"===",[5,"0"]],[0,[[10,false]]]]]]],[10,true]]],"externalNames":["obj"]},
+        ast: {
+          params: [{
+            type: "i",
+            name: "n"
+          }],
+          body: [0, [[11, [1, "n", "<=", [5, "1"]], [0, [[10, false]]]], [14, [12, "i", [5, "2"]], [1, "i", "<", "n"], [102, "++", "i"], [0, [[11, [1, [6, [7, "obj", "mod"], ["n", "i"]], "===", [5, "0"]], [0, [[10, false]]]]]]], [10, true]]],
+          externalNames: ["obj"]
+        },
         externals: () => {
           return {
             obj
@@ -257,11 +333,21 @@ describe('[BABEL] "use gpu" directive', () => {
       "const add = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
         'use gpu';
 
-        return a + b;
+        return __tsover_add(a, b);
       }, {
         v: 1,
         name: "add",
-        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+        ast: {
+          params: [{
+            type: "i",
+            name: "a"
+          }, {
+            type: "i",
+            name: "b"
+          }],
+          body: [0, [[10, [1, "a", "+", "b"]]]],
+          externalNames: []
+        },
         externals: () => {
           return {};
         }
@@ -274,14 +360,13 @@ describe('[BABEL] "use gpu" directive', () => {
     const code = `\
       function add(a, b) {
         return a + b;
-      };
+      }
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "function add(a, b) {
         return a + b;
-      }
-      ;"
+      }"
     `);
   });
 
@@ -313,7 +398,17 @@ describe('[BABEL] "use gpu" directive', () => {
       }, {
         v: 1,
         name: "main",
-        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[12,"c",[1,[1,"a","+","b"],"+",[5,"2"]]],[2,"c","+=",[1,[5,"2"],"*","b"]],[2,[7,"countMutable","$"],"+=",[5,"3"]]]],"externalNames":["countMutable"]},
+        ast: {
+          params: [{
+            type: "i",
+            name: "a"
+          }, {
+            type: "i",
+            name: "b"
+          }],
+          body: [0, [[12, "c", [1, [1, "a", "+", "b"], "+", [5, "2"]]], [2, "c", "+=", [1, [5, "2"], "*", "b"]], [2, [7, "countMutable", "$"], "+=", [5, "3"]]]],
+          externalNames: ["countMutable"]
+        },
         externals: () => {
           return {
             countMutable
@@ -356,15 +451,15 @@ describe('[ROLLUP] "use gpu" directive', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import 'typegpu';
 
-      const addGPU = (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
+      const addGPU = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
               'use gpu';
               return __tsover_add(a, b);
             }), {
-                    v: 1,
-                    name: "addGPU",
-                    ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-                    externals: () => ({}),
-                  }) && $.f)({}));
+          v: 1,
+          name: "addGPU",
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({}));
 
             console.log(addGPU);
 
@@ -398,15 +493,15 @@ describe('[ROLLUP] "use gpu" directive', () => {
 
       const shell = tgpu.fn([]);
 
-            shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
+            shell(/* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
               'use gpu';
               return __tsover_add(a, b);
             }), {
-                    v: 1,
-                    name: undefined,
-                    ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-                    externals: () => ({}),
-                  }) && $.f)({})));
+          v: 1,
+          name: undefined,
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({})));
 
             shell((a, b) => {
               return a + b;
@@ -435,15 +530,15 @@ describe('[ROLLUP] "use gpu" directive', () => {
 
       const shell = tgpu.fn([]);
 
-            shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function(a, b){
+            shell(/* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function(a, b){
               'use gpu';
               return __tsover_add(a, b);
             }), {
-                    v: 1,
-                    name: undefined,
-                    ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-                    externals: () => ({}),
-                  }) && $.f)({})));
+          v: 1,
+          name: undefined,
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({})));
 
             shell(function(a, b) {
               return a + b;
@@ -473,15 +568,15 @@ describe('[ROLLUP] "use gpu" directive', () => {
 
       const shell = tgpu.fn([]);
 
-            shell((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function addGPU(a, b){
+            shell(/* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function addGPU(a, b){
               'use gpu';
               return __tsover_add(a, b);
             }), {
-                    v: 1,
-                    name: "addGPU",
-                    ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-                    externals: () => ({}),
-                  }) && $.f)({})));
+          v: 1,
+          name: "addGPU",
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({})));
 
             shell(function addCPU(a, b) {
               return a + b;
@@ -492,8 +587,6 @@ describe('[ROLLUP] "use gpu" directive', () => {
 
   it('makes plugin transpile marked function statements', async () => {
     const code = `\
-      import tgpu from 'typegpu';
-
       function addGPU(a, b) {
         'use gpu';
         return a + b * 3;
@@ -509,17 +602,17 @@ describe('[ROLLUP] "use gpu" directive', () => {
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import 'typegpu';
-
-      const addGPU = (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function addGPU(a, b) {
+      "const addGPU = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function addGPU(a, b) {
               'use gpu';
               return __tsover_add(a, __tsover_mul(b, 3));
             }), {
-                    v: 1,
-                    name: "addGPU",
-                    ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+",[1,"b","*",[5,"3"]]]]]],"externalNames":[]},
-                    externals: () => ({}),
-                  }) && $.f)({}));
+          v: 1,
+          name: "addGPU",
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+",[1,"b","*",[5,"3"]]]]]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({}));
+
+
 
             console.log(addGPU);
 
@@ -528,6 +621,96 @@ describe('[ROLLUP] "use gpu" directive', () => {
             }
 
             console.log(addCPU);
+      "
+    `);
+  });
+
+  it('hoists marked function statements', async () => {
+    const code = `\
+      console.log(add);
+      console.log(mul);
+
+      function add(a, b) {
+        'use gpu';
+        return a + b;
+      }
+
+      function mul(a, b) {
+        'use gpu';
+        return a * b;
+      }
+
+    `;
+
+    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
+      "const mul = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
+              'use gpu';
+              return __tsover_mul(a, b);
+            }), {
+          v: 1,
+          name: "mul",
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({}));
+
+      const add = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
+              'use gpu';
+              return __tsover_add(a, b);
+            }), {
+          v: 1,
+          name: "add",
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({}));
+
+      console.log(add);
+            console.log(mul);
+      "
+    `);
+  });
+
+  it('hoists exported marked function statements', async () => {
+    const code = `\
+      console.log(add);
+      console.log(mul);
+
+      export function add(a, b) {
+        'use gpu';
+        return a + b;
+      }
+
+      export function mul(a, b) {
+        'use gpu';
+        return a * b;
+      }
+
+    `;
+
+    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
+      "const mul = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
+              'use gpu';
+              return __tsover_mul(a, b);
+            }), {
+          v: 1,
+          name: "mul",
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({}));
+
+      const add = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
+              'use gpu';
+              return __tsover_add(a, b);
+            }), {
+          v: 1,
+          name: "add",
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({}));
+
+      console.log(add);
+            console.log(mul);
+
+      export { add, mul };
       "
     `);
   });
@@ -554,22 +737,25 @@ describe('[ROLLUP] "use gpu" directive', () => {
           }
           return true;
         }
+
+        console.log(isPrime(1));
+        console.log(isPrime(2));
       `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "const obj = {
-                mod: (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
+                mod: /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
                   'use gpu';
                   return __tsover_mod(a, b);
                 }), {
-                    v: 1,
-                    name: "mod",
-                    ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","%","b"]]]],"externalNames":[]},
-                    externals: () => ({}),
-                  }) && $.f)({}))
+          v: 1,
+          name: "mod",
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","%","b"]]]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({}))
               };
 
-              (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((n) => {
+              const isPrime = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((n) => {
                 'use gpu';
                 if (n <= 1) {
                   return false;
@@ -582,48 +768,41 @@ describe('[ROLLUP] "use gpu" directive', () => {
                 }
                 return true;
               }), {
-                    v: 1,
-                    name: "isPrime",
-                    ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[11,[1,"n","<=",[5,"1"]],[0,[[10,false]]]],[14,[12,"i",[5,"2"]],[1,"i","<","n"],[102,"++","i"],[0,[[11,[1,[6,[7,"obj","mod"],["n","i"]],"===",[5,"0"]],[0,[[10,false]]]]]]],[10,true]]],"externalNames":["obj"]},
-                    externals: () => ({obj}),
-                  }) && $.f)({}));
+          v: 1,
+          name: "isPrime",
+          ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[11,[1,"n","<=",[5,"1"]],[0,[[10,false]]]],[14,[12,"i",[5,"2"]],[1,"i","<","n"],[102,"++","i"],[0,[[11,[1,[6,[7,"obj","mod"],["n","i"]],"===",[5,"0"]],[0,[[10,false]]]]]]],[10,true]]],"externalNames":["obj"]},
+          externals: () => ({obj}),
+        }) && $.f)({}));
+
+              console.log(isPrime(1));
+              console.log(isPrime(2));
       "
     `);
   });
 
-  it('throws when hoisting was meant to be used', async () => {
-    const code = `\
-      const sum = add(1, 2);
-      function add(a, b) {
-        'use gpu';
-        return a + b;
-      };
-    `;
-
-    await rollupTransform(code);
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      `File  virtual:code: function "add" might have been referenced before its usage. Function statements are no longer hoisted after being transformed by the plugin.`,
-    );
-  });
-
   it('parses when no typegpu import', async () => {
     const code = `\
+      import tgpu from 'typegpu';
+      console.log(tgpu.resolve(add));
       function add(a, b) {
         'use gpu';
         return a + b;
-      };
+      }
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
+      "import tgpu from 'typegpu';
+
+      const add = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
               'use gpu';
               return __tsover_add(a, b);
             }), {
-                    v: 1,
-                    name: "add",
-                    ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-                    externals: () => ({}),
-                  }) && $.f)({}));
+          v: 1,
+          name: "add",
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({}));
+            console.log(tgpu.resolve(add));
       "
     `);
   });
@@ -632,7 +811,7 @@ describe('[ROLLUP] "use gpu" directive', () => {
     const code = `\
       function add(a, b) {
         return a + b;
-      };
+      }
 
       console.log(add);
     `;
@@ -641,6 +820,7 @@ describe('[ROLLUP] "use gpu" directive', () => {
       "function add(a, b) {
               return a + b;
             }
+
             console.log(add);
       "
     `);
@@ -659,6 +839,8 @@ describe('[ROLLUP] "use gpu" directive', () => {
         c += 2 * b;
         countMutable.$ += 3;
       };
+
+      console.log(main);
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
@@ -667,17 +849,19 @@ describe('[ROLLUP] "use gpu" directive', () => {
       const root = await tgpu.init();
             const countMutable = root.createMutable(d.i32, 0);
 
-            (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
+            const main = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
               'use gpu';
               let c = __tsover_add(__tsover_add(a, b), 2);
               c = __tsover_add(c, __tsover_mul(2, b));
               countMutable.$ = __tsover_add(countMutable.$, 3);
             }), {
-                    v: 1,
-                    name: "main",
-                    ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[12,"c",[1,[1,"a","+","b"],"+",[5,"2"]]],[2,"c","+=",[1,[5,"2"],"*","b"]],[2,[7,"countMutable","$"],"+=",[5,"3"]]]],"externalNames":["countMutable"]},
-                    externals: () => ({countMutable}),
-                  }) && $.f)({}));
+          v: 1,
+          name: "main",
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[12,"c",[1,[1,"a","+","b"],"+",[5,"2"]]],[2,"c","+=",[1,[5,"2"],"*","b"]],[2,[7,"countMutable","$"],"+=",[5,"3"]]]],"externalNames":["countMutable"]},
+          externals: () => ({countMutable}),
+        }) && $.f)({}));
+
+            console.log(main);
       "
     `);
   });

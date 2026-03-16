@@ -1,16 +1,95 @@
-import type * as babel from '@babel/types';
-import type * as acorn from 'acorn';
+import type { NodePath, TraverseOptions } from '@babel/traverse';
+import * as t from '@babel/types';
 import type { FilterPattern } from 'unplugin';
+import { MagicStringAST } from 'magic-string-ast';
+import { transpileFn } from 'tinyest-for-wgsl';
 
-export type Context = {
+export type MetadatableFunction =
+  | t.FunctionDeclaration
+  | t.FunctionExpression
+  | t.ArrowFunctionExpression;
+
+export interface TransformMethods {
+  warn(message: string): void;
+
+  /**
+   * For function statements to have metadata assigned, they first have to be manually hoisted
+   * to the top of their scope, then replaced with a variable declaration.
+   *
+   * @example
+   * ```ts
+   * const value = mod(13, 10);
+   * function mod(a: number, b: number): number {
+   *   'use gpu';
+   *   return a % b;
+   * }
+   * ```
+   *
+   * Should be transformed to:
+   *
+   * ```ts
+   * const mod = (a: number, b: number): number => {
+   *   'use gpu';
+   *   return a % b;
+   * };
+   * const value = mod(13, 10);
+   * ```
+   *
+   * Note that named function expressions aren't hoisted, so they don't pose a problem.
+   * ```ts
+   * double(2); // Uncaught ReferenceError: double is not defined
+   * console.log(function double(a) { return a * 2; });
+   * ```
+   */
+  assignMetadata(
+    this: PluginState,
+    path: NodePath<MetadatableFunction>,
+    name: string | undefined,
+    ast: ReturnType<typeof transpileFn>,
+  ): void;
+
+  wrapInAutoName(this: PluginState, path: NodePath<t.Expression>, name: string): void;
+
+  replaceWithAssignmentOverload(path: NodePath<t.AssignmentExpression>, runtimeFn: string): void;
+
+  replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void;
+}
+
+export interface PluginState extends TransformMethods {
   /**
    * How the `tgpu` object is used in code. Since it can be aliased, we
    * need to catch that and act accordingly.
    */
   tgpuAliases: Set<string>;
-  fileId?: string | undefined;
   autoNamingEnabled: boolean;
-};
+
+  /**
+   * Populated by Babel
+   */
+  filename?: string | undefined;
+
+  /**
+   * In Babel, options are assigned to the property `opts` on the plugin state.
+   * We use this pattern everywhere for consistency.
+   */
+  opts: Options;
+
+  inUseGpuScope: boolean;
+
+  alreadyTransformed: WeakSet<t.Node>;
+}
+
+export interface UnpluginPluginState extends PluginState {
+  magicString: MagicStringAST;
+}
+
+export function initPluginState(state: PluginState, methods: TransformMethods): void {
+  state.tgpuAliases = new Set<string>(state.opts.forceTgpuAlias ? [state.opts.forceTgpuAlias] : []);
+  state.autoNamingEnabled = state.opts.autoNamingEnabled ?? true;
+  state.inUseGpuScope = false;
+  state.alreadyTransformed = new WeakSet<t.Node>();
+  Object.assign(state, methods);
+}
 
 export interface Options {
   /** @default [/\.m?[jt]sx?$/] */
@@ -54,16 +133,13 @@ export function embedJSON(jsValue: unknown) {
  * Checks if `node` is an alias for the 'tgpu' object, traditionally
  * available via `import tgpu from 'typegpu'`.
  */
-function isTgpu(ctx: Context, node: babel.Node | acorn.AnyNode): boolean {
+function isTgpu(state: PluginState, node: babel.Node): boolean {
   let path = '';
 
   let tail = node;
   while (true) {
     if (tail.type === 'MemberExpression') {
-      if (
-        (tail.property.type === 'Literal' || tail.property.type === 'StringLiteral') &&
-        tail.property.value === '~unstable'
-      ) {
+      if (tail.property.type === 'StringLiteral' && tail.property.value === '~unstable') {
         // Bypassing the '~unstable' property.
         tail = tail.object;
         continue;
@@ -84,45 +160,69 @@ function isTgpu(ctx: Context, node: babel.Node | acorn.AnyNode): boolean {
     }
   }
 
-  return ctx.tgpuAliases.has(path);
+  return state.tgpuAliases.has(path);
 }
 
-export function gatherTgpuAliases(
-  node: acorn.ImportDeclaration | babel.ImportDeclaration,
-  ctx: Context,
-) {
-  if (node.source.value === 'typegpu') {
-    for (const spec of node.specifiers) {
-      if (
-        // The default export of 'typegpu' is the `tgpu` object.
-        spec.type === 'ImportDefaultSpecifier' ||
-        // Aliasing 'tgpu' while importing, e.g. import { tgpu as t } from 'typegpu';
-        (spec.type === 'ImportSpecifier' &&
-          spec.imported.type === 'Identifier' &&
-          spec.imported.name === 'tgpu')
-      ) {
-        ctx.tgpuAliases.add(spec.local.name);
-      } else if (spec.type === 'ImportNamespaceSpecifier') {
-        // Importing everything, e.g. import * as t from 'typegpu';
-        ctx.tgpuAliases.add(`${spec.local.name}.tgpu`);
-      }
+export function getVisibilityScope(
+  state: PluginState,
+  path: NodePath<t.FunctionDeclaration>,
+): { scope: NodePath<t.Block | t.Program>; name: string } | undefined {
+  if (!path.node.id) {
+    // Anonymous function statement, no visiblility
+    return undefined;
+  }
+
+  // The generated function expression will get visited again
+  const binding = path.scope.getBinding(path.node.id.name);
+  if (!binding) {
+    // Not bound anywhere, we can skip
+    return undefined;
+  }
+
+  const scopePath = binding.scope.path;
+  if (!t.isBlock(scopePath.node) && !t.isProgram(scopePath.node)) {
+    state.warn('FunctionDeclaration scope is not a block or program: ' + scopePath.node.type);
+    return undefined;
+  }
+
+  return {
+    scope: scopePath as NodePath<t.Block | t.Program>,
+    name: path.node.id.name,
+  };
+}
+
+export function gatherTgpuAliases(state: PluginState, node: t.ImportDeclaration) {
+  if (node.source.value !== 'typegpu') {
+    return;
+  }
+
+  for (const spec of node.specifiers) {
+    if (
+      // The default export of 'typegpu' is the `tgpu` object.
+      spec.type === 'ImportDefaultSpecifier' ||
+      // Aliasing 'tgpu' while importing, e.g. import { tgpu as t } from 'typegpu';
+      (spec.type === 'ImportSpecifier' &&
+        spec.imported.type === 'Identifier' &&
+        spec.imported.name === 'tgpu')
+    ) {
+      state.tgpuAliases.add(spec.local.name);
+    } else if (spec.type === 'ImportNamespaceSpecifier') {
+      // Importing everything, e.g. import * as t from 'typegpu';
+      state.tgpuAliases.add(`${spec.local.name}.tgpu`);
     }
   }
 }
 
 const fnShellFunctionNames = ['fn', 'vertexFn', 'fragmentFn', 'computeFn'];
 
-export function isShellImplementationCall(
-  node: acorn.CallExpression | babel.CallExpression,
-  ctx: Context,
-) {
+export function isShellImplementationCall(node: t.CallExpression, state: PluginState) {
   return (
     node.callee.type === 'CallExpression' &&
     node.callee.callee.type === 'MemberExpression' &&
     node.callee.callee.property.type === 'Identifier' &&
     fnShellFunctionNames.includes(node.callee.callee.property.name) &&
     node.arguments.length === 1 &&
-    isTgpu(ctx, node.callee.callee.object)
+    isTgpu(state, node.callee.callee.object)
   );
 }
 
@@ -135,45 +235,43 @@ export function isShellImplementationCall(
  * extractLabelledExpression(node`let name = tgpu.bindGroupLayout({});`)
  * // ["name", node`tgpu.bindGroupLayout({})`]
  */
-function extractLabelledExpression<T extends acorn.AnyNode | babel.Node>(
-  node: T,
-): [string, ExpressionFor<T>] | undefined {
-  if (node.type === 'VariableDeclarator' && node.id.type === 'Identifier' && node.init) {
-    // let id = init;
-    return [node.id.name, node.init as ExpressionFor<T>];
-  } else if (node.type === 'AssignmentExpression') {
-    // left = right;
-    const maybeName = tryFindIdentifier(node.left);
-    if (maybeName) {
-      return [maybeName, node.right as ExpressionFor<T>];
-    }
-  } else if (
-    (node.type === 'Property' || node.type === 'ObjectProperty') &&
-    node.key.type === 'Identifier'
+function extractLabelledExpression(
+  path: NodePath<t.Node>,
+): [string, NodePath<t.Expression>] | undefined {
+  if (
+    path.node.type === 'VariableDeclarator' &&
+    path.node.id.type === 'Identifier' &&
+    path.node.init
   ) {
+    // let id = init;
+    return [path.node.id.name, path.get('init') as NodePath<t.Expression>];
+  } else if (path.node.type === 'AssignmentExpression') {
+    // left = right;
+    const maybeName = tryFindIdentifier(path.node.left);
+    if (maybeName) {
+      return [maybeName, path.get('right') as NodePath<t.Expression>];
+    }
+  } else if (path.node.type === 'ObjectProperty' && path.node.key.type === 'Identifier') {
     // const a = { key: value }
-    return [node.key.name, node.value as ExpressionFor<T>];
+    return [path.node.key.name, path.get('value') as NodePath<t.Expression>];
   } else if (
-    (node.type === 'ClassProperty' || node.type === 'PropertyDefinition') &&
-    node.value &&
-    node.key.type === 'Identifier'
+    path.node.type === 'ClassProperty' &&
+    path.node.value &&
+    path.node.key.type === 'Identifier'
   ) {
     // class Class {
     //	 key = value;
     // }
-    return [node.key.name, node.value as ExpressionFor<T>];
+    return [path.node.key.name, path.get('value') as NodePath<t.Expression>];
   }
 }
 
-export function getFunctionName(
-  node: acorn.AnyNode | babel.Node,
-  parent: acorn.AnyNode | babel.Node | null,
-): string | undefined {
-  const maybeName = parent ? extractLabelledExpression(parent)?.[0] : undefined;
+export function getFunctionName(path: NodePath<t.Node>): string | undefined {
+  const maybeName = path.parentPath ? extractLabelledExpression(path.parentPath)?.[0] : undefined;
   return (
     maybeName ??
-    (node.type === 'FunctionDeclaration' || node.type === 'FunctionExpression'
-      ? node.id?.name
+    (path.node.type === 'FunctionDeclaration' || path.node.type === 'FunctionExpression'
+      ? path.node.id?.name
       : undefined)
   );
 }
@@ -214,9 +312,9 @@ const resourceConstructors: string[] = [
  * Since it is mostly for debugging and clean WGSL generation,
  * some false positives and false negatives are admissible.
  */
-function containsResourceConstructorCall(node: acorn.AnyNode | babel.Node, ctx: Context) {
+function containsResourceConstructorCall(node: babel.Node, state: PluginState) {
   if (node.type === 'CallExpression') {
-    if (isShellImplementationCall(node, ctx)) {
+    if (isShellImplementationCall(node, state)) {
       return true;
     }
     // struct({...})
@@ -234,11 +332,11 @@ function containsResourceConstructorCall(node: acorn.AnyNode | babel.Node, ctx: 
         }
       }
       // root.createBuffer(d.f32).$usage('storage')
-      return containsResourceConstructorCall(node.callee.object, ctx);
+      return containsResourceConstructorCall(node.callee.object, state);
     }
   }
   if (node.type === 'TaggedTemplateExpression') {
-    return containsResourceConstructorCall(node.tag, ctx);
+    return containsResourceConstructorCall(node.tag, state);
   }
   return false;
 }
@@ -253,24 +351,17 @@ function containsResourceConstructorCall(node: acorn.AnyNode | babel.Node, ctx: 
  * tryFindIdentifier('this.myBuffer'); // 'myBuffer'
  * tryFindIdentifier('[a, b]'); // undefined
  */
-function tryFindIdentifier(node: acorn.AnyNode | babel.Node): string | undefined {
+function tryFindIdentifier(node: babel.Node): string | undefined {
   if (node.type === 'Identifier') {
     return node.name;
   }
   if (node.type === 'PrivateName') {
     return tryFindIdentifier(node.id);
   }
-  if (node.type === 'PrivateIdentifier') {
-    return node.name;
-  }
   if (node.type === 'MemberExpression') {
     return tryFindIdentifier(node.property);
   }
 }
-
-type ExpressionFor<T extends acorn.AnyNode | babel.Node> = T extends acorn.AnyNode
-  ? acorn.Expression
-  : babel.Expression;
 
 /**
  * Checks if `node` contains a label and a tgpu expression that could be named.
@@ -291,20 +382,20 @@ type ExpressionFor<T extends acorn.AnyNode | babel.Node> = T extends acorn.AnyNo
  * @privateRemarks
  * When adding new checks, you need to call this method in the corresponding node in Babel.
  */
-export function performExpressionNaming<T extends acorn.AnyNode | babel.Node>(
-  ctx: Context,
-  node: T,
-  namingCallback: (node: ExpressionFor<T>, name: string) => void,
+function performExpressionNaming(
+  state: PluginState,
+  path: NodePath<t.Node>,
+  namingCallback: (node: NodePath<t.Expression>, name: string) => void,
 ) {
-  if (!ctx.autoNamingEnabled) {
+  if (!state.autoNamingEnabled) {
     return;
   }
 
-  const labelledExpression = extractLabelledExpression(node);
+  const labelledExpression = extractLabelledExpression(path);
   if (labelledExpression) {
-    const [label, expression] = labelledExpression;
-    if (containsResourceConstructorCall(expression, ctx)) {
-      namingCallback(expression, label);
+    const [label, expressionPath] = labelledExpression;
+    if (containsResourceConstructorCall(expressionPath.node, state)) {
+      namingCallback(expressionPath, label);
     }
   }
 }
@@ -325,4 +416,168 @@ export const operators = {
   '*=': '__tsover_mul',
   '/=': '__tsover_div',
   '%=': '__tsover_mod',
+};
+
+function containsUseGpuDirective(
+  node: t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
+): boolean {
+  return ('directives' in node.body ? (node.body?.directives ?? []) : [])
+    .map((directive) => directive.value.value)
+    .includes(useGpuDirective);
+}
+
+const fnNodeToOriginalMap = new WeakMap<
+  t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
+  t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression
+>();
+
+const fnNodeToTranspiledMap = new WeakMap<
+  t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
+  ReturnType<typeof transpileFn>
+>();
+
+const functionOnExit = (
+  path: NodePath<t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression>,
+  state: PluginState,
+) => {
+  const node = path.node;
+  if (!containsUseGpuDirective(node)) {
+    return;
+  }
+
+  state.inUseGpuScope = false;
+
+  if (state.alreadyTransformed.has(node)) {
+    return;
+  }
+
+  const ast = fnNodeToTranspiledMap.get(path.node);
+  const maybeName = getFunctionName(path);
+  if (!ast) {
+    throw new Error(`No metadata found for function ${maybeName ?? '<unnamed>'}`);
+  }
+  state.assignMetadata(path, maybeName, ast);
+  state.alreadyTransformed.add(node);
+  path.skip();
+};
+
+export const functionVisitor: TraverseOptions<PluginState> = {
+  ImportDeclaration(path, state) {
+    gatherTgpuAliases(state, path.node);
+  },
+
+  VariableDeclarator(path, state) {
+    performExpressionNaming(state, path, (pathToName, name) => {
+      state.wrapInAutoName(pathToName, name);
+    });
+  },
+
+  ObjectProperty(path, state) {
+    performExpressionNaming(state, path, (pathToName, name) =>
+      state.wrapInAutoName(pathToName, name),
+    );
+  },
+
+  ClassProperty(path, state) {
+    performExpressionNaming(state, path, (pathToName, name) =>
+      state.wrapInAutoName(pathToName, name),
+    );
+  },
+
+  AssignmentExpression: {
+    exit(path, state) {
+      const runtimeFn = operators[path.node.operator as keyof typeof operators];
+      if (state.inUseGpuScope && runtimeFn) {
+        state.replaceWithAssignmentOverload(path, runtimeFn);
+      }
+
+      performExpressionNaming(state, path, (pathToName, name) =>
+        state.wrapInAutoName(pathToName, name),
+      );
+
+      path.skip();
+    },
+  },
+
+  BinaryExpression: {
+    exit(path, state) {
+      const runtimeFn = operators[path.node.operator as keyof typeof operators];
+      if (state.inUseGpuScope && runtimeFn) {
+        state.replaceWithBinaryOverload(path, runtimeFn);
+      }
+
+      path.skip();
+    },
+  },
+
+  ArrowFunctionExpression: {
+    enter(path, state) {
+      if (containsUseGpuDirective(path.node)) {
+        // TODO: Might not be necessary
+        fnNodeToOriginalMap.set(path.node, t.cloneNode(path.node, true));
+        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
+        if (state.inUseGpuScope) {
+          throw new Error(`Nesting 'use gpu' functions is not allowed`);
+        }
+        state.inUseGpuScope = true;
+      }
+    },
+    exit: functionOnExit,
+  },
+
+  FunctionExpression: {
+    enter(path, state) {
+      if (containsUseGpuDirective(path.node)) {
+        // TODO: Might not be necessary
+        fnNodeToOriginalMap.set(path.node, t.cloneNode(path.node, true));
+        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
+        if (state.inUseGpuScope) {
+          throw new Error(`Nesting 'use gpu' functions is not allowed`);
+        }
+        state.inUseGpuScope = true;
+      }
+    },
+    exit: functionOnExit,
+  },
+
+  FunctionDeclaration: {
+    enter(path, state) {
+      if (containsUseGpuDirective(path.node)) {
+        // TODO: Might not be necessary
+        fnNodeToOriginalMap.set(path.node, t.cloneNode(path.node, true));
+        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
+        if (state.inUseGpuScope) {
+          throw new Error(`Nesting 'use gpu' functions is not allowed`);
+        }
+        state.inUseGpuScope = true;
+      }
+    },
+    exit: functionOnExit,
+  },
+
+  CallExpression: {
+    exit(path, state) {
+      const node = path.node;
+
+      if (isShellImplementationCall(node, state)) {
+        const implementation = node.arguments[0];
+
+        if (
+          implementation &&
+          // If it contains a 'use gpu' directive, it has already been transpiled
+          (implementation.type === 'FunctionExpression' ||
+            implementation.type === 'ArrowFunctionExpression') &&
+          !containsUseGpuDirective(implementation)
+        ) {
+          state.assignMetadata(
+            path.get('arguments.0') as NodePath<
+              t.ArrowFunctionExpression | t.FunctionDeclaration | t.FunctionExpression
+            >,
+            getFunctionName(path.get('arguments.0')),
+            transpileFn(implementation),
+          );
+        }
+      }
+    },
+  },
 };
