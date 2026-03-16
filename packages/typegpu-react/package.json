@@ -1,6 +1,6 @@
 {
   "name": "@typegpu/react",
-  "version": "0.10.0-alpha.1",
+  "version": "0.10.0-alpha.2",
   "description": "The best way to integrate TypeGPU into your React app.",
   "keywords": [],
   "license": "MIT",
@@ -21,8 +21,8 @@
       }
     },
     "linkDirectory": false,
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts"
+    "main": "./dist/index.mjs",
+    "types": "./dist/index.d.mts"
   },
   "scripts": {
     "build": "tsdown",
