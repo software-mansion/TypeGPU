@@ -317,6 +317,30 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
     return this[1];
   }
 
+  get z() {
+    return this[2];
+  }
+
+  get w() {
+    return this[3];
+  }
+
+  set x(value: S) {
+    this[0] = value;
+  }
+
+  set y(value: S) {
+    this[1] = value;
+  }
+
+  set z(value: S) {
+    this[2] = value;
+  }
+
+  set w(value: S) {
+    this[3] = value;
+  }
+
   get r() {
     return this[0];
   }
@@ -346,30 +370,6 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
   }
 
   set a(value: S) {
-    this[3] = value;
-  }
-
-  get z() {
-    return this[2];
-  }
-
-  get w() {
-    return this[3];
-  }
-
-  set x(value: S) {
-    this[0] = value;
-  }
-
-  set y(value: S) {
-    this[1] = value;
-  }
-
-  set z(value: S) {
-    this[2] = value;
-  }
-
-  set w(value: S) {
     this[3] = value;
   }
 }
