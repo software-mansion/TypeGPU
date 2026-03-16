@@ -372,6 +372,9 @@ importers:
       typegpu-testing-utility:
         specifier: workspace:*
         version: link:../../packages/typegpu-testing-utility
+      typegpu-testing-utility:
+        specifier: workspace:*
+        version: link:../../packages/typegpu-testing-utility
       vite-imagetools:
         specifier: catalog:frontend
         version: 9.0.0(rollup@4.34.8)
@@ -665,28 +668,6 @@ importers:
     publishDirectory: dist
 
   packages/typegpu-sdf:
-    devDependencies:
-      '@typegpu/tgpu-dev-cli':
-        specifier: workspace:*
-        version: link:../tgpu-dev-cli
-      '@webgpu/types':
-        specifier: catalog:types
-        version: 0.1.66
-      typegpu:
-        specifier: workspace:*
-        version: link:../typegpu
-      typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
-      unbuild:
-        specifier: catalog:build
-        version: 3.5.0(tsover@5.9.11)
-      unplugin-typegpu:
-        specifier: workspace:*
-        version: link:../unplugin-typegpu
-    publishDirectory: dist
-
-  packages/typegpu-sort:
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
