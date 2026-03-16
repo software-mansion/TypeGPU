@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import * as d from '../src/data/index.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import type {
   StorageFlag,
   TgpuBuffer,

@@ -4,7 +4,7 @@ import tgpu, { d } from '../../src/index.js';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { deserializeAndStringify } from '../../src/tgsl/consoleLog/deserializers.ts';
 import { CodegenState } from '../../src/types.ts';
-import { it } from '../utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('wgslGenerator with console.log', () => {
   let ctx: ResolutionCtxImpl;
