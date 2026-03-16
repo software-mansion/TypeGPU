@@ -4,6 +4,7 @@ packages:
 
 catalog:
   arktype: ^2.1.22
+  '@babel/types': ^7.29.0
 
 catalogs:
   build:

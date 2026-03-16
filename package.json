@@ -67,6 +67,7 @@
     ],
     "overrides": {
       "rollup": "4.34.8",
+      "@babel/types": "catalog:",
       "typescript": "catalog:types",
       "three": "catalog:example"
     }
