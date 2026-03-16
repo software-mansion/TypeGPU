@@ -2,6 +2,7 @@ import { d, type StorageFlag, type TgpuBuffer, type TgpuRoot, type VertexFlag } 
 import { CHUNK_SIZE, INIT_CONFIG } from './params.ts';
 import type { Chunk } from './schemas.ts';
 import { coordToIndex } from './chunkGenerator.ts';
+import type { WorldMap } from './state.ts';
 
 export const MAX_CHUNKS_AT_ONCE = Object.values(INIT_CONFIG.chunks)
   .map((v) => v[1] - v[0] + 1)
@@ -28,8 +29,12 @@ export class Mesher {
     this.#emptyArray = new Int32Array(CHUNK_SIZE ** 3 * 4 * 4 * 4);
   }
 
-  recalculateMeshesFor(chunks: Chunk[]) {
-    if (chunks.length === 0) {
+  /**
+   * Checks which meshes need updating and (re)calculates them.
+   */
+  updateMeshes(worldMap: WorldMap) {
+    const dirtyChunks = worldMap.getAndCleanModifiedChunks();
+    if (dirtyChunks.length === 0) {
       return;
     }
 
@@ -39,7 +44,7 @@ export class Mesher {
 
     const unwrappedBuffer = this.#root.unwrap(this.#vertexBuffer);
 
-    for (const chunk of chunks) {
+    for (const chunk of dirtyChunks) {
       const vertexCount = calculateMeshForChunk(chunk, this.#workArray);
       const byteSize = vertexCount * 4 * 4;
 
@@ -83,7 +88,7 @@ export class Mesher {
     // --- This is here only to measure performance and will be removed ---
     const total = performance.now() - time;
     console.log(
-      `Meshing ${chunks.length} chunks took ${total.toFixed(0)}ms, agv: ${(total / chunks.length).toFixed(2)}ms`,
+      `Meshing ${dirtyChunks.length} chunks took ${total.toFixed(0)}ms, agv: ${(total / dirtyChunks.length).toFixed(2)}ms`,
     );
     // --- End ---
   }

@@ -48,7 +48,7 @@ function draw() {
   // );
   // state.worldMap.updateBlock(d.vec3i(), randomBlockPos, Math.random() < 0.5 ? 0 : 1);
 
-  mesher.recalculateMeshesFor(state.worldMap.getAndCleanModifiedChunks());
+  mesher.updateMeshes(state.worldMap);
 
   const mesherResources = mesher.getResources();
   renderer.render(context, mesherResources, playerPos);
