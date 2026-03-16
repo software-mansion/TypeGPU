@@ -8,7 +8,6 @@
     "url": "git+https://github.com/software-mansion/TypeGPU.git"
   },
   "type": "module",
-  "sideEffects": false,
   "exports": "./src/index.ts",
   "dependencies": {
     "typegpu": "workspace:*"
