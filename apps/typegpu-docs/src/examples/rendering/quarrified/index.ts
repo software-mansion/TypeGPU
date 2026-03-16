@@ -14,8 +14,8 @@ const context = root.configureContext({ canvas });
 
 await RAPIER.init();
 const world = new RAPIER.World(new RAPIER.Vector3(0, -9.81, 0));
-const state = new State(INIT_CONFIG, world);
-await state.init(root);
+const state = new State(root, INIT_CONFIG, world);
+await state.init();
 
 const cameraUniform = root.createUniform(Camera);
 
@@ -27,16 +27,6 @@ const {
 } = setupThirdPersonCamera(canvas);
 
 const mesher = new Mesher(root);
-
-// --- This is here only to measure performance and will be removed ---
-const time = performance.now();
-const initialDirtyChunks = state.worldMap.getAndCleanModifiedChunks();
-mesher.recalculateMeshesFor(initialDirtyChunks);
-const total = performance.now() - time;
-console.log(
-  `Meshing ${initialDirtyChunks.length} chunks took ${total.toFixed(0)}ms, agv: ${(total / initialDirtyChunks.length).toFixed(2)}ms`,
-);
-// --- End ---
 
 const renderer = new Renderer(root, cameraUniform, state.player.dims);
 

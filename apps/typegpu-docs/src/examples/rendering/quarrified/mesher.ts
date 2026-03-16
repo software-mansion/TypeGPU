@@ -29,6 +29,14 @@ export class Mesher {
   }
 
   recalculateMeshesFor(chunks: Chunk[]) {
+    if (chunks.length === 0) {
+      return;
+    }
+
+    // --- This is here only to measure performance and will be removed ---
+    const time = performance.now();
+    // --- End ---
+
     const unwrappedBuffer = this.#root.unwrap(this.#vertexBuffer);
 
     for (const chunk of chunks) {
@@ -71,6 +79,13 @@ export class Mesher {
         vertexCount * 4,
       );
     }
+
+    // --- This is here only to measure performance and will be removed ---
+    const total = performance.now() - time;
+    console.log(
+      `Meshing ${chunks.length} chunks took ${total.toFixed(0)}ms, agv: ${(total / chunks.length).toFixed(2)}ms`,
+    );
+    // --- End ---
   }
 
   getResources() {
