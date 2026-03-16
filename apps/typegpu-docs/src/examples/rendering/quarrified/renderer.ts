@@ -150,6 +150,14 @@ export class Renderer {
     mesherResources: ReturnType<Mesher['getResources']>,
     playerPos: d.v3f,
   ) {
+    // --- debug ---
+    console.log(`Drawing ${mesherResources.instanceCount} instances...`);
+    // --- debug end ---
+
+    if (mesherResources.instanceCount === 0) {
+      return;
+    }
+
     const currentTexture = context.getCurrentTexture();
     if (
       !this.#depthTexture ||

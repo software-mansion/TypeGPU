@@ -3,6 +3,7 @@ import { CHUNK_SIZE, INIT_CONFIG } from './params.ts';
 import type { Chunk } from './schemas.ts';
 import { coordToIndex } from './chunkGenerator.ts';
 import type { WorldMap } from './state.ts';
+import { blockTypes } from './blockTypes.ts';
 
 export const MAX_CHUNKS_AT_ONCE = Object.values(INIT_CONFIG.chunks)
   .map((v) => v[1] - v[0] + 1)
@@ -45,7 +46,7 @@ export class Mesher {
     const unwrappedBuffer = this.#root.unwrap(this.#vertexBuffer);
 
     for (const chunk of dirtyChunks) {
-      const vertexCount = calculateMeshForChunk(chunk, this.#workArray);
+      const vertexCount = calculateMeshForChunk(worldMap, chunk, this.#workArray);
       const byteSize = vertexCount * 4 * 4;
 
       let slotId = this.#chunkToId.get(chunk);
@@ -102,20 +103,26 @@ export class Mesher {
   }
 }
 
-const isAir = (chunk: Chunk, x: number, y: number, z: number): boolean => {
-  if (x < 0 || x >= CHUNK_SIZE || y < 0 || y >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) {
-    return true;
-  }
-  return chunk.blocks[coordToIndex(x, y, z)].blockType === 0;
-};
+/**
+ * Calculates a mesh for the chunk, stores it in the provided arrayBuffer, and returns the number of instances (faces).
+ * This function should only be called on chunks that have their neighborhood generated.
+ */
+function calculateMeshForChunk(worldMap: WorldMap, chunk: Chunk, arrayBuffer: Int32Array): number {
+  let instanceCount = 0;
+  const { chunkIndex: ci, blocks } = chunk;
 
-function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Int32Array): number {
-  let verticesCount = 0;
-  const { chunkIndex, blocks } = chunk;
+  // Pre-fetched neighboring chunks to avoid map lookups
+  // !! this makes everything WAY FASTER, 1.05ms -> 0.06ms !!
+  const negX = worldMap.getChunk(d.vec3i(ci.x - 1, ci.y, ci.z)) as Chunk;
+  const posX = worldMap.getChunk(d.vec3i(ci.x + 1, ci.y, ci.z)) as Chunk;
+  const negY = worldMap.getChunk(d.vec3i(ci.x, ci.y - 1, ci.z)) as Chunk;
+  const posY = worldMap.getChunk(d.vec3i(ci.x, ci.y + 1, ci.z)) as Chunk;
+  const negZ = worldMap.getChunk(d.vec3i(ci.x, ci.y, ci.z - 1)) as Chunk;
+  const posZ = worldMap.getChunk(d.vec3i(ci.x, ci.y, ci.z + 1)) as Chunk;
 
-  const wx0 = chunkIndex.x * CHUNK_SIZE;
-  const wy0 = chunkIndex.y * CHUNK_SIZE;
-  const wz0 = chunkIndex.z * CHUNK_SIZE;
+  const wx0 = ci.x * CHUNK_SIZE;
+  const wy0 = ci.y * CHUNK_SIZE;
+  const wz0 = ci.z * CHUNK_SIZE;
 
   for (let z = 0; z < CHUNK_SIZE; z++) {
     for (let y = 0; y < CHUNK_SIZE; y++) {
@@ -127,26 +134,39 @@ function calculateMeshForChunk(chunk: Chunk, arrayBuffer: Int32Array): number {
         const wy = wy0 + y;
         const wz = wz0 + z;
 
-        // This function makes things cleaner and doesn't slow down things too much (less than 3%)
-        function addFace(index: number, lightLevel: number) {
-          arrayBuffer[4 * verticesCount] = wx;
-          arrayBuffer[4 * verticesCount + 1] = wy;
-          arrayBuffer[4 * verticesCount + 2] = wz;
-          arrayBuffer[4 * verticesCount + 3] = 1 | (index << 8) | (lightLevel << 24);
-          verticesCount += 1;
+        // JS is actually smart about dynamically created functions, this is fine
+        function checkAddFace(
+          neighborChunk: Chunk,
+          nx: number,
+          ny: number,
+          nz: number,
+          index: number,
+        ) {
+          const neighborBlock = neighborChunk.blocks[coordToIndex(nx, ny, nz)];
+          if (neighborBlock.blockType !== blockTypes.air) {
+            return;
+          }
+          arrayBuffer[4 * instanceCount] = wx;
+          arrayBuffer[4 * instanceCount + 1] = wy;
+          arrayBuffer[4 * instanceCount + 2] = wz;
+          arrayBuffer[4 * instanceCount + 3] =
+            blockTypes.stone | (index << 8) | (neighborBlock.lightLevel << 24);
+          instanceCount += 1;
         }
 
-        if (isAir(chunk, x, y - 1, z)) addFace(0, blockData.lightLevel);
-        if (isAir(chunk, x, y + 1, z)) addFace(1, blockData.lightLevel);
-        if (isAir(chunk, x - 1, y, z)) addFace(2, blockData.lightLevel);
-        if (isAir(chunk, x + 1, y, z)) addFace(3, blockData.lightLevel);
-        if (isAir(chunk, x, y, z + 1)) addFace(4, blockData.lightLevel);
-        if (isAir(chunk, x, y, z - 1)) addFace(5, blockData.lightLevel);
+        const L = CHUNK_SIZE - 1; // L for limit
+
+        checkAddFace(y === 0 ? negY : chunk, x, y === 0 ? L : y - 1, z, 0);
+        checkAddFace(y === L ? posY : chunk, x, y === L ? 0 : y + 1, z, 1);
+        checkAddFace(x === 0 ? negX : chunk, x === 0 ? L : x - 1, y, z, 2);
+        checkAddFace(x === L ? posX : chunk, x === L ? 0 : x + 1, y, z, 3);
+        checkAddFace(z === L ? posZ : chunk, x, y, z === L ? 0 : z + 1, 4);
+        checkAddFace(z === 0 ? negZ : chunk, x, y, z === 0 ? L : z - 1, 5);
       }
     }
   }
 
-  return verticesCount;
+  return instanceCount;
 }
 
 type SlotId = number;
