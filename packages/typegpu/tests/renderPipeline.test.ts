@@ -1485,6 +1485,66 @@ describe('root.createRenderPipeline', () => {
     `);
   });
 
+  it('derefs implicit pointers in the vertex and fragment outputs', ({ root }) => {
+    const pipeline = root.createRenderPipeline({
+      vertex: ({ $vertexIndex }) => {
+        'use gpu';
+        const pos = [d.vec2f(0.0, 0.5), d.vec2f(-0.5, -0.5), d.vec2f(0.5, -0.5)];
+        const local = pos[$vertexIndex]!;
+        return {
+          $position: d.vec4f(local, 0, 1),
+          local,
+        };
+      },
+      fragment: () => {
+        'use gpu';
+        const color = d.vec4f(1, 0, 0, 1);
+        const alias = color;
+        return {
+          color: alias,
+        };
+      },
+      targets: { color: { format: 'rgba8unorm' } },
+    });
+
+    expectTypeOf(pipeline).toEqualTypeOf<TgpuRenderPipeline<{ color: d.Vec4f }>>();
+
+    const wgsl = tgpu.resolve([pipeline]);
+    // vertex
+    expect(wgsl).toContain('local: vec2f');
+    expect(wgsl).not.toContain('local: ptr<function, vec2f>');
+    // fragment
+    expect(wgsl).toContain('color: vec4f');
+    expect(wgsl).not.toContain('ptr<function, vec4f>');
+
+    expect(wgsl).toMatchInlineSnapshot(`
+      "struct VertexOut {
+        @builtin(position) position: vec4f,
+        @location(0) local: vec2f,
+      }
+
+      struct VertexIn {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
+        var pos = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
+        let local = (&pos[_arg_0.vertexIndex]);
+        return VertexOut(vec4f((*local), 0f, 1f), (*local));
+      }
+
+      struct FragmentOut {
+        @location(0) color: vec4f,
+      }
+
+      @fragment fn fragment() -> FragmentOut {
+        var color = vec4f(1, 0, 0, 1);
+        let alias_1 = (&color);
+        return FragmentOut((*alias_1));
+      }"
+    `);
+  });
+
   it('generates a struct that matches vertex attributes', ({ root }) => {
     const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec3f));
     const pipeline = root.createRenderPipeline({
