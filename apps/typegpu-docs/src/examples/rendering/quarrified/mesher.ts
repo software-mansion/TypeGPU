@@ -128,7 +128,7 @@ function calculateMeshForChunk(worldMap: WorldMap, chunk: Chunk, arrayBuffer: In
     for (let y = 0; y < CHUNK_SIZE; y++) {
       for (let x = 0; x < CHUNK_SIZE; x++) {
         const blockData = blocks[coordToIndex(x, y, z)];
-        if (blockData.blockType === 0) continue;
+        if (blockData.blockType === blockTypes.air) continue;
 
         const wx = wx0 + x;
         const wy = wy0 + y;

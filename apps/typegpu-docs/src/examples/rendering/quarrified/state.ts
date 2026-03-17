@@ -66,9 +66,9 @@ export class State {
           if (blocks[coordToIndex(x, y, z)].blockType === blockTypes.air) {
             continue;
           }
-          tempPoints.push(x0 + x + 0.5);
-          tempPoints.push(y0 + y + 0.5);
-          tempPoints.push(z0 + z + 0.5);
+          tempPoints.push(x0 + x);
+          tempPoints.push(y0 + y);
+          tempPoints.push(z0 + z);
         }
       }
     }
