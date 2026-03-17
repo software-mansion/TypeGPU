@@ -148,13 +148,6 @@ const specialPackedFormats = {
   },
 } as const;
 
-/**
- * Builds the body of a compiled writer function.
- *
- * @param partial - When `true`, emits `endOffset` upper-bound checks for partial writes
- *   (preventing out-of-bounds access when fewer elements are passed than the schema expects).
- *   When `false` (default), emits plain writes for maximum performance on full-buffer writes.
- */
 export function buildWriter(
   node: wgsl.BaseData,
   offsetExpr: string,
@@ -189,8 +182,6 @@ export function buildWriter(
     const elementSize = roundUp(sizeOf(node.elementType), alignmentOf(node));
     let code = '';
 
-    // Specialized handler for arrays of numeric vectors: supports TypedArray input
-    // where the flat TypedArray has N*componentCount elements (packed, no padding).
     if (wgsl.isVec(node.elementType)) {
       const N = node.elementType.componentCount;
       const primitive = typeToPrimitive[node.elementType.type as keyof typeof typeToPrimitive];

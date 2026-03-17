@@ -209,6 +209,13 @@ particleBuffer.write({
 });
 ```
 
+:::caution[WebGPU Interoperability]
+If you create a buffer from an existing WebGPU buffer that happens to be mapped, the data will be written directly to the buffer (the buffer will not be unmapped).
+If you pass an unmapped buffer, the data will be written to the buffer using `GPUQueue.writeBuffer`.
+
+If you passed your own buffer to the `root.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the `write` method.
+:::
+
 ### Permissive vector inputs
 
 For vector fields and buffers, `.write()` accepts three equivalent forms - you don't need to construct a typed vec instance:
@@ -249,13 +256,6 @@ arrBuffer.write(new Float32Array([1, 2, 3, 4, 5, 6]));
 ```
 
 The same rules apply to scalar arrays - a `Float32Array` (or `Int32Array` / `Uint32Array`) can be passed directly to a buffer of `arrayOf(d.f32, n)` (or `i32` / `u32`).
-
-:::caution[WebGPU Interoperability]
-If you create a buffer from an existing WebGPU buffer that happens to be mapped, the data will be written directly to the buffer (the buffer will not be unmapped).
-If you pass an unmapped buffer, the data will be written to the buffer using `GPUQueue.writeBuffer`.
-
-If you passed your own buffer to the `root.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the `write` method.
-:::
 
 ### Writing a slice
 
