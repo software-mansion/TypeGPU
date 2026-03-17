@@ -49,7 +49,7 @@ import { NotUniformError } from './errors.ts';
 import { isUsableAsStorage, NotStorageError, type StorageFlag } from './extension.ts';
 import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
-import type { Infer, MemIdentity } from './shared/repr.ts';
+import type { InferGPU, MemIdentity } from './shared/repr.ts';
 import { safeStringify } from './shared/stringify.ts';
 import { $gpuValueOf, $internal } from './shared/symbols.ts';
 import type { Default, NullableToOptional, Prettify } from './shared/utilityTypes.ts';
@@ -392,19 +392,19 @@ export type BindLayoutEntry<T extends TgpuLayoutEntry | null> = T extends TgpuLa
               : never;
 
 export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends TgpuLayoutUniform
-  ? Infer<T['uniform']>
+  ? InferGPU<T['uniform']>
   : T extends TgpuLayoutStorage
-    ? Infer<UnwrapRuntimeConstructor<T['storage']>>
+    ? InferGPU<UnwrapRuntimeConstructor<T['storage']>>
     : T extends TgpuLayoutSampler
-      ? Infer<WgslSampler>
+      ? InferGPU<WgslSampler>
       : T extends TgpuLayoutComparisonSampler
-        ? Infer<WgslComparisonSampler>
+        ? InferGPU<WgslComparisonSampler>
         : T extends TgpuLayoutTexture<infer TSchema>
-          ? Infer<TSchema>
+          ? InferGPU<TSchema>
           : T extends TgpuLayoutStorageTexture<infer TSchema>
-            ? Infer<TSchema>
+            ? InferGPU<TSchema>
             : T extends TgpuLayoutExternalTexture
-              ? Infer<T['externalTexture']>
+              ? InferGPU<T['externalTexture']>
               : never;
 
 export type ExtractBindGroupInputFromLayout<T extends Record<string, TgpuLayoutEntry | null>> =
@@ -496,14 +496,14 @@ class TgpuBindGroupLayoutImpl<
       const membership: LayoutMembership = { layout: this, key, idx };
 
       if ('uniform' in entry) {
-        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
         (bound[key] as any) = new TgpuLaidOutBufferImpl('uniform', entry.uniform, membership);
       }
 
       if ('storage' in entry) {
         const dataType = 'type' in entry.storage ? entry.storage : entry.storage(0);
 
-        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
         (bound[key] as any) = new TgpuLaidOutBufferImpl(
           entry.access ?? 'readonly',
           dataType,
@@ -512,22 +512,22 @@ class TgpuBindGroupLayoutImpl<
       }
 
       if ('texture' in entry) {
-        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
         (bound[key] as any) = new TgpuLaidOutTextureViewImpl(entry.texture, membership);
       }
 
       if ('storageTexture' in entry) {
-        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
         (bound[key] as any) = new TgpuLaidOutTextureViewImpl(entry.storageTexture, membership);
       }
 
       if ('externalTexture' in entry) {
-        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
         (bound[key] as any) = new TgpuExternalTextureImpl(entry.externalTexture, membership);
       }
 
       if ('sampler' in entry) {
-        // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
+        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
         (bound[key] as any) = new TgpuLaidOutSamplerImpl(
           entry.sampler === 'comparison' ? wgslComparisonSampler() : wgslSampler(),
           membership,
@@ -536,7 +536,7 @@ class TgpuBindGroupLayoutImpl<
 
       Object.defineProperty(this.value, key, {
         get: () => {
-          // oxlint-disable-next-line typescript/no-explicit-any no need for type magic
+          // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
           return (bound[key] as any).value;
         },
       });

@@ -7,4 +7,6 @@ export default defineConfig({
   dts: true,
   platform: 'neutral',
   target: false,
+  unbundle: true,
+  sourcemap: false,
 });

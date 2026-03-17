@@ -155,7 +155,7 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
       const maybeSecondArg = ast.params[1];
       if (maybeSecondArg && maybeSecondArg.type === 'i' && fnAttribute !== '') {
         applyExternals(externalMap, {
-          // oxlint-disable-next-line typescript/no-non-null-assertion entry functions cannot be shellless
+          // oxlint-disable-next-line typescript/no-non-null-assertion -- entry functions cannot be shellless
           [maybeSecondArg.name]: undecorate(returnType!),
         });
       }

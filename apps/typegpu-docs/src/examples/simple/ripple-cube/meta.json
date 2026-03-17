@@ -1,5 +1,6 @@
 {
   "title": "Ripple cube",
   "category": "simple",
-  "tags": ["experimental"]
+  "tags": ["3d", "ecosystem", "noise", "ray marching", "sdf"],
+  "coolFactor": 8
 }

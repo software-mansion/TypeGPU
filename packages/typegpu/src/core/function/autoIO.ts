@@ -7,6 +7,7 @@ import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU, InferGPURecord, InferRecord } from '../../shared/repr.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { shaderStageSlot } from '../slot/internalSlots.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { BaseIOData } from './fnTypes.ts';
 
@@ -53,7 +54,7 @@ type AutoFragmentFnImpl = (
 ) => AutoFragmentOut<undefined | v4f | AnyAutoCustoms>;
 
 /**
- * Only used internally
+ * Only used internally. Meant to be recreated on every resolution.
  */
 export class AutoFragmentFn implements SelfResolvable {
   // Prototype properties
@@ -61,8 +62,8 @@ export class AutoFragmentFn implements SelfResolvable {
   declare resourceType: 'auto-fragment-fn';
 
   #core: FnCore;
-  #autoIn: AutoStruct;
-  #autoOut: AutoStruct;
+  autoIn: AutoStruct;
+  autoOut: AutoStruct;
 
   constructor(
     impl: AutoFragmentFnImpl,
@@ -74,10 +75,10 @@ export class AutoFragmentFn implements SelfResolvable {
       setName(impl, 'fragmentFn');
     }
     this.#core = createFnCore(impl, '@fragment ');
-    this.#autoIn = new AutoStruct({ ...builtinFragmentIn, ...varyings }, undefined, locations);
-    setName(this.#autoIn, 'FragmentIn');
-    this.#autoOut = new AutoStruct(builtinFragmentOut, vec4f);
-    setName(this.#autoOut, 'FragmentOut');
+    this.autoIn = new AutoStruct({ ...builtinFragmentIn, ...varyings }, undefined, locations);
+    setName(this.autoIn, 'FragmentIn');
+    this.autoOut = new AutoStruct(builtinFragmentOut, vec4f);
+    setName(this.autoOut, 'FragmentOut');
   }
 
   toString(): string {
@@ -85,7 +86,9 @@ export class AutoFragmentFn implements SelfResolvable {
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    return this.#core.resolve(ctx, [this.#autoIn], this.#autoOut);
+    return ctx.withSlots([[shaderStageSlot, 'fragment']], () =>
+      this.#core.resolve(ctx, [this.autoIn], this.autoOut),
+    );
   }
 }
 
@@ -97,7 +100,7 @@ type AutoVertexFnImpl = (
 ) => AutoVertexOut<AnyAutoCustoms>;
 
 /**
- * Only used internally
+ * Only used internally. Meant to be recreated on every resolution.
  */
 export class AutoVertexFn implements SelfResolvable {
   // Prototype properties
@@ -105,8 +108,8 @@ export class AutoVertexFn implements SelfResolvable {
   declare resourceType: 'auto-vertex-fn';
 
   #core: FnCore;
-  #autoIn: AutoStruct;
-  #autoOut: AutoStruct;
+  autoIn: AutoStruct;
+  autoOut: AutoStruct;
 
   constructor(
     impl: AutoVertexFnImpl,
@@ -118,10 +121,10 @@ export class AutoVertexFn implements SelfResolvable {
       setName(impl, 'vertexFn');
     }
     this.#core = createFnCore(impl, '@vertex ');
-    this.#autoIn = new AutoStruct({ ...builtinVertexIn, ...attribs }, undefined, locations);
-    setName(this.#autoIn, 'VertexIn');
-    this.#autoOut = new AutoStruct(builtinVertexOut, undefined);
-    setName(this.#autoOut, 'VertexOut');
+    this.autoIn = new AutoStruct({ ...builtinVertexIn, ...attribs }, undefined, locations);
+    setName(this.autoIn, 'VertexIn');
+    this.autoOut = new AutoStruct(builtinVertexOut, undefined);
+    setName(this.autoOut, 'VertexOut');
   }
 
   toString(): string {
@@ -129,7 +132,9 @@ export class AutoVertexFn implements SelfResolvable {
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    return this.#core.resolve(ctx, [this.#autoIn], this.#autoOut);
+    return ctx.withSlots([[shaderStageSlot, 'vertex']], () =>
+      this.#core.resolve(ctx, [this.autoIn], this.autoOut),
+    );
   }
 }
 

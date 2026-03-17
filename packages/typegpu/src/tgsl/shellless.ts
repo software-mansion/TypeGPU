@@ -65,7 +65,7 @@ export class ShelllessRepository {
       let type = concretize(s.dataType);
 
       if (s.origin === 'constant-tgpu-const-ref' || s.origin === 'runtime-tgpu-const-ref') {
-        // oxlint-disable-next-line typescript/no-non-null-assertion it's there
+        // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there
         const ctx = getResolutionCtx()!;
         throw new Error(
           `Cannot pass constant references as function arguments. Explicitly copy them by wrapping them in a schema: '${

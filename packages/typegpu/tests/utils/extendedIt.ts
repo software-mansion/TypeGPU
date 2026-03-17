@@ -1,7 +1,7 @@
 import { it as base, vi } from 'vitest';
 import type { ExperimentalTgpuRoot } from '../../src/core/root/rootTypes.ts';
 import tgpu from '../../src/index.js';
-// oxlint-disable-next-line import/no-unassigned-import imported for side effects
+// oxlint-disable-next-line import/no-unassigned-import -- imported for side effects
 import './webgpuGlobals.ts';
 
 const adapterMock = {
@@ -56,6 +56,9 @@ const mockComputePassEncoder = {
 };
 
 const mockRenderPassEncoder = {
+  get mock() {
+    return mockRenderPassEncoder;
+  },
   draw: vi.fn(),
   drawIndexed: vi.fn(),
   end: vi.fn(),
@@ -64,6 +67,18 @@ const mockRenderPassEncoder = {
   setVertexBuffer: vi.fn(),
   setIndexBuffer: vi.fn(),
   setStencilReference: vi.fn(),
+  executeBundles: vi.fn(),
+};
+
+const mockRenderBundleEncoder = {
+  draw: vi.fn(),
+  drawIndexed: vi.fn(),
+  setBindGroup: vi.fn(),
+  setPipeline: vi.fn(),
+  setVertexBuffer: vi.fn(),
+  setIndexBuffer: vi.fn(),
+  finish: vi.fn(() => 'mockRenderBundle'),
+  label: '<unnamed>',
 };
 
 const mockQuerySet = {
@@ -144,6 +159,12 @@ export const it = base.extend<{
   _global: undefined;
   commandEncoder: GPUCommandEncoder & { mock: typeof mockCommandEncoder };
   device: GPUDevice & { mock: typeof mockDevice };
+  renderPassEncoder: GPURenderPassEncoder & {
+    mock: typeof mockRenderPassEncoder;
+  };
+  renderBundleEncoder: GPURenderBundleEncoder & {
+    mock: typeof mockRenderBundleEncoder;
+  };
   root: ExperimentalTgpuRoot;
 }>({
   _global: [
@@ -162,6 +183,22 @@ export const it = base.extend<{
     await use(
       mockCommandEncoder as unknown as GPUCommandEncoder & {
         mock: typeof mockCommandEncoder;
+      },
+    );
+  },
+
+  renderPassEncoder: async ({ task }, use) => {
+    await use(
+      mockRenderPassEncoder as unknown as GPURenderPassEncoder & {
+        mock: typeof mockRenderPassEncoder;
+      },
+    );
+  },
+
+  renderBundleEncoder: async ({ task }, use) => {
+    await use(
+      mockRenderBundleEncoder as unknown as GPURenderBundleEncoder & {
+        mock: typeof mockRenderBundleEncoder;
       },
     );
   },

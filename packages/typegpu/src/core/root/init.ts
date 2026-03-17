@@ -6,7 +6,7 @@ import {
 } from '../../core/querySet/querySet.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type { AnyWgslData, BaseData, v3u, Vec3u, WgslArray } from '../../data/wgslTypes.ts';
-import { invariant, MissingBindGroupsError, MissingVertexBuffersError } from '../../errors.ts';
+import { invariant } from '../../errors.ts';
 import { WeakMemo } from '../../memo.ts';
 import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import type { Infer } from '../../shared/repr.ts';
@@ -51,6 +51,7 @@ import {
   type TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
 import { isComputePipeline, isRenderPipeline } from '../pipeline/typeGuards.ts';
+import { applyBindGroups, applyVertexBuffers } from '../pipeline/applyPipelineState.ts';
 import {
   INTERNAL_createComparisonSampler,
   INTERNAL_createSampler,
@@ -85,6 +86,7 @@ import type {
   CreateTextureOptions,
   CreateTextureResult,
   ExperimentalTgpuRoot,
+  RenderBundleEncoderPass,
   RenderPass,
   TgpuGuardedComputePipeline,
   TgpuRoot,
@@ -208,7 +210,7 @@ class WithBindingImpl implements WithBinding {
 
   createRenderPipeline(
     descriptor: TgpuRenderPipeline.Descriptor,
-    // oxlint-disable-next-line typescript/no-explicit-any required to be compatible with overloads
+    // oxlint-disable-next-line typescript/no-explicit-any -- required to be compatible with overloads
   ): TgpuRenderPipeline<any> {
     return INTERNAL_createRenderPipeline({
       root: this._getRoot(),
@@ -445,7 +447,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuUniform<TData> {
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
-      // oxlint-disable-next-line typescript/no-explicit-any i'm sure it's fine
+      // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
       .$usage('uniform' as any);
 
     return new TgpuBufferShorthandImpl('uniform', buffer);
@@ -456,7 +458,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuMutable<TData> {
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
-      // oxlint-disable-next-line typescript/no-explicit-any i'm sure it's fine
+      // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
       .$usage('storage' as any);
 
     return new TgpuBufferShorthandImpl('mutable', buffer);
@@ -467,7 +469,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     initialOrBuffer?: Infer<TData> | GPUBuffer,
   ): TgpuReadonly<TData> {
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
-      // oxlint-disable-next-line typescript/no-explicit-any i'm sure it's fine
+      // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
       .$usage('storage' as any);
 
     return new TgpuBufferShorthandImpl('readonly', buffer);
@@ -521,7 +523,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     CreateTextureResult<TSize, TFormat, TMipLevelCount, TSampleCount, TViewFormats, TDimension>
   > {
     const texture = INTERNAL_createTexture(props, this);
-    // oxlint-disable-next-line typescript/no-explicit-any <too much type wrangling>
+    // oxlint-disable-next-line typescript/no-explicit-any -- too much type wrangling
     return texture as any;
   }
 
@@ -617,10 +619,9 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     throw new Error(`Unknown resource type: ${resource}`);
   }
 
-  beginRenderPass(descriptor: GPURenderPassDescriptor, callback: (pass: RenderPass) => void): void {
-    const commandEncoder = this.device.createCommandEncoder();
-    const pass = commandEncoder.beginRenderPass(descriptor);
-
+  private createDrawablePassProxy(
+    encoder: GPURenderPassEncoder | GPURenderBundleEncoder,
+  ): RenderBundleEncoderPass {
     const bindGroups = new Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup>();
     const vertexBuffers = new Map<
       TgpuVertexLayout,
@@ -632,64 +633,87 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     >();
 
     let currentPipeline: TgpuRenderPipeline | undefined;
+    let dirty = true;
 
-    const setupPassBeforeDraw = () => {
+    const applyPipelineState = () => {
       if (!currentPipeline) {
         throw new Error('Cannot draw without a call to pass.setPipeline');
       }
-
+      if (!dirty) {
+        return;
+      }
+      dirty = false;
       const { core, priors } = currentPipeline[$internal];
       const memo = core.unwrap();
+      encoder.setPipeline(memo.pipeline);
 
-      pass.setPipeline(memo.pipeline);
+      applyBindGroups(
+        encoder,
+        this,
+        memo.usedBindGroupLayouts,
+        memo.catchall,
+        (layout) => priors.bindGroupLayoutMap?.get(layout) ?? bindGroups.get(layout),
+      );
 
-      const missingBindGroups = new Set(memo.usedBindGroupLayouts);
-      memo.usedBindGroupLayouts.forEach((layout, idx) => {
-        if (memo.catchall && idx === memo.catchall[0]) {
-          // Catch-all
-          pass.setBindGroup(idx, this.unwrap(memo.catchall[1]));
-          missingBindGroups.delete(layout);
-        } else {
-          const bindGroup = priors.bindGroupLayoutMap?.get(layout) ?? bindGroups.get(layout);
-          if (bindGroup !== undefined) {
-            missingBindGroups.delete(layout);
-            if (isBindGroup(bindGroup)) {
-              pass.setBindGroup(idx, this.unwrap(bindGroup));
-            } else {
-              pass.setBindGroup(idx, bindGroup);
-            }
-          }
-        }
-      });
-
-      const missingVertexLayouts = new Set<TgpuVertexLayout>();
-      memo.usedVertexLayouts.forEach((vertexLayout, idx) => {
+      applyVertexBuffers(encoder, this, memo.usedVertexLayouts, (vertexLayout) => {
         const priorBuffer = priors.vertexLayoutMap?.get(vertexLayout);
-        const opts = priorBuffer
-          ? {
-              buffer: priorBuffer,
-              offset: undefined,
-              size: undefined,
-            }
+        return priorBuffer
+          ? { buffer: priorBuffer, offset: undefined, size: undefined }
           : vertexBuffers.get(vertexLayout);
-
-        if (!opts || !opts.buffer) {
-          missingVertexLayouts.add(vertexLayout);
-        } else if (isBuffer(opts.buffer)) {
-          pass.setVertexBuffer(idx, this.unwrap(opts.buffer), opts.offset, opts.size);
-        } else {
-          pass.setVertexBuffer(idx, opts.buffer, opts.offset, opts.size);
-        }
       });
-
-      if (missingBindGroups.size > 0) {
-        throw new MissingBindGroupsError(missingBindGroups);
-      }
-
-      if (missingVertexLayouts.size > 0) {
-        throw new MissingVertexBuffersError(missingVertexLayouts);
-      }
     };
+
+    return {
+      setPipeline(pipeline) {
+        currentPipeline = pipeline;
+        dirty = true;
+      },
+
+      setIndexBuffer: (buffer, indexFormat, offset, size) => {
+        if (isBuffer(buffer)) {
+          encoder.setIndexBuffer(this.unwrap(buffer), indexFormat, offset, size);
+        } else {
+          encoder.setIndexBuffer(buffer, indexFormat, offset, size);
+        }
+      },
+
+      setVertexBuffer(vertexLayout, buffer, offset, size) {
+        vertexBuffers.set(vertexLayout, { buffer, offset, size });
+        dirty = true;
+      },
+
+      setBindGroup(bindGroupLayout, bindGroup) {
+        bindGroups.set(bindGroupLayout, bindGroup);
+        dirty = true;
+      },
+
+      draw(vertexCount, instanceCount, firstVertex, firstInstance) {
+        applyPipelineState();
+        encoder.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+      },
+
+      drawIndexed(...args) {
+        applyPipelineState();
+        encoder.drawIndexed(...args);
+      },
+
+      drawIndirect(...args) {
+        applyPipelineState();
+        encoder.drawIndirect(...args);
+      },
+
+      drawIndexedIndirect(...args) {
+        applyPipelineState();
+        encoder.drawIndexedIndirect(...args);
+      },
+    };
+  }
+
+  beginRenderPass(descriptor: GPURenderPassDescriptor, callback: (pass: RenderPass) => void): void {
+    const commandEncoder = this.device.createCommandEncoder();
+    const pass = commandEncoder.beginRenderPass(descriptor);
+
+    const proxy = this.createDrawablePassProxy(pass);
 
     callback({
       setViewport(...args) {
@@ -713,49 +737,22 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       executeBundles(...args) {
         pass.executeBundles(...args);
       },
-      setPipeline(pipeline) {
-        currentPipeline = pipeline;
-      },
-
-      setIndexBuffer: (buffer, indexFormat, offset, size) => {
-        if (isBuffer(buffer)) {
-          pass.setIndexBuffer(this.unwrap(buffer), indexFormat, offset, size);
-        } else {
-          pass.setIndexBuffer(buffer, indexFormat, offset, size);
-        }
-      },
-
-      setVertexBuffer(vertexLayout, buffer, offset, size) {
-        vertexBuffers.set(vertexLayout, { buffer, offset, size });
-      },
-
-      setBindGroup(bindGroupLayout, bindGroup) {
-        bindGroups.set(bindGroupLayout, bindGroup);
-      },
-
-      draw(vertexCount, instanceCount, firstVertex, firstInstance) {
-        setupPassBeforeDraw();
-        pass.draw(vertexCount, instanceCount, firstVertex, firstInstance);
-      },
-
-      drawIndexed(...args) {
-        setupPassBeforeDraw();
-        pass.drawIndexed(...args);
-      },
-
-      drawIndirect(...args) {
-        setupPassBeforeDraw();
-        pass.drawIndirect(...args);
-      },
-
-      drawIndexedIndirect(...args) {
-        setupPassBeforeDraw();
-        pass.drawIndexedIndirect(...args);
-      },
+      ...proxy,
     });
 
     pass.end();
     this.device.queue.submit([commandEncoder.finish()]);
+  }
+
+  beginRenderBundleEncoder(
+    descriptor: GPURenderBundleEncoderDescriptor,
+    callback: (pass: RenderBundleEncoderPass) => void,
+  ): GPURenderBundle {
+    const bundleEncoder = this.device.createRenderBundleEncoder(descriptor);
+
+    callback(this.createDrawablePassProxy(bundleEncoder));
+
+    return bundleEncoder.finish();
   }
 
   flush() {

@@ -46,7 +46,7 @@ function defineBuiltin<T extends Decorated | LooseDecorated>(
   return attribute(dataType, {
     [$internal]: true,
     type: '@builtin',
-    // oxlint-disable-next-line typescript/no-explicit-any it's fine
+    // oxlint-disable-next-line typescript/no-explicit-any -- it's fine
     params: [value as any],
   }) as T;
 }

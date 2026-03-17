@@ -14,7 +14,7 @@ function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
   operator: InfixOperator,
   operatorSymbol: symbol,
 ) {
-  // oxlint-disable-next-line typescript/no-explicit-any anything is possible
+  // oxlint-disable-next-line typescript/no-explicit-any -- anything is possible
   const proto = object.prototype as any;
   const opImpl = infixOperators[operator] as (lhs: unknown, rhs: unknown) => unknown;
 
@@ -57,6 +57,8 @@ export type {
   AnyWgslData,
   AnyWgslStruct,
   Atomic,
+  atomicI32,
+  atomicU32,
   BaseData,
   BaseData as BaseWgslData,
   Bool,

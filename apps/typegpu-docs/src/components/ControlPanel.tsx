@@ -1,5 +1,7 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import DiscordIconSvg from '../assets/discord-icon.svg';
+import GithubIconSvg from '../assets/github-icon.svg';
 import { useId, useState } from 'react';
 import { runWithCatchAtom } from '../utils/examples/currentSnackbarAtom.ts';
 import {
@@ -86,7 +88,7 @@ function SliderRow({
   );
 }
 
-function VectorSliderRow({
+function VectorSliderRow<T extends d.v2f | d.v3f | d.v4f>({
   label,
   initial,
   min,
@@ -95,13 +97,13 @@ function VectorSliderRow({
   onChange,
 }: {
   label: string;
-  initial: number[];
-  min: number[];
-  max: number[];
-  step: number[];
-  onChange: (value: number[]) => void;
+  initial: T;
+  min: T;
+  max: T;
+  step: T;
+  onChange: (value: T) => void;
 }) {
-  const [value, setValue] = useState<number[]>(initial ?? min);
+  const [value, setValue] = useState<T>(initial);
   const runWithCatch = useSetAtom(runWithCatchAtom);
 
   return (
@@ -114,8 +116,8 @@ function VectorSliderRow({
         step={step}
         value={value}
         onChange={(newValue) => {
-          setValue(newValue);
-          void runWithCatch(() => onChange(newValue));
+          setValue(newValue as T);
+          void runWithCatch(() => onChange(newValue as T));
         }}
       />
     </>
@@ -246,7 +248,7 @@ function paramToControlRow(param: ExampleControlParam) {
     <VectorSliderRow
       key={param.label}
       label={param.label}
-      onChange={param.onVectorSliderChange}
+      onChange={param.onVectorSliderChange as (value: d.v2f | d.v3f | d.v4f) => void}
       min={param.min}
       max={param.max}
       step={param.step}
@@ -328,6 +330,18 @@ export function ControlPanel() {
           </div>
         </>
       )}
+
+      <div className="mt-auto hidden items-center justify-between pt-2 text-tameplum-800 text-xs md:flex">
+        <div>&copy; {new Date().getFullYear()} Software Mansion S.A.</div>
+        <div className="flex items-center gap-3">
+          <a href="https://discord.gg/8jpfgDqPcM" target="_blank" rel="noreferrer">
+            <img src={DiscordIconSvg.src} className="opacity-75" alt="discord logo" />
+          </a>
+          <a href="https://github.com/software-mansion/TypeGPU" target="_blank" rel="noreferrer">
+            <img src={GithubIconSvg.src} className="opacity-75" alt="github logo" />
+          </a>
+        </div>
+      </div>
     </div>
   );
 }

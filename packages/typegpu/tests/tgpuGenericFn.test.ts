@@ -372,4 +372,34 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
       }"
     `);
   });
+
+  it('can be resolved', () => {
+    const foo = tgpu.fn(() => {
+      'use gpu';
+      return 3;
+    });
+
+    const resolved = tgpu.resolve([foo]);
+    expect(resolved).toMatchInlineSnapshot(`
+      "fn foo() -> i32 {
+        return 3;
+      }"
+    `);
+  });
+
+  it('can be resolved (with provided slots)', () => {
+    const mulSlot = tgpu.slot<number>();
+
+    const foo = tgpu.fn(() => {
+      'use gpu';
+      return 3 * mulSlot.$;
+    });
+
+    const resolved = tgpu.resolve([foo.with(mulSlot, 2)]);
+    expect(resolved).toMatchInlineSnapshot(`
+      "fn foo() -> i32 {
+        return 6;
+      }"
+    `);
+  });
 });

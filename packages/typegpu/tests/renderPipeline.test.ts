@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { matchUpVaryingLocations } from '../src/core/pipeline/renderPipeline.ts';
+import type { ExperimentalTgpuRoot } from '../src/core/root/rootTypes.ts';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
 import tgpu, {
   common,
@@ -95,7 +96,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
       .withVertex(vertexFn, {})
       .withFragment(fragmentFn, { out: { format: 'rgba8unorm' } })
       .createPipeline()
-      // oxlint-disable-next-line typescript/no-explicit-any <not testing color attachment at this time>
+      // oxlint-disable-next-line typescript/no-explicit-any -- not testing color attachment at this time
       .withColorAttachment({ out: {} } as any);
 
     expect(() => pipeline.draw(6)).toThrowError(new MissingBindGroupsError([layout]));
@@ -841,7 +842,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
 
     //@ts-expect-error: No index buffer assigned
     expect(() => pipeline.drawIndexed(3)).toThrowErrorMatchingInlineSnapshot(
-      '[Error: No index buffer set for this render pipeline.]',
+      `[Error: No index buffer set for this render pipeline.]`,
     );
 
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
@@ -1598,6 +1599,126 @@ describe('root.createRenderPipeline', () => {
       - autoFragmentFn: Property name 'frontFacing' causes naming clashes. Choose a different name.]
     `);
   });
+
+  it('generates proper vertex layout for shell-less attributes', ({
+    root,
+    device,
+    renderPassEncoder,
+  }) => {
+    const Boid = d.struct({
+      velocity: d.vec3f,
+      life: d.f32,
+    });
+    const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec3f));
+    const instanceLayout = tgpu.vertexLayout(d.arrayOf(Boid), 'instance');
+    const pipeline = root.createRenderPipeline({
+      attribs: { vertexPos: vertexLayout.attrib, ...instanceLayout.attrib },
+      vertex: ({ life, velocity, vertexPos }) => {
+        'use gpu';
+        return { $position: d.vec4f(vertexPos + velocity, 1), life };
+      },
+      fragment: ({ life }) => {
+        'use gpu';
+        return d.vec4f(1, life, 0, 1);
+      },
+      targets: { format: 'rgba8unorm' },
+    });
+
+    const vertexBuffer = root.createBuffer(vertexLayout.schemaForCount(3)).$usage('vertex');
+    const instanceBuffer = root.createBuffer(instanceLayout.schemaForCount(1)).$usage('vertex');
+
+    pipeline
+      .with(vertexLayout, vertexBuffer)
+      .with(instanceLayout, instanceBuffer)
+      .withColorAttachment({ view: {} as unknown as GPUTextureView })
+      .draw(3);
+
+    expect(device.mock.createRenderPipeline.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          {
+            "fragment": {
+              "module": "mockShaderModule",
+              "targets": [
+                {
+                  "format": "rgba8unorm",
+                },
+              ],
+            },
+            "label": "pipeline",
+            "layout": "mockPipelineLayout",
+            "vertex": {
+              "buffers": [
+                {
+                  "arrayStride": 16,
+                  "attributes": [
+                    {
+                      "format": "float32",
+                      "offset": 12,
+                      "shaderLocation": 0,
+                    },
+                    {
+                      "format": "float32x3",
+                      "offset": 0,
+                      "shaderLocation": 1,
+                    },
+                  ],
+                  "stepMode": "instance",
+                },
+                {
+                  "arrayStride": 16,
+                  "attributes": [
+                    {
+                      "format": "float32x3",
+                      "offset": 0,
+                      "shaderLocation": 2,
+                    },
+                  ],
+                  "stepMode": "vertex",
+                },
+              ],
+              "module": "mockShaderModule",
+            },
+          },
+        ],
+      ]
+    `);
+
+    expect(renderPassEncoder.mock.setVertexBuffer.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          0,
+          {
+            "destroy": [MockFunction spy],
+            "getMappedRange": [MockFunction spy],
+            "label": "instanceBuffer",
+            "mapAsync": [MockFunction spy],
+            "mapState": "unmapped",
+            "size": 16,
+            "unmap": [MockFunction spy],
+            "usage": 44,
+          },
+          undefined,
+          undefined,
+        ],
+        [
+          1,
+          {
+            "destroy": [MockFunction spy],
+            "getMappedRange": [MockFunction spy],
+            "label": "vertexBuffer",
+            "mapAsync": [MockFunction spy],
+            "mapState": "unmapped",
+            "size": 48,
+            "unmap": [MockFunction spy],
+            "usage": 44,
+          },
+          undefined,
+          undefined,
+        ],
+      ]
+    `);
+  });
 });
 
 describe('matchUpVaryingLocations', () => {
@@ -1825,5 +1946,141 @@ describe('TgpuRenderPipeline', () => {
     };
 
     helper(pipeline);
+  });
+});
+
+describe('Render Bundles', () => {
+  const vertexFn = tgpu.vertexFn({
+    out: { pos: d.builtin.position },
+  })('');
+
+  const fragmentFn = tgpu.fragmentFn({
+    out: { color: d.vec4f },
+  })('');
+
+  function createPipeline(root: ExperimentalTgpuRoot) {
+    return root
+      .createRenderPipeline({
+        vertex: vertexFn,
+        fragment: fragmentFn,
+        targets: { color: { format: 'rgba8unorm' } },
+      })
+      .withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      });
+  }
+
+  it('routes draw calls through the bundle encoder', ({ root, renderBundleEncoder }) => {
+    const pipeline = createPipeline(root);
+    pipeline.with(renderBundleEncoder).draw(6);
+
+    const encoder = renderBundleEncoder as unknown as {
+      setPipeline: ReturnType<typeof vi.fn>;
+      draw: ReturnType<typeof vi.fn>;
+    };
+
+    expect(encoder.setPipeline).toHaveBeenCalledTimes(1);
+    expect(encoder.draw).toHaveBeenCalledWith(6, undefined, undefined, undefined);
+  });
+
+  it('skips redundant state application when same pipeline draws twice (dirty flag)', ({
+    root,
+    renderBundleEncoder,
+  }) => {
+    const pipeline = createPipeline(root).with(renderBundleEncoder);
+
+    pipeline.draw(3);
+    pipeline.draw(6);
+
+    const encoder = renderBundleEncoder as unknown as {
+      setPipeline: ReturnType<typeof vi.fn>;
+      draw: ReturnType<typeof vi.fn>;
+    };
+
+    expect(encoder.setPipeline).toHaveBeenCalledTimes(1);
+    expect(encoder.draw).toHaveBeenCalledTimes(2);
+  });
+
+  it('re-applies state when a different pipeline draws on the same encoder', ({
+    root,
+    renderBundleEncoder,
+  }) => {
+    const pipeline1 = createPipeline(root).with(renderBundleEncoder);
+    const pipeline2 = createPipeline(root).with(renderBundleEncoder);
+
+    pipeline1.draw(3);
+    pipeline2.draw(6);
+
+    const encoder = renderBundleEncoder as unknown as {
+      setPipeline: ReturnType<typeof vi.fn>;
+    };
+
+    expect(encoder.setPipeline).toHaveBeenCalledTimes(2);
+  });
+
+  it('throws on missing bind groups when using bundle encoder', ({ root, renderBundleEncoder }) => {
+    const layout = tgpu.bindGroupLayout({ alpha: { uniform: d.f32 } });
+
+    const vertexWithLayout = tgpu.vertexFn({
+      out: { pos: d.builtin.position },
+    })`{ layout.$.alpha; }`.$uses({ layout });
+
+    const pipeline = root
+      .createRenderPipeline({
+        vertex: vertexWithLayout,
+        fragment: fragmentFn,
+        targets: { color: { format: 'rgba8unorm' } },
+      })
+      .withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      });
+
+    expect(() => pipeline.with(renderBundleEncoder).draw(6)).toThrowError(
+      new MissingBindGroupsError([layout]),
+    );
+  });
+
+  it('sets index buffer when drawIndexed is called on bundle encoder', ({
+    root,
+    renderBundleEncoder,
+  }) => {
+    const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 6)).$usage('index');
+
+    const pipeline = createPipeline(root).withIndexBuffer(indexBuffer).with(renderBundleEncoder);
+
+    pipeline.drawIndexed(6);
+
+    const encoder = renderBundleEncoder as unknown as {
+      setPipeline: ReturnType<typeof vi.fn>;
+      setIndexBuffer: ReturnType<typeof vi.fn>;
+      drawIndexed: ReturnType<typeof vi.fn>;
+    };
+
+    expect(encoder.setPipeline).toHaveBeenCalled();
+    expect(encoder.setIndexBuffer).toHaveBeenCalled();
+    expect(encoder.drawIndexed).toHaveBeenCalledWith(6, undefined, undefined, undefined, undefined);
+  });
+
+  it('creates its own render pass when using external command encoder', ({
+    root,
+    commandEncoder,
+  }) => {
+    const beginRenderPassSpy = vi.spyOn(commandEncoder, 'beginRenderPass');
+    const pipeline = createPipeline(root);
+    pipeline.with(commandEncoder).draw(3);
+
+    expect(beginRenderPassSpy).toHaveBeenCalled();
+    const pass = beginRenderPassSpy.mock.results[0]!.value;
+    expect(pass.setPipeline).toHaveBeenCalled();
+    expect(pass.draw).toHaveBeenCalledWith(3, undefined, undefined, undefined);
+    expect(pass.end).toHaveBeenCalled();
   });
 });

@@ -76,7 +76,7 @@ interface TgpuFnBase<ImplSchema extends AnyFn> extends TgpuNamable, Withable<Tgp
   $uses(dependencyMap: Record<string, unknown>): this;
 }
 
-// oxlint-disable-next-line typescript/no-explicit-any the widest type requires `any`
+// oxlint-disable-next-line typescript/no-explicit-any -- the widest type requires `any`
 export type TgpuFn<ImplSchema extends AnyFn = (...args: any[]) => any> = DualFn<
   InferImplSchema<ImplSchema>
 > &
@@ -329,7 +329,11 @@ function createGenericFn<T extends AnyFn>(inner: T, pairs: SlotValuePair[]): Tgp
       if (!getName(inner)) {
         setName(inner, label);
       }
-      return this as TgpuGenericFn<T>;
+      return this as TgpuGenericFn<T> & SelfResolvable;
+    },
+
+    [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+      return ctx.resolve(inner);
     },
 
     with(

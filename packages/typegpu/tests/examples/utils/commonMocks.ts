@@ -9,7 +9,7 @@ export function setupCommonMocks() {
       return createDeepNoopProxy(
         {} as unknown as CanvasRenderingContext2D,
         new Set(),
-        // oxlint-disable-next-line typescript/no-explicit-any we testing here
+        // oxlint-disable-next-line typescript/no-explicit-any -- we testing here
       ) as any;
     });
 
