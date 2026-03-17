@@ -9,7 +9,9 @@ export const INIT_CONFIG: Config = {
   playerDims: d.vec2f(0.5, 0.45), // capsule
   chunks: {
     xRange: d.vec2i(-1, 10),
-    yRange: d.vec2i(0, 16),
+    yRange: d.vec2i(0, 18),
     zRange: d.vec2i(-1, 10),
   },
+  // all blocks above this value must be (initially) empty for the sky lighting to work
+  skyAbove: CHUNK_SIZE * 16,
 };

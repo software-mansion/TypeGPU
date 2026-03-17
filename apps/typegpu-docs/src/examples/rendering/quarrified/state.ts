@@ -4,6 +4,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { ChunkGenerator, coordToIndex } from './chunkGenerator.ts';
 import { CHUNK_SIZE } from './params.ts';
 import type { MovementInput } from './thirdPersonCamera.ts';
+import { blockTypes } from './blockTypes.ts';
 
 const offsets = [
   d.vec3i(-1, 0, 0),
@@ -91,6 +92,7 @@ export interface Config {
     yRange: d.v2i;
     zRange: d.v2i;
   };
+  skyAbove: number;
 }
 
 export class Player {
@@ -208,7 +210,9 @@ export class State {
 
   #loadChunkColliders(key: string) {
     // double check :)
-    if (this.loadedColliderChunks.has(key)) return;
+    if (this.loadedColliderChunks.has(key)) {
+      return;
+    }
 
     const chunk = this.worldMap.chunks.get(key);
     if (!chunk) {
@@ -226,8 +230,9 @@ export class State {
     for (let z = 0; z < CHUNK_SIZE; z++) {
       for (let y = 0; y < CHUNK_SIZE; y++) {
         for (let x = 0; x < CHUNK_SIZE; x++) {
-          // TODO: hardcode somewhere air index
-          if (blocks[coordToIndex(x, y, z)].blockType === 0) continue;
+          if (blocks[coordToIndex(x, y, z)].blockType === blockTypes.air) {
+            continue;
+          }
           tempPoints.push(x0 + x + 0.5);
           tempPoints.push(y0 + y + 0.5);
           tempPoints.push(z0 + z + 0.5);
@@ -235,6 +240,9 @@ export class State {
       }
     }
 
+    if (tempPoints.length === 0) {
+      return;
+    }
     const points = new Float32Array(tempPoints);
     const dims = { x: 0.5, y: 0.5, z: 0.5 };
 

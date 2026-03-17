@@ -6,8 +6,8 @@ import {
   type TgpuRoot,
   type TgpuUniform,
 } from 'typegpu';
-import { perlin3d } from '@typegpu/noise';
-import { CHUNK_SIZE, CHUNK_SIZE_BITS } from './params.ts';
+import { perlin3d, randf } from '@typegpu/noise';
+import { CHUNK_SIZE, CHUNK_SIZE_BITS, INIT_CONFIG } from './params.ts';
 import { blockTypes } from './blockTypes.ts';
 import { type Chunk } from './schemas.ts';
 
@@ -26,9 +26,14 @@ export class ChunkGenerator {
     this.chunkIndexUniform = root.createUniform(d.vec3i);
     this.#pipeline = root.createGuardedComputePipeline((x, y, z) => {
       'use gpu';
+      randf.seed3(d.vec3f(x, y, z).div(100));
       const arrayIndex = coordToIndex(x, y, z);
-      const sampleIndex = d.vec3f(x, y, z) + d.vec3f(this.chunkIndexUniform.$) * CHUNK_SIZE;
-      const result = perlin3d.sample(sampleIndex * 0.2) ** 3;
+      const worldPos = d.vec3f(x, y, z) + d.vec3f(this.chunkIndexUniform.$) * CHUNK_SIZE;
+      if (worldPos.y > INIT_CONFIG.skyAbove) {
+        this.blocksMutable.$[arrayIndex] = blockTypes.air;
+        return;
+      }
+      const result = perlin3d.sample(worldPos * 0.2) ** 3;
       if (d.f32(result) > -0.02) {
         this.blocksMutable.$[arrayIndex] = blockTypes.air;
       } else {
