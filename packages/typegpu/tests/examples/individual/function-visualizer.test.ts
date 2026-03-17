@@ -160,7 +160,7 @@ describe('function visualizer example', () => {
         var rightTop = ((*properties2).transformation * vec4f(1, 1, 0, 1));
         let aspectRatio = ((rightTop.x - leftBot.x) / (rightTop.y - leftBot.y));
         var transformedPoints = array<vec2f, 4>(vec2f(leftBot.x, 0f), vec2f(rightTop.x, 0f), vec2f(0f, leftBot.y), vec2f(0f, rightTop.y));
-        var currentPoint = ((*properties2).inverseTransformation * vec4f(transformedPoints[u32((f32((2u * _arg_0.iid)) + (f32(_arg_0.vid) / 2f)))].xy, 0f, 1f));
+        var currentPoint = ((*properties2).inverseTransformation * vec4f(transformedPoints[((2u * _arg_0.iid) + u32((f32(_arg_0.vid) / 2f)))].xy, 0f, 1f));
         return backgroundVertex_Output(vec4f((currentPoint.x + (((f32(_arg_0.iid) * select(-1f, 1f, ((_arg_0.vid % 2u) == 0u))) * 5e-3f) / aspectRatio)), (currentPoint.y + ((f32((1u - _arg_0.iid)) * select(-1f, 1f, ((_arg_0.vid % 2u) == 0u))) * 5e-3f)), currentPoint.zw));
       }
 
