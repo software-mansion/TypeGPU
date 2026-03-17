@@ -22,6 +22,7 @@ import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { shaderStageSlot } from '../slot/internalSlots.ts';
+import { AnyAutoCustoms, AutoFragmentIn, AutoFragmentOut } from './autoIO.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { BaseIOData, Implementation, InferIO, IOLayout, IORecord } from './fnTypes.ts';
 import { createIoSchema, type IOLayoutToSchema } from './ioSchema.ts';
@@ -118,6 +119,8 @@ export declare namespace TgpuFragmentFn {
   // readable, and refactoring to use a builtin argument is too much hassle.
   type In = Record<string, BaseData>;
   type Out = Record<string, BaseData> | BaseData;
+  type AutoIn<T extends AnyAutoCustoms> = AutoFragmentIn<T>;
+  type AutoOut<T extends AnyAutoCustoms = AnyAutoCustoms> = AutoFragmentOut<T>;
 }
 
 export function fragmentFn<FragmentOut extends FragmentOutConstrained>(options: {
