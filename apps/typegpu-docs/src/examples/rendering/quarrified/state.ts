@@ -109,11 +109,11 @@ export class State {
       }
     }
 
-    for (const loadedKey of this.loadedColliderChunks.keys()) {
-      if (!needed.has(loadedKey)) {
-        this.#unloadChunkColliders(loadedKey);
-      }
-    }
+    // for (const loadedKey of this.loadedColliderChunks.keys()) {
+    //   if (!needed.has(loadedKey)) {
+    //     this.#unloadChunkColliders(loadedKey);
+    //   }
+    // }
 
     for (const key of needed) {
       if (!this.loadedColliderChunks.has(key)) {

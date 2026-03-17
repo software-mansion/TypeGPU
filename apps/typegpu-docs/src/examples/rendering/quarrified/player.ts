@@ -34,7 +34,7 @@ export class Player {
 
   get position(): d.v3f {
     const pos = this.body.translation();
-    return d.vec3f(pos.x, pos.y, pos.z); // center of capsule
+    return d.vec3f(pos.x, pos.y, pos.z);
   }
 
   getCurrentChunk(): d.v3i {
@@ -43,8 +43,8 @@ export class Player {
 
   step(input: MovementInput, yaw: number, dt: number) {
     // --- debug ---
-    // const p = this.body.translation();
-    // console.log('Player Pos:', p.x.toFixed(2), p.y.toFixed(2), p.z.toFixed(2));
+    const p = this.position;
+    console.log('Player Pos:', p.x.toFixed(2), p.y.toFixed(2), p.z.toFixed(2));
     // --- debug end ---
     const forwardX = Math.sin(yaw);
     const forwardZ = Math.cos(yaw);
