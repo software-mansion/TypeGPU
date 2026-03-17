@@ -11,6 +11,13 @@ import { Camera, MeshLayout } from './schemas.ts';
 import { type Mesher } from './mesher.ts';
 import { faceOffsets } from './cubeVertices.ts';
 
+const getSecondSmallestFromThree = (v: d.v3f): number => {
+  'use gpu';
+  const highest = std.max(v.x, v.y, v.z);
+  const secondHighest = v.x + v.y + v.z - highest;
+  return std.min(highest, secondHighest);
+};
+
 export class Renderer {
   #root: TgpuRoot;
   #pipeline: TgpuRenderPipeline<d.Vec4f>;
@@ -26,15 +33,15 @@ export class Renderer {
 
   constructor(root: TgpuRoot, cameraUniform: TgpuUniform<typeof Camera>, playerDims: d.v2f) {
     this.#root = root;
-    // prettier-ignore
 
+    // prettier-ignore
     this.#pipeline = root.createRenderPipeline({
       attribs: { position: MeshLayout.attrib },
       vertex: tgpu.vertexFn({
         in: { vertexIndex: d.builtin.vertexIndex, position: d.vec4i },
-        out: { position: d.builtin.position, worldPos: d.vec3f, lightLevel: d.interpolate("flat", d.u32) },
+        out: { position: d.builtin.position, worldPos: d.vec3f, lightLevel: d.interpolate('flat', d.u32) },
       })(({ position, vertexIndex }) => {
-        "use gpu";
+        'use gpu';
         // TODO: remove this temporary solution (without this, every "empty" draw creates a face at 0, 0, 0 that has enormous overdraw)
         if (std.allEq(position.xyz, d.vec3i(0, 0, 0))) {
           return {
@@ -64,41 +71,39 @@ export class Renderer {
         };
       }),
       fragment: ({ worldPos, lightLevel }) => {
-        "use gpu";
+        'use gpu';
         const localPos = std.fract(worldPos.xyz);
         const nearEdge = std.min(localPos, 1 - localPos);
-        const highest = std.max(nearEdge.x, nearEdge.y, nearEdge.z);
-        const secondHighest = nearEdge.x + nearEdge.y + nearEdge.z - highest;
-        const distFromEdge = std.min(highest, secondHighest);
+        const distFromEdge = getSecondSmallestFromThree(nearEdge);
         const color = std.select(
           d.vec3f(0.5),
           d.vec3f(0.3),
           distFromEdge < 0.05,
         );
-        return d.vec4f(color, 1) * lightLevel / 15;
+        return d.vec4f(color, 1) * (lightLevel / 31 + 0.2);
       },
       depthStencil: {
-        format: "depth24plus",
+        format: 'depth24plus',
         depthWriteEnabled: true,
-        depthCompare: "less",
+        depthCompare: 'less',
       },
       primitive: {
-        cullMode: /* debug option */ "none",
-        topology: "triangle-strip",
+        cullMode: /* debug option */ 'none',
+        topology: 'triangle-strip',
       },
     });
 
     const playerPosUniform = root.createUniform(d.vec4f);
     this.#playerPosUniform = playerPosUniform;
 
+    // cuboid with square base
     const hx = playerDims.x;
     const hy = playerDims.y;
-    const hz = playerDims.x;
     const v = (x: number, y: number, z: number) => d.vec4f(x, y, z, 1);
     // oxfmt-ignore
     const cuboidVertices: d.v4f[] = [
-      v(-hx, -hy, -hz), v( hx, -hy, -hz), v( hx,  hy, -hz), v(-hx,  hy, -hz),
-      v(-hx, -hy,  hz), v( hx, -hy,  hz), v( hx,  hy,  hz), v(-hx,  hy,  hz),
+      v(-hx, -hy, -hx), v( hx, -hy, -hx), v( hx,  hy, -hx), v(-hx,  hy, -hx),
+      v(-hx, -hy,  hx), v( hx, -hy,  hx), v( hx,  hy,  hx), v(-hx,  hy,  hx),
     ];
     // oxfmt-ignore
     const cuboidIndices = new Uint16Array([
@@ -124,12 +129,11 @@ export class Renderer {
       out: { pos: d.builtin.position, localPos: d.vec3f },
     })((input) => {
       'use gpu';
-      const vtx = playerVertexBuffer.$[input.idx];
-      const worldPos =
-        cameraUniform.$.projection * cameraUniform.$.view * (vtx + playerPosUniform.$);
+      const v = playerVertexBuffer.$[input.idx];
+      const worldPos = cameraUniform.$.projection * cameraUniform.$.view * (v + playerPosUniform.$);
       return {
         pos: worldPos,
-        localPos: vtx.xyz,
+        localPos: v.xyz,
       };
     });
 
@@ -138,11 +142,19 @@ export class Renderer {
       out: d.vec4f,
     })((input) => {
       'use gpu';
-      const t = input.localPos / d.vec3f(2 * hx, 2 * hy, 2 * hz) + 0.5;
+      const extents = d.vec3f(hx, hy, hx);
+      const pos = input.localPos + extents;
+      const dist = getSecondSmallestFromThree(std.min(pos, 2 * extents - pos));
+
+      if (dist < 0.05) {
+        return d.vec4f(0, 0, 1, 1);
+      }
+
+      const t = input.localPos / (2 * extents) + 0.5;
       const lo = d.vec3f(0.85, 0.2, 0.55);
       const hi = d.vec3f(0.15, 0.85, 0.95);
       const base = std.mix(lo, hi, d.vec3f(t.y));
-      const color = base + d.vec3f(0.12 * std.sin(t.x * 3.14), 0, 0.1 * std.cos(t.z * 3.14));
+      const color = base + d.vec3f(0.12 * std.sin(t.x * Math.PI), 0, 0.1 * std.cos(t.z * Math.PI));
       return d.vec4f(color, 1);
     });
 

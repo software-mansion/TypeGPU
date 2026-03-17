@@ -90,13 +90,18 @@ export class State {
   #unloadChunkColliders(key: string) {
     const body = this.loadedColliderChunks.get(key);
     if (!body) return;
+
     this.world.removeRigidBody(body);
     this.loadedColliderChunks.delete(key);
   }
 
   #updateNearbyColliders() {
     const currentChunk = this.player.getCurrentChunk();
-    if (std.allEq(this.lastPlayerChunk, currentChunk)) return;
+
+    if (std.allEq(this.lastPlayerChunk, currentChunk)) {
+      return;
+    }
+
     this.lastPlayerChunk = currentChunk;
 
     // TODO: check for dirty loaded chunks
@@ -109,11 +114,11 @@ export class State {
       }
     }
 
-    // for (const loadedKey of this.loadedColliderChunks.keys()) {
-    //   if (!needed.has(loadedKey)) {
-    //     this.#unloadChunkColliders(loadedKey);
-    //   }
-    // }
+    for (const loadedKey of this.loadedColliderChunks.keys()) {
+      if (!needed.has(loadedKey)) {
+        this.#unloadChunkColliders(loadedKey);
+      }
+    }
 
     for (const key of needed) {
       if (!this.loadedColliderChunks.has(key)) {

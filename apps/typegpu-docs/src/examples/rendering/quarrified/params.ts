@@ -5,7 +5,7 @@ export const CHUNK_SIZE_BITS = 4;
 export const CHUNK_SIZE = 1 << CHUNK_SIZE_BITS;
 
 export const INIT_CONFIG: Config = {
-  playerPos: d.vec3f(2, 16 + 2, 2).mul(CHUNK_SIZE),
+  playerPos: d.vec3f(2, 3, 2).mul(CHUNK_SIZE),
   playerDims: d.vec2f(0.3, 0.9),
   chunks: {
     xRange: d.vec2i(-1, 10),

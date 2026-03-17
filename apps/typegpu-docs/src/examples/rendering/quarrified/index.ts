@@ -30,11 +30,15 @@ const mesher = new Mesher(root);
 
 const renderer = new Renderer(root, cameraUniform, state.player.dims);
 
+let stateStepDelay = 60; // 1 second
+
 let frameId = requestAnimationFrame(draw);
 function draw() {
-  const input = getMovementInput();
-  const yaw = getYaw();
-  state.step(input, yaw);
+  if (stateStepDelay === 0) {
+    const input = getMovementInput();
+    const yaw = getYaw();
+    state.step(input, yaw);
+  }
 
   const playerPos = state.player.position;
   const camera = updateCamera(playerPos);
@@ -53,6 +57,9 @@ function draw() {
   const mesherResources = mesher.getResources();
   renderer.render(context, mesherResources, playerPos);
 
+  if (stateStepDelay > 0) {
+    stateStepDelay--;
+  }
   frameId = requestAnimationFrame(draw);
 }
 
