@@ -1,3 +1,4 @@
+import type { d } from 'typegpu';
 import type { ExampleControlParam } from './exampleControlAtom.ts';
 import type { ExampleState } from './exampleState.ts';
 
@@ -14,7 +15,7 @@ function initializeParam(param: ExampleControlParam) {
     return param.onSliderChange(param.initial);
   }
   if ('onVectorSliderChange' in param) {
-    return param.onVectorSliderChange(param.initial);
+    return (param.onVectorSliderChange as (v: d.v2f | d.v3f | d.v4f) => void)(param.initial);
   }
   if ('onColorChange' in param) {
     return param.onColorChange(param.initial);

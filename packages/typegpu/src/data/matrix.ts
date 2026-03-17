@@ -4,9 +4,10 @@ import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { $repr } from '../shared/symbols.ts';
 import { $internal, $resolve } from '../shared/symbols.ts';
-import type { SelfResolvable } from '../types.ts';
+import { numericLiteralToSnippet } from '../tgsl/generationHelpers.ts';
+import type { ResolutionCtx, SelfResolvable } from '../types.ts';
 import { f32 } from './numeric.ts';
-import { type ResolvedSnippet, snip } from './snippet.ts';
+import { type ResolvedSnippet } from './snippet.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import {
   type BaseData,
@@ -66,6 +67,7 @@ function createMatSchema<
 ): { type: TType; [$repr]: ValueType } & MatConstructor<ValueType, ColumnType> {
   const construct = callableSchema({
     name: options.type,
+    schema: () => schema,
     normalImpl: (...args: (number | ColumnType)[]): ValueType => {
       const elements: number[] = [];
 
@@ -89,11 +91,8 @@ function createMatSchema<
 
       return new options.MatImpl(...elements) as ValueType;
     },
-    signature: (...args) => ({
-      argTypes: args.map((arg) => (isVec(arg) ? arg : f32)),
-      returnType: schema as unknown as BaseData,
-    }),
-    codegenImpl: (_ctx, args) => stitch`${options.type}(${args})`,
+    argTypes: (...args) => args.map((arg) => (isVec(arg) ? arg : f32)),
+    codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(schema, args),
   });
 
   const schema = Object.assign(construct, {
@@ -106,7 +105,7 @@ function createMatSchema<
     rotationX: options.columns === 4 ? rotationX4 : undefined,
     rotationY: options.columns === 4 ? rotationY4 : undefined,
     rotationZ: options.columns === 4 ? rotationZ4 : undefined,
-  }) as unknown as {
+  }) as unknown as BaseData & {
     type: TType;
     [$repr]: ValueType;
   } & MatConstructor<ValueType, ColumnType>;
@@ -117,6 +116,8 @@ function createMatSchema<
 
   return schema;
 }
+
+const VALID_MAT2x2_ELEMENTS = [0, 1, 2, 3];
 
 abstract class mat2x2Impl<TColumn extends v2f>
   extends MatBase<TColumn>
@@ -177,18 +178,16 @@ abstract class mat2x2Impl<TColumn extends v2f>
     yield this[3];
   }
 
-  [$resolve](): ResolvedSnippet {
-    return snip(
-      `${this.kind}(${Array.from({ length: this.length })
-        .map((_, i) => this[i])
-        .join(', ')})`,
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    return ctx.gen.typeInstantiation(
       mat2x2f,
-      /* origin */ 'runtime',
+      // oxlint-disable-next-line typescript-eslint(no-non-null-assertion)
+      VALID_MAT2x2_ELEMENTS.map((i) => numericLiteralToSnippet(this[i]!)),
     );
   }
 
   toString() {
-    return this[$resolve]().value;
+    return `${this.kind}(${VALID_MAT2x2_ELEMENTS.map((i) => this[i]).join(', ')})`;
   }
 }
 
@@ -199,6 +198,8 @@ class mat2x2fImpl extends mat2x2Impl<v2f> {
     return vec2f(e0, e1);
   }
 }
+
+const VALID_MAT3x3_ELEMENTS = [0, 1, 2, 4, 5, 6, 8, 9, 10];
 
 abstract class mat3x3Impl<TColumn extends v3f>
   extends MatBase<TColumn>
@@ -317,18 +318,16 @@ abstract class mat3x3Impl<TColumn extends v3f>
     }
   }
 
-  [$resolve](): ResolvedSnippet {
-    return snip(
-      `${this.kind}(${this[0]}, ${this[1]}, ${this[2]}, ${this[4]}, ${
-        this[5]
-      }, ${this[6]}, ${this[8]}, ${this[9]}, ${this[10]})`,
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    return ctx.gen.typeInstantiation(
       mat3x3f,
-      /* origin */ 'runtime',
+      // oxlint-disable-next-line typescript-eslint(no-non-null-assertion)
+      VALID_MAT3x3_ELEMENTS.map((i) => numericLiteralToSnippet(this[i]!)),
     );
   }
 
   toString() {
-    return this[$resolve]().value;
+    return `${this.kind}(${VALID_MAT3x3_ELEMENTS.map((i) => this[i]).join(', ')})`;
   }
 }
 
@@ -338,6 +337,8 @@ class mat3x3fImpl extends mat3x3Impl<v3f> {
     return vec3f(x, y, z);
   }
 }
+
+const VALID_MAT4x4_ELEMENTS = Array.from({ length: 16 }, (_, i) => i);
 
 abstract class mat4x4Impl<TColumn extends v4f>
   extends MatBase<TColumn>
@@ -516,18 +517,16 @@ abstract class mat4x4Impl<TColumn extends v4f>
     }
   }
 
-  [$resolve](): ResolvedSnippet {
-    return snip(
-      `${this.kind}(${Array.from({ length: this.length })
-        .map((_, i) => this[i])
-        .join(', ')})`,
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    return ctx.gen.typeInstantiation(
       mat4x4f,
-      /* origin */ 'runtime',
+      // oxlint-disable-next-line typescript-eslint(no-non-null-assertion)
+      VALID_MAT4x4_ELEMENTS.map((i) => numericLiteralToSnippet(this[i]!)),
     );
   }
 
   toString() {
-    return this[$resolve]().value;
+    return `${this.kind}(${VALID_MAT4x4_ELEMENTS.map((i) => this[i]).join(', ')})`;
   }
 }
 

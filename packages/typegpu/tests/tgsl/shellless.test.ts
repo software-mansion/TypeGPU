@@ -8,7 +8,7 @@ import tgpu, {
   type TgpuTextureView,
   type TgpuUniform,
 } from '../../src/index.js';
-import { it } from '../utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('shellless', () => {
   it('is callable from shelled function', () => {

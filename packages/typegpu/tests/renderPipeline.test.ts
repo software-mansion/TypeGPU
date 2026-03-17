@@ -11,7 +11,7 @@ import tgpu, {
   type TgpuVertexFnShell,
 } from '../src/index.js';
 import { $internal } from '../src/shared/symbols.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('root.withVertex(...).withFragment(...)', () => {
   const vert = tgpu.vertexFn({
@@ -1481,6 +1481,66 @@ describe('root.createRenderPipeline', () => {
 
       @fragment fn fragment(_arg_0: FragmentIn) -> FragmentOut {
         return FragmentOut(vec4f(_arg_0.uv, 0f, 1f), 0f);
+      }"
+    `);
+  });
+
+  it('derefs implicit pointers in the vertex and fragment outputs', ({ root }) => {
+    const pipeline = root.createRenderPipeline({
+      vertex: ({ $vertexIndex }) => {
+        'use gpu';
+        const pos = [d.vec2f(0.0, 0.5), d.vec2f(-0.5, -0.5), d.vec2f(0.5, -0.5)];
+        const local = pos[$vertexIndex]!;
+        return {
+          $position: d.vec4f(local, 0, 1),
+          local,
+        };
+      },
+      fragment: () => {
+        'use gpu';
+        const color = d.vec4f(1, 0, 0, 1);
+        const alias = color;
+        return {
+          color: alias,
+        };
+      },
+      targets: { color: { format: 'rgba8unorm' } },
+    });
+
+    expectTypeOf(pipeline).toEqualTypeOf<TgpuRenderPipeline<{ color: d.Vec4f }>>();
+
+    const wgsl = tgpu.resolve([pipeline]);
+    // vertex
+    expect(wgsl).toContain('local: vec2f');
+    expect(wgsl).not.toContain('local: ptr<function, vec2f>');
+    // fragment
+    expect(wgsl).toContain('color: vec4f');
+    expect(wgsl).not.toContain('ptr<function, vec4f>');
+
+    expect(wgsl).toMatchInlineSnapshot(`
+      "struct VertexOut {
+        @builtin(position) position: vec4f,
+        @location(0) local: vec2f,
+      }
+
+      struct VertexIn {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
+        var pos = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
+        let local = (&pos[_arg_0.vertexIndex]);
+        return VertexOut(vec4f((*local), 0f, 1f), (*local));
+      }
+
+      struct FragmentOut {
+        @location(0) color: vec4f,
+      }
+
+      @fragment fn fragment() -> FragmentOut {
+        var color = vec4f(1, 0, 0, 1);
+        let alias_1 = (&color);
+        return FragmentOut((*alias_1));
       }"
     `);
   });

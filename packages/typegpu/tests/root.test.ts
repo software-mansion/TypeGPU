@@ -1,7 +1,7 @@
 import { describe, expect, vi } from 'vitest';
 import { Void } from '../src/data/wgslTypes.ts';
 import tgpu, { d } from '../src/index.js';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('TgpuRoot', () => {
   describe('.createBuffer', () => {

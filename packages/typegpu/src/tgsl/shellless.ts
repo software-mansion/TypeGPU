@@ -4,7 +4,6 @@ import { RefOperator } from '../data/ref.ts';
 import type { Snippet } from '../data/snippet.ts';
 import { type BaseData, isPtr, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
 import { WgslTypeError } from '../errors.ts';
-import { getResolutionCtx } from '../execMode.ts';
 import { getMetaData, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
 
@@ -63,16 +62,6 @@ export class ShelllessRepository {
       }
 
       let type = concretize(s.dataType);
-
-      if (s.origin === 'constant-tgpu-const-ref' || s.origin === 'runtime-tgpu-const-ref') {
-        // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there
-        const ctx = getResolutionCtx()!;
-        throw new Error(
-          `Cannot pass constant references as function arguments. Explicitly copy them by wrapping them in a schema: '${
-            ctx.resolve(type).value
-          }(...)'`,
-        );
-      }
 
       if (isPtr(type) && type.implicit) {
         // If the pointer was made implicitly (e.g. by assigning a reference to a const variable),

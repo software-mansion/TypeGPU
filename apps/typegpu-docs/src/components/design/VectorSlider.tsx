@@ -1,16 +1,24 @@
 import * as RadixSlider from '@radix-ui/react-slider';
+import { d } from 'typegpu';
 
-type Props = {
-  min: number[];
-  max: number[];
-  step: number[];
-  value: number[];
-  onChange: (value: number[]) => void;
+type Props<T extends d.v2f | d.v3f | d.v4f> = {
+  min: T;
+  max: T;
+  step: T;
+  value: T;
+  onChange: (value: T) => void;
 };
 
-export function VectorSlider({ min, max, step, value, onChange }: Props) {
+export function VectorSlider({ min, max, step, value, onChange }: Props<d.v2f | d.v3f | d.v4f>) {
   const handleComponentChange = (index: number, newValue: number) => {
-    onChange([...value.slice(0, index), newValue, ...value.slice(index + 1)]);
+    const newVec =
+      value.kind === 'vec2f'
+        ? d.vec2f(value)
+        : value.kind === 'vec3f'
+          ? d.vec3f(value)
+          : d.vec4f(value);
+    newVec[index] = newValue;
+    onChange(newVec);
   };
 
   const renderSlider = (index: number) => (

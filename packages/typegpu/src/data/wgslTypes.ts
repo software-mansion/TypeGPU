@@ -70,6 +70,17 @@ export interface vecInfixNotation<T extends vecBase> {
   [Symbol.operatorPercent](lhs: T | number, rhs: T | number): T;
 }
 
+export type vecIToVecU<T extends AnyIntegerVecInstance> = T extends v2i | v2u
+  ? v2u
+  : T extends v3i | v3u
+    ? v3u
+    : v4u;
+
+export interface vecBitShiftNotation<T extends AnyIntegerVecInstance> {
+  bitShiftLeft(rhs: vecIToVecU<T> | number): T;
+  bitShiftRight(rhs: vecIToVecU<T> | number): T;
+}
+
 /**
  * Matrix infix notation.
  *
@@ -228,7 +239,8 @@ export interface v2h extends Tuple2<number>, Swizzle2<v2h, v3h, v4h>, vecInfixNo
  * Interface representing its WGSL vector type counterpart: vec2i or vec2<i32>.
  * A vector with 2 elements of type i32
  */
-export interface v2i extends Tuple2<number>, Swizzle2<v2i, v3i, v4i>, vecInfixNotation<v2i> {
+export interface v2i
+  extends Tuple2<number>, Swizzle2<v2i, v3i, v4i>, vecInfixNotation<v2i>, vecBitShiftNotation<v2i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2i';
@@ -242,7 +254,8 @@ export interface v2i extends Tuple2<number>, Swizzle2<v2i, v3i, v4i>, vecInfixNo
  * Interface representing its WGSL vector type counterpart: vec2u or vec2<u32>.
  * A vector with 2 elements of type u32
  */
-export interface v2u extends Tuple2<number>, Swizzle2<v2u, v3u, v4u>, vecInfixNotation<v2u> {
+export interface v2u
+  extends Tuple2<number>, Swizzle2<v2u, v3u, v4u>, vecInfixNotation<v2u>, vecBitShiftNotation<v2u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2u';
@@ -302,7 +315,8 @@ export interface v3h extends Tuple3<number>, Swizzle3<v2h, v3h, v4h>, vecInfixNo
  * Interface representing its WGSL vector type counterpart: vec3i or vec3<i32>.
  * A vector with 3 elements of type i32
  */
-export interface v3i extends Tuple3<number>, Swizzle3<v2i, v3i, v4i>, vecInfixNotation<v3i> {
+export interface v3i
+  extends Tuple3<number>, Swizzle3<v2i, v3i, v4i>, vecInfixNotation<v3i>, vecBitShiftNotation<v3i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3i';
@@ -318,7 +332,8 @@ export interface v3i extends Tuple3<number>, Swizzle3<v2i, v3i, v4i>, vecInfixNo
  * Interface representing its WGSL vector type counterpart: vec3u or vec3<u32>.
  * A vector with 3 elements of type u32
  */
-export interface v3u extends Tuple3<number>, Swizzle3<v2u, v3u, v4u>, vecInfixNotation<v3u> {
+export interface v3u
+  extends Tuple3<number>, Swizzle3<v2u, v3u, v4u>, vecInfixNotation<v3u>, vecBitShiftNotation<v3u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3u';
@@ -386,7 +401,8 @@ export interface v4h extends Tuple4<number>, Swizzle4<v2h, v3h, v4h>, vecInfixNo
  * Interface representing its WGSL vector type counterpart: vec4i or vec4<i32>.
  * A vector with 4 elements of type i32
  */
-export interface v4i extends Tuple4<number>, Swizzle4<v2i, v3i, v4i>, vecInfixNotation<v4i> {
+export interface v4i
+  extends Tuple4<number>, Swizzle4<v2i, v3i, v4i>, vecInfixNotation<v4i>, vecBitShiftNotation<v4i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4i';
@@ -404,7 +420,8 @@ export interface v4i extends Tuple4<number>, Swizzle4<v2i, v3i, v4i>, vecInfixNo
  * Interface representing its WGSL vector type counterpart: vec4u or vec4<u32>.
  * A vector with 4 elements of type u32
  */
-export interface v4u extends Tuple4<number>, Swizzle4<v2u, v3u, v4u>, vecInfixNotation<v4u> {
+export interface v4u
+  extends Tuple4<number>, Swizzle4<v2u, v3u, v4u>, vecInfixNotation<v4u>, vecBitShiftNotation<v4u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4u';
@@ -1528,10 +1545,16 @@ export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
   return isMat2x2f(value) || isMat3x3f(value) || isMat4x4f(value);
 }
 
-export function isFloat32VecInstance(
-  element: number | AnyVecInstance | AnyMatInstance,
-): element is AnyFloat32VecInstance {
+export function isFloat32VecInstance(element: unknown): element is AnyFloat32VecInstance {
   return isVecInstance(element) && ['vec2f', 'vec3f', 'vec4f'].includes(element.kind);
+}
+
+export function isInteger32VecInstance(value: unknown): value is v2u | v2i | v3u | v3i | v4u | v4i {
+  return isVecInstance(value) && /[iu]$/.test(value.kind);
+}
+
+export function isUint32VecInstance(value: unknown): value is v2u | v3u | v4u {
+  return isVecInstance(value) && /[u]$/.test(value.kind);
 }
 
 export function isWgslData(value: unknown): value is AnyWgslData {
