@@ -227,23 +227,31 @@ describe('TgpuBuffer', () => {
 
   it('should throw on negative startOffset', ({ root }) => {
     const buffer = root.createBuffer(d.arrayOf(d.u32, 4));
-    expect(() => buffer.write([1], { startOffset: -4 })).toThrow('startOffset must be a non-negative integer');
+    expect(() => buffer.write([1], { startOffset: -4 })).toThrow(
+      'startOffset must be a non-negative integer',
+    );
   });
 
   it('should throw on non-integer startOffset', ({ root }) => {
     const buffer = root.createBuffer(d.arrayOf(d.u32, 4));
-    expect(() => buffer.write([1], { startOffset: 1.5 })).toThrow('startOffset must be a non-negative integer');
+    expect(() => buffer.write([1], { startOffset: 1.5 })).toThrow(
+      'startOffset must be a non-negative integer',
+    );
   });
 
   it('should throw when endOffset < startOffset', ({ root }) => {
     const buffer = root.createBuffer(d.arrayOf(d.u32, 4));
-    expect(() => buffer.write([1], { startOffset: 8, endOffset: 4 })).toThrow('endOffset (4) must be >= startOffset (8)');
+    expect(() => buffer.write([1], { startOffset: 8, endOffset: 4 })).toThrow(
+      'endOffset (4) must be >= startOffset (8)',
+    );
   });
 
   it('should throw when endOffset exceeds buffer size', ({ root }) => {
     const schema = d.arrayOf(d.u32, 4);
     const buffer = root.createBuffer(schema);
-    expect(() => buffer.write([1], { endOffset: sizeOf(schema) + 4 })).toThrow(`endOffset (${sizeOf(schema) + 4}) exceeds buffer size (${sizeOf(schema)})`);
+    expect(() => buffer.write([1], { endOffset: sizeOf(schema) + 4 })).toThrow(
+      `endOffset (${sizeOf(schema) + 4}) exceeds buffer size (${sizeOf(schema)})`,
+    );
   });
 
   it('should map a mappable buffer before reading', async ({ root }) => {
