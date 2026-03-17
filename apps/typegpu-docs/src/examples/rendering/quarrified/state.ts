@@ -38,6 +38,7 @@ export class WorldMap {
     for (let x = this.xRange[0]; x <= this.xRange[1]; x++) {
       for (let y = this.yRange[0]; y <= this.yRange[1]; y++) {
         for (let z = this.zRange[0]; z <= this.zRange[1]; z++) {
+          // oxlint-disable-next-line typescript-eslint(no-floating-promises)
           this.generateChunk(d.vec3i(x, y, z));
         }
       }
@@ -211,8 +212,8 @@ export class State {
   }
 
   step(input: MovementInput, yaw: number) {
-    this.player.step(input, yaw, this.world.timestep);
     this.world.step();
+    this.player.step(input, yaw, this.world.timestep);
     this.#updateNearbyColliders();
   }
 
@@ -262,7 +263,6 @@ export class State {
     this.loadedColliderChunks.set(key, body);
   }
 
-  // oxlint-disable-next-line no-unused-private-class-members
   #unloadChunkColliders(key: string) {
     const body = this.loadedColliderChunks.get(key);
     if (!body) return;
@@ -270,7 +270,6 @@ export class State {
     this.loadedColliderChunks.delete(key);
   }
 
-  // TODO: investigate why causes error `unreachable`
   #updateNearbyColliders() {
     const currentChunk = this.player.getCurrentChunk();
     if (std.allEq(this.lastPlayerChunk, currentChunk)) return;
@@ -286,11 +285,11 @@ export class State {
       }
     }
 
-    // for (const loadedKey of this.loadedColliderChunks.keys()) {
-    //   if (!needed.has(loadedKey)) {
-    //     this.#unloadChunkColliders(loadedKey);
-    //   }
-    // }
+    for (const loadedKey of this.loadedColliderChunks.keys()) {
+      if (!needed.has(loadedKey)) {
+        this.#unloadChunkColliders(loadedKey);
+      }
+    }
 
     for (const key of needed) {
       if (!this.loadedColliderChunks.has(key)) {

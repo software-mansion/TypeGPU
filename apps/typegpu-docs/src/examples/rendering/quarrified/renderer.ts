@@ -194,7 +194,7 @@ export class Renderer {
     this.#pipeline
       .withColorAttachment({
         view: currentTexture.createView(),
-        clearValue: [1, 0.75, 0.8, 1],
+        clearValue: [0, 1, 0, 1],
         loadOp: 'clear',
         storeOp: 'store',
       })
