@@ -101,7 +101,6 @@ export class Player {
   controller: RAPIER.KinematicCharacterController;
   dims: d.v2f;
   velocityY: number;
-  grounded = false;
 
   constructor(config: Config, world: RAPIER.World) {
     this.dims = config.playerDims;
@@ -111,11 +110,17 @@ export class Player {
       .setCcdEnabled(true);
     this.body = world.createRigidBody(playerDesc);
 
-    const colliderDesc = RAPIER.ColliderDesc.capsule(config.playerDims.x, config.playerDims.y);
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(
+      config.playerDims.x,
+      config.playerDims.y,
+      config.playerDims.x,
+    );
     world.createCollider(colliderDesc, this.body);
 
     this.controller = world.createCharacterController(0.01);
-    this.velocityY = 1.2 * world.gravity.y;
+    this.controller.enableAutostep(0.1, 0.1, false);
+    this.controller.enableSnapToGround(0.5);
+    this.velocityY = world.gravity.y;
   }
 
   get position(): d.v3f {
@@ -128,6 +133,10 @@ export class Player {
   }
 
   step(input: MovementInput, yaw: number, dt: number) {
+    // --- debug ---
+    // const p = this.body.translation();
+    // console.log('Player Pos:', p.x.toFixed(2), p.y.toFixed(2), p.z.toFixed(2));
+    // --- debug end ---
     const forwardX = Math.sin(yaw);
     const forwardZ = Math.cos(yaw);
     const rightX = -forwardZ;
@@ -151,7 +160,6 @@ export class Player {
     });
 
     const corrected = this.controller.computedMovement();
-    this.grounded = this.controller.computedGrounded();
 
     // if (this.grounded && this.velocityY < 0) {
     //   console.log('LOSER');
@@ -240,11 +248,12 @@ export class State {
       }
     }
 
-    if (tempPoints.length === 0) {
+    const points = new Int32Array(tempPoints);
+    const dims = { x: 1, y: 1, z: 1 };
+
+    if (points.length === 0) {
       return;
     }
-    const points = new Float32Array(tempPoints);
-    const dims = { x: 0.5, y: 0.5, z: 0.5 };
 
     const bodyDesc = RAPIER.RigidBodyDesc.fixed();
     const body = this.world.createRigidBody(bodyDesc);

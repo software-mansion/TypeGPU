@@ -9,7 +9,6 @@ import tgpu, {
 } from 'typegpu';
 import { Camera, MeshLayout } from './schemas.ts';
 import { type Mesher } from './mesher.ts';
-import { getCapsuleVertices } from './helpers.ts';
 import { faceOffsets } from './cubeVertices.ts';
 
 export class Renderer {
@@ -92,39 +91,59 @@ export class Renderer {
     const playerPosUniform = root.createUniform(d.vec4f);
     this.#playerPosUniform = playerPosUniform;
 
-    const [positionArray, indexArray] = getCapsuleVertices(
-      playerDims.x,
-      2 * (playerDims.y + playerDims.x),
-    );
-    this.#playerIndexCount = indexArray.length;
+    const hx = playerDims.x;
+    const hy = playerDims.y;
+    const hz = playerDims.x;
+    const v = (x: number, y: number, z: number) => d.vec4f(x, y, z, 1);
+    // oxfmt-ignore
+    const cuboidVertices: d.v4f[] = [
+      v(-hx, -hy, -hz), v( hx, -hy, -hz), v( hx,  hy, -hz), v(-hx,  hy, -hz),
+      v(-hx, -hy,  hz), v( hx, -hy,  hz), v( hx,  hy,  hz), v(-hx,  hy,  hz),
+    ];
+    // oxfmt-ignore
+    const cuboidIndices = new Uint16Array([
+      4, 5, 6, 4, 6, 7,
+      1, 0, 3, 1, 3, 2,
+      3, 7, 6, 3, 6, 2,
+      4, 0, 1, 4, 1, 5,
+      5, 1, 2, 5, 2, 6,
+      0, 4, 7, 0, 7, 3,
+    ]);
+    this.#playerIndexCount = cuboidIndices.length;
 
-    const playerColliderPositionBuffer = root
-      .createBuffer(d.arrayOf(d.vec4f, positionArray.length), positionArray)
+    const playerVertexBuffer = root
+      .createBuffer(d.arrayOf(d.vec4f, cuboidVertices.length), cuboidVertices)
       .$usage('uniform')
       .as('uniform');
-    const playerColliderIndexBuffer = root
-      .createBuffer(d.arrayOf(d.u16, indexArray.length), Array.from(indexArray))
+    const playerIndexBuffer = root
+      .createBuffer(d.arrayOf(d.u16, cuboidIndices.length), Array.from(cuboidIndices))
       .$usage('index');
 
     const playerVertexFn = tgpu.vertexFn({
       in: { idx: d.builtin.vertexIndex },
-      out: { pos: d.builtin.position, rawCol: d.vec3f },
+      out: { pos: d.builtin.position, localPos: d.vec3f },
     })((input) => {
       'use gpu';
-      const localPos = playerColliderPositionBuffer.$[input.idx] + playerPosUniform.$;
-      const worldPos = cameraUniform.$.projection * cameraUniform.$.view * localPos;
+      const vtx = playerVertexBuffer.$[input.idx];
+      const worldPos =
+        cameraUniform.$.projection * cameraUniform.$.view * (vtx + playerPosUniform.$);
       return {
         pos: worldPos,
-        rawCol: playerColliderPositionBuffer.$[input.idx].xyz,
+        localPos: vtx.xyz,
       };
     });
 
     const playerFragmentFn = tgpu.fragmentFn({
-      in: { rawCol: d.vec3f },
+      in: { localPos: d.vec3f },
       out: d.vec4f,
     })((input) => {
       'use gpu';
-      return d.vec4f(std.normalize(std.abs(input.rawCol)), 1);
+      const t = input.localPos / d.vec3f(2 * hx, 2 * hy, 2 * hz) + 0.5;
+      const lo = d.vec3f(0.85, 0.2, 0.55);
+      const hi = d.vec3f(0.15, 0.85, 0.95);
+      const base = std.mix(lo, hi, d.vec3f(t.y));
+      const color = base + d.vec3f(0.12 * std.sin(t.x * 3.14), 0, 0.1 * std.cos(t.z * 3.14));
+      return d.vec4f(color, 1);
     });
 
     this.#playerPipeline = root
@@ -142,7 +161,7 @@ export class Renderer {
           cullMode: 'back',
         },
       })
-      .withIndexBuffer(playerColliderIndexBuffer);
+      .withIndexBuffer(playerIndexBuffer);
   }
 
   render(
