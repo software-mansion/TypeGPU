@@ -70,7 +70,7 @@ export {
   trunc,
 } from './numeric.ts';
 
-export { add, div, mod, mul, neg, sub } from './operators.ts';
+export { add, bitShiftLeft, bitShiftRight, div, mod, mul, neg, sub } from './operators.ts';
 
 export { rotateX4, rotateY4, rotateZ4, scale4, translate4 } from './matrix.ts';
 

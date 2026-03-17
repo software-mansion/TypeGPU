@@ -1,11 +1,11 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import {
+  isWgslExternalTexture,
   isWgslTexture,
   type WgslExternalTexture,
   type WgslStorageTexture,
   type WgslTexture,
 } from '../data/texture.ts';
-import type { TexelData } from '../core/texture/texture.ts';
 import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
 import { f32, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
@@ -39,6 +39,7 @@ import type {
   textureDepth2dArray,
   textureDepthCube,
   textureDepthCubeArray,
+  textureDepthMultisampled2d,
   textureExternal,
   textureMultisampled2d,
   textureStorage1d,
@@ -46,7 +47,6 @@ import type {
   textureStorage2dArray,
   textureStorage3d,
 } from '../data/texture.ts';
-
 import type { comparisonSampler, sampler } from '../data/sampler.ts';
 
 function sampleCpu<T extends texture1d>(texture: T, sampler: sampler, coords: number): v4f;
@@ -338,6 +338,23 @@ function textureLoadCpu<T extends textureMultisampled2d>(
   coords: v2i | v2u,
   sampleIndex: number,
 ): PrimitiveToLoadedType[T[typeof $internal]['type']];
+function textureLoadCpu<T extends textureDepth2d>(
+  texture: T,
+  coords: v2i | v2u,
+  level: number,
+): number;
+function textureLoadCpu<T extends textureDepth2dArray>(
+  texture: T,
+  coords: v2i | v2u,
+  arrayIndex: number,
+  level: number,
+): number;
+function textureLoadCpu<T extends textureDepthMultisampled2d>(
+  texture: T,
+  coords: v2i | v2u,
+  sampleIndex: number,
+): number;
+function textureLoadCpu<T extends textureExternal>(texture: T, coords: v2i | v2u): v4f;
 function textureLoadCpu<T extends textureStorage1d>(
   texture: T,
   coords: number,
@@ -356,10 +373,10 @@ function textureLoadCpu<T extends textureStorage3d>(
   coords: v3i | v3u,
 ): TexelFormatToInstanceType<T[typeof $internal][0]>;
 function textureLoadCpu(
-  _texture: WgslTexture | WgslStorageTexture,
+  _texture: WgslTexture | WgslStorageTexture | WgslExternalTexture,
   _coords: number | v2i | v2u | v3i | v3u,
   _levelOrArrayIndex?: number,
-): TexelData {
+): v4f | v4i | v4u | number {
   throw new MissingCpuImplError(
     '`textureLoad` relies on GPU resources and cannot be executed outside of a draw call',
   );
@@ -370,7 +387,7 @@ export const textureLoad = dualImpl({
   normalImpl: textureLoadCpu,
   codegenImpl: (_ctx, args) => stitch`textureLoad(${args})`,
   signature: (...args) => {
-    const texture = args[0] as WgslTexture | WgslStorageTexture;
+    const texture = args[0] as WgslTexture | WgslStorageTexture | WgslExternalTexture;
     if (isWgslTexture(texture)) {
       const isDepth = texture.type.startsWith('texture_depth');
       const sampleType = texture.sampleType;
@@ -383,6 +400,12 @@ export const textureLoad = dualImpl({
             : sampleType.type === 'u32'
               ? vec4u
               : vec4i,
+      };
+    }
+    if (isWgslExternalTexture(texture)) {
+      return {
+        argTypes: args,
+        returnType: vec4f,
       };
     }
     const format = texture.format;
@@ -418,8 +441,8 @@ function textureStoreCpu<T extends textureStorage3d>(
 function textureStoreCpu(
   _texture: WgslStorageTexture,
   _coords: number | v2i | v2u | v3i | v3u,
-  _arrayIndexOrValue?: number | TexelData,
-  _maybeValue?: TexelData,
+  _arrayIndexOrValue?: number | v4f | v4i | v4u,
+  _maybeValue?: v4f | v4i | v4u,
 ): void {
   throw new MissingCpuImplError(
     '`textureStore` relies on GPU resources and cannot be executed outside of a draw call',

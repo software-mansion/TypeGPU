@@ -1,5 +1,6 @@
 {
   "title": "Square",
   "category": "simple",
-  "tags": ["index buffer"]
+  "tags": ["basics", "primitives"],
+  "coolFactor": 3
 }

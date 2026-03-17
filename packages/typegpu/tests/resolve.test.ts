@@ -3,7 +3,7 @@ import tgpu, { d } from '../src/index.js';
 import { setName } from '../src/shared/meta.ts';
 import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import { snip } from '../src/data/snippet.ts';
 
 describe('tgpu resolve', () => {

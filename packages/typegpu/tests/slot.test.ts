@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import tgpu, { d, std } from '../src/index.js';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import { getName } from '../src/shared/meta.ts';
 
 const RED = 'vec3f(1., 0., 0.)';

@@ -46,6 +46,7 @@ import {
 import type { TgpuBindGroupLayout, TgpuLayoutEntry } from './tgpuBindGroupLayout.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
 import type { Infer } from './shared/repr.ts';
+import { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -242,6 +243,7 @@ export interface ResolutionCtx {
 
   readonly mode: ExecState;
   readonly enableExtensions: WgslExtension[] | undefined;
+  readonly gen: ShaderGenerator;
 
   addDeclaration(declaration: string): void;
   withResetIndentLevel<T>(callback: () => T): T;
@@ -280,10 +282,13 @@ export interface ResolutionCtx {
    *
    * @param item The value to resolve
    * @param schema Additional information about the item's data type
-   * @param exact Should the inferred value of the resulting code be typed exactly as `schema` (true),
-   *              or is being assignable to `schema` enough (false). Default is false.
    */
-  resolve(item: unknown, schema?: BaseData | UnknownData, exact?: boolean): ResolvedSnippet;
+  resolve(item: unknown, schema?: BaseData | UnknownData): ResolvedSnippet;
+
+  /**
+   * Equivalent to `snip(ctx.resolve(snippet.value, snippet.dataType).value, snippet.dataType, snippet.origin)`.
+   */
+  resolveSnippet(snippet: Snippet): ResolvedSnippet;
 
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;

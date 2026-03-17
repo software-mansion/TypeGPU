@@ -1,6 +1,6 @@
 {
   "name": "typegpu",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "private": true,
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "keywords": [
@@ -81,7 +81,7 @@
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
-    "tinyest": "workspace:~0.3.0",
+    "tinyest": "workspace:~0.3.1",
     "tsover-runtime": "^0.0.5",
     "typed-binary": "^4.3.1"
   },
@@ -93,6 +93,7 @@
     "jiti": "catalog:build",
     "jsdom": "^27.0.0",
     "tsdown": "catalog:build",
+    "typegpu-testing-utility": "workspace:*",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*",
     "wgpu-matrix": "catalog:example"
