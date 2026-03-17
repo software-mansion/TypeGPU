@@ -1,5 +1,16 @@
 import tgpu, { d } from 'typegpu';
 
+export interface Config {
+  playerPos: d.v3f;
+  playerDims: d.v2f;
+  chunks: {
+    xRange: d.v2i;
+    yRange: d.v2i;
+    zRange: d.v2i;
+  };
+  skyAbove: number;
+}
+
 export type Block = { blockType: number; lightLevel: number };
 export type Chunk = { chunkIndex: d.v3i; blocks: Block[] };
 

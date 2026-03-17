@@ -1,5 +1,5 @@
 import { d } from 'typegpu';
-import type { Config } from './state.ts';
+import type { Config } from './schemas.ts';
 
 export const CHUNK_SIZE_BITS = 4;
 export const CHUNK_SIZE = 1 << CHUNK_SIZE_BITS;

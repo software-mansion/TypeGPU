@@ -2,7 +2,7 @@ import { d, type StorageFlag, type TgpuBuffer, type TgpuRoot, type VertexFlag } 
 import { CHUNK_SIZE, INIT_CONFIG } from './params.ts';
 import type { Chunk } from './schemas.ts';
 import { coordToIndex } from './chunkGenerator.ts';
-import type { WorldMap } from './state.ts';
+import type { WorldMap } from './worldMap.ts';
 import { blockTypes } from './blockTypes.ts';
 
 export const MAX_CHUNKS_AT_ONCE = Object.values(INIT_CONFIG.chunks)
