@@ -3,7 +3,7 @@ import * as d from '../src/data/index.ts';
 import { offsetsForProps } from '../src/data/offsets.ts';
 import { getWriteInstructions, type WriteInstruction } from '../src/data/partialIO.ts';
 import type { TypedArray } from '../src/shared/utilityTypes.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 function expectInstruction(
   instruction: WriteInstruction,

@@ -2,7 +2,7 @@ import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, expectTypeOf } from 'vitest';
 import { readData, writeData } from '../src/data/dataIO.ts';
 import * as d from '../src/data/index.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('disarray', () => {
   it('does not take element alignment into account when measuring', () => {

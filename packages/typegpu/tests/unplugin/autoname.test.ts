@@ -2,7 +2,7 @@ import { describe, expect } from 'vitest';
 import { struct } from '../../src/data/index.ts';
 import tgpu, { d, type TgpuBindGroupLayout } from '../../src/index.js';
 import { getName } from '../../src/shared/meta.ts';
-import { it } from '../utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('autonaming', () => {
   it('autonames resources created using tgpu', () => {

@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import tgpu, { d } from '../src/index.js';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('tgpu.simulate()', () => {
   it('runs the callback synchronously and returns the result', () => {

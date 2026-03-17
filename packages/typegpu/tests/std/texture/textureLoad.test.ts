@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import { it } from '../../utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import { textureLoad } from '../../../src/std/texture.ts';
 import tgpu from '../../../src/index.js';
 import * as d from '../../../src/data/index.ts';

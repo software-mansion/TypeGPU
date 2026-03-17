@@ -1,5 +1,5 @@
 import { describe, expect, vi } from 'vitest';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import tgpu, { d } from '../src/index.js';
 import { warnIfOverflow } from '../src/core/pipeline/limitsOverflow.ts';
 
