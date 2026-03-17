@@ -16,6 +16,8 @@ export class Player {
 
     const playerDesc = RAPIER.RigidBodyDesc.kinematicPositionBased()
       .setTranslation(config.playerPos.x, config.playerPos.y, config.playerPos.z)
+      .lockRotations()
+      .setLinearDamping(0)
       .setCcdEnabled(true);
     this.body = world.createRigidBody(playerDesc);
 
@@ -27,8 +29,9 @@ export class Player {
     world.createCollider(colliderDesc, this.body);
 
     this.controller = world.createCharacterController(0.01);
-    this.controller.enableAutostep(0.1, 0.1, false);
-    this.controller.enableSnapToGround(0.5);
+    this.controller.enableAutostep(0.6, 0.6, false);
+    this.controller.setUp({ x: 0, y: 1, z: 0 });
+
     this.velocityY = world.gravity.y;
   }
 
@@ -46,6 +49,7 @@ export class Player {
     const p = this.position;
     console.log('Player Pos:', p.x.toFixed(2), p.y.toFixed(2), p.z.toFixed(2));
     // --- debug end ---
+
     const forwardX = Math.sin(yaw);
     const forwardZ = Math.cos(yaw);
     const rightX = -forwardZ;
