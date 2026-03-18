@@ -113,7 +113,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'buffer';
   readonly dataType: TData;
-  readonly initial?: Infer<TData> | undefined;
+  readonly initial?: InferInput<TData> | undefined;
 
   readonly buffer: GPUBuffer;
   readonly destroyed: boolean;
@@ -149,7 +149,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
 export function INTERNAL_createBuffer<TData extends AnyData>(
   group: ExperimentalTgpuRoot,
   typeSchema: TData,
-  initialOrBuffer?: Infer<TData> | GPUBuffer,
+  initialOrBuffer?: InferInput<TData> | GPUBuffer,
 ): TgpuBuffer<TData> {
   if (!isWgslData(typeSchema)) {
     return new TgpuBufferImpl(group, typeSchema, initialOrBuffer, ['storage', 'uniform']);
@@ -190,7 +190,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   private _destroyed = false;
   private _hostBuffer: ArrayBuffer | undefined;
 
-  readonly initial: Infer<TData> | undefined;
+  readonly initial: InferInput<TData> | undefined;
 
   usableAsUniform = false;
   usableAsStorage = false;
@@ -201,7 +201,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   constructor(
     root: ExperimentalTgpuRoot,
     public readonly dataType: TData,
-    public readonly initialOrBuffer?: Infer<TData> | GPUBuffer,
+    public readonly initialOrBuffer?: InferInput<TData> | GPUBuffer,
     private readonly _disallowedUsages?: UsageLiteral[],
   ) {
     this.#device = root.device;
@@ -228,7 +228,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       });
 
       if (this.initial) {
-        this._writeToTarget(this._buffer.getMappedRange(), this.initial as InferInput<TData>);
+        this._writeToTarget(this._buffer.getMappedRange(), this.initial);
         this._buffer.unmap();
       }
     }
