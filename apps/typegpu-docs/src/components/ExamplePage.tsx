@@ -5,6 +5,36 @@ import { common, examples } from '../examples/exampleContent.ts';
 import { ExampleNotFound } from './ExampleNotFound.tsx';
 import { ExampleView } from './ExampleView.tsx';
 
+// This setup required for tsover to work, because monaco-react won't use custom monaco without `loader.config()`
+// Integration docs: https://github.com/microsoft/monaco-editor/blob/main/docs/integrate-esm.md
+import { loader } from "@monaco-editor/react";
+import * as monaco from "monaco-editor";
+import editorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
+import jsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
+import cssWorker from "monaco-editor/esm/vs/language/css/css.worker?worker";
+import htmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
+import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
+
+self.MonacoEnvironment = {
+  getWorker(_, label) {
+    switch (label) {
+      case "json":
+        return new jsonWorker();
+      case "css":
+        return new cssWorker();
+      case "html":
+        return new htmlWorker();
+      case "typescript":
+      case "javascript":
+        return new tsWorker();
+      default:
+        return new editorWorker();
+    }
+  },
+};
+
+loader.config({ monaco });
+
 const getRandomExampleKey = () => {
   const keys = Object.keys(examples);
   const randomIdx = Math.floor(Math.random() * keys.length);

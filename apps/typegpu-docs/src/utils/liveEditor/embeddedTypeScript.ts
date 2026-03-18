@@ -10,5 +10,7 @@ export const tsCompilerOptions: languages.typescript.CompilerOptions = {
   skipLibCheck: true,
   exactOptionalPropertyTypes: true,
   baseUrl: '.',
-  lib: ['dom', 'es2021'],
+  lib: ['dom', 'es2021', 'tsover'],
 };
+
+// AAA: Duplicate tsnotoverconfig
