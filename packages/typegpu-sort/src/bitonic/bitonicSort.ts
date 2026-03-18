@@ -106,7 +106,7 @@ const bitonicStepKernel = tgpu.computeFn({
   const k = sortLayout.$.uniforms.k;
   const shift = sortLayout.$.uniforms.jShift;
   const dataLength = d.u32(sortLayout.$.data.length);
-  const stride = 1 << shift;
+  const stride = d.u32(1) << shift;
 
   const maskBelow = stride - 1;
   const below = tid & maskBelow;
