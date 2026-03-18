@@ -182,7 +182,7 @@ function generateRandomArray() {
   const workgroupsTotal = Math.ceil(state.arraySize / WORKGROUP_SIZE);
   const [workgroupsX, workgroupsY, workgroupsZ] = decomposeWorkgroups(workgroupsTotal);
 
-  initSeed.write(Math.random() * 1000);
+  initSeed.write(Math.random());
 
   initPipeline.with(initBindGroup).dispatchWorkgroups(workgroupsX, workgroupsY, workgroupsZ);
 
@@ -190,14 +190,7 @@ function generateRandomArray() {
 }
 
 function render() {
-  renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .with(bindGroup)
-    .draw(3);
+  renderPipeline.withColorAttachment({ view: context }).with(bindGroup).draw(3);
 }
 
 const overlay = document.getElementById('sort-overlay') as HTMLDivElement;
