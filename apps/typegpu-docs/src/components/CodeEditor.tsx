@@ -65,7 +65,7 @@ const createCodeEditorComponent =
       <div className={shown ? 'h-[calc(100%-7rem)] md:h-[calc(100%-3rem)]' : 'hidden'}>
         <Editor
           defaultLanguage={language}
-          value={file.tsnotoverContent ?? file.content}
+          value={file.content}
           path={path}
           beforeMount={beforeMount}
           onMount={onMount}
