@@ -83,6 +83,7 @@
     "magic-string": "^0.30.21",
     "tailwindcss": "^4.1.11",
     "tailwindcss-motion": "^1.1.1",
+    "typegpu-testing-utility": "workspace:*",
     "vite-imagetools": "catalog:frontend",
     "vite-plugin-wasm": "^3.5.0",
     "yaml": "^2.8.1"

@@ -11,7 +11,7 @@ import tgpu, {
   type TgpuVertexFnShell,
 } from '../src/index.js';
 import { $internal } from '../src/shared/symbols.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('root.withVertex(...).withFragment(...)', () => {
   const vert = tgpu.vertexFn({
@@ -842,7 +842,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
 
     //@ts-expect-error: No index buffer assigned
     expect(() => pipeline.drawIndexed(3)).toThrowErrorMatchingInlineSnapshot(
-      '[Error: No index buffer set for this render pipeline.]',
+      `[Error: No index buffer set for this render pipeline.]`,
     );
 
     const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
@@ -1485,6 +1485,66 @@ describe('root.createRenderPipeline', () => {
     `);
   });
 
+  it('derefs implicit pointers in the vertex and fragment outputs', ({ root }) => {
+    const pipeline = root.createRenderPipeline({
+      vertex: ({ $vertexIndex }) => {
+        'use gpu';
+        const pos = [d.vec2f(0.0, 0.5), d.vec2f(-0.5, -0.5), d.vec2f(0.5, -0.5)];
+        const local = pos[$vertexIndex]!;
+        return {
+          $position: d.vec4f(local, 0, 1),
+          local,
+        };
+      },
+      fragment: () => {
+        'use gpu';
+        const color = d.vec4f(1, 0, 0, 1);
+        const alias = color;
+        return {
+          color: alias,
+        };
+      },
+      targets: { color: { format: 'rgba8unorm' } },
+    });
+
+    expectTypeOf(pipeline).toEqualTypeOf<TgpuRenderPipeline<{ color: d.Vec4f }>>();
+
+    const wgsl = tgpu.resolve([pipeline]);
+    // vertex
+    expect(wgsl).toContain('local: vec2f');
+    expect(wgsl).not.toContain('local: ptr<function, vec2f>');
+    // fragment
+    expect(wgsl).toContain('color: vec4f');
+    expect(wgsl).not.toContain('ptr<function, vec4f>');
+
+    expect(wgsl).toMatchInlineSnapshot(`
+      "struct VertexOut {
+        @builtin(position) position: vec4f,
+        @location(0) local: vec2f,
+      }
+
+      struct VertexIn {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
+        var pos = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
+        let local = (&pos[_arg_0.vertexIndex]);
+        return VertexOut(vec4f((*local), 0f, 1f), (*local));
+      }
+
+      struct FragmentOut {
+        @location(0) color: vec4f,
+      }
+
+      @fragment fn fragment() -> FragmentOut {
+        var color = vec4f(1, 0, 0, 1);
+        let alias_1 = (&color);
+        return FragmentOut((*alias_1));
+      }"
+    `);
+  });
+
   it('generates a struct that matches vertex attributes', ({ root }) => {
     const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec3f));
     const pipeline = root.createRenderPipeline({
@@ -1597,6 +1657,126 @@ describe('root.createRenderPipeline', () => {
       - renderPipeline:pipeline
       - renderPipelineCore
       - autoFragmentFn: Property name 'frontFacing' causes naming clashes. Choose a different name.]
+    `);
+  });
+
+  it('generates proper vertex layout for shell-less attributes', ({
+    root,
+    device,
+    renderPassEncoder,
+  }) => {
+    const Boid = d.struct({
+      velocity: d.vec3f,
+      life: d.f32,
+    });
+    const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec3f));
+    const instanceLayout = tgpu.vertexLayout(d.arrayOf(Boid), 'instance');
+    const pipeline = root.createRenderPipeline({
+      attribs: { vertexPos: vertexLayout.attrib, ...instanceLayout.attrib },
+      vertex: ({ life, velocity, vertexPos }) => {
+        'use gpu';
+        return { $position: d.vec4f(vertexPos + velocity, 1), life };
+      },
+      fragment: ({ life }) => {
+        'use gpu';
+        return d.vec4f(1, life, 0, 1);
+      },
+      targets: { format: 'rgba8unorm' },
+    });
+
+    const vertexBuffer = root.createBuffer(vertexLayout.schemaForCount(3)).$usage('vertex');
+    const instanceBuffer = root.createBuffer(instanceLayout.schemaForCount(1)).$usage('vertex');
+
+    pipeline
+      .with(vertexLayout, vertexBuffer)
+      .with(instanceLayout, instanceBuffer)
+      .withColorAttachment({ view: {} as unknown as GPUTextureView })
+      .draw(3);
+
+    expect(device.mock.createRenderPipeline.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          {
+            "fragment": {
+              "module": "mockShaderModule",
+              "targets": [
+                {
+                  "format": "rgba8unorm",
+                },
+              ],
+            },
+            "label": "pipeline",
+            "layout": "mockPipelineLayout",
+            "vertex": {
+              "buffers": [
+                {
+                  "arrayStride": 16,
+                  "attributes": [
+                    {
+                      "format": "float32",
+                      "offset": 12,
+                      "shaderLocation": 0,
+                    },
+                    {
+                      "format": "float32x3",
+                      "offset": 0,
+                      "shaderLocation": 1,
+                    },
+                  ],
+                  "stepMode": "instance",
+                },
+                {
+                  "arrayStride": 16,
+                  "attributes": [
+                    {
+                      "format": "float32x3",
+                      "offset": 0,
+                      "shaderLocation": 2,
+                    },
+                  ],
+                  "stepMode": "vertex",
+                },
+              ],
+              "module": "mockShaderModule",
+            },
+          },
+        ],
+      ]
+    `);
+
+    expect(renderPassEncoder.mock.setVertexBuffer.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          0,
+          {
+            "destroy": [MockFunction spy],
+            "getMappedRange": [MockFunction spy],
+            "label": "instanceBuffer",
+            "mapAsync": [MockFunction spy],
+            "mapState": "unmapped",
+            "size": 16,
+            "unmap": [MockFunction spy],
+            "usage": 44,
+          },
+          undefined,
+          undefined,
+        ],
+        [
+          1,
+          {
+            "destroy": [MockFunction spy],
+            "getMappedRange": [MockFunction spy],
+            "label": "vertexBuffer",
+            "mapAsync": [MockFunction spy],
+            "mapState": "unmapped",
+            "size": 48,
+            "unmap": [MockFunction spy],
+            "usage": 44,
+          },
+          undefined,
+          undefined,
+        ],
+      ]
     `);
   });
 });

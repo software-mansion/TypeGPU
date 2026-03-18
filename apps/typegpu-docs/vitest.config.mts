@@ -19,11 +19,24 @@ export default defineConfig({
     },
   },
   test: {
-    name: 'browser',
-    include: ['**/*.{test,spec}.browser.ts'],
-    browser: {
-      provider: 'preview',
-      instances: [{ browser: 'chromium' }],
-    },
+    projects: [
+      {
+        test: {
+          name: 'browser',
+          include: ['**/*.{test,spec}.browser.ts'],
+          browser: {
+            provider: 'preview',
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+      {
+        test: {
+          name: 'individual-example-tests',
+          root: './tests/individual-example-tests',
+          environment: 'node',
+        },
+      },
+    ],
   },
 });

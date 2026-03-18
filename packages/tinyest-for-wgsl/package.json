@@ -1,6 +1,6 @@
 {
   "name": "tinyest-for-wgsl",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "private": true,
   "description": "Transforms JavaScript into its 'tinyest' form, to be used in generating equivalent (or close to) WGSL code.",
   "keywords": [
@@ -32,10 +32,14 @@
     "exports": {
       "./package.json": "./package.json",
       ".": {
-        "types": "./dist/index.d.ts",
-        "module": "./dist/index.js",
-        "import": "./dist/index.js",
-        "default": "./dist/index.cjs"
+        "require": {
+          "types": "./dist/index.d.cts",
+          "default": "./dist/index.cjs"
+        },
+        "import": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        }
       }
     },
     "linkDirectory": false,
@@ -48,7 +52,7 @@
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
-    "tinyest": "workspace:~0.3.0"
+    "tinyest": "workspace:~0.3.1"
   },
   "devDependencies": {
     "@babel/parser": "^7.27.0",

@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import { it } from '../../utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import { textureSample } from '../../../src/std/texture.ts';
 import { fn } from '../../../src/core/function/tgpuFn.ts';
 import * as d from '../../../src/data/index.ts';

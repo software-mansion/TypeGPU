@@ -133,10 +133,11 @@ async function main() {
 
   const args = arg({
     '--skip-publish-tag-check': Boolean,
-    '--skip-all-checks': Boolean,
   });
 
-  if (!args['--skip-publish-tag-check'] && !args['--skip-all-checks']) {
+  const skipAllChecks = process.env.SKIP_ALL_CHECKS === 'true';
+
+  if (!args['--skip-publish-tag-check'] && !skipAllChecks) {
     verifyPublishTag();
   }
 
@@ -199,7 +200,7 @@ async function main() {
       // First build
       ...(await Promise.allSettled([withStatusUpdate('build', $`pnpm build`)])),
       // Then the rest
-      ...(args['--skip-all-checks']
+      ...(skipAllChecks
         ? []
         : await Promise.allSettled([
             withStatusUpdate('style', $`pnpm -w test:style`),

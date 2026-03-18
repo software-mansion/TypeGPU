@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import { d, tgpu } from '../../src/index.js';
-import { test } from '../utils/extendedIt.ts';
+import { test } from 'typegpu-testing-utility';
 
 test('vec3f() +', () => {
   const main = () => {

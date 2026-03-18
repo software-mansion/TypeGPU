@@ -1,6 +1,5 @@
 import { isTgpuFn } from './core/function/tgpuFn.ts';
 import { getUniqueName, type Namespace, type NamespaceInternal } from './core/resolve/namespace.ts';
-import { resolveData } from './core/resolve/resolveData.ts';
 import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
 import type { Configurable, ExperimentalTgpuRoot } from './core/root/rootTypes.ts';
@@ -313,7 +312,6 @@ interface FixedBindingConfig {
 
 export class ResolutionCtxImpl implements ResolutionCtx {
   readonly #namespaceInternal: NamespaceInternal;
-  readonly #shaderGenerator: ShaderGenerator;
 
   private readonly _indentController = new IndentController();
   private readonly _itemStateStack = new ItemStateStackImpl();
@@ -322,6 +320,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private _varyingLocations: Record<string, number> | undefined;
   readonly #currentlyResolvedItems: WeakSet<object> = new WeakSet();
   readonly #logGenerator: LogGenerator;
+
+  readonly gen: ShaderGenerator;
 
   get varyingLocations() {
     return this._varyingLocations;
@@ -348,7 +348,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
   constructor(opts: ResolutionCtxImplOptions) {
     this.enableExtensions = opts.enableExtensions;
-    this.#shaderGenerator = opts.shaderGenerator ?? wgslGenerator;
+    this.gen = opts.shaderGenerator ?? wgslGenerator;
     this.#logGenerator = opts.root ? new LogGeneratorImpl(opts.root) : new LogGeneratorNullImpl();
     this.#namespaceInternal = opts.namespace[$internal];
   }
@@ -502,8 +502,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       );
       fnScopePushed = true;
 
-      this.#shaderGenerator.initGenerator(this);
-      const body = this.#shaderGenerator.functionDefinition(options.body);
+      const body = this.gen.functionDefinition(options.body);
 
       let returnType = options.returnType;
       if (returnType instanceof AutoStruct) {
@@ -734,7 +733,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       let result: ResolvedSnippet;
       if (isData(item)) {
         // Ref is arbitrary, as we're resolving a schema
-        result = snip(resolveData(this, item), Void, /* origin */ 'runtime');
+        result = snip(this.gen.typeAnnotation(item), Void, /* origin */ 'runtime');
       } else if (isLazy(item) || isSlot(item)) {
         result = this.resolve(this.unwrap(item));
       } else if (isSelfResolvable(item)) {
@@ -800,6 +799,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     if (isMarkedInternal(item) || hasTinyestMetadata(item)) {
       // Top-level resolve
       if (this._itemStateStack.itemDepth === 0) {
+        this.gen.initGenerator(this);
         try {
           this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));
@@ -899,6 +899,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         schema ? ` to type ${safeStringify(schema)}` : ''
       }`,
     );
+  }
+
+  resolveSnippet(snippet: Snippet): ResolvedSnippet {
+    return snip(
+      this.resolve(snippet.value, snippet.dataType).value,
+      snippet.dataType,
+      snippet.origin,
+    ) as ResolvedSnippet;
   }
 
   pushMode(mode: ExecState) {

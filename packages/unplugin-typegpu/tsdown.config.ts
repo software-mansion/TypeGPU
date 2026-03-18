@@ -22,5 +22,6 @@ export default defineConfig({
   tsconfig: './tsconfig.json',
   target: 'es2017',
   platform: 'node',
+  sourcemap: false,
   dts: true,
 });

@@ -2,7 +2,7 @@ import { describe, expect } from 'vitest';
 import { buildWriter, getCompiledWriterForSchema } from '../src/data/compiledIO.ts';
 import * as d from '../src/data/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('buildWriter', () => {
   it('should compile a writer for a struct', () => {

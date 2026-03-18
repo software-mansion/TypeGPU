@@ -1,3 +1,5 @@
+import { d } from 'typegpu';
+
 const body = document.querySelector('body') as HTMLBodyElement;
 body.style.display = 'flex';
 body.style.flexDirection = 'column';
@@ -146,7 +148,7 @@ for (const controls of Object.values(example)) {
 
           slider.addEventListener('input', () => {
             currentValues[i] = Number.parseFloat(slider.value);
-            params.onVectorSliderChange(currentValues);
+            (params.onVectorSliderChange as (value: d.v2f | d.v3f | d.v4f) => void)(currentValues);
           });
 
           row.appendChild(labelSpan);
@@ -154,7 +156,7 @@ for (const controls of Object.values(example)) {
           sliderContainer.appendChild(row);
         }
 
-        params.onVectorSliderChange(currentValues);
+        (params.onVectorSliderChange as (value: d.v2f | d.v3f | d.v4f) => void)(currentValues);
         controlRow.appendChild(sliderContainer);
       }
 
@@ -222,17 +224,17 @@ type SliderControlParam = {
   step?: number;
 };
 
-type VectorSliderControlParam = {
-  onVectorSliderChange: (newValue: number[]) => void;
-  initial: number[];
-  min: number[];
-  max: number[];
-  step: number[];
+type VectorSliderControlParam<T extends d.v2f | d.v3f | d.v4f> = {
+  onVectorSliderChange: (newValue: T) => void;
+  initial: T;
+  min: T;
+  max: T;
+  step: T;
 };
 
 type ColorPickerControlParam = {
-  onColorChange: (newValue: readonly [number, number, number]) => void;
-  initial: readonly [number, number, number];
+  onColorChange: (newValue: d.v3f) => void;
+  initial: d.v3f;
 };
 
 type ButtonControlParam = {
@@ -250,15 +252,17 @@ type ExampleControlParam =
   | SliderControlParam
   | ButtonControlParam
   | TextAreaControlParam
-  | VectorSliderControlParam
+  | VectorSliderControlParam<d.v2f>
+  | VectorSliderControlParam<d.v3f>
+  | VectorSliderControlParam<d.v4f>
   | ColorPickerControlParam;
 
-function hexToRgb(hex: string): readonly [number, number, number] {
-  return [
+function hexToRgb(hex: string): d.v3f {
+  return d.vec3f(
     Number.parseInt(hex.slice(1, 3), 16) / 255,
     Number.parseInt(hex.slice(3, 5), 16) / 255,
     Number.parseInt(hex.slice(5, 7), 16) / 255,
-  ];
+  );
 }
 
 function componentToHex(c: number) {
@@ -266,6 +270,6 @@ function componentToHex(c: number) {
   return hex.length === 1 ? `0${hex}` : hex;
 }
 
-function rgbToHex(rgb: readonly [number, number, number]) {
+function rgbToHex(rgb: d.v3f) {
   return `#${rgb.map(componentToHex).join('')}`;
 }
