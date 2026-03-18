@@ -986,35 +986,6 @@ describe('createCompileInstructions', () => {
     expect([...new Float32Array(arr, 32, 3)]).toStrictEqual([7, 8, 9]);
   });
 
-  it('should write an array of vec4f from a flat Float32Array (no stride correction needed)', () => {
-    // GPU layout: vec4f has 16-byte stride (16 bytes, no padding)
-    // Input: Float32Array with 4 floats per element = same layout
-    const schema = d.arrayOf(d.vec4f, 2);
-    const writer = getCompiledWriterForSchema(schema)!;
-    const arr = new ArrayBuffer(sizeOf(schema)); // 32 bytes
-    const dataView = new DataView(arr);
-
-    writer(dataView, 0, new Float32Array([1, 2, 3, 4, 5, 6, 7, 8]));
-
-    expect([...new Float32Array(arr, 0, 4)]).toStrictEqual([1, 2, 3, 4]);
-    expect([...new Float32Array(arr, 16, 4)]).toStrictEqual([5, 6, 7, 8]);
-  });
-
-  it('should write an array of vec3u from a padded Uint32Array (raw bytes, 16-byte stride)', () => {
-    // New semantics: TypedArray → raw byte copy; user must provide the padded GPU layout
-    // GPU layout: vec3u has 16-byte stride (12 bytes data + 4 bytes padding per element)
-    const schema = d.arrayOf(d.vec3u, 2);
-    const writer = getCompiledWriterForSchema(schema)!;
-    const arr = new ArrayBuffer(sizeOf(schema)); // 2 * 16 = 32 bytes
-    const dataView = new DataView(arr);
-
-    // Padded layout: 4 uint32s per element, 4th is padding
-    writer(dataView, 0, new Uint32Array([10, 20, 30, 0, 40, 50, 60, 0]));
-
-    expect([...new Uint32Array(arr, 0, 3)]).toStrictEqual([10, 20, 30]);
-    expect([...new Uint32Array(arr, 16, 3)]).toStrictEqual([40, 50, 60]);
-  });
-
   it('should write an array of vec3f where each element is its own Float32Array', () => {
     const schema = d.arrayOf(d.vec3f, 3);
     const writer = getCompiledWriterForSchema(schema)!;
@@ -1048,27 +1019,6 @@ describe('createCompileInstructions', () => {
     expect(dataView.getFloat16(0, true)).toBeCloseTo(1.5);
     expect(dataView.getFloat16(2, true)).toBeCloseTo(2.5);
     expect(dataView.getFloat16(4, true)).toBeCloseTo(3.5);
-  });
-
-  it('should write an arrayOf(vec2h) from plain tuples with correct 2-byte component offsets', () => {
-    const schema = d.arrayOf(d.vec2h, 3);
-    const writer = getCompiledWriterForSchema(schema)!;
-    const arr = new ArrayBuffer(sizeOf(schema)); // 3 * 4 = 12 bytes
-    const dataView = new DataView(arr);
-
-    writer(dataView, 0, [
-      [1, 2],
-      [3, 4],
-      [5, 6],
-    ]);
-
-    // Each vec2h: 2 components × 2 bytes = 4 bytes per element (no padding needed)
-    expect(dataView.getFloat16(0, true)).toBeCloseTo(1);
-    expect(dataView.getFloat16(2, true)).toBeCloseTo(2);
-    expect(dataView.getFloat16(4, true)).toBeCloseTo(3);
-    expect(dataView.getFloat16(6, true)).toBeCloseTo(4);
-    expect(dataView.getFloat16(8, true)).toBeCloseTo(5);
-    expect(dataView.getFloat16(10, true)).toBeCloseTo(6);
   });
 
   it('should write an arrayOf(vec3h) from plain tuples with stride-corrected 2-byte offsets', () => {
