@@ -1,4 +1,4 @@
-import { languages } from 'monaco-editor';
+import { languages } from 'tsover-monaco-editor';
 
 export const tsCompilerOptions: languages.typescript.CompilerOptions = {
   target: languages.typescript.ScriptTarget.ESNext,

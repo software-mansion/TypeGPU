@@ -1,5 +1,5 @@
 import Editor, { type BeforeMount, type Monaco, type OnMount } from '@monaco-editor/react';
-import type { editor } from 'monaco-editor';
+import type { editor } from 'tsover-monaco-editor';
 import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
 import { SANDBOX_MODULES } from '../utils/examples/sandboxModules.ts';
 import type { ExampleCommonFile, ExampleSrcFile } from '../utils/examples/types.ts';
