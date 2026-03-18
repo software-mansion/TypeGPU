@@ -54,7 +54,12 @@ type Props = {
 };
 
 const createCodeEditorComponent =
-  (language: 'typescript' | 'html', beforeMount?: BeforeMount, onMount?: OnMount) =>
+  (
+    language: 'typescript' | 'html',
+    tsoverEnabled: boolean,
+    beforeMount?: (tsover: boolean) => BeforeMount,
+    onMount?: OnMount,
+  ) =>
   (props: Props) => {
     const { file, shown } = props;
 
@@ -68,9 +73,9 @@ const createCodeEditorComponent =
       <div className={shown ? 'h-[calc(100%-7rem)] md:h-[calc(100%-3rem)]' : 'hidden'}>
         <Editor
           defaultLanguage={language}
-          value={file.content}
+          value={tsoverEnabled ? file.content : (file.tsnotoverContent ?? file.content)}
           path={path}
-          beforeMount={beforeMount}
+          beforeMount={beforeMount?.(tsoverEnabled)}
           onMount={onMount}
           options={{
             minimap: {
@@ -86,14 +91,16 @@ const createCodeEditorComponent =
 
 export const TsnotoverCodeEditor = createCodeEditorComponent(
   'typescript',
-  handleEditorWillMount(false),
-  handleEditorOnMount,
+  false,
+  handleEditorWillMount,
+  handleEditorOnMount as OnMount,
 );
 
 export const TsoverCodeEditor = createCodeEditorComponent(
   'typescript',
-  handleEditorWillMount(true),
-  handleEditorOnMount,
+  true,
+  handleEditorWillMount,
+  handleEditorOnMount as OnMount,
 );
 
-export const HtmlCodeEditor = createCodeEditorComponent('html');
+export const HtmlCodeEditor = createCodeEditorComponent('html', false);
