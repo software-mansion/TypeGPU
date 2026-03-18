@@ -49,7 +49,7 @@ function EditorSection({
         value={value}
         onChange={onChange ? (v) => onChange(v || '') : undefined}
         theme="vs-dark"
-        beforeMount={language === 'typescript' ? setupMonacoEditor : undefined} // AAA: extract monaco instance with effectem/refem/subscribe
+        beforeMount={language === 'typescript' ? setupMonacoEditor : undefined}
         onMount={onMount}
         loading={
           <div className="flex items-center justify-center text-gray-400">Loading editor...</div>
