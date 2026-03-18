@@ -2,7 +2,6 @@ import {
   type StorageFlag,
   type TgpuBuffer,
   type TgpuComputePipeline,
-  type TgpuFn,
   type TgpuQuerySet,
   type TgpuRoot,
   d,
@@ -42,12 +41,13 @@ export class PrefixScanComputer {
       return cached;
     }
 
-    const pipeline = this.root['~unstable']
-      .with(operatorSlot, this.operation as TgpuFn)
+    const pipeline = this.root
+      .with(operatorSlot, this.operation)
       .with(identitySlot, this.identityElement)
       .with(onlyGreatestElementSlot, onlyGreatestElement)
-      .withCompute(computeBlock)
-      .createPipeline();
+      .createComputePipeline({
+        compute: computeBlock,
+      });
 
     if (onlyGreatestElement) {
       this.#reducePipeline = pipeline;
@@ -59,10 +59,9 @@ export class PrefixScanComputer {
   }
 
   private get opPipeline(): TgpuComputePipeline {
-    this.#opPipeline ??= this.root['~unstable']
-      .with(operatorSlot, this.operation as TgpuFn)
-      .withCompute(uniformOp)
-      .createPipeline();
+    this.#opPipeline ??= this.root.with(operatorSlot, this.operation).createComputePipeline({
+      compute: uniformOp,
+    });
     return this.#opPipeline;
   }
 

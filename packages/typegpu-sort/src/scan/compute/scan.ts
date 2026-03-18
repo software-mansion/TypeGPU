@@ -10,7 +10,7 @@ import { downsweep, upsweep, workgroupMemory } from './shared.ts';
 
 const fillIdentityArray = tgpu.comptime(() => Array.from({ length: 8 }, () => identitySlot.$));
 
-export const computeBlock = tgpu['~unstable'].computeFn({
+export const computeBlock = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE],
   in: {
     gid: d.builtin.globalInvocationId,

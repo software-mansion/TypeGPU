@@ -13,5 +13,5 @@ export const uniformOpLayout = tgpu.bindGroupLayout({
 });
 
 export const operatorSlot = tgpu.slot<(a: number, b: number) => number>();
-export const identitySlot = tgpu['~unstable'].accessor(d.f32);
+export const identitySlot = tgpu.accessor(d.f32);
 export const onlyGreatestElementSlot = tgpu.slot<boolean>();

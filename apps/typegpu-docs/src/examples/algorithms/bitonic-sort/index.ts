@@ -206,7 +206,13 @@ const spinnerEl = document.getElementById('sort-spinner') as HTMLDivElement;
 const statusEl = document.getElementById('sort-status') as HTMLSpanElement;
 canvas.parentElement?.appendChild(overlay);
 
+let hideTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
 function showOverlay(text: string, showSpinner = true) {
+  if (hideTimeoutId !== null) {
+    clearTimeout(hideTimeoutId);
+    hideTimeoutId = null;
+  }
   spinnerEl.hidden = !showSpinner;
   statusEl.textContent = text;
   overlay.hidden = false;
@@ -214,7 +220,8 @@ function showOverlay(text: string, showSpinner = true) {
 }
 
 function hideOverlay(delayMs = 1500) {
-  setTimeout(() => {
+  hideTimeoutId = setTimeout(() => {
+    hideTimeoutId = null;
     overlay.classList.remove('visible');
     overlay.addEventListener('transitionend', () => (overlay.hidden = true), {
       once: true,

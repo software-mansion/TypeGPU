@@ -1,7 +1,7 @@
 import tgpu, { d } from 'typegpu';
 import { operatorSlot, uniformOpLayout, WORKGROUP_SIZE } from '../schemas.ts';
 
-export const uniformOp = tgpu['~unstable'].computeFn({
+export const uniformOp = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE],
   in: {
     gid: d.builtin.globalInvocationId,

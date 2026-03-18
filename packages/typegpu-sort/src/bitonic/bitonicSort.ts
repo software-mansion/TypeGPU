@@ -48,7 +48,7 @@ const copyLayout = tgpu.bindGroupLayout({
   },
 });
 
-const copyPadKernel = tgpu['~unstable'].computeFn({
+const copyPadKernel = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE],
   in: {
     gid: d.builtin.globalInvocationId,
@@ -74,7 +74,7 @@ const copyPadKernel = tgpu['~unstable'].computeFn({
   );
 });
 
-const copyBackKernel = tgpu['~unstable'].computeFn({
+const copyBackKernel = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE],
   in: {
     gid: d.builtin.globalInvocationId,
@@ -91,7 +91,7 @@ const copyBackKernel = tgpu['~unstable'].computeFn({
   }
 });
 
-const bitonicStepKernel = tgpu['~unstable'].computeFn({
+const bitonicStepKernel = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE],
   in: {
     gid: d.builtin.globalInvocationId,
@@ -211,14 +211,13 @@ export function createBitonicSorter(
     uniforms: uniformBuffer,
   });
 
-  const sortPipeline = root['~unstable']
-    .with(compareSlot, compareFunc)
-    .withCompute(bitonicStepKernel)
-    .createPipeline();
+  const sortPipeline = root.with(compareSlot, compareFunc).createComputePipeline({
+    compute: bitonicStepKernel,
+  });
 
-  const copyPadPipeline = root['~unstable'].withCompute(copyPadKernel).createPipeline();
+  const copyPadPipeline = root.createComputePipeline({ compute: copyPadKernel });
 
-  const copyBackPipeline = root['~unstable'].withCompute(copyBackKernel).createPipeline();
+  const copyBackPipeline = root.createComputePipeline({ compute: copyBackKernel });
 
   const log2N = Math.log2(paddedSize);
   const totalSteps = (log2N * (log2N + 1)) / 2;
