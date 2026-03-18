@@ -933,7 +933,7 @@ describe('createCompileInstructions', () => {
   it('should write a vec3f from a plain tuple', () => {
     const schema = d.vec3f;
     const writer = getCompiledWriterForSchema(schema)!;
-    const arr = new ArrayBuffer(16); // vec3f is 12 bytes but align = 16
+    const arr = new ArrayBuffer(16);
     const dataView = new DataView(arr);
 
     writer(dataView, 0, [1, 2, 3]);
@@ -955,7 +955,7 @@ describe('createCompileInstructions', () => {
   it('should write an array of vec3f from plain tuples', () => {
     const schema = d.arrayOf(d.vec3f, 3);
     const writer = getCompiledWriterForSchema(schema)!;
-    const arr = new ArrayBuffer(sizeOf(schema)); // 3 * 16 = 48 bytes (with padding)
+    const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
 
     writer(dataView, 0, [
@@ -964,21 +964,17 @@ describe('createCompileInstructions', () => {
       [7, 8, 9],
     ]);
 
-    // GPU layout: each vec3f occupies 16 bytes (12 data + 4 padding)
     expect([...new Float32Array(arr, 0, 3)]).toStrictEqual([1, 2, 3]);
     expect([...new Float32Array(arr, 16, 3)]).toStrictEqual([4, 5, 6]);
     expect([...new Float32Array(arr, 32, 3)]).toStrictEqual([7, 8, 9]);
   });
 
   it('should write an array of vec3f from a padded Float32Array (raw bytes, 16-byte stride)', () => {
-    // New semantics: TypedArray → raw byte copy; user must provide the padded GPU layout
-    // GPU layout: vec3f has 16-byte stride (12 bytes data + 4 bytes padding per element)
     const schema = d.arrayOf(d.vec3f, 3);
     const writer = getCompiledWriterForSchema(schema)!;
-    const arr = new ArrayBuffer(sizeOf(schema)); // 48 bytes
+    const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
 
-    // Padded layout: 4 floats per element, 4th is padding
     writer(dataView, 0, new Float32Array([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]));
 
     expect([...new Float32Array(arr, 0, 3)]).toStrictEqual([1, 2, 3]);
@@ -989,11 +985,10 @@ describe('createCompileInstructions', () => {
   it('should write an array of vec3f where each element is its own Float32Array', () => {
     const schema = d.arrayOf(d.vec3f, 3);
     const writer = getCompiledWriterForSchema(schema)!;
-    const arr = new ArrayBuffer(sizeOf(schema)); // 48 bytes
+    const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
 
-    // Three views into a single shared ArrayBuffer
-    const sharedBuffer = new ArrayBuffer(36); // 3 * 3 floats * 4 bytes
+    const sharedBuffer = new ArrayBuffer(36);
     const v0 = new Float32Array(sharedBuffer, 0, 3);
     const v1 = new Float32Array(sharedBuffer, 12, 3);
     const v2 = new Float32Array(sharedBuffer, 24, 3);
@@ -1011,7 +1006,7 @@ describe('createCompileInstructions', () => {
   it('should write a vec3h from a plain tuple with correct 2-byte component offsets', () => {
     const schema = d.vec3h;
     const writer = getCompiledWriterForSchema(schema)!;
-    const arr = new ArrayBuffer(8); // vec3h alignment = 8 bytes
+    const arr = new ArrayBuffer(8);
     const dataView = new DataView(arr);
 
     writer(dataView, 0, [1.5, 2.5, 3.5]);
@@ -1022,10 +1017,9 @@ describe('createCompileInstructions', () => {
   });
 
   it('should write an arrayOf(vec3h) from plain tuples with stride-corrected 2-byte offsets', () => {
-    // vec3h: 6 bytes data, 8-byte stride (2 bytes padding per element)
     const schema = d.arrayOf(d.vec3h, 2);
     const writer = getCompiledWriterForSchema(schema)!;
-    const arr = new ArrayBuffer(sizeOf(schema)); // 2 * 8 = 16 bytes
+    const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
 
     writer(dataView, 0, [
@@ -1033,7 +1027,6 @@ describe('createCompileInstructions', () => {
       [4, 5, 6],
     ]);
 
-    // First element at byte 0, second at byte 8
     expect(dataView.getFloat16(0, true)).toBeCloseTo(1);
     expect(dataView.getFloat16(2, true)).toBeCloseTo(2);
     expect(dataView.getFloat16(4, true)).toBeCloseTo(3);
@@ -1045,7 +1038,7 @@ describe('createCompileInstructions', () => {
   it('should write an array of f32 scalars from a Float32Array', () => {
     const schema = d.arrayOf(d.f32, 4);
     const writer = getCompiledWriterForSchema(schema)!;
-    const arr = new ArrayBuffer(sizeOf(schema)); // 16 bytes
+    const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
 
     writer(dataView, 0, new Float32Array([1.5, 2.5, 3.5, 4.5]));
@@ -1167,49 +1160,40 @@ describe('createCompileInstructions', () => {
   });
 
   it('should write a nested struct with TypedArray array fields interleaved with normal fields', () => {
-    // Mixed input: some array fields are TypedArrays (raw copy), others are plain JS arrays
-    // Also tests a nested struct where the inner struct has a TypedArray field
     const inner = d.struct({
       scalar: d.u32,
-      vecs: d.arrayOf(d.vec4f, 2), // 2 * 16 = 32 bytes
+      vecs: d.arrayOf(d.vec4f, 2),
     });
 
     const outer = d.struct({
       label: d.u32,
       inner: inner,
-      scalars: d.arrayOf(d.f32, 4), // 4 * 4 = 16 bytes — normal path
-      padded: d.arrayOf(d.vec3f, 2), // 2 * 16 = 32 bytes — TypedArray path
+      scalars: d.arrayOf(d.f32, 4),
+      padded: d.arrayOf(d.vec3f, 2),
     });
 
     const writer = getCompiledWriterForSchema(outer)!;
     const arr = new ArrayBuffer(sizeOf(outer));
     const dataView = new DataView(arr);
 
-    // 'vecs' field: padded Float32Array with 16-byte stride (vec4f has no padding)
     const vecsData = new Float32Array([1, 2, 3, 4, 5, 6, 7, 8]);
-    // 'padded' field: padded Float32Array with 16-byte stride (vec3f needs 4-float stride)
     const paddedData = new Float32Array([10, 20, 30, 0, 40, 50, 60, 0]);
 
     writer(dataView, 0, {
       label: 99,
       inner: { scalar: 7, vecs: vecsData },
-      scalars: [1.5, 2.5, 3.5, 4.5], // normal JS array
+      scalars: [1.5, 2.5, 3.5, 4.5],
       padded: paddedData,
     });
 
-    // outer.label at offset 0
     expect(new Uint32Array(arr, 0, 1)[0]).toBe(99);
-    // inner.scalar — struct alignment kicks in; inner starts at offset 16
     const innerOffset = 16;
     expect(new Uint32Array(arr, innerOffset, 1)[0]).toBe(7);
-    // inner.vecs start at innerOffset + 16 (vec4f align = 16)
     const vecsOffset = innerOffset + 16;
     expect([...new Float32Array(arr, vecsOffset, 4)]).toStrictEqual([1, 2, 3, 4]);
     expect([...new Float32Array(arr, vecsOffset + 16, 4)]).toStrictEqual([5, 6, 7, 8]);
-    // scalars follow inner; inner size = sizeOf(inner)
     const scalarsOffset = innerOffset + sizeOf(inner);
     expect([...new Float32Array(arr, scalarsOffset, 4)]).toStrictEqual([1.5, 2.5, 3.5, 4.5]);
-    // padded follows scalars
     const paddedOffset = scalarsOffset + 16;
     expect([...new Float32Array(arr, paddedOffset, 3)]).toStrictEqual([10, 20, 30]);
     expect([...new Float32Array(arr, paddedOffset + 16, 3)]).toStrictEqual([40, 50, 60]);

@@ -678,24 +678,20 @@ describe('TgpuBuffer (InferInput)', () => {
     const arrBuf = root.createBuffer(d.arrayOf(d.vec3f, 2));
     const scalarArrBuf = root.createBuffer(d.arrayOf(d.f32, 3));
 
-    // vec3f write accepts: instance, tuple, Float32Array, or raw ArrayBuffer
     expectTypeOf(vec3fBuf.write)
       .parameter(0)
       .toEqualTypeOf<d.v3f | [number, number, number] | Float32Array | ArrayBuffer>();
 
-    // vec2i write accepts: instance, tuple, Int32Array, or raw ArrayBuffer
     expectTypeOf(vec2iBuf.write)
       .parameter(0)
       .toEqualTypeOf<d.v2i | [number, number] | Int32Array | ArrayBuffer>();
 
-    // arrayOf(vec3f) write accepts: array of element inputs, flat Float32Array, or raw ArrayBuffer
     expectTypeOf(arrBuf.write)
       .parameter(0)
       .toEqualTypeOf<
         (d.v3f | [number, number, number] | Float32Array)[] | Float32Array | ArrayBuffer
       >();
 
-    // arrayOf(f32) write accepts: number array, Float32Array, or raw ArrayBuffer
     expectTypeOf(scalarArrBuf.write)
       .parameter(0)
       .toEqualTypeOf<number[] | Float32Array | ArrayBuffer>();
@@ -729,7 +725,6 @@ describe('TgpuBuffer (InferInput)', () => {
     const startLayout = d.memoryLayoutOf(schema, (a) => a[2]);
     const endLayout = d.memoryLayoutOf(schema, (a) => a[3]);
 
-    // Write only element [2]: offsets via padded TypedArray, weight and flags as plain values
     buffer.write([{ weight: 0.5, offsets: new Float32Array([1, 2, 3, 0, 4, 5, 6, 0]), flags: 7 }], {
       startOffset: startLayout.offset,
       endOffset: endLayout.offset,
@@ -746,15 +741,12 @@ describe('TgpuBuffer (InferInput)', () => {
     ]);
 
     const data = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
-    // Elements [0] and [1] untouched (bytes 0–127)
     expect([...new Float32Array(data, 0, 32)]).toStrictEqual(Array(32).fill(0));
-    // Element [2]: weight at +0, 12 bytes padding, offsets at +16, flags at +48
     expect(new Float32Array(data, startLayout.offset, 1)[0]).toBeCloseTo(0.5);
     expect([...new Float32Array(data, startLayout.offset + 16, 8)]).toStrictEqual([
       1, 2, 3, 0, 4, 5, 6, 0,
     ]);
     expect(new Uint32Array(data, startLayout.offset + 48, 1)[0]).toBe(7);
-    // Element [3] untouched
     expect([...new Float32Array(data, endLayout.offset, 16)]).toStrictEqual(Array(16).fill(0));
   });
 
@@ -762,7 +754,6 @@ describe('TgpuBuffer (InferInput)', () => {
     root,
     device,
   }) => {
-    // flags: u32 at offset 0 (+12 pad), colors: arrayOf(vec4f, 3) at offset 16, count: u32 at offset 64
     const Schema = d.struct({
       flags: d.u32,
       colors: d.arrayOf(d.vec4f, 3),
@@ -775,7 +766,6 @@ describe('TgpuBuffer (InferInput)', () => {
     const countLayout = d.memoryLayoutOf(Schema, (s) => s.count);
     const fieldSize = countLayout.offset - colorsLayout.offset;
 
-    // Build raw bytes for 3 vec4f values — exactly fieldSize bytes, no warning
     const raw = new ArrayBuffer(fieldSize);
     new Float32Array(raw).set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 
@@ -786,15 +776,12 @@ describe('TgpuBuffer (InferInput)', () => {
     ]);
 
     const data = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
-    // flags and padding before colors are untouched
     expect([...new Uint8Array(data, 0, colorsLayout.offset)]).toStrictEqual(
       Array(colorsLayout.offset).fill(0),
     );
-    // colors field matches the raw input
     expect([...new Float32Array(data, colorsLayout.offset, 12)]).toStrictEqual([
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
     ]);
-    // count and trailing padding are untouched
     expect([...new Uint8Array(data, countLayout.offset)]).toStrictEqual(
       Array(d.sizeOf(Schema) - countLayout.offset).fill(0),
     );
