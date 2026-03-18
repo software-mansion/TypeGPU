@@ -930,10 +930,6 @@ describe('createCompileInstructions', () => {
     expect(decoded.d.w).toBeCloseTo(inputData.d.w, 2);
   });
 
-  // ----------
-  // InferInput: plain tuples and TypedArrays as input
-  // ----------
-
   it('should write a vec3f from a plain tuple', () => {
     const schema = d.vec3f;
     const writer = getCompiledWriterForSchema(schema)!;

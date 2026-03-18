@@ -54,7 +54,6 @@ export interface NumberArrayView {
 
 /**
  * Maps a scalar or vector element schema to the corresponding TypedArray type.
- * Used to determine which TypedArrays are accepted for array write operations.
  */
 export type TypedArrayFor<T> = T extends Vec2f | Vec3f | Vec4f | F32
   ? Float32Array
