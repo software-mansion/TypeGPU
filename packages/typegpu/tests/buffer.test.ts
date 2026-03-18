@@ -678,23 +678,27 @@ describe('TgpuBuffer (InferInput)', () => {
     const arrBuf = root.createBuffer(d.arrayOf(d.vec3f, 2));
     const scalarArrBuf = root.createBuffer(d.arrayOf(d.f32, 3));
 
-    // vec3f write accepts: instance, tuple, or Float32Array
+    // vec3f write accepts: instance, tuple, Float32Array, or raw ArrayBuffer
     expectTypeOf(vec3fBuf.write)
       .parameter(0)
-      .toEqualTypeOf<d.v3f | [number, number, number] | Float32Array>();
+      .toEqualTypeOf<d.v3f | [number, number, number] | Float32Array | ArrayBuffer>();
 
-    // vec2i write accepts: instance, tuple, or Int32Array
+    // vec2i write accepts: instance, tuple, Int32Array, or raw ArrayBuffer
     expectTypeOf(vec2iBuf.write)
       .parameter(0)
-      .toEqualTypeOf<d.v2i | [number, number] | Int32Array>();
+      .toEqualTypeOf<d.v2i | [number, number] | Int32Array | ArrayBuffer>();
 
-    // arrayOf(vec3f) write accepts: array of element inputs OR flat Float32Array
+    // arrayOf(vec3f) write accepts: array of element inputs, flat Float32Array, or raw ArrayBuffer
     expectTypeOf(arrBuf.write)
       .parameter(0)
-      .toEqualTypeOf<(d.v3f | [number, number, number] | Float32Array)[] | Float32Array>();
+      .toEqualTypeOf<
+        (d.v3f | [number, number, number] | Float32Array)[] | Float32Array | ArrayBuffer
+      >();
 
-    // arrayOf(f32) write accepts: number array OR Float32Array
-    expectTypeOf(scalarArrBuf.write).parameter(0).toEqualTypeOf<number[] | Float32Array>();
+    // arrayOf(f32) write accepts: number array, Float32Array, or raw ArrayBuffer
+    expectTypeOf(scalarArrBuf.write)
+      .parameter(0)
+      .toEqualTypeOf<number[] | Float32Array | ArrayBuffer>();
   });
 
   it('should write a vec3f from a plain tuple', ({ root, device }) => {

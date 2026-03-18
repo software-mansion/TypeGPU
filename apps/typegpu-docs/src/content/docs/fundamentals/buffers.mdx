@@ -241,8 +241,8 @@ vecBuffer.write(new Float32Array([1, 2, 3])); // TypedArray
 
 For **arrays**, a `TypedArray` is treated as a **raw byte copy**: TypeGPU copies the bytes directly without any per-element processing. This is useful when your data is already stored in the padded GPU layout (e.g. output from a previous GPU readback, or a manually laid-out simulation buffer), as it avoids any allocation overhead and becomes a single `memcpy`.
 
-:::note[TypedArray inputs are copied as-is]
-Wherever a TypedArray is passed, the bytes are copied directly without any interpretation. The data must already match the GPU memory layout, including any padding. For example, each element in `d.arrayOf(d.vec3f, N)` occupies **16 bytes** (12 bytes of data + 4 bytes of padding), so the TypedArray must include those padding bytes.
+:::note[TypedArray and ArrayBuffer inputs are copied as-is]
+Wherever a `TypedArray` or `ArrayBuffer` is passed, the bytes are copied directly without any interpretation. The data must already match the GPU memory layout, including any padding. For example, each element in `d.arrayOf(d.vec3f, N)` occupies **16 bytes** (12 bytes of data + 4 bytes of padding), so the input must include those padding bytes.
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
@@ -260,6 +260,22 @@ vec4Buffer.write(new Float32Array([1, 2, 3, 4, 5, 6, 7, 8]));
 
 Plain JS arrays, tuples, and objects always go through the normal path, which handles layout automatically.
 :::
+
+### Raw ArrayBuffer writes
+
+`.write()` also accepts a plain `ArrayBuffer` as a zero-overhead path for when you already have the exact GPU-layout bytes (e.g. from a GPU readback, shared memory, or another binary source). TypeGPU copies the bytes directly into the GPU buffer with no interpretation.
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const Particle = d.struct({ position: d.vec3f, velocity: d.vec3f, health: d.f32 });
+const particleBuffer = root.createBuffer(d.arrayOf(Particle, 100));
+
+// Bytes already laid out exactly as the GPU expects
+declare const rawBytes: ArrayBuffer;
+particleBuffer.write(rawBytes);
+```
 
 ### Writing a slice
 

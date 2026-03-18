@@ -138,6 +138,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
 
   compileWriter(): void;
   write(data: InferInput<TData>, options?: BufferWriteOptions): void;
+  write(data: ArrayBuffer, options?: BufferWriteOptions): void;
   writePartial(data: InferPartial<TData>): void;
   clear(): void;
   copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void;
@@ -295,24 +296,27 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
 
   private _writeToTarget(
     target: ArrayBuffer,
-    data: InferInput<TData>,
+    data: InferInput<TData> | ArrayBuffer,
     options?: BufferWriteOptions,
   ): void {
     const startOffset = options?.startOffset ?? 0;
     const endOffset = options?.endOffset ?? target.byteLength;
 
-    // Fast path: raw byte copy — user guarantees the padded layout
-    if (ArrayBuffer.isView(data)) {
-      const src = data as ArrayBufferView;
+    // Fast path: raw byte copy, user guarantees the padded layout
+    if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
+      const src =
+        data instanceof ArrayBuffer
+          ? new Uint8Array(data)
+          : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
       const expected = sizeOf(this.dataType);
       if (src.byteLength !== expected) {
         console.warn(
-          `TypedArray size mismatch: schema expects ${expected} bytes, got ${src.byteLength}. ` +
+          `Buffer size mismatch: schema expects ${expected} bytes, got ${src.byteLength}. ` +
             (src.byteLength < expected ? 'Data truncated.' : 'Excess ignored.'),
         );
       }
       const copyLen = Math.min(src.byteLength, endOffset - startOffset);
-      new Uint8Array(target).set(new Uint8Array(src.buffer, src.byteOffset, copyLen), startOffset);
+      new Uint8Array(target).set(src.subarray(0, copyLen), startOffset);
       return;
     }
 
@@ -340,7 +344,9 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     writeData(writer, this.dataType, data as Infer<TData>);
   }
 
-  write(data: InferInput<TData>, options?: BufferWriteOptions): void {
+  write(data: InferInput<TData>, options?: BufferWriteOptions): void;
+  write(data: ArrayBuffer, options?: BufferWriteOptions): void;
+  write(data: InferInput<TData> | ArrayBuffer, options?: BufferWriteOptions): void {
     const gpuBuffer = this.buffer;
     const bufferSize = sizeOf(this.dataType);
     const startOffset = options?.startOffset ?? 0;
