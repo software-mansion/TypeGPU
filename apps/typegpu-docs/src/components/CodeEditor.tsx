@@ -3,9 +3,12 @@ import type { editor } from 'tsover-monaco-editor';
 import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
 import { SANDBOX_MODULES } from '../utils/examples/sandboxModules.ts';
 import type { ExampleCommonFile, ExampleSrcFile } from '../utils/examples/types.ts';
-import { tsCompilerOptions } from '../utils/liveEditor/embeddedTypeScript.ts';
+import {
+  tsnotoverCompilerOptions,
+  tsoverCompilerOptions,
+} from '../utils/liveEditor/embeddedTypeScript.ts';
 
-function handleEditorWillMount(monaco: Monaco) {
+const handleEditorWillMount = (tsover: boolean) => (monaco: Monaco) => {
   const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
 
   const reroutes = pipe(
@@ -34,10 +37,10 @@ function handleEditorWillMount(monaco: Monaco) {
   }
 
   tsDefaults.setCompilerOptions({
-    ...tsCompilerOptions,
+    ...(tsover ? tsoverCompilerOptions : tsnotoverCompilerOptions),
     paths: reroutes,
   });
-}
+};
 
 function handleEditorOnMount(editor: editor.IStandaloneCodeEditor) {
   // Folding regions in code automatically. Useful for code not strictly
@@ -81,9 +84,15 @@ const createCodeEditorComponent =
     );
   };
 
-export const TsCodeEditor = createCodeEditorComponent(
+export const TsnotoverCodeEditor = createCodeEditorComponent(
   'typescript',
-  handleEditorWillMount,
+  handleEditorWillMount(false),
+  handleEditorOnMount,
+);
+
+export const TsoverCodeEditor = createCodeEditorComponent(
+  'typescript',
+  handleEditorWillMount(true),
   handleEditorOnMount,
 );
 

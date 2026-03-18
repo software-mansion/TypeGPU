@@ -2,14 +2,14 @@ import cs from 'classnames';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { type RefObject, useEffect, useRef, useState } from 'react';
 import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom.ts';
-import { codeEditorShownAtom } from '../utils/examples/exampleViewStateAtoms.ts';
+import { codeEditorShownAtom, tsoverUsedAtom } from '../utils/examples/exampleViewStateAtoms.ts';
 import { ExecutionCancelledError } from '../utils/examples/errors.ts';
 import { exampleControlsAtom } from '../utils/examples/exampleControlAtom.ts';
 import { executeExample } from '../utils/examples/exampleRunner.ts';
 import type { ExampleState } from '../utils/examples/exampleState.ts';
 import type { Example, ExampleCommonFile, ExampleSrcFile } from '../utils/examples/types.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
-import { HtmlCodeEditor, TsCodeEditor } from './CodeEditor.tsx';
+import { HtmlCodeEditor, TsnotoverCodeEditor, TsoverCodeEditor } from './CodeEditor.tsx';
 import { ControlPanel } from './ControlPanel.tsx';
 import { Button } from './design/Button.tsx';
 import { Snackbar } from './design/Snackbar.tsx';
@@ -70,6 +70,7 @@ export function ExampleView({ example, common }: Props) {
   const [currentFilePath, setCurrentFilePath] = useState<string>('index.ts');
 
   const codeEditorShown = useAtomValue(codeEditorShownAtom);
+  const tsoverUsed = useAtomValue(tsoverUsedAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
   const tsFiles = filterRelevantTsFiles(srcFiles, common);
@@ -142,9 +143,21 @@ export function ExampleView({ example, common }: Props) {
 
                 <HtmlCodeEditor shown={currentFilePath === 'index.html'} file={htmlFile} />
 
-                {tsFiles.map((file) => (
-                  <TsCodeEditor key={file.path} shown={file.path === currentFilePath} file={file} />
-                ))}
+                {tsFiles.map((file) =>
+                  tsoverUsed ? (
+                    <TsoverCodeEditor
+                      key={file.path}
+                      shown={file.path === currentFilePath}
+                      file={file}
+                    />
+                  ) : (
+                    <TsnotoverCodeEditor
+                      key={file.path}
+                      shown={file.path === currentFilePath}
+                      file={file}
+                    />
+                  ),
+                )}
               </div>
 
               <div className="absolute right-0 z-5 md:top-15 md:right-8">

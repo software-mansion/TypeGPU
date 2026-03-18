@@ -1,6 +1,6 @@
 import { languages } from 'tsover-monaco-editor';
 
-export const tsCompilerOptions: languages.typescript.CompilerOptions = {
+export const tsnotoverCompilerOptions: languages.typescript.CompilerOptions = {
   target: languages.typescript.ScriptTarget.ESNext,
   allowNonTsExtensions: true,
   strict: true,
@@ -10,7 +10,10 @@ export const tsCompilerOptions: languages.typescript.CompilerOptions = {
   skipLibCheck: true,
   exactOptionalPropertyTypes: true,
   baseUrl: '.',
-  lib: ['dom', 'es2021', 'tsover'],
+  lib: ['dom', 'es2021'],
 };
 
-// AAA: Duplicate tsnotoverconfig
+export const tsoverCompilerOptions: languages.typescript.CompilerOptions = {
+  ...tsnotoverCompilerOptions,
+  lib: [...tsnotoverCompilerOptions.lib, 'tsover'],
+};
