@@ -75,16 +75,16 @@ describe('bitonic sort example', () => {
         let k = uniforms.k;
         let shift = uniforms.jShift;
         let dataLength = arrayLength(&data);
-        let stride = (1u << shift);
-        let maskBelow = (stride - 1u);
-        let below = (tid & maskBelow);
+        let stride = (1 << shift);
+        let maskBelow = (stride - 1i);
+        let below = (i32(tid) & maskBelow);
         let above = (tid >> shift);
-        let i = (below + (above * (stride << 1u)));
+        let i = (below + (i32(above) * (stride << 1u)));
         let ixj = (i + stride);
-        if ((ixj >= dataLength)) {
+        if ((ixj >= i32(dataLength))) {
           return;
         }
-        let ascending = ((i & k) == 0u);
+        let ascending = ((i & i32(k)) == 0i);
         let left = data[i];
         let right = data[ixj];
         let leftFirst = defaultCompare(left, right);
