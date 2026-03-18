@@ -1,11 +1,11 @@
 import { BufferReader, BufferWriter, getSystemEndianness } from 'typed-binary';
 import { getCompiledWriterForSchema } from '../../data/compiledIO.ts';
 import { readData, writeData } from '../../data/dataIO.ts';
-import { isDisarray, type AnyData } from '../../data/dataTypes.ts';
+import type { AnyData } from '../../data/dataTypes.ts';
 import { getWriteInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
-import { isVec, isWgslArray, isWgslData } from '../../data/wgslTypes.ts';
+import { isWgslData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
@@ -298,10 +298,26 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     data: InferInput<TData>,
     options?: BufferWriteOptions,
   ): void {
-    const dataView = new DataView(target);
-    const isLittleEndian = endianness === 'little';
     const startOffset = options?.startOffset ?? 0;
     const endOffset = options?.endOffset ?? target.byteLength;
+
+    // Fast path: raw byte copy — user guarantees the padded layout
+    if (ArrayBuffer.isView(data)) {
+      const src = data as ArrayBufferView;
+      const expected = sizeOf(this.dataType);
+      if (src.byteLength !== expected) {
+        console.warn(
+          `TypedArray size mismatch: schema expects ${expected} bytes, got ${src.byteLength}. ` +
+            (src.byteLength < expected ? 'Data truncated.' : 'Excess ignored.'),
+        );
+      }
+      const copyLen = Math.min(src.byteLength, endOffset - startOffset);
+      new Uint8Array(target).set(new Uint8Array(src.buffer, src.byteOffset, copyLen), startOffset);
+      return;
+    }
+
+    const dataView = new DataView(target);
+    const isLittleEndian = endianness === 'little';
 
     const compiledWriter = getCompiledWriterForSchema(this.dataType);
 
@@ -321,26 +337,6 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
 
     const writer = new BufferWriter(target);
     writer.seekTo(startOffset);
-
-    if (
-      ArrayBuffer.isView(data) &&
-      (isWgslArray(this.dataType) || isDisarray(this.dataType)) &&
-      isVec(this.dataType.elementType)
-    ) {
-      const elementType = this.dataType.elementType;
-      const N = elementType.componentCount;
-      const typedData = data as Float32Array | Int32Array | Uint32Array;
-      const count = Math.floor(typedData.length / N);
-      writeData(
-        writer,
-        this.dataType,
-        Array.from({ length: count }, (_, i) =>
-          typedData.subarray(i * N, i * N + N),
-        ) as Infer<TData>,
-      );
-      return;
-    }
-
     writeData(writer, this.dataType, data as Infer<TData>);
   }
 

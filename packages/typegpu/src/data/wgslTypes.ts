@@ -9,6 +9,7 @@ import type {
   InferGPU,
   InferGPURecord,
   InferInput,
+  InferInputRecord,
   InferPartial,
   InferPartialRecord,
   InferRecord,
@@ -55,7 +56,7 @@ export interface NumberArrayView {
  * Maps a scalar or vector element schema to the corresponding TypedArray type.
  * Used to determine which TypedArrays are accepted for array write operations.
  */
-type TypedArrayFor<T> = T extends Vec2f | Vec3f | Vec4f | F32
+export type TypedArrayFor<T> = T extends Vec2f | Vec3f | Vec4f | F32
   ? Float32Array
   : T extends Vec2h | Vec3h | Vec4h | F16
     ? Float16Array
@@ -1200,6 +1201,7 @@ export interface WgslStruct<
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Prettify<InferRecord<TProps>>;
+  readonly [$inRepr]: Prettify<InferInputRecord<TProps>>;
   readonly [$gpuRepr]: Prettify<InferGPURecord<TProps>>;
   readonly [$memIdent]: WgslStruct<Prettify<MemIdentityRecord<TProps>>>;
   readonly [$reprPartial]: Prettify<Partial<InferPartialRecord<TProps>>> | undefined;

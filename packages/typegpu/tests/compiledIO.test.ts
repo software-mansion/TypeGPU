@@ -31,14 +31,21 @@ describe('buildWriter', () => {
 
     expect(writer).toMatchInlineSnapshot(`
       "output.setUint32((offset + 0), value.a, littleEndian);
-      var _ta0 = ArrayBuffer.isView(value.b);
+      if (ArrayBuffer.isView(value.b)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.b.buffer, value.b.byteOffset, Math.min(value.b.byteLength, 32)), output.byteOffset + ((offset + 16)));
+      } else {
       for (let i = 0; i < 2; i++) {
-      output.setFloat32(((offset + 16) + i * 16 + 0), _ta0 ? value.b[i * 3 + 0] : value.b[i][0], littleEndian);
-      output.setFloat32(((offset + 16) + i * 16 + 4), _ta0 ? value.b[i * 3 + 1] : value.b[i][1], littleEndian);
-      output.setFloat32(((offset + 16) + i * 16 + 8), _ta0 ? value.b[i * 3 + 2] : value.b[i][2], littleEndian);
+      output.setFloat32((((offset + 16) + i * 16) + 0), value.b[i][0], littleEndian);
+      output.setFloat32((((offset + 16) + i * 16) + 4), value.b[i][1], littleEndian);
+      output.setFloat32((((offset + 16) + i * 16) + 8), value.b[i][2], littleEndian);
       }
+      }
+      if (ArrayBuffer.isView(value.c)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.c.buffer, value.c.byteOffset, Math.min(value.c.byteLength, 12)), output.byteOffset + ((offset + 48)));
+      } else {
       for (let i = 0; i < 3; i++) {
       output.setUint32(((offset + 48) + i * 4), value.c[i], littleEndian);
+      }
       }
       "
     `);
@@ -58,8 +65,12 @@ describe('buildWriter', () => {
       output.setFloat32((((offset + 16) + 0) + 0), value.b.d[0], littleEndian);
       output.setFloat32((((offset + 16) + 0) + 4), value.b.d[1], littleEndian);
       output.setFloat32((((offset + 16) + 0) + 8), value.b.d[2], littleEndian);
+      if (ArrayBuffer.isView(value.c)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.c.buffer, value.c.byteOffset, Math.min(value.c.byteLength, 12)), output.byteOffset + ((offset + 32)));
+      } else {
       for (let i = 0; i < 3; i++) {
       output.setUint32((((offset + 32) + i * 4) + 0), value.c[i].d, littleEndian);
+      }
       }
       "
     `);
@@ -70,11 +81,14 @@ describe('buildWriter', () => {
     const writer = buildWriter(array, 'offset', 'value');
 
     expect(writer).toMatchInlineSnapshot(`
-      "var _ta0 = ArrayBuffer.isView(value);
+      "if (ArrayBuffer.isView(value)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.buffer, value.byteOffset, Math.min(value.byteLength, 80)), output.byteOffset + (offset));
+      } else {
       for (let i = 0; i < 5; i++) {
-      output.setFloat32((offset + i * 16 + 0), _ta0 ? value[i * 3 + 0] : value[i][0], littleEndian);
-      output.setFloat32((offset + i * 16 + 4), _ta0 ? value[i * 3 + 1] : value[i][1], littleEndian);
-      output.setFloat32((offset + i * 16 + 8), _ta0 ? value[i * 3 + 2] : value[i][2], littleEndian);
+      output.setFloat32(((offset + i * 16) + 0), value[i][0], littleEndian);
+      output.setFloat32(((offset + i * 16) + 4), value[i][1], littleEndian);
+      output.setFloat32(((offset + i * 16) + 8), value[i][2], littleEndian);
+      }
       }
       "
     `);
@@ -86,9 +100,17 @@ describe('buildWriter', () => {
     const writer = buildWriter(nestedArray, 'offset', 'value');
 
     expect(writer).toMatchInlineSnapshot(`
-      "for (let i = 0; i < 2; i++) {
+      "if (ArrayBuffer.isView(value)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.buffer, value.byteOffset, Math.min(value.byteLength, 24)), output.byteOffset + (offset));
+      } else {
+      for (let i = 0; i < 2; i++) {
+      if (ArrayBuffer.isView(value[i])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i].buffer, value[i].byteOffset, Math.min(value[i].byteLength, 12)), output.byteOffset + ((offset + i * 12)));
+      } else {
       for (let j = 0; j < 3; j++) {
       output.setUint32(((offset + i * 12) + j * 4), value[i][j], littleEndian);
+      }
+      }
       }
       }
       "
@@ -105,11 +127,18 @@ describe('buildWriter', () => {
 
     expect(writer).toMatchInlineSnapshot(`
       "output.setUint32((offset + 0), value.a, littleEndian);
+      if (ArrayBuffer.isView(value.b)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.b.buffer, value.b.byteOffset, Math.min(value.b.byteLength, 32)), output.byteOffset + ((offset + 8)));
+      } else {
       for (let i = 0; i < 2; i++) {
-      var _ta1 = ArrayBuffer.isView(value.b[i]);
+      if (ArrayBuffer.isView(value.b[i])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.b[i].buffer, value.b[i].byteOffset, Math.min(value.b[i].byteLength, 16)), output.byteOffset + (((offset + 8) + i * 16)));
+      } else {
       for (let j = 0; j < 2; j++) {
-      output.setFloat32((((offset + 8) + i * 16) + j * 8 + 0), _ta1 ? value.b[i][j * 2 + 0] : value.b[i][j][0], littleEndian);
-      output.setFloat32((((offset + 8) + i * 16) + j * 8 + 4), _ta1 ? value.b[i][j * 2 + 1] : value.b[i][j][1], littleEndian);
+      output.setFloat32(((((offset + 8) + i * 16) + j * 8) + 0), value.b[i][j][0], littleEndian);
+      output.setFloat32(((((offset + 8) + i * 16) + j * 8) + 4), value.b[i][j][1], littleEndian);
+      }
+      }
       }
       }
       "
@@ -125,22 +154,82 @@ describe('buildWriter', () => {
     const writer = buildWriter(veryDeeplyNested, 'offset', 'value');
 
     expect(writer).toMatchInlineSnapshot(`
-      "for (let i = 0; i < 2; i++) {
+      "if (ArrayBuffer.isView(value)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.buffer, value.byteOffset, Math.min(value.byteLength, 131072)), output.byteOffset + (offset));
+      } else {
+      for (let i = 0; i < 2; i++) {
+      if (ArrayBuffer.isView(value[i])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i].buffer, value[i].byteOffset, Math.min(value[i].byteLength, 65536)), output.byteOffset + ((offset + i * 65536)));
+      } else {
       for (let j = 0; j < 2; j++) {
+      if (ArrayBuffer.isView(value[i][j])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i][j].buffer, value[i][j].byteOffset, Math.min(value[i][j].byteLength, 32768)), output.byteOffset + (((offset + i * 65536) + j * 32768)));
+      } else {
       for (let k = 0; k < 2; k++) {
+      if (ArrayBuffer.isView(value[i][j][k])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i][j][k].buffer, value[i][j][k].byteOffset, Math.min(value[i][j][k].byteLength, 16384)), output.byteOffset + ((((offset + i * 65536) + j * 32768) + k * 16384)));
+      } else {
       for (let i3 = 0; i3 < 2; i3++) {
+      if (ArrayBuffer.isView(value[i][j][k][i3])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i][j][k][i3].buffer, value[i][j][k][i3].byteOffset, Math.min(value[i][j][k][i3].byteLength, 8192)), output.byteOffset + (((((offset + i * 65536) + j * 32768) + k * 16384) + i3 * 8192)));
+      } else {
       for (let i4 = 0; i4 < 2; i4++) {
+      if (ArrayBuffer.isView(value[i][j][k][i3][i4])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i][j][k][i3][i4].buffer, value[i][j][k][i3][i4].byteOffset, Math.min(value[i][j][k][i3][i4].byteLength, 4096)), output.byteOffset + ((((((offset + i * 65536) + j * 32768) + k * 16384) + i3 * 8192) + i4 * 4096)));
+      } else {
       for (let i5 = 0; i5 < 2; i5++) {
+      if (ArrayBuffer.isView(value[i][j][k][i3][i4][i5])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i][j][k][i3][i4][i5].buffer, value[i][j][k][i3][i4][i5].byteOffset, Math.min(value[i][j][k][i3][i4][i5].byteLength, 2048)), output.byteOffset + (((((((offset + i * 65536) + j * 32768) + k * 16384) + i3 * 8192) + i4 * 4096) + i5 * 2048)));
+      } else {
       for (let i6 = 0; i6 < 2; i6++) {
+      if (ArrayBuffer.isView(value[i][j][k][i3][i4][i5][i6])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i][j][k][i3][i4][i5][i6].buffer, value[i][j][k][i3][i4][i5][i6].byteOffset, Math.min(value[i][j][k][i3][i4][i5][i6].byteLength, 1024)), output.byteOffset + ((((((((offset + i * 65536) + j * 32768) + k * 16384) + i3 * 8192) + i4 * 4096) + i5 * 2048) + i6 * 1024)));
+      } else {
       for (let i7 = 0; i7 < 2; i7++) {
+      if (ArrayBuffer.isView(value[i][j][k][i3][i4][i5][i6][i7])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i][j][k][i3][i4][i5][i6][i7].buffer, value[i][j][k][i3][i4][i5][i6][i7].byteOffset, Math.min(value[i][j][k][i3][i4][i5][i6][i7].byteLength, 512)), output.byteOffset + (((((((((offset + i * 65536) + j * 32768) + k * 16384) + i3 * 8192) + i4 * 4096) + i5 * 2048) + i6 * 1024) + i7 * 512)));
+      } else {
       for (let i8 = 0; i8 < 2; i8++) {
+      if (ArrayBuffer.isView(value[i][j][k][i3][i4][i5][i6][i7][i8])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i][j][k][i3][i4][i5][i6][i7][i8].buffer, value[i][j][k][i3][i4][i5][i6][i7][i8].byteOffset, Math.min(value[i][j][k][i3][i4][i5][i6][i7][i8].byteLength, 256)), output.byteOffset + ((((((((((offset + i * 65536) + j * 32768) + k * 16384) + i3 * 8192) + i4 * 4096) + i5 * 2048) + i6 * 1024) + i7 * 512) + i8 * 256)));
+      } else {
       for (let i9 = 0; i9 < 2; i9++) {
+      if (ArrayBuffer.isView(value[i][j][k][i3][i4][i5][i6][i7][i8][i9])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i][j][k][i3][i4][i5][i6][i7][i8][i9].buffer, value[i][j][k][i3][i4][i5][i6][i7][i8][i9].byteOffset, Math.min(value[i][j][k][i3][i4][i5][i6][i7][i8][i9].byteLength, 128)), output.byteOffset + (((((((((((offset + i * 65536) + j * 32768) + k * 16384) + i3 * 8192) + i4 * 4096) + i5 * 2048) + i6 * 1024) + i7 * 512) + i8 * 256) + i9 * 128)));
+      } else {
       for (let i10 = 0; i10 < 2; i10++) {
+      if (ArrayBuffer.isView(value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10].buffer, value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10].byteOffset, Math.min(value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10].byteLength, 64)), output.byteOffset + ((((((((((((offset + i * 65536) + j * 32768) + k * 16384) + i3 * 8192) + i4 * 4096) + i5 * 2048) + i6 * 1024) + i7 * 512) + i8 * 256) + i9 * 128) + i10 * 64)));
+      } else {
       for (let i11 = 0; i11 < 2; i11++) {
+      if (ArrayBuffer.isView(value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10][i11])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10][i11].buffer, value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10][i11].byteOffset, Math.min(value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10][i11].byteLength, 32)), output.byteOffset + (((((((((((((offset + i * 65536) + j * 32768) + k * 16384) + i3 * 8192) + i4 * 4096) + i5 * 2048) + i6 * 1024) + i7 * 512) + i8 * 256) + i9 * 128) + i10 * 64) + i11 * 32)));
+      } else {
       for (let i12 = 0; i12 < 2; i12++) {
+      if (ArrayBuffer.isView(value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10][i11][i12])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10][i11][i12].buffer, value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10][i11][i12].byteOffset, Math.min(value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10][i11][i12].byteLength, 16)), output.byteOffset + ((((((((((((((offset + i * 65536) + j * 32768) + k * 16384) + i3 * 8192) + i4 * 4096) + i5 * 2048) + i6 * 1024) + i7 * 512) + i8 * 256) + i9 * 128) + i10 * 64) + i11 * 32) + i12 * 16)));
+      } else {
       for (let i13 = 0; i13 < 2; i13++) {
+      if (ArrayBuffer.isView(value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10][i11][i12][i13])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10][i11][i12][i13].buffer, value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10][i11][i12][i13].byteOffset, Math.min(value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10][i11][i12][i13].byteLength, 8)), output.byteOffset + (((((((((((((((offset + i * 65536) + j * 32768) + k * 16384) + i3 * 8192) + i4 * 4096) + i5 * 2048) + i6 * 1024) + i7 * 512) + i8 * 256) + i9 * 128) + i10 * 64) + i11 * 32) + i12 * 16) + i13 * 8)));
+      } else {
       for (let i14 = 0; i14 < 2; i14++) {
       output.setUint32((((((((((((((((offset + i * 65536) + j * 32768) + k * 16384) + i3 * 8192) + i4 * 4096) + i5 * 2048) + i6 * 1024) + i7 * 512) + i8 * 256) + i9 * 128) + i10 * 64) + i11 * 32) + i12 * 16) + i13 * 8) + i14 * 4), value[i][j][k][i3][i4][i5][i6][i7][i8][i9][i10][i11][i12][i13][i14], littleEndian);
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      }
+      }
       }
       }
       }
@@ -198,23 +287,30 @@ describe('buildWriter (partial mode)', () => {
       "if ((offset + 0) < endOffset) {
       output.setUint32((offset + 0), value.a, littleEndian);
       }
-      var _ta0 = ArrayBuffer.isView(value.b);
+      if (ArrayBuffer.isView(value.b)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.b.buffer, value.b.byteOffset, Math.min(value.b.byteLength, Math.max(0, endOffset - ((offset + 16))))), output.byteOffset + ((offset + 16)));
+      } else {
       for (let i = 0; i < 2; i++) {
-      if (((offset + 16) + i * 16) >= endOffset) { break; }
-      if (((offset + 16) + i * 16 + 0) < endOffset) {
-      output.setFloat32(((offset + 16) + i * 16 + 0), _ta0 ? value.b[i * 3 + 0] : value.b[i][0], littleEndian);
+      if (((offset + 16) + i * 16) >= endOffset) return;
+      if ((((offset + 16) + i * 16) + 0) < endOffset) {
+      output.setFloat32((((offset + 16) + i * 16) + 0), value.b[i][0], littleEndian);
       }
-      if (((offset + 16) + i * 16 + 4) < endOffset) {
-      output.setFloat32(((offset + 16) + i * 16 + 4), _ta0 ? value.b[i * 3 + 1] : value.b[i][1], littleEndian);
+      if ((((offset + 16) + i * 16) + 4) < endOffset) {
+      output.setFloat32((((offset + 16) + i * 16) + 4), value.b[i][1], littleEndian);
       }
-      if (((offset + 16) + i * 16 + 8) < endOffset) {
-      output.setFloat32(((offset + 16) + i * 16 + 8), _ta0 ? value.b[i * 3 + 2] : value.b[i][2], littleEndian);
+      if ((((offset + 16) + i * 16) + 8) < endOffset) {
+      output.setFloat32((((offset + 16) + i * 16) + 8), value.b[i][2], littleEndian);
       }
       }
+      }
+      if (ArrayBuffer.isView(value.c)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.c.buffer, value.c.byteOffset, Math.min(value.c.byteLength, Math.max(0, endOffset - ((offset + 48))))), output.byteOffset + ((offset + 48)));
+      } else {
       for (let i = 0; i < 3; i++) {
       if (((offset + 48) + i * 4) >= endOffset) return;
       if (((offset + 48) + i * 4) < endOffset) {
       output.setUint32(((offset + 48) + i * 4), value.c[i], littleEndian);
+      }
       }
       }
       "
@@ -226,10 +322,14 @@ describe('buildWriter (partial mode)', () => {
 
     const builtWriter = buildWriter(array, 'offset', 'value', 0, true);
     expect(builtWriter).toMatchInlineSnapshot(`
-      "for (let i = 0; i < 5; i++) {
+      "if (ArrayBuffer.isView(value)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.buffer, value.byteOffset, Math.min(value.byteLength, Math.max(0, endOffset - (offset)))), output.byteOffset + (offset));
+      } else {
+      for (let i = 0; i < 5; i++) {
       if ((offset + i * 2) >= endOffset) return;
       if ((offset + i * 2) < endOffset) {
       output.setUint16((offset + i * 2), value[i], littleEndian);
+      }
       }
       }
       "
@@ -437,14 +537,29 @@ describe('createCompileInstructions', () => {
     const nestedArray = d.arrayOf(d.arrayOf(d.arrayOf(d.arrayOf(d.vec3f, 2), 2), 2), 2);
 
     expect(buildWriter(nestedArray, 'offset', 'value')).toMatchInlineSnapshot(`
-      "for (let i = 0; i < 2; i++) {
+      "if (ArrayBuffer.isView(value)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.buffer, value.byteOffset, Math.min(value.byteLength, 256)), output.byteOffset + (offset));
+      } else {
+      for (let i = 0; i < 2; i++) {
+      if (ArrayBuffer.isView(value[i])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i].buffer, value[i].byteOffset, Math.min(value[i].byteLength, 128)), output.byteOffset + ((offset + i * 128)));
+      } else {
       for (let j = 0; j < 2; j++) {
+      if (ArrayBuffer.isView(value[i][j])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i][j].buffer, value[i][j].byteOffset, Math.min(value[i][j].byteLength, 64)), output.byteOffset + (((offset + i * 128) + j * 64)));
+      } else {
       for (let k = 0; k < 2; k++) {
-      var _ta3 = ArrayBuffer.isView(value[i][j][k]);
+      if (ArrayBuffer.isView(value[i][j][k])) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value[i][j][k].buffer, value[i][j][k].byteOffset, Math.min(value[i][j][k].byteLength, 32)), output.byteOffset + ((((offset + i * 128) + j * 64) + k * 32)));
+      } else {
       for (let i3 = 0; i3 < 2; i3++) {
-      output.setFloat32(((((offset + i * 128) + j * 64) + k * 32) + i3 * 16 + 0), _ta3 ? value[i][j][k][i3 * 3 + 0] : value[i][j][k][i3][0], littleEndian);
-      output.setFloat32(((((offset + i * 128) + j * 64) + k * 32) + i3 * 16 + 4), _ta3 ? value[i][j][k][i3 * 3 + 1] : value[i][j][k][i3][1], littleEndian);
-      output.setFloat32(((((offset + i * 128) + j * 64) + k * 32) + i3 * 16 + 8), _ta3 ? value[i][j][k][i3 * 3 + 2] : value[i][j][k][i3][2], littleEndian);
+      output.setFloat32((((((offset + i * 128) + j * 64) + k * 32) + i3 * 16) + 0), value[i][j][k][i3][0], littleEndian);
+      output.setFloat32((((((offset + i * 128) + j * 64) + k * 32) + i3 * 16) + 4), value[i][j][k][i3][1], littleEndian);
+      output.setFloat32((((((offset + i * 128) + j * 64) + k * 32) + i3 * 16) + 8), value[i][j][k][i3][2], littleEndian);
+      }
+      }
+      }
+      }
       }
       }
       }
@@ -603,8 +718,12 @@ describe('createCompileInstructions', () => {
     const builtWriter = buildWriter(schema, 'offset', 'value');
     expect(builtWriter).toMatchInlineSnapshot(`
       "output.setFloat32((offset + 0), value.a, littleEndian);
+      if (ArrayBuffer.isView(value.b)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.b.buffer, value.b.byteOffset, Math.min(value.b.byteLength, 8)), output.byteOffset + ((offset + 16)));
+      } else {
       for (let i = 0; i < 2; i++) {
       output.setFloat32(((offset + 16) + i * 4), value.b[i], littleEndian);
+      }
       }
       "
     `);
@@ -628,8 +747,12 @@ describe('createCompileInstructions', () => {
     const builtWriter = buildWriter(schema, 'offset', 'value');
     expect(builtWriter).toMatchInlineSnapshot(`
       "output.setFloat32((offset + 0), value.a, littleEndian);
+      if (ArrayBuffer.isView(value.b)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.b.buffer, value.b.byteOffset, Math.min(value.b.byteLength, 8)), output.byteOffset + ((offset + 64)));
+      } else {
       for (let i = 0; i < 2; i++) {
       output.setFloat32(((offset + 64) + i * 4), value.b[i], littleEndian);
+      }
       }
       "
     `);
@@ -686,11 +809,14 @@ describe('createCompileInstructions', () => {
 
     const builtWriter = buildWriter(disarray, 'offset', 'value');
     expect(builtWriter).toMatchInlineSnapshot(`
-      "var _ta0 = ArrayBuffer.isView(value);
+      "if (ArrayBuffer.isView(value)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.buffer, value.byteOffset, Math.min(value.byteLength, 36)), output.byteOffset + (offset));
+      } else {
       for (let i = 0; i < 3; i++) {
-      output.setFloat32((offset + i * 12 + 0), _ta0 ? value[i * 3 + 0] : value[i][0], littleEndian);
-      output.setFloat32((offset + i * 12 + 4), _ta0 ? value[i * 3 + 1] : value[i][1], littleEndian);
-      output.setFloat32((offset + i * 12 + 8), _ta0 ? value[i * 3 + 2] : value[i][2], littleEndian);
+      output.setFloat32(((offset + i * 12) + 0), value[i][0], littleEndian);
+      output.setFloat32(((offset + i * 12) + 4), value[i][1], littleEndian);
+      output.setFloat32(((offset + i * 12) + 8), value[i][2], littleEndian);
+      }
       }
       "
     `);
@@ -720,11 +846,14 @@ describe('createCompileInstructions', () => {
     const writer = buildWriter(d.arrayOf(d.vec3h, 2), 'offset', 'value');
 
     expect(writer).toMatchInlineSnapshot(`
-      "var _ta0 = ArrayBuffer.isView(value);
+      "if (ArrayBuffer.isView(value)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.buffer, value.byteOffset, Math.min(value.byteLength, 16)), output.byteOffset + (offset));
+      } else {
       for (let i = 0; i < 2; i++) {
-      output.setFloat16((offset + i * 8 + 0), _ta0 ? value[i * 3 + 0] : value[i][0], littleEndian);
-      output.setFloat16((offset + i * 8 + 2), _ta0 ? value[i * 3 + 1] : value[i][1], littleEndian);
-      output.setFloat16((offset + i * 8 + 4), _ta0 ? value[i * 3 + 2] : value[i][2], littleEndian);
+      output.setFloat16(((offset + i * 8) + 0), value[i][0], littleEndian);
+      output.setFloat16(((offset + i * 8) + 2), value[i][1], littleEndian);
+      output.setFloat16(((offset + i * 8) + 4), value[i][2], littleEndian);
+      }
       }
       "
     `);
@@ -739,7 +868,10 @@ describe('createCompileInstructions', () => {
 
     const builtWriter = buildWriter(disarray, 'offset', 'value');
     expect(builtWriter).toMatchInlineSnapshot(`
-      "for (let i = 0; i < 2; i++) {
+      "if (ArrayBuffer.isView(value)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.buffer, value.byteOffset, Math.min(value.byteLength, 56)), output.byteOffset + (offset));
+      } else {
+      for (let i = 0; i < 2; i++) {
       output.setFloat32((((offset + i * 28) + 0) + 0), value[i].a[0], littleEndian);
       output.setFloat32((((offset + i * 28) + 0) + 4), value[i].a[1], littleEndian);
       output.setFloat32((((offset + i * 28) + 0) + 8), value[i].a[2], littleEndian);
@@ -747,6 +879,7 @@ describe('createCompileInstructions', () => {
       output.setFloat32((((offset + i * 28) + 12) + 4), value[i].b[1], littleEndian);
       output.setFloat32((((offset + i * 28) + 12) + 8), value[i].b[2], littleEndian);
       output.setFloat32((((offset + i * 28) + 12) + 12), value[i].b[3], littleEndian);
+      }
       }
       "
     `);
@@ -877,15 +1010,16 @@ describe('createCompileInstructions', () => {
     expect([...new Float32Array(arr, 32, 3)]).toStrictEqual([7, 8, 9]);
   });
 
-  it('should write an array of vec3f from a flat Float32Array (stride correction: packed 3→padded 4)', () => {
-    // GPU layout: vec3f has 16-byte stride (12 bytes + 4 padding)
-    // Input: packed Float32Array with 3 floats per element (no padding)
+  it('should write an array of vec3f from a padded Float32Array (raw bytes, 16-byte stride)', () => {
+    // New semantics: TypedArray → raw byte copy; user must provide the padded GPU layout
+    // GPU layout: vec3f has 16-byte stride (12 bytes data + 4 bytes padding per element)
     const schema = d.arrayOf(d.vec3f, 3);
     const writer = getCompiledWriterForSchema(schema)!;
     const arr = new ArrayBuffer(sizeOf(schema)); // 48 bytes
     const dataView = new DataView(arr);
 
-    writer(dataView, 0, new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9]));
+    // Padded layout: 4 floats per element, 4th is padding
+    writer(dataView, 0, new Float32Array([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]));
 
     expect([...new Float32Array(arr, 0, 3)]).toStrictEqual([1, 2, 3]);
     expect([...new Float32Array(arr, 16, 3)]).toStrictEqual([4, 5, 6]);
@@ -906,13 +1040,16 @@ describe('createCompileInstructions', () => {
     expect([...new Float32Array(arr, 16, 4)]).toStrictEqual([5, 6, 7, 8]);
   });
 
-  it('should write an array of vec3u from a flat Uint32Array', () => {
+  it('should write an array of vec3u from a padded Uint32Array (raw bytes, 16-byte stride)', () => {
+    // New semantics: TypedArray → raw byte copy; user must provide the padded GPU layout
+    // GPU layout: vec3u has 16-byte stride (12 bytes data + 4 bytes padding per element)
     const schema = d.arrayOf(d.vec3u, 2);
     const writer = getCompiledWriterForSchema(schema)!;
     const arr = new ArrayBuffer(sizeOf(schema)); // 2 * 16 = 32 bytes
     const dataView = new DataView(arr);
 
-    writer(dataView, 0, new Uint32Array([10, 20, 30, 40, 50, 60]));
+    // Padded layout: 4 uint32s per element, 4th is padding
+    writer(dataView, 0, new Uint32Array([10, 20, 30, 0, 40, 50, 60, 0]));
 
     expect([...new Uint32Array(arr, 0, 3)]).toStrictEqual([10, 20, 30]);
     expect([...new Uint32Array(arr, 16, 3)]).toStrictEqual([40, 50, 60]);
@@ -1019,7 +1156,10 @@ describe('createCompileInstructions', () => {
     const disarray = d.disarrayOf(unstruct, 2);
     const disarrayWriter = buildWriter(disarray, 'offset', 'value');
     expect(disarrayWriter).toMatchInlineSnapshot(`
-      "for (let i = 0; i < 2; i++) {
+      "if (ArrayBuffer.isView(value)) {
+        new Uint8Array(output.buffer).set(new Uint8Array(value.buffer, value.byteOffset, Math.min(value.byteLength, 44)), output.byteOffset + (offset));
+      } else {
+      for (let i = 0; i < 2; i++) {
       output.setUint16((((offset + i * 22) + 0) + 0), Math.round(value[i].a.x * 65535), littleEndian);
       output.setUint16((((offset + i * 22) + 0) + 2), Math.round(value[i].a.y * 65535), littleEndian);
       output.setUint8((((offset + i * 22) + 4) + 0), Math.round(value[i].b.z * 255), littleEndian);
@@ -1036,6 +1176,7 @@ describe('createCompileInstructions', () => {
       output.setInt8((((offset + i * 22) + 16) + 1), value[i].e.y, littleEndian);
       output.setInt16((((offset + i * 22) + 18) + 0), value[i].f.x, littleEndian);
       output.setInt16((((offset + i * 22) + 18) + 2), value[i].f.y, littleEndian);
+      }
       }
       "
     `);
@@ -1113,5 +1254,54 @@ describe('createCompileInstructions', () => {
       expect(result.e).toEqual(expected.e);
       expect(result.f).toEqual(expected.f);
     }
+  });
+
+  it('should write a nested struct with TypedArray array fields interleaved with normal fields', () => {
+    // Mixed input: some array fields are TypedArrays (raw copy), others are plain JS arrays
+    // Also tests a nested struct where the inner struct has a TypedArray field
+    const inner = d.struct({
+      scalar: d.u32,
+      vecs: d.arrayOf(d.vec4f, 2), // 2 * 16 = 32 bytes
+    });
+
+    const outer = d.struct({
+      label: d.u32,
+      inner: inner,
+      scalars: d.arrayOf(d.f32, 4), // 4 * 4 = 16 bytes — normal path
+      padded: d.arrayOf(d.vec3f, 2), // 2 * 16 = 32 bytes — TypedArray path
+    });
+
+    const writer = getCompiledWriterForSchema(outer)!;
+    const arr = new ArrayBuffer(sizeOf(outer));
+    const dataView = new DataView(arr);
+
+    // 'vecs' field: padded Float32Array with 16-byte stride (vec4f has no padding)
+    const vecsData = new Float32Array([1, 2, 3, 4, 5, 6, 7, 8]);
+    // 'padded' field: padded Float32Array with 16-byte stride (vec3f needs 4-float stride)
+    const paddedData = new Float32Array([10, 20, 30, 0, 40, 50, 60, 0]);
+
+    writer(dataView, 0, {
+      label: 99,
+      inner: { scalar: 7, vecs: vecsData },
+      scalars: [1.5, 2.5, 3.5, 4.5], // normal JS array
+      padded: paddedData,
+    });
+
+    // outer.label at offset 0
+    expect(new Uint32Array(arr, 0, 1)[0]).toBe(99);
+    // inner.scalar — struct alignment kicks in; inner starts at offset 16
+    const innerOffset = 16;
+    expect(new Uint32Array(arr, innerOffset, 1)[0]).toBe(7);
+    // inner.vecs start at innerOffset + 16 (vec4f align = 16)
+    const vecsOffset = innerOffset + 16;
+    expect([...new Float32Array(arr, vecsOffset, 4)]).toStrictEqual([1, 2, 3, 4]);
+    expect([...new Float32Array(arr, vecsOffset + 16, 4)]).toStrictEqual([5, 6, 7, 8]);
+    // scalars follow inner; inner size = sizeOf(inner)
+    const scalarsOffset = innerOffset + sizeOf(inner);
+    expect([...new Float32Array(arr, scalarsOffset, 4)]).toStrictEqual([1.5, 2.5, 3.5, 4.5]);
+    // padded follows scalars
+    const paddedOffset = scalarsOffset + 16;
+    expect([...new Float32Array(arr, paddedOffset, 3)]).toStrictEqual([10, 20, 30]);
+    expect([...new Float32Array(arr, paddedOffset + 16, 3)]).toStrictEqual([40, 50, 60]);
   });
 });

@@ -440,6 +440,23 @@ export function writeData<TData extends wgsl.BaseData>(
   schema: TData,
   value: Infer<TData>,
 ): void {
+  if (ArrayBuffer.isView(value)) {
+    const src = value as ArrayBufferView;
+    const expected = sizeOf(schema);
+    if (src.byteLength !== expected) {
+      console.warn(
+        `TypedArray size mismatch: schema expects ${expected} bytes, got ${src.byteLength}. ` +
+          (src.byteLength < expected ? 'Data truncated.' : 'Excess ignored.'),
+      );
+    }
+    const start = output.currentByteOffset;
+    output.writeSlice(
+      new Uint8Array(src.buffer, src.byteOffset, Math.min(src.byteLength, expected)),
+    );
+    output.seekTo(start + expected);
+    return;
+  }
+
   const writer = dataWriters[schema.type];
   if (!writer) {
     throw new Error(`Cannot write data of type '${schema.type}'.`);

@@ -761,14 +761,15 @@ describe('TgpuBuffer (InferInput)', () => {
     expect([...new Float32Array(data, 16, 3)]).toStrictEqual([4, 5, 6]);
   });
 
-  it('should write an array of vec3f from a flat Float32Array with stride correction', ({
+  it('should write an array of vec3f from a padded Float32Array (raw bytes, 16-byte stride)', ({
     root,
     device,
   }) => {
-    // Packed input: 3 floats per element; GPU layout: 4 floats per element (padding)
+    // New semantics: TypedArray → raw byte copy; user provides the padded GPU layout
+    // GPU layout: vec3f has 16-byte stride (4 floats per element, 4th is padding)
     const buffer = root.createBuffer(d.arrayOf(d.vec3f, 2));
 
-    buffer.write(new Float32Array([1, 2, 3, 4, 5, 6]));
+    buffer.write(new Float32Array([1, 2, 3, 0, 4, 5, 6, 0]));
 
     const data = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
     expect([...new Float32Array(data, 0, 3)]).toStrictEqual([1, 2, 3]);

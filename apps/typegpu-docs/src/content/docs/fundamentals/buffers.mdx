@@ -239,7 +239,10 @@ vecBuffer.write([1, 2, 3]);                   // plain tuple
 vecBuffer.write(new Float32Array([1, 2, 3])); // TypedArray
 ```
 
-For **arrays of vectors**, a single flat TypedArray is also accepted. TypeGPU automatically handles the stride difference between the packed input and the padded GPU layout (e.g. `vec3f` occupies 16 bytes in a buffer, but only 3 floats in the TypedArray). When your data already lives in a flat TypedArray, this avoids both per-element wrapper allocation and array construction overhead:
+For **arrays**, a `TypedArray` is treated as a **raw byte copy**: TypeGPU copies the bytes directly without any per-element processing. This is useful when your data is already stored in the padded GPU layout (e.g. output from a previous GPU readback, or a manually laid-out simulation buffer), as it avoids any allocation overhead and becomes a single `memcpy`.
+
+:::note[TypedArray inputs are copied as-is]
+Wherever a TypedArray is passed, the bytes are copied directly without any interpretation. The data must already match the GPU memory layout, including any padding. For example, each element in `d.arrayOf(d.vec3f, N)` occupies **16 bytes** (12 bytes of data + 4 bytes of padding), so the TypedArray must include those padding bytes.
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
@@ -247,15 +250,16 @@ const root = await tgpu.init();
 // ---cut---
 const arrBuffer = root.createBuffer(d.arrayOf(d.vec3f, 2));
 
-// Array of instances, tuples, or per-element TypedArrays - all equivalent:
-arrBuffer.write([d.vec3f(1, 2, 3), d.vec3f(4, 5, 6)]);
-arrBuffer.write([[1, 2, 3], [4, 5, 6]]);
+// TypedArray: must match the padded GPU layout (4 floats per element, 4th is padding)
+arrBuffer.write(new Float32Array([1, 2, 3, 0, 4, 5, 6, 0]));
 
-// Flat Float32Array - no per-element wrapper construction:
-arrBuffer.write(new Float32Array([1, 2, 3, 4, 5, 6]));
+// vec4f has no padding, so the layout is straightforward:
+const vec4Buffer = root.createBuffer(d.arrayOf(d.vec4f, 2));
+vec4Buffer.write(new Float32Array([1, 2, 3, 4, 5, 6, 7, 8]));
 ```
 
-The same rules apply to scalar arrays - a `Float32Array` (or `Int32Array` / `Uint32Array`) can be passed directly to a buffer of `arrayOf(d.f32, n)` (or `i32` / `u32`).
+Plain JS arrays, tuples, and objects always go through the normal path, which handles layout automatically.
+:::
 
 ### Writing a slice
 

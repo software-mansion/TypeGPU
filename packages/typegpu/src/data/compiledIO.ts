@@ -188,34 +188,18 @@ export function buildWriter(
 
   if (wgsl.isWgslArray(node) || isDisarray(node)) {
     const elementSize = roundUp(sizeOf(node.elementType), alignmentOf(node));
+    const totalSize = node.elementCount * elementSize;
     let code = '';
 
-    if (wgsl.isVec(node.elementType)) {
-      const N = node.elementType.componentCount;
-      const primitive = typeToPrimitive[node.elementType.type as keyof typeof typeToPrimitive];
-      const componentSize = sizeOf(node.elementType.primitive);
-      const writeFunc = primitiveToWriteFunction[primitive];
-      const taVar = `_ta${depth}`;
+    // Raw-copy branch: user passes a TypedArray → copy bytes directly
+    const copyLen = partial
+      ? `Math.min(${valueExpr}.byteLength, Math.max(0, endOffset - (${offsetExpr})))`
+      : `Math.min(${valueExpr}.byteLength, ${totalSize})`;
+    code += `if (ArrayBuffer.isView(${valueExpr})) {\n`;
+    code += `  new Uint8Array(output.buffer).set(new Uint8Array(${valueExpr}.buffer, ${valueExpr}.byteOffset, ${copyLen}), output.byteOffset + (${offsetExpr}));\n`;
+    code += `} else {\n`;
 
-      code += `var ${taVar} = ArrayBuffer.isView(${valueExpr});\n`;
-      code += `for (let ${loopVar} = 0; ${loopVar} < ${node.elementCount}; ${loopVar}++) {\n`;
-      if (partial) {
-        code += `if ((${offsetExpr} + ${loopVar} * ${elementSize}) >= endOffset) { break; }\n`;
-      }
-      for (let c = 0; c < N; c++) {
-        const byteOff = c * componentSize;
-        const access = `${taVar} ? ${valueExpr}[${loopVar} * ${N} + ${c}] : ${valueExpr}[${loopVar}][${c}]`;
-        code += emitWrite(
-          writeFunc,
-          `(${offsetExpr} + ${loopVar} * ${elementSize} + ${byteOff})`,
-          access,
-          partial,
-        );
-      }
-      code += '}\n';
-      return code;
-    }
-
+    // Element-wise branch
     code += `for (let ${loopVar} = 0; ${loopVar} < ${node.elementCount}; ${loopVar}++) {\n`;
     if (partial) {
       code += `if ((${offsetExpr} + ${loopVar} * ${elementSize}) >= endOffset) return;\n`;
@@ -229,6 +213,7 @@ export function buildWriter(
     );
     code += '}\n';
 
+    code += '}\n'; // close if/else
     return code;
   }
 

@@ -69,6 +69,10 @@ export type InferRecord<T extends Record<string | number | symbol, unknown>> = {
   [Key in keyof T]: Infer<T[Key]>;
 };
 
+export type InferInputRecord<T extends Record<string | number | symbol, unknown>> = {
+  [Key in keyof T]: InferInput<T[Key]>;
+};
+
 export type InferPartialRecord<T extends Record<string | number | symbol, unknown>> = {
   [Key in keyof T]?: InferPartial<T[Key]>;
 };

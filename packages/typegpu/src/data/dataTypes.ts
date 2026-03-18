@@ -3,6 +3,8 @@ import { isMarkedInternal } from '../shared/symbols.ts';
 import type {
   Infer,
   InferGPURecord,
+  InferInput,
+  InferInputRecord,
   InferPartial,
   InferPartialRecord,
   InferRecord,
@@ -11,6 +13,7 @@ import type {
 } from '../shared/repr.ts';
 import type {
   $gpuRepr,
+  $inRepr,
   $invalidSchemaReason,
   $memIdent,
   $repr,
@@ -46,6 +49,9 @@ export interface Disarray<out TElement extends wgsl.BaseData = wgsl.BaseData>
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TElement>[];
+  readonly [$inRepr]: wgsl.TypedArrayFor<TElement> extends never
+    ? InferInput<TElement>[]
+    : InferInput<TElement>[] | wgsl.TypedArrayFor<TElement>;
   readonly [$reprPartial]: { idx: number; value: InferPartial<TElement> }[] | undefined;
   readonly [$validVertexSchema]: IsValidVertexSchema<TElement>;
   readonly [$invalidSchemaReason]: 'Disarrays are not host-shareable, use arrays instead';
@@ -72,6 +78,7 @@ export interface Unstruct<
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Prettify<InferRecord<TProps>>;
+  readonly [$inRepr]: Prettify<InferInputRecord<TProps>>;
   readonly [$gpuRepr]: Prettify<InferGPURecord<TProps>>;
   readonly [$memIdent]: Unstruct<Prettify<MemIdentityRecord<TProps>>>;
   readonly [$reprPartial]: Prettify<Partial<InferPartialRecord<TProps>>> | undefined;
