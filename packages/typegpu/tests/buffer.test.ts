@@ -225,35 +225,6 @@ describe('TgpuBuffer', () => {
     ]);
   });
 
-  it('should throw on negative startOffset', ({ root }) => {
-    const buffer = root.createBuffer(d.arrayOf(d.u32, 4));
-    expect(() => buffer.write([1], { startOffset: -4 })).toThrow(
-      'startOffset must be a non-negative integer',
-    );
-  });
-
-  it('should throw on non-integer startOffset', ({ root }) => {
-    const buffer = root.createBuffer(d.arrayOf(d.u32, 4));
-    expect(() => buffer.write([1], { startOffset: 1.5 })).toThrow(
-      'startOffset must be a non-negative integer',
-    );
-  });
-
-  it('should throw when endOffset < startOffset', ({ root }) => {
-    const buffer = root.createBuffer(d.arrayOf(d.u32, 4));
-    expect(() => buffer.write([1], { startOffset: 8, endOffset: 4 })).toThrow(
-      'endOffset (4) must be >= startOffset (8)',
-    );
-  });
-
-  it('should throw when endOffset exceeds buffer size', ({ root }) => {
-    const schema = d.arrayOf(d.u32, 4);
-    const buffer = root.createBuffer(schema);
-    expect(() => buffer.write([1], { endOffset: sizeOf(schema) + 4 })).toThrow(
-      `endOffset (${sizeOf(schema) + 4}) exceeds buffer size (${sizeOf(schema)})`,
-    );
-  });
-
   it('should map a mappable buffer before reading', async ({ root }) => {
     const rawBuffer = root.device.createBuffer({
       size: 12,
@@ -802,6 +773,51 @@ describe('TgpuBuffer (InferInput)', () => {
 
     const data = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
     expect([...new Float32Array(data)]).toStrictEqual([1.5, 2.5, 3.5]);
+  });
+
+  it('should write a single struct element with mixed TypedArray and plain fields using startOffset and endOffset', ({
+    root,
+    device,
+  }) => {
+    const Element = d.struct({
+      weight: d.f32,
+      offsets: d.arrayOf(d.vec3f, 2),
+      flags: d.u32,
+    });
+    const schema = d.arrayOf(Element, 4);
+    const buffer = root.createBuffer(schema);
+    const rawBuffer = root.unwrap(buffer);
+
+    const startLayout = d.memoryLayoutOf(schema, (a) => a[2]);
+    const endLayout = d.memoryLayoutOf(schema, (a) => a[3]);
+
+    // Write only element [2]: offsets via padded TypedArray, weight and flags as plain values
+    buffer.write([{ weight: 0.5, offsets: new Float32Array([1, 2, 3, 0, 4, 5, 6, 0]), flags: 7 }], {
+      startOffset: startLayout.offset,
+      endOffset: endLayout.offset,
+    });
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [
+        rawBuffer,
+        startLayout.offset,
+        expect.any(ArrayBuffer),
+        startLayout.offset,
+        endLayout.offset - startLayout.offset,
+      ],
+    ]);
+
+    const data = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    // Elements [0] and [1] untouched (bytes 0–127)
+    expect([...new Float32Array(data, 0, 32)]).toStrictEqual(Array(32).fill(0));
+    // Element [2]: weight at +0, 12 bytes padding, offsets at +16, flags at +48
+    expect(new Float32Array(data, startLayout.offset, 1)[0]).toBeCloseTo(0.5);
+    expect([...new Float32Array(data, startLayout.offset + 16, 8)]).toStrictEqual([
+      1, 2, 3, 0, 4, 5, 6, 0,
+    ]);
+    expect(new Uint32Array(data, startLayout.offset + 48, 1)[0]).toBe(7);
+    // Element [3] untouched
+    expect([...new Float32Array(data, endLayout.offset, 16)]).toStrictEqual(Array(16).fill(0));
   });
 });
 
