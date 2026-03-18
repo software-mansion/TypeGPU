@@ -31,7 +31,7 @@ describe('buildWriter', () => {
 
     expect(writer).toMatchInlineSnapshot(`
       "output.setUint32((offset + 0), value.a, littleEndian);
-      var _ta0 = ArrayBuffer.isView(value.b) && !(value.b instanceof DataView);
+      var _ta0 = ArrayBuffer.isView(value.b);
       for (let i = 0; i < 2; i++) {
       output.setFloat32(((offset + 16) + i * 16 + 0), _ta0 ? value.b[i * 3 + 0] : value.b[i][0], littleEndian);
       output.setFloat32(((offset + 16) + i * 16 + 4), _ta0 ? value.b[i * 3 + 1] : value.b[i][1], littleEndian);
@@ -70,7 +70,7 @@ describe('buildWriter', () => {
     const writer = buildWriter(array, 'offset', 'value');
 
     expect(writer).toMatchInlineSnapshot(`
-      "var _ta0 = ArrayBuffer.isView(value) && !(value instanceof DataView);
+      "var _ta0 = ArrayBuffer.isView(value);
       for (let i = 0; i < 5; i++) {
       output.setFloat32((offset + i * 16 + 0), _ta0 ? value[i * 3 + 0] : value[i][0], littleEndian);
       output.setFloat32((offset + i * 16 + 4), _ta0 ? value[i * 3 + 1] : value[i][1], littleEndian);
@@ -106,7 +106,7 @@ describe('buildWriter', () => {
     expect(writer).toMatchInlineSnapshot(`
       "output.setUint32((offset + 0), value.a, littleEndian);
       for (let i = 0; i < 2; i++) {
-      var _ta1 = ArrayBuffer.isView(value.b[i]) && !(value.b[i] instanceof DataView);
+      var _ta1 = ArrayBuffer.isView(value.b[i]);
       for (let j = 0; j < 2; j++) {
       output.setFloat32((((offset + 8) + i * 16) + j * 8 + 0), _ta1 ? value.b[i][j * 2 + 0] : value.b[i][j][0], littleEndian);
       output.setFloat32((((offset + 8) + i * 16) + j * 8 + 4), _ta1 ? value.b[i][j * 2 + 1] : value.b[i][j][1], littleEndian);
@@ -198,7 +198,7 @@ describe('buildWriter (partial mode)', () => {
       "if ((offset + 0) < endOffset) {
       output.setUint32((offset + 0), value.a, littleEndian);
       }
-      var _ta0 = ArrayBuffer.isView(value.b) && !(value.b instanceof DataView);
+      var _ta0 = ArrayBuffer.isView(value.b);
       for (let i = 0; i < 2; i++) {
       if (((offset + 16) + i * 16) >= endOffset) { break; }
       if (((offset + 16) + i * 16 + 0) < endOffset) {
@@ -440,7 +440,7 @@ describe('createCompileInstructions', () => {
       "for (let i = 0; i < 2; i++) {
       for (let j = 0; j < 2; j++) {
       for (let k = 0; k < 2; k++) {
-      var _ta3 = ArrayBuffer.isView(value[i][j][k]) && !(value[i][j][k] instanceof DataView);
+      var _ta3 = ArrayBuffer.isView(value[i][j][k]);
       for (let i3 = 0; i3 < 2; i3++) {
       output.setFloat32(((((offset + i * 128) + j * 64) + k * 32) + i3 * 16 + 0), _ta3 ? value[i][j][k][i3 * 3 + 0] : value[i][j][k][i3][0], littleEndian);
       output.setFloat32(((((offset + i * 128) + j * 64) + k * 32) + i3 * 16 + 4), _ta3 ? value[i][j][k][i3 * 3 + 1] : value[i][j][k][i3][1], littleEndian);
@@ -686,7 +686,7 @@ describe('createCompileInstructions', () => {
 
     const builtWriter = buildWriter(disarray, 'offset', 'value');
     expect(builtWriter).toMatchInlineSnapshot(`
-      "var _ta0 = ArrayBuffer.isView(value) && !(value instanceof DataView);
+      "var _ta0 = ArrayBuffer.isView(value);
       for (let i = 0; i < 3; i++) {
       output.setFloat32((offset + i * 12 + 0), _ta0 ? value[i * 3 + 0] : value[i][0], littleEndian);
       output.setFloat32((offset + i * 12 + 4), _ta0 ? value[i * 3 + 1] : value[i][1], littleEndian);
@@ -720,7 +720,7 @@ describe('createCompileInstructions', () => {
     const writer = buildWriter(d.arrayOf(d.vec3h, 2), 'offset', 'value');
 
     expect(writer).toMatchInlineSnapshot(`
-      "var _ta0 = ArrayBuffer.isView(value) && !(value instanceof DataView);
+      "var _ta0 = ArrayBuffer.isView(value);
       for (let i = 0; i < 2; i++) {
       output.setFloat16((offset + i * 8 + 0), _ta0 ? value[i * 3 + 0] : value[i][0], littleEndian);
       output.setFloat16((offset + i * 8 + 2), _ta0 ? value[i * 3 + 1] : value[i][1], littleEndian);

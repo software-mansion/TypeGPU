@@ -324,12 +324,10 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
 
     if (
       ArrayBuffer.isView(data) &&
-      !(data instanceof DataView) &&
       (isWgslArray(this.dataType) || isDisarray(this.dataType)) &&
-      isVec((this.dataType as { elementType?: unknown }).elementType)
+      isVec(this.dataType.elementType)
     ) {
-      const elementType = (this.dataType as { elementType: { componentCount: number } })
-        .elementType;
+      const elementType = this.dataType.elementType;
       const N = elementType.componentCount;
       const typedData = data as Float32Array | Int32Array | Uint32Array;
       const count = Math.floor(typedData.length / N);

@@ -197,7 +197,7 @@ export function buildWriter(
       const writeFunc = primitiveToWriteFunction[primitive];
       const taVar = `_ta${depth}`;
 
-      code += `var ${taVar} = ArrayBuffer.isView(${valueExpr}) && !(${valueExpr} instanceof DataView);\n`;
+      code += `var ${taVar} = ArrayBuffer.isView(${valueExpr});\n`;
       code += `for (let ${loopVar} = 0; ${loopVar} < ${node.elementCount}; ${loopVar}++) {\n`;
       if (partial) {
         code += `if ((${offsetExpr} + ${loopVar} * ${elementSize}) >= endOffset) { break; }\n`;
