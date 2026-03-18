@@ -30,8 +30,6 @@ export type Infer<T> = T extends { readonly [$repr]: infer TRepr } ? TRepr : T;
 
 /**
  * Extracts the inferred input (write-side) representation of a resource.
- * More permissive than {@link Infer} — accepts plain arrays and TypedArrays
- * for vector and array schemas. Falls back to {@link Infer} when $inRepr is not defined.
  *
  * @example
  * type A = InferInput<Vec3f> // => v3f | [number, number, number] | Float32Array

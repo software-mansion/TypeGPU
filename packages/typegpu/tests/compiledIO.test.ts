@@ -259,18 +259,10 @@ describe('buildWriter (partial mode)', () => {
     const writer = buildWriter(struct, 'offset', 'value', 0, true);
 
     expect(writer).toMatchInlineSnapshot(`
-      "if ((offset + 0) < endOffset) {
-      output.setUint32((offset + 0), value.a, littleEndian);
-      }
-      if (((offset + 16) + 0) < endOffset) {
-      output.setFloat32(((offset + 16) + 0), value.b[0], littleEndian);
-      }
-      if (((offset + 16) + 4) < endOffset) {
-      output.setFloat32(((offset + 16) + 4), value.b[1], littleEndian);
-      }
-      if (((offset + 16) + 8) < endOffset) {
-      output.setFloat32(((offset + 16) + 8), value.b[2], littleEndian);
-      }
+      "if ((offset + 0) < endOffset) { output.setUint32((offset + 0), value.a, littleEndian); }
+      if (((offset + 16) + 0) < endOffset) { output.setFloat32(((offset + 16) + 0), value.b[0], littleEndian); }
+      if (((offset + 16) + 4) < endOffset) { output.setFloat32(((offset + 16) + 4), value.b[1], littleEndian); }
+      if (((offset + 16) + 8) < endOffset) { output.setFloat32(((offset + 16) + 8), value.b[2], littleEndian); }
       "
     `);
   });
@@ -284,23 +276,15 @@ describe('buildWriter (partial mode)', () => {
     const writer = buildWriter(struct, 'offset', 'value', 0, true);
 
     expect(writer).toMatchInlineSnapshot(`
-      "if ((offset + 0) < endOffset) {
-      output.setUint32((offset + 0), value.a, littleEndian);
-      }
+      "if ((offset + 0) < endOffset) { output.setUint32((offset + 0), value.a, littleEndian); }
       if (ArrayBuffer.isView(value.b)) {
         new Uint8Array(output.buffer).set(new Uint8Array(value.b.buffer, value.b.byteOffset, Math.min(value.b.byteLength, Math.max(0, endOffset - ((offset + 16))))), output.byteOffset + ((offset + 16)));
       } else {
       for (let i = 0; i < 2; i++) {
       if (((offset + 16) + i * 16) >= endOffset) return;
-      if ((((offset + 16) + i * 16) + 0) < endOffset) {
-      output.setFloat32((((offset + 16) + i * 16) + 0), value.b[i][0], littleEndian);
-      }
-      if ((((offset + 16) + i * 16) + 4) < endOffset) {
-      output.setFloat32((((offset + 16) + i * 16) + 4), value.b[i][1], littleEndian);
-      }
-      if ((((offset + 16) + i * 16) + 8) < endOffset) {
-      output.setFloat32((((offset + 16) + i * 16) + 8), value.b[i][2], littleEndian);
-      }
+      if ((((offset + 16) + i * 16) + 0) < endOffset) { output.setFloat32((((offset + 16) + i * 16) + 0), value.b[i][0], littleEndian); }
+      if ((((offset + 16) + i * 16) + 4) < endOffset) { output.setFloat32((((offset + 16) + i * 16) + 4), value.b[i][1], littleEndian); }
+      if ((((offset + 16) + i * 16) + 8) < endOffset) { output.setFloat32((((offset + 16) + i * 16) + 8), value.b[i][2], littleEndian); }
       }
       }
       if (ArrayBuffer.isView(value.c)) {
@@ -308,9 +292,7 @@ describe('buildWriter (partial mode)', () => {
       } else {
       for (let i = 0; i < 3; i++) {
       if (((offset + 48) + i * 4) >= endOffset) return;
-      if (((offset + 48) + i * 4) < endOffset) {
-      output.setUint32(((offset + 48) + i * 4), value.c[i], littleEndian);
-      }
+      if (((offset + 48) + i * 4) < endOffset) { output.setUint32(((offset + 48) + i * 4), value.c[i], littleEndian); }
       }
       }
       "
@@ -327,9 +309,7 @@ describe('buildWriter (partial mode)', () => {
       } else {
       for (let i = 0; i < 5; i++) {
       if ((offset + i * 2) >= endOffset) return;
-      if ((offset + i * 2) < endOffset) {
-      output.setUint16((offset + i * 2), value[i], littleEndian);
-      }
+      if ((offset + i * 2) < endOffset) { output.setUint16((offset + i * 2), value[i], littleEndian); }
       }
       }
       "
@@ -346,33 +326,17 @@ describe('buildWriter (partial mode)', () => {
 
     const unstructWriter = buildWriter(unstruct, 'offset', 'value', 0, true);
     expect(unstructWriter).toMatchInlineSnapshot(`
-      "if (((offset + 0) + 0) < endOffset) {
-      output.setUint16(((offset + 0) + 0), value.a.x, littleEndian);
-      }
-      if (((offset + 0) + 2) < endOffset) {
-      output.setUint16(((offset + 0) + 2), value.a.y, littleEndian);
-      }
+      "if (((offset + 0) + 0) < endOffset) { output.setUint16(((offset + 0) + 0), value.a.x, littleEndian); }
+      if (((offset + 0) + 2) < endOffset) { output.setUint16(((offset + 0) + 2), value.a.y, littleEndian); }
       if (((offset + 4)) < endOffset) {
       output.setUint32((offset + 4), ((value.b.x*1023&0x3FF)<<22)|((value.b.y*1023&0x3FF)<<12)|((value.b.z*1023&0x3FF)<<2)|(value.b.w*3&3), littleEndian);
       }
-      if (((offset + 8) + 0) < endOffset) {
-      output.setUint8(((offset + 8) + 0), value.c.x, littleEndian);
-      }
-      if (((offset + 8) + 1) < endOffset) {
-      output.setUint8(((offset + 8) + 1), value.c.y, littleEndian);
-      }
-      if (((offset + 10) + 0) < endOffset) {
-      output.setUint8(((offset + 10) + 0), Math.round(value.d.x * 255), littleEndian);
-      }
-      if (((offset + 10) + 1) < endOffset) {
-      output.setUint8(((offset + 10) + 1), Math.round(value.d.y * 255), littleEndian);
-      }
-      if (((offset + 10) + 2) < endOffset) {
-      output.setUint8(((offset + 10) + 2), Math.round(value.d.z * 255), littleEndian);
-      }
-      if (((offset + 10) + 3) < endOffset) {
-      output.setUint8(((offset + 10) + 3), Math.round(value.d.w * 255), littleEndian);
-      }
+      if (((offset + 8) + 0) < endOffset) { output.setUint8(((offset + 8) + 0), value.c.x, littleEndian); }
+      if (((offset + 8) + 1) < endOffset) { output.setUint8(((offset + 8) + 1), value.c.y, littleEndian); }
+      if (((offset + 10) + 0) < endOffset) { output.setUint8(((offset + 10) + 0), Math.round(value.d.x * 255), littleEndian); }
+      if (((offset + 10) + 1) < endOffset) { output.setUint8(((offset + 10) + 1), Math.round(value.d.y * 255), littleEndian); }
+      if (((offset + 10) + 2) < endOffset) { output.setUint8(((offset + 10) + 2), Math.round(value.d.z * 255), littleEndian); }
+      if (((offset + 10) + 3) < endOffset) { output.setUint8(((offset + 10) + 3), Math.round(value.d.w * 255), littleEndian); }
       "
     `);
   });
