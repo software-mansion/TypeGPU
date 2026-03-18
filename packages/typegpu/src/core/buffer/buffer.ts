@@ -308,14 +308,14 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
         data instanceof ArrayBuffer
           ? new Uint8Array(data)
           : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-      const expected = sizeOf(this.dataType);
-      if (src.byteLength !== expected) {
+      const regionSize = endOffset - startOffset;
+      if (src.byteLength !== regionSize) {
         console.warn(
-          `Buffer size mismatch: schema expects ${expected} bytes, got ${src.byteLength}. ` +
-            (src.byteLength < expected ? 'Data truncated.' : 'Excess ignored.'),
+          `Buffer size mismatch: expected ${regionSize} bytes, got ${src.byteLength}. ` +
+            (src.byteLength < regionSize ? 'Data truncated.' : 'Excess ignored.'),
         );
       }
-      const copyLen = Math.min(src.byteLength, endOffset - startOffset);
+      const copyLen = Math.min(src.byteLength, regionSize);
       new Uint8Array(target).set(src.subarray(0, copyLen), startOffset);
       return;
     }

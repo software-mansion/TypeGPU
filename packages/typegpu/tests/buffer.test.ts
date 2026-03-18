@@ -823,6 +823,48 @@ describe('TgpuBuffer (InferInput)', () => {
     // Element [3] untouched
     expect([...new Float32Array(data, endLayout.offset, 16)]).toStrictEqual(Array(16).fill(0));
   });
+
+  it('should write a struct field as a raw ArrayBuffer using startOffset and endOffset', ({
+    root,
+    device,
+  }) => {
+    // flags: u32 at offset 0 (+12 pad), colors: arrayOf(vec4f, 3) at offset 16, count: u32 at offset 64
+    const Schema = d.struct({
+      flags: d.u32,
+      colors: d.arrayOf(d.vec4f, 3),
+      count: d.u32,
+    });
+    const buffer = root.createBuffer(Schema);
+    const rawBuffer = root.unwrap(buffer);
+
+    const colorsLayout = d.memoryLayoutOf(Schema, (s) => s.colors);
+    const countLayout = d.memoryLayoutOf(Schema, (s) => s.count);
+    const fieldSize = countLayout.offset - colorsLayout.offset;
+
+    // Build raw bytes for 3 vec4f values — exactly fieldSize bytes, no warning
+    const raw = new ArrayBuffer(fieldSize);
+    new Float32Array(raw).set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+
+    buffer.write(raw, { startOffset: colorsLayout.offset, endOffset: countLayout.offset });
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, colorsLayout.offset, expect.any(ArrayBuffer), colorsLayout.offset, fieldSize],
+    ]);
+
+    const data = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    // flags and padding before colors are untouched
+    expect([...new Uint8Array(data, 0, colorsLayout.offset)]).toStrictEqual(
+      Array(colorsLayout.offset).fill(0),
+    );
+    // colors field matches the raw input
+    expect([...new Float32Array(data, colorsLayout.offset, 12)]).toStrictEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+    ]);
+    // count and trailing padding are untouched
+    expect([...new Uint8Array(data, countLayout.offset)]).toStrictEqual(
+      Array(d.sizeOf(Schema) - countLayout.offset).fill(0),
+    );
+  });
 });
 
 describe('IsValidUniformSchema', () => {
