@@ -72,7 +72,6 @@ function mergeVisitors(visitors: RuleListener[]): RuleListener {
     }
 
     merged[key] = (...args: unknown[]) => {
-      // biome-ignore lint/suspicious/useIterableCallbackReturn: those functions return void
       listeners.forEach((fn) => (fn as (...args: unknown[]) => void)(...args));
     };
   }
