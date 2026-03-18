@@ -88,14 +88,14 @@ const initLayout = tgpu.bindGroupLayout({
   },
 });
 
-const initLength = root.createUniform(d.u32, state.arraySize);
 const initSeed = root.createUniform(d.f32, 0);
 
 const fragmentFn = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  const arrayLength = initLength.$;
+  const data = renderLayout.$.data;
+  const arrayLength = data.length;
 
   const cols = d.u32(std.round(std.sqrt(d.f32(arrayLength))));
   const rows = d.u32(std.round(arrayLength / cols));
@@ -108,7 +108,7 @@ const fragmentFn = tgpu.fragmentFn({
     return d.vec4f(0.1, 0.1, 0.1, 1);
   }
 
-  const value = renderLayout.$.data[idx];
+  const value = data[idx];
   const normalized = value / 255;
 
   return d.vec4f(normalized, normalized, normalized, 1);
@@ -125,7 +125,7 @@ const initKernel = tgpu.computeFn({
   const spanY = input.numWorkgroups.y * spanX;
   const idx = input.gid.x + input.gid.y * spanX + input.gid.z * spanY;
 
-  if (idx >= initLength.$) {
+  if (idx >= initLayout.$.data.length) {
     return;
   }
 
@@ -182,7 +182,6 @@ function generateRandomArray() {
   const workgroupsTotal = Math.ceil(state.arraySize / WORKGROUP_SIZE);
   const [workgroupsX, workgroupsY, workgroupsZ] = decomposeWorkgroups(workgroupsTotal);
 
-  initLength.write(state.arraySize);
   initSeed.write(Math.random() * 1000);
 
   initPipeline.with(initBindGroup).dispatchWorkgroups(workgroupsX, workgroupsY, workgroupsZ);

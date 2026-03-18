@@ -137,16 +137,15 @@ describe('bitonic sort example', () => {
         return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
-      @group(0) @binding(0) var<uniform> initLength: u32;
-
-      @group(1) @binding(0) var<storage, read> data: array<u32>;
+      @group(0) @binding(0) var<storage, read> data_1: array<u32>;
 
       struct fragmentFn_Input {
         @location(0) uv: vec2f,
       }
 
       @fragment fn fragmentFn(input: fragmentFn_Input) -> @location(0) vec4f {
-        let arrayLength_1 = initLength;
+        let data = (&data_1);
+        let arrayLength_1 = arrayLength(&(*data));
         let cols = u32(round(sqrt(f32(arrayLength_1))));
         let rows = u32(round((f32(arrayLength_1) / f32(cols))));
         let col = u32(floor((input.uv.x * f32(cols))));
@@ -155,7 +154,7 @@ describe('bitonic sort example', () => {
         if ((idx >= arrayLength_1)) {
           return vec4f(0.10000000149011612, 0.10000000149011612, 0.10000000149011612, 1);
         }
-        let value = data[idx];
+        let value = (*data)[idx];
         let normalized = (f32(value) / 255f);
         return vec4f(normalized, normalized, normalized, 1f);
       }"
