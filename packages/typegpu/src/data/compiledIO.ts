@@ -148,6 +148,14 @@ const specialPackedFormats = {
   },
 } as const;
 
+function emitBlock(addr: string, block: string, partial: boolean): string {
+  return partial ? `if (${addr} < endOffset) {\n${block}}\n` : block;
+}
+
+function emitWrite(writeFunc: string, addr: string, value: string, partial: boolean): string {
+  return emitBlock(addr, `output.${writeFunc}(${addr}, ${value}, littleEndian);\n`, partial);
+}
+
 export function buildWriter(
   node: wgsl.BaseData,
   offsetExpr: string,
@@ -197,13 +205,12 @@ export function buildWriter(
       for (let c = 0; c < N; c++) {
         const byteOff = c * componentSize;
         const access = `${taVar} ? ${valueExpr}[${loopVar} * ${N} + ${c}] : ${valueExpr}[${loopVar}][${c}]`;
-        if (partial) {
-          code += `if ((${offsetExpr} + ${loopVar} * ${elementSize} + ${byteOff}) < endOffset) {\n`;
-          code += `output.${writeFunc}((${offsetExpr} + ${loopVar} * ${elementSize} + ${byteOff}), ${access}, littleEndian);\n`;
-          code += '}\n';
-        } else {
-          code += `output.${writeFunc}((${offsetExpr} + ${loopVar} * ${elementSize} + ${byteOff}), ${access}, littleEndian);\n`;
-        }
+        code += emitWrite(
+          writeFunc,
+          `(${offsetExpr} + ${loopVar} * ${elementSize} + ${byteOff})`,
+          access,
+          partial,
+        );
       }
       code += '}\n';
       return code;
@@ -237,13 +244,7 @@ export function buildWriter(
 
     for (let i = 0; i < node.componentCount; i++) {
       const byteOff = i * componentSize;
-      if (partial) {
-        code += `if ((${offsetExpr} + ${byteOff}) < endOffset) {\n`;
-        code += `output.${writeFunc}((${offsetExpr} + ${byteOff}), ${valueExpr}[${i}], littleEndian);\n`;
-        code += '}\n';
-      } else {
-        code += `output.${writeFunc}((${offsetExpr} + ${byteOff}), ${valueExpr}[${i}], littleEndian);\n`;
-      }
+      code += emitWrite(writeFunc, `(${offsetExpr} + ${byteOff})`, `${valueExpr}[${i}]`, partial);
     }
     return code;
   }
@@ -262,17 +263,12 @@ export function buildWriter(
       const rowIndex = idx % matSize;
       const byteOffset = colIndex * rowStride + rowIndex * 4;
 
-      if (partial) {
-        code += `if ((${offsetExpr} + ${byteOffset}) < endOffset) {\n`;
-        code += `output.${writeFunc}((${offsetExpr} + ${byteOffset}), ${valueExpr}.columns[${colIndex}].${
-          ['x', 'y', 'z', 'w'][rowIndex]
-        }, littleEndian);\n`;
-        code += '}\n';
-      } else {
-        code += `output.${writeFunc}((${offsetExpr} + ${byteOffset}), ${valueExpr}.columns[${colIndex}].${
-          ['x', 'y', 'z', 'w'][rowIndex]
-        }, littleEndian);\n`;
-      }
+      code += emitWrite(
+        writeFunc,
+        `(${offsetExpr} + ${byteOffset})`,
+        `${valueExpr}.columns[${colIndex}].${['x', 'y', 'z', 'w'][rowIndex]}`,
+        partial,
+      );
     }
 
     return code;
@@ -283,10 +279,7 @@ export function buildWriter(
 
     if (formatName in specialPackedFormats) {
       const handler = specialPackedFormats[formatName as keyof typeof specialPackedFormats];
-      if (partial) {
-        return `if ((${offsetExpr}) < endOffset) {\n${handler.generator(offsetExpr, valueExpr)}}\n`;
-      }
-      return handler.generator(offsetExpr, valueExpr);
+      return emitBlock(`(${offsetExpr})`, handler.generator(offsetExpr, valueExpr), partial);
     }
 
     const primitive = vertexFormatToPrimitive[formatName as keyof typeof vertexFormatToPrimitive];
@@ -308,13 +301,7 @@ export function buildWriter(
       const accessor = componentCount === 1 ? valueExpr : `${valueExpr}.${components[idx]}`;
       const value = transform ? transform(accessor) : accessor;
       const byteOff = idx * componentSize;
-      if (partial) {
-        code += `if ((${offsetExpr} + ${byteOff}) < endOffset) {\n`;
-        code += `output.${writeFunc}((${offsetExpr} + ${byteOff}), ${value}, littleEndian);\n`;
-        code += '}\n';
-      } else {
-        code += `output.${writeFunc}((${offsetExpr} + ${byteOff}), ${value}, littleEndian);\n`;
-      }
+      code += emitWrite(writeFunc, `(${offsetExpr} + ${byteOff})`, value, partial);
     }
 
     return code;
@@ -325,12 +312,7 @@ export function buildWriter(
   }
 
   const primitive = typeToPrimitive[node.type as keyof typeof typeToPrimitive];
-  if (partial) {
-    return `if ((${offsetExpr}) < endOffset) {\noutput.${
-      primitiveToWriteFunction[primitive]
-    }(${offsetExpr}, ${valueExpr}, littleEndian);\n}\n`;
-  }
-  return `output.${primitiveToWriteFunction[primitive]}(${offsetExpr}, ${valueExpr}, littleEndian);\n`;
+  return emitWrite(primitiveToWriteFunction[primitive], offsetExpr, valueExpr, partial);
 }
 
 export function getCompiledWriterForSchema<T extends wgsl.BaseData>(

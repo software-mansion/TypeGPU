@@ -319,20 +319,30 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       }
     }
 
+    const writer = new BufferWriter(target);
+    writer.seekTo(startOffset);
+
     if (
       ArrayBuffer.isView(data) &&
       !(data instanceof DataView) &&
       (isWgslArray(this.dataType) || isDisarray(this.dataType)) &&
       isVec((this.dataType as { elementType?: unknown }).elementType)
     ) {
-      throw new Error(
-        'Flat TypedArray input for arrays of vectors requires the compiled writer. ' +
-          'This environment does not allow eval - pass an array of vec instances or plain tuples instead.',
+      const elementType = (this.dataType as { elementType: { componentCount: number } })
+        .elementType;
+      const N = elementType.componentCount;
+      const typedData = data as Float32Array | Int32Array | Uint32Array;
+      const count = Math.floor(typedData.length / N);
+      writeData(
+        writer,
+        this.dataType,
+        Array.from({ length: count }, (_, i) =>
+          typedData.subarray(i * N, i * N + N),
+        ) as Infer<TData>,
       );
+      return;
     }
 
-    const writer = new BufferWriter(target);
-    writer.seekTo(startOffset);
     writeData(writer, this.dataType, data as Infer<TData>);
   }
 

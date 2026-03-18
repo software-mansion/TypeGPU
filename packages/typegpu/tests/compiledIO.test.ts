@@ -170,7 +170,7 @@ describe('buildWriter (partial mode)', () => {
     const writer = buildWriter(struct, 'offset', 'value', 0, true);
 
     expect(writer).toMatchInlineSnapshot(`
-      "if (((offset + 0)) < endOffset) {
+      "if ((offset + 0) < endOffset) {
       output.setUint32((offset + 0), value.a, littleEndian);
       }
       if (((offset + 16) + 0) < endOffset) {
@@ -195,7 +195,7 @@ describe('buildWriter (partial mode)', () => {
     const writer = buildWriter(struct, 'offset', 'value', 0, true);
 
     expect(writer).toMatchInlineSnapshot(`
-      "if (((offset + 0)) < endOffset) {
+      "if ((offset + 0) < endOffset) {
       output.setUint32((offset + 0), value.a, littleEndian);
       }
       var _ta0 = ArrayBuffer.isView(value.b) && !(value.b instanceof DataView);
@@ -213,7 +213,7 @@ describe('buildWriter (partial mode)', () => {
       }
       for (let i = 0; i < 3; i++) {
       if (((offset + 48) + i * 4) >= endOffset) return;
-      if ((((offset + 48) + i * 4)) < endOffset) {
+      if (((offset + 48) + i * 4) < endOffset) {
       output.setUint32(((offset + 48) + i * 4), value.c[i], littleEndian);
       }
       }
@@ -228,7 +228,7 @@ describe('buildWriter (partial mode)', () => {
     expect(builtWriter).toMatchInlineSnapshot(`
       "for (let i = 0; i < 5; i++) {
       if ((offset + i * 2) >= endOffset) return;
-      if (((offset + i * 2)) < endOffset) {
+      if ((offset + i * 2) < endOffset) {
       output.setUint16((offset + i * 2), value[i], littleEndian);
       }
       }
