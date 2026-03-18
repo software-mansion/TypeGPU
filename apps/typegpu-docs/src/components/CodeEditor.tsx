@@ -49,58 +49,37 @@ function handleEditorOnMount(editor: editor.IStandaloneCodeEditor) {
 }
 
 type Props = {
+  language: 'typescript' | 'html',
+  tsoverEnabled: boolean,
   file: ExampleSrcFile | ExampleCommonFile;
   shown: boolean;
 };
 
-const createCodeEditorComponent =
-  (
-    language: 'typescript' | 'html',
-    tsoverEnabled: boolean,
-    beforeMount?: (tsover: boolean) => BeforeMount,
-    onMount?: OnMount,
-  ) =>
-  (props: Props) => {
-    const { file, shown } = props;
+export function CodeEditor(props: Props) {
+  const { language, tsoverEnabled, file, shown } = props;
 
-    // Monaco needs relative paths to work correctly and '../../common/file.ts' will not do
-    const path =
-      'common' in file
-        ? `common/${file.path}`
-        : `${file.exampleKey.replace('--', '/')}/${file.path}`;
+  // Monaco needs relative paths to work correctly and '../../common/file.ts' will not do
+  const path =
+    'common' in file
+      ? `common/${file.path}`
+      : `${file.exampleKey.replace('--', '/')}/${file.path}`;
 
-    return (
-      <div className={shown ? 'h-[calc(100%-7rem)] md:h-[calc(100%-3rem)]' : 'hidden'}>
-        <Editor
-          defaultLanguage={language}
-          value={tsoverEnabled ? file.content : (file.tsnotoverContent ?? file.content)}
-          path={path}
-          beforeMount={beforeMount?.(tsoverEnabled)}
-          onMount={onMount}
-          options={{
-            minimap: {
-              enabled: false,
-            },
-            readOnly: true,
-            domReadOnly: true,
-          }}
-        />
-      </div>
-    );
-  };
-
-export const TsnotoverCodeEditor = createCodeEditorComponent(
-  'typescript',
-  false,
-  handleEditorWillMount,
-  handleEditorOnMount as OnMount,
-);
-
-export const TsoverCodeEditor = createCodeEditorComponent(
-  'typescript',
-  true,
-  handleEditorWillMount,
-  handleEditorOnMount as OnMount,
-);
-
-export const HtmlCodeEditor = createCodeEditorComponent('html', false);
+  return (
+    <div className={shown ? 'h-[calc(100%-7rem)] md:h-[calc(100%-3rem)]' : 'hidden'}>
+      <Editor
+        defaultLanguage={language}
+        value={tsoverEnabled ? file.content : (file.tsnotoverContent ?? file.content)}
+        path={path}
+        beforeMount={language === 'typescript' ? handleEditorWillMount(tsoverEnabled) : undefined}
+        onMount={language === 'typescript' ? handleEditorOnMount as OnMount : undefined}
+        options={{
+          minimap: {
+            enabled: false,
+          },
+          readOnly: true,
+          domReadOnly: true,
+        }}
+      />
+    </div>
+  );
+};

@@ -9,7 +9,7 @@ import { executeExample } from '../utils/examples/exampleRunner.ts';
 import type { ExampleState } from '../utils/examples/exampleState.ts';
 import type { Example, ExampleCommonFile, ExampleSrcFile } from '../utils/examples/types.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
-import { HtmlCodeEditor, TsnotoverCodeEditor, TsoverCodeEditor } from './CodeEditor.tsx';
+import { CodeEditor } from './CodeEditor.tsx';
 import { ControlPanel } from './ControlPanel.tsx';
 import { Button } from './design/Button.tsx';
 import { Snackbar } from './design/Snackbar.tsx';
@@ -141,22 +141,20 @@ export function ExampleView({ example, common }: Props) {
                   </div>
                 </div>
 
-                <HtmlCodeEditor shown={currentFilePath === 'index.html'} file={htmlFile} />
+                <CodeEditor
+                  shown={currentFilePath === 'index.html'}
+                  file={htmlFile}
+                  language={'html'}
+                  tsoverEnabled={false} />
 
                 {tsFiles.map((file) =>
-                  tsoverUsed ? (
-                    <TsoverCodeEditor
-                      key={file.path}
-                      shown={file.path === currentFilePath}
-                      file={file}
-                    />
-                  ) : (
-                    <TsnotoverCodeEditor
-                      key={file.path}
-                      shown={file.path === currentFilePath}
-                      file={file}
-                    />
-                  ),
+                  <CodeEditor
+                    key={file.path}
+                    shown={file.path === currentFilePath}
+                    language={"typescript"}
+                    tsoverEnabled={tsoverUsed}
+                    file={file}
+                  />
                 )}
               </div>
 
