@@ -11,7 +11,7 @@ export interface UseConfigureContextOptions {
 
 export interface UseConfigureContextResult {
   canvasRefCallback: React.RefCallback<HTMLCanvasElement>;
-  canvasRef: Readonly<React.Ref<HTMLCanvasElement | null>>;
+  canvasRef: Readonly<React.RefObject<HTMLCanvasElement | null>>;
   ctxRef: React.RefObject<GPUCanvasContext | null>;
 }
 
