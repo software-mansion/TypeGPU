@@ -8,9 +8,9 @@ export const DEFAULT_POP = 8192;
 export const CarState = d.struct({
   position: d.vec2f,
   angle: d.f32,
-  speed: d.f32,
   alive: d.u32,
   progress: d.f32,
+  speed: d.f32,
   angVel: d.f32,
   aliveSteps: d.u32,
   stallSteps: d.u32,
