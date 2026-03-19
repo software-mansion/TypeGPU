@@ -617,34 +617,6 @@ importers:
         version: link:../unplugin-typegpu
     publishDirectory: dist
 
-  packages/typegpu-gl:
-    devDependencies:
-      '@typegpu/tgpu-dev-cli':
-        specifier: workspace:*
-        version: link:../tgpu-dev-cli
-      '@webgpu/types':
-        specifier: catalog:types
-        version: 0.1.66
-      tinyest:
-        specifier: workspace:^0.3.0
-        version: link:../tinyest
-      tsdown:
-        specifier: catalog:build
-        version: 0.20.3(tsover@5.9.11)
-      typegpu:
-        specifier: workspace:*
-        version: link:../typegpu
-      typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
-      unbuild:
-        specifier: catalog:build
-        version: 3.5.0(tsover@5.9.11)
-      unplugin-typegpu:
-        specifier: workspace:*
-        version: link:../unplugin-typegpu
-    publishDirectory: dist
-
   packages/typegpu-noise:
     devDependencies:
       '@typegpu/tgpu-dev-cli':
@@ -668,6 +640,28 @@ importers:
     publishDirectory: dist
 
   packages/typegpu-sdf:
+    devDependencies:
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
+      '@webgpu/types':
+        specifier: catalog:types
+        version: 0.1.66
+      typegpu:
+        specifier: workspace:*
+        version: link:../typegpu
+      typescript:
+        specifier: npm:tsover@^5.9.11
+        version: tsover@5.9.11
+      unbuild:
+        specifier: catalog:build
+        version: 3.5.0(tsover@5.9.11)
+      unplugin-typegpu:
+        specifier: workspace:*
+        version: link:../unplugin-typegpu
+    publishDirectory: dist
+
+  packages/typegpu-sort:
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -5008,13 +5002,11 @@ packages:
 
   glob@10.5.0:
     resolution: {integrity: sha512-DfXN8DfhJ7NH3Oe7cFmu3NCu1wKbkReJ8TorzSAFbSKrlNaQSKfIzqYqVY8zlbs2NLBbWpRiU52GX2PbaBVNkg==}
-    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   glob@11.1.0:
     resolution: {integrity: sha512-vuNwKSaKiqm7g0THUBu2x7ckSs3XJLXE+2ssL7/MfTGPLLcrJQ/4Uq1CjPTtO5cCIiRxqvN6Twy1qOwhL0Xjcw==}
     engines: {node: 20 || >=22}
-    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   globals@14.0.0:
@@ -5654,7 +5646,6 @@ packages:
 
   mathjax-full@3.2.2:
     resolution: {integrity: sha512-+LfG9Fik+OuI8SLwsiR02IVdjcnRCy5MufYLi0C3TdMT56L/pjB0alMVGgoWJF8pN9Rc7FESycZB9BMNWIid5w==}
-    deprecated: Version 4 replaces this package with the scoped package @mathjax/src
 
   mdast-util-definitions@6.0.0:
     resolution: {integrity: sha512-scTllyX6pnYNZH/AIp/0ePz6s4cZtARxImwoPJ7kS42n+MnVsI4XbnG6d4ibehRIldYMWM2LD7ImQblVhUejVQ==}
@@ -7982,7 +7973,6 @@ packages:
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
-    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
