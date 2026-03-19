@@ -357,7 +357,9 @@ const carFragment = tgpu.fragmentFn({
   'use gpu';
   const sample = std.textureSampleLevel(carSpriteView.$, linearSampler.$, uv, 0);
   const t = std.smoothstep(0, 1, progress);
-  const tint = std.mix(d.vec3f(0.4, 0.6, 1.0), d.vec3f(1.0, 0.85, 0.15), t);
+  const baseTint = std.mix(d.vec3f(0.4, 0.6, 1.0), d.vec3f(1.0, 0.85, 0.15), t);
+  const lapAccent = std.smoothstep(1, 10, progress);
+  const tint = std.mix(baseTint, d.vec3f(0.15, 1.0, 0.35), lapAccent);
   const lum = std.dot(sample.xyz, d.vec3f(0.299, 0.587, 0.114));
   const rgb = std.mix(d.vec3f(lum) * 0.4, sample.xyz * tint, isAlive);
   const a = sample.w * std.mix(0.45, 1, isAlive);
@@ -469,7 +471,8 @@ function frame() {
   const genStr = String(ga.generation).padStart(5);
   const stepStr = String(steps).padStart(String(stepsPerGeneration).length);
   const bestStr = displayedBestFitness.toFixed(2).padStart(6);
-  statsDiv.textContent = `Gen ${genStr}  Step ${stepStr}/${stepsPerGeneration}  Pop ${population}  Best ${bestStr}`;
+  const saturatedNote = displayedBestFitness >= 64 ? '  (saturated)' : '';
+  statsDiv.textContent = `Gen ${genStr}  Step ${stepStr}/${stepsPerGeneration}  Pop ${population}  Best ${bestStr}${saturatedNote}`;
 
   trackPipeline.withColorAttachment({ view: context, clearValue: [0.04, 0.05, 0.07, 1] }).draw(3);
 
