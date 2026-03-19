@@ -38,6 +38,33 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
+        code: "const fn = () => { 'use gpu'; await foo(); }",
+        errors: [
+          {
+            messageId: 'unsupportedSyntax',
+            data: { snippet: 'await foo()', syntax: 'await expression' },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; class Foo {} }",
+        errors: [
+          {
+            messageId: 'unsupportedSyntax',
+            data: { snippet: 'class Foo {}', syntax: 'class declaration' },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; const Foo = class {}; }",
+        errors: [
+          {
+            messageId: 'unsupportedSyntax',
+            data: { snippet: 'class {}', syntax: 'class expression' },
+          },
+        ],
+      },
+      {
         code: "const fn = () => { 'use gpu'; const obj = { [key]: 1 }; }",
         errors: [
           {
@@ -168,6 +195,15 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
+        code: "const fn = () => { 'use gpu'; const x = tag`hello`; }",
+        errors: [
+          {
+            messageId: 'unsupportedSyntax',
+            data: { snippet: '`hello`', syntax: 'template literal' },
+          },
+        ],
+      },
+      {
         code: "const fn = () => { 'use gpu'; try { } catch(e) { } }",
         errors: [
           {
@@ -200,6 +236,15 @@ describe('noUnsupportedSyntax', () => {
           {
             messageId: 'unsupportedSyntax',
             data: { snippet: '[a] = arr', syntax: 'variable declaration using destructuring' },
+          },
+        ],
+      },
+      {
+        code: "function* fn() { 'use gpu'; yield 1; }",
+        errors: [
+          {
+            messageId: 'unsupportedSyntax',
+            data: { snippet: 'yield 1', syntax: 'yield expression' },
           },
         ],
       },

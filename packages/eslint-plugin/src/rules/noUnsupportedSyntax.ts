@@ -3,7 +3,6 @@ import { enhanceRule } from '../enhanceRule.ts';
 import { directiveTracking } from '../enhancers/directiveTracking.ts';
 import { createRule } from '../ruleCreator.ts';
 
-// TODO: go through the entire AST to check what was missed
 export const noUnsupportedSyntax = createRule({
   name: 'no-unsupported-syntax',
   meta: {
@@ -139,13 +138,6 @@ export const noUnsupportedSyntax = createRule({
           return;
         }
         report(node, 'switch statement');
-      },
-
-      TaggedTemplateExpression(node) {
-        if (!directives.insideUseGpu()) {
-          return;
-        }
-        report(node, 'tagged template expression');
       },
 
       TemplateLiteral(node) {
