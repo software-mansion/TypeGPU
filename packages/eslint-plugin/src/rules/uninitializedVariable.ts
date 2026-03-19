@@ -7,8 +7,7 @@ export const uninitializedVariable = createRule({
   meta: {
     type: 'problem',
     docs: {
-      description:
-        `Always assign an initial value when declaring a variable inside TypeGPU functions.`,
+      description: `Always assign an initial value when declaring a variable inside TypeGPU functions.`,
     },
     messages: {
       uninitializedVariable: "'{{snippet}}' should have an initial value.",
@@ -23,6 +22,10 @@ export const uninitializedVariable = createRule({
     return {
       VariableDeclarator(node) {
         if (!directives.insideUseGpu()) {
+          return;
+        }
+        if (node.parent?.parent?.type === 'ForOfStatement') {
+          // one exception where we allow uninitialized variable
           return;
         }
         if (node.init === null) {

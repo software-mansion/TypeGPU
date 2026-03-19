@@ -9,6 +9,12 @@ describe('uninitializedVariable', () => {
       'let a, b;',
       "const fn = () => { 'use gpu'; const vec = d.vec3f(); }",
       "const fn = () => { 'use gpu'; let vec = d.vec3f(); }",
+      `const fn = () => { 'use gpu';
+        let a = 0;
+        for (const foo of tgpu.unroll([1, 2, 3])) {
+          a += foo;
+        }
+      }`,
     ],
     invalid: [
       {
