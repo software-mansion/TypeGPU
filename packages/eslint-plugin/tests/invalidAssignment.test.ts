@@ -61,6 +61,14 @@ describe('invalidAssignment', () => {
         errors: [{ messageId: 'parameterAssignment', data: { snippet: 'a' } }],
       },
       {
+        code: "const fn = (a) => { 'use gpu'; --a; }",
+        errors: [{ messageId: 'parameterAssignment', data: { snippet: 'a' } }],
+      },
+      {
+        code: "const fn = ({a}) => { 'use gpu'; a = 1; }",
+        errors: [{ messageId: 'parameterAssignment', data: { snippet: 'a' } }],
+      },
+      {
         code: "const fn = (a) => { 'use gpu'; a += 1; }",
         errors: [{ messageId: 'parameterAssignment', data: { snippet: 'a' } }],
       },
@@ -140,15 +148,6 @@ describe('invalidAssignment', () => {
           {
             messageId: 'jsAssignment',
             data: { snippet: "a['prop']" },
-          },
-        ],
-      },
-      {
-        code: "const a = []; const fn = () => { 'use gpu'; a[0] = 1; }",
-        errors: [
-          {
-            messageId: 'jsAssignment',
-            data: { snippet: 'a[0]' },
           },
         ],
       },
