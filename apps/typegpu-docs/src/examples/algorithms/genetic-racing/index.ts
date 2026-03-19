@@ -21,7 +21,6 @@ const DEG_30 = Math.PI / 6;
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const STEPS_PER_DISPATCH = 32;
 
@@ -320,7 +319,6 @@ const trackFragment = tgpu.fragmentFn({
 const trackPipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: trackFragment,
-  targets: { format: presentationFormat },
 });
 
 const carQuad = tgpu.const(d.arrayOf(d.vec4f, 4), [
@@ -379,7 +377,6 @@ const carPipeline = root.createRenderPipeline({
   fragment: carFragment,
   primitive: { topology: 'triangle-strip' },
   targets: {
-    format: presentationFormat,
     blend: {
       color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
       alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
