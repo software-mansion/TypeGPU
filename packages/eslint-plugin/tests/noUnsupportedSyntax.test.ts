@@ -11,6 +11,33 @@ describe('noUnsupportedSyntax', () => {
     ],
     invalid: [
       {
+        code: "const fn = (arg = 1) => { 'use gpu'; }",
+        errors: [
+          {
+            messageId: 'unsupportedSyntax',
+            data: { snippet: 'arg = 1', syntax: 'assignment pattern (default parameter)' },
+          },
+        ],
+      },
+      {
+        code: "function fn(arg = 1) { 'use gpu'; }",
+        errors: [
+          {
+            messageId: 'unsupportedSyntax',
+            data: { snippet: 'arg = 1', syntax: 'assignment pattern (default parameter)' },
+          },
+        ],
+      },
+      {
+        code: "const fn = function(arg = 1) { 'use gpu'; }",
+        errors: [
+          {
+            messageId: 'unsupportedSyntax',
+            data: { snippet: 'arg = 1', syntax: 'assignment pattern (default parameter)' },
+          },
+        ],
+      },
+      {
         code: "const fn = () => { 'use gpu'; const obj = { [key]: 1 }; }",
         errors: [
           {

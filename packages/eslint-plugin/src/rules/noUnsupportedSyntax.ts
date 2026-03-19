@@ -35,6 +35,13 @@ export const noUnsupportedSyntax = createRule({
         // TODO: needs to know if parent is inside useGpu
       },
 
+      AssignmentPattern(node) {
+        if (!directives.insideUseGpu()) {
+          return;
+        }
+        report(node, 'assignment pattern (default parameter)');
+      },
+
       AwaitExpression(node) {
         if (!directives.insideUseGpu()) {
           return;
