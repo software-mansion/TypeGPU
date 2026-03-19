@@ -31,53 +31,8 @@ export const noUnsupportedSyntax = createRule({
     }
 
     return {
-      TemplateLiteral(node) {
-        if (!directives.insideUseGpu()) {
-          return;
-        }
-        report(node, 'template literal');
-      },
-
-      TaggedTemplateExpression(node) {
-        if (!directives.insideUseGpu()) {
-          return;
-        }
-        report(node, 'tagged template expression');
-      },
-
-      SwitchStatement(node) {
-        if (!directives.insideUseGpu()) {
-          return;
-        }
-        report(node, 'switch statement');
-      },
-
-      TryStatement(node) {
-        if (!directives.insideUseGpu()) {
-          return;
-        }
-        report(node, 'try-catch statement');
-      },
-
-      ThrowStatement(node) {
-        if (!directives.insideUseGpu()) {
-          return;
-        }
-        report(node, 'throw statement');
-      },
-
-      DoWhileStatement(node) {
-        if (!directives.insideUseGpu()) {
-          return;
-        }
-        report(node, 'do-while loop');
-      },
-
-      ForInStatement(node) {
-        if (!directives.insideUseGpu()) {
-          return;
-        }
-        report(node, 'for-in loop');
+      ArrowFunctionExpression() {
+        // TODO: needs to know if parent is inside useGpu
       },
 
       AwaitExpression(node) {
@@ -85,20 +40,6 @@ export const noUnsupportedSyntax = createRule({
           return;
         }
         report(node, 'await expression');
-      },
-
-      YieldExpression(node) {
-        if (!directives.insideUseGpu()) {
-          return;
-        }
-        report(node, 'yield expression');
-      },
-
-      NewExpression(node) {
-        if (!directives.insideUseGpu()) {
-          return;
-        }
-        report(node, `'new' expression`);
       },
 
       ClassDeclaration(node) {
@@ -115,11 +56,103 @@ export const noUnsupportedSyntax = createRule({
         report(node, 'class expression');
       },
 
+      DoWhileStatement(node) {
+        if (!directives.insideUseGpu()) {
+          return;
+        }
+        report(node, 'do-while loop');
+      },
+
+      ForInStatement(node) {
+        if (!directives.insideUseGpu()) {
+          return;
+        }
+        report(node, 'for-in loop');
+      },
+
+      FunctionDeclaration() {
+        // TODO: needs to know if parent is inside useGpu
+      },
+
+      FunctionExpression() {
+        // TODO: needs to know if parent is inside useGpu
+      },
+
+      Literal(node) {
+        if (!directives.insideUseGpu()) {
+          return;
+        }
+        if ('regex' in node && node.regex) {
+          report(node, 'regular expression literal');
+        }
+      },
+
+      NewExpression(node) {
+        if (!directives.insideUseGpu()) {
+          return;
+        }
+        report(node, `'new' expression`);
+      },
+
+      Property(node) {
+        if (!directives.insideUseGpu()) {
+          return;
+        }
+        if (node.method === true) {
+          report(node, 'object method shorthand');
+        }
+        if (node.computed === true) {
+          report(node, 'computed property key');
+        }
+      },
+
       SequenceExpression(node) {
         if (!directives.insideUseGpu()) {
           return;
         }
         report(node, 'sequence expression (comma operator)');
+      },
+
+      SpreadElement(node) {
+        if (!directives.insideUseGpu()) {
+          return;
+        }
+        report(node, 'spread element');
+      },
+
+      SwitchStatement(node) {
+        if (!directives.insideUseGpu()) {
+          return;
+        }
+        report(node, 'switch statement');
+      },
+
+      TaggedTemplateExpression(node) {
+        if (!directives.insideUseGpu()) {
+          return;
+        }
+        report(node, 'tagged template expression');
+      },
+
+      TemplateLiteral(node) {
+        if (!directives.insideUseGpu()) {
+          return;
+        }
+        report(node, 'template literal');
+      },
+
+      ThrowStatement(node) {
+        if (!directives.insideUseGpu()) {
+          return;
+        }
+        report(node, 'throw statement');
+      },
+
+      TryStatement(node) {
+        if (!directives.insideUseGpu()) {
+          return;
+        }
+        report(node, 'try-catch statement');
       },
 
       UpdateExpression(node) {
@@ -152,44 +185,11 @@ export const noUnsupportedSyntax = createRule({
         }
       },
 
-      SpreadElement(node) {
+      YieldExpression(node) {
         if (!directives.insideUseGpu()) {
           return;
         }
-        report(node, 'spread element');
-      },
-
-      Property(node) {
-        if (!directives.insideUseGpu()) {
-          return;
-        }
-        if (node.method === true) {
-          report(node, 'object method shorthand');
-        }
-        if (node.computed === true) {
-          report(node, 'computed property key');
-        }
-      },
-
-      Literal(node) {
-        if (!directives.insideUseGpu()) {
-          return;
-        }
-        if ('regex' in node && node.regex) {
-          report(node, 'regular expression literal');
-        }
-      },
-
-      ArrowFunctionExpression() {
-        // TODO: needs to know if parent is inside useGpu
-      },
-
-      FunctionExpression() {
-        // TODO: needs to know if parent is inside useGpu
-      },
-
-      FunctionDeclaration() {
-        // TODO: needs to know if parent is inside useGpu
+        report(node, 'yield expression');
       },
     };
   }),
