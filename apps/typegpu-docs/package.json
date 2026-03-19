@@ -43,7 +43,7 @@
     "fuse.js": "catalog:frontend",
     "jotai": "^2.15.0",
     "jotai-location": "^0.6.2",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "lucide-react": "^0.536.0",
     "lz-string": "^1.5.0",
     "monaco-editor": "^0.53.0",
