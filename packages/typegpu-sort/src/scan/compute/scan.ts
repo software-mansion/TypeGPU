@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import tgpu, { d, std } from 'typegpu';
 import {
   identitySlot,
   onlyGreatestElementSlot,
@@ -6,13 +6,11 @@ import {
   scanLayout,
   WORKGROUP_SIZE,
 } from '../schemas.ts';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import { downsweep, upsweep, workgroupMemory } from './shared.ts';
 
 const fillIdentityArray = tgpu.comptime(() => Array.from({ length: 8 }, () => identitySlot.$));
 
-export const computeBlock = tgpu['~unstable'].computeFn({
+export const computeBlock = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE],
   in: {
     gid: d.builtin.globalInvocationId,
