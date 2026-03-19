@@ -1,4 +1,4 @@
-import { TSESTree } from '@typescript-eslint/utils';
+import type { TSESTree } from '@typescript-eslint/utils';
 import { enhanceRule } from '../enhanceRule.ts';
 import { directiveTracking } from '../enhancers/directiveTracking.ts';
 import { createRule } from '../ruleCreator.ts';
