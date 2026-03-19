@@ -84,6 +84,7 @@ const evolveLayout = tgpu.bindGroupLayout({
   genome: { storage: GenomeArray },
   nextState: { storage: CarStateArray, access: 'mutable' },
   nextGenome: { storage: GenomeArray, access: 'mutable' },
+  bestIdx: { storage: d.u32 },
 });
 
 const randSignedVec4 = () => {
@@ -155,7 +156,7 @@ const evolveMat4x4 = (a: d.m4x4f, b: d.m4x4f) => {
   );
 };
 
-const evolveInputLayer = (a: d.Infer<typeof InputLayer>, b: d.Infer<typeof InputLayer>) => {
+const evolveInputLayer = (a: d.InferGPU<typeof InputLayer>, b: d.InferGPU<typeof InputLayer>) => {
   'use gpu';
   return InputLayer({
     wA: evolveMat4x4(a.wA, b.wA),
@@ -165,12 +166,15 @@ const evolveInputLayer = (a: d.Infer<typeof InputLayer>, b: d.Infer<typeof Input
   });
 };
 
-const evolveDenseLayer = (a: d.Infer<typeof DenseLayer>, b: d.Infer<typeof DenseLayer>) => {
+const evolveDenseLayer = (a: d.InferGPU<typeof DenseLayer>, b: d.InferGPU<typeof DenseLayer>) => {
   'use gpu';
   return DenseLayer({ w: evolveMat4x4(a.w, b.w), bias: evolveVec(a.bias, b.bias) });
 };
 
-const evolveOutputLayer = (a: d.Infer<typeof OutputLayer>, b: d.Infer<typeof OutputLayer>) => {
+const evolveOutputLayer = (
+  a: d.InferGPU<typeof OutputLayer>,
+  b: d.InferGPU<typeof OutputLayer>,
+) => {
   'use gpu';
   return OutputLayer({
     steer: evolveVec(a.steer, b.steer),
@@ -196,21 +200,31 @@ const initShader = (i: number) => {
   randf.seed2(d.vec2f(d.f32(i) + 1, paramsAccess.$.generation + 11));
 
   initLayout.$.genome[i] = Genome({
-    h1: InputLayer({
+    h1: {
       wA: randSignedMat4x4(),
       wB: randSignedMat4x4(),
       wC: randSignedMat4x4(),
       bias: d.vec4f(),
-    }),
-    h2: DenseLayer({ w: randSignedMat4x4(), bias: d.vec4f() }),
-    out: OutputLayer({ steer: randSignedVec4(), throttle: randSignedVec4(), bias: d.vec2f() }),
+    },
+    h2: { w: randSignedMat4x4(), bias: d.vec4f() },
+    out: { steer: randSignedVec4(), throttle: randSignedVec4(), bias: d.vec2f() },
   });
   initLayout.$.state[i] = makeSpawnState();
 };
 
 const evolveShader = (i: number) => {
   'use gpu';
-  if (d.u32(i) >= paramsAccess.$.population) return;
+  if (d.u32(i) >= paramsAccess.$.population) {
+    return;
+  }
+
+  // Elitism: champion always lives at index 0, copied unchanged
+  if (d.u32(i) === 0) {
+    evolveLayout.$.nextGenome[0] = Genome(evolveLayout.$.genome[evolveLayout.$.bestIdx]);
+    evolveLayout.$.nextState[0] = makeSpawnState();
+    return;
+  }
+
   randf.seed2(d.vec2f(d.f32(i) + 3, paramsAccess.$.generation + 19));
 
   const parentA = Genome(evolveLayout.$.genome[tournamentSelect()]);
@@ -231,6 +245,7 @@ export function createGeneticPopulation(root: TgpuRoot, params: TgpuUniform<type
   );
   const genomeBuffers = [0, 1].map(() => root.createBuffer(GenomeArray).$usage('storage'));
   const fitnessBuffer = root.createBuffer(FitnessArray).$usage('storage');
+  const bestIdxBuffer = root.createBuffer(d.u32).$usage('storage');
 
   const initBindGroups = [0, 1].map((i) =>
     root.createBindGroup(initLayout, {
@@ -252,6 +267,7 @@ export function createGeneticPopulation(root: TgpuRoot, params: TgpuUniform<type
       genome: genomeBuffers[i],
       nextState: stateBuffers[1 - i],
       nextGenome: genomeBuffers[1 - i],
+      bestIdx: bestIdxBuffer,
     }),
   );
 
@@ -266,6 +282,7 @@ export function createGeneticPopulation(root: TgpuRoot, params: TgpuUniform<type
     stateBuffers,
     genomeBuffers,
     fitnessBuffer,
+    bestIdxBuffer,
     get current() {
       return current;
     },

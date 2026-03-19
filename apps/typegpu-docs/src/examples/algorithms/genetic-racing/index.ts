@@ -127,7 +127,7 @@ const senseRaycast = (pos: d.v2f, angle: number, offset: number) => {
   return hitT;
 };
 
-const evalNetwork = (genome: d.Infer<typeof Genome>, a: d.v4f, b: d.v4f, c: d.v4f) => {
+const evalNetwork = (genome: d.InferGPU<typeof Genome>, a: d.v4f, b: d.v4f, c: d.v4f) => {
   'use gpu';
   const h1 = std.tanh(
     std.transpose(genome.h1.wA) * a +
@@ -257,14 +257,13 @@ const simulatePipeline = root.createGuardedComputePipeline((i) => {
 
 // upper 16 bits = quantized fitness [0,65535], lower 16 bits = car index
 const reductionPackedBuffer = root.createBuffer(d.atomic(d.u32), 0).$usage('storage');
-const championGenomeBuffer = root.createBuffer(Genome).$usage('storage');
 const bestFitnessBuffer = root.createBuffer(d.f32).$usage('storage');
 
 const reductionLayout = tgpu.bindGroupLayout({
   fitness: { storage: FitnessArray },
   genome: { storage: GenomeArray },
   packed: { storage: d.atomic(d.u32), access: 'mutable' },
-  championGenome: { storage: Genome, access: 'mutable' },
+  bestIdx: { storage: d.u32, access: 'mutable' },
   bestFitness: { storage: d.f32, access: 'mutable' },
 });
 
@@ -272,8 +271,8 @@ const reductionBindGroups = [0, 1].map((i) =>
   root.createBindGroup(reductionLayout, {
     fitness: ga.fitnessBuffer,
     genome: ga.genomeBuffers[i],
+    bestIdx: ga.bestIdxBuffer,
     packed: reductionPackedBuffer,
-    championGenome: championGenomeBuffer,
     bestFitness: bestFitnessBuffer,
   }),
 );
@@ -289,11 +288,10 @@ const reductionPipeline = root.createGuardedComputePipeline((i) => {
   std.atomicMax(reductionLayout.$.packed, packed);
 });
 
-const finalizeReductionPipeline = root.createGuardedComputePipeline((_x) => {
+const finalizeReductionPipeline = root.createGuardedComputePipeline(() => {
   'use gpu';
   const packed = std.atomicLoad(reductionLayout.$.packed);
-  const bestIdx = packed & 0xffff;
-  reductionLayout.$.championGenome = Genome(reductionLayout.$.genome[bestIdx]);
+  reductionLayout.$.bestIdx = packed & 0xffff;
   reductionLayout.$.bestFitness = (d.f32(packed >> 16) / 65535) * 64;
 });
 
@@ -396,7 +394,6 @@ let population = DEFAULT_POP;
 let rafHandle = 0;
 let pendingEvolve = false;
 let showBestOnly = false;
-let hasChampion = false;
 let displayedBestFitness = 0;
 
 const statsDiv = document.querySelector('.stats') as HTMLDivElement;
@@ -429,12 +426,6 @@ function frame() {
   if (!paused) {
     if (pendingEvolve) {
       ga.evolve(population);
-      if (hasChampion) {
-        const src = root.unwrap(championGenomeBuffer);
-        const encoder = root.device.createCommandEncoder();
-        encoder.copyBufferToBuffer(src, 0, root.unwrap(ga.genomeBuffers[ga.current]), 0, src.size);
-        root.device.queue.submit([encoder.finish()]);
-      }
       steps = 0;
       params.writePartial({ generation: ga.generation });
       pendingEvolve = false;
@@ -449,11 +440,9 @@ function frame() {
       const dispatchCount = Math.ceil(stepsToRun / innerSteps);
 
       const simEncoder = root.device.createCommandEncoder();
+      const encoderPipeline = simulatePipeline.with(simBindGroups[ga.current]).with(simEncoder);
       for (let dispatch = 0; dispatch < dispatchCount; dispatch++) {
-        simulatePipeline
-          .with(simBindGroups[ga.current])
-          .with(simEncoder)
-          .dispatchThreads(population);
+        encoderPipeline.dispatchThreads(population);
       }
       root.device.queue.submit([simEncoder.finish()]);
 
@@ -468,10 +457,9 @@ function frame() {
       const reductionEncoder = root.device.createCommandEncoder();
       reductionEncoder.clearBuffer(root.unwrap(reductionPackedBuffer));
       reductionPipeline.with(bg).with(reductionEncoder).dispatchThreads(population);
-      finalizeReductionPipeline.with(bg).with(reductionEncoder).dispatchThreads(1);
+      finalizeReductionPipeline.with(bg).with(reductionEncoder).dispatchThreads();
       root.device.queue.submit([reductionEncoder.finish()]);
 
-      hasChampion = true;
       void bestFitnessBuffer.read().then((fitness) => {
         displayedBestFitness = fitness;
       });
@@ -488,7 +476,7 @@ function frame() {
   carPipeline
     .withColorAttachment({ view: context, loadOp: 'load', storeOp: 'store' })
     .with(instanceLayout, ga.currentStateBuffer)
-    .draw(4, showBestOnly && hasChampion ? 1 : population);
+    .draw(4, showBestOnly ? 1 : population);
 
   rafHandle = requestAnimationFrame(frame);
 }
@@ -527,7 +515,6 @@ let gridSizeKey = 'S';
 function startSimulation() {
   steps = 0;
   pendingEvolve = false;
-  hasChampion = false;
   displayedBestFitness = 0;
   params.writePartial({ generation: 0 });
   ga.init();
