@@ -3,11 +3,7 @@ import { OBJLoader } from '@loaders.gl/obj';
 import { d, type TgpuRoot } from 'typegpu';
 import { modelVertexLayout } from './schemas.ts';
 
-export async function loadModel(
-  root: TgpuRoot,
-  modelPath: string,
-  texturePath: string,
-) {
+export async function loadModel(root: TgpuRoot, modelPath: string, texturePath: string) {
   const modelMesh = await load(modelPath, OBJLoader);
   const polygonCount = modelMesh.attributes.POSITION.value.length / 3;
 

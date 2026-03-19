@@ -1,5 +1,6 @@
 {
   "title": "Increment",
   "category": "simple",
-  "tags": ["compute", "experimental"]
+  "tags": ["basics"],
+  "coolFactor": 3
 }

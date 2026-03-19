@@ -16,7 +16,7 @@ import {
   startCapSlot,
   uvToLineSegment,
 } from '@typegpu/geometry';
-import tgpu from 'typegpu';
+import tgpu, { type ColorAttachment } from 'typegpu';
 import {
   arrayOf,
   builtin,
@@ -30,9 +30,9 @@ import {
   vec4f,
 } from 'typegpu/data';
 import { clamp, cos, min, mix, select, sin } from 'typegpu/std';
-import type { ColorAttachment } from '../../../../../../packages/typegpu/src/core/pipeline/renderPipeline.ts';
 import { TEST_SEGMENT_COUNT } from './constants.ts';
 import * as testCases from './testCases.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas');
@@ -85,10 +85,7 @@ const uniformsBindGroup = root.createBindGroup(bindGroupLayout, {
 });
 
 const indexBuffer = root
-  .createBuffer(
-    arrayOf(u16, lineSegmentIndicesCapLevel3.length),
-    lineSegmentIndicesCapLevel3,
-  )
+  .createBuffer(arrayOf(u16, lineSegmentIndicesCapLevel3.length), lineSegmentIndicesCapLevel3)
   .$usage('index');
 
 const outlineIndexBuffer = root
@@ -100,7 +97,7 @@ const outlineIndexBuffer = root
 
 const testCaseSlot = tgpu.slot(testCases.arms);
 
-const mainVertex = tgpu['~unstable'].vertexFn({
+const mainVertex = tgpu.vertexFn({
   in: {
     instanceIndex: builtin.instanceIndex,
     vertexIndex: builtin.vertexIndex,
@@ -148,7 +145,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
 
 console.log(tgpu.resolve({ externals: { lineSegmentVariableWidth } }));
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: {
     instanceIndex: interpolate('flat', u32),
     vertexIndex: interpolate('flat', u32),
@@ -159,65 +156,47 @@ const mainFragment = tgpu['~unstable'].fragmentFn({
     uv: vec2f,
   },
   out: vec4f,
-})(
-  ({
-    instanceIndex,
-    vertexIndex,
-    situationIndex,
-    frontFacing,
-    screenPosition,
-    position,
-    uv,
-  }) => {
-    'use gpu';
-    const fillType = bindGroupLayout.$.uniforms.fillType;
-    if (fillType === 1) {
-      // typegpu gradient
-      return mix(
-        vec4f(0.77, 0.39, 1, 0.5),
-        vec4f(0.11, 0.44, 0.94, 0.5),
-        position.x * 0.5 + 0.5,
-      );
-    }
-    let color = vec3f();
-    const colors = [
-      vec3f(1, 0, 0), // 0
-      vec3f(0, 1, 0), // 1
-      vec3f(0, 0, 1), // 2
-      vec3f(1, 0, 1), // 3
-      vec3f(1, 1, 0), // 4
-      vec3f(0, 1, 1), // 5
-      vec3f(0.75, 0.25, 0.25), // 6
-      vec3f(0.25, 0.75, 0.25), // 7
-      vec3f(0.25, 0.25, 0.75), // 8
-    ];
-    if (fillType === 2) {
-      color = colors[instanceIndex % colors.length];
-    }
-    if (fillType === 3) {
-      color = colors[vertexIndex % colors.length];
-    }
-    if (fillType === 4) {
-      color = colors[situationIndex % colors.length];
-    }
-    if (fillType === 5) {
-      color = vec3f(uv.x, cos(uv.y * 100), 0);
-    }
-    if (frontFacing) {
-      return vec4f(color, 0.5);
-    }
-    return vec4f(
-      color,
-      select(
-        f32(0),
-        f32(1),
-        (u32(screenPosition.x) >> 3) % 2 !== (u32(screenPosition.y) >> 3) % 2,
-      ),
-    );
-  },
-);
+})(({ instanceIndex, vertexIndex, situationIndex, frontFacing, screenPosition, position, uv }) => {
+  'use gpu';
+  const fillType = bindGroupLayout.$.uniforms.fillType;
+  if (fillType === 1) {
+    // typegpu gradient
+    return mix(vec4f(0.77, 0.39, 1, 0.5), vec4f(0.11, 0.44, 0.94, 0.5), position.x * 0.5 + 0.5);
+  }
+  let color = vec3f();
+  const colors = [
+    vec3f(1, 0, 0), // 0
+    vec3f(0, 1, 0), // 1
+    vec3f(0, 0, 1), // 2
+    vec3f(1, 0, 1), // 3
+    vec3f(1, 1, 0), // 4
+    vec3f(0, 1, 1), // 5
+    vec3f(0.75, 0.25, 0.25), // 6
+    vec3f(0.25, 0.75, 0.25), // 7
+    vec3f(0.25, 0.25, 0.75), // 8
+  ];
+  if (fillType === 2) {
+    color = colors[instanceIndex % colors.length];
+  }
+  if (fillType === 3) {
+    color = colors[vertexIndex % colors.length];
+  }
+  if (fillType === 4) {
+    color = colors[situationIndex % colors.length];
+  }
+  if (fillType === 5) {
+    color = vec3f(uv.x, cos(uv.y * 100), 0);
+  }
+  if (frontFacing) {
+    return vec4f(color, 0.5);
+  }
+  return vec4f(
+    color,
+    select(f32(0), f32(1), (u32(screenPosition.x) >> 3) % 2 !== (u32(screenPosition.y) >> 3) % 2),
+  );
+});
 
-const centerlineVertex = tgpu['~unstable'].vertexFn({
+const centerlineVertex = tgpu.vertexFn({
   in: {
     vertexIndex: builtin.vertexIndex,
   },
@@ -237,7 +216,7 @@ const centerlineVertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-const outlineFragment = tgpu['~unstable'].fragmentFn({
+const outlineFragment = tgpu.fragmentFn({
   in: {
     _unused: builtin.frontFacing,
   },
@@ -260,7 +239,7 @@ const CIRCLE_MIN_STEP = (2 * Math.PI) / CIRCLE_SEGMENT_COUNT;
 const CIRCLE_MAX_STEP = Math.PI / 8;
 const CIRCLE_DASH_LEN = 0.0025 * Math.PI;
 
-const circlesVertex = tgpu['~unstable'].vertexFn({
+const circlesVertex = tgpu.vertexFn({
   in: {
     instanceIndex: builtin.instanceIndex,
     vertexIndex: builtin.vertexIndex,
@@ -276,11 +255,7 @@ const circlesVertex = tgpu['~unstable'].vertexFn({
       outPos: vec4f(),
     };
   }
-  const step = clamp(
-    CIRCLE_DASH_LEN / vertex.radius,
-    CIRCLE_MIN_STEP,
-    CIRCLE_MAX_STEP,
-  );
+  const step = clamp(CIRCLE_DASH_LEN / vertex.radius, CIRCLE_MIN_STEP, CIRCLE_MAX_STEP);
   const angle = min(2 * Math.PI, step * f32(vertexIndex));
   const unit = vec2f(cos(angle), sin(angle));
   return {
@@ -294,61 +269,53 @@ let startCap = lineCaps.round;
 let endCap = lineCaps.round;
 
 function createPipelines() {
-  const fill = root['~unstable']
+  const fill = root
     .with(joinSlot, join)
     .with(startCapSlot, startCap)
     .with(endCapSlot, endCap)
     .with(testCaseSlot, testCase)
-    .withVertex(mainVertex, {})
-    .withFragment(mainFragment, {
-      format: presentationFormat,
-      blend: alphaBlend,
+    .createRenderPipeline({
+      vertex: mainVertex,
+      fragment: mainFragment,
+      targets: { format: presentationFormat, blend: alphaBlend },
+      // primitive: {
+      //   cullMode: 'back',
+      // },
     })
-    .withPrimitive({
-      // cullMode: 'back',
-    })
-    .createPipeline()
     .withIndexBuffer(indexBuffer);
 
-  const outline = root['~unstable']
+  const outline = root
     .with(joinSlot, join)
     .with(startCapSlot, startCap)
     .with(endCapSlot, endCap)
     .with(testCaseSlot, testCase)
-    .withVertex(mainVertex, {})
-    .withFragment(outlineFragment, {
-      format: presentationFormat,
-      blend: alphaBlend,
+    .createRenderPipeline({
+      vertex: mainVertex,
+      fragment: outlineFragment,
+      targets: { format: presentationFormat, blend: alphaBlend },
+      primitive: {
+        topology: 'line-list',
+      },
     })
-    .withPrimitive({
-      topology: 'line-list',
-    })
-    .createPipeline()
     .withIndexBuffer(outlineIndexBuffer);
 
-  const centerline = root['~unstable']
-    .with(testCaseSlot, testCase)
-    .withVertex(centerlineVertex, {})
-    .withFragment(outlineFragment, {
-      format: presentationFormat,
-      blend: alphaBlend,
-    })
-    .withPrimitive({
+  const centerline = root.with(testCaseSlot, testCase).createRenderPipeline({
+    vertex: centerlineVertex,
+    fragment: outlineFragment,
+    targets: { format: presentationFormat, blend: alphaBlend },
+    primitive: {
       topology: 'line-strip',
-    })
-    .createPipeline();
+    },
+  });
 
-  const circles = root['~unstable']
-    .with(testCaseSlot, testCase)
-    .withVertex(circlesVertex, {})
-    .withFragment(outlineFragment, {
-      format: presentationFormat,
-      blend: alphaBlend,
-    })
-    .withPrimitive({
+  const circles = root.with(testCaseSlot, testCase).createRenderPipeline({
+    vertex: circlesVertex,
+    fragment: outlineFragment,
+    targets: { format: presentationFormat, blend: alphaBlend },
+    primitive: {
       topology: 'line-list',
-    })
-    .createPipeline();
+    },
+  });
 
   return {
     fill,
@@ -375,10 +342,9 @@ const draw = (timeMs: number) => {
     time: timeMs * 1e-3,
   });
   const colorAttachment: ColorAttachment = {
-    view: context.getCurrentTexture().createView(),
+    view: context,
     clearValue: [1, 1, 1, 1],
     loadOp: 'load',
-    storeOp: 'store',
   };
   pipelines.fill
     .with(uniformsBindGroup)
@@ -449,45 +415,44 @@ const subdivs = [
   },
 ];
 
-export const controls = {
+export const controls = defineControls({
   'Test Case': {
     initial: Object.keys(testCases)[0],
     options: Object.keys(testCases),
-    onSelectChange: async (selected: keyof typeof testCases) => {
-      // biome-ignore lint/performance/noDynamicNamespaceImportAccess: no other way
-      testCase = testCases[selected];
+    onSelectChange: async (selected) => {
+      testCase = testCases[selected as keyof typeof testCases];
       pipelines = createPipelines();
     },
   },
   'Start Cap': {
     initial: 'round',
     options: Object.keys(lineCaps),
-    onSelectChange: async (selected: keyof typeof lineCaps) => {
-      startCap = lineCaps[selected];
+    onSelectChange: async (selected) => {
+      startCap = lineCaps[selected as keyof typeof lineCaps];
       pipelines = createPipelines();
     },
   },
   'End Cap': {
     initial: 'round',
     options: Object.keys(lineCaps),
-    onSelectChange: async (selected: keyof typeof lineCaps) => {
-      endCap = lineCaps[selected];
+    onSelectChange: async (selected) => {
+      endCap = lineCaps[selected as keyof typeof lineCaps];
       pipelines = createPipelines();
     },
   },
   Join: {
     initial: 'round',
     options: Object.keys(lineJoins),
-    onSelectChange: async (selected: keyof typeof lineJoins) => {
-      join = lineJoins[selected];
+    onSelectChange: async (selected) => {
+      join = lineJoins[selected as keyof typeof lineJoins];
       pipelines = createPipelines();
     },
   },
   Fill: {
     initial: 'solid',
     options: Object.keys(fillOptions),
-    onSelectChange: async (selected: keyof typeof fillOptions) => {
-      fillType = fillOptions[selected];
+    onSelectChange: async (selected) => {
+      fillType = fillOptions[selected as keyof typeof fillOptions];
       uniformsBuffer.writePartial({ fillType });
     },
   },
@@ -496,19 +461,19 @@ export const controls = {
     min: 0,
     step: 1,
     max: 3,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       subdiv = subdivs[value];
     },
   },
   Wireframe: {
     initial: true,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       wireframe = value;
     },
   },
   'Radius and centerline': {
     initial: false,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       showRadii = value;
     },
   },
@@ -517,17 +482,17 @@ export const controls = {
     min: 0,
     step: 0.001,
     max: 5,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       animationSpeed = value;
     },
   },
   Reverse: {
     initial: false,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       reverse = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

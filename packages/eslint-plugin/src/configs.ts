@@ -10,13 +10,10 @@ export const rules = {
   'unwrapped-pojo': unwrappedPojos,
   'uninitialized-variable': uninitializedVariable,
   'spread-operator': spreadOperator,
-  'math': math,
+  math: math,
 } as const;
 
-type Rules = Record<
-  `typegpu/${keyof typeof rules}`,
-  TSESLint.FlatConfig.RuleEntry
->;
+type Rules = Record<`typegpu/${keyof typeof rules}`, TSESLint.FlatConfig.RuleEntry>;
 
 export const recommendedRules: Rules = {
   'typegpu/integer-division': 'warn',

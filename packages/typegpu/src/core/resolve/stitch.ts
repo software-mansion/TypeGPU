@@ -2,7 +2,7 @@ import { isSnippet, type Snippet } from '../../data/snippet.ts';
 import { getResolutionCtx } from '../../execMode.ts';
 import type { ResolutionCtx } from '../../types.ts';
 
-type ValueOrArray<T> = T | T[];
+type ValueOrArray<T> = T | readonly T[];
 
 /**
  * "The reverse of snipping"
@@ -30,7 +30,7 @@ export function stitch(
         .map(resolveSnippet)
         .join(', ');
     } else if (snippet) {
-      result += resolveSnippet(snippet);
+      result += resolveSnippet(snippet as Snippet | string | number);
     }
   }
   return result;

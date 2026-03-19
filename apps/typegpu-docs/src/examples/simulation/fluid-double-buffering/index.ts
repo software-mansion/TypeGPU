@@ -1,10 +1,6 @@
 import { randf } from '@typegpu/noise';
-import tgpu, {
-  d,
-  std,
-  type TgpuBufferMutable,
-  type TgpuBufferReadonly,
-} from 'typegpu';
+import tgpu, { d, std, type TgpuBufferMutable, type TgpuBufferReadonly } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const MAX_GRID_SIZE = 1024;
 
@@ -26,9 +22,7 @@ const BoxObstacle = d.struct({
 
 const gridSize = 256;
 
-const inputGridSlot = tgpu.slot<
-  TgpuBufferReadonly<GridData> | TgpuBufferMutable<GridData>
->();
+const inputGridSlot = tgpu.slot<TgpuBufferReadonly<GridData> | TgpuBufferMutable<GridData>>();
 const outputGridSlot = tgpu.slot<TgpuBufferMutable<GridData>>();
 
 const MAX_OBSTACLES = 4;
@@ -106,9 +100,7 @@ const time = root.createUniform(d.f32);
 
 const isInsideObstacle = (x: number, y: number): boolean => {
   'use gpu';
-  for (let obsIdx = 0; obsIdx < MAX_OBSTACLES; obsIdx++) {
-    const obs = obstacles.$[obsIdx];
-
+  for (const obs of obstacles.$) {
     if (obs.enabled === 0) {
       continue;
     }
@@ -143,45 +135,31 @@ const computeVelocity = (x: number, y: number): d.v2f => {
   'use gpu';
   const gravityCost = 0.5;
 
-  const neighborOffsets = [
-    d.vec2i(0, 1),
-    d.vec2i(0, -1),
-    d.vec2i(1, 0),
-    d.vec2i(-1, 0),
-  ];
+  const neighborOffsets = [d.vec2i(0, 1), d.vec2i(0, -1), d.vec2i(1, 0), d.vec2i(-1, 0)];
 
   const cell = getCell(x, y);
   let leastCost = cell.z;
 
-  const dirChoices = [
-    d.vec2f(0, 0),
-    d.vec2f(0, 0),
-    d.vec2f(0, 0),
-    d.vec2f(0, 0),
-  ];
+  const dirChoices = [d.vec2f(0, 0), d.vec2f(0, 0), d.vec2f(0, 0), d.vec2f(0, 0)];
   let dirChoiceCount = 1;
 
-  for (let i = 0; i < 4; i++) {
-    const offset = neighborOffsets[i];
+  for (const offset of tgpu.unroll(neighborOffsets)) {
     const neighborDensity = getCell(x + offset.x, y + offset.y);
     const cost = neighborDensity.z + d.f32(offset.y) * gravityCost;
 
-    if (!isValidFlowOut(x + offset.x, y + offset.y)) {
-      continue;
-    }
-
-    if (cost === leastCost) {
-      dirChoices[dirChoiceCount] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
-      dirChoiceCount++;
-    } else if (cost < leastCost) {
-      leastCost = cost;
-      dirChoices[0] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
-      dirChoiceCount = 1;
+    if (isValidFlowOut(x + offset.x, y + offset.y)) {
+      if (cost === leastCost) {
+        dirChoices[dirChoiceCount] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
+        dirChoiceCount++;
+      } else if (cost < leastCost) {
+        leastCost = cost;
+        dirChoices[0] = d.vec2f(d.f32(offset.x), d.f32(offset.y));
+        dirChoiceCount = 1;
+      }
     }
   }
 
-  const leastCostDir =
-    dirChoices[d.u32(randf.sample() * d.f32(dirChoiceCount))];
+  const leastCostDir = dirChoices[d.u32(randf.sample() * d.f32(dirChoiceCount))];
   return d.vec2f(leastCostDir);
 };
 
@@ -203,18 +181,9 @@ const moveObstacles = () => {
     const maxY = std.min(gridSize, obs.center.y + d.i32(obs.size.y / 2));
 
     const nextMinX = std.max(0, nextObs.center.x - d.i32(obs.size.x / 2));
-    const nextMaxX = std.min(
-      gridSize,
-      nextObs.center.x + d.i32(obs.size.x / 2),
-    );
-    const nextMinY = std.max(
-      0,
-      nextObs.center.y - d.i32(obs.size.y / 2),
-    );
-    const nextMaxY = std.min(
-      gridSize,
-      nextObs.center.y + d.i32(obs.size.y / 2),
-    );
+    const nextMaxX = std.min(gridSize, nextObs.center.x + d.i32(obs.size.x / 2));
+    const nextMinY = std.max(0, nextObs.center.y - d.i32(obs.size.y / 2));
+    const nextMaxY = std.min(gridSize, nextObs.center.y + d.i32(obs.size.y / 2));
 
     // does it move right
     if (diff.x > 0) {
@@ -283,11 +252,7 @@ const moveObstacles = () => {
     }
 
     // right column
-    for (
-      let y = std.max(1, nextMinY);
-      y <= std.min(nextMaxY, gridSize - 2);
-      y++
-    ) {
+    for (let y = std.max(1, nextMinY); y <= std.min(nextMaxY, gridSize - 2); y++) {
       const newVel = computeVelocity(nextMaxX + 2, y);
       setVelocity(nextMaxX + 2, y, newVel);
     }
@@ -297,11 +262,13 @@ const moveObstacles = () => {
 let sourceIntensity = 0.1;
 let sourceRadius = 0.01;
 
-const sourceParams = root.createUniform(d.struct({
-  center: d.vec2f,
-  radius: d.f32,
-  intensity: d.f32,
-}));
+const sourceParams = root.createUniform(
+  d.struct({
+    center: d.vec2f,
+    radius: d.f32,
+    intensity: d.f32,
+  }),
+);
 
 const getMinimumInFlow = (x: number, y: number): number => {
   'use gpu';
@@ -379,7 +346,7 @@ const limitedBoxX = () => {
 let boxY = 0.2;
 let leftWallX = 0;
 
-const vertexMain = tgpu['~unstable'].vertexFn({
+const vertexMain = tgpu.vertexFn({
   in: { idx: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })((input) => {
@@ -392,7 +359,7 @@ const vertexMain = tgpu['~unstable'].vertexFn({
   };
 });
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -435,22 +402,17 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
     );
   }
 
-  return std.mix(
-    secondColor,
-    thirdColor,
-    std.min((density - secondThreshold) / thirdThreshold, 1),
-  );
+  return std.mix(secondColor, thirdColor, std.min((density - secondThreshold) / thirdThreshold, 1));
 });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 function makePipelines(
   inputGridReadonly: TgpuBufferReadonly<GridData>,
   outputGridMutable: TgpuBufferMutable<GridData>,
 ) {
-  const initWorldPipeline = root['~unstable']
+  const initWorldPipeline = root
     .with(outputGridSlot, outputGridMutable)
     .createGuardedComputePipeline((xu, yu) => {
       'use gpu';
@@ -473,25 +435,22 @@ function makePipelines(
       outputGridSlot.$[index] = d.vec4f(value);
     });
 
-  const simulatePipeline = root['~unstable']
+  const simulatePipeline = root
     .with(inputGridSlot, inputGridReadonly)
     .with(outputGridSlot, outputGridMutable)
     .createGuardedComputePipeline(simulate);
 
-  const moveObstaclesPipeline = root['~unstable']
+  const moveObstaclesPipeline = root
     .with(inputGridSlot, outputGridMutable)
     .with(outputGridSlot, outputGridMutable)
     .createGuardedComputePipeline(moveObstacles);
 
-  const renderPipeline = root['~unstable']
-    .with(inputGridSlot, inputGridReadonly)
-    .createRenderPipeline({
-      vertex: vertexMain,
-      fragment: fragmentMain,
-      targets: { format: presentationFormat },
+  const renderPipeline = root.with(inputGridSlot, inputGridReadonly).createRenderPipeline({
+    vertex: vertexMain,
+    fragment: fragmentMain,
 
-      primitive: { topology: 'triangle-strip' },
-    });
+    primitive: { topology: 'triangle-strip' },
+  });
 
   return {
     init() {
@@ -509,14 +468,10 @@ function makePipelines(
     },
 
     render() {
-      const textureView = context.getCurrentTexture().createView();
-
       renderPipeline
         .withColorAttachment({
-          view: textureView,
+          view: context,
           clearValue: [0, 0, 0, 1],
-          loadOp: 'clear',
-          storeOp: 'store',
         })
         .draw(4);
     },
@@ -589,13 +544,13 @@ onFrame((deltaTime) => {
   }
 });
 
-export const controls = {
+export const controls = defineControls({
   'source intensity': {
     initial: sourceIntensity,
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       sourceIntensity = value;
     },
   },
@@ -605,7 +560,7 @@ export const controls = {
     min: 0.01,
     max: 0.1,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       sourceRadius = value;
     },
   },
@@ -615,7 +570,7 @@ export const controls = {
     min: 0.2,
     max: 0.8,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       boxX = value;
       obstaclesCpu[OBSTACLE_BOX].x = limitedBoxX();
       primary.applyMovedObstacles(obstaclesToConcrete());
@@ -627,7 +582,7 @@ export const controls = {
     min: 0.2,
     max: 0.85,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       boxY = value;
       obstaclesCpu[OBSTACLE_BOX].y = boxY;
       primary.applyMovedObstacles(obstaclesToConcrete());
@@ -639,14 +594,14 @@ export const controls = {
     min: 0,
     max: 0.6,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       leftWallX = value;
       obstaclesCpu[OBSTACLE_LEFT_WALL].x = leftWallX;
       obstaclesCpu[OBSTACLE_BOX].x = limitedBoxX();
       primary.applyMovedObstacles(obstaclesToConcrete());
     },
   },
-};
+});
 
 export function onCleanup() {
   disposed = true;

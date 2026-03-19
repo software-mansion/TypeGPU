@@ -1,5 +1,6 @@
 {
   "title": "Probability Distribution Plot",
   "category": "algorithms",
-  "tags": ["experimental", "ecosystem", "@typegpu/noise"]
+  "tags": ["ecosystem", "statistics"],
+  "coolFactor": 6
 }

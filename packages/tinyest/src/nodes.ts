@@ -23,6 +23,7 @@ export const NodeTypeCatalog = {
   while: 15,
   continue: 16,
   break: 17,
+  forOf: 18,
 
   // rare
   arrayExpr: 100,
@@ -47,12 +48,7 @@ export type Return =
  */
 export type If =
   | readonly [type: NodeTypeCatalog['if'], cond: Expression, then: Statement]
-  | readonly [
-    type: NodeTypeCatalog['if'],
-    cond: Expression,
-    then: Statement,
-    alt: Statement,
-  ];
+  | readonly [type: NodeTypeCatalog['if'], cond: Expression, then: Statement, alt: Statement];
 
 /**
  * Represents a block of statements
@@ -64,20 +60,14 @@ export type Block = readonly [type: NodeTypeCatalog['block'], Statement[]];
  */
 export type Let =
   | readonly [type: NodeTypeCatalog['let'], identifier: string]
-  | readonly [
-    type: NodeTypeCatalog['let'],
-    identifier: string,
-    value: Expression,
-  ];
+  | readonly [type: NodeTypeCatalog['let'], identifier: string, value: Expression];
 
 /**
  * Represents a const statement
  */
-export type Const = readonly [
-  type: NodeTypeCatalog['const'],
-  identifier: string,
-  value: Expression,
-];
+export type Const =
+  | readonly [type: NodeTypeCatalog['const'], identifier: string]
+  | readonly [type: NodeTypeCatalog['const'], identifier: string, value: Expression];
 
 export type For = readonly [
   type: NodeTypeCatalog['for'],
@@ -97,6 +87,13 @@ export type Continue = readonly [type: NodeTypeCatalog['continue']];
 
 export type Break = readonly [type: NodeTypeCatalog['break']];
 
+export type ForOf = readonly [
+  type: NodeTypeCatalog['forOf'],
+  left: Const | Let,
+  right: Expression,
+  body: Statement,
+];
+
 /**
  * A union type of all statements
  */
@@ -110,7 +107,8 @@ export type Statement =
   | For
   | While
   | Continue
-  | Break;
+  | Break
+  | ForOf;
 
 //
 // Expression
@@ -181,14 +179,7 @@ export type LogicalExpression = readonly [
   rhs: Expression,
 ];
 
-export type UnaryOperator =
-  | '-'
-  | '+'
-  | '!'
-  | '~'
-  | 'typeof'
-  | 'void'
-  | 'delete';
+export type UnaryOperator = '-' | '+' | '!' | '~' | 'typeof' | 'void' | 'delete';
 
 export type UnaryExpression = readonly [
   type: NodeTypeCatalog['unaryExpr'],
@@ -201,10 +192,7 @@ export type ObjectExpression = readonly [
   Record<string, Expression>,
 ];
 
-export type ArrayExpression = readonly [
-  type: NodeTypeCatalog['arrayExpr'],
-  values: Expression[],
-];
+export type ArrayExpression = readonly [type: NodeTypeCatalog['arrayExpr'], values: Expression[]];
 
 export type ConditionalExpression = readonly [
   type: NodeTypeCatalog['conditionalExpr'],
@@ -277,13 +265,13 @@ export const FuncParameterType = {
 
 export type FuncParameter =
   | {
-    type: typeof FuncParameterType.identifier;
-    name: string;
-  }
-  | {
-    type: typeof FuncParameterType.destructuredObject;
-    props: {
+      type: typeof FuncParameterType.identifier;
       name: string;
-      alias: string;
-    }[];
-  };
+    }
+  | {
+      type: typeof FuncParameterType.destructuredObject;
+      props: {
+        name: string;
+        alias: string;
+      }[];
+    };

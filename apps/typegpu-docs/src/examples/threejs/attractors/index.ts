@@ -5,13 +5,11 @@
 import { randf } from '@typegpu/noise';
 import * as t3 from '@typegpu/three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import {
-  TransformControls,
-  type TransformControlsMode,
-} from 'three/addons/controls/TransformControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { color, uniform } from 'three/tsl';
 import * as THREE from 'three/webgpu';
 import { d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 
@@ -37,7 +35,7 @@ scene.add(directionalLight);
 
 const renderer = new THREE.WebGPURenderer({ antialias: true, canvas });
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setAnimationLoop(animate);
+void renderer.setAnimationLoop(animate);
 renderer.setClearColor('#000000');
 
 await renderer.init();
@@ -51,42 +49,30 @@ orbitControls.maxDistance = 50;
 
 // attractors
 
-const attractorsPositions = t3.uniformArray([
-  new THREE.Vector3(-1, 0, 0),
-  new THREE.Vector3(1, 0, -0.5),
-  new THREE.Vector3(0, 0.5, 1),
-], d.vec4f);
-const attractorsRotationAxes = t3.uniformArray([
-  new THREE.Vector3(0, 1, 0),
-  new THREE.Vector3(0, 1, 0),
-  new THREE.Vector3(1, 0, -0.5).normalize(),
-], d.vec4f);
-const attractorsLength = t3.uniform(
-  attractorsPositions.node.array.length,
-  d.u32,
+const attractorsPositions = t3.uniformArray(
+  [new THREE.Vector3(-1, 0, 0), new THREE.Vector3(1, 0, -0.5), new THREE.Vector3(0, 0.5, 1)],
+  d.vec4f,
 );
-const helpersRingGeometry = new THREE.RingGeometry(
-  1,
-  1.02,
-  32,
-  1,
-  0,
-  Math.PI * 1.5,
+const attractorsRotationAxes = t3.uniformArray(
+  [
+    new THREE.Vector3(0, 1, 0),
+    new THREE.Vector3(0, 1, 0),
+    new THREE.Vector3(1, 0, -0.5).normalize(),
+  ],
+  d.vec4f,
 );
+const attractorsLength = t3.uniform(attractorsPositions.node.array.length, d.u32);
+const helpersRingGeometry = new THREE.RingGeometry(1, 1.02, 32, 1, 0, Math.PI * 1.5);
 const helpersArrowGeometry = new THREE.ConeGeometry(0.1, 0.4, 12, 1, false);
 const helpersMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
 
-const attractorsHelpers: { controls: TransformControls; arrow: THREE.Group }[] =
-  [];
+const attractorsHelpers: { controls: TransformControls; arrow: THREE.Group }[] = [];
 for (let i = 0; i < attractorsPositions.node.array.length; i++) {
   const position = attractorsPositions.node.array[i] as THREE.Vector3;
   const orientation = attractorsRotationAxes.node.array[i] as THREE.Vector3;
   const reference = new THREE.Object3D();
   reference.position.copy(position);
-  reference.quaternion.setFromUnitVectors(
-    new THREE.Vector3(0, 1, 0),
-    orientation,
-  );
+  reference.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), orientation);
   scene.add(reference);
 
   const arrowHelper = new THREE.Group();
@@ -117,9 +103,7 @@ for (let i = 0; i < attractorsPositions.node.array.length; i++) {
 
   attractorControls.addEventListener('change', () => {
     position.copy(reference.position);
-    orientation.copy(
-      new THREE.Vector3(0, 1, 0).applyQuaternion(reference.quaternion),
-    );
+    orientation.copy(new THREE.Vector3(0, 1, 0).applyQuaternion(reference.quaternion));
   });
 
   attractorsHelpers.push({ controls: attractorControls, arrow: arrowHelper });
@@ -151,10 +135,7 @@ const velocityBuffer = t3.instancedArray(count, d.vec3f);
 
 const seed = Math.random();
 
-const velocityBufferAttributeTA = t3.fromTSL(
-  velocityBuffer.node.toAttribute(),
-  d.vec3f,
-);
+const velocityBufferAttributeTA = t3.fromTSL(velocityBuffer.node.toAttribute(), d.vec3f);
 
 // init compute
 
@@ -162,11 +143,7 @@ const sphericalToVec3 = (phi: number, theta: number) => {
   'use gpu';
   const sinPhiRadius = std.sin(phi);
 
-  return d.vec3f(
-    sinPhiRadius * std.sin(theta),
-    std.cos(phi),
-    sinPhiRadius * std.cos(theta),
-  );
+  return d.vec3f(sinPhiRadius * std.sin(theta), std.cos(phi), sinPhiRadius * std.cos(theta));
 };
 
 const initCompute = t3.toTSL(() => {
@@ -174,19 +151,17 @@ const initCompute = t3.toTSL(() => {
   const instanceIndex = t3.instanceIndex.$;
   randf.seed(instanceIndex / count + seed);
 
-  const basePosition = randf.inUnitCube()
-    .sub(0.5)
-    .mul(d.vec3f(5, 0.2, 5));
+  const basePosition = (randf.inUnitCube() - 0.5) * d.vec3f(5, 0.2, 5);
   positionBuffer.$[instanceIndex] = d.vec3f(basePosition);
 
   const phi = randf.sample() * 2 * Math.PI;
   const theta = randf.sample() * 2;
-  const baseVelocity = sphericalToVec3(phi, theta).mul(0.05);
+  const baseVelocity = sphericalToVec3(phi, theta) * 0.05;
   velocityBuffer.$[instanceIndex] = d.vec3f(baseVelocity);
 });
 
 const reset = () => renderer.compute(initCompute.compute(count));
-reset();
+void reset();
 
 // update compute
 
@@ -194,7 +169,7 @@ const getParticleMassMultiplier = () => {
   'use gpu';
   randf.seed(t3.instanceIndex.$ / count + seed);
   // in the original example, the values are remapped to [-1/3, 1] instead of [1/4, 1]
-  const base = 0.25 + randf.sample() * 3 / 4;
+  const base = 0.25 + (randf.sample() * 3) / 4;
   return base;
 };
 
@@ -216,42 +191,35 @@ const update = t3.toTSL(() => {
     const attractorPosition = attractorsPositions.$[i].xyz;
     const attractorRotationAxis = attractorsRotationAxes.$[i].xyz;
 
-    const toAttractor = attractorPosition.sub(position);
+    const toAttractor = attractorPosition - position;
     const distance = std.length(toAttractor);
     const direction = std.normalize(toAttractor);
 
     // gravity
-    const gravityStrength = attractorMass.$ *
-      getParticleMass() *
-      gravityConstant /
-      (distance ** 2);
-    const gravityForce = direction.mul(gravityStrength);
-    force = force.add(gravityForce);
+    const gravityStrength = (attractorMass.$ * getParticleMass() * gravityConstant) / distance ** 2;
+    const gravityForce = direction * gravityStrength;
+    force += gravityForce;
 
     // spinning
-    const spinningForce = attractorRotationAxis
-      .mul(gravityStrength)
-      .mul(spinningStrength.$);
+    const spinningForce = attractorRotationAxis * gravityStrength * spinningStrength.$;
     const spinningVelocity = std.cross(spinningForce, toAttractor);
-    force = force.add(spinningVelocity);
+    force += spinningVelocity;
   }
 
   // velocity
-  velocity = velocity.add(force.mul(delta));
+  velocity += force * delta;
   const speed = std.length(velocity);
   if (speed > maxSpeed.$) {
-    velocity = std.normalize(velocity).mul(maxSpeed.$);
+    velocity = std.normalize(velocity) * maxSpeed.$;
   }
-  velocity = velocity.mul(1 - velocityDamping.$);
+  velocity *= 1 - velocityDamping.$;
 
   // position
-  position = position.add(velocity.mul(delta));
+  position += velocity * delta;
 
   // box loop
   const halfHalfExtent = boundHalfExtent.$ / 2;
-  position = std
-    .mod(position.add(halfHalfExtent), boundHalfExtent.$)
-    .sub(halfHalfExtent);
+  position = std.mod(position + halfHalfExtent, boundHalfExtent.$) - halfHalfExtent;
 
   positionBuffer.$[t3.instanceIndex.$] = d.vec3f(position);
   velocityBuffer.$[t3.instanceIndex.$] = d.vec3f(velocity);
@@ -297,21 +265,17 @@ observer.observe(canvas);
 
 async function animate() {
   orbitControls.update();
-  renderer.compute(updateCompute);
+  void renderer.compute(updateCompute);
   renderer.render(scene, camera);
 }
 
 // #region Example controls and cleanup
 
-export const controls = {
+export const controls = defineControls({
   'Controls Mode': {
     initial: 'translate',
-    options: [
-      'translate',
-      'rotate',
-      'none',
-    ],
-    onSelectChange: (value: string) => {
+    options: ['translate', 'rotate', 'none'],
+    onSelectChange: (value) => {
       for (const { controls } of attractorsHelpers) {
         if (value === 'none') {
           controls.getHelper().visible = false;
@@ -319,14 +283,14 @@ export const controls = {
         } else {
           controls.getHelper().visible = true;
           controls.enabled = true;
-          controls.setMode(value as TransformControlsMode);
+          controls.setMode(value);
         }
       }
     },
   },
   'Arrow visible': {
     initial: true,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       for (const { arrow } of attractorsHelpers) {
         arrow.visible = value;
       }
@@ -337,7 +301,7 @@ export const controls = {
     min: 0,
     max: 10,
     step: 1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       attractorMass.node.value = Number(`1e${newValue}`);
     },
   },
@@ -346,7 +310,7 @@ export const controls = {
     min: 0,
     max: 10,
     step: 1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       particleGlobalMass.node.value = Number(`1e${newValue}`);
     },
   },
@@ -355,7 +319,7 @@ export const controls = {
     min: 0,
     max: 10,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       maxSpeed.node.value = newValue;
     },
   },
@@ -364,7 +328,7 @@ export const controls = {
     min: 0,
     max: 0.1,
     step: 0.001,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       velocityDamping.node.value = newValue;
     },
   },
@@ -373,16 +337,16 @@ export const controls = {
     min: 0,
     max: 10,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       spinningStrength.node.value = newValue;
     },
   },
-  'Scale': {
+  Scale: {
     initial: 0.008,
     min: 0,
     max: 0.1,
     step: 0.001,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       scale.value = newValue;
     },
   },
@@ -391,26 +355,26 @@ export const controls = {
     min: 0,
     max: 20,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       boundHalfExtent.node.value = newValue;
     },
   },
   'Color A': {
-    initial: [colorA.node.value.r, colorA.node.value.g, colorA.node.value.b],
-    onColorChange: (newValue: [number, number, number]) => {
+    initial: d.vec3f(colorA.node.value.r, colorA.node.value.g, colorA.node.value.b),
+    onColorChange: (newValue) => {
       colorA.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
     },
   },
   'Color B': {
-    initial: [colorB.node.value.r, colorB.node.value.g, colorB.node.value.b],
-    onColorChange: (newValue: [number, number, number]) => {
+    initial: d.vec3f(colorB.node.value.r, colorB.node.value.g, colorB.node.value.b),
+    onColorChange: (newValue) => {
       colorB.node.value.setRGB(newValue[0], newValue[1], newValue[2]);
     },
   },
   'Reset Particles': {
     onButtonClick: reset,
   },
-};
+});
 
 export function onCleanup() {
   observer.disconnect();

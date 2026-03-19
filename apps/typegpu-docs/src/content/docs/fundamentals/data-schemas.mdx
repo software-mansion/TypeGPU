@@ -13,7 +13,7 @@ TypeGPU does this automatically during buffer writes and reads.
 :::
 
 The primary usage for data schemas is to define buffer and function signatures.
-Schemas can also be called in JS or TGSL to create instances of the types they represent.
+Schemas can also be called to create instances of the types they represent.
 
 TypeGPU provides data schemas for scalar, vector and matrix types, as well as constructors for struct and array schemas.
 
@@ -23,7 +23,7 @@ TypeGPU provides data schemas for scalar, vector and matrix types, as well as co
 
 For scalar WGSL types `f32`, `u32`, `i32`, `f16` and `bool`, TypeGPU provides `d.f32`, `d.u32`, `d.i32`, `d.f16` and `d.bool` schemas respectively.
 Schemas can be called to cast a value to a given type.
-This works both in TGSL, and in plain JavaScript.
+This works both inside and outside 'use gpu' functions.
 
 ```ts twoslash
 import { d } from 'typegpu';
@@ -36,7 +36,7 @@ d.bool(0.01); // true
 ```
 
 :::caution
-On JavaScript side, the type of any number remains a number regardless of any casts.
+In JavaScript, the type of any number remains a number regardless of casts.
 
 ```ts twoslash
 import { d } from 'typegpu';
@@ -46,7 +46,7 @@ const myUnsignedInt = d.u32(1);
 const result = d.u32(3)/d.u32(2); // 1.5
 ```
 
-For the WGSL and JS functions to return consistent results, during WGSL resolution TypeGPU wraps all divisions in `f32` casts.
+To achieve consistent behavior of 'use gpu' functions in JS and on the GPU, TypeGPU wraps all divisions in `f32` casts implicitly.
 :::
 
 For each of the scalar types, there is a vector schema of 2, 3 and 4 elements of that type.
@@ -106,7 +106,7 @@ to a seamless integration with `wgpu-matrix`, which you can [read more about her
 
 :::caution
 For `wgpu-matrix` integration, matrix instances implement array access.
-Matrix array access is not supported in TGSL.
+Matrix array access is not supported in 'use gpu' functions.
 
 ```ts twoslash
 import { d } from 'typegpu';
@@ -120,8 +120,15 @@ const firstElement = mat[0]; // 1.1 in JS, but resolves to invalid WGSL!
 
 ### Operators
 
-As you may know, it is currently impossible to overload operators in JavaScript.
-For that reason, TypeGPU provides `std` functions imitating those.
+For performing math operations on vectors and matrices, you can either use the standard JavaScript operators like
+`+`, `-`, `*`, `/` and `%` when inside functions marked with `'use gpu'`, use functions provided on the `std` namespace,
+or `.add`, `.sub`, `.mul`, `.div` and `.mod` functions on the values themselves.
+
+:::note
+Use of `tsover` is required for operator overloading support, [refer to their documentation on how to set it up in your project](https://software-mansion-labs.github.io/tsover/docs).
+
+When operating on scalars, you can still use `+`, `<=`, `!` etc., whether you adopt `tsover` or not.
+:::
 
 ```ts twoslash
 import { d, std } from 'typegpu';
@@ -129,6 +136,12 @@ import { d, std } from 'typegpu';
 const vec1 = d.vec3f(1, 2, 3);
 const vec2 = std.add(vec1, 3); // d.vec3f(4, 5, 6)
 //    ^?
+
+function foo() {
+  'use gpu';
+  const vec1 = d.vec3f(1, 2, 3) * 2; // d.vec3f(2, 4, 6)
+  //    ^?
+}
 
 const mat = d.mat3x3f(
   2, 0, 0,
@@ -143,14 +156,14 @@ const comparison = std.le(d.vec3f(2, 3, 4), d.vec3f(3)); // d.vec3b(true, true, 
 //    ^?
 ```
 
-Currently, implemented operators include:
+Currently, implemented `std` operations include:
 
 - arithmetic operators `add`, `sub`, `mul`, `div`, `mod`, `neg`,
 - comparison operators `eq`, `ne`, `lt`, `le`, `gt`, `ge`,
 - logical operators `not`, `and`, `or`.
 
-When operating on scalars, you can still use `+`, `<=`, `!` etc.,
-the purpose of these `std` functions is to enable working on vectors and matrices.
+Vectors currently overload the binary `+`, `-`, `*`, `/` and `%` operators, while matrices
+overload `+`, `-` and  `*`.
 
 For arithmetic operators, you can also use the infix notation.
 
@@ -461,16 +474,17 @@ const AtomicI32 = d.atomic(d.i32);
 ```
 
 :::tip
-The `std` module provides functions for manipulating atomic data in TGSL.
+The `std` module provides functions for manipulating atomic data in 'use gpu' functions.
 
 ```ts twoslash
 import tgpu, { d, std } from 'typegpu';
 // ---cut---
 const count = tgpu.workgroupVar(d.atomic(d.u32));
 
-const incrementAndGet = tgpu.fn([], d.u32)(() => {
+function incrementAndGet() {
+  'use gpu';
   return std.atomicAdd(count.$, 1);
-});
+}
 ```
 
 :::
@@ -501,19 +515,19 @@ This extension is enabled automatically when available.
 ## Copy constructors
 
 One of the biggest differences between JavaScript and WGSL is the existence of value/reference types.
-Let's take a look at a simple TGSL function and the WGSL code it resolves to.
+Let's take a look at a simple TypeGPU function and the WGSL code it resolves to.
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
 // ---cut---
-// TGSL
 const MyStruct = d.struct({ n: d.u32 });
 
-const myFn = tgpu.fn([])(() => {
+function myFn() {
+  'use gpu';
   const s1 = MyStruct({ n: 0 });
   const s2 = s1;
   s2.n = 1; // s1 is modified
-});
+}
 ```
 
 ```wgsl
@@ -524,28 +538,30 @@ struct MyStruct {
 
 fn myFn(){
   var s1 = MyStruct(0);
-  var s2 = s1;
-  s2.n = 1; // s1 is not modified
+  let s2 = &s1;
+  (*s2).n = 1; // s1 is modified
 }
 ```
 
-On the JS side, s2 is a reference to s1 and therefore s1 is modified when s2 is modified.
-On the WGSL side, the assignment operator copies the value of s1, and thus s1 is not modified later on.
+In JavaScript, `s2` is a reference to `s1` and therefore `s1` is modified when `s2` is modified.
+On the WGSL side, we make `s2` a reference to `s1` and modifying `s2.n` is translated to modifying `(*s2).n`.
 
-To help with this issue, schema calls can be used as "copy constructors", that copy the value on the JS side, and disappear on the WGSL side:
+Schemas can be used to create deep copies of values.
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
 // ---cut---
-// TGSL
 const MyStruct = d.struct({ n: d.u32 });
 
-const myFn = tgpu.fn([])(() => {
+function myFn() {
+  'use gpu';
   const s1 = MyStruct({ n: 0 });
   const s2 = MyStruct(s1); // deep copy of s1
   s2.n = 1; // s1 is not modified
-});
+}
 ```
+
+The TypeGPU shader generator understands this and generates a simple assignment, which copies the value of `s1` into `s2`.
 
 ```wgsl
 // WGSL

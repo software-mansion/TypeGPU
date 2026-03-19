@@ -1,0 +1,57 @@
+<canvas data-fit-to-container></canvas>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" />
+
+<style>
+  #score {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Fredoka One', cursive;
+    font-size: 2.4rem;
+    color: white;
+    text-shadow:
+      0 3px 0 rgba(0, 0, 0, 0.35),
+      0 0 12px rgba(255, 220, 100, 0.4);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  #attribution {
+    opacity: 1;
+    position: absolute;
+    bottom: 0.625rem;
+    left: 0.625rem;
+    z-index: 2;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    user-select: none;
+    pointer-events: auto;
+    transition: opacity 0.5s;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+
+  #attribution a {
+    color: #87ceeb;
+    text-decoration: none;
+  }
+
+  #attribution a:hover {
+    text-decoration: underline;
+  }
+</style>
+
+<div id="score">0</div>
+
+<div id="attribution">
+  Assets by
+  <a href="https://apps2amigos.itch.io/fruit-game-free-asset-pack" target="_blank">Apps2Amigos</a
+  ><br />
+  Adapted from
+  <a href="https://zrghr.itch.io/froots-and-veggies-culinary-pixels" target="_blank">zrghr</a>
+</div>

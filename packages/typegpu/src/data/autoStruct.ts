@@ -38,7 +38,7 @@ export class AutoStruct implements BaseData, SelfResolvable {
   constructor(
     validProps: Record<string, BaseData>,
     typeForExtraProps: BaseData | undefined,
-    locations?: Record<string, number> | undefined,
+    locations?: Record<string, number>,
   ) {
     this.#validProps = validProps;
     this.#typeForExtraProps = typeForExtraProps;
@@ -66,10 +66,7 @@ export class AutoStruct implements BaseData, SelfResolvable {
    * @privateRemarks
    * Internally used by `accessProp`.
    */
-  provideProp(
-    key: string,
-    dataType: BaseData,
-  ): { prop: string; type: BaseData } {
+  provideProp(key: string, dataType: BaseData): { prop: string; type: BaseData } {
     let alloc = this.#allocated[key];
     if (!alloc) {
       const wgslKey = key.replaceAll('$', '');
@@ -79,9 +76,7 @@ export class AutoStruct implements BaseData, SelfResolvable {
         );
       }
       if (!isValidProp(wgslKey)) {
-        throw new Error(
-          `Property key '${key}' is a reserved WGSL word. Choose a different name.`,
-        );
+        throw new Error(`Property key '${key}' is a reserved WGSL word. Choose a different name.`);
       }
 
       this.#usedWgslKeys.add(wgslKey);

@@ -10,18 +10,15 @@ import {
   mainFragment7,
 } from './shaders/fragment.ts';
 import { mainVertex } from './shaders/vertex.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 // Uniforms
 const time = root.createUniform(d.f32, 0);
-const resolutionUniform = root.createUniform(
-  d.vec2f,
-  d.vec2f(canvas.width, canvas.height),
-);
+const resolutionUniform = root.createUniform(d.vec2f, d.vec2f(canvas.width, canvas.height));
 
 const fragmentShaders = [
   mainFragment1,
@@ -34,14 +31,10 @@ const fragmentShaders = [
 ];
 
 const pipelines = fragmentShaders.map((fragment) =>
-  root['~unstable']
-    .with(timeAccess, time)
-    .with(resolutionAccess, resolutionUniform)
-    .createRenderPipeline({
-      vertex: mainVertex,
-      fragment: fragment,
-      targets: { format: presentationFormat },
-    })
+  root.with(timeAccess, time).with(resolutionAccess, resolutionUniform).createRenderPipeline({
+    vertex: mainVertex,
+    fragment: fragment,
+  }),
 );
 
 let currentPipeline = pipelines[0];
@@ -57,10 +50,8 @@ function render() {
 
   currentPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [0, 0, 0, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .draw(6);
 
@@ -74,19 +65,11 @@ export function onCleanup() {
   root.destroy();
 }
 
-export const controls = {
+export const controls = defineControls({
   Pattern: {
     initial: 'pattern1',
-    options: [
-      'pattern1',
-      'pattern2',
-      'pattern3',
-      'pattern4',
-      'pattern5',
-      'pattern6',
-      'pattern7',
-    ],
-    onSelectChange(value: string) {
+    options: ['pattern1', 'pattern2', 'pattern3', 'pattern4', 'pattern5', 'pattern6', 'pattern7'],
+    onSelectChange(value) {
       const patternIndex = {
         pattern1: 0,
         pattern2: 1,
@@ -107,8 +90,8 @@ export const controls = {
       Array.from({ length: 6 }).map((_, i) =>
         root.device.createShaderModule({
           code: tgpu.resolve([pipelines[i + 1]], { names: namespace }),
-        })
+        }),
       );
     },
   },
-};
+});

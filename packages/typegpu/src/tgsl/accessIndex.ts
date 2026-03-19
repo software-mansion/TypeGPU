@@ -1,16 +1,7 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import {
-  isDisarray,
-  MatrixColumnsAccess,
-  UnknownData,
-} from '../data/dataTypes.ts';
+import { isDisarray, MatrixColumnsAccess, UnknownData } from '../data/dataTypes.ts';
 import { derefSnippet } from '../data/ref.ts';
-import {
-  isEphemeralSnippet,
-  type Origin,
-  snip,
-  type Snippet,
-} from '../data/snippet.ts';
+import { isEphemeralSnippet, type Origin, snip, type Snippet } from '../data/snippet.ts';
 import { vec2f, vec3f, vec4f } from '../data/vector.ts';
 import {
   type BaseData,
@@ -18,8 +9,10 @@ import {
   isPtr,
   isVec,
   isWgslArray,
+  isWgslStruct,
 } from '../data/wgslTypes.ts';
 import { isKnownAtComptime } from '../types.ts';
+import { accessProp } from './accessProp.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
 
 const indexableTypeToResult = {
@@ -28,13 +21,8 @@ const indexableTypeToResult = {
   mat4x4f: vec4f,
 } as const;
 
-export function accessIndex(
-  target: Snippet,
-  indexArg: Snippet | number,
-): Snippet | undefined {
-  const index = typeof indexArg === 'number'
-    ? coerceToSnippet(indexArg)
-    : indexArg;
+export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippet | undefined {
+  const index = typeof indexArg === 'number' ? coerceToSnippet(indexArg) : indexArg;
 
   // array
   if (isWgslArray(target.dataType) || isDisarray(target.dataType)) {
@@ -68,8 +56,8 @@ export function accessIndex(
 
     return snip(
       isKnownAtComptime(target) && isKnownAtComptime(index)
-        // biome-ignore lint/suspicious/noExplicitAny: it's fine, it's there
-        ? (target.value as any)[index.value as number]
+        ? // oxlint-disable-next-line typescript/no-explicit-any -- it's fine, it's there
+          (target.value as any)[index.value as number]
         : stitch`${target}[${index}]`,
       elementType,
       /* origin */ origin,
@@ -80,12 +68,11 @@ export function accessIndex(
   if (isVec(target.dataType)) {
     return snip(
       isKnownAtComptime(target) && isKnownAtComptime(index)
-        // biome-ignore lint/suspicious/noExplicitAny: it's fine, it's there
-        ? (target.value as any)[index.value as any]
+        ? // oxlint-disable-next-line typescript/no-explicit-any -- it's fine, it's there
+          (target.value as any)[index.value as any]
         : stitch`${target}[${index}]`,
       target.dataType.primitive,
-      /* origin */ target.origin === 'constant' ||
-          target.origin === 'constant-tgpu-const-ref'
+      /* origin */ target.origin === 'constant' || target.origin === 'constant-tgpu-const-ref'
         ? 'constant'
         : 'runtime',
     );
@@ -99,34 +86,35 @@ export function accessIndex(
 
   // matrix.columns
   if (target.value instanceof MatrixColumnsAccess) {
-    const propType = indexableTypeToResult[
-      (target.value.matrix.dataType as BaseData)
-        .type as keyof typeof indexableTypeToResult
-    ];
+    const propType =
+      indexableTypeToResult[
+        (target.value.matrix.dataType as BaseData).type as keyof typeof indexableTypeToResult
+      ];
 
-    return snip(
-      stitch`${target.value.matrix}[${index}]`,
-      propType,
-      /* origin */ target.origin,
-    );
+    return snip(stitch`${target.value.matrix}[${index}]`, propType, /* origin */ target.origin);
   }
 
   // matrix
   if ((target.dataType as BaseData).type in indexableTypeToResult) {
     throw new Error(
-      "The only way of accessing matrix elements in TGSL is through the 'columns' property.",
+      "The only way of accessing matrix elements in TypeGPU functions is through the 'columns' property.",
+    );
+  }
+
+  if ((isKnownAtComptime(target) && isKnownAtComptime(index)) || target.dataType === UnknownData) {
+    // No idea what the type is, so we act on the snippet's value and try to guess
+    return coerceToSnippet(
+      // oxlint-disable-next-line typescript/no-explicit-any -- we're inspecting the value, and it could be any value
+      (target.value as any)[index.value as number],
     );
   }
 
   if (
-    (isKnownAtComptime(target) && isKnownAtComptime(index)) ||
-    target.dataType === UnknownData
+    isWgslStruct(target.dataType) &&
+    isKnownAtComptime(index) &&
+    typeof index.value === 'string'
   ) {
-    // No idea what the type is, so we act on the snippet's value and try to guess
-    return coerceToSnippet(
-      // biome-ignore lint/suspicious/noExplicitAny: we're inspecting the value, and it could be any value
-      (target.value as any)[index.value as number],
-    );
+    return accessProp(target, index.value);
   }
 
   return undefined;

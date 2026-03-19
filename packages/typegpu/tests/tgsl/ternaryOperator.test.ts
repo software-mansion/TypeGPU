@@ -1,11 +1,14 @@
 import { describe, expect } from 'vitest';
-import { it } from '../utils/extendedIt.ts';
-import tgpu, { d, std } from '../../src/index.ts';
+import { it } from 'typegpu-testing-utility';
+import tgpu, { d, std } from '../../src/index.js';
 
 describe('ternary operator', () => {
   it('should resolve to one of the branches', () => {
     const mySlot = tgpu.slot<boolean>();
-    const myFn = tgpu.fn([], d.u32)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
       return mySlot.$ ? 10 : 20;
     });
 
@@ -14,8 +17,7 @@ describe('ternary operator', () => {
         myFn.with(mySlot, true).$name('trueFn'),
         myFn.with(mySlot, false).$name('falseFn'),
       ]),
-    )
-      .toMatchInlineSnapshot(`
+    ).toMatchInlineSnapshot(`
         "fn trueFn() -> u32 {
           return 10u;
         }
@@ -28,12 +30,11 @@ describe('ternary operator', () => {
 
   it('should work for different comptime known expressions', () => {
     const condition = true;
-    const comptime = tgpu['~unstable'].comptime(() => true);
+    const comptime = tgpu.comptime(() => true);
     const slot = tgpu.slot(true);
     const lazy = tgpu.lazy(() => slot.$);
 
     const myFn = tgpu.fn([])(() => {
-      // biome-ignore lint/correctness/noConstantCondition: it's a test
       const a = true ? 1 : 0;
       const b = std.allEq(d.vec2f(1, 2), d.vec2f(1, 2)) ? 1 : 0;
       const c = condition ? 1 : 0;
@@ -56,14 +57,11 @@ describe('ternary operator', () => {
 
   it('should resolve nested operators', () => {
     const mySlot = tgpu.slot<number>(0);
-    const myFn = tgpu.fn([], d.u32)(() => {
-      return mySlot.$ === 1
-        ? 10
-        : mySlot.$ === 2
-        ? 20
-        : mySlot.$ === 3
-        ? 30
-        : -1;
+    const myFn = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
+      return mySlot.$ === 1 ? 10 : mySlot.$ === 2 ? 20 : mySlot.$ === 3 ? 30 : -1;
     });
 
     expect(
@@ -73,8 +71,7 @@ describe('ternary operator', () => {
         myFn.with(mySlot, 2).$name('twoFn'),
         myFn.with(mySlot, 3).$name('threeFn'),
       ]),
-    )
-      .toMatchInlineSnapshot(`
+    ).toMatchInlineSnapshot(`
         "fn myFn() -> u32 {
           return -1u;
         }
@@ -98,12 +95,14 @@ describe('ternary operator', () => {
     const myUniform = root.createUniform(d.u32);
     const myReadonly = root.createReadonly(d.u32);
 
-    const myFn = tgpu.fn([], d.u32)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
       return mySlot.$ ? myUniform.$ : myReadonly.$;
     });
 
-    expect(tgpu.resolve([myFn.with(mySlot, true).$name('trueFn')]))
-      .toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn.with(mySlot, true).$name('trueFn')])).toMatchInlineSnapshot(`
         "@group(0) @binding(0) var<uniform> myUniform: u32;
 
         fn trueFn() -> u32 {
@@ -111,8 +110,7 @@ describe('ternary operator', () => {
         }"
       `);
 
-    expect(tgpu.resolve([myFn.with(mySlot, false).$name('falseFn')]))
-      .toMatchInlineSnapshot(`
+    expect(tgpu.resolve([myFn.with(mySlot, false).$name('falseFn')])).toMatchInlineSnapshot(`
         "@group(0) @binding(0) var<storage, read> myReadonly: u32;
 
         fn falseFn() -> u32 {
@@ -125,7 +123,6 @@ describe('ternary operator', () => {
     const counter = root.createMutable(d.u32);
 
     const myFunction = tgpu.fn([])(() => {
-      // biome-ignore lint/correctness/noConstantCondition: it's a test
       false ? counter.$++ : undefined;
     });
     expect(tgpu.resolve([myFunction])).toMatchInlineSnapshot(`
@@ -136,7 +133,10 @@ describe('ternary operator', () => {
   });
 
   it('should throw when test is not comptime known', () => {
-    const myFn = tgpu.fn([d.u32], d.u32)((n) => {
+    const myFn = tgpu.fn(
+      [d.u32],
+      d.u32,
+    )((n) => {
       return n > 0 ? n : -n;
     });
 

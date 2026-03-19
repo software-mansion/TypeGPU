@@ -29,6 +29,7 @@ export interface TgpuSlot<T> extends TgpuNamable {
    */
   readonly value: GPUValueOf<T>;
   readonly $: GPUValueOf<T>;
+  toString(): string;
 }
 
 export interface TgpuLazy<out T> extends Withable<TgpuLazy<T>> {
@@ -49,8 +50,7 @@ export interface TgpuLazy<out T> extends Withable<TgpuLazy<T>> {
   // ---
 }
 
-export interface TgpuAccessor<T extends BaseData = BaseData>
-  extends TgpuNamable {
+export interface TgpuAccessor<T extends BaseData = BaseData> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'accessor';
 
@@ -86,8 +86,7 @@ export declare namespace TgpuAccessor {
       : DataAccessorIn<UnwrapRuntimeConstructor<T>>;
 }
 
-export interface TgpuMutableAccessor<T extends BaseData = BaseData>
-  extends TgpuNamable {
+export interface TgpuMutableAccessor<T extends BaseData = BaseData> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'mutable-accessor';
 
@@ -129,30 +128,24 @@ export type Providing = {
   pairs: SlotValuePair[];
 };
 
-export function isSlot<T>(value: unknown | TgpuSlot<T>): value is TgpuSlot<T> {
+export function isSlot<T>(value: unknown): value is TgpuSlot<T> {
   return (value as TgpuSlot<T>)?.resourceType === 'slot';
 }
 
-export function isLazy<T extends TgpuLazy<unknown>>(
-  value: T | unknown,
-): value is T {
-  return (value as T)?.resourceType === 'lazy';
+export function isLazy<T>(value: unknown): value is TgpuLazy<T> {
+  return (value as TgpuLazy<T>)?.resourceType === 'lazy';
 }
 
-export function isProviding(
-  value: unknown,
-): value is { [$providing]: Providing } {
+export function isProviding(value: unknown): value is { [$providing]: Providing } {
   return (value as { [$providing]: Providing })?.[$providing] !== undefined;
 }
 
-export function isAccessor<T extends BaseData>(
-  value: unknown | TgpuAccessor<T>,
-): value is TgpuAccessor<T> {
+export function isAccessor<T extends BaseData>(value: unknown): value is TgpuAccessor<T> {
   return (value as TgpuAccessor<T>)?.resourceType === 'accessor';
 }
 
 export function isMutableAccessor<T extends BaseData>(
-  value: unknown | TgpuMutableAccessor<T>,
+  value: unknown,
 ): value is TgpuMutableAccessor<T> {
   return (value as TgpuMutableAccessor<T>)?.resourceType === 'mutable-accessor';
 }

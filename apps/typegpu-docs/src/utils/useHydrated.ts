@@ -32,14 +32,12 @@ type UseHydratedAtomReturn<T extends AnyWritableAtom> = [
  * The same as `useAtom`, but returns `unhydratedValue` instead of the atom's value
  * if the component is yet to be hydrated.
  */
-export function useHydratedAtom<
-  T extends AnyWritableAtom,
->(atom: T, unhydratedValue: ExtractAtomValue<T>): UseHydratedAtomReturn<T> {
+export function useHydratedAtom<T extends AnyWritableAtom>(
+  atom: T,
+  unhydratedValue: ExtractAtomValue<T>,
+): UseHydratedAtomReturn<T> {
   const [atomValue, atomSetter] = useAtom(atom);
   const hydrated = useHydrated();
 
-  return [
-    hydrated ? atomValue : unhydratedValue,
-    atomSetter,
-  ] as UseHydratedAtomReturn<T>;
+  return [hydrated ? atomValue : unhydratedValue, atomSetter] as UseHydratedAtomReturn<T>;
 }

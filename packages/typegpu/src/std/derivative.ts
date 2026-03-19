@@ -2,9 +2,8 @@ import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import type { AnyFloat32VecInstance } from '../data/wgslTypes.ts';
 
-type DerivativeSignature =
-  & ((value: number) => number)
-  & (<T extends AnyFloat32VecInstance>(value: T) => T);
+type DerivativeSignature = ((value: number) => number) &
+  (<T extends AnyFloat32VecInstance>(value: T) => T);
 
 const derivativeNormalError = 'Derivative builtins are not allowed on the CPU';
 

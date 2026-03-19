@@ -2,5 +2,6 @@
   "title": "Three.js - Test Mismatched Types",
   "category": "threejs",
   "dev": true,
-  "tags": ["experimental", "three.js"]
+  "tags": ["test"],
+  "coolFactor": 1
 }

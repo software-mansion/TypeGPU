@@ -7,10 +7,8 @@ import { useCallback, useLayoutEffect, useRef } from 'react';
  * @returns A stable reference of the passed in function.
  */
 
-// biome-ignore lint/suspicious/noExplicitAny: <makes the generic infer properly>
-function useEvent<TFunction extends (...params: any[]) => any>(
-  handler: TFunction,
-) {
+// oxlint-disable-next-line typescript/no-explicit-any -- makes the generic infer properly
+function useEvent<TFunction extends (...params: any[]) => any>(handler: TFunction) {
   const handlerRef = useRef(handler);
 
   // In a real implementation, this would run before layout effects

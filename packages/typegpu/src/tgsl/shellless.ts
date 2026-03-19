@@ -1,18 +1,9 @@
-import {
-  createShelllessImpl,
-  type ShelllessImpl,
-} from '../core/function/shelllessImpl.ts';
+import { createShelllessImpl, type ShelllessImpl } from '../core/function/shelllessImpl.ts';
 import { UnknownData } from '../data/dataTypes.ts';
 import { RefOperator } from '../data/ref.ts';
 import type { Snippet } from '../data/snippet.ts';
-import {
-  type BaseData,
-  isPtr,
-  isWgslArray,
-  isWgslStruct,
-} from '../data/wgslTypes.ts';
+import { type BaseData, isPtr, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
 import { WgslTypeError } from '../errors.ts';
-import { getResolutionCtx } from '../execMode.ts';
 import { getMetaData, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
 
@@ -29,8 +20,7 @@ function shallowEqualSchemas(a: BaseData, b: BaseData): boolean {
     );
   }
   if (isWgslArray(a) && isWgslArray(b)) {
-    return a.elementCount === b.elementCount &&
-      shallowEqualSchemas(a.elementType as BaseData, b.elementType as BaseData);
+    return a.elementCount === b.elementCount && shallowEqualSchemas(a.elementType, b.elementType);
   }
   if (isWgslStruct(a) && isWgslStruct(b)) {
     // Only structs with the same identity are considered equal
@@ -42,17 +32,14 @@ function shallowEqualSchemas(a: BaseData, b: BaseData): boolean {
 export class ShelllessRepository {
   cache = new Map<AnyFn, ShelllessImpl[]>();
 
-  get(
-    fn: AnyFn,
-    argSnippets: Snippet[] | undefined,
-  ): ShelllessImpl | undefined {
+  get(fn: AnyFn, argSnippets: Snippet[] | undefined): ShelllessImpl | undefined {
     const meta = getMetaData(fn);
     if (!meta?.ast) return undefined;
     if (!argSnippets && meta.ast.params.length > 0) {
       throw new Error(
-        `Cannot resolve '${
-          getName(fn)
-        }' directly, because it expects arguments. Either call it from another function, or wrap it in a shell`,
+        `Cannot resolve '${getName(
+          fn,
+        )}' directly, because it expects arguments. Either call it from another function, or wrap it in a shell`,
       );
     }
 
@@ -76,19 +63,6 @@ export class ShelllessRepository {
 
       let type = concretize(s.dataType);
 
-      if (
-        s.origin === 'constant-tgpu-const-ref' ||
-        s.origin === 'runtime-tgpu-const-ref'
-      ) {
-        // biome-ignore lint/style/noNonNullAssertion: it's there
-        const ctx = getResolutionCtx()!;
-        throw new Error(
-          `Cannot pass constant references as function arguments. Explicitly copy them by wrapping them in a schema: '${
-            ctx.resolve(type).value
-          }(...)'`,
-        );
-      }
-
       if (isPtr(type) && type.implicit) {
         // If the pointer was made implicitly (e.g. by assigning a reference to a const variable),
         // then we dereference the pointer before passing it to the function. The main reason for this,
@@ -107,11 +81,10 @@ export class ShelllessRepository {
 
     let cache = this.cache.get(fn);
     if (cache) {
-      const variant = cache.find((v) =>
-        v.argTypes.length === argTypes.length &&
-        v.argTypes.every((t, i) =>
-          shallowEqualSchemas(t, argTypes[i] as BaseData)
-        )
+      const variant = cache.find(
+        (v) =>
+          v.argTypes.length === argTypes.length &&
+          v.argTypes.every((t, i) => shallowEqualSchemas(t, argTypes[i] as BaseData)),
       );
       if (variant) {
         return variant;

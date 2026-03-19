@@ -1,11 +1,10 @@
 import tgpu, { d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 canvas.addEventListener('contextmenu', (event) => {
   if (event.target === canvas) {
@@ -52,27 +51,24 @@ const currentStateStorage = currentStateBuffer.as('readonly');
 const nextState = root.createMutable(d.arrayOf(d.atomic(d.u32), 1024 ** 2));
 
 const squareBuffer = root
-  .createBuffer(d.arrayOf(d.vec2f, 4), [
-    d.vec2f(0, 0),
-    d.vec2f(0, 1),
-    d.vec2f(1, 0),
-    d.vec2f(1, 1),
-  ])
+  .createBuffer(d.arrayOf(d.vec2f, 4), [d.vec2f(0, 0), d.vec2f(0, 1), d.vec2f(1, 0), d.vec2f(1, 1)])
   .$usage('vertex');
 
-const getIndex = tgpu.fn([d.u32, d.u32], d.u32)((x, y) => {
+const getIndex = tgpu.fn(
+  [d.u32, d.u32],
+  d.u32,
+)((x, y) => {
   const h = size.$.y;
   const w = size.$.x;
   return (y % h) * w + (x % w);
 });
 
-const getCell = tgpu.fn([d.u32, d.u32], d.u32)((x, y) =>
-  currentStateStorage.$[getIndex(x, y)]
-);
+const getCell = tgpu.fn([d.u32, d.u32], d.u32)((x, y) => currentStateStorage.$[getIndex(x, y)]);
 
-const getCellNext = tgpu.fn([d.u32, d.u32], d.u32)((x, y) =>
-  std.atomicLoad(nextState.$[getIndex(x, y)])
-);
+const getCellNext = tgpu.fn(
+  [d.u32, d.u32],
+  d.u32,
+)((x, y) => std.atomicLoad(nextState.$[getIndex(x, y)]));
 
 const updateCell = tgpu.fn([d.u32, d.u32, d.u32])((x, y, value) => {
   std.atomicStore(nextState.$[getIndex(x, y)], value);
@@ -99,7 +95,10 @@ const persistFlags = tgpu.fn([d.u32, d.u32])((x, y) => {
   updateCell(x, y, (flags << 24) | waterLevel);
 });
 
-const getStableStateBelow = tgpu.fn([d.u32, d.u32], d.u32)((upper, lower) => {
+const getStableStateBelow = tgpu.fn(
+  [d.u32, d.u32],
+  d.u32,
+)((upper, lower) => {
   const totalMass = upper + lower;
   if (totalMass <= MAX_WATER_LEVEL_UNPRESSURIZED.$) {
     return totalMass;
@@ -110,27 +109,20 @@ const getStableStateBelow = tgpu.fn([d.u32, d.u32], d.u32)((upper, lower) => {
   return MAX_WATER_LEVEL_UNPRESSURIZED.$;
 });
 
-const isWall = tgpu.fn([d.u32, d.u32], d.bool)((x, y) =>
-  getCell(x, y) >> 24 === 1
-);
+const isWall = tgpu.fn([d.u32, d.u32], d.bool)((x, y) => getCell(x, y) >> 24 === 1);
 
-const isWaterSource = tgpu.fn([d.u32, d.u32], d.bool)((x, y) =>
-  getCell(x, y) >> 24 === 2
-);
+const isWaterSource = tgpu.fn([d.u32, d.u32], d.bool)((x, y) => getCell(x, y) >> 24 === 2);
 
-const isWaterDrain = tgpu.fn([d.u32, d.u32], d.bool)((x, y) =>
-  getCell(x, y) >> 24 === 3
-);
+const isWaterDrain = tgpu.fn([d.u32, d.u32], d.bool)((x, y) => getCell(x, y) >> 24 === 3);
 
-const isClearCell = tgpu.fn([d.u32, d.u32], d.bool)((x, y) =>
-  getCell(x, y) >> 24 === 4
-);
+const isClearCell = tgpu.fn([d.u32, d.u32], d.bool)((x, y) => getCell(x, y) >> 24 === 4);
 
-const getWaterLevel = tgpu.fn([d.u32, d.u32], d.u32)((x, y) =>
-  getCell(x, y) & MAX_WATER_LEVEL.$
-);
+const getWaterLevel = tgpu.fn([d.u32, d.u32], d.u32)((x, y) => getCell(x, y) & MAX_WATER_LEVEL.$);
 
-const checkForFlagsAndBounds = tgpu.fn([d.u32, d.u32], d.bool)((x, y) => {
+const checkForFlagsAndBounds = tgpu.fn(
+  [d.u32, d.u32],
+  d.bool,
+)((x, y) => {
   if (isClearCell(x, y)) {
     updateCell(x, y, 0);
     return true;
@@ -153,12 +145,7 @@ const checkForFlagsAndBounds = tgpu.fn([d.u32, d.u32], d.bool)((x, y) => {
     return true;
   }
 
-  if (
-    y === 0 ||
-    y === size.$.y - 1 ||
-    x === 0 ||
-    x === size.$.x - 1
-  ) {
+  if (y === 0 || y === size.$.y - 1 || x === 0 || x === size.$.x - 1) {
     subtractFromCell(x, y, getWaterLevel(x, y));
     return true;
   }
@@ -179,10 +166,7 @@ const decideWaterLevel = tgpu.fn([d.u32, d.u32])((x, y) => {
 
   if (!isWall(x, y - 1)) {
     const waterLevelBelow = getWaterLevel(x, y - 1);
-    const stable = getStableStateBelow(
-      remainingWater,
-      waterLevelBelow,
-    );
+    const stable = getStableStateBelow(remainingWater, waterLevelBelow);
     if (waterLevelBelow < stable) {
       const change = stable - waterLevelBelow;
       const flow = std.min(change, viscosity.$);
@@ -200,10 +184,7 @@ const decideWaterLevel = tgpu.fn([d.u32, d.u32])((x, y) => {
   if (!isWall(x - 1, y)) {
     const flowRaw = d.i32(waterLevelBefore) - d.i32(getWaterLevel(x - 1, y));
     if (flowRaw > 0) {
-      const change = std.max(
-        std.min(4, remainingWater),
-        d.u32(flowRaw / 4),
-      );
+      const change = std.max(std.min(4, remainingWater), d.u32(flowRaw / 4));
       const flow = std.min(change, viscosity.$);
       subtractFromCell(x, y, flow);
       addToCell(x - 1, y, flow);
@@ -218,10 +199,7 @@ const decideWaterLevel = tgpu.fn([d.u32, d.u32])((x, y) => {
   if (!isWall(x + 1, y)) {
     const flowRaw = d.i32(waterLevelBefore) - d.i32(getWaterLevel(x + 1, y));
     if (flowRaw > 0) {
-      const change = std.max(
-        std.min(4, remainingWater),
-        d.u32(flowRaw / 4),
-      );
+      const change = std.max(std.min(4, remainingWater), d.u32(flowRaw / 4));
       const flow = std.min(change, viscosity.$);
       subtractFromCell(x, y, flow);
       addToCell(x + 1, y, flow);
@@ -234,10 +212,7 @@ const decideWaterLevel = tgpu.fn([d.u32, d.u32])((x, y) => {
   }
 
   if (!isWall(x, y + 1)) {
-    const stable = getStableStateBelow(
-      getWaterLevel(x, y + 1),
-      remainingWater,
-    );
+    const stable = getStableStateBelow(getWaterLevel(x, y + 1), remainingWater);
     if (stable < remainingWater) {
       const flow = std.min(remainingWater - stable, viscosity.$);
       subtractFromCell(x, y, flow);
@@ -247,7 +222,7 @@ const decideWaterLevel = tgpu.fn([d.u32, d.u32])((x, y) => {
   }
 });
 
-const vertex = tgpu['~unstable'].vertexFn({
+const vertex = tgpu.vertexFn({
   in: {
     squareData: d.vec2f,
     currentStateData: d.u32,
@@ -277,7 +252,7 @@ const vertex = tgpu['~unstable'].vertexFn({
   return { pos: d.vec4f(x, y, 0, 1), cell };
 });
 
-const fragment = tgpu['~unstable'].fragmentFn({
+const fragment = tgpu.fragmentFn({
   in: { cell: d.f32 },
   out: d.vec4f,
 })((input) => {
@@ -301,14 +276,8 @@ const fragment = tgpu['~unstable'].fragmentFn({
   return d.vec4f(0, 0, res, res);
 });
 
-const vertexInstanceLayout = tgpu.vertexLayout(
-  d.arrayOf(d.u32),
-  'instance',
-);
-const vertexLayout = tgpu.vertexLayout(
-  d.arrayOf(d.vec2f),
-  'vertex',
-);
+const vertexInstanceLayout = tgpu.vertexLayout(d.arrayOf(d.u32), 'instance');
+const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2f), 'vertex');
 
 let drawCanvasData: { idx: number; value: number }[] = [];
 
@@ -320,18 +289,18 @@ let renderChanges: () => void;
 function resetGameData() {
   drawCanvasData = [];
 
-  const compute = tgpu['~unstable'].computeFn({
+  const compute = tgpu.computeFn({
     in: { gid: d.builtin.globalInvocationId },
     workgroupSize: [options.workgroupSize, options.workgroupSize],
   })((input) => {
     decideWaterLevel(input.gid.x, input.gid.y);
   });
 
-  const computePipeline = root['~unstable'].createComputePipeline({
+  const computePipeline = root.createComputePipeline({
     compute,
   });
 
-  const renderPipeline = root['~unstable']
+  const renderPipeline = root
     .createRenderPipeline({
       attribs: {
         squareData: vertexLayout.attrib,
@@ -339,7 +308,6 @@ function resetGameData() {
       },
       vertex,
       fragment,
-      targets: { format: presentationFormat },
 
       primitive: {
         topology: 'triangle-strip',
@@ -360,14 +328,7 @@ function resetGameData() {
     );
 
     // render
-    renderPipeline
-      .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        clearValue: [0, 0, 0, 0],
-        loadOp: 'clear' as const,
-        storeOp: 'store' as const,
-      })
-      .draw(4, options.size ** 2);
+    renderPipeline.withColorAttachment({ view: context }).draw(4, options.size ** 2);
 
     currentStateBuffer.copyFrom(nextState.buffer);
   };
@@ -380,12 +341,7 @@ function resetGameData() {
 
   renderChanges = () => {
     renderPipeline
-      .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        clearValue: [0, 0, 0, 0],
-        loadOp: 'clear' as const,
-        storeOp: 'store' as const,
-      })
+      .withColorAttachment({ view: context })
       .with(vertexLayout, squareBuffer)
       .with(vertexInstanceLayout, currentStateBuffer)
       .draw(4, options.size ** 2);
@@ -470,9 +426,7 @@ canvas.onmousemove = (event) => {
 
   const cellSize = canvas.width / options.size;
   const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
-  const y = options.size -
-    Math.floor((event.offsetY * window.devicePixelRatio) / cellSize) -
-    1;
+  const y = options.size - Math.floor((event.offsetY * window.devicePixelRatio) / cellSize) - 1;
 
   handleDrawing(x, y);
 };
@@ -503,13 +457,10 @@ canvas.ontouchmove = (event) => {
   const touch = event.touches[0];
   const cellSize = canvas.width / options.size;
   const canvasPos = canvas.getBoundingClientRect();
-  const x = Math.floor(
-    ((touch.clientX - canvasPos.left) * window.devicePixelRatio) / cellSize,
-  );
-  const y = options.size -
-    Math.floor(
-      ((touch.clientY - canvasPos.top) * window.devicePixelRatio) / cellSize,
-    ) -
+  const x = Math.floor(((touch.clientX - canvasPos.left) * window.devicePixelRatio) / cellSize);
+  const y =
+    options.size -
+    Math.floor(((touch.clientY - canvasPos.top) * window.devicePixelRatio) / cellSize) -
     1;
 
   handleDrawing(x, y);
@@ -534,9 +485,7 @@ const createSampleScene = () => {
     for (let j = -smallRadius; j <= smallRadius; j++) {
       if (i * i + j * j <= smallRadius * smallRadius) {
         drawCanvasData.push({
-          idx: (middlePoint + j + options.size / 4) * options.size +
-            middlePoint +
-            i,
+          idx: (middlePoint + j + options.size / 4) * options.size + middlePoint + i,
           value: 2 << 24,
         });
       }
@@ -584,12 +533,12 @@ function run(timestamp: number) {
 }
 animationFrame = requestAnimationFrame(run);
 
-export const controls = {
+export const controls = defineControls({
   size: {
-    initial: '32',
-    options: [16, 32, 64, 128, 256, 512, 1024].map((x) => x.toString()),
-    onSelectChange: (value: string) => {
-      options.size = Number.parseInt(value);
+    initial: 32,
+    options: [16, 32, 64, 128, 256, 512, 1024],
+    onSelectChange: (value) => {
+      options.size = value;
       resetGameData();
     },
   },
@@ -599,7 +548,7 @@ export const controls = {
     min: 15,
     max: 100,
     step: 1,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       options.timestep = value;
     },
   },
@@ -609,16 +558,16 @@ export const controls = {
     min: 1,
     max: 50,
     step: 1,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       options.stepsPerTimestep = value;
     },
   },
 
   'workgroup size': {
-    initial: '1',
-    options: [1, 2, 4, 8, 16].map((x) => x.toString()),
-    onSelectChange: (value: string) => {
-      options.workgroupSize = Number.parseInt(value);
+    initial: 1,
+    options: [1, 2, 4, 8, 16],
+    onSelectChange: (value) => {
+      options.workgroupSize = value;
       resetGameData();
     },
   },
@@ -628,7 +577,7 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       options.viscosity = 1000 - value * 990;
       viscosity.write(options.viscosity);
     },
@@ -639,7 +588,7 @@ export const controls = {
     min: 1,
     max: 10,
     step: 1,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       options.brushSize = value - 1;
     },
   },
@@ -647,18 +596,18 @@ export const controls = {
   'brush type': {
     initial: 'water',
     options: BrushTypes,
-    onSelectChange: (value: string) => {
+    onSelectChange: (value) => {
       options.brushType = value;
     },
   },
 
   pause: {
     initial: false,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       paused = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);

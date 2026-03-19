@@ -11,6 +11,7 @@ on:
 
 jobs:
   treeshake-test:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
       issues: write
@@ -45,7 +46,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 24.x
           cache: 'pnpm'
           cache-dependency-path: |
             pr-branch/pnpm-lock.yaml

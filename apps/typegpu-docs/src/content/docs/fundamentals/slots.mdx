@@ -7,7 +7,7 @@ Similarly to bind group layouts, you can think of slots as of typed "holes" in T
 The main differences between slots and bound resources include the following:
 
 - Slots are filled in before the shader module compile time, instead of just before the shader execution starts.
-- Slots can contain not only buffers, but also basically anything that is allowed in TGSL, even TypeGPU functions.
+- Slots can contain not only buffers, but also basically any JavaScript value, even TypeGPU functions.
 
 Main use cases for slots include:
 
@@ -50,24 +50,25 @@ Instead, you can bind it in one of two ways.
 
 ### Binding after defining a function
 
-The first way to bind a value to a slot is to call the `with` method on a `TgpuFn` instance:
+The first way to bind a value to a slot is to call the `with` method on a wrapped TypeGPU function:
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
 // ---cut---
 const filterColorSlot = tgpu.slot<d.v3f>();
 
-const filter = tgpu.fn([d.vec3f], d.vec3f)((color) => {
+const filter = (color: d.v3f): d.v3f => {
+  'use gpu';
   const filterColor = filterColorSlot.$;
   return color.mul(filterColor);
-});
+};
 
 // Bind the filter function with a red color.
-const filterWithRed = filter
+const filterWithRed = tgpu.fn(filter)
   .with(filterColorSlot, d.vec3f(1, 0, 0));
 
 // Bind the filter function with a green color.
-const filterWithGreen = filter
+const filterWithGreen = tgpu.fn(filter)
   .with(filterColorSlot, d.vec3f(0, 1, 0));
 ```
 
@@ -97,15 +98,13 @@ const root = await tgpu.init();
 const resultBuffer = root.createMutable(d.i32, 0);
 const multiplierSlot = tgpu.slot<number>();
 
-const computeMultiply = tgpu['~unstable']
-  .computeFn({ workgroupSize: [1] })(() => {
-    resultBuffer.$ = resultBuffer.$ * multiplierSlot.$;
-  });
+const computeMultiply = tgpu.computeFn({ workgroupSize: [1] })(() => {
+  resultBuffer.$ = resultBuffer.$ * multiplierSlot.$;
+});
 
-const pipeline = root['~unstable']
+const pipeline = root
   .with(multiplierSlot, 3)
-  .withCompute(computeMultiply)
-  .createPipeline();
+  .createComputePipeline({ compute: computeMultiply });
 ```
 
 The pipeline above resolves to the following WGSL:
@@ -173,7 +172,7 @@ const gravityTowardsCenter = tgpu.fn([vec2f], vec2f)((pos) => {
 const stepPhysicsCustomized = stepPhysics
   .with(gravitySlot, gravityTowardsCenter);
 
-const main = tgpu['~unstable'].computeFn()(() => {
+const main = tgpu.computeFn()(() => {
   stepPhysicsCustomized(); // <- Will use altered gravity.
 });
 ```

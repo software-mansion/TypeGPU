@@ -1,5 +1,6 @@
 import { rgbToYcbcrMatrix } from '@typegpu/color';
 import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 const device = root.device;
@@ -17,24 +18,20 @@ const layout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
 });
 
-const fragment = tgpu['~unstable'].fragmentFn({
+const fragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
   const uv2 = uvTransform.$.mul(uv.sub(0.5)).add(0.5);
-  const col = std.textureSampleBaseClampToEdge(
-    layout.$.inputTexture,
-    sampler.$,
-    uv2,
-  );
-  const ycbcr = col.xyz.mul(rgbToYcbcrMatrix.$);
+  const col = std.textureSampleBaseClampToEdge(layout.$.inputTexture, sampler.$, uv2);
+  const ycbcr = col.rgb.mul(rgbToYcbcrMatrix.$);
   const colycbcr = color.$.mul(rgbToYcbcrMatrix.$);
 
   const crDiff = std.abs(ycbcr.y - colycbcr.y);
   const cbDiff = std.abs(ycbcr.z - colycbcr.z);
   const distance = std.length(d.vec2f(crDiff, cbDiff));
 
-  if (distance < (threshold.$ ** 2)) {
+  if (distance < threshold.$ ** 2) {
     return d.vec4f();
   }
 
@@ -60,18 +57,18 @@ if (navigator.mediaDevices.getUserMedia) {
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const renderPipeline = root['~unstable']
-  .withVertex(common.fullScreenTriangle)
-  .withFragment(fragment, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment,
+  targets: { format: presentationFormat },
+});
 
 function onVideoChange(size: { width: number; height: number }) {
   const aspectRatio = size.width / size.height;
   video.style.height = `${video.clientWidth / aspectRatio}px`;
   if (canvas.parentElement) {
     canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
-    canvas.parentElement.style.height =
-      `min(100cqh, calc(100cqw/(${aspectRatio})))`;
+    canvas.parentElement.style.height = `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
 }
 
@@ -99,10 +96,7 @@ if (isIOS) {
 let videoFrameCallbackId: number | undefined;
 let lastFrameSize: { width: number; height: number } | undefined;
 
-function processVideoFrame(
-  _: number,
-  metadata: VideoFrameCallbackMetadata,
-) {
+function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   if (video.readyState < 2) {
     videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
     return;
@@ -124,14 +118,7 @@ function processVideoFrame(
     inputTexture: device.importExternalTexture({ source: video }),
   });
 
-  renderPipeline
-    .with(group)
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .draw(3);
+  renderPipeline.with(group).withColorAttachment({ view: context }).draw(3);
 
   videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 }
@@ -140,11 +127,11 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 // #region Example controls & Cleanup
 
-export const controls = {
+export const controls = defineControls({
   color: {
-    initial: [0, 1, 0] as const,
-    onColorChange: (value: readonly [number, number, number]) => {
-      color.write(d.vec3f(...value));
+    initial: d.vec3f(0, 1, 0),
+    onColorChange: (value) => {
+      color.write(value);
     },
   },
   threshold: {
@@ -152,9 +139,9 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => threshold.write(value),
+    onSliderChange: (value) => threshold.write(value),
   },
-};
+});
 
 export function onCleanup() {
   if (videoFrameCallbackId !== undefined) {

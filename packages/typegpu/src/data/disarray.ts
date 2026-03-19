@@ -8,14 +8,9 @@ import { schemaCallWrapper } from './schemaCallWrapper.ts';
 // ----------
 
 interface DisarrayConstructor {
-  <TElement extends AnyData>(
-    elementType: TElement,
-  ): (elementCount: number) => Disarray<TElement>;
+  <TElement extends AnyData>(elementType: TElement): (elementCount: number) => Disarray<TElement>;
 
-  <TElement extends AnyData>(
-    elementType: TElement,
-    elementCount: number,
-  ): Disarray<TElement>;
+  <TElement extends AnyData>(elementType: TElement, elementCount: number): Disarray<TElement>;
 }
 
 /**
@@ -40,14 +35,12 @@ interface DisarrayConstructor {
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.
  */
-export const disarrayOf = comptime(
-  ((elementType, elementCount) => {
-    if (elementCount === undefined) {
-      return (count: number) => cpu_disarrayOf(elementType, count);
-    }
-    return cpu_disarrayOf(elementType, elementCount);
-  }) as DisarrayConstructor,
-).$name('disarrayOf');
+export const disarrayOf = comptime(((elementType, elementCount) => {
+  if (elementCount === undefined) {
+    return (count: number) => cpu_disarrayOf(elementType, count);
+  }
+  return cpu_disarrayOf(elementType, elementCount);
+}) as DisarrayConstructor).$name('disarrayOf');
 
 export function cpu_disarrayOf<TElement extends AnyData>(
   elementType: TElement,
@@ -62,9 +55,8 @@ export function cpu_disarrayOf<TElement extends AnyData>(
       );
     }
 
-    return Array.from(
-      { length: elementCount },
-      (_, i) => schemaCallWrapper(elementType, elements?.[i]),
+    return Array.from({ length: elementCount }, (_, i) =>
+      schemaCallWrapper(elementType, elements?.[i]),
     );
   };
   Object.setPrototypeOf(disarraySchema, DisarrayImpl);
@@ -72,9 +64,7 @@ export function cpu_disarrayOf<TElement extends AnyData>(
   disarraySchema.elementType = elementType;
 
   if (!Number.isInteger(elementCount) || elementCount < 0) {
-    throw new Error(
-      `Cannot create disarray schema with invalid element count: ${elementCount}.`,
-    );
+    throw new Error(`Cannot create disarray schema with invalid element count: ${elementCount}.`);
   }
   disarraySchema.elementCount = elementCount;
 

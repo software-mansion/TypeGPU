@@ -12,6 +12,7 @@ import {
   gatherTgpuAliases,
   getFunctionName,
   isShellImplementationCall,
+  operators,
   type Options,
   performExpressionNaming,
   useGpuDirective,
@@ -20,22 +21,15 @@ import { createFilterForId } from './filter.ts';
 
 // NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
 // typing for @babel/standalone does not expose them.
-const template = (
-  Babel as unknown as { packages: { template: typeof TemplateGenerator } }
-).packages.template;
-const types = (Babel as unknown as { packages: { types: typeof babel } })
-  .packages.types;
+const template = (Babel as unknown as { packages: { template: typeof TemplateGenerator } }).packages
+  .template;
+const types = (Babel as unknown as { packages: { types: typeof babel } }).packages.types;
 
 function containsUseGpuDirective(
-  node:
-    | babel.FunctionDeclaration
-    | babel.FunctionExpression
-    | babel.ArrowFunctionExpression,
+  node: babel.FunctionDeclaration | babel.FunctionExpression | babel.ArrowFunctionExpression,
 ): boolean {
-  return ((
-    'directives' in node.body ? (node.body?.directives ?? []) : []
-  )
-    .map((directive) => directive.value.value))
+  return ('directives' in node.body ? (node.body?.directives ?? []) : [])
+    .map((directive) => directive.value.value)
     .includes(useGpuDirective);
 }
 
@@ -43,18 +37,20 @@ function i(identifier: string): babel.Identifier {
   return types.identifier(identifier);
 }
 
+const fnNodeToOriginalMap = new WeakMap<
+  babel.FunctionDeclaration | babel.FunctionExpression | babel.ArrowFunctionExpression,
+  babel.FunctionDeclaration | babel.FunctionExpression | babel.ArrowFunctionExpression
+>();
+
 function functionToTranspiled(
   node: babel.ArrowFunctionExpression | babel.FunctionExpression,
   parent: babel.Node | null,
 ): babel.CallExpression {
-  const { params, body, externalNames } = transpileFn(node);
+  const { params, body, externalNames } = transpileFn(fnNodeToOriginalMap.get(node) ?? node);
   const maybeName = getFunctionName(node, parent);
 
   const metadata = types.objectExpression([
-    types.objectProperty(
-      i('v'),
-      types.numericLiteral(FORMAT_VERSION),
-    ),
+    types.objectProperty(i('v'), types.numericLiteral(FORMAT_VERSION)),
     types.objectProperty(
       i('name'),
       maybeName ? types.stringLiteral(maybeName) : types.buildUndefinedNode(),
@@ -71,12 +67,7 @@ function functionToTranspiled(
           types.returnStatement(
             types.objectExpression(
               externalNames.map((name) =>
-                types.objectProperty(
-                  i(name),
-                  i(name),
-                  false,
-                  /* shorthand */ name !== 'this',
-                )
+                types.objectProperty(i(name), i(name), false, /* shorthand */ name !== 'this'),
               ),
             ),
           ),
@@ -99,14 +90,7 @@ function functionToTranspiled(
             ),
             i('set'),
           ),
-          [
-            types.assignmentExpression(
-              '=',
-              types.memberExpression(i('$'), i('f')),
-              node,
-            ),
-            metadata,
-          ],
+          [types.assignmentExpression('=', types.memberExpression(i('$'), i('f')), node), metadata],
         ),
         types.memberExpression(i('$'), i('f')),
       ),
@@ -115,10 +99,7 @@ function functionToTranspiled(
   );
 }
 
-function wrapInAutoName(
-  node: babel.Expression,
-  name: string,
-) {
+function wrapInAutoName(node: babel.Expression, name: string) {
   return types.callExpression(
     template.expression('globalThis.__TYPEGPU_AUTONAME__ ?? (a => a)', {
       placeholderPattern: false,
@@ -128,6 +109,8 @@ function wrapInAutoName(
 }
 
 function functionVisitor(ctx: Context): TraverseOptions {
+  let inUseGpuScope = false;
+
   return {
     VariableDeclarator(path) {
       performExpressionNaming(ctx, path.node, (node, name) => {
@@ -136,6 +119,23 @@ function functionVisitor(ctx: Context): TraverseOptions {
     },
 
     AssignmentExpression(path) {
+      if (inUseGpuScope) {
+        const runtimeFn = operators[path.node.operator as keyof typeof operators];
+
+        if (runtimeFn) {
+          path.replaceWith(
+            types.assignmentExpression(
+              '=',
+              path.node.left,
+              types.callExpression(types.identifier(runtimeFn), [
+                path.node.left as babel.Expression,
+                path.node.right,
+              ]),
+            ),
+          );
+        }
+      }
+
       performExpressionNaming(ctx, path.node, (node, name) => {
         path.get('right').replaceWith(wrapInAutoName(node, name));
       });
@@ -157,71 +157,119 @@ function functionVisitor(ctx: Context): TraverseOptions {
       gatherTgpuAliases(path.node, ctx);
     },
 
-    ArrowFunctionExpression(path) {
-      const node = path.node;
-      const parent = path.parentPath.node;
-      if (containsUseGpuDirective(node)) {
-        path.replaceWith(functionToTranspiled(node, parent));
-        path.skip();
-      }
-    },
+    BinaryExpression: {
+      exit(path) {
+        if (!inUseGpuScope) {
+          return;
+        }
 
-    FunctionExpression(path) {
-      const node = path.node;
-      const parent = path.parentPath.node;
-      if (containsUseGpuDirective(node)) {
-        path.replaceWith(functionToTranspiled(node, parent));
-        path.skip();
-      }
-    },
+        const runtimeFn = operators[path.node.operator as keyof typeof operators];
 
-    FunctionDeclaration(path) {
-      const node = path.node;
-      const parent = path.parentPath.node;
-      const expression = types.functionExpression(
-        node.id,
-        node.params,
-        node.body,
-      );
-
-      if (containsUseGpuDirective(path.node) && node.id) {
-        path.replaceWith(
-          types.variableDeclaration('const', [
-            types.variableDeclarator(
-              node.id,
-              functionToTranspiled(expression, parent),
-            ),
-          ]),
-        );
-        path.skip();
-      }
-    },
-
-    CallExpression(path) {
-      const node = path.node;
-
-      if (isShellImplementationCall(node, ctx)) {
-        const implementation = node.arguments[0];
-
-        if (
-          implementation &&
-          (implementation.type === 'FunctionExpression' ||
-            implementation.type === 'ArrowFunctionExpression')
-        ) {
-          const transpiled = functionToTranspiled(
-            implementation,
-            null,
-          ) as babel.CallExpression;
-
+        if (runtimeFn) {
           path.replaceWith(
-            types.callExpression(node.callee, [
-              transpiled,
+            types.callExpression(types.identifier(runtimeFn), [
+              path.node.left as babel.Expression,
+              path.node.right,
             ]),
           );
+        }
+      },
+    },
 
+    ArrowFunctionExpression: {
+      enter(path) {
+        if (containsUseGpuDirective(path.node)) {
+          fnNodeToOriginalMap.set(path.node, types.cloneNode(path.node, true));
+          if (inUseGpuScope) {
+            throw new Error(`Nesting 'use gpu' functions is not allowed`);
+          }
+          inUseGpuScope = true;
+        }
+      },
+      exit(path) {
+        const node = path.node;
+        if (containsUseGpuDirective(node)) {
+          inUseGpuScope = false;
+          const parent = path.parentPath.node;
+          path.replaceWith(functionToTranspiled(node, parent));
           path.skip();
         }
-      }
+      },
+    },
+
+    FunctionExpression: {
+      enter(path) {
+        if (containsUseGpuDirective(path.node)) {
+          fnNodeToOriginalMap.set(path.node, types.cloneNode(path.node, true));
+          if (inUseGpuScope) {
+            throw new Error(`Nesting 'use gpu' functions is not allowed`);
+          }
+          inUseGpuScope = true;
+        }
+      },
+      exit(path) {
+        const node = path.node;
+        if (containsUseGpuDirective(node)) {
+          inUseGpuScope = false;
+          const parent = path.parentPath.node;
+          path.replaceWith(functionToTranspiled(node, parent));
+          path.skip();
+        }
+      },
+    },
+
+    FunctionDeclaration: {
+      enter(path) {
+        if (containsUseGpuDirective(path.node)) {
+          fnNodeToOriginalMap.set(path.node, types.cloneNode(path.node, true));
+          if (inUseGpuScope) {
+            throw new Error(`Nesting 'use gpu' functions is not allowed`);
+          }
+          inUseGpuScope = true;
+        }
+      },
+      exit(path) {
+        const node = (fnNodeToOriginalMap.get(path.node) ?? path.node) as babel.FunctionDeclaration;
+        if (containsUseGpuDirective(node)) {
+          inUseGpuScope = false;
+
+          if (!node.id) {
+            return;
+          }
+
+          const parent = path.parentPath.node;
+          const expression = types.functionExpression(node.id, node.params, node.body);
+
+          path.replaceWith(
+            types.variableDeclaration('const', [
+              types.variableDeclarator(node.id, functionToTranspiled(expression, parent)),
+            ]),
+          );
+          path.skip();
+        }
+      },
+    },
+
+    CallExpression: {
+      exit(path) {
+        const node = path.node;
+
+        if (isShellImplementationCall(node, ctx)) {
+          const implementation = node.arguments[0];
+
+          if (
+            implementation &&
+            (implementation.type === 'FunctionExpression' ||
+              implementation.type === 'ArrowFunctionExpression')
+          ) {
+            const transpiled = functionToTranspiled(implementation, null);
+
+            path.replaceWith(types.callExpression(node.callee, [transpiled]));
+
+            path.skip();
+          }
+        }
+      },
     },
   };
 }
@@ -230,9 +278,9 @@ export default function () {
   return {
     visitor: {
       Program(path, state) {
-        // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
+        // oxlint-disable-next-line typescript/no-explicit-any -- <oh babel babel...>
         const options = defu((state as any).opts as Options, defaultOptions);
-        // biome-ignore lint/suspicious/noExplicitAny: <oh babel babel...>
+        // oxlint-disable-next-line typescript/no-explicit-any -- <oh babel babel...>
         const id: string | undefined = (state as any).filename;
 
         const filter = createFilterForId(options);
@@ -241,9 +289,7 @@ export default function () {
         }
 
         const ctx: Context = {
-          tgpuAliases: new Set<string>(
-            options.forceTgpuAlias ? [options.forceTgpuAlias] : [],
-          ),
+          tgpuAliases: new Set<string>(options.forceTgpuAlias ? [options.forceTgpuAlias] : []),
           fileId: id,
           autoNamingEnabled: options.autoNamingEnabled,
         };

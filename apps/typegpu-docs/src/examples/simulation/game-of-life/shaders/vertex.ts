@@ -4,7 +4,7 @@ import * as std from 'typegpu/std';
 
 export const sizeSlot = tgpu.slot(d.vec2u(64, 64));
 
-export const vertexFn = tgpu['~unstable'].vertexFn({
+export const vertexFn = tgpu.vertexFn({
   in: {
     iid: d.builtin.instanceIndex,
     cell: d.u32,

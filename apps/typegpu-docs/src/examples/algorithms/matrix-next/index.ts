@@ -1,14 +1,10 @@
 import tgpu from 'typegpu';
 import { INITIAL_MAX_MATRIX_SIZE, TILE_SIZE } from './params.ts';
-import {
-  type CalculationStrategy,
-  computeLayout,
-  createMatrixData,
-  MatrixInfo,
-} from './types.ts';
+import { type CalculationStrategy, computeLayout, createMatrixData, MatrixInfo } from './types.ts';
 import { computeSharedMemory } from './computeShared.ts';
 import { computeSimple } from './computeSimple.ts';
 import { multiplyMatricesCPU } from './computeCpu.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const state = {
   dimensions: { firstRowCount: 3, firstColumnCount: 4, secondColumnCount: 2 },
@@ -30,15 +26,9 @@ const root = await tgpu.init({
 const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 
 const buffers = {
-  first: root
-    .createBuffer(createMatrixData(INITIAL_MAX_MATRIX_SIZE))
-    .$usage('storage'),
-  second: root
-    .createBuffer(createMatrixData(INITIAL_MAX_MATRIX_SIZE))
-    .$usage('storage'),
-  result: root
-    .createBuffer(createMatrixData(INITIAL_MAX_MATRIX_SIZE))
-    .$usage('storage'),
+  first: root.createBuffer(createMatrixData(INITIAL_MAX_MATRIX_SIZE)).$usage('storage'),
+  second: root.createBuffer(createMatrixData(INITIAL_MAX_MATRIX_SIZE)).$usage('storage'),
+  result: root.createBuffer(createMatrixData(INITIAL_MAX_MATRIX_SIZE)).$usage('storage'),
   info: root.createBuffer(MatrixInfo, state.dimensions).$usage('uniform'),
 };
 
@@ -60,10 +50,10 @@ function createPipelines() {
     state.gpuTime = Number(end - start) / 1_000_000;
   };
 
-  const optimized = root['~unstable'].createComputePipeline({
+  const optimized = root.createComputePipeline({
     compute: computeSharedMemory,
   });
-  const simple = root['~unstable'].createComputePipeline({
+  const simple = root.createComputePipeline({
     compute: computeSimple,
   });
 
@@ -71,9 +61,7 @@ function createPipelines() {
     'gpu-optimized': hasTimestampQuery
       ? optimized.withPerformanceCallback(performanceCallback)
       : optimized,
-    'gpu-simple': hasTimestampQuery
-      ? simple.withPerformanceCallback(performanceCallback)
-      : simple,
+    'gpu-simple': hasTimestampQuery ? simple.withPerformanceCallback(performanceCallback) : simple,
   };
 }
 
@@ -90,29 +78,19 @@ function resizeBuffersIfNeeded(requiredSize: number) {
     buffer.destroy();
   }
 
-  buffers.first = root
-    .createBuffer(createMatrixData(state.bufferCapacity))
-    .$usage('storage');
-  buffers.second = root
-    .createBuffer(createMatrixData(state.bufferCapacity))
-    .$usage('storage');
-  buffers.result = root
-    .createBuffer(createMatrixData(state.bufferCapacity))
-    .$usage('storage');
+  buffers.first = root.createBuffer(createMatrixData(state.bufferCapacity)).$usage('storage');
+  buffers.second = root.createBuffer(createMatrixData(state.bufferCapacity)).$usage('storage');
+  buffers.result = root.createBuffer(createMatrixData(state.bufferCapacity)).$usage('storage');
 
   bindGroup = createBindGroup();
 }
 
 function createMatrix(rows: number, cols: number) {
-  return Array.from(
-    { length: rows * cols },
-    () => Math.floor(Math.random() * 10),
-  );
+  return Array.from({ length: rows * cols }, () => Math.floor(Math.random() * 10));
 }
 
 function generateMatrices() {
-  const { firstRowCount, firstColumnCount, secondColumnCount } =
-    state.dimensions;
+  const { firstRowCount, firstColumnCount, secondColumnCount } = state.dimensions;
 
   state.matrices.first = createMatrix(firstRowCount, firstColumnCount);
   state.matrices.second = createMatrix(firstColumnCount, secondColumnCount);
@@ -121,21 +99,10 @@ function generateMatrices() {
 }
 
 function updateInputDisplays() {
-  const { firstRowCount, firstColumnCount, secondColumnCount } =
-    state.dimensions;
+  const { firstRowCount, firstColumnCount, secondColumnCount } = state.dimensions;
 
-  printMatrixToHtml(
-    firstTable,
-    state.matrices.first,
-    firstRowCount,
-    firstColumnCount,
-  );
-  printMatrixToHtml(
-    secondTable,
-    state.matrices.second,
-    firstColumnCount,
-    secondColumnCount,
-  );
+  printMatrixToHtml(firstTable, state.matrices.first, firstRowCount, firstColumnCount);
+  printMatrixToHtml(secondTable, state.matrices.second, firstColumnCount, secondColumnCount);
 }
 
 let isComputing = false;
@@ -148,8 +115,7 @@ async function compute() {
   isComputing = true;
 
   try {
-    const { firstRowCount, firstColumnCount, secondColumnCount } =
-      state.dimensions;
+    const { firstRowCount, firstColumnCount, secondColumnCount } = state.dimensions;
     const maxSize = Math.max(
       firstRowCount * firstColumnCount,
       firstColumnCount * secondColumnCount,
@@ -184,10 +150,7 @@ async function compute() {
       await root.device.queue.onSubmittedWorkDone();
 
       const gpuResult = await buffers.result.read();
-      state.matrices.result = gpuResult.slice(
-        0,
-        firstRowCount * secondColumnCount,
-      );
+      state.matrices.result = gpuResult.slice(0, firstRowCount * secondColumnCount);
     }
 
     const totalTime = performance.now() - startTime;
@@ -198,18 +161,9 @@ async function compute() {
     }[state.strategy];
 
     const showGpu = state.strategy !== 'cpu' && hasTimestampQuery;
-    updateTimingDisplay(
-      strategyName,
-      totalTime,
-      showGpu ? state.gpuTime : undefined,
-    );
+    updateTimingDisplay(strategyName, totalTime, showGpu ? state.gpuTime : undefined);
 
-    printMatrixToHtml(
-      resultTable,
-      state.matrices.result,
-      firstRowCount,
-      secondColumnCount,
-    );
+    printMatrixToHtml(resultTable, state.matrices.result, firstRowCount, secondColumnCount);
   } finally {
     isComputing = false;
   }
@@ -220,35 +174,23 @@ async function compute() {
 const firstTable = document.querySelector('.matrix-a') as HTMLDivElement;
 const secondTable = document.querySelector('.matrix-b') as HTMLDivElement;
 const resultTable = document.querySelector('.matrix-result') as HTMLDivElement;
-const timingDisplay = document.querySelector(
-  '.timing-content',
-) as HTMLDivElement;
+const timingDisplay = document.querySelector('.timing-content') as HTMLDivElement;
 
 generateMatrices();
 
-function updateTimingDisplay(
-  strategy: string,
-  totalTime: number,
-  gpuTime?: number,
-) {
+function updateTimingDisplay(strategy: string, totalTime: number, gpuTime?: number) {
   if (!timingDisplay) return;
 
-  timingDisplay.innerHTML = gpuTime !== undefined
-    ? `<div>${strategy} computation:</div>
+  timingDisplay.innerHTML =
+    gpuTime !== undefined
+      ? `<div>${strategy} computation:</div>
        <div style="font-size: 0.9em; margin-top: 0.25rem;">
-         Total: ${totalTime.toFixed(2)}ms | GPU: ${
-      gpuTime >= 0.01 ? gpuTime.toFixed(2) : '<0.01'
-    }ms
+         Total: ${totalTime.toFixed(2)}ms | GPU: ${gpuTime >= 0.01 ? gpuTime.toFixed(2) : '<0.01'}ms
        </div>`
-    : `${strategy} computation: ${totalTime.toFixed(2)}ms`;
+      : `${strategy} computation: ${totalTime.toFixed(2)}ms`;
 }
 
-function printMatrixToHtml(
-  element: HTMLDivElement,
-  matrix: number[],
-  rows: number,
-  cols: number,
-) {
+function printMatrixToHtml(element: HTMLDivElement, matrix: number[], rows: number, cols: number) {
   const isMobile = window.innerWidth <= 480;
   const isTablet = window.innerWidth <= 768;
   const maxDisplaySize = isMobile ? 3 : isTablet ? 5 : 8;
@@ -299,20 +241,20 @@ function printMatrixToHtml(
 
 const paramSettings = { min: 1, max: 512, step: 1 };
 
-export const controls = {
+export const controls = defineControls({
   Reshuffle: { onButtonClick: () => generateMatrices() },
   Compute: { onButtonClick: () => compute() },
   strategy: {
     initial: 'gpu-optimized',
     options: ['gpu-optimized', 'gpu-simple', 'cpu'],
-    onSelectChange: (value: CalculationStrategy) => {
+    onSelectChange: (value) => {
       state.strategy = value;
     },
   },
   '#1 rows': {
     initial: state.dimensions.firstRowCount,
     ...paramSettings,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       state.dimensions.firstRowCount = value;
       generateMatrices();
     },
@@ -320,7 +262,7 @@ export const controls = {
   '#1 columns': {
     initial: state.dimensions.firstColumnCount,
     ...paramSettings,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       state.dimensions.firstColumnCount = value;
       generateMatrices();
     },
@@ -328,12 +270,12 @@ export const controls = {
   '#2 columns': {
     initial: state.dimensions.secondColumnCount,
     ...paramSettings,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       state.dimensions.secondColumnCount = value;
       generateMatrices();
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

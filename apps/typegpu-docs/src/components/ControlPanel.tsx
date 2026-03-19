@@ -1,15 +1,14 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import DiscordIconSvg from '../assets/discord-icon.svg';
+import GithubIconSvg from '../assets/github-icon.svg';
 import { useId, useState } from 'react';
 import { runWithCatchAtom } from '../utils/examples/currentSnackbarAtom.ts';
 import {
   type ExampleControlParam,
   exampleControlsAtom,
 } from '../utils/examples/exampleControlAtom.ts';
-import {
-  codeEditorShownAtom,
-  menuShownAtom,
-} from '../utils/examples/exampleViewStateAtoms.ts';
+import { codeEditorShownAtom, menuShownAtom } from '../utils/examples/exampleViewStateAtoms.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { Button } from './design/Button.tsx';
 import { ColorPicker } from './design/ColorPicker.tsx';
@@ -19,6 +18,7 @@ import { TextArea } from './design/TextArea.tsx';
 import { Toggle } from './design/Toggle.tsx';
 import { VectorSlider } from './design/VectorSlider.tsx';
 import { FPSCounter } from './FpsCounter.tsx';
+import type { d } from 'typegpu';
 
 function ToggleRow({
   label,
@@ -26,7 +26,7 @@ function ToggleRow({
   onChange,
 }: {
   label: string;
-  initial?: boolean;
+  initial: boolean;
   onChange: (value: boolean) => void;
 }) {
   const [value, setValue] = useState(initial);
@@ -36,18 +36,15 @@ function ToggleRow({
 
   return (
     <>
-      <div className='text-sm'>{label}</div>
+      <div className="text-sm">{label}</div>
 
-      <label
-        htmlFor={toggleId}
-        className='grid h-10 cursor-pointer items-center justify-end'
-      >
+      <label htmlFor={toggleId} className="grid h-10 cursor-pointer items-center justify-end">
         <Toggle
           id={toggleId}
           checked={value}
           onChange={(e) => {
             setValue(e.target.checked);
-            runWithCatch(() => onChange(e.target.checked));
+            void runWithCatch(() => onChange(e.target.checked));
           }}
         />
       </label>
@@ -64,7 +61,7 @@ function SliderRow({
   onChange,
 }: {
   label: string;
-  initial?: number;
+  initial: number;
   min?: number;
   max?: number;
   step?: number;
@@ -75,7 +72,7 @@ function SliderRow({
 
   return (
     <>
-      <div className='text-sm'>{label}</div>
+      <div className="text-sm">{label}</div>
 
       <Slider
         min={min}
@@ -84,14 +81,14 @@ function SliderRow({
         value={value}
         onChange={(newValue) => {
           setValue(newValue);
-          runWithCatch(() => onChange(newValue));
+          void runWithCatch(() => onChange(newValue));
         }}
       />
     </>
   );
 }
 
-function VectorSliderRow({
+function VectorSliderRow<T extends d.v2f | d.v3f | d.v4f>({
   label,
   initial,
   min,
@@ -100,18 +97,18 @@ function VectorSliderRow({
   onChange,
 }: {
   label: string;
-  initial?: number[];
-  min: number[];
-  max: number[];
-  step: number[];
-  onChange: (value: number[]) => void;
+  initial: T;
+  min: T;
+  max: T;
+  step: T;
+  onChange: (value: T) => void;
 }) {
-  const [value, setValue] = useState<number[]>(initial ?? min);
+  const [value, setValue] = useState<T>(initial);
   const runWithCatch = useSetAtom(runWithCatchAtom);
 
   return (
     <>
-      <div className='text-sm'>{label}</div>
+      <div className="text-sm">{label}</div>
 
       <VectorSlider
         min={min}
@@ -119,8 +116,8 @@ function VectorSliderRow({
         step={step}
         value={value}
         onChange={(newValue) => {
-          setValue(newValue);
-          runWithCatch(() => onChange(newValue));
+          setValue(newValue as T);
+          void runWithCatch(() => onChange(newValue as T));
         }}
       />
     </>
@@ -133,23 +130,21 @@ function ColorPickerRow({
   onChange,
 }: {
   label: string;
-  initial?: readonly [number, number, number];
-  onChange: (value: readonly [number, number, number]) => void;
+  initial: d.v3f;
+  onChange: (value: d.v3f) => void;
 }) {
-  const [value, setValue] = useState<readonly [number, number, number]>(
-    initial ?? [0, 0, 0],
-  );
+  const [value, setValue] = useState<d.v3f>(initial);
   const runWithCatch = useSetAtom(runWithCatchAtom);
 
   return (
     <>
-      <div className='text-sm'>{label}</div>
+      <div className="text-sm">{label}</div>
 
       <ColorPicker
         value={value}
         onChange={(newValue) => {
           setValue(newValue);
-          runWithCatch(() => onChange(newValue));
+          void runWithCatch(() => onChange(newValue));
         }}
       />
     </>
@@ -162,7 +157,7 @@ function TextAreaRow({
   onChange,
 }: {
   label: string;
-  initial?: string;
+  initial: string;
   onChange: (value: string) => void;
 }) {
   const [value, setValue] = useState(initial ?? '');
@@ -170,13 +165,13 @@ function TextAreaRow({
 
   return (
     <>
-      <div className='text-sm'>{label}</div>
+      <div className="text-sm">{label}</div>
 
       <TextArea
         value={value}
         onChange={(newValue) => {
           setValue(newValue);
-          runWithCatch(() => onChange(newValue));
+          void runWithCatch(() => onChange(newValue));
         }}
       />
     </>
@@ -190,7 +185,7 @@ function SelectRow({
   onChange,
 }: {
   label: string;
-  initial?: string;
+  initial: string;
   options: string[];
   onChange: (value: string) => void;
 }) {
@@ -199,14 +194,14 @@ function SelectRow({
 
   return (
     <>
-      <div className='text-sm'>{label}</div>
+      <div className="text-sm">{label}</div>
 
       <Select
         value={value}
         options={options}
         onChange={(newValue) => {
           setValue(newValue);
-          runWithCatch(() => onChange(newValue));
+          void runWithCatch(() => onChange(newValue));
         }}
       />
     </>
@@ -217,94 +212,74 @@ function ButtonRow({ label, onClick }: { label: string; onClick: () => void }) {
   const runWithCatch = useSetAtom(runWithCatchAtom);
 
   return (
-    <div className='col-span-2 grid h-10'>
+    <div className="col-span-2 grid h-10">
       <Button onClick={() => runWithCatch(onClick)}>{label}</Button>
     </div>
   );
 }
 
 function paramToControlRow(param: ExampleControlParam) {
-  return 'onSelectChange' in param
-    ? (
-      <SelectRow
-        label={param.label}
-        key={param.label}
-        options={param.options}
-        initial={param.initial}
-        onChange={param.onSelectChange}
-      />
-    )
-    : 'onToggleChange' in param
-    ? (
-      <ToggleRow
-        key={param.label}
-        label={param.label}
-        onChange={param.onToggleChange}
-        initial={param.initial}
-      />
-    )
-    : 'onSliderChange' in param
-    ? (
-      <SliderRow
-        key={param.label}
-        label={param.label}
-        onChange={param.onSliderChange}
-        min={param.min}
-        max={param.max}
-        step={param.step}
-        initial={param.initial}
-      />
-    )
-    : 'onVectorSliderChange' in param
-    ? (
-      <VectorSliderRow
-        key={param.label}
-        label={param.label}
-        onChange={param.onVectorSliderChange}
-        min={param.min}
-        max={param.max}
-        step={param.step}
-        initial={param.initial}
-      />
-    )
-    : 'onColorChange' in param
-    ? (
-      <ColorPickerRow
-        key={param.label}
-        label={param.label}
-        onChange={param.onColorChange}
-        initial={param.initial}
-      />
-    )
-    : 'onButtonClick' in param
-    ? (
-      <ButtonRow
-        key={param.label}
-        label={param.label}
-        onClick={param.onButtonClick}
-      />
-    )
-    : 'onTextChange' in param
-    ? (
-      <TextAreaRow
-        key={param.label}
-        label={param.label}
-        onChange={param.onTextChange}
-        initial={param.initial}
-      />
-    )
-    : (
-      unreachable(param)
-    );
+  return 'onSelectChange' in param ? (
+    <SelectRow
+      label={param.label}
+      key={param.label}
+      options={param.options}
+      initial={param.initial}
+      onChange={param.onSelectChange}
+    />
+  ) : 'onToggleChange' in param ? (
+    <ToggleRow
+      key={param.label}
+      label={param.label}
+      onChange={param.onToggleChange}
+      initial={param.initial}
+    />
+  ) : 'onSliderChange' in param ? (
+    <SliderRow
+      key={param.label}
+      label={param.label}
+      onChange={param.onSliderChange}
+      min={param.min}
+      max={param.max}
+      step={param.step}
+      initial={param.initial}
+    />
+  ) : 'onVectorSliderChange' in param ? (
+    <VectorSliderRow
+      key={param.label}
+      label={param.label}
+      onChange={param.onVectorSliderChange as (value: d.v2f | d.v3f | d.v4f) => void}
+      min={param.min}
+      max={param.max}
+      step={param.step}
+      initial={param.initial}
+    />
+  ) : 'onColorChange' in param ? (
+    <ColorPickerRow
+      key={param.label}
+      label={param.label}
+      onChange={param.onColorChange}
+      initial={param.initial}
+    />
+  ) : 'onButtonClick' in param ? (
+    <ButtonRow key={param.label} label={param.label} onClick={param.onButtonClick} />
+  ) : 'onTextChange' in param ? (
+    <TextAreaRow
+      key={param.label}
+      label={param.label}
+      onChange={param.onTextChange}
+      initial={param.initial}
+    />
+  ) : (
+    unreachable(param)
+  );
 }
 
 const unreachable = (_: never) => null;
 
 export function ControlPanel() {
   const [menuShowing, setMenuShowing] = useAtom(menuShownAtom);
-  const [codeEditorShowing, setCodeEditorShowing] = useAtom(
-    codeEditorShownAtom,
-  );
+  const [codeEditorShowing, setCodeEditorShowing] = useAtom(codeEditorShownAtom);
   const exampleControlParams = useAtomValue(exampleControlsAtom);
 
   const showLeftMenuId = useId();
@@ -318,12 +293,12 @@ export function ControlPanel() {
       )}
     >
       <FPSCounter />
-      <div className='hidden flex-col gap-4 md:flex'>
-        <h2 className='font-medium text-xl'>Control panel</h2>
+      <div className="hidden flex-col gap-4 md:flex">
+        <h2 className="font-medium text-xl">Control panel</h2>
 
         <label
           htmlFor={showLeftMenuId}
-          className='flex cursor-pointer items-center justify-between gap-3 text-sm'
+          className="flex cursor-pointer items-center justify-between gap-3 text-sm"
         >
           <span>Show left menu</span>
           <Toggle
@@ -334,7 +309,7 @@ export function ControlPanel() {
         </label>
         <label
           htmlFor={showCodeEditorId}
-          className='flex cursor-pointer items-center justify-between gap-3 text-sm'
+          className="flex cursor-pointer items-center justify-between gap-3 text-sm"
         >
           <span>Show code editor</span>
           <Toggle
@@ -344,17 +319,29 @@ export function ControlPanel() {
           />
         </label>
 
-        <hr className='my-0 box-border w-full border-tameplum-100 border-t' />
+        <hr className="my-0 box-border w-full border-tameplum-100 border-t" />
       </div>
 
       {isGPUSupported && (
         <>
-          <h2 className='m-0 font-medium text-xl'>Example controls</h2>
-          <div className='grid grid-cols-2 items-center gap-4 overflow-auto p-1 pb-2'>
+          <h2 className="m-0 font-medium text-xl">Example controls</h2>
+          <div className="grid grid-cols-2 items-center gap-4 overflow-auto p-1 pb-2">
             {exampleControlParams.map(paramToControlRow)}
           </div>
         </>
       )}
+
+      <div className="mt-auto hidden items-center justify-between pt-2 text-tameplum-800 text-xs md:flex">
+        <div>&copy; {new Date().getFullYear()} Software Mansion S.A.</div>
+        <div className="flex items-center gap-3">
+          <a href="https://discord.gg/8jpfgDqPcM" target="_blank" rel="noreferrer">
+            <img src={DiscordIconSvg.src} className="opacity-75" alt="discord logo" />
+          </a>
+          <a href="https://github.com/software-mansion/TypeGPU" target="_blank" rel="noreferrer">
+            <img src={GithubIconSvg.src} className="opacity-75" alt="github logo" />
+          </a>
+        </div>
+      </div>
     </div>
   );
 }

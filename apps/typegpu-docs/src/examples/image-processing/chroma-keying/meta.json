@@ -1,5 +1,6 @@
 {
   "title": "Chroma Keying",
   "category": "image-processing",
-  "tags": ["camera", "filtering"]
+  "tags": ["camera", "color", "ecosystem", "filtering", "segmentation"],
+  "coolFactor": 5
 }
