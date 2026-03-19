@@ -3,7 +3,7 @@ import { ruleTester } from './ruleTester.ts';
 import { invalidAssignment } from '../src/rules/invalidAssignment.ts';
 
 describe('invalidAssignment', () => {
-  ruleTester.run('parameterAssignment', invalidAssignment, {
+  ruleTester.run('invalidAssignment', invalidAssignment, {
     valid: [
       // not inside 'use gpu' function
       'const fn = (a) => { a = {}; }',
@@ -108,7 +108,7 @@ describe('invalidAssignment', () => {
     ],
   });
 
-  ruleTester.run('jsAssignment', invalidAssignment, {
+  ruleTester.run('invalidAssignment', invalidAssignment, {
     valid: [
       // not inside 'use gpu' function
       'let a; const fn = () => { a = 1 }',
