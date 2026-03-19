@@ -1,3 +1,4 @@
+// @ts-nocheck -- language.typescript is deprecated, but its replacement is not yet exported
 import { languages } from 'tsover-monaco-editor';
 
 export const tsnotoverCompilerOptions: languages.typescript.CompilerOptions = {

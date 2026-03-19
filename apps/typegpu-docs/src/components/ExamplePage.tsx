@@ -6,6 +6,7 @@ import { ExampleNotFound } from './ExampleNotFound.tsx';
 import { ExampleView } from './ExampleView.tsx';
 
 // This setup is required for tsover to work, because monaco-react won't use custom monaco without `loader.config()`
+// Config docs: https://www.npmjs.com/package/@monaco-editor/react?activeTab=readme#loader-config
 // Integration docs: https://github.com/microsoft/monaco-editor/blob/main/docs/integrate-esm.md
 import { loader } from '@monaco-editor/react';
 import * as monaco from 'tsover-monaco-editor';
