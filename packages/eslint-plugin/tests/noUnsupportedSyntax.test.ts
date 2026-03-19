@@ -38,7 +38,7 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = () => { 'use gpu'; await foo(); }",
+        code: "const fn = async () => { 'use gpu'; await foo(); }",
         errors: [
           {
             messageId: 'unsupportedSyntax',
