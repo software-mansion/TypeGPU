@@ -145,17 +145,18 @@ export function ExampleView({ example, common }: Props) {
                   shown={currentFilePath === 'index.html'}
                   file={htmlFile}
                   language={'html'}
-                  tsoverEnabled={false} />
+                  tsoverEnabled={false}
+                />
 
-                {tsFiles.map((file) =>
+                {tsFiles.map((file) => (
                   <CodeEditor
                     key={file.path}
                     shown={file.path === currentFilePath}
-                    language={"typescript"}
+                    language={'typescript'}
                     tsoverEnabled={tsoverUsed}
                     file={file}
                   />
-                )}
+                ))}
               </div>
 
               <div className="absolute right-0 z-5 md:top-15 md:right-8">

@@ -85,8 +85,8 @@ function handleEditorOnMount(editor: editor.IStandaloneCodeEditor) {
 }
 
 type Props = {
-  language: 'typescript' | 'html',
-  tsoverEnabled: boolean,
+  language: 'typescript' | 'html';
+  tsoverEnabled: boolean;
   file: ExampleSrcFile | ExampleCommonFile;
   shown: boolean;
 };
@@ -96,9 +96,7 @@ export function CodeEditor(props: Props) {
 
   // Monaco needs relative paths to work correctly and '../../common/file.ts' will not do
   const path =
-    'common' in file
-      ? `common/${file.path}`
-      : `${file.exampleKey.replace('--', '/')}/${file.path}`;
+    'common' in file ? `common/${file.path}` : `${file.exampleKey.replace('--', '/')}/${file.path}`;
 
   return (
     <div className={shown ? 'h-[calc(100%-7rem)] md:h-[calc(100%-3rem)]' : 'hidden'}>
@@ -107,7 +105,7 @@ export function CodeEditor(props: Props) {
         value={tsoverEnabled ? file.content : (file.tsnotoverContent ?? file.content)}
         path={path}
         beforeMount={language === 'typescript' ? handleEditorWillMount(tsoverEnabled) : undefined}
-        onMount={language === 'typescript' ? handleEditorOnMount as OnMount : undefined}
+        onMount={language === 'typescript' ? (handleEditorOnMount as OnMount) : undefined}
         options={{
           minimap: {
             enabled: false,
@@ -118,4 +116,4 @@ export function CodeEditor(props: Props) {
       />
     </div>
   );
-};
+}
