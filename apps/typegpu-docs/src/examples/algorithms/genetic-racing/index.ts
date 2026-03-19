@@ -367,12 +367,7 @@ const carFragment = tgpu.fragmentFn({
 const instanceLayout = tgpu.vertexLayout(CarStateLayout, 'instance');
 
 const carPipeline = root.createRenderPipeline({
-  attribs: {
-    position: instanceLayout.attrib.position,
-    angle: instanceLayout.attrib.angle,
-    alive: instanceLayout.attrib.alive,
-    progress: instanceLayout.attrib.progress,
-  },
+  attribs: instanceLayout.attrib,
   vertex: carVertex,
   fragment: carFragment,
   primitive: { topology: 'triangle-strip' },
