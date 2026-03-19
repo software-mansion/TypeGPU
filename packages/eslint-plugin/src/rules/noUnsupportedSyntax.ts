@@ -111,10 +111,10 @@ export const noUnsupportedSyntax = createRule({
         if (!directives.insideUseGpu()) {
           return;
         }
-        if (node.method === true) {
+        if (node.method) {
           report(node, 'object method shorthand');
         }
-        if (node.computed === true) {
+        if (node.computed) {
           report(node, 'computed property key');
         }
       },
@@ -165,7 +165,7 @@ export const noUnsupportedSyntax = createRule({
         if (!directives.insideUseGpu()) {
           return;
         }
-        if (node.prefix === true) {
+        if (node.prefix) {
           report(node, 'prefix update expression');
         }
       },
