@@ -65,15 +65,6 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = () => { 'use gpu'; const obj = { [key]: 1 }; }",
-        errors: [
-          {
-            messageId: 'unsupportedSyntax',
-            data: { snippet: '[key]: 1', syntax: 'computed property key' },
-          },
-        ],
-      },
-      {
         code: "const fn = () => { 'use gpu'; do { } while (x); }",
         errors: [
           {
@@ -92,14 +83,11 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = () => { 'use gpu'; let a = 1, b = 2; }",
+        code: "const fn = () => { 'use gpu'; const r = /abc/; }",
         errors: [
           {
             messageId: 'unsupportedSyntax',
-            data: {
-              snippet: 'let a = 1, b = 2;',
-              syntax: 'Multiple variable declarations in one statement',
-            },
+            data: { snippet: '/abc/', syntax: 'regular expression literal' },
           },
         ],
       },
@@ -113,24 +101,6 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = () => { 'use gpu'; const obj = { foo() {} }; }",
-        errors: [
-          {
-            messageId: 'unsupportedSyntax',
-            data: { snippet: 'foo() {}', syntax: 'object method shorthand' },
-          },
-        ],
-      },
-      {
-        code: "const fn = () => { 'use gpu'; ++x; }",
-        errors: [
-          {
-            messageId: 'unsupportedSyntax',
-            data: { snippet: '++x', syntax: 'prefix update expression' },
-          },
-        ],
-      },
-      {
         code: "const fn = () => { 'use gpu'; obj.#buffer.$ = 1; }",
         errors: [
           {
@@ -140,11 +110,20 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = () => { 'use gpu'; const r = /abc/; }",
+        code: "const fn = () => { 'use gpu'; const obj = { foo() {} }; }",
         errors: [
           {
             messageId: 'unsupportedSyntax',
-            data: { snippet: '/abc/', syntax: 'regular expression literal' },
+            data: { snippet: 'foo() {}', syntax: 'object method shorthand' },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; const obj = { [key]: 1 }; }",
+        errors: [
+          {
+            messageId: 'unsupportedSyntax',
+            data: { snippet: '[key]: 1', syntax: 'computed property key' },
           },
         ],
       },
@@ -182,6 +161,15 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
+        code: "const fn = () => { 'use gpu'; const x = tag`hello`; }",
+        errors: [
+          {
+            messageId: 'unsupportedSyntax',
+            data: { snippet: '`hello`', syntax: 'template literal' },
+          },
+        ],
+      },
+      {
         code: "const fn = () => { 'use gpu'; throw new Error('x'); }",
         errors: [
           {
@@ -195,15 +183,6 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = () => { 'use gpu'; const x = tag`hello`; }",
-        errors: [
-          {
-            messageId: 'unsupportedSyntax',
-            data: { snippet: '`hello`', syntax: 'template literal' },
-          },
-        ],
-      },
-      {
         code: "const fn = () => { 'use gpu'; try { } catch(e) { } }",
         errors: [
           {
@@ -213,11 +192,32 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
+        code: "const fn = () => { 'use gpu'; ++x; }",
+        errors: [
+          {
+            messageId: 'unsupportedSyntax',
+            data: { snippet: '++x', syntax: 'prefix update expression' },
+          },
+        ],
+      },
+      {
         code: "const fn = () => { 'use gpu'; var x = 1; }",
         errors: [
           {
             messageId: 'unsupportedSyntax',
             data: { snippet: 'var x = 1;', syntax: "'var' declaration" },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; let a = 1, b = 2; }",
+        errors: [
+          {
+            messageId: 'unsupportedSyntax',
+            data: {
+              snippet: 'let a = 1, b = 2;',
+              syntax: 'Multiple variable declarations in one statement',
+            },
           },
         ],
       },
