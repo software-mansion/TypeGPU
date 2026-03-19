@@ -33,6 +33,22 @@ export function isEphemeralOrigin(space: Origin) {
   return space === 'runtime' || space === 'constant' || space === 'argument';
 }
 
+/**
+ * What happens to a snippet's origin when it's deep copied in JS, and left as is in WGSL?
+ * e.g. `vec3f(vec3f(0, 1, 2))`
+ */
+export function fallthroughCopyOrigin(origin: Origin): Origin {
+  if (
+    origin === 'runtime' || // runtime values stay runtime
+    origin === 'constant' // constant values stay constant
+  ) {
+    // The origin is kept as-is
+    return origin;
+  }
+  // All other origins become runtime
+  return 'runtime';
+}
+
 export function isEphemeralSnippet(snippet: Snippet) {
   return isEphemeralOrigin(snippet.origin);
 }
@@ -86,16 +102,8 @@ export function isSnippetNumeric(snippet: Snippet) {
   return isNumericSchema(snippet.dataType);
 }
 
-export function snip(
-  value: string,
-  dataType: BaseData,
-  origin: Origin,
-): ResolvedSnippet;
-export function snip(
-  value: unknown,
-  dataType: BaseData | UnknownData,
-  origin: Origin,
-): Snippet;
+export function snip(value: string, dataType: BaseData, origin: Origin): ResolvedSnippet;
+export function snip(value: unknown, dataType: BaseData | UnknownData, origin: Origin): Snippet;
 export function snip(
   value: unknown,
   dataType: BaseData | UnknownData,

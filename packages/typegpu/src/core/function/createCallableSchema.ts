@@ -1,33 +1,27 @@
-import { type MapValueToSnippet, snip } from '../../data/snippet.ts';
+import { type MapValueToSnippet, ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { type BaseData, isPtr } from '../../data/wgslTypes.ts';
 import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
-import {
-  type DualFn,
-  isKnownAtComptime,
-  NormalState,
-  type ResolutionCtx,
-} from '../../types.ts';
+import { type DualFn, isKnownAtComptime, NormalState, type ResolutionCtx } from '../../types.ts';
 import type { AnyFn } from './fnTypes.ts';
 
 type MapValueToDataType<T> = { [K in keyof T]: BaseData };
 
 interface CallableSchemaOptions<T extends AnyFn> {
   readonly name: string;
+  readonly schema: () => BaseData;
   readonly normalImpl: T;
   readonly codegenImpl: (
     ctx: ResolutionCtx,
     args: MapValueToSnippet<Parameters<T>>,
-  ) => string;
-  readonly signature: (
+  ) => ResolvedSnippet;
+  readonly argTypes: (
     ...inArgTypes: MapValueToDataType<Parameters<T>>
-  ) => { argTypes: (BaseData | BaseData[])[]; returnType: BaseData };
+  ) => (BaseData | BaseData[])[];
 }
 
-export function callableSchema<T extends AnyFn>(
-  options: CallableSchemaOptions<T>,
-): DualFn<T> {
+export function callableSchema<T extends AnyFn>(options: CallableSchemaOptions<T>): DualFn<T> {
   const impl = ((...args: Parameters<T>) => {
     return options.normalImpl(...args);
   }) as DualFn<T>;
@@ -39,14 +33,14 @@ export function callableSchema<T extends AnyFn>(
       return undefined;
     },
     call(ctx, args) {
-      const { argTypes, returnType } = options.signature(
-        ...args.map((s) => {
+      const argTypes = options.argTypes(
+        ...(args.map((s) => {
           // Dereference implicit pointers
           if (isPtr(s.dataType) && s.dataType.implicit) {
             return s.dataType.inner;
           }
           return s.dataType;
-        }) as MapValueToDataType<Parameters<T>>,
+        }) as MapValueToDataType<Parameters<T>>),
       );
 
       const converted = args.map((s, idx) => {
@@ -54,20 +48,15 @@ export function callableSchema<T extends AnyFn>(
         if (!argType) {
           throw new Error('Function called with invalid arguments');
         }
-        return tryConvertSnippet(
-          ctx,
-          s,
-          argType,
-          false,
-        );
+        return tryConvertSnippet(ctx, s, argType, false);
       }) as MapValueToSnippet<Parameters<T>>;
 
       if (converted.every((s) => isKnownAtComptime(s))) {
         ctx.pushMode(new NormalState());
         try {
           return snip(
-            options.normalImpl(...converted.map((s) => s.value) as never[]),
-            returnType,
+            options.normalImpl(...(converted.map((s) => s.value) as never[])),
+            options.schema(),
             // Functions give up ownership of their return value
             /* origin */ 'constant',
           );
@@ -76,12 +65,7 @@ export function callableSchema<T extends AnyFn>(
         }
       }
 
-      return snip(
-        options.codegenImpl(ctx, converted),
-        returnType,
-        // Functions give up ownership of their return value
-        /* origin */ 'runtime',
-      );
+      return options.codegenImpl(ctx, converted);
     },
   };
 

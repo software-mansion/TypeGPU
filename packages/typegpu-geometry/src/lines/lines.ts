@@ -16,8 +16,11 @@ export const endCapSlot = tgpu.slot(roundCap);
 
 const getJoinParent = tgpu.fn([u32], u32)((i) => (i - 4) >> 1);
 
-const getJoinVertexPath = tgpu.fn([u32], JoinPath)((vertexIndex) => {
-  // deno-fmt-ignore
+const getJoinVertexPath = tgpu.fn(
+  [u32],
+  JoinPath,
+)((vertexIndex) => {
+  // oxfmt-ignore
   const lookup = [u32(0), u32(0), /* dont care */u32(0), u32(1), u32(1), u32(2), u32(2), /* dont care */u32(2), u32(3), u32(3)];
   if (vertexIndex < 10) {
     return JoinPath({
@@ -42,13 +45,10 @@ const LineSegmentOutput = struct({
   situationIndex: u32,
 });
 
-export const lineSegmentVariableWidth = tgpu.fn([
-  u32,
-  LineSegmentVertex,
-  LineSegmentVertex,
-  LineSegmentVertex,
-  LineSegmentVertex,
-], LineSegmentOutput)((vertexIndex, A, B, C, D) => {
+export const lineSegmentVariableWidth = tgpu.fn(
+  [u32, LineSegmentVertex, LineSegmentVertex, LineSegmentVertex, LineSegmentVertex],
+  LineSegmentOutput,
+)((vertexIndex, A, B, C, D) => {
   const joinPath = getJoinVertexPath(vertexIndex);
 
   const AB = sub(B.position, A.position);
@@ -91,33 +91,21 @@ export const lineSegmentVariableWidth = tgpu.fn([
   let joinCu = true;
   let joinCd = true;
   if (!isCapB) {
-    if (
-      situationIndexB === 1 || situationIndexB === 5 ||
-      dot(eBC.n2, eAB.n2) > JOIN_LIMIT.$
-    ) {
+    if (situationIndexB === 1 || situationIndexB === 5 || dot(eBC.n2, eAB.n2) > JOIN_LIMIT.$) {
       d4 = miterPoint(eBC.n2, eAB.n2);
       joinBd = false;
     }
-    if (
-      situationIndexB === 4 || situationIndexB === 5 ||
-      dot(eAB.n1, eBC.n1) > JOIN_LIMIT.$
-    ) {
+    if (situationIndexB === 4 || situationIndexB === 5 || dot(eAB.n1, eBC.n1) > JOIN_LIMIT.$) {
       d0 = miterPoint(eAB.n1, eBC.n1);
       joinBu = false;
     }
   }
   if (!isCapC) {
-    if (
-      situationIndexC === 4 || situationIndexC === 5 ||
-      dot(eCD.n2, eBC.n2) > JOIN_LIMIT.$
-    ) {
+    if (situationIndexC === 4 || situationIndexC === 5 || dot(eCD.n2, eBC.n2) > JOIN_LIMIT.$) {
       d5 = miterPoint(eCD.n2, eBC.n2);
       joinCd = false;
     }
-    if (
-      situationIndexC === 1 || situationIndexC === 5 ||
-      dot(eBC.n1, eCD.n1) > JOIN_LIMIT.$
-    ) {
+    if (situationIndexC === 1 || situationIndexC === 5 || dot(eBC.n1, eCD.n1) > JOIN_LIMIT.$) {
       d9 = miterPoint(eBC.n1, eCD.n1);
       joinCu = false;
     }
@@ -182,14 +170,14 @@ export const lineSegmentVariableWidth = tgpu.fn([
 
   let vertexPosition = vec2f();
 
-  // deno-fmt-ignore
   if (isCap) {
     if (isCSide) {
-      vertexPosition =   endCapSlot.$(vertexIndex, joinPath, V, vu, vd, j2, nBC, j4);
+      vertexPosition = endCapSlot.$(vertexIndex, joinPath, V, vu, vd, j2, nBC, j4);
     } else {
       vertexPosition = startCapSlot.$(vertexIndex, joinPath, V, vu, vd, j2, nCB, j4);
     }
   } else {
+    // oxfmt-ignore
     vertexPosition = joinSlot.$(
       situationIndex, vertexIndex,
       joinPath,

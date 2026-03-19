@@ -1,6 +1,7 @@
 {
   "title": "Concurrent Chart",
   "category": "algorithms",
-  "tags": ["compute", "concurrent", "timestamp query"],
-  "dev": true
+  "tags": ["concurrent"],
+  "dev": true,
+  "coolFactor": 4
 }

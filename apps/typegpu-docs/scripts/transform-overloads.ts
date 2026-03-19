@@ -113,11 +113,7 @@ function createProgram(allFiles: string[]): ts.Program {
   }
 
   const { config } = ts.parseConfigFileTextToJson(configPath, configText);
-  const parsedConfig = ts.parseJsonConfigFileContent(
-    config,
-    ts.sys,
-    projectRoot,
-  );
+  const parsedConfig = ts.parseJsonConfigFileContent(config, ts.sys, projectRoot);
 
   const compilerOptions: ts.CompilerOptions = {
     ...parsedConfig.options,
@@ -264,24 +260,15 @@ async function main() {
       }
     } catch (error) {
       errorCount++;
-      const errorMessage = error instanceof Error
-        ? error.message
-        : String(error);
-      console.error(
-        `Error processing ${relative(projectRoot, filePath)}: ${errorMessage}`,
-      );
-      throw new Error(
-        `Failed to transform ${
-          relative(projectRoot, filePath)
-        }: ${errorMessage}`,
-        { cause: error },
-      );
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`Error processing ${relative(projectRoot, filePath)}: ${errorMessage}`);
+      throw new Error(`Failed to transform ${relative(projectRoot, filePath)}: ${errorMessage}`, {
+        cause: error,
+      });
     }
   }
 
-  console.log(
-    `\nDone! Transformed ${transformedCount} files, ${errorCount} errors.`,
-  );
+  console.log(`\nDone! Transformed ${transformedCount} files, ${errorCount} errors.`);
 }
 
 main().catch((error) => {

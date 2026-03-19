@@ -3,9 +3,7 @@ import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
 
 export interface Timeable {
-  withPerformanceCallback(
-    callback: (start: bigint, end: bigint) => void | Promise<void>,
-  ): this;
+  withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this;
 
   withTimestampWrites(options: {
     querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
@@ -20,10 +18,7 @@ export type TimestampWritesPriors = {
     beginningOfPassWriteIndex?: number;
     endOfPassWriteIndex?: number;
   };
-  readonly performanceCallback?: (
-    start: bigint,
-    end: bigint,
-  ) => void | Promise<void>;
+  readonly performanceCallback?: (start: bigint, end: bigint) => void | Promise<void>;
   readonly hasAutoQuerySet?: boolean;
 };
 
@@ -81,8 +76,7 @@ export function createWithTimestampWrites<T extends TimestampWritesPriors>(
   };
 
   if (options.beginningOfPassWriteIndex !== undefined) {
-    timestampWrites.beginningOfPassWriteIndex =
-      options.beginningOfPassWriteIndex;
+    timestampWrites.beginningOfPassWriteIndex = options.beginningOfPassWriteIndex;
   }
   if (options.endOfPassWriteIndex !== undefined) {
     timestampWrites.endOfPassWriteIndex = options.endOfPassWriteIndex;
@@ -99,22 +93,17 @@ export function setupTimestampWrites(
   priors: TimestampWritesPriors,
   root: ExperimentalTgpuRoot,
 ): {
-  timestampWrites?:
-    | GPUComputePassTimestampWrites
-    | GPURenderPassTimestampWrites;
+  timestampWrites?: GPUComputePassTimestampWrites | GPURenderPassTimestampWrites;
 } {
   if (!priors.timestampWrites) {
     return {};
   }
 
-  const { querySet, beginningOfPassWriteIndex, endOfPassWriteIndex } =
-    priors.timestampWrites;
+  const { querySet, beginningOfPassWriteIndex, endOfPassWriteIndex } = priors.timestampWrites;
 
-  const timestampWrites:
-    | GPUComputePassTimestampWrites
-    | GPURenderPassTimestampWrites = {
-      querySet: isQuerySet(querySet) ? root.unwrap(querySet) : querySet,
-    };
+  const timestampWrites: GPUComputePassTimestampWrites | GPURenderPassTimestampWrites = {
+    querySet: isQuerySet(querySet) ? root.unwrap(querySet) : querySet,
+  };
 
   if (beginningOfPassWriteIndex !== undefined) {
     timestampWrites.beginningOfPassWriteIndex = beginningOfPassWriteIndex;
@@ -140,9 +129,7 @@ export function triggerPerformanceCallback({
   ) => void | Promise<void>;
 
   if (!querySet) {
-    throw new Error(
-      'Cannot dispatch workgroups with performance callback without a query set.',
-    );
+    throw new Error('Cannot dispatch workgroups with performance callback without a query set.');
   }
 
   if (!isQuerySet(querySet)) {
@@ -166,8 +153,7 @@ export function triggerPerformanceCallback({
       return;
     }
     const result = await querySet.read();
-    const start =
-      result[priors.timestampWrites?.beginningOfPassWriteIndex ?? 0];
+    const start = result[priors.timestampWrites?.beginningOfPassWriteIndex ?? 0];
     const end = result[priors.timestampWrites?.endOfPassWriteIndex ?? 1];
 
     if (start === undefined || end === undefined) {

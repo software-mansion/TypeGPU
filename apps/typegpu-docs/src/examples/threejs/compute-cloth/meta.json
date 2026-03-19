@@ -1,5 +1,6 @@
 {
   "title": "Three.js - compute / cloth",
   "category": "threejs",
-  "tags": ["experimental", "three.js"]
+  "tags": ["3d", "ecosystem", "interaction", "physics"],
+  "coolFactor": 5
 }

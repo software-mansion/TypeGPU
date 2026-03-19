@@ -7,7 +7,7 @@ export const PRNG = {
   LCG: 'lcg',
 } as const;
 
-export type PRNG = typeof PRNG[keyof typeof PRNG];
+export type PRNG = (typeof PRNG)[keyof typeof PRNG];
 
 const PRNG_MAP = {
   [PRNG.BPETER]: BPETER,

@@ -8,17 +8,9 @@ export const taaResolveFn = tgpu.computeFn({
     gid: d.builtin.globalInvocationId,
   },
 })(({ gid }) => {
-  const currentColor = std.textureLoad(
-    taaResolveLayout.$.currentTexture,
-    d.vec2u(gid.xy),
-    0,
-  );
+  const currentColor = std.textureLoad(taaResolveLayout.$.currentTexture, d.vec2u(gid.xy), 0);
 
-  const historyColor = std.textureLoad(
-    taaResolveLayout.$.historyTexture,
-    d.vec2u(gid.xy),
-    0,
-  );
+  const historyColor = std.textureLoad(taaResolveLayout.$.historyTexture, d.vec2u(gid.xy), 0);
 
   let minColor = d.vec3f(9999.0);
   let maxColor = d.vec3f(-9999.0);
@@ -34,11 +26,7 @@ export const taaResolveFn = tgpu.computeFn({
         d.vec2i(dimensions.xy).sub(d.vec2i(1)),
       );
 
-      const neighborColor = std.textureLoad(
-        taaResolveLayout.$.currentTexture,
-        clampedCoord,
-        0,
-      );
+      const neighborColor = std.textureLoad(taaResolveLayout.$.currentTexture, clampedCoord, 0);
 
       minColor = std.min(minColor, neighborColor.rgb);
       maxColor = std.max(maxColor, neighborColor.rgb);
@@ -56,52 +44,29 @@ export const taaResolveFn = tgpu.computeFn({
 
   const borderSize = d.f32(0.02);
 
-  const fadeInX = std.smoothstep(
-    textRegionMinX - borderSize,
-    textRegionMinX + borderSize,
-    uv.x,
-  );
-  const fadeOutX = d.f32(1.0) - (std.smoothstep(
-    textRegionMaxX - borderSize,
-    textRegionMaxX + borderSize,
-    uv.x,
-  ));
-  const fadeInY = std.smoothstep(
-    textRegionMinY - borderSize,
-    textRegionMinY + borderSize,
-    uv.y,
-  );
-  const fadeOutY = d.f32(1.0) - (std.smoothstep(
-    textRegionMaxY - borderSize,
-    textRegionMaxY + borderSize,
-    uv.y,
-  ));
+  const fadeInX = std.smoothstep(textRegionMinX - borderSize, textRegionMinX + borderSize, uv.x);
+  const fadeOutX =
+    d.f32(1.0) - std.smoothstep(textRegionMaxX - borderSize, textRegionMaxX + borderSize, uv.x);
+  const fadeInY = std.smoothstep(textRegionMinY - borderSize, textRegionMinY + borderSize, uv.y);
+  const fadeOutY =
+    d.f32(1.0) - std.smoothstep(textRegionMaxY - borderSize, textRegionMaxY + borderSize, uv.y);
 
   const inTextRegion = fadeInX * fadeOutX * fadeInY * fadeOutY;
   const blendFactor = std.mix(d.f32(0.9), d.f32(0.7), inTextRegion);
 
-  const resolvedColor = d.vec4f(
-    std.mix(currentColor.rgb, historyColorClamped, blendFactor),
-    1.0,
-  );
+  const resolvedColor = d.vec4f(std.mix(currentColor.rgb, historyColorClamped, blendFactor), 1.0);
 
-  std.textureStore(
-    taaResolveLayout.$.outputTexture,
-    d.vec2u(gid.x, gid.y),
-    resolvedColor,
-  );
+  std.textureStore(taaResolveLayout.$.outputTexture, d.vec2u(gid.x, gid.y), resolvedColor);
 });
 
-export function createTaaTextures(
-  root: TgpuRoot,
-  width: number,
-  height: number,
-) {
+export function createTaaTextures(root: TgpuRoot, width: number, height: number) {
   return [0, 1].map(() => {
-    const texture = root['~unstable'].createTexture({
-      size: [width, height],
-      format: 'rgba8unorm',
-    }).$usage('storage', 'sampled');
+    const texture = root['~unstable']
+      .createTexture({
+        size: [width, height],
+        format: 'rgba8unorm',
+      })
+      .$usage('storage', 'sampled');
 
     return {
       write: texture.createView(d.textureStorage2d('rgba8unorm')),
@@ -134,18 +99,15 @@ export class TAAResolver {
   ) {
     const previousFrame = 1 - currentFrame;
 
-    this.#pipeline.with(
-      this.#root.createBindGroup(taaResolveLayout, {
-        currentTexture,
-        historyTexture: frameCount === 1
-          ? currentTexture
-          : this.#textures[previousFrame].sampled,
-        outputTexture: this.#textures[currentFrame].write,
-      }),
-    ).dispatchWorkgroups(
-      Math.ceil(this.#width / 16),
-      Math.ceil(this.#height / 16),
-    );
+    this.#pipeline
+      .with(
+        this.#root.createBindGroup(taaResolveLayout, {
+          currentTexture,
+          historyTexture: frameCount === 1 ? currentTexture : this.#textures[previousFrame].sampled,
+          outputTexture: this.#textures[currentFrame].write,
+        }),
+      )
+      .dispatchWorkgroups(Math.ceil(this.#width / 16), Math.ceil(this.#height / 16));
 
     return this.#textures[currentFrame].sampled;
   }

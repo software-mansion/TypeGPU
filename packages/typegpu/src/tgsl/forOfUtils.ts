@@ -8,11 +8,7 @@ import { arrayLength } from '../std/array.ts';
 import { accessIndex } from './accessIndex.ts';
 import { createPtrFromOrigin, implicitFrom } from '../data/ptr.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
-import {
-  ArrayExpression,
-  concretize,
-  type GenerationCtx,
-} from './generationHelpers.ts';
+import { ArrayExpression, concretize, type GenerationCtx } from './generationHelpers.ts';
 
 export function getLoopVarKind(elementSnippet: Snippet) {
   // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
@@ -20,28 +16,17 @@ export function getLoopVarKind(elementSnippet: Snippet) {
   return elementSnippet.origin === 'constant-tgpu-const-ref' ? 'const' : 'let';
 }
 
-export function getElementSnippet(
-  iterableSnippet: Snippet,
-  index: Snippet,
-) {
-  const elementSnippet = accessIndex(
-    iterableSnippet,
-    index,
-  );
+export function getElementSnippet(iterableSnippet: Snippet, index: Snippet) {
+  const elementSnippet = accessIndex(iterableSnippet, index);
 
   if (!elementSnippet) {
-    throw new WgslTypeError(
-      '`for ... of ...` loops only support array or vector iterables',
-    );
+    throw new WgslTypeError('`for ... of ...` loops only support array or vector iterables');
   }
 
   return elementSnippet;
 }
 
-export function getElementType(
-  elementSnippet: Snippet,
-  iterableSnippet: Snippet,
-) {
+export function getElementType(elementSnippet: Snippet, iterableSnippet: Snippet) {
   let elementType = elementSnippet.dataType;
   if (elementType === UnknownData) {
     throw new WgslTypeError(
@@ -62,10 +47,7 @@ export function getElementType(
       elementSnippet.origin,
       concretize(elementType as wgsl.AnyWgslData) as wgsl.StorableData,
     );
-    invariant(
-      ptrType !== undefined,
-      `Creating pointer type from origin ${elementSnippet.origin}`,
-    );
+    invariant(ptrType !== undefined, `Creating pointer type from origin ${elementSnippet.origin}`);
     elementType = ptrType;
   }
 
@@ -81,20 +63,12 @@ export function getElementCountSnippet(
 
   if (wgsl.isWgslArray(dataType)) {
     return dataType.elementCount > 0
-      ? snip(
-        dataType.elementCount,
-        u32,
-        'constant',
-      )
+      ? snip(dataType.elementCount, u32, 'constant')
       : arrayLength[$gpuCallable].call(ctx, [iterableSnippet]);
   }
 
   if (wgsl.isVec(dataType)) {
-    return snip(
-      dataType.componentCount,
-      u32,
-      'constant',
-    );
+    return snip(dataType.componentCount, u32, 'constant');
   }
 
   if (unroll) {
@@ -107,7 +81,5 @@ export function getElementCountSnippet(
     }
   }
 
-  throw new WgslTypeError(
-    '`for ... of ...` loops only support array or vector iterables',
-  );
+  throw new WgslTypeError('`for ... of ...` loops only support array or vector iterables');
 }

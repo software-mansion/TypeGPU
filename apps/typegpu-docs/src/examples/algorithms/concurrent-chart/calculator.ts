@@ -1,4 +1,4 @@
-import { initCache, prefixScan } from '@typegpu/concurrent-scan';
+import { createPrefixScanComputer, prefixScan } from '@typegpu/sort';
 import type { TgpuRoot } from 'typegpu';
 import { d, std } from 'typegpu';
 
@@ -36,9 +36,7 @@ export async function performCalculationsWithTime(
   inputArray: number[],
 ): Promise<SumResult> {
   const arraySize = inputArray.length;
-  const inputBuffer = root
-    .createBuffer(d.arrayOf(d.f32, arraySize))
-    .$usage('storage');
+  const inputBuffer = root.createBuffer(d.arrayOf(d.f32, arraySize)).$usage('storage');
   inputBuffer.write(inputArray);
 
   // JS version
@@ -47,7 +45,7 @@ export async function performCalculationsWithTime(
   const jsTime = performance.now() - jsStartTime;
 
   // GPU version
-  initCache(root, { operation: std.add, identityElement: 0 });
+  createPrefixScanComputer(root, { operation: std.add, identityElement: 0 });
   const querySet = root.createQuerySet('timestamp', 2);
   const gpuStartTime = performance.now();
   const calcResult = prefixScan(

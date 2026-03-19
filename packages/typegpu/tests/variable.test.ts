@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type {
-  TgpuVar,
-  VariableScope,
-} from '../src/core/variable/tgpuVariable.ts';
+import type { TgpuVar, VariableScope } from '../src/core/variable/tgpuVariable.ts';
 import tgpu, { d, std } from '../src/index.js';
 
 describe('tgpu.privateVar|tgpu.workgroupVar', () => {
@@ -11,8 +8,7 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
     const fn1 = tgpu.fn([])`() {
       let y = x;
       return x;
-    }`
-      .$uses({ x });
+    }`.$uses({ x });
 
     expect(tgpu.resolve([fn1])).toMatchInlineSnapshot(`
       "var<private> x: u32 = 2u;
@@ -25,39 +21,21 @@ describe('tgpu.privateVar|tgpu.workgroupVar', () => {
   });
 
   it('should properly resolve variables', () => {
-    function test(
-      variable: TgpuVar<VariableScope, d.AnyWgslData>,
-      expected: string,
-    ) {
+    function test(variable: TgpuVar<VariableScope, d.AnyWgslData>, expected: string) {
       expect(tgpu.resolve([variable])).toBe(expected);
     }
 
-    test(
-      tgpu.privateVar(d.u32, 2).$name('x'),
-      'var<private> x: u32 = 2u;',
-    );
-    test(
-      tgpu.privateVar(d.f32, 1.5).$name('x'),
-      'var<private> x: f32 = 1.5f;',
-    );
-    test(
-      tgpu.privateVar(d.u32).$name('x'),
-      'var<private> x: u32;',
-    );
-    test(
-      tgpu.workgroupVar(d.f32).$name('x'),
-      'var<workgroup> x: f32;',
-    );
+    test(tgpu.privateVar(d.u32, 2).$name('x'), 'var<private> x: u32 = 2u;');
+    test(tgpu.privateVar(d.f32, 1.5).$name('x'), 'var<private> x: f32 = 1.5f;');
+    test(tgpu.privateVar(d.u32).$name('x'), 'var<private> x: u32;');
+    test(tgpu.workgroupVar(d.f32).$name('x'), 'var<workgroup> x: f32;');
 
     test(
       tgpu.privateVar(d.vec2u, d.vec2u(1, 2)).$name('x'),
       'var<private> x: vec2u = vec2u(1, 2);',
     );
 
-    test(
-      tgpu.privateVar(d.vec3f, d.vec3f()).$name('x'),
-      'var<private> x: vec3f = vec3f();',
-    );
+    test(tgpu.privateVar(d.vec3f, d.vec3f()).$name('x'), 'var<private> x: vec3f = vec3f();');
 
     test(
       tgpu.privateVar(d.arrayOf(d.u32, 2), [1, 2]).$name('x'),
@@ -80,10 +58,12 @@ var<private> x: s = s(2u, vec2i(1, 2));`,
     const a = d.arrayOf(s, 2);
 
     test(
-      tgpu.privateVar(a, [
-        { x: 1, y: d.vec2i(2, 3) },
-        { x: 4, y: d.vec2i(5, 6) },
-      ]).$name('x'),
+      tgpu
+        .privateVar(a, [
+          { x: 1, y: d.vec2i(2, 3) },
+          { x: 4, y: d.vec2i(5, 6) },
+        ])
+        .$name('x'),
       `\
 struct s {
   x: u32,
@@ -154,7 +134,10 @@ var<private> x: array<s, 2> = array<s, 2>(s(1u, vec2i(2, 3)), s(4u, vec2i(5, 6))
 
   it('should throw an error when trying to access variable inside of a function top-level', () => {
     const x = tgpu.privateVar(d.u32, 2);
-    const foo = tgpu.fn([], d.f32)(() => {
+    const foo = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       return x.$; // Accessing variable inside of a function
     });
     expect(() => foo()).toThrowErrorMatchingInlineSnapshot(`

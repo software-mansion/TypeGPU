@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import { d, tgpu } from '../../src/index.js';
-import { test } from '../utils/extendedIt.ts';
+import { test } from 'typegpu-testing-utility';
 
 test('vec3f() +', () => {
   const main = () => {
@@ -83,9 +83,7 @@ test('vec3f() /', () => {
     }"
   `);
 
-  expect(String(main())).toMatchInlineSnapshot(
-    `"vec3f(0.25, 0.5, 0.5)"`,
-  );
+  expect(String(main())).toMatchInlineSnapshot(`"vec3f(0.25, 0.5, 0.5)"`);
 });
 
 test('vec3f() %', () => {
@@ -106,9 +104,7 @@ test('vec3f() %', () => {
     }"
   `);
 
-  expect(String(main())).toMatchInlineSnapshot(
-    `"vec3f(1, 2, 1)"`,
-  );
+  expect(String(main())).toMatchInlineSnapshot(`"vec3f(1, 2, 1)"`);
 });
 
 test('+= refOfVec3f', () => {

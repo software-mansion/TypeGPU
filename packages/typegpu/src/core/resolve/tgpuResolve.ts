@@ -1,9 +1,6 @@
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
-import {
-  type ResolutionResult,
-  resolve as resolveImpl,
-} from '../../resolutionCtx.ts';
+import { type ResolutionResult, resolve as resolveImpl } from '../../resolutionCtx.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
 import { isBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
@@ -37,10 +34,12 @@ export interface TgpuResolveOptions {
    */
   enableExtensions?: WgslExtension[] | undefined;
   /**
+   * **NOTE: This is an unstable API and may change in the future.**
+   *
    * A custom shader code generator, used when resolving TypeGPU functions.
    * If not provided, the default WGSL generator will be used.
    */
-  shaderGenerator?: ShaderGenerator | undefined;
+  unstable_shaderGenerator?: ShaderGenerator | undefined;
 }
 
 export interface TgpuExtendedResolveOptions extends TgpuResolveOptions {
@@ -87,9 +86,7 @@ export interface TgpuExtendedResolveOptions extends TgpuResolveOptions {
  * // }
  * ```
  */
-export function resolveWithContext(
-  options: TgpuExtendedResolveOptions,
-): ResolutionResult;
+export function resolveWithContext(options: TgpuExtendedResolveOptions): ResolutionResult;
 /**
  * Resolves given TypeGPU resources.
  * Any dependencies of the externals will also be resolved and included in the output.
@@ -171,10 +168,7 @@ export function resolveWithContext(
  * ```
  */
 export function resolve(options: TgpuExtendedResolveOptions): string;
-export function resolve(
-  items: ResolvableObject[],
-  options?: TgpuResolveOptions,
-): string;
+export function resolve(items: ResolvableObject[], options?: TgpuResolveOptions): string;
 export function resolve(
   arg: TgpuExtendedResolveOptions | ResolvableObject[],
   options?: TgpuResolveOptions,
@@ -185,13 +179,11 @@ export function resolve(
   return resolveWithContext(arg).code;
 }
 
-function resolveFromTemplate(
-  options: TgpuExtendedResolveOptions,
-): ResolutionResult {
+function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionResult {
   const {
     template,
     externals,
-    shaderGenerator,
+    unstable_shaderGenerator: shaderGenerator,
     names = 'strict',
     config,
     enableExtensions,
@@ -232,7 +224,7 @@ function resolveFromArray(
   options?: TgpuResolveOptions,
 ): ResolutionResult {
   const {
-    shaderGenerator,
+    unstable_shaderGenerator: shaderGenerator,
     names = 'strict',
     config,
     enableExtensions,
@@ -273,9 +265,7 @@ function resolveFromArray(
 function tryFindRoot(items: unknown[]): ExperimentalTgpuRoot | undefined {
   const pipelines = items.filter(isPipeline);
   if (pipelines.length > 1) {
-    throw new Error(
-      `Found ${pipelines.length} pipelines but can only resolve one at a time.`,
-    );
+    throw new Error(`Found ${pipelines.length} pipelines but can only resolve one at a time.`);
   }
   return pipelines[0]?.[$internal].root;
 }

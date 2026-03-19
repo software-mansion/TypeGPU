@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import tgpu, { d } from '../../src/index.js';
-import { it } from '../utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('wgslGenerator', () => {
   it('resolves add infix operator', () => {
@@ -71,7 +71,10 @@ describe('wgslGenerator', () => {
   });
 
   it('resolves mul infix operator on a function return value', () => {
-    const getVec = tgpu.fn([], d.vec3f)(() => {
+    const getVec = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
       'use gpu';
       return d.vec3f(1, 2, 3);
     });

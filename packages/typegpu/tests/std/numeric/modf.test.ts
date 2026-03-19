@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import { it } from '../../utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import { modf } from '../../../src/std/numeric.ts';
 import { vec2f, vec3h } from '../../../src/data/vector.ts';
 import type { v2f } from '../../../src/data/index.ts';

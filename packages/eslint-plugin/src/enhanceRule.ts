@@ -1,11 +1,6 @@
-import type {
-  RuleContext,
-  RuleListener,
-} from '@typescript-eslint/utils/ts-eslint';
+import type { RuleContext, RuleListener } from '@typescript-eslint/utils/ts-eslint';
 
-export type RuleEnhancer<TState> = (
-  context: RuleContext<string, unknown[]>,
-) => {
+export type RuleEnhancer<TState> = (context: RuleContext<string, unknown[]>) => {
   visitors: RuleListener;
   state: TState;
 };
@@ -36,10 +31,7 @@ type State<TMap extends Record<string, RuleEnhancer<unknown>>> = {
 export function enhanceRule<
   TMap extends Record<string, RuleEnhancer<unknown>>,
   Context extends RuleContext<string, unknown[]>,
->(
-  enhancers: TMap,
-  rule: (context: Context, state: State<TMap>) => RuleListener,
-) {
+>(enhancers: TMap, rule: (context: Context, state: State<TMap>) => RuleListener) {
   return (context: Context) => {
     const enhancerVisitors: RuleListener[] = [];
     const combinedState: Record<string, unknown> = {};
@@ -68,9 +60,7 @@ function mergeVisitors(visitors: RuleListener[]): RuleListener {
   const allKeys = new Set(visitors.flatMap((v) => Object.keys(v)));
 
   for (const key of allKeys) {
-    const listeners = visitors
-      .map((v) => v[key])
-      .filter((fn) => fn !== undefined);
+    const listeners = visitors.map((v) => v[key]).filter((fn) => fn !== undefined);
 
     if (listeners.length === 0) {
       continue;

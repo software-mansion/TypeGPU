@@ -1,9 +1,6 @@
 import tgpu, { type Configurable, type TgpuFn, type TgpuRoot } from 'typegpu';
 import * as d from 'typegpu/data';
-import {
-  computeJunctionGradient,
-  getJunctionGradientSlot,
-} from './algorithm.ts';
+import { computeJunctionGradient, getJunctionGradientSlot } from './algorithm.ts';
 
 const MemorySchema = d.arrayOf(d.vec3f);
 
@@ -59,33 +56,30 @@ export function staticCache(options: {
 }): StaticPerlin3DCache {
   const { root, size } = options;
 
-  const memoryBuffer = root
-    .createBuffer(MemorySchema(size.x * size.y * size.z))
-    .$usage('storage');
+  const memoryBuffer = root.createBuffer(MemorySchema(size.x * size.y * size.z)).$usage('storage');
 
   const memoryReadonly = memoryBuffer.as('readonly');
   const memoryMutable = memoryBuffer.as('mutable');
 
-  const computePipeline = root
-    .createGuardedComputePipeline((x, y, z) => {
-      'use gpu';
-      const idx = x +
-        y * size.x +
-        z * size.x * size.y;
+  const computePipeline = root.createGuardedComputePipeline((x, y, z) => {
+    'use gpu';
+    const idx = x + y * size.x + z * size.x * size.y;
 
-      memoryMutable.$[idx] = computeJunctionGradient(d.vec3i(x, y, z));
-    });
+    memoryMutable.$[idx] = computeJunctionGradient(d.vec3i(x, y, z));
+  });
 
   computePipeline.dispatchThreads(size.x, size.y, size.z);
 
-  const getJunctionGradient = tgpu.fn([d.vec3i], d.vec3f)((pos) => {
+  const getJunctionGradient = tgpu.fn(
+    [d.vec3i],
+    d.vec3f,
+  )((pos) => {
     const size_i = d.vec3i(size);
-    const x = (pos.x % size_i.x + size_i.x) % size_i.x;
-    const y = (pos.y % size_i.y + size_i.y) % size_i.y;
-    const z = (pos.z % size_i.z + size_i.z) % size_i.z;
+    const x = ((pos.x % size_i.x) + size_i.x) % size_i.x;
+    const y = ((pos.y % size_i.y) + size_i.y) % size_i.y;
+    const z = ((pos.z % size_i.z) + size_i.z) % size_i.z;
 
-    return memoryReadonly
-      .$[x + y * size_i.x + z * size_i.x * size_i.y] as d.v3f;
+    return memoryReadonly.$[x + y * size_i.x + z * size_i.x * size_i.y] as d.v3f;
   });
 
   return {
@@ -98,7 +92,6 @@ export function staticCache(options: {
       memoryBuffer.destroy();
     },
 
-    inject: () => (cfg) =>
-      cfg.with(getJunctionGradientSlot, getJunctionGradient),
+    inject: () => (cfg) => cfg.with(getJunctionGradientSlot, getJunctionGradient),
   };
 }

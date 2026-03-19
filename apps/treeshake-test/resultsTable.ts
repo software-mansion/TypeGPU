@@ -50,16 +50,19 @@ export class ResultsTable {
     }
     output += ' |\n';
 
-    for (const [test, row] of this.#results.entries()) {
+    const sortedResults = [...this.#results.entries()]
+      .map(([test, row]) => [test, row, this.#maxAbsoluteChange(row)] as const)
+      .toSorted(([, , scoreA], [, , scoreB]) => scoreB - scoreA)
+      .map(([test, row]) => [test, row] as const);
+
+    for (const [test, row] of sortedResults) {
       output += `| ${test.replaceAll('_', ' ')}`;
 
       for (const bundler of this.#bundlers) {
         const prSize = row.get(bundler)?.pr;
         const targetSize = row.get(bundler)?.target;
 
-        output += ` | ${prettifySize(prSize)} ${
-          calculateTrendMessage(prSize, targetSize)
-        }`;
+        output += ` | ${prettifySize(prSize)} ${calculateTrendMessage(prSize, targetSize)}`;
       }
       output += ' |\n';
     }
@@ -80,6 +83,16 @@ ${output}
     return output;
   }
 
+  #maxAbsoluteChange(row: Row): number {
+    let max = 0;
+    for (const { pr, target } of row.values()) {
+      if (pr !== undefined && target !== undefined && target !== 0) {
+        max = Math.max(max, Math.abs((pr - target) / target));
+      }
+    }
+    return max;
+  }
+
   #isInteresting(row: Row) {
     for (const cell of row) {
       const pr = cell[1].pr;
@@ -87,10 +100,7 @@ ${output}
       if (pr && target === undefined) {
         return true;
       }
-      if (
-        pr && target &&
-        Math.max(pr / target, target / pr) >= 1 + this.#threshold
-      ) {
+      if (pr && target && Math.max(pr / target, target / pr) >= 1 + this.#threshold) {
         return true;
       }
     }
@@ -114,10 +124,7 @@ function prettifySize(size: number | undefined) {
   } ${units[unitIndex]}`;
 }
 
-function calculateTrendMessage(
-  prSize: number | undefined,
-  targetSize: number | undefined,
-): string {
+function calculateTrendMessage(prSize: number | undefined, targetSize: number | undefined): string {
   if (prSize === undefined || targetSize === undefined) {
     return '';
   }

@@ -1,36 +1,24 @@
 import { $internal, $resolve } from '../shared/symbols.ts';
-import type { SelfResolvable } from '../types.ts';
+import { numericLiteralToSnippet } from '../tgsl/generationHelpers.ts';
+import type { ResolutionCtx, SelfResolvable } from '../types.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
-import { type ResolvedSnippet, snip } from './snippet.ts';
-import type { BaseData, VecKind } from './wgslTypes.ts';
+import { type ResolvedSnippet } from './snippet.ts';
+import { WORKAROUND_getSchema, type BaseData, type VecKind } from './wgslTypes.ts';
 
-type VecSchema<S> = BaseData & ((v?: S) => S);
+type ElementSchema<S> = BaseData & ((v?: S) => S);
 
 const XYZW = ['x', 'y', 'z', 'w'];
 const RGBA = ['r', 'g', 'b', 'a'];
 
-// deno-fmt-ignore
 export abstract class VecBase<S> extends Array implements SelfResolvable {
   abstract readonly [$internal]: {
-    elementSchema: VecSchema<S>;
+    elementSchema: ElementSchema<S>;
   };
   abstract get kind(): VecKind;
 
-  abstract get _Vec2(): new (
-    x: S,
-    y: S,
-  ) => Vec2<S>;
-  abstract get _Vec3(): new (
-    x: S,
-    y: S,
-    z: S,
-  ) => Vec3<S>;
-  abstract get _Vec4(): new (
-    x: S,
-    y: S,
-    z: S,
-    w: S,
-  ) => Vec4<S>;
+  abstract get _Vec2(): new (x: S, y: S) => Vec2<S>;
+  abstract get _Vec3(): new (x: S, y: S, z: S) => Vec3<S>;
+  abstract get _Vec4(): new (x: S, y: S, z: S, w: S) => Vec4<S>;
 
   static {
     // Defining 4-length swizzles
@@ -98,19 +86,26 @@ export abstract class VecBase<S> extends Array implements SelfResolvable {
     return this[$internal].elementSchema;
   }
 
-  [$resolve](): ResolvedSnippet {
-    const schema = this[$internal].elementSchema;
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    // oxlint-disable-next-line typescript-eslint(no-explicit-any)
+    const vecSchema = WORKAROUND_getSchema(this as any);
+
     if (this.every((e) => !e)) {
-      return snip(`${this.kind}()`, schema, /* origin */ 'constant');
+      return ctx.gen.typeInstantiation(vecSchema, []);
     }
+
     if (this.every((e) => this[0] === e)) {
-      return snip(`${this.kind}(${this[0]})`, schema, /* origin */ 'runtime');
+      return ctx.gen.typeInstantiation(vecSchema, [numericLiteralToSnippet(this[0])]);
     }
-    return snip(`${this.kind}(${this.join(', ')})`, schema, /* origin */ 'runtime');
+
+    return ctx.gen.typeInstantiation(
+      vecSchema,
+      this.map((e) => numericLiteralToSnippet(e)),
+    );
   }
 
   toString() {
-    return this[$resolve]().value;
+    return `${this.kind}(${this.join(', ')})`;
   }
 }
 
@@ -322,6 +317,30 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
     return this[1];
   }
 
+  get z() {
+    return this[2];
+  }
+
+  get w() {
+    return this[3];
+  }
+
+  set x(value: S) {
+    this[0] = value;
+  }
+
+  set y(value: S) {
+    this[1] = value;
+  }
+
+  set z(value: S) {
+    this[2] = value;
+  }
+
+  set w(value: S) {
+    this[3] = value;
+  }
+
   get r() {
     return this[0];
   }
@@ -351,30 +370,6 @@ abstract class Vec4<S> extends VecBase<S> implements Tuple4<S> {
   }
 
   set a(value: S) {
-    this[3] = value;
-  }
-
-  get z() {
-    return this[2];
-  }
-
-  get w() {
-    return this[3];
-  }
-
-  set x(value: S) {
-    this[0] = value;
-  }
-
-  set y(value: S) {
-    this[1] = value;
-  }
-
-  set z(value: S) {
-    this[2] = value;
-  }
-
-  set w(value: S) {
     this[3] = value;
   }
 }

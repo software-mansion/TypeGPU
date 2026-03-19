@@ -31,24 +31,30 @@ describe('invalidAssignment', () => {
       },
       {
         code: "const fn = (a) => { 'use gpu'; a.prop = 1; }",
-        errors: [{
-          messageId: 'parameterAssignment',
-          data: { snippet: 'a.prop' },
-        }],
+        errors: [
+          {
+            messageId: 'parameterAssignment',
+            data: { snippet: 'a.prop' },
+          },
+        ],
       },
       {
         code: "const fn = (a) => { 'use gpu'; a['prop'] = 1; }",
-        errors: [{
-          messageId: 'parameterAssignment',
-          data: { snippet: "a['prop']" },
-        }],
+        errors: [
+          {
+            messageId: 'parameterAssignment',
+            data: { snippet: "a['prop']" },
+          },
+        ],
       },
       {
         code: "const fn = (a) => { 'use gpu'; a[0] = 1; }",
-        errors: [{
-          messageId: 'parameterAssignment',
-          data: { snippet: 'a[0]' },
-        }],
+        errors: [
+          {
+            messageId: 'parameterAssignment',
+            data: { snippet: 'a[0]' },
+          },
+        ],
       },
       {
         code: "const fn = (a) => { 'use gpu'; a++; }",
@@ -60,10 +66,12 @@ describe('invalidAssignment', () => {
       },
       {
         code: "const fn = (a) => { 'use gpu'; a.prop1.prop2 = 1; }",
-        errors: [{
-          messageId: 'parameterAssignment',
-          data: { snippet: 'a.prop1.prop2' },
-        }],
+        errors: [
+          {
+            messageId: 'parameterAssignment',
+            data: { snippet: 'a.prop1.prop2' },
+          },
+        ],
       },
       {
         code: "const fn = (a) => { 'use gpu'; if (true) { a = 1; } }",
@@ -82,10 +90,12 @@ describe('invalidAssignment', () => {
       },
       {
         code: "const fn = (a) => { 'use gpu'; a.$prop = 1; }",
-        errors: [{
-          messageId: 'parameterAssignment',
-          data: { snippet: 'a.$prop' },
-        }],
+        errors: [
+          {
+            messageId: 'parameterAssignment',
+            data: { snippet: 'a.$prop' },
+          },
+        ],
       },
     ],
   });
@@ -117,24 +127,30 @@ describe('invalidAssignment', () => {
       },
       {
         code: "const a = {}; const fn = () => { 'use gpu'; a.prop = 1; }",
-        errors: [{
-          messageId: 'jsAssignment',
-          data: { snippet: 'a.prop' },
-        }],
+        errors: [
+          {
+            messageId: 'jsAssignment',
+            data: { snippet: 'a.prop' },
+          },
+        ],
       },
       {
         code: "const a = {}; const fn = () => { 'use gpu'; a['prop'] = 1; }",
-        errors: [{
-          messageId: 'jsAssignment',
-          data: { snippet: "a['prop']" },
-        }],
+        errors: [
+          {
+            messageId: 'jsAssignment',
+            data: { snippet: "a['prop']" },
+          },
+        ],
       },
       {
         code: "const a = []; const fn = () => { 'use gpu'; a[0] = 1; }",
-        errors: [{
-          messageId: 'jsAssignment',
-          data: { snippet: 'a[0]' },
-        }],
+        errors: [
+          {
+            messageId: 'jsAssignment',
+            data: { snippet: 'a[0]' },
+          },
+        ],
       },
       {
         code: "const vars = []; const fn = () => { 'use gpu'; vars[0] = 1 }",
@@ -153,12 +169,13 @@ describe('invalidAssignment', () => {
         errors: [{ messageId: 'jsAssignment', data: { snippet: 'a' } }],
       },
       {
-        code:
-          "const a = {}; const fn = () => { 'use gpu'; a.prop1.prop2 = 1; }",
-        errors: [{
-          messageId: 'jsAssignment',
-          data: { snippet: 'a.prop1.prop2' },
-        }],
+        code: "const a = {}; const fn = () => { 'use gpu'; a.prop1.prop2 = 1; }",
+        errors: [
+          {
+            messageId: 'jsAssignment',
+            data: { snippet: 'a.prop1.prop2' },
+          },
+        ],
       },
       {
         code: "let a; const fn = () => { 'use gpu'; if (true) { a = 1; } }",
@@ -173,17 +190,21 @@ describe('invalidAssignment', () => {
       },
       {
         code: "const a = {}; const fn = () => { 'use gpu'; a.$prop = 1; }",
-        errors: [{
-          messageId: 'jsAssignment',
-          data: { snippet: 'a.$prop' },
-        }],
+        errors: [
+          {
+            messageId: 'jsAssignment',
+            data: { snippet: 'a.$prop' },
+          },
+        ],
       },
       {
         code: "const fn = () => { 'use gpu'; globalThis.prop = 1 }",
-        errors: [{
-          messageId: 'jsAssignment',
-          data: { snippet: 'globalThis.prop' },
-        }],
+        errors: [
+          {
+            messageId: 'jsAssignment',
+            data: { snippet: 'globalThis.prop' },
+          },
+        ],
       },
     ],
   });

@@ -21,7 +21,8 @@ export function useAutoCompile() {
   useEffect(() => {
     const currentCode = mode === TRANSLATOR_MODES.TGSL ? tgslCode : wgslCode;
 
-    const canAutoCompile = formats.length > 0 &&
+    const canAutoCompile =
+      formats.length > 0 &&
       !editorLoading &&
       currentCode.trim().length > 0 &&
       (mode === TRANSLATOR_MODES.WGSL ||

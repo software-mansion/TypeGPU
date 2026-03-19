@@ -1,3 +1,3 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu from 'typegpu/$built$';
+import * as d from 'typegpu/data/$built$';
+import * as std from 'typegpu/std/$built$';

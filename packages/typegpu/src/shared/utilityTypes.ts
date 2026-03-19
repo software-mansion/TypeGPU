@@ -1,27 +1,24 @@
-export type Default<T, TDefault> = unknown extends T ? TDefault
-  : T extends undefined ? TDefault
-  : T;
+export type Default<T, TDefault> = unknown extends T
+  ? TDefault
+  : T extends undefined
+    ? TDefault
+    : T;
 
 export type SwapNever<T, Replacement> = [T] extends [never] ? Replacement : T;
 
 export type UnionToIntersection<U> =
   // oxlint-disable-next-line typescript/no-explicit-any -- had to be done
-  (U extends any ? (x: U) => void : never) extends (x: infer I) => void ? I
-    : never;
+  (U extends any ? (x: U) => void : never) extends (x: infer I) => void ? I : never;
 
-export type Prettify<T> =
-  & {
-    [K in keyof T]: T[K];
-  }
-  & {};
+export type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
 
 /**
  * Utility type that merges a partial type with defaults, where defaults are used
  * for properties not present in the partial type.
  */
-export type WithDefaults<TPartial, TDefaults> =
-  & Omit<TDefaults, keyof TPartial>
-  & TPartial;
+export type WithDefaults<TPartial, TDefaults> = Omit<TDefaults, keyof TPartial> & TPartial;
 
 /**
  * Removes properties from record type that extend `Prop`
@@ -43,15 +40,13 @@ export type OmitPropsExact<T extends Record<string, unknown>, Prop> = Pick<
   }[keyof T]
 >;
 
-export type NullableToOptional<T> =
-  & {
-    // Props where the value extends `null` -> make them optional and remove null from the type
-    [K in keyof T as T[K] extends null ? K : never]?: T[K];
-  }
-  & {
-    // All other props remain unchanged
-    [K in keyof T as T[K] extends null ? never : K]: T[K];
-  };
+export type NullableToOptional<T> = {
+  // Props where the value extends `null` -> make them optional and remove null from the type
+  [K in keyof T as T[K] extends null ? K : never]?: T[K];
+} & {
+  // All other props remain unchanged
+  [K in keyof T as T[K] extends null ? never : K]: T[K];
+};
 
 /**
  * The opposite of Readonly<T>

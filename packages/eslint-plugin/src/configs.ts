@@ -9,10 +9,7 @@ export const rules = {
   'invalid-assignment': invalidAssignment,
 } as const;
 
-type Rules = Record<
-  `typegpu/${keyof typeof rules}`,
-  TSESLint.FlatConfig.RuleEntry
->;
+type Rules = Record<`typegpu/${keyof typeof rules}`, TSESLint.FlatConfig.RuleEntry>;
 
 export const recommendedRules: Rules = {
   'typegpu/integer-division': 'warn',

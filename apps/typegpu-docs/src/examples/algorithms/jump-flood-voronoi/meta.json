@@ -1,5 +1,6 @@
 {
   "title": "Jump Flood (Voronoi)",
   "category": "algorithms",
-  "tags": ["experimental", "compute"]
+  "tags": ["ecosystem", "spatial"],
+  "coolFactor": 7
 }

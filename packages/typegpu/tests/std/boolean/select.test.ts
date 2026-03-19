@@ -31,15 +31,11 @@ describe('select', () => {
   });
 
   it('selects for f32 vectors', () => {
+    expect(select(vec2f(-1.1, -2.2), vec2f(1.1, 2.2), vec2b(false, true))).toStrictEqual(
+      vec2f(-1.1, 2.2),
+    );
     expect(
-      select(vec2f(-1.1, -2.2), vec2f(1.1, 2.2), vec2b(false, true)),
-    ).toStrictEqual(vec2f(-1.1, 2.2));
-    expect(
-      select(
-        vec3f(-1.1, -2.2, -3.3),
-        vec3f(1.1, 2.2, 3.3),
-        vec3b(true, false, true),
-      ),
+      select(vec3f(-1.1, -2.2, -3.3), vec3f(1.1, 2.2, 3.3), vec3b(true, false, true)),
     ).toStrictEqual(vec3f(1.1, -2.2, 3.3));
     expect(
       select(
@@ -51,15 +47,11 @@ describe('select', () => {
   });
 
   it('selects for f16 vectors', () => {
+    expect(select(vec2h(-1.1, -2.2), vec2h(1.1, 2.2), vec2b(false, true))).toStrictEqual(
+      vec2h(-1.1, 2.2),
+    );
     expect(
-      select(vec2h(-1.1, -2.2), vec2h(1.1, 2.2), vec2b(false, true)),
-    ).toStrictEqual(vec2h(-1.1, 2.2));
-    expect(
-      select(
-        vec3h(-1.1, -2.2, -3.3),
-        vec3h(1.1, 2.2, 3.3),
-        vec3b(true, false, true),
-      ),
+      select(vec3h(-1.1, -2.2, -3.3), vec3h(1.1, 2.2, 3.3), vec3b(true, false, true)),
     ).toStrictEqual(vec3h(1.1, -2.2, 3.3));
     expect(
       select(
@@ -71,47 +63,31 @@ describe('select', () => {
   });
 
   it('selects for i32 vectors', () => {
+    expect(select(vec2i(-1, -2), vec2i(1, 2), vec2b(true, false))).toStrictEqual(vec2i(1, -2));
+    expect(select(vec3i(-1, -2, -3), vec3i(1, 2, 3), vec3b(true, true, false))).toStrictEqual(
+      vec3i(1, 2, -3),
+    );
     expect(
-      select(vec2i(-1, -2), vec2i(1, 2), vec2b(true, false)),
-    ).toStrictEqual(vec2i(1, -2));
-    expect(
-      select(vec3i(-1, -2, -3), vec3i(1, 2, 3), vec3b(true, true, false)),
-    ).toStrictEqual(vec3i(1, 2, -3));
-    expect(
-      select(
-        vec4i(-1, -2, -3, -4),
-        vec4i(1, 2, 3, 4),
-        vec4b(true, false, false, true),
-      ),
+      select(vec4i(-1, -2, -3, -4), vec4i(1, 2, 3, 4), vec4b(true, false, false, true)),
     ).toStrictEqual(vec4i(1, -2, -3, 4));
   });
 
   it('selects for u32 vectors', () => {
+    expect(select(vec2u(11, 12), vec2u(1, 2), vec2b(true, false))).toStrictEqual(vec2u(1, 12));
+    expect(select(vec3u(11, 12, 13), vec3u(1, 2, 3), vec3b(true, true, false))).toStrictEqual(
+      vec3u(1, 2, 13),
+    );
     expect(
-      select(vec2u(11, 12), vec2u(1, 2), vec2b(true, false)),
-    ).toStrictEqual(vec2u(1, 12));
-    expect(
-      select(vec3u(11, 12, 13), vec3u(1, 2, 3), vec3b(true, true, false)),
-    ).toStrictEqual(vec3u(1, 2, 13));
-    expect(
-      select(
-        vec4u(11, 12, 13, 14),
-        vec4u(1, 2, 3, 4),
-        vec4b(true, false, false, true),
-      ),
+      select(vec4u(11, 12, 13, 14), vec4u(1, 2, 3, 4), vec4b(true, false, false, true)),
     ).toStrictEqual(vec4u(1, 12, 13, 4));
   });
 
   it('selects for bool vectors', () => {
+    expect(select(vec2b(true, true), vec2b(false, false), vec2b(true, false))).toStrictEqual(
+      vec2b(false, true),
+    );
     expect(
-      select(vec2b(true, true), vec2b(false, false), vec2b(true, false)),
-    ).toStrictEqual(vec2b(false, true));
-    expect(
-      select(
-        vec3b(true, false, true),
-        vec3b(false, true, false),
-        vec3b(true, true, false),
-      ),
+      select(vec3b(true, false, true), vec3b(false, true, false), vec3b(true, true, false)),
     ).toStrictEqual(vec3b(false, true, true));
     expect(
       select(

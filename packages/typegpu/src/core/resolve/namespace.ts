@@ -1,9 +1,5 @@
 import type { ResolvedSnippet } from '../../data/snippet.ts';
-import {
-  type NameRegistry,
-  RandomNameRegistry,
-  StrictNameRegistry,
-} from '../../nameRegistry.ts';
+import { type NameRegistry, RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry.ts';
 import { getName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { ShelllessRepository } from '../../tgsl/shellless.ts';
@@ -35,7 +31,7 @@ export interface NamespaceInternal {
 }
 
 type NamespaceEventMap = {
-  'name': { target: object; name: string };
+  name: { target: object; name: string };
 };
 
 type DetachListener = () => void;
@@ -83,10 +79,7 @@ export interface NamespaceOptions {
   names?: 'random' | 'strict' | undefined;
 }
 
-export function getUniqueName(
-  namespace: NamespaceInternal,
-  resource: object,
-): string {
+export function getUniqueName(namespace: NamespaceInternal, resource: object): string {
   const name = namespace.nameRegistry.makeUnique(getName(resource), true);
   for (const listener of namespace.listeners.name) {
     listener({ target: resource, name });

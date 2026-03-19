@@ -28,11 +28,7 @@ import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
 import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
 import { type AnyData, UnknownData } from './data/dataTypes.ts';
-import type {
-  MapValueToSnippet,
-  ResolvedSnippet,
-  Snippet,
-} from './data/snippet.ts';
+import type { MapValueToSnippet, ResolvedSnippet, Snippet } from './data/snippet.ts';
 import {
   type AnyMatInstance,
   type AnyVecInstance,
@@ -47,12 +43,10 @@ import {
   $ownSnippet,
   $resolve,
 } from './shared/symbols.ts';
-import type {
-  TgpuBindGroupLayout,
-  TgpuLayoutEntry,
-} from './tgpuBindGroupLayout.ts';
+import type { TgpuBindGroupLayout, TgpuLayoutEntry } from './tgpuBindGroupLayout.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
 import type { Infer } from './shared/repr.ts';
+import { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -127,11 +121,7 @@ export type BlockScopeLayer = {
   externals: Map<string, Snippet>;
 };
 
-export type StackLayer =
-  | ItemLayer
-  | SlotBindingLayer
-  | FunctionScopeLayer
-  | BlockScopeLayer;
+export type StackLayer = ItemLayer | SlotBindingLayer | FunctionScopeLayer | BlockScopeLayer;
 
 export interface ItemStateStack {
   readonly itemDepth: number;
@@ -237,16 +227,9 @@ export class SimulationState {
   ) {}
 }
 
-export type ExecState =
-  | NormalState
-  | CodegenState
-  | SimulationState;
+export type ExecState = NormalState | CodegenState | SimulationState;
 
-export type ShaderStage =
-  | 'vertex'
-  | 'fragment'
-  | 'compute'
-  | undefined;
+export type ShaderStage = 'vertex' | 'fragment' | 'compute' | undefined;
 
 /**
  * Passed into each resolvable item. All items in a tree share a resolution ctx,
@@ -260,6 +243,7 @@ export interface ResolutionCtx {
 
   readonly mode: ExecState;
   readonly enableExtensions: WgslExtension[] | undefined;
+  readonly gen: ShaderGenerator;
 
   addDeclaration(declaration: string): void;
   withResetIndentLevel<T>(callback: () => T): T;
@@ -298,14 +282,13 @@ export interface ResolutionCtx {
    *
    * @param item The value to resolve
    * @param schema Additional information about the item's data type
-   * @param exact Should the inferred value of the resulting code be typed exactly as `schema` (true),
-   *              or is being assignable to `schema` enough (false). Default is false.
    */
-  resolve(
-    item: unknown,
-    schema?: BaseData | UnknownData,
-    exact?: boolean,
-  ): ResolvedSnippet;
+  resolve(item: unknown, schema?: BaseData | UnknownData): ResolvedSnippet;
+
+  /**
+   * Equivalent to `snip(ctx.resolve(snippet.value, snippet.dataType).value, snippet.dataType, snippet.origin)`.
+   */
+  resolveSnippet(snippet: Snippet): ResolvedSnippet;
 
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
@@ -313,10 +296,7 @@ export interface ResolutionCtx {
     returnType: BaseData;
   };
 
-  withVaryingLocations<T>(
-    locations: Record<string, number>,
-    callback: () => T,
-  ): T;
+  withVaryingLocations<T>(locations: Record<string, number>, callback: () => T): T;
 
   get varyingLocations(): Record<string, number> | undefined;
 
@@ -363,9 +343,7 @@ export function getOwnSnippet(value: unknown): Snippet | undefined {
 
 export interface GPUCallable<TArgs extends unknown[] = unknown[]> {
   [$gpuCallable]: {
-    strictSignature?:
-      | { argTypes: (BaseData | BaseData[])[]; returnType: BaseData }
-      | undefined;
+    strictSignature?: { argTypes: (BaseData | BaseData[])[]; returnType: BaseData } | undefined;
     call(ctx: ResolutionCtx, args: MapValueToSnippet<TArgs>): Snippet;
   };
 }
@@ -386,9 +364,10 @@ type AnyFn = (...args: never[]) => unknown;
 export type DualFn<T extends AnyFn> = T & GPUCallable<Parameters<T>>;
 
 export function isKnownAtComptime(snippet: Snippet): boolean {
-  return (typeof snippet.value !== 'string' ||
-    snippet.dataType === UnknownData) &&
-    getOwnSnippet(snippet.value) === undefined;
+  return (
+    (typeof snippet.value !== 'string' || snippet.dataType === UnknownData) &&
+    getOwnSnippet(snippet.value) === undefined
+  );
 }
 
 export function isWgsl(value: unknown): value is Wgsl {
@@ -408,20 +387,21 @@ export type BindableBufferUsage = 'uniform' | 'readonly' | 'mutable';
 export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
 
 export function isGPUBuffer(value: unknown): value is GPUBuffer {
-  return (
-    !!value &&
-    typeof value === 'object' &&
-    'getMappedRange' in value &&
-    'mapAsync' in value
-  );
+  return !!value && typeof value === 'object' && 'getMappedRange' in value && 'mapAsync' in value;
 }
 
-export function isBufferUsage(value: unknown): value is
+export function isBufferUsage(
+  value: unknown,
+): value is
   | TgpuBufferUniform<BaseData>
   | TgpuBufferReadonly<BaseData>
   | TgpuBufferMutable<BaseData> {
-  return (value as
-    | TgpuBufferUniform<BaseData>
-    | TgpuBufferReadonly<BaseData>
-    | TgpuBufferMutable<BaseData>)?.resourceType === 'buffer-usage';
+  return (
+    (
+      value as
+        | TgpuBufferUniform<BaseData>
+        | TgpuBufferReadonly<BaseData>
+        | TgpuBufferMutable<BaseData>
+    )?.resourceType === 'buffer-usage'
+  );
 }

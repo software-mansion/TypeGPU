@@ -12,16 +12,8 @@ const heightColor = tgpu.fn(
 )((t) => {
   const clamped = std.clamp(t, 0, 1);
 
-  const lowToMid = std.mix(
-    LOW_COLOR,
-    MID_COLOR,
-    std.smoothstep(0, 0.4, clamped),
-  );
-  const midToHigh = std.mix(
-    lowToMid,
-    HIGH_COLOR,
-    std.smoothstep(0.4, 1, clamped),
-  );
+  const lowToMid = std.mix(LOW_COLOR, MID_COLOR, std.smoothstep(0, 0.4, clamped));
+  const midToHigh = std.mix(lowToMid, HIGH_COLOR, std.smoothstep(0.4, 1, clamped));
 
   return midToHigh;
 });
@@ -56,17 +48,12 @@ export const vertexFn = tgpu['~unstable'].vertexFn({
   const worldPos = std.mul(cube.model, d.vec4f(input.position, 1));
 
   const cubeCenter = cube.model.columns[3];
-  const noiseCoord = d.vec2f(
-    cubeCenter.x * params.noiseScale,
-    cubeCenter.z * params.noiseScale,
-  );
+  const noiseCoord = d.vec2f(cubeCenter.x * params.noiseScale, cubeCenter.z * params.noiseScale);
   const height = fbm(noiseCoord) * params.terrainHeight;
 
   const displaced = d.vec4f(worldPos.x, worldPos.y + height, worldPos.z, 1);
 
-  const worldNormal = std.normalize(
-    std.mul(cube.model, d.vec4f(input.normal, 0)).xyz,
-  );
+  const worldNormal = std.normalize(std.mul(cube.model, d.vec4f(input.normal, 0)).xyz);
 
   const t = height / params.terrainHeight + 0.5;
   const color = heightColor(t);
@@ -97,8 +84,6 @@ export const fragmentFn = tgpu['~unstable'].fragmentFn({
   const halfDir = std.normalize(lightDir.add(viewDir));
   const specular = std.pow(std.max(0, std.dot(input.worldNormal, halfDir)), 32);
 
-  const lit = input.color
-    .mul(ambient + diffuse * 0.85)
-    .add(d.vec3f(specular * 0.3));
+  const lit = input.color.mul(ambient + diffuse * 0.85).add(d.vec3f(specular * 0.3));
   return d.vec4f(lit, 1);
 });

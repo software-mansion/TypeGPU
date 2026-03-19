@@ -9,11 +9,6 @@ describe('unwrappedPojos', () => {
       "function func() { 'use gpu'; const wrapped = Schema({ a: 1 }); }",
       "const func = function() { 'use gpu'; const wrapped = Schema({ a: 1 }); }",
       "() => { 'use gpu'; const wrapped = Schema({ a: 1 }); }",
-      "function func() { 'use gpu'; return Schema({ a: 1 }); }",
-      "const func = function() { 'use gpu'; return Schema({ a: 1 }); }",
-      "() => { 'use gpu'; return Schema({ a: 1 }); }",
-
-      "() => { 'use gpu'; return Schema({ a: { b: 1 } }); }",
 
       // not inside 'use gpu' function
       'const pojo = { a: 1 };',
@@ -28,7 +23,6 @@ describe('unwrappedPojos', () => {
       "function func() { 'use gpu'; return { a: 1 }; }",
       "const func = function() { 'use gpu'; return { a: 1 }; }",
       "() => { 'use gpu'; return { a: 1 }; }",
-
       "() => { 'use gpu'; return { a: { b: 1 } }; }",
     ],
     invalid: [
@@ -42,8 +36,7 @@ describe('unwrappedPojos', () => {
         ],
       },
       {
-        code:
-          "const func = function() { 'use gpu'; const unwrapped = { a: 1 }; }",
+        code: "const func = function() { 'use gpu'; const unwrapped = { a: 1 }; }",
         errors: [
           {
             messageId: 'unwrappedPojo',
@@ -61,8 +54,7 @@ describe('unwrappedPojos', () => {
         ],
       },
       {
-        code:
-          "function func() { 'unknown directive'; 'use gpu'; const unwrapped = { a: 1 }; }",
+        code: "function func() { 'unknown directive'; 'use gpu'; const unwrapped = { a: 1 }; }",
         errors: [
           {
             messageId: 'unwrappedPojo',

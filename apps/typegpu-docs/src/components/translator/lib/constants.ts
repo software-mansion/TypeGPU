@@ -3,8 +3,7 @@ export const TRANSLATOR_MODES = {
   TGSL: 'tgsl',
 } as const;
 
-export type TranslatorMode =
-  typeof TRANSLATOR_MODES[keyof typeof TRANSLATOR_MODES];
+export type TranslatorMode = (typeof TRANSLATOR_MODES)[keyof typeof TRANSLATOR_MODES];
 
 export const DEFAULT_WGSL = `@vertex
 fn vs_main(@builtin(vertex_index) vertex_index: u32) -> @builtin(position) vec4<f32> {

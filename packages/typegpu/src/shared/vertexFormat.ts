@@ -70,9 +70,7 @@ export interface TgpuVertexAttrib<TFormat extends VertexFormat = VertexFormat> {
   readonly offset: number;
 }
 
-export type AnyVertexAttribs =
-  | Record<string, TgpuVertexAttrib>
-  | TgpuVertexAttrib;
+export type AnyVertexAttribs = Record<string, TgpuVertexAttrib> | TgpuVertexAttrib;
 
 /**
  * All vertex attribute formats that can be interpreted as

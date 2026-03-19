@@ -1,5 +1,4 @@
 import { callableSchema } from '../core/function/createCallableSchema.ts';
-import { stitch } from '../core/resolve/stitch.ts';
 import { $internal, $repr } from '../shared/symbols.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
 import {
@@ -304,32 +303,19 @@ function makeVecSchema<TValue, S extends number | boolean>(
       return new VecImpl(...values) as TValue;
     }
 
-    throw new Error(
-      `'${type}' constructor called with invalid number of arguments.`,
-    );
+    throw new Error(`'${type}' constructor called with invalid number of arguments.`);
   };
 
   const construct = callableSchema({
     name: type,
-    signature: (...args) => ({
-      argTypes: args.map((arg) => isVec(arg) ? arg : primitive),
-      returnType: schema as unknown as BaseData,
-    }),
+    schema: () => schema,
+    argTypes: (...args) => args.map((arg) => (isVec(arg) ? arg : primitive)),
     normalImpl: cpuConstruct,
-    codegenImpl: (_ctx, args) => {
-      if (
-        args.length === 1 && args[0]?.dataType === schema as unknown as BaseData
-      ) {
-        // Already typed as the schema
-        return stitch`${args[0]}`;
-      }
-      return stitch`${type}(${args})`;
-    },
+    codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(schema, args),
   });
 
-  const schema:
-    & VecSchemaBase<TValue>
-    & ((...args: (S | AnyVecInstance)[]) => TValue) = Object.assign(construct, {
+  const schema: BaseData & VecSchemaBase<TValue> & ((...args: (S | AnyVecInstance)[]) => TValue) =
+    Object.assign(construct, {
       [$internal]: {},
       type,
       primitive,

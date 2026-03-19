@@ -51,10 +51,7 @@ function validateAssignment(
   // follow the member expression chain
   let assignee = leftNode;
   while (assignee.type === 'MemberExpression') {
-    if (
-      assignee.property.type === 'Identifier' &&
-      assignee.property.name === '$'
-    ) {
+    if (assignee.property.type === 'Identifier' && assignee.property.name === '$') {
       // a dollar was used so we assume this assignment is fine
       return;
     }
@@ -65,10 +62,7 @@ function validateAssignment(
   }
 
   // look for a scope that defines the variable
-  const variable = ASTUtils.findVariable(
-    context.sourceCode.getScope(assignee),
-    assignee,
-  );
+  const variable = ASTUtils.findVariable(context.sourceCode.getScope(assignee), assignee);
   // defs is an array because there may be multiple definitions with `var`
   const def = variable?.defs[0];
 
@@ -76,10 +70,7 @@ function validateAssignment(
   // NOTE: if the variable is an outer function parameter, then the enclosingFn range will be encompassed by node range
   if (
     !def ||
-    def && (
-        def.node.range[0] < enclosingFn.range[0] ||
-        enclosingFn.range[1] < def.node.range[1]
-      )
+    (def && (def.node.range[0] < enclosingFn.range[0] || enclosingFn.range[1] < def.node.range[1]))
   ) {
     context.report({
       messageId: 'jsAssignment',

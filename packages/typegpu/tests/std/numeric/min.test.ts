@@ -3,7 +3,10 @@ import tgpu, { d, std } from '../../../src/index.js';
 
 describe('min', () => {
   it('acts as identity when called with one argument', () => {
-    const myMin = tgpu.fn([d.f32], d.f32)((a: number) => {
+    const myMin = tgpu.fn(
+      [d.f32],
+      d.f32,
+    )((a: number) => {
       'use gpu';
       return std.min(a);
     });
@@ -17,7 +20,10 @@ describe('min', () => {
   });
 
   it('works with two arguments', () => {
-    const myMin = tgpu.fn([d.f32, d.f32], d.f32)((a, b) => {
+    const myMin = tgpu.fn(
+      [d.f32, d.f32],
+      d.f32,
+    )((a, b) => {
       'use gpu';
       return std.min(a, b);
     });
@@ -31,12 +37,13 @@ describe('min', () => {
   });
 
   it('works with multiple arguments', () => {
-    const myMin = tgpu.fn([d.f32, d.f32, d.f32, d.f32], d.f32)(
-      (a, b, c, d) => {
-        'use gpu';
-        return std.min(a, b, c, d);
-      },
-    );
+    const myMin = tgpu.fn(
+      [d.f32, d.f32, d.f32, d.f32],
+      d.f32,
+    )((a, b, c, d) => {
+      'use gpu';
+      return std.min(a, b, c, d);
+    });
 
     expect(myMin(2, 1, 4, 5)).toBe(1);
     expect(tgpu.resolve([myMin])).toMatchInlineSnapshot(`
@@ -47,7 +54,10 @@ describe('min', () => {
   });
 
   it('unifies arguments', () => {
-    const myMin = tgpu.fn([], d.f32)(() => {
+    const myMin = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       'use gpu';
       const a = d.u32(9);
       const b = d.i32(1);
@@ -67,13 +77,15 @@ describe('min', () => {
   });
 
   it('works with vectors', () => {
-    const myMin = tgpu.fn([d.vec3u, d.vec3u], d.vec3u)((a, b) => {
+    const myMin = tgpu.fn(
+      [d.vec3u, d.vec3u],
+      d.vec3u,
+    )((a, b) => {
       'use gpu';
       return std.min(a, b);
     });
 
-    expect(myMin(d.vec3u(1, 2, 3), d.vec3u(3, 2, 1)))
-      .toStrictEqual(d.vec3u(1, 2, 1));
+    expect(myMin(d.vec3u(1, 2, 3), d.vec3u(3, 2, 1))).toStrictEqual(d.vec3u(1, 2, 1));
     expect(tgpu.resolve([myMin])).toMatchInlineSnapshot(`
       "fn myMin(a: vec3u, b: vec3u) -> vec3u {
         return min(a, b);
@@ -82,7 +94,10 @@ describe('min', () => {
   });
 
   it('does comptime reduction', () => {
-    const myMin = tgpu.fn([], d.u32)(() => {
+    const myMin = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
       'use gpu';
       return std.min(33, 12, 444, 12333);
     });
@@ -97,10 +112,10 @@ describe('min', () => {
 
   it('cannot be called with invalid arguments', () => {
     // @ts-expect-error
-    (() => std.min());
+    () => std.min();
     // @ts-expect-error
-    (() => std.min(1, d.vec2f()));
+    () => std.min(1, d.vec2f());
     // @ts-expect-error
-    (() => std.min(d.vec3f(), d.vec2f()));
+    () => std.min(d.vec3f(), d.vec2f());
   });
 });

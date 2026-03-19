@@ -1,5 +1,5 @@
 import { describe } from 'vitest';
-import { it } from '../utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import { expectSnippetOf } from '../utils/parseResolved.ts';
 import { snip } from '../../src/data/snippet.ts';
 import tgpu, { d } from '../../src/index.js';
