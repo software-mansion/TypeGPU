@@ -104,6 +104,15 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
+        code: "const fn = () => { 'use gpu'; obj.#buffer.$ = 1; }",
+        errors: [
+          {
+            messageId: 'unsupportedSyntax',
+            data: { snippet: '#buffer', syntax: 'private identifier' },
+          },
+        ],
+      },
+      {
         code: "const fn = () => { 'use gpu'; const r = /abc/; }",
         errors: [
           {
