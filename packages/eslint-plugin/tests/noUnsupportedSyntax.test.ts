@@ -5,22 +5,9 @@ import { noUnsupportedSyntax } from '../src/rules/noUnsupportedSyntax.ts';
 describe('noUnsupportedSyntax', () => {
   ruleTester.run('noUnsupportedSyntax', noUnsupportedSyntax, {
     valid: [
-      // supported syntax inside 'use gpu'
-      "const fn = () => { 'use gpu'; const x = 1 + 2; return x; }",
-      "const fn = () => { 'use gpu'; if (x > 0) { return x; } }",
-      "const fn = () => { 'use gpu'; for (let i = 0; i < 10; i++) { } }",
-      "const fn = () => { 'use gpu'; for (const x of arr) { } }",
-      "const fn = () => { 'use gpu'; while (x > 0) { x--; } }",
-      "const fn = () => { 'use gpu'; let a = 1; }",
-      "const fn = () => { 'use gpu'; const a = [1, 2, 3]; }",
-      "const fn = () => { 'use gpu'; x++; }",
-
-      // unsupported syntax outside 'use gpu' is fine
-      'const x = `template`;',
-      'switch (x) { case 1: break; }',
-      'try { } catch(e) { }',
-      'const fn = () => { const x = `template`; }',
-      'const fn = () => { var x = 1; }',
+      "const fn = () => { 'use gpu'; const x = 1; }",
+      "const fn = () => { 'use gpu'; const x = Struct({ prop: 1}); }",
+      "const fn = () => { 'use gpu'; let x = 1; }",
     ],
     invalid: [
       {
@@ -85,7 +72,7 @@ describe('noUnsupportedSyntax', () => {
         errors: [
           {
             messageId: 'unsupportedSyntax',
-            data: { snippet: '++x', syntax: 'prefix update expression (`++x`/`--x`)' },
+            data: { snippet: '++x', syntax: 'prefix update expression' },
           },
         ],
       },

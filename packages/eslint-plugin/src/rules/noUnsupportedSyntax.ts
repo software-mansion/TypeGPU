@@ -160,7 +160,7 @@ export const noUnsupportedSyntax = createRule({
           return;
         }
         if (node.prefix === true) {
-          report(node, 'prefix update expression (`++x`/`--x`)');
+          report(node, 'prefix update expression');
         }
       },
 
