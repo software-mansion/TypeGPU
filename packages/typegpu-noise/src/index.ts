@@ -145,7 +145,9 @@ export {
   BPETER,
   // The default (Can change between releases to improve uniformity).
   DefaultGenerator,
-  LCG,
+  LCG32,
+  LCG64,
+  XOROSHIRO64STARSTAR,
   // ---
   randomGeneratorShell,
   randomGeneratorSlot,
