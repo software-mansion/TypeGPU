@@ -2,9 +2,9 @@ import tgpu from 'typegpu';
 
 import { Plotter } from './plotter.ts';
 import { Executor } from './executor.ts';
-import type { Distribution, Generator } from './types.ts';
+import type { Distribution } from './types.ts';
 import * as c from './constants.ts';
-import { getCameraPosition, getGenerator, getPRNG } from './helpers.ts';
+import { getCameraPosition, getPRNG } from './helpers.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
@@ -13,17 +13,11 @@ const executor = new Executor(root);
 const plotter = new Plotter();
 
 let currentDistribution = c.initialDistribution;
-let currentGenerator = c.initialGenerator;
 
-const replot = async (
-  currentDistribution: Distribution,
-  currentGenerator: Generator,
-  animate = false,
-) => {
+const replot = async (currentDistribution: Distribution, animate = false) => {
   const prng = getPRNG(currentDistribution);
-  const gen = getGenerator(currentGenerator);
 
-  const samples = await executor.executeMoreWorkers(prng.prng, gen);
+  const samples = await executor.executeMoreWorkers(prng.prng);
   await plotter.plot(samples, prng, animate);
 };
 
@@ -70,19 +64,7 @@ export const controls = defineControls({
   Reseed: {
     async onButtonClick() {
       executor.reseed();
-      await replot(currentDistribution, currentGenerator, true);
-      plotter.resetView(getCameraPosition(currentDistribution));
-    },
-  },
-  Generator: {
-    initial: c.initialGenerator,
-    options: c.generators,
-    onSelectChange: async (value: Generator) => {
-      if (currentGenerator === value) {
-        return;
-      }
-      currentGenerator = value;
-      await replot(currentDistribution, currentGenerator, true);
+      await replot(currentDistribution, true);
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
@@ -95,7 +77,7 @@ export const controls = defineControls({
       }
 
       currentDistribution = value;
-      await replot(currentDistribution, currentGenerator, true);
+      await replot(currentDistribution, true);
       plotter.resetView(getCameraPosition(currentDistribution));
     },
   },
@@ -104,26 +86,15 @@ export const controls = defineControls({
     options: c.numSamplesOptions,
     async onSelectChange(value) {
       executor.count = value;
-      await replot(currentDistribution, currentGenerator);
+      await replot(currentDistribution);
     },
   },
+  // this is the only place where some niche distributions are tested
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick() {
-      for (const [i, j] of [
-        [0, 0],
-        [8, 1],
-        [10, 0],
-      ]) {
-        const code = tgpu.resolve({
-          externals: {
-            p: executor.pipelineCacheGet(
-              getPRNG(c.distributions[i]).prng,
-              getGenerator(c.generators[j]),
-            ),
-          },
-        });
-        root.device.createShaderModule({ code });
-      }
+      c.distributions
+        .map((dist) => tgpu.resolve([executor.getPipeline(getPRNG(dist).prng)]))
+        .forEach((r) => root.device.createShaderModule({ code: r }));
     },
   },
 });
@@ -132,4 +103,5 @@ export function onCleanup() {
   root.destroy();
   plotter.destroy();
 }
+
 // #endregion

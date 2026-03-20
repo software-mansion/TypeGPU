@@ -1,15 +1,19 @@
-import { BPETER, LCG, type StatefulGenerator } from '@typegpu/noise';
+import { BPETER, LCG32, XOROSHIRO64STARSTAR, type StatefulGenerator } from '@typegpu/noise';
 
-export const PRNG = {
-  BPETER: 'bpeter (default)',
-  LCG: 'lcg',
-} as const;
+interface PRNGOptions {
+  name: string;
+  useSeed2: boolean;
+  generator: StatefulGenerator;
+}
 
-export type PRNG = (typeof PRNG)[keyof typeof PRNG];
+export const prngs = {
+  bpeter: { name: 'bpeter (default)', useSeed2: true, generator: BPETER },
+  lcg32: { name: 'lcg32', useSeed2: false, generator: LCG32 },
+  xoroshiro64: { name: 'xoroshiro64', useSeed2: true, generator: XOROSHIRO64STARSTAR },
+} as const satisfies Record<string, PRNGOptions>;
 
-const PRNG_MAP = {
-  [PRNG.BPETER]: BPETER,
-  [PRNG.LCG]: LCG,
-};
+export type PRNGKey = keyof typeof prngs;
 
-export const getPRNG = (prng: PRNG): StatefulGenerator => PRNG_MAP[prng];
+export const prngKeys = Object.keys(prngs) as PRNGKey[];
+
+export const initialPRNG: PRNGKey = 'bpeter';

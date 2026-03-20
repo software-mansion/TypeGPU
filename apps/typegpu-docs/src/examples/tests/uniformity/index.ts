@@ -2,7 +2,7 @@ import { randf, randomGeneratorSlot } from '@typegpu/noise';
 import tgpu, { common, d, std, type TgpuRenderPipeline } from 'typegpu';
 
 import * as c from './constants.ts';
-import { getPRNG, type PRNG } from './prngs.ts';
+import { initialPRNG, prngKeys, prngs, type PRNGKey } from './prngs.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
@@ -11,29 +11,43 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const gridSizeUniform = root.createUniform(d.f32, c.initialGridSize);
-const canvasRatioUniform = root.createUniform(d.f32, canvas.width / canvas.height);
+const Config = d.struct({
+  gridSize: d.f32,
+  canvasRatio: d.f32,
+  useSeed2: d.u32,
+});
+
+const configUniform = root.createUniform(Config, {
+  gridSize: c.initialGridSize,
+  canvasRatio: canvas.width / canvas.height,
+  useSeed2: d.u32(prngs[initialPRNG].useSeed2),
+});
 
 const fragmentShader = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
   'use gpu';
-  const uv = ((input.uv + 1) / 2) * d.vec2f(canvasRatioUniform.$, 1);
-  const gridedUV = std.floor(uv * gridSizeUniform.$);
+  const gridSize = configUniform.$.gridSize;
+  const uv = input.uv * d.vec2f(configUniform.$.canvasRatio, 1);
+  const gridedUV = std.floor(uv * gridSize);
 
-  randf.seed2(gridedUV);
+  if (configUniform.$.useSeed2 === 1) {
+    randf.seed2(gridedUV);
+  } else {
+    randf.seed(gridedUV.x * gridSize + gridedUV.y);
+  }
 
   return d.vec4f(d.vec3f(randf.sample()), 1);
 });
 
-const pipelineCache = new Map<PRNG, TgpuRenderPipeline<d.Vec4f>>();
-let prng: PRNG = c.initialPRNG;
+const pipelineCache = new Map<PRNGKey, TgpuRenderPipeline<d.Vec4f>>();
+let prng: PRNGKey = initialPRNG;
 
 const redraw = () => {
   let pipeline = pipelineCache.get(prng);
   if (!pipeline) {
-    pipeline = root.with(randomGeneratorSlot, getPRNG(prng)).createRenderPipeline({
+    pipeline = root.with(randomGeneratorSlot, prngs[prng].generator).createRenderPipeline({
       vertex: common.fullScreenTriangle,
       fragment: fragmentShader,
       targets: { format: presentationFormat },
@@ -47,10 +61,11 @@ const redraw = () => {
 // #region Example controls & Cleanup
 export const controls = defineControls({
   PRNG: {
-    initial: c.initialPRNG,
-    options: c.prngs,
+    initial: initialPRNG,
+    options: prngKeys,
     onSelectChange: (value) => {
       prng = value;
+      configUniform.writePartial({ useSeed2: d.u32(prngs[value].useSeed2) });
       redraw();
     },
   },
@@ -58,33 +73,29 @@ export const controls = defineControls({
     initial: c.initialGridSize,
     options: c.gridSizes,
     onSelectChange: (value) => {
-      gridSizeUniform.write(value);
+      configUniform.writePartial({ gridSize: value });
       redraw();
     },
   },
+  // this is the only place where some niche prngs are tested
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick: () => {
-      const namespace = tgpu['~unstable'].namespace();
-      c.prngs
-        .map((prng) =>
-          tgpu.resolve(
-            [
-              root.with(randomGeneratorSlot, getPRNG(prng)).createRenderPipeline({
-                vertex: common.fullScreenTriangle,
-                fragment: fragmentShader,
-                targets: { format: presentationFormat },
-              }),
-            ],
-            { names: namespace },
-          ),
+      prngKeys
+        .map((key) =>
+          tgpu.resolve([
+            root.with(randomGeneratorSlot, prngs[key].generator).createRenderPipeline({
+              vertex: common.fullScreenTriangle,
+              fragment: fragmentShader,
+            }),
+          ]),
         )
-        .map((r) => root.device.createShaderModule({ code: r }));
+        .forEach((r) => root.device.createShaderModule({ code: r }));
     },
   },
 });
 
 const resizeObserver = new ResizeObserver(() => {
-  canvasRatioUniform.write(canvas.width / canvas.height);
+  configUniform.writePartial({ canvasRatio: canvas.width / canvas.height });
   redraw();
 });
 resizeObserver.observe(canvas);

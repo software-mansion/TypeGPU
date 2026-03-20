@@ -1,4 +1,4 @@
-import { randf, randomGeneratorSlot, type StatefulGenerator } from '@typegpu/noise';
+import { randf } from '@typegpu/noise';
 import type {
   StorageFlag,
   TgpuBindGroup,
@@ -26,8 +26,7 @@ export class Executor {
     number,
     [TgpuBuffer<d.WgslArray<d.Vec3f>> & StorageFlag, TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag]
   >;
-  // they can be WeakMaps, because we always have reference to distribution and PRNG
-  readonly #pipelineCache: WeakMap<TgpuFn, WeakMap<StatefulGenerator, TgpuComputePipeline>>;
+  readonly #pipelineCache: Map<TgpuFn, TgpuComputePipeline>;
 
   constructor(root: TgpuRoot) {
     this.#root = root;
@@ -80,43 +79,21 @@ export class Executor {
     });
   }
 
-  #pipelineCacheSet(
-    distribution: TgpuFn<() => d.Vec3f>,
-    generator: StatefulGenerator,
-    pipeline: TgpuComputePipeline,
-  ) {
-    let distributionMap = this.#pipelineCache.get(distribution);
-    if (!distributionMap) {
-      distributionMap = new WeakMap();
-      this.#pipelineCache.set(distribution, distributionMap);
-    }
-
-    distributionMap.set(generator, pipeline);
-  }
-
-  pipelineCacheGet(
-    distribution: TgpuFn<() => d.Vec3f>,
-    generator: StatefulGenerator,
-  ): TgpuComputePipeline {
-    let pipeline = this.#pipelineCache.get(distribution)?.get(generator);
+  getPipeline(distribution: TgpuFn<() => d.Vec3f>) {
+    let pipeline = this.#pipelineCache.get(distribution);
     if (!pipeline) {
       pipeline = this.#root
-        .with(randomGeneratorSlot, generator)
         .with(this.#distributionSlot, distribution)
         .createComputePipeline({ compute: this.#dataMoreWorkersFunc });
-      this.#pipelineCacheSet(distribution, generator, pipeline);
+      this.#pipelineCache.set(distribution, pipeline);
     }
-
     return pipeline;
   }
 
-  async executeMoreWorkers(
-    distribution: TgpuFn<() => d.Vec3f>,
-    generator: StatefulGenerator,
-  ): Promise<d.v3f[]> {
-    const pipeline = this.pipelineCacheGet(distribution, generator);
-
-    pipeline.with(this.#bindGroup).dispatchWorkgroups(Math.ceil(this.#count / 64));
+  async executeMoreWorkers(distribution: TgpuFn<() => d.Vec3f>): Promise<d.v3f[]> {
+    this.getPipeline(distribution)
+      .with(this.#bindGroup)
+      .dispatchWorkgroups(Math.ceil(this.#count / 64));
 
     return await this.#samplesBuffer.read();
   }
