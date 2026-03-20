@@ -63,24 +63,26 @@ export const XOROSHIRO64STARSTAR: StatefulGenerator = (() => {
     return (x << k) | (x >> (32 - k));
   });
 
-  const next = tgpu.fn([])(() => {
+  const next = tgpu.fn(
+    [],
+    d.u32,
+  )(() => {
     const s0 = seed.$[0];
     let s1 = seed.$[1];
-
     s1 ^= s0;
     seed.$[0] = rotl(s0, 26) ^ s1 ^ (s1 << 9);
     seed.$[1] = rotl(s1, 13);
+    return rotl(seed.$[0] * 0x9e3779bb, 5) * 5;
   });
 
   return {
     seed2: tgpu.fn([d.vec2f])((value) => {
-      seed.$ = d.vec2u(value);
+      seed.$ = d.vec2u(hash(d.u32(value.x)), hash(d.u32(value.y)));
     }),
 
     sample: randomGeneratorShell(() => {
       'use gpu';
-      next();
-      const r = seed.$.x;
+      const r = next();
       return u32To01Float(r);
     }).$name('sample'),
   };

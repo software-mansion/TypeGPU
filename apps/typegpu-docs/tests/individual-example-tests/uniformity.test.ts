@@ -200,10 +200,21 @@ describe('uniformity test example', () => {
 
       @group(0) @binding(0) var<uniform> configUniform: Config;
 
+      fn hash(v: u32) -> u32 {
+        var x = (v ^ (v >> 17u));
+        x *= 3982152891u;
+        x ^= (x >> 11u);
+        x *= 2890668881u;
+        x ^= (x >> 15u);
+        x *= 830770091u;
+        x ^= (x >> 14u);
+        return x;
+      }
+
       var<private> seed: vec2u;
 
       fn seed2(value: vec2f) {
-        seed = vec2u(value);
+        seed = vec2u(hash(u32(value.x)), hash(u32(value.y)));
       }
 
       fn randSeed2(seed: vec2f) {
@@ -218,12 +229,13 @@ describe('uniformity test example', () => {
         return ((x << k) | (x >> (32u - k)));
       }
 
-      fn next() {
+      fn next() -> u32 {
         let s0 = seed[0i];
         var s1 = seed[1i];
         s1 ^= s0;
         seed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
         seed[1i] = rotl(s1, 13u);
+        return (rotl((seed[0i] * 2654435771u), 5u) * 5u);
       }
 
       fn u32To01Float(value: u32) -> f32 {
@@ -234,8 +246,7 @@ describe('uniformity test example', () => {
       }
 
       fn sample() -> f32 {
-        next();
-        let r = seed.x;
+        let r = next();
         return u32To01Float(r);
       }
 
