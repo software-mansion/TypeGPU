@@ -17,7 +17,7 @@ describe('uniformity test example', () => {
         name: 'uniformity',
         setupMocks: mockResizeObserver,
         controlTriggers: ['Test Resolution'],
-        expectedCalls: 2,
+        expectedCalls: 3,
       },
       device,
     );
@@ -39,9 +39,13 @@ describe('uniformity test example', () => {
         return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
       }
 
-      @group(0) @binding(0) var<uniform> canvasRatioUniform: f32;
+      struct Config {
+        gridSize: f32,
+        canvasRatio: f32,
+        useSeed2: u32,
+      }
 
-      @group(0) @binding(1) var<uniform> gridSizeUniform: f32;
+      @group(0) @binding(0) var<uniform> configUniform: Config;
 
       var<private> seed: vec2f;
 
@@ -51,6 +55,14 @@ describe('uniformity test example', () => {
 
       fn randSeed2(seed: vec2f) {
         seed2(seed);
+      }
+
+      fn seed_2(value: f32) {
+        seed = vec2f(value, 0f);
+      }
+
+      fn randSeed(seed_1: f32) {
+        seed_2(seed_1);
       }
 
       fn sample() -> f32 {
@@ -70,20 +82,65 @@ describe('uniformity test example', () => {
       }
 
       @fragment fn fragmentShader(input: fragmentShader_Input) -> @location(0) vec4f {
-        var uv = (((input.uv + 1f) / 2f) * vec2f(canvasRatioUniform, 1f));
-        var gridedUV = floor((uv * gridSizeUniform));
-        randSeed2(gridedUV);
+        let gridSize = configUniform.gridSize;
+        var uv = (input.uv * vec2f(configUniform.canvasRatio, 1f));
+        var gridedUV = floor((uv * gridSize));
+        if ((configUniform.useSeed2 == 1u)) {
+          randSeed2(gridedUV);
+        }
+        else {
+          randSeed(((gridedUV.x * gridSize) + gridedUV.y));
+        }
         return vec4f(vec3f(randFloat01()), 1f);
       }
 
-      var<private> seed_1: u32;
-
-      fn seed2_1(value: vec2f) {
-        seed_1 = u32(((value.x * 32768f) + (value.y * 1024f)));
+      struct fullScreenTriangle_Input {
+        @builtin(vertex_index) vertexIndex: u32,
       }
 
-      fn randSeed2_1(seed_1: vec2f) {
-        seed2_1(seed_1);
+      struct fullScreenTriangle_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+
+        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+      }
+
+      struct Config {
+        gridSize: f32,
+        canvasRatio: f32,
+        useSeed2: u32,
+      }
+
+      @group(0) @binding(0) var<uniform> configUniform: Config;
+
+      fn randSeed2(seed: vec2f) {
+
+      }
+
+      fn hash(v: u32) -> u32 {
+        var x = (v ^ (v >> 17u));
+        x *= 3982152891u;
+        x ^= (x >> 11u);
+        x *= 2890668881u;
+        x ^= (x >> 15u);
+        x *= 830770091u;
+        x ^= (x >> 14u);
+        return x;
+      }
+
+      var<private> seed: u32;
+
+      fn seed_1(value: f32) {
+        seed = hash(u32(value));
+      }
+
+      fn randSeed(seed: f32) {
+        seed_1(seed);
       }
 
       fn u32To01Float(value: u32) -> f32 {
@@ -93,24 +150,114 @@ describe('uniformity test example', () => {
         return (f - 1f);
       }
 
-      fn sample_1() -> f32 {
-        seed_1 = ((seed_1 * 1664525u) + 1013904223u);
-        return u32To01Float(seed_1);
+      fn sample() -> f32 {
+        seed = ((seed * 1664525u) + 1013904223u);
+        return u32To01Float(seed);
       }
 
-      fn randFloat01_1() -> f32 {
-        return sample_1();
+      fn randFloat01() -> f32 {
+        return sample();
       }
 
-      struct fragmentShader_Input_1 {
+      struct fragmentShader_Input {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn fragmentShader_1(input: fragmentShader_Input_1) -> @location(0) vec4f {
-        var uv = (((input.uv + 1f) / 2f) * vec2f(canvasRatioUniform, 1f));
-        var gridedUV = floor((uv * gridSizeUniform));
-        randSeed2_1(gridedUV);
-        return vec4f(vec3f(randFloat01_1()), 1f);
+      @fragment fn fragmentShader(input: fragmentShader_Input) -> @location(0) vec4f {
+        let gridSize = configUniform.gridSize;
+        var uv = (input.uv * vec2f(configUniform.canvasRatio, 1f));
+        var gridedUV = floor((uv * gridSize));
+        if ((configUniform.useSeed2 == 1u)) {
+          randSeed2(gridedUV);
+        }
+        else {
+          randSeed(((gridedUV.x * gridSize) + gridedUV.y));
+        }
+        return vec4f(vec3f(randFloat01()), 1f);
+      }
+
+      struct fullScreenTriangle_Input {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      struct fullScreenTriangle_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+
+        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+      }
+
+      struct Config {
+        gridSize: f32,
+        canvasRatio: f32,
+        useSeed2: u32,
+      }
+
+      @group(0) @binding(0) var<uniform> configUniform: Config;
+
+      var<private> seed: vec2u;
+
+      fn seed2(value: vec2f) {
+        seed = vec2u(value);
+      }
+
+      fn randSeed2(seed: vec2f) {
+        seed2(seed);
+      }
+
+      fn randSeed(seed_1: f32) {
+
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
+      fn next() {
+        let s0 = seed[0i];
+        var s1 = seed[1i];
+        s1 ^= s0;
+        seed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+        seed[1i] = rotl(s1, 13u);
+      }
+
+      fn u32To01Float(value: u32) -> f32 {
+        let mantissa = (value >> 9u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn sample() -> f32 {
+        next();
+        let r = seed.x;
+        return u32To01Float(r);
+      }
+
+      fn randFloat01() -> f32 {
+        return sample();
+      }
+
+      struct fragmentShader_Input {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragmentShader(input: fragmentShader_Input) -> @location(0) vec4f {
+        let gridSize = configUniform.gridSize;
+        var uv = (input.uv * vec2f(configUniform.canvasRatio, 1f));
+        var gridedUV = floor((uv * gridSize));
+        if ((configUniform.useSeed2 == 1u)) {
+          randSeed2(gridedUV);
+        }
+        else {
+          randSeed(((gridedUV.x * gridSize) + gridedUV.y));
+        }
+        return vec4f(vec3f(randFloat01()), 1f);
       }"
     `);
   });
