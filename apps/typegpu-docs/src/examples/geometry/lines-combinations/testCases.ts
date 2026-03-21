@@ -2,7 +2,7 @@ import { LineControlPoint } from '@typegpu/geometry';
 import { perlin2d, randf } from '@typegpu/noise';
 import tgpu from 'typegpu';
 import { arrayOf, f32, i32, mat2x2f, u32, vec2f } from 'typegpu/data';
-import { abs, add, clamp, cos, floor, max, mul, pow, select, sin } from 'typegpu/std';
+import { abs, clamp, cos, floor, max, pow, select, sin } from 'typegpu/std';
 import { TEST_SEGMENT_COUNT } from './constants.ts';
 
 const testCaseShell = tgpu.fn([u32, f32], LineControlPoint);
@@ -198,7 +198,7 @@ const flyingSquares = testCaseShell((vertexIndex, time) => {
   const r = 0.1 + 0.05 * randf.sample();
   const x = 2.0 * randf.sample() - 1;
   const y = 2.0 * randf.sample() - 1;
-  const transformedPoint = add(vec2f(x, y), mul(rotate, mul(point, r)));
+  const transformedPoint = vec2f(x, y) + rotate * (point * r);
   return LineControlPoint({
     position: transformedPoint,
     radius: select(0.1 * r + 0.05 * randf.sample(), -1, pointIndex === 7 || squareIndex > 50),
@@ -218,21 +218,21 @@ const spring = testCaseShell((vertexIndex, time) => {
 });
 
 export const testCases = {
-  segmentAlternate,
-  segmentStretch,
-  segmentContainsAnotherEnd,
-  caseVShapeSmall,
-  caseVShapeBig,
-  halfCircle,
-  halfCircleThin,
-  bending,
   animateWidth,
-  perlinTraces,
-  bars,
   arms,
-  armsSmall,
   armsBig,
   armsRotating,
+  armsSmall,
+  bars,
+  bending,
+  caseVShapeBig,
+  caseVShapeSmall,
   flyingSquares,
+  halfCircle,
+  halfCircleThin,
+  perlinTraces,
+  segmentAlternate,
+  segmentContainsAnotherEnd,
+  segmentStretch,
   spring,
 };

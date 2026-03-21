@@ -1,20 +1,13 @@
 import tgpu from 'typegpu';
 import { bool, f32, struct, vec2f } from 'typegpu/data';
-import { add, dot, mix, mul, normalize, select, sub } from 'typegpu/std';
-
-/** Shorthand for `add(a, mul(b, f))` due to lack of operators */
-export const addMul = tgpu.fn(
-  [vec2f, vec2f, f32],
-  vec2f,
-)((a, b, f) => {
-  return add(a, mul(b, f));
-});
+import { dot, mix, normalize, select } from 'typegpu/std';
 
 /** Rotates a 2D vector counter-clockwise by 90 degrees */
 export const rot90ccw = tgpu.fn(
   [vec2f],
   vec2f,
 )((v) => {
+  'use gpu';
   return vec2f(-v.y, v.x);
 });
 
@@ -23,6 +16,7 @@ export const rot90cw = tgpu.fn(
   [vec2f],
   vec2f,
 )((v) => {
+  'use gpu';
   return vec2f(v.y, -v.x);
 });
 
@@ -34,6 +28,7 @@ export const cross2d = tgpu.fn(
   [vec2f, vec2f],
   f32,
 )((a, b) => {
+  'use gpu';
   return a.x * b.y - a.y * b.x;
 });
 
@@ -46,11 +41,12 @@ export const bisectCcw = tgpu.fn(
   [vec2f, vec2f],
   vec2f,
 )((a, b) => {
+  'use gpu';
   const sin = cross2d(a, b);
   const sinSign = select(f32(-1), f32(1), sin >= 0);
   const orthoA = rot90ccw(a);
   const orthoB = rot90cw(b);
-  const dir = select(mul(add(a, b), sinSign), add(orthoA, orthoB), dot(a, b) < 0);
+  const dir = select((a + b) * sinSign, orthoA + orthoB, dot(a, b) < 0);
   return normalize(dir);
 });
 
@@ -62,8 +58,9 @@ export const miterPointNoCheck = tgpu.fn(
   [vec2f, vec2f],
   vec2f,
 )((a, b) => {
-  const ab = add(a, b);
-  return mul(ab, 2 / dot(ab, ab));
+  'use gpu';
+  const ab = a + b;
+  return ab * (2 / dot(ab, ab));
 });
 
 /**
@@ -75,20 +72,23 @@ export const bisectNoCheck = tgpu.fn(
   [vec2f, vec2f],
   vec2f,
 )((a, b) => {
-  return normalize(add(a, b));
+  'use gpu';
+  return normalize(a + b);
 });
 
 export const midPoint = tgpu.fn(
   [vec2f, vec2f],
   vec2f,
 )((a, b) => {
-  return mul(0.5, add(a, b));
+  'use gpu';
+  return (a + b) * 0.5;
 });
 
 export const slerpApprox = tgpu.fn(
   [vec2f, vec2f, f32],
   vec2f,
 )((a, b, t) => {
+  'use gpu';
   const mid = bisectNoCheck(a, b);
   let a_ = vec2f(a);
   let b_ = vec2f(mid);
@@ -111,14 +111,15 @@ export const intersectLines = tgpu.fn(
   [vec2f, vec2f, vec2f, vec2f],
   Intersection,
 )((A1, A2, B1, B2) => {
-  const a = sub(A2, A1);
-  const b = sub(B2, B1);
+  'use gpu';
+  const a = A2 - A1;
+  const b = B2 - B1;
   const axb = cross2d(a, b);
-  const AB = sub(B1, A1);
+  const AB = B1 - A1;
   const t = cross2d(AB, b) / axb;
   return {
     valid: axb !== 0 && t >= 0 && t <= 1,
     t,
-    point: addMul(A1, a, t),
+    point: A1 + a * t,
   };
 });

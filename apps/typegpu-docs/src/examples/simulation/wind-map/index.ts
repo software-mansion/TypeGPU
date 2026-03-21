@@ -8,7 +8,7 @@ import {
 } from '@typegpu/geometry';
 import tgpu from 'typegpu';
 import { arrayOf, builtin, f32, i32, struct, u16, u32, vec2f, vec4f } from 'typegpu/data';
-import { add, clamp, mix, mul, normalize, select } from 'typegpu/std';
+import { clamp, mix, normalize, select } from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
@@ -96,6 +96,7 @@ const vectorField = tgpu.fn(
   [vec2f],
   vec2f,
 )((pos) => {
+  'use gpu';
   return normalize(vec2f(-pos.y, pos.x));
 });
 
@@ -104,6 +105,7 @@ const advectCompute = tgpu.computeFn({
   in: { globalInvocationId: builtin.globalInvocationId },
   workgroupSize: [WORKGROUP_SIZE],
 })(({ globalInvocationId }) => {
+  'use gpu';
   const stepSize = bindGroupLayoutWritable.$.uniforms.stepSize;
   const frameCount = bindGroupLayoutWritable.$.uniforms.frameCount;
   const particleIndex = globalInvocationId.x;
@@ -112,13 +114,19 @@ const advectCompute = tgpu.computeFn({
   const prevPosIndex = (TRAIL_LENGTH + frameCount - 1) % TRAIL_LENGTH;
   const pos = particle.positions[prevPosIndex];
   const v0 = vectorField(pos);
-  const v1 = vectorField(add(pos, mul(v0, 0.5 * stepSize)));
-  const newPos = add(pos, mul(v1, stepSize));
+  const v1 = vectorField(pos + v0 * (0.5 * stepSize));
+  const newPos = pos + v1 * stepSize;
   particle.positions[currentPosIndex] = vec2f(newPos);
   bindGroupLayoutWritable.$.particles[particleIndex] = ParticleTrail(particle);
 });
 
-const lineWidth = tgpu.fn([f32], f32)((x) => 0.004 * (1 - x));
+const lineWidth = tgpu.fn(
+  [f32],
+  f32,
+)((x) => {
+  'use gpu';
+  return 0.004 * (1 - x);
+});
 
 const mainVertex = tgpu.vertexFn({
   in: {
@@ -131,6 +139,7 @@ const mainVertex = tgpu.vertexFn({
     trailPosition: f32,
   },
 })(({ vertexIndex, instanceIndex }) => {
+  'use gpu';
   const frameCount = bindGroupLayout.$.uniforms.frameCount;
   const particleIndex = u32(instanceIndex / TRAIL_LENGTH);
   const trailIndexOriginal = instanceIndex % TRAIL_LENGTH;
@@ -184,6 +193,7 @@ const mainFragment = tgpu.fragmentFn({
   },
   out: vec4f,
 })(({ position, trailPosition }) => {
+  'use gpu';
   const opacity = clamp(f32(3) * (1 - trailPosition), 0, 1);
   return mix(
     vec4f(0.77, 0.39, 1, opacity),

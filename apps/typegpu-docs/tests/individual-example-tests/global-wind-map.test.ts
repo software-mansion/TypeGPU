@@ -136,10 +136,6 @@ describe('global wind map example', () => {
         return JoinResult(dL, dR, shouldJoinL, shouldJoinR, isHairpin);
       }
 
-      fn addMul(a: vec2f, b: vec2f, f: f32) -> vec2f {
-        return (a + (b * f));
-      }
-
       fn cross2d(a: vec2f, b: vec2f) -> f32 {
         return ((a.x * b.y) - (a.y * b.x));
       }
@@ -156,7 +152,7 @@ describe('global wind map example', () => {
         let axb = cross2d(a, b);
         var AB = (B1 - A1);
         let t = (cross2d(AB, b) / axb);
-        return Intersection((((axb != 0f) && (t >= 0f)) && (t <= 1f)), t, addMul(A1, a, t));
+        return Intersection((((axb != 0f) && (t >= 0f)) && (t <= 1f)), t, (A1 + (a * t)));
       }
 
       struct JoinInput {
@@ -180,12 +176,12 @@ describe('global wind map example', () => {
         let sgn = sign(cross2d(bw, join.d));
         var svert = (vert * sgn);
         var v0 = (svert + (bw * 7.5f));
-        var v1 = addMul(v0, (bw + svert), 1.5f);
+        var v1 = (v0 + ((bw + svert) * 1.5f));
         if ((joinVertexIndex == 0u)) {
-          return addMul(join.C.position, v0, join.C.radius);
+          return (join.C.position + (v0 * join.C.radius));
         }
         if ((joinVertexIndex == 1u)) {
-          return addMul(join.C.position, v1, join.C.radius);
+          return (join.C.position + (v1 * join.C.radius));
         }
         return join.C.position;
       }
@@ -195,7 +191,7 @@ describe('global wind map example', () => {
         var vert = rot90ccw(fw);
         let sgn = sign(cross2d(fw, join.d));
         var svert = (vert * sgn);
-        return addMul(join.C.position, svert, join.C.radius);
+        return (join.C.position + (svert * join.C.radius));
       }
 
       fn rot90cw(v: vec2f) -> vec2f {
@@ -233,7 +229,7 @@ describe('global wind map example', () => {
           return join.v;
         }
         var dir = slerpApprox(join.d, bisectCcw(join.start, join.end), (f32(joinVertexIndex) / f32(maxJoinCount)));
-        return addMul(join.C.position, dir, join.C.radius);
+        return (join.C.position + (dir * join.C.radius));
       }
 
       fn lineSegmentVariableWidth(vertexIndex: u32, A: LineControlPoint, B: LineControlPoint, C: LineControlPoint, D: LineControlPoint, maxJoinCount: u32) -> LineSegmentOutput {
@@ -260,10 +256,10 @@ describe('global wind map example', () => {
         let d3 = (&joinB.dR);
         let d4 = (&joinC.dL);
         let d5 = (&joinC.dR);
-        var v2orig = addMul(B.position, (*d2), B.radius);
-        var v3orig = addMul(B.position, (*d3), B.radius);
-        var v4orig = addMul(C.position, (*d4), C.radius);
-        var v5orig = addMul(C.position, (*d5), C.radius);
+        var v2orig = (B.position + ((*d2) * B.radius));
+        var v3orig = (B.position + ((*d3) * B.radius));
+        var v4orig = (C.position + ((*d4) * C.radius));
+        var v5orig = (C.position + ((*d5) * C.radius));
         var limL = intersectLines(B.position, v2orig, C.position, v5orig);
         var limR = intersectLines(B.position, v3orig, C.position, v4orig);
         var v2 = select(v2orig, limL.point, limL.valid);

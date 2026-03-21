@@ -1,8 +1,8 @@
 import tgpu from 'typegpu';
 import type { v2f } from 'typegpu/data';
 import { vec2f } from 'typegpu/data';
-import { dot, mul, normalize, select } from 'typegpu/std';
-import { addMul, bisectCcw, cross2d, miterPointNoCheck, rot90ccw } from '../../utils.ts';
+import { dot, normalize, select } from 'typegpu/std';
+import { bisectCcw, cross2d, miterPointNoCheck, rot90ccw } from '../../utils.ts';
 import type { JoinInput } from '../types.ts';
 
 export const miterJoinLimitSlot = tgpu.slot(2);
@@ -29,7 +29,7 @@ function miterPoint(a: v2f, b: v2f) {
   const cos_ = dot(a, b);
   const diff = b2 - cos_;
   const t = diff / sin_;
-  return addMul(a, rot90ccw(a), t);
+  return a + rot90ccw(a) * t;
 }
 
 /**
@@ -41,7 +41,7 @@ function miterLimit(miter: v2f, limitRatio: number) {
   const m2 = dot(miter, miter);
   const l2 = limitRatio * limitRatio;
   if (m2 > l2) {
-    return mul(normalize(miter), ((limitRatio - 1) * (l2 - 1)) / (m2 - 1) + 1);
+    return normalize(miter) * (((limitRatio - 1) * (l2 - 1)) / (m2 - 1) + 1);
   }
   return vec2f(miter);
 }
@@ -56,5 +56,5 @@ export function miter(join: JoinInput, joinVertexIndex: number, _maxJoinCount: n
     miterJoinLimitSlot.$,
   );
   const dir = select(miterPoint(join.d, miter), miter, joinVertexIndex > 1);
-  return addMul(join.C.position, dir, join.C.radius);
+  return join.C.position + dir * join.C.radius;
 }

@@ -1,6 +1,5 @@
 import { vec2f } from 'typegpu/data';
 import { normalize } from 'typegpu/std';
-import { addMul } from '../../utils.ts';
 import type { JoinInput } from '../types.ts';
 
 export function triangle(join: JoinInput, joinVertexIndex: number, _maxJoinCount: number) {
@@ -9,5 +8,5 @@ export function triangle(join: JoinInput, joinVertexIndex: number, _maxJoinCount
     return vec2f(join.v);
   }
   const fw = normalize(join.fw);
-  return addMul(join.C.position, fw, join.C.radius);
+  return join.C.position + fw * join.C.radius;
 }
