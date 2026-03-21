@@ -20,6 +20,7 @@ export const externalNormals = tgpu.fn(
   [vec2f, f32, f32],
   ExternalNormals,
 )((distance, r1, r2) => {
+  'use gpu';
   // Distance squared inverse is used to avoid taking square root more than necessary.
   // This way we only need to take it once!
   const dist2Inv = 1 / dot(distance, distance);

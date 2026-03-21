@@ -22,7 +22,7 @@ import {
   vec3f,
   vec4f,
 } from 'typegpu/data';
-import { add, clamp, cos, fwidth, min, mix, mul, select, sin, smoothstep } from 'typegpu/std';
+import { clamp, cos, fwidth, min, mix, select, sin, smoothstep } from 'typegpu/std';
 import { TEST_SEGMENT_COUNT } from './constants.ts';
 import { testCases } from './testCases.ts';
 import { defineControls } from '../../common/defineControls.ts';
@@ -127,7 +127,7 @@ const mainVertex = tgpu.vertexFn({
     vertexIndex: interpolate('flat', u32),
     situationIndex: interpolate('flat', u32),
   },
-})(({ vertexIndex, instanceIndex }) => {
+})(({ vertexIndex, instanceIndex }, Out) => {
   'use gpu';
   const t = bindGroupLayout.$.uniforms.time;
   const A = testCaseSlot.$(instanceIndex, t);
@@ -137,20 +137,13 @@ const mainVertex = tgpu.vertexFn({
 
   // disconnect lines if radius is < 0
   if (A.radius < 0 || B.radius < 0 || C.radius < 0 || D.radius < 0) {
-    return {
-      outPos: vec4f(),
-      position: vec2f(),
-      uv: vec2f(),
-      instanceIndex: 0,
-      vertexIndex: 0,
-      situationIndex: 0,
-    };
+    return Out();
   }
 
   const result = lineSegmentVariableWidth(vertexIndex, A, B, C, D, MAX_JOIN_COUNT);
 
   return {
-    outPos: vec4f(mul(result.vertexPosition, result.w), 0, result.w),
+    outPos: vec4f(result.vertexPosition * result.w, 0, result.w),
     position: result.vertexPosition,
     uv: vec2f(0, select(f32(0), f32(1), vertexIndex > 1)),
     instanceIndex,
@@ -203,7 +196,7 @@ const mainFragment = tgpu.fragmentFn({
   if (fillType === 5) {
     color = vec3f(colors[situationIndex % colors.length]);
   }
-  color = mul(color, 0.8 + 0.2 * smoothstep(1, 0.5, uv.y));
+  color = color * (0.8 + 0.2 * smoothstep(1, 0.5, uv.y));
   if (frontFacing) {
     return vec4f(color, 0.5);
   }
@@ -221,6 +214,7 @@ const centerlineVertex = tgpu.vertexFn({
     outPos: builtin.position,
   },
 })(({ vertexIndex }) => {
+  'use gpu';
   const t = bindGroupLayout.$.uniforms.time;
   const vertex = testCaseSlot.$(vertexIndex, t);
   if (vertex.radius < 0) {
@@ -239,6 +233,7 @@ const outlineFragment = tgpu.fragmentFn({
   },
   out: vec4f,
 })(() => {
+  'use gpu';
   return vec4f(0, 0, 0, 0.2);
 });
 
@@ -265,6 +260,7 @@ const circlesVertex = tgpu.vertexFn({
     outPos: builtin.position,
   },
 })(({ instanceIndex, vertexIndex }) => {
+  'use gpu';
   const t = bindGroupLayout.$.uniforms.time;
   const vertex = testCaseSlot.$(instanceIndex, t);
   if (vertex.radius < 0) {
@@ -276,7 +272,7 @@ const circlesVertex = tgpu.vertexFn({
   const angle = min(2 * Math.PI, step * f32(vertexIndex));
   const unit = vec2f(cos(angle), sin(angle));
   return {
-    outPos: vec4f(add(vertex.position, mul(unit, vertex.radius)), 0, 1),
+    outPos: vec4f(vertex.position + unit * vertex.radius, 0, 1),
   };
 });
 

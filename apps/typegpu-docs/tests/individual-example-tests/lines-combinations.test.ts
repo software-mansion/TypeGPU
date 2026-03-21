@@ -105,10 +105,6 @@ describe('lines combinations example', () => {
         return JoinResult(dL, dR, shouldJoinL, shouldJoinR, isHairpin);
       }
 
-      fn addMul(a: vec2f, b: vec2f, f: f32) -> vec2f {
-        return (a + (b * f));
-      }
-
       fn cross2d(a: vec2f, b: vec2f) -> f32 {
         return ((a.x * b.y) - (a.y * b.x));
       }
@@ -125,7 +121,7 @@ describe('lines combinations example', () => {
         let axb = cross2d(a, b);
         var AB = (B1 - A1);
         let t = (cross2d(AB, b) / axb);
-        return Intersection((((axb != 0f) && (t >= 0f)) && (t <= 1f)), t, addMul(A1, a, t));
+        return Intersection((((axb != 0f) && (t >= 0f)) && (t <= 1f)), t, (A1 + (a * t)));
       }
 
       struct JoinInput {
@@ -178,7 +174,7 @@ describe('lines combinations example', () => {
           return join.v;
         }
         var dir = slerpApprox(join.d, bisectCcw(join.start, join.end), (f32(joinVertexIndex) / f32(maxJoinCount)));
-        return addMul(join.C.position, dir, join.C.radius);
+        return (join.C.position + (dir * join.C.radius));
       }
 
       fn lineSegmentVariableWidth(vertexIndex: u32, A: LineControlPoint, B: LineControlPoint, C: LineControlPoint, D: LineControlPoint, maxJoinCount: u32) -> LineSegmentOutput {
@@ -205,10 +201,10 @@ describe('lines combinations example', () => {
         let d3 = (&joinB.dR);
         let d4 = (&joinC.dL);
         let d5 = (&joinC.dR);
-        var v2orig = addMul(B.position, (*d2), B.radius);
-        var v3orig = addMul(B.position, (*d3), B.radius);
-        var v4orig = addMul(C.position, (*d4), C.radius);
-        var v5orig = addMul(C.position, (*d5), C.radius);
+        var v2orig = (B.position + ((*d2) * B.radius));
+        var v3orig = (B.position + ((*d3) * B.radius));
+        var v4orig = (C.position + ((*d4) * C.radius));
+        var v5orig = (C.position + ((*d5) * C.radius));
         var limL = intersectLines(B.position, v2orig, C.position, v5orig);
         var limR = intersectLines(B.position, v3orig, C.position, v4orig);
         var v2 = select(v2orig, limL.point, limL.valid);
@@ -270,7 +266,7 @@ describe('lines combinations example', () => {
         var C = item((_arg_0.instanceIndex + 2u), t);
         var D = item((_arg_0.instanceIndex + 3u), t);
         if (((((A.radius < 0f) || (B.radius < 0f)) || (C.radius < 0f)) || (D.radius < 0f))) {
-          return mainVertex_Output(vec4f(), vec2f(), vec2f(), 0u, 0u, 0u);
+          return mainVertex_Output();
         }
         var result = lineSegmentVariableWidth(_arg_0.vertexIndex, A, B, C, D, 6u);
         return mainVertex_Output(vec4f((result.vertexPosition * result.w), 0f, result.w), result.vertexPosition, vec2f(0f, select(0f, 1f, (_arg_0.vertexIndex > 1u))), _arg_0.instanceIndex, _arg_0.vertexIndex, 0u);

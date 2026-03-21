@@ -1,7 +1,7 @@
 import tgpu from 'typegpu';
 import { u32, vec2f } from 'typegpu/data';
-import { dot, neg, select, sub } from 'typegpu/std';
-import { addMul, intersectLines } from '../utils.ts';
+import { dot, neg, select } from 'typegpu/std';
+import { intersectLines } from '../utils.ts';
 import { ExternalNormals, externalNormals } from './externalNormals.ts';
 import { round } from './joins/round.ts';
 import { solveJoin } from './solveJoin.ts';
@@ -15,9 +15,10 @@ export const lineSegmentVariableWidth = tgpu.fn(
   [u32, LineControlPoint, LineControlPoint, LineControlPoint, LineControlPoint, u32],
   LineSegmentOutput,
 )((vertexIndex, A, B, C, D, maxJoinCount) => {
-  const AB = sub(B.position, A.position);
-  const BC = sub(C.position, B.position);
-  const DC = sub(C.position, D.position);
+  'use gpu';
+  const AB = B.position - A.position;
+  const BC = C.position - B.position;
+  const DC = C.position - D.position;
   const CB = neg(BC);
 
   const radiusABDelta = A.radius - B.radius;
@@ -46,10 +47,10 @@ export const lineSegmentVariableWidth = tgpu.fn(
   const d4 = joinC.dL;
   const d5 = joinC.dR;
 
-  const v2orig = addMul(B.position, d2, B.radius);
-  const v3orig = addMul(B.position, d3, B.radius);
-  const v4orig = addMul(C.position, d4, C.radius);
-  const v5orig = addMul(C.position, d5, C.radius);
+  const v2orig = B.position + d2 * B.radius;
+  const v3orig = B.position + d3 * B.radius;
+  const v4orig = C.position + d4 * C.radius;
+  const v5orig = C.position + d5 * C.radius;
 
   const limL = intersectLines(B.position, v2orig, C.position, v5orig);
   const limR = intersectLines(B.position, v3orig, C.position, v4orig);
