@@ -128,7 +128,7 @@ export type StockhamLineBindGroup = TgpuBindGroup<(typeof stockhamLayout)['entri
  * Out-of-place Stockham radix-2 along lines for an explicit `ns` stage list.
  * **Per-stage uniforms:** `stageUniforms[i]` / bind groups must be distinct GPU buffers — repeated
  * `queue.writeBuffer` into one buffer before a single `submit` would leave every dispatch seeing the
- * last `ns` only. Each stage records its own compute pass on `commandEncoder`.
+ * last `ns` only. Dispatches are recorded on the caller's open `computePass`.
  */
 export function dispatchStockhamLineFftStages(
   pipeline: ReturnType<typeof createStockhamStagePipeline>,
@@ -140,7 +140,7 @@ export function dispatchStockhamLineFftStages(
   numLines: number,
   inputInA: boolean,
   nsList: readonly number[],
-  opts: { commandEncoder: GPUCommandEncoder; inverse?: boolean },
+  opts: { computePass: GPUComputePassEncoder; inverse?: boolean },
 ): boolean {
   if (nsList.length > stageUniforms.length) {
     throw new Error(
@@ -161,9 +161,7 @@ export function dispatchStockhamLineFftStages(
   let readA = inputInA;
   const direction = inverse ? 1 : 0;
 
-  const pass = opts.commandEncoder.beginComputePass({
-    label: `fft2d Stockham radix-2 ${inverse ? 'inverse' : 'forward'}`,
-  });
+  const pass = opts.computePass;
   for (let i = 0; i < nsList.length; i++) {
     // oxlint-disable-next-line typescript/no-non-null-assertion
     const ns = nsList[i]!;
@@ -174,7 +172,6 @@ export function dispatchStockhamLineFftStages(
     pipeline.with(pass).with(bg).dispatchWorkgroups(wx, wy, wz);
     readA = !readA;
   }
-  pass.end();
 
   return readA;
 }
@@ -188,7 +185,7 @@ export function dispatchStockhamLineFft(
   lineStride: number,
   numLines: number,
   inputInA: boolean,
-  opts: { commandEncoder: GPUCommandEncoder; inverse?: boolean },
+  opts: { computePass: GPUComputePassEncoder; inverse?: boolean },
 ): boolean {
   return dispatchStockhamLineFftStages(
     pipeline,
