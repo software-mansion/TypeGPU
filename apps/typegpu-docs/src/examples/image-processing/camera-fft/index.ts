@@ -1,9 +1,12 @@
 import {
   createFft2d,
+  createStockhamRadix2LineStrategyCopy,
+  createStockhamRadix4LineStrategy,
   decomposeWorkgroups,
   fftForwardProfileQueryIndexCount,
   log2Int,
   nextPowerOf2,
+  radix4LineStageCount,
   stockhamStageCount,
   stockhamTwiddleLutVec2Count,
   type Fft2d,
@@ -14,6 +17,8 @@ import { defineControls } from '../../common/defineControls.ts';
 /**
  * Pipeline: camera → luminance (optional separable Hann edge window) → `forward()` → radial low-pass
  * on `pingPong[spectrumSlot]` → optional `inverse()` (spatial) or log-magnitude spectrum.
+ * By default the 2D FFT uses the **radix-4 line strategy** (`createStockhamRadix4LineStrategy`) for fewer
+ * global passes; use control `lineFft` or `?lineFft=default` for classic radix-2 Stockham.
  */
 
 const WORKGROUP = 256;
@@ -24,6 +29,21 @@ const WORKGROUP = 256;
  * camera-thresholding / chroma-keying.
  */
 let fftMaxSide = 1024;
+
+type LineFftMode = 'default' | 'copy' | 'radix4';
+
+function lineFftModeFromSearch(): LineFftMode {
+  const v = new URLSearchParams(window.location.search).get('lineFft');
+  if (v === 'copy' || v === 'radix4' || v === 'default') {
+    return v;
+  }
+  return 'radix4';
+}
+
+let lineFftMode: LineFftMode = lineFftModeFromSearch();
+/** Tracks which line mode the current `fft` was built with (invalidate on change). */
+let fftLineFftMode: LineFftMode | undefined;
+
 
 /** Decode size for layout + downscale math (metadata can disagree with what `<video>` exposes). */
 function decodedFrameSize(
@@ -356,7 +376,7 @@ const root = await tgpu.init({
   device: { optionalFeatures: ['timestamp-query'] },
 });
 const device = root.device;
-/** Upper bound on FFT pad (matches max `fftMaxSide`); profiling uses two slots per Stockham stage + transpose. */
+/** Upper bound on FFT pad (matches max `fftMaxSide`); query buffer sized for worst case (radix-2 line stages + transposes). */
 const PROFILE_PAD_MAX = 2048;
 /** Omit final spectrum transpose (matches `createFft2d`); saves one global transpose after column FFT. */
 const SKIP_FINAL_FFT_TRANSPOSE = true;
@@ -367,7 +387,7 @@ const PROFILE_QUERY_COUNT =
   });
 /**
  * GPU intervals when `timestamp-query` is enabled: fill 0–1, filter 2–3, forward FFT from index 4
- * (`profileForward`: per Stockham radix stage + each transpose).
+ * (`profileForward`: per line-FFT stage + each transpose; row/col stage count follows active strategy).
  */
 const profileQuerySet = root.enabledFeatures.has('timestamp-query')
   ? root.createQuerySet('timestamp', PROFILE_QUERY_COUNT)
@@ -516,6 +536,7 @@ function destroyVideoTexture() {
 function destroyFftBlock() {
   fft?.destroy();
   fft = undefined;
+  fftLineFftMode = undefined;
   displayTexture?.destroy();
   displayTexture = undefined;
   displaySampleView = undefined;
@@ -529,24 +550,33 @@ function ensureResources(frameW: number, frameH: number) {
   const nextPadH = nextPowerOf2(effH);
 
   const needVideoTex = !videoTexture || videoW !== effW || videoH !== effH;
-  const needFft = !fft || padW !== nextPadW || padH !== nextPadH;
+  const needFft =
+    !fft || padW !== nextPadW || padH !== nextPadH || fftLineFftMode !== lineFftMode;
 
   if (needFft) {
     destroyFftBlock();
     padW = nextPadW;
     padH = nextPadH;
+    const lineFactory =
+      lineFftMode === 'copy'
+        ? createStockhamRadix2LineStrategyCopy
+        : lineFftMode === 'radix4'
+          ? createStockhamRadix4LineStrategy
+          : undefined;
     fft = createFft2d(root, {
       width: padW,
       height: padH,
       skipFinalTranspose: SKIP_FINAL_FFT_TRANSPOSE,
+      ...(lineFactory !== undefined ? { lineFftStrategyFactory: lineFactory } : {}),
     });
+    fftLineFftMode = lineFftMode;
     lastMagUniformKey = '';
     lastFilterUniformKey = '';
     {
       const lutN = Math.max(padW, padH);
       const lutVec2 = stockhamTwiddleLutVec2Count(lutN);
       console.info(
-        `[camera-fft] FFT ${padW}×${padH} | twiddle LUT ${lutVec2} vec2 (~${((lutVec2 * 8) / 1024).toFixed(1)} KiB) | useGlobalTranspose=${fft.useGlobalTranspose} skipFinalTranspose=${fft.skipFinalTranspose} (filter/mag use swapped freq axes when true)`,
+        `[camera-fft] FFT ${padW}×${padH} | lineFft=${lineFftMode} lineFftStrategyId=${fft.lineFftStrategyId} | twiddle LUT ${lutVec2} vec2 (~${((lutVec2 * 8) / 1024).toFixed(1)} KiB) | useGlobalTranspose=${fft.useGlobalTranspose} skipFinalTranspose=${fft.skipFinalTranspose} (filter/mag use swapped freq axes when true)`,
       );
     }
 
@@ -818,6 +848,7 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
     const query = qs;
     const snapshotPadW = padW;
     const snapshotPadH = padH;
+    const snapshotLineFftId = fft.lineFftStrategyId;
     const snapshotCallbackWallMs = lastCallbackWallMs;
     gpuTimingReadPending = true;
     lastGpuTimingLogMs = performance.now();
@@ -827,16 +858,24 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
         const r = await query.read();
         const fillMs = ticksToMs(Number(r[1] - r[0]));
         const filterMs = ticksToMs(Number(r[3] - r[2]));
+        const rowStages =
+          snapshotLineFftId === 'stockham-radix4'
+            ? radix4LineStageCount(snapshotPadW)
+            : stockhamStageCount(snapshotPadW);
+        const colStages =
+          snapshotLineFftId === 'stockham-radix4'
+            ? radix4LineStageCount(snapshotPadH)
+            : stockhamStageCount(snapshotPadH);
         let idx = 4;
         let fftRowMs = 0;
-        for (let s = 0; s < stockhamStageCount(snapshotPadW); s++) {
+        for (let s = 0; s < rowStages; s++) {
           fftRowMs += ticksToMs(Number(r[idx + 1] - r[idx]));
           idx += 2;
         }
         const fftTr1Ms = ticksToMs(Number(r[idx + 1] - r[idx]));
         idx += 2;
         let fftColMs = 0;
-        for (let s = 0; s < stockhamStageCount(snapshotPadH); s++) {
+        for (let s = 0; s < colStages; s++) {
           fftColMs += ticksToMs(Number(r[idx + 1] - r[idx]));
           idx += 2;
         }
@@ -888,6 +927,13 @@ export const controls = defineControls({
     options: ['512', '1024', '2048'],
     onSelectChange: (value) => {
       fftMaxSide = Number(value);
+    },
+  },
+  lineFft: {
+    initial: lineFftMode,
+    options: ['radix4', 'default', 'copy'],
+    onSelectChange: (value) => {
+      lineFftMode = value as LineFftMode;
     },
   },
   gpuTiming: {

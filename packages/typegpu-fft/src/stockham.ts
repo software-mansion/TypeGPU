@@ -122,22 +122,21 @@ export function buildStockhamTwiddleLut(nMax: number): [number, number][] {
   return out;
 }
 
-export function dispatchStockhamLineFft(
+/** Out-of-place Stockham radix-2 along lines for an explicit `ns` stage list (e.g. tail after radix-4). */
+export function dispatchStockhamLineFftStages(
   pipeline: ReturnType<typeof createStockhamStagePipeline>,
   uniformBuffer: TgpuBuffer<typeof stockhamUniformType> & UniformFlag,
   n: number,
   lineStride: number,
   numLines: number,
   inputInA: boolean,
-  /** `src = bufA → dst = bufB` */
   bindGroupSrcA: TgpuBindGroup<(typeof stockhamLayout)['entries']>,
-  /** `src = bufB → dst = bufA` */
   bindGroupSrcB: TgpuBindGroup<(typeof stockhamLayout)['entries']>,
+  nsList: readonly number[],
   opts?: { computePass?: GPUComputePassEncoder; inverse?: boolean },
 ): boolean {
   const computePass = opts?.computePass;
   const inverse = opts?.inverse === true;
-  const nsList = stockhamNsValues(n);
   const totalThreads = numLines * (n >> 1);
   const [wx, wy, wz] = decomposeWorkgroups(Math.ceil(totalThreads / WORKGROUP_SIZE));
 
@@ -152,6 +151,32 @@ export function dispatchStockhamLineFft(
     readA = !readA;
   }
 
-  // `readA` after the last stage: result lives in bufA iff true, else bufB.
   return readA;
+}
+
+export function dispatchStockhamLineFft(
+  pipeline: ReturnType<typeof createStockhamStagePipeline>,
+  uniformBuffer: TgpuBuffer<typeof stockhamUniformType> & UniformFlag,
+  n: number,
+  lineStride: number,
+  numLines: number,
+  inputInA: boolean,
+  /** `src = bufA → dst = bufB` */
+  bindGroupSrcA: TgpuBindGroup<(typeof stockhamLayout)['entries']>,
+  /** `src = bufB → dst = bufA` */
+  bindGroupSrcB: TgpuBindGroup<(typeof stockhamLayout)['entries']>,
+  opts?: { computePass?: GPUComputePassEncoder; inverse?: boolean },
+): boolean {
+  return dispatchStockhamLineFftStages(
+    pipeline,
+    uniformBuffer,
+    n,
+    lineStride,
+    numLines,
+    inputInA,
+    bindGroupSrcA,
+    bindGroupSrcB,
+    stockhamNsValues(n),
+    opts,
+  );
 }
