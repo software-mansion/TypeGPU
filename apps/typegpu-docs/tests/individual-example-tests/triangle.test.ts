@@ -20,16 +20,12 @@ describe('triangle example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct mainVertex_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      struct mainVertex_Output {
+      "struct mainVertex_Output {
         @builtin(position) outPos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn mainVertex(in: mainVertex_Input) -> mainVertex_Output {
+      @vertex fn mainVertex(@builtin(vertex_index) vertexIndex: u32) -> mainVertex_Output {
         var pos = array<vec2f, 3>(
           vec2(0.0, 0.5),
           vec2(-0.5, -0.5),
@@ -42,7 +38,7 @@ describe('triangle example', () => {
           vec2(1.0, 0.0),
         );
 
-        return mainVertex_Output(vec4f(pos[in.vertexIndex], 0.0, 1.0), uv[in.vertexIndex]);
+        return mainVertex_Output(vec4f(pos[vertexIndex], 0.0, 1.0), uv[vertexIndex]);
       }
 
       fn getGradientColor(ratio: f32) -> vec4f{

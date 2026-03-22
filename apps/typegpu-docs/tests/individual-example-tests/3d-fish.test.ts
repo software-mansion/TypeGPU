@@ -77,15 +77,11 @@ describe('3d fish example', () => {
         fish_data_1[x] = data;
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u)  {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -229,15 +225,11 @@ describe('3d fish example', () => {
         (*nextFishData_1).direction = direction;
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u)  {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        simulate(in.id.x, in.id.y, in.id.z);
+        simulate(id.x, id.y, id.z);
       }
 
       struct ModelData {
@@ -293,18 +285,11 @@ describe('3d fish example', () => {
         @location(5) @interpolate(flat) applySeaDesaturation: u32,
       }
 
-      struct vertexShader_Input {
-        @location(0) modelPosition: vec3f,
-        @location(1) modelNormal: vec3f,
-        @location(2) textureUV: vec2f,
-        @builtin(instance_index) instanceIndex: u32,
-      }
-
-      @vertex fn vertexShader(input: vertexShader_Input) -> vertexShader_Output {
-        let currentModelData = (&modelData[input.instanceIndex]);
-        var wavedVertex = PosAndNormal(input.modelPosition, input.modelNormal);
+      @vertex fn vertexShader(@location(0) _arg_modelPosition: vec3f, @location(1) _arg_modelNormal: vec3f, @location(2) _arg_textureUV: vec2f, @builtin(instance_index) _arg_instanceIndex: u32) -> vertexShader_Output {
+        let currentModelData = (&modelData[_arg_instanceIndex]);
+        var wavedVertex = PosAndNormal(_arg_modelPosition, _arg_modelNormal);
         if (((*currentModelData).applySinWave == 1u)) {
-          wavedVertex = applySinWave(input.instanceIndex, PosAndNormal(input.modelPosition, input.modelNormal), currentTime);
+          wavedVertex = applySinWave(_arg_instanceIndex, PosAndNormal(_arg_modelPosition, _arg_modelNormal), currentTime);
         }
         var direction = normalize((*currentModelData).direction);
         let yaw = (-(atan2(direction.z, direction.x)) + 3.141592653589793f);
@@ -317,7 +302,16 @@ describe('3d fish example', () => {
         var worldNormal = normalize(((yawMatrix * pitchMatrix) * vec4f(wavedVertex.normal, 1f)).xyz);
         let worldPositionUniform = (&worldPosition);
         var canvasPosition = ((camera.projection * camera.view) * (*worldPositionUniform));
-        return vertexShader_Output(worldPosition.xyz, worldNormal, canvasPosition, (*currentModelData).variant, input.textureUV, (*currentModelData).applySeaFog, (*currentModelData).applySeaDesaturation);
+        return vertexShader_Output(worldPosition.xyz, worldNormal, canvasPosition, (*currentModelData).variant, _arg_textureUV, (*currentModelData).applySeaFog, (*currentModelData).applySeaDesaturation);
+      }
+
+      struct fragmentShader_Input {
+        @location(0) worldPosition: vec3f,
+        @location(1) worldNormal: vec3f,
+        @location(2) variant: f32,
+        @location(3) textureUV: vec2f,
+        @location(4) @interpolate(flat) applySeaFog: u32,
+        @location(5) @interpolate(flat) applySeaDesaturation: u32,
       }
 
       @group(0) @binding(1) var modelTexture: texture_2d<f32>;
@@ -424,39 +418,29 @@ describe('3d fish example', () => {
         return vec3f(r, g, b);
       }
 
-      struct fragmentShader_Input {
-        @location(0) worldPosition: vec3f,
-        @location(1) worldNormal: vec3f,
-        @builtin(position) canvasPosition: vec4f,
-        @location(2) variant: f32,
-        @location(3) textureUV: vec2f,
-        @location(4) @interpolate(flat) applySeaFog: u32,
-        @location(5) @interpolate(flat) applySeaDesaturation: u32,
-      }
-
-      @fragment fn fragmentShader(input: fragmentShader_Input) -> @location(0) vec4f {
-        var textureColorWithAlpha = textureSample(modelTexture, sampler_1, input.textureUV);
+      @fragment fn fragmentShader(_arg_0: fragmentShader_Input, @builtin(position) _arg_canvasPosition: vec4f) -> @location(0) vec4f {
+        var textureColorWithAlpha = textureSample(modelTexture, sampler_1, _arg_0.textureUV);
         var textureColor = textureColorWithAlpha.rgb;
         var ambient = ((0.5f * textureColor) * vec3f(0.800000011920929, 0.800000011920929, 1));
-        let cosTheta = dot(input.worldNormal, vec3f(-0.2357022613286972, 0.9428090453147888, -0.2357022613286972));
+        let cosTheta = dot(_arg_0.worldNormal, vec3f(-0.2357022613286972, 0.9428090453147888, -0.2357022613286972));
         var diffuse = ((max(0f, cosTheta) * textureColor) * vec3f(0.800000011920929, 0.800000011920929, 1));
-        var viewSource = normalize((camera.position.xyz - input.worldPosition));
-        var reflectSource = normalize(reflect(vec3f(0.2357022613286972, -0.9428090453147888, 0.2357022613286972), input.worldNormal));
+        var viewSource = normalize((camera.position.xyz - _arg_0.worldPosition));
+        var reflectSource = normalize(reflect(vec3f(0.2357022613286972, -0.9428090453147888, 0.2357022613286972), _arg_0.worldNormal));
         let specularStrength = pow(max(0f, dot(viewSource, reflectSource)), 16f);
         var specular = (specularStrength * vec3f(0.800000011920929, 0.800000011920929, 1));
         var lightedColor = ((ambient + diffuse) + specular);
-        let distanceFromCamera = length((camera.position.xyz - input.worldPosition));
+        let distanceFromCamera = length((camera.position.xyz - _arg_0.worldPosition));
         var desaturatedColor = lightedColor;
-        if ((input.applySeaDesaturation == 1u)) {
+        if ((_arg_0.applySeaDesaturation == 1u)) {
           let desaturationFactor = (-(atan2(((distanceFromCamera - 5f) / 10f), 1f)) / 3f);
           var hsv = rgbToHsv(desaturatedColor);
           hsv.y += (desaturationFactor / 2f);
           hsv.z += desaturationFactor;
-          hsv.x += ((input.variant - 0.5f) * 0.2f);
+          hsv.x += ((_arg_0.variant - 0.5f) * 0.2f);
           desaturatedColor = hsvToRgb(hsv);
         }
         var foggedColor = desaturatedColor;
-        if ((input.applySeaFog == 1u)) {
+        if ((_arg_0.applySeaFog == 1u)) {
           let fogParameter = max(0f, ((distanceFromCamera - 1.5f) * 0.2f));
           let fogFactor = (fogParameter / (1f + fogParameter));
           foggedColor = mix(foggedColor, vec3f(0, 0.47843137383461, 0.800000011920929), fogFactor);

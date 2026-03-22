@@ -25,22 +25,17 @@ describe('square example', () => {
         @builtin(position) pos: vec4f,
       }
 
-      struct vertex_Input {
-        @builtin(vertex_index) idx: u32,
-        @location(0) color: vec4f,
-      }
-
-      @vertex fn vertex(_arg_0: vertex_Input) -> vertex_Output {
+      @vertex fn vertex(@builtin(vertex_index) idx: u32, @location(0) color: vec4f) -> vertex_Output {
         var vertices = array<vec2f, 4>(vec2f(-1), vec2f(1, -1), vec2f(1), vec2f(-1, 1));
-        return vertex_Output(_arg_0.color, vec4f(vertices[_arg_0.idx], 0f, 1f));
+        return vertex_Output(color, vec4f(vertices[idx], 0f, 1f));
       }
 
       struct mainFragment_Input {
         @location(0) color: vec4f,
       }
 
-      @fragment fn mainFragment(input: mainFragment_Input) -> @location(0) vec4f {
-        return input.color;
+      @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
+        return _arg_0.color;
       }"
     `);
   });

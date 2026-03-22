@@ -360,15 +360,11 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
         log1((((x + y) + z) + 1u));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u)  {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        f(in.id.x, in.id.y, in.id.z);
+        f(id.x, id.y, id.z);
       }"
     `);
   });
