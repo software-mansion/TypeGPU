@@ -91,7 +91,7 @@ export interface FnToWgslOptions {
    * For entry functions: positional args and optional data struct.
    * When provided, takes precedence over `argTypes` for WGSL header generation.
    */
-  entryInput?: SeparatedEntryArgs;
+  entryInput?: SeparatedEntryArgs | undefined;
 }
 
 export type ItemLayer = {
