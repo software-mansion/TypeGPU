@@ -1,128 +1,58 @@
-import {
-  createFft2d,
-  createStockhamRadix4LineStrategy,
-  decomposeWorkgroups,
-  log2Int,
-  nextPowerOf2,
-  radix4LineStageCount,
-  stockhamStageCount,
-  stockhamTwiddleLutVec2Count,
-  type Fft2d,
-} from '@typegpu/fft';
+import { createFft2d, createStockhamRadix4LineStrategy, type Fft2d } from '@typegpu/fft';
 import tgpu, { common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 /**
- * Pipeline: camera → luminance (optional separable Hann edge window) → `encodeForward` → radial low-pass
- * on `pingPong[spectrumSlot]` → optional `encodeInverse` (spatial) or log-magnitude spectrum.
- * By default the 2D FFT uses **radix-2 Stockham** (`lineFft=default`); optional **radix-4** via `lineFft` /
- * `?lineFft=radix4` for fewer global passes. **One `queue.submit` per frame:** fill → forward → filter →
- * inverse + spatial + present, or mag + present, all on one command encoder. Separate line-FFT uniform pools
- * (forward row/col, inverse row/col) and multiple transpose uniforms avoid `writeBuffer` stomping when
- * forward and inverse are recorded together.
- * Partial inverse debugging uses the **Inverse stages (debug)** slider. While the cap is **below** a full
- * inverse on either axis, the spatial view is log-graded (not a literal image): radix-2 tends to look
- * blockier as stages accrue; radix-4 often shows
- * periodic / repeated spectrum structure until the chain completes. When the cap reaches a full inverse
- * on both axes (e.g. radix-4 line strategy on 512×512 needs 5), spatial uses normal `Re·1/(WH)` like slider −1.
- * Radix-4 inverse kernels multiply
- * by ¼ each stage, so partial results look dark vs Stockham — the example applies a **display-only**
- * tapered `4^{taper·(a+b)}` factor on the log path. **Gain** is scaled; use the **gain** slider to tune brightness.
+ * Pipeline: camera → luminance (optional separable Hann window) → `encodeForward` → radial low-pass on the
+ * spectrum buffer → optional `encodeInverse` (spatial) or log-magnitude spectrum.
+ * Radix-2 Stockham by default; optional radix-4 line strategy. One compute pass chains fill, FFT, filter,
+ * inverse FFT, and spatial/mag; then a render pass presents.
  */
 
 const WORKGROUP = 256;
 
-/** Multiplies the **gain** slider for partial-inverse debug (log path). */
-const PARTIAL_INVERSE_DEBUG_GAIN_SCALE = 14;
-/** Inside `log(1 + …)` — lifts tiny `|c|·invSize` before grading (WGSL). */
-const PARTIAL_INVERSE_DEBUG_LOG_PRESCALE = 32;
+function nextPowerOf2(n: number): number {
+  if (n <= 0) return 1;
+  if ((n & (n - 1)) === 0) return n;
+  let p = 1;
+  while (p < n) p <<= 1;
+  return p;
+}
 
-/**
- * Radix-4 inverse applies ×¼ per stage; two line passes attenuate ~4^{-(a+b)}. Full `4^{a+b}` inside
- * `log(1 + x)` often clips to white — use a **tapered** exponent (display only).
- */
-const RADIX4_PARTIAL_AMP_EXPONENT_TAPER = 0.72;
-
-/**
- * Radix-4 inverse kernels each scale by ¼; the optional Stockham tail inverse does not.
- * Partial-debug display should lift by 4^(taper·(quarterStagesRow+quarterStagesCol)) only for those
- * radix-4 inverse dispatches — not using {@link radix4LineStageCount} directly, which counts the tail too.
- */
-function radix4InverseQuarterStagesRun(n: number, cap: number): number {
-  const k = log2Int(n);
-  const r4 = Math.floor(k / 2);
-  const totalDispatches = radix4LineStageCount(n);
-  let remaining = Math.min(Math.max(0, cap), totalDispatches);
-  if (k % 2 === 1 && remaining > 0) {
-    remaining -= 1;
+function log2Int(n: number): number {
+  if (n <= 0 || (n & (n - 1)) !== 0) {
+    throw new Error(`log2Int expects a positive power of two, got ${n}`);
   }
-  return Math.min(r4, remaining);
+  return 31 - Math.clz32(n);
 }
 
-function radix4PartialInverseAmpComp(
-  padW: number,
-  padH: number,
-  inverseStagesCap: number | undefined,
-  lineFftStrategyId: string,
-): number {
-  if (inverseStagesCap === undefined || lineFftStrategyId !== 'stockham-radix4') {
-    return 1;
+const MAX_WORKGROUPS_PER_DIMENSION = 65535;
+
+function decomposeWorkgroups(total: number): [number, number, number] {
+  if (total <= 0) {
+    return [1, 1, 1];
   }
-  const a = radix4InverseQuarterStagesRun(padH, inverseStagesCap);
-  const b = radix4InverseQuarterStagesRun(padW, inverseStagesCap);
-  const e = (a + b) * RADIX4_PARTIAL_AMP_EXPONENT_TAPER;
-  return 4 ** e;
-}
-
-/** Stages per line FFT for the active strategy (matches `dispatchLineFft` internal schedule). */
-function lineFftStageCountForPad(n: number, lineFftStrategyId: string): number {
-  return lineFftStrategyId === 'stockham-radix4' ? radix4LineStageCount(n) : stockhamStageCount(n);
-}
-
-/**
- * True when the debug cap truncates the inverse on at least one axis — use log-magnitude spatial debug.
- * When the cap is enough for a full inverse on both axes (e.g. 5 on 512×512 radix-4), use normal `Re·inv` spatial.
- */
-function inverseStagesCapIsPartial(
-  padW: number,
-  padH: number,
-  cap: number | undefined,
-  lineFftStrategyId: string,
-): boolean {
-  if (cap === undefined) {
-    return false;
+  const x = Math.min(total, MAX_WORKGROUPS_PER_DIMENSION);
+  const remainingAfterX = Math.ceil(total / x);
+  const y = Math.min(remainingAfterX, MAX_WORKGROUPS_PER_DIMENSION);
+  const remainingAfterY = Math.ceil(remainingAfterX / y);
+  const z = Math.min(remainingAfterY, MAX_WORKGROUPS_PER_DIMENSION);
+  if (Math.ceil(total / (x * y * z)) > 1) {
+    throw new Error(
+      `Required workgroups (${total}) exceed device dispatch limits (${MAX_WORKGROUPS_PER_DIMENSION} per dimension)`,
+    );
   }
-  const sw = lineFftStageCountForPad(padW, lineFftStrategyId);
-  const sh = lineFftStageCountForPad(padH, lineFftStrategyId);
-  return cap < sw || cap < sh;
+  return [x, y, z];
 }
 
-/**
- * Max longer side of the camera ROI before downscale (user control); FFT pad is still
- * `nextPowerOf2(effW)×nextPowerOf2(effH)` — see `@typegpu/fft`. Video is blit to `rgba8unorm` like
- * camera-thresholding / chroma-keying.
- */
+/** Max longer side of the camera ROI before downscale; FFT pad is `nextPowerOf2(effW)×nextPowerOf2(effH)`. */
 let fftMaxSide = 1024;
 
-/**
- * TEMP: after normal downscale, clamp `effH` to at most `⌊effW/2⌋` for lighter asymmetric pads while debugging.
- * Off by default so the ROI matches camera aspect.
- */
-const TEMP_CAP_EFF_HEIGHT_TO_HALF_WIDTH = false;
-
-type LineFftMode = 'default' | 'copy' | 'radix4';
-
-/**
- * Cap each inverse line-FFT dispatch to this many internal stages (`undefined` = full inverse).
- * Driven by the **Inverse stages (debug)** control.
- */
-let inverseStagesDebugCap: number | undefined;
+type LineFftMode = 'default' | 'radix4';
 
 let lineFftMode: LineFftMode = 'default';
 /** Tracks which line mode the current `fft` was built with (invalidate on change). */
 let fftLineFftMode: LineFftMode | undefined;
-/** Tracks debug inverse stage cap used to build `fft` (invalidate when the control changes). */
-let fftDebugInverseMaxLineStages: number | undefined;
 
 /** Decode size for layout + downscale math (metadata can disagree with what `<video>` exposes). */
 function decodedFrameSize(
@@ -320,14 +250,8 @@ const spatialParamsType = d.struct({
   padH: d.u32,
   padWLog2: d.u32,
   padWMask: d.u32,
-  /** `1 / (padW * padH)` — unnormalized Stockham inverse scaling. */
+  /** `1 / (padW * padH)` — unnormalized inverse scaling. */
   invSize: d.f32,
-  /** `1`: partial inverse debug — log-graded magnitude (see `PARTIAL_INVERSE_DEBUG_*` constants). */
-  spatialPartialDebug: d.u32,
-  /** Effective log path scale: **gain** × `PARTIAL_INVERSE_DEBUG_GAIN_SCALE` when partial debug is on. */
-  partialLogGain: d.f32,
-  /** Tapered `4^{0.72·(min(cap,R_H)+min(cap,R_W))}` for radix-4 partial debug (else `1`); display only. */
-  radix4PartialAmp: d.f32,
 });
 
 const spatialLayout = tgpu.bindGroupLayout({
@@ -355,14 +279,8 @@ const spatialKernel = tgpu.computeFn({
   }
 
   const c = spatialLayout.$.spectrum[tid] as d.v2f;
-  const dbg = spatialLayout.$.params.spatialPartialDebug !== d.u32(0);
   const inv = spatialLayout.$.params.invSize;
-  const len = std.sqrt(c.x * c.x + c.y * c.y);
-  const gLinear = c.x * inv;
-  const prescale = d.f32(PARTIAL_INVERSE_DEBUG_LOG_PRESCALE);
-  const r4Amp = spatialLayout.$.params.radix4PartialAmp;
-  const gLog = std.log(1.0 + len * inv * prescale * r4Amp) * spatialLayout.$.params.partialLogGain;
-  const g = std.clamp(std.select(gLinear, gLog, dbg), 0.0, 1.0);
+  const g = std.clamp(c.x * inv, 0.0, 1.0);
   const padWLog2 = spatialLayout.$.params.padWLog2;
   const padWMask = spatialLayout.$.params.padWMask;
   const x = tid & padWMask;
@@ -459,106 +377,11 @@ if (navigator.mediaDevices.getUserMedia) {
   throw new Error('getUserMedia not supported');
 }
 
-const root = await tgpu.init({
-  device: { optionalFeatures: ['timestamp-query'] },
-});
+const root = await tgpu.init();
 const device = root.device;
-
-/** Verbose FFT / submit-path logging. Set `false` when done debugging. */
-const DEBUG_FFT_SLOTS = true;
-
-function gpuBufferLabel(buf: Fft2d['pingPong'][0]): string {
-  try {
-    const raw = root.unwrap(buf);
-    return raw.label && raw.label.length > 0 ? raw.label : '(unlabeled buffer)';
-  } catch {
-    return '(unwrap failed)';
-  }
-}
-
-function fftDbgLine(pairs: Record<string, string | number | boolean>): string {
-  return Object.entries(pairs)
-    .map(([k, v]) => `${k}=${v}`)
-    .join(' | ');
-}
-
-/** Once per frame per branch: dimensions, strategy, caps, ping-pong GPUBuffer labels, line stage counts. */
-function logFftFrame(
-  phase: string,
-  activeFft: Fft2d,
-  ctx: {
-    submitPath: string;
-    padW: number;
-    padH: number;
-    effW: number;
-    effH: number;
-    fbW: number;
-    fbH: number;
-    logGpuTimingThisFrame: boolean;
-  },
-) {
-  if (!DEBUG_FFT_SLOTS) {
-    return;
-  }
-  const { padW, padH } = ctx;
-  const rowStages =
-    activeFft.lineFftStrategyId === 'stockham-radix4'
-      ? radix4LineStageCount(padW)
-      : stockhamStageCount(padW);
-  const colStages =
-    activeFft.lineFftStrategyId === 'stockham-radix4'
-      ? radix4LineStageCount(padH)
-      : stockhamStageCount(padH);
-  const sched =
-    ctx.submitPath === 'single-submit'
-      ? 'singleSubmitEncoder'
-      : 'multiSubmitProfileForward';
-  console.log(
-    `[camera-fft dbg] ${phase} | tMs=${performance.now().toFixed(2)} | ${fftDbgLine({
-      submitPath: ctx.submitPath,
-      sched,
-      padW: ctx.padW,
-      padH: ctx.padH,
-      effW: ctx.effW,
-      effH: ctx.effH,
-      fbW: ctx.fbW,
-      fbH: ctx.fbH,
-      logGpuTiming: ctx.logGpuTimingThisFrame,
-      applyInverseFft,
-      lineFft: activeFft.lineFftStrategyId,
-      skipFinalT: activeFft.skipFinalTranspose,
-      invStagesCap: inverseStagesDebugCap ?? -1,
-      gain: gainValue,
-      cutoff: cutoffRadiusNorm,
-      edgeWin: applyEdgeWindow,
-      buf0: gpuBufferLabel(activeFft.pingPong[0]),
-      buf1: gpuBufferLabel(activeFft.pingPong[1]),
-      rowSt: rowStages,
-      colSt: colStages,
-    })}`,
-  );
-}
-
-function logFftSlots(message: string, pairs: Record<string, string | number | boolean>) {
-  if (!DEBUG_FFT_SLOTS) {
-    return;
-  }
-  console.log(
-    `[camera-fft slots] ${message} | tMs=${performance.now().toFixed(2)} | ${fftDbgLine(pairs)}`,
-  );
-}
 
 /** Omit final spectrum transpose (matches `createFft2d`); saves one global transpose after column FFT. */
 const SKIP_FINAL_FFT_TRANSPOSE = true;
-
-/** GPU timestamps: fill 0–1, filter 2–3, spatial or mag 4–5. */
-const PROFILE_QUERY_COUNT = 6;
-/**
- * GPU intervals when `timestamp-query` is enabled: fill 0–1, filter 2–3, tail compute 4–5 (spatial or mag).
- */
-const profileQuerySet = root.enabledFeatures.has('timestamp-query')
-  ? root.createQuerySet('timestamp', PROFILE_QUERY_COUNT)
-  : null;
 
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -641,23 +464,9 @@ let gainValue = 0.12;
 let cutoffRadiusNorm = 1;
 /** Separable Hann window on camera ROI before FFT (reduces periodic-boundary cross in spectrum). */
 let applyEdgeWindow = false;
-let logGpuTiming = false;
-let lastGpuTimingLogMs = 0;
-let gpuTimingReadPending = false;
-/** Wall time for last full `processVideoFrame` (after resource guards), for comparing to GPU timestamp subset. */
-let lastCallbackWallMs = 0;
 let lastMagUniformKey = '';
 let lastSpatialUniformKey = '';
 let lastFilterUniformKey = '';
-
-function timestampPeriodNs(): number {
-  const limits = device.limits as { timestampPeriod?: number };
-  return typeof limits.timestampPeriod === 'number' ? limits.timestampPeriod : 1;
-}
-
-function ticksToMs(delta: number): number {
-  return (delta * timestampPeriodNs()) / 1e6;
-}
 
 function effectiveFrameSize(frameW: number, frameH: number): { effW: number; effH: number } {
   let effW: number;
@@ -670,17 +479,11 @@ function effectiveFrameSize(frameW: number, frameH: number): { effW: number; eff
     effW = Math.max(1, Math.floor(frameW * scale));
     effH = Math.max(1, Math.floor(frameH * scale));
   }
-  if (TEMP_CAP_EFF_HEIGHT_TO_HALF_WIDTH) {
-    const maxH = Math.max(1, Math.floor(effW / 2));
-    if (effH > maxH) {
-      effH = maxH;
-    }
-  }
   return { effW, effH };
 }
 
 let fillBindGroup: ReturnType<typeof root.createBindGroup> | undefined;
-/** One bind group per ping-pong buffer; use `fft.outputSlot()` after each transform to pick the right one. */
+/** One bind group per ping-pong buffer; use `fft.outputIndex()` after each transform to pick the right one. */
 let magBindSlots:
   | [ReturnType<typeof root.createBindGroup>, ReturnType<typeof root.createBindGroup>]
   | undefined;
@@ -713,7 +516,6 @@ function destroyFftBlock() {
   fft?.destroy();
   fft = undefined;
   fftLineFftMode = undefined;
-  fftDebugInverseMaxLineStages = undefined;
   displayTexture?.destroy();
   displayTexture = undefined;
   displaySampleView = undefined;
@@ -727,13 +529,7 @@ function ensureResources(frameW: number, frameH: number) {
   const nextPadH = nextPowerOf2(effH);
 
   const needVideoTex = !videoTexture || videoW !== effW || videoH !== effH;
-  const nextDebugInverseStages = inverseStagesDebugCap;
-  const needFft =
-    !fft ||
-    padW !== nextPadW ||
-    padH !== nextPadH ||
-    fftLineFftMode !== lineFftMode ||
-    fftDebugInverseMaxLineStages !== nextDebugInverseStages;
+  const needFft = !fft || padW !== nextPadW || padH !== nextPadH || fftLineFftMode !== lineFftMode;
 
   if (needFft) {
     destroyFftBlock();
@@ -745,25 +541,10 @@ function ensureResources(frameW: number, frameH: number) {
       height: padH,
       skipFinalTranspose: SKIP_FINAL_FFT_TRANSPOSE,
       ...(lineFactory !== undefined ? { lineFftStrategyFactory: lineFactory } : {}),
-      ...(nextDebugInverseStages !== undefined
-        ? { debugInverseMaxLineStages: nextDebugInverseStages }
-        : {}),
     });
     fftLineFftMode = lineFftMode;
-    fftDebugInverseMaxLineStages = nextDebugInverseStages;
     lastMagUniformKey = '';
     lastFilterUniformKey = '';
-    {
-      const lutN = Math.max(padW, padH);
-      const lutVec2 = stockhamTwiddleLutVec2Count(lutN);
-      const invDbg =
-        nextDebugInverseStages !== undefined
-          ? ` | DEBUG inverse line stages ≤${nextDebugInverseStages} per dispatch`
-          : '';
-      console.info(
-        `[camera-fft] FFT ${padW}×${padH} | lineFft=${lineFftMode} lineFftStrategyId=${fft.lineFftStrategyId} | twiddle LUT ${lutVec2} vec2 (~${((lutVec2 * 8) / 1024).toFixed(1)} KiB) | useGlobalTranspose=${fft.useGlobalTranspose} skipFinalTranspose=${fft.skipFinalTranspose} (filter/mag use swapped freq axes when true)${invDbg}`,
-      );
-    }
 
     displayTexture = createPaddedDisplayTexture(padW, padH);
 
@@ -790,12 +571,12 @@ function ensureResources(frameW: number, frameH: number) {
     if (!magBindSlots) {
       magBindSlots = [
         root.createBindGroup(magLayout, {
-          spectrum: fft.pingPong[0],
+          spectrum: fft.buffers[0],
           params: magParams,
           outTex: displayStorageView,
         }),
         root.createBindGroup(magLayout, {
-          spectrum: fft.pingPong[1],
+          spectrum: fft.buffers[1],
           params: magParams,
           outTex: displayStorageView,
         }),
@@ -804,11 +585,11 @@ function ensureResources(frameW: number, frameH: number) {
     if (!filterBindSlots) {
       filterBindSlots = [
         root.createBindGroup(filterLayout, {
-          spectrum: fft.pingPong[0],
+          spectrum: fft.buffers[0],
           params: filterParams,
         }),
         root.createBindGroup(filterLayout, {
-          spectrum: fft.pingPong[1],
+          spectrum: fft.buffers[1],
           params: filterParams,
         }),
       ];
@@ -816,12 +597,12 @@ function ensureResources(frameW: number, frameH: number) {
     if (!spatialBindSlots) {
       spatialBindSlots = [
         root.createBindGroup(spatialLayout, {
-          spectrum: fft.pingPong[0],
+          spectrum: fft.buffers[0],
           params: spatialParams,
           outTex: displayStorageView,
         }),
         root.createBindGroup(spatialLayout, {
-          spectrum: fft.pingPong[1],
+          spectrum: fft.buffers[1],
           params: spatialParams,
           outTex: displayStorageView,
         }),
@@ -881,8 +662,6 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
 
   const activeFft = fft;
 
-  const wallT0 = performance.now();
-
   const { effW, effH } = effectiveFrameSize(frameWidth, frameHeight);
 
   videoBlitTargetPx.write({ w: effW, h: effH });
@@ -922,32 +701,15 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
     });
   }
 
-  const invStagesCap = inverseStagesDebugCap;
-  const spatialUniformKey = `${padW}x${padH}x${invStagesCap ?? 'full'}x${activeFft.lineFftStrategyId}x${
-    invStagesCap !== undefined ? gainValue : ''
-  }`;
+  const spatialUniformKey = `${padW}x${padH}x${gainValue}`;
   if (spatialUniformKey !== lastSpatialUniformKey) {
     lastSpatialUniformKey = spatialUniformKey;
-    const partialDebug = inverseStagesCapIsPartial(
-      padW,
-      padH,
-      invStagesCap,
-      activeFft.lineFftStrategyId,
-    );
     spatialParams.write({
       padW,
       padH,
       padWLog2,
       padWMask: padW - 1,
       invSize: 1 / (padW * padH),
-      spatialPartialDebug: partialDebug ? 1 : 0,
-      partialLogGain: partialDebug ? gainValue * PARTIAL_INVERSE_DEBUG_GAIN_SCALE : gainValue,
-      radix4PartialAmp: radix4PartialInverseAmpComp(
-        padW,
-        padH,
-        invStagesCap,
-        activeFft.lineFftStrategyId,
-      ),
     });
   }
 
@@ -982,207 +744,37 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
     viewMode: applyInverseFft ? 1 : 0,
   });
 
-  const qs = profileQuerySet;
-
-  if (logGpuTiming && qs) {
-    logFftFrame('frame (start)', activeFft, {
-      submitPath: 'single-submit',
-      padW,
-      padH,
-      effW,
-      effH,
-      fbW,
-      fbH,
-      logGpuTimingThisFrame: true,
-    });
-    const encTimed = device.createCommandEncoder({ label: 'camera-fft frame (timed)' });
-    {
-      const fillPass = encTimed.beginComputePass({
-        label: 'camera-fft fill',
-        timestampWrites: {
-          querySet: qs.querySet,
-          beginningOfPassWriteIndex: 0,
-          endOfPassWriteIndex: 1,
-        },
-      });
-      fillPipeline.with(fillPass).with(fillBindGroup).dispatchWorkgroups(gx, gy, gz);
-      fillPass.end();
-    }
-    activeFft.encodeForward(encTimed);
-    const spectrumSlotTimed = activeFft.outputSlot();
-    logFftSlots('after encodeForward (single CB, GPU timing path)', {
-      path: 'frameCb',
-      spectrumSlot: spectrumSlotTimed,
-      spectrumGpuBuffer: gpuBufferLabel(activeFft.pingPong[spectrumSlotTimed]),
-      logGpuTiming: true,
-      applyInverseFft,
-    });
-    {
-      const filterPass = encTimed.beginComputePass({
-        label: 'camera-fft filter',
-        timestampWrites: {
-          querySet: qs.querySet,
-          beginningOfPassWriteIndex: 2,
-          endOfPassWriteIndex: 3,
-        },
-      });
-      filterPipeline
-        .with(filterPass)
-        .with(filterBindSlots[spectrumSlotTimed])
+  const enc = device.createCommandEncoder({ label: 'camera-fft frame' });
+  {
+    const computePass = enc.beginComputePass({ label: 'camera-fft fft-pipeline' });
+    fillPipeline.with(computePass).with(fillBindGroup).dispatchWorkgroups(gx, gy, gz);
+    activeFft.encodeForward(computePass);
+    const spectrumIdx = activeFft.outputIndex();
+    filterPipeline
+      .with(computePass)
+      .with(filterBindSlots[spectrumIdx])
+      .dispatchWorkgroups(gx, gy, gz);
+    if (applyInverseFft) {
+      activeFft.encodeInverse(computePass);
+      const spatialIdx = activeFft.outputIndex();
+      spatialPipeline
+        .with(computePass)
+        .with(spatialBindSlots[spatialIdx])
         .dispatchWorkgroups(gx, gy, gz);
-      filterPass.end();
-    }
-    logFftSlots('after filter (single CB, GPU timing path)', {
-      outputSlot: activeFft.outputSlot(),
-      expectedUnchangedSpectrumSlot: spectrumSlotTimed,
-      slotMatches: activeFft.outputSlot() === spectrumSlotTimed,
-      filteredSpectrumGpuBuffer: gpuBufferLabel(activeFft.pingPong[spectrumSlotTimed]),
-    });
-    if (applyInverseFft) {
-      logFftSlots('before encodeInverse (single CB, GPU timing path)', {
-        outputSlot: activeFft.outputSlot(),
-        expectedSpectrumSlot: spectrumSlotTimed,
-        match: activeFft.outputSlot() === spectrumSlotTimed,
-      });
-      activeFft.encodeInverse(encTimed);
-      const spatialSlotTimed = activeFft.outputSlot();
-      logFftSlots('after encodeInverse (single CB, GPU timing path)', {
-        spatialSlot: spatialSlotTimed,
-        spatialReadGpuBuffer: gpuBufferLabel(activeFft.pingPong[spatialSlotTimed]),
-      });
-      {
-        const sp = encTimed.beginComputePass({
-          label: 'camera-fft spatial',
-          timestampWrites: {
-            querySet: qs.querySet,
-            beginningOfPassWriteIndex: 4,
-            endOfPassWriteIndex: 5,
-          },
-        });
-        spatialPipeline
-          .with(sp)
-          .with(spatialBindSlots[spatialSlotTimed])
-          .dispatchWorkgroups(gx, gy, gz);
-        sp.end();
-      }
     } else {
-      {
-        const mp = encTimed.beginComputePass({
-          label: 'camera-fft mag',
-          timestampWrites: {
-            querySet: qs.querySet,
-            beginningOfPassWriteIndex: 4,
-            endOfPassWriteIndex: 5,
-          },
-        });
-        magPipeline.with(mp).with(magBindSlots[spectrumSlotTimed]).dispatchWorkgroups(gx, gy, gz);
-        mp.end();
-      }
+      magPipeline.with(computePass).with(magBindSlots[spectrumIdx]).dispatchWorkgroups(gx, gy, gz);
     }
-    renderPipeline
-      .with(encTimed)
-      .withColorAttachment({
-        view: context,
-        clearValue: [0.02, 0.02, 0.05, 1],
-      })
-      .with(renderBindGroup)
-      .draw(3);
-    device.queue.submit([encTimed.finish()]);
-  } else {
-    const enc = device.createCommandEncoder({ label: 'camera-fft frame' });
-    {
-      const fillPass = enc.beginComputePass({ label: 'camera-fft fill' });
-      fillPipeline.with(fillPass).with(fillBindGroup).dispatchWorkgroups(gx, gy, gz);
-      fillPass.end();
-    }
-    activeFft.encodeForward(enc);
-    const spectrumSlot = activeFft.outputSlot();
-    logFftSlots('after encodeForward (single CB, non-timing path)', {
-      path: 'frameCb',
-      spectrumSlot,
-      spectrumGpuBuffer: gpuBufferLabel(activeFft.pingPong[spectrumSlot]),
-      logGpuTiming: false,
-      applyInverseFft,
-    });
-    {
-      const p = enc.beginComputePass({ label: 'camera-fft filter' });
-      filterPipeline.with(p).with(filterBindSlots[spectrumSlot]).dispatchWorkgroups(gx, gy, gz);
-      p.end();
-    }
-    logFftSlots('after filter (single CB, non-timing path)', {
-      outputSlot: activeFft.outputSlot(),
-      expectedUnchangedSpectrumSlot: spectrumSlot,
-      slotMatches: activeFft.outputSlot() === spectrumSlot,
-      filteredSpectrumGpuBuffer: gpuBufferLabel(activeFft.pingPong[spectrumSlot]),
-    });
-    if (applyInverseFft) {
-      logFftSlots('before encodeInverse (single CB, non-timing path)', {
-        outputSlot: activeFft.outputSlot(),
-        expectedSpectrumSlot: spectrumSlot,
-        match: activeFft.outputSlot() === spectrumSlot,
-      });
-      activeFft.encodeInverse(enc);
-      const spatialSlot = activeFft.outputSlot();
-      logFftSlots('after encodeInverse (single CB, non-timing path)', {
-        spatialSlot,
-        spatialReadGpuBuffer: gpuBufferLabel(activeFft.pingPong[spatialSlot]),
-      });
-      {
-        const p = enc.beginComputePass({ label: 'camera-fft spatial' });
-        spatialPipeline.with(p).with(spatialBindSlots[spatialSlot]).dispatchWorkgroups(gx, gy, gz);
-        p.end();
-      }
-    } else {
-      {
-        const p = enc.beginComputePass({ label: 'camera-fft mag' });
-        magPipeline.with(p).with(magBindSlots[spectrumSlot]).dispatchWorkgroups(gx, gy, gz);
-        p.end();
-      }
-    }
-    renderPipeline
-      .with(enc)
-      .withColorAttachment({
-        view: context,
-        clearValue: [0.02, 0.02, 0.05, 1],
-      })
-      .with(renderBindGroup)
-      .draw(3);
-    device.queue.submit([enc.finish()]);
+    computePass.end();
   }
-
-  lastCallbackWallMs = performance.now() - wallT0;
-
-  if (
-    logGpuTiming &&
-    qs &&
-    !gpuTimingReadPending &&
-    performance.now() - lastGpuTimingLogMs >= 1000
-  ) {
-    const query = qs;
-    const snapshotCallbackWallMs = lastCallbackWallMs;
-    gpuTimingReadPending = true;
-    lastGpuTimingLogMs = performance.now();
-    void device.queue.onSubmittedWorkDone().then(async () => {
-      try {
-        query.resolve();
-        const r = await query.read();
-        const fillMs = ticksToMs(Number(r[1] - r[0]));
-        const filterMs = ticksToMs(Number(r[3] - r[2]));
-        const tailMs = ticksToMs(Number(r[5] - r[4]));
-        const wallFps = snapshotCallbackWallMs > 0 ? 1000 / snapshotCallbackWallMs : 0;
-        console.debug(
-          `[camera-fft] GPU fill ~${fillMs.toFixed(3)} ms | filter ~${filterMs.toFixed(3)} ms | spatial|mag ~${tailMs.toFixed(3)} ms | one submit | callback wall ~${snapshotCallbackWallMs.toFixed(2)} ms (~${wallFps.toFixed(1)} Hz)`,
-        );
-      } finally {
-        gpuTimingReadPending = false;
-      }
-    });
-  } else if (logGpuTiming && !qs && performance.now() - lastGpuTimingLogMs >= 1000) {
-    lastGpuTimingLogMs = performance.now();
-    console.debug(
-      '[camera-fft] GPU timing needs timestamp-query support (no GPU timers on this device)',
-    );
-  }
+  renderPipeline
+    .with(enc)
+    .withColorAttachment({
+      view: context,
+      clearValue: [0.02, 0.02, 0.05, 1],
+    })
+    .with(renderBindGroup)
+    .draw(3);
+  device.queue.submit([enc.finish()]);
 
   spinner.style.display = 'none';
 
@@ -1213,15 +805,9 @@ export const controls = defineControls({
   },
   lineFft: {
     initial: lineFftMode,
-    options: ['radix4', 'default', 'copy'],
+    options: ['radix4', 'default'],
     onSelectChange: (value) => {
       lineFftMode = value as LineFftMode;
-    },
-  },
-  gpuTiming: {
-    initial: false,
-    onToggleChange: (value) => {
-      logGpuTiming = value;
     },
   },
   gain: {
@@ -1243,16 +829,6 @@ export const controls = defineControls({
     onSliderChange: (value) => {
       cutoffRadiusNorm = value;
       lastFilterUniformKey = '';
-    },
-  },
-  'Inverse stages (debug)': {
-    initial: -1,
-    min: -1,
-    max: 16,
-    step: 1,
-    onSliderChange: (value) => {
-      inverseStagesDebugCap = value < 0 ? undefined : value;
-      lastSpatialUniformKey = '';
     },
   },
 });
@@ -1279,6 +855,5 @@ export function onCleanup() {
   spatialParams.destroy();
   displayFb.destroy();
   videoBlitTargetPx.destroy();
-  profileQuerySet?.destroy();
   root.destroy();
 }

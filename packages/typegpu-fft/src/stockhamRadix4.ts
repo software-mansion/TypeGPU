@@ -4,7 +4,6 @@ import type { LineFftEncodeOptions } from './lineFftStrategy.ts';
 import {
   createStockhamStagePipeline,
   dispatchStockhamLineFftStages,
-  stockhamLayout,
   stockhamUniformType,
   type StockhamLineBindGroup,
 } from './stockham.ts';
@@ -271,16 +270,6 @@ export type Radix4LineUniformPools = {
   stockhamTailBgSrcB: StockhamLineBindGroup;
 };
 
-function withLinePass(
-  commandEncoder: GPUCommandEncoder,
-  label: string,
-  body: (pass: GPUComputePassEncoder) => void,
-): void {
-  const pass = commandEncoder.beginComputePass({ label });
-  body(pass);
-  pass.end();
-}
-
 export function dispatchRadix4LineFft(
   radix4Pipeline: ReturnType<typeof createRadix4StagePipeline>,
   radix4InversePipeline: ReturnType<typeof createRadix4InverseStagePipeline>,
@@ -312,11 +301,8 @@ export function dispatchRadix4LineFft(
     stockhamTailBgSrcB,
   } = pool;
 
-  const { commandEncoder } = opts;
+  const { computePass } = opts;
   const inverse = opts.inverse === true;
-  const stageCap = opts.inverseMaxStages;
-  let invRemaining =
-    inverse && stageCap !== undefined ? Math.max(0, stageCap) : Number.POSITIVE_INFINITY;
 
   const k = 31 - Math.clz32(n);
   const ps = radix4PValues(n);
@@ -332,7 +318,7 @@ export function dispatchRadix4LineFft(
   let readA = inputInA;
 
   if (inverse) {
-    if (k % 2 === 1 && invRemaining > 0) {
+    if (k % 2 === 1) {
       readA = dispatchStockhamLineFftStages(
         stockhamPipeline,
         [stockhamTailUniform],
@@ -343,30 +329,36 @@ export function dispatchRadix4LineFft(
         numLines,
         readA,
         [n >> 1],
-        { commandEncoder, inverse: true },
+        { computePass, inverse: true },
       );
-      invRemaining--;
     }
-    for (let s = ps.length - 1; s >= 0 && invRemaining > 0; s--) {
-      const p = ps[s]!;
-      radix4StageUniforms[s]!.write({ p, n, lineStride, numLines });
-      const bg = readA ? radix4BgSrcA[s]! : radix4BgSrcB[s]!;
-      withLinePass(commandEncoder, `fft2d radix-4 inverse stage p=${p}`, (pass) => {
-        radix4InversePipeline.with(pass).with(bg).dispatchWorkgroups(wx, wy, wz);
-      });
+    for (let s = ps.length - 1; s >= 0; s--) {
+      const p = ps[s];
+      const uni = radix4StageUniforms[s];
+      const bgA = radix4BgSrcA[s];
+      const bgB = radix4BgSrcB[s];
+      if (p === undefined || uni === undefined || bgA === undefined || bgB === undefined) {
+        break;
+      }
+      uni.write({ p, n, lineStride, numLines });
+      const bg = readA ? bgA : bgB;
+      radix4InversePipeline.with(computePass).with(bg).dispatchWorkgroups(wx, wy, wz);
       readA = !readA;
-      invRemaining--;
     }
     return readA;
   }
 
   for (let s = 0; s < ps.length; s++) {
-    const p = ps[s]!;
-    radix4StageUniforms[s]!.write({ p, n, lineStride, numLines });
-    const bg = readA ? radix4BgSrcA[s]! : radix4BgSrcB[s]!;
-    withLinePass(commandEncoder, `fft2d radix-4 forward stage p=${p}`, (pass) => {
-      radix4Pipeline.with(pass).with(bg).dispatchWorkgroups(wx, wy, wz);
-    });
+    const p = ps[s];
+    const uni = radix4StageUniforms[s];
+    const bgA = radix4BgSrcA[s];
+    const bgB = radix4BgSrcB[s];
+    if (p === undefined || uni === undefined || bgA === undefined || bgB === undefined) {
+      break;
+    }
+    uni.write({ p, n, lineStride, numLines });
+    const bg = readA ? bgA : bgB;
+    radix4Pipeline.with(computePass).with(bg).dispatchWorkgroups(wx, wy, wz);
     readA = !readA;
   }
 
@@ -381,7 +373,7 @@ export function dispatchRadix4LineFft(
       numLines,
       readA,
       [n >> 1],
-      { commandEncoder },
+      { computePass },
     );
   }
 
