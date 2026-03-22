@@ -144,4 +144,8 @@ export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
     import: { reroute: 'typegpu-sort/src/index.ts' },
     typeDef: { reroute: 'typegpu-sort/src/index.ts' },
   },
+  '@typegpu/fft': {
+    import: { reroute: 'typegpu-fft/src/index.ts' },
+    typeDef: { reroute: 'typegpu-fft/src/index.ts' },
+  },
 };
