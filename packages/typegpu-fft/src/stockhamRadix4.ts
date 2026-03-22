@@ -1,11 +1,12 @@
 import tgpu, { d, std } from 'typegpu';
 import type { TgpuBindGroup, TgpuBuffer, TgpuRoot, UniformFlag } from 'typegpu';
+import type { LineFftEncodeOptions } from './lineFftStrategy.ts';
 import {
   createStockhamStagePipeline,
-  dispatchStockhamLineFft,
   dispatchStockhamLineFftStages,
   stockhamLayout,
   stockhamUniformType,
+  type StockhamLineBindGroup,
 } from './stockham.ts';
 import { decomposeWorkgroups } from './utils.ts';
 
@@ -17,8 +18,6 @@ export const radix4UniformType = d.struct({
   n: d.u32,
   lineStride: d.u32,
   numLines: d.u32,
-  /** `0` = forward; `1` = inverse (conjugate twiddles). */
-  direction: d.u32,
 });
 
 export const radix4Layout = tgpu.bindGroupLayout({
@@ -73,14 +72,12 @@ export const radix4StageKernel = tgpu.computeFn({
   const i2 = base + i + (T << 1);
   const i3 = base + i + (T * 3);
 
-  const inv = radix4Layout.$.uniforms.direction !== d.u32(0);
-  const pi = d.f32(3.141592653589793);
-  let ang = (-pi * d.f32(k)) / (d.f32(2) * d.f32(p));
-  ang = std.select(ang, -ang, inv);
+  const pi = Math.PI;
+  const ang = (-pi * d.f32(k)) / (2 * p);
   const c1 = std.cos(ang);
   const sn1 = std.sin(ang);
   const tw1 = d.vec2f(c1, sn1);
-  const tw2 = d.vec2f(c1 * c1 - sn1 * sn1, d.f32(2) * c1 * sn1);
+  const tw2 = d.vec2f(c1 * c1 - sn1 * sn1, 2 * c1 * sn1);
   const tw3 = d.vec2f(
     tw2.x * c1 - tw2.y * sn1,
     tw2.x * sn1 + tw2.y * c1,
@@ -110,12 +107,8 @@ export const radix4StageKernel = tgpu.computeFn({
   const v2 = d.vec2f(u1.x + u3.x, u1.y + u3.y);
   const du1x = u1.x - u3.x;
   const du1y = u1.y - u3.y;
-  /** `±i` rotation in the DFT₄ (forward vs inverse). */
-  const v3 = std.select(
-    d.vec2f(du1y, -du1x),
-    d.vec2f(-du1y, du1x),
-    inv,
-  );
+  /** Multiply `(u1−u3)` by `−i` (forward DFT₄ step). */
+  const v3 = d.vec2f(du1y, -du1x);
 
   const y0 = d.vec2f(v0.x + v2.x, v0.y + v2.y);
   const y1 = d.vec2f(v1.x + v3.x, v1.y + v3.y);
@@ -123,22 +116,129 @@ export const radix4StageKernel = tgpu.computeFn({
   const y3 = d.vec2f(v1.x - v3.x, v1.y - v3.y);
 
   const outBase = base + ((i - k) << 2) + k;
-  radix4Layout.$.dst[outBase] = d.vec2f(y0.x, y0.y);
-  radix4Layout.$.dst[outBase + p] = d.vec2f(y1.x, y1.y);
-  radix4Layout.$.dst[outBase + (p << 1)] = d.vec2f(y2.x, y2.y);
-  radix4Layout.$.dst[outBase + p + (p << 1)] = d.vec2f(y3.x, y3.y);
+  radix4Layout.$.dst[outBase] = d.vec2f(y0);
+  radix4Layout.$.dst[outBase + p] = d.vec2f(y1);
+  radix4Layout.$.dst[outBase + (p << 1)] = d.vec2f(y2);
+  radix4Layout.$.dst[outBase + p + (p << 1)] = d.vec2f(y3);
+});
+
+/**
+ * Inverse of {@link radix4StageKernel}: read scattered `y`, write linear samples; twiddle `cis(+πk/2p)`.
+ * Separate entry point — same uniform layout as forward (no mode flag in the buffer).
+ */
+export const radix4InverseStageKernel = tgpu.computeFn({
+  workgroupSize: [WORKGROUP_SIZE],
+  in: {
+    gid: d.builtin.globalInvocationId,
+    numWorkgroups: d.builtin.numWorkgroups,
+  },
+})((input) => {
+  'use gpu';
+  const wg = d.u32(WORKGROUP_SIZE);
+  const spanX = input.numWorkgroups.x * wg;
+  const spanY = input.numWorkgroups.y * spanX;
+
+  const tid = input.gid.x + input.gid.y * spanX + input.gid.z * spanY;
+
+  const n = radix4Layout.$.uniforms.n;
+  const quarter = n >> 2;
+  const numLines = radix4Layout.$.uniforms.numLines;
+  const total = numLines * quarter;
+
+  if (tid >= total) {
+    return;
+  }
+
+  const line = d.u32(tid / quarter);
+  const i = tid - line * quarter;
+
+  const p = radix4Layout.$.uniforms.p;
+  const k = i & (p - d.u32(1));
+  const T = quarter;
+
+  const lineStride = radix4Layout.$.uniforms.lineStride;
+  const base = line * lineStride;
+
+  const i0 = base + i;
+  const i1 = base + i + T;
+  const i2 = base + i + (T << 1);
+  const i3 = base + i + (T * 3);
+
+  const outBase = base + ((i - k) << 2) + k;
+
+  const y0 = radix4Layout.$.src[outBase] as d.v2f;
+  const y1 = radix4Layout.$.src[outBase + p] as d.v2f;
+  const y2 = radix4Layout.$.src[outBase + (p << 1)] as d.v2f;
+  const y3 = radix4Layout.$.src[outBase + p + (p << 1)] as d.v2f;
+
+  const v0 = d.vec2f(y0.x + y2.x, y0.y + y2.y);
+  const v2u = d.vec2f(y0.x - y2.x, y0.y - y2.y);
+  const v1 = d.vec2f(y1.x + y3.x, y1.y + y3.y);
+  const v3m = d.vec2f(y1.x - y3.x, y1.y - y3.y);
+
+  const u0p = d.vec2f(v0.x + v1.x, v0.y + v1.y);
+  const u2p = d.vec2f(v0.x - v1.x, v0.y - v1.y);
+  const du1 = d.vec2f(-v3m.y, v3m.x);
+  const u1p = d.vec2f(v2u.x + du1.x, v2u.y + du1.y);
+  const u3p = d.vec2f(v2u.x - du1.x, v2u.y - du1.y);
+
+  const q = d.f32(0.25);
+  const u0 = q * d.vec2f(u0p.x, u0p.y);
+  const u1 = q * d.vec2f(u1p.x, u1p.y);
+  const u2 = q * d.vec2f(u2p.x, u2p.y);
+  const u3 = q * d.vec2f(u3p.x, u3p.y);
+
+  const pi = Math.PI;
+  const angInv = (pi * d.f32(k)) / (d.f32(2) * d.f32(p));
+  const c1i = std.cos(angInv);
+  const sn1i = std.sin(angInv);
+  const tw1i = d.vec2f(c1i, sn1i);
+  const tw2i = d.vec2f(c1i * c1i - sn1i * sn1i, d.f32(2) * c1i * sn1i);
+  const tw3i = d.vec2f(
+    tw2i.x * c1i - tw2i.y * sn1i,
+    tw2i.x * sn1i + tw2i.y * c1i,
+  );
+
+  const b0 = d.vec2f(u0.x, u0.y);
+  const b1 = d.vec2f(
+    u1.x * tw1i.x - u1.y * tw1i.y,
+    u1.x * tw1i.y + u1.y * tw1i.x,
+  );
+  const b2 = d.vec2f(
+    u2.x * tw2i.x - u2.y * tw2i.y,
+    u2.x * tw2i.y + u2.y * tw2i.x,
+  );
+  const b3 = d.vec2f(
+    u3.x * tw3i.x - u3.y * tw3i.y,
+    u3.x * tw3i.y + u3.y * tw3i.x,
+  );
+
+  radix4Layout.$.dst[i0] = d.vec2f(b0);
+  radix4Layout.$.dst[i1] = d.vec2f(b1);
+  radix4Layout.$.dst[i2] = d.vec2f(b2);
+  radix4Layout.$.dst[i3] = d.vec2f(b3);
 });
 
 export function createRadix4StagePipeline(root: TgpuRoot) {
   return root.createComputePipeline({ compute: radix4StageKernel });
 }
 
-/** `floor(log2(n) / 2)` radix-4 passes + one radix-2 Stockham stage when `log2(n)` is odd. */
+export function createRadix4InverseStagePipeline(root: TgpuRoot) {
+  return root.createComputePipeline({ compute: radix4InverseStageKernel });
+}
+
+/** `floor(log2(n) / 2)` radix-4 passes + one radix-2 Stockham stage when `log₂(n)` is odd. */
 export function radix4LineStageCount(n: number): number {
   const k = 31 - Math.clz32(n);
   return Math.floor(k / 2) + (k % 2);
 }
 
+/** Max radix-4 butterfly passes for any line length ≤ `nMax` (`floor(log₂(nMax)/2)`). */
+export function maxRadix4PassCount(nMax: number): number {
+  return Math.floor((31 - Math.clz32(nMax)) / 2);
+}
+
+/** Bainville radix-4 stage `p` values in forward order (`1, 4, 16, …`). */
 function radix4PValues(n: number): number[] {
   const r4 = Math.floor((31 - Math.clz32(n)) / 2);
   const ps: number[] = [];
@@ -150,75 +250,138 @@ function radix4PValues(n: number): number[] {
   return ps;
 }
 
+/** @internal Unit tests only — not part of the public package API. */
+export const _forTesting = {
+  radix4PValues,
+} as const;
+
+/**
+ * Forward: radix-4 stages + optional radix-2 Stockham tail when `log₂(n)` is odd.
+ * Inverse: Stockham tail inverse first when `k` is odd, then radix-4 inverse stages in descending `p`.
+ */
+export type Radix4LineBindGroup = TgpuBindGroup<(typeof radix4Layout)['entries']>;
+
+/** One duplicate uniform/bind-group pool so row vs column line FFT can share one encoder before `submit`. */
+export type Radix4LineUniformPools = {
+  radix4StageUniforms: ReadonlyArray<TgpuBuffer<typeof radix4UniformType> & UniformFlag>;
+  radix4BgSrcA: ReadonlyArray<Radix4LineBindGroup>;
+  radix4BgSrcB: ReadonlyArray<Radix4LineBindGroup>;
+  stockhamTailUniform: TgpuBuffer<typeof stockhamUniformType> & UniformFlag;
+  stockhamTailBgSrcA: StockhamLineBindGroup;
+  stockhamTailBgSrcB: StockhamLineBindGroup;
+};
+
+function withLinePass(
+  commandEncoder: GPUCommandEncoder,
+  label: string,
+  body: (pass: GPUComputePassEncoder) => void,
+): void {
+  const pass = commandEncoder.beginComputePass({ label });
+  body(pass);
+  pass.end();
+}
+
 export function dispatchRadix4LineFft(
   radix4Pipeline: ReturnType<typeof createRadix4StagePipeline>,
-  radix4Uniform: TgpuBuffer<typeof radix4UniformType> & UniformFlag,
+  radix4InversePipeline: ReturnType<typeof createRadix4InverseStagePipeline>,
   stockhamPipeline: ReturnType<typeof createStockhamStagePipeline>,
-  stockhamUniform: TgpuBuffer<typeof stockhamUniformType> & UniformFlag,
+  pools: readonly [
+    Radix4LineUniformPools,
+    Radix4LineUniformPools,
+    Radix4LineUniformPools,
+    Radix4LineUniformPools,
+  ],
   n: number,
   lineStride: number,
   numLines: number,
   inputInA: boolean,
-  radix4BgSrcA: TgpuBindGroup<(typeof radix4Layout)['entries']>,
-  radix4BgSrcB: TgpuBindGroup<(typeof radix4Layout)['entries']>,
-  stockhamBgSrcA: TgpuBindGroup<(typeof stockhamLayout)['entries']>,
-  stockhamBgSrcB: TgpuBindGroup<(typeof stockhamLayout)['entries']>,
-  opts?: { computePass?: GPUComputePassEncoder; inverse?: boolean },
+  opts: LineFftEncodeOptions,
 ): boolean {
-  const computePass = opts?.computePass;
-  const inverse = opts?.inverse === true;
-
-  /**
-   * Forward uses fewer global passes than full Stockham; numerically it matches the same line DFT.
-   * The bespoke radix-4 inverse path was incorrect for 2D + `skipFinalTranspose` camera flows — use the
-   * proven full Stockham inverse (same linear map as {@link dispatchStockhamLineFft} forward).
-   */
-  if (inverse) {
-    return dispatchStockhamLineFft(
-      stockhamPipeline,
-      stockhamUniform,
-      n,
-      lineStride,
-      numLines,
-      inputInA,
-      stockhamBgSrcA,
-      stockhamBgSrcB,
-      opts,
-    );
+  const s = opts.lineUniformSlot ?? 0;
+  const slot = s >= 0 && s <= 3 ? s : 0;
+  const pool = pools.at(slot);
+  if (pool === undefined) {
+    throw new Error('@typegpu/fft: invalid lineUniformSlot for radix-4 dispatch');
   }
+  const {
+    radix4StageUniforms,
+    radix4BgSrcA,
+    radix4BgSrcB,
+    stockhamTailUniform,
+    stockhamTailBgSrcA,
+    stockhamTailBgSrcB,
+  } = pool;
+
+  const { commandEncoder } = opts;
+  const inverse = opts.inverse === true;
+  const stageCap = opts.inverseMaxStages;
+  let invRemaining =
+    inverse && stageCap !== undefined ? Math.max(0, stageCap) : Number.POSITIVE_INFINITY;
 
   const k = 31 - Math.clz32(n);
   const ps = radix4PValues(n);
+  if (ps.length > radix4StageUniforms.length) {
+    throw new Error(
+      `@typegpu/fft: need at least ${ps.length} radix-4 uniform buffers (got ${radix4StageUniforms.length})`,
+    );
+  }
   const quarter = n >> 2;
   const totalThreads = numLines * quarter;
   const [wx, wy, wz] = decomposeWorkgroups(Math.ceil(totalThreads / WORKGROUP_SIZE));
 
   let readA = inputInA;
-  const direction = 0;
 
-  const runRadix4Stages = (stages: number[]) => {
-    for (const p of stages) {
-      radix4Uniform.write({ p, n, lineStride, numLines, direction });
-      const bg = readA ? radix4BgSrcA : radix4BgSrcB;
-      const scoped = computePass ? radix4Pipeline.with(computePass).with(bg) : radix4Pipeline.with(bg);
-      scoped.dispatchWorkgroups(wx, wy, wz);
-      readA = !readA;
+  if (inverse) {
+    if (k % 2 === 1 && invRemaining > 0) {
+      readA = dispatchStockhamLineFftStages(
+        stockhamPipeline,
+        [stockhamTailUniform],
+        [stockhamTailBgSrcA],
+        [stockhamTailBgSrcB],
+        n,
+        lineStride,
+        numLines,
+        readA,
+        [n >> 1],
+        { commandEncoder, inverse: true },
+      );
+      invRemaining--;
     }
-  };
+    for (let s = ps.length - 1; s >= 0 && invRemaining > 0; s--) {
+      const p = ps[s]!;
+      radix4StageUniforms[s]!.write({ p, n, lineStride, numLines });
+      const bg = readA ? radix4BgSrcA[s]! : radix4BgSrcB[s]!;
+      withLinePass(commandEncoder, `fft2d radix-4 inverse stage p=${p}`, (pass) => {
+        radix4InversePipeline.with(pass).with(bg).dispatchWorkgroups(wx, wy, wz);
+      });
+      readA = !readA;
+      invRemaining--;
+    }
+    return readA;
+  }
 
-  runRadix4Stages(ps);
+  for (let s = 0; s < ps.length; s++) {
+    const p = ps[s]!;
+    radix4StageUniforms[s]!.write({ p, n, lineStride, numLines });
+    const bg = readA ? radix4BgSrcA[s]! : radix4BgSrcB[s]!;
+    withLinePass(commandEncoder, `fft2d radix-4 forward stage p=${p}`, (pass) => {
+      radix4Pipeline.with(pass).with(bg).dispatchWorkgroups(wx, wy, wz);
+    });
+    readA = !readA;
+  }
+
   if (k % 2 === 1) {
     readA = dispatchStockhamLineFftStages(
       stockhamPipeline,
-      stockhamUniform,
+      [stockhamTailUniform],
+      [stockhamTailBgSrcA],
+      [stockhamTailBgSrcB],
       n,
       lineStride,
       numLines,
       readA,
-      stockhamBgSrcA,
-      stockhamBgSrcB,
       [n >> 1],
-      opts,
+      { commandEncoder },
     );
   }
 

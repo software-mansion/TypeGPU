@@ -122,60 +122,83 @@ export function buildStockhamTwiddleLut(nMax: number): [number, number][] {
   return out;
 }
 
-/** Out-of-place Stockham radix-2 along lines for an explicit `ns` stage list (e.g. tail after radix-4). */
+export type StockhamLineBindGroup = TgpuBindGroup<(typeof stockhamLayout)['entries']>;
+
+/**
+ * Out-of-place Stockham radix-2 along lines for an explicit `ns` stage list.
+ * **Per-stage uniforms:** `stageUniforms[i]` / bind groups must be distinct GPU buffers — repeated
+ * `queue.writeBuffer` into one buffer before a single `submit` would leave every dispatch seeing the
+ * last `ns` only. Each stage records its own compute pass on `commandEncoder`.
+ */
 export function dispatchStockhamLineFftStages(
   pipeline: ReturnType<typeof createStockhamStagePipeline>,
-  uniformBuffer: TgpuBuffer<typeof stockhamUniformType> & UniformFlag,
+  stageUniforms: ReadonlyArray<TgpuBuffer<typeof stockhamUniformType> & UniformFlag>,
+  bindGroupSrcA: ReadonlyArray<StockhamLineBindGroup>,
+  bindGroupSrcB: ReadonlyArray<StockhamLineBindGroup>,
   n: number,
   lineStride: number,
   numLines: number,
   inputInA: boolean,
-  bindGroupSrcA: TgpuBindGroup<(typeof stockhamLayout)['entries']>,
-  bindGroupSrcB: TgpuBindGroup<(typeof stockhamLayout)['entries']>,
   nsList: readonly number[],
-  opts?: { computePass?: GPUComputePassEncoder; inverse?: boolean },
+  opts: { commandEncoder: GPUCommandEncoder; inverse?: boolean },
 ): boolean {
-  const computePass = opts?.computePass;
-  const inverse = opts?.inverse === true;
+  if (nsList.length > stageUniforms.length) {
+    throw new Error(
+      `@typegpu/fft: need at least ${nsList.length} per-stage Stockham uniform buffers (got ${stageUniforms.length})`,
+    );
+  }
+  if (
+    bindGroupSrcA.length !== stageUniforms.length ||
+    bindGroupSrcB.length !== stageUniforms.length
+  ) {
+    throw new Error('@typegpu/fft: Stockham bind group arrays must match stageUniforms length');
+  }
+
+  const inverse = opts.inverse === true;
   const totalThreads = numLines * (n >> 1);
   const [wx, wy, wz] = decomposeWorkgroups(Math.ceil(totalThreads / WORKGROUP_SIZE));
 
   let readA = inputInA;
   const direction = inverse ? 1 : 0;
 
-  for (const ns of nsList) {
-    uniformBuffer.write({ ns, n, lineStride, numLines, direction });
-    const bg = readA ? bindGroupSrcA : bindGroupSrcB;
-    const scoped = computePass ? pipeline.with(computePass).with(bg) : pipeline.with(bg);
-    scoped.dispatchWorkgroups(wx, wy, wz);
+  const pass = opts.commandEncoder.beginComputePass({
+    label: `fft2d Stockham radix-2 ${inverse ? 'inverse' : 'forward'}`,
+  });
+  for (let i = 0; i < nsList.length; i++) {
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    const ns = nsList[i]!;
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    stageUniforms[i]!.write({ ns, n, lineStride, numLines, direction });
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    const bg = readA ? bindGroupSrcA[i]! : bindGroupSrcB[i]!;
+    pipeline.with(pass).with(bg).dispatchWorkgroups(wx, wy, wz);
     readA = !readA;
   }
+  pass.end();
 
   return readA;
 }
 
 export function dispatchStockhamLineFft(
   pipeline: ReturnType<typeof createStockhamStagePipeline>,
-  uniformBuffer: TgpuBuffer<typeof stockhamUniformType> & UniformFlag,
+  stageUniforms: ReadonlyArray<TgpuBuffer<typeof stockhamUniformType> & UniformFlag>,
+  bindGroupSrcA: ReadonlyArray<StockhamLineBindGroup>,
+  bindGroupSrcB: ReadonlyArray<StockhamLineBindGroup>,
   n: number,
   lineStride: number,
   numLines: number,
   inputInA: boolean,
-  /** `src = bufA → dst = bufB` */
-  bindGroupSrcA: TgpuBindGroup<(typeof stockhamLayout)['entries']>,
-  /** `src = bufB → dst = bufA` */
-  bindGroupSrcB: TgpuBindGroup<(typeof stockhamLayout)['entries']>,
-  opts?: { computePass?: GPUComputePassEncoder; inverse?: boolean },
+  opts: { commandEncoder: GPUCommandEncoder; inverse?: boolean },
 ): boolean {
   return dispatchStockhamLineFftStages(
     pipeline,
-    uniformBuffer,
+    stageUniforms,
+    bindGroupSrcA,
+    bindGroupSrcB,
     n,
     lineStride,
     numLines,
     inputInA,
-    bindGroupSrcA,
-    bindGroupSrcB,
     stockhamNsValues(n),
     opts,
   );

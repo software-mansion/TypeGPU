@@ -1,8 +1,8 @@
-import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
+import type { StorageFlag, TgpuBindGroup, TgpuBuffer, TgpuRoot, UniformFlag } from 'typegpu';
 import { d } from 'typegpu';
 import {
   createStockhamRadix2LineStrategy,
-  type LineFftStrategy,
+  type LineFftEncodeOptions,
   type LineFftStrategyFactory,
 } from './lineFftStrategy.ts';
 import { stockhamStageCount } from './stockham.ts';
@@ -13,11 +13,38 @@ import {
   transposeUniformType,
 } from './transpose.ts';
 
-function lineFftOpts(computePass?: GPUComputePassEncoder, inverse?: boolean) {
-  if (computePass !== undefined) {
-    return inverse ? { computePass, inverse: true } : { computePass };
-  }
-  return inverse ? { inverse: true as const } : undefined;
+function makeLineFftOpts(debugInverseMaxLineStages: number | undefined) {
+  return function lineFftOpts(
+    commandEncoder: GPUCommandEncoder,
+    extras?: { inverse?: boolean; lineUniformSlot?: 0 | 1 | 2 | 3 },
+  ): LineFftEncodeOptions {
+    const inverse = extras?.inverse === true;
+    const lineUniformSlot = extras?.lineUniformSlot ?? 0;
+    const cap =
+      inverse && debugInverseMaxLineStages !== undefined
+        ? debugInverseMaxLineStages
+        : undefined;
+    if (inverse) {
+      return cap !== undefined
+        ? { commandEncoder, inverse: true as const, inverseMaxStages: cap, lineUniformSlot }
+        : { commandEncoder, inverse: true as const, lineUniformSlot };
+    }
+    return { commandEncoder, lineUniformSlot };
+  };
+}
+
+function recordTransposePass(
+  encoder: GPUCommandEncoder,
+  label: string,
+  pipeline: ReturnType<typeof createTransposePipeline>,
+  uniformBuffer: TgpuBuffer<typeof transposeUniformType> & UniformFlag,
+  bindGroup: TgpuBindGroup<(typeof transposeLayout)['entries']>,
+  srcCols: number,
+  srcRows: number,
+): void {
+  const p = encoder.beginComputePass({ label });
+  dispatchTranspose(pipeline, uniformBuffer, bindGroup, srcCols, srcRows, p);
+  p.end();
 }
 
 export type Fft2dOptions = {
@@ -31,9 +58,9 @@ export type Fft2dOptions = {
   /**
    * When `true`, omits the final `H×W` transpose after the column pass. The spectrum stays in the
    * intermediate **transposed** layout (same linear buffer, frequency axes swapped vs row-major natural).
-   * Callers must interpret filters / indexing accordingly, or call {@link Fft2d.retileSpectrumToNatural}
-   * for natural spectrum layout (e.g. custom inverse paths). {@link Fft2d.inverse} does not retile when
-   * this is set; it uses a factored inverse on the skip layout.
+   * Callers must interpret filters / indexing accordingly, or call {@link Fft2d.encodeRetileSpectrumToNatural}
+   * for natural spectrum layout. {@link Fft2d.encodeInverse} does not retile when this is set; it uses a
+   * factored inverse on the skip layout.
    */
   skipFinalTranspose?: boolean;
   /**
@@ -41,6 +68,11 @@ export type Fft2dOptions = {
    * {@link createStockhamRadix2LineStrategy}.
    */
   lineFftStrategyFactory?: LineFftStrategyFactory;
+  /**
+   * Debug: each inverse line-FFT dispatch runs at most this many internal stages (same semantics as
+   * `LineFftEncodeOptions.inverseMaxStages` in this package). Omit for a full inverse.
+   */
+  debugInverseMaxLineStages?: number;
 };
 
 /**
@@ -57,97 +89,106 @@ export function fftForwardProfileQueryIndexCount(
   return 2 * stage(width) + transposes * 2 + 2 * stage(height);
 }
 
+export type EncodeForwardPerStageSubmitsOptions = {
+  /** @default 1 — only radix-2 Stockham `profileLineFft` honors this. */
+  lineStagesPerSubmit?: number;
+};
+
 export type Fft2d = {
   readonly width: number;
   readonly height: number;
-  /** Mirrors {@link Fft2dOptions.useGlobalTranspose}. */
   readonly useGlobalTranspose: boolean;
-  /** Mirrors {@link Fft2dOptions.skipFinalTranspose}. */
   readonly skipFinalTranspose: boolean;
-  /** Id of the active {@link LineFftStrategy} (e.g. `stockham-radix2`). */
   readonly lineFftStrategyId: string;
   /**
-   * Applies the `H×W` transpose that {@link forward} skips when `skipFinalTranspose` is set — restores
-   * natural row-major spectrum layout. No-op when `skipFinalTranspose` is false. Use before custom
-   * `inverse` logic if you bypass {@link inverse}.
-   */
-  retileSpectrumToNatural(): void;
-  encodeRetileSpectrumToNatural(computePass: GPUComputePassEncoder): void;
-  /**
-   * Write complex samples `vec2(re, im)` here before `forward()` (row-major: `y * width + x`).
+   * Write complex samples `vec2(re, im)` before {@link Fft2d.encodeForward} (row-major: `y * width + x`).
    * Same buffer as `pingPong[0]`.
    */
   readonly input: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
-  /**
-   * Fixed ping-pong pair for the transform. After each `forward()` / `inverse()`, the latest
-   * coefficients live in `pingPong[outputSlot()]` (use this to build two bind groups and pick per frame).
-   */
   readonly pingPong: readonly [
     TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag,
     TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag,
   ];
-  /** `0` or `1` — index into `pingPong` for the buffer that holds the last transform result. */
   outputSlot(): 0 | 1;
-  /** Buffer that holds the result of the last `forward()` or `inverse()` (same indexing). */
+  /** Buffer that holds the result of the last encode pass (same indexing). */
   output(): TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
+
+  encodeTransformRows1DForward(commandEncoder: GPUCommandEncoder): void;
+  encodeTransformRows1DInverse(commandEncoder: GPUCommandEncoder): void;
+  encodeTransformColumns1DForward(commandEncoder: GPUCommandEncoder): void;
+  encodeTransformColumns1DInverse(commandEncoder: GPUCommandEncoder): void;
   /**
-   * 1D FFT along every row (`width` points per row, `height` rows), row-major layout.
-   * Composes with {@link transformColumns1DForward} to match {@link forward} (for `useGlobalTranspose: true`).
+   * Full 2D forward from {@link input} (`pingPong[0]`). Records multiple compute passes on `commandEncoder`
+   * (one per line-FFT stage and per transpose); caller `finish`es and `submit`s.
    */
-  transformRows1DForward(): void;
-  /** Inverse of {@link transformRows1DForward} on the current buffer (inverse line FFT, no global conjugate). */
-  transformRows1DInverse(): void;
+  encodeForward(commandEncoder: GPUCommandEncoder): void;
   /**
-   * 1D FFT along every column in row-major storage. With `useGlobalTranspose: true`, uses
-   * transpose → row-direction FFT on `height×width` → transpose back.
+   * Same result as {@link Fft2d.encodeForward}, but uses one queue submit after the row 1D FFT and one
+   * after the column phase (transpose + column FFT and optional final transpose). Optional scheduling
+   * variant; dual uniform pools make single-submit {@link Fft2d.encodeForward} correct for non-square sizes.
    */
-  transformColumns1DForward(): void;
-  /** Inverse of {@link transformColumns1DForward} (inverse line FFT + same transposes as forward). */
-  transformColumns1DInverse(): void;
-  encodeTransformRows1DForward(computePass: GPUComputePassEncoder): void;
-  encodeTransformRows1DInverse(computePass: GPUComputePassEncoder): void;
-  encodeTransformColumns1DForward(computePass: GPUComputePassEncoder): void;
-  encodeTransformColumns1DInverse(computePass: GPUComputePassEncoder): void;
+  encodeForwardSplitSubmits(device: GPUDevice): void;
   /**
-   * Full 2D forward from {@link input} (`pingPong[0]`). Equivalent to {@link transformRows1DForward}
-   * then a column pass; if {@link skipFinalTranspose} is set, the column pass omits the final
-   * `H×W` transpose (spectrum axes swapped vs natural row-major — see {@link retileSpectrumToNatural}).
+   * Same result as {@link Fft2d.encodeForward}, with two submits at a different boundary: first submit runs
+   * row 1D FFT, W×H transpose, and column 1D FFT; second submit runs only the final H×W transpose. If
+   * {@link Fft2d.skipFinalTranspose} is set, behaves like {@link Fft2d.encodeForwardSplitSubmits} (no final
+   * transpose to split).
    */
-  forward(): void;
-  /** Record forward FFT on a caller-owned compute pass (experimental; `forward()` is safer). */
-  encodeForward(computePass: GPUComputePassEncoder): void;
+  encodeForwardSplitSubmitsThroughColumn(device: GPUDevice): void;
   /**
-   * Same result as `forward()`, with one queue submit per line-FFT stage and per transpose so
-   * uniform updates stay correct. Each submit uses a compute pass with `timestampWrites` for two
-   * query indices (begin/end). First pair starts at `timestampBaseIndex` (e.g. after fill/filter slots).
-   * Requires the line strategy to implement per-stage profiling (default Stockham does).
+   * Same result as {@link Fft2d.encodeInverse}, with a queue submit between major phases (skip-final:
+   * column inverse, transpose, row inverse; otherwise: retile, row inverse, column inverse).
+   */
+  encodeInverseSplitSubmits(device: GPUDevice): void;
+  /**
+   * Same result as {@link Fft2d.encodeForward}, with one queue submit per line-FFT stage and per transpose
+   * (same recording path as {@link Fft2d.profileForward} but **no** timestamp queries).
+   * Pass `opts.lineStagesPerSubmit` greater than 1 to merge consecutive radix-2 Stockham line-FFT stages into one
+   * submit (other line strategies ignore this field).
+   */
+  encodeForwardPerStageSubmits(
+    device: GPUDevice,
+    opts?: EncodeForwardPerStageSubmitsOptions,
+  ): void;
+  /**
+   * Same result as {@link Fft2d.encodeForward}, with one queue submit per line-FFT stage and per transpose.
+   * Each submit uses a compute pass with `timestampWrites` for two query indices (begin/end).
    */
   profileForward(device: GPUDevice, querySet: GPUQuerySet, timestampBaseIndex: number): void;
+  encodeRetileSpectrumToNatural(commandEncoder: GPUCommandEncoder): void;
   /**
-   * Inverse DFT of the spectrum from the last `forward()` (same ping-pong buffers).
-   * Uses inverse line FFT stages (e.g. conjugated twiddles for Stockham) — no buffer-wide
-   * `conj` passes. Caller still scales reals by `1/(WH)` for unnormalized Stockham.
+   * Inverse DFT of the spectrum from the last forward (same ping-pong buffers). Multiple compute passes on
+   * `commandEncoder`; caller `finish`es and `submit`s.
    */
-  inverse(): void;
-  /** Record inverse FFT on a caller-owned compute pass (experimental; `inverse()` is safer). */
-  encodeInverse(computePass: GPUComputePassEncoder): void;
+  encodeInverse(commandEncoder: GPUCommandEncoder): void;
   destroy(): void;
 };
 
 /**
  * Radix-2 Stockham 2D FFT on row-major `width×height` complex buffers (`input` = `pingPong[0]`).
- * {@link Fft2d.forward} applies row FFT then a column pass (starting from buffer A). With
- * `skipFinalTranspose: true`, the column pass omits the final `H×W` transpose; {@link Fft2d.inverse} uses
- * inverse line FFT on that layout (no global conjugate passes).
- * `useGlobalTranspose: false` is reserved for a strided column pass and currently throws on column / 2D forward.
+ * All GPU work is recorded through {@link Fft2d.encodeForward} / {@link Fft2d.encodeInverse} (or the
+ * `encodeTransform*` helpers) on a caller-owned {@link GPUCommandEncoder}.
  *
- * `width` and `height` must be powers of two. NPOT sizes would need mixed radix / Bluestein elsewhere.
+ * WebGPU allows many `dispatchWorkgroups` calls (and pipeline switches) in **one** compute pass; this
+ * package still uses **one short compute pass per FFT stage / transpose** so each dispatch is isolated and
+ * `queue.writeBuffer` updates to per-stage uniforms are easy to reason about before a single `submit`.
+ *
+ * Recording does not execute work. Uniform updates use `queue.writeBuffer` (ordered on the queue before
+ * submitted command buffers). Batch dependent work in **one** encoder (e.g. fill pass then
+ * {@link Fft2d.encodeForward}) then submit once.
+ *
+ * Line strategies use **two duplicate uniform pools** (slot `0` = row-axis, `1` = column-axis) so each
+ * Stockham / radix-4 stage index maps to distinct GPU buffers for row vs column passes. That avoids
+ * `queue.writeBuffer` last-write-wins across axes when {@link Fft2d.encodeForward} records both passes on
+ * one encoder before `submit`. Two transpose uniform buffers still cover the column pass’s two transposes
+ * when both are recorded back-to-back on the same encoder.
  */
 export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
   const { width: W, height: H } = options;
   const useGlobalTranspose = options.useGlobalTranspose !== false;
   const skipFinalTranspose = options.skipFinalTranspose === true;
   const lineFftFactory = options.lineFftStrategyFactory ?? createStockhamRadix2LineStrategy;
+  const lineFftOpts = makeLineFftOpts(options.debugInverseMaxLineStages);
 
   if (W <= 0 || H <= 0) {
     throw new Error('FFT dimensions must be positive');
@@ -161,49 +202,64 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
   const bufB = root.createBuffer(d.arrayOf(d.vec2f, count)).$usage('storage');
 
   const nMax = Math.max(W, H);
-  const lineFft: LineFftStrategy = lineFftFactory({
-    root,
-    nMax,
-    bufA,
-    bufB,
-  });
+  const lineFft = lineFftFactory({ root, nMax, bufA, bufB });
 
-  const transposeUniform = root.createBuffer(transposeUniformType).$usage('uniform');
+  const transposeUniformFwd0 = root.createBuffer(transposeUniformType).$usage('uniform');
+  const transposeUniformFwd1 = root.createBuffer(transposeUniformType).$usage('uniform');
+  const transposeUniformInv0 = root.createBuffer(transposeUniformType).$usage('uniform');
+  const transposeUniformInv1 = root.createBuffer(transposeUniformType).$usage('uniform');
+  const transposeUniformInvAux = root.createBuffer(transposeUniformType).$usage('uniform');
   const transposePipeline = createTransposePipeline(root);
 
-  const transposeBgSrcA = root.createBindGroup(transposeLayout, {
-    uniforms: transposeUniform,
-    src: bufA,
-    dst: bufB,
-  });
-  const transposeBgSrcB = root.createBindGroup(transposeLayout, {
-    uniforms: transposeUniform,
-    src: bufB,
-    dst: bufA,
-  });
+  type TransposeBgPair = {
+    bgSrcA: TgpuBindGroup<(typeof transposeLayout)['entries']>;
+    bgSrcB: TgpuBindGroup<(typeof transposeLayout)['entries']>;
+  };
+  function mkTransposePair(
+    uniformBuf: TgpuBuffer<typeof transposeUniformType> & UniformFlag,
+  ): TransposeBgPair {
+    return {
+      bgSrcA: root.createBindGroup(transposeLayout, {
+        uniforms: uniformBuf,
+        src: bufA,
+        dst: bufB,
+      }),
+      bgSrcB: root.createBindGroup(transposeLayout, {
+        uniforms: uniformBuf,
+        src: bufB,
+        dst: bufA,
+      }),
+    };
+  }
+  const transposePairFwd0 = mkTransposePair(transposeUniformFwd0);
+  const transposePairFwd1 = mkTransposePair(transposeUniformFwd1);
+  const transposePairInv0 = mkTransposePair(transposeUniformInv0);
+  const transposePairInv1 = mkTransposePair(transposeUniformInv1);
+  const transposePairInvAux = mkTransposePair(transposeUniformInvAux);
+
+  function pickTransposeBg(pair: TransposeBgPair, inA: boolean): TgpuBindGroup<(typeof transposeLayout)['entries']> {
+    return inA ? pair.bgSrcA : pair.bgSrcB;
+  }
 
   let resultInA = true;
 
-  /**
-   * Inverse 2D on skip-final spectrum layout: inverse column line FFT on `W×H`, then `T(H×W)`,
-   * then inverse row line FFT on `H×W`.
-   */
-  function inverseFromSkipSpectrumDirect(computePass?: GPUComputePassEncoder) {
+  function inverseFromSkipSpectrumDirect(encoder: GPUCommandEncoder) {
     let inA = resultInA;
 
-    inA = lineFft.dispatchLineFft(H, H, W, inA, lineFftOpts(computePass, true));
+    inA = lineFft.dispatchLineFft(H, H, W, inA, lineFftOpts(encoder, { inverse: true, lineUniformSlot: 3 }));
 
-    dispatchTranspose(
+    recordTransposePass(
+      encoder,
+      'fft2d inverse skip-layout transpose H×W',
       transposePipeline,
-      transposeUniform,
-      inA ? transposeBgSrcA : transposeBgSrcB,
+      transposeUniformInvAux,
+      pickTransposeBg(transposePairInvAux, inA),
       H,
       W,
-      computePass,
     );
     inA = !inA;
 
-    inA = lineFft.dispatchLineFft(W, W, H, inA, lineFftOpts(computePass, true));
+    inA = lineFft.dispatchLineFft(W, W, H, inA, lineFftOpts(encoder, { inverse: true, lineUniformSlot: 2 }));
 
     resultInA = inA;
   }
@@ -216,123 +272,217 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
     }
   }
 
-  /** Row-direction line FFT forward; `inA` = source buffer for first read. */
-  function applyRows1DForward(inA: boolean, computePass?: GPUComputePassEncoder): boolean {
-    return lineFft.dispatchLineFft(W, W, H, inA, lineFftOpts(computePass));
+  function applyRows1DForward(inA: boolean, encoder: GPUCommandEncoder): boolean {
+    return lineFft.dispatchLineFft(W, W, H, inA, lineFftOpts(encoder));
   }
 
-  /** Row-direction inverse line FFT on `H×W` row-major (`width` points per row). */
-  function applyRows1DInversePass(inA: boolean, computePass?: GPUComputePassEncoder): boolean {
-    return lineFft.dispatchLineFft(W, W, H, inA, lineFftOpts(computePass, true));
+  function applyRows1DInversePass(inA: boolean, encoder: GPUCommandEncoder): boolean {
+    return lineFft.dispatchLineFft(W, W, H, inA, lineFftOpts(encoder, { inverse: true, lineUniformSlot: 0 }));
   }
 
-  /** Column-direction forward in row-major layout via global transposes + line FFT on `H×W`. */
-  function applyColumns1DForward(inA: boolean, computePass?: GPUComputePassEncoder): boolean {
+  function applyColumns1DForward(inA: boolean, encoder: GPUCommandEncoder): boolean {
     assertGlobalTranspose('applyColumns1DForward');
-    dispatchTranspose(
+    recordTransposePass(
+      encoder,
+      'fft2d transpose W×H',
       transposePipeline,
-      transposeUniform,
-      inA ? transposeBgSrcA : transposeBgSrcB,
+      transposeUniformFwd0,
+      pickTransposeBg(transposePairFwd0, inA),
       W,
       H,
-      computePass,
     );
     const afterTInA = !inA;
 
-    const midInA = lineFft.dispatchLineFft(H, H, W, afterTInA, lineFftOpts(computePass));
+    const midInA = lineFft.dispatchLineFft(H, H, W, afterTInA, lineFftOpts(encoder, { lineUniformSlot: 1 }));
 
-    dispatchTranspose(
+    recordTransposePass(
+      encoder,
+      'fft2d transpose H×W',
       transposePipeline,
-      transposeUniform,
-      midInA ? transposeBgSrcA : transposeBgSrcB,
+      transposeUniformFwd1,
+      pickTransposeBg(transposePairFwd1, midInA),
       H,
       W,
-      computePass,
     );
     return !midInA;
   }
 
-  /** Same transposes as {@link applyColumns1DForward}, inverse line FFT in the middle. */
-  function applyColumns1DInversePass(inA: boolean, computePass?: GPUComputePassEncoder): boolean {
+  function applyColumns1DInversePass(inA: boolean, encoder: GPUCommandEncoder): boolean {
     assertGlobalTranspose('applyColumns1DInversePass');
-    dispatchTranspose(
+    recordTransposePass(
+      encoder,
+      'fft2d inverse transpose W×H',
       transposePipeline,
-      transposeUniform,
-      inA ? transposeBgSrcA : transposeBgSrcB,
+      transposeUniformInv0,
+      pickTransposeBg(transposePairInv0, inA),
       W,
       H,
-      computePass,
     );
     const afterTInA = !inA;
 
-    const midInA = lineFft.dispatchLineFft(H, H, W, afterTInA, lineFftOpts(computePass, true));
+    const midInA = lineFft.dispatchLineFft(H, H, W, afterTInA, lineFftOpts(encoder, { inverse: true, lineUniformSlot: 3 }));
 
-    dispatchTranspose(
+    recordTransposePass(
+      encoder,
+      'fft2d inverse transpose H×W',
       transposePipeline,
-      transposeUniform,
-      midInA ? transposeBgSrcA : transposeBgSrcB,
+      transposeUniformInv1,
+      pickTransposeBg(transposePairInv1, midInA),
       H,
       W,
-      computePass,
     );
     return !midInA;
   }
 
-  /** Column pass through transposed layout but **without** the closing `H×W` transpose. */
-  function applyColumns1DForwardLeavingTransposed(
-    inA: boolean,
-    computePass?: GPUComputePassEncoder,
-  ): boolean {
+  function applyColumns1DForwardLeavingTransposed(inA: boolean, encoder: GPUCommandEncoder): boolean {
     assertGlobalTranspose('applyColumns1DForwardLeavingTransposed');
-    dispatchTranspose(
+    recordTransposePass(
+      encoder,
+      'fft2d transpose W×H (skip final)',
       transposePipeline,
-      transposeUniform,
-      inA ? transposeBgSrcA : transposeBgSrcB,
+      transposeUniformFwd0,
+      pickTransposeBg(transposePairFwd0, inA),
       W,
       H,
-      computePass,
     );
     const afterTInA = !inA;
-    return lineFft.dispatchLineFft(H, H, W, afterTInA, lineFftOpts(computePass));
+    return lineFft.dispatchLineFft(H, H, W, afterTInA, lineFftOpts(encoder, { lineUniformSlot: 1 }));
   }
 
-  /** Full 2D forward with both transposes. */
-  function forwardFromFull(initialInA: boolean, computePass?: GPUComputePassEncoder) {
+  function forwardFromFullInverse(initialInA: boolean, encoder: GPUCommandEncoder) {
     let inA = initialInA;
-    inA = applyRows1DForward(inA, computePass);
-    inA = applyColumns1DForward(inA, computePass);
+    inA = applyRows1DInversePass(inA, encoder);
+    inA = applyColumns1DInversePass(inA, encoder);
     resultInA = inA;
   }
 
-  /** Full 2D inverse: inverse row FFT then inverse column pass (inverse line FFT + transposes). */
-  function forwardFromFullInverse(initialInA: boolean, computePass?: GPUComputePassEncoder) {
+  function forwardFrom(initialInA: boolean, encoder: GPUCommandEncoder) {
     let inA = initialInA;
-    inA = applyRows1DInversePass(inA, computePass);
-    inA = applyColumns1DInversePass(inA, computePass);
-    resultInA = inA;
-  }
-
-  function forwardFrom(initialInA: boolean, computePass?: GPUComputePassEncoder) {
-    let inA = initialInA;
-    inA = applyRows1DForward(inA, computePass);
+    inA = applyRows1DForward(inA, encoder);
     inA = skipFinalTranspose
-      ? applyColumns1DForwardLeavingTransposed(inA, computePass)
-      : applyColumns1DForward(inA, computePass);
+      ? applyColumns1DForwardLeavingTransposed(inA, encoder)
+      : applyColumns1DForward(inA, encoder);
     resultInA = inA;
   }
 
-  function retileSpectrumToNaturalInternal(computePass?: GPUComputePassEncoder) {
+  function encodeForwardSplitSubmitsInternal(device: GPUDevice) {
+    let inA = true;
+    {
+      const enc = device.createCommandEncoder({ label: 'fft2d forward rows' });
+      inA = applyRows1DForward(inA, enc);
+      resultInA = inA;
+      device.queue.submit([enc.finish()]);
+    }
+    inA = resultInA;
+    {
+      const enc = device.createCommandEncoder({ label: 'fft2d forward columns' });
+      inA = skipFinalTranspose
+        ? applyColumns1DForwardLeavingTransposed(inA, enc)
+        : applyColumns1DForward(inA, enc);
+      resultInA = inA;
+      device.queue.submit([enc.finish()]);
+    }
+  }
+
+  /** Submit 1: row FFT + W×H transpose + column FFT. Submit 2: H×W transpose only (when not skip-final). */
+  function encodeForwardSplitSubmitsThroughColumnInternal(device: GPUDevice) {
+    if (skipFinalTranspose) {
+      encodeForwardSplitSubmitsInternal(device);
+      return;
+    }
+    let inA = true;
+    {
+      const enc = device.createCommandEncoder({ label: 'fft2d forward rows+transpose+col' });
+      inA = applyRows1DForward(inA, enc);
+      inA = applyColumns1DForwardLeavingTransposed(inA, enc);
+      resultInA = inA;
+      device.queue.submit([enc.finish()]);
+    }
+    inA = resultInA;
+    {
+      const enc = device.createCommandEncoder({ label: 'fft2d forward final transpose H×W' });
+      recordTransposePass(
+        enc,
+        'fft2d transpose H×W',
+        transposePipeline,
+        transposeUniformFwd1,
+        pickTransposeBg(transposePairFwd1, inA),
+        H,
+        W,
+      );
+      resultInA = !inA;
+      device.queue.submit([enc.finish()]);
+    }
+  }
+
+  function encodeInverseSplitSubmitsInternal(device: GPUDevice) {
+    if (skipFinalTranspose) {
+      let inA = resultInA;
+      {
+        const enc = device.createCommandEncoder({ label: 'fft2d inverse skip col' });
+        inA = lineFft.dispatchLineFft(H, H, W, inA, lineFftOpts(enc, { inverse: true, lineUniformSlot: 1 }));
+        resultInA = inA;
+        device.queue.submit([enc.finish()]);
+      }
+      inA = resultInA;
+      {
+        const enc = device.createCommandEncoder({ label: 'fft2d inverse skip transpose' });
+        recordTransposePass(
+          enc,
+          'fft2d inverse skip-layout transpose H×W',
+          transposePipeline,
+          transposeUniformInvAux,
+          pickTransposeBg(transposePairInvAux, inA),
+          H,
+          W,
+        );
+        inA = !inA;
+        resultInA = inA;
+        device.queue.submit([enc.finish()]);
+      }
+      inA = resultInA;
+      {
+        const enc = device.createCommandEncoder({ label: 'fft2d inverse skip row' });
+        inA = lineFft.dispatchLineFft(W, W, H, inA, lineFftOpts(enc, { inverse: true, lineUniformSlot: 0 }));
+        resultInA = inA;
+        device.queue.submit([enc.finish()]);
+      }
+    } else {
+      {
+        const enc = device.createCommandEncoder({ label: 'fft2d inverse retile' });
+        retileSpectrumToNaturalInternal(enc);
+        device.queue.submit([enc.finish()]);
+      }
+      let inA = resultInA;
+      {
+        const enc = device.createCommandEncoder({ label: 'fft2d inverse rows' });
+        inA = applyRows1DInversePass(inA, enc);
+        resultInA = inA;
+        device.queue.submit([enc.finish()]);
+      }
+      inA = resultInA;
+      {
+        const enc = device.createCommandEncoder({ label: 'fft2d inverse columns' });
+        inA = applyColumns1DInversePass(inA, enc);
+        resultInA = inA;
+        device.queue.submit([enc.finish()]);
+      }
+    }
+  }
+
+  function retileSpectrumToNaturalInternal(encoder: GPUCommandEncoder) {
     if (!skipFinalTranspose) {
       return;
     }
     const inA = resultInA;
-    dispatchTranspose(
+    recordTransposePass(
+      encoder,
+      'fft2d retile spectrum H×W',
       transposePipeline,
-      transposeUniform,
-      inA ? transposeBgSrcA : transposeBgSrcB,
+      transposeUniformInvAux,
+      pickTransposeBg(transposePairInvAux, inA),
       H,
       W,
-      computePass,
     );
     resultInA = !inA;
   }
@@ -340,8 +490,9 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
   function forwardFromProfiled(
     initialInA: boolean,
     gpuDevice: GPUDevice,
-    querySet: GPUQuerySet,
+    querySet: GPUQuerySet | undefined,
     baseIndex: number,
+    lineStagesPerSubmit = 1,
   ) {
     assertGlobalTranspose('profileForward');
     const profile = lineFft.profileLineFft;
@@ -361,8 +512,10 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
       numLines: H,
       inputInA: inA,
       device: gpuDevice,
-      querySet,
+      ...(querySet !== undefined ? { querySet } : {}),
       queryIndexStart: idx,
+      lineStagesPerSubmit,
+      lineUniformSlot: 0,
     });
     idx = rowPr.queryIndexEnd;
     inA = rowPr.resultInA;
@@ -371,16 +524,20 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
       const enc = gpuDevice.createCommandEncoder({ label: 'fft2d transpose W×H' });
       const pass = enc.beginComputePass({
         label: 'fft2d transpose W×H',
-        timestampWrites: {
-          querySet,
-          beginningOfPassWriteIndex: idx,
-          endOfPassWriteIndex: idx + 1,
-        },
+        ...(querySet !== undefined
+          ? {
+              timestampWrites: {
+                querySet,
+                beginningOfPassWriteIndex: idx,
+                endOfPassWriteIndex: idx + 1,
+              },
+            }
+          : {}),
       });
       dispatchTranspose(
         transposePipeline,
-        transposeUniform,
-        inA ? transposeBgSrcA : transposeBgSrcB,
+        transposeUniformFwd0,
+        pickTransposeBg(transposePairFwd0, inA),
         W,
         H,
         pass,
@@ -398,8 +555,10 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
       numLines: W,
       inputInA: afterTInA,
       device: gpuDevice,
-      querySet,
+      ...(querySet !== undefined ? { querySet } : {}),
       queryIndexStart: idx,
+      lineStagesPerSubmit,
+      lineUniformSlot: 1,
     });
     idx = colPr.queryIndexEnd;
     const colInA = colPr.resultInA;
@@ -408,16 +567,20 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
       const enc = gpuDevice.createCommandEncoder({ label: 'fft2d transpose H×W' });
       const pass = enc.beginComputePass({
         label: 'fft2d transpose H×W',
-        timestampWrites: {
-          querySet,
-          beginningOfPassWriteIndex: idx,
-          endOfPassWriteIndex: idx + 1,
-        },
+        ...(querySet !== undefined
+          ? {
+              timestampWrites: {
+                querySet,
+                beginningOfPassWriteIndex: idx,
+                endOfPassWriteIndex: idx + 1,
+              },
+            }
+          : {}),
       });
       dispatchTranspose(
         transposePipeline,
-        transposeUniform,
-        colInA ? transposeBgSrcA : transposeBgSrcB,
+        transposeUniformFwd1,
+        pickTransposeBg(transposePairFwd1, colInA),
         H,
         W,
         pass,
@@ -444,66 +607,57 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
     output() {
       return resultInA ? bufA : bufB;
     },
-    transformRows1DForward() {
-      resultInA = applyRows1DForward(resultInA);
+    encodeTransformRows1DForward(commandEncoder) {
+      resultInA = applyRows1DForward(resultInA, commandEncoder);
     },
-    transformRows1DInverse() {
-      resultInA = applyRows1DInversePass(resultInA);
+    encodeTransformRows1DInverse(commandEncoder) {
+      resultInA = applyRows1DInversePass(resultInA, commandEncoder);
     },
-    transformColumns1DForward() {
-      resultInA = applyColumns1DForward(resultInA);
+    encodeTransformColumns1DForward(commandEncoder) {
+      resultInA = applyColumns1DForward(resultInA, commandEncoder);
     },
-    transformColumns1DInverse() {
-      resultInA = applyColumns1DInversePass(resultInA);
+    encodeTransformColumns1DInverse(commandEncoder) {
+      resultInA = applyColumns1DInversePass(resultInA, commandEncoder);
     },
-    encodeTransformRows1DForward(computePass) {
-      resultInA = applyRows1DForward(resultInA, computePass);
+    encodeForward(commandEncoder) {
+      forwardFrom(true, commandEncoder);
     },
-    encodeTransformRows1DInverse(computePass) {
-      resultInA = applyRows1DInversePass(resultInA, computePass);
+    encodeForwardSplitSubmits(device) {
+      encodeForwardSplitSubmitsInternal(device);
     },
-    encodeTransformColumns1DForward(computePass) {
-      resultInA = applyColumns1DForward(resultInA, computePass);
+    encodeForwardSplitSubmitsThroughColumn(device) {
+      encodeForwardSplitSubmitsThroughColumnInternal(device);
     },
-    encodeTransformColumns1DInverse(computePass) {
-      resultInA = applyColumns1DInversePass(resultInA, computePass);
+    encodeForwardPerStageSubmits(device, opts) {
+      const lineStagesPerSubmit = Math.max(1, Math.floor(opts?.lineStagesPerSubmit ?? 1));
+      forwardFromProfiled(true, device, undefined, 0, lineStagesPerSubmit);
     },
-    forward() {
-      forwardFrom(true);
-    },
-    encodeForward(computePass) {
-      forwardFrom(true, computePass);
+    encodeInverseSplitSubmits(device) {
+      encodeInverseSplitSubmitsInternal(device);
     },
     profileForward(gpuDevice, querySet, timestampBaseIndex) {
       forwardFromProfiled(true, gpuDevice, querySet, timestampBaseIndex);
     },
-    retileSpectrumToNatural() {
-      retileSpectrumToNaturalInternal();
+    encodeRetileSpectrumToNatural(commandEncoder) {
+      retileSpectrumToNaturalInternal(commandEncoder);
     },
-    encodeRetileSpectrumToNatural(computePass) {
-      retileSpectrumToNaturalInternal(computePass);
-    },
-    inverse() {
+    encodeInverse(commandEncoder) {
       if (skipFinalTranspose) {
-        inverseFromSkipSpectrumDirect();
+        inverseFromSkipSpectrumDirect(commandEncoder);
       } else {
-        retileSpectrumToNaturalInternal();
-        forwardFromFullInverse(resultInA);
-      }
-    },
-    encodeInverse(computePass) {
-      if (skipFinalTranspose) {
-        inverseFromSkipSpectrumDirect(computePass);
-      } else {
-        retileSpectrumToNaturalInternal(computePass);
-        forwardFromFullInverse(resultInA, computePass);
+        retileSpectrumToNaturalInternal(commandEncoder);
+        forwardFromFullInverse(resultInA, commandEncoder);
       }
     },
     destroy() {
       lineFft.destroy();
       bufA.destroy();
       bufB.destroy();
-      transposeUniform.destroy();
+      transposeUniformFwd0.destroy();
+      transposeUniformFwd1.destroy();
+      transposeUniformInv0.destroy();
+      transposeUniformInv1.destroy();
+      transposeUniformInvAux.destroy();
     },
   };
 }

@@ -1,6 +1,9 @@
 /**
  * Validates @typegpu/fft line strategies: GPU↔CPU (fft.js separable 2D), factory copy parity,
- * radix-4 vs default Stockham, and GPU timestamp averages over repeated forwards (camera-fft style).
+ * radix-4 vs default Stockham, forward→inverse round-trip (WebGPU), and wall-clock averages over forwards.
+ *
+ * Run in the docs dev server: `/TypeGPU/examples#example=tests--fft-line-strategy-check` — needs WebGPU
+ * (Node alone cannot execute these kernels).
  */
 import {
   createFft2d,
@@ -110,6 +113,56 @@ function gpuGpuDiff(a: Vec2Like[], b: Vec2Like[]): { maxAbs: number; rms: number
   return { maxAbs, rms: Math.sqrt(sumSq / n) };
 }
 
+/** Rounds components for a compact Set key (fewer duplicate strings in console). */
+function complexKey(v: Vec2Like, decimals: number): string {
+  const f = 10 ** decimals;
+  const rx = Math.round(v.x * f) / f;
+  const iy = Math.round(v.y * f) / f;
+  return `${rx},${iy}`;
+}
+
+/**
+ * Logs aggregate stats and a bounded preview of **distinct** rounded complex samples (radix-4 inverse debug).
+ */
+function logComplexBufferFingerprint(label: string, buf: Vec2Like[], opts?: { decimals?: number; preview?: number }) {
+  const decimals = opts?.decimals ?? 4;
+  const previewCap = opts?.preview ?? 48;
+  const n = buf.length;
+  let zeroish = 0;
+  let nan = 0;
+  let minR = Infinity;
+  let maxR = -Infinity;
+  let minI = Infinity;
+  let maxI = -Infinity;
+  const distinct = new Set<string>();
+  for (let i = 0; i < n; i++) {
+    const v = buf[i]!;
+    const r = v.x;
+    const im = v.y;
+    if (!Number.isFinite(r) || !Number.isFinite(im)) {
+      nan++;
+      continue;
+    }
+    if (Math.abs(r) < 1e-20 && Math.abs(im) < 1e-20) {
+      zeroish++;
+    }
+    minR = Math.min(minR, r);
+    maxR = Math.max(maxR, r);
+    minI = Math.min(minI, im);
+    maxI = Math.max(maxI, im);
+    distinct.add(complexKey(v, decimals));
+  }
+  const preview = Array.from(distinct).sort().slice(0, previewCap);
+  console.warn(`[fft-line-strategy-check] ${label}  n=${n}  nearZero=${zeroish}  nan=${nan}`);
+  console.warn(
+    `[fft-line-strategy-check] ${label}  re∈[${minR.toExponential(3)}, ${maxR.toExponential(3)}]  im∈[${minI.toExponential(3)}, ${maxI.toExponential(3)}]`,
+  );
+  console.warn(
+    `[fft-line-strategy-check] ${label}  distinct rounded(vec2, ${decimals}dp)=${distinct.size}  preview (sorted, max ${previewCap}):`,
+    preview,
+  );
+}
+
 function diffStats(
   gpu: Vec2Like[],
   cpu: Float64Array,
@@ -132,51 +185,35 @@ function diffStats(
   return { maxAbs, rms: Math.sqrt(sumSq / n) };
 }
 
-function timestampPeriodNs(device: GPUDevice): number {
-  const limits = device.limits as { timestampPeriod?: number };
-  return typeof limits.timestampPeriod === 'number' ? limits.timestampPeriod : 1;
-}
-
-function ticksToMs(device: GPUDevice, delta: number): number {
-  return (delta * timestampPeriodNs(device)) / 1e6;
-}
-
-type TimestampQuerySet = {
-  querySet: GPUQuerySet;
-  resolve(): void;
-  read(): Promise<bigint[]>;
-};
-
 async function avgEncodeForwardMs(
   device: GPUDevice,
   fft: Fft2d,
   hostData: d.v2f[],
-  qs: TimestampQuerySet,
   k: number,
 ): Promise<number> {
+  let sum = 0;
   for (let i = 0; i < k; i++) {
     fft.input.write(hostData);
     const enc = device.createCommandEncoder({ label: 'fft-line-strategy-check timed forward' });
-    const pass = enc.beginComputePass({
-      label: 'fft2d forward',
-      timestampWrites: {
-        querySet: qs.querySet,
-        beginningOfPassWriteIndex: 2 * i,
-        endOfPassWriteIndex: 2 * i + 1,
-      },
-    });
-    fft.encodeForward(pass);
-    pass.end();
+    fft.encodeForward(enc);
+    const t0 = performance.now();
     device.queue.submit([enc.finish()]);
-  }
-  await device.queue.onSubmittedWorkDone();
-  qs.resolve();
-  const r = await qs.read();
-  let sum = 0;
-  for (let i = 0; i < k; i++) {
-    sum += ticksToMs(device, Number(r[2 * i + 1]! - r[2 * i]!));
+    await device.queue.onSubmittedWorkDone();
+    sum += performance.now() - t0;
   }
   return sum / k;
+}
+
+function submitEncodeForward(device: GPUDevice, fft: Fft2d) {
+  const enc = device.createCommandEncoder();
+  fft.encodeForward(enc);
+  device.queue.submit([enc.finish()]);
+}
+
+function submitEncodeInverse(device: GPUDevice, fft: Fft2d) {
+  const enc = device.createCommandEncoder();
+  fft.encodeInverse(enc);
+  device.queue.submit([enc.finish()]);
 }
 
 const root = await tgpu.init({
@@ -204,7 +241,7 @@ const fftRadix4 = createFft2d(root, {
 
 function loadAndForward(fft: Fft2d) {
   fft.input.write(host);
-  fft.forward();
+  submitEncodeForward(device, fft);
 }
 
 for (let i = 0; i < WARMUP; i++) {
@@ -227,10 +264,33 @@ console.info(
   `[fft-line-strategy-check] factory copy vs default: maxAbs=${parity.maxAbs.toExponential(3)} rms=${parity.rms.toExponential(3)} → ${parityPass ? 'PASS' : 'FAIL'}`,
 );
 
-const parityR4 = diffStats(outRadix4, outDefault.flatMap((v) => [v.x, v.y]), 1);
+const parityR4 = diffStats(
+  outRadix4,
+  Float64Array.from(outDefault.flatMap((v) => [v.x, v.y])),
+  1,
+);
 const parityR4Pass = parityR4.maxAbs < ERR_PASS_MAX && parityR4.rms < ERR_PASS_RMS;
 console.info(
   `[fft-line-strategy-check] radix-4 vs default Stockham: maxAbs=${parityR4.maxAbs.toExponential(3)} rms=${parityR4.rms.toExponential(3)} → ${parityR4Pass ? 'PASS' : 'FAIL'}`,
+);
+
+fftDefault.input.write(host);
+submitEncodeForward(device, fftDefault);
+submitEncodeInverse(device, fftDefault);
+const outDefaultRt = (await fftDefault.output().read()) as Vec2Like[];
+
+fftRadix4.input.write(host);
+submitEncodeForward(device, fftRadix4);
+submitEncodeInverse(device, fftRadix4);
+const outRadix4Rt = (await fftRadix4.output().read()) as Vec2Like[];
+
+logComplexBufferFingerprint('radix-4 round-trip output (vs input diagnostic)', outRadix4Rt);
+logComplexBufferFingerprint('default Stockham round-trip output (reference)', outDefaultRt);
+
+const rtParity = gpuGpuDiff(outRadix4Rt, outDefaultRt);
+const rtPass = rtParity.maxAbs < ERR_PASS_MAX && rtParity.rms < ERR_PASS_RMS;
+console.info(
+  `[fft-line-strategy-check] forward→inverse round-trip radix-4 vs default: maxAbs=${rtParity.maxAbs.toExponential(3)} rms=${rtParity.rms.toExponential(3)} → ${rtPass ? 'PASS' : 'FAIL'}`,
 );
 
 let cpuScale = 1;
@@ -265,32 +325,19 @@ console.info(
 );
 console.info(`[fft-line-strategy-check] CPU ref fft.js wall ~${cpuRefMs.toFixed(3)} ms (not GPU)`);
 
-const tsOk = root.enabledFeatures.has('timestamp-query');
-let gpuAvgDefault: number | null = null;
-let gpuAvgCopy: number | null = null;
-let gpuAvgRadix4: number | null = null;
-
-if (tsOk) {
-  const qs = root.createQuerySet('timestamp', 2 * K);
-  gpuAvgDefault = await avgEncodeForwardMs(device, fftDefault, host, qs, K);
-  gpuAvgCopy = await avgEncodeForwardMs(device, fftCopy, host, qs, K);
-  gpuAvgRadix4 = await avgEncodeForwardMs(device, fftRadix4, host, qs, K);
-  qs.destroy();
-  const row = {
-    'default Stockham': gpuAvgDefault.toFixed(4),
-    'copy factory': gpuAvgCopy.toFixed(4),
-    'radix-4 line': gpuAvgRadix4.toFixed(4),
-  };
-  console.table({ 'GPU avg ms / forward (timestamp query)': row });
-  const vsDefault = gpuAvgDefault / gpuAvgRadix4;
-  console.info(
-    `[fft-line-strategy-check] GPU avg ms/forward (timestamp): default=${row['default Stockham']} copy=${row['copy factory']} radix4=${row['radix-4 line']} — radix4 ~${vsDefault.toFixed(2)}× vs default (${K} runs, this GPU)`,
-  );
-} else {
-  console.info(
-    '[fft-line-strategy-check] GPU timings N/A (enable timestamp-query or use a GPU that supports it)',
-  );
-}
+const gpuAvgDefault = await avgEncodeForwardMs(device, fftDefault, host, K);
+const gpuAvgCopy = await avgEncodeForwardMs(device, fftCopy, host, K);
+const gpuAvgRadix4 = await avgEncodeForwardMs(device, fftRadix4, host, K);
+const row = {
+  'default Stockham': gpuAvgDefault.toFixed(4),
+  'copy factory': gpuAvgCopy.toFixed(4),
+  'radix-4 line': gpuAvgRadix4.toFixed(4),
+};
+console.table({ 'GPU avg ms / forward (submit + GPU idle, wall clock)': row });
+const vsDefault = gpuAvgDefault / gpuAvgRadix4;
+console.info(
+  `[fft-line-strategy-check] GPU avg ms/forward (wall): default=${row['default Stockham']} copy=${row['copy factory']} radix4=${row['radix-4 line']} — radix4 ~${vsDefault.toFixed(2)}× vs default (${K} runs, this GPU)`,
+);
 
 console.info(
   `[fft-line-strategy-check] lineFftStrategyId: default=${fftDefault.lineFftStrategyId} copy=${fftCopy.lineFftStrategyId} radix4=${fftRadix4.lineFftStrategyId}`,
