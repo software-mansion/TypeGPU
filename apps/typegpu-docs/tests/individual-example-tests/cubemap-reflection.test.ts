@@ -252,7 +252,7 @@ describe('cubemap reflection example', () => {
         @location(0) texCoord: vec3f,
       }
 
-      @vertex fn cubeVertexFn(@location(0) _arg_position: vec3f, @location(1) _arg_uv: vec2f) -> cubeVertexFn_Output {
+      @vertex fn cubeVertexFn(@location(0) _arg_position: vec3f) -> cubeVertexFn_Output {
         var viewPos = (camera.view * vec4f(_arg_position.xyz, 0f)).xyz;
         return cubeVertexFn_Output((camera.projection * vec4f(viewPos, 1f)), _arg_position.xyz);
       }

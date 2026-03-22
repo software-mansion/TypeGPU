@@ -83,7 +83,7 @@ describe('tagged syntax', () => {
       })`{ return vec4f(); }`;
 
       expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(
-        `"@fragment fn fragmentFn(@builtin(position) pos: vec4f) -> @location(0)  vec4f { return vec4f(); }"`,
+        `"@fragment fn fragmentFn() -> @location(0)  vec4f { return vec4f(); }"`,
       );
     });
 
@@ -97,7 +97,7 @@ describe('tagged syntax', () => {
       }`;
 
       expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
-        "@fragment fn fragmentFn(@builtin(position) pos: vec4f) -> @location(0)  vec4f {
+        "@fragment fn fragmentFn() -> @location(0)  vec4f {
                 var a = f32(10) + f32(20) + f32(30.1);
                 return vec4f();
               }"
@@ -113,7 +113,7 @@ describe('tagged syntax', () => {
       })`{}`;
 
       expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(
-        `"@compute @workgroup_size(1) fn computeFn(@builtin(global_invocation_id) gid: vec3u) {}"`,
+        `"@compute @workgroup_size(1) fn computeFn() {}"`,
       );
     });
 
@@ -126,7 +126,7 @@ describe('tagged syntax', () => {
       }`;
 
       expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
-        "@compute @workgroup_size(1) fn computeFn(@builtin(global_invocation_id) gid: vec3u) {
+        "@compute @workgroup_size(1) fn computeFn() {
                 var a = f32(10) + f32(20) + f32(30.1);
               }"
       `);

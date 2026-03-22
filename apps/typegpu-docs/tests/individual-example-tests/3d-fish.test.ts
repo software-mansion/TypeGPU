@@ -426,7 +426,7 @@ describe('3d fish example', () => {
         return vec3f(r, g, b);
       }
 
-      @fragment fn fragmentShader(_arg_0: fragmentShader_Input, @builtin(position) _arg_canvasPosition: vec4f) -> @location(0) vec4f {
+      @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
         var textureColorWithAlpha = textureSample(modelTexture, sampler_1, _arg_0.textureUV);
         var textureColor = textureColorWithAlpha.rgb;
         var ambient = ((0.5f * textureColor) * vec3f(0.800000011920929, 0.800000011920929, 1));

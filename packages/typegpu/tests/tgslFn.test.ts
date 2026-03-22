@@ -373,7 +373,7 @@ describe('TGSL tgpu.fn function', () => {
         @location(0) out: vec4f,
       }
 
-      @fragment fn fragmentFn(_arg_0: fragmentFn_Input, @builtin(position) _arg_pos: vec4f, @builtin(sample_mask) _arg_sampleMask: u32) -> fragmentFn_Output {
+      @fragment fn fragmentFn(@builtin(position) _arg_pos: vec4f, @builtin(sample_mask) _arg_sampleMask: u32) -> fragmentFn_Output {
         let pos = _arg_pos;
         var sampleMask = 0;
         if (((_arg_sampleMask > 0u) && (pos.x > 0f))) {
@@ -420,7 +420,7 @@ describe('TGSL tgpu.fn function', () => {
         @location(0) out: vec4f,
       }
 
-      @fragment fn fragmentFn(_arg_0: fragmentFn_Input, @builtin(position) _arg_pos: vec4f, @builtin(sample_mask) _arg_sampleMask: u32) -> fragmentFn_Output {
+      @fragment fn fragmentFn(@builtin(position) _arg_pos: vec4f, @builtin(sample_mask) _arg_sampleMask: u32) -> fragmentFn_Output {
         var myOutput = fragmentFn_Output(0u, 1f, vec4f());
         if (((_arg_sampleMask > 0u) && (_arg_pos.x > 0f))) {
           myOutput.sampleMask = 1u;
@@ -448,7 +448,7 @@ describe('TGSL tgpu.fn function', () => {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn fragmentFn(_arg_0: fragmentFn_Input, @builtin(position) _arg_pos: vec4f, @builtin(sample_mask) _arg_sampleMask: u32) -> @location(0) vec4f {
+      @fragment fn fragmentFn() -> @location(0) vec4f {
         var hmm = vec4f(1.25);
         return hmm;
       }"
@@ -491,7 +491,7 @@ describe('TGSL tgpu.fn function', () => {
         @location(0) out: vec4f,
       }
 
-      @fragment fn fragmentFn(_arg_0: fragmentFn_Input, @builtin(position) position: vec4f, @builtin(sample_mask) sampleMask: u32) -> fragmentFn_Output {
+      @fragment fn fragmentFn(@builtin(position) position: vec4f, @builtin(sample_mask) sampleMask: u32) -> fragmentFn_Output {
         var out = fragmentFn_Output(0u, 1f, vec4f());
         if (((sampleMask > 0u) && (position.x > 0f))) {
           out.sampleMask = 1u;
@@ -582,7 +582,7 @@ describe('TGSL tgpu.fn function', () => {
         return TestStruct(1f, 2f, vec2f(3, 4));
       }
 
-      @compute @workgroup_size(24) fn compute_fn(@builtin(global_invocation_id) _arg_gid: vec3u) {
+      @compute @workgroup_size(24) fn compute_fn() {
         var testStruct = getTestStruct();
       }"
     `);

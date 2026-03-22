@@ -446,7 +446,7 @@ describe('TgpuComputePipeline', () => {
       "enable f16;
       enable subgroups;
 
-      @compute @workgroup_size(1) fn fn_1(@builtin(global_invocation_id) gid: vec3u) {
+      @compute @workgroup_size(1) fn fn_1() {
         var a = array<f32, 3>();
       }"
     `);

@@ -372,7 +372,7 @@ describe('indents', () => {
         @location(0) @interpolate(flat, either) uv: vec2f,
       }
 
-      @vertex fn someVertex(@builtin(vertex_index) _arg_vertexIndex: u32, @location(0) _arg_position: vec4f, @location(1) _arg_something: vec4f) -> someVertex_Output {
+      @vertex fn someVertex(@location(0) _arg_position: vec4f, @location(1) _arg_something: vec4f) -> someVertex_Output {
         let uniBoid = (&boids);
         for (var i = 0u; (i < 1u); i++) {
           var sampled_1 = textureSample(sampled, sampler_1, vec2f(0.5), i);

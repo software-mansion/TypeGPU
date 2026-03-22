@@ -51,7 +51,7 @@ describe('wgsl resolution example', () => {
         @location(0) color: vec4f,
       }
 
-      @fragment fn fragment_shader(_arg_0: fragment_shader_Input, @builtin(position) _arg_position: vec4f) -> @location(0) vec4f {
+      @fragment fn fragment_shader(_arg_0: fragment_shader_Input) -> @location(0) vec4f {
         return _arg_0.color;
       }
 

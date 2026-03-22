@@ -187,7 +187,7 @@ describe('gravity example', () => {
         @location(0) texCoord: vec3f,
       }
 
-      @vertex fn skyBoxVertex(@location(0) _arg_position: vec3f, @location(1) _arg_uv: vec2f) -> skyBoxVertex_Output {
+      @vertex fn skyBoxVertex(@location(0) _arg_position: vec3f) -> skyBoxVertex_Output {
         var viewPos = (camera.view * vec4f(_arg_position, 0f)).xyz;
         return skyBoxVertex_Output((camera.projection * vec4f(viewPos, 1f)), _arg_position.xyz);
       }
@@ -265,7 +265,7 @@ describe('gravity example', () => {
 
       @group(0) @binding(2) var<uniform> lightSource: vec3f;
 
-      @fragment fn mainFragment(_arg_0: mainFragment_Input, @builtin(position) _arg_position: vec4f) -> @location(0) vec4f {
+      @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
         if ((_arg_0.destroyed == 1u)) {
           discard;;
         }

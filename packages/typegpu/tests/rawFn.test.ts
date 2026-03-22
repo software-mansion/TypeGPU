@@ -184,7 +184,7 @@ struct fragment_Output {
       .$name('fragment');
 
     expect(tgpu.resolve([fragmentFunction])).toMatchInlineSnapshot(`
-      "@fragment fn fragment(@builtin(position) position: vec4f) -> @location(0)  vec4f {
+      "@fragment fn fragment() -> @location(0)  vec4f {
               return vec4f(1.0f);
             }"
     `);
@@ -553,7 +553,7 @@ describe('tgpu.computeFn with raw string WGSL implementation', () => {
     }`);
 
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
-      "@compute @workgroup_size(1) fn foo(@builtin(global_invocation_id) gid: vec3u) {
+      "@compute @workgroup_size(1) fn foo() {
             var result: array<f32, 4>;
           }"
     `);

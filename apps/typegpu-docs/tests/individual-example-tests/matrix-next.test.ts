@@ -47,7 +47,7 @@ describe('matrix(next) example', () => {
 
       @group(0) @binding(2) var<storage, read_write> resultMatrix: array<i32>;
 
-      @compute @workgroup_size(16, 16) fn computeSharedMemory(@builtin(global_invocation_id) _arg_gid: vec3u, @builtin(local_invocation_id) _arg_lid: vec3u, @builtin(workgroup_id) _arg_wid: vec3u) {
+      @compute @workgroup_size(16, 16) fn computeSharedMemory(@builtin(local_invocation_id) _arg_lid: vec3u, @builtin(workgroup_id) _arg_wid: vec3u) {
         let dimensions = (&dimensions_1);
         let numTiles = u32((f32((((*dimensions).firstColumnCount + 16u) - 1u)) / 16f));
         let globalRow = ((_arg_wid.x * 16u) + _arg_lid.x);

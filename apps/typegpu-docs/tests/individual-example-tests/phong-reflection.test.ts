@@ -47,7 +47,7 @@ describe('phong reflection example', () => {
         @builtin(position) canvasPosition: vec4f,
       }
 
-      @vertex fn vertexShader(@location(0) _arg_modelPosition: vec3f, @location(1) _arg_modelNormal: vec3f, @builtin(instance_index) _arg_instanceIndex: u32) -> vertexShader_Output {
+      @vertex fn vertexShader(@location(0) _arg_modelPosition: vec3f, @location(1) _arg_modelNormal: vec3f) -> vertexShader_Output {
         var worldPosition = vec4f(_arg_modelPosition, 1f);
         let camera = (&cameraUniform);
         var canvasPosition = (((*camera).projection * (*camera).view) * worldPosition);
@@ -69,7 +69,7 @@ describe('phong reflection example', () => {
 
       @group(0) @binding(1) var<uniform> exampleControlsUniform: ExampleControls;
 
-      @fragment fn fragmentShader(_arg_0: fragmentShader_Input, @builtin(position) _arg_canvasPosition: vec4f) -> @location(0) vec4f {
+      @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
         var lightColor = normalize(exampleControlsUniform.lightColor);
         var lightDirection = normalize(exampleControlsUniform.lightDirection);
         let ambientColor = (&exampleControlsUniform.ambientColor);
