@@ -496,9 +496,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
             });
           }
           const router = new EntryInputRouter(structArgName, dataSchema, proxyEntries);
-          // The router is used only for property access routing — it is never emitted as WGSL.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          argAliases.push([firstParam.name, snip(firstParam.name, router as any, 'argument')]);
+          argAliases.push([firstParam.name, snip(firstParam.name, router, 'argument')]);
         } else {
           // No first param: push positional args with schema key names.
           for (const a of positionalArgs) {
