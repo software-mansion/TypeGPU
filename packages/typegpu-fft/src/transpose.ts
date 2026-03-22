@@ -75,7 +75,7 @@ export function dispatchTranspose(
   bindGroup: TgpuBindGroup<(typeof transposeLayout)['entries']>,
   srcCols: number,
   srcRows: number,
-  computePass?: GPUComputePassEncoder,
+  computePass: GPUComputePassEncoder,
 ): void {
   uniformBuffer.write({ srcCols, srcRows });
   const numWgX = Math.ceil(srcCols / TILE_DIM);
@@ -88,6 +88,5 @@ export function dispatchTranspose(
       `Transpose grid (${numWgX}×${numWgY}) exceeds max workgroups per dimension (${MAX_WORKGROUPS_PER_DIMENSION})`,
     );
   }
-  const scoped = computePass ? pipeline.with(computePass).with(bindGroup) : pipeline.with(bindGroup);
-  scoped.dispatchWorkgroups(numWgX, numWgY, 1);
+  pipeline.with(computePass).with(bindGroup).dispatchWorkgroups(numWgX, numWgY, 1);
 }

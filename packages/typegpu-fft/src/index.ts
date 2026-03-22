@@ -2,12 +2,12 @@ export { complexMul } from './complex.ts';
 export {
   createFft2d,
   fftForwardProfileQueryIndexCount,
+  type EncodeForwardPerStageSubmitsOptions,
   type Fft2d,
   type Fft2dOptions,
 } from './fft2d.ts';
 export {
   createStockhamRadix2LineStrategy,
-  createStockhamRadix2LineStrategyCopy,
   type LineFftEncodeOptions,
   type LineFftProfileArgs,
   type LineFftProfileResult,
@@ -16,13 +16,19 @@ export {
   type LineFftStrategyFactoryContext,
 } from './lineFftStrategy.ts';
 export { createStockhamRadix4LineStrategy } from './lineFftRadix4Strategy.ts';
-export { radix4LineStageCount } from './stockhamRadix4.ts';
+export {
+  maxRadix4PassCount,
+  radix4LineStageCount,
+  type Radix4LineBindGroup,
+  type Radix4LineUniformPools,
+} from './stockhamRadix4.ts';
 export {
   buildStockhamTwiddleLut,
   createStockhamStagePipeline,
   dispatchStockhamLineFft,
   dispatchStockhamLineFftStages,
   stockhamLayout,
+  type StockhamLineBindGroup,
   stockhamNsValues,
   stockhamStageCount,
   stockhamStageKernel,

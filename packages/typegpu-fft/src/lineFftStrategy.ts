@@ -1,9 +1,11 @@
-import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
+import type { StorageFlag, TgpuBuffer, TgpuRoot, UniformFlag } from 'typegpu';
 import { d } from 'typegpu';
 import {
   buildStockhamTwiddleLut,
   createStockhamStagePipeline,
   dispatchStockhamLineFft,
+  dispatchStockhamLineFftStages,
+  type StockhamLineBindGroup,
   stockhamLayout,
   stockhamNsValues,
   stockhamStageCount,
@@ -15,8 +17,24 @@ import { decomposeWorkgroups } from './utils.ts';
 const STOCKHAM_WG = 256;
 
 export type LineFftEncodeOptions = {
-  computePass?: GPUComputePassEncoder;
+  /** Caller-owned encoder; each line-FFT stage records its own short compute pass, then you `finish` + `submit` once. */
+  commandEncoder: GPUCommandEncoder;
+  /**
+   * Which line-FFT uniform pool: `0` forward row (`n`=width), `1` forward column, `2` inverse row, `3` inverse column.
+   * Separates forward vs inverse so {@link createFft2d} can record full forward then full inverse on one encoder.
+   * @default 0
+   */
+  lineUniformSlot?: 0 | 1 | 2 | 3;
   inverse?: boolean;
+  /**
+   * Debug: when `inverse` is set, run at most this many **kernel dispatches** **per**
+   * `dispatchLineFft` call (each dispatch = one global read/write along the line).
+   * **Stockham:** the first `N` radix-2 stages (increasing `ns`).
+   * **Radix-4:** if `log₂(n)` is odd, the Stockham tail inverse runs first (one dispatch), then radix-4 inverse
+   * stages in descending `p` order — each counts as one dispatch until `N` is exhausted.
+   * Omit for a full inverse. `0` runs no inverse kernels for that dispatch (buffer unchanged).
+   */
+  inverseMaxStages?: number;
 };
 
 /** Context passed to {@link LineFftStrategyFactory} when {@link createFft2d} builds the 2D FFT. */
@@ -35,8 +53,17 @@ export type LineFftProfileArgs = {
   numLines: number;
   inputInA: boolean;
   device: GPUDevice;
-  querySet: GPUQuerySet;
+  /** Omit for pipelined forward without timestamp queries (same submits as profiling). */
+  querySet?: GPUQuerySet;
   queryIndexStart: number;
+  /** @see LineFftEncodeOptions.lineUniformSlot */
+  lineUniformSlot?: 0 | 1 | 2 | 3;
+  /**
+   * Pack this many consecutive line-FFT stages into one queue submit (still one compute pass per stage).
+   * Default `1` is one submit per stage; larger values merge submits toward the row/column split path.
+   * Only the radix-2 Stockham `profileLineFft` in this package implements this (bisect driver submit merges).
+   */
+  lineStagesPerSubmit?: number;
 };
 
 export type LineFftProfileResult = {
@@ -75,7 +102,7 @@ export type LineFftStrategy = {
     lineStride: number,
     numLines: number,
     inputInA: boolean,
-    options?: LineFftEncodeOptions,
+    options: LineFftEncodeOptions,
   ): boolean;
   /**
    * One timestamp pair per line-FFT stage (separate submit per stage).
@@ -86,16 +113,6 @@ export type LineFftStrategy = {
 };
 
 export type LineFftStrategyFactory = (ctx: LineFftStrategyFactoryContext) => LineFftStrategy;
-
-function lineFftEncodeOpts(
-  computePass?: GPUComputePassEncoder,
-  inverse?: boolean,
-): LineFftEncodeOptions | undefined {
-  if (computePass !== undefined) {
-    return inverse ? { computePass, inverse: true } : { computePass };
-  }
-  return inverse ? { inverse: true as const } : undefined;
-}
 
 /**
  * Default: radix-2 Stockham stages (current @typegpu/fft behavior). Use as
@@ -109,23 +126,50 @@ export function createStockhamRadix2LineStrategy(
   const twiddleLut = root.createBuffer(d.arrayOf(d.vec2f, twiddleLutLen)).$usage('storage');
   twiddleLut.write(buildStockhamTwiddleLut(nMax).map(([x, y]) => d.vec2f(x, y)));
 
-  const stockhamUniform = root.createBuffer(stockhamUniformType).$usage('uniform');
+  const maxStockhamStages = stockhamStageCount(nMax);
   const stockhamPipeline = createStockhamStagePipeline(root);
 
-  const stockhamBgSrcA = root.createBindGroup(stockhamLayout, {
-    uniforms: stockhamUniform,
-    twiddles: twiddleLut,
-    src: bufA,
-    dst: bufB,
-  });
-  const stockhamBgSrcB = root.createBindGroup(stockhamLayout, {
-    uniforms: stockhamUniform,
-    twiddles: twiddleLut,
-    src: bufB,
-    dst: bufA,
-  });
+  function createStockhamPool(): {
+    uniforms: (TgpuBuffer<typeof stockhamUniformType> & UniformFlag)[];
+    bindSrcA: StockhamLineBindGroup[];
+    bindSrcB: StockhamLineBindGroup[];
+  } {
+    const uniforms = Array.from({ length: maxStockhamStages }, () =>
+      root.createBuffer(stockhamUniformType).$usage('uniform'),
+    );
+    const bindSrcA: StockhamLineBindGroup[] = uniforms.map((uniforms) =>
+      root.createBindGroup(stockhamLayout, {
+        uniforms,
+        twiddles: twiddleLut,
+        src: bufA,
+        dst: bufB,
+      }),
+    );
+    const bindSrcB: StockhamLineBindGroup[] = uniforms.map((uniforms) =>
+      root.createBindGroup(stockhamLayout, {
+        uniforms,
+        twiddles: twiddleLut,
+        src: bufB,
+        dst: bufA,
+      }),
+    );
+    return { uniforms, bindSrcA, bindSrcB };
+  }
+
+  const stockhamPool0 = createStockhamPool();
+  const stockhamPool1 = createStockhamPool();
+  const stockhamPool2 = createStockhamPool();
+  const stockhamPool3 = createStockhamPool();
+  const stockhamPools = [stockhamPool0, stockhamPool1, stockhamPool2, stockhamPool3] as const;
 
   function profileLineFft(args: LineFftProfileArgs): LineFftProfileResult {
+    const s = args.lineUniformSlot ?? 0;
+    const slot = s >= 0 && s <= 3 ? s : 0;
+    const pool = stockhamPools[slot as 0 | 1 | 2 | 3];
+    const stockhamUniforms = pool.uniforms;
+    const stockhamBindSrcA = pool.bindSrcA;
+    const stockhamBindSrcB = pool.bindSrcB;
+
     const inverse = args.mode === 'inverse';
     const direction = inverse ? 1 : 0;
     const totalThreads = args.numLines * (args.n >> 1);
@@ -134,29 +178,48 @@ export function createStockhamRadix2LineStrategy(
     let idx = args.queryIndexStart;
     let inA = args.inputInA;
 
-    for (const ns of stockhamNsValues(args.n)) {
-      stockhamUniform.write({
-        ns,
-        n: args.n,
-        lineStride: args.lineStride,
-        numLines: args.numLines,
-        direction,
+    const nsVals = stockhamNsValues(args.n);
+    const groupSize = Math.max(1, Math.floor(args.lineStagesPerSubmit ?? 1));
+
+    for (let si = 0; si < nsVals.length; si += groupSize) {
+      const end = Math.min(si + groupSize, nsVals.length);
+      const enc = args.device.createCommandEncoder({
+        label: `fft2d line FFT ${args.mode} stages ${si}..${end - 1}`,
       });
-      const bg = inA ? stockhamBgSrcA : stockhamBgSrcB;
-      const enc = args.device.createCommandEncoder({ label: `fft2d line FFT ${args.mode} stage` });
-      const pass = enc.beginComputePass({
-        label: 'fft2d line Stockham',
-        timestampWrites: {
-          querySet: args.querySet,
-          beginningOfPassWriteIndex: idx,
-          endOfPassWriteIndex: idx + 1,
-        },
-      });
-      stockhamPipeline.with(pass).with(bg).dispatchWorkgroups(wx, wy, wz);
-      pass.end();
+      for (let j = si; j < end; j++) {
+        const ns = nsVals.at(j);
+        const uniforms = stockhamUniforms.at(j);
+        const bgA = stockhamBindSrcA.at(j);
+        const bgB = stockhamBindSrcB.at(j);
+        if (ns === undefined || uniforms === undefined || bgA === undefined || bgB === undefined) {
+          break;
+        }
+        uniforms.write({
+          ns,
+          n: args.n,
+          lineStride: args.lineStride,
+          numLines: args.numLines,
+          direction,
+        });
+        const bg = inA ? bgA : bgB;
+        const pass = enc.beginComputePass({
+          label: 'fft2d line Stockham',
+          ...(args.querySet !== undefined
+            ? {
+                timestampWrites: {
+                  querySet: args.querySet,
+                  beginningOfPassWriteIndex: idx,
+                  endOfPassWriteIndex: idx + 1,
+                },
+              }
+            : {}),
+        });
+        stockhamPipeline.with(pass).with(bg).dispatchWorkgroups(wx, wy, wz);
+        pass.end();
+        inA = !inA;
+        idx += 2;
+      }
       args.device.queue.submit([enc.finish()]);
-      inA = !inA;
-      idx += 2;
     }
 
     return { queryIndexEnd: idx, resultInA: inA };
@@ -166,45 +229,43 @@ export function createStockhamRadix2LineStrategy(
     id: 'stockham-radix2',
     stageCount: stockhamStageCount,
     dispatchLineFft(n, lineStride, numLines, inputInA, options) {
+      const s = options.lineUniformSlot ?? 0;
+      const slot = s >= 0 && s <= 3 ? s : 0;
+      const pool = stockhamPools[slot as 0 | 1 | 2 | 3];
+      if (options.inverse === true && options.inverseMaxStages !== undefined) {
+        return dispatchStockhamLineFftStages(
+          stockhamPipeline,
+          pool.uniforms,
+          pool.bindSrcA,
+          pool.bindSrcB,
+          n,
+          lineStride,
+          numLines,
+          inputInA,
+          stockhamNsValues(n),
+          options,
+        );
+      }
       return dispatchStockhamLineFft(
         stockhamPipeline,
-        stockhamUniform,
+        pool.uniforms,
+        pool.bindSrcA,
+        pool.bindSrcB,
         n,
         lineStride,
         numLines,
         inputInA,
-        stockhamBgSrcA,
-        stockhamBgSrcB,
-        lineFftEncodeOpts(options?.computePass, options?.inverse),
+        options,
       );
     },
     profileLineFft,
     destroy() {
       twiddleLut.destroy();
-      stockhamUniform.destroy();
-    },
-  };
-}
-
-/**
- * Same radix-2 Stockham line FFT as {@link createStockhamRadix2LineStrategy}, distinct {@link LineFftStrategy.id}
- * for parity / factory tests.
- */
-export function createStockhamRadix2LineStrategyCopy(
-  ctx: LineFftStrategyFactoryContext,
-): LineFftStrategy {
-  const inner = createStockhamRadix2LineStrategy(ctx);
-  const profileLineFft = inner.profileLineFft;
-  if (!profileLineFft) {
-    throw new Error('@typegpu/fft: createStockhamRadix2LineStrategyCopy: inner strategy missing profileLineFft');
-  }
-  return {
-    id: 'stockham-radix2-copy',
-    stageCount: inner.stageCount.bind(inner),
-    dispatchLineFft: inner.dispatchLineFft.bind(inner),
-    profileLineFft: profileLineFft.bind(inner),
-    destroy() {
-      inner.destroy();
+      for (const p of stockhamPools) {
+        for (const u of p.uniforms) {
+          u.destroy();
+        }
+      }
     },
   };
 }

@@ -31,6 +31,7 @@
   },
   "scripts": {
     "build": "unbuild",
+    "test": "vitest run",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
@@ -40,7 +41,8 @@
     "typegpu": "workspace:*",
     "typescript": "catalog:types",
     "unbuild": "catalog:build",
-    "unplugin-typegpu": "workspace:*"
+    "unplugin-typegpu": "workspace:*",
+    "vitest": "catalog:test"
   },
   "peerDependencies": {
     "typegpu": "^0.10.2"
