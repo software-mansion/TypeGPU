@@ -86,13 +86,14 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
         if (fnAttribute !== '' && entryInput && validArgNames) {
           const { dataSchema, positionalArgs } = entryInput;
           const parts: string[] = [];
-          if (dataSchema) {
+          if (dataSchema && isArgUsedInBody('in', replacedImpl)) {
             parts.push(`in: ${ctx.resolve(dataSchema).value}`);
           }
           for (const a of positionalArgs) {
-            parts.push(
-              `${getAttributesString(a.type)}${validArgNames[a.schemaKey]}: ${ctx.resolve(a.type).value}`,
-            );
+            const argName = validArgNames[a.schemaKey] ?? '';
+            if (argName !== '' && isArgUsedInBody(argName, replacedImpl)) {
+              parts.push(`${getAttributesString(a.type)}${argName}: ${ctx.resolve(a.type).value}`);
+            }
           }
           const input = `(${parts.join(', ')})`;
 
@@ -215,6 +216,10 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
   };
 
   return core;
+}
+
+function isArgUsedInBody(argName: string, body: string): boolean {
+  return new RegExp(`\\b${argName}\\b`).test(body);
 }
 
 function checkAndReturnType(

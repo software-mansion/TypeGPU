@@ -73,7 +73,7 @@ describe('resolve', () => {
         color: vec4f,
       }
 
-      @compute @workgroup_size(1, 1, 1) fn computeFn(@builtin(global_invocation_id) _arg_gid: vec3u) {
+      @compute @workgroup_size(1, 1, 1) fn computeFn() {
         var myBoid = Boid(vec2f(), vec4f(1, 0, 0, 1));
       }"
     `);

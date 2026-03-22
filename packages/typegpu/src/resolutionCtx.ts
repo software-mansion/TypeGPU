@@ -445,10 +445,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       this.#namespaceInternal.nameRegistry.pushFunctionScope();
       const args: Snippet[] = [];
       const argAliases: [string, Snippet][] = [];
-      // For entry functions: WGSL header arg strings built eagerly (before snip() strips decorations).
-      const headerParts: string[] | undefined = options.entryInput ? [] : undefined;
+      // For entry functions: collect pending header entries to be filtered after body generation.
+      const pendingHeaderEntries: Array<{ argName: string; header: string }> = [];
 
-      if (headerParts !== undefined && options.entryInput) {
+      if (options.entryInput) {
         const { dataSchema, positionalArgs } = options.entryInput;
         const firstParam = options.params[0];
 
@@ -456,7 +456,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         const structArg = dataSchema ? snip(structArgName, dataSchema, 'argument') : undefined;
         if (structArg) {
           args.push(structArg);
-          headerParts.push(`${structArgName}: ${this.resolve(dataSchema).value}`);
+          pendingHeaderEntries.push({
+            argName: structArgName,
+            header: `${structArgName}: ${this.resolve(dataSchema).value}`,
+          });
         }
 
         if (firstParam?.type === FuncParameterType.destructuredObject) {
@@ -468,9 +471,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
               const argSnippet = snip(argName, argInfo.type, 'argument');
               args.push(argSnippet);
               argAliases.push([alias, argSnippet]);
-              headerParts.push(
-                `${getAttributesString(argInfo.type)}${argName}: ${this.resolve(undecorate(argInfo.type)).value}`,
-              );
+              pendingHeaderEntries.push({
+                argName,
+                header: `${getAttributesString(argInfo.type)}${argName}: ${this.resolve(undecorate(argInfo.type)).value}`,
+              });
             } else if (structArg) {
               const propSnippet = accessProp(structArg, name);
               if (propSnippet) {
@@ -483,12 +487,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           const proxyEntries: Array<{ schemaKey: string; argName: string; type: BaseData }> = [];
           for (const a of positionalArgs) {
             const argName = this.makeNameValid(`_arg_${a.schemaKey}`);
-            headerParts.push(
-              `${getAttributesString(a.type)}${argName}: ${this.resolve(undecorate(a.type)).value}`,
-            );
             const s = snip(argName, a.type, 'argument');
             args.push(s);
             proxyEntries.push({ schemaKey: a.schemaKey, argName, type: a.type });
+            pendingHeaderEntries.push({
+              argName,
+              header: `${getAttributesString(a.type)}${argName}: ${this.resolve(undecorate(a.type)).value}`,
+            });
           }
           const router = new EntryInputRouter(structArgName, dataSchema, proxyEntries);
           // The router is used only for property access routing — it is never emitted as WGSL.
@@ -498,10 +503,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           // No first param: push positional args with schema key names.
           for (const a of positionalArgs) {
             const argName = this.makeNameValid(`_arg_${a.schemaKey}`);
-            headerParts.push(
-              `${getAttributesString(a.type)}${argName}: ${this.resolve(undecorate(a.type)).value}`,
-            );
             args.push(snip(argName, a.type, 'argument'));
+            pendingHeaderEntries.push({
+              argName,
+              header: `${getAttributesString(a.type)}${argName}: ${this.resolve(undecorate(a.type)).value}`,
+            });
           }
         }
       } else {
@@ -603,7 +609,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         }
       }
 
-      if (headerParts !== undefined) {
+      if (options.entryInput) {
+        const headerParts = pendingHeaderEntries
+          .filter(({ argName }) => isArgUsedInBody(argName, body))
+          .map(({ header }) => header);
         const argList = headerParts.join(', ');
         const returnStr =
           returnType.type !== 'void'
@@ -1071,6 +1080,10 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
     catchall,
     logResources: ctx.logResources,
   };
+}
+
+function isArgUsedInBody(argName: string, body: string): boolean {
+  return new RegExp(`\\b${argName}\\b`).test(body);
 }
 
 function resolveFunctionHeader(ctx: ResolutionCtx, args: Snippet[], returnType: BaseData) {

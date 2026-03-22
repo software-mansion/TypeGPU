@@ -118,7 +118,7 @@ describe('boids example', () => {
         @location(0) color: vec4f,
       }
 
-      @fragment fn mainFrag(_arg_0: mainFrag_Input, @builtin(position) _arg_position: vec4f) -> @location(0) vec4f {
+      @fragment fn mainFrag(_arg_0: mainFrag_Input) -> @location(0) vec4f {
         return _arg_0.color;
       }"
     `);
