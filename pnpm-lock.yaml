@@ -268,6 +268,9 @@ importers:
       expressive-code-twoslash:
         specifier: ^0.5.3
         version: 0.5.3(@expressive-code/core@0.41.7)(expressive-code@0.41.7)(tsover@5.9.11)
+      fft.js:
+        specifier: ^4.0.4
+        version: 4.0.4
       fuse.js:
         specifier: catalog:frontend
         version: 7.1.0
@@ -5090,6 +5093,9 @@ packages:
 
   fflate@0.8.2:
     resolution: {integrity: sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A==}
+
+  fft.js@4.0.4:
+    resolution: {integrity: sha512-f9c00hphOgeQTlDyavwTtu6RiK8AIFjD6+jvXkNkpeQ7rirK3uFWVpalkoS4LAwbdX7mfZ8aoBfFVQX1Re/8aw==}
 
   figures@6.1.0:
     resolution: {integrity: sha512-d+l3qxjSesT4V7v2fh+QnmFnUWv9lSpjarhShNTgBOfA0ttejbQUAlHLitbjkoRiDulW0OPoQPYIGhIC8ohejg==}
@@ -12693,6 +12699,8 @@ snapshots:
       picomatch: 4.0.4
 
   fflate@0.8.2: {}
+
+  fft.js@4.0.4: {}
 
   figures@6.1.0:
     dependencies:
