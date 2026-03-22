@@ -60,7 +60,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[0i][((_arg_0.lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[0i][((lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #1
           {
@@ -68,7 +68,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[0i][((_arg_0.lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[0i][((lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #2
           {
@@ -76,7 +76,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[0i][((_arg_0.lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[0i][((lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #3
           {
@@ -84,7 +84,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[0i][((_arg_0.lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[0i][((lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
         }
         // unrolled iteration #1
@@ -95,7 +95,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[1i][((_arg_0.lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[1i][((lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #1
           {
@@ -103,7 +103,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[1i][((_arg_0.lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[1i][((lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #2
           {
@@ -111,7 +111,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[1i][((_arg_0.lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[1i][((lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #3
           {
@@ -119,7 +119,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[1i][((_arg_0.lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[1i][((lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
         }
         // unrolled iteration #2
@@ -130,7 +130,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[2i][((_arg_0.lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[2i][((lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #1
           {
@@ -138,7 +138,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[2i][((_arg_0.lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[2i][((lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #2
           {
@@ -146,7 +146,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[2i][((_arg_0.lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[2i][((lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #3
           {
@@ -154,7 +154,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[2i][((_arg_0.lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[2i][((lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
         }
         // unrolled iteration #3
@@ -165,7 +165,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[3i][((_arg_0.lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[3i][((lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #1
           {
@@ -173,7 +173,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[3i][((_arg_0.lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[3i][((lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #2
           {
@@ -181,7 +181,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[3i][((_arg_0.lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[3i][((lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #3
           {
@@ -189,7 +189,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[3i][((_arg_0.lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[3i][((lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
         }
         workgroupBarrier();
@@ -201,7 +201,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 0i);
+            let center = (i32((4u * lid.x)) + 0i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings).filterDim); f++) {
@@ -217,7 +217,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 1i);
+            let center = (i32((4u * lid.x)) + 1i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings).filterDim); f++) {
@@ -233,7 +233,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 2i);
+            let center = (i32((4u * lid.x)) + 2i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings).filterDim); f++) {
@@ -249,7 +249,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 3i);
+            let center = (i32((4u * lid.x)) + 3i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings).filterDim); f++) {
@@ -268,7 +268,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 0i);
+            let center = (i32((4u * lid.x)) + 0i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings).filterDim); f++) {
@@ -284,7 +284,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 1i);
+            let center = (i32((4u * lid.x)) + 1i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings).filterDim); f++) {
@@ -300,7 +300,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 2i);
+            let center = (i32((4u * lid.x)) + 2i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings).filterDim); f++) {
@@ -316,7 +316,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 3i);
+            let center = (i32((4u * lid.x)) + 3i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings).filterDim); f++) {
@@ -335,7 +335,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 0i);
+            let center = (i32((4u * lid.x)) + 0i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings).filterDim); f++) {
@@ -351,7 +351,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 1i);
+            let center = (i32((4u * lid.x)) + 1i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings).filterDim); f++) {
@@ -367,7 +367,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 2i);
+            let center = (i32((4u * lid.x)) + 2i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings).filterDim); f++) {
@@ -383,7 +383,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 3i);
+            let center = (i32((4u * lid.x)) + 3i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings).filterDim); f++) {
@@ -402,7 +402,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 0i);
+            let center = (i32((4u * lid.x)) + 0i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings).filterDim); f++) {
@@ -418,7 +418,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 1i);
+            let center = (i32((4u * lid.x)) + 1i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings).filterDim); f++) {
@@ -434,7 +434,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 2i);
+            let center = (i32((4u * lid.x)) + 2i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings).filterDim); f++) {
@@ -450,7 +450,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 3i);
+            let center = (i32((4u * lid.x)) + 3i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
               for (var f = 0; (f < (*settings).filterDim); f++) {
@@ -463,32 +463,28 @@ describe('blur example', () => {
         }
       }
 
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
       struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      struct renderFragment_Input {
+        @location(0) uv: vec2f,
       }
 
       @group(0) @binding(0) var renderView: texture_2d<f32>;
 
       @group(0) @binding(1) var sampler_1: sampler;
 
-      struct renderFragment_Input {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn renderFragment(input: renderFragment_Input) -> @location(0) vec4f {
-        return textureSample(renderView, sampler_1, input.uv);
+      @fragment fn renderFragment(_arg_0: renderFragment_Input) -> @location(0) vec4f {
+        return textureSample(renderView, sampler_1, _arg_0.uv);
       }"
     `);
   });

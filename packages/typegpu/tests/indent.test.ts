@@ -372,13 +372,7 @@ describe('indents', () => {
         @location(0) @interpolate(flat, either) uv: vec2f,
       }
 
-      struct someVertex_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-        @location(0) position: vec4f,
-        @location(1) something: vec4f,
-      }
-
-      @vertex fn someVertex(input: someVertex_Input) -> someVertex_Output {
+      @vertex fn someVertex(@builtin(vertex_index) _arg_vertexIndex: u32, @location(0) _arg_position: vec4f, @location(1) _arg_something: vec4f) -> someVertex_Output {
         let uniBoid = (&boids);
         for (var i = 0u; (i < 1u); i++) {
           var sampled_1 = textureSample(sampled, sampler_1, vec2f(0.5), i);
@@ -390,12 +384,12 @@ describe('indents', () => {
             while (true) {
               var newPos = ((*uniBoid).position + vec4f(1, 2, 3, 4));
               if ((newPos.x > 0f)) {
-                var evenNewer = (newPos + input.position);
+                var evenNewer = (newPos + _arg_position);
               }
             }
           }
         }
-        return someVertex_Output(input.position, input.something.xy);
+        return someVertex_Output(_arg_position, _arg_something.xy);
       }"
     `);
   });

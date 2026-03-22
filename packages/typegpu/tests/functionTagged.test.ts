@@ -42,18 +42,14 @@ describe('tagged syntax', () => {
       const vertexFn = tgpu.vertexFn({
         in: { idx: d.builtin.instanceIndex },
         out: { pos: d.builtin.position },
-      })`{ return in.pos; }`.$name('vertexFn');
+      })`{ return Out(vec4f(f32(in.idx), 0.0, 0.0, 1.0)); }`.$name('vertexFn');
 
       expect(tgpu.resolve([vertexFn])).toMatchInlineSnapshot(`
-        "struct vertexFn_Input {
-          @builtin(instance_index) idx: u32,
-        }
-
-        struct vertexFn_Output {
+        "struct vertexFn_Output {
           @builtin(position) pos: vec4f,
         }
 
-        @vertex fn vertexFn(in: vertexFn_Input) -> vertexFn_Output { return in.pos; }"
+        @vertex fn vertexFn(@builtin(instance_index) idx: u32) -> vertexFn_Output { return vertexFn_Output(vec4f(f32(idx), 0.0, 0.0, 1.0)); }"
       `);
     });
 
@@ -63,21 +59,17 @@ describe('tagged syntax', () => {
         out: { pos: d.builtin.position },
       })`{
         var a = f32(${10}) + f32(${'20'}) + f32(${30.1});
-        return in.pos;
+        return Out(vec4f(a + f32(in.idx), 0.0, 0.0, 1.0));
       }`.$name('vertexFn');
 
       expect(tgpu.resolve([vertexFn])).toMatchInlineSnapshot(`
-        "struct vertexFn_Input {
-          @builtin(instance_index) idx: u32,
-        }
-
-        struct vertexFn_Output {
+        "struct vertexFn_Output {
           @builtin(position) pos: vec4f,
         }
 
-        @vertex fn vertexFn(in: vertexFn_Input) -> vertexFn_Output {
+        @vertex fn vertexFn(@builtin(instance_index) idx: u32) -> vertexFn_Output {
                 var a = f32(10) + f32(20) + f32(30.1);
-                return in.pos;
+                return vertexFn_Output(vec4f(a + f32(idx), 0.0, 0.0, 1.0));
               }"
       `);
     });
@@ -90,13 +82,9 @@ describe('tagged syntax', () => {
         out: d.vec4f,
       })`{ return vec4f(); }`;
 
-      expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
-        "struct fragmentFn_Input {
-          @builtin(position) pos: vec4f,
-        }
-
-        @fragment fn fragmentFn(in: fragmentFn_Input) -> @location(0)  vec4f { return vec4f(); }"
-      `);
+      expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(
+        `"@fragment fn fragmentFn(@builtin(position) pos: vec4f) -> @location(0)  vec4f { return vec4f(); }"`,
+      );
     });
 
     it('parses template literal with arguments of different types', () => {
@@ -109,11 +97,7 @@ describe('tagged syntax', () => {
       }`;
 
       expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
-        "struct fragmentFn_Input {
-          @builtin(position) pos: vec4f,
-        }
-
-        @fragment fn fragmentFn(in: fragmentFn_Input) -> @location(0)  vec4f {
+        "@fragment fn fragmentFn(@builtin(position) pos: vec4f) -> @location(0)  vec4f {
                 var a = f32(10) + f32(20) + f32(30.1);
                 return vec4f();
               }"
@@ -128,13 +112,9 @@ describe('tagged syntax', () => {
         workgroupSize: [1],
       })`{}`;
 
-      expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
-        "struct computeFn_Input {
-          @builtin(global_invocation_id) gid: vec3u,
-        }
-
-        @compute @workgroup_size(1) fn computeFn(in: computeFn_Input) {}"
-      `);
+      expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(
+        `"@compute @workgroup_size(1) fn computeFn(@builtin(global_invocation_id) gid: vec3u) {}"`,
+      );
     });
 
     it('parses template literal with arguments of different types', () => {
@@ -146,11 +126,7 @@ describe('tagged syntax', () => {
       }`;
 
       expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
-        "struct computeFn_Input {
-          @builtin(global_invocation_id) gid: vec3u,
-        }
-
-        @compute @workgroup_size(1) fn computeFn(in: computeFn_Input) {
+        "@compute @workgroup_size(1) fn computeFn(@builtin(global_invocation_id) gid: vec3u) {
                 var a = f32(10) + f32(20) + f32(30.1);
               }"
       `);

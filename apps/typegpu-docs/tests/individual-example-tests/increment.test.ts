@@ -37,7 +37,7 @@ describe('increment example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }"
     `);
   });

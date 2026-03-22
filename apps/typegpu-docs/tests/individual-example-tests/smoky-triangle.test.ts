@@ -69,7 +69,7 @@ describe('smoky triangle', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       const positions: array<vec2f, 3> = array<vec2f, 3>(vec2f(0, 0.800000011920929), vec2f(-0.800000011920929), vec2f(0.800000011920929, -0.800000011920929));

@@ -89,7 +89,7 @@ describe('console log example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -153,7 +153,7 @@ describe('console log example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -210,7 +210,7 @@ describe('console log example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -840,7 +840,7 @@ describe('console log example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -1010,7 +1010,7 @@ describe('console log example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -1071,7 +1071,7 @@ describe('console log example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -1126,7 +1126,7 @@ describe('console log example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -1183,7 +1183,7 @@ describe('console log example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -1243,7 +1243,7 @@ describe('console log example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -1334,7 +1334,7 @@ describe('console log example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -1485,20 +1485,16 @@ describe('console log example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       struct mainVertex_Output {
         @builtin(position) pos: vec4f,
       }
 
-      struct mainVertex_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      @vertex fn mainVertex(input: mainVertex_Input) -> mainVertex_Output {
+      @vertex fn mainVertex(@builtin(vertex_index) _arg_vertexIndex: u32) -> mainVertex_Output {
         var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
-        return mainVertex_Output(vec4f(positions[input.vertexIndex], 0f, 1f));
+        return mainVertex_Output(vec4f(positions[_arg_vertexIndex], 0f, 1f));
       }
 
       @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
@@ -1540,12 +1536,8 @@ describe('console log example', () => {
         log1serializer(_arg_0, _arg_1);
       }
 
-      struct mainFragment_Input {
-        @builtin(position) pos: vec4f,
-      }
-
-      @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
-        log1(_arg_0.pos.x, _arg_0.pos.y);
+      @fragment fn mainFragment(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+        log1(pos.x, pos.y);
         return vec4f(0.7689999938011169, 0.3919999897480011, 1, 1);
       }
 
@@ -1553,13 +1545,9 @@ describe('console log example', () => {
         @builtin(position) pos: vec4f,
       }
 
-      struct mainVertex_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      @vertex fn mainVertex(input: mainVertex_Input) -> mainVertex_Output {
+      @vertex fn mainVertex(@builtin(vertex_index) _arg_vertexIndex: u32) -> mainVertex_Output {
         var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
-        return mainVertex_Output(vec4f(positions[input.vertexIndex], 0f, 1f));
+        return mainVertex_Output(vec4f(positions[_arg_vertexIndex], 0f, 1f));
       }
 
       @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
@@ -1601,12 +1589,8 @@ describe('console log example', () => {
         log1serializer(_arg_0, _arg_1);
       }
 
-      struct mainFragment_Input {
-        @builtin(position) pos: vec4f,
-      }
-
-      @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
-        log1(_arg_0.pos.x, _arg_0.pos.y);
+      @fragment fn mainFragment(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+        log1(pos.x, pos.y);
         return vec4f(0.7689999938011169, 0.3919999897480011, 1, 1);
       }
 
@@ -1694,7 +1678,7 @@ describe('console log example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }"
     `);
   });

@@ -8,6 +8,7 @@ import { isBuiltin } from '../../data/attributes.ts';
 import { getCustomLocation, isData } from '../../data/dataTypes.ts';
 import { INTERNAL_createStruct } from '../../data/struct.ts';
 import { type BaseData, isVoid, type Location, type WgslStruct } from '../../data/wgslTypes.ts';
+import type { SeparatedEntryArgs } from './fnTypes.ts';
 
 export type WithLocations<T extends Record<string, BaseData>> = {
   [Key in keyof T]: IsBuiltin<T[Key]> extends true
@@ -70,6 +71,35 @@ export function withLocations<T extends BaseData>(
         return [key, location(nextLocation++, member)];
       }),
   );
+}
+
+export function separateBuiltins(
+  schema: Record<string, BaseData>,
+  locations: Record<string, number> = {},
+): SeparatedEntryArgs {
+  const positionalArgs: SeparatedEntryArgs['positionalArgs'] = [];
+  const dataFields: Record<string, BaseData> = {};
+
+  for (const [key, type] of Object.entries(schema)) {
+    if (isBuiltin(type)) {
+      positionalArgs.push({ schemaKey: key, type });
+    } else {
+      dataFields[key] = type;
+    }
+  }
+
+  const dataSchema =
+    Object.keys(dataFields).length > 0
+      ? INTERNAL_createStruct(withLocations(dataFields, locations), /* isAbstruct */ false)
+      : undefined;
+
+  return { dataSchema, positionalArgs };
+}
+
+export function separateAllAsPositional(schema: Record<string, BaseData>): SeparatedEntryArgs {
+  const withLocs = withLocations(schema);
+  const positionalArgs = Object.entries(withLocs).map(([key, type]) => ({ schemaKey: key, type }));
+  return { dataSchema: undefined, positionalArgs };
 }
 
 export function createIoSchema<T extends BaseData | Record<string, BaseData>>(

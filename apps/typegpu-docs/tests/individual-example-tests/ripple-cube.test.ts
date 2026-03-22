@@ -71,7 +71,7 @@ describe('ripple-cube example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -123,7 +123,7 @@ describe('ripple-cube example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -250,7 +250,7 @@ describe('ripple-cube example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -301,7 +301,7 @@ describe('ripple-cube example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -550,7 +550,7 @@ describe('ripple-cube example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -661,7 +661,7 @@ describe('ripple-cube example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -683,7 +683,7 @@ describe('ripple-cube example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -720,7 +720,7 @@ describe('ripple-cube example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -755,7 +755,7 @@ describe('ripple-cube example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -790,11 +790,7 @@ describe('ripple-cube example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
-      }
-
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       struct fullScreenTriangle_Output {
@@ -802,11 +798,15 @@ describe('ripple-cube example', () => {
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      struct fragmentMain_Input {
+        @location(0) uv: vec2f,
       }
 
       @group(1) @binding(0) var colorTexture: texture_2d<f32>;
@@ -821,10 +821,6 @@ describe('ripple-cube example', () => {
       }
 
       @group(0) @binding(0) var<uniform> bloomUniform: BloomParams;
-
-      struct fragmentMain_Input {
-        @location(0) uv: vec2f,
-      }
 
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
         var color = textureSample(colorTexture, sampler_1, _arg_0.uv);

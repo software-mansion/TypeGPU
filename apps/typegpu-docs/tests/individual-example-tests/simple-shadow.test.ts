@@ -46,12 +46,8 @@ describe('simple shadow example', () => {
         @builtin(position) pos: vec4f,
       }
 
-      struct shadowVert_Input {
-        @location(0) position: vec4f,
-      }
-
-      @vertex fn shadowVert(_arg_0: shadowVert_Input) -> shadowVert_Output {
-        var world = (instanceInfo.modelMatrix * _arg_0.position);
+      @vertex fn shadowVert(@location(0) position: vec4f) -> shadowVert_Output {
+        var world = (instanceInfo.modelMatrix * position);
         var clip = (lightSpaceUniform.viewProj * world);
         return shadowVert_Output(clip);
       }
@@ -84,18 +80,18 @@ describe('simple shadow example', () => {
         @location(1) worldPos: vec3f,
       }
 
-      struct mainVert_Input {
-        @location(0) position: vec4f,
-        @location(1) normal: vec4f,
-      }
-
-      @vertex fn mainVert(_arg_0: mainVert_Input) -> mainVert_Output {
+      @vertex fn mainVert(@location(0) position: vec4f, @location(1) normal: vec4f) -> mainVert_Output {
         let modelMatrixUniform = (&instanceInfo.modelMatrix);
-        var worldPos = ((*modelMatrixUniform) * _arg_0.position);
+        var worldPos = ((*modelMatrixUniform) * position);
         var viewPos = (cameraUniform.view * worldPos);
         var clipPos = (cameraUniform.projection * viewPos);
-        var transformedNormal = ((*modelMatrixUniform) * _arg_0.normal);
+        var transformedNormal = ((*modelMatrixUniform) * normal);
         return mainVert_Output(clipPos, transformedNormal, worldPos.xyz);
+      }
+
+      struct mainFrag_Input {
+        @location(0) normal: vec4f,
+        @location(1) worldPos: vec3f,
       }
 
       struct DirectionalLight {
@@ -121,11 +117,6 @@ describe('simple shadow example', () => {
       }
 
       @group(0) @binding(3) var<uniform> paramsUniform: VisParams;
-
-      struct mainFrag_Input {
-        @location(0) normal: vec4f,
-        @location(1) worldPos: vec3f,
-      }
 
       @fragment fn mainFrag(_arg_0: mainFrag_Input) -> @location(0) vec4f {
         let instanceInfo_1 = (&instanceInfo);

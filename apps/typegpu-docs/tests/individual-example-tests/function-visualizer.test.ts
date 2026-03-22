@@ -57,7 +57,7 @@ describe('function visualizer example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        computePointsFn(in.id.x, in.id.y, in.id.z);
+        computePointsFn(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -95,7 +95,7 @@ describe('function visualizer example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        computePointsFn(in.id.x, in.id.y, in.id.z);
+        computePointsFn(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -133,7 +133,7 @@ describe('function visualizer example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        computePointsFn(in.id.x, in.id.y, in.id.z);
+        computePointsFn(id.x, id.y, id.z);
       }
 
       struct Properties {
@@ -210,7 +210,7 @@ describe('function visualizer example', () => {
       @vertex fn vertex(_arg_0: vertex_Input) -> vertex_Output {
         let properties = (&propertiesUniform);
         let lineVertices = (&lineVertices_1);
-        let currentVertex = (f32(_arg_0.vid) / 2f);
+        let currentVertex = (f32(vid) / 2f);
         var orthonormal = orthonormalForVertex(currentVertex);
         var offset = ((orthonormal * (*properties).lineWidth) * select(-1f, 1f, ((_arg_0.vid % 2u) == 0u)));
         var leftBot = ((*properties).transformation * vec4f(-1, -1, 0, 1));

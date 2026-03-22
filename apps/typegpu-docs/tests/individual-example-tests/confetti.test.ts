@@ -47,7 +47,7 @@ describe('confetti example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       fn rotate(v: vec2f, angle: f32) -> vec2f {

@@ -210,7 +210,11 @@ class WithBindingImpl implements WithBinding {
   createComputePipeline<ComputeIn extends Record<string, AnyComputeBuiltin>>(
     descriptor: TgpuComputePipeline.Descriptor<ComputeIn>,
   ): TgpuComputePipeline {
-    return INTERNAL_createComputePipeline(this.#getRoot(), this.#slotBindings, descriptor);
+    return INTERNAL_createComputePipeline(
+      this.#getRoot(),
+      this.#slotBindings,
+      descriptor as unknown as TgpuComputePipeline.Descriptor,
+    );
   }
 
   createRenderPipeline(
@@ -525,9 +529,9 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     THeight extends number,
     TDepth extends number,
     TSize extends
-      | readonly [TWidth]
-      | readonly [TWidth, THeight]
-      | readonly [TWidth, THeight, TDepth],
+    | readonly [TWidth]
+    | readonly [TWidth, THeight]
+    | readonly [TWidth, THeight, TDepth],
     TFormat extends GPUTextureFormat,
     TMipLevelCount extends number,
     TSampleCount extends number,

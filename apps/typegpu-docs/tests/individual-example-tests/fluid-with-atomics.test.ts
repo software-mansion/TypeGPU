@@ -190,12 +190,8 @@ describe('fluid with atomics example', () => {
         }
       }
 
-      struct compute_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(1, 1) fn compute(input: compute_Input) {
-        decideWaterLevel(input.gid.x, input.gid.y);
+      @compute @workgroup_size(1, 1) fn compute(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        decideWaterLevel(_arg_gid.x, _arg_gid.y);
       }
 
       @group(0) @binding(0) var<uniform> size: vec2u;
@@ -205,22 +201,16 @@ describe('fluid with atomics example', () => {
         @location(0) cell: f32,
       }
 
-      struct vertex_Input {
-        @location(0) squareData: vec2f,
-        @location(1) currentStateData: u32,
-        @builtin(instance_index) idx: u32,
-      }
-
-      @vertex fn vertex(input: vertex_Input) -> vertex_Output {
+      @vertex fn vertex(@location(0) _arg_squareData: vec2f, @location(1) _arg_currentStateData: u32, @builtin(instance_index) _arg_idx: u32) -> vertex_Output {
         let w = size.x;
         let h = size.y;
-        let gridX = (input.idx % w);
-        let gridY = u32((f32(input.idx) / f32(w)));
+        let gridX = (_arg_idx % w);
+        let gridY = u32((f32(_arg_idx) / f32(w)));
         let maxDim = max(w, h);
-        let x = (((2f * (f32(gridX) + input.squareData.x)) - f32(w)) / f32(maxDim));
-        let y = (((2f * (f32(gridY) + input.squareData.y)) - f32(h)) / f32(maxDim));
-        let cellFlags = (input.currentStateData >> 24u);
-        var cell = f32((input.currentStateData & 16777215u));
+        let x = (((2f * (f32(gridX) + _arg_squareData.x)) - f32(w)) / f32(maxDim));
+        let y = (((2f * (f32(gridY) + _arg_squareData.y)) - f32(h)) / f32(maxDim));
+        let cellFlags = (_arg_currentStateData >> 24u);
+        var cell = f32((_arg_currentStateData & 16777215u));
         if ((cellFlags == 1u)) {
           cell = -1f;
         }
@@ -237,17 +227,17 @@ describe('fluid with atomics example', () => {
         @location(0) cell: f32,
       }
 
-      @fragment fn fragment(input: fragment_Input) -> @location(0) vec4f {
-        if ((input.cell == -1f)) {
+      @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
+        if ((_arg_0.cell == -1f)) {
           return vec4f(0.5, 0.5, 0.5, 1);
         }
-        if ((input.cell == -2f)) {
+        if ((_arg_0.cell == -2f)) {
           return vec4f(0, 1, 0, 1);
         }
-        if ((input.cell == -3f)) {
+        if ((_arg_0.cell == -3f)) {
           return vec4f(1, 0, 0, 1);
         }
-        let normalized = min((input.cell / 255f), 1f);
+        let normalized = min((_arg_0.cell / 255f), 1f);
         if ((normalized == 0f)) {
           return vec4f();
         }

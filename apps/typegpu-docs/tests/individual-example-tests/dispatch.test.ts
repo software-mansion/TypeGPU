@@ -36,7 +36,7 @@ describe('tgsl parsing test example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -55,7 +55,7 @@ describe('tgsl parsing test example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -74,7 +74,7 @@ describe('tgsl parsing test example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -93,7 +93,7 @@ describe('tgsl parsing test example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -112,7 +112,7 @@ describe('tgsl parsing test example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -131,7 +131,7 @@ describe('tgsl parsing test example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -152,7 +152,7 @@ describe('tgsl parsing test example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -171,7 +171,7 @@ describe('tgsl parsing test example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        main(in.id.x, in.id.y, in.id.z);
+        main(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -190,7 +190,7 @@ describe('tgsl parsing test example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        main(in.id.x, in.id.y, in.id.z);
+        main(id.x, id.y, id.z);
       }"
     `);
   });

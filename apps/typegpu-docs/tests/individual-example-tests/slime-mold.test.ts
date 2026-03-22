@@ -68,7 +68,7 @@ describe('slime mold example', () => {
         if (any(in.id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(1) @binding(0) var oldState: texture_storage_2d<rgba8unorm, read>;
@@ -85,13 +85,9 @@ describe('slime mold example', () => {
 
       @group(1) @binding(1) var newState: texture_storage_2d<rgba8unorm, write>;
 
-      struct blur_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16) fn blur(_arg_0: blur_Input) {
+      @compute @workgroup_size(16, 16) fn blur(@builtin(global_invocation_id) gid: vec3u) {
         var dims = textureDimensions(oldState);
-        if (((_arg_0.gid.x >= dims.x) || (_arg_0.gid.y >= dims.y))) {
+        if (((gid.x >= dims.x) || (gid.y >= dims.y))) {
           return;
         }
         var sum = vec3f();
@@ -100,7 +96,7 @@ describe('slime mold example', () => {
         {
           // unrolled iteration #0
           {
-            var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(-1));
+            var samplePos = (vec2i(gid.xy) + vec2i(-1));
             var dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
               var color = textureLoad(oldState, vec2u(samplePos)).rgb;
@@ -110,7 +106,7 @@ describe('slime mold example', () => {
           }
           // unrolled iteration #1
           {
-            var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(0, -1));
+            var samplePos = (vec2i(gid.xy) + vec2i(0, -1));
             var dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
               var color = textureLoad(oldState, vec2u(samplePos)).rgb;
@@ -120,7 +116,7 @@ describe('slime mold example', () => {
           }
           // unrolled iteration #2
           {
-            var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(1, -1));
+            var samplePos = (vec2i(gid.xy) + vec2i(1, -1));
             var dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
               var color = textureLoad(oldState, vec2u(samplePos)).rgb;
@@ -133,7 +129,7 @@ describe('slime mold example', () => {
         {
           // unrolled iteration #0
           {
-            var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(-1, 0));
+            var samplePos = (vec2i(gid.xy) + vec2i(-1, 0));
             var dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
               var color = textureLoad(oldState, vec2u(samplePos)).rgb;
@@ -143,7 +139,7 @@ describe('slime mold example', () => {
           }
           // unrolled iteration #1
           {
-            var samplePos = (vec2i(_arg_0.gid.xy) + vec2i());
+            var samplePos = (vec2i(gid.xy) + vec2i());
             var dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
               var color = textureLoad(oldState, vec2u(samplePos)).rgb;
@@ -153,7 +149,7 @@ describe('slime mold example', () => {
           }
           // unrolled iteration #2
           {
-            var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(1, 0));
+            var samplePos = (vec2i(gid.xy) + vec2i(1, 0));
             var dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
               var color = textureLoad(oldState, vec2u(samplePos)).rgb;
@@ -166,7 +162,7 @@ describe('slime mold example', () => {
         {
           // unrolled iteration #0
           {
-            var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(-1, 1));
+            var samplePos = (vec2i(gid.xy) + vec2i(-1, 1));
             var dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
               var color = textureLoad(oldState, vec2u(samplePos)).rgb;
@@ -176,7 +172,7 @@ describe('slime mold example', () => {
           }
           // unrolled iteration #1
           {
-            var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(0, 1));
+            var samplePos = (vec2i(gid.xy) + vec2i(0, 1));
             var dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
               var color = textureLoad(oldState, vec2u(samplePos)).rgb;
@@ -186,7 +182,7 @@ describe('slime mold example', () => {
           }
           // unrolled iteration #2
           {
-            var samplePos = (vec2i(_arg_0.gid.xy) + vec2i(1));
+            var samplePos = (vec2i(gid.xy) + vec2i(1));
             var dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
               var color = textureLoad(oldState, vec2u(samplePos)).rgb;
@@ -197,7 +193,7 @@ describe('slime mold example', () => {
         }
         var blurred = (sum / count);
         var newColor = saturate((blurred - params.evaporationRate));
-        textureStore(newState, _arg_0.gid.xy, vec4f(newColor, 1f));
+        textureStore(newState, gid.xy, vec4f(newColor, 1f));
       }
 
       var<private> seed: vec2f;
@@ -256,17 +252,13 @@ describe('slime mold example', () => {
 
       @group(1) @binding(1) var newState_1: texture_storage_2d<rgba8unorm, write>;
 
-      struct updateAgents_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(64) fn updateAgents(_arg_0: updateAgents_Input) {
-        if ((_arg_0.gid.x >= 200000u)) {
+      @compute @workgroup_size(64) fn updateAgents(@builtin(global_invocation_id) gid: vec3u) {
+        if ((gid.x >= 200000u)) {
           return;
         }
-        randSeed(((f32(_arg_0.gid.x) / 2e+5f) + 0.1f));
+        randSeed(((f32(gid.x) / 2e+5f) + 0.1f));
         var dims = textureDimensions(oldState);
-        let agent = (&agentsData[_arg_0.gid.x]);
+        let agent = (&agentsData[gid.x]);
         let random = randFloat01();
         let weightForward = sense((*agent).position, (*agent).angle, 0f);
         let weightLeft = sense((*agent).position, (*agent).angle, params.sensorAngle);
@@ -303,7 +295,7 @@ describe('slime mold example', () => {
           }
           angle += ((random - 0.5f) * 0.1f);
         }
-        agentsData[_arg_0.gid.x] = Agent(newPos, angle);
+        agentsData[gid.x] = Agent(newPos, angle);
         var oldState_1 = textureLoad(oldState, vec2u(newPos)).rgb;
         var newState = (oldState_1 + 1f);
         textureStore(newState_1, vec2u(newPos), vec4f(newState, 1f));
@@ -314,23 +306,19 @@ describe('slime mold example', () => {
         @location(0) uv: vec2f,
       }
 
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      @vertex fn fullScreenTriangle(input: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) _arg_vertexIndex: u32) -> fullScreenTriangle_Output {
         var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
         var uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-        return fullScreenTriangle_Output(vec4f(pos[input.vertexIndex], 0f, 1f), uv[input.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[_arg_vertexIndex], 0f, 1f), uv[_arg_vertexIndex]);
+      }
+
+      struct fragmentShader_Input {
+        @location(0) uv: vec2f,
       }
 
       @group(1) @binding(0) var state: texture_2d<f32>;
 
       @group(0) @binding(0) var filteringSampler: sampler;
-
-      struct fragmentShader_Input {
-        @location(0) uv: vec2f,
-      }
 
       @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
         return textureSample(state, filteringSampler, _arg_0.uv);
