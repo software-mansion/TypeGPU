@@ -1,5 +1,6 @@
 import { undecorate } from '../../data/dataTypes.ts';
 import { snip, type Snippet } from '../../data/snippet.ts';
+import { $internal, $repr } from '../../shared/symbols.ts';
 import { type BaseData, isWgslStruct } from '../../data/wgslTypes.ts';
 
 interface PositionalArgEntry {
@@ -12,7 +13,11 @@ interface PositionalArgEntry {
  * expression: positional args get a direct snippet, struct fields get
  * `structArgName.fieldName`.
  */
-export class EntryInputRouter {
+export class EntryInputRouter implements BaseData {
+  readonly [$internal]: Record<string, unknown> = {};
+  readonly type = 'entry-input-router' as const;
+  // Type-token only, not present at runtime:
+  declare readonly [$repr]: never;
   readonly structArgName: string;
   readonly dataSchema: BaseData | undefined;
   /** Maps schemaKey → { WGSL arg name, type } */
@@ -28,6 +33,10 @@ export class EntryInputRouter {
     this.positionalArgsMap = new Map(
       positionalArgs.map((a) => [a.schemaKey, { argName: a.argName, type: a.type }]),
     );
+  }
+
+  toString(): string {
+    return 'entry-input-router';
   }
 
   accessProp(propName: string): Snippet | undefined {
