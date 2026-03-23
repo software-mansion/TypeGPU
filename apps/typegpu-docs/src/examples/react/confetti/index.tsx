@@ -108,7 +108,7 @@ const vertexShader = (input: TgpuVertexFn.AutoIn<typeof attribs>) => {
 
 function App() {
   const root = useRoot();
-  const { canvasRefCallback, ctxRef } = useConfigureContext();
+  const { canvasRefCallback, ctxRef } = useConfigureContext({ alphaMode: 'premultiplied' });
 
   // buffers
 

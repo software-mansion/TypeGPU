@@ -55,7 +55,7 @@ function App() {
     [root, time],
   );
 
-  const { canvasRefCallback, ctxRef } = useConfigureContext();
+  const { canvasRefCallback, ctxRef } = useConfigureContext({ alphaMode: 'premultiplied' });
   useFrame(({ elapsedSeconds }) => {
     if (!ctxRef.current) return;
 
