@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useRoot } from './root-context.tsx';
 import useEffectEvent from './use-effect-event.ts';
+import type { TgpuRoot } from 'typegpu';
 
-export interface UseConfigureContextOptions {
+type ConfigureContextOptions = Parameters<TgpuRoot['configureContext']>[0];
+
+export interface UseConfigureContextOptions extends Omit<ConfigureContextOptions, 'canvas'> {
   /**
    * @default true
    */
@@ -18,9 +21,10 @@ export interface UseConfigureContextResult {
 export function useConfigureContext(
   options?: UseConfigureContextOptions,
 ): UseConfigureContextResult {
-  const { autoResize = true } = options ?? {};
+  const { autoResize = true, ...restOptions } = options ?? {};
 
   const root = useRoot();
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const resizeEffect = useEffectEvent((entries: ResizeObserverEntry[]) => {
@@ -54,7 +58,7 @@ export function useConfigureContext(
     (el: HTMLCanvasElement) => {
       if (el) {
         canvasRef.current = el;
-        ctxRef.current = root.configureContext({ canvas: el, alphaMode: 'premultiplied' });
+        ctxRef.current = root.configureContext({ canvas: el, ...restOptions });
         if (autoResize) {
           if (resizeObserverRef.current) {
             resizeObserverRef.current.disconnect();
