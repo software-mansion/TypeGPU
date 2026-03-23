@@ -1,10 +1,7 @@
 import type { StorageFlag, TgpuBindGroup, TgpuBuffer, TgpuRoot, UniformFlag } from 'typegpu';
 import { d } from 'typegpu';
-import {
-  createStockhamRadix2LineStrategy,
-  type LineFftEncodeOptions,
-  type LineFftStrategyFactory,
-} from './lineFftStrategy.ts';
+import type { LineFftEncodeOptions, LineFftStrategyFactory } from './lineFftStrategy.ts';
+import { createStockhamRadix4LineStrategy } from './lineFftRadix4Strategy.ts';
 import {
   createTransposePipeline,
   dispatchTranspose,
@@ -35,8 +32,9 @@ export type Fft2dOptions = {
    */
   skipFinalTranspose?: boolean;
   /**
-   * Pluggable 1D line FFT (Stockham along contiguous lines). Default: radix-2 Stockham via
-   * {@link createStockhamRadix2LineStrategy}.
+   * Pluggable 1D line FFT (Stockham-style along contiguous lines). Default: faster radix-4 + optional
+   * radix-2 tail via {@link createStockhamRadix4LineStrategy}. Pass {@link createStockhamRadix2LineStrategy}
+   * for pure radix-2 Stockham.
    */
   lineFftStrategyFactory?: LineFftStrategyFactory;
 };
@@ -70,8 +68,9 @@ export type Fft2d = {
 };
 
 /**
- * Radix-2 (default) or pluggable line-strategy 2D FFT on row-major `width×height` complex buffers
- * (`input` = `buffers[0]`). All GPU work is recorded on a caller-owned {@link GPUComputePassEncoder}.
+ * 2D FFT on row-major `width×height` complex buffers (`input` = `buffers[0]`). Default line FFT is
+ * radix-4 Stockham (Bainville) with an optional radix-2 tail; override with {@link Fft2dOptions.lineFftStrategyFactory}.
+ * All GPU work is recorded on a caller-owned {@link GPUComputePassEncoder}.
  *
  * Per-stage uniform buffers are distinct so many dispatches can be recorded in one pass before `submit`
  * without last-write-wins. Line strategies use four duplicate uniform pools (slots `0`–`3`) for row/column
@@ -80,7 +79,7 @@ export type Fft2d = {
 export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
   const { width: W, height: H } = options;
   const skipFinalTranspose = options.skipFinalTranspose === true;
-  const lineFftFactory = options.lineFftStrategyFactory ?? createStockhamRadix2LineStrategy;
+  const lineFftFactory = options.lineFftStrategyFactory ?? createStockhamRadix4LineStrategy;
 
   if (W <= 0 || H <= 0) {
     throw new Error('FFT dimensions must be positive');

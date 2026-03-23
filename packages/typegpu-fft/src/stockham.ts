@@ -88,8 +88,76 @@ export const stockhamStageKernel = tgpu.computeFn({
   stockhamLayout.$.dst[base + idxD + ns] = d.vec2f(v1.x, v1.y);
 });
 
+/**
+ * Decimation-in-frequency radix-2 butterfly: sum/difference first, then multiply the difference by
+ * `conj(w)` where `w` is the forward twiddle from the LUT (`cis(−θ)`).
+ *
+ * This is the **unnormalized algebraic inverse** of one {@link stockhamStageKernel} DIT stage when
+ * composed after that stage. Conjugating twiddles inside the DIT kernel (`direction = 1`) is only
+ * correct for a **full** multi-stage Stockham inverse, not for isolating a single stage — hence this
+ * entry point for the radix-4 mixed path’s Stockham tail inverse.
+ *
+ * `direction` in the uniform buffer is ignored (always uses `conj` twiddle).
+ */
+export const stockhamDifStageKernel = tgpu.computeFn({
+  workgroupSize: [WORKGROUP_SIZE],
+  in: {
+    gid: d.builtin.globalInvocationId,
+    numWorkgroups: d.builtin.numWorkgroups,
+  },
+})((input) => {
+  const wg = d.u32(WORKGROUP_SIZE);
+  const spanX = input.numWorkgroups.x * wg;
+  const spanY = input.numWorkgroups.y * spanX;
+
+  const tid = input.gid.x + input.gid.y * spanX + input.gid.z * spanY;
+
+  const n = stockhamLayout.$.uniforms.n;
+  const half = n >> 1;
+  const numLines = stockhamLayout.$.uniforms.numLines;
+  const total = numLines * half;
+
+  if (tid >= total) {
+    return;
+  }
+
+  const j = tid % half;
+  const line = d.u32(tid / half);
+  const lineStride = stockhamLayout.$.uniforms.lineStride;
+  const base = line * lineStride;
+
+  const i0 = base + j;
+  const i1 = base + j + half;
+
+  const ns = stockhamLayout.$.uniforms.ns;
+  const k = j % ns;
+  const twIdx = ns - d.u32(1) + k;
+  const w = stockhamLayout.$.twiddles[twIdx] as d.v2f;
+  /** `conj(w)` for LUT entries `w = cis(−θ)`. */
+  const wy = -w.y;
+
+  const u = stockhamLayout.$.src[i0] as d.v2f;
+  const t = stockhamLayout.$.src[i1] as d.v2f;
+
+  const v0 = d.vec2f(u.x + t.x, u.y + t.y);
+  const diff = d.vec2f(u.x - t.x, u.y - t.y);
+  const v1 = d.vec2f(
+    diff.x * w.x - diff.y * wy,
+    diff.x * wy + diff.y * w.x,
+  );
+
+  const jDivNs = d.u32(j / ns);
+  const idxD = jDivNs * (ns << 1) + (j % ns);
+  stockhamLayout.$.dst[base + idxD] = d.vec2f(v0.x, v0.y);
+  stockhamLayout.$.dst[base + idxD + ns] = d.vec2f(v1.x, v1.y);
+});
+
 export function createStockhamStagePipeline(root: TgpuRoot) {
   return root.createComputePipeline({ compute: stockhamStageKernel });
+}
+
+export function createStockhamDifStagePipeline(root: TgpuRoot) {
+  return root.createComputePipeline({ compute: stockhamDifStageKernel });
 }
 
 export function stockhamNsValues(n: number): number[] {

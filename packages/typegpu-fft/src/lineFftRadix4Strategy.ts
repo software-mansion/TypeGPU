@@ -1,6 +1,7 @@
 import { d } from 'typegpu';
 import {
   buildStockhamTwiddleLut,
+  createStockhamDifStagePipeline,
   createStockhamStagePipeline,
   stockhamLayout,
   stockhamUniformType,
@@ -29,6 +30,7 @@ export function createStockhamRadix4LineStrategy(
   const radix4Pipeline = createRadix4StagePipeline(root);
   const radix4InversePipeline = createRadix4InverseStagePipeline(root);
   const stockhamPipeline = createStockhamStagePipeline(root);
+  const stockhamDifPipeline = createStockhamDifStagePipeline(root);
 
   const twiddleLutLen = nMax - 1;
   const twiddleLut = root.createBuffer(d.arrayOf(d.vec2f, twiddleLutLen)).$usage('storage');
@@ -98,6 +100,7 @@ export function createStockhamRadix4LineStrategy(
         radix4Pipeline,
         radix4InversePipeline,
         stockhamPipeline,
+        stockhamDifPipeline,
         radix4Pools,
         n,
         lineStride,

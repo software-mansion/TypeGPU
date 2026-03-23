@@ -1,12 +1,20 @@
-import { createFft2d, createStockhamRadix4LineStrategy, type Fft2d } from '@typegpu/fft';
+import { oklabGamutClipSlot, oklabToLinearRgb } from '@typegpu/color';
+import {
+  createFft2d,
+  createStockhamRadix2LineStrategy,
+  createStockhamRadix4LineStrategy,
+  type Fft2d,
+} from '@typegpu/fft';
 import tgpu, { common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 /**
  * Pipeline: camera → luminance (optional separable Hann window) → `encodeForward` → radial low-pass on the
- * spectrum buffer → optional `encodeInverse` (spatial) or log-magnitude spectrum.
- * Radix-2 Stockham by default; optional radix-4 line strategy. One compute pass chains fill, FFT, filter,
- * inverse FFT, and spatial/mag; then a render pass presents.
+ * spectrum buffer → optional `encodeInverse` (spatial) or log-magnitude spectrum colored in **Oklab**
+ * (lightness from magnitude, hue from complex phase via `a,b`).
+ * Line FFT: **radix-4 (default)** (faster Stockham-style radix-4 + optional radix-2 tail) or **radix-2**
+ * (pure Stockham radix-2). One compute pass chains fill, FFT, filter, inverse FFT, and spatial/mag; then a
+ * render pass presents.
  */
 
 const WORKGROUP = 256;
@@ -48,9 +56,10 @@ function decomposeWorkgroups(total: number): [number, number, number] {
 /** Max longer side of the camera ROI before downscale; FFT pad is `nextPowerOf2(effW)×nextPowerOf2(effH)`. */
 let fftMaxSide = 1024;
 
-type LineFftMode = 'default' | 'radix4';
+/** UI select values — must match `lineFft` control `options`. */
+type LineFftMode = 'radix-4 (default)' | 'radix-2';
 
-let lineFftMode: LineFftMode = 'default';
+let lineFftMode: LineFftMode = 'radix-4 (default)';
 /** Tracks which line mode the current `fft` was built with (invalidate on change). */
 let fftLineFftMode: LineFftMode | undefined;
 
@@ -213,6 +222,7 @@ const magKernel = tgpu.computeFn({
     numWorkgroups: d.builtin.numWorkgroups,
   },
 })((input) => {
+  'use gpu';
   const wg = d.u32(WORKGROUP);
   const spanX = input.numWorkgroups.x * wg;
   const spanY = input.numWorkgroups.y * spanX;
@@ -242,7 +252,14 @@ const magKernel = tgpu.computeFn({
   const len = std.sqrt(cShift.x * cShift.x + cShift.y * cShift.y);
   const logv = std.log(1.0 + len) * magLayout.$.params.gain;
   const cv = std.clamp(logv, 0.0, 1.0);
-  std.textureStore(magLayout.$.outTex, d.vec2u(xLin, yLin), d.vec4f(cv, cv, cv, 1));
+  /** Perceptual lightness from log-magnitude; chroma scales with magnitude; phase → hue in the `a,b` plane. */
+  const eps = 1e-8;
+  const hue = std.atan2(cShift.y, cShift.x);
+  const chroma = std.select(cv * 0.16, d.f32(0), len < eps);
+  const L = 0.04 + cv * 0.88;
+  const lab = d.vec3f(L, chroma * std.cos(hue), chroma * std.sin(hue));
+  const rgb = oklabToLinearRgb(oklabGamutClipSlot.$(lab));
+  std.textureStore(magLayout.$.outTex, d.vec2u(xLin, yLin), d.vec4f(rgb, 1));
 });
 
 const spatialParamsType = d.struct({
@@ -368,8 +385,8 @@ if (navigator.mediaDevices.getUserMedia) {
   video.srcObject = await navigator.mediaDevices.getUserMedia({
     video: {
       facingMode: 'user',
-      width: { ideal: 1280 },
-      height: { ideal: 720 },
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
       frameRate: { ideal: 60 },
     },
   });
@@ -458,8 +475,8 @@ const renderPipeline = root.createRenderPipeline({
 });
 
 /** When true: after forward FFT, run inverse and show grayscale spatial reconstruction. When false: show log-magnitude spectrum (forward only). */
-let applyInverseFft = true;
-let gainValue = 0.12;
+let applyInverseFft = false;
+let gainValue = 0.2;
 /** Normalized low-pass cutoff vs max toroidal radius (1 = no filtering). */
 let cutoffRadiusNorm = 1;
 /** Separable Hann window on camera ROI before FFT (reduces periodic-boundary cross in spectrum). */
@@ -535,12 +552,13 @@ function ensureResources(frameW: number, frameH: number) {
     destroyFftBlock();
     padW = nextPadW;
     padH = nextPadH;
-    const lineFactory = lineFftMode === 'radix4' ? createStockhamRadix4LineStrategy : undefined;
+    const lineFftStrategyFactory =
+      lineFftMode === 'radix-2' ? createStockhamRadix2LineStrategy : createStockhamRadix4LineStrategy;
     fft = createFft2d(root, {
       width: padW,
       height: padH,
       skipFinalTranspose: SKIP_FINAL_FFT_TRANSPOSE,
-      ...(lineFactory !== undefined ? { lineFftStrategyFactory: lineFactory } : {}),
+      lineFftStrategyFactory,
     });
     fftLineFftMode = lineFftMode;
     lastMagUniformKey = '';
@@ -785,7 +803,7 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 export const controls = defineControls({
   inverseFft: {
-    initial: true,
+    initial: false,
     onToggleChange: (value) => {
       applyInverseFft = value;
     },
@@ -805,7 +823,7 @@ export const controls = defineControls({
   },
   lineFft: {
     initial: lineFftMode,
-    options: ['radix4', 'default'],
+    options: ['radix-4 (default)', 'radix-2'],
     onSelectChange: (value) => {
       lineFftMode = value as LineFftMode;
     },
