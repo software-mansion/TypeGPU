@@ -27,7 +27,7 @@ const App = (props: Props) => {
     },
   }), [root, time, color]);
   
-  const { canvasRefCallback, ctxRef } = useConfigureContext();
+  const { canvasRefCallback, ctxRef } = useConfigureContext({ alphaMode: 'premultiplied' });
 
   // Runs each frame on the CPU 🤖
   useFrame(({ elapsedSeconds }) => {
