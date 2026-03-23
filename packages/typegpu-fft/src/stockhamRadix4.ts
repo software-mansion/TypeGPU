@@ -2,6 +2,7 @@ import tgpu, { d, std } from 'typegpu';
 import type { TgpuBindGroup, TgpuBuffer, TgpuRoot, UniformFlag } from 'typegpu';
 import type { LineFftEncodeOptions } from './lineFftStrategy.ts';
 import {
+  createStockhamDifStagePipeline,
   createStockhamStagePipeline,
   dispatchStockhamLineFftStages,
   stockhamUniformType,
@@ -87,7 +88,7 @@ export const radix4StageKernel = tgpu.computeFn({
   const a2 = radix4Layout.$.src[i2] as d.v2f;
   const a3 = radix4Layout.$.src[i3] as d.v2f;
 
-  const u0 = d.vec2f(a0.x, a0.y);
+  const u0 = d.vec2f(a0);
   const u1 = d.vec2f(
     a1.x * tw1.x - a1.y * tw1.y,
     a1.x * tw1.y + a1.y * tw1.x,
@@ -181,11 +182,10 @@ export const radix4InverseStageKernel = tgpu.computeFn({
   const u1p = d.vec2f(v2u.x + du1.x, v2u.y + du1.y);
   const u3p = d.vec2f(v2u.x - du1.x, v2u.y - du1.y);
 
-  const q = d.f32(0.25);
-  const u0 = q * d.vec2f(u0p.x, u0p.y);
-  const u1 = q * d.vec2f(u1p.x, u1p.y);
-  const u2 = q * d.vec2f(u2p.x, u2p.y);
-  const u3 = q * d.vec2f(u3p.x, u3p.y);
+  const u0 = d.vec2f(u0p);
+  const u1 = d.vec2f(u1p);
+  const u2 = d.vec2f(u2p);
+  const u3 = d.vec2f(u3p);
 
   const pi = Math.PI;
   const angInv = (pi * d.f32(k)) / (d.f32(2) * d.f32(p));
@@ -198,7 +198,7 @@ export const radix4InverseStageKernel = tgpu.computeFn({
     tw2i.x * sn1i + tw2i.y * c1i,
   );
 
-  const b0 = d.vec2f(u0.x, u0.y);
+  const b0 = d.vec2f(u0);
   const b1 = d.vec2f(
     u1.x * tw1i.x - u1.y * tw1i.y,
     u1.x * tw1i.y + u1.y * tw1i.x,
@@ -274,6 +274,7 @@ export function dispatchRadix4LineFft(
   radix4Pipeline: ReturnType<typeof createRadix4StagePipeline>,
   radix4InversePipeline: ReturnType<typeof createRadix4InverseStagePipeline>,
   stockhamPipeline: ReturnType<typeof createStockhamStagePipeline>,
+  stockhamDifPipeline: ReturnType<typeof createStockhamDifStagePipeline>,
   pools: readonly [
     Radix4LineUniformPools,
     Radix4LineUniformPools,
@@ -319,18 +320,18 @@ export function dispatchRadix4LineFft(
 
   if (inverse) {
     if (k % 2 === 1) {
-      readA = dispatchStockhamLineFftStages(
-        stockhamPipeline,
-        [stockhamTailUniform],
-        [stockhamTailBgSrcA],
-        [stockhamTailBgSrcB],
+      const tailThreads = numLines * (n >> 1);
+      const [twx, twy, twz] = decomposeWorkgroups(Math.ceil(tailThreads / WORKGROUP_SIZE));
+      stockhamTailUniform.write({
+        ns: n >> 1,
         n,
         lineStride,
         numLines,
-        readA,
-        [n >> 1],
-        { computePass, inverse: true },
-      );
+        direction: 1,
+      });
+      const tailBg = readA ? stockhamTailBgSrcA : stockhamTailBgSrcB;
+      stockhamDifPipeline.with(computePass).with(tailBg).dispatchWorkgroups(twx, twy, twz);
+      readA = !readA;
     }
     for (let s = ps.length - 1; s >= 0; s--) {
       const p = ps[s];

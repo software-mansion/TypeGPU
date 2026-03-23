@@ -37,7 +37,7 @@ export type LineFftStrategyFactoryContext = {
  * Row and column passes in {@link createFft2d} both use this; transpose stays separate.
  *
  * **Contract:** `dispatchLineFft(..., { inverse: false })` and `{ inverse: true }` must implement the **same**
- * unnormalized complex DFT / IDFT pair as the default Stockham radix-2 path (same convention as {@link createFft2d}).
+ * unnormalized complex DFT / IDFT pair as the reference Stockham radix-2 path ({@link createStockhamRadix2LineStrategy}).
  * A faster **forward** factorization (e.g. radix-4 stages) still defines one linear operator `F`; the inverse pass
  * must apply `F⁻¹`, not merely “reverse stages and conjugate twiddles” unless that has been shown equivalent.
  * It is valid for `inverse: true` to use a different **sequence** of kernels (e.g. full Stockham inverse) as long
@@ -69,8 +69,8 @@ export type LineFftStrategy = {
 export type LineFftStrategyFactory = (ctx: LineFftStrategyFactoryContext) => LineFftStrategy;
 
 /**
- * Default: radix-2 Stockham stages (current @typegpu/fft behavior). Use as
- * `lineFftStrategyFactory: createStockhamRadix2LineStrategy` or rely on {@link createFft2d} default.
+ * Pure radix-2 Stockham line FFT (reference implementation). {@link createFft2d} defaults to the faster
+ * {@link createStockhamRadix4LineStrategy} instead; pass this factory to opt into radix-2 only.
  */
 export function createStockhamRadix2LineStrategy(
   ctx: LineFftStrategyFactoryContext,

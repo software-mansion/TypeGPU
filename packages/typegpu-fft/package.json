@@ -1,7 +1,7 @@
 {
   "name": "@typegpu/fft",
   "version": "0.10.0",
-  "description": "2D GPU FFT for TypeGPU: Stockham radix-2 (default) and optional radix-4 line strategy.",
+  "description": "2D GPU FFT for TypeGPU: Stockham-style radix-4 line FFT (default) and optional radix-2 reference path.",
   "keywords": [
     "webgpu",
     "fft",

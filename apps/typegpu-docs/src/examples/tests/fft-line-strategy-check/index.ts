@@ -1,10 +1,15 @@
 /**
- * Validates @typegpu/fft line strategies: GPU↔CPU (fft.js separable 2D), radix-4 vs default Stockham,
+ * Validates @typegpu/fft line strategies: GPU↔CPU (fft.js separable 2D), radix-4 vs radix-2 Stockham,
  * and forward→inverse round-trip (WebGPU).
  *
  * Run in the docs dev server: `/TypeGPU/examples#example=tests--fft-line-strategy-check` — needs WebGPU.
  */
-import { createFft2d, createStockhamRadix4LineStrategy, type Fft2d } from '@typegpu/fft';
+import {
+  createFft2d,
+  createStockhamRadix2LineStrategy,
+  createStockhamRadix4LineStrategy,
+  type Fft2d,
+} from '@typegpu/fft';
 import tgpu, { d } from 'typegpu';
 import FFT from 'fft.js';
 
@@ -140,7 +145,11 @@ const host = buildHostComplex();
 const cpuRef = hostToFloat64Interleaved(host);
 fft2dSeparableForward(cpuRef);
 
-const fftDefault = createFft2d(root, { width: W, height: H });
+const fftRadix2 = createFft2d(root, {
+  width: W,
+  height: H,
+  lineFftStrategyFactory: createStockhamRadix2LineStrategy,
+});
 const fftRadix4 = createFft2d(root, {
   width: W,
   height: H,
@@ -153,44 +162,44 @@ function loadAndForward(fft: Fft2d) {
 }
 
 for (let i = 0; i < WARMUP; i++) {
-  loadAndForward(fftDefault);
+  loadAndForward(fftRadix2);
   loadAndForward(fftRadix4);
 }
 
-loadAndForward(fftDefault);
+loadAndForward(fftRadix2);
 loadAndForward(fftRadix4);
 
-const outDefault = (await fftDefault.output().read()) as Vec2Like[];
+const outRadix2 = (await fftRadix2.output().read()) as Vec2Like[];
 const outRadix4 = (await fftRadix4.output().read()) as Vec2Like[];
 
 const parityR4 = diffStats(
   outRadix4,
-  Float64Array.from(outDefault.flatMap((v) => [v.x, v.y])),
+  Float64Array.from(outRadix2.flatMap((v) => [v.x, v.y])),
   1,
 );
 const parityR4Pass = parityR4.maxAbs < ERR_PASS_MAX && parityR4.rms < ERR_PASS_RMS;
 console.info(
-  `[fft-line-strategy-check] radix-4 vs default Stockham: maxAbs=${parityR4.maxAbs.toExponential(3)} rms=${parityR4.rms.toExponential(3)} → ${parityR4Pass ? 'PASS' : 'FAIL'}`,
+  `[fft-line-strategy-check] radix-4 vs radix-2 Stockham: maxAbs=${parityR4.maxAbs.toExponential(3)} rms=${parityR4.rms.toExponential(3)} → ${parityR4Pass ? 'PASS' : 'FAIL'}`,
 );
 
-fftDefault.input.write(host);
-submitEncodeForward(device, fftDefault);
-submitEncodeInverse(device, fftDefault);
-const outDefaultRt = (await fftDefault.output().read()) as Vec2Like[];
+fftRadix2.input.write(host);
+submitEncodeForward(device, fftRadix2);
+submitEncodeInverse(device, fftRadix2);
+const outRadix2Rt = (await fftRadix2.output().read()) as Vec2Like[];
 
 fftRadix4.input.write(host);
 submitEncodeForward(device, fftRadix4);
 submitEncodeInverse(device, fftRadix4);
 const outRadix4Rt = (await fftRadix4.output().read()) as Vec2Like[];
 
-const rtParity = gpuGpuDiff(outRadix4Rt, outDefaultRt);
+const rtParity = gpuGpuDiff(outRadix4Rt, outRadix2Rt);
 const rtPass = rtParity.maxAbs < ERR_PASS_MAX && rtParity.rms < ERR_PASS_RMS;
 console.info(
-  `[fft-line-strategy-check] forward→inverse round-trip radix-4 vs default: maxAbs=${rtParity.maxAbs.toExponential(3)} rms=${rtParity.rms.toExponential(3)} → ${rtPass ? 'PASS' : 'FAIL'}`,
+  `[fft-line-strategy-check] forward→inverse round-trip radix-4 vs radix-2: maxAbs=${rtParity.maxAbs.toExponential(3)} rms=${rtParity.rms.toExponential(3)} → ${rtPass ? 'PASS' : 'FAIL'}`,
 );
 
 let cpuScale = 1;
-let gpuCpu = diffStats(outDefault, cpuRef, cpuScale);
+let gpuCpu = diffStats(outRadix2, cpuRef, cpuScale);
 if (gpuCpu.maxAbs > ERR_PASS_MAX * 50) {
   const s =
     (() => {
@@ -199,8 +208,8 @@ if (gpuCpu.maxAbs > ERR_PASS_MAX * 50) {
       for (let i = 0; i < W * H; i++) {
         const cr = cpuRef[i * 2]!;
         const ci = cpuRef[i * 2 + 1]!;
-        const gr = outDefault[i]!.x;
-        const gi = outDefault[i]!.y;
+        const gr = outRadix2[i]!.x;
+        const gi = outRadix2[i]!.y;
         num += gr * cr + gi * ci;
         den += cr * cr + ci * ci;
       }
@@ -208,7 +217,7 @@ if (gpuCpu.maxAbs > ERR_PASS_MAX * 50) {
     })();
   if (Number.isFinite(s) && Math.abs(s - 1) > 0.01) {
     cpuScale = s;
-    gpuCpu = diffStats(outDefault, cpuRef, cpuScale);
+    gpuCpu = diffStats(outRadix2, cpuRef, cpuScale);
     console.info(
       `[fft-line-strategy-check] applied CPU ref scale=${cpuScale.toExponential(6)} (fft.js vs unnormalized Stockham)`,
     );
@@ -217,9 +226,9 @@ if (gpuCpu.maxAbs > ERR_PASS_MAX * 50) {
 
 const refPass = gpuCpu.maxAbs < ERR_PASS_MAX && gpuCpu.rms < ERR_PASS_RMS;
 console.info(
-  `[fft-line-strategy-check] GPU default vs CPU fft.js (2D separable): maxAbs=${gpuCpu.maxAbs.toExponential(3)} rms=${gpuCpu.rms.toExponential(3)} → ${refPass ? 'PASS' : 'FAIL'}`,
+  `[fft-line-strategy-check] GPU radix-2 vs CPU fft.js (2D separable): maxAbs=${gpuCpu.maxAbs.toExponential(3)} rms=${gpuCpu.rms.toExponential(3)} → ${refPass ? 'PASS' : 'FAIL'}`,
 );
 
-fftDefault.destroy();
+fftRadix2.destroy();
 fftRadix4.destroy();
 root.destroy();
