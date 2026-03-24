@@ -550,11 +550,14 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
   withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this {
     const internals = this[$internal];
-    const newPriors = createWithPerformanceCallback(
-      internals.priors,
-      callback,
-      internals.core.options.root,
-    );
+    const querySet = internals.core.performanceCallbackQuerySet;
+    if (!querySet) {
+      console.warn(
+        'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
+      );
+      return this;
+    }
+    const newPriors = createWithPerformanceCallback(internals.priors, callback, querySet);
     return new TgpuRenderPipelineImpl(internals.core, newPriors) as this;
   }
 
@@ -953,6 +956,7 @@ class RenderPipelineCore implements SelfResolvable {
 
   #latestAutoVertexIn: TgpuVertexFn.In | undefined;
   #latestAutoFragmentOut: BaseData | undefined;
+  #performanceCallbackQuerySet: TgpuQuerySet<'timestamp'> | undefined;
 
   constructor(public readonly options: RenderPipelineCoreOptions) {}
 
@@ -1005,6 +1009,13 @@ class RenderPipelineCore implements SelfResolvable {
 
   toString() {
     return 'renderPipelineCore';
+  }
+
+  get performanceCallbackQuerySet() {
+    if (!this.options.root.enabledFeatures.has('timestamp-query')) {
+      return undefined;
+    }
+    return (this.#performanceCallbackQuerySet ??= this.options.root.createQuerySet('timestamp', 2));
   }
 
   public unwrap(): Memo {

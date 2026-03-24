@@ -141,8 +141,7 @@ describe('TgpuComputePipeline', () => {
       expect(pipeline[$internal].priors.performanceCallback).not.toBe(callback1);
     });
 
-    it('should throw error if timestamp-query feature is not enabled', ({ root, device }) => {
-      const originalFeatures = device.features;
+    it('should warn if timestamp-query feature is not enabled', ({ root, device }) => {
       //@ts-expect-error
       device.features = new Set();
 
@@ -151,13 +150,11 @@ describe('TgpuComputePipeline', () => {
       const callback = vi.fn();
 
       expect(() => {
-        root.createComputePipeline({ compute: entryFn }).withPerformanceCallback(callback);
-      }).toThrow(
-        'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
-      );
-
-      //@ts-expect-error
-      device.features = originalFeatures;
+        const before = root.createComputePipeline({ compute: entryFn });
+        const after = before.withPerformanceCallback(callback);
+        // no-op
+        expect(after).toBe(before);
+      }).not.toThrow();
     });
   });
 

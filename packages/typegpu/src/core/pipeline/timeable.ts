@@ -25,21 +25,15 @@ export type TimestampWritesPriors = {
 export function createWithPerformanceCallback<T extends TimestampWritesPriors>(
   currentPriors: T,
   callback: (start: bigint, end: bigint) => void | Promise<void>,
-  root: ExperimentalTgpuRoot,
+  querySet: TgpuQuerySet<'timestamp'>,
 ): T {
-  if (!root.enabledFeatures.has('timestamp-query')) {
-    throw new Error(
-      'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
-    );
-  }
-
   if (!currentPriors.timestampWrites) {
     return {
       ...currentPriors,
       performanceCallback: callback,
       hasAutoQuerySet: true,
       timestampWrites: {
-        querySet: root.createQuerySet('timestamp', 2),
+        querySet,
         beginningOfPassWriteIndex: 0,
         endOfPassWriteIndex: 1,
       },
