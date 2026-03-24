@@ -84,6 +84,7 @@ function assignMetadata(
     const declaration = t.variableDeclaration('const', [
       t.variableDeclarator(i(visibility.name), callExpr),
     ]);
+    declaration.leadingComments = fnDecl.leadingComments ?? null;
 
     // Hoisting the declaration to the top of the scope
     visibility.scope.unshiftContainer('body', declaration);

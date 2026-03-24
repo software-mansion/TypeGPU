@@ -189,9 +189,7 @@ describe('[BABEL] "use gpu" directive', () => {
 
   it('makes plugin transpile marked function statements', () => {
     const code = `
-      /**
-       * bruh
-       */
+      /** ADD */
       function addGPU(a, b) {
         'use gpu';
         // hello there
@@ -207,7 +205,8 @@ describe('[BABEL] "use gpu" directive', () => {
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "const addGPU = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function addGPU(a, b) {
+      "/** ADD */
+      const addGPU = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function addGPU(a, b) {
         'use gpu';
 
         // hello there
@@ -230,9 +229,6 @@ describe('[BABEL] "use gpu" directive', () => {
           return {};
         }
       }) && $.f)({});
-      /**
-       * bruh
-       */
       function addCPU(a, b) {
         return a + b;
       }
@@ -243,12 +239,14 @@ describe('[BABEL] "use gpu" directive', () => {
   it('makes plugin transpile marked object method', () => {
     const code = `\
         const obj = {
+          /** MOD */
           mod: (a: number, b: number): number => {
             'use gpu';
             return a % b;
           }
         }
 
+        /** PRIME */
         const isPrime = (n: number): boolean => {
           'use gpu';
           if (n <= 1) {
@@ -266,6 +264,7 @@ describe('[BABEL] "use gpu" directive', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "const obj = {
+        /** MOD */
         mod: ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a: number, b: number): number => {
           'use gpu';
 
@@ -289,6 +288,8 @@ describe('[BABEL] "use gpu" directive', () => {
           }
         }) && $.f)({})
       };
+
+      /** PRIME */
       const isPrime = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (n: number): boolean => {
         'use gpu';
 
@@ -323,6 +324,8 @@ describe('[BABEL] "use gpu" directive', () => {
 
   it('parses when no typegpu import', () => {
     const code = `\
+      /** ADD */
+      // another comment
       function add(a, b) {
         'use gpu';
         return a + b;
@@ -330,7 +333,9 @@ describe('[BABEL] "use gpu" directive', () => {
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "const add = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
+      "/** ADD */
+      // another comment
+      const add = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
         'use gpu';
 
         return __tsover_add(a, b);
@@ -377,6 +382,8 @@ describe('[BABEL] "use gpu" directive', () => {
       const root = await tgpu.init();
       const countMutable = root.createMutable(d.i32, 0);
 
+      /** the main function */
+      // another comment
       const main = (a, b) => {
         'use gpu';
         let c = a + b + 2;
@@ -389,6 +396,9 @@ describe('[BABEL] "use gpu" directive', () => {
       "import tgpu, { d } from 'typegpu';
       const root = await tgpu.init();
       const countMutable = root.createMutable(d.i32, 0);
+
+      /** the main function */
+      // another comment
       const main = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a, b) => {
         'use gpu';
 
@@ -587,6 +597,8 @@ describe('[ROLLUP] "use gpu" directive', () => {
 
   it('makes plugin transpile marked function statements', async () => {
     const code = `\
+      /** ADD */
+      // another comment
       function addGPU(a, b) {
         'use gpu';
         return a + b * 3;
@@ -602,7 +614,9 @@ describe('[ROLLUP] "use gpu" directive', () => {
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "const addGPU = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function addGPU(a, b) {
+      "/** ADD */
+            // another comment
+            const addGPU = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function addGPU(a, b) {
               'use gpu';
               return __tsover_add(a, __tsover_mul(b, 3));
             }), {
@@ -630,11 +644,15 @@ describe('[ROLLUP] "use gpu" directive', () => {
       console.log(add);
       console.log(mul);
 
+      /** ADD */
+      // another comment
       function add(a, b) {
         'use gpu';
         return a + b;
       }
 
+      /** MUL */
+      // another comment
       function mul(a, b) {
         'use gpu';
         return a * b;
@@ -643,7 +661,9 @@ describe('[ROLLUP] "use gpu" directive', () => {
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "const mul = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
+      "/** MUL */
+      // another comment
+      const mul = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
               'use gpu';
               return __tsover_mul(a, b);
             }), {
@@ -653,6 +673,8 @@ describe('[ROLLUP] "use gpu" directive', () => {
           externals: () => ({}),
         }) && $.f)({}));
 
+      /** ADD */
+      // another comment
       const add = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
               'use gpu';
               return __tsover_add(a, b);
@@ -674,11 +696,13 @@ describe('[ROLLUP] "use gpu" directive', () => {
       console.log(add);
       console.log(mul);
 
+      /** ADD */
       export function add(a, b) {
         'use gpu';
         return a + b;
       }
 
+      /** MUL */
       export function mul(a, b) {
         'use gpu';
         return a * b;
@@ -687,7 +711,8 @@ describe('[ROLLUP] "use gpu" directive', () => {
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "const mul = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
+      "/** MUL */
+      const mul = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
               'use gpu';
               return __tsover_mul(a, b);
             }), {
@@ -697,6 +722,7 @@ describe('[ROLLUP] "use gpu" directive', () => {
           externals: () => ({}),
         }) && $.f)({}));
 
+      /** ADD */
       const add = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
               'use gpu';
               return __tsover_add(a, b);
