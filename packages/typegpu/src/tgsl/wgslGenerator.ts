@@ -941,6 +941,7 @@ Try 'return ${typeStr}(${str});' instead.
       const condition = this._typedExpression(condNode, bool);
 
       if (typeof condition.value === 'boolean') {
+        // the condition is known at comptime
         let node = condition.value ? consNode : altNode;
         if (!node) {
           return '';
@@ -960,20 +961,8 @@ Try 'return ${typeStr}(${str});' instead.
         return `${this.ctx.pre}${this._block(blockifySingleStatement(node))}`;
       }
 
-      const consequent =
-        condition.value === false ? undefined : this._block(blockifySingleStatement(consNode));
-      const alternate =
-        condition.value === true || !altNode
-          ? undefined
-          : this._block(blockifySingleStatement(altNode));
-
-      if (condition.value === true) {
-        return `${this.ctx.pre}${consequent}`;
-      }
-
-      if (condition.value === false) {
-        return alternate ? `${this.ctx.pre}${alternate}` : '';
-      }
+      const consequent = this._block(blockifySingleStatement(consNode));
+      const alternate = !altNode ? undefined : this._block(blockifySingleStatement(altNode));
 
       if (!alternate) {
         return stitch`${this.ctx.pre}if (${condition}) ${consequent}`;
