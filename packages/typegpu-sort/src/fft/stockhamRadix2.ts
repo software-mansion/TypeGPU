@@ -1,5 +1,7 @@
 import tgpu, { d, std } from 'typegpu';
 import type { TgpuBindGroup, TgpuBuffer, TgpuRoot, UniformFlag } from 'typegpu';
+import { complexCmulDs, splitComplexFromVec2 } from './complex.ts';
+import type { LineFftEncodeOptions } from './lineFftStrategy.ts';
 import { decomposeWorkgroups } from './utils.ts';
 
 const WORKGROUP_SIZE = 256;
@@ -11,12 +13,22 @@ export const stockhamUniformType = d.struct({
   numLines: d.u32,
   /** `0` = forward DFT twiddles `cis(−π·k/ns)`; `1` = inverse (multiply by `conj(twiddle)` = `cis(+π·k/ns)`). */
   direction: d.u32,
+  /**
+   * Multiply every written output sample by this factor (orthonormal 2D: `1/sqrt(n)` on both last
+   * forward stage and first inverse stage). Use `1` for no extra scaling.
+   */
+  outputScale: d.f32,
 });
 
 export const stockhamLayout = tgpu.bindGroupLayout({
   uniforms: { uniform: stockhamUniformType },
-  /** Precomputed `vec2(cos θ, sin θ)` for θ = −π·k/ns; layout matches {@link buildStockhamTwiddleLut}. */
+  /** High parts of twiddles; layout matches {@link buildStockhamTwiddleLutHiLo}. */
   twiddles: {
+    storage: d.arrayOf(d.vec2f),
+    access: 'readonly',
+  },
+  /** Low parts of double-single twiddle storage; same length as `twiddles`. */
+  twiddlesLo: {
     storage: d.arrayOf(d.vec2f),
     access: 'readonly',
   },
@@ -41,6 +53,7 @@ export const stockhamStageKernel = tgpu.computeFn({
     numWorkgroups: d.builtin.numWorkgroups,
   },
 })((input) => {
+  'use gpu';
   const wg = d.u32(WORKGROUP_SIZE);
   const spanX = input.numWorkgroups.x * wg;
   const spanY = input.numWorkgroups.y * spanX;
@@ -68,24 +81,26 @@ export const stockhamStageKernel = tgpu.computeFn({
   const ns = stockhamLayout.$.uniforms.ns;
   const k = j % ns;
   const twIdx = ns - d.u32(1) + k;
-  const w = stockhamLayout.$.twiddles[twIdx] as d.v2f;
+  const wh = stockhamLayout.$.twiddles[twIdx] as d.v2f;
+  const wl = stockhamLayout.$.twiddlesLo[twIdx] as d.v2f;
   const inv = stockhamLayout.$.uniforms.direction !== d.u32(0);
-  /** LUT stores `cis(−θ)`; inverse DFT uses `cis(+θ) = conj(cis(−θ))` → negate imaginary part. */
-  const wy = std.select(w.y, -w.y, inv);
+  const wsum = wh + wl;
+  const wcomb = d.vec2f(wsum.x, std.select(wsum.y, -wsum.y, inv));
+  const sp = splitComplexFromVec2(wcomb);
 
   const u = stockhamLayout.$.src[i0] as d.v2f;
   const t = stockhamLayout.$.src[i1] as d.v2f;
-  const vx = t.x * w.x - t.y * wy;
-  const vy = t.x * wy + t.y * w.x;
-  const tv = d.vec2f(vx, vy);
+  const tv = complexCmulDs(t, sp.xy, sp.zw);
 
-  const v0 = d.vec2f(u.x + tv.x, u.y + tv.y);
-  const v1 = d.vec2f(u.x - tv.x, u.y - tv.y);
+  const v0 = u + tv;
+  const v1 = u - tv;
+
+  const s = stockhamLayout.$.uniforms.outputScale;
 
   const jDivNs = d.u32(j / ns);
   const idxD = jDivNs * (ns << 1) + (j % ns);
-  stockhamLayout.$.dst[base + idxD] = d.vec2f(v0.x, v0.y);
-  stockhamLayout.$.dst[base + idxD + ns] = d.vec2f(v1.x, v1.y);
+  stockhamLayout.$.dst[base + idxD] = v0 * s;
+  stockhamLayout.$.dst[base + idxD + ns] = v1 * s;
 });
 
 /**
@@ -106,6 +121,7 @@ export const stockhamDifStageKernel = tgpu.computeFn({
     numWorkgroups: d.builtin.numWorkgroups,
   },
 })((input) => {
+  'use gpu';
   const wg = d.u32(WORKGROUP_SIZE);
   const spanX = input.numWorkgroups.x * wg;
   const spanY = input.numWorkgroups.y * spanX;
@@ -132,21 +148,26 @@ export const stockhamDifStageKernel = tgpu.computeFn({
   const ns = stockhamLayout.$.uniforms.ns;
   const k = j % ns;
   const twIdx = ns - d.u32(1) + k;
-  const w = stockhamLayout.$.twiddles[twIdx] as d.v2f;
-  /** `conj(w)` for LUT entries `w = cis(−θ)`. */
-  const wy = -w.y;
+  const wh = stockhamLayout.$.twiddles[twIdx] as d.v2f;
+  const wl = stockhamLayout.$.twiddlesLo[twIdx] as d.v2f;
+  /** `conj(w)` for LUT entries `w = cis(−θ)`; combine hi+lo then conj. */
+  const wsum = wh + wl;
+  const wcomb = d.vec2f(wsum.x, -wsum.y);
+  const sp = splitComplexFromVec2(wcomb);
 
   const u = stockhamLayout.$.src[i0] as d.v2f;
   const t = stockhamLayout.$.src[i1] as d.v2f;
 
-  const v0 = d.vec2f(u.x + t.x, u.y + t.y);
-  const diff = d.vec2f(u.x - t.x, u.y - t.y);
-  const v1 = d.vec2f(diff.x * w.x - diff.y * wy, diff.x * wy + diff.y * w.x);
+  const v0 = u + t;
+  const diff = u - t;
+  const v1 = complexCmulDs(diff, sp.xy, sp.zw);
+
+  const s = stockhamLayout.$.uniforms.outputScale;
 
   const jDivNs = d.u32(j / ns);
   const idxD = jDivNs * (ns << 1) + (j % ns);
-  stockhamLayout.$.dst[base + idxD] = d.vec2f(v0.x, v0.y);
-  stockhamLayout.$.dst[base + idxD + ns] = d.vec2f(v1.x, v1.y);
+  stockhamLayout.$.dst[base + idxD] = v0 * s;
+  stockhamLayout.$.dst[base + idxD + ns] = v1 * s;
 });
 
 export function createStockhamStagePipeline(root: TgpuRoot) {
@@ -167,7 +188,7 @@ export function stockhamStageCount(n: number): number {
   return stockhamNsValues(n).length;
 }
 
-/** Number of `vec2f` entries for {@link buildStockhamTwiddleLut} at max line length `n` (power of two). */
+/** Number of `vec2f` entries for {@link buildStockhamTwiddleLutHiLo} at max line length `n` (power of two). */
 export function stockhamTwiddleLutVec2Count(n: number): number {
   return n - 1;
 }
@@ -187,6 +208,29 @@ export function buildStockhamTwiddleLut(nMax: number): [number, number][] {
   return out;
 }
 
+/**
+ * Double-single split of each twiddle in {@link buildStockhamTwiddleLut} (f64 angle, f32 hi/lo parts).
+ */
+export function buildStockhamTwiddleLutHiLo(nMax: number): {
+  hi: [number, number][];
+  lo: [number, number][];
+} {
+  const hi: [number, number][] = [];
+  const lo: [number, number][] = [];
+  for (const ns of stockhamNsValues(nMax)) {
+    for (let k = 0; k < ns; k++) {
+      const angle = (-Math.PI * k) / ns;
+      const re = Math.cos(angle);
+      const im = Math.sin(angle);
+      const hre = Math.fround(re);
+      const him = Math.fround(im);
+      hi.push([hre, him]);
+      lo.push([Math.fround(re - hre), Math.fround(im - him)]);
+    }
+  }
+  return { hi, lo };
+}
+
 export type StockhamLineBindGroup = TgpuBindGroup<(typeof stockhamLayout)['entries']>;
 
 /**
@@ -204,7 +248,7 @@ export function dispatchStockhamLineFftStages(
   numLines: number,
   inputInA: boolean,
   nsList: readonly number[],
-  opts: { computePass: GPUComputePassEncoder; inverse?: boolean },
+  opts: LineFftEncodeOptions,
 ): boolean {
   if (nsList.length > stageUniforms.length) {
     throw new Error(
@@ -224,7 +268,29 @@ export function dispatchStockhamLineFftStages(
   let readA = inputInA;
 
   const pass = opts.computePass;
+  const inverse = opts.inverse === true;
+  const lineStride = n;
+  const direction = inverse ? 1 : 0;
+
   for (let i = 0; i < nsList.length; i++) {
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    const ns = nsList[i]!;
+    let outputScale = 1.0;
+    if (!inverse && opts.lastPassOrthonormalScale !== undefined && i === nsList.length - 1) {
+      outputScale = opts.lastPassOrthonormalScale;
+    }
+    if (inverse && opts.firstPassOrthonormalScale !== undefined && i === 0) {
+      outputScale = opts.firstPassOrthonormalScale;
+    }
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    stageUniforms[i]!.write({
+      ns,
+      n,
+      lineStride,
+      numLines,
+      direction,
+      outputScale,
+    });
     // oxlint-disable-next-line typescript/no-non-null-assertion
     const bg = readA ? bindGroupSrcA[i]! : bindGroupSrcB[i]!;
     pipeline.with(pass).with(bg).dispatchWorkgroups(wx, wy, wz);
@@ -242,7 +308,7 @@ export function dispatchStockhamLineFft(
   n: number,
   numLines: number,
   inputInA: boolean,
-  opts: { computePass: GPUComputePassEncoder; inverse?: boolean },
+  opts: LineFftEncodeOptions,
 ): boolean {
   return dispatchStockhamLineFftStages(
     pipeline,

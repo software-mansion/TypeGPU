@@ -1,6 +1,7 @@
 /**
  * Validates @typegpu/sort FFT line strategies against CPU references: 1D naive DFT and fft.js row FFT,
  * 2D separable spectrum (fft.js), reconstructed input after fft.js forward+inverse, plus radix-4 vs radix-2 cross-checks.
+ * Includes a **non-square** (128×64) round-trip with **scale=1** vs input to catch transpose/axis bugs that squares can hide.
  *
  * Run in the docs dev server: `/TypeGPU/examples#example=tests--fft-line-strategy-check` — needs WebGPU.
  */
@@ -28,7 +29,7 @@ function passFailTag(ok: boolean): string {
 }
 
 /** Bump to confirm the docs example bundle reloaded (see console). */
-const RUN_STAMP = 5;
+const RUN_STAMP = 7;
 console.info(`[fft-line-strategy-check] RUN_STAMP=${RUN_STAMP}`);
 
 /** Unnormalized forward DFT: X[k] = Σ_j x[j]·exp(-2πi·k·j/n). Interleaved re, im. */
@@ -62,105 +63,90 @@ function mulberry32(seed: number) {
   };
 }
 
-function buildHostComplex(): d.v2f[] {
+function buildHostComplex(width: number, height: number): d.v2f[] {
   const rnd = mulberry32(SEED);
   const out: d.v2f[] = [];
-  for (let i = 0; i < W * H; i++) {
+  for (let i = 0; i < width * height; i++) {
     const re = rnd() * 2 - 1 + (i === 0 ? 2 : 0);
     const im = rnd() * 2 - 1;
-    const x = i % W;
-    const y = (i / W) | 0;
-    const w = 0.15 * Math.cos((2 * Math.PI * (x * 0.0625 + y * 0.03125)) / W);
+    const x = i % width;
+    const y = (i / width) | 0;
+    const w = 0.15 * Math.cos((2 * Math.PI * (x * 0.0625 + y * 0.03125)) / width);
     out.push(d.vec2f(re + w, im));
   }
   return out;
 }
 
-function hostToFloat64Interleaved(host: d.v2f[]): Float64Array {
-  const a = new Float64Array(W * H * 2);
-  for (let i = 0; i < W * H; i++) {
+function hostToFloat64Interleaved(host: d.v2f[], width: number, height: number): Float64Array {
+  const a = new Float64Array(width * height * 2);
+  for (let i = 0; i < width * height; i++) {
     a[i * 2] = host[i].x;
     a[i * 2 + 1] = host[i].y;
   }
   return a;
 }
 
-function fft2dSeparableForward(work: Float64Array) {
-  const fftW = new FFT(W);
-  const fftH = new FFT(H);
+function fft2dSeparableForward(work: Float64Array, width: number, height: number) {
+  const fftW = new FFT(width);
+  const fftH = new FFT(height);
   const rowIn = fftW.createComplexArray() as number[];
   const rowOut = fftW.createComplexArray() as number[];
-  for (let y = 0; y < H; y++) {
-    const off = y * W * 2;
-    for (let i = 0; i < W * 2; i++) {
-      rowIn[i] = work[off + i]!;
+  for (let y = 0; y < height; y++) {
+    const off = y * width * 2;
+    for (let i = 0; i < width * 2; i++) {
+      rowIn[i] = work[off + i];
     }
     fftW.transform(rowOut, rowIn);
-    for (let i = 0; i < W * 2; i++) {
-      work[off + i] = rowOut[i]!;
+    for (let i = 0; i < width * 2; i++) {
+      work[off + i] = rowOut[i];
     }
   }
   const colIn = fftH.createComplexArray() as number[];
   const colOut = fftH.createComplexArray() as number[];
-  for (let x = 0; x < W; x++) {
-    for (let y = 0; y < H; y++) {
-      colIn[y * 2] = work[(y * W + x) * 2]!;
-      colIn[y * 2 + 1] = work[(y * W + x) * 2 + 1]!;
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      colIn[y * 2] = work[(y * width + x) * 2];
+      colIn[y * 2 + 1] = work[(y * width + x) * 2 + 1];
     }
     fftH.transform(colOut, colIn);
-    for (let y = 0; y < H; y++) {
-      work[(y * W + x) * 2] = colOut[y * 2]!;
-      work[(y * W + x) * 2 + 1] = colOut[y * 2 + 1]!;
+    for (let y = 0; y < height; y++) {
+      work[(y * width + x) * 2] = colOut[y * 2];
+      work[(y * width + x) * 2 + 1] = colOut[y * 2 + 1];
     }
   }
 }
 
-/** Inverse of {@link fft2dSeparableForward}: column IFFT then row IFFT (fft.js `inverseTransform`). */
-function fft2dSeparableInverse(work: Float64Array) {
-  const fftW = new FFT(W);
-  const fftH = new FFT(H);
+function fft2dSeparableInverse(work: Float64Array, width: number, height: number) {
+  const fftW = new FFT(width);
+  const fftH = new FFT(height);
   const colIn = fftH.createComplexArray() as number[];
   const colOut = fftH.createComplexArray() as number[];
-  for (let x = 0; x < W; x++) {
-    for (let y = 0; y < H; y++) {
-      colIn[y * 2] = work[(y * W + x) * 2]!;
-      colIn[y * 2 + 1] = work[(y * W + x) * 2 + 1]!;
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      colIn[y * 2] = work[(y * width + x) * 2];
+      colIn[y * 2 + 1] = work[(y * width + x) * 2 + 1];
     }
     fftH.inverseTransform(colOut, colIn);
-    for (let y = 0; y < H; y++) {
-      work[(y * W + x) * 2] = colOut[y * 2]!;
-      work[(y * W + x) * 2 + 1] = colOut[y * 2 + 1]!;
+    for (let y = 0; y < height; y++) {
+      work[(y * width + x) * 2] = colOut[y * 2];
+      work[(y * width + x) * 2 + 1] = colOut[y * 2 + 1];
     }
   }
   const rowIn = fftW.createComplexArray() as number[];
   const rowOut = fftW.createComplexArray() as number[];
-  for (let y = 0; y < H; y++) {
-    const off = y * W * 2;
-    for (let i = 0; i < W * 2; i++) {
-      rowIn[i] = work[off + i]!;
+  for (let y = 0; y < height; y++) {
+    const off = y * width * 2;
+    for (let i = 0; i < width * 2; i++) {
+      rowIn[i] = work[off + i];
     }
     fftW.inverseTransform(rowOut, rowIn);
-    for (let i = 0; i < W * 2; i++) {
-      work[off + i] = rowOut[i]!;
+    for (let i = 0; i < width * 2; i++) {
+      work[off + i] = rowOut[i];
     }
   }
 }
 
 type Vec2Like = { x: number; y: number };
-
-function gpuGpuDiff(a: Vec2Like[], b: Vec2Like[]): { maxAbs: number; rms: number } {
-  let maxAbs = 0;
-  let sumSq = 0;
-  const n = W * H;
-  for (let i = 0; i < n; i++) {
-    const dr = a[i].x - b[i].x;
-    const di = a[i].y - b[i].y;
-    const e = Math.hypot(dr, di);
-    maxAbs = Math.max(maxAbs, e);
-    sumSq += dr * dr + di * di;
-  }
-  return { maxAbs, rms: Math.sqrt(sumSq / n) };
-}
 
 function gpuGpuDiffLen(a: Vec2Like[], b: Vec2Like[], len: number): { maxAbs: number; rms: number } {
   let maxAbs = 0;
@@ -178,11 +164,12 @@ function gpuGpuDiffLen(a: Vec2Like[], b: Vec2Like[], len: number): { maxAbs: num
 function diffStats(
   gpu: Vec2Like[],
   cpu: Float64Array,
+  len: number,
   cpuScale: number,
 ): { maxAbs: number; rms: number } {
   let maxAbs = 0;
   let sumSq = 0;
-  const n = W * H;
+  const n = len;
   for (let i = 0; i < n; i++) {
     const gr = gpu[i].x;
     const gi = gpu[i].y;
@@ -444,10 +431,10 @@ for (const n of [4, 16, 64] as const) {
 bufA1d.destroy();
 bufB1d.destroy();
 
-const host = buildHostComplex();
-const inputInterleaved = hostToFloat64Interleaved(host);
+const host = buildHostComplex(W, H);
+const inputInterleaved = hostToFloat64Interleaved(host, W, H);
 const cpuSpectrum = new Float64Array(inputInterleaved);
-fft2dSeparableForward(cpuSpectrum);
+fft2dSeparableForward(cpuSpectrum, W, H);
 
 const fftRadix2 = createFft2d(root, {
   width: W,
@@ -477,18 +464,18 @@ const outRadix2 = (await fftRadix2.output().read()) as Vec2Like[];
 const outRadix4 = (await fftRadix4.output().read()) as Vec2Like[];
 
 let spectrumScale = 1;
-let fwdR2vsCpu = diffStats(outRadix2, cpuSpectrum, spectrumScale);
+let fwdR2vsCpu = diffStats(outRadix2, cpuSpectrum, W * H, spectrumScale);
 if (fwdR2vsCpu.maxAbs > ERR_PASS_MAX * 50) {
   const s = fitScale1d(outRadix2, cpuSpectrum, W * H);
   if (Number.isFinite(s) && Math.abs(s - 1) > 0.01) {
     spectrumScale = s;
-    fwdR2vsCpu = diffStats(outRadix2, cpuSpectrum, spectrumScale);
+    fwdR2vsCpu = diffStats(outRadix2, cpuSpectrum, W * H, spectrumScale);
     console.info(
       `[fft-line-strategy-check] applied spectrum scale=${spectrumScale.toExponential(6)} (GPU vs CPU fft.js forward)`,
     );
   }
 }
-const fwdR4vsCpu = diffStats(outRadix4, cpuSpectrum, spectrumScale);
+const fwdR4vsCpu = diffStats(outRadix4, cpuSpectrum, W * H, spectrumScale);
 const passFwdR2 = fwdR2vsCpu.maxAbs < ERR_PASS_MAX && fwdR2vsCpu.rms < ERR_PASS_RMS;
 const passFwdR4 = fwdR4vsCpu.maxAbs < ERR_PASS_MAX && fwdR4vsCpu.rms < ERR_PASS_RMS;
 console.info(
@@ -498,7 +485,12 @@ console.info(
   `[fft-line-strategy-check] 2D forward radix-4 vs CPU (fft.js separable spectrum): maxAbs=${fwdR4vsCpu.maxAbs.toExponential(3)} rms=${fwdR4vsCpu.rms.toExponential(3)} → ${passFailTag(passFwdR4)}`,
 );
 
-const parityR4 = diffStats(outRadix4, Float64Array.from(outRadix2.flatMap((v) => [v.x, v.y])), 1);
+const parityR4 = diffStats(
+  outRadix4,
+  Float64Array.from(outRadix2.flatMap((v) => [v.x, v.y])),
+  W * H,
+  1,
+);
 const parityR4Pass = parityR4.maxAbs < ERR_PASS_MAX && parityR4.rms < ERR_PASS_RMS;
 console.info(
   `[fft-line-strategy-check] 2D forward radix-4 vs radix-2 (cross): maxAbs=${parityR4.maxAbs.toExponential(3)} rms=${parityR4.rms.toExponential(3)} → ${passFailTag(parityR4Pass)}`,
@@ -515,26 +507,26 @@ submitEncodeInverse(device, fftRadix4);
 const outRadix4Rt = (await fftRadix4.output().read()) as Vec2Like[];
 
 const cpuRoundTrip = new Float64Array(inputInterleaved);
-fft2dSeparableForward(cpuRoundTrip);
-fft2dSeparableInverse(cpuRoundTrip);
+fft2dSeparableForward(cpuRoundTrip, W, H);
+fft2dSeparableInverse(cpuRoundTrip, W, H);
 const cpuRtSelf = diffFloat64Interleaved(cpuRoundTrip, inputInterleaved, W * H);
 console.info(
   `[fft-line-strategy-check] CPU fft.js forward+inverse vs input: maxAbs=${cpuRtSelf.maxAbs.toExponential(3)} rms=${cpuRtSelf.rms.toExponential(3)} → ${passFailTag(cpuRtSelf.maxAbs < ERR_PASS_MAX)}`,
 );
 
 let inputScale = 1;
-let rtR2vsCpu = diffStats(outRadix2Rt, inputInterleaved, inputScale);
+let rtR2vsCpu = diffStats(outRadix2Rt, inputInterleaved, W * H, inputScale);
 if (rtR2vsCpu.maxAbs > ERR_PASS_MAX * 50) {
   const s = fitScale1d(outRadix2Rt, inputInterleaved, W * H);
   if (Number.isFinite(s) && Math.abs(s - 1) > 0.01) {
     inputScale = s;
-    rtR2vsCpu = diffStats(outRadix2Rt, inputInterleaved, inputScale);
+    rtR2vsCpu = diffStats(outRadix2Rt, inputInterleaved, W * H, inputScale);
     console.info(
       `[fft-line-strategy-check] applied round-trip scale=${inputScale.toExponential(6)} (GPU vs CPU fft.js input)`,
     );
   }
 }
-const rtR4vsCpu = diffStats(outRadix4Rt, inputInterleaved, inputScale);
+const rtR4vsCpu = diffStats(outRadix4Rt, inputInterleaved, W * H, inputScale);
 const passRtR2 = rtR2vsCpu.maxAbs < ERR_PASS_MAX && rtR2vsCpu.rms < ERR_PASS_RMS;
 const passRtR4 = rtR4vsCpu.maxAbs < ERR_PASS_MAX && rtR4vsCpu.rms < ERR_PASS_RMS;
 console.info(
@@ -544,11 +536,85 @@ console.info(
   `[fft-line-strategy-check] round-trip radix-4 vs CPU (fft.js input): maxAbs=${rtR4vsCpu.maxAbs.toExponential(3)} rms=${rtR4vsCpu.rms.toExponential(3)} → ${passFailTag(passRtR4)}`,
 );
 
-const rtParity = gpuGpuDiff(outRadix4Rt, outRadix2Rt);
+const rtParity = gpuGpuDiffLen(outRadix4Rt, outRadix2Rt, W * H);
 const rtPass = rtParity.maxAbs < ERR_PASS_MAX && rtParity.rms < ERR_PASS_RMS;
 console.info(
   `[fft-line-strategy-check] round-trip radix-4 vs radix-2 (cross): maxAbs=${rtParity.maxAbs.toExponential(3)} rms=${rtParity.rms.toExponential(3)} → ${passFailTag(rtPass)}`,
 );
+
+/**
+ * Non-square grid (2:1 aspect, powers of two): same round-trip checks as the square block.
+ * Catches transpose / axis scaling mistakes that can cancel when `width === height`.
+ */
+const RECT_W = 128;
+const RECT_H = 64;
+const rectArea = RECT_W * RECT_H;
+const hostRect = buildHostComplex(RECT_W, RECT_H);
+const inputRectInterleaved = hostToFloat64Interleaved(hostRect, RECT_W, RECT_H);
+
+const cpuRectRoundTrip = new Float64Array(inputRectInterleaved);
+fft2dSeparableForward(cpuRectRoundTrip, RECT_W, RECT_H);
+fft2dSeparableInverse(cpuRectRoundTrip, RECT_W, RECT_H);
+const cpuRectRtSelf = diffFloat64Interleaved(cpuRectRoundTrip, inputRectInterleaved, rectArea);
+console.info(
+  `[fft-line-strategy-check] CPU fft.js forward+inverse (non-square ${RECT_W}×${RECT_H}) vs input: maxAbs=${cpuRectRtSelf.maxAbs.toExponential(3)} rms=${cpuRectRtSelf.rms.toExponential(3)} → ${passFailTag(cpuRectRtSelf.maxAbs < ERR_PASS_MAX && cpuRectRtSelf.rms < ERR_PASS_RMS)}`,
+);
+
+const fftRect2 = createFft2d(root, {
+  width: RECT_W,
+  height: RECT_H,
+  lineFftStrategyFactory: createStockhamRadix2LineStrategy,
+});
+const fftRect4 = createFft2d(root, {
+  width: RECT_W,
+  height: RECT_H,
+  lineFftStrategyFactory: createStockhamRadix4LineStrategy,
+});
+
+for (let i = 0; i < WARMUP; i++) {
+  fftRect2.input.write(hostRect);
+  submitEncodeForward(device, fftRect2);
+  fftRect4.input.write(hostRect);
+  submitEncodeForward(device, fftRect4);
+}
+
+fftRect2.input.write(hostRect);
+submitEncodeForward(device, fftRect2);
+submitEncodeInverse(device, fftRect2);
+const outRect2Rt = (await fftRect2.output().read()) as Vec2Like[];
+
+fftRect4.input.write(hostRect);
+submitEncodeForward(device, fftRect4);
+submitEncodeInverse(device, fftRect4);
+const outRect4Rt = (await fftRect4.output().read()) as Vec2Like[];
+
+/** Strict identity: scale fixed at 1 so a systematic gain bug shows up as FAIL without auto-fit. */
+const rtRectStrictR2 = diffStats(outRect2Rt, inputRectInterleaved, rectArea, 1);
+const rtRectStrictR4 = diffStats(outRect4Rt, inputRectInterleaved, rectArea, 1);
+const rtRectParity = gpuGpuDiffLen(outRect4Rt, outRect2Rt, rectArea);
+
+const sRect = fitScale1d(outRect2Rt, inputRectInterleaved, rectArea);
+const rectScaleDiag =
+  Number.isFinite(sRect) && Math.abs(sRect - 1) > 0.01
+    ? ` | diagnostic fitScale=${sRect.toExponential(6)} (≠1 suggests systematic scale error)`
+    : '';
+
+const passRectR2 = rtRectStrictR2.maxAbs < ERR_PASS_MAX && rtRectStrictR2.rms < ERR_PASS_RMS;
+const passRectR4 = rtRectStrictR4.maxAbs < ERR_PASS_MAX && rtRectStrictR4.rms < ERR_PASS_RMS;
+const passRectParity = rtRectParity.maxAbs < ERR_PASS_MAX && rtRectParity.rms < ERR_PASS_RMS;
+
+console.info(
+  `[fft-line-strategy-check] non-square ${RECT_W}×${RECT_H} round-trip radix-2 vs input (scale=1): maxAbs=${rtRectStrictR2.maxAbs.toExponential(3)} rms=${rtRectStrictR2.rms.toExponential(3)}${rectScaleDiag} → ${passFailTag(passRectR2)}`,
+);
+console.info(
+  `[fft-line-strategy-check] non-square ${RECT_W}×${RECT_H} round-trip radix-4 vs input (scale=1): maxAbs=${rtRectStrictR4.maxAbs.toExponential(3)} rms=${rtRectStrictR4.rms.toExponential(3)} → ${passFailTag(passRectR4)}`,
+);
+console.info(
+  `[fft-line-strategy-check] non-square ${RECT_W}×${RECT_H} round-trip radix-4 vs radix-2 (cross): maxAbs=${rtRectParity.maxAbs.toExponential(3)} rms=${rtRectParity.rms.toExponential(3)} → ${passFailTag(passRectParity)}`,
+);
+
+fftRect2.destroy();
+fftRect4.destroy();
 
 fftRadix2.destroy();
 fftRadix4.destroy();

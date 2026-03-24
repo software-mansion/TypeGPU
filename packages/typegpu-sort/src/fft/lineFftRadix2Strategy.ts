@@ -1,7 +1,7 @@
 import type { TgpuBuffer, UniformFlag } from 'typegpu';
 import { d } from 'typegpu';
 import {
-  buildStockhamTwiddleLut,
+  buildStockhamTwiddleLutHiLo,
   createStockhamStagePipeline,
   dispatchStockhamLineFft,
   type StockhamLineBindGroup,
@@ -21,9 +21,12 @@ export function createStockhamRadix2LineStrategy(
   ctx: LineFftStrategyFactoryContext,
 ): LineFftStrategy {
   const { root, nMax, width: W, height: H, bufA, bufB } = ctx;
-  const twiddleLutLen = stockhamTwiddleLutVec2Count(nMax);
-  const twiddleLut = root.createBuffer(d.arrayOf(d.vec2f, twiddleLutLen)).$usage('storage');
-  twiddleLut.write(buildStockhamTwiddleLut(nMax).map(([x, y]) => d.vec2f(x, y)));
+  const radix2LutLen = stockhamTwiddleLutVec2Count(nMax);
+  const radix2Lut = root.createBuffer(d.arrayOf(d.vec2f, radix2LutLen)).$usage('storage');
+  const radix2LutLo = root.createBuffer(d.arrayOf(d.vec2f, radix2LutLen)).$usage('storage');
+  const { hi, lo } = buildStockhamTwiddleLutHiLo(nMax);
+  radix2Lut.write(hi.map(([x, y]) => d.vec2f(x, y)));
+  radix2LutLo.write(lo.map(([x, y]) => d.vec2f(x, y)));
 
   const maxStockhamStages = stockhamStageCount(nMax);
   const stockhamPipeline = createStockhamStagePipeline(root);
@@ -39,7 +42,8 @@ export function createStockhamRadix2LineStrategy(
     const bindSrcA: StockhamLineBindGroup[] = uniforms.map((uniforms) =>
       root.createBindGroup(stockhamLayout, {
         uniforms,
-        twiddles: twiddleLut,
+        twiddles: radix2Lut,
+        twiddlesLo: radix2LutLo,
         src: bufA,
         dst: bufB,
       }),
@@ -47,7 +51,8 @@ export function createStockhamRadix2LineStrategy(
     const bindSrcB: StockhamLineBindGroup[] = uniforms.map((uniforms) =>
       root.createBindGroup(stockhamLayout, {
         uniforms,
-        twiddles: twiddleLut,
+        twiddles: radix2Lut,
+        twiddlesLo: radix2LutLo,
         src: bufB,
         dst: bufA,
       }),
@@ -73,7 +78,15 @@ export function createStockhamRadix2LineStrategy(
     const direction = inverse ? 1 : 0;
     for (let i = 0; i < nsList.length; i++) {
       // oxlint-disable-next-line typescript/no-non-null-assertion
-      pool.uniforms[i]!.write({ ns: nsList[i]!, n, lineStride, numLines, direction });
+      pool.uniforms[i]!.write({
+        // oxlint-disable-next-line typescript/no-non-null-assertion
+        ns: nsList[i]!,
+        n,
+        lineStride,
+        numLines,
+        direction,
+        outputScale: 1.0,
+      });
     }
   }
 
@@ -102,7 +115,8 @@ export function createStockhamRadix2LineStrategy(
       );
     },
     destroy() {
-      twiddleLut.destroy();
+      radix2Lut.destroy();
+      radix2LutLo.destroy();
       for (const p of stockhamPools) {
         for (const u of p.uniforms) {
           u.destroy();

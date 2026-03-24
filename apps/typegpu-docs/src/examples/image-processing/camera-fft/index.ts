@@ -146,7 +146,7 @@ const filterParamsType = d.struct({
   padHMask: d.u32,
   /** Normalized low-pass radius vs max toroidal √(hw²+hh²); keep r ≤ cutoff. */
   lowPassCutoff: d.f32,
-  /** Normalized high-pass inner radius; keep r > cutoff (DC at r = 0 is removed when cutoff = 0). */
+  /** Normalized high-pass inner radius; keep `r > cutoff`. `0` = high-pass **off** (do not attenuate DC or low r). */
   highPassCutoff: d.f32,
   /** 1 when `Fft2d.skipFinalTranspose`: spectrum is `W×H` row-major with stride `padH` (`r*padH+c`), not `y*padW+x`. */
   swapSpectrumAxes: d.u32,
@@ -199,7 +199,9 @@ const filterKernel = tgpu.computeFn({
   const lowC = filterLayout.$.params.lowPassCutoff * rMax;
   const highC = filterLayout.$.params.highPassCutoff * rMax;
   const lowMask = std.select(d.f32(0), d.f32(1), r <= lowC);
-  const highMask = std.select(d.f32(0), d.f32(1), r > highC);
+  const highPassOff = filterLayout.$.params.highPassCutoff <= d.f32(0);
+  const highMaskInner = std.select(d.f32(0), d.f32(1), r > highC);
+  const highMask = std.select(highMaskInner, d.f32(1), highPassOff);
   const mask = lowMask * highMask;
   const c = filterLayout.$.spectrum[tid];
   filterLayout.$.spectrum[tid] = d.vec2f(c.x * mask, c.y * mask);
@@ -255,16 +257,15 @@ const magKernel = tgpu.computeFn({
     magLayout.$.params.swapSpectrumAxes !== d.u32(0),
   );
   const cShift = magLayout.$.spectrum[srcTid];
-  const len = std.sqrt(cShift.x * cShift.x + cShift.y * cShift.y);
-  /** Neutral at `exposure = 0` matches the former default `log(1+|·|) * 0.2` scale. */
-  const logv =
-    std.log(1.0 + len) * 0.2 * std.exp2(magLayout.$.params.exposure);
+  const lenRaw = std.sqrt(cShift.x * cShift.x + cShift.y * cShift.y);
+  /** Log stretch tuned on these magnitudes (`log(1+|·|) * 0.2`). */
+  const logv = std.log(1.0 + lenRaw) * 0.2 * std.exp2(magLayout.$.params.exposure);
   const cv = std.clamp(logv, 0.0, 1.0);
   /** `cv` from log-magnitude; L ∈ [0.04, 1]; chroma → 0 at max `cv` so peaks go neutral white. */
   const L = 0.04 + cv * (1.0 - 0.04);
   const chroma = cv * (1.0 - cv) * 0.32;
   /** Oklab a,b = chroma × unit phase — same as chroma·(cos θ, sin θ) with θ = atan2(im, re), without trig. */
-  const invLen = 1.0 / std.max(len, 1e-20);
+  const invLen = 1.0 / std.max(lenRaw, 1e-20);
   const lab = d.vec3f(L, chroma * invLen * cShift.x, chroma * invLen * cShift.y);
   const rgb = oklabToLinearRgb(oklabGamutClip.adaptiveL05(lab));
   std.textureStore(magLayout.$.outTex, d.vec2u(xLin, yLin), d.vec4f(rgb, 1));
@@ -275,7 +276,7 @@ const spatialParamsType = d.struct({
   padH: d.u32,
   padWLog2: d.u32,
   padWMask: d.u32,
-  /** `1 / (padW * padH)` — unnormalized inverse scaling. */
+  /** Linear gain on real part after inverse FFT (`1` = full amplitude in buffer). */
   invSize: d.f32,
   /** Same EV as spectrum: linear sample is multiplied by `exp2(exposure)` before clamp. */
   exposure: d.f32,
@@ -490,7 +491,7 @@ let applyInverseFft = false;
 let exposureEv = 0;
 /** Normalized low-pass radius vs max toroidal radius (1 = no attenuation). */
 let lowPassCutoffNorm = 1;
-/** Normalized high-pass inner radius (0 = no AC attenuation from this term). */
+/** Normalized high-pass inner radius (`0` = high-pass off; spectrum passes through to low-pass only). */
 let highPassCutoffNorm = 0;
 /** Separable Hann window on camera ROI before FFT (reduces periodic-boundary cross in spectrum). */
 let applyEdgeWindow = false;
@@ -757,7 +758,7 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
       padH,
       padWLog2,
       padWMask: padW - 1,
-      invSize: 1 / (padW * padH),
+      invSize: 1,
       exposure: exposureEv,
     });
   }
@@ -868,8 +869,8 @@ export const controls = defineControls({
   },
   exposure: {
     initial: exposureEv,
-    min: -4,
-    max: 4,
+    min: -8,
+    max: 8,
     step: 0.05,
     onSliderChange: (value) => {
       exposureEv = value;

@@ -1,5 +1,10 @@
 import type { StorageFlag, TgpuBindGroup, TgpuBuffer, TgpuRoot, UniformFlag } from 'typegpu';
 import { d } from 'typegpu';
+import {
+  complexVec2ScaleLayout,
+  complexVec2ScaleUniformType,
+  createComplexVec2ScalePipeline,
+} from './complexVec2Scale.ts';
 import type { LineFftStrategyFactory } from './lineFftStrategy.ts';
 import { createStockhamRadix4LineStrategy } from './lineFftRadix4Strategy.ts';
 import {
@@ -8,6 +13,7 @@ import {
   transposeLayout,
   transposeUniformType,
 } from './transpose.ts';
+import { decomposeWorkgroups } from './utils.ts';
 
 type TransposeBgPair = {
   bgSrcA: TgpuBindGroup<(typeof transposeLayout)['entries']>;
@@ -58,10 +64,15 @@ export type Fft2d = {
   /**
    * Full 2D forward from {@link input} (`buffers[0]`). Records dispatches on `computePass`; caller must
    * `end` the pass and `submit` the encoder.
+   *
+   * **Spectrum:** unnormalized separable complex DFT (same convention as typical reference FFTs such as
+   * fft.js). Line FFT stages use `1/√n` scaling internally for stability, then the result is scaled to
+   * standard DFT units before return.
    */
   encodeForward(computePass: GPUComputePassEncoder): void;
   /**
-   * Inverse DFT of the spectrum from the last forward (same buffers). Records on `computePass`.
+   * Inverse DFT of the spectrum from the last forward (same buffers). Expects the same unnormalized
+   * spectrum units as {@link encodeForward} output. Records on `computePass`.
    */
   encodeInverse(computePass: GPUComputePassEncoder): void;
   destroy(): void;
@@ -124,6 +135,58 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
   const transposePairInv1 = mkTransposePair(transposeUniformInv1);
   const transposePairInvAux = mkTransposePair(transposeUniformInvAux);
 
+  const spectrumToStandardUnits = Math.sqrt(W * H);
+  const spectrumFromStandardUnits = 1 / spectrumToStandardUnits;
+
+  const scalePipeline = createComplexVec2ScalePipeline(root);
+
+  const scaleUpUniform = root.createBuffer(complexVec2ScaleUniformType).$usage('uniform');
+  scaleUpUniform.write({ scale: spectrumToStandardUnits });
+  const scaleUpBgAtoB = root.createBindGroup(complexVec2ScaleLayout, {
+    uniforms: scaleUpUniform,
+    src: bufA,
+    dst: bufB,
+  });
+  const scaleUpBgBtoA = root.createBindGroup(complexVec2ScaleLayout, {
+    uniforms: scaleUpUniform,
+    src: bufB,
+    dst: bufA,
+  });
+
+  const scaleDownUniform = root.createBuffer(complexVec2ScaleUniformType).$usage('uniform');
+  scaleDownUniform.write({ scale: spectrumFromStandardUnits });
+  const scaleDownBgAtoB = root.createBindGroup(complexVec2ScaleLayout, {
+    uniforms: scaleDownUniform,
+    src: bufA,
+    dst: bufB,
+  });
+  const scaleDownBgBtoA = root.createBindGroup(complexVec2ScaleLayout, {
+    uniforms: scaleDownUniform,
+    src: bufB,
+    dst: bufA,
+  });
+
+  function scaleUp(inputInA: boolean, computePass: GPUComputePassEncoder): boolean {
+    const bg = inputInA ? scaleUpBgAtoB : scaleUpBgBtoA;
+    scalePipeline
+      .with(computePass)
+      .with(bg)
+      .dispatchWorkgroups(...decomposeWorkgroups(Math.ceil(count / 256)));
+    return !inputInA;
+  }
+
+  function scaleDown(inputInA: boolean, computePass: GPUComputePassEncoder): boolean {
+    const bg = inputInA ? scaleDownBgAtoB : scaleDownBgBtoA;
+    scalePipeline
+      .with(computePass)
+      .with(bg)
+      .dispatchWorkgroups(...decomposeWorkgroups(Math.ceil(count / 256)));
+    return !inputInA;
+  }
+
+  const invSqrtW = 1 / Math.sqrt(W);
+  const invSqrtH = 1 / Math.sqrt(H);
+
   // Transpose uniforms (constant for fixed W×H)
   transposeUniformFwd0.write({ srcCols: W, srcRows: H });
   transposeUniformFwd1.write({ srcCols: H, srcRows: W });
@@ -131,12 +194,22 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
   transposeUniformInv1.write({ srcCols: H, srcRows: W });
   transposeUniformInvAux.write({ srcCols: H, srcRows: W });
 
+  /**
+   * GPU kernels are **unnormalized** (`F_inv(F(x)) = N·x`), so orthonormal inverse also needs `1/√N`
+   * (not `√N`) — same factor as forward. `√N` was wrong: it produced round-trip = `N·x` per axis.
+   */
+
   let resultInA = true;
 
   function inverseFromSkipSpectrumDirect(computePass: GPUComputePassEncoder) {
     let inA = resultInA;
 
-    inA = lineFft.dispatchLineFft(H, W, inA, { computePass, inverse: true, lineUniformSlot: 3 });
+    inA = lineFft.dispatchLineFft(H, W, inA, {
+      computePass,
+      inverse: true,
+      lineUniformSlot: 3,
+      firstPassOrthonormalScale: invSqrtH,
+    });
 
     dispatchTranspose(
       transposePipeline,
@@ -147,13 +220,21 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
     );
     inA = !inA;
 
-    inA = lineFft.dispatchLineFft(W, H, inA, { computePass, inverse: true, lineUniformSlot: 2 });
+    inA = lineFft.dispatchLineFft(W, H, inA, {
+      computePass,
+      inverse: true,
+      lineUniformSlot: 2,
+      firstPassOrthonormalScale: invSqrtW,
+    });
 
     resultInA = inA;
   }
 
   function applyRows1DForward(inA: boolean, computePass: GPUComputePassEncoder): boolean {
-    return lineFft.dispatchLineFft(W, H, inA, { computePass });
+    return lineFft.dispatchLineFft(W, H, inA, {
+      computePass,
+      lastPassOrthonormalScale: invSqrtW,
+    });
   }
 
   function applyRows1DInversePass(inA: boolean, computePass: GPUComputePassEncoder): boolean {
@@ -161,6 +242,7 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
       computePass,
       inverse: true,
       lineUniformSlot: 2,
+      firstPassOrthonormalScale: invSqrtW,
     });
   }
 
@@ -174,7 +256,11 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
     );
     const afterTInA = !inA;
 
-    const midInA = lineFft.dispatchLineFft(H, W, afterTInA, { computePass, lineUniformSlot: 1 });
+    const midInA = lineFft.dispatchLineFft(H, W, afterTInA, {
+      computePass,
+      lineUniformSlot: 1,
+      lastPassOrthonormalScale: invSqrtH,
+    });
 
     dispatchTranspose(
       transposePipeline,
@@ -200,6 +286,7 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
       computePass,
       inverse: true,
       lineUniformSlot: 3,
+      firstPassOrthonormalScale: invSqrtH,
     });
 
     dispatchTranspose(
@@ -224,7 +311,11 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
       computePass,
     );
     const afterTInA = !inA;
-    return lineFft.dispatchLineFft(H, W, afterTInA, { computePass, lineUniformSlot: 1 });
+    return lineFft.dispatchLineFft(H, W, afterTInA, {
+      computePass,
+      lineUniformSlot: 1,
+      lastPassOrthonormalScale: invSqrtH,
+    });
   }
 
   function forwardFromFullInverse(initialInA: boolean, computePass: GPUComputePassEncoder) {
@@ -272,8 +363,10 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
     },
     encodeForward(computePass) {
       forwardFrom(true, computePass);
+      resultInA = scaleUp(resultInA, computePass);
     },
     encodeInverse(computePass) {
+      resultInA = scaleDown(resultInA, computePass);
       if (skipFinalTranspose) {
         inverseFromSkipSpectrumDirect(computePass);
       } else {
@@ -285,6 +378,8 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
       lineFft.destroy();
       bufA.destroy();
       bufB.destroy();
+      scaleUpUniform.destroy();
+      scaleDownUniform.destroy();
       transposeUniformFwd0.destroy();
       transposeUniformFwd1.destroy();
       transposeUniformInv0.destroy();
