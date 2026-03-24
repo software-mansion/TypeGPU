@@ -9,8 +9,8 @@ import tgpu, { common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 /**
- * Pipeline: camera → luminance (optional separable Hann window) → `encodeForward` → radial low-pass on the
- * spectrum buffer → optional `encodeInverse` (spatial) or log-magnitude spectrum colored in **Oklab**
+ * Pipeline: camera → luminance (optional separable Hann window) → `encodeForward` → radial low- or high-pass on the
+ * spectrum buffer (independent radial low- and high-pass masks, multiplied) → optional `encodeInverse` (spatial) or log-magnitude spectrum colored in **Oklab**
  * (lightness from magnitude, hue from complex phase via `a,b`).
  * Line FFT: **radix-4 (default)** (faster Stockham-style radix-4 + optional radix-2 tail) or **radix-2**
  * (pure Stockham radix-2). One compute pass chains fill, FFT, filter, inverse FFT, and spatial/mag; then a
@@ -144,8 +144,10 @@ const filterParamsType = d.struct({
   padWMask: d.u32,
   padHLog2: d.u32,
   padHMask: d.u32,
-  /** 1 = pass all bins; 0 = DC only. Scales max toroidal radius √(hw²+hh²), hw = padW/2, hh = padH/2. */
-  cutoffRadius: d.f32,
+  /** Normalized low-pass radius vs max toroidal √(hw²+hh²); keep r ≤ cutoff. */
+  lowPassCutoff: d.f32,
+  /** Normalized high-pass inner radius; keep r > cutoff (DC at r = 0 is removed when cutoff = 0). */
+  highPassCutoff: d.f32,
   /** 1 when `Fft2d.skipFinalTranspose`: spectrum is `W×H` row-major with stride `padH` (`r*padH+c`), not `y*padW+x`. */
   swapSpectrumAxes: d.u32,
 });
@@ -193,9 +195,12 @@ const filterKernel = tgpu.computeFn({
   const hw = d.f32(halfW);
   const hh = d.f32(halfH);
   const rMax = std.sqrt(hw * hw + hh * hh);
-  const cutoff = filterLayout.$.params.cutoffRadius * rMax;
   const r = std.sqrt(r2);
-  const mask = std.select(d.f32(0), d.f32(1), r <= cutoff);
+  const lowC = filterLayout.$.params.lowPassCutoff * rMax;
+  const highC = filterLayout.$.params.highPassCutoff * rMax;
+  const lowMask = std.select(d.f32(0), d.f32(1), r <= lowC);
+  const highMask = std.select(d.f32(0), d.f32(1), r > highC);
+  const mask = lowMask * highMask;
   const c = filterLayout.$.spectrum[tid];
   filterLayout.$.spectrum[tid] = d.vec2f(c.x * mask, c.y * mask);
 });
@@ -203,7 +208,8 @@ const filterKernel = tgpu.computeFn({
 const magParamsType = d.struct({
   padW: d.u32,
   padH: d.u32,
-  gain: d.f32,
+  /** Exposure in stops (EV): brightness scales as `exp2(exposure)` on top of the neutral log stretch. */
+  exposure: d.f32,
   padWLog2: d.u32,
   padWMask: d.u32,
   swapSpectrumAxes: d.u32,
@@ -250,7 +256,9 @@ const magKernel = tgpu.computeFn({
   );
   const cShift = magLayout.$.spectrum[srcTid];
   const len = std.sqrt(cShift.x * cShift.x + cShift.y * cShift.y);
-  const logv = std.log(1.0 + len) * magLayout.$.params.gain;
+  /** Neutral at `exposure = 0` matches the former default `log(1+|·|) * 0.2` scale. */
+  const logv =
+    std.log(1.0 + len) * 0.2 * std.exp2(magLayout.$.params.exposure);
   const cv = std.clamp(logv, 0.0, 1.0);
   /** `cv` from log-magnitude; L ∈ [0.04, 1]; chroma → 0 at max `cv` so peaks go neutral white. */
   const L = 0.04 + cv * (1.0 - 0.04);
@@ -269,6 +277,8 @@ const spatialParamsType = d.struct({
   padWMask: d.u32,
   /** `1 / (padW * padH)` — unnormalized inverse scaling. */
   invSize: d.f32,
+  /** Same EV as spectrum: linear sample is multiplied by `exp2(exposure)` before clamp. */
+  exposure: d.f32,
 });
 
 const spatialLayout = tgpu.bindGroupLayout({
@@ -297,7 +307,7 @@ const spatialKernel = tgpu.computeFn({
 
   const c = spatialLayout.$.spectrum[tid];
   const inv = spatialLayout.$.params.invSize;
-  const g = std.clamp(c.x * inv, 0.0, 1.0);
+  const g = std.clamp(c.x * inv * std.exp2(spatialLayout.$.params.exposure), 0.0, 1.0);
   const padWLog2 = spatialLayout.$.params.padWLog2;
   const padWMask = spatialLayout.$.params.padWMask;
   const x = tid & padWMask;
@@ -476,9 +486,12 @@ const renderPipeline = root.createRenderPipeline({
 
 /** When true: after forward FFT, run inverse and show grayscale spatial reconstruction. When false: show log-magnitude spectrum (forward only). */
 let applyInverseFft = false;
-let gainValue = 0.2;
-/** Normalized low-pass cutoff vs max toroidal radius (1 = no filtering). */
-let cutoffRadiusNorm = 1;
+/** Exposure in stops (EV), −4…+4; 0 is neutral vs the legacy spectrum scale. */
+let exposureEv = 0;
+/** Normalized low-pass radius vs max toroidal radius (1 = no attenuation). */
+let lowPassCutoffNorm = 1;
+/** Normalized high-pass inner radius (0 = no AC attenuation from this term). */
+let highPassCutoffNorm = 0;
 /** Separable Hann window on camera ROI before FFT (reduces periodic-boundary cross in spectrum). */
 let applyEdgeWindow = false;
 let lastFillUniformKey = '';
@@ -723,20 +736,20 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
     });
   }
 
-  const magUniformKey = `${padW}x${padH}x${gainValue}x${activeFft.skipFinalTranspose}`;
+  const magUniformKey = `${padW}x${padH}x${exposureEv}x${activeFft.skipFinalTranspose}`;
   if (magUniformKey !== lastMagUniformKey) {
     lastMagUniformKey = magUniformKey;
     magParams.write({
       padW,
       padH,
-      gain: gainValue,
+      exposure: exposureEv,
       padWLog2,
       padWMask: padW - 1,
       swapSpectrumAxes: activeFft.skipFinalTranspose ? 1 : 0,
     });
   }
 
-  const spatialUniformKey = `${padW}x${padH}x${gainValue}`;
+  const spatialUniformKey = `${padW}x${padH}x${exposureEv}`;
   if (spatialUniformKey !== lastSpatialUniformKey) {
     lastSpatialUniformKey = spatialUniformKey;
     spatialParams.write({
@@ -745,10 +758,11 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
       padWLog2,
       padWMask: padW - 1,
       invSize: 1 / (padW * padH),
+      exposure: exposureEv,
     });
   }
 
-  const filterUniformKey = `${padW}x${padH}x${cutoffRadiusNorm}x${activeFft.skipFinalTranspose}`;
+  const filterUniformKey = `${padW}x${padH}x${lowPassCutoffNorm}x${highPassCutoffNorm}x${activeFft.skipFinalTranspose}`;
   if (filterUniformKey !== lastFilterUniformKey) {
     lastFilterUniformKey = filterUniformKey;
     filterParams.write({
@@ -758,7 +772,8 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
       padWMask: padW - 1,
       padHLog2: log2Int(padH),
       padHMask: padH - 1,
-      cutoffRadius: cutoffRadiusNorm,
+      lowPassCutoff: lowPassCutoffNorm,
+      highPassCutoff: highPassCutoffNorm,
       swapSpectrumAxes: activeFft.skipFinalTranspose ? 1 : 0,
     });
   }
@@ -851,24 +866,34 @@ export const controls = defineControls({
       lineFftMode = value as LineFftMode;
     },
   },
-  gain: {
-    initial: gainValue,
-    min: 0.01,
-    max: 0.45,
-    step: 0.005,
+  exposure: {
+    initial: exposureEv,
+    min: -4,
+    max: 4,
+    step: 0.05,
     onSliderChange: (value) => {
-      gainValue = value;
+      exposureEv = value;
       lastMagUniformKey = '';
       lastSpatialUniformKey = '';
     },
   },
-  cutoffRadius: {
-    initial: 1,
+  lowPassCutoff: {
+    initial: lowPassCutoffNorm,
     min: 0,
     max: 1,
     step: 0.01,
     onSliderChange: (value) => {
-      cutoffRadiusNorm = value;
+      lowPassCutoffNorm = value;
+      lastFilterUniformKey = '';
+    },
+  },
+  highPassCutoff: {
+    initial: highPassCutoffNorm,
+    min: 0,
+    max: 1,
+    step: 0.01,
+    onSliderChange: (value) => {
+      highPassCutoffNorm = value;
       lastFilterUniformKey = '';
     },
   },
