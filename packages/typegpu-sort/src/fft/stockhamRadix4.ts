@@ -291,7 +291,7 @@ export function dispatchRadix4LineFft(
   const slot = s >= 0 && s <= 3 ? s : 0;
   const pool = pools.at(slot);
   if (pool === undefined) {
-    throw new Error('@typegpu/fft: invalid lineUniformSlot for radix-4 dispatch');
+    throw new Error('@typegpu/sort: invalid lineUniformSlot for radix-4 dispatch');
   }
   const {
     radix4StageUniforms,
@@ -309,7 +309,7 @@ export function dispatchRadix4LineFft(
   const ps = radix4PValues(n);
   if (ps.length > radix4StageUniforms.length) {
     throw new Error(
-      `@typegpu/fft: need at least ${ps.length} radix-4 uniform buffers (got ${radix4StageUniforms.length})`,
+      `@typegpu/sort: need at least ${ps.length} radix-4 uniform buffers (got ${radix4StageUniforms.length})`,
     );
   }
   const quarter = n >> 2;

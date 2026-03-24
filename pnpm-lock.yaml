@@ -209,9 +209,6 @@ importers:
       '@typegpu/color':
         specifier: workspace:*
         version: link:../../packages/typegpu-color
-      '@typegpu/fft':
-        specifier: workspace:*
-        version: link:../../packages/typegpu-fft
       '@typegpu/geometry':
         specifier: workspace:*
         version: link:../../packages/typegpu-geometry
@@ -567,31 +564,6 @@ importers:
         version: link:../unplugin-typegpu
     publishDirectory: dist
 
-  packages/typegpu-fft:
-    devDependencies:
-      '@typegpu/tgpu-dev-cli':
-        specifier: workspace:*
-        version: link:../tgpu-dev-cli
-      '@webgpu/types':
-        specifier: catalog:types
-        version: 0.1.66
-      typegpu:
-        specifier: workspace:*
-        version: link:../typegpu
-      typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
-      unbuild:
-        specifier: catalog:build
-        version: 3.5.0(tsover@5.9.11)
-      unplugin-typegpu:
-        specifier: workspace:*
-        version: link:../unplugin-typegpu
-      vitest:
-        specifier: catalog:test
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@25.1.0)(@vitest/browser@3.2.4)(jiti@2.6.1)(jsdom@27.0.0(canvas@3.2.0)(postcss@8.5.6))(lightningcss@1.30.2)(msw@2.10.2(@types/node@25.1.0)(tsover@5.9.11))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1)
-    publishDirectory: dist
-
   packages/typegpu-geometry:
     devDependencies:
       '@typegpu/tgpu-dev-cli':
@@ -706,6 +678,9 @@ importers:
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
+      vitest:
+        specifier: catalog:test
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@25.1.0)(@vitest/browser@3.2.4)(jiti@2.6.1)(jsdom@27.0.0(canvas@3.2.0)(postcss@8.5.6))(lightningcss@1.30.2)(msw@2.10.2(@types/node@25.1.0)(tsover@5.9.11))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1)
     publishDirectory: dist
 
   packages/typegpu-testing-utility:

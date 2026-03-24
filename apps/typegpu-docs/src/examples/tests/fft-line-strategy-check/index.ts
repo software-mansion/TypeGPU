@@ -1,5 +1,5 @@
 /**
- * Validates @typegpu/fft line strategies: GPU↔CPU (fft.js separable 2D), radix-4 vs radix-2 Stockham,
+ * Validates @typegpu/sort FFT line strategies: GPU↔CPU (fft.js separable 2D), radix-4 vs radix-2 Stockham,
  * and forward→inverse round-trip (WebGPU).
  *
  * Run in the docs dev server: `/TypeGPU/examples#example=tests--fft-line-strategy-check` — needs WebGPU.
@@ -9,7 +9,7 @@ import {
   createStockhamRadix2LineStrategy,
   createStockhamRadix4LineStrategy,
   type Fft2d,
-} from '@typegpu/fft';
+} from '@typegpu/sort';
 import tgpu, { d } from 'typegpu';
 import FFT from 'fft.js';
 
