@@ -28,7 +28,7 @@ if (typeof (traverse as any).default === 'function') {
 }
 
 const fnWrapperTemplate = (fnCode: string, metadata: string) =>
-  `/* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (${fnCode}), ${metadata}) && $.f)({}))`;
+  `(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (${fnCode}), ${metadata}) && $.f)({}))`;
 
 function assignMetadata(
   this: UnpluginPluginState,
@@ -89,7 +89,10 @@ function wrapInAutoName(
   name: string,
 ): void {
   this.magicString
-    .appendLeft(path.node.start ?? 0, '((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(')
+    .appendLeft(
+      path.node.start ?? 0,
+      '/*#__PURE__*/((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(',
+    )
     .prependRight(path.node.end ?? 0, `, "${name}"))`);
 }
 

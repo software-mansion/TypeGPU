@@ -80,13 +80,15 @@ function assignMetadata(
     [t.objectExpression([])],
   );
 
+  t.addComment(callExpr, 'leading', '#__PURE__');
+
   let replacement: t.Node = callExpr;
 
   if (t.isFunctionDeclaration(path.node) && path.node.id) {
     const declaration = t.variableDeclaration('const', [
       t.variableDeclarator(path.node.id, callExpr),
     ]);
-    declaration.leadingComments = fnDecl.leadingComments ?? null;
+    t.inheritLeadingComments(declaration, fnDecl);
     replacement = declaration;
   }
 
@@ -102,19 +104,19 @@ function assignMetadata(
 }
 
 function wrapInAutoName(path: NodePath<t.Expression>, name: string): void {
-  // (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(<node>, '<name>')
-  path.replaceWith(
-    t.callExpression(
-      t.logicalExpression(
-        '??',
-        // globalThis.__TYPEGPU_AUTONAME__
-        t.memberExpression(i('globalThis'), i('__TYPEGPU_AUTONAME__')),
-        // (a => a)
-        t.arrowFunctionExpression([i('a')], i('a')),
-      ),
-      [path.node, t.stringLiteral(name)],
+  // /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(<node>, '<name>')
+  const callExpr = t.callExpression(
+    t.logicalExpression(
+      '??',
+      // globalThis.__TYPEGPU_AUTONAME__
+      t.memberExpression(i('globalThis'), i('__TYPEGPU_AUTONAME__')),
+      // (a => a)
+      t.arrowFunctionExpression([i('a')], i('a')),
     ),
+    [path.node, t.stringLiteral(name)],
   );
+  t.addComment(callExpr, 'leading', '#__PURE__');
+  path.replaceWith(callExpr);
 }
 
 function replaceWithAssignmentOverload(

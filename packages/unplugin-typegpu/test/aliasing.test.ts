@@ -13,7 +13,7 @@ describe('[BABEL] tgpu alias gathering', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import hello from 'typegpu';
-      const increment = hello.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+      const increment = hello.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const x = 2 + 2;
       }, {
         v: 1,
@@ -41,7 +41,7 @@ describe('[BABEL] tgpu alias gathering', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import { tgpu as t } from 'typegpu';
-      const increment = t.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+      const increment = t.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const x = 2 + 2;
       }, {
         v: 1,
@@ -69,7 +69,7 @@ describe('[BABEL] tgpu alias gathering', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "import * as t from 'typegpu';
-      const increment = t.tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+      const increment = t.tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const x = 2 + 2;
       }, {
         v: 1,
@@ -99,7 +99,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import hello from 'typegpu';
 
-      hello.fn([])(/* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+      hello.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
           v: 1,
           name: undefined,
@@ -122,7 +122,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import { tgpu } from 'typegpu';
 
-      tgpu.fn([])(/* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+      tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
           v: 1,
           name: undefined,
@@ -145,7 +145,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
       "import * as t from 'typegpu';
 
-      t.tgpu.fn([])(/* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+      t.tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
           v: 1,
           name: undefined,
