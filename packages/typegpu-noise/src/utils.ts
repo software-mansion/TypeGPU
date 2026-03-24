@@ -32,7 +32,7 @@ export function quinticDerivative(t: d.vecBase): d.vecBase {
 /*
  * Converts u32 to f32 value in the range [0.0, 1.0).
  */
-export const u32To01Float = tgpu.fn(
+export const u32To01F32 = tgpu.fn(
   [d.u32],
   d.f32,
 )((value) => {

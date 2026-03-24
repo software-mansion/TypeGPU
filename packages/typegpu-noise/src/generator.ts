@@ -1,6 +1,6 @@
 import tgpu, { d, type TgpuFnShell, type TgpuSlot } from 'typegpu';
 import { cos, dot, fract } from 'typegpu/std';
-import { hash, u32To01Float } from './utils.ts';
+import { hash, u32To01F32 } from './utils.ts';
 
 export interface StatefulGenerator {
   seed?: (seed: number) => void;
@@ -83,7 +83,7 @@ export const XOROSHIRO64STARSTAR: StatefulGenerator = (() => {
     sample: randomGeneratorShell(() => {
       'use gpu';
       const r = next();
-      return u32To01Float(r);
+      return u32To01F32(r);
     }).$name('sample'),
   };
 })();
@@ -102,7 +102,7 @@ export const LCG32: StatefulGenerator = (() => {
     sample: randomGeneratorShell(() => {
       'use gpu';
       seed.$ = seed.$ * 1664525 + 1013904223; // % 2 ^ 32
-      return u32To01Float(seed.$);
+      return u32To01F32(seed.$);
     }).$name('sample'),
   };
 })();
@@ -121,7 +121,7 @@ export const LCG64: StatefulGenerator = (() => {
     sample: randomGeneratorShell(() => {
       'use gpu';
       seed.$ = seed.$ * 1664525 + 1013904223; // % 2 ^ 32
-      return u32To01Float(seed.$);
+      return u32To01F32(seed.$);
     }).$name('sample'),
   };
 })();
