@@ -51,28 +51,32 @@ function assignMetadata(
 
   const fnCode = this.magicString.sliceNode(path.node);
 
+  let nodeToOverride: t.Node = path.node;
+  let code = fnWrapperTemplate(fnCode, metadata);
+  let insertPos = path.node.start ?? 0;
   if (visibility) {
     // Hoisting the declaration to the top of the scope
-    const insertPos = visibility.scope.node.body[0]
+    insertPos = visibility.scope.node.body[0]
       ? (visibility.scope.node.body[0].start ?? 0)
       : (visibility.scope.node.start ?? 0) + 1;
 
-    let nodeToOverride: t.Node = path.node;
-    let code = `const ${visibility.name} = ${fnWrapperTemplate(fnCode, metadata)};\n\n`;
+    code = `const ${visibility.name} = ${code};\n\n`;
 
     if (t.isExportNamedDeclaration(path.parent)) {
       nodeToOverride = path.parent;
       code = `export ${code}`;
     }
+  }
 
-    if ((path.node.start ?? 0) > insertPos) {
-      this.magicString.removeNode(nodeToOverride);
-      this.magicString.prependLeft(insertPos, code);
-    } else {
-      this.magicString.overwriteNode(nodeToOverride, code);
+  if (insertPos < (path.node.start ?? 0)) {
+    for (const comment of nodeToOverride.leadingComments?.toReversed() ?? []) {
+      code = `${this.magicString.slice(comment.start ?? 0, comment.end ?? 0)}\n${code}`;
+      this.magicString.removeNode(comment);
     }
+    this.magicString.removeNode(nodeToOverride);
+    this.magicString.prependLeft(insertPos, code);
   } else {
-    this.magicString.overwriteNode(path.node, fnWrapperTemplate(fnCode, metadata));
+    this.magicString.overwriteNode(nodeToOverride, code);
   }
 }
 
@@ -132,12 +136,9 @@ export const unpluginFactory: UnpluginFactory<Options> = (rawOptions) => {
             str.toString(),
             getBabelParserOptions(getLang(id), {
               sourceType: 'module',
-              attachComment: true,
-              comments: true,
               allowReturnOutsideFunction: true,
             }),
           );
-          console.log(ast.comments);
         } catch (cause) {
           console.warn(
             `[unplugin-typegpu] Failed to parse ${id}. Cause: ${
