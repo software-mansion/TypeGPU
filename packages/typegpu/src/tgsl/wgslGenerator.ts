@@ -940,6 +940,26 @@ Try 'return ${typeStr}(${str});' instead.
       const [_, condNode, consNode, altNode] = statement;
       const condition = this._typedExpression(condNode, bool);
 
+      if (typeof condition.value === 'boolean') {
+        let node = condition.value ? consNode : altNode;
+        if (!node) {
+          return '';
+        }
+        if (!Array.isArray(node)) {
+          throw new Error(`Unreachable: one of NODE.if branches is not a node: ${node}`);
+        }
+        if (node[0] === NODE.block && node[1].length === 1 && node[1][0][0] === NODE.if) {
+          // simplify 'if (true) { if (A) {B} } else {C}' to 'if (A) {B}'
+          return this._statement(node[1][0]);
+        }
+        if (node[0] === NODE.if) {
+          // simplify 'if (false) {A} else if (B) {C}' to 'if (B) {C}'
+          return this._statement(node);
+        }
+        // simplify 'if (true) {A} else {B}' to '{A}'
+        return `${this.ctx.pre}${this._block(blockifySingleStatement(node))}`;
+      }
+
       const consequent =
         condition.value === false ? undefined : this._block(blockifySingleStatement(consNode));
       const alternate =
