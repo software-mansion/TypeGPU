@@ -4,7 +4,7 @@ import {
   createStockhamRadix2LineStrategy,
   createStockhamRadix4LineStrategy,
   type Fft2d,
-} from '@typegpu/fft';
+} from '@typegpu/sort';
 import tgpu, { common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 

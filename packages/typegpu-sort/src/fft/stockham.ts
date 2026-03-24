@@ -212,14 +212,14 @@ export function dispatchStockhamLineFftStages(
 ): boolean {
   if (nsList.length > stageUniforms.length) {
     throw new Error(
-      `@typegpu/fft: need at least ${nsList.length} per-stage Stockham uniform buffers (got ${stageUniforms.length})`,
+      `@typegpu/sort: need at least ${nsList.length} per-stage Stockham uniform buffers (got ${stageUniforms.length})`,
     );
   }
   if (
     bindGroupSrcA.length !== stageUniforms.length ||
     bindGroupSrcB.length !== stageUniforms.length
   ) {
-    throw new Error('@typegpu/fft: Stockham bind group arrays must match stageUniforms length');
+    throw new Error('@typegpu/sort: Stockham bind group arrays must match stageUniforms length');
   }
 
   const inverse = opts.inverse === true;
