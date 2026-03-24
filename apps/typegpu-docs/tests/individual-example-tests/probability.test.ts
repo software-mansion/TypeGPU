@@ -15,7 +15,7 @@ describe('probability distribution plot example', () => {
         category: 'algorithms',
         name: 'probability',
         controlTriggers: ['Test Resolution'],
-        expectedCalls: 3,
+        expectedCalls: 13,
       },
       device,
     );

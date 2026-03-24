@@ -23,29 +23,17 @@ describe('uniformity test example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      struct fullScreenTriangle_Output {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
-      }
-
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
-        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
-      }
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
       struct Config {
         gridSize: f32,
         canvasRatio: f32,
         useSeed2: u32,
+        samplesPerThread: u32,
+        takeAverage: u32,
       }
 
-      @group(0) @binding(0) var<uniform> configUniform: Config;
+      @group(0) @binding(1) var<uniform> configUniform: Config;
 
       var<private> seed: vec2f;
 
@@ -77,46 +65,52 @@ describe('uniformity test example', () => {
         return sample();
       }
 
-      struct fragmentShader_Input {
-        @location(0) uv: vec2f,
-      }
+      @group(1) @binding(0) var texture: texture_storage_2d<r32float, write>;
 
-      @fragment fn fragmentShader(input: fragmentShader_Input) -> @location(0) vec4f {
-        let gridSize = configUniform.gridSize;
-        var uv = (input.uv * vec2f(configUniform.canvasRatio, 1f));
-        var gridedUV = floor((uv * gridSize));
+      fn computeFn(x: u32, y: u32, _arg_2: u32) {
+        let gridSize2 = configUniform.gridSize;
         if ((configUniform.useSeed2 == 1u)) {
-          randSeed2(gridedUV);
+          randSeed2(vec2f(f32(x), f32(y)));
         }
         else {
-          randSeed(((gridedUV.x * gridSize) + gridedUV.y));
+          randSeed(((f32(x) * gridSize2) + f32(y)));
         }
-        return vec4f(vec3f(randFloat01()), 1f);
+        var i = 0u;
+        let samplesPerThread = configUniform.samplesPerThread;
+        var samples = 0f;
+        while ((i < (samplesPerThread - 1u))) {
+          samples += randFloat01();
+          i += 1u;
+        }
+        var result = randFloat01();
+        if ((configUniform.takeAverage == 1u)) {
+          result = ((result + samples) / f32(samplesPerThread));
+        }
+        textureStore(texture, vec2u(x, y), vec4f(result, 0f, 0f, 0f));
       }
 
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
+      struct mainCompute_Input {
+        @builtin(global_invocation_id) id: vec3u,
       }
 
-      struct fullScreenTriangle_Output {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
+        if (any(in.id >= sizeUniform)) {
+          return;
+        }
+        computeFn(in.id.x, in.id.y, in.id.z);
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
-        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
-      }
+      @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
       struct Config {
         gridSize: f32,
         canvasRatio: f32,
         useSeed2: u32,
+        samplesPerThread: u32,
+        takeAverage: u32,
       }
 
-      @group(0) @binding(0) var<uniform> configUniform: Config;
+      @group(0) @binding(1) var<uniform> configUniform: Config;
 
       fn randSeed2(seed: vec2f) {
 
@@ -159,46 +153,52 @@ describe('uniformity test example', () => {
         return sample();
       }
 
-      struct fragmentShader_Input {
-        @location(0) uv: vec2f,
-      }
+      @group(1) @binding(0) var texture: texture_storage_2d<r32float, write>;
 
-      @fragment fn fragmentShader(input: fragmentShader_Input) -> @location(0) vec4f {
-        let gridSize = configUniform.gridSize;
-        var uv = (input.uv * vec2f(configUniform.canvasRatio, 1f));
-        var gridedUV = floor((uv * gridSize));
+      fn computeFn(x: u32, y: u32, _arg_2: u32) {
+        let gridSize2 = configUniform.gridSize;
         if ((configUniform.useSeed2 == 1u)) {
-          randSeed2(gridedUV);
+          randSeed2(vec2f(f32(x), f32(y)));
         }
         else {
-          randSeed(((gridedUV.x * gridSize) + gridedUV.y));
+          randSeed(((f32(x) * gridSize2) + f32(y)));
         }
-        return vec4f(vec3f(randFloat01()), 1f);
+        var i = 0u;
+        let samplesPerThread = configUniform.samplesPerThread;
+        var samples = 0f;
+        while ((i < (samplesPerThread - 1u))) {
+          samples += randFloat01();
+          i += 1u;
+        }
+        var result = randFloat01();
+        if ((configUniform.takeAverage == 1u)) {
+          result = ((result + samples) / f32(samplesPerThread));
+        }
+        textureStore(texture, vec2u(x, y), vec4f(result, 0f, 0f, 0f));
       }
 
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
+      struct mainCompute_Input {
+        @builtin(global_invocation_id) id: vec3u,
       }
 
-      struct fullScreenTriangle_Output {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
+        if (any(in.id >= sizeUniform)) {
+          return;
+        }
+        computeFn(in.id.x, in.id.y, in.id.z);
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
-        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
-        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
-      }
+      @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
       struct Config {
         gridSize: f32,
         canvasRatio: f32,
         useSeed2: u32,
+        samplesPerThread: u32,
+        takeAverage: u32,
       }
 
-      @group(0) @binding(0) var<uniform> configUniform: Config;
+      @group(0) @binding(1) var<uniform> configUniform: Config;
 
       fn hash(v: u32) -> u32 {
         var x = (v ^ (v >> 17u));
@@ -254,21 +254,39 @@ describe('uniformity test example', () => {
         return sample();
       }
 
-      struct fragmentShader_Input {
-        @location(0) uv: vec2f,
-      }
+      @group(1) @binding(0) var texture: texture_storage_2d<r32float, write>;
 
-      @fragment fn fragmentShader(input: fragmentShader_Input) -> @location(0) vec4f {
-        let gridSize = configUniform.gridSize;
-        var uv = (input.uv * vec2f(configUniform.canvasRatio, 1f));
-        var gridedUV = floor((uv * gridSize));
+      fn computeFn(x: u32, y: u32, _arg_2: u32) {
+        let gridSize2 = configUniform.gridSize;
         if ((configUniform.useSeed2 == 1u)) {
-          randSeed2(gridedUV);
+          randSeed2(vec2f(f32(x), f32(y)));
         }
         else {
-          randSeed(((gridedUV.x * gridSize) + gridedUV.y));
+          randSeed(((f32(x) * gridSize2) + f32(y)));
         }
-        return vec4f(vec3f(randFloat01()), 1f);
+        var i = 0u;
+        let samplesPerThread = configUniform.samplesPerThread;
+        var samples = 0f;
+        while ((i < (samplesPerThread - 1u))) {
+          samples += randFloat01();
+          i += 1u;
+        }
+        var result = randFloat01();
+        if ((configUniform.takeAverage == 1u)) {
+          result = ((result + samples) / f32(samplesPerThread));
+        }
+        textureStore(texture, vec2u(x, y), vec4f(result, 0f, 0f, 0f));
+      }
+
+      struct mainCompute_Input {
+        @builtin(global_invocation_id) id: vec3u,
+      }
+
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
+        if (any(in.id >= sizeUniform)) {
+          return;
+        }
+        computeFn(in.id.x, in.id.y, in.id.z);
       }"
     `);
   });
