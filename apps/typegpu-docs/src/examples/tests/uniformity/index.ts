@@ -69,9 +69,9 @@ const computeFn = (x: number, y: number) => {
   const gridSize = configUniform.$.gridSize;
 
   if (configUniform.$.useSeed2 === 1) {
-    randf.seed2(d.vec2f(x, y));
+    randf.seed2(d.vec2f(x, y) + 1);
   } else {
-    randf.seed(d.f32(x) * gridSize + d.f32(y));
+    randf.seed(d.f32(x + 1) * gridSize + d.f32(y + 1));
   }
 
   let i = d.u32(0);
@@ -98,7 +98,7 @@ const getComputePipeline = (key: PRNGKey) => {
       .with(randomGeneratorSlot, prngs[key].generator)
       .createGuardedComputePipeline(computeFn)
       .withPerformanceCallback((start, end) => {
-        console.log(`[${key}] - ${Number(end - start) / 1000} ms.`);
+        console.log(`[${key}] - ${Number(end - start) / 1_000_000} ms.`);
       });
     computePipelineCache.set(key, pipeline);
   }
