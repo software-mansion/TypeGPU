@@ -141,10 +141,7 @@ export const stockhamDifStageKernel = tgpu.computeFn({
 
   const v0 = d.vec2f(u.x + t.x, u.y + t.y);
   const diff = d.vec2f(u.x - t.x, u.y - t.y);
-  const v1 = d.vec2f(
-    diff.x * w.x - diff.y * wy,
-    diff.x * wy + diff.y * w.x,
-  );
+  const v1 = d.vec2f(diff.x * w.x - diff.y * wy, diff.x * wy + diff.y * w.x);
 
   const jDivNs = d.u32(j / ns);
   const idxD = jDivNs * (ns << 1) + (j % ns);
@@ -204,7 +201,6 @@ export function dispatchStockhamLineFftStages(
   bindGroupSrcA: ReadonlyArray<StockhamLineBindGroup>,
   bindGroupSrcB: ReadonlyArray<StockhamLineBindGroup>,
   n: number,
-  lineStride: number,
   numLines: number,
   inputInA: boolean,
   nsList: readonly number[],
@@ -222,19 +218,13 @@ export function dispatchStockhamLineFftStages(
     throw new Error('@typegpu/sort: Stockham bind group arrays must match stageUniforms length');
   }
 
-  const inverse = opts.inverse === true;
   const totalThreads = numLines * (n >> 1);
   const [wx, wy, wz] = decomposeWorkgroups(Math.ceil(totalThreads / WORKGROUP_SIZE));
 
   let readA = inputInA;
-  const direction = inverse ? 1 : 0;
 
   const pass = opts.computePass;
   for (let i = 0; i < nsList.length; i++) {
-    // oxlint-disable-next-line typescript/no-non-null-assertion
-    const ns = nsList[i]!;
-    // oxlint-disable-next-line typescript/no-non-null-assertion
-    stageUniforms[i]!.write({ ns, n, lineStride, numLines, direction });
     // oxlint-disable-next-line typescript/no-non-null-assertion
     const bg = readA ? bindGroupSrcA[i]! : bindGroupSrcB[i]!;
     pipeline.with(pass).with(bg).dispatchWorkgroups(wx, wy, wz);
@@ -250,7 +240,6 @@ export function dispatchStockhamLineFft(
   bindGroupSrcA: ReadonlyArray<StockhamLineBindGroup>,
   bindGroupSrcB: ReadonlyArray<StockhamLineBindGroup>,
   n: number,
-  lineStride: number,
   numLines: number,
   inputInA: boolean,
   opts: { computePass: GPUComputePassEncoder; inverse?: boolean },
@@ -261,7 +250,6 @@ export function dispatchStockhamLineFft(
     bindGroupSrcA,
     bindGroupSrcB,
     n,
-    lineStride,
     numLines,
     inputInA,
     stockhamNsValues(n),

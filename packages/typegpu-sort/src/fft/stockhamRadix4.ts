@@ -1,13 +1,12 @@
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { d } from 'typegpu';
 import type { TgpuBindGroup, TgpuBuffer, TgpuRoot, UniformFlag } from 'typegpu';
 import type { LineFftEncodeOptions } from './lineFftStrategy.ts';
 import {
   createStockhamDifStagePipeline,
   createStockhamStagePipeline,
-  dispatchStockhamLineFftStages,
   stockhamUniformType,
   type StockhamLineBindGroup,
-} from './stockham.ts';
+} from './stockhamRadix2.ts';
 import { decomposeWorkgroups } from './utils.ts';
 
 const WORKGROUP_SIZE = 256;
@@ -18,10 +17,17 @@ export const radix4UniformType = d.struct({
   n: d.u32,
   lineStride: d.u32,
   numLines: d.u32,
+  /** Start offset into the twiddle LUT for this stage's `p` value: `(p - 1) / 3`. */
+  twiddleOffset: d.u32,
 });
 
 export const radix4Layout = tgpu.bindGroupLayout({
   uniforms: { uniform: radix4UniformType },
+  /** Precomputed twiddle factors; layout matches {@link buildRadix4TwiddleLut}. */
+  twiddles: {
+    storage: d.arrayOf(d.vec2f),
+    access: 'readonly',
+  },
   src: {
     storage: d.arrayOf(d.vec2f),
     access: 'readonly',
@@ -70,18 +76,12 @@ export const radix4StageKernel = tgpu.computeFn({
   const i0 = base + i;
   const i1 = base + i + T;
   const i2 = base + i + (T << 1);
-  const i3 = base + i + (T * 3);
+  const i3 = base + i + T * 3;
 
-  const pi = Math.PI;
-  const ang = (-pi * d.f32(k)) / (2 * p);
-  const c1 = std.cos(ang);
-  const sn1 = std.sin(ang);
-  const tw1 = d.vec2f(c1, sn1);
-  const tw2 = d.vec2f(c1 * c1 - sn1 * sn1, 2 * c1 * sn1);
-  const tw3 = d.vec2f(
-    tw2.x * c1 - tw2.y * sn1,
-    tw2.x * sn1 + tw2.y * c1,
-  );
+  const twOff = radix4Layout.$.uniforms.twiddleOffset;
+  const tw1 = radix4Layout.$.twiddles[twOff + k] as d.v2f;
+  const tw2 = d.vec2f(tw1.x * tw1.x - tw1.y * tw1.y, d.f32(2) * tw1.x * tw1.y);
+  const tw3 = d.vec2f(tw2.x * tw1.x - tw2.y * tw1.y, tw2.x * tw1.y + tw2.y * tw1.x);
 
   const a0 = radix4Layout.$.src[i0] as d.v2f;
   const a1 = radix4Layout.$.src[i1] as d.v2f;
@@ -89,18 +89,9 @@ export const radix4StageKernel = tgpu.computeFn({
   const a3 = radix4Layout.$.src[i3] as d.v2f;
 
   const u0 = d.vec2f(a0);
-  const u1 = d.vec2f(
-    a1.x * tw1.x - a1.y * tw1.y,
-    a1.x * tw1.y + a1.y * tw1.x,
-  );
-  const u2 = d.vec2f(
-    a2.x * tw2.x - a2.y * tw2.y,
-    a2.x * tw2.y + a2.y * tw2.x,
-  );
-  const u3 = d.vec2f(
-    a3.x * tw3.x - a3.y * tw3.y,
-    a3.x * tw3.y + a3.y * tw3.x,
-  );
+  const u1 = d.vec2f(a1.x * tw1.x - a1.y * tw1.y, a1.x * tw1.y + a1.y * tw1.x);
+  const u2 = d.vec2f(a2.x * tw2.x - a2.y * tw2.y, a2.x * tw2.y + a2.y * tw2.x);
+  const u3 = d.vec2f(a3.x * tw3.x - a3.y * tw3.y, a3.x * tw3.y + a3.y * tw3.x);
 
   const v0 = d.vec2f(u0.x + u2.x, u0.y + u2.y);
   const v1 = d.vec2f(u0.x - u2.x, u0.y - u2.y);
@@ -162,7 +153,7 @@ export const radix4InverseStageKernel = tgpu.computeFn({
   const i0 = base + i;
   const i1 = base + i + T;
   const i2 = base + i + (T << 1);
-  const i3 = base + i + (T * 3);
+  const i3 = base + i + T * 3;
 
   const outBase = base + ((i - k) << 2) + k;
 
@@ -187,30 +178,16 @@ export const radix4InverseStageKernel = tgpu.computeFn({
   const u2 = d.vec2f(u2p);
   const u3 = d.vec2f(u3p);
 
-  const pi = Math.PI;
-  const angInv = (pi * d.f32(k)) / (d.f32(2) * d.f32(p));
-  const c1i = std.cos(angInv);
-  const sn1i = std.sin(angInv);
-  const tw1i = d.vec2f(c1i, sn1i);
-  const tw2i = d.vec2f(c1i * c1i - sn1i * sn1i, d.f32(2) * c1i * sn1i);
-  const tw3i = d.vec2f(
-    tw2i.x * c1i - tw2i.y * sn1i,
-    tw2i.x * sn1i + tw2i.y * c1i,
-  );
+  const twOff = radix4Layout.$.uniforms.twiddleOffset;
+  const twFwd = radix4Layout.$.twiddles[twOff + k] as d.v2f;
+  const tw1i = d.vec2f(twFwd.x, -twFwd.y);
+  const tw2i = d.vec2f(tw1i.x * tw1i.x - tw1i.y * tw1i.y, d.f32(2) * tw1i.x * tw1i.y);
+  const tw3i = d.vec2f(tw2i.x * tw1i.x - tw2i.y * tw1i.y, tw2i.x * tw1i.y + tw2i.y * tw1i.x);
 
   const b0 = d.vec2f(u0);
-  const b1 = d.vec2f(
-    u1.x * tw1i.x - u1.y * tw1i.y,
-    u1.x * tw1i.y + u1.y * tw1i.x,
-  );
-  const b2 = d.vec2f(
-    u2.x * tw2i.x - u2.y * tw2i.y,
-    u2.x * tw2i.y + u2.y * tw2i.x,
-  );
-  const b3 = d.vec2f(
-    u3.x * tw3i.x - u3.y * tw3i.y,
-    u3.x * tw3i.y + u3.y * tw3i.x,
-  );
+  const b1 = d.vec2f(u1.x * tw1i.x - u1.y * tw1i.y, u1.x * tw1i.y + u1.y * tw1i.x);
+  const b2 = d.vec2f(u2.x * tw2i.x - u2.y * tw2i.y, u2.x * tw2i.y + u2.y * tw2i.x);
+  const b3 = d.vec2f(u3.x * tw3i.x - u3.y * tw3i.y, u3.x * tw3i.y + u3.y * tw3i.x);
 
   radix4Layout.$.dst[i0] = d.vec2f(b0);
   radix4Layout.$.dst[i1] = d.vec2f(b1);
@@ -249,6 +226,76 @@ function radix4PValues(n: number): number[] {
   return ps;
 }
 
+/**
+ * Number of `vec2f` entries for the radix-4 twiddle LUT up to max line length `nMax`.
+ * Layout: for each stage p in `radix4PValues(nMax)`, p entries of `cis(-π·k/(2p))` for k = 0..p-1.
+ * Total = sum of p values = (4^r4 - 1)/3 where r4 = `maxRadix4PassCount(nMax)`.
+ */
+export function radix4TwiddleLutVec2Count(nMax: number): number {
+  const ps = radix4PValues(nMax);
+  let total = 0;
+  for (const p of ps) {
+    total += p;
+  }
+  return total;
+}
+
+/**
+ * Precomputed twiddle factors `cis(-π·k/(2p))` for all radix-4 stages up to `nMax`.
+ * Computed in f64 on CPU for maximum precision.
+ */
+export function buildRadix4TwiddleLut(nMax: number): [number, number][] {
+  const out: [number, number][] = [];
+  for (const p of radix4PValues(nMax)) {
+    for (let k = 0; k < p; k++) {
+      const angle = (-Math.PI * k) / (2 * p);
+      out.push([Math.cos(angle), Math.sin(angle)]);
+    }
+  }
+  return out;
+}
+
+/** Twiddle LUT offset for a given `p` value: `(p - 1) / 3`. */
+function radix4TwiddleOffset(p: number): number {
+  return (p - 1) / 3;
+}
+
+/**
+ * Pre-write all uniform buffers for a radix-4 pool so that {@link dispatchRadix4LineFft}
+ * performs zero uniform writes at dispatch time.
+ */
+export function prepareRadix4Slot(
+  pool: Radix4LineUniformPools,
+  n: number,
+  lineStride: number,
+  numLines: number,
+  inverse: boolean,
+): void {
+  const ps = radix4PValues(n);
+  for (let s = 0; s < ps.length; s++) {
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    const p = ps[s]!;
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    pool.radix4StageUniforms[s]!.write({
+      p,
+      n,
+      lineStride,
+      numLines,
+      twiddleOffset: radix4TwiddleOffset(p),
+    });
+  }
+  const k = 31 - Math.clz32(n);
+  if (k % 2 === 1) {
+    pool.stockhamTailUniform.write({
+      ns: n >> 1,
+      n,
+      lineStride,
+      numLines,
+      direction: inverse ? 1 : 0,
+    });
+  }
+}
+
 /** @internal Unit tests only — not part of the public package API. */
 export const _forTesting = {
   radix4PValues,
@@ -282,7 +329,6 @@ export function dispatchRadix4LineFft(
     Radix4LineUniformPools,
   ],
   n: number,
-  lineStride: number,
   numLines: number,
   inputInA: boolean,
   opts: LineFftEncodeOptions,
@@ -293,25 +339,13 @@ export function dispatchRadix4LineFft(
   if (pool === undefined) {
     throw new Error('@typegpu/sort: invalid lineUniformSlot for radix-4 dispatch');
   }
-  const {
-    radix4StageUniforms,
-    radix4BgSrcA,
-    radix4BgSrcB,
-    stockhamTailUniform,
-    stockhamTailBgSrcA,
-    stockhamTailBgSrcB,
-  } = pool;
+  const { radix4BgSrcA, radix4BgSrcB, stockhamTailBgSrcA, stockhamTailBgSrcB } = pool;
 
   const { computePass } = opts;
   const inverse = opts.inverse === true;
 
   const k = 31 - Math.clz32(n);
   const ps = radix4PValues(n);
-  if (ps.length > radix4StageUniforms.length) {
-    throw new Error(
-      `@typegpu/sort: need at least ${ps.length} radix-4 uniform buffers (got ${radix4StageUniforms.length})`,
-    );
-  }
   const quarter = n >> 2;
   const totalThreads = numLines * quarter;
   const [wx, wy, wz] = decomposeWorkgroups(Math.ceil(totalThreads / WORKGROUP_SIZE));
@@ -322,26 +356,16 @@ export function dispatchRadix4LineFft(
     if (k % 2 === 1) {
       const tailThreads = numLines * (n >> 1);
       const [twx, twy, twz] = decomposeWorkgroups(Math.ceil(tailThreads / WORKGROUP_SIZE));
-      stockhamTailUniform.write({
-        ns: n >> 1,
-        n,
-        lineStride,
-        numLines,
-        direction: 1,
-      });
       const tailBg = readA ? stockhamTailBgSrcA : stockhamTailBgSrcB;
       stockhamDifPipeline.with(computePass).with(tailBg).dispatchWorkgroups(twx, twy, twz);
       readA = !readA;
     }
     for (let s = ps.length - 1; s >= 0; s--) {
-      const p = ps[s];
-      const uni = radix4StageUniforms[s];
       const bgA = radix4BgSrcA[s];
       const bgB = radix4BgSrcB[s];
-      if (p === undefined || uni === undefined || bgA === undefined || bgB === undefined) {
+      if (bgA === undefined || bgB === undefined) {
         break;
       }
-      uni.write({ p, n, lineStride, numLines });
       const bg = readA ? bgA : bgB;
       radix4InversePipeline.with(computePass).with(bg).dispatchWorkgroups(wx, wy, wz);
       readA = !readA;
@@ -350,32 +374,22 @@ export function dispatchRadix4LineFft(
   }
 
   for (let s = 0; s < ps.length; s++) {
-    const p = ps[s];
-    const uni = radix4StageUniforms[s];
     const bgA = radix4BgSrcA[s];
     const bgB = radix4BgSrcB[s];
-    if (p === undefined || uni === undefined || bgA === undefined || bgB === undefined) {
+    if (bgA === undefined || bgB === undefined) {
       break;
     }
-    uni.write({ p, n, lineStride, numLines });
     const bg = readA ? bgA : bgB;
     radix4Pipeline.with(computePass).with(bg).dispatchWorkgroups(wx, wy, wz);
     readA = !readA;
   }
 
   if (k % 2 === 1) {
-    readA = dispatchStockhamLineFftStages(
-      stockhamPipeline,
-      [stockhamTailUniform],
-      [stockhamTailBgSrcA],
-      [stockhamTailBgSrcB],
-      n,
-      lineStride,
-      numLines,
-      readA,
-      [n >> 1],
-      { computePass },
-    );
+    const tailThreads = numLines * (n >> 1);
+    const [twx, twy, twz] = decomposeWorkgroups(Math.ceil(tailThreads / WORKGROUP_SIZE));
+    const tailBg = readA ? stockhamTailBgSrcA : stockhamTailBgSrcB;
+    stockhamPipeline.with(computePass).with(tailBg).dispatchWorkgroups(twx, twy, twz);
+    readA = !readA;
   }
 
   return readA;

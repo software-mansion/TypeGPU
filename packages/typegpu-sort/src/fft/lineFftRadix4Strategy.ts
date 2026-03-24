@@ -5,17 +5,24 @@ import {
   createStockhamStagePipeline,
   stockhamLayout,
   stockhamUniformType,
-} from './stockham.ts';
+} from './stockhamRadix2.ts';
 import {
+  buildRadix4TwiddleLut,
   createRadix4InverseStagePipeline,
   createRadix4StagePipeline,
   dispatchRadix4LineFft,
   maxRadix4PassCount,
+  prepareRadix4Slot,
   radix4Layout,
   radix4LineStageCount,
+  radix4TwiddleLutVec2Count,
   radix4UniformType,
 } from './stockhamRadix4.ts';
-import type { LineFftEncodeOptions, LineFftStrategy, LineFftStrategyFactoryContext } from './lineFftStrategy.ts';
+import type {
+  LineFftEncodeOptions,
+  LineFftStrategy,
+  LineFftStrategyFactoryContext,
+} from './lineFftStrategy.ts';
 
 /**
  * Radix-4 (Bainville) line stages + optional single radix-2 Stockham tail when `log₂(n)` is odd.
@@ -24,7 +31,7 @@ import type { LineFftEncodeOptions, LineFftStrategy, LineFftStrategyFactoryConte
 export function createStockhamRadix4LineStrategy(
   ctx: LineFftStrategyFactoryContext,
 ): LineFftStrategy {
-  const { root, nMax, bufA, bufB } = ctx;
+  const { root, nMax, width: W, height: H, bufA, bufB } = ctx;
 
   const radix4PassPool = maxRadix4PassCount(nMax);
   const radix4Pipeline = createRadix4StagePipeline(root);
@@ -32,9 +39,13 @@ export function createStockhamRadix4LineStrategy(
   const stockhamPipeline = createStockhamStagePipeline(root);
   const stockhamDifPipeline = createStockhamDifStagePipeline(root);
 
-  const twiddleLutLen = nMax - 1;
-  const twiddleLut = root.createBuffer(d.arrayOf(d.vec2f, twiddleLutLen)).$usage('storage');
-  twiddleLut.write(buildStockhamTwiddleLut(nMax).map(([x, y]) => d.vec2f(x, y)));
+  const stockhamLutLen = nMax - 1;
+  const stockhamLut = root.createBuffer(d.arrayOf(d.vec2f, stockhamLutLen)).$usage('storage');
+  stockhamLut.write(buildStockhamTwiddleLut(nMax).map(([x, y]) => d.vec2f(x, y)));
+
+  const radix4LutLen = Math.max(1, radix4TwiddleLutVec2Count(nMax));
+  const radix4Lut = root.createBuffer(d.arrayOf(d.vec2f, radix4LutLen)).$usage('storage');
+  radix4Lut.write(buildRadix4TwiddleLut(nMax).map(([x, y]) => d.vec2f(x, y)));
 
   function createRadix4Pool() {
     const radix4StageUniforms = Array.from({ length: radix4PassPool }, () =>
@@ -43,6 +54,7 @@ export function createStockhamRadix4LineStrategy(
     const radix4BgSrcA = radix4StageUniforms.map((uniforms) =>
       root.createBindGroup(radix4Layout, {
         uniforms,
+        twiddles: radix4Lut,
         src: bufA,
         dst: bufB,
       }),
@@ -50,6 +62,7 @@ export function createStockhamRadix4LineStrategy(
     const radix4BgSrcB = radix4StageUniforms.map((uniforms) =>
       root.createBindGroup(radix4Layout, {
         uniforms,
+        twiddles: radix4Lut,
         src: bufB,
         dst: bufA,
       }),
@@ -57,13 +70,13 @@ export function createStockhamRadix4LineStrategy(
     const stockhamTailUniform = root.createBuffer(stockhamUniformType).$usage('uniform');
     const stockhamTailBgSrcA = root.createBindGroup(stockhamLayout, {
       uniforms: stockhamTailUniform,
-      twiddles: twiddleLut,
+      twiddles: stockhamLut,
       src: bufA,
       dst: bufB,
     });
     const stockhamTailBgSrcB = root.createBindGroup(stockhamLayout, {
       uniforms: stockhamTailUniform,
-      twiddles: twiddleLut,
+      twiddles: stockhamLut,
       src: bufB,
       dst: bufA,
     });
@@ -84,10 +97,16 @@ export function createStockhamRadix4LineStrategy(
     createRadix4Pool(),
   ] as const;
 
+  // Slots match {@link createFft2d}: 0=fwd rows, 1=fwd cols, 2=inv rows, 3=inv cols
+  prepareRadix4Slot(radix4Pools[0], W, W, H, false);
+  prepareRadix4Slot(radix4Pools[1], H, H, W, false);
+  prepareRadix4Slot(radix4Pools[2], W, W, H, true);
+  prepareRadix4Slot(radix4Pools[3], H, H, W, true);
+
   return {
     id: 'stockham-radix4',
     stageCount: radix4LineStageCount,
-    dispatchLineFft(n, lineStride, numLines, inputInA, options) {
+    dispatchLineFft(n, numLines, inputInA, options) {
       const merged: LineFftEncodeOptions = {
         computePass: options.computePass,
         lineUniformSlot: (() => {
@@ -103,14 +122,14 @@ export function createStockhamRadix4LineStrategy(
         stockhamDifPipeline,
         radix4Pools,
         n,
-        lineStride,
         numLines,
         inputInA,
         merged,
       );
     },
     destroy() {
-      twiddleLut.destroy();
+      stockhamLut.destroy();
+      radix4Lut.destroy();
       for (const p of radix4Pools) {
         for (const u of p.radix4StageUniforms) {
           u.destroy();

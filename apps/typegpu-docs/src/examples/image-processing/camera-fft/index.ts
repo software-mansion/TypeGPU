@@ -1,4 +1,4 @@
-import { oklabGamutClipSlot, oklabToLinearRgb } from '@typegpu/color';
+import { oklabGamutClip, oklabToLinearRgb } from '@typegpu/color';
 import {
   createFft2d,
   createStockhamRadix2LineStrategy,
@@ -196,7 +196,7 @@ const filterKernel = tgpu.computeFn({
   const cutoff = filterLayout.$.params.cutoffRadius * rMax;
   const r = std.sqrt(r2);
   const mask = std.select(d.f32(0), d.f32(1), r <= cutoff);
-  const c = filterLayout.$.spectrum[tid] as d.v2f;
+  const c = filterLayout.$.spectrum[tid];
   filterLayout.$.spectrum[tid] = d.vec2f(c.x * mask, c.y * mask);
 });
 
@@ -248,17 +248,17 @@ const magKernel = tgpu.computeFn({
     srcX * padH + srcY,
     magLayout.$.params.swapSpectrumAxes !== d.u32(0),
   );
-  const cShift = magLayout.$.spectrum[srcTid] as d.v2f;
+  const cShift = magLayout.$.spectrum[srcTid];
   const len = std.sqrt(cShift.x * cShift.x + cShift.y * cShift.y);
   const logv = std.log(1.0 + len) * magLayout.$.params.gain;
   const cv = std.clamp(logv, 0.0, 1.0);
-  /** Perceptual lightness from log-magnitude; chroma scales with magnitude; phase → hue in the `a,b` plane. */
-  const eps = 1e-8;
-  const hue = std.atan2(cShift.y, cShift.x);
-  const chroma = std.select(cv * 0.16, d.f32(0), len < eps);
-  const L = 0.04 + cv * 0.88;
-  const lab = d.vec3f(L, chroma * std.cos(hue), chroma * std.sin(hue));
-  const rgb = oklabToLinearRgb(oklabGamutClipSlot.$(lab));
+  /** `cv` from log-magnitude; L ∈ [0.04, 1]; chroma → 0 at max `cv` so peaks go neutral white. */
+  const L = 0.04 + cv * (1.0 - 0.04);
+  const chroma = cv * (1.0 - cv) * 0.32;
+  /** Oklab a,b = chroma × unit phase — same as chroma·(cos θ, sin θ) with θ = atan2(im, re), without trig. */
+  const invLen = 1.0 / std.max(len, 1e-20);
+  const lab = d.vec3f(L, chroma * invLen * cShift.x, chroma * invLen * cShift.y);
+  const rgb = oklabToLinearRgb(oklabGamutClip.adaptiveL05(lab));
   std.textureStore(magLayout.$.outTex, d.vec2u(xLin, yLin), d.vec4f(rgb, 1));
 });
 
@@ -295,7 +295,7 @@ const spatialKernel = tgpu.computeFn({
     return;
   }
 
-  const c = spatialLayout.$.spectrum[tid] as d.v2f;
+  const c = spatialLayout.$.spectrum[tid];
   const inv = spatialLayout.$.params.invSize;
   const g = std.clamp(c.x * inv, 0.0, 1.0);
   const padWLog2 = spatialLayout.$.params.padWLog2;
@@ -481,9 +481,12 @@ let gainValue = 0.2;
 let cutoffRadiusNorm = 1;
 /** Separable Hann window on camera ROI before FFT (reduces periodic-boundary cross in spectrum). */
 let applyEdgeWindow = false;
+let lastFillUniformKey = '';
 let lastMagUniformKey = '';
 let lastSpatialUniformKey = '';
 let lastFilterUniformKey = '';
+let lastDisplayFbKey = '';
+let lastVideoBlitKey = '';
 
 function effectiveFrameSize(frameW: number, frameH: number): { effW: number; effH: number } {
   let effW: number;
@@ -553,7 +556,9 @@ function ensureResources(frameW: number, frameH: number) {
     padW = nextPadW;
     padH = nextPadH;
     const lineFftStrategyFactory =
-      lineFftMode === 'radix-2' ? createStockhamRadix2LineStrategy : createStockhamRadix4LineStrategy;
+      lineFftMode === 'radix-2'
+        ? createStockhamRadix2LineStrategy
+        : createStockhamRadix4LineStrategy;
     fft = createFft2d(root, {
       width: padW,
       height: padH,
@@ -561,8 +566,12 @@ function ensureResources(frameW: number, frameH: number) {
       lineFftStrategyFactory,
     });
     fftLineFftMode = lineFftMode;
+    lastFillUniformKey = '';
     lastMagUniformKey = '';
+    lastSpatialUniformKey = '';
     lastFilterUniformKey = '';
+    lastDisplayFbKey = '';
+    lastVideoBlitKey = '';
 
     displayTexture = createPaddedDisplayTexture(padW, padH);
 
@@ -682,7 +691,11 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
 
   const { effW, effH } = effectiveFrameSize(frameWidth, frameHeight);
 
-  videoBlitTargetPx.write({ w: effW, h: effH });
+  const videoBlitKey = `${effW}x${effH}`;
+  if (videoBlitKey !== lastVideoBlitKey) {
+    lastVideoBlitKey = videoBlitKey;
+    videoBlitTargetPx.write({ w: effW, h: effH });
+  }
   const videoBlitBindGroup = root.createBindGroup(videoBlitLayout, {
     inputTexture: device.importExternalTexture({ source: video }),
     targetPx: videoBlitTargetPx,
@@ -696,15 +709,19 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
     .draw(3);
 
   const padWLog2 = log2Int(padW);
-  fillParams.write({
-    videoW: effW,
-    videoH: effH,
-    padW,
-    padH,
-    padWLog2,
-    padWMask: padW - 1,
-    edgeWindow: applyEdgeWindow ? 1 : 0,
-  });
+  const fillUniformKey = `${effW}x${effH}x${padW}x${padH}x${applyEdgeWindow}`;
+  if (fillUniformKey !== lastFillUniformKey) {
+    lastFillUniformKey = fillUniformKey;
+    fillParams.write({
+      videoW: effW,
+      videoH: effH,
+      padW,
+      padH,
+      padWLog2,
+      padWMask: padW - 1,
+      edgeWindow: applyEdgeWindow ? 1 : 0,
+    });
+  }
 
   const magUniformKey = `${padW}x${padH}x${gainValue}x${activeFft.skipFinalTranspose}`;
   if (magUniformKey !== lastMagUniformKey) {
@@ -752,15 +769,19 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   const gpuCanvas = context.canvas;
   const fbW = Math.max(1, gpuCanvas.width);
   const fbH = Math.max(1, gpuCanvas.height);
-  displayFb.write({
-    fbW,
-    fbH,
-    padW,
-    padH,
-    effW,
-    effH,
-    viewMode: applyInverseFft ? 1 : 0,
-  });
+  const displayFbKey = `${fbW}x${fbH}x${padW}x${padH}x${effW}x${effH}x${applyInverseFft}`;
+  if (displayFbKey !== lastDisplayFbKey) {
+    lastDisplayFbKey = displayFbKey;
+    displayFb.write({
+      fbW,
+      fbH,
+      padW,
+      padH,
+      effW,
+      effH,
+      viewMode: applyInverseFft ? 1 : 0,
+    });
+  }
 
   const enc = device.createCommandEncoder({ label: 'camera-fft frame' });
   {
@@ -806,12 +827,14 @@ export const controls = defineControls({
     initial: false,
     onToggleChange: (value) => {
       applyInverseFft = value;
+      lastDisplayFbKey = '';
     },
   },
   edgeWindow: {
     initial: false,
     onToggleChange: (value) => {
       applyEdgeWindow = value;
+      lastFillUniformKey = '';
     },
   },
   fftMaxSide: {

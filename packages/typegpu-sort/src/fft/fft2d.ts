@@ -1,6 +1,6 @@
 import type { StorageFlag, TgpuBindGroup, TgpuBuffer, TgpuRoot, UniformFlag } from 'typegpu';
 import { d } from 'typegpu';
-import type { LineFftEncodeOptions, LineFftStrategyFactory } from './lineFftStrategy.ts';
+import type { LineFftStrategyFactory } from './lineFftStrategy.ts';
 import { createStockhamRadix4LineStrategy } from './lineFftRadix4Strategy.ts';
 import {
   createTransposePipeline,
@@ -9,16 +9,16 @@ import {
   transposeUniformType,
 } from './transpose.ts';
 
-function lineFftOpts(
-  computePass: GPUComputePassEncoder,
-  extras?: { inverse?: boolean; lineUniformSlot?: 0 | 1 | 2 | 3 },
-): LineFftEncodeOptions {
-  const inverse = extras?.inverse === true;
-  const lineUniformSlot = extras?.lineUniformSlot ?? 0;
-  if (inverse) {
-    return { computePass, inverse: true as const, lineUniformSlot };
-  }
-  return { computePass, lineUniformSlot };
+type TransposeBgPair = {
+  bgSrcA: TgpuBindGroup<(typeof transposeLayout)['entries']>;
+  bgSrcB: TgpuBindGroup<(typeof transposeLayout)['entries']>;
+};
+
+function pickTransposeBg(
+  pair: TransposeBgPair,
+  inA: boolean,
+): TgpuBindGroup<(typeof transposeLayout)['entries']> {
+  return inA ? pair.bgSrcA : pair.bgSrcB;
 }
 
 export type Fft2dOptions = {
@@ -93,7 +93,7 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
   const bufB = root.createBuffer(d.arrayOf(d.vec2f, count)).$usage('storage');
 
   const nMax = Math.max(W, H);
-  const lineFft = lineFftFactory({ root, nMax, bufA, bufB });
+  const lineFft = lineFftFactory({ root, nMax, width: W, height: H, bufA, bufB });
 
   const transposeUniformFwd0 = root.createBuffer(transposeUniformType).$usage('uniform');
   const transposeUniformFwd1 = root.createBuffer(transposeUniformType).$usage('uniform');
@@ -102,10 +102,6 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
   const transposeUniformInvAux = root.createBuffer(transposeUniformType).$usage('uniform');
   const transposePipeline = createTransposePipeline(root);
 
-  type TransposeBgPair = {
-    bgSrcA: TgpuBindGroup<(typeof transposeLayout)['entries']>;
-    bgSrcB: TgpuBindGroup<(typeof transposeLayout)['entries']>;
-  };
   function mkTransposePair(
     uniformBuf: TgpuBuffer<typeof transposeUniformType> & UniformFlag,
   ): TransposeBgPair {
@@ -128,20 +124,22 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
   const transposePairInv1 = mkTransposePair(transposeUniformInv1);
   const transposePairInvAux = mkTransposePair(transposeUniformInvAux);
 
-  function pickTransposeBg(pair: TransposeBgPair, inA: boolean): TgpuBindGroup<(typeof transposeLayout)['entries']> {
-    return inA ? pair.bgSrcA : pair.bgSrcB;
-  }
+  // Transpose uniforms (constant for fixed W×H)
+  transposeUniformFwd0.write({ srcCols: W, srcRows: H });
+  transposeUniformFwd1.write({ srcCols: H, srcRows: W });
+  transposeUniformInv0.write({ srcCols: W, srcRows: H });
+  transposeUniformInv1.write({ srcCols: H, srcRows: W });
+  transposeUniformInvAux.write({ srcCols: H, srcRows: W });
 
   let resultInA = true;
 
   function inverseFromSkipSpectrumDirect(computePass: GPUComputePassEncoder) {
     let inA = resultInA;
 
-    inA = lineFft.dispatchLineFft(H, H, W, inA, lineFftOpts(computePass, { inverse: true, lineUniformSlot: 3 }));
+    inA = lineFft.dispatchLineFft(H, W, inA, { computePass, inverse: true, lineUniformSlot: 3 });
 
     dispatchTranspose(
       transposePipeline,
-      transposeUniformInvAux,
       pickTransposeBg(transposePairInvAux, inA),
       H,
       W,
@@ -149,23 +147,26 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
     );
     inA = !inA;
 
-    inA = lineFft.dispatchLineFft(W, W, H, inA, lineFftOpts(computePass, { inverse: true, lineUniformSlot: 2 }));
+    inA = lineFft.dispatchLineFft(W, H, inA, { computePass, inverse: true, lineUniformSlot: 2 });
 
     resultInA = inA;
   }
 
   function applyRows1DForward(inA: boolean, computePass: GPUComputePassEncoder): boolean {
-    return lineFft.dispatchLineFft(W, W, H, inA, lineFftOpts(computePass));
+    return lineFft.dispatchLineFft(W, H, inA, { computePass });
   }
 
   function applyRows1DInversePass(inA: boolean, computePass: GPUComputePassEncoder): boolean {
-    return lineFft.dispatchLineFft(W, W, H, inA, lineFftOpts(computePass, { inverse: true, lineUniformSlot: 0 }));
+    return lineFft.dispatchLineFft(W, H, inA, {
+      computePass,
+      inverse: true,
+      lineUniformSlot: 2,
+    });
   }
 
   function applyColumns1DForward(inA: boolean, computePass: GPUComputePassEncoder): boolean {
     dispatchTranspose(
       transposePipeline,
-      transposeUniformFwd0,
       pickTransposeBg(transposePairFwd0, inA),
       W,
       H,
@@ -173,11 +174,10 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
     );
     const afterTInA = !inA;
 
-    const midInA = lineFft.dispatchLineFft(H, H, W, afterTInA, lineFftOpts(computePass, { lineUniformSlot: 1 }));
+    const midInA = lineFft.dispatchLineFft(H, W, afterTInA, { computePass, lineUniformSlot: 1 });
 
     dispatchTranspose(
       transposePipeline,
-      transposeUniformFwd1,
       pickTransposeBg(transposePairFwd1, midInA),
       H,
       W,
@@ -189,7 +189,6 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
   function applyColumns1DInversePass(inA: boolean, computePass: GPUComputePassEncoder): boolean {
     dispatchTranspose(
       transposePipeline,
-      transposeUniformInv0,
       pickTransposeBg(transposePairInv0, inA),
       W,
       H,
@@ -197,17 +196,14 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
     );
     const afterTInA = !inA;
 
-    const midInA = lineFft.dispatchLineFft(
-      H,
-      H,
-      W,
-      afterTInA,
-      lineFftOpts(computePass, { inverse: true, lineUniformSlot: 3 }),
-    );
+    const midInA = lineFft.dispatchLineFft(H, W, afterTInA, {
+      computePass,
+      inverse: true,
+      lineUniformSlot: 3,
+    });
 
     dispatchTranspose(
       transposePipeline,
-      transposeUniformInv1,
       pickTransposeBg(transposePairInv1, midInA),
       H,
       W,
@@ -216,17 +212,19 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
     return !midInA;
   }
 
-  function applyColumns1DForwardLeavingTransposed(inA: boolean, computePass: GPUComputePassEncoder): boolean {
+  function applyColumns1DForwardLeavingTransposed(
+    inA: boolean,
+    computePass: GPUComputePassEncoder,
+  ): boolean {
     dispatchTranspose(
       transposePipeline,
-      transposeUniformFwd0,
       pickTransposeBg(transposePairFwd0, inA),
       W,
       H,
       computePass,
     );
     const afterTInA = !inA;
-    return lineFft.dispatchLineFft(H, H, W, afterTInA, lineFftOpts(computePass, { lineUniformSlot: 1 }));
+    return lineFft.dispatchLineFft(H, W, afterTInA, { computePass, lineUniformSlot: 1 });
   }
 
   function forwardFromFullInverse(initialInA: boolean, computePass: GPUComputePassEncoder) {
@@ -252,7 +250,6 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
     const inA = resultInA;
     dispatchTranspose(
       transposePipeline,
-      transposeUniformInvAux,
       pickTransposeBg(transposePairInvAux, inA),
       H,
       W,

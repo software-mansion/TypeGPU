@@ -1,15 +1,5 @@
-import type { StorageFlag, TgpuBuffer, TgpuRoot, UniformFlag } from 'typegpu';
+import type { StorageFlag, TgpuBuffer, TgpuRoot } from 'typegpu';
 import { d } from 'typegpu';
-import {
-  buildStockhamTwiddleLut,
-  createStockhamStagePipeline,
-  dispatchStockhamLineFft,
-  type StockhamLineBindGroup,
-  stockhamLayout,
-  stockhamStageCount,
-  stockhamTwiddleLutVec2Count,
-  stockhamUniformType,
-} from './stockham.ts';
 
 export type LineFftEncodeOptions = {
   /** Caller-owned compute pass; must stay open for the whole `dispatchLineFft` call. */
@@ -28,6 +18,12 @@ export type LineFftStrategyFactoryContext = {
   root: TgpuRoot;
   /** `max(width, height)` — line FFT length is at most this. */
   nMax: number;
+  /**
+   * Row-major grid size for this strategy. Uniform pools for slots `0`–`3` are pre-written for this
+   * layout (same convention as {@link createFft2d}: rows along `width`, columns along `height`).
+   */
+  width: number;
+  height: number;
   bufA: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
   bufB: TgpuBuffer<d.WgslArray<d.Vec2f>> & StorageFlag;
 };
@@ -52,13 +48,15 @@ export type LineFftStrategy = {
    */
   stageCount(n: number): number;
   /**
-   * Out-of-place along each line: `n` points, stride between consecutive line elements,
-   * `numLines` parallel lines. Returns whether the result sits in `bufA` (`true`) or `bufB` (`false`).
-   * With `options.inverse`, applies the inverse line DFT consistent with the forward transform above.
+   * Out-of-place along each line: `n` points per line, `numLines` parallel lines. Returns whether the
+   * result sits in `bufA` (`true`) or `bufB` (`false`). With `options.inverse`, applies the inverse line
+   * DFT consistent with the forward transform above.
+   *
+   * `lineStride` and other layout fields live in uniforms written at strategy creation for a fixed
+   * `(width, height)`; dispatch only needs `n` and `numLines` for workgroup sizing.
    */
   dispatchLineFft(
     n: number,
-    lineStride: number,
     numLines: number,
     inputInA: boolean,
     options: LineFftEncodeOptions,
@@ -67,81 +65,3 @@ export type LineFftStrategy = {
 };
 
 export type LineFftStrategyFactory = (ctx: LineFftStrategyFactoryContext) => LineFftStrategy;
-
-/**
- * Pure radix-2 Stockham line FFT (reference implementation). {@link createFft2d} defaults to the faster
- * {@link createStockhamRadix4LineStrategy} instead; pass this factory to opt into radix-2 only.
- */
-export function createStockhamRadix2LineStrategy(
-  ctx: LineFftStrategyFactoryContext,
-): LineFftStrategy {
-  const { root, nMax, bufA, bufB } = ctx;
-  const twiddleLutLen = stockhamTwiddleLutVec2Count(nMax);
-  const twiddleLut = root.createBuffer(d.arrayOf(d.vec2f, twiddleLutLen)).$usage('storage');
-  twiddleLut.write(buildStockhamTwiddleLut(nMax).map(([x, y]) => d.vec2f(x, y)));
-
-  const maxStockhamStages = stockhamStageCount(nMax);
-  const stockhamPipeline = createStockhamStagePipeline(root);
-
-  function createStockhamPool(): {
-    uniforms: (TgpuBuffer<typeof stockhamUniformType> & UniformFlag)[];
-    bindSrcA: StockhamLineBindGroup[];
-    bindSrcB: StockhamLineBindGroup[];
-  } {
-    const uniforms = Array.from({ length: maxStockhamStages }, () =>
-      root.createBuffer(stockhamUniformType).$usage('uniform'),
-    );
-    const bindSrcA: StockhamLineBindGroup[] = uniforms.map((uniforms) =>
-      root.createBindGroup(stockhamLayout, {
-        uniforms,
-        twiddles: twiddleLut,
-        src: bufA,
-        dst: bufB,
-      }),
-    );
-    const bindSrcB: StockhamLineBindGroup[] = uniforms.map((uniforms) =>
-      root.createBindGroup(stockhamLayout, {
-        uniforms,
-        twiddles: twiddleLut,
-        src: bufB,
-        dst: bufA,
-      }),
-    );
-    return { uniforms, bindSrcA, bindSrcB };
-  }
-
-  const stockhamPool0 = createStockhamPool();
-  const stockhamPool1 = createStockhamPool();
-  const stockhamPool2 = createStockhamPool();
-  const stockhamPool3 = createStockhamPool();
-  const stockhamPools = [stockhamPool0, stockhamPool1, stockhamPool2, stockhamPool3] as const;
-
-  return {
-    id: 'stockham-radix2',
-    stageCount: stockhamStageCount,
-    dispatchLineFft(n, lineStride, numLines, inputInA, options) {
-      const s = options.lineUniformSlot ?? 0;
-      const slot = s >= 0 && s <= 3 ? s : 0;
-      const pool = stockhamPools[slot as 0 | 1 | 2 | 3];
-      return dispatchStockhamLineFft(
-        stockhamPipeline,
-        pool.uniforms,
-        pool.bindSrcA,
-        pool.bindSrcB,
-        n,
-        lineStride,
-        numLines,
-        inputInA,
-        options,
-      );
-    },
-    destroy() {
-      twiddleLut.destroy();
-      for (const p of stockhamPools) {
-        for (const u of p.uniforms) {
-          u.destroy();
-        }
-      }
-    },
-  };
-}

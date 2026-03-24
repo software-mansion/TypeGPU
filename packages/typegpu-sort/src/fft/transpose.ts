@@ -1,5 +1,5 @@
 import tgpu, { d, std } from 'typegpu';
-import type { TgpuBindGroup, TgpuBuffer, TgpuRoot, UniformFlag } from 'typegpu';
+import type { TgpuBindGroup, TgpuRoot } from 'typegpu';
 
 /** Tile width/height; 16×16 = 256 threads per workgroup. */
 const TILE_DIM = 16;
@@ -71,19 +71,14 @@ export function createTransposePipeline(root: TgpuRoot) {
 
 export function dispatchTranspose(
   pipeline: ReturnType<typeof createTransposePipeline>,
-  uniformBuffer: TgpuBuffer<typeof transposeUniformType> & UniformFlag,
   bindGroup: TgpuBindGroup<(typeof transposeLayout)['entries']>,
   srcCols: number,
   srcRows: number,
   computePass: GPUComputePassEncoder,
 ): void {
-  uniformBuffer.write({ srcCols, srcRows });
   const numWgX = Math.ceil(srcCols / TILE_DIM);
   const numWgY = Math.ceil(srcRows / TILE_DIM);
-  if (
-    numWgX > MAX_WORKGROUPS_PER_DIMENSION ||
-    numWgY > MAX_WORKGROUPS_PER_DIMENSION
-  ) {
+  if (numWgX > MAX_WORKGROUPS_PER_DIMENSION || numWgY > MAX_WORKGROUPS_PER_DIMENSION) {
     throw new Error(
       `Transpose grid (${numWgX}×${numWgY}) exceeds max workgroups per dimension (${MAX_WORKGROUPS_PER_DIMENSION})`,
     );
