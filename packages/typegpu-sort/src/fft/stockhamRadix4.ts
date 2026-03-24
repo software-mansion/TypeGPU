@@ -1,5 +1,6 @@
 import tgpu, { d } from 'typegpu';
 import type { TgpuBindGroup, TgpuBuffer, TgpuRoot, UniformFlag } from 'typegpu';
+import { complexCmulDs, splitComplexFromVec2 } from './complex.ts';
 import type { LineFftEncodeOptions } from './lineFftStrategy.ts';
 import {
   createStockhamDifStagePipeline,
@@ -17,14 +18,23 @@ export const radix4UniformType = d.struct({
   n: d.u32,
   lineStride: d.u32,
   numLines: d.u32,
-  /** Start offset into the twiddle LUT for this stage's `p` value: `(p - 1) / 3`. */
+  /** Start offset into the twiddle LUT for this stage's `p` value (`3` vec2 per `k`); equals `p − 1`. */
   twiddleOffset: d.u32,
+  /**
+   * Multiply every written output sample by this (orthonormal 2D: `1/sqrt(n)` on both last forward
+   * and first inverse stage). Use `1` for no extra scaling.
+   */
+  outputScale: d.f32,
 });
 
 export const radix4Layout = tgpu.bindGroupLayout({
   uniforms: { uniform: radix4UniformType },
-  /** Precomputed twiddle factors; layout matches {@link buildRadix4TwiddleLut}. */
+  /** High parts of precomputed twiddles; layout matches {@link buildRadix4TwiddleLutHiLo}. */
   twiddles: {
+    storage: d.arrayOf(d.vec2f),
+    access: 'readonly',
+  },
+  twiddlesLo: {
     storage: d.arrayOf(d.vec2f),
     access: 'readonly',
   },
@@ -48,6 +58,7 @@ export const radix4StageKernel = tgpu.computeFn({
     numWorkgroups: d.builtin.numWorkgroups,
   },
 })((input) => {
+  'use gpu';
   const wg = d.u32(WORKGROUP_SIZE);
   const spanX = input.numWorkgroups.x * wg;
   const spanY = input.numWorkgroups.y * spanX;
@@ -79,9 +90,13 @@ export const radix4StageKernel = tgpu.computeFn({
   const i3 = base + i + T * 3;
 
   const twOff = radix4Layout.$.uniforms.twiddleOffset;
-  const tw1 = radix4Layout.$.twiddles[twOff + k] as d.v2f;
-  const tw2 = d.vec2f(tw1.x * tw1.x - tw1.y * tw1.y, d.f32(2) * tw1.x * tw1.y);
-  const tw3 = d.vec2f(tw2.x * tw1.x - tw2.y * tw1.y, tw2.x * tw1.y + tw2.y * tw1.x);
+  const tbase = twOff + d.u32(3) * k;
+  const tw1_hi = radix4Layout.$.twiddles[tbase] as d.v2f;
+  const tw1_lo = radix4Layout.$.twiddlesLo[tbase] as d.v2f;
+  const tw2_hi = radix4Layout.$.twiddles[tbase + d.u32(1)] as d.v2f;
+  const tw2_lo = radix4Layout.$.twiddlesLo[tbase + d.u32(1)] as d.v2f;
+  const tw3_hi = radix4Layout.$.twiddles[tbase + d.u32(2)] as d.v2f;
+  const tw3_lo = radix4Layout.$.twiddlesLo[tbase + d.u32(2)] as d.v2f;
 
   const a0 = radix4Layout.$.src[i0] as d.v2f;
   const a1 = radix4Layout.$.src[i1] as d.v2f;
@@ -89,28 +104,29 @@ export const radix4StageKernel = tgpu.computeFn({
   const a3 = radix4Layout.$.src[i3] as d.v2f;
 
   const u0 = d.vec2f(a0);
-  const u1 = d.vec2f(a1.x * tw1.x - a1.y * tw1.y, a1.x * tw1.y + a1.y * tw1.x);
-  const u2 = d.vec2f(a2.x * tw2.x - a2.y * tw2.y, a2.x * tw2.y + a2.y * tw2.x);
-  const u3 = d.vec2f(a3.x * tw3.x - a3.y * tw3.y, a3.x * tw3.y + a3.y * tw3.x);
+  const u1 = complexCmulDs(a1, tw1_hi, tw1_lo);
+  const u2 = complexCmulDs(a2, tw2_hi, tw2_lo);
+  const u3 = complexCmulDs(a3, tw3_hi, tw3_lo);
 
-  const v0 = d.vec2f(u0.x + u2.x, u0.y + u2.y);
-  const v1 = d.vec2f(u0.x - u2.x, u0.y - u2.y);
-  const v2 = d.vec2f(u1.x + u3.x, u1.y + u3.y);
-  const du1x = u1.x - u3.x;
-  const du1y = u1.y - u3.y;
+  const v0 = u0 + u2;
+  const v1 = u0 - u2;
+  const v2 = u1 + u3;
+  const du1 = u1 - u3;
   /** Multiply `(u1−u3)` by `−i` (forward DFT₄ step). */
-  const v3 = d.vec2f(du1y, -du1x);
+  const v3 = d.vec2f(du1.y, -du1.x);
 
-  const y0 = d.vec2f(v0.x + v2.x, v0.y + v2.y);
-  const y1 = d.vec2f(v1.x + v3.x, v1.y + v3.y);
-  const y2 = d.vec2f(v0.x - v2.x, v0.y - v2.y);
-  const y3 = d.vec2f(v1.x - v3.x, v1.y - v3.y);
+  const y0 = v0 + v2;
+  const y1 = v1 + v3;
+  const y2 = v0 - v2;
+  const y3 = v1 - v3;
+
+  const s = radix4Layout.$.uniforms.outputScale;
 
   const outBase = base + ((i - k) << 2) + k;
-  radix4Layout.$.dst[outBase] = d.vec2f(y0);
-  radix4Layout.$.dst[outBase + p] = d.vec2f(y1);
-  radix4Layout.$.dst[outBase + (p << 1)] = d.vec2f(y2);
-  radix4Layout.$.dst[outBase + p + (p << 1)] = d.vec2f(y3);
+  radix4Layout.$.dst[outBase] = y0 * s;
+  radix4Layout.$.dst[outBase + p] = y1 * s;
+  radix4Layout.$.dst[outBase + (p << 1)] = y2 * s;
+  radix4Layout.$.dst[outBase + p + (p << 1)] = y3 * s;
 });
 
 /**
@@ -162,37 +178,46 @@ export const radix4InverseStageKernel = tgpu.computeFn({
   const y2 = radix4Layout.$.src[outBase + (p << 1)] as d.v2f;
   const y3 = radix4Layout.$.src[outBase + p + (p << 1)] as d.v2f;
 
-  const v0 = d.vec2f(y0.x + y2.x, y0.y + y2.y);
-  const v2u = d.vec2f(y0.x - y2.x, y0.y - y2.y);
-  const v1 = d.vec2f(y1.x + y3.x, y1.y + y3.y);
-  const v3m = d.vec2f(y1.x - y3.x, y1.y - y3.y);
+  const v0 = y0 + y2;
+  const v2u = y0 - y2;
+  const v1 = y1 + y3;
+  const v3m = y1 - y3;
 
-  const u0p = d.vec2f(v0.x + v1.x, v0.y + v1.y);
-  const u2p = d.vec2f(v0.x - v1.x, v0.y - v1.y);
+  const u0p = v0 + v1;
+  const u2p = v0 - v1;
   const du1 = d.vec2f(-v3m.y, v3m.x);
-  const u1p = d.vec2f(v2u.x + du1.x, v2u.y + du1.y);
-  const u3p = d.vec2f(v2u.x - du1.x, v2u.y - du1.y);
-
-  const u0 = d.vec2f(u0p);
-  const u1 = d.vec2f(u1p);
-  const u2 = d.vec2f(u2p);
-  const u3 = d.vec2f(u3p);
+  const u1p = v2u + du1;
+  const u3p = v2u - du1;
 
   const twOff = radix4Layout.$.uniforms.twiddleOffset;
-  const twFwd = radix4Layout.$.twiddles[twOff + k] as d.v2f;
-  const tw1i = d.vec2f(twFwd.x, -twFwd.y);
-  const tw2i = d.vec2f(tw1i.x * tw1i.x - tw1i.y * tw1i.y, d.f32(2) * tw1i.x * tw1i.y);
-  const tw3i = d.vec2f(tw2i.x * tw1i.x - tw2i.y * tw1i.y, tw2i.x * tw1i.y + tw2i.y * tw1i.x);
+  const tbase = twOff + d.u32(3) * k;
+  const tw1_hi = radix4Layout.$.twiddles[tbase] as d.v2f;
+  const tw1_lo = radix4Layout.$.twiddlesLo[tbase] as d.v2f;
+  const tw2_hi = radix4Layout.$.twiddles[tbase + d.u32(1)] as d.v2f;
+  const tw2_lo = radix4Layout.$.twiddlesLo[tbase + d.u32(1)] as d.v2f;
+  const tw3_hi = radix4Layout.$.twiddles[tbase + d.u32(2)] as d.v2f;
+  const tw3_lo = radix4Layout.$.twiddlesLo[tbase + d.u32(2)] as d.v2f;
 
-  const b0 = d.vec2f(u0);
-  const b1 = d.vec2f(u1.x * tw1i.x - u1.y * tw1i.y, u1.x * tw1i.y + u1.y * tw1i.x);
-  const b2 = d.vec2f(u2.x * tw2i.x - u2.y * tw2i.y, u2.x * tw2i.y + u2.y * tw2i.x);
-  const b3 = d.vec2f(u3.x * tw3i.x - u3.y * tw3i.y, u3.x * tw3i.y + u3.y * tw3i.x);
+  /** `conj(cis(−mθ))` from forward double-single parts. */
+  const conjMask = d.vec2f(1, -1);
+  const c1 = (tw1_hi + tw1_lo) * conjMask;
+  const c2 = (tw2_hi + tw2_lo) * conjMask;
+  const c3 = (tw3_hi + tw3_lo) * conjMask;
+  const sp1 = splitComplexFromVec2(c1);
+  const sp2 = splitComplexFromVec2(c2);
+  const sp3 = splitComplexFromVec2(c3);
 
-  radix4Layout.$.dst[i0] = d.vec2f(b0);
-  radix4Layout.$.dst[i1] = d.vec2f(b1);
-  radix4Layout.$.dst[i2] = d.vec2f(b2);
-  radix4Layout.$.dst[i3] = d.vec2f(b3);
+  const b0 = u0p;
+  const b1 = complexCmulDs(u1p, sp1.xy, sp1.zw);
+  const b2 = complexCmulDs(u2p, sp2.xy, sp2.zw);
+  const b3 = complexCmulDs(u3p, sp3.xy, sp3.zw);
+
+  const s = radix4Layout.$.uniforms.outputScale;
+
+  radix4Layout.$.dst[i0] = b0 * s;
+  radix4Layout.$.dst[i1] = b1 * s;
+  radix4Layout.$.dst[i2] = b2 * s;
+  radix4Layout.$.dst[i3] = b3 * s;
 });
 
 export function createRadix4StagePipeline(root: TgpuRoot) {
@@ -215,7 +240,7 @@ export function maxRadix4PassCount(nMax: number): number {
 }
 
 /** Bainville radix-4 stage `p` values in forward order (`1, 4, 16, …`). */
-function radix4PValues(n: number): number[] {
+export function radix4PValues(n: number): number[] {
   const r4 = Math.floor((31 - Math.clz32(n)) / 2);
   const ps: number[] = [];
   let p = 1;
@@ -227,44 +252,50 @@ function radix4PValues(n: number): number[] {
 }
 
 /**
- * Number of `vec2f` entries for the radix-4 twiddle LUT up to max line length `nMax`.
- * Layout: for each stage p in `radix4PValues(nMax)`, p entries of `cis(-π·k/(2p))` for k = 0..p-1.
- * Total = sum of p values = (4^r4 - 1)/3 where r4 = `maxRadix4PassCount(nMax)`.
+ * Number of `vec2f` entries per radix-4 twiddle buffer (hi or lo) up to max line length `nMax`.
+ * Three entries per `(p, k)` for `cis(θ)`, `cis(2θ)`, `cis(3θ)` with θ = −π·k/(2p).
  */
 export function radix4TwiddleLutVec2Count(nMax: number): number {
   const ps = radix4PValues(nMax);
   let total = 0;
   for (const p of ps) {
-    total += p;
+    total += 3 * p;
   }
   return total;
 }
 
 /**
- * Precomputed twiddle factors `cis(-π·k/(2p))` for all radix-4 stages up to `nMax`.
- * Computed in f64 on CPU for maximum precision.
+ * Precomputed twiddle high/low parts for all radix-4 stages up to `nMax` (f64 angles, f32 hi/lo).
  */
-export function buildRadix4TwiddleLut(nMax: number): [number, number][] {
-  const out: [number, number][] = [];
+export function buildRadix4TwiddleLutHiLo(nMax: number): {
+  hi: [number, number][];
+  lo: [number, number][];
+} {
+  const hi: [number, number][] = [];
+  const lo: [number, number][] = [];
   for (const p of radix4PValues(nMax)) {
     for (let k = 0; k < p; k++) {
-      const angle = (-Math.PI * k) / (2 * p);
-      out.push([Math.cos(angle), Math.sin(angle)]);
+      const theta = (-Math.PI * k) / (2 * p);
+      for (const m of [1, 2, 3] as const) {
+        const angle = theta * m;
+        const re = Math.cos(angle);
+        const im = Math.sin(angle);
+        const hre = Math.fround(re);
+        const him = Math.fround(im);
+        hi.push([hre, him]);
+        lo.push([Math.fround(re - hre), Math.fround(im - him)]);
+      }
     }
   }
-  return out;
+  return { hi, lo };
 }
 
-/** Twiddle LUT offset for a given `p` value: `(p - 1) / 3`. */
-function radix4TwiddleOffset(p: number): number {
-  return (p - 1) / 3;
+/** Twiddle LUT offset for a given `p` value (3 vec2 per k): `p − 1`. */
+export function radix4TwiddleOffset(p: number): number {
+  return p - 1;
 }
 
-/**
- * Pre-write all uniform buffers for a radix-4 pool so that {@link dispatchRadix4LineFft}
- * performs zero uniform writes at dispatch time.
- */
-export function prepareRadix4Slot(
+function writeRadix4PoolUniformDefaults(
   pool: Radix4LineUniformPools,
   n: number,
   lineStride: number,
@@ -282,6 +313,7 @@ export function prepareRadix4Slot(
       lineStride,
       numLines,
       twiddleOffset: radix4TwiddleOffset(p),
+      outputScale: 1.0,
     });
   }
   const k = 31 - Math.clz32(n);
@@ -292,8 +324,91 @@ export function prepareRadix4Slot(
       lineStride,
       numLines,
       direction: inverse ? 1 : 0,
+      outputScale: 1.0,
     });
   }
+}
+
+function patchLastForwardOrthonormalScale(
+  pool: Radix4LineUniformPools,
+  n: number,
+  lineStride: number,
+  numLines: number,
+  scale: number,
+): void {
+  const ps = radix4PValues(n);
+  const k = 31 - Math.clz32(n);
+  if (k % 2 === 1) {
+    pool.stockhamTailUniform.write({
+      ns: n >> 1,
+      n,
+      lineStride,
+      numLines,
+      direction: 0,
+      outputScale: scale,
+    });
+  } else if (ps.length > 0) {
+    const s = ps.length - 1;
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    const p = ps[s]!;
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    pool.radix4StageUniforms[s]!.write({
+      p,
+      n,
+      lineStride,
+      numLines,
+      twiddleOffset: radix4TwiddleOffset(p),
+      outputScale: scale,
+    });
+  }
+}
+
+function patchFirstInverseOrthonormalScale(
+  pool: Radix4LineUniformPools,
+  n: number,
+  lineStride: number,
+  numLines: number,
+  scale: number,
+): void {
+  const ps = radix4PValues(n);
+  const k = 31 - Math.clz32(n);
+  if (k % 2 === 1) {
+    pool.stockhamTailUniform.write({
+      ns: n >> 1,
+      n,
+      lineStride,
+      numLines,
+      direction: 1,
+      outputScale: scale,
+    });
+  } else if (ps.length > 0) {
+    const s = ps.length - 1;
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    const p = ps[s]!;
+    // oxlint-disable-next-line typescript/no-non-null-assertion
+    pool.radix4StageUniforms[s]!.write({
+      p,
+      n,
+      lineStride,
+      numLines,
+      twiddleOffset: radix4TwiddleOffset(p),
+      outputScale: scale,
+    });
+  }
+}
+
+/**
+ * Pre-write all uniform buffers for a radix-4 pool so that {@link dispatchRadix4LineFft}
+ * can avoid redundant writes when no orthonormal scaling is requested.
+ */
+export function prepareRadix4Slot(
+  pool: Radix4LineUniformPools,
+  n: number,
+  lineStride: number,
+  numLines: number,
+  inverse: boolean,
+): void {
+  writeRadix4PoolUniformDefaults(pool, n, lineStride, numLines, inverse);
 }
 
 /** @internal Unit tests only — not part of the public package API. */
@@ -343,6 +458,21 @@ export function dispatchRadix4LineFft(
 
   const { computePass } = opts;
   const inverse = opts.inverse === true;
+
+  const lineStride = n;
+  writeRadix4PoolUniformDefaults(pool, n, lineStride, numLines, inverse);
+  if (!inverse && opts.lastPassOrthonormalScale !== undefined) {
+    patchLastForwardOrthonormalScale(pool, n, lineStride, numLines, opts.lastPassOrthonormalScale);
+  }
+  if (inverse && opts.firstPassOrthonormalScale !== undefined) {
+    patchFirstInverseOrthonormalScale(
+      pool,
+      n,
+      lineStride,
+      numLines,
+      opts.firstPassOrthonormalScale,
+    );
+  }
 
   const k = 31 - Math.clz32(n);
   const ps = radix4PValues(n);

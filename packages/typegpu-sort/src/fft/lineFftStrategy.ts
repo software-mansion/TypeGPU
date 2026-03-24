@@ -11,6 +11,16 @@ export type LineFftEncodeOptions = {
    */
   lineUniformSlot?: 0 | 1 | 2 | 3;
   inverse?: boolean;
+  /**
+   * Orthonormal 2D separable convention: multiply the **last** butterfly stage's outputs by this factor
+   * (typically `1/sqrt(n)` for line length `n`). Applied inside that stage's kernel — no extra compute pass.
+   */
+  lastPassOrthonormalScale?: number;
+  /**
+   * Orthonormal inverse: multiply the **first** inverse stage's outputs by this factor (typically
+   * `1/sqrt(n)` — same as forward — since GPU kernels are unnormalized: `F_inv(F(x)) = N*x`).
+   */
+  firstPassOrthonormalScale?: number;
 };
 
 /** Context passed to {@link LineFftStrategyFactory} when {@link createFft2d} builds the 2D FFT. */
@@ -35,10 +45,10 @@ export type LineFftStrategyFactoryContext = {
  * **Contract:** `dispatchLineFft(..., { inverse: false })` and `{ inverse: true }` must implement the **same**
  * unnormalized complex DFT / IDFT pair as the reference Stockham radix-2 path ({@link createStockhamRadix2LineStrategy}).
  * A faster **forward** factorization (e.g. radix-4 stages) still defines one linear operator `F`; the inverse pass
- * must apply `F⁻¹`, not merely “reverse stages and conjugate twiddles” unless that has been shown equivalent.
+ * must apply `F^-1`, not merely "reverse stages and conjugate twiddles" unless that has been shown equivalent.
  * It is valid for `inverse: true` to use a different **sequence** of kernels (e.g. full Stockham inverse) as long
- * as it is mathematically the inverse of the same `F`. Custom strategies should verify **round-trip** (forward →
- * inverse vs input, up to `1/(n·numLines)` scaling) — matching forward output to Stockham is necessary but **not**
+ * as it is mathematically the inverse of the same `F`. Custom strategies should verify **round-trip** (forward then
+ * inverse vs input, up to float noise) — matching forward output to Stockham is necessary but **not**
  * sufficient for inverse correctness.
  */
 export type LineFftStrategy = {

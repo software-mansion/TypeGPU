@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { _forTesting, radix4LineStageCount } from './stockhamRadix4.ts';
+import {
+  _forTesting,
+  radix4LineStageCount,
+  radix4TwiddleLutVec2Count,
+  radix4TwiddleOffset,
+} from './stockhamRadix4.ts';
 
 const { radix4PValues } = _forTesting;
 
@@ -64,6 +69,19 @@ describe('radix4PValues', () => {
     const ps = radix4PValues(1024);
     const inv = ps.toReversed();
     expect(inv).toEqual([256, 64, 16, 4, 1]);
+  });
+});
+
+describe('radix4TwiddleLutVec2Count (3-wide twiddles per k)', () => {
+  it('matches 3 × Σp for nMax', () => {
+    expect(radix4TwiddleLutVec2Count(64)).toBe(63);
+    expect(radix4TwiddleLutVec2Count(1024)).toBe(1023);
+  });
+
+  it('radix4TwiddleOffset(p) is p − 1 in vec2 indices', () => {
+    expect(radix4TwiddleOffset(1)).toBe(0);
+    expect(radix4TwiddleOffset(4)).toBe(3);
+    expect(radix4TwiddleOffset(16)).toBe(15);
   });
 });
 

@@ -1,13 +1,13 @@
 import { d } from 'typegpu';
 import {
-  buildStockhamTwiddleLut,
+  buildStockhamTwiddleLutHiLo,
   createStockhamDifStagePipeline,
   createStockhamStagePipeline,
   stockhamLayout,
   stockhamUniformType,
 } from './stockhamRadix2.ts';
 import {
-  buildRadix4TwiddleLut,
+  buildRadix4TwiddleLutHiLo,
   createRadix4InverseStagePipeline,
   createRadix4StagePipeline,
   dispatchRadix4LineFft,
@@ -39,13 +39,19 @@ export function createStockhamRadix4LineStrategy(
   const stockhamPipeline = createStockhamStagePipeline(root);
   const stockhamDifPipeline = createStockhamDifStagePipeline(root);
 
-  const stockhamLutLen = nMax - 1;
-  const stockhamLut = root.createBuffer(d.arrayOf(d.vec2f, stockhamLutLen)).$usage('storage');
-  stockhamLut.write(buildStockhamTwiddleLut(nMax).map(([x, y]) => d.vec2f(x, y)));
+  const radix2LutLen = nMax - 1;
+  const radix2Lut = root.createBuffer(d.arrayOf(d.vec2f, radix2LutLen)).$usage('storage');
+  const radix2LutLo = root.createBuffer(d.arrayOf(d.vec2f, radix2LutLen)).$usage('storage');
+  const { hi: r2Hi, lo: r2Lo } = buildStockhamTwiddleLutHiLo(nMax);
+  radix2Lut.write(r2Hi.map(([x, y]) => d.vec2f(x, y)));
+  radix2LutLo.write(r2Lo.map(([x, y]) => d.vec2f(x, y)));
 
   const radix4LutLen = Math.max(1, radix4TwiddleLutVec2Count(nMax));
   const radix4Lut = root.createBuffer(d.arrayOf(d.vec2f, radix4LutLen)).$usage('storage');
-  radix4Lut.write(buildRadix4TwiddleLut(nMax).map(([x, y]) => d.vec2f(x, y)));
+  const radix4LutLo = root.createBuffer(d.arrayOf(d.vec2f, radix4LutLen)).$usage('storage');
+  const { hi: r4Hi, lo: r4Lo } = buildRadix4TwiddleLutHiLo(nMax);
+  radix4Lut.write(r4Hi.map(([x, y]) => d.vec2f(x, y)));
+  radix4LutLo.write(r4Lo.map(([x, y]) => d.vec2f(x, y)));
 
   function createRadix4Pool() {
     const radix4StageUniforms = Array.from({ length: radix4PassPool }, () =>
@@ -55,6 +61,7 @@ export function createStockhamRadix4LineStrategy(
       root.createBindGroup(radix4Layout, {
         uniforms,
         twiddles: radix4Lut,
+        twiddlesLo: radix4LutLo,
         src: bufA,
         dst: bufB,
       }),
@@ -63,6 +70,7 @@ export function createStockhamRadix4LineStrategy(
       root.createBindGroup(radix4Layout, {
         uniforms,
         twiddles: radix4Lut,
+        twiddlesLo: radix4LutLo,
         src: bufB,
         dst: bufA,
       }),
@@ -70,13 +78,15 @@ export function createStockhamRadix4LineStrategy(
     const stockhamTailUniform = root.createBuffer(stockhamUniformType).$usage('uniform');
     const stockhamTailBgSrcA = root.createBindGroup(stockhamLayout, {
       uniforms: stockhamTailUniform,
-      twiddles: stockhamLut,
+      twiddles: radix2Lut,
+      twiddlesLo: radix2LutLo,
       src: bufA,
       dst: bufB,
     });
     const stockhamTailBgSrcB = root.createBindGroup(stockhamLayout, {
       uniforms: stockhamTailUniform,
-      twiddles: stockhamLut,
+      twiddles: radix2Lut,
+      twiddlesLo: radix2LutLo,
       src: bufB,
       dst: bufA,
     });
@@ -114,6 +124,12 @@ export function createStockhamRadix4LineStrategy(
           return s >= 0 && s <= 3 ? s : 0;
         })(),
         ...(options.inverse === true ? { inverse: true as const } : {}),
+        ...(options.lastPassOrthonormalScale !== undefined
+          ? { lastPassOrthonormalScale: options.lastPassOrthonormalScale }
+          : {}),
+        ...(options.firstPassOrthonormalScale !== undefined
+          ? { firstPassOrthonormalScale: options.firstPassOrthonormalScale }
+          : {}),
       };
       return dispatchRadix4LineFft(
         radix4Pipeline,
@@ -128,8 +144,10 @@ export function createStockhamRadix4LineStrategy(
       );
     },
     destroy() {
-      stockhamLut.destroy();
+      radix2Lut.destroy();
+      radix2LutLo.destroy();
       radix4Lut.destroy();
+      radix4LutLo.destroy();
       for (const p of radix4Pools) {
         for (const u of p.radix4StageUniforms) {
           u.destroy();

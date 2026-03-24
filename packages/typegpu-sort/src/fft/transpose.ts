@@ -61,7 +61,7 @@ export const transposeKernel = tgpu.computeFn({
   if (outJ < srcCols && outI < srcRows) {
     const outIdx = outJ * srcRows + outI;
     const v = tile.$[lx * tileStride + ly] as d.v2f;
-    transposeLayout.$.dst[outIdx] = d.vec2f(v.x, v.y);
+    transposeLayout.$.dst[outIdx] = d.vec2f(v);
   }
 });
 
