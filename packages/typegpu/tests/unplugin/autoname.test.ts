@@ -190,7 +190,7 @@ describe('autonaming', () => {
 
     expect(scope.toString()).toMatchInlineSnapshot(`
       "() => {
-            /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function myFun() {
+            const myFun = /* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function myFun() {
               "use gpu";
               return 0;
             }), {
@@ -199,6 +199,8 @@ describe('autonaming', () => {
           ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
           externals: () => ({}),
         }) && $.f)({}));
+
+
             const main = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(__vite_ssr_import_2__.default.fn([])(/* #__PURE__ */ (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
               myFun();
             }), {

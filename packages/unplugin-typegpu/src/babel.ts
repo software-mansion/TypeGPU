@@ -52,7 +52,7 @@ function assignMetadata(
   const visibility = t.isFunctionDeclaration(path.node)
     ? getVisibilityScope(this, path as NodePath<t.FunctionDeclaration>)
     : undefined;
-  if (visibility) {
+  if (t.isFunctionDeclaration(path.node)) {
     expression = t.functionExpression(fnDecl.id!, fnDecl.params, fnDecl.body);
   } else {
     expression = path.node as t.Expression;
@@ -80,18 +80,23 @@ function assignMetadata(
     [t.objectExpression([])],
   );
 
-  if (visibility) {
+  let replacement: t.Node = callExpr;
+
+  if (t.isFunctionDeclaration(path.node) && path.node.id) {
     const declaration = t.variableDeclaration('const', [
-      t.variableDeclarator(i(visibility.name), callExpr),
+      t.variableDeclarator(path.node.id, callExpr),
     ]);
     declaration.leadingComments = fnDecl.leadingComments ?? null;
+    replacement = declaration;
+  }
 
+  if (visibility) {
     // Hoisting the declaration to the top of the scope
-    visibility.scope.unshiftContainer('body', declaration);
+    visibility.unshiftContainer('body', replacement as t.Statement);
     this.alreadyTransformed.add(expression);
     path.remove();
   } else {
-    path.replaceWith(callExpr);
+    path.replaceWith(replacement);
   }
   path.skip();
 }

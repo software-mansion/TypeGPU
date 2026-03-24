@@ -166,29 +166,32 @@ function isTgpu(state: PluginState, node: babel.Node): boolean {
 export function getVisibilityScope(
   state: PluginState,
   path: NodePath<t.FunctionDeclaration>,
-): { scope: NodePath<t.Block | t.Program>; name: string } | undefined {
+): NodePath<t.BlockStatement> | undefined {
   if (!path.node.id) {
     // Anonymous function statement, no visiblility
     return undefined;
   }
 
-  // The generated function expression will get visited again
   const binding = path.scope.getBinding(path.node.id.name);
   if (!binding) {
     // Not bound anywhere, we can skip
     return undefined;
   }
 
-  const scopePath = binding.scope.path;
-  if (!t.isBlock(scopePath.node) && !t.isProgram(scopePath.node)) {
-    state.warn('FunctionDeclaration scope is not a block or program: ' + scopePath.node.type);
-    return undefined;
+  let scopePath = binding.scope.path;
+
+  // If the block doesn't have an array of statements for a body (e.g. FunctionDeclaration), delve deeper
+  if (t.isNode((scopePath.node as t.FunctionDeclaration).body)) {
+    scopePath = scopePath.get('body') as NodePath;
   }
 
-  return {
-    scope: scopePath as NodePath<t.Block | t.Program>,
-    name: path.node.id.name,
-  };
+  if (Array.isArray((scopePath.node as t.BlockStatement).body)) {
+    return scopePath as NodePath<t.BlockStatement>;
+  }
+
+  // We give up. This is most likely a switch statement. The fallback will just not
+  // hoist the function, so it should still work in most cases.
+  return undefined;
 }
 
 export function gatherTgpuAliases(state: PluginState, node: t.ImportDeclaration) {

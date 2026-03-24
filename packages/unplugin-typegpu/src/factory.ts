@@ -54,13 +54,16 @@ function assignMetadata(
   let nodeToOverride: t.Node = path.node;
   let code = fnWrapperTemplate(fnCode, metadata);
   let insertPos = path.node.start ?? 0;
+
+  if (t.isFunctionDeclaration(path.node) && path.node.id) {
+    code = `const ${(path.node as t.FunctionDeclaration).id!.name} = ${code};\n\n`;
+  }
+
   if (visibility) {
     // Hoisting the declaration to the top of the scope
-    insertPos = visibility.scope.node.body[0]
-      ? (visibility.scope.node.body[0].start ?? 0)
-      : (visibility.scope.node.start ?? 0) + 1;
-
-    code = `const ${visibility.name} = ${code};\n\n`;
+    insertPos = visibility.node.body[0]
+      ? (visibility.node.body[0].start ?? 0)
+      : (visibility.node.start ?? 0) + 1;
 
     if (t.isExportNamedDeclaration(path.parent)) {
       nodeToOverride = path.parent;
