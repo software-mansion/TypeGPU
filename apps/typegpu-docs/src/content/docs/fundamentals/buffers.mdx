@@ -216,7 +216,7 @@ If you pass an unmapped buffer, the data will be written to the buffer using `GP
 If you passed your own buffer to the `root.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the `write` method.
 :::
 
-### Permissive vector inputs
+### Permissive vector and matrix inputs
 
 For vector fields and buffers, `.write()` accepts three equivalent forms - you don't need to construct a typed vec instance:
 
@@ -238,6 +238,35 @@ vecBuffer.write(d.vec3f(1, 2, 3));            // typed instance
 vecBuffer.write([1, 2, 3]);                   // plain tuple
 vecBuffer.write(new Float32Array([1, 2, 3])); // TypedArray
 ```
+
+For matrix fields and buffers, `.write()` accepts typed matrix instances, plain `number[]`, and `Float32Array`.
+
+:::tip[WGSL matrices are column-major]
+WGSL matrices are stored by columns, not rows.
+
+For `mat3x3f`, use packed `number[]` (9 floats) or padded `Float32Array` (12 floats, one padding float per column).
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const mat3Buffer = root.createBuffer(d.mat3x3f);
+
+// Column-major packed input (3 columns, 3 rows each)
+mat3Buffer.write([
+  1, 2, 3, // column 0
+  4, 5, 6, // column 1
+  7, 8, 9, // column 2
+]);
+
+// Equivalent padded WGSL layout
+mat3Buffer.write(new Float32Array([
+  1, 2, 3, 0,
+  4, 5, 6, 0,
+  7, 8, 9, 0,
+]));
+```
+:::
 
 For **arrays**, a `TypedArray` is treated as a **raw byte copy**: TypeGPU copies the bytes directly without any per-element processing. This is useful when your data is already stored in the padded GPU layout (e.g. output from a previous GPU readback, or a manually laid-out simulation buffer), as it avoids any allocation overhead and becomes a single `memcpy`.
 

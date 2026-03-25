@@ -1091,6 +1091,7 @@ export interface Mat2x2f extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m2x2f;
+  readonly [$inRepr]: m2x2f | number[] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   // ---
@@ -1110,6 +1111,7 @@ export interface Mat3x3f extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m3x3f;
+  readonly [$inRepr]: m3x3f | number[] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   // ---
@@ -1129,6 +1131,7 @@ export interface Mat4x4f extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m4x4f;
+  readonly [$inRepr]: m4x4f | number[] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   // ---

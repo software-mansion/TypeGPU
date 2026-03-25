@@ -952,6 +952,41 @@ describe('createCompileInstructions', () => {
     expect([...new Float32Array(arr, 0, 3)]).toStrictEqual([1, 2, 3]);
   });
 
+  it('should write a mat3x3f from a packed number[]', () => {
+    const schema = d.mat3x3f;
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(sizeOf(schema));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, [0, 1, 2, 3, 4, 5, 6, 7, 8]);
+
+    expect(arr.byteLength).toBe(48);
+    expect([...new Float32Array(arr)]).toStrictEqual([0, 1, 2, 0, 3, 4, 5, 0, 6, 7, 8, 0]);
+  });
+
+  it('should write a mat3x3f from a padded Float32Array', () => {
+    const schema = d.mat3x3f;
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(sizeOf(schema));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, new Float32Array([0, 1, 2, 0, 3, 4, 5, 0, 6, 7, 8, 0]));
+
+    expect(arr.byteLength).toBe(48);
+    expect([...new Float32Array(arr)]).toStrictEqual([0, 1, 2, 0, 3, 4, 5, 0, 6, 7, 8, 0]);
+  });
+
+  it('should write a mat4x4f from a Float32Array', () => {
+    const schema = d.mat4x4f;
+    const writer = getCompiledWriterForSchema(schema)!;
+    const arr = new ArrayBuffer(sizeOf(schema));
+    const dataView = new DataView(arr);
+
+    writer(dataView, 0, new Float32Array(Array.from({ length: 16 }).map((_, i) => i)));
+
+    expect([...new Float32Array(arr)]).toStrictEqual(Array.from({ length: 16 }).map((_, i) => i));
+  });
+
   it('should write an array of vec3f from plain tuples', () => {
     const schema = d.arrayOf(d.vec3f, 3);
     const writer = getCompiledWriterForSchema(schema)!;

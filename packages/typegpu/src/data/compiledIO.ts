@@ -226,14 +226,21 @@ export function buildWriter(
       const matSize = wgsl.isMat2x2f(node) ? 2 : wgsl.isMat3x3f(node) ? 3 : 4;
       const rowStride = roundUp(matSize * 4, 8);
       const components = ['x', 'y', 'z', 'w'];
+      const wgslElementStride = rowStride / 4;
 
       return Array.from({ length: matSize * matSize }, (_, idx) => {
         const col = Math.floor(idx / matSize);
         const row = idx % matSize;
+        const packedIndex = col * matSize + row;
+        const wgslIndex = col * wgslElementStride + row;
         return emitWrite(
           writeFunc,
           `(${offsetExpr} + ${col * rowStride + row * 4})`,
-          `${valueExpr}.columns[${col}].${components[row]}`,
+          `ArrayBuffer.isView(${valueExpr}) ? ${valueExpr}[${
+            wgsl.isMat3x3f(node) ? wgslIndex : packedIndex
+          }] : Array.isArray(${valueExpr}) ? ${valueExpr}[${packedIndex}] : ${valueExpr}.columns[${
+            col
+          }].${components[row]}`,
         );
       }).join('');
     }

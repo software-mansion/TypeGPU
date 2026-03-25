@@ -693,6 +693,8 @@ describe('TgpuBuffer (InferInput)', () => {
   it('should accept plain tuples and TypedArrays for vec schemas at the type level', ({ root }) => {
     const vec3fBuf = root.createBuffer(d.vec3f);
     const vec2iBuf = root.createBuffer(d.vec2i);
+    const mat3x3fBuf = root.createBuffer(d.mat3x3f);
+    const mat4x4fBuf = root.createBuffer(d.mat4x4f);
     const arrBuf = root.createBuffer(d.arrayOf(d.vec3f, 2));
     const scalarArrBuf = root.createBuffer(d.arrayOf(d.f32, 3));
 
@@ -703,6 +705,14 @@ describe('TgpuBuffer (InferInput)', () => {
     expectTypeOf(vec2iBuf.write)
       .parameter(0)
       .toEqualTypeOf<d.v2i | [number, number] | Int32Array | ArrayBuffer>();
+
+    expectTypeOf(mat3x3fBuf.write)
+      .parameter(0)
+      .toEqualTypeOf<d.m3x3f | number[] | Float32Array | ArrayBuffer>();
+
+    expectTypeOf(mat4x4fBuf.write)
+      .parameter(0)
+      .toEqualTypeOf<d.m4x4f | number[] | Float32Array | ArrayBuffer>();
 
     expectTypeOf(arrBuf.write)
       .parameter(0)
