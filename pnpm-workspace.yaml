@@ -4,6 +4,7 @@ packages:
 
 catalog:
   arktype: ^2.1.22
+  rollup: ^4.59.0
 
 catalogs:
   build:
