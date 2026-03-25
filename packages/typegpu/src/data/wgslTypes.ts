@@ -63,7 +63,9 @@ export type TypedArrayFor<T> = T extends Vec2f | Vec3f | Vec4f | F32
       ? Int32Array
       : T extends Vec2u | Vec3u | Vec4u | U32
         ? Uint32Array
-        : never;
+        : T extends U16
+          ? Uint16Array
+          : never;
 
 /**
  * Vector infix notation.

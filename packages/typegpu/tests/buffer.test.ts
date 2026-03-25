@@ -643,6 +643,24 @@ describe('TgpuBuffer', () => {
     >();
   });
 
+  it('should accept Uint16Array when writing to an arrayOf(u16) buffer at the type level', ({
+    root,
+  }) => {
+    const buffer = root.createBuffer(d.arrayOf(d.u16, 32));
+
+    expectTypeOf(buffer.write).parameter(0).toEqualTypeOf<number[] | Uint16Array | ArrayBuffer>();
+  });
+
+  it('should write an arrayOf(u16) buffer from a Uint16Array', ({ root, device }) => {
+    const buffer = root.createBuffer(d.arrayOf(d.u16, 4));
+    const data = new Uint16Array([10, 20, 30, 40]);
+
+    buffer.write(data);
+
+    const written = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    expect([...new Uint16Array(written, 0, 4)]).toStrictEqual([10, 20, 30, 40]);
+  });
+
   it('should allow an array of u32 to be used as an index buffer as well as any other usage', ({
     root,
   }) => {
