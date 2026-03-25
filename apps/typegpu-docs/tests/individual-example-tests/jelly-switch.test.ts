@@ -190,10 +190,10 @@ describe('jelly switch example', () => {
 
       fn getFakeShadow(position: vec3f, lightDir: vec3f) -> vec3f {
         if ((position.y < -0.03f)) {
-          const fadeSharpness = 30;
+          const fadeSharpness = 30f;
           const inset = 0.02;
           let cutout = (rectangleCutoutDist(position.xz) + inset);
-          let edgeDarkening = saturate((1f - (cutout * f32(fadeSharpness))));
+          let edgeDarkening = saturate((1f - (cutout * fadeSharpness)));
           let lightGradient = saturate((((-(position.z) * 4f) * lightDir.z) + 1f));
           return ((vec3f(1) * edgeDarkening) * (lightGradient * 0.5f));
         }
