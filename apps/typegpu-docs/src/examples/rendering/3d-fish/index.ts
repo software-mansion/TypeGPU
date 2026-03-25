@@ -20,6 +20,7 @@ import { defineControls } from '../../common/defineControls.ts';
 
 // setup
 let speedMultiplier = 1;
+let disposed = false;
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -77,7 +78,8 @@ function enqueuePresetChanges() {
   spinnerBackground.style.display = 'grid';
   fishBehaviorBuffer.write(presets.init);
 
-  setTimeout(() => {
+  window.setTimeout(() => {
+    if (disposed) return;
     fishBehaviorBuffer.write(presets.default);
     spinnerBackground.style.display = 'none';
     speedMultiplier = 1;
@@ -438,6 +440,7 @@ const resizeObserver = new ResizeObserver(() => {
 resizeObserver.observe(canvas);
 
 export function onCleanup() {
+  disposed = true;
   cancelAnimationFrame(animationFrameId);
   window.removeEventListener('mouseup', mouseUpEventListener);
   window.removeEventListener('mousemove', mouseMoveEventListener);
