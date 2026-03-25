@@ -116,7 +116,7 @@ function replaceWithBinaryOverload(
   this.magicString.overwriteNode(path.node, `${runtimeFn}(${lhs}, ${rhs})`);
 }
 
-export const unpluginFactory: UnpluginFactory<Options> = (rawOptions) => {
+export const unpluginFactory = ((rawOptions, meta) => {
   const options = defu(rawOptions, defaultOptions);
 
   return {
@@ -174,4 +174,4 @@ export const unpluginFactory: UnpluginFactory<Options> = (rawOptions) => {
       }),
     },
   };
-};
+}) satisfies UnpluginFactory<Options, false>;
