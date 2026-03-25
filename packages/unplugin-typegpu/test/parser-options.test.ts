@@ -17,7 +17,7 @@ describe('[BABEL] parser options', () => {
         const x = 2 + 2;
       }, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [],
           body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]],

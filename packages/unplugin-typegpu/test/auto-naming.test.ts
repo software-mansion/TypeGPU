@@ -23,7 +23,7 @@ describe('[BABEL] auto naming', () => {
       const vertexLayout = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexLayout(d.arrayOf(d.u32)), "vertexLayout");
       var fn = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {}, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [],
           body: [0, []],
@@ -129,7 +129,7 @@ describe('[BABEL] auto naming', () => {
       import * as d from 'typegpu/data';
       const myFunction = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => 0, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [],
           body: [0, [[10, [5, "0"]]]],
@@ -143,7 +143,7 @@ describe('[BABEL] auto naming', () => {
         workgroupSize: [1]
       })(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {}, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [],
           body: [0, []],
@@ -161,7 +161,7 @@ describe('[BABEL] auto naming', () => {
         ret: 0
       }), {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [],
           body: [0, [[10, [104, {
@@ -180,7 +180,7 @@ describe('[BABEL] auto naming', () => {
         out: d.vec4f
       })(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => d.vec4f(), {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [],
           body: [0, [[10, [6, [7, "d", "vec4f"], []]]]],
@@ -514,7 +514,7 @@ describe('[BABEL] auto naming', () => {
         'use gpu';
       }, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [],
           body: [0, []],
@@ -528,7 +528,7 @@ describe('[BABEL] auto naming', () => {
         'use gpu';
       }, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [],
           body: [0, []],

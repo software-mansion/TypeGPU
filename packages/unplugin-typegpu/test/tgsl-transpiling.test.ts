@@ -38,7 +38,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         counter.$.z += d.f32(input.num.x);
       }, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [{
             type: "i",
@@ -83,7 +83,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         const x = true;
       }, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [{
             type: "i",
@@ -100,7 +100,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         const y = 2 + 2;
       }, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [],
           body: [0, [[13, "y", [1, [5, "2"], "+", [5, "2"]]]]],
@@ -113,7 +113,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       const cx = 2;
       const c = tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => cx, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [],
           body: [0, [[10, "cx"]]],
@@ -169,7 +169,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         const x = true;
       }, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [{
             type: "i",
@@ -188,7 +188,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         const x = true as boolean;
       }, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [{
             type: "i",
@@ -207,7 +207,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         const x = true satisfies boolean;
       }, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [{
             type: "i",
@@ -251,7 +251,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           return this.myBuffer.$;
         }, {
           v: 1,
-          name: void 0,
+          name: undefined,
           ast: {
             params: [],
             body: [0, [[10, [7, [7, "this", "myBuffer"], "$"]]]],
