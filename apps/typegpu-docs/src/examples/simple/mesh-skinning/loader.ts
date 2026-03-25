@@ -19,13 +19,22 @@ interface GLTFAnimation {
   channels: GLTFAnimationChannel[];
 }
 
+const GLTF_COMPONENT_TYPE = {
+  BYTE: 5120,
+  UNSIGNED_BYTE: 5121,
+  SHORT: 5122,
+  UNSIGNED_SHORT: 5123,
+  UNSIGNED_INT: 5125,
+  FLOAT: 5126,
+} as const;
+
 const COMPONENT_SIZES: Record<number, number> = {
-  5120: 1,
-  5121: 1,
-  5122: 2,
-  5123: 2,
-  5125: 4,
-  5126: 4,
+  [GLTF_COMPONENT_TYPE.BYTE]: 1,
+  [GLTF_COMPONENT_TYPE.UNSIGNED_BYTE]: 1,
+  [GLTF_COMPONENT_TYPE.SHORT]: 2,
+  [GLTF_COMPONENT_TYPE.UNSIGNED_SHORT]: 2,
+  [GLTF_COMPONENT_TYPE.UNSIGNED_INT]: 4,
+  [GLTF_COMPONENT_TYPE.FLOAT]: 4,
 };
 
 const TYPE_COMPONENTS: Record<string, number> = {
@@ -38,12 +47,19 @@ const TYPE_COMPONENTS: Record<string, number> = {
 
 const TYPED_ARRAYS: Record<
   number,
-  typeof Uint8Array | typeof Uint16Array | typeof Uint32Array | typeof Float32Array
+  | typeof Int8Array
+  | typeof Uint8Array
+  | typeof Int16Array
+  | typeof Uint16Array
+  | typeof Uint32Array
+  | typeof Float32Array
 > = {
-  5121: Uint8Array,
-  5123: Uint16Array,
-  5125: Uint32Array,
-  5126: Float32Array,
+  [GLTF_COMPONENT_TYPE.BYTE]: Int8Array,
+  [GLTF_COMPONENT_TYPE.UNSIGNED_BYTE]: Uint8Array,
+  [GLTF_COMPONENT_TYPE.SHORT]: Int16Array,
+  [GLTF_COMPONENT_TYPE.UNSIGNED_SHORT]: Uint16Array,
+  [GLTF_COMPONENT_TYPE.UNSIGNED_INT]: Uint32Array,
+  [GLTF_COMPONENT_TYPE.FLOAT]: Float32Array,
 };
 
 export async function loadGLBModel(path: string): Promise<ModelData> {
@@ -119,7 +135,11 @@ export async function loadGLBModel(path: string): Promise<ModelData> {
     const samplers: AnimationSampler[] = anim.samplers.map((s) => {
       const input = getTypedArray(s.input) as Float32Array;
       const output = getTypedArray(s.output) as Float32Array;
-      duration = Math.max(duration, input[input.length - 1]);
+
+      if (input.length > 0) {
+        duration = Math.max(duration, input[input.length - 1]);
+      }
+
       return {
         input,
         output,

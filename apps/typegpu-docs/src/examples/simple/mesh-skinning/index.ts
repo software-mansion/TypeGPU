@@ -13,11 +13,16 @@ const MODEL = {
   offset: [0, 0, 0] as [number, number, number],
 };
 
-const MAX_JOINTS = 64;
+const MAX_JOINTS = 128;
 const CAMERA_TARGET_SMOOTHING = 0.08;
-const CAMERA_TARGET_Y_OFFSET = 0.4;
+const CAMERA_TARGET_Y_OFFSET = 0.7;
 
 const modelData: ModelData = await loadGLBModel(MODEL.path);
+if (modelData.jointNodes.length > MAX_JOINTS) {
+  throw new Error(
+    `Model has ${modelData.jointNodes.length} joints but MAX_JOINTS is ${MAX_JOINTS}.`,
+  );
+}
 const animationOptions = modelData.animations.map((anim) => anim.name.replaceAll('_', ' '));
 
 const state = {
@@ -50,12 +55,12 @@ const modelTransform = mat4.identity();
 mat4.translate(modelTransform, MODEL.offset, modelTransform);
 mat4.scale(modelTransform, [MODEL.scale, MODEL.scale, MODEL.scale], modelTransform);
 
-const getModelCenterFromJoints = (jointMatrices: d.m4x4f[]): d.v4f => {
+const getModelCenterFromJoints = (jointWorldMatrices: d.m4x4f[]): d.v4f => {
   if (modelData.jointNodes.length === 0) {
     return d.vec4f(MODEL.offset[0], MODEL.offset[1], MODEL.offset[2], 1);
   }
 
-  const rootJointMatrix = jointMatrices[0];
+  const rootJointMatrix = jointWorldMatrices[0];
   return d.vec4f(rootJointMatrix[12], rootJointMatrix[13], rootJointMatrix[14], 1);
 };
 
@@ -88,7 +93,7 @@ const getWorldTransform = (
   return parentWorld ? mat4.mul(parentWorld, localMatrix) : localMatrix;
 };
 
-const getJointMatrices = (): d.m4x4f[] => {
+const getJointWorldMatrices = (): d.m4x4f[] => {
   const activeAnimation = modelData.animations.find(
     (anim) => anim.name === state.animation.selectedName,
   );
@@ -96,11 +101,15 @@ const getJointMatrices = (): d.m4x4f[] => {
     ? sampleAnimation(activeAnimation, state.animation.time)
     : undefined;
 
-  const matrices = modelData.jointNodes.map((jointNode: number, i: number) => {
-    const world = getWorldTransform(jointNode, animatedTransforms);
-    const jointMatrix = mat4.mul(world, inverseBindMatrices[i], d.mat4x4f());
-    return mat4.mul(modelTransform, jointMatrix, d.mat4x4f());
-  });
+  return modelData.jointNodes.map((jointNode: number) =>
+    mat4.mul(modelTransform, getWorldTransform(jointNode, animatedTransforms), d.mat4x4f()),
+  );
+};
+
+const getJointMatrices = (jointWorldMatrices: d.m4x4f[]): d.m4x4f[] => {
+  const matrices = jointWorldMatrices.map((world, i) =>
+    mat4.mul(world, inverseBindMatrices[i], d.mat4x4f()),
+  );
 
   while (matrices.length < MAX_JOINTS) {
     matrices.push(d.mat4x4f.identity());
@@ -168,14 +177,12 @@ const vertexBuffer = root
   .$usage('vertex');
 
 const indexBuffer = root
-  .createBuffer(
-    d.arrayOf(d.u16, modelData.indices.length),
-    Array.from(modelData.indices) as number[],
-  )
+  .createBuffer(d.arrayOf(d.u16, modelData.indices.length), Array.from(modelData.indices))
   .$usage('index');
 
-const initialJointMatrices = getJointMatrices();
-state.camera.target = getModelCenterFromJoints(initialJointMatrices);
+const initialJointWorldMatrices = getJointWorldMatrices();
+const initialJointMatrices = getJointMatrices(initialJointWorldMatrices);
+state.camera.target = getModelCenterFromJoints(initialJointWorldMatrices);
 
 const jointMatricesUniform = root.createUniform(
   d.arrayOf(d.mat4x4f, MAX_JOINTS),
@@ -244,8 +251,8 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
-const updateCameraTarget = (jointMatrices: d.m4x4f[]) => {
-  const desiredTarget = getModelCenterFromJoints(jointMatrices);
+const updateCameraTarget = (jointWorldMatrices: d.m4x4f[]) => {
+  const desiredTarget = getModelCenterFromJoints(jointWorldMatrices);
   state.camera.target = d.vec4f(
     state.camera.target.x + (desiredTarget.x - state.camera.target.x) * CAMERA_TARGET_SMOOTHING,
     state.camera.target.y +
@@ -262,9 +269,10 @@ const update = (deltaTimeMs: number) => {
     state.animation.time += deltaTimeMs * 0.001;
   }
 
-  const jointMatrices = getJointMatrices();
+  const jointWorldMatrices = getJointWorldMatrices();
+  const jointMatrices = getJointMatrices(jointWorldMatrices);
   jointMatricesUniform.write(jointMatrices);
-  updateCameraTarget(jointMatrices);
+  updateCameraTarget(jointWorldMatrices);
 };
 
 const draw = () => {

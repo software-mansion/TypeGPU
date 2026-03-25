@@ -45,5 +45,5 @@ export const slerp = (q0: Quat, q1: Quat, t: number): Quat => {
   ];
 };
 
-export const lerp = (a: number[], b: number[], t: number): number[] =>
-  a.map((v, i) => v + (b[i] - v) * t);
+export const lerp = <T extends number[]>(a: T, b: T, t: number): T =>
+  a.map((v, i) => v + (b[i] - v) * t) as T;

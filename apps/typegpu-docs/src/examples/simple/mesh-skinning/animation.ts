@@ -9,6 +9,9 @@ export type NodeTransform = {
 
 export const sampleAnimation = (animation: Animation, time: number): Map<number, NodeTransform> => {
   const transforms = new Map<number, NodeTransform>();
+  if (animation.duration <= 0) {
+    return transforms;
+  }
   const loopedTime = time % animation.duration;
 
   for (const channel of animation.channels) {
@@ -32,7 +35,7 @@ export const sampleAnimation = (animation: Animation, time: number): Map<number,
     const result =
       channel.targetPath === 'rotation'
         ? slerp(v0 as Quat, v1 as Quat, alpha)
-        : lerp(v0, v1, alpha);
+        : lerp(v0 as Vec3, v1 as Vec3, alpha);
 
     if (!transforms.has(channel.targetNode)) {
       transforms.set(channel.targetNode, {});
