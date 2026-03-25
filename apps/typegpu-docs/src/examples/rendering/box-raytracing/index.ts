@@ -248,24 +248,13 @@ const pipeline = root.createRenderPipeline({
 
 // UI
 
-let disposed = false;
+let animationFrameId: number;
+let lastTime: number | null = null;
 
-const onFrame = (loop: (deltaTime: number) => unknown) => {
-  let lastTime = Date.now();
-  const runner = () => {
-    if (disposed) {
-      return;
-    }
-    const now = Date.now();
-    const dt = now - lastTime;
-    lastTime = now;
-    loop(dt);
-    requestAnimationFrame(runner);
-  };
-  requestAnimationFrame(runner);
-};
+const runner = (timestamp: number) => {
+  const deltaTime = lastTime !== null ? timestamp - lastTime : 0;
+  lastTime = timestamp;
 
-onFrame((deltaTime) => {
   const width = canvas.width;
   const height = canvas.height;
 
@@ -283,7 +272,9 @@ onFrame((deltaTime) => {
   frame += (rotationSpeed * deltaTime) / 1000;
 
   pipeline.withColorAttachment({ view: context }).draw(3);
-});
+  animationFrameId = requestAnimationFrame(runner);
+};
+animationFrameId = requestAnimationFrame(runner);
 
 // #region Example controls and cleanup
 
@@ -330,7 +321,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  disposed = true;
+  cancelAnimationFrame(animationFrameId);
   root.destroy();
 }
 
