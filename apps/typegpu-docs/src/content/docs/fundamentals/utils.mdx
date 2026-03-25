@@ -308,15 +308,81 @@ import tgpu, { d } from 'typegpu';
 const processNeighbor = (cell: d.v2i) => {};
 
 // ---cut---
-const processNeighbors = (cell: d.v2i) => {
+function processNeighbors(cell: d.v2i) {
   'use gpu';
 
   for (const dy of tgpu.unroll([-1, 0, 1])) {
     for (const dx of tgpu.unroll([-1, 0, 1])) {
-      processNeighbor(cell.add(d.vec2i(dx, dy)));
+      processNeighbor(cell + d.vec2i(dx, dy));
     }
   }
-};
+}
+```
+
+Generates:
+
+```wgsl
+// Generated WGSL
+
+fn processNeighbors(cell: vec2i) {
+  // unrolled iteration #0
+  {
+    // unrolled iteration #0
+    {
+      processNeighbor(cell + vec2i(-1, -1));
+    }
+    // unrolled iteration #1
+    {
+      processNeighbor(cell + vec2i(0, -1));
+    }
+    // (and so on...)
+  }
+  // (and so on ...)
+}
+```
+
+If you'd like to unroll over a range of numbers, use `tgpu.unroll(n)`.
+
+```ts
+// (...)
+const FBM_OCTAVES = 3;
+
+function fbm(pos: d.v3f): number {
+  'use gpu';
+  let sum = d.f32();
+
+  // i = 0, 1, 2
+  for (const i of tgpu.unroll(FBM_OCTAVES)) {
+    sum +=
+      noise3d(pos * (CLOUD_FREQUENCY * FBM_LACUNARITY ** i)) *
+      (CLOUD_AMPLITUDE * FBM_PERSISTENCE ** i);
+  }
+
+  return sum;
+}
+```
+
+Generates:
+ 
+```wgsl
+// (...)
+
+fn fbm(pos: vec3f) -> f32 {
+  var sum = 0f;
+  // unrolled iteration #0
+  {
+    sum += noise3d(pos * 1.4f) * 1f;
+  }
+  // unrolled iteration #1
+  {
+    sum += noise3d(pos * 2.8f) * 0.5f;
+  }
+  // unrolled iteration #2
+  {
+    sum += noise3d(pos * 5.6f) * 0.25f;
+  }
+  return sum;
+}
 ```
 
 :::note

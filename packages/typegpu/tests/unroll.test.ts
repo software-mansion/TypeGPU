@@ -11,6 +11,12 @@ describe('tgpu.unroll', () => {
     expect(x).toBe(arr);
   });
 
+  it('called outside the gpu function with a length, creates a 0..n-1 array', () => {
+    const x = tgpu.unroll(3);
+
+    expect(x).toEqual([0, 1, 2]);
+  });
+
   it('called inside the gpu function but outside of forOf returns passed iterable', () => {
     const layout = tgpu.bindGroupLayout({
       arr: { storage: d.arrayOf(d.f32) },
@@ -23,16 +29,33 @@ describe('tgpu.unroll', () => {
       const v1 = d.vec2f(7);
       const v2 = tgpu.unroll(v1); // this should return a pointer
       const arr = tgpu.unroll(layout.$.arr); // this should return a pointer
+      return arr[0];
     };
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read> arr_1: array<f32>;
 
-      fn f() {
+      fn f() -> f32 {
         var a = array<i32, 3>(1, 2, 3);
         var v1 = vec2f(7);
         let v2 = (&v1);
         let arr = (&arr_1);
+        return (*arr)[0i];
+      }"
+    `);
+  });
+
+  it('called inside the gpu function but outside of forOf with length creates a 0..n-1 array', () => {
+    const f = () => {
+      'use gpu';
+      const a = tgpu.unroll(3);
+      return a[0];
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> i32 {
+        var a = array<i32, 3>(0, 1, 2);
+        return a[0i];
       }"
     `);
   });
@@ -867,6 +890,36 @@ describe('tgpu.unroll', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> i32 {
         var a = 0;
+        return a;
+      }"
+    `);
+  });
+
+  it('unrolls n times', () => {
+    const f = () => {
+      'use gpu';
+      let a = d.f32(0);
+      for (const i of tgpu.unroll(3)) {
+        a += i;
+      }
+      return a;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> f32 {
+        var a = 0f;
+        // unrolled iteration #0
+        {
+          a += 0f;
+        }
+        // unrolled iteration #1
+        {
+          a += 1f;
+        }
+        // unrolled iteration #2
+        {
+          a += 2f;
+        }
         return a;
       }"
     `);

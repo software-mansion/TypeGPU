@@ -87,25 +87,17 @@ describe('clouds example', () => {
 
       fn fbm(pos: vec3f) -> f32 {
         var sum = 0f;
-        var amp = 1f;
-        var freq = 1.399999976158142f;
         // unrolled iteration #0
         {
-          sum += (noise3d((pos * freq)) * amp);
-          amp *= 0.5f;
-          freq *= 2f;
+          sum += (noise3d((pos * 1.4f)) * 1f);
         }
         // unrolled iteration #1
         {
-          sum += (noise3d((pos * freq)) * amp);
-          amp *= 0.5f;
-          freq *= 2f;
+          sum += (noise3d((pos * 2.8f)) * 0.5f);
         }
         // unrolled iteration #2
         {
-          sum += (noise3d((pos * freq)) * amp);
-          amp *= 0.5f;
-          freq *= 2f;
+          sum += (noise3d((pos * 5.6f)) * 0.25f);
         }
         return sum;
       }
