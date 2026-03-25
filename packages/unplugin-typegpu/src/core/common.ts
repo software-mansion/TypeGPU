@@ -4,6 +4,32 @@ import type { FilterPattern } from 'unplugin';
 import { MagicStringAST } from 'magic-string-ast';
 import { transpileFn } from 'tinyest-for-wgsl';
 
+export interface Options {
+  /** @default [/\.m?[jt]sx?$/] */
+  include?: FilterPattern;
+
+  /** @default undefined */
+  exclude?: FilterPattern;
+
+  /** @default undefined */
+  enforce?: 'post' | 'pre' | undefined;
+
+  /** @default undefined */
+  forceTgpuAlias?: string | undefined;
+
+  /** @default true */
+  autoNamingEnabled?: boolean | undefined;
+
+  /**
+   * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
+   * In case this early pruning hinders transformation, you
+   * can disable it.
+   *
+   * @default true
+   */
+  earlyPruning?: boolean | undefined;
+}
+
 export type MetadatableFunction =
   | t.FunctionDeclaration
   | t.FunctionExpression
@@ -91,31 +117,8 @@ export function initPluginState(state: PluginState, methods: TransformMethods): 
   Object.assign(state, methods);
 }
 
-export interface Options {
-  /** @default [/\.m?[jt]sx?$/] */
-  include?: FilterPattern;
-
-  /** @default undefined */
-  exclude?: FilterPattern;
-
-  /** @default undefined */
-  enforce?: 'post' | 'pre' | undefined;
-
-  /** @default undefined */
-  forceTgpuAlias?: string | undefined;
-
-  /** @default true */
-  autoNamingEnabled?: boolean | undefined;
-
-  /**
-   * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
-   * In case this early pruning hinders transformation, you
-   * can disable it.
-   *
-   * @default true
-   */
-  earlyPruning?: boolean | undefined;
-}
+/** Regular expressions used for early pruning (to avoid unnecessary parsing, which is expensive) */
+export const earlyPruneRegex = [/["']use gpu["']/, /t(ype)?gpu/];
 
 export const defaultOptions = {
   include: /\.m?[jt]sx?(?:\?.*)?$/,
@@ -123,10 +126,38 @@ export const defaultOptions = {
   earlyPruning: true,
 };
 
-export function embedJSON(jsValue: unknown) {
-  return JSON.stringify(jsValue)
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029');
+/**
+ * Returns the block scope of a function declaration, if one exists.
+ * Used to hoist a function declaration to the top of the scope it's visible in.
+ */
+export function getBlockScope(
+  path: NodePath<t.FunctionDeclaration>,
+): NodePath<t.BlockStatement> | undefined {
+  if (!path.node.id) {
+    // Anonymous function statement, no visiblility
+    return undefined;
+  }
+
+  const binding = path.scope.getBinding(path.node.id.name);
+  if (!binding) {
+    // Not bound anywhere, we can skip
+    return undefined;
+  }
+
+  let scopePath = binding.scope.path;
+
+  // If the block doesn't have an array of statements for a body (e.g. FunctionDeclaration), delve deeper
+  if (t.isNode((scopePath.node as t.FunctionDeclaration).body)) {
+    scopePath = scopePath.get('body') as NodePath;
+  }
+
+  if (Array.isArray((scopePath.node as t.BlockStatement).body)) {
+    return scopePath as NodePath<t.BlockStatement>;
+  }
+
+  // We give up. This is most likely a switch statement. The fallback will just not
+  // hoist the function, so it should still work in most cases.
+  return undefined;
 }
 
 /**
@@ -163,38 +194,7 @@ function isTgpu(state: PluginState, node: babel.Node): boolean {
   return state.tgpuAliases.has(path);
 }
 
-export function getVisibilityScope(
-  state: PluginState,
-  path: NodePath<t.FunctionDeclaration>,
-): NodePath<t.BlockStatement> | undefined {
-  if (!path.node.id) {
-    // Anonymous function statement, no visiblility
-    return undefined;
-  }
-
-  const binding = path.scope.getBinding(path.node.id.name);
-  if (!binding) {
-    // Not bound anywhere, we can skip
-    return undefined;
-  }
-
-  let scopePath = binding.scope.path;
-
-  // If the block doesn't have an array of statements for a body (e.g. FunctionDeclaration), delve deeper
-  if (t.isNode((scopePath.node as t.FunctionDeclaration).body)) {
-    scopePath = scopePath.get('body') as NodePath;
-  }
-
-  if (Array.isArray((scopePath.node as t.BlockStatement).body)) {
-    return scopePath as NodePath<t.BlockStatement>;
-  }
-
-  // We give up. This is most likely a switch statement. The fallback will just not
-  // hoist the function, so it should still work in most cases.
-  return undefined;
-}
-
-export function gatherTgpuAliases(state: PluginState, node: t.ImportDeclaration) {
+function gatherTgpuAliases(state: PluginState, node: t.ImportDeclaration) {
   if (node.source.value !== 'typegpu') {
     return;
   }
@@ -218,7 +218,7 @@ export function gatherTgpuAliases(state: PluginState, node: t.ImportDeclaration)
 
 const fnShellFunctionNames = ['fn', 'vertexFn', 'fragmentFn', 'computeFn'];
 
-export function isShellImplementationCall(node: t.CallExpression, state: PluginState) {
+function isShellImplementationCall(node: t.CallExpression, state: PluginState) {
   return (
     node.callee.type === 'CallExpression' &&
     node.callee.callee.type === 'MemberExpression' &&
@@ -267,7 +267,7 @@ function extractLabelledExpression(path: NodePath): [string, NodePath<t.Expressi
   }
 }
 
-export function getFunctionName(path: NodePath): string | undefined {
+function getFunctionName(path: NodePath): string | undefined {
   const maybeName = path.parentPath ? extractLabelledExpression(path.parentPath)?.[0] : undefined;
   return (
     maybeName ??
@@ -401,12 +401,7 @@ function performExpressionNaming(
   }
 }
 
-export const useGpuDirective = 'use gpu';
-
-/** Regular expressions used for early pruning (to avoid unnecessary parsing, which is expensive) */
-export const earlyPruneRegex = [/["']use gpu["']/, /t(ype)?gpu/];
-
-export const operators = {
+const operators = {
   '+': '__tsover_add',
   '-': '__tsover_sub',
   '*': '__tsover_mul',
@@ -424,23 +419,18 @@ function containsUseGpuDirective(
 ): boolean {
   return ('directives' in node.body ? (node.body?.directives ?? []) : [])
     .map((directive) => directive.value.value)
-    .includes(useGpuDirective);
+    .includes('use gpu');
 }
-
-const fnNodeToOriginalMap = new WeakMap<
-  t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
-  t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression
->();
 
 const fnNodeToTranspiledMap = new WeakMap<
   t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
   ReturnType<typeof transpileFn>
 >();
 
-const functionOnExit = (
+function functionOnExit(
   path: NodePath<t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression>,
   state: PluginState,
-) => {
+) {
   const node = path.node;
   if (!containsUseGpuDirective(node)) {
     return;
@@ -460,7 +450,7 @@ const functionOnExit = (
   state.assignMetadata(path, maybeName, ast);
   state.alreadyTransformed.add(node);
   path.skip();
-};
+}
 
 export const functionVisitor: TraverseOptions<PluginState> = {
   ImportDeclaration(path, state) {
@@ -514,8 +504,6 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   ArrowFunctionExpression: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        // TODO: Might not be necessary
-        fnNodeToOriginalMap.set(path.node, t.cloneNode(path.node, true));
         fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
@@ -529,8 +517,6 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   FunctionExpression: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        // TODO: Might not be necessary
-        fnNodeToOriginalMap.set(path.node, t.cloneNode(path.node, true));
         fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
@@ -544,8 +530,6 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   FunctionDeclaration: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        // TODO: Might not be necessary
-        fnNodeToOriginalMap.set(path.node, t.cloneNode(path.node, true));
         fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
