@@ -1,22 +1,12 @@
 // Original implementation:
 // https://webgpu.github.io/webgpu-samples/?sample=imageBlur
 
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { fullScreenTriangle } from 'typegpu/common';
+import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
-const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-});
+const context = root.configureContext({ canvas });
 
 const response = await fetch('/TypeGPU/plums.jpg');
 const imageBitmap = await createImageBitmap(await response.blob());
@@ -26,7 +16,7 @@ const settings = {
   filterDim: 3,
   iterations: 1,
   get blockDim() {
-    return 128 - (this.filterDim) + 1;
+    return 128 - this.filterDim + 1;
   },
 };
 
@@ -68,7 +58,7 @@ const ioLayout = tgpu.bindGroupLayout({
 
 const tileData = tgpu.workgroupVar(d.arrayOf(d.arrayOf(d.vec3f, 128), 4));
 
-const computeFn = tgpu['~unstable'].computeFn({
+const computeFn = tgpu.computeFn({
   in: {
     wid: d.builtin.workgroupId,
     lid: d.builtin.localInvocationId,
@@ -78,13 +68,13 @@ const computeFn = tgpu['~unstable'].computeFn({
   const settings = settingsUniform.$;
   const filterOffset = d.i32((settings.filterDim - 1) / 2);
   const dims = d.vec2i(std.textureDimensions(ioLayout.$.inTexture));
-  const baseIndex = d.vec2i(
-    wid.xy.mul(d.vec2u(settings.blockDim, 4)).add(lid.xy.mul(d.vec2u(4, 1))),
-  ).sub(d.vec2i(filterOffset, 0));
+  const baseIndex = d
+    .vec2i(wid.xy.mul(d.vec2u(settings.blockDim, 4)).add(lid.xy.mul(d.vec2u(4, 1))))
+    .sub(d.vec2i(filterOffset, 0));
 
   // Load a tile of pixels into shared memory
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
+  for (const r of tgpu.unroll([0, 1, 2, 3])) {
+    for (const c of tgpu.unroll([0, 1, 2, 3])) {
       let loadIndex = baseIndex.add(d.vec2i(c, r));
       if (ioLayout.$.flip !== 0) {
         loadIndex = loadIndex.yx;
@@ -95,15 +85,15 @@ const computeFn = tgpu['~unstable'].computeFn({
         sampler.$,
         d.vec2f(d.vec2f(loadIndex).add(d.vec2f(0.5)).div(d.vec2f(dims))),
         0,
-      ).xyz;
+      ).rgb;
     }
   }
 
   std.workgroupBarrier();
 
   // Apply the horizontal blur filter and write to the output texture
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
+  for (const r of tgpu.unroll([0, 1, 2, 3])) {
+    for (const c of tgpu.unroll([0, 1, 2, 3])) {
       let writeIndex = baseIndex.add(d.vec2i(c, r));
       if (ioLayout.$.flip !== 0) {
         writeIndex = writeIndex.yx;
@@ -126,16 +116,10 @@ const computeFn = tgpu['~unstable'].computeFn({
   }
 });
 
-const renderFragment = tgpu['~unstable'].fragmentFn({
+const renderFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
-})((input) =>
-  std.textureSample(
-    renderView.$,
-    sampler.$,
-    input.uv,
-  )
-);
+})((input) => std.textureSample(renderView.$, sampler.$, input.uv));
 
 const zeroBuffer = root.createBuffer(d.u32, 0).$usage('uniform');
 const oneBuffer = root.createBuffer(d.u32, 1).$usage('uniform');
@@ -158,14 +142,12 @@ const ioBindGroups = [
   }),
 ];
 
-const computePipeline = root['~unstable']
-  .withCompute(computeFn)
-  .createPipeline();
+const computePipeline = root.createComputePipeline({ compute: computeFn });
 
-const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(renderFragment, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: renderFragment,
+});
 
 function render() {
   settingsUniform.write({
@@ -173,34 +155,33 @@ function render() {
     blockDim: settings.blockDim,
   });
 
-  const indices = [0, 1, ...Array(settings.iterations - 1).fill([2, 1]).flat()];
+  const indices = [
+    0,
+    1,
+    ...Array(settings.iterations - 1)
+      .fill([2, 1])
+      .flat(),
+  ];
 
   for (const i of indices) {
     computePipeline
       .with(ioBindGroups[i])
-      .dispatchWorkgroups(
-        Math.ceil(srcWidth / settings.blockDim),
-        Math.ceil(srcHeight / 4),
-      );
+      .dispatchWorkgroups(Math.ceil(srcWidth / settings.blockDim), Math.ceil(srcHeight / 4));
   }
 
-  renderPipeline.withColorAttachment({
-    view: context.getCurrentTexture().createView(),
-    loadOp: 'clear',
-    storeOp: 'store',
-  }).draw(3);
+  renderPipeline.withColorAttachment({ view: context }).draw(3);
 }
 render();
 
 // #region Example controls & Cleanup
 
-export const controls = {
+export const controls = defineControls({
   'filter size': {
     initial: 3,
     min: 3,
     max: 41,
     step: 2,
-    onSliderChange(newValue: number) {
+    onSliderChange(newValue) {
       settings.filterDim = newValue;
       render();
     },
@@ -211,12 +192,12 @@ export const controls = {
     min: 1,
     max: 10,
     step: 1,
-    onSliderChange(newValue: number) {
+    onSliderChange(newValue) {
       settings.iterations = newValue;
       render();
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

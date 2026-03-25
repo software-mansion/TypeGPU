@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import * as d from '../src/data/index.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import type {
   StorageFlag,
   TgpuBuffer,
@@ -8,7 +8,7 @@ import type {
   TgpuReadonly,
   TgpuUniform,
   UniformFlag,
-} from '../src/index.ts';
+} from '../src/index.js';
 import { attest } from '@ark/attest';
 
 describe('root.createMutable', () => {
@@ -44,10 +44,9 @@ describe('root.createMutable', () => {
     );
 
     // @ts-expect-error: bool is not allowed in mutable schemas
-    attest(() => root.createMutable(d.struct({ foo: d.bool }))).type.errors
-      .snap(
-        "Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead\"'.",
-      );
+    attest(() => root.createMutable(d.struct({ foo: d.bool }))).type.errors.snap(
+      "Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead\"'.",
+    );
   });
 });
 
@@ -84,10 +83,9 @@ describe('root.createReadonly', () => {
     );
 
     // @ts-expect-error: bool is not allowed in readonly schemas
-    attest(() => root.createReadonly(d.struct({ foo: d.bool }))).type.errors
-      .snap(
-        "Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead\"'.",
-      );
+    attest(() => root.createReadonly(d.struct({ foo: d.bool }))).type.errors.snap(
+      "Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead\"'.",
+    );
   });
 });
 
@@ -124,9 +122,8 @@ describe('root.createUniform', () => {
     );
 
     // @ts-expect-error: bool is not allowed in uniform schemas
-    attest(() => root.createUniform(d.struct({ foo: d.bool }))).type.errors
-      .snap(
-        "Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead\"'.",
-      );
+    attest(() => root.createUniform(d.struct({ foo: d.bool }))).type.errors.snap(
+      "Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead\"'.",
+    );
   });
 });

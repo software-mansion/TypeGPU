@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { randf } from '@typegpu/noise';
 import type {
   StorageFlag,
   TgpuBindGroup,
@@ -10,18 +10,13 @@ import type {
   TgpuRoot,
   TgpuSlot,
 } from 'typegpu';
-import * as d from 'typegpu/data';
-import { randf } from '@typegpu/noise';
+import tgpu, { d } from 'typegpu';
 
 export class Executor {
   // don't exceed max workgroup grid X dimension size
   #count!: number;
-  #samplesBuffer!:
-    & TgpuBuffer<d.WgslArray<d.Vec3f>>
-    & StorageFlag;
-  #seedBuffer!:
-    & TgpuBuffer<d.WgslArray<d.F32>>
-    & StorageFlag;
+  #samplesBuffer!: TgpuBuffer<d.WgslArray<d.Vec3f>> & StorageFlag;
+  #seedBuffer!: TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag;
   #bindGroup!: TgpuBindGroup;
   readonly #root: TgpuRoot;
   readonly #dataMoreWorkersFunc: TgpuComputeFn;
@@ -29,12 +24,7 @@ export class Executor {
   readonly #bindGroupLayout: TgpuBindGroupLayout;
   readonly #bufferCache: Map<
     number,
-    [
-      & TgpuBuffer<d.WgslArray<d.Vec3f>>
-      & StorageFlag,
-      & TgpuBuffer<d.WgslArray<d.F32>>
-      & StorageFlag,
-    ]
+    [TgpuBuffer<d.WgslArray<d.Vec3f>> & StorageFlag, TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag]
   >;
   readonly #pipelineCache: Map<TgpuFn, TgpuComputePipeline>;
 
@@ -52,22 +42,19 @@ export class Executor {
     });
     this.#bindGroupLayout = bindGroupLayoutTempAlias;
 
-    this.#dataMoreWorkersFunc = tgpu['~unstable'].computeFn({
+    this.#dataMoreWorkersFunc = tgpu.computeFn({
       in: { gid: d.builtin.globalInvocationId },
       workgroupSize: [64],
     })((input) => {
       const id = input.gid.x;
       if (id >= bindGroupLayoutTempAlias.$.samplesBuffer.length) return;
       randf.seed(bindGroupLayoutTempAlias.$.seedBuffer[id]);
-      bindGroupLayoutTempAlias.$.samplesBuffer[id] = distributionSlotTempAlias
-        .$();
+      bindGroupLayoutTempAlias.$.samplesBuffer[id] = distributionSlotTempAlias.$();
     });
   }
 
   reseed() {
-    this.#seedBuffer.write(
-      Array.from({ length: this.#count }, () => Math.random()),
-    );
+    this.#seedBuffer.write(Array.from({ length: this.#count }, () => Math.random()));
   }
 
   set count(value: number) {
@@ -76,14 +63,13 @@ export class Executor {
     if (cacheEntry) {
       [this.#samplesBuffer, this.#seedBuffer] = cacheEntry;
     } else {
-      this.#samplesBuffer = this.#root
-        .createBuffer(d.arrayOf(d.vec3f, value))
-        .$usage('storage');
+      this.#samplesBuffer = this.#root.createBuffer(d.arrayOf(d.vec3f, value)).$usage('storage');
       this.#seedBuffer = this.#root
         .createBuffer(
           d.arrayOf(d.f32, value),
           Array.from({ length: value }, () => Math.random()),
-        ).$usage('storage');
+        )
+        .$usage('storage');
       this.#bufferCache.set(value, [this.#samplesBuffer, this.#seedBuffer]);
     }
 
@@ -99,32 +85,26 @@ export class Executor {
     }
 
     if (!this.#pipelineCache.has(distribution)) {
-      const pipeline = this.#root['~unstable']
+      const pipeline = this.#root
         .with(this.#distributionSlot, distribution)
-        .withCompute(this.#dataMoreWorkersFunc)
-        .createPipeline();
+        .createComputePipeline({ compute: this.#dataMoreWorkersFunc });
       this.#pipelineCache.set(distribution, pipeline);
     }
 
-    // biome-ignore lint/style/noNonNullAssertion: just checked it above
+    // oxlint-disable-next-line typescript/no-non-null-assertion -- just checked it above
     return this.#pipelineCache.get(distribution)!;
   }
 
-  async executeMoreWorkers(
-    distribution: TgpuFn<() => d.Vec3f>,
-  ): Promise<d.v3f[]> {
+  async executeMoreWorkers(distribution: TgpuFn<() => d.Vec3f>): Promise<d.v3f[]> {
     let pipeline = this.#pipelineCache.get(distribution);
     if (!pipeline) {
-      pipeline = this.#root['~unstable']
+      pipeline = this.#root
         .with(this.#distributionSlot, distribution)
-        .withCompute(this.#dataMoreWorkersFunc as TgpuComputeFn)
-        .createPipeline();
+        .createComputePipeline({ compute: this.#dataMoreWorkersFunc });
       this.#pipelineCache.set(distribution, pipeline);
     }
 
-    pipeline
-      .with(this.#bindGroup)
-      .dispatchWorkgroups(Math.ceil(this.#count / 64));
+    pipeline.with(this.#bindGroup).dispatchWorkgroups(Math.ceil(this.#count / 64));
 
     return await this.#samplesBuffer.read();
   }

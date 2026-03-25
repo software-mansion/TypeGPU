@@ -2,6 +2,8 @@
  * @module typegpu/std
  */
 
+// NOTE: This is a barrel file, internal files should not import things from this file
+
 export { discard } from './discard.ts';
 
 export {
@@ -68,12 +70,10 @@ export {
   trunc,
 } from './numeric.ts';
 
-export { add, div, mod, mul, neg, sub } from './operators.ts';
+export { add, bitShiftLeft, bitShiftRight, div, mod, mul, neg, sub } from './operators.ts';
 
-// deno-fmt-ingore
 export { rotateX4, rotateY4, rotateZ4, scale4, translate4 } from './matrix.ts';
 
-// deno-fmt-ingore
 export {
   identity2,
   identity3,
@@ -85,7 +85,6 @@ export {
   translation4,
 } from '../data/matrix.ts';
 
-// deno-fmt-ignore
 export {
   // comparison
   allEq,
@@ -107,7 +106,6 @@ export {
   select,
 } from './boolean.ts';
 
-// deno-fmt-ignore
 export {
   atomicAdd,
   atomicAnd,
@@ -138,7 +136,7 @@ export {
 
 export { arrayLength } from './array.ts';
 
-// deno-fmt-ignore
+// oxfmt-ignore
 export {
   pack4x8unorm,
   pack2x16float,
@@ -148,11 +146,13 @@ export {
 
 export {
   textureDimensions,
+  textureGather,
   textureLoad,
   textureSample,
   textureSampleBaseClampToEdge,
   textureSampleBias,
   textureSampleCompare,
+  textureSampleCompareLevel,
   textureSampleLevel,
   textureStore,
 } from './texture.ts';

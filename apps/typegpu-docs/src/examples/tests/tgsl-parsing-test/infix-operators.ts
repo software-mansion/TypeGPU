@@ -1,11 +1,12 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 
 const getVec = tgpu.fn([], d.vec3f)(() => d.vec3f(1, 2, 3));
 
 // TODO: replace `s = s &&` with `s &&=` when implemented
-export const infixOperatorsTests = tgpu.fn([], d.bool)(() => {
+export const infixOperatorsTests = tgpu.fn(
+  [],
+  d.bool,
+)(() => {
   let s = true;
 
   // mul
@@ -16,12 +17,9 @@ export const infixOperatorsTests = tgpu.fn([], d.bool)(() => {
   s = s && std.allEq(d.vec2i(1, 2).mul(d.vec2i(3, 4)), d.vec2i(3, 8));
 
   s = s && std.allEq(d.vec2u(1, 2).mul(2).mul(3), d.vec2u(6, 12));
-  s = s &&
-    std.isCloseTo(
-      d.mat2x2f(1, 2, 3, 4).mul(2).mul(d.vec2f(1, 10)),
-      d.vec2f(62, 84),
-    );
-  s = s &&
+  s = s && std.isCloseTo(d.mat2x2f(1, 2, 3, 4).mul(2).mul(d.vec2f(1, 10)), d.vec2f(62, 84));
+  s =
+    s &&
     std.isCloseTo(
       d
         .vec2f(1, 10)
@@ -29,7 +27,8 @@ export const infixOperatorsTests = tgpu.fn([], d.bool)(() => {
         .mul(-1),
       d.vec2f(-21, -43),
     );
-  s = s &&
+  s =
+    s &&
     std.isCloseTo(
       d
         .vec2f(1, 10)
@@ -37,7 +36,8 @@ export const infixOperatorsTests = tgpu.fn([], d.bool)(() => {
         .mul(d.mat2x2f(1, 2, 3, 4)),
       d.vec2f(-21, -43),
     );
-  s = s &&
+  s =
+    s &&
     std.allEq(
       d
         .vec3f(1, 10, 100)
@@ -49,11 +49,11 @@ export const infixOperatorsTests = tgpu.fn([], d.bool)(() => {
       d.vec3f(321, 654, 987),
     );
 
-  s = s &&
-    std.allEq(getVec().mul(getVec()), d.vec3f(1, 4, 9));
+  s = s && std.allEq(getVec().mul(getVec()), d.vec3f(1, 4, 9));
 
   // add
-  s = s &&
+  s =
+    s &&
     std.allEq(
       d
         .vec3f()
@@ -64,7 +64,8 @@ export const infixOperatorsTests = tgpu.fn([], d.bool)(() => {
     );
 
   // sub
-  s = s &&
+  s =
+    s &&
     std.allEq(
       d
         .vec3f(10)
@@ -75,7 +76,8 @@ export const infixOperatorsTests = tgpu.fn([], d.bool)(() => {
     );
 
   // div
-  s = s &&
+  s =
+    s &&
     std.allEq(
       d
         .vec3f(60)

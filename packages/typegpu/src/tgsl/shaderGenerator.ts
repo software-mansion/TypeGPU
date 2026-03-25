@@ -1,14 +1,20 @@
-import type { Block, Expression, Statement } from 'tinyest';
-import type { AnyData } from '../data/dataTypes.ts';
-import type { Snippet } from '../data/snippet.ts';
+import type { Block } from 'tinyest';
+import type { BaseData } from '../data/wgslTypes.ts';
 import type { GenerationCtx } from './generationHelpers.ts';
+import type { ResolvedSnippet, Snippet } from '../data/snippet.ts';
 
+/**
+ * **NOTE: This is an unstable API and may change in the future.**
+ *
+ * An interface meant to be used by other systems to generate snippets of
+ * shader code in the target language (WGSL, GLSL, etc.).
+ */
 export interface ShaderGenerator {
   initGenerator(ctx: GenerationCtx): void;
-  block(body: Block): string;
-  identifier(id: string): Snippet;
-  typedExpression(expression: Expression, expectedType: AnyData): Snippet;
-  expression(expression: Expression): Snippet;
-  statement(statement: Statement): string;
+
   functionDefinition(body: Block): string;
+  typeInstantiation(schema: BaseData, args: readonly Snippet[]): ResolvedSnippet;
+  typeAnnotation(schema: BaseData): string;
 }
+
+export * as ShaderGenerator from './shaderGenerator_members.ts';

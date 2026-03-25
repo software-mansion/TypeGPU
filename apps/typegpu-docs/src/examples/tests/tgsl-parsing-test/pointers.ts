@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 
 const SimpleStruct = d.struct({ vec: d.vec2f });
 
@@ -27,13 +25,16 @@ const modifyStructPrivate = tgpu.fn([d.ptrPrivate(SimpleStruct)])((ptr) => {
 });
 
 // TODO: replace `s = s &&` with `s &&=` when implemented
-export const pointersTest = tgpu.fn([], d.bool)(() => {
+export const pointersTest = tgpu.fn(
+  [],
+  d.bool,
+)(() => {
   let s = true;
 
   // function pointers
   const num = d.ref(d.u32());
   modifyNumFn(num);
-  s = s && (num.$ === 1);
+  s = s && num.$ === 1;
 
   const vec = d.ref(d.vec2f());
   modifyVecFn(vec);

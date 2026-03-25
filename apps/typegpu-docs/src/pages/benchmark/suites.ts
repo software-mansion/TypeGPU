@@ -10,10 +10,7 @@ import { castSuite } from './test-suites/cast.ts';
 
 export type TestIdentifier = `${string}_${string}`;
 
-export function identifierOf(
-  suiteName: string,
-  testName: string,
-): TestIdentifier {
+export function identifierOf(suiteName: string, testName: string): TestIdentifier {
   return `${suiteName.replaceAll(' ', '-')}_${testName.replaceAll(' ', '-')}`;
 }
 
@@ -25,9 +22,9 @@ export type SuiteSetupOptions = {
   d: TypeGPUDataModule;
 };
 
-// biome-ignore lint/suspicious/noExplicitAny: <sshhhhhh...>
+// oxlint-disable-next-line typescript/no-explicit-any -- sshhhhhh...
 export type Suite<T extends { bench: Bench } = any> = {
-  setup(options: SuiteSetupOptions): T;
+  setup: (options: SuiteSetupOptions) => T;
   tests: Record<string, (getCtx: () => T) => () => Promise<unknown>>;
 };
 
@@ -58,9 +55,7 @@ export function getFilteredSuites(selectedTests: TestIdentifier[]) {
       const filteredTests = pipe(
         tests,
         entries(),
-        filter((entry) =>
-          selectedTests.includes(identifierOf(suiteName, entry[0]))
-        ),
+        filter((entry) => selectedTests.includes(identifierOf(suiteName, entry[0]))),
         fromEntries(),
       );
 

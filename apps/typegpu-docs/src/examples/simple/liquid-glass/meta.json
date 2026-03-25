@@ -1,5 +1,6 @@
 {
   "title": "Liquid Glass",
   "category": "simple",
-  "tags": ["rendering", "experimental"]
+  "tags": ["ecosystem", "interaction", "sdf"],
+  "coolFactor": 8
 }

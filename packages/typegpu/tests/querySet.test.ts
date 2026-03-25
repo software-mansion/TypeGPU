@@ -1,7 +1,7 @@
 import { describe, expect, vi } from 'vitest';
 import { getName } from '../src/shared/meta.ts';
 import { $internal } from '../src/shared/symbols.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('TgpuQuerySet', () => {
   it('should be namable', ({ root }) => {
@@ -97,9 +97,7 @@ describe('TgpuQuerySet', () => {
   it('should throw when reading before resolving', async ({ root }) => {
     const querySet = root.createQuerySet('timestamp', 2);
 
-    await expect(querySet.read()).rejects.toThrow(
-      'QuerySet must be resolved before reading.',
-    );
+    await expect(querySet.read()).rejects.toThrow('QuerySet must be resolved before reading.');
   });
 
   it('should throw when using destroyed query set', ({ root }) => {
@@ -107,9 +105,7 @@ describe('TgpuQuerySet', () => {
     querySet.destroy();
 
     expect(() => querySet.querySet).toThrow('QuerySet has been destroyed.');
-    expect(() => querySet.resolve()).toThrow(
-      'This QuerySet has been destroyed.',
-    );
+    expect(() => querySet.resolve()).toThrow('This QuerySet has been destroyed.');
   });
 
   it('should track availability state', ({ root }) => {
@@ -123,12 +119,10 @@ describe('TgpuQuerySet', () => {
     const querySet = root.createQuerySet('occlusion', 1);
     querySet.resolve();
 
-    // biome-ignore lint/suspicious/noExplicitAny: <we testing here>
+    // oxlint-disable-next-line typescript/no-explicit-any -- we testing here
     (querySet as any)._available = false;
 
-    expect(() => querySet.resolve()).toThrow(
-      'This QuerySet is busy resolving or reading.',
-    );
+    expect(() => querySet.resolve()).toThrow('This QuerySet is busy resolving or reading.');
   });
 
   it('should work with external query set', ({ root, device }) => {

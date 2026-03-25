@@ -1,9 +1,4 @@
-import tgpu, {
-  type SampledFlag,
-  type StorageFlag,
-  type TgpuTexture,
-} from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d, type SampledFlag, type StorageFlag, type TgpuTexture } from 'typegpu';
 
 export const VisualizationParams = d.struct({
   showInside: d.u32,
@@ -21,7 +16,7 @@ export const SampleResult = d.struct({
   outside: d.vec2f,
 });
 
-export const paramsAccessor = tgpu['~unstable'].accessor(VisualizationParams);
+export const paramsAccess = tgpu.accessor(VisualizationParams);
 
 export const distSampleLayout = tgpu.bindGroupLayout({
   distTexture: { texture: d.texture2d() },
@@ -64,15 +59,11 @@ export const initFromMaskLayout = tgpu.bindGroupLayout({
   },
 });
 
-export type FloodTexture =
-  & TgpuTexture<{ size: [number, number]; format: 'rgba16float' }>
-  & StorageFlag;
+export type FloodTexture = TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> &
+  StorageFlag;
 
-export type MaskTexture =
-  & TgpuTexture<{ size: [number, number]; format: 'r32uint' }>
-  & StorageFlag;
+export type MaskTexture = TgpuTexture<{ size: [number, number]; format: 'r32uint' }> & StorageFlag;
 
-export type DistanceTexture =
-  & TgpuTexture<{ size: [number, number]; format: 'rgba16float' }>
-  & SampledFlag
-  & StorageFlag;
+export type DistanceTexture = TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> &
+  SampledFlag &
+  StorageFlag;

@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as m from 'wgpu-matrix';
-import {
-  mat3x3f,
-  mat4x4f,
-  matToArray,
-  vec2f,
-  vec3f,
-  vec4f,
-} from '../src/data/index.ts';
+import { mat3x3f, mat4x4f, matToArray, vec2f, vec3f, vec4f } from '../src/data/index.ts';
 
 describe('mat4x4f', () => {
   it('can interact with wgpu-matrix library', () => {
@@ -20,10 +13,8 @@ describe('mat4x4f', () => {
 
     expect(m.mat4.equals(mat, mat)).toBe(true);
 
-    // deno-fmt-ignore
     expect(matToArray(mat)).toStrictEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
     m.mat4.identity(mat);
-    // deno-fmt-ignore
     expect(matToArray(mat)).toStrictEqual([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
   });
 });
@@ -105,7 +96,6 @@ describe('mat and vec interaction', () => {
     const vec = vec3f(0, 0, 0);
     const up = vec3f(0, 0, 1);
     m.mat4.lookAt(mat, vec, up, mat);
-    // deno-fmt-ignore
     expect(matToArray(mat)).toStrictEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0, -0, -0, 1]);
   });
 });

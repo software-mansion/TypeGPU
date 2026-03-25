@@ -1,5 +1,6 @@
 {
   "title": "Three.js - Simple",
   "category": "threejs",
-  "tags": ["experimental", "three.js"]
+  "tags": ["3d", "basics", "ecosystem", "noise"],
+  "coolFactor": 4
 }

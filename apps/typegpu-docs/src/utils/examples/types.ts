@@ -5,6 +5,7 @@ export const ExampleMetadata = type({
   title: 'string',
   category: 'string',
   'tags?': 'string[]',
+  coolFactor: 'number',
   'dev?': 'boolean',
 });
 
@@ -21,8 +22,30 @@ export const exampleCategories = [
 
 export type ExampleSrcFile = {
   exampleKey: string;
+  /**
+   * The relative path, for example 'index.ts'
+   */
   path: string;
   content: string;
+  /**
+   * Stripped down version of the content, without
+   * overloaded operators (if they were used)
+   */
+  tsnotoverContent?: string | undefined;
+};
+
+export type ExampleCommonFile = {
+  common: true;
+  /**
+   * The relative path, for example 'helper.ts'
+   */
+  path: string;
+  content: string;
+  /**
+   * Stripped down version of the content, without
+   * overloaded operators (if they were used)
+   */
+  tsnotoverContent?: string | undefined;
 };
 
 export interface ThumbnailPair {
@@ -37,4 +60,5 @@ export type Example = {
   htmlFile: ExampleSrcFile;
   metadata: ExampleMetadata;
   thumbnails?: ThumbnailPair;
+  usedApis: string[];
 };

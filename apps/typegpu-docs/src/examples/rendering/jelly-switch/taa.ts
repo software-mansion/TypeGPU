@@ -1,34 +1,24 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import type { TgpuComputePipeline, TgpuRoot, TgpuTextureView } from 'typegpu';
+import tgpu, { d, std } from 'typegpu';
 import { taaResolveLayout } from './dataTypes.ts';
 
-export const taaResolveFn = tgpu['~unstable'].computeFn({
+export const taaResolveFn = tgpu.computeFn({
   workgroupSize: [16, 16],
   in: {
     gid: d.builtin.globalInvocationId,
   },
 })(({ gid }) => {
-  const currentColor = std.textureLoad(
-    taaResolveLayout.$.currentTexture,
-    d.vec2u(gid.xy),
-    0,
-  );
+  const currentColor = std.textureLoad(taaResolveLayout.$.currentTexture, d.vec2u(gid.xy), 0);
 
-  const historyColor = std.textureLoad(
-    taaResolveLayout.$.historyTexture,
-    d.vec2u(gid.xy),
-    0,
-  );
+  const historyColor = std.textureLoad(taaResolveLayout.$.historyTexture, d.vec2u(gid.xy), 0);
 
   let minColor = d.vec3f(9999.0);
   let maxColor = d.vec3f(-9999.0);
 
   const dimensions = std.textureDimensions(taaResolveLayout.$.currentTexture);
 
-  for (let x = -1; x <= 1; x++) {
-    for (let y = -1; y <= 1; y++) {
+  for (const x of tgpu.unroll([-1, 0, 1])) {
+    for (const y of tgpu.unroll([-1, 0, 1])) {
       const sampleCoord = d.vec2i(gid.xy).add(d.vec2i(x, y));
       const clampedCoord = std.clamp(
         sampleCoord,
@@ -36,43 +26,30 @@ export const taaResolveFn = tgpu['~unstable'].computeFn({
         d.vec2i(dimensions.xy).sub(d.vec2i(1)),
       );
 
-      const neighborColor = std.textureLoad(
-        taaResolveLayout.$.currentTexture,
-        clampedCoord,
-        0,
-      );
+      const neighborColor = std.textureLoad(taaResolveLayout.$.currentTexture, clampedCoord, 0);
 
-      minColor = std.min(minColor, neighborColor.xyz);
-      maxColor = std.max(maxColor, neighborColor.xyz);
+      minColor = std.min(minColor, neighborColor.rgb);
+      maxColor = std.max(maxColor, neighborColor.rgb);
     }
   }
 
-  const historyColorClamped = std.clamp(historyColor.xyz, minColor, maxColor);
+  const historyColorClamped = std.clamp(historyColor.rgb, minColor, maxColor);
 
   const blendFactor = d.f32(0.9);
 
-  const resolvedColor = d.vec4f(
-    std.mix(currentColor.xyz, historyColorClamped, blendFactor),
-    1.0,
-  );
+  const resolvedColor = d.vec4f(std.mix(currentColor.rgb, historyColorClamped, blendFactor), 1.0);
 
-  std.textureStore(
-    taaResolveLayout.$.outputTexture,
-    d.vec2u(gid.x, gid.y),
-    resolvedColor,
-  );
+  std.textureStore(taaResolveLayout.$.outputTexture, d.vec2u(gid.x, gid.y), resolvedColor);
 });
 
-export function createTaaTextures(
-  root: TgpuRoot,
-  width: number,
-  height: number,
-) {
+export function createTaaTextures(root: TgpuRoot, width: number, height: number) {
   return [0, 1].map(() => {
-    const texture = root['~unstable'].createTexture({
-      size: [width, height],
-      format: 'rgba8unorm',
-    }).$usage('storage', 'sampled');
+    const texture = root['~unstable']
+      .createTexture({
+        size: [width, height],
+        format: 'rgba8unorm',
+      })
+      .$usage('storage', 'sampled');
 
     return {
       write: texture.createView(d.textureStorage2d('rgba8unorm')),
@@ -93,10 +70,7 @@ export class TAAResolver {
     this.#width = width;
     this.#height = height;
 
-    this.#pipeline = root['~unstable']
-      .withCompute(taaResolveFn)
-      .createPipeline();
-
+    this.#pipeline = root.createComputePipeline({ compute: taaResolveFn });
     this.#textures = createTaaTextures(root, width, height);
   }
 
@@ -107,18 +81,15 @@ export class TAAResolver {
   ) {
     const previousFrame = 1 - currentFrame;
 
-    this.#pipeline.with(
-      this.#root.createBindGroup(taaResolveLayout, {
-        currentTexture,
-        historyTexture: frameCount === 1
-          ? currentTexture
-          : this.#textures[previousFrame].sampled,
-        outputTexture: this.#textures[currentFrame].write,
-      }),
-    ).dispatchWorkgroups(
-      Math.ceil(this.#width / 16),
-      Math.ceil(this.#height / 16),
-    );
+    this.#pipeline
+      .with(
+        this.#root.createBindGroup(taaResolveLayout, {
+          currentTexture,
+          historyTexture: frameCount === 1 ? currentTexture : this.#textures[previousFrame].sampled,
+          outputTexture: this.#textures[currentFrame].write,
+        }),
+      )
+      .dispatchWorkgroups(Math.ceil(this.#width / 16), Math.ceil(this.#height / 16));
 
     return this.#textures[currentFrame].sampled;
   }

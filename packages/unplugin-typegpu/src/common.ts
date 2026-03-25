@@ -61,8 +61,7 @@ function isTgpu(ctx: Context, node: babel.Node | acorn.AnyNode): boolean {
   while (true) {
     if (tail.type === 'MemberExpression') {
       if (
-        (tail.property.type === 'Literal' ||
-          tail.property.type === 'StringLiteral') &&
+        (tail.property.type === 'Literal' || tail.property.type === 'StringLiteral') &&
         tail.property.value === '~unstable'
       ) {
         // Bypassing the '~unstable' property.
@@ -122,23 +121,61 @@ export function isShellImplementationCall(
     node.callee.callee.type === 'MemberExpression' &&
     node.callee.callee.property.type === 'Identifier' &&
     fnShellFunctionNames.includes(node.callee.callee.property.name) &&
-    node.arguments.length === 1 && isTgpu(ctx, node.callee.callee.object)
+    node.arguments.length === 1 &&
+    isTgpu(ctx, node.callee.callee.object)
   );
+}
+
+/**
+ * Extracts a name and expression from nodes that contain a label and an expression,
+ * such as VariableDeclarator or PropertyDefinition.
+ * Returns a tuple of [name, expression] if found, otherwise undefined.
+ *
+ * @example
+ * extractLabelledExpression(node`let name = tgpu.bindGroupLayout({});`)
+ * // ["name", node`tgpu.bindGroupLayout({})`]
+ */
+function extractLabelledExpression<T extends acorn.AnyNode | babel.Node>(
+  node: T,
+): [string, ExpressionFor<T>] | undefined {
+  if (node.type === 'VariableDeclarator' && node.id.type === 'Identifier' && node.init) {
+    // let id = init;
+    return [node.id.name, node.init as ExpressionFor<T>];
+  } else if (node.type === 'AssignmentExpression') {
+    // left = right;
+    const maybeName = tryFindIdentifier(node.left);
+    if (maybeName) {
+      return [maybeName, node.right as ExpressionFor<T>];
+    }
+  } else if (
+    (node.type === 'Property' || node.type === 'ObjectProperty') &&
+    node.key.type === 'Identifier'
+  ) {
+    // const a = { key: value }
+    return [node.key.name, node.value as ExpressionFor<T>];
+  } else if (
+    (node.type === 'ClassProperty' || node.type === 'PropertyDefinition') &&
+    node.value &&
+    node.key.type === 'Identifier'
+  ) {
+    // class Class {
+    //	 key = value;
+    // }
+    return [node.key.name, node.value as ExpressionFor<T>];
+  }
 }
 
 export function getFunctionName(
   node: acorn.AnyNode | babel.Node,
   parent: acorn.AnyNode | babel.Node | null,
 ): string | undefined {
-  if (
-    parent?.type === 'VariableDeclarator' && parent.id.type === 'Identifier'
-  ) {
-    return parent.id.name;
-  }
-  return node.type === 'FunctionDeclaration' ||
-      node.type === 'FunctionExpression'
-    ? node.id?.name
-    : undefined;
+  const maybeName = parent ? extractLabelledExpression(parent)?.[0] : undefined;
+  return (
+    maybeName ??
+    (node.type === 'FunctionDeclaration' || node.type === 'FunctionExpression'
+      ? node.id?.name
+      : undefined)
+  );
 }
 
 const resourceConstructors: string[] = [
@@ -148,26 +185,28 @@ const resourceConstructors: string[] = [
   'privateVar',
   'workgroupVar',
   'const',
-  // tgpu['~unstable']
   'slot',
   'accessor',
   'comptime',
   ...fnShellFunctionNames,
-  // d
-  'struct',
-  'unstruct',
   // root
   'createBuffer',
   'createMutable',
   'createReadonly',
   'createUniform',
   'createQuerySet',
-  // root['~unstable']
   'createPipeline',
+  'createComputePipeline',
   'createGuardedComputePipeline',
+  'createRenderPipeline',
   'createTexture',
   'createSampler',
   'createComparisonSampler',
+  // d
+  'struct',
+  'unstruct',
+  // other
+  'createView',
 ];
 
 /**
@@ -175,19 +214,13 @@ const resourceConstructors: string[] = [
  * Since it is mostly for debugging and clean WGSL generation,
  * some false positives and false negatives are admissible.
  */
-function containsResourceConstructorCall(
-  node: acorn.AnyNode | babel.Node,
-  ctx: Context,
-) {
+function containsResourceConstructorCall(node: acorn.AnyNode | babel.Node, ctx: Context) {
   if (node.type === 'CallExpression') {
     if (isShellImplementationCall(node, ctx)) {
       return true;
     }
     // struct({...})
-    if (
-      node.callee.type === 'Identifier' &&
-      resourceConstructors.includes(node.callee.name)
-    ) {
+    if (node.callee.type === 'Identifier' && resourceConstructors.includes(node.callee.name)) {
       return true;
     }
     if (node.callee.type === 'MemberExpression') {
@@ -220,10 +253,14 @@ function containsResourceConstructorCall(
  * tryFindIdentifier('this.myBuffer'); // 'myBuffer'
  * tryFindIdentifier('[a, b]'); // undefined
  */
-function tryFindIdentifier(
-  node: acorn.AnyNode | babel.Node,
-): string | undefined {
+function tryFindIdentifier(node: acorn.AnyNode | babel.Node): string | undefined {
   if (node.type === 'Identifier') {
+    return node.name;
+  }
+  if (node.type === 'PrivateName') {
+    return tryFindIdentifier(node.id);
+  }
+  if (node.type === 'PrivateIdentifier') {
     return node.name;
   }
   if (node.type === 'MemberExpression') {
@@ -231,8 +268,9 @@ function tryFindIdentifier(
   }
 }
 
-type ExpressionFor<T extends acorn.AnyNode | babel.Node> = T extends
-  acorn.AnyNode ? acorn.Expression : babel.Expression;
+type ExpressionFor<T extends acorn.AnyNode | babel.Node> = T extends acorn.AnyNode
+  ? acorn.Expression
+  : babel.Expression;
 
 /**
  * Checks if `node` contains a label and a tgpu expression that could be named.
@@ -262,34 +300,12 @@ export function performExpressionNaming<T extends acorn.AnyNode | babel.Node>(
     return;
   }
 
-  if (
-    node.type === 'VariableDeclarator' &&
-    node.id.type === 'Identifier' &&
-    node.init &&
-    containsResourceConstructorCall(node.init, ctx)
-  ) {
-    namingCallback(node.init as ExpressionFor<T>, node.id.name);
-  } else if (
-    node.type === 'AssignmentExpression' &&
-    containsResourceConstructorCall(node.right, ctx)
-  ) {
-    const maybeName = tryFindIdentifier(node.left);
-    if (maybeName) {
-      namingCallback(node.right as ExpressionFor<T>, maybeName);
+  const labelledExpression = extractLabelledExpression(node);
+  if (labelledExpression) {
+    const [label, expression] = labelledExpression;
+    if (containsResourceConstructorCall(expression, ctx)) {
+      namingCallback(expression, label);
     }
-  } else if (
-    (node.type === 'Property' || node.type === 'ObjectProperty') &&
-    node.key.type === 'Identifier' &&
-    containsResourceConstructorCall(node.value, ctx)
-  ) {
-    namingCallback(node.value as ExpressionFor<T>, node.key.name);
-  } else if (
-    (node.type === 'ClassProperty' || node.type === 'PropertyDefinition') &&
-    node.value &&
-    node.key.type === 'Identifier' &&
-    containsResourceConstructorCall(node.value, ctx)
-  ) {
-    namingCallback(node.value as ExpressionFor<T>, node.key.name);
   }
 }
 
@@ -297,3 +313,16 @@ export const useGpuDirective = 'use gpu';
 
 /** Regular expressions used for early pruning (to avoid unnecessary parsing, which is expensive) */
 export const earlyPruneRegex = [/["']use gpu["']/, /t(ype)?gpu/];
+
+export const operators = {
+  '+': '__tsover_add',
+  '-': '__tsover_sub',
+  '*': '__tsover_mul',
+  '/': '__tsover_div',
+  '%': '__tsover_mod',
+  '+=': '__tsover_add',
+  '-=': '__tsover_sub',
+  '*=': '__tsover_mul',
+  '/=': '__tsover_div',
+  '%=': '__tsover_mod',
+};

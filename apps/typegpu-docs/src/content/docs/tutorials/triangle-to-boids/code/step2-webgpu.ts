@@ -1,10 +1,6 @@
 // @ts-nocheck
 // TODO: ^ REMOVE WHEN CODE WORKS AGAIN
-import {
-  addElement,
-  addSliderParameter,
-  onFrame,
-} from '@typegpu/example-toolkit';
+import { addElement, addSliderParameter, onFrame } from '@typegpu/example-toolkit';
 
 const adapter = await navigator.gpu?.requestAdapter();
 const device = await adapter?.requestDevice();
@@ -14,14 +10,8 @@ if (!device) {
 }
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const triangleVertexData = new Float32Array([0.0, 0.5, -0.5, -0.5, 0.5, -0.5]);
 

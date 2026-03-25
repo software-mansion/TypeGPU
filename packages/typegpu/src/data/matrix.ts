@@ -1,14 +1,16 @@
 import { comptime } from '../core/function/comptime.ts';
+import { callableSchema } from '../core/function/createCallableSchema.ts';
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { $repr } from '../shared/symbols.ts';
 import { $internal, $resolve } from '../shared/symbols.ts';
-import type { SelfResolvable } from '../types.ts';
-import type { AnyData } from './dataTypes.ts';
+import { numericLiteralToSnippet } from '../tgsl/generationHelpers.ts';
+import type { ResolutionCtx, SelfResolvable } from '../types.ts';
 import { f32 } from './numeric.ts';
-import { type ResolvedSnippet, snip } from './snippet.ts';
+import { type ResolvedSnippet } from './snippet.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import {
+  type BaseData,
   isVec,
   type m2x2f,
   type m3x3f,
@@ -52,10 +54,9 @@ interface MatSchemaOptions<TType extends string, ColumnType> {
   MatImpl: new (...args: number[]) => MatBase<ColumnType>;
 }
 
-type MatConstructor<
-  ValueType extends MatBase<ColumnType>,
-  ColumnType extends vBase,
-> = (...args: (number | ColumnType)[]) => ValueType;
+type MatConstructor<ValueType extends MatBase<ColumnType>, ColumnType extends vBase> = (
+  ...args: (number | ColumnType)[]
+) => ValueType;
 
 function createMatSchema<
   TType extends string,
@@ -64,8 +65,9 @@ function createMatSchema<
 >(
   options: MatSchemaOptions<TType, ColumnType>,
 ): { type: TType; [$repr]: ValueType } & MatConstructor<ValueType, ColumnType> {
-  const construct = dualImpl({
+  const construct = callableSchema({
     name: options.type,
+    schema: () => schema,
     normalImpl: (...args: (number | ColumnType)[]): ValueType => {
       const elements: number[] = [];
 
@@ -79,13 +81,8 @@ function createMatSchema<
         }
       }
 
-      if (
-        elements.length !== 0 &&
-        elements.length !== options.columns * options.rows
-      ) {
-        throw new Error(
-          `'${options.type}' constructor called with invalid number of arguments.`,
-        );
+      if (elements.length !== 0 && elements.length !== options.columns * options.rows) {
+        throw new Error(`'${options.type}' constructor called with invalid number of arguments.`);
       }
 
       for (let i = elements.length; i < options.columns * options.rows; ++i) {
@@ -94,37 +91,38 @@ function createMatSchema<
 
       return new options.MatImpl(...elements) as ValueType;
     },
-    ignoreImplicitCastWarning: true,
-    signature: (...args) => ({
-      argTypes: args.map((arg) => (isVec(arg) ? arg : f32)),
-      returnType: schema as unknown as AnyData,
-    }),
-    codegenImpl: (...args) => stitch`${options.type}(${args})`,
+    argTypes: (...args) => args.map((arg) => (isVec(arg) ? arg : f32)),
+    codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(schema, args),
   });
 
   const schema = Object.assign(construct, {
+    [$internal]: {},
     type: options.type,
+    primitive: f32,
     identity: identityFunctions[options.columns],
     translation: options.columns === 4 ? translation4 : undefined,
     scaling: options.columns === 4 ? scaling4 : undefined,
     rotationX: options.columns === 4 ? rotationX4 : undefined,
     rotationY: options.columns === 4 ? rotationY4 : undefined,
     rotationZ: options.columns === 4 ? rotationZ4 : undefined,
-  }) as unknown as {
+  }) as unknown as BaseData & {
     type: TType;
     [$repr]: ValueType;
   } & MatConstructor<ValueType, ColumnType>;
 
   // TODO: Remove workaround
   // it's a workaround for circular dependencies caused by us using schemas in the shader generator
-  // biome-ignore lint/suspicious/noExplicitAny: explained above
-  (options.MatImpl.prototype as any).schema = schema;
+  options.MatImpl.prototype.schema = schema;
 
   return schema;
 }
 
-abstract class mat2x2Impl<TColumn extends v2f> extends MatBase<TColumn>
-  implements mat2x2<TColumn>, SelfResolvable {
+const VALID_MAT2x2_ELEMENTS = [0, 1, 2, 3];
+
+abstract class mat2x2Impl<TColumn extends v2f>
+  extends MatBase<TColumn>
+  implements mat2x2<TColumn>, SelfResolvable
+{
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn];
   public readonly length = 4;
@@ -180,20 +178,16 @@ abstract class mat2x2Impl<TColumn extends v2f> extends MatBase<TColumn>
     yield this[3];
   }
 
-  [$resolve](): ResolvedSnippet {
-    return snip(
-      `${this.kind}(${
-        Array.from({ length: this.length })
-          .map((_, i) => this[i])
-          .join(', ')
-      })`,
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    return ctx.gen.typeInstantiation(
       mat2x2f,
-      /* origin */ 'runtime',
+      // oxlint-disable-next-line typescript-eslint(no-non-null-assertion)
+      VALID_MAT2x2_ELEMENTS.map((i) => numericLiteralToSnippet(this[i]!)),
     );
   }
 
   toString() {
-    return this[$resolve]().value;
+    return `${this.kind}(${VALID_MAT2x2_ELEMENTS.map((i) => this[i]).join(', ')})`;
   }
 }
 
@@ -205,8 +199,12 @@ class mat2x2fImpl extends mat2x2Impl<v2f> {
   }
 }
 
-abstract class mat3x3Impl<TColumn extends v3f> extends MatBase<TColumn>
-  implements mat3x3<TColumn>, SelfResolvable {
+const VALID_MAT3x3_ELEMENTS = [0, 1, 2, 4, 5, 6, 8, 9, 10];
+
+abstract class mat3x3Impl<TColumn extends v3f>
+  extends MatBase<TColumn>
+  implements mat3x3<TColumn>, SelfResolvable
+{
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn, TColumn];
   public readonly length = 12;
@@ -216,21 +214,9 @@ abstract class mat3x3Impl<TColumn extends v3f> extends MatBase<TColumn>
   constructor(...elements: number[]) {
     super();
     this.columns = [
-      this.makeColumn(
-        elements[0] as number,
-        elements[1] as number,
-        elements[2] as number,
-      ),
-      this.makeColumn(
-        elements[3] as number,
-        elements[4] as number,
-        elements[5] as number,
-      ),
-      this.makeColumn(
-        elements[6] as number,
-        elements[7] as number,
-        elements[8] as number,
-      ),
+      this.makeColumn(elements[0] as number, elements[1] as number, elements[2] as number),
+      this.makeColumn(elements[3] as number, elements[4] as number, elements[5] as number),
+      this.makeColumn(elements[6] as number, elements[7] as number, elements[8] as number),
     ];
   }
 
@@ -332,18 +318,16 @@ abstract class mat3x3Impl<TColumn extends v3f> extends MatBase<TColumn>
     }
   }
 
-  [$resolve](): ResolvedSnippet {
-    return snip(
-      `${this.kind}(${this[0]}, ${this[1]}, ${this[2]}, ${this[4]}, ${
-        this[5]
-      }, ${this[6]}, ${this[8]}, ${this[9]}, ${this[10]})`,
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    return ctx.gen.typeInstantiation(
       mat3x3f,
-      /* origin */ 'runtime',
+      // oxlint-disable-next-line typescript-eslint(no-non-null-assertion)
+      VALID_MAT3x3_ELEMENTS.map((i) => numericLiteralToSnippet(this[i]!)),
     );
   }
 
   toString() {
-    return this[$resolve]().value;
+    return `${this.kind}(${VALID_MAT3x3_ELEMENTS.map((i) => this[i]).join(', ')})`;
   }
 }
 
@@ -354,8 +338,12 @@ class mat3x3fImpl extends mat3x3Impl<v3f> {
   }
 }
 
-abstract class mat4x4Impl<TColumn extends v4f> extends MatBase<TColumn>
-  implements mat4x4<TColumn>, SelfResolvable {
+const VALID_MAT4x4_ELEMENTS = Array.from({ length: 16 }, (_, i) => i);
+
+abstract class mat4x4Impl<TColumn extends v4f>
+  extends MatBase<TColumn>
+  implements mat4x4<TColumn>, SelfResolvable
+{
   public readonly [$internal] = true;
   public readonly columns: readonly [TColumn, TColumn, TColumn, TColumn];
   public abstract readonly kind: string;
@@ -529,20 +517,16 @@ abstract class mat4x4Impl<TColumn extends v4f> extends MatBase<TColumn>
     }
   }
 
-  [$resolve](): ResolvedSnippet {
-    return snip(
-      `${this.kind}(${
-        Array.from({ length: this.length })
-          .map((_, i) => this[i])
-          .join(', ')
-      })`,
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    return ctx.gen.typeInstantiation(
       mat4x4f,
-      /* origin */ 'runtime',
+      // oxlint-disable-next-line typescript-eslint(no-non-null-assertion)
+      VALID_MAT4x4_ELEMENTS.map((i) => numericLiteralToSnippet(this[i]!)),
     );
   }
 
   toString() {
-    return this[$resolve]().value;
+    return `${this.kind}(${VALID_MAT4x4_ELEMENTS.map((i) => this[i]).join(', ')})`;
   }
 }
 
@@ -568,16 +552,14 @@ export const identity2 = comptime(() => mat2x2f(1, 0, 0, 1)).$name('identity2');
  * Returns a 3-by-3 identity matrix.
  * @returns {m3x3f} The result matrix.
  */
-export const identity3 = comptime(
-  () => mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1),
-).$name('identity3');
+export const identity3 = comptime(() => mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1)).$name('identity3');
 
 /**
  * Returns a 4-by-4 identity matrix.
  * @returns {m4x4f} The result matrix.
  */
-export const identity4 = comptime(
-  () => mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
+export const identity4 = comptime(() =>
+  mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1),
 ).$name('identity4');
 
 const identityFunctions = {
@@ -594,7 +576,7 @@ const identityFunctions = {
 export const translation4 = dualImpl({
   name: 'translation4',
   normalImpl: (vector: v3f) =>
-    // deno-fmt-ignore
+    // oxfmt-ignore
     mat4x4f(
       1, 0, 0, 0,
       0, 1, 0, 0,
@@ -604,7 +586,7 @@ export const translation4 = dualImpl({
   get signature() {
     return { argTypes: [vec3f], returnType: mat4x4f };
   },
-  codegenImpl: (v) =>
+  codegenImpl: (_ctx, [v]) =>
     stitch`mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, ${v}.x, ${v}.y, ${v}.z, 1)`,
 });
 
@@ -616,7 +598,7 @@ export const translation4 = dualImpl({
 export const scaling4 = dualImpl({
   name: 'scaling4',
   normalImpl: (vector: v3f) =>
-    // deno-fmt-ignore
+    // oxfmt-ignore
     mat4x4f(
       vector.x, 0, 0, 0,
       0, vector.y, 0, 0,
@@ -626,7 +608,7 @@ export const scaling4 = dualImpl({
   get signature() {
     return { argTypes: [vec3f], returnType: mat4x4f };
   },
-  codegenImpl: (v) =>
+  codegenImpl: (_ctx, [v]) =>
     stitch`mat4x4f(${v}.x, 0, 0, 0, 0, ${v}.y, 0, 0, 0, 0, ${v}.z, 0, 0, 0, 0, 1)`,
 });
 
@@ -638,7 +620,7 @@ export const scaling4 = dualImpl({
 export const rotationX4 = dualImpl({
   name: 'rotationX4',
   normalImpl: (a: number) =>
-    // deno-fmt-ignore
+    // oxfmt-ignore
     mat4x4f(
       1, 0, 0, 0,
       0, Math.cos(a), Math.sin(a), 0,
@@ -648,7 +630,7 @@ export const rotationX4 = dualImpl({
   get signature() {
     return { argTypes: [f32], returnType: mat4x4f };
   },
-  codegenImpl: (a) =>
+  codegenImpl: (_ctx, [a]) =>
     stitch`mat4x4f(1, 0, 0, 0, 0, cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1)`,
 });
 
@@ -660,7 +642,7 @@ export const rotationX4 = dualImpl({
 export const rotationY4 = dualImpl({
   name: 'rotationY4',
   normalImpl: (a: number) =>
-    // deno-fmt-ignore
+    // oxfmt-ignore
     mat4x4f(
       Math.cos(a), 0, -Math.sin(a), 0,
       0, 1, 0, 0,
@@ -670,7 +652,7 @@ export const rotationY4 = dualImpl({
   get signature() {
     return { argTypes: [f32], returnType: mat4x4f };
   },
-  codegenImpl: (a) =>
+  codegenImpl: (_ctx, [a]) =>
     stitch`mat4x4f(cos(${a}), 0, -sin(${a}), 0, 0, 1, 0, 0, sin(${a}), 0, cos(${a}), 0, 0, 0, 0, 1)`,
 });
 
@@ -682,7 +664,7 @@ export const rotationY4 = dualImpl({
 export const rotationZ4 = dualImpl({
   name: 'rotationZ4',
   normalImpl: (a: number) =>
-    // deno-fmt-ignore
+    // oxfmt-ignore
     mat4x4f(
       Math.cos(a), Math.sin(a), 0, 0,
       -Math.sin(a), Math.cos(a), 0, 0,
@@ -692,7 +674,7 @@ export const rotationZ4 = dualImpl({
   get signature() {
     return { argTypes: [f32], returnType: mat4x4f };
   },
-  codegenImpl: (a) =>
+  codegenImpl: (_ctx, [a]) =>
     stitch`mat4x4f(cos(${a}), sin(${a}), 0, 0, -sin(${a}), cos(${a}), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)`,
 });
 
@@ -792,17 +774,7 @@ export const mat4x4f = createMatSchema<'mat4x4f', m4x4f, v4f>({
 
 export function matToArray(mat: m2x2f | m3x3f | m4x4f): number[] {
   if (mat.kind === 'mat3x3f') {
-    return [
-      mat[0],
-      mat[1],
-      mat[2],
-      mat[4],
-      mat[5],
-      mat[6],
-      mat[8],
-      mat[9],
-      mat[10],
-    ] as number[];
+    return [mat[0], mat[1], mat[2], mat[4], mat[5], mat[6], mat[8], mat[9], mat[10]] as number[];
   }
 
   return Array.from({ length: mat.length }).map((_, idx) => mat[idx] as number);

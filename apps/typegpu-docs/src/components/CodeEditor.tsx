@@ -1,12 +1,8 @@
-import Editor, {
-  type BeforeMount,
-  type Monaco,
-  type OnMount,
-} from '@monaco-editor/react';
+import Editor, { type BeforeMount, type Monaco, type OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
 import { SANDBOX_MODULES } from '../utils/examples/sandboxModules.ts';
-import type { ExampleSrcFile } from '../utils/examples/types.ts';
+import type { ExampleCommonFile, ExampleSrcFile } from '../utils/examples/types.ts';
 import { tsCompilerOptions } from '../utils/liveEditor/embeddedTypeScript.ts';
 
 function handleEditorWillMount(monaco: Monaco) {
@@ -26,19 +22,13 @@ function handleEditorWillMount(monaco: Monaco) {
 
   for (const [moduleKey, moduleDef] of entries(SANDBOX_MODULES)) {
     if ('content' in moduleDef.typeDef) {
-      tsDefaults.addExtraLib(
-        moduleDef.typeDef.content,
-        moduleDef.typeDef.filename,
-      );
+      tsDefaults.addExtraLib(moduleDef.typeDef.content, moduleDef.typeDef.filename);
 
       if (
         moduleDef.typeDef.filename &&
         moduleDef.typeDef.filename !== moduleKey // the redirect is not a no-op
       ) {
-        reroutes[moduleKey] = [
-          ...(reroutes[moduleKey] ?? []),
-          moduleDef.typeDef.filename,
-        ];
+        reroutes[moduleKey] = [...(reroutes[moduleKey] ?? []), moduleDef.typeDef.filename];
       }
     }
   }
@@ -56,40 +46,40 @@ function handleEditorOnMount(editor: editor.IStandaloneCodeEditor) {
 }
 
 type Props = {
-  file: ExampleSrcFile;
+  file: ExampleSrcFile | ExampleCommonFile;
   shown: boolean;
 };
 
-const createCodeEditorComponent = (
-  language: 'typescript' | 'html',
-  beforeMount?: BeforeMount,
-  onMount?: OnMount,
-) =>
-(props: Props) => {
-  const { file, shown } = props;
+const createCodeEditorComponent =
+  (language: 'typescript' | 'html', beforeMount?: BeforeMount, onMount?: OnMount) =>
+  (props: Props) => {
+    const { file, shown } = props;
 
-  return (
-    <div
-      className={shown
-        ? 'h-[calc(100%-7rem)] md:h-[calc(100%-3rem)]'
-        : 'hidden'}
-    >
-      <Editor
-        defaultLanguage={language}
-        value={file.content}
-        path={file.path}
-        beforeMount={beforeMount}
-        onMount={onMount}
-        options={{
-          minimap: {
-            enabled: false,
-          },
-          readOnly: true,
-        }}
-      />
-    </div>
-  );
-};
+    // Monaco needs relative paths to work correctly and '../../common/file.ts' will not do
+    const path =
+      'common' in file
+        ? `common/${file.path}`
+        : `${file.exampleKey.replace('--', '/')}/${file.path}`;
+
+    return (
+      <div className={shown ? 'h-[calc(100%-7rem)] md:h-[calc(100%-3rem)]' : 'hidden'}>
+        <Editor
+          defaultLanguage={language}
+          value={file.tsnotoverContent ?? file.content}
+          path={path}
+          beforeMount={beforeMount}
+          onMount={onMount}
+          options={{
+            minimap: {
+              enabled: false,
+            },
+            readOnly: true,
+            domReadOnly: true,
+          }}
+        />
+      </div>
+    );
+  };
 
 export const TsCodeEditor = createCodeEditorComponent(
   'typescript',

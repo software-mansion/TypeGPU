@@ -1,5 +1,6 @@
 {
   "title": "Confetti",
   "category": "simulation",
-  "tags": ["experimental", "compute", "instancing"]
+  "tags": ["particles", "physics"],
+  "coolFactor": 6
 }

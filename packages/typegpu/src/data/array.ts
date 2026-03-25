@@ -13,10 +13,7 @@ interface WgslArrayConstructor {
     elementType: TElement,
   ): (elementCount: number) => WgslArray<TElement>;
 
-  <TElement extends AnyWgslData>(
-    elementType: TElement,
-    elementCount: number,
-  ): WgslArray<TElement>;
+  <TElement extends AnyWgslData>(elementType: TElement, elementCount: number): WgslArray<TElement>;
 }
 
 /**
@@ -35,14 +32,12 @@ interface WgslArrayConstructor {
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.
  */
-export const arrayOf = comptime(
-  ((elementType, elementCount) => {
-    if (elementCount === undefined) {
-      return comptime((count: number) => cpu_arrayOf(elementType, count));
-    }
-    return cpu_arrayOf(elementType, elementCount);
-  }) as WgslArrayConstructor,
-).$name('arrayOf');
+export const arrayOf = comptime(((elementType, elementCount) => {
+  if (elementCount === undefined) {
+    return comptime((count: number) => cpu_arrayOf(elementType, count));
+  }
+  return cpu_arrayOf(elementType, elementCount);
+}) as WgslArrayConstructor).$name('arrayOf');
 
 // --------------
 // Implementation
@@ -61,9 +56,8 @@ function cpu_arrayOf<TElement extends AnyWgslData>(
       );
     }
 
-    return Array.from(
-      { length: elementCount },
-      (_, i) => schemaCallWrapper(elementType, elements?.[i]),
+    return Array.from({ length: elementCount }, (_, i) =>
+      schemaCallWrapper(elementType, elements?.[i]),
     );
   };
   Object.setPrototypeOf(arraySchema, WgslArrayImpl);
@@ -74,9 +68,7 @@ function cpu_arrayOf<TElement extends AnyWgslData>(
   arraySchema.elementType = elementType;
 
   if (!Number.isInteger(elementCount) || elementCount < 0) {
-    throw new Error(
-      `Cannot create array schema with invalid element count: ${elementCount}.`,
-    );
+    throw new Error(`Cannot create array schema with invalid element count: ${elementCount}.`);
   }
   arraySchema.elementCount = elementCount;
 

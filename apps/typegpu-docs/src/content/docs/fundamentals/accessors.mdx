@@ -1,0 +1,503 @@
+---
+title: Accessors
+description: Accessors are schema-aware typed placeholders for GPU resources, allowing reusable GPU functions to reference buffers, variables, textures, and more without coupling to a specific resource.
+---
+
+When writing reusable GPU functions in TypeGPU, you often need to reference "some global value" without coupling to a specific buffer, texture or variable. [Slots](/TypeGPU/fundamentals/slots) seem like the right tool for the job, but they encode the delivery mechanism into the slot type (e.g. a buffer or texture), making it inflexible for reusable functions.
+
+```ts twoslash
+import tgpu, { type TgpuUniform, d } from 'typegpu';
+// ---cut---
+// 👎 only works with JS literals
+const staticColorSlot = tgpu.slot<d.v3f>();
+
+// 👎 requires a uniform binding that only carries that value
+const uniformColorSlot = tgpu.slot<TgpuUniform<d.Vec3f>>();
+
+// 👎 requires the value to be returned from a function
+const getColorSlot = tgpu.slot<() => d.v3f>();
+
+// 💜 works with any value that matches the schema
+const colorAccess = tgpu.accessor(d.vec3f);
+```
+
+**Accessors** fill this gap. They allow code to care only about the type of a value, delegating the delivery mechanism of the actual value to the caller. An accessor knows the data type of the resource it represents (`d.vec3f`, `d.struct(...)`, etc.), and TypeGPU validates that whatever is bound to it matches that schema.
+
+## Basic usage
+
+Create an accessor with `tgpu.accessor(schema)`. Optionally pass a default value as the second argument:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+// ---cut---
+// No default — must be bound before resolving.
+const colorAccess = tgpu.accessor(d.vec3f);
+
+// With a default — used if no binding is provided.
+const colorWithDefault = tgpu.accessor(d.vec3f, d.vec3f(1, 0, 0));
+```
+
+Inside a GPU function, read the accessor's value using `.$`:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const colorAccess = tgpu.accessor(d.vec3f, d.vec3f(1, 0, 0));
+// ---cut---
+const getColor = () => {
+  'use gpu';
+  return colorAccess.$; // reads the bound resource
+};
+```
+
+:::caution
+`.$` can only be used inside GPU functions (shellless callbacks, `tgpu.fn`, compute/render entry points).
+Accessing it outside GPU context throws a runtime error.
+:::
+
+If no default is set and no binding is provided at resolution time, TypeGPU throws a descriptive error:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+// ---cut---
+const colorAccess = tgpu.accessor(d.vec3f);
+
+function getColor() {
+  'use gpu';
+  return colorAccess.$;
+}
+
+tgpu.resolve([getColor]);
+// Error: Resolution of the following tree failed:
+// - <root>
+// - fn:getColor
+// - accessor:colorAccess: Missing value for 'slot:colorAccess'
+```
+
+## Overriding the binding
+
+Use `.with(accessor, value)` on a function or pipeline — the same pattern as [slots](/fundamentals/slots):
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const RED = d.vec3f(1, 0, 0);
+const GREEN = d.vec3f(0, 1, 0);
+// ---cut---
+const colorAccess = tgpu.accessor(d.vec3f, RED); // red by default
+
+function getColor() {
+  'use gpu';
+  return colorAccess.$;
+}
+
+// Override the default with green for a specific variant.
+const getGreenColor = tgpu.fn(getColor).with(colorAccess, GREEN);
+```
+
+The two functions resolve to separate WGSL:
+
+```wgsl
+// getColor (uses default)
+fn getColor() -> vec3f {
+  return vec3f(1, 0, 0);
+}
+
+// getColor_1 (overridden)
+fn getColor_1() -> vec3f {
+  return vec3f(0, 1, 0);
+}
+```
+
+You can also override on a pipeline:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const colorAccess = tgpu.accessor(d.vec3f, d.vec3f(1, 0, 0));
+
+const computeEntry = tgpu.computeFn({ workgroupSize: [1] })(() => {
+  const _color = colorAccess.$;
+});
+
+const pipeline = root
+  .with(colorAccess, d.vec3f(0, 0, 1)) // override to blue for this pipeline
+  .createComputePipeline({ compute: computeEntry });
+```
+
+## Supported binding types
+
+Accessors accept several types of GPU resources as values.
+
+### Raw JS value (inlined as a literal)
+
+The simplest binding — the value is resolved at compile time and inlined directly into the WGSL:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+// ---cut---
+const colorAccess = tgpu.accessor(d.vec3f);
+const multiplierAccess = tgpu.accessor(d.f32);
+
+function getColor() {
+  'use gpu';
+  return colorAccess.$ * multiplierAccess.$;
+}
+
+const getDoubleRed = tgpu
+  .fn(getColor)
+  .with(colorAccess, d.vec3f(1, 0, 0))
+  .with(multiplierAccess, 2);
+```
+
+```wgsl
+// Generated WGSL
+fn getColor() -> vec3f {
+  return vec3f(2, 0, 0);
+}
+```
+
+:::note
+Notice how, because the values are known at compile time, the result is precomputed and inlined directly into the WGSL function.
+:::
+
+### GPU function or shellless callback
+
+Resolves to a function call in the generated WGSL:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+// ---cut---
+const colorAccess = tgpu.accessor(d.vec3f, () => {
+  'use gpu';
+  return d.vec3f(1, 2, 3);
+});
+
+function getColor() {
+  'use gpu';
+  return colorAccess.$;
+}
+```
+
+```wgsl
+fn colorAccess() -> vec3f {
+  return vec3f(1, 2, 3);
+}
+
+fn getColor() -> vec3f {
+  return colorAccess();
+}
+```
+
+### Buffer usage
+
+Resolves to the WGSL variable declaration for that buffer binding:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+const RED = d.vec3f(1, 0, 0);
+// ---cut---
+const colorAccess = tgpu.accessor(d.vec3f);
+
+function getColor() {
+  'use gpu';
+  return colorAccess.$;
+}
+
+const redUniform = root.createUniform(d.vec3f, RED);
+const getRed = tgpu.fn(getColor).with(colorAccess, redUniform);
+```
+
+```wgsl
+@group(0) @binding(0) var<uniform> redUniform: vec3f;
+
+fn getColor() -> vec3f {
+  return redUniform;
+}
+```
+
+### Bind group layout entry
+
+A common pattern for library-style code: use a bind group layout entry as the default, making it easy to swap the resource via `.with()`:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+// ---cut---
+const ImageData = (count: number) =>
+  d.struct({
+    width: d.u32,
+    height: d.u32,
+    pixels: d.arrayOf(d.vec4f, count),
+  });
+
+const layout = tgpu.bindGroupLayout({
+  image: { storage: ImageData, access: 'readonly' },
+});
+
+// Default is the layout entry, but can be overridden.
+const imageAccess = tgpu.accessor(ImageData, () => layout.$.image);
+```
+
+### Variable
+
+Bind a private or workgroup variable:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+// ---cut---
+const colorAccess = tgpu.accessor(d.vec3f);
+
+const getColor = tgpu.fn([], d.vec3f)(() => {
+  'use gpu';
+  return colorAccess.$;
+});
+
+const privateColor = tgpu.privateVar(d.vec3f);
+const workgroupColor = tgpu.workgroupVar(d.vec3f);
+
+const getColorPrivate = getColor.with(colorAccess, privateColor);
+const getColorWorkgroup = getColor.with(colorAccess, workgroupColor);
+```
+
+```wgsl
+var<private> privateColor: vec3f;
+
+fn getColor() -> vec3f {
+  return privateColor;
+}
+
+var<workgroup> workgroupColor: vec3f;
+
+fn getColor_1() -> vec3f {
+  return workgroupColor;
+}
+```
+
+### Constant
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+// ---cut---
+const colorAccess = tgpu.accessor(d.vec3f);
+
+const getColor = tgpu.fn([], d.vec3f)(() => {
+  'use gpu';
+  return colorAccess.$;
+});
+
+const constantColor = tgpu.const(d.vec3f, d.vec3f(0.1, 0.5, 0.3));
+const getColorConst = getColor.with(colorAccess, constantColor);
+```
+
+```wgsl
+const constantColor: vec3f = vec3f(0.10000000149011612, 0.5, 0.30000001192092896);
+
+fn getColor() -> vec3f {
+  return constantColor;
+}
+```
+
+### Texture view
+
+```ts twoslash
+import tgpu, { d, std } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const texture = root['~unstable']
+  .createTexture({ format: 'rgba8unorm', size: [100, 100] })
+  .$usage('storage');
+
+const storageView = texture.createView(d.textureStorage2d('rgba8unorm'));
+
+const textureAccess = tgpu.accessor(d.textureStorage2d('rgba8unorm'), storageView);
+
+function main() {
+  'use gpu';
+  std.textureStore(textureAccess.$, d.vec2u(), d.vec4f(1));
+}
+```
+
+```wgsl
+@group(0) @binding(0) var storageView: texture_storage_2d<rgba8unorm, write>;
+
+fn main() {
+  textureStore(storageView, vec2u(), vec4f(1));
+}
+```
+
+## Deep and nested property access
+
+Because accessors know the schema of their resource, you can access struct fields directly through `.$`:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+// ---cut---
+const ImageData = (count: number) =>
+  d.struct({
+    width: d.u32,
+    height: d.u32,
+    pixels: d.arrayOf(d.vec4f, count),
+  });
+
+const layout = tgpu.bindGroupLayout({
+  image: { storage: ImageData, access: 'readonly' },
+});
+
+const imageAccess = tgpu.accessor(ImageData, () => layout.$.image);
+
+const getPixel = (x: number, y: number) => {
+  'use gpu';
+  const width = imageAccess.$.width;   // struct field access
+  const pixels = imageAccess.$.pixels;
+  return d.vec4f(pixels[x + y * width]!);
+};
+```
+
+This resolves correctly to WGSL field accesses:
+
+```wgsl
+struct item {
+  width: u32,
+  height: u32,
+  pixels: array<vec4f>,
+}
+
+@group(0) @binding(0) var<storage, read> image: item;
+
+fn getPixel(x: i32, y: i32) -> vec4f {
+  let width = image.width;
+  let pixels = (&image.pixels);
+  return (*pixels)[(x + (y * i32(width)))];
+}
+```
+
+You can also access deeply nested references — e.g., a specific element of a buffer's array field:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+
+const Boid = d.struct({ pos: d.vec3f });
+const BoidArray = d.arrayOf(Boid, 100);
+// ---cut---
+const boids = root.createReadonly(BoidArray);
+
+// Access the first boid's position through the accessor.
+const anyBoidPosAccess = tgpu.accessor(d.vec3f, () => boids.$[0]!.pos);
+
+function main() {
+  'use gpu';
+  const firstX = anyBoidPosAccess.$.x;
+}
+```
+
+```wgsl
+struct Boid {
+  pos: vec3f,
+}
+
+@group(0) @binding(0) var<storage, read> boids: array<Boid, 100>;
+
+fn main() {
+  let firstX = boids[0].pos.x;
+}
+```
+
+## Mutable accessors
+
+
+Use `tgpu.mutableAccessor` when you need to *write* to the resource:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const Ctx = d.struct({ counter: d.f32 });
+const ctx = root.createMutable(Ctx);
+
+const counterAccess = tgpu.mutableAccessor(d.f32, () => ctx.$.counter);
+
+function main() {
+  'use gpu';
+  counterAccess.$ += 1; // write through the accessor
+}
+```
+
+```wgsl
+struct Ctx {
+  counter: f32,
+}
+
+@group(0) @binding(0) var<storage, read_write> ctx: Ctx;
+
+fn main() {
+  ctx.counter += 1f;
+}
+```
+
+The split between `tgpu.accessor` and `tgpu.mutableAccessor` is useful, as the read-only restriction on `tgpu.accessor` is both a contract between the function and the caller, as well as allows for more varied delivery mechanisms (e.g. a getter function that computes a value is inherently read-only).
+
+You can also mutate fields of a non-primitive struct:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+
+const Boid = d.struct({ pos: d.vec3f });
+const BoidArray = d.arrayOf(Boid, 100);
+// ---cut---
+const boids = root.createMutable(BoidArray);
+
+const boidAccess = tgpu.mutableAccessor(Boid, () => boids.$[0]!);
+
+function main() {
+  'use gpu';
+  boidAccess.$.pos.x += 1;
+}
+```
+
+```wgsl
+struct Boid {
+  pos: vec3f,
+}
+
+@group(0) @binding(0) var<storage, read_write> boids: array<Boid, 100>;
+
+fn main() {
+  boids[0].pos.x += 1f;
+}
+```
+
+## Accessors vs Slots vs Bind Groups
+
+| | Accessors | Slots | Bind Groups |
+|---|---|---|---|
+| **What can be bound** | GPU resources (buffers, variables, textures, constants, functions, raw values) | Any JavaScript value | Buffers, textures, samplers |
+| **Schema-aware** | Yes — schema is declared upfront, TypeGPU validates the binding | No | Yes (layout defines types) |
+| **Indirect access of deep fields** | Yes — `accessor.$` can access struct fields | No (a slot value cannot be a reference to a nested field) | N/A |
+| **Potentially mutable** | Through `tgpu.mutableAccessor` | No | Yes (storage buffers) |
+| **When resolved** | Compile time (shader generation) | Compile time (shader generation) | Runtime (before draw/dispatch) |
+| **Primary use case** | Parameterising GPU functions over resources | Parameterising shader *logic* (callbacks, numbers, config) | Swapping resources between draw calls without recompiling |
+
+**Choose slots** when you want to inject arbitrary JavaScript values or TypeGPU functions that affect shader generation — for example, a gravity function or a boolean compile-time flag.
+
+**Choose accessors** when you want to decouple shader logic from how the data is sourced, or where the results are stored.
+
+**Choose bind groups** when you need to swap resources at runtime without changing the compiled shader — the classic WebGPU pattern for per-frame or per-draw-call resource binding.
+
+:::note
+Accessors and slots operate at **compile time**: the WGSL output reflects which buffer or variable was bound.
+Bind groups operate at **runtime**: the WGSL is fixed, and the GPU receives different resources each frame.
+:::
+
+Accessors and slots are complementary — you can combine them. For example, an accessor's default can reference a bind group layout entry (`() => layout.$.image`), and you can override it with `.with()` the same way as a slot.
+For more on slots, see the [Slots guide](/TypeGPU/fundamentals/slots).
+For more on bind groups, see the [Bind Groups guide](/TypeGPU/fundamentals/bind-groups).

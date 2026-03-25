@@ -13,12 +13,12 @@
             <div class="mb-4"></div>
             <div class="flex items-start mb-4">
               <input type="checkbox" id="updates-agree" name="updates-agree" required class="relative appearance-none border-2 border-accent-600 rounded-none w-4 h-4 aspect-square mt-1 mr-3 checked:bg-accent-600 checked:border-accent-600 focus:outline-none focus:ring-2 focus:ring-accent-500 after:content-['✓'] after:absolute after:top-0 after:left-0 after:w-full after:h-full after:flex after:items-center after:justify-center after:text-white after:text-xs after:font-bold checked:after:opacity-100 after:opacity-0" />
-              <label for="updates-agree" class="text-sm text-gray-700 dark:text-gray-300">I agree to receive updates, news, and marketing materials related to ShaderHunt. You can unsubscribe at any time. See our <a target="_blank" rel="noreferrer" href="/TypeGPU/privacy" class="text-black dark:text-white">Privacy Policy</a> for details. (required)</label>
+              <label for="updates-agree" class="text-sm text-gray-700 dark:text-gray-300">I agree to receive updates, news, and marketing materials related to ShaderHunt. You can unsubscribe at any time. See our <a target="_blank" rel="noreferrer" href="https://swmansion.com/privacy" class="text-black dark:text-white">Privacy Policy</a> for details. (required)</label>
             </div>
 
             <div class="flex items-start mb-4">
               <input type="checkbox" id="newsletter-agree" name="newsletter-agree" class="relative appearance-none border-2 border-accent-600 rounded-none w-4 h-4 aspect-square mt-1 mr-3 checked:bg-accent-600 checked:border-accent-600 focus:outline-none focus:ring-2 focus:ring-accent-500 after:content-['✓'] after:absolute after:top-0 after:left-0 after:w-full after:h-full after:flex after:items-center after:justify-center after:text-white after:text-xs after:font-bold checked:after:opacity-100 after:opacity-0" />
-              <label for="newsletter-agree" class="text-sm text-gray-700 dark:text-gray-300">I agree to receive the monthly Software Mansion newsletter with updates on TypeGPU and other React Native, AI, and multimedia projects. You can unsubscribe anytime. See our <a target="_blank" rel="noreferrer" href="/TypeGPU/privacy" class="text-black dark:text-white">Privacy Policy</a> for details.</label>
+              <label for="newsletter-agree" class="text-sm text-gray-700 dark:text-gray-300">I agree to receive the monthly Software Mansion newsletter with updates on TypeGPU and other React Native, AI, and multimedia projects. You can unsubscribe anytime. See our <a target="_blank" rel="noreferrer" href="https://swmansion.com/privacy" class="text-black dark:text-white">Privacy Policy</a> for details.</label>
             </div>
             <button type="submit" class="mt-4 w-full px-4 py-2 bg-accent-600 dark:bg-accent-700 text-white font-medium border-none rounded-none hover:bg-accent-700 dark:hover:bg-accent-800 focus:outline-none focus:ring-2 focus:ring-accent-500 dark:focus:ring-accent-400">Get Notified</button>
         </form>
@@ -98,12 +98,38 @@
 
   const dialogBoxes = Array.from(popovers).map((popover) => new DialogBox(popover));
 
+  function isElementVisible(element: Element): boolean {
+    // Check if the element or any of its ancestors have display: none
+    let current: Element | null = element;
+    while (current) {
+      const style = window.getComputedStyle(current);
+      if (style.display === 'none') {
+        return false;
+      }
+      current = current.parentElement;
+    }
+    return true;
+  }
+
+  function getVisibleDialogBox(): DialogBox | undefined {
+    // Find a dialog box whose link element is actually visible
+    for (let i = 0; i < dialogBoxes.length; i++) {
+      const popover = popovers[i];
+      const linkElement = popover?.querySelector('a');
+      if (linkElement && isElementVisible(linkElement)) {
+        return dialogBoxes[i];
+      }
+    }
+    // Fallback to first dialog box if none are visibly rendered
+    return dialogBoxes[0];
+  }
+
   // Check if URL hash indicates popover should be open
   if (window.location.hash === '#challenges-signup') {
-    const firstDialogBox = dialogBoxes[0]
-    if (!firstDialogBox) {
+    const visibleDialogBox = getVisibleDialogBox();
+    if (!visibleDialogBox) {
       throw new Error('Expected at least one dialog box');
     }
-    firstDialogBox.dialogElement.showModal();
+    visibleDialogBox.dialogElement.showModal();
   }
 </script>

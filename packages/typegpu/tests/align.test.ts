@@ -1,7 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { alignmentOf } from '../src/data/alignmentOf.ts';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import { d, tgpu } from '../src/index.js';
 
 describe('d.align', () => {
   it('adds @align attribute for custom aligned struct members', () => {
@@ -11,14 +9,12 @@ describe('d.align', () => {
       c: d.u32,
     });
 
-    expect(tgpu.resolve([s1])).toContain(
-      '@align(16) b: u32,',
-    );
+    expect(tgpu.resolve([s1])).toContain('@align(16) b: u32,');
   });
 
   it('changes alignment of a struct containing aligned member', () => {
     expect(
-      alignmentOf(
+      d.alignmentOf(
         d.struct({
           a: d.u32,
           b: d.u32,
@@ -28,7 +24,7 @@ describe('d.align', () => {
     ).toBe(4);
 
     expect(
-      alignmentOf(
+      d.alignmentOf(
         d.struct({
           a: d.u32,
           b: d.align(16, d.u32),
@@ -108,9 +104,7 @@ describe('d.align', () => {
     const disarray = d.disarrayOf(d.vec3f, 2);
     const alignedDisarray = d.align(16, disarray);
 
-    expectTypeOf(alignedArray).toEqualTypeOf<
-      d.Decorated<d.WgslArray<d.Vec3f>, [d.Align<16>]>
-    >();
+    expectTypeOf(alignedArray).toEqualTypeOf<d.Decorated<d.WgslArray<d.Vec3f>, [d.Align<16>]>>();
     expect(d.isLooseData(alignedArray)).toBe(false);
 
     expectTypeOf(alignedDisarray).toEqualTypeOf<

@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import { radiusOf } from './helpers.ts';
 import {
   cameraAccess,
@@ -12,7 +10,7 @@ import {
   VertexOutput,
 } from './schemas.ts';
 
-export const skyBoxVertex = tgpu['~unstable'].vertexFn({
+export const skyBoxVertex = tgpu.vertexFn({
   in: {
     position: d.vec3f,
     uv: d.vec2f,
@@ -22,47 +20,38 @@ export const skyBoxVertex = tgpu['~unstable'].vertexFn({
     texCoord: d.vec3f,
   },
 })((input) => {
-  const viewPos = std.mul(cameraAccess.$.view, d.vec4f(input.position, 0)).xyz;
+  'use gpu';
+  const viewPos = (cameraAccess.$.view * d.vec4f(input.position, 0)).xyz;
 
   return {
-    pos: std.mul(
-      cameraAccess.$.projection,
-      d.vec4f(viewPos, 1),
-    ),
+    pos: cameraAccess.$.projection * d.vec4f(viewPos, 1),
     texCoord: input.position.xyz,
   };
 });
 
-export const skyBoxFragment = tgpu['~unstable'].fragmentFn({
+export const skyBoxFragment = tgpu.fragmentFn({
   in: {
     texCoord: d.vec3f,
   },
   out: d.vec4f,
 })((input) =>
-  std.textureSample(
-    skyBoxAccess.$,
-    filteringSamplerSlot.$,
-    std.normalize(input.texCoord),
-  )
+  std.textureSample(skyBoxAccess.$, filteringSamplerSlot.$, std.normalize(input.texCoord)),
 );
 
-export const mainVertex = tgpu['~unstable'].vertexFn({
+export const mainVertex = tgpu.vertexFn({
   in: {
     ...VertexInput,
     instanceIndex: d.builtin.instanceIndex,
   },
   out: VertexOutput,
 })((input) => {
+  'use gpu';
   const currentBody = renderLayout.$.celestialBodies[input.instanceIndex];
 
-  const worldPosition = currentBody.position.add(
-    input.position.xyz.mul(radiusOf(currentBody)),
-  );
+  const worldPosition = currentBody.position + input.position.xyz * radiusOf(currentBody);
 
   const camera = cameraAccess.$;
-  const positionOnCanvas = camera.projection
-    .mul(camera.view)
-    .mul(d.vec4f(worldPosition, 1));
+  const positionOnCanvas = camera.projection * camera.view * d.vec4f(worldPosition, 1);
 
   return {
     position: positionOnCanvas,
@@ -75,10 +64,11 @@ export const mainVertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-export const mainFragment = tgpu['~unstable'].fragmentFn({
+export const mainFragment = tgpu.fragmentFn({
   in: VertexOutput,
   out: d.vec4f,
 })((input) => {
+  'use gpu';
   if (input.destroyed === 1) {
     std.discard();
   }
@@ -89,18 +79,14 @@ export const mainFragment = tgpu['~unstable'].fragmentFn({
     filteringSamplerSlot.$,
     input.uv,
     input.sphereTextureIndex,
-  ).xyz;
+  ).rgb;
 
-  const ambient = textureColor.mul(lightColor).mul(input.ambientLightFactor);
+  const ambient = textureColor * lightColor * input.ambientLightFactor;
 
   const normal = input.normals;
-  const lightDirection = std.normalize(
-    lightSourceAccess.$.sub(input.worldPosition),
-  );
+  const lightDirection = std.normalize(lightSourceAccess.$ - input.worldPosition);
   const cosTheta = std.dot(normal, lightDirection);
-  const diffuse = textureColor.mul(lightColor).mul(std.max(0, cosTheta));
+  const diffuse = textureColor * lightColor * std.max(0, cosTheta);
 
-  const litColor = ambient.add(diffuse);
-
-  return d.vec4f(litColor.xyz, 1);
+  return d.vec4f(ambient + diffuse, 1);
 });

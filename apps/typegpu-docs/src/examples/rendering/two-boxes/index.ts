@@ -1,28 +1,14 @@
-import tgpu, {
-  type RenderFlag,
-  type TgpuBindGroup,
-  type TgpuBuffer,
-  type TgpuTexture,
-  type VertexFlag,
-} from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import type { RenderFlag, TgpuBindGroup, TgpuBuffer, TgpuTexture, VertexFlag } from 'typegpu';
+import tgpu, { d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
 
 // Initialization
 
 const root = await tgpu.init();
-const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const helpInfo = document.getElementById('help') as HTMLDivElement;
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 // Data Structures
 
@@ -151,9 +137,8 @@ function getPlaneTransform(translation: d.v3f, scale: d.v3f) {
 
 const cameraBuffer = root.createBuffer(Camera, cameraInitial).$usage('uniform');
 
-const [cubeBuffer, secondCubeBuffer] = [createCube(), createCube()].map(
-  (cube) =>
-    root.createBuffer(vertexLayout.schemaForCount(36), cube).$usage('vertex'),
+const [cubeBuffer, secondCubeBuffer] = [createCube(), createCube()].map((cube) =>
+  root.createBuffer(vertexLayout.schemaForCount(36), cube).$usage('vertex'),
 );
 
 const [transformBuffer, secondTransformBuffer] = [
@@ -164,7 +149,7 @@ const [transformBuffer, secondTransformBuffer] = [
     .createBuffer(Transform, {
       model: getCubeTransform(translation, m.mat4.identity(d.mat4x4f())),
     })
-    .$usage('uniform')
+    .$usage('uniform'),
 );
 
 const planeBuffer = root
@@ -196,75 +181,76 @@ const planeBindGroup = root.createBindGroup(layout, {
 
 // Textures
 
-let depthTexture:
-  & TgpuTexture<{
-    size: [number, number];
-    format: 'depth24plus';
-    sampleCount: 4;
-  }>
-  & RenderFlag;
-let msaaTexture:
-  & TgpuTexture<{
-    size: [number, number];
-    format: typeof presentationFormat;
-    sampleCount: 4;
-  }>
-  & RenderFlag;
+let depthTexture: TgpuTexture<{
+  size: [number, number];
+  format: 'depth24plus';
+  sampleCount: 4;
+}> &
+  RenderFlag;
+let msaaTexture: TgpuTexture<{
+  size: [number, number];
+  format: typeof presentationFormat;
+  sampleCount: 4;
+}> &
+  RenderFlag;
 
 function createDepthAndMsaaTextures() {
   if (depthTexture) {
     depthTexture.destroy();
   }
-  depthTexture = root['~unstable'].createTexture({
-    size: [canvas.width, canvas.height],
-    format: 'depth24plus',
-    sampleCount: 4,
-  }).$usage('render');
+  depthTexture = root['~unstable']
+    .createTexture({
+      size: [canvas.width, canvas.height],
+      format: 'depth24plus',
+      sampleCount: 4,
+    })
+    .$usage('render');
 
   if (msaaTexture) {
     msaaTexture.destroy();
   }
-  msaaTexture = root['~unstable'].createTexture({
-    size: [canvas.width, canvas.height],
-    format: presentationFormat,
-    sampleCount: 4,
-  }).$usage('render');
+  msaaTexture = root['~unstable']
+    .createTexture({
+      size: [canvas.width, canvas.height],
+      format: presentationFormat,
+      sampleCount: 4,
+    })
+    .$usage('render');
 }
 createDepthAndMsaaTextures();
 
 // Shaders and Pipeline
 
-const vertex = tgpu['~unstable'].vertexFn({
+const vertex = tgpu.vertexFn({
   in: { position: d.vec4f, color: d.vec4f },
   out: { pos: d.builtin.position, color: d.vec4f },
 })((input) => {
   const pos = std.mul(
     layout.$.camera.projection,
-    std.mul(
-      layout.$.camera.view,
-      std.mul(layout.$.transform.model, input.position),
-    ),
+    std.mul(layout.$.camera.view, std.mul(layout.$.transform.model, input.position)),
   );
   return { pos, color: input.color };
 });
 
-const fragment = tgpu['~unstable'].fragmentFn({
+const fragment = tgpu.fragmentFn({
   in: { color: d.vec4f },
   out: d.vec4f,
 })((input) => input.color);
 
-const pipeline = root['~unstable']
-  .withVertex(vertex, vertexLayout.attrib)
-  .withFragment(fragment, { format: presentationFormat })
-  .withDepthStencil({
+const pipeline = root.createRenderPipeline({
+  attribs: vertexLayout.attrib,
+  vertex,
+  fragment,
+
+  depthStencil: {
     format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
-  })
-  .withMultisample({
+  },
+  multisample: {
     count: 4,
-  })
-  .createPipeline();
+  },
+});
 
 // Render Loop
 
@@ -277,10 +263,8 @@ function drawObject(
   pipeline
     .withColorAttachment({
       view: msaaTexture,
-      resolveTarget: context.getCurrentTexture().createView(),
-      clearValue: [0, 0, 0, 0],
+      resolveTarget: context,
       loadOp: loadOp,
-      storeOp: 'store',
     })
     .withDepthStencilAttachment({
       view: depthTexture,
@@ -337,16 +321,8 @@ function updateCubesRotation(dx: number, dy: number) {
   const sensitivity = 0.003;
   const yaw = -dx * sensitivity;
   const pitch = -dy * sensitivity;
-  const yawMatrix = m.mat4.rotateY(
-    m.mat4.identity(d.mat4x4f()),
-    yaw,
-    d.mat4x4f(),
-  );
-  const pitchMatrix = m.mat4.rotateX(
-    m.mat4.identity(d.mat4x4f()),
-    pitch,
-    d.mat4x4f(),
-  );
+  const yawMatrix = m.mat4.rotateY(m.mat4.identity(d.mat4x4f()), yaw, d.mat4x4f());
+  const pitchMatrix = m.mat4.rotateX(m.mat4.identity(d.mat4x4f()), pitch, d.mat4x4f());
   const deltaRotation = m.mat4.mul(yawMatrix, pitchMatrix, d.mat4x4f());
   cube1Rotation = m.mat4.mul(deltaRotation, cube1Rotation, d.mat4x4f());
   cube2Rotation = m.mat4.mul(deltaRotation, cube2Rotation, d.mat4x4f());
@@ -362,21 +338,13 @@ function updateCameraPosition() {
   const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
   const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
 
-  const newView = m.mat4.lookAt(
-    newCameraPos,
-    target,
-    d.vec3f(0, 1, 0),
-    d.mat4x4f(),
-  );
+  const newView = m.mat4.lookAt(newCameraPos, target, d.vec3f(0, 1, 0), d.mat4x4f());
   cameraBuffer.write({ view: newView, projection: cameraInitial.projection });
 }
 
 function updateCameraOrbit(dx: number, dy: number) {
   orbitYaw += -dx * 0.005;
-  orbitPitch = Math.max(
-    -Math.PI / 2 + 0.01,
-    Math.min(Math.PI / 2 - 0.01, orbitPitch + dy * 0.005),
-  );
+  orbitPitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, orbitPitch + dy * 0.005));
   updateCameraPosition();
 }
 
@@ -397,17 +365,25 @@ canvas.addEventListener('mouseout', () => {
   helpInfo.style.opacity = '1';
 });
 // handle mobile devices
-canvas.addEventListener('touchstart', () => {
-  helpInfo.style.opacity = '0';
-}, { passive: true });
+canvas.addEventListener(
+  'touchstart',
+  () => {
+    helpInfo.style.opacity = '0';
+  },
+  { passive: true },
+);
 canvas.addEventListener('touchend', () => {
   helpInfo.style.opacity = '1';
 });
 
-canvas.addEventListener('wheel', (e: WheelEvent) => {
-  e.preventDefault();
-  zoomCamera(e.deltaY * 0.05);
-}, { passive: false });
+canvas.addEventListener(
+  'wheel',
+  (e: WheelEvent) => {
+    e.preventDefault();
+    zoomCamera(e.deltaY * 0.05);
+  },
+  { passive: false },
+);
 
 canvas.addEventListener('mousedown', (e) => {
   if (e.button === 0) {
@@ -419,19 +395,23 @@ canvas.addEventListener('mousedown', (e) => {
   prevY = e.clientY;
 });
 
-canvas.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  if (e.touches.length === 1) {
-    isDragging = true;
-    prevX = e.touches[0].clientX;
-    prevY = e.touches[0].clientY;
-  } else if (e.touches.length === 2) {
-    isDragging = false;
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    lastPinchDist = Math.sqrt(dx * dx + dy * dy);
-  }
-}, { passive: false });
+canvas.addEventListener(
+  'touchstart',
+  (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      isDragging = true;
+      prevX = e.touches[0].clientX;
+      prevY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastPinchDist = Math.sqrt(dx * dx + dy * dy);
+    }
+  },
+  { passive: false },
+);
 
 const mouseUpEventListener = () => {
   isRightDragging = false;
@@ -473,16 +453,20 @@ window.addEventListener('touchmove', touchMoveEventListener, {
   passive: false,
 });
 
-canvas.addEventListener('touchmove', (e) => {
-  if (e.touches.length === 2) {
-    e.preventDefault();
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    const pinchDist = Math.sqrt(dx * dx + dy * dy);
-    zoomCamera((lastPinchDist - pinchDist) * 0.05);
-    lastPinchDist = pinchDist;
-  }
-}, { passive: false });
+canvas.addEventListener(
+  'touchmove',
+  (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const pinchDist = Math.sqrt(dx * dx + dy * dy);
+      zoomCamera((lastPinchDist - pinchDist) * 0.05);
+      lastPinchDist = pinchDist;
+    }
+  },
+  { passive: false },
+);
 
 const resizeObserver = new ResizeObserver(() => {
   createDepthAndMsaaTextures();

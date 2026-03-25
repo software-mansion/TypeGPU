@@ -18,7 +18,8 @@ import {
   vec3h,
   vec3u,
 } from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu from '../src/index.js';
+import * as d from '../src/data/index.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { frexp } from '../src/std/numeric.ts';
 
@@ -41,10 +42,7 @@ describe('struct', () => {
     const writer = new BufferWriter(buffer);
 
     writeData(writer, TestStruct, { x: 1, y: vec3u(1, 2, 3) });
-    // deno-fmt-ignore
-    expect([...new Uint32Array(buffer)]).toStrictEqual([
-      1, 0, 0, 0, 1, 2, 3, 0,
-    ]);
+    expect([...new Uint32Array(buffer)]).toStrictEqual([1, 0, 0, 0, 1, 2, 3, 0]);
   });
 
   it('aligns struct properties when reading', () => {
@@ -232,9 +230,7 @@ describe('struct', () => {
     };
 
     writeData(new BufferWriter(buffer2), TestStruct2, value2);
-    expect(readData(new BufferReader(buffer2), TestStruct2)).toStrictEqual(
-      value2,
-    );
+    expect(readData(new BufferReader(buffer2), TestStruct2)).toStrictEqual(value2);
   });
 
   it('can be called to create an object', () => {
@@ -256,7 +252,7 @@ describe('struct', () => {
     });
 
     // @ts-expect-error
-    (() => TestStruct({ x: 1, z: 2 }));
+    () => TestStruct({ x: 1, z: 2 });
   });
 
   it('can be called to create a deep copy of other struct', () => {
@@ -377,17 +373,38 @@ describe('struct', () => {
   });
 
   it('throws when struct prop has whitespace in name', () => {
-    expect(() => struct({ 'my prop': f32 }))
-      .toThrowErrorMatchingInlineSnapshot(
-        `[Error: Invalid identifier 'my prop'. Choose an identifier without whitespaces or leading underscores.]`,
-      );
+    expect(() => struct({ 'my prop': f32 })).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Invalid identifier 'my prop'. Choose an identifier without whitespaces or leading underscores.]`,
+    );
   });
 
   it('throws when struct prop uses a reserved word', () => {
-    expect(() => struct({ struct: f32 }))
-      .toThrowErrorMatchingInlineSnapshot(
-        `[Error: Property key 'struct' is a reserved WGSL word. Choose a different name.]`,
-      );
+    expect(() => struct({ struct: f32 })).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Property key 'struct' is a reserved WGSL word. Choose a different name.]`,
+    );
+  });
+
+  it('throws when invalid number of arguments during code generation', () => {
+    const Boid = struct({
+      pos: vec2f,
+      vel: vec2f,
+    });
+
+    const f = () => {
+      'use gpu';
+      const b1 = Boid({ pos: vec2f(6), vel: vec2f(7) });
+
+      // @ts-expect-error
+      const b2 = Boid(b1, b1);
+      return;
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): Struct schemas should always be called with at most 1 argument]
+    `);
   });
 
   it('allows builtin names as struct props', () => {
@@ -406,9 +423,43 @@ describe('struct', () => {
   });
 });
 
+describe('WgslStruct', () => {
+  it('default struct has sane properties (not any or never)', () => {
+    const foo = d.struct({}) as d.WgslStruct;
+
+    expectTypeOf(foo.type).toEqualTypeOf<'struct'>();
+    expectTypeOf(foo.propTypes).toEqualTypeOf<Record<string, d.BaseData>>();
+  });
+
+  it('accepts every struct by default', () => {
+    const foo = (_aStruct: d.WgslStruct) => {
+      // Does something with the struct...
+    };
+
+    foo(d.struct({}));
+    foo(d.struct({ a: d.f32 }));
+  });
+
+  it('accepts structs with more properties', () => {
+    const foo = (_aStruct: d.WgslStruct<{ a: d.F32 }>) => {
+      // Does something with the struct...
+    };
+
+    // @ts-expect-error: It doesn't have the 'a' property
+    () => foo(d.struct({}));
+    // Exact match
+    foo(d.struct({ a: d.f32 }));
+    // Extra properties
+    foo(d.struct({ a: d.f32, b: d.u32 }));
+  });
+});
+
 describe('abstruct', () => {
   it('gets correctly resolved when returned from an std function', () => {
-    const testFn = tgpu.fn([f32], f32)((x) => {
+    const testFn = tgpu.fn(
+      [f32],
+      f32,
+    )((x) => {
       const result = frexp(x);
       // It should know that exp is an u32 and cast it to f32
       return result.exp;

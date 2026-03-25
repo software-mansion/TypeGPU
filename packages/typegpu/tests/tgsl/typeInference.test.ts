@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as d from '../../src/data/index.ts';
-import tgpu from '../../src/index.ts';
+import tgpu, { d, std } from '../../src/index.js';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { CodegenState } from '../../src/types.ts';
@@ -42,7 +41,10 @@ describe('wgsl generator type inference', () => {
 
   it('coerces return value to a struct', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
-    const myFn = tgpu.fn([], Boid)(() => {
+    const myFn = tgpu.fn(
+      [],
+      Boid,
+    )(() => {
       return { vel: d.vec2f(), pos: d.vec2f(1, 1) };
     });
 
@@ -62,7 +64,10 @@ describe('wgsl generator type inference', () => {
     const Inner = d.struct({ prop: d.vec2f });
     const Outer = d.struct({ inner: Inner });
 
-    const myFn = tgpu.fn([], Outer)(() => {
+    const myFn = tgpu.fn(
+      [],
+      Outer,
+    )(() => {
       return { inner: { prop: d.vec2f() } };
     });
 
@@ -124,9 +129,12 @@ describe('wgsl generator type inference', () => {
     const StructArray = d.arrayOf(Struct, 2);
 
     const myFn = tgpu.fn([])(() => {
-      const myStructArray = StructArray([{ prop: d.vec2f(1, 2) }, {
-        prop: d.vec2f(3, 4),
-      }]);
+      const myStructArray = StructArray([
+        { prop: d.vec2f(1, 2) },
+        {
+          prop: d.vec2f(3, 4),
+        },
+      ]);
     });
 
     expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
@@ -173,11 +181,9 @@ describe('wgsl generator type inference', () => {
       return;
     });
     const myFn = tgpu.fn([])(() => {
-      nop(
-        { x: 1, y: 2 },
-        { vel: d.vec2f(), pos: { x: 3, y: 4 } },
-        [{ vel: d.vec2f(), pos: { x: 5, y: 6 } }],
-      );
+      nop({ x: 1, y: 2 }, { vel: d.vec2f(), pos: { x: 3, y: 4 } }, [
+        { vel: d.vec2f(), pos: { x: 5, y: 6 } },
+      ]);
     });
 
     expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
@@ -202,33 +208,37 @@ describe('wgsl generator type inference', () => {
   });
 
   it('throws when returning a value from void function', () => {
-    const add = tgpu.fn([d.u32, d.u32])(
-      (x, y) => x + y,
-    );
+    const add = tgpu.fn([d.u32, d.u32])((x, y) => x + y);
 
     expect(() => tgpu.resolve([add])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:add: Cannot convert value of type 'u32' to type 'void']
+      - fn:add: Cannot convert value of type 'u32' to any of the target types: [void]]
     `);
   });
 
   it('throws when returning an unconvertible value', () => {
-    const add = tgpu.fn([], d.vec3f)(() => {
+    const add = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
       return 1 as unknown as d.v3f;
     });
 
     expect(() => tgpu.resolve([add])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:add: Cannot convert value of type 'abstractInt' to type 'vec3f']
+      - fn:add: Cannot convert value of type 'abstractInt' to any of the target types: [vec3f]]
     `);
   });
 
   it('converts float to int implicitly with a warning', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    const myFn = tgpu.fn([], d.u32)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
       return 1.1;
     });
 
@@ -246,7 +256,10 @@ describe('wgsl generator type inference', () => {
   it('throws when no info about what to coerce to', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 
-    const myFn = tgpu.fn([], Boid)(() => {
+    const myFn = tgpu.fn(
+      [],
+      Boid,
+    )(() => {
       const unrelated = { pos: d.vec2f(), vel: d.vec2f() };
       return Boid({ pos: d.vec2f(), vel: d.vec2f() });
     });
@@ -259,7 +272,10 @@ describe('wgsl generator type inference', () => {
   });
 
   it('throws when if condition is not boolean', () => {
-    const myFn = tgpu.fn([], d.bool)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.bool,
+    )(() => {
       if (d.vec2b()) {
         return true;
       }
@@ -269,12 +285,15 @@ describe('wgsl generator type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Cannot convert value of type 'vec2<bool>' to type 'bool']
+      - fn:myFn: Cannot convert value of type 'vec2<bool>' to any of the target types: [bool]]
     `);
   });
 
   it('throws when while condition is not boolean', () => {
-    const myFn = tgpu.fn([], d.bool)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.bool,
+    )(() => {
       while (d.mat2x2f()) {
         return true;
       }
@@ -284,14 +303,15 @@ describe('wgsl generator type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Cannot convert value of type 'mat2x2f' to type 'bool']
+      - fn:myFn: Cannot convert value of type 'mat2x2f' to any of the target types: [bool]]
     `);
   });
 
   it('throws when for condition is not boolean', () => {
-    const myFn = tgpu.fn([], d.bool)(() => {
-      // biome-ignore lint/correctness/noConstantCondition: this is a test
-      // biome-ignore lint/correctness/noUnreachable: this is a test
+    const myFn = tgpu.fn(
+      [],
+      d.bool,
+    )(() => {
       for (let i = 0; 1; i < 10) {
         return true;
       }
@@ -301,7 +321,7 @@ describe('wgsl generator type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Cannot convert value of type 'abstractInt' to type 'bool']
+      - fn:myFn: Cannot convert value of type 'abstractInt' to any of the target types: [bool]]
     `);
   });
 
@@ -400,7 +420,10 @@ describe('wgsl generator js type inference', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 
     const structValue = { vel: d.vec2f(), pos: d.vec2f(1, 1) };
-    const myFn = tgpu.fn([], Boid)(() => {
+    const myFn = tgpu.fn(
+      [],
+      Boid,
+    )(() => {
       return structValue;
     });
 
@@ -421,7 +444,10 @@ describe('wgsl generator js type inference', () => {
     const Outer = d.struct({ inner: Inner });
 
     const structValue = { inner: { prop: d.vec2f() } };
-    const myFn = tgpu.fn([], Outer)(() => {
+    const myFn = tgpu.fn(
+      [],
+      Outer,
+    )(() => {
       return structValue;
     });
 
@@ -568,7 +594,10 @@ describe('wgsl generator js type inference', () => {
     const Boid = d.struct({ pos: d.vec2f, vel: d.vec2f });
 
     const structValue = { pos: d.vec2f(), vel: d.vec2f() };
-    const myFn = tgpu.fn([], Boid)(() => {
+    const myFn = tgpu.fn(
+      [],
+      Boid,
+    )(() => {
       const unrelated = structValue;
       return Boid({ pos: d.vec2f(), vel: d.vec2f() });
     });
@@ -590,6 +619,48 @@ describe('wgsl generator js type inference', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn: Tried to define variable 'myArr' of unknown type]
+    `);
+  });
+
+  it('is generic over number of arguments', () => {
+    const f32Array = d.arrayOf(d.f32);
+
+    const interpolate = (progress: number, from: number[], to: number[]) => {
+      'use gpu';
+      const result = f32Array(from.length)();
+      for (let i = 0; i < from.length; i++) {
+        result[i] = std.mix(from[i]!, to[i]!, progress);
+      }
+      return result;
+    };
+
+    const main = () => {
+      'use gpu';
+      const foo = interpolate(0.1, [0, 0.5, 1], [100, 200, 100]);
+      const bar = interpolate(0.6, [0, 0.5], [100, 40.5]);
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn interpolate(progress: f32, from_1: array<f32, 3>, to: array<i32, 3>) -> array<f32, 3> {
+        var result = array<f32, 3>();
+        for (var i = 0; (i < 3i); i++) {
+          result[i] = mix(from_1[i], f32(to[i]), progress);
+        }
+        return result;
+      }
+
+      fn interpolate_1(progress: f32, from_1: array<f32, 2>, to: array<f32, 2>) -> array<f32, 2> {
+        var result = array<f32, 2>();
+        for (var i = 0; (i < 2i); i++) {
+          result[i] = mix(from_1[i], to[i], progress);
+        }
+        return result;
+      }
+
+      fn main() {
+        var foo = interpolate(0.1f, array<f32, 3>(0., 0.5, 1.), array<i32, 3>(100, 200, 100));
+        var bar = interpolate_1(0.6f, array<f32, 2>(0., 0.5), array<f32, 2>(100., 40.5));
+      }"
     `);
   });
 });

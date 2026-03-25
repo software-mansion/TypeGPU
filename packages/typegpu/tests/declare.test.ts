@@ -1,15 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import { d, tgpu } from '../src/index.js';
 
 describe('tgpu.declare', () => {
   it('should inject provided declaration when resolving a function', () => {
-    const declaration = tgpu['~unstable'].declare(
-      '@group(0) @binding(0) var<uniform> val: f32;',
-    );
+    const declaration = tgpu['~unstable'].declare('@group(0) @binding(0) var<uniform> val: f32;');
 
-    const empty = tgpu.fn([])`() { /* do nothing */ }`
-      .$uses({ declaration });
+    const empty = tgpu.fn([])`() { /* do nothing */ }`.$uses({ declaration });
 
     expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> val: f32;
@@ -19,12 +15,9 @@ describe('tgpu.declare', () => {
   });
 
   it('should replace declaration statement in raw wgsl', () => {
-    const declaration = tgpu['~unstable'].declare(
-      '@group(0) @binding(0) var<uniform> val: f32;',
-    );
+    const declaration = tgpu['~unstable'].declare('@group(0) @binding(0) var<uniform> val: f32;');
 
-    const empty = tgpu.fn([])`() { declaration }`
-      .$uses({ declaration });
+    const empty = tgpu.fn([])`() { declaration }`.$uses({ declaration });
 
     expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> val: f32;
@@ -34,16 +27,13 @@ describe('tgpu.declare', () => {
   });
 
   it('should inject all provided declarations', () => {
-    const decl1 = tgpu['~unstable'].declare(
-      '@group(0) @binding(0) var<uniform> val: f32;',
-    );
+    const decl1 = tgpu['~unstable'].declare('@group(0) @binding(0) var<uniform> val: f32;');
     const decl2 = tgpu['~unstable'].declare(`\
 struct Output {
   x: u32,
 }`);
 
-    const empty = tgpu.fn([])`() { /* do nothing */ }`
-      .$uses({ decl1, decl2 });
+    const empty = tgpu.fn([])`() { /* do nothing */ }`.$uses({ decl1, decl2 });
 
     expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> val: f32;
@@ -63,8 +53,7 @@ struct Output {
         nested: tgpu['~unstable'].declare('struct Output { x: u32 }'),
       });
 
-    const empty = tgpu.fn([])`() { /* do nothing */ }`
-      .$uses({ declaration });
+    const empty = tgpu.fn([])`() { /* do nothing */ }`.$uses({ declaration });
 
     expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "struct Output { x: u32 }
@@ -84,8 +73,7 @@ struct Output {
       .declare('@group(0) @binding(0) var<uniform> val: Output;')
       .$uses({ Output });
 
-    const empty = tgpu.fn([])`() { /* do nothing */ }`
-      .$uses({ declaration });
+    const empty = tgpu.fn([])`() { /* do nothing */ }`.$uses({ declaration });
 
     expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "struct Output {
@@ -99,11 +87,12 @@ struct Output {
   });
 
   it('works with TGSL functions', () => {
-    const declaration = tgpu['~unstable'].declare(
-      '@group(0) @binding(0) var<uniform> val: f32;',
-    );
+    const declaration = tgpu['~unstable'].declare('@group(0) @binding(0) var<uniform> val: f32;');
 
-    const main = tgpu.fn([], d.f32)(() => {
+    const main = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       declaration;
       return 2;
     });
@@ -112,7 +101,6 @@ struct Output {
       "@group(0) @binding(0) var<uniform> val: f32;
 
       fn main() -> f32 {
-        ;
         return 2f;
       }"
     `);

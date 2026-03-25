@@ -9,10 +9,7 @@ import type { ModelData } from './types.ts';
 import { VertexData } from './types.ts';
 import { setupOrbitCamera } from './setup-orbit-camera.ts';
 
-const MODELS: Record<
-  string,
-  { path: string; scale: number; offset: [number, number, number] }
-> = {
+const MODELS: Record<string, { path: string; scale: number; offset: [number, number, number] }> = {
   LongBoi: {
     path: '/TypeGPU/assets/mesh-skinning/LongBoi.glb',
     scale: 1,
@@ -49,16 +46,20 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-let depthTexture = root['~unstable'].createTexture({
-  size: [canvas.width, canvas.height],
-  format: 'depth24plus',
-  sampleCount: 4,
-}).$usage('render');
-let msaaTexture = root['~unstable'].createTexture({
-  size: [canvas.width, canvas.height],
-  format: presentationFormat,
-  sampleCount: 4,
-}).$usage('render');
+let depthTexture = root['~unstable']
+  .createTexture({
+    size: [canvas.width, canvas.height],
+    format: 'depth24plus',
+    sampleCount: 4,
+  })
+  .$usage('render');
+let msaaTexture = root['~unstable']
+  .createTexture({
+    size: [canvas.width, canvas.height],
+    format: presentationFormat,
+    sampleCount: 4,
+  })
+  .$usage('render');
 
 const cameraUniform = root.createUniform(d.mat4x4f);
 let viewMatrix = d.mat4x4f();
@@ -82,14 +83,8 @@ const longBoiAnimation = (nodeIndex: number): Quat | null => {
   if (nodeIndex !== 0) {
     return null;
   }
-  const bendQuat = quatFromAxisAngle(
-    [0, 0, 1],
-    Math.sin(bendTime * 0.001) * Math.PI * 0.5,
-  );
-  const twistQuat = quatFromAxisAngle(
-    [0, 1, 0],
-    Math.sin(twistTime * 0.0015) * Math.PI * 0.3,
-  );
+  const bendQuat = quatFromAxisAngle([0, 0, 1], Math.sin(bendTime * 0.001) * Math.PI * 0.5);
+  const twistQuat = quatFromAxisAngle([0, 1, 0], Math.sin(twistTime * 0.0015) * Math.PI * 0.3);
   return quatMul(twistQuat, bendQuat);
 };
 
@@ -130,10 +125,7 @@ const getWorldTransform = (
 
   for (let i = 0; i < modelData.nodes.length; i++) {
     if (modelData.nodes[i].children?.includes(nodeIndex)) {
-      return mat4.mul(
-        getWorldTransform(i, undefined, animatedTransforms, useLongBoi),
-        localMatrix,
-      );
+      return mat4.mul(getWorldTransform(i, undefined, animatedTransforms, useLongBoi), localMatrix);
     }
   }
 
@@ -141,8 +133,7 @@ const getWorldTransform = (
 };
 
 const getJointMatrices = (): d.m4x4f[] => {
-  const useLongBoi = currentModelName === 'LongBoi' &&
-    (twistEnabled || bendEnabled);
+  const useLongBoi = currentModelName === 'LongBoi' && (twistEnabled || bendEnabled);
   const animTransforms =
     currentModelName === 'DancingBot' && modelData.animations.length > 0
       ? sampleAnimation(modelData.animations[0], animationTime)
@@ -154,12 +145,7 @@ const getJointMatrices = (): d.m4x4f[] => {
   mat4.scale(modelTransform, [scale, scale, scale], modelTransform);
 
   const matrices = modelData.jointNodes.map((jointNode: number, i: number) => {
-    const world = getWorldTransform(
-      jointNode,
-      undefined,
-      animTransforms,
-      useLongBoi,
-    );
+    const world = getWorldTransform(jointNode, undefined, animTransforms, useLongBoi);
     const invBind = modelData.inverseBindMatrices.slice(i * 16, (i + 1) * 16);
     const jointMatrix = mat4.mul(world, invBind, d.mat4x4f());
     return mat4.mul(modelTransform, jointMatrix, d.mat4x4f());
@@ -197,14 +183,15 @@ const createVertexData = (): d.Infer<typeof VertexData>[] =>
     ),
   }));
 
-let vertexBuffer = root.createBuffer(
-  d.arrayOf(VertexData, modelData.vertexCount),
-  createVertexData(),
-).$usage('vertex');
-let indexBuffer = root.createBuffer(
-  d.arrayOf(d.u16, modelData.indices.length),
-  Array.from(modelData.indices) as number[],
-).$usage('index');
+let vertexBuffer = root
+  .createBuffer(d.arrayOf(VertexData, modelData.vertexCount), createVertexData())
+  .$usage('vertex');
+let indexBuffer = root
+  .createBuffer(
+    d.arrayOf(d.u16, modelData.indices.length),
+    Array.from(modelData.indices) as number[],
+  )
+  .$usage('index');
 let currentIndexCount = modelData.indices.length;
 
 const jointMatricesUniform = root.createUniform(
@@ -218,7 +205,8 @@ const vertex = tgpu['~unstable'].vertexFn({
   out: { pos: d.builtin.position, normal: d.vec3f },
 })(({ position, normal, joint, weight }) => {
   const jm = jointMatricesUniform.$;
-  const skinMatrix = jm[joint.x].mul(weight.x)
+  const skinMatrix = jm[joint.x]
+    .mul(weight.x)
     .add(jm[joint.y].mul(weight.y))
     .add(jm[joint.z].mul(weight.z))
     .add(jm[joint.w].mul(weight.w));
@@ -233,9 +221,7 @@ const fragment = tgpu['~unstable'].fragmentFn({
   in: { normal: d.vec3f },
   out: d.vec4f,
 })(({ normal }) => {
-  const diffuse = std.saturate(
-    std.dot(normal, std.normalize(d.vec3f(1, 0, 1))),
-  );
+  const diffuse = std.saturate(std.dot(normal, std.normalize(d.vec3f(1, 0, 1))));
   return d.vec4f(d.vec3f(0.8).mul(diffuse * 0.7 + 0.3), 1.0);
 });
 
@@ -252,16 +238,20 @@ const pipeline = root['~unstable']
   .withIndexBuffer(indexBuffer);
 
 const resizeObserver = new ResizeObserver(() => {
-  depthTexture = root['~unstable'].createTexture({
-    size: [canvas.width, canvas.height],
-    format: 'depth24plus',
-    sampleCount: 4,
-  }).$usage('render');
-  msaaTexture = root['~unstable'].createTexture({
-    size: [canvas.width, canvas.height],
-    format: presentationFormat,
-    sampleCount: 4,
-  }).$usage('render');
+  depthTexture = root['~unstable']
+    .createTexture({
+      size: [canvas.width, canvas.height],
+      format: 'depth24plus',
+      sampleCount: 4,
+    })
+    .$usage('render');
+  msaaTexture = root['~unstable']
+    .createTexture({
+      size: [canvas.width, canvas.height],
+      format: presentationFormat,
+      sampleCount: 4,
+    })
+    .$usage('render');
 });
 resizeObserver.observe(canvas);
 
@@ -271,14 +261,12 @@ async function switchModel(name: ModelName) {
   }
   currentModelName = name;
   modelData = await loadGLBModel(MODELS[name].path);
-  vertexBuffer = root.createBuffer(
-    d.arrayOf(VertexData, modelData.vertexCount),
-    createVertexData(),
-  ).$usage('vertex');
-  indexBuffer = root.createBuffer(
-    d.arrayOf(d.u16, modelData.indices.length),
-    Array.from(modelData.indices),
-  ).$usage('index');
+  vertexBuffer = root
+    .createBuffer(d.arrayOf(VertexData, modelData.vertexCount), createVertexData())
+    .$usage('vertex');
+  indexBuffer = root
+    .createBuffer(d.arrayOf(d.u16, modelData.indices.length), Array.from(modelData.indices))
+    .$usage('index');
   currentIndexCount = modelData.indices.length;
   animationTime = 0;
 }

@@ -1,7 +1,6 @@
 import { describe, expect } from 'vitest';
-import * as d from '../../src/data/index.ts';
-import tgpu from '../../src/index.ts';
-import { it } from '../utils/extendedIt.ts';
+import tgpu, { d } from '../../src/index.js';
+import { it } from 'typegpu-testing-utility';
 
 describe('wgslGenerator', () => {
   it('resolves add infix operator', () => {
@@ -72,7 +71,10 @@ describe('wgslGenerator', () => {
   });
 
   it('resolves mul infix operator on a function return value', () => {
-    const getVec = tgpu.fn([], d.vec3f)(() => {
+    const getVec = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
       'use gpu';
       return d.vec3f(1, 2, 3);
     });
@@ -130,6 +132,20 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('resolves mod infix operator', () => {
+    const testFn = tgpu.fn([])(() => {
+      const v1 = d.vec4f(11).mod(2);
+      const v2 = d.vec3f(13.5).mod(d.vec3f(1, 2, 10));
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "fn testFn() {
+        var v1 = vec4f(1);
+        var v2 = vec3f(0.5, 1.5, 3.5);
+      }"
+    `);
+  });
+
   it('resolves add infix operator on uniform vector', ({ root }) => {
     const fooUniform = root.createUniform(d.vec3f);
     const barUniform = root.createUniform(d.vec3f);
@@ -146,7 +162,7 @@ describe('wgslGenerator', () => {
       @group(0) @binding(1) var<uniform> barUniform: vec3f;
 
       fn testFn() {
-        var v1 = (fooUniform + 2);
+        var v1 = (fooUniform + 2f);
         var v2 = (vec3f(1, 2, 3) + barUniform);
         var v3 = (fooUniform + barUniform);
       }"

@@ -1,13 +1,9 @@
 import type { ResolvedSnippet } from '../../data/snippet.ts';
-import {
-  type NameRegistry,
-  RandomNameRegistry,
-  StrictNameRegistry,
-} from '../../nameRegistry.ts';
+import { type NameRegistry, RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry.ts';
 import { getName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { ShelllessRepository } from '../../tgsl/shellless.ts';
-import type { TgpuDerived, TgpuSlot } from '../slot/slotTypes.ts';
+import type { TgpuLazy, TgpuSlot } from '../slot/slotTypes.ts';
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
 
@@ -22,10 +18,10 @@ export interface NamespaceInternal {
     { slotToValueMap: SlotToValueMap; result: ResolvedSnippet }[]
   >;
 
-  memoizedDerived: WeakMap<
-    // WeakMap because if the "derived" does not exist anymore,
+  memoizedLazy: WeakMap<
+    // WeakMap because if the "lazy" does not exist anymore,
     // apart from this map, there is no way to access the cached value anyway.
-    TgpuDerived<unknown>,
+    TgpuLazy<unknown>,
     { slotToValueMap: SlotToValueMap; result: unknown }[]
   >;
 
@@ -35,7 +31,7 @@ export interface NamespaceInternal {
 }
 
 type NamespaceEventMap = {
-  'name': { target: object; name: string };
+  name: { target: object; name: string };
 };
 
 type DetachListener = () => void;
@@ -57,7 +53,7 @@ class NamespaceImpl implements Namespace {
       nameRegistry,
       shelllessRepo: new ShelllessRepository(),
       memoizedResolves: new WeakMap(),
-      memoizedDerived: new WeakMap(),
+      memoizedLazy: new WeakMap(),
       listeners: {
         name: new Set(),
       },
@@ -83,10 +79,7 @@ export interface NamespaceOptions {
   names?: 'random' | 'strict' | undefined;
 }
 
-export function getUniqueName(
-  namespace: NamespaceInternal,
-  resource: object,
-): string {
+export function getUniqueName(namespace: NamespaceInternal, resource: object): string {
   const name = namespace.nameRegistry.makeUnique(getName(resource), true);
   for (const listener of namespace.listeners.name) {
     listener({ target: resource, name });
@@ -94,7 +87,7 @@ export function getUniqueName(
   return name;
 }
 
-export function namespace(options?: NamespaceOptions | undefined): Namespace {
+export function namespace(options?: NamespaceOptions): Namespace {
   const { names = 'strict' } = options ?? {};
 
   return new NamespaceImpl(

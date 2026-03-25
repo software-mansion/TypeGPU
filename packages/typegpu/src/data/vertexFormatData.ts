@@ -1,52 +1,66 @@
-import { isMarkedInternal } from '../shared/symbols.ts';
+import { $cast, $gpuCallable, $internal, isMarkedInternal } from '../shared/symbols.ts';
 import type { Infer } from '../shared/repr.ts';
-import { $internal } from '../shared/symbols.ts';
-import type {
-  $invalidSchemaReason,
-  $repr,
-  $validVertexSchema,
-} from '../shared/symbols.ts';
+import type { $invalidSchemaReason, $repr, $validVertexSchema } from '../shared/symbols.ts';
 import type { VertexFormat } from '../shared/vertexFormat.ts';
 import { f32, i32, u32 } from './numeric.ts';
-import {
-  vec2f,
-  vec2i,
-  vec2u,
-  vec3f,
-  vec3i,
-  vec3u,
-  vec4f,
-  vec4i,
-  vec4u,
-} from './vector.ts';
-import type { BaseData } from './wgslTypes.ts';
+import { vec2f, vec2i, vec2u, vec3f, vec3i, vec3u, vec4f, vec4i, vec4u } from './vector.ts';
+import type { WithCast } from '../types.ts';
+import { schemaCallWrapper, schemaCallWrapperGPU } from './schemaCallWrapper.ts';
+import type { Snippet } from './snippet.ts';
+import type {
+  BaseData,
+  F16,
+  F32,
+  I32,
+  U32,
+  Vec2f,
+  Vec2h,
+  Vec2i,
+  Vec2u,
+  Vec3f,
+  Vec3h,
+  Vec3i,
+  Vec3u,
+  Vec4f,
+  Vec4h,
+  Vec4i,
+  Vec4u,
+} from './wgslTypes.ts';
 
-export type FormatToWGSLType<T extends VertexFormat> =
-  (typeof formatToWGSLType)[T];
+export type FormatToWGSLType<T extends VertexFormat> = (typeof formatToWGSLType)[T];
 
-export interface TgpuVertexFormatData<T extends VertexFormat> extends BaseData {
+export interface TgpuVertexFormatData<T extends VertexFormat>
+  extends BaseData, WithCast<FormatToWGSLType<T>> {
   readonly type: T;
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<FormatToWGSLType<T>>;
   readonly [$validVertexSchema]: true;
-  readonly [$invalidSchemaReason]:
-    'Vertex formats are not host-shareable, use concrete types instead';
+  readonly [$invalidSchemaReason]: 'Vertex formats are not host-shareable, use concrete types instead';
   // ---
 }
 
-class TgpuVertexFormatDataImpl<T extends VertexFormat>
-  implements TgpuVertexFormatData<T> {
-  public readonly [$internal] = true;
+class TgpuVertexFormatDataImpl<T extends VertexFormat> implements TgpuVertexFormatData<T> {
+  public readonly [$internal] = {};
+  [$gpuCallable]: TgpuVertexFormatData<T>[typeof $gpuCallable];
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<FormatToWGSLType<T>>;
   declare readonly [$validVertexSchema]: true;
-  declare readonly [$invalidSchemaReason]:
-    'Vertex formats are not host-shareable, use concrete types instead';
+  declare readonly [$invalidSchemaReason]: 'Vertex formats are not host-shareable, use concrete types instead';
   // ---
 
-  constructor(public readonly type: T) {}
+  constructor(public readonly type: T) {
+    this[$gpuCallable] = {
+      call: (ctx, [v]): Snippet => {
+        return schemaCallWrapperGPU(ctx, formatToWGSLType[this.type], v);
+      },
+    };
+  }
+
+  [$cast](v?: Infer<FormatToWGSLType<T>>): Infer<FormatToWGSLType<T>> {
+    return schemaCallWrapper(formatToWGSLType[this.type], v);
+  }
 }
 
 export const formatToWGSLType = {
@@ -213,14 +227,10 @@ export type sint32x4 = TgpuVertexFormatData<'sint32x4'>;
 export const sint32x4 = new TgpuVertexFormatDataImpl('sint32x4') as sint32x4;
 
 export type unorm10_10_10_2 = TgpuVertexFormatData<'unorm10-10-10-2'>;
-export const unorm10_10_10_2 = new TgpuVertexFormatDataImpl(
-  'unorm10-10-10-2',
-) as unorm10_10_10_2;
+export const unorm10_10_10_2 = new TgpuVertexFormatDataImpl('unorm10-10-10-2') as unorm10_10_10_2;
 
 export type unorm8x4_bgra = TgpuVertexFormatData<'unorm8x4-bgra'>;
-export const unorm8x4_bgra = new TgpuVertexFormatDataImpl(
-  'unorm8x4-bgra',
-) as unorm8x4_bgra;
+export const unorm8x4_bgra = new TgpuVertexFormatDataImpl('unorm8x4-bgra') as unorm8x4_bgra;
 
 export type PackedData =
   | uint8
@@ -265,9 +275,54 @@ export type PackedData =
   | unorm10_10_10_2
   | unorm8x4_bgra;
 
-export function isPackedData(
-  value: unknown,
-): value is PackedData {
-  return isMarkedInternal(value) &&
-    packedFormats.has((value as PackedData)?.type);
+export function isPackedData(value: unknown): value is PackedData {
+  return isMarkedInternal(value) && packedFormats.has((value as PackedData)?.type);
 }
+
+type U32Data = U32 | Vec2u | Vec3u | Vec4u;
+type I32Data = I32 | Vec2i | Vec3i | Vec4i;
+type FloatData = F32 | Vec2f | Vec3f | Vec4f | F16 | Vec2h | Vec3h | Vec4h;
+
+export type FormatToAcceptedData = {
+  uint8: U32Data;
+  uint8x2: U32Data;
+  uint8x4: U32Data;
+  sint8: I32Data;
+  sint8x2: I32Data;
+  sint8x4: I32Data;
+  unorm8: FloatData;
+  unorm8x2: FloatData;
+  unorm8x4: FloatData;
+  snorm8: FloatData;
+  snorm8x2: FloatData;
+  snorm8x4: FloatData;
+  uint16: U32Data;
+  uint16x2: U32Data;
+  uint16x4: U32Data;
+  sint16: I32Data;
+  sint16x2: I32Data;
+  sint16x4: I32Data;
+  unorm16: FloatData;
+  unorm16x2: FloatData;
+  unorm16x4: FloatData;
+  snorm16: FloatData;
+  snorm16x2: FloatData;
+  snorm16x4: FloatData;
+  float16: FloatData;
+  float16x2: FloatData;
+  float16x4: FloatData;
+  float32: FloatData;
+  float32x2: FloatData;
+  float32x3: FloatData;
+  float32x4: FloatData;
+  uint32: U32Data;
+  uint32x2: U32Data;
+  uint32x3: U32Data;
+  uint32x4: U32Data;
+  sint32: I32Data;
+  sint32x2: I32Data;
+  sint32x3: I32Data;
+  sint32x4: I32Data;
+  'unorm10-10-10-2': FloatData;
+  'unorm8x4-bgra': FloatData;
+};

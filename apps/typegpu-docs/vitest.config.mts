@@ -4,16 +4,10 @@ import { imagetools } from 'vite-imagetools';
 import { defineConfig, type Plugin } from 'vitest/config';
 
 const jiti = createJiti(import.meta.url);
-const typegpu = await jiti.import<typeof TypeGPUPlugin>(
-  'unplugin-typegpu/vite',
-  { default: true },
-);
+const typegpu = await jiti.import<typeof TypeGPUPlugin>('unplugin-typegpu/vite', { default: true });
 
 export default defineConfig({
-  plugins: [
-    typegpu({ include: [/\.m?[jt]sx?/] }),
-    imagetools(),
-  ] as Plugin[],
+  plugins: [typegpu({ include: [/\.m?[jt]sx?/] }), imagetools()] as Plugin[],
   server: {
     proxy: {
       '/TypeGPU': {
@@ -25,13 +19,24 @@ export default defineConfig({
     },
   },
   test: {
-    name: 'browser',
-    include: [
-      '**/*.{test,spec}.browser.ts',
+    projects: [
+      {
+        test: {
+          name: 'browser',
+          include: ['**/*.{test,spec}.browser.ts'],
+          browser: {
+            provider: 'preview',
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+      {
+        test: {
+          name: 'individual-example-tests',
+          root: './tests/individual-example-tests',
+          environment: 'node',
+        },
+      },
     ],
-    browser: {
-      provider: 'preview',
-      instances: [{ browser: 'chromium' }],
-    },
   },
 });

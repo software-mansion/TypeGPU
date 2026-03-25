@@ -30,15 +30,12 @@ let resolutionCtx: ResolutionCtx | undefined;
 /**
  * Used to mock the context before all tests. For normal use-cases, use `provideCtx`
  */
-export function INTERNAL_setCtx<T>(ctx: ResolutionCtx | undefined) {
+export function INTERNAL_setCtx(ctx: ResolutionCtx | undefined) {
   resolutionCtx = ctx;
 }
 
 export function provideCtx<T>(ctx: ResolutionCtx, callback: () => T): T {
-  invariant(
-    resolutionCtx === undefined || resolutionCtx === ctx,
-    'Cannot nest context providers',
-  );
+  invariant(resolutionCtx === undefined || resolutionCtx === ctx, 'Cannot nest context providers');
 
   if (resolutionCtx === ctx) {
     return callback();

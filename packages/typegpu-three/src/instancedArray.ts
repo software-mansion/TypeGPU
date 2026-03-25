@@ -1,6 +1,6 @@
 import { instancedArray as instancedArrayImpl } from 'three/tsl';
 import type { StorageBufferNode, TypedArray } from 'three/webgpu';
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 import { wgslTypeToGlslType } from './common.ts';
 import { fromTSL, type TSLAccessor } from './typegpu-node.ts';
 
@@ -21,9 +21,7 @@ export function instancedArray<TDataType extends d.AnyWgslData>(
   count: number | TypedArray,
   elementType: TDataType,
 ): TSLAccessor<d.WgslArray<TDataType>, StorageBufferNode> {
-  const glslType = wgslTypeToGlslType[
-    elementType.type as keyof typeof wgslTypeToGlslType
-  ];
+  const glslType = wgslTypeToGlslType[elementType.type as keyof typeof wgslTypeToGlslType];
 
   return fromTSL(instancedArrayImpl(count, glslType), d.arrayOf(elementType));
 }

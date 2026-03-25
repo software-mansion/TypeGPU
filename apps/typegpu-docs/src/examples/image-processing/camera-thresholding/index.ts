@@ -1,24 +1,18 @@
 import { rgbToYcbcrMatrix } from '@typegpu/color';
-import tgpu from 'typegpu';
-import { fullScreenTriangle } from 'typegpu/common';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const textureLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
 });
 
-const mainFrag = tgpu['~unstable'].fragmentFn({
+const mainFrag = tgpu.fragmentFn({
   in: { uv: d.location(0, d.vec2f) },
   out: d.vec4f,
 })((input) => {
   const uv2 = uvTransformUniform.$.mul(input.uv.sub(0.5)).add(0.5);
-  let col = std.textureSampleBaseClampToEdge(
-    textureLayout.$.inputTexture,
-    sampler.$,
-    uv2,
-  );
-  const ycbcr = col.xyz.mul(rgbToYcbcrMatrix.$);
+  let col = std.textureSampleBaseClampToEdge(textureLayout.$.inputTexture, sampler.$, uv2);
+  const ycbcr = col.rgb.mul(rgbToYcbcrMatrix.$);
   const colycbcr = colorUniform.$.mul(rgbToYcbcrMatrix.$);
 
   const crDiff = std.abs(ycbcr.y - colycbcr.y);
@@ -52,14 +46,8 @@ if (navigator.mediaDevices.getUserMedia) {
 const root = await tgpu.init();
 const device = root.device;
 
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const thresholdBuffer = root.createUniform(d.f32, 0.5);
 const colorUniform = root.createUniform(d.vec3f, d.vec3f(0, 1.0, 0));
@@ -70,18 +58,18 @@ const sampler = root['~unstable'].createSampler({
   minFilter: 'linear',
 });
 
-const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(mainFrag, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: mainFrag,
+  targets: { format: presentationFormat },
+});
 
 function onVideoChange(size: { width: number; height: number }) {
   const aspectRatio = size.width / size.height;
   video.style.height = `${video.clientWidth / aspectRatio}px`;
   if (canvas.parentElement) {
     canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
-    canvas.parentElement.style.height =
-      `min(100cqh, calc(100cqw/(${aspectRatio})))`;
+    canvas.parentElement.style.height = `min(100cqh, calc(100cqw/(${aspectRatio})))`;
   }
 }
 
@@ -109,10 +97,7 @@ if (isIOS) {
 let videoFrameCallbackId: number | undefined;
 let lastFrameSize: { width: number; height: number } | undefined;
 
-function processVideoFrame(
-  _: number,
-  metadata: VideoFrameCallbackMetadata,
-) {
+function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   if (video.readyState < 2) {
     videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
     return;
@@ -132,13 +117,10 @@ function processVideoFrame(
 
   renderPipeline
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [1, 1, 1, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
     .with(
-      textureLayout,
       root.createBindGroup(textureLayout, {
         inputTexture: device.importExternalTexture({ source: video }),
       }),
@@ -153,21 +135,21 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 // #region Example controls & Cleanup
 
-export const controls = {
+export const controls = defineControls({
   color: {
-    onColorChange: (value: readonly [number, number, number]) => {
-      colorUniform.write(d.vec3f(...value));
+    onColorChange: (value) => {
+      colorUniform.write(value);
     },
-    initial: [0, 1, 0] as const,
+    initial: d.vec3f(0, 1, 0),
   },
   threshold: {
     initial: 0.1,
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => thresholdBuffer.write(value),
+    onSliderChange: (value) => thresholdBuffer.write(value),
   },
-};
+});
 
 export function onCleanup() {
   if (videoFrameCallbackId !== undefined) {

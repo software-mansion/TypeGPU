@@ -1,10 +1,8 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 
-import tgpu from '../src/index.ts';
-
-import * as d from '../src/data/index.ts';
+import { d, tgpu } from '../src/index.js';
 import type { Infer } from '../src/shared/repr.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('TgpuBufferUniform', () => {
   it('represents a `number` value', ({ root }) => {
@@ -18,8 +16,7 @@ describe('TgpuBufferUniform', () => {
     const buffer = root.createBuffer(d.f32).$usage('uniform').$name('param');
     const uniform = buffer.as('uniform');
 
-    const main = tgpu.fn([])`() { let y = hello; }`
-      .$uses({ hello: uniform });
+    const main = tgpu.fn([])`() { let y = hello; }`.$uses({ hello: uniform });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> param: f32;
@@ -33,7 +30,7 @@ describe('TgpuBufferUniform', () => {
     const uniform = buffer.as('uniform');
 
     const func = tgpu.fn([])(() => {
-      const x = uniform.value;
+      const x = uniform.$;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
@@ -55,8 +52,8 @@ describe('TgpuBufferUniform', () => {
     const uniform = buffer.as('uniform');
 
     const func = tgpu.fn([])(() => {
-      const pos = uniform.value.pos;
-      const velX = uniform.value.vel.x;
+      const pos = uniform.$.pos;
+      const velX = uniform.$.vel.x;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
@@ -73,6 +70,21 @@ describe('TgpuBufferUniform', () => {
       }"
     `);
   });
+
+  it('allows creating bufferUsages only for buffers allowing them', ({ root }) => {
+    root.createBuffer(d.u32, 2).$usage('uniform').as('uniform');
+    root.createBuffer(d.u32, 2).$usage('uniform', 'storage').as('uniform');
+    root.createBuffer(d.u32, 2).$usage('uniform', 'vertex').as('uniform');
+    // @ts-expect-error
+    expect(() => root.createBuffer(d.u32, 2).as('uniform')).toThrow();
+    expect(() =>
+      root
+        .createBuffer(d.u32, 2)
+        .$usage('storage')
+        // @ts-expect-error
+        .as('uniform'),
+    ).toThrow();
+  });
 });
 
 describe('TgpuBufferMutable', () => {
@@ -87,8 +99,7 @@ describe('TgpuBufferMutable', () => {
     const buffer = root.createBuffer(d.f32).$usage('storage').$name('param');
     const mutable = buffer.as('mutable');
 
-    const main = tgpu.fn([])`() { let y = hello; }`
-      .$uses({ hello: mutable });
+    const main = tgpu.fn([])`() { let y = hello; }`.$uses({ hello: mutable });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read_write> param: f32;
@@ -102,7 +113,7 @@ describe('TgpuBufferMutable', () => {
     const mutable = buffer.as('mutable');
 
     const func = tgpu.fn([])(() => {
-      const x = mutable.value;
+      const x = mutable.$;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
@@ -126,8 +137,8 @@ describe('TgpuBufferMutable', () => {
     const mutable = buffer.as('mutable');
 
     const func = tgpu.fn([])(() => {
-      const pos = mutable.value.pos;
-      const velX = mutable.value.vel.x;
+      const pos = mutable.$.pos;
+      const velX = mutable.$.vel.x;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
@@ -163,6 +174,21 @@ describe('TgpuBufferMutable', () => {
       expect(result.value).toBe(3);
     });
   });
+
+  it('allows creating bufferUsages only for buffers allowing them', ({ root }) => {
+    root.createBuffer(d.u32, 2).$usage('storage').as('mutable');
+    root.createBuffer(d.u32, 2).$usage('storage', 'uniform').as('mutable');
+    root.createBuffer(d.u32, 2).$usage('vertex', 'storage').as('mutable');
+    // @ts-expect-error
+    expect(() => root.createBuffer(d.u32, 2).as('mutable')).toThrow();
+    expect(() =>
+      root
+        .createBuffer(d.u32, 2)
+        .$usage('uniform')
+        // @ts-expect-error
+        .as('mutable'),
+    ).toThrow();
+  });
 });
 
 describe('TgpuBufferReadonly', () => {
@@ -177,8 +203,7 @@ describe('TgpuBufferReadonly', () => {
     const buffer = root.createBuffer(d.f32).$usage('storage').$name('param');
     const readonly = buffer.as('readonly');
 
-    const main = tgpu.fn([])`() { let y = hello; }`
-      .$uses({ hello: readonly });
+    const main = tgpu.fn([])`() { let y = hello; }`.$uses({ hello: readonly });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read> param: f32;
@@ -192,7 +217,7 @@ describe('TgpuBufferReadonly', () => {
     const paramReadonly = paramBuffer.as('readonly');
 
     const func = tgpu.fn([])(() => {
-      const x = paramReadonly.value;
+      const x = paramReadonly.$;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
@@ -205,18 +230,17 @@ describe('TgpuBufferReadonly', () => {
   });
 
   it('allows accessing fields in a struct stored in its buffer', ({ root }) => {
-    const Boid = d
-      .struct({
-        pos: d.vec3f,
-        vel: d.vec3u,
-      });
+    const Boid = d.struct({
+      pos: d.vec3f,
+      vel: d.vec3u,
+    });
 
     const boidBuffer = root.createBuffer(Boid).$usage('storage').$name('boid');
     const boidReadonly = boidBuffer.as('readonly');
 
     const func = tgpu.fn([])(() => {
-      const pos = boidReadonly.value.pos;
-      const velX = boidReadonly.value.vel.x;
+      const pos = boidReadonly.$.pos;
+      const velX = boidReadonly.$.vel.x;
     });
 
     expect(tgpu.resolve([func])).toMatchInlineSnapshot(`
@@ -234,23 +258,23 @@ describe('TgpuBufferReadonly', () => {
     `);
   });
 
-  it('cannot be accessed via .$ or .value top-level', ({ root }) => {
+  it('cannot be accessed via .$ top-level', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('storage');
     const readonly = buffer.as('readonly');
 
     expect(() => readonly.$).toThrowErrorMatchingInlineSnapshot(
-      '[Error: .$ and .value are inaccessible during normal JS execution. Try `.read()`]',
-    );
-    expect(() => readonly.value).toThrowErrorMatchingInlineSnapshot(
-      '[Error: .$ and .value are inaccessible during normal JS execution. Try `.read()`]',
+      `[Error: .$ is inaccessible during normal JS execution. Try \`.read()\`]`,
     );
   });
 
-  it('cannot be accessed via .$ or .value in a function called top-level', ({ root }) => {
+  it('cannot be accessed via .$ in a function called top-level', ({ root }) => {
     const fooBuffer = root.createBuffer(d.f32).$usage('storage');
     const readonly = fooBuffer.as('readonly');
 
-    const foo = tgpu.fn([], d.f32)(() => {
+    const foo = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       return readonly.$; // accessing GPU resource
     });
 
@@ -272,5 +296,20 @@ describe('TgpuBufferReadonly', () => {
       const result = tgpu['~unstable'].simulate(foo);
       expect(result.value).toBe(123);
     });
+  });
+
+  it('allows creating bufferUsages only for buffers allowing them', ({ root }) => {
+    root.createBuffer(d.u32, 2).$usage('storage').as('readonly');
+    root.createBuffer(d.u32, 2).$usage('storage', 'uniform').as('readonly');
+    root.createBuffer(d.u32, 2).$usage('storage', 'vertex').as('readonly');
+    // @ts-expect-error
+    expect(() => root.createBuffer(d.u32, 2).as('readonly')).toThrow();
+    expect(() =>
+      root
+        .createBuffer(d.u32, 2)
+        .$usage('uniform')
+        // @ts-expect-error
+        .as('readonly'),
+    ).toThrow();
   });
 });

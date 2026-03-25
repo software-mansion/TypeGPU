@@ -1,5 +1,4 @@
-import type { TgpuRoot } from 'typegpu';
-import * as d from 'typegpu/data';
+import { d, type TgpuRoot } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { CameraData } from './types.ts';
 
@@ -61,12 +60,7 @@ export class Camera {
   }
 
   #computeData() {
-    const view = m.mat4.lookAt(
-      this.#position,
-      this.#target,
-      this.#up,
-      d.mat4x4f(),
-    );
+    const view = m.mat4.lookAt(this.#position, this.#target, this.#up, d.mat4x4f());
 
     const projection = m.mat4.perspective(
       (this.#fov * Math.PI) / 180,

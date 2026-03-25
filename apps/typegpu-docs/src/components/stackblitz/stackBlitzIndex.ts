@@ -1,3 +1,5 @@
+import { d } from 'typegpu';
+
 const body = document.querySelector('body') as HTMLBodyElement;
 body.style.display = 'flex';
 body.style.flexDirection = 'column';
@@ -38,8 +40,7 @@ for (const canvas of document.querySelectorAll('canvas')) {
   } else {
     const aspectRatio = canvas.dataset.aspectRatio ?? '1';
     frame.style.aspectRatio = aspectRatio;
-    frame.style.height =
-      `min(calc(min(100cqw, 100cqh)/(${aspectRatio})), min(100cqw, 100cqh))`;
+    frame.style.height = `min(calc(min(100cqw, 100cqh)/(${aspectRatio})), min(100cqw, 100cqh))`;
   }
 
   canvas.style.position = 'absolute';
@@ -75,11 +76,7 @@ for (const controls of Object.values(example)) {
     continue;
   }
 
-  for (
-    const [label, params] of Object.entries(
-      controls as Record<string, ExampleControlParam>,
-    )
-  ) {
+  for (const [label, params] of Object.entries(controls as Record<string, ExampleControlParam>)) {
     if ('onButtonClick' in params) {
       const button = document.createElement('button');
       button.innerText = label;
@@ -113,7 +110,7 @@ for (const controls of Object.values(example)) {
         select.innerHTML = params.options
           .map((option) => `<option value="${option}">${option}</option>`)
           .join('');
-        select.value = params.initial ?? params.options[0];
+        select.value = params.initial;
 
         select.addEventListener('change', () => {
           params.onSelectChange(select.value);
@@ -129,9 +126,7 @@ for (const controls of Object.values(example)) {
         sliderContainer.style.flexDirection = 'column';
         sliderContainer.style.gap = '0.2rem';
 
-        const currentValues = params.initial
-          ? [...params.initial]
-          : [...params.min];
+        const currentValues = params.initial;
         const length = params.min.length;
         const labels = ['x', 'y', 'z', 'w'];
 
@@ -153,7 +148,7 @@ for (const controls of Object.values(example)) {
 
           slider.addEventListener('input', () => {
             currentValues[i] = Number.parseFloat(slider.value);
-            params.onVectorSliderChange(currentValues);
+            (params.onVectorSliderChange as (value: d.v2f | d.v3f | d.v4f) => void)(currentValues);
           });
 
           row.appendChild(labelSpan);
@@ -161,7 +156,7 @@ for (const controls of Object.values(example)) {
           sliderContainer.appendChild(row);
         }
 
-        params.onVectorSliderChange(currentValues);
+        (params.onVectorSliderChange as (value: d.v2f | d.v3f | d.v4f) => void)(currentValues);
         controlRow.appendChild(sliderContainer);
       }
 
@@ -212,34 +207,34 @@ for (const controls of Object.values(example)) {
 
 type SelectControlParam = {
   onSelectChange: (newValue: string) => void;
-  initial?: string;
+  initial: string;
   options: string[];
 };
 
 type ToggleControlParam = {
   onToggleChange: (newValue: boolean) => void;
-  initial?: boolean;
+  initial: boolean;
 };
 
 type SliderControlParam = {
   onSliderChange: (newValue: number) => void;
-  initial?: number;
+  initial: number;
   min?: number;
   max?: number;
   step?: number;
 };
 
-type VectorSliderControlParam = {
-  onVectorSliderChange: (newValue: number[]) => void;
-  initial?: number[];
-  min: number[];
-  max: number[];
-  step: number[];
+type VectorSliderControlParam<T extends d.v2f | d.v3f | d.v4f> = {
+  onVectorSliderChange: (newValue: T) => void;
+  initial: T;
+  min: T;
+  max: T;
+  step: T;
 };
 
 type ColorPickerControlParam = {
-  onColorChange: (newValue: readonly [number, number, number]) => void;
-  initial?: readonly [number, number, number];
+  onColorChange: (newValue: d.v3f) => void;
+  initial: d.v3f;
 };
 
 type ButtonControlParam = {
@@ -248,7 +243,7 @@ type ButtonControlParam = {
 
 type TextAreaControlParam = {
   onTextChange: (newValue: string) => void;
-  initial?: string;
+  initial: string;
 };
 
 type ExampleControlParam =
@@ -257,15 +252,17 @@ type ExampleControlParam =
   | SliderControlParam
   | ButtonControlParam
   | TextAreaControlParam
-  | VectorSliderControlParam
+  | VectorSliderControlParam<d.v2f>
+  | VectorSliderControlParam<d.v3f>
+  | VectorSliderControlParam<d.v4f>
   | ColorPickerControlParam;
 
-function hexToRgb(hex: string): readonly [number, number, number] {
-  return [
+function hexToRgb(hex: string): d.v3f {
+  return d.vec3f(
     Number.parseInt(hex.slice(1, 3), 16) / 255,
     Number.parseInt(hex.slice(3, 5), 16) / 255,
     Number.parseInt(hex.slice(5, 7), 16) / 255,
-  ];
+  );
 }
 
 function componentToHex(c: number) {
@@ -273,6 +270,6 @@ function componentToHex(c: number) {
   return hex.length === 1 ? `0${hex}` : hex;
 }
 
-function rgbToHex(rgb: readonly [number, number, number]) {
+function rgbToHex(rgb: d.v3f) {
   return `#${rgb.map(componentToHex).join('')}`;
 }

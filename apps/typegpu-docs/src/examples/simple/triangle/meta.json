@@ -1,5 +1,6 @@
 {
   "title": "Triangle",
   "category": "simple",
-  "tags": ["experimental"]
+  "tags": ["basics", "primitives"],
+  "coolFactor": 3
 }

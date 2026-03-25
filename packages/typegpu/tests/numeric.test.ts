@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import { tgpu } from '../src/index.ts';
+import tgpu, { d } from '../src/index.js';
 
 describe('f32', () => {
   it('differs in type from other numeric schemas', () => {
@@ -60,14 +59,13 @@ it('has correct default values', () => {
 
 describe('TGSL', () => {
   it('works for default constructors', () => {
-    const main = tgpu
-      .fn([])(() => {
-        const f = d.f32();
-        const h = d.f16();
-        const i = d.i32();
-        const u = d.u32();
-        const b = d.bool();
-      });
+    const main = tgpu.fn([])(() => {
+      const f = d.f32();
+      const h = d.f16();
+      const i = d.i32();
+      const u = d.u32();
+      const b = d.bool();
+    });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() {

@@ -17,8 +17,7 @@ TypeGPU textures serve as a wrapper that provides type safety and higher level u
 Let's look at an example of creating and using a typed texture.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -141,6 +140,10 @@ const ctx = canvas.getContext('2d');
 texture.write(canvas);
 ```
 
+:::tip
+If image dimensions don't match the texture size, the image will be automatically resampled to fit (requires 'render' usage).
+:::
+
 ### Writing arrays of images
 
 For 3D textures or texture arrays, you can write multiple images:
@@ -189,10 +192,6 @@ const mipData = new Uint8Array(4 * 128 * 128); // Data for 128x128
 texture.write(mipData, 1); // Write to mip level 1
 ```
 
-:::tip
-If image dimensions don't match the texture size, the image will be automatically resampled to fit.
-:::
-
 You can also copy from another texture:
 
 ```ts twoslash
@@ -240,8 +239,7 @@ The `generateMipmaps()` method requires both `'sampled'` and `'render'` usage fl
 To create a view - which will also serve as fixed texture usage - you can use one of the available [texture schemas](/TypeGPU/fundamentals/data-schemas/#textures). You can pass it to the `.createView` method of the texture.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root['~unstable'].createTexture({
@@ -259,8 +257,7 @@ const sampledView = texture.createView(d.texture2d(d.f32));
 If type information is available the view schema will be staticly checked against the texture properties.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root['~unstable'].createTexture({
@@ -273,8 +270,7 @@ const sampledView = texture.createView(d.texture2d(d.f32));
 ```
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root['~unstable'].createTexture({
@@ -313,8 +309,7 @@ Textures can be used in shaders through bind groups or as fixed resources, simil
 ### Manual binding
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root['~unstable'].createTexture({
@@ -345,9 +340,7 @@ const bindGroup = root.createBindGroup(bindGroupLayout, {
 For textures that remain consistent across operations, you can create fixed texture views:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root['~unstable'].createTexture({

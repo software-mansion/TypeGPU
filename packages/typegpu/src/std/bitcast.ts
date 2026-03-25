@@ -5,24 +5,13 @@ import { f32, i32, u32 } from '../data/numeric.ts';
 import { isVec } from '../data/wgslTypes.ts';
 import { vec2f, vec2i, vec3f, vec3i, vec4f, vec4i } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
-import type {
-  v2f,
-  v2i,
-  v2u,
-  v3f,
-  v3i,
-  v3u,
-  v4f,
-  v4i,
-  v4u,
-} from '../data/wgslTypes.ts';
+import type { v2f, v2i, v2u, v3f, v3i, v3u, v4f, v4i, v4u } from '../data/wgslTypes.ts';
 import { unify } from '../tgsl/conversion.ts';
 
-export type BitcastU32toF32Overload =
-  & ((value: number) => number)
-  & ((value: v2u) => v2f)
-  & ((value: v3u) => v3f)
-  & ((value: v4u) => v4f);
+export type BitcastU32toF32Overload = ((value: number) => number) &
+  ((value: v2u) => v2f) &
+  ((value: v3u) => v3f) &
+  ((value: v4u) => v4f);
 
 export const bitcastU32toF32 = dualImpl({
   name: 'bitcastU32toF32',
@@ -32,7 +21,7 @@ export const bitcastU32toF32 = dualImpl({
     }
     return VectorOps.bitcastU32toF32[value.kind](value);
   }) as BitcastU32toF32Overload,
-  codegenImpl: (n) => stitch`bitcast<f32>(${n})`,
+  codegenImpl: (_ctx, [n]) => stitch`bitcast<f32>(${n})`,
   signature: (...arg) => {
     const uargs = unify(arg, [u32]) ?? arg;
     return {
@@ -41,18 +30,17 @@ export const bitcastU32toF32 = dualImpl({
         ? uargs[0].type === 'vec2u'
           ? vec2f
           : uargs[0].type === 'vec3u'
-          ? vec3f
-          : vec4f
+            ? vec3f
+            : vec4f
         : f32,
     };
   },
 });
 
-export type BitcastU32toI32Overload =
-  & ((value: number) => number)
-  & ((value: v2u) => v2i)
-  & ((value: v3u) => v3i)
-  & ((value: v4u) => v4i);
+export type BitcastU32toI32Overload = ((value: number) => number) &
+  ((value: v2u) => v2i) &
+  ((value: v3u) => v3i) &
+  ((value: v4u) => v4i);
 
 export const bitcastU32toI32 = dualImpl({
   name: 'bitcastU32toI32',
@@ -62,7 +50,7 @@ export const bitcastU32toI32 = dualImpl({
     }
     return VectorOps.bitcastU32toI32[value.kind](value);
   }) as BitcastU32toI32Overload,
-  codegenImpl: (n) => stitch`bitcast<i32>(${n})`,
+  codegenImpl: (_ctx, [n]) => stitch`bitcast<i32>(${n})`,
   signature: (...arg) => {
     const uargs = unify(arg, [u32]) ?? arg;
     return {
@@ -71,8 +59,8 @@ export const bitcastU32toI32 = dualImpl({
         ? uargs[0].type === 'vec2u'
           ? vec2i
           : uargs[0].type === 'vec3u'
-          ? vec3i
-          : vec4i
+            ? vec3i
+            : vec4i
         : i32,
     };
   },

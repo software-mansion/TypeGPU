@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std } from 'typegpu';
 import { SIM_N } from './params.ts';
 
 export const renderLayout = tgpu.bindGroupLayout({
@@ -9,7 +7,7 @@ export const renderLayout = tgpu.bindGroupLayout({
   linSampler: { sampler: 'filtering' },
 });
 
-export const renderFn = tgpu['~unstable'].vertexFn({
+export const renderFn = tgpu.vertexFn({
   in: { idx: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })((input) => {
@@ -19,27 +17,19 @@ export const renderFn = tgpu['~unstable'].vertexFn({
   return { pos: d.vec4f(vertices[input.idx], 0, 1), uv: texCoords[input.idx] };
 });
 
-export const fragmentInkFn = tgpu['~unstable'].fragmentFn({
+export const fragmentInkFn = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  const density = std.textureSample(
-    renderLayout.$.result,
-    renderLayout.$.linSampler,
-    input.uv,
-  ).x;
+  const density = std.textureSample(renderLayout.$.result, renderLayout.$.linSampler, input.uv).x;
   return d.vec4f(density, density * 0.8, density * 0.5, d.f32(1.0));
 });
 
-export const fragmentVelFn = tgpu['~unstable'].fragmentFn({
+export const fragmentVelFn = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  const velocity = std.textureSample(
-    renderLayout.$.result,
-    renderLayout.$.linSampler,
-    input.uv,
-  ).xy;
+  const velocity = std.textureSample(renderLayout.$.result, renderLayout.$.linSampler, input.uv).xy;
   const magnitude = std.length(velocity);
   const outColor = d.vec4f(
     (velocity.x + 1.0) * 0.5,
@@ -50,10 +40,11 @@ export const fragmentVelFn = tgpu['~unstable'].fragmentFn({
   return outColor;
 });
 
-export const fragmentImageFn = tgpu['~unstable'].fragmentFn({
+export const fragmentImageFn = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
+  'use gpu';
   const pixelStep = d.f32(1) / SIM_N;
 
   const leftSample = std.textureSample(
@@ -82,10 +73,7 @@ export const fragmentImageFn = tgpu['~unstable'].fragmentFn({
 
   const distortStrength = 0.8;
   const distortVector = d.vec2f(gradientX, gradientY);
-  const distortedUV = std.add(
-    input.uv,
-    std.mul(distortVector, d.vec2f(distortStrength, -distortStrength)),
-  );
+  const distortedUV = input.uv + distortVector * d.vec2f(distortStrength, -distortStrength);
 
   const outputColor = std.textureSample(
     renderLayout.$.background,
@@ -93,5 +81,5 @@ export const fragmentImageFn = tgpu['~unstable'].fragmentFn({
     d.vec2f(distortedUV.x, 1.0 - distortedUV.y),
   );
 
-  return d.vec4f(outputColor.xyz, 1.0);
+  return d.vec4f(outputColor.rgb, 1.0);
 });

@@ -1,20 +1,16 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-});
-
-let stencilTexture = root['~unstable'].createTexture({
-  size: [canvas.width, canvas.height],
-  format: 'stencil8',
-}).$usage('render');
+let stencilTexture = root['~unstable']
+  .createTexture({
+    size: [canvas.width, canvas.height],
+    format: 'stencil8',
+  })
+  .$usage('render');
 
 const triangleData = {
   vertices: tgpu.const(d.arrayOf(d.vec2f, 3), [
@@ -22,16 +18,12 @@ const triangleData = {
     d.vec2f(-0.5, -0.5),
     d.vec2f(0.5, -0.5),
   ]),
-  uvs: tgpu.const(d.arrayOf(d.vec2f, 3), [
-    d.vec2f(0.5, 1),
-    d.vec2f(0, 0),
-    d.vec2f(1, 0),
-  ]),
+  uvs: tgpu.const(d.arrayOf(d.vec2f, 3), [d.vec2f(0.5, 1), d.vec2f(0, 0), d.vec2f(1, 0)]),
 };
 
 const rotationUniform = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
 
-const vertexFn = tgpu['~unstable'].vertexFn({
+const vertexFn = tgpu.vertexFn({
   in: {
     vid: d.builtin.vertexIndex,
   },
@@ -40,10 +32,11 @@ const vertexFn = tgpu['~unstable'].vertexFn({
     uv: d.vec2f,
   },
 })(({ vid }) => {
+  'use gpu';
   const pos = triangleData.vertices.$[vid];
   const uv = triangleData.uvs.$[vid];
 
-  const rotatedPos = rotationUniform.$.mul(pos);
+  const rotatedPos = rotationUniform.$ * pos;
 
   return {
     position: d.vec4f(rotatedPos, 0, 1),
@@ -51,34 +44,34 @@ const vertexFn = tgpu['~unstable'].vertexFn({
   };
 });
 
-const fragmentFn = tgpu['~unstable'].fragmentFn({
-  in: {
-    uv: d.vec2f,
-  },
+const fragmentFn = tgpu.fragmentFn({
+  in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => d.vec4f(uv, 0, 1));
 
-const basePipeline = root['~unstable']
-  .withVertex(vertexFn);
-
-const writeStencilPipeline = basePipeline
-  .withDepthStencil({
-    format: 'stencil8',
-    stencilFront: { passOp: 'replace' },
-  })
-  .createPipeline()
-  .withStencilReference(1);
-
-const testStencilPipeline = basePipeline
-  .withFragment(fragmentFn, { format: presentationFormat })
-  .withDepthStencil({
-    format: 'stencil8',
-    stencilFront: {
-      compare: 'equal',
-      passOp: 'keep',
+const writeStencilPipeline = root
+  .createRenderPipeline({
+    vertex: vertexFn,
+    depthStencil: {
+      format: 'stencil8',
+      stencilFront: { passOp: 'replace' },
     },
   })
-  .createPipeline()
+  .withStencilReference(1);
+
+const testStencilPipeline = root
+  .createRenderPipeline({
+    vertex: vertexFn,
+    fragment: fragmentFn,
+    targets: { format: presentationFormat },
+    depthStencil: {
+      format: 'stencil8',
+      stencilFront: {
+        compare: 'equal',
+        passOp: 'keep',
+      },
+    },
+  })
   .withStencilReference(1);
 
 writeStencilPipeline
@@ -87,7 +80,8 @@ writeStencilPipeline
     stencilClearValue: 0,
     stencilLoadOp: 'clear',
     stencilStoreOp: 'store',
-  }).draw(3);
+  })
+  .draw(3);
 
 let frameId: number;
 function frame(timestamp: number) {
@@ -102,11 +96,7 @@ function frame(timestamp: number) {
       stencilLoadOp: 'load',
       stencilStoreOp: 'store',
     })
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .draw(3);
 
   frameId = requestAnimationFrame(frame);
@@ -114,19 +104,23 @@ function frame(timestamp: number) {
 frameId = requestAnimationFrame(frame);
 
 const resizeObserver = new ResizeObserver(() => {
-  stencilTexture = root['~unstable'].createTexture({
-    size: [canvas.width, canvas.height],
-    format: 'stencil8',
-  }).$usage('render');
+  stencilTexture = root['~unstable']
+    .createTexture({
+      size: [canvas.width, canvas.height],
+      format: 'stencil8',
+    })
+    .$usage('render');
 
   rotationUniform.write(d.mat2x2f.identity());
 
-  writeStencilPipeline.withDepthStencilAttachment({
-    view: stencilTexture,
-    stencilClearValue: 0,
-    stencilLoadOp: 'clear',
-    stencilStoreOp: 'store',
-  }).draw(3);
+  writeStencilPipeline
+    .withDepthStencilAttachment({
+      view: stencilTexture,
+      stencilClearValue: 0,
+      stencilLoadOp: 'clear',
+      stencilStoreOp: 'store',
+    })
+    .draw(3);
 });
 resizeObserver.observe(canvas);
 

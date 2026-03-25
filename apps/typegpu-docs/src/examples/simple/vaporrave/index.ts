@@ -1,35 +1,23 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { sdPlane } from '@typegpu/sdf';
 import { perlin3d } from '@typegpu/noise';
+import { sdPlane } from '@typegpu/sdf';
+import tgpu, { d, std } from 'typegpu';
 
-import { circles, grid } from './floor.ts';
 import * as c from './constants.ts';
-import { LightRay, Ray } from './types.ts';
-import { getSphere } from './sphere.ts';
+import { circles, grid } from './floor.ts';
 import { rayUnion } from './helpers.ts';
+import { getSphere } from './sphere.ts';
+import { LightRay, Ray } from './types.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 // == INIT ==
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
 const root = await tgpu.init();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // == BUFFERS ==
 const floorAngleUniform = root.createUniform(d.f32);
 const sphereAngleUniform = root.createUniform(d.f32);
-const glowIntensityUniform = root.createUniform(
-  d.f32,
-  c.INITIAL_GLOW_INTENSITY,
-);
+const glowIntensityUniform = root.createUniform(d.f32, c.INITIAL_GLOW_INTENSITY);
 const resolutionUniform = root.createUniform(d.vec2f);
 const sphereColorUniform = root.createUniform(d.vec3f, c.initialSphereColor);
 
@@ -41,25 +29,21 @@ const floorPatternSlot = tgpu.slot(circles);
 // == RAYMARCHING ==
 
 // returns smallest distance to some object in the scene
-const getSceneRay = tgpu.fn([d.vec3f], Ray)((p) => {
+const getSceneRay = tgpu.fn(
+  [d.vec3f],
+  Ray,
+)((p) => {
   const floor = Ray({
     dist: sdPlane(p, c.planeOrthonormal, c.PLANE_OFFSET),
     color: floorPatternSlot.$(p.xz, floorAngleUniform.$),
   });
-  const sphere = getSphere(
-    p,
-    sphereColorUniform.$,
-    c.sphereCenter,
-    sphereAngleUniform.$,
-  );
+  const sphere = getSphere(p, sphereColorUniform.$, c.sphereCenter, sphereAngleUniform.$);
 
   return rayUnion(floor, sphere);
 });
 
-const rayMarch = tgpu.fn(
-  [d.vec3f, d.vec3f],
-  LightRay,
-)((ro, rd) => {
+const rayMarch = (ro: d.v3f, rd: d.v3f) => {
+  'use gpu';
   let distOrigin = d.f32();
   const result = Ray({
     dist: d.f32(c.MAX_DIST),
@@ -69,18 +53,11 @@ const rayMarch = tgpu.fn(
   let glow = d.vec3f();
 
   for (let i = 0; i < c.MAX_STEPS; i++) {
-    const p = rd.mul(distOrigin).add(ro);
+    const p = rd * distOrigin + ro;
     const scene = getSceneRay(p);
-    const sphereDist = getSphere(
-      p,
-      sphereColorUniform.$,
-      c.sphereCenter,
-      sphereAngleUniform.$,
-    );
+    const sphereDist = getSphere(p, sphereColorUniform.$, c.sphereCenter, sphereAngleUniform.$);
 
-    glow = d.vec3f(sphereColorUniform.$)
-      .mul(std.exp(-sphereDist.dist))
-      .add(glow);
+    glow += d.vec3f(sphereColorUniform.$) * std.exp(-sphereDist.dist);
 
     distOrigin += scene.dist;
 
@@ -96,10 +73,10 @@ const rayMarch = tgpu.fn(
     }
   }
 
-  return { ray: result, glow };
-});
+  return LightRay({ ray: result, glow });
+};
 
-const vertexMain = tgpu['~unstable'].vertexFn({
+const vertexMain = tgpu.vertexFn({
   in: { idx: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })(({ idx }) => {
@@ -112,11 +89,12 @@ const vertexMain = tgpu['~unstable'].vertexFn({
   };
 });
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
-  const uv = input.uv.mul(2).sub(1);
+  'use gpu';
+  const uv = input.uv * 2 - 1;
   uv.x *= resolutionUniform.$.x / resolutionUniform.$.y;
 
   // ray origin and direction
@@ -127,7 +105,7 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   const march = rayMarch(ro, rd);
 
   // sky gradient
-  const y = rd.mul(march.ray.dist).add(ro).y - 2; // camera at level 2
+  const y = rd.y * march.ray.dist + ro.y - 2; // camera at level 2
   const sky = std.mix(c.skyColor1, c.skyColor2, y / c.MAX_DIST);
 
   // fog coefficient
@@ -146,19 +124,20 @@ const perlinCache = perlin3d.staticCache({
   size: d.vec3u(7),
 });
 
-let renderPipeline = root['~unstable']
+let renderPipeline = root
   .with(floorPatternSlot, circles)
   .pipe(perlinCache.inject())
-  .withVertex(vertexMain, {})
-  .withFragment(fragmentMain, { format: presentationFormat })
-  .createPipeline();
+  .createRenderPipeline({
+    vertex: vertexMain,
+    fragment: fragmentMain,
+  });
 
 let animationFrame: number;
 let floorAngle = 0;
 let sphereAngle = 0;
 let prevAngle = 0;
 function run(timestamp: number) {
-  const curAngle = (timestamp / 1000) % c.PERIOD / c.PERIOD * 2 * Math.PI;
+  const curAngle = (((timestamp / 1000) % c.PERIOD) / c.PERIOD) * 2 * Math.PI;
   const delta = (curAngle + 2 * Math.PI - prevAngle) % (2 * Math.PI);
   prevAngle = curAngle;
 
@@ -171,13 +150,7 @@ function run(timestamp: number) {
   sphereAngleUniform.write(sphereAngle);
   resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
 
-  renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .draw(3);
+  renderPipeline.withColorAttachment({ view: context }).draw(3);
 
   animationFrame = requestAnimationFrame(run);
 }
@@ -191,13 +164,13 @@ export function onCleanup() {
   root.destroy();
 }
 
-export const controls = {
+export const controls = defineControls({
   'glow intensity': {
     initial: c.INITIAL_GLOW_INTENSITY,
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       glowIntensityUniform.write(value);
     },
   },
@@ -206,7 +179,7 @@ export const controls = {
     min: -10,
     max: 10,
     step: 0.1,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       floorSpeed = value;
     },
   },
@@ -215,28 +188,29 @@ export const controls = {
     min: -10,
     max: 10,
     step: 0.1,
-    onSliderChange(value: number) {
+    onSliderChange(value) {
       sphereSpeed = value;
     },
   },
   'sphere color': {
-    initial: [...c.initialSphereColor] as const,
-    onColorChange: (value: readonly [number, number, number]) => {
-      sphereColorUniform.write(d.vec3f(...value));
+    initial: c.initialSphereColor,
+    onColorChange: (value) => {
+      sphereColorUniform.write(value);
     },
   },
   'floor pattern': {
     initial: 'circles',
     options: ['grid', 'circles'],
-    onSelectChange: (value: string) => {
-      renderPipeline = root['~unstable']
+    onSelectChange: (value) => {
+      renderPipeline = root
         .with(floorPatternSlot, value === 'grid' ? grid : circles)
         .pipe(perlinCache.inject())
-        .withVertex(vertexMain, {})
-        .withFragment(fragmentMain, { format: presentationFormat })
-        .createPipeline();
+        .createRenderPipeline({
+          vertex: vertexMain,
+          fragment: fragmentMain,
+        });
     },
   },
-};
+});
 
 // #endregion

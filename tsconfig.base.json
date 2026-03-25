@@ -1,9 +1,7 @@
 {
   "compilerOptions": {
     "outDir": "${configDir}/dist",
-    "baseUrl": "${configDir}",
     "declaration": true,
-    "declarationMap": true,
     "lib": ["ESNext", "DOM"],
     "emitDeclarationOnly": true,
     "target": "ESNext",

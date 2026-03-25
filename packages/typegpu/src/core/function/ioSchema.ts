@@ -6,81 +6,88 @@ import {
 } from '../../data/attributes.ts';
 import { isBuiltin } from '../../data/attributes.ts';
 import { getCustomLocation, isData } from '../../data/dataTypes.ts';
-import { struct } from '../../data/struct.ts';
-import {
-  type BaseData,
-  isVoid,
-  type Location,
-  type WgslStruct,
-} from '../../data/wgslTypes.ts';
-import type { IOData, IOLayout, IORecord } from './fnTypes.ts';
+import { INTERNAL_createStruct } from '../../data/struct.ts';
+import { type BaseData, isVoid, type Location, type WgslStruct } from '../../data/wgslTypes.ts';
 
-export type WithLocations<T extends IORecord> = {
-  [Key in keyof T]: IsBuiltin<T[Key]> extends true ? T[Key]
-    : HasCustomLocation<T[Key]> extends true ? T[Key]
-    : Decorate<T[Key], Location>;
+export type WithLocations<T extends Record<string, BaseData>> = {
+  [Key in keyof T]: IsBuiltin<T[Key]> extends true
+    ? T[Key]
+    : HasCustomLocation<T[Key]> extends true
+      ? T[Key]
+      : Decorate<T[Key], Location>;
 };
 
-export type IOLayoutToSchema<T extends IOLayout> = T extends BaseData
-  ? Decorate<T, Location<0>>
-  : T extends IORecord ? WgslStruct<WithLocations<T>>
-  // biome-ignore lint/suspicious/noConfusingVoidType: <it actually is void>
-  : T extends { type: 'void' } ? void
-  : never;
+export type IOLayoutToSchema<T> = T extends BaseData
+  ? HasCustomLocation<T> extends true
+    ? T
+    : Decorate<T, Location<0>>
+  : T extends Record<string, BaseData>
+    ? WgslStruct<WithLocations<T>>
+    : T extends { type: 'void' }
+      ? void
+      : never;
 
-export function withLocations<T extends IOData>(
-  members: IORecord<T> | undefined,
+export function withLocations<T extends BaseData>(
+  members: Record<string, T> | undefined,
   locations: Record<string, number> = {},
-): WithLocations<IORecord<T>> {
+): Record<string, BaseData> {
   let nextLocation = 0;
   const usedCustomLocations = new Set<number>();
 
   return Object.fromEntries(
-    Object.entries(members ?? {}).map(([key, member]) => {
-      const customLocation = getCustomLocation(member);
+    Object.entries(members ?? {})
+      .map(([key, member]) => {
+        const customLocation = getCustomLocation(member);
 
-      if (customLocation !== undefined) {
-        if (usedCustomLocations.has(customLocation)) {
-          throw new Error('Duplicate custom location attributes found');
+        if (customLocation !== undefined) {
+          if (usedCustomLocations.has(customLocation)) {
+            throw new Error('Duplicate custom location attributes found');
+          }
+          usedCustomLocations.add(customLocation);
         }
-        usedCustomLocations.add(customLocation);
-      }
 
-      return [key, member] as const;
-    }).map(([key, member]) => {
-      if (isBuiltin(member)) { // skipping builtins
-        return [key, member];
-      }
+        return [key, member] as const;
+      })
+      .map(([key, member]) => {
+        if (isBuiltin(member)) {
+          // skipping builtins
+          return [key, member];
+        }
 
-      if (getCustomLocation(member) !== undefined) { // this member is already marked
-        return [key, member];
-      }
+        if (getCustomLocation(member) !== undefined) {
+          // this member is already marked
+          return [key, member];
+        }
 
-      if (locations[key]) { // location has been determined by a previous procedure
-        return [key, location(locations[key], member)];
-      }
+        if (locations[key]) {
+          // location has been determined by a previous procedure
+          return [key, location(locations[key], member)];
+        }
 
-      while (usedCustomLocations.has(nextLocation)) {
-        nextLocation++;
-      }
-      return [key, location(nextLocation++, member)];
-    }),
+        while (usedCustomLocations.has(nextLocation)) {
+          nextLocation++;
+        }
+        return [key, location(nextLocation++, member)];
+      }),
   );
 }
 
-export function createIoSchema<
-  T extends IOData,
-  Layout extends IORecord<T> | IOLayout<T>,
->(layout: Layout, locations: Record<string, number> = {}) {
+export function createIoSchema<T extends BaseData | Record<string, BaseData>>(
+  layout: T,
+  locations: Record<string, number> = {},
+) {
   return (
     isData(layout)
       ? isVoid(layout)
         ? layout
         : isBuiltin(layout)
-        ? layout
-        : getCustomLocation(layout) !== undefined
-        ? layout
-        : location(0, layout)
-      : struct(withLocations(layout, locations) as Record<string, T>)
-  ) as IOLayoutToSchema<Layout>;
+          ? layout
+          : getCustomLocation(layout) !== undefined
+            ? layout
+            : location(0, layout)
+      : INTERNAL_createStruct(
+          withLocations(layout as Record<string, BaseData>, locations),
+          /* isAbstruct */ false,
+        )
+  ) as IOLayoutToSchema<T>;
 }

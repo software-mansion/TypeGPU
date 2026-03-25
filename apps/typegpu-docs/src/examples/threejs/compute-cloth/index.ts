@@ -2,21 +2,16 @@
  * Based on: https://github.com/mrdoob/three.js/blob/dev/examples/webgpu_compute_cloth.html
  */
 
-import * as d from 'typegpu/data';
+import { d, std } from 'typegpu';
 import * as THREE from 'three/webgpu';
 import * as t3 from '@typegpu/three';
-import * as std from 'typegpu/std';
-
 import * as TSL from 'three/tsl';
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { UltraHDRLoader } from 'three/addons/loaders/UltraHDRLoader.js';
 import WebGPU from 'three/addons/capabilities/WebGPU.js';
-import {
-  clothNumSegmentsX,
-  clothNumSegmentsY,
-  VerletSimulation,
-} from './verlet.ts';
+import { clothNumSegmentsX, clothNumSegmentsY, VerletSimulation } from './verlet.ts';
+import { defineControls } from '../../common/defineControls.ts';
 
 const sphereRadius = 0.15;
 const spherePositionUniform = t3.uniform(new THREE.Vector3(0, 0, 0), d.vec3f);
@@ -50,7 +45,7 @@ const API = {
   sheenColor: 0xffffff, // sRGB
 };
 
-if (WebGPU.isAvailable() === false) {
+if (!WebGPU.isAvailable()) {
   document.body.appendChild(WebGPU.getErrorMessage());
 
   throw new Error('No WebGPU support');
@@ -73,12 +68,7 @@ const material = new THREE.MeshStandardNodeMaterial();
 const sphere = new THREE.Mesh(geometry, material);
 scene.add(sphere);
 
-const camera = new THREE.PerspectiveCamera(
-  40,
-  1,
-  0.01,
-  10,
-);
+const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 10);
 camera.position.set(-1.6, -0.1, -1.6);
 
 const cameraControls = new OrbitControls(camera, canvas);
@@ -100,15 +90,16 @@ scene.environment = hdrTexture;
 setupWireframe();
 const clothMesh = setupClothMesh();
 
-renderer.setAnimationLoop(render);
+void renderer.setAnimationLoop(render);
 
 function setupWireframe() {
   // adds helpers to visualize the verlet system
 
   // verlet vertex visualizer
   const vertexWireframeMaterial = new THREE.SpriteNodeMaterial();
-  vertexWireframeMaterial.positionNode = verletSim.vertexPositionBuffer.node
-    .element(TSL.instanceIndex);
+  vertexWireframeMaterial.positionNode = verletSim.vertexPositionBuffer.node.element(
+    TSL.instanceIndex,
+  );
   vertexWireframeObject = new THREE.Mesh(
     new THREE.PlaneGeometry(0.01, 0.01),
     vertexWireframeMaterial,
@@ -118,16 +109,8 @@ function setupWireframe() {
   scene.add(vertexWireframeObject);
 
   // verlet spring visualizer
-  const springWireframePositionBuffer = new THREE.BufferAttribute(
-    new Float32Array(6),
-    3,
-    false,
-  );
-  const springWireframeIndexBuffer = new THREE.BufferAttribute(
-    new Uint32Array([0, 1]),
-    1,
-    false,
-  );
+  const springWireframePositionBuffer = new THREE.BufferAttribute(new Float32Array(6), 3, false);
+  const springWireframeIndexBuffer = new THREE.BufferAttribute(new Uint32Array([0, 1]), 1, false);
   const springWireframeMaterial = new THREE.LineBasicNodeMaterial();
   const vertexIndex = t3.fromTSL(TSL.attribute('vertexIndex'), d.f32);
   springWireframeMaterial.positionNode = t3.toTSL(() => {
@@ -138,20 +121,11 @@ function setupWireframe() {
   });
 
   const springWireframeGeometry = new THREE.InstancedBufferGeometry();
-  springWireframeGeometry.setAttribute(
-    'position',
-    springWireframePositionBuffer,
-  );
-  springWireframeGeometry.setAttribute(
-    'vertexIndex',
-    springWireframeIndexBuffer,
-  );
+  springWireframeGeometry.setAttribute('position', springWireframePositionBuffer);
+  springWireframeGeometry.setAttribute('vertexIndex', springWireframeIndexBuffer);
   springWireframeGeometry.instanceCount = verletSim.springs.length;
 
-  springWireframeObject = new THREE.Line(
-    springWireframeGeometry,
-    springWireframeMaterial,
-  );
+  springWireframeObject = new THREE.Line(springWireframeGeometry, springWireframeMaterial);
   springWireframeObject.frustumCulled = false;
   springWireframeObject.count = verletSim.springs.length;
   scene.add(springWireframeObject);
@@ -179,42 +153,21 @@ function setupClothMesh(): THREE.Mesh {
       verletVertexIdArray[index * 4] = verletSim.vertexColumns[x][y].id;
       verletVertexIdArray[index * 4 + 1] = verletSim.vertexColumns[x + 1][y].id;
       verletVertexIdArray[index * 4 + 2] = verletSim.vertexColumns[x][y + 1].id;
-      verletVertexIdArray[index * 4 + 3] =
-        verletSim.vertexColumns[x + 1][y + 1].id;
+      verletVertexIdArray[index * 4 + 3] = verletSim.vertexColumns[x + 1][y + 1].id;
 
       vertexUvArray[index * 2] = x / clothNumSegmentsX;
       vertexUvArray[index * 2 + 1] = y / clothNumSegmentsY;
 
       if (x > 0 && y > 0) {
-        indices.push(
-          getIndex(x, y),
-          getIndex(x - 1, y),
-          getIndex(x - 1, y - 1),
-        );
-        indices.push(
-          getIndex(x, y),
-          getIndex(x - 1, y - 1),
-          getIndex(x, y - 1),
-        );
+        indices.push(getIndex(x, y), getIndex(x - 1, y), getIndex(x - 1, y - 1));
+        indices.push(getIndex(x, y), getIndex(x - 1, y - 1), getIndex(x, y - 1));
       }
     }
   }
 
-  const verletVertexIdBuffer = new THREE.BufferAttribute(
-    verletVertexIdArray,
-    4,
-    false,
-  );
-  const positionBuffer = new THREE.BufferAttribute(
-    new Float32Array(vertexCount * 3),
-    3,
-    false,
-  );
-  const uvBuffer = new THREE.BufferAttribute(
-    vertexUvArray,
-    2,
-    false,
-  );
+  const verletVertexIdBuffer = new THREE.BufferAttribute(verletVertexIdArray, 4, false);
+  const positionBuffer = new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3, false);
+  const uvBuffer = new THREE.BufferAttribute(vertexUvArray, 2, false);
   geometry.setAttribute('position', positionBuffer);
   geometry.setAttribute('uv', uvBuffer);
   geometry.setAttribute('vertexIds', verletVertexIdBuffer);
@@ -238,7 +191,7 @@ function setupClothMesh(): THREE.Mesh {
   clothMaterial.colorNode = t3.toTSL(() => {
     'use gpu';
     const uv = t3.uv().$;
-    const pattern = checkerBoard(uv.mul(5));
+    const pattern = checkerBoard(uv * 5);
     return std.mix(patternUniforms.color1.$, patternUniforms.color2.$, pattern);
   });
 
@@ -274,11 +227,7 @@ function setupClothMesh(): THREE.Mesh {
 }
 
 function updateSphere() {
-  sphere.position.set(
-    Math.sin(timestamp * 2.1) * 0.1,
-    0,
-    Math.sin(timestamp * 0.8),
-  );
+  sphere.position.set(Math.sin(timestamp * 2.1) * 0.1, 0, Math.sin(timestamp * 0.8));
   spherePositionUniform.node.value.copy(sphere.position);
 }
 
@@ -322,7 +271,7 @@ async function render() {
 }
 
 // #region Example controls and cleanup
-export const controls = {
+export const controls = defineControls({
   Stiffness: {
     initial: 0.2,
     min: 0.1,
@@ -333,14 +282,14 @@ export const controls = {
     },
   },
   'Pattern Color 1': {
-    initial: [204 / 255, 144 / 255, 250 / 255] as [number, number, number],
-    onColorChange: (value: [number, number, number]) => {
+    initial: d.vec3f(204, 144, 250).div(255),
+    onColorChange: (value) => {
       patternUniforms.color1.node.value.set(value[0], value[1], value[2], 1);
     },
   },
   'Pattern Color 2': {
-    initial: [100 / 255, 125 / 255, 228 / 255] as [number, number, number],
-    onColorChange: (value: [number, number, number]) => {
+    initial: d.vec3f(100, 125, 228).div(255),
+    onColorChange: (value) => {
       patternUniforms.color2.node.value.set(value[0], value[1], value[2], 1);
     },
   },
@@ -349,7 +298,7 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       clothMaterial.roughness = value;
     },
   },
@@ -358,7 +307,7 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       clothMaterial.sheen = value;
     },
   },
@@ -367,13 +316,17 @@ export const controls = {
     min: 0,
     max: 1,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       clothMaterial.sheenRoughness = value;
     },
   },
   'Sheen Color': {
-    initial: new THREE.Color(API.sheenColor).toArray(),
-    onColorChange: (value: [number, number, number]) => {
+    initial: d.vec3f(
+      ((API.sheenColor >> 16) & 0xff) / 255,
+      ((API.sheenColor >> 8) & 0xff) / 255,
+      (API.sheenColor & 0xff) / 255,
+    ),
+    onColorChange: (value) => {
       const color = new THREE.Color().fromArray(value);
       API.sheenColor = color.getHex();
       clothMaterial.sheenColor = color;
@@ -384,11 +337,11 @@ export const controls = {
     min: 0,
     max: 5,
     step: 0.01,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       params.wind = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   observer.disconnect();

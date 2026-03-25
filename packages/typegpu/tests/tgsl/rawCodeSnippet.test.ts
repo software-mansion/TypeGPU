@@ -1,13 +1,15 @@
-import { describe, expect } from 'vitest';
-import { it } from '../utils/extendedIt.ts';
-import * as d from '../../src/data/index.ts';
-import tgpu from '../../src/index.ts';
+import { describe, expect, expectTypeOf } from 'vitest';
+import { it } from 'typegpu-testing-utility';
+import tgpu, { d } from '../../src/index.js';
 
 describe('rawCodeSnippet', () => {
   it('should throw a descriptive error when called in JS', () => {
     const rawSnippet = tgpu['~unstable'].rawCodeSnippet('3', d.f32);
 
-    const myFn = tgpu.fn([], d.f32)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       return rawSnippet.$;
     });
 
@@ -20,7 +22,10 @@ describe('rawCodeSnippet', () => {
   it('should properly inline', () => {
     const rawSnippet = tgpu['~unstable'].rawCodeSnippet('3f', d.f32);
 
-    const myFn = tgpu.fn([], d.f32)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       return rawSnippet.$;
     });
 
@@ -32,13 +37,12 @@ describe('rawCodeSnippet', () => {
   });
 
   it('should use the origin', () => {
-    const rawSnippet = tgpu['~unstable'].rawCodeSnippet(
-      '3f',
-      d.f32,
-      'constant',
-    );
+    const rawSnippet = tgpu['~unstable'].rawCodeSnippet('3f', d.f32, 'constant');
 
-    const myFn = tgpu.fn([], d.f32)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
       const a = rawSnippet.$; // should resolve to 'const' instead of 'let'
       return a;
     });
@@ -54,13 +58,14 @@ describe('rawCodeSnippet', () => {
   it('should properly resolve dependencies', ({ root }) => {
     const myBuffer = root.createUniform(d.u32, 7);
 
-    const rawSnippet = tgpu['~unstable'].rawCodeSnippet(
-      'myBuffer',
-      d.u32,
-      'uniform',
-    ).$uses({ myBuffer });
+    const rawSnippet = tgpu['~unstable']
+      .rawCodeSnippet('myBuffer', d.u32, 'uniform')
+      .$uses({ myBuffer });
 
-    const myFn = tgpu.fn([], d.u32)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
       return rawSnippet.$;
     });
 
@@ -76,13 +81,14 @@ describe('rawCodeSnippet', () => {
   it('should properly resolve layout dependencies', ({ root }) => {
     const myLayout = tgpu.bindGroupLayout({ myBuffer: { uniform: d.u32 } });
 
-    const rawSnippet = tgpu['~unstable'].rawCodeSnippet(
-      'myLayout.$.myBuffer',
-      d.u32,
-      'uniform',
-    ).$uses({ myLayout });
+    const rawSnippet = tgpu['~unstable']
+      .rawCodeSnippet('myLayout.$.myBuffer', d.u32, 'uniform')
+      .$uses({ myLayout });
 
-    const myFn = tgpu.fn([], d.u32)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
       return rawSnippet.$;
     });
 
@@ -98,13 +104,14 @@ describe('rawCodeSnippet', () => {
   it('should not duplicate dependencies', ({ root }) => {
     const myBuffer = root.createUniform(d.u32, 7);
 
-    const rawSnippet = tgpu['~unstable'].rawCodeSnippet(
-      'myBuffer',
-      d.u32,
-      'uniform',
-    ).$uses({ myBuffer });
+    const rawSnippet = tgpu['~unstable']
+      .rawCodeSnippet('myBuffer', d.u32, 'uniform')
+      .$uses({ myBuffer });
 
-    const myFn = tgpu.fn([], d.u32)(() => {
+    const myFn = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
       return myBuffer.$ + rawSnippet.$;
     });
 
@@ -113,6 +120,22 @@ describe('rawCodeSnippet', () => {
 
       fn myFn() -> u32 {
         return (myBuffer + myBuffer);
+      }"
+    `);
+  });
+
+  it('should be accessed transitively through a slot', () => {
+    const exprSlot = tgpu.slot(tgpu['~unstable'].rawCodeSnippet('0.5 + 0.2', d.f32, 'constant'));
+
+    const foo = () => {
+      'use gpu';
+      return exprSlot.$;
+    };
+
+    expectTypeOf<typeof exprSlot.$>().toEqualTypeOf<number>();
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() -> f32 {
+        return 0.5 + 0.2;
       }"
     `);
   });

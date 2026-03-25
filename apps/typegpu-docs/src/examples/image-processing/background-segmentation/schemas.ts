@@ -1,5 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 // constants
 
@@ -43,8 +42,8 @@ export const Params = d.struct({
   sampleBias: d.f32,
 });
 
-export const paramsAccessor = tgpu['~unstable'].accessor(Params);
-export const flipSlot = tgpu['~unstable'].accessor(d.bool);
+export const paramsAccess = tgpu.accessor(Params);
+export const flipAccess = tgpu.accessor(d.bool);
 
 export interface ModelConfig {
   name: string;

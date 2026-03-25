@@ -1,5 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const WORKGROUP_SIZE = [8, 8] as [number, number];
 const MAX_MATRIX_SIZE = 6;
@@ -75,10 +75,7 @@ const bindGroup = root.createBindGroup(layout, {
   resultMatrix: resultMatrixBuffer,
 });
 
-function createMatrix(
-  size: d.v2f,
-  initValue: (row: number, col: number) => number,
-) {
+function createMatrix(size: d.v2f, initValue: (row: number, col: number) => number) {
   return {
     size: size,
     numbers: Array(size.x * size.y)
@@ -88,13 +85,11 @@ function createMatrix(
 }
 
 async function run() {
-  const firstMatrix = createMatrix(
-    d.vec2f(firstRowCount, firstColumnCount),
-    () => Math.floor(Math.random() * 10),
+  const firstMatrix = createMatrix(d.vec2f(firstRowCount, firstColumnCount), () =>
+    Math.floor(Math.random() * 10),
   );
-  const secondMatrix = createMatrix(
-    d.vec2f(firstColumnCount, secondColumnCount),
-    () => Math.floor(Math.random() * 10),
+  const secondMatrix = createMatrix(d.vec2f(firstColumnCount, secondColumnCount), () =>
+    Math.floor(Math.random() * 10),
   );
 
   firstMatrixBuffer.write(firstMatrix);
@@ -120,7 +115,7 @@ async function run() {
   printMatrixToHtml(resultTable, multiplicationResult);
 }
 
-run();
+void run();
 
 // #region UI
 
@@ -128,10 +123,7 @@ const firstTable = document.querySelector('.matrix-a') as HTMLDivElement;
 const secondTable = document.querySelector('.matrix-b') as HTMLDivElement;
 const resultTable = document.querySelector('.matrix-result') as HTMLDivElement;
 
-function printMatrixToHtml(
-  element: HTMLDivElement,
-  matrix: d.Infer<typeof MatrixStruct>,
-) {
+function printMatrixToHtml(element: HTMLDivElement, matrix: d.Infer<typeof MatrixStruct>) {
   element.style.gridTemplateColumns = `repeat(${matrix.size.y}, 1fr)`;
   element.innerHTML = matrix.numbers
     .slice(0, matrix.size.x * matrix.size.y)
@@ -149,40 +141,40 @@ const paramSettings = {
   step: 1,
 };
 
-export const controls = {
+export const controls = defineControls({
   Reshuffle: {
     onButtonClick: () => {
-      run();
+      void run();
     },
   },
 
   '#1 rows': {
     initial: firstRowCount,
     ...paramSettings,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       firstRowCount = value;
-      run();
+      void run();
     },
   },
 
   '#1 columns': {
     initial: firstColumnCount,
     ...paramSettings,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       firstColumnCount = value;
-      run();
+      void run();
     },
   },
 
   '#2 columns': {
     initial: secondColumnCount,
     ...paramSettings,
-    onSliderChange: (value: number) => {
+    onSliderChange: (value) => {
       secondColumnCount = value;
-      run();
+      void run();
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

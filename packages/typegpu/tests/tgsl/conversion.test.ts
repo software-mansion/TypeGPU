@@ -7,7 +7,7 @@ import {
   convertToCommonType,
   getBestConversion,
 } from '../../src/tgsl/conversion.ts';
-import { it } from '../utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import { INTERNAL_setCtx } from '../../src/execMode.ts';
 import { CodegenState } from '../../src/types.ts';
 import { UnknownData } from '../../src/data/dataTypes.ts';
@@ -20,6 +20,7 @@ const ctx = new ResolutionCtxImpl({
   namespace: namespace({ names: 'strict' }),
   shaderGenerator: wgslGenerator,
 });
+wgslGenerator.initGenerator(ctx);
 ctx.pushMode(new CodegenState());
 
 beforeAll(() => {
@@ -32,19 +33,9 @@ afterAll(() => {
 
 describe('getBestConversion', () => {
   // d.ptrPrivate(d.f32)
-  const ptrF32 = INTERNAL_createPtr(
-    'private',
-    d.f32,
-    'read-write',
-    /* implicit */ true,
-  );
+  const ptrF32 = INTERNAL_createPtr('private', d.f32, 'read-write', /* implicit */ true);
   // d.ptrPrivate(d.i32)
-  const ptrI32 = INTERNAL_createPtr(
-    'private',
-    d.i32,
-    'read-write',
-    /* implicit */ true,
-  );
+  const ptrI32 = INTERNAL_createPtr('private', d.i32, 'read-write', /* implicit */ true);
 
   it('returns result for identical types', () => {
     const res = getBestConversion([d.f32, d.f32]);
@@ -211,7 +202,7 @@ describe('convertToCommonType', () => {
   const snippetUnknown = snip('?', UnknownData, /* origin */ 'runtime');
 
   it('converts identical types', () => {
-    const result = convertToCommonType([snippetF32, snippetF32]);
+    const result = convertToCommonType(ctx, [snippetF32, snippetF32]);
     expect(result).toBeDefined();
     expect(result?.length).toBe(2);
     expect(result?.[0]?.dataType).toBe(d.f32);
@@ -221,11 +212,7 @@ describe('convertToCommonType', () => {
   });
 
   it('handles abstract types automatically', () => {
-    const result = convertToCommonType([
-      snippetAbsFloat,
-      snippetF32,
-      snippetAbsInt,
-    ]);
+    const result = convertToCommonType(ctx, [snippetAbsFloat, snippetF32, snippetAbsInt]);
     // since WGSL handles all abstract types automatically, this should be basically identity
     expect(result).toBeDefined();
     expect(result?.length).toBe(3);
@@ -238,7 +225,7 @@ describe('convertToCommonType', () => {
   });
 
   it('performs implicit casts and warns', () => {
-    const result = convertToCommonType([snippetI32, snippetF32]);
+    const result = convertToCommonType(ctx, [snippetI32, snippetF32]);
     expect(result).toBeDefined();
     expect(result?.length).toBe(2);
     expect(result?.[0]?.dataType).toBe(d.f32);
@@ -248,7 +235,7 @@ describe('convertToCommonType', () => {
   });
 
   it('performs pointer dereferencing', () => {
-    const result = convertToCommonType([snippetPtrF32, snippetF32]);
+    const result = convertToCommonType(ctx, [snippetPtrF32, snippetF32]);
     expect(result).toBeDefined();
     expect(result?.length).toBe(2);
     expect(result?.[0]?.dataType).toBe(d.f32);
@@ -259,24 +246,24 @@ describe('convertToCommonType', () => {
 
   it('returns undefined for incompatible types', () => {
     const snippetVec2f = snip('v2', d.vec2f, /* origin */ 'runtime');
-    const result = convertToCommonType([snippetF32, snippetVec2f]);
+    const result = convertToCommonType(ctx, [snippetF32, snippetVec2f]);
     expect(result).toBeUndefined();
   });
 
   it('returns undefined if any type is UnknownData', () => {
-    const result = convertToCommonType([snippetF32, snippetUnknown]);
+    const result = convertToCommonType(ctx, [snippetF32, snippetUnknown]);
     expect(result).toBeUndefined();
   });
 
   it('returns undefined for empty input', () => {
-    const result = convertToCommonType([]);
+    const result = convertToCommonType(ctx, []);
     expect(result).toBeUndefined();
   });
 
   it('respects restrictTo types', () => {
     // [abstractInt, i32] -> common type i32
     // Restrict to f32: requires cast for i32
-    const result = convertToCommonType([snippetAbsInt, snippetI32], [d.f32]);
+    const result = convertToCommonType(ctx, [snippetAbsInt, snippetI32], [d.f32]);
     expect(result).toBeDefined();
     expect(result?.length).toBe(2);
     expect(result?.[0]?.dataType).toBe(d.f32);
@@ -286,19 +273,19 @@ describe('convertToCommonType', () => {
   });
 
   it('can restrict abstractFloat to u32', () => {
-    const result = convertToCommonType([snippetAbsFloat], [d.u32]);
+    const result = convertToCommonType(ctx, [snippetAbsFloat], [d.u32]);
     expect(result).toBeDefined();
     expect(result?.[0]?.dataType).toBe(d.u32);
     expect(result?.[0]?.value).toBe('u32(1.1)');
   });
 
   it('fails if restrictTo is incompatible', () => {
-    const result = convertToCommonType([snippetAbsInt, snippetI32], [d.vec2f]);
+    const result = convertToCommonType(ctx, [snippetAbsInt, snippetI32], [d.vec2f]);
     expect(result).toBeUndefined();
   });
 
   it('handles void gracefully', () => {
-    const result = convertToCommonType([
+    const result = convertToCommonType(ctx, [
       snippetF32,
       snip('void', d.Void, /* origin */ 'runtime'),
     ]);
@@ -306,7 +293,7 @@ describe('convertToCommonType', () => {
   });
 
   it('handles void as target type gracefully', () => {
-    const result = convertToCommonType([snippetF32], [d.Void]);
+    const result = convertToCommonType(ctx, [snippetF32], [d.Void]);
     expect(result).toBeUndefined();
   });
 });
@@ -326,7 +313,7 @@ describe('convertStructValues', () => {
       c: snip('vec2f(1.0, 1.0)', d.vec2f, /* origin */ 'runtime'),
       d: snip('true', d.bool, /* origin */ 'runtime'),
     };
-    const res = convertStructValues(structType, snippets);
+    const res = convertStructValues(ctx, structType, snippets);
     expect(res.length).toBe(4);
     expect(res[0]).toEqual(snippets.a);
     expect(res[1]).toEqual(snippets.b);
@@ -341,7 +328,7 @@ describe('convertStructValues', () => {
       c: snip('2.22', d.f32, /* origin */ 'runtime'),
       d: snip('true', d.bool, /* origin */ 'runtime'),
     };
-    const res = convertStructValues(structType, snippets);
+    const res = convertStructValues(ctx, structType, snippets);
     expect(res.length).toBe(4);
     expect(res[0]).toEqual(snip('f32(1)', d.f32, /* origin */ 'runtime')); // Cast applied
     expect(res[1]).toEqual(snip('i32(2)', d.i32, /* origin */ 'runtime')); // Cast applied
@@ -356,8 +343,6 @@ describe('convertStructValues', () => {
       c: snip('vec2f(1.0, 1.0)', d.vec2f, /* origin */ 'runtime'),
       d: snip('true', d.bool, /* origin */ 'runtime'),
     };
-    expect(() => convertStructValues(structType, snippets)).toThrow(
-      /Missing property b/,
-    );
+    expect(() => convertStructValues(ctx, structType, snippets)).toThrow(/Missing property b/);
   });
 });

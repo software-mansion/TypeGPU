@@ -19,7 +19,7 @@ export const unpack2x16float = dualImpl({
     return vec2f(reader.readFloat16(), reader.readFloat16());
   },
   signature: { argTypes: [u32], returnType: vec2f },
-  codegenImpl: (e) => stitch`unpack2x16float(${e})`,
+  codegenImpl: (_ctx, [e]) => stitch`unpack2x16float(${e})`,
 });
 
 /**
@@ -37,7 +37,7 @@ export const pack2x16float = dualImpl({
     return u32(reader.readUint32());
   },
   signature: { argTypes: [vec2f], returnType: u32 },
-  codegenImpl: (e) => stitch`pack2x16float(${e})`,
+  codegenImpl: (_ctx, [e]) => stitch`pack2x16float(${e})`,
 });
 
 /**
@@ -59,7 +59,7 @@ export const unpack4x8unorm = dualImpl({
     );
   },
   signature: { argTypes: [u32], returnType: vec4f },
-  codegenImpl: (e) => stitch`unpack4x8unorm(${e})`,
+  codegenImpl: (_ctx, [e]) => stitch`unpack4x8unorm(${e})`,
 });
 
 /**
@@ -79,5 +79,5 @@ export const pack4x8unorm = dualImpl({
     return u32(reader.readUint32());
   },
   signature: { argTypes: [vec4f], returnType: u32 },
-  codegenImpl: (e) => stitch`pack4x8unorm(${e})`,
+  codegenImpl: (_ctx, [e]) => stitch`pack4x8unorm(${e})`,
 });

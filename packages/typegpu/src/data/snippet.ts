@@ -1,7 +1,7 @@
 import { undecorate } from './dataTypes.ts';
-import type { AnyData, UnknownData } from './dataTypes.ts';
+import type { UnknownData } from './dataTypes.ts';
 import { DEV } from '../shared/env.ts';
-import { isNumericSchema } from './wgslTypes.ts';
+import { type BaseData, isNumericSchema } from './wgslTypes.ts';
 
 export type Origin =
   | 'uniform'
@@ -33,6 +33,22 @@ export function isEphemeralOrigin(space: Origin) {
   return space === 'runtime' || space === 'constant' || space === 'argument';
 }
 
+/**
+ * What happens to a snippet's origin when it's deep copied in JS, and left as is in WGSL?
+ * e.g. `vec3f(vec3f(0, 1, 2))`
+ */
+export function fallthroughCopyOrigin(origin: Origin): Origin {
+  if (
+    origin === 'runtime' || // runtime values stay runtime
+    origin === 'constant' // constant values stay constant
+  ) {
+    // The origin is kept as-is
+    return origin;
+  }
+  // All other origins become runtime
+  return 'runtime';
+}
+
 export function isEphemeralSnippet(snippet: Snippet) {
   return isEphemeralOrigin(snippet.origin);
 }
@@ -54,7 +70,7 @@ export interface Snippet {
    * The type that `value` is assignable to (not necessary exactly inferred as).
    * E.g. `1.1` is assignable to `f32`, but `1.1` itself is an abstract float
    */
-  readonly dataType: AnyData | UnknownData;
+  readonly dataType: BaseData | UnknownData;
   readonly origin: Origin;
 }
 
@@ -64,7 +80,7 @@ export interface ResolvedSnippet {
    * The type that `value` is assignable to (not necessary exactly inferred as).
    * E.g. `1.1` is assignable to `f32`, but `1.1` itself is an abstract float
    */
-  readonly dataType: AnyData;
+  readonly dataType: BaseData;
   readonly origin: Origin;
 }
 
@@ -73,7 +89,7 @@ export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 class SnippetImpl implements Snippet {
   constructor(
     readonly value: unknown,
-    readonly dataType: AnyData | UnknownData,
+    readonly dataType: BaseData | UnknownData,
     readonly origin: Origin,
   ) {}
 }
@@ -86,19 +102,11 @@ export function isSnippetNumeric(snippet: Snippet) {
   return isNumericSchema(snippet.dataType);
 }
 
-export function snip(
-  value: string,
-  dataType: AnyData,
-  origin: Origin,
-): ResolvedSnippet;
+export function snip(value: string, dataType: BaseData, origin: Origin): ResolvedSnippet;
+export function snip(value: unknown, dataType: BaseData | UnknownData, origin: Origin): Snippet;
 export function snip(
   value: unknown,
-  dataType: AnyData | UnknownData,
-  origin: Origin,
-): Snippet;
-export function snip(
-  value: unknown,
-  dataType: AnyData | UnknownData,
+  dataType: BaseData | UnknownData,
   origin: Origin,
 ): Snippet | ResolvedSnippet {
   if (DEV && isSnippet(value)) {
@@ -109,7 +117,7 @@ export function snip(
   return new SnippetImpl(
     value,
     // We don't care about attributes in snippet land, so we discard that information.
-    undecorate(dataType as AnyData),
+    undecorate(dataType as BaseData),
     origin,
   );
 }

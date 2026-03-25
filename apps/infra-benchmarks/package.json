@@ -1,11 +1,11 @@
 {
   "name": "infra-benchmarks",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
   "scripts": {
     "discriminated-union": "node --experimental-strip-types --expose-gc src/discriminated-union.ts"
   },
-  "license": "MIT",
   "devDependencies": {
     "tinybench": "^3.1.0"
   },

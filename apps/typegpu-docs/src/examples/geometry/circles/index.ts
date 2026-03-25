@@ -1,8 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as s from 'typegpu/std';
-
 import { circle, circleVertexCount } from '@typegpu/geometry';
+import tgpu, { d, std as s } from 'typegpu';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas');
@@ -74,22 +71,24 @@ const bindGroupLayout = tgpu.bindGroupLayout({
 // );
 
 const circleCount = 1000;
-const circles = root.createBuffer(
-  d.arrayOf(Circle, circleCount),
-  Array.from({ length: circleCount }).map(() =>
-    Circle({
-      position: d.vec2f(Math.random() * 2 - 1, Math.random() * 2 - 1),
-      radius: 0.05 * Math.random() + 0.01,
-    })
-  ),
-).$usage('storage');
+const circles = root
+  .createBuffer(
+    d.arrayOf(Circle, circleCount),
+    Array.from({ length: circleCount }).map(() =>
+      Circle({
+        position: d.vec2f(Math.random() * 2 - 1, Math.random() * 2 - 1),
+        radius: 0.05 * Math.random() + 0.01,
+      }),
+    ),
+  )
+  .$usage('storage');
 
 const uniformsBindGroup = root.createBindGroup(bindGroupLayout, {
   // uniforms,
   circles,
 });
 
-const mainVertexMaxArea = tgpu['~unstable'].vertexFn({
+const mainVertexMaxArea = tgpu.vertexFn({
   in: {
     instanceIndex: d.builtin.instanceIndex,
     vertexIndex: d.builtin.vertexIndex,
@@ -110,43 +109,35 @@ const mainVertexMaxArea = tgpu['~unstable'].vertexFn({
   };
 });
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: {
     uv: d.vec2f,
     instanceIndex: d.interpolate('flat', d.u32),
   },
   out: d.vec4f,
 })(({ uv, instanceIndex }) => {
-  const color = d.vec3f(
-    1,
-    s.cos(d.f32(instanceIndex)),
-    s.sin(5 * d.f32(instanceIndex)),
-  );
+  const color = d.vec3f(1, s.cos(d.f32(instanceIndex)), s.sin(5 * d.f32(instanceIndex)));
   const r = s.length(uv);
-  return d.vec4f(
-    s.mix(color, d.vec3f(), s.clamp((r - 0.9) * 20, 0, 0.5)),
-    1,
-  );
+  return d.vec4f(s.mix(color, d.vec3f(), s.clamp((r - 0.9) * 20, 0, 0.5)), 1);
 });
 
-const pipeline = root['~unstable']
-  .withVertex(mainVertexMaxArea, {})
-  .withFragment(mainFragment, { format: presentationFormat })
-  .withMultisample({ count: multisample ? 4 : 1 })
-  .createPipeline();
+const pipeline = root.createRenderPipeline({
+  vertex: mainVertexMaxArea,
+  fragment: mainFragment,
+  targets: { format: presentationFormat },
+  multisample: { count: multisample ? 4 : 1 },
+});
 
 setTimeout(() => {
   pipeline
-    .with(bindGroupLayout, uniformsBindGroup)
+    .with(uniformsBindGroup)
     .withColorAttachment({
       ...(multisample
         ? {
-          view: msaaTextureView,
-          resolveTarget: context.getCurrentTexture().createView(),
-        }
-        : {
-          view: context.getCurrentTexture().createView(),
-        }),
+            view: msaaTextureView,
+            resolveTarget: context,
+          }
+        : { view: context }),
       clearValue: [0, 0, 0, 0],
       loadOp: 'clear',
       storeOp: 'store',

@@ -1,7 +1,6 @@
 import { describe, expect, vi } from 'vitest';
-import tgpu from '../src/index.ts';
-import * as d from '../src/data/index.ts';
-import { it } from './utils/extendedIt.ts';
+import tgpu, { d } from '../src/index.js';
+import { it } from 'typegpu-testing-utility';
 
 describe('tgpu.namespace', () => {
   it('defines direct dependencies only once', () => {
@@ -38,7 +37,10 @@ describe('tgpu.namespace', () => {
       pos: d.vec3f,
     });
 
-    const createBoid = tgpu.fn([], Boid)(() => {
+    const createBoid = tgpu.fn(
+      [],
+      Boid,
+    )(() => {
       return Boid();
     });
 
@@ -104,7 +106,10 @@ describe('tgpu.namespace', () => {
       const Boid = d.struct({
         pos: d.vec3f,
       });
-      const createBoid = tgpu.fn([], Boid)(() => {
+      const createBoid = tgpu.fn(
+        [],
+        Boid,
+      )(() => {
         return Boid();
       });
       code1 = tgpu.resolve([createBoid], { names });
@@ -114,7 +119,10 @@ describe('tgpu.namespace', () => {
       const Boid = d.struct({
         pos: d.vec3i,
       });
-      const createBoid = tgpu.fn([], Boid)(() => {
+      const createBoid = tgpu.fn(
+        [],
+        Boid,
+      )(() => {
         return Boid();
       });
       code2 = tgpu.resolve([createBoid], { names });

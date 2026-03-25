@@ -10,29 +10,28 @@ import {
   unptr,
 } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
+import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
+  fallthroughCopyOrigin,
   isEphemeralOrigin,
   isEphemeralSnippet,
-  isSnippet,
   type Origin,
+  ResolvedSnippet,
   snip,
   type Snippet,
 } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
-import { isMarkedInternal } from '../shared/symbols.ts';
+import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared/symbols.ts';
 import { safeStringify } from '../shared/stringify.ts';
-import { $internal } from '../shared/symbols.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
-import { type FnArgsConversionHint, isKnownAtComptime } from '../types.ts';
+import { isGPUCallable, isKnownAtComptime } from '../types.ts';
+import { convertStructValues, convertToCommonType, tryConvertSnippet } from './conversion.ts';
 import {
-  convertStructValues,
-  convertToCommonType,
-  tryConvertSnippet,
-} from './conversion.ts';
-import {
+  ArrayExpression,
+  coerceToSnippet,
   concretize,
   type GenerationCtx,
   numericLiteralToSnippet,
@@ -40,10 +39,17 @@ import {
 import { accessIndex } from './accessIndex.ts';
 import { accessProp } from './accessProp.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
-import type { DualFn } from '../data/dualFn.ts';
+import { resolveData } from '../core/resolve/resolveData.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
+import { UnrollableIterable } from '../core/unroll/tgpuUnroll.ts';
+import { isGenericFn } from '../core/function/tgpuFn.ts';
+import type { AnyFn } from '../core/function/fnTypes.ts';
+import { AutoStruct } from '../data/autoStruct.ts';
+import { mathToStd } from './math.ts';
+import type { ExternalMap } from '../core/resolve/externals.ts';
+import * as forOfUtils from './forOfUtils.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -70,18 +76,9 @@ const parenthesizedOps = [
   '||',
 ];
 
-const binaryLogicalOps = [
-  '&&',
-  '||',
-  '==',
-  '!=',
-  '===',
-  '!==',
-  '<',
-  '<=',
-  '>',
-  '>=',
-];
+const binaryLogicalOps = ['&&', '||', '==', '!=', '===', '!==', '<', '<=', '>', '>='];
+
+const bitShiftOps: string[] = ['<<', '>>', '<<=', '>>='];
 
 const OP_MAP = {
   //
@@ -96,9 +93,7 @@ const OP_MAP = {
     throw new Error('The `in` operator is unsupported in TypeGPU functions.');
   },
   get instanceof(): never {
-    throw new Error(
-      'The `instanceof` operator is unsupported in TypeGPU functions.',
-    );
+    throw new Error('The `instanceof` operator is unsupported in TypeGPU functions.');
   },
   get '|>'(): never {
     throw new Error('The `|>` operator is unsupported in TypeGPU functions.');
@@ -136,11 +131,11 @@ type Operator =
   | tinyest.UnaryOperator;
 
 function operatorToType<
-  TL extends AnyData | UnknownData,
-  TR extends AnyData | UnknownData,
+  TL extends wgsl.BaseData | UnknownData,
+  TR extends wgsl.BaseData | UnknownData,
 >(lhs: TL, op: Operator, rhs?: TR): TL | TR | wgsl.Bool {
   if (!rhs) {
-    if (op === '!' || op === '~') {
+    if (op === '!') {
       return bool;
     }
 
@@ -159,29 +154,28 @@ function operatorToType<
 }
 
 const unaryOpCodeToCodegen = {
-  '-': neg[$internal].gpuImpl,
-} satisfies Partial<
-  Record<tinyest.UnaryOperator, (...args: never[]) => unknown>
->;
+  '-': neg[$gpuCallable].call.bind(neg),
+  void: () => snip(undefined, wgsl.Void, 'constant'),
+} satisfies Partial<Record<tinyest.UnaryOperator, (...args: never[]) => unknown>>;
 
 const binaryOpCodeToCodegen = {
-  '+': add[$internal].gpuImpl,
-  '-': sub[$internal].gpuImpl,
-  '*': mul[$internal].gpuImpl,
-  '/': div[$internal].gpuImpl,
-  '**': pow[$internal].gpuImpl,
-} satisfies Partial<
-  Record<tinyest.BinaryOperator, (...args: never[]) => unknown>
->;
+  '+': add[$gpuCallable].call.bind(add),
+  '-': sub[$gpuCallable].call.bind(sub),
+  '*': mul[$gpuCallable].call.bind(mul),
+  '/': div[$gpuCallable].call.bind(div),
+  '**': pow[$gpuCallable].call.bind(pow),
+} satisfies Partial<Record<tinyest.BinaryOperator, (...args: never[]) => unknown>>;
 
-class WgslGenerator implements ShaderGenerator {
+export class WgslGenerator implements ShaderGenerator {
   #ctx: GenerationCtx | undefined = undefined;
+  // used to detect `continue` and `break` nodes in loop body
+  #unrolling = false;
 
   public initGenerator(ctx: GenerationCtx) {
     this.#ctx = ctx;
   }
 
-  private get ctx(): GenerationCtx {
+  protected get ctx(): GenerationCtx {
     if (!this.#ctx) {
       throw new Error(
         'WGSL Generator has not yet been initialized. Please call initialize(ctx) before using the generator.',
@@ -190,13 +184,21 @@ class WgslGenerator implements ShaderGenerator {
     return this.#ctx;
   }
 
-  public block(
-    [_, statements]: tinyest.Block,
-  ): string {
+  public _block([_, statements]: tinyest.Block, externalMap?: ExternalMap): string {
     this.ctx.pushBlockScope();
+
+    if (externalMap) {
+      const externals = Object.fromEntries(
+        Object.entries(externalMap).map(([id, value]) => [id, coerceToSnippet(value)]),
+      );
+      this.ctx.setBlockExternals(externals);
+    }
+
     try {
       this.ctx.indent();
-      const body = statements.map((statement) => this.statement(statement))
+      const body = statements
+        .map((statement) => this._statement(statement))
+        .filter((statement) => statement.length > 0)
         .join('\n');
       this.ctx.dedent();
       return `{
@@ -207,10 +209,7 @@ ${this.ctx.pre}}`;
     }
   }
 
-  public refVariable(
-    id: string,
-    dataType: wgsl.StorableData,
-  ): string {
+  public refVariable(id: string, dataType: wgsl.StorableData): string {
     const varName = this.ctx.makeNameValid(id);
     const ptrType = ptrFn(dataType);
     const snippet = snip(
@@ -225,16 +224,13 @@ ${this.ctx.pre}}`;
   public blockVariable(
     varType: 'var' | 'let' | 'const',
     id: string,
-    dataType: wgsl.AnyWgslData | UnknownData,
+    dataType: wgsl.BaseData | UnknownData,
     origin: Origin,
   ): Snippet {
     const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
 
     let varOrigin: Origin;
-    if (
-      origin === 'constant-tgpu-const-ref' ||
-      origin === 'runtime-tgpu-const-ref'
-    ) {
+    if (origin === 'constant-tgpu-const-ref' || origin === 'runtime-tgpu-const-ref') {
       // Even types that aren't naturally referential (like vectors or structs) should
       // be treated as constant references when assigned to a const.
       varOrigin = origin;
@@ -252,19 +248,29 @@ ${this.ctx.pre}}`;
       varOrigin = 'runtime';
     }
 
-    const snippet = snip(
-      this.ctx.makeNameValid(id),
-      dataType,
-      /* origin */ varOrigin,
-    );
+    const snippet = snip(this.ctx.makeNameValid(id), dataType, /* origin */ varOrigin);
     this.ctx.defineVariable(id, snippet);
     return snippet;
   }
 
-  public identifier(id: string): Snippet {
+  protected emitVarDecl(
+    pre: string,
+    keyword: 'var' | 'let' | 'const',
+    name: string,
+    _dataType: wgsl.BaseData | UnknownData,
+    rhsStr: string,
+  ): string {
+    return `${pre}${keyword} ${name} = ${rhsStr};`;
+  }
+
+  public _identifier(id: string): Snippet {
     if (!id) {
       throw new Error('Cannot resolve an empty identifier');
     }
+    if (id === 'undefined') {
+      return snip(undefined, wgsl.Void, 'constant');
+    }
+
     const res = this.ctx.getById(id);
 
     if (!res) {
@@ -278,26 +284,30 @@ ${this.ctx.pre}}`;
    * A wrapper for `generateExpression` that updates `ctx.expectedType`
    * and tries to convert the result when it does not match the expected type.
    */
-  public typedExpression(
+  public _typedExpression(
     expression: tinyest.Expression,
-    expectedType: AnyData,
+    expectedType: wgsl.BaseData | wgsl.BaseData[],
   ) {
     const prevExpectedType = this.ctx.expectedType;
     this.ctx.expectedType = expectedType;
 
     try {
-      const result = this.expression(expression);
-      return tryConvertSnippet(result, expectedType);
+      const result = this._expression(expression);
+      if (expectedType instanceof AutoStruct) {
+        // We provide a certain AutoStruct object to later
+        // investigate what props were accessed. No need to
+        // convert the result.
+        return result;
+      }
+      return tryConvertSnippet(this.ctx, result, expectedType);
     } finally {
       this.ctx.expectedType = prevExpectedType;
     }
   }
 
-  public expression(
-    expression: tinyest.Expression,
-  ): Snippet {
+  public _expression(expression: tinyest.Expression): Snippet {
     if (typeof expression === 'string') {
-      return this.identifier(expression);
+      return this._identifier(expression);
     }
 
     if (typeof expression === 'boolean') {
@@ -311,8 +321,8 @@ ${this.ctx.pre}}`;
     ) {
       // Logical/Binary/Assignment Expression
       const [exprType, lhs, op, rhs] = expression;
-      const lhsExpr = this.expression(lhs);
-      const rhsExpr = this.expression(rhs);
+      const lhsExpr = this._expression(lhs);
+      const rhsExpr = this._expression(rhs);
 
       if (rhsExpr.value instanceof RefOperator) {
         throw new WgslTypeError(
@@ -324,35 +334,45 @@ ${this.ctx.pre}}`;
         throw new Error('Please use the === operator instead of ==');
       }
 
-      if (
-        op === '===' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)
-      ) {
+      if (op === '===' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
         return snip(lhsExpr.value === rhsExpr.value, bool, 'constant');
       }
 
-      if (lhsExpr.dataType.type === 'unknown') {
+      if (lhsExpr.dataType === UnknownData) {
         throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
       }
 
-      if (rhsExpr.dataType.type === 'unknown') {
-        throw new WgslTypeError(
-          `Right-hand side of '${op}' is of unknown type`,
-        );
+      if (rhsExpr.dataType === UnknownData) {
+        throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
       }
 
-      const codegen =
-        binaryOpCodeToCodegen[op as keyof typeof binaryOpCodeToCodegen];
+      const codegen = binaryOpCodeToCodegen[op as keyof typeof binaryOpCodeToCodegen];
       if (codegen) {
-        return codegen(lhsExpr, rhsExpr);
+        return codegen(this.ctx, [lhsExpr, rhsExpr]);
       }
 
-      const forcedType = exprType === NODE.assignmentExpr
-        ? [lhsExpr.dataType]
-        : undefined;
+      let convLhs: Snippet;
+      let convRhs: Snippet;
 
-      const [convLhs, convRhs] =
-        convertToCommonType([lhsExpr, rhsExpr], forcedType) ??
-          [lhsExpr, rhsExpr];
+      if (bitShiftOps.includes(op)) {
+        // rhs must be u32 (or vecN<u32> for vector lhs)
+        let rhsTarget: wgsl.BaseData;
+        if (wgsl.isVec(lhsExpr.dataType)) {
+          const cc = lhsExpr.dataType.componentCount;
+          rhsTarget = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;
+        } else {
+          rhsTarget = u32;
+        }
+        convRhs = tryConvertSnippet(this.ctx, rhsExpr, rhsTarget, false);
+        // if lhs is not an integer type, the browser will return a descriptive wgsl error
+        convLhs = lhsExpr;
+      } else {
+        const forcedType = exprType === NODE.assignmentExpr ? [lhsExpr.dataType] : undefined;
+        [convLhs, convRhs] = convertToCommonType(this.ctx, [lhsExpr, rhsExpr], forcedType) ?? [
+          lhsExpr,
+          rhsExpr,
+        ];
+      }
 
       const lhsStr = this.ctx.resolve(convLhs.value, convLhs.dataType).value;
       const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
@@ -365,7 +385,7 @@ ${this.ctx.pre}}`;
           convLhs.origin === 'runtime-tgpu-const-ref'
         ) {
           throw new WgslTypeError(
-            `'${lhsStr} = ${rhsStr}' is invalid, because ${lhsStr} is a constant.`,
+            `'${lhsStr} = ${rhsStr}' is invalid, because ${lhsStr} is a constant. This error may also occur when assigning to a value defined outside of a TypeGPU function's scope.`,
           );
         }
 
@@ -375,7 +395,9 @@ ${this.ctx.pre}}`;
           );
         }
 
+        // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
         if (
+          op === '=' &&
           rhsExpr.origin === 'argument' &&
           !wgsl.isNaturallyEphemeral(rhsExpr.dataType)
         ) {
@@ -386,7 +408,8 @@ ${this.ctx.pre}}`;
           );
         }
 
-        if (!isEphemeralSnippet(rhsExpr)) {
+        // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
+        if (op === '=' && !isEphemeralSnippet(rhsExpr)) {
           throw new WgslTypeError(
             `'${lhsStr} = ${rhsStr}' is invalid, because references cannot be assigned.\n-----\nTry '${lhsStr} = ${
               this.ctx.resolve(rhsExpr.dataType).value
@@ -408,7 +431,7 @@ ${this.ctx.pre}}`;
     if (expression[0] === NODE.postUpdate) {
       // Post-Update Expression
       const [_, op, arg] = expression;
-      const argExpr = this.expression(arg);
+      const argExpr = this._expression(arg);
       const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
 
       // Result of an operation, so not a reference to anything
@@ -418,12 +441,11 @@ ${this.ctx.pre}}`;
     if (expression[0] === NODE.unaryExpr) {
       // Unary Expression
       const [_, op, arg] = expression;
-      const argExpr = this.expression(arg);
+      const argExpr = this._expression(arg);
 
-      const codegen =
-        unaryOpCodeToCodegen[op as keyof typeof unaryOpCodeToCodegen];
+      const codegen = unaryOpCodeToCodegen[op as keyof typeof unaryOpCodeToCodegen];
       if (codegen) {
-        return codegen(argExpr);
+        return codegen(this.ctx, [argExpr]);
       }
 
       const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
@@ -436,22 +458,29 @@ ${this.ctx.pre}}`;
     if (expression[0] === NODE.memberAccess) {
       // Member Access
       const [_, targetNode, property] = expression;
-      const target = this.expression(targetNode);
+      const target = this._expression(targetNode);
 
       if (target.value === console) {
-        return snip(
-          new ConsoleLog(property),
-          UnknownData,
-          /* origin */ 'runtime',
-        );
+        return snip(new ConsoleLog(property), UnknownData, /* origin */ 'runtime');
+      }
+
+      if (target.value === Math) {
+        if (property in mathToStd && mathToStd[property]) {
+          return snip(mathToStd[property], UnknownData, /* origin */ 'runtime');
+        }
+        if (typeof Math[property as keyof typeof Math] === 'function') {
+          throw new Error(
+            `Unsupported functionality 'Math.${property}'. Use an std alternative, or implement the function manually.`,
+          );
+        }
       }
 
       const accessed = accessProp(target, property);
       if (!accessed) {
         throw new Error(
-          stitch`Property '${property}' not found on value '${target}' of type ${
-            this.ctx.resolve(target.dataType)
-          }`,
+          stitch`Property '${property}' not found on value '${target}' of type ${this.ctx.resolve(
+            target.dataType,
+          )}`,
         );
       }
       return accessed;
@@ -460,19 +489,16 @@ ${this.ctx.pre}}`;
     if (expression[0] === NODE.indexAccess) {
       // Index Access
       const [_, targetNode, propertyNode] = expression;
-      const target = this.expression(targetNode);
-      const inProperty = this.expression(propertyNode);
-      const property = convertToCommonType(
-        [inProperty],
-        [u32, i32],
-        /* verbose */ false,
-      )?.[0] ?? inProperty;
+      const target = this._expression(targetNode);
+      const inProperty = this._expression(propertyNode);
+      const property =
+        convertToCommonType(this.ctx, [inProperty], [u32, i32], /* verbose */ false)?.[0] ??
+        inProperty;
 
       const accessed = accessIndex(target, property);
       if (!accessed) {
         const targetStr = this.ctx.resolve(target.value, target.dataType).value;
-        const propertyStr =
-          this.ctx.resolve(property.value, property.dataType).value;
+        const propertyStr = this.ctx.resolve(property.value, property.dataType).value;
 
         throw new Error(
           `Unable to index value ${targetStr} of unknown type with index ${propertyStr}. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
@@ -484,9 +510,10 @@ ${this.ctx.pre}}`;
 
     if (expression[0] === NODE.numericLiteral) {
       // Numeric Literal
-      const type = typeof expression[1] === 'string'
-        ? numericLiteralToSnippet(parseNumericString(expression[1]))
-        : numericLiteralToSnippet(expression[1]);
+      const type =
+        typeof expression[1] === 'string'
+          ? numericLiteralToSnippet(parseNumericString(expression[1]))
+          : numericLiteralToSnippet(expression[1]);
       if (!type) {
         throw new Error(`Invalid numeric literal ${expression[1]}`);
       }
@@ -496,38 +523,73 @@ ${this.ctx.pre}}`;
     if (expression[0] === NODE.call) {
       // Function Call
       const [_, calleeNode, argNodes] = expression;
-      const callee = this.expression(calleeNode);
+      const callee = this._expression(calleeNode);
 
-      if (wgsl.isWgslStruct(callee.value) || wgsl.isWgslArray(callee.value)) {
-        // Struct/array schema call.
+      if (wgsl.isWgslStruct(callee.value)) {
+        // Struct schema call.
         if (argNodes.length > 1) {
-          throw new WgslTypeError(
-            'Array and struct schemas should always be called with at most 1 argument',
-          );
+          throw new WgslTypeError('Struct schemas should always be called with at most 1 argument');
         }
 
         // No arguments `Struct()`, resolve struct name and return.
         if (!argNodes[0]) {
-          // the schema becomes the data type
+          // The schema becomes the data type.
           return snip(
             `${this.ctx.resolve(callee.value).value}()`,
             callee.value,
-            // A new struct, so not a reference
+            // A new struct, so not a reference.
             /* origin */ 'runtime',
           );
         }
 
-        const arg = this.typedExpression(
-          argNodes[0],
-          callee.value,
-        );
+        const arg = this._typedExpression(argNodes[0], callee.value);
 
         // Either `Struct({ x: 1, y: 2 })`, or `Struct(otherStruct)`.
         // In both cases, we just let the argument resolve everything.
         return snip(
           this.ctx.resolve(arg.value, callee.value).value,
           callee.value,
-          // A new struct, so not a reference
+          // A new struct, so not a reference.
+          /* origin */ 'runtime',
+        );
+      }
+
+      if (wgsl.isWgslArray(callee.value)) {
+        // Array schema call.
+        if (argNodes.length > 1) {
+          throw new WgslTypeError('Array schemas should always be called with at most 1 argument');
+        }
+
+        // No arguments `array<...>()`, resolve array type and return.
+        if (!argNodes[0]) {
+          // The schema becomes the data type.
+          return snip(
+            `${this.ctx.resolve(callee.value).value}()`,
+            callee.value,
+            // A new array, so not a reference.
+            /* origin */ 'runtime',
+          );
+        }
+
+        const arg = this._typedExpression(argNodes[0], callee.value);
+
+        // `d.arrayOf(...)([...])`.
+        // We don't resolve the ArrayExpression object itself to
+        // avoid reference checks (we're copying so it's fine)
+        if (arg.value instanceof ArrayExpression) {
+          return snip(
+            stitch`${this.ctx.resolve(callee.value).value}(${arg.value.elements})`,
+            arg.dataType,
+            /* origin */ 'runtime',
+          );
+        }
+
+        // `d.arrayOf(...)(otherArr)`.
+        // We just let the argument resolve everything.
+        return snip(
+          this.ctx.resolve(arg.value, callee.value).value,
+          callee.value,
+          // A new array, so not a reference.
           /* origin */ 'runtime',
         );
       }
@@ -545,50 +607,22 @@ ${this.ctx.pre}}`;
             `An infix operator '${callee.value.name}' was called without any arguments`,
           );
         }
-        const rhs = this.expression(argNodes[0]);
-        return callee.value.operator(callee.value.lhs, rhs);
+        const rhs = this._expression(argNodes[0]);
+        return callee.value.operator(this.ctx, [callee.value.lhs, rhs]);
       }
 
-      if (!isMarkedInternal(callee.value)) {
-        const args = argNodes.map((arg) => this.expression(arg));
-        const shellless = this.ctx.shelllessRepo.get(
-          callee.value as (...args: never[]) => unknown,
-          args,
-        );
-        if (shellless) {
-          const converted = args.map((s, idx) => {
-            const argType = shellless.argTypes[idx] as AnyData;
-            return tryConvertSnippet(s, argType, /* verbose */ false);
-          });
-
-          return this.ctx.withResetIndentLevel(() => {
-            const snippet = this.ctx.resolve(shellless);
-            return snip(
-              stitch`${snippet.value}(${converted})`,
-              snippet.dataType,
-              /* origin */ 'runtime',
-            );
-          });
-        }
-
-        throw new Error(
-          `Function '${
-            getName(callee.value) ?? String(callee.value)
-          }' is not marked with the 'use gpu' directive and cannot be used in a shader`,
+      if (callee.value instanceof ConsoleLog) {
+        return this.ctx.generateLog(
+          callee.value.op,
+          argNodes.map((arg) => this._expression(arg)),
         );
       }
 
-      // Other, including tgsl functions, std and vector/matrix schema calls.
+      if (isGPUCallable(callee.value)) {
+        const callable = callee.value[$gpuCallable];
+        const strictSignature = callable.strictSignature;
 
-      const argConversionHint =
-        (callee.value[$internal] as Record<string, unknown>)
-          ?.argConversionHint as FnArgsConversionHint ?? 'keep';
-      const strictSignature = (callee.value as DualFn)[$internal]
-        ?.strictSignature;
-
-      try {
         let convertedArguments: Snippet[];
-
         if (strictSignature) {
           // The function's signature does not depend on the context, so it can be used to
           // give a hint to the argument expressions that a specific type is expected.
@@ -596,106 +630,140 @@ ${this.ctx.pre}}`;
             const argType = strictSignature.argTypes[i];
             if (!argType) {
               throw new WgslTypeError(
-                `Function '${
-                  getName(callee.value)
-                }' was called with too many arguments`,
+                `Function '${getName(callee.value)}' was called with too many arguments`,
               );
             }
-            return this.typedExpression(arg, argType);
-          });
-        } else if (Array.isArray(argConversionHint)) {
-          // The hint is an array of schemas.
-          convertedArguments = argNodes.map((arg, i) => {
-            const argType = argConversionHint[i];
-            if (!argType) {
-              throw new WgslTypeError(
-                `Function '${
-                  getName(callee.value)
-                }' was called with too many arguments`,
-              );
-            }
-            return this.typedExpression(arg, argType);
+            return this._typedExpression(arg, argType);
           });
         } else {
-          const snippets = argNodes.map((arg) => this.expression(arg));
+          convertedArguments = argNodes.map((arg) => this._expression(arg));
+        }
 
-          if (argConversionHint === 'keep') {
-            // The hint tells us to do nothing.
-            convertedArguments = snippets;
-          } else if (argConversionHint === 'unify') {
-            // The hint tells us to unify the types.
-            convertedArguments = convertToCommonType(snippets) ?? snippets;
-          } else {
-            // The hint is a function that converts the arguments.
-            convertedArguments = argConversionHint(...snippets)
-              .map((type, i) => [type, snippets[i] as Snippet] as const)
-              .map(([type, sn]) => tryConvertSnippet(sn, type));
+        try {
+          return callable.call(this.ctx, convertedArguments);
+        } catch (err) {
+          if (err instanceof ResolutionError) {
+            throw err;
           }
-        }
 
-        if (callee.value instanceof ConsoleLog) {
-          return this.ctx.generateLog(callee.value.op, convertedArguments);
+          throw new ResolutionError(err, [
+            {
+              toString: () => `fn:${getName(callee.value)}`,
+            },
+          ]);
         }
-
-        // Assuming that `callee` is callable
-        const fnRes =
-          (callee.value as unknown as (...args: unknown[]) => unknown)(
-            ...convertedArguments,
-          );
-
-        if (!isSnippet(fnRes)) {
-          throw new Error(
-            'Functions running in codegen mode must return snippets',
-          );
-        }
-        return fnRes;
-      } catch (err) {
-        if (err instanceof ResolutionError) {
-          throw err;
-        }
-
-        throw new ResolutionError(err, [{
-          toString: () => `fn:${getName(callee.value)}`,
-        }]);
       }
+
+      const isGeneric = isGenericFn(callee.value);
+      if (!isMarkedInternal(callee.value) || isGeneric) {
+        const slotPairs = isGeneric ? (callee.value[$providing]?.pairs ?? []) : [];
+        const callback = isGeneric ? callee.value[$internal].inner : (callee.value as AnyFn);
+
+        const shelllessCall = this.ctx.withRenamed(callback, getName(callee.value), () =>
+          this.ctx.withSlots(slotPairs, (): Snippet | undefined => {
+            const args = argNodes.map((arg) => this._expression(arg));
+            const shellless = this.ctx.shelllessRepo.get(callback, args);
+            if (!shellless) {
+              return undefined;
+            }
+
+            const converted = args.map((s, idx) => {
+              const argType = shellless.argTypes[idx] as wgsl.BaseData;
+              return tryConvertSnippet(this.ctx, s, argType, /* verbose */ false);
+            });
+
+            return this.ctx.withResetIndentLevel(() => {
+              const snippet = this.ctx.resolve(shellless);
+              return snip(
+                stitch`${snippet.value}(${converted})`,
+                snippet.dataType,
+                /* origin */ 'runtime',
+              );
+            });
+          }),
+        );
+
+        if (shelllessCall) {
+          return shelllessCall;
+        }
+      }
+
+      throw new Error(
+        `Function '${
+          getName(callee.value) ?? String(callee.value)
+        }' is not marked with the 'use gpu' directive and cannot be used in a shader`,
+      );
     }
 
     if (expression[0] === NODE.objectExpr) {
       // Object Literal
       const obj = expression[1];
-
       const structType = this.ctx.expectedType;
 
-      if (!structType || !wgsl.isWgslStruct(structType)) {
-        throw new WgslTypeError(
-          `No target type could be inferred for object with keys [${
-            Object.keys(obj).join(', ')
-          }], please wrap the object in the corresponding schema.`,
+      if (structType instanceof AutoStruct) {
+        const entries = Object.fromEntries(
+          Object.entries(obj).map(([key, value]) => {
+            let accessed = structType.accessProp(key);
+            let expr: Snippet;
+            if (accessed) {
+              // Generating the expression expecting a specific type
+              expr = this._typedExpression(value, accessed.type);
+            } else {
+              // Generating the expression and inferring the type instead
+              expr = this._expression(value);
+              if (expr.dataType === UnknownData) {
+                throw new WgslTypeError(
+                  stitch`Property ${key} in object literal has a value of unknown type: '${expr}'`,
+                );
+              }
+              // Taking care of abstract numerics and implicit pointers
+              accessed = structType.provideProp(
+                key,
+                unptr(concretize(expr.dataType)) as wgsl.BaseData,
+              );
+            }
+
+            return [accessed.prop, expr];
+          }),
+        );
+
+        const completeStruct = structType.completeStruct;
+        const convertedSnippets = convertStructValues(this.ctx, completeStruct, entries);
+
+        return snip(
+          stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
+          completeStruct,
+          /* origin */ 'runtime',
         );
       }
 
-      const entries = Object.fromEntries(
-        Object.entries(structType.propTypes).map(([key, value]) => {
-          const val = obj[key];
-          if (val === undefined) {
-            throw new WgslTypeError(
-              `Missing property ${key} in object literal for struct ${structType}`,
-            );
-          }
-          const result = this.typedExpression(
-            val,
-            value as AnyData,
-          );
-          return [key, result];
-        }),
-      );
+      if (wgsl.isWgslStruct(structType)) {
+        const entries = Object.fromEntries(
+          Object.entries(structType.propTypes).map(([key, value]) => {
+            const val = obj[key];
+            if (val === undefined) {
+              throw new WgslTypeError(
+                `Missing property ${key} in object literal for struct ${structType}`,
+              );
+            }
+            const result = this._typedExpression(val, value);
+            return [key, result];
+          }),
+        );
 
-      const convertedSnippets = convertStructValues(structType, entries);
+        const convertedSnippets = convertStructValues(this.ctx, structType, entries);
 
-      return snip(
-        stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
-        structType,
-        /* origin */ 'runtime',
+        return snip(
+          stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
+          structType,
+          /* origin */ 'runtime',
+        );
+      }
+
+      throw new WgslTypeError(
+        `No target type could be inferred for object with keys [${Object.keys(obj).join(
+          ', ',
+        )}], please wrap the object in the corresponding schema.`,
       );
     }
 
@@ -703,15 +771,13 @@ ${this.ctx.pre}}`;
       const [_, valueNodes] = expression;
       // Array Expression
       const arrType = this.ctx.expectedType;
-      let elemType: AnyData;
+      let elemType: wgsl.BaseData;
       let values: Snippet[];
 
       if (wgsl.isWgslArray(arrType)) {
-        elemType = arrType.elementType as AnyData;
+        elemType = arrType.elementType;
         // The array is typed, so its elements should be as well.
-        values = valueNodes.map((value) =>
-          this.typedExpression(value, elemType)
-        );
+        values = valueNodes.map((value) => this._typedExpression(value, elemType));
         // Since it's an expected type, we enforce the length
         if (values.length !== arrType.elementCount) {
           throw new WgslTypeError(
@@ -720,32 +786,13 @@ ${this.ctx.pre}}`;
         }
       } else {
         // The array is not typed, so we try to guess the types.
-        const valuesSnippets = valueNodes.map((value) => {
-          const snippet = this.expression(value as tinyest.Expression);
-          // We check if there are no references among the elements
-          if (
-            (snippet.origin === 'argument' &&
-              !wgsl.isNaturallyEphemeral(snippet.dataType)) ||
-            !isEphemeralSnippet(snippet)
-          ) {
-            const snippetStr =
-              this.ctx.resolve(snippet.value, snippet.dataType).value;
-            const snippetType =
-              this.ctx.resolve(concretize(snippet.dataType as AnyData)).value;
-            throw new WgslTypeError(
-              `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,
-            );
-          }
-          return snippet;
-        });
+        const valuesSnippets = valueNodes.map((value) => this._expression(value));
 
         if (valuesSnippets.length === 0) {
-          throw new WgslTypeError(
-            'Cannot infer the type of an empty array literal.',
-          );
+          throw new WgslTypeError('Cannot infer the type of an empty array literal.');
         }
 
-        const converted = convertToCommonType(valuesSnippets);
+        const converted = convertToCommonType(this.ctx, valuesSnippets);
         if (!converted) {
           throw new WgslTypeError(
             'The given values cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema',
@@ -756,18 +803,22 @@ ${this.ctx.pre}}`;
         elemType = concretize(values[0]?.dataType as wgsl.AnyWgslData);
       }
 
-      const arrayType = `array<${
-        this.ctx.resolve(elemType).value
-      }, ${values.length}>`;
+      const arrayType = arrayOf(elemType as wgsl.AnyWgslData, values.length);
 
-      return snip(
-        stitch`${arrayType}(${values})`,
-        arrayOf[$internal].jsImpl(
-          elemType as wgsl.AnyWgslData,
-          values.length,
-        ) as wgsl.AnyWgslData,
-        /* origin */ 'runtime',
-      );
+      return snip(new ArrayExpression(arrayType, values), arrayType, /* origin */ 'runtime');
+    }
+
+    if (expression[0] === NODE.conditionalExpr) {
+      // ternary operator
+      const [_, test, consequent, alternative] = expression;
+      const testExpression = this._expression(test);
+      if (isKnownAtComptime(testExpression)) {
+        return testExpression.value ? this._expression(consequent) : this._expression(alternative);
+      } else {
+        throw new Error(
+          `Ternary operator is only supported for comptime-known checks (used with '${testExpression.value}'). For runtime checks, please use 'std.select' or if/else statements.`,
+        );
+      }
     }
 
     if (expression[0] === NODE.stringLiteral) {
@@ -775,25 +826,41 @@ ${this.ctx.pre}}`;
     }
 
     if (expression[0] === NODE.preUpdate) {
-      throw new Error('Cannot use pre-updates in TGSL.');
+      throw new Error('Cannot use pre-updates in TypeGPU functions.');
     }
 
     assertExhaustive(expression);
   }
 
-  public functionDefinition(
-    body: tinyest.Block,
-  ): string {
-    return this.block(body);
+  public functionDefinition(body: tinyest.Block): string {
+    return this._block(body);
   }
 
-  public statement(
-    statement: tinyest.Statement,
-  ): string {
+  /**
+   * Generates a WGSL type string for the given data type, and adds necessary
+   * definitions to the shader preamble. This shouldn't be called directly, only
+   * through `ctx.resolve` to properly cache the result.
+   */
+  public typeAnnotation(data: wgsl.BaseData): string {
+    return resolveData(this.ctx, data as AnyData);
+  }
+
+  public typeInstantiation(schema: wgsl.BaseData, args: readonly Snippet[]): ResolvedSnippet {
+    if (args.length === 1 && args[0]?.dataType === schema) {
+      // Already of the desired type, e.g. `bool(false)` or `vec3f(vec3f(1, 2, 3))`
+      // We can make this snippet ephemeral, as we know it will be deep copied in JS
+      return snip(stitch`${args[0]}`, schema, fallthroughCopyOrigin(args[0].origin));
+    }
+    // Creating a 'runtime' snippet, since it's instantiating a new value
+    return snip(stitch`${this.ctx.resolve(schema).value}(${args})`, schema, 'runtime');
+  }
+
+  public _statement(statement: tinyest.Statement): string {
     if (typeof statement === 'string') {
-      return `${this.ctx.pre}${
-        this.ctx.resolve(this.identifier(statement).value).value
-      };`;
+      const id = this._identifier(statement);
+      const resolved = id.value && this.ctx.resolve(id.value).value;
+      // oxlint-disable-next-line typescript/no-base-to-string
+      return resolved ? `${this.ctx.pre}${resolved};` : '';
     }
 
     if (typeof statement === 'boolean') {
@@ -806,11 +873,8 @@ ${this.ctx.pre}}`;
       if (returnNode !== undefined) {
         const expectedReturnType = this.ctx.topFunctionReturnType;
         let returnSnippet = expectedReturnType
-          ? this.typedExpression(
-            returnNode,
-            expectedReturnType,
-          )
-          : this.expression(returnNode);
+          ? this._typedExpression(returnNode, expectedReturnType)
+          : this._expression(returnNode);
 
         if (returnSnippet.value instanceof RefOperator) {
           throw new WgslTypeError(
@@ -846,10 +910,7 @@ ${this.ctx.pre}}`;
           !isEphemeralSnippet(returnSnippet) &&
           returnSnippet.origin !== 'this-function'
         ) {
-          const str = this.ctx.resolve(
-            returnSnippet.value,
-            returnSnippet.dataType,
-          ).value;
+          const str = this.ctx.resolve(returnSnippet.value, returnSnippet.dataType).value;
           const typeStr = this.ctx.resolve(unptr(returnSnippet.dataType)).value;
           throw new WgslTypeError(
             `'return ${str};' is invalid, cannot return references.
@@ -860,15 +921,13 @@ Try 'return ${typeStr}(${str});' instead.
         }
 
         returnSnippet = tryConvertSnippet(
+          this.ctx,
           returnSnippet,
           unptr(returnSnippet.dataType) as wgsl.AnyWgslData,
           false,
         );
 
-        invariant(
-          returnSnippet.dataType.type !== 'unknown',
-          'Return type should be known',
-        );
+        invariant(returnSnippet.dataType !== UnknownData, 'Return type should be known');
 
         this.ctx.reportReturnType(returnSnippet.dataType);
         return stitch`${this.ctx.pre}return ${returnSnippet};`;
@@ -879,14 +938,14 @@ Try 'return ${typeStr}(${str});' instead.
 
     if (statement[0] === NODE.if) {
       const [_, condNode, consNode, altNode] = statement;
-      const condition = this.typedExpression(condNode, bool);
+      const condition = this._typedExpression(condNode, bool);
 
-      const consequent = condition.value === false
-        ? undefined
-        : this.block(blockifySingleStatement(consNode));
-      const alternate = condition.value === true || !altNode
-        ? undefined
-        : this.block(blockifySingleStatement(altNode));
+      const consequent =
+        condition.value === false ? undefined : this._block(blockifySingleStatement(consNode));
+      const alternate =
+        condition.value === true || !altNode
+          ? undefined
+          : this._block(blockifySingleStatement(altNode));
 
       if (condition.value === true) {
         return `${this.ctx.pre}${consequent}`;
@@ -908,27 +967,23 @@ ${this.ctx.pre}else ${alternate}`;
     if (statement[0] === NODE.let || statement[0] === NODE.const) {
       let varType: 'var' | 'let' | 'const' = 'var';
       const [stmtType, rawId, rawValue] = statement;
-      const eq = rawValue !== undefined ? this.expression(rawValue) : undefined;
+      const eq = rawValue !== undefined ? this._expression(rawValue) : undefined;
 
       if (!eq) {
-        throw new Error(
-          `Cannot create variable '${rawId}' without an initial value.`,
-        );
+        throw new Error(`Cannot create variable '${rawId}' without an initial value.`);
       }
 
       const ephemeral = isEphemeralSnippet(eq);
-      let dataType = eq.dataType as wgsl.AnyWgslData;
+      let dataType = eq.dataType as wgsl.BaseData;
       const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
 
       if (isLooseData(eq.dataType)) {
-        throw new Error(
-          `Cannot create variable '${rawId}' with loose data type.`,
-        );
+        throw new Error(`Cannot create variable '${rawId}' with loose data type.`);
       }
 
       if (eq.value instanceof RefOperator) {
         // We're assigning a newly created `d.ref()`
-        if (eq.dataType.type !== 'unknown') {
+        if (eq.dataType !== UnknownData) {
           throw new WgslTypeError(
             `Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead.`,
           );
@@ -936,15 +991,14 @@ ${this.ctx.pre}else ${alternate}`;
         const refSnippet = eq.value.snippet;
         const varName = this.refVariable(
           rawId,
-          concretize(refSnippet.dataType as AnyData) as wgsl.StorableData,
+          concretize(refSnippet.dataType as wgsl.BaseData) as wgsl.StorableData,
         );
-        return stitch`${this.ctx.pre}var ${varName} = ${
-          tryConvertSnippet(
-            refSnippet,
-            refSnippet.dataType as wgsl.AnyWgslData,
-            false,
-          )
-        };`;
+        return stitch`${this.ctx.pre}var ${varName} = ${tryConvertSnippet(
+          this.ctx,
+          refSnippet,
+          refSnippet.dataType as wgsl.AnyWgslData,
+          false,
+        )};`;
       }
 
       // Assigning a reference to a `const` variable means we store the pointer
@@ -975,17 +1029,14 @@ ${this.ctx.pre}else ${alternate}`;
               eq.origin,
               concretize(dataType) as wgsl.StorableData,
             );
-            invariant(
-              ptrType !== undefined,
-              `Creating pointer type from origin ${eq.origin}`,
-            );
+            invariant(ptrType !== undefined, `Creating pointer type from origin ${eq.origin}`);
             dataType = ptrType;
           }
 
           if (!(eq.value instanceof RefOperator)) {
             // If what we're assigning is something preceded by `&`, then it's a value
             // created using `d.ref()`. Otherwise, it's an implicit pointer
-            dataType = implicitFrom(dataType);
+            dataType = implicitFrom(dataType as wgsl.Ptr);
           }
         }
       } else {
@@ -1018,64 +1069,201 @@ ${this.ctx.pre}else ${alternate}`;
         }
       }
 
-      const snippet = this.blockVariable(
+      const snippet = this.blockVariable(varType, rawId, concretize(dataType), eq.origin);
+      const rhsSnippet = tryConvertSnippet(this.ctx, eq, dataType, false);
+      const rhsStr = this.ctx.resolve(rhsSnippet.value, rhsSnippet.dataType).value;
+      return this.emitVarDecl(
+        this.ctx.pre,
         varType,
-        rawId,
+        snippet.value as string,
         concretize(dataType),
-        eq.origin,
+        rhsStr,
       );
-      return stitch`${this.ctx.pre}${varType} ${snippet
-        .value as string} = ${tryConvertSnippet(eq, dataType, false)};`;
     }
 
     if (statement[0] === NODE.block) {
-      return this.block(statement);
+      return `${this.ctx.pre}${this._block(statement)}`;
     }
 
     if (statement[0] === NODE.for) {
       const [_, init, condition, update, body] = statement;
+      const prevUnrollingFlag = this.#unrolling;
+      this.#unrolling = false;
 
-      const [initStatement, conditionExpr, updateStatement] = this.ctx
-        .withResetIndentLevel(() => [
-          init ? this.statement(init) : undefined,
-          condition ? this.typedExpression(condition, bool) : undefined,
-          update ? this.statement(update) : undefined,
-        ]);
+      try {
+        this.ctx.pushBlockScope();
+        const [initStatement, conditionExpr, updateStatement] = this.ctx.withResetIndentLevel(
+          () => [
+            init ? this._statement(init) : undefined,
+            condition ? this._typedExpression(condition, bool) : undefined,
+            update ? this._statement(update) : undefined,
+          ],
+        );
 
-      const initStr = initStatement ? initStatement.slice(0, -1) : '';
-      const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
+        const initStr = initStatement ? initStatement.slice(0, -1) : '';
+        const updateStr = updateStatement ? updateStatement.slice(0, -1) : '';
 
-      const bodyStr = this.block(blockifySingleStatement(body));
-      return stitch`${this.ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr}`;
+        const bodyStr = this._block(blockifySingleStatement(body));
+        return stitch`${this.ctx.pre}for (${initStr}; ${conditionExpr}; ${updateStr}) ${bodyStr}`;
+      } finally {
+        this.#unrolling = prevUnrollingFlag;
+        this.ctx.popBlockScope();
+      }
     }
 
     if (statement[0] === NODE.while) {
-      const [_, condition, body] = statement;
-      const condSnippet = this.typedExpression(condition, bool);
-      const conditionStr = this.ctx.resolve(condSnippet.value).value;
+      const prevUnrollingFlag = this.#unrolling;
+      this.#unrolling = false;
+      try {
+        const [_, condition, body] = statement;
+        const condSnippet = this._typedExpression(condition, bool);
+        const conditionStr = this.ctx.resolve(condSnippet.value).value;
 
-      const bodyStr = this.block(blockifySingleStatement(body));
-      return `${this.ctx.pre}while (${conditionStr}) ${bodyStr}`;
+        const bodyStr = this._block(blockifySingleStatement(body));
+        return `${this.ctx.pre}while (${conditionStr}) ${bodyStr}`;
+      } finally {
+        this.#unrolling = prevUnrollingFlag;
+      }
+    }
+
+    if (statement[0] === NODE.forOf) {
+      const [_, loopVar, iterable, body] = statement;
+
+      if (loopVar[0] !== NODE.const) {
+        throw new WgslTypeError('Only `for (const ... of ... )` loops are supported');
+      }
+
+      let ctxIndent = false;
+      const prevUnrollingFlag = this.#unrolling;
+
+      try {
+        this.ctx.pushBlockScope();
+        const iterableExpr = this._expression(iterable);
+        const shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
+        const iterableSnippet = shouldUnroll ? iterableExpr.value.snippet : iterableExpr;
+        const elementCountSnippet = forOfUtils.getElementCountSnippet(
+          this.ctx,
+          iterableSnippet,
+          shouldUnroll,
+        );
+        const originalLoopVarName = loopVar[1];
+        const blockified = blockifySingleStatement(body);
+
+        if (shouldUnroll) {
+          if (!isKnownAtComptime(elementCountSnippet)) {
+            throw new Error('Cannot unroll loop. Length of iterable is unknown at comptime.');
+          }
+
+          this.#unrolling = true;
+
+          const length = elementCountSnippet.value as number;
+          if (length === 0) {
+            return '';
+          }
+
+          const { value } = iterableSnippet;
+
+          const elements =
+            value instanceof ArrayExpression
+              ? value.elements
+              : Array.from({ length }, (_, i) =>
+                  forOfUtils.getElementSnippet(iterableSnippet, snip(i, u32, 'constant')),
+                );
+
+          if (
+            isEphemeralSnippet(elements[0] as Snippet) &&
+            !wgsl.isNaturallyEphemeral(elements[0]?.dataType)
+          ) {
+            throw new WgslTypeError(
+              'Cannot unroll loop. The elements of iterable are emphemeral but not naturally ephemeral.',
+            );
+          }
+
+          const blocks = elements.map(
+            (e, i) =>
+              `${this.ctx.pre}// unrolled iteration #${i}\n${this.ctx.pre}${this._block(
+                blockified,
+                {
+                  [originalLoopVarName]: e,
+                },
+              )}`,
+          );
+
+          return blocks.join('\n');
+        }
+
+        if (isEphemeralSnippet(iterableSnippet)) {
+          throw new Error(
+            `\`for ... of ...\` loops only support iterables stored in variables.
+  -----
+  You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptime, the loop will be unrolled.
+  -----`,
+          );
+        }
+
+        this.#unrolling = false;
+
+        const index = this.ctx.makeNameValid('i');
+        const elementSnippet = forOfUtils.getElementSnippet(
+          iterableSnippet,
+          snip(index, u32, 'runtime'),
+        );
+        const loopVarName = this.ctx.makeNameValid(originalLoopVarName);
+        const loopVarKind = forOfUtils.getLoopVarKind(elementSnippet);
+        const elementType = forOfUtils.getElementType(elementSnippet, iterableSnippet);
+
+        const forHeaderStr = stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${elementCountSnippet}; ${index}++) {`;
+
+        this.ctx.indent();
+        ctxIndent = true;
+
+        const loopVarDeclStr = stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${tryConvertSnippet(
+          this.ctx,
+          elementSnippet,
+          elementType,
+          false,
+        )};`;
+
+        const bodyStr = `${this.ctx.pre}${this._block(blockified, {
+          [originalLoopVarName]: snip(loopVarName, elementType, elementSnippet.origin),
+        })}`;
+
+        this.ctx.dedent();
+        ctxIndent = false;
+
+        return stitch`${forHeaderStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
+      } finally {
+        if (ctxIndent) {
+          this.ctx.dedent();
+        }
+        this.#unrolling = prevUnrollingFlag;
+        this.ctx.popBlockScope();
+      }
     }
 
     if (statement[0] === NODE.continue) {
+      if (this.#unrolling) {
+        throw new WgslTypeError('Cannot unroll loop containing `continue`');
+      }
       return `${this.ctx.pre}continue;`;
     }
 
     if (statement[0] === NODE.break) {
+      if (this.#unrolling) {
+        throw new WgslTypeError('Cannot unroll loop containing `break`');
+      }
       return `${this.ctx.pre}break;`;
     }
 
-    return `${this.ctx.pre}${
-      this.ctx.resolve(this.expression(statement).value).value
-    };`;
+    const expr = this._expression(statement);
+    const resolved = expr.value && this.ctx.resolve(expr.value).value;
+    // oxlint-disable-next-line typescript/no-base-to-string
+    return resolved ? `${this.ctx.pre}${resolved};` : '';
   }
 }
 
 function assertExhaustive(value: never): never {
-  throw new Error(
-    `'${safeStringify(value)}' was not handled by the WGSL generator.`,
-  );
+  throw new Error(`'${safeStringify(value)}' was not handled by the WGSL generator.`);
 }
 
 function parseNumericString(str: string): number {
@@ -1093,8 +1281,7 @@ function parseNumericString(str: string): number {
 }
 
 function blockifySingleStatement(statement: tinyest.Statement): tinyest.Block {
-  return typeof statement !== 'object' ||
-      statement[0] !== NODE.block
+  return typeof statement !== 'object' || statement[0] !== NODE.block
     ? [NODE.block, [statement]]
     : statement;
 }

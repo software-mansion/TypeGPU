@@ -7,19 +7,10 @@ import {
   startCapSlot,
 } from '@typegpu/geometry';
 import tgpu from 'typegpu';
-import {
-  arrayOf,
-  builtin,
-  f32,
-  i32,
-  struct,
-  u16,
-  u32,
-  vec2f,
-  vec4f,
-} from 'typegpu/data';
+import { arrayOf, builtin, f32, i32, struct, u16, u32, vec2f, vec4f } from 'typegpu/data';
 import { lineCaps, lineJoins } from '@typegpu/geometry';
 import { add, clamp, mix, mul, normalize, select } from 'typegpu/std';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
   adapter: {
@@ -29,24 +20,21 @@ const root = await tgpu.init({
 const device = root.device;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const Uniforms = struct({
   stepSize: f32,
   frameCount: u32,
 });
 
-const uniformsBuffer = root.createBuffer(Uniforms, {
-  stepSize: 0.008,
-  frameCount: 0,
-}).$usage('uniform');
+const uniformsBuffer = root
+  .createBuffer(Uniforms, {
+    stepSize: 0.008,
+    frameCount: 0,
+  })
+  .$usage('uniform');
 
 const PARTICLE_COUNT = 1000;
 const TRAIL_LENGTH = 20;
@@ -55,16 +43,18 @@ const ParticleTrail = struct({
   positions: arrayOf(vec2f, TRAIL_LENGTH),
 });
 
-const particleTrailsBuffer = root.createBuffer(
-  arrayOf(ParticleTrail, PARTICLE_COUNT),
-  Array.from({ length: PARTICLE_COUNT }).map(() => {
-    const x = 0.8 * (2 * Math.random() - 1);
-    const y = 0.8 * (2 * Math.random() - 1);
-    return {
-      positions: Array.from({ length: TRAIL_LENGTH }).map(() => vec2f(x, y)),
-    };
-  }),
-).$usage('storage');
+const particleTrailsBuffer = root
+  .createBuffer(
+    arrayOf(ParticleTrail, PARTICLE_COUNT),
+    Array.from({ length: PARTICLE_COUNT }).map(() => {
+      const x = 0.8 * (2 * Math.random() - 1);
+      const y = 0.8 * (2 * Math.random() - 1);
+      return {
+        positions: Array.from({ length: TRAIL_LENGTH }).map(() => vec2f(x, y)),
+      };
+    }),
+  )
+  .$usage('storage');
 
 const bindGroupLayout = tgpu.bindGroupLayout({
   uniforms: {
@@ -95,21 +85,23 @@ const bindGroupWritable = root.createBindGroup(bindGroupLayoutWritable, {
   particles: particleTrailsBuffer,
 });
 
-const indexBuffer = root.createBuffer(
-  arrayOf(u16, lineSegmentIndicesCapLevel1.length),
-  lineSegmentIndicesCapLevel1,
-).$usage('index');
+const indexBuffer = root
+  .createBuffer(arrayOf(u16, lineSegmentIndicesCapLevel1.length), lineSegmentIndicesCapLevel1)
+  .$usage('index');
 
 // const vectorField = tgpu.fn([vec2f], vec2f)((pos) => {
 //   return normalize(perlin2d.sampleWithGradient(pos).yz);
 // });
 
-const vectorField = tgpu.fn([vec2f], vec2f)((pos) => {
+const vectorField = tgpu.fn(
+  [vec2f],
+  vec2f,
+)((pos) => {
   return normalize(vec2f(-pos.y, pos.x));
 });
 
 const WORKGROUP_SIZE = 64;
-const advectCompute = tgpu['~unstable'].computeFn({
+const advectCompute = tgpu.computeFn({
   in: { globalInvocationId: builtin.globalInvocationId },
   workgroupSize: [WORKGROUP_SIZE],
 })(({ globalInvocationId }) => {
@@ -129,7 +121,7 @@ const advectCompute = tgpu['~unstable'].computeFn({
 
 const lineWidth = tgpu.fn([f32], f32)((x) => 0.004 * (1 - x));
 
-const mainVertex = tgpu['~unstable'].vertexFn({
+const mainVertex = tgpu.vertexFn({
   in: {
     instanceIndex: builtin.instanceIndex,
     vertexIndex: builtin.vertexIndex,
@@ -144,8 +136,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   const particleIndex = u32(instanceIndex / TRAIL_LENGTH);
   const trailIndexOriginal = instanceIndex % TRAIL_LENGTH;
   const currentPosIndex = frameCount % TRAIL_LENGTH;
-  const trailIndex = i32(TRAIL_LENGTH + currentPosIndex - trailIndexOriginal) %
-    TRAIL_LENGTH;
+  const trailIndex = i32(TRAIL_LENGTH + currentPosIndex - trailIndexOriginal) % TRAIL_LENGTH;
 
   // disconnect lines
   if (trailIndexOriginal === TRAIL_LENGTH - 1) {
@@ -157,11 +148,7 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   }
 
   const particle = bindGroupLayout.$.particles[particleIndex];
-  const iA = select(
-    (trailIndex + 1) % TRAIL_LENGTH,
-    trailIndex,
-    trailIndexOriginal === 0,
-  );
+  const iA = select((trailIndex + 1) % TRAIL_LENGTH, trailIndex, trailIndexOriginal === 0);
   const iB = trailIndex;
   const iC = (TRAIL_LENGTH + trailIndex - 1) % TRAIL_LENGTH;
   const iD = (TRAIL_LENGTH + trailIndex - 2) % TRAIL_LENGTH;
@@ -191,22 +178,20 @@ const mainVertex = tgpu['~unstable'].vertexFn({
   };
 });
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: {
     position: vec2f,
     trailPosition: f32,
   },
   out: vec4f,
-})(
-  ({ position, trailPosition }) => {
-    const opacity = clamp(f32(3) * (1 - trailPosition), 0, 1);
-    return mix(
-      vec4f(0.77, 0.39, 1, opacity),
-      vec4f(0.11, 0.44, 0.94, opacity),
-      position.x * 0.5 + 0.5,
-    );
-  },
-);
+})(({ position, trailPosition }) => {
+  const opacity = clamp(f32(3) * (1 - trailPosition), 0, 1);
+  return mix(
+    vec4f(0.77, 0.39, 1, opacity),
+    vec4f(0.11, 0.44, 0.94, opacity),
+    position.x * 0.5 + 0.5,
+  );
+});
 
 const alphaBlend: GPUBlendState = {
   color: {
@@ -218,20 +203,17 @@ const alphaBlend: GPUBlendState = {
 };
 
 function createPipelines() {
-  const advect = root['~unstable']
-    .withCompute(advectCompute)
-    .createPipeline();
+  const advect = root.createComputePipeline({ compute: advectCompute });
 
-  const fill = root['~unstable']
+  const fill = root
     .with(joinSlot, lineJoins.round)
     .with(startCapSlot, lineCaps.arrow)
     .with(endCapSlot, lineCaps.butt)
-    .withVertex(mainVertex, {})
-    .withFragment(mainFragment, {
-      format: presentationFormat,
-      blend: alphaBlend,
+    .createRenderPipeline({
+      vertex: mainVertex,
+      fragment: mainFragment,
+      targets: { format: presentationFormat, blend: alphaBlend },
     })
-    .createPipeline()
     .withIndexBuffer(indexBuffer);
 
   return {
@@ -246,23 +228,16 @@ const draw = () => {
   uniformsBuffer.writePartial({ frameCount });
 
   pipelines.advect
-    .with(bindGroupLayoutWritable, bindGroupWritable)
-    .dispatchWorkgroups(
-      Math.ceil(PARTICLE_COUNT / WORKGROUP_SIZE),
-    );
+    .with(bindGroupWritable)
+    .dispatchWorkgroups(Math.ceil(PARTICLE_COUNT / WORKGROUP_SIZE));
 
   pipelines.fill
-    .with(bindGroupLayout, bindGroup)
+    .with(bindGroup)
     .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
+      view: context,
       clearValue: [1, 1, 1, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
     })
-    .drawIndexed(
-      lineSegmentIndicesCapLevel1.length,
-      PARTICLE_COUNT * TRAIL_LENGTH,
-    );
+    .drawIndexed(lineSegmentIndicesCapLevel1.length, PARTICLE_COUNT * TRAIL_LENGTH);
 };
 
 let frameId = -1;
@@ -276,7 +251,7 @@ const runAnimationFrame = () => {
     draw();
     frameCount++;
     framesInFlight.add(frameIdLocal);
-    device.queue.onSubmittedWorkDone().then(() => {
+    void device.queue.onSubmittedWorkDone().then(() => {
       framesInFlight.delete(frameIdLocal);
     });
   }
@@ -284,14 +259,14 @@ const runAnimationFrame = () => {
 };
 runAnimationFrame();
 
-export const controls = {
-  'Play': {
+export const controls = defineControls({
+  Play: {
     initial: true,
-    onToggleChange: (value: boolean) => {
+    onToggleChange: (value) => {
       play = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

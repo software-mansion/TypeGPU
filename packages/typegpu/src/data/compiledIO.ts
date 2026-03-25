@@ -9,6 +9,7 @@ import * as wgsl from './wgslTypes.ts';
 
 export const EVAL_ALLOWED_IN_ENV: boolean = (() => {
   try {
+    // oxlint-disable-next-line typescript-eslint/no-implied-eval typescript-eslint/no-new
     new Function('return true');
     return true;
   } catch {
@@ -18,12 +19,7 @@ export const EVAL_ALLOWED_IN_ENV: boolean = (() => {
 
 const compiledWriters = new WeakMap<
   wgsl.BaseData,
-  (
-    output: DataView,
-    offset: number,
-    value: unknown,
-    littleEndian?: boolean,
-  ) => void
+  (output: DataView, offset: number, value: unknown, littleEndian?: boolean) => void
 >();
 
 const typeToPrimitive = {
@@ -137,10 +133,9 @@ const specialPackedFormats = {
       const bgraComponents = ['z', 'y', 'x', 'w'];
       let code = '';
       for (let idx = 0; idx < 4; idx++) {
-        code +=
-          `output.setUint8((${offsetExpr} + ${idx}), Math.round(${valueExpr}.${
-            bgraComponents[idx]
-          } * 255), littleEndian);\n`;
+        code += `output.setUint8((${offsetExpr} + ${idx}), Math.round(${valueExpr}.${
+          bgraComponents[idx]
+        } * 255), littleEndian);\n`;
       }
       return code;
     },
@@ -176,14 +171,10 @@ export function buildWriter(
   }
 
   if (wgsl.isWgslArray(node) || isDisarray(node)) {
-    const elementSize = roundUp(
-      sizeOf(node.elementType),
-      alignmentOf(node),
-    );
+    const elementSize = roundUp(sizeOf(node.elementType), alignmentOf(node));
     let code = '';
 
-    code +=
-      `for (let ${loopVar} = 0; ${loopVar} < ${node.elementCount}; ${loopVar}++) {\n`;
+    code += `for (let ${loopVar} = 0; ${loopVar} < ${node.elementCount}; ${loopVar}++) {\n`;
     code += buildWriter(
       node.elementType,
       `(${offsetExpr} + ${loopVar} * ${elementSize})`,
@@ -196,13 +187,16 @@ export function buildWriter(
   }
 
   if (wgsl.isVec(node)) {
+    if (wgsl.isVecBool(node)) {
+      throw new Error('Compiled writers do not support boolean vectors');
+    }
+
     const primitive = typeToPrimitive[node.type];
     let code = '';
     const writeFunc = primitiveToWriteFunction[primitive];
     const components = ['x', 'y', 'z', 'w'];
-    const count = wgsl.isVec2(node) ? 2 : wgsl.isVec3(node) ? 3 : 4;
 
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < node.componentCount; i++) {
       code += `output.${writeFunc}((${offsetExpr} + ${i * 4}), ${valueExpr}.${
         components[i]
       }, littleEndian);\n`;
@@ -224,10 +218,9 @@ export function buildWriter(
       const rowIndex = idx % matSize;
       const byteOffset = colIndex * rowStride + rowIndex * 4;
 
-      code +=
-        `output.${writeFunc}((${offsetExpr} + ${byteOffset}), ${valueExpr}.columns[${colIndex}].${
-          ['x', 'y', 'z', 'w'][rowIndex]
-        }, littleEndian);\n`;
+      code += `output.${writeFunc}((${offsetExpr} + ${byteOffset}), ${valueExpr}.columns[${colIndex}].${
+        ['x', 'y', 'z', 'w'][rowIndex]
+      }, littleEndian);\n`;
     }
 
     return code;
@@ -237,38 +230,27 @@ export function buildWriter(
     const formatName = node.type;
 
     if (formatName in specialPackedFormats) {
-      const handler =
-        specialPackedFormats[formatName as keyof typeof specialPackedFormats];
+      const handler = specialPackedFormats[formatName as keyof typeof specialPackedFormats];
       return handler.generator(offsetExpr, valueExpr);
     }
 
-    const primitive = vertexFormatToPrimitive[
-      formatName as keyof typeof vertexFormatToPrimitive
-    ];
+    const primitive = vertexFormatToPrimitive[formatName as keyof typeof vertexFormatToPrimitive];
     const writeFunc = primitiveToWriteFunction[primitive];
     const wgslType = formatToWGSLType[formatName];
-    const componentCount = wgsl.isVec4(wgslType)
-      ? 4
-      : wgsl.isVec3(wgslType)
-      ? 3
-      : wgsl.isVec2(wgslType)
-      ? 2
-      : 1;
-    const componentSize = primitive === 'u8' || primitive === 'i8'
-      ? 1
-      : primitive === 'u16' || primitive === 'i16' || primitive === 'f16'
-      ? 2
-      : 4;
+    const componentCount = wgsl.isVec(wgslType) ? wgslType.componentCount : 1;
+    const componentSize =
+      primitive === 'u8' || primitive === 'i8'
+        ? 1
+        : primitive === 'u16' || primitive === 'i16' || primitive === 'f16'
+          ? 2
+          : 4;
     const components = ['x', 'y', 'z', 'w'];
-    const transform = vertexFormatValueTransform[
-      formatName as keyof typeof vertexFormatValueTransform
-    ];
+    const transform =
+      vertexFormatValueTransform[formatName as keyof typeof vertexFormatValueTransform];
 
     let code = '';
     for (let idx = 0; idx < componentCount; idx++) {
-      const accessor = componentCount === 1
-        ? valueExpr
-        : `${valueExpr}.${components[idx]}`;
+      const accessor = componentCount === 1 ? valueExpr : `${valueExpr}.${components[idx]}`;
       const value = transform ? transform(accessor) : accessor;
       code += `output.${writeFunc}((${offsetExpr} + ${
         idx * componentSize
@@ -279,9 +261,7 @@ export function buildWriter(
   }
 
   if (!Object.hasOwn(typeToPrimitive, node.type)) {
-    throw new Error(
-      `Primitive ${node.type} is unsupported by compiled writer`,
-    );
+    throw new Error(`Primitive ${node.type} is unsupported by compiled writer`);
   }
 
   const primitive = typeToPrimitive[node.type as keyof typeof typeToPrimitive];
@@ -293,17 +273,10 @@ export function buildWriter(
 export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
   schema: T,
 ):
-  | ((
-    output: DataView,
-    offset: number,
-    value: Infer<T>,
-    littleEndian?: boolean,
-  ) => void)
+  | ((output: DataView, offset: number, value: Infer<T>, littleEndian?: boolean) => void)
   | undefined {
   if (!EVAL_ALLOWED_IN_ENV) {
-    console.warn(
-      'This environment does not allow eval - using default writer as fallback',
-    );
+    console.warn('This environment does not allow eval - using default writer as fallback');
     return undefined;
   }
 
@@ -319,16 +292,11 @@ export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
   try {
     const body = buildWriter(schema, 'offset', 'value', 0);
 
-    const fn = new Function(
-      'output',
-      'offset',
-      'value',
-      'littleEndian=true',
-      body,
-    ) as (
+    // oxlint-disable-next-line typescript-eslint/no-implied-eval
+    const fn = new Function('output', 'offset', 'value', 'littleEndian=true', body) as (
       output: DataView,
       offset: number,
-      value: Infer<T> | unknown,
+      value: unknown,
       littleEndian?: boolean,
     ) => void;
 

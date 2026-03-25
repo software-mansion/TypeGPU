@@ -1,17 +1,9 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+import tgpu, { d } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const colors = {
   bottomLeft: d.vec4f(1, 0, 0, 1),
@@ -32,7 +24,7 @@ const colorBuffer = root
   .$usage('vertex');
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec4f));
 
-const vertex = tgpu['~unstable'].vertexFn({
+const vertex = tgpu.vertexFn({
   in: {
     idx: d.builtin.vertexIndex,
     color: d.vec4f,
@@ -42,54 +34,39 @@ const vertex = tgpu['~unstable'].vertexFn({
     pos: d.builtin.position,
   },
 })(({ idx, color }) => {
-  const vertices = [
-    d.vec2f(-1, -1),
-    d.vec2f(1, -1),
-    d.vec2f(1, 1),
-    d.vec2f(-1, 1),
-  ];
+  const vertices = [d.vec2f(-1, -1), d.vec2f(1, -1), d.vec2f(1, 1), d.vec2f(-1, 1)];
   return {
     color,
     pos: d.vec4f(vertices[idx], 0, 1),
   };
 });
 
-const mainFragment = tgpu['~unstable'].fragmentFn({
+const mainFragment = tgpu.fragmentFn({
   in: {
     color: d.vec4f,
   },
   out: d.vec4f,
 })((input) => input.color);
 
-const indexBuffer = root
-  .createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
-  .$usage('index');
+const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2]).$usage('index');
 
-const pipeline = root['~unstable']
-  .withVertex(vertex, { color: vertexLayout.attrib })
-  .withFragment(mainFragment, { format: presentationFormat })
-  .createPipeline()
+const pipeline = root
+  .createRenderPipeline({
+    attribs: { color: vertexLayout.attrib },
+    vertex,
+    fragment: mainFragment,
+  })
   .withIndexBuffer(indexBuffer);
 
 function render() {
-  pipeline
-    .with(vertexLayout, colorBuffer)
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .drawIndexed(6);
+  pipeline.with(vertexLayout, colorBuffer).withColorAttachment({ view: context }).drawIndexed(6);
 }
 render();
 
 // #region Example controls & Cleanup
 
-function updateColor(
-  color: readonly [number, number, number],
-  position: keyof typeof colors,
-): void {
-  colors[position] = d.vec4f(...color, 1);
+function updateColor(color: d.v3f, position: keyof typeof colors): void {
+  colors[position] = d.vec4f(color, 1);
   const idx = colorIndices[position];
   colorBuffer.writePartial([
     {
@@ -100,28 +77,24 @@ function updateColor(
   render();
 }
 
-export const controls = {
+export const controls = defineControls({
   topLeft: {
-    onColorChange: (value: readonly [number, number, number]) =>
-      updateColor(value, 'topLeft'),
-    initial: [...colors.topLeft.xyz],
+    onColorChange: (value) => updateColor(value, 'topLeft'),
+    initial: colors.topLeft.rgb,
   },
   topRight: {
-    onColorChange: (value: readonly [number, number, number]) =>
-      updateColor(value, 'topRight'),
-    initial: [...colors.topRight.xyz],
+    onColorChange: (value) => updateColor(value, 'topRight'),
+    initial: colors.topRight.rgb,
   },
   bottomLeft: {
-    onColorChange: (value: readonly [number, number, number]) =>
-      updateColor(value, 'bottomLeft'),
-    initial: [...colors.bottomLeft.xyz],
+    onColorChange: (value) => updateColor(value, 'bottomLeft'),
+    initial: colors.bottomLeft.rgb,
   },
   bottomRight: {
-    onColorChange: (value: readonly [number, number, number]) =>
-      updateColor(value, 'bottomRight'),
-    initial: [...colors.bottomRight.xyz],
+    onColorChange: (value) => updateColor(value, 'bottomRight'),
+    initial: colors.bottomRight.rgb,
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();

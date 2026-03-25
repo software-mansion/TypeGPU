@@ -1,19 +1,9 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
 import { sdBoxFrame3d, sdPlane, sdSphere } from '@typegpu/sdf';
-
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+import tgpu, { d, std } from 'typegpu';
 
 const root = await tgpu.init();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const time = root.createUniform(d.f32);
 const resolution = root.createUniform(d.vec2f);
@@ -73,11 +63,7 @@ const getMorphingShape = (p: d.v3f, t: number): Shape => {
   const boxSize = d.vec3f(0.7);
 
   // Create two spheres that move in a circular pattern
-  const sphere1Offset = d.vec3f(
-    std.cos(t * 2) * 0.8,
-    std.sin(t * 3) * 0.3,
-    std.sin(t * 2) * 0.8,
-  );
+  const sphere1Offset = d.vec3f(std.cos(t * 2) * 0.8, std.sin(t * 3) * 0.3, std.sin(t * 2) * 0.8);
   const sphere2Offset = d.vec3f(
     std.cos(t * 2 + 3.14) * 0.8,
     std.sin(t * 3 + 1.57) * 0.3,
@@ -108,11 +94,7 @@ const getSceneDist = (p: d.v3f): Shape => {
   const shape = getMorphingShape(p, time.$);
   const floor = Shape({
     dist: sdPlane(p, d.vec3f(0, 1, 0), 0),
-    color: std.mix(
-      d.vec3f(1),
-      d.vec3f(0.2),
-      checkerBoard(std.mul(p.xz, 2)),
-    ),
+    color: std.mix(d.vec3f(1), d.vec3f(0.2), checkerBoard(std.mul(p.xz, 2))),
   });
 
   return shapeUnion(shape, floor);
@@ -141,13 +123,7 @@ const rayMarch = (ro: d.v3f, rd: d.v3f): Shape => {
   return result;
 };
 
-const softShadow = (
-  ro: d.v3f,
-  rd: d.v3f,
-  minT: number,
-  maxT: number,
-  k: number,
-): number => {
+const softShadow = (ro: d.v3f, rd: d.v3f, minT: number, maxT: number, k: number): number => {
   'use gpu';
   let res = d.f32(1);
   let t = minT;
@@ -156,7 +132,7 @@ const softShadow = (
     if (t >= maxT) break;
     const h = getSceneDist(ro.add(rd.mul(t))).dist;
     if (h < 0.001) return 0;
-    res = std.min(res, k * h / t);
+    res = std.min(res, (k * h) / t);
     t += std.max(h, 0.001);
   }
 
@@ -183,14 +159,10 @@ const getOrbitingLightPos = (t: number): d.v3f => {
   const height = d.f32(6);
   const speed = d.f32(1);
 
-  return d.vec3f(
-    std.cos(t * speed) * radius,
-    height + std.sin(t * speed) * radius,
-    4,
-  );
+  return d.vec3f(std.cos(t * speed) * radius, height + std.sin(t * speed) * radius, 4);
 };
 
-const vertexMain = tgpu['~unstable'].vertexFn({
+const vertexMain = tgpu.vertexFn({
   in: { idx: d.builtin.vertexIndex },
   out: { pos: d.builtin.position, uv: d.vec2f },
 })(({ idx }) => {
@@ -203,7 +175,7 @@ const vertexMain = tgpu['~unstable'].vertexFn({
   };
 });
 
-const fragmentMain = tgpu['~unstable'].fragmentFn({
+const fragmentMain = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })((input) => {
@@ -243,23 +215,17 @@ const fragmentMain = tgpu['~unstable'].fragmentFn({
   return std.mix(d.vec4f(finalColor, 1), skyColor, fog);
 });
 
-const renderPipeline = root['~unstable']
-  .withVertex(vertexMain, {})
-  .withFragment(fragmentMain, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: vertexMain,
+  fragment: fragmentMain,
+});
 
 let animationFrame: number;
 function run(timestamp: number) {
-  time.write(timestamp / 1000 % 1000);
+  time.write((timestamp / 1000) % 1000);
   resolution.write(d.vec2f(canvas.width, canvas.height));
 
-  renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .draw(3);
+  renderPipeline.withColorAttachment({ view: context }).draw(3);
 
   animationFrame = requestAnimationFrame(run);
 }

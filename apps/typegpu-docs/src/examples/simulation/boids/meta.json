@@ -1,5 +1,6 @@
 {
   "title": "Boids",
   "category": "simulation",
-  "tags": ["compute", "instancing", "double buffering"]
+  "tags": ["double buffering", "particles", "physics"],
+  "coolFactor": 5
 }

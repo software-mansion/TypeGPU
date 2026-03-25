@@ -7,7 +7,7 @@ Similarly to bind group layouts, you can think of slots as of typed "holes" in T
 The main differences between slots and bound resources include the following:
 
 - Slots are filled in before the shader module compile time, instead of just before the shader execution starts.
-- Slots can contain not only buffers, but also basically anything that is allowed in TGSL, even TypeGPU functions.
+- Slots can contain not only buffers, but also basically any JavaScript value, even TypeGPU functions.
 
 Main use cases for slots include:
 
@@ -20,8 +20,7 @@ Main use cases for slots include:
 A slot is created using the `tgpu.slot()` function and can optionally take a default value:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // ---cut---
 const filterColorSlot = tgpu.slot<d.v3f>(); // Slot for a 3D vector.
 const mySlot = tgpu.slot<number>(42); // Slot with a default value.
@@ -34,13 +33,10 @@ interface Config {
 const configSlot = tgpu.slot<Config>();
 ```
 
-You can access a slot's value using either:
-
-- `.value` property,
-- `.$` shorthand property.
+You can access a slot's value using `.$`:
 
 ```typescript
-const value = mySlot.value; // or mySlot.$
+const value = mySlot.$;
 ```
 
 :::caution
@@ -54,26 +50,25 @@ Instead, you can bind it in one of two ways.
 
 ### Binding after defining a function
 
-The first way to bind a value to a slot is to call the `with` method on a `TgpuFn` instance:
+The first way to bind a value to a slot is to call the `with` method on a wrapped TypeGPU function:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import { mul } from 'typegpu/std';
+import tgpu, { d } from 'typegpu';
 // ---cut---
 const filterColorSlot = tgpu.slot<d.v3f>();
 
-const filter = tgpu.fn([d.vec3f], d.vec3f)((color) => {
+const filter = (color: d.v3f): d.v3f => {
+  'use gpu';
   const filterColor = filterColorSlot.$;
-  return mul(color, filterColor);
-});
+  return color.mul(filterColor);
+};
 
 // Bind the filter function with a red color.
-const filterWithRed = filter
+const filterWithRed = tgpu.fn(filter)
   .with(filterColorSlot, d.vec3f(1, 0, 0));
 
 // Bind the filter function with a green color.
-const filterWithGreen = filter
+const filterWithGreen = tgpu.fn(filter)
   .with(filterColorSlot, d.vec3f(0, 1, 0));
 ```
 
@@ -96,23 +91,20 @@ fn filter_1(color: vec3f) ->  vec3f{
 The other way to fill in a slot is to call the `with` method during the creation of a `TgpuComputePipeline` or `TgpuRenderPipeline`:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
 const resultBuffer = root.createMutable(d.i32, 0);
 const multiplierSlot = tgpu.slot<number>();
 
-const computeMultiply = tgpu['~unstable']
-  .computeFn({ workgroupSize: [1] })(() => {
-    resultBuffer.$ = resultBuffer.$ * multiplierSlot.$;
-  });
+const computeMultiply = tgpu.computeFn({ workgroupSize: [1] })(() => {
+  resultBuffer.$ = resultBuffer.$ * multiplierSlot.$;
+});
 
-const pipeline = root['~unstable']
+const pipeline = root
   .with(multiplierSlot, 3)
-  .withCompute(computeMultiply)
-  .createPipeline();
+  .createComputePipeline({ compute: computeMultiply });
 ```
 
 The pipeline above resolves to the following WGSL:
@@ -137,8 +129,7 @@ They enable internal behavior to be modified without sacrificing type safety or 
 
 ```ts twoslash
 // physics.ts
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 import { add, mul } from 'typegpu/std';
 
 const root = await tgpu.init();
@@ -181,7 +172,7 @@ const gravityTowardsCenter = tgpu.fn([vec2f], vec2f)((pos) => {
 const stepPhysicsCustomized = stepPhysics
   .with(gravitySlot, gravityTowardsCenter);
 
-const main = tgpu['~unstable'].computeFn()(() => {
+const main = tgpu.computeFn()(() => {
   stepPhysicsCustomized(); // <- Will use altered gravity.
 });
 ```
@@ -195,8 +186,7 @@ Slots can be used for conditional compilation of segments of shaders.
 When the slot holding a boolean value is filled with `false`, all `if` statements depending on the value of that slot will be pruned by our tree-shaking mechanism.
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 import { max } from 'typegpu/std';
 
 const root = await tgpu.init();
@@ -232,8 +222,7 @@ const processObjects = tgpu.fn([])(() => {
 It is possible to use slots even in TypeGPU functions that are implemented in WGSL:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // ---cut---
 const colorSlot = tgpu.slot(d.vec3f(1, 0, 0));
 

@@ -1,5 +1,6 @@
 {
   "title": "Matrix Multiplication",
   "category": "algorithms",
-  "tags": ["compute"]
+  "tags": ["linear algebra"],
+  "coolFactor": 4
 }

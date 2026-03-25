@@ -1,7 +1,6 @@
 import { describe, expect } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
-import { it } from './utils/extendedIt.ts';
+import tgpu, { d } from '../src/index.js';
+import { it } from 'typegpu-testing-utility';
 
 describe('resolve', () => {
   const Boid = d.struct({
@@ -9,7 +8,7 @@ describe('resolve', () => {
     color: d.vec4f,
   });
 
-  const computeFn = tgpu['~unstable'].computeFn({
+  const computeFn = tgpu.computeFn({
     workgroupSize: [1, 1, 1],
     in: { gid: d.builtin.globalInvocationId },
   })(() => {
@@ -19,14 +18,14 @@ describe('resolve', () => {
     });
   });
 
-  const vertexFn = tgpu['~unstable'].vertexFn({
+  const vertexFn = tgpu.vertexFn({
     out: { pos: d.builtin.position, color: d.vec4f },
   })(() => {
     const myBoid = Boid();
     return { pos: d.vec4f(myBoid.position, 0, 1), color: myBoid.color };
   });
 
-  const fragmentFn = tgpu['~unstable'].fragmentFn({
+  const fragmentFn = tgpu.fragmentFn({
     in: { color: d.vec4f },
     out: d.vec4f,
   })((input) => {
@@ -66,9 +65,7 @@ describe('resolve', () => {
   });
 
   it('can resolve a compute pipeline', ({ root }) => {
-    const pipeline = root
-      .withCompute(computeFn)
-      .createPipeline();
+    const pipeline = root.withCompute(computeFn).createPipeline();
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct Boid {
@@ -95,8 +92,7 @@ describe('resolve', () => {
       });
     });
 
-    expect(tgpu.resolve([pipelineGuard.pipeline]))
-      .toMatchInlineSnapshot(`
+    expect(tgpu.resolve([pipelineGuard.pipeline])).toMatchInlineSnapshot(`
         "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
         struct Boid {
@@ -127,13 +123,12 @@ describe('resolve', () => {
       .withFragment(fragmentFn, { format: 'rgba8unorm' })
       .createPipeline();
 
-    const computePipeline = root
-      .withCompute(computeFn)
-      .createPipeline();
+    const computePipeline = root.withCompute(computeFn).createPipeline();
 
-    expect(() => tgpu.resolve([renderPipeline, computePipeline]))
-      .toThrowErrorMatchingInlineSnapshot(
-        `[Error: Found 2 pipelines but can only resolve one at a time.]`,
-      );
+    expect(() =>
+      tgpu.resolve([renderPipeline, computePipeline]),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Found 2 pipelines but can only resolve one at a time.]`,
+    );
   });
 });

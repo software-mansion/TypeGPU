@@ -1,6 +1,7 @@
 import type { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
 import { stitch } from '../../core/resolve/stitch.ts';
 import type { TgpuRoot } from '../../core/root/rootTypes.ts';
+import { shaderStageSlot } from '../../core/slot/internalSlots.ts';
 import { arrayOf } from '../../data/array.ts';
 import { atomic } from '../../data/atomic.ts';
 import { UnknownData } from '../../data/dataTypes.ts';
@@ -15,10 +16,7 @@ import {
   type WgslArray,
 } from '../../data/wgslTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
-import {
-  concretizeSnippets,
-  type GenerationCtx,
-} from '../generationHelpers.ts';
+import { concretizeSnippets, type GenerationCtx } from '../generationHelpers.ts';
 import { createLoggingFunction } from './serializers.ts';
 import {
   type LogGenerator,
@@ -36,11 +34,7 @@ const defaultOptions: Required<LogGeneratorOptions> = {
   messagePrefix: ' GPU ',
 };
 
-const fallbackSnippet = snip(
-  '/* console.log() */',
-  Void,
-  /* origin */ 'runtime',
-);
+const fallbackSnippet = snip('/* console.log() */', Void, /* origin */ 'runtime');
 
 export class LogGeneratorNullImpl implements LogGenerator {
   get logResources(): undefined {
@@ -72,9 +66,7 @@ export class LogGeneratorImpl implements LogGenerator {
       .createMutable(arrayOf(SerializedLogData, this.#options.logCountLimit))
       .$name('dataBuffer');
 
-    this.#indexBuffer = root
-      .createMutable(atomic(u32))
-      .$name('indexBuffer');
+    this.#indexBuffer = root.createMutable(atomic(u32)).$name('indexBuffer');
   }
 
   /**
@@ -84,21 +76,21 @@ export class LogGeneratorImpl implements LogGenerator {
    * @param args Argument snippets. Snippets of UnknownType will be treated as string literals.
    * @returns A snippet containing the call to the logging function.
    */
-  generateLog(
-    ctx: GenerationCtx,
-    op: string,
-    args: Snippet[],
-  ): Snippet {
+  generateLog(ctx: GenerationCtx, op: string, args: Snippet[]): Snippet {
+    if (shaderStageSlot.$ === 'vertex') {
+      console.warn(`'console.${op}' is not supported in vertex shaders.`);
+      return fallbackSnippet;
+    }
+
     if (!supportedLogOps.includes(op as SupportedLogOps)) {
-      console.warn(`Unsupported log method '${op}' was used in TGSL.`);
+      console.warn(`Unsupported log method '${op}'.`);
       return fallbackSnippet;
     }
 
     const concreteArgs = concretizeSnippets(args);
     const id = this.#firstUnusedId++;
 
-    const nonStringArgs = concreteArgs
-      .filter((e) => e.dataType !== UnknownData);
+    const nonStringArgs = concreteArgs.filter((e) => e.dataType !== UnknownData);
 
     const logFn = createLoggingFunction(
       id,
@@ -109,9 +101,7 @@ export class LogGeneratorImpl implements LogGenerator {
     );
 
     const argTypes = concreteArgs.map((e) =>
-      e.dataType === UnknownData
-        ? (e.value as string)
-        : e.dataType as AnyWgslData
+      e.dataType === UnknownData ? (e.value as string) : (e.dataType as AnyWgslData),
     );
 
     this.#logIdToMeta.set(id, { op: op as SupportedLogOps, argTypes });
@@ -124,11 +114,13 @@ export class LogGeneratorImpl implements LogGenerator {
   }
 
   get logResources(): LogResources | undefined {
-    return this.#firstUnusedId === 1 ? undefined : {
-      dataBuffer: this.#dataBuffer,
-      indexBuffer: this.#indexBuffer,
-      options: this.#options,
-      logIdToMeta: this.#logIdToMeta,
-    };
+    return this.#firstUnusedId === 1
+      ? undefined
+      : {
+          dataBuffer: this.#dataBuffer,
+          indexBuffer: this.#indexBuffer,
+          options: this.#options,
+          logIdToMeta: this.#logIdToMeta,
+        };
   }
 }

@@ -82,9 +82,7 @@ describe('d.size', () => {
     const s1 = d.disarrayOf(d.size(11, d.u32), 10);
 
     expect(d.sizeOf(s1)).toBe(110);
-    expectTypeOf(s1).toEqualTypeOf<
-      d.Disarray<d.Decorated<d.U32, [d.Size<11>]>>
-    >();
+    expectTypeOf(s1).toEqualTypeOf<d.Disarray<d.Decorated<d.U32, [d.Size<11>]>>>();
   });
 
   it('changes size of loose struct member of type loose array', () => {

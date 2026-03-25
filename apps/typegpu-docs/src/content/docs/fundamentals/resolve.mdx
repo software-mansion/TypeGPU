@@ -15,8 +15,7 @@ The `tgpu.resolve` API takes in TypeGPU resources (and optionally a WGSL templat
 The first `tgpu.resolve` overload takes in an array of items to resolve, and an optional argument with options. Here's a simple example:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // ---cut---
 const Boid = d.struct({
   size: d.f32,
@@ -58,15 +57,14 @@ As you may note, the resolved WGSL code contains exactly the set of definitions 
 You can also resolve other resources, like consts, buffers, textures, entry point functions or even entire pipelines. Here's an example with a pipeline:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // ---cut---
 const root = await tgpu.init();
 
 const dataMutable = root
   .createMutable(d.arrayOf(d.u32, 8), [1, 2, 3, 4, 5, 6, 7, 8]);
 
-const computeMain = tgpu['~unstable'].computeFn({
+const computeMain = tgpu.computeFn({
   workgroupSize: [1],
   in: { gid: d.builtin.globalInvocationId },
 })((input) => {
@@ -74,9 +72,7 @@ const computeMain = tgpu['~unstable'].computeFn({
   dataMutable.$[index] *= 2;
 });
 
-const multiplyPipeline = root['~unstable']
-  .withCompute(computeMain)
-  .createPipeline();
+const multiplyPipeline = root.createComputePipeline({ compute: computeMain });
 
 const resolved = tgpu.resolve([multiplyPipeline]);
 ```
@@ -103,7 +99,7 @@ eliminating the need for manual resolve calls.
 :::
 
 :::tip
-To resolve all items from a layout, you can use `tgpu.resolve([...Object.values(layout.bound)])`.
+To resolve all items from a layout, you can use `tgpu.resolve([layout])`.
 :::
 
 
@@ -120,8 +116,7 @@ Use it when you are already provided with existing WGSL code and want to extend 
 Here's an example:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -161,8 +156,7 @@ As you may note, in this case `tgpu.resolve` uses the structure of the `external
 Here is another example. Assume, that the bind group index `0` is already taken by some existing code:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 // ---cut---
 const LightSource = d.struct({
   ambientColor: d.vec3f,
@@ -264,7 +258,7 @@ Sometimes, it may not be clear which bind group layouts were used in a given res
 This may occur especially when using:
 
 - Buffer usages/shorthands, which use a hidden, automatically created "catchall" bind group,
-- TypeGPU functions implemented in TGSL, which generate their externals automatically.
+- TypeGPU functions implemented in JavaScript/TypeScript, which generate their externals automatically.
 
 For these cases, you can use `tgpu.resolveWithContext`, which has the same input API as `tgpu.resolve`, but in addition to the resolved code, it also returns information about the layouts used. `tgpu.resolveWithContext` returns an object with 3 props:
 
@@ -275,8 +269,7 @@ For these cases, you can use `tgpu.resolveWithContext`, which has the same input
 An example, where the "catchall" bind group is created:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -297,19 +290,19 @@ console.log(catchall?.[0]); // 0 - the group index of the catchall bind group
 console.log(catchall?.[1]); // the catchall bind group
 ```
 
-An example, where a bind group layout is automatically included via a TGSL function:
+An example, where a bind group layout is automatically included via a TypeScript function:
 
 ```ts twoslash
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
+import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
 const myLayout = tgpu.bindGroupLayout({ count: { uniform: d.u32 } });
 
-const exampleFn = tgpu.fn([])(() => {
+function exampleFn() {
+  'use gpu';
   myLayout.$.count += 1;
-});
+}
 
 const { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
   externals: { exampleFn },

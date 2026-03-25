@@ -10,14 +10,8 @@ if (!device) {
 }
 
 const canvas = await addElement('canvas', { aspectRatio: 1 });
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
 
 const pipeline = device.createRenderPipeline({
   layout: 'auto',

@@ -1,9 +1,6 @@
 import type InputNode from 'three/src/nodes/core/InputNode.js';
-import {
-  uniform as uniformImpl,
-  uniformArray as uniformArrayImpl,
-} from 'three/tsl';
-import type { Node, TSL, UniformArrayNode, UniformNode } from 'three/webgpu';
+import { uniform as uniformImpl, uniformArray as uniformArrayImpl } from 'three/tsl';
+import type { Color, Node, TSL, UniformArrayNode, UniformNode } from 'three/webgpu';
 import * as d from 'typegpu/data';
 import { wgslTypeToGlslType } from './common.ts';
 import { fromTSL, type TSLAccessor } from './typegpu-node.ts';
@@ -28,7 +25,7 @@ export function uniform<TValue, TDataType extends d.AnyWgslData>(
   let glslType: string | undefined =
     wgslTypeToGlslType[dataType.type as keyof typeof wgslTypeToGlslType];
 
-  if ((value as TSL.NodeObject<Node>).isNode) {
+  if ((value as TSL.NodeObject<Node>).isNode || (value as Color).isColor) {
     // The type sometimes interferes with the node's inherent type
     glslType = undefined;
   }

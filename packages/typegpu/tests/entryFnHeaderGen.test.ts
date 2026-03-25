@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu from '../src/index.js';
 
 describe('autogenerating wgsl headers for tgpu entry functions with raw string WGSL implementations', () => {
   it('works for fragment entry function with non-decorated non-struct output', () => {
-    const mainFragment = tgpu['~unstable'].fragmentFn({
+    const mainFragment = tgpu.fragmentFn({
       in: { uv: d.vec2f },
       out: d.vec4f,
-    }) /* wgsl */`{ return vec4f(in.uv[0]); }`;
+    }) /* wgsl */ `{ return vec4f(in.uv[0]); }`;
 
     expect(tgpu.resolve([mainFragment])).toMatchInlineSnapshot(`
       "struct mainFragment_Input {
@@ -19,10 +19,10 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
   });
 
   it('works for fragment entry function with decorated non-struct output', () => {
-    const mainFragment = tgpu['~unstable'].fragmentFn({
+    const mainFragment = tgpu.fragmentFn({
       in: { uv: d.vec2f },
       out: d.location(1, d.vec4f),
-    }) /* wgsl */`{ return vec4f(in.uv[0]); }`;
+    }) /* wgsl */ `{ return vec4f(in.uv[0]); }`;
 
     expect(tgpu.resolve([mainFragment])).toMatchInlineSnapshot(`
       "struct mainFragment_Input {
@@ -34,12 +34,12 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
   });
 
   it('works for fragment entry function with struct output', () => {
-    const mainFragment = tgpu['~unstable'].fragmentFn({
+    const mainFragment = tgpu.fragmentFn({
       in: { uv: d.vec2f },
       out: {
         primary: d.location(1, d.vec4f),
       },
-    }) /* wgsl */`{ return Out(vec4f(in.uv[0])); }`;
+    }) /* wgsl */ `{ return Out(vec4f(in.uv[0])); }`;
 
     expect(tgpu.resolve([mainFragment])).toMatchInlineSnapshot(`
       "struct mainFragment_Input {
@@ -55,10 +55,10 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
   });
 
   it('works for compute entry function', () => {
-    const mainCompute = tgpu['~unstable'].computeFn({
+    const mainCompute = tgpu.computeFn({
       in: { index: d.builtin.globalInvocationId },
       workgroupSize: [1],
-    }) /* wgsl */`{ let x = in.index; }`;
+    }) /* wgsl */ `{ let x = in.index; }`;
 
     expect(tgpu.resolve([mainCompute])).toMatchInlineSnapshot(`
       "struct mainCompute_Input {
@@ -70,7 +70,7 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
   });
 
   it('works for vertex entry function', () => {
-    const mainVertex = tgpu['~unstable'].vertexFn({
+    const mainVertex = tgpu.vertexFn({
       in: { vertexIndex: d.builtin.vertexIndex },
       out: { outPos: d.builtin.position, uv: d.vec2f },
     })(/* wgsl */ `{

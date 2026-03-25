@@ -16,8 +16,7 @@ describe('[BABEL] auto naming', () => {
       console.log(bindGroupLayout, vertexLayout);
     `;
 
-    expect(babelTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
         const bindGroupLayout = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.bindGroupLayout({}), "bindGroupLayout");
@@ -42,18 +41,17 @@ describe('[BABEL] auto naming', () => {
       import * as d from 'typegpu/data';
 
       let nothing, accessor = tgpu['~unstable'].accessor(d.u32);
-      const hello = tgpu['~unstable'].comptime(() => 1 + 2);
+      const hello = tgpu.comptime(() => 1 + 2);
 
       console.log(accessor, shell, fn, cst);
     `;
 
-    expect(babelTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
         let nothing,
           accessor = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].accessor(d.u32), "accessor");
-        const hello = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].comptime(() => 1 + 2), "hello");
+        const hello = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.comptime(() => 1 + 2), "hello");
         console.log(accessor, shell, fn, cst);"
       `);
   });
@@ -70,8 +68,7 @@ describe('[BABEL] auto naming', () => {
       console.log(myStruct1, myStruct2, bait);
     `;
 
-    expect(babelTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
       "import * as d from 'typegpu/data';
       import { struct } from 'typegpu/data';
       const myStruct1 = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({
@@ -95,8 +92,7 @@ describe('[BABEL] auto naming', () => {
       console.log(myBuffer);
     `;
 
-    expect(babelTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       const root = await tgpu.init();
       const myBuffer = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createBuffer(d.u32, 2), "myBuffer");
@@ -110,13 +106,13 @@ describe('[BABEL] auto naming', () => {
       import * as d from 'typegpu/data';
 
       const myFunction = tgpu.fn([])(() => 0);
-      const myComputeFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const myComputeFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
-      const myVertexFn = tgpu['~unstable'].vertexFn({ out: { ret: d.i32 } })(
+      const myVertexFn = tgpu.vertexFn({ out: { ret: d.i32 } })(
         () => ({ ret: 0 }),
       );
-      const myFragmentFn = tgpu['~unstable'].fragmentFn({
+      const myFragmentFn = tgpu.fragmentFn({
         in: { position: d.builtin.position },
         out: d.vec4f,
       })(
@@ -124,8 +120,7 @@ describe('[BABEL] auto naming', () => {
       );
     `;
 
-    expect(babelTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
         const myFunction = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => 0, {
@@ -136,7 +131,7 @@ describe('[BABEL] auto naming', () => {
             return {};
           }
         }) && $.f)({})), "myFunction");
-        const myComputeFn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].computeFn({
+        const myComputeFn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.computeFn({
           workgroupSize: [1]
         })(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {}, {
           v: 1,
@@ -146,7 +141,7 @@ describe('[BABEL] auto naming', () => {
             return {};
           }
         }) && $.f)({})), "myComputeFn");
-        const myVertexFn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].vertexFn({
+        const myVertexFn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexFn({
           out: {
             ret: d.i32
           }
@@ -160,7 +155,7 @@ describe('[BABEL] auto naming', () => {
             return {};
           }
         }) && $.f)({})), "myVertexFn");
-        const myFragmentFn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fragmentFn({
+        const myFragmentFn = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fragmentFn({
           in: {
             position: d.builtin.position
           },
@@ -194,8 +189,7 @@ describe('[BABEL] auto naming', () => {
         .$idx(0);
     `;
 
-    expect(babelTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "const myBuffer = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createBuffer(d.u32).$usage('storage').$addFlags(GPUBufferUsage.STORAGE), "myBuffer");
         const Item = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({
           a: d.u32
@@ -226,8 +220,7 @@ describe('[BABEL] auto naming', () => {
 
     `;
 
-    expect(babelTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
       import { struct } from 'typegpu/data';
@@ -249,8 +242,7 @@ describe('[BABEL] auto naming', () => {
       console.log(a, b, c);
     `;
 
-    expect(babelTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
       "const a = 1;
       const b = "root.createBuffer()";
       const c = () => {};
@@ -267,8 +259,7 @@ describe('[BABEL] auto naming', () => {
         });
     `;
 
-    expect(babelTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "let layout;
         layout = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.bindGroupLayout({
           foo: {
@@ -285,8 +276,7 @@ describe('[BABEL] auto naming', () => {
       };
     `;
 
-    expect(babelTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "const mySchemas = {
           myStruct: (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({
             a: d.vec3f
@@ -313,8 +303,7 @@ describe('[BABEL] auto naming', () => {
       }
     `;
 
-    expect(babelTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "const myFun1 = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
           'use gpu';
 
@@ -365,8 +354,7 @@ describe('[BABEL] auto naming', () => {
       }
     `;
 
-    expect(babelTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
         const root = await tgpu.init();
@@ -387,8 +375,7 @@ describe('[BABEL] auto naming', () => {
       items.myBuffer = root.createUniform(d.u32);
     `;
 
-    expect(babelTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
         const root = await tgpu.init();
@@ -416,8 +403,7 @@ describe('[BABEL] auto naming', () => {
       }
     `;
 
-    expect(babelTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "import tgpu, { type TgpuUniform } from 'typegpu';
         import * as d from 'typegpu/data';
         const root = await tgpu.init();
@@ -427,6 +413,90 @@ describe('[BABEL] auto naming', () => {
             this.myBuffer = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createUniform(d.u32), "myBuffer");
           }
         }"
+      `);
+  });
+
+  it('works with assigning to "this" private property', () => {
+    const code = `\
+      import tgpu from 'typegpu';
+      import * as d from 'typegpu/data';
+
+      const root = await tgpu.init();
+
+      class MyController {
+        #myBuffer;
+
+        constructor() {
+          this.#myBuffer = root.createUniform(d.u32);
+        }
+
+        get myBuffer() {
+          return this.#myBuffer;
+        }
+      }
+
+      console.log(MyController);
+    `;
+
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
+        "import tgpu from 'typegpu';
+        import * as d from 'typegpu/data';
+        const root = await tgpu.init();
+        class MyController {
+          #myBuffer;
+          constructor() {
+            this.#myBuffer = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createUniform(d.u32), "myBuffer");
+          }
+          get myBuffer() {
+            return this.#myBuffer;
+          }
+        }
+        console.log(MyController);"
+      `);
+  });
+
+  it('works with guarded pipelines', () => {
+    const code = `\
+      import tgpu from 'typegpu';
+
+      const root = await tgpu.init();
+
+      const myGuardedPipeline = root.createGuardedComputePipeline(() => {
+        'use gpu';
+      });
+
+      const anotherGuardedPipeline = root
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+        }).dispatchThreads();
+
+      console.log(myGuardedPipeline, anotherGuardedPipeline);
+    `;
+
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
+        "import tgpu from 'typegpu';
+        const root = await tgpu.init();
+        const myGuardedPipeline = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createGuardedComputePipeline(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+          'use gpu';
+        }, {
+          v: 1,
+          name: void 0,
+          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          externals: () => {
+            return {};
+          }
+        }) && $.f)({})), "myGuardedPipeline");
+        const anotherGuardedPipeline = (globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createGuardedComputePipeline(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+          'use gpu';
+        }, {
+          v: 1,
+          name: void 0,
+          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          externals: () => {
+            return {};
+          }
+        }) && $.f)({})).dispatchThreads(), "anotherGuardedPipeline");
+        console.log(myGuardedPipeline, anotherGuardedPipeline);"
       `);
   });
 });
@@ -441,12 +511,13 @@ describe('[ROLLUP] auto naming', () => {
       const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.u32));
       let shell = tgpu.fn([]);
       var fn = tgpu.fn([])(() => {});
+      let nothing, accessor = tgpu.accessor(d.u32);
+      const cst = tgpu.const(d.u32, 1);
 
       console.log(bindGroupLayout, vertexLayout);
     `;
 
-    expect(await rollupTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
 
@@ -459,32 +530,10 @@ describe('[ROLLUP] auto naming', () => {
                       ast: {"params":[],"body":[0,[]],"externalNames":[]},
                       externals: () => ({}),
                     }) && $.f)({}))), "fn"));
+              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.accessor(d.u32), "accessor"));
+              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 1), "cst"));
 
               console.log(bindGroupLayout, vertexLayout);
-        "
-      `);
-  });
-
-  it(`works with tgpu['~unstable'] items`, async () => {
-    const code = `\
-      import tgpu from 'typegpu';
-      import * as d from 'typegpu/data';
-
-      let nothing, accessor = tgpu['~unstable'].accessor(d.u32);
-      const cst = tgpu.const(d.u32, 1);
-
-      console.log(accessor, shell, fn, cst);
-    `;
-
-    expect(await rollupTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
-        "import tgpu from 'typegpu';
-        import * as d from 'typegpu/data';
-
-        let accessor = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].accessor(d.u32), "accessor"));
-              const cst = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 1), "cst"));
-
-              console.log(accessor, shell, fn, cst);
         "
       `);
   });
@@ -501,8 +550,7 @@ describe('[ROLLUP] auto naming', () => {
       console.log(myStruct1, myStruct2, bait);
     `;
 
-    expect(await rollupTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "import * as d from 'typegpu/data';
         import { struct } from 'typegpu/data';
 
@@ -525,8 +573,7 @@ describe('[ROLLUP] auto naming', () => {
       console.log(myBuffer);
     `;
 
-    expect(await rollupTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "import tgpu from 'typegpu';
 
         const root = await tgpu.init();
@@ -543,13 +590,13 @@ describe('[ROLLUP] auto naming', () => {
       import * as d from 'typegpu/data';
 
       const myFunction = tgpu.fn([])(() => 0);
-      const myComputeFn = tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+      const myComputeFn = tgpu.computeFn({ workgroupSize: [1] })(
         () => {},
       );
-      const myVertexFn = tgpu['~unstable'].vertexFn({ out: { ret: d.i32 } })(
+      const myVertexFn = tgpu.vertexFn({ out: { ret: d.i32 } })(
         () => ({ ret: 0 }),
       );
-      const myFragmentFn = tgpu['~unstable'].fragmentFn({
+      const myFragmentFn = tgpu.fragmentFn({
         in: { position: d.builtin.position },
         out: d.vec4f,
       })(
@@ -557,8 +604,7 @@ describe('[ROLLUP] auto naming', () => {
       );
     `;
 
-    expect(await rollupTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
 
@@ -568,7 +614,7 @@ describe('[ROLLUP] auto naming', () => {
                       ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
                       externals: () => ({}),
                     }) && $.f)({}))), "myFunction"));
-              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].computeFn({ workgroupSize: [1] })(
+              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.computeFn({ workgroupSize: [1] })(
                 (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {}), {
                       v: 1,
                       name: undefined,
@@ -576,7 +622,7 @@ describe('[ROLLUP] auto naming', () => {
                       externals: () => ({}),
                     }) && $.f)({})),
               ), "myComputeFn"));
-              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].vertexFn({ out: { ret: d.i32 } })(
+              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexFn({ out: { ret: d.i32 } })(
                 (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => ({ ret: 0 })), {
                       v: 1,
                       name: undefined,
@@ -584,7 +630,7 @@ describe('[ROLLUP] auto naming', () => {
                       externals: () => ({}),
                     }) && $.f)({})),
               ), "myVertexFn"));
-              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].fragmentFn({
+              ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fragmentFn({
                 in: { position: d.builtin.position },
                 out: d.vec4f,
               })(
@@ -615,8 +661,7 @@ describe('[ROLLUP] auto naming', () => {
         .$idx(0);
     `;
 
-    expect(await rollupTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createBuffer(d.u32)
                 .$usage('storage')
                 .$addFlags(GPUBufferUsage.STORAGE), "myBuffer"));
@@ -648,8 +693,7 @@ describe('[ROLLUP] auto naming', () => {
 
     `;
 
-    expect(await rollupTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
       import { struct } from 'typegpu/data';
@@ -673,8 +717,7 @@ describe('[ROLLUP] auto naming', () => {
       console.log(a, b, c);
     `;
 
-    expect(await rollupTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
       "const a = 1;
             const b = "root.createBuffer()";
             const c = () => {};
@@ -693,8 +736,7 @@ describe('[ROLLUP] auto naming', () => {
         });
     `;
 
-    expect(await rollupTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu
                 .bindGroupLayout({
                   foo: { uniform: vec3f },
@@ -715,8 +757,7 @@ describe('[ROLLUP] auto naming', () => {
         autoNamingEnabled: true,
         earlyPruning: false,
       }),
-    )
-      .toMatchInlineSnapshot(`
+    ).toMatchInlineSnapshot(`
         "({
                 myStruct: ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(d.struct({ a: d.vec3f }), "myStruct"))
               });
@@ -744,8 +785,7 @@ describe('[ROLLUP] auto naming', () => {
       console.log(myFun1, myFun2, myFun3);
     `;
 
-    expect(await rollupTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "const myFun1 = (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                 'use gpu';
                 return 0;
@@ -794,8 +834,7 @@ describe('[ROLLUP] auto naming', () => {
       console.log(MyController)
     `;
 
-    expect(await rollupTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
 
@@ -823,8 +862,7 @@ describe('[ROLLUP] auto naming', () => {
       console.log(items.myBuffer)
     `;
 
-    expect(await rollupTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
 
@@ -856,8 +894,7 @@ describe('[ROLLUP] auto naming', () => {
       console.log(MyController)
     `;
 
-    expect(await rollupTransform(code, { autoNamingEnabled: true }))
-      .toMatchInlineSnapshot(`
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
         "import tgpu from 'typegpu';
         import * as d from 'typegpu/data';
 
@@ -872,6 +909,100 @@ describe('[ROLLUP] auto naming', () => {
               }
 
               console.log(MyController);
+        "
+      `);
+  });
+
+  it('works with assigning to "this" private property', async () => {
+    const code = `\
+      import tgpu from 'typegpu';
+      import * as d from 'typegpu/data';
+
+      const root = await tgpu.init();
+
+      class MyController {
+        #myBuffer;
+
+        constructor() {
+          this.#myBuffer = root.createUniform(d.u32);
+        }
+
+        get myBuffer() {
+          return this.#myBuffer;
+        }
+      }
+
+      console.log(MyController);
+    `;
+
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
+        "import tgpu from 'typegpu';
+        import * as d from 'typegpu/data';
+
+        const root = await tgpu.init();
+
+              class MyController {
+                #myBuffer;
+
+                constructor() {
+                  this.#myBuffer = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createUniform(d.u32), "myBuffer"));
+                }
+
+                get myBuffer() {
+                  return this.#myBuffer;
+                }
+              }
+
+              console.log(MyController);
+        "
+      `);
+  });
+
+  it('works with guarded pipelines', async () => {
+    const code = `\
+      import tgpu from 'typegpu';
+
+      const root = await tgpu.init();
+
+      const myGuardedPipeline = root.createGuardedComputePipeline(() => {
+        'use gpu';
+      });
+
+      const anotherGuardedPipeline = root
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+        })
+        .dispatchThreads();
+
+      console.log(myGuardedPipeline, anotherGuardedPipeline);
+    `;
+
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
+        "import tgpu from 'typegpu';
+
+        const root = await tgpu.init();
+
+              const myGuardedPipeline = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createGuardedComputePipeline((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                'use gpu';
+              }), {
+                      v: 1,
+                      name: undefined,
+                      ast: {"params":[],"body":[0,[]],"externalNames":[]},
+                      externals: () => ({}),
+                    }) && $.f)({}))), "myGuardedPipeline"));
+
+              const anotherGuardedPipeline = ((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root
+                .createGuardedComputePipeline((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+                  'use gpu';
+                }), {
+                      v: 1,
+                      name: undefined,
+                      ast: {"params":[],"body":[0,[]],"externalNames":[]},
+                      externals: () => ({}),
+                    }) && $.f)({})))
+                .dispatchThreads(), "anotherGuardedPipeline"));
+
+              console.log(myGuardedPipeline, anotherGuardedPipeline);
         "
       `);
   });

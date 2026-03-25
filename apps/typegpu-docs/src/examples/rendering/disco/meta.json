@@ -1,5 +1,6 @@
 {
   "title": "Disco",
   "category": "rendering",
-  "tags": ["experimental"]
+  "tags": ["interaction"],
+  "coolFactor": 6
 }

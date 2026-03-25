@@ -1,8 +1,7 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { connectAttributesToShader } from '../src/core/vertexLayout/connectAttributesToShader.ts';
 import type { ArrayToContainedAttribs } from '../src/core/vertexLayout/vertexAttribute.ts';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.ts';
+import tgpu, { d } from '../src/index.js';
 import type { TgpuVertexAttrib } from '../src/shared/vertexFormat.ts';
 
 describe('ArrayToContainedAttribs', () => {
@@ -31,9 +30,7 @@ describe('ArrayToContainedAttribs', () => {
   });
 
   it('processes a loose array of structs', () => {
-    type Result = ArrayToContainedAttribs<
-      d.Disarray<d.WgslStruct<{ a: d.F32; b: d.F32 }>>
-    >;
+    type Result = ArrayToContainedAttribs<d.Disarray<d.WgslStruct<{ a: d.F32; b: d.F32 }>>>;
 
     expectTypeOf<Result>().toEqualTypeOf<{
       a: TgpuVertexAttrib<'float32'>;
@@ -42,9 +39,7 @@ describe('ArrayToContainedAttribs', () => {
   });
 
   it('processes a loose array of loose struct', () => {
-    type Result = ArrayToContainedAttribs<
-      d.Disarray<d.Unstruct<{ a: d.F32; b: d.F32 }>>
-    >;
+    type Result = ArrayToContainedAttribs<d.Disarray<d.Unstruct<{ a: d.F32; b: d.F32 }>>>;
 
     expectTypeOf<Result>().toEqualTypeOf<{
       a: TgpuVertexAttrib<'float32'>;
@@ -53,9 +48,7 @@ describe('ArrayToContainedAttribs', () => {
   });
 
   it('processes an array of structs', () => {
-    type Result = ArrayToContainedAttribs<
-      d.Disarray<d.Unstruct<{ a: d.F32; b: d.F32 }>>
-    >;
+    type Result = ArrayToContainedAttribs<d.Disarray<d.Unstruct<{ a: d.F32; b: d.F32 }>>>;
 
     expectTypeOf<Result>().toEqualTypeOf<{
       a: TgpuVertexAttrib<'float32'>;
@@ -78,9 +71,7 @@ describe('ArrayToContainedAttribs', () => {
 
 describe('tgpu.vertexLayout', () => {
   it('creates attributes from loose array of vec3f', () => {
-    const vertexLayout = tgpu.vertexLayout((count: number) =>
-      d.disarrayOf(d.vec3f, count)
-    );
+    const vertexLayout = tgpu.vertexLayout((count: number) => d.disarrayOf(d.vec3f, count));
 
     expect(vertexLayout.stride).toBe(12);
     expect(vertexLayout.attrib).toStrictEqual({
@@ -97,9 +88,7 @@ describe('tgpu.vertexLayout', () => {
       c: d.f32, // + 4
     });
 
-    const vertexLayout = tgpu.vertexLayout((count: number) =>
-      d.disarrayOf(VertexData, count)
-    );
+    const vertexLayout = tgpu.vertexLayout((count: number) => d.disarrayOf(VertexData, count));
 
     expect(vertexLayout.stride).toBe(32);
     expect(vertexLayout.attrib).toStrictEqual({
@@ -128,9 +117,7 @@ describe('tgpu.vertexLayout', () => {
       c: d.f32, // + 4
     });
 
-    const vertexLayout = tgpu.vertexLayout((count: number) =>
-      d.disarrayOf(VertexData, count)
-    );
+    const vertexLayout = tgpu.vertexLayout((count: number) => d.disarrayOf(VertexData, count));
 
     expect(vertexLayout.stride).toBe(20);
     expect(vertexLayout.attrib).toStrictEqual({
@@ -153,9 +140,7 @@ describe('tgpu.vertexLayout', () => {
   });
 
   it('creates attributes from loose array with f16 variants', () => {
-    const vertexLayout = tgpu.vertexLayout((count: number) =>
-      d.disarrayOf(d.float16x4, count)
-    );
+    const vertexLayout = tgpu.vertexLayout((count: number) => d.disarrayOf(d.float16x4, count));
 
     expect(vertexLayout.stride).toBe(8);
     expect(vertexLayout.attrib).toStrictEqual({
@@ -192,9 +177,7 @@ describe('connectAttributesToShader', () => {
 
   it('connects a single vec4f attribute (with custom shader location)', () => {
     const shaderInputLayout = d.location(3, d.vec4f);
-    const layout = tgpu.vertexLayout((n: number) =>
-      d.disarrayOf(d.unorm16x4, n)
-    );
+    const layout = tgpu.vertexLayout((n: number) => d.disarrayOf(d.unorm16x4, n));
     const attrib = layout.attrib;
 
     expect(connectAttributesToShader(shaderInputLayout, attrib)).toStrictEqual({
@@ -219,7 +202,7 @@ describe('connectAttributesToShader', () => {
     const shaderInputLayout = {
       a: d.f32,
       b: d.location(3, d.vec2f),
-      c: d.u32, /* should get @location(4) automatically */
+      c: d.u32 /* should get @location(4) automatically */,
     };
 
     const layout = tgpu.vertexLayout((n: number) =>
@@ -230,7 +213,7 @@ describe('connectAttributesToShader', () => {
           gamma: d.u32, // 4 bytes
         }),
         n,
-      )
+      ),
     );
 
     const result = connectAttributesToShader(shaderInputLayout, {
@@ -273,7 +256,7 @@ describe('connectAttributesToShader', () => {
       vi: d.builtin.vertexIndex, // should be omitted
       a: d.f32,
       b: d.location(3, d.vec2f),
-      c: d.u32, /* should get @location(4) automatically */
+      c: d.u32 /* should get @location(4) automatically */,
     };
 
     const alphaBetaLayout = tgpu.vertexLayout((n: number) =>
@@ -283,7 +266,7 @@ describe('connectAttributesToShader', () => {
           beta: d.unorm8x2, // 2 bytes
         }),
         n,
-      )
+      ),
     );
 
     const gammaLayout = tgpu.vertexLayout(d.arrayOf(d.u32));
@@ -331,9 +314,7 @@ describe('connectAttributesToShader', () => {
 
   it('connects a single vec4h attribute', () => {
     const shaderInputLayout = d.vec4h;
-    const layout = tgpu.vertexLayout((n: number) =>
-      d.disarrayOf(d.float16x4, n)
-    );
+    const layout = tgpu.vertexLayout((n: number) => d.disarrayOf(d.float16x4, n));
     const attrib = layout.attrib;
 
     expect(connectAttributesToShader(shaderInputLayout, attrib)).toStrictEqual({
@@ -358,7 +339,7 @@ describe('connectAttributesToShader', () => {
     const shaderInputLayout = {
       a: d.f16,
       b: d.location(3, d.vec2h),
-      c: d.u32, /* should get @location(4) automatically */
+      c: d.u32 /* should get @location(4) automatically */,
       d: d.f32,
     };
 
@@ -371,7 +352,7 @@ describe('connectAttributesToShader', () => {
           delta: d.float16, // 2 bytes
         }),
         n,
-      )
+      ),
     );
 
     const result = connectAttributesToShader(shaderInputLayout, {
@@ -416,7 +397,6 @@ describe('connectAttributesToShader', () => {
   });
 
   it('throws when trying to use type that has no attribute representation', () => {
-    expect(() => tgpu.vertexLayout(d.disarrayOf(d.vec3h)))
-      .toThrow();
+    expect(() => tgpu.vertexLayout(d.disarrayOf(d.vec3h))).toThrow();
   });
 });

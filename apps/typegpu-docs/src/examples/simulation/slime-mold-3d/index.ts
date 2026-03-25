@@ -1,25 +1,15 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import { fullScreenTriangle } from 'typegpu/common';
 import { randf } from '@typegpu/noise';
+import tgpu, { common, d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
   device: { optionalFeatures: ['float32-filterable'] },
 });
 const canFilter = root.enabledFeatures.has('float32-filterable');
-const device = root.device;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device: device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const VOLUME_SIZE = 256;
 const NUM_AGENTS = 800_000;
@@ -57,17 +47,19 @@ const aspect = canvas.width / canvas.height;
 const near = 0.1;
 const far = 1000.0;
 
-let cameraDistance = Math.max(resolution.x, resolution.y, resolution.z) *
-  CAMERA_DISTANCE_MULTIPLIER;
+let cameraDistance =
+  Math.max(resolution.x, resolution.y, resolution.z) * CAMERA_DISTANCE_MULTIPLIER;
 let cameraTheta = CAMERA_INITIAL_ANGLE; // azimuth
 let cameraPhi = CAMERA_INITIAL_ANGLE; // elevation
 
 const updateCamera = () => {
-  const cameraPos = cameraTarget.add(d.vec3f(
-    cameraDistance * Math.sin(cameraPhi) * Math.cos(cameraTheta),
-    cameraDistance * Math.cos(cameraPhi),
-    cameraDistance * Math.sin(cameraPhi) * Math.sin(cameraTheta),
-  ));
+  const cameraPos = cameraTarget.add(
+    d.vec3f(
+      cameraDistance * Math.sin(cameraPhi) * Math.cos(cameraTheta),
+      cameraDistance * Math.cos(cameraPhi),
+      cameraDistance * Math.sin(cameraPhi) * Math.sin(cameraTheta),
+    ),
+  );
 
   const view = m.mat4.lookAt(cameraPos, cameraTarget, cameraUp, d.mat4x4f());
   const proj = m.mat4.perspective(fov, aspect, near, far, d.mat4x4f());
@@ -104,19 +96,21 @@ const Params = d.struct({
 });
 
 const agentsDataBuffers = [0, 1].map(() =>
-  root.createBuffer(d.arrayOf(Agent, NUM_AGENTS)).$usage('storage')
+  root.createBuffer(d.arrayOf(Agent, NUM_AGENTS)).$usage('storage'),
 );
 
 const mutableAgentsDataBuffers = agentsDataBuffers.map((b) => b.as('mutable'));
-root['~unstable'].createGuardedComputePipeline((x) => {
-  'use gpu';
-  randf.seed(x / NUM_AGENTS);
-  const pos = randf.inUnitSphere().mul(resolution.x / 4).add(resolution.div(2));
-  const center = resolution.div(2);
-  const dir = std.normalize(center.sub(pos));
-  mutableAgentsDataBuffers[0].$[x] = Agent({ position: pos, direction: dir });
-  mutableAgentsDataBuffers[1].$[x] = Agent({ position: pos, direction: dir });
-}).dispatchThreads(NUM_AGENTS);
+root
+  .createGuardedComputePipeline((x) => {
+    'use gpu';
+    randf.seed(x / NUM_AGENTS);
+    const pos = randf.inUnitSphere() * (resolution.x / 4) + resolution / 2;
+    const center = resolution / 2;
+    const dir = std.normalize(center - pos);
+    mutableAgentsDataBuffers[0].$[x] = Agent({ position: pos, direction: dir });
+    mutableAgentsDataBuffers[1].$[x] = Agent({ position: pos, direction: dir });
+  })
+  .dispatchThreads(NUM_AGENTS);
 
 const params = root.createUniform(Params, {
   deltaTime: 0,
@@ -134,7 +128,7 @@ const textures = [0, 1].map(() =>
       format: 'r32float',
       dimension: '3d',
     })
-    .$usage('sampled', 'storage')
+    .$usage('sampled', 'storage'),
 );
 
 const computeLayout = tgpu.bindGroupLayout({
@@ -186,6 +180,8 @@ const getPerpendicular = (dir: d.v3f) => {
   return std.normalize(std.cross(dir, axis));
 };
 
+const numSamples = 8;
+const samplesIterations = Array.from({ length: numSamples }, (_, i) => i);
 const sense3D = (pos: d.v3f, direction: d.v3f) => {
   'use gpu';
   const dims = std.textureDimensions(computeLayout.$.oldState);
@@ -197,33 +193,29 @@ const sense3D = (pos: d.v3f, direction: d.v3f) => {
   const perp1 = getPerpendicular(direction);
   const perp2 = std.cross(direction, perp1);
 
-  const numSamples = 8;
-  for (let i = 0; i < numSamples; i++) {
+  for (const i of tgpu.unroll(samplesIterations)) {
     const theta = (i / numSamples) * 2 * Math.PI;
 
-    const coneOffset = perp1.mul(std.cos(theta)).add(perp2.mul(std.sin(theta)));
-    const sensorDir = std.normalize(
-      direction.add(coneOffset.mul(std.sin(params.$.sensorAngle))),
-    );
+    const coneOffset = perp1 * std.cos(theta) + perp2 * std.sin(theta);
+    const sensorDir = std.normalize(direction + coneOffset * std.sin(params.$.sensorAngle));
 
-    const sensorPos = pos.add(sensorDir.mul(params.$.sensorDistance));
-    const sensorPosInt = d.vec3u(
-      std.clamp(sensorPos, d.vec3f(), dimsf.sub(d.vec3f(1))),
-    );
+    const sensorPos = pos + sensorDir * params.$.sensorDistance;
+    const sensorPosInt = d.vec3u(std.clamp(sensorPos, d.vec3f(), dimsf - 1));
 
     const weight = std.textureLoad(computeLayout.$.oldState, sensorPosInt).x;
 
-    weightedDir = weightedDir.add(sensorDir.mul(weight));
+    weightedDir = weightedDir + sensorDir * weight;
     totalWeight = totalWeight + weight;
   }
 
   return SenseResult({ weightedDir, totalWeight });
 };
 
-const updateAgents = tgpu['~unstable'].computeFn({
+const updateAgents = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [AGENT_WORKGROUP_SIZE],
 })(({ gid }) => {
+  'use gpu';
   if (gid.x >= NUM_AGENTS) {
     return;
   }
@@ -242,15 +234,11 @@ const updateAgents = tgpu['~unstable'].computeFn({
     std.normalize(senseResult.weightedDir),
     senseResult.totalWeight > 0.01,
   );
-  direction = std.normalize(direction.add(
-    targetDirection.mul(params.$.turnSpeed * params.$.deltaTime),
-  ));
+  direction = std.normalize(direction + targetDirection * params.$.turnSpeed * params.$.deltaTime);
 
-  const newPos = agent.position.add(
-    direction.mul(params.$.moveSpeed * params.$.deltaTime),
-  );
+  const newPos = agent.position + direction * params.$.moveSpeed * params.$.deltaTime;
 
-  const center = dimsf.div(2);
+  const center = dimsf / 2;
 
   if (newPos.x < 0 || newPos.x >= dimsf.x) {
     newPos.x = std.clamp(newPos.x, 0, dimsf.x - 1);
@@ -259,13 +247,9 @@ const updateAgents = tgpu['~unstable'].computeFn({
       normal = d.vec3f(-1, 0, 0);
     }
     const randomDir = randf.inHemisphere(normal);
-    const toCenter = std.normalize(center.sub(newPos));
+    const toCenter = std.normalize(center - newPos);
 
-    direction = std.normalize(
-      randomDir.mul(RANDOM_DIRECTION_WEIGHT).add(
-        toCenter.mul(CENTER_BIAS_WEIGHT),
-      ),
-    );
+    direction = std.normalize(randomDir * RANDOM_DIRECTION_WEIGHT + toCenter * CENTER_BIAS_WEIGHT);
   }
   if (newPos.y < 0 || newPos.y >= dimsf.y) {
     newPos.y = std.clamp(newPos.y, 0, dimsf.y - 1);
@@ -274,12 +258,8 @@ const updateAgents = tgpu['~unstable'].computeFn({
       normal = d.vec3f(0, -1, 0);
     }
     const randomDir = randf.inHemisphere(normal);
-    const toCenter = std.normalize(center.sub(newPos));
-    direction = std.normalize(
-      randomDir.mul(RANDOM_DIRECTION_WEIGHT).add(
-        toCenter.mul(CENTER_BIAS_WEIGHT),
-      ),
-    );
+    const toCenter = std.normalize(center - newPos);
+    direction = std.normalize(randomDir * RANDOM_DIRECTION_WEIGHT + toCenter * CENTER_BIAS_WEIGHT);
   }
   if (newPos.z < 0 || newPos.z >= dimsf.z) {
     newPos.z = std.clamp(newPos.z, 0, dimsf.z - 1);
@@ -288,12 +268,8 @@ const updateAgents = tgpu['~unstable'].computeFn({
       normal = d.vec3f(0, 0, -1);
     }
     const randomDir = randf.inHemisphere(normal);
-    const toCenter = std.normalize(center.sub(newPos));
-    direction = std.normalize(
-      randomDir.mul(RANDOM_DIRECTION_WEIGHT).add(
-        toCenter.mul(CENTER_BIAS_WEIGHT),
-      ),
-    );
+    const toCenter = std.normalize(center - newPos);
+    direction = std.normalize(randomDir * RANDOM_DIRECTION_WEIGHT + toCenter * CENTER_BIAS_WEIGHT);
   }
 
   computeLayout.$.newAgents[gid.x] = Agent({
@@ -303,11 +279,7 @@ const updateAgents = tgpu['~unstable'].computeFn({
 
   const oldState = std.textureLoad(computeLayout.$.oldState, d.vec3u(newPos)).x;
   const newState = oldState + 1;
-  std.textureStore(
-    computeLayout.$.newState,
-    d.vec3u(newPos),
-    d.vec4f(newState, 0, 0, 1),
-  );
+  std.textureStore(computeLayout.$.newState, d.vec3u(newPos), d.vec4f(newState, 0, 0, 1));
 });
 
 const sampler = root['~unstable'].createSampler({
@@ -315,53 +287,44 @@ const sampler = root['~unstable'].createSampler({
   minFilter: canFilter ? 'linear' : 'nearest',
 });
 
-const getSummand = tgpu.fn([d.vec3f, d.vec3f], d.f32)((uv, offset) =>
-  std.textureSampleLevel(
-    blurLayout.$.oldState,
-    blurLayout.$.sampler,
-    uv.add(offset),
-    0,
-  ).x
+const getSummand = tgpu.fn(
+  [d.vec3f, d.vec3f],
+  d.f32,
+)(
+  (uv, offset) =>
+    std.textureSampleLevel(blurLayout.$.oldState, blurLayout.$.sampler, uv.add(offset), 0).x,
 );
 
-const blur = tgpu['~unstable'].computeFn({
+const blur = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: BLUR_WORKGROUP_SIZE,
 })(({ gid }) => {
+  'use gpu';
   const dims = d.vec3u(std.textureDimensions(blurLayout.$.oldState));
   if (gid.x >= dims.x || gid.y >= dims.y || gid.z >= dims.z) return;
 
-  const uv = d.vec3f(gid).add(0.5).div(d.vec3f(dims));
+  const uv = (d.vec3f(gid) + 0.5) / d.vec3f(dims);
 
   let sum = d.f32();
 
-  sum += getSummand(uv, d.vec3f(-1, 0, 0).div(d.vec3f(dims)));
-  sum += getSummand(uv, d.vec3f(1, 0, 0).div(d.vec3f(dims)));
-  sum += getSummand(uv, d.vec3f(0, -1, 0).div(d.vec3f(dims)));
-  sum += getSummand(uv, d.vec3f(0, 1, 0).div(d.vec3f(dims)));
-  sum += getSummand(uv, d.vec3f(0, 0, -1).div(d.vec3f(dims)));
-  sum += getSummand(uv, d.vec3f(0, 0, 1).div(d.vec3f(dims)));
+  sum += getSummand(uv, d.vec3f(-1, 0, 0) / d.vec3f(dims));
+  sum += getSummand(uv, d.vec3f(1, 0, 0) / d.vec3f(dims));
+  sum += getSummand(uv, d.vec3f(0, -1, 0) / d.vec3f(dims));
+  sum += getSummand(uv, d.vec3f(0, 1, 0) / d.vec3f(dims));
+  sum += getSummand(uv, d.vec3f(0, 0, -1) / d.vec3f(dims));
+  sum += getSummand(uv, d.vec3f(0, 0, 1) / d.vec3f(dims));
 
-  const blurred = sum / 6.0;
+  const blurred = sum / 6;
   const newValue = std.saturate(blurred - params.$.evaporationRate);
-  std.textureStore(
-    blurLayout.$.newState,
-    gid.xyz,
-    d.vec4f(newValue, 0, 0, 1),
-  );
+  std.textureStore(blurLayout.$.newState, gid.xyz, d.vec4f(newValue, 0, 0, 1));
 });
 
 // Ray-box intersection
-const rayBoxIntersection = (
-  rayOrigin: d.v3f,
-  rayDir: d.v3f,
-  boxMin: d.v3f,
-  boxMax: d.v3f,
-) => {
+const rayBoxIntersection = (rayOrigin: d.v3f, rayDir: d.v3f, boxMin: d.v3f, boxMax: d.v3f) => {
   'use gpu';
-  const invDir = d.vec3f(1).div(rayDir);
-  const t0 = boxMin.sub(rayOrigin).mul(invDir);
-  const t1 = boxMax.sub(rayOrigin).mul(invDir);
+  const invDir = 1 / rayDir;
+  const t0 = (boxMin - rayOrigin) * invDir;
+  const t1 = (boxMax - rayOrigin) * invDir;
   const tmin = std.min(t0, t1);
   const tmax = std.max(t0, t1);
   const tNear = std.max(tmin.x, tmin.y, tmin.z);
@@ -370,21 +333,22 @@ const rayBoxIntersection = (
   return RayBoxResult({ tNear, tFar, hit });
 };
 
-const fragmentShader = tgpu['~unstable'].fragmentFn({
+const fragmentShader = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
+  'use gpu';
   randf.seed2(uv);
   const ndc = d.vec2f(uv.x * 2 - 1, 1 - uv.y * 2);
   const ndcNear = d.vec4f(ndc, -1, 1);
   const ndcFar = d.vec4f(ndc, 1, 1);
 
-  const worldNear = cameraData.$.invViewProj.mul(ndcNear);
-  const worldFar = cameraData.$.invViewProj.mul(ndcFar);
+  const worldNear = cameraData.$.invViewProj * ndcNear;
+  const worldFar = cameraData.$.invViewProj * ndcFar;
 
-  const rayOrigin = worldNear.xyz.div(worldNear.w);
-  const rayEnd = worldFar.xyz.div(worldFar.w);
-  const rayDir = std.normalize(rayEnd.sub(rayOrigin));
+  const rayOrigin = worldNear.xyz / worldNear.w;
+  const rayEnd = worldFar.xyz / worldFar.w;
+  const rayDir = std.normalize(rayEnd - rayOrigin);
 
   const boxMin = d.vec3f();
   const boxMax = resolution;
@@ -402,11 +366,7 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   const minSteps = d.i32(8);
   const maxSteps = d.i32(RAYMARCH_STEPS);
 
-  const adaptiveSteps = std.clamp(
-    d.i32(intersectionLength * baseStepsPerUnit),
-    minSteps,
-    maxSteps,
-  );
+  const adaptiveSteps = std.clamp(d.i32(intersectionLength * baseStepsPerUnit), minSteps, maxSteps);
 
   const numSteps = adaptiveSteps;
   const stepSize = intersectionLength / d.f32(numSteps);
@@ -426,21 +386,19 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   let i = d.i32(0);
   while (i < numSteps && transmittance > TMin) {
     const t = tStart + (d.f32(i) + 0.5) * stepSize;
-    const pos = rayOrigin.add(rayDir.mul(t));
-    const texCoord = pos.div(resolution);
+    const pos = rayOrigin + rayDir * t;
+    const texCoord = pos / resolution;
 
-    const sampleValue = std
-      .textureSampleLevel(renderLayout.$.state, sampler.$, texCoord, 0)
-      .x;
+    const sampleValue = std.textureSampleLevel(renderLayout.$.state, sampler.$, texCoord, 0).x;
 
     const d0 = std.smoothstep(thresholdLo, thresholdHi, sampleValue);
-    const density = std.pow(d0, gamma);
+    const density = d0 ** gamma;
 
     const alphaSrc = 1 - std.exp(-sigmaT * density * stepSize);
 
-    const contrib = albedo.mul(alphaSrc);
+    const contrib = albedo * alphaSrc;
 
-    accum = accum.add(contrib.mul(transmittance));
+    accum += contrib * transmittance;
     transmittance = transmittance * (1 - alphaSrc);
 
     i += 1;
@@ -450,18 +408,14 @@ const fragmentShader = tgpu['~unstable'].fragmentFn({
   return d.vec4f(accum, alpha);
 });
 
-const renderPipeline = root['~unstable']
-  .withVertex(fullScreenTriangle, {})
-  .withFragment(fragmentShader, { format: presentationFormat })
-  .createPipeline();
+const renderPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: fragmentShader,
+});
 
-const computePipeline = root['~unstable']
-  .withCompute(updateAgents)
-  .createPipeline();
+const computePipeline = root.createComputePipeline({ compute: updateAgents });
 
-const blurPipeline = root['~unstable']
-  .withCompute(blur)
-  .createPipeline();
+const blurPipeline = root.createComputePipeline({ compute: blur });
 
 const bindGroups = [0, 1].map((i) =>
   root.createBindGroup(computeLayout, {
@@ -469,7 +423,7 @@ const bindGroups = [0, 1].map((i) =>
     oldState: textures[i],
     newAgents: agentsDataBuffers[1 - i],
     newState: textures[1 - i],
-  })
+  }),
 );
 
 const blurBindGroups = [0, 1].map((i) =>
@@ -477,13 +431,13 @@ const blurBindGroups = [0, 1].map((i) =>
     oldState: textures[i],
     newState: textures[1 - i],
     sampler: sampler,
-  })
+  }),
 );
 
 const renderBindGroups = [0, 1].map((i) =>
   root.createBindGroup(renderLayout, {
     state: textures[i],
-  })
+  }),
 );
 
 let lastTime = performance.now();
@@ -506,16 +460,10 @@ function frame() {
 
   computePipeline
     .with(bindGroups[currentTexture])
-    .dispatchWorkgroups(
-      Math.ceil(NUM_AGENTS / AGENT_WORKGROUP_SIZE),
-    );
+    .dispatchWorkgroups(Math.ceil(NUM_AGENTS / AGENT_WORKGROUP_SIZE));
 
   renderPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
+    .withColorAttachment({ view: context })
     .with(renderBindGroups[1 - currentTexture])
     .draw(3);
 
@@ -563,58 +511,75 @@ canvas.addEventListener('mouseleave', () => {
   isDragging = false;
 });
 
-canvas.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  cameraDistance *= 1 + e.deltaY * 0.001;
-  cameraDistance = Math.max(
-    100,
-    Math.min(
-      cameraDistance,
-      Math.max(resolution.x, resolution.y, resolution.z) * 3,
-    ),
-  );
-  updateCamera();
-}, { passive: false });
+canvas.addEventListener(
+  'wheel',
+  (e) => {
+    e.preventDefault();
+    cameraDistance *= 1 + e.deltaY * 0.001;
+    cameraDistance = Math.max(
+      100,
+      Math.min(cameraDistance, Math.max(resolution.x, resolution.y, resolution.z) * 3),
+    );
+    updateCamera();
+  },
+  { passive: false },
+);
 
-canvas.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  if (e.touches.length === 1) {
-    isDragging = true;
+canvas.addEventListener(
+  'touchstart',
+  (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      isDragging = true;
+      lastMouseX = e.touches[0].clientX;
+      lastMouseY = e.touches[0].clientY;
+    }
+  },
+  { passive: false },
+);
+
+canvas.addEventListener(
+  'touchmove',
+  (e) => {
+    e.preventDefault();
+    if (!isDragging || e.touches.length !== 1) return;
+
+    const deltaX = e.touches[0].clientX - lastMouseX;
+    const deltaY = e.touches[0].clientY - lastMouseY;
+
+    handleCameraRotation(deltaX, deltaY);
+
     lastMouseX = e.touches[0].clientX;
     lastMouseY = e.touches[0].clientY;
-  }
-}, { passive: false });
+  },
+  { passive: false },
+);
 
-canvas.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  if (!isDragging || e.touches.length !== 1) return;
+canvas.addEventListener(
+  'touchend',
+  (e) => {
+    e.preventDefault();
+    isDragging = false;
+  },
+  { passive: false },
+);
 
-  const deltaX = e.touches[0].clientX - lastMouseX;
-  const deltaY = e.touches[0].clientY - lastMouseY;
+canvas.addEventListener(
+  'touchcancel',
+  (e) => {
+    e.preventDefault();
+    isDragging = false;
+  },
+  { passive: false },
+);
 
-  handleCameraRotation(deltaX, deltaY);
-
-  lastMouseX = e.touches[0].clientX;
-  lastMouseY = e.touches[0].clientY;
-}, { passive: false });
-
-canvas.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  isDragging = false;
-}, { passive: false });
-
-canvas.addEventListener('touchcancel', (e) => {
-  e.preventDefault();
-  isDragging = false;
-}, { passive: false });
-
-export const controls = {
+export const controls = defineControls({
   'Move Speed': {
     initial: DEFAULT_MOVE_SPEED,
     min: 0,
     max: 100,
     step: 1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ moveSpeed: newValue });
     },
   },
@@ -623,7 +588,7 @@ export const controls = {
     min: 0,
     max: 3.14,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ sensorAngle: newValue });
     },
   },
@@ -632,7 +597,7 @@ export const controls = {
     min: 1,
     max: 50,
     step: 0.5,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ sensorDistance: newValue });
     },
   },
@@ -641,7 +606,7 @@ export const controls = {
     min: 0,
     max: 100,
     step: 0.1,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ turnSpeed: newValue });
     },
   },
@@ -650,11 +615,11 @@ export const controls = {
     min: 0,
     max: 0.5,
     step: 0.01,
-    onSliderChange: (newValue: number) => {
+    onSliderChange: (newValue) => {
       params.writePartial({ evaporationRate: newValue });
     },
   },
-};
+});
 
 export function onCleanup() {
   root.destroy();
