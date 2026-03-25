@@ -23,8 +23,8 @@ import { transpileFn } from 'tinyest-for-wgsl';
 
 // I love CommonJS 💔
 let traverse = _traverse;
-if (typeof (traverse as any).default === 'function') {
-  traverse = (traverse as any).default as typeof traverse;
+if (typeof (traverse as unknown as { default: typeof traverse }).default === 'function') {
+  traverse = (traverse as unknown as { default: typeof traverse }).default as typeof traverse;
 }
 
 const fnWrapperTemplate = (fnCode: string, metadata: string) =>
@@ -56,7 +56,7 @@ function assignMetadata(
   let insertPos = path.node.start ?? 0;
 
   if (t.isFunctionDeclaration(path.node) && path.node.id) {
-    code = `const ${(path.node as t.FunctionDeclaration).id!.name} = ${code};\n\n`;
+    code = `const ${path.node.id.name} = ${code};\n\n`;
   }
 
   if (visibility) {

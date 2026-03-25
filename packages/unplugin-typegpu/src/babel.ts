@@ -48,12 +48,12 @@ function assignMetadata(
   ]);
 
   let expression: t.Expression;
-  const fnDecl = path.node as t.FunctionDeclaration;
   const visibility = t.isFunctionDeclaration(path.node)
     ? getVisibilityScope(this, path as NodePath<t.FunctionDeclaration>)
     : undefined;
+
   if (t.isFunctionDeclaration(path.node)) {
-    expression = t.functionExpression(fnDecl.id!, fnDecl.params, fnDecl.body);
+    expression = t.functionExpression(path.node.id, path.node.params, path.node.body);
   } else {
     expression = path.node as t.Expression;
   }
@@ -88,7 +88,7 @@ function assignMetadata(
     const declaration = t.variableDeclaration('const', [
       t.variableDeclarator(path.node.id, callExpr),
     ]);
-    t.inheritLeadingComments(declaration, fnDecl);
+    t.inheritLeadingComments(declaration, path.node);
     replacement = declaration;
   }
 

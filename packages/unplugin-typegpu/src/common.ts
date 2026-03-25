@@ -238,9 +238,7 @@ export function isShellImplementationCall(node: t.CallExpression, state: PluginS
  * extractLabelledExpression(node`let name = tgpu.bindGroupLayout({});`)
  * // ["name", node`tgpu.bindGroupLayout({})`]
  */
-function extractLabelledExpression(
-  path: NodePath<t.Node>,
-): [string, NodePath<t.Expression>] | undefined {
+function extractLabelledExpression(path: NodePath): [string, NodePath<t.Expression>] | undefined {
   if (
     path.node.type === 'VariableDeclarator' &&
     path.node.id.type === 'Identifier' &&
@@ -269,7 +267,7 @@ function extractLabelledExpression(
   }
 }
 
-export function getFunctionName(path: NodePath<t.Node>): string | undefined {
+export function getFunctionName(path: NodePath): string | undefined {
   const maybeName = path.parentPath ? extractLabelledExpression(path.parentPath)?.[0] : undefined;
   return (
     maybeName ??
@@ -387,7 +385,7 @@ function tryFindIdentifier(node: babel.Node): string | undefined {
  */
 function performExpressionNaming(
   state: PluginState,
-  path: NodePath<t.Node>,
+  path: NodePath,
   namingCallback: (node: NodePath<t.Expression>, name: string) => void,
 ) {
   if (!state.autoNamingEnabled) {
