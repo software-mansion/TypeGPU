@@ -507,6 +507,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
     it('should warn if timestamp-query feature is not enabled', ({ root, device }) => {
       //@ts-expect-error
       device.features = new Set();
+      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const vertexFn = tgpu.vertexFn({
         out: { pos: d.builtin.position },
@@ -527,6 +528,9 @@ describe('root.withVertex(...).withFragment(...)', () => {
         // no-op
         expect(after).toBe(before);
       }).not.toThrow();
+      expect(consoleWarnSpy.mock.calls[0]?.[0]).toMatchInlineSnapshot(
+        `"Performance callback cannot be used because the timestamp-query feature is not enabled on the root."`,
+      );
     });
 
     it("should not throw 'A color target was not provided to the shader'", ({ root, device }) => {

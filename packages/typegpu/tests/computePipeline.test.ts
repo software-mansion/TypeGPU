@@ -142,8 +142,9 @@ describe('TgpuComputePipeline', () => {
     });
 
     it('should warn if timestamp-query feature is not enabled', ({ root, device }) => {
-      //@ts-expect-error
+      // @ts-expect-error
       device.features = new Set();
+      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 
@@ -155,6 +156,9 @@ describe('TgpuComputePipeline', () => {
         // no-op
         expect(after).toBe(before);
       }).not.toThrow();
+      expect(consoleWarnSpy.mock.calls[0]?.[0]).toMatchInlineSnapshot(
+        `"Performance callback cannot be used because the timestamp-query feature is not enabled on the root."`,
+      );
     });
   });
 
@@ -390,8 +394,6 @@ describe('TgpuComputePipeline', () => {
         beginningOfPassWriteIndex: 2,
         endOfPassWriteIndex: 5,
       });
-
-      expect((autoQuerySet as TgpuQuerySet<'timestamp'>).destroyed).toBe(true);
 
       const priors = pipeline[$internal].priors;
       expect(priors.performanceCallback).toBe(callback);
