@@ -31,7 +31,7 @@ export default (rawOptions?: Options): Bun.BunPlugin => {
           };
         }
 
-        const result = await rawPlugin.transform.handler.apply(
+        const result = rawPlugin.transform.handler.apply(
           {} as UnpluginBuildContext & UnpluginContext,
           [codeIn, args.path],
         );
