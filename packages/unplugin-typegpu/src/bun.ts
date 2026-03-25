@@ -1,10 +1,9 @@
-import type { BunPlugin } from 'bun';
 import defu from 'defu';
 import { defaultOptions, earlyPruneRegex, type Options } from './common.ts';
 import { unpluginFactory } from './factory.ts';
 import { UnpluginBuildContext, UnpluginContext } from 'unplugin';
 
-export default (rawOptions: Options): BunPlugin => {
+export default (rawOptions: Options): Bun.BunPlugin => {
   const options = defu(rawOptions, defaultOptions);
   const include = options.include;
   if (!(include instanceof RegExp)) {
