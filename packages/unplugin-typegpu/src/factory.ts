@@ -91,7 +91,7 @@ function wrapInAutoName(
   this.magicString
     .appendLeft(
       path.node.start ?? 0,
-      '/*#__PURE__*/((globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(',
+      '(/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(',
     )
     .prependRight(path.node.end ?? 0, `, "${name}"))`);
 }
