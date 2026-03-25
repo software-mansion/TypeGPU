@@ -2,112 +2,78 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { mat4 } from 'wgpu-matrix';
-import { loadGLBModel } from './loader.ts';
+import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { type NodeTransform, sampleAnimation } from './animation.ts';
-import { type Quat, quatFromAxisAngle, quatMul } from './math.ts';
-import type { ModelData } from './types.ts';
-import { VertexData } from './types.ts';
-import { setupOrbitCamera } from './setup-orbit-camera.ts';
+import { loadGLBModel } from './loader.ts';
+import { type ModelData, VertexData } from './types.ts';
 
-const MODELS: Record<string, { path: string; scale: number; offset: [number, number, number] }> = {
-  LongBoi: {
-    path: '/TypeGPU/assets/mesh-skinning/LongBoi.glb',
-    scale: 1,
-    offset: [0, 0, 0],
-  },
-  DancingBot: {
-    path: '/TypeGPU/assets/mesh-skinning/DancingBot.glb',
-    scale: 8,
-    offset: [0, -8, 0],
-  },
+const MODEL = {
+  path: '/TypeGPU/assets/mesh-skinning/NewModel.glb',
+  scale: 1,
+  offset: [0, 0, 0] as [number, number, number],
 };
-type ModelName = keyof typeof MODELS;
 
 const MAX_JOINTS = 64;
+const CAMERA_TARGET_SMOOTHING = 0.08;
+const CAMERA_TARGET_Y_OFFSET = 0.4;
 
-let currentModelName: ModelName = 'LongBoi';
-let modelData: ModelData = await loadGLBModel(MODELS[currentModelName].path);
-let twistEnabled = false;
-let bendEnabled = false;
-let animationPlaying = true;
-let bendTime = 0;
-let twistTime = 0;
-let animationTime = 0;
-let lastFrameTime = 0;
+const modelData: ModelData = await loadGLBModel(MODEL.path);
+const animationOptions = modelData.animations.map((anim) => anim.name.replaceAll('_', ' '));
 
-const root = await tgpu.init();
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = canvas.getContext('webgpu') as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
-
-let depthTexture = root['~unstable']
-  .createTexture({
-    size: [canvas.width, canvas.height],
-    format: 'depth24plus',
-    sampleCount: 4,
-  })
-  .$usage('render');
-let msaaTexture = root['~unstable']
-  .createTexture({
-    size: [canvas.width, canvas.height],
-    format: presentationFormat,
-    sampleCount: 4,
-  })
-  .$usage('render');
-
-const cameraUniform = root.createUniform(d.mat4x4f);
-let viewMatrix = d.mat4x4f();
-let projectionMatrix = d.mat4x4f();
-
-const { cleanupCamera } = setupOrbitCamera(
-  canvas,
-  { initPos: d.vec4f(15, 15, 15, 1) },
-  (camera) => {
-    if (camera.view) {
-      viewMatrix = camera.view;
-    }
-    if (camera.projection) {
-      projectionMatrix = camera.projection;
-    }
-    cameraUniform.write(mat4.mul(projectionMatrix, viewMatrix, d.mat4x4f()));
+const state = {
+  animation: {
+    selectedName: 'Yes',
+    playing: true,
+    time: 0,
   },
+  frame: {
+    lastTime: 0,
+  },
+  camera: {
+    position: d.vec4f(3, 3, 3, 1),
+    target: d.vec4f(0, 0, 0, 1),
+  },
+};
+
+const parentByNode = new Int16Array(modelData.nodes.length).fill(-1);
+for (let parent = 0; parent < modelData.nodes.length; parent++) {
+  for (const child of modelData.nodes[parent].children ?? []) {
+    parentByNode[child] = parent;
+  }
+}
+
+const inverseBindMatrices = modelData.jointNodes.map((_, i) =>
+  modelData.inverseBindMatrices.slice(i * 16, (i + 1) * 16),
 );
 
-const longBoiAnimation = (nodeIndex: number): Quat | null => {
-  if (nodeIndex !== 0) {
-    return null;
+const modelTransform = mat4.identity();
+mat4.translate(modelTransform, MODEL.offset, modelTransform);
+mat4.scale(modelTransform, [MODEL.scale, MODEL.scale, MODEL.scale], modelTransform);
+
+const getModelCenterFromJoints = (jointMatrices: d.m4x4f[]): d.v4f => {
+  if (modelData.jointNodes.length === 0) {
+    return d.vec4f(MODEL.offset[0], MODEL.offset[1], MODEL.offset[2], 1);
   }
-  const bendQuat = quatFromAxisAngle([0, 0, 1], Math.sin(bendTime * 0.001) * Math.PI * 0.5);
-  const twistQuat = quatFromAxisAngle([0, 1, 0], Math.sin(twistTime * 0.0015) * Math.PI * 0.3);
-  return quatMul(twistQuat, bendQuat);
+
+  const rootJointMatrix = jointMatrices[0];
+  return d.vec4f(rootJointMatrix[12], rootJointMatrix[13], rootJointMatrix[14], 1);
 };
 
 const getWorldTransform = (
   nodeIndex: number,
-  parentTransform?: Float32Array,
   animatedTransforms?: Map<number, NodeTransform>,
-  useLongBoi?: boolean,
 ): Float32Array => {
+  const parentIndex = parentByNode[nodeIndex];
+  const parentWorld =
+    parentIndex === -1 ? undefined : getWorldTransform(parentIndex, animatedTransforms);
+
   const node = modelData.nodes[nodeIndex];
   const anim = animatedTransforms?.get(nodeIndex);
   const localMatrix = mat4.identity();
 
   const translation = anim?.translation ?? node.translation;
+  const rotation = anim?.rotation ?? node.rotation;
   const scale = anim?.scale ?? node.scale;
-  let rotation = anim?.rotation ?? node.rotation;
-
-  if (useLongBoi) {
-    const animRot = longBoiAnimation(nodeIndex);
-    if (animRot) {
-      rotation = animRot;
-    }
-  }
 
   if (translation) {
     mat4.translate(localMatrix, translation, localMatrix);
@@ -119,41 +85,27 @@ const getWorldTransform = (
     mat4.scale(localMatrix, scale, localMatrix);
   }
 
-  if (parentTransform) {
-    return mat4.mul(parentTransform, localMatrix);
-  }
-
-  for (let i = 0; i < modelData.nodes.length; i++) {
-    if (modelData.nodes[i].children?.includes(nodeIndex)) {
-      return mat4.mul(getWorldTransform(i, undefined, animatedTransforms, useLongBoi), localMatrix);
-    }
-  }
-
-  return localMatrix;
+  return parentWorld ? mat4.mul(parentWorld, localMatrix) : localMatrix;
 };
 
 const getJointMatrices = (): d.m4x4f[] => {
-  const useLongBoi = currentModelName === 'LongBoi' && (twistEnabled || bendEnabled);
-  const animTransforms =
-    currentModelName === 'DancingBot' && modelData.animations.length > 0
-      ? sampleAnimation(modelData.animations[0], animationTime)
-      : undefined;
-
-  const { scale, offset } = MODELS[currentModelName];
-  const modelTransform = mat4.identity();
-  mat4.translate(modelTransform, offset, modelTransform);
-  mat4.scale(modelTransform, [scale, scale, scale], modelTransform);
+  const activeAnimation = modelData.animations.find(
+    (anim) => anim.name === state.animation.selectedName,
+  );
+  const animatedTransforms = activeAnimation
+    ? sampleAnimation(activeAnimation, state.animation.time)
+    : undefined;
 
   const matrices = modelData.jointNodes.map((jointNode: number, i: number) => {
-    const world = getWorldTransform(jointNode, undefined, animTransforms, useLongBoi);
-    const invBind = modelData.inverseBindMatrices.slice(i * 16, (i + 1) * 16);
-    const jointMatrix = mat4.mul(world, invBind, d.mat4x4f());
+    const world = getWorldTransform(jointNode, animatedTransforms);
+    const jointMatrix = mat4.mul(world, inverseBindMatrices[i], d.mat4x4f());
     return mat4.mul(modelTransform, jointMatrix, d.mat4x4f());
   });
 
   while (matrices.length < MAX_JOINTS) {
     matrices.push(d.mat4x4f.identity());
   }
+
   return matrices;
 };
 
@@ -183,119 +135,145 @@ const createVertexData = (): d.Infer<typeof VertexData>[] =>
     ),
   }));
 
-let vertexBuffer = root
-  .createBuffer(d.arrayOf(VertexData, modelData.vertexCount), createVertexData())
-  .$usage('vertex');
-let indexBuffer = root
-  .createBuffer(
-    d.arrayOf(d.u16, modelData.indices.length),
-    Array.from(modelData.indices) as number[],
-  )
-  .$usage('index');
-let currentIndexCount = modelData.indices.length;
+const root = await tgpu.init();
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas });
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const jointMatricesUniform = root.createUniform(
-  d.arrayOf(d.mat4x4f, MAX_JOINTS),
-  getJointMatrices(),
-);
-const vertexLayout = tgpu.vertexLayout(d.arrayOf(VertexData));
-
-const vertex = tgpu['~unstable'].vertexFn({
-  in: { position: d.vec3f, normal: d.vec3f, joint: d.vec4u, weight: d.vec4f },
-  out: { pos: d.builtin.position, normal: d.vec3f },
-})(({ position, normal, joint, weight }) => {
-  const jm = jointMatricesUniform.$;
-  const skinMatrix = jm[joint.x]
-    .mul(weight.x)
-    .add(jm[joint.y].mul(weight.y))
-    .add(jm[joint.z].mul(weight.z))
-    .add(jm[joint.w].mul(weight.w));
-
-  return {
-    pos: cameraUniform.$.mul(skinMatrix.mul(d.vec4f(position, 1))),
-    normal: std.normalize(skinMatrix.mul(d.vec4f(normal, 0)).xyz),
-  };
-});
-
-const fragment = tgpu['~unstable'].fragmentFn({
-  in: { normal: d.vec3f },
-  out: d.vec4f,
-})(({ normal }) => {
-  const diffuse = std.saturate(std.dot(normal, std.normalize(d.vec3f(1, 0, 1))));
-  return d.vec4f(d.vec3f(0.8).mul(diffuse * 0.7 + 0.3), 1.0);
-});
-
-const pipeline = root['~unstable']
-  .withVertex(vertex, vertexLayout.attrib)
-  .withFragment(fragment, { format: presentationFormat })
-  .withDepthStencil({
-    format: 'depth24plus',
-    depthWriteEnabled: true,
-    depthCompare: 'less',
-  })
-  .withMultisample({ count: 4 })
-  .createPipeline()
-  .withIndexBuffer(indexBuffer);
-
-const resizeObserver = new ResizeObserver(() => {
-  depthTexture = root['~unstable']
+const createDepthTexture = () =>
+  root['~unstable']
     .createTexture({
       size: [canvas.width, canvas.height],
       format: 'depth24plus',
       sampleCount: 4,
     })
     .$usage('render');
-  msaaTexture = root['~unstable']
+
+const createMsaaTexture = () =>
+  root['~unstable']
     .createTexture({
       size: [canvas.width, canvas.height],
       format: presentationFormat,
       sampleCount: 4,
     })
     .$usage('render');
+
+let depthTexture = createDepthTexture();
+let msaaTexture = createMsaaTexture();
+
+const cameraUniform = root.createUniform(d.mat4x4f);
+
+const vertexBuffer = root
+  .createBuffer(d.arrayOf(VertexData, modelData.vertexCount), createVertexData())
+  .$usage('vertex');
+
+const indexBuffer = root
+  .createBuffer(
+    d.arrayOf(d.u16, modelData.indices.length),
+    Array.from(modelData.indices) as number[],
+  )
+  .$usage('index');
+
+const initialJointMatrices = getJointMatrices();
+state.camera.target = getModelCenterFromJoints(initialJointMatrices);
+
+const jointMatricesUniform = root.createUniform(
+  d.arrayOf(d.mat4x4f, MAX_JOINTS),
+  initialJointMatrices,
+);
+
+const { cleanupCamera, targetCamera } = setupOrbitCamera(
+  canvas,
+  { initPos: state.camera.position, target: state.camera.target },
+  (camera) => {
+    if (camera.position) {
+      state.camera.position = camera.position;
+    }
+    if (camera.view && camera.projection) {
+      cameraUniform.write(mat4.mul(camera.projection, camera.view, d.mat4x4f()));
+    }
+  },
+);
+
+const vertexLayout = tgpu.vertexLayout(d.arrayOf(VertexData));
+
+const vertex = tgpu.vertexFn({
+  in: { position: d.vec3f, normal: d.vec3f, joint: d.vec4u, weight: d.vec4f },
+  out: { pos: d.builtin.position, normal: d.vec3f },
+})(({ position, normal, joint, weight }) => {
+  'use gpu';
+  const jm = jointMatricesUniform.$;
+  const skinMatrix =
+    jm[joint.x] * weight.x +
+    jm[joint.y] * weight.y +
+    jm[joint.z] * weight.z +
+    jm[joint.w] * weight.w;
+
+  return {
+    pos: cameraUniform.$ * (skinMatrix * d.vec4f(position, 1)),
+    normal: std.normalize((skinMatrix * d.vec4f(normal, 0)).xyz),
+  };
+});
+
+const fragment = tgpu.fragmentFn({
+  in: { normal: d.vec3f },
+  out: d.vec4f,
+})(({ normal }) => {
+  'use gpu';
+  const diffuse = std.saturate(std.dot(normal, std.normalize(d.vec3f(1, 0, 1))));
+  return d.vec4f(d.vec3f(0.8) * (diffuse * 0.7 + 0.3), 1);
+});
+
+const pipeline = root
+  .createRenderPipeline({
+    vertex,
+    fragment,
+    attribs: vertexLayout.attrib,
+    depthStencil: {
+      format: 'depth24plus',
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+    },
+    multisample: { count: 4 },
+  })
+  .withIndexBuffer(indexBuffer);
+
+const resizeObserver = new ResizeObserver(() => {
+  depthTexture = createDepthTexture();
+  msaaTexture = createMsaaTexture();
 });
 resizeObserver.observe(canvas);
 
-async function switchModel(name: ModelName) {
-  if (name === currentModelName) {
-    return;
-  }
-  currentModelName = name;
-  modelData = await loadGLBModel(MODELS[name].path);
-  vertexBuffer = root
-    .createBuffer(d.arrayOf(VertexData, modelData.vertexCount), createVertexData())
-    .$usage('vertex');
-  indexBuffer = root
-    .createBuffer(d.arrayOf(d.u16, modelData.indices.length), Array.from(modelData.indices))
-    .$usage('index');
-  currentIndexCount = modelData.indices.length;
-  animationTime = 0;
-}
+const updateCameraTarget = (jointMatrices: d.m4x4f[]) => {
+  const desiredTarget = getModelCenterFromJoints(jointMatrices);
+  state.camera.target = d.vec4f(
+    state.camera.target.x + (desiredTarget.x - state.camera.target.x) * CAMERA_TARGET_SMOOTHING,
+    state.camera.target.y +
+      (desiredTarget.y + CAMERA_TARGET_Y_OFFSET - state.camera.target.y) * CAMERA_TARGET_SMOOTHING,
+    state.camera.target.z + (desiredTarget.z - state.camera.target.z) * CAMERA_TARGET_SMOOTHING,
+    1,
+  );
 
-function render(time: number) {
-  const deltaTime = Math.max(0, time - lastFrameTime);
-  lastFrameTime = time;
+  targetCamera(state.camera.position, state.camera.target);
+};
 
-  if (currentModelName === 'LongBoi') {
-    if (bendEnabled) {
-      bendTime += deltaTime;
-    }
-    if (twistEnabled) {
-      twistTime += deltaTime;
-    }
-  } else if (animationPlaying) {
-    animationTime += deltaTime * 0.001;
+const update = (deltaTimeMs: number) => {
+  if (state.animation.playing) {
+    state.animation.time += deltaTimeMs * 0.001;
   }
 
-  jointMatricesUniform.write(getJointMatrices());
+  const jointMatrices = getJointMatrices();
+  jointMatricesUniform.write(jointMatrices);
+  updateCameraTarget(jointMatrices);
+};
 
+const draw = () => {
   pipeline
     .with(vertexLayout, vertexBuffer)
     .withIndexBuffer(indexBuffer)
     .withColorAttachment({
-      resolveTarget: context.getCurrentTexture().createView(),
-      view: root.unwrap(msaaTexture).createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
+      resolveTarget: context,
+      view: msaaTexture,
     })
     .withDepthStencilAttachment({
       view: depthTexture,
@@ -303,7 +281,15 @@ function render(time: number) {
       depthLoadOp: 'clear',
       depthStoreOp: 'store',
     })
-    .drawIndexed(currentIndexCount);
+    .drawIndexed(modelData.indices.length);
+};
+
+function render(time: number) {
+  const deltaTime = Math.max(0, time - state.frame.lastTime);
+  state.frame.lastTime = time;
+
+  update(deltaTime);
+  draw();
 
   animationId = requestAnimationFrame(render);
 }
@@ -312,36 +298,23 @@ let animationId: number | undefined;
 animationId = requestAnimationFrame(render);
 
 export const controls = {
-  Model: {
-    initial: 'LongBoi',
-    options: Object.keys(MODELS),
-    onSelectChange: async (v: string) => {
-      await switchModel(v as ModelName);
-    },
-  },
-  Twist: {
-    initial: true,
-    onToggleChange: (v: boolean) => {
-      twistEnabled = v;
-    },
-  },
-  Bend: {
-    initial: true,
-    onToggleChange: (v: boolean) => {
-      bendEnabled = v;
+  Animation: {
+    initial: 'Yes',
+    options: animationOptions,
+    onSelectChange: (v: string) => {
+      state.animation.selectedName = v.replaceAll(' ', '_');
+      state.animation.time = 0;
     },
   },
   'Play Animation': {
     initial: true,
     onToggleChange: (v: boolean) => {
-      animationPlaying = v;
+      state.animation.playing = v;
     },
   },
   'Reset Animation': {
     onButtonClick: () => {
-      animationTime = 0;
-      bendTime = 0;
-      twistTime = 0;
+      state.animation.time = 0;
     },
   },
 };
