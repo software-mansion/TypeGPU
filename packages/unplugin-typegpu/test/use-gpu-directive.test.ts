@@ -100,7 +100,7 @@ describe('marked arrow functions passed to shells', () => {
         return __tsover_add(a, b);
       }, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [{
             type: "i",
@@ -172,7 +172,7 @@ describe('marked anonymous function expressions passed to shells', () => {
         return __tsover_add(a, b);
       }, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [{
             type: "i",

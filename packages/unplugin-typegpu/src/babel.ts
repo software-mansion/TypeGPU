@@ -1,6 +1,8 @@
 import * as t from '@babel/types';
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import defu from 'defu';
+import { transpileFn } from 'tinyest-for-wgsl';
+import { FORMAT_VERSION } from 'tinyest';
 import {
   type PluginState,
   defaultOptions,
@@ -9,8 +11,6 @@ import {
   initPluginState,
 } from './common.ts';
 import { createFilterForId } from './filter.ts';
-import { transpileFn } from 'tinyest-for-wgsl';
-import { FORMAT_VERSION } from 'tinyest';
 
 function i(identifier: string): t.Identifier {
   return t.identifier(identifier);
@@ -19,16 +19,12 @@ function i(identifier: string): t.Identifier {
 function assignMetadata(
   this: PluginState,
   path: NodePath<t.FunctionDeclaration | t.ArrowFunctionExpression | t.FunctionExpression>,
-  name: string,
+  name: string | undefined,
   ast: ReturnType<typeof transpileFn>,
 ): void {
   const metadata = t.objectExpression([
     t.objectProperty(i('v'), t.numericLiteral(FORMAT_VERSION)),
-    t.objectProperty(
-      i('name'),
-      // TODO: Try t.valueToNode(name)
-      name ? t.stringLiteral(name) : t.buildUndefinedNode(),
-    ),
+    t.objectProperty(i('name'), t.valueToNode(name)),
     t.objectProperty(i('ast'), t.valueToNode(ast)),
     t.objectProperty(
       i('externals'),
@@ -142,6 +138,7 @@ export default function TypeGPUPlugin() {
   return {
     name: 'typegpu',
     pre(this: PluginState) {
+      this.opts = defu(this.opts, defaultOptions);
       initPluginState(this, {
         warn: (message) => console.warn(message),
         assignMetadata,
@@ -152,9 +149,7 @@ export default function TypeGPUPlugin() {
     },
     visitor: {
       Program(path, state) {
-        const options = defu(state.opts, defaultOptions);
-
-        const filter = createFilterForId(options);
+        const filter = createFilterForId(state.opts);
         if (state.filename && filter && !filter?.(state.filename)) {
           return;
         }

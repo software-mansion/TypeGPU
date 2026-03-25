@@ -17,7 +17,7 @@ describe('[BABEL] tgpu alias gathering', () => {
         const x = 2 + 2;
       }, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [],
           body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]],
@@ -45,7 +45,7 @@ describe('[BABEL] tgpu alias gathering', () => {
         const x = 2 + 2;
       }, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [],
           body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]],
@@ -73,7 +73,7 @@ describe('[BABEL] tgpu alias gathering', () => {
         const x = 2 + 2;
       }, {
         v: 1,
-        name: void 0,
+        name: undefined,
         ast: {
           params: [],
           body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]],
