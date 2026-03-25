@@ -1,6 +1,5 @@
 import defu from 'defu';
-import { type RolldownString, withMagicString } from 'rolldown-string';
-import { MagicStringAST } from 'magic-string-ast';
+import { generateTransform, MagicStringAST } from 'magic-string-ast';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 
 import * as parser from '@babel/parser';
@@ -129,15 +128,11 @@ export const unpluginFactory = ((rawOptions, _meta) => {
         : {
             id: options,
           },
-      handler: withMagicString(function (
-        this: UnpluginBuildContext & UnpluginContext,
-        str: RolldownString,
-        id: string,
-      ) {
+      handler(this: UnpluginBuildContext & UnpluginContext, code: string, id: string) {
         let ast: parser.ParseResult;
         try {
           ast = parser.parse(
-            str.toString(),
+            code,
             getBabelParserOptions(getLang(id), {
               sourceType: 'module',
               allowReturnOutsideFunction: true,
@@ -152,7 +147,7 @@ export const unpluginFactory = ((rawOptions, _meta) => {
           return undefined;
         }
 
-        const magicString = new MagicStringAST(str);
+        const magicString = new MagicStringAST(code);
 
         const state = {
           filename: id,
@@ -169,7 +164,9 @@ export const unpluginFactory = ((rawOptions, _meta) => {
         });
 
         traverse(ast, functionVisitor, undefined, state);
-      }),
+
+        return generateTransform(magicString, id);
+      },
     },
   };
 }) satisfies UnpluginFactory<Options | undefined, false>;
