@@ -217,6 +217,13 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 
   withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this {
+    if (this._priors.timestampWrites) {
+      return new TgpuComputePipelineImpl(this._core, {
+        ...this._priors,
+        performanceCallback: callback,
+      }) as this;
+    }
+
     const querySet = this._core.performanceCallbackQuerySet;
     if (!querySet) {
       console.warn(

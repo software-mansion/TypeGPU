@@ -156,8 +156,8 @@ describe('TgpuComputePipeline', () => {
         // no-op
         expect(after).toBe(before);
       }).not.toThrow();
-      expect(consoleWarnSpy.mock.calls[0]?.[0]).toMatchInlineSnapshot(
-        `"Performance callback cannot be used because the timestamp-query feature is not enabled on the root."`,
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
       );
     });
   });
@@ -332,6 +332,7 @@ describe('TgpuComputePipeline', () => {
   describe('Combined Performance callback and Timestamp Writes', () => {
     it('should work with both performance callback and custom timestamp writes', ({
       root,
+      device,
       commandEncoder,
     }) => {
       const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
@@ -372,6 +373,12 @@ describe('TgpuComputePipeline', () => {
         querySet[$internal].resolveBuffer,
         0,
       );
+
+      expect(device.mock.createQuerySet).toHaveBeenCalledTimes(1);
+      expect(device.mock.createQuerySet).toHaveBeenCalledWith({
+        type: 'timestamp',
+        count: 10,
+      });
     });
 
     it('should prioritize custom timestamp writes over automatic ones', ({

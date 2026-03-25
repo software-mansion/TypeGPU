@@ -550,6 +550,14 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
   withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this {
     const internals = this[$internal];
+
+    if (internals.priors.timestampWrites) {
+      return new TgpuRenderPipelineImpl(internals.core, {
+        ...internals.priors,
+        performanceCallback: callback,
+      }) as this;
+    }
+
     const querySet = internals.core.performanceCallbackQuerySet;
     if (!querySet) {
       console.warn(

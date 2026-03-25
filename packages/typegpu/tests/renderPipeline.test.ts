@@ -528,8 +528,8 @@ describe('root.withVertex(...).withFragment(...)', () => {
         // no-op
         expect(after).toBe(before);
       }).not.toThrow();
-      expect(consoleWarnSpy.mock.calls[0]?.[0]).toMatchInlineSnapshot(
-        `"Performance callback cannot be used because the timestamp-query feature is not enabled on the root."`,
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
       );
     });
 
