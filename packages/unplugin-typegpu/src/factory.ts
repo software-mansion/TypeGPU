@@ -174,4 +174,4 @@ export const unpluginFactory = ((rawOptions, _meta) => {
       }),
     },
   };
-}) satisfies UnpluginFactory<Options, false>;
+}) satisfies UnpluginFactory<Options | undefined, false>;
