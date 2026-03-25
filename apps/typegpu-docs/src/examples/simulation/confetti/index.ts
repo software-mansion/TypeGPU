@@ -129,24 +129,13 @@ function randomizePositions() {
 
 randomizePositions();
 
-let disposed = false;
+let animationFrameId: number;
+let lastTime: number | null = null;
 
-function onFrame(loop: (deltaTime: number) => unknown) {
-  let lastTime = Date.now();
-  const runner = () => {
-    if (disposed) {
-      return;
-    }
-    const now = Date.now();
-    const dt = now - lastTime;
-    lastTime = now;
-    loop(dt);
-    requestAnimationFrame(runner);
-  };
-  requestAnimationFrame(runner);
-}
+const runner = (timestamp: number) => {
+  const dt = lastTime !== null ? timestamp - lastTime : 0;
+  lastTime = timestamp;
 
-onFrame((dt) => {
   elapsedTime += dt;
   time.write(elapsedTime);
   deltaTime.write(dt);
@@ -157,7 +146,10 @@ onFrame((dt) => {
 
   // Drawing the particles
   renderPipeline.withColorAttachment({ view: context }).draw(4, PARTICLE_AMOUNT);
-});
+  animationFrameId = requestAnimationFrame(runner);
+};
+
+animationFrameId = requestAnimationFrame(runner);
 
 // example controls and cleanup
 
@@ -168,6 +160,6 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  disposed = true;
+  cancelAnimationFrame(animationFrameId);
   root.destroy();
 }
