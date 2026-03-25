@@ -943,11 +943,11 @@ Try 'return ${typeStr}(${str});' instead.
       if (typeof condition.value === 'boolean') {
         // the condition is known at comptime
         let node = condition.value ? consNode : altNode;
-        if (!node) {
+        if (node === undefined) {
           return '';
         }
         if (!Array.isArray(node)) {
-          throw new Error(`Unreachable: one of NODE.if branches is not a node: ${node}`);
+          throw new Error(`Unreachable: one of NODE.if branches is not a node.`);
         }
         if (node[0] === NODE.block && node[1].length === 1 && node[1][0][0] === NODE.if) {
           // simplify 'if (true) { if (A) {B} } else {C}' to 'if (A) {B}'
