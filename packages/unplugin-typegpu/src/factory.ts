@@ -1,5 +1,5 @@
 import defu from 'defu';
-import { RolldownString, withMagicString } from 'rolldown-string';
+import { type RolldownString, withMagicString } from 'rolldown-string';
 import { MagicStringAST } from 'magic-string-ast';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 
@@ -8,14 +8,12 @@ import * as t from '@babel/types';
 import {
   defaultOptions,
   earlyPruneRegex,
-  type Options,
   initPluginState,
-  UnpluginPluginState,
   embedJSON,
   functionVisitor,
-  MetadatableFunction,
   getVisibilityScope,
 } from './common.ts';
+import type { Options, UnpluginPluginState, MetadatableFunction } from './common.ts';
 import type { UnpluginBuildContext, UnpluginContext, UnpluginFactory } from 'unplugin';
 import _traverse, { type NodePath } from '@babel/traverse';
 import { FORMAT_VERSION } from 'tinyest';
@@ -24,7 +22,7 @@ import { transpileFn } from 'tinyest-for-wgsl';
 // I love CommonJS 💔
 let traverse = _traverse;
 if (typeof (traverse as unknown as { default: typeof traverse }).default === 'function') {
-  traverse = (traverse as unknown as { default: typeof traverse }).default as typeof traverse;
+  traverse = (traverse as unknown as { default: typeof traverse }).default;
 }
 
 const fnWrapperTemplate = (fnCode: string, metadata: string) =>
