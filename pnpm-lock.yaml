@@ -746,9 +746,6 @@ importers:
       picomatch:
         specifier: ^4.0.3
         version: 4.0.3
-      rolldown-string:
-        specifier: ^0.3.0
-        version: 0.3.0
       tinyest:
         specifier: workspace:~0.3.1
         version: link:../tinyest
@@ -6862,15 +6859,6 @@ packages:
       typescript:
         optional: true
       vue-tsc:
-        optional: true
-
-  rolldown-string@0.3.0:
-    resolution: {integrity: sha512-qGhBPNSv/27uzFBQdO+Cs4YAXC/1PKznD7Jz5Fl7NIAIlteuTPBTBWBhCpJ2AFTqLsoKvvUr7wSjqSUip0Fkpg==}
-    engines: {node: '>=20.19.0'}
-    peerDependencies:
-      rolldown: '*'
-    peerDependenciesMeta:
-      rolldown:
         optional: true
 
   rolldown@1.0.0-beta.45:
@@ -14897,10 +14885,6 @@ snapshots:
       typescript: tsover@5.9.11
     transitivePeerDependencies:
       - oxc-resolver
-
-  rolldown-string@0.3.0:
-    dependencies:
-      magic-string: 0.30.21
 
   rolldown@1.0.0-beta.45:
     dependencies:
