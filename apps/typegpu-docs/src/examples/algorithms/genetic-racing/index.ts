@@ -117,8 +117,8 @@ const senseRaycast = (pos: d.v2f, angle: number, offset: number) => {
   'use gpu';
   const dir = d.vec2f(std.cos(angle + offset), std.sin(angle + offset));
   let hitT = d.f32(1);
-  for (const step of tgpu.unroll([1, 2, 3, 4, 5, 6, 7, 8])) {
-    const t = d.f32(step / 8);
+  for (const step of tgpu.unroll(8)) {
+    const t = d.f32((step + 1) / 8);
     const samplePos = pos + dir * t * params.$.sensorDistance;
     const s = sampleTrack(samplePos, nearestSampler.$);
     hitT = std.select(hitT, std.select(t, hitT, hitT < t), s.z < 0.5);
