@@ -360,7 +360,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     }
 
     if (!this._hostBuffer) {
-      this._hostBuffer = new ArrayBuffer(sizeOf(this.dataType));
+      this._hostBuffer = new ArrayBuffer(bufferSize);
     }
 
     this._writeToTarget(this._hostBuffer, data, options);
