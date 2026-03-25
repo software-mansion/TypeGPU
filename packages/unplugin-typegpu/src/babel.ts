@@ -7,10 +7,10 @@ import {
   type PluginState,
   defaultOptions,
   functionVisitor,
-  getVisibilityScope,
+  getBlockScope,
   initPluginState,
-} from './common.ts';
-import { createFilterForId } from './filter.ts';
+} from './core/common.ts';
+import { createFilterForId } from './core/filter.ts';
 
 function i(identifier: string): t.Identifier {
   return t.identifier(identifier);
@@ -34,7 +34,9 @@ function assignMetadata(
           t.returnStatement(
             t.objectExpression(
               ast.externalNames.map((name) =>
-                t.objectProperty(i(name), i(name), false, /* shorthand */ name !== 'this'),
+                name === 'this'
+                  ? t.objectProperty(i('this'), t.thisExpression())
+                  : t.objectProperty(i(name), i(name), false, /* shorthand */ name !== 'this'),
               ),
             ),
           ),
@@ -45,7 +47,7 @@ function assignMetadata(
 
   let expression: t.Expression;
   const visibility = t.isFunctionDeclaration(path.node)
-    ? getVisibilityScope(this, path as NodePath<t.FunctionDeclaration>)
+    ? getBlockScope(path as NodePath<t.FunctionDeclaration>)
     : undefined;
 
   if (t.isFunctionDeclaration(path.node)) {

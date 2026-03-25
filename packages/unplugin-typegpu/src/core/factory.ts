@@ -1,22 +1,21 @@
 import defu from 'defu';
 import { generateTransform, MagicStringAST } from 'magic-string-ast';
 import { getBabelParserOptions, getLang } from 'ast-kit';
-
+import type { UnpluginBuildContext, UnpluginContext, UnpluginFactory } from 'unplugin';
+import _traverse, { type NodePath } from '@babel/traverse';
+import { FORMAT_VERSION } from 'tinyest';
+import { transpileFn } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
 import {
   defaultOptions,
   earlyPruneRegex,
   initPluginState,
-  embedJSON,
   functionVisitor,
-  getVisibilityScope,
+  getBlockScope,
 } from './common.ts';
+
 import type { Options, UnpluginPluginState, MetadatableFunction } from './common.ts';
-import type { UnpluginBuildContext, UnpluginContext, UnpluginFactory } from 'unplugin';
-import _traverse, { type NodePath } from '@babel/traverse';
-import { FORMAT_VERSION } from 'tinyest';
-import { transpileFn } from 'tinyest-for-wgsl';
 
 // I love CommonJS 💔
 let traverse = _traverse;
@@ -26,6 +25,12 @@ if (typeof (traverse as unknown as { default: typeof traverse }).default === 'fu
 
 const fnWrapperTemplate = (fnCode: string, metadata: string) =>
   `(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (${fnCode}), ${metadata}) && $.f)({}))`;
+
+function embedJSON(jsValue: unknown) {
+  return JSON.stringify(jsValue)
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
 
 function assignMetadata(
   this: UnpluginPluginState,
@@ -43,7 +48,7 @@ function assignMetadata(
   }`;
 
   const visibility = t.isFunctionDeclaration(path.node)
-    ? getVisibilityScope(this, path as NodePath<t.FunctionDeclaration>)
+    ? getBlockScope(path as NodePath<t.FunctionDeclaration>)
     : undefined;
 
   const fnCode = this.magicString.sliceNode(path.node);
@@ -58,9 +63,7 @@ function assignMetadata(
 
   if (visibility) {
     // Hoisting the declaration to the top of the scope
-    insertPos = visibility.node.body[0]
-      ? (visibility.node.body[0].start ?? 0)
-      : (visibility.node.start ?? 0) + 1;
+    insertPos = visibility.node.body[0]?.start ?? insertPos;
 
     if (t.isExportNamedDeclaration(path.parent)) {
       nodeToOverride = path.parent;

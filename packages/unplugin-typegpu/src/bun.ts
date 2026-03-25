@@ -1,7 +1,7 @@
 import defu from 'defu';
-import { defaultOptions, earlyPruneRegex, type Options } from './common.ts';
-import { unpluginFactory } from './factory.ts';
-import { UnpluginBuildContext, UnpluginContext } from 'unplugin';
+import { defaultOptions, earlyPruneRegex, type Options } from './core/common.ts';
+import { unpluginFactory } from './core/factory.ts';
+import type { UnpluginBuildContext, UnpluginContext } from 'unplugin';
 
 export default (rawOptions?: Options): Bun.BunPlugin => {
   const options = defu(rawOptions, defaultOptions);

@@ -4,7 +4,6 @@ packages:
 
 catalog:
   arktype: ^2.1.22
-  rollup: ^4.59.0
   '@babel/types': ^7.29.0
 
 catalogs:
