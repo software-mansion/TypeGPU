@@ -20,6 +20,7 @@ import { defineControls } from '../../common/defineControls.ts';
 
 // setup
 let speedMultiplier = 1;
+let disposed = false;
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -77,7 +78,7 @@ function enqueuePresetChanges() {
   spinnerBackground.style.display = 'grid';
   fishBehaviorBuffer.write(presets.init);
 
-  setTimeout(() => {
+  window.setTimeout(() => {
     if (disposed) return;
     fishBehaviorBuffer.write(presets.default);
     spinnerBackground.style.display = 'none';
@@ -222,12 +223,9 @@ const computeBindGroups = [0, 1].map((idx) =>
 
 let odd = false;
 let lastTimestamp: DOMHighResTimeStamp = 0;
-let disposed = false;
+let animationFrameId: number;
 
 function frame(timestamp: DOMHighResTimeStamp) {
-  if (disposed) {
-    return;
-  }
   odd = !odd;
 
   currentTimeBuffer.write(timestamp);
@@ -270,10 +268,10 @@ function frame(timestamp: DOMHighResTimeStamp) {
     .with(renderFishBindGroups[odd ? 1 : 0])
     .draw(fishModel.polygonCount, p.fishAmount);
 
-  requestAnimationFrame(frame);
+  animationFrameId = requestAnimationFrame(frame);
 }
 enqueuePresetChanges();
-requestAnimationFrame(frame);
+animationFrameId = requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
 
@@ -443,6 +441,7 @@ resizeObserver.observe(canvas);
 
 export function onCleanup() {
   disposed = true;
+  cancelAnimationFrame(animationFrameId);
   window.removeEventListener('mouseup', mouseUpEventListener);
   window.removeEventListener('mousemove', mouseMoveEventListener);
   window.removeEventListener('touchmove', touchMoveEventListener);

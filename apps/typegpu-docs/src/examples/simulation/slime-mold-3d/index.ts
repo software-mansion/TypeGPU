@@ -440,13 +440,12 @@ const renderBindGroups = [0, 1].map((i) =>
   }),
 );
 
-let lastTime = performance.now();
+let lastTime: number | null = null;
 let currentTexture = 0;
 
-function frame() {
-  const now = performance.now();
-  const deltaTime = Math.min((now - lastTime) / 1000, 0.1);
-  lastTime = now;
+function frame(timestamp: number) {
+  const deltaTime = Math.min(lastTime !== null ? (timestamp - lastTime) / 1000 : 0, 0.1);
+  lastTime = timestamp;
 
   params.writePartial({ deltaTime });
 
