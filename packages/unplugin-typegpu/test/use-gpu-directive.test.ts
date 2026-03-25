@@ -1,9 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { babelTransform, rollupTransform } from './transform.ts';
 
-// TODO: Add pure comment to babel implementation
-// TODO: Test if pure comments are kept by babel
-
 describe('"use gpu" marked arrow function, assigned to a const', () => {
   const code = `\
     /** ADD */
@@ -797,13 +794,13 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
 
       console.log(add, mul);
 
-            
-            
-            
 
-            
-            
-            
+
+
+
+
+
+
           }
 
       export { scope };
@@ -918,13 +915,13 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
 
       console.log(add, mul);
 
-            
-            
-            
 
-            
-            
-            
+
+
+
+
+
+
           };
 
       export { scope };
@@ -1046,13 +1043,13 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
 
       console.log(add, mul);
 
-            
-            
-            
 
-            
-            
-            
+
+
+
+
+
+
           }
       "
     `);
