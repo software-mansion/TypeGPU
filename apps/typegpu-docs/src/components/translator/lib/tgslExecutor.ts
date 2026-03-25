@@ -5,6 +5,7 @@ import { SANDBOX_MODULES } from '../../../utils/examples/sandboxModules.ts';
 
 const moduleImports = {
   'typed-binary': 'https://esm.sh/typed-binary@latest',
+  'tsover-runtime': 'https://esm.sh/tsover-runtime@latest',
 } as Record<string, string>;
 
 type TgslModule = Record<string, unknown>;
@@ -30,7 +31,7 @@ async function executeTgslModule(tgslCode: string): Promise<TgslModule> {
     ['./index.ts'],
     {
       plugins: [rolldownPlugin({})],
-      external: ['typed-binary'],
+      external: ['typed-binary', 'tsover-runtime'],
     },
   );
 

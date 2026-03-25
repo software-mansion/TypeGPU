@@ -217,11 +217,11 @@ const renderBindGroups = [0, 1].map((i) =>
   }),
 );
 
-let lastTime = performance.now();
+let lastTime: number | null = null;
 let currentTexture = 0;
 
 function frame(now: number) {
-  const deltaTimeValue = Math.min((now - lastTime) / 1000, 0.1);
+  const deltaTimeValue = Math.min(lastTime !== null ? (now - lastTime) / 1000 : 0, 0.1);
   lastTime = now;
 
   deltaTime.write(deltaTimeValue);
