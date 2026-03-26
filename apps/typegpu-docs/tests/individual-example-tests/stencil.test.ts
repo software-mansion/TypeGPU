@@ -33,13 +33,9 @@ describe('stencil example', () => {
         @location(0) uv: vec2f,
       }
 
-      struct vertexFn_Input {
-        @builtin(vertex_index) vid: u32,
-      }
-
-      @vertex fn vertexFn(_arg_0: vertexFn_Input) -> vertexFn_Output {
-        let pos = vertices[_arg_0.vid];
-        let uv = uvs[_arg_0.vid];
+      @vertex fn vertexFn(@builtin(vertex_index) vid: u32) -> vertexFn_Output {
+        let pos = vertices[vid];
+        let uv = uvs[vid];
         var rotatedPos = (rotationUniform * pos);
         return vertexFn_Output(vec4f(rotatedPos, 0f, 1f), uv);
       }
@@ -55,13 +51,9 @@ describe('stencil example', () => {
         @location(0) uv: vec2f,
       }
 
-      struct vertexFn_Input {
-        @builtin(vertex_index) vid: u32,
-      }
-
-      @vertex fn vertexFn(_arg_0: vertexFn_Input) -> vertexFn_Output {
-        let pos = vertices[_arg_0.vid];
-        let uv = uvs[_arg_0.vid];
+      @vertex fn vertexFn(@builtin(vertex_index) vid: u32) -> vertexFn_Output {
+        let pos = vertices[vid];
+        let uv = uvs[vid];
         var rotatedPos = (rotationUniform * pos);
         return vertexFn_Output(vec4f(rotatedPos, 0f, 1f), uv);
       }

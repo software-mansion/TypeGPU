@@ -25,14 +25,14 @@ describe('caustics example', () => {
         @location(0) uv: vec2f,
       }
 
-      struct mainVertex_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      @vertex fn mainVertex(_arg_0: mainVertex_Input) -> mainVertex_Output {
+      @vertex fn mainVertex(@builtin(vertex_index) vertexIndex: u32) -> mainVertex_Output {
         var pos = array<vec2f, 3>(vec2f(0, 0.800000011920929), vec2f(-0.800000011920929), vec2f(0.800000011920929, -0.800000011920929));
         var uv = array<vec2f, 3>(vec2f(0.5, 1), vec2f(), vec2f(1, 0));
-        return mainVertex_Output(vec4f(pos[_arg_0.vertexIndex], 0f, 1f), uv[_arg_0.vertexIndex]);
+        return mainVertex_Output(vec4f(pos[vertexIndex], 0f, 1f), uv[vertexIndex]);
+      }
+
+      struct mainFragment_Input {
+        @location(0) uv: vec2f,
       }
 
       @group(0) @binding(0) var<uniform> tileDensity: f32;
@@ -118,10 +118,6 @@ describe('caustics example', () => {
 
       fn rotateXY(angle2: f32) -> mat2x2f {
         return mat2x2f(vec2f(cos(angle2), sin(angle2)), vec2f(-(sin(angle2)), cos(angle2)));
-      }
-
-      struct mainFragment_Input {
-        @location(0) uv: vec2f,
       }
 
       @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {

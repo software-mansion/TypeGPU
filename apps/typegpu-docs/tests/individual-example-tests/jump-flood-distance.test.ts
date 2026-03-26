@@ -40,15 +40,11 @@ describe('jump flood (distance) example', () => {
         textureStore(writeView, vec2i(i32(x), i32(y)), vec4f(insideCoord, outsideCoord));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u)  {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -257,15 +253,11 @@ describe('jump flood (distance) example', () => {
         textureStore(writeView, vec2i(i32(x), i32(y)), vec4f(bestInsideCoord, bestOutsideCoord));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u)  {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -292,19 +284,11 @@ describe('jump flood (distance) example', () => {
         textureStore(distTexture, vec2i(i32(x), i32(y)), vec4f(signedDist, 0f, 0f, 0f));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u)  {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
-      }
-
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       struct fullScreenTriangle_Output {
@@ -312,11 +296,15 @@ describe('jump flood (distance) example', () => {
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      struct distanceFrag_Input {
+        @location(0) uv: vec2f,
       }
 
       @group(1) @binding(0) var distTexture: texture_2d<f32>;
@@ -333,10 +321,6 @@ describe('jump flood (distance) example', () => {
       const outsideGradient: array<vec3f, 5> = array<vec3f, 5>(vec3f(0.05000000074505806, 0.05000000074505806, 0.15000000596046448), vec3f(0.20000000298023224, 0.10000000149011612, 0.4000000059604645), vec3f(0.6000000238418579, 0.20000000298023224, 0.5), vec3f(0.949999988079071, 0.5, 0.30000001192092896), vec3f(1, 0.949999988079071, 0.800000011920929));
 
       const insideGradient: array<vec3f, 5> = array<vec3f, 5>(vec3f(0.05000000074505806, 0.05000000074505806, 0.15000000596046448), vec3f(0.10000000149011612, 0.20000000298023224, 0.30000001192092896), vec3f(0.20000000298023224, 0.44999998807907104, 0.550000011920929), vec3f(0.4000000059604645, 0.75, 0.699999988079071), vec3f(0.8999999761581421, 1, 0.949999988079071));
-
-      struct distanceFrag_Input {
-        @location(0) uv: vec2f,
-      }
 
       @fragment fn distanceFrag(_arg_0: distanceFrag_Input) -> @location(0) vec4f {
         var size = textureDimensions(distTexture);

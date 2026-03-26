@@ -38,13 +38,9 @@ describe('stable-fluid example', () => {
 
       @group(0) @binding(3) var linSampler: sampler;
 
-      struct advectFn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16) fn advectFn(input: advectFn_Input) {
+      @compute @workgroup_size(16, 16) fn advectFn(@builtin(global_invocation_id) _arg_gid: vec3u) {
         var texSize = textureDimensions(src);
-        var pixelPos = input.gid.xy;
+        var pixelPos = _arg_gid.xy;
         if (((((pixelPos.x >= (texSize.x - 1u)) || (pixelPos.y >= (texSize.y - 1u))) || (pixelPos.x <= 0u)) || (pixelPos.y <= 0u))) {
           textureStore(dst, pixelPos, vec4f(0, 0, 0, 1));
           return;
@@ -90,12 +86,8 @@ describe('stable-fluid example', () => {
 
       @group(0) @binding(1) var out: texture_storage_2d<rgba16float, write>;
 
-      struct diffusionFn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16) fn diffusionFn(input: diffusionFn_Input) {
-        var pixelPos = vec2i(input.gid.xy);
+      @compute @workgroup_size(16, 16) fn diffusionFn(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        var pixelPos = vec2i(_arg_gid.xy);
         var texSize = vec2i(textureDimensions(in));
         var centerVal = textureLoad(in, pixelPos, 0);
         var neighbors = getNeighbors(pixelPos, texSize);
@@ -136,12 +128,8 @@ describe('stable-fluid example', () => {
 
       @group(0) @binding(1) var div: texture_storage_2d<rgba16float, write>;
 
-      struct divergenceFn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16) fn divergenceFn(input: divergenceFn_Input) {
-        var pixelPos = vec2i(input.gid.xy);
+      @compute @workgroup_size(16, 16) fn divergenceFn(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        var pixelPos = vec2i(_arg_gid.xy);
         var texSize = vec2i(textureDimensions(vel));
         var neighbors = getNeighbors(pixelPos, texSize);
         var leftVel = textureLoad(vel, neighbors[0i], 0);
@@ -179,12 +167,8 @@ describe('stable-fluid example', () => {
 
       @group(0) @binding(2) var out: texture_storage_2d<rgba16float, write>;
 
-      struct pressureFn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16) fn pressureFn(input: pressureFn_Input) {
-        var pixelPos = vec2i(input.gid.xy);
+      @compute @workgroup_size(16, 16) fn pressureFn(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        var pixelPos = vec2i(_arg_gid.xy);
         var texSize = vec2i(textureDimensions(x));
         var neighbors = getNeighbors(pixelPos, texSize);
         var leftPressure = textureLoad(x, neighbors[0i], 0);
@@ -223,12 +207,8 @@ describe('stable-fluid example', () => {
 
       @group(0) @binding(2) var out: texture_storage_2d<rgba16float, write>;
 
-      struct projectFn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16) fn projectFn(input: projectFn_Input) {
-        var pixelPos = vec2i(input.gid.xy);
+      @compute @workgroup_size(16, 16) fn projectFn(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        var pixelPos = vec2i(_arg_gid.xy);
         var texSize = vec2i(textureDimensions(vel));
         var velocity = textureLoad(vel, pixelPos, 0);
         var neighbors = getNeighbors(pixelPos, texSize);
@@ -256,13 +236,9 @@ describe('stable-fluid example', () => {
 
       @group(0) @binding(2) var dst: texture_storage_2d<rgba16float, write>;
 
-      struct advectInkFn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16) fn advectInkFn(input: advectInkFn_Input) {
+      @compute @workgroup_size(16, 16) fn advectInkFn(@builtin(global_invocation_id) _arg_gid: vec3u) {
         var texSize = textureDimensions(src);
-        var pixelPos = input.gid.xy;
+        var pixelPos = _arg_gid.xy;
         var velocity = textureLoad(vel, pixelPos, 0).xy;
         let timeStep = simParams.dt;
         var prevPos = (vec2f(pixelPos) - (timeStep * velocity));
@@ -277,14 +253,14 @@ describe('stable-fluid example', () => {
         @location(0) uv: vec2f,
       }
 
-      struct renderFn_Input {
-        @builtin(vertex_index) idx: u32,
-      }
-
-      @vertex fn renderFn(input: renderFn_Input) -> renderFn_Output {
+      @vertex fn renderFn(@builtin(vertex_index) _arg_idx: u32) -> renderFn_Output {
         var vertices = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
         var texCoords = array<vec2f, 3>(vec2f(), vec2f(2, 0), vec2f(0, 2));
-        return renderFn_Output(vec4f(vertices[input.idx], 0f, 1f), texCoords[input.idx]);
+        return renderFn_Output(vec4f(vertices[_arg_idx], 0f, 1f), texCoords[_arg_idx]);
+      }
+
+      struct fragmentImageFn_Input {
+        @location(0) uv: vec2f,
       }
 
       @group(0) @binding(0) var result: texture_2d<f32>;
@@ -293,21 +269,17 @@ describe('stable-fluid example', () => {
 
       @group(0) @binding(1) var background: texture_2d<f32>;
 
-      struct fragmentImageFn_Input {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn fragmentImageFn(input: fragmentImageFn_Input) -> @location(0) vec4f {
+      @fragment fn fragmentImageFn(_arg_0: fragmentImageFn_Input) -> @location(0) vec4f {
         const pixelStep = 0.001953125f;
-        let leftSample = textureSample(result, linSampler, vec2f((input.uv.x - pixelStep), input.uv.y)).x;
-        let rightSample = textureSample(result, linSampler, vec2f((input.uv.x + pixelStep), input.uv.y)).x;
-        let upSample = textureSample(result, linSampler, vec2f(input.uv.x, (input.uv.y + pixelStep))).x;
-        let downSample = textureSample(result, linSampler, vec2f(input.uv.x, (input.uv.y - pixelStep))).x;
+        let leftSample = textureSample(result, linSampler, vec2f((_arg_0.uv.x - pixelStep), _arg_0.uv.y)).x;
+        let rightSample = textureSample(result, linSampler, vec2f((_arg_0.uv.x + pixelStep), _arg_0.uv.y)).x;
+        let upSample = textureSample(result, linSampler, vec2f(_arg_0.uv.x, (_arg_0.uv.y + pixelStep))).x;
+        let downSample = textureSample(result, linSampler, vec2f(_arg_0.uv.x, (_arg_0.uv.y - pixelStep))).x;
         let gradientX = (rightSample - leftSample);
         let gradientY = (upSample - downSample);
         const distortStrength = 0.8;
         var distortVector = vec2f(gradientX, gradientY);
-        var distortedUV = (input.uv + (distortVector * vec2f(distortStrength, -(distortStrength))));
+        var distortedUV = (_arg_0.uv + (distortVector * vec2f(distortStrength, -(distortStrength))));
         var outputColor = textureSample(background, linSampler, vec2f(distortedUV.x, (1f - distortedUV.y)));
         return vec4f(outputColor.rgb, 1f);
       }"

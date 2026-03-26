@@ -219,11 +219,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
 
         @vertex fn vertex() -> vertex_Output { return vertex_Output(); }
 
-        struct fragment_Input {
-          @builtin(position) a: vec4f,
-        }
-
-        @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
+        @fragment fn fragment() -> @location(0) vec4f {
           return vec4f(1, 2, 3, 4);
         }"
       `);
@@ -286,7 +282,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
           @location(5) baz2: f32,
         }
 
-        @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
+        @fragment fn fragmentMain() -> @location(0) vec4f {
           return vec4f();
         }"
       `);
@@ -334,15 +330,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
 
         @vertex fn vertexMain() -> vertexMain_Output { return vertexMain_Output(); }
 
-        struct fragmentMain_Input {
-          @builtin(position) position: vec4f,
-          @location(3) baz3: u32,
-          @location(1) bar: vec3f,
-          @location(2) foo: vec3f,
-          @location(5) baz2: f32,
-        }
-
-        @fragment fn fragmentMain(in: fragmentMain_Input) -> @location(0)  vec4f { return vec4f(); }"
+        @fragment fn fragmentMain() -> @location(0)  vec4f { return vec4f(); }"
       `);
     });
 

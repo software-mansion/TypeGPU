@@ -64,19 +64,11 @@ describe('perlin noise example', () => {
         memory[idx] = computeJunctionGradient(vec3i(i32(x), i32(y), i32(z)));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(8, 8, 4) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(8, 8, 4) fn mainCompute(@builtin(global_invocation_id) id: vec3u)  {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        mainCompute_1(in.id.x, in.id.y, in.id.z);
-      }
-
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
+        mainCompute_1(id.x, id.y, id.z);
       }
 
       struct fullScreenTriangle_Output {
@@ -84,11 +76,11 @@ describe('perlin noise example', () => {
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
       @group(0) @binding(0) var<uniform> gridSize: f32;
