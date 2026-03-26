@@ -22,7 +22,7 @@ export const unwrappedPojos = createRule({
 
     return {
       ObjectExpression(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         if (node.parent?.type === 'Property') {
