@@ -940,20 +940,29 @@ Try 'return ${typeStr}(${str});' instead.
       const [_, condNode, consNode, altNode] = statement;
       const condition = this._typedExpression(condNode, bool);
 
-      const consequent =
-        condition.value === false ? undefined : this._block(blockifySingleStatement(consNode));
-      const alternate =
-        condition.value === true || !altNode
-          ? undefined
-          : this._block(blockifySingleStatement(altNode));
-
-      if (condition.value === true) {
-        return `${this.ctx.pre}${consequent}`;
+      if (typeof condition.value === 'boolean') {
+        // the condition is known at comptime
+        let node = condition.value ? consNode : altNode;
+        if (node === undefined) {
+          return '';
+        }
+        if (!Array.isArray(node)) {
+          node = blockifySingleStatement(node);
+        }
+        if (node[0] === NODE.block && node[1].length === 1 && node[1][0][0] === NODE.if) {
+          // simplify 'if (true) { if (A) {B} } else {C}' to 'if (A) {B}'
+          return this._statement(node[1][0]);
+        }
+        if (node[0] === NODE.if) {
+          // simplify 'if (false) {A} else if (B) {C}' to 'if (B) {C}'
+          return this._statement(node);
+        }
+        // simplify 'if (true) {A} else {B}' to '{A}'
+        return `${this.ctx.pre}${this._block(blockifySingleStatement(node))}`;
       }
 
-      if (condition.value === false) {
-        return alternate ? `${this.ctx.pre}${alternate}` : '';
-      }
+      const consequent = this._block(blockifySingleStatement(consNode));
+      const alternate = !altNode ? undefined : this._block(blockifySingleStatement(altNode));
 
       if (!alternate) {
         return stitch`${this.ctx.pre}if (${condition}) ${consequent}`;
