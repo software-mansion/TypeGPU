@@ -237,7 +237,7 @@ export function buildWriter(
           writeFunc,
           `(${offsetExpr} + ${col * rowStride + row * 4})`,
           `ArrayBuffer.isView(${valueExpr}) ? ${valueExpr}[${
-            wgsl.isMat3x3f(node) ? wgslIndex : packedIndex
+            wgslIndex
           }] : Array.isArray(${valueExpr}) ? ${valueExpr}[${packedIndex}] : ${valueExpr}.columns[${
             col
           }].${components[row]}`,

@@ -35,6 +35,8 @@ export type Infer<T> = T extends { readonly [$repr]: infer TRepr } ? TRepr : T;
  * type A = InferInput<Vec3f> // => v3f | [number, number, number] | Float32Array
  * type B = InferInput<WgslArray<Vec3f>> // => (v3f | [number, number, number] | Float32Array)[] | Float32Array
  * type C = InferInput<F32> // => number (same as Infer<F32>)
+ * const arrayOfStructs = d.arrayOf(d.struct({ pos: d.vec3f, id: d.f32 }), 4);
+ * type D = d.InferInput<typeof arrayOfStructs>; // { pos: d.v3f | Float32Array<ArrayBufferLike> | [number, number, number]; id: number; }[]
  */
 export type InferInput<T> = T extends { readonly [$inRepr]: infer TRepr } ? TRepr : Infer<T>;
 

@@ -216,17 +216,18 @@ If you pass an unmapped buffer, the data will be written to the buffer using `GP
 If you passed your own buffer to the `root.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the `write` method.
 :::
 
-### Permissive vector and matrix inputs
+### Permissive write inputs
 
-For vector fields and buffers, `.write()` accepts three equivalent forms - you don't need to construct a typed vec instance:
+`.write()` accepts several equivalent forms — you don't need to construct typed instances:
 
-| Input form | Example for `vec3f` | Notes |
-|---|---|---|
-| Typed vec instance | `d.vec3f(1, 2, 3)` | Allocates a TypeGPU wrapper object |
-| Plain JS tuple | `[1, 2, 3]` | No TypeGPU wrapper allocated |
-| TypedArray | `new Float32Array([1, 2, 3])` | No TypeGPU wrapper allocated |
+| Input form | Example for `vec3f` | Example for `mat2x2f` | Notes |
+|---|---|---|---|
+| Typed instance | `d.vec3f(1, 2, 3)` | `d.mat2x2f(1, 2, 3, 4)` | Allocates a TypeGPU wrapper object |
+| Plain JS array | `[1, 2, 3]` | `[1, 2, 3, 4]` | No TypeGPU wrapper allocated |
+| TypedArray | `new Float32Array([1, 2, 3])` | `new Float32Array([1, 2, 3, 4])` | Bytes copied as-is — must match GPU layout |
+| ArrayBuffer | `rawBytes` | `rawBytes` | Bytes copied as-is — must match GPU layout |
 
-When the data already lives in tuples or typed arrays, skipping vec construction avoids allocating TypeGPU wrapper objects, which can reduce garbage-collector pressure in hot paths such as per-frame updates or simulation ticks.
+When data already lives in tuples or typed arrays, skipping typed instance construction avoids allocating TypeGPU wrapper objects, which can reduce garbage-collector pressure in hot paths such as per-frame updates or simulation ticks.
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
@@ -237,9 +238,14 @@ const vecBuffer = root.createBuffer(d.vec3f);
 vecBuffer.write(d.vec3f(1, 2, 3));            // typed instance
 vecBuffer.write([1, 2, 3]);                   // plain tuple
 vecBuffer.write(new Float32Array([1, 2, 3])); // TypedArray
-```
 
-For matrix fields and buffers, `.write()` accepts typed matrix instances, plain `number[]`, and `Float32Array`.
+const Particle = d.struct({ position: d.vec3f, velocity: d.vec3f, health: d.f32 });
+const particleBuffer = root.createBuffer(d.arrayOf(Particle, 100));
+
+// Bytes already laid out exactly as the GPU expects
+declare const rawBytes: ArrayBuffer;
+particleBuffer.write(rawBytes);              // ArrayBuffer
+```
 
 :::tip[WGSL matrices are column-major]
 WGSL matrices are stored by columns, not rows.
@@ -268,8 +274,6 @@ mat3Buffer.write(new Float32Array([
 ```
 :::
 
-For **arrays**, a `TypedArray` is treated as a **raw byte copy**: TypeGPU copies the bytes directly without any per-element processing. This is useful when your data is already stored in the padded GPU layout (e.g. output from a previous GPU readback, or a manually laid-out simulation buffer), as it avoids any allocation overhead and becomes a single `memcpy`.
-
 :::note[TypedArray and ArrayBuffer inputs are copied as-is]
 Wherever a `TypedArray` or `ArrayBuffer` is passed, the bytes are copied directly without any interpretation. The data must already match the GPU memory layout, including any padding. For example, each element in `d.arrayOf(d.vec3f, N)` occupies **16 bytes** (12 bytes of data + 4 bytes of padding), so the input must include those padding bytes.
 
@@ -289,22 +293,6 @@ vec4Buffer.write(new Float32Array([1, 2, 3, 4, 5, 6, 7, 8]));
 
 Plain JS arrays, tuples, and objects always go through the normal path, which handles layout automatically.
 :::
-
-### Raw ArrayBuffer writes
-
-`.write()` also accepts a plain `ArrayBuffer` as a zero-overhead path for when you already have the exact GPU-layout bytes (e.g. from a GPU readback, shared memory, or another binary source). TypeGPU copies the bytes directly into the GPU buffer with no interpretation.
-
-```ts twoslash
-import tgpu, { d } from 'typegpu';
-const root = await tgpu.init();
-// ---cut---
-const Particle = d.struct({ position: d.vec3f, velocity: d.vec3f, health: d.f32 });
-const particleBuffer = root.createBuffer(d.arrayOf(Particle, 100));
-
-// Bytes already laid out exactly as the GPU expects
-declare const rawBytes: ArrayBuffer;
-particleBuffer.write(rawBytes);
-```
 
 ### Writing a slice
 
@@ -331,7 +319,7 @@ const data = await buffer.read(); // will be [0, 1, 2, 4, 5, 6]
 ```
 
 An optional `endOffset` specifies the byte offset at which writing stops entirely.
-Combined with `startOffset` and `d.memoryLayoutOf`, this lets you write to a precise region of the buffer.
+Combined with `startOffset` and `d.memoryLayoutOf`, this lets you write to a precise region of the buffer. If ommitted, writing will continue until the end of the provided data or the end of the buffer, whichever comes first.
 
 :::note
 Both offsets are **byte-based**. Any component whose byte position falls at or beyond `endOffset` is not written, which means offsets that do not align to schema element boundaries can result in partial elements being written. Use `d.memoryLayoutOf` to target whole elements safely.

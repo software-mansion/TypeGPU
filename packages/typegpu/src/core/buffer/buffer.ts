@@ -5,7 +5,7 @@ import type { AnyData } from '../../data/dataTypes.ts';
 import { getWriteInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
-import { isWgslData } from '../../data/wgslTypes.ts';
+import { isWgslArray, isWgslData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
@@ -32,6 +32,8 @@ import {
   type TgpuFixedBufferUsage,
   uniform,
 } from './bufferUsage.ts';
+import { alignmentOf } from '../../data/alignmentOf.ts';
+import { roundUp } from '../../mathUtils.ts';
 
 // ----------
 // Public API
@@ -350,7 +352,18 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     const gpuBuffer = this.buffer;
     const bufferSize = sizeOf(this.dataType);
     const startOffset = options?.startOffset ?? 0;
-    const endOffset = options?.endOffset ?? bufferSize;
+
+    const naturalSize =
+      isWgslArray(this.dataType) && Array.isArray(data)
+        ? data.length *
+          roundUp(sizeOf(this.dataType.elementType), alignmentOf(this.dataType.elementType))
+        : ArrayBuffer.isView(data) || data instanceof ArrayBuffer
+          ? data.byteLength
+          : undefined;
+    const naturalEndOffset =
+      naturalSize !== undefined ? Math.min(startOffset + naturalSize, bufferSize) : undefined;
+
+    const endOffset = options?.endOffset ?? naturalEndOffset ?? bufferSize;
     const size = endOffset - startOffset;
 
     if (gpuBuffer.mapState === 'mapped') {

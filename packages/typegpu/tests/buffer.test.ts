@@ -7,6 +7,7 @@ import { getName } from '../src/shared/meta.ts';
 import type { IsValidBufferSchema, IsValidUniformSchema } from '../src/shared/repr.ts';
 import type { TypedArray } from '../src/shared/utilityTypes.ts';
 import { it } from 'typegpu-testing-utility';
+import { buildWriter } from '../src/data/compiledIO.ts';
 
 function toUint8Array(...arrays: Array<TypedArray>): Uint8Array {
   let totalByteLength = 0;
@@ -167,6 +168,64 @@ describe('TgpuBuffer', () => {
     expect([...new Uint32Array(uploadedBuffer)]).toStrictEqual([
       0, 0, 0, 0, 4, 5, 6, 0, 7, 8, 9, 0, 10, 11, 12, 0,
     ]);
+  });
+
+  it('should write only the provided scalar elements and not to the end of the buffer when endOffset is omitted', ({
+    root,
+    device,
+  }) => {
+    const schema = d.arrayOf(d.u32, 6);
+    const buffer = root.createBuffer(schema);
+    const rawBuffer = root.unwrap(buffer);
+
+    buffer.write([4, 5], { startOffset: 4 });
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 4, expect.any(ArrayBuffer), 4, 8],
+    ]);
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    expect([...new Uint32Array(uploadedBuffer)]).toStrictEqual([0, 4, 5, 0, 0, 0]);
+  });
+
+  it('should write only the provided padded elements and not to the end of the buffer when endOffset is omitted', ({
+    root,
+    device,
+  }) => {
+    const schema = d.arrayOf(d.vec3u, 4);
+    const buffer = root.createBuffer(schema);
+    const rawBuffer = root.unwrap(buffer);
+    const layout = d.memoryLayoutOf(schema, (a) => a[1]);
+
+    buffer.write([d.vec3u(4, 5, 6)], { startOffset: layout.offset });
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, layout.offset, expect.any(ArrayBuffer), layout.offset, 16],
+    ]);
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    expect([...new Uint32Array(uploadedBuffer)]).toStrictEqual([
+      0, 0, 0, 0, 4, 5, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ]);
+  });
+
+  it('should write a TypedArray up to startOffset + byteLength when endOffset is omitted', ({
+    root,
+    device,
+  }) => {
+    const schema = d.arrayOf(d.f32, 8);
+    const buffer = root.createBuffer(schema);
+    const rawBuffer = root.unwrap(buffer);
+
+    const data = new Float32Array([1, 2]);
+    buffer.write(data, { startOffset: 8 });
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 8, expect.any(ArrayBuffer), 8, 8],
+    ]);
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    expect([...new Float32Array(uploadedBuffer)]).toStrictEqual([0, 0, 1, 2, 0, 0, 0, 0]);
   });
 
   it('should write a single padded element when both startOffset and endOffset are provided', ({
