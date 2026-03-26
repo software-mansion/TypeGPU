@@ -1,10 +1,11 @@
 import { oklabGamutClip, oklabToLinearRgb } from '@typegpu/color';
+import type { Fft2d } from '@typegpu/sort';
 import {
   createFft2d,
   createStockhamRadix2LineStrategy,
   createStockhamRadix4LineStrategy,
-  type Fft2d,
 } from '@typegpu/sort';
+import type { TgpuBindGroup } from 'typegpu';
 import tgpu, { common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
@@ -73,7 +74,7 @@ function decodedFrameSize(
   return { width: w, height: h };
 }
 
-const fillParamsType = d.struct({
+const FillParams = d.struct({
   videoW: d.u32,
   videoH: d.u32,
   padW: d.u32,
@@ -88,7 +89,7 @@ const fillParamsType = d.struct({
 
 const fillLayout = tgpu.bindGroupLayout({
   video: { texture: d.texture2d() },
-  params: { uniform: fillParamsType },
+  params: { uniform: FillParams },
   out: { storage: d.arrayOf(d.vec2f), access: 'mutable' },
 });
 
@@ -164,6 +165,7 @@ const filterKernel = tgpu.computeFn({
     numWorkgroups: d.builtin.numWorkgroups,
   },
 })((input) => {
+  'use gpu';
   const wg = d.u32(WORKGROUP);
   const spanX = input.numWorkgroups.x * wg;
   const spanY = input.numWorkgroups.y * spanX;
@@ -203,8 +205,7 @@ const filterKernel = tgpu.computeFn({
   const highMaskInner = std.select(d.f32(0), d.f32(1), r > highC);
   const highMask = std.select(highMaskInner, d.f32(1), highPassOff);
   const mask = lowMask * highMask;
-  const c = filterLayout.$.spectrum[tid];
-  filterLayout.$.spectrum[tid] = d.vec2f(c.x * mask, c.y * mask);
+  filterLayout.$.spectrum[tid] *= mask;
 });
 
 const magParamsType = d.struct({
@@ -257,10 +258,10 @@ const magKernel = tgpu.computeFn({
     magLayout.$.params.swapSpectrumAxes !== d.u32(0),
   );
   const cShift = magLayout.$.spectrum[srcTid];
-  const lenRaw = std.sqrt(cShift.x * cShift.x + cShift.y * cShift.y);
+  const lenRaw = std.length(cShift);
   /** Log stretch tuned on these magnitudes (`log(1+|·|) * 0.2`). */
   const logv = std.log(1.0 + lenRaw) * 0.2 * std.exp2(magLayout.$.params.exposure);
-  const cv = std.clamp(logv, 0.0, 1.0);
+  const cv = std.saturate(logv);
   /** `cv` from log-magnitude; L ∈ [0.04, 1]; chroma → 0 at max `cv` so peaks go neutral white. */
   const L = 0.04 + cv * (1.0 - 0.04);
   const chroma = cv * (1.0 - cv) * 0.32;
@@ -295,6 +296,7 @@ const spatialKernel = tgpu.computeFn({
     numWorkgroups: d.builtin.numWorkgroups,
   },
 })((input) => {
+  'use gpu';
   const wg = d.u32(WORKGROUP);
   const spanX = input.numWorkgroups.x * wg;
   const spanY = input.numWorkgroups.y * spanX;
@@ -308,7 +310,7 @@ const spatialKernel = tgpu.computeFn({
 
   const c = spatialLayout.$.spectrum[tid];
   const inv = spatialLayout.$.params.invSize;
-  const g = std.clamp(c.x * inv * std.exp2(spatialLayout.$.params.exposure), 0.0, 1.0);
+  const g = std.saturate(c.x * inv * std.exp2(spatialLayout.$.params.exposure));
   const padWLog2 = spatialLayout.$.params.padWLog2;
   const padWMask = spatialLayout.$.params.padWMask;
   const x = tid & padWMask;
@@ -377,15 +379,10 @@ const spectrumFrag = tgpu.fragmentFn({
   return d.vec4f(col.rgb, 1);
 });
 
-const videoBlitTargetDimsType = d.struct({
-  w: d.f32,
-  h: d.f32,
-});
-
 const videoBlitLayout = tgpu.bindGroupLayout({
   inputTexture: { externalTexture: d.textureExternal() },
   /** Render-target size (pixels); `fullScreenTriangle` uv is not linear in pixel space for offscreen passes. */
-  targetPx: { uniform: videoBlitTargetDimsType },
+  targetPx: { uniform: d.vec2f },
 });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -419,15 +416,14 @@ const sampler = root['~unstable'].createSampler({
   minFilter: 'linear',
 });
 
-const videoBlitTargetPx = root.createBuffer(videoBlitTargetDimsType).$usage('uniform');
+const videoBlitTargetPx = root.createBuffer(d.vec2f).$usage('uniform');
 
 const videoBlitFrag = tgpu.fragmentFn({
   in: { position: d.builtin.position },
   out: d.vec4f,
 })((input) => {
-  const w = d.f32(videoBlitLayout.$.targetPx.w);
-  const rtH = d.f32(videoBlitLayout.$.targetPx.h);
-  const st = d.vec2f(input.position.x / w, input.position.y / rtH);
+  'use gpu';
+  const st = input.position.xy / videoBlitLayout.$.targetPx;
   return std.textureSampleBaseClampToEdge(videoBlitLayout.$.inputTexture, sampler.$, st);
 });
 
@@ -470,7 +466,7 @@ let displayTexture: ReturnType<typeof createPaddedDisplayTexture> | undefined;
 let displaySampleView: ReturnType<typeof displaySampleViewOf> | undefined;
 let displayStorageView: ReturnType<typeof displayStorageViewOf> | undefined;
 
-const fillParams = root.createBuffer(fillParamsType).$usage('uniform');
+const fillParams = root.createBuffer(FillParams).$usage('uniform');
 const filterParams = root.createBuffer(filterParamsType).$usage('uniform');
 const magParams = root.createBuffer(magParamsType).$usage('uniform');
 const spatialParams = root.createBuffer(spatialParamsType).$usage('uniform');
@@ -516,18 +512,12 @@ function effectiveFrameSize(frameW: number, frameH: number): { effW: number; eff
   return { effW, effH };
 }
 
-let fillBindGroup: ReturnType<typeof root.createBindGroup> | undefined;
+let fillBindGroup: TgpuBindGroup | undefined;
 /** One bind group per ping-pong buffer; use `fft.outputIndex()` after each transform to pick the right one. */
-let magBindSlots:
-  | [ReturnType<typeof root.createBindGroup>, ReturnType<typeof root.createBindGroup>]
-  | undefined;
-let filterBindSlots:
-  | [ReturnType<typeof root.createBindGroup>, ReturnType<typeof root.createBindGroup>]
-  | undefined;
-let spatialBindSlots:
-  | [ReturnType<typeof root.createBindGroup>, ReturnType<typeof root.createBindGroup>]
-  | undefined;
-let renderBindGroup: ReturnType<typeof root.createBindGroup> | undefined;
+let magBindSlots: [TgpuBindGroup, TgpuBindGroup] | undefined;
+let filterBindSlots: [TgpuBindGroup, TgpuBindGroup] | undefined;
+let spatialBindSlots: [TgpuBindGroup, TgpuBindGroup] | undefined;
+let renderBindGroup: TgpuBindGroup | undefined;
 
 function invalidateBindGroups(all: boolean) {
   fillBindGroup = undefined;
@@ -708,7 +698,7 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   const videoBlitKey = `${effW}x${effH}`;
   if (videoBlitKey !== lastVideoBlitKey) {
     lastVideoBlitKey = videoBlitKey;
-    videoBlitTargetPx.write({ w: effW, h: effH });
+    videoBlitTargetPx.write(d.vec2f(effW, effH));
   }
   const videoBlitBindGroup = root.createBindGroup(videoBlitLayout, {
     inputTexture: device.importExternalTexture({ source: video }),
