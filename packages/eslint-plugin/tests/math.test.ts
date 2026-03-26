@@ -9,6 +9,7 @@ describe('math', () => {
       'const t = std.sin(Math.PI)',
       "const fn = () => { 'use gpu'; const vec = std.sin(Math.PI); }",
       "const Math = { sin: std.sin }; const fn = () => { 'use gpu'; const vec = Math.sin(0); }",
+      "import Math from 'utils'; const fn = () => { 'use gpu'; const vec = Math.sin(0); }",
     ],
     invalid: [
       {
