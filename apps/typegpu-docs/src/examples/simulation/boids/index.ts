@@ -222,13 +222,9 @@ const computeBindGroups = [0, 1].map((idx) =>
 );
 
 let even = false;
-let disposed = false;
+let animationFrameId: number;
 
 function frame() {
-  if (disposed) {
-    return;
-  }
-
   even = !even;
 
   simulatePipeline.with(computeBindGroups[even ? 0 : 1]).dispatchThreads(triangleAmount);
@@ -241,10 +237,10 @@ function frame() {
     .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
     .draw(3, triangleAmount);
 
-  requestAnimationFrame(frame);
+  animationFrameId = requestAnimationFrame(frame);
 }
 
-frame();
+animationFrameId = requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
 
@@ -291,7 +287,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  disposed = true;
+  cancelAnimationFrame(animationFrameId);
   root.destroy();
 }
 

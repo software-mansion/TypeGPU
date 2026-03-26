@@ -93,8 +93,8 @@ resizeObserver.observe(canvas);
 
 let frameId: number;
 
-function render() {
-  paramsUniform.writePartial({ time: (performance.now() / 1000) % 500 });
+function render(timestamp: number) {
+  paramsUniform.writePartial({ time: (timestamp / 1000) % 500 });
 
   pipeline
     .with(bindGroup)

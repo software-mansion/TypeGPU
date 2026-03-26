@@ -345,6 +345,8 @@ const stepOnce = (timestamp: number) => {
     );
 };
 
+let frameId: number;
+
 function frame(timestamp: number) {
   const isZoomed = input.zoomLevel > 1;
   zoomUniform.write({
@@ -396,9 +398,9 @@ function frame(timestamp: number) {
     .with(displayBindGroups[1 - even])
     .draw(3);
 
-  requestAnimationFrame(frame);
+  frameId = requestAnimationFrame(frame);
 }
-requestAnimationFrame(frame);
+frameId = requestAnimationFrame(frame);
 
 // #region Example controls & Cleanup
 
@@ -503,6 +505,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  cancelAnimationFrame(frameId);
   root.destroy();
 }
 

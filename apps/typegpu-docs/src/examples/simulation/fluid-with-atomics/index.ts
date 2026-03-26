@@ -514,9 +514,9 @@ resetGameData();
 let paused = false;
 
 let animationFrame: number;
-let lastTime = performance.now();
+let lastTime: number | null = null;
 function run(timestamp: number) {
-  const dt = timestamp - lastTime;
+  const dt = lastTime !== null ? timestamp - lastTime : 0;
   lastTime = timestamp;
   msSinceLastTick += dt;
 
