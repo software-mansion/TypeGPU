@@ -74,8 +74,7 @@ const foregroundPipeline = pipelineBase.createRenderPipeline({
 });
 
 function getShiftedColors(timestamp: number) {
-  const shiftBy = Math.floor(timestamp / getAnimationDuration()) %
-    colors.length;
+  const shiftBy = Math.floor(timestamp / getAnimationDuration()) % colors.length;
   return [...colors.slice(shiftBy), ...colors.slice(0, shiftBy)];
 }
 
@@ -139,11 +138,7 @@ export const controls = {
     max: 1.33,
     step: 0.01,
     onSliderChange: (newValue: number) =>
-      updateGridParams(
-        scaleUniform,
-        updateInstanceInfoBufferAndBindGroup,
-        newValue,
-      ),
+      updateGridParams(scaleUniform, updateInstanceInfoBufferAndBindGroup, newValue),
   },
   'Animation duration': {
     initial: getAnimationDuration(),
@@ -156,11 +151,7 @@ export const controls = {
     initial: INITIAL_STEP_ROTATION,
     options: ROTATION_OPTIONS,
     onSelectChange: (newValue: number) =>
-      updateStepRotation(
-        newValue,
-        stepRotationUniform,
-        middleSquareScaleUniform,
-      ),
+      updateStepRotation(newValue, stepRotationUniform, middleSquareScaleUniform),
   },
   'Draw over neighbors': {
     initial: false,
@@ -174,17 +165,12 @@ export const controls = {
       const newPoints = parseControlPoints(value);
 
       updateCubicBezierControlPoints(newPoints);
-      ease = createBezier(
-        newPoints,
-      );
+      ease = createBezier(newPoints);
     },
   },
   'Edit Cubic Bezier Points': {
     onButtonClick: () => {
-      window.open(
-        `https://cubic-bezier.com/?#${getCubicBezierControlPoints().join()}`,
-        '_blank',
-      );
+      window.open(`https://cubic-bezier.com/?#${getCubicBezierControlPoints().join()}`, '_blank');
     },
   },
 };

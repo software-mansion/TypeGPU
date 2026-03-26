@@ -7,12 +7,7 @@ const INITIAL_STEP_ROTATION = 60;
 const INITIAL_MIDDLE_SQUARE_SCALE = 2;
 const DEFAULT_ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY = 2;
 
-let cubicBezierControlPoints: [number, number, number, number] = [
-  0.18,
-  0.7,
-  0.68,
-  1.03,
-];
+let cubicBezierControlPoints: [number, number, number, number] = [0.18, 0.7, 0.68, 1.03];
 
 function updateCubicBezierControlPoints(points: number[]) {
   if (points.length !== 4) {
@@ -26,9 +21,7 @@ function getCubicBezierControlPoints() {
 }
 
 function getCubicBezierControlPointsString() {
-  return cubicBezierControlPoints.map((value) =>
-    String(value).replace(/^0(?=\.)/, '')
-  ).join(', ');
+  return cubicBezierControlPoints.map((value) => String(value).replace(/^0(?=\.)/, '')).join(', ');
 }
 
 function parseControlPoints(value: string) {
@@ -44,7 +37,7 @@ function parseOneControlPoint(value: string, index: number) {
   if (Number.isNaN(parsedNumber)) {
     throw Error('Cubic Bezier control point must be a number');
   }
-  if ((index % 2 === 0) && (parsedNumber < 0 || parsedNumber > 1)) {
+  if (index % 2 === 0 && (parsedNumber < 0 || parsedNumber > 1)) {
     throw Error('Cubic Bezier control point must be a value between 0 and 1');
   }
 
@@ -53,11 +46,7 @@ function parseOneControlPoint(value: string, index: number) {
 
 let aspectRatio = 1;
 
-function updateAspectRatio(
-  width: number,
-  height: number,
-  aspectRatioBuffer: TgpuUniform<d.F32>,
-) {
+function updateAspectRatio(width: number, height: number, aspectRatioBuffer: TgpuUniform<d.F32>) {
   aspectRatio = width / height;
   aspectRatioBuffer.write(aspectRatio);
 }
@@ -75,9 +64,7 @@ const ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY = [
   [180, 3],
 ];
 
-const ROTATION_OPTIONS = ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY.flatMap(
-  (element) => element[0],
-);
+const ROTATION_OPTIONS = ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY.flatMap((element) => element[0]);
 
 function updateStepRotation(
   newValue: number,
@@ -89,13 +76,11 @@ function updateStepRotation(
   // update middle triangle scale so that it doesn't
   // show already hidden color
 
-  const scale = ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY.find((element) =>
-    element[0] === newValue
+  const scale = ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY.find(
+    (element) => element[0] === newValue,
   )?.[1];
 
-  middleSquareScaleBuffer.write(
-    scale ?? DEFAULT_ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY,
-  );
+  middleSquareScaleBuffer.write(scale ?? DEFAULT_ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY);
 }
 
 let gridParams = createGridParams(INIT_TILE_DENSITY);

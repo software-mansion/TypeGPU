@@ -11,12 +11,15 @@ describe('rotating-triangle-tiles example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
-    const shaderCodes = await runExampleTest({
-      category: 'simple',
-      name: 'rotating-triangle-tiles',
-      expectedCalls: 1,
-      setupMocks: mockResizeObserver,
-    }, device);
+    const shaderCodes = await runExampleTest(
+      {
+        category: 'simple',
+        name: 'rotating-triangle-tiles',
+        expectedCalls: 1,
+        setupMocks: mockResizeObserver,
+      },
+      device,
+    );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
       "const originalVertices: array<vec2f, 3> = array<vec2f, 3>(vec2f(0.8660253882408142, -0.5), vec2f(0, 1), vec2f(-0.8660253882408142, -0.5));

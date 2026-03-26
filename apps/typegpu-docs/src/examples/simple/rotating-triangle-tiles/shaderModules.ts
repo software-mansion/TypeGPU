@@ -1,11 +1,7 @@
 import tgpu from 'typegpu';
 import * as std from 'typegpu/std';
 import * as d from 'typegpu/data';
-import {
-  instanceTransform,
-  interpolateBezier,
-  rotate,
-} from './transformations.ts';
+import { instanceTransform, interpolateBezier, rotate } from './transformations.ts';
 import { originalVertices } from './geometry.ts';
 import {
   animationProgressAccess,
@@ -43,15 +39,10 @@ const midgroundVertex = tgpu.vertexFn({
   const angle = interpolateBezier(
     animationProgressAccess.$,
     stepRotationAccess.$ % SMALLEST_LOOPING_ROTATION_ANGLE,
-    stepRotationAccess.$ +
-      stepRotationAccess.$ % SMALLEST_LOOPING_ROTATION_ANGLE,
+    stepRotationAccess.$ + (stepRotationAccess.$ % SMALLEST_LOOPING_ROTATION_ANGLE),
   );
 
-  const scaleFactor = interpolateBezier(
-    animationProgressAccess.$,
-    0.5,
-    middleSquareScaleAccess.$,
-  );
+  const scaleFactor = interpolateBezier(animationProgressAccess.$, 0.5, middleSquareScaleAccess.$);
 
   const calculatedPosition = rotate(vertexPosition, angle).mul(scaleFactor);
 
@@ -96,28 +87,20 @@ function edgeFunction(a: d.v2f, b: d.v2f, p: d.v2f) {
   return (p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x);
 }
 
-function isOutsideMask(
-  maskP0: d.v2f,
-  maskP1: d.v2f,
-  maskP2: d.v2f,
-  vertexClipPos: d.v2f,
-) {
+function isOutsideMask(maskP0: d.v2f, maskP1: d.v2f, maskP2: d.v2f, vertexClipPos: d.v2f) {
   'use gpu';
   const e0 = edgeFunction(maskP0, maskP1, vertexClipPos);
   const e1 = edgeFunction(maskP1, maskP2, vertexClipPos);
   const e2 = edgeFunction(maskP2, maskP0, vertexClipPos);
 
-  return (e0 > 0 || e1 > 0 || e2 > 0);
+  return e0 > 0 || e1 > 0 || e2 > 0;
 }
 
 const midgroundFragment = tgpu.fragmentFn({
   in: MidgroundVertexOutput,
   out: d.vec4f,
 })(({ maskP0, maskP1, maskP2, vertexClipPos }) => {
-  if (
-    drawOverNeighborsAccess.$ === 0 &&
-    isOutsideMask(maskP0, maskP1, maskP2, vertexClipPos)
-  ) {
+  if (drawOverNeighborsAccess.$ === 0 && isOutsideMask(maskP0, maskP1, maskP2, vertexClipPos)) {
     std.discard();
   }
 
@@ -133,17 +116,11 @@ const foregroundVertex = tgpu.vertexFn({
   out: { outPos: d.builtin.position },
 })(({ vertexIndex, instanceIndex }) => {
   const vertexPosition = d.vec2f(originalVertices.$[vertexIndex]);
-  let calculatedPosition = d.mat2x2f(0.5, 0, 0, 0.5).mul(
-    vertexPosition,
-  );
+  let calculatedPosition = d.mat2x2f(0.5, 0, 0, 0.5).mul(vertexPosition);
 
   const instanceInfo = instanceInfoLayout.$.instanceInfo[instanceIndex];
 
-  const angle = interpolateBezier(
-    animationProgressAccess.$,
-    0,
-    stepRotationAccess.$,
-  );
+  const angle = interpolateBezier(animationProgressAccess.$, 0, stepRotationAccess.$);
 
   const scaleFactor = animationProgressAccess.$;
   calculatedPosition = rotate(calculatedPosition, angle).mul(scaleFactor);
@@ -168,9 +145,4 @@ const foregroundFragment = tgpu.fragmentFn({
   return color;
 });
 
-export {
-  foregroundFragment,
-  foregroundVertex,
-  midgroundFragment,
-  midgroundVertex,
-};
+export { foregroundFragment, foregroundVertex, midgroundFragment, midgroundVertex };

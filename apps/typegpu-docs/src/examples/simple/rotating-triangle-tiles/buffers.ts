@@ -2,11 +2,7 @@ import * as d from 'typegpu/data';
 import tgpu, { type TgpuRoot } from 'typegpu';
 import { colors } from './geometry.ts';
 import { createInstanceInfoArray, InstanceInfoArray } from './instanceInfo.ts';
-import {
-  getGridParams,
-  INITIAL_MIDDLE_SQUARE_SCALE,
-  INITIAL_STEP_ROTATION,
-} from './params.ts';
+import { getGridParams, INITIAL_MIDDLE_SQUARE_SCALE, INITIAL_STEP_ROTATION } from './params.ts';
 
 const stepRotationAccess = tgpu.accessor(d.f32);
 const shiftedColorsAccess = tgpu.accessor(d.arrayOf(d.vec4f, 3));
@@ -23,10 +19,7 @@ const instanceInfoLayout = tgpu.bindGroupLayout({
 function createBuffers(root: TgpuRoot) {
   const animationProgressUniform = root.createUniform(d.f32);
 
-  const shiftedColorsUniform = root.createUniform(
-    d.arrayOf(d.vec4f, 3),
-    colors,
-  );
+  const shiftedColorsUniform = root.createUniform(d.arrayOf(d.vec4f, 3), colors);
 
   let instanceInfoBindGroup = createInstanceInfoBufferAndBindGroup();
 
@@ -56,10 +49,7 @@ function createBuffers(root: TgpuRoot) {
 
   const stepRotationUniform = root.createUniform(d.f32, INITIAL_STEP_ROTATION);
 
-  const middleSquareScaleUniform = root.createUniform(
-    d.f32,
-    INITIAL_MIDDLE_SQUARE_SCALE,
-  );
+  const middleSquareScaleUniform = root.createUniform(d.f32, INITIAL_MIDDLE_SQUARE_SCALE);
 
   const drawOverNeighborsUniform = root.createUniform(d.u32, 0);
 

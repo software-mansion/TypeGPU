@@ -16,35 +16,23 @@ function interpolate(
   const inputInterval = inputUpperEndpoint - inputLowerEndpoint;
   const progressPercentage = inputProgress / inputInterval;
   const outputInterval = outputUpperEndpoint - outputLowerEndpoint;
-  const outputValue = outputLowerEndpoint +
-    outputInterval * progressPercentage;
+  const outputValue = outputLowerEndpoint + outputInterval * progressPercentage;
   return outputValue;
 }
 
 const interpolateBezier = tgpu.fn(
   [d.f32, d.f32, d.f32],
   d.f32,
-)(
-  (inputValue, outputLowerEndpoint, outputUpperEndpoint) => {
-    return interpolate(
-      inputValue,
-      d.f32(0),
-      d.f32(1),
-      outputLowerEndpoint,
-      outputUpperEndpoint,
-    );
-  },
-);
+)((inputValue, outputLowerEndpoint, outputUpperEndpoint) => {
+  return interpolate(inputValue, d.f32(0), d.f32(1), outputLowerEndpoint, outputUpperEndpoint);
+});
 
 function rotate(coordinate: d.v2f, angleInDegrees: number) {
   'use gpu';
   const angle = (angleInDegrees * Math.PI) / 180;
   const x = coordinate.x;
   const y = coordinate.y;
-  return d.vec2f(
-    x * std.cos(angle) - y * std.sin(angle),
-    x * std.sin(angle) + y * std.cos(angle),
-  );
+  return d.vec2f(x * std.cos(angle) - y * std.sin(angle), x * std.sin(angle) + y * std.cos(angle));
 }
 
 function instanceTransform(
@@ -56,15 +44,9 @@ function instanceTransform(
   'use gpu';
   const transformedPoint = std.add(
     // rotate accordingly
-    rotate(
-      std.mul(position, scaleValue),
-      instanceInfo.rotationAngle,
-    ),
+    rotate(std.mul(position, scaleValue), instanceInfo.rotationAngle),
     // add instance offsets with top left corner offset
-    std.add(
-      instanceInfo.offset,
-      getZeroOffset(scaleValue, aspectRatioValue),
-    ),
+    std.add(instanceInfo.offset, getZeroOffset(scaleValue, aspectRatioValue)),
   );
 
   // squish/stretch triangles horizontally
@@ -73,13 +55,9 @@ function instanceTransform(
 
 // common offset so that the first triangle's
 // top vertex lies on top of canvas's top left corner
-function getZeroOffset(
-  scaleValue: number,
-  aspectRatioValue: number,
-) {
+function getZeroOffset(scaleValue: number, aspectRatioValue: number) {
   'use gpu';
-  const zeroXOffset = BASE_TRIANGLE_HALF_SIDE * scaleValue -
-    1 * aspectRatioValue;
+  const zeroXOffset = BASE_TRIANGLE_HALF_SIDE * scaleValue - 1 * aspectRatioValue;
   // make the top of the very first triangle touch the border
   const zeroYOffset = 1 - scaleValue;
 
