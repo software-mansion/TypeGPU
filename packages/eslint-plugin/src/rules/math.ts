@@ -1,6 +1,8 @@
 import { createRule } from '../ruleCreator.ts';
 import { enhanceRule } from '../enhanceRule.ts';
 import { directiveTracking } from '../enhancers/directiveTracking.ts';
+import type { RuleContext } from '@typescript-eslint/utils/ts-eslint';
+import { ASTUtils, type TSESTree } from '@typescript-eslint/utils';
 
 export const math = createRule({
   name: 'math',
@@ -28,7 +30,8 @@ export const math = createRule({
         if (
           node.callee.type === 'MemberExpression' &&
           node.callee.object.type === 'Identifier' &&
-          node.callee.object.name === 'Math'
+          node.callee.object.name === 'Math' &&
+          isGlobalIdentifier(context, node.callee.object)
         ) {
           context.report({
             node,
@@ -40,3 +43,14 @@ export const math = createRule({
     };
   }),
 });
+
+function isGlobalIdentifier(
+  context: Readonly<RuleContext<string, unknown[]>>,
+  node: TSESTree.Identifier,
+) {
+  const variable = ASTUtils.findVariable(context.sourceCode.getScope(node), node);
+  if (!variable) {
+    throw new Error(`Couldn't find variable ${node.name}.`);
+  }
+  return variable.defs.length === 0;
+}
