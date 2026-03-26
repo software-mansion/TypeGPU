@@ -28,7 +28,8 @@ export function quinticDerivative(t: d.vecBase): d.vecBase {
   'use gpu';
   return 30 * t * t * (t * (t - 2) + 1);
 }
-/*
+
+/**
  * Left circular shif of x by k positions.
  */
 export const rotl = tgpu.fn(
@@ -38,8 +39,8 @@ export const rotl = tgpu.fn(
   return (x << k) | (x >> (32 - k));
 });
 
-/*
- * Converts u32 to f32 value in the range [0.0, 1.0).
+/**
+ * Converts `u32` to `f32` value in the range `[0.0, 1.0)`.
  */
 export const u32To01F32 = tgpu.fn(
   [d.u32],
@@ -61,8 +62,8 @@ export const u32To01F32 = tgpu.fn(
 export const hash = tgpu.fn(
   [d.u32],
   d.u32,
-)((v) => {
-  let x = v ^ (v >> 17);
+)((value) => {
+  let x = value ^ (value >> 17);
   x *= d.u32(0xed5ad4bb);
   x ^= x >> 11;
   x *= d.u32(0xac4c1b51);
@@ -73,8 +74,8 @@ export const hash = tgpu.fn(
 });
 
 /**
- * Emulated 64-bit unsigned addition on two vec2u values.
- * Each vec2u represents a u64: x = low 32 bits, y = high 32 bits.
+ * Emulated 64-bit unsigned addition on two `vec2u` values.
+ * Each `vec2u` represents a `u64`: x = low 32 bits, y = high 32 bits.
  */
 export const u64Add = tgpu.fn(
   [d.vec2u, d.vec2u],
@@ -87,8 +88,8 @@ export const u64Add = tgpu.fn(
 });
 
 /**
- * Emulated 64-bit unsigned multiplication on two vec2u values.
- * Each vec2u represents a u64: x = low 32 bits, y = high 32 bits.
+ * Emulated 64-bit unsigned multiplication on two `vec2u` values.
+ * Each `vec2u` represents a `u64`: x = low 32 bits, y = high 32 bits.
  */
 export const u64Mul = tgpu.fn(
   [d.vec2u, d.vec2u],
