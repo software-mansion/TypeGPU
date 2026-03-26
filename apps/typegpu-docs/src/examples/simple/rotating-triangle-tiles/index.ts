@@ -74,27 +74,21 @@ function updateLayerTransforms(animationProgress: number) {
   };
 }
 
-function createInstanceInfoBindGroup(instanceInfos: d.m3x3f[]) {
-  const instanceInfo = root.createReadonly(InstanceInfoArray(instanceInfos.length), instanceInfos);
-  const bindGroup = root.createBindGroup(instanceInfoLayout, {
-    instanceInfo: instanceInfo.buffer,
-  });
-
-  return { bindGroup, count: instanceInfos.length };
-}
-
 function createInstanceInfos() {
   const { allRows, checkerboardGroups } = createInstanceInfoArrays(
     updateAspectRatio(canvas.width, canvas.height),
   );
-  return {
-    allRowInstances: createInstanceInfoBindGroup(allRows),
-    checkerboardInstances: checkerboardGroups.map((group) => createInstanceInfoBindGroup(group)),
+  const makeGroup = (infos: d.m3x3f[]) => {
+    const buf = root.createReadonly(InstanceInfoArray(infos.length), infos);
+    return {
+      bindGroup: root.createBindGroup(instanceInfoLayout, { instanceInfo: buf.buffer }),
+      count: infos.length,
+    };
   };
-}
-
-function refreshInstanceInfo() {
-  ({ allRowInstances, checkerboardInstances } = createInstanceInfos());
+  return {
+    allRowInstances: makeGroup(allRows),
+    checkerboardInstances: checkerboardGroups.map(makeGroup),
+  };
 }
 
 function createStencilTexture() {
@@ -138,31 +132,22 @@ const basePipeline = root
     },
   });
 
+const layerDepthStencil = {
+  format: 'stencil8',
+  stencilFront: { compare: 'equal', passOp: 'increment-clamp' },
+} as const;
+
 const midgroundPipeline = root
   .with(layerTransformAccess, () => uniforms.$.midgroundTransform)
-  .createRenderPipeline({
-    vertex,
-    fragment,
-    depthStencil: {
-      format: 'stencil8',
-      stencilFront: { compare: 'equal', passOp: 'increment-clamp' },
-    },
-  })
+  .createRenderPipeline({ vertex, fragment, depthStencil: layerDepthStencil })
   .withStencilReference(1);
 
 const foregroundPipeline = root
   .with(layerTransformAccess, () => uniforms.$.foregroundTransform)
-  .createRenderPipeline({
-    vertex,
-    fragment,
-    depthStencil: {
-      format: 'stencil8',
-      stencilFront: { compare: 'equal', passOp: 'increment-clamp' },
-    },
-  })
+  .createRenderPipeline({ vertex, fragment, depthStencil: layerDepthStencil })
   .withStencilReference(2);
 
-type InstanceGroup = ReturnType<typeof createInstanceInfoBindGroup>;
+type InstanceGroup = ReturnType<typeof createInstanceInfos>['allRowInstances'];
 type PassSpec =
   | {
       kind: 'stencil';
@@ -180,63 +165,43 @@ type PassSpec =
       clearColor?: (typeof colors)[number];
     };
 
-function createDrawOverNeighborsPasses(shiftedColors: d.v4f[]) {
+function makePassGroup(
+  instances: InstanceGroup,
+  stencilRef: number,
+  isFirst: boolean,
+  colors: d.v4f[],
+): PassSpec[] {
+  const loadOp: GPULoadOp = isFirst ? 'clear' : 'load';
   return [
-    {
-      kind: 'stencil',
-      instances: allRowInstances,
-      stencilReference: 1,
-      stencilLoadOp: 'clear',
-    },
+    { kind: 'stencil', instances, stencilReference: stencilRef, stencilLoadOp: loadOp },
     {
       kind: 'color',
       pipeline: midgroundPipeline,
-      instances: allRowInstances,
-      stencilReference: 1,
-      colorLoadOp: 'clear',
-      color: shiftedColors[1],
-      clearColor: shiftedColors[0],
+      instances,
+      stencilReference: stencilRef,
+      colorLoadOp: loadOp,
+      color: colors[1],
+      ...(isFirst ? { clearColor: colors[0] } : {}),
     },
     {
       kind: 'color',
       pipeline: foregroundPipeline,
-      instances: allRowInstances,
-      stencilReference: 2,
+      instances,
+      stencilReference: stencilRef + 1,
       colorLoadOp: 'load',
-      color: shiftedColors[2],
+      color: colors[2],
     },
-  ] satisfies PassSpec[];
+  ];
 }
 
-function createCheckerboardPasses(shiftedColors: (typeof shiftedColorSets)[number]) {
-  return checkerboardInstances.flatMap((instances, groupIndex) => {
-    const stencilReference = 1 + groupIndex * 3;
-    return [
-      {
-        kind: 'stencil',
-        instances,
-        stencilReference,
-        stencilLoadOp: groupIndex === 0 ? 'clear' : 'load',
-      },
-      {
-        kind: 'color',
-        pipeline: midgroundPipeline,
-        instances,
-        stencilReference,
-        colorLoadOp: groupIndex === 0 ? 'clear' : 'load',
-        color: shiftedColors[1],
-        ...(groupIndex === 0 ? { clearColor: shiftedColors[0] } : {}),
-      },
-      {
-        kind: 'color',
-        pipeline: foregroundPipeline,
-        instances,
-        stencilReference: stencilReference + 1,
-        colorLoadOp: 'load',
-        color: shiftedColors[2],
-      },
-    ] satisfies PassSpec[];
-  });
+function createDrawOverNeighborsPasses(shiftedColors: d.v4f[]): PassSpec[] {
+  return makePassGroup(allRowInstances, 1, true, shiftedColors);
+}
+
+function createCheckerboardPasses(shiftedColors: (typeof shiftedColorSets)[number]): PassSpec[] {
+  return checkerboardInstances.flatMap((instances, i) =>
+    makePassGroup(instances, 1 + i * 3, i === 0, shiftedColors),
+  );
 }
 
 function runPasses(passSpecs: PassSpec[]) {
@@ -288,7 +253,7 @@ let animationFrame = requestAnimationFrame(function draw(timestamp: number) {
 
 const resizeObserver = new ResizeObserver(() => {
   updateGridParams();
-  refreshInstanceInfo();
+  ({ allRowInstances, checkerboardInstances } = createInstanceInfos());
   stencilTexture.destroy();
   stencilTexture = createStencilTexture();
 });
@@ -310,7 +275,7 @@ export const controls = {
     step: 0.01,
     onSliderChange(newValue: number) {
       updateGridParams(newValue);
-      refreshInstanceInfo();
+      ({ allRowInstances, checkerboardInstances } = createInstanceInfos());
     },
   },
   'Animation duration': {
