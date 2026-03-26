@@ -1,18 +1,13 @@
-import { colors } from './geometry.ts';
+import tgpu, { d } from 'typegpu';
+import { colors, originalVertices } from './geometry.ts';
 import { createBezier } from './bezier.ts';
+import { createInstanceInfoArrays, InstanceInfoArray } from './instanceInfo.ts';
 import {
-  foregroundFragment,
-  foregroundVertex,
-  midgroundFragment,
-  midgroundVertex,
-} from './shaderModules.ts';
-import {
-  getAnimationDuration,
-  getCubicBezierControlPoints,
   getCubicBezierControlPointsString,
-  getGridParams,
-  INIT_TILE_DENSITY,
   INITIAL_STEP_ROTATION,
+  INIT_TILE_DENSITY,
+  animationDuration,
+  cubicBezierControlPoints,
   parseControlPoints,
   ROTATION_OPTIONS,
   updateAnimationDuration,
@@ -21,104 +16,281 @@ import {
   updateGridParams,
   updateStepRotation,
 } from './params.ts';
-import {
-  animationProgressAccess,
-  aspectRatioAccess,
-  createBuffers,
-  drawOverNeighborsAccess,
-  middleSquareScaleAccess,
-  scaleAccess,
-  shiftedColorsAccess,
-  stepRotationAccess,
-} from './buffers.ts';
-import tgpu from 'typegpu';
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-let ease = createBezier(getCubicBezierControlPoints());
-
-export const root = await tgpu.init();
-
-const {
-  aspectRatioUniform,
-  animationProgressUniform,
-  drawOverNeighborsUniform,
-  getInstanceInfoBindGroup,
-  scaleUniform,
-  shiftedColorsUniform,
-  middleSquareScaleUniform,
-  updateInstanceInfoBufferAndBindGroup,
-  stepRotationUniform,
-} = createBuffers(root);
-
-updateAspectRatio(canvas.width, canvas.height, aspectRatioUniform);
-
+const root = await tgpu.init();
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
-const pipelineBase = root
-  .with(animationProgressAccess, animationProgressUniform)
-  .with(stepRotationAccess, stepRotationUniform)
-  .with(drawOverNeighborsAccess, drawOverNeighborsUniform)
-  .with(shiftedColorsAccess, shiftedColorsUniform)
-  .with(middleSquareScaleAccess, middleSquareScaleUniform)
-  .with(scaleAccess, scaleUniform)
-  .with(aspectRatioAccess, aspectRatioUniform);
+const Uniforms = d.struct({
+  color: d.vec4f,
+  foregroundTransform: d.mat3x3f,
+  midgroundTransform: d.mat3x3f,
+});
+const layerTransformAccess = tgpu.accessor(d.mat3x3f);
 
-const midgroundPipeline = pipelineBase.createRenderPipeline({
-  vertex: midgroundVertex,
-  fragment: midgroundFragment,
+const instanceInfoLayout = tgpu.bindGroupLayout({
+  instanceInfo: { storage: InstanceInfoArray },
 });
 
-const foregroundPipeline = pipelineBase.createRenderPipeline({
-  vertex: foregroundVertex,
-  fragment: foregroundFragment,
-});
+let ease = createBezier(cubicBezierControlPoints);
+let stepRotation = INITIAL_STEP_ROTATION;
+let middleSquareScale = updateStepRotation(stepRotation);
+let uniformsState: d.Infer<typeof Uniforms> = {
+  color: colors[1],
+  foregroundTransform: d.mat3x3f.identity(),
+  midgroundTransform: d.mat3x3f.identity(),
+};
 
-function getShiftedColors(timestamp: number) {
-  const shiftBy = Math.floor(timestamp / getAnimationDuration()) % colors.length;
-  return [...colors.slice(shiftBy), ...colors.slice(0, shiftBy)];
+const uniforms = root.createUniform(Uniforms, uniformsState);
+let { allRowInstances, checkerboardInstances } = createInstanceInfos();
+let stencilTexture = createStencilTexture();
+let drawOverNeighbors = false;
+
+function createRotationScaleMatrix(scale: number, angleInDegrees: number) {
+  const angle = (angleInDegrees * Math.PI) / 180;
+  const cosAngle = Math.cos(angle) * scale;
+  const sinAngle = Math.sin(angle) * scale;
+
+  return d.mat3x3f(
+    d.vec3f(cosAngle, sinAngle, 0),
+    d.vec3f(-sinAngle, cosAngle, 0),
+    d.vec3f(0, 0, 1),
+  );
 }
 
-let animationFrame: number;
+function updateLayerTransforms(animationProgress: number) {
+  const smallestLoopingRotationAngle = 120;
+  const midgroundAngle =
+    (stepRotation % smallestLoopingRotationAngle) + animationProgress * stepRotation;
+  const midgroundScale = 0.5 + animationProgress * (middleSquareScale - 0.5);
 
-function draw(timestamp: number) {
-  const shiftedColors = getShiftedColors(timestamp);
+  uniformsState = {
+    ...uniformsState,
+    foregroundTransform: createRotationScaleMatrix(
+      0.5 * animationProgress,
+      animationProgress * stepRotation,
+    ),
+    midgroundTransform: createRotationScaleMatrix(midgroundScale, midgroundAngle),
+  };
+}
 
-  shiftedColorsUniform.write(shiftedColors);
-  animationProgressUniform.write(
-    ease((timestamp % getAnimationDuration()) / getAnimationDuration()),
+function createInstanceInfoBindGroup(instanceInfos: d.m3x3f[]) {
+  const instanceInfo = root.createReadonly(InstanceInfoArray(instanceInfos.length), instanceInfos);
+  const bindGroup = root.createBindGroup(instanceInfoLayout, {
+    instanceInfo: instanceInfo.buffer,
+  });
+
+  return { bindGroup, count: instanceInfos.length };
+}
+
+function createInstanceInfos() {
+  const { allRows, checkerboardGroups } = createInstanceInfoArrays(
+    updateAspectRatio(canvas.width, canvas.height),
   );
+  return {
+    allRowInstances: createInstanceInfoBindGroup(allRows),
+    checkerboardInstances: checkerboardGroups.map((group) => createInstanceInfoBindGroup(group)),
+  };
+}
 
-  const view = context.getCurrentTexture().createView();
+function refreshInstanceInfo() {
+  ({ allRowInstances, checkerboardInstances } = createInstanceInfos());
+}
 
-  midgroundPipeline
-    .withColorAttachment({
-      view,
-      loadOp: 'clear',
-      storeOp: 'store',
-      clearValue: shiftedColors[0],
+function createStencilTexture() {
+  return root['~unstable']
+    .createTexture({
+      size: [canvas.width, canvas.height],
+      format: 'stencil8',
     })
-    .with(getInstanceInfoBindGroup())
-    .draw(3, getGridParams().triangleCount);
+    .$usage('render');
+}
 
-  foregroundPipeline
-    .withColorAttachment({
-      view,
-      loadOp: 'load',
-      storeOp: 'store',
-    })
-    .with(getInstanceInfoBindGroup())
-    .draw(3, getGridParams().triangleCount);
+const vertex = tgpu.vertexFn({
+  in: {
+    vertexIndex: d.builtin.vertexIndex,
+    instanceIndex: d.builtin.instanceIndex,
+  },
+  out: { outPos: d.builtin.position },
+})(({ vertexIndex, instanceIndex }) => {
+  'use gpu';
+  const vertexPosition = d.vec2f(originalVertices.$[vertexIndex]);
+  const transform = instanceInfoLayout.$.instanceInfo[instanceIndex] * layerTransformAccess.$;
+  const position = transform.mul(d.vec3f(vertexPosition, 1)).xy;
+
+  return { outPos: d.vec4f(position, 0, 1) };
+});
+
+const fragment = tgpu.fragmentFn({ out: d.vec4f })(() => d.vec4f(uniforms.$.color));
+
+const shiftedColorSets = colors.map((_, shiftBy) => [
+  ...colors.slice(shiftBy),
+  ...colors.slice(0, shiftBy),
+]);
+
+const basePipeline = root
+  .with(layerTransformAccess, tgpu.const(d.mat3x3f, d.mat3x3f.identity()))
+  .createRenderPipeline({
+    vertex,
+    depthStencil: {
+      format: 'stencil8',
+      stencilFront: { compare: 'always', passOp: 'replace' },
+    },
+  });
+
+const midgroundPipeline = root
+  .with(layerTransformAccess, () => uniforms.$.midgroundTransform)
+  .createRenderPipeline({
+    vertex,
+    fragment,
+    depthStencil: {
+      format: 'stencil8',
+      stencilFront: { compare: 'equal', passOp: 'increment-clamp' },
+    },
+  })
+  .withStencilReference(1);
+
+const foregroundPipeline = root
+  .with(layerTransformAccess, () => uniforms.$.foregroundTransform)
+  .createRenderPipeline({
+    vertex,
+    fragment,
+    depthStencil: {
+      format: 'stencil8',
+      stencilFront: { compare: 'equal', passOp: 'increment-clamp' },
+    },
+  })
+  .withStencilReference(2);
+
+type InstanceGroup = ReturnType<typeof createInstanceInfoBindGroup>;
+type PassSpec =
+  | {
+      kind: 'stencil';
+      instances: InstanceGroup;
+      stencilReference: number;
+      stencilLoadOp: GPULoadOp;
+    }
+  | {
+      kind: 'color';
+      pipeline: typeof midgroundPipeline | typeof foregroundPipeline;
+      instances: InstanceGroup;
+      stencilReference: number;
+      colorLoadOp: GPULoadOp;
+      color: (typeof colors)[number];
+      clearColor?: (typeof colors)[number];
+    };
+
+function createDrawOverNeighborsPasses(shiftedColors: d.v4f[]) {
+  return [
+    {
+      kind: 'stencil',
+      instances: allRowInstances,
+      stencilReference: 1,
+      stencilLoadOp: 'clear',
+    },
+    {
+      kind: 'color',
+      pipeline: midgroundPipeline,
+      instances: allRowInstances,
+      stencilReference: 1,
+      colorLoadOp: 'clear',
+      color: shiftedColors[1],
+      clearColor: shiftedColors[0],
+    },
+    {
+      kind: 'color',
+      pipeline: foregroundPipeline,
+      instances: allRowInstances,
+      stencilReference: 2,
+      colorLoadOp: 'load',
+      color: shiftedColors[2],
+    },
+  ] satisfies PassSpec[];
+}
+
+function createCheckerboardPasses(shiftedColors: (typeof shiftedColorSets)[number]) {
+  return checkerboardInstances.flatMap((instances, groupIndex) => {
+    const stencilReference = 1 + groupIndex * 3;
+    return [
+      {
+        kind: 'stencil',
+        instances,
+        stencilReference,
+        stencilLoadOp: groupIndex === 0 ? 'clear' : 'load',
+      },
+      {
+        kind: 'color',
+        pipeline: midgroundPipeline,
+        instances,
+        stencilReference,
+        colorLoadOp: groupIndex === 0 ? 'clear' : 'load',
+        color: shiftedColors[1],
+        ...(groupIndex === 0 ? { clearColor: shiftedColors[0] } : {}),
+      },
+      {
+        kind: 'color',
+        pipeline: foregroundPipeline,
+        instances,
+        stencilReference: stencilReference + 1,
+        colorLoadOp: 'load',
+        color: shiftedColors[2],
+      },
+    ] satisfies PassSpec[];
+  });
+}
+
+function runPasses(passSpecs: PassSpec[]) {
+  passSpecs.forEach((pass) => {
+    if (pass.kind === 'stencil') {
+      basePipeline
+        .withStencilReference(pass.stencilReference)
+        .withDepthStencilAttachment({
+          view: stencilTexture,
+          stencilLoadOp: pass.stencilLoadOp,
+          stencilStoreOp: 'store',
+          ...(pass.stencilLoadOp === 'clear' ? { stencilClearValue: 0 } : {}),
+        })
+        .with(pass.instances.bindGroup)
+        .draw(3, pass.instances.count);
+      return;
+    }
+
+    uniforms.write({ ...uniformsState, color: pass.color });
+    pass.pipeline
+      .withStencilReference(pass.stencilReference)
+      .withColorAttachment({
+        view: context,
+        loadOp: pass.colorLoadOp,
+        ...(pass.clearColor ? { clearValue: pass.clearColor } : {}),
+      })
+      .withDepthStencilAttachment({
+        view: stencilTexture,
+        stencilLoadOp: 'load',
+        stencilStoreOp: 'store',
+      })
+      .with(pass.instances.bindGroup)
+      .draw(3, pass.instances.count);
+  });
+}
+
+let animationFrame = requestAnimationFrame(function draw(timestamp: number) {
+  const animationProgress = ease((timestamp % animationDuration) / animationDuration);
+  updateLayerTransforms(animationProgress);
+  const shiftedColors = shiftedColorSets[Math.floor(timestamp / animationDuration) % colors.length];
+  const passSpecs = drawOverNeighbors
+    ? createDrawOverNeighborsPasses(shiftedColors)
+    : createCheckerboardPasses(shiftedColors);
+
+  runPasses(passSpecs);
 
   animationFrame = requestAnimationFrame(draw);
-}
+});
 
-animationFrame = requestAnimationFrame(draw);
-
-// cleanup
 const resizeObserver = new ResizeObserver(() => {
-  updateAspectRatio(canvas.width, canvas.height, aspectRatioUniform);
-  updateGridParams(scaleUniform, updateInstanceInfoBufferAndBindGroup);
-  updateInstanceInfoBufferAndBindGroup();
+  updateGridParams();
+  refreshInstanceInfo();
+  stencilTexture.destroy();
+  stencilTexture = createStencilTexture();
 });
 
 resizeObserver.observe(canvas);
@@ -126,10 +298,9 @@ resizeObserver.observe(canvas);
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);
   resizeObserver.disconnect();
+  stencilTexture.destroy();
   root.destroy();
 }
-
-// Example controls
 
 export const controls = {
   'Tile density': {
@@ -137,11 +308,13 @@ export const controls = {
     min: 0.01,
     max: 1.33,
     step: 0.01,
-    onSliderChange: (newValue: number) =>
-      updateGridParams(scaleUniform, updateInstanceInfoBufferAndBindGroup, newValue),
+    onSliderChange(newValue: number) {
+      updateGridParams(newValue);
+      refreshInstanceInfo();
+    },
   },
   'Animation duration': {
-    initial: getAnimationDuration(),
+    initial: animationDuration,
     min: 250,
     max: 3500,
     step: 25,
@@ -150,27 +323,28 @@ export const controls = {
   'Rotation in degrees': {
     initial: INITIAL_STEP_ROTATION,
     options: ROTATION_OPTIONS,
-    onSelectChange: (newValue: number) =>
-      updateStepRotation(newValue, stepRotationUniform, middleSquareScaleUniform),
+    onSelectChange(newValue: number) {
+      stepRotation = newValue;
+      middleSquareScale = updateStepRotation(newValue);
+    },
   },
   'Draw over neighbors': {
     initial: false,
     onToggleChange(value: boolean) {
-      drawOverNeighborsUniform.write(value ? 1 : 0);
+      drawOverNeighbors = value;
     },
   },
   'Cubic Bezier Control Points': {
     initial: getCubicBezierControlPointsString(),
     async onTextChange(value: string) {
       const newPoints = parseControlPoints(value);
-
       updateCubicBezierControlPoints(newPoints);
       ease = createBezier(newPoints);
     },
   },
   'Edit Cubic Bezier Points': {
     onButtonClick: () => {
-      window.open(`https://cubic-bezier.com/?#${getCubicBezierControlPoints().join()}`, '_blank');
+      window.open(`https://cubic-bezier.com/?#${cubicBezierControlPoints.join()}`, '_blank');
     },
   },
 };
