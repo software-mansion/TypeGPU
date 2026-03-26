@@ -228,6 +228,32 @@ describe('TgpuBuffer', () => {
     expect([...new Float32Array(uploadedBuffer)]).toStrictEqual([0, 0, 1, 2, 0, 0, 0, 0]);
   });
 
+  it('should write an array of structs from a given startOffset until the values are exhausted when endOffset is omitted', ({
+    root,
+    device,
+  }) => {
+    const simpleStruct = d.struct({ a: d.u32, b: d.vec3i });
+    const nestedStruct = d.struct({ x: d.f32, y: simpleStruct });
+
+    const schema = d.arrayOf(nestedStruct, 4);
+    const buffer = root.createBuffer(schema);
+    const rawBuffer = root.unwrap(buffer);
+    const layout = d.memoryLayoutOf(schema, (a) => a[1]);
+
+    buffer.write([{ x: 1, y: { a: 2, b: [3, 4, 5] } }], { startOffset: layout.offset });
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, layout.offset, expect.any(ArrayBuffer), layout.offset, 48],
+    ]);
+
+    const emptyStruct = new Float32Array(new ArrayBuffer(48));
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    expect([...new Float32Array(uploadedBuffer, 0, 12)]).toStrictEqual([...emptyStruct]);
+    expect([...new Float32Array(uploadedBuffer, 48, 1)]).toStrictEqual([1]);
+    expect([...new Uint32Array(uploadedBuffer, 64, 1)]).toStrictEqual([2]);
+    expect([...new Int32Array(uploadedBuffer, 80, 3)]).toStrictEqual([3, 4, 5]);
+  });
+
   it('should write a single padded element when both startOffset and endOffset are provided', ({
     root,
     device,
