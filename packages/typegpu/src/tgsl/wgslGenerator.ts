@@ -947,7 +947,7 @@ Try 'return ${typeStr}(${str});' instead.
           return '';
         }
         if (!Array.isArray(node)) {
-          throw new Error(`Unreachable: one of NODE.if branches is not a node.`);
+          node = blockifySingleStatement(node);
         }
         if (node[0] === NODE.block && node[1].length === 1 && node[1][0][0] === NODE.if) {
           // simplify 'if (true) { if (A) {B} } else {C}' to 'if (A) {B}'
