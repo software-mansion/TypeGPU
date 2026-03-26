@@ -1861,4 +1861,212 @@ describe('wgslGenerator', () => {
       `);
     });
   });
+
+  it('prunes comptime if/else', () => {
+    const vAccess = tgpu.accessor(d.u32);
+
+    const fn = tgpu.fn(() => {
+      'use gpu';
+      let a = -1;
+      if (vAccess.$ === 0) {
+        const temp = 0;
+        a = temp;
+      } else {
+        const temp = 1;
+        a = temp;
+      }
+      const temp = a * 2;
+      return temp;
+    });
+
+    expect(tgpu.resolve([fn.with(vAccess, 0)])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        var a = -1;
+        {
+          const temp2 = 0;
+          a = temp2;
+        }
+        let temp = (a * 2i);
+        return temp;
+      }"
+    `);
+
+    expect(tgpu.resolve([fn.with(vAccess, 1)])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        var a = -1;
+        {
+          const temp2 = 1;
+          a = temp2;
+        }
+        let temp = (a * 2i);
+        return temp;
+      }"
+    `);
+
+    expect(
+      tgpu.resolve([
+        fn.with(vAccess, () => {
+          'use gpu';
+          return 0;
+        }),
+      ]),
+    ).toMatchInlineSnapshot(`
+      "fn item() -> i32 {
+        return 0;
+      }
+
+      fn fn_1() -> i32 {
+        var a = -1;
+        if ((item() == 0u)) {
+          const temp2 = 0;
+          a = temp2;
+        }
+        else {
+          const temp2 = 1;
+          a = temp2;
+        }
+        let temp = (a * 2i);
+        return temp;
+      }"
+    `);
+  });
+
+  it('prunes comptime if/else without blocks', () => {
+    const vAccess = tgpu.accessor(d.u32);
+
+    const fn = tgpu.fn(() => {
+      'use gpu';
+      let a = -1;
+      if (vAccess.$ === 0) a = 0;
+      else a = 1;
+      return a;
+    });
+
+    expect(tgpu.resolve([fn.with(vAccess, 0)])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        var a = -1;
+        {
+          a = 0i;
+        }
+        return a;
+      }"
+    `);
+
+    expect(tgpu.resolve([fn.with(vAccess, 1)])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        var a = -1;
+        {
+          a = 1i;
+        }
+        return a;
+      }"
+    `);
+
+    expect(
+      tgpu.resolve([
+        fn.with(vAccess, () => {
+          'use gpu';
+          return 0;
+        }),
+      ]),
+    ).toMatchInlineSnapshot(`
+      "fn item() -> i32 {
+        return 0;
+      }
+
+      fn fn_1() -> i32 {
+        var a = -1;
+        if ((item() == 0u)) {
+          a = 0i;
+        }
+        else {
+          a = 1i;
+        }
+        return a;
+      }"
+    `);
+  });
+
+  it('dedents nested comptime if/else', () => {
+    const v = 2 as number;
+
+    const fn = () => {
+      'use gpu';
+      let a = -1;
+      if (v === 0) {
+        a = 0;
+      } else {
+        if (v === 1) {
+          a = 1;
+        } else {
+          a = 2;
+        }
+      }
+      return a;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        var a = -1;
+        {
+          a = 2i;
+        }
+        return a;
+      }"
+    `);
+  });
+
+  it('dedents nested comptime if/else without else blocks', () => {
+    const v = 2 as number;
+
+    const fn = () => {
+      'use gpu';
+      let a = -1;
+      if (v === 0) {
+        a = 0;
+      } else if (v === 1) {
+        a = 1;
+      } else {
+        a = 2;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        var a = -1;
+        {
+          a = 2i;
+        }
+      }"
+    `);
+  });
+
+  it('dedents multinested comptime if/else without else blocks', () => {
+    const v = 3 as number;
+
+    const fn = () => {
+      'use gpu';
+      let a = -1;
+      if (v === 0) {
+        a = 0;
+      } else if (v === 1) {
+        a = 1;
+      } else if (v === 2) {
+        a = 2;
+      } else if (v === 3) {
+        a = 3;
+      } else if (v === 4) {
+        a = 4;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        var a = -1;
+        {
+          a = 3i;
+        }
+      }"
+    `);
+  });
 });
