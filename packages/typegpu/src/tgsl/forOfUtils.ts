@@ -2,7 +2,7 @@ import { UnknownData } from '../data/dataTypes.ts';
 import { isEphemeralSnippet, snip, type Snippet } from '../data/snippet.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import * as wgsl from '../data/wgslTypes.ts';
-import { abstractInt, i32, u32 } from '../data/numeric.ts';
+import { i32, u32 } from '../data/numeric.ts';
 import { invariant, WgslTypeError } from '../errors.ts';
 import { arrayLength } from '../std/array.ts';
 import { accessIndex } from './accessIndex.ts';
