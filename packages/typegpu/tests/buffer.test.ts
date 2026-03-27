@@ -1,7 +1,8 @@
 import { attest } from '@ark/attest';
 import { describe, expect, expectTypeOf, vi } from 'vitest';
+import * as common from '../src/common/index.ts';
 import * as d from '../src/data/index.ts';
-import type { SoAInputFor } from '../src/data/index.ts';
+import type { InferInput, SoAInputFor } from '../src/data/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
 import type { ValidateBufferSchema, ValidUsagesFor } from '../src/index.js';
 import { getName } from '../src/shared/meta.ts';
@@ -99,6 +100,48 @@ describe('TgpuBuffer', () => {
     expect(mockBuffer).toBeDefined();
 
     expect(root.device.queue.writeBuffer).toBeCalledWith(mockBuffer, 0, new ArrayBuffer(64), 0, 64);
+  });
+
+  it('should initialize a buffer from a mapped callback using common.writeSoA', ({ root }) => {
+    const Entry = d.struct({
+      id: d.u32,
+      values: d.arrayOf(d.vec3f, 2),
+    });
+
+    const buffer = root.createBuffer(d.arrayOf(Entry, 2), (mappedBuffer) => {
+      common.writeSoA(mappedBuffer, {
+        id: new Uint32Array([10, 20]),
+        values: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+      });
+    });
+
+    const rawBuffer = root.unwrap(buffer);
+    const writtenBuffer = vi.mocked(rawBuffer.getMappedRange).mock.results[0]?.value as ArrayBuffer;
+
+    expect(root.device.createBuffer).toBeCalledWith(
+      expect.objectContaining({
+        mappedAtCreation: true,
+        size: sizeOf(d.arrayOf(Entry, 2)),
+        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+      }),
+    );
+    expect(root.device.queue.writeBuffer).not.toHaveBeenCalled();
+    const ids = [
+      new DataView(writtenBuffer).getUint32(0, true),
+      new DataView(writtenBuffer).getUint32(48, true),
+    ];
+    const values = [
+      new Float32Array(writtenBuffer, 16, 3),
+      new Float32Array(writtenBuffer, 32, 3),
+      new Float32Array(writtenBuffer, 64, 3),
+      new Float32Array(writtenBuffer, 80, 3),
+    ];
+
+    expect(ids).toStrictEqual([10, 20]);
+    expect([...values[0]!]).toStrictEqual([1, 2, 3]);
+    expect([...values[1]!]).toStrictEqual([4, 5, 6]);
+    expect([...values[2]!]).toStrictEqual([7, 8, 9]);
+    expect([...values[3]!]).toStrictEqual([10, 11, 12]);
   });
 
   it('should write to a mapped buffer', ({ root }) => {
@@ -996,7 +1039,7 @@ describe('ValidateBufferSchema', () => {
     const buffer = root.createBuffer(schema);
     const rawBuffer = root.unwrap(buffer);
 
-    buffer.write({
+    common.writeSoA(buffer, {
       pos: new Float32Array([1, 2, 3, 4, 5, 6]),
       vel: new Float32Array([10, 20]),
     });
@@ -1030,7 +1073,7 @@ describe('ValidateBufferSchema', () => {
     const buffer = root.createBuffer(schema);
     root.unwrap(buffer);
 
-    buffer.write({
+    common.writeSoA(buffer, {
       id: new Uint32Array([100, 200]),
       heading: new Int32Array([1, 2, 3, 4, 5, 6]),
     });
@@ -1083,6 +1126,38 @@ describe('ValidateBufferSchema', () => {
     expectTypeOf<SoAInputFor<Test>>().toEqualTypeOf<never>();
   });
 
+  it('should not accept SoA input through buffer.write', ({ root }) => {
+    const Entry = d.struct({
+      id: d.u32,
+      values: d.arrayOf(d.f32, 3),
+    });
+    const buffer = root.createBuffer(d.arrayOf(Entry, 2));
+
+    if (false) {
+      // @ts-expect-error SoA writes go through common.writeSoA, not buffer.write
+      buffer.write({
+        id: new Uint32Array([10, 20]),
+        values: new Float32Array([1, 2, 3, 4, 5, 6]),
+      });
+    }
+  });
+
+  it('should keep SoA input out of nested array fields in InferInput', () => {
+    const Child = d.struct({
+      x: d.f32,
+    });
+    const Parent = d.struct({
+      children: d.arrayOf(Child, 2),
+    });
+    const TopLevel = d.arrayOf(Parent, 4);
+
+    expectTypeOf<InferInput<typeof Parent>>().toEqualTypeOf<{
+      children: { x: number }[];
+    }>();
+
+    expectTypeOf<InferInput<typeof TopLevel>>().toEqualTypeOf<{ children: { x: number }[] }[]>();
+  });
+
   it('should write SoA data for struct fields that are fixed-size arrays of primitives', ({
     root,
     device,
@@ -1096,7 +1171,7 @@ describe('ValidateBufferSchema', () => {
     const buffer = root.createBuffer(schema);
     root.unwrap(buffer);
 
-    buffer.write({
+    common.writeSoA(buffer, {
       id: new Uint32Array([10, 20]),
       values: new Float32Array([1, 2, 3, 4, 5, 6]),
     });
@@ -1128,7 +1203,7 @@ describe('ValidateBufferSchema', () => {
     const buffer = root.createBuffer(schema);
     root.unwrap(buffer);
 
-    buffer.write({
+    common.writeSoA(buffer, {
       values: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
     });
 
@@ -1150,7 +1225,7 @@ describe('ValidateBufferSchema', () => {
     const buffer = root.createBuffer(schema);
     root.unwrap(buffer);
 
-    buffer.write({
+    common.writeSoA(buffer, {
       basis: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]),
     });
 
@@ -1181,7 +1256,8 @@ describe('ValidateBufferSchema', () => {
     const value1Layout = d.memoryLayoutOf(Entry, (e) => e.values[1]);
     const stride = sizeOf(Entry);
 
-    buffer.write(
+    common.writeSoA(
+      buffer,
       {
         id: new Uint32Array([30, 40]),
         values: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
@@ -1254,7 +1330,8 @@ describe('ValidateBufferSchema', () => {
     const value1Layout = d.memoryLayoutOf(Entry, (e) => e.values[1]);
     const stride = sizeOf(Entry);
 
-    buffer.write(
+    common.writeSoA(
+      buffer,
       {
         id: new Uint32Array([30, 40]),
         values: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),

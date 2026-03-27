@@ -84,7 +84,7 @@ export function getSoANaturalSize(dataType: BaseData, data: unknown): number | u
   const values = Object.values(soaData);
   const isSoAInput =
     values.length > 0 &&
-    values.every(ArrayBuffer.isView) &&
+    values.every((value) => ArrayBuffer.isView(value)) &&
     Object.values(dataType.elementType.propTypes).every(isSoACompatibleField);
 
   if (!isSoAInput) {

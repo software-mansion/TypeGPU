@@ -1183,10 +1183,7 @@ export interface WgslArray<out TElement extends BaseData = BaseData> extends Bas
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TElement>[];
-  readonly [$inRepr]:
-    | InferInput<TElement>[]
-    | TypedArrayFor<TElement>
-    | (TElement extends WgslStruct<infer TProps> ? SoAInputFor<TProps> : never);
+  readonly [$inRepr]: InferInput<TElement>[] | TypedArrayFor<TElement>;
   readonly [$gpuRepr]: InferGPU<TElement>[];
   readonly [$reprPartial]: { idx: number; value: InferPartial<TElement> }[] | undefined;
   readonly [$memIdent]: WgslArray<MemIdentity<TElement>>;
