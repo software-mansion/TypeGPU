@@ -47,8 +47,8 @@ describe('max', () => {
 
     expect(myMax(2, 1, 4, 5)).toBe(5);
     expect(tgpu.resolve([myMax])).toMatchInlineSnapshot(`
-      "fn myMax(a: f32, b: f32, c: f32, d2: f32) -> f32 {
-        return max(max(max(a, b), c), d2);
+      "fn myMax(a: f32, b: f32, c: f32, d: f32) -> f32 {
+        return max(max(max(a, b), c), d);
       }"
     `);
   });

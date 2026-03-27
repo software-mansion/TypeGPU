@@ -5,12 +5,13 @@ import type { AnyData } from '../../data/dataTypes.ts';
 import { getWriteInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
-import { isWgslData } from '../../data/wgslTypes.ts';
+import { isWgslArray, isWgslData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type {
   Infer,
+  InferInput,
   InferPartial,
   IsValidIndexSchema,
   IsValidStorageSchema,
@@ -31,6 +32,8 @@ import {
   type TgpuFixedBufferUsage,
   uniform,
 } from './bufferUsage.ts';
+import { alignmentOf } from '../../data/alignmentOf.ts';
+import { roundUp } from '../../mathUtils.ts';
 
 // ----------
 // Public API
@@ -103,11 +106,16 @@ type InnerValidUsagesFor<T> = {
 
 export type ValidUsagesFor<T> = InnerValidUsagesFor<T>['usage'];
 
+export type BufferWriteOptions = {
+  startOffset?: number;
+  endOffset?: number;
+};
+
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'buffer';
   readonly dataType: TData;
-  readonly initial?: Infer<TData> | undefined;
+  readonly initial?: InferInput<TData> | undefined;
 
   readonly buffer: GPUBuffer;
   readonly destroyed: boolean;
@@ -131,7 +139,8 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T];
 
   compileWriter(): void;
-  write(data: Infer<TData>): void;
+  write(data: InferInput<TData>, options?: BufferWriteOptions): void;
+  write(data: ArrayBuffer, options?: BufferWriteOptions): void;
   writePartial(data: InferPartial<TData>): void;
   clear(): void;
   copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>): void;
@@ -143,7 +152,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
 export function INTERNAL_createBuffer<TData extends AnyData>(
   group: ExperimentalTgpuRoot,
   typeSchema: TData,
-  initialOrBuffer?: Infer<TData> | GPUBuffer,
+  initialOrBuffer?: InferInput<TData> | GPUBuffer,
 ): TgpuBuffer<TData> {
   if (!isWgslData(typeSchema)) {
     return new TgpuBufferImpl(group, typeSchema, initialOrBuffer, ['storage', 'uniform']);
@@ -184,7 +193,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   private _destroyed = false;
   private _hostBuffer: ArrayBuffer | undefined;
 
-  readonly initial: Infer<TData> | undefined;
+  readonly initial: InferInput<TData> | undefined;
 
   usableAsUniform = false;
   usableAsStorage = false;
@@ -195,7 +204,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   constructor(
     root: ExperimentalTgpuRoot,
     public readonly dataType: TData,
-    public readonly initialOrBuffer?: Infer<TData> | GPUBuffer,
+    public readonly initialOrBuffer?: InferInput<TData> | GPUBuffer,
     private readonly _disallowedUsages?: UsageLiteral[],
   ) {
     this.#device = root.device;
@@ -287,12 +296,40 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     getCompiledWriterForSchema(this.dataType);
   }
 
-  private _writeToTarget(target: ArrayBuffer, data: Infer<TData>): void {
+  private _writeToTarget(
+    target: ArrayBuffer,
+    data: InferInput<TData> | ArrayBuffer,
+    options?: BufferWriteOptions,
+  ): void {
+    const startOffset = options?.startOffset ?? 0;
+    const endOffset = options?.endOffset ?? target.byteLength;
+
+    // Fast path: raw byte copy, user guarantees the padded layout
+    if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
+      const src =
+        data instanceof ArrayBuffer
+          ? new Uint8Array(data)
+          : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+      const regionSize = endOffset - startOffset;
+      if (src.byteLength !== regionSize) {
+        console.warn(
+          `Buffer size mismatch: expected ${regionSize} bytes, got ${src.byteLength}. ` +
+            (src.byteLength < regionSize ? 'Data truncated.' : 'Excess ignored.'),
+        );
+      }
+      const copyLen = Math.min(src.byteLength, regionSize);
+      new Uint8Array(target).set(src.subarray(0, copyLen), startOffset);
+      return;
+    }
+
+    const dataView = new DataView(target);
+    const isLittleEndian = endianness === 'little';
+
     const compiledWriter = getCompiledWriterForSchema(this.dataType);
 
     if (compiledWriter) {
       try {
-        compiledWriter(new DataView(target), 0, data, endianness === 'little');
+        compiledWriter(dataView, startOffset, data, isLittleEndian, endOffset);
         return;
       } catch (error) {
         console.error(
@@ -304,25 +341,43 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       }
     }
 
-    writeData(new BufferWriter(target), this.dataType, data);
+    const writer = new BufferWriter(target);
+    writer.seekTo(startOffset);
+    writeData(writer, this.dataType, data as Infer<TData>);
   }
 
-  write(data: Infer<TData>): void {
+  write(data: InferInput<TData>, options?: BufferWriteOptions): void;
+  write(data: ArrayBuffer, options?: BufferWriteOptions): void;
+  write(data: InferInput<TData> | ArrayBuffer, options?: BufferWriteOptions): void {
     const gpuBuffer = this.buffer;
+    const bufferSize = sizeOf(this.dataType);
+    const startOffset = options?.startOffset ?? 0;
+
+    const naturalSize =
+      isWgslArray(this.dataType) && Array.isArray(data)
+        ? data.length *
+          roundUp(sizeOf(this.dataType.elementType), alignmentOf(this.dataType.elementType))
+        : ArrayBuffer.isView(data) || data instanceof ArrayBuffer
+          ? data.byteLength
+          : undefined;
+    const naturalEndOffset =
+      naturalSize !== undefined ? Math.min(startOffset + naturalSize, bufferSize) : undefined;
+
+    const endOffset = options?.endOffset ?? naturalEndOffset ?? bufferSize;
+    const size = endOffset - startOffset;
 
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = gpuBuffer.getMappedRange();
-      this._writeToTarget(mapped, data);
+      this._writeToTarget(mapped, data, options);
       return;
     }
 
-    const size = sizeOf(this.dataType);
     if (!this._hostBuffer) {
-      this._hostBuffer = new ArrayBuffer(size);
+      this._hostBuffer = new ArrayBuffer(bufferSize);
     }
 
-    this._writeToTarget(this._hostBuffer, data);
-    this.#device.queue.writeBuffer(gpuBuffer, 0, this._hostBuffer, 0, size);
+    this._writeToTarget(this._hostBuffer, data, options);
+    this.#device.queue.writeBuffer(gpuBuffer, startOffset, this._hostBuffer, startOffset, size);
   }
 
   public writePartial(data: InferPartial<TData>): void {
