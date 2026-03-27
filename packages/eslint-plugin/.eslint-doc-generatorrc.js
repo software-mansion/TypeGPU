@@ -2,6 +2,6 @@
 export const config = {
   pathRuleDoc(name) {
     const [plugin, rule] = name.split('/');
-    return `packages/eslint-plugin-${plugin}/src/rules/${rule}.md`;
+    return `packages/eslint-plugin-${plugin}/docs/rules/${rule}.md`;
   },
 };

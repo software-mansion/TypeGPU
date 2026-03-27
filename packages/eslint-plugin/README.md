@@ -32,4 +32,17 @@ export default defineConfig([
 ## List of supported rules
 
 <!-- begin auto-generated rules list -->
+
+💼 Configurations enabled in.\
+⚠️ Configurations set to warn in.\
+🌐 Set in the `all` configuration.\
+✅ Set in the `recommended` configuration.
+
+| Name                                                           | Description                                                                                | 💼 | ⚠️ |
+| :------------------------------------------------------------- | :----------------------------------------------------------------------------------------- | :- | :- |
+| [integer-division](docs/rules/integer-division.md)             | Avoid dividing numbers wrapped in 'u32' and 'i32'.                                         | 🌐 | ✅  |
+| [math](docs/rules/math.md)                                     | Disallow usage of JavaScript 'Math' methods inside 'use gpu' functions; use 'std' instead. | 🌐 | ✅  |
+| [uninitialized-variable](docs/rules/uninitialized-variable.md) | Always assign an initial value when declaring a variable inside TypeGPU functions.         | 🌐 | ✅  |
+| [unwrapped-pojo](docs/rules/unwrapped-pojo.md)                 | Wrap Plain Old JavaScript Objects with schemas.                                            | 🌐 | ✅  |
+
 <!-- end auto-generated rules list -->
