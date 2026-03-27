@@ -791,7 +791,7 @@ describe('jelly-slider example', () => {
         var closestT = 0f;
         const epsilon = 0.029999999329447746f;
         var xOffset = vec2f(epsilon, 0f);
-        var yOffset2 = vec2f(0f, epsilon);
+        var yOffset = vec2f(0f, epsilon);
         var xPlusDist = 1e+10f;
         var xMinusDist = 1e+10f;
         var yPlusDist = 1e+10f;
@@ -816,8 +816,8 @@ describe('jelly-slider example', () => {
           }
           xPlusDist = min(xPlusDist, sdBezier((sliderPos + xOffset), (*A), (*C), (*B)));
           xMinusDist = min(xMinusDist, sdBezier((sliderPos - xOffset), (*A), (*C), (*B)));
-          yPlusDist = min(yPlusDist, sdBezier((sliderPos + yOffset2), (*A), (*C), (*B)));
-          yMinusDist = min(yMinusDist, sdBezier((sliderPos - yOffset2), (*A), (*C), (*B)));
+          yPlusDist = min(yPlusDist, sdBezier((sliderPos + yOffset), (*A), (*C), (*B)));
+          yMinusDist = min(yMinusDist, sdBezier((sliderPos - yOffset), (*A), (*C), (*B)));
         }
         let overallProgress = ((f32(closestSegment) + closestT) / 16f);
         let normalX = ((xPlusDist - xMinusDist) / (2f * epsilon));
