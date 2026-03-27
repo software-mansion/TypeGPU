@@ -1,4 +1,4 @@
-export const generateTube = (rings: number, segs: number, radius: number, height: number) => {
+export function generateTube(rings: number, segs: number, radius: number, height: number) {
   const vertexCount = rings * segs;
   const positions = new Float32Array(vertexCount * 3);
   const normals = new Float32Array(vertexCount * 3);
@@ -31,4 +31,4 @@ export const generateTube = (rings: number, segs: number, radius: number, height
   }
 
   return { positions, normals, joints, weights, indices, vertexCount, indexCount };
-};
+}

@@ -1,57 +1,98 @@
 import type { Animation } from './types.ts';
-import { lerp, type Quat, slerp, type Vec3 } from './math.ts';
+import { lerpInto, type Quat, slerpInto, type Vec3 } from './math.ts';
 
-export type NodeTransform = {
-  translation?: Vec3;
-  rotation?: Quat;
-  scale?: Vec3;
-};
+export interface NodeTransform {
+  translation: Vec3;
+  hasTranslation: boolean;
+  rotation: Quat;
+  hasRotation: boolean;
+  scale: Vec3;
+  hasScale: boolean;
+}
 
-export const sampleAnimation = (animation: Animation, time: number): Map<number, NodeTransform> => {
-  const transforms = new Map<number, NodeTransform>();
-  if (animation.duration <= 0) {
+export type NodeTransformState = NodeTransform[];
+
+export function createNodeTransformState(nodeCount: number): NodeTransformState {
+  return Array.from({ length: nodeCount }, () => ({
+    translation: [0, 0, 0],
+    hasTranslation: false,
+    rotation: [0, 0, 0, 1],
+    hasRotation: false,
+    scale: [1, 1, 1],
+    hasScale: false,
+  }));
+}
+
+export function sampleAnimationInto(
+  animation: Animation | undefined,
+  time: number,
+  transforms: NodeTransformState,
+  touchedNodes: number[],
+): NodeTransformState {
+  for (const nodeIndex of touchedNodes) {
+    const transform = transforms[nodeIndex];
+    transform.hasTranslation = false;
+    transform.hasRotation = false;
+    transform.hasScale = false;
+  }
+  touchedNodes.length = 0;
+
+  if (!animation || animation.duration <= 0) {
     return transforms;
   }
+
   const loopedTime = time % animation.duration;
 
   for (const channel of animation.channels) {
     const { input: times, output: values } = animation.samplers[channel.samplerIndex];
     const components = channel.targetPath === 'rotation' ? 4 : 3;
 
-    let i = 0;
-    while (i < times.length - 2 && loopedTime >= times[i + 1]) {
-      i++;
+    let keyframeIndex = 0;
+    while (keyframeIndex < times.length - 2 && loopedTime >= times[keyframeIndex + 1]) {
+      keyframeIndex++;
     }
 
-    const t0 = times[i];
-    const t1 = times[i + 1];
-    const alpha = t1 > t0 ? Math.max(0, Math.min(1, (loopedTime - t0) / (t1 - t0))) : 0;
+    const startTime = times[keyframeIndex];
+    const endTime = times[keyframeIndex + 1];
+    const alpha =
+      endTime > startTime
+        ? Math.max(0, Math.min(1, (loopedTime - startTime) / (endTime - startTime)))
+        : 0;
 
-    const start = i * components;
-    const end = (i + 1) * components;
-    const v0 = Array.from(values.slice(start, start + components));
-    const v1 = Array.from(values.slice(end, end + components));
+    const start = keyframeIndex * components;
+    const end = (keyframeIndex + 1) * components;
 
-    const result =
-      channel.targetPath === 'rotation'
-        ? slerp(v0 as Quat, v1 as Quat, alpha)
-        : lerp(v0 as Vec3, v1 as Vec3, alpha);
-
-    if (!transforms.has(channel.targetNode)) {
-      transforms.set(channel.targetNode, {});
+    const transform = transforms[channel.targetNode];
+    if (!transform.hasTranslation && !transform.hasRotation && !transform.hasScale) {
+      touchedNodes.push(channel.targetNode);
     }
-    const t = transforms.get(channel.targetNode);
-    if (!t) {
-      continue;
-    }
+
     if (channel.targetPath === 'rotation') {
-      t.rotation = result as Quat;
+      slerpInto(
+        values.subarray(start, start + components),
+        values.subarray(end, end + components),
+        alpha,
+        transform.rotation,
+      );
+      transform.hasRotation = true;
     } else if (channel.targetPath === 'translation') {
-      t.translation = result as Vec3;
+      lerpInto(
+        values.subarray(start, start + components),
+        values.subarray(end, end + components),
+        alpha,
+        transform.translation,
+      );
+      transform.hasTranslation = true;
     } else {
-      t.scale = result as Vec3;
+      lerpInto(
+        values.subarray(start, start + components),
+        values.subarray(end, end + components),
+        alpha,
+        transform.scale,
+      );
+      transform.hasScale = true;
     }
   }
 
   return transforms;
-};
+}

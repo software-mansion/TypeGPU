@@ -160,6 +160,7 @@ export async function loadGLBModel(path: string): Promise<ModelData> {
     joints,
     weights,
     indices,
+    indexCount: indices.length,
     inverseBindMatrices,
     nodes,
     jointNodes: skin.joints,

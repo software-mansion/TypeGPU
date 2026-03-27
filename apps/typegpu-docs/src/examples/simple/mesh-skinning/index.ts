@@ -2,52 +2,57 @@ import tgpu, { common } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { mat4, quat, vec3 } from 'wgpu-matrix';
+import { defineControls } from '../../common/defineControls.ts';
 import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
-import { type NodeTransform, sampleAnimation } from './animation.ts';
+import {
+  createNodeTransformState,
+  sampleAnimationInto,
+  type NodeTransformState,
+} from './animation.ts';
 import { loadGLBModel } from './loader.ts';
 import { mat4ToDualQuat } from './math.ts';
-import { type ModelData, VertexData } from './types.ts';
 import { generateTube } from './tube.ts';
+import type { Animation, MeshData, SceneVariant } from './types.ts';
+import { VertexData } from './types.ts';
 
-const MODEL = {
-  path: '/TypeGPU/assets/mesh-skinning/NewModel.glb',
+const MODEL_ASSET = {
+  path: '/TypeGPU/assets/mesh-skinning/DemoModel.glb',
   scale: 1,
   offset: [0, 0, 0],
-};
+} as const;
 
 const MAX_JOINTS = 128;
+const INITIAL_CAMERA_POSITION = [3, 3, 3, 1] as const;
 const CAMERA_TARGET_SMOOTHING = 0.08;
 const CAMERA_TARGET_Y_OFFSET = 0.9;
+const TWIST_DEMO_ID = 'Twist_Demo';
 
-const modelData: ModelData = await loadGLBModel(MODEL.path);
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const modelData = await loadGLBModel(MODEL_ASSET.path);
+const twistDemoMesh = generateTube(32, 8, 0.25, 2);
+
+const variants: SceneVariant[] = [
+  ...modelData.animations.map((animation) => ({
+    id: animation.name,
+    mesh: modelData,
+  })),
+  {
+    id: TWIST_DEMO_ID,
+    mesh: twistDemoMesh,
+  },
+];
+
+const selectedVariantId =
+  variants.find((variant) => variant.id === 'Yes')?.id ?? variants[0]?.id ?? TWIST_DEMO_ID;
+const selectedVariant = variants.find((variant) => variant.id === selectedVariantId);
+if (!selectedVariant) {
+  throw new Error('Mesh skinning example has no scene variants to render.');
+}
 if (modelData.jointNodes.length > MAX_JOINTS) {
   throw new Error(
     `Model has ${modelData.jointNodes.length} joints but MAX_JOINTS is ${MAX_JOINTS}.`,
   );
 }
-
-const animationOptions = [
-  'Twist Demo',
-  ...modelData.animations.map((anim) => anim.name.replaceAll('_', ' ')),
-];
-
-const tube = generateTube(32, 8, 0.25, 2);
-
-const state = {
-  animation: {
-    selectedName: 'Yes',
-    playing: true,
-    time: 0,
-  },
-  frame: {
-    lastTime: 0,
-  },
-  camera: {
-    position: d.vec4f(3, 3, 3, 1),
-    target: d.vec4f(0, 0, 0, 1),
-  },
-  useDualQuaternions: false,
-};
 
 const parentByNode = new Int16Array(modelData.nodes.length).fill(-1);
 for (let parent = 0; parent < modelData.nodes.length; parent++) {
@@ -56,215 +61,97 @@ for (let parent = 0; parent < modelData.nodes.length; parent++) {
   }
 }
 
-const inverseBindMatrices = modelData.jointNodes.map((_, i) =>
-  modelData.inverseBindMatrices.slice(i * 16, (i + 1) * 16),
+const inverseBindViews = modelData.jointNodes.map((_, index) =>
+  modelData.inverseBindMatrices.subarray(index * 16, (index + 1) * 16),
 );
 
 const modelTransform = mat4.identity();
-mat4.translate(modelTransform, MODEL.offset, modelTransform);
-mat4.scale(modelTransform, [MODEL.scale, MODEL.scale, MODEL.scale], modelTransform);
+mat4.translate(modelTransform, MODEL_ASSET.offset, modelTransform);
+mat4.scale(
+  modelTransform,
+  [MODEL_ASSET.scale, MODEL_ASSET.scale, MODEL_ASSET.scale],
+  modelTransform,
+);
 
-// Pre-allocated arrays for computations to avoid GC overhead
-const pool = {
+const CpuState = {
+  animatedTransforms: createNodeTransformState(modelData.nodes.length),
+  animatedTransformIndices: [] as number[],
   nodeWorld: modelData.nodes.map(() => new Float32Array(16)),
   nodeWorldDirty: new Uint8Array(modelData.nodes.length),
   local: new Float32Array(16),
-  quat: new Float32Array(16),
-  camera: new Float32Array(16),
+  quatMatrix: new Float32Array(16),
   jointWorld: modelData.jointNodes.map(() => new Float32Array(16)),
   jointMatrices: new Float32Array(MAX_JOINTS * 16),
-  jointPos: new Float32Array(3),
-  cameraTarget: new Float32Array(3),
   jointDualQuats: new Float32Array(MAX_JOINTS * 8),
-  quatTemp: new Float32Array(4),
+  quatScratch: new Float32Array(4),
+  rootJointPosition: new Float32Array(3),
+  smoothedTarget: new Float32Array(3),
+  cameraMatrix: new Float32Array(16),
 };
 
-for (let i = modelData.jointNodes.length; i < MAX_JOINTS; i++) {
-  mat4.identity(pool.jointMatrices.subarray(i * 16, i * 16 + 16));
-  // Identity dual quaternion: real = (0,0,0,1), dual = (0,0,0,0)
-  pool.jointDualQuats[i * 8 + 3] = 1;
+for (let index = modelData.jointNodes.length; index < MAX_JOINTS; index++) {
+  mat4.identity(CpuState.jointMatrices.subarray(index * 16, index * 16 + 16));
+  CpuState.jointDualQuats[index * 8 + 3] = 1;
 }
 
-const getRootJointPosition = (): Float32Array => {
-  mat4.getTranslation(pool.jointWorld[0], pool.jointPos);
-  return pool.jointPos;
-};
-
-const smoothTrackTarget = (target: Float32Array): d.v4f => {
-  target[1] += CAMERA_TARGET_Y_OFFSET;
-  vec3.lerp(pool.cameraTarget, target, CAMERA_TARGET_SMOOTHING, pool.cameraTarget);
-  return d.vec4f(pool.cameraTarget[0], pool.cameraTarget[1], pool.cameraTarget[2], 1);
-};
-
-const computeWorldTransform = (
-  nodeIndex: number,
-  animatedTransforms?: Map<number, NodeTransform>,
-): Float32Array => {
-  if (pool.nodeWorldDirty[nodeIndex]) {
-    return pool.nodeWorld[nodeIndex];
-  }
-
-  const parentIndex = parentByNode[nodeIndex];
-  const parentWorld =
-    parentIndex === -1 ? undefined : computeWorldTransform(parentIndex, animatedTransforms);
-
-  const node = modelData.nodes[nodeIndex];
-  const anim = animatedTransforms?.get(nodeIndex);
-
-  const translation = anim?.translation ?? node.translation;
-  const rotation = anim?.rotation ?? node.rotation;
-  const scale = anim?.scale ?? node.scale;
-
-  mat4.identity(pool.local);
-  if (translation) {
-    mat4.translate(pool.local, translation, pool.local);
-  }
-  if (rotation) {
-    mat4.mul(pool.local, mat4.fromQuat(rotation, pool.quat), pool.local);
-  }
-  if (scale) {
-    mat4.scale(pool.local, scale, pool.local);
-  }
-
-  const dst = pool.nodeWorld[nodeIndex];
-  if (parentWorld) {
-    mat4.mul(parentWorld, pool.local, dst);
-  } else {
-    dst.set(pool.local);
-  }
-
-  pool.nodeWorldDirty[nodeIndex] = 1;
-  return dst;
-};
-
-const updateJointMatrices = () => {
-  const activeAnim = modelData.animations.find(
-    (anim) => anim.name === state.animation.selectedName,
-  );
-  const animTransforms = activeAnim ? sampleAnimation(activeAnim, state.animation.time) : undefined;
-
-  pool.nodeWorldDirty.fill(0);
-  for (let i = 0; i < modelData.jointNodes.length; i++) {
-    const world = computeWorldTransform(modelData.jointNodes[i], animTransforms);
-    mat4.mul(modelTransform, world, pool.jointWorld[i]);
-    const mo = i * 16;
-    mat4.mul(pool.jointWorld[i], inverseBindMatrices[i], pool.jointMatrices.subarray(mo, mo + 16));
-    mat4ToDualQuat(
-      pool.jointMatrices.subarray(mo, mo + 16),
-      quat.fromMat,
-      pool.quatTemp,
-      pool.jointDualQuats,
-      i * 8,
-    );
-  }
-};
-
-const updateTwistDemo = () => {
-  const twist = Math.sin(state.animation.time * 0.5) * Math.PI;
-
-  // Joint 0: identity (bottom half stays fixed)
-  mat4.identity(pool.jointMatrices.subarray(0, 16));
-  // Joint 1: Y-axis rotation (top half twists)
-  pool.quatTemp.set([0, Math.sin(twist / 2), 0, Math.cos(twist / 2)]);
-  mat4.fromQuat(pool.quatTemp, pool.jointMatrices.subarray(16, 32));
-
-  for (let i = 0; i < 2; i++) {
-    mat4ToDualQuat(
-      pool.jointMatrices.subarray(i * 16, i * 16 + 16),
-      quat.fromMat,
-      pool.quatTemp,
-      pool.jointDualQuats,
-      i * 8,
-    );
-  }
-};
-
 const root = await tgpu.init();
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const createDepthTexture = () =>
-  root['~unstable']
+function createDepthTexture() {
+  return root['~unstable']
     .createTexture({
       size: [canvas.width, canvas.height],
       format: 'depth24plus',
       sampleCount: 4,
     })
     .$usage('render');
+}
 
-const createMsaaTexture = () =>
-  root['~unstable']
+function createMsaaTexture() {
+  return root['~unstable']
     .createTexture({
       size: [canvas.width, canvas.height],
       format: presentationFormat,
       sampleCount: 4,
     })
     .$usage('render');
+}
 
 let depthTexture = createDepthTexture();
 let msaaTexture = createMsaaTexture();
 
 const cameraUniform = root.createUniform(d.mat4x4f);
-
-const vertexBuffer = root
-  .createBuffer(d.arrayOf(VertexData, modelData.vertexCount), (buffer) => {
-    common.writeSoA(buffer, {
-      position: modelData.positions,
-      normal: modelData.normals,
-      joint: modelData.joints,
-      weight: modelData.weights,
-    });
-  })
-  .$usage('vertex');
-
-const indexBuffer = root
-  .createBuffer(d.arrayOf(d.u16, modelData.indices.length), Array.from(modelData.indices))
-  .$usage('index');
-
-const tubeVertexBuffer = root
-  .createBuffer(d.arrayOf(VertexData, tube.vertexCount), (buffer) => {
-    common.writeSoA(buffer, {
-      position: tube.positions,
-      normal: tube.normals,
-      joint: tube.joints,
-      weight: tube.weights,
-    });
-  })
-  .$usage('vertex');
-
-const tubeIndexBuffer = root
-  .createBuffer(d.arrayOf(d.u16, tube.indexCount), Array.from(tube.indices))
-  .$usage('index');
-
-updateTwistDemo();
-updateJointMatrices();
-const initTarget = getRootJointPosition();
-pool.cameraTarget.set(initTarget);
-state.camera.target = d.vec4f(initTarget[0], initTarget[1], initTarget[2], 1);
-
 const jointMatricesUniform = root.createUniform(
   d.arrayOf(d.mat4x4f, MAX_JOINTS),
-  pool.jointMatrices,
+  CpuState.jointMatrices,
 );
-
 const jointDualQuatsUniform = root.createUniform(
   d.arrayOf(d.vec4f, MAX_JOINTS * 2),
-  pool.jointDualQuats,
+  CpuState.jointDualQuats,
 );
 
-const { cleanupCamera, targetCamera } = setupOrbitCamera(
-  canvas,
-  { initPos: state.camera.position, target: state.camera.target },
-  (camera) => {
-    if (camera.position) {
-      state.camera.position = camera.position;
-    }
-    if (camera.view && camera.projection) {
-      cameraUniform.write(mat4.mul(camera.projection, camera.view, pool.camera));
-    }
-  },
-);
+function createRenderMesh(mesh: MeshData) {
+  return {
+    vertexBuffer: root
+      .createBuffer(d.arrayOf(VertexData, mesh.vertexCount), (buffer) => {
+        common.writeSoA(buffer, {
+          position: mesh.positions,
+          normal: mesh.normals,
+          joint: mesh.joints,
+          weight: mesh.weights,
+        });
+      })
+      .$usage('vertex'),
+    indexBuffer: root
+      .createBuffer(d.arrayOf(d.u16, mesh.indexCount), Array.from(mesh.indices))
+      .$usage('index'),
+    indexCount: mesh.indexCount,
+  };
+}
+
+const modelRenderMesh = createRenderMesh(modelData);
+const demoRenderMesh = createRenderMesh(twistDemoMesh);
 
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(VertexData));
 
@@ -273,16 +160,52 @@ const vertex = tgpu.vertexFn({
   out: { pos: d.builtin.position, normal: d.vec3f },
 })(({ position, normal, joint, weight }) => {
   'use gpu';
-  const jm = jointMatricesUniform.$;
+  const jointMatrices = jointMatricesUniform.$;
   const skinMatrix =
-    jm[joint.x] * weight.x +
-    jm[joint.y] * weight.y +
-    jm[joint.z] * weight.z +
-    jm[joint.w] * weight.w;
+    jointMatrices[joint.x] * weight.x +
+    jointMatrices[joint.y] * weight.y +
+    jointMatrices[joint.z] * weight.z +
+    jointMatrices[joint.w] * weight.w;
 
   return {
     pos: cameraUniform.$ * (skinMatrix * d.vec4f(position, 1)),
     normal: std.normalize((skinMatrix * d.vec4f(normal, 0)).xyz),
+  };
+});
+
+const rotateByUnitQuat = (value: d.v3f, quaternion: d.v4f): d.v3f => {
+  'use gpu';
+  const tangent = 2 * std.cross(quaternion.xyz, value);
+  return value + quaternion.w * tangent + std.cross(quaternion.xyz, tangent);
+};
+
+const dqsVertex = tgpu.vertexFn({
+  in: { position: d.vec3f, normal: d.vec3f, joint: d.vec4u, weight: d.vec4f },
+  out: { pos: d.builtin.position, normal: d.vec3f },
+})(({ position, normal, joint, weight }) => {
+  'use gpu';
+  const dualQuats = jointDualQuatsUniform.$;
+  const referenceReal = dualQuats[joint.x * 2];
+  let realAccum = referenceReal * weight.x;
+  let dualAccum = dualQuats[joint.x * 2 + 1] * weight.x;
+
+  for (const index of tgpu.unroll([1, 2, 3])) {
+    const base = joint[index] * 2;
+    const real = dualQuats[base];
+    const signedWeight =
+      weight[index] * std.select(d.f32(-1), 1, std.dot(referenceReal, real) >= 0);
+    realAccum = realAccum + real * signedWeight;
+    dualAccum = dualAccum + dualQuats[base + 1] * signedWeight;
+  }
+
+  const invLength = 1 / std.length(realAccum);
+  const real = realAccum * invLength;
+  const dual = dualAccum * invLength;
+  const translation = 2.0 * (real.w * dual.xyz - dual.w * real.xyz + std.cross(real.xyz, dual.xyz));
+
+  return {
+    pos: cameraUniform.$ * d.vec4f(rotateByUnitQuat(position, real) + translation, 1),
+    normal: std.normalize(rotateByUnitQuat(normal, real)),
   };
 });
 
@@ -306,60 +229,8 @@ const pipelineConfig = {
   multisample: { count: 4 },
 };
 
-const lbsPipeline = root
-  .createRenderPipeline({ vertex, ...pipelineConfig })
-  .withIndexBuffer(indexBuffer);
-
-const rotateByUnitQuat = (v: d.v3f, q: d.v4f): d.v3f => {
-  'use gpu';
-  const t = 2 * std.cross(q.xyz, v);
-  return v + q.w * t + std.cross(q.xyz, t);
-};
-
-const dqsVertex = tgpu.vertexFn({
-  in: { position: d.vec3f, normal: d.vec3f, joint: d.vec4u, weight: d.vec4f },
-  out: { pos: d.builtin.position, normal: d.vec3f },
-})(({ position, normal, joint, weight }) => {
-  'use gpu';
-  const dq = jointDualQuatsUniform.$;
-
-  // Load first joint's dual quaternion as reference for antipodality
-  const refReal = dq[joint.x * 2];
-  let realAccum = refReal * weight.x;
-  let dualAccum = dq[joint.x * 2 + 1] * weight.x;
-
-  // Blend remaining joints, flipping sign when quaternions are in opposite hemispheres
-  for (const i of tgpu.unroll([1, 2, 3])) {
-    const base = joint[i] * 2;
-    const real = dq[base];
-    const signedWeight = weight[i] * std.select(-1, 1, std.dot(refReal, real) >= 0);
-    realAccum = realAccum + real * signedWeight;
-    dualAccum = dualAccum + dq[base + 1] * signedWeight;
-  }
-
-  // Normalize the blended dual quaternion
-  const invLen = 1 / std.length(realAccum);
-  const c0 = realAccum * invLen;
-  const ce = dualAccum * invLen;
-
-  // Translation from dual quaternion
-  const q = c0.xyz;
-  const qe = ce.xyz;
-  const t = 2.0 * (c0.w * qe - ce.w * q + std.cross(q, qe));
-
-  // Transform position (rotation + translation) and normal (rotation only)
-  const skinnedPos = rotateByUnitQuat(position, c0) + t;
-  const skinnedNormal = std.normalize(rotateByUnitQuat(normal, c0));
-
-  return {
-    pos: cameraUniform.$ * d.vec4f(skinnedPos, 1),
-    normal: skinnedNormal,
-  };
-});
-
-const dqsPipeline = root
-  .createRenderPipeline({ vertex: dqsVertex, ...pipelineConfig })
-  .withIndexBuffer(indexBuffer);
+const lbsPipeline = root.createRenderPipeline({ vertex, ...pipelineConfig });
+const dqsPipeline = root.createRenderPipeline({ vertex: dqsVertex, ...pipelineConfig });
 
 const resizeObserver = new ResizeObserver(() => {
   depthTexture = createDepthTexture();
@@ -367,81 +238,276 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
-function render(time: number) {
-  const dt = Math.max(0, time - state.frame.lastTime);
-  state.frame.lastTime = time;
+const state = {
+  selectedVariantId,
+  isPlaying: true,
+  timeSeconds: 0,
+  lastFrameTimeMs: 0,
+  useDualQuaternions: false,
+  cameraPosition: d.vec4f(...INITIAL_CAMERA_POSITION),
+  cameraTarget: d.vec4f(0, 0, 0, 1),
+};
 
-  if (state.animation.playing) {
-    state.animation.time += dt * 0.001;
+let activeVariant = selectedVariant;
+let activeAnimation: Animation | undefined =
+  selectedVariant.id !== TWIST_DEMO_ID
+    ? modelData.animations.find((animation) => animation.name === selectedVariant.id)
+    : undefined;
+
+function toLabel(id: string) {
+  return id.replaceAll('_', ' ');
+}
+
+function fromLabel(label: string) {
+  return label.replaceAll(' ', '_');
+}
+
+function getRootJointPosition(): Float32Array {
+  mat4.getTranslation(CpuState.jointWorld[0], CpuState.rootJointPosition);
+  return CpuState.rootJointPosition;
+}
+
+function updateCameraTarget(position: Float32Array): d.v4f {
+  position[1] += CAMERA_TARGET_Y_OFFSET;
+  vec3.lerp(CpuState.smoothedTarget, position, CAMERA_TARGET_SMOOTHING, CpuState.smoothedTarget);
+  return d.vec4f(
+    CpuState.smoothedTarget[0],
+    CpuState.smoothedTarget[1],
+    CpuState.smoothedTarget[2],
+    1,
+  );
+}
+
+const computeWorldTransform = (
+  nodeIndex: number,
+  animatedTransforms: NodeTransformState,
+): Float32Array => {
+  if (CpuState.nodeWorldDirty[nodeIndex]) {
+    return CpuState.nodeWorld[nodeIndex];
   }
 
-  const isDemoMode = state.animation.selectedName === 'Twist_Demo';
-  if (isDemoMode) {
-    updateTwistDemo();
+  const parentIndex = parentByNode[nodeIndex];
+  const parentWorld =
+    parentIndex === -1 ? undefined : computeWorldTransform(parentIndex, animatedTransforms);
+  const node = modelData.nodes[nodeIndex];
+  const animated = animatedTransforms[nodeIndex];
+
+  mat4.identity(CpuState.local);
+  if (animated.hasTranslation || node.translation) {
+    mat4.translate(
+      CpuState.local,
+      animated.hasTranslation ? animated.translation : (node.translation ?? [0, 0, 0]),
+      CpuState.local,
+    );
+  }
+  if (animated.hasRotation || node.rotation) {
+    mat4.mul(
+      CpuState.local,
+      mat4.fromQuat(
+        animated.hasRotation ? animated.rotation : (node.rotation ?? [0, 0, 0, 1]),
+        CpuState.quatMatrix,
+      ),
+      CpuState.local,
+    );
+  }
+  if (animated.hasScale || node.scale) {
+    mat4.scale(
+      CpuState.local,
+      animated.hasScale ? animated.scale : (node.scale ?? [1, 1, 1]),
+      CpuState.local,
+    );
+  }
+
+  const destination = CpuState.nodeWorld[nodeIndex];
+  if (parentWorld) {
+    mat4.mul(parentWorld, CpuState.local, destination);
   } else {
-    updateJointMatrices();
-    state.camera.target = smoothTrackTarget(getRootJointPosition());
+    destination.set(CpuState.local);
   }
-  targetCamera(state.camera.position, state.camera.target);
 
-  jointMatricesUniform.write(pool.jointMatrices);
-  jointDualQuatsUniform.write(pool.jointDualQuats);
+  CpuState.nodeWorldDirty[nodeIndex] = 1;
+  return destination;
+};
 
-  const activeVerts = isDemoMode ? tubeVertexBuffer : vertexBuffer;
-  const activeIdx = isDemoMode ? tubeIndexBuffer : indexBuffer;
-  const activeCount = isDemoMode ? tube.indexCount : modelData.indices.length;
+function writeJointDualQuat(jointIndex: number) {
+  const matrixOffset = jointIndex * 16;
+  mat4ToDualQuat(
+    CpuState.jointMatrices.subarray(matrixOffset, matrixOffset + 16),
+    quat.fromMat,
+    CpuState.quatScratch,
+    CpuState.jointDualQuats,
+    jointIndex * 8,
+  );
+}
 
-  const activePipeline = state.useDualQuaternions ? dqsPipeline : lbsPipeline;
-  activePipeline
-    .with(vertexLayout, activeVerts)
-    .withIndexBuffer(activeIdx)
+function updateModelSkinning() {
+  const animatedTransforms = sampleAnimationInto(
+    activeAnimation,
+    state.timeSeconds,
+    CpuState.animatedTransforms,
+    CpuState.animatedTransformIndices,
+  );
+
+  CpuState.nodeWorldDirty.fill(0);
+  for (let jointIndex = 0; jointIndex < modelData.jointNodes.length; jointIndex++) {
+    const world = computeWorldTransform(modelData.jointNodes[jointIndex], animatedTransforms);
+    mat4.mul(modelTransform, world, CpuState.jointWorld[jointIndex]);
+
+    const matrixOffset = jointIndex * 16;
+    mat4.mul(
+      CpuState.jointWorld[jointIndex],
+      inverseBindViews[jointIndex],
+      CpuState.jointMatrices.subarray(matrixOffset, matrixOffset + 16),
+    );
+    writeJointDualQuat(jointIndex);
+  }
+
+  state.cameraTarget = updateCameraTarget(getRootJointPosition());
+}
+
+function updateTwistDemo() {
+  const twist = Math.sin(state.timeSeconds * 0.5) * Math.PI;
+
+  mat4.identity(CpuState.jointMatrices.subarray(0, 16));
+  CpuState.quatScratch.set([0, Math.sin(twist / 2), 0, Math.cos(twist / 2)]);
+  mat4.fromQuat(CpuState.quatScratch, CpuState.jointMatrices.subarray(16, 32));
+
+  writeJointDualQuat(0);
+  writeJointDualQuat(1);
+  for (let jointIndex = 2; jointIndex < modelData.jointNodes.length; jointIndex++) {
+    const matrixOffset = jointIndex * 16;
+    mat4.identity(CpuState.jointMatrices.subarray(matrixOffset, matrixOffset + 16));
+    CpuState.jointDualQuats.fill(0, jointIndex * 8, jointIndex * 8 + 8);
+    CpuState.jointDualQuats[jointIndex * 8 + 3] = 1;
+  }
+
+  state.cameraTarget = d.vec4f(0, 0, 0, 1);
+}
+
+function getInitialCameraTarget(): d.v4f {
+  if (activeVariant.id === TWIST_DEMO_ID) {
+    CpuState.smoothedTarget.fill(0);
+    return d.vec4f(0, 0, 0, 1);
+  }
+
+  updateModelSkinning();
+  const rootJointPosition = getRootJointPosition();
+  CpuState.smoothedTarget[0] = rootJointPosition[0];
+  CpuState.smoothedTarget[1] = rootJointPosition[1] + CAMERA_TARGET_Y_OFFSET;
+  CpuState.smoothedTarget[2] = rootJointPosition[2];
+  return d.vec4f(
+    CpuState.smoothedTarget[0],
+    CpuState.smoothedTarget[1],
+    CpuState.smoothedTarget[2],
+    1,
+  );
+}
+
+function setActiveVariant(variant: SceneVariant) {
+  activeVariant = variant;
+  activeAnimation =
+    variant.id !== TWIST_DEMO_ID
+      ? modelData.animations.find((animation) => animation.name === variant.id)
+      : undefined;
+
+  state.selectedVariantId = variant.id;
+  state.timeSeconds = 0;
+  sampleAnimationInto(
+    activeAnimation,
+    0,
+    CpuState.animatedTransforms,
+    CpuState.animatedTransformIndices,
+  );
+  state.cameraTarget = getInitialCameraTarget();
+  targetCamera(state.cameraPosition, state.cameraTarget);
+}
+
+function drawFrame() {
+  jointMatricesUniform.write(CpuState.jointMatrices);
+  jointDualQuatsUniform.write(CpuState.jointDualQuats);
+
+  const renderMesh = activeVariant.id === TWIST_DEMO_ID ? demoRenderMesh : modelRenderMesh;
+  const pipeline = state.useDualQuaternions ? dqsPipeline : lbsPipeline;
+
+  pipeline
+    .with(vertexLayout, renderMesh.vertexBuffer)
+    .withIndexBuffer(renderMesh.indexBuffer)
     .withColorAttachment({ resolveTarget: context, view: msaaTexture })
     .withDepthStencilAttachment({
       view: depthTexture,
-      depthClearValue: 1.0,
+      depthClearValue: 1,
       depthLoadOp: 'clear',
       depthStoreOp: 'store',
     })
-    .drawIndexed(activeCount);
+    .drawIndexed(renderMesh.indexCount);
+}
 
+state.cameraTarget = getInitialCameraTarget();
+
+const { cleanupCamera, targetCamera } = setupOrbitCamera(
+  canvas,
+  { initPos: state.cameraPosition, target: state.cameraTarget },
+  (camera) => {
+    if (camera.position) {
+      state.cameraPosition = camera.position;
+    }
+    if (camera.view && camera.projection) {
+      cameraUniform.write(mat4.mul(camera.projection, camera.view, CpuState.cameraMatrix));
+    }
+  },
+);
+
+function render(frameTimeMs: number) {
+  const deltaTimeMs = Math.max(0, frameTimeMs - state.lastFrameTimeMs);
+  state.lastFrameTimeMs = frameTimeMs;
+
+  if (state.isPlaying) {
+    state.timeSeconds += deltaTimeMs * 0.001;
+  }
+
+  if (activeVariant.id === TWIST_DEMO_ID) {
+    updateTwistDemo();
+  } else {
+    updateModelSkinning();
+    targetCamera(state.cameraPosition, state.cameraTarget);
+  }
+
+  drawFrame();
   animationId = requestAnimationFrame(render);
 }
 
 let animationId: number | undefined;
 animationId = requestAnimationFrame(render);
 
-export const controls = {
+export const controls = defineControls({
   Animation: {
-    initial: 'Yes',
-    options: animationOptions,
-    onSelectChange: (v: string) => {
-      state.animation.selectedName = v.replaceAll(' ', '_');
-      state.animation.time = 0;
-      if (v === 'Twist Demo') {
-        pool.cameraTarget.set([0, 0, 0]);
-        state.camera.target = d.vec4f(0, 0, 0, 1);
-        targetCamera(state.camera.position, state.camera.target);
+    initial: toLabel(selectedVariant.id),
+    options: variants.map((variant) => toLabel(variant.id)),
+    onSelectChange: (label: string) => {
+      const variant = variants.find((entry) => entry.id === fromLabel(label));
+      if (variant) {
+        setActiveVariant(variant);
       }
     },
   },
   'Play Animation': {
     initial: true,
-    onToggleChange: (v: boolean) => {
-      state.animation.playing = v;
+    onToggleChange: (value: boolean) => {
+      state.isPlaying = value;
     },
   },
   'Reset Animation': {
     onButtonClick: () => {
-      state.animation.time = 0;
+      state.timeSeconds = 0;
     },
   },
   'Dual Quaternion Skinning': {
     initial: false,
-    onToggleChange: (v: boolean) => {
-      state.useDualQuaternions = v;
+    onToggleChange: (value: boolean) => {
+      state.useDualQuaternions = value;
     },
   },
-};
+});
 
 export function onCleanup() {
   if (animationId !== undefined) {

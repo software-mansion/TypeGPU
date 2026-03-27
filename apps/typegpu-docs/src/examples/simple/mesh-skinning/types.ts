@@ -36,16 +36,25 @@ export interface Animation {
   channels: AnimationChannel[];
 }
 
-export interface ModelData {
+export interface MeshData {
   positions: Float32Array;
   normals: Float32Array;
   joints: Uint32Array;
   weights: Float32Array;
   indices: Uint16Array;
+  vertexCount: number;
+  indexCount: number;
+}
+
+export interface ModelData extends MeshData {
   inverseBindMatrices: Float32Array;
   nodes: GLTFNode[];
   jointNodes: number[];
-  vertexCount: number;
   animations: Animation[];
   jointCount: number;
+}
+
+export interface SceneVariant {
+  id: string;
+  mesh: MeshData;
 }
