@@ -1,13 +1,10 @@
 import { stitch } from '../resolve/stitch.ts';
 import { $gpuCallable, $internal, $resolve } from '../../../src/shared/symbols.ts';
 import { setName } from '../../../src/shared/meta.ts';
-import { isKnownAtComptime, type DualFn } from '../../../src/types.ts';
+import type { DualFn } from '../../../src/types.ts';
 import { type ResolvedSnippet, snip, type Snippet } from '../../../src/data/snippet.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../../src/types.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
-import { arrayOf } from '../../data/array.ts';
-import { i32 } from '../../data/numeric.ts';
-import { ArrayExpression, coerceToSnippet } from '../../tgsl/generationHelpers.ts';
 
 /**
  * The result of calling `tgpu.unroll(...)`. The code responsible for
@@ -37,7 +34,7 @@ export class UnrollableIterable implements SelfResolvable {
  * }
  * ```
  *
- * If you'd like to unroll over a range of numbers, use `tgpu.unroll(n)`.
+ * If you'd like to unroll over a range of numbers, use `tgpu.unroll(std.range(n))`.
  *
  * @example
  * ```ts
@@ -49,7 +46,7 @@ export class UnrollableIterable implements SelfResolvable {
  *   let sum = d.f32();
  *
  *   // i = 0, 1, 2
- *   for (const i of tgpu.unroll(FBM_OCTAVES)) {
+ *   for (const i of tgpu.unroll(std.range(FBM_OCTAVES))) {
  *     sum +=
  *       noise3d(pos * (CLOUD_FREQUENCY * FBM_LACUNARITY ** i)) *
  *       (CLOUD_AMPLITUDE * FBM_PERSISTENCE ** i);
@@ -84,16 +81,8 @@ export class UnrollableIterable implements SelfResolvable {
  * ```
  */
 export const unroll = (() => {
-  function jsImpl<T extends Iterable<unknown>>(iterable: T): T;
-  function jsImpl(length: number): number[];
-  function jsImpl(iterableOrLength: Iterable<unknown> | number): Iterable<unknown>;
-  function jsImpl<T extends Iterable<unknown>>(
-    iterableOrLength: Iterable<unknown> | number,
-  ): Iterable<unknown> {
-    if (typeof iterableOrLength === 'number') {
-      return Array.from({ length: iterableOrLength }, (_, i) => i) as unknown as T;
-    }
-    return iterableOrLength as T;
+  function jsImpl<T extends Iterable<unknown>>(iterable: T): T {
+    return iterable;
   }
 
   const impl = jsImpl as unknown as DualFn<typeof jsImpl> & { [$internal]: true };
@@ -103,19 +92,6 @@ export const unroll = (() => {
   impl[$internal] = true;
   impl[$gpuCallable] = {
     call(_ctx, [value]) {
-      if (isKnownAtComptime(value) && typeof value.value === 'number') {
-        const elementCount = value.value;
-        const arrayType = arrayOf(i32, elementCount);
-        const iterableSnippet = snip(
-          new ArrayExpression(
-            arrayType,
-            Array.from({ length: elementCount }, (_, i) => coerceToSnippet(i)),
-          ),
-          arrayType,
-          'constant',
-        );
-        return snip(new UnrollableIterable(iterableSnippet), arrayType, 'constant');
-      }
       return snip(new UnrollableIterable(value), value.dataType, value.origin);
     },
   };

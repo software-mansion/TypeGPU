@@ -1,7 +1,7 @@
-import { describe, expect, vi } from 'vitest';
+import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.js';
+import tgpu, { std } from '../src/index.js';
 
 describe('tgpu.unroll', () => {
   it('called outside the gpu function returns passed iterable', () => {
@@ -9,12 +9,6 @@ describe('tgpu.unroll', () => {
     const x = tgpu.unroll(arr);
 
     expect(x).toBe(arr);
-  });
-
-  it('called outside the gpu function with a length, creates a 0..n-1 array', () => {
-    const x = tgpu.unroll(3);
-
-    expect(x).toEqual([0, 1, 2]);
   });
 
   it('called inside the gpu function but outside of forOf returns passed iterable', () => {
@@ -41,21 +35,6 @@ describe('tgpu.unroll', () => {
         let v2 = (&v1);
         let arr = (&arr_1);
         return (*arr)[0i];
-      }"
-    `);
-  });
-
-  it('called inside the gpu function but outside of forOf with length creates a 0..n-1 array', () => {
-    const f = () => {
-      'use gpu';
-      const a = tgpu.unroll(3);
-      return a[0];
-    };
-
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-      "fn f() -> i32 {
-        var a = array<i32, 3>(0, 1, 2);
-        return a[0i];
       }"
     `);
   });
@@ -895,11 +874,11 @@ describe('tgpu.unroll', () => {
     `);
   });
 
-  it('unrolls n times', () => {
+  it('unrolls a range', () => {
     const f = () => {
       'use gpu';
       let a = d.f32(0);
-      for (const i of tgpu.unroll(3)) {
+      for (const i of tgpu.unroll(std.range(1, 9, 2))) {
         a += i;
       }
       return a;
@@ -910,15 +889,19 @@ describe('tgpu.unroll', () => {
         var a = 0f;
         // unrolled iteration #0
         {
-          a += 0f;
+          a += 1f;
         }
         // unrolled iteration #1
         {
-          a += 1f;
+          a += 3f;
         }
         // unrolled iteration #2
         {
-          a += 2f;
+          a += 5f;
+        }
+        // unrolled iteration #3
+        {
+          a += 7f;
         }
         return a;
       }"

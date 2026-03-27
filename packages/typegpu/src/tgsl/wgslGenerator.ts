@@ -1169,8 +1169,9 @@ ${this.ctx.pre}else ${alternate}`;
 
           const { value } = iterableSnippet;
 
-          const elements =
-            value instanceof ArrayExpression
+          const elements = isTgpuRange(value)
+            ? value.map((i) => coerceToSnippet(i))
+            : value instanceof ArrayExpression
               ? value.elements
               : Array.from({ length }, (_, i) =>
                   forOfUtils.getElementSnippet(iterableSnippet, snip(i, u32, 'constant')),
