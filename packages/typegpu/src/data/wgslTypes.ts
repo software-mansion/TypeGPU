@@ -55,25 +55,33 @@ export interface NumberArrayView {
 /**
  * Maps a scalar, vector, or matrix element schema to the corresponding TypedArray type.
  */
-export type TypedArrayFor<T> = T extends Vec2f | Vec3f | Vec4f | F32 | Mat2x2f | Mat3x3f | Mat4x4f
+export type TypedArrayFor<T> = T extends F32 | Vec2f | Vec3f | Vec4f | Mat2x2f | Mat3x3f | Mat4x4f
   ? Float32Array
-  : T extends Vec2h | Vec3h | Vec4h | F16
+  : T extends F16 | Vec2h | Vec3h | Vec4h
     ? Float16Array
-    : T extends Vec2i | Vec3i | Vec4i | I32
+    : T extends I32 | Vec2i | Vec3i | Vec4i
       ? Int32Array
-      : T extends Vec2u | Vec3u | Vec4u | U32
+      : T extends U32 | Vec2u | Vec3u | Vec4u
         ? Uint32Array
         : T extends U16
           ? Uint16Array
           : never;
 
-/**
- * Maps struct properties to a record of TypedArrays (Struct-of-Arrays input format).
- * If any property resolves to `never` (e.g. nested structs), the type becomes unconstructable.
- */
-export type SoAInputFor<TProps extends Record<string, BaseData>> = {
-  [K in keyof TProps]: TypedArrayFor<TProps[K]>;
+type UnwrapWgslArray<T> = T extends WgslArray<infer U> ? UnwrapWgslArray<U> : T;
+type PackedSoAInputFor<T> = TypedArrayFor<UnwrapWgslArray<T>>;
+
+type SoAFieldsFor<T extends Record<string, BaseData>> = {
+  [K in keyof T as [PackedSoAInputFor<T[K]>] extends [never] ? never : K]: PackedSoAInputFor<T[K]>;
 };
+
+/**
+ * Maps struct properties to a record of TypedArrays (Struct-of-Arrays input format) - if not possible, resolves to never.
+ */
+export type SoAInputFor<T extends Record<string, BaseData>> = [keyof T] extends [
+  keyof SoAFieldsFor<T>,
+]
+  ? Prettify<SoAFieldsFor<T>>
+  : never;
 
 /**
  * Vector infix notation.

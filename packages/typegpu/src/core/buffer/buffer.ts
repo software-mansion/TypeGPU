@@ -5,7 +5,7 @@ import type { AnyData } from '../../data/dataTypes.ts';
 import { getWriteInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
-import { writeSoA } from '../../data/soaIO.ts';
+import { getSoANaturalSize, isSoACompatibleField, writeSoA } from '../../data/soaIO.ts';
 import { isWgslArray, isWgslData, isWgslStruct } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -323,7 +323,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       return;
     }
 
-    // SoA path: struct-of-arrays input for array-of-structs schema
+    // SoA path
     if (
       isWgslArray(this.dataType) &&
       isWgslStruct(this.dataType.elementType) &&
@@ -331,13 +331,20 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       typeof data === 'object' &&
       data !== null
     ) {
-      const firstValue = Object.values(data as Record<string, unknown>)[0];
-      if (firstValue !== undefined && ArrayBuffer.isView(firstValue)) {
+      const soaData = data as Record<string, unknown>;
+      const values = Object.values(soaData);
+      const isSoAInput =
+        values.length > 0 &&
+        values.every(ArrayBuffer.isView) &&
+        Object.values(this.dataType.elementType.propTypes).every(isSoACompatibleField);
+
+      if (isSoAInput) {
         writeSoA(
           new Uint8Array(target),
           this.dataType,
-          data as Record<string, ArrayBufferView>,
+          soaData as Record<string, ArrayBufferView>,
           startOffset,
+          endOffset,
         );
         return;
       }
@@ -380,7 +387,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
           roundUp(sizeOf(this.dataType.elementType), alignmentOf(this.dataType.elementType))
         : ArrayBuffer.isView(data) || data instanceof ArrayBuffer
           ? data.byteLength
-          : undefined;
+          : getSoANaturalSize(this.dataType, data);
     const naturalEndOffset =
       naturalSize !== undefined ? Math.min(startOffset + naturalSize, bufferSize) : undefined;
 
