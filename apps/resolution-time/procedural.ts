@@ -12,7 +12,7 @@ interface ProcGenConfig {
 }
 
 // default config
-const SAMPLES = 10;
+const SAMPLES = 50;
 const config: ProcGenConfig & { samples: number } = {
   mainBranching: 2,
   branching: 2,
@@ -258,7 +258,7 @@ function benchmarkResolve(): BenchmarkResult {
 const outDir = resolve(import.meta.dirname ?? '.', '.');
 
 function runBenchmark(input: ProcGenConfig, output: BenchmarkResult[]) {
-  Object.assign(config, { samples: input.samples ?? SAMPLES }, input);
+  Object.assign(config, { samples: (input.samples ?? SAMPLES) * 2 }, input);
   branchingUnrollArray = getArrayForUnroll(config.branching);
 
   for (let i = 0; i < config.samples; i++) {
@@ -272,21 +272,6 @@ function runBenchmark(input: ProcGenConfig, output: BenchmarkResult[]) {
     );
   }
 }
-
-function warmupJIT() {
-  runBenchmark(
-    {
-      mainBranching: 1,
-      branching: 1,
-      maxDepth: 1,
-      recurseProb: 0,
-      seed: 0.1882 * 2 ** 32,
-    },
-    [],
-  );
-}
-
-warmupJIT();
 
 const results: BenchmarkResult[] = [];
 const DEPTHS = Array.from({ length: 8 }, (_, i) => i + 1);
@@ -304,7 +289,10 @@ for (const depth of DEPTHS) {
     results,
   );
 }
-writeFileSync(resolve(outDir, 'results-max-depth.json'), JSON.stringify(results, null, 2));
+writeFileSync(
+  resolve(outDir, 'results-max-depth.json'),
+  JSON.stringify(results.slice(Math.floor(results.length / 2), results.length), null, 2),
+);
 results.length = 0;
 
 // resolution time vs linear recursion (path)
@@ -320,7 +308,10 @@ for (const depth of DEPTHS) {
     results,
   );
 }
-writeFileSync(resolve(outDir, 'results-linear-recursion.json'), JSON.stringify(results, null, 2));
+writeFileSync(
+  resolve(outDir, 'results-linear-recursion.json'),
+  JSON.stringify(results.slice(Math.floor(results.length / 2), results.length), null, 2),
+);
 results.length = 0;
 
 // resolution time vs random
@@ -336,5 +327,8 @@ for (const depth of DEPTHS) {
     results,
   );
 }
-writeFileSync(resolve(outDir, 'results-random.json'), JSON.stringify(results, null, 2));
+writeFileSync(
+  resolve(outDir, 'results-random.json'),
+  JSON.stringify(results.slice(Math.floor(results.length / 2), results.length), null, 2),
+);
 results.length = 0;

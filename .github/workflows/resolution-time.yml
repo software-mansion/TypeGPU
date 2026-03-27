@@ -5,12 +5,13 @@ on:
   workflow_dispatch:
     inputs:
       target_branch:
-        description: 'Target branch to compare against'
+        description: "Target branch to compare against"
         required: true
-        default: 'main'
+        default: "main"
 
 jobs:
   resolution-time:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
       issues: write
@@ -34,92 +35,106 @@ jobs:
           path: target-branch
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_branch || github.base_ref }}
 
-      - name: Checkout release branch
+      - name: Checkout latest release
         uses: actions/checkout@v4
         with:
           path: release-branch
           ref: release
 
-      - name: Copy resolution-time app into target and release branches
+      - name: Copy resolution-time app to release checkout
         run: |
-          cp -r pr-branch/apps/resolution-time target-branch/apps/resolution-time
-          cp -r pr-branch/apps/resolution-time release-branch/apps/resolution-time
-
-      - name: Install dependencies (PR branch)
-        working-directory: pr-branch
-        run: pnpm install
-
-      - name: Install dependencies (target branch)
-        working-directory: target-branch
-        run: pnpm install
-
-      - name: Install dependencies (release branch)
-        working-directory: release-branch
-        run: pnpm install
+          if [ ! -d release-branch/apps/resolution-time ]; then
+            cp -r target-branch/apps/resolution-time release-branch/apps/resolution-time
+            echo "Copied resolution-time app from target branch to release checkout"
+          else
+            echo "resolution-time app already exists in release checkout"
+          fi
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24.x
-          cache: 'pnpm'
+          cache: "pnpm"
           cache-dependency-path: |
             pr-branch/pnpm-lock.yaml
             target-branch/pnpm-lock.yaml
             release-branch/pnpm-lock.yaml
 
-      - name: Run benchmark on PR branch
+      - name: Install dependencies (PR branch)
+        working-directory: pr-branch
+        run: pnpm install && cd apps/resolution-time/node_modules/bun && node install.js
+
+      - name: Install dependencies (target branch)
+        working-directory: target-branch
+        run: pnpm install && cd apps/resolution-time/node_modules/bun && node install.js
+
+      - name: Install dependencies (release branch)
+        working-directory: release-branch
+        run: pnpm install --no-frozen-lockfile && cd apps/resolution-time/node_modules/bun && node install.js
+
+      - name: Run benchmark (PR branch)
         working-directory: pr-branch
         run: pnpm --filter resolution-time resolution-time
 
-      - name: Run benchmark on target branch
+      - name: Run benchmark (target branch)
         working-directory: target-branch
         run: pnpm --filter resolution-time resolution-time
-        continue-on-error: true
 
-      - name: Run benchmark on release branch
+      - name: Run benchmark (release branch)
         working-directory: release-branch
         run: pnpm --filter resolution-time resolution-time
-        continue-on-error: true
 
-      - name: Generate charts
+      - name: Generate chart (random)
         run: |
-          SCRIPT=pr-branch/apps/resolution-time/generateChart.ts
+          node pr-branch/apps/resolution-time/generateChart.ts \
+            --input "PR:pr-branch/apps/resolution-time/results-random.json" \
+            --input "main:target-branch/apps/resolution-time/results-random.json" \
+            --input "release:release-branch/apps/resolution-time/results-random.json" \
+            --title "Random Branching" \
+            --xAxisTitle "max depth" \
+            --yAxisTitle "time (ms)" \
+            --output chart-random.md
 
-          DEPTH_ARGS="--input PR:pr-branch/apps/resolution-time/results-max-depth.json"
-          LINEAR_ARGS="--input PR:pr-branch/apps/resolution-time/results-linear-recursion.json"
+      - name: Generate chart (linear)
+        run: |
+          node pr-branch/apps/resolution-time/generateChart.ts \
+            --input "PR:pr-branch/apps/resolution-time/results-linear-recursion.json" \
+            --input "main:target-branch/apps/resolution-time/results-linear-recursion.json" \
+            --input "release:release-branch/apps/resolution-time/results-linear-recursion.json" \
+            --title "Linear Recursion" \
+            --xAxisTitle "max depth" \
+            --yAxisTitle "time (ms)" \
+            --output chart-linear.md
 
-          if [ -f target-branch/apps/resolution-time/results-max-depth.json ]; then
-            DEPTH_ARGS="$DEPTH_ARGS --input target:target-branch/apps/resolution-time/results-max-depth.json"
-            LINEAR_ARGS="$LINEAR_ARGS --input target:target-branch/apps/resolution-time/results-linear-recursion.json"
-          fi
+      - name: Generate chart (max depth)
+        run: |
+          node pr-branch/apps/resolution-time/generateChart.ts \
+            --input "PR:pr-branch/apps/resolution-time/results-max-depth.json" \
+            --input "main:target-branch/apps/resolution-time/results-max-depth.json" \
+            --input "release:release-branch/apps/resolution-time/results-max-depth.json" \
+            --title "Full Tree (Max Depth)" \
+            --xAxisTitle "max depth" \
+            --yAxisTitle "time (ms)" \
+            --output chart-max-depth.md
 
-          if [ -f release-branch/apps/resolution-time/results-max-depth.json ]; then
-            DEPTH_ARGS="$DEPTH_ARGS --input release:release-branch/apps/resolution-time/results-max-depth.json"
-            LINEAR_ARGS="$LINEAR_ARGS --input release:release-branch/apps/resolution-time/results-linear-recursion.json"
-          fi
-
-          node $SCRIPT $DEPTH_ARGS --title "Resolution Time vs Max Depth" --xAxisTitle "max depth" --yAxisTitle "time (ms)" --output max-depth.md
-          node $SCRIPT $LINEAR_ARGS --title "Resolution Time vs Linear Recursion" --xAxisTitle "max depth" --yAxisTitle "time (ms)" --output linear-recursion.md
-
-      - name: Build comment
+      - name: Prepare comment
         run: |
           {
-            echo '<!-- resolution-time-bot-comment -->'
-            echo '## Resolution Time Benchmark'
-            echo ''
-            echo '### Max Depth (branching=2)'
-            cat max-depth.md
-            echo ''
-            echo '### Linear Recursion (branching=1)'
-            cat linear-recursion.md
-          } > comment.md
+            echo "## Resolution Time Benchmark"
+            echo ""
+            cat chart-random.md
+            echo ""
+            cat chart-linear.md
+            echo ""
+            cat chart-max-depth.md
+          } > comparison.md
 
       - name: Comment PR with results
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const comment = fs.readFileSync('comment.md', 'utf8');
+            const comparison = fs.readFileSync('comparison.md', 'utf8');
 
             const botCommentIdentifier = '<!-- resolution-time-bot-comment -->';
 
@@ -130,8 +145,8 @@ jobs:
                 repo: context.repo.repo,
                 issue_number: issueNumber,
               });
-              return comments.data.find((c) =>
-                c.body.includes(botCommentIdentifier)
+              return comments.data.find((comment) =>
+                comment.body.includes(botCommentIdentifier)
               );
             }
 
@@ -146,13 +161,13 @@ jobs:
                 await github.rest.issues.updateComment({
                   ...context.repo,
                   comment_id: existingComment.id,
-                  body: comment,
+                  body: botCommentIdentifier + '\n' + comparison,
                 });
               } else {
                 await github.rest.issues.createComment({
                   ...context.repo,
                   issue_number: issueNumber,
-                  body: comment,
+                  body: botCommentIdentifier + '\n' + comparison,
                 });
               }
             }
@@ -164,5 +179,5 @@ jobs:
               await createOrUpdateComment(issueNumber);
             }
             await core.summary
-              .addRaw(comment)
+              .addRaw(comparison)
               .write();
