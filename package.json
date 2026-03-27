@@ -44,8 +44,8 @@
     "eslint-plugin-typegpu": "workspace:*",
     "jiti": "catalog:build",
     "oxfmt": "^0.35.0",
-    "oxlint": "^1.49.0",
-    "oxlint-tsgolint": "^0.12.1",
+    "oxlint": "^1.57.0",
+    "oxlint-tsgolint": "^0.17.4",
     "pkg-pr-new": "^0.0.62",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*",
@@ -67,6 +67,7 @@
     ],
     "overrides": {
       "rollup": "catalog:",
+      "vite": "8.0.2",
       "typescript": "catalog:types",
       "three": "catalog:example"
     }
