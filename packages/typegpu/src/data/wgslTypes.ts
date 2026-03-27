@@ -67,22 +67,6 @@ export type TypedArrayFor<T> = T extends F32 | Vec2f | Vec3f | Vec4f | Mat2x2f |
           ? Uint16Array
           : never;
 
-type UnwrapWgslArray<T> = T extends WgslArray<infer U> ? UnwrapWgslArray<U> : T;
-type PackedSoAInputFor<T> = TypedArrayFor<UnwrapWgslArray<T>>;
-
-type SoAFieldsFor<T extends Record<string, BaseData>> = {
-  [K in keyof T as [PackedSoAInputFor<T[K]>] extends [never] ? never : K]: PackedSoAInputFor<T[K]>;
-};
-
-/**
- * Maps struct properties to a record of TypedArrays (Struct-of-Arrays input format) - if not possible, resolves to never.
- */
-export type SoAInputFor<T extends Record<string, BaseData>> = [keyof T] extends [
-  keyof SoAFieldsFor<T>,
-]
-  ? Prettify<SoAFieldsFor<T>>
-  : never;
-
 /**
  * Vector infix notation.
  *

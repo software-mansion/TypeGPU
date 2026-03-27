@@ -3,9 +3,21 @@ import { roundUp } from '../mathUtils.ts';
 import { alignmentOf } from '../data/alignmentOf.ts';
 import { offsetsForProps } from '../data/offsets.ts';
 import { sizeOf } from '../data/sizeOf.ts';
-import type { BaseData, SoAInputFor, WgslArray, WgslStruct } from '../data/wgslTypes.ts';
+import type { BaseData, TypedArrayFor, WgslArray, WgslStruct } from '../data/wgslTypes.ts';
 import { isMat, isMat2x2f, isMat3x3f, isWgslArray } from '../data/wgslTypes.ts';
 import type { BufferWriteOptions, TgpuBuffer } from '../core/buffer/buffer.ts';
+import type { Prettify } from '../shared/utilityTypes.ts';
+
+type UnwrapWgslArray<T> = T extends WgslArray<infer U> ? UnwrapWgslArray<U> : T;
+type PackedSoAInputFor<T> = TypedArrayFor<UnwrapWgslArray<T>>;
+
+type SoAFieldsFor<T extends Record<string, BaseData>> = {
+  [K in keyof T as [PackedSoAInputFor<T[K]>] extends [never] ? never : K]: PackedSoAInputFor<T[K]>;
+};
+
+type SoAInputFor<T extends Record<string, BaseData>> = [keyof T] extends [keyof SoAFieldsFor<T>]
+  ? Prettify<SoAFieldsFor<T>>
+  : never;
 
 function getPackedMatrixLayout(schema: BaseData) {
   if (!isMat(schema)) {
@@ -188,4 +200,8 @@ export function writeSoA<TProps extends Record<string, BaseData>>(
     endOffset,
   );
   buffer.write(arrayBuffer, { startOffset, endOffset });
+}
+
+export namespace writeSoA {
+  export type InputFor<TProps extends Record<string, BaseData>> = SoAInputFor<TProps>;
 }

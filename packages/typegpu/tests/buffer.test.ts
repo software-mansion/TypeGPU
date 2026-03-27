@@ -2,7 +2,6 @@ import { attest } from '@ark/attest';
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import * as common from '../src/common/index.ts';
 import * as d from '../src/data/index.ts';
-import type { InferInput, SoAInputFor } from '../src/data/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
 import type { ValidateBufferSchema, ValidUsagesFor } from '../src/index.js';
 import { getName } from '../src/shared/meta.ts';
@@ -1085,7 +1084,7 @@ describe('ValidateBufferSchema', () => {
       f: d.WgslArray<d.Mat3x3f>;
     };
 
-    expectTypeOf<SoAInputFor<Test>>().toEqualTypeOf<{
+    expectTypeOf<common.writeSoA.InputFor<Test>>().toEqualTypeOf<{
       a: Float32Array;
       b: Uint32Array;
       c: Float32Array;
@@ -1105,7 +1104,7 @@ describe('ValidateBufferSchema', () => {
       nested: typeof Nested;
     };
 
-    expectTypeOf<SoAInputFor<Test>>().toEqualTypeOf<never>();
+    expectTypeOf<common.writeSoA.InputFor<Test>>().toEqualTypeOf<never>();
   });
 
   it('should write SoA data for struct fields that are fixed-size arrays of primitives', ({

@@ -89,7 +89,6 @@ export type {
   Mat4x4f,
   matBase,
   Ptr,
-  SoAInputFor,
   Size,
   StorableData,
   U16,
