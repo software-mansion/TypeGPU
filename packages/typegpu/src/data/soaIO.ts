@@ -4,7 +4,7 @@ import { alignmentOf } from './alignmentOf.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
 import type { BaseData, WgslArray, WgslStruct } from './wgslTypes.ts';
-import { isMat, isMat2x2f, isMat3x3f, isWgslArray, isWgslStruct } from './wgslTypes.ts';
+import { isMat, isMat2x2f, isMat3x3f, isWgslArray } from './wgslTypes.ts';
 
 function getPackedMatrixLayout(schema: BaseData) {
   if (!isMat(schema)) {
@@ -21,7 +21,7 @@ function getPackedMatrixLayout(schema: BaseData) {
   } as const;
 }
 
-export function packedSizeOf(schema: BaseData): number {
+function packedSizeOf(schema: BaseData): number {
   const matrixLayout = getPackedMatrixLayout(schema);
   if (matrixLayout) {
     return matrixLayout.packedSize;
@@ -34,7 +34,7 @@ export function packedSizeOf(schema: BaseData): number {
   return sizeOf(schema);
 }
 
-export function inferSoAElementCount(
+function inferSoAElementCount(
   arraySchema: WgslArray,
   soaData: Record<string, ArrayBufferView>,
 ): number | undefined {
@@ -61,14 +61,6 @@ export function inferSoAElementCount(
   return inferredCount;
 }
 
-export function isSoACompatibleField(schema: BaseData): boolean {
-  if (isWgslArray(schema)) {
-    return isSoACompatibleField(schema.elementType);
-  }
-
-  return !isWgslStruct(schema);
-}
-
 /**
  * Computes the byte length that a scatterSoA call will naturally cover, based on
  * the minimum element count implied by the provided SoA data arrays.
@@ -85,37 +77,6 @@ export function computeSoAByteLength(
     sizeOf(arraySchema.elementType),
     alignmentOf(arraySchema.elementType),
   );
-  return elementCount * elementStride;
-}
-
-export function getSoANaturalSize(dataType: BaseData, data: unknown): number | undefined {
-  if (
-    !isWgslArray(dataType) ||
-    !isWgslStruct(dataType.elementType) ||
-    Array.isArray(data) ||
-    typeof data !== 'object' ||
-    data === null
-  ) {
-    return undefined;
-  }
-
-  const soaData = data as Record<string, unknown>;
-  const values = Object.values(soaData);
-  const isSoAInput =
-    values.length > 0 &&
-    values.every((value) => ArrayBuffer.isView(value)) &&
-    Object.values(dataType.elementType.propTypes).every(isSoACompatibleField);
-
-  if (!isSoAInput) {
-    return undefined;
-  }
-
-  const elementCount = inferSoAElementCount(dataType, soaData as Record<string, ArrayBufferView>);
-  if (elementCount === undefined) {
-    return undefined;
-  }
-
-  const elementStride = roundUp(sizeOf(dataType.elementType), alignmentOf(dataType.elementType));
   return elementCount * elementStride;
 }
 
