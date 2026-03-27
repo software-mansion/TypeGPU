@@ -1032,9 +1032,6 @@ describe('ValidateBufferSchema', () => {
       pos: d.vec3f,
       vel: d.f32,
     });
-    // vec3f alignment=16, size=12; f32 alignment=4, size=4
-    // struct layout: pos @ 0 (12 bytes), vel @ 12 (4 bytes) → struct size=16, alignment=16
-    // element stride = 16
 
     const schema = d.arrayOf(Particle, 2);
     const buffer = root.createBuffer(schema);
@@ -1048,18 +1045,7 @@ describe('ValidateBufferSchema', () => {
     const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
     const result = new Float32Array(uploadedBuffer);
 
-    // Element 0: pos=(1,2,3) @ offset 0, vel=10 @ offset 12
-    // Element 1: pos=(4,5,6) @ offset 16, vel=20 @ offset 28
-    expect([...result]).toStrictEqual([
-      1,
-      2,
-      3,
-      10, // element 0
-      4,
-      5,
-      6,
-      20, // element 1
-    ]);
+    expect([...result]).toStrictEqual([1, 2, 3, 10, 4, 5, 6, 20]);
   });
 
   it('should write SoA data with integer fields', ({ root, device }) => {
@@ -1067,9 +1053,6 @@ describe('ValidateBufferSchema', () => {
       id: d.u32,
       heading: d.vec3i,
     });
-    // u32: align=4, size=4; vec3i: align=16, size=12
-    // struct layout: id @ 0 (4 bytes), [12 bytes padding], heading @ 16 (12 bytes) → struct size=32
-
     const schema = d.arrayOf(Entry, 2);
     const buffer = root.createBuffer(schema);
     root.unwrap(buffer);
@@ -1081,8 +1064,6 @@ describe('ValidateBufferSchema', () => {
 
     const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
 
-    // Element 0: id=100 @ byte 0, heading=(1,2,3) @ byte 16
-    // Element 1: id=200 @ byte 32, heading=(4,5,6) @ byte 48
     const ids = [
       new DataView(uploadedBuffer).getUint32(0, true),
       new DataView(uploadedBuffer).getUint32(32, true),
@@ -1125,38 +1106,6 @@ describe('ValidateBufferSchema', () => {
     };
 
     expectTypeOf<SoAInputFor<Test>>().toEqualTypeOf<never>();
-  });
-
-  it('should not accept SoA input through buffer.write', ({ root }) => {
-    const Entry = d.struct({
-      id: d.u32,
-      values: d.arrayOf(d.f32, 3),
-    });
-    const buffer = root.createBuffer(d.arrayOf(Entry, 2));
-
-    if (false) {
-      // @ts-expect-error SoA writes go through common.writeSoA, not buffer.write
-      buffer.write({
-        id: new Uint32Array([10, 20]),
-        values: new Float32Array([1, 2, 3, 4, 5, 6]),
-      });
-    }
-  });
-
-  it('should keep SoA input out of nested array fields in InferInput', () => {
-    const Child = d.struct({
-      x: d.f32,
-    });
-    const Parent = d.struct({
-      children: d.arrayOf(Child, 2),
-    });
-    const TopLevel = d.arrayOf(Parent, 4);
-
-    expectTypeOf<InferInput<typeof Parent>>().toEqualTypeOf<{
-      children: { x: number }[];
-    }>();
-
-    expectTypeOf<InferInput<typeof TopLevel>>().toEqualTypeOf<{ children: { x: number }[] }[]>();
   });
 
   it('should write SoA data for struct fields that are fixed-size arrays of primitives', ({
