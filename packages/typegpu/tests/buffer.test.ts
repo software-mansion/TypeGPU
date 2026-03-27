@@ -125,6 +125,7 @@ describe('TgpuBuffer', () => {
         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
       }),
     );
+    expect(rawBuffer.getMappedRange).toHaveBeenCalledTimes(1);
     expect(root.device.queue.writeBuffer).not.toHaveBeenCalled();
     const ids = [
       new DataView(writtenBuffer).getUint32(0, true),

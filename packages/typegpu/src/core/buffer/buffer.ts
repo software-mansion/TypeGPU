@@ -198,6 +198,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   private _ownBuffer: boolean;
   private _destroyed = false;
   private _hostBuffer: ArrayBuffer | undefined;
+  private _mappedRange: ArrayBuffer | undefined;
   private _initialCallback: BufferInitCallback<TData> | undefined;
 
   readonly initial: InferInput<TData> | undefined;
@@ -245,9 +246,9 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
         if (this._initialCallback) {
           this._initialCallback(this);
         } else if (this.initial) {
-          this._writeToTarget(this._buffer.getMappedRange(), this.initial);
+          this._writeToTarget(this._getMappedRange(), this.initial);
         }
-        this._buffer.unmap();
+        this._unmapBuffer();
       }
     }
 
@@ -261,7 +262,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   get arrayBuffer(): ArrayBuffer {
     const gpuBuffer = this.buffer;
     if (gpuBuffer.mapState === 'mapped') {
-      return gpuBuffer.getMappedRange();
+      return this._getMappedRange();
     }
 
     if (!this._hostBuffer) {
@@ -269,6 +270,24 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     }
 
     return this._hostBuffer;
+  }
+
+  private _getMappedRange(): ArrayBuffer {
+    if (!this._buffer || this._buffer.mapState !== 'mapped') {
+      throw new Error('Buffer is not mapped.');
+    }
+
+    this._mappedRange ??= this._buffer.getMappedRange();
+    return this._mappedRange;
+  }
+
+  private _unmapBuffer(): void {
+    if (!this._buffer || this._buffer.mapState !== 'mapped') {
+      return;
+    }
+
+    this._mappedRange = undefined;
+    this._buffer.unmap();
   }
 
   $name(label: string) {
@@ -397,7 +416,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     const size = endOffset - startOffset;
 
     if (gpuBuffer.mapState === 'mapped') {
-      const mapped = gpuBuffer.getMappedRange();
+      const mapped = this._getMappedRange();
       if (data instanceof ArrayBuffer && data === mapped) {
         return;
       }
@@ -421,7 +440,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     const instructions = getWriteInstructions(this.dataType, data);
 
     if (gpuBuffer.mapState === 'mapped') {
-      const mappedRange = gpuBuffer.getMappedRange();
+      const mappedRange = this._getMappedRange();
       const mappedView = new Uint8Array(mappedRange);
 
       for (const instruction of instructions) {
@@ -444,7 +463,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     const gpuBuffer = this.buffer;
 
     if (gpuBuffer.mapState === 'mapped') {
-      new Uint8Array(gpuBuffer.getMappedRange()).fill(0);
+      new Uint8Array(this._getMappedRange()).fill(0);
       return;
     }
 
@@ -468,15 +487,15 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     const gpuBuffer = this.buffer;
 
     if (gpuBuffer.mapState === 'mapped') {
-      const mapped = gpuBuffer.getMappedRange();
+      const mapped = this._getMappedRange();
       return readData(new BufferReader(mapped), this.dataType);
     }
 
     if (gpuBuffer.usage & GPUBufferUsage.MAP_READ) {
       await gpuBuffer.mapAsync(GPUMapMode.READ);
-      const mapped = gpuBuffer.getMappedRange();
+      const mapped = this._getMappedRange();
       const res = readData(new BufferReader(mapped), this.dataType);
-      gpuBuffer.unmap();
+      this._unmapBuffer();
       return res;
     }
 
@@ -508,6 +527,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       return;
     }
     this._destroyed = true;
+    this._mappedRange = undefined;
     if (this._ownBuffer) {
       this._buffer?.destroy();
     }
