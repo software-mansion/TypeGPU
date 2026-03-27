@@ -53,9 +53,9 @@ export interface NumberArrayView {
 }
 
 /**
- * Maps a scalar or vector element schema to the corresponding TypedArray type.
+ * Maps a scalar, vector, or matrix element schema to the corresponding TypedArray type.
  */
-export type TypedArrayFor<T> = T extends Vec2f | Vec3f | Vec4f | F32
+export type TypedArrayFor<T> = T extends Vec2f | Vec3f | Vec4f | F32 | Mat2x2f | Mat3x3f | Mat4x4f
   ? Float32Array
   : T extends Vec2h | Vec3h | Vec4h | F16
     ? Float16Array
@@ -66,6 +66,14 @@ export type TypedArrayFor<T> = T extends Vec2f | Vec3f | Vec4f | F32
         : T extends U16
           ? Uint16Array
           : never;
+
+/**
+ * Maps struct properties to a record of TypedArrays (Struct-of-Arrays input format).
+ * If any property resolves to `never` (e.g. nested structs), the type becomes unconstructable.
+ */
+export type SoAInputFor<TProps extends Record<string, BaseData>> = {
+  [K in keyof TProps]: TypedArrayFor<TProps[K]>;
+};
 
 /**
  * Vector infix notation.
@@ -1167,7 +1175,10 @@ export interface WgslArray<out TElement extends BaseData = BaseData> extends Bas
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TElement>[];
-  readonly [$inRepr]: InferInput<TElement>[] | TypedArrayFor<TElement>;
+  readonly [$inRepr]:
+    | InferInput<TElement>[]
+    | TypedArrayFor<TElement>
+    | (TElement extends WgslStruct<infer TProps> ? SoAInputFor<TProps> : never);
   readonly [$gpuRepr]: InferGPU<TElement>[];
   readonly [$reprPartial]: { idx: number; value: InferPartial<TElement> }[] | undefined;
   readonly [$memIdent]: WgslArray<MemIdentity<TElement>>;

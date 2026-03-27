@@ -978,4 +978,74 @@ describe('ValidateBufferSchema', () => {
     createMyBuffer(d.f32, ['uniform']);
     createMyBuffer(d.unorm8x4, ['vertex']);
   });
+
+  it('should write struct-of-arrays (SoA) data to an array-of-structs buffer', ({
+    root,
+    device,
+  }) => {
+    const Particle = d.struct({
+      pos: d.vec3f,
+      vel: d.f32,
+    });
+    // vec3f alignment=16, size=12; f32 alignment=4, size=4
+    // struct layout: pos @ 0 (12 bytes), vel @ 12 (4 bytes) → struct size=16, alignment=16
+    // element stride = 16
+
+    const schema = d.arrayOf(Particle, 2);
+    const buffer = root.createBuffer(schema);
+    const rawBuffer = root.unwrap(buffer);
+
+    buffer.write({
+      pos: new Float32Array([1, 2, 3, 4, 5, 6]),
+      vel: new Float32Array([10, 20]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const result = new Float32Array(uploadedBuffer);
+
+    // Element 0: pos=(1,2,3) @ offset 0, vel=10 @ offset 12
+    // Element 1: pos=(4,5,6) @ offset 16, vel=20 @ offset 28
+    expect([...result]).toStrictEqual([
+      1,
+      2,
+      3,
+      10, // element 0
+      4,
+      5,
+      6,
+      20, // element 1
+    ]);
+  });
+
+  it('should write SoA data with integer fields', ({ root, device }) => {
+    const Entry = d.struct({
+      id: d.u32,
+      heading: d.vec3i,
+    });
+    // u32: align=4, size=4; vec3i: align=16, size=12
+    // struct layout: id @ 0 (4 bytes), [12 bytes padding], heading @ 16 (12 bytes) → struct size=32
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    buffer.write({
+      id: new Uint32Array([100, 200]),
+      heading: new Int32Array([1, 2, 3, 4, 5, 6]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+
+    // Element 0: id=100 @ byte 0, heading=(1,2,3) @ byte 16
+    // Element 1: id=200 @ byte 32, heading=(4,5,6) @ byte 48
+    const ids = [
+      new DataView(uploadedBuffer).getUint32(0, true),
+      new DataView(uploadedBuffer).getUint32(32, true),
+    ];
+    const headings = [new Int32Array(uploadedBuffer, 16, 3), new Int32Array(uploadedBuffer, 48, 3)];
+
+    expect(ids).toStrictEqual([100, 200]);
+    expect([...headings[0]!]).toStrictEqual([1, 2, 3]);
+    expect([...headings[1]!]).toStrictEqual([4, 5, 6]);
+  });
 });

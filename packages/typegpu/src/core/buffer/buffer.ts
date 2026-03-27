@@ -5,7 +5,8 @@ import type { AnyData } from '../../data/dataTypes.ts';
 import { getWriteInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
-import { isWgslArray, isWgslData } from '../../data/wgslTypes.ts';
+import { writeSoA } from '../../data/soaIO.ts';
+import { isWgslArray, isWgslData, isWgslStruct } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
@@ -320,6 +321,26 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       const copyLen = Math.min(src.byteLength, regionSize);
       new Uint8Array(target).set(src.subarray(0, copyLen), startOffset);
       return;
+    }
+
+    // SoA path: struct-of-arrays input for array-of-structs schema
+    if (
+      isWgslArray(this.dataType) &&
+      isWgslStruct(this.dataType.elementType) &&
+      !Array.isArray(data) &&
+      typeof data === 'object' &&
+      data !== null
+    ) {
+      const firstValue = Object.values(data as Record<string, unknown>)[0];
+      if (firstValue !== undefined && ArrayBuffer.isView(firstValue)) {
+        writeSoA(
+          new Uint8Array(target),
+          this.dataType,
+          data as Record<string, ArrayBufferView>,
+          startOffset,
+        );
+        return;
+      }
     }
 
     const dataView = new DataView(target);
