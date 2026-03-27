@@ -76,7 +76,7 @@ function fbm(pos: d.v3f): number {
   'use gpu';
   let sum = d.f32();
 
-  for (const i of tgpu.unroll(FBM_OCTAVES)) {
+  for (const i of tgpu.unroll(std.range(FBM_OCTAVES))) {
     sum +=
       noise3d(pos * (CLOUD_FREQUENCY * FBM_LACUNARITY ** i)) *
       (CLOUD_AMPLITUDE * FBM_PERSISTENCE ** i);

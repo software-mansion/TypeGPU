@@ -155,7 +155,7 @@ export class IcosphereGenerator {
       ]);
 
       const baseIndexNext = triangleIndex * 12;
-      for (const i of tgpu.unroll(12)) {
+      for (const i of tgpu.unroll(std.range(12))) {
         const reprojectedVertex = newVertices[i];
 
         const triBase = i - (i % 3);

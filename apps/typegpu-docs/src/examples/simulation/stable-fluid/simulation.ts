@@ -4,7 +4,7 @@ import * as p from './params.ts';
 const getNeighbors = (coords: d.v2i, bounds: d.v2i): d.v2i[] => {
   'use gpu';
   const adjacentOffsets = [d.vec2i(-1, 0), d.vec2i(0, -1), d.vec2i(1, 0), d.vec2i(0, 1)];
-  for (const i of tgpu.unroll(4)) {
+  for (const i of tgpu.unroll(std.range(4))) {
     adjacentOffsets[i] = std.clamp(coords + adjacentOffsets[i], d.vec2i(), bounds - d.vec2i(1));
   }
   return adjacentOffsets;
