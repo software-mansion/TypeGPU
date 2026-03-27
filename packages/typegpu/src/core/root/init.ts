@@ -152,6 +152,30 @@ export class TgpuGuardedComputePipelineImpl<
     );
   }
 
+  withPerformanceCallback(
+    callback: (start: bigint, end: bigint) => void | Promise<void>,
+  ): TgpuGuardedComputePipeline<TArgs> {
+    return new TgpuGuardedComputePipelineImpl(
+      this.#root,
+      this.#pipeline.withPerformanceCallback(callback),
+      this.#sizeUniform,
+      this.#workgroupSize,
+    );
+  }
+
+  withTimestampWrites(options: {
+    querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
+    beginningOfPassWriteIndex?: number;
+    endOfPassWriteIndex?: number;
+  }): TgpuGuardedComputePipeline<TArgs> {
+    return new TgpuGuardedComputePipelineImpl(
+      this.#root,
+      this.#pipeline.withTimestampWrites(options),
+      this.#sizeUniform,
+      this.#workgroupSize,
+    );
+  }
+
   dispatchThreads(...threads: TArgs): void {
     const sanitizedSize = toVec3(threads);
     const workgroupCount = ceil(vec3f(sanitizedSize).div(vec3f(this.#workgroupSize)));
