@@ -409,8 +409,7 @@ When the buffer schema is an `array<struct<...>>`, you can write the data in a s
 This is useful when your CPU-side data is already stored per-field, such as simulation attributes kept in separate typed arrays.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
-import { writeSoA } from 'typegpu/common';
+import tgpu, { d, common } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -421,7 +420,7 @@ const Particle = d.struct({
 
 const particleBuffer = root.createBuffer(d.arrayOf(Particle, 2));
 
-writeSoA(particleBuffer, {
+common.writeSoA(particleBuffer, {
   pos: new Float32Array([
     1, 2, 3,
     4, 5, 6,
@@ -452,8 +451,7 @@ TypeGPU inserts the required WGSL padding while scattering the data into the tar
 You can also restrict the write to a slice of the destination buffer:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
-import { writeSoA } from 'typegpu/common';
+import tgpu, { d, common } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -468,7 +466,7 @@ const buffer = root.createBuffer(schema);
 const start = d.memoryLayoutOf(schema, (a) => a[1]);
 const end = d.memoryLayoutOf(schema, (a) => a[3]);
 
-writeSoA(
+common.writeSoA(
   buffer,
   {
     id: new Uint32Array([30, 40]),
