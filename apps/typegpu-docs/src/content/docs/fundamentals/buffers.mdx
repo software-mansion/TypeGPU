@@ -160,6 +160,26 @@ const buffer2 = root.createBuffer(d.arrayOf(d.vec3f, 2), [
 ]);
 ```
 
+For cases where a plain typed value is not enough, you can also pass an initializer callback.
+It receives the newly created typed buffer while it is still mapped, so you can populate it with multiple writes or helper utilities before the first upload.
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const Schema = d.arrayOf(d.u32, 6);
+const firstChunk = d.memoryLayoutOf(Schema, (a) => a[1]);
+const secondChunk = d.memoryLayoutOf(Schema, (a) => a[4]);
+
+const buffer = root.createBuffer(Schema, (mappedBuffer) => {
+  mappedBuffer.write([10, 20], { startOffset: firstChunk.offset });
+  mappedBuffer.write([30, 40], { startOffset: secondChunk.offset });
+});
+```
+
+For buffers whose CPU-side data already lives in separate per-field arrays, see the <a href="#writing-struct-of-arrays-soa-data">SoA write section</a>.
+
 ### Using an existing buffer
 
 You can also create a buffer using an existing WebGPU buffer. This is useful when you have existing logic but want to introduce type-safe data operations.
@@ -382,6 +402,93 @@ planetBuffer.writePartial({
   ],
 });
 ```
+
+### Writing struct-of-arrays (SoA) data
+
+When the buffer schema is an `array<struct<...>>`, you can write the data in a struct-of-arrays form with `writeSoA` from `typegpu/common`.
+This is useful when your CPU-side data is already stored per-field, such as simulation attributes kept in separate typed arrays.
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+import { writeSoA } from 'typegpu/common';
+
+const root = await tgpu.init();
+// ---cut---
+const Particle = d.struct({
+  pos: d.vec3f,
+  vel: d.f32,
+});
+
+const particleBuffer = root.createBuffer(d.arrayOf(Particle, 2));
+
+writeSoA(particleBuffer, {
+  pos: new Float32Array([
+    1, 2, 3,
+    4, 5, 6,
+  ]),
+  vel: new Float32Array([10, 20]),
+});
+```
+
+`writeSoA` converts those field-wise arrays into the buffer's GPU array-of-structs layout before uploading.
+For the example above, the resulting bytes match two `Particle` structs laid out in memory, including the padding required by `vec3f`.
+
+:::note[Supported field shapes]
+SoA writes work for arrays of structs whose fields are:
+- scalars,
+- vectors,
+- matrices,
+- fixed-size arrays of scalars, vectors, or matrices.
+
+Nested struct fields are not supported.
+:::
+
+:::tip[Packed input, padded output]
+Unlike `.write()` with a raw `TypedArray` or `ArrayBuffer`, `writeSoA` expects each field in its natural packed form.
+For example, a `vec3f` field should be provided as 3 floats per element, not 4, and a `mat3x3f` field should be provided as 9 floats per matrix, not 12.
+TypeGPU inserts the required WGSL padding while scattering the data into the target buffer.
+:::
+
+You can also restrict the write to a slice of the destination buffer:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+import { writeSoA } from 'typegpu/common';
+
+const root = await tgpu.init();
+// ---cut---
+const Entry = d.struct({
+  id: d.u32,
+  values: d.arrayOf(d.vec3f, 2),
+});
+
+const schema = d.arrayOf(Entry, 4);
+const buffer = root.createBuffer(schema);
+
+const start = d.memoryLayoutOf(schema, (a) => a[1]);
+const end = d.memoryLayoutOf(schema, (a) => a[3]);
+
+writeSoA(
+  buffer,
+  {
+    id: new Uint32Array([30, 40]),
+    values: new Float32Array([
+      1, 2, 3,
+      4, 5, 6,
+      7, 8, 9,
+      10, 11, 12,
+    ]),
+  },
+  {
+    startOffset: start.offset,
+    endOffset: end.offset,
+  },
+);
+```
+
+If `endOffset` is omitted, TypeGPU infers the written range from the provided field arrays and stops at the shortest complete element count implied by the data.
+`startOffset` is still byte-based and should point to the start of a struct element, so `d.memoryLayoutOf` is the safest way to compute it.
+All struct fields must be present in the SoA object.
 
 ### Copying
 

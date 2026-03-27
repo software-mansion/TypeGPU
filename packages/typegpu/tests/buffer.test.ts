@@ -80,6 +80,16 @@ describe('TgpuBuffer', () => {
     const s1 = d.struct({ a: d.u32, b: d.u32, c: d.vec3i });
     const s2 = d.struct({ a: d.u32, b: s1, c: d.vec4u });
 
+    const schema = d.arrayOf(d.u32, 6);
+    const firstChunk = d.memoryLayoutOf(schema, (a) => a[1]);
+    const secondChunk = d.memoryLayoutOf(schema, (a) => a[4]);
+
+    const buffer = root.createBuffer(schema, (mappedBuffer) => {
+      mappedBuffer.write([10, 20], { startOffset: firstChunk.offset });
+      mappedBuffer.write([30, 40], { startOffset: secondChunk.offset });
+    });
+    const raw = buffer.buffer;
+
     const dataBuffer = root.createBuffer(s2).$usage('uniform');
 
     root.unwrap(dataBuffer);
@@ -1161,6 +1171,33 @@ describe('ValidateBufferSchema', () => {
     const result = new Float32Array(uploadedBuffer);
 
     expect([...result]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0, 10, 11, 12, 0]);
+  });
+
+  it('should write SoA data for struct fields that are arrays of arrays of padded vectors', ({
+    root,
+    device,
+  }) => {
+    const Entry = d.struct({
+      values: d.arrayOf(d.arrayOf(d.vec3f, 2), 2),
+    });
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      values: new Float32Array([
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+      ]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const result = new Float32Array(uploadedBuffer);
+
+    expect([...result]).toStrictEqual([
+      1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0, 10, 11, 12, 0, 13, 14, 15, 0, 16, 17, 18, 0, 19, 20, 21,
+      0, 22, 23, 24, 0,
+    ]);
   });
 
   it('should write SoA data for struct fields that are arrays of padded matrices', ({
