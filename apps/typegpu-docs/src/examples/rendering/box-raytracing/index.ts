@@ -1,5 +1,5 @@
 import { linearToSrgb, srgbToLinear } from '@typegpu/color';
-import tgpu, { d } from 'typegpu';
+import tgpu, { d, type TgpuFragmentFn, type TgpuVertexFn } from 'typegpu';
 import { add, discard, div, max, min, mul, normalize, pow, sub } from 'typegpu/std';
 import { mat4 } from 'wgpu-matrix';
 import { defineControls } from '../../common/defineControls.ts';
@@ -133,41 +133,39 @@ const getBoxIntersection = tgpu
 }`)
   .$uses({ IntersectionStruct });
 
-const Varying = {
-  rayWorldOrigin: d.vec3f,
-};
-
-const mainVertex = tgpu.vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, ...Varying },
-})((input) => {
+const mainVertex = ({ $vertexIndex: vid }: TgpuVertexFn.AutoIn<{}>) => {
+  'use gpu';
   const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
 
-  const rayWorldOrigin = mul(uniforms.$.invViewMatrix, d.vec4f(0, 0, 0, 1)).xyz;
+  const rayWorldOrigin = (uniforms.$.invViewMatrix * d.vec4f(0, 0, 0, 1)).xyz;
 
-  return { pos: d.vec4f(pos[input.vertexIndex], 0.0, 1.0), rayWorldOrigin };
-});
+  return {
+    $position: d.vec4f(pos[vid], 0, 1),
+    rayWorldOrigin,
+  } satisfies TgpuVertexFn.AutoOut;
+};
 
-const fragmentFunction = tgpu.fragmentFn({
-  in: { position: d.builtin.position, ...Varying },
-  out: d.vec4f,
-})((input) => {
-  const boxSize3 = d.vec3f(d.f32(uniforms.$.boxSize));
-  const halfBoxSize3 = mul(0.5, boxSize3);
-  const halfCanvasDims = mul(0.5, uniforms.$.canvasDims);
+const fragmentFunction = ({
+  $position,
+  rayWorldOrigin,
+}: TgpuFragmentFn.AutoIn<{ rayWorldOrigin: d.v3f }>) => {
+  'use gpu';
+  const boxSize3 = d.vec3f(uniforms.$.boxSize);
+  const halfBoxSize3 = 0.5 * boxSize3;
+  const halfCanvasDims = 0.5 * uniforms.$.canvasDims;
 
   const minDim = min(uniforms.$.canvasDims.x, uniforms.$.canvasDims.y);
-  const viewCoords = div(sub(input.position.xy, halfCanvasDims), minDim);
+  const viewCoords = ($position.xy - halfCanvasDims) / minDim;
 
   const ray = Ray({
-    origin: input.rayWorldOrigin,
-    direction: mul(uniforms.$.invViewMatrix, d.vec4f(normalize(d.vec3f(viewCoords, 1)), 0)).xyz,
+    origin: rayWorldOrigin,
+    direction: (uniforms.$.invViewMatrix * d.vec4f(normalize(d.vec3f(viewCoords, 1)), 0)).xyz,
   });
 
   const bigBoxIntersection = getBoxIntersection(
     AxisAlignedBounds({
-      min: mul(-1, halfBoxSize3),
-      max: add(cubeSize, halfBoxSize3),
+      min: -1 * halfBoxSize3,
+      max: cubeSize + halfBoxSize3,
     }),
     ray,
   );
@@ -188,12 +186,12 @@ const fragmentFunction = tgpu.fragmentFn({
           continue;
         }
 
-        const ijkScaled = d.vec3f(d.f32(i), d.f32(j), d.f32(k));
+        const ijkScaled = d.vec3f(i, j, k);
 
         const intersection = getBoxIntersection(
           AxisAlignedBounds({
-            min: sub(ijkScaled, halfBoxSize3),
-            max: add(ijkScaled, halfBoxSize3),
+            min: ijkScaled - halfBoxSize3,
+            max: ijkScaled + halfBoxSize3,
           }),
           ray,
         );
@@ -202,25 +200,25 @@ const fragmentFunction = tgpu.fragmentFn({
           const boxDensity =
             max(0, intersection.tMax - intersection.tMin) * pow(uniforms.$.materialDensity, 2);
           density += boxDensity;
-          invColor = add(invColor, mul(boxDensity, div(d.vec3f(1), boxMatrix.$[i][j][k].albedo)));
+          invColor += boxDensity * (1 / boxMatrix.$[i][j][k].albedo);
           intersectionFound = true;
         }
       }
     }
   }
 
-  const linear = div(d.vec3f(1), invColor);
+  const linear = 1 / invColor;
   const srgb = linearToSrgb(linear);
   const gamma = 2.2;
-  const corrected = pow(srgb, d.vec3f(1.0 / gamma));
+  const corrected = pow(srgb, d.vec3f(1 / gamma));
 
   if (intersectionFound) {
-    return mul(min(density, 1), d.vec4f(min(corrected, d.vec3f(1)), 1));
+    return min(density, 1) * d.vec4f(min(corrected, d.vec3f(1)), 1);
   }
 
   discard();
   return d.vec4f();
-});
+};
 
 // pipeline
 
