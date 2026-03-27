@@ -39,7 +39,7 @@ export const simulate = (fishIndex: number) => {
   if (cohesionCount > 0) {
     cohesion = cohesion / cohesionCount - fishData.position;
   }
-  for (const i of tgpu.unroll(3)) {
+  for (const i of tgpu.unroll(std.range(3))) {
     const repulsion = d.vec3f();
     repulsion[i] = 1;
 

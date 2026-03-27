@@ -723,17 +723,17 @@ describe('tgpu.unroll', () => {
       }"
     `);
     expect(tgpu.resolve([tgpu.fn(f).with(unroll, false)])).toMatchInlineSnapshot(`
-        "fn f() {
-          var arr = array<i32, 3>(1, 2, 3);
-          var r = 0f;
-          for (var i = 0u; i < 3u; i++) {
-            let foo = arr[i];
-            {
-              r += f32(foo);
-            }
+      "fn f() {
+        var arr = array<i32, 3>(1, 2, 3);
+        var r = 0f;
+        for (var i = 0u; i < 3u; i += 1u) {
+          let foo = arr[i];
+          {
+            r += f32(foo);
           }
-        }"
-      `);
+        }
+      }"
+    `);
   });
 
   it('throws when `continue` or `break` is used inside the loop body', () => {
@@ -825,7 +825,7 @@ describe('tgpu.unroll', () => {
             i--;
             break;
           }
-          for (var i_1 = 0u; i_1 < 3u; i_1++) {
+          for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
             let boo = arr[i_1];
             {
               continue;
@@ -844,7 +844,7 @@ describe('tgpu.unroll', () => {
             i--;
             break;
           }
-          for (var i_1 = 0u; i_1 < 3u; i_1++) {
+          for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
             let boo = arr[i_1];
             {
               continue;

@@ -341,7 +341,7 @@ fn processNeighbors(cell: vec2i) {
 }
 ```
 
-If you'd like to unroll over a range of numbers, use `tgpu.unroll(n)`.
+If you'd like to unroll over a range of numbers, use `tgpu.unroll(std.range(n))`.
 
 ```ts
 // (...)
@@ -352,7 +352,7 @@ function fbm(pos: d.v3f): number {
   let sum = d.f32();
 
   // i = 0, 1, 2
-  for (const i of tgpu.unroll(FBM_OCTAVES)) {
+  for (const i of tgpu.unroll(std.range(FBM_OCTAVES))) {
     sum +=
       noise3d(pos * (CLOUD_FREQUENCY * FBM_LACUNARITY ** i)) *
       (CLOUD_AMPLITUDE * FBM_PERSISTENCE ** i);

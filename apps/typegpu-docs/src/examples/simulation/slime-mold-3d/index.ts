@@ -192,7 +192,7 @@ const sense3D = (pos: d.v3f, direction: d.v3f) => {
   const perp1 = getPerpendicular(direction);
   const perp2 = std.cross(direction, perp1);
 
-  for (const i of tgpu.unroll(numSamples)) {
+  for (const i of tgpu.unroll(std.range(numSamples))) {
     const theta = (i / numSamples) * 2 * Math.PI;
 
     const coneOffset = perp1 * std.cos(theta) + perp2 * std.sin(theta);
