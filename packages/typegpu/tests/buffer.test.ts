@@ -80,16 +80,6 @@ describe('TgpuBuffer', () => {
     const s1 = d.struct({ a: d.u32, b: d.u32, c: d.vec3i });
     const s2 = d.struct({ a: d.u32, b: s1, c: d.vec4u });
 
-    const schema = d.arrayOf(d.u32, 6);
-    const firstChunk = d.memoryLayoutOf(schema, (a) => a[1]);
-    const secondChunk = d.memoryLayoutOf(schema, (a) => a[4]);
-
-    const buffer = root.createBuffer(schema, (mappedBuffer) => {
-      mappedBuffer.write([10, 20], { startOffset: firstChunk.offset });
-      mappedBuffer.write([30, 40], { startOffset: secondChunk.offset });
-    });
-    const raw = buffer.buffer;
-
     const dataBuffer = root.createBuffer(s2).$usage('uniform');
 
     root.unwrap(dataBuffer);
