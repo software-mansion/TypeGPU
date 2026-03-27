@@ -115,7 +115,7 @@ importers:
     devDependencies:
       '@types/bun':
         specifier: latest
-        version: 1.3.10
+        version: 1.3.11
 
   apps/infra-benchmarks:
     devDependencies:
@@ -243,6 +243,9 @@ importers:
       expressive-code-twoslash:
         specifier: ^0.5.3
         version: 0.5.3(@expressive-code/core@0.41.7)(expressive-code@0.41.7)(tsover@5.9.11)
+      fft.js:
+        specifier: ^4.0.4
+        version: 4.0.4
       fuse.js:
         specifier: catalog:frontend
         version: 7.1.0
@@ -676,6 +679,9 @@ importers:
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
+      vitest:
+        specifier: catalog:test
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@25.1.0)(@vitest/browser@3.2.4)(jiti@2.6.1)(jsdom@27.0.0(canvas@3.2.0)(postcss@8.5.6))(lightningcss@1.30.2)(msw@2.10.2(@types/node@25.1.0)(tsover@5.9.11))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1)
     publishDirectory: dist
 
   packages/typegpu-testing-utility:
@@ -3640,8 +3646,8 @@ packages:
   '@types/bun@1.2.22':
     resolution: {integrity: sha512-5A/KrKos2ZcN0c6ljRSOa1fYIyCKhZfIVYeuyb4snnvomnpFqC0tTsEkdqNxbAgExV384OETQ//WAjl3XbYqQA==}
 
-  '@types/bun@1.3.10':
-    resolution: {integrity: sha512-0+rlrUrOrTSskibryHbvQkDOWRJwJZqZlxrUs1u4oOoTln8+WIXBPmAuCF35SWB2z4Zl3E84Nl/D0P7803nigQ==}
+  '@types/bun@1.3.11':
+    resolution: {integrity: sha512-5vPne5QvtpjGpsGYXiFyycfpDF2ECyPcTSsFBMa0fraoxiQyMJ3SmuQIGhzPg2WJuWxVBoxWJ2kClYTcw/4fAg==}
 
   '@types/chai@5.2.2':
     resolution: {integrity: sha512-8kB30R7Hwqf40JPiKhVzodJs2Qc1ZJ5zuT3uzw5Hq/dhNCl3G3l83jfpdI1e20BP348+fV7VIL/+FxaXkqBmWg==}
@@ -4265,8 +4271,8 @@ packages:
     peerDependencies:
       '@types/react': ^19
 
-  bun-types@1.3.10:
-    resolution: {integrity: sha512-tcpfCCl6XWo6nCVnpcVrxQ+9AYN1iqMIzgrSKYMB/fjLtV2eyAVEg7AxQJuCq/26R6HpKWykQXuSOq/21RYcbg==}
+  bun-types@1.3.11:
+    resolution: {integrity: sha512-1KGPpoxQWl9f6wcZh57LvrPIInQMn2TQ7jsgxqpRzg+l0QPOFvJVH7HmvHo/AiPgwXy+/Thf6Ov3EdVn1vOabg==}
 
   cac@6.7.14:
     resolution: {integrity: sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ==}
@@ -5034,6 +5040,9 @@ packages:
 
   fflate@0.8.2:
     resolution: {integrity: sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A==}
+
+  fft.js@4.0.4:
+    resolution: {integrity: sha512-f9c00hphOgeQTlDyavwTtu6RiK8AIFjD6+jvXkNkpeQ7rirK3uFWVpalkoS4LAwbdX7mfZ8aoBfFVQX1Re/8aw==}
 
   figures@6.1.0:
     resolution: {integrity: sha512-d+l3qxjSesT4V7v2fh+QnmFnUWv9lSpjarhShNTgBOfA0ttejbQUAlHLitbjkoRiDulW0OPoQPYIGhIC8ohejg==}
@@ -10562,9 +10571,9 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
-  '@types/bun@1.3.10':
+  '@types/bun@1.3.11':
     dependencies:
-      bun-types: 1.3.10
+      bun-types: 1.3.11
 
   '@types/chai@5.2.2':
     dependencies:
@@ -11418,7 +11427,7 @@ snapshots:
       '@types/node': 25.1.0
       '@types/react': 19.1.8
 
-  bun-types@1.3.10:
+  bun-types@1.3.11:
     dependencies:
       '@types/node': 25.1.0
 
@@ -12301,6 +12310,8 @@ snapshots:
       picomatch: 4.0.3
 
   fflate@0.8.2: {}
+
+  fft.js@4.0.4: {}
 
   figures@6.1.0:
     dependencies:

@@ -1,0 +1,10 @@
+---
+description: Do not run Astro typecheck in this repo
+alwaysApply: true
+---
+
+# Do not run `astro check`
+
+Never run `pnpm astro check`, `astro check`, or similar Astro CLI validation as part of debugging, verification, or “typecheck the docs app” unless the user **explicitly** asks for it.
+
+Prefer targeted checks (e.g. `tsc` on a specific package, linter on edited files) or skip automated checks when the user did not request them.
