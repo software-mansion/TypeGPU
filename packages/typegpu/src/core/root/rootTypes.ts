@@ -15,6 +15,7 @@ import type {
 import type {
   ExtractInvalidSchemaError,
   InferGPURecord,
+  InferInput,
   IsValidBufferSchema,
   IsValidStorageSchema,
   IsValidUniformSchema,
@@ -30,7 +31,7 @@ import type {
 import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
-import type { BufferInitialData, TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
+import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
 import type { TgpuMutable, TgpuReadonly, TgpuUniform } from '../buffer/bufferShorthand.ts';
 import type { TgpuFixedComparisonSampler, TgpuFixedSampler } from '../sampler/sampler.ts';
 import type { IORecord } from '../function/fnTypes.ts';
@@ -834,8 +835,12 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    */
   createBuffer<TData extends AnyData>(
     typeSchema: ValidateBufferSchema<TData>,
+    initializer: (buffer: TgpuBuffer<TData>) => void,
+  ): TgpuBuffer<TData>;
+  createBuffer<TData extends AnyData>(
+    typeSchema: ValidateBufferSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: BufferInitialData<NoInfer<TData>>,
+    initial?: InferInput<NoInfer<TData>>,
   ): TgpuBuffer<TData>;
 
   /**
@@ -862,8 +867,12 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    */
   createUniform<TData extends AnyWgslData>(
     typeSchema: ValidateUniformSchema<TData>,
+    initializer: (buffer: TgpuBuffer<TData>) => void,
+  ): TgpuUniform<TData>;
+  createUniform<TData extends AnyWgslData>(
+    typeSchema: ValidateUniformSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: BufferInitialData<NoInfer<TData>>,
+    initial?: InferInput<NoInfer<TData>>,
   ): TgpuUniform<TData>;
 
   /**
@@ -889,8 +898,12 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    */
   createMutable<TData extends AnyWgslData>(
     typeSchema: ValidateStorageSchema<TData>,
+    initializer: (buffer: TgpuBuffer<TData>) => void,
+  ): TgpuMutable<TData>;
+  createMutable<TData extends AnyWgslData>(
+    typeSchema: ValidateStorageSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: BufferInitialData<NoInfer<TData>>,
+    initial?: InferInput<NoInfer<TData>>,
   ): TgpuMutable<TData>;
 
   /**
@@ -916,8 +929,12 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    */
   createReadonly<TData extends AnyWgslData>(
     typeSchema: ValidateStorageSchema<TData>,
+    initializer: (buffer: TgpuBuffer<TData>) => void,
+  ): TgpuReadonly<TData>;
+  createReadonly<TData extends AnyWgslData>(
+    typeSchema: ValidateStorageSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: BufferInitialData<NoInfer<TData>>,
+    initial?: InferInput<NoInfer<TData>>,
   ): TgpuReadonly<TData>;
 
   /**

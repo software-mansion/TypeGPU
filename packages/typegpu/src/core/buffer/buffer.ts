@@ -145,7 +145,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T];
 
   compileWriter(): void;
-  write(data: InferInput<TData>, options?: BufferWriteOptions): void;
+  write(data: Prettify<InferInput<TData>>, options?: BufferWriteOptions): void;
   write(data: ArrayBuffer, options?: BufferWriteOptions): void;
   writePartial(data: InferPartial<TData>): void;
   clear(): void;
