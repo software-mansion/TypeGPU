@@ -3,6 +3,7 @@ import * as d from 'typegpu/data';
 export const VertexData = d.struct({
   position: d.vec3f,
   normal: d.vec3f,
+  materialId: d.u32,
   joint: d.vec4u,
   weight: d.vec4f,
 });
@@ -39,6 +40,7 @@ export interface Animation {
 export interface MeshData {
   positions: Float32Array;
   normals: Float32Array;
+  materialIds: Uint32Array;
   joints: Uint32Array;
   weights: Float32Array;
   indices: Uint16Array;
@@ -47,6 +49,7 @@ export interface MeshData {
 }
 
 export interface ModelData extends MeshData {
+  materials: [number, number, number, number][];
   inverseBindMatrices: Float32Array;
   nodes: GLTFNode[];
   jointNodes: number[];

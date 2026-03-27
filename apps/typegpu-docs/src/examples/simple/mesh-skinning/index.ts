@@ -26,6 +26,12 @@ const INITIAL_CAMERA_POSITION = [3, 3, 3, 1] as const;
 const CAMERA_TARGET_SMOOTHING = 0.08;
 const CAMERA_TARGET_Y_OFFSET = 0.9;
 const TWIST_DEMO_ID = 'Twist_Demo';
+const DEMO_MATERIAL_ID = 0;
+const LIGHTING = {
+  key: d.vec3f(0.42, 0.84, 0.33),
+  fill: d.vec3f(-0.8, 0.25, 0.55),
+  specularColor: d.vec3f(1.0, 0.96, 0.9),
+} as const;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const modelData = await loadGLBModel(MODEL_ASSET.path);
@@ -120,8 +126,17 @@ function createMsaaTexture() {
 
 let depthTexture = createDepthTexture();
 let msaaTexture = createMsaaTexture();
+const materialPalette = [
+  d.vec4f(0.82, 0.82, 0.82, 1),
+  ...modelData.materials.map((material) => d.vec4f(...material)),
+];
 
 const cameraUniform = root.createUniform(d.mat4x4f);
+const cameraPositionUniform = root.createUniform(d.vec4f, d.vec4f(...INITIAL_CAMERA_POSITION));
+const materialUniform = root.createReadonly(
+  d.arrayOf(d.vec4f, materialPalette.length),
+  materialPalette,
+);
 const jointMatricesUniform = root.createUniform(
   d.arrayOf(d.mat4x4f, MAX_JOINTS),
   CpuState.jointMatrices,
@@ -131,13 +146,19 @@ const jointDualQuatsUniform = root.createUniform(
   CpuState.jointDualQuats,
 );
 
-function createRenderMesh(mesh: MeshData) {
+function createRenderMesh(mesh: MeshData, materialIdOffset = 0) {
+  const materialIds =
+    materialIdOffset === 0
+      ? mesh.materialIds
+      : mesh.materialIds.map((materialId) => materialId + materialIdOffset);
+
   return {
     vertexBuffer: root
       .createBuffer(d.arrayOf(VertexData, mesh.vertexCount), (buffer) => {
         common.writeSoA(buffer, {
           position: mesh.positions,
           normal: mesh.normals,
+          materialId: materialIds,
           joint: mesh.joints,
           weight: mesh.weights,
         });
@@ -150,15 +171,15 @@ function createRenderMesh(mesh: MeshData) {
   };
 }
 
-const modelRenderMesh = createRenderMesh(modelData);
-const demoRenderMesh = createRenderMesh(twistDemoMesh);
+const modelRenderMesh = createRenderMesh(modelData, 1);
+const demoRenderMesh = createRenderMesh(twistDemoMesh, DEMO_MATERIAL_ID);
 
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(VertexData));
 
 const vertex = tgpu.vertexFn({
-  in: { position: d.vec3f, normal: d.vec3f, joint: d.vec4u, weight: d.vec4f },
-  out: { pos: d.builtin.position, normal: d.vec3f },
-})(({ position, normal, joint, weight }) => {
+  in: { position: d.vec3f, normal: d.vec3f, materialId: d.u32, joint: d.vec4u, weight: d.vec4f },
+  out: { pos: d.builtin.position, normal: d.vec3f, color: d.vec3f, worldPos: d.vec3f },
+})(({ position, normal, materialId, joint, weight }) => {
   'use gpu';
   const jointMatrices = jointMatricesUniform.$;
   const skinMatrix =
@@ -166,10 +187,13 @@ const vertex = tgpu.vertexFn({
     jointMatrices[joint.y] * weight.y +
     jointMatrices[joint.z] * weight.z +
     jointMatrices[joint.w] * weight.w;
+  const skinnedPosition = skinMatrix * d.vec4f(position, 1);
 
   return {
-    pos: cameraUniform.$ * (skinMatrix * d.vec4f(position, 1)),
+    pos: cameraUniform.$ * skinnedPosition,
     normal: std.normalize((skinMatrix * d.vec4f(normal, 0)).xyz),
+    color: materialUniform.$[materialId].xyz,
+    worldPos: skinnedPosition.xyz,
   };
 });
 
@@ -180,9 +204,9 @@ const rotateByUnitQuat = (value: d.v3f, quaternion: d.v4f): d.v3f => {
 };
 
 const dqsVertex = tgpu.vertexFn({
-  in: { position: d.vec3f, normal: d.vec3f, joint: d.vec4u, weight: d.vec4f },
-  out: { pos: d.builtin.position, normal: d.vec3f },
-})(({ position, normal, joint, weight }) => {
+  in: { position: d.vec3f, normal: d.vec3f, materialId: d.u32, joint: d.vec4u, weight: d.vec4f },
+  out: { pos: d.builtin.position, normal: d.vec3f, color: d.vec3f, worldPos: d.vec3f },
+})(({ position, normal, materialId, joint, weight }) => {
   'use gpu';
   const dualQuats = jointDualQuatsUniform.$;
   const referenceReal = dualQuats[joint.x * 2];
@@ -203,19 +227,31 @@ const dqsVertex = tgpu.vertexFn({
   const dual = dualAccum * invLength;
   const translation = 2.0 * (real.w * dual.xyz - dual.w * real.xyz + std.cross(real.xyz, dual.xyz));
 
+  const worldPos = rotateByUnitQuat(position, real) + translation;
+
   return {
-    pos: cameraUniform.$ * d.vec4f(rotateByUnitQuat(position, real) + translation, 1),
+    pos: cameraUniform.$ * d.vec4f(worldPos, 1),
     normal: std.normalize(rotateByUnitQuat(normal, real)),
+    color: materialUniform.$[materialId].xyz,
+    worldPos,
   };
 });
 
 const fragment = tgpu.fragmentFn({
-  in: { normal: d.vec3f },
+  in: { normal: d.vec3f, color: d.vec3f, worldPos: d.vec3f },
   out: d.vec4f,
-})(({ normal }) => {
+})(({ normal, color, worldPos }) => {
   'use gpu';
-  const diffuse = std.saturate(std.dot(normal, std.normalize(d.vec3f(1, 0, 1))));
-  return d.vec4f(d.vec3f(0.8) * (diffuse * 0.7 + 0.3), 1);
+  const viewDir = std.normalize(cameraPositionUniform.$.xyz - worldPos);
+  const key = std.saturate(std.dot(normal, LIGHTING.key));
+  const fill = std.saturate(std.dot(normal, LIGHTING.fill));
+  const halfVector = std.normalize(LIGHTING.key + viewDir);
+  const specular = std.pow(std.saturate(std.dot(normal, halfVector)), 32);
+  const finalColor = std.saturate(
+    color * (0.2 + key * 0.9 + fill * 0.25) + LIGHTING.specularColor * specular * 0.18,
+  );
+
+  return d.vec4f(finalColor, 1);
 });
 
 const pipelineConfig = {
@@ -278,10 +314,16 @@ function updateCameraTarget(position: Float32Array): d.v4f {
   );
 }
 
-const computeWorldTransform = (
+function getAnimationById(id: string): Animation | undefined {
+  return id === TWIST_DEMO_ID
+    ? undefined
+    : modelData.animations.find((animation) => animation.name === id);
+}
+
+function computeWorldTransform(
   nodeIndex: number,
   animatedTransforms: NodeTransformState,
-): Float32Array => {
+): Float32Array {
   if (CpuState.nodeWorldDirty[nodeIndex]) {
     return CpuState.nodeWorld[nodeIndex];
   }
@@ -327,7 +369,7 @@ const computeWorldTransform = (
 
   CpuState.nodeWorldDirty[nodeIndex] = 1;
   return destination;
-};
+}
 
 function writeJointDualQuat(jointIndex: number) {
   const matrixOffset = jointIndex * 16;
@@ -405,10 +447,7 @@ function getInitialCameraTarget(): d.v4f {
 
 function setActiveVariant(variant: SceneVariant) {
   activeVariant = variant;
-  activeAnimation =
-    variant.id !== TWIST_DEMO_ID
-      ? modelData.animations.find((animation) => animation.name === variant.id)
-      : undefined;
+  activeAnimation = getAnimationById(variant.id);
 
   state.selectedVariantId = variant.id;
   state.timeSeconds = 0;
@@ -450,6 +489,7 @@ const { cleanupCamera, targetCamera } = setupOrbitCamera(
   (camera) => {
     if (camera.position) {
       state.cameraPosition = camera.position;
+      cameraPositionUniform.write(camera.position);
     }
     if (camera.view && camera.projection) {
       cameraUniform.write(mat4.mul(camera.projection, camera.view, CpuState.cameraMatrix));

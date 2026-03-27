@@ -2,6 +2,7 @@ export function generateTube(rings: number, segs: number, radius: number, height
   const vertexCount = rings * segs;
   const positions = new Float32Array(vertexCount * 3);
   const normals = new Float32Array(vertexCount * 3);
+  const materialIds = new Uint32Array(vertexCount);
   const joints = new Uint32Array(vertexCount * 4);
   const weights = new Float32Array(vertexCount * 4);
 
@@ -13,6 +14,7 @@ export function generateTube(rings: number, segs: number, radius: number, height
       const i = r * segs + s;
       positions.set([Math.cos(a) * radius, y, Math.sin(a) * radius], i * 3);
       normals.set([Math.cos(a), 0, Math.sin(a)], i * 3);
+      materialIds[i] = 0;
       joints.set([0, 1, 0, 0], i * 4);
       weights.set([1 - blend, blend, 0, 0], i * 4);
     }
@@ -30,5 +32,5 @@ export function generateTube(rings: number, segs: number, radius: number, height
     }
   }
 
-  return { positions, normals, joints, weights, indices, vertexCount, indexCount };
+  return { positions, normals, materialIds, joints, weights, indices, vertexCount, indexCount };
 }

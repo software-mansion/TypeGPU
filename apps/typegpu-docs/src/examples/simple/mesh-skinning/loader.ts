@@ -19,6 +19,12 @@ interface GLTFAnimation {
   channels: GLTFAnimationChannel[];
 }
 
+interface GLTFMaterial {
+  pbrMetallicRoughness?: {
+    baseColorFactor?: [number, number, number, number];
+  };
+}
+
 const GLTF_COMPONENT_TYPE = {
   BYTE: 5120,
   UNSIGNED_BYTE: 5121,
@@ -66,7 +72,15 @@ export async function loadGLBModel(path: string): Promise<ModelData> {
   const model = await load(path, GLBLoader);
   const { arrayBuffer, byteOffset, byteLength } = model.binChunks[0];
   const binChunk = arrayBuffer.slice(byteOffset, byteOffset + byteLength);
-  const { accessors, bufferViews, meshes, skins, nodes, animations: rawAnims } = model.json;
+  const {
+    accessors,
+    bufferViews,
+    meshes,
+    skins,
+    nodes,
+    materials,
+    animations: rawAnims,
+  } = model.json;
 
   const getTypedArray = (idx: number) => {
     const acc = accessors[idx];
@@ -79,6 +93,7 @@ export async function loadGLBModel(path: string): Promise<ModelData> {
   const primitiveData: {
     pos: Float32Array;
     norm: Float32Array;
+    materialId: number;
     joints: Uint8Array | Uint16Array;
     weights: Float32Array;
     indices: Uint16Array;
@@ -93,7 +108,14 @@ export async function loadGLBModel(path: string): Promise<ModelData> {
       const joints = getTypedArray(prim.attributes.JOINTS_0) as Uint8Array | Uint16Array;
       const weights = getTypedArray(prim.attributes.WEIGHTS_0) as Float32Array;
       const indices = getTypedArray(prim.indices) as Uint16Array;
-      primitiveData.push({ pos, norm, joints, weights, indices });
+      primitiveData.push({
+        pos,
+        norm,
+        materialId: prim.material ?? 0,
+        joints,
+        weights,
+        indices,
+      });
       totalVerts += pos.length / 3;
       totalIndices += indices.length;
     }
@@ -101,6 +123,7 @@ export async function loadGLBModel(path: string): Promise<ModelData> {
 
   const positions = new Float32Array(totalVerts * 3);
   const normals = new Float32Array(totalVerts * 3);
+  const materialIds = new Uint32Array(totalVerts);
   const joints = new Uint32Array(totalVerts * 4);
   const weights = new Float32Array(totalVerts * 4);
   const indices = new Uint16Array(totalIndices);
@@ -109,10 +132,13 @@ export async function loadGLBModel(path: string): Promise<ModelData> {
   let iOff = 0;
   let base = 0;
 
-  for (const { pos, norm, joints: j, weights: w, indices: idx } of primitiveData) {
+  for (const { pos, norm, materialId, joints: j, weights: w, indices: idx } of primitiveData) {
     const count = pos.length / 3;
     positions.set(pos, vOff * 3);
     normals.set(norm, vOff * 3);
+    for (let v = 0; v < count; v++) {
+      materialIds[vOff + v] = materialId;
+    }
     for (let v = 0; v < count; v++) {
       for (let c = 0; c < 4; c++) {
         joints[(vOff + v) * 4 + c] = j[v * 4 + c];
@@ -129,6 +155,15 @@ export async function loadGLBModel(path: string): Promise<ModelData> {
 
   const skin = skins[0];
   const inverseBindMatrices = getTypedArray(skin.inverseBindMatrices) as Float32Array;
+  const materialPalette = ((materials || []) as GLTFMaterial[]).map((material) => {
+    const baseColor = material.pbrMetallicRoughness?.baseColorFactor ?? [0.8, 0.8, 0.8, 1];
+    return [baseColor[0], baseColor[1], baseColor[2], baseColor[3]] as [
+      number,
+      number,
+      number,
+      number,
+    ];
+  });
 
   const animations: Animation[] = ((rawAnims || []) as GLTFAnimation[]).map((anim) => {
     let duration = 0;
@@ -157,10 +192,12 @@ export async function loadGLBModel(path: string): Promise<ModelData> {
   return {
     positions,
     normals,
+    materialIds,
     joints,
     weights,
     indices,
     indexCount: indices.length,
+    materials: materialPalette,
     inverseBindMatrices,
     nodes,
     jointNodes: skin.joints,
