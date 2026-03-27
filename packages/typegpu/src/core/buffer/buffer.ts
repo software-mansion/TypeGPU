@@ -145,7 +145,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T];
 
   compileWriter(): void;
-  write(data: Prettify<InferInput<TData>>, options?: BufferWriteOptions): void;
+  write(data: InferInput<TData>, options?: BufferWriteOptions): void;
   write(data: ArrayBuffer, options?: BufferWriteOptions): void;
   writePartial(data: InferPartial<TData>): void;
   clear(): void;
@@ -246,9 +246,9 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
         if (this._initialCallback) {
           this._initialCallback(this);
         } else if (this.initial) {
-          this._writeToTarget(this._getMappedRange(), this.initial);
+          this.#writeToTarget(this.#getMappedRange(), this.initial);
         }
-        this._unmapBuffer();
+        this.#unmapBuffer();
       }
     }
 
@@ -262,7 +262,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   get arrayBuffer(): ArrayBuffer {
     const gpuBuffer = this.buffer;
     if (gpuBuffer.mapState === 'mapped') {
-      return this._getMappedRange();
+      return this.#getMappedRange();
     }
 
     if (!this._hostBuffer) {
@@ -272,7 +272,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     return this._hostBuffer;
   }
 
-  private _getMappedRange(): ArrayBuffer {
+  #getMappedRange(): ArrayBuffer {
     if (!this._buffer || this._buffer.mapState !== 'mapped') {
       throw new Error('Buffer is not mapped.');
     }
@@ -281,7 +281,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     return this._mappedRange;
   }
 
-  private _unmapBuffer(): void {
+  #unmapBuffer(): void {
     if (!this._buffer || this._buffer.mapState !== 'mapped') {
       return;
     }
@@ -343,7 +343,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     getCompiledWriterForSchema(this.dataType);
   }
 
-  private _writeToTarget(
+  #writeToTarget(
     target: ArrayBuffer,
     data: InferInput<TData> | ArrayBuffer,
     options?: BufferWriteOptions,
@@ -416,13 +416,13 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     const size = endOffset - startOffset;
 
     if (gpuBuffer.mapState === 'mapped') {
-      const mapped = this._getMappedRange();
+      const mapped = this.#getMappedRange();
       if (data instanceof ArrayBuffer && data === mapped) {
         // The caller already wrote data directly into the mapped range
         // via arrayBuffer. Nothing to do here
         return;
       }
-      this._writeToTarget(mapped, data, options);
+      this.#writeToTarget(mapped, data, options);
       return;
     }
 
@@ -433,7 +433,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     // If the caller already wrote directly into _hostBuffer via
     // arrayBuffer, skip the redundant copy, the data is already in place.
     if (!(data instanceof ArrayBuffer && data === this._hostBuffer)) {
-      this._writeToTarget(this._hostBuffer, data, options);
+      this.#writeToTarget(this._hostBuffer, data, options);
     }
     this.#device.queue.writeBuffer(gpuBuffer, startOffset, this._hostBuffer, startOffset, size);
   }
@@ -444,7 +444,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     const instructions = getWriteInstructions(this.dataType, data);
 
     if (gpuBuffer.mapState === 'mapped') {
-      const mappedRange = this._getMappedRange();
+      const mappedRange = this.#getMappedRange();
       const mappedView = new Uint8Array(mappedRange);
 
       for (const instruction of instructions) {
@@ -467,7 +467,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     const gpuBuffer = this.buffer;
 
     if (gpuBuffer.mapState === 'mapped') {
-      new Uint8Array(this._getMappedRange()).fill(0);
+      new Uint8Array(this.#getMappedRange()).fill(0);
       return;
     }
 
@@ -491,15 +491,15 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     const gpuBuffer = this.buffer;
 
     if (gpuBuffer.mapState === 'mapped') {
-      const mapped = this._getMappedRange();
+      const mapped = this.#getMappedRange();
       return readData(new BufferReader(mapped), this.dataType);
     }
 
     if (gpuBuffer.usage & GPUBufferUsage.MAP_READ) {
       await gpuBuffer.mapAsync(GPUMapMode.READ);
-      const mapped = this._getMappedRange();
+      const mapped = this.#getMappedRange();
       const res = readData(new BufferReader(mapped), this.dataType);
-      this._unmapBuffer();
+      this.#unmapBuffer();
       return res;
     }
 

@@ -29,7 +29,7 @@ const Particle = d.struct({
 });
 
 // Utility for creating a random particle
-function createParticle(): d.Infer<typeof Particle> {
+function createParticle(): d.InferInput<typeof Particle> {
   return {
     position: d.vec3f(Math.random(), 2, Math.random()),
     velocity: d.vec3f(0, 9.8, 0),
