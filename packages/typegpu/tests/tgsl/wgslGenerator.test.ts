@@ -1882,8 +1882,8 @@ describe('wgslGenerator', () => {
       "fn fn_1() -> i32 {
         var a = -1;
         {
-          const temp2 = 0;
-          a = temp2;
+          const temp = 0;
+          a = temp;
         }
         let temp = (a * 2i);
         return temp;
@@ -1894,8 +1894,8 @@ describe('wgslGenerator', () => {
       "fn fn_1() -> i32 {
         var a = -1;
         {
-          const temp2 = 1;
-          a = temp2;
+          const temp = 1;
+          a = temp;
         }
         let temp = (a * 2i);
         return temp;
@@ -1917,12 +1917,12 @@ describe('wgslGenerator', () => {
       fn fn_1() -> i32 {
         var a = -1;
         if ((item() == 0u)) {
-          const temp2 = 0;
-          a = temp2;
+          const temp = 0;
+          a = temp;
         }
         else {
-          const temp2 = 1;
-          a = temp2;
+          const temp = 1;
+          a = temp;
         }
         let temp = (a * 2i);
         return temp;
