@@ -12,7 +12,7 @@ interface ProcGenConfig {
 }
 
 // default config
-const SAMPLES = 10;
+const SAMPLES = 50;
 const config: ProcGenConfig & { samples: number } = {
   mainBranching: 2,
   branching: 2,
@@ -261,6 +261,12 @@ function runBenchmark(input: ProcGenConfig, output: BenchmarkResult[]) {
   Object.assign(config, { samples: input.samples ?? SAMPLES }, input);
   branchingUnrollArray = getArrayForUnroll(config.branching);
 
+  // warmup
+  for (let i = 0; i < config.samples; i++) {
+    rand = splitmix32(config.seed);
+    const _ = benchmarkResolve();
+  }
+
   for (let i = 0; i < config.samples; i++) {
     rand = splitmix32(config.seed);
     const result = benchmarkResolve();
@@ -272,21 +278,6 @@ function runBenchmark(input: ProcGenConfig, output: BenchmarkResult[]) {
     );
   }
 }
-
-function warmupJIT() {
-  runBenchmark(
-    {
-      mainBranching: 1,
-      branching: 1,
-      maxDepth: 1,
-      recurseProb: 0,
-      seed: 0.1882 * 2 ** 32,
-    },
-    [],
-  );
-}
-
-warmupJIT();
 
 const results: BenchmarkResult[] = [];
 const DEPTHS = Array.from({ length: 8 }, (_, i) => i + 1);
