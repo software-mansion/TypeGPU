@@ -282,12 +282,12 @@ export interface PrimitiveOffsetInfo {
  * ```
  *
  * @param schema - The data schema to analyze.
- * @param accessor - Optional function that accesses a specific primitive within the schema. If omitted, uses the root offset (0).
+ * @param accessor - Optional function that accesses a specific element within the schema. If omitted, uses the root offset (0).
  * @returns An object containing the offset and contiguous byte information.
  */
 export function memoryLayoutOf<T extends BaseData>(
   schema: T,
-  accessor?: (proxy: Infer<T>) => number,
+  accessor?: (proxy: Infer<T>) => unknown,
 ): PrimitiveOffsetInfo {
   if (!accessor) {
     return {
@@ -306,5 +306,7 @@ export function memoryLayoutOf<T extends BaseData>(
     };
   }
 
-  throw new Error('Invalid accessor result. Expected an offset proxy with markers.');
+  throw new Error(
+    'memoryLayoutOf: accessor did not return a schema element. Make sure the accessor navigates to a field or element of the schema (e.g. `(s) => s.position.x`).',
+  );
 }

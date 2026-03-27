@@ -114,8 +114,8 @@ describe('tgpu.unroll', () => {
         {
           const boo = 1;
           {
-            const foo2 = boo;
-            fooResult += f32(foo2);
+            const foo = boo;
+            fooResult += f32(foo);
           }
           const bar = 1;
         }
@@ -123,8 +123,8 @@ describe('tgpu.unroll', () => {
         {
           const boo = 2;
           {
-            const foo2 = boo;
-            fooResult += f32(foo2);
+            const foo = boo;
+            fooResult += f32(foo);
           }
           const bar = 2;
         }
@@ -761,8 +761,8 @@ describe('tgpu.unroll', () => {
         var arr = array<i32, 3>(1, 2, 3);
         // unrolled iteration #0
         {
-          for (var i2 = 0; (i2 < 2i); i2++) {
-            if ((i2 == 1i)) {
+          for (var i = 0; (i < 2i); i++) {
+            if ((i == 1i)) {
               continue;
             }
           }
@@ -780,8 +780,8 @@ describe('tgpu.unroll', () => {
         }
         // unrolled iteration #1
         {
-          for (var i2 = 0; (i2 < 2i); i2++) {
-            if ((i2 == 2i)) {
+          for (var i = 0; (i < 2i); i++) {
+            if ((i == 2i)) {
               continue;
             }
           }

@@ -67,6 +67,7 @@
     ],
     "overrides": {
       "rollup": "catalog:",
+      "vite": "8.0.2",
       "typescript": "catalog:types",
       "three": "catalog:example"
     }
