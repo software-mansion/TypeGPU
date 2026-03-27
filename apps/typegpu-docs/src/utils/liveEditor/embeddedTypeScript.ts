@@ -1,6 +1,7 @@
-import { languages } from 'monaco-editor';
+// @ts-nocheck -- language.typescript is deprecated, but its replacement is not yet exported
+import { languages } from 'tsover-monaco-editor';
 
-export const tsCompilerOptions: languages.typescript.CompilerOptions = {
+export const tsnotoverCompilerOptions: languages.typescript.CompilerOptions = {
   target: languages.typescript.ScriptTarget.ESNext,
   allowNonTsExtensions: true,
   strict: true,
@@ -11,4 +12,9 @@ export const tsCompilerOptions: languages.typescript.CompilerOptions = {
   exactOptionalPropertyTypes: true,
   baseUrl: '.',
   lib: ['dom', 'es2021'],
+};
+
+export const tsoverCompilerOptions: languages.typescript.CompilerOptions = {
+  ...tsnotoverCompilerOptions,
+  lib: [...tsnotoverCompilerOptions.lib, 'tsover'],
 };

@@ -8,7 +8,11 @@ import {
   type ExampleControlParam,
   exampleControlsAtom,
 } from '../utils/examples/exampleControlAtom.ts';
-import { codeEditorShownAtom, menuShownAtom } from '../utils/examples/exampleViewStateAtoms.ts';
+import {
+  codeEditorShownAtom,
+  menuShownAtom,
+  tsoverUsedAtom,
+} from '../utils/examples/exampleViewStateAtoms.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { Button } from './design/Button.tsx';
 import { ColorPicker } from './design/ColorPicker.tsx';
@@ -280,10 +284,12 @@ const unreachable = (_: never) => null;
 export function ControlPanel() {
   const [menuShowing, setMenuShowing] = useAtom(menuShownAtom);
   const [codeEditorShowing, setCodeEditorShowing] = useAtom(codeEditorShownAtom);
+  const [tsoverUsed, setTsoverUsed] = useAtom(tsoverUsedAtom);
   const exampleControlParams = useAtomValue(exampleControlsAtom);
 
   const showLeftMenuId = useId();
   const showCodeEditorId = useId();
+  const tsoverUsedId = useId();
 
   return (
     <div
@@ -316,6 +322,17 @@ export function ControlPanel() {
             id={showCodeEditorId}
             checked={codeEditorShowing}
             onChange={(e) => setCodeEditorShowing(e.target.checked)}
+          />
+        </label>
+        <label
+          htmlFor={tsoverUsedId}
+          className="flex cursor-pointer items-center justify-between gap-3 text-sm"
+        >
+          <span>Use operator overloads</span>
+          <Toggle
+            id={tsoverUsedId}
+            checked={tsoverUsed}
+            onChange={(e) => setTsoverUsed(e.target.checked)}
           />
         </label>
 
