@@ -212,7 +212,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   constructor(
     root: ExperimentalTgpuRoot,
     public readonly dataType: TData,
-    public readonly initialOrBuffer?: BufferInitialData<TData> | GPUBuffer,
+    initialOrBuffer?: BufferInitialData<TData> | GPUBuffer,
     private readonly _disallowedUsages?: UsageLiteral[],
   ) {
     this.#device = root.device;
@@ -418,6 +418,8 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = this._getMappedRange();
       if (data instanceof ArrayBuffer && data === mapped) {
+        // The caller already wrote data directly into the mapped range
+        // via arrayBuffer. Nothing to do here
         return;
       }
       this._writeToTarget(mapped, data, options);
@@ -428,6 +430,8 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       this._hostBuffer = new ArrayBuffer(bufferSize);
     }
 
+    // If the caller already wrote directly into _hostBuffer via
+    // arrayBuffer, skip the redundant copy, the data is already in place.
     if (!(data instanceof ArrayBuffer && data === this._hostBuffer)) {
       this._writeToTarget(this._hostBuffer, data, options);
     }

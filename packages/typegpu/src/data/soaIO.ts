@@ -69,6 +69,25 @@ export function isSoACompatibleField(schema: BaseData): boolean {
   return !isWgslStruct(schema);
 }
 
+/**
+ * Computes the byte length that a scatterSoA call will naturally cover, based on
+ * the minimum element count implied by the provided SoA data arrays.
+ */
+export function computeSoAByteLength(
+  arraySchema: WgslArray,
+  soaData: Record<string, ArrayBufferView>,
+): number | undefined {
+  const elementCount = inferSoAElementCount(arraySchema, soaData);
+  if (elementCount === undefined) {
+    return undefined;
+  }
+  const elementStride = roundUp(
+    sizeOf(arraySchema.elementType),
+    alignmentOf(arraySchema.elementType),
+  );
+  return elementCount * elementStride;
+}
+
 export function getSoANaturalSize(dataType: BaseData, data: unknown): number | undefined {
   if (
     !isWgslArray(dataType) ||
@@ -145,13 +164,9 @@ function writePackedValue(
 }
 
 /**
- * Writes struct-of-arrays (SoA) data into a GPU-layout (AoS) target buffer.
- *
- * Each key in `soaData` is a struct field name mapped to a packed TypedArray
- * containing that field's values for all elements (no inter-element padding).
- * This function scatters those packed arrays into the correctly padded AoS layout.
+ * Scatters struct-of-arrays (SoA) data into a GPU-layout (AoS) target buffer.
  */
-export function writeSoA(
+export function scatterSoA(
   target: Uint8Array,
   arraySchema: WgslArray,
   soaData: Record<string, ArrayBufferView>,
@@ -161,6 +176,10 @@ export function writeSoA(
   const structSchema = arraySchema.elementType as WgslStruct;
   const offsets = offsetsForProps(structSchema);
   const elementStride = roundUp(sizeOf(structSchema), alignmentOf(structSchema));
+  invariant(
+    startOffset % elementStride === 0,
+    `startOffset (${startOffset}) must be aligned to the element stride (${elementStride})`,
+  );
   const startElement = Math.floor(startOffset / elementStride);
   const endElement = Math.min(arraySchema.elementCount, Math.ceil(endOffset / elementStride));
   const elementCount = Math.max(0, endElement - startElement);
@@ -171,9 +190,7 @@ export function writeSoA(
       continue;
     }
     const srcArray = soaData[key];
-    if (srcArray === undefined) {
-      continue;
-    }
+    invariant(srcArray !== undefined, `Missing SoA data for field '${key}'`);
 
     const fieldOffset = offsets[key]?.offset;
     invariant(fieldOffset !== undefined, `Field ${key} not found in struct schema`);

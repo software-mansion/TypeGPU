@@ -1,4 +1,4 @@
-import { getSoANaturalSize, writeSoA as scatterSoA } from '../data/soaIO.ts';
+import { computeSoAByteLength, scatterSoA } from '../data/soaIO.ts';
 import { sizeOf } from '../data/sizeOf.ts';
 import type { BaseData, SoAInputFor, WgslArray, WgslStruct } from '../data/wgslTypes.ts';
 import type { BufferWriteOptions, TgpuBuffer } from '../core/buffer/buffer.ts';
@@ -11,7 +11,10 @@ export function writeSoA<TProps extends Record<string, BaseData>>(
   const arrayBuffer = buffer.arrayBuffer;
   const startOffset = options?.startOffset ?? 0;
   const bufferSize = sizeOf(buffer.dataType);
-  const naturalSize = getSoANaturalSize(buffer.dataType, data);
+  const naturalSize = computeSoAByteLength(
+    buffer.dataType,
+    data as Record<string, ArrayBufferView>,
+  );
   const endOffset =
     options?.endOffset ??
     (naturalSize === undefined ? bufferSize : Math.min(startOffset + naturalSize, bufferSize));
