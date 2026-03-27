@@ -1,8 +1,23 @@
 {
   "name": "eslint-plugin-typegpu",
-  "version": "0.10.0",
-  "description": "An eslint plugin containing custom rules for TypeGPU.",
+  "version": "0.10.0-alpha.0",
+  "description": "TypeGPU specific linting rules for ESLint",
+  "keywords": [
+    "eslint",
+    "eslint-plugin",
+    "eslintplugin",
+    "typegpu",
+    "use gpu"
+  ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion/TypeGPU.git#main",
+    "directory": "packages/eslint-plugin"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "sideEffects": false,
   "exports": {
@@ -17,12 +32,15 @@
         "types": "./dist/index.d.mts",
         "import": "./dist/index.mjs"
       }
-    }
+    },
+    "main": "./dist/index.mjs",
+    "types": "./dist/index.d.mts"
   },
   "scripts": {
     "build": "tsdown",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
-    "test": "vitest"
+    "test": "vitest",
+    "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
     "@typescript-eslint/utils": "^8.53.0"
