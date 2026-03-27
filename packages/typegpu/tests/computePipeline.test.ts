@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, vi } from 'vitest';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
 import { d, MissingBindGroupsError, tgpu, type TgpuComputePipeline } from '../src/index.js';
 import { $internal } from '../src/shared/symbols.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import { extensionEnabled } from '../src/std/extensions.ts';
 
 describe('TgpuComputePipeline', () => {
@@ -618,7 +618,7 @@ describe('TgpuComputePipeline', () => {
       const deepBuffer = root.createBuffer(DeepStruct).$usage('indirect');
       pipeline.dispatchWorkgroupsIndirect(
         deepBuffer,
-        d.memoryLayoutOf(DeepStruct, (s) => s.someData[11] as number),
+        d.memoryLayoutOf(DeepStruct, (s) => s.someData[11]),
       );
 
       expect(warnSpy.mock.calls[1]![0]).toMatchInlineSnapshot(
@@ -627,7 +627,7 @@ describe('TgpuComputePipeline', () => {
 
       pipeline.dispatchWorkgroupsIndirect(
         deepBuffer,
-        d.memoryLayoutOf(DeepStruct, (s) => s.nested.innerNested[0]?.yy as number),
+        d.memoryLayoutOf(DeepStruct, (s) => s.nested.innerNested[0]?.yy),
       );
 
       expect(warnSpy.mock.calls[2]![0]).toMatchInlineSnapshot(

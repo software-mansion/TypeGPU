@@ -1,7 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { test } from 'vitest';
-import tgpu, { d, std, type TgpuComptime, type TgpuGenericFn } from 'typegpu';
+import tgpu, { d, std, type TgpuComptime } from 'typegpu';
 
 interface ProcGenConfig {
   mainBranching: number;
@@ -43,7 +42,8 @@ const state = tgpu.lazy(() => ({
   stackDepth: 0,
 }));
 
-const instructions: TgpuComptime<() => TgpuGenericFn<() => void>>[] = [];
+const instructions: TgpuComptime<() => () => void>[] = [];
+const LEAF_COUNT = 4;
 
 // TODO: replace it with number, when unroll supports that
 const getArrayForUnroll = tgpu.comptime((n: number) => Array.from({ length: n }));
@@ -88,7 +88,7 @@ const baseFn = tgpu.comptime(() => {
       'use gpu';
 
       let v = d.vec2f(0.5, 0.5);
-      v.x += 0.1;
+      v += 0.1;
 
       popDepth();
     })
@@ -117,7 +117,7 @@ const thresholdFn = tgpu.comptime(() => {
       'use gpu';
 
       const tint = tintSlot.$;
-      const v = d.vec2f(tint.x, tint.y);
+      const v = tint.xy;
       const len = std.length(v);
       const edge = std.smoothstep(0.2, 0.8, len);
       const _result = d.vec3f(tint.x * edge, tint.y * edge, tint.z);
@@ -137,7 +137,7 @@ const filterFn = tgpu.comptime(() => {
       let _result = d.vec3f();
       for (const dy of tgpu.unroll([-1, 0, 1])) {
         for (const dx of tgpu.unroll([-1, 0, 1])) {
-          // oxlint-disable-next-line typescript-eslint(no-non-null-assertion
+          // oxlint-disable-next-line typescript-eslint(no-non-null-assertion)
           _result += cellsLayout.$.grid[xy.x + dx]![xy.y + dy]!.col;
         }
       }
@@ -154,7 +154,7 @@ const waveFn = tgpu.comptime(() => {
 
       let v = d.vec2f(0.3, 0.7);
       v = d.vec2f(std.sin(v.x * Math.PI), std.cos(v.y * Math.PI));
-      const _energy = v.x * v.x + v.y * v.y;
+      const _energy = std.dot(v, v);
 
       for (const _i of tgpu.unroll(branchingUnrollArray)) {
         // @ts-expect-error trust me
@@ -194,8 +194,8 @@ const rotateFn = tgpu.comptime(() => {
       const phase = phaseSlot.$;
       const angle = phase.x + timeAccessor.$ * phase.y;
       let v = d.vec2f(1, 0);
-      const c = Math.cos(angle);
-      const s = Math.sin(angle);
+      const c = std.cos(angle);
+      const s = std.sin(angle);
       v = d.vec2f(v.x * c - v.y * s, v.x * s + v.y * c);
 
       for (const _i of tgpu.unroll(branchingUnrollArray)) {
@@ -217,7 +217,7 @@ const spiralFn = tgpu.comptime(() => {
       const center = dataLayout.$.offset;
       const radius = 0.5 * std.sin(t * 2.0);
       const angle = t * Math.PI;
-      const pos = d.vec2f(center.x + radius * Math.cos(angle), center.y + radius * Math.sin(angle));
+      const pos = d.vec2f(center.x + radius * std.cos(angle), center.y + radius * std.sin(angle));
       const _dist = std.length(pos);
 
       for (const _i of tgpu.unroll(branchingUnrollArray)) {
@@ -232,7 +232,6 @@ const spiralFn = tgpu.comptime(() => {
 
 // leaves first, then recursive
 instructions.push(baseFn, blendFn, thresholdFn, filterFn, waveFn, accFn, rotateFn, spiralFn);
-const LEAF_COUNT = 4;
 
 const main = () => {
   'use gpu';
@@ -263,7 +262,7 @@ function runBenchmark(input: ProcGenConfig, output: BenchmarkResult[]) {
   branchingUnrollArray = getArrayForUnroll(config.branching);
 
   for (let i = 0; i < config.samples; i++) {
-    rand = splitmix32(config.maxDepth * 2 ** 32);
+    rand = splitmix32(config.seed);
     const result = benchmarkResolve();
     output.push(result);
     console.log(
@@ -287,44 +286,55 @@ function warmupJIT() {
   );
 }
 
-test('resolution time vs max depth (full tree)', () => {
-  const results: BenchmarkResult[] = [];
-  const DEPTHS = Array.from({ length: 8 }, (_, i) => i + 1);
+warmupJIT();
 
-  warmupJIT();
+const results: BenchmarkResult[] = [];
+const DEPTHS = Array.from({ length: 8 }, (_, i) => i + 1);
 
-  for (const depth of DEPTHS) {
-    runBenchmark(
-      {
-        mainBranching: 2,
-        branching: 2,
-        maxDepth: depth,
-        recurseProb: 1,
-        seed: 0.1882 * 2 ** 32,
-      },
-      results,
-    );
-  }
-  writeFileSync(resolve(outDir, 'results-max-depth.json'), JSON.stringify(results, null, 2));
-});
+// resolution time vs max depth (full tree)
+for (const depth of DEPTHS) {
+  runBenchmark(
+    {
+      mainBranching: 2,
+      branching: 2,
+      maxDepth: depth,
+      recurseProb: 1,
+      seed: depth * 2 ** 24,
+    },
+    results,
+  );
+}
+writeFileSync(resolve(outDir, 'results-max-depth.json'), JSON.stringify(results, null, 2));
+results.length = 0;
 
-test('resolution time vs linear recursion (path)', () => {
-  const results: BenchmarkResult[] = [];
-  const DEPTHS = Array.from({ length: 8 }, (_, i) => i + 1);
+// resolution time vs linear recursion (path)
+for (const depth of DEPTHS) {
+  runBenchmark(
+    {
+      mainBranching: 1,
+      branching: 1,
+      maxDepth: depth,
+      recurseProb: 1,
+      seed: depth * 2 ** 24,
+    },
+    results,
+  );
+}
+writeFileSync(resolve(outDir, 'results-linear-recursion.json'), JSON.stringify(results, null, 2));
+results.length = 0;
 
-  warmupJIT();
-
-  for (const depth of DEPTHS) {
-    runBenchmark(
-      {
-        mainBranching: 1,
-        branching: 1,
-        maxDepth: depth,
-        recurseProb: 1,
-        seed: 0.1882 * 2 ** 32,
-      },
-      results,
-    );
-  }
-  writeFileSync(resolve(outDir, 'results-linear-recursion.json'), JSON.stringify(results, null, 2));
-});
+// resolution time vs random
+for (const depth of DEPTHS) {
+  runBenchmark(
+    {
+      mainBranching: 3,
+      branching: 3,
+      maxDepth: depth,
+      recurseProb: 0.5,
+      seed: depth * 2 ** 24,
+    },
+    results,
+  );
+}
+writeFileSync(resolve(outDir, 'results-random.json'), JSON.stringify(results, null, 2));
+results.length = 0;

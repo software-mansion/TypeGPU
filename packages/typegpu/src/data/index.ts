@@ -36,6 +36,18 @@ assignInfixOperator(MatBase, 'add', Operator.plus);
 assignInfixOperator(MatBase, 'sub', Operator.minus);
 assignInfixOperator(MatBase, 'mul', Operator.star);
 
+// bitShift does not yet have tsover operator symbol
+{
+  // oxlint-disable-next-line typescript/no-explicit-any -- anything is possible
+  const proto = VecBase.prototype as any;
+  proto.bitShiftLeft = function (this: unknown, other: unknown) {
+    return (infixOperators.bitShiftLeft as (a: unknown, b: unknown) => unknown)(this, other);
+  };
+  proto.bitShiftRight = function (this: unknown, other: unknown) {
+    return (infixOperators.bitShiftRight as (a: unknown, b: unknown) => unknown)(this, other);
+  };
+}
+
 export { bool, f16, f32, i32, u16, u32 } from './numeric.ts';
 export {
   isAlignAttrib,
@@ -57,6 +69,8 @@ export type {
   AnyWgslData,
   AnyWgslStruct,
   Atomic,
+  atomicI32,
+  atomicU32,
   BaseData,
   BaseData as BaseWgslData,
   Bool,
@@ -217,4 +231,4 @@ export type {
   BuiltinVertexIndex,
   BuiltinWorkgroupId,
 } from '../builtin.ts';
-export type { Infer, InferGPU, InferPartial } from '../shared/repr.ts';
+export type { Infer, InferGPU, InferInput, InferPartial } from '../shared/repr.ts';

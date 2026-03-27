@@ -1,5 +1,6 @@
 {
   "title": "Three.js - compute / geometry",
   "category": "threejs",
-  "tags": ["three.js"]
+  "tags": ["3d", "interaction"],
+  "coolFactor": 5
 }

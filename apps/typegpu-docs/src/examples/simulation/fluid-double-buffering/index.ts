@@ -502,8 +502,8 @@ let msSinceLastTick = 0;
 const timestep = 15;
 const stepsPerTick = 64;
 
-function tick() {
-  time.write(Date.now() % 1000);
+function tick(timestamp: number) {
+  time.write(timestamp % 1000);
 
   sourceParams.write({
     center: d.vec2f(0.5, 0.9),
@@ -515,34 +515,27 @@ function tick() {
   primary.compute();
 }
 
-let disposed = false;
+let animationFrameId: number;
+let lastTime: number | null = null;
 
-const onFrame = (loop: (deltaTime: number) => unknown) => {
-  let lastTime = Date.now();
-  const runner = () => {
-    if (disposed) {
-      return;
-    }
-    const now = Date.now();
-    const dt = now - lastTime;
-    lastTime = now;
-    loop(dt);
-    requestAnimationFrame(runner);
-  };
-  requestAnimationFrame(runner);
-};
+const runner = (timestamp: number) => {
+  const deltaTime = lastTime !== null ? timestamp - lastTime : 0;
+  lastTime = timestamp;
 
-onFrame((deltaTime) => {
   msSinceLastTick += deltaTime;
 
   if (msSinceLastTick >= timestep) {
     for (let i = 0; i < stepsPerTick; ++i) {
-      tick();
+      tick(timestamp);
     }
     primary.render();
     msSinceLastTick -= timestep;
   }
-});
+
+  animationFrameId = requestAnimationFrame(runner);
+};
+
+animationFrameId = requestAnimationFrame(runner);
 
 export const controls = defineControls({
   'source intensity': {
@@ -604,6 +597,6 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  disposed = true;
+  cancelAnimationFrame(animationFrameId);
   root.destroy();
 }

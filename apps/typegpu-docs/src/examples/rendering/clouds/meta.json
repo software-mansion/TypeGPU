@@ -1,5 +1,6 @@
 {
   "title": "Clouds",
   "category": "rendering",
-  "tags": ["experimental", "3d", "ray marching"]
+  "tags": ["3d", "ecosystem", "noise", "ray marching", "sdf"],
+  "coolFactor": 10
 }

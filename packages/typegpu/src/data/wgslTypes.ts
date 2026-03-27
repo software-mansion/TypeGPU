@@ -8,6 +8,8 @@ import type {
   Infer,
   InferGPU,
   InferGPURecord,
+  InferInput,
+  InferInputRecord,
   InferPartial,
   InferPartialRecord,
   InferRecord,
@@ -19,6 +21,7 @@ import type {
 } from '../shared/repr.ts';
 import type {
   $gpuRepr,
+  $inRepr,
   $invalidSchemaReason,
   $memIdent,
   $repr,
@@ -50,6 +53,21 @@ export interface NumberArrayView {
 }
 
 /**
+ * Maps a scalar or vector element schema to the corresponding TypedArray type.
+ */
+export type TypedArrayFor<T> = T extends Vec2f | Vec3f | Vec4f | F32
+  ? Float32Array
+  : T extends Vec2h | Vec3h | Vec4h | F16
+    ? Float16Array
+    : T extends Vec2i | Vec3i | Vec4i | I32
+      ? Int32Array
+      : T extends Vec2u | Vec3u | Vec4u | U32
+        ? Uint32Array
+        : T extends U16
+          ? Uint16Array
+          : never;
+
+/**
  * Vector infix notation.
  *
  * @privateRemarks
@@ -68,6 +86,17 @@ export interface vecInfixNotation<T extends vecBase> {
   [Symbol.operatorStar](lhs: mBaseForVec<T> | T | number, rhs: mBaseForVec<T> | T | number): T;
   [Symbol.operatorSlash](lhs: T | number, rhs: T | number): T;
   [Symbol.operatorPercent](lhs: T | number, rhs: T | number): T;
+}
+
+export type vecIToVecU<T extends AnyIntegerVecInstance> = T extends v2i | v2u
+  ? v2u
+  : T extends v3i | v3u
+    ? v3u
+    : v4u;
+
+export interface vecBitShiftNotation<T extends AnyIntegerVecInstance> {
+  bitShiftLeft(rhs: vecIToVecU<T> | number): T;
+  bitShiftRight(rhs: vecIToVecU<T> | number): T;
 }
 
 /**
@@ -228,7 +257,8 @@ export interface v2h extends Tuple2<number>, Swizzle2<v2h, v3h, v4h>, vecInfixNo
  * Interface representing its WGSL vector type counterpart: vec2i or vec2<i32>.
  * A vector with 2 elements of type i32
  */
-export interface v2i extends Tuple2<number>, Swizzle2<v2i, v3i, v4i>, vecInfixNotation<v2i> {
+export interface v2i
+  extends Tuple2<number>, Swizzle2<v2i, v3i, v4i>, vecInfixNotation<v2i>, vecBitShiftNotation<v2i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2i';
@@ -242,7 +272,8 @@ export interface v2i extends Tuple2<number>, Swizzle2<v2i, v3i, v4i>, vecInfixNo
  * Interface representing its WGSL vector type counterpart: vec2u or vec2<u32>.
  * A vector with 2 elements of type u32
  */
-export interface v2u extends Tuple2<number>, Swizzle2<v2u, v3u, v4u>, vecInfixNotation<v2u> {
+export interface v2u
+  extends Tuple2<number>, Swizzle2<v2u, v3u, v4u>, vecInfixNotation<v2u>, vecBitShiftNotation<v2u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec2u';
@@ -302,7 +333,8 @@ export interface v3h extends Tuple3<number>, Swizzle3<v2h, v3h, v4h>, vecInfixNo
  * Interface representing its WGSL vector type counterpart: vec3i or vec3<i32>.
  * A vector with 3 elements of type i32
  */
-export interface v3i extends Tuple3<number>, Swizzle3<v2i, v3i, v4i>, vecInfixNotation<v3i> {
+export interface v3i
+  extends Tuple3<number>, Swizzle3<v2i, v3i, v4i>, vecInfixNotation<v3i>, vecBitShiftNotation<v3i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3i';
@@ -318,7 +350,8 @@ export interface v3i extends Tuple3<number>, Swizzle3<v2i, v3i, v4i>, vecInfixNo
  * Interface representing its WGSL vector type counterpart: vec3u or vec3<u32>.
  * A vector with 3 elements of type u32
  */
-export interface v3u extends Tuple3<number>, Swizzle3<v2u, v3u, v4u>, vecInfixNotation<v3u> {
+export interface v3u
+  extends Tuple3<number>, Swizzle3<v2u, v3u, v4u>, vecInfixNotation<v3u>, vecBitShiftNotation<v3u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec3u';
@@ -386,7 +419,8 @@ export interface v4h extends Tuple4<number>, Swizzle4<v2h, v3h, v4h>, vecInfixNo
  * Interface representing its WGSL vector type counterpart: vec4i or vec4<i32>.
  * A vector with 4 elements of type i32
  */
-export interface v4i extends Tuple4<number>, Swizzle4<v2i, v3i, v4i>, vecInfixNotation<v4i> {
+export interface v4i
+  extends Tuple4<number>, Swizzle4<v2i, v3i, v4i>, vecInfixNotation<v4i>, vecBitShiftNotation<v4i> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4i';
@@ -404,7 +438,8 @@ export interface v4i extends Tuple4<number>, Swizzle4<v2i, v3i, v4i>, vecInfixNo
  * Interface representing its WGSL vector type counterpart: vec4u or vec4<u32>.
  * A vector with 4 elements of type u32
  */
-export interface v4u extends Tuple4<number>, Swizzle4<v2u, v3u, v4u>, vecInfixNotation<v4u> {
+export interface v4u
+  extends Tuple4<number>, Swizzle4<v2u, v3u, v4u>, vecInfixNotation<v4u>, vecBitShiftNotation<v4u> {
   readonly [$internal]: true;
   /** use to distinguish between vectors of the same size on the type level */
   readonly kind: 'vec4u';
@@ -659,6 +694,7 @@ export interface Vec2f
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2f;
+  readonly [$inRepr]: v2f | [number, number] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -683,6 +719,7 @@ export interface Vec2h
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2h;
+  readonly [$inRepr]: v2h | [number, number] | Float16Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -707,6 +744,7 @@ export interface Vec2i
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2i;
+  readonly [$inRepr]: v2i | [number, number] | Int32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -731,6 +769,7 @@ export interface Vec2u
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2u;
+  readonly [$inRepr]: v2u | [number, number] | Uint32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -777,6 +816,7 @@ export interface Vec3f
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3f;
+  readonly [$inRepr]: v3f | [number, number, number] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -803,6 +843,7 @@ export interface Vec3h
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3h;
+  readonly [$inRepr]: v3h | [number, number, number] | Float16Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -829,6 +870,7 @@ export interface Vec3i
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3i;
+  readonly [$inRepr]: v3i | [number, number, number] | Int32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -855,6 +897,7 @@ export interface Vec3u
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3u;
+  readonly [$inRepr]: v3u | [number, number, number] | Uint32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -910,6 +953,7 @@ export interface Vec4f
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4f;
+  readonly [$inRepr]: v4f | [number, number, number, number] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -940,6 +984,7 @@ export interface Vec4h
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4h;
+  readonly [$inRepr]: v4h | [number, number, number, number] | Float16Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -970,6 +1015,7 @@ export interface Vec4i
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4i;
+  readonly [$inRepr]: v4i | [number, number, number, number] | Int32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -1000,6 +1046,7 @@ export interface Vec4u
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4u;
+  readonly [$inRepr]: v4u | [number, number, number, number] | Uint32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -1044,6 +1091,7 @@ export interface Mat2x2f extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m2x2f;
+  readonly [$inRepr]: m2x2f | number[] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   // ---
@@ -1063,6 +1111,7 @@ export interface Mat3x3f extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m3x3f;
+  readonly [$inRepr]: m3x3f | number[] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   // ---
@@ -1082,6 +1131,7 @@ export interface Mat4x4f extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m4x4f;
+  readonly [$inRepr]: m4x4f | number[] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   // ---
@@ -1117,6 +1167,7 @@ export interface WgslArray<out TElement extends BaseData = BaseData> extends Bas
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TElement>[];
+  readonly [$inRepr]: InferInput<TElement>[] | TypedArrayFor<TElement>;
   readonly [$gpuRepr]: InferGPU<TElement>[];
   readonly [$reprPartial]: { idx: number; value: InferPartial<TElement> }[] | undefined;
   readonly [$memIdent]: WgslArray<MemIdentity<TElement>>;
@@ -1152,6 +1203,7 @@ export interface WgslStruct<
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Prettify<InferRecord<TProps>>;
+  readonly [$inRepr]: Prettify<InferInputRecord<TProps>>;
   readonly [$gpuRepr]: Prettify<InferGPURecord<TProps>>;
   readonly [$memIdent]: WgslStruct<Prettify<MemIdentityRecord<TProps>>>;
   readonly [$reprPartial]: Prettify<Partial<InferPartialRecord<TProps>>> | undefined;
@@ -1528,10 +1580,16 @@ export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
   return isMat2x2f(value) || isMat3x3f(value) || isMat4x4f(value);
 }
 
-export function isFloat32VecInstance(
-  element: number | AnyVecInstance | AnyMatInstance,
-): element is AnyFloat32VecInstance {
+export function isFloat32VecInstance(element: unknown): element is AnyFloat32VecInstance {
   return isVecInstance(element) && ['vec2f', 'vec3f', 'vec4f'].includes(element.kind);
+}
+
+export function isInteger32VecInstance(value: unknown): value is v2u | v2i | v3u | v3i | v4u | v4i {
+  return isVecInstance(value) && /[iu]$/.test(value.kind);
+}
+
+export function isUint32VecInstance(value: unknown): value is v2u | v3u | v4u {
+  return isVecInstance(value) && /[u]$/.test(value.kind);
 }
 
 export function isWgslData(value: unknown): value is AnyWgslData {

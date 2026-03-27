@@ -11,7 +11,7 @@ import type {
 
 function extractUrlFromViteImport(importFn: () => void): [URL | undefined, boolean] {
   const filePath = String(importFn);
-  const match = filePath.match(/\(\)\s*=>\s*import\("([^"]+)"\)/);
+  const match = filePath.match(/\(\)\s*=>\s*import\(["`']([^"`']+)["`']\)/);
 
   if (match?.[1]) {
     const isRelative = match[1].startsWith('./');
@@ -67,8 +67,8 @@ const exampleTsnotoverFiles = import.meta.glob('./*/*/*.tsnotover.ts', {
 }) as Record<string, string>;
 
 const exampleTsFiles = R.pipe(
-  // './<category>/<example>/<file>.ts'
-  import.meta.glob('./*/*/*.ts', {
+  // './<category>/<example>/[<subdir>/]<file>.ts'
+  import.meta.glob('./*/**/*.ts', {
     query: 'raw',
     eager: true,
     import: 'default',
@@ -125,6 +125,40 @@ const thumbnailFiles = R.pipe(
   }),
 );
 
+const API_RULES: { id: string; pattern: RegExp }[] = [
+  { id: 'compute', pattern: /\.(computeFn|createComputePipeline|createGuardedComputePipeline)/ },
+  { id: 'textures', pattern: /d\.texture/ },
+  { id: 'storage textures', pattern: /d\.textureStorage|storageTexture:/ },
+  { id: 'samplers', pattern: /createSampler|d\.sampler/ },
+  { id: 'atomics', pattern: /d\.atomic/ },
+  { id: 'vertex layouts', pattern: /tgpu\.vertexLayout/ },
+  { id: 'bind group layouts', pattern: /tgpu\.bindGroupLayout/ },
+  { id: 'storage buffers', pattern: /\$usage\([\s\S]*?'storage'/ },
+  { id: 'index buffers', pattern: /withIndexBuffer|setIndexBuffer|\$usage\('index'/ },
+  {
+    id: 'instancing',
+    pattern: /instanceCount|drawInstanced|builtin\.instanceIndex|vertexLayout[^\n]*'instance'/,
+  },
+  { id: 'bindless buffers', pattern: /\.createUniform|\.createReadonly|\.createMutable/ },
+  { id: 'subgroups', pattern: /subgroups/ },
+  { id: 'timestamp query', pattern: /timestamp-query/ },
+  { id: 'external texture', pattern: /importExternalTexture|externalTexture/ },
+  { id: 'stencil', pattern: /stencilFront|stencilBack/ },
+  { id: 'unwrap', pattern: /\.unwrap\(/ },
+  { id: 'raw shaders', pattern: /rawCodeSnippet/ },
+  { id: 'three.js', pattern: /from ['"]three['"/]/ },
+  { id: '~unstable', pattern: /\['~unstable'\]/ },
+  { id: '@typegpu/noise', pattern: /@typegpu\/noise/ },
+  { id: '@typegpu/sdf', pattern: /@typegpu\/sdf/ },
+  { id: '@typegpu/color', pattern: /@typegpu\/color/ },
+  { id: 'wgpu-matrix', pattern: /wgpu-matrix/ },
+];
+
+function detectUsedApis(tsFiles: ExampleSrcFile[]): string[] {
+  const allContent = tsFiles.map((f) => f.content).join('\n');
+  return API_RULES.filter((r) => r.pattern.test(allContent)).map((r) => r.id);
+}
+
 export const examples = R.pipe(
   metaFiles,
   R.mapValues(
@@ -136,6 +170,7 @@ export const examples = R.pipe(
         tsImport: () => noCacheImport(tsFilesImportFunctions[key]),
         htmlFile: htmlFiles[key]?.[0] ?? '',
         thumbnails: thumbnailFiles[key],
+        usedApis: detectUsedApis(exampleTsFiles[key] ?? []),
       }) satisfies Example,
   ),
 );

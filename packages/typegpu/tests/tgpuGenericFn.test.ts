@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu, { std } from '../src/index.js';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('TgpuGenericFn - shellless callback wrapper', () => {
   it('can be called in js', () => {
@@ -369,6 +369,36 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
           return;
         }
         f(in.id.x, in.id.y, in.id.z);
+      }"
+    `);
+  });
+
+  it('can be resolved', () => {
+    const foo = tgpu.fn(() => {
+      'use gpu';
+      return 3;
+    });
+
+    const resolved = tgpu.resolve([foo]);
+    expect(resolved).toMatchInlineSnapshot(`
+      "fn foo() -> i32 {
+        return 3;
+      }"
+    `);
+  });
+
+  it('can be resolved (with provided slots)', () => {
+    const mulSlot = tgpu.slot<number>();
+
+    const foo = tgpu.fn(() => {
+      'use gpu';
+      return 3 * mulSlot.$;
+    });
+
+    const resolved = tgpu.resolve([foo.with(mulSlot, 2)]);
+    expect(resolved).toMatchInlineSnapshot(`
+      "fn foo() -> i32 {
+        return 6;
       }"
     `);
   });

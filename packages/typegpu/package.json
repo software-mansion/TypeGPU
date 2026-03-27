@@ -1,6 +1,6 @@
 {
   "name": "typegpu",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "private": true,
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "keywords": [
@@ -32,7 +32,23 @@
     },
     "./data": "./src/data/index.ts",
     "./std": "./src/std/index.ts",
-    "./common": "./src/common/index.ts"
+    "./common": "./src/common/index.ts",
+    "./$built$": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./data/$built$": {
+      "types": "./dist/data/index.d.ts",
+      "default": "./dist/data/index.js"
+    },
+    "./std/$built$": {
+      "types": "./dist/std/index.d.ts",
+      "default": "./dist/std/index.js"
+    },
+    "./common/$built$": {
+      "types": "./dist/common/index.d.ts",
+      "default": "./dist/common/index.js"
+    }
   },
   "publishConfig": {
     "directory": "dist",
@@ -65,7 +81,7 @@
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
-    "tinyest": "workspace:~0.3.0",
+    "tinyest": "workspace:~0.3.1",
     "tsover-runtime": "^0.0.5",
     "typed-binary": "^4.3.1"
   },
@@ -77,6 +93,7 @@
     "jiti": "catalog:build",
     "jsdom": "^27.0.0",
     "tsdown": "catalog:build",
+    "typegpu-testing-utility": "workspace:*",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*",
     "wgpu-matrix": "catalog:example"

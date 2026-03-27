@@ -1,4 +1,3 @@
-import { stitch } from '../core/resolve/stitch.ts';
 import { $internal } from '../shared/symbols.ts';
 import type { AbstractFloat, AbstractInt, Bool, F16, F32, I32, U16, U32 } from './wgslTypes.ts';
 import { callableSchema } from '../core/function/createCallableSchema.ts';
@@ -21,7 +20,8 @@ export const abstractFloat = {
 
 const boolCast = callableSchema({
   name: 'bool',
-  signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: bool }),
+  schema: () => bool,
+  argTypes: (arg) => (arg ? [arg] : []),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {
       return false;
@@ -31,11 +31,7 @@ const boolCast = callableSchema({
     }
     return !!v;
   },
-  codegenImpl: (_ctx, [arg]) =>
-    arg?.dataType === bool
-      ? // Already of type bool
-        stitch`${arg}`
-      : stitch`bool(${arg})`,
+  codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(bool, args),
 });
 
 /**
@@ -59,7 +55,8 @@ export const bool: Bool = Object.assign(boolCast, {
 
 const u32Cast = callableSchema({
   name: 'u32',
-  signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: u32 }),
+  schema: () => u32,
+  argTypes: (arg) => (arg ? [arg] : []),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {
       return 0;
@@ -80,11 +77,7 @@ const u32Cast = callableSchema({
     // Integer input: treat as bit reinterpretation (i32 -> u32)
     return (v & 0xffffffff) >>> 0;
   },
-  codegenImpl: (_ctx, [arg]) =>
-    arg?.dataType === u32
-      ? // Already of type u32
-        stitch`${arg}`
-      : stitch`u32(${arg})`,
+  codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(u32, args),
 });
 
 /**
@@ -110,7 +103,8 @@ export const u32: U32 = Object.assign(u32Cast, {
 
 const i32Cast = callableSchema({
   name: 'i32',
-  signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: i32 }),
+  schema: () => i32,
+  argTypes: (arg) => (arg ? [arg] : []),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {
       return 0;
@@ -120,11 +114,7 @@ const i32Cast = callableSchema({
     }
     return v | 0;
   },
-  codegenImpl: (_ctx, [arg]) =>
-    arg?.dataType === i32
-      ? // Already of type i32
-        stitch`${arg}`
-      : stitch`i32(${arg})`,
+  codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(i32, args),
 });
 
 export const u16: U16 = {
@@ -153,7 +143,8 @@ export const i32: I32 = Object.assign(i32Cast, {
 
 const f32Cast = callableSchema({
   name: 'f32',
-  signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: f32 }),
+  schema: () => f32,
+  argTypes: (arg) => (arg ? [arg] : []),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {
       return 0;
@@ -163,11 +154,7 @@ const f32Cast = callableSchema({
     }
     return Math.fround(v);
   },
-  codegenImpl: (_ctx, [arg]) =>
-    arg?.dataType === f32
-      ? // Already of type f32
-        stitch`${arg}`
-      : stitch`f32(${arg})`,
+  codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(f32, args),
 });
 
 /**
@@ -279,7 +266,8 @@ function roundToF16(x: number): number {
 
 const f16Cast = callableSchema({
   name: 'f16',
-  signature: (arg) => ({ argTypes: arg ? [arg] : [], returnType: f16 }),
+  schema: () => f16,
+  argTypes: (arg) => (arg ? [arg] : []),
   normalImpl(v?: number | boolean) {
     if (v === undefined) {
       return 0;
@@ -290,11 +278,7 @@ const f16Cast = callableSchema({
     return roundToF16(v);
   },
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
-  codegenImpl: (_ctx, [arg]) =>
-    arg?.dataType === f16
-      ? // Already of type f16
-        stitch`${arg}`
-      : stitch`f16(${arg})`,
+  codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(f16, args),
 });
 
 /**

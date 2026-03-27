@@ -1,6 +1,6 @@
 import tgpu, { d } from '../src/index.js';
 import { describe, expect } from 'vitest';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('d.ref', () => {
   it('fails when using a ref as an external', () => {

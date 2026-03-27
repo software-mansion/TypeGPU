@@ -9,7 +9,7 @@ import type { AnyWgslData, BaseData, v3u, Vec3u, WgslArray } from '../../data/wg
 import { invariant } from '../../errors.ts';
 import { WeakMemo } from '../../memo.ts';
 import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
-import type { Infer } from '../../shared/repr.ts';
+import type { InferInput } from '../../shared/repr.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type {
   ExtractBindGroupInputFromLayout,
@@ -141,10 +141,12 @@ export class TgpuGuardedComputePipelineImpl<
     this.#lastSize = vec3u();
   }
 
-  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs> {
+  with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs>;
+  with(encoder: GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs>;
+  with(bindGroupOrEncoder: TgpuBindGroup | GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs> {
     return new TgpuGuardedComputePipelineImpl(
       this.#root,
-      this.#pipeline.with(bindGroup),
+      this.#pipeline.with(bindGroupOrEncoder as TgpuBindGroup & GPUCommandEncoder),
       this.#sizeUniform,
       this.#workgroupSize,
     );
@@ -437,14 +439,14 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
-    initialOrBuffer?: Infer<TData> | GPUBuffer,
+    initialOrBuffer?: InferInput<TData> | GPUBuffer,
   ): TgpuBuffer<TData> {
     return INTERNAL_createBuffer(this, typeSchema, initialOrBuffer);
   }
 
   createUniform<TData extends AnyWgslData>(
     typeSchema: TData,
-    initialOrBuffer?: Infer<TData> | GPUBuffer,
+    initialOrBuffer?: InferInput<TData> | GPUBuffer,
   ): TgpuUniform<TData> {
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
@@ -455,7 +457,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
   createMutable<TData extends AnyWgslData>(
     typeSchema: TData,
-    initialOrBuffer?: Infer<TData> | GPUBuffer,
+    initialOrBuffer?: InferInput<TData> | GPUBuffer,
   ): TgpuMutable<TData> {
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
@@ -466,7 +468,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
   createReadonly<TData extends AnyWgslData>(
     typeSchema: TData,
-    initialOrBuffer?: Infer<TData> | GPUBuffer,
+    initialOrBuffer?: InferInput<TData> | GPUBuffer,
   ): TgpuReadonly<TData> {
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine

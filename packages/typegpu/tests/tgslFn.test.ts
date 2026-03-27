@@ -3,7 +3,7 @@ import { describe, expect } from 'vitest';
 import { builtin } from '../src/builtin.ts';
 import tgpu, { d, type TgpuFn, type TgpuSlot } from '../src/index.js';
 import { getName } from '../src/shared/meta.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('TGSL tgpu.fn function', () => {
   it('is namable', () => {

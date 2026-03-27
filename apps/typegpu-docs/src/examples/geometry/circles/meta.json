@@ -1,6 +1,7 @@
 {
   "title": "Circles",
   "category": "geometry",
-  "tags": ["experimental"],
-  "dev": true
+  "tags": ["ecosystem", "primitives"],
+  "dev": true,
+  "coolFactor": 5
 }

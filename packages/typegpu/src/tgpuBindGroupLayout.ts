@@ -49,7 +49,7 @@ import { NotUniformError } from './errors.ts';
 import { isUsableAsStorage, NotStorageError, type StorageFlag } from './extension.ts';
 import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
-import type { Infer, MemIdentity } from './shared/repr.ts';
+import type { InferGPU, MemIdentity } from './shared/repr.ts';
 import { safeStringify } from './shared/stringify.ts';
 import { $gpuValueOf, $internal } from './shared/symbols.ts';
 import type { Default, NullableToOptional, Prettify } from './shared/utilityTypes.ts';
@@ -392,19 +392,19 @@ export type BindLayoutEntry<T extends TgpuLayoutEntry | null> = T extends TgpuLa
               : never;
 
 export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends TgpuLayoutUniform
-  ? Infer<T['uniform']>
+  ? InferGPU<T['uniform']>
   : T extends TgpuLayoutStorage
-    ? Infer<UnwrapRuntimeConstructor<T['storage']>>
+    ? InferGPU<UnwrapRuntimeConstructor<T['storage']>>
     : T extends TgpuLayoutSampler
-      ? Infer<WgslSampler>
+      ? InferGPU<WgslSampler>
       : T extends TgpuLayoutComparisonSampler
-        ? Infer<WgslComparisonSampler>
+        ? InferGPU<WgslComparisonSampler>
         : T extends TgpuLayoutTexture<infer TSchema>
-          ? Infer<TSchema>
+          ? InferGPU<TSchema>
           : T extends TgpuLayoutStorageTexture<infer TSchema>
-            ? Infer<TSchema>
+            ? InferGPU<TSchema>
             : T extends TgpuLayoutExternalTexture
-              ? Infer<T['externalTexture']>
+              ? InferGPU<T['externalTexture']>
               : never;
 
 export type ExtractBindGroupInputFromLayout<T extends Record<string, TgpuLayoutEntry | null>> =

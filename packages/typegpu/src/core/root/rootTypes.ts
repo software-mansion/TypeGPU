@@ -14,8 +14,8 @@ import type {
 } from '../../data/wgslTypes.ts';
 import type {
   ExtractInvalidSchemaError,
-  Infer,
   InferGPURecord,
+  InferInput,
   IsValidBufferSchema,
   IsValidStorageSchema,
   IsValidUniformSchema,
@@ -72,6 +72,13 @@ export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> e
    * Analogous to `TgpuComputePipeline.with(bindGroup)`.
    */
   with(bindGroup: TgpuBindGroup): TgpuGuardedComputePipeline<TArgs>;
+
+  /**
+   * Returns a pipeline wrapper that encodes dispatches into the provided
+   * command encoder instead of submitting them immediately.
+   * Analogous to `TgpuComputePipeline.with(encoder)`.
+   */
+  with(encoder: GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs>;
 
   /**
    * Dispatches the pipeline.
@@ -829,7 +836,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
   createBuffer<TData extends AnyData>(
     typeSchema: ValidateBufferSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: Infer<NoInfer<TData>>,
+    initial?: InferInput<NoInfer<TData>>,
   ): TgpuBuffer<TData>;
 
   /**
@@ -857,7 +864,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
   createUniform<TData extends AnyWgslData>(
     typeSchema: ValidateUniformSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: Infer<NoInfer<TData>>,
+    initial?: InferInput<NoInfer<TData>>,
   ): TgpuUniform<TData>;
 
   /**
@@ -884,7 +891,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
   createMutable<TData extends AnyWgslData>(
     typeSchema: ValidateStorageSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: Infer<NoInfer<TData>>,
+    initial?: InferInput<NoInfer<TData>>,
   ): TgpuMutable<TData>;
 
   /**
@@ -911,7 +918,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
   createReadonly<TData extends AnyWgslData>(
     typeSchema: ValidateStorageSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: Infer<NoInfer<TData>>,
+    initial?: InferInput<NoInfer<TData>>,
   ): TgpuReadonly<TData>;
 
   /**
