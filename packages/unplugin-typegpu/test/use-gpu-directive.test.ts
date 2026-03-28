@@ -381,6 +381,39 @@ describe('[BABEL] "use gpu" directive', () => {
       }) && $.f)({});"
     `);
   });
+
+  it('throws for nested destructuring', () => {
+    expect(() =>
+      babelTransform(`
+        const f = (obj) => {
+          'use gpu';
+          const { a: { b } } = obj;
+        };
+      `),
+    ).toThrow(/Unsupported object destructuring/);
+  });
+
+  it('throws for default values in destructuring', () => {
+    expect(() =>
+      babelTransform(`
+        const f = (obj) => {
+          'use gpu';
+          const { a = 1 } = obj;
+        };
+      `),
+    ).toThrow(/Unsupported object destructuring/);
+  });
+
+  it('throws for rest properties in destructuring', () => {
+    expect(() =>
+      babelTransform(`
+        const f = (obj) => {
+          'use gpu';
+          const { ...rest } = obj;
+        };
+      `),
+    ).toThrow(/Unsupported object destructuring/);
+  });
 });
 
 describe('[ROLLUP] "use gpu" directive', () => {
@@ -487,6 +520,39 @@ describe('[ROLLUP] "use gpu" directive', () => {
       export { pick };
       "
     `);
+  });
+
+  it('throws for nested destructuring', async () => {
+    await expect(
+      rollupTransform(`
+        const f = (obj) => {
+          'use gpu';
+          const { a: { b } } = obj;
+        };
+      `),
+    ).rejects.toThrow(/Unsupported object destructuring/);
+  });
+
+  it('throws for default values in destructuring', async () => {
+    await expect(
+      rollupTransform(`
+        const f = (obj) => {
+          'use gpu';
+          const { a = 1 } = obj;
+        };
+      `),
+    ).rejects.toThrow(/Unsupported object destructuring/);
+  });
+
+  it('throws for rest properties in destructuring', async () => {
+    await expect(
+      rollupTransform(`
+        const f = (obj) => {
+          'use gpu';
+          const { ...rest } = obj;
+        };
+      `),
+    ).rejects.toThrow(/Unsupported object destructuring/);
   });
 
   it('makes plugin transpile marked arrow functions passed to shells and keeps JS impl', async () => {

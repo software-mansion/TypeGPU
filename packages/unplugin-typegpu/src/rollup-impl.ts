@@ -40,6 +40,10 @@ function objectDestructuringError(message: string): Error {
   return new Error(`Unsupported object destructuring in "use gpu" functions: ${message}`);
 }
 
+function hasObjectPatternDeclaration(node: acorn.VariableDeclaration): boolean {
+  return node.declarations.some((decl) => decl.id.type === 'ObjectPattern');
+}
+
 function cloneIdentifierNode(node: acorn.Identifier): acorn.AnyNode {
   return structuredClone(node);
 }
@@ -61,7 +65,7 @@ function expandObjectPatternDeclaration(
   sliceNode: (node: acorn.Node) => string,
   getTmpId: () => string,
 ): { declarations: acorn.AnyNode[]; replacement: string } | null {
-  if (!node.declarations.some((decl) => decl.id.type === 'ObjectPattern')) {
+  if (!hasObjectPatternDeclaration(node)) {
     return null;
   }
 
@@ -164,7 +168,29 @@ function normalizeObjectDestructuring(
   sliceNode: (node: acorn.Node) => string,
 ) {
   let tmpCounter = 0;
-  const getTmpId = () => (tmpCounter === 0 ? '_tmp' : `_tmp${tmpCounter++}`);
+  const getTmpId = () => {
+    const id = tmpCounter === 0 ? '_tmp' : `_tmp${tmpCounter}`;
+    tmpCounter++;
+    return id;
+  };
+
+  walk(node as Node, {
+    enter(current, parent) {
+      const currentNode = current as acorn.AnyNode;
+      const parentNode = parent as acorn.AnyNode | undefined;
+
+      if (
+        currentNode.type === 'VariableDeclaration' &&
+        hasObjectPatternDeclaration(currentNode) &&
+        parentNode?.type !== 'BlockStatement' &&
+        parentNode?.type !== 'Program'
+      ) {
+        throw objectDestructuringError(
+          'unsupported object destructuring in non-block variable declaration (e.g. for-loop initializer or for-of/in)',
+        );
+      }
+    },
+  });
 
   const rewriteBody = (body: acorn.AnyNode[]) => {
     const nextBody: acorn.AnyNode[] = [];

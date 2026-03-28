@@ -116,11 +116,15 @@ function objectDestructuringError(message: string): Error {
   return new Error(`Unsupported object destructuring in "use gpu" functions: ${message}`);
 }
 
+function hasObjectPatternDeclaration(node: babel.VariableDeclaration): boolean {
+  return node.declarations.some((decl) => decl.id.type === 'ObjectPattern');
+}
+
 function expandObjectPatternDeclaration(
   node: babel.VariableDeclaration,
   path: NodePath<babel.VariableDeclaration>,
 ): babel.VariableDeclaration[] | null {
-  if (!node.declarations.some((decl) => decl.id.type === 'ObjectPattern')) {
+  if (!hasObjectPatternDeclaration(node)) {
     return null;
   }
 
@@ -146,7 +150,7 @@ function expandObjectPatternDeclaration(
 
     if (objectSource.type !== 'Identifier') {
       const tmpId = path.scope.generateUidIdentifier('tmp');
-      
+
       expanded.push(
         types.variableDeclaration(node.kind, [
           types.variableDeclarator(tmpId, types.cloneNode(objectSource, true)),
@@ -202,6 +206,15 @@ function normalizeObjectDestructuring(path: UseGpuFunctionPath) {
     },
 
     VariableDeclaration(innerPath) {
+      if (hasObjectPatternDeclaration(innerPath.node)) {
+        const parentPath = innerPath.parentPath;
+        if (!parentPath.isBlockStatement() && !parentPath.isProgram()) {
+          throw objectDestructuringError(
+            'unsupported object destructuring in non-block variable declaration (e.g. for-loop initializer or for-of/in)',
+          );
+        }
+      }
+
       const expanded = expandObjectPatternDeclaration(innerPath.node, innerPath);
       if (!expanded) {
         return;
