@@ -207,7 +207,9 @@ export const it = base.extend<{
   },
 
   device: async ({ task }, use) => {
+    const savedFeatures = new Set(mockDevice.features);
     await use(mockDevice as unknown as GPUDevice & { mock: typeof mockDevice });
+    mockDevice.features = savedFeatures;
   },
 
   root: async ({ task }, use) => {

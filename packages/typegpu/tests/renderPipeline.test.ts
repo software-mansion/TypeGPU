@@ -504,10 +504,10 @@ describe('root.withVertex(...).withFragment(...)', () => {
       expect(pipeline[$internal].priors.performanceCallback).not.toBe(callback1);
     });
 
-    it('should throw error if timestamp-query feature is not enabled', ({ root, device }) => {
-      const originalFeatures = device.features;
+    it('should warn if timestamp-query feature is not enabled', ({ root, device }) => {
       //@ts-expect-error
       device.features = new Set();
+      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const vertexFn = tgpu.vertexFn({
         out: { pos: d.builtin.position },
@@ -520,17 +520,17 @@ describe('root.withVertex(...).withFragment(...)', () => {
       const callback = vi.fn();
 
       expect(() => {
-        root
-          .withVertex(vertexFn, {})
-          .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-          .createPipeline()
-          .withPerformanceCallback(callback);
-      }).toThrow(
-        'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
+        const before = root.createRenderPipeline({
+          vertex: vertexFn,
+          fragment: fragmentFn,
+        });
+        const after = before.withPerformanceCallback(callback);
+        // no-op
+        expect(after).toBe(before);
+      }).not.toThrow();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
       );
-
-      //@ts-expect-error
-      device.features = originalFeatures;
     });
 
     it("should not throw 'A color target was not provided to the shader'", ({ root, device }) => {
