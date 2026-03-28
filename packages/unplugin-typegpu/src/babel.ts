@@ -1,6 +1,6 @@
 import * as Babel from '@babel/standalone';
 import type TemplateGenerator from '@babel/template';
-import type { TraverseOptions } from '@babel/traverse';
+import type { NodePath, TraverseOptions } from '@babel/traverse';
 import type * as babel from '@babel/types';
 import defu from 'defu';
 import { FORMAT_VERSION } from 'tinyest';
@@ -108,6 +108,111 @@ function wrapInAutoName(node: babel.Expression, name: string) {
   );
 }
 
+type UseGpuFunctionPath = NodePath<
+  babel.FunctionDeclaration | babel.FunctionExpression | babel.ArrowFunctionExpression
+>;
+
+function objectDestructuringError(message: string): Error {
+  return new Error(`Unsupported object destructuring in "use gpu" functions: ${message}`);
+}
+
+function expandObjectPatternDeclaration(
+  node: babel.VariableDeclaration,
+  path: NodePath<babel.VariableDeclaration>,
+): babel.VariableDeclaration[] | null {
+  if (!node.declarations.some((decl) => decl.id.type === 'ObjectPattern')) {
+    return null;
+  }
+
+  const expanded: babel.VariableDeclaration[] = [];
+
+  for (const declarator of node.declarations) {
+    if (declarator.id.type === 'Identifier') {
+      expanded.push(
+        types.variableDeclaration(node.kind, [types.cloneNode(declarator, true)]),
+      );
+      continue;
+    }
+
+    if (declarator.id.type !== 'ObjectPattern') {
+      throw objectDestructuringError('only flat object patterns are supported');
+    }
+
+    if (!declarator.init) {
+      throw objectDestructuringError('an initializer is required');
+    }
+
+    let objectSource = declarator.init;
+
+    if (objectSource.type !== 'Identifier') {
+      const tmpId = path.scope.generateUidIdentifier('tmp');
+      
+      expanded.push(
+        types.variableDeclaration(node.kind, [
+          types.variableDeclarator(tmpId, types.cloneNode(objectSource, true)),
+        ]),
+      );
+      objectSource = tmpId;
+    }
+
+    for (const property of declarator.id.properties) {
+      if (property.type === 'RestElement') {
+        throw objectDestructuringError('rest properties are not supported');
+      }
+
+      if (property.type !== 'ObjectProperty') {
+        throw objectDestructuringError('only plain object properties are supported');
+      }
+
+      if (property.computed || property.key.type !== 'Identifier') {
+        throw objectDestructuringError('only identifier property names are supported');
+      }
+
+      if (property.value.type !== 'Identifier') {
+        if (property.value.type === 'AssignmentPattern') {
+          throw objectDestructuringError('default values are not supported');
+        }
+
+        throw objectDestructuringError('nested destructuring is not supported');
+      }
+
+      expanded.push(
+        types.variableDeclaration(node.kind, [
+          types.variableDeclarator(
+            types.cloneNode(property.value, true),
+            types.memberExpression(
+              types.cloneNode(objectSource, true),
+              types.identifier(property.key.name),
+            ),
+          ),
+        ]),
+      );
+    }
+  }
+
+  return expanded;
+}
+
+function normalizeObjectDestructuring(path: UseGpuFunctionPath) {
+  path.traverse({
+    Function(innerPath) {
+      if (innerPath.node !== path.node) {
+        innerPath.skip();
+      }
+    },
+
+    VariableDeclaration(innerPath) {
+      const expanded = expandObjectPatternDeclaration(innerPath.node, innerPath);
+      if (!expanded) {
+        return;
+      }
+
+      innerPath.replaceWithMultiple(expanded);
+      innerPath.skip();
+    },
+  });
+}
+
 function functionVisitor(ctx: Context): TraverseOptions {
   let inUseGpuScope = false;
 
@@ -179,6 +284,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
     ArrowFunctionExpression: {
       enter(path) {
         if (containsUseGpuDirective(path.node)) {
+          normalizeObjectDestructuring(path);
           fnNodeToOriginalMap.set(path.node, types.cloneNode(path.node, true));
           if (inUseGpuScope) {
             throw new Error(`Nesting 'use gpu' functions is not allowed`);
@@ -200,6 +306,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
     FunctionExpression: {
       enter(path) {
         if (containsUseGpuDirective(path.node)) {
+          normalizeObjectDestructuring(path);
           fnNodeToOriginalMap.set(path.node, types.cloneNode(path.node, true));
           if (inUseGpuScope) {
             throw new Error(`Nesting 'use gpu' functions is not allowed`);
@@ -221,6 +328,7 @@ function functionVisitor(ctx: Context): TraverseOptions {
     FunctionDeclaration: {
       enter(path) {
         if (containsUseGpuDirective(path.node)) {
+          normalizeObjectDestructuring(path);
           fnNodeToOriginalMap.set(path.node, types.cloneNode(path.node, true));
           if (inUseGpuScope) {
             throw new Error(`Nesting 'use gpu' functions is not allowed`);

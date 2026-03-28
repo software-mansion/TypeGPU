@@ -36,6 +36,181 @@ export function containsUseGpuDirective(node: FunctionNode): boolean {
   return false;
 }
 
+function objectDestructuringError(message: string): Error {
+  return new Error(`Unsupported object destructuring in "use gpu" functions: ${message}`);
+}
+
+function cloneIdentifierNode(node: acorn.Identifier): acorn.AnyNode {
+  return structuredClone(node);
+}
+
+function createMemberExpression(
+  object: acorn.Expression,
+  propertyName: string,
+): acorn.AnyNode {
+  return {
+    type: 'MemberExpression',
+    object: structuredClone(object),
+    property: { type: 'Identifier', name: propertyName },
+    computed: false,
+  } as acorn.AnyNode;
+}
+
+function expandObjectPatternDeclaration(
+  node: acorn.VariableDeclaration,
+  sliceNode: (node: acorn.Node) => string,
+  getTmpId: () => string,
+): { declarations: acorn.AnyNode[]; replacement: string } | null {
+  if (!node.declarations.some((decl) => decl.id.type === 'ObjectPattern')) {
+    return null;
+  }
+
+  const expanded: acorn.AnyNode[] = [];
+  const declarations: string[] = [];
+
+  for (const declarator of node.declarations) {
+    if (declarator.id.type === 'Identifier') {
+      expanded.push({
+        type: 'VariableDeclaration',
+        kind: node.kind,
+        declarations: [structuredClone(declarator)],
+      } as acorn.AnyNode);
+
+      declarations.push(
+        `${node.kind} ${declarator.id.name}${
+          declarator.init ? ` = ${sliceNode(declarator.init)}` : ''
+        };`,
+      );
+      continue;
+    }
+
+    if (declarator.id.type !== 'ObjectPattern') {
+      throw objectDestructuringError('only flat object patterns are supported');
+    }
+
+    if (!declarator.init) {
+      throw objectDestructuringError('an initializer is required');
+    }
+
+    let objectSourceStr = sliceNode(declarator.init);
+    let objectSourceAst = declarator.init as acorn.Expression;
+
+    if (objectSourceAst.type !== 'Identifier') {
+      const tmpName = getTmpId();
+      objectSourceStr = tmpName;
+      objectSourceAst = {
+        type: 'Identifier',
+        name: tmpName,
+      } as acorn.AnyNode as acorn.Identifier;
+
+      expanded.push({
+        type: 'VariableDeclaration',
+        kind: node.kind,
+        declarations: [
+          {
+            type: 'VariableDeclarator',
+            id: structuredClone(objectSourceAst),
+            init: declarator.init,
+          },
+        ],
+      } as acorn.AnyNode);
+
+      declarations.push(`${node.kind} ${tmpName} = ${sliceNode(declarator.init)};`);
+    }
+
+    for (const property of declarator.id.properties) {
+      if (property.type === 'RestElement') {
+        throw objectDestructuringError('rest properties are not supported');
+      }
+
+      if (property.type !== 'Property') {
+        throw objectDestructuringError('only plain object properties are supported');
+      }
+
+      if (property.computed || property.key.type !== 'Identifier') {
+        throw objectDestructuringError('only identifier property names are supported');
+      }
+
+      if (property.value.type !== 'Identifier') {
+        if (property.value.type === 'AssignmentPattern') {
+          throw objectDestructuringError('default values are not supported');
+        }
+
+        throw objectDestructuringError('nested destructuring is not supported');
+      }
+
+      expanded.push({
+        type: 'VariableDeclaration',
+        kind: node.kind,
+        declarations: [
+          {
+            type: 'VariableDeclarator',
+            id: cloneIdentifierNode(property.value),
+            init: createMemberExpression(objectSourceAst, property.key.name),
+          },
+        ],
+      } as acorn.AnyNode);
+
+      declarations.push(`${node.kind} ${property.value.name} = ${objectSourceStr}.${property.key.name};`);
+    }
+  }
+
+  return { declarations: expanded, replacement: declarations.join(' ') };
+}
+
+function normalizeObjectDestructuring(
+  node: acorn.AnyNode,
+  replaceNode: (node: acorn.Node, content: string) => void,
+  sliceNode: (node: acorn.Node) => string,
+) {
+  let tmpCounter = 0;
+  const getTmpId = () => (tmpCounter === 0 ? '_tmp' : `_tmp${tmpCounter++}`);
+
+  const rewriteBody = (body: acorn.AnyNode[]) => {
+    const nextBody: acorn.AnyNode[] = [];
+
+    for (const statement of body) {
+      if (statement.type === 'VariableDeclaration') {
+        const expanded = expandObjectPatternDeclaration(statement, sliceNode, getTmpId);
+        if (expanded) {
+          replaceNode(statement, expanded.replacement);
+          nextBody.push(...expanded.declarations);
+          continue;
+        }
+      }
+
+      if (statement.type === 'BlockStatement') {
+        rewriteBody(statement.body);
+      } else if (statement.type === 'IfStatement') {
+        if (statement.consequent.type === 'BlockStatement') {
+          rewriteBody(statement.consequent.body);
+        }
+        if (statement.alternate?.type === 'BlockStatement') {
+          rewriteBody(statement.alternate.body);
+        }
+      } else if (
+        statement.type === 'ForStatement' &&
+        statement.body.type === 'BlockStatement'
+      ) {
+        rewriteBody(statement.body.body);
+      } else if (
+        statement.type === 'WhileStatement' &&
+        statement.body.type === 'BlockStatement'
+      ) {
+        rewriteBody(statement.body.body);
+      }
+
+      nextBody.push(statement);
+    }
+
+    body.splice(0, body.length, ...nextBody);
+  };
+
+  if (node.body.type === 'BlockStatement') {
+    rewriteBody(node.body.body);
+  }
+}
+
 export function removeUseGpuDirective(node: FunctionNode) {
   const cloned = structuredClone(node);
 
@@ -127,9 +302,13 @@ export const rollUpImpl = (rawOptions: Options) => {
                   (implementation.type === 'FunctionExpression' ||
                     implementation.type === 'ArrowFunctionExpression')
                 ) {
-                  tgslFunctionDefs.push({
-                    def: removeUseGpuDirective(implementation),
-                  });
+                  const def = removeUseGpuDirective(implementation);
+                  normalizeObjectDestructuring(
+                    def,
+                    (targetNode, content) => magicString.overwriteNode(targetNode as Node, content),
+                    (targetNode) => magicString.sliceNode(targetNode as Node),
+                  );
+                  tgslFunctionDefs.push({ def });
                   this.skip();
                 }
               }
@@ -141,8 +320,14 @@ export const rollUpImpl = (rawOptions: Options) => {
               node.type === 'FunctionDeclaration'
             ) {
               if (containsUseGpuDirective(node)) {
+                const def = removeUseGpuDirective(node);
+                normalizeObjectDestructuring(
+                  def,
+                  (targetNode, content) => magicString.overwriteNode(targetNode as Node, content),
+                  (targetNode) => magicString.sliceNode(targetNode as Node),
+                );
                 tgslFunctionDefs.push({
-                  def: removeUseGpuDirective(node),
+                  def,
                   name: getFunctionName(node, parent),
                 });
                 this.skip();
