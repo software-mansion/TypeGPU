@@ -8,6 +8,7 @@ import {
 } from 'typegpu';
 import type { BinaryOp } from './types.ts';
 import {
+  ELEMENTS_PER_THREAD,
   identitySlot,
   onlyGreatestElementSlot,
   operatorSlot,
@@ -76,7 +77,7 @@ export class PrefixScanComputer {
     querySet: TgpuQuerySet<'timestamp'> | null,
     isFirstPass: boolean,
   ): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-    const numWorkgroups = Math.ceil(actualLength / (WORKGROUP_SIZE * 8));
+    const numWorkgroups = Math.ceil(actualLength / (WORKGROUP_SIZE * ELEMENTS_PER_THREAD));
     const scanPipeline = this.getScanPipeline(onlyGreatestElement);
 
     // Base case: single workgroup

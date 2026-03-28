@@ -1,5 +1,7 @@
 import tgpu, { d, std } from 'typegpu';
 import {
+  ELEMENTS_PER_THREAD,
+  ELEMENTS_RANGE,
   identitySlot,
   onlyGreatestElementSlot,
   operatorSlot,
@@ -8,7 +10,9 @@ import {
 } from '../schemas.ts';
 import { downsweep, upsweep, workgroupMemory } from './shared.ts';
 
-const fillIdentityArray = tgpu.comptime(() => Array.from({ length: 8 }, () => identitySlot.$));
+const fillIdentityArray = tgpu.comptime(() =>
+  Array.from({ length: ELEMENTS_PER_THREAD }, () => identitySlot.$),
+);
 
 export const computeBlock = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE],
@@ -22,19 +26,17 @@ export const computeBlock = tgpu.computeFn({
   const workgroupId = wid.x;
   const localIdx = lid.x;
 
-  // 8 elements per thread
-  const baseIdx = globalIdx * 8;
+  const baseIdx = globalIdx * ELEMENTS_PER_THREAD;
 
-  const partialSums = d.arrayOf(d.f32, 8)(fillIdentityArray());
+  const partialSums = d.arrayOf(d.f32, ELEMENTS_PER_THREAD)(fillIdentityArray());
 
   let prev = identitySlot.$;
   let lastIdx = d.u32(0);
 
-  // TODO: use `tgpu.unroll(8)`
-  for (let i = d.u32(); i < 8; i++) {
+  for (const i of tgpu.unroll(ELEMENTS_RANGE)) {
     if (baseIdx + i < scanLayout.$.input.length) {
       partialSums[i] = operatorSlot.$(prev, scanLayout.$.input[baseIdx + i] as number);
-      prev = partialSums[i] as number;
+      prev = partialSums[i];
       lastIdx = i;
     }
   }
@@ -56,7 +58,7 @@ export const computeBlock = tgpu.computeFn({
 
     const scannedSum = workgroupMemory.$[localIdx];
 
-    for (let i = d.u32(0); i < 8; i++) {
+    for (const i of tgpu.unroll(ELEMENTS_RANGE)) {
       if (baseIdx + i < scanLayout.$.input.length) {
         if (i === 0) {
           scanLayout.$.input[baseIdx + i] = scannedSum;
