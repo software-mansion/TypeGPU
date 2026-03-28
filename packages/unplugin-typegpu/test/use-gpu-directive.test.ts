@@ -322,6 +322,98 @@ describe('[BABEL] "use gpu" directive', () => {
       }) && $.f)({});"
     `);
   });
+
+  it('supports flat object destructuring', () => {
+    const code = `\
+      const pick = (obj) => {
+        'use gpu';
+        const { a, b: alias } = obj;
+        let { c } = obj;
+        return a + alias + c;
+      };
+    `;
+
+    expect(babelTransform(code)).toMatchInlineSnapshot(`
+      "const pick = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = obj => {
+        'use gpu';
+
+        const a = obj.a;
+        const alias = obj.b;
+        let c = obj.c;
+        return __tsover_add(__tsover_add(a, alias), c);
+      }, {
+        v: 1,
+        name: "pick",
+        ast: {"params":[{"type":"i","name":"obj"}],"body":[0,[[13,"a",[7,"obj","a"]],[13,"alias",[7,"obj","b"]],[12,"c",[7,"obj","c"]],[10,[1,[1,"a","+","alias"],"+","c"]]]],"externalNames":[]},
+        externals: () => {
+          return {};
+        }
+      }) && $.f)({});"
+    `);
+  });
+
+  it('maintains single-evaluation safety for function calls', () => {
+    const code = `\
+      const pick = () => {
+        'use gpu';
+        const { a, b } = getObj();
+        return a + b;
+      };
+    `;
+
+    expect(babelTransform(code)).toMatchInlineSnapshot(`
+      "const pick = ($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        'use gpu';
+
+        const _tmp = getObj();
+        const a = _tmp.a;
+        const b = _tmp.b;
+        return __tsover_add(a, b);
+      }, {
+        v: 1,
+        name: "pick",
+        ast: {"params":[],"body":[0,[[12,"_tmp",[6,"getObj",[]]],[13,"a",[7,"_tmp","a"]],[13,"b",[7,"_tmp","b"]],[10,[1,"a","+","b"]]]],"externalNames":["getObj"]},
+        externals: () => {
+          return {
+            getObj
+          };
+        }
+      }) && $.f)({});"
+    `);
+  });
+
+  it('throws for nested destructuring', () => {
+    expect(() =>
+      babelTransform(`
+        const f = (obj) => {
+          'use gpu';
+          const { a: { b } } = obj;
+        };
+      `),
+    ).toThrow(/Unsupported object destructuring/);
+  });
+
+  it('throws for default values in destructuring', () => {
+    expect(() =>
+      babelTransform(`
+        const f = (obj) => {
+          'use gpu';
+          const { a = 1 } = obj;
+        };
+      `),
+    ).toThrow(/Unsupported object destructuring/);
+  });
+
+  it('throws for rest properties in destructuring', () => {
+    expect(() =>
+      babelTransform(`
+        const f = (obj) => {
+          'use gpu';
+          const { ...rest } = obj;
+        };
+      `),
+    ).toThrow(/Unsupported object destructuring/);
+  });
 });
 
 describe('[ROLLUP] "use gpu" directive', () => {
@@ -375,6 +467,92 @@ describe('[ROLLUP] "use gpu" directive', () => {
             console.log(addCPU);
       "
     `);
+  });
+
+  it('supports flat object destructuring', async () => {
+    const code = `\
+      const pick = (obj) => {
+        'use gpu';
+        const { a, b: alias } = obj;
+        let { c } = obj;
+        return a + alias + c;
+      };
+    `;
+
+    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
+      "const pick = (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((obj) => {
+              'use gpu';
+              const a = obj.a; const alias = obj.b; let c = obj.c;
+              return __tsover_add(__tsover_add(a, alias), c);
+            }), {
+                    v: 1,
+                    name: \\"pick\\",
+                    ast: {\\"params\\":[{\\"type\\":\\"i\\",\\"name\\":\\"obj\\"}],\\"body\\":[0,[[13,\\"a\\",[7,\\"obj\\",\\"a\\"]],[13,\\"alias\\",[7,\\"obj\\",\\"b\\"]],[12,\\"c\\",[7,\\"obj\\",\\"c\\"]],[10,[1,[1,\\"a\\",\\"+\\",\\"alias\\"],\\"+\\",\\"c\\"]]]],\\"externalNames\\":[]},
+                    externals: () => ({}),
+                  }) && $.f)({}));
+
+      export { pick };
+      "
+    `);
+  });
+
+  it('maintains single-evaluation safety for function calls', async () => {
+    const code = `\
+      const pick = () => {
+        'use gpu';
+        const { a, b } = getObj();
+        return a + b;
+      };
+    `;
+
+    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
+      "const pick = (($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+              'use gpu';
+              const _tmp = getObj(); const a = _tmp.a; const b = _tmp.b;
+              return __tsover_add(a, b);
+            }), {
+                    v: 1,
+                    name: \\"pick\\",
+                    ast: {\\"params\\":[],\\"body\\":[0,[[12,\\"_tmp\\",[6,\\"getObj\\",[]]],[13,\\"a\\",[7,\\"_tmp\\",\\"a\\"]],[13,\\"b\\",[7,\\"_tmp\\",\\"b\\"]],[10,[1,\\"a\\",\\"+\\",\\"b\\"]]]],\\"externalNames\\":[\\"getObj\\"]},
+                    externals: () => ({getObj}),
+                  }) && $.f)({}));
+
+      export { pick };
+      "
+    `);
+  });
+
+  it('throws for nested destructuring', async () => {
+    await expect(
+      rollupTransform(`
+        const f = (obj) => {
+          'use gpu';
+          const { a: { b } } = obj;
+        };
+      `),
+    ).rejects.toThrow(/Unsupported object destructuring/);
+  });
+
+  it('throws for default values in destructuring', async () => {
+    await expect(
+      rollupTransform(`
+        const f = (obj) => {
+          'use gpu';
+          const { a = 1 } = obj;
+        };
+      `),
+    ).rejects.toThrow(/Unsupported object destructuring/);
+  });
+
+  it('throws for rest properties in destructuring', async () => {
+    await expect(
+      rollupTransform(`
+        const f = (obj) => {
+          'use gpu';
+          const { ...rest } = obj;
+        };
+      `),
+    ).rejects.toThrow(/Unsupported object destructuring/);
   });
 
   it('makes plugin transpile marked arrow functions passed to shells and keeps JS impl', async () => {
