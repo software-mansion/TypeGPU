@@ -24,79 +24,52 @@ type SoAInputFor<T extends Record<string, BaseData>> = [keyof T] extends [keyof 
   : never;
 
 function packedSchemaOf(schema: BaseData): BaseData {
-  const unpacked = undecorate(schema);
-  return isAtomic(unpacked) ? unpacked.inner : unpacked;
+  const unpackedSchema = undecorate(schema);
+  return isAtomic(unpackedSchema) ? unpackedSchema.inner : unpackedSchema;
 }
 
-function getPackedMatrixLayout(packedSchema: BaseData) {
-  if (!isMat(packedSchema)) {
-    return undefined;
-  }
-
-  const dim = isMat3x3f(packedSchema) ? 3 : isMat2x2f(packedSchema) ? 2 : 4;
-  const packedColumnSize = dim * 4;
-
-  return {
-    dim,
-    packedColumnSize,
-    packedSize: dim * packedColumnSize,
-  } as const;
+function packedMatrixDimOf(schema: BaseData): 2 | 3 | 4 | undefined {
+  return isMat3x3f(schema) ? 3 : isMat2x2f(schema) ? 2 : isMat(schema) ? 4 : undefined;
 }
 
 function packedSizeOf(schema: BaseData): number {
   const packedSchema = packedSchemaOf(schema);
-  const matrixLayout = getPackedMatrixLayout(packedSchema);
-  if (matrixLayout) {
-    return matrixLayout.packedSize;
+  const matrixDim = packedMatrixDimOf(packedSchema);
+  if (matrixDim) {
+    return matrixDim * matrixDim * 4;
   }
-
   if (isWgslArray(packedSchema)) {
     return packedSchema.elementCount * packedSizeOf(packedSchema.elementType);
   }
-
   return sizeOf(packedSchema);
-}
-
-function inferSoAElementCount(
-  arraySchema: WgslArray,
-  soaData: Record<string, ArrayBufferView>,
-): number | undefined {
-  const structSchema = arraySchema.elementType as WgslStruct;
-  let inferredCount: number | undefined;
-
-  for (const key in soaData) {
-    const srcArray = soaData[key];
-    const fieldSchema = structSchema.propTypes[key];
-    if (srcArray === undefined || fieldSchema === undefined) {
-      continue;
-    }
-
-    const fieldPackedSize = packedSizeOf(fieldSchema);
-    if (fieldPackedSize === 0) {
-      continue;
-    }
-
-    const fieldElementCount = Math.floor(srcArray.byteLength / fieldPackedSize);
-    inferredCount =
-      inferredCount === undefined ? fieldElementCount : Math.min(inferredCount, fieldElementCount);
-  }
-
-  return inferredCount;
 }
 
 function computeSoAByteLength(
   arraySchema: WgslArray,
   soaData: Record<string, ArrayBufferView>,
 ): number | undefined {
-  const elementCount = inferSoAElementCount(arraySchema, soaData);
-  if (elementCount === undefined) {
+  const structSchema = arraySchema.elementType as WgslStruct;
+  let inferredCount: number | undefined;
+
+  for (const key in structSchema.propTypes) {
+    const srcArray = soaData[key];
+    const fieldSchema = structSchema.propTypes[key];
+    if (srcArray === undefined || fieldSchema === undefined) {
+      continue;
+    }
+    const packedFieldSize = packedSizeOf(fieldSchema);
+    if (packedFieldSize === 0) {
+      continue;
+    }
+    const fieldElementCount = Math.floor(srcArray.byteLength / packedFieldSize);
+    inferredCount =
+      inferredCount === undefined ? fieldElementCount : Math.min(inferredCount, fieldElementCount);
+  }
+  if (inferredCount === undefined) {
     return undefined;
   }
-  const elementStride = roundUp(
-    sizeOf(arraySchema.elementType),
-    alignmentOf(arraySchema.elementType),
-  );
-  return elementCount * elementStride;
+  const elementStride = roundUp(sizeOf(structSchema), alignmentOf(structSchema));
+  return inferredCount * elementStride;
 }
 
 function writePackedValue(
@@ -108,23 +81,21 @@ function writePackedValue(
 ): void {
   const unpackedSchema = undecorate(schema);
   const packedSchema = isAtomic(unpackedSchema) ? unpackedSchema.inner : unpackedSchema;
-  const matrixLayout = getPackedMatrixLayout(packedSchema);
-  if (matrixLayout) {
-    const gpuColumnStride = roundUp(matrixLayout.packedColumnSize, alignmentOf(schema));
-
-    for (let col = 0; col < matrixLayout.dim; col++) {
+  const matrixDim = packedMatrixDimOf(packedSchema);
+  if (matrixDim) {
+    const packedColumnSize = matrixDim * 4;
+    const gpuColumnStride = roundUp(packedColumnSize, alignmentOf(schema));
+    for (let col = 0; col < matrixDim; col++) {
       target.set(
         srcBytes.subarray(
-          srcOffset + col * matrixLayout.packedColumnSize,
-          srcOffset + col * matrixLayout.packedColumnSize + matrixLayout.packedColumnSize,
+          srcOffset + col * packedColumnSize,
+          srcOffset + col * packedColumnSize + packedColumnSize,
         ),
         dstOffset + col * gpuColumnStride,
       );
     }
-
     return;
   }
-
   if (isWgslArray(unpackedSchema)) {
     const packedElementSize = packedSizeOf(unpackedSchema.elementType);
     const gpuElementStride = roundUp(
@@ -141,10 +112,8 @@ function writePackedValue(
         srcOffset + i * packedElementSize,
       );
     }
-
     return;
   }
-
   target.set(srcBytes.subarray(srcOffset, srcOffset + sizeOf(packedSchema)), dstOffset);
 }
 
@@ -156,7 +125,6 @@ function scatterSoA(
   endOffset: number,
 ): void {
   const structSchema = arraySchema.elementType as WgslStruct;
-  const offsets = offsetsForProps(structSchema);
   const elementStride = roundUp(sizeOf(structSchema), alignmentOf(structSchema));
   invariant(
     startOffset % elementStride === 0,
@@ -165,6 +133,7 @@ function scatterSoA(
   const startElement = Math.floor(startOffset / elementStride);
   const endElement = Math.min(arraySchema.elementCount, Math.ceil(endOffset / elementStride));
   const elementCount = Math.max(0, endElement - startElement);
+  const offsets = offsetsForProps(structSchema);
 
   for (const key in structSchema.propTypes) {
     const fieldSchema = structSchema.propTypes[key];
@@ -173,12 +142,10 @@ function scatterSoA(
     }
     const srcArray = soaData[key];
     invariant(srcArray !== undefined, `Missing SoA data for field '${key}'`);
-
     const fieldOffset = offsets[key]?.offset;
     invariant(fieldOffset !== undefined, `Field ${key} not found in struct schema`);
-    const srcBytes = new Uint8Array(srcArray.buffer, srcArray.byteOffset, srcArray.byteLength);
-
     const packedFieldSize = packedSizeOf(fieldSchema);
+    const srcBytes = new Uint8Array(srcArray.buffer, srcArray.byteOffset, srcArray.byteLength);
     for (let i = 0; i < elementCount; i++) {
       writePackedValue(
         target,
