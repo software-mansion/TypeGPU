@@ -1,6 +1,6 @@
 {
   "name": "eslint-plugin-typegpu",
-  "version": "0.10.0-alpha.1",
+  "version": "0.10.0-alpha.2",
   "description": "TypeGPU specific linting rules for ESLint",
   "keywords": [
     "eslint",
