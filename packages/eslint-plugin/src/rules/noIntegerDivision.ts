@@ -2,8 +2,8 @@ import type { TSESTree } from '@typescript-eslint/utils';
 import { createRule } from '../ruleCreator.ts';
 
 // TODO: detect `std.div(d.u32(1), d.u32(2))`
-export const integerDivision = createRule({
-  name: 'integer-division',
+export const noIntegerDivision = createRule({
+  name: 'no-integer-division',
   meta: {
     type: 'suggestion',
     docs: { description: `Avoid dividing numbers wrapped in 'u32' and 'i32'.` },

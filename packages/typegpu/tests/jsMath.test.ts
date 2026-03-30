@@ -19,7 +19,7 @@ describe('Math', () => {
     const myFn = () => {
       'use gpu';
       const a = 0.5;
-      // oxlint-disable-next-line typegpu/math
+      // oxlint-disable-next-line typegpu/no-math
       const b = Math.sin(a);
     };
 
@@ -34,7 +34,7 @@ describe('Math', () => {
   it('precomputes Math.sin when applicable', () => {
     const myFn = () => {
       'use gpu';
-      // oxlint-disable-next-line typegpu/math
+      // oxlint-disable-next-line typegpu/no-math
       const a = Math.sin(0.5);
     };
 
@@ -49,7 +49,7 @@ describe('Math', () => {
     const myFn = () => {
       'use gpu';
       const a = d.u32();
-      // oxlint-disable-next-line typegpu/math
+      // oxlint-disable-next-line typegpu/no-math
       const b = Math.sin(a);
     };
 
@@ -65,7 +65,7 @@ describe('Math', () => {
     const myFn = () => {
       'use gpu';
       const a = d.u32();
-      // oxlint-disable-next-line typegpu/math
+      // oxlint-disable-next-line typegpu/no-math
       const b = Math.min(a, 1, 2, 3);
     };
 
@@ -80,7 +80,7 @@ describe('Math', () => {
   it('throws a readable error when unsupported Math feature is used', () => {
     const myFn = () => {
       'use gpu';
-      // oxlint-disable-next-line typegpu/math
+      // oxlint-disable-next-line typegpu/no-math
       const a = Math.log1p(1);
     };
 
@@ -95,7 +95,7 @@ describe('Math', () => {
   it('correctly applies Math.fround', () => {
     const myFn = () => {
       'use gpu';
-      // oxlint-disable-next-line typegpu/math
+      // oxlint-disable-next-line typegpu/no-math
       const a = Math.fround(16777217);
     };
 

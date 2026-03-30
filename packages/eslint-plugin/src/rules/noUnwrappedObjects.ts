@@ -2,8 +2,8 @@ import { enhanceRule } from '../enhanceRule.ts';
 import { directiveTracking } from '../enhancers/directiveTracking.ts';
 import { createRule } from '../ruleCreator.ts';
 
-export const unwrappedPojos = createRule({
-  name: 'unwrapped-pojo',
+export const noUnwrappedObjects = createRule({
+  name: 'no-unwrapped-objects',
   meta: {
     type: 'problem',
     docs: {

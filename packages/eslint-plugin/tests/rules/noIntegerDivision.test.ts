@@ -1,9 +1,9 @@
 import { describe } from 'vitest';
-import { integerDivision } from '../../src/rules/integerDivision.ts';
+import { noIntegerDivision } from '../../src/rules/noIntegerDivision.ts';
 import { ruleTester } from '../utils/ruleTester.ts';
 
-describe('integerDivision', () => {
-  ruleTester.run('integerDivision', integerDivision, {
+describe('noIntegerDivision', () => {
+  ruleTester.run('noIntegerDivision', noIntegerDivision, {
     valid: ['1 / 2', 'd.u32(d.u32(1) / d.u32(2))'],
     invalid: [
       {

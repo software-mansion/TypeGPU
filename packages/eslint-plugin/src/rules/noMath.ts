@@ -4,8 +4,8 @@ import { directiveTracking } from '../enhancers/directiveTracking.ts';
 import type { RuleContext } from '@typescript-eslint/utils/ts-eslint';
 import { ASTUtils, type TSESTree } from '@typescript-eslint/utils';
 
-export const math = createRule({
-  name: 'math',
+export const noMath = createRule({
+  name: 'no-math',
   meta: {
     type: 'suggestion',
     docs: {

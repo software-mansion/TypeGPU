@@ -2,8 +2,8 @@ import { enhanceRule } from '../enhanceRule.ts';
 import { directiveTracking } from '../enhancers/directiveTracking.ts';
 import { createRule } from '../ruleCreator.ts';
 
-export const uninitializedVariable = createRule({
-  name: 'uninitialized-variable',
+export const noUninitializedVariables = createRule({
+  name: 'no-uninitialized-variables',
   meta: {
     type: 'problem',
     docs: {

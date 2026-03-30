@@ -1,9 +1,9 @@
 import { describe } from 'vitest';
 import { ruleTester } from '../utils/ruleTester.ts';
-import { unwrappedPojos } from '../../src/rules/unwrappedPojos.ts';
+import { noUnwrappedObjects } from '../../src/rules/noUnwrappedObjects.ts';
 
-describe('unwrappedPojos', () => {
-  ruleTester.run('unwrappedPojos', unwrappedPojos, {
+describe('noUnwrappedObjects', () => {
+  ruleTester.run('noUnwrappedObjects', noUnwrappedObjects, {
     valid: [
       // correctly wrapped
       "function func() { 'use gpu'; const wrapped = Schema({ a: 1 }); }",
