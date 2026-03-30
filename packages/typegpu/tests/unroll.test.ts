@@ -114,8 +114,8 @@ describe('tgpu.unroll', () => {
         {
           const boo = 1;
           {
-            const foo2 = boo;
-            fooResult += f32(foo2);
+            const foo = boo;
+            fooResult += f32(foo);
           }
           const bar = 1;
         }
@@ -123,8 +123,8 @@ describe('tgpu.unroll', () => {
         {
           const boo = 2;
           {
-            const foo2 = boo;
-            fooResult += f32(foo2);
+            const foo = boo;
+            fooResult += f32(foo);
           }
           const bar = 2;
         }
@@ -429,6 +429,37 @@ describe('tgpu.unroll', () => {
         // unrolled iteration #2
         {
           result += 3i;
+        }
+        return result;
+      }"
+    `);
+  });
+
+  it('unrolls tgpu.const arrays', () => {
+    const arr = tgpu.const(d.arrayOf(d.vec3f, 2), [d.vec3f(1), d.vec3f(2)]);
+
+    const f = () => {
+      'use gpu';
+      let result = d.vec3f();
+      for (const value of tgpu.unroll(arr.$)) {
+        result += value;
+      }
+
+      return result;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "const arr: array<vec3f, 2> = array<vec3f, 2>(vec3f(1), vec3f(2));
+
+      fn f() -> vec3f {
+        var result = vec3f();
+        // unrolled iteration #0
+        {
+          result += arr[0u];
+        }
+        // unrolled iteration #1
+        {
+          result += arr[1u];
         }
         return result;
       }"
@@ -761,8 +792,8 @@ describe('tgpu.unroll', () => {
         var arr = array<i32, 3>(1, 2, 3);
         // unrolled iteration #0
         {
-          for (var i2 = 0; (i2 < 2i); i2++) {
-            if ((i2 == 1i)) {
+          for (var i = 0; (i < 2i); i++) {
+            if ((i == 1i)) {
               continue;
             }
           }
@@ -780,8 +811,8 @@ describe('tgpu.unroll', () => {
         }
         // unrolled iteration #1
         {
-          for (var i2 = 0; (i2 < 2i); i2++) {
-            if ((i2 == 2i)) {
+          for (var i = 0; (i < 2i); i++) {
+            if ((i == 2i)) {
               continue;
             }
           }
