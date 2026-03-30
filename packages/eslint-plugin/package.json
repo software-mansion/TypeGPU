@@ -50,7 +50,7 @@
     "@typescript-eslint/utils": "^8.57.2"
   },
   "devDependencies": {
-    "@types/node": "^25.0.10",
+    "@types/node": "catalog:types",
     "@typescript-eslint/rule-tester": "^8.57.2",
     "eslint": "^9.39.2",
     "eslint-doc-generator": "^3.3.2",

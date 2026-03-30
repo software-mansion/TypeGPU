@@ -6,8 +6,8 @@ export function getExampleURLs(
   ts: string;
 } {
   return {
-    html: `../../../../../apps/typegpu-docs/src/examples/${category}/${name}/index.html?raw`,
-    ts: `../../../../../apps/typegpu-docs/src/examples/${category}/${name}/index.ts`,
+    html: `../../../src/examples/${category}/${name}/index.html?raw`,
+    ts: `../../../src/examples/${category}/${name}/index.ts`,
   };
 }
 
