@@ -1,15 +1,19 @@
 import { invariant } from '../errors.ts';
 import { roundUp } from '../mathUtils.ts';
+import type { Undecorate } from '../data/dataTypes.ts';
 import { alignmentOf } from '../data/alignmentOf.ts';
+import { undecorate } from '../data/dataTypes.ts';
 import { offsetsForProps } from '../data/offsets.ts';
 import { sizeOf } from '../data/sizeOf.ts';
 import type { BaseData, TypedArrayFor, WgslArray, WgslStruct } from '../data/wgslTypes.ts';
-import { isMat, isMat2x2f, isMat3x3f, isWgslArray } from '../data/wgslTypes.ts';
+import { isAtomic, isMat, isMat2x2f, isMat3x3f, isWgslArray } from '../data/wgslTypes.ts';
 import type { BufferWriteOptions, TgpuBuffer } from '../core/buffer/buffer.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 
-type UnwrapWgslArray<T> = T extends WgslArray<infer U> ? UnwrapWgslArray<U> : T;
-type PackedSoAInputFor<T> = TypedArrayFor<UnwrapWgslArray<T>>;
+type PackedScalarFor<T> =
+  Undecorate<T> extends WgslArray<infer TElement> ? PackedScalarFor<TElement> : Undecorate<T>;
+
+type PackedSoAInputFor<T> = TypedArrayFor<PackedScalarFor<T>>;
 
 type SoAFieldsFor<T extends Record<string, BaseData>> = {
   [K in keyof T as [PackedSoAInputFor<T[K]>] extends [never] ? never : K]: PackedSoAInputFor<T[K]>;
@@ -19,12 +23,18 @@ type SoAInputFor<T extends Record<string, BaseData>> = [keyof T] extends [keyof 
   ? Prettify<SoAFieldsFor<T>>
   : never;
 
+function packedSchemaOf(schema: BaseData): BaseData {
+  const unpacked = undecorate(schema);
+  return isAtomic(unpacked) ? unpacked.inner : unpacked;
+}
+
 function getPackedMatrixLayout(schema: BaseData) {
-  if (!isMat(schema)) {
+  const packedSchema = packedSchemaOf(schema);
+  if (!isMat(packedSchema)) {
     return undefined;
   }
 
-  const dim = isMat3x3f(schema) ? 3 : isMat2x2f(schema) ? 2 : 4;
+  const dim = isMat3x3f(packedSchema) ? 3 : isMat2x2f(packedSchema) ? 2 : 4;
   const packedColumnSize = dim * 4;
 
   return {
@@ -35,16 +45,17 @@ function getPackedMatrixLayout(schema: BaseData) {
 }
 
 function packedSizeOf(schema: BaseData): number {
-  const matrixLayout = getPackedMatrixLayout(schema);
+  const packedSchema = packedSchemaOf(schema);
+  const matrixLayout = getPackedMatrixLayout(packedSchema);
   if (matrixLayout) {
     return matrixLayout.packedSize;
   }
 
-  if (isWgslArray(schema)) {
-    return schema.elementCount * packedSizeOf(schema.elementType);
+  if (isWgslArray(packedSchema)) {
+    return packedSchema.elementCount * packedSizeOf(packedSchema.elementType);
   }
 
-  return sizeOf(schema);
+  return sizeOf(packedSchema);
 }
 
 function inferSoAElementCount(
@@ -96,7 +107,8 @@ function writePackedValue(
   dstOffset: number,
   srcOffset: number,
 ): void {
-  const matrixLayout = getPackedMatrixLayout(schema);
+  const packedSchema = packedSchemaOf(schema);
+  const matrixLayout = getPackedMatrixLayout(packedSchema);
   if (matrixLayout) {
     const gpuColumnStride = roundUp(matrixLayout.packedColumnSize, alignmentOf(schema));
 
@@ -113,11 +125,11 @@ function writePackedValue(
     return;
   }
 
-  if (isWgslArray(schema)) {
-    const packedElementSize = packedSizeOf(schema.elementType);
+  if (isWgslArray(packedSchema) && isWgslArray(schema)) {
+    const packedElementSize = packedSizeOf(packedSchema.elementType);
     const gpuElementStride = roundUp(sizeOf(schema.elementType), alignmentOf(schema.elementType));
 
-    for (let i = 0; i < schema.elementCount; i++) {
+    for (let i = 0; i < packedSchema.elementCount; i++) {
       writePackedValue(
         target,
         schema.elementType,
@@ -130,7 +142,7 @@ function writePackedValue(
     return;
   }
 
-  target.set(srcBytes.subarray(srcOffset, srcOffset + sizeOf(schema)), dstOffset);
+  target.set(srcBytes.subarray(srcOffset, srcOffset + sizeOf(packedSchema)), dstOffset);
 }
 
 function scatterSoA(

@@ -1225,6 +1225,117 @@ describe('ValidateBufferSchema', () => {
     expect([...headings[1]!]).toStrictEqual([4, 5, 6]);
   });
 
+  it('should treat atomics like normal scalars when writing', ({ root, device }) => {
+    const Entry = d.struct({
+      id: d.atomic(d.u32),
+      states: d.arrayOf(d.atomic(d.i32), 4),
+    });
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      id: new Uint32Array([1000, 2000]),
+      states: new Int32Array([1, 2, 3, 4, 5, 6, 7, 8]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+
+    const ids = [
+      new DataView(uploadedBuffer).getUint32(0, true),
+      new DataView(uploadedBuffer).getUint32(20, true),
+    ];
+    const states = [new Int32Array(uploadedBuffer, 4, 4), new Int32Array(uploadedBuffer, 24, 4)];
+
+    expect(ids).toStrictEqual([1000, 2000]);
+    expect([...states[0]!]).toStrictEqual([1, 2, 3, 4]);
+    expect([...states[1]!]).toStrictEqual([5, 6, 7, 8]);
+  });
+
+  it('should treat decorated types like normal types when writing SoA', ({ root, device }) => {
+    const Entry = d.struct({
+      magic: d.u32,
+      id: d.align(16, d.u32),
+      pos: d.size(64, d.vec3f),
+      someData: d.arrayOf(d.f32, 4),
+    });
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      magic: new Uint32Array([10, 20]),
+      id: new Uint32Array([100, 200]),
+      pos: new Float32Array([1, 2, 3, 4, 5, 6]),
+      someData: new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+
+    const magics = [
+      new DataView(uploadedBuffer).getUint32(0, true),
+      new DataView(uploadedBuffer).getUint32(112, true),
+    ];
+    const ids = [
+      new DataView(uploadedBuffer).getUint32(16, true),
+      new DataView(uploadedBuffer).getUint32(128, true),
+    ];
+    const positions = [
+      new Float32Array(uploadedBuffer, 32, 3),
+      new Float32Array(uploadedBuffer, 144, 3),
+    ];
+    const someData = [
+      new Float32Array(uploadedBuffer, 96, 4),
+      new Float32Array(uploadedBuffer, 208, 4),
+    ];
+
+    expect(magics).toStrictEqual([10, 20]);
+    expect(ids).toStrictEqual([100, 200]);
+    expect([...positions[0]!]).toStrictEqual([1, 2, 3]);
+    expect([...positions[1]!]).toStrictEqual([4, 5, 6]);
+    expect([...someData[0]!].map((value) => Number(value.toFixed(6)))).toStrictEqual([
+      0.1, 0.2, 0.3, 0.4,
+    ]);
+    expect([...someData[1]!].map((value) => Number(value.toFixed(6)))).toStrictEqual([
+      0.5, 0.6, 0.7, 0.8,
+    ]);
+  });
+
+  it('should treat decorated array fields like normal types when writing SoA', ({
+    root,
+    device,
+  }) => {
+    const Entry = d.struct({
+      id: d.u32,
+      values: d.align(16, d.arrayOf(d.f32, 4)),
+    });
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      id: new Uint32Array([7, 8]),
+      values: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const ids = [
+      new DataView(uploadedBuffer).getUint32(0, true),
+      new DataView(uploadedBuffer).getUint32(32, true),
+    ];
+    const values = [
+      new Float32Array(uploadedBuffer, 16, 4),
+      new Float32Array(uploadedBuffer, 48, 4),
+    ];
+
+    expect(ids).toStrictEqual([7, 8]);
+    expect([...values[0]!]).toStrictEqual([1, 2, 3, 4]);
+    expect([...values[1]!]).toStrictEqual([5, 6, 7, 8]);
+  });
+
   it('should accept SoA input for struct fields that are fixed-size arrays of primitives', () => {
     type Test = {
       a: d.F32;
@@ -1242,6 +1353,18 @@ describe('ValidateBufferSchema', () => {
       d: Float32Array;
       e: Int32Array;
       f: Float32Array;
+    }>();
+  });
+
+  it('should accept SoA input for decorated array fields', () => {
+    type Test = {
+      id: d.U32;
+      values: d.Decorated<d.WgslArray<d.F32>, [d.Align<16>]>;
+    };
+
+    expectTypeOf<common.writeSoA.InputFor<Test>>().toEqualTypeOf<{
+      id: Uint32Array;
+      values: Float32Array;
     }>();
   });
 
