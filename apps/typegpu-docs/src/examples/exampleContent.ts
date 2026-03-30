@@ -11,7 +11,7 @@ import type {
 
 function extractUrlFromViteImport(importFn: () => void): [URL | undefined, boolean] {
   const filePath = String(importFn);
-  const match = filePath.match(/\(\)\s*=>\s*import\("([^"]+)"\)/);
+  const match = filePath.match(/\(\)\s*=>\s*import\(["`']([^"`']+)["`']\)/);
 
   if (match?.[1]) {
     const isRelative = match[1].startsWith('./');

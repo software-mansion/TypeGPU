@@ -53,15 +53,15 @@ export interface NumberArrayView {
 }
 
 /**
- * Maps a scalar or vector element schema to the corresponding TypedArray type.
+ * Maps a scalar, vector, or matrix element schema to the corresponding TypedArray type.
  */
-export type TypedArrayFor<T> = T extends Vec2f | Vec3f | Vec4f | F32
+export type TypedArrayFor<T> = T extends F32 | Vec2f | Vec3f | Vec4f | Mat2x2f | Mat3x3f | Mat4x4f
   ? Float32Array
-  : T extends Vec2h | Vec3h | Vec4h | F16
+  : T extends F16 | Vec2h | Vec3h | Vec4h
     ? Float16Array
-    : T extends Vec2i | Vec3i | Vec4i | I32
+    : T extends I32 | Vec2i | Vec3i | Vec4i
       ? Int32Array
-      : T extends Vec2u | Vec3u | Vec4u | U32
+      : T extends U32 | Vec2u | Vec3u | Vec4u
         ? Uint32Array
         : T extends U16
           ? Uint16Array

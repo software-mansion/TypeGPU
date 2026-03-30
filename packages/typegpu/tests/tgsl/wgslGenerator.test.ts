@@ -508,9 +508,9 @@ describe('wgslGenerator', () => {
           let foo = arr[i];
           {
             for (var i_1 = 0u; i_1 < 3u; i_1++) {
-              let foo2 = arr[i_1];
+              let foo_1 = arr[i_1];
               {
-                res += (foo2 * foo2);
+                res += (foo_1 * foo_1);
               }
             }
           }
@@ -950,34 +950,33 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  // TODO: enable when we transition to `rolldown`
-  // it('handles "for ... of ..." loop variable name when there is shadowning', ({ root }) => {
-  //   const i = root.createUniform(d.u32, 7);
+  it('handles "for ... of ..." loop variable name when there is shadowing', ({ root }) => {
+    const i = root.createUniform(d.u32, 7);
 
-  //   const f = () => {
-  //     'use gpu';
-  //     const arr = [1, 2, 3, i.$];
-  //     let res = 0;
-  //     for (const i of arr) {
-  //       res += i;
-  //     }
-  //   };
+    const f = () => {
+      'use gpu';
+      const arr = [1, 2, 3, i.$];
+      let res = 0;
+      for (const i of arr) {
+        res += i;
+      }
+    };
 
-  //   expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-  //     "@group(0) @binding(0) var<uniform> i: u32;
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> i: u32;
 
-  //     fn f() {
-  //       var arr = array<u32, 4>(1u, 2u, 3u, i);
-  //       var res = 0;
-  //       for (var i_1 = 0u; i_1 < 4; i_1++) {
-  //         let i_2 = arr[i_1];
-  //         {
-  //           res += i32(i_2);
-  //         }
-  //       }
-  //     }"
-  //   `);
-  // });
+      fn f() {
+        var arr = array<u32, 4>(1u, 2u, 3u, i);
+        var res = 0;
+        for (var i_1 = 0u; i_1 < 4u; i_1++) {
+          let i_2 = arr[i_1];
+          {
+            res += i32(i_2);
+          }
+        }
+      }"
+    `);
+  });
 
   it('creates correct resources for lazy values and slots', () => {
     const testFn = tgpu.fn([], d.vec4u)(() => lazyV4u.$);
@@ -1883,8 +1882,8 @@ describe('wgslGenerator', () => {
       "fn fn_1() -> i32 {
         var a = -1;
         {
-          const temp2 = 0;
-          a = temp2;
+          const temp = 0;
+          a = temp;
         }
         let temp = (a * 2i);
         return temp;
@@ -1895,8 +1894,8 @@ describe('wgslGenerator', () => {
       "fn fn_1() -> i32 {
         var a = -1;
         {
-          const temp2 = 1;
-          a = temp2;
+          const temp = 1;
+          a = temp;
         }
         let temp = (a * 2i);
         return temp;
@@ -1918,12 +1917,12 @@ describe('wgslGenerator', () => {
       fn fn_1() -> i32 {
         var a = -1;
         if ((item() == 0u)) {
-          const temp2 = 0;
-          a = temp2;
+          const temp = 0;
+          a = temp;
         }
         else {
-          const temp2 = 1;
-          a = temp2;
+          const temp = 1;
+          a = temp;
         }
         let temp = (a * 2i);
         return temp;

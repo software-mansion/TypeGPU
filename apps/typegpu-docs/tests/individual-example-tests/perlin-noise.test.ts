@@ -138,8 +138,8 @@ describe('perlin noise example', () => {
         return mix(x, X, smoothPartial.x);
       }
 
-      fn exponentialSharpen(n: f32, sharpness2: f32) -> f32 {
-        return (sign(n) * pow(abs(n), (1f - sharpness2)));
+      fn exponentialSharpen(n: f32, sharpness: f32) -> f32 {
+        return (sign(n) * pow(abs(n), (1f - sharpness)));
       }
 
       @group(0) @binding(2) var<uniform> sharpness: f32;

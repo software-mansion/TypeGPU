@@ -1,0 +1,17 @@
+{
+  "name": "resolution-time",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Resolution time benchmark app for TypeGPU",
+  "type": "module",
+  "scripts": {
+    "resolution-time": "bun procedural.ts"
+  },
+  "dependencies": {
+    "typegpu": "workspace:*"
+  },
+  "devDependencies": {
+    "bun": "^1.3.10",
+    "unplugin-typegpu": "workspace:*"
+  }
+}

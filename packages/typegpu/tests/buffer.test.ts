@@ -1,5 +1,6 @@
 import { attest } from '@ark/attest';
 import { describe, expect, expectTypeOf, vi } from 'vitest';
+import * as common from '../src/common/index.ts';
 import * as d from '../src/data/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
 import type { ValidateBufferSchema, ValidUsagesFor } from '../src/index.js';
@@ -98,6 +99,49 @@ describe('TgpuBuffer', () => {
     expect(mockBuffer).toBeDefined();
 
     expect(root.device.queue.writeBuffer).toBeCalledWith(mockBuffer, 0, new ArrayBuffer(64), 0, 64);
+  });
+
+  it('should initialize a buffer from a mapped callback using common.writeSoA', ({ root }) => {
+    const Entry = d.struct({
+      id: d.u32,
+      values: d.arrayOf(d.vec3f, 2),
+    });
+
+    const buffer = root.createBuffer(d.arrayOf(Entry, 2), (mappedBuffer) => {
+      common.writeSoA(mappedBuffer, {
+        id: new Uint32Array([10, 20]),
+        values: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+      });
+    });
+
+    const rawBuffer = root.unwrap(buffer);
+    const writtenBuffer = vi.mocked(rawBuffer.getMappedRange).mock.results[0]?.value as ArrayBuffer;
+
+    expect(root.device.createBuffer).toBeCalledWith(
+      expect.objectContaining({
+        mappedAtCreation: true,
+        size: sizeOf(d.arrayOf(Entry, 2)),
+        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+      }),
+    );
+    expect(rawBuffer.getMappedRange).toHaveBeenCalledTimes(1);
+    expect(root.device.queue.writeBuffer).not.toHaveBeenCalled();
+    const ids = [
+      new DataView(writtenBuffer).getUint32(0, true),
+      new DataView(writtenBuffer).getUint32(48, true),
+    ];
+    const values = [
+      new Float32Array(writtenBuffer, 16, 3),
+      new Float32Array(writtenBuffer, 32, 3),
+      new Float32Array(writtenBuffer, 64, 3),
+      new Float32Array(writtenBuffer, 80, 3),
+    ];
+
+    expect(ids).toStrictEqual([10, 20]);
+    expect([...values[0]!]).toStrictEqual([1, 2, 3]);
+    expect([...values[1]!]).toStrictEqual([4, 5, 6]);
+    expect([...values[2]!]).toStrictEqual([7, 8, 9]);
+    expect([...values[3]!]).toStrictEqual([10, 11, 12]);
   });
 
   it('should write to a mapped buffer', ({ root }) => {
@@ -977,5 +1021,342 @@ describe('ValidateBufferSchema', () => {
     // Valid
     createMyBuffer(d.f32, ['uniform']);
     createMyBuffer(d.unorm8x4, ['vertex']);
+  });
+
+  it('should write struct-of-arrays (SoA) data to an array-of-structs buffer', ({
+    root,
+    device,
+  }) => {
+    const Particle = d.struct({
+      pos: d.vec3f,
+      vel: d.f32,
+    });
+
+    const schema = d.arrayOf(Particle, 2);
+    const buffer = root.createBuffer(schema);
+    const rawBuffer = root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      pos: new Float32Array([1, 2, 3, 4, 5, 6]),
+      vel: new Float32Array([10, 20]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const result = new Float32Array(uploadedBuffer);
+
+    expect([...result]).toStrictEqual([1, 2, 3, 10, 4, 5, 6, 20]);
+  });
+
+  it('should write SoA data with integer fields', ({ root, device }) => {
+    const Entry = d.struct({
+      id: d.u32,
+      heading: d.vec3i,
+    });
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      id: new Uint32Array([100, 200]),
+      heading: new Int32Array([1, 2, 3, 4, 5, 6]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+
+    const ids = [
+      new DataView(uploadedBuffer).getUint32(0, true),
+      new DataView(uploadedBuffer).getUint32(32, true),
+    ];
+    const headings = [new Int32Array(uploadedBuffer, 16, 3), new Int32Array(uploadedBuffer, 48, 3)];
+
+    expect(ids).toStrictEqual([100, 200]);
+    expect([...headings[0]!]).toStrictEqual([1, 2, 3]);
+    expect([...headings[1]!]).toStrictEqual([4, 5, 6]);
+  });
+
+  it('should accept SoA input for struct fields that are fixed-size arrays of primitives', () => {
+    type Test = {
+      a: d.F32;
+      b: d.Vec3u;
+      c: d.Mat4x4f;
+      d: d.WgslArray<d.F32>;
+      e: d.WgslArray<d.Vec3i>;
+      f: d.WgslArray<d.Mat3x3f>;
+    };
+
+    expectTypeOf<common.writeSoA.InputFor<Test>>().toEqualTypeOf<{
+      a: Float32Array;
+      b: Uint32Array;
+      c: Float32Array;
+      d: Float32Array;
+      e: Int32Array;
+      f: Float32Array;
+    }>();
+  });
+
+  it('should reject SoA input for struct fields that contain nested structs', () => {
+    const Nested = d.struct({
+      x: d.f32,
+    });
+
+    type Test = {
+      a: d.F32;
+      nested: typeof Nested;
+    };
+
+    expectTypeOf<common.writeSoA.InputFor<Test>>().toEqualTypeOf<never>();
+  });
+
+  it('should write SoA data for struct fields that are fixed-size arrays of primitives', ({
+    root,
+    device,
+  }) => {
+    const Entry = d.struct({
+      id: d.u32,
+      values: d.arrayOf(d.f32, 3),
+    });
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      id: new Uint32Array([10, 20]),
+      values: new Float32Array([1, 2, 3, 4, 5, 6]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const ids = [
+      new DataView(uploadedBuffer).getUint32(0, true),
+      new DataView(uploadedBuffer).getUint32(16, true),
+    ];
+    const values = [
+      new Float32Array(uploadedBuffer, 4, 3),
+      new Float32Array(uploadedBuffer, 20, 3),
+    ];
+
+    expect(ids).toStrictEqual([10, 20]);
+    expect([...values[0]!]).toStrictEqual([1, 2, 3]);
+    expect([...values[1]!]).toStrictEqual([4, 5, 6]);
+  });
+
+  it('should write SoA data for struct fields that are arrays of padded vectors', ({
+    root,
+    device,
+  }) => {
+    const Entry = d.struct({
+      values: d.arrayOf(d.vec3f, 2),
+    });
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      values: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const result = new Float32Array(uploadedBuffer);
+
+    expect([...result]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0, 10, 11, 12, 0]);
+  });
+
+  it('should write SoA data for struct fields that are arrays of arrays of padded vectors', ({
+    root,
+    device,
+  }) => {
+    const Entry = d.struct({
+      values: d.arrayOf(d.arrayOf(d.vec3f, 2), 2),
+    });
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      values: new Float32Array([
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+      ]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const result = new Float32Array(uploadedBuffer);
+
+    expect([...result]).toStrictEqual([
+      1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0, 10, 11, 12, 0, 13, 14, 15, 0, 16, 17, 18, 0, 19, 20, 21,
+      0, 22, 23, 24, 0,
+    ]);
+  });
+
+  it('should write SoA data for struct fields that are arrays of padded matrices', ({
+    root,
+    device,
+  }) => {
+    const Entry = d.struct({
+      basis: d.arrayOf(d.mat3x3f, 2),
+    });
+
+    const schema = d.arrayOf(Entry, 1);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      basis: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const result = new Float32Array(uploadedBuffer);
+
+    expect([...result]).toStrictEqual([
+      1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0, 10, 11, 12, 0, 13, 14, 15, 0, 16, 17, 18, 0,
+    ]);
+  });
+
+  it('should write SoA data only for the middle two elements when using startOffset and endOffset', ({
+    root,
+    device,
+  }) => {
+    const Entry = d.struct({
+      id: d.u32,
+      values: d.arrayOf(d.vec3f, 2),
+    });
+
+    const schema = d.arrayOf(Entry, 4);
+    const buffer = root.createBuffer(schema);
+    const rawBuffer = root.unwrap(buffer);
+    const startLayout = d.memoryLayoutOf(schema, (a) => a[1]);
+    const endLayout = d.memoryLayoutOf(schema, (a) => a[3]);
+    const idLayout = d.memoryLayoutOf(Entry, (e) => e.id);
+    const value0Layout = d.memoryLayoutOf(Entry, (e) => e.values[0]);
+    const value1Layout = d.memoryLayoutOf(Entry, (e) => e.values[1]);
+    const stride = sizeOf(Entry);
+
+    common.writeSoA(
+      buffer,
+      {
+        id: new Uint32Array([30, 40]),
+        values: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+      },
+      {
+        startOffset: startLayout.offset,
+        endOffset: endLayout.offset,
+      },
+    );
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [
+        rawBuffer,
+        startLayout.offset,
+        expect.any(ArrayBuffer),
+        startLayout.offset,
+        endLayout.offset - startLayout.offset,
+      ],
+    ]);
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const firstBase = startLayout.offset;
+    const secondBase = startLayout.offset + stride;
+    const ids = [
+      new DataView(uploadedBuffer).getUint32(firstBase + idLayout.offset, true),
+      new DataView(uploadedBuffer).getUint32(secondBase + idLayout.offset, true),
+    ];
+    const valueVectors = [
+      new Float32Array(uploadedBuffer, firstBase + value0Layout.offset, 3),
+      new Float32Array(uploadedBuffer, firstBase + value1Layout.offset, 3),
+      new Float32Array(uploadedBuffer, secondBase + value0Layout.offset, 3),
+      new Float32Array(uploadedBuffer, secondBase + value1Layout.offset, 3),
+    ];
+    const untouchedPrefix = new Uint32Array(uploadedBuffer, 0, startLayout.offset / 4);
+    const untouchedSuffix = new Uint32Array(
+      uploadedBuffer,
+      endLayout.offset,
+      (sizeOf(schema) - endLayout.offset) / 4,
+    );
+
+    expect([...untouchedPrefix]).toStrictEqual(
+      Array.from({ length: startLayout.offset / 4 }, () => 0),
+    );
+    expect(ids).toStrictEqual([30, 40]);
+    expect([...valueVectors[0]!]).toStrictEqual([1, 2, 3]);
+    expect([...valueVectors[1]!]).toStrictEqual([4, 5, 6]);
+    expect([...valueVectors[2]!]).toStrictEqual([7, 8, 9]);
+    expect([...valueVectors[3]!]).toStrictEqual([10, 11, 12]);
+    expect([...untouchedSuffix]).toStrictEqual(
+      Array.from({ length: (sizeOf(schema) - endLayout.offset) / 4 }, () => 0),
+    );
+  });
+
+  it('should infer the SoA write range from provided data when endOffset is omitted', ({
+    root,
+    device,
+  }) => {
+    const Entry = d.struct({
+      id: d.u32,
+      values: d.arrayOf(d.vec3f, 2),
+    });
+
+    const schema = d.arrayOf(Entry, 4);
+    const buffer = root.createBuffer(schema);
+    const rawBuffer = root.unwrap(buffer);
+    const startLayout = d.memoryLayoutOf(schema, (a) => a[1]);
+    const endLayout = d.memoryLayoutOf(schema, (a) => a[3]);
+    const idLayout = d.memoryLayoutOf(Entry, (e) => e.id);
+    const value0Layout = d.memoryLayoutOf(Entry, (e) => e.values[0]);
+    const value1Layout = d.memoryLayoutOf(Entry, (e) => e.values[1]);
+    const stride = sizeOf(Entry);
+
+    common.writeSoA(
+      buffer,
+      {
+        id: new Uint32Array([30, 40]),
+        values: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+      },
+      {
+        startOffset: startLayout.offset,
+      },
+    );
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [
+        rawBuffer,
+        startLayout.offset,
+        expect.any(ArrayBuffer),
+        startLayout.offset,
+        endLayout.offset - startLayout.offset,
+      ],
+    ]);
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const firstBase = startLayout.offset;
+    const secondBase = startLayout.offset + stride;
+    const ids = [
+      new DataView(uploadedBuffer).getUint32(firstBase + idLayout.offset, true),
+      new DataView(uploadedBuffer).getUint32(secondBase + idLayout.offset, true),
+    ];
+    const valueVectors = [
+      new Float32Array(uploadedBuffer, firstBase + value0Layout.offset, 3),
+      new Float32Array(uploadedBuffer, firstBase + value1Layout.offset, 3),
+      new Float32Array(uploadedBuffer, secondBase + value0Layout.offset, 3),
+      new Float32Array(uploadedBuffer, secondBase + value1Layout.offset, 3),
+    ];
+    const untouchedPrefix = new Uint32Array(uploadedBuffer, 0, startLayout.offset / 4);
+    const untouchedSuffix = new Uint32Array(
+      uploadedBuffer,
+      endLayout.offset,
+      (sizeOf(schema) - endLayout.offset) / 4,
+    );
+
+    expect([...untouchedPrefix]).toStrictEqual(
+      Array.from({ length: startLayout.offset / 4 }, () => 0),
+    );
+    expect(ids).toStrictEqual([30, 40]);
+    expect([...valueVectors[0]!]).toStrictEqual([1, 2, 3]);
+    expect([...valueVectors[1]!]).toStrictEqual([4, 5, 6]);
+    expect([...valueVectors[2]!]).toStrictEqual([7, 8, 9]);
+    expect([...valueVectors[3]!]).toStrictEqual([10, 11, 12]);
+    expect([...untouchedSuffix]).toStrictEqual(
+      Array.from({ length: (sizeOf(schema) - endLayout.offset) / 4 }, () => 0),
+    );
   });
 });
