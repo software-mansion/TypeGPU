@@ -15,8 +15,8 @@ type Rules = Record<`typegpu/${keyof typeof rules}`, TSESLint.FlatConfig.RuleEnt
 
 export const recommendedRules: Rules = {
   'typegpu/integer-division': 'warn',
-  'typegpu/unwrapped-pojo': 'warn',
-  'typegpu/uninitialized-variable': 'warn',
+  'typegpu/unwrapped-pojo': 'error',
+  'typegpu/uninitialized-variable': 'error',
   'typegpu/math': 'warn',
 };
 
