@@ -1,6 +1,6 @@
 import { describe } from 'vitest';
-import { ruleTester } from './ruleTester.ts';
-import { uninitializedVariable } from '../src/rules/uninitializedVariable.ts';
+import { ruleTester } from '../utils/ruleTester.ts';
+import { uninitializedVariable } from '../../src/rules/uninitializedVariable.ts';
 
 describe('uninitializedVariable', () => {
   ruleTester.run('uninitializedVariable', uninitializedVariable, {

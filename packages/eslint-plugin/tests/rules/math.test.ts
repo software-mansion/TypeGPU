@@ -1,6 +1,6 @@
 import { describe } from 'vitest';
-import { ruleTester } from './ruleTester.ts';
-import { math } from '../src/rules/math.ts';
+import { ruleTester } from '../utils/ruleTester.ts';
+import { math } from '../../src/rules/math.ts';
 
 describe('math', () => {
   ruleTester.run('math', math, {

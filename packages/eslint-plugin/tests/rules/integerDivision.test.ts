@@ -1,6 +1,6 @@
 import { describe } from 'vitest';
-import { integerDivision } from '../src/rules/integerDivision.ts';
-import { ruleTester } from './ruleTester.ts';
+import { integerDivision } from '../../src/rules/integerDivision.ts';
+import { ruleTester } from '../utils/ruleTester.ts';
 
 describe('integerDivision', () => {
   ruleTester.run('integerDivision', integerDivision, {

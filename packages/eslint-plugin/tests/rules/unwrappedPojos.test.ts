@@ -1,6 +1,6 @@
 import { describe } from 'vitest';
-import { ruleTester } from './ruleTester.ts';
-import { unwrappedPojos } from '../src/rules/unwrappedPojos.ts';
+import { ruleTester } from '../utils/ruleTester.ts';
+import { unwrappedPojos } from '../../src/rules/unwrappedPojos.ts';
 
 describe('unwrappedPojos', () => {
   ruleTester.run('unwrappedPojos', unwrappedPojos, {
