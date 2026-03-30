@@ -1,5 +1,6 @@
 import { enhanceRule } from '../enhanceRule.ts';
 import { directiveTracking } from '../enhancers/directiveTracking.ts';
+import { getNonTransparentParent } from '../nodeHelpers.ts';
 import { createRule } from '../ruleCreator.ts';
 
 export const noUnwrappedObjects = createRule({
@@ -24,15 +25,16 @@ export const noUnwrappedObjects = createRule({
         if (!directives.insideUseGpu()) {
           return;
         }
-        if (node.parent?.type === 'Property') {
+        let parent = getNonTransparentParent(node);
+        if (parent?.type === 'Property') {
           // a part of a bigger struct
           return;
         }
-        if (node.parent?.type === 'CallExpression') {
+        if (parent?.type === 'CallExpression') {
           // wrapped in a schema call
           return;
         }
-        if (node.parent?.type === 'ReturnStatement') {
+        if (parent?.type === 'ReturnStatement') {
           // likely inferred (shelled fn or shell-less entry) so we cannot report
           return;
         }
