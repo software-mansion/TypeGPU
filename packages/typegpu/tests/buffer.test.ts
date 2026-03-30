@@ -1395,6 +1395,28 @@ describe('ValidateBufferSchema', () => {
     expect([...values[1]!]).toStrictEqual([5, 6, 7, 8]);
   });
 
+  it('should write SoA data for decorated array fields with padded elements', ({
+    root,
+    device,
+  }) => {
+    const Entry = d.struct({
+      values: d.align(16, d.arrayOf(d.vec3f, 2)),
+    });
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      values: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const result = new Float32Array(uploadedBuffer);
+
+    expect([...result]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0, 10, 11, 12, 0]);
+  });
+
   it('should accept SoA input for struct fields that are fixed-size arrays of primitives', () => {
     type Test = {
       a: d.F32;
