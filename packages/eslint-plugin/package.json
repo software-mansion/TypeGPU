@@ -40,12 +40,11 @@
   "scripts": {
     "build": "tsdown",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
-    "test:style": "pnpm run docs:check",
     "docs:init": "eslint-doc-generator --init-rule-docs",
     "docs:check": "eslint-doc-generator --check",
     "docs:update": "eslint-doc-generator",
     "test": "vitest",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "pnpm run docs:check && pnpm run test:types && vitest run && pnpm run build"
   },
   "dependencies": {
     "@typescript-eslint/utils": "^8.53.0"
