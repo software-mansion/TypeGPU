@@ -1,10 +1,9 @@
-import type { BunPlugin } from 'bun';
-import * as Babel from '@babel/standalone';
 import defu from 'defu';
-import { defaultOptions, earlyPruneRegex, type Options } from './common.ts';
-import babelPlugin from './babel.ts';
+import { defaultOptions, earlyPruneRegex, type Options } from './core/common.ts';
+import { unpluginFactory } from './core/factory.ts';
+import type { UnpluginBuildContext, UnpluginContext } from 'unplugin';
 
-export default (rawOptions: Options): BunPlugin => {
+export default (rawOptions?: Options): Bun.BunPlugin => {
   const options = defu(rawOptions, defaultOptions);
   const include = options.include;
   if (!(include instanceof RegExp)) {
@@ -16,28 +15,29 @@ export default (rawOptions: Options): BunPlugin => {
     throw new Error(`Unsupported 'exclude' option in Bun plugin`);
   }
 
+  const rawPlugin = unpluginFactory(rawOptions, { framework: 'bun' });
+
   return {
     name: 'unplugin-typegpu',
     setup(build) {
       build.onLoad({ filter: include }, async (args) => {
-        const text = await Bun.file(args.path).text();
+        const codeIn = await Bun.file(args.path).text();
 
         // Pruning early before more expensive operations
-        if (earlyPruneRegex.every((pattern) => !pattern.test(text))) {
+        if (earlyPruneRegex.every((pattern) => !pattern.test(codeIn))) {
           return {
-            contents: text,
+            contents: codeIn,
             loader: args.loader,
           };
         }
 
-        const result = Babel.transform(text, {
-          presets: [['typescript', { allowDeclareFields: true }]],
-          filename: args.path,
-          plugins: [babelPlugin],
-        }).code;
+        const result = rawPlugin.transform.handler.apply(
+          {} as UnpluginBuildContext & UnpluginContext,
+          [codeIn, args.path],
+        );
 
         return {
-          contents: result ?? text,
+          contents: result?.code ?? codeIn,
           loader: args.loader,
         };
       });

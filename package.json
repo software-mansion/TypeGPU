@@ -66,8 +66,9 @@
       "sharp"
     ],
     "overrides": {
-      "rollup": "catalog:",
+      "rollup": "catalog:build",
       "vite": "8.0.2",
+      "@babel/types": "catalog:",
       "typescript": "catalog:types",
       "three": "catalog:example"
     }
