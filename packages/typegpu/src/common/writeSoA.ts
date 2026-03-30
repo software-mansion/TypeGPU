@@ -28,8 +28,7 @@ function packedSchemaOf(schema: BaseData): BaseData {
   return isAtomic(unpacked) ? unpacked.inner : unpacked;
 }
 
-function getPackedMatrixLayout(schema: BaseData) {
-  const packedSchema = packedSchemaOf(schema);
+function getPackedMatrixLayout(packedSchema: BaseData) {
   if (!isMat(packedSchema)) {
     return undefined;
   }
@@ -108,7 +107,7 @@ function writePackedValue(
   srcOffset: number,
 ): void {
   const unpackedSchema = undecorate(schema);
-  const packedSchema = packedSchemaOf(schema);
+  const packedSchema = isAtomic(unpackedSchema) ? unpackedSchema.inner : unpackedSchema;
   const matrixLayout = getPackedMatrixLayout(packedSchema);
   if (matrixLayout) {
     const gpuColumnStride = roundUp(matrixLayout.packedColumnSize, alignmentOf(schema));
