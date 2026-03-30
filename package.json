@@ -69,7 +69,8 @@
     "overrides": {
       "rollup": "catalog:",
       "typescript": "catalog:types",
-      "three": "catalog:example"
+      "three": "catalog:example",
+      "@typescript-eslint/utils": "^8.57.2"
     }
   }
 }
