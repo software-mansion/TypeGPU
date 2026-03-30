@@ -9,10 +9,11 @@ export const noMath = createRule({
   meta: {
     type: 'suggestion',
     docs: {
-      description: `Disallow usage of JavaScript 'Math' methods inside 'use gpu' functions; use 'std' instead.`,
+      description: `Disallow usage of JavaScript 'Math' methods inside 'use gpu' functions`,
     },
     messages: {
-      unexpected: "Using Math methods, such as '{{snippet}}', is not advised, and may not work as expected. Use 'std' instead.",
+      unexpected:
+        "Using Math methods, such as '{{snippet}}', may not work as expected. Use 'std' instead",
     },
     schema: [],
   },

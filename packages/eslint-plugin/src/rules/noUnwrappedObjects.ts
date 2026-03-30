@@ -7,11 +7,10 @@ export const noUnwrappedObjects = createRule({
   meta: {
     type: 'problem',
     docs: {
-      description: `Wrap Plain Old JavaScript Objects with schemas.`,
+      description: `Disallow unwrapped Plain Old JavaScript Objects inside 'use gpu' functions`,
     },
     messages: {
-      unexpected:
-        '{{snippet}} is a POJO that is not wrapped in a schema. To allow WGSL resolution, wrap it in a schema call. You only need to wrap the outermost object.',
+      unexpected: '{{snippet}} must be wrapped in a schema call',
     },
     schema: [],
   },

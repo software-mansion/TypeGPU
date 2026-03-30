@@ -1,6 +1,6 @@
 # typegpu/no-uninitialized-variables
 
-📝 Always assign an initial value when declaring a variable inside TypeGPU functions.
+📝 Disallow variable declarations without initializers inside 'use gpu' functions.
 
 💼 This rule is enabled in the following configs: 🌐 `all`, ✅ `recommended`.
 

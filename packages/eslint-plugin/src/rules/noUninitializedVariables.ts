@@ -7,10 +7,10 @@ export const noUninitializedVariables = createRule({
   meta: {
     type: 'problem',
     docs: {
-      description: `Always assign an initial value when declaring a variable inside TypeGPU functions.`,
+      description: `Disallow variable declarations without initializers inside 'use gpu' functions`,
     },
     messages: {
-      uninitializedVariable: "'{{snippet}}' should have an initial value.",
+      uninitializedVariable: "'{{snippet}}' must have an initial value",
     },
     schema: [],
   },

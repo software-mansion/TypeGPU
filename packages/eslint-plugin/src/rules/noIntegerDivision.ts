@@ -6,10 +6,10 @@ export const noIntegerDivision = createRule({
   name: 'no-integer-division',
   meta: {
     type: 'suggestion',
-    docs: { description: `Avoid dividing numbers wrapped in 'u32' and 'i32'.` },
+    docs: { description: `Disallow division incorporating numbers wrapped in 'u32' and 'i32'` },
     messages: {
       suspiciousDivision:
-        "'{{snippet}}' might result in floating point values. To perform integer division, wrap the result in 'd.u32' or 'd.i32' instead.",
+        "'{{snippet}}' might result in floating point values. To perform integer division, wrap the result in 'd.u32' or 'd.i32' instead",
     },
     schema: [],
   },

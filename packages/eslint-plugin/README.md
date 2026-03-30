@@ -38,11 +38,11 @@ export default defineConfig([
 🌐 Set in the `all` configuration.\
 ✅ Set in the `recommended` configuration.
 
-| Name                                                                   | Description                                                                                | 💼   | ⚠️ |
-| :--------------------------------------------------------------------- | :----------------------------------------------------------------------------------------- | :--- | :- |
-| [no-integer-division](docs/rules/no-integer-division.md)               | Avoid dividing numbers wrapped in 'u32' and 'i32'.                                         | 🌐   | ✅  |
-| [no-math](docs/rules/no-math.md)                                       | Disallow usage of JavaScript 'Math' methods inside 'use gpu' functions; use 'std' instead. | 🌐   | ✅  |
-| [no-uninitialized-variables](docs/rules/no-uninitialized-variables.md) | Always assign an initial value when declaring a variable inside TypeGPU functions.         | 🌐 ✅ |    |
-| [no-unwrapped-objects](docs/rules/no-unwrapped-objects.md)             | Wrap Plain Old JavaScript Objects with schemas.                                            | 🌐 ✅ |    |
+| Name                                                                   | Description                                                                    | 💼   | ⚠️ |
+| :--------------------------------------------------------------------- | :----------------------------------------------------------------------------- | :--- | :- |
+| [no-integer-division](docs/rules/no-integer-division.md)               | Disallow division incorporating numbers wrapped in 'u32' and 'i32'             | 🌐   | ✅  |
+| [no-math](docs/rules/no-math.md)                                       | Disallow usage of JavaScript 'Math' methods inside 'use gpu' functions         | 🌐   | ✅  |
+| [no-uninitialized-variables](docs/rules/no-uninitialized-variables.md) | Disallow variable declarations without initializers inside 'use gpu' functions | 🌐 ✅ |    |
+| [no-unwrapped-objects](docs/rules/no-unwrapped-objects.md)             | Disallow unwrapped Plain Old JavaScript Objects inside 'use gpu' functions     | 🌐 ✅ |    |
 
 <!-- end auto-generated rules list -->
