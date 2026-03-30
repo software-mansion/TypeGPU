@@ -43,6 +43,7 @@
     "test:style": "pnpm run docs:check",
     "docs:init": "eslint-doc-generator --init-rule-docs",
     "docs:check": "eslint-doc-generator --check",
+    "docs:update": "eslint-doc-generator",
     "test": "vitest",
     "prepublishOnly": "pnpm run build"
   },
