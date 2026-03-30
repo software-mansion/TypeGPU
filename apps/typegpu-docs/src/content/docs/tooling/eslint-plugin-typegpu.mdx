@@ -4,7 +4,7 @@ description: A guide on how to use the optional lint plugin for TypeGPU
 ---
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-[eslint-plugin-typegpu](https://www.npmjs.com/package/eslint-plugin-typegpu) is an optional (but highly recommended) tool for projects using TypeGPU. 
+[eslint-plugin-typegpu](https://www.npmjs.com/package/eslint-plugin-typegpu) is an optional (but highly recommended) tool for projects using TypeGPU.
 It helps with coding 'use gpu' functions by highlighting common pitfalls and unsupported syntax.
 
 ## Installation
@@ -27,7 +27,7 @@ It helps with coding 'use gpu' functions by highlighting common pitfalls and uns
   </TabItem>
 </Tabs>
 
-After installing, the plugin still needs to be added to a config. 
+After installing, the plugin still needs to be added to a config.
 The way this is done depends on the linter used.
 
 ## Configuring
@@ -87,7 +87,7 @@ export default defineConfig({
 
 ### Oxlint (`.oxlintrc.json`)
 
-The plugin needs to be listed in `jsPlugins`, and the rules have to be listed one by one. 
+The plugin needs to be listed in `jsPlugins`, and the rules have to be listed one by one.
 
 ```diff lang=json
   "$schema": "./node_modules/oxlint/configuration_schema.json",
