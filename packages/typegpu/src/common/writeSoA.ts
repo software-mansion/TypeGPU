@@ -107,6 +107,7 @@ function writePackedValue(
   dstOffset: number,
   srcOffset: number,
 ): void {
+  const unpackedSchema = undecorate(schema);
   const packedSchema = packedSchemaOf(schema);
   const matrixLayout = getPackedMatrixLayout(packedSchema);
   if (matrixLayout) {
@@ -125,14 +126,17 @@ function writePackedValue(
     return;
   }
 
-  if (isWgslArray(packedSchema) && isWgslArray(schema)) {
-    const packedElementSize = packedSizeOf(packedSchema.elementType);
-    const gpuElementStride = roundUp(sizeOf(schema.elementType), alignmentOf(schema.elementType));
+  if (isWgslArray(unpackedSchema)) {
+    const packedElementSize = packedSizeOf(unpackedSchema.elementType);
+    const gpuElementStride = roundUp(
+      sizeOf(unpackedSchema.elementType),
+      alignmentOf(unpackedSchema.elementType),
+    );
 
-    for (let i = 0; i < packedSchema.elementCount; i++) {
+    for (let i = 0; i < unpackedSchema.elementCount; i++) {
       writePackedValue(
         target,
-        schema.elementType,
+        unpackedSchema.elementType,
         srcBytes,
         dstOffset + i * gpuElementStride,
         srcOffset + i * packedElementSize,
