@@ -37,8 +37,6 @@ The way this is done depends on the linter used.
 The plugin needs to be imported and included in `defineConfig`.
 
 ```diff lang=ts
-import js from "@eslint/js";
-import globals from "globals";
 import { defineConfig } from "eslint/config";
 +import typegpu from "eslint-plugin-typegpu";
 
@@ -57,8 +55,6 @@ export default defineConfig([
 The plugin also exports `recommended` and `all` configs, which may be used instead of listing the rules one by one.
 
 ```diff lang=ts
-import js from "@eslint/js";
-import globals from "globals";
 import { defineConfig } from "eslint/config";
 +import typegpu from "eslint-plugin-typegpu";
 
