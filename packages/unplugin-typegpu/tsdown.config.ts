@@ -16,7 +16,9 @@ export default defineConfig({
   outputOptions: {
     exports: 'named',
   },
-  inlineOnly: ['@babel/types', '@types/estree', 'rollup'],
+  deps: {
+    onlyBundle: false,
+  },
   outDir: 'dist',
   format: ['cjs', 'esm'],
   tsconfig: './tsconfig.json',

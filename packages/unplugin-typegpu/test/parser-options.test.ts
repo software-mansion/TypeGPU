@@ -13,12 +13,16 @@ describe('[BABEL] parser options', () => {
 
     expect(babelTransform(codeWithImport, { include: [/virtual:/] })).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
-      const increment = tgpu.fn([])(($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+      const increment = tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const x = 2 + 2;
       }, {
         v: 1,
-        name: void 0,
-        ast: {"params":[],"body":[0,[[13,"x",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+        name: undefined,
+        ast: {
+          params: [],
+          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]],
+          externalNames: []
+        },
         externals: () => {
           return {};
         }
@@ -53,13 +57,13 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
     expect(await rollupTransform(codeWithImport, { include: [/virtual:/] })).toMatchInlineSnapshot(`
       "import tgpu from 'typegpu';
 
-      const increment = tgpu.fn([])((($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+      const increment = tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
-                    v: 1,
-                    name: undefined,
-                    ast: {"params":[],"body":[0,[]],"externalNames":[]},
-                    externals: () => ({}),
-                  }) && $.f)({})));
+          v: 1,
+          name: undefined,
+          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({})));
 
             console.log(increment);
       "
