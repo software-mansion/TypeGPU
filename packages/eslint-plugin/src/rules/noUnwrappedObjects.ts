@@ -7,7 +7,7 @@ export const noUnwrappedObjects = createRule({
   meta: {
     type: 'problem',
     docs: {
-      description: `Disallow unwrapped Plain Old JavaScript Objects inside 'use gpu' functions`,
+      description: `Disallow unwrapped Plain Old JavaScript Objects inside 'use gpu' functions (except returns)`,
     },
     messages: {
       unexpected: '{{snippet}} must be wrapped in a schema call',

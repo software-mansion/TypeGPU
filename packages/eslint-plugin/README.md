@@ -8,7 +8,7 @@ TypeGPU specific linting rules for ESLint.
 
 </div>
 
-## Installataion
+## Installation
 
 `npm add -D eslint-plugin-typegpu`
 
@@ -21,6 +21,7 @@ Configuration depends on the linter used.
 In eslint, either define the used rules manually, or use one of the configs provided by the plugin.
 
 ```ts
+import { defineConfig } from "eslint/config";
 import typegpu from "eslint-plugin-typegpu";
 
 export default defineConfig([
@@ -38,11 +39,11 @@ export default defineConfig([
 🌐 Set in the `all` configuration.\
 ✅ Set in the `recommended` configuration.
 
-| Name                                                                   | Description                                                                    | 💼   | ⚠️ |
-| :--------------------------------------------------------------------- | :----------------------------------------------------------------------------- | :--- | :- |
-| [no-integer-division](docs/rules/no-integer-division.md)               | Disallow division incorporating numbers wrapped in 'u32' and 'i32'             | 🌐   | ✅  |
-| [no-math](docs/rules/no-math.md)                                       | Disallow usage of JavaScript 'Math' methods inside 'use gpu' functions         | 🌐   | ✅  |
-| [no-uninitialized-variables](docs/rules/no-uninitialized-variables.md) | Disallow variable declarations without initializers inside 'use gpu' functions | 🌐 ✅ |    |
-| [no-unwrapped-objects](docs/rules/no-unwrapped-objects.md)             | Disallow unwrapped Plain Old JavaScript Objects inside 'use gpu' functions     | 🌐 ✅ |    |
+| Name                                                                   | Description                                                                                 | 💼   | ⚠️ |
+| :--------------------------------------------------------------------- | :------------------------------------------------------------------------------------------ | :--- | :- |
+| [no-integer-division](docs/rules/no-integer-division.md)               | Disallow division incorporating numbers wrapped in 'u32' and 'i32'                          | 🌐   | ✅  |
+| [no-math](docs/rules/no-math.md)                                       | Disallow usage of JavaScript 'Math' methods inside 'use gpu' functions                      | 🌐   | ✅  |
+| [no-uninitialized-variables](docs/rules/no-uninitialized-variables.md) | Disallow variable declarations without initializers inside 'use gpu' functions              | 🌐 ✅ |    |
+| [no-unwrapped-objects](docs/rules/no-unwrapped-objects.md)             | Disallow unwrapped Plain Old JavaScript Objects inside 'use gpu' functions (except returns) | 🌐 ✅ |    |
 
 <!-- end auto-generated rules list -->

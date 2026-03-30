@@ -47,7 +47,7 @@
     "prepublishOnly": "pnpm run docs:check && pnpm run test:types && vitest run && pnpm run build"
   },
   "dependencies": {
-    "@typescript-eslint/utils": "^8.53.0"
+    "@typescript-eslint/utils": "^8.57.2"
   },
   "devDependencies": {
     "@types/node": "^25.0.10",

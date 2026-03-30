@@ -1,6 +1,6 @@
 # typegpu/no-unwrapped-objects
 
-📝 Disallow unwrapped Plain Old JavaScript Objects inside 'use gpu' functions.
+📝 Disallow unwrapped Plain Old JavaScript Objects inside 'use gpu' functions (except returns).
 
 💼 This rule is enabled in the following configs: 🌐 `all`, ✅ `recommended`.
 
