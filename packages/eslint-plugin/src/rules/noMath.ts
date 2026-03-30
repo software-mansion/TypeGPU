@@ -12,7 +12,7 @@ export const noMath = createRule({
       description: `Disallow usage of JavaScript 'Math' methods inside 'use gpu' functions; use 'std' instead.`,
     },
     messages: {
-      math: "Using Math methods, such as '{{snippet}}', is not advised, and may not work as expected. Use 'std' instead.",
+      unexpected: "Using Math methods, such as '{{snippet}}', is not advised, and may not work as expected. Use 'std' instead.",
     },
     schema: [],
   },
@@ -35,7 +35,7 @@ export const noMath = createRule({
         ) {
           context.report({
             node,
-            messageId: 'math',
+            messageId: 'unexpected',
             data: { snippet: context.sourceCode.getText(node) },
           });
         }

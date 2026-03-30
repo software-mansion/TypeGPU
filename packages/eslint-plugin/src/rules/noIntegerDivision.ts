@@ -8,7 +8,7 @@ export const noIntegerDivision = createRule({
     type: 'suggestion',
     docs: { description: `Avoid dividing numbers wrapped in 'u32' and 'i32'.` },
     messages: {
-      intDiv:
+      suspiciousDivision:
         "'{{snippet}}' might result in floating point values. To perform integer division, wrap the result in 'd.u32' or 'd.i32' instead.",
     },
     schema: [],
@@ -29,7 +29,7 @@ export const noIntegerDivision = createRule({
         if (isIntCast(node.left) || isIntCast(node.right)) {
           context.report({
             node,
-            messageId: 'intDiv',
+            messageId: 'suspiciousDivision',
             data: { snippet: context.sourceCode.getText(node) },
           });
         }

@@ -16,7 +16,7 @@ describe('noMath', () => {
         code: "const fn = () => { 'use gpu'; const vec = Math.sin(0); }",
         errors: [
           {
-            messageId: 'math',
+            messageId: 'unexpected',
             data: { snippet: 'Math.sin(0)' },
           },
         ],

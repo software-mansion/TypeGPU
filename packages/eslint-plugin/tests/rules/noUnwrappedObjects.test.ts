@@ -30,7 +30,7 @@ describe('noUnwrappedObjects', () => {
         code: "function func() { 'use gpu'; const unwrapped = { a: 1 }; }",
         errors: [
           {
-            messageId: 'unwrappedPojo',
+            messageId: 'unexpected',
             data: { snippet: '{ a: 1 }' },
           },
         ],
@@ -39,7 +39,7 @@ describe('noUnwrappedObjects', () => {
         code: "const func = function() { 'use gpu'; const unwrapped = { a: 1 }; }",
         errors: [
           {
-            messageId: 'unwrappedPojo',
+            messageId: 'unexpected',
             data: { snippet: '{ a: 1 }' },
           },
         ],
@@ -48,7 +48,7 @@ describe('noUnwrappedObjects', () => {
         code: "() => { 'use gpu'; const unwrapped = { a: 1 }; }",
         errors: [
           {
-            messageId: 'unwrappedPojo',
+            messageId: 'unexpected',
             data: { snippet: '{ a: 1 }' },
           },
         ],
@@ -57,7 +57,7 @@ describe('noUnwrappedObjects', () => {
         code: "function func() { 'unknown directive'; 'use gpu'; const unwrapped = { a: 1 }; }",
         errors: [
           {
-            messageId: 'unwrappedPojo',
+            messageId: 'unexpected',
             data: { snippet: '{ a: 1 }' },
           },
         ],
@@ -66,7 +66,7 @@ describe('noUnwrappedObjects', () => {
         code: "() => { 'use gpu'; const unwrapped = { a: { b: 1 } }; }",
         errors: [
           {
-            messageId: 'unwrappedPojo',
+            messageId: 'unexpected',
             data: { snippet: '{ a: { b: 1 } }' },
           },
         ],

@@ -10,7 +10,7 @@ export const noUnwrappedObjects = createRule({
       description: `Wrap Plain Old JavaScript Objects with schemas.`,
     },
     messages: {
-      unwrappedPojo:
+      unexpected:
         '{{snippet}} is a POJO that is not wrapped in a schema. To allow WGSL resolution, wrap it in a schema call. You only need to wrap the outermost object.',
     },
     schema: [],
@@ -39,7 +39,7 @@ export const noUnwrappedObjects = createRule({
         }
         context.report({
           node,
-          messageId: 'unwrappedPojo',
+          messageId: 'unexpected',
           data: { snippet: context.sourceCode.getText(node) },
         });
       },
