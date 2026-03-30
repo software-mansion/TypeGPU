@@ -24,6 +24,9 @@ describe('noUnwrappedObjects', () => {
       "const func = function() { 'use gpu'; return { a: 1 }; }",
       "() => { 'use gpu'; return { a: 1 }; }",
       "() => { 'use gpu'; return { a: { b: 1 } }; }",
+      "() => { 'use gpu'; return { a: 1 } as typeof Struct; }",
+      "() => { 'use gpu'; return { a: 1 } satisfies Struct; }",
+      "() => { 'use gpu'; return ({ a: 1 }); }",
     ],
     invalid: [
       {
