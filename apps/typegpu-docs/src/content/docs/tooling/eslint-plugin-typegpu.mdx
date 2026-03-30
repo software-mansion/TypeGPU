@@ -43,17 +43,12 @@ import { defineConfig } from "eslint/config";
 +import typegpu from "eslint-plugin-typegpu";
 
 export default defineConfig([
-  {
-    files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
-    plugins: { js },
-    extends: ["js/recommended"],
-    languageOptions: { globals: globals.browser },
-  },
+  // other configs
 +  {
 +    plugins: { typegpu },
 +    rules: {
-+      'typegpu/integer-division': 'warn',
-+      'typegpu/unwrapped-pojo': 'warn',
++      'typegpu/no-integer-division': 'warn',
++      'typegpu/no-math': 'warn',
 +    }
 +  }
 ]);
@@ -68,12 +63,7 @@ import { defineConfig } from "eslint/config";
 +import typegpu from "eslint-plugin-typegpu";
 
 export default defineConfig([
-  {
-    files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
-    plugins: { js },
-    extends: ["js/recommended"],
-    languageOptions: { globals: globals.browser },
-  },
+  // other configs
 +  typegpu.configs.recommended,
 ]);
 ```
@@ -109,8 +99,8 @@ The plugin needs to be listed in `jsPlugins`, and the rules have to be listed on
 +  "jsPlugins": ["eslint-plugin-typegpu"],
   "categories": {},
 +  "rules": {
-+    "typegpu/integer-division": "warn",
-+    "typegpu/unwrapped-pojo": "warn",
++    "typegpu/no-integer-division": "warn",
++    "typegpu/no-math": "warn",
 +  },
 ```
 
