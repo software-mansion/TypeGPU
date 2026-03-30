@@ -1,73 +1,42 @@
-import * as Babel from '@babel/standalone';
-import type TemplateGenerator from '@babel/template';
-import type { TraverseOptions } from '@babel/traverse';
-import type * as babel from '@babel/types';
+import * as t from '@babel/types';
+import type { NodePath, TraverseOptions } from '@babel/traverse';
 import defu from 'defu';
-import { FORMAT_VERSION } from 'tinyest';
 import { transpileFn } from 'tinyest-for-wgsl';
+import { FORMAT_VERSION } from 'tinyest';
 import {
-  type Context,
+  type PluginState,
   defaultOptions,
-  embedJSON,
-  gatherTgpuAliases,
-  getFunctionName,
-  isShellImplementationCall,
-  operators,
-  type Options,
-  performExpressionNaming,
-  useGpuDirective,
-} from './common.ts';
-import { createFilterForId } from './filter.ts';
+  functionVisitor,
+  getBlockScope,
+  initPluginState,
+} from './core/common.ts';
+import { createFilterForId } from './core/filter.ts';
 
-// NOTE: @babel/standalone does expose internal packages, as specified in the docs, but the
-// typing for @babel/standalone does not expose them.
-const template = (Babel as unknown as { packages: { template: typeof TemplateGenerator } }).packages
-  .template;
-const types = (Babel as unknown as { packages: { types: typeof babel } }).packages.types;
-
-function containsUseGpuDirective(
-  node: babel.FunctionDeclaration | babel.FunctionExpression | babel.ArrowFunctionExpression,
-): boolean {
-  return ('directives' in node.body ? (node.body?.directives ?? []) : [])
-    .map((directive) => directive.value.value)
-    .includes(useGpuDirective);
+function i(identifier: string): t.Identifier {
+  return t.identifier(identifier);
 }
 
-function i(identifier: string): babel.Identifier {
-  return types.identifier(identifier);
-}
-
-const fnNodeToOriginalMap = new WeakMap<
-  babel.FunctionDeclaration | babel.FunctionExpression | babel.ArrowFunctionExpression,
-  babel.FunctionDeclaration | babel.FunctionExpression | babel.ArrowFunctionExpression
->();
-
-function functionToTranspiled(
-  node: babel.ArrowFunctionExpression | babel.FunctionExpression,
-  parent: babel.Node | null,
-): babel.CallExpression {
-  const { params, body, externalNames } = transpileFn(fnNodeToOriginalMap.get(node) ?? node);
-  const maybeName = getFunctionName(node, parent);
-
-  const metadata = types.objectExpression([
-    types.objectProperty(i('v'), types.numericLiteral(FORMAT_VERSION)),
-    types.objectProperty(
-      i('name'),
-      maybeName ? types.stringLiteral(maybeName) : types.buildUndefinedNode(),
-    ),
-    types.objectProperty(
-      i('ast'),
-      template.expression`${embedJSON({ params, body, externalNames })}`(),
-    ),
-    types.objectProperty(
+function assignMetadata(
+  this: PluginState,
+  path: NodePath<t.FunctionDeclaration | t.ArrowFunctionExpression | t.FunctionExpression>,
+  name: string | undefined,
+  ast: ReturnType<typeof transpileFn>,
+): void {
+  const metadata = t.objectExpression([
+    t.objectProperty(i('v'), t.numericLiteral(FORMAT_VERSION)),
+    t.objectProperty(i('name'), t.valueToNode(name)),
+    t.objectProperty(i('ast'), t.valueToNode(ast)),
+    t.objectProperty(
       i('externals'),
-      types.arrowFunctionExpression(
+      t.arrowFunctionExpression(
         [],
-        types.blockStatement([
-          types.returnStatement(
-            types.objectExpression(
-              externalNames.map((name) =>
-                types.objectProperty(i(name), i(name), false, /* shorthand */ name !== 'this'),
+        t.blockStatement([
+          t.returnStatement(
+            t.objectExpression(
+              ast.externalNames.map((name) =>
+                name === 'this'
+                  ? t.objectProperty(i('this'), t.thisExpression())
+                  : t.objectProperty(i(name), i(name), false, /* shorthand */ name !== 'this'),
               ),
             ),
           ),
@@ -76,226 +45,119 @@ function functionToTranspiled(
     ),
   ]);
 
-  return types.callExpression(
-    types.arrowFunctionExpression(
+  let expression: t.Expression;
+  const visibility = t.isFunctionDeclaration(path.node)
+    ? getBlockScope(path as NodePath<t.FunctionDeclaration>)
+    : undefined;
+
+  if (t.isFunctionDeclaration(path.node)) {
+    expression = t.functionExpression(path.node.id, path.node.params, path.node.body);
+  } else {
+    expression = path.node as t.Expression;
+  }
+
+  const callExpr = t.callExpression(
+    t.arrowFunctionExpression(
       [i('$')],
-      types.logicalExpression(
+      t.logicalExpression(
         '&&',
-        types.callExpression(
-          types.memberExpression(
-            types.assignmentExpression(
+        t.callExpression(
+          t.memberExpression(
+            t.assignmentExpression(
               '??=',
-              types.memberExpression(i('globalThis'), i('__TYPEGPU_META__')),
-              types.newExpression(i('WeakMap'), []),
+              t.memberExpression(i('globalThis'), i('__TYPEGPU_META__')),
+              t.newExpression(i('WeakMap'), []),
             ),
             i('set'),
           ),
-          [types.assignmentExpression('=', types.memberExpression(i('$'), i('f')), node), metadata],
+          [t.assignmentExpression('=', t.memberExpression(i('$'), i('f')), expression), metadata],
         ),
-        types.memberExpression(i('$'), i('f')),
+        t.memberExpression(i('$'), i('f')),
       ),
     ),
-    [types.objectExpression([])],
+    [t.objectExpression([])],
+  );
+
+  t.addComment(callExpr, 'leading', '#__PURE__');
+
+  let replacement: t.Node = callExpr;
+
+  if (t.isFunctionDeclaration(path.node) && path.node.id) {
+    const declaration = t.variableDeclaration('const', [
+      t.variableDeclarator(path.node.id, callExpr),
+    ]);
+    t.inheritLeadingComments(declaration, path.node);
+    replacement = declaration;
+  }
+
+  if (visibility) {
+    // Hoisting the declaration to the top of the scope
+    visibility.unshiftContainer('body', replacement as t.Statement);
+    this.alreadyTransformed.add(expression);
+    path.remove();
+  } else {
+    path.replaceWith(replacement);
+  }
+  path.skip();
+}
+
+function wrapInAutoName(path: NodePath<t.Expression>, name: string): void {
+  // /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(<node>, '<name>')
+  const callExpr = t.callExpression(
+    t.logicalExpression(
+      '??',
+      // globalThis.__TYPEGPU_AUTONAME__
+      t.memberExpression(i('globalThis'), i('__TYPEGPU_AUTONAME__')),
+      // (a => a)
+      t.arrowFunctionExpression([i('a')], i('a')),
+    ),
+    [path.node, t.stringLiteral(name)],
+  );
+  t.addComment(callExpr, 'leading', '#__PURE__');
+  path.replaceWith(callExpr);
+}
+
+function replaceWithAssignmentOverload(
+  path: NodePath<t.AssignmentExpression>,
+  runtimeFn: string,
+): void {
+  path.replaceWith(
+    t.assignmentExpression(
+      '=',
+      path.node.left,
+      t.callExpression(i(runtimeFn), [path.node.left as t.Expression, path.node.right]),
+    ),
   );
 }
 
-function wrapInAutoName(node: babel.Expression, name: string) {
-  return types.callExpression(
-    template.expression('globalThis.__TYPEGPU_AUTONAME__ ?? (a => a)', {
-      placeholderPattern: false,
-    })(),
-    [node, types.stringLiteral(name)],
+function replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void {
+  path.replaceWith(
+    t.callExpression(i(runtimeFn), [path.node.left as t.Expression, path.node.right]),
   );
 }
 
-function functionVisitor(ctx: Context): TraverseOptions {
-  let inUseGpuScope = false;
-
+export default function TypeGPUPlugin() {
   return {
-    VariableDeclarator(path) {
-      performExpressionNaming(ctx, path.node, (node, name) => {
-        path.get('init').replaceWith(wrapInAutoName(node, name));
+    name: 'typegpu',
+    pre(this: PluginState) {
+      this.opts = defu(this.opts, defaultOptions);
+      initPluginState(this, {
+        warn: (message) => console.warn(message),
+        assignMetadata,
+        wrapInAutoName,
+        replaceWithAssignmentOverload,
+        replaceWithBinaryOverload,
       });
     },
-
-    AssignmentExpression(path) {
-      if (inUseGpuScope) {
-        const runtimeFn = operators[path.node.operator as keyof typeof operators];
-
-        if (runtimeFn) {
-          path.replaceWith(
-            types.assignmentExpression(
-              '=',
-              path.node.left,
-              types.callExpression(types.identifier(runtimeFn), [
-                path.node.left as babel.Expression,
-                path.node.right,
-              ]),
-            ),
-          );
-        }
-      }
-
-      performExpressionNaming(ctx, path.node, (node, name) => {
-        path.get('right').replaceWith(wrapInAutoName(node, name));
-      });
-    },
-
-    ObjectProperty(path) {
-      performExpressionNaming(ctx, path.node, (node, name) => {
-        path.get('value').replaceWith(wrapInAutoName(node, name));
-      });
-    },
-
-    ClassProperty(path) {
-      performExpressionNaming(ctx, path.node, (node, name) => {
-        path.get('value').replaceWith(wrapInAutoName(node, name));
-      });
-    },
-
-    ImportDeclaration(path) {
-      gatherTgpuAliases(path.node, ctx);
-    },
-
-    BinaryExpression: {
-      exit(path) {
-        if (!inUseGpuScope) {
-          return;
-        }
-
-        const runtimeFn = operators[path.node.operator as keyof typeof operators];
-
-        if (runtimeFn) {
-          path.replaceWith(
-            types.callExpression(types.identifier(runtimeFn), [
-              path.node.left as babel.Expression,
-              path.node.right,
-            ]),
-          );
-        }
-      },
-    },
-
-    ArrowFunctionExpression: {
-      enter(path) {
-        if (containsUseGpuDirective(path.node)) {
-          fnNodeToOriginalMap.set(path.node, types.cloneNode(path.node, true));
-          if (inUseGpuScope) {
-            throw new Error(`Nesting 'use gpu' functions is not allowed`);
-          }
-          inUseGpuScope = true;
-        }
-      },
-      exit(path) {
-        const node = path.node;
-        if (containsUseGpuDirective(node)) {
-          inUseGpuScope = false;
-          const parent = path.parentPath.node;
-          path.replaceWith(functionToTranspiled(node, parent));
-          path.skip();
-        }
-      },
-    },
-
-    FunctionExpression: {
-      enter(path) {
-        if (containsUseGpuDirective(path.node)) {
-          fnNodeToOriginalMap.set(path.node, types.cloneNode(path.node, true));
-          if (inUseGpuScope) {
-            throw new Error(`Nesting 'use gpu' functions is not allowed`);
-          }
-          inUseGpuScope = true;
-        }
-      },
-      exit(path) {
-        const node = path.node;
-        if (containsUseGpuDirective(node)) {
-          inUseGpuScope = false;
-          const parent = path.parentPath.node;
-          path.replaceWith(functionToTranspiled(node, parent));
-          path.skip();
-        }
-      },
-    },
-
-    FunctionDeclaration: {
-      enter(path) {
-        if (containsUseGpuDirective(path.node)) {
-          fnNodeToOriginalMap.set(path.node, types.cloneNode(path.node, true));
-          if (inUseGpuScope) {
-            throw new Error(`Nesting 'use gpu' functions is not allowed`);
-          }
-          inUseGpuScope = true;
-        }
-      },
-      exit(path) {
-        const node = (fnNodeToOriginalMap.get(path.node) ?? path.node) as babel.FunctionDeclaration;
-        if (containsUseGpuDirective(node)) {
-          inUseGpuScope = false;
-
-          if (!node.id) {
-            return;
-          }
-
-          const parent = path.parentPath.node;
-          const expression = types.functionExpression(node.id, node.params, node.body);
-
-          path.replaceWith(
-            types.variableDeclaration('const', [
-              types.variableDeclarator(node.id, functionToTranspiled(expression, parent)),
-            ]),
-          );
-          path.skip();
-        }
-      },
-    },
-
-    CallExpression: {
-      exit(path) {
-        const node = path.node;
-
-        if (isShellImplementationCall(node, ctx)) {
-          const implementation = node.arguments[0];
-
-          if (
-            implementation &&
-            (implementation.type === 'FunctionExpression' ||
-              implementation.type === 'ArrowFunctionExpression')
-          ) {
-            const transpiled = functionToTranspiled(implementation, null);
-
-            path.replaceWith(types.callExpression(node.callee, [transpiled]));
-
-            path.skip();
-          }
-        }
-      },
-    },
-  };
-}
-
-export default function () {
-  return {
     visitor: {
       Program(path, state) {
-        // oxlint-disable-next-line typescript/no-explicit-any -- <oh babel babel...>
-        const options = defu((state as any).opts as Options, defaultOptions);
-        // oxlint-disable-next-line typescript/no-explicit-any -- <oh babel babel...>
-        const id: string | undefined = (state as any).filename;
-
-        const filter = createFilterForId(options);
-        if (id && filter && !filter?.(id)) {
+        const filter = createFilterForId(state.opts);
+        if (state.filename && filter && !filter?.(state.filename)) {
           return;
         }
 
-        const ctx: Context = {
-          tgpuAliases: new Set<string>(options.forceTgpuAlias ? [options.forceTgpuAlias] : []),
-          fileId: id,
-          autoNamingEnabled: options.autoNamingEnabled,
-        };
-
-        path.traverse(functionVisitor(ctx));
+        path.traverse(functionVisitor, state);
       },
-    } satisfies TraverseOptions,
+    } satisfies TraverseOptions<PluginState>,
   };
 }

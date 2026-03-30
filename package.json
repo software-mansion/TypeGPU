@@ -19,12 +19,12 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "DEV=true pnpm --parallel -r dev",
-    "dev:host": "DEV=true pnpm --parallel -r dev --host --mode https",
+    "dev": "DEV=true pnpm run --filter typegpu-docs dev",
+    "dev:host": "DEV=true pnpm run --filter typegpu-docs dev --host --mode https",
     "fix": "oxlint -c oxlint.config.ts --fix && oxfmt",
     "test": "pnpm run test:types && pnpm run test:style && pnpm run test:unit-and-attest && pnpm run test:circular-deps",
     "test:circular-deps": "pnpm dpdm -T --exit-code circular:1 packages/**/src/index.ts packages/**/src/index.js !packages/**/node_modules",
-    "test:types": "pnpm run -r --parallel test:types",
+    "test:types": "pnpm run --filter typegpu-docs transform-overloads && pnpm run -r --parallel test:types",
     "test:style": "oxlint -c oxlint.config.ts --max-warnings=0 --type-aware --report-unused-disable-directives && oxfmt --check",
     "test:unit-and-attest": "ENABLE_ATTEST=1 vitest run --project=!browser",
     "test:unit": "vitest run --project=!browser",
@@ -67,8 +67,9 @@
       "sharp"
     ],
     "overrides": {
-      "rollup": "catalog:",
+      "rollup": "catalog:build",
       "vite": "8.0.2",
+      "@babel/types": "catalog:",
       "typescript": "catalog:types",
       "three": "catalog:example",
       "@typescript-eslint/utils": "^8.57.2"

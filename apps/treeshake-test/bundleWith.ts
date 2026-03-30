@@ -17,7 +17,7 @@ export async function bundleWithEsbuild(entryUrl: URL, outDir: URL): Promise<URL
   const entryFileName = path.basename(entryUrl.pathname, '.ts');
   const outPath = new URL(`${entryFileName}.esbuild.js`, outDir);
   await esbuild({
-    plugins: [esbuildPlugin({})],
+    plugins: [esbuildPlugin()],
     entryPoints: [entryUrl.pathname],
     bundle: true,
     outfile: outPath.pathname,
@@ -40,7 +40,7 @@ export async function bundleWithWebpack(entryPath: URL, outDir: URL): Promise<UR
           path: path.dirname(outPath.pathname),
           filename: path.basename(outPath.pathname),
         },
-        plugins: [webpackPlugin({})],
+        plugins: [webpackPlugin()],
         module: {
           rules: [
             {
@@ -84,7 +84,7 @@ export async function bundleWithTsdown(entryUrl: URL, outDir: URL): Promise<URL>
 
   try {
     await tsdown({
-      plugins: [rolldownPlugin({})],
+      plugins: [rolldownPlugin()],
       outputOptions: {
         name: path.basename(outPath.pathname),
         dir: path.dirname(outPath.pathname),
