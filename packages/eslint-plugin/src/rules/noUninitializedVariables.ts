@@ -2,15 +2,15 @@ import { enhanceRule } from '../enhanceRule.ts';
 import { directiveTracking } from '../enhancers/directiveTracking.ts';
 import { createRule } from '../ruleCreator.ts';
 
-export const uninitializedVariable = createRule({
-  name: 'uninitialized-variable',
+export const noUninitializedVariables = createRule({
+  name: 'no-uninitialized-variables',
   meta: {
     type: 'problem',
     docs: {
-      description: `Always assign an initial value when declaring a variable inside TypeGPU functions.`,
+      description: `Disallow variable declarations without initializers inside 'use gpu' functions`,
     },
     messages: {
-      uninitializedVariable: "'{{snippet}}' should have an initial value.",
+      uninitializedVariable: "'{{snippet}}' must have an initial value",
     },
     schema: [],
   },
