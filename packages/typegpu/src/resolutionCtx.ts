@@ -446,7 +446,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       const args: Snippet[] = [];
       const argAliases: [string, Snippet][] = [];
       // For entry functions: collect pending header entries to be filtered after body generation.
-      const pendingHeaderEntries: Array<{ argName: string; header: string }> = [];
+      const pendingHeaderEntries: { argName: string; header: string }[] = [];
 
       if (options.entryInput) {
         const { dataSchema, positionalArgs } = options.entryInput;

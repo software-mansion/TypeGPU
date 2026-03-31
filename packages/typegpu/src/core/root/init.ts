@@ -529,9 +529,9 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     THeight extends number,
     TDepth extends number,
     TSize extends
-    | readonly [TWidth]
-    | readonly [TWidth, THeight]
-    | readonly [TWidth, THeight, TDepth],
+      | readonly [TWidth]
+      | readonly [TWidth, THeight]
+      | readonly [TWidth, THeight, TDepth],
     TFormat extends GPUTextureFormat,
     TMipLevelCount extends number,
     TSampleCount extends number,

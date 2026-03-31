@@ -26,7 +26,7 @@ export class EntryInputRouter implements BaseData {
   constructor(
     structArgName: string,
     dataSchema: BaseData | undefined,
-    positionalArgs: Array<{ schemaKey: string; argName: string; type: BaseData }>,
+    positionalArgs: { schemaKey: string; argName: string; type: BaseData }[],
   ) {
     this.structArgName = structArgName;
     this.dataSchema = dataSchema;
