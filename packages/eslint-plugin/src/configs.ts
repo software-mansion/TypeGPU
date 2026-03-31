@@ -20,7 +20,7 @@ export const recommendedRules: Rules = {
   'typegpu/no-unwrapped-objects': 'error',
   'typegpu/no-uninitialized-variables': 'error',
   'typegpu/no-math': 'warn',
-  'typegpu/no-invalid-assignment': 'warn',
+  'typegpu/no-invalid-assignment': 'error',
 };
 
 export const allRules: Rules = {

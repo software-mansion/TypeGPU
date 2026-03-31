@@ -9,13 +9,13 @@ export const noInvalidAssignment = createRule({
   meta: {
     type: 'problem',
     docs: {
-      description: `Avoid assignments that will not generate valid WGSL.`,
+      description: `Disallow assignments that will generate invalid WGSL`,
     },
     messages: {
       parameterAssignment:
-        "Cannot assign to '{{snippet}}' since WGSL parameters are immutable. If you're using d.ref, please either use '.$' or disable this rule.",
+        "Cannot assign to '{{snippet}}' since WGSL parameters are immutable. If you're using d.ref, please either use '.$' or disable this rule",
       jsAssignment:
-        "Cannot assign to '{{snippet}}' since it is a JS variable defined outside of the current TypeGPU function's scope. Use buffers, workgroup variables or local variables instead.",
+        "Cannot assign to '{{snippet}}' since it is a JS variable defined outside of the current TypeGPU function's scope. Use buffers, workgroup variables or local variables instead",
     },
     schema: [],
   },
