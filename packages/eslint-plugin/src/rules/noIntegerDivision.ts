@@ -2,14 +2,14 @@ import type { TSESTree } from '@typescript-eslint/utils';
 import { createRule } from '../ruleCreator.ts';
 
 // TODO: detect `std.div(d.u32(1), d.u32(2))`
-export const integerDivision = createRule({
-  name: 'integer-division',
+export const noIntegerDivision = createRule({
+  name: 'no-integer-division',
   meta: {
     type: 'suggestion',
-    docs: { description: `Avoid dividing numbers wrapped in 'u32' and 'i32'.` },
+    docs: { description: `Disallow division incorporating numbers wrapped in 'u32' and 'i32'` },
     messages: {
-      intDiv:
-        "'{{snippet}}' might result in floating point values. To perform integer division, wrap the result in 'd.u32' or 'd.i32' instead.",
+      suspiciousDivision:
+        "'{{snippet}}' might result in floating point values. To perform integer division, wrap the result in 'd.u32' or 'd.i32' instead",
     },
     schema: [],
   },
@@ -29,7 +29,7 @@ export const integerDivision = createRule({
         if (isIntCast(node.left) || isIntCast(node.right)) {
           context.report({
             node,
-            messageId: 'intDiv',
+            messageId: 'suspiciousDivision',
             data: { snippet: context.sourceCode.getText(node) },
           });
         }

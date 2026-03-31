@@ -1,17 +1,17 @@
 import { enhanceRule } from '../enhanceRule.ts';
 import { directiveTracking } from '../enhancers/directiveTracking.ts';
+import { getNonTransparentParent } from '../nodeHelpers.ts';
 import { createRule } from '../ruleCreator.ts';
 
-export const unwrappedPojos = createRule({
-  name: 'unwrapped-pojo',
+export const noUnwrappedObjects = createRule({
+  name: 'no-unwrapped-objects',
   meta: {
     type: 'problem',
     docs: {
-      description: `Wrap Plain Old JavaScript Objects with schemas.`,
+      description: `Disallow unwrapped Plain Old JavaScript Objects inside 'use gpu' functions (except returns)`,
     },
     messages: {
-      unwrappedPojo:
-        '{{snippet}} is a POJO that is not wrapped in a schema. To allow WGSL resolution, wrap it in a schema call. You only need to wrap the outermost object.',
+      unexpected: '{{snippet}} must be wrapped in a schema call',
     },
     schema: [],
   },
@@ -25,21 +25,22 @@ export const unwrappedPojos = createRule({
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
-        if (node.parent?.type === 'Property') {
+        let parent = getNonTransparentParent(node);
+        if (parent?.type === 'Property') {
           // a part of a bigger struct
           return;
         }
-        if (node.parent?.type === 'CallExpression') {
+        if (parent?.type === 'CallExpression') {
           // wrapped in a schema call
           return;
         }
-        if (node.parent?.type === 'ReturnStatement') {
+        if (parent?.type === 'ReturnStatement') {
           // likely inferred (shelled fn or shell-less entry) so we cannot report
           return;
         }
         context.report({
           node,
-          messageId: 'unwrappedPojo',
+          messageId: 'unexpected',
           data: { snippet: context.sourceCode.getText(node) },
         });
       },

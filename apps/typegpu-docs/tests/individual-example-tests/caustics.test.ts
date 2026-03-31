@@ -109,15 +109,15 @@ describe('caustics example', () => {
         return mix(x, X, smoothPartial.x);
       }
 
-      fn caustics(uv: vec2f, time2: f32, profile: vec3f) -> vec3f {
-        let distortion = sample(vec3f((uv * 0.5f), (time2 * 0.2f)));
+      fn caustics(uv: vec2f, time_1: f32, profile: vec3f) -> vec3f {
+        let distortion = sample(vec3f((uv * 0.5f), (time_1 * 0.2f)));
         var uv2 = (uv + distortion);
-        let noise = abs(sample(vec3f((uv2 * 5f), time2)));
+        let noise = abs(sample(vec3f((uv2 * 5f), time_1)));
         return pow(vec3f((1f - noise)), profile);
       }
 
-      fn rotateXY(angle2: f32) -> mat2x2f {
-        return mat2x2f(vec2f(cos(angle2), sin(angle2)), vec2f(-(sin(angle2)), cos(angle2)));
+      fn rotateXY(angle: f32) -> mat2x2f {
+        return mat2x2f(vec2f(cos(angle), sin(angle)), vec2f(-(sin(angle)), cos(angle)));
       }
 
       struct mainFragment_Input {

@@ -11,6 +11,8 @@ export const codeEditorShownAtom = atomWithStorage(
   storageOptions,
 );
 
+export const tsoverUsedAtom = atomWithStorage('tsover-used', true, undefined, storageOptions);
+
 export const experimentalExamplesShownAtom = atomWithStorage(
   'experimental-examples-shown',
   true,

@@ -8,6 +8,8 @@ import type {
   Infer,
   InferGPU,
   InferGPURecord,
+  InferInput,
+  InferInputRecord,
   InferPartial,
   InferPartialRecord,
   InferRecord,
@@ -19,6 +21,7 @@ import type {
 } from '../shared/repr.ts';
 import type {
   $gpuRepr,
+  $inRepr,
   $invalidSchemaReason,
   $memIdent,
   $repr,
@@ -48,6 +51,21 @@ export interface NumberArrayView {
   [n: number]: number;
   [Symbol.iterator]: () => Iterator<number>;
 }
+
+/**
+ * Maps a scalar, vector, or matrix element schema to the corresponding TypedArray type.
+ */
+export type TypedArrayFor<T> = T extends F32 | Vec2f | Vec3f | Vec4f | Mat2x2f | Mat3x3f | Mat4x4f
+  ? Float32Array
+  : T extends F16 | Vec2h | Vec3h | Vec4h
+    ? Float16Array
+    : T extends I32 | Vec2i | Vec3i | Vec4i
+      ? Int32Array
+      : T extends U32 | Vec2u | Vec3u | Vec4u
+        ? Uint32Array
+        : T extends U16
+          ? Uint16Array
+          : never;
 
 /**
  * Vector infix notation.
@@ -676,6 +694,7 @@ export interface Vec2f
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2f;
+  readonly [$inRepr]: v2f | [number, number] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -700,6 +719,7 @@ export interface Vec2h
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2h;
+  readonly [$inRepr]: v2h | [number, number] | Float16Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -724,6 +744,7 @@ export interface Vec2i
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2i;
+  readonly [$inRepr]: v2i | [number, number] | Int32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -748,6 +769,7 @@ export interface Vec2u
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v2u;
+  readonly [$inRepr]: v2u | [number, number] | Uint32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -794,6 +816,7 @@ export interface Vec3f
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3f;
+  readonly [$inRepr]: v3f | [number, number, number] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -820,6 +843,7 @@ export interface Vec3h
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3h;
+  readonly [$inRepr]: v3h | [number, number, number] | Float16Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -846,6 +870,7 @@ export interface Vec3i
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3i;
+  readonly [$inRepr]: v3i | [number, number, number] | Int32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -872,6 +897,7 @@ export interface Vec3u
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v3u;
+  readonly [$inRepr]: v3u | [number, number, number] | Uint32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -927,6 +953,7 @@ export interface Vec4f
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4f;
+  readonly [$inRepr]: v4f | [number, number, number, number] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -957,6 +984,7 @@ export interface Vec4h
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4h;
+  readonly [$inRepr]: v4h | [number, number, number, number] | Float16Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -987,6 +1015,7 @@ export interface Vec4i
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4i;
+  readonly [$inRepr]: v4i | [number, number, number, number] | Int32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -1017,6 +1046,7 @@ export interface Vec4u
 
   // Type-tokens, not available at runtime
   readonly [$repr]: v4u;
+  readonly [$inRepr]: v4u | [number, number, number, number] | Uint32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   readonly [$validVertexSchema]: true;
@@ -1061,6 +1091,7 @@ export interface Mat2x2f extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m2x2f;
+  readonly [$inRepr]: m2x2f | number[] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   // ---
@@ -1080,6 +1111,7 @@ export interface Mat3x3f extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m3x3f;
+  readonly [$inRepr]: m3x3f | number[] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   // ---
@@ -1099,6 +1131,7 @@ export interface Mat4x4f extends BaseData {
 
   // Type-tokens, not available at runtime
   readonly [$repr]: m4x4f;
+  readonly [$inRepr]: m4x4f | number[] | Float32Array;
   readonly [$validStorageSchema]: true;
   readonly [$validUniformSchema]: true;
   // ---
@@ -1134,6 +1167,7 @@ export interface WgslArray<out TElement extends BaseData = BaseData> extends Bas
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TElement>[];
+  readonly [$inRepr]: InferInput<TElement>[] | TypedArrayFor<TElement>;
   readonly [$gpuRepr]: InferGPU<TElement>[];
   readonly [$reprPartial]: { idx: number; value: InferPartial<TElement> }[] | undefined;
   readonly [$memIdent]: WgslArray<MemIdentity<TElement>>;
@@ -1169,6 +1203,7 @@ export interface WgslStruct<
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Prettify<InferRecord<TProps>>;
+  readonly [$inRepr]: Prettify<InferInputRecord<TProps>>;
   readonly [$gpuRepr]: Prettify<InferGPURecord<TProps>>;
   readonly [$memIdent]: WgslStruct<Prettify<MemIdentityRecord<TProps>>>;
   readonly [$reprPartial]: Prettify<Partial<InferPartialRecord<TProps>>> | undefined;
