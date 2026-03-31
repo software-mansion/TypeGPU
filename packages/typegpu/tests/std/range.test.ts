@@ -40,14 +40,6 @@ test('std.range - negative step', () => {
   expect(JSON.stringify(std.range(3, -1, -1))).toMatchInlineSnapshot(`"[3,2,1,0]"`);
 });
 
-// fractional / floating-point step
-test('std.range - float step', () => {
-  expect(JSON.stringify(std.range(0, 1, 0.25))).toMatchInlineSnapshot(`"[0,0.25,0.5,0.75]"`);
-  expect(std.range(0, 1, 0.25)).toHaveLength(4);
-  expect(std.range(0, 1, 0.25)[0]).toBe(0);
-  expect(std.range(0, 1, 0.25)[3]).toBe(0.75);
-});
-
 test('std.range - returns empty array when step direction mismatches range direction', () => {
   // positive range, negative step
   expect(JSON.stringify(std.range(0, 5, -1))).toMatchInlineSnapshot(`"[]"`);
@@ -57,7 +49,15 @@ test('std.range - returns empty array when step direction mismatches range direc
 
 // error cases
 test('std.range - throws on zero step', () => {
-  expect(() => std.range(0, 5, 0)).toThrow('Step cannot be zero');
+  expect(() => std.range(0, 5, 0)).toThrowErrorMatchingInlineSnapshot(
+    `[Error: 'step' must be a non-zero integer, got 0]`,
+  );
+});
+
+test('std.range - float step', () => {
+  expect(() => std.range(0, 1, 0.25)).toThrowErrorMatchingInlineSnapshot(
+    `[Error: 'step' must be a non-zero integer, got 0.25]`,
+  );
 });
 
 describe('on the GPU', () => {
