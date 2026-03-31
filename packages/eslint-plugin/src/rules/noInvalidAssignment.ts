@@ -4,8 +4,8 @@ import { enhanceRule } from '../enhanceRule.ts';
 import { directiveTracking } from '../enhancers/directiveTracking.ts';
 import type { RuleContext } from '@typescript-eslint/utils/ts-eslint';
 
-export const invalidAssignment = createRule({
-  name: 'invalid-assignment',
+export const noInvalidAssignment = createRule({
+  name: 'no-invalid-assignment',
   meta: {
     type: 'problem',
     docs: {

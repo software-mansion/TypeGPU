@@ -1,9 +1,9 @@
 import { describe } from 'vitest';
-import { ruleTester } from './ruleTester.ts';
-import { invalidAssignment } from '../src/rules/invalidAssignment.ts';
+import { ruleTester } from '../utils/ruleTester.ts';
+import { noInvalidAssignment } from '../../src/rules/noInvalidAssignment.ts';
 
-describe('invalidAssignment', () => {
-  ruleTester.run('invalidAssignment', invalidAssignment, {
+describe('noInvalidAssignment', () => {
+  ruleTester.run('noInvalidAssignment', noInvalidAssignment, {
     valid: [
       // not inside 'use gpu' function
       'const fn = (a) => { a = {}; }',
@@ -108,7 +108,7 @@ describe('invalidAssignment', () => {
     ],
   });
 
-  ruleTester.run('invalidAssignment', invalidAssignment, {
+  ruleTester.run('invalidAssignment', noInvalidAssignment, {
     valid: [
       // not inside 'use gpu' function
       'let a; const fn = () => { a = 1 }',
