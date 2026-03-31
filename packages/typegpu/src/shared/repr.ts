@@ -38,7 +38,9 @@ export type Infer<T> = T extends { readonly [$repr]: infer TRepr } ? TRepr : T;
  * const arrayOfStructs = d.arrayOf(d.struct({ pos: d.vec3f, id: d.f32 }), 4);
  * type D = d.InferInput<typeof arrayOfStructs>; // { pos: d.v3f | Float32Array<ArrayBufferLike> | [number, number, number]; id: number; }[]
  */
-export type InferInput<T> = T extends { readonly [$inRepr]: infer TRepr } ? TRepr : Infer<T>;
+export type InferInput<T> =
+  | Infer<T>
+  | (T extends { readonly [$inRepr]: infer TRepr } ? TRepr : never);
 
 /**
  * Extracts a sparse/partial inferred representation of a resource.
