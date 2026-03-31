@@ -697,7 +697,7 @@ importers:
         version: 2.6.1
       jsdom:
         specifier: ^27.0.0
-        version: 27.0.0(canvas@3.2.0)(postcss@8.5.6)
+        version: 27.0.0(canvas@3.2.0)(postcss@8.5.8)
       tsdown:
         specifier: catalog:build
         version: 0.21.7(tsover@5.9.11)
