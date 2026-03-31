@@ -7,7 +7,7 @@ export function getExampleURLs(
 } {
   return {
     html: `../../../src/examples/${category}/${name}/index.html?raw`,
-    ts: `../../../src/examples/${category}/${name}/index.ts`,
+    ts: `../../../src/examples/${category}/${name}/index`,
   };
 }
 
@@ -41,7 +41,7 @@ export async function testExampleShaderGeneration(
     if (control?.onButtonClick) {
       try {
         control.onButtonClick();
-      } catch {}
+      } catch { }
     }
   }
 
@@ -84,8 +84,7 @@ export async function waitForExpectedCalls(
   }
 
   console.warn(
-    `Timeout waiting for ${expectedCalls} shader calls, got ${
-      device.mock?.createShaderModule?.mock?.calls?.length || 0
+    `Timeout waiting for ${expectedCalls} shader calls, got ${device.mock?.createShaderModule?.mock?.calls?.length || 0
     }`,
   );
 }
