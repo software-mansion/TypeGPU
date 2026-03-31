@@ -14,6 +14,8 @@ import ThemeSwitcher from "../../components/ThemeSwitcher.astro";
 import Videos from "../../components/Videos.astro";
 import PageLayout from "../../layouts/PageLayout.astro";
 import TgpuExamples from "../../components/TgpuExamples";
+import { HeroEffect } from "../../components/hero-effect/HeroEffect";
+import { HeroTitle } from "../../components/hero-effect/HeroTitle";
 ---
 
 <PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
@@ -21,6 +23,11 @@ import TgpuExamples from "../../components/TgpuExamples";
         class="flex flex-col gap-14 md:gap-30 text-blue-950 dark:text-gray-100 transition-colors duration-300"
     >
         <main>
+            <div
+                class="flex flex-col items-center absolute top-0 right-32 -z-10"
+            >
+                <HeroEffect client:only="react" />
+            </div>
             <header
                 class="flex justify-between items-center self-stretch px-4 sm:px-7.5 md:px-10 lg:px-12.5 h-24 shrink-0"
             >
