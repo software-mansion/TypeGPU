@@ -28,8 +28,14 @@ export const range = comptime<
     end = start;
     start = 0;
   }
-  if (step === 0) {
-    throw new Error('Step cannot be zero');
+  if (!Number.isInteger(start)) {
+    throw new Error(`'start' must be an integer, got ${start}`);
+  }
+  if (!Number.isInteger(end)) {
+    throw new Error(`'end' must be an integer, got ${end}`);
+  }
+  if (!Number.isInteger(step) || step === 0) {
+    throw new Error(`'step' must be a non-zero integer, got ${step}`);
   }
 
   const result: TgpuRange = [] as unknown as TgpuRange;
