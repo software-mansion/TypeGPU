@@ -112,17 +112,17 @@ describe('liquid-glass example', () => {
         var samples = array<vec3f, 3>();
         // unrolled iteration #0
         {
-          var channelOffset = (dir * (-1f * offset));
+          var channelOffset = ((dir * -1f) * offset);
           samples[0i] = textureSampleBias(tex, sampler_2, (uv - channelOffset), blur).rgb;
         }
         // unrolled iteration #1
         {
-          var channelOffset = (dir * (0f * offset));
+          var channelOffset = ((dir * 0f) * offset);
           samples[1i] = textureSampleBias(tex, sampler_2, (uv - channelOffset), blur).rgb;
         }
         // unrolled iteration #2
         {
-          var channelOffset = (dir * (1f * offset));
+          var channelOffset = ((dir * 1f) * offset);
           samples[2i] = textureSampleBias(tex, sampler_2, (uv - channelOffset), blur).rgb;
         }
         return vec3f(samples[0i].x, samples[1i].y, samples[2i].z);
