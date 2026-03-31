@@ -217,14 +217,22 @@ export class CodegenState {
 
 export class SimulationState {
   readonly type = 'simulate' as const;
+  readonly buffers: Map<TgpuBuffer<BaseData>, unknown>;
+  readonly vars: {
+    private: Map<TgpuVar, unknown>;
+    workgroup: Map<TgpuVar, unknown>;
+  };
 
   constructor(
-    readonly buffers: Map<TgpuBuffer<BaseData>, unknown>,
-    readonly vars: {
+    buffers: Map<TgpuBuffer<BaseData>, unknown>,
+    vars: {
       private: Map<TgpuVar, unknown>;
       workgroup: Map<TgpuVar, unknown>;
     },
-  ) {}
+  ) {
+    this.buffers = buffers;
+    this.vars = vars;
+  }
 }
 
 export type ExecState = NormalState | CodegenState | SimulationState;

@@ -87,11 +87,15 @@ export interface ResolvedSnippet {
 export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 
 class SnippetImpl implements Snippet {
-  constructor(
-    readonly value: unknown,
-    readonly dataType: BaseData | UnknownData,
-    readonly origin: Origin,
-  ) {}
+  readonly value: unknown;
+  readonly dataType: BaseData | UnknownData;
+  readonly origin: Origin;
+
+  constructor(value: unknown, dataType: BaseData | UnknownData, origin: Origin) {
+    this.value = value;
+    this.dataType = dataType;
+    this.origin = origin;
+  }
 }
 
 export function isSnippet(value: unknown): value is Snippet {

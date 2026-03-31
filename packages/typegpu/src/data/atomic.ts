@@ -32,8 +32,9 @@ export function atomic<TSchema extends U32 | I32>(data: TSchema): Atomic<TSchema
 // --------------
 
 class AtomicImpl<TSchema extends U32 | I32> implements Atomic<TSchema> {
-  public readonly [$internal] = {};
-  public readonly type = 'atomic';
+  readonly [$internal] = {};
+  readonly type = 'atomic';
+  readonly inner: TSchema;
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<TSchema>;
@@ -44,5 +45,7 @@ class AtomicImpl<TSchema extends U32 | I32> implements Atomic<TSchema> {
   declare readonly [$validVertexSchema]: true;
   // ---
 
-  constructor(public readonly inner: TSchema) {}
+  constructor(inner: TSchema) {
+    this.inner = inner;
+  }
 }
