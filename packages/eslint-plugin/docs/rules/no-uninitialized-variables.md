@@ -2,7 +2,7 @@
 
 📝 Disallow variable declarations without initializers inside 'use gpu' functions.
 
-💼 This rule is enabled in the following configs: 🌐 `all`, ✅ `recommended`.
+🚨 This rule is enabled in the ⭐ `recommended` config.
 
 <!-- end auto-generated rule header -->
 
