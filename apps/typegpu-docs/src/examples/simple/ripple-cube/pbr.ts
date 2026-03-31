@@ -65,14 +65,13 @@ export const evaluateLight = (
   return ((kd * material.albedo) / PI + specular) * radiance * ndotl;
 };
 
-const lightCountIterations = Array.from({ length: LIGHT_COUNT }, (_, i) => i);
 export const shade = (p: d.v3f, n: d.v3f, v: d.v3f): d.v3f => {
   'use gpu';
   const material = materialAccess.$;
   const f0 = std.mix(d.vec3f(0.04), material.albedo, material.metallic);
 
   let lo = d.vec3f(0);
-  for (const i of tgpu.unroll(lightCountIterations)) {
+  for (const i of tgpu.unroll(std.range(LIGHT_COUNT))) {
     lo += evaluateLight(p, n, v, lightsAccess.$[i], material, f0);
   }
 
