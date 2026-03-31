@@ -13,7 +13,7 @@ import GradientTitle from "../../components/GradientTitle.astro";
 import ThemeSwitcher from "../../components/ThemeSwitcher.astro";
 import Videos from "../../components/Videos.astro";
 import PageLayout from "../../layouts/PageLayout.astro";
-import TgpuExamples from "../../components/TgpuExamples";
+import LandingExampleGrid from "../../components/landing-examples/LandingExampleGrid";
 import { HeroEffect } from "../../components/hero-effect/HeroEffect";
 ---
 
@@ -175,7 +175,7 @@ import { HeroEffect } from "../../components/hero-effect/HeroEffect";
                     WebGPU can do.
                 </p>
             </div>
-            <TgpuExamples client:visible />
+            <LandingExampleGrid client:visible />
         </section>
 
         <!-- Videos -->

@@ -1,57 +1,57 @@
-import ExternalOpenSvg from '../assets/externalopen.svg';
-import CausticsGif from '../assets/hero/caustics_bg.webp';
-import RayMarchingGif from '../assets/hero/rayMarch_bg.webp';
-import JellySliderGif from '../assets/hero/jellySlider_bg.jpg';
-import FishGif from '../assets/hero/fish_bg.webp';
-import ReflectionGif from '../assets/hero/reflection_bg.jpg';
-import VaporRaveGif from '../assets/hero/rave_bg.webp';
+import ExternalOpenSvg from '../../assets/externalopen.svg';
+import CausticsGif from '../../assets/hero/caustics_bg.webp';
+import RayMarchingGif from '../../assets/hero/rayMarch_bg.webp';
+import JellySliderGif from '../../assets/hero/jellySlider_bg.jpg';
+import FishGif from '../../assets/hero/fish_bg.webp';
+import ReflectionGif from '../../assets/hero/reflection_bg.jpg';
+import VaporRaveGif from '../../assets/hero/rave_bg.webp';
 
 import HoverExampleIsland from './HoverExampleIsland.tsx';
 
-// biome-ignore lint/correctness/useImportExtensions: Vite ?raw query is valid, extension is .html
-import fishHtml from '../pages/landing-examples/3d-fish/index.html?raw';
-// biome-ignore lint/correctness/useImportExtensions: Vite ?raw query is valid, extension is .html
-import causticsHtml from '../pages/landing-examples/caustics/index.html?raw';
-// biome-ignore lint/correctness/useImportExtensions: Vite ?raw query is valid, extension is .html
-import reflectionHtml from '../pages/landing-examples/cubemap-reflection/index.html?raw';
-// biome-ignore lint/correctness/useImportExtensions: Vite ?raw query is valid, extension is .html
-import jellyHtml from '../pages/landing-examples/jelly-slider/index.html?raw';
-// biome-ignore lint/correctness/useImportExtensions: Vite ?raw query is valid, extension is .html
-import rayMarchingHtml from '../pages/landing-examples/ray-marching/index.html?raw';
-// biome-ignore lint/correctness/useImportExtensions: Vite ?raw query is valid, extension is .html
-import vaporRaveHtml from '../pages/landing-examples/vaporrave/index.html?raw';
+import initReflection from './cubemap-reflection/index.ts';
+import initJelly from './jelly-slider/index.ts';
+import initVaporRave from './vaporrave/index.ts';
+import initRayMarching from './ray-marching/index.ts';
+import initFish from './3d-fish/index.ts';
+import initCaustics from './caustics/index.ts';
+
+// const root = await tgpu.init({
+//   device: {
+//     optionalFeatures: ['timestamp-query'],
+//   },
+// });
 
 const galleryItems = [
   {
     asset: ReflectionGif,
     title: 'Reflection',
     key: 'cubemap-reflection',
-    html: reflectionHtml,
+    init: initReflection,
   },
   {
     asset: JellySliderGif,
     title: 'Jelly Slider',
     key: 'jelly-slider',
-    html: jellyHtml,
+    init: initJelly,
   },
   {
     asset: VaporRaveGif,
     title: 'VaporRave',
     key: 'vaporrave',
-    html: vaporRaveHtml,
+    init: initVaporRave,
   },
   {
     asset: RayMarchingGif,
     title: 'Ray Marching',
     key: 'ray-marching',
-    html: rayMarchingHtml,
+    init: initRayMarching,
   },
-  { asset: FishGif, title: '3D Fish', key: '3d-fish', html: fishHtml },
+  { asset: FishGif, title: '3D Fish', key: '3d-fish', init: initFish },
   {
     asset: CausticsGif,
     title: 'Caustics',
     key: 'caustics',
-    html: causticsHtml,
+    init: initCaustics,
   },
 ] as const;
 

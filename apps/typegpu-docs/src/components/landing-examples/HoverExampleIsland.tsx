@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, TouchEvent as ReactTouchEvent } from 'react';
 import { useAtom } from 'jotai';
-import { activeExampleAtom } from '../utils/examples/activeExampleAtom.ts';
-import { executeExample } from '../utils/examples/exampleRunner.ts';
-import { isGPUSupported } from '../utils/isGPUSupported.ts';
+import { activeExampleAtom } from '../../utils/examples/activeExampleAtom.ts';
+import { executeExample } from '../../utils/examples/exampleRunner.ts';
+import { isGPUSupported } from '../../utils/isGPUSupported.ts';
 
 type Props = {
   exampleKey: string;
@@ -102,7 +102,6 @@ export default function HoverExampleIsland({ exampleKey, html }: Props) {
         if (!containerRef.current) return;
 
         containerRef.current.innerHTML = html;
-        hideHelpElement(containerRef.current);
         resizeCanvases(containerRef.current);
 
         const tsPath = `../pages/landing-examples/${exampleKey}/index.ts`;
@@ -156,11 +155,6 @@ export default function HoverExampleIsland({ exampleKey, html }: Props) {
       )}
     </div>
   );
-}
-
-function hideHelpElement(container: HTMLElement) {
-  const help = container.querySelector<HTMLElement>('#help');
-  if (help) help.style.display = 'none';
 }
 
 function resizeCanvases(container: HTMLElement) {
