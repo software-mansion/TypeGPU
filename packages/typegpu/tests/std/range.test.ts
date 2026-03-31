@@ -8,6 +8,7 @@ test('std.range - single arg', () => {
   expect(JSON.stringify(std.range(4))).toMatchInlineSnapshot(`"[0,1,2,3]"`);
   expect(JSON.stringify(std.range(0))).toMatchInlineSnapshot(`"[]"`);
   expect(JSON.stringify(std.range(1))).toMatchInlineSnapshot(`"[0]"`);
+  expect(JSON.stringify(std.range(-1))).toMatchInlineSnapshot(`"[]"`);
 });
 
 // range(start, end) — two arguments, generates [start, end)

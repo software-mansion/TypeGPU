@@ -345,13 +345,13 @@ If you'd like to unroll over a range of numbers, use `tgpu.unroll(std.range(n))`
 
 ```ts
 // (...)
-const FBM_OCTAVES = 3;
+const FBM_OCTAVES = 3; // user-provided value
 
 function fbm(pos: d.v3f): number {
   'use gpu';
   let sum = d.f32();
 
-  // i = 0, 1, 2
+  // i = 0, 1, .., FBM_OCTAVES-1
   for (const i of tgpu.unroll(std.range(FBM_OCTAVES))) {
     sum +=
       noise3d(pos * (CLOUD_FREQUENCY * FBM_LACUNARITY ** i)) *

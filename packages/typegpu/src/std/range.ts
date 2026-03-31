@@ -6,7 +6,23 @@ export interface TgpuRange extends Array<number> {
   step: number;
 }
 
-export const range = comptime((start: number, end?: number, step: number = 1): TgpuRange => {
+/**
+ * Returns an array of values between `start` (inclusive) and `end` (exclusive) with the given `step`.
+ *
+ * If only one argument is provided, it is interpreted as `end`, with `start=0` and `step=1`.
+ *
+ * ```ts
+ * let result = d.f32(1);
+ * for (const i of std.range(5)) {
+ *   result *= i + 1;
+ * }
+ * ```
+ *
+ * Can also be combined with `tgpu.unroll` to unroll a specific number of iterations.
+ */
+export const range = comptime<
+  ((end: number) => TgpuRange) & ((start: number, end?: number, step?: number) => TgpuRange)
+>((start: number, end?: number, step: number = 1): TgpuRange => {
   if (end === undefined) {
     // range(n)
     end = start;
