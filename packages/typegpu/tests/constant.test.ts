@@ -121,4 +121,21 @@ describe('tgpu.const', () => {
       }"
     `);
   });
+
+  it('can infer array length for partially-applied array schema', () => {
+    const positions = tgpu.const(d.arrayOf(d.vec3f), [d.vec3f(1), d.vec3f(2)]);
+
+    const main = () => {
+      'use gpu';
+      const pos = positions.$[1];
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "const positions: array<vec3f, 2> = array<vec3f, 2>(vec3f(1), vec3f(2));
+
+      fn main() {
+        const pos = positions[1i];
+      }"
+    `);
+  });
 });

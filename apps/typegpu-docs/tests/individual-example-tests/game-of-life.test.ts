@@ -290,9 +290,9 @@ describe('game of life example', () => {
             let a = (1f - smoothstep(0f, borderWidth, abs(dist)));
             return vec4f(borderColor.x, borderColor.y, borderColor.z, a);
           }
-          let value2 = sampleRegular(localUv, gs);
-          var alive2 = select(vec4f((localUv.x / 2.5f), (localUv.y / 2.5f), ((1f - localUv.x) / 2.5f), 0.8f), vec4f(0.6000000238418579, 0.6000000238418579, 0.6000000238418579, 0.800000011920929), (viewModeUniform == 1u));
-          return select(vec4f(0, 0, 0, 0.800000011920929), alive2, (value2 == 1u));
+          let value = sampleRegular(localUv, gs);
+          var alive = select(vec4f((localUv.x / 2.5f), (localUv.y / 2.5f), ((1f - localUv.x) / 2.5f), 0.8f), vec4f(0.6000000238418579, 0.6000000238418579, 0.6000000238418579, 0.800000011920929), (viewModeUniform == 1u));
+          return select(vec4f(0, 0, 0, 0.800000011920929), alive, (value == 1u));
         }
         var sampleUv = _arg_0.uv;
         if (((*zoom).enabled == 1u)) {
