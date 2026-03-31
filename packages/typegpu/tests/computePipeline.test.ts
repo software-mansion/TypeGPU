@@ -612,7 +612,7 @@ describe('TgpuComputePipeline', () => {
       );
 
       expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
-        `"dispatchWorkgroupsIndirect: Starting at offset 0, only 4 contiguous bytes are available before padding. Dispatch requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
+        `"dispatchWorkgroupsIndirect: Starting at offset 0, only 4 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
       );
 
       const deepBuffer = root.createBuffer(DeepStruct).$usage('indirect');
@@ -622,7 +622,7 @@ describe('TgpuComputePipeline', () => {
       );
 
       expect(warnSpy.mock.calls[1]![0]).toMatchInlineSnapshot(
-        `"dispatchWorkgroupsIndirect: Starting at offset 44, only 8 contiguous bytes are available before padding. Dispatch requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
+        `"dispatchWorkgroupsIndirect: Starting at offset 44, only 8 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
       );
 
       pipeline.dispatchWorkgroupsIndirect(
@@ -631,7 +631,7 @@ describe('TgpuComputePipeline', () => {
       );
 
       expect(warnSpy.mock.calls[2]![0]).toMatchInlineSnapshot(
-        `"dispatchWorkgroupsIndirect: Starting at offset 84, only 8 contiguous bytes are available before padding. Dispatch requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
+        `"dispatchWorkgroupsIndirect: Starting at offset 84, only 8 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
       );
     });
 

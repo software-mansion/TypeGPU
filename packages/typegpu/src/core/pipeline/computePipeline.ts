@@ -1,7 +1,6 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import { sizeOf } from '../../data/sizeOf.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { applyBindGroups } from './applyPipelineState.ts';
@@ -27,7 +26,8 @@ import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 
-import { memoryLayoutOf, type PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
+import type { PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
+import { resolveIndirectOffset } from './pipelineUtils.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
@@ -112,25 +112,6 @@ type Memo = {
   catchall: [number, TgpuBindGroup] | undefined;
   logResources: LogResources | undefined;
 };
-
-function validateIndirectBufferSize(
-  bufferSize: number,
-  offset: number,
-  requiredBytes: number,
-  operation: string,
-): void {
-  if (offset + requiredBytes > bufferSize) {
-    throw new Error(
-      `Buffer too small for ${operation}. ` +
-        `Required: ${requiredBytes} bytes at offset ${offset}, ` +
-        `but buffer is only ${bufferSize} bytes.`,
-    );
-  }
-
-  if (offset % 4 !== 0) {
-    throw new Error(`Indirect buffer offset must be a multiple of 4. Got: ${offset}`);
-  }
-}
 
 const _lastAppliedCompute = new WeakMap<GPUComputePassEncoder, TgpuComputePipelineImpl>();
 
@@ -240,37 +221,12 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   ): void {
     const DISPATCH_SIZE = 12; // 3 x u32 (x, y, z)
 
-    let offsetInfo = start ?? memoryLayoutOf(indirectBuffer.dataType);
-
-    if (typeof offsetInfo === 'number') {
-      if (offsetInfo === 0) {
-        offsetInfo = memoryLayoutOf(indirectBuffer.dataType);
-      } else {
-        console.warn(
-          `dispatchWorkgroupsIndirect: Provided start offset ${offsetInfo} as a raw number. Use d.memoryLayoutOf(...) to include contiguous padding info for safer validation.`,
-        );
-        // When only an offset is provided, assume we have at least 12 bytes contiguous.
-        offsetInfo = {
-          offset: offsetInfo,
-          contiguous: DISPATCH_SIZE,
-        };
-      }
-    }
-
-    const { offset, contiguous } = offsetInfo;
-
-    validateIndirectBufferSize(
-      sizeOf(indirectBuffer.dataType),
-      offset,
+    const offset = resolveIndirectOffset(
+      indirectBuffer,
+      start,
       DISPATCH_SIZE,
       'dispatchWorkgroupsIndirect',
     );
-
-    if (contiguous < DISPATCH_SIZE) {
-      console.warn(
-        `dispatchWorkgroupsIndirect: Starting at offset ${offset}, only ${contiguous} contiguous bytes are available before padding. Dispatch requires ${DISPATCH_SIZE} bytes (3 x u32). Reading across padding may result in undefined behavior.`,
-      );
-    }
 
     this._executeComputePass((pass) =>
       pass.dispatchWorkgroupsIndirect(indirectBuffer.buffer, offset),

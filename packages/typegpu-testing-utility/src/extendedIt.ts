@@ -62,6 +62,8 @@ const mockRenderPassEncoder = {
   },
   draw: vi.fn(),
   drawIndexed: vi.fn(),
+  drawIndirect: vi.fn(),
+  drawIndexedIndirect: vi.fn(),
   end: vi.fn(),
   setBindGroup: vi.fn(),
   setPipeline: vi.fn(),
