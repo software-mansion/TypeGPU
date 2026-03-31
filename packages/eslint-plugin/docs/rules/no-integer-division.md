@@ -28,11 +28,6 @@ const a = 1 / 2;
 ```ts
 const a = d.u32(d.u32(1) / d.u32(2));
 ```
-```ts
-const a = d.u32(1);
-const b = d.u32(2);
-const c = a / b;
-```
 
 Note that this rule is not type aware. 
 Extracting the dividend and the divisor to variables will silence the rule,

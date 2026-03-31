@@ -20,11 +20,12 @@ const fn = () => {
 Examples of **correct** code for this rule:
 
 ```ts
-const a = Math.sin(1);
-```
-```ts
 const fn = () => { 
   'use gpu';
   const a = std.sin(Math.PI);
 }
+```
+```ts
+// outside 'use gpu'
+const a = Math.sin(1);
 ```

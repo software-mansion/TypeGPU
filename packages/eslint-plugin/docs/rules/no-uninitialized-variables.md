@@ -25,3 +25,7 @@ const fn = () => {
   let vec = d.vec3f();
 } 
 ```
+```ts
+// outside 'use gpu'
+let a;
+```

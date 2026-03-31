@@ -2,7 +2,7 @@
 
 📝 Disallow unwrapped Plain Old JavaScript Objects inside 'use gpu' functions (except returns).
 
-💤 This rule is _disabled_ in the ⭐ `recommended` config.
+🚨 This rule is enabled in the ⭐ `recommended` config.
 
 <!-- end auto-generated rule header -->
 
