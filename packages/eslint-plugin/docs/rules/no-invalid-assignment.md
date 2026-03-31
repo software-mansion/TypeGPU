@@ -19,7 +19,7 @@ const fn = (a) => {
 ```ts
 const fn = (a) => { 
   'use gpu'; 
-  a.prop = 1;
+  a.prop++;
 }
 ```
 ```ts
@@ -33,16 +33,16 @@ const fn = () => {
 Examples of **correct** code for this rule:
 
 ```ts
-const fn = (ref) => { 
-  'use gpu'; 
+const fn = () => {
+  'use gpu';
+  const ref = d.ref(0);
+  other(ref);
+};
+
+const other = (ref: d.ref<number>) => {
+  'use gpu';
   ref.$ = 1;
-}
-```
-```ts
-const fn = (ref) => { 
-  'use gpu'; 
-  ref.$.prop = 1;
-}
+};
 ```
 ```ts
 const privateVar = tgpu.privateVar(d.u32);
