@@ -31,6 +31,7 @@ function useExample(
   useEffect(() => {
     let cancelled = false;
     setSnackbarText(undefined);
+    setExampleControlParams([]);
 
     executeExample(tsImport)
       .then((example) => {
