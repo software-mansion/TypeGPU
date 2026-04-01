@@ -21,7 +21,7 @@ export const noUninitializedVariables = createRule({
 
     return {
       VariableDeclarator(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         if (node.parent?.parent?.type === 'ForOfStatement') {
