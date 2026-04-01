@@ -47,6 +47,15 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
+        code: "const fn = async () => { 'use gpu'; if (1 == 2) { return true; } else { return false; } }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: '1 == 2', syntax: 'eqeq' },
+          },
+        ],
+      },
+      {
         code: "const fn = () => { 'use gpu'; class Foo {} }",
         errors: [
           {

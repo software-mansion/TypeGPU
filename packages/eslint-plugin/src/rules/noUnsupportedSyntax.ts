@@ -48,6 +48,15 @@ export const noUnsupportedSyntax = createRule({
         report(node, 'await expression');
       },
 
+      BinaryExpression(node) {
+        if (!directives.getEnclosingTypegpuFunction()) {
+          return;
+        }
+        if (node.operator === '==') {
+          report(node, 'eqeq');
+        }
+      },
+
       ClassDeclaration(node) {
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
