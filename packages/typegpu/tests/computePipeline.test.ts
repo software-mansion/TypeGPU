@@ -655,6 +655,19 @@ describe('TgpuComputePipeline', () => {
       );
     });
 
+    it('warns when offset is a number', ({ root }) => {
+      using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+      const pipeline = root.createComputePipeline({ compute: entryFn });
+
+      const buffer = root.createBuffer(d.mat4x4f).$usage('indirect');
+
+      pipeline.dispatchWorkgroupsIndirect(buffer, 4);
+
+      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(`"dispatchWorkgroupsIndirect: Provided start offset 4 as a raw number. Use d.memoryLayoutOf(...) to include contiguous padding info for safer validation."`);
+    });
+
     it('warns when dispatch would read across padding', ({ root }) => {
       using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
