@@ -93,8 +93,8 @@ function frame(timestamp: number) {
 }
 frameId = requestAnimationFrame(frame);
 
-const initialToColorBuffer = d.vec3f(1.538, 0.784, 2);
-const initialToColorPicker = d.vec3f(0.965, 0.784, 0.98);
+const initialToColorBufferValue = d.vec3f(1.538, 0.784, 2);
+const initialToColorPickerValue = d.vec3f(0.965, 0.784, 0.98);
 export const controls = {
   Distortion: {
     initial: 0.05,
@@ -121,10 +121,10 @@ export const controls = {
     },
   },
   'To Color': {
-    initial: initialToColorPicker,
+    initial: initialToColorPickerValue,
     onColorChange(value: readonly [number, number, number]) {
-      if (value === initialToColorPicker) {
-        paramsUniform.writePartial({ toColor: initialToColorBuffer });
+      if (value === initialToColorPickerValue) {
+        paramsUniform.writePartial({ toColor: initialToColorBufferValue });
         return;
       }
       paramsUniform.writePartial({ toColor: d.vec3f(...value) });
