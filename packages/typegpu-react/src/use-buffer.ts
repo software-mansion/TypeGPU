@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import type { TgpuBuffer, ValidateBufferSchema } from 'typegpu';
 
 export interface UseBufferOptions<TSchema extends d.AnyData> {
-  initial?: (() => d.Infer<NoInfer<TSchema>>) | d.Infer<NoInfer<TSchema>>;
+  initial?:
+    | ((buffer: TgpuBuffer<TSchema>) => d.InferInput<NoInfer<TSchema>>)
+    | d.InferInput<NoInfer<TSchema>>;
   onInit?: (buffer: TgpuBuffer<TSchema>) => void;
 }
 
@@ -16,13 +18,13 @@ export function useBuffer<TSchema extends d.AnyData>(
   const { initial, onInit } = options ?? {};
   const root = useRoot();
 
-  const [buffer] = useState(() => {
-    const buffer = root.createBuffer(
-      schema,
-      typeof initial === 'function' ? (initial as () => d.Infer<NoInfer<TSchema>>)() : initial,
-    );
+  const [fakeState] = useState(() => {
+    const buffer = root.createBuffer(schema, initial);
     onInit?.(buffer);
-    return buffer;
+
+    return {
+      buffer,
+    };
   });
 
   const cleanupRef = useRef<ReturnType<typeof setTimeout> | null>(null);

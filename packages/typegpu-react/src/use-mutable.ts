@@ -1,29 +1,31 @@
-import { useRoot } from './root-context.tsx';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { TgpuMutable, ValidateStorageSchema, d } from 'typegpu';
 
+import { useRoot } from './root-context.tsx';
+import { useChangeDetection, useDeferredCleanup, useStableSchema } from './helper-hooks.ts';
+
 export function useMutable<TSchema extends d.AnyWgslData>(
-  schema: ValidateStorageSchema<TSchema>,
+  _schema: ValidateStorageSchema<TSchema>,
   initialValue?: d.Infer<TSchema>,
 ): TgpuMutable<TSchema> {
   const root = useRoot();
+  const [fakeState] = useState(() => ({
+    // TODO: The cast to d.InferInput<TSchema> should not be necessary
+    mutable: root.createMutable(_schema, initialValue as d.InferInput<TSchema>),
+  }));
 
-  const [mutable] = useState(() => {
-    return root.createMutable(schema, initialValue);
+  const [schema, schemaChanged] = useStableSchema(_schema);
+  const rootChanged = useChangeDetection(root);
+
+  if (schemaChanged || rootChanged) {
+    fakeState.mutable.buffer.destroy();
+    // TODO: The cast to d.InferInput<TSchema> should not be necessary
+    fakeState.mutable = root.createMutable(schema, initialValue as d.InferInput<TSchema>);
+  }
+
+  useDeferredCleanup(() => {
+    fakeState.mutable.buffer.destroy();
   });
 
-  const cleanupRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (cleanupRef.current) {
-      clearTimeout(cleanupRef.current);
-    }
-
-    return () => {
-      cleanupRef.current = setTimeout(() => {
-        mutable.buffer.destroy();
-      }, 200);
-    };
-  }, [mutable]);
-
-  return mutable;
+  return fakeState.mutable;
 }
