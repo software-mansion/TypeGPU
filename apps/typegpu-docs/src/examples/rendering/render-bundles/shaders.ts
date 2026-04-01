@@ -29,7 +29,7 @@ const fbm = tgpu.fn(
   return value;
 });
 
-export const vertexFn = tgpu['~unstable'].vertexFn({
+export const vertexFn = tgpu.vertexFn({
   in: {
     ...Vertex.propTypes,
     instanceIndex: d.builtin.instanceIndex,
@@ -66,7 +66,7 @@ export const vertexFn = tgpu['~unstable'].vertexFn({
   };
 });
 
-export const fragmentFn = tgpu['~unstable'].fragmentFn({
+export const fragmentFn = tgpu.fragmentFn({
   in: {
     worldNormal: d.vec3f,
     color: d.vec3f,

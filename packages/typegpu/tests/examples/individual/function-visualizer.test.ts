@@ -33,7 +33,7 @@ describe('function visualizer example', () => {
 
       @group(0) @binding(1) var<uniform> propertiesUniform: Properties;
 
-      fn interpolatedFunction(x: f32) -> f32 {
+      fn interpolatedFunction(x: f32) -> f32{
         return x;
       }
 
@@ -71,7 +71,7 @@ describe('function visualizer example', () => {
 
       @group(0) @binding(1) var<uniform> propertiesUniform: Properties;
 
-      fn interpolatedFunction(x: f32) -> f32 {
+      fn interpolatedFunction(x: f32) -> f32{
         return cos(x*5)/3-x;
       }
 
@@ -109,7 +109,7 @@ describe('function visualizer example', () => {
 
       @group(0) @binding(1) var<uniform> propertiesUniform: Properties;
 
-      fn interpolatedFunction(x: f32) -> f32 {
+      fn interpolatedFunction(x: f32) -> f32{
         return x*sin(log(abs(x)));
       }
 
