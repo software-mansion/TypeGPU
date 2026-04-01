@@ -665,7 +665,9 @@ describe('TgpuComputePipeline', () => {
 
       pipeline.dispatchWorkgroupsIndirect(buffer, 4);
 
-      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(`"dispatchWorkgroupsIndirect: Provided start offset 4 as a raw number. Use d.memoryLayoutOf(...) to include contiguous padding info for safer validation."`);
+      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
+        `"dispatchWorkgroupsIndirect: Provided start offset 4 as a raw number. Use d.memoryLayoutOf(...) to include contiguous padding info for safer validation."`,
+      );
     });
 
     it('warns when dispatch would read across padding', ({ root }) => {
