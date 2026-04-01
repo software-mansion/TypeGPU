@@ -211,10 +211,10 @@ describe('jelly-slider example', () => {
         let jellyColor = (&jellyColorUniform);
         let endCapX = endCapUniform.x;
         if ((position.y < -0.03f)) {
-          const fadeSharpness = 30;
+          const fadeSharpness = 30f;
           const inset = 0.02;
           let cutout = (rectangleCutoutDist(position.xz) + inset);
-          let edgeDarkening = saturate((1f - (cutout * f32(fadeSharpness))));
+          let edgeDarkening = saturate((1f - (cutout * fadeSharpness)));
           let lightGradient = saturate((((-(position.z) * 4f) * lightDir.z) + 1f));
           return ((vec3f(1) * edgeDarkening) * (lightGradient * 0.5f));
         }
@@ -225,8 +225,8 @@ describe('jelly-slider example', () => {
           var shadowColor = mix(vec3f(), (*jellyColor).rgb, jellySaturation);
           let contrast = ((20f * saturate(finalUV.y)) * (0.8f + (endCapX * 0.2f)));
           const shadowOffset = -0.3;
-          const featherSharpness = 10;
-          let uvEdgeFeather = (((saturate((finalUV.x * f32(featherSharpness))) * saturate(((1f - finalUV.x) * f32(featherSharpness)))) * saturate(((1f - finalUV.y) * f32(featherSharpness)))) * saturate(finalUV.y));
+          const featherSharpness = 10f;
+          let uvEdgeFeather = (((saturate((finalUV.x * featherSharpness)) * saturate(((1f - finalUV.x) * featherSharpness))) * saturate(((1f - finalUV.y) * featherSharpness))) * saturate(finalUV.y));
           let influence = (saturate(((1f - lightDir.y) * 2f)) * uvEdgeFeather);
           return mix(vec3f(1), mix(shadowColor, vec3f(1), saturate(((data.x * contrast) + shadowOffset))), influence);
         }
@@ -791,7 +791,7 @@ describe('jelly-slider example', () => {
         var closestT = 0f;
         const epsilon = 0.029999999329447746f;
         var xOffset = vec2f(epsilon, 0f);
-        var yOffset2 = vec2f(0f, epsilon);
+        var yOffset = vec2f(0f, epsilon);
         var xPlusDist = 1e+10f;
         var xMinusDist = 1e+10f;
         var yPlusDist = 1e+10f;
@@ -816,8 +816,8 @@ describe('jelly-slider example', () => {
           }
           xPlusDist = min(xPlusDist, sdBezier((sliderPos + xOffset), (*A), (*C), (*B)));
           xMinusDist = min(xMinusDist, sdBezier((sliderPos - xOffset), (*A), (*C), (*B)));
-          yPlusDist = min(yPlusDist, sdBezier((sliderPos + yOffset2), (*A), (*C), (*B)));
-          yMinusDist = min(yMinusDist, sdBezier((sliderPos - yOffset2), (*A), (*C), (*B)));
+          yPlusDist = min(yPlusDist, sdBezier((sliderPos + yOffset), (*A), (*C), (*B)));
+          yMinusDist = min(yMinusDist, sdBezier((sliderPos - yOffset), (*A), (*C), (*B)));
         }
         let overallProgress = ((f32(closestSegment) + closestT) / 16f);
         let normalX = ((xPlusDist - xMinusDist) / (2f * epsilon));
@@ -829,7 +829,7 @@ describe('jelly-slider example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }

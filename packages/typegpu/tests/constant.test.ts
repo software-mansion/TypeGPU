@@ -14,7 +14,7 @@ describe('tgpu.const', () => {
     expect(tgpu.resolve([fn1])).toMatchInlineSnapshot(`
       "const x: u32 = 2u;
 
-      fn fn1() -> u32{ return x; }"
+      fn fn1() -> u32 { return x; }"
     `);
   });
 
@@ -118,6 +118,23 @@ describe('tgpu.const', () => {
 
       fn main() {
         foo(0i);
+      }"
+    `);
+  });
+
+  it('can infer array length for partially-applied array schema', () => {
+    const positions = tgpu.const(d.arrayOf(d.vec3f), [d.vec3f(1), d.vec3f(2)]);
+
+    const main = () => {
+      'use gpu';
+      const pos = positions.$[1];
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "const positions: array<vec3f, 2> = array<vec3f, 2>(vec3f(1), vec3f(2));
+
+      fn main() {
+        const pos = positions[1i];
       }"
     `);
   });

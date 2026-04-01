@@ -65,7 +65,7 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
         @builtin(global_invocation_id) index: vec3u,
       }
 
-      @compute @workgroup_size(1) fn mainCompute(in: mainCompute_Input)  { let x = in.index; }"
+      @compute @workgroup_size(1) fn mainCompute(in: mainCompute_Input) { let x = in.index; }"
     `);
   });
 

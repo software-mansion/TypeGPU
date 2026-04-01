@@ -39,7 +39,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(1) var<storage, read> obstacles: array<BoxObstacle, 4>;
 
       fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0u; i < 4u; i++) {
+        for (var i = 0u; i < 4u; i += 1u) {
           let obs = (&obstacles[i]);
           {
             if (((*obs).enabled == 0u)) {
@@ -90,7 +90,7 @@ describe('fluid double buffering example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -134,7 +134,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(3) var<storage, read> obstacles: array<BoxObstacle, 4>;
 
       fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0u; i < 4u; i++) {
+        for (var i = 0u; i < 4u; i += 1u) {
           let obs = (&obstacles[i]);
           {
             if (((*obs).enabled == 0u)) {
@@ -288,9 +288,9 @@ describe('fluid double buffering example', () => {
 
       fn getMinimumInFlow(x: i32, y: i32) -> f32 {
         const gridSizeF = 256f;
-        let sourceRadius2 = max(1f, (sourceParams.radius * gridSizeF));
+        let sourceRadius = max(1f, (sourceParams.radius * gridSizeF));
         var sourcePos = vec2f((sourceParams.center.x * gridSizeF), (sourceParams.center.y * gridSizeF));
-        if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius2)) {
+        if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius)) {
           return sourceParams.intensity;
         }
         return 0;
@@ -321,7 +321,7 @@ describe('fluid double buffering example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -365,7 +365,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(3) var<storage, read> obstacles: array<BoxObstacle, 4>;
 
       fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0u; i < 4u; i++) {
+        for (var i = 0u; i < 4u; i += 1u) {
           let obs = (&obstacles[i]);
           {
             if (((*obs).enabled == 0u)) {
@@ -519,9 +519,9 @@ describe('fluid double buffering example', () => {
 
       fn getMinimumInFlow(x: i32, y: i32) -> f32 {
         const gridSizeF = 256f;
-        let sourceRadius2 = max(1f, (sourceParams.radius * gridSizeF));
+        let sourceRadius = max(1f, (sourceParams.radius * gridSizeF));
         var sourcePos = vec2f((sourceParams.center.x * gridSizeF), (sourceParams.center.y * gridSizeF));
-        if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius2)) {
+        if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius)) {
           return sourceParams.intensity;
         }
         return 0;
@@ -552,7 +552,7 @@ describe('fluid double buffering example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -589,7 +589,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(1) var<storage, read> obstacles: array<BoxObstacle, 4>;
 
       fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0u; i < 4u; i++) {
+        for (var i = 0u; i < 4u; i += 1u) {
           let obs = (&obstacles[i]);
           {
             if (((*obs).enabled == 0u)) {

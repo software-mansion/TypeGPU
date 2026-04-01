@@ -50,6 +50,7 @@ import { AutoStruct } from '../data/autoStruct.ts';
 import { mathToStd } from './math.ts';
 import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
+import { isTgpuRange } from '../std/range.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -940,20 +941,29 @@ Try 'return ${typeStr}(${str});' instead.
       const [_, condNode, consNode, altNode] = statement;
       const condition = this._typedExpression(condNode, bool);
 
-      const consequent =
-        condition.value === false ? undefined : this._block(blockifySingleStatement(consNode));
-      const alternate =
-        condition.value === true || !altNode
-          ? undefined
-          : this._block(blockifySingleStatement(altNode));
-
-      if (condition.value === true) {
-        return `${this.ctx.pre}${consequent}`;
+      if (typeof condition.value === 'boolean') {
+        // the condition is known at comptime
+        let node = condition.value ? consNode : altNode;
+        if (node === undefined) {
+          return '';
+        }
+        if (!Array.isArray(node)) {
+          node = blockifySingleStatement(node);
+        }
+        if (node[0] === NODE.block && node[1].length === 1 && node[1][0][0] === NODE.if) {
+          // simplify 'if (true) { if (A) {B} } else {C}' to 'if (A) {B}'
+          return this._statement(node[1][0]);
+        }
+        if (node[0] === NODE.if) {
+          // simplify 'if (false) {A} else if (B) {C}' to 'if (B) {C}'
+          return this._statement(node);
+        }
+        // simplify 'if (true) {A} else {B}' to '{A}'
+        return `${this.ctx.pre}${this._block(blockifySingleStatement(node))}`;
       }
 
-      if (condition.value === false) {
-        return alternate ? `${this.ctx.pre}${alternate}` : '';
-      }
+      const consequent = this._block(blockifySingleStatement(consNode));
+      const alternate = !altNode ? undefined : this._block(blockifySingleStatement(altNode));
 
       if (!alternate) {
         return stitch`${this.ctx.pre}if (${condition}) ${consequent}`;
@@ -1141,30 +1151,27 @@ ${this.ctx.pre}else ${alternate}`;
         const iterableExpr = this._expression(iterable);
         const shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
         const iterableSnippet = shouldUnroll ? iterableExpr.value.snippet : iterableExpr;
-        const elementCountSnippet = forOfUtils.getElementCountSnippet(
-          this.ctx,
-          iterableSnippet,
-          shouldUnroll,
-        );
+        const range = forOfUtils.getRangeSnippets(this.ctx, iterableSnippet, shouldUnroll);
         const originalLoopVarName = loopVar[1];
         const blockified = blockifySingleStatement(body);
 
         if (shouldUnroll) {
-          if (!isKnownAtComptime(elementCountSnippet)) {
+          if (!isKnownAtComptime(range.end)) {
             throw new Error('Cannot unroll loop. Length of iterable is unknown at comptime.');
           }
 
           this.#unrolling = true;
 
-          const length = elementCountSnippet.value as number;
+          const length = range.end.value as number;
           if (length === 0) {
             return '';
           }
 
           const { value } = iterableSnippet;
 
-          const elements =
-            value instanceof ArrayExpression
+          const elements = isTgpuRange(value)
+            ? value.map((i) => coerceToSnippet(i))
+            : value instanceof ArrayExpression
               ? value.elements
               : Array.from({ length }, (_, i) =>
                   forOfUtils.getElementSnippet(iterableSnippet, snip(i, u32, 'constant')),
@@ -1192,46 +1199,44 @@ ${this.ctx.pre}else ${alternate}`;
           return blocks.join('\n');
         }
 
-        if (isEphemeralSnippet(iterableSnippet)) {
-          throw new Error(
-            `\`for ... of ...\` loops only support iterables stored in variables.
-  -----
-  You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptime, the loop will be unrolled.
-  -----`,
-          );
-        }
-
         this.#unrolling = false;
 
         const index = this.ctx.makeNameValid('i');
-        const elementSnippet = forOfUtils.getElementSnippet(
-          iterableSnippet,
-          snip(index, u32, 'runtime'),
-        );
-        const loopVarName = this.ctx.makeNameValid(originalLoopVarName);
-        const loopVarKind = forOfUtils.getLoopVarKind(elementSnippet);
-        const elementType = forOfUtils.getElementType(elementSnippet, iterableSnippet);
 
-        const forHeaderStr = stitch`${this.ctx.pre}for (var ${index} = 0u; ${index} < ${elementCountSnippet}; ${index}++) {`;
+        const forHeaderStr = stitch`${this.ctx.pre}for (var ${index} = ${range.start}; ${index} ${range.comparison} ${range.end}; ${index} += ${range.step})`;
 
-        this.ctx.indent();
-        ctxIndent = true;
+        let bodyStr = '';
 
-        const loopVarDeclStr = stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${tryConvertSnippet(
-          this.ctx,
-          elementSnippet,
-          elementType,
-          false,
-        )};`;
+        if (isTgpuRange(iterableSnippet.value)) {
+          bodyStr = this._block(blockified, {
+            [originalLoopVarName]: snip(index, u32, 'runtime'),
+          });
+        } else {
+          this.ctx.indent();
+          ctxIndent = true;
+          const loopVarName = this.ctx.makeNameValid(originalLoopVarName);
+          const elementSnippet = forOfUtils.getElementSnippet(
+            iterableSnippet,
+            snip(index, u32, 'runtime'),
+          );
+          const loopVarKind = forOfUtils.getLoopVarKind(elementSnippet);
+          const elementType = forOfUtils.getElementType(elementSnippet, iterableSnippet);
+          const loopVarDeclStr = stitch`${this.ctx.pre}${loopVarKind} ${loopVarName} = ${tryConvertSnippet(
+            this.ctx,
+            elementSnippet,
+            elementType,
+            false,
+          )};`;
 
-        const bodyStr = `${this.ctx.pre}${this._block(blockified, {
-          [originalLoopVarName]: snip(loopVarName, elementType, elementSnippet.origin),
-        })}`;
+          bodyStr = `{\n${loopVarDeclStr}\n${this.ctx.pre}${this._block(blockified, {
+            [originalLoopVarName]: snip(loopVarName, elementType, elementSnippet.origin),
+          })}\n`;
+          this.ctx.dedent();
+          bodyStr += `${this.ctx.pre}}`;
+          ctxIndent = false;
+        }
 
-        this.ctx.dedent();
-        ctxIndent = false;
-
-        return stitch`${forHeaderStr}\n${loopVarDeclStr}\n${bodyStr}\n${this.ctx.pre}}`;
+        return stitch`${forHeaderStr} ${bodyStr.trim()}`;
       } finally {
         if (ctxIndent) {
           this.ctx.dedent();

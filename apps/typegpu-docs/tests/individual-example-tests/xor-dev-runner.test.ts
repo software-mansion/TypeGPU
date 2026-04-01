@@ -68,7 +68,7 @@ describe('xor dev runner example', () => {
 
       @group(0) @binding(3) var<uniform> autoMoveOffsetUniform: vec3f;
 
-      fn mod_1(v: vec3f, a: f32) -> vec3f{
+      fn mod_1(v: vec3f, a: f32) -> vec3f {
         return fract(v / a) * a;
       }
 

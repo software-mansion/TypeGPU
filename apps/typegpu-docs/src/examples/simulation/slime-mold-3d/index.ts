@@ -181,7 +181,6 @@ const getPerpendicular = (dir: d.v3f) => {
 };
 
 const numSamples = 8;
-const samplesIterations = Array.from({ length: numSamples }, (_, i) => i);
 const sense3D = (pos: d.v3f, direction: d.v3f) => {
   'use gpu';
   const dims = std.textureDimensions(computeLayout.$.oldState);
@@ -193,7 +192,7 @@ const sense3D = (pos: d.v3f, direction: d.v3f) => {
   const perp1 = getPerpendicular(direction);
   const perp2 = std.cross(direction, perp1);
 
-  for (const i of tgpu.unroll(samplesIterations)) {
+  for (const i of tgpu.unroll(std.range(numSamples))) {
     const theta = (i / numSamples) * 2 * Math.PI;
 
     const coneOffset = perp1 * std.cos(theta) + perp2 * std.sin(theta);
@@ -440,13 +439,12 @@ const renderBindGroups = [0, 1].map((i) =>
   }),
 );
 
-let lastTime = performance.now();
+let lastTime: number | null = null;
 let currentTexture = 0;
 
-function frame() {
-  const now = performance.now();
-  const deltaTime = Math.min((now - lastTime) / 1000, 0.1);
-  lastTime = now;
+function frame(timestamp: number) {
+  const deltaTime = Math.min(lastTime !== null ? (timestamp - lastTime) / 1000 : 0, 0.1);
+  lastTime = timestamp;
 
   params.writePartial({ deltaTime });
 

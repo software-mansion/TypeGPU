@@ -1,9 +1,9 @@
 import { describe } from 'vitest';
-import { ruleTester } from './ruleTester.ts';
-import { unwrappedPojos } from '../src/rules/unwrappedPojos.ts';
+import { ruleTester } from '../utils/ruleTester.ts';
+import { noUnwrappedObjects } from '../../src/rules/noUnwrappedObjects.ts';
 
-describe('unwrappedPojos', () => {
-  ruleTester.run('unwrappedPojos', unwrappedPojos, {
+describe('noUnwrappedObjects', () => {
+  ruleTester.run('noUnwrappedObjects', noUnwrappedObjects, {
     valid: [
       // correctly wrapped
       "function func() { 'use gpu'; const wrapped = Schema({ a: 1 }); }",
@@ -24,13 +24,16 @@ describe('unwrappedPojos', () => {
       "const func = function() { 'use gpu'; return { a: 1 }; }",
       "() => { 'use gpu'; return { a: 1 }; }",
       "() => { 'use gpu'; return { a: { b: 1 } }; }",
+      "() => { 'use gpu'; return { a: 1 } as typeof Struct; }",
+      "() => { 'use gpu'; return { a: 1 } satisfies Struct; }",
+      "() => { 'use gpu'; return ({ a: 1 }); }",
     ],
     invalid: [
       {
         code: "function func() { 'use gpu'; const unwrapped = { a: 1 }; }",
         errors: [
           {
-            messageId: 'unwrappedPojo',
+            messageId: 'unexpected',
             data: { snippet: '{ a: 1 }' },
           },
         ],
@@ -39,7 +42,7 @@ describe('unwrappedPojos', () => {
         code: "const func = function() { 'use gpu'; const unwrapped = { a: 1 }; }",
         errors: [
           {
-            messageId: 'unwrappedPojo',
+            messageId: 'unexpected',
             data: { snippet: '{ a: 1 }' },
           },
         ],
@@ -48,7 +51,7 @@ describe('unwrappedPojos', () => {
         code: "() => { 'use gpu'; const unwrapped = { a: 1 }; }",
         errors: [
           {
-            messageId: 'unwrappedPojo',
+            messageId: 'unexpected',
             data: { snippet: '{ a: 1 }' },
           },
         ],
@@ -57,7 +60,7 @@ describe('unwrappedPojos', () => {
         code: "function func() { 'unknown directive'; 'use gpu'; const unwrapped = { a: 1 }; }",
         errors: [
           {
-            messageId: 'unwrappedPojo',
+            messageId: 'unexpected',
             data: { snippet: '{ a: 1 }' },
           },
         ],
@@ -66,7 +69,7 @@ describe('unwrappedPojos', () => {
         code: "() => { 'use gpu'; const unwrapped = { a: { b: 1 } }; }",
         errors: [
           {
-            messageId: 'unwrappedPojo',
+            messageId: 'unexpected',
             data: { snippet: '{ a: { b: 1 } }' },
           },
         ],

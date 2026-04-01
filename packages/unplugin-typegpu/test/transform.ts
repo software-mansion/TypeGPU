@@ -2,7 +2,7 @@ import Babel from '@babel/standalone';
 import virtual from '@rollup/plugin-virtual';
 import { rollup } from 'rollup';
 import babelPlugin from '../src/babel.ts';
-import type { Options } from '../src/common.ts';
+import type { Options } from '../src/core/common.ts';
 import rollupPlugin from '../src/rollup.ts';
 
 const defaultOptions: Options = {

@@ -76,13 +76,13 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
           const output =
             returnType !== Void
               ? isWgslStruct(returnType)
-                ? `-> ${ctx.resolve(returnType).value}`
-                : `-> ${attributes !== '' ? attributes : '@location(0)'} ${
+                ? ` -> ${ctx.resolve(returnType).value} `
+                : ` -> ${attributes !== '' ? attributes : '@location(0)'} ${
                     ctx.resolve(returnType).value
-                  }`
-              : '';
+                  } `
+              : ' ';
 
-          header = `${input} ${output} `;
+          header = `${input}${output}`;
           body = replacedImpl;
         } else {
           const providedArgs = extractArgs(replacedImpl);
@@ -107,10 +107,10 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
 
           const output =
             returnType === Void
-              ? ''
-              : `-> ${checkAndReturnType(ctx, 'return type', providedArgs.ret?.type, returnType)}`;
+              ? ' '
+              : ` -> ${checkAndReturnType(ctx, 'return type', providedArgs.ret?.type, returnType)} `;
 
-          header = `(${input}) ${output}`;
+          header = `(${input})${output}`;
 
           body = replacedImpl.slice(providedArgs.range.end);
         }
