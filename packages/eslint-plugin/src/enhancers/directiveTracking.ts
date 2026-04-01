@@ -9,6 +9,7 @@ export type FunctionNode =
 
 export type DirectiveData = {
   getEnclosingTypegpuFunction: () => FunctionNode | undefined;
+  getDirectiveStack: () => { node: FunctionNode; directives: string[] }[];
 };
 
 /**
@@ -48,12 +49,15 @@ export const directiveTracking: RuleEnhancer<DirectiveData> = () => {
   return {
     visitors,
     state: {
-      getEnclosingTypegpuFunction: () => {
+      getEnclosingTypegpuFunction() {
         const current = stack.at(-1);
         if (current && current.directives.includes('use gpu')) {
           return current.node;
         }
         return undefined;
+      },
+      getDirectiveStack() {
+        return stack;
       },
     },
   };
