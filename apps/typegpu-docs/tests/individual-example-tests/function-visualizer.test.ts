@@ -33,7 +33,7 @@ describe('function visualizer example', () => {
 
       @group(0) @binding(1) var<uniform> propertiesUniform: Properties;
 
-      fn interpolatedFunction(x: f32) -> f32{
+      fn interpolatedFunction(x: f32) -> f32 {
         return x;
       }
 
@@ -53,7 +53,7 @@ describe('function visualizer example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -71,7 +71,7 @@ describe('function visualizer example', () => {
 
       @group(0) @binding(1) var<uniform> propertiesUniform: Properties;
 
-      fn interpolatedFunction(x: f32) -> f32{
+      fn interpolatedFunction(x: f32) -> f32 {
         return cos(x*5)/3-x;
       }
 
@@ -91,7 +91,7 @@ describe('function visualizer example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -109,7 +109,7 @@ describe('function visualizer example', () => {
 
       @group(0) @binding(1) var<uniform> propertiesUniform: Properties;
 
-      fn interpolatedFunction(x: f32) -> f32{
+      fn interpolatedFunction(x: f32) -> f32 {
         return x*sin(log(abs(x)));
       }
 
@@ -129,7 +129,7 @@ describe('function visualizer example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }

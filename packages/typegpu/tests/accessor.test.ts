@@ -19,9 +19,9 @@ describe('tgpu.accessor', () => {
       .with(colorAccess, red);
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
-      "fn red() -> vec3f{ return vec3f(1, 0, 0); }
+      "fn red() -> vec3f { return vec3f(1, 0, 0); }
 
-      fn getColor() -> vec3f{ return red(); }"
+      fn getColor() -> vec3f { return red(); }"
     `);
   });
 
@@ -77,7 +77,7 @@ describe('tgpu.accessor', () => {
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> redUniform: vec3f;
 
-      fn getColor() -> vec3f{ return redUniform; }"
+      fn getColor() -> vec3f { return redUniform; }"
     `);
   });
 
@@ -91,7 +91,7 @@ describe('tgpu.accessor', () => {
       .with(multiplierAccess, 2);
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(
-      `"fn getColor() -> vec3f{ return vec3f(1, 0, 0) * 2f; }"`,
+      `"fn getColor() -> vec3f { return vec3f(1, 0, 0) * 2f; }"`,
     );
   });
 
@@ -101,7 +101,7 @@ describe('tgpu.accessor', () => {
     const getColor = tgpu.fn([], d.vec3f)`() { return colorAccess; }`.$uses({ colorAccess });
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(
-      `"fn getColor() -> vec3f{ return vec3f(1, 0, 0); }"`,
+      `"fn getColor() -> vec3f { return vec3f(1, 0, 0); }"`,
     );
   });
 
@@ -116,7 +116,7 @@ describe('tgpu.accessor', () => {
     const main = tgpu.fn([])`() { return getColorWithGreen(); }`.$uses({ getColorWithGreen });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn getColor() -> vec3f{ return vec3f(0, 1, 0); }
+      "fn getColor() -> vec3f { return vec3f(0, 1, 0); }
 
       fn main() { return getColor(); }"
     `);
