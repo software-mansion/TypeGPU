@@ -30,8 +30,13 @@ export const noUnsupportedSyntax = createRule({
     }
 
     return {
-      ArrowFunctionExpression() {
-        // TODO: needs to know if parent is inside useGpu
+      ArrowFunctionExpression(node) {
+        if (
+          directives.getDirectiveStack().length >= 2 &&
+          directives.getDirectiveStack().at(-2)?.directives.includes('use gpu')
+        ) {
+          report(node, 'arrow function');
+        }
       },
 
       AssignmentPattern(node) {
@@ -85,12 +90,22 @@ export const noUnsupportedSyntax = createRule({
         report(node, 'for-in loop');
       },
 
-      FunctionDeclaration() {
-        // TODO: needs to know if parent is inside useGpu
+      FunctionDeclaration(node) {
+        if (
+          directives.getDirectiveStack().length >= 2 &&
+          directives.getDirectiveStack().at(-2)?.directives.includes('use gpu')
+        ) {
+          report(node, 'function declaration');
+        }
       },
 
-      FunctionExpression() {
-        // TODO: needs to know if parent is inside useGpu
+      FunctionExpression(node) {
+        if (
+          directives.getDirectiveStack().length >= 2 &&
+          directives.getDirectiveStack().at(-2)?.directives.includes('use gpu')
+        ) {
+          report(node, 'function expression');
+        }
       },
 
       Literal(node) {

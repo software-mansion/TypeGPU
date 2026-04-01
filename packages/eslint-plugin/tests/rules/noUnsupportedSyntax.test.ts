@@ -11,6 +11,15 @@ describe('noUnsupportedSyntax', () => {
     ],
     invalid: [
       {
+        code: "const fn = () => { 'use gpu'; const nested = () => {}; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: '() => {}', syntax: 'arrow function' },
+          },
+        ],
+      },
+      {
         code: "const fn = (arg = 1) => { 'use gpu'; }",
         errors: [
           {
@@ -88,6 +97,24 @@ describe('noUnsupportedSyntax', () => {
           {
             messageId: 'unexpected',
             data: { snippet: 'for (const k in obj) { }', syntax: 'for-in loop' },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; function nested() {} }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'function nested() {}', syntax: 'function declaration' },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; const nested = function() {}; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'function() {}', syntax: 'function expression' },
           },
         ],
       },
