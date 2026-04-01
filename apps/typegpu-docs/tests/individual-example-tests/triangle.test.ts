@@ -45,7 +45,7 @@ describe('triangle example', () => {
         return mainVertex_Output(vec4f(pos[in.vertexIndex], 0.0, 1.0), uv[in.vertexIndex]);
       }
 
-      fn getGradientColor(ratio: f32) -> vec4f{
+      fn getGradientColor(ratio: f32) -> vec4f {
         return mix(vec4f(0.7689999938011169, 0.3919999897480011, 1, 1), vec4f(0.11400000005960464, 0.44699999690055847, 0.9409999847412109, 1), ratio);
       }
 

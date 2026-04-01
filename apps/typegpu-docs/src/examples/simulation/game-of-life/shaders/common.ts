@@ -14,7 +14,7 @@ export const displayLayout = tgpu.bindGroupLayout({
 
 export const TILE_SIZE = 16;
 
-export const gameSizeAccessor = tgpu['~unstable'].accessor(d.u32, 64);
+export const gameSizeAccessor = tgpu.accessor(d.u32, 64);
 
 export const loadTexAt = (pos: d.v2u): number => {
   'use gpu';
