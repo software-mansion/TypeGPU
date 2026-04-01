@@ -11,7 +11,7 @@ export const noUnsupportedSyntax = createRule({
       description: `Disallow JS syntax that will not be parsed to correct WGSL.`,
     },
     messages: {
-      unsupportedSyntax:
+      unexpected:
         "'{{snippet}}' will not parse to correct WGSL because it uses unsupported syntax: {{syntax}}.",
     },
     schema: [],
@@ -24,7 +24,7 @@ export const noUnsupportedSyntax = createRule({
     function report(node: TSESTree.Node, syntax: string) {
       context.report({
         node,
-        messageId: 'unsupportedSyntax',
+        messageId: 'unexpected',
         data: { snippet: context.sourceCode.getText(node), syntax },
       });
     }
@@ -35,42 +35,42 @@ export const noUnsupportedSyntax = createRule({
       },
 
       AssignmentPattern(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         report(node, 'assignment pattern (default parameter)');
       },
 
       AwaitExpression(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         report(node, 'await expression');
       },
 
       ClassDeclaration(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         report(node, 'class declaration');
       },
 
       ClassExpression(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         report(node, 'class expression');
       },
 
       DoWhileStatement(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         report(node, 'do-while loop');
       },
 
       ForInStatement(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         report(node, 'for-in loop');
@@ -85,7 +85,7 @@ export const noUnsupportedSyntax = createRule({
       },
 
       Literal(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         if ('regex' in node && node.regex) {
@@ -94,21 +94,21 @@ export const noUnsupportedSyntax = createRule({
       },
 
       NewExpression(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         report(node, `'new' expression`);
       },
 
       PrivateIdentifier(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         report(node, 'private identifier');
       },
 
       Property(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         if (node.method) {
@@ -120,49 +120,49 @@ export const noUnsupportedSyntax = createRule({
       },
 
       SequenceExpression(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         report(node, 'sequence expression (comma operator)');
       },
 
       SpreadElement(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         report(node, 'spread element');
       },
 
       SwitchStatement(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         report(node, 'switch statement');
       },
 
       TemplateLiteral(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         report(node, 'template literal');
       },
 
       ThrowStatement(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         report(node, 'throw statement');
       },
 
       TryStatement(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         report(node, 'try-catch statement');
       },
 
       UpdateExpression(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         if (node.prefix) {
@@ -171,7 +171,7 @@ export const noUnsupportedSyntax = createRule({
       },
 
       VariableDeclaration(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         if (node.kind === 'var') {
@@ -183,7 +183,7 @@ export const noUnsupportedSyntax = createRule({
       },
 
       VariableDeclarator(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         if (node.id.type !== 'Identifier') {
@@ -192,7 +192,7 @@ export const noUnsupportedSyntax = createRule({
       },
 
       YieldExpression(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         report(node, 'yield expression');
