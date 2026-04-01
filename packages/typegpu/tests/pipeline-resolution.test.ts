@@ -93,28 +93,28 @@ describe('resolve', () => {
     });
 
     expect(tgpu.resolve([pipelineGuard.pipeline])).toMatchInlineSnapshot(`
-        "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
-        struct Boid {
-          position: vec2f,
-          color: vec4f,
+      struct Boid {
+        position: vec2f,
+        color: vec4f,
+      }
+
+      fn wrappedCallback(x: u32, y: u32, z: u32) {
+        var myBoid = Boid(vec2f(), vec4f(f32(x), f32(y), f32(z), 1f));
+      }
+
+      struct mainCompute_Input {
+        @builtin(global_invocation_id) id: vec3u,
+      }
+
+      @compute @workgroup_size(8, 8, 4) fn mainCompute(in: mainCompute_Input) {
+        if (any(in.id >= sizeUniform)) {
+          return;
         }
-
-        fn wrappedCallback(x: u32, y: u32, z: u32) {
-          var myBoid = Boid(vec2f(), vec4f(f32(x), f32(y), f32(z), 1f));
-        }
-
-        struct mainCompute_Input {
-          @builtin(global_invocation_id) id: vec3u,
-        }
-
-        @compute @workgroup_size(8, 8, 4) fn mainCompute(in: mainCompute_Input)  {
-          if (any(in.id >= sizeUniform)) {
-            return;
-          }
-          wrappedCallback(in.id.x, in.id.y, in.id.z);
-        }"
-      `);
+        wrappedCallback(in.id.x, in.id.y, in.id.z);
+      }"
+    `);
   });
 
   it('throws when resolving multiple pipelines', ({ root }) => {
