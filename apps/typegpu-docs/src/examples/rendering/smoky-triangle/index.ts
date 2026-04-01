@@ -148,7 +148,7 @@ export const controls = {
         distortion: 0.05,
         sharpness: 4.5 ** 2,
         fromColor: d.vec3f(0.057, 0.2235, 0.4705),
-        toColor: d.vec3f(1.538, 0.784, 2),
+        toColor: initialToColorBufferValue,
         polarCoords: 0,
         squashed: 1,
       });
