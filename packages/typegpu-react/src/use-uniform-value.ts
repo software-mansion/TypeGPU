@@ -1,8 +1,10 @@
 import type * as d from 'typegpu/data';
-import { useRoot } from './root-context.tsx';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { TgpuBuffer, ValidateUniformSchema } from 'typegpu';
+
 import { $buffer } from './symbols.ts';
+import { useRoot } from './root-context.tsx';
+import { useChangeDetection, useDeferredCleanup, useStableSchema } from './helper-hooks.ts';
 
 export interface UniformValue<TSchema extends d.BaseData, TValue extends d.Infer<TSchema>> {
   schema: TSchema;
@@ -22,45 +24,47 @@ function initialValueFromSchema<T extends d.AnyWgslData>(
 }
 
 export function useUniformValue<TSchema extends d.AnyWgslData, TValue extends d.Infer<TSchema>>(
-  schema: ValidateUniformSchema<TSchema>,
+  _schema: ValidateUniformSchema<TSchema>,
   initialValue?: TValue,
 ): UniformValue<TSchema, TValue> {
   const root = useRoot();
 
-  const [uniformBuffer] = useState(() => {
-    return root.createUniform(schema, initialValue);
+  const [fakeState] = useState(() => ({
+    currentValue: initialValue ?? (initialValueFromSchema(schema) as TValue),
+    // TODO: The cast to d.InferInput<TSchema> should not be necessary
+    uniform: root.createUniform(schema, initialValue as d.InferInput<TSchema>),
+  }));
+
+  const [schema, schemaChanged] = useStableSchema(_schema);
+  const rootChanged = useChangeDetection(root);
+
+  if (schemaChanged || rootChanged) {
+    fakeState.uniform.buffer.destroy();
+    // TODO: The cast to d.InferInput<TSchema> should not be necessary
+    fakeState.uniform = root.createUniform(schema, fakeState.currentValue as d.InferInput<TSchema>);
+  }
+
+  useDeferredCleanup(() => {
+    fakeState.uniform.buffer.destroy();
   });
 
-  const cleanupRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (cleanupRef.current) {
-      clearTimeout(cleanupRef.current);
-    }
-
-    return () => {
-      cleanupRef.current = setTimeout(() => {
-        uniformBuffer.buffer.destroy();
-      }, 200);
-    };
-  }, [uniformBuffer]);
-
   const uniformValue = useMemo(() => {
-    let currentValue = initialValue ?? (initialValueFromSchema(schema) as TValue);
     return {
       schema,
-      [$buffer]: uniformBuffer.buffer,
+      [$buffer]: fakeState.uniform.buffer,
       get value() {
-        return currentValue;
+        return fakeState.currentValue;
       },
       set value(newValue: TValue) {
-        currentValue = newValue;
-        uniformBuffer.write(newValue);
+        fakeState.currentValue = newValue;
+        // TODO: The cast to d.InferInput<TSchema> should not be necessary
+        fakeState.uniform.write(newValue as d.InferInput<TSchema>);
       },
       get $() {
-        return uniformBuffer.$;
+        return fakeState.uniform.$;
       },
     };
-  }, []);
+  }, [schema, fakeState.uniform]);
 
   return uniformValue as UniformValue<TSchema, TValue>;
 }
