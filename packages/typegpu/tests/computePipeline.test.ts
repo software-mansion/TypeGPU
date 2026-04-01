@@ -639,7 +639,7 @@ describe('TgpuComputePipeline', () => {
       );
     });
 
-    it('warns when raw GPUBuffer size is not enough for dispatch', ({ device, root }) => {
+    it('throws when raw GPUBuffer size is not enough for dispatch', ({ device, root }) => {
       const buffer = device.createBuffer({
         size: 13,
         usage: GPUBufferUsage.INDIRECT,

@@ -2227,7 +2227,7 @@ describe('drawIndirect / drawIndexedIndirect buffer and offset validation', () =
       );
     });
 
-    it('warns when raw GPUBuffer size is not enough for draw', ({ device, root }) => {
+    it('throws when raw GPUBuffer size is not enough for draw', ({ device, root }) => {
       const buffer = device.createBuffer({
         size: 17,
         usage: GPUBufferUsage.INDIRECT,
@@ -2278,7 +2278,7 @@ describe('drawIndirect / drawIndexedIndirect buffer and offset validation', () =
       const DrawIndirectArgs = d.struct({
         vertexCount: d.u32,
         instanceCount: d.u32,
-        firstIndex: d.u32,
+        firstVertex: d.u32,
         firstInstance: d.u32,
       });
       const buffer = root.createBuffer(DrawIndirectArgs).$usage('indirect');
@@ -2330,7 +2330,7 @@ describe('drawIndirect / drawIndexedIndirect buffer and offset validation', () =
       );
     });
 
-    it('warns when raw GPUBuffer size is not enough for drawIndexed', ({ device, root }) => {
+    it('throws when raw GPUBuffer size is not enough for drawIndexed', ({ device, root }) => {
       const buffer = device.createBuffer({
         size: 21,
         usage: GPUBufferUsage.INDIRECT,
