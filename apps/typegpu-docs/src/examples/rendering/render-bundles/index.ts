@@ -63,7 +63,7 @@ const terrainBindGroup = root.createBindGroup(terrainLayout, {
   terrain: terrainBuffer,
 });
 
-const pipeline = root['~unstable'].pipe(perlinCache.inject()).createRenderPipeline({
+const pipeline = root.pipe(perlinCache.inject()).createRenderPipeline({
   attribs: vertexLayout.attrib,
   vertex: vertexFn,
   fragment: fragmentFn,

@@ -3,7 +3,7 @@ import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
 import { computeLayout, gameSizeAccessor, loadTexAt, TILE_SIZE } from './common.ts';
 
-export const naiveCompute = tgpu['~unstable'].computeFn({
+export const naiveCompute = tgpu.computeFn({
   workgroupSize: [TILE_SIZE, TILE_SIZE],
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {

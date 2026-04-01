@@ -27,7 +27,7 @@ const countNeighborsInTile = (x: number, y: number): number => {
          readTile(x - 1, y + 1) + readTile(x, y + 1) + readTile(x + 1, y + 1);
 };
 
-export const tiledCompute = tgpu['~unstable'].computeFn({
+export const tiledCompute = tgpu.computeFn({
   workgroupSize: [TILE_SIZE, TILE_SIZE],
   in: {
     gid: d.builtin.globalInvocationId,
