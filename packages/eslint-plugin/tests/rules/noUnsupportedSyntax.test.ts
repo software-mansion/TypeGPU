@@ -1,6 +1,6 @@
 import { describe } from 'vitest';
-import { ruleTester } from './utils/ruleTester.ts';
-import { noUnsupportedSyntax } from '../src/rules/noUnsupportedSyntax.ts';
+import { ruleTester } from '../utils/ruleTester.ts';
+import { noUnsupportedSyntax } from '../../src/rules/noUnsupportedSyntax.ts';
 
 describe('noUnsupportedSyntax', () => {
   ruleTester.run('noUnsupportedSyntax', noUnsupportedSyntax, {
