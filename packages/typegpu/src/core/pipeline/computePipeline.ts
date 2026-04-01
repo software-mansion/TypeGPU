@@ -18,7 +18,7 @@ import {
 import { isGPUCommandEncoder, isGPUComputePassEncoder } from './typeGuards.ts';
 import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { isGPUBuffer, type ResolutionCtx, type SelfResolvable } from '../../types.ts';
 import { wgslExtensions, wgslExtensionToFeatureName } from '../../wgslExtensions.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
@@ -72,11 +72,11 @@ export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeab
    * The buffer must contain 3 consecutive u32 values (x, y, z workgroup counts).
    * To get the correct offset within complex data structures, use `d.memoryLayoutOf(...)`.
    *
-   * @param indirectBuffer - Buffer marked with 'indirect' usage containing dispatch parameters
+   * @param indirectBuffer - Buffer marked with 'indirect' usage containing dispatch parameters or raw GPUBuffer
    * @param start - PrimitiveOffsetInfo pointing to the first dispatch parameter. If not provided, starts at offset 0. To obtain safe offsets, use `d.memoryLayoutOf(...)`.
    */
   dispatchWorkgroupsIndirect<T extends AnyWgslData>(
-    indirectBuffer: TgpuBuffer<T> & IndirectFlag,
+    indirectBuffer: (TgpuBuffer<T> & IndirectFlag) | GPUBuffer,
     start?: PrimitiveOffsetInfo | number,
   ): void;
 }
@@ -216,11 +216,12 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 
   dispatchWorkgroupsIndirect<T extends AnyWgslData>(
-    indirectBuffer: TgpuBuffer<T> & IndirectFlag,
+    indirectBuffer: (TgpuBuffer<T> & IndirectFlag) | GPUBuffer,
     start?: PrimitiveOffsetInfo | number,
   ): void {
     const DISPATCH_SIZE = 12; // 3 x u32 (x, y, z)
 
+    const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : indirectBuffer.buffer;
     const offset = resolveIndirectOffset(
       indirectBuffer,
       start,
@@ -228,9 +229,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       'dispatchWorkgroupsIndirect',
     );
 
-    this._executeComputePass((pass) =>
-      pass.dispatchWorkgroupsIndirect(indirectBuffer.buffer, offset),
-    );
+    this._executeComputePass((pass) => pass.dispatchWorkgroupsIndirect(rawBuffer, offset));
   }
 
   private _applyComputeState(pass: GPUComputePassEncoder): void {

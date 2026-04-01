@@ -887,7 +887,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   ): void {
     const internals = this[$internal];
     const { root } = internals.core.options;
-    const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : root.unwrap(indirectBuffer);
+    const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : indirectBuffer.buffer;
     const offset = resolveIndirectOffset(
       indirectBuffer,
       indirectOffset,
