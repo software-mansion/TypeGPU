@@ -263,7 +263,7 @@ function runBenchmark(input: ProcGenConfig, output: BenchmarkResult[]) {
   }
 
   for (let i = 0; i < config.samples; i++) {
-    rand = splitmix32(config.seed);
+    rand = splitmix32((config.seed << i) | (config.seed >> (32 - i)));
     const result = benchmarkResolve();
     output.push(result);
     console.log(
