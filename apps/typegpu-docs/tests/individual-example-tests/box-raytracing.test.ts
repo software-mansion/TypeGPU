@@ -60,7 +60,7 @@ describe('box raytracing example', () => {
         tMax: f32,
       }
 
-      fn getBoxIntersection(bounds: AxisAlignedBounds, ray: Ray) -> IntersectionStruct{
+      fn getBoxIntersection(bounds: AxisAlignedBounds, ray: Ray) -> IntersectionStruct {
         var tMin: f32;
         var tMax: f32;
         var tMinY: f32;

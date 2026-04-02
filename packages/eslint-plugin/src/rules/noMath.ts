@@ -24,7 +24,7 @@ export const noMath = createRule({
 
     return {
       CallExpression(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
 

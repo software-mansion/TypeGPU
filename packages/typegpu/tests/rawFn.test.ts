@@ -12,7 +12,7 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
   it('resolves to WGSL', () => {
     const getY = tgpu.fn([], d.f32)`() { return 3.0f; }`;
 
-    expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`"fn getY() -> f32{ return 3.0f; }"`);
+    expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`"fn getY() -> f32 { return 3.0f; }"`);
   });
 
   it('resolves externals and replaces their usages in code', () => {
@@ -37,17 +37,17 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       .$uses({ get_x: getX, color: getColor });
 
     expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`
-      "fn getColor() -> vec3f{
+      "fn getColor() -> vec3f {
             let color = vec3f();
             return color;
           }
 
-      fn getX() -> f32{
+      fn getX() -> f32 {
               let color = getColor();
               return 3.0f;
             }
 
-      fn getY() -> f32{
+      fn getY() -> f32 {
               let c = getColor();
               return getX();
             }"
@@ -70,9 +70,9 @@ describe('tgpu.fn with raw string WGSL implementation', () => {
       .$uses({ getx });
 
     expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`
-      "fn externalFn() -> f32{ return 3.0f; }
+      "fn externalFn() -> f32 { return 3.0f; }
 
-      fn get_y() -> f32{
+      fn get_y() -> f32 {
               let x = externalFn();
               let y = externalFn() + externalFn();
               let z = hellogetx();
@@ -247,7 +247,7 @@ struct fragment_Output {
         b: u32,
       }
 
-      fn newPointF(a: vec4f, b: P) -> vec2f{
+      fn newPointF(a: vec4f, b: P) -> vec2f {
               var newPoint: P;
               newPoint = b;
             }"
@@ -279,7 +279,7 @@ struct fragment_Output {
         b: u32,
       }
 
-      fn newPointF(a: vec4f) -> P{
+      fn newPointF(a: vec4f) -> P {
               var newPoint: P;
               newPoint = b;
               return newPoint;
@@ -332,12 +332,12 @@ struct fragment_Output {
       .$uses({ functions: { getColor } });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn get_color() -> vec3f{
+      "fn get_color() -> vec3f {
               let color = vec3f();
               return color;
             }
 
-      fn main() -> f32{
+      fn main() -> f32 {
               let c = get_color();
               return c.x;
             }"
@@ -365,7 +365,7 @@ struct fragment_Output {
         a: u32,
       }
 
-      fn get_color(a: array<P,4>) -> u32{
+      fn get_color(a: array<P,4>) -> u32 {
               var b: P = a[0];
               return b.a;
             }"
@@ -385,7 +385,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
       .$name('get_color');
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
-      "fn get_color(a: vec3f, b: u32, c: mat2x2f, d: bool, e: vec2<bool>) -> vec4u{
+      "fn get_color(a: vec3f, b: u32, c: mat2x2f, d: bool, e: vec2<bool>) -> vec4u {
               return vec4u();
             }"
     `);
@@ -412,7 +412,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
     }`);
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
-      "fn getColor(a: array<u32,4>) -> u32{
+      "fn getColor(a: array<u32,4>) -> u32 {
             return a[0];
           }"
     `);
@@ -436,7 +436,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
         a: u32,
       }
 
-      fn getColor(a: array<P,4>) -> u32{
+      fn getColor(a: array<P,4>) -> u32 {
               var b: P = a[0];
               return b.a;
             }"
@@ -466,7 +466,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
         b: u32,
       }
 
-      fn newPointF(a: P, b: P) -> P{
+      fn newPointF(a: P, b: P) -> P {
               return b;
             }"
     `);
@@ -561,7 +561,7 @@ describe('tgpu.computeFn with raw string WGSL implementation', () => {
         @builtin(global_invocation_id) gid: vec3u,
       }
 
-      @compute @workgroup_size(1) fn foo(in: foo_Input)  {
+      @compute @workgroup_size(1) fn foo(in: foo_Input) {
             var result: array<f32, 4>;
           }"
     `);

@@ -43,6 +43,7 @@ export default defineConfig([
 | Name                                                                   | Description                                                                                 | 🚨 | ⚠️ |
 | :--------------------------------------------------------------------- | :------------------------------------------------------------------------------------------ | :- | :- |
 | [no-integer-division](docs/rules/no-integer-division.md)               | Disallow division incorporating numbers wrapped in 'u32' and 'i32'                          |    | ⭐  |
+| [no-invalid-assignment](docs/rules/no-invalid-assignment.md)           | Disallow assignments that will generate invalid WGSL                                        | ⭐  |    |
 | [no-math](docs/rules/no-math.md)                                       | Disallow usage of JavaScript 'Math' methods inside 'use gpu' functions                      |    | ⭐  |
 | [no-uninitialized-variables](docs/rules/no-uninitialized-variables.md) | Disallow variable declarations without initializers inside 'use gpu' functions              | ⭐  |    |
 | [no-unwrapped-objects](docs/rules/no-unwrapped-objects.md)             | Disallow unwrapped Plain Old JavaScript Objects inside 'use gpu' functions (except returns) | ⭐  |    |

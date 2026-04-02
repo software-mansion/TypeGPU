@@ -7,7 +7,9 @@ describe('tagged syntax', () => {
     it('parses template literal without arguments', () => {
       const getConst = tgpu.fn([], d.i32)`() { return 3; }`;
 
-      expect(tgpu.resolve([getConst])).toMatchInlineSnapshot(`"fn getConst() -> i32{ return 3; }"`);
+      expect(tgpu.resolve([getConst])).toMatchInlineSnapshot(
+        `"fn getConst() -> i32 { return 3; }"`,
+      );
     });
 
     it('parses template literal with arguments of different types', () => {
@@ -16,7 +18,7 @@ describe('tagged syntax', () => {
       }`;
 
       expect(tgpu.resolve([add])).toMatchInlineSnapshot(`
-        "fn add() -> f32{
+        "fn add() -> f32 {
                 return f32(10) + f32(20) + f32(30.1);
               }"
       `);
@@ -28,7 +30,7 @@ describe('tagged syntax', () => {
       }`;
 
       expect(tgpu.resolve([add])).toMatchInlineSnapshot(`
-        "fn add() -> f32{
+        "fn add() -> f32 {
                 return f32(10) + f32(20) + f32(30.1);
               }"
       `);
@@ -131,7 +133,7 @@ describe('tagged syntax', () => {
           @builtin(global_invocation_id) gid: vec3u,
         }
 
-        @compute @workgroup_size(1) fn computeFn(in: computeFn_Input)  {}"
+        @compute @workgroup_size(1) fn computeFn(in: computeFn_Input) {}"
       `);
     });
 
@@ -148,7 +150,7 @@ describe('tagged syntax', () => {
           @builtin(global_invocation_id) gid: vec3u,
         }
 
-        @compute @workgroup_size(1) fn computeFn(in: computeFn_Input)  {
+        @compute @workgroup_size(1) fn computeFn(in: computeFn_Input) {
                 var a = f32(10) + f32(20) + f32(30.1);
               }"
       `);

@@ -123,7 +123,7 @@ const golNextStateBitpacked = (current: number, count: number[]): number => {
   return two_or_three & (bit0 | current);
 };
 
-export const bitpackedCompute = tgpu['~unstable'].computeFn({
+export const bitpackedCompute = tgpu.computeFn({
   workgroupSize: [TILE_SIZE, TILE_SIZE],
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
