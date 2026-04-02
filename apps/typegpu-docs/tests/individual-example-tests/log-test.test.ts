@@ -52,7 +52,7 @@ describe('console log example', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -85,7 +85,7 @@ describe('console log example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -107,7 +107,7 @@ describe('console log example', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -149,7 +149,7 @@ describe('console log example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -171,7 +171,7 @@ describe('console log example', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -206,7 +206,7 @@ describe('console log example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -243,7 +243,7 @@ describe('console log example', () => {
         log1serializer();
       }
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -836,7 +836,7 @@ describe('console log example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -863,7 +863,7 @@ describe('console log example', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -1006,7 +1006,7 @@ describe('console log example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -1067,7 +1067,7 @@ describe('console log example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -1089,7 +1089,7 @@ describe('console log example', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -1122,7 +1122,7 @@ describe('console log example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -1144,7 +1144,7 @@ describe('console log example', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -1179,7 +1179,7 @@ describe('console log example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -1203,7 +1203,7 @@ describe('console log example', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -1239,7 +1239,7 @@ describe('console log example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -1261,7 +1261,7 @@ describe('console log example', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -1330,7 +1330,7 @@ describe('console log example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -1382,7 +1382,7 @@ describe('console log example', () => {
         log2serializer();
       }
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -1481,7 +1481,7 @@ describe('console log example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -1514,7 +1514,7 @@ describe('console log example', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -1575,7 +1575,7 @@ describe('console log example', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -1625,7 +1625,7 @@ describe('console log example', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -1690,7 +1690,7 @@ describe('console log example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }

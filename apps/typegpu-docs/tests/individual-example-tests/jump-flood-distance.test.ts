@@ -44,7 +44,7 @@ describe('jump flood (distance) example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -261,7 +261,7 @@ describe('jump flood (distance) example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
@@ -296,7 +296,7 @@ describe('jump flood (distance) example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }

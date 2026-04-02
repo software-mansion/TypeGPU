@@ -107,7 +107,7 @@ describe('wgslGenerator with console.log', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -187,7 +187,7 @@ describe('wgslGenerator with console.log', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -273,7 +273,7 @@ describe('wgslGenerator with console.log', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -333,7 +333,7 @@ describe('wgslGenerator with console.log', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -395,7 +395,7 @@ describe('wgslGenerator with console.log', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -477,7 +477,7 @@ describe('wgslGenerator with console.log', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -567,7 +567,7 @@ describe('wgslGenerator with console.log', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;

@@ -22,7 +22,7 @@ export const noUnwrappedObjects = createRule({
 
     return {
       ObjectExpression(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
         let parent = getNonTransparentParent(node);
