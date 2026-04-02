@@ -9,11 +9,16 @@
   },
   "type": "module",
   "exports": "./src/index.ts",
+  "scripts": {
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit"
+  },
   "dependencies": {
     "typegpu": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "catalog:types"
+    "@types/node": "catalog:types",
+    "typescript": "catalog:types",
+    "vitest": "catalog:test"
   },
   "engines": {
     "node": ">=12.20.0"
