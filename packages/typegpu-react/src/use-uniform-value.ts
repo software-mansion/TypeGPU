@@ -39,6 +39,10 @@ export function useUniformValue<TSchema extends d.AnyWgslData, TValue extends d.
 
   if (schemaChanged || rootChanged) {
     fakeState.uniform.buffer.destroy();
+    if (schemaChanged) {
+      // Resetting the current value, as it might not be compatible with the new schema
+      fakeState.currentValue = initialValue ?? (initialValueFromSchema(_schema) as TValue);
+    }
     fakeState.uniform = root.createUniform(schema, fakeState.currentValue);
   }
 
