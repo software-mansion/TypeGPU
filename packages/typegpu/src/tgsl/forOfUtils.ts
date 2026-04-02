@@ -2,13 +2,14 @@ import { UnknownData } from '../data/dataTypes.ts';
 import { isEphemeralSnippet, snip, type Snippet } from '../data/snippet.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import * as wgsl from '../data/wgslTypes.ts';
-import { u32 } from '../data/numeric.ts';
+import { i32, u32 } from '../data/numeric.ts';
 import { invariant, WgslTypeError } from '../errors.ts';
 import { arrayLength } from '../std/array.ts';
 import { accessIndex } from './accessIndex.ts';
 import { createPtrFromOrigin, implicitFrom } from '../data/ptr.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
 import { ArrayExpression, concretize, type GenerationCtx } from './generationHelpers.ts';
+import { isTgpuRange } from '../std/range.ts';
 
 export function getLoopVarKind(elementSnippet: Snippet) {
   // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
@@ -54,30 +55,67 @@ export function getElementType(elementSnippet: Snippet, iterableSnippet: Snippet
   return implicitFrom(elementType as wgsl.Ptr);
 }
 
-export function getElementCountSnippet(
+export function getRangeSnippets(
   ctx: GenerationCtx,
   iterableSnippet: Snippet,
   unroll: boolean = false,
-) {
+): { start: Snippet; end: Snippet; step: Snippet; comparison: '<' | '>' } {
   const { value, dataType } = iterableSnippet;
 
+  if (isTgpuRange(value)) {
+    return {
+      start: snip(value.start, i32, 'constant'),
+      end: snip(value.end, i32, 'constant'),
+      step: snip(value.step, i32, 'constant'),
+      comparison: value.step < 0 ? '>' : '<',
+    };
+  }
+
+  if (!unroll && isEphemeralSnippet(iterableSnippet)) {
+    throw new Error(
+      `\`for ... of ...\` loops only support std.range or iterables stored in variables.
+-----
+You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptime, the loop will be unrolled.
+-----`,
+    );
+  }
+
+  const defaults = {
+    start: snip(0, u32, 'constant'),
+    step: snip(1, u32, 'constant'),
+    comparison: '<' as const,
+  };
+
   if (wgsl.isWgslArray(dataType)) {
-    return dataType.elementCount > 0
-      ? snip(dataType.elementCount, u32, 'constant')
-      : arrayLength[$gpuCallable].call(ctx, [iterableSnippet]);
+    return {
+      ...defaults,
+      end:
+        dataType.elementCount > 0
+          ? snip(dataType.elementCount, u32, 'constant')
+          : arrayLength[$gpuCallable].call(ctx, [iterableSnippet]),
+    };
   }
 
   if (wgsl.isVec(dataType)) {
-    return snip(dataType.componentCount, u32, 'constant');
+    return {
+      ...defaults,
+      end: snip(dataType.componentCount, u32, 'constant'),
+    };
   }
 
   if (unroll) {
     if (Array.isArray(value)) {
-      return snip(value.length, u32, 'constant');
+      return {
+        ...defaults,
+        end: snip(value.length, u32, 'constant'),
+      };
     }
 
     if (value instanceof ArrayExpression) {
-      return snip(value.elements.length, u32, 'constant');
+      return {
+        ...defaults,
+        end: snip(value.elements.length, u32, 'constant'),
+      };
     }
   }
 

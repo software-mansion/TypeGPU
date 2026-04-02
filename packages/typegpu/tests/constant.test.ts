@@ -14,7 +14,7 @@ describe('tgpu.const', () => {
     expect(tgpu.resolve([fn1])).toMatchInlineSnapshot(`
       "const x: u32 = 2u;
 
-      fn fn1() -> u32{ return x; }"
+      fn fn1() -> u32 { return x; }"
     `);
   });
 

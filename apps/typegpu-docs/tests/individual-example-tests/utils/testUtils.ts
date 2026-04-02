@@ -16,7 +16,7 @@ export function createDeepNoopProxy<T extends object>(
   accessedProperties = new Set<PropertyKey>(),
 ): T {
   return new Proxy(target, {
-    get(obj, prop, receiver) {
+    get(_obj, prop, _receiver) {
       accessedProperties.add(prop);
 
       return () => createDeepNoopProxy({}, accessedProperties);

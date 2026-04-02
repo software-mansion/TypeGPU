@@ -49,7 +49,7 @@ describe('boids example', () => {
         var cohesion = vec2f();
         var alignmentCount = 0;
         var cohesionCount = 0;
-        for (var i = 0u; i < arrayLength((&currentTrianglePos)); i++) {
+        for (var i = 0u; i < arrayLength((&currentTrianglePos)); i += 1u) {
           let other = (&currentTrianglePos[i]);
           {
             let dist = distance(self_1.position, (*other).position);
@@ -86,7 +86,7 @@ describe('boids example', () => {
         @builtin(global_invocation_id) id: vec3u,
       }
 
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input)  {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input) {
         if (any(in.id >= sizeUniform)) {
           return;
         }
