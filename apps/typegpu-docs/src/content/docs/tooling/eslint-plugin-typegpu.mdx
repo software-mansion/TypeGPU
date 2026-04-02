@@ -9,18 +9,18 @@ It helps with writing 'use gpu' functions by highlighting common pitfalls and un
 
 ## Installation
 
-<Tabs syncKey="package-manager">
-  <TabItem label="npm" icon="seti:npm">
+<Tabs syncKey='package-manager'>
+  <TabItem label='npm' icon='seti:npm'>
     ```sh frame=none
     npm add -D eslint-plugin-typegpu
     ```
   </TabItem>
-  <TabItem label="pnpm" icon="pnpm">
+  <TabItem label='pnpm' icon='pnpm'>
     ```sh frame=none
     pnpm add -D eslint-plugin-typegpu
     ```
   </TabItem>
-  <TabItem label="yarn" icon="seti:yarn">
+  <TabItem label='yarn' icon='seti:yarn'>
     ```sh frame=none
     yarn add -D eslint-plugin-typegpu
     ```
@@ -36,31 +36,30 @@ The way this is done depends on the linter used.
 
 The plugin needs to be imported and included in `defineConfig`.
 
-```diff lang=ts
-import { defineConfig } from "eslint/config";
-+import typegpu from "eslint-plugin-typegpu";
+```ts
+import { defineConfig } from 'eslint/config';
+import typegpu from 'eslint-plugin-typegpu';
 
 export default defineConfig([
-  // other configs
-+  {
-+    plugins: { typegpu },
-+    rules: {
-+      'typegpu/no-integer-division': 'warn',
-+      'typegpu/no-math': 'warn',
-+    }
-+  }
+  {
+    plugins: { typegpu },
+    rules: {
+      'typegpu/no-integer-division': 'warn',
+      'typegpu/no-math': 'warn',
+      // other rules you want to enable
+    }
+  }
 ]);
 ```
 
 The plugin also exports `recommended` and `all` configs, which may be used instead of listing the rules one by one.
 
-```diff lang=ts
-import { defineConfig } from "eslint/config";
-+import typegpu from "eslint-plugin-typegpu";
+```ts
+import { defineConfig } from 'eslint/config';
+import typegpu from 'eslint-plugin-typegpu';
 
 export default defineConfig([
-  // other configs
-+  typegpu.configs.recommended,
+  typegpu.configs.recommended,
 ]);
 ```
 
@@ -68,19 +67,15 @@ export default defineConfig([
 
 The plugin needs to be listed in `jsPlugins`. The rules can either be listed one by one, or a config can be used.
 
-```diff lang=ts
-import { defineConfig } from "oxlint";
-+import typegpu from "eslint-plugin-typegpu";
-
-+const typegpuPreset = typegpu.configs?.recommended;
-+const typegpuRules = typegpuPreset && "rules" in typegpuPreset ? typegpuPreset.rules : {};
+```ts
+import { defineConfig } from 'oxlint';
+import typegpu from 'eslint-plugin-typegpu';
 
 export default defineConfig({
-  categories: { correctness: "warn" },
-+  jsPlugins: ["eslint-plugin-typegpu"],
+  jsPlugins: ['eslint-plugin-typegpu'],
   rules: {
-+    ...typegpuRules,
-    "eslint/no-unused-vars": "error",
+    ...typegpu.configs.recommended.rules,
+    // (optional) changes from the recommended preset
   },
 });
 ```
@@ -88,16 +83,18 @@ export default defineConfig({
 ### Oxlint (`.oxlintrc.json`)
 
 The plugin needs to be listed in `jsPlugins`, and the rules have to be listed one by one.
+In this type of config there is no way to enable all rules 
 
-```diff lang=json
+```json
+{
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": null,
-+  "jsPlugins": ["eslint-plugin-typegpu"],
-  "categories": {},
-+  "rules": {
-+    "typegpu/no-integer-division": "warn",
-+    "typegpu/no-math": "warn",
-+  },
+  "jsPlugins": ["eslint-plugin-typegpu"],
+  "rules": {
+    "typegpu/no-integer-division": "warn",
+    "typegpu/no-math": "warn",
+    ...
+  }
+}
 ```
 
 ## Rules
