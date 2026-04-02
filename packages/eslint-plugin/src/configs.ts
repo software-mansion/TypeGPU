@@ -23,7 +23,7 @@ export const recommendedRules: Rules = {
   'typegpu/no-uninitialized-variables': 'error',
   'typegpu/no-math': 'warn',
   'typegpu/no-invalid-assignment': 'error',
-  'typegpu/no-unsupported-syntax': 'warn',
+  'typegpu/no-unsupported-syntax': 'error',
 };
 
 export const allRules: Rules = {
