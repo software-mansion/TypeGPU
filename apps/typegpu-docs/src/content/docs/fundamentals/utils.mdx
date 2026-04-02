@@ -393,13 +393,14 @@ fn fbm(pos: vec3f) -> f32 {
 :::tip
 You can unroll loops conditionally, for example:
 ```ts
-const unroll = tgpu.accessor(d.bool, true);
+// A value determined based on the user's environment
+const shouldUnroll = true;
 
 const f = () => {
   'use gpu';
   const arr = [1, 2, 3];
   let r = d.i32(0);
-  for (const foo of unroll.$ ? tgpu.unroll(arr) : arr) {
+  for (const foo of shouldUnroll ? tgpu.unroll(arr) : arr) {
     r += foo;
   }
 };
@@ -408,7 +409,7 @@ const f = () => {
 
 ### Types of iterables (more technical section)
 
-**Array expression of primitive element type:**
+**Array expression of primitive elements:**
 ```ts
 for (const foo of tgpu.unroll([1, 2, 3])) {
   result += foo;
@@ -434,7 +435,7 @@ Generates:
 `std.range` falls into the primitive array expression category.
 :::
 
-**Array expression of complex element type:**
+**Array expression of complex elements:**
 ```ts
 const b1 = Boid({ pos: d.vec2i(1), vel: d.vec2f(1) });
 const b2 = Boid({ pos: d.vec2i(2), vel: d.vec2f(2) });
@@ -530,7 +531,7 @@ Generates:
 As you can see, `tgpu.unroll` will handle external arrays as long as they are known at compile-time.
 :::
 
-**Iterable stored in variable**
+**Iterable stored in a variable**
 
 In this case, we fall back to array access:
 ```ts
