@@ -4,9 +4,7 @@ import { useChangeDetection, useDeferredCleanup, useStableSchema } from './helpe
 import { useRoot } from './root-context.tsx';
 
 export interface UseBufferOptions<TSchema extends d.AnyData> {
-  initial?:
-    | ((buffer: TgpuBuffer<TSchema>) => d.InferInput<NoInfer<TSchema>>)
-    | d.InferInput<NoInfer<TSchema>>;
+  initial?: ((buffer: TgpuBuffer<TSchema>) => void) | d.InferInput<NoInfer<TSchema>>;
   onInit?: (buffer: TgpuBuffer<TSchema>) => void;
 }
 
