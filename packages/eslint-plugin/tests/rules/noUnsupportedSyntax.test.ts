@@ -119,6 +119,15 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
+        code: "const fn = () => { 'use gpu'; const obj = { foo() {} }; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: '() {}', syntax: 'function expression' },
+          },
+        ],
+      },
+      {
         code: "const fn = () => { 'use gpu'; const r = /abc/; }",
         errors: [
           {
@@ -142,15 +151,6 @@ describe('noUnsupportedSyntax', () => {
           {
             messageId: 'unexpected',
             data: { snippet: '#buffer', syntax: 'private identifier' },
-          },
-        ],
-      },
-      {
-        code: "const fn = () => { 'use gpu'; const obj = { foo() {} }; }",
-        errors: [
-          {
-            messageId: 'unexpected',
-            data: { snippet: 'foo() {}', syntax: 'object method shorthand' },
           },
         ],
       },

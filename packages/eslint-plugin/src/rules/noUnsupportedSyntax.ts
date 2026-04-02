@@ -135,9 +135,6 @@ export const noUnsupportedSyntax = createRule({
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
-        if (node.method) {
-          report(node, 'object method shorthand');
-        }
         if (node.computed) {
           report(node, 'computed property key');
         }
