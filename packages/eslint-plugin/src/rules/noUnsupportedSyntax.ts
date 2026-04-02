@@ -198,6 +198,16 @@ export const noUnsupportedSyntax = createRule({
         report(node, 'try-catch statement');
       },
 
+      UnaryExpression(node) {
+        if (!directives.getEnclosingTypegpuFunction()) {
+          return;
+        }
+        if (['~', '-', '!'].includes(node.operator)) {
+          return;
+        }
+        report(node, `unary operator '${node.operator}'`);
+      },
+
       UpdateExpression(node) {
         if (!directives.getEnclosingTypegpuFunction()) {
           return;

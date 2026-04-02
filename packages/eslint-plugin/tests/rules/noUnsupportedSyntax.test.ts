@@ -294,6 +294,27 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
+        code: "const fn = () => { 'use gpu'; +a; typeof b; void c; delete d; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: '+a', syntax: "unary operator '+'" },
+          },
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'typeof b', syntax: "unary operator 'typeof'" },
+          },
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'void c', syntax: "unary operator 'void'" },
+          },
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'delete d', syntax: "unary operator 'delete'" },
+          },
+        ],
+      },
+      {
         code: "function* fn() { 'use gpu'; yield 1; }",
         errors: [
           {
