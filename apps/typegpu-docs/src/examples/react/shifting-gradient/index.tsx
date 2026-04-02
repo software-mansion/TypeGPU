@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { d, common, std } from 'typegpu';
 import { useConfigureContext, useFrame, useRoot, useUniformValue } from '@typegpu/react';
 import { oklabToRgb, hexToOklab } from '@typegpu/color';
@@ -28,7 +29,7 @@ function App() {
     [root, time],
   );
 
-  const { canvasRefCallback, ctxRef } = useConfigureContext();
+  const { canvasRefCallback, ctxRef } = useConfigureContext({ alphaMode: 'premultiplied' });
   useFrame(({ elapsedSeconds }) => {
     if (!ctxRef.current) return;
 
@@ -42,7 +43,6 @@ function App() {
 // #region Example controls and cleanup
 
 import { createRoot } from 'react-dom/client';
-import { useMemo } from 'react';
 const reactRoot = createRoot(document.getElementById('example-app') as HTMLDivElement);
 reactRoot.render(<App />);
 
