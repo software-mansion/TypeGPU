@@ -1,0 +1,65 @@
+{
+  "name": "eslint-plugin-typegpu",
+  "version": "0.10.0-alpha.2",
+  "description": "TypeGPU specific linting rules for ESLint",
+  "keywords": [
+    "eslint",
+    "eslint-plugin",
+    "eslintplugin",
+    "typegpu",
+    "use gpu"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion/TypeGPU.git#main",
+    "directory": "packages/eslint-plugin"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.mts",
+        "import": "./dist/index.mjs"
+      }
+    },
+    "main": "./dist/index.mjs",
+    "types": "./dist/index.d.mts"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "docs:init": "eslint-doc-generator --init-rule-docs",
+    "docs:check": "eslint-doc-generator --check",
+    "docs:update": "eslint-doc-generator",
+    "test": "vitest",
+    "prepublishOnly": "pnpm run docs:check && pnpm run test:types && vitest run && pnpm run build"
+  },
+  "dependencies": {
+    "@typescript-eslint/utils": "^8.57.2"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "@typescript-eslint/rule-tester": "^8.57.2",
+    "eslint": "^9.39.2",
+    "eslint-doc-generator": "^3.3.2",
+    "tsdown": "^0.20.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.17"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0"
+  },
+  "packageManager": "pnpm@10.15.1"
+}
