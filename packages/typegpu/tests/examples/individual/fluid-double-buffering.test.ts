@@ -288,9 +288,9 @@ describe('fluid double buffering example', () => {
 
       fn getMinimumInFlow(x: i32, y: i32) -> f32 {
         const gridSizeF = 256f;
-        let sourceRadius2 = max(1f, (sourceParams.radius * gridSizeF));
+        let sourceRadius = max(1f, (sourceParams.radius * gridSizeF));
         var sourcePos = vec2f((sourceParams.center.x * gridSizeF), (sourceParams.center.y * gridSizeF));
-        if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius2)) {
+        if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius)) {
           return sourceParams.intensity;
         }
         return 0;
@@ -519,9 +519,9 @@ describe('fluid double buffering example', () => {
 
       fn getMinimumInFlow(x: i32, y: i32) -> f32 {
         const gridSizeF = 256f;
-        let sourceRadius2 = max(1f, (sourceParams.radius * gridSizeF));
+        let sourceRadius = max(1f, (sourceParams.radius * gridSizeF));
         var sourcePos = vec2f((sourceParams.center.x * gridSizeF), (sourceParams.center.y * gridSizeF));
-        if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius2)) {
+        if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius)) {
           return sourceParams.intensity;
         }
         return 0;

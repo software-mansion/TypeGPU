@@ -171,12 +171,12 @@ describe('3d fish example', () => {
           let axisPosition = (*fishData).position[0i];
           const distance_1 = 0.1;
           if ((axisPosition > (axisAquariumSize - distance_1))) {
-            let str2 = (axisPosition - (axisAquariumSize - distance_1));
-            wallRepulsion = (wallRepulsion - (repulsion * str2));
+            let str = (axisPosition - (axisAquariumSize - distance_1));
+            wallRepulsion = (wallRepulsion - (repulsion * str));
           }
           if ((axisPosition < (-(axisAquariumSize) + distance_1))) {
-            let str2 = ((-(axisAquariumSize) + distance_1) - axisPosition);
-            wallRepulsion = (wallRepulsion + (repulsion * str2));
+            let str = ((-(axisAquariumSize) + distance_1) - axisPosition);
+            wallRepulsion = (wallRepulsion + (repulsion * str));
           }
         }
         // unrolled iteration #1
@@ -187,12 +187,12 @@ describe('3d fish example', () => {
           let axisPosition = (*fishData).position[1i];
           const distance_1 = 0.1;
           if ((axisPosition > (axisAquariumSize - distance_1))) {
-            let str2 = (axisPosition - (axisAquariumSize - distance_1));
-            wallRepulsion = (wallRepulsion - (repulsion * str2));
+            let str = (axisPosition - (axisAquariumSize - distance_1));
+            wallRepulsion = (wallRepulsion - (repulsion * str));
           }
           if ((axisPosition < (-(axisAquariumSize) + distance_1))) {
-            let str2 = ((-(axisAquariumSize) + distance_1) - axisPosition);
-            wallRepulsion = (wallRepulsion + (repulsion * str2));
+            let str = ((-(axisAquariumSize) + distance_1) - axisPosition);
+            wallRepulsion = (wallRepulsion + (repulsion * str));
           }
         }
         // unrolled iteration #2
@@ -203,12 +203,12 @@ describe('3d fish example', () => {
           let axisPosition = (*fishData).position[2i];
           const distance_1 = 0.1;
           if ((axisPosition > (axisAquariumSize - distance_1))) {
-            let str2 = (axisPosition - (axisAquariumSize - distance_1));
-            wallRepulsion = (wallRepulsion - (repulsion * str2));
+            let str = (axisPosition - (axisAquariumSize - distance_1));
+            wallRepulsion = (wallRepulsion - (repulsion * str));
           }
           if ((axisPosition < (-(axisAquariumSize) + distance_1))) {
-            let str2 = ((-(axisAquariumSize) + distance_1) - axisPosition);
-            wallRepulsion = (wallRepulsion + (repulsion * str2));
+            let str = ((-(axisAquariumSize) + distance_1) - axisPosition);
+            wallRepulsion = (wallRepulsion + (repulsion * str));
           }
         }
         var proj = projectPointOnLine((*fishData).position, mouseRay);
