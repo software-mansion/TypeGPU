@@ -22,7 +22,7 @@ const fn = () => {
   'use gpu'; 
   const myStruct = Struct({prop: 1});
   const otherStruct = Struct({...myStruct}); // SpreadElement
-  return helper(1);
+  return otherStruct;
 }
 ```
 ```ts
@@ -61,4 +61,4 @@ const fn = () => {
 ```
 
 Note that it is possible that TypeGPU starts/stops supporting JS syntax from version to version.
-Make sure that the minor version of `typegpu` and `eslint-plugin-typegpu matches`.
+Make sure that the minor versions of `typegpu` and `eslint-plugin-typegpu` match.

@@ -9,7 +9,7 @@ export type FunctionNode =
 
 export type DirectiveData = {
   getEnclosingTypegpuFunction: () => FunctionNode | undefined;
-  getDirectiveStack: () => { node: FunctionNode; directives: string[] }[];
+  getDirectiveStack: () => readonly { node: FunctionNode; directives: string[] }[];
 };
 
 /**
