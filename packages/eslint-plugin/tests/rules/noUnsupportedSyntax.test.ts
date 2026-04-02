@@ -146,6 +146,15 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
+        code: "const fn = () => { 'use gpu'; const x = a ?? b; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'a ?? b', syntax: 'nullish coalescing' },
+          },
+        ],
+      },
+      {
         code: "const fn = () => { 'use gpu'; const x = new Foo(); }",
         errors: [
           {

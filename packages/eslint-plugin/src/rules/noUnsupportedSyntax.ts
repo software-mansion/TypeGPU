@@ -124,6 +124,15 @@ export const noUnsupportedSyntax = createRule({
         }
       },
 
+      LogicalExpression(node) {
+        if (!directives.getEnclosingTypegpuFunction()) {
+          return;
+        }
+        if (node.operator === '??') {
+          report(node, 'nullish coalescing');
+        }
+      },
+
       NewExpression(node) {
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
