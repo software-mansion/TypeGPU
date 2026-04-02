@@ -36,51 +36,52 @@ export function isQuerySet<T extends GPUQueryType>(value: unknown): value is Tgp
 }
 
 class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
-  public readonly resourceType = 'query-set' as const;
+  readonly resourceType = 'query-set' as const;
+  readonly type: T;
+  readonly count: number;
 
+  readonly #rawQuerySet: GPUQuerySet | undefined;
   readonly #device: GPUDevice;
-  private _querySet: GPUQuerySet | null = null;
-  private readonly _ownQuerySet: boolean;
-  private _destroyed = false;
-  private _available = true;
-  private _readBuffer: GPUBuffer | null = null;
-  private _resolveBuffer: GPUBuffer | null = null;
+  #querySet: GPUQuerySet | undefined;
+  readonly #ownQuerySet: boolean;
+  #destroyed = false;
+  #available = true;
+  #readBuffer: GPUBuffer | undefined = undefined;
+  #resolveBuffer: GPUBuffer | undefined = undefined;
 
-  constructor(
-    root: ExperimentalTgpuRoot,
-    public readonly type: T,
-    public readonly count: number,
-    private readonly rawQuerySet?: GPUQuerySet,
-  ) {
+  constructor(root: ExperimentalTgpuRoot, type: T, count: number, rawQuerySet?: GPUQuerySet) {
     this.#device = root.device;
-    this._ownQuerySet = !rawQuerySet;
-    this._querySet = rawQuerySet || null;
+    this.type = type;
+    this.count = count;
+    this.#rawQuerySet = rawQuerySet;
+    this.#ownQuerySet = !rawQuerySet;
+    this.#querySet = rawQuerySet;
   }
 
   get querySet(): GPUQuerySet {
-    if (this._destroyed) {
+    if (this.#destroyed) {
       throw new Error('This QuerySet has been destroyed.');
     }
-    if (this.rawQuerySet) {
-      return this.rawQuerySet;
+    if (this.#rawQuerySet) {
+      return this.#rawQuerySet;
     }
-    if (this._querySet) {
-      return this._querySet;
+    if (this.#querySet) {
+      return this.#querySet;
     }
 
-    this._querySet = this.#device.createQuerySet({
+    this.#querySet = this.#device.createQuerySet({
       type: this.type,
       count: this.count,
     });
-    return this._querySet;
+    return this.#querySet;
   }
 
   get destroyed(): boolean {
-    return this._destroyed;
+    return this.#destroyed;
   }
 
   get available(): boolean {
-    return this._available;
+    return this.#available;
   }
 
   get [$internal]() {
@@ -88,39 +89,39 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
     const self = this;
     return {
       get readBuffer(): GPUBuffer {
-        if (!self._readBuffer) {
-          self._readBuffer = self.#device.createBuffer({
+        if (!self.#readBuffer) {
+          self.#readBuffer = self.#device.createBuffer({
             size: self.count * BigUint64Array.BYTES_PER_ELEMENT,
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
           });
         }
-        return self._readBuffer;
+        return self.#readBuffer;
       },
       get resolveBuffer(): GPUBuffer {
-        if (!self._resolveBuffer) {
-          self._resolveBuffer = self.#device.createBuffer({
+        if (!self.#resolveBuffer) {
+          self.#resolveBuffer = self.#device.createBuffer({
             size: self.count * BigUint64Array.BYTES_PER_ELEMENT,
             usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
           });
         }
-        return self._resolveBuffer;
+        return self.#resolveBuffer;
       },
     };
   }
 
   $name(label: string) {
     setName(this, label);
-    if (this._querySet) {
-      this._querySet.label = label;
+    if (this.#querySet) {
+      this.#querySet.label = label;
     }
     return this;
   }
 
   resolve(): void {
-    if (this._destroyed) {
+    if (this.#destroyed) {
       throw new Error('This QuerySet has been destroyed.');
     }
-    if (!this._available) {
+    if (!this.#available) {
       throw new Error('This QuerySet is busy resolving or reading.');
     }
 
@@ -130,11 +131,11 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
   }
 
   async read(): Promise<bigint[]> {
-    if (!this._resolveBuffer) {
+    if (!this.#resolveBuffer) {
       throw new Error('QuerySet must be resolved before reading.');
     }
 
-    this._available = false;
+    this.#available = false;
     try {
       const commandEncoder = this.#device.createCommandEncoder();
       commandEncoder.copyBufferToBuffer(
@@ -152,21 +153,21 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
       readBuffer.unmap();
       return Array.from(data);
     } finally {
-      this._available = true;
+      this.#available = true;
     }
   }
 
   destroy(): void {
-    if (this._destroyed) {
+    if (this.#destroyed) {
       return;
     }
-    this._destroyed = true;
+    this.#destroyed = true;
 
-    if (this._querySet && this._ownQuerySet) {
-      this._querySet.destroy();
+    if (this.#querySet && this.#ownQuerySet) {
+      this.#querySet.destroy();
     }
-    this._readBuffer?.destroy();
-    this._resolveBuffer?.destroy();
-    this._readBuffer = this._resolveBuffer = null;
+    this.#readBuffer?.destroy();
+    this.#resolveBuffer?.destroy();
+    this.#readBuffer = this.#resolveBuffer = undefined;
   }
 }

@@ -16,7 +16,7 @@ import {
   isEphemeralOrigin,
   isEphemeralSnippet,
   type Origin,
-  ResolvedSnippet,
+  type ResolvedSnippet,
   snip,
   type Snippet,
 } from '../data/snippet.ts';
