@@ -65,6 +65,15 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
+        code: "const fn = () => { 'use gpu'; let a = external?.prop; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'external?.prop', syntax: 'chain expression' },
+          },
+        ],
+      },
+      {
         code: "const fn = () => { 'use gpu'; class Foo {} }",
         errors: [
           {

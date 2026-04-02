@@ -62,6 +62,13 @@ export const noUnsupportedSyntax = createRule({
         }
       },
 
+      ChainExpression(node) {
+        if (!directives.getEnclosingTypegpuFunction()) {
+          return;
+        }
+        report(node, 'chain expression');
+      },
+
       ClassDeclaration(node) {
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
