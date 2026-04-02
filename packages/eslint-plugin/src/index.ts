@@ -22,7 +22,7 @@ const all: TSESLint.FlatConfig.Config = {
   rules: allRules,
 };
 
-const plugin: TSESLint.FlatConfig.Plugin = {
+const plugin = {
   ...pluginBase,
   configs: {
     recommended,
