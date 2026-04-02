@@ -30,9 +30,8 @@ export function useUniformValue<TSchema extends d.AnyWgslData, TValue extends d.
   const root = useRoot();
 
   const [fakeState] = useState(() => ({
-    currentValue: initialValue ?? (initialValueFromSchema(schema) as TValue),
-    // TODO: The cast to d.InferInput<TSchema> should not be necessary
-    uniform: root.createUniform(schema, initialValue as d.InferInput<TSchema>),
+    currentValue: initialValue ?? (initialValueFromSchema(_schema) as TValue),
+    uniform: root.createUniform(_schema, initialValue),
   }));
 
   const [schema, schemaChanged] = useStableSchema(_schema);
@@ -40,8 +39,7 @@ export function useUniformValue<TSchema extends d.AnyWgslData, TValue extends d.
 
   if (schemaChanged || rootChanged) {
     fakeState.uniform.buffer.destroy();
-    // TODO: The cast to d.InferInput<TSchema> should not be necessary
-    fakeState.uniform = root.createUniform(schema, fakeState.currentValue as d.InferInput<TSchema>);
+    fakeState.uniform = root.createUniform(schema, fakeState.currentValue);
   }
 
   useDeferredCleanup(() => {
@@ -57,8 +55,7 @@ export function useUniformValue<TSchema extends d.AnyWgslData, TValue extends d.
       },
       set value(newValue: TValue) {
         fakeState.currentValue = newValue;
-        // TODO: The cast to d.InferInput<TSchema> should not be necessary
-        fakeState.uniform.write(newValue as d.InferInput<TSchema>);
+        fakeState.uniform.write(newValue);
       },
       get $() {
         return fakeState.uniform.$;
