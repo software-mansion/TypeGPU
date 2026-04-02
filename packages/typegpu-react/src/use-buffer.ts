@@ -1,7 +1,8 @@
 import type * as d from 'typegpu/data';
 import { useRoot } from './root-context.tsx';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { TgpuBuffer, ValidateBufferSchema } from 'typegpu';
+import { useDeferredCleanup } from './helper-hooks.ts';
 
 export interface UseBufferOptions<TSchema extends d.AnyData> {
   initial?:
@@ -19,6 +20,7 @@ export function useBuffer<TSchema extends d.AnyData>(
   const root = useRoot();
 
   const [fakeState] = useState(() => {
+    // TODO: The cast to any should not be necessary
     const buffer = root.createBuffer(schema, initial);
     onInit?.(buffer);
 
@@ -27,18 +29,9 @@ export function useBuffer<TSchema extends d.AnyData>(
     };
   });
 
-  const cleanupRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (cleanupRef.current) {
-      clearTimeout(cleanupRef.current);
-    }
+  useDeferredCleanup(() => {
+    fakeState.buffer.destroy();
+  });
 
-    return () => {
-      cleanupRef.current = setTimeout(() => {
-        buffer.buffer.destroy();
-      }, 200);
-    };
-  }, [buffer]);
-
-  return buffer;
+  return fakeState.buffer;
 }

@@ -10,8 +10,7 @@ export function useMutable<TSchema extends d.AnyWgslData>(
 ): TgpuMutable<TSchema> {
   const root = useRoot();
   const [fakeState] = useState(() => ({
-    // TODO: The cast to d.InferInput<TSchema> should not be necessary
-    mutable: root.createMutable(_schema, initialValue as d.InferInput<TSchema>),
+    mutable: root.createMutable(_schema, initialValue),
   }));
 
   const [schema, schemaChanged] = useStableSchema(_schema);
@@ -19,8 +18,7 @@ export function useMutable<TSchema extends d.AnyWgslData>(
 
   if (schemaChanged || rootChanged) {
     fakeState.mutable.buffer.destroy();
-    // TODO: The cast to d.InferInput<TSchema> should not be necessary
-    fakeState.mutable = root.createMutable(schema, initialValue as d.InferInput<TSchema>);
+    fakeState.mutable = root.createMutable(schema, initialValue);
   }
 
   useDeferredCleanup(() => {
