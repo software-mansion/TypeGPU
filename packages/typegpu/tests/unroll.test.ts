@@ -205,13 +205,13 @@ describe('tgpu.unroll', () => {
 
   it('unrolls array expression of struct field names - (simple)', () => {
     const values = { a: 1, b: 2, c: 3 };
-    const list = Object.keys(values) as (keyof typeof values)[];
+    const keys = Object.keys(values) as (keyof typeof values)[];
 
     const f = () => {
       'use gpu';
       let result = d.u32(0);
-      for (const prop of tgpu.unroll(list)) {
-        result += values[prop];
+      for (const key of tgpu.unroll(keys)) {
+        result += values[key];
       }
       return result;
     };
