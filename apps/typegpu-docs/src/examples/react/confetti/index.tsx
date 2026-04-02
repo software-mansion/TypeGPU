@@ -1,4 +1,4 @@
-import tgpu, { d, std, type TgpuVertexFn } from 'typegpu';
+import tgpu, { d, std, type TgpuBuffer, type TgpuVertexFn } from 'typegpu';
 import {
   useFrame,
   useRoot,
@@ -51,12 +51,14 @@ const rotate = (v: d.v2f, angle: number) => {
   return pos;
 };
 
-function createRandomPositions() {
-  return Array.from({ length: PARTICLE_AMOUNT }, () => ({
-    position: d.vec2f(Math.random() * 2 - 1, Math.random() * 2 + 1),
-    velocity: d.vec2f((Math.random() * 2 - 1) / 50, -(Math.random() / 25 + 0.01)),
-    seed: Math.random(),
-  }));
+function writeRandomPositions(buffer: TgpuBuffer<ReturnType<typeof dataLayout.schemaForCount>>) {
+  buffer.write(
+    Array.from({ length: PARTICLE_AMOUNT }, () => ({
+      position: d.vec2f(Math.random() * 2 - 1, Math.random() * 2 + 1),
+      velocity: d.vec2f((Math.random() * 2 - 1) / 50, -(Math.random() / 25 + 0.01)),
+      seed: Math.random(),
+    })),
+  );
 }
 
 const computeLayout = tgpu.bindGroupLayout({
@@ -113,16 +115,19 @@ function App() {
   // buffers
 
   const particleGeometryBuffer = useBuffer(d.arrayOf(ParticleGeometry, PARTICLE_AMOUNT), {
-    initial: () =>
-      Array.from({ length: PARTICLE_AMOUNT }, () => ({
-        angle: Math.floor(Math.random() * 50) - 10,
-        tilt: Math.floor(Math.random() * 10) - 10 - 10,
-        color: COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)],
-      })),
+    initial: (buffer) => {
+      buffer.write(
+        Array.from({ length: PARTICLE_AMOUNT }, () => ({
+          angle: Math.floor(Math.random() * 50) - 10,
+          tilt: Math.floor(Math.random() * 10) - 10 - 10,
+          color: COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)],
+        })),
+      );
+    },
   }).$usage('vertex');
 
   const particleDataBuffer = useBuffer(d.arrayOf(ParticleData, PARTICLE_AMOUNT), {
-    initial: createRandomPositions,
+    initial: writeRandomPositions,
   }).$usage('storage', 'uniform', 'vertex');
 
   const aspectRatio = useUniformValue(d.f32, 1);
@@ -185,7 +190,7 @@ function App() {
         <button
           type="button"
           className="text-4xl shadow rounded p-4"
-          onClick={() => particleDataBuffer.write(createRandomPositions())}
+          onClick={() => writeRandomPositions(particleDataBuffer)}
         >
           🎉
         </button>
