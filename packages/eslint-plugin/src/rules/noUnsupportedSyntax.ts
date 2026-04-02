@@ -57,8 +57,8 @@ export const noUnsupportedSyntax = createRule({
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
-        if (node.operator === '==') {
-          report(node, 'eqeq');
+        if (unsupportedBinaryOps.includes(node.operator)) {
+          report(node, `binary operator '${node.operator}'`);
         }
       },
 
@@ -202,10 +202,9 @@ export const noUnsupportedSyntax = createRule({
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
-        if (['~', '-', '!'].includes(node.operator)) {
-          return;
+        if (unsupportedUnaryOps.includes(node.operator)) {
+          report(node, `unary operator '${node.operator}'`);
         }
-        report(node, `unary operator '${node.operator}'`);
       },
 
       UpdateExpression(node) {
@@ -247,3 +246,19 @@ export const noUnsupportedSyntax = createRule({
     };
   }),
 });
+
+const unsupportedUnaryOps = ['+', 'typeof', 'void', 'delete'];
+
+const unsupportedBinaryOps = [
+  '==',
+  '>>>',
+  'in',
+  'instanceof',
+  '|>',
+  '??',
+  '>>>=',
+  '**=',
+  '??=',
+  '&&=',
+  '||=',
+];

@@ -60,7 +60,24 @@ describe('noUnsupportedSyntax', () => {
         errors: [
           {
             messageId: 'unexpected',
-            data: { snippet: '1 == 2', syntax: 'eqeq' },
+            data: { snippet: '1 == 2', syntax: "binary operator '=='" },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; a >>> b; c in d; e instanceof Foo; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'a >>> b', syntax: "binary operator '>>>'" },
+          },
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'c in d', syntax: "binary operator 'in'" },
+          },
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'e instanceof Foo', syntax: "binary operator 'instanceof'" },
           },
         ],
       },
