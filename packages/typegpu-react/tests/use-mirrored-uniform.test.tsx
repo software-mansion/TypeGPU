@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
 import { useMirroredUniform } from '@typegpu/react';
 import { d, TgpuUniform } from 'typegpu';
-import { it } from './utils/extended-test.ts';
+import { it } from './utils/extended-test.tsx';
 import { $buffer } from '../src/symbols.ts';
 
 describe('useMirroredUniform', () => {
@@ -14,42 +14,42 @@ describe('useMirroredUniform', () => {
     vi.useRealTimers();
   });
 
-  it('should create a uniform buffer on initial render', async ({ globalRoot }) => {
-    using createUniformSpy = vi.spyOn(globalRoot, 'createUniform');
+  it('should create a uniform buffer on initial render', async ({ root, RootWrapper }) => {
+    using createUniformSpy = vi.spyOn(root, 'createUniform');
 
-    await act(() => {
-      return renderHook(() => useMirroredUniform(d.f32, 1.0));
-    });
+    renderHook(() => useMirroredUniform(d.f32, 1.0), { wrapper: RootWrapper });
 
     expect(createUniformSpy).toHaveBeenCalledTimes(1);
   });
 
   it('should not recreate the buffer when the value changes but the schema is the same', async ({
-    globalRoot,
-    device,
+    RootWrapper,
+    root,
   }) => {
-    using createUniformSpy = vi.spyOn(globalRoot, 'createUniform');
+    using createUniformSpy = vi.spyOn(root, 'createUniform');
 
     const schema = d.f32;
     const { rerender } = await act(() => {
       return renderHook(({ value }: { value: number }) => useMirroredUniform(schema, value), {
         initialProps: { value: 1.0 },
+        wrapper: RootWrapper,
       });
     });
 
     expect(createUniformSpy).toHaveBeenCalledTimes(1);
-    expect(device.queue.writeBuffer).toHaveBeenCalledTimes(0);
+    expect(root.device.queue.writeBuffer).toHaveBeenCalledTimes(0);
 
     rerender({ value: 2.0 });
 
     expect(createUniformSpy).toHaveBeenCalledTimes(1);
-    expect(device.queue.writeBuffer).toHaveBeenCalledTimes(1);
+    expect(root.device.queue.writeBuffer).toHaveBeenCalledTimes(1);
   });
 
-  it('should recreate the buffer when the schema changes', ({ globalRoot, device }) => {
-    using createUniformSpy = vi.spyOn(globalRoot, 'createUniform');
+  it('should recreate the buffer when the schema changes', ({ RootWrapper, root }) => {
+    using createUniformSpy = vi.spyOn(root, 'createUniform');
 
     const { rerender } = renderHook(({ schema, value }) => useMirroredUniform(schema, value), {
+      wrapper: RootWrapper,
       initialProps: { schema: d.f32, value: 1.0 } as {
         schema: d.AnyWgslData;
         value: d.InferInput<d.AnyWgslData>;
@@ -68,8 +68,8 @@ describe('useMirroredUniform', () => {
     expect(createUniformSpy).toHaveBeenCalledWith(d.vec2f, d.vec2f(1, 2));
   });
 
-  it('should not recreate the buffer for deeply equal schemas', ({ device, globalRoot }) => {
-    using createUniformSpy = vi.spyOn(globalRoot, 'createUniform');
+  it('should not recreate the buffer for deeply equal schemas', ({ RootWrapper, root }) => {
+    using createUniformSpy = vi.spyOn(root, 'createUniform');
 
     const schema1 = d.struct({ a: d.f32 });
     const schema2 = d.struct({ a: d.f32 });
@@ -78,6 +78,7 @@ describe('useMirroredUniform', () => {
       ({ schema, value }: { schema: d.AnyWgslData; value: d.Infer<d.AnyWgslData> }) =>
         useMirroredUniform(schema, value),
       {
+        wrapper: RootWrapper,
         initialProps: { schema: schema1, value: { a: 1.0 } },
       },
     );
@@ -92,8 +93,11 @@ describe('useMirroredUniform', () => {
     expect(result.current).toBe(firstResult);
   });
 
-  it('should update memoized value when schema content actually changes', ({ globalRoot }) => {
-    using createUniformSpy = vi.spyOn(globalRoot, 'createUniform');
+  it('should update memoized value when schema content actually changes', ({
+    RootWrapper,
+    root,
+  }) => {
+    using createUniformSpy = vi.spyOn(root, 'createUniform');
 
     const schema1 = d.struct({ a: d.f32 });
     const schema2 = d.struct({ a: d.f32, b: d.f32 });
@@ -102,6 +106,7 @@ describe('useMirroredUniform', () => {
       ({ schema, value }: { schema: d.AnyWgslData; value: d.Infer<d.AnyWgslData> }) =>
         useMirroredUniform(schema, value),
       {
+        wrapper: RootWrapper,
         initialProps: { schema: schema1, value: { a: 1.0 } } as {
           schema: d.AnyWgslData;
           value: d.Infer<d.AnyWgslData>;
@@ -118,13 +123,14 @@ describe('useMirroredUniform', () => {
     expect(createUniformSpy).toHaveBeenCalledTimes(2);
   });
 
-  it('should use stable schema reference', () => {
+  it('should use stable schema reference', ({ RootWrapper }) => {
     const schema1 = d.struct({ a: d.f32 });
     const schema2 = d.struct({ a: d.f32 });
 
     const { result, rerender } = renderHook(
       ({ schema, value }) => useMirroredUniform(schema, value),
       {
+        wrapper: RootWrapper,
         initialProps: { schema: schema1, value: { a: 1.0 } },
       },
     );
@@ -139,56 +145,55 @@ describe('useMirroredUniform', () => {
   });
 
   describe('React StrictMode compatibility', () => {
-    it('should handle buffer creation in normal mode', async ({ globalRoot }) => {
-      using createUniformSpy = vi.spyOn(globalRoot, 'createUniform');
+    it('should handle buffer creation in normal mode', async ({ RootWrapper, root }) => {
+      using createUniformSpy = vi.spyOn(root, 'createUniform');
 
-      await act(() => {
-        return renderHook(() => useMirroredUniform(d.f32, 1.0));
+      renderHook(() => useMirroredUniform(d.f32, 1.0), { wrapper: RootWrapper });
+
+      expect(createUniformSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should handle buffer creation in StrictMode', async ({ RootWrapper, root }) => {
+      using createUniformSpy = vi.spyOn(root, 'createUniform');
+
+      renderHook(() => useMirroredUniform(d.f32, 1.0), {
+        wrapper: RootWrapper,
+        reactStrictMode: true,
       });
 
-      expect(createUniformSpy).toBeCalledTimes(1);
-    });
-
-    it('should handle buffer creation in StrictMode', async ({ globalRoot }) => {
-      using createUniformSpy = vi.spyOn(globalRoot, 'createUniform');
-
-      await act(() =>
-        renderHook(() => useMirroredUniform(d.f32, 1.0), {
-          reactStrictMode: true,
-        }),
-      );
-
       // Creates uniform twice, and discards one of them
-      expect(createUniformSpy).toBeCalledTimes(2);
+      expect(createUniformSpy).toHaveBeenCalledTimes(2);
     });
 
-    it('should handle value updates in StrictMode', async ({ globalRoot, device }) => {
-      using createUniformSpy = vi.spyOn(globalRoot, 'createUniform');
+    it('should handle value updates in StrictMode', async ({ RootWrapper, root }) => {
+      using createUniformSpy = vi.spyOn(root, 'createUniform');
 
       const { rerender } = renderHook(({ value }) => useMirroredUniform(d.f32, value), {
+        wrapper: RootWrapper,
         reactStrictMode: true,
         initialProps: { value: 1 },
       });
 
       // Creates uniform twice, and discards one of them
-      expect(createUniformSpy).toBeCalledTimes(2);
-      expect(device.mock.queue.writeBuffer).toBeCalledTimes(0);
+      expect(createUniformSpy).toHaveBeenCalledTimes(2);
+      expect(root.device.queue.writeBuffer).toHaveBeenCalledTimes(0);
 
       rerender({ value: 2 });
 
       // Doesn't recreate buffer on value update
-      expect(createUniformSpy).toBeCalledTimes(2);
-      expect(device.mock.queue.writeBuffer).toBeCalledTimes(1);
+      expect(createUniformSpy).toHaveBeenCalledTimes(2);
+      expect(root.device.queue.writeBuffer).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle cleanup timeouts in StrictMode', async ({ globalRoot }) => {
-      using createUniformSpy = vi.spyOn(globalRoot, 'createUniform');
+    it('should handle cleanup timeouts in StrictMode', async ({ RootWrapper, root }) => {
+      using createUniformSpy = vi.spyOn(root, 'createUniform');
 
       const { unmount, result } = renderHook(() => useMirroredUniform(d.f32, 1.0), {
+        wrapper: RootWrapper,
         reactStrictMode: true,
       });
 
-      expect(createUniformSpy).toBeCalledTimes(2);
+      expect(createUniformSpy).toHaveBeenCalledTimes(2);
       const createdBuffer = result.current[$buffer];
       using destroyBufferSpy = vi.spyOn(createdBuffer, 'destroy');
 
@@ -196,16 +201,16 @@ describe('useMirroredUniform', () => {
       vi.runAllTimers();
 
       // The timeout should have been cleaned up
-      expect(destroyBufferSpy).not.toBeCalled();
+      expect(destroyBufferSpy).not.toHaveBeenCalled();
 
       unmount();
 
       // Not destroyed yet
-      expect(destroyBufferSpy).not.toBeCalled();
+      expect(destroyBufferSpy).not.toHaveBeenCalled();
 
       vi.runAllTimers();
 
-      expect(destroyBufferSpy).toBeCalledTimes(1);
+      expect(destroyBufferSpy).toHaveBeenCalledTimes(1);
     });
   });
 });

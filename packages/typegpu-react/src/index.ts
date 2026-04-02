@@ -1,4 +1,4 @@
-export { useRoot } from './root-context.tsx';
+export { Root, useRoot } from './root-context.tsx';
 export { useFrame } from './use-frame.ts';
 export { useMutable } from './use-mutable.ts';
 export { useUniformValue } from './use-uniform-value.ts';
