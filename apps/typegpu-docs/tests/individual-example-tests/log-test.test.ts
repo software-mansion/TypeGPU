@@ -81,12 +81,8 @@ describe('console log example', () => {
         log1(321u);
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
         wrappedCallback(id.x, id.y, id.z);
@@ -145,12 +141,8 @@ describe('console log example', () => {
         log1(1i, vec3u(2, 3, 4), 5i, 6i);
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
         wrappedCallback(id.x, id.y, id.z);
@@ -202,12 +194,8 @@ describe('console log example', () => {
         log1(2i, 3i, 5i);
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
         wrappedCallback(id.x, id.y, id.z);
@@ -832,12 +820,8 @@ describe('console log example', () => {
         }
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
         wrappedCallback(id.x, id.y, id.z);
@@ -1002,12 +986,8 @@ describe('console log example', () => {
         log4(complexArray);
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
         wrappedCallback(id.x, id.y, id.z);
@@ -1063,12 +1043,8 @@ describe('console log example', () => {
         log2_1();
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
         wrappedCallback(id.x, id.y, id.z);
@@ -1118,12 +1094,8 @@ describe('console log example', () => {
         log1(x);
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
         wrappedCallback(id.x, id.y, id.z);
@@ -1175,12 +1147,8 @@ describe('console log example', () => {
         log1(indexUniform);
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
         wrappedCallback(id.x, id.y, id.z);
@@ -1235,12 +1203,8 @@ describe('console log example', () => {
         }
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
         wrappedCallback(id.x, id.y, id.z);
@@ -1326,12 +1290,8 @@ describe('console log example', () => {
         log2_1(vec3f(1, 2, 3), vec3f(1, 2, 3));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
         wrappedCallback(id.x, id.y, id.z);
@@ -1477,12 +1437,8 @@ describe('console log example', () => {
         log7(5i);
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
         wrappedCallback(id.x, id.y, id.z);
@@ -1670,12 +1626,8 @@ describe('console log example', () => {
         log3(x);
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
         wrappedCallback(id.x, id.y, id.z);

@@ -813,12 +813,8 @@ describe('jelly-slider example', () => {
         textureStore(bezierWriteView, vec2u(x, y), vec4f(minDist, overallProgress, normalX, normalY));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
         wrappedCallback(id.x, id.y, id.z);

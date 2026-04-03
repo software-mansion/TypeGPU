@@ -56,12 +56,8 @@ describe('game of life example', () => {
         textureStore(next, vec2u(x, y), vec4u(u32(select(0, 1, (randFloat01() > 0.5f))), 0u, 0u, 0u));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
         wrappedCallback(id.x, id.y, id.z);

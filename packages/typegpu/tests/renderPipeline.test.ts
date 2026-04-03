@@ -311,7 +311,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
           baz2: d.f32,
         },
         out: d.vec4f,
-      })`{ return vec4f(); }`;
+      })`{ return vec4f(in.bar, 1); }`;
 
       const pipeline = root
         .withVertex(vertexMain, {})
@@ -330,7 +330,14 @@ describe('root.withVertex(...).withFragment(...)', () => {
 
         @vertex fn vertexMain() -> vertexMain_Output { return vertexMain_Output(); }
 
-        @fragment fn fragmentMain() -> @location(0)  vec4f { return vec4f(); }"
+        struct fragmentMain_Input {
+          @location(3) baz3: u32,
+          @location(1) bar: vec3f,
+          @location(2) foo: vec3f,
+          @location(5) baz2: f32,
+        }
+
+        @fragment fn fragmentMain(in: fragmentMain_Input) -> @location(0)  vec4f { return vec4f(in.bar, 1); }"
       `);
     });
 

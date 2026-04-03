@@ -61,12 +61,8 @@ describe('vaporrave example', () => {
         memoryBuffer[idx] = computeJunctionGradient(vec3i(i32(x), i32(y), i32(z)));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(8, 8, 4) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(8, 8, 4) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
         wrappedCallback(id.x, id.y, id.z);
