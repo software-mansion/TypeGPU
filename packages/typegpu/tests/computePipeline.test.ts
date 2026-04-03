@@ -622,7 +622,7 @@ describe('TgpuComputePipeline', () => {
       pipeline.dispatchWorkgroupsIndirect(buffer, 4);
 
       expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
-        `"dispatchWorkgroupsIndirect: Using raw GPUBuffer. Offset validation is limited."`,
+        `"dispatchWorkgroupsIndirect: Using raw GPUBuffer. Offset validation is limited. Wrap the GPUBuffer with \`root.createBuffer(...)\` for safe validation."`,
       );
     });
 

@@ -2213,7 +2213,7 @@ describe('drawIndirect / drawIndexedIndirect buffer and offset validation', () =
       pipeline.drawIndirect(buffer, 4);
 
       expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
-        `"drawIndirect: Using raw GPUBuffer. Offset validation is limited."`,
+        `"drawIndirect: Using raw GPUBuffer. Offset validation is limited. Wrap the GPUBuffer with \`root.createBuffer(...)\` for safe validation."`,
       );
     });
 
@@ -2316,7 +2316,7 @@ describe('drawIndirect / drawIndexedIndirect buffer and offset validation', () =
       pipeline.drawIndexedIndirect(buffer, 4);
 
       expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
-        `"drawIndexedIndirect: Using raw GPUBuffer. Offset validation is limited."`,
+        `"drawIndexedIndirect: Using raw GPUBuffer. Offset validation is limited. Wrap the GPUBuffer with \`root.createBuffer(...)\` for safe validation."`,
       );
     });
 

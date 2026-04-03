@@ -41,7 +41,9 @@ export function resolveIndirectOffset(
       throw new Error(`${operation}: GPUBuffer must have the INDIRECT usage flag set.`);
     }
 
-    console.warn(`${operation}: Using raw GPUBuffer. Offset validation is limited.`);
+    console.warn(
+      `${operation}: Using raw GPUBuffer. Offset validation is limited. Wrap the GPUBuffer with \`root.createBuffer(...)\` for safe validation.`,
+    );
     const offset = typeof start === 'number' ? start : (start?.offset ?? 0);
     validateIndirectBufferSize(indirectBuffer.size, offset, requiredSize, operation);
     return offset;
