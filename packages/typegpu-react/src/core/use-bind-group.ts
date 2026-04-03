@@ -1,6 +1,7 @@
-import { d, LayoutEntryToInput, TgpuBindGroup, TgpuBindGroupLayout } from 'typegpu';
+import { d, type LayoutEntryToInput, type TgpuBindGroup, type TgpuBindGroupLayout } from 'typegpu';
+
 import { useRoot } from './root-context.tsx';
-import { UniformValue } from './use-uniform-value.ts';
+import type { UniformValue } from './use-uniform-value.ts';
 import { $buffer } from './symbols.ts';
 
 type ExtractInputFromEntries<T extends TgpuBindGroupLayout['entries']> = {

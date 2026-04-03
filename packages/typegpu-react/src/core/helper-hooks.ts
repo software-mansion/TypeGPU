@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { d } from 'typegpu';
-import useEffectEvent from './use-effect-event';
+
+import useEffectEvent from './use-effect-event.ts';
 
 export function useStableSchema<T>(schema: T): [T, /* schemaChanged */ boolean] {
   const prevSchemaRef = useRef(schema as d.AnyData);
