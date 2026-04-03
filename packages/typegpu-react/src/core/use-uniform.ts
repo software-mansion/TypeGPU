@@ -1,41 +1,41 @@
 import { useState } from 'react';
-import type { TgpuMutable, ValidateStorageSchema, d } from 'typegpu';
+import type { TgpuUniform, d, ValidateUniformSchema } from 'typegpu';
 
 import { useRoot } from './root-context.tsx';
 import { useChangeDetection, useDeferredCleanup, useStableSchema } from './helper-hooks.ts';
 
-export interface UseMutableOptions<TSchema extends d.AnyWgslData> {
+export interface UseUniformOptions<TSchema extends d.AnyWgslData> {
   // TODO: Allow passing a function once it's possible for vanilla shorthands
   // initial?: ((buffer: TgpuBuffer<TSchema>) => void) | d.InferInput<NoInfer<TSchema>>;
   initial?: d.InferInput<NoInfer<TSchema>>;
-  onInit?: (buffer: TgpuMutable<TSchema>) => void;
+  onInit?: (buffer: TgpuUniform<TSchema>) => void;
 }
 
-export function useMutable<TSchema extends d.AnyWgslData>(
-  _schema: ValidateStorageSchema<TSchema>,
-  options?: UseMutableOptions<TSchema>,
-): TgpuMutable<TSchema> {
+export function useUniform<TSchema extends d.AnyWgslData>(
+  _schema: ValidateUniformSchema<TSchema>,
+  options?: UseUniformOptions<TSchema>,
+): TgpuUniform<TSchema> {
   const { initial, onInit } = options ?? {};
   const root = useRoot();
   const [fakeState] = useState(() => {
-    const mutable = root.createMutable(_schema, initial);
-    onInit?.(mutable);
+    const uniform = root.createUniform(_schema, initial);
+    onInit?.(uniform);
 
-    return { mutable };
+    return { uniform };
   });
 
   const [schema, schemaChanged] = useStableSchema(_schema);
   const rootChanged = useChangeDetection(root);
 
   if (schemaChanged || rootChanged) {
-    fakeState.mutable.buffer.destroy();
-    fakeState.mutable = root.createMutable(schema, initial);
-    onInit?.(fakeState.mutable);
+    fakeState.uniform.buffer.destroy();
+    fakeState.uniform = root.createUniform(schema, initial);
+    onInit?.(fakeState.uniform);
   }
 
   useDeferredCleanup(() => {
-    fakeState.mutable.buffer.destroy();
+    fakeState.uniform.buffer.destroy();
   });
 
-  return fakeState.mutable;
+  return fakeState.uniform;
 }
