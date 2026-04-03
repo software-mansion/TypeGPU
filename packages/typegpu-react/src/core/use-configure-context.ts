@@ -41,7 +41,6 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
   ): UseConfigureContextResult {
     const { autoResize = true, ...restOptions } = options ?? {};
 
-    const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const ctxRef = useRef<GPUCanvasContext>(null);
     const root = useRoot();
@@ -51,7 +50,7 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
     if (rootChanged && ctxRef.current) {
       ctxRef.current.configure({
         device: root.device,
-        format: presentationFormat,
+        format: navigator.gpu.getPreferredCanvasFormat(),
         ...restOptions,
       });
     }
