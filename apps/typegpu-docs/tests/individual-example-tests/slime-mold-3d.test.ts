@@ -75,15 +75,11 @@ describe('slime mold 3d example', () => {
         item_1[x] = Agent(pos, dir);
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(1) @binding(0) var oldState: texture_3d<f32>;
@@ -107,16 +103,12 @@ describe('slime mold 3d example', () => {
 
       @group(1) @binding(1) var newState: texture_storage_3d<r32float, write>;
 
-      struct blur_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(4, 4, 4) fn blur(_arg_0: blur_Input) {
+      @compute @workgroup_size(4, 4, 4) fn blur(@builtin(global_invocation_id) gid: vec3u) {
         var dims = textureDimensions(oldState);
-        if ((((_arg_0.gid.x >= dims.x) || (_arg_0.gid.y >= dims.y)) || (_arg_0.gid.z >= dims.z))) {
+        if ((((gid.x >= dims.x) || (gid.y >= dims.y)) || (gid.z >= dims.z))) {
           return;
         }
-        var uv = ((vec3f(_arg_0.gid) + 0.5f) / vec3f(dims));
+        var uv = ((vec3f(gid) + 0.5f) / vec3f(dims));
         var sum = 0f;
         sum += getSummand(uv, (vec3f(-1, 0, 0) / vec3f(dims)));
         sum += getSummand(uv, (vec3f(1, 0, 0) / vec3f(dims)));
@@ -126,7 +118,7 @@ describe('slime mold 3d example', () => {
         sum += getSummand(uv, (vec3f(0, 0, 1) / vec3f(dims)));
         let blurred = (sum / 6f);
         let newValue = saturate((blurred - params.evaporationRate));
-        textureStore(newState, _arg_0.gid.xyz, vec4f(newValue, 0f, 0f, 1f));
+        textureStore(newState, gid.xyz, vec4f(newValue, 0f, 0f, 1f));
       }
 
       var<private> seed: vec2f;
@@ -328,18 +320,14 @@ describe('slime mold 3d example', () => {
 
       @group(1) @binding(3) var newState_1: texture_storage_3d<r32float, write>;
 
-      struct updateAgents_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(64) fn updateAgents(_arg_0: updateAgents_Input) {
-        if ((_arg_0.gid.x >= 800000u)) {
+      @compute @workgroup_size(64) fn updateAgents(@builtin(global_invocation_id) gid: vec3u) {
+        if ((gid.x >= 800000u)) {
           return;
         }
-        randSeed(((f32(_arg_0.gid.x) / 8e+5f) + 0.1f));
+        randSeed(((f32(gid.x) / 8e+5f) + 0.1f));
         var dims = textureDimensions(oldState);
         var dimsf = vec3f(dims);
-        let agent = (&oldAgents[_arg_0.gid.x]);
+        let agent = (&oldAgents[gid.x]);
         var direction = normalize((*agent).direction);
         var senseResult = sense3D((*agent).position, direction);
         var targetDirection = select(randOnUnitHemisphere(direction), normalize(senseResult.weightedDir), (senseResult.totalWeight > 0.01f));
@@ -376,14 +364,10 @@ describe('slime mold 3d example', () => {
           var toCenter = normalize((center - newPos));
           direction = normalize(((randomDir * 0.3f) + (toCenter * 0.7f)));
         }
-        newAgents[_arg_0.gid.x] = Agent(newPos, direction);
+        newAgents[gid.x] = Agent(newPos, direction);
         let oldState_1 = textureLoad(oldState, vec3u(newPos)).x;
         let newState = (oldState_1 + 1f);
         textureStore(newState_1, vec3u(newPos), vec4f(newState, 0f, 0f, 1f));
-      }
-
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
       }
 
       struct fullScreenTriangle_Output {
@@ -391,11 +375,15 @@ describe('slime mold 3d example', () => {
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      struct fragmentShader_Input {
+        @location(0) uv: vec2f,
       }
 
       var<private> seed: vec2f;
@@ -449,10 +437,6 @@ describe('slime mold 3d example', () => {
       @group(1) @binding(0) var state: texture_3d<f32>;
 
       @group(0) @binding(1) var sampler_1: sampler;
-
-      struct fragmentShader_Input {
-        @location(0) uv: vec2f,
-      }
 
       @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
         randSeed2(_arg_0.uv);

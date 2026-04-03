@@ -63,16 +63,12 @@ describe('cubemap reflection example', () => {
         return vec2u(xy, zw);
       }
 
-      struct computeFn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(256, 1, 1) fn computeFn(input: computeFn_Input) {
+      @compute @workgroup_size(256, 1, 1) fn computeFn(@builtin(global_invocation_id) _arg_gid: vec3u) {
         let prevVertices = (&prevVertices_1);
         let nextVertices = (&nextVertices_1);
         let smoothFlag = smoothFlag_1;
         let triangleCount = u32((f32(arrayLength(&(*prevVertices))) / 3f));
-        let triangleIndex = (input.gid.x + (input.gid.y * 65535u));
+        let triangleIndex = (_arg_gid.x + (_arg_gid.y * 65535u));
         if ((triangleIndex >= triangleCount)) {
           return;
         }
@@ -256,26 +252,21 @@ describe('cubemap reflection example', () => {
         @location(0) texCoord: vec3f,
       }
 
-      struct cubeVertexFn_Input {
-        @location(0) position: vec3f,
-        @location(1) uv: vec2f,
+      @vertex fn cubeVertexFn(@location(0) _arg_position: vec3f) -> cubeVertexFn_Output {
+        var viewPos = (camera.view * vec4f(_arg_position.xyz, 0f)).xyz;
+        return cubeVertexFn_Output((camera.projection * vec4f(viewPos, 1f)), _arg_position.xyz);
       }
 
-      @vertex fn cubeVertexFn(input: cubeVertexFn_Input) -> cubeVertexFn_Output {
-        var viewPos = (camera.view * vec4f(input.position.xyz, 0f)).xyz;
-        return cubeVertexFn_Output((camera.projection * vec4f(viewPos, 1f)), input.position.xyz);
+      struct cubeFragmentFn_Input {
+        @location(0) texCoord: vec3f,
       }
 
       @group(1) @binding(0) var cubemap: texture_cube<f32>;
 
       @group(1) @binding(1) var texSampler: sampler;
 
-      struct cubeFragmentFn_Input {
-        @location(0) texCoord: vec3f,
-      }
-
-      @fragment fn cubeFragmentFn(input: cubeFragmentFn_Input) -> @location(0) vec4f {
-        return textureSample(cubemap, texSampler, normalize(input.texCoord));
+      @fragment fn cubeFragmentFn(_arg_0: cubeFragmentFn_Input) -> @location(0) vec4f {
+        return textureSample(cubemap, texSampler, normalize(_arg_0.texCoord));
       }
 
       struct Camera {
@@ -292,13 +283,13 @@ describe('cubemap reflection example', () => {
         @location(1) worldPos: vec4f,
       }
 
-      struct vertexFn_Input {
-        @location(0) position: vec4f,
-        @location(1) normal: vec4f,
+      @vertex fn vertexFn(@location(0) _arg_position: vec4f, @location(1) _arg_normal: vec4f) -> vertexFn_Output {
+        return vertexFn_Output((camera.projection * (camera.view * _arg_position)), _arg_normal, _arg_position);
       }
 
-      @vertex fn vertexFn(input: vertexFn_Input) -> vertexFn_Output {
-        return vertexFn_Output((camera.projection * (camera.view * input.position)), input.normal, input.position);
+      struct fragmentFn_Input {
+        @location(0) normal: vec4f,
+        @location(1) worldPos: vec4f,
       }
 
       struct DirectionalLight {
@@ -323,18 +314,13 @@ describe('cubemap reflection example', () => {
 
       @group(1) @binding(1) var texSampler: sampler;
 
-      struct fragmentFn_Input {
-        @location(0) normal: vec4f,
-        @location(1) worldPos: vec4f,
-      }
-
-      @fragment fn fragmentFn(input: fragmentFn_Input) -> @location(0) vec4f {
-        var normalizedNormal = normalize(input.normal.xyz);
+      @fragment fn fragmentFn(_arg_0: fragmentFn_Input) -> @location(0) vec4f {
+        var normalizedNormal = normalize(_arg_0.normal.xyz);
         var normalizedLightDir = normalize(light.direction);
         var ambientLight = ((material.ambient * light.color) * light.intensity);
         let diffuseFactor = max(dot(normalizedNormal, normalizedLightDir), 0f);
         var diffuseLight = (((material.diffuse * light.color) * light.intensity) * diffuseFactor);
-        var viewDirection = normalize((camera.position.xyz - input.worldPos.xyz));
+        var viewDirection = normalize((camera.position.xyz - _arg_0.worldPos.xyz));
         var reflectionDirection = reflect(-(normalizedLightDir), normalizedNormal);
         let specularFactor = pow(max(dot(viewDirection, reflectionDirection), 0f), material.shininess);
         var specularLight = (((material.specular * light.color) * light.intensity) * specularFactor);

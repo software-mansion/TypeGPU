@@ -60,12 +60,8 @@ describe('probability distribution plot example', () => {
         return (vNorm * pow(u, 0.33f));
       }
 
-      struct dataMoreWorkersFunc_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(64) fn dataMoreWorkersFunc(input: dataMoreWorkersFunc_Input) {
-        let id = input.gid.x;
+      @compute @workgroup_size(64) fn dataMoreWorkersFunc(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        let id = _arg_gid.x;
         if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
@@ -104,12 +100,8 @@ describe('probability distribution plot example', () => {
         return vec3f(x, y, z);
       }
 
-      struct dataMoreWorkersFunc_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(64) fn dataMoreWorkersFunc(input: dataMoreWorkersFunc_Input) {
-        let id = input.gid.x;
+      @compute @workgroup_size(64) fn dataMoreWorkersFunc(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        let id = _arg_gid.x;
         if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
@@ -149,12 +141,8 @@ describe('probability distribution plot example', () => {
         return vec3f(randInUnitCircle(), 0.5f);
       }
 
-      struct dataMoreWorkersFunc_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(64) fn dataMoreWorkersFunc(input: dataMoreWorkersFunc_Input) {
-        let id = input.gid.x;
+      @compute @workgroup_size(64) fn dataMoreWorkersFunc(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        let id = _arg_gid.x;
         if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
@@ -193,12 +181,8 @@ describe('probability distribution plot example', () => {
         return vec3f(randOnUnitCircle(), 0.5f);
       }
 
-      struct dataMoreWorkersFunc_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(64) fn dataMoreWorkersFunc(input: dataMoreWorkersFunc_Input) {
-        let id = input.gid.x;
+      @compute @workgroup_size(64) fn dataMoreWorkersFunc(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        let id = _arg_gid.x;
         if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
@@ -232,12 +216,8 @@ describe('probability distribution plot example', () => {
         return vec3f(sample(), sample(), sample());
       }
 
-      struct dataMoreWorkersFunc_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(64) fn dataMoreWorkersFunc(input: dataMoreWorkersFunc_Input) {
-        let id = input.gid.x;
+      @compute @workgroup_size(64) fn dataMoreWorkersFunc(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        let id = _arg_gid.x;
         if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
@@ -277,12 +257,8 @@ describe('probability distribution plot example', () => {
         return result;
       }
 
-      struct dataMoreWorkersFunc_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(64) fn dataMoreWorkersFunc(input: dataMoreWorkersFunc_Input) {
-        let id = input.gid.x;
+      @compute @workgroup_size(64) fn dataMoreWorkersFunc(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        let id = _arg_gid.x;
         if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
@@ -339,12 +315,8 @@ describe('probability distribution plot example', () => {
         return randInUnitHemisphere(vec3f(1.409999966621399, 1.409999966621399, 0));
       }
 
-      struct dataMoreWorkersFunc_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(64) fn dataMoreWorkersFunc(input: dataMoreWorkersFunc_Input) {
-        let id = input.gid.x;
+      @compute @workgroup_size(64) fn dataMoreWorkersFunc(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        let id = _arg_gid.x;
         if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
@@ -393,12 +365,8 @@ describe('probability distribution plot example', () => {
         return randOnUnitHemisphere(vec3f(1.409999966621399, 1.409999966621399, 0));
       }
 
-      struct dataMoreWorkersFunc_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(64) fn dataMoreWorkersFunc(input: dataMoreWorkersFunc_Input) {
-        let id = input.gid.x;
+      @compute @workgroup_size(64) fn dataMoreWorkersFunc(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        let id = _arg_gid.x;
         if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
@@ -437,12 +405,8 @@ describe('probability distribution plot example', () => {
         return vec3f(randBernoulli(0.7f));
       }
 
-      struct dataMoreWorkersFunc_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(64) fn dataMoreWorkersFunc(input: dataMoreWorkersFunc_Input) {
-        let id = input.gid.x;
+      @compute @workgroup_size(64) fn dataMoreWorkersFunc(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        let id = _arg_gid.x;
         if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
@@ -480,12 +444,8 @@ describe('probability distribution plot example', () => {
         return vec3f(randFloat01());
       }
 
-      struct dataMoreWorkersFunc_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(64) fn dataMoreWorkersFunc(input: dataMoreWorkersFunc_Input) {
-        let id = input.gid.x;
+      @compute @workgroup_size(64) fn dataMoreWorkersFunc(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        let id = _arg_gid.x;
         if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
@@ -528,12 +488,8 @@ describe('probability distribution plot example', () => {
         return vec3f(randExponential(1f));
       }
 
-      struct dataMoreWorkersFunc_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(64) fn dataMoreWorkersFunc(input: dataMoreWorkersFunc_Input) {
-        let id = input.gid.x;
+      @compute @workgroup_size(64) fn dataMoreWorkersFunc(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        let id = _arg_gid.x;
         if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
@@ -577,12 +533,8 @@ describe('probability distribution plot example', () => {
         return vec3f(randNormal(0f, 1f));
       }
 
-      struct dataMoreWorkersFunc_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(64) fn dataMoreWorkersFunc(input: dataMoreWorkersFunc_Input) {
-        let id = input.gid.x;
+      @compute @workgroup_size(64) fn dataMoreWorkersFunc(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        let id = _arg_gid.x;
         if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }
@@ -625,12 +577,8 @@ describe('probability distribution plot example', () => {
         return vec3f(randCauchy(0f, 1f));
       }
 
-      struct dataMoreWorkersFunc_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(64) fn dataMoreWorkersFunc(input: dataMoreWorkersFunc_Input) {
-        let id = input.gid.x;
+      @compute @workgroup_size(64) fn dataMoreWorkersFunc(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        let id = _arg_gid.x;
         if ((id >= arrayLength(&samplesBuffer))) {
           return;
         }

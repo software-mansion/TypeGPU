@@ -42,7 +42,7 @@
     "fuse.js": "catalog:frontend",
     "jotai": "^2.15.0",
     "jotai-location": "^0.6.2",
-    "lodash": "^4.17.21",
+    "lodash": "^4.18.1",
     "lucide-react": "^0.536.0",
     "lz-string": "^1.5.0",
     "morphcharts": "^1.3.2",
@@ -73,9 +73,10 @@
     "@types/babel__standalone": "^7.1.9",
     "@types/babel__template": "^7.4.4",
     "@types/babel__traverse": "^7.20.7",
-    "@types/node": "^24.7.0",
+    "@types/node": "catalog:types",
     "@types/three": "catalog:types",
     "@vitejs/plugin-basic-ssl": "^2.1.0",
+    "@vitest/browser-preview": "^4.1.2",
     "@webgpu/types": "catalog:types",
     "astro-vtbot": "^2.1.10",
     "autoprefixer": "^10.4.21",
@@ -85,6 +86,6 @@
     "typegpu-testing-utility": "workspace:*",
     "vite-imagetools": "catalog:frontend",
     "vite-plugin-wasm": "^3.5.0",
-    "yaml": "^2.8.1"
+    "yaml": "^2.8.3"
   }
 }

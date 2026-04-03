@@ -214,6 +214,7 @@ export function isTextureView(value: unknown): value is TgpuTextureView {
 class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps> {
   readonly [$internal]: TextureInternals;
   readonly resourceType = 'texture';
+  readonly props: TProps;
   usableAsSampled = false;
   usableAsStorage = false;
   usableAsRender = false;
@@ -224,10 +225,9 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
   #texture: GPUTexture | null = null;
   #branch: ExperimentalTgpuRoot;
 
-  constructor(
-    public readonly props: TProps,
-    branch: ExperimentalTgpuRoot,
-  ) {
+  constructor(props: TProps, branch: ExperimentalTgpuRoot) {
+    this.props = props;
+
     const format = props.format as TProps['format'];
 
     this.#branch = branch;
@@ -518,6 +518,7 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
   declare readonly [$repr]: Infer<T>;
   readonly [$internal]: TextureViewInternals;
   readonly resourceType = 'texture-view' as const;
+  readonly schema: T;
 
   #baseTexture: TgpuTexture;
   #view: GPUTextureView | undefined;
@@ -527,11 +528,8 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
       })
     | undefined;
 
-  constructor(
-    readonly schema: T,
-    baseTexture: TgpuTexture,
-    descriptor?: TgpuTextureViewDescriptor,
-  ) {
+  constructor(schema: T, baseTexture: TgpuTexture, descriptor?: TgpuTextureViewDescriptor) {
+    this.schema = schema;
     this.#baseTexture = baseTexture;
     this.#descriptor = descriptor;
 
@@ -631,11 +629,10 @@ export class TgpuLaidOutTextureViewImpl<T extends WgslTexture | WgslStorageTextu
   readonly [$internal] = { unwrap: undefined };
   readonly resourceType = 'texture-view' as const;
   readonly #membership: LayoutMembership;
+  readonly schema: T;
 
-  constructor(
-    readonly schema: T,
-    membership: LayoutMembership,
-  ) {
+  constructor(schema: T, membership: LayoutMembership) {
+    this.schema = schema;
     this.#membership = membership;
     setName(this, membership.key);
   }
@@ -697,11 +694,10 @@ export class TgpuLaidOutTextureViewImpl<T extends WgslTexture | WgslStorageTextu
 export class TgpuTextureRenderViewImpl implements TgpuTextureRenderView {
   readonly [$internal]: TextureViewInternals;
   readonly resourceType = 'texture-view' as const;
+  readonly descriptor: TgpuTextureViewDescriptor;
 
-  constructor(
-    baseTexture: TgpuTexture,
-    readonly descriptor: TgpuTextureViewDescriptor = {},
-  ) {
+  constructor(baseTexture: TgpuTexture, descriptor: TgpuTextureViewDescriptor = {}) {
+    this.descriptor = descriptor;
     this[$internal] = {
       unwrap: () => {
         return baseTexture[$internal].unwrap().createView({

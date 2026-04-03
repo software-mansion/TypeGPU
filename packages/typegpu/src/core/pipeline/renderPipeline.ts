@@ -985,12 +985,16 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
 class RenderPipelineCore implements SelfResolvable {
   readonly [$internal] = true;
+  readonly options: RenderPipelineCoreOptions;
+
   private _memo: Memo | undefined;
 
   #latestAutoVertexIn: TgpuVertexFn.In | undefined;
   #latestAutoFragmentOut: BaseData | undefined;
 
-  constructor(public readonly options: RenderPipelineCoreOptions) {}
+  constructor(options: RenderPipelineCoreOptions) {
+    this.options = options;
+  }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const { slotBindings } = this.options;

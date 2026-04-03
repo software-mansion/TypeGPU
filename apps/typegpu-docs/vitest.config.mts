@@ -2,6 +2,7 @@ import { createJiti } from 'jiti';
 import type TypeGPUPlugin from 'unplugin-typegpu/vite';
 import { imagetools } from 'vite-imagetools';
 import { defineConfig, type Plugin } from 'vitest/config';
+import { preview } from '@vitest/browser-preview';
 
 const jiti = createJiti(import.meta.url);
 const typegpu = await jiti.import<typeof TypeGPUPlugin>('unplugin-typegpu/vite', { default: true });
@@ -25,7 +26,7 @@ export default defineConfig({
           name: 'browser',
           include: ['**/*.{test,spec}.browser.ts'],
           browser: {
-            provider: 'preview',
+            provider: preview(),
             instances: [{ browser: 'chromium' }],
           },
         },

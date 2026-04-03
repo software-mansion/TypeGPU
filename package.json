@@ -70,6 +70,7 @@
       "rollup": "catalog:build",
       "vite": "8.0.2",
       "@babel/types": "catalog:",
+      "@types/node": "catalog:types",
       "typescript": "catalog:types",
       "three": "catalog:example",
       "@typescript-eslint/utils": "^8.57.2"
