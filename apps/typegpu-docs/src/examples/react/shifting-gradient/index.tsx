@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { d, common, std } from 'typegpu';
-import { useConfigureContext, useFrame, useRoot, useUniformValue } from '@typegpu/react';
+import { useConfigureContext, useFrame, useRoot, useUniform } from '@typegpu/react';
 import { oklabToRgb, hexToOklab } from '@typegpu/color';
 
 function App() {
   const root = useRoot();
-  const time = useUniformValue(d.f32, 0);
+  const time = useUniform(d.f32);
 
   const renderPipeline = useMemo(
     () =>
@@ -33,7 +33,7 @@ function App() {
   useFrame(({ elapsedSeconds }) => {
     if (!ctxRef.current) return;
 
-    time.value = elapsedSeconds;
+    time.write(elapsedSeconds);
     renderPipeline.withColorAttachment({ view: ctxRef.current }).draw(3);
   });
 

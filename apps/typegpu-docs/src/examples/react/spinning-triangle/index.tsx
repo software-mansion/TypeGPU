@@ -1,6 +1,6 @@
 import tgpu, { d, std } from 'typegpu';
 import { hexToOklab, oklabToRgb } from '@typegpu/color';
-import { useConfigureContext, useFrame, useRoot, useUniformValue } from '@typegpu/react';
+import { useConfigureContext, useFrame, useRoot, useUniform } from '@typegpu/react';
 import { useMemo } from 'react';
 
 function rotate(v: d.v2f, angle: number): d.v2f {
@@ -29,7 +29,7 @@ const positions = tgpu.const(d.arrayOf(d.vec2f, 3), [
 
 function App() {
   const root = useRoot();
-  const time = useUniformValue(d.f32, 0);
+  const time = useUniform(d.f32);
 
   const renderPipeline = useMemo(
     () =>
@@ -59,7 +59,7 @@ function App() {
   useFrame(({ elapsedSeconds }) => {
     if (!ctxRef.current) return;
 
-    time.value = elapsedSeconds;
+    time.write(elapsedSeconds);
     renderPipeline.withColorAttachment({ view: ctxRef.current }).draw(3);
   });
 
