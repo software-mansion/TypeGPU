@@ -20,9 +20,7 @@ export function useBuffer<TSchema extends d.AnyData>(
     const buffer = root.createBuffer(_schema, initial);
     onInit?.(buffer);
 
-    return {
-      buffer,
-    };
+    return { buffer };
   });
 
   const [schema, schemaChanged] = useStableSchema(_schema);

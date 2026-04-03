@@ -3,7 +3,7 @@ import {
   useFrame,
   useRoot,
   useBuffer,
-  useUniformValue,
+  useUniform,
   useConfigureContext,
   useBindGroup,
 } from '@typegpu/react';
@@ -130,9 +130,9 @@ function App() {
     initial: writeRandomPositions,
   }).$usage('storage', 'uniform', 'vertex');
 
-  const aspectRatio = useUniformValue(d.f32, 1);
-  const deltaTime = useUniformValue(d.f32);
-  const time = useUniformValue(d.f32);
+  const aspectRatio = useUniform(d.f32, { initial: 1 });
+  const deltaTime = useUniform(d.f32);
+  const time = useUniform(d.f32);
 
   const renderPipeline = useMemo(
     () =>
@@ -153,12 +153,15 @@ function App() {
   const computePipeline = useMemo(() => root.createGuardedComputePipeline(simulate), []);
 
   const computeGroup = useBindGroup(computeLayout, {
-    deltaTime,
+    deltaTime: deltaTime.buffer,
     particleData: particleDataBuffer,
-    time,
+    time: time.buffer,
   });
 
-  const renderGroup = useBindGroup(renderLayout, { time, aspectRatio });
+  const renderGroup = useBindGroup(renderLayout, {
+    time: time.buffer,
+    aspectRatio: aspectRatio.buffer,
+  });
 
   useFrame(({ deltaSeconds, elapsedSeconds }) => {
     const context = ctxRef.current;
@@ -167,9 +170,9 @@ function App() {
     }
 
     const canvas = context.canvas as HTMLCanvasElement;
-    time.value = elapsedSeconds * 1000;
-    deltaTime.value = deltaSeconds * 1000;
-    aspectRatio.value = canvas.width / canvas.height;
+    time.write(elapsedSeconds * 1000);
+    deltaTime.write(deltaSeconds * 1000);
+    aspectRatio.write(canvas.width / canvas.height);
 
     computePipeline.with(computeGroup).dispatchThreads(PARTICLE_AMOUNT);
     renderPipeline
