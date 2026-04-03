@@ -40,22 +40,17 @@ describe('two boxes example', () => {
         @location(0) color: vec4f,
       }
 
-      struct vertex_Input {
-        @location(0) position: vec4f,
-        @location(1) color: vec4f,
-      }
-
-      @vertex fn vertex(input: vertex_Input) -> vertex_Output {
-        var pos = (camera.projection * (camera.view * (transform.model * input.position)));
-        return vertex_Output(pos, input.color);
+      @vertex fn vertex(@location(0) _arg_position: vec4f, @location(1) _arg_color: vec4f) -> vertex_Output {
+        var pos = (camera.projection * (camera.view * (transform.model * _arg_position)));
+        return vertex_Output(pos, _arg_color);
       }
 
       struct fragment_Input {
         @location(0) color: vec4f,
       }
 
-      @fragment fn fragment(input: fragment_Input) -> @location(0) vec4f {
-        return input.color;
+      @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
+        return _arg_0.color;
       }"
     `);
   });

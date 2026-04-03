@@ -228,20 +228,35 @@ export const UnknownData = Symbol('UNKNOWN');
 export type UnknownData = typeof UnknownData;
 
 export class InfixDispatch {
+  readonly name: string;
+  readonly lhs: Snippet;
+  readonly operator: (ctx: ResolutionCtx, args: [lhs: Snippet, rhs: Snippet]) => Snippet;
+
   constructor(
-    readonly name: string,
-    readonly lhs: Snippet,
-    readonly operator: (ctx: ResolutionCtx, args: [lhs: Snippet, rhs: Snippet]) => Snippet,
-  ) {}
+    name: string,
+    lhs: Snippet,
+    operator: (ctx: ResolutionCtx, args: [lhs: Snippet, rhs: Snippet]) => Snippet,
+  ) {
+    this.name = name;
+    this.lhs = lhs;
+    this.operator = operator;
+  }
 }
 
 export class MatrixColumnsAccess {
-  constructor(readonly matrix: Snippet) {}
+  readonly matrix: Snippet;
+
+  constructor(matrix: Snippet) {
+    this.matrix = matrix;
+  }
 }
 
 export class ConsoleLog {
   [$internal] = true;
-  constructor(readonly op: string) {
+  readonly op: string;
+
+  constructor(op: string) {
+    this.op = op;
     setName(this, 'consoleLog');
   }
 }

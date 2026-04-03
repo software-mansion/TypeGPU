@@ -24,7 +24,7 @@ import { addReturnTypeToExternals } from '../resolve/externals.ts';
 import { shaderStageSlot } from '../slot/internalSlots.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { BaseIOData, Implementation, InferIO, IOLayout, IORecord } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema } from './ioSchema.ts';
+import { createIoSchema, type IOLayoutToSchema, separateBuiltins } from './ioSchema.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -206,18 +206,15 @@ function createFragmentFn(
     },
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-      const inputWithLocation = shell.in
-        ? createIoSchema(shell.in, ctx.varyingLocations)
-        : undefined;
+      const entryInput = separateBuiltins(shell.in ?? {}, ctx.varyingLocations ?? {});
 
-      if (inputWithLocation) {
-        inputWithLocation.$name(`${getName(this) ?? ''}_Input`);
-        core.applyExternals({ In: inputWithLocation });
+      if (entryInput.dataSchema && isNamable(entryInput.dataSchema)) {
+        entryInput.dataSchema.$name(`${getName(this) ?? ''}_Input`);
       }
       core.applyExternals({ Out: outputType });
 
       return ctx.withSlots([[shaderStageSlot, 'fragment']], () =>
-        core.resolve(ctx, inputWithLocation ? [inputWithLocation] : [], shell.returnType),
+        core.resolve(ctx, [], shell.returnType, entryInput),
       );
     },
 

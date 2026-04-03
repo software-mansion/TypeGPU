@@ -41,7 +41,8 @@ export interface TgpuVertexFormatData<T extends VertexFormat>
 }
 
 class TgpuVertexFormatDataImpl<T extends VertexFormat> implements TgpuVertexFormatData<T> {
-  public readonly [$internal] = {};
+  readonly [$internal] = {};
+  readonly type: T;
   [$gpuCallable]: TgpuVertexFormatData<T>[typeof $gpuCallable];
 
   // Type-tokens, not available at runtime
@@ -50,7 +51,8 @@ class TgpuVertexFormatDataImpl<T extends VertexFormat> implements TgpuVertexForm
   declare readonly [$invalidSchemaReason]: 'Vertex formats are not host-shareable, use concrete types instead';
   // ---
 
-  constructor(public readonly type: T) {
+  constructor(type: T) {
+    this.type = type;
     this[$gpuCallable] = {
       call: (ctx, [v]): Snippet => {
         return schemaCallWrapperGPU(ctx, formatToWGSLType[this.type], v);
