@@ -210,7 +210,11 @@ class WithBindingImpl implements WithBinding {
   createComputePipeline<ComputeIn extends Record<string, AnyComputeBuiltin>>(
     descriptor: TgpuComputePipeline.Descriptor<ComputeIn>,
   ): TgpuComputePipeline {
-    return INTERNAL_createComputePipeline(this.#getRoot(), this.#slotBindings, descriptor);
+    return INTERNAL_createComputePipeline(
+      this.#getRoot(),
+      this.#slotBindings,
+      descriptor as unknown as TgpuComputePipeline.Descriptor,
+    );
   }
 
   createRenderPipeline(

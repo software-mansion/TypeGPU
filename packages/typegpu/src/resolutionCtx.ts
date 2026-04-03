@@ -13,7 +13,7 @@ import {
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
 import { getAttributesString } from './data/attributes.ts';
-import { isData, UnknownData } from './data/dataTypes.ts';
+import { isData, undecorate, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
 import { type BaseData, isPtr, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
@@ -57,6 +57,7 @@ import { accessProp } from './tgsl/accessProp.ts';
 import { createIoSchema } from './core/function/ioSchema.ts';
 import type { IOData } from './core/function/fnTypes.ts';
 import { AutoStruct } from './data/autoStruct.ts';
+import { EntryInputRouter } from './core/function/entryInputRouter.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -444,50 +445,114 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       this.#namespaceInternal.nameRegistry.pushFunctionScope();
       const args: Snippet[] = [];
       const argAliases: [string, Snippet][] = [];
+      // For entry functions: collect pending header entries to be filtered after body generation.
+      const pendingHeaderEntries: { argName: string; header: string }[] = [];
 
-      for (const [i, argType] of options.argTypes.entries()) {
-        const astParam = options.params[i];
-        // We know if arguments are passed by reference or by value, because we
-        // enforce that based on the whether the argument is a pointer or not.
-        //
-        // It still applies for shell-less functions, since we determine the type
-        // of the argument based on the argument's referentiality.
-        // In other words, if we pass a reference to a function, it's typed as a pointer,
-        // otherwise it's typed as a value.
-        const origin = isPtr(argType)
-          ? argType.addressSpace === 'storage'
-            ? argType.access === 'read'
-              ? 'readonly'
-              : 'mutable'
-            : argType.addressSpace
-          : 'argument';
+      if (options.entryInput) {
+        const { dataSchema, positionalArgs } = options.entryInput;
+        const firstParam = options.params[0];
 
-        switch (astParam?.type) {
-          case FuncParameterType.identifier: {
-            const rawName = astParam.name;
-            const snippet = snip(this.makeNameValid(rawName), argType, origin);
-            args.push(snippet);
-            if (snippet.value !== rawName) {
-              argAliases.push([rawName, snippet]);
+        const structArgName = this.makeNameValid('_arg_0');
+        const structArg = dataSchema ? snip(structArgName, dataSchema, 'argument') : undefined;
+        if (structArg) {
+          args.push(structArg);
+          pendingHeaderEntries.push({
+            argName: structArgName,
+            header: `${structArgName}: ${this.resolve(dataSchema).value}`,
+          });
+        }
+
+        if (firstParam?.type === FuncParameterType.destructuredObject) {
+          // Route each destructured prop to a positional arg or struct field.
+          for (const { name, alias } of firstParam.props) {
+            const argInfo = positionalArgs.find((a) => a.schemaKey === name);
+            if (argInfo) {
+              const argName = this.makeNameValid(alias);
+              const argSnippet = snip(argName, argInfo.type, 'argument');
+              args.push(argSnippet);
+              argAliases.push([alias, argSnippet]);
+              pendingHeaderEntries.push({
+                argName,
+                header: `${getAttributesString(argInfo.type)}${argName}: ${this.resolve(undecorate(argInfo.type)).value}`,
+              });
+            } else if (structArg) {
+              const propSnippet = accessProp(structArg, name);
+              if (propSnippet) {
+                argAliases.push([alias, propSnippet]);
+              }
             }
-            break;
           }
-          case FuncParameterType.destructuredObject: {
-            const objSnippet = snip(`_arg_${i}`, argType, origin);
-            args.push(objSnippet);
-            argAliases.push(
-              ...astParam.props.map(
-                ({ name, alias }) => [alias, accessProp(objSnippet, name)] as [string, Snippet],
-              ),
-            );
-            break;
+        } else if (firstParam?.type === FuncParameterType.identifier) {
+          // Create named arg snippets, then a proxy for property access routing.
+          const proxyEntries: Array<{ schemaKey: string; argName: string; type: BaseData }> = [];
+          for (const a of positionalArgs) {
+            const argName = this.makeNameValid(`_arg_${a.schemaKey}`);
+            const s = snip(argName, a.type, 'argument');
+            args.push(s);
+            proxyEntries.push({ schemaKey: a.schemaKey, argName, type: a.type });
+            pendingHeaderEntries.push({
+              argName,
+              header: `${getAttributesString(a.type)}${argName}: ${this.resolve(undecorate(a.type)).value}`,
+            });
           }
-          case undefined: {
-            // Only push the argument if it's not an auto-struct.
-            // If we're not using an auto-struct, it's not going to
-            // have any properties anyway.
-            if (!(argType instanceof AutoStruct)) {
-              args.push(snip(`_arg_${i}`, argType, origin));
+          const router = new EntryInputRouter(structArgName, dataSchema, proxyEntries);
+          argAliases.push([firstParam.name, snip(firstParam.name, router, 'argument')]);
+        } else {
+          // No first param: push positional args with schema key names.
+          for (const a of positionalArgs) {
+            const argName = this.makeNameValid(`_arg_${a.schemaKey}`);
+            args.push(snip(argName, a.type, 'argument'));
+            pendingHeaderEntries.push({
+              argName,
+              header: `${getAttributesString(a.type)}${argName}: ${this.resolve(undecorate(a.type)).value}`,
+            });
+          }
+        }
+      } else {
+        for (const [i, argType] of options.argTypes.entries()) {
+          const astParam = options.params[i];
+          // We know if arguments are passed by reference or by value, because we
+          // enforce that based on the whether the argument is a pointer or not.
+          //
+          // It still applies for shell-less functions, since we determine the type
+          // of the argument based on the argument's referentiality.
+          // In other words, if we pass a reference to a function, it's typed as a pointer,
+          // otherwise it's typed as a value.
+          const origin = isPtr(argType)
+            ? argType.addressSpace === 'storage'
+              ? argType.access === 'read'
+                ? 'readonly'
+                : 'mutable'
+              : argType.addressSpace
+            : 'argument';
+
+          switch (astParam?.type) {
+            case FuncParameterType.identifier: {
+              const rawName = astParam.name;
+              const snippet = snip(this.makeNameValid(rawName), argType, origin);
+              args.push(snippet);
+              if (snippet.value !== rawName) {
+                argAliases.push([rawName, snippet]);
+              }
+              break;
+            }
+            case FuncParameterType.destructuredObject: {
+              const objSnippet = snip(`_arg_${i}`, argType, origin);
+              args.push(objSnippet);
+              argAliases.push(
+                ...astParam.props.map(
+                  ({ name, alias }) => [alias, accessProp(objSnippet, name)] as [string, Snippet],
+                ),
+              );
+              break;
+            }
+            case undefined: {
+              // Only push the argument if it's not an auto-struct.
+              // If we're not using an auto-struct, it's not going to
+              // have any properties anyway.
+              if (!(argType instanceof AutoStruct)) {
+                args.push(snip(`_arg_${i}`, argType, origin));
+              }
             }
           }
         }
@@ -540,6 +605,18 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         if (options.functionType === 'vertex' || options.functionType === 'fragment') {
           returnType = createIoSchema(returnType as IOData);
         }
+      }
+
+      if (options.entryInput) {
+        const headerParts = pendingHeaderEntries
+          .filter(({ argName }) => isArgUsedInBody(argName, body))
+          .map(({ header }) => header);
+        const argList = headerParts.join(', ');
+        const returnStr =
+          returnType.type !== 'void'
+            ? `-> ${getAttributesString(returnType)}${this.resolve(returnType).value} `
+            : '';
+        return { head: `(${argList}) ${returnStr}`, body, returnType };
       }
 
       return {
@@ -1001,6 +1078,10 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
     catchall,
     logResources: ctx.logResources,
   };
+}
+
+function isArgUsedInBody(argName: string, body: string): boolean {
+  return new RegExp(`\\b${argName}\\b`).test(body);
 }
 
 function resolveFunctionHeader(ctx: ResolutionCtx, args: Snippet[], returnType: BaseData) {

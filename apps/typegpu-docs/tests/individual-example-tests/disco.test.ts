@@ -26,14 +26,14 @@ describe('disco example', () => {
         @location(0) uv: vec2f,
       }
 
-      struct mainVertex_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      @vertex fn mainVertex(_arg_0: mainVertex_Input) -> mainVertex_Output {
+      @vertex fn mainVertex(@builtin(vertex_index) vertexIndex: u32) -> mainVertex_Output {
         var pos = array<vec2f, 6>(vec2f(-1, 1), vec2f(-1), vec2f(1, -1), vec2f(-1, 1), vec2f(1, -1), vec2f(1));
         var uv = array<vec2f, 6>(vec2f(0, 1), vec2f(), vec2f(1, 0), vec2f(0, 1), vec2f(1, 0), vec2f(1));
-        return mainVertex_Output(vec4f(pos[_arg_0.vertexIndex], 0f, 1f), uv[_arg_0.vertexIndex]);
+        return mainVertex_Output(vec4f(pos[vertexIndex], 0f, 1f), uv[vertexIndex]);
+      }
+
+      struct mainFragment2_Input {
+        @location(0) uv: vec2f,
       }
 
       @group(0) @binding(0) var<uniform> resolutionUniform: vec2f;
@@ -63,10 +63,6 @@ describe('disco example', () => {
 
       fn accumulate(acc: vec3f, col: vec3f, weight: f32) -> vec3f {
         return (acc + (col * weight));
-      }
-
-      struct mainFragment2_Input {
-        @location(0) uv: vec2f,
       }
 
       @fragment fn mainFragment2(_arg_0: mainFragment2_Input) -> @location(0) vec4f {
@@ -241,14 +237,14 @@ describe('disco example', () => {
         @location(0) uv: vec2f,
       }
 
-      struct mainVertex_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      @vertex fn mainVertex(_arg_0: mainVertex_Input) -> mainVertex_Output {
+      @vertex fn mainVertex(@builtin(vertex_index) vertexIndex: u32) -> mainVertex_Output {
         var pos = array<vec2f, 6>(vec2f(-1, 1), vec2f(-1), vec2f(1, -1), vec2f(-1, 1), vec2f(1, -1), vec2f(1));
         var uv = array<vec2f, 6>(vec2f(0, 1), vec2f(), vec2f(1, 0), vec2f(0, 1), vec2f(1, 0), vec2f(1));
-        return mainVertex_Output(vec4f(pos[_arg_0.vertexIndex], 0f, 1f), uv[_arg_0.vertexIndex]);
+        return mainVertex_Output(vec4f(pos[vertexIndex], 0f, 1f), uv[vertexIndex]);
+      }
+
+      struct mainFragment1_Input {
+        @location(0) uv: vec2f,
       }
 
       @group(0) @binding(0) var<uniform> resolutionUniform: vec2f;
@@ -278,10 +274,6 @@ describe('disco example', () => {
 
       fn accumulate(acc: vec3f, col: vec3f, weight: f32) -> vec3f {
         return (acc + (col * weight));
-      }
-
-      struct mainFragment1_Input {
-        @location(0) uv: vec2f,
       }
 
       @fragment fn mainFragment1(_arg_0: mainFragment1_Input) -> @location(0) vec4f {

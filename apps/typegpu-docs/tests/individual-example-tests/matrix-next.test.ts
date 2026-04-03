@@ -47,19 +47,13 @@ describe('matrix(next) example', () => {
 
       @group(0) @binding(2) var<storage, read_write> resultMatrix: array<i32>;
 
-      struct computeSharedMemory_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-        @builtin(local_invocation_id) lid: vec3u,
-        @builtin(workgroup_id) wid: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16) fn computeSharedMemory(input: computeSharedMemory_Input) {
+      @compute @workgroup_size(16, 16) fn computeSharedMemory(@builtin(local_invocation_id) _arg_lid: vec3u, @builtin(workgroup_id) _arg_wid: vec3u) {
         let dimensions = (&dimensions_1);
         let numTiles = u32((f32((((*dimensions).firstColumnCount + 16u) - 1u)) / 16f));
-        let globalRow = ((input.wid.x * 16u) + input.lid.x);
-        let globalCol = ((input.wid.y * 16u) + input.lid.y);
-        let localRow = input.lid.x;
-        let localCol = input.lid.y;
+        let globalRow = ((_arg_wid.x * 16u) + _arg_lid.x);
+        let globalCol = ((_arg_wid.y * 16u) + _arg_lid.y);
+        let localRow = _arg_lid.x;
+        let localCol = _arg_lid.y;
         let tileIdx = getTileIndex(localRow, localCol);
         var accumulatedResult = 0;
         for (var tileIndex = 0u; (tileIndex < numTiles); tileIndex++) {
