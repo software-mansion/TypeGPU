@@ -1700,6 +1700,10 @@ export function isVoid(value: unknown): value is Void {
   return isMarkedInternal(value) && (value as Void).type === 'void';
 }
 
+export function isBool(value: unknown): value is Bool {
+  return (value as Bool).type === 'bool';
+}
+
 export function isNumericSchema(
   schema: unknown,
 ): schema is AbstractInt | AbstractFloat | F32 | F16 | I32 | U32 {
