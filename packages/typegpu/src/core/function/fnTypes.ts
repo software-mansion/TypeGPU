@@ -2,6 +2,7 @@ import type * as tinyest from 'tinyest';
 import type { BuiltinClipDistances } from '../../builtin.ts';
 import type { AnyAttribute } from '../../data/attributes.ts';
 import type {
+  BaseData,
   Bool,
   Decorated,
   F16,
@@ -104,3 +105,13 @@ export type InferIO<T> = T extends { type: string }
   : T extends Record<string, unknown>
     ? { [K in keyof T]: Infer<T[K]> }
     : T;
+
+export interface PositionalArgInfo {
+  schemaKey: string;
+  type: BaseData;
+}
+
+export interface SeparatedEntryArgs {
+  dataSchema: BaseData | undefined;
+  positionalArgs: PositionalArgInfo[];
+}

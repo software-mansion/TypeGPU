@@ -33,29 +33,32 @@ export function declare(declaration: string): TgpuDeclare {
 
 class TgpuDeclareImpl implements TgpuDeclare, SelfResolvable {
   readonly [$internal] = true;
-  private externalsToApply: ExternalMap[] = [];
+  #externalsToApply: ExternalMap[] = [];
+  #declaration: string;
 
-  constructor(private declaration: string) {}
+  constructor(declaration: string) {
+    this.#declaration = declaration;
+  }
 
   $uses(dependencyMap: Record<string, unknown>): this {
-    this.externalsToApply.push(dependencyMap);
+    this.#externalsToApply.push(dependencyMap);
     return this;
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const externalMap: ExternalMap = {};
 
-    for (const externals of this.externalsToApply) {
+    for (const externals of this.#externalsToApply) {
       applyExternals(externalMap, externals);
     }
 
-    const replacedDeclaration = replaceExternalsInWgsl(ctx, externalMap, this.declaration);
+    const replacedDeclaration = replaceExternalsInWgsl(ctx, externalMap, this.#declaration);
 
     ctx.addDeclaration(replacedDeclaration);
     return snip('', Void, /* origin */ 'constant');
   }
 
   toString() {
-    return `declare: ${this.declaration}`;
+    return `declare: ${this.#declaration}`;
   }
 }

@@ -25,13 +25,13 @@ describe('xor dev centrifuge example', () => {
         @location(0) uv: vec2f,
       }
 
-      struct vertexMain_Input {
-        @builtin(vertex_index) vertexIndex: u32,
+      @vertex fn vertexMain(@builtin(vertex_index) _arg_vertexIndex: u32) -> vertexMain_Output {
+        var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
+        return vertexMain_Output(vec4f(pos[_arg_vertexIndex], 0f, 1f), pos[_arg_vertexIndex]);
       }
 
-      @vertex fn vertexMain(input: vertexMain_Input) -> vertexMain_Output {
-        var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
-        return vertexMain_Output(vec4f(pos[input.vertexIndex], 0f, 1f), pos[input.vertexIndex]);
+      struct fragmentMain_Input {
+        @location(0) uv: vec2f,
       }
 
       struct Params {
@@ -49,10 +49,6 @@ describe('xor dev centrifuge example', () => {
 
       fn safeTanh(v: vec3f) -> vec3f {
         return select(tanh(v), sign(v), (abs(v) > vec3f(10)));
-      }
-
-      struct fragmentMain_Input {
-        @location(0) uv: vec2f,
       }
 
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {

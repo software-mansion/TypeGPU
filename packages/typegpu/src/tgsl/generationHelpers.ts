@@ -151,11 +151,13 @@ export function coerceToSnippet(value: unknown): Snippet {
  */
 export class ArrayExpression implements SelfResolvable {
   readonly [$internal] = true;
+  readonly type: WgslArray<AnyWgslData>;
+  readonly elements: Snippet[];
 
-  constructor(
-    public readonly type: WgslArray<AnyWgslData>,
-    public readonly elements: Snippet[],
-  ) {}
+  constructor(type: WgslArray<AnyWgslData>, elements: Snippet[]) {
+    this.type = type;
+    this.elements = elements;
+  }
 
   toString(): string {
     return 'ArrayExpression';

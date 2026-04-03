@@ -82,15 +82,11 @@ describe('boids example', () => {
         nextTrianglePos[index] = self_1;
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        simulate(in.id.x, in.id.y, in.id.z);
+        simulate(id.x, id.y, id.z);
       }
 
       fn getRotationFromVelocity(velocity: vec2f) -> f32 {
@@ -110,27 +106,20 @@ describe('boids example', () => {
         @location(0) color: vec4f,
       }
 
-      struct mainVert_Input {
-        @location(0) v: vec2f,
-        @location(1) center: vec2f,
-        @location(2) velocity: vec2f,
-      }
-
-      @vertex fn mainVert(input: mainVert_Input) -> mainVert_Output {
-        let angle = getRotationFromVelocity(input.velocity);
-        var rotated = rotate(input.v, angle);
-        var pos = vec4f((rotated + input.center), 0f, 1f);
+      @vertex fn mainVert(@location(0) _arg_v: vec2f, @location(1) _arg_center: vec2f, @location(2) _arg_velocity: vec2f) -> mainVert_Output {
+        let angle = getRotationFromVelocity(_arg_velocity);
+        var rotated = rotate(_arg_v, angle);
+        var pos = vec4f((rotated + _arg_center), 0f, 1f);
         var color = vec4f(((sin((colorPalette + angle)) * 0.45f) + 0.45f), 1f);
         return mainVert_Output(pos, color);
       }
 
       struct mainFrag_Input {
-        @builtin(position) position: vec4f,
         @location(0) color: vec4f,
       }
 
-      @fragment fn mainFrag(input: mainFrag_Input) -> @location(0) vec4f {
-        return input.color;
+      @fragment fn mainFrag(_arg_0: mainFrag_Input) -> @location(0) vec4f {
+        return _arg_0.color;
       }"
     `);
   });

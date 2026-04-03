@@ -2,14 +2,20 @@ import type { AnyVertexInputBuiltin, AnyVertexOutputBuiltin, OmitBuiltins } from
 import type { UndecorateRecord } from '../../data/dataTypes.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
 import type { BaseData, Decorated, Interpolate, Location } from '../../data/wgslTypes.ts';
-import { getName, isNamable, setName, type TgpuNamable } from '../../shared/meta.ts';
+import { getName, setName, type TgpuNamable } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { shaderStageSlot } from '../slot/internalSlots.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
-import type { BaseIOData, Implementation, InferIO, IORecord } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema } from './ioSchema.ts';
+import type {
+  BaseIOData,
+  Implementation,
+  InferIO,
+  IORecord,
+  SeparatedEntryArgs,
+} from './fnTypes.ts';
+import { createIoSchema, type IOLayoutToSchema, separateAllAsPositional } from './ioSchema.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -148,7 +154,7 @@ function createVertexFn(
     };
 
   const core = createFnCore(implementation, '@vertex ');
-  const inputType = shell.argTypes[0];
+  const entryInput: SeparatedEntryArgs = separateAllAsPositional(shell.in ?? {});
 
   const result: This = {
     shell,
@@ -162,9 +168,6 @@ function createVertexFn(
     [$getNameForward]: core,
     $name(newLabel: string): This {
       setName(this, newLabel);
-      if (isNamable(inputType)) {
-        inputType.$name(`${newLabel}_Input`);
-      }
       return this;
     },
 
@@ -174,14 +177,11 @@ function createVertexFn(
       );
 
       if (typeof implementation === 'string') {
-        if (inputType) {
-          core.applyExternals({ In: inputType });
-        }
         core.applyExternals({ Out: outputWithLocation });
       }
 
       return ctx.withSlots([[shaderStageSlot, 'vertex']], () =>
-        core.resolve(ctx, shell.argTypes, outputWithLocation),
+        core.resolve(ctx, [], outputWithLocation, entryInput),
       );
     },
 

@@ -97,14 +97,16 @@ class TgpuFixedBufferImpl<TData extends BaseData, TUsage extends BindableBufferU
 {
   /** Type-token, not available at runtime */
   declare readonly [$repr]: Infer<TData>;
+
   readonly resourceType = 'buffer-usage' as const;
+  readonly usage: TUsage;
+  readonly buffer: TgpuBuffer<TData>;
   readonly [$internal]: { readonly dataType: TData };
   readonly [$getNameForward]: TgpuBuffer<TData>;
 
-  constructor(
-    public readonly usage: TUsage,
-    public readonly buffer: TgpuBuffer<TData>,
-  ) {
+  constructor(usage: TUsage, buffer: TgpuBuffer<TData>) {
+    this.usage = usage;
+    this.buffer = buffer;
     this[$internal] = { dataType: buffer.dataType };
     this[$getNameForward] = buffer;
   }
@@ -222,16 +224,18 @@ export class TgpuLaidOutBufferImpl<TData extends BaseData, TUsage extends Bindab
 {
   /** Type-token, not available at runtime */
   declare readonly [$repr]: Infer<TData>;
+
   readonly [$internal]: { readonly dataType: TData };
   readonly resourceType = 'buffer-usage' as const;
+  readonly usage: TUsage;
+  readonly dataType: TData;
+
   readonly #membership: LayoutMembership;
 
-  constructor(
-    public readonly usage: TUsage,
-    public readonly dataType: TData,
-    membership: LayoutMembership,
-  ) {
+  constructor(usage: TUsage, dataType: TData, membership: LayoutMembership) {
     this[$internal] = { dataType };
+    this.usage = usage;
+    this.dataType = dataType;
     this.#membership = membership;
     setName(this, membership.key);
   }

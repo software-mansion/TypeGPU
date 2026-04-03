@@ -10,7 +10,11 @@ import {
 import type { Configurable } from './rootTypes.ts';
 
 export class ConfigurableImpl implements Configurable {
-  constructor(readonly bindings: [TgpuSlot<unknown>, unknown][]) {}
+  readonly bindings: [TgpuSlot<unknown>, unknown][];
+
+  constructor(bindings: [TgpuSlot<unknown>, unknown][]) {
+    this.bindings = bindings;
+  }
 
   with<T extends BaseData>(
     slot: TgpuSlot<T> | TgpuAccessor<T> | TgpuMutableAccessor<T>,

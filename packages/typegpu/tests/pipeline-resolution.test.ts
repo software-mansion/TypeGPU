@@ -58,8 +58,8 @@ describe('resolve', () => {
         @location(0) color: vec4f,
       }
 
-      @fragment fn fragmentFn(input: fragmentFn_Input) -> @location(0) vec4f {
-        return input.color;
+      @fragment fn fragmentFn(_arg_0: fragmentFn_Input) -> @location(0) vec4f {
+        return _arg_0.color;
       }"
     `);
   });
@@ -73,11 +73,7 @@ describe('resolve', () => {
         color: vec4f,
       }
 
-      struct computeFn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(1, 1, 1) fn computeFn(_arg_0: computeFn_Input) {
+      @compute @workgroup_size(1, 1, 1) fn computeFn() {
         var myBoid = Boid(vec2f(), vec4f(1, 0, 0, 1));
       }"
     `);
@@ -104,15 +100,11 @@ describe('resolve', () => {
         var myBoid = Boid(vec2f(), vec4f(f32(x), f32(y), f32(z), 1f));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(8, 8, 4) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(8, 8, 4) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }"
     `);
   });

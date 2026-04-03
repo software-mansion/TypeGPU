@@ -6,7 +6,7 @@
  * Compute operations, storage buffers, textures, etc. throw WebGLFallbackUnsupportedError.
  */
 
-import tgpu, { d, ShaderGenerator, TgpuFragmentFn, TgpuVertexFn } from 'typegpu';
+import tgpu, { d, ShaderGenerator, type TgpuFragmentFn, type TgpuVertexFn } from 'typegpu';
 import glslGenerator, { translateWgslTypeToGlsl } from './glslGenerator.ts';
 
 // ----------
