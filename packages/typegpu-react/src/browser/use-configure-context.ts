@@ -2,7 +2,6 @@ import { useRef } from 'react';
 
 import {
   createUseConfigureContextHook,
-  type AbstractCanvasElement,
   type UseResizerHook,
 } from '../core/use-configure-context.ts';
 import useEffectEvent from '../core/use-effect-event.ts';
@@ -34,13 +33,13 @@ const useResizer: UseResizerHook = () => {
     el.height = Math.round(box.blockSize * dpr);
   });
 
-  const attachResizing = useEffectEvent((el: AbstractCanvasElement | null) => {
-    if (el) {
+  const attachResizing = useEffectEvent((el: HTMLCanvasElement | OffscreenCanvas | null) => {
+    if (el && 'clientWidth' in el) {
       if (resizeObserverRef.current) {
         resizeObserverRef.current.disconnect();
       }
       resizeObserverRef.current = new ResizeObserver(resizeEffect);
-      resizeObserverRef.current.observe(el as HTMLCanvasElement);
+      resizeObserverRef.current.observe(el);
     } else {
       resizeObserverRef.current?.disconnect();
       resizeObserverRef.current = null;

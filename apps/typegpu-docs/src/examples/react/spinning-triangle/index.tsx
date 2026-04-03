@@ -21,7 +21,7 @@ function getGradientColor(ratio: number) {
   return oklabToRgb(std.mix(purple, blue, ratio));
 }
 
-const positions = tgpu.const(d.arrayOf(d.vec2f, 3), [
+const vertices = tgpu.const(d.arrayOf(d.vec2f, 3), [
   d.vec2f(0, 1),
   rotate(d.vec2f(0, 1), (Math.PI * 2) / 3),
   rotate(d.vec2f(0, 1), (Math.PI * 4) / 3),
@@ -36,13 +36,13 @@ function App() {
       root.createRenderPipeline({
         vertex: ({ $vertexIndex: vid }) => {
           'use gpu';
-          const local = positions.$[vid];
+          const local = vertices.$[vid];
           const rotated = rotate(local, time.$ * 0.1);
           return {
             $position: d.vec4f(rotated * 0.7, 0, 1),
-            dist0: std.length(local - positions.$[0]),
-            dist1: std.length(local - positions.$[1]),
-            dist2: std.length(local - positions.$[2]),
+            dist0: std.length(local - vertices.$[0]),
+            dist1: std.length(local - vertices.$[1]),
+            dist2: std.length(local - vertices.$[2]),
           };
         },
         fragment: ({ dist0, dist1, dist2 }) => {
