@@ -12,7 +12,7 @@ export class NumberProvider {
     SampledFlag;
 
   constructor(root: TgpuRoot) {
-    this.digitTextureAtlas = root['~unstable']
+    this.digitTextureAtlas = root
       .createTexture({
         size: [PERCENTAGE_WIDTH, PERCENTAGE_HEIGHT, PERCENTAGE_COUNT],
         format: 'rgba8unorm',

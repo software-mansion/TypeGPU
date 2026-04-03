@@ -99,7 +99,7 @@ export class Slider {
       .createBuffer(d.arrayOf(d.vec2f, this.n), this.#normals)
       .$usage('storage');
 
-    this.bezierTexture = this.#root['~unstable']
+    this.bezierTexture = this.#root
       .createTexture({
         size: BEZIER_TEXTURE_SIZE,
         format: 'rgba16float',

@@ -51,7 +51,7 @@ const params = root.createUniform(SimParams, {
 
 const ga = createGeneticPopulation(root, params);
 
-const trackTexture = root['~unstable']
+const trackTexture = root
   .createTexture({ size: [512, 512], format: 'rgba8unorm' })
   .$usage('render', 'sampled');
 const trackView = trackTexture.createView();
@@ -60,7 +60,7 @@ const carBitmap = await fetch('/TypeGPU/assets/genetic-car/car.png')
   .then((r) => r.blob())
   .then(createImageBitmap);
 
-const carSpriteTexture = root['~unstable']
+const carSpriteTexture = root
   .createTexture({
     size: [carBitmap.width / 2, carBitmap.height / 2],
     format: 'rgba8unorm',
@@ -69,11 +69,11 @@ const carSpriteTexture = root['~unstable']
 carSpriteTexture.write(carBitmap);
 const carSpriteView = carSpriteTexture.createView();
 
-const linearSampler = root['~unstable'].createSampler({
+const linearSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
-const nearestSampler = root['~unstable'].createSampler({
+const nearestSampler = root.createSampler({
   magFilter: 'nearest',
   minFilter: 'nearest',
 });
