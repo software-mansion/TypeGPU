@@ -110,7 +110,6 @@ const vertexShader = (input: TgpuVertexFn.AutoIn<typeof attribs>) => {
 
 function App() {
   const root = useRoot();
-  const { canvasRefCallback, ctxRef } = useConfigureContext({ alphaMode: 'premultiplied' });
 
   // buffers
 
@@ -163,6 +162,8 @@ function App() {
     aspectRatio: aspectRatio.buffer,
   });
 
+  const { ref, ctxRef } = useConfigureContext({ alphaMode: 'premultiplied' });
+
   useFrame(({ deltaSeconds, elapsedSeconds }) => {
     const context = ctxRef.current;
     if (!context) {
@@ -185,10 +186,7 @@ function App() {
 
   return (
     <div className="absolute inset-0">
-      <canvas
-        ref={canvasRefCallback}
-        className="absolute inset-0 w-full h-full pointer-events-none"
-      />
+      <canvas ref={ref} className="absolute inset-0 w-full h-full pointer-events-none" />
       <div className="absolute inset-0 flex items-center justify-center">
         <button
           type="button"
