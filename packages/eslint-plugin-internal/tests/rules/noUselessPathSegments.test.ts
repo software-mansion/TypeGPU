@@ -4,8 +4,8 @@ import { noUselessPathSegments } from '../../src/rules/noUselessPathSegments.ts'
 
 const filename = '/Users/me/typegpu-monorepo/packages/typegpu/tests/buffer.test.ts';
 
-describe('noRedundantImportPath', () => {
-  ruleTester.run('noRedundantImportPath', noUselessPathSegments, {
+describe('noUselessPathSegments', () => {
+  ruleTester.run('noUselessPathSegments', noUselessPathSegments, {
     valid: [
       { code: "import item from './file.ts';", filename },
       { code: "import item from '../file.ts';", filename },
