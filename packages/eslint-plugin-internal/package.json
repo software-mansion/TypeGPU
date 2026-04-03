@@ -19,7 +19,8 @@
     }
   },
   "scripts": {
-    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit"
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "test": "vitest"
   },
   "dependencies": {
     "@typescript-eslint/utils": "^8.57.2"

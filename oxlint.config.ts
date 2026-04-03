@@ -24,7 +24,7 @@ export default defineConfig({
     'eslint-plugin-import/no-named-as-default': 'off',
     'eslint-plugin-import/no-named-as-default-member': 'off',
     'eslint-plugin-import/extensions': ['error', 'always', { ignorePackages: true }],
-    'eslint-plugin-internal/no-math': 'error',
+    'eslint-plugin-internal/no-useless-path-segments': 'error',
   },
   ignorePatterns: ['**/*.astro', '**/*.mjs'],
   overrides: [

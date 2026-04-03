@@ -1,6 +1,6 @@
 import pkg from '../package.json' with { type: 'json' };
 import type { TSESLint } from '@typescript-eslint/utils';
-import { noMath } from './rules/noMath.ts';
+import { noUselessPathSegments } from './rules/noUselessPathSegments.ts';
 
 const plugin = {
   meta: {
@@ -8,7 +8,7 @@ const plugin = {
     version: pkg.version,
   },
   rules: {
-    'no-math': noMath,
+    'no-useless-path-segments': noUselessPathSegments,
   },
 } satisfies TSESLint.FlatConfig.Plugin;
 
