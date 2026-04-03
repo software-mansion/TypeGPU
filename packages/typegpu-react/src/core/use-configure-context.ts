@@ -1,38 +1,36 @@
 import { useEffect, useRef } from 'react';
-import type { TgpuRoot } from 'typegpu';
 
 import { useRoot } from './root-context.tsx';
 import useEffectEvent from './use-effect-event.ts';
 import { useChangeDetection } from './helper-hooks.ts';
 
-type ConfigureContextOptions = Parameters<TgpuRoot['configureContext']>[0];
-
-export interface UseConfigureContextOptions extends Omit<ConfigureContextOptions, 'canvas'> {
-  /**
-   * @default true
-   */
-  autoResize?: boolean;
+/**
+ * Only used to capture the canvas element. Has to be extremely vague to
+ * encompass both the react-native-wgpu canvas, as well as the HTML canvas.
+ */
+export interface CanvasRef {
+  getContext(contextName: 'webgpu'): CanvasContext | null;
 }
+
+export type UseConfigureContextOptions = Omit<GPUCanvasConfiguration, 'device' | 'format'> &
+  Partial<Pick<GPUCanvasConfiguration, 'format'>> & {
+    /**
+     * @default true
+     */
+    autoResize?: boolean;
+  };
 
 // react-native-wgpu requires you to call `present` on the canvas context
 // submit the rendered frame, we reflect that on the type level
 type CanvasContext = GPUCanvasContext & { present?: () => void };
 
 export interface UseConfigureContextResult {
-  canvasRefCallback: React.RefCallback<AbstractCanvasElement>;
-  canvasRef: Readonly<React.RefObject<AbstractCanvasElement | null>>;
+  ref: React.RefCallback<CanvasRef>;
   ctxRef: React.RefObject<CanvasContext | null>;
 }
 
-export interface AbstractCanvasElement {
-  width: number;
-  height: number;
-  clientWidth: number;
-  clientHeight: number;
-}
-
 export interface Resizer {
-  attachResizing: (el: AbstractCanvasElement | null) => void;
+  attachResizing: (el: HTMLCanvasElement | OffscreenCanvas | null) => void;
 }
 
 export type UseResizerHook = () => Resizer;
@@ -43,6 +41,7 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
   ): UseConfigureContextResult {
     const { autoResize = true, ...restOptions } = options ?? {};
 
+    const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const ctxRef = useRef<GPUCanvasContext>(null);
     const root = useRoot();
@@ -52,7 +51,7 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
     if (rootChanged && ctxRef.current) {
       ctxRef.current.configure({
         device: root.device,
-        format: navigator.gpu.getPreferredCanvasFormat(),
+        format: presentationFormat,
         ...restOptions,
       });
     }
@@ -93,6 +92,6 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
       };
     }, [attachResizing, autoResize]);
 
-    return { canvasRefCallback, canvasRef, ctxRef };
+    return { ref: canvasRefCallback, ctxRef };
   };
 }

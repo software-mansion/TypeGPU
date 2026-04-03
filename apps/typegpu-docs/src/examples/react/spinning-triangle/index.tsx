@@ -55,7 +55,7 @@ function App() {
     [root, time],
   );
 
-  const { canvasRefCallback, ctxRef } = useConfigureContext({ alphaMode: 'premultiplied' });
+  const { ref, ctxRef } = useConfigureContext({ alphaMode: 'premultiplied' });
   useFrame(({ elapsedSeconds }) => {
     if (!ctxRef.current) return;
 
@@ -63,7 +63,7 @@ function App() {
     renderPipeline.withColorAttachment({ view: ctxRef.current }).draw(3);
   });
 
-  return <canvas ref={canvasRefCallback} className="aspect-square h-full max-h-[100vw]" />;
+  return <canvas ref={ref} className="aspect-square h-full max-h-[100vw]" />;
 }
 
 // #region Example controls and cleanup
