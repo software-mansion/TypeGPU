@@ -6,7 +6,6 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const context = root.configureContext({ canvas });
 
@@ -176,17 +175,12 @@ const jumpFlood = root.createGuardedComputePipeline((x, y) => {
   std.textureStore(pingPongLayout.$.writeView, d.vec2i(x, y), 1, d.vec4f(bestSample.coord, 0, 0));
 });
 
-const voronoiFrag = tgpu.fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-})(({ uv }) =>
-  std.textureSample(colorSampleLayout.$.floodTexture, colorSampleLayout.$.sampler, uv),
-);
-
 const voronoiPipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
-  fragment: voronoiFrag,
-  targets: { format: presentationFormat },
+  fragment: ({ uv }) => {
+    'use gpu';
+    return std.textureSample(colorSampleLayout.$.floodTexture, colorSampleLayout.$.sampler, uv);
+  },
 });
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

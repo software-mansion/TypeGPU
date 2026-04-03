@@ -1,5 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
+  "include": ["tests/**/*"],
+  "exclude": ["node_modules", "dist"],
   "compilerOptions": {
     "declaration": false,
     "noEmit": true,

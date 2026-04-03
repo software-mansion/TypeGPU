@@ -8,7 +8,6 @@ import { getName } from '../src/shared/meta.ts';
 import type { IsValidBufferSchema, IsValidUniformSchema } from '../src/shared/repr.ts';
 import type { TypedArray } from '../src/shared/utilityTypes.ts';
 import { it } from 'typegpu-testing-utility';
-import { buildWriter } from '../src/data/compiledIO.ts';
 
 function toUint8Array(...arrays: Array<TypedArray>): Uint8Array {
   let totalByteLength = 0;
@@ -846,7 +845,7 @@ describe('TgpuBuffer (InferInput)', () => {
     expectTypeOf(arrBuf.write)
       .parameter(0)
       .toEqualTypeOf<
-        (d.v3f | [number, number, number] | Float32Array)[] | Float32Array | ArrayBuffer
+        (d.v3f | [number, number, number] | Float32Array)[] | Float32Array | ArrayBuffer | d.v3f[]
       >();
 
     expectTypeOf(scalarArrBuf.write)

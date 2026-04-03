@@ -1,6 +1,6 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
-import { type RefObject, useEffect, useRef, useState } from 'react';
+import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom.ts';
 import { codeEditorShownAtom, tsoverUsedAtom } from '../utils/examples/exampleViewStateAtoms.ts';
 import { ExecutionCancelledError } from '../utils/examples/errors.ts';
@@ -28,9 +28,10 @@ function useExample(
   const exampleRef = useRef<ExampleState | null>(null);
   const setExampleControlParams = useSetAtom(exampleControlsAtom);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     let cancelled = false;
     setSnackbarText(undefined);
+    setExampleControlParams([]);
 
     executeExample(tsImport)
       .then((example) => {

@@ -1,5 +1,6 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
+import { EntryInputRouter } from '../core/function/entryInputRouter.ts';
 import {
   InfixDispatch,
   isUnstruct,
@@ -156,6 +157,10 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
       return undefined;
     }
     return snip(stitch`${target}.${result.prop}`, result.type, 'argument');
+  }
+
+  if (target.dataType instanceof EntryInputRouter) {
+    return target.dataType.accessProp(propName);
   }
 
   if (isPtr(target.dataType)) {

@@ -344,7 +344,9 @@ export function getAttributesString<T extends BaseData>(field: T): string {
 // --------------
 
 class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
-  public readonly [$internal] = {};
+  readonly [$internal] = {};
+  readonly inner: TInner;
+  readonly attribs: TAttribs;
 
   // Type-tokens, not available at runtime
   declare readonly [$repr]: Infer<TInner>;
@@ -352,10 +354,10 @@ class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
   declare readonly [$reprPartial]: InferPartial<TInner>;
   // ---
 
-  constructor(
-    public readonly inner: TInner,
-    public readonly attribs: TAttribs,
-  ) {
+  constructor(inner: TInner, attribs: TAttribs) {
+    this.inner = inner;
+    this.attribs = attribs;
+
     const alignAttrib = attribs.find(isAlignAttrib)?.params[0];
     const sizeAttrib = attribs.find(isSizeAttrib)?.params[0];
 

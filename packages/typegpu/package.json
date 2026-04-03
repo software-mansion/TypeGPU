@@ -88,6 +88,7 @@
   "devDependencies": {
     "@ark/attest": "^0.56.0",
     "@typegpu/tgpu-dev-cli": "workspace:*",
+    "@types/node": "catalog:types",
     "@webgpu/types": "catalog:types",
     "arktype": "catalog:",
     "jiti": "catalog:build",
