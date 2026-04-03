@@ -1,7 +1,8 @@
 import * as d from 'typegpu/data';
 import tgpu from 'typegpu';
-import { useRoot } from './root-context.tsx';
 import { useMemo, useRef } from 'react';
+
+import { useRoot } from './root-context.tsx';
 import { useFrame } from './use-frame.ts';
 
 type InferGPURecord<T> = {

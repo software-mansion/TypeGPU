@@ -6,9 +6,9 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
-  "types": "./src/index.ts",
+  "types": "./src/browser/index.ts",
   "exports": {
-    ".": "./src/index.ts",
+    ".": "./src/browser/index.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -16,13 +16,16 @@
     "exports": {
       "./package.json": "./dist/package.json",
       ".": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.mjs"
+        "types": "./dist/browser/index.d.ts",
+        "browser": "./dist/browser/index.js",
+        "react-native": "./dist/react-native/index.js",
+        "default": "./dist/browser/index.js"
       }
     },
     "linkDirectory": false,
-    "main": "./dist/index.mjs",
-    "types": "./dist/index.d.mts"
+    "main": "./dist/browser/index.js",
+    "react-native": "./dist/react-native/index.js",
+    "types": "./dist/browser/index.d.ts"
   },
   "scripts": {
     "build": "tsdown",
@@ -38,6 +41,7 @@
     "@webgpu/types": "catalog:types",
     "jiti": "catalog:build",
     "jsdom": "^27.0.0",
+    "react-native": "0.84.1",
     "tsdown": "catalog:build",
     "typegpu": "workspace:*",
     "typegpu-testing-utility": "workspace:^",
@@ -46,6 +50,7 @@
   },
   "peerDependencies": {
     "react": "^19.0.0",
+    "react-native": "*",
     "typegpu": "^0.10.2"
   }
 }

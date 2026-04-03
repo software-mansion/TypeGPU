@@ -23,6 +23,9 @@ function initialValueFromSchema<T extends d.AnyWgslData>(
   return schema() as d.Infer<T>;
 }
 
+/**
+ * @deprecated Might not be useful enough to keep. useRef + useUniform does the job fine
+ */
 export function useUniformValue<TSchema extends d.AnyWgslData, TValue extends d.Infer<TSchema>>(
   _schema: ValidateUniformSchema<TSchema>,
   initialValue?: TValue,
