@@ -27,7 +27,9 @@ export const noUselessPathSegments = createRule({
         const filename = context.filename; // e.g. `/Users/me/typegpu-monorepo/packages/typegpu/tests/buffer.test.ts`
         const dir = path.dirname(filename); // e.g. `/Users/me/typegpu-monorepo/packages/typegpu/tests`
         const resolved = path.resolve(dir, importPath); // e.g. `/Users/me/typegpu-monorepo/packages/typegpu/src/data/index.ts`
-        let simplified = path.relative(dir, resolved); // e.g. `../src/data/index.ts`, or `subfolder/helper.ts`
+        let simplified = path
+          .relative(dir, resolved) // e.g. `../src/data/index.ts`, or `subfolder/helper.ts`
+          .replaceAll('\\', '/'); // Windows compatibility
 
         if (!simplified.startsWith('..')) {
           simplified = `./${simplified}`;
