@@ -1,8 +1,4 @@
 import { createRule } from '../ruleCreator.ts';
-import { enhanceRule } from '../enhanceRule.ts';
-import { directiveTracking } from '../enhancers/directiveTracking.ts';
-import type { RuleContext } from '@typescript-eslint/utils/ts-eslint';
-import { ASTUtils, type TSESTree } from '@typescript-eslint/utils';
 
 export const noMath = createRule({
   name: 'no-math',
@@ -19,39 +15,15 @@ export const noMath = createRule({
   },
   defaultOptions: [],
 
-  create: enhanceRule({ directives: directiveTracking }, (context, state) => {
-    const { directives } = state;
-
+  create(context) {
     return {
       CallExpression(node) {
-        if (!directives.getEnclosingTypegpuFunction()) {
-          return;
-        }
-
-        if (
-          node.callee.type === 'MemberExpression' &&
-          node.callee.object.type === 'Identifier' &&
-          node.callee.object.name === 'Math' &&
-          isGlobalIdentifier(context, node.callee.object)
-        ) {
-          context.report({
-            node,
-            messageId: 'unexpected',
-            data: { snippet: context.sourceCode.getText(node) },
-          });
-        }
+        context.report({
+          node,
+          messageId: 'unexpected',
+          data: { snippet: context.sourceCode.getText(node) },
+        });
       },
     };
-  }),
+  },
 });
-
-function isGlobalIdentifier(
-  context: Readonly<RuleContext<string, unknown[]>>,
-  node: TSESTree.Identifier,
-) {
-  const variable = ASTUtils.findVariable(context.sourceCode.getScope(node), node);
-  if (!variable) {
-    throw new Error(`Couldn't find variable ${node.name}.`);
-  }
-  return variable.defs.length === 0;
-}

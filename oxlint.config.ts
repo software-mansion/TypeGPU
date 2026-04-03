@@ -7,7 +7,7 @@ const typegpuRules = typegpuPreset && 'rules' in typegpuPreset ? typegpuPreset.r
 
 export default defineConfig({
   plugins: ['eslint', 'typescript', 'import', 'unicorn', 'oxc'],
-  jsPlugins: ['eslint-plugin-typegpu', 'eslint-plugin-eslint-plugin'],
+  jsPlugins: ['eslint-plugin-typegpu', 'eslint-plugin-eslint-plugin', 'eslint-plugin-internal'],
   categories: {
     correctness: 'warn',
     suspicious: 'warn',
@@ -24,6 +24,7 @@ export default defineConfig({
     'eslint-plugin-import/no-named-as-default': 'off',
     'eslint-plugin-import/no-named-as-default-member': 'off',
     'eslint-plugin-import/extensions': ['error', 'always', { ignorePackages: true }],
+    'eslint-plugin-internal/no-math': 'error',
   },
   ignorePatterns: ['**/*.astro', '**/*.mjs'],
   overrides: [

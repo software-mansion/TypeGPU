@@ -42,6 +42,7 @@
     "@webgpu/types": "catalog:types",
     "dpdm": "^3.14.0",
     "eslint-plugin-eslint-plugin": "^7.3.2",
+    "eslint-plugin-internal": "workspace:*",
     "eslint-plugin-typegpu": "workspace:*",
     "jiti": "catalog:build",
     "oxfmt": "^0.35.0",
