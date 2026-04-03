@@ -4,7 +4,6 @@ export const noLongImports = createRule({
   name: 'no-long-imports',
   meta: {
     type: 'suggestion',
-    fixable: 'code',
     docs: {
       description: 'Disallow long import paths (to be used in TypeGPU examples), except common.',
     },
@@ -20,7 +19,7 @@ export const noLongImports = createRule({
     return {
       ImportDeclaration(node) {
         const importPath = node.source.value;
-        if (importPath.startsWith('../../') && !importPath.startsWith('../../common')) {
+        if (importPath.startsWith('../../') && !importPath.startsWith('../../common/')) {
           context.report({
             node,
             messageId: 'unexpected',
