@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { d, TgpuBuffer, type ValidateUniformSchema } from 'typegpu';
+import { d, type TgpuBuffer, type ValidateUniformSchema } from 'typegpu';
 
 import { $buffer } from './symbols.ts';
 import { useRoot } from './root-context.tsx';

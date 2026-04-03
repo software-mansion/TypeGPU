@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { d, TgpuBuffer, ValidateBufferSchema } from 'typegpu';
+
 import { useChangeDetection, useDeferredCleanup, useStableSchema } from './helper-hooks.ts';
 import { useRoot } from './root-context.tsx';
 
