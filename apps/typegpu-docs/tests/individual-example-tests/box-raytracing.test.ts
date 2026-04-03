@@ -29,19 +29,19 @@ describe('box raytracing example', () => {
 
       @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
-      struct mainVertex_Output {
-        @builtin(position) pos: vec4f,
+      struct VertexOut {
+        @builtin(position) position: vec4f,
         @location(0) rayWorldOrigin: vec3f,
       }
 
-      @vertex fn mainVertex(@builtin(vertex_index) _arg_vertexIndex: u32) -> mainVertex_Output {
+      struct VertexIn {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      @vertex fn mainVertex(_arg_0: VertexIn) -> VertexOut {
         var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
         var rayWorldOrigin = (uniforms.invViewMatrix * vec4f(0, 0, 0, 1)).xyz;
-        return mainVertex_Output(vec4f(pos[_arg_vertexIndex], 0f, 1f), rayWorldOrigin);
-      }
-
-      struct fragmentFunction_Input {
-        @location(0) rayWorldOrigin: vec3f,
+        return VertexOut(vec4f(pos[_arg_0.vertexIndex], 0f, 1f), rayWorldOrigin);
       }
 
       struct Ray {
@@ -130,12 +130,17 @@ describe('box raytracing example', () => {
         return select((12.92f * linear), ((1.055f * pow(linear, vec3f(0.4166666567325592))) - vec3f(0.054999999701976776)), (linear > vec3f(0.0031308000907301903)));
       }
 
-      @fragment fn fragmentFunction(_arg_0: fragmentFunction_Input, @builtin(position) _arg_position: vec4f) -> @location(0) vec4f {
+      struct FragmentIn {
+        @builtin(position) position: vec4f,
+        @location(0) rayWorldOrigin: vec3f,
+      }
+
+      @fragment fn fragmentFunction(_arg_0: FragmentIn) -> @location(0) vec4f {
         var boxSize3 = vec3f(uniforms.boxSize);
         var halfBoxSize3 = (0.5f * boxSize3);
         var halfCanvasDims = (0.5f * uniforms.canvasDims);
         let minDim = min(uniforms.canvasDims.x, uniforms.canvasDims.y);
-        var viewCoords = ((_arg_position.xy - halfCanvasDims) / minDim);
+        var viewCoords = ((_arg_0.position.xy - halfCanvasDims) / minDim);
         var ray = Ray(_arg_0.rayWorldOrigin, (uniforms.invViewMatrix * vec4f(normalize(vec3f(viewCoords, 1f)), 0f)).xyz);
         var bigBoxIntersection = getBoxIntersection(AxisAlignedBounds((-1f * halfBoxSize3), (vec3f(7) + halfBoxSize3)), ray);
         if (!bigBoxIntersection.intersects) {
@@ -156,13 +161,13 @@ describe('box raytracing example', () => {
               if (intersection.intersects) {
                 let boxDensity = (max(0f, (intersection.tMax - intersection.tMin)) * pow(uniforms.materialDensity, 2f));
                 density += boxDensity;
-                invColor = (invColor + (boxDensity * (vec3f(1) / boxMatrix[i][j][k].albedo)));
+                invColor += (boxDensity * (1f / boxMatrix[i][j][k].albedo));
                 intersectionFound = true;
               }
             }
           }
         }
-        var linear = (vec3f(1) / invColor);
+        var linear = (1f / invColor);
         var srgb = linearToSrgb(linear);
         const gamma = 2.2;
         var corrected = pow(srgb, vec3f((1f / gamma)));
