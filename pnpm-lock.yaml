@@ -448,12 +448,6 @@ importers:
       eslint:
         specifier: ^9.39.2
         version: 9.39.2(jiti@2.6.1)
-      eslint-doc-generator:
-        specifier: ^3.3.2
-        version: 3.3.2(eslint@9.39.2(jiti@2.6.1))(prettier@3.8.0)(tsover@5.9.11)
-      tsdown:
-        specifier: ^0.20.3
-        version: 0.20.3(tsover@5.9.11)
       typescript:
         specifier: npm:tsover@^5.9.11
         version: tsover@5.9.11

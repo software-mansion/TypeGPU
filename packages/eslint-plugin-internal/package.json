@@ -1,23 +1,9 @@
 {
   "name": "eslint-plugin-internal",
-  "version": "0.10.0",
   "private": true,
-  "description": "Ruleset for working on TypeGPU monorepo",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/software-mansion/TypeGPU.git#main",
-    "directory": "packages/eslint-plugin-internal"
-  },
   "type": "module",
-  "sideEffects": false,
   "main": "./src/index.ts",
-  "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts"
-    }
-  },
   "scripts": {
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
     "test": "vitest"
@@ -29,13 +15,10 @@
     "@types/node": "catalog:types",
     "@typescript-eslint/rule-tester": "^8.57.2",
     "eslint": "^9.39.2",
-    "eslint-doc-generator": "^3.3.2",
-    "tsdown": "^0.20.3",
     "typescript": "^5.9.3",
     "vitest": "^4.0.17"
   },
   "peerDependencies": {
     "eslint": "^9.0.0"
-  },
-  "packageManager": "pnpm@10.15.1"
+  }
 }
