@@ -48,27 +48,30 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
     const root = useRoot();
     const rootChanged = useChangeDetection(root);
 
-    const prevConfig = ctxRef.current?.getConfiguration();
     // If the root changed, and the context as been previously configured, we need to reconfigure it.
-    if (rootChanged && ctxRef.current && prevConfig) {
-      ctxRef.current.configure({ ...prevConfig, device: root.device });
+    if (rootChanged && ctxRef.current) {
+      ctxRef.current.configure({
+        device: root.device,
+        format: navigator.gpu.getPreferredCanvasFormat(),
+        ...restOptions,
+      });
     }
 
     const { attachResizing } = useResizer();
 
     const canvasRefCallback = useEffectEvent((el: HTMLCanvasElement | null) => {
+      if (el && autoResize) {
+        attachResizing(el);
+      } else {
+        attachResizing(null);
+      }
+
       if (el) {
         canvasRef.current = el;
         ctxRef.current = root.configureContext({ canvas: el, ...restOptions });
       } else {
         canvasRef.current = null;
         ctxRef.current = null;
-      }
-
-      if (el && autoResize) {
-        attachResizing(el);
-      } else {
-        attachResizing(null);
       }
 
       return () => {
