@@ -5,7 +5,7 @@ import type { GPUValueOf, Infer, InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
 import type { UnwrapRuntimeConstructor } from '../../tgpuBindGroupLayout.ts';
 import type { TgpuBufferShorthand } from '../buffer/bufferShorthand.ts';
-import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
+import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { TgpuConst } from '../constant/tgpuConstant.ts';
 import type { Withable } from '../root/rootTypes.ts';
 import type { TgpuTextureView } from '../texture/texture.ts';

@@ -1,6 +1,6 @@
 import type { AnyBuiltin, OmitBuiltins } from '../../builtin.ts';
-import type { IndexFlag, TgpuBuffer, VertexFlag } from '../../core/buffer/buffer.ts';
-import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
+import type { IndexFlag, TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
+import type { TgpuQuerySet } from '../querySet/querySet.ts';
 import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation, type UndecorateRecord } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';

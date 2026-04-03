@@ -1,9 +1,5 @@
 import { type AnyComputeBuiltin, builtin, type OmitBuiltins } from '../../builtin.ts';
-import {
-  INTERNAL_createQuerySet,
-  isQuerySet,
-  type TgpuQuerySet,
-} from '../../core/querySet/querySet.ts';
+import { INTERNAL_createQuerySet, isQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type { AnyWgslData, BaseData, v3u, Vec3u, WgslArray } from '../../data/wgslTypes.ts';
 import { invariant } from '../../errors.ts';
