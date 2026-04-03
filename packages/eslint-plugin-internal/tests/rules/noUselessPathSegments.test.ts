@@ -1,8 +1,9 @@
 import { describe } from 'vitest';
 import { ruleTester } from '../utils/ruleTester.ts';
 import { noUselessPathSegments } from '../../src/rules/noUselessPathSegments.ts';
+import path from 'path';
 
-const filename = '/Users/me/typegpu-monorepo/packages/typegpu/tests/buffer.test.ts';
+const filename = path.join(process.cwd(), 'packages', 'typegpu', 'tests', 'buffer.test.ts');
 
 describe('noUselessPathSegments', () => {
   ruleTester.run('noUselessPathSegments', noUselessPathSegments, {
