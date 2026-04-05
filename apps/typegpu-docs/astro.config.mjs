@@ -45,6 +45,13 @@ export default defineConfig({
       // Required for '@rolldown/browser' to work.
       'process.env.NODE_DEBUG_NATIVE': '""',
     },
+    build: {
+      rolldownOptions: {
+        output: {
+          minify: 'dce-only',
+        },
+      },
+    },
     optimizeDeps: {
       exclude: ['@rolldown/browser', 'onnxruntime-web'],
     },
