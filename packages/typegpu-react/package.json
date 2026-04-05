@@ -52,5 +52,10 @@
     "react": "^19.0.0",
     "react-native": "*",
     "typegpu": "^0.10.2"
+  },
+  "peerDependenciesMeta": {
+    "react-native": {
+      "optional": true
+    }
   }
 }
