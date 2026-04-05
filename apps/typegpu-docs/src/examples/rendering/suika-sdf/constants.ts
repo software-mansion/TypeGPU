@@ -9,6 +9,11 @@ export const WALL_DEFS = [
   { cx: 0.5, cy: 0, hw: 0.05, hh: 0.55 },
   { cx: -0.5, cy: 0, hw: 0.05, hh: 0.55 },
 ];
+export const PHYSICS_WALL_DEFS = [
+  { cx: 0, cy: -0.5, hw: 0.5, hh: 0.05 },
+  { cx: 0.5, cy: 1.75, hw: 0.05, hh: 2.8 },
+  { cx: -0.5, cy: 1.75, hw: 0.05, hh: 2.8 },
+];
 
 export const SCENE_SCALE = 0.75;
 export const WALL_COLOR = d.vec3f(0.55, 0.5, 0.45);
@@ -18,6 +23,14 @@ export const GHOST_ALPHA = 0.45;
 export const SMOOTH_MIN_K = 16.0;
 export const SHARP_FACTOR = 2.4;
 export const SPEED_BLEND_MAX = 0.5;
+export const PULL_ACTIVATION_FACTOR = 2.0;
+export const PULL_FORCE = 0.001;
+export const LOSE_LINE_Y = 0.452;
+export const LOSE_TIMEOUT_MS = 8_000;
+export const WARNING_FLASH_SPEED = 0.01;
+export const ESCAPE_X = 0.72;
+export const ESCAPE_BOTTOM_Y = -0.85;
+export const LOSE_LINE_HALF_THICKNESS = 0.005;
 
 export const MERGE_SCORES = Array.from({ length: LEVEL_COUNT }, (_, n) => ((n + 1) * (n + 2)) / 2);
 
