@@ -560,7 +560,7 @@ function frame(now: number) {
       }
       score += MERGE_SCORES[m.level];
       scoreEl.textContent = String(score);
-      spawnFruit(m.level + 1, m.x, m.y, m.vx, m.vy, m.angle, true);
+      spawnFruit(m.level + 1, m.pos.x, m.pos.y, m.vel.x, m.vel.y, m.angle, true);
     }
   }
 

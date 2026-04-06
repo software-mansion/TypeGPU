@@ -1,8 +1,8 @@
-import RAPIER from '@dimforge/rapier2d-compat';
+import RAPIER, { type Vector2 } from '@dimforge/rapier2d-compat';
 
 export interface BallState {
-  pos: { x: number; y: number };
-  vel: { x: number; y: number };
+  pos: Vector2;
+  vel: Vector2;
   angle: number;
 }
 
@@ -10,10 +10,8 @@ export interface MergeEvent {
   handleA: number;
   handleB: number;
   level: number;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
+  pos: Vector2;
+  vel: Vector2;
   angle: number;
 }
 
@@ -76,8 +74,7 @@ export async function createPhysicsWorld(
         continue;
       }
       const levelA = ballLevels[i];
-      const radiusA = ballRadii[i];
-      const mergeDist = radiusA * mergeDistFactor;
+      const mergeDist = ballRadii[i] * mergeDistFactor;
       const pullStart = mergeDist * pullActivationFactor;
       const mergeDistSq = mergeDist * mergeDist;
       const pullStartSq = pullStart * pullStart;
@@ -150,10 +147,8 @@ export async function createPhysicsWorld(
           handleA: i,
           handleB: j,
           level: levelA,
-          x: (posA.x + posB.x) * 0.5,
-          y: (posA.y + posB.y) * 0.5,
-          vx: (velA.x + velB.x) * 0.5,
-          vy: (velA.y + velB.y) * 0.5,
+          pos: { x: (posA.x + posB.x) * 0.5, y: (posA.y + posB.y) * 0.5 },
+          vel: { x: (velA.x + velB.x) * 0.5, y: (velA.y + velB.y) * 0.5 },
           angle: Math.atan2(Math.sin(angA) + Math.sin(angB), Math.cos(angA) + Math.cos(angB)),
         });
 
@@ -175,19 +170,15 @@ export async function createPhysicsWorld(
       return detectMerges(mergeDistFactor, maxLevel);
     },
 
-    getBallState(handle: number): BallState | null {
+    getBallState(handle) {
       const body = ballBodies[handle];
       if (!body) {
         return null;
       }
-      return {
-        pos: body.translation(),
-        vel: body.linvel(),
-        angle: body.rotation(),
-      };
+      return { pos: body.translation(), vel: body.linvel(), angle: body.rotation() };
     },
 
-    addBall(x, y, radius, contour, level, vx = 0, vy = 0, angle = 0): number {
+    addBall(x, y, radius, contour, level, vx = 0, vy = 0, angle = 0) {
       const body = world.createRigidBody(
         RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y).setLinvel(vx, vy).setRotation(angle),
       );
@@ -211,7 +202,7 @@ export async function createPhysicsWorld(
       return ballBodies.length - 1;
     },
 
-    removeBall(handle: number) {
+    removeBall(handle) {
       const body = ballBodies[handle];
       if (body) {
         world.removeRigidBody(body);
