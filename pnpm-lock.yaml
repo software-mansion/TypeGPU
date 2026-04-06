@@ -73,6 +73,9 @@ importers:
       eslint-plugin-eslint-plugin:
         specifier: ^7.3.2
         version: 7.3.2(eslint@9.39.2(jiti@2.6.1))
+      eslint-plugin-internal:
+        specifier: workspace:*
+        version: link:packages/eslint-plugin-internal
       eslint-plugin-typegpu:
         specifier: workspace:*
         version: link:packages/eslint-plugin
@@ -428,7 +431,29 @@ importers:
         version: tsover@5.9.11
       vitest:
         specifier: ^4.0.17
-        version: 4.0.18(@types/node@24.10.0)(@vitest/browser-preview@4.1.2)(esbuild@0.27.5)(jiti@2.6.1)(jsdom@27.0.0(canvas@3.2.0)(postcss@8.5.8))(msw@2.10.2(@types/node@24.10.0)(tsover@5.9.11))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
+        version: 4.0.18(@types/node@24.10.0)(@vitest/browser-preview@4.1.2(msw@2.10.2(@types/node@24.10.0)(tsover@5.9.11))(vite@8.0.2(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))(vitest@4.1.2))(esbuild@0.27.5)(jiti@2.6.1)(jsdom@27.0.0(canvas@3.2.0)(postcss@8.5.8))(msw@2.10.2(@types/node@24.10.0)(tsover@5.9.11))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
+
+  packages/eslint-plugin-internal:
+    dependencies:
+      '@typescript-eslint/utils':
+        specifier: ^8.57.2
+        version: 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@5.9.11)
+    devDependencies:
+      '@types/node':
+        specifier: ^24.1.0
+        version: 24.10.0
+      '@typescript-eslint/rule-tester':
+        specifier: ^8.57.2
+        version: 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@5.9.11)
+      eslint:
+        specifier: ^9.39.2
+        version: 9.39.2(jiti@2.6.1)
+      typescript:
+        specifier: npm:tsover@^5.9.11
+        version: tsover@5.9.11
+      vitest:
+        specifier: ^4.0.17
+        version: 4.1.2(@types/node@24.10.0)(@vitest/browser-preview@4.1.2)(jsdom@27.0.0(canvas@3.2.0)(postcss@8.5.8))(msw@2.10.2(@types/node@24.10.0)(tsover@5.9.11))(vite@8.0.2(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))
 
   packages/tgpu-dev-cli:
     dependencies:
@@ -16061,7 +16086,7 @@ snapshots:
     optionalDependencies:
       vite: 8.0.2(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
 
-  vitest@4.0.18(@types/node@24.10.0)(@vitest/browser-preview@4.1.2)(esbuild@0.27.5)(jiti@2.6.1)(jsdom@27.0.0(canvas@3.2.0)(postcss@8.5.8))(msw@2.10.2(@types/node@24.10.0)(tsover@5.9.11))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3):
+  vitest@4.0.18(@types/node@24.10.0)(@vitest/browser-preview@4.1.2(msw@2.10.2(@types/node@24.10.0)(tsover@5.9.11))(vite@8.0.2(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))(vitest@4.1.2))(esbuild@0.27.5)(jiti@2.6.1)(jsdom@27.0.0(canvas@3.2.0)(postcss@8.5.8))(msw@2.10.2(@types/node@24.10.0)(tsover@5.9.11))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3):
     dependencies:
       '@vitest/expect': 4.0.18
       '@vitest/mocker': 4.0.18(msw@2.10.2(@types/node@24.10.0)(tsover@5.9.11))(vite@8.0.2(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))
