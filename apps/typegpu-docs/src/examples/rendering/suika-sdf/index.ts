@@ -159,20 +159,28 @@ const nearSampler = root['~unstable'].createSampler({
 const smoothSdfReadView = createSmoothedSdf(root, sdfTexture, linSampler);
 
 const mergedFieldLayout = tgpu.bindGroupLayout({
-  mergedField: { texture: d.texture2d() },
+  distance: { texture: d.texture2d() },
+  info: { texture: d.texture2d() },
 });
 
 function createMergedFieldResources() {
   const size = [canvas.width, canvas.height].map((v) => Math.ceil(v / 2)) as [number, number];
-  return root['~unstable']
-    .createTexture({ size, format: 'rgba16float' })
-    .$usage('sampled', 'render');
+  return {
+    distance: root['~unstable']
+      .createTexture({ size, format: 'r16float' })
+      .$usage('sampled', 'render'),
+    info: root['~unstable']
+      .createTexture({ size, format: 'rgba16float' })
+      .$usage('sampled', 'render'),
+  };
 }
 
-let mergedFieldTexture = createMergedFieldResources();
-let mergedFieldView = mergedFieldTexture.createView(d.texture2d());
+let mergedField = createMergedFieldResources();
+let distanceView = mergedField.distance.createView(d.texture2d());
+let infoView = mergedField.info.createView(d.texture2d());
 let mergedFieldBindGroup = root.createBindGroup(mergedFieldLayout, {
-  mergedField: mergedFieldView,
+  distance: distanceView,
+  info: infoView,
 });
 
 const rectUniform = root.createUniform(
@@ -218,15 +226,14 @@ const blendSprite = (uv: d.v2f, level: number) => {
   return std.mix(center, sprite.xyz, sprite.w);
 };
 
-const evalFruits = (field: d.v4f, activeCount: number) => {
+const evalFruits = (bestDist: number, info: d.v4f, activeCount: number) => {
   'use gpu';
   if (activeCount === 0) {
     return SceneHit({ dist: 2e10, color: d.vec3f() });
   }
-  return SceneHit({
-    dist: field.x,
-    color: blendSprite(field.yz, d.i32(field.w)),
-  });
+  let color = blendSprite(info.xy, d.i32(info.z));
+  color = std.mix(color, d.vec3f(1, 0.12, 0.1), info.w * 0.78);
+  return SceneHit({ dist: bestDist, color });
 };
 
 const evalWalls = (scenePos: d.v2f, hit: d.Infer<typeof SceneHit>, daylight: number) => {
@@ -255,25 +262,6 @@ const applyGhost = (baseColor: d.v3f, ghost: d.Infer<typeof SdCircle>, scenePos:
   const alpha = std.smoothstep(std.fwidth(scenePos.x), 0, dist) * GHOST_ALPHA;
   const spriteColor = blendSprite(uv, ghost.level);
   return std.mix(baseColor, spriteColor, alpha);
-};
-
-const applyDangerOverlay = (baseColor: d.v3f, scenePos: d.v2f, activeCount: number) => {
-  'use gpu';
-  let out = d.vec3f(baseColor);
-  for (let i = d.u32(0); i < activeCount; i++) {
-    const circle = circleUniform.$[i];
-    if (circle.danger <= 0) {
-      continue;
-    }
-    const raw = (scenePos - circle.center) / (circle.radius * 2);
-    const localPos = rotate2d(raw, -circle.angle);
-    const clamped = clampRadial(localPos, MAX_LEVEL_RADIUS, MIN_RADIUS);
-    const uv = circleUv(clamped);
-    const dist = sampleSdf(uv, circle.radius, localPos, circle.level);
-    const fruitMask = std.smoothstep(std.fwidth(scenePos.x), 0, dist);
-    out = std.mix(out, d.vec3f(1, 0.12, 0.1), fruitMask * circle.danger * 0.78);
-  }
-  return out;
 };
 
 const applyNextPreview = (
@@ -336,6 +324,7 @@ const mergedFieldPipeline = root.createRenderPipeline({
     let smoothAccum = d.arrayOf(d.f32, LEVEL_COUNT)(LEVEL_F32_ZEROS);
     let uvAccum = d.arrayOf(d.vec2f, LEVEL_COUNT)(LEVEL_V2F_ZEROS);
     let uvWeight = d.arrayOf(d.f32, LEVEL_COUNT)(LEVEL_F32_ZEROS);
+    let dangerAccum = d.arrayOf(d.f32, LEVEL_COUNT)(LEVEL_F32_ZEROS);
 
     for (let i = d.u32(0); i < frame.activeCount; i++) {
       const circle = circleUniform.$[i];
@@ -354,8 +343,10 @@ const mergedFieldPipeline = root.createRenderPipeline({
       smoothAccum[lv] += weight;
       uvAccum[lv] += uvLocal * weight;
       uvWeight[lv] += weight;
+      dangerAccum[lv] += circle.danger * weight;
     }
 
+    let bestDanger = d.f32(0);
     for (let level = d.i32(0); level < LEVEL_COUNT; level++) {
       const safeSmooth = std.max(smoothAccum[level], 1e-6);
       const dist = -std.log(safeSmooth) / SMOOTH_MIN_K;
@@ -364,12 +355,19 @@ const mergedFieldPipeline = root.createRenderPipeline({
         bestDist = dist;
         bestLevel = d.f32(level);
         bestUv = d.vec2f(blendedUv);
+        bestDanger = dangerAccum[level] / std.max(uvWeight[level], 1e-6);
       }
     }
 
-    return d.vec4f(bestDist, bestUv.x, bestUv.y, bestLevel);
+    return {
+      distance: d.vec4f(bestDist, 0, 0, 0),
+      info: d.vec4f(bestUv, bestLevel, bestDanger),
+    };
   },
-  targets: { format: 'rgba16float' },
+  targets: {
+    distance: { format: 'r16float' },
+    info: { format: 'rgba16float' },
+  },
 });
 
 const renderPipeline = root.createRenderPipeline({
@@ -392,20 +390,18 @@ const renderPipeline = root.createRenderPipeline({
       bucketMask,
     );
 
-    const fieldLin = std.textureSampleLevel(mergedFieldLayout.$.mergedField, linSampler.$, uv, 0);
-    const fieldNear = std.textureSampleLevel(mergedFieldLayout.$.mergedField, nearSampler.$, uv, 0);
-    const field = d.vec4f(fieldLin.x, fieldNear.y, fieldNear.z, fieldNear.w);
+    const bestDist = std.textureSampleLevel(mergedFieldLayout.$.distance, linSampler.$, uv, 0).x;
+    const info = std.textureSampleLevel(mergedFieldLayout.$.info, nearSampler.$, uv, 0);
     // Fruit glow on bucket interior back wall
     bg +=
-      blendSprite(d.vec2f(0.5), d.i32(field.w)) *
-      std.exp(-std.max(field.x, 0) * 12) *
+      blendSprite(d.vec2f(0.5), d.i32(info.z)) *
+      std.exp(-std.max(bestDist, 0) * 12) *
       bucketMask *
       0.4;
 
-    const hit = evalWalls(scenePos, evalFruits(field, frame.activeCount), daylight);
+    const hit = evalWalls(scenePos, evalFruits(bestDist, info, frame.activeCount), daylight);
     const alpha = std.smoothstep(std.fwidth(scenePos.x), 0, hit.dist);
     let sceneColor = std.mix(bg, hit.color, alpha);
-    sceneColor = applyDangerOverlay(sceneColor, scenePos, frame.activeCount);
     let finalColor = applyGhost(sceneColor, frame.ghostCircle, scenePos);
     finalColor = applyNextPreview(
       finalColor,
@@ -420,15 +416,17 @@ const renderPipeline = root.createRenderPipeline({
 
     return d.vec4f(finalColor, 1);
   },
-  targets: { format: navigator.gpu.getPreferredCanvasFormat() },
 });
 
 const resizeObserver = new ResizeObserver(() => {
-  mergedFieldTexture.destroy();
-  mergedFieldTexture = createMergedFieldResources();
-  mergedFieldView = mergedFieldTexture.createView(d.texture2d());
+  mergedField.distance.destroy();
+  mergedField.info.destroy();
+  mergedField = createMergedFieldResources();
+  distanceView = mergedField.distance.createView(d.texture2d());
+  infoView = mergedField.info.createView(d.texture2d());
   mergedFieldBindGroup = root.createBindGroup(mergedFieldLayout, {
-    mergedField: mergedFieldView,
+    distance: distanceView,
+    info: infoView,
   });
 });
 resizeObserver.observe(canvas);
@@ -610,6 +608,10 @@ function frame(now: number) {
       speed = Math.max(speed, 1 - t * t);
     }
 
+    if (visualRadius <= MIN_RADIUS) {
+      continue;
+    }
+
     circleData[drawCount] = {
       center: d.vec2f(state.pos.x, state.pos.y),
       radius: visualRadius,
@@ -645,7 +647,12 @@ function frame(now: number) {
         },
   });
 
-  mergedFieldPipeline.withColorAttachment({ view: mergedFieldView }).draw(3);
+  mergedFieldPipeline
+    .withColorAttachment({
+      distance: { view: distanceView },
+      info: { view: infoView },
+    })
+    .draw(3);
 
   renderPipeline
     .with(mergedFieldBindGroup)

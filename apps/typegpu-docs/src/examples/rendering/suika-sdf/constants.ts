@@ -41,5 +41,5 @@ export const SPAWN_WEIGHTS = [4, 3, 2, 1];
 export const SPAWN_WEIGHT_TOTAL = SPAWN_WEIGHTS.reduce((a, b) => a + b, 0);
 export const MERGE_DISTANCE_FACTOR = 0.4;
 export const PLAYFIELD_HALF_WIDTH = 0.5;
-export const SPAWN_COOLDOWN = 0.35;
+export const SPAWN_COOLDOWN = 0.0035;
 export const GAME_ASPECT = 1;
