@@ -39,15 +39,11 @@ describe('confetti example', () => {
         particleDataBuffer[index].position += (((particleDataBuffer[index].velocity * deltaTime) / 20f) + vec2f((sin(phase) / 600f), (cos(phase) / 500f)));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       fn rotate(v: vec2f, angle: f32) -> vec2f {

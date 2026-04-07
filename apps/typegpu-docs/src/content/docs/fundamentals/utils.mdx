@@ -296,7 +296,7 @@ const processNeighbors = (cell: d.v2i) => {
 
 ## *tgpu.unroll*
 
-For code with small, fixed iteration counts, you can use `tgpu.unroll` to unroll loops at compile time. This eliminates branch prediction overhead and can significantly improve performance.
+For code with small, fixed iteration counts, you can use `tgpu.unroll` to unroll loops at compile time.
 
 ### Usage
 
@@ -308,18 +308,294 @@ import tgpu, { d } from 'typegpu';
 const processNeighbor = (cell: d.v2i) => {};
 
 // ---cut---
-const processNeighbors = (cell: d.v2i) => {
+function processNeighbors(cell: d.v2i) {
   'use gpu';
 
   for (const dy of tgpu.unroll([-1, 0, 1])) {
     for (const dx of tgpu.unroll([-1, 0, 1])) {
-      processNeighbor(cell.add(d.vec2i(dx, dy)));
+      processNeighbor(cell + d.vec2i(dx, dy));
     }
   }
-};
+}
+```
+
+Generates:
+
+```wgsl
+// Generated WGSL
+
+fn processNeighbors(cell: vec2i) {
+  // unrolled iteration #0
+  {
+    // unrolled iteration #0
+    {
+      processNeighbor(cell + vec2i(-1, -1));
+    }
+    // unrolled iteration #1
+    {
+      processNeighbor(cell + vec2i(0, -1));
+    }
+    // (and so on...)
+  }
+  // (and so on ...)
+}
+```
+
+If you'd like to unroll over a range of numbers, use `tgpu.unroll(std.range(n))`.
+
+```ts
+// (...)
+const FBM_OCTAVES = 3; // user-provided value
+
+function fbm(pos: d.v3f): number {
+  'use gpu';
+  let sum = d.f32();
+
+  // i = 0, 1, .., FBM_OCTAVES-1
+  for (const i of tgpu.unroll(std.range(FBM_OCTAVES))) {
+    sum +=
+      noise3d(pos * (CLOUD_FREQUENCY * FBM_LACUNARITY ** i)) *
+      (CLOUD_AMPLITUDE * FBM_PERSISTENCE ** i);
+  }
+
+  return sum;
+}
+```
+
+Generates:
+ 
+```wgsl
+// (...)
+
+fn fbm(pos: vec3f) -> f32 {
+  var sum = 0f;
+  // unrolled iteration #0
+  {
+    sum += noise3d(pos * 1.4f) * 1f;
+  }
+  // unrolled iteration #1
+  {
+    sum += noise3d(pos * 2.8f) * 0.5f;
+  }
+  // unrolled iteration #2
+  {
+    sum += noise3d(pos * 5.6f) * 0.25f;
+  }
+  return sum;
+}
 ```
 
 :::note
 - There are no constraints on how large a loop can be for unrolling. We will always try to unroll it, and if we can't, you'll receive an error.
-- You cannot use `continue` or `break` inside loop that you intend to unroll later.
+- You cannot use `continue` or `break` inside a loop that you intend to unroll later.
 :::
+
+:::tip
+You can unroll loops conditionally, for example:
+```ts
+// A value determined based on the user's environment
+const shouldUnroll = true;
+
+const f = () => {
+  'use gpu';
+  const arr = [1, 2, 3];
+  let r = d.i32(0);
+  for (const foo of shouldUnroll ? tgpu.unroll(arr) : arr) {
+    r += foo;
+  }
+};
+```
+:::
+
+### Types of iterables (more technical section)
+
+**Array expression of primitive elements:**
+```ts
+for (const foo of tgpu.unroll([1, 2, 3])) {
+  result += foo;
+}
+```
+
+Generates:
+```wgsl
+// unrolled iteration #0
+{
+  result += 1u;
+}
+// unrolled iteration #1
+{
+  result += 2u;
+}
+// unrolled iteration #2
+{
+  result += 3u;
+}
+```
+:::note
+`std.range` falls into the primitive array expression category.
+:::
+
+**Array expression of complex elements:**
+```ts
+const b1 = Boid({ pos: d.vec2i(1), vel: d.vec2f(1) });
+const b2 = Boid({ pos: d.vec2i(2), vel: d.vec2f(2) });
+
+for (const foo of tgpu.unroll([b1, b2])) {
+  const boo = foo;
+  res = res.add(foo.vel);
+  boo.pos = d.vec2i();
+}
+```
+
+Generates:
+```wgsl
+// unrolled iteration #0
+{
+  let boo = (&b1);
+  res = (res + b1.vel);
+  (*boo).pos = vec2i();
+}
+// unrolled iteration #1
+{
+  let boo = (&b2);
+  res = (res + b2.vel);
+  (*boo).pos = vec2i();
+}
+```
+
+:::caution
+In the example above, if `Boid` creation were inlined, we would throw an error. This means that elements of a complex type must be stored in variables before unrolling.
+:::
+
+**Vector**
+```ts
+const v = d.vec3f(1, 2, 3);
+let res = d.f32(0);
+for (const foo of tgpu.unroll(d.vec3f(v))) {
+  res += foo;
+}
+```
+
+Generates:
+```wgsl
+// unrolled iteration #0
+{
+  res = res + v[0u];
+}
+// unrolled iteration #1
+{
+  res = res + v[1u];
+}
+// unrolled iteration #2
+{
+  res = res + v[2u];
+}
+```
+
+**Array expression of struct field names**
+```ts
+const values = { a: 1, b: 2, c: 3 };
+const keys = Object.keys(values) as (keyof typeof values)[];
+
+const f = () => {
+  'use gpu';
+  let result = d.u32(0);
+  for (const key of tgpu.unroll(keys)) {
+    result += values[key];
+  }
+  return result;
+};
+```
+
+Generates:
+```wgsl
+// ...
+
+// unrolled iteration #0
+{
+  result += 1u;
+}
+// unrolled iteration #1
+{
+  result += 2u;
+}
+// unrolled iteration #2
+{
+  result += 3u;
+}
+
+// ...
+```
+
+:::note
+As you can see, `tgpu.unroll` will handle external arrays as long as they are known at compile-time.
+:::
+
+**Iterable stored in a variable**
+
+In this case, we fall back to array access:
+```ts
+const arr = [1, 2, 3];
+let res = d.f32(0);
+for (const foo of tgpu.unroll(arr)) {
+  res += foo;
+}
+```
+
+Generates:
+```wgsl
+var arr = array<i32, 3>(1, 2, 3);
+var res = 0f;
+// unrolled iteration #0
+{
+  res += f32(arr[0u]);
+}
+// unrolled iteration #1
+{
+  res += f32(arr[1u]);
+}
+// unrolled iteration #2
+{
+  res += f32(arr[2u]);
+}
+```
+
+**Buffer, `const`, `accessor`, `comptime`, `lazy`, etc.**
+
+As long as we know the length at compile time, we will unroll the loop.
+```ts
+const buffer = root.createUniform(d.arrayOf(d.u32, 3));
+const acc = tgpu.accessor(d.arrayOf(d.u32, 3), buffer);
+
+const f = () => {
+  'use gpu';
+  let result = d.u32(0);
+  for (const foo of tgpu.unroll(acc.$)) {
+    result += foo;
+  }
+
+  return result;
+};
+```
+
+Generates:
+```wgsl
+@group(0) @binding(0) var<uniform> buffer: array<u32, 3>;
+
+fn f() -> u32 {
+  var result = 0u;
+  // unrolled iteration #0
+  {
+    result += buffer[0u];
+  }
+  // unrolled iteration #1
+  {
+    result += buffer[1u];
+  }
+  // unrolled iteration #2
+  {
+    result += buffer[2u];
+  }
+  return result;
+}
+```

@@ -2,8 +2,13 @@ import type { TSESTree } from '@typescript-eslint/utils';
 import type { RuleListener } from '@typescript-eslint/utils/ts-eslint';
 import type { RuleEnhancer } from '../enhanceRule.ts';
 
+export type FunctionNode =
+  | TSESTree.FunctionDeclaration
+  | TSESTree.FunctionExpression
+  | TSESTree.ArrowFunctionExpression;
+
 export type DirectiveData = {
-  insideUseGpu: () => boolean;
+  getEnclosingTypegpuFunction: () => FunctionNode | undefined;
 };
 
 /**
@@ -16,17 +21,17 @@ export type DirectiveData = {
  * - top level directives.
  */
 export const directiveTracking: RuleEnhancer<DirectiveData> = () => {
-  const stack: string[][] = [];
+  const stack: { node: FunctionNode; directives: string[] }[] = [];
 
   const visitors: RuleListener = {
     FunctionDeclaration(node) {
-      stack.push(getDirectives(node));
+      stack.push({ node, directives: getDirectives(node) });
     },
     FunctionExpression(node) {
-      stack.push(getDirectives(node));
+      stack.push({ node, directives: getDirectives(node) });
     },
     ArrowFunctionExpression(node) {
-      stack.push(getDirectives(node));
+      stack.push({ node, directives: getDirectives(node) });
     },
 
     'FunctionDeclaration:exit'() {
@@ -42,7 +47,15 @@ export const directiveTracking: RuleEnhancer<DirectiveData> = () => {
 
   return {
     visitors,
-    state: { insideUseGpu: () => (stack.at(-1) ?? []).includes('use gpu') },
+    state: {
+      getEnclosingTypegpuFunction: () => {
+        const current = stack.at(-1);
+        if (current && current.directives.includes('use gpu')) {
+          return current.node;
+        }
+        return undefined;
+      },
+    },
   };
 };
 

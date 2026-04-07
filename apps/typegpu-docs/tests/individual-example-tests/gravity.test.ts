@@ -87,12 +87,8 @@ describe('gravity example', () => {
 
       @group(0) @binding(2) var<storage, read_write> outState: array<CelestialBody>;
 
-      struct computeCollisionsShader_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(1) fn computeCollisionsShader(input: computeCollisionsShader_Input) {
-        let currentId = input.gid.x;
+      @compute @workgroup_size(1) fn computeCollisionsShader(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        let currentId = _arg_gid.x;
         var current = inState[currentId];
         if ((current.destroyed == 0u)) {
           for (var otherId = 0u; (otherId < u32(celestialBodiesCount)); otherId++) {
@@ -155,13 +151,9 @@ describe('gravity example', () => {
 
       @group(1) @binding(2) var<storage, read_write> outState: array<CelestialBody>;
 
-      struct computeGravityShader_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(1) fn computeGravityShader(input: computeGravityShader_Input) {
+      @compute @workgroup_size(1) fn computeGravityShader(@builtin(global_invocation_id) _arg_gid: vec3u) {
         let dt = (time.passed * time.multiplier);
-        let currentId = input.gid.x;
+        let currentId = _arg_gid.x;
         var current = inState[currentId];
         if ((current.destroyed == 0u)) {
           for (var otherId = 0u; (otherId < u32(celestialBodiesCount)); otherId++) {
@@ -195,26 +187,21 @@ describe('gravity example', () => {
         @location(0) texCoord: vec3f,
       }
 
-      struct skyBoxVertex_Input {
-        @location(0) position: vec3f,
-        @location(1) uv: vec2f,
+      @vertex fn skyBoxVertex(@location(0) _arg_position: vec3f) -> skyBoxVertex_Output {
+        var viewPos = (camera.view * vec4f(_arg_position, 0f)).xyz;
+        return skyBoxVertex_Output((camera.projection * vec4f(viewPos, 1f)), _arg_position.xyz);
       }
 
-      @vertex fn skyBoxVertex(input: skyBoxVertex_Input) -> skyBoxVertex_Output {
-        var viewPos = (camera.view * vec4f(input.position, 0f)).xyz;
-        return skyBoxVertex_Output((camera.projection * vec4f(viewPos, 1f)), input.position.xyz);
+      struct skyBoxFragment_Input {
+        @location(0) texCoord: vec3f,
       }
 
       @group(0) @binding(1) var skyBox: texture_cube<f32>;
 
       @group(0) @binding(2) var sampler_1: sampler;
 
-      struct skyBoxFragment_Input {
-        @location(0) texCoord: vec3f,
-      }
-
-      @fragment fn skyBoxFragment(input: skyBoxFragment_Input) -> @location(0) vec4f {
-        return textureSample(skyBox, sampler_1, normalize(input.texCoord));
+      @fragment fn skyBoxFragment(_arg_0: skyBoxFragment_Input) -> @location(0) vec4f {
+        return textureSample(skyBox, sampler_1, normalize(_arg_0.texCoord));
       }
 
       struct CelestialBody {
@@ -255,29 +242,15 @@ describe('gravity example', () => {
         @location(5) ambientLightFactor: f32,
       }
 
-      struct mainVertex_Input {
-        @location(0) position: vec3f,
-        @location(1) normal: vec3f,
-        @location(2) uv: vec2f,
-        @builtin(instance_index) instanceIndex: u32,
-      }
-
-      @vertex fn mainVertex(input: mainVertex_Input) -> mainVertex_Output {
-        let currentBody = (&celestialBodies[input.instanceIndex]);
-        var worldPosition = ((*currentBody).position + (input.position.xyz * radiusOf((*currentBody))));
+      @vertex fn mainVertex(@location(0) _arg_position: vec3f, @location(1) _arg_normal: vec3f, @location(2) _arg_uv: vec2f, @builtin(instance_index) _arg_instanceIndex: u32) -> mainVertex_Output {
+        let currentBody = (&celestialBodies[_arg_instanceIndex]);
+        var worldPosition = ((*currentBody).position + (_arg_position.xyz * radiusOf((*currentBody))));
         let camera = (&camera_1);
         var positionOnCanvas = (((*camera).projection * (*camera).view) * vec4f(worldPosition, 1f));
-        return mainVertex_Output(positionOnCanvas, input.uv, input.normal, worldPosition, (*currentBody).textureIndex, (*currentBody).destroyed, (*currentBody).ambientLightFactor);
+        return mainVertex_Output(positionOnCanvas, _arg_uv, _arg_normal, worldPosition, (*currentBody).textureIndex, (*currentBody).destroyed, (*currentBody).ambientLightFactor);
       }
 
-      @group(1) @binding(0) var celestialBodyTextures: texture_2d_array<f32>;
-
-      @group(0) @binding(1) var sampler_1: sampler;
-
-      @group(0) @binding(2) var<uniform> lightSource: vec3f;
-
       struct mainFragment_Input {
-        @builtin(position) position: vec4f,
         @location(0) uv: vec2f,
         @location(1) normals: vec3f,
         @location(2) worldPosition: vec3f,
@@ -286,15 +259,21 @@ describe('gravity example', () => {
         @location(5) ambientLightFactor: f32,
       }
 
-      @fragment fn mainFragment(input: mainFragment_Input) -> @location(0) vec4f {
-        if ((input.destroyed == 1u)) {
+      @group(1) @binding(0) var celestialBodyTextures: texture_2d_array<f32>;
+
+      @group(0) @binding(1) var sampler_1: sampler;
+
+      @group(0) @binding(2) var<uniform> lightSource: vec3f;
+
+      @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
+        if ((_arg_0.destroyed == 1u)) {
           discard;;
         }
         var lightColor = vec3f(1, 0.8999999761581421, 0.8999999761581421);
-        var textureColor = textureSample(celestialBodyTextures, sampler_1, input.uv, input.sphereTextureIndex).rgb;
-        var ambient = ((textureColor * lightColor) * input.ambientLightFactor);
-        let normal = input.normals;
-        var lightDirection = normalize((lightSource - input.worldPosition));
+        var textureColor = textureSample(celestialBodyTextures, sampler_1, _arg_0.uv, _arg_0.sphereTextureIndex).rgb;
+        var ambient = ((textureColor * lightColor) * _arg_0.ambientLightFactor);
+        let normal = _arg_0.normals;
+        var lightDirection = normalize((lightSource - _arg_0.worldPosition));
         let cosTheta = dot(normal, lightDirection);
         var diffuse = ((textureColor * lightColor) * max(0f, cosTheta));
         return vec4f((ambient + diffuse), 1f);

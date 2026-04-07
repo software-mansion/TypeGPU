@@ -156,9 +156,13 @@ function strip(rawCode: string): { strippedCode: string; argRange: [number, numb
 }
 
 class ParsableString {
+  readonly str: string;
+
   #parseStartPos: number | undefined;
   #pos: number;
-  constructor(public readonly str: string) {
+
+  constructor(str: string) {
+    this.str = str;
     this.#pos = 0;
   }
 

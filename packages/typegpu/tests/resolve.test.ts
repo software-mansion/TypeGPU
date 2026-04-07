@@ -168,7 +168,7 @@ fn main() {
         range: vec2f,
       }
 
-      fn random() -> f32{
+      fn random() -> f32 {
               var r: Random;
               r.seed = vec2<f32>(3.14, 1.59);
               r.range = vec2<f32>(0.0, 1.0);
@@ -312,7 +312,7 @@ fn main() {
     expect(resolved).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> intensity: u32;
 
-      fn get_color() -> vec3f{
+      fn get_color() -> vec3f {
               let color = vec3f();
               return color;
             }

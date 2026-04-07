@@ -1,13 +1,13 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
-import { getName, isNamable, setName, type TgpuNamable } from '../../shared/meta.ts';
+import { getName, setName, type TgpuNamable } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { shaderStageSlot } from '../slot/internalSlots.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
-import type { Implementation, InferIO, IORecord } from './fnTypes.ts';
-import { createIoSchema, type IOLayoutToSchema } from './ioSchema.ts';
+import type { Implementation, InferIO, IORecord, SeparatedEntryArgs } from './fnTypes.ts';
+import { separateBuiltins } from './ioSchema.ts';
 import { stripTemplate } from './templateUtils.ts';
 
 // ----------
@@ -18,9 +18,9 @@ import { stripTemplate } from './templateUtils.ts';
  * Describes a compute entry function signature (its arguments, return type and workgroup size)
  */
 type TgpuComputeFnShellHeader<ComputeIn extends IORecord<AnyComputeBuiltin>> = {
-  readonly argTypes: [IOLayoutToSchema<ComputeIn>] | [];
+  readonly argTypes: ComputeIn[keyof ComputeIn][];
   readonly returnType: Void;
-  readonly workgroupSize: [number, number, number];
+  readonly workgroupSize: number[];
   readonly entryPoint: 'compute';
 };
 
@@ -78,19 +78,16 @@ export function computeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(options
   workgroupSize: number[];
 }): TgpuComputeFnShell<ComputeIn> {
   const shell: TgpuComputeFnShellHeader<ComputeIn> = {
-    argTypes:
-      options.in && Object.keys(options.in).length !== 0 ? [createIoSchema(options.in)] : [],
+    argTypes: Object.values(options.in ?? {}) as ComputeIn[keyof ComputeIn][],
     returnType: Void,
-    workgroupSize: [
-      options.workgroupSize[0] ?? 1,
-      options.workgroupSize[1] ?? 1,
-      options.workgroupSize[2] ?? 1,
-    ],
+    workgroupSize: options.workgroupSize,
     entryPoint: 'compute',
   };
 
+  const entryInput = separateBuiltins(options.in ?? {});
+
   const call = (arg: Implementation | TemplateStringsArray, ...values: unknown[]) =>
-    createComputeFn(shell, options.workgroupSize, stripTemplate(arg, ...values));
+    createComputeFn(shell, options.workgroupSize, stripTemplate(arg, ...values), entryInput);
 
   return Object.assign(call, shell);
 }
@@ -109,6 +106,7 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
   shell: TgpuComputeFnShellHeader<ComputeIn>,
   workgroupSize: number[],
   implementation: Implementation,
+  entryInput: SeparatedEntryArgs,
 ): TgpuComputeFn<ComputeIn> {
   type This = TgpuComputeFn<ComputeIn> &
     SelfResolvable & {
@@ -120,7 +118,6 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     implementation,
     `@compute @workgroup_size(${workgroupSize.join(', ')}) `,
   );
-  const inputType = shell.argTypes[0];
 
   const result: This = {
     shell,
@@ -134,15 +131,12 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     [$getNameForward]: core,
     $name(newLabel: string): This {
       setName(this, newLabel);
-      if (isNamable(inputType)) {
-        inputType.$name(`${newLabel}_Input`);
-      }
       return this;
     },
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
       return ctx.withSlots([[shaderStageSlot, 'compute']], () =>
-        core.resolve(ctx, shell.argTypes, shell.returnType),
+        core.resolve(ctx, [], shell.returnType, entryInput),
       );
     },
 

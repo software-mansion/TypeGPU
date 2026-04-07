@@ -39,7 +39,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(1) var<storage, read> obstacles: array<BoxObstacle, 4>;
 
       fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0u; i < 4u; i++) {
+        for (var i = 0u; i < 4u; i += 1u) {
           let obs = (&obstacles[i]);
           {
             if (((*obs).enabled == 0u)) {
@@ -86,15 +86,11 @@ describe('fluid double buffering example', () => {
         gridBetaBuffer[index] = value;
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -134,7 +130,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(3) var<storage, read> obstacles: array<BoxObstacle, 4>;
 
       fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0u; i < 4u; i++) {
+        for (var i = 0u; i < 4u; i += 1u) {
           let obs = (&obstacles[i]);
           {
             if (((*obs).enabled == 0u)) {
@@ -317,15 +313,11 @@ describe('fluid double buffering example', () => {
         gridAlphaBuffer[index] = next;
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        simulate(in.id.x, in.id.y, in.id.z);
+        simulate(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -365,7 +357,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(3) var<storage, read> obstacles: array<BoxObstacle, 4>;
 
       fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0u; i < 4u; i++) {
+        for (var i = 0u; i < 4u; i += 1u) {
           let obs = (&obstacles[i]);
           {
             if (((*obs).enabled == 0u)) {
@@ -548,15 +540,11 @@ describe('fluid double buffering example', () => {
         gridBetaBuffer[index] = next;
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        simulate(in.id.x, in.id.y, in.id.z);
+        simulate(id.x, id.y, id.z);
       }
 
       struct vertexMain_Output {
@@ -564,14 +552,14 @@ describe('fluid double buffering example', () => {
         @location(0) uv: vec2f,
       }
 
-      struct vertexMain_Input {
-        @builtin(vertex_index) idx: u32,
-      }
-
-      @vertex fn vertexMain(input: vertexMain_Input) -> vertexMain_Output {
+      @vertex fn vertexMain(@builtin(vertex_index) _arg_idx: u32) -> vertexMain_Output {
         var pos = array<vec2f, 4>(vec2f(1), vec2f(-1, 1), vec2f(1, -1), vec2f(-1));
         var uv = array<vec2f, 4>(vec2f(1), vec2f(0, 1), vec2f(1, 0), vec2f());
-        return vertexMain_Output(vec4f(pos[input.idx].x, pos[input.idx].y, 0f, 1f), uv[input.idx]);
+        return vertexMain_Output(vec4f(pos[_arg_idx].x, pos[_arg_idx].y, 0f, 1f), uv[_arg_idx]);
+      }
+
+      struct fragmentMain_Input {
+        @location(0) uv: vec2f,
       }
 
       fn coordsToIndex(x: i32, y: i32) -> i32 {
@@ -589,7 +577,7 @@ describe('fluid double buffering example', () => {
       @group(0) @binding(1) var<storage, read> obstacles: array<BoxObstacle, 4>;
 
       fn isInsideObstacle(x: i32, y: i32) -> bool {
-        for (var i = 0u; i < 4u; i++) {
+        for (var i = 0u; i < 4u; i += 1u) {
           let obs = (&obstacles[i]);
           {
             if (((*obs).enabled == 0u)) {
@@ -607,13 +595,9 @@ describe('fluid double buffering example', () => {
         return false;
       }
 
-      struct fragmentMain_Input {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn fragmentMain(input: fragmentMain_Input) -> @location(0) vec4f {
-        let x = i32((input.uv.x * 256f));
-        let y = i32((input.uv.y * 256f));
+      @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
+        let x = i32((_arg_0.uv.x * 256f));
+        let y = i32((_arg_0.uv.y * 256f));
         let index = coordsToIndex(x, y);
         let cell = (&gridAlphaBuffer[index]);
         let density = max(0f, (*cell).z);

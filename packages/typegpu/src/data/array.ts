@@ -80,6 +80,6 @@ const WgslArrayImpl = {
   type: 'array',
 
   toString(this: WgslArray): string {
-    return `arrayOf(${this.elementType}, ${this.elementCount})`;
+    return `arrayOf(${String(this.elementType)}, ${this.elementCount})`;
   },
 };

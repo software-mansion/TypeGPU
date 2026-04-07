@@ -86,13 +86,18 @@ export class TgpuBufferShorthandImpl<
 > implements SelfResolvable {
   readonly [$internal] = true;
   readonly [$getNameForward]: object;
+  readonly resourceType: TType;
+  readonly buffer: TgpuBuffer<TData> &
+    (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag);
+
   readonly #usage: TgpuBufferUsage<TData, TType>;
 
   constructor(
-    public readonly resourceType: TType,
-    public readonly buffer: TgpuBuffer<TData> &
-      (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag),
+    resourceType: TType,
+    buffer: TgpuBuffer<TData> & (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag),
   ) {
+    this.resourceType = resourceType;
+    this.buffer = buffer;
     this[$getNameForward] = buffer;
     // oxlint-disable-next-line typescript/no-explicit-any -- too complex a type
     this.#usage = (this.buffer as any).as(this.resourceType);

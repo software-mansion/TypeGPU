@@ -189,17 +189,19 @@ export function isUsableAsIndex<T extends TgpuBuffer<BaseData>>(
 const endianness = getSystemEndianness();
 
 class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
-  public readonly [$internal] = true;
-  public readonly resourceType = 'buffer';
-  public flags: GPUBufferUsageFlags = GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
+  readonly [$internal] = true;
+  readonly resourceType = 'buffer';
+  flags: GPUBufferUsageFlags = GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
+  readonly dataType: TData;
 
   readonly #device: GPUDevice;
-  private _buffer: GPUBuffer | null = null;
-  private _ownBuffer: boolean;
-  private _destroyed = false;
-  private _hostBuffer: ArrayBuffer | undefined;
-  private _mappedRange: ArrayBuffer | undefined;
-  private _initialCallback: BufferInitCallback<TData> | undefined;
+  #buffer: GPUBuffer | null = null;
+  #ownBuffer: boolean;
+  #destroyed = false;
+  #hostBuffer: ArrayBuffer | undefined;
+  #mappedRange: ArrayBuffer | undefined;
+  #initialCallback: BufferInitCallback<TData> | undefined;
+  readonly #disallowedUsages: UsageLiteral[] | undefined;
 
   readonly initial: InferInput<TData> | undefined;
 
@@ -211,18 +213,20 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
 
   constructor(
     root: ExperimentalTgpuRoot,
-    public readonly dataType: TData,
+    dataType: TData,
     initialOrBuffer?: BufferInitialData<TData> | GPUBuffer,
-    private readonly _disallowedUsages?: UsageLiteral[],
+    disallowedUsages?: UsageLiteral[],
   ) {
+    this.dataType = dataType;
+    this.#disallowedUsages = disallowedUsages;
     this.#device = root.device;
     if (isGPUBuffer(initialOrBuffer)) {
-      this._ownBuffer = false;
-      this._buffer = initialOrBuffer;
+      this.#ownBuffer = false;
+      this.#buffer = initialOrBuffer;
     } else {
-      this._ownBuffer = true;
+      this.#ownBuffer = true;
       if (typeof initialOrBuffer === 'function') {
-        this._initialCallback = initialOrBuffer as BufferInitCallback<TData>;
+        this.#initialCallback = initialOrBuffer as BufferInitCallback<TData>;
       } else {
         this.initial = initialOrBuffer;
       }
@@ -230,21 +234,21 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   }
 
   get buffer() {
-    if (this._destroyed) {
+    if (this.#destroyed) {
       throw new Error('This buffer has been destroyed');
     }
 
-    if (!this._buffer) {
-      this._buffer = this.#device.createBuffer({
+    if (!this.#buffer) {
+      this.#buffer = this.#device.createBuffer({
         size: sizeOf(this.dataType),
         usage: this.flags,
-        mappedAtCreation: !!this.initial || !!this._initialCallback,
+        mappedAtCreation: !!this.initial || !!this.#initialCallback,
         label: getName(this) ?? '<unnamed>',
       });
 
-      if (this.initial || this._initialCallback) {
-        if (this._initialCallback) {
-          this._initialCallback(this);
+      if (this.initial || this.#initialCallback) {
+        if (this.#initialCallback) {
+          this.#initialCallback(this);
         } else if (this.initial) {
           this.#writeToTarget(this.#getMappedRange(), this.initial);
         }
@@ -252,11 +256,11 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       }
     }
 
-    return this._buffer;
+    return this.#buffer;
   }
 
   get destroyed() {
-    return this._destroyed;
+    return this.#destroyed;
   }
 
   get arrayBuffer(): ArrayBuffer {
@@ -265,35 +269,35 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       return this.#getMappedRange();
     }
 
-    if (!this._hostBuffer) {
-      this._hostBuffer = new ArrayBuffer(sizeOf(this.dataType));
+    if (!this.#hostBuffer) {
+      this.#hostBuffer = new ArrayBuffer(sizeOf(this.dataType));
     }
 
-    return this._hostBuffer;
+    return this.#hostBuffer;
   }
 
   #getMappedRange(): ArrayBuffer {
-    if (!this._buffer || this._buffer.mapState !== 'mapped') {
+    if (!this.#buffer || this.#buffer.mapState !== 'mapped') {
       throw new Error('Buffer is not mapped.');
     }
 
-    this._mappedRange ??= this._buffer.getMappedRange();
-    return this._mappedRange;
+    this.#mappedRange ??= this.#buffer.getMappedRange();
+    return this.#mappedRange;
   }
 
   #unmapBuffer(): void {
-    if (!this._buffer || this._buffer.mapState !== 'mapped') {
+    if (!this.#buffer || this.#buffer.mapState !== 'mapped') {
       return;
     }
 
-    this._mappedRange = undefined;
-    this._buffer.unmap();
+    this.#mappedRange = undefined;
+    this.#buffer.unmap();
   }
 
   $name(label: string) {
     setName(this, label);
-    if (this._buffer) {
-      this._buffer.label = label;
+    if (this.#buffer) {
+      this.#buffer.label = label;
     }
     return this;
   }
@@ -302,7 +306,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     ...usages: T
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>> {
     for (const usage of usages) {
-      if (this._disallowedUsages?.includes(usage)) {
+      if (this.#disallowedUsages?.includes(usage)) {
         throw new Error(`Buffer of type ${this.dataType.type} cannot be used as ${usage}`);
       }
 
@@ -321,7 +325,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   }
 
   $addFlags(flags: GPUBufferUsageFlags) {
-    if (!this._ownBuffer) {
+    if (!this.#ownBuffer) {
       throw new Error('Cannot add flags to a buffer that is not managed by TypeGPU.');
     }
 
@@ -426,16 +430,16 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       return;
     }
 
-    if (!this._hostBuffer) {
-      this._hostBuffer = new ArrayBuffer(bufferSize);
+    if (!this.#hostBuffer) {
+      this.#hostBuffer = new ArrayBuffer(bufferSize);
     }
 
-    // If the caller already wrote directly into _hostBuffer via
+    // If the caller already wrote directly into #hostBuffer via
     // arrayBuffer, skip the redundant copy, the data is already in place.
-    if (!(data instanceof ArrayBuffer && data === this._hostBuffer)) {
-      this.#writeToTarget(this._hostBuffer, data, options);
+    if (!(data instanceof ArrayBuffer && data === this.#hostBuffer)) {
+      this.#writeToTarget(this.#hostBuffer, data, options);
     }
-    this.#device.queue.writeBuffer(gpuBuffer, startOffset, this._hostBuffer, startOffset, size);
+    this.#device.queue.writeBuffer(gpuBuffer, startOffset, this.#hostBuffer, startOffset, size);
   }
 
   public writePartial(data: InferPartial<TData>): void {
@@ -527,13 +531,13 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   }
 
   destroy() {
-    if (this._destroyed) {
+    if (this.#destroyed) {
       return;
     }
-    this._destroyed = true;
-    this._mappedRange = undefined;
-    if (this._ownBuffer) {
-      this._buffer?.destroy();
+    this.#destroyed = true;
+    this.#mappedRange = undefined;
+    if (this.#ownBuffer) {
+      this.#buffer?.destroy();
     }
   }
 

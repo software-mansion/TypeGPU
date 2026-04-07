@@ -1,7 +1,7 @@
-import { describe, expect, vi } from 'vitest';
+import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.js';
+import tgpu, { std } from '../src/index.js';
 
 describe('tgpu.unroll', () => {
   it('called outside the gpu function returns passed iterable', () => {
@@ -23,16 +23,18 @@ describe('tgpu.unroll', () => {
       const v1 = d.vec2f(7);
       const v2 = tgpu.unroll(v1); // this should return a pointer
       const arr = tgpu.unroll(layout.$.arr); // this should return a pointer
+      return arr[0];
     };
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<storage, read> arr_1: array<f32>;
 
-      fn f() {
+      fn f() -> f32 {
         var a = array<i32, 3>(1, 2, 3);
         var v1 = vec2f(7);
         let v2 = (&v1);
         let arr = (&arr_1);
+        return (*arr)[0i];
       }"
     `);
   });
@@ -203,13 +205,13 @@ describe('tgpu.unroll', () => {
 
   it('unrolls array expression of struct field names - (simple)', () => {
     const values = { a: 1, b: 2, c: 3 };
-    const list = Object.keys(values) as (keyof typeof values)[];
+    const keys = Object.keys(values) as (keyof typeof values)[];
 
     const f = () => {
       'use gpu';
       let result = d.u32(0);
-      for (const prop of tgpu.unroll(list)) {
-        result += values[prop];
+      for (const key of tgpu.unroll(keys)) {
+        result += values[key];
       }
       return result;
     };
@@ -700,17 +702,17 @@ describe('tgpu.unroll', () => {
       }"
     `);
     expect(tgpu.resolve([tgpu.fn(f).with(unroll, false)])).toMatchInlineSnapshot(`
-        "fn f() {
-          var arr = array<i32, 3>(1, 2, 3);
-          var r = 0f;
-          for (var i = 0u; i < 3u; i++) {
-            let foo = arr[i];
-            {
-              r += f32(foo);
-            }
+      "fn f() {
+        var arr = array<i32, 3>(1, 2, 3);
+        var r = 0f;
+        for (var i = 0u; i < 3u; i += 1u) {
+          let foo = arr[i];
+          {
+            r += f32(foo);
           }
-        }"
-      `);
+        }
+      }"
+    `);
   });
 
   it('throws when `continue` or `break` is used inside the loop body', () => {
@@ -802,7 +804,7 @@ describe('tgpu.unroll', () => {
             i--;
             break;
           }
-          for (var i_1 = 0u; i_1 < 3u; i_1++) {
+          for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
             let boo = arr[i_1];
             {
               continue;
@@ -821,7 +823,7 @@ describe('tgpu.unroll', () => {
             i--;
             break;
           }
-          for (var i_1 = 0u; i_1 < 3u; i_1++) {
+          for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
             let boo = arr[i_1];
             {
               continue;
@@ -867,6 +869,40 @@ describe('tgpu.unroll', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> i32 {
         var a = 0;
+        return a;
+      }"
+    `);
+  });
+
+  it('unrolls a range', () => {
+    const f = () => {
+      'use gpu';
+      let a = d.f32(0);
+      for (const i of tgpu.unroll(std.range(1, 9, 2))) {
+        a += i;
+      }
+      return a;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> f32 {
+        var a = 0f;
+        // unrolled iteration #0
+        {
+          a += 1f;
+        }
+        // unrolled iteration #1
+        {
+          a += 3f;
+        }
+        // unrolled iteration #2
+        {
+          a += 5f;
+        }
+        // unrolled iteration #3
+        {
+          a += 7f;
+        }
         return a;
       }"
     `);

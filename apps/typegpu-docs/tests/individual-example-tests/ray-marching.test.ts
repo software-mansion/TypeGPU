@@ -25,14 +25,14 @@ describe('ray-marching example', () => {
         @location(0) uv: vec2f,
       }
 
-      struct vertexMain_Input {
-        @builtin(vertex_index) idx: u32,
-      }
-
-      @vertex fn vertexMain(_arg_0: vertexMain_Input) -> vertexMain_Output {
+      @vertex fn vertexMain(@builtin(vertex_index) idx: u32) -> vertexMain_Output {
         var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
         var uv = array<vec2f, 3>(vec2f(), vec2f(2, 0), vec2f(0, 2));
-        return vertexMain_Output(vec4f(pos[_arg_0.idx], 0f, 1f), uv[_arg_0.idx]);
+        return vertexMain_Output(vec4f(pos[idx], 0f, 1f), uv[idx]);
+      }
+
+      struct fragmentMain_Input {
+        @location(0) uv: vec2f,
       }
 
       @group(0) @binding(0) var<uniform> resolution: vec2f;
@@ -148,12 +148,8 @@ describe('ray-marching example', () => {
         return res;
       }
 
-      struct fragmentMain_Input {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn fragmentMain(input: fragmentMain_Input) -> @location(0) vec4f {
-        var uv = ((input.uv * 2f) - 1f);
+      @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
+        var uv = ((_arg_0.uv * 2f) - 1f);
         uv.x *= (resolution.x / resolution.y);
         var ro = vec3f(0, 2, 3);
         var rd = normalize(vec3f(uv.x, uv.y, 1f));
