@@ -87,7 +87,7 @@ export declare namespace TgpuVertexFn {
   type AutoIn<T> = _AutoVertexIn<T>;
   type AutoOut<T extends AnyAutoCustoms = AnyAutoCustoms> = AutoVertexOut<T>;
 
-  type AutoInEmpty = _AutoVertexIn<{}>;
+  type AutoInEmpty = _AutoVertexIn<Record<string, never>>;
 }
 
 export function vertexFn<VertexOut extends VertexOutConstrained>(options: {
