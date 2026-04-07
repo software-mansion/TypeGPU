@@ -1795,7 +1795,7 @@ describe('root.createRenderPipeline', () => {
 
     const fragment = ({ $position }: TgpuFragmentFn.AutoInEmpty) => {
       'use gpu';
-      return d.vec4f($position);
+      return $position;
     };
 
     const pipeline = root.createRenderPipeline({
