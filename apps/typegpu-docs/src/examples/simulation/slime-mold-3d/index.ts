@@ -122,7 +122,7 @@ const params = root.createUniform(Params, {
 });
 
 const textures = [0, 1].map(() =>
-  root['~unstable']
+  root
     .createTexture({
       size: [resolution.x, resolution.y, resolution.z],
       format: 'r32float',
@@ -281,7 +281,7 @@ const updateAgents = tgpu.computeFn({
   std.textureStore(computeLayout.$.newState, d.vec3u(newPos), d.vec4f(newState, 0, 0, 1));
 });
 
-const sampler = root['~unstable'].createSampler({
+const sampler = root.createSampler({
   magFilter: canFilter ? 'linear' : 'nearest',
   minFilter: canFilter ? 'linear' : 'nearest',
 });

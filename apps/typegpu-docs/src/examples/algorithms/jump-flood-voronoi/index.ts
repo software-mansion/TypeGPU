@@ -55,14 +55,14 @@ type FloodTexture = TgpuTexture<{ size: [number, number, 2]; format: 'rgba16floa
   SampledFlag &
   StorageFlag;
 
-const filteringSampler = root['~unstable'].createSampler({
+const filteringSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
 function createResources() {
   const textures = [0, 1].map(() =>
-    root['~unstable']
+    root
       .createTexture({
         size: [canvas.width, canvas.height, 2],
         format: 'rgba16float',

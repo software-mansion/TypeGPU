@@ -49,7 +49,7 @@ const params = root.createUniform(Params, defaultParams);
 const deltaTime = root.createUniform(d.f32, 0.016);
 
 const textures = [0, 1].map(() =>
-  root['~unstable']
+  root
     .createTexture({
       size: [resolution.x, resolution.y],
       format: 'rgba8unorm',
@@ -183,7 +183,7 @@ const fullScreenTriangle = tgpu.vertexFn({
   };
 });
 
-const filteringSampler = root['~unstable'].createSampler({
+const filteringSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });

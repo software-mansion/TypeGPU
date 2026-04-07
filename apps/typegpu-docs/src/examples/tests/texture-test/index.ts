@@ -50,7 +50,7 @@ function createTestTexture(format: TestFormat, size: readonly [number, number]) 
     }, mips: ${mipLevels}, filterable: ${isFilterable(format)}`,
   );
 
-  return root['~unstable']
+  return root
     .createTexture({
       size,
       format,
@@ -62,13 +62,13 @@ function createTestTexture(format: TestFormat, size: readonly [number, number]) 
 const biasUniform = root.createUniform(d.f32);
 const channelUniform = root.createUniform(d.i32);
 
-const filteringSampler = root['~unstable'].createSampler({
+const filteringSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
   mipmapFilter: 'linear',
 });
 
-const nearestSampler = root['~unstable'].createSampler({
+const nearestSampler = root.createSampler({
   magFilter: 'nearest',
   minFilter: 'nearest',
   mipmapFilter: 'nearest',
