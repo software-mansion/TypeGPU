@@ -11,7 +11,7 @@ const mousePosUniform = root.createUniform(d.vec2f, d.vec2f(0.5, 0.5));
 const response = await fetch('/TypeGPU/plums.jpg');
 const imageBitmap = await createImageBitmap(await response.blob());
 
-const imageTexture = root['~unstable']
+const imageTexture = root
   .createTexture({
     size: [imageBitmap.width, imageBitmap.height, 1],
     format: 'rgba8unorm',
@@ -22,7 +22,7 @@ imageTexture.write(imageBitmap);
 imageTexture.generateMipmaps();
 
 const sampledView = imageTexture.createView();
-const sampler = root['~unstable'].createSampler({
+const sampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
   mipmapFilter: 'linear',

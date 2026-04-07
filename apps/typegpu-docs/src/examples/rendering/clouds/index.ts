@@ -31,14 +31,14 @@ for (let i = 0; i < noiseData.length; i += 1) {
   noiseData[i] = Math.random() * 255;
 }
 
-const sampler = root['~unstable'].createSampler({
+const sampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
   addressModeU: 'repeat',
   addressModeV: 'repeat',
 });
 
-const noiseTexture = root['~unstable']
+const noiseTexture = root
   .createTexture({
     size: [NOISE_TEXTURE_SIZE, NOISE_TEXTURE_SIZE],
     format: 'r8unorm',
