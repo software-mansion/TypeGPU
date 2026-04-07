@@ -2111,6 +2111,7 @@ describe('wgslGenerator', () => {
     )(() => {
       return !buffer.$;
     });
+
     expect(() => tgpu.resolve([testFn1])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>

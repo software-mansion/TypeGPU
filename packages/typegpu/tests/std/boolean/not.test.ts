@@ -1,11 +1,133 @@
-import { describe, expect, it } from 'vitest';
-import { vec2b, vec3b, vec4b } from '../../../src/data/index.ts';
+import { describe, expect } from 'vitest';
+import { it } from 'typegpu-testing-utility';
+import { vec2b, vec2f, vec3b, vec3i, vec4b, vec4h, vec4u } from '../../../src/data/index.ts';
 import { not } from '../../../src/std/boolean.ts';
+import tgpu, { d } from '../../../src/index.js';
 
-describe('neg', () => {
-  it('negates', () => {
+describe('not', () => {
+  it('negates booleans', () => {
+    expect(not(true)).toBe(false);
+    expect(not(false)).toBe(true);
+  });
+
+  it('converts numbers to booleans and negates', () => {
+    expect(not(0)).toBe(true);
+    expect(not(-1)).toBe(false);
+    expect(not(42)).toBe(false);
+  });
+
+  it('negates boolean vectors', () => {
     expect(not(vec2b(true, false))).toStrictEqual(vec2b(false, true));
     expect(not(vec3b(false, false, true))).toStrictEqual(vec3b(true, true, false));
     expect(not(vec4b(true, true, false, false))).toStrictEqual(vec4b(false, false, true, true));
+  });
+
+  it('converts numeric vectors to booleans vectors and negates component-wise', () => {
+    expect(not(vec2f(0.0, 1.0))).toStrictEqual(vec2b(true, false));
+    expect(not(vec3i(0, 5, -1))).toStrictEqual(vec3b(true, false, false));
+    expect(not(vec4u(0, 0, 1, 0))).toStrictEqual(vec4b(true, true, false, true));
+    expect(not(vec4h(0, 3.14, 0, -2.5))).toStrictEqual(vec4b(true, false, true, false));
+  });
+
+  it('negates truthiness check', () => {
+    const s = {};
+    expect(not(null)).toBe(true);
+    expect(not(undefined)).toBe(true);
+    expect(not(s)).toBe(false);
+  });
+
+  it('generates correct WGSL on a boolean runtime-known argument', () => {
+    const testFn = tgpu.fn(
+      [d.bool],
+      d.bool,
+    )((v) => {
+      return not(v);
+    });
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "fn testFn(v: bool) -> bool {
+        return !v;
+      }"
+    `);
+  });
+
+  it('generates correct WGSL on a numeric runtime-known argument', () => {
+    const testFn = tgpu.fn(
+      [d.i32],
+      d.bool,
+    )((v) => {
+      return not(v);
+    });
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(v: i32) -> bool {
+          return !bool(v);
+        }"
+      `);
+  });
+
+  it('generates correct WGSL on a boolean vector runtime-known argument', () => {
+    const testFn = tgpu.fn(
+      [d.vec3b],
+      d.vec3b,
+    )((v) => {
+      return not(v);
+    });
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "fn testFn(v: vec3<bool>) -> vec3<bool> {
+        return !(v);
+      }"
+    `);
+  });
+
+  it('generates correct WGSL on a numeric vector runtime-known argument', () => {
+    const testFn = tgpu.fn(
+      [d.vec3f],
+      d.vec3b,
+    )((v) => {
+      return not(v);
+    });
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(v: vec3f) -> vec3<bool> {
+          return !vec3<bool>(v);
+        }"
+      `);
+  });
+
+  it('evaluates at compile time for comptime-known arguments', () => {
+    const getN = tgpu.comptime(() => 42);
+    const slot = tgpu.slot<{ a?: number }>({});
+
+    const f = () => {
+      'use gpu';
+      if (not(getN()) && not(slot.$.a) && not(d.vec4f(1, 8, 8, 2)).x) {
+        return 1;
+      }
+      return -1;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> i32 {
+        if (((false && true) && false)) {
+          return 1;
+        }
+        return -1;
+      }"
+    `);
+  });
+
+  it('throws when cannot determine truthiness of argument at compile time', ({ root }) => {
+    const buffer = root.createUniform(d.mat4x4f);
+    const testFn = tgpu.fn(
+      [],
+      d.bool,
+    )(() => {
+      return not(buffer.$);
+    });
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:testFn
+      - fn:not: \`std.not\` cannot determine truthiness for runtime value of type: mat4x4f.]
+    `);
   });
 });
