@@ -93,7 +93,7 @@ canvas.addEventListener('touchend', dismissAttribution, { once: true });
 const { spriteAtlas, sdfAtlas, contours } = await createAtlases();
 const physics = await createPhysicsWorld(WALL_DEFS);
 
-const spriteTexture = root['~unstable']
+const spriteTexture = root
   .createTexture({
     size: [SPRITE_SIZE, SPRITE_SIZE, LEVEL_COUNT],
     format: 'rgba8unorm',
@@ -102,7 +102,7 @@ const spriteTexture = root['~unstable']
 spriteTexture.write(spriteAtlas);
 const spriteView = spriteTexture.createView(d.texture2dArray());
 
-const sdfTexture = root['~unstable']
+const sdfTexture = root
   .createTexture({
     size: [SPRITE_SIZE, SPRITE_SIZE, LEVEL_COUNT],
     format: 'rgba16float',
@@ -110,7 +110,7 @@ const sdfTexture = root['~unstable']
   .$usage('sampled', 'render');
 sdfTexture.write(sdfAtlas);
 
-const linSampler = root['~unstable'].createSampler({
+const linSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -123,9 +123,7 @@ const mergedFieldLayout = tgpu.bindGroupLayout({
 
 function createMergedFieldResources() {
   const size = [canvas.width, canvas.height].map((v) => Math.ceil(v / 2)) as [number, number];
-  return root['~unstable']
-    .createTexture({ size, format: 'rgba16float' })
-    .$usage('sampled', 'render');
+  return root.createTexture({ size, format: 'rgba16float' }).$usage('sampled', 'render');
 }
 
 let mergedFieldTexture = createMergedFieldResources();

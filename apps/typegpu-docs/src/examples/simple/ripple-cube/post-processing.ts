@@ -25,7 +25,7 @@ const compositeLayout = tgpu.bindGroupLayout({
 });
 
 function createProcessingTexture(root: TgpuRoot, width: number, height: number) {
-  const texture = root['~unstable']
+  const texture = root
     .createTexture({
       size: [width, height],
       format: 'rgba16float',
@@ -55,7 +55,7 @@ export function createPostProcessingPipelines(
   const history = createProcessingTexture(root, width, height);
   const taaOutput = createProcessingTexture(root, width, height);
 
-  const sampler = root['~unstable'].createSampler({
+  const sampler = root.createSampler({
     magFilter: 'linear',
     minFilter: 'linear',
   });

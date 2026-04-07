@@ -33,7 +33,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // static resources (created on the example load)
 
-const sampler = root['~unstable'].createSampler({
+const sampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
