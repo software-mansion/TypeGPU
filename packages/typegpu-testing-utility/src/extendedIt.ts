@@ -172,7 +172,6 @@ export const it = base
 
     onCleanup(() => {
       vi.unstubAllGlobals();
-      vi.restoreAllMocks();
     });
   })
   .extend('root', async ({}, { onCleanup }) => {
