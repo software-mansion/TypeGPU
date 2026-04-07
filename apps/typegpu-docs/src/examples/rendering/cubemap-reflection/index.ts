@@ -80,7 +80,7 @@ const materialBuffer = root.createBuffer(Material, materialProps).$usage('unifor
 
 let chosenCubemap: CubemapNames = 'campsite';
 const size = 2048;
-const texture = root['~unstable']
+const texture = root
   .createTexture({
     dimension: '2d',
     size: [size, size, 6],
@@ -90,7 +90,7 @@ const texture = root['~unstable']
 await loadCubemap(texture, chosenCubemap);
 
 const cubemap = texture.createView(d.textureCube(d.f32));
-const sampler = root['~unstable'].createSampler({
+const sampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });

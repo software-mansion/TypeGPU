@@ -174,7 +174,7 @@ export function createSmoothedSdf(
 ) {
   const sdfView = sdfTexture.createView(d.texture2dArray());
 
-  const smoothSdfTexture = root['~unstable']
+  const smoothSdfTexture = root
     .createTexture({
       size: [SPRITE_SIZE, SPRITE_SIZE, LEVEL_COUNT],
       format: 'rgba16float',
