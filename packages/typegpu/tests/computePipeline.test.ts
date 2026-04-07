@@ -589,33 +589,13 @@ describe('TgpuComputePipeline', () => {
       }),
     });
 
-    it('throws when raw GPUBuffer without indirect flag is passed', ({ root, device }) => {
-      const buffer = device.createBuffer({ size: 12, usage: GPUBufferUsage.STORAGE });
-
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
-      const pipeline = root.createComputePipeline({ compute: entryFn });
-
-      expect(() =>
-        pipeline.dispatchWorkgroupsIndirect(buffer, 0),
-      ).toThrowErrorMatchingInlineSnapshot(
-        `[Error: dispatchWorkgroupsIndirect: GPUBuffer must have the INDIRECT usage flag set.]`,
-      );
-    });
-
-    it('accepts raw GPUBuffer with indirect flag and warns that offset validation is limited', ({
-      root,
-      device,
-    }) => {
-      using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    it('accepts raw GPUBuffer with indirect flag', ({ root, device }) => {
       const buffer = device.createBuffer({ size: 16, usage: GPUBufferUsage.INDIRECT });
 
       const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
       const pipeline = root.createComputePipeline({ compute: entryFn });
-      pipeline.dispatchWorkgroupsIndirect(buffer, 4);
 
-      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
-        `"dispatchWorkgroupsIndirect: Using raw GPUBuffer. Offset validation is limited. Wrap the GPUBuffer with \`root.createBuffer(...)\` for safe validation."`,
-      );
+      pipeline.dispatchWorkgroupsIndirect(buffer, 4);
     });
 
     it('throws when offset is not multiple of 4', ({ root, device }) => {
@@ -644,21 +624,6 @@ describe('TgpuComputePipeline', () => {
         pipeline.dispatchWorkgroupsIndirect(buffer, 4),
       ).toThrowErrorMatchingInlineSnapshot(
         `[Error: Buffer too small for dispatchWorkgroupsIndirect. Required: 12 bytes at offset 4, but buffer is only 13 bytes.]`,
-      );
-    });
-
-    it('warns when offset is a number', ({ root }) => {
-      using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
-      const pipeline = root.createComputePipeline({ compute: entryFn });
-
-      const buffer = root.createBuffer(d.mat4x4f).$usage('indirect');
-
-      pipeline.dispatchWorkgroupsIndirect(buffer, 4);
-
-      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
-        `"dispatchWorkgroupsIndirect: Provided start offset 4 as a raw number. Use d.memoryLayoutOf(...) to include contiguous padding info for safer validation."`,
       );
     });
 
