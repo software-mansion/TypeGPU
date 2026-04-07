@@ -534,10 +534,9 @@ function restart() {
 
 let lastTime = 0;
 let animationFrameId = 0;
-let isDisposed = false;
 
 function frame(now: number) {
-  if (isDisposed) {
+  if (signal.aborted) {
     return;
   }
   const dt = Math.min((now - lastTime) / 1000, 0.05);
@@ -679,7 +678,6 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  isDisposed = true;
   cleanupController.abort();
   cancelAnimationFrame(animationFrameId);
   resizeObserver.disconnect();
