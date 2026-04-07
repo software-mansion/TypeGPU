@@ -7,7 +7,7 @@ import type { BaseData, v4f } from '../../data/wgslTypes.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU, InferGPURecord, InferRecord } from '../../shared/repr.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
-import type { Assume } from '../../shared/utilityTypes.ts';
+import type { Assume, RemoveIndexSignature } from '../../shared/utilityTypes.ts';
 import type { TgpuVertexAttrib } from '../../shared/vertexFormat.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { shaderStageSlot } from '../slot/internalSlots.ts';
@@ -21,7 +21,8 @@ const builtinVertexIn = {
   $instanceIndex: builtin.instanceIndex,
 } as const;
 
-export type AutoVertexIn<T extends AnyAutoCustoms> = T & InferRecord<typeof builtinVertexIn>;
+export type AutoVertexIn<T extends AnyAutoCustoms> = RemoveIndexSignature<T> &
+  InferRecord<typeof builtinVertexIn>;
 
 export type _AutoVertexIn<T> = AutoVertexIn<{
   [Key in keyof T]: T[Key] extends TgpuVertexAttrib
@@ -47,7 +48,8 @@ const builtinFragmentIn = {
   $subgroupSize: builtin.subgroupSize,
 } as const;
 
-export type AutoFragmentIn<T extends AnyAutoCustoms> = T & InferRecord<typeof builtinFragmentIn>;
+export type AutoFragmentIn<T extends AnyAutoCustoms> = RemoveIndexSignature<T> &
+  InferRecord<typeof builtinFragmentIn>;
 
 const builtinFragmentOut = {
   $fragDepth: builtin.fragDepth,
