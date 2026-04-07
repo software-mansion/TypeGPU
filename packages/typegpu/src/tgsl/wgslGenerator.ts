@@ -27,7 +27,7 @@ import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared
 import { safeStringify } from '../shared/stringify.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
-import { isGPUCallable, isKnownAtComptime, ResolutionCtx } from '../types.ts';
+import { isGPUCallable, isKnownAtComptime } from '../types.ts';
 import { convertStructValues, convertToCommonType, tryConvertSnippet } from './conversion.ts';
 import {
   ArrayExpression,
@@ -157,7 +157,7 @@ function operatorToType<
 const unaryOpCodeToCodegen = {
   '-': neg[$gpuCallable].call.bind(neg),
   void: () => snip(undefined, wgsl.Void, 'constant'),
-  '!': (ctx: ResolutionCtx, [argExpr]: Snippet[]) => {
+  '!': (ctx: GenerationCtx, [argExpr]: Snippet[]) => {
     if (argExpr === undefined) {
       throw new Error('The unary operator `!` expects 1 argument, but 0 were provided.');
     }
@@ -177,7 +177,7 @@ const unaryOpCodeToCodegen = {
     }
 
     if (wgsl.isVec(dataType)) {
-      console.warn('Use `std.not` for the WGSL `!` unary operator `!` on vector types.');
+      console.warn('Use `std.not` for the WGSL unary operator `!` on vector types.');
     }
 
     throw new Error(

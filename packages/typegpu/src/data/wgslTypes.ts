@@ -1701,7 +1701,7 @@ export function isVoid(value: unknown): value is Void {
 }
 
 export function isBool(value: unknown): value is Bool {
-  return (value as Bool).type === 'bool';
+  return isMarkedInternal(value) && (value as Bool).type === 'bool';
 }
 
 export function isNumericSchema(

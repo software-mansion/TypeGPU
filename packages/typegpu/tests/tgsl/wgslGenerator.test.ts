@@ -2069,83 +2069,84 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  describe('unary', () => {
-    it('handles unary operator `!` on boolean runtime-known argument', () => {
-      const testFn = tgpu.fn(
-        [d.bool],
-        d.bool,
-      )((b) => {
-        return !b;
-      });
+  it('handles unary operator `!` on boolean runtime-known operand', () => {
+    const testFn = tgpu.fn(
+      [d.bool],
+      d.bool,
+    )((b) => {
+      return !b;
+    });
 
-      expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
         "fn testFn(b: bool) -> bool {
           return !b;
         }"
       `);
+  });
+
+  it('handles unary operator `!` on numeric runtime-known operand', () => {
+    const testFn = tgpu.fn(
+      [d.i32],
+      d.bool,
+    )((n) => {
+      return !n;
     });
 
-    it('handles unary operator `!` on numeric runtime-known argument', () => {
-      const testFn = tgpu.fn(
-        [d.i32],
-        d.bool,
-      )((n) => {
-        return !n;
-      });
-
-      expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
         "fn testFn(n: i32) -> bool {
           return !bool(n);
         }"
       `);
+  });
+
+  it('warns and throws when cannot determine truthiness of a unary operator `!` operand', ({
+    root,
+  }) => {
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const buffer = root.createUniform(d.mat4x4f);
+    const testFn1 = tgpu.fn(
+      [],
+      d.bool,
+    )(() => {
+      return !buffer.$;
     });
-
-    it('warns and throws when cannot determine truthiness in unary operator `!`', ({ root }) => {
-      using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const buffer = root.createUniform(d.mat4x4f);
-      const testFn1 = tgpu.fn(
-        [],
-        d.bool,
-      )(() => {
-        return !buffer.$;
-      });
-      expect(() => tgpu.resolve([testFn1])).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([testFn1])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:testFn1: The unary operator \`!\` cannot determine truthiness for runtime value of type: mat4x4f.]
       `);
-      expect(warnSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
 
-      const testFn2 = tgpu.fn(
-        [d.vec3f],
-        d.bool,
-      )((v) => {
-        return !v;
-      });
+    const testFn2 = tgpu.fn(
+      [d.vec3f],
+      d.bool,
+    )((v) => {
+      return !v;
+    });
 
-      expect(() => tgpu.resolve([testFn2])).toThrowErrorMatchingInlineSnapshot(`
+    expect(() => tgpu.resolve([testFn2])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:testFn2: The unary operator \`!\` cannot determine truthiness for runtime value of type: vec3f.]
       `);
-      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
-        `"Use \`std.not\` for the WGSL \`!\` unary operator \`!\` on vector types."`,
-      );
-    });
+    expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
+      `"Use \`std.not\` for the WGSL unary operator \`!\` on vector types."`,
+    );
+  });
 
-    it('handles unary operator `!` on numeric and boolean comptime-known arguments', () => {
-      const getN = tgpu.comptime(() => 1882);
+  it('handles unary operator `!` on numeric and boolean comptime-known operands', () => {
+    const getN = tgpu.comptime(() => 1882);
 
-      const f = () => {
-        'use gpu';
-        if (!(getN() === 7) || !getN()) {
-          return 1;
-        }
-        return -1;
-      };
+    const f = () => {
+      'use gpu';
+      if (!(getN() === 7) || !getN()) {
+        return 1;
+      }
+      return -1;
+    };
 
-      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
         "fn f() -> i32 {
           if ((true || false)) {
             return 1;
@@ -2153,41 +2154,67 @@ describe('wgslGenerator', () => {
           return -1;
         }"
       `);
+  });
+
+  it('handles unary operator `!` on operands from slots and accessors', () => {
+    const Boid = d.struct({
+      pos: d.vec2f,
+      vel: d.vec2f,
     });
 
-    it('handles multiple unary operators `!`', () => {
-      const testFn = tgpu.fn(
-        [d.i32],
-        d.bool,
-      )((n) => {
-        // oxlint-disable-next-line
-        return !!!!!false || !!!n;
-      });
+    const slot = tgpu.slot<d.Infer<typeof Boid>>({ pos: d.vec2f(), vel: d.vec2f() });
+    const accessor = tgpu.accessor(d.vec4u, d.vec4u(1, 8, 8, 2));
 
-      expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+    const f = () => {
+      'use gpu';
+      if (!!slot.$ && !!accessor.$) {
+        return 1;
+      }
+      return -1;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          if ((true && true)) {
+            return 1;
+          }
+          return -1;
+        }"
+      `);
+  });
+
+  it('handles chained unary operators `!`', () => {
+    const testFn = tgpu.fn(
+      [d.i32],
+      d.bool,
+    )((n) => {
+      // oxlint-disable-next-line
+      return !!!!!false || !!!n;
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
         "fn testFn(n: i32) -> bool {
           return (true || !!!bool(n));
         }"
       `);
-    });
+  });
 
-    it('handles unary operator `!` on complex comptime-known argument', () => {
-      const fnSlot = tgpu.slot<{ a?: number }>({});
+  it('handles unary operator `!` on complex comptime-known operand', () => {
+    const slot = tgpu.slot<{ a?: number }>({});
 
-      const f = () => {
-        'use gpu';
-        // oxlint-disable-next-line
-        if (!!fnSlot.$.a) {
-          return fnSlot.$.a;
-        }
-        return 1929;
-      };
+    const f = () => {
+      'use gpu';
+      // oxlint-disable-next-line
+      if (!!slot.$.a) {
+        return slot.$.a;
+      }
+      return 1929;
+    };
 
-      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
         "fn f() -> i32 {
           return 1929;
         }"
       `);
-    });
   });
 });
