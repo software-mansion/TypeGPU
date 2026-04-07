@@ -2,10 +2,13 @@ import { builtin, type OmitBuiltins } from '../../builtin.ts';
 import { AutoStruct } from '../../data/autoStruct.ts';
 import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { vec4f } from '../../data/vector.ts';
+import type { FormatToWGSLType } from '../../data/vertexFormatData.ts';
 import type { BaseData, v4f } from '../../data/wgslTypes.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU, InferGPURecord, InferRecord } from '../../shared/repr.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
+import type { Assume } from '../../shared/utilityTypes.ts';
+import type { TgpuVertexAttrib } from '../../shared/vertexFormat.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { shaderStageSlot } from '../slot/internalSlots.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
@@ -19,6 +22,12 @@ const builtinVertexIn = {
 } as const;
 
 export type AutoVertexIn<T extends AnyAutoCustoms> = T & InferRecord<typeof builtinVertexIn>;
+
+export type _AutoVertexIn<T> = AutoVertexIn<{
+  [Key in keyof T]: T[Key] extends TgpuVertexAttrib
+    ? InferGPU<FormatToWGSLType<T[Key]['format']>>
+    : Assume<T[Key], InferGPU<BaseIOData>>;
+}>;
 
 const builtinVertexOut = {
   $clipDistances: builtin.clipDistances,

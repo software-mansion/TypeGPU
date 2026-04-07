@@ -98,7 +98,7 @@ export interface BackgroundCubemap {
 }
 
 export function createBackgroundCubemap(root: TgpuRoot): BackgroundCubemap {
-  const texture = root['~unstable']
+  const texture = root
     .createTexture({
       size: [CUBEMAP_SIZE, CUBEMAP_SIZE, 6],
       format: 'rgba16float',

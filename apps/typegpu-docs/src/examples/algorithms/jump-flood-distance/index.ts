@@ -49,14 +49,14 @@ const paramsUniform = root.createUniform(VisualizationParams, {
   showOutside: 1,
 });
 
-const filteringSampler = root['~unstable'].createSampler({
+const filteringSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
 function createResources() {
   const textures = [0, 1].map(() =>
-    root['~unstable']
+    root
       .createTexture({
         size: [width, height],
         format: 'rgba16float',
@@ -64,14 +64,14 @@ function createResources() {
       .$usage('storage'),
   ) as [FloodTexture, FloodTexture];
 
-  const maskTexture = root['~unstable']
+  const maskTexture = root
     .createTexture({
       size: [width, height],
       format: 'r32uint',
     })
     .$usage('storage') as MaskTexture;
 
-  const distanceTexture = root['~unstable']
+  const distanceTexture = root
     .createTexture({
       size: [width, height],
       format: 'rgba16float',

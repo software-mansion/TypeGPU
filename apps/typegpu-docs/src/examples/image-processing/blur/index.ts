@@ -27,7 +27,7 @@ const Settings = d.struct({
 
 const settingsUniform = root.createUniform(Settings);
 
-const imageTexture = root['~unstable']
+const imageTexture = root
   .createTexture({
     size: [srcWidth, srcHeight],
     format: 'rgba8unorm',
@@ -36,7 +36,7 @@ const imageTexture = root['~unstable']
 imageTexture.write(imageBitmap);
 
 const textures = [0, 1].map(() => {
-  return root['~unstable']
+  return root
     .createTexture({
       size: [srcWidth, srcHeight],
       format: 'rgba8unorm',
@@ -45,7 +45,7 @@ const textures = [0, 1].map(() => {
 });
 const renderView = textures[1].createView(d.texture2d(d.f32));
 
-const sampler = root['~unstable'].createSampler({
+const sampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });

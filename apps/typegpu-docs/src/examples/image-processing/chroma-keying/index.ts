@@ -5,7 +5,7 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 const device = root.device;
 
-const sampler = root['~unstable'].createSampler({
+const sampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });

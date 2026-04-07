@@ -11,6 +11,7 @@ import type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
 import type { TgpuComputeFn } from './core/function/tgpuComputeFn.ts';
 import type { TgpuFn } from './core/function/tgpuFn.ts';
 import type { TgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
+import type { SeparatedEntryArgs } from './core/function/fnTypes.ts';
 import type { TgpuVertexFn } from './core/function/tgpuVertexFn.ts';
 import type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
 import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
@@ -86,6 +87,11 @@ export interface FnToWgslOptions {
   body: Block;
   params: FuncParameter[];
   externalMap: Record<string, unknown>;
+  /**
+   * For entry functions: positional args and optional data struct.
+   * When provided, takes precedence over `argTypes` for WGSL header generation.
+   */
+  entryInput?: SeparatedEntryArgs | undefined;
 }
 
 export type ItemLayer = {
@@ -217,14 +223,22 @@ export class CodegenState {
 
 export class SimulationState {
   readonly type = 'simulate' as const;
+  readonly buffers: Map<TgpuBuffer<BaseData>, unknown>;
+  readonly vars: {
+    private: Map<TgpuVar, unknown>;
+    workgroup: Map<TgpuVar, unknown>;
+  };
 
   constructor(
-    readonly buffers: Map<TgpuBuffer<BaseData>, unknown>,
-    readonly vars: {
+    buffers: Map<TgpuBuffer<BaseData>, unknown>,
+    vars: {
       private: Map<TgpuVar, unknown>;
       workgroup: Map<TgpuVar, unknown>;
     },
-  ) {}
+  ) {
+    this.buffers = buffers;
+    this.vars = vars;
+  }
 }
 
 export type ExecState = NormalState | CodegenState | SimulationState;
