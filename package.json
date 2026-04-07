@@ -68,7 +68,7 @@
     ],
     "overrides": {
       "rollup": "catalog:build",
-      "vite": "8.0.2",
+      "vite": "8.0.5",
       "@babel/types": "catalog:",
       "@types/node": "catalog:types",
       "typescript": "catalog:types",
