@@ -151,7 +151,7 @@ const linSampler = root.createSampler({
   minFilter: 'linear',
 });
 
-const nearSampler = root['~unstable'].createSampler({
+const nearSampler = root.createSampler({
   magFilter: 'nearest',
   minFilter: 'nearest',
 });
@@ -633,13 +633,13 @@ function frame(now: number) {
     ghostCircle: isGameOver
       ? INACTIVE_CIRCLE
       : {
-        center: d.vec2f(ghostX, DROP_Y),
-        radius: LEVEL_RADII[ghostLevel],
-        level: ghostLevel,
-        angle: 0,
-        speed: 0,
-        danger: 0,
-      },
+          center: d.vec2f(ghostX, DROP_Y),
+          radius: LEVEL_RADII[ghostLevel],
+          level: ghostLevel,
+          angle: 0,
+          speed: 0,
+          danger: 0,
+        },
   });
 
   mergedFieldPipeline
