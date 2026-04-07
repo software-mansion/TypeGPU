@@ -86,10 +86,10 @@ describe('not', () => {
       return not(v);
     });
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-        "fn testFn(v: vec3f) -> vec3<bool> {
-          return !vec3<bool>(v);
-        }"
-      `);
+      "fn testFn(v: vec3f) -> vec3<bool> {
+        return !(vec3<bool>(v));
+      }"
+    `);
   });
 
   it('evaluates at compile time for comptime-known arguments', () => {

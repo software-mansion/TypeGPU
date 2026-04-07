@@ -237,7 +237,7 @@ export const not = dualImpl({
 
     if (isVec(dataType)) {
       const vecConstructorStr = `vec${dataType.componentCount}<bool>`;
-      return stitch`!${vecConstructorStr}(${arg})`;
+      return stitch`!(${vecConstructorStr}(${arg}))`;
     }
 
     throw new Error(
