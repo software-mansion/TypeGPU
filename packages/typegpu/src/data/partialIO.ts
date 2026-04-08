@@ -1,6 +1,5 @@
 import { BufferWriter, getSystemEndianness } from 'typed-binary';
 import { roundUp } from '../mathUtils.ts';
-import type { InferPartial } from '../shared/repr.ts';
 import { alignmentOf } from './alignmentOf.ts';
 import { type CompiledWriter, getCompiledWriter } from './compiledIO.ts';
 import { writeData } from './dataIO.ts';
@@ -15,6 +14,51 @@ export interface WriteInstruction {
   gpuOffset: number;
 }
 
+/**
+ * Converts a value in the legacy `InferPartial` format (with `{idx, value}[]`
+ * sparse arrays) into the `InferPatch` format (with `Record<number, T>`).
+ * Dense arrays, typed arrays, and leaves are already patch-compatible and
+ * pass through untouched.
+ */
+export function convertPartialToPatch(schema: wgsl.BaseData, data: unknown): unknown {
+  if (data === undefined || data === null) {
+    return data;
+  }
+
+  if (isWgslStruct(schema) || isUnstruct(schema)) {
+    const result: Record<string, unknown> = {};
+    const record = data as Record<string, unknown>;
+    for (const key of Object.keys(schema.propTypes)) {
+      const subSchema = schema.propTypes[key];
+      const value = record[key];
+      if (value !== undefined && subSchema) {
+        result[key] = convertPartialToPatch(subSchema, value);
+      }
+    }
+    return result;
+  }
+
+  if (
+    (isWgslArray(schema) || isDisarray(schema)) &&
+    Array.isArray(data) &&
+    data.length > 0 &&
+    typeof data[0] === 'object' &&
+    data[0] !== null &&
+    'idx' in data[0]
+  ) {
+    const arrSchema = schema as wgsl.WgslArray;
+    const result: Record<number, unknown> = {};
+    for (const entry of data as { idx: number; value: unknown }[]) {
+      result[entry.idx] = convertPartialToPatch(arrSchema.elementType, entry.value);
+    }
+    return result;
+  }
+
+  return data;
+}
+
+const isLittleEndian = getSystemEndianness() === 'little';
+
 interface Update {
   offset: number;
   size: number;
@@ -22,27 +66,15 @@ interface Update {
   write: (view: DataView, localOffset: number) => void;
 }
 
-const isLittleEndian = getSystemEndianness() === 'little';
-
-function isSparseArray(value: unknown): boolean {
-  return (
-    Array.isArray(value) &&
-    value.length > 0 &&
-    typeof value[0] === 'object' &&
-    value[0] !== null &&
-    'idx' in (value[0] as object)
-  );
-}
-
 /**
- * Can the partial value be passed directly to the struct's compiled writer?
- * True when every field is present and no array field uses sparse format.
+ * Compiled writers require every field to be present and every array field
+ * to be in dense form (plain array or TypedArray, not a sparse Record).
  */
 function canUseDirectWriter(
   node: wgsl.WgslStruct | Unstruct,
   value: Record<string, unknown>,
 ): boolean {
-  for (const key of Object.keys(offsetsForProps(node))) {
+  for (const key of Object.keys(node.propTypes)) {
     const childValue = value[key];
     if (childValue === undefined || childValue === null) {
       return false;
@@ -50,13 +82,16 @@ function canUseDirectWriter(
 
     const subSchema = node.propTypes[key];
 
-    if ((isWgslArray(subSchema) || isDisarray(subSchema)) && isSparseArray(childValue)) {
-      return false;
+    if (isWgslStruct(subSchema) || isUnstruct(subSchema)) {
+      if (!canUseDirectWriter(subSchema, childValue as Record<string, unknown>)) {
+        return false;
+      }
     }
 
     if (
-      (isWgslStruct(subSchema) || isUnstruct(subSchema)) &&
-      !canUseDirectWriter(subSchema as wgsl.WgslStruct, childValue as Record<string, unknown>)
+      (isWgslArray(subSchema) || isDisarray(subSchema)) &&
+      !Array.isArray(childValue) &&
+      !ArrayBuffer.isView(childValue)
     ) {
       return false;
     }
@@ -81,9 +116,50 @@ function makeWriteFn(
   };
 }
 
-export function getWriteInstructions<TData extends wgsl.BaseData>(
+interface Run {
+  start: number;
+  end: number;
+  padding: number;
+  entries: Update[];
+}
+
+function flushRun(run: Run): WriteInstruction {
+  const buf = new ArrayBuffer(run.end - run.start);
+  const view = new DataView(buf);
+  for (const entry of run.entries) {
+    entry.write(view, entry.offset - run.start);
+  }
+  return { gpuOffset: run.start, data: new Uint8Array(buf) };
+}
+
+function coalesceUpdates(updates: Update[]): WriteInstruction[] {
+  updates.sort((a, b) => a.offset - b.offset);
+
+  const instructions: WriteInstruction[] = [];
+  let run: Run | null = null;
+
+  for (const u of updates) {
+    if (run && u.offset === run.end + run.padding) {
+      run.end = u.offset + u.size;
+      run.padding = u.padding;
+      run.entries.push(u);
+    } else {
+      if (run) {
+        instructions.push(flushRun(run));
+      }
+      run = { start: u.offset, end: u.offset + u.size, padding: u.padding, entries: [u] };
+    }
+  }
+  if (run) {
+    instructions.push(flushRun(run));
+  }
+
+  return instructions;
+}
+
+export function getPatchInstructions<TData extends wgsl.BaseData>(
   schema: TData,
-  data: InferPartial<TData>,
+  data: unknown,
 ): WriteInstruction[] {
   if (sizeOf(schema) === 0 || data === undefined || data === null) {
     return [];
@@ -91,157 +167,123 @@ export function getWriteInstructions<TData extends wgsl.BaseData>(
 
   const updates: Update[] = [];
 
-  function collect(node: wgsl.BaseData, partialValue: unknown, offset: number, padding: number) {
-    if (partialValue === undefined || partialValue === null) {
-      return;
-    }
-
-    if (isWgslStruct(node) || isUnstruct(node)) {
-      const writer = canUseDirectWriter(node, partialValue as Record<string, unknown>)
-        ? getCompiledWriter(node)
-        : undefined;
-
+  function collectStruct(
+    node: wgsl.WgslStruct | Unstruct,
+    value: Record<string, unknown>,
+    offset: number,
+    padding: number,
+  ) {
+    if (canUseDirectWriter(node, value)) {
+      const writer = getCompiledWriter(node);
       if (writer) {
         const nodeSize = sizeOf(node);
         updates.push({
           offset,
           size: nodeSize,
           padding,
-          write: makeWriteFn(writer, node, nodeSize, partialValue),
+          write: makeWriteFn(writer, node, nodeSize, value),
         });
         return;
       }
+    }
 
-      const propOffsets = offsetsForProps(node);
-      for (const key of Object.keys(propOffsets)) {
-        const propOffset = propOffsets[key];
-        const subSchema = node.propTypes[key];
-        if (!subSchema || !propOffset) {
-          continue;
-        }
-
-        const childValue = (partialValue as Record<string, unknown>)[key];
-        if (childValue !== undefined) {
-          collect(subSchema, childValue, offset + propOffset.offset, propOffset.padding ?? padding);
-        }
+    const propOffsets = offsetsForProps(node);
+    for (const key of Object.keys(propOffsets)) {
+      const propOffset = propOffsets[key];
+      const subSchema = node.propTypes[key];
+      if (!subSchema || !propOffset) {
+        continue;
       }
+      const childValue = value[key];
+      if (childValue !== undefined) {
+        collect(subSchema, childValue, offset + propOffset.offset, propOffset.padding ?? padding);
+      }
+    }
+  }
+
+  function collectArrayDense(
+    arrSchema: wgsl.WgslArray,
+    value: unknown[] | ArrayBufferView,
+    offset: number,
+    padding: number,
+  ) {
+    const elementSize = roundUp(sizeOf(arrSchema.elementType), alignmentOf(arrSchema.elementType));
+
+    if (ArrayBuffer.isView(value)) {
+      const copyLen = Math.min(value.byteLength, arrSchema.elementCount * elementSize);
+      updates.push({
+        offset,
+        size: copyLen,
+        padding,
+        write: (view, localOffset) => {
+          new Uint8Array(view.buffer, view.byteOffset + localOffset, copyLen).set(
+            new Uint8Array(value.buffer, value.byteOffset, copyLen),
+          );
+        },
+      });
+      return;
+    }
+
+    const arrWriter = getCompiledWriter(arrSchema);
+    if (arrWriter) {
+      const arrSize = arrSchema.elementCount * elementSize;
+      updates.push({
+        offset,
+        size: arrSize,
+        padding,
+        write: makeWriteFn(arrWriter, arrSchema, arrSize, value),
+      });
+      return;
+    }
+
+    const elementPadding = elementSize - sizeOf(arrSchema.elementType);
+    for (let i = 0; i < Math.min(arrSchema.elementCount, value.length); i++) {
+      collect(arrSchema.elementType, value[i], offset + i * elementSize, elementPadding);
+    }
+  }
+
+  function collect(node: wgsl.BaseData, value: unknown, offset: number, padding: number) {
+    if (value === undefined || value === null) {
+      return;
+    }
+
+    if (isWgslStruct(node) || isUnstruct(node)) {
+      collectStruct(node, value as Record<string, unknown>, offset, padding);
       return;
     }
 
     if (isWgslArray(node) || isDisarray(node)) {
       const arrSchema = node as wgsl.WgslArray;
+
+      if (ArrayBuffer.isView(value) || Array.isArray(value)) {
+        collectArrayDense(arrSchema, value, offset, padding);
+        return;
+      }
+
+      const sparse = value as Record<string, unknown>;
       const elementSize = roundUp(
         sizeOf(arrSchema.elementType),
         alignmentOf(arrSchema.elementType),
       );
       const elementPadding = elementSize - sizeOf(arrSchema.elementType);
-
-      if (ArrayBuffer.isView(partialValue)) {
-        const src = partialValue;
-        const copyLen = Math.min(src.byteLength, arrSchema.elementCount * elementSize);
-        updates.push({
-          offset,
-          size: copyLen,
-          padding,
-          write: (view, localOffset) => {
-            new Uint8Array(view.buffer, view.byteOffset + localOffset, copyLen).set(
-              new Uint8Array(src.buffer, src.byteOffset, copyLen),
-            );
-          },
-        });
-        return;
-      }
-
-      if (!Array.isArray(partialValue)) {
-        throw new Error('Partial value for array must be an array');
-      }
-
-      if (isSparseArray(partialValue)) {
-        const entries = partialValue as { idx: number; value: unknown }[];
-        entries.sort((a, b) => a.idx - b.idx);
-        for (const { idx, value } of entries) {
-          collect(arrSchema.elementType, value, offset + idx * elementSize, elementPadding);
-        }
-        return;
-      }
-
-      // Full replacement with plain array
-      const arrWriter = getCompiledWriter(node);
-      if (arrWriter) {
-        const arrSize = arrSchema.elementCount * elementSize;
-        updates.push({
-          offset,
-          size: arrSize,
-          padding,
-          write: makeWriteFn(arrWriter, node, arrSize, partialValue),
-        });
-      } else {
-        for (let i = 0; i < Math.min(arrSchema.elementCount, partialValue.length); i++) {
-          collect(arrSchema.elementType, partialValue[i], offset + i * elementSize, elementPadding);
+      for (const key of Object.keys(sparse)) {
+        const idx = Number(key);
+        if (!Number.isNaN(idx)) {
+          collect(arrSchema.elementType, sparse[key], offset + idx * elementSize, elementPadding);
         }
       }
       return;
     }
 
-    // Leaf (vec, mat, scalar, packed)
     const leafSize = sizeOf(node);
     updates.push({
       offset,
       size: leafSize,
       padding,
-      write: makeWriteFn(getCompiledWriter(node), node, leafSize, partialValue),
+      write: makeWriteFn(getCompiledWriter(node), node, leafSize, value),
     });
   }
 
   collect(schema, data, 0, 0);
-
-  if (updates.length === 0) {
-    return [];
-  }
-
-  // Coalesce adjacent updates (bridging known alignment padding) into runs
-  updates.sort((a, b) => a.offset - b.offset);
-
-  const first = updates[0];
-  if (!first) {
-    return [];
-  }
-
-  const instructions: WriteInstruction[] = [];
-  let run = {
-    start: first.offset,
-    end: first.offset + first.size,
-    padding: first.padding,
-    entries: [first],
-  };
-
-  for (let i = 1; i < updates.length; i++) {
-    const u = updates[i];
-    if (!u) {
-      continue;
-    }
-    if (u.offset === run.end + run.padding) {
-      run.end = u.offset + u.size;
-      run.padding = u.padding;
-      run.entries.push(u);
-    } else {
-      instructions.push(flushRun(run));
-      run = { start: u.offset, end: u.offset + u.size, padding: u.padding, entries: [u] };
-    }
-  }
-  instructions.push(flushRun(run));
-
-  return instructions;
-}
-
-function flushRun(run: { start: number; end: number; entries: Update[] }): WriteInstruction {
-  const runSize = run.end - run.start;
-  const buf = new ArrayBuffer(runSize);
-  const view = new DataView(buf);
-
-  for (const entry of run.entries) {
-    entry.write(view, entry.offset - run.start);
-  }
-
-  return { gpuOffset: run.start, data: new Uint8Array(buf) };
+  return coalesceUpdates(updates);
 }

@@ -1,7 +1,7 @@
 import type { TgpuTexture } from '../core/texture/texture.ts';
 import type { Disarray, Undecorate } from '../data/dataTypes.ts';
 import type { WgslStorageTexture, WgslTexture } from '../data/texture.ts';
-import type { U16, U32, WgslArray } from '../data/wgslTypes.ts';
+import type { TypedArrayFor, U16, U32, WgslArray } from '../data/wgslTypes.ts';
 import type {
   $gpuRepr,
   $gpuValueOf,
@@ -15,7 +15,7 @@ import type {
   $validVertexSchema,
 } from './symbols.ts';
 import type { ViewDimensionToDimension } from '../core/texture/textureFormats.ts';
-import type { Default } from './utilityTypes.ts';
+import type { Default, Prettify } from './utilityTypes.ts';
 
 /**
  * Extracts the inferred representation of a resource.
@@ -76,6 +76,31 @@ export type InferInputRecord<T extends Record<string | number | symbol, unknown>
 
 export type InferPartialRecord<T extends Record<string | number | symbol, unknown>> = {
   [Key in keyof T]?: InferPartial<T[Key]>;
+};
+
+/**
+ * Extracts the patch representation of a resource.
+ * Used by the `buffer.patch` API. Differs from {@link InferPartial} in that
+ * sparse array updates use `Record<number, T>` instead of `{idx, value}[]`.
+ *
+ * @example
+ * type A = InferPatch<F32> // => number | undefined
+ * type B = InferPatch<WgslStruct<{ a: F32 }>> // => { a?: number | undefined }
+ * type C = InferPatch<WgslArray<F32>> // => Record<number, number | undefined> | number[] | undefined
+ */
+export type InferPatch<T> =
+  T extends WgslArray<infer E>
+    ? Record<number, InferPatch<E>> | InferInput<E>[] | TypedArrayFor<E> | undefined
+    : T extends Disarray<infer E>
+      ? Record<number, InferPatch<E>> | InferInput<E>[] | TypedArrayFor<E> | undefined
+      : T extends { readonly propTypes: infer P extends Record<string, unknown> }
+        ? Prettify<Partial<InferPatchRecord<P>>> | undefined
+        : T extends { readonly inner: infer I }
+          ? InferPatch<I>
+          : InferInput<T> | undefined;
+
+export type InferPatchRecord<T extends Record<string | number | symbol, unknown>> = {
+  [Key in keyof T]?: InferPatch<T[Key]>;
 };
 
 export type InferGPURecord<T extends Record<string | number | symbol, unknown>> = {
