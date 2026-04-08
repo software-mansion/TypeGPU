@@ -90,13 +90,12 @@ export const partialWriteSuite = createSuite(
     '20% of the buffer - not contiguous': (getCtx) => async () => {
       const { amountOfBoids, d, root, buffer } = getCtx();
 
-      const writes: Record<
-        number,
-        { pos: ReturnType<typeof d.vec3f>; vel: ReturnType<typeof d.vec3f> }
-      > = {};
-      for (let i = 0; i < amountOfBoids; i += 5) {
-        writes[i] = { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) };
-      }
+      const writes = Object.fromEntries(
+        Array.from({ length: amountOfBoids / 5 }, (_, i) => [
+          i,
+          { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) },
+        ]),
+      );
 
       buffer.patch(writes);
 
@@ -106,13 +105,12 @@ export const partialWriteSuite = createSuite(
     '20% of the buffer - contiguous': (getCtx) => async () => {
       const { amountOfBoids, d, root, buffer } = getCtx();
 
-      const writes: Record<
-        number,
-        { pos: ReturnType<typeof d.vec3f>; vel: ReturnType<typeof d.vec3f> }
-      > = {};
-      for (let i = 0; i < amountOfBoids / 5; i++) {
-        writes[i] = { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) };
-      }
+      const writes = Object.fromEntries(
+        Array.from({ length: amountOfBoids / 5 }, (_, i) => [
+          i,
+          { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) },
+        ]),
+      );
 
       buffer.patch(writes);
       await root.device.queue.onSubmittedWorkDone();
@@ -121,13 +119,12 @@ export const partialWriteSuite = createSuite(
     '100% of the buffer - contiguous': (getCtx) => async () => {
       const { amountOfBoids, d, root, buffer } = getCtx();
 
-      const writes: Record<
-        number,
-        { pos: ReturnType<typeof d.vec3f>; vel: ReturnType<typeof d.vec3f> }
-      > = {};
-      for (let i = 0; i < amountOfBoids; i++) {
-        writes[i] = { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) };
-      }
+      const writes = Object.fromEntries(
+        Array.from({ length: amountOfBoids / 5 }, (_, i) => [
+          i,
+          { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) },
+        ]),
+      );
 
       buffer.patch(writes);
       await root.device.queue.onSubmittedWorkDone();
