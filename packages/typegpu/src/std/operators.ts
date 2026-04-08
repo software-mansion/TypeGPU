@@ -17,7 +17,7 @@ import {
   isUint32VecInstance,
   isVec,
   isVecInstance,
-  vecIToVecU,
+  type vecIToVecU,
 } from '../data/wgslTypes.ts';
 import { SignatureNotSupportedError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';

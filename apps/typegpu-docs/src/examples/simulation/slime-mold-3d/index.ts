@@ -122,7 +122,7 @@ const params = root.createUniform(Params, {
 });
 
 const textures = [0, 1].map(() =>
-  root['~unstable']
+  root
     .createTexture({
       size: [resolution.x, resolution.y, resolution.z],
       format: 'r32float',
@@ -181,7 +181,6 @@ const getPerpendicular = (dir: d.v3f) => {
 };
 
 const numSamples = 8;
-const samplesIterations = Array.from({ length: numSamples }, (_, i) => i);
 const sense3D = (pos: d.v3f, direction: d.v3f) => {
   'use gpu';
   const dims = std.textureDimensions(computeLayout.$.oldState);
@@ -193,7 +192,7 @@ const sense3D = (pos: d.v3f, direction: d.v3f) => {
   const perp1 = getPerpendicular(direction);
   const perp2 = std.cross(direction, perp1);
 
-  for (const i of tgpu.unroll(samplesIterations)) {
+  for (const i of tgpu.unroll(std.range(numSamples))) {
     const theta = (i / numSamples) * 2 * Math.PI;
 
     const coneOffset = perp1 * std.cos(theta) + perp2 * std.sin(theta);
@@ -282,7 +281,7 @@ const updateAgents = tgpu.computeFn({
   std.textureStore(computeLayout.$.newState, d.vec3u(newPos), d.vec4f(newState, 0, 0, 1));
 });
 
-const sampler = root['~unstable'].createSampler({
+const sampler = root.createSampler({
   magFilter: canFilter ? 'linear' : 'nearest',
   minFilter: canFilter ? 'linear' : 'nearest',
 });

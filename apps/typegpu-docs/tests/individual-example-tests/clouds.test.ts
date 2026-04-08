@@ -22,20 +22,16 @@ describe('clouds example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      struct fullScreenTriangle_Output {
+      "struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
       struct CloudsParams {
@@ -87,25 +83,17 @@ describe('clouds example', () => {
 
       fn fbm(pos: vec3f) -> f32 {
         var sum = 0f;
-        var amp = 1f;
-        var freq = 1.399999976158142f;
         // unrolled iteration #0
         {
-          sum += (noise3d((pos * freq)) * amp);
-          amp *= 0.5f;
-          freq *= 2f;
+          sum += (noise3d((pos * 1.4f)) * 1f);
         }
         // unrolled iteration #1
         {
-          sum += (noise3d((pos * freq)) * amp);
-          amp *= 0.5f;
-          freq *= 2f;
+          sum += (noise3d((pos * 2.8f)) * 0.5f);
         }
         // unrolled iteration #2
         {
-          sum += (noise3d((pos * freq)) * amp);
-          amp *= 0.5f;
-          freq *= 2f;
+          sum += (noise3d((pos * 5.6f)) * 0.25f);
         }
         return sum;
       }

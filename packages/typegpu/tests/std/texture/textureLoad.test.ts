@@ -191,7 +191,7 @@ describe('textureLoad', () => {
   });
 
   it('does not allow for raw schemas to be passed in', ({ root }) => {
-    const someTexture = root['~unstable']
+    const someTexture = root
       .createTexture({
         size: [256, 256],
         format: 'rgba8unorm',

@@ -43,15 +43,15 @@ describe('autonaming', () => {
     const myGuardedPipeline = root.createGuardedComputePipeline(() => {
       'use gpu';
     });
-    const myTexture = root['~unstable'].createTexture({
+    const myTexture = root.createTexture({
       size: [1, 1],
       format: 'rgba8unorm',
     });
-    const mySampler = root['~unstable'].createSampler({
+    const mySampler = root.createSampler({
       magFilter: 'linear',
       minFilter: 'linear',
     });
-    const myComparisonSampler = root['~unstable'].createComparisonSampler({
+    const myComparisonSampler = root.createComparisonSampler({
       compare: 'equal',
     });
 
@@ -79,7 +79,7 @@ describe('autonaming', () => {
   });
 
   it('names views', ({ root }) => {
-    const texture = root['~unstable']
+    const texture = root
       .createTexture({
         size: [256, 256],
         format: 'rgba8unorm',
@@ -175,16 +175,45 @@ describe('autonaming', () => {
   });
 
   it('shellless name carries over to WGSL', () => {
-    function myFun() {
-      'use gpu';
-      return 0;
-    }
+    const scope = () => {
+      function myFun() {
+        'use gpu';
+        return 0;
+      }
 
-    const main = tgpu.fn([])(() => {
-      myFun();
-    });
+      const main = tgpu.fn([])(() => {
+        myFun();
+      });
 
-    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      return main;
+    };
+
+    expect(scope.toString()).toMatchInlineSnapshot(`
+      "() => {
+      			const myFun = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function myFun() {
+      				"use gpu";
+      				return 0;
+      			}), {
+          v: 1,
+          name: "myFun",
+          ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({}));
+
+
+      			const main = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(__vite_ssr_import_2__.default.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+      				myFun();
+      			}), {
+          v: 1,
+          name: undefined,
+          ast: {"params":[],"body":[0,[[6,"myFun",[]]]],"externalNames":["myFun"]},
+          externals: () => ({myFun}),
+        }) && $.f)({}))), "main"));
+      			return main;
+      		}"
+    `);
+
+    expect(tgpu.resolve([scope()])).toMatchInlineSnapshot(`
       "fn myFun() -> i32 {
         return 0;
       }

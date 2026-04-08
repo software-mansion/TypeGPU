@@ -44,7 +44,7 @@ const initialBloom = {
 };
 const blendFactorUniform = root.createUniform(d.f32, 0.03);
 
-const sdfTexture = root['~unstable']
+const sdfTexture = root
   .createTexture({
     size: [GRID_SIZE / 2, GRID_SIZE / 2, GRID_SIZE / 2],
     format: 'rgba16float',
@@ -56,7 +56,7 @@ const sdfWriteView = sdfTexture.createView(d.textureStorage3d('rgba16float'));
 
 const sdfBindGroup = root.createBindGroup(sdfLayout, {
   sdfTexture: sdfTexture,
-  sdfSampler: root['~unstable'].createSampler({
+  sdfSampler: root.createSampler({
     magFilter: 'linear',
     minFilter: 'linear',
   }),
@@ -106,7 +106,7 @@ const backgroundCubemap = createBackgroundCubemap(root);
 
 const envMapBindGroup = root.createBindGroup(envMapLayout, {
   envMap: backgroundCubemap.view,
-  envSampler: root['~unstable'].createSampler({
+  envSampler: root.createSampler({
     magFilter: 'linear',
     minFilter: 'linear',
   }),

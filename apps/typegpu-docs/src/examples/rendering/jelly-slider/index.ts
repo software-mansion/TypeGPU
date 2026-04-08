@@ -72,7 +72,7 @@ let [width, height] = [canvas.width * qualityScale, canvas.height * qualityScale
 let textures = createTextures(root, width, height);
 let backgroundTexture = createBackgroundTexture(root, width, height);
 
-const filteringSampler = root['~unstable'].createSampler({
+const filteringSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -816,7 +816,7 @@ async function autoSetQuaility() {
   });
 
   for (let i = 0; i < 8; i++) {
-    const testTexture = root['~unstable']
+    const testTexture = root
       .createTexture({
         size: [canvas.width * resolutionScale, canvas.height * resolutionScale],
         format: 'rgba8unorm',

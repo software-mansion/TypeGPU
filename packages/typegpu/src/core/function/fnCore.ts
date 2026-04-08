@@ -8,7 +8,7 @@ import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx } from '../../types.ts';
 import { applyExternals, type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
 import { extractArgs } from './extractArgs.ts';
-import type { Implementation } from './fnTypes.ts';
+import type { Implementation, SeparatedEntryArgs } from './fnTypes.ts';
 
 export interface FnCore {
   applyExternals: (newExternals: ExternalMap) => void;
@@ -24,6 +24,11 @@ export interface FnCore {
      * from the implementation (relevant for shellless functions).
      */
     returnType: BaseData | undefined,
+    /**
+     * For entry functions: positional args and optional data struct.
+     * When provided, takes precedence over `argTypes` for WGSL header generation.
+     */
+    entryInput?: SeparatedEntryArgs,
   ): ResolvedSnippet;
 }
 
@@ -48,6 +53,7 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
       ctx: ResolutionCtx,
       argTypes: BaseData[],
       returnType: BaseData | undefined,
+      entryInput?: SeparatedEntryArgs,
     ): ResolvedSnippet {
       const externalMap: ExternalMap = {};
 
@@ -62,27 +68,46 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
           throw new Error('Explicit return type is required for string implementation');
         }
 
+        const validArgNames = entryInput
+          ? Object.fromEntries(
+              entryInput.positionalArgs.map((a) => [a.schemaKey, ctx.makeNameValid(a.schemaKey)]),
+            )
+          : undefined;
+
+        if (validArgNames && Object.keys(validArgNames).length > 0) {
+          applyExternals(externalMap, { in: validArgNames });
+        }
+
         const replacedImpl = replaceExternalsInWgsl(ctx, externalMap, implementation);
 
         let header = '';
         let body = '';
 
-        if (fnAttribute !== '') {
-          const input = isWgslStruct(argTypes[0])
-            ? `(in: ${ctx.resolve(argTypes[0]).value})`
-            : '()';
+        if (fnAttribute !== '' && entryInput && validArgNames) {
+          const { dataSchema, positionalArgs } = entryInput;
+          const parts: string[] = [];
+          if (dataSchema && isArgUsedInBody('in', replacedImpl)) {
+            parts.push(`in: ${ctx.resolve(dataSchema).value}`);
+          }
+          for (const a of positionalArgs) {
+            const argName = validArgNames[a.schemaKey] ?? '';
+            if (argName !== '' && isArgUsedInBody(argName, replacedImpl)) {
+              parts.push(`${getAttributesString(a.type)}${argName}: ${ctx.resolve(a.type).value}`);
+            }
+          }
+          const input = `(${parts.join(', ')})`;
 
           const attributes = isWgslData(returnType) ? getAttributesString(returnType) : '';
           const output =
             returnType !== Void
               ? isWgslStruct(returnType)
-                ? `-> ${ctx.resolve(returnType).value}`
-                : `-> ${attributes !== '' ? attributes : '@location(0)'} ${
+                ? ` -> ${ctx.resolve(returnType).value} `
+                : ` -> ${attributes !== '' ? attributes : '@location(0)'} ${
                     ctx.resolve(returnType).value
-                  }`
-              : '';
+                  } `
+              : ' ';
 
-          header = `${input} ${output} `;
+          header = `${input}${output}`;
           body = replacedImpl;
         } else {
           const providedArgs = extractArgs(replacedImpl);
@@ -107,10 +132,10 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
 
           const output =
             returnType === Void
-              ? ''
-              : `-> ${checkAndReturnType(ctx, 'return type', providedArgs.ret?.type, returnType)}`;
+              ? ' '
+              : ` -> ${checkAndReturnType(ctx, 'return type', providedArgs.ret?.type, returnType)} `;
 
-          header = `(${input}) ${output}`;
+          header = `(${input})${output}`;
 
           body = replacedImpl.slice(providedArgs.range.end);
         }
@@ -175,6 +200,7 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
               ? 'fragment'
               : 'normal',
         argTypes,
+        entryInput,
         params: ast.params,
         returnType,
         body: ast.body,
@@ -190,6 +216,10 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
   };
 
   return core;
+}
+
+function isArgUsedInBody(argName: string, body: string): boolean {
+  return new RegExp(`\\b${argName}\\b`).test(body);
 }
 
 function checkAndReturnType(

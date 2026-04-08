@@ -49,15 +49,11 @@ describe('function visualizer example', () => {
         lineVertices[x] = result.xy;
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        computePointsFn(in.id.x, in.id.y, in.id.z);
+        computePointsFn(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -87,15 +83,11 @@ describe('function visualizer example', () => {
         lineVertices[x] = result.xy;
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        computePointsFn(in.id.x, in.id.y, in.id.z);
+        computePointsFn(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -125,15 +117,11 @@ describe('function visualizer example', () => {
         lineVertices[x] = result.xy;
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        computePointsFn(in.id.x, in.id.y, in.id.z);
+        computePointsFn(id.x, id.y, id.z);
       }
 
       struct Properties {
@@ -149,19 +137,14 @@ describe('function visualizer example', () => {
         @builtin(position) pos: vec4f,
       }
 
-      struct backgroundVertex_Input {
-        @builtin(vertex_index) vid: u32,
-        @builtin(instance_index) iid: u32,
-      }
-
-      @vertex fn backgroundVertex(_arg_0: backgroundVertex_Input) -> backgroundVertex_Output {
+      @vertex fn backgroundVertex(@builtin(vertex_index) vid: u32, @builtin(instance_index) iid: u32) -> backgroundVertex_Output {
         let properties = (&propertiesUniform);
         var leftBot = ((*properties).transformation * vec4f(-1, -1, 0, 1));
         var rightTop = ((*properties).transformation * vec4f(1, 1, 0, 1));
         let aspectRatio = ((rightTop.x - leftBot.x) / (rightTop.y - leftBot.y));
         var transformedPoints = array<vec2f, 4>(vec2f(leftBot.x, 0f), vec2f(rightTop.x, 0f), vec2f(0f, leftBot.y), vec2f(0f, rightTop.y));
-        var currentPoint = ((*properties).inverseTransformation * vec4f(transformedPoints[((2u * _arg_0.iid) + u32((f32(_arg_0.vid) / 2f)))].xy, 0f, 1f));
-        return backgroundVertex_Output(vec4f((currentPoint.x + (((f32(_arg_0.iid) * select(-1f, 1f, ((_arg_0.vid % 2u) == 0u))) * 5e-3f) / aspectRatio)), (currentPoint.y + ((f32((1u - _arg_0.iid)) * select(-1f, 1f, ((_arg_0.vid % 2u) == 0u))) * 5e-3f)), currentPoint.zw));
+        var currentPoint = ((*properties).inverseTransformation * vec4f(transformedPoints[((2u * iid) + u32((f32(vid) / 2f)))].xy, 0f, 1f));
+        return backgroundVertex_Output(vec4f((currentPoint.x + (((f32(iid) * select(-1f, 1f, ((vid % 2u) == 0u))) * 5e-3f) / aspectRatio)), (currentPoint.y + ((f32((1u - iid)) * select(-1f, 1f, ((vid % 2u) == 0u))) * 5e-3f)), currentPoint.zw));
       }
 
       @fragment fn backgroundFragment() -> @location(0) vec4f {
@@ -203,16 +186,12 @@ describe('function visualizer example', () => {
         @builtin(position) pos: vec4f,
       }
 
-      struct vertex_Input {
-        @builtin(vertex_index) vid: u32,
-      }
-
-      @vertex fn vertex(_arg_0: vertex_Input) -> vertex_Output {
+      @vertex fn vertex(@builtin(vertex_index) vid: u32) -> vertex_Output {
         let properties = (&propertiesUniform);
         let lineVertices = (&lineVertices_1);
-        let currentVertex = (f32(_arg_0.vid) / 2f);
+        let currentVertex = (f32(vid) / 2f);
         var orthonormal = orthonormalForVertex(currentVertex);
-        var offset = ((orthonormal * (*properties).lineWidth) * select(-1f, 1f, ((_arg_0.vid % 2u) == 0u)));
+        var offset = ((orthonormal * (*properties).lineWidth) * select(-1f, 1f, ((vid % 2u) == 0u)));
         var leftBot = ((*properties).transformation * vec4f(-1, -1, 0, 1));
         var rightTop = ((*properties).transformation * vec4f(1, 1, 0, 1));
         let canvasRatio = ((rightTop.x - leftBot.x) / (rightTop.y - leftBot.y));

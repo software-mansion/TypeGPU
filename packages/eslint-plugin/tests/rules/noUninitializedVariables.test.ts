@@ -1,9 +1,9 @@
 import { describe } from 'vitest';
-import { ruleTester } from './ruleTester.ts';
-import { uninitializedVariable } from '../src/rules/uninitializedVariable.ts';
+import { ruleTester } from '../utils/ruleTester.ts';
+import { noUninitializedVariables } from '../../src/rules/noUninitializedVariables.ts';
 
-describe('uninitializedVariable', () => {
-  ruleTester.run('uninitializedVariable', uninitializedVariable, {
+describe('noUninitializedVariables', () => {
+  ruleTester.run('noUninitializedVariables', noUninitializedVariables, {
     valid: [
       'let a;',
       'let a, b;',

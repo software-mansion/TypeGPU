@@ -4,15 +4,16 @@ import { directiveTracking } from '../enhancers/directiveTracking.ts';
 import type { RuleContext } from '@typescript-eslint/utils/ts-eslint';
 import { ASTUtils, type TSESTree } from '@typescript-eslint/utils';
 
-export const math = createRule({
-  name: 'math',
+export const noMath = createRule({
+  name: 'no-math',
   meta: {
     type: 'suggestion',
     docs: {
-      description: `Disallow usage of JavaScript 'Math' methods inside 'use gpu' functions; use 'std' instead.`,
+      description: `Disallow usage of JavaScript 'Math' methods inside 'use gpu' functions`,
     },
     messages: {
-      math: "Using Math methods, such as '{{snippet}}', is not advised, and may not work as expected. Use 'std' instead.",
+      unexpected:
+        "Using Math methods, such as '{{snippet}}', may not work as expected. Use 'std' instead",
     },
     schema: [],
   },
@@ -23,7 +24,7 @@ export const math = createRule({
 
     return {
       CallExpression(node) {
-        if (!directives.insideUseGpu()) {
+        if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
 
@@ -35,7 +36,7 @@ export const math = createRule({
         ) {
           context.report({
             node,
-            messageId: 'math',
+            messageId: 'unexpected',
             data: { snippet: context.sourceCode.getText(node) },
           });
         }
