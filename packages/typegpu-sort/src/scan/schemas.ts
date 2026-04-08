@@ -1,6 +1,8 @@
 import tgpu, { d } from 'typegpu';
 
 export const WORKGROUP_SIZE = 256;
+export const ELEMENTS_PER_THREAD = 8;
+export const ELEMENTS_RANGE = Array.from({ length: ELEMENTS_PER_THREAD }, (_, i) => i);
 
 export const scanLayout = tgpu.bindGroupLayout({
   input: { storage: d.arrayOf(d.f32), access: 'mutable' },
