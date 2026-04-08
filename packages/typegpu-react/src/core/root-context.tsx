@@ -91,7 +91,8 @@ export const Root = ({ children, root }: RootProps) => {
  *
  * If the root hasn't been initialized yet, it will suspend the component until it is.
  * This hook will throw if there is an error initializing the root (like no WebGPU support).
- * You can use {@link useRootOrError} instead.
+ * If you'd like to handle these cases yourself, you can use {@link useRootOrError} or
+ * {@link useRootWithStatus} instead.
  */
 export function useRoot(): TgpuRoot {
   const context = useContext(rootContext) ?? globalRootContextValue;
