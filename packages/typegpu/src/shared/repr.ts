@@ -1,7 +1,7 @@
 import type { TgpuTexture } from '../core/texture/texture.ts';
 import type { Disarray, Undecorate } from '../data/dataTypes.ts';
 import type { WgslStorageTexture, WgslTexture } from '../data/texture.ts';
-import type { TypedArrayFor, U16, U32, WgslArray } from '../data/wgslTypes.ts';
+import type { U16, U32, WgslArray } from '../data/wgslTypes.ts';
 import type {
   $gpuRepr,
   $gpuValueOf,
@@ -10,12 +10,13 @@ import type {
   $memIdent,
   $repr,
   $reprPartial,
+  $reprPatch,
   $validStorageSchema,
   $validUniformSchema,
   $validVertexSchema,
 } from './symbols.ts';
 import type { ViewDimensionToDimension } from '../core/texture/textureFormats.ts';
-import type { Default, Prettify } from './utilityTypes.ts';
+import type { Default } from './utilityTypes.ts';
 
 /**
  * Extracts the inferred representation of a resource.
@@ -44,17 +45,18 @@ export type InferInput<T> =
 
 /**
  * Extracts a sparse/partial inferred representation of a resource.
- * Used by the `buffer.writePartial` API.
+ * Used by the deprecated `buffer.writePartial` API.
  *
  * @example
  * type A = InferPartial<F32> // => number | undefined
  * type B = InferPartial<WgslStruct<{ a: F32 }>> // => { a?: number | undefined }
  * type C = InferPartial<WgslArray<F32>> // => { idx: number; value: number | undefined }[] | undefined
- * type D = InferPartial<Vec3f> // => v3f | [number, number, number] | Float32Array | undefined
  */
 export type InferPartial<T> = T extends { readonly [$reprPartial]: infer TRepr }
   ? TRepr
-  : InferInput<T> | undefined;
+  : T extends { readonly [$repr]: infer TRepr }
+    ? TRepr | undefined
+    : T;
 
 /**
  * Extracts the inferred representation of a resource (as seen by the GPU).
@@ -88,16 +90,9 @@ export type InferPartialRecord<T extends Record<string | number | symbol, unknow
  * type B = InferPatch<WgslStruct<{ a: F32 }>> // => { a?: number | undefined }
  * type C = InferPatch<WgslArray<F32>> // => Record<number, number | undefined> | number[] | undefined
  */
-export type InferPatch<T> =
-  T extends WgslArray<infer E>
-    ? Record<number, InferPatch<E>> | InferInput<E>[] | TypedArrayFor<E> | undefined
-    : T extends Disarray<infer E>
-      ? Record<number, InferPatch<E>> | InferInput<E>[] | TypedArrayFor<E> | undefined
-      : T extends { readonly propTypes: infer P extends Record<string, unknown> }
-        ? Prettify<Partial<InferPatchRecord<P>>> | undefined
-        : T extends { readonly inner: infer I }
-          ? InferPatch<I>
-          : InferInput<T> | undefined;
+export type InferPatch<T> = T extends { readonly [$reprPatch]: infer TRepr }
+  ? TRepr
+  : InferInput<T> | undefined;
 
 export type InferPatchRecord<T extends Record<string | number | symbol, unknown>> = {
   [Key in keyof T]?: InferPatch<T[Key]>;

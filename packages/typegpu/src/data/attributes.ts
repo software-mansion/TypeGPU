@@ -2,6 +2,7 @@ import type {
   Infer,
   InferGPU,
   InferInput,
+  InferPatch,
   InferPartial,
   IsValidStorageSchema,
   IsValidUniformSchema,
@@ -16,6 +17,7 @@ import {
   $memIdent,
   $repr,
   $reprPartial,
+  $reprPatch,
   $validStorageSchema,
   $validUniformSchema,
   $validVertexSchema,
@@ -354,6 +356,7 @@ class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
   declare readonly [$repr]: Infer<TInner>;
   declare readonly [$gpuRepr]: InferGPU<TInner>;
   declare readonly [$reprPartial]: InferPartial<TInner>;
+  declare readonly [$reprPatch]: InferPatch<TInner>;
   // ---
 
   constructor(inner: TInner, attribs: TAttribs) {

@@ -5,6 +5,8 @@ import type {
   InferGPURecord,
   InferInput,
   InferInputRecord,
+  InferPatch,
+  InferPatchRecord,
   InferPartial,
   InferPartialRecord,
   InferRecord,
@@ -18,6 +20,7 @@ import type {
   $memIdent,
   $repr,
   $reprPartial,
+  $reprPatch,
   $validVertexSchema,
 } from '../shared/symbols.ts';
 import { $internal } from '../shared/symbols.ts';
@@ -50,8 +53,9 @@ export interface Disarray<out TElement extends wgsl.BaseData = wgsl.BaseData>
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TElement>[];
   readonly [$inRepr]: InferInput<TElement>[] | wgsl.TypedArrayFor<TElement>;
-  readonly [$reprPartial]:
-    | { idx: number; value: InferPartial<TElement> }[]
+  readonly [$reprPartial]: { idx: number; value: InferPartial<TElement> }[] | undefined;
+  readonly [$reprPatch]:
+    | Record<number, InferPatch<TElement>>
     | InferInput<TElement>[]
     | wgsl.TypedArrayFor<TElement>
     | undefined;
@@ -84,6 +88,7 @@ export interface Unstruct<
   readonly [$gpuRepr]: Prettify<InferGPURecord<TProps>>;
   readonly [$memIdent]: Unstruct<Prettify<MemIdentityRecord<TProps>>>;
   readonly [$reprPartial]: Prettify<Partial<InferPartialRecord<TProps>>> | undefined;
+  readonly [$reprPatch]: Prettify<Partial<InferPatchRecord<TProps>>> | undefined;
   readonly [$validVertexSchema]: {
     [K in keyof TProps]: IsValidVertexSchema<TProps[K]>;
   }[keyof TProps] extends true
