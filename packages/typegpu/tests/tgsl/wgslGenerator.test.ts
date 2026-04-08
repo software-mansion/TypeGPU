@@ -2137,13 +2137,13 @@ describe('wgslGenerator', () => {
     };
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() -> i32 {
-          if ((true || false)) {
-            return 1;
-          }
-          return -1;
-        }"
-      `);
+      "fn f() -> i32 {
+        {
+          return 1;
+        }
+        return -1;
+      }"
+    `);
   });
 
   it('handles unary operator `!` on operands from slots and accessors', () => {
@@ -2164,13 +2164,13 @@ describe('wgslGenerator', () => {
     };
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() -> i32 {
-          if ((true && true)) {
-            return 1;
-          }
-          return -1;
-        }"
-      `);
+      "fn f() -> i32 {
+        {
+          return 1;
+        }
+        return -1;
+      }"
+    `);
   });
 
   it('handles chained unary operators `!`', () => {
@@ -2183,10 +2183,10 @@ describe('wgslGenerator', () => {
     });
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-        "fn testFn(n: i32) -> bool {
-          return (true || !!!bool(n));
-        }"
-      `);
+      "fn testFn(n: i32) -> bool {
+        return true;
+      }"
+    `);
   });
 
   it('handles unary operator `!` on complex comptime-known operand', () => {
@@ -2206,5 +2206,128 @@ describe('wgslGenerator', () => {
           return 1929;
         }"
       `);
+  });
+
+  describe('short-circuit evaluation', () => {
+    const state = {
+      counter: 0,
+      result: true,
+    };
+
+    const getTrackedBool = tgpu.comptime(() => {
+      state.counter++;
+      return state.result;
+    });
+
+    beforeEach(() => {
+      state.counter = 0;
+      state.result = true;
+    });
+
+    it('handles `||` short-circuit evaluation', () => {
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        if (true || getTrackedBool()) {
+          res = 1;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          {
+            res = 1i;
+          }
+          return res;
+        }"
+      `);
+      expect(state.counter).toBe(0);
+    });
+
+    it('handles `&&` short-circuit evaluation', () => {
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        if (false && getTrackedBool()) {
+          res = 1;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          return res;
+        }"
+      `);
+      expect(state.counter).toBe(0);
+    });
+
+    it('handles chained `||` short-circuit evaluation', () => {
+      state.result = false;
+
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        if (getTrackedBool() || true || getTrackedBool() || getTrackedBool() || getTrackedBool()) {
+          res = 1;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          {
+            res = 1i;
+          }
+          return res;
+        }"
+      `);
+      expect(state.counter).toEqual(1);
+    });
+
+    it('handles chained `&&` short-circuit evaluation', () => {
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        if (getTrackedBool() && false && getTrackedBool() && getTrackedBool() && getTrackedBool()) {
+          res = 1;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          return res;
+        }"
+      `);
+      expect(state.counter).toBe(1);
+    });
+
+    it('handles mixed logical operators short-circuit evaluation', () => {
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        if (true || (getTrackedBool() && getTrackedBool())) {
+          res = 1;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          {
+            res = 1i;
+          }
+          return res;
+        }"
+      `);
+      expect(state.counter).toBe(0);
+    });
   });
 });

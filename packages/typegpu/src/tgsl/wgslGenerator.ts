@@ -352,6 +352,33 @@ ${this.ctx.pre}}`;
       // Logical/Binary/Assignment Expression
       const [exprType, lhs, op, rhs] = expression;
       const lhsExpr = this._expression(lhs);
+
+      // Short Circuit Evaluation
+      if ((op === '||' || op === '&&') && isKnownAtComptime(lhsExpr)) {
+        let evalRhs = !lhsExpr.value;
+        if (op === '&&') {
+          evalRhs = !evalRhs;
+        }
+
+        if (!evalRhs) {
+          return op === '||' ? snip(true, bool, 'constant') : snip(false, bool, 'constant');
+        }
+
+        const rhsExpr = this._expression(rhs);
+
+        if (isKnownAtComptime(rhsExpr)) {
+          return snip(rhsExpr.value, bool, 'constant');
+        }
+
+        if (rhsExpr.dataType === UnknownData) {
+          throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
+        }
+
+        const convRhs = tryConvertSnippet(this.ctx, rhsExpr, bool, false);
+        const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
+        return snip(rhsStr, bool, 'runtime');
+      }
+
       const rhsExpr = this._expression(rhs);
 
       if (rhsExpr.value instanceof RefOperator) {
