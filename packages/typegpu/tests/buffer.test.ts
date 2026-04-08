@@ -565,7 +565,6 @@ describe('TgpuBuffer', () => {
     const rawBuffer = root.unwrap(buffer);
     expect(rawBuffer).toBeDefined();
 
-    // unorm16: Math.round(0.5 * 65535) = 32768 -> [0, 128] in LE
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawBuffer, 8, new Uint8Array([0, 128, 0, 128])],
     ]);
@@ -1072,8 +1071,10 @@ describe('TgpuBuffer (.patch() with flexible inputs)', () => {
     });
 
     const rawBuffer = root.unwrap(buffer);
+    // vec3f elements are 12 bytes each with 4 bytes padding between them
+    // (the trailing padding after the last element is not included)
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 0, toUint8Array(new Float32Array([1, 2, 3, 0, 4, 5, 6, 0]))],
+      [rawBuffer, 0, toUint8Array(new Float32Array([1, 2, 3, 0, 4, 5, 6]))],
     ]);
   });
 
