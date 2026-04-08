@@ -66,6 +66,10 @@ const exampleTsnotoverFiles = import.meta.glob(['./*/*/*.tsnotover.ts', './*/*/*
   import: 'default',
 }) as Record<string, string>;
 
+function replaceExt(key: string, newExt: string) {
+  return `${key.substring(0, key.length - pathe.extname(key).length)}${newExt}`;
+}
+
 const exampleTsFiles = R.pipe(
   // './<category>/<example>/[<subdir>/]<file>.tsx?'
   import.meta.glob(['./*/**/*.ts', './*/**/*.tsx'], {
@@ -74,13 +78,14 @@ const exampleTsFiles = R.pipe(
     import: 'default',
   }) as Record<string, string>,
   R.entries(),
-  R.filter(([key]) => !key.endsWith('.tsnotover.ts')),
+  R.filter(([key]) => !key.includes('.tsnotover.')),
   R.map(
     ([key, content]): ExampleSrcFile => ({
       exampleKey: pathToExampleKey(key),
       path: pathToRelativePath(key),
       content,
-      tsnotoverContent: exampleTsnotoverFiles[`${key}notover.ts`],
+      tsnotoverContent:
+        exampleTsnotoverFiles[`${replaceExt(key, `.tsnotover${pathe.extname(key)}`)}`],
     }),
   ),
   R.groupBy(R.prop('exampleKey')),
