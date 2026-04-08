@@ -401,7 +401,7 @@ function updateAspect() {
     return;
   }
   lastAspect = nextAspect;
-  params.writePartial({ aspect: nextAspect });
+  params.patch({ aspect: nextAspect });
 }
 
 function updatePopulation(nextPopulation: number) {
@@ -410,7 +410,7 @@ function updatePopulation(nextPopulation: number) {
     return;
   }
   population = clamped;
-  params.writePartial({ population: clamped });
+  params.patch({ population: clamped });
   ga.reinitCurrent(population);
 }
 
@@ -421,7 +421,7 @@ function frame() {
     if (pendingEvolve) {
       ga.evolve(population);
       steps = 0;
-      params.writePartial({ generation: ga.generation });
+      params.patch({ generation: ga.generation });
       pendingEvolve = false;
     }
 
@@ -430,7 +430,7 @@ function frame() {
       pendingEvolve = true;
     } else {
       const innerSteps = Math.min(stepsToRun, STEPS_PER_DISPATCH);
-      params.writePartial({ stepsPerDispatch: innerSteps });
+      params.patch({ stepsPerDispatch: innerSteps });
       const dispatchCount = Math.ceil(stepsToRun / innerSteps);
 
       const simEncoder = root.device.createCommandEncoder();
@@ -480,7 +480,7 @@ function applyTrack(result: TrackResult) {
   trackTexture.write(
     new ImageData(new Uint8ClampedArray(result.data), result.width, result.height),
   );
-  params.writePartial({
+  params.patch({
     spawnX: result.spawn.position[0],
     spawnY: result.spawn.position[1],
     spawnAngle: result.spawn.angle,
@@ -490,7 +490,7 @@ function applyTrack(result: TrackResult) {
 
 function applyGridSize(W: number, H: number) {
   const scale = 5 / Math.max(W, H);
-  params.writePartial(
+  params.patch(
     Object.fromEntries(
       Object.entries(BASE_SPATIAL_PARAMS).map(([k, v]) => [k, v * scale]),
     ) as typeof BASE_SPATIAL_PARAMS,
@@ -511,7 +511,7 @@ function startSimulation() {
   steps = 0;
   pendingEvolve = false;
   displayedBestFitness = 0;
-  params.writePartial({ generation: 0 });
+  params.patch({ generation: 0 });
   ga.init();
 
   updateAspect();
@@ -589,7 +589,7 @@ export const controls = defineControls({
     max: 0.4,
     step: 0.005,
     onSliderChange: (value: number) => {
-      params.writePartial({ mutationRate: value });
+      params.patch({ mutationRate: value });
     },
   },
   'Mutation strength': {
@@ -598,7 +598,7 @@ export const controls = defineControls({
     max: 0.8,
     step: 0.01,
     onSliderChange: (value: number) => {
-      params.writePartial({ mutationStrength: value });
+      params.patch({ mutationStrength: value });
     },
   },
 });

@@ -612,7 +612,7 @@ export const controls = defineControls({
     max: 64,
     step: 1,
     onSliderChange: (v) => {
-      shadowParams.writePartial({ pcfSamples: v });
+      shadowParams.patch({ pcfSamples: v });
     },
   },
   'PCF Disk Radius': {
@@ -621,7 +621,7 @@ export const controls = defineControls({
     max: 0.1,
     step: 0.001,
     onSliderChange: (v) => {
-      shadowParams.writePartial({ diskRadius: v });
+      shadowParams.patch({ diskRadius: v });
     },
   },
   'Normal Bias Base': {
@@ -630,7 +630,7 @@ export const controls = defineControls({
     max: 0.1,
     step: 0.0001,
     onSliderChange: (v) => {
-      shadowParams.writePartial({ normalBiasBase: v });
+      shadowParams.patch({ normalBiasBase: v });
     },
   },
   'Normal Bias Slope': {
@@ -639,7 +639,7 @@ export const controls = defineControls({
     max: 0.5,
     step: 0.0005,
     onSliderChange: (v) => {
-      shadowParams.writePartial({ normalBiasSlope: v });
+      shadowParams.patch({ normalBiasSlope: v });
     },
   },
 });

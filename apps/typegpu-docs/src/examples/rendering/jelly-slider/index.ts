@@ -885,7 +885,7 @@ export const controls = defineControls({
       const dir1 = std.normalize(d.vec3f(0.18, -0.3, 0.64));
       const dir2 = std.normalize(d.vec3f(-0.5, -0.14, -0.8));
       const finalDir = std.normalize(std.mix(dir1, dir2, v));
-      lightUniform.writePartial({
+      lightUniform.patch({
         direction: finalDir,
       });
     },
