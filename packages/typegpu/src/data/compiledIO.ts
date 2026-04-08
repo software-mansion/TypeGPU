@@ -285,6 +285,7 @@ export function buildWriter(
 
 export function getCompiledWriter(schema: wgsl.BaseData): CompiledWriter | undefined {
   if (!EVAL_ALLOWED_IN_ENV) {
+    console.warn('This environment does not allow eval - using default writer as fallback');
     return undefined;
   }
 
