@@ -1169,7 +1169,11 @@ export interface WgslArray<out TElement extends BaseData = BaseData> extends Bas
   readonly [$repr]: Infer<TElement>[];
   readonly [$inRepr]: InferInput<TElement>[] | TypedArrayFor<TElement>;
   readonly [$gpuRepr]: InferGPU<TElement>[];
-  readonly [$reprPartial]: { idx: number; value: InferPartial<TElement> }[] | undefined;
+  readonly [$reprPartial]:
+    | { idx: number; value: InferPartial<TElement> }[]
+    | InferInput<TElement>[]
+    | TypedArrayFor<TElement>
+    | undefined;
   readonly [$memIdent]: WgslArray<MemIdentity<TElement>>;
   readonly [$validStorageSchema]: IsValidStorageSchema<TElement>;
   readonly [$validUniformSchema]: IsValidUniformSchema<TElement>;
@@ -1336,6 +1340,7 @@ export interface Decorated<
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TInner>;
+  readonly [$inRepr]: InferInput<TInner>;
   readonly [$gpuRepr]: InferGPU<TInner>;
   readonly [$reprPartial]: InferPartial<TInner>;
   readonly [$memIdent]: TAttribs extends Location[]

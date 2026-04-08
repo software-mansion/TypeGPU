@@ -1,5 +1,5 @@
 import { BufferReader, BufferWriter, getSystemEndianness } from 'typed-binary';
-import { getCompiledWriterForSchema } from '../../data/compiledIO.ts';
+import { getCompiledWriter } from '../../data/compiledIO.ts';
 import { readData, writeData } from '../../data/dataIO.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import { getWriteInstructions } from '../../data/partialIO.ts';
@@ -344,7 +344,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   }
 
   compileWriter(): void {
-    getCompiledWriterForSchema(this.dataType);
+    getCompiledWriter(this.dataType);
   }
 
   #writeToTarget(
@@ -376,7 +376,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     const dataView = new DataView(target);
     const isLittleEndian = endianness === 'little';
 
-    const compiledWriter = getCompiledWriterForSchema(this.dataType);
+    const compiledWriter = getCompiledWriter(this.dataType);
 
     if (compiledWriter) {
       try {
@@ -452,17 +452,11 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       const mappedView = new Uint8Array(mappedRange);
 
       for (const instruction of instructions) {
-        mappedView.set(instruction.data, instruction.data.byteOffset);
+        mappedView.set(instruction.data, instruction.gpuOffset);
       }
     } else {
       for (const instruction of instructions) {
-        this.#device.queue.writeBuffer(
-          gpuBuffer,
-          instruction.data.byteOffset,
-          instruction.data,
-          0,
-          instruction.data.byteLength,
-        );
+        this.#device.queue.writeBuffer(gpuBuffer, instruction.gpuOffset, instruction.data);
       }
     }
   }

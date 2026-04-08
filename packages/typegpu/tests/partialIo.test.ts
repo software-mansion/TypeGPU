@@ -17,7 +17,7 @@ function expectInstruction(
     expectedData: TypedArray | TypedArray[];
   },
 ): void {
-  expect(instruction.data.byteOffset).toBe(start);
+  expect(instruction.gpuOffset).toBe(start);
   expect(instruction.data.byteLength).toBe(length);
 
   const dataArrays = Array.isArray(expectedData) ? expectedData : [expectedData];

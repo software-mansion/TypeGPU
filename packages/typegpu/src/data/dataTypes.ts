@@ -50,7 +50,11 @@ export interface Disarray<out TElement extends wgsl.BaseData = wgsl.BaseData>
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TElement>[];
   readonly [$inRepr]: InferInput<TElement>[] | wgsl.TypedArrayFor<TElement>;
-  readonly [$reprPartial]: { idx: number; value: InferPartial<TElement> }[] | undefined;
+  readonly [$reprPartial]:
+    | { idx: number; value: InferPartial<TElement> }[]
+    | InferInput<TElement>[]
+    | wgsl.TypedArrayFor<TElement>
+    | undefined;
   readonly [$validVertexSchema]: IsValidVertexSchema<TElement>;
   readonly [$invalidSchemaReason]: 'Disarrays are not host-shareable, use arrays instead';
   // ---

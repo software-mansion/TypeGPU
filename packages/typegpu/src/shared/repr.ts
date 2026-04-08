@@ -50,12 +50,11 @@ export type InferInput<T> =
  * type A = InferPartial<F32> // => number | undefined
  * type B = InferPartial<WgslStruct<{ a: F32 }>> // => { a?: number | undefined }
  * type C = InferPartial<WgslArray<F32>> // => { idx: number; value: number | undefined }[] | undefined
+ * type D = InferPartial<Vec3f> // => v3f | [number, number, number] | Float32Array | undefined
  */
 export type InferPartial<T> = T extends { readonly [$reprPartial]: infer TRepr }
   ? TRepr
-  : T extends { readonly [$repr]: infer TRepr }
-    ? TRepr | undefined
-    : T;
+  : InferInput<T> | undefined;
 
 /**
  * Extracts the inferred representation of a resource (as seen by the GPU).

@@ -1,5 +1,4 @@
 import { roundUp } from '../mathUtils.ts';
-import type { InferInput } from '../shared/repr.ts';
 import { alignmentOf } from './alignmentOf.ts';
 import { isDisarray, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
@@ -17,16 +16,15 @@ export const EVAL_ALLOWED_IN_ENV: boolean = (() => {
   }
 })();
 
-const compiledWriters = new WeakMap<
-  wgsl.BaseData,
-  (
-    output: DataView,
-    offset: number,
-    value: unknown,
-    littleEndian?: boolean,
-    endOffset?: number,
-  ) => void
->();
+export type CompiledWriter = (
+  output: DataView,
+  offset: number,
+  value: unknown,
+  littleEndian?: boolean,
+  endOffset?: number,
+) => void;
+
+const compiledWriters = new WeakMap<wgsl.BaseData, CompiledWriter>();
 
 const typeToPrimitive = {
   u32: 'u32',
@@ -285,30 +283,14 @@ export function buildWriter(
   return go(node, offsetExpr, valueExpr, depth);
 }
 
-export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
-  schema: T,
-):
-  | ((
-      output: DataView,
-      offset: number,
-      value: InferInput<T>,
-      littleEndian?: boolean,
-      endOffset?: number,
-    ) => void)
-  | undefined {
+export function getCompiledWriter(schema: wgsl.BaseData): CompiledWriter | undefined {
   if (!EVAL_ALLOWED_IN_ENV) {
-    console.warn('This environment does not allow eval - using default writer as fallback');
     return undefined;
   }
 
-  if (compiledWriters.has(schema)) {
-    return compiledWriters.get(schema) as (
-      output: DataView,
-      offset: number,
-      value: InferInput<T>,
-      littleEndian?: boolean,
-      endOffset?: number,
-    ) => void;
+  const cached = compiledWriters.get(schema);
+  if (cached) {
+    return cached;
   }
 
   try {
@@ -324,16 +306,9 @@ export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
       'littleEndian=true',
       'endOffset=output.byteLength',
       body,
-    ) as (
-      output: DataView,
-      offset: number,
-      value: unknown,
-      littleEndian?: boolean,
-      endOffset?: number,
-    ) => void;
+    ) as CompiledWriter;
 
     compiledWriters.set(schema, fn);
-
     return fn;
   } catch (error) {
     console.warn(

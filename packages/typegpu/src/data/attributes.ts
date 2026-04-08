@@ -1,6 +1,7 @@
 import type {
   Infer,
   InferGPU,
+  InferInput,
   InferPartial,
   IsValidStorageSchema,
   IsValidUniformSchema,
@@ -10,6 +11,7 @@ import type {
 import { $internal } from '../shared/symbols.ts';
 import {
   $gpuRepr,
+  $inRepr,
   $invalidSchemaReason,
   $memIdent,
   $repr,
@@ -405,6 +407,7 @@ class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   public readonly type = 'decorated';
 
   // Type-tokens, not available at runtime
+  declare readonly [$inRepr]: InferInput<TInner>;
   declare readonly [$memIdent]: TAttribs extends Location[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;
