@@ -145,7 +145,7 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
       if (run) {
         instructions.push({
           gpuOffset: run.start,
-          data: new Uint8Array(buf, run.start, run.end - run.start),
+          data: new Uint8Array(buf, run.start, run.end - run.start).slice(),
         });
       }
       run = seg;
@@ -154,7 +154,7 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
   if (run) {
     instructions.push({
       gpuOffset: run.start,
-      data: new Uint8Array(buf, run.start, run.end - run.start),
+      data: new Uint8Array(buf, run.start, run.end - run.start).slice(),
     });
   }
 
