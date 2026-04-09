@@ -35,18 +35,11 @@ export function convertPartialToPatch(schema: wgsl.BaseData, data: unknown): unk
     return result;
   }
 
-  if (
-    (isWgslArray(schema) || isDisarray(schema)) &&
-    Array.isArray(data) &&
-    data.length > 0 &&
-    typeof data[0] === 'object' &&
-    data[0] !== null &&
-    'idx' in data[0]
-  ) {
+  if (isWgslArray(schema) || isDisarray(schema)) {
     const arrSchema = schema as wgsl.WgslArray;
     const result: Record<number, unknown> = {};
-    for (const entry of data as { idx: number; value: unknown }[]) {
-      result[entry.idx] = convertPartialToPatch(arrSchema.elementType, entry.value);
+    for (const { idx, value } of data as { idx: number; value: unknown }[]) {
+      result[idx] = convertPartialToPatch(arrSchema.elementType, value);
     }
     return result;
   }
