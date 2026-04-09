@@ -133,7 +133,6 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
   }
 
   collect(schema, data, 0);
-  // segments.sort((a, b) => a.start - b.start);
 
   const instructions: WriteInstruction[] = [];
   let run: Segment | null = null;
