@@ -1,8 +1,5 @@
 /**
- * Tests for getPatchInstructions when the compiled writer is unavailable
- * (CSP/eval-restricted environments). vi.mock is hoisted by vitest so this
- * file's entire module graph sees getCompiledWriter returning undefined,
- * forcing the typed-binary fallback path in partialIO.ts.
+ * Tests for getPatchInstructions when the compiled writer is unavailable.
  */
 import { describe, expect, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
