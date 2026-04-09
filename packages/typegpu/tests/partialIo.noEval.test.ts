@@ -8,6 +8,8 @@ import { describe, expect, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import type { TypedArray } from '../src/shared/utilityTypes.ts';
 import type { WriteInstruction } from '../src/data/partialIO.ts';
+import { getPatchInstructions } from '../src/data/partialIO.ts';
+import * as d from '../src/data/index.ts';
 
 vi.mock('../src/data/compiledIO.ts', () => ({
   EVAL_ALLOWED_IN_ENV: false,
@@ -15,12 +17,8 @@ vi.mock('../src/data/compiledIO.ts', () => ({
   buildWriter: () => '',
 }));
 
-// Dynamic imports are required AFTER vi.mock to get the mocked versions.
-const { getPatchInstructions } = await import('../src/data/partialIO.ts');
-const d = await import('../src/data/index.ts');
-
 function expectInstruction(
-  instruction: WriteInstruction,
+  instruction: WriteInstruction | undefined,
   {
     start,
     length,
@@ -31,6 +29,9 @@ function expectInstruction(
     expectedData: TypedArray | TypedArray[];
   },
 ): void {
+  if (!instruction) {
+    throw new Error('Instruction is undefined');
+  }
   expect(instruction.gpuOffset).toBe(start);
   expect(instruction.data.byteLength).toBe(length);
 
@@ -43,13 +44,12 @@ function expectInstruction(
     offset += arr.byteLength;
   }
 
-  expect(instruction.data).toHaveLength(totalByteLength);
   expect(new Uint8Array(instruction.data)).toStrictEqual(mergedExpected);
 }
 
 describe('getPatchInstructions (no-eval / typed-binary fallback)', () => {
   it('should produce correct instructions for a scalar', () => {
-    const instructions = getPatchInstructions(d.u32, 3) as [WriteInstruction];
+    const instructions = getPatchInstructions(d.u32, 3);
     expect(instructions).toHaveLength(1);
     expectInstruction(instructions[0], {
       start: 0,
@@ -69,7 +69,7 @@ describe('getPatchInstructions (no-eval / typed-binary fallback)', () => {
       a: 3,
       b: d.vec3f(1, 2, 3),
       c: { d: 4 },
-    }) as [WriteInstruction];
+    });
 
     expect(instructions).toHaveLength(1);
     expectInstruction(instructions[0], {
@@ -91,7 +91,7 @@ describe('getPatchInstructions (no-eval / typed-binary fallback)', () => {
 
     const instructions = getPatchInstructions(struct, {
       b: { 1: d.vec3f(4, 5, 6) },
-    }) as [WriteInstruction];
+    });
 
     expect(instructions).toHaveLength(1);
     expectInstruction(instructions[0], {
@@ -108,9 +108,7 @@ describe('getPatchInstructions (no-eval / typed-binary fallback)', () => {
     });
 
     // Only patch b, leaving a out — creates a gap after start
-    const instructions = getPatchInstructions(struct, { b: d.vec3f(1, 2, 3) }) as [
-      WriteInstruction,
-    ];
+    const instructions = getPatchInstructions(struct, { b: d.vec3f(1, 2, 3) });
 
     expect(instructions).toHaveLength(1);
     expectInstruction(instructions[0], {
