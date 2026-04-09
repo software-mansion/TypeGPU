@@ -1085,8 +1085,8 @@ describe('TgpuBuffer (.patch() with flexible inputs)', () => {
     const buffer = root.createBuffer(d.arrayOf(d.vec3f, 4));
 
     buffer.patch({
-      1: [10, 20, 30],
       3: [40, 50, 60],
+      1: [10, 20, 30],
     });
 
     const rawBuffer = root.unwrap(buffer);

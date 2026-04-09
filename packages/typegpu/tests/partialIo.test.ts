@@ -196,10 +196,10 @@ describe('getPatchInstructions', () => {
       a: 3,
       c: { d: 4 },
       b: {
-        0: d.vec3f(1, 2, 3),
         1: d.vec3f(4, 5, 6),
-        2: d.vec3f(7, 8, 9),
+        0: d.vec3f(1, 2, 3),
         3: d.vec3f(10, 11, 12),
+        2: d.vec3f(7, 8, 9),
       },
     };
 
@@ -229,8 +229,8 @@ describe('getPatchInstructions', () => {
 
     const data = {
       b: {
-        0: d.vec3f(1, 2, 3),
         2: d.vec3f(7, 8, 9),
+        0: d.vec3f(1, 2, 3),
         3: d.vec3f(10, 11, 12),
       },
       c: { d: 4 },
