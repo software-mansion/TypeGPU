@@ -67,6 +67,7 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
 
   const buf = targetBuffer ?? new ArrayBuffer(totalSize);
   const writer = new BufferWriter(buf);
+  const compiledView = new DataView(buf);
 
   const segments: Segment[] = [];
 
@@ -124,7 +125,7 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
     const leafSize = sizeOf(node);
     const compiledWriter = getCompiledWriter(node);
     if (compiledWriter) {
-      compiledWriter(new DataView(buf), offset, value, isLittleEndian, offset + leafSize);
+      compiledWriter(compiledView, offset, value, isLittleEndian, offset + leafSize);
     } else {
       writer.seekTo(offset);
       writeData(writer, node, value);
