@@ -45,7 +45,9 @@ export type InferInput<T> =
 
 /**
  * Extracts a sparse/partial inferred representation of a resource.
- * Used by the deprecated `buffer.writePartial` API.
+ * Used by the `buffer.writePartial` API.
+ *
+ * @deprecated
  *
  * @example
  * type A = InferPartial<F32> // => number | undefined
@@ -76,14 +78,14 @@ export type InferInputRecord<T extends Record<string | number | symbol, unknown>
   [Key in keyof T]: InferInput<T[Key]>;
 };
 
+/** @deprecated */
 export type InferPartialRecord<T extends Record<string | number | symbol, unknown>> = {
   [Key in keyof T]?: InferPartial<T[Key]>;
 };
 
 /**
  * Extracts the patch representation of a resource.
- * Used by the `buffer.patch` API. Differs from {@link InferPartial} in that
- * sparse array updates use `Record<number, T>` instead of `{idx, value}[]`.
+ * Used by the `buffer.patch` API.
  *
  * @example
  * type A = InferPatch<F32> // => number | undefined
