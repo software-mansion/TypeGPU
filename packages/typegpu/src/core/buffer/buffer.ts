@@ -205,7 +205,11 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   #buffer: GPUBuffer | null = null;
   #ownBuffer: boolean;
   #destroyed = false;
-  #hostBuffer: ArrayBuffer | undefined;
+  #internalBuffer: ArrayBuffer | undefined;
+
+  get #hostBuffer(): ArrayBuffer {
+    return (this.#internalBuffer ??= new ArrayBuffer(sizeOf(this.dataType)));
+  }
   #mappedRange: ArrayBuffer | undefined;
   #initialCallback: BufferInitCallback<TData> | undefined;
   readonly #disallowedUsages: UsageLiteral[] | undefined;
@@ -274,10 +278,6 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     const gpuBuffer = this.buffer;
     if (gpuBuffer.mapState === 'mapped') {
       return this.#getMappedRange();
-    }
-
-    if (!this.#hostBuffer) {
-      this.#hostBuffer = new ArrayBuffer(sizeOf(this.dataType));
     }
 
     return this.#hostBuffer;
@@ -437,10 +437,6 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       return;
     }
 
-    if (!this.#hostBuffer) {
-      this.#hostBuffer = new ArrayBuffer(bufferSize);
-    }
-
     // If the caller already wrote directly into #hostBuffer via
     // arrayBuffer, skip the redundant copy, the data is already in place.
     if (!(data instanceof ArrayBuffer && data === this.#hostBuffer)) {
@@ -452,12 +448,16 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   /** @deprecated Use {@link patch} instead. */
   public writePartial(data: InferPartial<TData>): void {
     this.#applyInstructions(
-      getPatchInstructions(this.dataType, convertPartialToPatch(this.dataType, data)),
+      getPatchInstructions(
+        this.dataType,
+        convertPartialToPatch(this.dataType, data),
+        this.#hostBuffer,
+      ),
     );
   }
 
   public patch(data: InferPatch<TData>): void {
-    this.#applyInstructions(getPatchInstructions(this.dataType, data));
+    this.#applyInstructions(getPatchInstructions(this.dataType, data, this.#hostBuffer));
   }
 
   #applyInstructions(instructions: WriteInstruction[]): void {

@@ -58,14 +58,15 @@ interface Segment {
 export function getPatchInstructions<TData extends wgsl.BaseData>(
   schema: TData,
   data: unknown,
+  targetBuffer?: ArrayBuffer,
 ): WriteInstruction[] {
   const totalSize = sizeOf(schema);
   if (totalSize === 0 || data === undefined || data === null) {
     return [];
   }
 
-  const bigBuffer = new ArrayBuffer(totalSize);
-  const writer = new BufferWriter(bigBuffer);
+  const buf = targetBuffer ?? new ArrayBuffer(totalSize);
+  const writer = new BufferWriter(buf);
 
   const segments: Segment[] = [];
 
@@ -96,7 +97,7 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
 
       if (ArrayBuffer.isView(value)) {
         const copyLen = Math.min(value.byteLength, arrSchema.elementCount * elementSize);
-        new Uint8Array(bigBuffer, offset, copyLen).set(
+        new Uint8Array(buf, offset, copyLen).set(
           new Uint8Array(value.buffer, value.byteOffset, copyLen),
         );
         segments.push({ start: offset, end: offset + copyLen, padding });
@@ -123,7 +124,7 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
     const leafSize = sizeOf(node);
     const compiledWriter = getCompiledWriter(node);
     if (compiledWriter) {
-      compiledWriter(new DataView(bigBuffer), offset, value, isLittleEndian, offset + leafSize);
+      compiledWriter(new DataView(buf), offset, value, isLittleEndian, offset + leafSize);
     } else {
       writer.seekTo(offset);
       writeData(writer, node, value);
@@ -144,7 +145,7 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
       if (run) {
         instructions.push({
           gpuOffset: run.start,
-          data: new Uint8Array(bigBuffer, run.start, run.end - run.start),
+          data: new Uint8Array(buf, run.start, run.end - run.start),
         });
       }
       run = seg;
@@ -153,7 +154,7 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
   if (run) {
     instructions.push({
       gpuOffset: run.start,
-      data: new Uint8Array(bigBuffer, run.start, run.end - run.start),
+      data: new Uint8Array(buf, run.start, run.end - run.start),
     });
   }
 
