@@ -80,9 +80,12 @@ export const partialWriteSuite = createSuite(
 
       const randomBoid = Math.floor(Math.random() * amountOfBoids);
 
-      buffer.patch({
-        [randomBoid]: { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) },
-      });
+      buffer.writePartial([
+        {
+          idx: randomBoid,
+          value: { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) },
+        },
+      ]);
 
       await root.device.queue.onSubmittedWorkDone();
     },
@@ -90,14 +93,15 @@ export const partialWriteSuite = createSuite(
     '20% of the buffer - not contiguous': (getCtx) => async () => {
       const { amountOfBoids, d, root, buffer } = getCtx();
 
-      const writes = Object.fromEntries(
-        Array.from({ length: amountOfBoids / 5 }, (_, i) => [
-          i,
-          { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) },
-        ]),
-      );
+      const writes = Array.from({ length: amountOfBoids })
+        .map((_, i) => i)
+        .filter((_, i) => i % 5 === 0)
+        .map((i) => ({
+          idx: i,
+          value: { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) },
+        }));
 
-      buffer.patch(writes);
+      buffer.writePartial(writes);
 
       await root.device.queue.onSubmittedWorkDone();
     },
@@ -105,28 +109,28 @@ export const partialWriteSuite = createSuite(
     '20% of the buffer - contiguous': (getCtx) => async () => {
       const { amountOfBoids, d, root, buffer } = getCtx();
 
-      const writes = Object.fromEntries(
-        Array.from({ length: amountOfBoids / 5 }, (_, i) => [
-          i,
-          { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) },
-        ]),
-      );
+      const writes = Array.from({ length: amountOfBoids / 5 })
+        .map((_, i) => i)
+        .map((i) => ({
+          idx: i,
+          value: { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) },
+        }));
 
-      buffer.patch(writes);
+      buffer.writePartial(writes);
       await root.device.queue.onSubmittedWorkDone();
     },
 
     '100% of the buffer - contiguous': (getCtx) => async () => {
       const { amountOfBoids, d, root, buffer } = getCtx();
 
-      const writes = Object.fromEntries(
-        Array.from({ length: amountOfBoids / 5 }, (_, i) => [
-          i,
-          { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) },
-        ]),
-      );
+      const writes = Array.from({ length: amountOfBoids })
+        .map((_, i) => i)
+        .map((i) => ({
+          idx: i,
+          value: { pos: d.vec3f(1, 2, 3), vel: d.vec3f(4, 5, 6) },
+        }));
 
-      buffer.patch(writes);
+      buffer.writePartial(writes);
       await root.device.queue.onSubmittedWorkDone();
     },
   },
