@@ -469,28 +469,23 @@ describe('TgpuBuffer', () => {
 
   it('should allow for partial writes', ({ root, device }) => {
     const buffer = root.createBuffer(d.struct({ a: d.u32, b: d.u32 }));
-
-    buffer.writePartial({ a: 3 });
-
     const rawBuffer = root.unwrap(buffer);
     expect(rawBuffer).toBeDefined();
 
+    buffer.writePartial({ a: 3 });
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawBuffer, 0, toUint8Array(new Uint32Array([3]))],
     ]);
+    device.mock.queue.writeBuffer.mockClear();
 
     buffer.writePartial({ b: 4 });
-
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 0, toUint8Array(new Uint32Array([3]))],
       [rawBuffer, 4, toUint8Array(new Uint32Array([4]))],
     ]);
+    device.mock.queue.writeBuffer.mockClear();
 
     buffer.writePartial({ a: 5, b: 6 }); // should merge the writes
-
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 0, toUint8Array(new Uint32Array([3]))],
-      [rawBuffer, 4, toUint8Array(new Uint32Array([4]))],
       [rawBuffer, 0, toUint8Array(new Uint32Array([5, 6]))],
     ]);
   });
@@ -503,22 +498,20 @@ describe('TgpuBuffer', () => {
         d: d.arrayOf(d.u32, 3),
       }),
     );
-
-    buffer.writePartial({ a: 3 });
-
     const rawBuffer = root.unwrap(buffer);
     expect(rawBuffer).toBeDefined();
 
+    buffer.writePartial({ a: 3 });
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
       [rawBuffer, 0, toUint8Array(new Uint32Array([3]))],
     ]);
+    device.mock.queue.writeBuffer.mockClear();
 
     buffer.writePartial({ b: { c: d.vec2f(1, 2) } });
-
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 0, toUint8Array(new Uint32Array([3]))],
       [rawBuffer, 8, toUint8Array(new Float32Array([1, 2]))],
     ]);
+    device.mock.queue.writeBuffer.mockClear();
 
     buffer.writePartial({
       d: [
@@ -526,13 +519,11 @@ describe('TgpuBuffer', () => {
         { idx: 2, value: 3 },
       ],
     });
-
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 0, toUint8Array(new Uint32Array([3]))],
-      [rawBuffer, 8, toUint8Array(new Float32Array([1, 2]))],
       [rawBuffer, 16, toUint8Array(new Uint32Array([1]))],
       [rawBuffer, 24, toUint8Array(new Uint32Array([3]))],
     ]);
+    device.mock.queue.writeBuffer.mockClear();
 
     buffer.writePartial({
       b: { c: d.vec2f(3, 4) },
@@ -541,12 +532,7 @@ describe('TgpuBuffer', () => {
         { idx: 1, value: 3 },
       ],
     }); // should merge the writes
-
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 0, toUint8Array(new Uint32Array([3]))],
-      [rawBuffer, 8, toUint8Array(new Float32Array([1, 2]))],
-      [rawBuffer, 16, toUint8Array(new Uint32Array([1]))],
-      [rawBuffer, 24, toUint8Array(new Uint32Array([3]))],
       [rawBuffer, 8, toUint8Array(new Float32Array([3, 4]), new Uint32Array([2, 3]))],
     ]);
   });
