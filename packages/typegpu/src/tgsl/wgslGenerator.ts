@@ -173,7 +173,8 @@ const unaryOpCodeToCodegen = {
       return snip(`!${argStr}`, bool, 'runtime');
     }
     if (wgsl.isNumericSchema(dataType)) {
-      return snip(`!bool(${argStr})`, bool, 'runtime');
+      // no bool cast, because bool(NaN) is true in WGSL but in JS it's false
+      return snip(`!(${argStr} != 0)`, bool, 'runtime');
     }
 
     return snip(false, bool, 'constant');

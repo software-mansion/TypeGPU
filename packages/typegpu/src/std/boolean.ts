@@ -180,6 +180,10 @@ function cpuNot(value: number): boolean;
 function cpuNot<T extends AnyVecInstance>(value: T): VecInstanceToBooleanVecInstance<T>;
 function cpuNot(value: unknown): boolean;
 function cpuNot(value: unknown): boolean | AnyBooleanVecInstance {
+  if (typeof value === 'number' && isNaN(value)) {
+    return false;
+  }
+
   if (isVecInstance(value)) {
     if (value.length === 2) {
       return vec2b(!value.x, !value.y);
@@ -206,6 +210,7 @@ function cpuNot(value: unknown): boolean | AnyBooleanVecInstance {
  * not(vec3b(true, true, false)) // returns vec3b(false, false, true)
  * not(vec3f(1.0, 0.0, -1.0)) // returns vec3b(false, true, false)
  * not({a: 1882}) // returns false
+ * not(NaN) // returns false **as in WGSL**
  */
 export const not = dualImpl({
   name: 'not',
@@ -217,8 +222,11 @@ export const not = dualImpl({
     };
   },
   normalImpl: cpuNot,
-  codegenImpl: (ctx, [arg]) => {
+  codegenImpl: (_ctx, [arg]) => {
     if (isKnownAtComptime(arg)) {
+      if (typeof arg.value === 'number' && isNaN(arg.value)) {
+        return 'false';
+      }
       return `${!arg.value}`;
     }
 

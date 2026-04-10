@@ -36,6 +36,10 @@ describe('not', () => {
     expect(not(s)).toBe(false);
   });
 
+  it('mimics WGSL behavior on NaN', () => {
+    expect(not(NaN)).toBe(false);
+  });
+
   it('generates correct WGSL on a boolean runtime-known argument', () => {
     const testFn = tgpu.fn(
       [d.bool],
