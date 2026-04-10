@@ -76,8 +76,10 @@ export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
-export interface FnToWgslOptions {
+export interface ResolveFunctionOptions {
   functionType: 'normal' | TgpuShaderStage;
+  workgroupSize?: readonly number[] | undefined;
+  name: string;
   argTypes: BaseData[];
   /**
    * The return type of the function. If undefined, the type should be inferred
@@ -313,7 +315,7 @@ export interface ResolutionCtx {
    */
   resolveSnippet(snippet: Snippet): ResolvedSnippet;
 
-  fnToWgsl(options: FnToWgslOptions): {
+  resolveFunction(options: ResolveFunctionOptions): {
     code: string;
     returnType: BaseData;
   };
