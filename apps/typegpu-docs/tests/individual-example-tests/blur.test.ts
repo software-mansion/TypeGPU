@@ -470,13 +470,13 @@ describe('blur example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct renderFragment_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var renderView: texture_2d<f32>;
 
       @group(0) @binding(1) var sampler_1: sampler;
+
+      struct renderFragment_Input {
+        @location(0) uv: vec2f,
+      }
 
       @fragment fn renderFragment(_arg_0: renderFragment_Input) -> @location(0) vec4f {
         return textureSample(renderView, sampler_1, _arg_0.uv);
