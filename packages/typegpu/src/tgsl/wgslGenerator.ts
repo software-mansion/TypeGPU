@@ -210,7 +210,7 @@ export class WgslGenerator implements ShaderGenerator {
     return this.#ctx;
   }
 
-  public _block([_, statements]: tinyest.Block, externalMap?: ExternalMap): string {
+  protected _block([_, statements]: tinyest.Block, externalMap?: ExternalMap): string {
     this.ctx.pushBlockScope();
 
     if (externalMap) {
@@ -235,7 +235,7 @@ ${this.ctx.pre}}`;
     }
   }
 
-  public _blockStatement(block: tinyest.Block, externalMap?: ExternalMap): string {
+  protected _blockStatement(block: tinyest.Block, externalMap?: ExternalMap): string {
     return `${this.ctx.pre}${this._block(block, externalMap)}`;
   }
 
@@ -255,17 +255,16 @@ ${this.ctx.pre}}`;
    * Creates a variable declaration string.
    * `keyword` may be a placeholder filled in later.
    */
-  protected emitVarDecl(
-    pre: string,
+  protected _emitVarDecl(
     keyword: 'var' | 'let' | 'const' | `#VAR_${number}#`,
     name: string,
     _dataType: wgsl.BaseData | UnknownData,
     rhsStr: string,
   ): string {
-    return `${pre}${keyword} ${name} = ${rhsStr};`;
+    return `${this.ctx.pre}${keyword} ${name} = ${rhsStr};`;
   }
 
-  public _identifier(id: string): Snippet {
+  protected _identifier(id: string): Snippet {
     if (!id) {
       throw new Error('Cannot resolve an empty identifier');
     }
@@ -286,7 +285,7 @@ ${this.ctx.pre}}`;
    * A wrapper for `generateExpression` that updates `ctx.expectedType`
    * and tries to convert the result when it does not match the expected type.
    */
-  public _typedExpression(
+  protected _typedExpression(
     expression: tinyest.Expression,
     expectedType: wgsl.BaseData | wgsl.BaseData[],
   ) {
@@ -307,7 +306,7 @@ ${this.ctx.pre}}`;
     }
   }
 
-  public _expression(expression: tinyest.Expression): Snippet {
+  protected _expression(expression: tinyest.Expression): Snippet {
     if (typeof expression === 'string') {
       return this._identifier(expression);
     }
@@ -862,7 +861,7 @@ ${this.ctx.pre}}`;
       );
     }
 
-    // Function header
+    // Only after generating the body can we determine the return type
     const returnType = options.determineReturnType();
 
     const argList = options.args
@@ -878,7 +877,19 @@ ${this.ctx.pre}}`;
         ? `(${argList}) -> ${getAttributesString(returnType)}${this.ctx.resolve(returnType).value} `
         : `(${argList}) `;
 
-    return `${head}${body}`;
+    let attributes = '';
+    if (options.functionType === 'compute') {
+      if (!options.workgroupSize) {
+        throw new Error('Compute shaders must have a workgroup size');
+      }
+      attributes = `@compute @workgroup_size(${options.workgroupSize.join(', ')}) `;
+    } else if (options.functionType === 'vertex') {
+      attributes = `@vertex `;
+    } else if (options.functionType === 'fragment') {
+      attributes = `@fragment `;
+    }
+
+    return `${attributes}fn ${options.name}${head}${body}`;
   }
 
   /**
@@ -900,7 +911,7 @@ ${this.ctx.pre}}`;
     return snip(stitch`${this.ctx.resolve(schema).value}(${args})`, schema, 'runtime');
   }
 
-  public _return(statement: tinyest.Return): string {
+  protected _return(statement: tinyest.Return): string {
     const returnNode = statement[1];
 
     if (returnNode !== undefined) {
@@ -972,7 +983,7 @@ Try 'return ${typeStr}(${str});' instead.
     return `${this.ctx.pre}return;`;
   }
 
-  public _letStatement(statement: tinyest.Let): string {
+  protected _letStatement(statement: tinyest.Let): string {
     const [_, rawId, eqNode] = statement;
 
     if (eqNode === undefined) {
@@ -1040,10 +1051,10 @@ Try 'return ${typeStr}(${str});' instead.
     const emittedVarType = `#VAR_${scope.placeholderForVariable.size}#` as const;
     scope.placeholderForVariable.set(snippet, emittedVarType);
 
-    return this.emitVarDecl(this.ctx.pre, emittedVarType, snippet.value, concreteType, rhsStr);
+    return this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr);
   }
 
-  public _constStatement(statement: tinyest.Const) {
+  protected _constStatement(statement: tinyest.Const) {
     const [_, rawId, eqNode] = statement;
 
     if (eqNode === undefined) {
@@ -1158,10 +1169,10 @@ Try 'return ${typeStr}(${str});' instead.
       emittedVarType = varType;
     }
 
-    return this.emitVarDecl(this.ctx.pre, emittedVarType, snippet.value, concreteType, rhsStr);
+    return this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr);
   }
 
-  public _statement(statement: tinyest.Statement): string {
+  protected _statement(statement: tinyest.Statement): string {
     if (typeof statement === 'string') {
       const id = this._identifier(statement);
       const resolved = id.value && this.ctx.resolve(id.value).value;
