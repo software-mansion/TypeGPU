@@ -1,0 +1,61 @@
+{
+  "name": "@typegpu/react",
+  "version": "0.10.0-alpha.7",
+  "description": "The best way to integrate TypeGPU into your React app.",
+  "keywords": [],
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "types": "./src/browser/index.ts",
+  "exports": {
+    ".": "./src/browser/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "directory": "dist",
+    "exports": {
+      "./package.json": "./dist/package.json",
+      ".": {
+        "types": "./dist/browser/index.d.ts",
+        "browser": "./dist/browser/index.js",
+        "react-native": "./dist/react-native/index.js",
+        "default": "./dist/browser/index.js"
+      }
+    },
+    "linkDirectory": false,
+    "main": "./dist/browser/index.js",
+    "react-native": "./dist/react-native/index.js",
+    "types": "./dist/browser/index.d.ts"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "prepublishOnly": "tgpu-dev-cli prepack"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "@typegpu/tgpu-dev-cli": "workspace:*",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@webgpu/types": "catalog:types",
+    "jiti": "catalog:build",
+    "jsdom": "^27.0.0",
+    "react-native": "0.84.1",
+    "tsdown": "catalog:build",
+    "typegpu": "workspace:*",
+    "typegpu-testing-utility": "workspace:^",
+    "typescript": "catalog:types",
+    "unplugin-typegpu": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-native": "*",
+    "typegpu": "^0.10.2"
+  },
+  "peerDependenciesMeta": {
+    "react-native": {
+      "optional": true
+    }
+  }
+}
