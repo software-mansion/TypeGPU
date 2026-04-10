@@ -173,8 +173,15 @@ const unaryOpCodeToCodegen = {
       return snip(`!${argStr}`, bool, 'runtime');
     }
     if (wgsl.isNumericSchema(dataType)) {
-      // no bool cast, because bool(NaN) is true in WGSL but in JS it's false
-      return snip(`!(${argStr} != 0)`, bool, 'runtime');
+      const resultStr = `!bool(${argStr})`;
+      const nanGuardedStr = // abstractFloat will be resolved as comptime
+        dataType.type === 'f32'
+          ? `(((bitcast<u32>(${argStr}) & 0x7fffffff) > 0x7f800000) || ${resultStr})`
+          : dataType.type === 'f16'
+            ? `(((bitcast<u32>(${argStr}) & 0x7fff) > 0x7c00) || ${resultStr})`
+            : resultStr;
+
+      return snip(nanGuardedStr, bool, 'runtime');
     }
 
     return snip(false, bool, 'constant');

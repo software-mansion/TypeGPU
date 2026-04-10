@@ -186,12 +186,14 @@ function cpuNot(value: unknown): boolean | AnyBooleanVecInstance {
 
   if (isVecInstance(value)) {
     if (value.length === 2) {
-      return vec2b(!value.x, !value.y);
+      return vec2b(cpuNot(value.x), cpuNot(value.y));
     }
     if (value.length === 3) {
-      return vec3b(!value.x, !value.y, !value.z);
+      return vec3b(cpuNot(value.x), cpuNot(value.y), cpuNot(value.z));
     }
-    return vec4b(!value.x, !value.y, !value.z, !value.w);
+    if (value.length === 4) {
+      return vec4b(cpuNot(value.x), cpuNot(value.y), cpuNot(value.z), cpuNot(value.w));
+    }
   }
 
   return !value;
@@ -224,10 +226,7 @@ export const not = dualImpl({
   normalImpl: cpuNot,
   codegenImpl: (_ctx, [arg]) => {
     if (isKnownAtComptime(arg)) {
-      if (typeof arg.value === 'number' && isNaN(arg.value)) {
-        return 'false';
-      }
-      return `${!arg.value}`;
+      return `${cpuNot(arg.value)}`;
     }
 
     const { dataType } = arg;

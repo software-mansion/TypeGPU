@@ -96,6 +96,19 @@ describe('not', () => {
     `);
   });
 
+  it('generates correct WGSL on a numeric vector comptime-known argument', () => {
+    const f = () => {
+      'use gpu';
+      const v = not(d.vec4f(Infinity, -Infinity, 0, NaN));
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() {
+        var v = vec4<bool>(false, false, true, false);
+      }"
+    `);
+  });
+
   it('evaluates at compile time for comptime-known arguments', () => {
     const getN = tgpu.comptime(() => 42);
     const slot = tgpu.slot<{ a?: number }>({});
