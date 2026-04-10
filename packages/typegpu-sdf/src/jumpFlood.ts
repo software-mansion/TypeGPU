@@ -34,6 +34,12 @@ const distWriteLayout = tgpu.bindGroupLayout({
   },
 });
 
+const finalizeReadLayout = tgpu.bindGroupLayout({
+  readView: {
+    storageTexture: d.textureStorage2d('rgba16uint', 'read-only'),
+  },
+});
+
 /**
  * Slot for the classify function that determines which pixels are "inside" for the SDF.
  * The function receives the pixel coordinate and texture size, and returns whether
@@ -68,17 +74,11 @@ const sampleWithOffset = (
     samplePos.x >= d.i32(dims.x) ||
     samplePos.y >= d.i32(dims.y);
 
-  const safePos = std.clamp(samplePos, d.vec2i(0), d.vec2i(dims.sub(1)));
-  const loaded = std.textureLoad(tex, safePos);
+  if (outOfBounds) {
+    return d.vec4u(INVALID_COORD);
+  }
 
-  const inside = loaded.xy;
-  const outside = loaded.zw;
-
-  const invalid = d.vec2u(INVALID_COORD);
-  return d.vec4u(
-    std.select(inside, invalid, outOfBounds),
-    std.select(outside, invalid, outOfBounds),
-  );
+  return std.textureLoad(tex, samplePos);
 };
 
 const offsetAccessor = tgpu.accessor(d.i32);
@@ -88,7 +88,7 @@ const initFromSeedCompute = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
   const size = std.textureDimensions(initLayout.$.writeView);
-  if (std.any(std.ge(gid.xy, size))) {
+  if (gid.x >= size.x || gid.y >= size.y) {
     return;
   }
 
@@ -109,43 +109,45 @@ const jumpFloodCompute = tgpu.computeFn({
   workgroupSize: [8, 8],
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
+  'use gpu';
   const size = std.textureDimensions(pingPongLayout.$.readView);
-  if (std.any(std.ge(gid.xy, size))) {
+  if (gid.x >= size.x || gid.y >= size.y) {
     return;
   }
 
   const offset = offsetAccessor.$;
-  const pos = d.vec2f(gid.xy);
+  const pos = d.vec2i(gid.xy);
 
   const invalid = d.vec2u(INVALID_COORD);
   let bestInsideCoord = d.vec2u(invalid);
   let bestOutsideCoord = d.vec2u(invalid);
-  let bestInsideDist2 = d.f32(1e20); // squared distance
-  let bestOutsideDist2 = d.f32(1e20); // squared distance
 
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
+  let bestInsideDist2 = d.i32(2147483647);
+  let bestOutsideDist2 = d.i32(2147483647);
+
+  for (const dy of tgpu.unroll([-1, 0, 1])) {
+    for (const dx of tgpu.unroll([-1, 0, 1])) {
       const sample = sampleWithOffset(
         pingPongLayout.$.readView,
         size,
-        d.vec2i(gid.xy),
-        d.vec2i(dx * offset, dy * offset),
+        pos,
+        d.vec2i(dx, dy) * offset,
       );
 
-      // Check inside candidate (valid if not INVALID_COORD)
       if (sample.x !== INVALID_COORD) {
-        const deltaIn = pos.sub(d.vec2f(sample.xy));
-        const dist2 = std.dot(deltaIn, deltaIn);
+        const deltaIn = pos - d.vec2i(sample.xy);
+        const dist2 = deltaIn.x * deltaIn.x + deltaIn.y * deltaIn.y;
+
         if (dist2 < bestInsideDist2) {
           bestInsideDist2 = dist2;
           bestInsideCoord = d.vec2u(sample.xy);
         }
       }
 
-      // Check outside candidate (valid if not INVALID_COORD)
       if (sample.z !== INVALID_COORD) {
-        const deltaOut = pos.sub(d.vec2f(sample.zw));
-        const dist2 = std.dot(deltaOut, deltaOut);
+        const deltaOut = pos - d.vec2i(sample.zw);
+        const dist2 = deltaOut.x * deltaOut.x + deltaOut.y * deltaOut.y;
+
         if (dist2 < bestOutsideDist2) {
           bestOutsideDist2 = dist2;
           bestOutsideCoord = d.vec2u(sample.zw);
@@ -161,52 +163,69 @@ const jumpFloodCompute = tgpu.computeFn({
   );
 });
 
-const createDistanceFieldCompute = tgpu.computeFn({
+// Runs a final JFA pass at offset=1 and immediately computes the signed distance
+const finalizeCompute = tgpu.computeFn({
   workgroupSize: [8, 8],
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
-  const size = std.textureDimensions(pingPongLayout.$.readView);
-  if (std.any(std.ge(gid.xy, size))) {
+  'use gpu';
+  const size = std.textureDimensions(finalizeReadLayout.$.readView);
+  if (gid.x >= size.x || gid.y >= size.y) {
     return;
   }
 
-  const pos = d.vec2f(gid.xy);
-  const texel = std.textureLoad(pingPongLayout.$.readView, d.vec2i(gid.xy));
+  const pos = d.vec2i(gid.xy);
+  const invalid = d.vec2u(INVALID_COORD);
+  let bestInsideCoord = d.vec2u(invalid);
+  let bestOutsideCoord = d.vec2u(invalid);
+  let bestInsideDist2 = d.i32(2147483647);
+  let bestOutsideDist2 = d.i32(2147483647);
 
-  const insideCoord = texel.xy;
-  const outsideCoord = texel.zw;
+  for (const dy of tgpu.unroll([-1, 0, 1])) {
+    for (const dx of tgpu.unroll([-1, 0, 1])) {
+      const sample = sampleWithOffset(finalizeReadLayout.$.readView, size, pos, d.vec2i(dx, dy));
 
-  let insideDist = d.f32(1e20);
-  let outsideDist = d.f32(1e20);
+      if (sample.x !== INVALID_COORD) {
+        const deltaIn = pos - d.vec2i(sample.xy);
+        const dist2 = deltaIn.x * deltaIn.x + deltaIn.y * deltaIn.y;
 
-  // Compute distances in pixel space
-  if (insideCoord.x !== INVALID_COORD) {
-    insideDist = std.distance(pos, d.vec2f(insideCoord));
+        if (dist2 < bestInsideDist2) {
+          bestInsideDist2 = dist2;
+          bestInsideCoord = d.vec2u(sample.xy);
+        }
+      }
+
+      if (sample.z !== INVALID_COORD) {
+        const deltaOut = pos - d.vec2i(sample.zw);
+        const dist2 = deltaOut.x * deltaOut.x + deltaOut.y * deltaOut.y;
+
+        if (dist2 < bestOutsideDist2) {
+          bestOutsideDist2 = dist2;
+          bestOutsideCoord = d.vec2u(sample.zw);
+        }
+      }
+    }
   }
 
-  if (outsideCoord.x !== INVALID_COORD) {
-    outsideDist = std.distance(pos, d.vec2f(outsideCoord));
+  const posF = d.vec2f(gid.xy);
+  let insideDist = d.f32(3.4 * 10 ** 38);
+  let outsideDist = d.f32(3.4 * 10 ** 38);
+
+  if (bestInsideCoord.x !== INVALID_COORD) {
+    insideDist = std.distance(posF, d.vec2f(bestInsideCoord));
   }
 
-  // Output signed distance in pixels
-  // Positive = outside (distance to nearest inside), Negative = inside (distance to nearest outside)
+  if (bestOutsideCoord.x !== INVALID_COORD) {
+    outsideDist = std.distance(posF, d.vec2f(bestOutsideCoord));
+  }
+
   const signedDist = insideDist - outsideDist;
-
-  // Get SDF and color values from slots
-  const sdfValue = sdfSlot.$(gid.xy, size, signedDist, insideCoord, outsideCoord);
-
-  const colorValue = colorSlot.$(gid.xy, size, signedDist, insideCoord, outsideCoord);
+  const sdfValue = sdfSlot.$(gid.xy, size, signedDist, bestInsideCoord, bestOutsideCoord);
+  const colorValue = colorSlot.$(gid.xy, size, signedDist, bestInsideCoord, bestOutsideCoord);
 
   std.textureStore(distWriteLayout.$.sdfTexture, d.vec2i(gid.xy), d.vec4f(sdfValue, 0, 0, 0));
-
   std.textureStore(distWriteLayout.$.colorTexture, d.vec2i(gid.xy), colorValue);
 });
-
-type FloodTexture = TgpuTexture<{
-  size: [number, number];
-  format: 'rgba16uint';
-}> &
-  StorageFlag;
 
 export type SdfTexture = TgpuTexture<{
   size: [number, number];
@@ -277,34 +296,34 @@ export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
   const { width, height } = size;
 
   // Create output textures
-  const sdfTexture = root['~unstable']
+  const sdfTexture = root
     .createTexture({
       size: [width, height],
       format: 'rgba16float',
     })
-    .$usage('storage', 'sampled') as SdfTexture;
+    .$usage('storage', 'sampled');
 
-  const colorTexture = root['~unstable']
+  const colorTexture = root
     .createTexture({
       size: [width, height],
       format: 'rgba8unorm',
     })
-    .$usage('storage', 'sampled') as ColorTexture;
+    .$usage('storage', 'sampled');
 
   // Create flood textures
-  const floodTextureA = root['~unstable']
+  const floodTextureA = root
     .createTexture({
       size: [width, height],
       format: 'rgba16uint',
     })
-    .$usage('storage') as FloodTexture;
+    .$usage('storage');
 
-  const floodTextureB = root['~unstable']
+  const floodTextureB = root
     .createTexture({
       size: [width, height],
       format: 'rgba16uint',
     })
-    .$usage('storage') as FloodTexture;
+    .$usage('storage');
 
   const offsetUniform = root.createUniform(d.i32);
 
@@ -316,10 +335,10 @@ export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
     .with(offsetAccessor, offsetUniform)
     .createComputePipeline({ compute: jumpFloodCompute });
 
-  const createDistancePipeline = root
+  const finalizePipeline = root
     .with(sdfSlot, getSdf)
     .with(colorSlot, getColor)
-    .createComputePipeline({ compute: createDistanceFieldCompute });
+    .createComputePipeline({ compute: finalizeCompute });
 
   // Create bind groups
   const initBG = root.createBindGroup(initLayout, {
@@ -342,10 +361,21 @@ export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
     colorTexture: colorTexture.createView(d.textureStorage2d('rgba8unorm', 'write-only')),
   });
 
+  const finalizeReadBGs = [
+    root.createBindGroup(finalizeReadLayout, {
+      readView: floodTextureA.createView(d.textureStorage2d('rgba16uint', 'read-only')),
+    }),
+    root.createBindGroup(finalizeReadLayout, {
+      readView: floodTextureB.createView(d.textureStorage2d('rgba16uint', 'read-only')),
+    }),
+  ];
+
   const workgroupsX = Math.ceil(width / 8);
   const workgroupsY = Math.ceil(height / 8);
   const maxDim = Math.max(width, height);
-  const maxRange = 1 << Math.floor(Math.log2(maxDim));
+
+  // Largest power-of-two strictly less than maxDim.
+  const maxRange = 2 ** Math.floor(Math.log2(Math.max(maxDim - 1, 1)));
 
   function destroy() {
     floodTextureA.destroy();
@@ -353,19 +383,6 @@ export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
     sdfTexture.destroy();
     colorTexture.destroy();
   }
-
-  // Determine which ping-pong texture contains the final result.
-  // After all iterations, sourceIdx will have been flipped, so compute it.
-  const iterationCount = (() => {
-    let count = 0;
-    let o = maxRange;
-    while (o >= 1) {
-      count++;
-      o = Math.floor(o / 2);
-    }
-    return count;
-  })();
-  const finalSourceIdx = iterationCount % 2 === 0 ? 0 : 1;
 
   function createExecutor(additionalBindGroups: TgpuBindGroup[] = []): JumpFloodExecutor {
     // Pre-cache pipeline+bindgroup combos to avoid re-chaining per frame.
@@ -382,8 +399,8 @@ export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
       return p;
     });
 
-    const prebuiltDistPipelines = pingPongBGs.map((bg) => {
-      let p = createDistancePipeline.with(bg).with(distWriteBG);
+    const prebuiltFinalizePipelines = finalizeReadBGs.map((bg) => {
+      let p = finalizePipeline.with(bg).with(distWriteBG);
       for (const addBg of additionalBindGroups) {
         p = p.with(addBg);
       }
@@ -393,7 +410,6 @@ export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
     function run() {
       prebuiltInitPipeline.dispatchWorkgroups(workgroupsX, workgroupsY);
 
-      // Run jump flood iterations
       let sourceIdx = 0;
       let offset = maxRange;
 
@@ -404,8 +420,8 @@ export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
         offset = Math.floor(offset / 2);
       }
 
-      // Create final distance field
-      prebuiltDistPipelines[finalSourceIdx]?.dispatchWorkgroups(workgroupsX, workgroupsY);
+      // Finalize: JFA+1 at offset=1 fused with distance field output
+      prebuiltFinalizePipelines[sourceIdx]?.dispatchWorkgroups(workgroupsX, workgroupsY);
     }
 
     return {

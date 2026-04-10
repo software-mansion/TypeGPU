@@ -180,8 +180,8 @@ const jumpFlood = root.createGuardedComputePipeline((x, y) => {
 
   let bestInsideCoord = d.vec2f(-1);
   let bestOutsideCoord = d.vec2f(-1);
-  let bestInsideDist = 1e20;
-  let bestOutsideDist = 1e20;
+  let bestInsideDist = d.f32(3.4 * 10 ** 38);
+  let bestOutsideDist = d.f32(3.4 * 10 ** 38);
 
   for (const dx of tgpu.unroll([-1, 0, 1])) {
     for (const dy of tgpu.unroll([-1, 0, 1])) {
@@ -242,8 +242,8 @@ const createDistanceField = root.createGuardedComputePipeline((x, y) => {
   const insideCoord = texel.xy;
   const outsideCoord = texel.zw;
 
-  let insideDist = 1e20;
-  let outsideDist = 1e20;
+  let insideDist = d.f32(3.4 * 10 ** 38);
+  let outsideDist = d.f32(3.4 * 10 ** 38);
 
   if (insideCoord.x >= 0) {
     insideDist = std.distance(pos, insideCoord.mul(d.vec2f(size)));
