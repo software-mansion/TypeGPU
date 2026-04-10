@@ -2,7 +2,6 @@
 
 # unplugin-typegpu
 
-🚧 **Under Construction** 🚧 -
 [GitHub](https://github.com/software-mansion/TypeGPU/tree/main/packages/unplugin-typegpu)
 
 Read more about the plugin in the
@@ -10,10 +9,10 @@ Read more about the plugin in the
 
 </div>
 
-Build plugins for [TypeGPU](https://typegpu.com) that enable:
+A set of bundler plugins that enhance [TypeGPU](https://typegpu.com) with:
 
-- Seamless JavaScript -> WGSL transpilation
-- [🚧 TODO] Improved debugging with automatic naming of resources
+- JavaScript/TypeScript shader support ('use gpu' directive)
+- Improved debugging with automatic naming of resources
 
 ## Getting Started
 
@@ -46,6 +45,17 @@ import typegpu from 'unplugin-typegpu/vite';
 export default defineConfig({
   plugins: [typegpu()],
 });
+```
+
+- bun
+
+```ts
+// preload.ts
+
+import { plugin } from 'bun';
+import typegpu from 'unplugin-typegpu/bun';
+
+void plugin(typegpu());
 ```
 
 ## TypeGPU is created by Software Mansion

@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import { getName } from '../src/shared/meta.ts';
 import { bindGroupLayout } from '../src/tgpuBindGroupLayout.ts';
 import { f32 } from '../src/data/numeric.ts';

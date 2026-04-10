@@ -1,15 +1,15 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
-import { type RefObject, useEffect, useRef, useState } from 'react';
+import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom.ts';
-import { codeEditorShownAtom } from '../utils/examples/exampleViewStateAtoms.ts';
+import { codeEditorShownAtom, tsoverUsedAtom } from '../utils/examples/exampleViewStateAtoms.ts';
 import { ExecutionCancelledError } from '../utils/examples/errors.ts';
 import { exampleControlsAtom } from '../utils/examples/exampleControlAtom.ts';
 import { executeExample } from '../utils/examples/exampleRunner.ts';
 import type { ExampleState } from '../utils/examples/exampleState.ts';
 import type { Example, ExampleCommonFile, ExampleSrcFile } from '../utils/examples/types.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
-import { HtmlCodeEditor, TsCodeEditor } from './CodeEditor.tsx';
+import { CodeEditor } from './CodeEditor.tsx';
 import { ControlPanel } from './ControlPanel.tsx';
 import { Button } from './design/Button.tsx';
 import { Snackbar } from './design/Snackbar.tsx';
@@ -28,9 +28,10 @@ function useExample(
   const exampleRef = useRef<ExampleState | null>(null);
   const setExampleControlParams = useSetAtom(exampleControlsAtom);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     let cancelled = false;
     setSnackbarText(undefined);
+    setExampleControlParams([]);
 
     executeExample(tsImport)
       .then((example) => {
@@ -70,6 +71,7 @@ export function ExampleView({ example, common }: Props) {
   const [currentFilePath, setCurrentFilePath] = useState<string>('index.ts');
 
   const codeEditorShown = useAtomValue(codeEditorShownAtom);
+  const tsoverUsed = useAtomValue(tsoverUsedAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
 
   const tsFiles = filterRelevantTsFiles(srcFiles, common);
@@ -140,10 +142,21 @@ export function ExampleView({ example, common }: Props) {
                   </div>
                 </div>
 
-                <HtmlCodeEditor shown={currentFilePath === 'index.html'} file={htmlFile} />
+                <CodeEditor
+                  shown={currentFilePath === 'index.html'}
+                  file={htmlFile}
+                  language={'html'}
+                  tsoverEnabled={false}
+                />
 
                 {tsFiles.map((file) => (
-                  <TsCodeEditor key={file.path} shown={file.path === currentFilePath} file={file} />
+                  <CodeEditor
+                    key={file.path}
+                    shown={file.path === currentFilePath}
+                    language={'typescript'}
+                    tsoverEnabled={tsoverUsed}
+                    file={file}
+                  />
                 ))}
               </div>
 

@@ -1,5 +1,6 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
+import { EntryInputRouter } from '../core/function/entryInputRouter.ts';
 import {
   InfixDispatch,
   isUnstruct,
@@ -37,7 +38,7 @@ import {
   isWgslStruct,
 } from '../data/wgslTypes.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
-import { add, div, mod, mul, sub } from '../std/operators.ts';
+import { add, bitShiftLeft, bitShiftRight, div, mod, mul, sub } from '../std/operators.ts';
 import { isKnownAtComptime } from '../types.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
 
@@ -65,6 +66,8 @@ export const infixOperators = {
   mul,
   div,
   mod,
+  bitShiftLeft,
+  bitShiftRight,
 } as const;
 
 export type InfixOperator = keyof typeof infixOperators;
@@ -154,6 +157,10 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
       return undefined;
     }
     return snip(stitch`${target}.${result.prop}`, result.type, 'argument');
+  }
+
+  if (target.dataType instanceof EntryInputRouter) {
+    return target.dataType.accessProp(propName);
   }
 
   if (isPtr(target.dataType)) {

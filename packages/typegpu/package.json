@@ -81,18 +81,20 @@
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
-    "tinyest": "workspace:~0.3.0",
+    "tinyest": "workspace:~0.3.1",
     "tsover-runtime": "^0.0.5",
     "typed-binary": "^4.3.1"
   },
   "devDependencies": {
     "@ark/attest": "^0.56.0",
     "@typegpu/tgpu-dev-cli": "workspace:*",
+    "@types/node": "catalog:types",
     "@webgpu/types": "catalog:types",
     "arktype": "catalog:",
     "jiti": "catalog:build",
     "jsdom": "^27.0.0",
     "tsdown": "catalog:build",
+    "typegpu-testing-utility": "workspace:*",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*",
     "wgpu-matrix": "catalog:example"

@@ -1,0 +1,7 @@
+{
+  "title": "Buffer Write Benchmark",
+  "category": "tests",
+  "tags": ["test", "performance", "buffer"],
+  "dev": true,
+  "coolFactor": 1
+}

@@ -25,6 +25,8 @@ export { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
 export { isTgpuVertexFn } from './core/function/tgpuVertexFn.ts';
 export { isTgpuComputeFn } from './core/function/tgpuComputeFn.ts';
 export { isVariable } from './core/variable/tgpuVariable.ts';
+export { ShaderGenerator } from './tgsl/shaderGenerator.ts';
+export { WgslGenerator } from './tgsl/wgslGenerator.ts';
 
 // types
 
@@ -108,9 +110,13 @@ export type { TgpuVertexFn, TgpuVertexFnShell } from './core/function/tgpuVertex
 export type { TgpuFragmentFn, TgpuFragmentFnShell } from './core/function/tgpuFragmentFn.ts';
 export type { TgpuComputeFn, TgpuComputeFnShell } from './core/function/tgpuComputeFn.ts';
 export type {
+  /** @deprecated use TgpuFragmentFn.AutoIn */
   AutoFragmentIn,
+  /** @deprecated use TgpuFragmentFn.AutoOut */
   AutoFragmentOut,
-  AutoVertexIn,
+  /** @deprecated use TgpuVertexFn.AutoIn */
+  _AutoVertexIn as AutoVertexIn,
+  /** @deprecated use TgpuVertexFn.AutoOut */
   AutoVertexOut,
 } from './core/function/autoIO.ts';
 export type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';

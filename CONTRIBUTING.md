@@ -43,6 +43,14 @@ pnpm publish --dry-run # (if alpha, --tag alpha)
 ```
 
 5. If everything looks okay, then `pnpm publish` (if alpha, `--tag alpha`)
+
+> **Tip:** If you already know all prepublish checks pass (tests, types, publish tag validation), you can skip them to speed up
+> publishing:
+>
+> ```bash
+> SKIP_ALL_CHECKS=true pnpm publish # (if alpha, --tag alpha)
+> ```
+
 6. Rebase _release_ branch on _main_
 7. Generate and edit release notes on GitHub
 8. Run `npx automd@latest`

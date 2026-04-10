@@ -1,6 +1,11 @@
-import type { AnyData } from '../../data/dataTypes.ts';
+import { isData, type AnyData } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import { type BaseData, isNaturallyEphemeral } from '../../data/wgslTypes.ts';
+import {
+  type AnyWgslData,
+  type BaseData,
+  isNaturallyEphemeral,
+  type WgslArray,
+} from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
@@ -42,7 +47,26 @@ export interface TgpuConst<TDataType extends BaseData = BaseData> extends TgpuNa
 export function constant<TDataType extends AnyData>(
   dataType: TDataType,
   value: InferGPU<TDataType>,
-): TgpuConst<TDataType> {
+): TgpuConst<TDataType>;
+
+export function constant<TElement extends AnyWgslData>(
+  dataType: (elementCount: number) => WgslArray<TElement>,
+  value: InferGPU<WgslArray<TElement>>,
+): TgpuConst<WgslArray<TElement>>;
+
+export function constant(
+  dataType: AnyData | ((elementCount: number) => WgslArray),
+  value: InferGPU<AnyData>,
+): TgpuConst {
+  if (!isData(dataType)) {
+    if (!Array.isArray(value)) {
+      throw new Error(
+        `Expected an array value for a partially-applied array schema, but received: ${typeof value}.`,
+      );
+    }
+    return new TgpuConstImpl(dataType(value.length), value);
+  }
+
   return new TgpuConstImpl(dataType, value);
 }
 
@@ -70,13 +94,13 @@ function deepFreeze<T extends object>(object: T): T {
 class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType>, SelfResolvable {
   readonly [$internal] = {};
   readonly resourceType: 'const';
+  readonly dataType: TDataType;
+
   readonly #value: DeepReadonly<InferGPU<TDataType>>;
 
-  constructor(
-    public readonly dataType: TDataType,
-    value: InferGPU<TDataType>,
-  ) {
+  constructor(dataType: TDataType, value: InferGPU<TDataType>) {
     this.resourceType = 'const';
+    this.dataType = dataType;
     this.#value =
       value && typeof value === 'object'
         ? (deepFreeze(value) as DeepReadonly<InferGPU<TDataType>>)

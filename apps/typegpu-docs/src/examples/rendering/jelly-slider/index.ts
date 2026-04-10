@@ -72,7 +72,7 @@ let [width, height] = [canvas.width * qualityScale, canvas.height * qualityScale
 let textures = createTextures(root, width, height);
 let backgroundTexture = createBackgroundTexture(root, width, height);
 
-const filteringSampler = root['~unstable'].createSampler({
+const filteringSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -360,7 +360,7 @@ const getFakeShadow = (position: d.v3f, lightDir: d.v3f): d.v3f => {
 
   if (position.y < -GroundParams.groundThickness) {
     // Applying darkening under the ground (the shadow cast by the upper ground layer)
-    const fadeSharpness = 30;
+    const fadeSharpness = d.f32(30);
     const inset = 0.02;
     const cutout = rectangleCutoutDist(position.xz) + inset;
     const edgeDarkening = std.saturate(1 - cutout * fadeSharpness);
@@ -386,7 +386,7 @@ const getFakeShadow = (position: d.v3f, lightDir: d.v3f): d.v3f => {
 
     const contrast = 20 * std.saturate(finalUV.y) * (0.8 + endCapX * 0.2);
     const shadowOffset = -0.3;
-    const featherSharpness = 10;
+    const featherSharpness = d.f32(10);
     const uvEdgeFeather =
       std.saturate(finalUV.x * featherSharpness) *
       std.saturate((1 - finalUV.x) * featherSharpness) *
@@ -714,7 +714,7 @@ const renderPipeline = root.createRenderPipeline({
 });
 
 const eventHandler = new EventHandler(canvas);
-let lastTimeStamp = performance.now();
+let lastTimestamp: number | null = null;
 let frameCount = 0;
 const taaResolver = new TAAResolver(root, width, height);
 
@@ -752,8 +752,8 @@ let animationFrameHandle: number;
 function render(timestamp: number) {
   frameCount++;
   camera.jitter();
-  const deltaTime = Math.min((timestamp - lastTimeStamp) * 0.001, 0.1);
-  lastTimeStamp = timestamp;
+  const deltaTime = Math.min(lastTimestamp !== null ? (timestamp - lastTimestamp) * 0.001 : 0, 0.1);
+  lastTimestamp = timestamp;
 
   randomUniform.write(d.vec2f((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2));
 
@@ -816,7 +816,7 @@ async function autoSetQuaility() {
   });
 
   for (let i = 0; i < 8; i++) {
-    const testTexture = root['~unstable']
+    const testTexture = root
       .createTexture({
         size: [canvas.width * resolutionScale, canvas.height * resolutionScale],
         format: 'rgba8unorm',

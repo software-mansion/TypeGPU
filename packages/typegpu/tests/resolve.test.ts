@@ -3,7 +3,7 @@ import tgpu, { d } from '../src/index.js';
 import { setName } from '../src/shared/meta.ts';
 import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import { snip } from '../src/data/snippet.ts';
 
 describe('tgpu resolve', () => {
@@ -168,7 +168,7 @@ fn main() {
         range: vec2f,
       }
 
-      fn random() -> f32{
+      fn random() -> f32 {
               var r: Random;
               r.seed = vec2<f32>(3.14, 1.59);
               r.range = vec2<f32>(0.0, 1.0);
@@ -312,7 +312,7 @@ fn main() {
     expect(resolved).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> intensity: u32;
 
-      fn get_color() -> vec3f{
+      fn get_color() -> vec3f {
               let color = vec3f();
               return color;
             }

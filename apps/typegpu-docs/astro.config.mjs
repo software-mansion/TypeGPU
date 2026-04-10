@@ -171,6 +171,10 @@ export default defineConfig({
               slug: 'fundamentals/slots',
             },
             {
+              label: 'Accessors',
+              slug: 'fundamentals/accessors',
+            },
+            {
               label: 'Utilities',
               slug: 'fundamentals/utils',
               badge: { text: 'new' },

@@ -11,6 +11,7 @@ import type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
 import type { TgpuComputeFn } from './core/function/tgpuComputeFn.ts';
 import type { TgpuFn } from './core/function/tgpuFn.ts';
 import type { TgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
+import type { SeparatedEntryArgs } from './core/function/fnTypes.ts';
 import type { TgpuVertexFn } from './core/function/tgpuVertexFn.ts';
 import type { TgpuComputePipeline } from './core/pipeline/computePipeline.ts';
 import type { TgpuRenderPipeline } from './core/pipeline/renderPipeline.ts';
@@ -46,6 +47,7 @@ import {
 import type { TgpuBindGroupLayout, TgpuLayoutEntry } from './tgpuBindGroupLayout.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
 import type { Infer } from './shared/repr.ts';
+import { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -85,6 +87,11 @@ export interface FnToWgslOptions {
   body: Block;
   params: FuncParameter[];
   externalMap: Record<string, unknown>;
+  /**
+   * For entry functions: positional args and optional data struct.
+   * When provided, takes precedence over `argTypes` for WGSL header generation.
+   */
+  entryInput?: SeparatedEntryArgs | undefined;
 }
 
 export type ItemLayer = {
@@ -216,14 +223,22 @@ export class CodegenState {
 
 export class SimulationState {
   readonly type = 'simulate' as const;
+  readonly buffers: Map<TgpuBuffer<BaseData>, unknown>;
+  readonly vars: {
+    private: Map<TgpuVar, unknown>;
+    workgroup: Map<TgpuVar, unknown>;
+  };
 
   constructor(
-    readonly buffers: Map<TgpuBuffer<BaseData>, unknown>,
-    readonly vars: {
+    buffers: Map<TgpuBuffer<BaseData>, unknown>,
+    vars: {
       private: Map<TgpuVar, unknown>;
       workgroup: Map<TgpuVar, unknown>;
     },
-  ) {}
+  ) {
+    this.buffers = buffers;
+    this.vars = vars;
+  }
 }
 
 export type ExecState = NormalState | CodegenState | SimulationState;
@@ -242,6 +257,7 @@ export interface ResolutionCtx {
 
   readonly mode: ExecState;
   readonly enableExtensions: WgslExtension[] | undefined;
+  readonly gen: ShaderGenerator;
 
   addDeclaration(declaration: string): void;
   withResetIndentLevel<T>(callback: () => T): T;
@@ -280,10 +296,13 @@ export interface ResolutionCtx {
    *
    * @param item The value to resolve
    * @param schema Additional information about the item's data type
-   * @param exact Should the inferred value of the resulting code be typed exactly as `schema` (true),
-   *              or is being assignable to `schema` enough (false). Default is false.
    */
-  resolve(item: unknown, schema?: BaseData | UnknownData, exact?: boolean): ResolvedSnippet;
+  resolve(item: unknown, schema?: BaseData | UnknownData): ResolvedSnippet;
+
+  /**
+   * Equivalent to `snip(ctx.resolve(snippet.value, snippet.dataType).value, snippet.dataType, snippet.origin)`.
+   */
+  resolveSnippet(snippet: Snippet): ResolvedSnippet;
 
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;

@@ -9,7 +9,7 @@ import type { AnyWgslData, BaseData, v3u, Vec3u, WgslArray } from '../../data/wg
 import { invariant } from '../../errors.ts';
 import { WeakMemo } from '../../memo.ts';
 import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
-import type { Infer } from '../../shared/repr.ts';
+import type { BufferInitialData } from '../buffer/buffer.ts';
 import { $getNameForward, $internal } from '../../shared/symbols.ts';
 import type {
   ExtractBindGroupInputFromLayout,
@@ -183,17 +183,20 @@ export class TgpuGuardedComputePipelineImpl<
 }
 
 class WithBindingImpl implements WithBinding {
-  constructor(
-    private readonly _getRoot: () => ExperimentalTgpuRoot,
-    private readonly _slotBindings: [TgpuSlot<unknown>, unknown][],
-  ) {}
+  readonly #getRoot: () => ExperimentalTgpuRoot;
+  readonly #slotBindings: [TgpuSlot<unknown>, unknown][];
+
+  constructor(getRoot: () => ExperimentalTgpuRoot, slotBindings: [TgpuSlot<unknown>, unknown][]) {
+    this.#getRoot = getRoot;
+    this.#slotBindings = slotBindings;
+  }
 
   with<T extends BaseData>(
     slot: TgpuSlot<T> | TgpuAccessor<T> | TgpuMutableAccessor<T>,
     value: TgpuAccessor.In<T> | TgpuMutableAccessor.In<T>,
   ): WithBinding {
-    return new WithBindingImpl(this._getRoot, [
-      ...this._slotBindings,
+    return new WithBindingImpl(this.#getRoot, [
+      ...this.#slotBindings,
       [isAccessor(slot) || isMutableAccessor(slot) ? slot.slot : slot, value],
     ]);
   }
@@ -201,13 +204,17 @@ class WithBindingImpl implements WithBinding {
   withCompute<ComputeIn extends Record<string, AnyComputeBuiltin>>(
     entryFn: TgpuComputeFn<ComputeIn>,
   ): WithCompute {
-    return new WithComputeImpl(this._getRoot(), this._slotBindings, entryFn);
+    return new WithComputeImpl(this.#getRoot(), this.#slotBindings, entryFn);
   }
 
   createComputePipeline<ComputeIn extends Record<string, AnyComputeBuiltin>>(
     descriptor: TgpuComputePipeline.Descriptor<ComputeIn>,
   ): TgpuComputePipeline {
-    return INTERNAL_createComputePipeline(this._getRoot(), this._slotBindings, descriptor);
+    return INTERNAL_createComputePipeline(
+      this.#getRoot(),
+      this.#slotBindings,
+      descriptor as unknown as TgpuComputePipeline.Descriptor,
+    );
   }
 
   createRenderPipeline(
@@ -215,8 +222,8 @@ class WithBindingImpl implements WithBinding {
     // oxlint-disable-next-line typescript/no-explicit-any -- required to be compatible with overloads
   ): TgpuRenderPipeline<any> {
     return INTERNAL_createRenderPipeline({
-      root: this._getRoot(),
-      slotBindings: this._slotBindings,
+      root: this.#getRoot(),
+      slotBindings: this.#slotBindings,
       descriptor,
     });
   }
@@ -224,7 +231,7 @@ class WithBindingImpl implements WithBinding {
   createGuardedComputePipeline<TArgs extends number[]>(
     callback: (...args: TArgs) => undefined,
   ): TgpuGuardedComputePipeline<TArgs> {
-    const root = this._getRoot();
+    const root = this.#getRoot();
 
     if (callback.length >= 4) {
       throw new Error('Guarded compute callback only supports up to three dimensions.');
@@ -257,7 +264,7 @@ class WithBindingImpl implements WithBinding {
     entryFn: TgpuVertexFn<VertexIn, VertexOut>,
     attribs?: LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>,
   ): WithVertex<VertexOut> {
-    return new WithVertexImpl(this._getRoot(), this._slotBindings, {
+    return new WithVertexImpl(this.#getRoot(), this.#slotBindings, {
       vertex: entryFn as TgpuVertexFn,
       attribs,
     });
@@ -265,20 +272,28 @@ class WithBindingImpl implements WithBinding {
 
   pipe(transform: (cfg: Configurable) => Configurable): WithBinding {
     const newCfg = transform(new ConfigurableImpl([]));
-    return new WithBindingImpl(this._getRoot, [...this._slotBindings, ...newCfg.bindings]);
+    return new WithBindingImpl(this.#getRoot, [...this.#slotBindings, ...newCfg.bindings]);
   }
 }
 
 class WithComputeImpl implements WithCompute {
+  readonly #root: ExperimentalTgpuRoot;
+  readonly #slotBindings: [TgpuSlot<unknown>, unknown][];
+  readonly #entryFn: TgpuComputeFn;
+
   constructor(
-    private readonly _root: ExperimentalTgpuRoot,
-    private readonly _slotBindings: [TgpuSlot<unknown>, unknown][],
-    private readonly _entryFn: TgpuComputeFn,
-  ) {}
+    root: ExperimentalTgpuRoot,
+    slotBindings: [TgpuSlot<unknown>, unknown][],
+    entryFn: TgpuComputeFn,
+  ) {
+    this.#root = root;
+    this.#slotBindings = slotBindings;
+    this.#entryFn = entryFn;
+  }
 
   createPipeline(): TgpuComputePipeline {
-    return INTERNAL_createComputePipeline(this._root, this._slotBindings, {
-      compute: this._entryFn,
+    return INTERNAL_createComputePipeline(this.#root, this.#slotBindings, {
+      compute: this.#entryFn,
     });
   }
 }
@@ -398,21 +413,31 @@ class WithFragmentImpl implements WithFragment {
 class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpuRoot {
   '~unstable': TgpuRoot['~unstable'];
 
-  private _unwrappedBindGroupLayouts = new WeakMemo((key: TgpuBindGroupLayout) => key.unwrap(this));
-  private _unwrappedBindGroups = new WeakMemo((key: TgpuBindGroup) => key.unwrap(this));
+  readonly device: GPUDevice;
+  readonly nameRegistrySetting: 'random' | 'strict';
+  readonly shaderGenerator: ShaderGenerator | undefined;
+
+  #unwrappedBindGroupLayouts = new WeakMemo((key: TgpuBindGroupLayout) => key.unwrap(this));
+  #unwrappedBindGroups = new WeakMemo((key: TgpuBindGroup) => key.unwrap(this));
+  #ownDevice: boolean;
 
   [$internal]: {
     logOptions: LogGeneratorOptions;
   };
 
   constructor(
-    public readonly device: GPUDevice,
-    public readonly nameRegistrySetting: 'random' | 'strict',
-    private readonly _ownDevice: boolean,
+    device: GPUDevice,
+    nameRegistrySetting: 'random' | 'strict',
+    ownDevice: boolean,
     logOptions: LogGeneratorOptions,
-    public readonly shaderGenerator?: ShaderGenerator,
+    shaderGenerator?: ShaderGenerator,
   ) {
     super(() => this, []);
+
+    this.device = device;
+    this.nameRegistrySetting = nameRegistrySetting;
+    this.#ownDevice = ownDevice;
+    this.shaderGenerator = shaderGenerator;
 
     this['~unstable'] = this;
     this[$internal] = {
@@ -439,14 +464,14 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
   createBuffer<TData extends AnyData>(
     typeSchema: TData,
-    initialOrBuffer?: Infer<TData> | GPUBuffer,
+    initialOrBuffer?: BufferInitialData<TData> | GPUBuffer,
   ): TgpuBuffer<TData> {
     return INTERNAL_createBuffer(this, typeSchema, initialOrBuffer);
   }
 
   createUniform<TData extends AnyWgslData>(
     typeSchema: TData,
-    initialOrBuffer?: Infer<TData> | GPUBuffer,
+    initialOrBuffer?: BufferInitialData<TData> | GPUBuffer,
   ): TgpuUniform<TData> {
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
@@ -457,7 +482,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
   createMutable<TData extends AnyWgslData>(
     typeSchema: TData,
-    initialOrBuffer?: Infer<TData> | GPUBuffer,
+    initialOrBuffer?: BufferInitialData<TData> | GPUBuffer,
   ): TgpuMutable<TData> {
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
@@ -468,7 +493,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
   createReadonly<TData extends AnyWgslData>(
     typeSchema: TData,
-    initialOrBuffer?: Infer<TData> | GPUBuffer,
+    initialOrBuffer?: BufferInitialData<TData> | GPUBuffer,
   ): TgpuReadonly<TData> {
     const buffer = INTERNAL_createBuffer(this, typeSchema, initialOrBuffer)
       // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
@@ -494,7 +519,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   destroy() {
     clearTextureUtilsCache(this.device);
 
-    if (this._ownDevice) {
+    if (this.#ownDevice) {
       this.device.destroy();
     }
   }
@@ -581,11 +606,11 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     }
 
     if (isBindGroupLayout(resource)) {
-      return this._unwrappedBindGroupLayouts.getOrMake(resource);
+      return this.#unwrappedBindGroupLayouts.getOrMake(resource);
     }
 
     if (isBindGroup(resource)) {
-      return this._unwrappedBindGroups.getOrMake(resource);
+      return this.#unwrappedBindGroups.getOrMake(resource);
     }
 
     if (isBuffer(resource)) {

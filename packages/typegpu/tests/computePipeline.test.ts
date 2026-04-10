@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, vi } from 'vitest';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
 import { d, MissingBindGroupsError, tgpu, type TgpuComputePipeline } from '../src/index.js';
 import { $internal } from '../src/shared/symbols.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import { extensionEnabled } from '../src/std/extensions.ts';
 
 describe('TgpuComputePipeline', () => {
@@ -141,23 +141,24 @@ describe('TgpuComputePipeline', () => {
       expect(pipeline[$internal].priors.performanceCallback).not.toBe(callback1);
     });
 
-    it('should throw error if timestamp-query feature is not enabled', ({ root, device }) => {
-      const originalFeatures = device.features;
-      //@ts-expect-error
+    it('should warn if timestamp-query feature is not enabled', ({ root, device }) => {
+      // @ts-expect-error
       device.features = new Set();
+      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 
       const callback = vi.fn();
 
       expect(() => {
-        root.createComputePipeline({ compute: entryFn }).withPerformanceCallback(callback);
-      }).toThrow(
-        'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
+        const before = root.createComputePipeline({ compute: entryFn });
+        const after = before.withPerformanceCallback(callback);
+        // no-op
+        expect(after).toBe(before);
+      }).not.toThrow();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
       );
-
-      //@ts-expect-error
-      device.features = originalFeatures;
     });
   });
 
@@ -331,6 +332,7 @@ describe('TgpuComputePipeline', () => {
   describe('Combined Performance callback and Timestamp Writes', () => {
     it('should work with both performance callback and custom timestamp writes', ({
       root,
+      device,
       commandEncoder,
     }) => {
       const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
@@ -371,6 +373,12 @@ describe('TgpuComputePipeline', () => {
         querySet[$internal].resolveBuffer,
         0,
       );
+
+      expect(device.mock.createQuerySet).toHaveBeenCalledTimes(1);
+      expect(device.mock.createQuerySet).toHaveBeenCalledWith({
+        type: 'timestamp',
+        count: 10,
+      });
     });
 
     it('should prioritize custom timestamp writes over automatic ones', ({
@@ -393,8 +401,6 @@ describe('TgpuComputePipeline', () => {
         beginningOfPassWriteIndex: 2,
         endOfPassWriteIndex: 5,
       });
-
-      expect((autoQuerySet as TgpuQuerySet<'timestamp'>).destroyed).toBe(true);
 
       const priors = pipeline[$internal].priors;
       expect(priors.performanceCallback).toBe(callback);
@@ -446,11 +452,7 @@ describe('TgpuComputePipeline', () => {
       "enable f16;
       enable subgroups;
 
-      struct fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
+      @compute @workgroup_size(1) fn fn_1() {
         var a = array<f32, 3>();
       }"
     `);
@@ -493,14 +495,10 @@ describe('TgpuComputePipeline', () => {
       "enable f16;
       enable subgroups;
 
-      struct fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
+      @compute @workgroup_size(1) fn fn_1(@builtin(global_invocation_id) gid: vec3u) {
         var a = array<f16, 3>();
         {
-          a[0i] = f16(_arg_0.gid.x);
+          a[0i] = f16(gid.x);
         }
         {
           a[1i] = 1h;
@@ -618,7 +616,7 @@ describe('TgpuComputePipeline', () => {
       const deepBuffer = root.createBuffer(DeepStruct).$usage('indirect');
       pipeline.dispatchWorkgroupsIndirect(
         deepBuffer,
-        d.memoryLayoutOf(DeepStruct, (s) => s.someData[11] as number),
+        d.memoryLayoutOf(DeepStruct, (s) => s.someData[11]),
       );
 
       expect(warnSpy.mock.calls[1]![0]).toMatchInlineSnapshot(
@@ -627,7 +625,7 @@ describe('TgpuComputePipeline', () => {
 
       pipeline.dispatchWorkgroupsIndirect(
         deepBuffer,
-        d.memoryLayoutOf(DeepStruct, (s) => s.nested.innerNested[0]?.yy as number),
+        d.memoryLayoutOf(DeepStruct, (s) => s.nested.innerNested[0]?.yy),
       );
 
       expect(warnSpy.mock.calls[2]![0]).toMatchInlineSnapshot(
