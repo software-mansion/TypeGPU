@@ -220,7 +220,21 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 
   withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this {
-    const newPriors = createWithPerformanceCallback(this.#priors, callback, this.#core.root);
+    if (this.#priors.timestampWrites) {
+      return new TgpuComputePipelineImpl(this.#core, {
+        ...this.#priors,
+        performanceCallback: callback,
+      }) as this;
+    }
+
+    const querySet = this.#core.performanceCallbackQuerySet;
+    if (!querySet) {
+      console.warn(
+        'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
+      );
+      return this;
+    }
+    const newPriors = createWithPerformanceCallback(this.#priors, callback, querySet);
     return new TgpuComputePipelineImpl(this.#core, newPriors) as this;
   }
 
@@ -353,6 +367,7 @@ class ComputePipelineCore implements SelfResolvable {
 
   #slotBindings: [TgpuSlot<unknown>, unknown][];
   #descriptor: TgpuComputePipeline.Descriptor;
+  #performanceCallbackQuerySet: TgpuQuerySet<'timestamp'> | undefined;
 
   constructor(
     root: ExperimentalTgpuRoot,
@@ -373,6 +388,13 @@ class ComputePipelineCore implements SelfResolvable {
 
   toString() {
     return 'computePipelineCore';
+  }
+
+  get performanceCallbackQuerySet() {
+    if (!this.root.enabledFeatures.has('timestamp-query')) {
+      return undefined;
+    }
+    return (this.#performanceCallbackQuerySet ??= this.root.createQuerySet('timestamp', 2));
   }
 
   public unwrap(): Memo {

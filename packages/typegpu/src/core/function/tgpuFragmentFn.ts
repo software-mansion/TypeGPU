@@ -121,6 +121,8 @@ export declare namespace TgpuFragmentFn {
   type Out = Record<string, BaseData> | BaseData;
   type AutoIn<T extends AnyAutoCustoms> = AutoFragmentIn<T>;
   type AutoOut<T extends AnyAutoCustoms = AnyAutoCustoms> = AutoFragmentOut<T>;
+
+  type AutoInEmpty = AutoFragmentIn<Record<string, never>>;
 }
 
 export function fragmentFn<FragmentOut extends FragmentOutConstrained>(options: {
