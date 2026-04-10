@@ -6,8 +6,10 @@ import tgpu, {
   common,
   d,
   MissingBindGroupsError,
+  type TgpuFragmentFn,
   type TgpuFragmentFnShell,
   type TgpuRenderPipeline,
+  type TgpuVertexFn,
   type TgpuVertexFnShell,
 } from '../src/index.js';
 import { $internal } from '../src/shared/symbols.ts';
@@ -499,10 +501,10 @@ describe('root.withVertex(...).withFragment(...)', () => {
       expect(pipeline[$internal].priors.performanceCallback).not.toBe(callback1);
     });
 
-    it('should throw error if timestamp-query feature is not enabled', ({ root, device }) => {
-      const originalFeatures = device.features;
+    it('should warn if timestamp-query feature is not enabled', ({ root, device }) => {
       //@ts-expect-error
       device.features = new Set();
+      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const vertexFn = tgpu.vertexFn({
         out: { pos: d.builtin.position },
@@ -515,17 +517,17 @@ describe('root.withVertex(...).withFragment(...)', () => {
       const callback = vi.fn();
 
       expect(() => {
-        root
-          .withVertex(vertexFn, {})
-          .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-          .createPipeline()
-          .withPerformanceCallback(callback);
-      }).toThrow(
-        'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
+        const before = root.createRenderPipeline({
+          vertex: vertexFn,
+          fragment: fragmentFn,
+        });
+        const after = before.withPerformanceCallback(callback);
+        // no-op
+        expect(after).toBe(before);
+      }).not.toThrow();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
       );
-
-      //@ts-expect-error
-      device.features = originalFeatures;
     });
 
     it("should not throw 'A color target was not provided to the shader'", ({ root, device }) => {
@@ -1591,7 +1593,7 @@ describe('root.createRenderPipeline', () => {
       attribs: { vertexIndex: vertexLayout.attrib },
       vertex: ({ vertexIndex, $vertexIndex }) => {
         'use gpu';
-        return { $position: d.vec4f() };
+        return { $position: d.vec4f(vertexIndex, $vertexIndex, 0, 1) };
       },
       fragment: () => {
         'use gpu';
@@ -1619,7 +1621,7 @@ describe('root.createRenderPipeline', () => {
       },
       fragment: ({ position }) => {
         'use gpu';
-        return d.vec4f();
+        return position;
       },
       targets: { format: 'rgba8unorm' },
     });
@@ -1641,7 +1643,10 @@ describe('root.createRenderPipeline', () => {
       },
       fragment: ({ $frontFacing, frontFacing }) => {
         'use gpu';
-        return d.vec4f();
+        if ($frontFacing && frontFacing === 1) {
+          return d.vec4f(0, 1, 0, 1);
+        }
+        return d.vec4f(1, 0, 0, 1);
       },
       targets: { format: 'rgba8unorm' },
     });
@@ -1772,6 +1777,54 @@ describe('root.createRenderPipeline', () => {
           undefined,
         ],
       ]
+    `);
+  });
+
+  it('accepts entry functions with no attributes or varyings', ({ root }) => {
+    const positions = tgpu.const(d.arrayOf(d.vec2f, 3), [
+      d.vec2f(0, 0),
+      d.vec2f(1, 0),
+      d.vec2f(0, 1),
+    ]);
+    const vertex = ({ $vertexIndex }: TgpuVertexFn.AutoInEmpty) => {
+      'use gpu';
+      return {
+        $position: d.vec4f(positions.$[$vertexIndex]!, 0, 1),
+      } satisfies TgpuVertexFn.AutoOut;
+    };
+
+    const fragment = ({ $position }: TgpuFragmentFn.AutoInEmpty) => {
+      'use gpu';
+      return $position;
+    };
+
+    const pipeline = root.createRenderPipeline({
+      vertex,
+      fragment,
+    });
+
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+      "const positions: array<vec2f, 3> = array<vec2f, 3>(vec2f(), vec2f(1, 0), vec2f(0, 1));
+
+      struct VertexOut {
+        @builtin(position) position: vec4f,
+      }
+
+      struct VertexIn {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
+        return VertexOut(vec4f(positions[_arg_0.vertexIndex], 0f, 1f));
+      }
+
+      struct FragmentIn {
+        @builtin(position) position: vec4f,
+      }
+
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
+        return _arg_0.position;
+      }"
     `);
   });
 });
