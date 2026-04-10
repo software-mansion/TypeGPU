@@ -355,25 +355,23 @@ ${this.ctx.pre}}`;
 
       // Short Circuit Evaluation
       if ((op === '||' || op === '&&') && isKnownAtComptime(lhsExpr)) {
-        let evalRhs = !lhsExpr.value;
-        if (op === '&&') {
-          evalRhs = !evalRhs;
-        }
+        const evalRhs = op === '&&' ? !!lhsExpr.value : !lhsExpr.value;
 
         if (!evalRhs) {
-          return op === '||' ? snip(true, bool, 'constant') : snip(false, bool, 'constant');
+          return snip(op === '||', bool, 'constant');
         }
 
         const rhsExpr = this._expression(rhs);
-
-        if (isKnownAtComptime(rhsExpr)) {
-          return snip(rhsExpr.value, bool, 'constant');
-        }
 
         if (rhsExpr.dataType === UnknownData) {
           throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
         }
 
+        if (isKnownAtComptime(rhsExpr)) {
+          return snip(rhsExpr.value, bool, 'constant');
+        }
+
+        // we can skip lhs
         const convRhs = tryConvertSnippet(this.ctx, rhsExpr, bool, false);
         const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
         return snip(rhsStr, bool, 'runtime');

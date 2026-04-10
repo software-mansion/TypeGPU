@@ -2224,10 +2224,11 @@ describe('wgslGenerator', () => {
       state.result = true;
     });
 
-    it('handles `||` short-circuit evaluation', () => {
+    it('handles `||`', () => {
       const f = () => {
         'use gpu';
         let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
         if (true || getTrackedBool()) {
           res = 1;
         }
@@ -2246,10 +2247,11 @@ describe('wgslGenerator', () => {
       expect(state.counter).toBe(0);
     });
 
-    it('handles `&&` short-circuit evaluation', () => {
+    it('handles `&&`', () => {
       const f = () => {
         'use gpu';
         let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
         if (false && getTrackedBool()) {
           res = 1;
         }
@@ -2265,12 +2267,13 @@ describe('wgslGenerator', () => {
       expect(state.counter).toBe(0);
     });
 
-    it('handles chained `||` short-circuit evaluation', () => {
+    it('handles chained `||`', () => {
       state.result = false;
 
       const f = () => {
         'use gpu';
         let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
         if (getTrackedBool() || true || getTrackedBool() || getTrackedBool() || getTrackedBool()) {
           res = 1;
         }
@@ -2289,10 +2292,11 @@ describe('wgslGenerator', () => {
       expect(state.counter).toEqual(1);
     });
 
-    it('handles chained `&&` short-circuit evaluation', () => {
+    it('handles chained `&&`', () => {
       const f = () => {
         'use gpu';
         let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
         if (getTrackedBool() && false && getTrackedBool() && getTrackedBool() && getTrackedBool()) {
           res = 1;
         }
@@ -2308,10 +2312,11 @@ describe('wgslGenerator', () => {
       expect(state.counter).toBe(1);
     });
 
-    it('handles mixed logical operators short-circuit evaluation', () => {
+    it('handles mixed logical operators', () => {
       const f = () => {
         'use gpu';
         let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
         if (true || (getTrackedBool() && getTrackedBool())) {
           res = 1;
         }
@@ -2328,6 +2333,52 @@ describe('wgslGenerator', () => {
         }"
       `);
       expect(state.counter).toBe(0);
+    });
+
+    it('skips lhs if known at compile time', () => {
+      const f1 = tgpu.fn(
+        [d.bool],
+        d.i32,
+      )((b) => {
+        'use gpu';
+        let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+        if (false || b) {
+          res = 1;
+        }
+        return res;
+      });
+
+      const f2 = tgpu.fn(
+        [d.bool],
+        d.i32,
+      )((b) => {
+        'use gpu';
+        let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+        if (true && b) {
+          res = 1;
+        }
+        return res;
+      });
+
+      expect(tgpu.resolve([f1, f2])).toMatchInlineSnapshot(`
+        "fn f1(b: bool) -> i32 {
+          var res = -1;
+          if (b) {
+            res = 1i;
+          }
+          return res;
+        }
+
+        fn f2(b: bool) -> i32 {
+          var res = -1;
+          if (b) {
+            res = 1i;
+          }
+          return res;
+        }"
+      `);
     });
   });
 });
