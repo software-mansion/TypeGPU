@@ -14,7 +14,6 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const Config = d.struct({
   gridSize: d.f32,
   canvasRatio: d.f32,
-  useSeed2: d.u32,
   samplesPerThread: d.u32,
   takeAverage: d.u32,
 });
@@ -22,7 +21,6 @@ const Config = d.struct({
 const configUniform = root.createUniform(Config, {
   gridSize: c.initialGridSize,
   canvasRatio: canvas.width / canvas.height,
-  useSeed2: d.u32(prngs[initialPRNG].useSeed2),
   samplesPerThread: c.initialSamplesPerThread,
   takeAverage: d.u32(c.initialTakeAverage),
 });
@@ -38,7 +36,7 @@ const layouts = {
 
 const bindGroups = Object.fromEntries(
   c.gridSizes.map((size) => {
-    const texture = root['~unstable']
+    const texture = root
       .createTexture({ size: [size, size], format: 'r32float' })
       .$usage('storage', 'sampled');
     return [
@@ -68,10 +66,10 @@ const computeFn = (x: number, y: number) => {
   'use gpu';
   const gridSize = configUniform.$.gridSize;
 
-  if (configUniform.$.useSeed2 === 1) {
-    randf.seed2(d.vec2f(x, y) + 1);
-  } else {
+  if (!randomGeneratorSlot.$.seed2) {
     randf.seed(d.f32(x + 1) * gridSize + d.f32(y + 1));
+  } else {
+    randf.seed2(d.vec2f(x, y) + 1);
   }
 
   let i = d.u32(0);
@@ -120,7 +118,6 @@ export const controls = defineControls({
     options: prngKeys,
     onSelectChange: (value) => {
       prng = value;
-      configUniform.writePartial({ useSeed2: d.u32(prngs[value].useSeed2) });
       redraw();
     },
   },
