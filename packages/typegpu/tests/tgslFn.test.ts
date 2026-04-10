@@ -176,16 +176,10 @@ describe('TGSL tgpu.fn function', () => {
         @location(0) uv: vec2f,
       }
 
-      struct vertex_fn_Input {
-        @builtin(vertex_index) vi: u32,
-        @builtin(instance_index) ii: u32,
-        @location(0) color: vec4f,
-      }
-
-      @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output {
-        let vi = f32(input.vi);
-        let ii = f32(input.ii);
-        let color = input.color;
+      @vertex fn vertex_fn(@builtin(vertex_index) _arg_vi: u32, @builtin(instance_index) _arg_ii: u32, @location(0) _arg_color: vec4f) -> vertex_fn_Output {
+        let vi = f32(_arg_vi);
+        let ii = f32(_arg_ii);
+        let color = _arg_color;
         return vertex_fn_Output(vec4f(color.w, ii, vi, 1f), vec2f(color.w, vi));
       }"
     `);
@@ -244,14 +238,8 @@ describe('TGSL tgpu.fn function', () => {
         @location(0) uv: vec2f,
       }
 
-      struct vertex_fn_Input {
-        @builtin(vertex_index) vi: u32,
-        @builtin(instance_index) ii: u32,
-        @location(0) color: vec4f,
-      }
-
-      @vertex fn vertex_fn(_arg_0: vertex_fn_Input) -> vertex_fn_Output {
-        return vertex_fn_Output(vec4f(_arg_0.color.w, f32(_arg_0.ii), f32(_arg_0.vi), 1f), vec2f(_arg_0.color.w, f32(_arg_0.vi)));
+      @vertex fn vertex_fn(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32, @location(0) color: vec4f) -> vertex_fn_Output {
+        return vertex_fn_Output(vec4f(color.w, f32(ii), f32(vi), 1f), vec2f(color.w, f32(vi)));
       }"
     `);
   });
@@ -284,14 +272,8 @@ describe('TGSL tgpu.fn function', () => {
         @location(0) uv: vec2f,
       }
 
-      struct vertex_fn_Input {
-        @builtin(vertex_index) vi: u32,
-        @builtin(instance_index) ii: u32,
-        @location(0) color: vec4f,
-      }
-
-      @vertex fn vertex_fn(input: vertex_fn_Input) -> vertex_fn_Output {
-        var myOutput = vertex_fn_Output(vec4f(input.color.w, f32(input.ii), f32(input.vi), 1f), vec2f(input.color.w, f32(input.vi)));
+      @vertex fn vertex_fn(@builtin(vertex_index) _arg_vi: u32, @builtin(instance_index) _arg_ii: u32, @location(0) _arg_color: vec4f) -> vertex_fn_Output {
+        var myOutput = vertex_fn_Output(vec4f(_arg_color.w, f32(_arg_ii), f32(_arg_vi), 1f), vec2f(_arg_color.w, f32(_arg_vi)));
         return myOutput;
       }"
     `);
@@ -311,12 +293,8 @@ describe('TGSL tgpu.fn function', () => {
       .$name('compute_fn');
 
     expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
-      "struct compute_fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(24) fn compute_fn(input: compute_fn_Input) {
-        let index = input.gid.x;
+      "@compute @workgroup_size(24) fn compute_fn(@builtin(global_invocation_id) _arg_gid: vec3u) {
+        let index = _arg_gid.x;
         const iterationF = 0f;
         const sign_1 = 0;
         var change = vec4f();
@@ -338,12 +316,8 @@ describe('TGSL tgpu.fn function', () => {
       .$name('compute_fn');
 
     expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
-      "struct compute_fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(24) fn compute_fn(_arg_0: compute_fn_Input) {
-        let index = _arg_0.gid.x;
+      "@compute @workgroup_size(24) fn compute_fn(@builtin(global_invocation_id) gid: vec3u) {
+        let index = gid.x;
         const iterationF = 0f;
         const sign_1 = 0;
         var change = vec4f();
@@ -389,22 +363,20 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
-      "struct fragmentFn_Output {
+      "struct fragmentFn_Input {
+        @location(0) uv: vec2f,
+      }
+
+      struct fragmentFn_Output {
         @builtin(sample_mask) sampleMask: u32,
         @builtin(frag_depth) fragDepth: f32,
         @location(0) out: vec4f,
       }
 
-      struct fragmentFn_Input {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
-        @builtin(sample_mask) sampleMask: u32,
-      }
-
-      @fragment fn fragmentFn(input: fragmentFn_Input) -> fragmentFn_Output {
-        let pos = input.pos;
+      @fragment fn fragmentFn(@builtin(position) _arg_pos: vec4f, @builtin(sample_mask) _arg_sampleMask: u32) -> fragmentFn_Output {
+        let pos = _arg_pos;
         var sampleMask = 0;
-        if (((input.sampleMask > 0u) && (pos.x > 0f))) {
+        if (((_arg_sampleMask > 0u) && (pos.x > 0f))) {
           sampleMask = 1i;
         }
         return fragmentFn_Output(u32(sampleMask), 1f, vec4f());
@@ -438,21 +410,19 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
-      "struct fragmentFn_Output {
+      "struct fragmentFn_Input {
+        @location(0) uv: vec2f,
+      }
+
+      struct fragmentFn_Output {
         @builtin(sample_mask) sampleMask: u32,
         @builtin(frag_depth) fragDepth: f32,
         @location(0) out: vec4f,
       }
 
-      struct fragmentFn_Input {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
-        @builtin(sample_mask) sampleMask: u32,
-      }
-
-      @fragment fn fragmentFn(input: fragmentFn_Input) -> fragmentFn_Output {
+      @fragment fn fragmentFn(@builtin(position) _arg_pos: vec4f, @builtin(sample_mask) _arg_sampleMask: u32) -> fragmentFn_Output {
         var myOutput = fragmentFn_Output(0u, 1f, vec4f());
-        if (((input.sampleMask > 0u) && (input.pos.x > 0f))) {
+        if (((_arg_sampleMask > 0u) && (_arg_pos.x > 0f))) {
           myOutput.sampleMask = 1u;
         }
         return myOutput;
@@ -475,12 +445,10 @@ describe('TGSL tgpu.fn function', () => {
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
       "struct fragmentFn_Input {
-        @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
-        @builtin(sample_mask) sampleMask: u32,
       }
 
-      @fragment fn fragmentFn(input: fragmentFn_Input) -> @location(0) vec4f {
+      @fragment fn fragmentFn() -> @location(0) vec4f {
         var hmm = vec4f(1.25);
         return hmm;
       }"
@@ -513,21 +481,19 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
-      "struct fragmentFn_Output {
+      "struct fragmentFn_Input {
+        @location(0) uv: vec2f,
+      }
+
+      struct fragmentFn_Output {
         @builtin(sample_mask) sampleMask: u32,
         @builtin(frag_depth) fragDepth: f32,
         @location(0) out: vec4f,
       }
 
-      struct fragmentFn_Input {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
-        @builtin(sample_mask) sampleMask: u32,
-      }
-
-      @fragment fn fragmentFn(_arg_0: fragmentFn_Input) -> fragmentFn_Output {
+      @fragment fn fragmentFn(@builtin(position) position: vec4f, @builtin(sample_mask) sampleMask: u32) -> fragmentFn_Output {
         var out = fragmentFn_Output(0u, 1f, vec4f());
-        if (((_arg_0.sampleMask > 0u) && (_arg_0.pos.x > 0f))) {
+        if (((sampleMask > 0u) && (position.x > 0f))) {
           out.sampleMask = 1u;
         }
         return out;
@@ -541,12 +507,8 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
-      "struct fragmentFn_Input {
-        @builtin(position) pos: vec4f,
-      }
-
-      @fragment fn fragmentFn(input: fragmentFn_Input) -> @location(0) vec4f {
-        return input.pos;
+      "@fragment fn fragmentFn(@builtin(position) _arg_pos: vec4f) -> @location(0) vec4f {
+        return _arg_pos;
       }"
     `);
   });
@@ -620,11 +582,7 @@ describe('TGSL tgpu.fn function', () => {
         return TestStruct(1f, 2f, vec2f(3, 4));
       }
 
-      struct compute_fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(24) fn compute_fn(input: compute_fn_Input) {
+      @compute @workgroup_size(24) fn compute_fn() {
         var testStruct = getTestStruct();
       }"
     `);

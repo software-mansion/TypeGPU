@@ -45,7 +45,8 @@ const properties = Properties({
 
 // Buffers
 
-const propertiesUniform = root.createUniform(Properties, properties);
+const propertiesUniform = root.createUniform(Properties);
+queuePropertiesBufferUpdate();
 
 // these buffers are recreated with a different size on interpolationPoints change
 function createLineVerticesBuffers() {
@@ -64,11 +65,9 @@ const computeLayout = tgpu.bindGroupLayout({
 
 const functionExprSlot = tgpu.slot<TgpuRawCodeSnippet<d.F32>>();
 
-// oxlint-disable-next-line no-unused-vars -- it is used in wgsl
-const interpolatedFunction = (x: number) => {
-  'use gpu';
-  return functionExprSlot.$;
-};
+const interpolatedFunction = tgpu.fn([d.f32], d.f32)`(x) {
+  return EXPR;
+}`.$uses({ EXPR: functionExprSlot });
 
 const computePointsFn = (x: number) => {
   'use gpu';
@@ -101,7 +100,7 @@ const backgroundVertex = tgpu.vertexFn({
   const properties = propertiesUniform.$;
   const leftBot = properties.transformation.mul(d.vec4f(-1, -1, 0, 1));
   const rightTop = properties.transformation.mul(d.vec4f(1, 1, 0, 1));
-  const canvasRatio = (rightTop.x - leftBot.x) / (rightTop.y - leftBot.y);
+  const aspectRatio = (rightTop.x - leftBot.x) / (rightTop.y - leftBot.y);
 
   const transformedPoints = [
     d.vec2f(leftBot.x, 0),
@@ -111,12 +110,12 @@ const backgroundVertex = tgpu.vertexFn({
   ];
 
   const currentPoint = properties.inverseTransformation.mul(
-    d.vec4f(transformedPoints[2 * iid + vid / 2].xy, 0, 1),
+    d.vec4f(transformedPoints[2 * iid + d.u32(vid / 2)].xy, 0, 1),
   );
 
   return {
     pos: d.vec4f(
-      currentPoint.x + (d.f32(iid) * std.select(d.f32(-1), 1, vid % 2 === 0) * 0.005) / canvasRatio,
+      currentPoint.x + (d.f32(iid) * std.select(d.f32(-1), 1, vid % 2 === 0) * 0.005) / aspectRatio,
       currentPoint.y + d.f32(1 - iid) * std.select(d.f32(-1), 1, vid % 2 === 0) * 0.005,
       currentPoint.zw,
     ),
@@ -294,6 +293,12 @@ async function tryRecreateComputePipeline(
 }
 
 function queuePropertiesBufferUpdate() {
+  const leftBot = properties.transformation.mul(d.vec4f(-1, -1, 0, 1));
+  const rightTop = properties.transformation.mul(d.vec4f(1, 1, 0, 1));
+  const currentCanvasRatio = (rightTop.x - leftBot.x) / (rightTop.y - leftBot.y);
+  const desiredCanvasRatio = canvas.clientWidth / canvas.clientHeight;
+  const rescaleMatrix = mat4.scaling([desiredCanvasRatio / currentCanvasRatio, 1, 1], d.mat4x4f());
+  properties.transformation = std.mul(properties.transformation, rescaleMatrix);
   properties.inverseTransformation = mat4.inverse(properties.transformation, d.mat4x4f());
   propertiesUniform.write(properties);
 }
@@ -379,12 +384,7 @@ window.addEventListener('touchend', touchEndEventListener);
 // Resize observer and cleanup
 
 const resizeObserver = new ResizeObserver(() => {
-  const leftBot = properties.transformation.mul(d.vec4f(-1, -1, 0, 1));
-  const rightTop = properties.transformation.mul(d.vec4f(1, 1, 0, 1));
-  const currentCanvasRatio = (rightTop.x - leftBot.x) / (rightTop.y - leftBot.y);
-  const desiredCanvasRatio = canvas.clientWidth / canvas.clientHeight;
-  const rescaleMatrix = mat4.scaling([desiredCanvasRatio / currentCanvasRatio, 1, 1], d.mat4x4f());
-  properties.transformation = std.mul(properties.transformation, rescaleMatrix);
+  queuePropertiesBufferUpdate();
 
   msTexture.destroy();
   msTexture = device.createTexture({

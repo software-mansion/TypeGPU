@@ -18,10 +18,13 @@ export function slot<T>(defaultValue?: T): TgpuSlot<T> {
 // --------------
 
 class TgpuSlotImpl<T> implements TgpuSlot<T> {
-  public readonly [$internal] = true;
-  public readonly resourceType = 'slot';
+  readonly [$internal] = true;
+  readonly resourceType = 'slot';
+  readonly defaultValue: T | undefined;
 
-  constructor(public defaultValue: T | undefined = undefined) {}
+  constructor(defaultValue: T | undefined = undefined) {
+    this.defaultValue = defaultValue;
+  }
 
   $name(label: string) {
     setName(this, label);

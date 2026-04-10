@@ -550,11 +550,22 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
   withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this {
     const internals = this[$internal];
-    const newPriors = createWithPerformanceCallback(
-      internals.priors,
-      callback,
-      internals.core.options.root,
-    );
+
+    if (internals.priors.timestampWrites) {
+      return new TgpuRenderPipelineImpl(internals.core, {
+        ...internals.priors,
+        performanceCallback: callback,
+      }) as this;
+    }
+
+    const querySet = internals.core.performanceCallbackQuerySet;
+    if (!querySet) {
+      console.warn(
+        'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
+      );
+      return this;
+    }
+    const newPriors = createWithPerformanceCallback(internals.priors, callback, querySet);
     return new TgpuRenderPipelineImpl(internals.core, newPriors) as this;
   }
 
@@ -949,12 +960,17 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
 class RenderPipelineCore implements SelfResolvable {
   readonly [$internal] = true;
+  readonly options: RenderPipelineCoreOptions;
+
   private _memo: Memo | undefined;
 
   #latestAutoVertexIn: TgpuVertexFn.In | undefined;
   #latestAutoFragmentOut: BaseData | undefined;
+  #performanceCallbackQuerySet: TgpuQuerySet<'timestamp'> | undefined;
 
-  constructor(public readonly options: RenderPipelineCoreOptions) {}
+  constructor(options: RenderPipelineCoreOptions) {
+    this.options = options;
+  }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const { slotBindings } = this.options;
@@ -1005,6 +1021,13 @@ class RenderPipelineCore implements SelfResolvable {
 
   toString() {
     return 'renderPipelineCore';
+  }
+
+  get performanceCallbackQuerySet() {
+    if (!this.options.root.enabledFeatures.has('timestamp-query')) {
+      return undefined;
+    }
+    return (this.#performanceCallbackQuerySet ??= this.options.root.createQuerySet('timestamp', 2));
   }
 
   public unwrap(): Memo {

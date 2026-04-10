@@ -20,20 +20,20 @@ describe('oklab example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      struct fullScreenTriangle_Output {
+      "struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      struct mainFragment_Input {
+        @location(0) uv: vec2f,
       }
 
       struct item {
@@ -182,11 +182,11 @@ describe('oklab example', () => {
               let g2 = (((-1.2684380046f * ldt2) + (2.6097574011f * mdt2)) - (0.3413193965f * sdt2));
               let u_g = (g1 / ((g1 * g1) - ((0.5f * g) * g2)));
               var t_g = (-(g) * u_g);
-              let b2 = ((((-0.0041960863f * l) - (0.7034186147f * m)) + (1.707614701f * s)) - 1f);
+              let b_1 = ((((-0.0041960863f * l) - (0.7034186147f * m)) + (1.707614701f * s)) - 1f);
               let b1 = (((-0.0041960863f * ldt) - (0.7034186147f * mdt)) + (1.707614701f * sdt));
-              let b22 = (((-0.0041960863f * ldt2) - (0.7034186147f * mdt2)) + (1.707614701f * sdt2));
-              let u_b = (b1 / ((b1 * b1) - ((0.5f * b2) * b22)));
-              var t_b = (-(b2) * u_b);
+              let b2 = (((-0.0041960863f * ldt2) - (0.7034186147f * mdt2)) + (1.707614701f * sdt2));
+              let u_b = (b1 / ((b1 * b1) - ((0.5f * b_1) * b2)));
+              var t_b = (-(b_1) * u_b);
               t_r = select(FLT_MAX, t_r, (u_r >= 0f));
               t_g = select(FLT_MAX, t_g, (u_g >= 0f));
               t_b = select(FLT_MAX, t_b, (u_b >= 0f));
@@ -226,12 +226,8 @@ describe('oklab example', () => {
         return 1f;
       }
 
-      struct mainFragment_Input {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn mainFragment(input: mainFragment_Input) -> @location(0) vec4f {
-        var uv = ((input.uv - 0.5f) * vec2f(2, -2));
+      @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
+        var uv = ((_arg_0.uv - 0.5f) * vec2f(2, -2));
         let hue = uniforms.hue;
         var pos = scaleView(uv);
         var yzDir = vec2f(cos(hue), sin(hue));

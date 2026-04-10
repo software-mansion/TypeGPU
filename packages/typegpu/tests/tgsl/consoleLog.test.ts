@@ -107,7 +107,7 @@ describe('wgslGenerator with console.log', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -187,7 +187,7 @@ describe('wgslGenerator with console.log', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -273,7 +273,7 @@ describe('wgslGenerator with console.log', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -333,7 +333,7 @@ describe('wgslGenerator with console.log', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -358,11 +358,7 @@ describe('wgslGenerator with console.log', () => {
         log1serializer(_arg_0);
       }
 
-      struct fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
+      @compute @workgroup_size(1) fn fn_1() {
         log1(10u);
       }"
     `);
@@ -395,7 +391,7 @@ describe('wgslGenerator with console.log', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -435,11 +431,7 @@ describe('wgslGenerator with console.log', () => {
         log2serializer(_arg_0);
       }
 
-      struct fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
+      @compute @workgroup_size(1) fn fn_1() {
         log1(10u);
         log2_1(20u);
       }"
@@ -477,7 +469,7 @@ describe('wgslGenerator with console.log', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -510,11 +502,7 @@ describe('wgslGenerator with console.log', () => {
         log1serializer(_arg_0, _arg_1, _arg_2);
       }
 
-      struct fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
+      @compute @workgroup_size(1) fn fn_1() {
         log1(10u, vec3u(2, 3, 4), 50u);
       }"
     `);
@@ -567,7 +555,7 @@ describe('wgslGenerator with console.log', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -629,11 +617,7 @@ describe('wgslGenerator with console.log', () => {
         log1serializer(_arg_0);
       }
 
-      struct fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
+      @compute @workgroup_size(1) fn fn_1() {
         var complexStruct = ComplexStruct(vec3f(1, 2, 3), array<SimpleStruct, 3>(SimpleStruct(0u, array<u32, 4>(9u, 8u, 7u, 6u)), SimpleStruct(1u, array<u32, 4>(8u, 7u, 6u, 5u)), SimpleStruct(2u, array<u32, 4>(7u, 6u, 5u, 4u))));
         log1(complexStruct);
       }"
@@ -690,11 +674,7 @@ describe('wgslGenerator with console.log', () => {
     const pipeline = root.createComputePipeline({ compute: fn });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-      "struct fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
+      "@compute @workgroup_size(1) fn fn_1() {
         /* console.log() */;
       }"
     `);

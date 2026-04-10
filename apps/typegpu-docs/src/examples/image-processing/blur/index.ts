@@ -27,7 +27,7 @@ const Settings = d.struct({
 
 const settingsUniform = root.createUniform(Settings);
 
-const imageTexture = root['~unstable']
+const imageTexture = root
   .createTexture({
     size: [srcWidth, srcHeight],
     format: 'rgba8unorm',
@@ -36,7 +36,7 @@ const imageTexture = root['~unstable']
 imageTexture.write(imageBitmap);
 
 const textures = [0, 1].map(() => {
-  return root['~unstable']
+  return root
     .createTexture({
       size: [srcWidth, srcHeight],
       format: 'rgba8unorm',
@@ -45,7 +45,7 @@ const textures = [0, 1].map(() => {
 });
 const renderView = textures[1].createView(d.texture2d(d.f32));
 
-const sampler = root['~unstable'].createSampler({
+const sampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -73,8 +73,8 @@ const computeFn = tgpu.computeFn({
     .sub(d.vec2i(filterOffset, 0));
 
   // Load a tile of pixels into shared memory
-  for (const r of tgpu.unroll([0, 1, 2, 3])) {
-    for (const c of tgpu.unroll([0, 1, 2, 3])) {
+  for (const r of tgpu.unroll(std.range(4))) {
+    for (const c of tgpu.unroll(std.range(4))) {
       let loadIndex = baseIndex.add(d.vec2i(c, r));
       if (ioLayout.$.flip !== 0) {
         loadIndex = loadIndex.yx;
@@ -92,8 +92,8 @@ const computeFn = tgpu.computeFn({
   std.workgroupBarrier();
 
   // Apply the horizontal blur filter and write to the output texture
-  for (const r of tgpu.unroll([0, 1, 2, 3])) {
-    for (const c of tgpu.unroll([0, 1, 2, 3])) {
+  for (const r of tgpu.unroll(std.range(4))) {
+    for (const c of tgpu.unroll(std.range(4))) {
       let writeIndex = baseIndex.add(d.vec2i(c, r));
       if (ioLayout.$.flip !== 0) {
         writeIndex = writeIndex.yx;

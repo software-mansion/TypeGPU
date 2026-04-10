@@ -3,6 +3,8 @@ import { isMarkedInternal } from '../shared/symbols.ts';
 import type {
   Infer,
   InferGPURecord,
+  InferInput,
+  InferInputRecord,
   InferPartial,
   InferPartialRecord,
   InferRecord,
@@ -11,6 +13,7 @@ import type {
 } from '../shared/repr.ts';
 import type {
   $gpuRepr,
+  $inRepr,
   $invalidSchemaReason,
   $memIdent,
   $repr,
@@ -46,6 +49,7 @@ export interface Disarray<out TElement extends wgsl.BaseData = wgsl.BaseData>
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TElement>[];
+  readonly [$inRepr]: InferInput<TElement>[] | wgsl.TypedArrayFor<TElement>;
   readonly [$reprPartial]: { idx: number; value: InferPartial<TElement> }[] | undefined;
   readonly [$validVertexSchema]: IsValidVertexSchema<TElement>;
   readonly [$invalidSchemaReason]: 'Disarrays are not host-shareable, use arrays instead';
@@ -72,6 +76,7 @@ export interface Unstruct<
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Prettify<InferRecord<TProps>>;
+  readonly [$inRepr]: Prettify<InferInputRecord<TProps>>;
   readonly [$gpuRepr]: Prettify<InferGPURecord<TProps>>;
   readonly [$memIdent]: Unstruct<Prettify<MemIdentityRecord<TProps>>>;
   readonly [$reprPartial]: Prettify<Partial<InferPartialRecord<TProps>>> | undefined;
@@ -223,20 +228,35 @@ export const UnknownData = Symbol('UNKNOWN');
 export type UnknownData = typeof UnknownData;
 
 export class InfixDispatch {
+  readonly name: string;
+  readonly lhs: Snippet;
+  readonly operator: (ctx: ResolutionCtx, args: [lhs: Snippet, rhs: Snippet]) => Snippet;
+
   constructor(
-    readonly name: string,
-    readonly lhs: Snippet,
-    readonly operator: (ctx: ResolutionCtx, args: [lhs: Snippet, rhs: Snippet]) => Snippet,
-  ) {}
+    name: string,
+    lhs: Snippet,
+    operator: (ctx: ResolutionCtx, args: [lhs: Snippet, rhs: Snippet]) => Snippet,
+  ) {
+    this.name = name;
+    this.lhs = lhs;
+    this.operator = operator;
+  }
 }
 
 export class MatrixColumnsAccess {
-  constructor(readonly matrix: Snippet) {}
+  readonly matrix: Snippet;
+
+  constructor(matrix: Snippet) {
+    this.matrix = matrix;
+  }
 }
 
 export class ConsoleLog {
   [$internal] = true;
-  constructor(readonly op: string) {
+  readonly op: string;
+
+  constructor(op: string) {
+    this.op = op;
     setName(this, 'consoleLog');
   }
 }

@@ -139,26 +139,29 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   public readonly resourceType = 'compute-pipeline';
   readonly [$getNameForward]: ComputePipelineCore;
 
-  constructor(
-    private readonly _core: ComputePipelineCore,
-    private readonly _priors: TgpuComputePipelinePriors,
-  ) {
+  readonly #core: ComputePipelineCore;
+  readonly #priors: TgpuComputePipelinePriors;
+
+  constructor(core: ComputePipelineCore, priors: TgpuComputePipelinePriors) {
+    this.#core = core;
+    this.#priors = priors;
+
     this[$internal] = {
       get rawPipeline() {
-        return _core.unwrap().pipeline;
+        return core.unwrap().pipeline;
       },
       get priors() {
-        return _priors;
+        return priors;
       },
       get root() {
-        return _core.root;
+        return core.root;
       },
     };
-    this[$getNameForward] = _core;
+    this[$getNameForward] = core;
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    return ctx.resolve(this._core);
+    return ctx.resolve(this.#core);
   }
 
   toString(): string {
@@ -166,7 +169,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 
   get rawPipeline(): GPUComputePipeline {
-    return this._core.unwrap().pipeline;
+    return this.#core.unwrap().pipeline;
   }
 
   with<Entries extends Record<string, TgpuLayoutEntry | null>>(
@@ -182,43 +185,57 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     bindGroup?: TgpuBindGroup | GPUBindGroup,
   ): this {
     if (isGPUComputePassEncoder(first)) {
-      return new TgpuComputePipelineImpl(this._core, {
-        ...this._priors,
+      return new TgpuComputePipelineImpl(this.#core, {
+        ...this.#priors,
         externalPass: first,
         externalEncoder: undefined,
       }) as this;
     }
 
     if (isGPUCommandEncoder(first)) {
-      return new TgpuComputePipelineImpl(this._core, {
-        ...this._priors,
+      return new TgpuComputePipelineImpl(this.#core, {
+        ...this.#priors,
         externalEncoder: first,
         externalPass: undefined,
       }) as this;
     }
 
     if (isBindGroup(first)) {
-      return new TgpuComputePipelineImpl(this._core, {
-        ...this._priors,
+      return new TgpuComputePipelineImpl(this.#core, {
+        ...this.#priors,
         bindGroupLayoutMap: new Map([
-          ...(this._priors.bindGroupLayoutMap ?? []),
+          ...(this.#priors.bindGroupLayoutMap ?? []),
           [first.layout, first],
         ]),
       }) as this;
     }
 
-    return new TgpuComputePipelineImpl(this._core, {
-      ...this._priors,
+    return new TgpuComputePipelineImpl(this.#core, {
+      ...this.#priors,
       bindGroupLayoutMap: new Map([
-        ...(this._priors.bindGroupLayoutMap ?? []),
+        ...(this.#priors.bindGroupLayoutMap ?? []),
         [first, bindGroup as TgpuBindGroup | GPUBindGroup],
       ]),
     }) as this;
   }
 
   withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this {
-    const newPriors = createWithPerformanceCallback(this._priors, callback, this._core.root);
-    return new TgpuComputePipelineImpl(this._core, newPriors) as this;
+    if (this.#priors.timestampWrites) {
+      return new TgpuComputePipelineImpl(this.#core, {
+        ...this.#priors,
+        performanceCallback: callback,
+      }) as this;
+    }
+
+    const querySet = this.#core.performanceCallbackQuerySet;
+    if (!querySet) {
+      console.warn(
+        'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
+      );
+      return this;
+    }
+    const newPriors = createWithPerformanceCallback(this.#priors, callback, querySet);
+    return new TgpuComputePipelineImpl(this.#core, newPriors) as this;
   }
 
   withTimestampWrites(options: {
@@ -226,8 +243,8 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     beginningOfPassWriteIndex?: number;
     endOfPassWriteIndex?: number;
   }): this {
-    const newPriors = createWithTimestampWrites(this._priors, options, this._core.root);
-    return new TgpuComputePipelineImpl(this._core, newPriors) as this;
+    const newPriors = createWithTimestampWrites(this.#priors, options, this.#core.root);
+    return new TgpuComputePipelineImpl(this.#core, newPriors) as this;
   }
 
   dispatchWorkgroups(x: number, y?: number, z?: number): void {
@@ -278,44 +295,44 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 
   private _applyComputeState(pass: GPUComputePassEncoder): void {
-    const memo = this._core.unwrap();
-    const { root } = this._core;
+    const memo = this.#core.unwrap();
+    const { root } = this.#core;
     pass.setPipeline(memo.pipeline);
 
     applyBindGroups(pass, root, memo.usedBindGroupLayouts, memo.catchall, (layout) =>
-      this._priors.bindGroupLayoutMap?.get(layout),
+      this.#priors.bindGroupLayoutMap?.get(layout),
     );
   }
 
   private _executeComputePass(dispatch: (pass: GPUComputePassEncoder) => void): void {
-    const { root } = this._core;
+    const { root } = this.#core;
 
-    if (this._priors.externalPass) {
-      if (_lastAppliedCompute.get(this._priors.externalPass) !== this) {
-        this._applyComputeState(this._priors.externalPass);
-        _lastAppliedCompute.set(this._priors.externalPass, this);
+    if (this.#priors.externalPass) {
+      if (_lastAppliedCompute.get(this.#priors.externalPass) !== this) {
+        this._applyComputeState(this.#priors.externalPass);
+        _lastAppliedCompute.set(this.#priors.externalPass, this);
       }
-      dispatch(this._priors.externalPass);
+      dispatch(this.#priors.externalPass);
       return;
     }
 
-    if (this._priors.externalEncoder) {
+    if (this.#priors.externalEncoder) {
       const passDescriptor: GPUComputePassDescriptor = {
-        label: getName(this._core) ?? '<unnamed>',
-        ...setupTimestampWrites(this._priors, root),
+        label: getName(this.#core) ?? '<unnamed>',
+        ...setupTimestampWrites(this.#priors, root),
       };
-      const pass = this._priors.externalEncoder.beginComputePass(passDescriptor);
+      const pass = this.#priors.externalEncoder.beginComputePass(passDescriptor);
       this._applyComputeState(pass);
       dispatch(pass);
       pass.end();
       return;
     }
 
-    const memo = this._core.unwrap();
+    const memo = this.#core.unwrap();
 
     const passDescriptor: GPUComputePassDescriptor = {
-      label: getName(this._core) ?? '<unnamed>',
-      ...setupTimestampWrites(this._priors, root),
+      label: getName(this.#core) ?? '<unnamed>',
+      ...setupTimestampWrites(this.#priors, root),
     };
 
     const commandEncoder = root.device.createCommandEncoder();
@@ -329,10 +346,10 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
       logDataFromGPU(memo.logResources);
     }
 
-    if (this._priors.performanceCallback) {
+    if (this.#priors.performanceCallback) {
       void triggerPerformanceCallback({
         root,
-        priors: this._priors,
+        priors: this.#priors,
       });
     }
   }
@@ -345,16 +362,19 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 
 class ComputePipelineCore implements SelfResolvable {
   readonly [$internal] = true;
+  readonly root: ExperimentalTgpuRoot;
   private _memo: Memo | undefined;
 
   #slotBindings: [TgpuSlot<unknown>, unknown][];
   #descriptor: TgpuComputePipeline.Descriptor;
+  #performanceCallbackQuerySet: TgpuQuerySet<'timestamp'> | undefined;
 
   constructor(
-    public readonly root: ExperimentalTgpuRoot,
+    root: ExperimentalTgpuRoot,
     slotBindings: [TgpuSlot<unknown>, unknown][],
     descriptor: TgpuComputePipeline.Descriptor,
   ) {
+    this.root = root;
     this.#slotBindings = slotBindings;
     this.#descriptor = descriptor;
   }
@@ -368,6 +388,13 @@ class ComputePipelineCore implements SelfResolvable {
 
   toString() {
     return 'computePipelineCore';
+  }
+
+  get performanceCallbackQuerySet() {
+    if (!this.root.enabledFeatures.has('timestamp-query')) {
+      return undefined;
+    }
+    return (this.#performanceCallbackQuerySet ??= this.root.createQuerySet('timestamp', 2));
   }
 
   public unwrap(): Memo {

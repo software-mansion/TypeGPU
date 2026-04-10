@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { d, std, type TgpuFragmentFn } from 'typegpu';
 import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
 import {
   blockDim,
@@ -51,8 +51,8 @@ export const computeFn = tgpu.computeFn({
     d.vec2i(wid.xy * d.vec2u(blockDim, 4) + lid.xy * d.vec2u(4, 1)) - d.vec2i(filterOffset, 0);
 
   // Load a tile of pixels into shared memory
-  for (const r of tgpu.unroll([0, 1, 2, 3])) {
-    for (const c of tgpu.unroll([0, 1, 2, 3])) {
+  for (const r of tgpu.unroll(std.range(4))) {
+    for (const c of tgpu.unroll(std.range(4))) {
       let loadIndex = baseIndex + d.vec2i(c, r);
       if (flipAccess.$) {
         loadIndex = loadIndex.yx;
@@ -70,8 +70,8 @@ export const computeFn = tgpu.computeFn({
   std.workgroupBarrier();
 
   // Apply the horizontal blur filter and write to the output texture
-  for (const r of tgpu.unroll([0, 1, 2, 3])) {
-    for (const c of tgpu.unroll([0, 1, 2, 3])) {
+  for (const r of tgpu.unroll(std.range(4))) {
+    for (const c of tgpu.unroll(std.range(4))) {
       let writeIndex = baseIndex + d.vec2i(c, r);
       if (flipAccess.$) {
         writeIndex = writeIndex.yx;
@@ -94,9 +94,8 @@ export const computeFn = tgpu.computeFn({
   }
 });
 
-export const fragmentFn = (input: { uv: d.v2f }) => {
+export const fragmentFn = ({ uv }: TgpuFragmentFn.AutoIn<{ uv: d.v2f }>) => {
   'use gpu';
-  const uv = input.uv;
   const originalColor = std.textureSampleBaseClampToEdge(
     drawWithMaskLayout.$.inputTexture,
     drawWithMaskLayout.$.sampler,

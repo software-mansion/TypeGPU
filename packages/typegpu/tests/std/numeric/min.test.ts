@@ -47,8 +47,8 @@ describe('min', () => {
 
     expect(myMin(2, 1, 4, 5)).toBe(1);
     expect(tgpu.resolve([myMin])).toMatchInlineSnapshot(`
-      "fn myMin(a: f32, b: f32, c: f32, d2: f32) -> f32 {
-        return min(min(min(a, b), c), d2);
+      "fn myMin(a: f32, b: f32, c: f32, d: f32) -> f32 {
+        return min(min(min(a, b), c), d);
       }"
     `);
   });

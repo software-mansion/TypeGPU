@@ -42,16 +42,11 @@ describe('blur example', () => {
 
       @group(1) @binding(2) var outTexture: texture_storage_2d<rgba8unorm, write>;
 
-      struct computeFn_Input {
-        @builtin(workgroup_id) wid: vec3u,
-        @builtin(local_invocation_id) lid: vec3u,
-      }
-
-      @compute @workgroup_size(32, 1, 1) fn computeFn(_arg_0: computeFn_Input) {
-        let settings2 = (&settingsUniform);
-        let filterOffset = i32((f32(((*settings2).filterDim - 1i)) / 2f));
+      @compute @workgroup_size(32, 1, 1) fn computeFn(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: vec3u) {
+        let settings = (&settingsUniform);
+        let filterOffset = i32((f32(((*settings).filterDim - 1i)) / 2f));
         var dims = vec2i(textureDimensions(inTexture));
-        var baseIndex = (vec2i(((_arg_0.wid.xy * vec2u((*settings2).blockDim, 4u)) + (_arg_0.lid.xy * vec2u(4, 1)))) - vec2i(filterOffset, 0i));
+        var baseIndex = (vec2i(((wid.xy * vec2u((*settings).blockDim, 4u)) + (lid.xy * vec2u(4, 1)))) - vec2i(filterOffset, 0i));
         // unrolled iteration #0
         {
           // unrolled iteration #0
@@ -60,7 +55,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[0i][((_arg_0.lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[0i][((lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #1
           {
@@ -68,7 +63,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[0i][((_arg_0.lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[0i][((lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #2
           {
@@ -76,7 +71,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[0i][((_arg_0.lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[0i][((lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #3
           {
@@ -84,7 +79,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[0i][((_arg_0.lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[0i][((lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
         }
         // unrolled iteration #1
@@ -95,7 +90,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[1i][((_arg_0.lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[1i][((lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #1
           {
@@ -103,7 +98,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[1i][((_arg_0.lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[1i][((lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #2
           {
@@ -111,7 +106,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[1i][((_arg_0.lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[1i][((lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #3
           {
@@ -119,7 +114,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[1i][((_arg_0.lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[1i][((lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
         }
         // unrolled iteration #2
@@ -130,7 +125,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[2i][((_arg_0.lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[2i][((lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #1
           {
@@ -138,7 +133,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[2i][((_arg_0.lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[2i][((lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #2
           {
@@ -146,7 +141,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[2i][((_arg_0.lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[2i][((lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #3
           {
@@ -154,7 +149,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[2i][((_arg_0.lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[2i][((lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
         }
         // unrolled iteration #3
@@ -165,7 +160,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[3i][((_arg_0.lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[3i][((lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #1
           {
@@ -173,7 +168,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[3i][((_arg_0.lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[3i][((lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #2
           {
@@ -181,7 +176,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[3i][((_arg_0.lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[3i][((lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
           // unrolled iteration #3
           {
@@ -189,7 +184,7 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               loadIndex = loadIndex.yx;
             }
-            tileData[3i][((_arg_0.lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+            tileData[3i][((lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
           }
         }
         workgroupBarrier();
@@ -201,12 +196,12 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 0i);
+            let center = (i32((4u * lid.x)) + 0i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
-              for (var f = 0; (f < (*settings2).filterDim); f++) {
+              for (var f = 0; (f < (*settings).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[0i][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[0i][i] * (1f / f32((*settings).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
@@ -217,12 +212,12 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 1i);
+            let center = (i32((4u * lid.x)) + 1i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
-              for (var f = 0; (f < (*settings2).filterDim); f++) {
+              for (var f = 0; (f < (*settings).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[0i][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[0i][i] * (1f / f32((*settings).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
@@ -233,12 +228,12 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 2i);
+            let center = (i32((4u * lid.x)) + 2i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
-              for (var f = 0; (f < (*settings2).filterDim); f++) {
+              for (var f = 0; (f < (*settings).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[0i][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[0i][i] * (1f / f32((*settings).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
@@ -249,12 +244,12 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 3i);
+            let center = (i32((4u * lid.x)) + 3i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
-              for (var f = 0; (f < (*settings2).filterDim); f++) {
+              for (var f = 0; (f < (*settings).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[0i][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[0i][i] * (1f / f32((*settings).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
@@ -268,12 +263,12 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 0i);
+            let center = (i32((4u * lid.x)) + 0i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
-              for (var f = 0; (f < (*settings2).filterDim); f++) {
+              for (var f = 0; (f < (*settings).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[1i][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[1i][i] * (1f / f32((*settings).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
@@ -284,12 +279,12 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 1i);
+            let center = (i32((4u * lid.x)) + 1i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
-              for (var f = 0; (f < (*settings2).filterDim); f++) {
+              for (var f = 0; (f < (*settings).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[1i][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[1i][i] * (1f / f32((*settings).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
@@ -300,12 +295,12 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 2i);
+            let center = (i32((4u * lid.x)) + 2i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
-              for (var f = 0; (f < (*settings2).filterDim); f++) {
+              for (var f = 0; (f < (*settings).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[1i][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[1i][i] * (1f / f32((*settings).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
@@ -316,12 +311,12 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 3i);
+            let center = (i32((4u * lid.x)) + 3i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
-              for (var f = 0; (f < (*settings2).filterDim); f++) {
+              for (var f = 0; (f < (*settings).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[1i][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[1i][i] * (1f / f32((*settings).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
@@ -335,12 +330,12 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 0i);
+            let center = (i32((4u * lid.x)) + 0i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
-              for (var f = 0; (f < (*settings2).filterDim); f++) {
+              for (var f = 0; (f < (*settings).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[2i][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[2i][i] * (1f / f32((*settings).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
@@ -351,12 +346,12 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 1i);
+            let center = (i32((4u * lid.x)) + 1i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
-              for (var f = 0; (f < (*settings2).filterDim); f++) {
+              for (var f = 0; (f < (*settings).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[2i][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[2i][i] * (1f / f32((*settings).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
@@ -367,12 +362,12 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 2i);
+            let center = (i32((4u * lid.x)) + 2i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
-              for (var f = 0; (f < (*settings2).filterDim); f++) {
+              for (var f = 0; (f < (*settings).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[2i][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[2i][i] * (1f / f32((*settings).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
@@ -383,12 +378,12 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 3i);
+            let center = (i32((4u * lid.x)) + 3i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
-              for (var f = 0; (f < (*settings2).filterDim); f++) {
+              for (var f = 0; (f < (*settings).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[2i][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[2i][i] * (1f / f32((*settings).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
@@ -402,12 +397,12 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 0i);
+            let center = (i32((4u * lid.x)) + 0i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
-              for (var f = 0; (f < (*settings2).filterDim); f++) {
+              for (var f = 0; (f < (*settings).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[3i][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[3i][i] * (1f / f32((*settings).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
@@ -418,12 +413,12 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 1i);
+            let center = (i32((4u * lid.x)) + 1i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
-              for (var f = 0; (f < (*settings2).filterDim); f++) {
+              for (var f = 0; (f < (*settings).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[3i][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[3i][i] * (1f / f32((*settings).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
@@ -434,12 +429,12 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 2i);
+            let center = (i32((4u * lid.x)) + 2i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
-              for (var f = 0; (f < (*settings2).filterDim); f++) {
+              for (var f = 0; (f < (*settings).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[3i][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[3i][i] * (1f / f32((*settings).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
@@ -450,12 +445,12 @@ describe('blur example', () => {
             if ((flip != 0u)) {
               writeIndex = writeIndex.yx;
             }
-            let center = (i32((4u * _arg_0.lid.x)) + 3i);
+            let center = (i32((4u * lid.x)) + 3i);
             if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
               var acc = vec3f();
-              for (var f = 0; (f < (*settings2).filterDim); f++) {
+              for (var f = 0; (f < (*settings).filterDim); f++) {
                 let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[3i][i] * (1f / f32((*settings2).filterDim))));
+                acc = (acc + (tileData[3i][i] * (1f / f32((*settings).filterDim))));
               }
               textureStore(outTexture, writeIndex, vec4f(acc, 1f));
             }
@@ -463,32 +458,28 @@ describe('blur example', () => {
         }
       }
 
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
       struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      struct renderFragment_Input {
+        @location(0) uv: vec2f,
       }
 
       @group(0) @binding(0) var renderView: texture_2d<f32>;
 
       @group(0) @binding(1) var sampler_1: sampler;
 
-      struct renderFragment_Input {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn renderFragment(input: renderFragment_Input) -> @location(0) vec4f {
-        return textureSample(renderView, sampler_1, input.uv);
+      @fragment fn renderFragment(_arg_0: renderFragment_Input) -> @location(0) vec4f {
+        return textureSample(renderView, sampler_1, _arg_0.uv);
       }"
     `);
   });

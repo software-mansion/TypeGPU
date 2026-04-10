@@ -20,20 +20,20 @@ describe('chroma keying example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      struct fullScreenTriangle_Output {
+      "struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      struct fragment_Input {
+        @location(0) uv: vec2f,
       }
 
       @group(0) @binding(0) var<uniform> uvTransform: mat2x2f;
@@ -47,10 +47,6 @@ describe('chroma keying example', () => {
       @group(0) @binding(2) var<uniform> color: vec3f;
 
       @group(0) @binding(3) var<uniform> threshold: f32;
-
-      struct fragment_Input {
-        @location(0) uv: vec2f,
-      }
 
       @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
         var uv2 = ((uvTransform * (_arg_0.uv - 0.5f)) + 0.5f);

@@ -5,6 +5,7 @@ import type { U16, U32, WgslArray } from '../data/wgslTypes.ts';
 import type {
   $gpuRepr,
   $gpuValueOf,
+  $inRepr,
   $invalidSchemaReason,
   $memIdent,
   $repr,
@@ -26,6 +27,20 @@ import type { Default } from './utilityTypes.ts';
  * type C = Infer<Atomic<U32>> // => number
  */
 export type Infer<T> = T extends { readonly [$repr]: infer TRepr } ? TRepr : T;
+
+/**
+ * Extracts the inferred input (write-side) representation of a resource.
+ *
+ * @example
+ * type A = InferInput<Vec3f> // => v3f | [number, number, number] | Float32Array
+ * type B = InferInput<WgslArray<Vec3f>> // => (v3f | [number, number, number] | Float32Array)[] | Float32Array
+ * type C = InferInput<F32> // => number (same as Infer<F32>)
+ * const arrayOfStructs = d.arrayOf(d.struct({ pos: d.vec3f, id: d.f32 }), 4);
+ * type D = d.InferInput<typeof arrayOfStructs>; // { pos: d.v3f | Float32Array<ArrayBufferLike> | [number, number, number]; id: number; }[]
+ */
+export type InferInput<T> =
+  | Infer<T>
+  | (T extends { readonly [$inRepr]: infer TRepr } ? TRepr : never);
 
 /**
  * Extracts a sparse/partial inferred representation of a resource.
@@ -54,6 +69,10 @@ export type InferGPU<T> = T extends { readonly [$gpuRepr]: infer TRepr } ? TRepr
 
 export type InferRecord<T extends Record<string | number | symbol, unknown>> = {
   [Key in keyof T]: Infer<T[Key]>;
+};
+
+export type InferInputRecord<T extends Record<string | number | symbol, unknown>> = {
+  [Key in keyof T]: InferInput<T[Key]>;
 };
 
 export type InferPartialRecord<T extends Record<string | number | symbol, unknown>> = {

@@ -198,7 +198,7 @@ function createDepthAndMsaaTextures() {
   if (depthTexture) {
     depthTexture.destroy();
   }
-  depthTexture = root['~unstable']
+  depthTexture = root
     .createTexture({
       size: [canvas.width, canvas.height],
       format: 'depth24plus',
@@ -209,7 +209,7 @@ function createDepthAndMsaaTextures() {
   if (msaaTexture) {
     msaaTexture.destroy();
   }
-  msaaTexture = root['~unstable']
+  msaaTexture = root
     .createTexture({
       size: [canvas.width, canvas.height],
       format: presentationFormat,
@@ -277,24 +277,16 @@ function drawObject(
     .draw(vertexCount);
 }
 
-let disposed = false;
+let animationFrameId: number;
 
-function render() {
-  if (disposed) {
-    return;
-  }
-
+function frame() {
   drawObject(cubeBuffer, bindGroup, 36, 'clear');
   drawObject(secondCubeBuffer, secondBindGroup, 36, 'load');
   drawObject(planeBuffer, planeBindGroup, 6, 'load');
+  animationFrameId = requestAnimationFrame(frame);
 }
 
-function frame() {
-  requestAnimationFrame(frame);
-  render();
-}
-
-frame();
+animationFrameId = requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
 
@@ -474,7 +466,7 @@ const resizeObserver = new ResizeObserver(() => {
 resizeObserver.observe(canvas);
 
 export function onCleanup() {
-  disposed = true;
+  cancelAnimationFrame(animationFrameId);
   window.removeEventListener('mouseup', mouseUpEventListener);
   window.removeEventListener('mousemove', mouseMoveEventListener);
   window.removeEventListener('touchend', touchEndEventListener);

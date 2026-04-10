@@ -39,13 +39,14 @@ const pipelines = fragmentShaders.map((fragment) =>
 
 let currentPipeline = pipelines[0];
 
-let startTime = performance.now();
+let startTime: null | number = null;
 let frameId: number;
 
-function render() {
-  const timestamp = (performance.now() - startTime) / 1000;
-  if (timestamp > 500.0) startTime = performance.now();
-  time.write(timestamp);
+function render(timestamp: number) {
+  if (startTime === null) {
+    startTime = timestamp;
+  }
+  time.write((timestamp - startTime) / 1000);
   resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
 
   currentPipeline

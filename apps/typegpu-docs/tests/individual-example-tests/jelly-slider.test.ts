@@ -54,20 +54,20 @@ describe('jelly-slider example', () => {
         return textureSample(src, samp, uv);
       }
 
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
       struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      struct raymarchFn_Input {
+        @location(0) uv: vec2f,
       }
 
       @group(0) @binding(0) var<uniform> randomUniform: vec2f;
@@ -211,10 +211,10 @@ describe('jelly-slider example', () => {
         let jellyColor = (&jellyColorUniform);
         let endCapX = endCapUniform.x;
         if ((position.y < -0.03f)) {
-          const fadeSharpness = 30;
+          const fadeSharpness = 30f;
           const inset = 0.02;
           let cutout = (rectangleCutoutDist(position.xz) + inset);
-          let edgeDarkening = saturate((1f - (cutout * f32(fadeSharpness))));
+          let edgeDarkening = saturate((1f - (cutout * fadeSharpness)));
           let lightGradient = saturate((((-(position.z) * 4f) * lightDir.z) + 1f));
           return ((vec3f(1) * edgeDarkening) * (lightGradient * 0.5f));
         }
@@ -225,8 +225,8 @@ describe('jelly-slider example', () => {
           var shadowColor = mix(vec3f(), (*jellyColor).rgb, jellySaturation);
           let contrast = ((20f * saturate(finalUV.y)) * (0.8f + (endCapX * 0.2f)));
           const shadowOffset = -0.3;
-          const featherSharpness = 10;
-          let uvEdgeFeather = (((saturate((finalUV.x * f32(featherSharpness))) * saturate(((1f - finalUV.x) * f32(featherSharpness)))) * saturate(((1f - finalUV.y) * f32(featherSharpness)))) * saturate(finalUV.y));
+          const featherSharpness = 10f;
+          let uvEdgeFeather = (((saturate((finalUV.x * featherSharpness)) * saturate(((1f - finalUV.x) * featherSharpness))) * saturate(((1f - finalUV.y) * featherSharpness))) * saturate(finalUV.y));
           let influence = (saturate(((1f - lightDir.y) * 2f)) * uvEdgeFeather);
           return mix(vec3f(1), mix(shadowColor, vec3f(1), saturate(((data.x * contrast) + shadowOffset))), influence);
         }
@@ -583,10 +583,6 @@ describe('jelly-slider example', () => {
         return background;
       }
 
-      struct raymarchFn_Input {
-        @location(0) uv: vec2f,
-      }
-
       @fragment fn raymarchFn(_arg_0: raymarchFn_Input) -> @location(0) vec4f {
         randSeed2((randomUniform * _arg_0.uv));
         var ndc = vec2f(((_arg_0.uv.x * 2f) - 1f), -(((_arg_0.uv.y * 2f) - 1f)));
@@ -601,13 +597,9 @@ describe('jelly-slider example', () => {
 
       @group(0) @binding(2) var outputTexture: texture_storage_2d<rgba8unorm, write>;
 
-      struct taaResolveFn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16) fn taaResolveFn(_arg_0: taaResolveFn_Input) {
-        var currentColor = textureLoad(currentTexture, _arg_0.gid.xy, 0);
-        var historyColor = textureLoad(historyTexture, _arg_0.gid.xy, 0);
+      @compute @workgroup_size(16, 16) fn taaResolveFn(@builtin(global_invocation_id) gid: vec3u) {
+        var currentColor = textureLoad(currentTexture, gid.xy, 0);
+        var historyColor = textureLoad(historyTexture, gid.xy, 0);
         var minColor = vec3f(9999);
         var maxColor = vec3f(-9999);
         var dimensions = textureDimensions(currentTexture);
@@ -615,7 +607,7 @@ describe('jelly-slider example', () => {
         {
           // unrolled iteration #0
           {
-            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(-1));
+            var sampleCoord = (vec2i(gid.xy) + vec2i(-1));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
             var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
@@ -623,7 +615,7 @@ describe('jelly-slider example', () => {
           }
           // unrolled iteration #1
           {
-            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(-1, 0));
+            var sampleCoord = (vec2i(gid.xy) + vec2i(-1, 0));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
             var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
@@ -631,7 +623,7 @@ describe('jelly-slider example', () => {
           }
           // unrolled iteration #2
           {
-            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(-1, 1));
+            var sampleCoord = (vec2i(gid.xy) + vec2i(-1, 1));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
             var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
@@ -642,7 +634,7 @@ describe('jelly-slider example', () => {
         {
           // unrolled iteration #0
           {
-            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(0, -1));
+            var sampleCoord = (vec2i(gid.xy) + vec2i(0, -1));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
             var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
@@ -650,7 +642,7 @@ describe('jelly-slider example', () => {
           }
           // unrolled iteration #1
           {
-            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i());
+            var sampleCoord = (vec2i(gid.xy) + vec2i());
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
             var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
@@ -658,7 +650,7 @@ describe('jelly-slider example', () => {
           }
           // unrolled iteration #2
           {
-            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(0, 1));
+            var sampleCoord = (vec2i(gid.xy) + vec2i(0, 1));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
             var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
@@ -669,7 +661,7 @@ describe('jelly-slider example', () => {
         {
           // unrolled iteration #0
           {
-            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(1, -1));
+            var sampleCoord = (vec2i(gid.xy) + vec2i(1, -1));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
             var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
@@ -677,7 +669,7 @@ describe('jelly-slider example', () => {
           }
           // unrolled iteration #1
           {
-            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(1, 0));
+            var sampleCoord = (vec2i(gid.xy) + vec2i(1, 0));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
             var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
@@ -685,7 +677,7 @@ describe('jelly-slider example', () => {
           }
           // unrolled iteration #2
           {
-            var sampleCoord = (vec2i(_arg_0.gid.xy) + vec2i(1));
+            var sampleCoord = (vec2i(gid.xy) + vec2i(1));
             var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
             var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
@@ -693,7 +685,7 @@ describe('jelly-slider example', () => {
           }
         }
         var historyColorClamped = clamp(historyColor.rgb, minColor, maxColor);
-        var uv = (vec2f(_arg_0.gid.xy) / vec2f(dimensions.xy));
+        var uv = (vec2f(gid.xy) / vec2f(dimensions.xy));
         const textRegionMinX = 0.7099999785423279f;
         const textRegionMaxX = 0.8500000238418579f;
         const textRegionMinY = 0.4699999988079071f;
@@ -706,11 +698,7 @@ describe('jelly-slider example', () => {
         let inTextRegion = (((fadeInX * fadeOutX) * fadeInY) * fadeOutY);
         let blendFactor = mix(0.8999999761581421f, 0.699999988079071f, inTextRegion);
         var resolvedColor = vec4f(mix(currentColor.rgb, historyColorClamped, blendFactor), 1f);
-        textureStore(outputTexture, vec2u(_arg_0.gid.x, _arg_0.gid.y), resolvedColor);
-      }
-
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
+        textureStore(outputTexture, vec2u(gid.x, gid.y), resolvedColor);
       }
 
       struct fullScreenTriangle_Output {
@@ -718,23 +706,23 @@ describe('jelly-slider example', () => {
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      struct fragmentMain_Input {
+        @location(0) uv: vec2f,
       }
 
       @group(1) @binding(0) var currentTexture: texture_2d<f32>;
 
       @group(0) @binding(0) var filteringSampler: sampler;
 
-      struct fragmentMain_Input {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn fragmentMain(input: fragmentMain_Input) -> @location(0) vec4f {
-        return textureSample(currentTexture, filteringSampler, input.uv);
+      @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
+        return textureSample(currentTexture, filteringSampler, _arg_0.uv);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -791,7 +779,7 @@ describe('jelly-slider example', () => {
         var closestT = 0f;
         const epsilon = 0.029999999329447746f;
         var xOffset = vec2f(epsilon, 0f);
-        var yOffset2 = vec2f(0f, epsilon);
+        var yOffset = vec2f(0f, epsilon);
         var xPlusDist = 1e+10f;
         var xMinusDist = 1e+10f;
         var yPlusDist = 1e+10f;
@@ -816,8 +804,8 @@ describe('jelly-slider example', () => {
           }
           xPlusDist = min(xPlusDist, sdBezier((sliderPos + xOffset), (*A), (*C), (*B)));
           xMinusDist = min(xMinusDist, sdBezier((sliderPos - xOffset), (*A), (*C), (*B)));
-          yPlusDist = min(yPlusDist, sdBezier((sliderPos + yOffset2), (*A), (*C), (*B)));
-          yMinusDist = min(yMinusDist, sdBezier((sliderPos - yOffset2), (*A), (*C), (*B)));
+          yPlusDist = min(yPlusDist, sdBezier((sliderPos + yOffset), (*A), (*C), (*B)));
+          yMinusDist = min(yMinusDist, sdBezier((sliderPos - yOffset), (*A), (*C), (*B)));
         }
         let overallProgress = ((f32(closestSegment) + closestT) / 16f);
         let normalX = ((xPlusDist - xMinusDist) / (2f * epsilon));
@@ -825,15 +813,11 @@ describe('jelly-slider example', () => {
         textureStore(bezierWriteView, vec2u(x, y), vec4f(minDist, overallProgress, normalX, normalY));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }"
     `);
   });

@@ -16,8 +16,8 @@ import type {
 import type { TgpuNamable } from '../../shared/meta.ts';
 import type {
   ExtractInvalidSchemaError,
-  Infer,
   InferGPURecord,
+  InferInput,
   IsValidBufferSchema,
   IsValidStorageSchema,
   IsValidUniformSchema,
@@ -853,8 +853,12 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    */
   createBuffer<TData extends AnyData>(
     typeSchema: ValidateBufferSchema<TData>,
+    initializer: (buffer: TgpuBuffer<TData>) => void,
+  ): TgpuBuffer<TData>;
+  createBuffer<TData extends AnyData>(
+    typeSchema: ValidateBufferSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: Infer<NoInfer<TData>>,
+    initial?: InferInput<NoInfer<TData>>,
   ): TgpuBuffer<TData>;
 
   /**
@@ -881,8 +885,12 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    */
   createUniform<TData extends AnyWgslData>(
     typeSchema: ValidateUniformSchema<TData>,
+    initializer: (buffer: TgpuBuffer<TData>) => void,
+  ): TgpuUniform<TData>;
+  createUniform<TData extends AnyWgslData>(
+    typeSchema: ValidateUniformSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: Infer<NoInfer<TData>>,
+    initial?: InferInput<NoInfer<TData>>,
   ): TgpuUniform<TData>;
 
   /**
@@ -908,8 +916,12 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    */
   createMutable<TData extends AnyWgslData>(
     typeSchema: ValidateStorageSchema<TData>,
+    initializer: (buffer: TgpuBuffer<TData>) => void,
+  ): TgpuMutable<TData>;
+  createMutable<TData extends AnyWgslData>(
+    typeSchema: ValidateStorageSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: Infer<NoInfer<TData>>,
+    initial?: InferInput<NoInfer<TData>>,
   ): TgpuMutable<TData>;
 
   /**
@@ -935,8 +947,12 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    */
   createReadonly<TData extends AnyWgslData>(
     typeSchema: ValidateStorageSchema<TData>,
+    initializer: (buffer: TgpuBuffer<TData>) => void,
+  ): TgpuReadonly<TData>;
+  createReadonly<TData extends AnyWgslData>(
+    typeSchema: ValidateStorageSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: Infer<NoInfer<TData>>,
+    initial?: InferInput<NoInfer<TData>>,
   ): TgpuReadonly<TData>;
 
   /**
@@ -951,6 +967,36 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
     typeSchema: ValidateStorageSchema<TData>,
     gpuBuffer: GPUBuffer,
   ): TgpuReadonly<TData>;
+
+  createTexture<
+    TWidth extends number,
+    THeight extends number,
+    TDepth extends number,
+    TSize extends
+      | readonly [TWidth]
+      | readonly [TWidth, THeight]
+      | readonly [TWidth, THeight, TDepth],
+    TFormat extends GPUTextureFormat,
+    TMipLevelCount extends number,
+    TSampleCount extends number,
+    TViewFormats extends GPUTextureFormat[],
+    TDimension extends GPUTextureDimension,
+  >(
+    props: CreateTextureOptions<
+      TSize,
+      TFormat,
+      TMipLevelCount,
+      TSampleCount,
+      TViewFormats,
+      TDimension
+    >,
+  ): TgpuTexture<
+    CreateTextureResult<TSize, TFormat, TMipLevelCount, TSampleCount, TViewFormats, TDimension>
+  >;
+
+  createSampler(props: WgslSamplerProps): TgpuFixedSampler;
+
+  createComparisonSampler(props: WgslComparisonSamplerProps): TgpuFixedComparisonSampler;
 
   /**
    * Creates a query set for collecting timestamps or occlusion queries.
@@ -1035,6 +1081,7 @@ export interface ExperimentalTgpuRoot
   readonly nameRegistrySetting: 'strict' | 'random';
   readonly shaderGenerator?: ShaderGenerator | undefined;
 
+  /** @deprecated Use `root.createTexture` instead. */
   createTexture<
     TWidth extends number,
     THeight extends number,
@@ -1080,8 +1127,10 @@ export interface ExperimentalTgpuRoot
     callback: (pass: RenderBundleEncoderPass) => void,
   ): GPURenderBundle;
 
+  /** @deprecated Use `root.createSampler` instead. */
   createSampler(props: WgslSamplerProps): TgpuFixedSampler;
 
+  /** @deprecated Use `root.createComparisonSampler` instead. */
   createComparisonSampler(props: WgslComparisonSamplerProps): TgpuFixedComparisonSampler;
 
   /**

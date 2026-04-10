@@ -5,7 +5,7 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-let stencilTexture = root['~unstable']
+let stencilTexture = root
   .createTexture({
     size: [canvas.width, canvas.height],
     format: 'stencil8',
@@ -104,7 +104,7 @@ function frame(timestamp: number) {
 frameId = requestAnimationFrame(frame);
 
 const resizeObserver = new ResizeObserver(() => {
-  stencilTexture = root['~unstable']
+  stencilTexture = root
     .createTexture({
       size: [canvas.width, canvas.height],
       format: 'stencil8',
