@@ -17,10 +17,10 @@ class ExtractingGenerator extends WgslGenerator {
     this.#fnDepth = 0;
   }
 
-  public functionDefinition(body: tinyest.Block): string {
+  public functionDefinition(options: ShaderGenerator.FunctionDefinitionOptions): string {
     this.#fnDepth++;
     try {
-      return super.functionDefinition(body);
+      return super.functionDefinition(options);
     } finally {
       this.#fnDepth--;
     }

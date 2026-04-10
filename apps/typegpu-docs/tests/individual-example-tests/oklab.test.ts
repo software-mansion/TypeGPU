@@ -32,10 +32,6 @@ describe('oklab example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct mainFragment_Input {
-        @location(0) uv: vec2f,
-      }
-
       struct item {
         hue: f32,
         alpha: f32,
@@ -224,6 +220,10 @@ describe('oklab example', () => {
 
       fn item_1(_arg_0: vec2f, _arg_1: vec3f) -> f32 {
         return 1f;
+      }
+
+      struct mainFragment_Input {
+        @location(0) uv: vec2f,
       }
 
       @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {

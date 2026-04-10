@@ -31,10 +31,6 @@ describe('ray-marching example', () => {
         return vertexMain_Output(vec4f(pos[idx], 0f, 1f), uv[idx]);
       }
 
-      struct fragmentMain_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var<uniform> resolution: vec2f;
 
       struct Shape {
@@ -146,6 +142,10 @@ describe('ray-marching example', () => {
           t += max(h, 1e-3f);
         }
         return res;
+      }
+
+      struct fragmentMain_Input {
+        @location(0) uv: vec2f,
       }
 
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
