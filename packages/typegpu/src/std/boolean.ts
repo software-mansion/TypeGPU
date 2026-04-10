@@ -23,7 +23,7 @@ import {
   type v4b,
 } from '../data/wgslTypes.ts';
 import { unify } from '../tgsl/conversion.ts';
-import { isKnownAtComptime } from '../types.ts';
+
 import { sub } from './operators.ts';
 
 function correspondingBooleanVectorSchema(dataType: BaseData) {
@@ -225,10 +225,6 @@ export const not = dualImpl({
   },
   normalImpl: cpuNot,
   codegenImpl: (_ctx, [arg]) => {
-    if (isKnownAtComptime(arg)) {
-      return `${cpuNot(arg.value)}`;
-    }
-
     const { dataType } = arg;
 
     if (isBool(dataType)) {

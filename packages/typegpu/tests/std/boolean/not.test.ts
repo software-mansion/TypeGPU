@@ -1,8 +1,7 @@
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import { vec2b, vec2f, vec3b, vec3i, vec4b, vec4h, vec4u } from '../../../src/data/index.ts';
 import { not } from '../../../src/std/boolean.ts';
-import tgpu, { d } from '../../../src/index.js';
+import tgpu, { d, std } from '../../../src/index.js';
 
 describe('not', () => {
   it('negates booleans', () => {
@@ -17,23 +16,22 @@ describe('not', () => {
   });
 
   it('negates boolean vectors', () => {
-    expect(not(vec2b(true, false))).toStrictEqual(vec2b(false, true));
-    expect(not(vec3b(false, false, true))).toStrictEqual(vec3b(true, true, false));
-    expect(not(vec4b(true, true, false, false))).toStrictEqual(vec4b(false, false, true, true));
+    expect(not(d.vec2b(true, false))).toStrictEqual(d.vec2b(false, true));
+    expect(not(d.vec3b(false, false, true))).toStrictEqual(d.vec3b(true, true, false));
+    expect(not(d.vec4b(true, true, false, false))).toStrictEqual(d.vec4b(false, false, true, true));
   });
 
   it('converts numeric vectors to booleans vectors and negates component-wise', () => {
-    expect(not(vec2f(0.0, 1.0))).toStrictEqual(vec2b(true, false));
-    expect(not(vec3i(0, 5, -1))).toStrictEqual(vec3b(true, false, false));
-    expect(not(vec4u(0, 0, 1, 0))).toStrictEqual(vec4b(true, true, false, true));
-    expect(not(vec4h(0, 3.14, 0, -2.5))).toStrictEqual(vec4b(true, false, true, false));
+    expect(not(d.vec2f(0.0, 1.0))).toStrictEqual(d.vec2b(true, false));
+    expect(not(d.vec3i(0, 5, -1))).toStrictEqual(d.vec3b(true, false, false));
+    expect(not(d.vec4u(0, 0, 1, 0))).toStrictEqual(d.vec4b(true, true, false, true));
+    expect(not(d.vec4h(0, 3.14, 0, -2.5))).toStrictEqual(d.vec4b(true, false, true, false));
   });
 
   it('negates truthiness check', () => {
-    const s = {};
     expect(not(null)).toBe(true);
     expect(not(undefined)).toBe(true);
-    expect(not(s)).toBe(false);
+    expect(not({})).toBe(false);
   });
 
   it('mimics WGSL behavior on NaN', () => {
@@ -138,8 +136,9 @@ describe('not', () => {
       const _b1 = !buffer.$;
       const _b2 = !v;
       const _b3 = !a;
-      const _b4 = !p;
-      const _b5 = !p.$;
+      const _b4 = !std.atomicLoad(a);
+      const _b5 = !p;
+      const _b6 = !p.$;
     });
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
@@ -150,8 +149,9 @@ describe('not', () => {
         const _b1 = false;
         const _b2 = false;
         const _b3 = false;
-        const _b4 = false;
-        let _b5 = !bool((*p));
+        let _b4 = !bool(atomicLoad(&a));
+        const _b5 = false;
+        let _b6 = !bool((*p));
       }"
     `);
   });
