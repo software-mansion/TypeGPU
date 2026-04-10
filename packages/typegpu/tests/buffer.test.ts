@@ -973,7 +973,7 @@ describe('TgpuBuffer (.patch() with flexible inputs)', () => {
     });
 
     // Full replacement with TypedArray
-    arrBuf.patch({ items: new Float32Array(48) });
+    arrBuf.patch({ items: new Float32Array(64) });
   });
 
   it('should patch a vec3f struct field from a tuple', ({ root, device }) => {
