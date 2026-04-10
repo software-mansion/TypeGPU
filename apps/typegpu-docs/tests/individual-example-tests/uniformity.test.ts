@@ -68,12 +68,12 @@ describe('uniformity test example', () => {
       @group(1) @binding(0) var texture: texture_storage_2d<r32float, write>;
 
       fn computeFn(x: u32, y: u32, _arg_2: u32) {
-        let gridSize2 = configUniform.gridSize;
+        let gridSize = configUniform.gridSize;
         if ((configUniform.useSeed2 == 1u)) {
           randSeed2((vec2f(f32(x), f32(y)) + 1f));
         }
         else {
-          randSeed(((f32((x + 1u)) * gridSize2) + f32((y + 1u))));
+          randSeed(((f32((x + 1u)) * gridSize) + f32((y + 1u))));
         }
         var i = 0u;
         let samplesPerThread = configUniform.samplesPerThread;
@@ -89,15 +89,11 @@ describe('uniformity test example', () => {
         textureStore(texture, vec2u(x, y), vec4f(result, 0f, 0f, 0f));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        computeFn(in.id.x, in.id.y, in.id.z);
+        computeFn(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -116,8 +112,8 @@ describe('uniformity test example', () => {
 
       }
 
-      fn hash(v: u32) -> u32 {
-        var x = (v ^ (v >> 17u));
+      fn hash(value: u32) -> u32 {
+        var x = (value ^ (value >> 17u));
         x *= 3982152891u;
         x ^= (x >> 11u);
         x *= 2890668881u;
@@ -156,12 +152,12 @@ describe('uniformity test example', () => {
       @group(1) @binding(0) var texture: texture_storage_2d<r32float, write>;
 
       fn computeFn(x: u32, y: u32, _arg_2: u32) {
-        let gridSize2 = configUniform.gridSize;
+        let gridSize = configUniform.gridSize;
         if ((configUniform.useSeed2 == 1u)) {
           randSeed2((vec2f(f32(x), f32(y)) + 1f));
         }
         else {
-          randSeed(((f32((x + 1u)) * gridSize2) + f32((y + 1u))));
+          randSeed(((f32((x + 1u)) * gridSize) + f32((y + 1u))));
         }
         var i = 0u;
         let samplesPerThread = configUniform.samplesPerThread;
@@ -177,15 +173,11 @@ describe('uniformity test example', () => {
         textureStore(texture, vec2u(x, y), vec4f(result, 0f, 0f, 0f));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        computeFn(in.id.x, in.id.y, in.id.z);
+        computeFn(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -200,8 +192,8 @@ describe('uniformity test example', () => {
 
       @group(0) @binding(1) var<uniform> configUniform: Config;
 
-      fn hash(v: u32) -> u32 {
-        var x = (v ^ (v >> 17u));
+      fn hash(value: u32) -> u32 {
+        var x = (value ^ (value >> 17u));
         x *= 3982152891u;
         x ^= (x >> 11u);
         x *= 2890668881u;
@@ -288,12 +280,12 @@ describe('uniformity test example', () => {
       @group(1) @binding(0) var texture: texture_storage_2d<r32float, write>;
 
       fn computeFn(x: u32, y: u32, _arg_2: u32) {
-        let gridSize2 = configUniform.gridSize;
+        let gridSize = configUniform.gridSize;
         if ((configUniform.useSeed2 == 1u)) {
           randSeed2((vec2f(f32(x), f32(y)) + 1f));
         }
         else {
-          randSeed(((f32((x + 1u)) * gridSize2) + f32((y + 1u))));
+          randSeed(((f32((x + 1u)) * gridSize) + f32((y + 1u))));
         }
         var i = 0u;
         let samplesPerThread = configUniform.samplesPerThread;
@@ -309,15 +301,11 @@ describe('uniformity test example', () => {
         textureStore(texture, vec2u(x, y), vec4f(result, 0f, 0f, 0f));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        computeFn(in.id.x, in.id.y, in.id.z);
+        computeFn(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -332,8 +320,8 @@ describe('uniformity test example', () => {
 
       @group(0) @binding(1) var<uniform> configUniform: Config;
 
-      fn hash(v: u32) -> u32 {
-        var x = (v ^ (v >> 17u));
+      fn hash(value: u32) -> u32 {
+        var x = (value ^ (value >> 17u));
         x *= 3982152891u;
         x ^= (x >> 11u);
         x *= 2890668881u;
@@ -391,12 +379,12 @@ describe('uniformity test example', () => {
       @group(1) @binding(0) var texture: texture_storage_2d<r32float, write>;
 
       fn computeFn(x: u32, y: u32, _arg_2: u32) {
-        let gridSize2 = configUniform.gridSize;
+        let gridSize = configUniform.gridSize;
         if ((configUniform.useSeed2 == 1u)) {
           randSeed2((vec2f(f32(x), f32(y)) + 1f));
         }
         else {
-          randSeed(((f32((x + 1u)) * gridSize2) + f32((y + 1u))));
+          randSeed(((f32((x + 1u)) * gridSize) + f32((y + 1u))));
         }
         var i = 0u;
         let samplesPerThread = configUniform.samplesPerThread;
@@ -412,15 +400,11 @@ describe('uniformity test example', () => {
         textureStore(texture, vec2u(x, y), vec4f(result, 0f, 0f, 0f));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        computeFn(in.id.x, in.id.y, in.id.z);
+        computeFn(id.x, id.y, id.z);
       }"
     `);
   });
