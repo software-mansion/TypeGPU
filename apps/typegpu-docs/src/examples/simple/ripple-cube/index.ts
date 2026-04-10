@@ -117,7 +117,7 @@ const postProcessing = createPostProcessingPipelines(root, width, height, initia
 const cameraResult = setupOrbitCamera(
   canvas,
   { initPos: d.vec4f(2, 2, 2, 1), maxZoom: 4, minZoom: 1 },
-  (newProps) => cameraUniform.writePartial(newProps),
+  (newProps) => cameraUniform.patch(newProps),
 );
 
 const getRayForUV = (uv: d.v2f) => {
@@ -230,7 +230,7 @@ export const controls = defineControls({
     initial: initialMaterial.metallic,
     step: 0.01,
     onSliderChange(v: number) {
-      materialUniform.writePartial({ metallic: v });
+      materialUniform.patch({ metallic: v });
     },
   },
   roughness: {
@@ -239,7 +239,7 @@ export const controls = defineControls({
     initial: initialMaterial.roughness,
     step: 0.01,
     onSliderChange(v: number) {
-      materialUniform.writePartial({ roughness: v });
+      materialUniform.patch({ roughness: v });
     },
   },
   'ambient occlusion': {
@@ -248,7 +248,7 @@ export const controls = defineControls({
     initial: initialMaterial.ao,
     step: 0.01,
     onSliderChange(v: number) {
-      materialUniform.writePartial({ ao: v });
+      materialUniform.patch({ ao: v });
     },
   },
   'bloom threshold': {
@@ -257,7 +257,7 @@ export const controls = defineControls({
     initial: initialBloom.threshold,
     step: 0.01,
     onSliderChange(v: number) {
-      postProcessing.bloomUniform.writePartial({ threshold: v });
+      postProcessing.bloomUniform.patch({ threshold: v });
     },
   },
   'bloom intensity': {
@@ -266,7 +266,7 @@ export const controls = defineControls({
     initial: initialBloom.intensity,
     step: 0.01,
     onSliderChange(v: number) {
-      postProcessing.bloomUniform.writePartial({ intensity: v });
+      postProcessing.bloomUniform.patch({ intensity: v });
     },
   },
   'blend factor': {

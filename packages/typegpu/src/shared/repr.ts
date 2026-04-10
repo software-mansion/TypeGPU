@@ -10,6 +10,7 @@ import type {
   $memIdent,
   $repr,
   $reprPartial,
+  $reprPatch,
   $validStorageSchema,
   $validUniformSchema,
   $validVertexSchema,
@@ -46,6 +47,8 @@ export type InferInput<T> =
  * Extracts a sparse/partial inferred representation of a resource.
  * Used by the `buffer.writePartial` API.
  *
+ * @deprecated
+ *
  * @example
  * type A = InferPartial<F32> // => number | undefined
  * type B = InferPartial<WgslStruct<{ a: F32 }>> // => { a?: number | undefined }
@@ -75,8 +78,26 @@ export type InferInputRecord<T extends Record<string | number | symbol, unknown>
   [Key in keyof T]: InferInput<T[Key]>;
 };
 
+/** @deprecated */
 export type InferPartialRecord<T extends Record<string | number | symbol, unknown>> = {
   [Key in keyof T]?: InferPartial<T[Key]>;
+};
+
+/**
+ * Extracts the patch representation of a resource.
+ * Used by the `buffer.patch` API.
+ *
+ * @example
+ * type A = InferPatch<F32> // => number | undefined
+ * type B = InferPatch<WgslStruct<{ a: F32 }>> // => { a?: number | undefined }
+ * type C = InferPatch<WgslArray<F32>> // => Record<number, number | undefined> | number[] | undefined
+ */
+export type InferPatch<T> = T extends { readonly [$reprPatch]: infer TRepr }
+  ? TRepr
+  : InferInput<T> | undefined;
+
+export type InferPatchRecord<T extends Record<string | number | symbol, unknown>> = {
+  [Key in keyof T]?: InferPatch<T[Key]>;
 };
 
 export type InferGPURecord<T extends Record<string | number | symbol, unknown>> = {

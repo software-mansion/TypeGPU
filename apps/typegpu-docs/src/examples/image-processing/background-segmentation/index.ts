@@ -198,7 +198,7 @@ function updateCropBounds(aspectRatio: number) {
       uvMaxY = uvMinY + cropHeight;
     }
   }
-  paramsUniform.writePartial({
+  paramsUniform.patch({
     cropBounds: d.vec4f(uvMinX, uvMinY, uvMaxX, uvMaxY),
   });
 }
@@ -313,7 +313,7 @@ export const controls = defineControls({
     options: ['mipmaps', 'gaussian'],
     async onSelectChange(value) {
       useGaussianBlur = value === 'gaussian';
-      paramsUniform.writePartial({ useGaussian: useGaussianBlur ? 1 : 0 });
+      paramsUniform.patch({ useGaussian: useGaussianBlur ? 1 : 0 });
     },
   },
   'blur strength': {
@@ -323,7 +323,7 @@ export const controls = defineControls({
     step: 1,
     onSliderChange(newValue) {
       blurStrength = newValue;
-      paramsUniform.writePartial({ sampleBias: blurStrength });
+      paramsUniform.patch({ sampleBias: blurStrength });
     },
   },
   'square crop': {
