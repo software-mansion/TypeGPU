@@ -39,7 +39,7 @@ export function getCascadeDim(width: number, height: number) {
 export const sdfSlot = tgpu.slot<(uv: d.v2f) => number>();
 export const colorSlot = tgpu.slot<(uv: d.v2f) => d.v3f>();
 
-// Slot for SDF resolution to calculate proper texel-based eps/minStep (so we don't do reduntant sub-texel steps)
+// Slot for SDF resolution to calculate proper texel-based eps/minStep (so we don't do redundant sub-texel steps)
 export const sdfResolutionSlot = tgpu.slot<d.v2u>();
 
 export const RayMarchResult = d.struct({
