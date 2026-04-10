@@ -1,4 +1,4 @@
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 
 export const VertexData = d.struct({
   position: d.vec3f,
