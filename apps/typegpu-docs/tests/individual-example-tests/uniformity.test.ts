@@ -17,7 +17,7 @@ describe('uniformity test example', () => {
         name: 'uniformity',
         setupMocks: mockResizeObserver,
         controlTriggers: ['Test Resolution'],
-        expectedCalls: 3,
+        expectedCalls: 4,
       },
       device,
     );
@@ -28,7 +28,6 @@ describe('uniformity test example', () => {
       struct Config {
         gridSize: f32,
         canvasRatio: f32,
-        useSeed2: u32,
         samplesPerThread: u32,
         takeAverage: u32,
       }
@@ -43,14 +42,6 @@ describe('uniformity test example', () => {
 
       fn randSeed2(seed: vec2f) {
         seed2(seed);
-      }
-
-      fn seed_2(value: f32) {
-        seed = vec2f(value, 0f);
-      }
-
-      fn randSeed(seed_1: f32) {
-        seed_2(seed_1);
       }
 
       fn sample() -> f32 {
@@ -69,11 +60,8 @@ describe('uniformity test example', () => {
 
       fn computeFn(x: u32, y: u32, _arg_2: u32) {
         let gridSize = configUniform.gridSize;
-        if ((configUniform.useSeed2 == 1u)) {
+        {
           randSeed2((vec2f(f32(x), f32(y)) + 1f));
-        }
-        else {
-          randSeed(((f32((x + 1u)) * gridSize) + f32((y + 1u))));
         }
         var i = 0u;
         let samplesPerThread = configUniform.samplesPerThread;
@@ -101,16 +89,11 @@ describe('uniformity test example', () => {
       struct Config {
         gridSize: f32,
         canvasRatio: f32,
-        useSeed2: u32,
         samplesPerThread: u32,
         takeAverage: u32,
       }
 
       @group(0) @binding(1) var<uniform> configUniform: Config;
-
-      fn randSeed2(seed: vec2f) {
-
-      }
 
       fn hash(value: u32) -> u32 {
         var x = (value ^ (value >> 17u));
@@ -153,10 +136,7 @@ describe('uniformity test example', () => {
 
       fn computeFn(x: u32, y: u32, _arg_2: u32) {
         let gridSize = configUniform.gridSize;
-        if ((configUniform.useSeed2 == 1u)) {
-          randSeed2((vec2f(f32(x), f32(y)) + 1f));
-        }
-        else {
+        {
           randSeed(((f32((x + 1u)) * gridSize) + f32((y + 1u))));
         }
         var i = 0u;
@@ -185,7 +165,6 @@ describe('uniformity test example', () => {
       struct Config {
         gridSize: f32,
         canvasRatio: f32,
-        useSeed2: u32,
         samplesPerThread: u32,
         takeAverage: u32,
       }
@@ -217,10 +196,6 @@ describe('uniformity test example', () => {
 
       fn randSeed2(seed: vec2f) {
         seed2(seed);
-      }
-
-      fn randSeed(seed_1: f32) {
-
       }
 
       fn u64Mul(a: vec2u, b: vec2u) -> vec2u {
@@ -281,11 +256,8 @@ describe('uniformity test example', () => {
 
       fn computeFn(x: u32, y: u32, _arg_2: u32) {
         let gridSize = configUniform.gridSize;
-        if ((configUniform.useSeed2 == 1u)) {
+        {
           randSeed2((vec2f(f32(x), f32(y)) + 1f));
-        }
-        else {
-          randSeed(((f32((x + 1u)) * gridSize) + f32((y + 1u))));
         }
         var i = 0u;
         let samplesPerThread = configUniform.samplesPerThread;
@@ -313,7 +285,6 @@ describe('uniformity test example', () => {
       struct Config {
         gridSize: f32,
         canvasRatio: f32,
-        useSeed2: u32,
         samplesPerThread: u32,
         takeAverage: u32,
       }
@@ -347,10 +318,6 @@ describe('uniformity test example', () => {
         seed2(seed);
       }
 
-      fn randSeed(seed_1: f32) {
-
-      }
-
       fn next() -> u32 {
         let s0 = seed[0i];
         var s1 = seed[1i];
@@ -380,11 +347,8 @@ describe('uniformity test example', () => {
 
       fn computeFn(x: u32, y: u32, _arg_2: u32) {
         let gridSize = configUniform.gridSize;
-        if ((configUniform.useSeed2 == 1u)) {
+        {
           randSeed2((vec2f(f32(x), f32(y)) + 1f));
-        }
-        else {
-          randSeed(((f32((x + 1u)) * gridSize) + f32((y + 1u))));
         }
         var i = 0u;
         let samplesPerThread = configUniform.samplesPerThread;
