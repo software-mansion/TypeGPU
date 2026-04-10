@@ -16,6 +16,7 @@ import { CodegenState } from '../../src/types.ts';
 import { it } from 'typegpu-testing-utility';
 import { ArrayExpression } from '../../src/tgsl/generationHelpers.ts';
 import { extractSnippetFromFn } from '../utils/parseResolved.ts';
+import { UnknownData } from '../../src/tgsl/shaderGenerator_members.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -2099,41 +2100,29 @@ describe('wgslGenerator', () => {
       `);
   });
 
-  it('warns and throws when cannot determine truthiness of a unary operator `!` operand', ({
-    root,
-  }) => {
-    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
+  it('handles unary operator `!` on non-primitive values', ({ root }) => {
     const buffer = root.createUniform(d.mat4x4f);
-    const testFn1 = tgpu.fn(
-      [],
-      d.bool,
-    )(() => {
-      return !buffer.$;
+    const testFn = tgpu.fn([d.vec3f, d.atomic(d.u32), d.ptrPrivate(d.u32)])((v, a, p) => {
+      const _b0 = !buffer;
+      const _b1 = !buffer.$;
+      const _b2 = !v;
+      const _b3 = !a;
+      const _b4 = !p;
+      const _b5 = !p.$;
     });
 
-    expect(() => tgpu.resolve([testFn1])).toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:testFn1: The unary operator \`!\` cannot determine truthiness for runtime value of type: mat4x4f.]
-      `);
-    expect(warnSpy).not.toHaveBeenCalled();
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> buffer: mat4x4f;
 
-    const testFn2 = tgpu.fn(
-      [d.vec3f],
-      d.bool,
-    )((v) => {
-      return !v;
-    });
-
-    expect(() => tgpu.resolve([testFn2])).toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:testFn2: The unary operator \`!\` cannot determine truthiness for runtime value of type: vec3f.]
-      `);
-    expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
-      `"Use \`std.not\` for the WGSL unary operator \`!\` on vector types."`,
-    );
+      fn testFn(v: vec3f, a: atomic<u32>, p: ptr<private, u32>) {
+        const _b0 = false;
+        const _b1 = false;
+        const _b2 = false;
+        const _b3 = false;
+        const _b4 = false;
+        let _b5 = !bool((*p));
+      }"
+    `);
   });
 
   it('handles unary operator `!` on numeric and boolean comptime-known operands', () => {

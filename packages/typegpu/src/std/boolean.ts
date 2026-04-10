@@ -240,9 +240,7 @@ export const not = dualImpl({
       return stitch`!(${vecConstructorStr}(${arg}))`;
     }
 
-    throw new Error(
-      `\`std.not\` cannot determine truthiness for runtime value of type: ${ctx.resolve(dataType).value}.`,
-    );
+    return 'false';
   },
 });
 

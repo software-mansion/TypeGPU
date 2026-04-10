@@ -176,13 +176,7 @@ const unaryOpCodeToCodegen = {
       return snip(`!bool(${argStr})`, bool, 'runtime');
     }
 
-    if (wgsl.isVec(dataType)) {
-      console.warn('Use `std.not` for the WGSL unary operator `!` on vector types.');
-    }
-
-    throw new Error(
-      `The unary operator \`!\` cannot determine truthiness for runtime value of type: ${ctx.resolve(dataType).value}.`,
-    );
+    return snip(false, bool, 'constant');
   },
 } satisfies Partial<Record<tinyest.UnaryOperator, (...args: never[]) => unknown>>;
 

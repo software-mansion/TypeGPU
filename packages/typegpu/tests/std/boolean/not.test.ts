@@ -114,20 +114,28 @@ describe('not', () => {
     `);
   });
 
-  it('throws when cannot determine truthiness of argument at compile time', ({ root }) => {
+  it('mimics JS on non-primitive values', ({ root }) => {
     const buffer = root.createUniform(d.mat4x4f);
-    const testFn = tgpu.fn(
-      [],
-      d.bool,
-    )(() => {
-      return not(buffer.$);
+    const testFn = tgpu.fn([d.vec3f, d.atomic(d.u32), d.ptrPrivate(d.u32)])((v, a, p) => {
+      const _b0 = !buffer;
+      const _b1 = !buffer.$;
+      const _b2 = !v;
+      const _b3 = !a;
+      const _b4 = !p;
+      const _b5 = !p.$;
     });
 
-    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn:testFn
-      - fn:not: \`std.not\` cannot determine truthiness for runtime value of type: mat4x4f.]
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> buffer: mat4x4f;
+
+      fn testFn(v: vec3f, a: atomic<u32>, p: ptr<private, u32>) {
+        const _b0 = false;
+        const _b1 = false;
+        const _b2 = false;
+        const _b3 = false;
+        const _b4 = false;
+        let _b5 = !bool((*p));
+      }"
     `);
   });
 });
