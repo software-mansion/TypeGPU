@@ -10,7 +10,7 @@ import {
 } from '../data/dataTypes.ts';
 import { abstractInt, bool, f16, f32, i32, u32 } from '../data/numeric.ts';
 import { derefSnippet } from '../data/ref.ts';
-import { isEphemeralSnippet, snip, type Snippet } from '../data/snippet.ts';
+import { isEphemeralSnippet, isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import {
   vec2b,
   vec2f,
@@ -160,7 +160,14 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
   }
 
   if (target.dataType instanceof EntryInputRouter) {
-    return target.dataType.accessProp(propName);
+    const result = target.dataType.accessProp(propName);
+    if (isSnippet(result)) {
+      return result;
+    }
+    if (result) {
+      return accessProp(result.target, result.prop);
+    }
+    return undefined;
   }
 
   if (isPtr(target.dataType)) {

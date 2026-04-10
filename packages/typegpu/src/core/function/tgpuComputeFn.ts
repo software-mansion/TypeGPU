@@ -114,10 +114,7 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
       [$getNameForward]: FnCore;
     };
 
-  const core = createFnCore(
-    implementation,
-    `@compute @workgroup_size(${workgroupSize.join(', ')}) `,
-  );
+  const core = createFnCore(implementation, 'compute', workgroupSize);
 
   const result: This = {
     shell,

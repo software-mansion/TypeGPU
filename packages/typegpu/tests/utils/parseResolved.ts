@@ -29,7 +29,6 @@ export function extractSnippetFromFn(cb: () => unknown): Snippet {
       ctx[$internal].itemStateStack.pushItem();
       ctx[$internal].itemStateStack.pushFunctionScope(
         'normal',
-        [],
         {},
         undefined,
         (meta.externals as () => Record<string, string>)() ?? {},
