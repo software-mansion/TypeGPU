@@ -364,12 +364,12 @@ buffer.write([d.vec3u(4, 5, 6)], {
 ```
 
 :::note
-In this particular case the `writePartial` method described in the next section would be a more convenient option, but the `startOffset` and `endOffset` options are useful for writing bigger slices of data.
+In this particular case the `patch` method described in the next section would be a more convenient option, but the `startOffset` and `endOffset` options are useful for writing bigger slices of data.
 :::
 
-### Partial writes
+### Patching buffers
 
-When you want to update only a subset of a buffer’s fields, you can use the `.writePartial(data)` method. This method updates only the fields provided in the `data` object and leaves the rest unchanged.
+When you want to update only a subset of a buffer’s fields, you can use the `.patch(data)` method. This method updates only the fields provided in the `data` object and leaves the rest unchanged.
 
 The format of the `data` value depends on your schema type:
 
@@ -377,9 +377,8 @@ The format of the `data` value depends on your schema type:
   Provide an object with keys corresponding to the subset of the schema’s fields you wish to update.
 
 - **For `d.array` schemas:**
-  Provide an array of objects. Each object should specify:
-  - `idx`: the index of the element to update.
-  - `value`: the new value for that element.
+  Provide an object with numeric keys as indices mapped to new values (sparse update),
+  a plain array for full replacement, or a `TypedArray` for byte-level replacement.
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
@@ -394,12 +393,12 @@ const Planet = d.struct({
 
 const planetBuffer = root.createBuffer(Planet);
 
-planetBuffer.writePartial({
+planetBuffer.patch({
   mass: 123.1,
-  colors: [
-    { idx: 2, value: d.vec3f(1, 0, 0) },
-    { idx: 4, value: d.vec3f(0, 0, 1) },
-  ],
+  colors: {
+    2: d.vec3f(1, 0, 0),
+    4: d.vec3f(0, 0, 1),
+  },
 });
 ```
 

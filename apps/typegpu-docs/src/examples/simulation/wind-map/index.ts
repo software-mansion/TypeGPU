@@ -225,7 +225,7 @@ function createPipelines() {
 const pipelines = createPipelines();
 
 const draw = () => {
-  uniformsBuffer.writePartial({ frameCount });
+  uniformsBuffer.patch({ frameCount });
 
   pipelines.advect
     .with(bindGroupWritable)

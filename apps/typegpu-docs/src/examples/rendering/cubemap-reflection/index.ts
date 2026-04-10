@@ -287,7 +287,7 @@ const resizeObserver = new ResizeObserver((entries) => {
       10000,
       d.mat4x4f(),
     );
-    cameraBuffer.writePartial({ projection: newProj });
+    cameraBuffer.patch({ projection: newProj });
   }
 });
 resizeObserver.observe(canvas);
@@ -310,7 +310,7 @@ function updateCameraPosition() {
   const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
 
   const newView = m.mat4.lookAt(newCameraPos, d.vec3f(0, 0, 0), d.vec3f(0, 1, 0), d.mat4x4f());
-  cameraBuffer.writePartial({ view: newView, position: newCameraPos });
+  cameraBuffer.patch({ view: newView, position: newCameraPos });
 }
 
 function updateCameraOrbit(dx: number, dy: number) {
@@ -454,21 +454,21 @@ export const controls = defineControls({
     initial: materialProps.ambient,
     onColorChange: (value) => {
       materialProps.ambient = value;
-      materialBuffer.writePartial({ ambient: materialProps.ambient });
+      materialBuffer.patch({ ambient: materialProps.ambient });
     },
   },
   'diffuse color': {
     initial: materialProps.diffuse,
     onColorChange: (value) => {
       materialProps.diffuse = value;
-      materialBuffer.writePartial({ diffuse: materialProps.diffuse });
+      materialBuffer.patch({ diffuse: materialProps.diffuse });
     },
   },
   'specular color': {
     initial: materialProps.specular,
     onColorChange: (value) => {
       materialProps.specular = value;
-      materialBuffer.writePartial({ specular: materialProps.specular });
+      materialBuffer.patch({ specular: materialProps.specular });
     },
   },
   shininess: {
@@ -478,7 +478,7 @@ export const controls = defineControls({
     step: 1,
     onSliderChange: (value) => {
       materialProps.shininess = value;
-      materialBuffer.writePartial({ shininess: value });
+      materialBuffer.patch({ shininess: value });
     },
   },
   reflectivity: {
@@ -488,7 +488,7 @@ export const controls = defineControls({
     step: 0.1,
     onSliderChange: (value) => {
       materialProps.reflectivity = value;
-      materialBuffer.writePartial({ reflectivity: value });
+      materialBuffer.patch({ reflectivity: value });
     },
   },
 });

@@ -338,7 +338,7 @@ let subdiv = {
 };
 
 const draw = (timeMs: number) => {
-  uniformsBuffer.writePartial({
+  uniformsBuffer.patch({
     time: timeMs * 1e-3,
   });
   const colorAttachment: ColorAttachment = {
@@ -453,7 +453,7 @@ export const controls = defineControls({
     options: Object.keys(fillOptions),
     onSelectChange: async (selected) => {
       fillType = fillOptions[selected as keyof typeof fillOptions];
-      uniformsBuffer.writePartial({ fillType });
+      uniformsBuffer.patch({ fillType });
     },
   },
   'Subdiv. Level': {
