@@ -89,11 +89,6 @@ describe('simple shadow example', () => {
         return mainVert_Output(clipPos, transformedNormal, worldPos.xyz);
       }
 
-      struct mainFrag_Input {
-        @location(0) normal: vec4f,
-        @location(1) worldPos: vec3f,
-      }
-
       struct DirectionalLight {
         direction: vec3f,
         color: vec3f,
@@ -117,6 +112,11 @@ describe('simple shadow example', () => {
       }
 
       @group(0) @binding(3) var<uniform> paramsUniform: VisParams;
+
+      struct mainFrag_Input {
+        @location(0) normal: vec4f,
+        @location(1) worldPos: vec3f,
+      }
 
       @fragment fn mainFrag(_arg_0: mainFrag_Input) -> @location(0) vec4f {
         let instanceInfo_1 = (&instanceInfo);

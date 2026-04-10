@@ -30,10 +30,6 @@ describe('xor dev centrifuge example', () => {
         return vertexMain_Output(vec4f(pos[_arg_vertexIndex], 0f, 1f), pos[_arg_vertexIndex]);
       }
 
-      struct fragmentMain_Input {
-        @location(0) uv: vec2f,
-      }
-
       struct Params {
         time: f32,
         aspectRatio: f32,
@@ -49,6 +45,10 @@ describe('xor dev centrifuge example', () => {
 
       fn safeTanh(v: vec3f) -> vec3f {
         return select(tanh(v), sign(v), (abs(v) > vec3f(10)));
+      }
+
+      struct fragmentMain_Input {
+        @location(0) uv: vec2f,
       }
 
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
