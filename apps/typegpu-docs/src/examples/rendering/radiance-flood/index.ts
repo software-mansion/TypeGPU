@@ -19,7 +19,7 @@ context.configure({
 const [width, height] = [canvas.width, canvas.height];
 
 // Scene texture + views.
-const sceneTexture = root['~unstable']
+const sceneTexture = root
   .createTexture({
     size: [width, height],
     format: 'rgba16float',
@@ -30,7 +30,7 @@ const sceneWriteView = sceneTexture.createView(d.textureStorage2d('rgba16float')
 const sceneSampledView = sceneTexture.createView();
 
 // Samplers.
-const linSampler = root['~unstable'].createSampler({
+const linSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -71,12 +71,12 @@ const drawCompute = root.createGuardedComputePipeline((x, y) => {
   const invDims = 1 / d.vec2f(dims);
 
   const uv = (d.vec2f(x, y) + 0.5) * invDims;
-  const uvA = d.vec2f(uv.x * aspectF, uv.y);
+  const uvA = uv * d.vec2f(aspectF, 1);
 
   const mouse = d.vec2f(params.mousePos.x * aspectF, params.mousePos.y);
   const last = d.vec2f(params.lastMousePos.x * aspectF, params.lastMousePos.y);
 
-  const noLast = std.any(std.lt(params.lastMousePos, d.vec2f()));
+  const noLast = std.any(std.lt(params.lastMousePos, d.vec2f(0)));
   const a = std.select(last, mouse, noLast);
 
   const dist = sdf.sdLine(uvA, a, mouse);
@@ -127,7 +127,7 @@ const radianceRunner = rc.createRadianceCascades({
   sdfResolution: floodSize,
   sdf: (uv) => {
     'use gpu';
-    if (std.any(std.lt(uv, d.vec2f(0))) || std.any(std.gt(uv, d.vec2f(1)))) {
+    if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) {
       return 1;
     }
     return std.textureSampleLevel(floodSdfView.$, linSampler.$, uv, 0).x;
@@ -153,7 +153,7 @@ const displayFragment = tgpu.fragmentFn({
     if (sdfDist < 0) {
       // on surface, show seed color
       const seedColor = std.textureSampleLevel(floodColorView.$, linSampler.$, uv, 0);
-      result = d.vec4f(seedColor.xyz, 1.0);
+      result = d.vec4f(seedColor.xyz, 1);
     } else {
       // sample radiance
       result = std.textureSampleLevel(radianceRes.$, linSampler.$, uv, 0);
@@ -162,17 +162,17 @@ const displayFragment = tgpu.fragmentFn({
     const signedDist = std.textureSampleLevel(floodSdfView.$, linSampler.$, uv, 0).x;
     const absDist = std.abs(signedDist);
 
-    const normalizedDist = std.clamp(absDist * 2.0, 0.0, 1.0) ** 0.8;
+    const normalizedDist = std.clamp(absDist * 2, 0, 1) ** 0.8;
 
-    const isInside = signedDist < 0.0;
+    const isInside = signedDist < 0;
 
     const distColor = std.select(
-      d.vec3f(normalizedDist, 0.0, 0.0),
-      d.vec3f(0.0, 0.0, normalizedDist),
+      d.vec3f(normalizedDist, 0, 0),
+      d.vec3f(0, 0, normalizedDist),
       isInside,
     );
 
-    result = d.vec4f(distColor, 1.0);
+    result = d.vec4f(distColor, 1);
   }
 
   return result;

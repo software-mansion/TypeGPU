@@ -93,7 +93,7 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
   // Create or use provided output texture
   const dst = hasOutputProvided
     ? output
-    : root['~unstable']
+    : root
         .createTexture({
           size: [outputWidth, outputHeight],
           format: 'rgba16float',
@@ -141,44 +141,41 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
     );
   }
 
-  const cascadeTextureA = root['~unstable']
+  const cascadeTextureA = root
     .createTexture({
       size: [cascadeDimX, cascadeDimY, cascadeAmount],
       format: 'rgba16float',
     })
     .$usage('storage', 'sampled');
 
-  const cascadeTextureB = root['~unstable']
+  const cascadeTextureB = root
     .createTexture({
       size: [cascadeDimX, cascadeDimY, cascadeAmount],
       format: 'rgba16float',
     })
     .$usage('storage', 'sampled');
 
-  const cascadeSampler = root['~unstable'].createSampler({
+  const cascadeSampler = root.createSampler({
     magFilter: 'linear',
     minFilter: 'linear',
-    addressModeU: 'clamp-to-edge',
-    addressModeV: 'clamp-to-edge',
   });
 
   const staticParamsBuffer = root
     .createBuffer(CascadeStaticParams, {
-      baseProbes: d.vec2u(cascadeProbesX, cascadeProbesY),
-      cascadeDim: d.vec2u(cascadeDimX, cascadeDimY),
+      baseProbes: [cascadeProbesX, cascadeProbesY],
+      cascadeDim: [cascadeDimX, cascadeDimY],
       cascadeCount: cascadeAmount,
     })
     .$usage('uniform');
 
   const layerBuffer = root.createBuffer(d.u32).$usage('uniform');
 
-  const cascadePassPipeline = root['~unstable']
+  const cascadePassPipeline = root
     .with(sdfResolutionSlot, d.vec2u(sdfResolution.width, sdfResolution.height))
     .with(sdfSlot, sdf)
     .with(colorSlot, color)
     .with(rayMarchSlot, rayMarch ?? defaultRayMarch)
-    .withCompute(cascadePassCompute)
-    .createPipeline();
+    .createComputePipeline({ compute: cascadePassCompute });
 
   const cascadePassBindGroups = Array.from({ length: cascadeAmount }, (_, layer) => {
     const writeToA = (cascadeAmount - 1 - layer) % 2 === 0;
@@ -193,32 +190,26 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
         arrayLayerCount: 1,
       }),
       upperSampler: cascadeSampler,
-      dst: dstTexture.createView(d.textureStorage2d('rgba16float', 'write-only'), {
+      dst: dstTexture.createView(d.textureStorage2d('rgba16float'), {
         baseArrayLayer: layer,
         arrayLayerCount: 1,
       }),
     });
   });
 
-  const buildRadianceFieldPipeline = root['~unstable']
-    .withCompute(buildRadianceFieldCompute)
-    .createPipeline();
+  const buildRadianceFieldPipeline = root.createComputePipeline({
+    compute: buildRadianceFieldCompute,
+  });
 
   const radianceFieldParamsBuffer = root
     .createBuffer(BuildRadianceFieldParams, {
-      outputProbes: d.vec2u(outputWidth, outputHeight),
-      cascadeProbes: d.vec2u(cascadeProbesX, cascadeProbesY),
+      outputProbes: [outputWidth, outputHeight],
+      cascadeProbes: [cascadeProbesX, cascadeProbesY],
     })
     .$usage('uniform');
 
   const cascade0InA = (cascadeAmount - 1) % 2 === 0;
   const srcCascadeTexture = cascade0InA ? cascadeTextureA : cascadeTextureB;
-
-  const dstView = isTexture(dst)
-    ? (
-        dst as TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> & StorageFlag
-      ).createView(d.textureStorage2d('rgba16float', 'write-only'))
-    : dst;
 
   const buildRadianceFieldBG = root.createBindGroup(buildRadianceFieldBGL, {
     params: radianceFieldParamsBuffer,
@@ -227,7 +218,7 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
       arrayLayerCount: 1,
     }),
     srcSampler: cascadeSampler,
-    dst: dstView,
+    dst,
   });
 
   const cascadeWorkgroupsX = Math.ceil(cascadeDimX / 8);

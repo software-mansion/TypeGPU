@@ -62,7 +62,7 @@ export const defaultRayMarch = tgpu.fn(
     if (t > endT) {
       break;
     }
-    const pos = probePos.add(rayDir.mul(t));
+    const pos = probePos + rayDir * t;
     if (std.any(std.lt(pos, d.vec2f(0))) || std.any(std.gt(pos, d.vec2f(1)))) {
       break;
     }
@@ -95,29 +95,30 @@ export const CascadeStaticParams = d.struct({
 export const cascadePassBGL = tgpu.bindGroupLayout({
   staticParams: { uniform: CascadeStaticParams },
   layer: { uniform: d.u32 },
-  upper: { texture: d.texture2d(d.f32) },
+  upper: { texture: d.texture2d() },
   upperSampler: { sampler: 'filtering' },
-  dst: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
+  dst: { storageTexture: d.textureStorage2d('rgba16float') },
 });
 
-export const cascadePassCompute = tgpu['~unstable'].computeFn({
+export const cascadePassCompute = tgpu.computeFn({
   workgroupSize: [8, 8],
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
+  'use gpu';
   const dim2 = std.textureDimensions(cascadePassBGL.$.dst);
-  if (std.any(std.ge(gid.xy, dim2))) {
+  if (gid.x >= dim2.x || gid.y >= dim2.y) {
     return;
   }
 
   const params = cascadePassBGL.$.staticParams;
   const layer = cascadePassBGL.$.layer;
-  const probes = d.vec2u(
-    std.max(params.baseProbes.x >> layer, d.u32(1)),
-    std.max(params.baseProbes.y >> layer, d.u32(1)),
+  const probes = std.max(
+    d.vec2u(params.baseProbes.x >> layer, params.baseProbes.y >> layer),
+    d.vec2u(1, 1),
   );
 
-  const dirStored = gid.xy.div(probes);
-  const probe = std.mod(gid.xy, probes);
+  const dirStored = gid.xy / probes;
+  const probe = gid.xy % probes;
   const raysDimStored = d.u32(2) << layer;
   const raysDimActual = raysDimStored * 2;
   const rayCountActual = d.f32(raysDimActual) ** 2;
@@ -127,16 +128,17 @@ export const cascadePassCompute = tgpu['~unstable'].computeFn({
     return;
   }
 
-  const probePos = d.vec2f(probe).add(0.5).div(d.vec2f(probes));
-  const aspect = d.f32(params.baseProbes.x) / d.f32(params.baseProbes.y);
+  // const probePos = d.vec2f(probe).add(0.5).div(d.vec2f(probes));
+  const probePos = (d.vec2f(probe) + 0.5) / d.vec2f(probes);
+  const aspect = params.baseProbes.x / params.baseProbes.y;
   const cascadeProbesMinVal = d.f32(std.min(params.baseProbes.x, params.baseProbes.y));
-  const interval0 = 1.0 / cascadeProbesMinVal;
-  const pow4 = d.f32(d.u32(1) << (layer * d.u32(2)));
-  const startUv = (interval0 * (pow4 - 1.0)) / 3.0;
+  const interval0 = 1 / cascadeProbesMinVal;
+  const pow4 = d.f32(d.u32(1) << (layer * 2));
+  const startUv = (interval0 * (pow4 - 1)) / 3;
   const endUv = startUv + interval0 * pow4;
 
   const sdfDim = sdfResolutionSlot.$;
-  const texelSizeMin = 1.0 / d.f32(std.max(std.min(sdfDim.x, sdfDim.y), d.u32(1)));
+  const texelSizeMin = 1.0 / d.f32(std.max(std.min(sdfDim.x, sdfDim.y), 1));
   // Use texel size as minimum threshold to avoid sub-texel stepping
   const eps = std.max(texelSizeMin, 0.25 / cascadeProbesMinVal);
   const minStep = std.max(texelSizeMin * 0.5, 0.125 / cascadeProbesMinVal);
@@ -145,15 +147,13 @@ export const cascadePassCompute = tgpu['~unstable'].computeFn({
   let accum = d.vec4f();
 
   for (let i = 0; i < 4; i++) {
-    const dirActual = dirStored
-      .mul(d.u32(2))
-      .add(d.vec2u(d.u32(i) & d.u32(1), d.u32(i) >> d.u32(1)));
+    const dirActual = dirStored * 2 + d.vec2u(i & 1, i >> 1);
     const rayIndex = d.f32(dirActual.y * raysDimActual + dirActual.x) + 0.5;
-    const angle = (rayIndex / d.f32(rayCountActual)) * (Math.PI * 2) - Math.PI;
+    const angle = (rayIndex / rayCountActual) * (Math.PI * 2) - Math.PI;
     const cosA = std.cos(angle);
     const sinA = -std.sin(angle);
     let rayDir = d.vec2f(cosA, sinA);
-    if (aspect >= d.f32(1)) {
+    if (aspect >= 1) {
       rayDir = d.vec2f(cosA / aspect, sinA);
     } else {
       rayDir = d.vec2f(cosA, sinA * aspect);
@@ -163,18 +163,15 @@ export const cascadePassCompute = tgpu['~unstable'].computeFn({
     let rgb = d.vec3f(marchResult.color);
     let T = d.f32(marchResult.transmittance);
 
-    if (layer < d.u32(params.cascadeCount - 1) && T > 0.01) {
-      const probesU = d.vec2u(
-        std.max(probes.x >> d.u32(1), d.u32(1)),
-        std.max(probes.y >> d.u32(1), d.u32(1)),
-      );
-      const tileOrigin = d.vec2f(dirActual).mul(d.vec2f(probesU));
+    if (layer < params.cascadeCount - 1 && T > 0.01) {
+      const probesU = std.max(d.vec2u(probes.x >> 1, probes.y >> 1), d.vec2u(1));
+      const tileOrigin = d.vec2f(dirActual) * d.vec2f(probesU);
       const probePixel = std.clamp(
-        probePos.mul(d.vec2f(probesU)),
+        probePos * d.vec2f(probesU),
         d.vec2f(0.5),
-        d.vec2f(probesU).sub(0.5),
+        d.vec2f(probesU) - 0.5,
       );
-      const uvU = tileOrigin.add(probePixel).div(d.vec2f(dim2));
+      const uvU = (tileOrigin + probePixel) / d.vec2f(dim2);
 
       const upper = std.textureSampleLevel(
         cascadePassBGL.$.upper,
@@ -182,14 +179,14 @@ export const cascadePassCompute = tgpu['~unstable'].computeFn({
         uvU,
         0,
       );
-      rgb = rgb.add(upper.xyz.mul(T));
+      rgb = rgb + upper.xyz * T;
       T *= upper.w;
     }
 
-    accum = accum.add(d.vec4f(rgb, T));
+    accum += d.vec4f(rgb, T);
   }
 
-  std.textureStore(cascadePassBGL.$.dst, gid.xy, accum.mul(0.25));
+  std.textureStore(cascadePassBGL.$.dst, gid.xy, accum * 0.25);
 });
 
 export const BuildRadianceFieldParams = d.struct({
@@ -199,48 +196,49 @@ export const BuildRadianceFieldParams = d.struct({
 
 export const buildRadianceFieldBGL = tgpu.bindGroupLayout({
   params: { uniform: BuildRadianceFieldParams },
-  src: { texture: d.texture2d(d.f32) },
+  src: { texture: d.texture2d() },
   srcSampler: { sampler: 'filtering' },
-  dst: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
+  dst: { storageTexture: d.textureStorage2d('rgba16float') },
 });
 
-export const buildRadianceFieldCompute = tgpu['~unstable'].computeFn({
+export const buildRadianceFieldCompute = tgpu.computeFn({
   workgroupSize: [8, 8],
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
+  'use gpu';
   const dim2 = std.textureDimensions(buildRadianceFieldBGL.$.dst);
-  if (std.any(std.ge(gid.xy, dim2))) {
+  if (gid.x >= dim2.x || gid.y >= dim2.y) {
     return;
   }
 
   const params = buildRadianceFieldBGL.$.params;
-  const cascadeDim = params.cascadeProbes.mul(2);
+  const cascadeDim = params.cascadeProbes * 2;
 
-  const invCascadeDim = d.vec2f(1.0).div(d.vec2f(cascadeDim));
-  const uv = d.vec2f(gid.xy).add(0.5).div(d.vec2f(params.outputProbes));
+  const invCascadeDim = 1 / d.vec2f(cascadeDim);
+  const uv = (d.vec2f(gid.xy) + 0.5) / d.vec2f(params.outputProbes);
 
   const probePixel = std.clamp(
-    uv.mul(d.vec2f(params.cascadeProbes)),
+    uv * d.vec2f(params.cascadeProbes),
     d.vec2f(0.5),
-    d.vec2f(params.cascadeProbes).sub(0.5),
+    d.vec2f(params.cascadeProbes) - 0.5,
   );
 
-  const uvStride = d.vec2f(params.cascadeProbes).mul(invCascadeDim);
-  const baseSampleUV = probePixel.mul(invCascadeDim);
+  const uvStride = d.vec2f(params.cascadeProbes) * invCascadeDim;
+  const baseSampleUV = probePixel * invCascadeDim;
 
   let sum = d.vec3f();
   for (let i = d.u32(0); i < 4; i++) {
-    const offset = d.vec2f(d.f32(i & 1), d.f32(i >> 1)).mul(uvStride);
+    const offset = d.vec2f(i & 1, i >> 1) * uvStride;
     const sample = std.textureSampleLevel(
       buildRadianceFieldBGL.$.src,
       buildRadianceFieldBGL.$.srcSampler,
-      baseSampleUV.add(offset),
+      baseSampleUV + offset,
       0,
     );
-    sum = sum.add(sample.xyz);
+    sum = sum + sample.xyz;
   }
 
-  const avg = sum.mul(0.25);
+  const avg = sum * 0.25;
   const res = d.vec3f(avg);
 
   std.textureStore(buildRadianceFieldBGL.$.dst, gid.xy, d.vec4f(res, 1));
