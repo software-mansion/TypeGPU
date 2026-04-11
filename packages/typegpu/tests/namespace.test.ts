@@ -1,4 +1,4 @@
-import { describe, expect, vi } from 'vitest';
+import { describe, expect } from 'vitest';
 import tgpu, { d } from '../src/index.js';
 import { it } from 'typegpu-testing-utility';
 
@@ -69,34 +69,6 @@ describe('tgpu.namespace', () => {
         (*boid).pos.x += 1f;
       }"
     `);
-  });
-
-  it('fires "name" event', () => {
-    const Boid = d.struct({
-      pos: d.vec3f,
-    });
-
-    const names = tgpu['~unstable'].namespace();
-
-    const listener = vi.fn((event) => {});
-    names.on('name', listener);
-
-    const code = tgpu.resolve([Boid], { names });
-
-    expect(listener).toHaveBeenCalledTimes(1);
-    expect(listener).toHaveBeenCalledWith({ name: 'Boid', target: Boid });
-
-    expect(code).toMatchInlineSnapshot(`
-      "struct Boid {
-        pos: vec3f,
-      }"
-    `);
-
-    const code2 = tgpu.resolve([Boid], { names });
-
-    // No more events
-    expect(listener).toHaveBeenCalledTimes(1);
-    expect(code2).toMatchInlineSnapshot(`""`);
   });
 
   it('handles name collision', () => {

@@ -566,7 +566,7 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('throws error when "for ... of ..." loop variable name is not correct in wgsl', () => {
+  it('renames "for ... of ..." loop variable name when it is not correct in WGSL', () => {
     const main = () => {
       'use gpu';
       const arr = [1, 2, 3];
@@ -575,11 +575,16 @@ describe('wgslGenerator', () => {
       }
     };
 
-    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:main
-      - fn*:main(): Invalid identifier '__foo'. Choose an identifier without whitespaces or leading underscores.]
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() {
+        var arr = array<i32, 3>(1, 2, 3);
+        for (var i = 0u; i < 3u; i += 1u) {
+          let item = arr[i];
+          {
+            continue;
+          }
+        }
+      }"
     `);
   });
 
@@ -1166,24 +1171,24 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('throws when an identifier starts with underscores', () => {
+  it('assigns a different name when an identifier starts with underscores', () => {
     const main1 = tgpu.fn([])(() => {
       const _ = 1;
     });
 
     const main2 = tgpu.fn([])(() => {
-      const __my_var = 1;
+      const __my_var = 2;
     });
 
-    expect(() => tgpu.resolve([main1])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn:main1: Invalid identifier '_'. Choose an identifier without whitespaces or leading underscores.]
+    expect(tgpu.resolve([main1])).toMatchInlineSnapshot(`
+      "fn main1() {
+        const item = 1;
+      }"
     `);
-    expect(() => tgpu.resolve([main2])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn:main2: Invalid identifier '__my_var'. Choose an identifier without whitespaces or leading underscores.]
+    expect(tgpu.resolve([main2])).toMatchInlineSnapshot(`
+      "fn main2() {
+        const item = 2;
+      }"
     `);
   });
 

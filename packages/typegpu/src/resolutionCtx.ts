@@ -1,5 +1,5 @@
 import { isTgpuFn } from './core/function/tgpuFn.ts';
-import { getUniqueName, type Namespace, type NamespaceInternal } from './core/resolve/namespace.ts';
+import type { Namespace, NamespaceInternal } from './core/resolve/namespace.ts';
 import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
 import type { Configurable, ExperimentalTgpuRoot } from './core/root/rootTypes.ts';
@@ -37,6 +37,7 @@ import { coerceToSnippet, concretize, numericLiteralToSnippet } from './tgsl/gen
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 import wgslGenerator from './tgsl/wgslGenerator.ts';
 import type {
+  BlockScopeLayer,
   ExecMode,
   ExecState,
   FnToWgslOptions,
@@ -59,6 +60,7 @@ import type { IOData } from './core/function/fnTypes.ts';
 import { AutoStruct } from './data/autoStruct.ts';
 import { EntryInputRouter } from './core/function/entryInputRouter.ts';
 import type { FunctionArgument } from './tgsl/shaderGenerator_members.ts';
+import { validateIdentifier, sanitizePrimer } from './nameUtils.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -99,6 +101,10 @@ class ItemStateStackImpl implements ItemStateStack {
     return this._stack.findLast((e) => e.type === 'functionScope');
   }
 
+  get topBlockScope(): BlockScopeLayer | undefined {
+    return this._stack.findLast((e) => e.type === 'blockScope');
+  }
+
   pushItem() {
     this._itemDepth++;
     this._stack.push({
@@ -136,6 +142,7 @@ class ItemStateStackImpl implements ItemStateStack {
   pushBlockScope() {
     this._stack.push({
       type: 'blockScope',
+      takenLocalIdentifiers: new Set(),
       declarations: new Map(),
       externals: new Map(),
     });
@@ -211,6 +218,26 @@ class ItemStateStackImpl implements ItemStateStack {
     }
 
     return undefined;
+  }
+
+  isIdentifierTakenLocally(id: string): boolean {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+
+      if (layer?.type === 'functionScope') {
+        // Since functions cannot access resources from the calling scope, we
+        // return early here.
+        return false;
+      }
+
+      if (layer?.type === 'blockScope') {
+        if (layer.takenLocalIdentifiers.has(id)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   defineBlockVariable(id: string, snippet: Snippet): void {
@@ -375,6 +402,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public readonly enableExtensions: WgslExtension[] | undefined;
   public expectedType: BaseData | undefined;
 
+  /**
+   * A counter used to generate unique identifiers for globally-scoped definitions in the 'random' strategy.
+   */
+  #lastUniqueId = 0;
+
   constructor(opts: ResolutionCtxImplOptions) {
     this.enableExtensions = opts.enableExtensions;
     this.gen = opts.shaderGenerator ?? wgslGenerator;
@@ -382,12 +414,46 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.#namespaceInternal = opts.namespace[$internal];
   }
 
-  getUniqueName(resource: object): string {
-    return getUniqueName(this.#namespaceInternal, resource);
+  isIdentifierTaken(name: string): boolean {
+    return (
+      this.#namespaceInternal.takenGlobalIdentifiers.has(name) ||
+      this._itemStateStack.isIdentifierTakenLocally(name)
+    );
   }
 
-  makeNameValid(name: string): string {
-    return this.#namespaceInternal.nameRegistry.makeValid(name);
+  makeUniqueIdentifier(primer: string = 'item', scope: 'global' | 'block'): string {
+    if (
+      scope === 'block' &&
+      validateIdentifier(primer).success &&
+      !this.isIdentifierTaken(primer)
+    ) {
+      // Preserving local definitions as they are, provided they are valid and not already taken.
+      this.reserveIdentifier(primer, 'block');
+      return primer;
+    }
+
+    const base = sanitizePrimer(primer);
+    let index = 0;
+    const random = this.#namespaceInternal.strategy === 'random';
+    let name = random ? `${base}_${this.#lastUniqueId++}` : base;
+    while (this.isIdentifierTaken(name)) {
+      name = random ? `${base}_${this.#lastUniqueId++}` : `${base}_${++index}`;
+    }
+
+    this.reserveIdentifier(name, scope);
+    return name;
+  }
+
+  reserveIdentifier(name: string, scope: 'global' | 'block'): void {
+    if (scope === 'block') {
+      const blockScope = this._itemStateStack.topBlockScope;
+      if (blockScope) {
+        blockScope.takenLocalIdentifiers.add(name);
+        return;
+      }
+      // Fall through if no block scope is present, treating as global.
+    }
+    this.#namespaceInternal.takenGlobalIdentifiers.add(name);
   }
 
   get pre(): string {
@@ -441,12 +507,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   pushBlockScope() {
-    this.#namespaceInternal.nameRegistry.pushBlockScope();
     this._itemStateStack.pushBlockScope();
   }
 
   popBlockScope() {
-    this.#namespaceInternal.nameRegistry.popBlockScope();
     this._itemStateStack.pop('blockScope');
   }
 
@@ -467,19 +531,24 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   fnToWgsl(options: FnToWgslOptions): { code: string; returnType: BaseData } {
-    let fnScopePushed = false;
-
     try {
-      this.#namespaceInternal.nameRegistry.pushFunctionScope();
+      const scope = this._itemStateStack.pushFunctionScope(
+        options.functionType,
+        {},
+        options.returnType,
+        options.externalMap,
+      );
+      // Pushing a block scope as well, so that any identifiers declared at this point will be scoped to the function body.
+      this._itemStateStack.pushBlockScope();
+
       const args: FunctionArgument[] = [];
-      const argAccess: Record<string, FunctionArgumentAccess> = {};
 
       if (options.entryInput) {
         const { dataSchema, positionalArgs } = options.entryInput;
         const firstParam = options.params[0];
 
         const structArg = dataSchema
-          ? createArgument(this.makeNameValid('_arg_0'), dataSchema)
+          ? createArgument(this.makeUniqueIdentifier('_arg_0', 'block'), dataSchema)
           : undefined;
 
         if (structArg) {
@@ -491,31 +560,31 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           for (const { name, alias } of firstParam.props) {
             const argInfo = positionalArgs.find((a) => a.schemaKey === name);
             if (argInfo) {
-              const arg = createArgument(this.makeNameValid(alias), argInfo.type);
+              const arg = createArgument(this.makeUniqueIdentifier(alias, 'block'), argInfo.type);
               args.push(arg);
-              argAccess[alias] = arg.access;
+              scope.argAccess[alias] = arg.access;
             } else if (structArg) {
-              argAccess[alias] = createArgumentPropAccess(structArg.access, name);
+              scope.argAccess[alias] = createArgumentPropAccess(structArg.access, name);
             }
           }
         } else if (firstParam?.type === FuncParameterType.identifier) {
           // Create named arg snippets, then a proxy for property access routing.
           const proxyEntries: Array<{ schemaKey: string; arg: FunctionArgumentAccess }> = [];
           for (const a of positionalArgs) {
-            const argName = this.makeNameValid(`_arg_${a.schemaKey}`);
+            const argName = this.makeUniqueIdentifier(`_arg_${a.schemaKey}`, 'block');
             const arg = createArgument(argName, a.type);
             args.push(arg);
             proxyEntries.push({ schemaKey: a.schemaKey, arg: arg.access });
           }
           const router = new EntryInputRouter(structArg?.access, proxyEntries);
-          argAccess[firstParam.name] = () => snip('N/A', router, 'argument');
+          scope.argAccess[firstParam.name] = () => snip('N/A', router, 'argument');
         } else {
           // No first param: push positional args with schema key names.
           for (const a of positionalArgs) {
-            const argName = this.makeNameValid(`_arg_${a.schemaKey}`);
+            const argName = this.makeUniqueIdentifier(`_arg_${a.schemaKey}`, 'block');
             const arg = createArgument(argName, a.type);
             args.push(arg);
-            argAccess[argName] = arg.access;
+            scope.argAccess[argName] = arg.access;
           }
         }
       } else {
@@ -538,16 +607,24 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
           switch (astParam?.type) {
             case FuncParameterType.identifier: {
-              const arg = createArgument(this.makeNameValid(astParam.name), argType, origin);
+              const arg = createArgument(
+                this.makeUniqueIdentifier(astParam.name, 'block'),
+                argType,
+                origin,
+              );
               args.push(arg);
-              argAccess[astParam.name] = arg.access;
+              scope.argAccess[astParam.name] = arg.access;
               break;
             }
             case FuncParameterType.destructuredObject: {
-              const objArg = createArgument(this.makeNameValid(`_arg_${i}`), argType, origin);
+              const objArg = createArgument(
+                this.makeUniqueIdentifier(`_arg_${i}`, 'block'),
+                argType,
+                origin,
+              );
               args.push(objArg);
               for (const { name, alias } of astParam.props) {
-                argAccess[alias] = createArgumentPropAccess(objArg.access, name);
+                scope.argAccess[alias] = createArgumentPropAccess(objArg.access, name);
               }
               break;
             }
@@ -557,7 +634,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
               // have any properties anyway.
               if (!(argType instanceof AutoStruct)) {
                 args.push({
-                  name: this.makeNameValid(`_arg_${i}`),
+                  name: this.makeUniqueIdentifier(`_arg_${i}`, 'block'),
                   access: () => {
                     throw new Error(
                       `Unreachable: Accessing an argument that wasn't named in the function signature`,
@@ -571,14 +648,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           }
         }
       }
-
-      const scope = this._itemStateStack.pushFunctionScope(
-        options.functionType,
-        argAccess,
-        options.returnType,
-        options.externalMap,
-      );
-      fnScopePushed = true;
 
       let returnType: BaseData | undefined;
 
@@ -642,10 +711,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         returnType,
       };
     } finally {
-      if (fnScopePushed) {
-        this._itemStateStack.pop('functionScope');
-      }
-      this.#namespaceInternal.nameRegistry.popFunctionScope();
+      this._itemStateStack.pop('blockScope');
+      this._itemStateStack.pop('functionScope');
     }
   }
 
