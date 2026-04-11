@@ -1,5 +1,5 @@
 import { createIoSchema } from '../core/function/ioSchema.ts';
-import { isValidProp } from '../nameRegistry.ts';
+import { isValidProp } from '../nameUtils.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $internal, $repr, $resolve } from '../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
