@@ -60,6 +60,7 @@
     "onlyBuiltDependencies": [
       "@rolldown/browser",
       "@tailwindcss/oxide",
+      "bun",
       "canvas",
       "esbuild",
       "msw",
