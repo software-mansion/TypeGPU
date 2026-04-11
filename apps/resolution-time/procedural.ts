@@ -12,7 +12,7 @@ interface ProcGenConfig {
 }
 
 // default config
-const SAMPLES = 10;
+const SAMPLES = 50;
 const config: ProcGenConfig & { samples: number } = {
   mainBranching: 2,
   branching: 2,
@@ -44,10 +44,6 @@ const state = tgpu.lazy(() => ({
 
 const instructions: TgpuComptime<() => () => void>[] = [];
 const LEAF_COUNT = 4;
-
-// TODO: replace it with number, when unroll supports that
-const getArrayForUnroll = tgpu.comptime((n: number) => Array.from({ length: n }));
-let branchingUnrollArray = getArrayForUnroll(config.branching);
 
 const choice = tgpu.comptime((): number => {
   if (state.$.stackDepth == config.maxDepth - 1 || rand() > config.recurseProb) {
@@ -156,7 +152,7 @@ const waveFn = tgpu.comptime(() => {
       v = d.vec2f(std.sin(v.x * Math.PI), std.cos(v.y * Math.PI));
       const _energy = std.dot(v, v);
 
-      for (const _i of tgpu.unroll(branchingUnrollArray)) {
+      for (const _i of tgpu.unroll(std.range(config.branching))) {
         // @ts-expect-error trust me
         instructions[choice()]()();
       }
@@ -176,7 +172,7 @@ const accFn = tgpu.comptime(() => {
       let acc = d.vec2f();
       acc = d.vec2f(acc.x + offset.x * scale, acc.y + offset.y * scale);
 
-      for (const _i of tgpu.unroll(branchingUnrollArray)) {
+      for (const _i of tgpu.unroll(std.range(config.branching))) {
         // @ts-expect-error trust me
         instructions[choice()]()();
       }
@@ -198,7 +194,7 @@ const rotateFn = tgpu.comptime(() => {
       const s = std.sin(angle);
       v = d.vec2f(v.x * c - v.y * s, v.x * s + v.y * c);
 
-      for (const _i of tgpu.unroll(branchingUnrollArray)) {
+      for (const _i of tgpu.unroll(std.range(config.branching))) {
         // @ts-expect-error trust me
         instructions[choice()]()();
       }
@@ -220,7 +216,7 @@ const spiralFn = tgpu.comptime(() => {
       const pos = d.vec2f(center.x + radius * std.cos(angle), center.y + radius * std.sin(angle));
       const _dist = std.length(pos);
 
-      for (const _i of tgpu.unroll(branchingUnrollArray)) {
+      for (const _i of tgpu.unroll(std.range(config.branching))) {
         // @ts-expect-error trust me
         instructions[choice()]()();
       }
@@ -236,7 +232,7 @@ instructions.push(baseFn, blendFn, thresholdFn, filterFn, waveFn, accFn, rotateF
 const main = () => {
   'use gpu';
 
-  for (const _i of tgpu.unroll(getArrayForUnroll(config.mainBranching))) {
+  for (const _i of tgpu.unroll(std.range(config.mainBranching))) {
     // @ts-expect-error trust me
     instructions[choice()]()();
   }
@@ -259,10 +255,15 @@ const outDir = resolve(import.meta.dirname ?? '.', '.');
 
 function runBenchmark(input: ProcGenConfig, output: BenchmarkResult[]) {
   Object.assign(config, { samples: input.samples ?? SAMPLES }, input);
-  branchingUnrollArray = getArrayForUnroll(config.branching);
 
+  // warmup
   for (let i = 0; i < config.samples; i++) {
     rand = splitmix32(config.seed);
+    benchmarkResolve();
+  }
+
+  for (let i = 0; i < config.samples; i++) {
+    rand = splitmix32((config.seed << i) | (config.seed >> (32 - i)));
     const result = benchmarkResolve();
     output.push(result);
     console.log(
@@ -272,21 +273,6 @@ function runBenchmark(input: ProcGenConfig, output: BenchmarkResult[]) {
     );
   }
 }
-
-function warmupJIT() {
-  runBenchmark(
-    {
-      mainBranching: 1,
-      branching: 1,
-      maxDepth: 1,
-      recurseProb: 0,
-      seed: 0.1882 * 2 ** 32,
-    },
-    [],
-  );
-}
-
-warmupJIT();
 
 const results: BenchmarkResult[] = [];
 const DEPTHS = Array.from({ length: 8 }, (_, i) => i + 1);

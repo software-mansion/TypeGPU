@@ -1,0 +1,176 @@
+name: Resolution time benchmark
+
+on:
+  pull_request:
+
+jobs:
+  resolution-time:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.27.0
+          run_install: false
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          path: pr-branch
+
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          path: target-branch
+          ref: ${{ github.base_ref }}
+
+      - name: Checkout latest release
+        uses: actions/checkout@v4
+        with:
+          path: release-branch
+          ref: release
+
+      - name: Copy resolution-time app to release checkout
+        run: |
+          if [ ! -d release-branch/apps/resolution-time ]; then
+            cp -r target-branch/apps/resolution-time release-branch/apps/resolution-time
+            echo "Copied resolution-time app from target branch to release checkout"
+          else
+            echo "resolution-time app already exists in release checkout"
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: 'pnpm'
+          cache-dependency-path: |
+            pr-branch/pnpm-lock.yaml
+            target-branch/pnpm-lock.yaml
+            release-branch/pnpm-lock.yaml
+
+      - name: Install dependencies (PR branch)
+        working-directory: pr-branch
+        run: pnpm install --frozen-lockfile && cd apps/resolution-time/node_modules/bun && node install.js
+
+      - name: Install dependencies (target branch)
+        working-directory: target-branch
+        run: pnpm install --frozen-lockfile && cd apps/resolution-time/node_modules/bun && node install.js
+
+      - name: Install dependencies (release branch)
+        working-directory: release-branch
+        run: pnpm install --no-frozen-lockfile && cd apps/resolution-time/node_modules/bun && node install.js
+
+      - name: Run benchmark (PR branch)
+        working-directory: pr-branch
+        run: pnpm --filter resolution-time resolution-time
+
+      - name: Run benchmark (target branch)
+        working-directory: target-branch
+        run: pnpm --filter resolution-time resolution-time
+
+      - name: Run benchmark (release branch)
+        working-directory: release-branch
+        run: pnpm --filter resolution-time resolution-time
+
+      - name: Generate chart (random)
+        run: |
+          node pr-branch/apps/resolution-time/generateChart.ts \
+            --input "PR:pr-branch/apps/resolution-time/results-random.json" \
+            --input "main:target-branch/apps/resolution-time/results-random.json" \
+            --input "release:release-branch/apps/resolution-time/results-random.json" \
+            --title "Random Branching" \
+            --xAxisTitle "max depth" \
+            --yAxisTitle "time (ms)" \
+            --output chart-random.md
+
+      - name: Generate chart (linear)
+        run: |
+          node pr-branch/apps/resolution-time/generateChart.ts \
+            --input "PR:pr-branch/apps/resolution-time/results-linear-recursion.json" \
+            --input "main:target-branch/apps/resolution-time/results-linear-recursion.json" \
+            --input "release:release-branch/apps/resolution-time/results-linear-recursion.json" \
+            --title "Linear Recursion" \
+            --xAxisTitle "max depth" \
+            --yAxisTitle "time (ms)" \
+            --output chart-linear.md
+
+      - name: Generate chart (max depth)
+        run: |
+          node pr-branch/apps/resolution-time/generateChart.ts \
+            --input "PR:pr-branch/apps/resolution-time/results-max-depth.json" \
+            --input "main:target-branch/apps/resolution-time/results-max-depth.json" \
+            --input "release:release-branch/apps/resolution-time/results-max-depth.json" \
+            --title "Full Tree" \
+            --xAxisTitle "max depth" \
+            --yAxisTitle "time (ms)" \
+            --output chart-max-depth.md
+
+      - name: Prepare comment
+        run: |
+          {
+            echo "## Resolution Time Benchmark"
+            echo ""
+            cat chart-random.md
+            echo ""
+            cat chart-linear.md
+            echo ""
+            cat chart-max-depth.md
+          } > comparison.md
+
+      - name: Comment PR with results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const comparison = fs.readFileSync('comparison.md', 'utf8');
+
+            const botCommentIdentifier = '<!-- resolution-time-bot-comment -->';
+
+            async function findBotComment(issueNumber) {
+              if (!issueNumber) return null;
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+              });
+              return comments.data.find((comment) =>
+                comment.body.includes(botCommentIdentifier)
+              );
+            }
+
+            async function createOrUpdateComment(issueNumber) {
+              if (!issueNumber) {
+                console.log('No issue number provided. Cannot post or update comment.');
+                return;
+              }
+
+              const existingComment = await findBotComment(issueNumber);
+              if (existingComment) {
+                await github.rest.issues.updateComment({
+                  ...context.repo,
+                  comment_id: existingComment.id,
+                  body: botCommentIdentifier + '\n' + comparison,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  ...context.repo,
+                  issue_number: issueNumber,
+                  body: botCommentIdentifier + '\n' + comparison,
+                });
+              }
+            }
+
+            const issueNumber = context.issue.number;
+            if (!issueNumber) {
+              console.log('No issue number found in context. Skipping comment.');
+            } else {
+              await createOrUpdateComment(issueNumber);
+            }
+            await core.summary
+              .addRaw(comparison)
+              .write();
