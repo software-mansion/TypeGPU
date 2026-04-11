@@ -37,7 +37,7 @@ export class TgpuExternalTextureImpl implements TgpuExternalTexture, SelfResolva
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.getUniqueName(this);
+    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const group = ctx.allocateLayoutEntry(this.#membership.layout);
 
     ctx.addDeclaration(
