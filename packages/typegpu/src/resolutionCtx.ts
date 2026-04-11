@@ -40,7 +40,7 @@ import type {
   BlockScopeLayer,
   ExecMode,
   ExecState,
-  FnToWgslOptions,
+  ResolveFunctionOptions,
   FunctionArgumentAccess,
   FunctionScopeLayer,
   ItemLayer,
@@ -526,7 +526,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this.#logGenerator.logResources;
   }
 
-  fnToWgsl(options: FnToWgslOptions): { code: string; returnType: BaseData } {
+  resolveFunction(options: ResolveFunctionOptions): { code: string; returnType: BaseData } {
     try {
       const scope = this._itemStateStack.pushFunctionScope(
         options.functionType,
@@ -649,6 +649,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       const code = this.gen.functionDefinition({
         functionType: options.functionType,
+        name: options.name,
+        workgroupSize: options.workgroupSize,
         args,
         body: options.body,
         determineReturnType: () => {
