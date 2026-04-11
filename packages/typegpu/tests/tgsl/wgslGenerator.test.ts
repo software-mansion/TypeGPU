@@ -1205,7 +1205,7 @@ describe('wgslGenerator', () => {
   });
 
   it('does not cause identifier clashes when renaming parameters', () => {
-    const main = tgpu.fn([d.u32, d.u32])((extern, extern_1) => { });
+    const main = tgpu.fn([d.u32, d.u32])((extern, extern_1) => {});
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main(extern_1: u32, extern_1_1: u32) {
