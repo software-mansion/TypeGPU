@@ -157,6 +157,35 @@ function operatorToType<
 const unaryOpCodeToCodegen = {
   '-': neg[$gpuCallable].call.bind(neg),
   void: () => snip(undefined, wgsl.Void, 'constant'),
+  '!': (ctx: GenerationCtx, [argExpr]: Snippet[]) => {
+    if (argExpr === undefined) {
+      throw new Error('The unary operator `!` expects 1 argument, but 0 were provided.');
+    }
+
+    if (isKnownAtComptime(argExpr)) {
+      return snip(!argExpr.value, bool, 'constant');
+    }
+
+    const { value, dataType } = argExpr;
+    const argStr = ctx.resolve(value, dataType).value;
+
+    if (wgsl.isBool(dataType)) {
+      return snip(`!${argStr}`, bool, 'runtime');
+    }
+    if (wgsl.isNumericSchema(dataType)) {
+      const resultStr = `!bool(${argStr})`;
+      const nanGuardedStr = // abstractFloat will be resolved as comptime
+        dataType.type === 'f32'
+          ? `(((bitcast<u32>(${argStr}) & 0x7fffffff) > 0x7f800000) || ${resultStr})`
+          : dataType.type === 'f16'
+            ? `(((bitcast<u32>(${argStr}) & 0x7fff) > 0x7c00) || ${resultStr})`
+            : resultStr;
+
+      return snip(nanGuardedStr, bool, 'runtime');
+    }
+
+    return snip(false, bool, 'constant');
+  },
 } satisfies Partial<Record<tinyest.UnaryOperator, (...args: never[]) => unknown>>;
 
 const binaryOpCodeToCodegen = {

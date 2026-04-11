@@ -1,5 +1,5 @@
 import * as tinyest from 'tinyest';
-import { beforeEach, describe, expect } from 'vitest';
+import { beforeEach, describe, expect, vi } from 'vitest';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
@@ -16,6 +16,7 @@ import { CodegenState } from '../../src/types.ts';
 import { it } from 'typegpu-testing-utility';
 import { ArrayExpression } from '../../src/tgsl/generationHelpers.ts';
 import { extractSnippetFromFn } from '../utils/parseResolved.ts';
+import { UnknownData } from '../../src/tgsl/shaderGenerator_members.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -2067,5 +2068,145 @@ describe('wgslGenerator', () => {
         }
       }"
     `);
+  });
+
+  it('handles unary operator `!` on boolean runtime-known operand', () => {
+    const testFn = tgpu.fn(
+      [d.bool],
+      d.bool,
+    )((b) => {
+      return !b;
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(b: bool) -> bool {
+          return !b;
+        }"
+      `);
+  });
+
+  it('handles unary operator `!` on numeric runtime-known operand', () => {
+    const testFn = tgpu.fn(
+      [d.i32],
+      d.bool,
+    )((n) => {
+      return !n;
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(n: i32) -> bool {
+          return !bool(n);
+        }"
+      `);
+  });
+
+  it('handles unary operator `!` on non-primitive values', ({ root }) => {
+    const buffer = root.createUniform(d.mat4x4f);
+    const testFn = tgpu.fn([d.vec3f, d.atomic(d.u32), d.ptrPrivate(d.u32)])((v, a, p) => {
+      const _b0 = !buffer;
+      const _b1 = !buffer.$;
+      const _b2 = !v;
+      const _b3 = !a;
+      const _b4 = !std.atomicLoad(a);
+      const _b5 = !p;
+      const _b6 = !p.$;
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> buffer: mat4x4f;
+
+      fn testFn(v: vec3f, a: atomic<u32>, p: ptr<private, u32>) {
+        const _b0 = false;
+        const _b1 = false;
+        const _b2 = false;
+        const _b3 = false;
+        let _b4 = !bool(atomicLoad(&a));
+        const _b5 = false;
+        let _b6 = !bool((*p));
+      }"
+    `);
+  });
+
+  it('handles unary operator `!` on numeric and boolean comptime-known operands', () => {
+    const getN = tgpu.comptime(() => 1882);
+
+    const f = () => {
+      'use gpu';
+      if (!(getN() === 7) || !getN()) {
+        return 1;
+      }
+      return -1;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          if ((true || false)) {
+            return 1;
+          }
+          return -1;
+        }"
+      `);
+  });
+
+  it('handles unary operator `!` on operands from slots and accessors', () => {
+    const Boid = d.struct({
+      pos: d.vec2f,
+      vel: d.vec2f,
+    });
+
+    const slot = tgpu.slot<d.Infer<typeof Boid>>({ pos: d.vec2f(), vel: d.vec2f() });
+    const accessor = tgpu.accessor(d.vec4u, d.vec4u(1, 8, 8, 2));
+
+    const f = () => {
+      'use gpu';
+      if (!!slot.$ && !!accessor.$) {
+        return 1;
+      }
+      return -1;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          if ((true && true)) {
+            return 1;
+          }
+          return -1;
+        }"
+      `);
+  });
+
+  it('handles chained unary operators `!`', () => {
+    const testFn = tgpu.fn(
+      [d.i32],
+      d.bool,
+    )((n) => {
+      // oxlint-disable-next-line
+      return !!!!!false || !!!n;
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(n: i32) -> bool {
+          return (true || !!!bool(n));
+        }"
+      `);
+  });
+
+  it('handles unary operator `!` on complex comptime-known operand', () => {
+    const slot = tgpu.slot<{ a?: number }>({});
+
+    const f = () => {
+      'use gpu';
+      // oxlint-disable-next-line
+      if (!!slot.$.a) {
+        return slot.$.a;
+      }
+      return 1929;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          return 1929;
+        }"
+      `);
   });
 });
