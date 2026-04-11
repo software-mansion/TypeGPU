@@ -277,13 +277,6 @@ describe('root.withVertex(...).withFragment(...)', () => {
           return vertexMain_Output(vec3f(), vec3f(), vec3f(), 0f, 0u, vec4f());
         }
 
-        struct fragmentMain_Input {
-          @location(3) baz3: u32,
-          @location(1) bar: vec3f,
-          @location(2) foo: vec3f,
-          @location(5) baz2: f32,
-        }
-
         @fragment fn fragmentMain() -> @location(0) vec4f {
           return vec4f();
         }"
@@ -1568,8 +1561,8 @@ describe('root.createRenderPipeline', () => {
       }
 
       struct VertexIn {
-        @builtin(vertex_index) vertexIndex: u32,
         @location(0) localPos: vec3f,
+        @builtin(vertex_index) vertexIndex: u32,
       }
 
       @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
@@ -1713,17 +1706,12 @@ describe('root.createRenderPipeline', () => {
                   "arrayStride": 16,
                   "attributes": [
                     {
-                      "format": "float32",
-                      "offset": 12,
-                      "shaderLocation": 0,
-                    },
-                    {
                       "format": "float32x3",
                       "offset": 0,
-                      "shaderLocation": 1,
+                      "shaderLocation": 0,
                     },
                   ],
-                  "stepMode": "instance",
+                  "stepMode": "vertex",
                 },
                 {
                   "arrayStride": 16,
@@ -1731,10 +1719,15 @@ describe('root.createRenderPipeline', () => {
                     {
                       "format": "float32x3",
                       "offset": 0,
+                      "shaderLocation": 1,
+                    },
+                    {
+                      "format": "float32",
+                      "offset": 12,
                       "shaderLocation": 2,
                     },
                   ],
-                  "stepMode": "vertex",
+                  "stepMode": "instance",
                 },
               ],
               "module": "mockShaderModule",
@@ -1751,10 +1744,10 @@ describe('root.createRenderPipeline', () => {
           {
             "destroy": [MockFunction],
             "getMappedRange": [MockFunction],
-            "label": "instanceBuffer",
+            "label": "vertexBuffer",
             "mapAsync": [MockFunction],
             "mapState": "unmapped",
-            "size": 16,
+            "size": 48,
             "unmap": [MockFunction],
             "usage": 44,
           },
@@ -1766,10 +1759,10 @@ describe('root.createRenderPipeline', () => {
           {
             "destroy": [MockFunction],
             "getMappedRange": [MockFunction],
-            "label": "vertexBuffer",
+            "label": "instanceBuffer",
             "mapAsync": [MockFunction],
             "mapState": "unmapped",
-            "size": 48,
+            "size": 16,
             "unmap": [MockFunction],
             "usage": 44,
           },

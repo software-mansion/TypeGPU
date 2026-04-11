@@ -31,7 +31,7 @@ export function createShelllessImpl(
   argTypes: BaseData[],
   implementation: (...args: never[]) => unknown,
 ): ShelllessImpl {
-  const core = createFnCore(implementation, '');
+  const core = createFnCore(implementation, 'normal');
 
   return {
     [$internal]: true,
