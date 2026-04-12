@@ -51,10 +51,14 @@
   "peerDependencies": {
     "react": "^19.0.0",
     "react-native": "*",
+    "react-native-wgpu": "*",
     "typegpu": "^0.10.2"
   },
   "peerDependenciesMeta": {
     "react-native": {
+      "optional": true
+    },
+    "react-native-wgpu": {
       "optional": true
     }
   }
