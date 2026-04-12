@@ -689,6 +689,9 @@ importers:
       react:
         specifier: ^19.0.0
         version: 19.1.0
+      react-native-wgpu:
+        specifier: '*'
+        version: 0.5.11(react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.1.0))(react@19.1.0)
     devDependencies:
       '@testing-library/dom':
         specifier: ^10.4.1
@@ -7664,6 +7667,19 @@ packages:
 
   react-is@18.3.1:
     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
+
+  react-native-wgpu@0.5.11:
+    resolution: {integrity: sha512-G2vj40rkFBTm1jl60PCm3XbmYD6krItVOI8y6sn6k5FLxCyx76kbOcRgM2gb/MhEucXDAfhNetZxpinvAyo1lw==}
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+      react-native-reanimated: '>=4.2.1'
+      react-native-worklets: '>=0.7.2'
+    peerDependenciesMeta:
+      react-native-reanimated:
+        optional: true
+      react-native-worklets:
+        optional: true
 
   react-native@0.84.1:
     resolution: {integrity: sha512-0PjxOyXRu3tZ8EobabxSukvhKje2HJbsZikR0U+pvS0pYZza2hXKjcSBiBdFN4h9D0S3v6a8kkrDK6WTRKMwzg==}
@@ -16953,6 +16969,11 @@ snapshots:
   react-is@17.0.2: {}
 
   react-is@18.3.1: {}
+
+  react-native-wgpu@0.5.11(react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.1.0))(react@19.1.0):
+    dependencies:
+      react: 19.1.0
+      react-native: 0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.1.0)
 
   react-native@0.84.1(@babel/core@7.29.0)(@react-native/metro-config@0.84.1(@babel/core@7.29.0))(@types/react@19.1.8)(react@19.1.0):
     dependencies:
