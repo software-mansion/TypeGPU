@@ -37,17 +37,13 @@ describe('global wind map example', () => {
         return normalize(vec2f(-(pos.y), pos.x));
       }
 
-      struct advectCompute_Input {
-        @builtin(global_invocation_id) globalInvocationId: vec3u,
-      }
-
-      @compute @workgroup_size(64) fn advectCompute(_arg_0: advectCompute_Input) {
+      @compute @workgroup_size(64) fn advectCompute(@builtin(global_invocation_id) globalInvocationId: vec3u) {
         let stepSize = uniforms.stepSize;
-        let frameCount2 = uniforms.frameCount;
-        let particleIndex = _arg_0.globalInvocationId.x;
+        let frameCount = uniforms.frameCount;
+        let particleIndex = globalInvocationId.x;
         let particle = (&particles[particleIndex]);
-        let currentPosIndex = (frameCount2 % 20u);
-        let prevPosIndex = (((20u + frameCount2) - 1u) % 20u);
+        let currentPosIndex = (frameCount % 20u);
+        let prevPosIndex = (((20u + frameCount) - 1u) % 20u);
         let pos = (&(*particle).positions[prevPosIndex]);
         var v0 = vectorField((*pos));
         var v1 = vectorField(((*pos) + (v0 * (0.5f * stepSize))));
@@ -309,16 +305,11 @@ describe('global wind map example', () => {
         return LineSegmentOutput(vertexPosition, w);
       }
 
-      struct mainVertex_Input {
-        @builtin(instance_index) instanceIndex: u32,
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      @vertex fn mainVertex(_arg_0: mainVertex_Input) -> mainVertex_Output {
-        let frameCount2 = uniforms.frameCount;
-        let particleIndex = u32((f32(_arg_0.instanceIndex) / 20f));
-        let trailIndexOriginal = (_arg_0.instanceIndex % 20u);
-        let currentPosIndex = (frameCount2 % 20u);
+      @vertex fn mainVertex(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) instanceIndex: u32) -> mainVertex_Output {
+        let frameCount = uniforms.frameCount;
+        let particleIndex = u32((f32(instanceIndex) / 20f));
+        let trailIndexOriginal = (instanceIndex % 20u);
+        let currentPosIndex = (frameCount % 20u);
         let trailIndex = (i32(((20u + currentPosIndex) - trailIndexOriginal)) % 20i);
         if ((trailIndexOriginal == 19u)) {
           return mainVertex_Output(vec4f(), vec2f(), 0f);
@@ -332,7 +323,7 @@ describe('global wind map example', () => {
         var B = LineControlPoint((*particle).positions[iB], lineWidth((f32((trailIndexOriginal + 1u)) / 19f)));
         var C = LineControlPoint((*particle).positions[iC], lineWidth((f32((trailIndexOriginal + 2u)) / 19f)));
         var D = LineControlPoint((*particle).positions[iD], lineWidth((f32((trailIndexOriginal + 3u)) / 19f)));
-        var result = lineSegmentVariableWidth(_arg_0.vertexIndex, A, B, C, D, 3u);
+        var result = lineSegmentVariableWidth(vertexIndex, A, B, C, D, 3u);
         return mainVertex_Output(vec4f(result.vertexPosition, 0f, 1f), result.vertexPosition, (f32(trailIndexOriginal) / 19f));
       }
 

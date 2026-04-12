@@ -254,60 +254,53 @@ describe('lines combinations example', () => {
         return LineSegmentOutput(vertexPosition, w);
       }
 
-      struct mainVertex_Input {
-        @builtin(instance_index) instanceIndex: u32,
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      @vertex fn mainVertex(_arg_0: mainVertex_Input) -> mainVertex_Output {
+      @vertex fn mainVertex(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) instanceIndex: u32) -> mainVertex_Output {
         let t = uniforms.time;
-        var A = item(_arg_0.instanceIndex, t);
-        var B = item((_arg_0.instanceIndex + 1u), t);
-        var C = item((_arg_0.instanceIndex + 2u), t);
-        var D = item((_arg_0.instanceIndex + 3u), t);
+        var A = item(instanceIndex, t);
+        var B = item((instanceIndex + 1u), t);
+        var C = item((instanceIndex + 2u), t);
+        var D = item((instanceIndex + 3u), t);
         if (((((A.radius < 0f) || (B.radius < 0f)) || (C.radius < 0f)) || (D.radius < 0f))) {
           return mainVertex_Output();
         }
-        var result = lineSegmentVariableWidth(_arg_0.vertexIndex, A, B, C, D, 6u);
-        return mainVertex_Output(vec4f((result.vertexPosition * result.w), 0f, result.w), result.vertexPosition, vec2f(0f, select(0f, 1f, (_arg_0.vertexIndex > 1u))), _arg_0.instanceIndex, _arg_0.vertexIndex, 0u);
+        var result = lineSegmentVariableWidth(vertexIndex, A, B, C, D, 6u);
+        return mainVertex_Output(vec4f((result.vertexPosition * result.w), 0f, result.w), result.vertexPosition, vec2f(0f, select(0f, 1f, (vertexIndex > 1u))), instanceIndex, vertexIndex, 0u);
       }
 
       struct mainFragment_Input {
         @location(2) @interpolate(flat) instanceIndex: u32,
         @location(3) @interpolate(flat) vertexIndex: u32,
         @location(4) @interpolate(flat) situationIndex: u32,
-        @builtin(front_facing) frontFacing: bool,
-        @builtin(position) screenPosition: vec4f,
         @location(0) position: vec2f,
         @location(1) uv: vec2f,
       }
 
-      @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
-        let fillType2 = uniforms.fillType;
+      @fragment fn mainFragment(_arg_0: mainFragment_Input, @builtin(front_facing) frontFacing: bool, @builtin(position) screenPosition: vec4f) -> @location(0) vec4f {
+        let fillType = uniforms.fillType;
         var color = vec3f();
         var colors = array<vec3f, 9>(vec3f(1, 0, 0), vec3f(0, 1, 0), vec3f(0, 0, 1), vec3f(1, 0, 1), vec3f(1, 1, 0), vec3f(0, 1, 1), vec3f(0.75, 0.25, 0.25), vec3f(0.25, 0.75, 0.25), vec3f(0.25, 0.25, 0.75));
-        if ((fillType2 == 1u)) {
+        if ((fillType == 1u)) {
           color = mix(vec3f(0.7699999809265137, 0.38999998569488525, 1), vec3f(0.10999999940395355, 0.4399999976158142, 0.9399999976158142), ((_arg_0.position.x * 0.5f) + 0.5f));
         }
-        if ((fillType2 == 2u)) {
+        if ((fillType == 2u)) {
           var t = cos((_arg_0.uv.y * 10f));
           t = clamp((t / fwidth(t)), 0f, 1f);
           color = mix(vec3f(0.7699999809265137, 0.38999998569488525, 1), vec3f(0.10999999940395355, 0.4399999976158142, 0.9399999976158142), t);
         }
-        if ((fillType2 == 3u)) {
+        if ((fillType == 3u)) {
           color = colors[(_arg_0.vertexIndex % 9u)];
         }
-        if ((fillType2 == 4u)) {
+        if ((fillType == 4u)) {
           color = colors[(_arg_0.instanceIndex % 9u)];
         }
-        if ((fillType2 == 5u)) {
+        if ((fillType == 5u)) {
           color = colors[(_arg_0.situationIndex % 9u)];
         }
         color = (color * (0.8f + (0.2f * smoothstep(1f, 0.5f, _arg_0.uv.y))));
-        if (_arg_0.frontFacing) {
+        if (frontFacing) {
           return vec4f(color, 0.5f);
         }
-        return vec4f(color, select(0f, 1f, (((u32(_arg_0.screenPosition.x) >> 3u) % 2u) != ((u32(_arg_0.screenPosition.y) >> 3u) % 2u))));
+        return vec4f(color, select(0f, 1f, (((u32(screenPosition.x) >> 3u) % 2u) != ((u32(screenPosition.y) >> 3u) % 2u))));
       }"
     `);
   });

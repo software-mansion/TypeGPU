@@ -71,16 +71,11 @@ describe('circles example', () => {
         @location(1) @interpolate(flat) instanceIndex: u32,
       }
 
-      struct mainVertexMaxArea_Input {
-        @builtin(instance_index) instanceIndex: u32,
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      @vertex fn mainVertexMaxArea(_arg_0: mainVertexMaxArea_Input) -> mainVertexMaxArea_Output {
-        let C = (&circles[_arg_0.instanceIndex]);
-        var unit = circle(_arg_0.vertexIndex);
+      @vertex fn mainVertexMaxArea(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) instanceIndex: u32) -> mainVertexMaxArea_Output {
+        let C = (&circles[instanceIndex]);
+        var unit = circle(vertexIndex);
         var pos = ((*C).position + (unit * (*C).radius));
-        return mainVertexMaxArea_Output(vec4f(pos, 0f, 1f), unit, _arg_0.instanceIndex);
+        return mainVertexMaxArea_Output(vec4f(pos, 0f, 1f), unit, instanceIndex);
       }
 
       struct mainFragment_Input {
