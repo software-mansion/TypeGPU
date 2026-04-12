@@ -35,6 +35,7 @@ export interface Resizer {
 
 export type UseResizerHook = () => Resizer;
 
+/*#__NO_SIDE_EFFECTS__*/
 export function createUseConfigureContextHook(useResizer: UseResizerHook) {
   return function useConfigureContext(
     options?: UseConfigureContextOptions,
