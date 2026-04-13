@@ -314,7 +314,7 @@ const resourceConstructors: string[] = [
  * Since it is mostly for debugging and clean WGSL generation,
  * some false positives and false negatives are admissible.
  */
-function containsResourceConstructorCall(node: babel.Node, state: PluginState) {
+function containsResourceConstructorCall(node: t.Node, state: PluginState) {
   if (node.type === 'CallExpression') {
     if (isShellImplementationCall(node, state)) {
       return true;
@@ -353,7 +353,7 @@ function containsResourceConstructorCall(node: babel.Node, state: PluginState) {
  * tryFindIdentifier('this.myBuffer'); // 'myBuffer'
  * tryFindIdentifier('[a, b]'); // undefined
  */
-function tryFindIdentifier(node: babel.Node): string | undefined {
+function tryFindIdentifier(node: t.Node): string | undefined {
   if (node.type === 'Identifier') {
     return node.name;
   }

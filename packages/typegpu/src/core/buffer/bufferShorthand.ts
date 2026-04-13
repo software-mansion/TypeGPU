@@ -2,7 +2,7 @@ import type { ResolvedSnippet } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import { getName, setName, type TgpuNamable } from '../../shared/meta.ts';
-import type { Infer, InferGPU, InferInput, InferPartial } from '../../shared/repr.ts';
+import type { Infer, InferGPU, InferInput, InferPatch, InferPartial } from '../../shared/repr.ts';
 import { $getNameForward, $gpuValueOf, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { BufferWriteOptions, TgpuBuffer, UniformFlag } from './buffer.ts';
@@ -17,7 +17,9 @@ interface TgpuBufferShorthandBase<TData extends BaseData> extends TgpuNamable {
 
   // Accessible on the CPU
   write(data: InferInput<TData>, options?: BufferWriteOptions): void;
+  /** @deprecated Use {@link patch} instead. */
   writePartial(data: InferPartial<TData>): void;
+  patch(data: InferPatch<TData>): void;
   read(): Promise<Infer<TData>>;
   // ---
 
@@ -112,8 +114,13 @@ export class TgpuBufferShorthandImpl<
     this.buffer.write(data, options);
   }
 
+  /** @deprecated Use {@link patch} instead. */
   writePartial(data: InferPartial<TData>): void {
     this.buffer.writePartial(data);
+  }
+
+  patch(data: InferPatch<TData>): void {
+    this.buffer.patch(data);
   }
 
   read(): Promise<Infer<TData>> {

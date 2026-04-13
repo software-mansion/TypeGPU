@@ -1,7 +1,7 @@
-import { BufferWriter } from 'typed-binary';
+import { BufferWriter, getSystemEndianness } from 'typed-binary';
 import { roundUp } from '../mathUtils.ts';
-import type { Infer, InferPartial } from '../shared/repr.ts';
 import { alignmentOf } from './alignmentOf.ts';
+import { getCompiledWriter } from './compiledIO.ts';
 import { writeData } from './dataIO.ts';
 import { isDisarray, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
@@ -11,53 +11,78 @@ import { isWgslArray, isWgslStruct } from './wgslTypes.ts';
 
 export interface WriteInstruction {
   data: Uint8Array<ArrayBuffer>;
+  gpuOffset: number;
 }
 
-export function getWriteInstructions<TData extends wgsl.BaseData>(
+/**
+ * Converts `{idx, value}[]` sparse arrays into `Record<number, T>` format.
+ */
+export function convertPartialToPatch(schema: wgsl.BaseData, data: unknown): unknown {
+  if (data === undefined || data === null) {
+    return data;
+  }
+
+  if (isWgslStruct(schema) || isUnstruct(schema)) {
+    const result: Record<string, unknown> = {};
+    const record = data as Record<string, unknown>;
+    for (const key of Object.keys(schema.propTypes)) {
+      const subSchema = schema.propTypes[key];
+      const value = record[key];
+      if (value !== undefined && subSchema) {
+        result[key] = convertPartialToPatch(subSchema, value);
+      }
+    }
+    return result;
+  }
+
+  if (isWgslArray(schema) || isDisarray(schema)) {
+    const arrSchema = schema as wgsl.WgslArray;
+    const result: Record<number, unknown> = {};
+    for (const { idx, value } of data as { idx: number; value: unknown }[]) {
+      result[idx] = convertPartialToPatch(arrSchema.elementType, value);
+    }
+    return result;
+  }
+
+  return data;
+}
+
+const isLittleEndian = getSystemEndianness() === 'little';
+
+interface Segment {
+  start: number;
+  end: number;
+  padding?: number | undefined;
+}
+
+export function getPatchInstructions<TData extends wgsl.BaseData>(
   schema: TData,
-  data: InferPartial<TData>,
+  data: unknown,
+  targetBuffer?: ArrayBuffer,
 ): WriteInstruction[] {
   const totalSize = sizeOf(schema);
   if (totalSize === 0 || data === undefined || data === null) {
     return [];
   }
 
-  const bigBuffer = new ArrayBuffer(totalSize);
-  const writer = new BufferWriter(bigBuffer);
+  const buf = targetBuffer ?? new ArrayBuffer(totalSize);
+  const writer = new BufferWriter(buf);
+  const compiledView = new DataView(buf);
 
-  const segments: Array<{
-    start: number;
-    end: number;
-    padding?: number | undefined;
-  }> = [];
+  const segments: Segment[] = [];
 
-  function gatherAndWrite<T extends wgsl.BaseData>(
-    node: T,
-    partialValue: InferPartial<T> | undefined,
-    offset: number,
-    padding?: number,
-  ) {
-    if (partialValue === undefined || partialValue === null) {
+  function collect(node: wgsl.BaseData, value: unknown, offset: number, padding?: number) {
+    if (value === undefined || value === null) {
       return;
     }
 
     if (isWgslStruct(node) || isUnstruct(node)) {
       const propOffsets = offsetsForProps(node);
-
       for (const [key, propOffset] of Object.entries(propOffsets)) {
+        const childValue = (value as Record<string, unknown>)[key];
         const subSchema = node.propTypes[key];
-        if (!subSchema) {
-          continue;
-        }
-
-        const childValue = partialValue[key as keyof typeof partialValue];
-        if (childValue !== undefined) {
-          gatherAndWrite(
-            subSchema,
-            childValue,
-            offset + propOffset.offset,
-            propOffset.padding ?? padding,
-          );
+        if (childValue !== undefined && subSchema) {
+          collect(subSchema, childValue, offset + propOffset.offset, propOffset.padding ?? padding);
         }
       }
       return;
@@ -69,63 +94,69 @@ export function getWriteInstructions<TData extends wgsl.BaseData>(
         sizeOf(arrSchema.elementType),
         alignmentOf(arrSchema.elementType),
       );
+      const elementPadding = elementSize - sizeOf(arrSchema.elementType);
 
-      if (!Array.isArray(partialValue)) {
-        throw new Error('Partial value for array must be an array');
-      }
-      const arrayPartialValue = (partialValue as InferPartial<wgsl.WgslArray>) ?? [];
-
-      arrayPartialValue.sort((a, b) => a.idx - b.idx);
-
-      for (const { idx, value } of arrayPartialValue) {
-        gatherAndWrite(
-          arrSchema.elementType,
-          value,
-          offset + idx * elementSize,
-          elementSize - sizeOf(arrSchema.elementType),
+      if (ArrayBuffer.isView(value)) {
+        const copyLen = Math.min(value.byteLength, arrSchema.elementCount * elementSize);
+        new Uint8Array(buf, offset, copyLen).set(
+          new Uint8Array(value.buffer, value.byteOffset, copyLen),
         );
+        segments.push({ start: offset, end: offset + copyLen, padding });
+        return;
       }
-    } else {
-      const leafSize = sizeOf(node);
-      writer.seekTo(offset);
-      writeData(writer, node, partialValue as Infer<T>);
 
-      segments.push({ start: offset, end: offset + leafSize, padding });
+      if (Array.isArray(value)) {
+        for (let i = 0; i < Math.min(arrSchema.elementCount, value.length); i++) {
+          collect(arrSchema.elementType, value[i], offset + i * elementSize, elementPadding);
+        }
+        return;
+      }
+
+      const sparse = value as Record<string, unknown>;
+      for (const key of Object.keys(sparse)) {
+        const idx = Number(key);
+        if (!Number.isNaN(idx)) {
+          collect(arrSchema.elementType, sparse[key], offset + idx * elementSize, elementPadding);
+        }
+      }
+      return;
     }
+
+    const leafSize = sizeOf(node);
+    const compiledWriter = getCompiledWriter(node);
+    if (compiledWriter) {
+      compiledWriter(compiledView, offset, value, isLittleEndian, offset + leafSize);
+    } else {
+      writer.seekTo(offset);
+      writeData(writer, node, value);
+    }
+    segments.push({ start: offset, end: offset + leafSize, padding });
   }
 
-  gatherAndWrite(schema, data, 0);
-
-  if (segments.length === 0) {
-    return [];
-  }
+  collect(schema, data, 0);
 
   const instructions: WriteInstruction[] = [];
-  let current = segments[0];
+  let run: Segment | null = null;
 
-  for (let i = 1; i < segments.length; i++) {
-    const next = segments[i];
-    if (!next || !current) {
-      throw new Error('Internal error: missing segment');
-    }
-    if (next.start === current.end + (current.padding ?? 0)) {
-      current.end = next.end;
-      current.padding = next.padding;
+  for (const seg of segments) {
+    if (run && seg.start === run.end + (run.padding ?? 0)) {
+      run = { start: run.start, end: seg.end, padding: seg.padding };
     } else {
-      instructions.push({
-        data: new Uint8Array(bigBuffer, current.start, current.end - current.start),
-      });
-      current = next;
+      if (run) {
+        instructions.push({
+          gpuOffset: run.start,
+          data: new Uint8Array(buf, run.start, run.end - run.start).slice(),
+        });
+      }
+      run = seg;
     }
   }
-
-  if (!current) {
-    throw new Error('Internal error: missing segment');
+  if (run) {
+    instructions.push({
+      gpuOffset: run.start,
+      data: new Uint8Array(buf, run.start, run.end - run.start).slice(),
+    });
   }
-
-  instructions.push({
-    data: new Uint8Array(bigBuffer, current.start, current.end - current.start),
-  });
 
   return instructions;
 }

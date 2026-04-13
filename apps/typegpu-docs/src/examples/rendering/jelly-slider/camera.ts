@@ -88,7 +88,7 @@ export class CameraController {
     const jitteredProj = m.mat4.mul(jitterMatrix, this.#baseProj, d.mat4x4f());
     const jitteredProjInv = m.mat4.invert(jitteredProj, d.mat4x4f());
 
-    this.#uniform.writePartial({
+    this.#uniform.patch({
       proj: jitteredProj,
       projInv: jitteredProjInv,
     });
@@ -98,7 +98,7 @@ export class CameraController {
     this.#view = m.mat4.lookAt(position, target, up, d.mat4x4f());
     this.#viewInv = m.mat4.invert(this.#view, d.mat4x4f());
 
-    this.#uniform.writePartial({
+    this.#uniform.patch({
       view: this.#view,
       viewInv: this.#viewInv,
     });
@@ -111,7 +111,7 @@ export class CameraController {
     this.#baseProj = m.mat4.perspective(fov, width / height, near, far, d.mat4x4f());
     this.#baseProjInv = m.mat4.invert(this.#baseProj, d.mat4x4f());
 
-    this.#uniform.writePartial({
+    this.#uniform.patch({
       proj: this.#baseProj,
       projInv: this.#baseProjInv,
     });

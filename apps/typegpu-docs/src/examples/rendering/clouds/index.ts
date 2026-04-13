@@ -94,7 +94,7 @@ resizeObserver.observe(canvas);
 let frameId: number;
 
 function render(timestamp: number) {
-  paramsUniform.writePartial({ time: (timestamp / 1000) % 500 });
+  paramsUniform.patch({ time: (timestamp / 1000) % 500 });
 
   pipeline
     .with(bindGroup)
@@ -137,7 +137,7 @@ export const controls = defineControls({
     initial: 'medium',
     options: ['very high', 'high', 'medium', 'low', 'very low'],
     onSelectChange(value) {
-      paramsUniform.writePartial(qualityOptions[value]);
+      paramsUniform.patch(qualityOptions[value]);
     },
   },
 });

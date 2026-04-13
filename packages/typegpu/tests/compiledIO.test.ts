@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import { buildWriter, getCompiledWriterForSchema } from '../src/data/compiledIO.ts';
+import { buildWriter, getCompiledWriter } from '../src/data/compiledIO.ts';
 import * as d from '../src/data/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
 import { it } from 'typegpu-testing-utility';
@@ -349,7 +349,7 @@ describe('createCompileInstructions', () => {
       b: d.vec3f,
     });
 
-    const writer = getCompiledWriterForSchema(struct)!;
+    const writer = getCompiledWriter(struct)!;
 
     const arr = new ArrayBuffer(sizeOf(struct));
     const dataView = new DataView(arr);
@@ -367,7 +367,7 @@ describe('createCompileInstructions', () => {
       c: d.arrayOf(d.u32, 3),
     });
 
-    const writer = getCompiledWriterForSchema(struct)!;
+    const writer = getCompiledWriter(struct)!;
 
     const arr = new ArrayBuffer(sizeOf(struct));
     const dataView = new DataView(arr);
@@ -393,7 +393,7 @@ describe('createCompileInstructions', () => {
       c: d.arrayOf(d.struct({ d: d.u32 }), 3),
     });
 
-    const writer = getCompiledWriterForSchema(struct)!;
+    const writer = getCompiledWriter(struct)!;
 
     const arr = new ArrayBuffer(sizeOf(struct));
     const dataView = new DataView(arr);
@@ -412,7 +412,7 @@ describe('createCompileInstructions', () => {
   it('should compile a writer for an array', () => {
     const array = d.arrayOf(d.vec3f, 5);
 
-    const writer = getCompiledWriterForSchema(array)!;
+    const writer = getCompiledWriter(array)!;
 
     const arr = new ArrayBuffer(sizeOf(array));
     const dataView = new DataView(arr);
@@ -433,7 +433,7 @@ describe('createCompileInstructions', () => {
   it('should compile a writer for nested arrays', () => {
     const nestedArray = d.arrayOf(d.arrayOf(d.u32, 3), 2);
 
-    const writer = getCompiledWriterForSchema(nestedArray)!;
+    const writer = getCompiledWriter(nestedArray)!;
 
     const arr = new ArrayBuffer(sizeOf(nestedArray));
     const dataView = new DataView(arr);
@@ -453,7 +453,7 @@ describe('createCompileInstructions', () => {
       b: d.arrayOf(d.arrayOf(d.vec2f, 2), 2),
     });
 
-    const writer = getCompiledWriterForSchema(struct)!;
+    const writer = getCompiledWriter(struct)!;
 
     const arr = new ArrayBuffer(sizeOf(struct));
     const dataView = new DataView(arr);
@@ -473,7 +473,7 @@ describe('createCompileInstructions', () => {
   it('should compile a writer for deeply nested arrays', () => {
     const deeplyNested = d.arrayOf(d.arrayOf(d.arrayOf(d.u32, 2), 2), 2);
 
-    const writer = getCompiledWriterForSchema(deeplyNested)!;
+    const writer = getCompiledWriter(deeplyNested)!;
 
     const arr = new ArrayBuffer(sizeOf(deeplyNested));
     const dataView = new DataView(arr);
@@ -531,7 +531,7 @@ describe('createCompileInstructions', () => {
       "
     `);
 
-    const writer = getCompiledWriterForSchema(nestedArray)!;
+    const writer = getCompiledWriter(nestedArray)!;
 
     expect;
 
@@ -564,7 +564,7 @@ describe('createCompileInstructions', () => {
 
   it('should stop writing elements at the given endOffset', () => {
     const schema = d.arrayOf(d.vec3u, 4);
-    const writer = getCompiledWriterForSchema(schema)!;
+    const writer = getCompiledWriter(schema)!;
     const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
     const endLayout = d.memoryLayoutOf(schema, (a) => a[2]);
@@ -578,7 +578,7 @@ describe('createCompileInstructions', () => {
 
   it('should write a padded array chunk from the beginning offset through the end when endOffset is omitted', () => {
     const schema = d.arrayOf(d.vec3u, 4);
-    const writer = getCompiledWriterForSchema(schema)!;
+    const writer = getCompiledWriter(schema)!;
     const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
     const layout = d.memoryLayoutOf(schema, (a) => a[1]?.x);
@@ -597,7 +597,7 @@ describe('createCompileInstructions', () => {
 
   it('should write a scalar array chunk from the beginning offset through the end when endOffset is omitted', () => {
     const schema = d.arrayOf(d.u32, 6);
-    const writer = getCompiledWriterForSchema(schema)!;
+    const writer = getCompiledWriter(schema)!;
     const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
     const layout = d.memoryLayoutOf(schema, (a) => a[3]);
@@ -612,7 +612,7 @@ describe('createCompileInstructions', () => {
       transform: d.mat4x4f,
     });
 
-    const writer = getCompiledWriterForSchema(Schema)!;
+    const writer = getCompiledWriter(Schema)!;
 
     const arr = new ArrayBuffer(sizeOf(Schema));
     const dataView = new DataView(arr);
@@ -629,7 +629,7 @@ describe('createCompileInstructions', () => {
       transform: d.mat3x3f,
     });
 
-    const writer = getCompiledWriterForSchema(Schema)!;
+    const writer = getCompiledWriter(Schema)!;
 
     const arr = new ArrayBuffer(sizeOf(Schema));
     const dataView = new DataView(arr);
@@ -647,7 +647,7 @@ describe('createCompileInstructions', () => {
       transform: d.mat2x2f,
     });
 
-    const writer = getCompiledWriterForSchema(Schema)!;
+    const writer = getCompiledWriter(Schema)!;
 
     const arr = new ArrayBuffer(sizeOf(Schema));
     const dataView = new DataView(arr);
@@ -663,7 +663,7 @@ describe('createCompileInstructions', () => {
   it('should compile a writer for an array of u16', () => {
     const array = d.arrayOf(d.u16, 5);
 
-    const writer = getCompiledWriterForSchema(array)!;
+    const writer = getCompiledWriter(array)!;
 
     const arr = new ArrayBuffer(sizeOf(array));
     const dataView = new DataView(arr);
@@ -692,7 +692,7 @@ describe('createCompileInstructions', () => {
       "
     `);
 
-    const writer = getCompiledWriterForSchema(schema)!;
+    const writer = getCompiledWriter(schema)!;
 
     const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
@@ -721,7 +721,7 @@ describe('createCompileInstructions', () => {
       "
     `);
 
-    const writer = getCompiledWriterForSchema(schema)!;
+    const writer = getCompiledWriter(schema)!;
 
     const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
@@ -755,7 +755,7 @@ describe('createCompileInstructions', () => {
       "
     `);
 
-    const writer = getCompiledWriterForSchema(unstruct)!;
+    const writer = getCompiledWriter(unstruct)!;
 
     const arr = new ArrayBuffer(sizeOf(unstruct));
     const dataView = new DataView(arr);
@@ -785,7 +785,7 @@ describe('createCompileInstructions', () => {
       "
     `);
 
-    const writer = getCompiledWriterForSchema(disarray)!;
+    const writer = getCompiledWriter(disarray)!;
 
     const arr = new ArrayBuffer(sizeOf(disarray));
     const dataView = new DataView(arr);
@@ -848,7 +848,7 @@ describe('createCompileInstructions', () => {
       "
     `);
 
-    const writer = getCompiledWriterForSchema(disarray)!;
+    const writer = getCompiledWriter(disarray)!;
 
     const arr = new ArrayBuffer(sizeOf(disarray));
     const dataView = new DataView(arr);
@@ -884,7 +884,7 @@ describe('createCompileInstructions', () => {
       output.setUint8(((offset + 10) + 3), Math.round(value.d.w * 255), littleEndian);
       "
     `);
-    const writer = getCompiledWriterForSchema(unstruct)!;
+    const writer = getCompiledWriter(unstruct)!;
 
     const arr = new ArrayBuffer(sizeOf(unstruct));
     const dataView = new DataView(arr);
@@ -932,7 +932,7 @@ describe('createCompileInstructions', () => {
 
   it('should write a vec3f from a plain tuple', () => {
     const schema = d.vec3f;
-    const writer = getCompiledWriterForSchema(schema)!;
+    const writer = getCompiledWriter(schema)!;
     const arr = new ArrayBuffer(16);
     const dataView = new DataView(arr);
 
@@ -943,7 +943,7 @@ describe('createCompileInstructions', () => {
 
   it('should write a vec3f from a Float32Array', () => {
     const schema = d.vec3f;
-    const writer = getCompiledWriterForSchema(schema)!;
+    const writer = getCompiledWriter(schema)!;
     const arr = new ArrayBuffer(16);
     const dataView = new DataView(arr);
 
@@ -954,7 +954,7 @@ describe('createCompileInstructions', () => {
 
   it('should write a mat3x3f from a packed number[]', () => {
     const schema = d.mat3x3f;
-    const writer = getCompiledWriterForSchema(schema)!;
+    const writer = getCompiledWriter(schema)!;
     const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
 
@@ -966,7 +966,7 @@ describe('createCompileInstructions', () => {
 
   it('should write a mat3x3f from a padded Float32Array', () => {
     const schema = d.mat3x3f;
-    const writer = getCompiledWriterForSchema(schema)!;
+    const writer = getCompiledWriter(schema)!;
     const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
 
@@ -978,7 +978,7 @@ describe('createCompileInstructions', () => {
 
   it('should write a mat4x4f from a Float32Array', () => {
     const schema = d.mat4x4f;
-    const writer = getCompiledWriterForSchema(schema)!;
+    const writer = getCompiledWriter(schema)!;
     const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
 
@@ -989,7 +989,7 @@ describe('createCompileInstructions', () => {
 
   it('should write an array of vec3f from plain tuples', () => {
     const schema = d.arrayOf(d.vec3f, 3);
-    const writer = getCompiledWriterForSchema(schema)!;
+    const writer = getCompiledWriter(schema)!;
     const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
 
@@ -1006,7 +1006,7 @@ describe('createCompileInstructions', () => {
 
   it('should write an array of vec3f from a padded Float32Array (raw bytes, 16-byte stride)', () => {
     const schema = d.arrayOf(d.vec3f, 3);
-    const writer = getCompiledWriterForSchema(schema)!;
+    const writer = getCompiledWriter(schema)!;
     const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
 
@@ -1019,7 +1019,7 @@ describe('createCompileInstructions', () => {
 
   it('should write an array of vec3f where each element is its own Float32Array', () => {
     const schema = d.arrayOf(d.vec3f, 3);
-    const writer = getCompiledWriterForSchema(schema)!;
+    const writer = getCompiledWriter(schema)!;
     const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
 
@@ -1040,7 +1040,7 @@ describe('createCompileInstructions', () => {
 
   it('should write a vec3h from a plain tuple with correct 2-byte component offsets', () => {
     const schema = d.vec3h;
-    const writer = getCompiledWriterForSchema(schema)!;
+    const writer = getCompiledWriter(schema)!;
     const arr = new ArrayBuffer(8);
     const dataView = new DataView(arr);
 
@@ -1053,7 +1053,7 @@ describe('createCompileInstructions', () => {
 
   it('should write an arrayOf(vec3h) from plain tuples with stride-corrected 2-byte offsets', () => {
     const schema = d.arrayOf(d.vec3h, 2);
-    const writer = getCompiledWriterForSchema(schema)!;
+    const writer = getCompiledWriter(schema)!;
     const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
 
@@ -1072,7 +1072,7 @@ describe('createCompileInstructions', () => {
 
   it('should write an array of f32 scalars from a Float32Array', () => {
     const schema = d.arrayOf(d.f32, 4);
-    const writer = getCompiledWriterForSchema(schema)!;
+    const writer = getCompiledWriter(schema)!;
     const arr = new ArrayBuffer(sizeOf(schema));
     const dataView = new DataView(arr);
 
@@ -1119,7 +1119,7 @@ describe('createCompileInstructions', () => {
       "
     `);
 
-    const compiled = getCompiledWriterForSchema(disarray)!;
+    const compiled = getCompiledWriter(disarray)!;
 
     const arr = new ArrayBuffer(sizeOf(disarray));
     const dataView = new DataView(arr);
@@ -1207,7 +1207,7 @@ describe('createCompileInstructions', () => {
       padded: d.arrayOf(d.vec3f, 2),
     });
 
-    const writer = getCompiledWriterForSchema(outer)!;
+    const writer = getCompiledWriter(outer)!;
     const arr = new ArrayBuffer(sizeOf(outer));
     const dataView = new DataView(arr);
 

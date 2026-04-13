@@ -15,6 +15,7 @@ const getSubdivLevel = tgpu.fn(
   [u32],
   SubdivLevelResult,
 )((vertexIndex) => {
+  'use gpu';
   let totalVertexCount = u32(0);
   for (let level = u32(0); level < 8; level += 1) {
     const pointCount = u32(3) * (u32(1) << level);
@@ -44,7 +45,8 @@ const consecutiveTriangleVertexIndex = tgpu.fn(
   [u32],
   u32,
 )((i) => {
-  return (2 * (i + 1)) / 3;
+  'use gpu';
+  return u32((2 * (i + 1)) / 3);
 });
 
 /**
@@ -61,6 +63,7 @@ export const circle = tgpu.fn(
   [u32],
   vec2f,
 )((vertexIndex) => {
+  'use gpu';
   const subdiv = getSubdivLevel(vertexIndex);
   const i = consecutiveTriangleVertexIndex(subdiv.vertexIndexInLevel);
   const pointCount = subdiv.pointCount;
@@ -70,7 +73,7 @@ export const circle = tgpu.fn(
 
 export function circleVertexCount(subdivLevel: number) {
   let totalVertexCount = 3;
-  for (let level = 0; level < subdivLevel; level += 1) {
+  for (let level = u32(0); level < subdivLevel; level += 1) {
     totalVertexCount += 9 * (1 << level);
   }
   return totalVertexCount;
