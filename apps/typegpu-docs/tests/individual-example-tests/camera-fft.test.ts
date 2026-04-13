@@ -18,7 +18,7 @@ describe('camera fft example', () => {
       {
         category: 'image-processing',
         name: 'camera-fft',
-        expectedCalls: 9,
+        expectedCalls: 8,
       },
       device,
     );
@@ -294,30 +294,6 @@ describe('camera fft example', () => {
         let idxD = ((jDivNs * (ns << 1u)) + (j % ns));
         dst[(base + idxD)] = (v0 * s);
         dst[((base + idxD) + ns)] = (v1 * s);
-      }
-
-      @group(0) @binding(1) var<storage, read> src: array<vec2f>;
-
-      struct complexVec2ScaleUniformType {
-        scale: f32,
-      }
-
-      @group(0) @binding(0) var<uniform> uniforms: complexVec2ScaleUniformType;
-
-      @group(0) @binding(2) var<storage, read_write> dst: array<vec2f>;
-
-      @compute @workgroup_size(256) fn scaleKernel(@builtin(global_invocation_id) _arg_gid: vec3u, @builtin(num_workgroups) _arg_numWorkgroups: vec3u) {
-        const wg = 256u;
-        let spanX = (_arg_numWorkgroups.x * wg);
-        let spanY = (_arg_numWorkgroups.y * spanX);
-        let tid = ((_arg_gid.x + (_arg_gid.y * spanX)) + (_arg_gid.z * spanY));
-        let count = arrayLength((&src));
-        if ((tid >= count)) {
-          return;
-        }
-        let s = uniforms.scale;
-        let v = (&src[tid]);
-        dst[tid] = ((*v) * s);
       }
 
       struct filterParamsType {

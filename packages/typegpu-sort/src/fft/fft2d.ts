@@ -1,10 +1,5 @@
 import type { StorageFlag, TgpuBindGroup, TgpuBuffer, TgpuRoot, UniformFlag } from 'typegpu';
 import { d } from 'typegpu';
-import {
-  complexVec2ScaleLayout,
-  complexVec2ScaleUniformType,
-  createComplexVec2ScalePipeline,
-} from './complexVec2Scale.ts';
 import type { LineFftStrategyFactory } from './lineFftStrategy.ts';
 import { createStockhamRadix4LineStrategy } from './lineFftRadix4Strategy.ts';
 import {
@@ -13,7 +8,6 @@ import {
   transposeLayout,
   transposeUniformType,
 } from './transpose.ts';
-import { decomposeWorkgroups } from './utils.ts';
 
 type TransposeBgPair = {
   bgSrcA: TgpuBindGroup<(typeof transposeLayout)['entries']>;
@@ -66,8 +60,8 @@ export type Fft2d = {
    * `end` the pass and `submit` the encoder.
    *
    * **Spectrum:** unnormalized separable complex DFT (same convention as typical reference FFTs such as
-   * fft.js). Line FFT stages use `1/√n` scaling internally for stability, then the result is scaled to
-   * standard DFT units before return.
+   * fft.js). Line FFT stages use `1/√n` scaling internally for stability; `√(WH)` to standard DFT units is
+   * fused into the last forward column pass (no separate scale dispatch).
    */
   encodeForward(computePass: GPUComputePassEncoder): void;
   /**
@@ -135,54 +129,10 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
   const transposePairInv1 = mkTransposePair(transposeUniformInv1);
   const transposePairInvAux = mkTransposePair(transposeUniformInvAux);
 
+  /** √(WH): fused into last forward column line-FFT orthonormal scale (no separate scale pass). */
   const spectrumToStandardUnits = Math.sqrt(W * H);
+  /** 1/√(WH): fused into first inverse line-FFT orthonormal scale (replaces a separate scale-down pass). */
   const spectrumFromStandardUnits = 1 / spectrumToStandardUnits;
-
-  const scalePipeline = createComplexVec2ScalePipeline(root);
-
-  const scaleUpUniform = root.createBuffer(complexVec2ScaleUniformType).$usage('uniform');
-  scaleUpUniform.write({ scale: spectrumToStandardUnits });
-  const scaleUpBgAtoB = root.createBindGroup(complexVec2ScaleLayout, {
-    uniforms: scaleUpUniform,
-    src: bufA,
-    dst: bufB,
-  });
-  const scaleUpBgBtoA = root.createBindGroup(complexVec2ScaleLayout, {
-    uniforms: scaleUpUniform,
-    src: bufB,
-    dst: bufA,
-  });
-
-  const scaleDownUniform = root.createBuffer(complexVec2ScaleUniformType).$usage('uniform');
-  scaleDownUniform.write({ scale: spectrumFromStandardUnits });
-  const scaleDownBgAtoB = root.createBindGroup(complexVec2ScaleLayout, {
-    uniforms: scaleDownUniform,
-    src: bufA,
-    dst: bufB,
-  });
-  const scaleDownBgBtoA = root.createBindGroup(complexVec2ScaleLayout, {
-    uniforms: scaleDownUniform,
-    src: bufB,
-    dst: bufA,
-  });
-
-  function scaleUp(inputInA: boolean, computePass: GPUComputePassEncoder): boolean {
-    const bg = inputInA ? scaleUpBgAtoB : scaleUpBgBtoA;
-    scalePipeline
-      .with(computePass)
-      .with(bg)
-      .dispatchWorkgroups(...decomposeWorkgroups(Math.ceil(count / 256)));
-    return !inputInA;
-  }
-
-  function scaleDown(inputInA: boolean, computePass: GPUComputePassEncoder): boolean {
-    const bg = inputInA ? scaleDownBgAtoB : scaleDownBgBtoA;
-    scalePipeline
-      .with(computePass)
-      .with(bg)
-      .dispatchWorkgroups(...decomposeWorkgroups(Math.ceil(count / 256)));
-    return !inputInA;
-  }
 
   const invSqrtW = 1 / Math.sqrt(W);
   const invSqrtH = 1 / Math.sqrt(H);
@@ -208,7 +158,7 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
       computePass,
       inverse: true,
       lineUniformSlot: 3,
-      firstPassOrthonormalScale: invSqrtH,
+      firstPassOrthonormalScale: invSqrtH * spectrumFromStandardUnits,
     });
 
     dispatchTranspose(
@@ -242,7 +192,7 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
       computePass,
       inverse: true,
       lineUniformSlot: 2,
-      firstPassOrthonormalScale: invSqrtW,
+      firstPassOrthonormalScale: invSqrtW * spectrumFromStandardUnits,
     });
   }
 
@@ -259,7 +209,7 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
     const midInA = lineFft.dispatchLineFft(H, W, afterTInA, {
       computePass,
       lineUniformSlot: 1,
-      lastPassOrthonormalScale: invSqrtH,
+      lastPassOrthonormalScale: invSqrtH * spectrumToStandardUnits,
     });
 
     dispatchTranspose(
@@ -314,7 +264,7 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
     return lineFft.dispatchLineFft(H, W, afterTInA, {
       computePass,
       lineUniformSlot: 1,
-      lastPassOrthonormalScale: invSqrtH,
+      lastPassOrthonormalScale: invSqrtH * spectrumToStandardUnits,
     });
   }
 
@@ -363,10 +313,8 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
     },
     encodeForward(computePass) {
       forwardFrom(true, computePass);
-      resultInA = scaleUp(resultInA, computePass);
     },
     encodeInverse(computePass) {
-      resultInA = scaleDown(resultInA, computePass);
       if (skipFinalTranspose) {
         inverseFromSkipSpectrumDirect(computePass);
       } else {
@@ -378,8 +326,6 @@ export function createFft2d(root: TgpuRoot, options: Fft2dOptions): Fft2d {
       lineFft.destroy();
       bufA.destroy();
       bufB.destroy();
-      scaleUpUniform.destroy();
-      scaleDownUniform.destroy();
       transposeUniformFwd0.destroy();
       transposeUniformFwd1.destroy();
       transposeUniformInv0.destroy();
