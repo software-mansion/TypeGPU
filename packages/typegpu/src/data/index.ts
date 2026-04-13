@@ -231,4 +231,4 @@ export type {
   BuiltinVertexIndex,
   BuiltinWorkgroupId,
 } from '../builtin.ts';
-export type { Infer, InferGPU, InferInput, InferPartial } from '../shared/repr.ts';
+export type { Infer, InferGPU, InferInput, InferPartial, InferPatch } from '../shared/repr.ts';

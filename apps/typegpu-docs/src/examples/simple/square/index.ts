@@ -68,12 +68,7 @@ render();
 function updateColor(color: d.v3f, position: keyof typeof colors): void {
   colors[position] = d.vec4f(color, 1);
   const idx = colorIndices[position];
-  colorBuffer.writePartial([
-    {
-      idx,
-      value: colors[position],
-    },
-  ]);
+  colorBuffer.patch({ [idx]: colors[position] });
   render();
 }
 
