@@ -1,5 +1,5 @@
-import type { Animation } from './types.ts';
-import { lerpInto, type Quat, slerpInto, type Vec3 } from './math.ts';
+import { quat, vec3 } from 'wgpu-matrix';
+import type { Animation, Quat, Vec3 } from './types.ts';
 
 export interface NodeTransform {
   translation: Vec3;
@@ -68,7 +68,7 @@ export function sampleAnimationInto(
     }
 
     if (channel.targetPath === 'rotation') {
-      slerpInto(
+      quat.slerp(
         values.subarray(start, start + components),
         values.subarray(end, end + components),
         alpha,
@@ -76,7 +76,7 @@ export function sampleAnimationInto(
       );
       transform.hasRotation = true;
     } else if (channel.targetPath === 'translation') {
-      lerpInto(
+      vec3.lerp(
         values.subarray(start, start + components),
         values.subarray(end, end + components),
         alpha,
@@ -84,7 +84,7 @@ export function sampleAnimationInto(
       );
       transform.hasTranslation = true;
     } else {
-      lerpInto(
+      vec3.lerp(
         values.subarray(start, start + components),
         values.subarray(end, end + components),
         alpha,

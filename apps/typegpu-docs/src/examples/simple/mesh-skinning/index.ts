@@ -1,7 +1,7 @@
 import tgpu, { common } from 'typegpu';
 import * as d from 'typegpu/data';
 import * as std from 'typegpu/std';
-import { mat4, quat, vec3 } from 'wgpu-matrix';
+import { mat4, vec3 } from 'wgpu-matrix';
 import { defineControls } from '../../common/defineControls.ts';
 import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import {
@@ -375,7 +375,6 @@ function writeJointDualQuat(jointIndex: number) {
   const matrixOffset = jointIndex * 16;
   mat4ToDualQuat(
     CpuState.jointMatrices.subarray(matrixOffset, matrixOffset + 16),
-    quat.fromMat,
     CpuState.quatScratch,
     CpuState.jointDualQuats,
     jointIndex * 8,

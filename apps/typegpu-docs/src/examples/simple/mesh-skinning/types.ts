@@ -1,5 +1,8 @@
 import { d } from 'typegpu';
 
+export type Vec3 = [number, number, number];
+export type Quat = [number, number, number, number];
+
 export const VertexData = d.struct({
   position: d.vec3f,
   normal: d.vec3f,
@@ -10,9 +13,9 @@ export const VertexData = d.struct({
 
 export interface GLTFNode {
   name?: string;
-  translation?: [number, number, number];
-  rotation?: [number, number, number, number];
-  scale?: [number, number, number];
+  translation?: Vec3;
+  rotation?: Quat;
+  scale?: Vec3;
   children?: number[];
   mesh?: number;
   skin?: number;
