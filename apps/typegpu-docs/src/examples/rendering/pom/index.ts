@@ -170,7 +170,7 @@ async function loadCustomMaterial() {
   const images = await Promise.all(
     slots.map((slot) => {
       if (fileMap[slot]) {
-        return createImageBitmap(fileMap[slot] as File);
+        return createImageBitmap(fileMap[slot]);
       }
       const [r, g, b, a] = slotFallbacks[slot];
       return createImageBitmap(new ImageData(new Uint8ClampedArray([r, g, b, a]), 1, 1));
