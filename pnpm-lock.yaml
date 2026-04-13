@@ -715,7 +715,7 @@ importers:
         version: link:../unplugin-typegpu
       vitest:
         specifier: catalog:test
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@25.1.0)(@vitest/browser@3.2.4)(jiti@2.6.1)(jsdom@27.0.0(canvas@3.2.0)(postcss@8.5.6))(lightningcss@1.30.2)(msw@2.10.2(@types/node@25.1.0)(tsover@5.9.11))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1)
+        version: 4.1.2(@types/node@24.10.0)(@vitest/browser-preview@4.1.2)(jsdom@27.0.0(canvas@3.2.0)(postcss@8.5.8))(msw@2.10.2(@types/node@24.10.0)(tsover@5.9.11))(vite@8.0.5(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))
     publishDirectory: dist
 
   packages/typegpu-testing-utility:
