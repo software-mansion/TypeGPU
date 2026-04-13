@@ -12,7 +12,7 @@ export const PomParams = d.struct({
   parallaxSteps: d.u32,
 });
 
-export const INITIAL_SUN_ANGLE = Math.atan2(0.5, 1);
+export const INITIAL_SUN_ANGLE = Math.atan2(0.5, 1) + Math.PI;
 export const INITIAL_SUN_HEIGHT = 0.21;
 export const MIN_SUN_ELEVATION = 0.08;
 export const MAX_PARALLAX_STEPS = 128;
@@ -23,7 +23,8 @@ export const MATERIAL_IDS = [
   'acoustic-foam',
   'beach',
   'aerial-rocks',
-  'brick-wall-moss',
+  'rocks',
+  'manhole-cover',
 ] as const;
 export type MaterialId = (typeof MATERIAL_IDS)[number];
 
