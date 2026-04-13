@@ -55,15 +55,15 @@ jobs:
 
       - name: Install dependencies (PR branch)
         working-directory: pr-branch
-        run: pnpm install --frozen-lockfile && cd apps/resolution-time/node_modules/bun && node install.js
+        run: pnpm install --frozen-lockfile
 
       - name: Install dependencies (target branch)
         working-directory: target-branch
-        run: pnpm install --frozen-lockfile && cd apps/resolution-time/node_modules/bun && node install.js
+        run: pnpm install --frozen-lockfile
 
       - name: Install dependencies (release branch)
         working-directory: release-branch
-        run: pnpm install --no-frozen-lockfile && cd apps/resolution-time/node_modules/bun && node install.js
+        run: pnpm install --no-frozen-lockfile
 
       - name: Run benchmark (PR branch)
         working-directory: pr-branch
