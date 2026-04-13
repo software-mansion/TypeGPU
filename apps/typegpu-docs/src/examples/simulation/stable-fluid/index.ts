@@ -280,7 +280,7 @@ function loop() {
   }
 
   if (brushState.isDown) {
-    brushParamBuffer.writePartial({
+    brushParamBuffer.patch({
       pos: d.vec2i(...brushState.pos),
       delta: d.vec2f(...brushState.delta),
     });
@@ -440,7 +440,7 @@ export const controls = defineControls({
     step: 0.01,
     onSliderChange: (value) => {
       p.params.dt = value;
-      simParamBuffer.writePartial({
+      simParamBuffer.patch({
         dt: p.params.dt,
       });
     },
@@ -452,7 +452,7 @@ export const controls = defineControls({
     step: 0.000001,
     onSliderChange: (value) => {
       p.params.viscosity = value;
-      simParamBuffer.writePartial({
+      simParamBuffer.patch({
         viscosity: p.params.viscosity,
       });
     },

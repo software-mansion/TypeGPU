@@ -1,16 +1,34 @@
-import { f32, i32, struct, u32, vec2f } from 'typegpu/data';
 import type { Infer } from 'typegpu/data';
+import { bool, f32, struct, vec2f } from 'typegpu/data';
 
-export type JoinPath = Infer<typeof JoinPath>;
-export const JoinPath = struct({
-  joinIndex: u32,
-  path: u32,
-  /** -1 for vertices on the original segment, >=0 for vertices inside the join */
-  depth: i32,
-});
-
-export type LineSegmentVertex = Infer<typeof LineSegmentVertex>;
-export const LineSegmentVertex = struct({
+export type LineControlPoint = Infer<typeof LineControlPoint>;
+export const LineControlPoint = struct({
   position: vec2f,
   radius: f32,
+});
+
+export type LineSegmentOutput = Infer<typeof LineSegmentOutput>;
+export const LineSegmentOutput = struct({
+  vertexPosition: vec2f,
+  /** Homogeneous coordinate for scaling surface values */
+  w: f32,
+});
+
+export type LineSegmentVertexData = Infer<typeof LineSegmentVertexData>;
+export const LineSegmentVertexData = struct({
+  along: f32,
+  cross: f32,
+  join: f32,
+});
+
+export type JoinInput = Infer<typeof JoinInput>;
+export const JoinInput = struct({
+  C: LineControlPoint,
+  v: vec2f,
+  d: vec2f,
+  fw: vec2f,
+  start: vec2f,
+  end: vec2f,
+  shouldJoin: bool,
+  isCap: bool,
 });

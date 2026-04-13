@@ -116,6 +116,7 @@ ${example.htmlFile.content}
       "wgpu-matrix": "${pnpmWorkspaceYaml.catalogs.example['wgpu-matrix']}",
       "@loaders.gl/core": "${typegpuDocsPackageJson.dependencies['@loaders.gl/core']}",
       "@loaders.gl/obj": "${typegpuDocsPackageJson.dependencies['@loaders.gl/obj']}",
+      "@loaders.gl/gltf": "${typegpuDocsPackageJson.dependencies['@loaders.gl/gltf']}",
       "three": "${pnpmWorkspaceYaml.catalogs.example.three}",
       "@typegpu/noise": "${typegpuNoisePackageJson.version}",
       "@typegpu/color": "${typegpuColorPackageJson.version}",

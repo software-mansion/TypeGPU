@@ -82,7 +82,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 let frameId: number;
 function frame(timestamp: number) {
-  paramsUniform.writePartial({
+  paramsUniform.patch({
     time: timestamp / 1000,
     grainSeed: Math.floor(Math.random() * 100),
   });
@@ -100,7 +100,7 @@ export const controls = {
     max: 0.2,
     step: 0.001,
     onSliderChange(v: number) {
-      paramsUniform.writePartial({ distortion: v });
+      paramsUniform.patch({ distortion: v });
     },
   },
   Sharpness: {
@@ -109,36 +109,36 @@ export const controls = {
     max: 7,
     step: 0.1,
     onSliderChange(v: number) {
-      paramsUniform.writePartial({ sharpness: v ** 2 });
+      paramsUniform.patch({ sharpness: v ** 2 });
     },
   },
   'From Color': {
     initial: [0.057, 0.2235, 0.4705],
     onColorChange(value: readonly [number, number, number]) {
-      paramsUniform.writePartial({ fromColor: d.vec3f(...value) });
+      paramsUniform.patch({ fromColor: d.vec3f(...value) });
     },
   },
   'To Color': {
     initial: [1.538, 0.784, 2],
     onColorChange(value: readonly [number, number, number]) {
-      paramsUniform.writePartial({ toColor: d.vec3f(...value) });
+      paramsUniform.patch({ toColor: d.vec3f(...value) });
     },
   },
   'Polar Coordinates': {
     initial: false,
     onToggleChange(value: boolean) {
-      paramsUniform.writePartial({ polarCoords: value ? 1 : 0 });
+      paramsUniform.patch({ polarCoords: value ? 1 : 0 });
     },
   },
   Squashed: {
     initial: true,
     onToggleChange(value: boolean) {
-      paramsUniform.writePartial({ squashed: value ? 1 : 0 });
+      paramsUniform.patch({ squashed: value ? 1 : 0 });
     },
   },
   'Clouds Preset': {
     onButtonClick() {
-      paramsUniform.writePartial({
+      paramsUniform.patch({
         distortion: 0.05,
         sharpness: 4.5 ** 2,
         fromColor: d.vec3f(0.057, 0.2235, 0.4705),
@@ -150,7 +150,7 @@ export const controls = {
   },
   'Fire Preset': {
     onButtonClick() {
-      paramsUniform.writePartial({
+      paramsUniform.patch({
         distortion: 0.1,
         sharpness: 7 ** 2,
         fromColor: d.vec3f(2, 0.4, 0.5),

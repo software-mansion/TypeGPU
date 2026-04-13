@@ -130,7 +130,19 @@ export function setupOrbitCamera(
     'wheel',
     (event: WheelEvent) => {
       event.preventDefault();
-      zoomCamera(event.deltaY);
+      let delta = event.deltaY;
+      // Normalize deltaY across input devices (touchpad vs mouse wheel).
+      // Mouse wheel (deltaMode LINE) reports ~3 per notch; convert to pixels.
+      // Touchpad (deltaMode PIXEL) reports small values directly.
+      if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+        delta *= 16;
+      } else if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+        delta *= canvas.clientHeight;
+      }
+      // Clamp to prevent large jumps from discrete mouse wheel notches
+      // (Chrome reports deltaMode PIXEL with ~100 per mouse wheel notch).
+      delta = Math.sign(delta) * Math.min(Math.abs(delta), 60);
+      zoomCamera(delta);
     },
     { passive: false },
   );
