@@ -19,17 +19,15 @@ export const MAX_PARALLAX_STEPS = 128;
 export const DEFAULT_PARALLAX_STEPS = 64;
 
 export const MATERIAL_IDS = [
-  'stone-block-wall',
-  'chiseled-cobble',
-  'geyser-rock',
-  'hexagon-pavers',
-  'red-scifi-metal',
-  'rocky-rugged-terrain',
-  'rocky-shoreline',
+  'bricks',
+  'acoustic-foam',
+  'beach',
+  'aerial-rocks',
+  'brick-wall-moss',
 ] as const;
 export type MaterialId = (typeof MATERIAL_IDS)[number];
 
-export const DEFAULT_MATERIAL: MaterialId = 'stone-block-wall';
+export const DEFAULT_MATERIAL: MaterialId = 'beach';
 export const MATERIAL_LAYER = {
   normal: 0,
   height: 1,

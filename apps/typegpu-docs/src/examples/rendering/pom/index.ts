@@ -124,21 +124,58 @@ async function loadCustomMaterial() {
   });
 
   const slots = ['albedo', 'normal', 'height', 'ao', 'roughness', 'metallic'] as const;
+  type Slot = (typeof slots)[number];
 
-  const fileMap = Object.fromEntries(
-    Array.from(files).flatMap((file) => {
-      const slot = slots.find((s) => file.name.toLowerCase().includes(s));
-      return slot ? [[slot, file]] : [];
-    }),
-  );
+  const slotAliases: Record<Slot, string[]> = {
+    albedo: ['basecolor', 'base_color', 'diffuse', 'albedo', 'color', 'diff', 'alb', 'col'],
+    normal: ['normal', 'norm', 'nor', 'nrm'],
+    height: ['displacement', 'height', 'bump', 'disp', 'hgt'],
+    ao: ['ambient_occlusion', 'occlusion', 'ao', 'occ'],
+    roughness: ['roughness', 'rough', 'rgh'],
+    metallic: ['metallic', 'metal', 'met', 'mtl'],
+  };
+
+  const fileMap: Partial<Record<Slot, File>> = {};
+
+  for (const file of Array.from(files)) {
+    const lower = file.name.toLowerCase();
+    for (const slot of slots) {
+      if (slotAliases[slot].some((alias) => lower.includes(alias))) {
+        if (fileMap[slot]) {
+          console.warn(
+            `Multiple files match slot "${slot}": keeping "${fileMap[slot].name}", ignoring "${file.name}"`,
+          );
+        } else {
+          fileMap[slot] = file;
+        }
+        break;
+      }
+    }
+  }
+
+  const slotFallbacks: Record<Slot, [number, number, number, number]> = {
+    albedo: [255, 255, 255, 255], // white
+    normal: [128, 128, 255, 255], // flat tangent-space normal
+    height: [128, 128, 128, 255], // mid height → no displacement
+    ao: [255, 255, 255, 255], // fully unoccluded
+    roughness: [128, 128, 128, 255], // mid roughness
+    metallic: [0, 0, 0, 255], // non-metallic
+  };
 
   const missing = slots.filter((slot) => !fileMap[slot]);
   if (missing.length > 0) {
-    console.error(`Custom material missing: ${missing.join(', ')}`);
-    return;
+    console.warn(`Custom material missing slots (using fallbacks): ${missing.join(', ')}`);
   }
 
-  const images = await Promise.all(slots.map((slot) => createImageBitmap(fileMap[slot])));
+  const images = await Promise.all(
+    slots.map((slot) => {
+      if (fileMap[slot]) {
+        return createImageBitmap(fileMap[slot] as File);
+      }
+      const [r, g, b, a] = slotFallbacks[slot];
+      return createImageBitmap(new ImageData(new Uint8ClampedArray([r, g, b, a]), 1, 1));
+    }),
+  );
   applyImages(images);
 }
 
@@ -149,7 +186,7 @@ let sunAngle = INITIAL_SUN_ANGLE;
 let sunHeight = INITIAL_SUN_HEIGHT;
 
 const pomParams = root.createUniform(PomParams, {
-  heightScale: 0.1,
+  heightScale: 0.05,
   tiling: 1,
   lightDir: computeLightDir(sunAngle, sunHeight),
   parallaxSteps: DEFAULT_PARALLAX_STEPS,
@@ -400,14 +437,14 @@ export const controls = defineControls({
   tiling: {
     initial: 1,
     min: 0.1,
-    max: 8,
+    max: 3,
     step: 0.1,
     onSliderChange(v) {
       pomParams.patch({ tiling: v });
     },
   },
   'parallax strength': {
-    initial: 0.1,
+    initial: 0.05,
     min: 0,
     max: 0.3,
     step: 0.005,
@@ -435,7 +472,7 @@ export const controls = defineControls({
     },
   },
   'sun angle': {
-    initial: (INITIAL_SUN_ANGLE * 180) / Math.PI,
+    initial: Math.round((INITIAL_SUN_ANGLE * 180) / Math.PI),
     min: 0,
     max: 360,
     step: 1,
