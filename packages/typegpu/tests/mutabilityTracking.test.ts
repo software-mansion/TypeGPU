@@ -6,7 +6,47 @@ const fnShell = tgpu.fn([d.vec4u], d.u32);
 
 describe('mutability tracking', () => {
   describe('resolves modified to var', () => {
-    it('resolves modified primitive let arg to var', () => {
+    it('resolves reassigned primitive let to var', () => {
+      const fn = fnShell((arg) => {
+        'use gpu';
+        let a = arg.x;
+        a = 1;
+        return a;
+      });
+
+      const resolved = tgpu.resolve([fn]);
+      expect(resolved).toContain('var a = arg.x');
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn item(arg: vec4u) -> u32 {
+          var a = arg.x;
+          a += 1u;
+          return a;
+        }"
+      `);
+    });
+
+    it('resolves conditionally reassigned primitive let to var', () => {
+      const fn = fnShell((arg) => {
+        'use gpu';
+        let a = arg.x;
+        if (a < 1) {
+          a = 1;
+        }
+        return a;
+      });
+
+      const resolved = tgpu.resolve([fn]);
+      expect(resolved).toContain('var a = arg.x');
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn item(arg: vec4u) -> u32 {
+          var a = arg.x;
+          a += 1u;
+          return a;
+        }"
+      `);
+    });
+
+    it('resolves mutated primitive let to var', () => {
       const fn = fnShell((arg) => {
         'use gpu';
         let a = arg.x;
@@ -25,7 +65,26 @@ describe('mutability tracking', () => {
       `);
     });
 
-    it('resolves modified reference const arg to var', () => {
+    it('resolves incremented primitive let to var', () => {
+      const fn = fnShell((arg) => {
+        'use gpu';
+        let a = arg.x;
+        a++;
+        return a;
+      });
+
+      const resolved = tgpu.resolve([fn]);
+      expect(resolved).toContain('var a = arg.x');
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn item(arg: vec4u) -> u32 {
+          var a = arg.x;
+          a += 1u;
+          return a;
+        }"
+      `);
+    });
+
+    it('resolves modified reference const to var', () => {
       const fn = fnShell((arg) => {
         'use gpu';
         const a = d.vec4u(arg);
@@ -44,11 +103,11 @@ describe('mutability tracking', () => {
       `);
     });
 
-    it('resolves modified reference let arg to var', () => {
+    it('resolves modified reference let to var', () => {
       const fn = fnShell((arg) => {
         'use gpu';
         let a = d.vec4u(arg);
-        a += 1;
+        a.x = 1;
         return a.x;
       });
 
@@ -63,7 +122,7 @@ describe('mutability tracking', () => {
       `);
     });
 
-    it('resolves reassigned reference let arg to var', () => {
+    it('resolves reassigned reference let to var', () => {
       const fn = fnShell((arg) => {
         'use gpu';
         let a = d.vec4u(arg);
@@ -136,5 +195,22 @@ describe('mutability tracking', () => {
       expect(resolved).toContain('let a = arg');
       expect(resolved).toMatchInlineSnapshot();
     });
+  });
+
+  it('resolves shadowed variables correctly', () => {
+    const fn = fnShell((arg) => {
+      'use gpu';
+      let a = d.vec4u(arg);
+      {
+        let a = d.vec4u(arg);
+        a.x++;
+      }
+      return a.x;
+    });
+
+    const resolved = tgpu.resolve([fn]);
+    expect(resolved).toContain('let a = arg');
+    expect(resolved).toContain('var a = arg');
+    expect(resolved).toMatchInlineSnapshot();
   });
 });
