@@ -1,1 +1,37 @@
 <canvas data-fit-to-container></canvas>
+
+<style>
+  #attribution {
+    opacity: 1;
+    position: absolute;
+    bottom: 0.625rem;
+    left: 0.625rem;
+    z-index: 2;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    user-select: none;
+    pointer-events: auto;
+    transition: opacity 0.5s;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+
+  #attribution a {
+    color: #87ceeb;
+    text-decoration: none;
+  }
+
+  #attribution a:hover {
+    text-decoration: underline;
+  }
+</style>
+
+<div id="attribution">
+  Mesh by
+  <a href="https://quaternius.com/packs/universalanimationlibrary2.html" target="_blank"
+    >Quaternius</a
+  >
+</div>

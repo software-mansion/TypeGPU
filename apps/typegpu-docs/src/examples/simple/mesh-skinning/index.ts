@@ -34,6 +34,13 @@ const LIGHTING = {
 } as const;
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const attributionEl = document.getElementById('attribution') as HTMLElement;
+const dismissAttribution = () => {
+  attributionEl.style.opacity = '0';
+  attributionEl.style.pointerEvents = 'none';
+};
+canvas.addEventListener('click', dismissAttribution, { once: true });
+canvas.addEventListener('touchend', dismissAttribution, { once: true });
 const modelData = await loadGLBModel(MODEL_ASSET.path);
 const twistDemoMesh = generateTube(32, 8, 0.25, 2);
 
