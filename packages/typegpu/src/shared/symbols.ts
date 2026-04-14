@@ -54,6 +54,15 @@ export const $gpuRepr = Symbol(`typegpu:${version}:$gpuRepr`);
  */
 export const $reprPartial = Symbol(`typegpu:${version}:$reprPartial`);
 /**
+ * Type token for the inferred patch representation of a resource.
+ * Used by the `buffer.patch` API with `Record<number, T>` sparse arrays.
+ */
+export const $reprPatch = Symbol(`typegpu:${version}:$reprPatch`);
+/**
+ * Type token for the write-side (input) representation of a resource.
+ */
+export const $inRepr = Symbol(`typegpu:${version}:$inRepr`);
+/**
  * Type token holding schemas that are identical in memory layout.
  */
 export const $memIdent = Symbol(`typegpu:${version}:$memIdent`);

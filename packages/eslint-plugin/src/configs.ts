@@ -1,16 +1,32 @@
 import type { TSESLint } from '@typescript-eslint/utils';
-import { integerDivision } from './rules/integerDivision.ts';
+import { noIntegerDivision } from './rules/noIntegerDivision.ts';
+import { noUnwrappedObjects } from './rules/noUnwrappedObjects.ts';
+import { noMath } from './rules/noMath.ts';
+import { noUninitializedVariables } from './rules/noUninitializedVariables.ts';
+import { noInvalidAssignment } from './rules/noInvalidAssignment.ts';
 
 export const rules = {
-  'integer-division': integerDivision,
+  'no-integer-division': noIntegerDivision,
+  'no-unwrapped-objects': noUnwrappedObjects,
+  'no-uninitialized-variables': noUninitializedVariables,
+  'no-math': noMath,
+  'no-invalid-assignment': noInvalidAssignment,
 } as const;
 
 type Rules = Record<`typegpu/${keyof typeof rules}`, TSESLint.FlatConfig.RuleEntry>;
 
-export const recommendedRules: Rules = {
-  'typegpu/integer-division': 'warn',
-};
+export const recommendedRules = {
+  'typegpu/no-integer-division': 'warn',
+  'typegpu/no-unwrapped-objects': 'error',
+  'typegpu/no-uninitialized-variables': 'error',
+  'typegpu/no-math': 'warn',
+  'typegpu/no-invalid-assignment': 'error',
+} as const satisfies Rules;
 
-export const allRules: Rules = {
-  'typegpu/integer-division': 'error',
-};
+export const allRules = {
+  'typegpu/no-integer-division': 'error',
+  'typegpu/no-unwrapped-objects': 'error',
+  'typegpu/no-uninitialized-variables': 'error',
+  'typegpu/no-math': 'error',
+  'typegpu/no-invalid-assignment': 'error',
+} as const satisfies Rules;

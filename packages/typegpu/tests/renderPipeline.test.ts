@@ -6,12 +6,14 @@ import tgpu, {
   common,
   d,
   MissingBindGroupsError,
+  type TgpuFragmentFn,
   type TgpuFragmentFnShell,
   type TgpuRenderPipeline,
+  type TgpuVertexFn,
   type TgpuVertexFnShell,
 } from '../src/index.js';
 import { $internal } from '../src/shared/symbols.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('root.withVertex(...).withFragment(...)', () => {
   const vert = tgpu.vertexFn({
@@ -219,11 +221,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
 
         @vertex fn vertex() -> vertex_Output { return vertex_Output(); }
 
-        struct fragment_Input {
-          @builtin(position) a: vec4f,
-        }
-
-        @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
+        @fragment fn fragment() -> @location(0) vec4f {
           return vec4f(1, 2, 3, 4);
         }"
       `);
@@ -286,7 +284,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
           @location(5) baz2: f32,
         }
 
-        @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
+        @fragment fn fragmentMain() -> @location(0) vec4f {
           return vec4f();
         }"
       `);
@@ -315,7 +313,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
           baz2: d.f32,
         },
         out: d.vec4f,
-      })`{ return vec4f(); }`;
+      })`{ return vec4f(in.bar, 1); }`;
 
       const pipeline = root
         .withVertex(vertexMain, {})
@@ -335,14 +333,13 @@ describe('root.withVertex(...).withFragment(...)', () => {
         @vertex fn vertexMain() -> vertexMain_Output { return vertexMain_Output(); }
 
         struct fragmentMain_Input {
-          @builtin(position) position: vec4f,
           @location(3) baz3: u32,
           @location(1) bar: vec3f,
           @location(2) foo: vec3f,
           @location(5) baz2: f32,
         }
 
-        @fragment fn fragmentMain(in: fragmentMain_Input) -> @location(0)  vec4f { return vec4f(); }"
+        @fragment fn fragmentMain(in: fragmentMain_Input) -> @location(0)  vec4f { return vec4f(in.bar, 1); }"
       `);
     });
 
@@ -504,10 +501,10 @@ describe('root.withVertex(...).withFragment(...)', () => {
       expect(pipeline[$internal].priors.performanceCallback).not.toBe(callback1);
     });
 
-    it('should throw error if timestamp-query feature is not enabled', ({ root, device }) => {
-      const originalFeatures = device.features;
+    it('should warn if timestamp-query feature is not enabled', ({ root, device }) => {
       //@ts-expect-error
       device.features = new Set();
+      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const vertexFn = tgpu.vertexFn({
         out: { pos: d.builtin.position },
@@ -520,17 +517,17 @@ describe('root.withVertex(...).withFragment(...)', () => {
       const callback = vi.fn();
 
       expect(() => {
-        root
-          .withVertex(vertexFn, {})
-          .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-          .createPipeline()
-          .withPerformanceCallback(callback);
-      }).toThrow(
-        'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
+        const before = root.createRenderPipeline({
+          vertex: vertexFn,
+          fragment: fragmentFn,
+        });
+        const after = before.withPerformanceCallback(callback);
+        // no-op
+        expect(after).toBe(before);
+      }).not.toThrow();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
       );
-
-      //@ts-expect-error
-      device.features = originalFeatures;
     });
 
     it("should not throw 'A color target was not provided to the shader'", ({ root, device }) => {
@@ -1485,6 +1482,66 @@ describe('root.createRenderPipeline', () => {
     `);
   });
 
+  it('derefs implicit pointers in the vertex and fragment outputs', ({ root }) => {
+    const pipeline = root.createRenderPipeline({
+      vertex: ({ $vertexIndex }) => {
+        'use gpu';
+        const pos = [d.vec2f(0.0, 0.5), d.vec2f(-0.5, -0.5), d.vec2f(0.5, -0.5)];
+        const local = pos[$vertexIndex]!;
+        return {
+          $position: d.vec4f(local, 0, 1),
+          local,
+        };
+      },
+      fragment: () => {
+        'use gpu';
+        const color = d.vec4f(1, 0, 0, 1);
+        const alias = color;
+        return {
+          color: alias,
+        };
+      },
+      targets: { color: { format: 'rgba8unorm' } },
+    });
+
+    expectTypeOf(pipeline).toEqualTypeOf<TgpuRenderPipeline<{ color: d.Vec4f }>>();
+
+    const wgsl = tgpu.resolve([pipeline]);
+    // vertex
+    expect(wgsl).toContain('local: vec2f');
+    expect(wgsl).not.toContain('local: ptr<function, vec2f>');
+    // fragment
+    expect(wgsl).toContain('color: vec4f');
+    expect(wgsl).not.toContain('ptr<function, vec4f>');
+
+    expect(wgsl).toMatchInlineSnapshot(`
+      "struct VertexOut {
+        @builtin(position) position: vec4f,
+        @location(0) local: vec2f,
+      }
+
+      struct VertexIn {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
+        var pos = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
+        let local = (&pos[_arg_0.vertexIndex]);
+        return VertexOut(vec4f((*local), 0f, 1f), (*local));
+      }
+
+      struct FragmentOut {
+        @location(0) color: vec4f,
+      }
+
+      @fragment fn fragment() -> FragmentOut {
+        var color = vec4f(1, 0, 0, 1);
+        let alias_1 = (&color);
+        return FragmentOut((*alias_1));
+      }"
+    `);
+  });
+
   it('generates a struct that matches vertex attributes', ({ root }) => {
     const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec3f));
     const pipeline = root.createRenderPipeline({
@@ -1536,7 +1593,7 @@ describe('root.createRenderPipeline', () => {
       attribs: { vertexIndex: vertexLayout.attrib },
       vertex: ({ vertexIndex, $vertexIndex }) => {
         'use gpu';
-        return { $position: d.vec4f() };
+        return { $position: d.vec4f(vertexIndex, $vertexIndex, 0, 1) };
       },
       fragment: () => {
         'use gpu';
@@ -1564,7 +1621,7 @@ describe('root.createRenderPipeline', () => {
       },
       fragment: ({ position }) => {
         'use gpu';
-        return d.vec4f();
+        return position;
       },
       targets: { format: 'rgba8unorm' },
     });
@@ -1586,7 +1643,10 @@ describe('root.createRenderPipeline', () => {
       },
       fragment: ({ $frontFacing, frontFacing }) => {
         'use gpu';
-        return d.vec4f();
+        if ($frontFacing && frontFacing === 1) {
+          return d.vec4f(0, 1, 0, 1);
+        }
+        return d.vec4f(1, 0, 0, 1);
       },
       targets: { format: 'rgba8unorm' },
     });
@@ -1689,13 +1749,13 @@ describe('root.createRenderPipeline', () => {
         [
           0,
           {
-            "destroy": [MockFunction spy],
-            "getMappedRange": [MockFunction spy],
+            "destroy": [MockFunction],
+            "getMappedRange": [MockFunction],
             "label": "instanceBuffer",
-            "mapAsync": [MockFunction spy],
+            "mapAsync": [MockFunction],
             "mapState": "unmapped",
             "size": 16,
-            "unmap": [MockFunction spy],
+            "unmap": [MockFunction],
             "usage": 44,
           },
           undefined,
@@ -1704,19 +1764,67 @@ describe('root.createRenderPipeline', () => {
         [
           1,
           {
-            "destroy": [MockFunction spy],
-            "getMappedRange": [MockFunction spy],
+            "destroy": [MockFunction],
+            "getMappedRange": [MockFunction],
             "label": "vertexBuffer",
-            "mapAsync": [MockFunction spy],
+            "mapAsync": [MockFunction],
             "mapState": "unmapped",
             "size": 48,
-            "unmap": [MockFunction spy],
+            "unmap": [MockFunction],
             "usage": 44,
           },
           undefined,
           undefined,
         ],
       ]
+    `);
+  });
+
+  it('accepts entry functions with no attributes or varyings', ({ root }) => {
+    const positions = tgpu.const(d.arrayOf(d.vec2f, 3), [
+      d.vec2f(0, 0),
+      d.vec2f(1, 0),
+      d.vec2f(0, 1),
+    ]);
+    const vertex = ({ $vertexIndex }: TgpuVertexFn.AutoInEmpty) => {
+      'use gpu';
+      return {
+        $position: d.vec4f(positions.$[$vertexIndex]!, 0, 1),
+      } satisfies TgpuVertexFn.AutoOut;
+    };
+
+    const fragment = ({ $position }: TgpuFragmentFn.AutoInEmpty) => {
+      'use gpu';
+      return $position;
+    };
+
+    const pipeline = root.createRenderPipeline({
+      vertex,
+      fragment,
+    });
+
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+      "const positions: array<vec2f, 3> = array<vec2f, 3>(vec2f(), vec2f(1, 0), vec2f(0, 1));
+
+      struct VertexOut {
+        @builtin(position) position: vec4f,
+      }
+
+      struct VertexIn {
+        @builtin(vertex_index) vertexIndex: u32,
+      }
+
+      @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
+        return VertexOut(vec4f(positions[_arg_0.vertexIndex], 0f, 1f));
+      }
+
+      struct FragmentIn {
+        @builtin(position) position: vec4f,
+      }
+
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
+        return _arg_0.position;
+      }"
     `);
   });
 });
@@ -2082,5 +2190,190 @@ describe('Render Bundles', () => {
     expect(pass.setPipeline).toHaveBeenCalled();
     expect(pass.draw).toHaveBeenCalledWith(3, undefined, undefined, undefined);
     expect(pass.end).toHaveBeenCalled();
+  });
+});
+
+describe('drawIndirect / drawIndexedIndirect buffer and offset validation', () => {
+  // our favorite struct: https://shorturl.at/NQggS
+  const DeepStruct = d.struct({
+    someData: d.arrayOf(d.f32, 13),
+    nested: d.struct({
+      randomData: d.f32,
+      x: d.atomic(d.u32),
+      y: d.u32,
+      innerNested: d.arrayOf(
+        d.struct({
+          xx: d.atomic(d.u32),
+          yy: d.u32,
+          zz: d.u32,
+          myVec: d.vec4u,
+        }),
+        3,
+      ),
+      z: d.u32,
+      additionalData: d.arrayOf(d.u32, 32),
+    }),
+  });
+
+  const vertexFn = tgpu.vertexFn({
+    out: { pos: d.builtin.position },
+  })('');
+
+  const fragmentFn = tgpu.fragmentFn({
+    out: { color: d.vec4f },
+  })('');
+
+  function createPipeline(root: ExperimentalTgpuRoot) {
+    return root
+      .createRenderPipeline({
+        vertex: vertexFn,
+        fragment: fragmentFn,
+        targets: { color: { format: 'rgba8unorm' } },
+      })
+      .withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      });
+  }
+
+  describe('drawIndirect', () => {
+    it('accepts raw GPUBuffer with indirect flag', ({ root, device }) => {
+      const buffer = device.createBuffer({ size: 20, usage: GPUBufferUsage.INDIRECT });
+
+      const pipeline = createPipeline(root);
+
+      pipeline.drawIndirect(buffer, 4);
+    });
+
+    it('throws when offset is not multiple of 4', ({ root, device }) => {
+      const buffer = device.createBuffer({ size: 20, usage: GPUBufferUsage.INDIRECT });
+
+      const pipeline = createPipeline(root);
+
+      expect(() => pipeline.drawIndirect(buffer, 3)).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Indirect buffer offset must be a multiple of 4. Got: 3]`,
+      );
+    });
+
+    it('throws when raw GPUBuffer size is not enough for draw', ({ device, root }) => {
+      const buffer = device.createBuffer({
+        size: 17,
+        usage: GPUBufferUsage.INDIRECT,
+      });
+
+      const pipeline = createPipeline(root);
+
+      expect(() => pipeline.drawIndirect(buffer, 4)).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Buffer too small for drawIndirect. Required: 16 bytes at offset 4, but buffer is only 17 bytes.]`,
+      );
+    });
+
+    it('warns when draw would read across padding', ({ root }) => {
+      using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const pipeline = createPipeline(root);
+
+      const buffer = root.createBuffer(DeepStruct).$usage('indirect');
+      pipeline.drawIndirect(
+        buffer,
+        d.memoryLayoutOf(DeepStruct, (s) => s.someData[10]),
+      );
+
+      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
+        `"drawIndirect: Starting at offset 40, only 12 contiguous bytes are available before padding. 'drawIndirect' requires 16 bytes (4 x u32). Reading across padding may result in undefined behavior."`,
+      );
+    });
+
+    it('does not warn when draw has sufficient contiguous data', ({ root }) => {
+      using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const pipeline = createPipeline(root);
+
+      const DrawIndirectArgs = d.struct({
+        vertexCount: d.u32,
+        instanceCount: d.u32,
+        firstVertex: d.u32,
+        firstInstance: d.u32,
+      });
+      const buffer = root.createBuffer(DrawIndirectArgs).$usage('indirect');
+      pipeline.drawIndirect(buffer);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('drawIndexedIndirect', () => {
+    function createPipelineIndexed(root: ExperimentalTgpuRoot) {
+      const indexBuffer = root.createBuffer(d.arrayOf(d.u32, 3)).$usage('index');
+      return createPipeline(root).withIndexBuffer(indexBuffer);
+    }
+
+    it('accepts raw GPUBuffer with indirect flag', ({ root, device }) => {
+      const buffer = device.createBuffer({ size: 24, usage: GPUBufferUsage.INDIRECT });
+
+      const pipeline = createPipelineIndexed(root);
+
+      pipeline.drawIndexedIndirect(buffer, 4);
+    });
+
+    it('throws when offset is not multiple of 4', ({ root, device }) => {
+      const buffer = device.createBuffer({ size: 24, usage: GPUBufferUsage.INDIRECT });
+
+      const pipeline = createPipelineIndexed(root);
+
+      expect(() => pipeline.drawIndexedIndirect(buffer, 3)).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Indirect buffer offset must be a multiple of 4. Got: 3]`,
+      );
+    });
+
+    it('throws when raw GPUBuffer size is not enough for drawIndexed', ({ device, root }) => {
+      const buffer = device.createBuffer({
+        size: 21,
+        usage: GPUBufferUsage.INDIRECT,
+      });
+
+      const pipeline = createPipelineIndexed(root);
+
+      expect(() => pipeline.drawIndexedIndirect(buffer, 4)).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Buffer too small for drawIndexedIndirect. Required: 20 bytes at offset 4, but buffer is only 21 bytes.]`,
+      );
+    });
+
+    it('warns when drawIndexed would read across padding', ({ root }) => {
+      using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const pipeline = createPipelineIndexed(root);
+
+      const buffer = root.createBuffer(DeepStruct).$usage('indirect');
+      pipeline.drawIndexedIndirect(
+        buffer,
+        d.memoryLayoutOf(DeepStruct, (s) => s.someData[9]),
+      );
+
+      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
+        `"drawIndexedIndirect: Starting at offset 36, only 16 contiguous bytes are available before padding. 'drawIndexedIndirect' requires 20 bytes (3 x u32, i32, u32). Reading across padding may result in undefined behavior."`,
+      );
+    });
+
+    it('does not warn when drawIndexed has sufficient contiguous data', ({ root }) => {
+      using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const pipeline = createPipelineIndexed(root);
+
+      const DrawIndexedIndirectArgs = d.struct({
+        indexCount: d.u32,
+        instanceCount: d.u32,
+        firstIndex: d.u32,
+        baseVertex: d.i32,
+        firstInstance: d.u32,
+      });
+      const buffer = root.createBuffer(DrawIndexedIndirectArgs).$usage('indirect');
+      pipeline.drawIndexedIndirect(buffer);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
   });
 });

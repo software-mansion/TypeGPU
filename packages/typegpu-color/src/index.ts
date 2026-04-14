@@ -10,3 +10,4 @@ export {
   oklabToRgb,
   rgbToOklab,
 } from './oklab.ts';
+export { hexToRgb, hexToRgba, hexToOklab } from './hex.ts';

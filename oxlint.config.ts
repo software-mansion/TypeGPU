@@ -1,18 +1,16 @@
 import { defineConfig } from 'oxlint';
 import typegpu from 'eslint-plugin-typegpu';
-
-const typegpuPreset = typegpu.configs?.recommended;
-const typegpuRules = typegpuPreset && 'rules' in typegpuPreset ? typegpuPreset.rules : {};
+import eslintPlugin from 'eslint-plugin-eslint-plugin';
 
 export default defineConfig({
   plugins: ['eslint', 'typescript', 'import', 'unicorn', 'oxc'],
-  jsPlugins: ['eslint-plugin-typegpu'],
+  jsPlugins: ['eslint-plugin-typegpu', 'eslint-plugin-eslint-plugin'],
   categories: {
     correctness: 'warn',
     suspicious: 'warn',
   },
   rules: {
-    ...typegpuRules,
+    ...typegpu.configs.recommended.rules,
     'typescript/no-unsafe-enum-comparison': 'off',
     'typescript/restrict-template-expressions': 'off',
     'typescript/no-unsafe-type-assertion': 'off',
@@ -36,6 +34,12 @@ export default defineConfig({
         'eslint-plugin-unicorn/consistent-function-scoping': 'off',
         'eslint/no-unsafe-optional-chaining': 'off',
         'eslint/no-constant-condition': 'off',
+      },
+    },
+    {
+      files: ['**/packages/eslint-plugin/**/*.ts'],
+      rules: {
+        ...(eslintPlugin.configs.recommended.rules as Record<string, 'error' | 'warn' | 'off'>),
       },
     },
   ],

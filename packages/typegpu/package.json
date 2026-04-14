@@ -1,7 +1,6 @@
 {
   "name": "typegpu",
-  "version": "0.10.2",
-  "private": true,
+  "version": "0.11.2",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "keywords": [
     "compute",
@@ -20,7 +19,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/software-mansion/TypeGPU.git"
+    "url": "git+https://github.com/software-mansion/TypeGPU.git",
+    "directory": "packages/typegpu"
   },
   "type": "module",
   "sideEffects": false,
@@ -51,6 +51,7 @@
     }
   },
   "publishConfig": {
+    "access": "public",
     "directory": "dist",
     "exports": {
       "./package.json": "./dist/package.json",
@@ -81,18 +82,20 @@
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
-    "tinyest": "workspace:~0.3.0",
-    "tsover-runtime": "^0.0.5",
-    "typed-binary": "^4.3.1"
+    "tinyest": "workspace:~0.3.1",
+    "tsover-runtime": "^0.0.6",
+    "typed-binary": "^4.3.3"
   },
   "devDependencies": {
     "@ark/attest": "^0.56.0",
     "@typegpu/tgpu-dev-cli": "workspace:*",
+    "@types/node": "catalog:types",
     "@webgpu/types": "catalog:types",
     "arktype": "catalog:",
     "jiti": "catalog:build",
     "jsdom": "^27.0.0",
     "tsdown": "catalog:build",
+    "typegpu-testing-utility": "workspace:*",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*",
     "wgpu-matrix": "catalog:example"

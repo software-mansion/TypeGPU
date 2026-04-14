@@ -33,6 +33,22 @@ export function isEphemeralOrigin(space: Origin) {
   return space === 'runtime' || space === 'constant' || space === 'argument';
 }
 
+/**
+ * What happens to a snippet's origin when it's deep copied in JS, and left as is in WGSL?
+ * e.g. `vec3f(vec3f(0, 1, 2))`
+ */
+export function fallthroughCopyOrigin(origin: Origin): Origin {
+  if (
+    origin === 'runtime' || // runtime values stay runtime
+    origin === 'constant' // constant values stay constant
+  ) {
+    // The origin is kept as-is
+    return origin;
+  }
+  // All other origins become runtime
+  return 'runtime';
+}
+
 export function isEphemeralSnippet(snippet: Snippet) {
   return isEphemeralOrigin(snippet.origin);
 }
@@ -71,11 +87,15 @@ export interface ResolvedSnippet {
 export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 
 class SnippetImpl implements Snippet {
-  constructor(
-    readonly value: unknown,
-    readonly dataType: BaseData | UnknownData,
-    readonly origin: Origin,
-  ) {}
+  readonly value: unknown;
+  readonly dataType: BaseData | UnknownData;
+  readonly origin: Origin;
+
+  constructor(value: unknown, dataType: BaseData | UnknownData, origin: Origin) {
+    this.value = value;
+    this.dataType = dataType;
+    this.origin = origin;
+  }
 }
 
 export function isSnippet(value: unknown): value is Snippet {

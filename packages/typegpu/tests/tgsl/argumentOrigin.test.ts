@@ -1,11 +1,12 @@
 import { describe, expect } from 'vitest';
-import { it } from '../utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import tgpu, { d } from '../../src/index.js';
 
 describe('function argument origin tracking', () => {
   it('should fail on mutation of primitive arguments', () => {
     const foo = (a: number) => {
       'use gpu';
+      // oxlint-disable-next-line typegpu/no-invalid-assignment -- this is a test
       a += 1;
     };
 
@@ -28,6 +29,7 @@ describe('function argument origin tracking', () => {
 
     const foo = ({ a }: { a: number }) => {
       'use gpu';
+      // oxlint-disable-next-line typegpu/no-invalid-assignment -- this is a test
       a += 1;
     };
 
@@ -48,6 +50,7 @@ describe('function argument origin tracking', () => {
   it('should fail on mutation of non-primitive arguments', () => {
     const foo = (a: d.v3f) => {
       'use gpu';
+      // oxlint-disable-next-line typegpu/no-invalid-assignment -- this is a test
       a.x += 1;
     };
 

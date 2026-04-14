@@ -4,6 +4,8 @@
     "declaration": true,
     "lib": ["ESNext", "DOM"],
     "emitDeclarationOnly": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
     "target": "ESNext",
     "module": "ESNext",
     "strict": true,

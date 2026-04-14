@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
 import tgpu, { std } from '../src/index.js';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('TgpuGenericFn - shellless callback wrapper', () => {
   it('can be called in js', () => {
@@ -331,7 +331,7 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
 
       var<private> dataByteIndex: u32;
 
-      fn nextByteIndex() -> u32{
+      fn nextByteIndex() -> u32 {
         let i = dataByteIndex;
         dataByteIndex = dataByteIndex + 1u;
         return i;
@@ -360,15 +360,11 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
         log1((((x + y) + z) + 1u));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(1, 1, 1) fn mainCompute(in: mainCompute_Input)  {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        f(in.id.x, in.id.y, in.id.z);
+        f(id.x, id.y, id.z);
       }"
     `);
   });

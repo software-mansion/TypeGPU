@@ -11,7 +11,7 @@ const mousePosUniform = root.createUniform(d.vec2f, d.vec2f(0.5, 0.5));
 const response = await fetch('/TypeGPU/plums.jpg');
 const imageBitmap = await createImageBitmap(await response.blob());
 
-const imageTexture = root['~unstable']
+const imageTexture = root
   .createTexture({
     size: [imageBitmap.width, imageBitmap.height, 1],
     format: 'rgba8unorm',
@@ -22,7 +22,7 @@ imageTexture.write(imageBitmap);
 imageTexture.generateMipmaps();
 
 const sampledView = imageTexture.createView();
-const sampler = root['~unstable'].createSampler({
+const sampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
   mipmapFilter: 'linear',
@@ -91,9 +91,9 @@ const sampleWithChromaticAberration = (
 ) => {
   'use gpu';
   const samples = d.arrayOf(d.vec3f, 3)();
-  for (const i of tgpu.unroll([0, 1, 2])) {
-    const channelOffset = dir.mul((d.f32(i) - 1.0) * offset);
-    samples[i] = std.textureSampleBias(tex, sampler, uv.sub(channelOffset), blur).rgb;
+  for (const i of tgpu.unroll(std.range(3))) {
+    const channelOffset = dir * (d.f32(i) - 1) * offset;
+    samples[i] = std.textureSampleBias(tex, sampler, uv - channelOffset, blur).rgb;
   }
   return d.vec3f(samples[0].x, samples[1].y, samples[2].z);
 };
@@ -194,7 +194,7 @@ export const controls = defineControls({
     max: d.vec2f(0.5, 0.5),
     step: d.vec2f(0.01, 0.01),
     onVectorSliderChange: (v) => {
-      paramsUniform.writePartial({
+      paramsUniform.patch({
         rectDims: d.vec2f(...(v as [number, number])),
       });
     },
@@ -205,7 +205,7 @@ export const controls = defineControls({
     max: 0.05,
     step: 0.001,
     onSliderChange: (v) => {
-      paramsUniform.writePartial({
+      paramsUniform.patch({
         radius: v,
       });
     },
@@ -216,7 +216,7 @@ export const controls = defineControls({
     max: 0.1,
     step: 0.001,
     onSliderChange: (v) => {
-      paramsUniform.writePartial({
+      paramsUniform.patch({
         start: v,
       });
     },
@@ -227,7 +227,7 @@ export const controls = defineControls({
     max: 0.2,
     step: 0.001,
     onSliderChange: (v) => {
-      paramsUniform.writePartial({
+      paramsUniform.patch({
         end: v,
       });
     },
@@ -238,7 +238,7 @@ export const controls = defineControls({
     max: 0.1,
     step: 0.001,
     onSliderChange: (v) => {
-      paramsUniform.writePartial({
+      paramsUniform.patch({
         chromaticStrength: v,
       });
     },
@@ -249,7 +249,7 @@ export const controls = defineControls({
     max: 0.2,
     step: 0.001,
     onSliderChange: (v) => {
-      paramsUniform.writePartial({
+      paramsUniform.patch({
         refractionStrength: v,
       });
     },
@@ -260,7 +260,7 @@ export const controls = defineControls({
     max: 6.0,
     step: 0.1,
     onSliderChange: (v) => {
-      paramsUniform.writePartial({ blur: v });
+      paramsUniform.patch({ blur: v });
     },
   },
   'Edge blur multiplier': {
@@ -269,7 +269,7 @@ export const controls = defineControls({
     max: 1.0,
     step: 0.05,
     onSliderChange: (v) => {
-      paramsUniform.writePartial({ edgeBlurMultiplier: v });
+      paramsUniform.patch({ edgeBlurMultiplier: v });
     },
   },
   'Feather ammount': {
@@ -278,7 +278,7 @@ export const controls = defineControls({
     max: 3.0,
     step: 0.1,
     onSliderChange: (v) => {
-      paramsUniform.writePartial({ edgeFeather: v });
+      paramsUniform.patch({ edgeFeather: v });
     },
   },
   'Tint strength': {
@@ -287,13 +287,13 @@ export const controls = defineControls({
     max: 1.0,
     step: 0.01,
     onSliderChange: (v) => {
-      paramsUniform.writePartial({ tintStrength: v });
+      paramsUniform.patch({ tintStrength: v });
     },
   },
   'Tint color': {
     initial: defaultParams.tintColor,
     onColorChange: (rgb) => {
-      paramsUniform.writePartial({
+      paramsUniform.patch({
         tintColor: d.vec3f(...(rgb as [number, number, number])),
       });
     },

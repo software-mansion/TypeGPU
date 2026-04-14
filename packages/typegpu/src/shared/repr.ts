@@ -5,10 +5,12 @@ import type { U16, U32, WgslArray } from '../data/wgslTypes.ts';
 import type {
   $gpuRepr,
   $gpuValueOf,
+  $inRepr,
   $invalidSchemaReason,
   $memIdent,
   $repr,
   $reprPartial,
+  $reprPatch,
   $validStorageSchema,
   $validUniformSchema,
   $validVertexSchema,
@@ -28,8 +30,24 @@ import type { Default } from './utilityTypes.ts';
 export type Infer<T> = T extends { readonly [$repr]: infer TRepr } ? TRepr : T;
 
 /**
+ * Extracts the inferred input (write-side) representation of a resource.
+ *
+ * @example
+ * type A = InferInput<Vec3f> // => v3f | [number, number, number] | Float32Array
+ * type B = InferInput<WgslArray<Vec3f>> // => (v3f | [number, number, number] | Float32Array)[] | Float32Array
+ * type C = InferInput<F32> // => number (same as Infer<F32>)
+ * const arrayOfStructs = d.arrayOf(d.struct({ pos: d.vec3f, id: d.f32 }), 4);
+ * type D = d.InferInput<typeof arrayOfStructs>; // { pos: d.v3f | Float32Array<ArrayBufferLike> | [number, number, number]; id: number; }[]
+ */
+export type InferInput<T> =
+  | Infer<T>
+  | (T extends { readonly [$inRepr]: infer TRepr } ? TRepr : never);
+
+/**
  * Extracts a sparse/partial inferred representation of a resource.
  * Used by the `buffer.writePartial` API.
+ *
+ * @deprecated
  *
  * @example
  * type A = InferPartial<F32> // => number | undefined
@@ -56,8 +74,30 @@ export type InferRecord<T extends Record<string | number | symbol, unknown>> = {
   [Key in keyof T]: Infer<T[Key]>;
 };
 
+export type InferInputRecord<T extends Record<string | number | symbol, unknown>> = {
+  [Key in keyof T]: InferInput<T[Key]>;
+};
+
+/** @deprecated */
 export type InferPartialRecord<T extends Record<string | number | symbol, unknown>> = {
   [Key in keyof T]?: InferPartial<T[Key]>;
+};
+
+/**
+ * Extracts the patch representation of a resource.
+ * Used by the `buffer.patch` API.
+ *
+ * @example
+ * type A = InferPatch<F32> // => number | undefined
+ * type B = InferPatch<WgslStruct<{ a: F32 }>> // => { a?: number | undefined }
+ * type C = InferPatch<WgslArray<F32>> // => Record<number, number | undefined> | number[] | undefined
+ */
+export type InferPatch<T> = T extends { readonly [$reprPatch]: infer TRepr }
+  ? TRepr
+  : InferInput<T> | undefined;
+
+export type InferPatchRecord<T extends Record<string | number | symbol, unknown>> = {
+  [Key in keyof T]?: InferPatch<T[Key]>;
 };
 
 export type InferGPURecord<T extends Record<string | number | symbol, unknown>> = {

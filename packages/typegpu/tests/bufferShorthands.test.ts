@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import * as d from '../src/data/index.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import type {
   StorageFlag,
   TgpuBuffer,
@@ -35,17 +35,20 @@ describe('root.createMutable', () => {
   it('does not accept non-host-shareable schemas', ({ root }) => {
     // @ts-expect-error: bool is not allowed in mutable schemas
     attest(() => root.createMutable(d.bool)).type.errors.snap(
-      "Argument of type 'Bool' is not assignable to parameter of type '\"(Error) Bool is not host-shareable, use U32 or I32 instead\"'.",
+      `No overload matches this call.Overload 1 of 4, '(typeSchema: "(Error) Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<Bool>> | undefined): TgpuMutable<Bool>', gave the following error.Argument of type 'Bool' is not assignable to parameter of type '"(Error) Bool is not host-shareable, use U32 or I32 instead"'.
+Overload 2 of 4, '(typeSchema: "(Error) Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<Bool>> | ((buffer: TgpuBuffer<NoInfer<Bool>>) => void) | undefined): TgpuMutable<...>', gave the following error.Argument of type 'Bool' is not assignable to parameter of type '"(Error) Bool is not host-shareable, use U32 or I32 instead"'.`,
     );
 
     // @ts-expect-error: bool is not allowed in mutable schemas
     attest(() => root.createMutable(d.arrayOf(d.bool, 16))).type.errors.snap(
-      "Argument of type 'WgslArray<Bool>' is not assignable to parameter of type '\"(Error) in array element — Bool is not host-shareable, use U32 or I32 instead\"'.",
+      `No overload matches this call.Overload 1 of 4, '(typeSchema: "(Error) in array element — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslArray<Bool>>> | undefined): TgpuMutable<...>', gave the following error.Argument of type 'WgslArray<Bool>' is not assignable to parameter of type '"(Error) in array element — Bool is not host-shareable, use U32 or I32 instead"'.
+Overload 2 of 4, '(typeSchema: "(Error) in array element — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslArray<Bool>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuMutable<...>', gave the following error.Argument of type 'WgslArray<Bool>' is not assignable to parameter of type '"(Error) in array element — Bool is not host-shareable, use U32 or I32 instead"'.`,
     );
 
     // @ts-expect-error: bool is not allowed in mutable schemas
     attest(() => root.createMutable(d.struct({ foo: d.bool }))).type.errors.snap(
-      "Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead\"'.",
+      `No overload matches this call.Overload 1 of 4, '(typeSchema: "(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ foo: Bool; }>>> | undefined): TgpuMutable<...>', gave the following error.Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead"'.
+Overload 2 of 4, '(typeSchema: "(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ foo: Bool; }>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuMutable<...>', gave the following error.Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead"'.`,
     );
   });
 });
@@ -74,17 +77,20 @@ describe('root.createReadonly', () => {
   it('does not accept non-host-shareable schemas', ({ root }) => {
     // @ts-expect-error: bool is not allowed in readonly schemas
     attest(() => root.createReadonly(d.bool)).type.errors.snap(
-      "Argument of type 'Bool' is not assignable to parameter of type '\"(Error) Bool is not host-shareable, use U32 or I32 instead\"'.",
+      `No overload matches this call.Overload 1 of 4, '(typeSchema: "(Error) Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<Bool>> | undefined): TgpuReadonly<Bool>', gave the following error.Argument of type 'Bool' is not assignable to parameter of type '"(Error) Bool is not host-shareable, use U32 or I32 instead"'.
+Overload 2 of 4, '(typeSchema: "(Error) Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<Bool>> | ((buffer: TgpuBuffer<NoInfer<Bool>>) => void) | undefined): TgpuReadonly<...>', gave the following error.Argument of type 'Bool' is not assignable to parameter of type '"(Error) Bool is not host-shareable, use U32 or I32 instead"'.`,
     );
 
     // @ts-expect-error: bool is not allowed in readonly schemas
     attest(() => root.createReadonly(d.arrayOf(d.bool, 16))).type.errors.snap(
-      "Argument of type 'WgslArray<Bool>' is not assignable to parameter of type '\"(Error) in array element — Bool is not host-shareable, use U32 or I32 instead\"'.",
+      `No overload matches this call.Overload 1 of 4, '(typeSchema: "(Error) in array element — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslArray<Bool>>> | undefined): TgpuReadonly<...>', gave the following error.Argument of type 'WgslArray<Bool>' is not assignable to parameter of type '"(Error) in array element — Bool is not host-shareable, use U32 or I32 instead"'.
+Overload 2 of 4, '(typeSchema: "(Error) in array element — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslArray<Bool>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuReadonly<...>', gave the following error.Argument of type 'WgslArray<Bool>' is not assignable to parameter of type '"(Error) in array element — Bool is not host-shareable, use U32 or I32 instead"'.`,
     );
 
     // @ts-expect-error: bool is not allowed in readonly schemas
     attest(() => root.createReadonly(d.struct({ foo: d.bool }))).type.errors.snap(
-      "Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead\"'.",
+      `No overload matches this call.Overload 1 of 4, '(typeSchema: "(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ foo: Bool; }>>> | undefined): TgpuReadonly<...>', gave the following error.Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead"'.
+Overload 2 of 4, '(typeSchema: "(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ foo: Bool; }>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuReadonly<...>', gave the following error.Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead"'.`,
     );
   });
 });
@@ -113,17 +119,20 @@ describe('root.createUniform', () => {
   it('does not accept non-host-shareable schemas', ({ root }) => {
     // @ts-expect-error: bool is not allowed in uniform schemas
     attest(() => root.createUniform(d.bool)).type.errors.snap(
-      "Argument of type 'Bool' is not assignable to parameter of type '\"(Error) Bool is not host-shareable, use U32 or I32 instead\"'.",
+      `No overload matches this call.Overload 1 of 4, '(typeSchema: "(Error) Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<Bool>> | undefined): TgpuUniform<Bool>', gave the following error.Argument of type 'Bool' is not assignable to parameter of type '"(Error) Bool is not host-shareable, use U32 or I32 instead"'.
+Overload 2 of 4, '(typeSchema: "(Error) Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<Bool>> | ((buffer: TgpuBuffer<NoInfer<Bool>>) => void) | undefined): TgpuUniform<...>', gave the following error.Argument of type 'Bool' is not assignable to parameter of type '"(Error) Bool is not host-shareable, use U32 or I32 instead"'.`,
     );
 
     // @ts-expect-error: bool is not allowed in uniform schemas
     attest(() => root.createUniform(d.arrayOf(d.bool, 16))).type.errors.snap(
-      "Argument of type 'WgslArray<Bool>' is not assignable to parameter of type '\"(Error) in array element — Bool is not host-shareable, use U32 or I32 instead\"'.",
+      `No overload matches this call.Overload 1 of 4, '(typeSchema: "(Error) in array element — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslArray<Bool>>> | undefined): TgpuUniform<...>', gave the following error.Argument of type 'WgslArray<Bool>' is not assignable to parameter of type '"(Error) in array element — Bool is not host-shareable, use U32 or I32 instead"'.
+Overload 2 of 4, '(typeSchema: "(Error) in array element — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslArray<Bool>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuUniform<...>', gave the following error.Argument of type 'WgslArray<Bool>' is not assignable to parameter of type '"(Error) in array element — Bool is not host-shareable, use U32 or I32 instead"'.`,
     );
 
     // @ts-expect-error: bool is not allowed in uniform schemas
     attest(() => root.createUniform(d.struct({ foo: d.bool }))).type.errors.snap(
-      "Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead\"'.",
+      `No overload matches this call.Overload 1 of 4, '(typeSchema: "(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ foo: Bool; }>>> | undefined): TgpuUniform<...>', gave the following error.Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead"'.
+Overload 2 of 4, '(typeSchema: "(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ foo: Bool; }>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuUniform<...>', gave the following error.Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead"'.`,
     );
   });
 });

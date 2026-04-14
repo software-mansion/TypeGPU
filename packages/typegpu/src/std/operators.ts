@@ -1,19 +1,23 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { abstractFloat, f16, f32 } from '../data/numeric.ts';
-import { vecTypeToConstructor } from '../data/vector.ts';
+import { abstractFloat, f16, f32, i32, u32 } from '../data/numeric.ts';
+import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u, vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
+  type AnyIntegerVecInstance,
   type AnyMatInstance,
   type AnyNumericVecInstance,
   type BaseData,
-  isFloat32VecInstance,
-  isMat,
-  isMatInstance,
-  isVec,
-  isVecInstance,
   type mBaseForVec,
   type vBaseForMat,
+  isFloat32VecInstance,
+  isInteger32VecInstance,
+  isMat,
+  isMatInstance,
+  isUint32VecInstance,
+  isVec,
+  isVecInstance,
+  type vecIToVecU,
 } from '../data/wgslTypes.ts';
 import { SignatureNotSupportedError } from '../errors.ts';
 import { unify } from '../tgsl/conversion.ts';
@@ -278,4 +282,112 @@ export const neg = dualImpl({
   }),
   normalImpl: cpuNeg,
   codegenImpl: (_ctx, [arg]) => stitch`-(${arg})`,
+});
+
+const anyConcreteInteger = [i32, u32, vec2i, vec3i, vec4i, vec2u, vec3u, vec4u] as BaseData[];
+
+const intVecToUnsignedVec = {
+  vec2i: vec2u,
+  vec2u: vec2u,
+  vec3i: vec3u,
+  vec3u: vec3u,
+  vec4i: vec4u,
+  vec4u: vec4u,
+} as const;
+
+const bitShiftSignature = (lhs: BaseData, rhs: BaseData) => {
+  const lhsUnified = unify([lhs], anyConcreteInteger)?.[0];
+  if (!lhsUnified) {
+    throw new SignatureNotSupportedError([lhs], anyConcreteInteger);
+  }
+
+  let rhsType: BaseData;
+  if (isVec(lhsUnified)) {
+    const cc = lhsUnified.componentCount;
+    const vecU = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;
+    const rhsUnified = unify([rhs], [u32, vecU])?.[0];
+    if (!rhsUnified) {
+      throw new SignatureNotSupportedError([rhs], [u32, vecU]);
+    }
+    rhsType = rhsUnified;
+  } else {
+    rhsType = u32;
+  }
+
+  return {
+    argTypes: [lhsUnified, rhsType],
+    returnType: lhsUnified,
+  };
+};
+
+function cpuBitShiftLeft(lhs: number, rhs: number): number;
+function cpuBitShiftLeft<T extends AnyIntegerVecInstance>(lhs: T, rhs: number): T;
+function cpuBitShiftLeft<T extends AnyIntegerVecInstance>(lhs: T, rhs: vecIToVecU<T>): T;
+function cpuBitShiftLeft<T extends AnyIntegerVecInstance>(
+  lhs: number | AnyIntegerVecInstance,
+  rhs: number | vecIToVecU<T>,
+) {
+  if (typeof lhs === 'number' && typeof rhs === 'number') {
+    return lhs << rhs;
+  }
+  if (isInteger32VecInstance(lhs) && isUint32VecInstance(rhs) && lhs.length == rhs.length) {
+    return VectorOps.bitShiftLeft[lhs.kind](lhs, rhs);
+  }
+  if (isInteger32VecInstance(lhs) && typeof rhs === 'number') {
+    const rhsVec = intVecToUnsignedVec[lhs.kind](rhs);
+    return VectorOps.bitShiftLeft[lhs.kind](lhs, rhsVec);
+  }
+  throw new Error(
+    'bitShiftLeft called with invalid arguments, expected types: number or integer vector (rhs must be the same arity as lhs).',
+  );
+}
+
+export const bitShiftLeft = dualImpl({
+  name: 'bitShiftLeft',
+  signature: bitShiftSignature,
+  normalImpl: cpuBitShiftLeft,
+  codegenImpl: (_ctx, [lhs, rhs]) => {
+    if (isVec(lhs.dataType) && !isVec(rhs.dataType)) {
+      const cc = lhs.dataType.componentCount;
+      const schema = cc === 2 ? 'vec2u' : cc === 3 ? 'vec3u' : 'vec4u';
+      return stitch`(${lhs} << ${schema}(${rhs}))`;
+    }
+    return stitch`(${lhs} << ${rhs})`;
+  },
+});
+
+function cpuBitShiftRight(lhs: number, rhs: number): number;
+function cpuBitShiftRight<T extends AnyIntegerVecInstance>(lhs: T, rhs: number): T;
+function cpuBitShiftRight<T extends AnyIntegerVecInstance>(lhs: T, rhs: vecIToVecU<T>): T;
+function cpuBitShiftRight<T extends AnyIntegerVecInstance>(
+  lhs: number | AnyIntegerVecInstance,
+  rhs: number | vecIToVecU<T>,
+) {
+  if (typeof lhs === 'number' && typeof rhs === 'number') {
+    return lhs >> rhs;
+  }
+  if (isInteger32VecInstance(lhs) && isUint32VecInstance(rhs) && lhs.length == rhs.length) {
+    return VectorOps.bitShiftRight[lhs.kind](lhs, rhs);
+  }
+  if (isInteger32VecInstance(lhs) && typeof rhs === 'number') {
+    const rhsVec = intVecToUnsignedVec[lhs.kind](rhs);
+    return VectorOps.bitShiftRight[lhs.kind](lhs, rhsVec);
+  }
+  throw new Error(
+    'bitShiftRight called with invalid arguments, expected types: number or integer vector (rhs must be the same arity as lhs).',
+  );
+}
+
+export const bitShiftRight = dualImpl({
+  name: 'bitShiftRight',
+  signature: bitShiftSignature,
+  normalImpl: cpuBitShiftRight,
+  codegenImpl: (_ctx, [lhs, rhs]) => {
+    if (isVec(lhs.dataType) && !isVec(rhs.dataType)) {
+      const cc = lhs.dataType.componentCount;
+      const schema = cc === 2 ? 'vec2u' : cc === 3 ? 'vec3u' : 'vec4u';
+      return stitch`(${lhs} >> ${schema}(${rhs}))`;
+    }
+    return stitch`(${lhs} >> ${rhs})`;
+  },
 });

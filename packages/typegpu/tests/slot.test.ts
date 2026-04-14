@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import tgpu, { d, std } from '../src/index.js';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import { getName } from '../src/shared/meta.ts';
 
 const RED = 'vec3f(1., 0., 0.)';
@@ -15,7 +15,7 @@ describe('tgpu.slot', () => {
     }`.$uses({ colorSlot });
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
-      "fn getColor() -> vec3f{
+      "fn getColor() -> vec3f {
             return vec3f(1., 0., 0.);
           }"
     `);
@@ -38,7 +38,7 @@ describe('tgpu.slot', () => {
       .$uses({ getColorWithGreen });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn getColor() -> vec3f{
+      "fn getColor() -> vec3f {
             return vec3f(0., 1., 0.);
           }
 
@@ -64,7 +64,7 @@ describe('tgpu.slot', () => {
 
     // should be green
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn getColor() -> vec3f{
+      "fn getColor() -> vec3f {
               return vec3f(0., 1., 0.);
             }
 
@@ -111,11 +111,11 @@ describe('tgpu.slot', () => {
     }`.$uses({ getColorWithRed, wrapper });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn getColor() -> vec3f{
+      "fn getColor() -> vec3f {
             return vec3f(1., 0., 0.);
           }
 
-      fn getColor_1() -> vec3f{
+      fn getColor_1() -> vec3f {
             return vec3f(0., 1., 0.);
           }
 
@@ -167,9 +167,9 @@ describe('tgpu.slot', () => {
       .$name('main');
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn getSize() -> f32{ return 1; }
+      "fn getSize() -> f32 { return 1; }
 
-      fn getColor() -> vec3f{ return vec3f(1., 0., 0.); }
+      fn getColor() -> vec3f { return vec3f(1., 0., 0.); }
 
       fn sizeAndColor() {
               getSize();
@@ -180,7 +180,7 @@ describe('tgpu.slot', () => {
               sizeAndColor();
             }
 
-      fn getSize_1() -> f32{ return 100; }
+      fn getSize_1() -> f32 { return 100; }
 
       fn sizeAndColor_1() {
               getSize_1();
@@ -191,7 +191,7 @@ describe('tgpu.slot', () => {
               sizeAndColor_1();
             }
 
-      fn getColor_1() -> vec3f{ return vec3f(0., 1., 0.); }
+      fn getColor_1() -> vec3f { return vec3f(0., 1., 0.); }
 
       fn sizeAndColor_2() {
               getSize();

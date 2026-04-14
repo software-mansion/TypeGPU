@@ -1,6 +1,6 @@
 import tgpu, { d } from '../src/index.js';
 import { describe, expect } from 'vitest';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('d.ref', () => {
   it('fails when using a ref as an external', () => {
@@ -114,7 +114,7 @@ describe('d.ref', () => {
 
     const clearPosition = (entity: d.ref<Entity>) => {
       'use gpu';
-      entity.pos = d.vec3f();
+      entity.$.pos = d.vec3f();
     };
 
     const main = () => {
@@ -149,7 +149,7 @@ describe('d.ref', () => {
   it('allows updating a vector component from another function', () => {
     const clearX = (pos: d.ref<d.v3f>) => {
       'use gpu';
-      pos.x = 0;
+      pos.$.x = 0;
     };
 
     const main = () => {

@@ -46,9 +46,9 @@ export function extractSnippetFromFn(cb: () => unknown): Snippet {
       wgslGenerator.initGenerator(ctx);
       // Prewarming statements
       for (const statement of statements) {
-        wgslGenerator.statement(statement);
+        wgslGenerator._statement(statement);
       }
-      return wgslGenerator.expression(statements[statements.length - 1] as tinyest.Expression);
+      return wgslGenerator._expression(statements[statements.length - 1] as tinyest.Expression);
     } finally {
       if (pushedFnScope) {
         ctx.popBlockScope();

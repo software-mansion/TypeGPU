@@ -31,14 +31,14 @@ function makeLightViewProj(lightDir: d.v3f, center: d.v3f = d.vec3f()) {
 
 function createCanvasTextures() {
   return {
-    msaa: root['~unstable']
+    msaa: root
       .createTexture({
         size: [canvas.width, canvas.height],
         format: presentationFormat,
         sampleCount: 4,
       })
       .$usage('render'),
-    depth: root['~unstable']
+    depth: root
       .createTexture({
         size: [canvas.width, canvas.height],
         format: 'depth32float',
@@ -53,14 +53,14 @@ function createShadowTextures(
   sampleCompare: 'less-equal' | 'greater' = 'less-equal',
   pcf = true,
 ) {
-  const shadowMap = root['~unstable']
+  const shadowMap = root
     .createTexture({
       size: [size, size],
       format: 'depth32float',
     })
     .$usage('render', 'sampled');
 
-  const comparisonSampler = root['~unstable'].createComparisonSampler({
+  const comparisonSampler = root.createComparisonSampler({
     compare: sampleCompare,
     magFilter: pcf ? 'linear' : 'nearest',
     minFilter: pcf ? 'linear' : 'nearest',
@@ -270,12 +270,12 @@ const shadowPipeline = root.createRenderPipeline({
 function updateLightDirection(dir: d.v3f) {
   currentLightDirection = dir;
 
-  light.writePartial({
+  light.patch({
     direction: dir,
   });
 
   const newLightViewProj = makeLightViewProj(currentLightDirection);
-  lightSpaceUniform.writePartial({
+  lightSpaceUniform.patch({
     viewProj: newLightViewProj,
   });
 }
@@ -350,7 +350,7 @@ const resizeObserver = new ResizeObserver(() => {
     100,
     d.mat4x4f(),
   );
-  cameraUniform.writePartial({
+  cameraUniform.patch({
     projection: newProjection,
   });
 });
@@ -369,7 +369,7 @@ export const controls = defineControls({
         d.vec3f(0, 1, 0),
         d.mat4x4f(),
       );
-      cameraUniform.writePartial({
+      cameraUniform.patch({
         view: newView,
         position: d.vec3f(value, 2, 5),
       });

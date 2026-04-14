@@ -279,7 +279,7 @@ const fragment = tgpu.fragmentFn({
 const vertexInstanceLayout = tgpu.vertexLayout(d.arrayOf(d.u32), 'instance');
 const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2f), 'vertex');
 
-let drawCanvasData: { idx: number; value: number }[] = [];
+let drawCanvasData: Record<number, number> = {};
 
 let msSinceLastTick = 0;
 let render: () => void;
@@ -287,7 +287,7 @@ let applyDrawCanvas: () => void;
 let renderChanges: () => void;
 
 function resetGameData() {
-  drawCanvasData = [];
+  drawCanvasData = {};
 
   const compute = tgpu.computeFn({
     in: { gid: d.builtin.globalInvocationId },
@@ -334,9 +334,9 @@ function resetGameData() {
   };
 
   applyDrawCanvas = () => {
-    nextState.writePartial(drawCanvasData);
+    nextState.patch(drawCanvasData);
 
-    drawCanvasData = [];
+    drawCanvasData = {};
   };
 
   renderChanges = () => {
@@ -390,7 +390,7 @@ const handleDrawing = (x: number, y: number) => {
         if (iSq + j * j > brushSize * brushSize) continue;
 
         const index = cellY * size + cellX;
-        drawCanvasData.push({ idx: index, value: drawValue });
+        drawCanvasData[index] = drawValue;
       }
     }
   };
@@ -472,10 +472,7 @@ const createSampleScene = () => {
   for (let i = -radius; i <= radius; i++) {
     for (let j = -radius; j <= radius; j++) {
       if (i * i + j * j <= radius * radius) {
-        drawCanvasData.push({
-          idx: (middlePoint + j) * options.size + middlePoint + i,
-          value: 1 << 24,
-        });
+        drawCanvasData[(middlePoint + j) * options.size + middlePoint + i] = 1 << 24;
       }
     }
   }
@@ -484,27 +481,22 @@ const createSampleScene = () => {
   for (let i = -smallRadius; i <= smallRadius; i++) {
     for (let j = -smallRadius; j <= smallRadius; j++) {
       if (i * i + j * j <= smallRadius * smallRadius) {
-        drawCanvasData.push({
-          idx: (middlePoint + j + options.size / 4) * options.size + middlePoint + i,
-          value: 2 << 24,
-        });
+        drawCanvasData[(middlePoint + j + options.size / 4) * options.size + middlePoint + i] =
+          2 << 24;
       }
     }
   }
 
   for (let i = 0; i < options.size; i++) {
-    drawCanvasData.push({ idx: i, value: 1 << 24 });
+    drawCanvasData[i] = 1 << 24;
   }
 
   for (let i = 0; i < Math.floor(options.size / 8); i++) {
-    drawCanvasData.push({ idx: i * options.size, value: 1 << 24 });
+    drawCanvasData[i * options.size] = 1 << 24;
   }
 
   for (let i = 0; i < Math.floor(options.size / 8); i++) {
-    drawCanvasData.push({
-      idx: i * options.size + options.size - 1,
-      value: 1 << 24,
-    });
+    drawCanvasData[i * options.size + options.size - 1] = 1 << 24;
   }
 };
 

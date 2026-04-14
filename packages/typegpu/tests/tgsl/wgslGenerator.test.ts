@@ -1,5 +1,5 @@
 import * as tinyest from 'tinyest';
-import { beforeEach, describe, expect } from 'vitest';
+import { beforeEach, describe, expect, vi } from 'vitest';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
@@ -13,9 +13,10 @@ import { $internal } from '../../src/shared/symbols.ts';
 import * as std from '../../src/std/index.ts';
 import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
-import { it } from '../utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import { ArrayExpression } from '../../src/tgsl/generationHelpers.ts';
 import { extractSnippetFromFn } from '../utils/parseResolved.ts';
+import { UnknownData } from '../../src/tgsl/shaderGenerator_members.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -119,7 +120,7 @@ describe('wgslGenerator', () => {
       for (const stmt of parsedBody[1]) {
         const letStatement = stmt as tinyest.Let;
         const [_, name, numLiteral] = letStatement;
-        const generatedExpr = wgslGenerator.expression(numLiteral as tinyest.Num);
+        const generatedExpr = wgslGenerator._expression(numLiteral as tinyest.Num);
         const expected = literals[name as keyof typeof literals];
 
         expect(generatedExpr.dataType).toStrictEqual(expected.dataType);
@@ -165,7 +166,7 @@ describe('wgslGenerator', () => {
     provideCtx(ctx, () => {
       // Check for: return testUsage.$.a + testUsage.$.b.x;
       //                   ^ this should be a u32
-      const res1 = wgslGenerator.expression(
+      const res1 = wgslGenerator._expression(
         ((astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.BinaryExpression)[1],
       );
 
@@ -173,14 +174,14 @@ describe('wgslGenerator', () => {
 
       // Check for: return testUsage.$.a + testUsage.$.b.x;
       //                                       ^ this should be a u32
-      const res2 = wgslGenerator.expression(
+      const res2 = wgslGenerator._expression(
         ((astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.BinaryExpression)[3],
       );
       expect(res2.dataType).toStrictEqual(d.u32);
 
       // Check for: return testUsage.$.a + testUsage.$.b.x;
       //            ^ this should be a u32
-      const sum = wgslGenerator.expression(
+      const sum = wgslGenerator._expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
       expect(sum.dataType).toStrictEqual(d.u32);
@@ -222,7 +223,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return testUsage.$[3];
       //                   ^ this should be a u32
-      const res = wgslGenerator.expression(
+      const res = wgslGenerator._expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
 
@@ -294,7 +295,7 @@ describe('wgslGenerator', () => {
 
       // Check for: const value = std.atomicLoad(testUsage.$.b.aa[idx]!.y);
       //                           ^ this part should be a i32
-      const res = wgslGenerator.expression(
+      const res = wgslGenerator._expression(
         (astInfo.ast?.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
       );
 
@@ -304,7 +305,7 @@ describe('wgslGenerator', () => {
       //                        ^ this part should be a vec4f
       ctx[$internal].itemStateStack.pushBlockScope();
       wgslGenerator.blockVariable('var', 'value', d.i32, 'runtime');
-      const res2 = wgslGenerator.expression(
+      const res2 = wgslGenerator._expression(
         (astInfo.ast?.body[1][1] as tinyest.Const)[2] as tinyest.Expression,
       );
       ctx[$internal].itemStateStack.pop('blockScope');
@@ -316,10 +317,10 @@ describe('wgslGenerator', () => {
       //            ^ this part should be void
       ctx[$internal].itemStateStack.pushBlockScope();
       wgslGenerator.blockVariable('var', 'vec', d.vec4f, 'function');
-      const res3 = wgslGenerator.expression(
+      const res3 = wgslGenerator._expression(
         (astInfo.ast?.body[1][2] as tinyest.Call)[2][0] as tinyest.Expression,
       );
-      const res4 = wgslGenerator.expression(astInfo.ast?.body[1][2] as tinyest.Expression);
+      const res4 = wgslGenerator._expression(astInfo.ast?.body[1][2] as tinyest.Expression);
       ctx[$internal].itemStateStack.pop('blockScope');
 
       expect(res3.dataType).toStrictEqual(d.atomic(d.u32));
@@ -447,7 +448,7 @@ describe('wgslGenerator', () => {
       "fn main() {
         var arr = array<f32, 3>(1f, 2f, 3f);
         var res = 0f;
-        for (var i = 0u; i < 3u; i++) {
+        for (var i = 0u; i < 3u; i += 1u) {
           let foo = arr[i];
           {
             res += foo;
@@ -473,10 +474,10 @@ describe('wgslGenerator', () => {
       "fn main() {
         var arr = array<f32, 3>(1f, 2f, 3f);
         var res = 0f;
-        for (var i = 0u; i < 3u; i++) {
+        for (var i = 0u; i < 3u; i += 1u) {
           let foo = arr[i];
           {
-            for (var i_1 = 0u; i_1 < 3u; i_1++) {
+            for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
               let boo = arr[i_1];
               {
                 res += (foo * boo);
@@ -504,10 +505,10 @@ describe('wgslGenerator', () => {
       "fn main() {
         var arr = array<f32, 3>(1f, 2f, 3f);
         var res = 0f;
-        for (var i = 0u; i < 3u; i++) {
+        for (var i = 0u; i < 3u; i += 1u) {
           let foo = arr[i];
           {
-            for (var i_1 = 0u; i_1 < 3u; i_1++) {
+            for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
               let foo_1 = arr[i_1];
               {
                 res += (foo_1 * foo_1);
@@ -533,7 +534,7 @@ describe('wgslGenerator', () => {
       "fn main() {
         var arr = array<vec2f, 3>(vec2f(1), vec2f(2), vec2f(3));
         var res = 0;
-        for (var i = 0u; i < 3u; i++) {
+        for (var i = 0u; i < 3u; i += 1u) {
           let foo = (&arr[i]);
           {
             res += i32((*foo).x);
@@ -561,7 +562,7 @@ describe('wgslGenerator', () => {
 
       fn main() {
         var res = 0f;
-        for (var i = 0u; i < arrayLength((&arr)); i++) {
+        for (var i = 0u; i < arrayLength((&arr)); i += 1u) {
           let foo = arr[i];
           {
             res += foo;
@@ -590,14 +591,14 @@ describe('wgslGenerator', () => {
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() {
         var v1 = vec4u(44, 88, 132, 176);
-        for (var i = 0u; i < 4u; i++) {
+        for (var i = 0u; i < 4u; i += 1u) {
           let foo = v1[i];
           {
             continue;
           }
         }
         var v2 = vec2f(1, 2);
-        for (var i = 0u; i < 2u; i++) {
+        for (var i = 0u; i < 2u; i += 1u) {
           let foo = v2[i];
           {
             continue;
@@ -626,7 +627,7 @@ describe('wgslGenerator', () => {
 
       fn f() -> u32 {
         var result = 0u;
-        for (var i = 0u; i < 7u; i++) {
+        for (var i = 0u; i < 7u; i += 1u) {
           let foo = b[i];
           {
             result += foo;
@@ -669,19 +670,19 @@ describe('wgslGenerator', () => {
         var res1 = 0f;
         var res2 = 0u;
         var res3 = false;
-        for (var i = 0u; i < 4u; i++) {
+        for (var i = 0u; i < 4u; i += 1u) {
           let foo = v1[i];
           {
             res1 += foo;
           }
         }
-        for (var i = 0u; i < 3u; i++) {
+        for (var i = 0u; i < 3u; i += 1u) {
           let foo = v2[i];
           {
             res2 *= foo;
           }
         }
-        for (var i = 0u; i < 2u; i++) {
+        for (var i = 0u; i < 2u; i += 1u) {
           let foo = v3[i];
           {
             res3 = (foo != res3);
@@ -711,7 +712,7 @@ describe('wgslGenerator', () => {
 
       fn main() {
         var testStruct = TestStruct(array<f32, 4>(1f, 8f, 8f, 2f));
-        for (var i = 0u; i < 4u; i++) {
+        for (var i = 0u; i < 4u; i += 1u) {
           let foo = testStruct.arr[i];
           {
             continue;
@@ -733,10 +734,10 @@ describe('wgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
-      - fn*:main(): \`for ... of ...\` loops only support iterables stored in variables.
-        -----
-        You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptime, the loop will be unrolled.
-        -----]
+      - fn*:main(): \`for ... of ...\` loops only support std.range or iterables stored in variables.
+      -----
+      You can wrap iterable with \`tgpu.unroll(...)\`. If iterable is known at comptime, the loop will be unrolled.
+      -----]
     `);
   });
 
@@ -809,7 +810,7 @@ describe('wgslGenerator', () => {
     expect(tgpu.resolve([f1])).toMatchInlineSnapshot(`
       "fn f1() {
         var arr = array<i32, 3>(1, 2, 3);
-        for (var i = 0u; i < 3u; i++) {
+        for (var i = 0u; i < 3u; i += 1u) {
           let foo = arr[i];
           {
             let i_1 = foo;
@@ -831,7 +832,7 @@ describe('wgslGenerator', () => {
       "fn f2() {
         const i = 7;
         var arr = array<i32, 3>(1, 2, 3);
-        for (var i_1 = 0u; i_1 < 3u; i_1++) {
+        for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
           let foo = arr[i_1];
           {
             continue;
@@ -859,7 +860,7 @@ describe('wgslGenerator', () => {
 
       fn f() {
         var arr = array<u32, 4>(1u, 2u, 3u, i);
-        for (var i_1 = 0u; i_1 < 4u; i_1++) {
+        for (var i_1 = 0u; i_1 < 4u; i_1 += 1u) {
           let foo = arr[i_1];
           {
             continue;
@@ -886,7 +887,7 @@ describe('wgslGenerator', () => {
 
       fn f() {
         var arr = array<i32, 3>(1, 2, 3);
-        for (var i = 0u; i < 3u; i++) {
+        for (var i = 0u; i < 3u; i += 1u) {
           let foo = arr[i];
           {
             let x = (foo + i32(i_1));
@@ -916,7 +917,7 @@ describe('wgslGenerator', () => {
 
       fn f() {
         var arr = array<i32, 3>(1, 2, 3);
-        for (var i = 0u; i < 3u; i++) {
+        for (var i = 0u; i < 3u; i += 1u) {
           let foo = arr[i];
           {
             let x = (foo + i32(i_1));
@@ -940,7 +941,7 @@ describe('wgslGenerator', () => {
       "fn f() {
         var arr = array<i32, 3>(1, 2, 3);
         var res = 0;
-        for (var i = 0u; i < 3u; i++) {
+        for (var i = 0u; i < 3u; i += 1u) {
           let i_1 = arr[i];
           {
             res += i_1;
@@ -968,7 +969,7 @@ describe('wgslGenerator', () => {
       fn f() {
         var arr = array<u32, 4>(1u, 2u, 3u, i);
         var res = 0;
-        for (var i_1 = 0u; i_1 < 4u; i_1++) {
+        for (var i_1 = 0u; i_1 < 4u; i_1 += 1u) {
           let i_2 = arr[i_1];
           {
             res += i32(i_2);
@@ -1011,7 +1012,7 @@ describe('wgslGenerator', () => {
       wgslGenerator.initGenerator(ctx);
       // Check for: return lazyV4u.$;
       //                      ^ this should be a vec4u
-      const res = wgslGenerator.expression(
+      const res = wgslGenerator._expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
 
@@ -1050,7 +1051,7 @@ describe('wgslGenerator', () => {
 
       // Check for: return lazyV2f.$[idx];
       //                      ^ this should be a f32
-      const res = wgslGenerator.expression(
+      const res = wgslGenerator._expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
 
@@ -1111,7 +1112,7 @@ describe('wgslGenerator', () => {
       // Check for: const arr = [1, 2, 3]
       //                        ^ this should be an array<u32, 3>
       wgslGenerator.initGenerator(ctx);
-      const res = wgslGenerator.expression(
+      const res = wgslGenerator._expression(
         (astInfo.ast?.body[1][0] as tinyest.Const)[2] as unknown as tinyest.Expression,
       );
 
@@ -1165,7 +1166,7 @@ describe('wgslGenerator', () => {
       // Check for: const arr = [1, 2, 3]
       //                        ^ this should be an array<u32, 3>
       wgslGenerator.initGenerator(ctx);
-      const res = wgslGenerator.expression(
+      const res = wgslGenerator._expression(
         (astInfo.ast?.body[1][0] as tinyest.Const)[2] as unknown as tinyest.Expression,
       );
 
@@ -1247,7 +1248,7 @@ describe('wgslGenerator', () => {
       // Check for: const arr = [TestStruct({ x: 1, y: 2 }), TestStruct({ x: 3, y: 4 })];
       //                        ^ this should be an array<TestStruct, 2>
       wgslGenerator.initGenerator(ctx);
-      return wgslGenerator.expression(
+      return wgslGenerator._expression(
         (astInfo.ast?.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
       );
     });
@@ -1295,7 +1296,7 @@ describe('wgslGenerator', () => {
       );
 
       wgslGenerator.initGenerator(ctx);
-      return wgslGenerator.expression(
+      return wgslGenerator._expression(
         (astInfo.ast?.body[1][0] as tinyest.Const)[2] as tinyest.Expression,
       );
     });
@@ -1362,7 +1363,7 @@ describe('wgslGenerator', () => {
       wgslGenerator.initGenerator(ctx);
       // Check for: return fnOne().y.x;
       //                   ^ this should be a f32
-      const res = wgslGenerator.expression(
+      const res = wgslGenerator._expression(
         (astInfo.ast?.body[1][0] as tinyest.Return)[1] as tinyest.Expression,
       );
 
@@ -1588,15 +1589,15 @@ describe('wgslGenerator', () => {
     });
 
     expect(() => tgpu.resolve([main1])).toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:main1: Invalid identifier '_'. Choose an identifier without whitespaces or leading underscores.]
-      `);
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:main1: Invalid identifier '_'. Choose an identifier without whitespaces or leading underscores.]
+    `);
     expect(() => tgpu.resolve([main2])).toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:main2: Invalid identifier '__my_var'. Choose an identifier without whitespaces or leading underscores.]
-      `);
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:main2: Invalid identifier '__my_var'. Choose an identifier without whitespaces or leading underscores.]
+    `);
   });
 
   it('does not cause identifier clashes when renaming variables', () => {
@@ -1677,10 +1678,10 @@ describe('wgslGenerator', () => {
     });
 
     expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn:testFn: The only way of accessing matrix elements in TypeGPU functions is through the 'columns' property.]
-      `);
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:testFn: The only way of accessing matrix elements in TypeGPU functions is through the 'columns' property.]
+    `);
   });
 
   it('generates correct code when accessing matrix elements through .columns', () => {
@@ -1791,7 +1792,7 @@ describe('wgslGenerator', () => {
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope('normal', [], {}, d.u32, {});
 
-      const res = wgslGenerator.block(parsed, { x: 42 });
+      const res = wgslGenerator._block(parsed, { x: 42 });
 
       expect(res).toMatchInlineSnapshot(`
           "{
@@ -1816,7 +1817,7 @@ describe('wgslGenerator', () => {
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope('normal', [], {}, d.Void, {});
 
-      const res = wgslGenerator.block((parsed[1][0] as tinyest.ForOf)[3] as tinyest.Block, {
+      const res = wgslGenerator._block((parsed[1][0] as tinyest.ForOf)[3] as tinyest.Block, {
         x: 67,
       });
 
@@ -1846,7 +1847,7 @@ describe('wgslGenerator', () => {
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope('normal', [], {}, d.Void, {});
 
-      const res = wgslGenerator.block((parsed[1][2] as tinyest.ForOf)[3] as tinyest.Block, {
+      const res = wgslGenerator._block((parsed[1][2] as tinyest.ForOf)[3] as tinyest.Block, {
         result: snip('result', d.i32, 'function'),
         elem: 7,
       });
@@ -1856,6 +1857,528 @@ describe('wgslGenerator', () => {
           {
             result += 7i;
           }
+        }"
+      `);
+    });
+  });
+
+  it('prunes comptime if/else', () => {
+    const vAccess = tgpu.accessor(d.u32);
+
+    const fn = tgpu.fn(() => {
+      'use gpu';
+      let a = -1;
+      if (vAccess.$ === 0) {
+        const temp = 0;
+        a = temp;
+      } else {
+        const temp = 1;
+        a = temp;
+      }
+      const temp = a * 2;
+      return temp;
+    });
+
+    expect(tgpu.resolve([fn.with(vAccess, 0)])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        var a = -1;
+        {
+          const temp = 0;
+          a = temp;
+        }
+        let temp = (a * 2i);
+        return temp;
+      }"
+    `);
+
+    expect(tgpu.resolve([fn.with(vAccess, 1)])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        var a = -1;
+        {
+          const temp = 1;
+          a = temp;
+        }
+        let temp = (a * 2i);
+        return temp;
+      }"
+    `);
+
+    expect(
+      tgpu.resolve([
+        fn.with(vAccess, () => {
+          'use gpu';
+          return 0;
+        }),
+      ]),
+    ).toMatchInlineSnapshot(`
+      "fn item() -> i32 {
+        return 0;
+      }
+
+      fn fn_1() -> i32 {
+        var a = -1;
+        if ((item() == 0u)) {
+          const temp = 0;
+          a = temp;
+        }
+        else {
+          const temp = 1;
+          a = temp;
+        }
+        let temp = (a * 2i);
+        return temp;
+      }"
+    `);
+  });
+
+  it('prunes comptime if/else without blocks', () => {
+    const vAccess = tgpu.accessor(d.u32);
+
+    const fn = tgpu.fn(() => {
+      'use gpu';
+      let a = -1;
+      if (vAccess.$ === 0) a = 0;
+      else a = 1;
+      return a;
+    });
+
+    expect(tgpu.resolve([fn.with(vAccess, 0)])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        var a = -1;
+        {
+          a = 0i;
+        }
+        return a;
+      }"
+    `);
+
+    expect(tgpu.resolve([fn.with(vAccess, 1)])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        var a = -1;
+        {
+          a = 1i;
+        }
+        return a;
+      }"
+    `);
+
+    expect(
+      tgpu.resolve([
+        fn.with(vAccess, () => {
+          'use gpu';
+          return 0;
+        }),
+      ]),
+    ).toMatchInlineSnapshot(`
+      "fn item() -> i32 {
+        return 0;
+      }
+
+      fn fn_1() -> i32 {
+        var a = -1;
+        if ((item() == 0u)) {
+          a = 0i;
+        }
+        else {
+          a = 1i;
+        }
+        return a;
+      }"
+    `);
+  });
+
+  it('dedents nested comptime if/else', () => {
+    const v = 2 as number;
+
+    const fn = () => {
+      'use gpu';
+      let a = -1;
+      if (v === 0) {
+        a = 0;
+      } else {
+        if (v === 1) {
+          a = 1;
+        } else {
+          a = 2;
+        }
+      }
+      return a;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        var a = -1;
+        {
+          a = 2i;
+        }
+        return a;
+      }"
+    `);
+  });
+
+  it('dedents nested comptime if/else without else blocks', () => {
+    const v = 2 as number;
+
+    const fn = () => {
+      'use gpu';
+      let a = -1;
+      if (v === 0) {
+        a = 0;
+      } else if (v === 1) {
+        a = 1;
+      } else {
+        a = 2;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        var a = -1;
+        {
+          a = 2i;
+        }
+      }"
+    `);
+  });
+
+  it('dedents multinested comptime if/else without else blocks', () => {
+    const v = 3 as number;
+
+    const fn = () => {
+      'use gpu';
+      let a = -1;
+      if (v === 0) {
+        a = 0;
+      } else if (v === 1) {
+        a = 1;
+      } else if (v === 2) {
+        a = 2;
+      } else if (v === 3) {
+        a = 3;
+      } else if (v === 4) {
+        a = 4;
+      }
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        var a = -1;
+        {
+          a = 3i;
+        }
+      }"
+    `);
+  });
+
+  it('handles unary operator `!` on boolean runtime-known operand', () => {
+    const testFn = tgpu.fn(
+      [d.bool],
+      d.bool,
+    )((b) => {
+      return !b;
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(b: bool) -> bool {
+          return !b;
+        }"
+      `);
+  });
+
+  it('handles unary operator `!` on numeric runtime-known operand', () => {
+    const testFn = tgpu.fn(
+      [d.i32],
+      d.bool,
+    )((n) => {
+      return !n;
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(n: i32) -> bool {
+          return !bool(n);
+        }"
+      `);
+  });
+
+  it('handles unary operator `!` on non-primitive values', ({ root }) => {
+    const buffer = root.createUniform(d.mat4x4f);
+    const testFn = tgpu.fn([d.vec3f, d.atomic(d.u32), d.ptrPrivate(d.u32)])((v, a, p) => {
+      const _b0 = !buffer;
+      const _b1 = !buffer.$;
+      const _b2 = !v;
+      const _b3 = !a;
+      const _b4 = !std.atomicLoad(a);
+      const _b5 = !p;
+      const _b6 = !p.$;
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> buffer: mat4x4f;
+
+      fn testFn(v: vec3f, a: atomic<u32>, p: ptr<private, u32>) {
+        const _b0 = false;
+        const _b1 = false;
+        const _b2 = false;
+        const _b3 = false;
+        let _b4 = !bool(atomicLoad(&a));
+        const _b5 = false;
+        let _b6 = !bool((*p));
+      }"
+    `);
+  });
+
+  it('handles unary operator `!` on numeric and boolean comptime-known operands', () => {
+    const getN = tgpu.comptime(() => 1882);
+
+    const f = () => {
+      'use gpu';
+      if (!(getN() === 7) || !getN()) {
+        return 1;
+      }
+      return -1;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> i32 {
+        {
+          return 1;
+        }
+        return -1;
+      }"
+    `);
+  });
+
+  it('handles unary operator `!` on operands from slots and accessors', () => {
+    const Boid = d.struct({
+      pos: d.vec2f,
+      vel: d.vec2f,
+    });
+
+    const slot = tgpu.slot<d.Infer<typeof Boid>>({ pos: d.vec2f(), vel: d.vec2f() });
+    const accessor = tgpu.accessor(d.vec4u, d.vec4u(1, 8, 8, 2));
+
+    const f = () => {
+      'use gpu';
+      if (!!slot.$ && !!accessor.$) {
+        return 1;
+      }
+      return -1;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> i32 {
+        {
+          return 1;
+        }
+        return -1;
+      }"
+    `);
+  });
+
+  it('handles chained unary operators `!`', () => {
+    const testFn = tgpu.fn(
+      [d.i32],
+      d.bool,
+    )((n) => {
+      // oxlint-disable-next-line
+      return !!!!!false || !!!n;
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "fn testFn(n: i32) -> bool {
+        return true;
+      }"
+    `);
+  });
+
+  it('handles unary operator `!` on complex comptime-known operand', () => {
+    const slot = tgpu.slot<{ a?: number }>({});
+
+    const f = () => {
+      'use gpu';
+      // oxlint-disable-next-line
+      if (!!slot.$.a) {
+        return slot.$.a;
+      }
+      return 1929;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          return 1929;
+        }"
+      `);
+  });
+
+  describe('short-circuit evaluation', () => {
+    const state = {
+      counter: 0,
+      result: true,
+    };
+
+    const getTrackedBool = tgpu.comptime(() => {
+      state.counter++;
+      return state.result;
+    });
+
+    beforeEach(() => {
+      state.counter = 0;
+      state.result = true;
+    });
+
+    it('handles `||`', () => {
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+        if (true || getTrackedBool()) {
+          res = 1;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          {
+            res = 1i;
+          }
+          return res;
+        }"
+      `);
+      expect(state.counter).toBe(0);
+    });
+
+    it('handles `&&`', () => {
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+        if (false && getTrackedBool()) {
+          res = 1;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          return res;
+        }"
+      `);
+      expect(state.counter).toBe(0);
+    });
+
+    it('handles chained `||`', () => {
+      state.result = false;
+
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+        if (getTrackedBool() || true || getTrackedBool() || getTrackedBool() || getTrackedBool()) {
+          res = 1;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          {
+            res = 1i;
+          }
+          return res;
+        }"
+      `);
+      expect(state.counter).toEqual(1);
+    });
+
+    it('handles chained `&&`', () => {
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+        if (getTrackedBool() && false && getTrackedBool() && getTrackedBool() && getTrackedBool()) {
+          res = 1;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          return res;
+        }"
+      `);
+      expect(state.counter).toBe(1);
+    });
+
+    it('handles mixed logical operators', () => {
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+        if (true || (getTrackedBool() && getTrackedBool())) {
+          res = 1;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          {
+            res = 1i;
+          }
+          return res;
+        }"
+      `);
+      expect(state.counter).toBe(0);
+    });
+
+    it('skips lhs if known at compile time', () => {
+      const f1 = tgpu.fn(
+        [d.bool],
+        d.i32,
+      )((b) => {
+        'use gpu';
+        let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+        if (false || b) {
+          res = 1;
+        }
+        return res;
+      });
+
+      const f2 = tgpu.fn(
+        [d.bool],
+        d.i32,
+      )((b) => {
+        'use gpu';
+        let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+        if (true && b) {
+          res = 1;
+        }
+        return res;
+      });
+
+      expect(tgpu.resolve([f1, f2])).toMatchInlineSnapshot(`
+        "fn f1(b: bool) -> i32 {
+          var res = -1;
+          if (b) {
+            res = 1i;
+          }
+          return res;
+        }
+
+        fn f2(b: bool) -> i32 {
+          var res = -1;
+          if (b) {
+            res = 1i;
+          }
+          return res;
         }"
       `);
     });

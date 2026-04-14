@@ -2,10 +2,8 @@ import { describe, expect, expectTypeOf, vi } from 'vitest';
 import type { TgpuTexture, TgpuTextureView } from '../src/core/texture/texture.ts';
 import type { RenderFlag, SampledFlag } from '../src/core/texture/usageExtension.ts';
 import type { ExperimentalTgpuRoot } from '../src/core/root/rootTypes.ts';
-import { it } from './utils/extendedIt.ts';
+import { it } from 'typegpu-testing-utility';
 import * as d from '../src/data/index.ts';
-// oxlint-disable-next-line import/no-unassigned-import -- imported for side effects
-import './utils/webgpuGlobals.ts';
 import { attest } from '@ark/attest';
 import tgpu from '../src/index.js';
 import { getName } from '../src/shared/meta.ts';

@@ -1,5 +1,4 @@
 import { roundUp } from '../mathUtils.ts';
-import type { Infer } from '../shared/repr.ts';
 import { alignmentOf } from './alignmentOf.ts';
 import { isDisarray, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
@@ -17,10 +16,15 @@ export const EVAL_ALLOWED_IN_ENV: boolean = (() => {
   }
 })();
 
-const compiledWriters = new WeakMap<
-  wgsl.BaseData,
-  (output: DataView, offset: number, value: unknown, littleEndian?: boolean) => void
->();
+export type CompiledWriter = (
+  output: DataView,
+  offset: number,
+  value: unknown,
+  littleEndian?: boolean,
+  endOffset?: number,
+) => void;
+
+const compiledWriters = new WeakMap<wgsl.BaseData, CompiledWriter>();
 
 const typeToPrimitive = {
   u32: 'u32',
@@ -131,13 +135,12 @@ const specialPackedFormats = {
     writeFunction: 'setUint8',
     generator: (offsetExpr: string, valueExpr: string) => {
       const bgraComponents = ['z', 'y', 'x', 'w'];
-      let code = '';
-      for (let idx = 0; idx < 4; idx++) {
-        code += `output.setUint8((${offsetExpr} + ${idx}), Math.round(${valueExpr}.${
-          bgraComponents[idx]
-        } * 255), littleEndian);\n`;
-      }
-      return code;
+      return bgraComponents
+        .map(
+          (c, idx) =>
+            `output.setUint8((${offsetExpr} + ${idx}), Math.round(${valueExpr}.${c} * 255), littleEndian);\n`,
+        )
+        .join('');
     },
   },
 } as const;
@@ -147,161 +150,166 @@ export function buildWriter(
   offsetExpr: string,
   valueExpr: string,
   depth = 0,
+  partial = false,
 ): string {
-  const loopVar = ['i', 'j', 'k'][depth] || `i${depth}`;
+  const emitWrite = (writeFunc: string, addr: string, value: string): string =>
+    partial
+      ? `if (${addr} < endOffset) { output.${writeFunc}(${addr}, ${value}, littleEndian); }\n`
+      : `output.${writeFunc}(${addr}, ${value}, littleEndian);\n`;
 
-  if (wgsl.isAtomic(node) || wgsl.isDecorated(node)) {
-    return buildWriter(node.inner, offsetExpr, valueExpr, depth);
-  }
+  const emitBlock = (addr: string, block: string): string =>
+    partial ? `if (${addr} < endOffset) {\n${block}}\n` : block;
 
-  if (wgsl.isWgslStruct(node) || isUnstruct(node)) {
-    const propOffsets = offsetsForProps(node);
-    let code = '';
-    for (const [key, propOffset] of Object.entries(propOffsets)) {
-      const subSchema = node.propTypes[key];
-      if (!subSchema) continue;
-      code += buildWriter(
-        subSchema,
-        `(${offsetExpr} + ${propOffset.offset})`,
-        `${valueExpr}.${key}`,
-        depth,
+  function go(node: wgsl.BaseData, offsetExpr: string, valueExpr: string, depth: number): string {
+    const loopVar = ['i', 'j', 'k'][depth] || `i${depth}`;
+
+    if (wgsl.isAtomic(node) || wgsl.isDecorated(node)) {
+      return go(node.inner, offsetExpr, valueExpr, depth);
+    }
+
+    if (wgsl.isWgslStruct(node) || isUnstruct(node)) {
+      return Object.entries(offsetsForProps(node))
+        .map(([key, propOffset]) => {
+          const subSchema = node.propTypes[key];
+          return subSchema
+            ? go(subSchema, `(${offsetExpr} + ${propOffset.offset})`, `${valueExpr}.${key}`, depth)
+            : '';
+        })
+        .join('');
+    }
+
+    if (wgsl.isWgslArray(node) || isDisarray(node)) {
+      const elementSize = roundUp(sizeOf(node.elementType), alignmentOf(node));
+      const totalSize = node.elementCount * elementSize;
+
+      const copyLen = partial
+        ? `Math.min(${valueExpr}.byteLength, Math.max(0, endOffset - (${offsetExpr})))`
+        : `Math.min(${valueExpr}.byteLength, ${totalSize})`;
+
+      let code = `if (ArrayBuffer.isView(${valueExpr})) {\n`;
+      code += `  new Uint8Array(output.buffer).set(new Uint8Array(${valueExpr}.buffer, ${valueExpr}.byteOffset, ${copyLen}), output.byteOffset + (${offsetExpr}));\n`;
+      code += `} else {\n`;
+      code += `for (let ${loopVar} = 0; ${loopVar} < ${node.elementCount}; ${loopVar}++) {\n`;
+      if (partial) {
+        code += `if ((${offsetExpr} + ${loopVar} * ${elementSize}) >= endOffset) return;\n`;
+      }
+      code += go(
+        node.elementType,
+        `(${offsetExpr} + ${loopVar} * ${elementSize})`,
+        `${valueExpr}[${loopVar}]`,
+        depth + 1,
       );
-    }
-    return code;
-  }
-
-  if (wgsl.isWgslArray(node) || isDisarray(node)) {
-    const elementSize = roundUp(sizeOf(node.elementType), alignmentOf(node));
-    let code = '';
-
-    code += `for (let ${loopVar} = 0; ${loopVar} < ${node.elementCount}; ${loopVar}++) {\n`;
-    code += buildWriter(
-      node.elementType,
-      `(${offsetExpr} + ${loopVar} * ${elementSize})`,
-      `${valueExpr}[${loopVar}]`,
-      depth + 1,
-    );
-    code += '}\n';
-
-    return code;
-  }
-
-  if (wgsl.isVec(node)) {
-    if (wgsl.isVecBool(node)) {
-      throw new Error('Compiled writers do not support boolean vectors');
+      code += '}\n';
+      code += '}\n';
+      return code;
     }
 
-    const primitive = typeToPrimitive[node.type];
-    let code = '';
-    const writeFunc = primitiveToWriteFunction[primitive];
-    const components = ['x', 'y', 'z', 'w'];
+    if (wgsl.isVec(node)) {
+      if (wgsl.isVecBool(node)) {
+        throw new Error('Compiled writers do not support boolean vectors');
+      }
 
-    for (let i = 0; i < node.componentCount; i++) {
-      code += `output.${writeFunc}((${offsetExpr} + ${i * 4}), ${valueExpr}.${
-        components[i]
-      }, littleEndian);\n`;
-    }
-    return code;
-  }
+      const primitive = typeToPrimitive[node.type];
+      const componentSize = sizeOf(node.primitive);
+      const writeFunc = primitiveToWriteFunction[primitive];
 
-  if (wgsl.isMat(node)) {
-    const primitive = typeToPrimitive[node.type];
-    const writeFunc = primitiveToWriteFunction[primitive];
-
-    const matSize = wgsl.isMat2x2f(node) ? 2 : wgsl.isMat3x3f(node) ? 3 : 4;
-    const elementCount = matSize * matSize;
-    const rowStride = roundUp(matSize * 4, 8);
-
-    let code = '';
-    for (let idx = 0; idx < elementCount; idx++) {
-      const colIndex = Math.floor(idx / matSize);
-      const rowIndex = idx % matSize;
-      const byteOffset = colIndex * rowStride + rowIndex * 4;
-
-      code += `output.${writeFunc}((${offsetExpr} + ${byteOffset}), ${valueExpr}.columns[${colIndex}].${
-        ['x', 'y', 'z', 'w'][rowIndex]
-      }, littleEndian);\n`;
+      return Array.from({ length: node.componentCount }, (_, i) =>
+        emitWrite(writeFunc, `(${offsetExpr} + ${i * componentSize})`, `${valueExpr}[${i}]`),
+      ).join('');
     }
 
-    return code;
-  }
+    if (wgsl.isMat(node)) {
+      const primitive = typeToPrimitive[node.type];
+      const writeFunc = primitiveToWriteFunction[primitive];
+      const matSize = wgsl.isMat2x2f(node) ? 2 : wgsl.isMat3x3f(node) ? 3 : 4;
+      const rowStride = roundUp(matSize * 4, 8);
+      const components = ['x', 'y', 'z', 'w'];
+      const wgslElementStride = rowStride / 4;
 
-  if (isPackedData(node)) {
-    const formatName = node.type;
-
-    if (formatName in specialPackedFormats) {
-      const handler = specialPackedFormats[formatName as keyof typeof specialPackedFormats];
-      return handler.generator(offsetExpr, valueExpr);
+      return Array.from({ length: matSize * matSize }, (_, idx) => {
+        const col = Math.floor(idx / matSize);
+        const row = idx % matSize;
+        const packedIndex = col * matSize + row;
+        const wgslIndex = col * wgslElementStride + row;
+        return emitWrite(
+          writeFunc,
+          `(${offsetExpr} + ${col * rowStride + row * 4})`,
+          `ArrayBuffer.isView(${valueExpr}) ? ${valueExpr}[${
+            wgslIndex
+          }] : Array.isArray(${valueExpr}) ? ${valueExpr}[${packedIndex}] : ${valueExpr}.columns[${
+            col
+          }].${components[row]}`,
+        );
+      }).join('');
     }
 
-    const primitive = vertexFormatToPrimitive[formatName as keyof typeof vertexFormatToPrimitive];
-    const writeFunc = primitiveToWriteFunction[primitive];
-    const wgslType = formatToWGSLType[formatName];
-    const componentCount = wgsl.isVec(wgslType) ? wgslType.componentCount : 1;
-    const componentSize =
-      primitive === 'u8' || primitive === 'i8'
-        ? 1
-        : primitive === 'u16' || primitive === 'i16' || primitive === 'f16'
-          ? 2
-          : 4;
-    const components = ['x', 'y', 'z', 'w'];
-    const transform =
-      vertexFormatValueTransform[formatName as keyof typeof vertexFormatValueTransform];
+    if (isPackedData(node)) {
+      const formatName = node.type;
 
-    let code = '';
-    for (let idx = 0; idx < componentCount; idx++) {
-      const accessor = componentCount === 1 ? valueExpr : `${valueExpr}.${components[idx]}`;
-      const value = transform ? transform(accessor) : accessor;
-      code += `output.${writeFunc}((${offsetExpr} + ${
-        idx * componentSize
-      }), ${value}, littleEndian);\n`;
+      if (formatName in specialPackedFormats) {
+        const handler = specialPackedFormats[formatName as keyof typeof specialPackedFormats];
+        return emitBlock(`(${offsetExpr})`, handler.generator(offsetExpr, valueExpr));
+      }
+
+      const primitive = vertexFormatToPrimitive[formatName as keyof typeof vertexFormatToPrimitive];
+      const writeFunc = primitiveToWriteFunction[primitive];
+      const wgslType = formatToWGSLType[formatName];
+      const componentCount = wgsl.isVec(wgslType) ? wgslType.componentCount : 1;
+      const componentSize =
+        primitive === 'u8' || primitive === 'i8'
+          ? 1
+          : primitive === 'u16' || primitive === 'i16' || primitive === 'f16'
+            ? 2
+            : 4;
+      const components = ['x', 'y', 'z', 'w'];
+      const transform =
+        vertexFormatValueTransform[formatName as keyof typeof vertexFormatValueTransform];
+
+      return Array.from({ length: componentCount }, (_, idx) => {
+        const accessor = componentCount === 1 ? valueExpr : `${valueExpr}.${components[idx]}`;
+        const value = transform ? transform(accessor) : accessor;
+        return emitWrite(writeFunc, `(${offsetExpr} + ${idx * componentSize})`, value);
+      }).join('');
     }
 
-    return code;
+    if (!Object.hasOwn(typeToPrimitive, node.type)) {
+      throw new Error(`Primitive ${node.type} is unsupported by compiled writer`);
+    }
+
+    const primitive = typeToPrimitive[node.type as keyof typeof typeToPrimitive];
+    return emitWrite(primitiveToWriteFunction[primitive], offsetExpr, valueExpr);
   }
 
-  if (!Object.hasOwn(typeToPrimitive, node.type)) {
-    throw new Error(`Primitive ${node.type} is unsupported by compiled writer`);
-  }
-
-  const primitive = typeToPrimitive[node.type as keyof typeof typeToPrimitive];
-  return `output.${
-    primitiveToWriteFunction[primitive]
-  }(${offsetExpr}, ${valueExpr}, littleEndian);\n`;
+  return go(node, offsetExpr, valueExpr, depth);
 }
 
-export function getCompiledWriterForSchema<T extends wgsl.BaseData>(
-  schema: T,
-):
-  | ((output: DataView, offset: number, value: Infer<T>, littleEndian?: boolean) => void)
-  | undefined {
+export function getCompiledWriter(schema: wgsl.BaseData): CompiledWriter | undefined {
   if (!EVAL_ALLOWED_IN_ENV) {
     console.warn('This environment does not allow eval - using default writer as fallback');
     return undefined;
   }
 
-  if (compiledWriters.has(schema)) {
-    return compiledWriters.get(schema) as (
-      output: DataView,
-      offset: number,
-      value: Infer<T>,
-      littleEndian?: boolean,
-    ) => void;
+  const cached = compiledWriters.get(schema);
+  if (cached) {
+    return cached;
   }
 
   try {
-    const body = buildWriter(schema, 'offset', 'value', 0);
+    const fullBody = buildWriter(schema, 'offset', 'value', 0, false);
+    const partialBody = buildWriter(schema, 'offset', 'value', 0, true);
+    const body = `if (offset > 0 || endOffset < output.byteLength) {\n${partialBody}} else {\n${fullBody}}\n`;
 
     // oxlint-disable-next-line typescript-eslint/no-implied-eval
-    const fn = new Function('output', 'offset', 'value', 'littleEndian=true', body) as (
-      output: DataView,
-      offset: number,
-      value: unknown,
-      littleEndian?: boolean,
-    ) => void;
+    const fn = new Function(
+      'output',
+      'offset',
+      'value',
+      'littleEndian=true',
+      'endOffset=output.byteLength',
+      body,
+    ) as CompiledWriter;
 
     compiledWriters.set(schema, fn);
-
     return fn;
   } catch (error) {
     console.warn(

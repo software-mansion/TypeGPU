@@ -37,7 +37,7 @@ export async function loadModel(root: TgpuRoot, modelPath: string, texturePath: 
 
   const textureResponse = await fetch(texturePath);
   const imageBitmap = await createImageBitmap(await textureResponse.blob());
-  const texture = root['~unstable']
+  const texture = root
     .createTexture({
       size: [imageBitmap.width, imageBitmap.height],
       format: 'rgba8unorm',

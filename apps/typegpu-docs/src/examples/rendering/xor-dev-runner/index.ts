@@ -141,7 +141,7 @@ const { cleanupCamera, updatePosition } = setupFirstPersonCamera(
     speed: d.vec3f(0.001, 0.1, 1),
   },
   (props) => {
-    cameraUniform.writePartial(props);
+    cameraUniform.patch(props);
   },
 );
 
