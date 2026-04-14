@@ -40,6 +40,7 @@
     "astro": "^6.0.8",
     "classnames": "^2.5.1",
     "expressive-code-twoslash": "^0.5.3",
+    "fft.js": "^4.0.4",
     "fuse.js": "catalog:frontend",
     "jotai": "^2.15.0",
     "jotai-location": "^0.6.2",

@@ -1,0 +1,7 @@
+{
+  "title": "FFT line strategy check",
+  "category": "tests",
+  "tags": ["test", "fft", "webgpu"],
+  "dev": true,
+  "coolFactor": 2
+}

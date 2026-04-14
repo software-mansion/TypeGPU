@@ -1,7 +1,7 @@
 {
   "name": "@typegpu/sort",
   "version": "0.10.0",
-  "description": "GPU sorting and scanning algorithms implemented using TypeGPU.",
+  "description": "GPU sorting, scanning, and FFT algorithms implemented using TypeGPU.",
   "keywords": [],
   "license": "MIT",
   "type": "module",
@@ -27,6 +27,7 @@
   },
   "scripts": {
     "build": "unbuild",
+    "test": "vitest run",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
@@ -36,7 +37,8 @@
     "typegpu": "workspace:*",
     "typescript": "catalog:types",
     "unbuild": "catalog:build",
-    "unplugin-typegpu": "workspace:*"
+    "unplugin-typegpu": "workspace:*",
+    "vitest": "catalog:test"
   },
   "peerDependencies": {
     "typegpu": "^0.10.2"
