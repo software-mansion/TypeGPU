@@ -192,6 +192,6 @@
     "typescript": "catalog:types"
   },
   "peerDependencies": {
-    "typegpu": "workspace:^0.10.2"
+    "typegpu": "workspace:^"
   }
 }
