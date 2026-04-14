@@ -42,6 +42,7 @@
     "./webpack": "./src/webpack.ts"
   },
   "publishConfig": {
+    "access": "public",
     "directory": "dist",
     "exports": {
       "./package.json": "./package.json",
