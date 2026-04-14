@@ -540,11 +540,11 @@ importers:
         specifier: workspace:~0.3.1
         version: link:../tinyest
       tsover-runtime:
-        specifier: ^0.0.5
-        version: 0.0.5
+        specifier: ^0.0.6
+        version: 0.0.6
       typed-binary:
-        specifier: ^4.3.1
-        version: 4.3.2
+        specifier: ^4.3.3
+        version: 4.3.3
     devDependencies:
       '@ark/attest':
         specifier: ^0.56.0
@@ -7569,8 +7569,8 @@ packages:
   tsover-monaco-editor@0.55.1:
     resolution: {integrity: sha512-tyPBs+0yzkiC+5m2LvXM+F0Vtx+om6slAFbWNUgyyCgYncpocIITqtLCNNuAYgXLXEkc1w4V+RqYdfvWeT/Ghw==}
 
-  tsover-runtime@0.0.5:
-    resolution: {integrity: sha512-OwpUKI97GvNRVukCE4jtCzUwQvnn6Wyu4a3LikaNF1GXosopXW4J928/EdBsKBxLKv/NP7RjuwhGFkkR1UCdjA==}
+  tsover-runtime@0.0.6:
+    resolution: {integrity: sha512-5h/j9l4SwMSVfTMLVC/d+dkRjgh2xj+WHkivs5hhSwqACbG3JKXxp+9jneRoT07oJRHb97b5nKafsPtZEAdQMg==}
 
   tsover@5.9.11:
     resolution: {integrity: sha512-l3kN4gSwpdAbtWB/dXnssSxJnuOqR20n94Wx0gKBY5n5ZtVcfjBN846VwuBBz4Jv7epcEmsMC1LWlIh0tHkgDw==}
@@ -7616,8 +7616,8 @@ packages:
     resolution: {integrity: sha512-PlBfpQwiUvGViBNX84Yxwjsdhd1TUlXr6zjX7eoirtCPIr08NAmxwa+fcYBTeRQxHo9YC9wwF3m9i700sHma8g==}
     engines: {node: '>=20'}
 
-  typed-binary@4.3.2:
-    resolution: {integrity: sha512-HT3pIBM2njCZUmeczDaQUUErGiM6GXFCqMsHegE12HCoBtvHCkfR10JJni0TeGOTnLilTd6YFyj+YhflqQDrDQ==}
+  typed-binary@4.3.3:
+    resolution: {integrity: sha512-W2hLsSzt3k/tg38gDE4Fn/QiwcoqGuUHBc2cb3mXuH7KcYxe/GM57vzW14s2/bawB4R5knGgGq8Xb57vsaJ4Sg==}
 
   typedoc-plugin-markdown@4.10.0:
     resolution: {integrity: sha512-psrg8Rtnv4HPWCsoxId+MzEN8TVK5jeKCnTbnGAbTBqcDapR9hM41bJT/9eAyKn9C2MDG9Qjh3MkltAYuLDoXg==}
@@ -15650,10 +15650,7 @@ snapshots:
 
   tsover-monaco-editor@0.55.1: {}
 
-  tsover-runtime@0.0.5:
-    dependencies:
-      minimatch: 9.0.5
-      unplugin: 2.3.5
+  tsover-runtime@0.0.6: {}
 
   tsover@5.9.11:
     dependencies:
@@ -15699,7 +15696,7 @@ snapshots:
     dependencies:
       tagged-tag: 1.0.0
 
-  typed-binary@4.3.2: {}
+  typed-binary@4.3.3: {}
 
   typedoc-plugin-markdown@4.10.0(typedoc@0.28.17(tsover@5.9.11)):
     dependencies:
