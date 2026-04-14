@@ -247,6 +247,11 @@ export default defineConfig({
               slug: 'tooling/unplugin-typegpu',
             },
             {
+              label: 'Lint Plugin',
+              slug: 'tooling/eslint-plugin-typegpu',
+              badge: { text: 'new' },
+            },
+            {
               label: 'Generator CLI',
               slug: 'tooling/tgpu-gen',
             },
