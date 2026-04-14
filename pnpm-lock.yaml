@@ -19,6 +19,9 @@ catalogs:
     arktype:
       specifier: ^2.1.22
       version: 2.1.28
+    bun:
+      specifier: 1.3.10
+      version: 1.3.10
   example:
     wgpu-matrix:
       specifier: ^3.4.0
@@ -46,7 +49,7 @@ overrides:
   rollup: ^4.60.0
   vite: 8.0.5
   '@babel/types': ^7.29.0
-  '@types/node': ^24.1.0
+  '@types/node': ^24.10.0
   typescript: npm:tsover@^5.9.11
   three: ^0.181.0
   '@typescript-eslint/utils': ^8.57.2
@@ -58,6 +61,9 @@ importers:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
         version: link:packages/tgpu-dev-cli
+      '@types/bun':
+        specifier: ^1.3.12
+        version: 1.3.12
       '@vitest/browser':
         specifier: ^3.2.4
         version: 3.2.4(msw@2.10.2(@types/node@24.10.0)(tsover@5.9.11))(vite@8.0.5(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))(vitest@4.1.2)
@@ -67,6 +73,9 @@ importers:
       '@webgpu/types':
         specifier: catalog:types
         version: 0.1.66
+      bun:
+        specifier: 'catalog:'
+        version: 1.3.10
       dpdm:
         specifier: ^3.14.0
         version: 3.14.0
@@ -89,8 +98,8 @@ importers:
         specifier: ^0.17.4
         version: 0.17.4
       pkg-pr-new:
-        specifier: ^0.0.62
-        version: 0.0.62
+        specifier: ^0.0.66
+        version: 0.0.66
       typescript:
         specifier: npm:tsover@^5.9.11
         version: tsover@5.9.11
@@ -121,7 +130,7 @@ importers:
     devDependencies:
       '@types/bun':
         specifier: latest
-        version: 1.3.11
+        version: 1.3.12
 
   apps/infra-benchmarks:
     devDependencies:
@@ -136,7 +145,7 @@ importers:
         version: link:../../packages/typegpu
     devDependencies:
       bun:
-        specifier: ^1.3.10
+        specifier: 1.3.10
         version: 1.3.10
       unplugin-typegpu:
         specifier: workspace:*
@@ -152,11 +161,11 @@ importers:
         version: link:../../packages/unplugin-typegpu
     devDependencies:
       '@types/node':
-        specifier: ^24.1.0
+        specifier: ^24.10.0
         version: 24.10.0
       arktype:
-        specifier: 1.0.29-alpha
-        version: 1.0.29-alpha
+        specifier: 'catalog:'
+        version: 2.1.28
       esbuild:
         specifier: ^0.25.11
         version: 0.25.12
@@ -205,6 +214,9 @@ importers:
       '@loaders.gl/core':
         specifier: ^4.3.4
         version: 4.3.4
+      '@loaders.gl/gltf':
+        specifier: ^4.3.4
+        version: 4.3.4(@loaders.gl/core@4.3.4)
       '@loaders.gl/obj':
         specifier: ^4.3.4
         version: 4.3.4(@loaders.gl/core@4.3.4)
@@ -360,7 +372,7 @@ importers:
         specifier: ^7.20.7
         version: 7.20.7
       '@types/node':
-        specifier: ^24.1.0
+        specifier: ^24.10.0
         version: 24.10.0
       '@types/three':
         specifier: catalog:types
@@ -409,7 +421,7 @@ importers:
         version: 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@5.9.11)
     devDependencies:
       '@types/node':
-        specifier: ^24.1.0
+        specifier: ^24.10.0
         version: 24.10.0
       '@typescript-eslint/rule-tester':
         specifier: ^8.57.2
@@ -453,6 +465,10 @@ importers:
       remeda:
         specifier: ^2.21.2
         version: 2.21.2
+    devDependencies:
+      '@types/node':
+        specifier: ^24.10.0
+        version: 24.10.0
 
   packages/tgpu-gen:
     dependencies:
@@ -469,7 +485,7 @@ importers:
         specifier: ^2.21.2
         version: 2.21.2
       typegpu:
-        specifier: workspace:^0.10.2
+        specifier: workspace:^
         version: link:../typegpu
       wgsl_reflect:
         specifier: git://github.com/mhawryluk/wgsl_reflect.git#85994fdc8d8a3abbb4f79baf3891e54eed0c1c63
@@ -537,7 +553,7 @@ importers:
         specifier: workspace:*
         version: link:../tgpu-dev-cli
       '@types/node':
-        specifier: ^24.1.0
+        specifier: ^24.10.0
         version: 24.10.0
       '@webgpu/types':
         specifier: catalog:types
@@ -716,7 +732,7 @@ importers:
         version: link:../typegpu
     devDependencies:
       '@types/node':
-        specifier: ^24.1.0
+        specifier: ^24.10.0
         version: 24.10.0
       typescript:
         specifier: npm:tsover@^5.9.11
@@ -787,7 +803,7 @@ importers:
         specifier: workspace:~0.3.2
         version: link:../tinyest-for-wgsl
       typegpu:
-        specifier: workspace:^0.10.2
+        specifier: workspace:^
         version: link:../typegpu
       unplugin:
         specifier: ^3.0.0
@@ -827,17 +843,17 @@ importers:
 
 packages:
 
-  '@actions/core@1.11.1':
-    resolution: {integrity: sha512-hXJCSrkwfA46Vd9Z3q4cpEpHB1rL5NG04+/rbqW9d3+CSvtB1tYe8UTpAlixa1vj0m/ULglfEK2UKxMGxCxv5A==}
+  '@actions/core@3.0.0':
+    resolution: {integrity: sha512-zYt6cz+ivnTmiT/ksRVriMBOiuoUpDCJJlZ5KPl2/FRdvwU3f7MPh9qftvbkXJThragzUZieit2nyHUyw53Seg==}
 
-  '@actions/exec@1.1.1':
-    resolution: {integrity: sha512-+sCcHHbVdk93a0XT19ECtO/gIXoxvdsgQLzb2fE2/5sIZmWQuluYyjPQtrtTHdU1YzTZ7bAPN4sITq2xi1679w==}
+  '@actions/exec@3.0.0':
+    resolution: {integrity: sha512-6xH/puSoNBXb72VPlZVm7vQ+svQpFyA96qdDBvhB8eNZOE8LtPf9L4oAsfzK/crCL8YZ+19fKYVnM63Sl+Xzlw==}
 
-  '@actions/http-client@2.2.3':
-    resolution: {integrity: sha512-mx8hyJi/hjFvbPokCg4uRd4ZX78t+YyRPtnKWwIl+RzNaVuFpQHfmlGVfsKEJN8LwTCvL+DfVgAM04XaHkm6bA==}
+  '@actions/http-client@4.0.0':
+    resolution: {integrity: sha512-QuwPsgVMsD6qaPD57GLZi9sqzAZCtiJT8kVBCDpLtxhL5MydQ4gS+DrejtZZPdIYyB1e95uCK9Luyds7ybHI3g==}
 
-  '@actions/io@1.1.3':
-    resolution: {integrity: sha512-wi9JjgKLYS7U/z8PPbco+PvTb/nRWjeoFlJ1Qer83k/3C5PHQi28hiVdeE2kHXmIL99mQFawx8qt/JPjZilJ8Q==}
+  '@actions/io@3.0.2':
+    resolution: {integrity: sha512-nRBchcMM+QK1pdjO7/idu86rbJI5YHUKCvKs0KxnSYbVe3F51UfGxuZX4Qy/fWlp6l7gWFwIkrOzN+oUK03kfw==}
 
   '@ampproject/remapping@2.3.0':
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
@@ -1697,10 +1713,6 @@ packages:
   '@expressive-code/plugin-text-markers@0.41.7':
     resolution: {integrity: sha512-Ewpwuc5t6eFdZmWlFyeuy3e1PTQC0jFvw2Q+2bpcWXbOZhPLsT7+h8lsSIJxb5mS7wZko7cKyQ2RLYDyK6Fpmw==}
 
-  '@fastify/busboy@2.1.1':
-    resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
-    engines: {node: '>=14'}
-
   '@floating-ui/core@1.7.1':
     resolution: {integrity: sha512-azI0DrjMMfIug/ExbBaeDVJXcY0a7EPvPjb2xAJPa4HeimBX+Z18HK8QQR3jb6356SnDDdxx+hinMLcJEDdOjw==}
 
@@ -1859,7 +1871,7 @@ packages:
     resolution: {integrity: sha512-KR8edRkIsUayMXV+o3Gv+q4jlhENF9nMYUZs9PA2HzrXeHI8M5uDag70U7RJn9yyiMZSbtF5/UexBtAVtZGSbQ==}
     engines: {node: '>=18'}
     peerDependencies:
-      '@types/node': ^24.1.0
+      '@types/node': ^24.10.0
     peerDependenciesMeta:
       '@types/node':
         optional: true
@@ -1868,7 +1880,7 @@ packages:
     resolution: {integrity: sha512-43RTuEbfP8MbKzedNqBrlhhNKVwoK//vUFNW3Q3vZ88BLcrs4kYpGg+B2mm5p2K/HfygoCxuKwJJiv8PbGmE0A==}
     engines: {node: '>=18'}
     peerDependencies:
-      '@types/node': ^24.1.0
+      '@types/node': ^24.10.0
     peerDependenciesMeta:
       '@types/node':
         optional: true
@@ -1881,7 +1893,7 @@ packages:
     resolution: {integrity: sha512-BvziSRxfz5Ov8ch0z/n3oijRSEcEsHnhggm4xFZe93DHcUCTlutlq9Ox4SVENAfcRD22UQq7T/atg9Wr3k09eA==}
     engines: {node: '>=18'}
     peerDependencies:
-      '@types/node': ^24.1.0
+      '@types/node': ^24.10.0
     peerDependenciesMeta:
       '@types/node':
         optional: true
@@ -1940,6 +1952,21 @@ packages:
   '@loaders.gl/core@4.3.4':
     resolution: {integrity: sha512-cG0C5fMZ1jyW6WCsf4LoHGvaIAJCEVA/ioqKoYRwoSfXkOf+17KupK1OUQyUCw5XoRn+oWA1FulJQOYlXnb9Gw==}
 
+  '@loaders.gl/draco@4.3.4':
+    resolution: {integrity: sha512-4Lx0rKmYENGspvcgV5XDpFD9o+NamXoazSSl9Oa3pjVVjo+HJuzCgrxTQYD/3JvRrolW/QRehZeWD/L/cEC6mw==}
+    peerDependencies:
+      '@loaders.gl/core': ^4.3.0
+
+  '@loaders.gl/gltf@4.3.4':
+    resolution: {integrity: sha512-EiUTiLGMfukLd9W98wMpKmw+hVRhQ0dJ37wdlXK98XPeGGB+zTQxCcQY+/BaMhsSpYt/OOJleHhTfwNr8RgzRg==}
+    peerDependencies:
+      '@loaders.gl/core': ^4.3.0
+
+  '@loaders.gl/images@4.3.4':
+    resolution: {integrity: sha512-qgc33BaNsqN9cWa/xvcGvQ50wGDONgQQdzHCKDDKhV2w/uptZoR5iofJfuG8UUV2vUMMd82Uk9zbopRx2rS4Ag==}
+    peerDependencies:
+      '@loaders.gl/core': ^4.3.0
+
   '@loaders.gl/loader-utils@4.3.4':
     resolution: {integrity: sha512-tjMZvlKQSaMl2qmYTAxg+ySR6zd6hQn5n3XaU8+Ehp90TD3WzxvDKOMNDqOa72fFmIV+KgPhcmIJTpq4lAdC4Q==}
     peerDependencies:
@@ -1955,10 +1982,21 @@ packages:
     peerDependencies:
       '@loaders.gl/core': ^4.3.0
 
+  '@loaders.gl/textures@4.3.4':
+    resolution: {integrity: sha512-arWIDjlE7JaDS6v9by7juLfxPGGnjT9JjleaXx3wq/PTp+psLOpGUywHXm38BNECos3MFEQK3/GFShWI+/dWPw==}
+    peerDependencies:
+      '@loaders.gl/core': ^4.3.0
+
   '@loaders.gl/worker-utils@4.3.4':
     resolution: {integrity: sha512-EbsszrASgT85GH3B7jkx7YXfQyIYo/rlobwMx6V3ewETapPUwdSAInv+89flnk5n2eu2Lpdeh+2zS6PvqbL2RA==}
     peerDependencies:
       '@loaders.gl/core': ^4.3.0
+
+  '@math.gl/core@4.1.0':
+    resolution: {integrity: sha512-FrdHBCVG3QdrworwrUSzXIaK+/9OCRLscxI2OUy6sLOHyHgBMyfnEGs99/m3KNvs+95BsnQLWklVfpKfQzfwKA==}
+
+  '@math.gl/types@4.1.0':
+    resolution: {integrity: sha512-clYZdHcmRvMzVK5fjeDkQlHUzXQSNdZ7s4xOqC3nJPgz4C/TZkUecTo9YS4PruZqtDda/ag4erndP0MIn40dGA==}
 
   '@mdx-js/mdx@3.1.1':
     resolution: {integrity: sha512-f6ZO2ifpwAQIpzGWaBQT2TXxPv6z3RBzQKpVftEWN78Vl/YweF1uwussDx8ECAXVtr3Rs89fKyG9YlzUs9DyGQ==}
@@ -3496,6 +3534,9 @@ packages:
   '@types/bun@1.3.11':
     resolution: {integrity: sha512-5vPne5QvtpjGpsGYXiFyycfpDF2ECyPcTSsFBMa0fraoxiQyMJ3SmuQIGhzPg2WJuWxVBoxWJ2kClYTcw/4fAg==}
 
+  '@types/bun@1.3.12':
+    resolution: {integrity: sha512-DBv81elK+/VSwXHDlnH3Qduw+KxkTIWi7TXkAeh24zpi5l0B2kUg9Ga3tb4nJaPcOFswflgi/yAvMVBPrxMB+A==}
+
   '@types/chai@5.2.2':
     resolution: {integrity: sha512-8kB30R7Hwqf40JPiKhVzodJs2Qc1ZJ5zuT3uzw5Hq/dhNCl3G3l83jfpdI1e20BP348+fV7VIL/+FxaXkqBmWg==}
 
@@ -4002,6 +4043,9 @@ packages:
   arg@5.0.2:
     resolution: {integrity: sha512-PYjyFOLKQ9y57JvQ6QLo8dAgNqswh8M1RMJYdQduT6xbWSgK36P/Z/v+p888pM69jMMfS8Xd8F6I1kQ/I9HUGg==}
 
+  argparse@1.0.10:
+    resolution: {integrity: sha512-o5Roy6tNG4SL/FOkCAN6RzjiakZS25RLYFrcMttJqbdd8BWrnA+fGz57iN5Pb06pvBGvl5gQ0B48dJlslXvoTg==}
+
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
 
@@ -4018,9 +4062,6 @@ packages:
 
   arkregex@0.0.4:
     resolution: {integrity: sha512-biS/FkvSwQq59TZ453piUp8bxMui11pgOMV9WHAnli1F8o0ayNCZzUwQadL/bGIUic5TkS/QlPcyMuI8ZIwedQ==}
-
-  arktype@1.0.29-alpha:
-    resolution: {integrity: sha512-glMLgVhIQRSkR3tymiS+POAcWVJH09sfrgic0jHnyFL8BlhHAJZX2BzdImU9zYr1y9NBqy+U93ZNrRTHXsKRDw==}
 
   arktype@2.1.28:
     resolution: {integrity: sha512-LVZqXl2zWRpNFnbITrtFmqeqNkPPo+KemuzbGSY6jvJwCb4v8NsDzrWOLHnQgWl26TkJeWWcUNUeBpq2Mst1/Q==}
@@ -4148,6 +4189,9 @@ packages:
 
   bun-types@1.3.11:
     resolution: {integrity: sha512-1KGPpoxQWl9f6wcZh57LvrPIInQMn2TQ7jsgxqpRzg+l0QPOFvJVH7HmvHo/AiPgwXy+/Thf6Ov3EdVn1vOabg==}
+
+  bun-types@1.3.12:
+    resolution: {integrity: sha512-HqOLj5PoFajAQciOMRiIZGNoKxDJSr6qigAttOX40vJuSp6DN/CxWp9s3C1Xwm4oH7ybueITwiaOcWXoYVoRkA==}
 
   bun@1.3.10:
     resolution: {integrity: sha512-S/CXaXXIyA4CMjdMkYQ4T2YMqnAn4s0ysD3mlsY4bUiOCqGlv28zck4Wd4H4kpvbekx15S9mUeLQ7Uxd0tYTLA==}
@@ -4685,6 +4729,9 @@ packages:
   dpdm@3.14.0:
     resolution: {integrity: sha512-YJzsFSyEtj88q5eTELg3UWU7TVZkG1dpbF4JDQ3t1b07xuzXmdoGeSz9TKOke1mUuOpWlk4q+pBh+aHzD6GBTg==}
     hasBin: true
+
+  draco3d@1.5.7:
+    resolution: {integrity: sha512-m6WCKt/erDXcw+70IJXnG7M3awwQPAsZvJGX5zY7beBqpELw6RDGkYVU0W43AFxye4pDZ5i2Lbyc/NNGqwjUVQ==}
 
   dset@3.1.4:
     resolution: {integrity: sha512-2QF/g9/zTaPDc3BjNcVTGoBbXBgYfMTTceLaYcFJ/W9kggFUkhxD/hMEeuLKbugyef9SqAx8cpgwlIP/jinUTA==}
@@ -5255,6 +5302,11 @@ packages:
     resolution: {integrity: sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g==}
     engines: {node: '>= 4'}
 
+  image-size@0.7.5:
+    resolution: {integrity: sha512-Hiyv+mXHfFEP7LzUL/llg9RwFxxY+o9N3JVLIeG5E7iFIFAalxvRU9UZthBdYDEVnzHMgjnKJPPpay5BWf1g9g==}
+    engines: {node: '>=6.9.0'}
+    hasBin: true
+
   imagetools-core@9.0.0:
     resolution: {integrity: sha512-LAU2iVl6MuLbARLrZFEOrgqUFGmHij0FqqOR1/mMndUzJoPz2BU4gCXUhjikgwwmfhBPa/1szwiliUy//ZWafw==}
     engines: {node: '>=20.0.0'}
@@ -5546,6 +5598,9 @@ packages:
 
   knitwork@1.2.0:
     resolution: {integrity: sha512-xYSH7AvuQ6nXkq42x0v5S8/Iry+cfulBz/DJQzhIyESdLD7425jXsPy4vn5cCXU+HhRN2kVw51Vd1K6/By4BQg==}
+
+  ktx-parse@0.7.1:
+    resolution: {integrity: sha512-FeA3g56ksdFNwjXJJsc1CCc7co+AJYDp6ipIp878zZ2bU8kWROatLYf39TQEd4/XRSUvBXovQ8gaVKWPXsCLEQ==}
 
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
@@ -6387,8 +6442,8 @@ packages:
     resolution: {integrity: sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==}
     engines: {node: '>=8'}
 
-  pkg-pr-new@0.0.62:
-    resolution: {integrity: sha512-K2jtf1PLCJJFDimQIpasPXDdnRTZSYPy36Ldz+QhMpLz2YN1Wi0ZQkomVt5Wi3NdBZcYuYGXekyFWfJ6fAHYjg==}
+  pkg-pr-new@0.0.66:
+    resolution: {integrity: sha512-t+rZ2DY9Bp7v2NSFZciqChb6DGPdo9YhQeuW/GSdMsUx634gnqe+baJq2ZQgVtXaIxUbnPPBmtFJb6qnQ0uVUA==}
     hasBin: true
 
   pkg-types@1.3.1:
@@ -7131,6 +7186,9 @@ packages:
   split2@3.2.2:
     resolution: {integrity: sha512-9NThjpgZnifTkJpzTZ7Eue85S49QwpNhZTq6GRJwObb6jnLFNGB7Qm73V5HewTROPyxD0C29xqmaI68bQtV+hg==}
 
+  sprintf-js@1.0.3:
+    resolution: {integrity: sha512-D9cPgkvLlV3t3IzL0D0YLvGA9Ahk4PcvVwUbN0dSGr1aP0Nrt4AEnTUbuGvquEC0mA64Gqt1fzirlRs5ibXx8g==}
+
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
 
@@ -7306,6 +7364,10 @@ packages:
   test-exclude@7.0.1:
     resolution: {integrity: sha512-pFYqmTw68LXVjeWJMST4+borgQP2AyMNbg1BpZh9LbyhUeNkeaPF9gzfPGUAnSMV3qPYdWUwDIjjCLiSDOl7vg==}
     engines: {node: '>=18'}
+
+  texture-compressor@1.0.2:
+    resolution: {integrity: sha512-dStVgoaQ11mA5htJ+RzZ51ZxIZqNOgWKAIvtjLrW1AliQQLCmrDqNzQZ8Jh91YealQ95DXt4MEduLzJmbs6lig==}
+    hasBin: true
 
   three@0.181.2:
     resolution: {integrity: sha512-k/CjiZ80bYss6Qs7/ex1TBlPD11whT9oKfT8oTGiHa34W4JRd1NiH/Tr1DbHWQ2/vMUypxksLnF2CfmlmM5XFQ==}
@@ -7614,10 +7676,6 @@ packages:
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
 
-  undici@5.29.0:
-    resolution: {integrity: sha512-raqeBD6NQK4SkWhQzeYKd1KmIG6dllBOTt55Rmkt4HtI9mwdWtJljnrXjAFUBLTSN67HWrOIZ3EPF4kjUw80Bg==}
-    engines: {node: '>=14.0'}
-
   undici@6.23.0:
     resolution: {integrity: sha512-VfQPToRA5FZs/qJxLIinmU59u0r7LXqoJkCzinq3ckNJp3vKEh7jTWN589YQ5+aoAC/TGRLyJLCPKcLQbM8r9g==}
     engines: {node: '>=18.17'}
@@ -7855,7 +7913,7 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
-      '@types/node': ^24.1.0
+      '@types/node': ^24.10.0
       '@vitejs/devtools': ^0.1.0
       esbuild: ^0.27.0 || ^0.28.0
       jiti: '>=1.21.0'
@@ -7908,7 +7966,7 @@ packages:
     peerDependencies:
       '@edge-runtime/vm': '*'
       '@opentelemetry/api': ^1.9.0
-      '@types/node': ^24.1.0
+      '@types/node': ^24.10.0
       '@vitest/browser-playwright': 4.0.18
       '@vitest/browser-preview': 4.0.18
       '@vitest/browser-webdriverio': 4.0.18
@@ -7942,7 +8000,7 @@ packages:
     peerDependencies:
       '@edge-runtime/vm': '*'
       '@opentelemetry/api': ^1.9.0
-      '@types/node': ^24.1.0
+      '@types/node': ^24.10.0
       '@vitest/browser-playwright': 4.1.2
       '@vitest/browser-preview': 4.1.2
       '@vitest/browser-webdriverio': 4.1.2
@@ -8283,21 +8341,21 @@ packages:
 
 snapshots:
 
-  '@actions/core@1.11.1':
+  '@actions/core@3.0.0':
     dependencies:
-      '@actions/exec': 1.1.1
-      '@actions/http-client': 2.2.3
+      '@actions/exec': 3.0.0
+      '@actions/http-client': 4.0.0
 
-  '@actions/exec@1.1.1':
+  '@actions/exec@3.0.0':
     dependencies:
-      '@actions/io': 1.1.3
+      '@actions/io': 3.0.2
 
-  '@actions/http-client@2.2.3':
+  '@actions/http-client@4.0.0':
     dependencies:
       tunnel: 0.0.6
-      undici: 5.29.0
+      undici: 6.23.0
 
-  '@actions/io@1.1.3': {}
+  '@actions/io@3.0.2': {}
 
   '@ampproject/remapping@2.3.0':
     dependencies:
@@ -9127,8 +9185,6 @@ snapshots:
     dependencies:
       '@expressive-code/core': 0.41.7
 
-  '@fastify/busboy@2.1.1': {}
-
   '@floating-ui/core@1.7.1':
     dependencies:
       '@floating-ui/utils': 0.2.9
@@ -9342,6 +9398,29 @@ snapshots:
       '@loaders.gl/worker-utils': 4.3.4(@loaders.gl/core@4.3.4)
       '@probe.gl/log': 4.1.0
 
+  '@loaders.gl/draco@4.3.4(@loaders.gl/core@4.3.4)':
+    dependencies:
+      '@loaders.gl/core': 4.3.4
+      '@loaders.gl/loader-utils': 4.3.4(@loaders.gl/core@4.3.4)
+      '@loaders.gl/schema': 4.3.4(@loaders.gl/core@4.3.4)
+      '@loaders.gl/worker-utils': 4.3.4(@loaders.gl/core@4.3.4)
+      draco3d: 1.5.7
+
+  '@loaders.gl/gltf@4.3.4(@loaders.gl/core@4.3.4)':
+    dependencies:
+      '@loaders.gl/core': 4.3.4
+      '@loaders.gl/draco': 4.3.4(@loaders.gl/core@4.3.4)
+      '@loaders.gl/images': 4.3.4(@loaders.gl/core@4.3.4)
+      '@loaders.gl/loader-utils': 4.3.4(@loaders.gl/core@4.3.4)
+      '@loaders.gl/schema': 4.3.4(@loaders.gl/core@4.3.4)
+      '@loaders.gl/textures': 4.3.4(@loaders.gl/core@4.3.4)
+      '@math.gl/core': 4.1.0
+
+  '@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4)':
+    dependencies:
+      '@loaders.gl/core': 4.3.4
+      '@loaders.gl/loader-utils': 4.3.4(@loaders.gl/core@4.3.4)
+
   '@loaders.gl/loader-utils@4.3.4(@loaders.gl/core@4.3.4)':
     dependencies:
       '@loaders.gl/core': 4.3.4
@@ -9361,9 +9440,26 @@ snapshots:
       '@loaders.gl/core': 4.3.4
       '@types/geojson': 7946.0.16
 
+  '@loaders.gl/textures@4.3.4(@loaders.gl/core@4.3.4)':
+    dependencies:
+      '@loaders.gl/core': 4.3.4
+      '@loaders.gl/images': 4.3.4(@loaders.gl/core@4.3.4)
+      '@loaders.gl/loader-utils': 4.3.4(@loaders.gl/core@4.3.4)
+      '@loaders.gl/schema': 4.3.4(@loaders.gl/core@4.3.4)
+      '@loaders.gl/worker-utils': 4.3.4(@loaders.gl/core@4.3.4)
+      '@math.gl/types': 4.1.0
+      ktx-parse: 0.7.1
+      texture-compressor: 1.0.2
+
   '@loaders.gl/worker-utils@4.3.4(@loaders.gl/core@4.3.4)':
     dependencies:
       '@loaders.gl/core': 4.3.4
+
+  '@math.gl/core@4.1.0':
+    dependencies:
+      '@math.gl/types': 4.1.0
+
+  '@math.gl/types@4.1.0': {}
 
   '@mdx-js/mdx@3.1.1':
     dependencies:
@@ -10557,6 +10653,10 @@ snapshots:
     dependencies:
       bun-types: 1.3.11
 
+  '@types/bun@1.3.12':
+    dependencies:
+      bun-types: 1.3.12
+
   '@types/chai@5.2.2':
     dependencies:
       '@types/deep-eql': 4.0.2
@@ -11218,6 +11318,10 @@ snapshots:
 
   arg@5.0.2: {}
 
+  argparse@1.0.10:
+    dependencies:
+      sprintf-js: 1.0.3
+
   argparse@2.0.1: {}
 
   aria-hidden@1.2.6:
@@ -11233,8 +11337,6 @@ snapshots:
   arkregex@0.0.4:
     dependencies:
       '@ark/util': 0.56.0
-
-  arktype@1.0.29-alpha: {}
 
   arktype@2.1.28:
     dependencies:
@@ -11468,6 +11570,10 @@ snapshots:
       ieee754: 1.2.1
 
   bun-types@1.3.11:
+    dependencies:
+      '@types/node': 24.10.0
+
+  bun-types@1.3.12:
     dependencies:
       '@types/node': 24.10.0
 
@@ -12011,6 +12117,8 @@ snapshots:
       tslib: 2.8.1
       typescript: tsover@5.9.11
       yargs: 17.7.2
+
+  draco3d@1.5.7: {}
 
   dset@3.1.4: {}
 
@@ -12797,6 +12905,8 @@ snapshots:
 
   ignore@5.3.2: {}
 
+  image-size@0.7.5: {}
+
   imagetools-core@9.0.0: {}
 
   import-fresh@3.3.1:
@@ -13045,6 +13155,8 @@ snapshots:
   klona@2.0.6: {}
 
   knitwork@1.2.0: {}
+
+  ktx-parse@0.7.1: {}
 
   levn@0.4.1:
     dependencies:
@@ -14220,9 +14332,9 @@ snapshots:
     dependencies:
       find-up: 4.1.0
 
-  pkg-pr-new@0.0.62:
+  pkg-pr-new@0.0.66:
     dependencies:
-      '@actions/core': 1.11.1
+      '@actions/core': 3.0.0
       '@jsdevtools/ez-spawn': 3.0.4
       '@octokit/action': 6.1.0
       ignore: 5.3.2
@@ -15165,6 +15277,8 @@ snapshots:
     dependencies:
       readable-stream: 3.6.2
 
+  sprintf-js@1.0.3: {}
+
   stackback@0.0.2: {}
 
   starlight-blog@0.26.1(@astrojs/starlight@0.38.1(astro@6.0.8(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3)))(astro@6.0.8(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3)):
@@ -15359,6 +15473,11 @@ snapshots:
       '@istanbuljs/schema': 0.1.3
       glob: 10.5.0
       minimatch: 9.0.5
+
+  texture-compressor@1.0.2:
+    dependencies:
+      argparse: 1.0.10
+      image-size: 0.7.5
 
   three@0.181.2: {}
 
@@ -15664,10 +15783,6 @@ snapshots:
   uncrypto@0.1.3: {}
 
   undici-types@7.16.0: {}
-
-  undici@5.29.0:
-    dependencies:
-      '@fastify/busboy': 2.1.1
 
   undici@6.23.0: {}
 

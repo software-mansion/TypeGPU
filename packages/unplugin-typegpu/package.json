@@ -42,6 +42,7 @@
     "./webpack": "./src/webpack.ts"
   },
   "publishConfig": {
+    "access": "public",
     "directory": "dist",
     "exports": {
       "./package.json": "./package.json",
@@ -191,6 +192,6 @@
     "typescript": "catalog:types"
   },
   "peerDependencies": {
-    "typegpu": "workspace:^0.10.2"
+    "typegpu": "workspace:^"
   }
 }

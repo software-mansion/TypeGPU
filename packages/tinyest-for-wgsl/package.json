@@ -1,7 +1,6 @@
 {
   "name": "tinyest-for-wgsl",
   "version": "0.3.2",
-  "private": true,
   "description": "Transforms JavaScript into its 'tinyest' form, to be used in generating equivalent (or close to) WGSL code.",
   "keywords": [
     "compute",
@@ -22,12 +21,14 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/software-mansion/TypeGPU.git"
+    "url": "git+https://github.com/software-mansion/TypeGPU.git",
+    "directory": "packages/tinyest-for-wgsl"
   },
   "type": "module",
   "sideEffects": false,
   "exports": "./src/index.ts",
   "publishConfig": {
+    "access": "public",
     "directory": "dist",
     "exports": {
       "./package.json": "./package.json",

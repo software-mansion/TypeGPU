@@ -1,7 +1,11 @@
 import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
 import { offsetsForProps } from '../src/data/offsets.ts';
-import { getWriteInstructions, type WriteInstruction } from '../src/data/partialIO.ts';
+import {
+  convertPartialToPatch,
+  getPatchInstructions,
+  type WriteInstruction,
+} from '../src/data/partialIO.ts';
 import type { TypedArray } from '../src/shared/utilityTypes.ts';
 import { it } from 'typegpu-testing-utility';
 
@@ -17,7 +21,7 @@ function expectInstruction(
     expectedData: TypedArray | TypedArray[];
   },
 ): void {
-  expect(instruction.data.byteOffset).toBe(start);
+  expect(instruction.gpuOffset).toBe(start);
   expect(instruction.data.byteLength).toBe(length);
 
   const dataArrays = Array.isArray(expectedData) ? expectedData : [expectedData];
@@ -105,9 +109,45 @@ describe('offsetsForProps', () => {
   });
 });
 
-describe('getWriteInstructions', () => {
-  it('should return correct write instructions for simple data', () => {
-    const instructions = getWriteInstructions(d.u32, 3) as [WriteInstruction];
+describe('convertPartialToPatch', () => {
+  it('should convert sparse {idx, value}[] to Record<number, T>', () => {
+    const schema = d.arrayOf(d.vec3f, 4);
+    const partial = [
+      { idx: 1, value: d.vec3f(1, 2, 3) },
+      { idx: 3, value: d.vec3f(4, 5, 6) },
+    ];
+
+    const result = convertPartialToPatch(schema, partial) as Record<number, unknown>;
+    expect(result[1]).toEqual(d.vec3f(1, 2, 3));
+    expect(result[3]).toEqual(d.vec3f(4, 5, 6));
+    expect(Object.keys(result)).toHaveLength(2);
+  });
+
+  it('should recurse into struct fields', () => {
+    const schema = d.struct({
+      a: d.u32,
+      b: d.arrayOf(d.f32, 3),
+    });
+    const partial = {
+      b: [
+        { idx: 0, value: 1.0 },
+        { idx: 2, value: 3.0 },
+      ],
+    };
+
+    const result = convertPartialToPatch(schema, partial) as Record<string, unknown>;
+    expect(result.b).toEqual({ 0: 1.0, 2: 3.0 });
+  });
+
+  it('should pass through leaves unchanged', () => {
+    expect(convertPartialToPatch(d.u32, 42)).toBe(42);
+    expect(convertPartialToPatch(d.f32, undefined)).toBeUndefined();
+  });
+});
+
+describe('getPatchInstructions', () => {
+  it('should return correct instructions for simple data', () => {
+    const instructions = getPatchInstructions(d.u32, 3) as [WriteInstruction];
 
     expect(instructions).toHaveLength(1);
 
@@ -118,7 +158,7 @@ describe('getWriteInstructions', () => {
     });
   });
 
-  it('should return correct write instructions for props', () => {
+  it('should return correct instructions for struct fields', () => {
     const struct = d.struct({
       a: d.u32,
       b: d.vec3f,
@@ -131,7 +171,7 @@ describe('getWriteInstructions', () => {
       c: { d: 4 },
     };
 
-    const instructions = getWriteInstructions(struct, data) as [WriteInstruction];
+    const instructions = getPatchInstructions(struct, data) as [WriteInstruction];
     expect(instructions).toHaveLength(1);
 
     expectInstruction(instructions[0], {
@@ -145,7 +185,7 @@ describe('getWriteInstructions', () => {
     });
   });
 
-  it('should return correct write instructions for props with arrays', () => {
+  it('should handle sparse array updates via Record<number, T>', () => {
     const struct = d.struct({
       a: d.u32,
       b: d.arrayOf(d.vec3f, 4),
@@ -155,15 +195,15 @@ describe('getWriteInstructions', () => {
     const data = {
       a: 3,
       c: { d: 4 },
-      b: [
-        { idx: 1, value: d.vec3f(4, 5, 6) },
-        { idx: 0, value: d.vec3f(1, 2, 3) },
-        { idx: 3, value: d.vec3f(10, 11, 12) },
-        { idx: 2, value: d.vec3f(7, 8, 9) },
-      ],
+      b: {
+        1: d.vec3f(4, 5, 6),
+        0: d.vec3f(1, 2, 3),
+        3: d.vec3f(10, 11, 12),
+        2: d.vec3f(7, 8, 9),
+      },
     };
 
-    const instructions = getWriteInstructions(struct, data) as [WriteInstruction];
+    const instructions = getPatchInstructions(struct, data) as [WriteInstruction];
     expect(instructions).toHaveLength(1);
 
     expectInstruction(instructions[0], {
@@ -180,7 +220,7 @@ describe('getWriteInstructions', () => {
     });
   });
 
-  it('should return correct write instructions for props with arrays and missing data', () => {
+  it('should split instructions when there is a gap', () => {
     const struct = d.struct({
       a: d.u32,
       b: d.arrayOf(d.vec3f, 4),
@@ -188,15 +228,15 @@ describe('getWriteInstructions', () => {
     });
 
     const data = {
-      b: [
-        { idx: 2, value: d.vec3f(7, 8, 9) },
-        { idx: 0, value: d.vec3f(1, 2, 3) },
-        { idx: 3, value: d.vec3f(10, 11, 12) },
-      ],
+      b: {
+        2: d.vec3f(7, 8, 9),
+        0: d.vec3f(1, 2, 3),
+        3: d.vec3f(10, 11, 12),
+      },
       c: { d: 4 },
     };
 
-    const instructions = getWriteInstructions(struct, data) as [WriteInstruction, WriteInstruction];
+    const instructions = getPatchInstructions(struct, data) as [WriteInstruction, WriteInstruction];
     expect(instructions).toHaveLength(2);
 
     expectInstruction(instructions[0], {
@@ -216,7 +256,7 @@ describe('getWriteInstructions', () => {
     });
   });
 
-  it('should return correct write instructions for arrays of structs', () => {
+  it('should handle arrays of structs with partial updates', () => {
     const Boid = d.struct({
       position: d.vec3f,
       velocity: d.vec3f,
@@ -226,15 +266,8 @@ describe('getWriteInstructions', () => {
       boids: d.arrayOf(Boid, 3),
     });
 
-    const data = [
-      {
-        idx: 1,
-        value: { position: d.vec3f(1, 2, 3) },
-      },
-    ];
-
-    const instructions = getWriteInstructions(struct, {
-      boids: data,
+    const instructions = getPatchInstructions(struct, {
+      boids: { 1: { position: d.vec3f(1, 2, 3) } },
     }) as [WriteInstruction];
 
     expect(instructions).toHaveLength(1);
@@ -246,26 +279,46 @@ describe('getWriteInstructions', () => {
     });
   });
 
-  it('should not accept invalid data', () => {
-    const struct = d.struct({
-      a: d.u32,
-      b: d.vec3f,
-      c: d.struct({ d: d.u32 }),
-    });
+  it('should handle dense array replacement', () => {
+    const array = d.arrayOf(d.u32, 3);
 
-    // @ts-expect-error
-    getWriteInstructions(struct, { a: 3, b: 4, c: 5 });
+    const instructions = getPatchInstructions(array, [100, 200, 300]) as [WriteInstruction];
+
+    expect(instructions).toHaveLength(1);
+
+    expectInstruction(instructions[0], {
+      start: 0,
+      length: 12,
+      expectedData: new Uint32Array([100, 200, 300]),
+    });
   });
 
-  it('should not merge instructions if there is a gap', () => {
+  it('should not false-positive on struct elements with idx/value fields', () => {
+    const WeirdSchema = d.struct({ idx: d.u32, value: d.f32 });
+    const array = d.arrayOf(WeirdSchema, 4);
+
+    const instructions = getPatchInstructions(array, {
+      1: { idx: 42, value: 3.14 },
+    }) as [WriteInstruction];
+
+    expect(instructions).toHaveLength(1);
+
+    expectInstruction(instructions[0], {
+      start: 8,
+      length: 8,
+      expectedData: [new Uint32Array([42]), new Float32Array([3.14])],
+    });
+  });
+
+  it('should not merge instructions for non-contiguous sparse elements', () => {
     const array = d.arrayOf(d.vec3f, 1024);
 
-    const data = Array.from({ length: 1024 })
-      .map((_, i) => i)
-      .filter((i) => i % 2 === 0)
-      .map((i) => ({ idx: i, value: d.vec3f(1, 2, 3) }));
+    const data: Record<number, unknown> = {};
+    for (let i = 0; i < 1024; i += 2) {
+      data[i] = d.vec3f(1, 2, 3);
+    }
 
-    const instructions = getWriteInstructions(array, data);
+    const instructions = getPatchInstructions(array, data);
 
     expect(instructions).toHaveLength(512);
 
@@ -279,5 +332,17 @@ describe('getWriteInstructions', () => {
         expectedData: new Float32Array([1, 2, 3]),
       });
     }
+  });
+
+  it('should handle invalid data gracefully', () => {
+    const struct = d.struct({
+      a: d.u32,
+      b: d.vec3f,
+      c: d.struct({ d: d.u32 }),
+    });
+
+    // getPatchInstructions accepts unknown, so invalid shapes just produce leaf writes
+    const instructions = getPatchInstructions(struct, { a: 3, b: 4, c: 5 });
+    expect(instructions.length).toBeGreaterThan(0);
   });
 });

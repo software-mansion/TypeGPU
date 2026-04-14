@@ -1,7 +1,6 @@
 {
   "name": "typegpu",
   "version": "0.10.2",
-  "private": true,
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "keywords": [
     "compute",
@@ -20,7 +19,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/software-mansion/TypeGPU.git"
+    "url": "git+https://github.com/software-mansion/TypeGPU.git",
+    "directory": "packages/typegpu"
   },
   "type": "module",
   "sideEffects": false,
@@ -51,6 +51,7 @@
     }
   },
   "publishConfig": {
+    "access": "public",
     "directory": "dist",
     "exports": {
       "./package.json": "./dist/package.json",

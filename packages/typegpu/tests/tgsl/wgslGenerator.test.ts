@@ -2107,8 +2107,9 @@ describe('wgslGenerator', () => {
       const _b1 = !buffer.$;
       const _b2 = !v;
       const _b3 = !a;
-      const _b4 = !p;
-      const _b5 = !p.$;
+      const _b4 = !std.atomicLoad(a);
+      const _b5 = !p;
+      const _b6 = !p.$;
     });
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
@@ -2119,8 +2120,9 @@ describe('wgslGenerator', () => {
         const _b1 = false;
         const _b2 = false;
         const _b3 = false;
-        const _b4 = false;
-        let _b5 = !bool((*p));
+        let _b4 = !bool(atomicLoad(&a));
+        const _b5 = false;
+        let _b6 = !bool((*p));
       }"
     `);
   });
