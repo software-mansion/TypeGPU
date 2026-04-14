@@ -36,6 +36,15 @@ export const noUnsupportedSyntax = createRule({
         }
       },
 
+      AssignmentExpression(node) {
+        if (!directives.getEnclosingTypegpuFunction()) {
+          return;
+        }
+        if (unsupportedAssignmentOps.includes(node.operator)) {
+          report(node, `assignment expression '${node.operator}'`);
+        }
+      },
+
       AssignmentPattern(node) {
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
@@ -238,6 +247,6 @@ export const noUnsupportedSyntax = createRule({
   }),
 });
 
-const unsupportedUnaryOps = ['+', 'typeof', 'void', 'delete'];
-
+const unsupportedAssignmentOps = ['&&=', '**=', '||=', '>>>=', '??='];
 const unsupportedBinaryOps = ['==', '!=', '>>>', 'in', 'instanceof', '|>'];
+const unsupportedUnaryOps = ['+', 'typeof', 'void', 'delete'];

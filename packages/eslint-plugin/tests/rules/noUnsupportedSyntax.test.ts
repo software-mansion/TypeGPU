@@ -20,6 +20,31 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
+        code: "const fn = () => { 'use gpu'; let a = 0; a **= 1; a ??= 1; a &&= 1; a ||= 1; a >>>= 1; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'a **= 1', syntax: "assignment expression '**='" },
+          },
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'a ??= 1', syntax: "assignment expression '??='" },
+          },
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'a &&= 1', syntax: "assignment expression '&&='" },
+          },
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'a ||= 1', syntax: "assignment expression '||='" },
+          },
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'a >>>= 1', syntax: "assignment expression '>>>='" },
+          },
+        ],
+      },
+      {
         code: "const fn = (arg = 1) => { 'use gpu'; }",
         errors: [
           {
