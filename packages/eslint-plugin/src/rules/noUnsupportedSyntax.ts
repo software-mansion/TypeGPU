@@ -240,4 +240,4 @@ export const noUnsupportedSyntax = createRule({
 
 const unsupportedUnaryOps = ['+', 'typeof', 'void', 'delete'];
 
-const unsupportedBinaryOps = ['==', '>>>', 'in', 'instanceof', '|>'];
+const unsupportedBinaryOps = ['==', '!=', '>>>', 'in', 'instanceof', '|>'];

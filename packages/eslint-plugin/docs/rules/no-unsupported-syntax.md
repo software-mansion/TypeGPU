@@ -60,5 +60,6 @@ const fn = () => {
 } 
 ```
 
-Note that it is possible that TypeGPU starts/stops supporting JS syntax from version to version.
-Make sure that the minor versions of `typegpu` and `eslint-plugin-typegpu` match.
+> [!NOTE]
+> Note that it is possible that TypeGPU starts/stops supporting JS syntax from version to version.
+> Make sure that the minor versions of `typegpu` and `eslint-plugin-typegpu` match.

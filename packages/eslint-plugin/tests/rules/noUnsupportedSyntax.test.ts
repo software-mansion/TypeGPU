@@ -56,16 +56,16 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const fn = async () => { 'use gpu'; if (1 == 2) { return true; } else { return false; } }",
+        code: "const fn = (i) => { 'use gpu'; return i == 2; }",
         errors: [
           {
             messageId: 'unexpected',
-            data: { snippet: '1 == 2', syntax: "binary operator '=='" },
+            data: { snippet: 'i == 2', syntax: "binary operator '=='" },
           },
         ],
       },
       {
-        code: "const fn = () => { 'use gpu'; a >>> b; c in d; e instanceof Foo; }",
+        code: "const fn = () => { 'use gpu'; a >>> b; c in d; e instanceof Foo; return g != 0; }",
         errors: [
           {
             messageId: 'unexpected',
@@ -78,6 +78,10 @@ describe('noUnsupportedSyntax', () => {
           {
             messageId: 'unexpected',
             data: { snippet: 'e instanceof Foo', syntax: "binary operator 'instanceof'" },
+          },
+          {
+            messageId: 'unexpected',
+            data: { snippet: 'g != 0', syntax: "binary operator '!='" },
           },
         ],
       },
