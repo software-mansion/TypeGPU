@@ -1,6 +1,7 @@
 import { builtin } from '../builtin.ts';
-import { vertexFn } from '../core/function/tgpuVertexFn.ts';
+import { type TgpuVertexFn, vertexFn } from '../core/function/tgpuVertexFn.ts';
 import { vec2f } from '../data/vector.ts';
+import type { Vec2f } from '../data/wgslTypes.ts';
 
 /**
  * A vertex function that defines a single full-screen triangle out
@@ -18,7 +19,12 @@ import { vec2f } from '../data/vector.ts';
  * pipeline.draw(3);
  * ```
  */
-export const fullScreenTriangle = vertexFn({
+export const fullScreenTriangle: TgpuVertexFn<
+  {},
+  {
+    uv: Vec2f;
+  }
+> = vertexFn({
   in: { vertexIndex: builtin.vertexIndex },
   out: { pos: builtin.position, uv: vec2f },
 })`{
