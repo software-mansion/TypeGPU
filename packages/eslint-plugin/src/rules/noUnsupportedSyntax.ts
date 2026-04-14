@@ -31,10 +31,7 @@ export const noUnsupportedSyntax = createRule({
 
     return {
       ArrowFunctionExpression(node) {
-        if (
-          directives.getDirectiveStack().length >= 2 &&
-          directives.getDirectiveStack().at(-2)?.directives.includes('use gpu')
-        ) {
+        if (directives.getDirectiveStack().at(-2)?.directives.includes('use gpu')) {
           report(node, 'arrow function');
         }
       },
@@ -98,19 +95,13 @@ export const noUnsupportedSyntax = createRule({
       },
 
       FunctionDeclaration(node) {
-        if (
-          directives.getDirectiveStack().length >= 2 &&
-          directives.getDirectiveStack().at(-2)?.directives.includes('use gpu')
-        ) {
+        if (directives.getDirectiveStack().at(-2)?.directives.includes('use gpu')) {
           report(node, 'function declaration');
         }
       },
 
       FunctionExpression(node) {
-        if (
-          directives.getDirectiveStack().length >= 2 &&
-          directives.getDirectiveStack().at(-2)?.directives.includes('use gpu')
-        ) {
+        if (directives.getDirectiveStack().at(-2)?.directives.includes('use gpu')) {
           report(node, 'function expression');
         }
       },
