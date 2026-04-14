@@ -290,7 +290,7 @@ const fragmentFn = tgpu.fragmentFn({
 
     const prevGap = prevSurfaceDepth - prevDepth;
     const currGap = surfaceDepth - depth;
-    const t = std.clamp(prevGap / (prevGap - currGap), 0, 1);
+    const t = std.saturate(prevGap / (prevGap - currGap));
     sampleUv = std.mix(prevUv, marchUv, t);
     sampleDepth = std.mix(prevDepth, depth, t);
 
@@ -343,7 +343,7 @@ const fragmentFn = tgpu.fragmentFn({
       shadowFactor = std.min(shadowFactor, (softShadowMultiplier * gap) / marchedDepth);
     }
 
-    shadowFactor = std.clamp(shadowFactor, 0, 1);
+    shadowFactor = std.saturate(shadowFactor);
   }
 
   const H = std.normalize(viewDir + lightDir);
@@ -368,7 +368,7 @@ const fragmentFn = tgpu.fragmentFn({
 
   // Reinhard tone mapping + gamma correction (linear → sRGB)
   color /= color + 1;
-  color = std.pow(color, d.vec3f(1 / 2.2));
+  color = std.pow(color, d.vec3f(1 / 3.2));
 
   return d.vec4f(color, 1);
 });
@@ -444,7 +444,7 @@ export const controls = defineControls({
     },
   },
   'parallax strength': {
-    initial: 0.05,
+    initial: 0.1,
     min: 0,
     max: 0.3,
     step: 0.005,

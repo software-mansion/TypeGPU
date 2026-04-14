@@ -13,7 +13,7 @@ export const PomParams = d.struct({
 });
 
 export const INITIAL_SUN_ANGLE = Math.atan2(0.5, 1) + Math.PI;
-export const INITIAL_SUN_HEIGHT = 0.21;
+export const INITIAL_SUN_HEIGHT = 0.05;
 export const MIN_SUN_ELEVATION = 0.08;
 export const MAX_PARALLAX_STEPS = 128;
 export const DEFAULT_PARALLAX_STEPS = 64;
@@ -28,7 +28,7 @@ export const MATERIAL_IDS = [
 ] as const;
 export type MaterialId = (typeof MATERIAL_IDS)[number];
 
-export const DEFAULT_MATERIAL: MaterialId = 'beach';
+export const DEFAULT_MATERIAL: MaterialId = 'rocks';
 export const MATERIAL_LAYER = {
   normal: 0,
   height: 1,
