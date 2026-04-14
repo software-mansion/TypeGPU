@@ -313,6 +313,11 @@ ${this.ctx.pre}}`;
         // convert the result.
         return result;
       }
+
+      if (wgsl.isBool(expectedType)) {
+        return bool[$gpuCallable].call(this.ctx, [result]);
+      }
+
       return tryConvertSnippet(this.ctx, result, expectedType);
     } finally {
       this.ctx.expectedType = prevExpectedType;
