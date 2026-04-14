@@ -24,7 +24,7 @@
     "vitest": "catalog:test"
   },
   "peerDependencies": {
-    "typegpu": "workspace:^0.10.2"
+    "typegpu": "workspace:^"
   },
   "engines": {
     "node": ">=12.20.0"

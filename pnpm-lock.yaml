@@ -164,8 +164,8 @@ importers:
         specifier: ^24.10.0
         version: 24.10.0
       arktype:
-        specifier: 1.0.29-alpha
-        version: 1.0.29-alpha
+        specifier: 'catalog:'
+        version: 2.1.28
       esbuild:
         specifier: ^0.25.11
         version: 0.25.12
@@ -485,7 +485,7 @@ importers:
         specifier: ^2.21.2
         version: 2.21.2
       typegpu:
-        specifier: workspace:^0.10.2
+        specifier: workspace:^
         version: link:../typegpu
       wgsl_reflect:
         specifier: git://github.com/mhawryluk/wgsl_reflect.git#85994fdc8d8a3abbb4f79baf3891e54eed0c1c63
@@ -803,7 +803,7 @@ importers:
         specifier: workspace:~0.3.2
         version: link:../tinyest-for-wgsl
       typegpu:
-        specifier: workspace:^0.10.2
+        specifier: workspace:^
         version: link:../typegpu
       unplugin:
         specifier: ^3.0.0
@@ -4066,9 +4066,6 @@ packages:
 
   arkregex@0.0.4:
     resolution: {integrity: sha512-biS/FkvSwQq59TZ453piUp8bxMui11pgOMV9WHAnli1F8o0ayNCZzUwQadL/bGIUic5TkS/QlPcyMuI8ZIwedQ==}
-
-  arktype@1.0.29-alpha:
-    resolution: {integrity: sha512-glMLgVhIQRSkR3tymiS+POAcWVJH09sfrgic0jHnyFL8BlhHAJZX2BzdImU9zYr1y9NBqy+U93ZNrRTHXsKRDw==}
 
   arktype@2.1.28:
     resolution: {integrity: sha512-LVZqXl2zWRpNFnbITrtFmqeqNkPPo+KemuzbGSY6jvJwCb4v8NsDzrWOLHnQgWl26TkJeWWcUNUeBpq2Mst1/Q==}
@@ -11350,8 +11347,6 @@ snapshots:
   arkregex@0.0.4:
     dependencies:
       '@ark/util': 0.56.0
-
-  arktype@1.0.29-alpha: {}
 
   arktype@2.1.28:
     dependencies:
