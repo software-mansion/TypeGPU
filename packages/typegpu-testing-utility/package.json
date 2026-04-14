@@ -3,10 +3,6 @@
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/software-mansion/TypeGPU.git"
-  },
   "type": "module",
   "exports": "./src/index.ts",
   "scripts": {

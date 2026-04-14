@@ -91,15 +91,6 @@ async function transformPackageJSON() {
   distPackageJson.scripts = {};
   // Removing dev dependencies.
   distPackageJson.devDependencies = undefined;
-  // Removing workspace specifiers in dependencies.
-  distPackageJson.dependencies = mapValues(
-    distPackageJson.dependencies ?? {},
-    (/** @type {string} */ value) => value.replace(/^workspace:/, ''),
-  );
-  distPackageJson.peerDependencies = mapValues(
-    distPackageJson.peerDependencies ?? {},
-    (/** @type {string} */ value) => value.replace(/^workspace:/, ''),
-  );
 
   await fs.writeFile(distPackageJsonUrl, JSON.stringify(distPackageJson, undefined, 2), 'utf-8');
 }

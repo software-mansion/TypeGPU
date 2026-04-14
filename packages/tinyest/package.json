@@ -13,7 +13,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/software-mansion/TypeGPU.git"
+    "url": "git+https://github.com/software-mansion/TypeGPU.git",
+    "directory": "packages/tinyest"
   },
   "type": "module",
   "sideEffects": false,
