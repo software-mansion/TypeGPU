@@ -2,7 +2,6 @@ import { MAGIC_NUMBER } from './geometry.ts';
 
 const INIT_TILE_DENSITY = 0.1;
 const INITIAL_STEP_ROTATION = 60;
-const INITIAL_MIDDLE_SQUARE_SCALE = 2;
 const DEFAULT_ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY = 2;
 
 let cubicBezierControlPoints: [number, number, number, number] = [0.18, 0.7, 0.68, 1.03];
@@ -89,10 +88,8 @@ function updateAnimationDuration(newValue: number) {
 }
 
 export {
-  createGridParams,
   getCubicBezierControlPointsString,
   INIT_TILE_DENSITY,
-  INITIAL_MIDDLE_SQUARE_SCALE,
   INITIAL_STEP_ROTATION,
   animationDuration,
   cubicBezierControlPoints,

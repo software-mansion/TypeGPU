@@ -60,4 +60,4 @@ function createInstanceInfoArrays(aspectRatio: number) {
   return { allRows, checkerboardGroups };
 }
 
-export { createInstanceInfoArrays, InstanceInfoArray };
+export { createRotationScaleMatrix, createInstanceInfoArrays, InstanceInfoArray };

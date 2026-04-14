@@ -1,7 +1,11 @@
 import tgpu, { d } from 'typegpu';
 import { colors, originalVertices } from './geometry.ts';
 import { createBezier } from './bezier.ts';
-import { createInstanceInfoArrays, InstanceInfoArray } from './instanceInfo.ts';
+import {
+  createRotationScaleMatrix,
+  createInstanceInfoArrays,
+  InstanceInfoArray,
+} from './instanceInfo.ts';
 import {
   getCubicBezierControlPointsString,
   INITIAL_STEP_ROTATION,
@@ -45,18 +49,6 @@ const uniforms = root.createUniform(Uniforms, uniformsState);
 let { allRowInstances, checkerboardInstances } = createInstanceInfos();
 let stencilTexture = createStencilTexture();
 let drawOverNeighbors = false;
-
-function createRotationScaleMatrix(scale: number, angleInDegrees: number) {
-  const angle = (angleInDegrees * Math.PI) / 180;
-  const cosAngle = Math.cos(angle) * scale;
-  const sinAngle = Math.sin(angle) * scale;
-
-  return d.mat3x3f(
-    d.vec3f(cosAngle, sinAngle, 0),
-    d.vec3f(-sinAngle, cosAngle, 0),
-    d.vec3f(0, 0, 1),
-  );
-}
 
 function updateLayerTransforms(animationProgress: number) {
   const smallestLoopingRotationAngle = 120;
