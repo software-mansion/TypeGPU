@@ -1,5 +1,6 @@
 {
   "title": "Mesh Skinning",
   "category": "simple",
-  "tags": ["rendering", "experimental"]
+  "tags": ["3d", "animation", "experimental"],
+  "coolFactor": 7
 }

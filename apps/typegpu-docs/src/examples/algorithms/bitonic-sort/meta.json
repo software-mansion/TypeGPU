@@ -1,5 +1,6 @@
 {
   "title": "Bitonic Sort",
   "category": "algorithms",
-  "tags": ["experimental", "compute"]
+  "tags": ["experimental", "compute"],
+  "coolFactor": 5
 }
