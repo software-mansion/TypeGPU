@@ -63,10 +63,12 @@ export function getRangeSnippets(
   const { value, dataType } = iterableSnippet;
 
   if (isTgpuRange(value)) {
+    const dataType = value.start >= 0 && value.step >= 0 ? u32 : i32;
+
     return {
-      start: snip(value.start, i32, 'constant'),
-      end: snip(value.end, i32, 'constant'),
-      step: snip(value.step, i32, 'constant'),
+      start: snip(value.start, dataType, 'constant'),
+      end: snip(value.end, dataType, 'constant'),
+      step: snip(value.step, dataType, 'constant'),
       comparison: value.step < 0 ? '>' : '<',
     };
   }

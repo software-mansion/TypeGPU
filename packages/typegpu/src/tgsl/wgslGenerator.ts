@@ -1263,7 +1263,7 @@ ${this.ctx.pre}else ${alternate}`;
 
         if (isTgpuRange(iterableSnippet.value)) {
           bodyStr = this._block(blockified, {
-            [originalLoopVarName]: snip(index, u32, 'runtime'),
+            [originalLoopVarName]: snip(index, range.start.dataType, 'runtime'), // range.start, .end , .step have the same dataType
           });
         } else {
           this.ctx.indent();
