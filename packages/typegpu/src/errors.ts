@@ -45,10 +45,10 @@ export function invariant(
  * @category Errors
  */
 export class ResolutionError extends Error {
-  constructor(
-    public readonly cause: unknown,
-    public readonly trace: unknown[],
-  ) {
+  readonly cause: unknown;
+  readonly trace: unknown[];
+
+  constructor(cause: unknown, trace: unknown[]) {
     let entries = trace.map(
       (ancestor) => `- ${hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : ancestor}`,
     );
@@ -63,6 +63,9 @@ export class ResolutionError extends Error {
         cause && typeof cause === 'object' && 'message' in cause ? cause.message : cause
       }`,
     );
+
+    this.cause = cause;
+    this.trace = trace;
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, ResolutionError.prototype);
@@ -82,10 +85,10 @@ export class ResolutionError extends Error {
  * @category Errors
  */
 export class ExecutionError extends Error {
-  constructor(
-    public readonly cause: unknown,
-    public readonly trace: unknown[],
-  ) {
+  readonly cause: unknown;
+  readonly trace: unknown[];
+
+  constructor(cause: unknown, trace: unknown[]) {
     let entries = trace.map((ancestor) => `- ${ancestor}`);
 
     // Showing only the root and leaf nodes.
@@ -98,6 +101,9 @@ export class ExecutionError extends Error {
         cause && typeof cause === 'object' && 'message' in cause ? cause.message : cause
       }`,
     );
+
+    this.cause = cause;
+    this.trace = trace;
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, ExecutionError.prototype);
@@ -114,8 +120,11 @@ export class ExecutionError extends Error {
  * @category Errors
  */
 export class MissingSlotValueError extends Error {
-  constructor(public readonly slot: TgpuSlot<unknown>) {
+  readonly slot: TgpuSlot<unknown>;
+
+  constructor(slot: TgpuSlot<unknown>) {
     super(`Missing value for '${slot}'`);
+    this.slot = slot;
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, MissingSlotValueError.prototype);

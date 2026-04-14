@@ -70,13 +70,13 @@ const paramsUniform = root.createUniform(Params, {
   sampleBias: blurStrength,
 });
 
-const sampler = root['~unstable'].createSampler({
+const sampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
   mipmapFilter: 'linear',
 });
 
-const maskTexture = root['~unstable']
+const maskTexture = root
   .createTexture({
     size: [MODEL_WIDTH, MODEL_HEIGHT],
     format: 'rgba8unorm',
@@ -198,7 +198,7 @@ function updateCropBounds(aspectRatio: number) {
       uvMaxY = uvMinY + cropHeight;
     }
   }
-  paramsUniform.writePartial({
+  paramsUniform.patch({
     cropBounds: d.vec4f(uvMinX, uvMinY, uvMaxX, uvMaxY),
   });
 }
@@ -214,7 +214,7 @@ function onVideoChange(size: { width: number; height: number }) {
   updateCropBounds(aspectRatio);
 
   blurredTextures = [0, 1].map(() =>
-    root['~unstable']
+    root
       .createTexture({
         size: [size.width, size.height],
         format: 'rgba8unorm',
@@ -313,7 +313,7 @@ export const controls = defineControls({
     options: ['mipmaps', 'gaussian'],
     async onSelectChange(value) {
       useGaussianBlur = value === 'gaussian';
-      paramsUniform.writePartial({ useGaussian: useGaussianBlur ? 1 : 0 });
+      paramsUniform.patch({ useGaussian: useGaussianBlur ? 1 : 0 });
     },
   },
   'blur strength': {
@@ -323,7 +323,7 @@ export const controls = defineControls({
     step: 1,
     onSliderChange(newValue) {
       blurStrength = newValue;
-      paramsUniform.writePartial({ sampleBias: blurStrength });
+      paramsUniform.patch({ sampleBias: blurStrength });
     },
   },
   'square crop': {

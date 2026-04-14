@@ -10,6 +10,8 @@ import type {
   InferGPURecord,
   InferInput,
   InferInputRecord,
+  InferPatch,
+  InferPatchRecord,
   InferPartial,
   InferPartialRecord,
   InferRecord,
@@ -26,6 +28,7 @@ import type {
   $memIdent,
   $repr,
   $reprPartial,
+  $reprPatch,
   $validStorageSchema,
   $validUniformSchema,
   $validVertexSchema,
@@ -59,13 +62,15 @@ export type TypedArrayFor<T> = T extends F32 | Vec2f | Vec3f | Vec4f | Mat2x2f |
   ? Float32Array
   : T extends F16 | Vec2h | Vec3h | Vec4h
     ? Float16Array
-    : T extends I32 | Vec2i | Vec3i | Vec4i
+    : T extends I32 | Vec2i | Vec3i | Vec4i | Atomic<I32>
       ? Int32Array
-      : T extends U32 | Vec2u | Vec3u | Vec4u
+      : T extends U32 | Vec2u | Vec3u | Vec4u | Atomic<U32>
         ? Uint32Array
         : T extends U16
           ? Uint16Array
-          : never;
+          : T extends Decorated<infer TBase>
+            ? TypedArrayFor<TBase>
+            : never;
 
 /**
  * Vector infix notation.
@@ -1170,6 +1175,11 @@ export interface WgslArray<out TElement extends BaseData = BaseData> extends Bas
   readonly [$inRepr]: InferInput<TElement>[] | TypedArrayFor<TElement>;
   readonly [$gpuRepr]: InferGPU<TElement>[];
   readonly [$reprPartial]: { idx: number; value: InferPartial<TElement> }[] | undefined;
+  readonly [$reprPatch]:
+    | Record<number, InferPatch<TElement>>
+    | InferInput<TElement>[]
+    | TypedArrayFor<TElement>
+    | undefined;
   readonly [$memIdent]: WgslArray<MemIdentity<TElement>>;
   readonly [$validStorageSchema]: IsValidStorageSchema<TElement>;
   readonly [$validUniformSchema]: IsValidUniformSchema<TElement>;
@@ -1207,6 +1217,7 @@ export interface WgslStruct<
   readonly [$gpuRepr]: Prettify<InferGPURecord<TProps>>;
   readonly [$memIdent]: WgslStruct<Prettify<MemIdentityRecord<TProps>>>;
   readonly [$reprPartial]: Prettify<Partial<InferPartialRecord<TProps>>> | undefined;
+  readonly [$reprPatch]: Prettify<Partial<InferPatchRecord<TProps>>> | undefined;
   readonly [$invalidSchemaReason]: SwapNever<
     {
       [K in keyof TProps]: ExtractInvalidSchemaError<
@@ -1336,8 +1347,10 @@ export interface Decorated<
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TInner>;
+  readonly [$inRepr]: InferInput<TInner>;
   readonly [$gpuRepr]: InferGPU<TInner>;
   readonly [$reprPartial]: InferPartial<TInner>;
+  readonly [$reprPatch]: InferPatch<TInner>;
   readonly [$memIdent]: TAttribs extends Location[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;
@@ -1698,6 +1711,10 @@ export function isConcrete(value: unknown): boolean {
 
 export function isVoid(value: unknown): value is Void {
   return isMarkedInternal(value) && (value as Void).type === 'void';
+}
+
+export function isBool(value: unknown): value is Bool {
+  return isMarkedInternal(value) && (value as Bool).type === 'bool';
 }
 
 export function isNumericSchema(

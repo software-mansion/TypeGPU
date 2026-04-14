@@ -1,6 +1,6 @@
 import { test } from 'typegpu-testing-utility';
 import { describe, expect } from 'vitest';
-import { d, ValidateBufferSchema } from 'typegpu';
+import { d, type ValidateBufferSchema } from 'typegpu';
 
 describe('d.InferInput', () => {
   test('d.Infer<T> should be assignable to d.InferInput<T>', ({ root }) => {

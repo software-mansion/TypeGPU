@@ -56,15 +56,11 @@ describe('game of life example', () => {
         textureStore(next, vec2u(x, y), vec4u(u32(select(0, 1, (randFloat01() > 0.5f))), 0u, 0u, 0u));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> gameSizeUniform: u32;
@@ -77,14 +73,10 @@ describe('game of life example', () => {
 
       @group(1) @binding(1) var next: texture_storage_2d<r32uint, write>;
 
-      struct naiveCompute_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16) fn naiveCompute(_arg_0: naiveCompute_Input) {
+      @compute @workgroup_size(16, 16) fn naiveCompute(@builtin(global_invocation_id) gid: vec3u) {
         let gs = gameSizeUniform;
         let vmax = (gs - 1u);
-        var p = _arg_0.gid.xy;
+        var p = gid.xy;
         var neighbors = 0u;
         for (var oy = -1; (oy <= 1i); oy++) {
           for (var ox = -1; (ox <= 1i); ox++) {
@@ -130,17 +122,11 @@ describe('game of life example', () => {
 
       @group(1) @binding(1) var next: texture_storage_2d<r32uint, write>;
 
-      struct tiledCompute_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-        @builtin(local_invocation_id) lid: vec3u,
-        @builtin(workgroup_id) wgid: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16) fn tiledCompute(_arg_0: tiledCompute_Input) {
+      @compute @workgroup_size(16, 16) fn tiledCompute(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wgid: vec3u) {
         let gs = f32(gameSizeUniform);
         var texelSize = (vec2f(1) / gs);
-        var tileOrigin = ((vec2f(_arg_0.wgid.xy) * 16f) - 1f);
-        let linearId = ((_arg_0.lid.y * 16u) + _arg_0.lid.x);
+        var tileOrigin = ((vec2f(wgid.xy) * 16f) - 1f);
+        let linearId = ((lid.y * 16u) + lid.x);
         const numGathers = 81u;
         if ((linearId < numGathers)) {
           let gx = (linearId % 9u);
@@ -155,12 +141,12 @@ describe('game of life example', () => {
           sharedTile[tileIdx((sx + 1u), (sy + 1u))] = g.y;
         }
         workgroupBarrier();
-        let lx = (_arg_0.lid.x + 1u);
-        let ly = (_arg_0.lid.y + 1u);
+        let lx = (lid.x + 1u);
+        let ly = (lid.y + 1u);
         let current_1 = readTile(lx, ly);
         let neighbors = countNeighborsInTile(lx, ly);
         let nextAlive = golNextState((current_1 != 0u), neighbors);
-        textureStore(next, _arg_0.gid.xy, vec4u(u32(select(0, 1, nextAlive)), 0u, 0u, 0u));
+        textureStore(next, gid.xy, vec4u(u32(select(0, 1, nextAlive)), 0u, 0u, 0u));
       }
 
       @group(0) @binding(0) var<uniform> gameSizeUniform: u32;
@@ -189,17 +175,11 @@ describe('game of life example', () => {
 
       @group(1) @binding(1) var next: texture_storage_2d<r32uint, write>;
 
-      struct tiledCompute_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-        @builtin(local_invocation_id) lid: vec3u,
-        @builtin(workgroup_id) wgid: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16) fn tiledCompute(_arg_0: tiledCompute_Input) {
+      @compute @workgroup_size(16, 16) fn tiledCompute(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wgid: vec3u) {
         let gs = f32(gameSizeUniform);
         var texelSize = (vec2f(1) / gs);
-        var tileOrigin = ((vec2f(_arg_0.wgid.xy) * 16f) - 1f);
-        let linearId = ((_arg_0.lid.y * 16u) + _arg_0.lid.x);
+        var tileOrigin = ((vec2f(wgid.xy) * 16f) - 1f);
+        let linearId = ((lid.y * 16u) + lid.x);
         const numGathers = 81u;
         if ((linearId < numGathers)) {
           let gx = (linearId % 9u);
@@ -214,16 +194,12 @@ describe('game of life example', () => {
           sharedTile[tileIdx((sx + 1u), (sy + 1u))] = g.y;
         }
         workgroupBarrier();
-        let lx = (_arg_0.lid.x + 1u);
-        let ly = (_arg_0.lid.y + 1u);
+        let lx = (lid.x + 1u);
+        let ly = (lid.y + 1u);
         let current_1 = readTile(lx, ly);
         let neighbors = countNeighborsInTile(lx, ly);
         let nextAlive = golNextState((current_1 != 0u), neighbors);
-        textureStore(next, _arg_0.gid.xy, vec4u(u32(select(0, 1, nextAlive)), 0u, 0u, 0u));
-      }
-
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
+        textureStore(next, gid.xy, vec4u(u32(select(0, 1, nextAlive)), 0u, 0u, 0u));
       }
 
       struct fullScreenTriangle_Output {
@@ -231,11 +207,15 @@ describe('game of life example', () => {
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      struct displayFragment_Input {
+        @location(0) uv: vec2f,
       }
 
       struct ZoomParams {
@@ -261,10 +241,6 @@ describe('game of life example', () => {
       }
 
       @group(0) @binding(2) var<uniform> viewModeUniform: u32;
-
-      struct displayFragment_Input {
-        @location(0) uv: vec2f,
-      }
 
       @fragment fn displayFragment(_arg_0: displayFragment_Input) -> @location(0) vec4f {
         let zoom = (&zoomUniform);

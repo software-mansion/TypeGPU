@@ -5,6 +5,8 @@ import type {
   InferGPURecord,
   InferInput,
   InferInputRecord,
+  InferPatch,
+  InferPatchRecord,
   InferPartial,
   InferPartialRecord,
   InferRecord,
@@ -18,6 +20,7 @@ import type {
   $memIdent,
   $repr,
   $reprPartial,
+  $reprPatch,
   $validVertexSchema,
 } from '../shared/symbols.ts';
 import { $internal } from '../shared/symbols.ts';
@@ -51,6 +54,11 @@ export interface Disarray<out TElement extends wgsl.BaseData = wgsl.BaseData>
   readonly [$repr]: Infer<TElement>[];
   readonly [$inRepr]: InferInput<TElement>[] | wgsl.TypedArrayFor<TElement>;
   readonly [$reprPartial]: { idx: number; value: InferPartial<TElement> }[] | undefined;
+  readonly [$reprPatch]:
+    | Record<number, InferPatch<TElement>>
+    | InferInput<TElement>[]
+    | wgsl.TypedArrayFor<TElement>
+    | undefined;
   readonly [$validVertexSchema]: IsValidVertexSchema<TElement>;
   readonly [$invalidSchemaReason]: 'Disarrays are not host-shareable, use arrays instead';
   // ---
@@ -80,6 +88,7 @@ export interface Unstruct<
   readonly [$gpuRepr]: Prettify<InferGPURecord<TProps>>;
   readonly [$memIdent]: Unstruct<Prettify<MemIdentityRecord<TProps>>>;
   readonly [$reprPartial]: Prettify<Partial<InferPartialRecord<TProps>>> | undefined;
+  readonly [$reprPatch]: Prettify<Partial<InferPatchRecord<TProps>>> | undefined;
   readonly [$validVertexSchema]: {
     [K in keyof TProps]: IsValidVertexSchema<TProps[K]>;
   }[keyof TProps] extends true
@@ -228,20 +237,35 @@ export const UnknownData = Symbol('UNKNOWN');
 export type UnknownData = typeof UnknownData;
 
 export class InfixDispatch {
+  readonly name: string;
+  readonly lhs: Snippet;
+  readonly operator: (ctx: ResolutionCtx, args: [lhs: Snippet, rhs: Snippet]) => Snippet;
+
   constructor(
-    readonly name: string,
-    readonly lhs: Snippet,
-    readonly operator: (ctx: ResolutionCtx, args: [lhs: Snippet, rhs: Snippet]) => Snippet,
-  ) {}
+    name: string,
+    lhs: Snippet,
+    operator: (ctx: ResolutionCtx, args: [lhs: Snippet, rhs: Snippet]) => Snippet,
+  ) {
+    this.name = name;
+    this.lhs = lhs;
+    this.operator = operator;
+  }
 }
 
 export class MatrixColumnsAccess {
-  constructor(readonly matrix: Snippet) {}
+  readonly matrix: Snippet;
+
+  constructor(matrix: Snippet) {
+    this.matrix = matrix;
+  }
 }
 
 export class ConsoleLog {
   [$internal] = true;
-  constructor(readonly op: string) {
+  readonly op: string;
+
+  constructor(op: string) {
+    this.op = op;
     setName(this, 'consoleLog');
   }
 }

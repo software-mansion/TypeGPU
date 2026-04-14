@@ -42,6 +42,7 @@
     "./webpack": "./src/webpack.ts"
   },
   "publishConfig": {
+    "access": "public",
     "directory": "dist",
     "exports": {
       "./package.json": "./package.json",
@@ -173,7 +174,7 @@
     "defu": "^6.1.4",
     "magic-string-ast": "^1.0.3",
     "pathe": "^2.0.3",
-    "picomatch": "^4.0.3",
+    "picomatch": "^4.0.4",
     "tinyest": "workspace:~0.3.1",
     "tinyest-for-wgsl": "workspace:~0.3.2",
     "unplugin": "^3.0.0"
@@ -191,6 +192,6 @@
     "typescript": "catalog:types"
   },
   "peerDependencies": {
-    "typegpu": "workspace:^0.10.2"
+    "typegpu": "workspace:^"
   }
 }

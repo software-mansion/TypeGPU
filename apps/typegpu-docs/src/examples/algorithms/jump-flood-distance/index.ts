@@ -49,14 +49,14 @@ const paramsUniform = root.createUniform(VisualizationParams, {
   showOutside: 1,
 });
 
-const filteringSampler = root['~unstable'].createSampler({
+const filteringSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
 function createResources() {
   const textures = [0, 1].map(() =>
-    root['~unstable']
+    root
       .createTexture({
         size: [width, height],
         format: 'rgba16float',
@@ -64,14 +64,14 @@ function createResources() {
       .$usage('storage'),
   ) as [FloodTexture, FloodTexture];
 
-  const maskTexture = root['~unstable']
+  const maskTexture = root
     .createTexture({
       size: [width, height],
       format: 'r32uint',
     })
     .$usage('storage') as MaskTexture;
 
-  const distanceTexture = root['~unstable']
+  const distanceTexture = root
     .createTexture({
       size: [width, height],
       format: 'rgba16float',
@@ -300,7 +300,7 @@ function runFlood() {
 
 function drawAtPosition(canvasX: number, canvasY: number) {
   const rect = canvas.getBoundingClientRect();
-  brushUniform.writePartial({
+  brushUniform.patch({
     center: d.vec2f((canvasX * width) / rect.width, (canvasY * height) / rect.height),
   });
   drawSeed.with(resources.maskBindGroup).dispatchThreads(width, height);
@@ -371,7 +371,7 @@ const onMouseDown = (e: MouseEvent) => {
   if (e.button !== 0 && e.button !== 2) {
     return;
   }
-  brushUniform.writePartial({ erasing: e.button === 2 ? 1 : 0 });
+  brushUniform.patch({ erasing: e.button === 2 ? 1 : 0 });
   isDrawing = true;
   lastDrawPos = null;
   const rect = canvas.getBoundingClientRect();
@@ -395,7 +395,7 @@ const onTouchStart = (e: TouchEvent) => {
   isDrawing = true;
   lastDrawPos = null;
   const rect = canvas.getBoundingClientRect();
-  brushUniform.writePartial({ erasing: e.touches.length === 2 ? 1 : 0 });
+  brushUniform.patch({ erasing: e.touches.length === 2 ? 1 : 0 });
   const pos = getTouchPosition(rect, e.touches);
   interpolateAndDraw(pos.x, pos.y);
 };
@@ -405,7 +405,7 @@ const onTouchMove = (e: TouchEvent) => {
     return;
   }
   e.preventDefault();
-  brushUniform.writePartial({ erasing: e.touches.length === 2 ? 1 : 0 });
+  brushUniform.patch({ erasing: e.touches.length === 2 ? 1 : 0 });
   const rect = canvas.getBoundingClientRect();
   const pos = getTouchPosition(rect, e.touches);
   interpolateAndDraw(pos.x, pos.y);
@@ -427,7 +427,7 @@ canvas.addEventListener('touchend', onTouchEnd);
 canvas.addEventListener('touchcancel', onTouchEnd);
 
 function updateBrushSize() {
-  brushUniform.writePartial({
+  brushUniform.patch({
     radius: Math.ceil(Math.min(width, height) * brushSize),
   });
 }
@@ -449,14 +449,14 @@ export const controls = defineControls({
   'Show positive distance': {
     initial: true,
     onToggleChange(value: boolean) {
-      paramsUniform.writePartial({ showOutside: value ? 1 : 0 });
+      paramsUniform.patch({ showOutside: value ? 1 : 0 });
       render();
     },
   },
   'Show negative distance': {
     initial: false,
     onToggleChange(value: boolean) {
-      paramsUniform.writePartial({ showInside: value ? 1 : 0 });
+      paramsUniform.patch({ showInside: value ? 1 : 0 });
       render();
     },
   },

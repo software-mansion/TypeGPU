@@ -21,7 +21,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // Helpers
 function createField(name: string) {
-  return root['~unstable']
+  return root
     .createTexture({ size: [p.SIM_N, p.SIM_N], format: 'rgba16float' })
     .$usage('storage', 'sampled')
     .$name(name);
@@ -92,7 +92,7 @@ const plums = await createImageBitmap(await response.blob(), {
   resizeQuality: 'high',
 });
 
-const backgroundTexture = root['~unstable']
+const backgroundTexture = root
   .createTexture({ size: [p.N, p.N], format: 'rgba8unorm' })
   .$usage('sampled', 'render');
 device.queue.copyExternalImageToTexture(
@@ -110,7 +110,7 @@ const newInkTex = createField('addedInk');
 const forceTex = createField('force');
 const divergenceTex = createField('divergence');
 
-const linSampler = root['~unstable'].createSampler({
+const linSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -280,7 +280,7 @@ function loop() {
   }
 
   if (brushState.isDown) {
-    brushParamBuffer.writePartial({
+    brushParamBuffer.patch({
       pos: d.vec2i(...brushState.pos),
       delta: d.vec2f(...brushState.delta),
     });
@@ -440,7 +440,7 @@ export const controls = defineControls({
     step: 0.01,
     onSliderChange: (value) => {
       p.params.dt = value;
-      simParamBuffer.writePartial({
+      simParamBuffer.patch({
         dt: p.params.dt,
       });
     },
@@ -452,7 +452,7 @@ export const controls = defineControls({
     step: 0.000001,
     onSliderChange: (value) => {
       p.params.viscosity = value;
-      simParamBuffer.writePartial({
+      simParamBuffer.patch({
         viscosity: p.params.viscosity,
       });
     },

@@ -19,6 +19,9 @@
     "pkg-types": "^2.1.0",
     "remeda": "^2.21.2"
   },
+  "devDependencies": {
+    "@types/node": "catalog:types"
+  },
   "engines": {
     "node": ">=12.20.0"
   },

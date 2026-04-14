@@ -14,7 +14,6 @@ if (!context) {
 }
 
 const adapter = await navigator.gpu.requestAdapter();
-console.log(`Using ${adapter?.info.vendor} adapter`);
 const device = await adapter?.requestDevice({
   requiredFeatures: ['timestamp-query'],
 });
@@ -29,7 +28,6 @@ context.configure({
   alphaMode: 'premultiplied',
 });
 
-// Textures
 let msaaTexture: GPUTexture;
 let msaaTextureView: GPUTextureView;
 
@@ -99,9 +97,10 @@ const mainVertexMaxArea = tgpu.vertexFn({
     instanceIndex: d.interpolate('flat', d.u32),
   },
 })(({ vertexIndex, instanceIndex }) => {
+  'use gpu';
   const C = bindGroupLayout.$.circles[instanceIndex];
   const unit = circle(vertexIndex);
-  const pos = s.add(C.position, s.mul(unit, C.radius));
+  const pos = C.position + unit * C.radius;
   return {
     outPos: d.vec4f(pos, 0.0, 1.0),
     uv: unit,
@@ -116,6 +115,7 @@ const mainFragment = tgpu.fragmentFn({
   },
   out: d.vec4f,
 })(({ uv, instanceIndex }) => {
+  'use gpu';
   const color = d.vec3f(1, s.cos(d.f32(instanceIndex)), s.sin(5 * d.f32(instanceIndex)));
   const r = s.length(uv);
   return d.vec4f(s.mix(color, d.vec3f(), s.clamp((r - 0.9) * 20, 0, 0.5)), 1);
@@ -148,6 +148,10 @@ setTimeout(() => {
     .draw(circleVertexCount(4), circleCount);
 }, 100);
 
+// #region Example controls & Cleanup
+
 export function onCleanup() {
   root.destroy();
 }
+
+// #endregion

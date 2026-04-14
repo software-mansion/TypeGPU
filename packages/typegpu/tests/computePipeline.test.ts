@@ -141,23 +141,24 @@ describe('TgpuComputePipeline', () => {
       expect(pipeline[$internal].priors.performanceCallback).not.toBe(callback1);
     });
 
-    it('should throw error if timestamp-query feature is not enabled', ({ root, device }) => {
-      const originalFeatures = device.features;
-      //@ts-expect-error
+    it('should warn if timestamp-query feature is not enabled', ({ root, device }) => {
+      // @ts-expect-error
       device.features = new Set();
+      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 
       const callback = vi.fn();
 
       expect(() => {
-        root.createComputePipeline({ compute: entryFn }).withPerformanceCallback(callback);
-      }).toThrow(
-        'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
+        const before = root.createComputePipeline({ compute: entryFn });
+        const after = before.withPerformanceCallback(callback);
+        // no-op
+        expect(after).toBe(before);
+      }).not.toThrow();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
       );
-
-      //@ts-expect-error
-      device.features = originalFeatures;
     });
   });
 
@@ -331,6 +332,7 @@ describe('TgpuComputePipeline', () => {
   describe('Combined Performance callback and Timestamp Writes', () => {
     it('should work with both performance callback and custom timestamp writes', ({
       root,
+      device,
       commandEncoder,
     }) => {
       const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
@@ -371,6 +373,12 @@ describe('TgpuComputePipeline', () => {
         querySet[$internal].resolveBuffer,
         0,
       );
+
+      expect(device.mock.createQuerySet).toHaveBeenCalledTimes(1);
+      expect(device.mock.createQuerySet).toHaveBeenCalledWith({
+        type: 'timestamp',
+        count: 10,
+      });
     });
 
     it('should prioritize custom timestamp writes over automatic ones', ({
@@ -393,8 +401,6 @@ describe('TgpuComputePipeline', () => {
         beginningOfPassWriteIndex: 2,
         endOfPassWriteIndex: 5,
       });
-
-      expect((autoQuerySet as TgpuQuerySet<'timestamp'>).destroyed).toBe(true);
 
       const priors = pipeline[$internal].priors;
       expect(priors.performanceCallback).toBe(callback);
@@ -446,11 +452,7 @@ describe('TgpuComputePipeline', () => {
       "enable f16;
       enable subgroups;
 
-      struct fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
+      @compute @workgroup_size(1) fn fn_1() {
         var a = array<f32, 3>();
       }"
     `);
@@ -493,14 +495,10 @@ describe('TgpuComputePipeline', () => {
       "enable f16;
       enable subgroups;
 
-      struct fn_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(1) fn fn_1(_arg_0: fn_Input) {
+      @compute @workgroup_size(1) fn fn_1(@builtin(global_invocation_id) gid: vec3u) {
         var a = array<f16, 3>();
         {
-          a[0i] = f16(_arg_0.gid.x);
+          a[0i] = f16(gid.x);
         }
         {
           a[1i] = 1h;
@@ -597,6 +595,44 @@ describe('TgpuComputePipeline', () => {
       }),
     });
 
+    it('accepts raw GPUBuffer with indirect flag', ({ root, device }) => {
+      const buffer = device.createBuffer({ size: 16, usage: GPUBufferUsage.INDIRECT });
+
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+      const pipeline = root.createComputePipeline({ compute: entryFn });
+
+      pipeline.dispatchWorkgroupsIndirect(buffer, 4);
+    });
+
+    it('throws when offset is not multiple of 4', ({ root, device }) => {
+      const buffer = device.createBuffer({ size: 16, usage: GPUBufferUsage.INDIRECT });
+
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+      const pipeline = root.createComputePipeline({ compute: entryFn });
+
+      expect(() =>
+        pipeline.dispatchWorkgroupsIndirect(buffer, 3),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Indirect buffer offset must be a multiple of 4. Got: 3]`,
+      );
+    });
+
+    it('throws when raw GPUBuffer size is not enough for dispatch', ({ device, root }) => {
+      const buffer = device.createBuffer({
+        size: 13,
+        usage: GPUBufferUsage.INDIRECT,
+      });
+
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+      const pipeline = root.createComputePipeline({ compute: entryFn });
+
+      expect(() =>
+        pipeline.dispatchWorkgroupsIndirect(buffer, 4),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Buffer too small for dispatchWorkgroupsIndirect. Required: 12 bytes at offset 4, but buffer is only 13 bytes.]`,
+      );
+    });
+
     it('warns when dispatch would read across padding', ({ root }) => {
       using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -612,7 +648,7 @@ describe('TgpuComputePipeline', () => {
       );
 
       expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
-        `"dispatchWorkgroupsIndirect: Starting at offset 0, only 4 contiguous bytes are available before padding. Dispatch requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
+        `"dispatchWorkgroupsIndirect: Starting at offset 0, only 4 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
       );
 
       const deepBuffer = root.createBuffer(DeepStruct).$usage('indirect');
@@ -622,7 +658,7 @@ describe('TgpuComputePipeline', () => {
       );
 
       expect(warnSpy.mock.calls[1]![0]).toMatchInlineSnapshot(
-        `"dispatchWorkgroupsIndirect: Starting at offset 44, only 8 contiguous bytes are available before padding. Dispatch requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
+        `"dispatchWorkgroupsIndirect: Starting at offset 44, only 8 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
       );
 
       pipeline.dispatchWorkgroupsIndirect(
@@ -631,7 +667,7 @@ describe('TgpuComputePipeline', () => {
       );
 
       expect(warnSpy.mock.calls[2]![0]).toMatchInlineSnapshot(
-        `"dispatchWorkgroupsIndirect: Starting at offset 84, only 8 contiguous bytes are available before padding. Dispatch requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
+        `"dispatchWorkgroupsIndirect: Starting at offset 84, only 8 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
       );
     });
 

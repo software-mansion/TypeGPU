@@ -10,17 +10,17 @@ const pluginBase: TSESLint.FlatConfig.Plugin = {
   rules,
 };
 
-const recommended: TSESLint.FlatConfig.Config = {
+const recommended = {
   name: 'typegpu/recommended',
   plugins: { typegpu: pluginBase },
   rules: recommendedRules,
-};
+} as const satisfies TSESLint.FlatConfig.Config;
 
-const all: TSESLint.FlatConfig.Config = {
+const all = {
   name: 'typegpu/all',
   plugins: { typegpu: pluginBase },
   rules: allRules,
-};
+} as const satisfies TSESLint.FlatConfig.Config;
 
 const plugin = {
   ...pluginBase,
@@ -28,6 +28,6 @@ const plugin = {
     recommended,
     all,
   },
-};
+} as const satisfies TSESLint.FlatConfig.Plugin;
 
 export default plugin;

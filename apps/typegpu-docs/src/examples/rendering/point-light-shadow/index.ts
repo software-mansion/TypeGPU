@@ -41,7 +41,7 @@ floorCube.scale = d.vec3f(10, 0.1, 10);
 floorCube.position = d.vec3f(0, -0.5, 0);
 scene.add([cube, floorCube, ...orbitingCubes]);
 
-let depthTexture = root['~unstable']
+let depthTexture = root
   .createTexture({
     size: [canvas.width, canvas.height],
     format: 'depth24plus',
@@ -49,7 +49,7 @@ let depthTexture = root['~unstable']
   })
   .$usage('render');
 
-let msaaTexture = root['~unstable']
+let msaaTexture = root
   .createTexture({
     size: [canvas.width, canvas.height],
     format: presentationFormat as 'bgra8unorm' | 'rgba8unorm',
@@ -57,7 +57,7 @@ let msaaTexture = root['~unstable']
   })
   .$usage('render');
 
-const shadowSampler = root['~unstable'].createComparisonSampler({
+const shadowSampler = root.createComparisonSampler({
   compare: 'less-equal',
   magFilter: 'linear',
   minFilter: 'linear',
@@ -200,7 +200,7 @@ const fragmentLightIndicator = tgpu.fragmentFn({
   out: d.vec4f,
 })(() => d.vec4f(1.0, 1.0, 0.5, 1.0));
 
-const previewSampler = root['~unstable'].createSampler({
+const previewSampler = root.createSampler({
   minFilter: 'nearest',
   magFilter: 'nearest',
 });
@@ -427,14 +427,14 @@ const resizeObserver = new ResizeObserver((entries) => {
     canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
     canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
 
-    depthTexture = root['~unstable']
+    depthTexture = root
       .createTexture({
         size: [canvas.width, canvas.height],
         format: 'depth24plus',
         sampleCount: 4,
       })
       .$usage('render');
-    msaaTexture = root['~unstable']
+    msaaTexture = root
       .createTexture({
         size: [canvas.width, canvas.height],
         format: presentationFormat as 'bgra8unorm' | 'rgba8unorm',
@@ -612,7 +612,7 @@ export const controls = defineControls({
     max: 64,
     step: 1,
     onSliderChange: (v) => {
-      shadowParams.writePartial({ pcfSamples: v });
+      shadowParams.patch({ pcfSamples: v });
     },
   },
   'PCF Disk Radius': {
@@ -621,7 +621,7 @@ export const controls = defineControls({
     max: 0.1,
     step: 0.001,
     onSliderChange: (v) => {
-      shadowParams.writePartial({ diskRadius: v });
+      shadowParams.patch({ diskRadius: v });
     },
   },
   'Normal Bias Base': {
@@ -630,7 +630,7 @@ export const controls = defineControls({
     max: 0.1,
     step: 0.0001,
     onSliderChange: (v) => {
-      shadowParams.writePartial({ normalBiasBase: v });
+      shadowParams.patch({ normalBiasBase: v });
     },
   },
   'Normal Bias Slope': {
@@ -639,7 +639,7 @@ export const controls = defineControls({
     max: 0.5,
     step: 0.0005,
     onSliderChange: (v) => {
-      shadowParams.writePartial({ normalBiasSlope: v });
+      shadowParams.patch({ normalBiasSlope: v });
     },
   },
 });

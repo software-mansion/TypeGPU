@@ -17,20 +17,20 @@ export const rules = {
 
 type Rules = Record<`typegpu/${keyof typeof rules}`, TSESLint.FlatConfig.RuleEntry>;
 
-export const recommendedRules: Rules = {
+export const recommendedRules = {
   'typegpu/no-integer-division': 'warn',
   'typegpu/no-unwrapped-objects': 'error',
   'typegpu/no-uninitialized-variables': 'error',
   'typegpu/no-math': 'warn',
   'typegpu/no-invalid-assignment': 'error',
   'typegpu/no-unsupported-syntax': 'error',
-};
+} as const satisfies Rules;
 
-export const allRules: Rules = {
+export const allRules = {
   'typegpu/no-integer-division': 'error',
   'typegpu/no-unwrapped-objects': 'error',
   'typegpu/no-uninitialized-variables': 'error',
   'typegpu/no-math': 'error',
   'typegpu/no-invalid-assignment': 'error',
   'typegpu/no-unsupported-syntax': 'error',
-};
+} as const satisfies Rules;

@@ -115,14 +115,13 @@ describe('TgpuQuerySet', () => {
     expect(querySet.destroyed).toBe(false);
   });
 
-  it('should throw when resolving unavailable query set', ({ root }) => {
+  it('should throw when resolving unavailable query set', async ({ root }) => {
     const querySet = root.createQuerySet('occlusion', 1);
     querySet.resolve();
 
-    // oxlint-disable-next-line typescript/no-explicit-any -- we testing here
-    (querySet as any)._available = false;
-
+    const readResult = querySet.read();
     expect(() => querySet.resolve()).toThrow('This QuerySet is busy resolving or reading.');
+    await readResult;
   });
 
   it('should work with external query set', ({ root, device }) => {
