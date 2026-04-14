@@ -8,11 +8,11 @@ export const noUnsupportedSyntax = createRule({
   meta: {
     type: 'problem',
     docs: {
-      description: `Disallow JS syntax that will not be parsed to correct WGSL.`,
+      description: `Disallow JS syntax that will not be parsed into valid WGSL.`,
     },
     messages: {
       unexpected:
-        "'{{snippet}}' will not parse to correct WGSL because it uses unsupported syntax: {{syntax}}.",
+        "'{{snippet}}' will not parse into valid WGSL because it uses unsupported syntax: {{syntax}}.",
     },
     schema: [],
   },
@@ -224,7 +224,7 @@ export const noUnsupportedSyntax = createRule({
           report(node, `'var' declaration`);
         }
         if (node.declarations.length > 1) {
-          report(node, 'Multiple variable declarations in one statement');
+          report(node, 'multiple variable declarations in one statement');
         }
       },
 

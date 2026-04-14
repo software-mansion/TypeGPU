@@ -1,6 +1,6 @@
 # typegpu/no-unsupported-syntax
 
-📝 Disallow JS syntax that will not be parsed to correct WGSL.
+📝 Disallow JS syntax that will not be parsed into valid WGSL.
 
 🚨 This rule is enabled in the ⭐ `recommended` config.
 

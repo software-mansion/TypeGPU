@@ -316,7 +316,7 @@ describe('noUnsupportedSyntax', () => {
             messageId: 'unexpected',
             data: {
               snippet: 'let a = 1, b = 2;',
-              syntax: 'Multiple variable declarations in one statement',
+              syntax: 'multiple variable declarations in one statement',
             },
           },
         ],
