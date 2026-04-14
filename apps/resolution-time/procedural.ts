@@ -59,6 +59,10 @@ const popDepth = tgpu.comptime(() => {
   state.$.stackDepth--;
 });
 
+const range = tgpu.comptime((count: number) => {
+  return Array.from({ length: count }, (_, i) => i);
+});
+
 const timeAccessor = tgpu.accessor(d.f32, 0);
 const colorAccessor = tgpu.accessor(d.vec3f, d.vec3f(1, 0.5, 0.2));
 
@@ -152,7 +156,7 @@ const waveFn = tgpu.comptime(() => {
       v = d.vec2f(std.sin(v.x * Math.PI), std.cos(v.y * Math.PI));
       const _energy = std.dot(v, v);
 
-      for (const _i of tgpu.unroll(std.range(config.branching))) {
+      for (const _i of tgpu.unroll(range(config.branching))) {
         // @ts-expect-error trust me
         instructions[choice()]()();
       }
@@ -172,7 +176,7 @@ const accFn = tgpu.comptime(() => {
       let acc = d.vec2f();
       acc = d.vec2f(acc.x + offset.x * scale, acc.y + offset.y * scale);
 
-      for (const _i of tgpu.unroll(std.range(config.branching))) {
+      for (const _i of tgpu.unroll(range(config.branching))) {
         // @ts-expect-error trust me
         instructions[choice()]()();
       }
@@ -194,7 +198,7 @@ const rotateFn = tgpu.comptime(() => {
       const s = std.sin(angle);
       v = d.vec2f(v.x * c - v.y * s, v.x * s + v.y * c);
 
-      for (const _i of tgpu.unroll(std.range(config.branching))) {
+      for (const _i of tgpu.unroll(range(config.branching))) {
         // @ts-expect-error trust me
         instructions[choice()]()();
       }
@@ -216,7 +220,7 @@ const spiralFn = tgpu.comptime(() => {
       const pos = d.vec2f(center.x + radius * std.cos(angle), center.y + radius * std.sin(angle));
       const _dist = std.length(pos);
 
-      for (const _i of tgpu.unroll(std.range(config.branching))) {
+      for (const _i of tgpu.unroll(range(config.branching))) {
         // @ts-expect-error trust me
         instructions[choice()]()();
       }
@@ -232,7 +236,7 @@ instructions.push(baseFn, blendFn, thresholdFn, filterFn, waveFn, accFn, rotateF
 const main = () => {
   'use gpu';
 
-  for (const _i of tgpu.unroll(std.range(config.mainBranching))) {
+  for (const _i of tgpu.unroll(range(config.mainBranching))) {
     // @ts-expect-error trust me
     instructions[choice()]()();
   }
