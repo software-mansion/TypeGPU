@@ -135,9 +135,9 @@ async function main() {
     '--skip-publish-tag-check': Boolean,
   });
 
-  const skipAllChecks = process.env.SKIP_ALL_CHECKS === 'true';
+  const skipTests = process.env.SKIP_TESTS === 'true';
 
-  if (!args['--skip-publish-tag-check'] && !skipAllChecks) {
+  if (!args['--skip-publish-tag-check']) {
     verifyPublishTag();
   }
 
@@ -200,7 +200,7 @@ async function main() {
       // First build
       ...(await Promise.allSettled([withStatusUpdate('build', $`pnpm build`)])),
       // Then the rest
-      ...(skipAllChecks
+      ...(skipTests
         ? []
         : await Promise.allSettled([
             withStatusUpdate('style', $`pnpm -w test:style`),

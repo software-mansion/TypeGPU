@@ -11,6 +11,7 @@
     "./package.json": "./package.json"
   },
   "publishConfig": {
+    "access": "public",
     "directory": "dist",
     "exports": {
       "./package.json": "./dist/package.json",

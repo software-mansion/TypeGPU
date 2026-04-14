@@ -1,7 +1,6 @@
 {
   "name": "tinyest",
   "version": "0.3.1",
-  "private": true,
   "description": "A compact, fast, and embeddable JavaScript AST for transpilation.",
   "keywords": [
     "ast",
@@ -20,6 +19,7 @@
   "sideEffects": false,
   "exports": "./src/index.ts",
   "publishConfig": {
+    "access": "public",
     "directory": "dist",
     "exports": {
       "./package.json": "./package.json",
