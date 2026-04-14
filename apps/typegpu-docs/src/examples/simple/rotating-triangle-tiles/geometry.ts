@@ -1,6 +1,4 @@
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
-import tgpu from 'typegpu';
+import tgpu, { d, std } from 'typegpu';
 
 const green = d.vec4f(0.117, 0.839, 0.513, 1);
 const yellow = d.vec4f(0.839, 0.647, 0.117, 1);

@@ -1,10 +1,7 @@
-import * as d from 'typegpu/data';
 import { MAGIC_NUMBER } from './geometry.ts';
-import type { TgpuUniform } from 'typegpu';
 
 const INIT_TILE_DENSITY = 0.1;
 const INITIAL_STEP_ROTATION = 60;
-const INITIAL_MIDDLE_SQUARE_SCALE = 2;
 const DEFAULT_ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY = 2;
 
 let cubicBezierControlPoints: [number, number, number, number] = [0.18, 0.7, 0.68, 1.03];
@@ -14,10 +11,6 @@ function updateCubicBezierControlPoints(points: number[]) {
     return;
   }
   cubicBezierControlPoints = points as [number, number, number, number];
-}
-
-function getCubicBezierControlPoints() {
-  return cubicBezierControlPoints;
 }
 
 function getCubicBezierControlPointsString() {
@@ -46,16 +39,12 @@ function parseOneControlPoint(value: string, index: number) {
 
 let aspectRatio = 1;
 
-function updateAspectRatio(width: number, height: number, aspectRatioBuffer: TgpuUniform<d.F32>) {
+function updateAspectRatio(width: number, height: number) {
   aspectRatio = width / height;
-  aspectRatioBuffer.write(aspectRatio);
+  return aspectRatio;
 }
 
-let animationDuration = 1000;
-
-function getAnimationDuration() {
-  return animationDuration;
-}
+let animationDuration = 2500;
 
 const ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY = [
   [0, 1.5],
@@ -66,38 +55,20 @@ const ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY = [
 
 const ROTATION_OPTIONS = ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY.flatMap((element) => element[0]);
 
-function updateStepRotation(
-  newValue: number,
-  stepRotationBuffer: TgpuUniform<d.F32>,
-  middleSquareScaleBuffer: TgpuUniform<d.F32>,
-) {
-  stepRotationBuffer.write(newValue);
-
-  // update middle triangle scale so that it doesn't
-  // show already hidden color
-
+function updateStepRotation(newValue: number) {
   const scale = ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY.find(
     (element) => element[0] === newValue,
   )?.[1];
 
-  middleSquareScaleBuffer.write(scale ?? DEFAULT_ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY);
+  return scale ?? DEFAULT_ROTATION_TO_MIDDLE_SQUARE_SCALE_ARRAY;
 }
 
 let gridParams = createGridParams(INIT_TILE_DENSITY);
 
-function getGridParams() {
-  return gridParams;
-}
-
-function updateGridParams(
-  scaleBuffer: TgpuUniform<d.F32>,
-  updateInstanceInfoBufferAndBindGroup: () => void,
-  newValue?: number,
-) {
+function updateGridParams(newValue?: number) {
   const value = newValue ?? gridParams.tileDensity;
   gridParams = createGridParams(value);
-  scaleBuffer.write(gridParams.tileDensity);
-  updateInstanceInfoBufferAndBindGroup();
+  return gridParams;
 }
 
 // snugly put all of the triangles inside the canvas
@@ -117,14 +88,12 @@ function updateAnimationDuration(newValue: number) {
 }
 
 export {
-  createGridParams,
-  getAnimationDuration,
-  getCubicBezierControlPoints,
   getCubicBezierControlPointsString,
-  getGridParams,
   INIT_TILE_DENSITY,
-  INITIAL_MIDDLE_SQUARE_SCALE,
   INITIAL_STEP_ROTATION,
+  animationDuration,
+  cubicBezierControlPoints,
+  gridParams,
   parseControlPoints,
   ROTATION_OPTIONS,
   updateAnimationDuration,
