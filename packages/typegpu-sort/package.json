@@ -5,6 +5,11 @@
   "description": "GPU sorting and scanning algorithms implemented using TypeGPU.",
   "keywords": [],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion/TypeGPU.git",
+    "directory": "packages/typegpu-sort"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {

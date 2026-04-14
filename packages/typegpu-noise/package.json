@@ -4,6 +4,11 @@
   "description": "A set of noise/pseudo-random functions for use in WebGPU/TypeGPU apps.",
   "keywords": [],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion/TypeGPU.git",
+    "directory": "packages/typegpu-noise"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {
