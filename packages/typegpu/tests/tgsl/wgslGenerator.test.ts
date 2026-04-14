@@ -2113,9 +2113,7 @@ describe('wgslGenerator', () => {
     });
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> buffer: mat4x4f;
-
-      fn testFn(v: vec3f, a: atomic<u32>, p: ptr<private, u32>) {
+      "fn testFn(v: vec3f, a: atomic<u32>, p: ptr<private, u32>) {
         const _b0 = false;
         const _b1 = false;
         const _b2 = false;
