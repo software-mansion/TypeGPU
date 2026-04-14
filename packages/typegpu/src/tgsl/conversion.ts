@@ -1,6 +1,7 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
+import { bool } from '../data/numeric.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
@@ -20,6 +21,7 @@ import {
 import { invariant, WgslTypeError } from '../errors.ts';
 import { DEV, TEST } from '../shared/env.ts';
 import { safeStringify } from '../shared/stringify.ts';
+import { $gpuCallable } from '../shared/symbols.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../types.ts';
 
@@ -322,6 +324,10 @@ export function tryConvertSnippet(
 
     if (target === dataType) {
       return snip(value, target, origin);
+    }
+
+    if (target.type === 'bool') {
+      return bool[$gpuCallable].call(ctx, [snippet]);
     }
 
     if (dataType === UnknownData) {

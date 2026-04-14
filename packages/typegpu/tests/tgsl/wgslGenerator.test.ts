@@ -2112,9 +2112,7 @@ describe('wgslGenerator', () => {
     });
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> buffer: mat4x4f;
-
-      fn testFn(v: vec3f, a: atomic<u32>, p: ptr<private, u32>) {
+      "fn testFn(v: vec3f, a: atomic<u32>, p: ptr<private, u32>) {
         const _b0 = false;
         const _b1 = false;
         const _b2 = false;
@@ -2206,6 +2204,239 @@ describe('wgslGenerator', () => {
           return 1929;
         }"
       `);
+  });
+
+  describe('handles truthiness check', () => {
+    it('boolean runtime-known operand', () => {
+      const testFn = tgpu.fn(
+        [d.bool],
+        d.i32,
+      )((b) => {
+        let res = -1;
+        if (b) {
+          res = 1;
+        }
+        return res;
+      });
+
+      expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(b: bool) -> i32 {
+          var res = -1;
+          if (b) {
+            res = 1i;
+          }
+          return res;
+        }"
+      `);
+    });
+
+    it('numeric runtime-known operand', () => {
+      const testFn = tgpu.fn(
+        [d.i32, d.f32],
+        d.i32,
+      )((n, f) => {
+        let res = -1;
+        if (n) {
+          res = 1;
+        }
+        if (f) {
+          res = 2;
+        }
+        return res;
+      });
+
+      expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(n: i32, f: f32) -> i32 {
+          var res = -1;
+          if (bool(n)) {
+            res = 1i;
+          }
+          if ((((bitcast<u32>(f) & 0x7fffffff) <= 0x7f800000) && bool(f))) {
+            res = 2i;
+          }
+          return res;
+        }"
+      `);
+    });
+
+    it('non-primitive values', ({ root }) => {
+      const buffer = root.createUniform(d.mat4x4f);
+      const testFn = tgpu.fn(
+        [d.vec3f, d.atomic(d.u32), d.ptrPrivate(d.u32)],
+        d.i32,
+      )((v, a, p) => {
+        let res = -1;
+        if (buffer) {
+          res = 0;
+        }
+        if (buffer.$) {
+          res = 1;
+        }
+        if (v) {
+          res = 2;
+        }
+        if (a) {
+          res = 3;
+        }
+        if (std.atomicLoad(a)) {
+          res = 4;
+        }
+        if (p) {
+          res = 5;
+        }
+        if (p.$) {
+          res = 6;
+        }
+        return res;
+      });
+
+      expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(v: vec3f, a: atomic<u32>, p: ptr<private, u32>) -> i32 {
+          var res = -1;
+          {
+            res = 0i;
+          }
+          {
+            res = 1i;
+          }
+          {
+            res = 2i;
+          }
+          {
+            res = 3i;
+          }
+          if (bool(atomicLoad(&a))) {
+            res = 4i;
+          }
+          {
+            res = 5i;
+          }
+          if (bool((*p))) {
+            res = 6i;
+          }
+          return res;
+        }"
+      `);
+    });
+
+    it('primitive comptime-known operands', () => {
+      const getTruthy = tgpu.comptime(() => 1882);
+      const getFalsy = tgpu.comptime(() => 0);
+
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        if (getTruthy()) {
+          res = 1;
+        }
+        if (getFalsy()) {
+          res = 2;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          {
+            res = 1i;
+          }
+          return res;
+        }"
+      `);
+    });
+
+    it('operands from slots and accessors', () => {
+      const Boid = d.struct({
+        pos: d.vec2f,
+        vel: d.vec2f,
+      });
+
+      const slot = tgpu.slot<d.Infer<typeof Boid>>({ pos: d.vec2f(), vel: d.vec2f() });
+      const accessor = tgpu.accessor(d.vec4u, d.vec4u(1, 8, 8, 2));
+
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        if (slot.$) {
+          res = 1;
+        }
+        if (accessor.$) {
+          res = 2;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          {
+            res = 1i;
+          }
+          {
+            res = 2i;
+          }
+          return res;
+        }"
+      `);
+    });
+
+    it('complex comptime-known operand', () => {
+      const slotEmpty = tgpu.slot<{ a?: number }>({});
+      const slotFull = tgpu.slot<{ a?: number }>({ a: 42 });
+
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        if (slotEmpty.$.a) {
+          res = 1;
+        }
+        if (slotFull.$.a) {
+          res = 2;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          {
+            res = 2i;
+          }
+          return res;
+        }"
+      `);
+    });
+
+    it('operand of && and ||', () => {
+      const testFn = tgpu.fn(
+        [d.i32, d.bool],
+        d.i32,
+      )((n, b) => {
+        let res = 0;
+        if (b && n) {
+          res = 1;
+        }
+        if (n || b) {
+          res = 2;
+        }
+
+        return res;
+      });
+
+      expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(n: i32, b: bool) -> i32 {
+          var res = 0;
+          if ((i32(b) && n)) {
+            res = 1i;
+          }
+          if ((n || i32(b))) {
+            res = 2i;
+          }
+          return res;
+        }"
+      `);
+    });
   });
 
   describe('short-circuit evaluation', () => {
