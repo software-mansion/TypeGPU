@@ -2429,10 +2429,10 @@ describe('wgslGenerator', () => {
       expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
         "fn testFn(n: i32, b: bool) -> i32 {
           var res = 0;
-          if ((i32(b) && n)) {
+          if ((b && bool(n))) {
             res = 1i;
           }
-          if ((n || i32(b))) {
+          if ((bool(n) || b)) {
             res = 2i;
           }
           return res;

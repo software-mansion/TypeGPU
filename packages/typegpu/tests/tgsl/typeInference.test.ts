@@ -271,7 +271,7 @@ describe('wgsl generator type inference', () => {
     `);
   });
 
-  it('throws when if condition is not boolean', () => {
+  it('converts if condition to boolean', () => {
     const myFn = tgpu.fn(
       [],
       d.bool,
@@ -282,14 +282,17 @@ describe('wgsl generator type inference', () => {
       return false;
     });
 
-    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn:myFn: Cannot convert value of type 'vec2<bool>' to any of the target types: [bool]]
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() -> bool {
+        {
+          return true;
+        }
+        return false;
+      }"
     `);
   });
 
-  it('throws when while condition is not boolean', () => {
+  it('converts while condition to boolean', () => {
     const myFn = tgpu.fn(
       [],
       d.bool,
@@ -300,14 +303,17 @@ describe('wgsl generator type inference', () => {
       return false;
     });
 
-    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn:myFn: Cannot convert value of type 'mat2x2f' to any of the target types: [bool]]
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() -> bool {
+        while (true) {
+          return true;
+        }
+        return false;
+      }"
     `);
   });
 
-  it('throws when for condition is not boolean', () => {
+  it('converts for condition to boolean', () => {
     const myFn = tgpu.fn(
       [],
       d.bool,
@@ -318,10 +324,13 @@ describe('wgsl generator type inference', () => {
       return false;
     });
 
-    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn:myFn: Cannot convert value of type 'abstractInt' to any of the target types: [bool]]
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() -> bool {
+        for (var i = 0; true; (i < 10i)) {
+          return true;
+        }
+        return false;
+      }"
     `);
   });
 

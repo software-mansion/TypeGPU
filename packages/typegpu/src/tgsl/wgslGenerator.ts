@@ -328,17 +328,12 @@ ${this.ctx.pre}}`;
       return snip(expression, bool, /* origin */ 'constant');
     }
 
-    if (
-      expression[0] === NODE.logicalExpr ||
-      expression[0] === NODE.binaryExpr ||
-      expression[0] === NODE.assignmentExpr
-    ) {
-      // Logical/Binary/Assignment Expression
-      const [exprType, lhs, op, rhs] = expression;
+    if (expression[0] === NODE.logicalExpr) {
+      const [_, lhs, op, rhs] = expression;
       const lhsExpr = this._expression(lhs);
 
       // Short Circuit Evaluation
-      if ((op === '||' || op === '&&') && isKnownAtComptime(lhsExpr)) {
+      if (isKnownAtComptime(lhsExpr)) {
         const evalRhs = op === '&&' ? lhsExpr.value : !lhsExpr.value;
 
         if (!evalRhs) {
@@ -347,12 +342,12 @@ ${this.ctx.pre}}`;
 
         const rhsExpr = this._expression(rhs);
 
-        if (rhsExpr.dataType === UnknownData) {
-          throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
-        }
-
         if (isKnownAtComptime(rhsExpr)) {
           return snip(!!rhsExpr.value, bool, 'constant');
+        }
+
+        if (rhsExpr.dataType === UnknownData) {
+          throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
         }
 
         // we can skip lhs
@@ -361,6 +356,32 @@ ${this.ctx.pre}}`;
         return snip(rhsStr, bool, 'runtime');
       }
 
+      const rhsExpr = this._expression(rhs);
+
+      // they are not know at comptime
+      if (lhsExpr.dataType === UnknownData) {
+        throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
+      }
+
+      if (!isKnownAtComptime(rhsExpr) && rhsExpr.dataType === UnknownData) {
+        throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
+      }
+
+      const [convLhs, convRhs] = convertToCommonType(this.ctx, [lhsExpr, rhsExpr], [bool]) ?? [
+        lhsExpr,
+        rhsExpr,
+      ];
+
+      const lhsStr = this.ctx.resolve(convLhs.value, convLhs.dataType).value;
+      const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
+
+      return snip(`(${lhsStr} ${op} ${rhsStr})`, bool, /* origin */ 'runtime');
+    }
+
+    if (expression[0] === NODE.binaryExpr || expression[0] === NODE.assignmentExpr) {
+      // Binary/Assignment Expression
+      const [exprType, lhs, op, rhs] = expression;
+      const lhsExpr = this._expression(lhs);
       const rhsExpr = this._expression(rhs);
 
       if (rhsExpr.value instanceof RefOperator) {
