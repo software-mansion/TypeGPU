@@ -151,7 +151,7 @@ describe('not', () => {
     `);
   });
 
-  it('converts numeric vectors to booleans vectors and negates component-wise', () => {
+  it('converts numeric vectors to boolean vectors and negates component-wise', () => {
     expect(not(d.vec2f(0.0, 1.0))).toStrictEqual(d.vec2b(true, false));
     expect(not(d.vec3i(0, 5, -1))).toStrictEqual(d.vec3b(true, false, false));
     expect(not(d.vec4u(0, 0, 1, 0))).toStrictEqual(d.vec4b(true, true, false, true));

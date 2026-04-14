@@ -368,7 +368,7 @@ ${this.ctx.pre}}`;
         }
 
         if (isKnownAtComptime(rhsExpr)) {
-          return snip(rhsExpr.value, bool, 'constant');
+          return snip(!!rhsExpr.value, bool, 'constant');
         }
 
         // we can skip lhs
