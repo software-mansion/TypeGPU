@@ -121,9 +121,6 @@ describe('not', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> i32 {
-        if (((false && true) && false)) {
-          return 1;
-        }
         return -1;
       }"
     `);
