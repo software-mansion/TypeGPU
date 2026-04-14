@@ -174,7 +174,7 @@ const unaryOpCodeToCodegen = {
     }
     if (wgsl.isNumericSchema(dataType)) {
       const resultStr = `!bool(${argStr})`;
-      const nanGuardedStr = // abstractFloat will be resolved as comptime
+      const nanGuardedStr = // abstractFloat will be resolved as comptime known value
         dataType.type === 'f32'
           ? `(((bitcast<u32>(${argStr}) & 0x7fffffff) > 0x7f800000) || ${resultStr})`
           : dataType.type === 'f16'

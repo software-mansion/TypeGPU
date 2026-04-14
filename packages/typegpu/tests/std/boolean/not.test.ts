@@ -132,25 +132,23 @@ describe('not', () => {
   it('mimics JS on non-primitive values', ({ root }) => {
     const buffer = root.createUniform(d.mat4x4f);
     const testFn = tgpu.fn([d.vec3f, d.atomic(d.u32), d.ptrPrivate(d.u32)])((v, a, p) => {
-      const _b0 = !buffer;
-      const _b1 = !buffer.$;
-      const _b2 = !v;
-      const _b3 = !a;
-      const _b4 = !std.atomicLoad(a);
-      const _b5 = !p;
-      const _b6 = !p.$;
+      const _b0 = not(buffer);
+      const _b1 = not(buffer.$);
+      const _b2 = not(v);
+      const _b3 = not(a);
+      const _b4 = not(std.atomicLoad(a));
+      const _b5 = not(p);
+      const _b6 = not(p.$);
     });
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> buffer: mat4x4f;
-
-      fn testFn(v: vec3f, a: atomic<u32>, p: ptr<private, u32>) {
+      "fn testFn(v: vec3f, a: atomic<u32>, p: ptr<private, u32>) {
         const _b0 = false;
-        const _b1 = false;
-        const _b2 = false;
-        const _b3 = false;
+        let _b1 = false;
+        var _b2 = !(vec3<bool>(v));
+        let _b3 = false;
         let _b4 = !bool(atomicLoad(&a));
-        const _b5 = false;
+        let _b5 = false;
         let _b6 = !bool((*p));
       }"
     `);
