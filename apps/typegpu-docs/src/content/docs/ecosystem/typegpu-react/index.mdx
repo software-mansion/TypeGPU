@@ -1,0 +1,184 @@
+---
+title: "@typegpu/react"
+---
+
+Setting up and managing TypeGPU resources in React components is not a trivial task, which is why we provide a set of hooks and utilities to
+help with it.
+
+## Setup
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Refer to [TypeGPU's installation guide](/TypeGPU/getting-started/) for setting up TypeGPU if you haven't already.
+After that, install React and `@typegpu/react` using the package manager of your choice.
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm" icon="seti:npm">
+    ```sh frame=none
+    npm install @typegpu/react
+    ```
+  </TabItem>
+  <TabItem label="pnpm" icon="pnpm">
+    ```sh frame=none
+    pnpm add @typegpu/react
+    ```
+  </TabItem>
+  <TabItem label="yarn" icon="seti:yarn">
+    ```sh frame=none
+    yarn add @typegpu/react
+    ```
+  </TabItem>
+</Tabs>
+
+## Your first effect
+
+We first get a reference to a TypeGPU root via the [useRoot](#use-root) hook.
+
+```tsx twoslash
+import { useRoot } from '@typegpu/react';
+
+function MyEffect() {
+  const root = useRoot();
+  
+  // the rest of our code will be here
+}
+```
+
+Then we create a [Render Pipeline](/TypeGPU/fundamentals/pipelines) that emits a red color over the whole canvas, and we memoize it.
+
+```tsx twoslash
+import React from 'react';
+import { useMemo } from 'react';
+import { d, common } from 'typegpu';
+import { useConfigureContext, useFrame, useRoot, useUniform } from '@typegpu/react';
+
+function MyEffect() {
+  const root = useRoot();
+// ---cut---
+
+const renderPipeline = useMemo(
+  () =>
+    root.createRenderPipeline({
+      vertex: common.fullScreenTriangle,
+      fragment: ({ uv }) => {
+        'use gpu';
+        //             r  g  b  a
+        return d.vec4f(1, 0, 0, 1);
+      },
+    }),
+  [root],
+);
+// ---cut-after---
+}
+```
+
+We need to update our imports to get access to both `d` and `common` from typegpu:
+
+```ts
+import { d, common } from 'typegpu';
+```
+
+Then we call the `useConfigureContext` hook, which will give us a `ref` to pass into a `<canvas>` element, as well as access to the WebGPU context via `ctxRef`.
+
+```ts
+  // ...
+  const { ref, ctxRef } = useConfigureContext();
+  
+  return <canvas ref={ref} className="absolute inset-0" />;
+}
+```
+
+After these changes, you should see a blank red canvas on your webpage. Let's make the effect more interesting.
+
+### Dynamic values
+
+To pass dynamic values to your shader without having to recompile it (compilation takes significant time), you can use `useUniform` or `useMirroredUniform`, depending on the situation.
+
+### Complete example
+
+```tsx twoslash
+import React from 'react';
+// ---cut---
+import { useMemo } from 'react';
+import { d, common } from 'typegpu';
+import { useConfigureContext, useFrame, useRoot, useUniform } from '@typegpu/react';
+
+function MyEffect() {
+  const root = useRoot();
+  const time = useUniform(d.f32);
+
+  const renderPipeline = useMemo(
+    () =>
+      root.createRenderPipeline({
+        vertex: common.fullScreenTriangle,
+        fragment: ({ uv }) => {
+          'use gpu';
+          return d.vec4f((uv * 5 + time.$) % 1, 0, 1);
+        },
+      }),
+    [root, time],
+  );
+
+  const { ref, ctxRef } = useConfigureContext();
+  useFrame(({ elapsedSeconds }) => {
+    if (!ctxRef.current) return;
+
+    time.write(elapsedSeconds);
+
+    renderPipeline.withColorAttachment({ view: ctxRef.current }).draw(3);
+  });
+
+  return <canvas ref={ref} className="absolute inset-0" />;
+}
+```
+
+## API Reference
+
+### useRoot
+
+Returns the [TypeGPU root](/TypeGPU/fundamentals/roots) shared between all components
+under the nearest `<Root>` provider. (equivalent to calling `await tgpu.init()`).
+
+It's not necessary to use a `<Root>` provider; if none is found, the global root is used instead.
+
+```tsx twoslash
+import { useRoot } from '@typegpu/react';
+
+function MyEffect() {
+  const root = useRoot();
+  
+  // ...
+}
+```
+
+If the root hasn't been initialized yet, it will suspend the component until it is.
+This hook will also throw if there is an error initializing the root (like no WebGPU support).
+If you'd like to handle these cases yourself, you can use `useRootOrError` or
+`useRootWithStatus` instead.
+
+### useUniform
+
+
+
+### The `<Root>` component
+
+The `<Root>` component is a context provider for all of it's descendants. All `useRoot` calls made by components beneath this wrapper
+will return the same `TgpuRoot` object.
+
+| Property | Type | Description |
+|-|-|-|
+| root | `TgpuRoot\|undefined`  | A custom root to provide for all descendants. If not provided, one will be created on demand. |
+
+```tsx twoslash
+import React from 'react';
+// ---cut---
+import { Root } from '@typegpu/react';
+
+function App() {
+  return (
+    <Root>
+      {/* ... other components ... */}
+    </Root>
+  );
+}
+```

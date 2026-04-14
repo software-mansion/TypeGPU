@@ -67,20 +67,21 @@ function useExample(
 export function ExampleView({ example, common }: Props) {
   const { tsFiles: srcFiles, tsImport, htmlFile } = example;
 
+  const tsFiles = filterRelevantTsFiles(srcFiles, common);
+  const filePaths = tsFiles.map((file) => file.path);
+  const entryFile = filePaths.find((path) => path.startsWith('index.ts')) as string;
+  const editorTabsList = [
+    entryFile,
+    ...filePaths.filter((name) => name !== entryFile),
+    'index.html',
+  ];
+
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
-  const [currentFilePath, setCurrentFilePath] = useState<string>('index.ts');
+  const [currentFilePath, setCurrentFilePath] = useState(entryFile);
 
   const codeEditorShown = useAtomValue(codeEditorShownAtom);
   const tsoverUsed = useAtomValue(tsoverUsedAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
-
-  const tsFiles = filterRelevantTsFiles(srcFiles, common);
-  const filePaths = tsFiles.map((file) => file.path);
-  const editorTabsList = [
-    'index.ts',
-    ...filePaths.filter((name) => name !== 'index.ts'),
-    'index.html',
-  ];
 
   useEffect(() => {
     if (!exampleHtmlRef.current) {

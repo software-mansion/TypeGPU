@@ -117,32 +117,32 @@ export type ValidateFragmentIn<
   FragmentOut extends FragmentOutConstrained,
 > =
   UndecorateRecord<FragmentIn> extends Partial<UndecorateRecord<VertexOut>>
-    ? UndecorateRecord<VertexOut> extends UndecorateRecord<FragmentIn>
-      ? OptionalArgs<FragmentOutToTargets<FragmentOut>> extends infer Args
-        ? Args extends [infer T]
-          ? [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>, targets: T]
-          : Args extends [] | [infer T]
-            ?
-                | [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>]
-                | [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>, targets: T]
-            : never
-        : never
-      : [
-          entryFn: 'n/a',
-          targets: 'n/a',
-          MissingFromVertexOutput: {
-            [Key in Exclude<keyof FragmentIn, keyof VertexOut>]: FragmentIn[Key];
-          },
-        ]
-    : [
-        entryFn: 'n/a',
-        targets: 'n/a',
-        MismatchedVertexOutput: {
-          [Key in keyof FragmentIn & keyof VertexOut as FragmentIn[Key] extends VertexOut[Key]
-            ? never
-            : Key]: [got: VertexOut[Key], expecting: FragmentIn[Key]];
-        },
-      ];
+  ? UndecorateRecord<VertexOut> extends UndecorateRecord<FragmentIn>
+  ? OptionalArgs<FragmentOutToTargets<FragmentOut>> extends infer Args
+  ? Args extends [infer T]
+  ? [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>, targets: T]
+  : Args extends [] | [infer T]
+  ?
+  | [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>]
+  | [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>, targets: T]
+  : never
+  : never
+  : [
+    entryFn: 'n/a',
+    targets: 'n/a',
+    MissingFromVertexOutput: {
+      [Key in Exclude<keyof FragmentIn, keyof VertexOut>]: FragmentIn[Key];
+    },
+  ]
+  : [
+    entryFn: 'n/a',
+    targets: 'n/a',
+    MismatchedVertexOutput: {
+      [Key in keyof FragmentIn & keyof VertexOut as FragmentIn[Key] extends VertexOut[Key]
+      ? never
+      : Key]: [got: VertexOut[Key], expecting: FragmentIn[Key]];
+    },
+  ];
 
 export interface WithVertex<VertexOut extends TgpuVertexFn.Out = TgpuVertexFn.Out> {
   /**
@@ -162,8 +162,8 @@ export interface WithVertex<VertexOut extends TgpuVertexFn.Out = TgpuVertexFn.Ou
     primitiveState:
       | GPUPrimitiveState
       | (Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
-          stripIndexFormat?: U32 | U16;
-        })
+        stripIndexFormat?: U32 | U16;
+      })
       | undefined,
   ): WithFragment<Void>;
 
@@ -188,8 +188,8 @@ export interface WithFragment<Targets extends FragmentOutConstrained = FragmentO
     primitiveState:
       | GPUPrimitiveState
       | (Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
-          stripIndexFormat?: U32 | U16;
-        })
+        stripIndexFormat?: U32 | U16;
+      })
       | undefined,
   ): WithFragment<Targets>;
 
@@ -247,8 +247,8 @@ export interface Configurable extends Withable<Configurable> {
  */
 type NormalizeOutput<T> = T extends { readonly [$internal]: unknown } | number | boolean
   ? [OmitBuiltins<InstanceToSchema<T>>] extends [never]
-    ? Void
-    : OmitBuiltins<InstanceToSchema<T>>
+  ? Void
+  : OmitBuiltins<InstanceToSchema<T>>
   : { [K in keyof OmitBuiltins<T>]: InstanceToSchema<OmitBuiltins<T>[K]> };
 
 export interface WithBinding extends Withable<WithBinding> {
@@ -271,22 +271,22 @@ export interface WithBinding extends Withable<WithBinding> {
     descriptor: TgpuRenderPipeline.DescriptorBase & {
       attribs?: TAttribs;
       vertex:
-        | TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>
-        | ((
-            input: AutoVertexIn<
-              Assume<InferGPURecord<AttribRecordToDefaultDataTypes<TAttribs>>, AnyAutoCustoms>
-            >,
-          ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
+      | TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>
+      | ((
+        input: AutoVertexIn<
+          Assume<InferGPURecord<AttribRecordToDefaultDataTypes<TAttribs>>, AnyAutoCustoms>
+        >,
+      ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
       fragment:
-        | TgpuFragmentFn<
-            VertexOutToVarying<TVertexOut> & Record<string, AnyFragmentInputBuiltin>,
-            Assume<TFragmentOut, TgpuFragmentFn.Out>
-          >
-        | ((
-            input: AutoFragmentIn<
-              Assume<InferGPURecord<VertexOutToVarying<TVertexOut>>, AnyAutoCustoms>
-            >,
-          ) => AutoFragmentOut<Assume<TFragmentOut, AnyAutoCustoms | v4f>>);
+      | TgpuFragmentFn<
+        VertexOutToVarying<TVertexOut> & Record<string, AnyFragmentInputBuiltin>,
+        Assume<TFragmentOut, TgpuFragmentFn.Out>
+      >
+      | ((
+        input: AutoFragmentIn<
+          Assume<InferGPURecord<VertexOutToVarying<TVertexOut>>, AnyAutoCustoms>
+        >,
+      ) => AutoFragmentOut<Assume<TFragmentOut, AnyAutoCustoms | v4f>>);
       targets?: FragmentOutToTargets<NoInfer<TFragmentOut>>;
     },
   ): TgpuRenderPipeline<NormalizeOutput<TFragmentOut>>;
@@ -299,23 +299,23 @@ export interface WithBinding extends Withable<WithBinding> {
     descriptor: TgpuRenderPipeline.DescriptorBase & {
       attribs?: TAttribs;
       vertex:
-        | TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>
-        | ((
-            input: AutoVertexIn<
-              Assume<InferGPURecord<AttribRecordToDefaultDataTypes<TAttribs>>, AnyAutoCustoms>
-            >,
-          ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
+      | TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>
+      | ((
+        input: AutoVertexIn<
+          Assume<InferGPURecord<AttribRecordToDefaultDataTypes<TAttribs>>, AnyAutoCustoms>
+        >,
+      ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
       fragment?:
-        | undefined
-        | TgpuFragmentFn<
-            VertexOutToVarying<OmitBuiltins<TVertexOut>> & Record<string, AnyFragmentInputBuiltin>,
-            Record<string, never> | Void
-          >
-        | ((
-            input: AutoFragmentIn<
-              Assume<InferGPURecord<OmitBuiltins<NoInfer<TVertexOut>>>, AnyAutoCustoms>
-            >,
-          ) => AutoFragmentOut<undefined>);
+      | undefined
+      | TgpuFragmentFn<
+        VertexOutToVarying<OmitBuiltins<TVertexOut>> & Record<string, AnyFragmentInputBuiltin>,
+        Record<string, never> | Void
+      >
+      | ((
+        input: AutoFragmentIn<
+          Assume<InferGPURecord<OmitBuiltins<NoInfer<TVertexOut>>>, AnyAutoCustoms>
+        >,
+      ) => AutoFragmentOut<undefined>);
       targets?: undefined;
     },
   ): TgpuRenderPipeline<Void>;
@@ -329,50 +329,50 @@ export interface WithBinding extends Withable<WithBinding> {
     descriptor: TgpuRenderPipeline.DescriptorBase &
       (
         | {
-            attribs?: TAttribs;
-            vertex:
-              | TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>
-              | ((
-                  input: AutoVertexIn<
-                    Assume<InferGPURecord<AttribRecordToDefaultDataTypes<TAttribs>>, AnyAutoCustoms>
-                  >,
-                ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
-            fragment:
-              | ((
-                  input: AutoFragmentIn<
-                    Assume<InferGPURecord<OmitBuiltins<NoInfer<TVertexOut>>>, AnyAutoCustoms>
-                  >,
-                ) => AutoFragmentOut<Assume<TFragmentOut, AnyAutoCustoms | v4f>>)
-              | TgpuFragmentFn<
-                  VertexOutToVarying<OmitBuiltins<TVertexOut>> &
-                    Record<string, AnyFragmentInputBuiltin>,
-                  Assume<TFragmentOut, TgpuFragmentFn.Out>
-                >;
-            targets?: FragmentOutToTargets<NoInfer<TFragmentOut>>;
-          }
+          attribs?: TAttribs;
+          vertex:
+          | TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>
+          | ((
+            input: AutoVertexIn<
+              Assume<InferGPURecord<AttribRecordToDefaultDataTypes<TAttribs>>, AnyAutoCustoms>
+            >,
+          ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
+          fragment:
+          | ((
+            input: AutoFragmentIn<
+              Assume<InferGPURecord<OmitBuiltins<NoInfer<TVertexOut>>>, AnyAutoCustoms>
+            >,
+          ) => AutoFragmentOut<Assume<TFragmentOut, AnyAutoCustoms | v4f>>)
+          | TgpuFragmentFn<
+            VertexOutToVarying<OmitBuiltins<TVertexOut>> &
+            Record<string, AnyFragmentInputBuiltin>,
+            Assume<TFragmentOut, TgpuFragmentFn.Out>
+          >;
+          targets?: FragmentOutToTargets<NoInfer<TFragmentOut>>;
+        }
         | {
-            attribs?: TAttribs;
-            vertex:
-              | TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>
-              | ((
-                  input: AutoVertexIn<
-                    Assume<InferGPURecord<AttribRecordToDefaultDataTypes<TAttribs>>, AnyAutoCustoms>
-                  >,
-                ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
-            fragment?:
-              | undefined
-              | TgpuFragmentFn<
-                  VertexOutToVarying<OmitBuiltins<TVertexOut>> &
-                    Record<string, AnyFragmentInputBuiltin>,
-                  Record<string, never>
-                >
-              | ((
-                  input: AutoFragmentIn<
-                    Assume<InferGPURecord<OmitBuiltins<NoInfer<TVertexOut>>>, AnyAutoCustoms>
-                  >,
-                ) => AutoFragmentOut<undefined>);
-            targets?: undefined;
-          }
+          attribs?: TAttribs;
+          vertex:
+          | TgpuVertexFn<TVertexIn, Assume<TVertexOut, TgpuVertexFn.Out>>
+          | ((
+            input: AutoVertexIn<
+              Assume<InferGPURecord<AttribRecordToDefaultDataTypes<TAttribs>>, AnyAutoCustoms>
+            >,
+          ) => AutoVertexOut<Assume<TVertexOut, AnyAutoCustoms>>);
+          fragment?:
+          | undefined
+          | TgpuFragmentFn<
+            VertexOutToVarying<OmitBuiltins<TVertexOut>> &
+            Record<string, AnyFragmentInputBuiltin>,
+            Record<string, never>
+          >
+          | ((
+            input: AutoFragmentIn<
+              Assume<InferGPURecord<OmitBuiltins<NoInfer<TVertexOut>>>, AnyAutoCustoms>
+            >,
+          ) => AutoFragmentOut<undefined>);
+          targets?: undefined;
+        }
       ),
   ): TgpuRenderPipeline<NormalizeOutput<TFragmentOut>> | TgpuRenderPipeline<Void>;
 
@@ -465,10 +465,10 @@ type SrgbVariants = {
 type SrgbVariantOrSelf<T extends GPUTextureFormat> = T extends keyof SrgbVariants
   ? (SrgbVariants[T] | T)[] | undefined
   : T extends `${infer Base}-srgb`
-    ? Base extends keyof SrgbVariants
-      ? (T | SrgbVariants[Base])[] | undefined
-      : T[] | undefined
-    : T[] | undefined;
+  ? Base extends keyof SrgbVariants
+  ? (T | SrgbVariants[Base])[] | undefined
+  : T[] | undefined
+  : T[] | undefined;
 
 export type CreateTextureOptions<
   TSize,
@@ -502,8 +502,8 @@ export type CreateTextureOptions<
    * @default []
    */
   viewFormats?: TViewFormats extends SrgbVariantOrSelf<NoInfer<TFormat>>
-    ? TViewFormats
-    : SrgbVariantOrSelf<NoInfer<TFormat>>;
+  ? TViewFormats
+  : SrgbVariantOrSelf<NoInfer<TFormat>>;
   /**
    * Whether the texture is one-dimensional, an array of two-dimensional layers, or three-dimensional.
    * @default '2d'
@@ -525,36 +525,36 @@ export type CreateTextureResult<
   } & OmitProps<
     {
       dimension: GPUTextureDimension extends TDimension
-        ? // Omitted property means the default
-          undefined
-        : // '2d' is the default, omitting from type
-          TDimension extends '2d'
-          ? undefined
-          : TDimension;
+      ? // Omitted property means the default
+      undefined
+      : // '2d' is the default, omitting from type
+      TDimension extends '2d'
+      ? undefined
+      : TDimension;
       mipLevelCount: number extends TMipLevelCount
-        ? // Omitted property means the default
-          undefined
-        : // '1' is the default, omitting from type
-          TMipLevelCount extends 1
-          ? undefined
-          : TMipLevelCount;
+      ? // Omitted property means the default
+      undefined
+      : // '1' is the default, omitting from type
+      TMipLevelCount extends 1
+      ? undefined
+      : TMipLevelCount;
       sampleCount: number extends TSampleCount
-        ? // Omitted property means the default
-          undefined
-        : // '1' is the default, omitting from type
-          TSampleCount extends 1
-          ? undefined
-          : TSampleCount;
+      ? // Omitted property means the default
+      undefined
+      : // '1' is the default, omitting from type
+      TSampleCount extends 1
+      ? undefined
+      : TSampleCount;
       viewFormats: GPUTextureFormat[] extends TViewFormats
-        ? // Omitted property means the default
-          // '[]' is the default, omitting from type
-          undefined
-        : TViewFormats extends never[]
-          ? undefined
-          : // As per WebGPU spec, the only format that can appear here is the srgb variant of the texture format or the base format if the texture format is srgb (or self)
-            TViewFormats extends SrgbVariantOrSelf<TFormat>
-            ? TViewFormats
-            : never;
+      ? // Omitted property means the default
+      // '[]' is the default, omitting from type
+      undefined
+      : TViewFormats extends never[]
+      ? undefined
+      : // As per WebGPU spec, the only format that can appear here is the srgb variant of the texture format or the base format if the texture format is srgb (or self)
+      TViewFormats extends SrgbVariantOrSelf<TFormat>
+      ? TViewFormats
+      : never;
     },
     undefined
   >
@@ -976,9 +976,9 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
     THeight extends number,
     TDepth extends number,
     TSize extends
-      | readonly [TWidth]
-      | readonly [TWidth, THeight]
-      | readonly [TWidth, THeight, TDepth],
+    | readonly [TWidth]
+    | readonly [TWidth, THeight]
+    | readonly [TWidth, THeight, TDepth],
     TFormat extends GPUTextureFormat,
     TMipLevelCount extends number,
     TSampleCount extends number,
@@ -1090,9 +1090,9 @@ export interface ExperimentalTgpuRoot
     THeight extends number,
     TDepth extends number,
     TSize extends
-      | readonly [TWidth]
-      | readonly [TWidth, THeight]
-      | readonly [TWidth, THeight, TDepth],
+    | readonly [TWidth]
+    | readonly [TWidth, THeight]
+    | readonly [TWidth, THeight, TDepth],
     TFormat extends GPUTextureFormat,
     TMipLevelCount extends number,
     TSampleCount extends number,
