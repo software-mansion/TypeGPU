@@ -225,10 +225,6 @@ export const not = dualImpl({
   },
   normalImpl: cpuNot,
   codegenImpl: (_ctx, [arg]) => {
-    if (isKnownAtComptime(arg)) {
-      return `${cpuNot(arg.value)}`;
-    }
-
     const { dataType } = arg;
 
     if (isBool(dataType)) {

@@ -37,7 +37,7 @@ jobs:
         run: pnpm nightly-build
 
       - name: Publish (pkg.pr.new)
-        run: npx pkg-pr-new publish './packages/typegpu/dist' './packages/typegpu-noise/dist' './packages/unplugin-typegpu/dist' --json output.json --comment=off --pnpm
+        run: pnpm exec pkg-pr-new publish './packages/typegpu' './packages/typegpu-noise' './packages/unplugin-typegpu' --json output.json --comment=off --pnpm --no-compact
       - name: Post or update comment
         uses: actions/github-script@v6
         with:

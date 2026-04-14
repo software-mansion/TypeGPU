@@ -446,7 +446,7 @@ function frame(timestamp: number) {
   const deltaTime = Math.min(lastTime !== null ? (timestamp - lastTime) / 1000 : 0, 0.1);
   lastTime = timestamp;
 
-  params.writePartial({ deltaTime });
+  params.patch({ deltaTime });
 
   blurPipeline
     .with(blurBindGroups[currentTexture])
@@ -578,7 +578,7 @@ export const controls = defineControls({
     max: 100,
     step: 1,
     onSliderChange: (newValue) => {
-      params.writePartial({ moveSpeed: newValue });
+      params.patch({ moveSpeed: newValue });
     },
   },
   'Sensor Angle': {
@@ -587,7 +587,7 @@ export const controls = defineControls({
     max: 3.14,
     step: 0.01,
     onSliderChange: (newValue) => {
-      params.writePartial({ sensorAngle: newValue });
+      params.patch({ sensorAngle: newValue });
     },
   },
   'Sensor Distance': {
@@ -596,7 +596,7 @@ export const controls = defineControls({
     max: 50,
     step: 0.5,
     onSliderChange: (newValue) => {
-      params.writePartial({ sensorDistance: newValue });
+      params.patch({ sensorDistance: newValue });
     },
   },
   'Turn Speed': {
@@ -605,7 +605,7 @@ export const controls = defineControls({
     max: 100,
     step: 0.1,
     onSliderChange: (newValue) => {
-      params.writePartial({ turnSpeed: newValue });
+      params.patch({ turnSpeed: newValue });
     },
   },
   'Evaporation Rate': {
@@ -614,7 +614,7 @@ export const controls = defineControls({
     max: 0.5,
     step: 0.01,
     onSliderChange: (newValue) => {
-      params.writePartial({ evaporationRate: newValue });
+      params.patch({ evaporationRate: newValue });
     },
   },
 });

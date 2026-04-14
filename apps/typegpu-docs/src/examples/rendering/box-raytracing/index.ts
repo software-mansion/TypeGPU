@@ -262,7 +262,7 @@ const runner = (timestamp: number) => {
     Math.sin(frame) * cameraDistance + cameraAnchor.z,
   );
 
-  uniforms.writePartial({
+  uniforms.patch({
     canvasDims: d.vec2f(width, height),
     invViewMatrix: mat4.aim(cameraPosition, cameraAnchor, d.vec3f(0, 1, 0), d.mat4x4f()),
   });
@@ -300,7 +300,7 @@ export const controls = defineControls({
     min: 0.1,
     max: 1,
     onSliderChange: (value) => {
-      uniforms.writePartial({
+      uniforms.patch({
         boxSize: value,
       });
     },
@@ -311,7 +311,7 @@ export const controls = defineControls({
     min: 0.2,
     max: 2,
     onSliderChange: (value) => {
-      uniforms.writePartial({
+      uniforms.patch({
         materialDensity: value,
       });
     },

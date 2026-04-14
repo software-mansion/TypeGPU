@@ -339,7 +339,7 @@ ${this.ctx.pre}}`;
 
       // Short Circuit Evaluation
       if ((op === '||' || op === '&&') && isKnownAtComptime(lhsExpr)) {
-        const evalRhs = op === '&&' ? !!lhsExpr.value : !lhsExpr.value;
+        const evalRhs = op === '&&' ? lhsExpr.value : !lhsExpr.value;
 
         if (!evalRhs) {
           return snip(op === '||', bool, 'constant');
@@ -352,7 +352,7 @@ ${this.ctx.pre}}`;
         }
 
         if (isKnownAtComptime(rhsExpr)) {
-          return snip(rhsExpr.value, bool, 'constant');
+          return snip(!!rhsExpr.value, bool, 'constant');
         }
 
         // we can skip lhs

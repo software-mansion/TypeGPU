@@ -2192,3 +2192,188 @@ describe('Render Bundles', () => {
     expect(pass.end).toHaveBeenCalled();
   });
 });
+
+describe('drawIndirect / drawIndexedIndirect buffer and offset validation', () => {
+  // our favorite struct: https://shorturl.at/NQggS
+  const DeepStruct = d.struct({
+    someData: d.arrayOf(d.f32, 13),
+    nested: d.struct({
+      randomData: d.f32,
+      x: d.atomic(d.u32),
+      y: d.u32,
+      innerNested: d.arrayOf(
+        d.struct({
+          xx: d.atomic(d.u32),
+          yy: d.u32,
+          zz: d.u32,
+          myVec: d.vec4u,
+        }),
+        3,
+      ),
+      z: d.u32,
+      additionalData: d.arrayOf(d.u32, 32),
+    }),
+  });
+
+  const vertexFn = tgpu.vertexFn({
+    out: { pos: d.builtin.position },
+  })('');
+
+  const fragmentFn = tgpu.fragmentFn({
+    out: { color: d.vec4f },
+  })('');
+
+  function createPipeline(root: ExperimentalTgpuRoot) {
+    return root
+      .createRenderPipeline({
+        vertex: vertexFn,
+        fragment: fragmentFn,
+        targets: { color: { format: 'rgba8unorm' } },
+      })
+      .withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      });
+  }
+
+  describe('drawIndirect', () => {
+    it('accepts raw GPUBuffer with indirect flag', ({ root, device }) => {
+      const buffer = device.createBuffer({ size: 20, usage: GPUBufferUsage.INDIRECT });
+
+      const pipeline = createPipeline(root);
+
+      pipeline.drawIndirect(buffer, 4);
+    });
+
+    it('throws when offset is not multiple of 4', ({ root, device }) => {
+      const buffer = device.createBuffer({ size: 20, usage: GPUBufferUsage.INDIRECT });
+
+      const pipeline = createPipeline(root);
+
+      expect(() => pipeline.drawIndirect(buffer, 3)).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Indirect buffer offset must be a multiple of 4. Got: 3]`,
+      );
+    });
+
+    it('throws when raw GPUBuffer size is not enough for draw', ({ device, root }) => {
+      const buffer = device.createBuffer({
+        size: 17,
+        usage: GPUBufferUsage.INDIRECT,
+      });
+
+      const pipeline = createPipeline(root);
+
+      expect(() => pipeline.drawIndirect(buffer, 4)).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Buffer too small for drawIndirect. Required: 16 bytes at offset 4, but buffer is only 17 bytes.]`,
+      );
+    });
+
+    it('warns when draw would read across padding', ({ root }) => {
+      using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const pipeline = createPipeline(root);
+
+      const buffer = root.createBuffer(DeepStruct).$usage('indirect');
+      pipeline.drawIndirect(
+        buffer,
+        d.memoryLayoutOf(DeepStruct, (s) => s.someData[10]),
+      );
+
+      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
+        `"drawIndirect: Starting at offset 40, only 12 contiguous bytes are available before padding. 'drawIndirect' requires 16 bytes (4 x u32). Reading across padding may result in undefined behavior."`,
+      );
+    });
+
+    it('does not warn when draw has sufficient contiguous data', ({ root }) => {
+      using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const pipeline = createPipeline(root);
+
+      const DrawIndirectArgs = d.struct({
+        vertexCount: d.u32,
+        instanceCount: d.u32,
+        firstVertex: d.u32,
+        firstInstance: d.u32,
+      });
+      const buffer = root.createBuffer(DrawIndirectArgs).$usage('indirect');
+      pipeline.drawIndirect(buffer);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('drawIndexedIndirect', () => {
+    function createPipelineIndexed(root: ExperimentalTgpuRoot) {
+      const indexBuffer = root.createBuffer(d.arrayOf(d.u32, 3)).$usage('index');
+      return createPipeline(root).withIndexBuffer(indexBuffer);
+    }
+
+    it('accepts raw GPUBuffer with indirect flag', ({ root, device }) => {
+      const buffer = device.createBuffer({ size: 24, usage: GPUBufferUsage.INDIRECT });
+
+      const pipeline = createPipelineIndexed(root);
+
+      pipeline.drawIndexedIndirect(buffer, 4);
+    });
+
+    it('throws when offset is not multiple of 4', ({ root, device }) => {
+      const buffer = device.createBuffer({ size: 24, usage: GPUBufferUsage.INDIRECT });
+
+      const pipeline = createPipelineIndexed(root);
+
+      expect(() => pipeline.drawIndexedIndirect(buffer, 3)).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Indirect buffer offset must be a multiple of 4. Got: 3]`,
+      );
+    });
+
+    it('throws when raw GPUBuffer size is not enough for drawIndexed', ({ device, root }) => {
+      const buffer = device.createBuffer({
+        size: 21,
+        usage: GPUBufferUsage.INDIRECT,
+      });
+
+      const pipeline = createPipelineIndexed(root);
+
+      expect(() => pipeline.drawIndexedIndirect(buffer, 4)).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Buffer too small for drawIndexedIndirect. Required: 20 bytes at offset 4, but buffer is only 21 bytes.]`,
+      );
+    });
+
+    it('warns when drawIndexed would read across padding', ({ root }) => {
+      using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const pipeline = createPipelineIndexed(root);
+
+      const buffer = root.createBuffer(DeepStruct).$usage('indirect');
+      pipeline.drawIndexedIndirect(
+        buffer,
+        d.memoryLayoutOf(DeepStruct, (s) => s.someData[9]),
+      );
+
+      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
+        `"drawIndexedIndirect: Starting at offset 36, only 16 contiguous bytes are available before padding. 'drawIndexedIndirect' requires 20 bytes (3 x u32, i32, u32). Reading across padding may result in undefined behavior."`,
+      );
+    });
+
+    it('does not warn when drawIndexed has sufficient contiguous data', ({ root }) => {
+      using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const pipeline = createPipelineIndexed(root);
+
+      const DrawIndexedIndirectArgs = d.struct({
+        indexCount: d.u32,
+        instanceCount: d.u32,
+        firstIndex: d.u32,
+        baseVertex: d.i32,
+        firstInstance: d.u32,
+      });
+      const buffer = root.createBuffer(DrawIndexedIndirectArgs).$usage('indirect');
+      pipeline.drawIndexedIndirect(buffer);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+  });
+});
