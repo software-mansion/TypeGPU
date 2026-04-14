@@ -43,4 +43,4 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
           DISABLE_DRY_RUN: ${{ inputs['dry-run'] == false }}
-        run: bun scripts/publish.ts
+        run: pnpm exec bun scripts/publish.ts
