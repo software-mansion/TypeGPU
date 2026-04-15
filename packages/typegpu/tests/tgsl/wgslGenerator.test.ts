@@ -979,6 +979,30 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('handles "for ... of ..." over `std.range`', ({ root }) => {
+    const testFn = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      'use gpu';
+      for (const bounce of std.range(12)) {
+        const test = d.u32(2) + bounce;
+        return d.f32(test);
+      }
+      return 0;
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "fn testFn() -> f32 {
+        for (var i = 0u; i < 12u; i += 1u) {
+          let test = (2u + i);
+          return f32(test);
+        }
+        return 0f;
+      }"
+    `);
+  });
+
   it('creates correct resources for lazy values and slots', () => {
     const testFn = tgpu.fn([], d.vec4u)(() => lazyV4u.$);
 
