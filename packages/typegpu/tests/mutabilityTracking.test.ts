@@ -15,7 +15,6 @@ describe('mutability tracking', () => {
       });
 
       const resolved = tgpu.resolve([fn]);
-      expect(resolved).toContain('var a = arg.x');
       expect(resolved).toMatchInlineSnapshot(`
         "fn item(arg: vec4u) -> u32 {
           var a = arg.x;
@@ -23,6 +22,7 @@ describe('mutability tracking', () => {
           return a;
         }"
       `);
+      expect(resolved).toContain('var a = arg.x');
     });
 
     it('resolves conditionally reassigned primitive let to var', () => {
@@ -36,7 +36,6 @@ describe('mutability tracking', () => {
       });
 
       const resolved = tgpu.resolve([fn]);
-      expect(resolved).toContain('var a = arg.x');
       expect(resolved).toMatchInlineSnapshot(`
         "fn item(arg: vec4u) -> u32 {
           var a = arg.x;
@@ -46,6 +45,7 @@ describe('mutability tracking', () => {
           return a;
         }"
       `);
+      expect(resolved).toContain('var a = arg.x');
     });
 
     it('resolves mutated primitive let to var', () => {
@@ -57,7 +57,6 @@ describe('mutability tracking', () => {
       });
 
       const resolved = tgpu.resolve([fn]);
-      expect(resolved).toContain('var a = arg.x');
       expect(resolved).toMatchInlineSnapshot(`
         "fn item(arg: vec4u) -> u32 {
           var a = arg.x;
@@ -65,6 +64,7 @@ describe('mutability tracking', () => {
           return a;
         }"
       `);
+      expect(resolved).toContain('var a = arg.x');
     });
 
     it('resolves incremented primitive let to var', () => {
@@ -76,7 +76,6 @@ describe('mutability tracking', () => {
       });
 
       const resolved = tgpu.resolve([fn]);
-      expect(resolved).toContain('var a = arg.x');
       expect(resolved).toMatchInlineSnapshot(`
         "fn item(arg: vec4u) -> u32 {
           var a = arg.x;
@@ -84,6 +83,7 @@ describe('mutability tracking', () => {
           return a;
         }"
       `);
+      expect(resolved).toContain('var a = arg.x');
     });
 
     it('resolves modified reference const to var', () => {
@@ -95,7 +95,6 @@ describe('mutability tracking', () => {
       });
 
       const resolved = tgpu.resolve([fn]);
-      expect(resolved).toContain('var a = arg');
       expect(resolved).toMatchInlineSnapshot(`
         "fn item(arg: vec4u) -> u32 {
           var a = arg;
@@ -103,6 +102,7 @@ describe('mutability tracking', () => {
           return a.x;
         }"
       `);
+      expect(resolved).toContain('var a = arg');
     });
 
     it('resolves modified reference let to var', () => {
@@ -114,7 +114,6 @@ describe('mutability tracking', () => {
       });
 
       const resolved = tgpu.resolve([fn]);
-      expect(resolved).toContain('var a = arg');
       expect(resolved).toMatchInlineSnapshot(`
         "fn item(arg: vec4u) -> u32 {
           var a = arg;
@@ -122,6 +121,7 @@ describe('mutability tracking', () => {
           return a.x;
         }"
       `);
+      expect(resolved).toContain('var a = arg');
     });
 
     it('resolves reassigned reference let to var', () => {
@@ -133,7 +133,6 @@ describe('mutability tracking', () => {
       });
 
       const resolved = tgpu.resolve([fn]);
-      expect(resolved).toContain('var a = arg');
       expect(resolved).toMatchInlineSnapshot(`
         "fn item(arg: vec4u) -> u32 {
           var a = arg;
@@ -141,6 +140,7 @@ describe('mutability tracking', () => {
           return a.x;
         }"
       `);
+      expect(resolved).toContain('var a = arg');
     });
   });
 
@@ -153,13 +153,13 @@ describe('mutability tracking', () => {
       });
 
       const resolved = tgpu.resolve([fn]);
-      expect(resolved).toContain('let a = arg.x');
       expect(resolved).toMatchInlineSnapshot(`
         "fn item(arg: vec4u) -> u32 {
           let a = arg.x;
           return a;
         }"
       `);
+      expect(resolved).toContain('let a = arg.x');
     });
 
     it('resolves unmodified primitive let arg', () => {
@@ -170,8 +170,13 @@ describe('mutability tracking', () => {
       });
 
       const resolved = tgpu.resolve([fn]);
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn item(arg: vec4u) -> u32 {
+          var a = arg.x;
+          return a;
+        }"
+      `);
       expect(resolved).toContain('let a = arg.x');
-      expect(resolved).toMatchInlineSnapshot();
     });
 
     it('resolves unmodified reference const arg', () => {
@@ -182,8 +187,13 @@ describe('mutability tracking', () => {
       });
 
       const resolved = tgpu.resolve([fn]);
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn item(arg: vec4u) -> u32 {
+          var a = arg;
+          return a.x;
+        }"
+      `);
       expect(resolved).toContain('let a = arg');
-      expect(resolved).toMatchInlineSnapshot();
     });
 
     it('resolves unmodified reference let arg', () => {
@@ -194,8 +204,13 @@ describe('mutability tracking', () => {
       });
 
       const resolved = tgpu.resolve([fn]);
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn item(arg: vec4u) -> u32 {
+          var a = arg;
+          return a.x;
+        }"
+      `);
       expect(resolved).toContain('let a = arg');
-      expect(resolved).toMatchInlineSnapshot();
     });
   });
 
@@ -211,9 +226,18 @@ describe('mutability tracking', () => {
     });
 
     const resolved = tgpu.resolve([fn]);
+    expect(resolved).toMatchInlineSnapshot(`
+      "fn item(arg: vec4u) -> u32 {
+        var a = arg;
+        {
+          var a_1 = arg;
+          a_1.x++;
+        }
+        return a.x;
+      }"
+    `);
     expect(resolved).toContain('let a = arg');
     expect(resolved).toContain('var a = arg');
-    expect(resolved).toMatchInlineSnapshot();
   });
 
   describe('references', () => {
@@ -225,13 +249,13 @@ describe('mutability tracking', () => {
       });
 
       const resolved = tgpu.resolve([fn]);
-      expect(resolved).toContain('var a = 0');
       expect(resolved).toMatchInlineSnapshot(`
         "fn item(arg: vec4u) -> u32 {
           var a = 0;
           return u32(a);
         }"
       `);
+      expect(resolved).toContain('var a = 0');
     });
 
     it('resolves a complex variable used with d.ref to var', () => {
@@ -242,13 +266,13 @@ describe('mutability tracking', () => {
       };
 
       const resolved = tgpu.resolve([fn]);
-      expect(resolved).toContain('var a = vec4u()');
       expect(resolved).toMatchInlineSnapshot(`
         "fn fn_1() -> u32 {
           var a = vec4u();
           return a.x;
         }"
       `);
+      expect(resolved).toContain('var a = vec4u()');
     });
 
     it('resolves a struct to var when its prop is referenced', () => {
@@ -260,7 +284,6 @@ describe('mutability tracking', () => {
       };
 
       const resolved = tgpu.resolve([fn]);
-      expect(resolved).toContain('var struct_1 = Struct()');
       expect(resolved).toMatchInlineSnapshot(`
         "struct Struct {
           prop: vec4f,
@@ -271,6 +294,7 @@ describe('mutability tracking', () => {
           let prop = (&struct_1.prop);
         }"
       `);
+      expect(resolved).toContain('var struct_1 = Struct()');
     });
 
     it('resolves a struct to let when its prop is only read', () => {
@@ -282,7 +306,6 @@ describe('mutability tracking', () => {
       };
 
       const resolved = tgpu.resolve([fn]);
-      expect(resolved).toContain('let struct_1 = Struct()');
       expect(resolved).toMatchInlineSnapshot(`
         "struct Struct {
           prop: vec4f,
@@ -293,6 +316,7 @@ describe('mutability tracking', () => {
           return struct_1.prop;
         }"
       `);
+      expect(resolved).toContain('let struct_1 = Struct()');
     });
   });
 });
