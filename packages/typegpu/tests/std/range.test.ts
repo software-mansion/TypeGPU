@@ -107,7 +107,7 @@ describe('on the GPU', () => {
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() -> f32 {
         var result = 0f;
-        for (var i = 0i; i < 8i; i += 2i) {
+        for (var i = 0u; i < 8u; i += 2u) {
           result += f32(i);
         }
         for (var i = 10i; i > -10i; i += -1i) {
