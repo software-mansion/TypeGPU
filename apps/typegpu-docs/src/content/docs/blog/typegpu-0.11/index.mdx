@@ -1,0 +1,276 @@
+---
+title: TypeGPU 0.11
+date: 2026-04-14
+tags:
+  - Release notes
+authors:
+  - name: Iwo Plaza
+    title: TypeGPU developer
+    picture: https://avatars.githubusercontent.com/u/7166752?s=200
+cover:
+  alt: A collage of examples introduced alongside TypeGPU 0.11
+  image: banner.webp
+---
+
+Hello fellow GPU enthusiast!
+
+Over the past 2 months, my team and I have been pulling on a few threads that we thought would improve TypeGPU in terms of efficiency, and as a byproduct, we actually made the APIs more convenient ~~on top of being faster~~. We are also introducing a _lint plugin_ to further improve the diagnostics and feedback you receive while writing TypeGPU shaders, on top of the type safety we already provide.
+
+- [New examples](#new-examples)
+- [Migration guide](#migration-guide)
+- [New and improved Write APIs](#efficient-write-apis)
+- [Efficient write APIs](#efficient-write-apis)
+- [A better partial write](#a-better-partial-write)
+
+
+We have been pulling a few more threads than I mentioned here.. but for those, you'll have to wait for the next blog post 🤐.
+
+## New examples
+
+My teammate Konrad Reczko [(@reczkok)](https://github.com/reczkok) has outdone himself again, and delivered 3 new examples that push TypeGPU APIs to their limits:
+
+* ["Genetic Racing"](https://typegpu.com/examples/#example=algorithms--genetic-racing) - watch a swarm of cars learn to traverse a procedurally generated race track.
+* ["Mesh Skinning"](https://typegpu.com/examples/#example=simple--mesh-skinning) - an animation and skinning system built from scratch in TypeGPU.
+* ["Parallax Occlusion Mapping"](https://typegpu.com/examples/#example=rendering--pom) - squeezing amazing depth out of just two triangles and a set of textures.
+
+## Migration guide
+
+### Deprecated APIs
+
+The `buffer.writePartial` API is being deprecated in favor of `buffer.patch` [(and here are the reasons why)](#a-better-partial-write).
+To migrate, simply replace any partial write of arrays in the form of `[{ idx: 2, value: foo }, /* ... */]` with `{ 2: foo, /* ... */ }`.
+
+```diff lang=ts
+const buffer = root.createBuffer(d.arrayOf(d.vec3f, 5)).$usage('storage');
+
+- buffer.writePartial([{ idx: 2, value: d.vec3f(1, 2, 3) }]);
++ buffer.patch({ 2: d.vec3f(1, 2, 3) });
+```
+
+### Stabilizing textures and samplers
+
+One by one, we're making our APIs available without the `['~unstable']` prefix, and this time around, it's **textures** and **samplers**.
+Just drop the unstable prefix, and you're good to go.
+
+```diff lang=ts
+- const sampler = root['~unstable'].createSampler({
++ const sampler = root.createSampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+});
+
+- const texture = root['~unstable'].createTexture({
++ const texture = root.createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm' as const,
+}).$usage('sampled');
+```
+
+## New and improved write APIs
+
+### Efficient data
+
+When writing to a buffer with an array of vectors, it's no longer required to create vector instances (e.g. `d.vec3f()`).
+```ts
+const positionsMutable = root.createMutable(d.arrayOf(d.vec3f, 3));
+
+// before
+positionsMutable.write([d.vec3f(0, 1, 2), d.vec3f(3, 4, 5), d.vec3f(6, 7, 8)]);
+// now
+positionsMutable.write([[0, 1, 2], [3, 4, 5], [6, 7, 8]]); // tuples
+positionsMutable.write(new Float32Array([0, 1, 2, 0, 3, 4, 5, 0, 6, 7, 8, 0])); // typed arrays (mind the padding)
+// and more...
+```
+Each one is more efficient than the previous, so you can choose the appropriate API for your efficiency needs.
+[More about these new APIs here](https://docs.swmansion.com/TypeGPU/fundamentals/buffers/#writing-to-a-buffer).
+
+### A better partial write
+
+When writing to a buffer, we require the passed in value to exactly match the schema. This specifically means that updating a single field of a single array item was very costly. The `buffer.partialWrite` API remedied that by accepting partial records
+for structs, and a list of indices and values to update in arrays. This works fine, but doesn't compose well with more complex data structures:
+
+```ts
+const Node = d.struct({
+  color: d.vec3f,
+  // Indices of neighboring nodes
+  neighbors: d.arrayOf(d.u32, 4),
+});
+
+const nodes = root.createUniform(d.arrayOf(Node, 100));
+
+// Updating the 50th node
+nodes.writePartial([
+  {
+    idx: 50,
+    value: {
+      color: d.vec3f(1, 0, 1),
+      // We cannot pass [48, 49, 51, 52], as we could with nodes.write()
+      neighbors: [{ idx: 0, value: 48 }, { idx: 0, value: 49 }, { idx: 0, value: 51 }, { idx: 0, value: 52 }],
+    },
+  }
+]);
+```
+
+If we loosened the type to accept either partial arrays or full arrays, then we would reach an ambiguity in the following case:
+
+```ts
+const Foo = d.struct({
+  idx: d.u32,
+  value: d.f32,
+});
+
+const foos = root.createUniform(d.arrayOf(Foo, 2));
+
+foos.writePartial([{ idx: 1, value: /* ... */ }, { idx: 0, value: /* ... */ }]);
+```
+
+We could traverse the value deeper to disambiguate, but for the sake of efficiency and being able to reuse optimizations added to `buffer.write` by Konrad, we chose to add a new API:
+
+```diff lang=ts
+- foos.writePartial([{ idx: 1, value: /* ... */ }, { idx: 0, value: /* ... */ }]);
++ foos.patch({ 1: /* ... */, 0: /* ... */ });
+```
+
+### Struct-of-arrays utility
+
+Relevant PRs:
+* impr: Add a `common.writeSoA(buffer, data)` for compatible buffers and extend the initial data field for more flexibility by @reczkok  in https://github.com/software-mansion/TypeGPU/pull/2320, https://github.com/software-mansion/TypeGPU/pull/2329
+
+## Lint plugin
+
+Aleksander Katan ([@aleksanderkatan](https://github.com/aleksanderkatan)) has been working behind the scenes on an ESLint/Oxlint plugin, capable of catching user errors that types cannot. This plugin is now available to install as:
+```sh
+npm install eslint-plugin-typegpu
+```
+
+Documentation: https://docs.swmansion.com/TypeGPU/tooling/eslint-plugin-typegpu/
+
+## Shader codegen improvements
+
+There's been a lot of improvements to our shader generation, mainly in regards to compile-time execution and pruning of unreachable branches.
+
+### std.range
+
+The new `std.range` function works similarly to `range()` in Python, and returns an array that can be iterated over.
+When combined with `tgpu.unroll`, it's now very easy to produce a set amount of code blocks.
+
+```ts
+let result = d.u32();
+for (const i of tgpu.unroll(std.range(3))) {
+  // this block will be inlined 3 times
+  result += i * 10;
+}
+```
+
+Generates:
+```wgsl
+var result = 0u;
+// unrolled iteration #0
+{
+  result += 0u;
+}
+// unrolled iteration #1
+{
+  result += 10u;
+}
+// unrolled iteration #2
+{
+  result += 20u;
+}
+````
+
+Because `i` is known at compile-time, the `i * 10` get evaluated and injected into the generated code in each block.
+For more, refer to [tgpu.unroll documentation.](/TypeGPU/fundamentals/utils/#tgpuunroll).
+
+### Boolean logic
+
+Logical expressions are now short-circuited if we can determine the result early.
+```ts
+const clampingEnabled = tgpu.accessor(d.bool);
+
+function main() {
+  'use gpu';
+  if (clampingEnabled.$) {
+    
+  }
+}
+```
+
+Relevant PRs:
+* feat: Bit operation on vectors by @cieplypolar in https://github.com/software-mansion/TypeGPU/pull/2276
+* feat: Dedent comptime-known nested if/else by @aleksanderkatan in https://github.com/software-mansion/TypeGPU/pull/2308
+* feat: std.range() by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2314
+* feat: std.textureSampleGrad (+ docs: POM example) by @reczkok in https://github.com/software-mansion/TypeGPU/pull/2366
+* impr: Do not pack entry-point variables by @reczkok in https://github.com/software-mansion/TypeGPU/pull/2303
+* impr: Short-circuit evaluation for operators `&&` and `||` by @cieplypolar in https://github.com/software-mansion/TypeGPU/pull/2361
+* feat: unary operator `!` support and `std.not` by @cieplypolar in https://github.com/software-mansion/TypeGPU/pull/2346
+
+## Convenience overload for `tgpu.const` API
+
+Relevant PRs:
+* feat(typegpu): infer `tgpu.const` array length from value for partial `d.arrayOf(...)` by @Copilot in https://github.com/software-mansion/TypeGPU/pull/2325
+
+## New @typegpu/color helpers
+
+Relevant PRs:
+* feat(@typegpu/color): hexToRgb, hexToRgba and hexToOklab utilities by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2284
+
+## Features
+
+* feat: More convenient TgpuVertexFn.AutoIn and TgpuVertexFn.AutoOut types by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2282
+* feat: A type alias for no-custom auto inputs by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2344
+* feat: Support for `PrimitiveOffsetInfo` in render pipeline  draw...Indirect methods by @cieplypolar in https://github.com/software-mansion/TypeGPU/pull/2337
+
+## Fixes / Stability
+* fix: Allow guarded pipeline with encoder by @reczkok in https://github.com/software-mansion/TypeGPU/pull/2273
+* refactor: Unplugin 3 by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2294
+* fix: Lift limitation on passing tgpu.const references as arguments by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2286
+* fix: Deref implicit pointers in shell-less entry function output by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2285
+* refactor: Single component props in Vec4 are in a weird order by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2296
+* Add unroll coverage for `tgpu.const` fixed-size array access by @Copilot in https://github.com/software-mansion/TypeGPU/pull/2323
+* fix: Inconsistent whitespace in WGSL functions by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2338
+* fix: Make `d.Infer<T>` assignable to `d.InferInput<T>` by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2335
+* impr: Better `withPerformanceCallback` API by @reczkok in https://github.com/software-mansion/TypeGPU/pull/2309
+* fix: Use InferGPU in function shell types by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2295
+
+## Internal DX
+* chore: Tweaks for working with worktrees by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2271
+* ci: Skip treeshaking in fork PRs by @aleksanderkatan in https://github.com/software-mansion/TypeGPU/pull/2289
+* chore: Sort treeshake-test results by impact in GitHub comments by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2268
+* chore: Move individual example tests to `apps/typegpu-docs` by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2291
+* chore: A way to skip checks before publishing, if we know tests already pass by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2281
+* chore: Skip attest by default by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2316
+* chore: Benchmark resolution time of procedurally generated functions by @cieplypolar in https://github.com/software-mansion/TypeGPU/pull/2233
+* chore: Bump oxlint and oxlint-tsgolint by @aleksanderkatan in https://github.com/software-mansion/TypeGPU/pull/2317
+* chore: Transform overloads before test:types by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2280
+* chore: Migrate to Vitest 4 by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2330
+* fix: Enable `erasableSyntaxOnly` and `verbatimModuleSyntax` TypeScript options by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2332
+* fix(docs): Bump vite to 8.0.5 to fix minifier issue by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2353
+* chore: Manual publish workflow by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2368
+* feat: Resolution time benchmark github action by @cieplypolar in https://github.com/software-mansion/TypeGPU/pull/2239
+
+## Docs
+* docs: Accessors by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2267
+* docs: Custom monaco build by @aleksanderkatan in https://github.com/software-mansion/TypeGPU/pull/2297
+* fix(docs): Vector slider controls by @aleksanderkatan in https://github.com/software-mansion/TypeGPU/pull/2247
+* docs: Cleanup examples by @aleksanderkatan in https://github.com/software-mansion/TypeGPU/pull/2265
+* fix(docs): Clear timeout in 3D Fish example by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2311
+* fix(docs): Make tsover-runtime importable in the translator app by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2310
+* chore: Update to Astro 6 by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2292
+* docs: Use Vite v8 for lower memory consumption by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2315
+* fix(docs): Fix diagnostics on release by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2333
+* fix(docs): Color picker lagging when switching between Jelly examples by @aleksanderkatan in https://github.com/software-mansion/TypeGPU/pull/2340
+* docs: Comprehensive `tgpu.unroll` docs by @cieplypolar in https://github.com/software-mansion/TypeGPU/pull/2334
+* docs: Add lose state to suika game and do a small refactor by @reczkok in https://github.com/software-mansion/TypeGPU/pull/2350
+* fix(docs): Add missing cool factor and remove explicit experimental tags by @reczkok in https://github.com/software-mansion/TypeGPU/pull/2377
+* impr: Improve orbit camera to better behave on mouse scroll-wheel by @mvanhorn in https://github.com/software-mansion/TypeGPU/pull/2304
+
+## Experimental
+* feat(@typegpu/gl): Type instantiation deferred to shader generator by @iwoplaza in https://github.com/software-mansion/TypeGPU/pull/2278
+* feat: Add `@typegpu/sort` scaffolding with simple bitonic sort implementation by @reczkok in https://github.com/software-mansion/TypeGPU/pull/2142
+* @typegpu/geometry Simplify variable width lines implementation by @deluksic in https://github.com/software-mansion/TypeGPU/pull/1935
+
+## New Contributors
+* @mvanhorn made their first contribution in https://github.com/software-mansion/TypeGPU/pull/2304
+
+**Full Changelog**: https://github.com/software-mansion/TypeGPU/compare/v0.10.2...v0.11.0
