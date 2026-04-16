@@ -16,7 +16,6 @@ import { CodegenState } from '../../src/types.ts';
 import { it } from 'typegpu-testing-utility';
 import { ArrayExpression } from '../../src/tgsl/generationHelpers.ts';
 import { extractSnippetFromFn } from '../utils/parseResolved.ts';
-import { UnknownData } from '../../src/tgsl/shaderGenerator_members.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -1086,7 +1085,7 @@ describe('wgslGenerator', () => {
   it('creates intermediate representation for array expression', () => {
     const testFn = () => {
       'use gpu';
-      [d.u32(1), 8, 8, 2];
+      return [d.u32(1), 8, 8, 2];
     };
 
     const snippet = extractSnippetFromFn(testFn);
