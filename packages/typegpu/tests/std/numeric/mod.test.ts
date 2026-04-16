@@ -12,23 +12,10 @@ import {
   vec4h,
   vec4i,
   vec4u,
-} from '../../../src/data/index.ts';
-import type {
-  v2f,
-  v2h,
-  v2i,
-  v2u,
-  v3f,
-  v3h,
-  v3i,
-  v3u,
-  v4f,
-  v4h,
-  v4i,
-  v4u,
-} from '../../../src/data/wgslTypes.ts';
-import { isCloseTo, mod } from '../../../src/std/index.ts';
-import tgpu, { d } from '../../../src/index.js';
+} from 'typegpu/data';
+import type { v2f, v2h, v2i, v2u, v3f, v3h, v3i, v3u, v4f, v4h, v4i, v4u } from 'typegpu/data';
+import { isCloseTo, mod } from 'typegpu/std';
+import tgpu, { d } from 'typegpu';
 
 describe('mod', () => {
   it('computes modulo of a number and a number', () => {

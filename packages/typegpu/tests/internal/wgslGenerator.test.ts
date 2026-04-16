@@ -1,5 +1,5 @@
 import * as tinyest from 'tinyest';
-import { beforeEach, describe, expect, vi } from 'vitest';
+import { beforeEach, describe, expect } from 'vitest';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';

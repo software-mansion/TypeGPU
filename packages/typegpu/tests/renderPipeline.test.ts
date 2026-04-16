@@ -11,7 +11,7 @@ import tgpu, {
   type TgpuRenderPipeline,
   type TgpuVertexFn,
   type TgpuVertexFnShell,
-} from '../src/index.js';
+} from 'typegpu';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from 'typegpu-testing-utility';
 

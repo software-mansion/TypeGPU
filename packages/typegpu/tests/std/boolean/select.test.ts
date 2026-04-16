@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu, { d } from '../../../src/index.js';
+import tgpu, { d } from 'typegpu';
 import {
   vec2b,
   vec2f,
@@ -16,8 +16,8 @@ import {
   vec4h,
   vec4i,
   vec4u,
-} from '../../../src/data/index.ts';
-import { select } from '../../../src/std/boolean.ts';
+} from 'typegpu/data';
+import { select } from 'typegpu/std';
 
 describe('select', () => {
   it('selects for numbers', () => {

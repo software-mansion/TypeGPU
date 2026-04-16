@@ -22,7 +22,7 @@
     "dev": "DEV=true pnpm run --filter typegpu-docs dev",
     "dev:host": "DEV=true pnpm run --filter typegpu-docs dev --host --mode https",
     "fix": "oxlint -c oxlint.config.ts --fix && oxfmt",
-    "test": "pnpm run test:types && pnpm run test:style && pnpm run test:unit-and-attest && pnpm run test:circular-deps",
+    "test": "pnpm -r --filter=!typegpu-docs run build && pnpm run test:types && pnpm run test:style && TEST_BUILT_CODE=true pnpm run test:unit-and-attest && pnpm run test:circular-deps",
     "test:circular-deps": "pnpm dpdm -T --exit-code circular:1 packages/**/src/index.ts packages/**/src/index.js !packages/**/node_modules",
     "test:types": "pnpm run --filter typegpu-docs transform-overloads && pnpm run -r --parallel test:types",
     "test:style": "oxlint -c oxlint.config.ts --max-warnings=0 --type-aware --report-unused-disable-directives && oxfmt --check",

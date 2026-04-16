@@ -1,5 +1,5 @@
 import { expect } from 'vitest';
-import tgpu, { d, std } from '../../src/index.js';
+import tgpu, { d, std } from 'typegpu';
 import { test } from 'typegpu-testing-utility';
 
 test('should differentiate parameter names from existing declarations', () => {

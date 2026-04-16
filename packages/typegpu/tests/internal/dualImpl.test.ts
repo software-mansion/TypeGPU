@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+// Importing directly from source, since we're testing internals
 import { dualImpl, MissingCpuImplError } from '../../src/core/function/dualImpl.ts';
 import { Void } from '../../src/data/wgslTypes.ts';
 import tgpu from '../../src/index.js';

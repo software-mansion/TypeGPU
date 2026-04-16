@@ -1,9 +1,7 @@
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import { textureSample } from '../../../src/std/texture.ts';
-import { fn } from '../../../src/core/function/tgpuFn.ts';
-import * as d from '../../../src/data/index.ts';
-import { bindGroupLayout } from '../../../src/tgpuBindGroupLayout.ts';
+import tgpu, { d } from 'typegpu';
+import { textureSample } from 'typegpu/std';
 
 describe('textureSample', () => {
   it('does not allow for raw schemas to be passed in', ({ root }) => {
@@ -20,21 +18,21 @@ describe('textureSample', () => {
         .$usage('sampled');
       const sampledView = someTexture.createView(d.texture2d());
 
-      const someLayout = bindGroupLayout({
+      const someLayout = tgpu.bindGroupLayout({
         sampledCube: { texture: d.textureCube() },
       });
 
-      const validFn = fn(
+      const validFn = tgpu.fn(
         [],
         d.vec4f,
       )(() => textureSample(sampledView.$, linSampler.$, d.vec2f(0.5)));
 
-      const validFn2 = fn(
+      const validFn2 = tgpu.fn(
         [],
         d.vec4f,
       )(() => textureSample(someLayout.$.sampledCube, linSampler.$, d.vec3f(0.5)));
 
-      const invalidFn = fn(
+      const invalidFn = tgpu.fn(
         [],
         d.vec4f,
       )(() =>
@@ -42,7 +40,7 @@ describe('textureSample', () => {
         textureSample(d.texture2d(), linSampler, d.vec2f(0.5)),
       );
 
-      const invalidFn2 = fn(
+      const invalidFn2 = tgpu.fn(
         [],
         d.vec4f,
       )(() =>

@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec4f } from '../../src/data/vector.ts';
-import {
-  pack2x16float,
-  pack4x8unorm,
-  unpack2x16float,
-  unpack4x8unorm,
-} from '../../src/std/packing.ts';
+import { vec2f, vec4f } from 'typegpu/data';
+import { pack2x16float, pack4x8unorm, unpack2x16float, unpack4x8unorm } from 'typegpu/std';
 
 describe('packing', () => {
   it('packs and unpacks 4x8 unorm', () => {

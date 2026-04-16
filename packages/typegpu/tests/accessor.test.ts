@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import tgpu, { d, std, type TgpuAccessor } from '../src/index.js';
+import tgpu, { d, std, type TgpuAccessor } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 const RED = d.vec3f(1, 0, 0);

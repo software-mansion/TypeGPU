@@ -1,4 +1,5 @@
 import { describe, expect } from 'vitest';
+// Importing directly from source, since we're testing internals
 import { struct } from '../../src/data/index.ts';
 import tgpu, { d, type TgpuBindGroupLayout } from '../../src/index.js';
 import { getName } from '../../src/shared/meta.ts';
