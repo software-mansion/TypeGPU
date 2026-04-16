@@ -41,7 +41,7 @@ import { accessProp } from './accessProp.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
 import { resolveData } from '../core/resolve/resolveData.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
-import { RefOperator } from '../data/ref.ts';
+import { _ref, RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
 import { UnrollableIterable } from '../core/unroll/tgpuUnroll.ts';
 import { isGenericFn } from '../core/function/tgpuFn.ts';
@@ -635,6 +635,10 @@ ${this.ctx.pre}}`;
           callee.value.op,
           argNodes.map((arg) => this._expression(arg)),
         );
+      }
+
+      if (callee.value === _ref && argNodes[0]) {
+        this.tryMarkModified(argNodes[0]);
       }
 
       if (isGPUCallable(callee.value)) {

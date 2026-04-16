@@ -104,7 +104,7 @@ describe('mutability tracking', () => {
 
         fn item(arg: vec4u) -> u32 {
           var a = arg.x;
-          let b = arg;
+          var b = arg;
           modify((&a), (&b));
           return a;
         }"
