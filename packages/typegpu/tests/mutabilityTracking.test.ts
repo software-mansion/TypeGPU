@@ -5,6 +5,115 @@ import tgpu from '../src/index.js';
 const fnShell = tgpu.fn([d.vec4u], d.u32);
 
 describe('mutability tracking', () => {
+  describe('different nodes', () => {
+    it('leaves unmodified variables as let', () => {
+      const fn = fnShell((arg) => {
+        'use gpu';
+        const a = arg.x;
+        const b = d.vec4u(arg);
+        return a;
+      });
+
+      const resolved = tgpu.resolve([fn]);
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn item(arg: vec4u) -> u32 {
+          let a = arg.x;
+          let b = arg;
+          return a;
+        }"
+      `);
+      expect(resolved).toContain('let a = arg.x');
+      expect(resolved).toContain('let b = arg');
+    });
+
+    it('resolves reassigned variable to var', () => {
+      const fn = fnShell((arg) => {
+        'use gpu';
+        let a = arg.x;
+        const b = d.vec4u(arg);
+
+        a = 1;
+        b.x = 1;
+
+        return a;
+      });
+
+      const resolved = tgpu.resolve([fn]);
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn item(arg: vec4u) -> u32 {
+          var a = arg.x;
+          var b = arg;
+          a = 1u;
+          b.x = 1u;
+          return a;
+        }"
+      `);
+      expect(resolved).toContain('var a = arg.x');
+      expect(resolved).toContain('var b = arg');
+    });
+
+    it('resolves incremented variable to var', () => {
+      const fn = fnShell((arg) => {
+        'use gpu';
+        let a = arg.x;
+        const b = d.vec4u(arg);
+
+        a++;
+        b.x++;
+
+        return a;
+      });
+
+      const resolved = tgpu.resolve([fn]);
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn item(arg: vec4u) -> u32 {
+          var a = arg.x;
+          var b = arg;
+          a++;
+          b.x++;
+          return a;
+        }"
+      `);
+      expect(resolved).toContain('var a = arg.x');
+      expect(resolved).toContain('var b = arg');
+    });
+
+    it('resolves pointed variable to var', () => {
+      const modify = tgpu.fn([d.ptrFn(d.u32), d.ptrFn(d.vec4u)])((num, vec) => {
+        'use gpu';
+        num.$ += 1;
+        vec.$ += 1;
+      });
+
+      const fn = fnShell((arg) => {
+        'use gpu';
+        let a = d.ref(d.u32(arg.x));
+        const b = d.vec4u(arg);
+
+        modify(a, d.ref(b));
+
+        return a.$;
+      });
+
+      const resolved = tgpu.resolve([fn]);
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn modify(num: ptr<function, u32>, vec: ptr<function, vec4u>) {
+          (*num) += 1u;
+          (*vec) += 1;
+        }
+
+        fn item(arg: vec4u) -> u32 {
+          var a = arg.x;
+          let b = arg;
+          modify((&a), (&b));
+          return a;
+        }"
+      `);
+      expect(resolved).toContain('var a = arg.x');
+      expect(resolved).toContain('var b = arg');
+    });
+  });
+
   describe('resolves modified to var', () => {
     it('resolves reassigned primitive let to var', () => {
       const fn = fnShell((arg) => {
@@ -78,7 +187,7 @@ describe('mutability tracking', () => {
       const resolved = tgpu.resolve([fn]);
       expect(resolved).toMatchInlineSnapshot(`
         "fn item(arg: vec4u) -> u32 {
-          let a = arg.x;
+          var a = arg.x;
           a++;
           return a;
         }"

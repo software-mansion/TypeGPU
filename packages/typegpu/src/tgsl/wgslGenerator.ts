@@ -451,6 +451,8 @@ ${this.ctx.pre}}`;
       const argExpr = this._expression(arg);
       const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
 
+      this.tryMarkModified(arg);
+
       // Result of an operation, so not a reference to anything
       return snip(`${argStr}${op}`, argExpr.dataType, /* origin */ 'runtime');
     }
