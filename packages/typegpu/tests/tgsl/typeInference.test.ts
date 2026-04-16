@@ -1,21 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import tgpu, { d, std } from '../../src/index.js';
-import { namespace } from '../../src/core/resolve/namespace.ts';
-import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
-import { CodegenState } from '../../src/types.ts';
-import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
+import { describe, expect, it, vi } from 'vitest';
+import tgpu, { d, std } from 'typegpu';
 
 describe('wgsl generator type inference', () => {
-  let ctx: ResolutionCtxImpl;
-
-  beforeEach(() => {
-    ctx = new ResolutionCtxImpl({
-      namespace: namespace({ names: 'strict' }),
-      shaderGenerator: wgslGenerator,
-    });
-    ctx.pushMode(new CodegenState());
-  });
-
   it('coerces nested structs', () => {
     const Inner = d.struct({ prop: d.vec2f });
     const Outer = d.struct({ inner: Inner });
@@ -129,12 +115,7 @@ describe('wgsl generator type inference', () => {
     const StructArray = d.arrayOf(Struct, 2);
 
     const myFn = tgpu.fn([])(() => {
-      const myStructArray = StructArray([
-        { prop: d.vec2f(1, 2) },
-        {
-          prop: d.vec2f(3, 4),
-        },
-      ]);
+      const myStructArray = StructArray([{ prop: d.vec2f(1, 2) }, { prop: d.vec2f(3, 4) }]);
     });
 
     expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
@@ -233,7 +214,7 @@ describe('wgsl generator type inference', () => {
   });
 
   it('converts float to int implicitly with a warning', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    using warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
 
     const myFn = tgpu.fn(
       [],
@@ -339,16 +320,6 @@ describe('wgsl generator type inference', () => {
 });
 
 describe('wgsl generator js type inference', () => {
-  let ctx: ResolutionCtxImpl;
-
-  beforeEach(() => {
-    ctx = new ResolutionCtxImpl({
-      namespace: namespace({ names: 'strict' }),
-      shaderGenerator: wgslGenerator,
-    });
-    ctx.pushMode(new CodegenState());
-  });
-
   it('coerces external to be an array', () => {
     const arr = [1, 2, 3];
     const Result = d.arrayOf(d.f32, 3);

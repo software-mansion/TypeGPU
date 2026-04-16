@@ -1,22 +1,18 @@
 import * as tinyest from 'tinyest';
-import { beforeEach, describe, expect, vi } from 'vitest';
-import { namespace } from '../../src/core/resolve/namespace.ts';
+import { beforeEach, describe, expect } from 'vitest';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import { snip } from '../../src/data/snippet.ts';
 import { Void, type WgslArray } from '../../src/data/wgslTypes.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import tgpu from '../../src/index.js';
-import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
 import { $internal } from '../../src/shared/symbols.ts';
 import * as std from '../../src/std/index.ts';
 import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
-import { CodegenState } from '../../src/types.ts';
 import { it } from 'typegpu-testing-utility';
 import { ArrayExpression } from '../../src/tgsl/generationHelpers.ts';
 import { extractSnippetFromFn } from '../utils/parseResolved.ts';
-import { UnknownData } from '../../src/tgsl/shaderGenerator_members.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -25,62 +21,34 @@ const lazyV4u = tgpu.lazy(() => d.vec4u(1, 2, 3, 4).mul(numberSlot.$));
 const lazyV2f = tgpu.lazy(() => d.vec2f(1, 2).mul(numberSlot.$));
 
 describe('wgslGenerator', () => {
-  let ctx: ResolutionCtxImpl;
-  beforeEach(() => {
-    ctx = new ResolutionCtxImpl({
-      namespace: namespace({ names: 'strict' }),
-      shaderGenerator: wgslGenerator,
-    });
-    ctx.pushMode(new CodegenState());
-    wgslGenerator.initGenerator(ctx);
-  });
-
   it('creates a simple return statement', () => {
-    const main = () => {
+    function main() {
       'use gpu';
       return true;
-    };
+    }
 
-    const parsedBody = getMetaData(main)?.ast?.body as tinyest.Block;
-
-    expect(JSON.stringify(parsedBody)).toMatchInlineSnapshot(`"[0,[[10,true]]]"`);
-
-    provideCtx(ctx, () => {
-      ctx[$internal].itemStateStack.pushFunctionScope('normal', [], {}, d.bool, {});
-      const gen = wgslGenerator.functionDefinition(parsedBody);
-      expect(gen).toMatchInlineSnapshot(`
-        "{
-          return true;
-        }"
-      `);
-    });
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> bool {
+        return true;
+      }"
+    `);
   });
 
   it('creates a function body', () => {
-    const main = () => {
+    function main() {
       'use gpu';
       let a = 12;
       a += 21;
       return a;
-    };
+    }
 
-    const parsedBody = getMetaData(main)?.ast?.body as tinyest.Block;
-
-    expect(JSON.stringify(parsedBody)).toMatchInlineSnapshot(
-      `"[0,[[12,"a",[5,"12"]],[2,"a","+=",[5,"21"]],[10,"a"]]]"`,
-    );
-
-    provideCtx(ctx, () => {
-      ctx[$internal].itemStateStack.pushFunctionScope('normal', [], {}, d.i32, {});
-      const gen = wgslGenerator.functionDefinition(parsedBody);
-      expect(gen).toMatchInlineSnapshot(`
-        "{
-          var a = 12;
-          a += 21i;
-          return a;
-        }"
-      `);
-    });
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        var a = 12;
+        a += 21i;
+        return a;
+      }"
+    `);
   });
 
   it('creates correct resources for numeric literals', () => {
@@ -97,35 +65,31 @@ describe('wgslGenerator', () => {
       },
     } as const;
 
-    const main = () => {
+    function main() {
       'use gpu';
       const intLiteral = 12;
       const floatLiteral = 12.5;
       const scientificLiteral = 12e10;
       const scientificNegativeExponentLiteral = 1.2e-3;
-    };
+    }
 
-    const parsedBody = getMetaData(main)?.ast?.body as tinyest.Block;
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() {
+        const intLiteral = 12;
+        const floatLiteral = 12.5;
+        const scientificLiteral = 120000000000;
+        const scientificNegativeExponentLiteral = 0.0012;
+      }"
+    `);
 
-    expect(parsedBody).toStrictEqual([
-      NODE.block,
-      Object.entries(literals).map(([key, { value }]) => [
-        NODE.const,
-        key,
-        [NODE.numericLiteral, value],
-      ]),
-    ]);
+    for (const stmt of Object.values(literals)) {
+      const letStatement = stmt as tinyest.Let;
+      const [_, name, numLiteral] = letStatement;
+      const generatedExpr = wgslGenerator._expression(numLiteral as tinyest.Num);
+      const expected = literals[name as keyof typeof literals];
 
-    provideCtx(ctx, () => {
-      for (const stmt of parsedBody[1]) {
-        const letStatement = stmt as tinyest.Let;
-        const [_, name, numLiteral] = letStatement;
-        const generatedExpr = wgslGenerator._expression(numLiteral as tinyest.Num);
-        const expected = literals[name as keyof typeof literals];
-
-        expect(generatedExpr.dataType).toStrictEqual(expected.dataType);
-      }
-    });
+      expect(generatedExpr.dataType).toStrictEqual(expected.dataType);
+    }
   });
 
   it('generates correct resources for member access expressions', ({ root }) => {
