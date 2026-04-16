@@ -133,6 +133,8 @@ class ItemStateStackImpl implements ItemStateStack {
       returnType,
       externalMap,
       reportedReturnTypes: new Set(),
+      placeholderForVariable: new Map(),
+      modifiedVariables: new Set(),
     };
 
     this._stack.push(scope);

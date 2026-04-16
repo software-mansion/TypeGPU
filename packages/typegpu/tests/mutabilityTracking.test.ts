@@ -217,10 +217,11 @@ describe('mutability tracking', () => {
   it('resolves shadowed variables correctly', () => {
     const fn = fnShell((arg) => {
       'use gpu';
-      let a = d.vec4u(arg);
+      const a = d.vec4u(arg);
       {
-        let a = d.vec4u(arg);
+        const a = d.vec4u(arg);
         a.x++;
+        const b = a;
       }
       return a.x;
     });

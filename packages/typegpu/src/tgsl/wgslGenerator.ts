@@ -845,7 +845,20 @@ ${this.ctx.pre}}`;
 
   public functionDefinition(options: FunctionDefinitionOptions): string {
     // Function body
-    const body = this._block(options.body);
+    let body = this._block(options.body);
+    const scope = this.ctx.topFunctionScope;
+    invariant(scope, 'Expected function scope to be present');
+    // TODO: optimize this to one pass
+    body = scope.modifiedVariables.values().reduce((body: string, variable: Snippet) => {
+      const placeholder = scope.placeholderForVariable.get(variable);
+      invariant(
+        placeholder,
+        `Expected placeholder (like #VAR_3#) to be present for ${variable.value}`,
+      );
+      return body.replaceAll(placeholder, 'var');
+    }, body);
+    // TODO: replace with 'let' once we actually report modified variables
+    body = body.replaceAll(/#VAR_[0-9]+#/g, 'var');
 
     // Function header
     const returnType = options.determineReturnType();
@@ -1004,7 +1017,7 @@ ${this.ctx.pre}else ${alternate}`;
     }
 
     if (statement[0] === NODE.let || statement[0] === NODE.const) {
-      let varType: 'var' | 'let' | 'const' = 'var';
+      let varType: 'var' | 'let' | 'const' | undefined;
       const [stmtType, rawId, rawValue] = statement;
       const eq = rawValue !== undefined ? this._expression(rawValue) : undefined;
 
@@ -1108,7 +1121,20 @@ ${this.ctx.pre}else ${alternate}`;
         }
       }
 
+      // TODO: move this inside block
+      if (varType === undefined) {
+        const scope = this.ctx.topFunctionScope;
+        invariant(scope, 'Expected function scope to be present');
+        const index = scope.placeholderForVariable.size;
+        varType = `#VAR_${index}#`;
+      }
       const snippet = this.blockVariable(varType, rawId, concretize(dataType), eq.origin);
+      if (varType?.startsWith('#')) {
+        const scope = this.ctx.topFunctionScope;
+        invariant(scope, 'Expected function scope to be present');
+        scope.placeholderForVariable.set(snippet, varType);
+      }
+
       const rhsSnippet = tryConvertSnippet(this.ctx, eq, dataType, false);
       const rhsStr = this.ctx.resolve(rhsSnippet.value, rhsSnippet.dataType).value;
       return this.emitVarDecl(
