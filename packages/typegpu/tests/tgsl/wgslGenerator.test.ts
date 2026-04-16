@@ -6,7 +6,7 @@ import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import { snip } from '../../src/data/snippet.ts';
 import { Void, type WgslArray } from '../../src/data/wgslTypes.ts';
 import { provideCtx } from '../../src/execMode.ts';
-import tgpu from '../../src/index.js';
+import tgpu from 'typegpu';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
 import { $internal } from '../../src/shared/symbols.ts';
@@ -16,7 +16,6 @@ import { CodegenState } from '../../src/types.ts';
 import { it } from 'typegpu-testing-utility';
 import { ArrayExpression } from '../../src/tgsl/generationHelpers.ts';
 import { extractSnippetFromFn } from '../utils/parseResolved.ts';
-import { UnknownData } from '../../src/tgsl/shaderGenerator_members.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -1086,7 +1085,7 @@ describe('wgslGenerator', () => {
   it('creates intermediate representation for array expression', () => {
     const testFn = () => {
       'use gpu';
-      [d.u32(1), 8, 8, 2];
+      return [d.u32(1), 8, 8, 2];
     };
 
     const snippet = extractSnippetFromFn(testFn);

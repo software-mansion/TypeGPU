@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import * as d from '../src/data/index.ts';
-import tgpu, { type TgpuComputeFn, type TgpuFragmentFn, type TgpuVertexFn } from '../src/index.js';
+import tgpu, { type TgpuComputeFn, type TgpuFragmentFn, type TgpuVertexFn } from 'typegpu';
 import { attest } from '@ark/attest';
 
 describe('entry functions accepting only the allowed subset of builtins', () => {

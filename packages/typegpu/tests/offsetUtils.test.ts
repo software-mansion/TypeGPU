@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { d } from '../src/index.js';
+import { d } from 'typegpu';
 import { sizeOf } from '../src/data/sizeOf.ts';
 
 describe('d.memoryLayoutOf (default)', () => {

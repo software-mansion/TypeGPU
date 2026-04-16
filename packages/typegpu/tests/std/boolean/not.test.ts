@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import { not } from '../../../src/std/boolean.ts';
-import tgpu, { d, std } from '../../../src/index.js';
+import tgpu, { d, std } from 'typegpu';
 
 describe('not', () => {
   it('negates booleans', () => {

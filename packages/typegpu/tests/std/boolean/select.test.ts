@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu, { d } from '../../../src/index.js';
+import tgpu, { d } from 'typegpu';
 import {
   vec2b,
   vec2f,

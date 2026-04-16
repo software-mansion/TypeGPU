@@ -1,6 +1,6 @@
 import { describe, expectTypeOf } from 'vitest';
 import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.js';
+import tgpu from 'typegpu';
 import type { GPUValueOf } from '../src/shared/repr.ts';
 import { it } from 'typegpu-testing-utility';
 

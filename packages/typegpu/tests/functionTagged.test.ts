@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.js';
+import tgpu from 'typegpu';
 
 describe('tagged syntax', () => {
   describe('function', () => {

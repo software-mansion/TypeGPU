@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import type { m3x3f, v2f, v3f, v4f } from '../../../src/data/index.ts';
+import type { m3x3f, v2f, v3f, v4f } from 'typegpu/data';
 import {
   mat2x2f,
   mat3x3f,
@@ -13,10 +13,9 @@ import {
   vec4f,
   vec4i,
   vec4u,
-} from '../../../src/data/index.ts';
-import { add } from '../../../src/std/index.ts';
+} from 'typegpu/data';
+import { add } from 'typegpu/std';
 import { expectDataTypeOf } from '../../utils/parseResolved.ts';
-import { abstractFloat, abstractInt } from '../../../src/data/numeric.ts';
 
 describe('add', () => {
   it('computes sum of two vec2f', () => {
@@ -104,28 +103,28 @@ describe('add', () => {
     it('infers types when adding constants', () => {
       const int_int = () => {
         'use gpu';
-        1 + 2;
+        return 1 + 2;
       };
 
       const float_float = () => {
         'use gpu';
-        1.1 + 2.3;
+        return 1.1 + 2.3;
       };
 
       const int_float = () => {
         'use gpu';
-        1.1 + 2;
+        return 1.1 + 2;
       };
 
       const float_int = () => {
         'use gpu';
-        1 + 2.3;
+        return 1 + 2.3;
       };
 
-      expectDataTypeOf(int_int).toBe(abstractInt);
-      expectDataTypeOf(float_float).toBe(abstractFloat);
-      expectDataTypeOf(int_float).toBe(abstractFloat);
-      expectDataTypeOf(float_int).toBe(abstractFloat);
+      expectDataTypeOf(int_int).toMatchObject({ type: 'abstractInt' });
+      expectDataTypeOf(float_float).toMatchObject({ type: 'abstractFloat' });
+      expectDataTypeOf(int_float).toMatchObject({ type: 'abstractFloat' });
+      expectDataTypeOf(float_int).toMatchObject({ type: 'abstractFloat' });
     });
   });
 });

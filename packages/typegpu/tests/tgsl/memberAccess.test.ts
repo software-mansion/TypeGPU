@@ -1,8 +1,7 @@
 import { describe } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import { expectSnippetOf } from '../utils/parseResolved.ts';
-import { snip } from '../../src/data/snippet.ts';
-import tgpu, { d } from '../../src/index.js';
+import tgpu, { d } from 'typegpu';
 
 describe('Member Access', () => {
   const Boid = d.struct({
@@ -12,13 +11,13 @@ describe('Member Access', () => {
   it('should access member properties of literals', () => {
     expectSnippetOf(() => {
       'use gpu';
-      Boid().pos;
-    }).toStrictEqual(snip('Boid().pos', d.vec3f, 'runtime'));
+      return Boid().pos;
+    }).toStrictEqual(['Boid().pos', d.vec3f, 'runtime']);
 
     expectSnippetOf(() => {
       'use gpu';
-      Boid().pos.xyz;
-    }).toStrictEqual(snip('Boid().pos.xyz', d.vec3f, 'runtime'));
+      return Boid().pos.xyz;
+    }).toStrictEqual(['Boid().pos.xyz', d.vec3f, 'runtime']);
   });
 
   it('should access member properties of externals', () => {
@@ -26,13 +25,13 @@ describe('Member Access', () => {
 
     expectSnippetOf(() => {
       'use gpu';
-      boid.pos;
-    }).toStrictEqual(snip(d.vec3f(1, 2, 3), d.vec3f, 'constant'));
+      return boid.pos;
+    }).toStrictEqual([d.vec3f(1, 2, 3), d.vec3f, 'constant']);
 
     expectSnippetOf(() => {
       'use gpu';
-      boid.pos.zyx;
-    }).toStrictEqual(snip(d.vec3f(3, 2, 1), d.vec3f, 'constant'));
+      return boid.pos.zyx;
+    }).toStrictEqual([d.vec3f(3, 2, 1), d.vec3f, 'constant']);
   });
 
   it('should access member properties of variables', () => {
@@ -40,13 +39,13 @@ describe('Member Access', () => {
 
     expectSnippetOf(() => {
       'use gpu';
-      boidVar.$.pos;
-    }).toStrictEqual(snip('boidVar.pos', d.vec3f, 'private'));
+      return boidVar.$.pos;
+    }).toStrictEqual(['boidVar.pos', d.vec3f, 'private']);
 
     expectSnippetOf(() => {
       'use gpu';
-      boidVar.$.pos.xyz;
-    }).toStrictEqual(snip('boidVar.pos.xyz', d.vec3f, 'runtime')); // < swizzles are new objects
+      return boidVar.$.pos.xyz;
+    }).toStrictEqual(['boidVar.pos.xyz', d.vec3f, 'runtime']); // < swizzles are new objects
   });
 
   it('derefs access to local variables with proper address space', () => {
@@ -56,8 +55,8 @@ describe('Member Access', () => {
       const boid = Boid();
       // Taking a reference that is local to this function
       const boidRef = boid;
-      boidRef.pos;
-    }).toStrictEqual(snip('(*boidRef).pos', d.vec3f, 'this-function'));
+      return boidRef.pos;
+    }).toStrictEqual(['(*boidRef).pos', d.vec3f, 'this-function']);
   });
 
   it('derefs access to storage with proper address space', ({ root }) => {
@@ -68,14 +67,14 @@ describe('Member Access', () => {
       'use gpu';
       // Taking a reference to a storage variable
       const boidRef = boidReadonly.$;
-      boidRef.pos;
-    }).toStrictEqual(snip('(*boidRef).pos', d.vec3f, 'readonly'));
+      return boidRef.pos;
+    }).toStrictEqual(['(*boidRef).pos', d.vec3f, 'readonly']);
 
     expectSnippetOf(() => {
       'use gpu';
       // Taking a reference to a storage variable
       const boidRef = boidMutable.$;
-      boidRef.pos;
-    }).toStrictEqual(snip('(*boidRef).pos', d.vec3f, 'mutable'));
+      return boidRef.pos;
+    }).toStrictEqual(['(*boidRef).pos', d.vec3f, 'mutable']);
   });
 });

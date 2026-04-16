@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect } from 'vitest';
+// Importing directly from source, since we're testing internals
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import * as d from '../../src/data/index.ts';
 import { snip, type Snippet } from '../../src/data/snippet.ts';
