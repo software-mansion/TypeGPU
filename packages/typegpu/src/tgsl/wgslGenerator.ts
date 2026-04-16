@@ -229,7 +229,7 @@ ${this.ctx.pre}}`;
   }
 
   public blockVariable(
-    varType: 'var' | 'let' | 'const',
+    varType: 'var' | 'let' | 'const' | undefined,
     id: string,
     dataType: wgsl.BaseData | UnknownData,
     origin: Origin,
@@ -264,9 +264,13 @@ ${this.ctx.pre}}`;
     return snippet;
   }
 
+  /**
+   * Creates a variable declaration string.
+   * `keyword` may be a placeholder filled in later.
+   */
   protected emitVarDecl(
     pre: string,
-    keyword: 'var' | 'let' | 'const',
+    keyword: string,
     name: string,
     _dataType: wgsl.BaseData | UnknownData,
     rhsStr: string,
@@ -405,6 +409,8 @@ ${this.ctx.pre}}`;
             `'${lhsStr} ${op} ${rhsStr}' is invalid, because non-pointer arguments cannot be mutated.`,
           );
         }
+
+        this.tryMarkModified(lhs);
 
         // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
         if (
@@ -857,8 +863,7 @@ ${this.ctx.pre}}`;
       );
       return body.replaceAll(placeholder, 'var');
     }, body);
-    // TODO: replace with 'let' once we actually report modified variables
-    body = body.replaceAll(/#VAR_[0-9]+#/g, 'var');
+    body = body.replaceAll(/#VAR_[0-9]+#/g, 'let');
 
     // Function header
     const returnType = options.determineReturnType();
@@ -1121,25 +1126,23 @@ ${this.ctx.pre}else ${alternate}`;
         }
       }
 
-      // TODO: move this inside block
-      if (varType === undefined) {
-        const scope = this.ctx.topFunctionScope;
-        invariant(scope, 'Expected function scope to be present');
-        const index = scope.placeholderForVariable.size;
-        varType = `#VAR_${index}#`;
-      }
       const snippet = this.blockVariable(varType, rawId, concretize(dataType), eq.origin);
-      if (varType?.startsWith('#')) {
-        const scope = this.ctx.topFunctionScope;
-        invariant(scope, 'Expected function scope to be present');
-        scope.placeholderForVariable.set(snippet, varType);
-      }
-
       const rhsSnippet = tryConvertSnippet(this.ctx, eq, dataType, false);
       const rhsStr = this.ctx.resolve(rhsSnippet.value, rhsSnippet.dataType).value;
+
+      let emittedVarType: string | undefined = varType;
+      if (emittedVarType === undefined) {
+        const scope = this.ctx.topFunctionScope;
+        const snippet = this.ctx.getById(rawId);
+        invariant(scope, `Expected function scope to be present for ${rawId}`);
+        invariant(snippet, `Expected snippet to be present for ${rawId}`);
+        emittedVarType = `#VAR_${scope.placeholderForVariable.size}#`;
+        scope.placeholderForVariable.set(snippet, emittedVarType);
+      }
+
       return this.emitVarDecl(
         this.ctx.pre,
-        varType,
+        emittedVarType,
         snippet.value as string,
         concretize(dataType),
         rhsStr,
@@ -1317,6 +1320,30 @@ ${this.ctx.pre}else ${alternate}`;
     // oxlint-disable-next-line typescript/no-base-to-string
     return resolved ? `${this.ctx.pre}${resolved};` : '';
   }
+
+  /**
+   * Attempts a member access lookup to mark a variable as modified.
+   * @example
+   * // given `let a; a = 1;`
+   * tryMarkModified('a') // `a` is marked in the function scope
+   *
+   * // given `const obj; obj.prop = 1;`
+   * tryMarkModified('obj.prop') // `obj` is marked in the function scope
+   *
+   * // given `this.buffer.$;`
+   * tryMarkModified('this.buffer.$') // `this` is not marked, since there is no placeholder for it
+   */
+  private tryMarkModified(expr: tinyest.Expression) {
+    const maybeObject = extractObject(expr);
+    if (maybeObject !== undefined) {
+      const snippet = this.ctx.getById(maybeObject);
+      const scope = this.ctx.topFunctionScope;
+      if (snippet && scope && scope.placeholderForVariable.has(snippet)) {
+        console.log(`Adding ${maybeObject} (${snippet.value}) to modified variables.`);
+        this.ctx.topFunctionScope?.modifiedVariables.add(snippet);
+      }
+    }
+  }
 }
 
 function assertExhaustive(value: never): never {
@@ -1341,6 +1368,16 @@ function blockifySingleStatement(statement: tinyest.Statement): tinyest.Block {
   return typeof statement !== 'object' || statement[0] !== NODE.block
     ? [NODE.block, [statement]]
     : statement;
+}
+
+function extractObject(expr: tinyest.Expression): string | undefined {
+  let object = expr;
+  while (Array.isArray(object) && object[0] === NODE.memberAccess) {
+    object = object[1];
+  }
+  if (typeof object === 'string') {
+    return object;
+  }
 }
 
 const wgslGenerator: WgslGenerator = new WgslGenerator();

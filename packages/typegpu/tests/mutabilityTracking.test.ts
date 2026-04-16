@@ -78,7 +78,7 @@ describe('mutability tracking', () => {
       const resolved = tgpu.resolve([fn]);
       expect(resolved).toMatchInlineSnapshot(`
         "fn item(arg: vec4u) -> u32 {
-          var a = arg.x;
+          let a = arg.x;
           a++;
           return a;
         }"
@@ -172,7 +172,7 @@ describe('mutability tracking', () => {
       const resolved = tgpu.resolve([fn]);
       expect(resolved).toMatchInlineSnapshot(`
         "fn item(arg: vec4u) -> u32 {
-          var a = arg.x;
+          let a = arg.x;
           return a;
         }"
       `);
@@ -189,7 +189,7 @@ describe('mutability tracking', () => {
       const resolved = tgpu.resolve([fn]);
       expect(resolved).toMatchInlineSnapshot(`
         "fn item(arg: vec4u) -> u32 {
-          var a = arg;
+          let a = arg;
           return a.x;
         }"
       `);
@@ -206,7 +206,7 @@ describe('mutability tracking', () => {
       const resolved = tgpu.resolve([fn]);
       expect(resolved).toMatchInlineSnapshot(`
         "fn item(arg: vec4u) -> u32 {
-          var a = arg;
+          let a = arg;
           return a.x;
         }"
       `);
@@ -220,7 +220,7 @@ describe('mutability tracking', () => {
       const a = d.vec4u(arg);
       {
         const a = d.vec4u(arg);
-        a.x++;
+        a.x = 2;
         const b = a;
       }
       return a.x;
@@ -229,16 +229,17 @@ describe('mutability tracking', () => {
     const resolved = tgpu.resolve([fn]);
     expect(resolved).toMatchInlineSnapshot(`
       "fn item(arg: vec4u) -> u32 {
-        var a = arg;
+        let a = arg;
         {
           var a_1 = arg;
-          a_1.x++;
+          a_1.x = 2u;
+          let b = (&a_1);
         }
         return a.x;
       }"
     `);
     expect(resolved).toContain('let a = arg');
-    expect(resolved).toContain('var a = arg');
+    expect(resolved).toContain('var a_1 = arg');
   });
 
   describe('references', () => {
@@ -291,7 +292,7 @@ describe('mutability tracking', () => {
         }
 
         fn fn_1() {
-          var struct_1 = Struct();
+          let struct_1 = Struct();
           let prop = (&struct_1.prop);
         }"
       `);
@@ -313,7 +314,7 @@ describe('mutability tracking', () => {
         }
 
         fn fn_1() -> vec4f {
-          var struct_1 = Struct();
+          let struct_1 = Struct();
           return struct_1.prop;
         }"
       `);
