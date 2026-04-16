@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TgpuVar, VariableScope } from '../src/core/variable/tgpuVariable.ts';
-import tgpu, { d, std } from '../src/index.js';
+import tgpu, { d, std } from 'typegpu';
 
 describe('tgpu.privateVar|tgpu.workgroupVar', () => {
   it('should inject variable declaration when used in functions', () => {

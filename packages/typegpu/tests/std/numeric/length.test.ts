@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f, vec4f } from '../../../src/data/index.ts';
-import { length } from '../../../src/std/index.ts';
+import { vec2f, vec3f, vec4f } from 'typegpu/data';
+import { length } from 'typegpu/std';
 
 describe('length', () => {
   it('computes length of vec2f', () => {

@@ -1,14 +1,11 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import { textureGather } from '../../../src/std/texture.ts';
-import tgpu from '../../../src/index.js';
-import * as d from '../../../src/data/index.ts';
-import { bindGroupLayout } from '../../../src/tgpuBindGroupLayout.ts';
-import { resolve } from '../../../src/core/resolve/tgpuResolve.ts';
+import { textureGather } from 'typegpu/std';
+import tgpu, { d } from 'typegpu';
 
 describe('textureGather', () => {
   it('Has correct signatures', () => {
-    const testLayout = bindGroupLayout({
+    const testLayout = tgpu.bindGroupLayout({
       tex2d: { texture: d.texture2d() },
       tex2d_u32: { texture: d.texture2d(d.u32) },
       tex2d_array: { texture: d.texture2dArray(d.i32) },
@@ -66,7 +63,7 @@ describe('textureGather', () => {
       }
     });
 
-    expect(resolve([testFn])).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var tex2d: texture_2d<f32>;
 
       @group(0) @binding(6) var sampler_1: sampler;

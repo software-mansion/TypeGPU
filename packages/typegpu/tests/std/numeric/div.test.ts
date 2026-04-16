@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import tgpu, { d } from '../../../src/index.js';
-import { div, isCloseTo } from '../../../src/std/index.ts';
+import tgpu, { d } from 'typegpu';
+import { div, isCloseTo } from 'typegpu/std';
 
 describe('div', () => {
   it('divides numbers just like js would', () => {

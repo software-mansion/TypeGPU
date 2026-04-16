@@ -3,7 +3,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { InferIO, InheritArgNames, IOLayout } from '../src/core/function/fnTypes.ts';
 import * as d from '../src/data/index.ts';
 import { Void } from '../src/data/wgslTypes.ts';
-import tgpu, { type TgpuFn, type TgpuFnShell } from '../src/index.js';
+import tgpu, { type TgpuFn, type TgpuFnShell } from 'typegpu';
 import type { Prettify } from '../src/shared/utilityTypes.ts';
 
 const empty = tgpu.fn([])`() {

@@ -3,7 +3,7 @@ import { describe, expect, expectTypeOf, vi } from 'vitest';
 import * as common from '../src/common/index.ts';
 import * as d from '../src/data/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
-import type { ValidateBufferSchema, ValidUsagesFor } from '../src/index.js';
+import type { ValidateBufferSchema, ValidUsagesFor } from 'typegpu';
 import { getName } from '../src/shared/meta.ts';
 import type { InferPatch, IsValidBufferSchema, IsValidUniformSchema } from '../src/shared/repr.ts';
 import type { TypedArray } from '../src/shared/utilityTypes.ts';

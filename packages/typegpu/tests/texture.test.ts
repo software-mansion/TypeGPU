@@ -5,7 +5,7 @@ import type { ExperimentalTgpuRoot } from '../src/core/root/rootTypes.ts';
 import { it } from 'typegpu-testing-utility';
 import * as d from '../src/data/index.ts';
 import { attest } from '@ark/attest';
-import tgpu from '../src/index.js';
+import tgpu from 'typegpu';
 import { getName } from '../src/shared/meta.ts';
 
 describe('TgpuTexture', () => {

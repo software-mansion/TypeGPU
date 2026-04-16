@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+// Importing directly from source, since we're testing internals
 import { arrayOf } from '../../src/data/array.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../../src/data/matrix.ts';
 import { abstractFloat, abstractInt, bool, f16, f32, i32, u32 } from '../../src/data/numeric.ts';

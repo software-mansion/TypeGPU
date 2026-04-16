@@ -1,5 +1,5 @@
 import { describe, expect, vi } from 'vitest';
-import tgpu, { d } from '../src/index.js';
+import tgpu, { d } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('tgpu.namespace', () => {
