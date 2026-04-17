@@ -1,4 +1,4 @@
-import { isValidProp } from '../nameRegistry.ts';
+import { isValidProp } from '../nameUtils.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
