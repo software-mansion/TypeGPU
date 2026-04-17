@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.js';
+import tgpu, { std } from '../src/index.js';
 
 const fnShell = tgpu.fn([d.vec4u], d.u32);
 
@@ -122,6 +122,7 @@ describe('mutability tracking', () => {
         let a = arg.x;
         if (a < 1) {
           a = 1;
+        } else {
         }
         return a;
       });
@@ -273,6 +274,65 @@ describe('mutability tracking', () => {
       `);
       expect(resolved).toContain('var a =');
     });
+
+    it('resolves for loops', () => {
+      const fn = fnShell((arg) => {
+        'use gpu';
+
+        for (const i of std.range(3)) {
+        }
+        for (let j = 0; j < 3; j++) {}
+
+        return 0;
+      });
+
+      const resolved = tgpu.resolve([fn]);
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn item(arg: vec4u) -> u32 {
+          for (var i = 0i; i < 3i; i += 1i) {
+
+          }
+          for (var j = 0; (j < 3i); j++) {
+
+          }
+          return 0u;
+        }"
+      `);
+    });
+
+    it('resolves deeply nested struct modification', () => {
+      const Struct = d.struct({
+        a: d.arrayOf(d.struct({ b: d.struct({ c: d.vec4f }) }), 4),
+      });
+      const fn = fnShell((arg) => {
+        'use gpu';
+        const struct = Struct();
+        struct.a[0]!.b.c.x += 1;
+        return 0;
+      });
+
+      const resolved = tgpu.resolve([fn]);
+      expect(resolved).toMatchInlineSnapshot(`
+        "struct b {
+          c: vec4f,
+        }
+
+        struct item_1 {
+          b: b,
+        }
+
+        struct Struct {
+          a: array<item_1, 4>,
+        }
+
+        fn item(arg: vec4u) -> u32 {
+          var struct_1 = Struct();
+          struct_1.a[0i].b.c.x += 1f;
+          return 0u;
+        }"
+      `);
+      expect(resolved).toContain('var struct_1 = Struct()');
+    });
   });
 
   it('resolves shadowed variables correctly', () => {
@@ -336,7 +396,7 @@ describe('mutability tracking', () => {
       expect(resolved).toContain('var a = vec4u()');
     });
 
-    it('resolves pointed variable to var', () => {
+    it('resolves pointed variable', () => {
       const modify = tgpu.fn([d.ptrFn(d.u32), d.ptrFn(d.vec4u)])((num, vec) => {
         'use gpu';
         num.$ += 1;
@@ -369,6 +429,42 @@ describe('mutability tracking', () => {
       `);
       expect(resolved).toContain('var a = arg.x');
       expect(resolved).toContain('var b = arg');
+    });
+
+    it('resolves d.ref to a struct prop', () => {
+      const Struct = d.struct({ prop: d.vec4u });
+
+      const modify = tgpu.fn([d.ptrFn(d.vec4u)])((vec) => {
+        'use gpu';
+        vec.$ += 1;
+      });
+
+      const fn = fnShell((arg) => {
+        'use gpu';
+        const struct = Struct();
+
+        modify(d.ref(struct.prop));
+
+        return struct.prop.x;
+      });
+
+      const resolved = tgpu.resolve([fn]);
+      expect(resolved).toMatchInlineSnapshot(`
+        "struct Struct {
+          prop: vec4u,
+        }
+
+        fn modify(vec: ptr<function, vec4u>) {
+          (*vec) += 1;
+        }
+
+        fn item(arg: vec4u) -> u32 {
+          var struct_1 = Struct();
+          modify((&struct_1.prop));
+          return struct_1.prop.x;
+        }"
+      `);
+      expect(resolved).toContain('var struct_1 = Struct()');
     });
 
     it('resolves a referenced reference', () => {
