@@ -101,7 +101,7 @@ describe('smoky triangle', () => {
       @group(0) @binding(1) var<storage, read> memoryBuffer: array<vec3f, 32768>;
 
       fn getJunctionGradient(pos: vec3i) -> vec3f {
-        var size_i = vec3i(32);
+        let size_i = vec3i(32);
         let x = (((pos.x % size_i.x) + size_i.x) % size_i.x);
         let y = (((pos.y % size_i.y) + size_i.y) % size_i.y);
         let z = (((pos.z % size_i.z) + size_i.z) % size_i.z);
@@ -109,8 +109,8 @@ describe('smoky triangle', () => {
       }
 
       fn dotProdGrid(pos: vec3f, junction: vec3f) -> f32 {
-        var relative = (pos - junction);
-        var gridVector = getJunctionGradient(vec3i(junction));
+        let relative = (pos - junction);
+        let gridVector = getJunctionGradient(vec3i(junction));
         return dot(relative, gridVector);
       }
 
@@ -119,7 +119,7 @@ describe('smoky triangle', () => {
       }
 
       fn sample(pos: vec3f) -> f32 {
-        var minJunction = floor(pos);
+        let minJunction = floor(pos);
         let xyz = dotProdGrid(pos, minJunction);
         let xyZ = dotProdGrid(pos, (minJunction + vec3f(0, 0, 1)));
         let xYz = dotProdGrid(pos, (minJunction + vec3f(0, 1, 0)));
@@ -128,8 +128,8 @@ describe('smoky triangle', () => {
         let XyZ = dotProdGrid(pos, (minJunction + vec3f(1, 0, 1)));
         let XYz = dotProdGrid(pos, (minJunction + vec3f(1, 1, 0)));
         let XYZ = dotProdGrid(pos, (minJunction + vec3f(1)));
-        var partial = (pos - minJunction);
-        var smoothPartial = quinticInterpolation(partial);
+        let partial = (pos - minJunction);
+        let smoothPartial = quinticInterpolation(partial);
         let xy = mix(xyz, xyZ, smoothPartial.z);
         let xY = mix(xYz, xYZ, smoothPartial.z);
         let Xy = mix(Xyz, XyZ, smoothPartial.z);
@@ -164,10 +164,10 @@ describe('smoky triangle', () => {
       @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
         let params = (&paramsUniform);
         let t = ((*params).time * 0.1f);
-        var ouv = ((_arg_0.uv * 5f) + vec2f(0f, -(t)));
+        let ouv = ((_arg_0.uv * 5f) + vec2f(0f, -(t)));
         var off = (vec2f(sample(vec3f(ouv, t)), (sample(vec3f((ouv * 2f), (t + 10f))) * 0.5f)) + -0.1f);
         off = tanhVec((off * (*params).sharpness));
-        var p = (_arg_0.uv + (off * (*params).distortion));
+        let p = (_arg_0.uv + (off * (*params).distortion));
         var factor = 0f;
         if (((*params).polarCoords == 1u)) {
           factor = length(((p - vec2f(0.5, 0.30000001192092896)) * 2f));

@@ -41,7 +41,7 @@ describe('two boxes example', () => {
       }
 
       @vertex fn vertex(@location(0) _arg_position: vec4f, @location(1) _arg_color: vec4f) -> vertex_Output {
-        var pos = (camera.projection * (camera.view * (transform.model * _arg_position)));
+        let pos = (camera.projection * (camera.view * (transform.model * _arg_position)));
         return vertex_Output(pos, _arg_color);
       }
 

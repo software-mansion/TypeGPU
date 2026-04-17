@@ -66,8 +66,8 @@ describe('uniformity test example', () => {
       }
 
       @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
-        var uv = (((_arg_0.uv + 1f) / 2f) * vec2f(canvasRatioUniform, 1f));
-        var gridedUV = floor((uv * gridSizeUniform));
+        let uv = (((_arg_0.uv + 1f) / 2f) * vec2f(canvasRatioUniform, 1f));
+        let gridedUV = floor((uv * gridSizeUniform));
         randSeed2(gridedUV);
         return vec4f(vec3f(randFloat01()), 1f);
       }
@@ -103,8 +103,8 @@ describe('uniformity test example', () => {
       }
 
       @fragment fn fragmentShader_1(_arg_0: fragmentShader_Input_1) -> @location(0) vec4f {
-        var uv = (((_arg_0.uv + 1f) / 2f) * vec2f(canvasRatioUniform, 1f));
-        var gridedUV = floor((uv * gridSizeUniform));
+        let uv = (((_arg_0.uv + 1f) / 2f) * vec2f(canvasRatioUniform, 1f));
+        let gridedUV = floor((uv * gridSizeUniform));
         randSeed2_1(gridedUV);
         return vec4f(vec3f(randFloat01_1()), 1f);
       }"
