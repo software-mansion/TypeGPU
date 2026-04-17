@@ -1349,7 +1349,6 @@ ${this.ctx.pre}else ${alternate}`;
       const snippet = this.ctx.getById(maybeObject);
       const scope = this.ctx.topFunctionScope;
       if (snippet && scope && scope.placeholderForVariable.has(snippet)) {
-        console.log(`Adding ${maybeObject} (${snippet.value}) to modified variables.`);
         this.ctx.topFunctionScope?.modifiedVariables.add(snippet);
       }
     }
