@@ -141,6 +141,11 @@ The first two can be harder to understand. Their behavior in each environment is
 These probes are intended for environment-specific implementation choices.
 They do not report whether a function might eventually run on a GPU.
 
+:::note
+When [@typegpu/gl](/TypeGPU/ecosystem/typegpu-gl) is used, `getTargetShaderLanguage()` will return `'glsl'` instead of `'wgsl'`,
+allowing functions to branch based on what language is being generated.
+:::
+
 ## Raw WGSL declarations
 
 `tgpu['~unstable'].declare(source)` adds a declaration to generated WGSL whenever a resolving object depends on it.
