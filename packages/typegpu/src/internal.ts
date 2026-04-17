@@ -4,9 +4,9 @@ export { abstractInt, abstractFloat } from './data/numeric.ts';
 export { makeResolvable } from './tgsl/makeResolvable.ts';
 export { makeDereferenceable } from './tgsl/makeDereferenceable.ts';
 export { UnknownData } from './data/dataTypes.ts';
-export { getName } from './shared/meta.ts';
+export { getName, setName } from './shared/meta.ts';
 export { WgslGenerator } from './tgsl/wgslGenerator.ts';
-export { snip } from './data/snippet.ts';
+export { snip, withValue, withDataType, withSideEffects } from './data/snippet.ts';
 export { stringifyNode } from './shared/tseynit.ts';
 export { dualImpl } from './core/function/dualImpl.ts';
 export {
