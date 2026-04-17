@@ -602,7 +602,7 @@ export type mBaseForVec<T extends vecBase> = T extends v2f
  * Boolean schema representing a single WGSL bool value.
  * Cannot be used inside buffers as it is not host-shareable.
  */
-export interface Bool extends BaseData, DualFn<(v?: number | boolean) => boolean> {
+export interface Bool extends BaseData, DualFn<(v?: unknown) => boolean> {
   readonly type: 'bool';
 
   // Type-tokens, not available at runtime
