@@ -1100,6 +1100,7 @@ ${this.ctx.pre}else ${alternate}`;
             // If what we're assigning is something preceded by `&`, then it's a value
             // created using `d.ref()`. Otherwise, it's an implicit pointer
             dataType = implicitFrom(dataType as wgsl.Ptr);
+            this.tryMarkModified(rawValue);
           }
         }
       } else {
@@ -1339,7 +1340,10 @@ ${this.ctx.pre}else ${alternate}`;
    * // given `this.buffer.$;`
    * tryMarkModified('this.buffer.$') // `this` is not marked, since there is no placeholder for it
    */
-  private tryMarkModified(expr: tinyest.Expression) {
+  private tryMarkModified(expr?: tinyest.Expression) {
+    if (!expr) {
+      return;
+    }
     const maybeObject = extractObject(expr);
     if (maybeObject !== undefined) {
       const snippet = this.ctx.getById(maybeObject);
@@ -1378,7 +1382,10 @@ function blockifySingleStatement(statement: tinyest.Statement): tinyest.Block {
 
 function extractObject(expr: tinyest.Expression): string | undefined {
   let object = expr;
-  while (Array.isArray(object) && object[0] === NODE.memberAccess) {
+  while (
+    Array.isArray(object) &&
+    (object[0] === NODE.memberAccess || object[0] === NODE.indexAccess)
+  ) {
     object = object[1];
   }
   if (typeof object === 'string') {

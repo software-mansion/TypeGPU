@@ -78,39 +78,25 @@ describe('mutability tracking', () => {
       expect(resolved).toContain('var b = arg');
     });
 
-    it('resolves pointed variable to var', () => {
-      const modify = tgpu.fn([d.ptrFn(d.u32), d.ptrFn(d.vec4u)])((num, vec) => {
-        'use gpu';
-        num.$ += 1;
-        vec.$ += 1;
-      });
-
+    it('resolves index-accessed variable to var', () => {
       const fn = fnShell((arg) => {
         'use gpu';
-        let a = d.ref(d.u32(arg.x));
-        const b = d.vec4u(arg);
+        const a = [1, 2, 3];
 
-        modify(a, d.ref(b));
+        a[0] = 1;
 
-        return a.$;
+        return a[0];
       });
 
       const resolved = tgpu.resolve([fn]);
       expect(resolved).toMatchInlineSnapshot(`
-        "fn modify(num: ptr<function, u32>, vec: ptr<function, vec4u>) {
-          (*num) += 1u;
-          (*vec) += 1;
-        }
-
-        fn item(arg: vec4u) -> u32 {
-          var a = arg.x;
-          var b = arg;
-          modify((&a), (&b));
-          return a;
+        "fn item(arg: vec4u) -> u32 {
+          var a = array<i32, 3>(1, 2, 3);
+          a[0i] = 1i;
+          return u32(a[0i]);
         }"
       `);
-      expect(resolved).toContain('var a = arg.x');
-      expect(resolved).toContain('var b = arg');
+      expect(resolved).toContain('var a =');
     });
   });
 
@@ -386,6 +372,41 @@ describe('mutability tracking', () => {
       expect(resolved).toContain('var a = vec4u()');
     });
 
+    it('resolves pointed variable to var', () => {
+      const modify = tgpu.fn([d.ptrFn(d.u32), d.ptrFn(d.vec4u)])((num, vec) => {
+        'use gpu';
+        num.$ += 1;
+        vec.$ += 1;
+      });
+
+      const fn = fnShell((arg) => {
+        'use gpu';
+        let a = d.ref(d.u32(arg.x));
+        const b = d.vec4u(arg);
+
+        modify(a, d.ref(b));
+
+        return a.$;
+      });
+
+      const resolved = tgpu.resolve([fn]);
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn modify(num: ptr<function, u32>, vec: ptr<function, vec4u>) {
+          (*num) += 1u;
+          (*vec) += 1;
+        }
+
+        fn item(arg: vec4u) -> u32 {
+          var a = arg.x;
+          var b = arg;
+          modify((&a), (&b));
+          return a;
+        }"
+      `);
+      expect(resolved).toContain('var a = arg.x');
+      expect(resolved).toContain('var b = arg');
+    });
+
     it('resolves a struct to var when its prop is referenced', () => {
       const Struct = d.struct({ prop: d.vec4f });
       const fn = () => {
@@ -401,7 +422,7 @@ describe('mutability tracking', () => {
         }
 
         fn fn_1() {
-          let struct_1 = Struct();
+          var struct_1 = Struct();
           let prop = (&struct_1.prop);
         }"
       `);
