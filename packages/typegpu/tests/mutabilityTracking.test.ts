@@ -134,6 +134,9 @@ describe('mutability tracking', () => {
           if ((a < 1u)) {
             a = 1u;
           }
+          else {
+
+          }
           return a;
         }"
       `);
@@ -289,7 +292,7 @@ describe('mutability tracking', () => {
       const resolved = tgpu.resolve([fn]);
       expect(resolved).toMatchInlineSnapshot(`
         "fn item(arg: vec4u) -> u32 {
-          for (var i = 0i; i < 3i; i += 1i) {
+          for (var i = 0u; i < 3u; i += 1u) {
 
           }
           for (var j = 0; (j < 3i); j++) {
@@ -504,6 +507,49 @@ describe('mutability tracking', () => {
         }"
       `);
       expect(resolved).toContain('var struct_1 = Struct()');
+    });
+
+    it('resolves an array with its element referenced', () => {
+      const fn = fnShell((arg) => {
+        'use gpu';
+        const t = [d.vec2u()];
+        const e = t[0]!;
+        return e.x;
+      });
+
+      const resolved = tgpu.resolve([fn]);
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn item(arg: vec4u) -> u32 {
+          var t = array<vec2u, 1>(vec2u());
+          let e = (&t[0i]);
+          return (*e).x;
+        }"
+      `);
+      expect(resolved).toContain('var t = ');
+    });
+
+    it('resolves the weird unroll case', () => {
+      const fn = fnShell((arg) => {
+        'use gpu';
+        const a = d.vec2u();
+        for (const e of tgpu.unroll([a])) {
+          a.x += 1;
+        }
+        return 0;
+      });
+
+      const resolved = tgpu.resolve([fn]);
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn item(arg: vec4u) -> u32 {
+          var a = vec2u();
+          // unrolled iteration #0
+          {
+            a.x += 1u;
+          }
+          return 0u;
+        }"
+      `);
+      expect(resolved).toContain('var a = ');
     });
 
     it('resolves a struct when its prop is only read', () => {

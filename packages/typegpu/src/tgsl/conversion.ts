@@ -227,6 +227,10 @@ function applyActionToSnippet(
   targetType: BaseData,
 ): Snippet {
   if (action.action === 'none') {
+    if (targetType === snippet.dataType) {
+      return snippet;
+    }
+
     return snip(
       snippet.value,
       targetType,
