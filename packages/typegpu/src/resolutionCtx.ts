@@ -419,7 +419,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   isIdentifierTaken(name: string): boolean {
     return (
       this.#namespaceInternal.takenGlobalIdentifiers.has(name) ||
-      !!this._itemStateStack.isIdentifierTakenLocally(name)
+      this._itemStateStack.isIdentifierTakenLocally(name)
     );
   }
 
