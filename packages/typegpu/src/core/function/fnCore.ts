@@ -206,8 +206,10 @@ export function createFnCore(
 
       // generate wgsl string
 
-      const { code, returnType: actualReturnType } = ctx.fnToWgsl({
+      const { code, returnType: actualReturnType } = ctx.resolveFunction({
         functionType,
+        name: id,
+        workgroupSize,
         argTypes,
         entryInput,
         params: ast.params,
@@ -216,16 +218,7 @@ export function createFnCore(
         externalMap,
       });
 
-      let attributes = '';
-      if (functionType === 'compute') {
-        attributes = `@compute @workgroup_size(${workgroupSize?.join(', ')}) `;
-      } else if (functionType === 'vertex') {
-        attributes = `@vertex `;
-      } else if (functionType === 'fragment') {
-        attributes = `@fragment `;
-      }
-
-      ctx.addDeclaration(`${attributes}fn ${id}${code}`);
+      ctx.addDeclaration(code);
 
       return snip(id, actualReturnType, /* origin */ 'runtime');
     },
