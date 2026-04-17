@@ -59,10 +59,10 @@ describe('confetti example', () => {
 
       struct VertexIn {
         @location(0) tilt: f32,
-        @location(1) angle: f32,
-        @location(2) color: vec4f,
-        @location(3) center: vec2f,
         @builtin(vertex_index) vertexIndex: u32,
+        @location(1) angle: f32,
+        @location(2) center: vec2f,
+        @location(3) color: vec4f,
       }
 
       @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {

@@ -51,6 +51,8 @@ import { mathToStd } from './math.ts';
 import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
+import type { FunctionDefinitionOptions } from './shaderGenerator_members.ts';
+import { getAttributesString } from '../data/attributes.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -887,8 +889,27 @@ ${this.ctx.pre}}`;
     assertExhaustive(expression);
   }
 
-  public functionDefinition(body: tinyest.Block): string {
-    return this._block(body);
+  public functionDefinition(options: FunctionDefinitionOptions): string {
+    // Function body
+    const body = this._block(options.body);
+
+    // Function header
+    const returnType = options.determineReturnType();
+
+    const argList = options.args
+      // Stripping out unused arguments in entry functions
+      .filter((arg) => arg.used || options.functionType === 'normal')
+      .map((arg) => {
+        return `${getAttributesString(arg.decoratedType)}${arg.name}: ${this.ctx.resolve(arg.decoratedType).value}`;
+      })
+      .join(', ');
+
+    const head =
+      returnType.type !== 'void'
+        ? `(${argList}) -> ${getAttributesString(returnType)}${this.ctx.resolve(returnType).value} `
+        : `(${argList}) `;
+
+    return `${head}${body}`;
   }
 
   /**

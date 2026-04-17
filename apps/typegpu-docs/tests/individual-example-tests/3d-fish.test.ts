@@ -305,15 +305,6 @@ describe('3d fish example', () => {
         return vertexShader_Output(worldPosition.xyz, worldNormal, canvasPosition, (*currentModelData).variant, _arg_textureUV, (*currentModelData).applySeaFog, (*currentModelData).applySeaDesaturation);
       }
 
-      struct fragmentShader_Input {
-        @location(0) worldPosition: vec3f,
-        @location(1) worldNormal: vec3f,
-        @location(2) variant: f32,
-        @location(3) textureUV: vec2f,
-        @location(4) @interpolate(flat) applySeaFog: u32,
-        @location(5) @interpolate(flat) applySeaDesaturation: u32,
-      }
-
       @group(0) @binding(1) var modelTexture: texture_2d<f32>;
 
       @group(0) @binding(3) var sampler_1: sampler;
@@ -416,6 +407,15 @@ describe('3d fish example', () => {
           }
         }
         return vec3f(r, g, b);
+      }
+
+      struct fragmentShader_Input {
+        @location(0) worldPosition: vec3f,
+        @location(1) worldNormal: vec3f,
+        @location(2) variant: f32,
+        @location(3) textureUV: vec2f,
+        @location(4) @interpolate(flat) applySeaFog: u32,
+        @location(5) @interpolate(flat) applySeaDesaturation: u32,
       }
 
       @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {

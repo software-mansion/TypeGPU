@@ -54,11 +54,6 @@ describe('phong reflection example', () => {
         return vertexShader_Output(_arg_modelPosition, _arg_modelNormal, canvasPosition);
       }
 
-      struct fragmentShader_Input {
-        @location(0) worldPosition: vec3f,
-        @location(1) worldNormal: vec3f,
-      }
-
       struct ExampleControls {
         lightColor: vec3f,
         lightDirection: vec3f,
@@ -68,6 +63,11 @@ describe('phong reflection example', () => {
       }
 
       @group(0) @binding(1) var<uniform> exampleControlsUniform: ExampleControls;
+
+      struct fragmentShader_Input {
+        @location(0) worldPosition: vec3f,
+        @location(1) worldNormal: vec3f,
+      }
 
       @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
         var lightColor = normalize(exampleControlsUniform.lightColor);
