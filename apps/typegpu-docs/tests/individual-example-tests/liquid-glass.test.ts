@@ -83,7 +83,7 @@ describe('liquid-glass example', () => {
       @group(0) @binding(1) var<uniform> paramsUniform: Params;
 
       fn sdRoundedBox2d(point: vec2f, size: vec2f, cornerRadius: f32) -> f32 {
-        var d = ((abs(point) - size) + vec2f(cornerRadius));
+        let d = ((abs(point) - size) + vec2f(cornerRadius));
         return ((length(max(d, vec2f())) + min(max(d.x, d.y), 0f)) - cornerRadius);
       }
 
@@ -108,17 +108,17 @@ describe('liquid-glass example', () => {
         var samples = array<vec3f, 3>();
         // unrolled iteration #0
         {
-          var channelOffset = ((dir * -1f) * offset);
+          let channelOffset = ((dir * -1f) * offset);
           samples[0i] = textureSampleBias(tex, sampler_2, (uv - channelOffset), blur).rgb;
         }
         // unrolled iteration #1
         {
-          var channelOffset = ((dir * 0f) * offset);
+          let channelOffset = ((dir * 0f) * offset);
           samples[1i] = textureSampleBias(tex, sampler_2, (uv - channelOffset), blur).rgb;
         }
         // unrolled iteration #2
         {
-          var channelOffset = ((dir * 1f) * offset);
+          let channelOffset = ((dir * 1f) * offset);
           samples[2i] = textureSampleBias(tex, sampler_2, (uv - channelOffset), blur).rgb;
         }
         return vec3f(samples[0i].x, samples[1i].y, samples[2i].z);
@@ -138,19 +138,19 @@ describe('liquid-glass example', () => {
       }
 
       @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
-        var posInBoxSpace = (_arg_0.uv - mousePosUniform);
+        let posInBoxSpace = (_arg_0.uv - mousePosUniform);
         let sdfDist = sdRoundedBox2d(posInBoxSpace, paramsUniform.rectDims, paramsUniform.radius);
-        var dir = normalize((posInBoxSpace * paramsUniform.rectDims.yx));
+        let dir = normalize((posInBoxSpace * paramsUniform.rectDims.yx));
         let normalizedDist = ((sdfDist - paramsUniform.start) / (paramsUniform.end - paramsUniform.start));
-        var texDim = textureDimensions(sampledView, 0);
+        let texDim = textureDimensions(sampledView, 0);
         let featherUV = (paramsUniform.edgeFeather / f32(max(texDim.x, texDim.y)));
-        var weights = calculateWeights(sdfDist, paramsUniform.start, paramsUniform.end, featherUV);
-        var blurSample = textureSampleBias(sampledView, sampler_1, _arg_0.uv, paramsUniform.blur);
-        var refractedSample = sampleWithChromaticAberration(sampledView, sampler_1, (_arg_0.uv + (dir * (paramsUniform.refractionStrength * normalizedDist))), (paramsUniform.chromaticStrength * normalizedDist), dir, (paramsUniform.blur * paramsUniform.edgeBlurMultiplier));
-        var normalSample = textureSampleLevel(sampledView, sampler_1, _arg_0.uv, 0);
-        var tint = TintParams(paramsUniform.tintColor, paramsUniform.tintStrength);
-        var tintedBlur = applyTint(blurSample.rgb, tint);
-        var tintedRing = applyTint(refractedSample, tint);
+        let weights = calculateWeights(sdfDist, paramsUniform.start, paramsUniform.end, featherUV);
+        let blurSample = textureSampleBias(sampledView, sampler_1, _arg_0.uv, paramsUniform.blur);
+        let refractedSample = sampleWithChromaticAberration(sampledView, sampler_1, (_arg_0.uv + (dir * (paramsUniform.refractionStrength * normalizedDist))), (paramsUniform.chromaticStrength * normalizedDist), dir, (paramsUniform.blur * paramsUniform.edgeBlurMultiplier));
+        let normalSample = textureSampleLevel(sampledView, sampler_1, _arg_0.uv, 0);
+        let tint = TintParams(paramsUniform.tintColor, paramsUniform.tintStrength);
+        let tintedBlur = applyTint(blurSample.rgb, tint);
+        let tintedRing = applyTint(refractedSample, tint);
         return (((tintedBlur * weights.inside) + (tintedRing * weights.ring)) + (normalSample * weights.outside));
       }"
     `);

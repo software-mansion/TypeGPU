@@ -68,7 +68,7 @@ describe('confetti example', () => {
       @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
         let width = (_arg_0.tilt / 350f);
         let height = (width / 2f);
-        var local = array<vec2f, 4>(vec2f(), vec2f(width, 0f), vec2f(0f, height), vec2f(width, height));
+        let local = array<vec2f, 4>(vec2f(), vec2f(width, 0f), vec2f(0f, height), vec2f(width, height));
         var pos = (rotate(local[_arg_0.vertexIndex], _arg_0.angle) + _arg_0.center);
         if ((aspectRatio < 1f)) {
           pos.x /= aspectRatio;

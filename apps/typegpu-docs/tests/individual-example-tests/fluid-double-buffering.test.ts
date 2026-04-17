@@ -172,14 +172,14 @@ describe('fluid double buffering example', () => {
 
       fn computeVelocity(x: i32, y: i32) -> vec2f {
         const gravityCost = 0.5;
-        var neighborOffsets = array<vec2i, 4>(vec2i(0, 1), vec2i(0, -1), vec2i(1, 0), vec2i(-1, 0));
-        var cell = getCell(x, y);
+        let neighborOffsets = array<vec2i, 4>(vec2i(0, 1), vec2i(0, -1), vec2i(1, 0), vec2i(-1, 0));
+        let cell = getCell(x, y);
         var leastCost = cell.z;
         var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
         var dirChoiceCount = 1;
         // unrolled iteration #0
         {
-          var neighborDensity = getCell((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y));
+          let neighborDensity = getCell((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[0u].y) * gravityCost));
           if (isValidFlowOut((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y))) {
             if ((cost == leastCost)) {
@@ -197,7 +197,7 @@ describe('fluid double buffering example', () => {
         }
         // unrolled iteration #1
         {
-          var neighborDensity = getCell((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y));
+          let neighborDensity = getCell((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[1u].y) * gravityCost));
           if (isValidFlowOut((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y))) {
             if ((cost == leastCost)) {
@@ -215,7 +215,7 @@ describe('fluid double buffering example', () => {
         }
         // unrolled iteration #2
         {
-          var neighborDensity = getCell((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y));
+          let neighborDensity = getCell((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[2u].y) * gravityCost));
           if (isValidFlowOut((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y))) {
             if ((cost == leastCost)) {
@@ -233,7 +233,7 @@ describe('fluid double buffering example', () => {
         }
         // unrolled iteration #3
         {
-          var neighborDensity = getCell((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y));
+          let neighborDensity = getCell((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[3u].y) * gravityCost));
           if (isValidFlowOut((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y))) {
             if ((cost == leastCost)) {
@@ -257,9 +257,9 @@ describe('fluid double buffering example', () => {
         if (!isValidCoord(x, y)) {
           return 0;
         }
-        var src = getCell(x, y);
-        var destPos = vec2i((x + i32(src.x)), (y + i32(src.y)));
-        var dest = getCell(destPos.x, destPos.y);
+        let src = getCell(x, y);
+        let destPos = vec2i((x + i32(src.x)), (y + i32(src.y)));
+        let dest = getCell(destPos.x, destPos.y);
         let diff = (src.z - dest.z);
         var outFlow = min(max(0.01f, (0.3f + (diff * 0.1f))), src.z);
         if ((length(src.xy) < 0.5f)) {
@@ -285,7 +285,7 @@ describe('fluid double buffering example', () => {
       fn getMinimumInFlow(x: i32, y: i32) -> f32 {
         const gridSizeF = 256f;
         let sourceRadius = max(1f, (sourceParams.radius * gridSizeF));
-        var sourcePos = vec2f((sourceParams.center.x * gridSizeF), (sourceParams.center.y * gridSizeF));
+        let sourcePos = vec2f((sourceParams.center.x * gridSizeF), (sourceParams.center.y * gridSizeF));
         if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius)) {
           return sourceParams.intensity;
         }
@@ -300,7 +300,7 @@ describe('fluid double buffering example', () => {
         let index = coordsToIndex(x, y);
         randSeed2(vec2f(f32(index), time));
         var next = getCell(x, y);
-        var nextVelocity = computeVelocity(x, y);
+        let nextVelocity = computeVelocity(x, y);
         next.x = nextVelocity.x;
         next.y = nextVelocity.y;
         next.z = flowFromCell(x, y, x, y);
@@ -399,14 +399,14 @@ describe('fluid double buffering example', () => {
 
       fn computeVelocity(x: i32, y: i32) -> vec2f {
         const gravityCost = 0.5;
-        var neighborOffsets = array<vec2i, 4>(vec2i(0, 1), vec2i(0, -1), vec2i(1, 0), vec2i(-1, 0));
-        var cell = getCell(x, y);
+        let neighborOffsets = array<vec2i, 4>(vec2i(0, 1), vec2i(0, -1), vec2i(1, 0), vec2i(-1, 0));
+        let cell = getCell(x, y);
         var leastCost = cell.z;
         var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
         var dirChoiceCount = 1;
         // unrolled iteration #0
         {
-          var neighborDensity = getCell((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y));
+          let neighborDensity = getCell((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[0u].y) * gravityCost));
           if (isValidFlowOut((x + neighborOffsets[0u].x), (y + neighborOffsets[0u].y))) {
             if ((cost == leastCost)) {
@@ -424,7 +424,7 @@ describe('fluid double buffering example', () => {
         }
         // unrolled iteration #1
         {
-          var neighborDensity = getCell((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y));
+          let neighborDensity = getCell((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[1u].y) * gravityCost));
           if (isValidFlowOut((x + neighborOffsets[1u].x), (y + neighborOffsets[1u].y))) {
             if ((cost == leastCost)) {
@@ -442,7 +442,7 @@ describe('fluid double buffering example', () => {
         }
         // unrolled iteration #2
         {
-          var neighborDensity = getCell((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y));
+          let neighborDensity = getCell((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[2u].y) * gravityCost));
           if (isValidFlowOut((x + neighborOffsets[2u].x), (y + neighborOffsets[2u].y))) {
             if ((cost == leastCost)) {
@@ -460,7 +460,7 @@ describe('fluid double buffering example', () => {
         }
         // unrolled iteration #3
         {
-          var neighborDensity = getCell((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y));
+          let neighborDensity = getCell((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y));
           let cost = (neighborDensity.z + (f32(neighborOffsets[3u].y) * gravityCost));
           if (isValidFlowOut((x + neighborOffsets[3u].x), (y + neighborOffsets[3u].y))) {
             if ((cost == leastCost)) {
@@ -484,9 +484,9 @@ describe('fluid double buffering example', () => {
         if (!isValidCoord(x, y)) {
           return 0;
         }
-        var src = getCell(x, y);
-        var destPos = vec2i((x + i32(src.x)), (y + i32(src.y)));
-        var dest = getCell(destPos.x, destPos.y);
+        let src = getCell(x, y);
+        let destPos = vec2i((x + i32(src.x)), (y + i32(src.y)));
+        let dest = getCell(destPos.x, destPos.y);
         let diff = (src.z - dest.z);
         var outFlow = min(max(0.01f, (0.3f + (diff * 0.1f))), src.z);
         if ((length(src.xy) < 0.5f)) {
@@ -512,7 +512,7 @@ describe('fluid double buffering example', () => {
       fn getMinimumInFlow(x: i32, y: i32) -> f32 {
         const gridSizeF = 256f;
         let sourceRadius = max(1f, (sourceParams.radius * gridSizeF));
-        var sourcePos = vec2f((sourceParams.center.x * gridSizeF), (sourceParams.center.y * gridSizeF));
+        let sourcePos = vec2f((sourceParams.center.x * gridSizeF), (sourceParams.center.y * gridSizeF));
         if ((distance(vec2f(f32(x), f32(y)), sourcePos) < sourceRadius)) {
           return sourceParams.intensity;
         }
@@ -527,7 +527,7 @@ describe('fluid double buffering example', () => {
         let index = coordsToIndex(x, y);
         randSeed2(vec2f(f32(index), time));
         var next = getCell(x, y);
-        var nextVelocity = computeVelocity(x, y);
+        let nextVelocity = computeVelocity(x, y);
         next.x = nextVelocity.x;
         next.y = nextVelocity.y;
         next.z = flowFromCell(x, y, x, y);
@@ -553,8 +553,8 @@ describe('fluid double buffering example', () => {
       }
 
       @vertex fn vertexMain(@builtin(vertex_index) _arg_idx: u32) -> vertexMain_Output {
-        var pos = array<vec2f, 4>(vec2f(1), vec2f(-1, 1), vec2f(1, -1), vec2f(-1));
-        var uv = array<vec2f, 4>(vec2f(1), vec2f(0, 1), vec2f(1, 0), vec2f());
+        let pos = array<vec2f, 4>(vec2f(1), vec2f(-1, 1), vec2f(1, -1), vec2f(-1));
+        let uv = array<vec2f, 4>(vec2f(1), vec2f(0, 1), vec2f(1, 0), vec2f());
         return vertexMain_Output(vec4f(pos[_arg_idx].x, pos[_arg_idx].y, 0f, 1f), uv[_arg_idx]);
       }
 
@@ -601,11 +601,11 @@ describe('fluid double buffering example', () => {
         let index = coordsToIndex(x, y);
         let cell = (&gridAlphaBuffer[index]);
         let density = max(0f, (*cell).z);
-        var obstacleColor = vec4f(0.10000000149011612, 0.10000000149011612, 0.10000000149011612, 1);
-        var background = vec4f(0.8999999761581421, 0.8999999761581421, 0.8999999761581421, 1);
-        var firstColor = vec4f(0.20000000298023224, 0.6000000238418579, 1, 1);
-        var secondColor = vec4f(0.20000000298023224, 0.30000001192092896, 0.6000000238418579, 1);
-        var thirdColor = vec4f(0.10000000149011612, 0.20000000298023224, 0.4000000059604645, 1);
+        let obstacleColor = vec4f(0.10000000149011612, 0.10000000149011612, 0.10000000149011612, 1);
+        let background = vec4f(0.8999999761581421, 0.8999999761581421, 0.8999999761581421, 1);
+        let firstColor = vec4f(0.20000000298023224, 0.6000000238418579, 1, 1);
+        let secondColor = vec4f(0.20000000298023224, 0.30000001192092896, 0.6000000238418579, 1);
+        let thirdColor = vec4f(0.10000000149011612, 0.20000000298023224, 0.4000000059604645, 1);
         const firstThreshold = 2f;
         const secondThreshold = 10f;
         const thirdThreshold = 20f;
