@@ -1,7 +1,6 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import { sizeOf } from '../../data/sizeOf.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { applyBindGroups } from './applyPipelineState.ts';
@@ -19,7 +18,7 @@ import {
 import { isGPUCommandEncoder, isGPUComputePassEncoder } from './typeGuards.ts';
 import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { isGPUBuffer, type ResolutionCtx, type SelfResolvable } from '../../types.ts';
 import { wgslExtensions, wgslExtensionToFeatureName } from '../../wgslExtensions.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
@@ -27,7 +26,8 @@ import { namespace } from '../resolve/namespace.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 
-import { memoryLayoutOf, type PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
+import type { PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
+import { resolveIndirectOffset } from './pipelineUtils.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
@@ -72,11 +72,11 @@ export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeab
    * The buffer must contain 3 consecutive u32 values (x, y, z workgroup counts).
    * To get the correct offset within complex data structures, use `d.memoryLayoutOf(...)`.
    *
-   * @param indirectBuffer - Buffer marked with 'indirect' usage containing dispatch parameters
+   * @param indirectBuffer - Buffer marked with 'indirect' usage containing dispatch parameters or raw GPUBuffer
    * @param start - PrimitiveOffsetInfo pointing to the first dispatch parameter. If not provided, starts at offset 0. To obtain safe offsets, use `d.memoryLayoutOf(...)`.
    */
   dispatchWorkgroupsIndirect<T extends AnyWgslData>(
-    indirectBuffer: TgpuBuffer<T> & IndirectFlag,
+    indirectBuffer: (TgpuBuffer<T> & IndirectFlag) | GPUBuffer,
     start?: PrimitiveOffsetInfo | number,
   ): void;
 }
@@ -112,25 +112,6 @@ type Memo = {
   catchall: [number, TgpuBindGroup] | undefined;
   logResources: LogResources | undefined;
 };
-
-function validateIndirectBufferSize(
-  bufferSize: number,
-  offset: number,
-  requiredBytes: number,
-  operation: string,
-): void {
-  if (offset + requiredBytes > bufferSize) {
-    throw new Error(
-      `Buffer too small for ${operation}. ` +
-        `Required: ${requiredBytes} bytes at offset ${offset}, ` +
-        `but buffer is only ${bufferSize} bytes.`,
-    );
-  }
-
-  if (offset % 4 !== 0) {
-    throw new Error(`Indirect buffer offset must be a multiple of 4. Got: ${offset}`);
-  }
-}
 
 const _lastAppliedCompute = new WeakMap<GPUComputePassEncoder, TgpuComputePipelineImpl>();
 
@@ -252,46 +233,20 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
   }
 
   dispatchWorkgroupsIndirect<T extends AnyWgslData>(
-    indirectBuffer: TgpuBuffer<T> & IndirectFlag,
+    indirectBuffer: (TgpuBuffer<T> & IndirectFlag) | GPUBuffer,
     start?: PrimitiveOffsetInfo | number,
   ): void {
     const DISPATCH_SIZE = 12; // 3 x u32 (x, y, z)
 
-    let offsetInfo = start ?? memoryLayoutOf(indirectBuffer.dataType);
-
-    if (typeof offsetInfo === 'number') {
-      if (offsetInfo === 0) {
-        offsetInfo = memoryLayoutOf(indirectBuffer.dataType);
-      } else {
-        console.warn(
-          `dispatchWorkgroupsIndirect: Provided start offset ${offsetInfo} as a raw number. Use d.memoryLayoutOf(...) to include contiguous padding info for safer validation.`,
-        );
-        // When only an offset is provided, assume we have at least 12 bytes contiguous.
-        offsetInfo = {
-          offset: offsetInfo,
-          contiguous: DISPATCH_SIZE,
-        };
-      }
-    }
-
-    const { offset, contiguous } = offsetInfo;
-
-    validateIndirectBufferSize(
-      sizeOf(indirectBuffer.dataType),
-      offset,
+    const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : indirectBuffer.buffer;
+    const offset = resolveIndirectOffset(
+      indirectBuffer,
+      start,
       DISPATCH_SIZE,
       'dispatchWorkgroupsIndirect',
     );
 
-    if (contiguous < DISPATCH_SIZE) {
-      console.warn(
-        `dispatchWorkgroupsIndirect: Starting at offset ${offset}, only ${contiguous} contiguous bytes are available before padding. Dispatch requires ${DISPATCH_SIZE} bytes (3 x u32). Reading across padding may result in undefined behavior.`,
-      );
-    }
-
-    this._executeComputePass((pass) =>
-      pass.dispatchWorkgroupsIndirect(indirectBuffer.buffer, offset),
-    );
+    this._executeComputePass((pass) => pass.dispatchWorkgroupsIndirect(rawBuffer, offset));
   }
 
   private _applyComputeState(pass: GPUComputePassEncoder): void {

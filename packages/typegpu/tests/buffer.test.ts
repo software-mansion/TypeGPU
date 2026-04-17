@@ -692,6 +692,31 @@ describe('TgpuBuffer', () => {
     ]);
   });
 
+  it('should fast-path aligned raw input for a buffer with decorated data', ({ root, device }) => {
+    const DecoratedSchema = d.struct({
+      a: d.size(12, d.f32),
+      b: d.align(16, d.u32),
+      c: d.arrayOf(d.u32, 3),
+    });
+
+    const decoratedBuffer = root.createBuffer(DecoratedSchema);
+    const rawDecoratedBuffer = root.unwrap(decoratedBuffer);
+
+    const aligned = new ArrayBuffer(32);
+    new Float32Array(aligned, 0, 1)[0] = 1.0;
+    new Uint32Array(aligned, 16, 1)[0] = 2;
+    new Uint32Array(aligned, 20, 3).set([3, 4, 5]);
+
+    decoratedBuffer.write(aligned);
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawDecoratedBuffer, 0, expect.any(ArrayBuffer), 0, 32],
+    ]);
+
+    const uploaded = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    expect([...new Uint8Array(uploaded)]).toStrictEqual([...new Uint8Array(aligned)]);
+  });
+
   it('should throw an error on the type level when using a schema containing boolean', ({
     root,
   }) => {
@@ -702,7 +727,7 @@ describe('TgpuBuffer', () => {
 
     // @ts-expect-error: boolean is not allowed in buffer schemas
     attest(root.createBuffer(boolSchema)).type.errors.snap(
-      "Argument of type 'WgslStruct<{ a: U32; b: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'b' — Bool is not host-shareable, use U32 or I32 instead\"'.",
+      "No overload matches this call.Overload 1 of 4, '(typeSchema: \"(Error) in struct property 'b' — Bool is not host-shareable, use U32 or I32 instead\", initial?: InferInput<NoInfer<WgslStruct<{ a: U32; b: Bool; }>>> | undefined): TgpuBuffer<...>', gave the following error.Argument of type 'WgslStruct<{ a: U32; b: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'b' — Bool is not host-shareable, use U32 or I32 instead\"'.\nOverload 2 of 4, '(typeSchema: \"(Error) in struct property 'b' — Bool is not host-shareable, use U32 or I32 instead\", initial?: InferInput<NoInfer<WgslStruct<{ a: U32; b: Bool; }>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuBuffer<...>', gave the following error.Argument of type 'WgslStruct<{ a: U32; b: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'b' — Bool is not host-shareable, use U32 or I32 instead\"'.",
     );
 
     const nestedBoolSchema = d.struct({
@@ -717,7 +742,8 @@ describe('TgpuBuffer', () => {
 
     // @ts-expect-error: boolean is not allowed in buffer schemas
     attest(root.createBuffer(nestedBoolSchema)).type.errors.snap(
-      "Argument of type 'WgslStruct<{ a: U32; b: WgslStruct<{ c: F32; d: WgslStruct<{ e: Bool; }>; }>; }>' is not assignable to parameter of type '\"(Error) in struct property 'b' — in struct property 'd' — in struct property 'e' — Bool is not host-shareable, use U32 or I32 instead\"'.",
+      `No overload matches this call.Overload 1 of 4, '(typeSchema: "(Error) in struct property 'b' — in struct property 'd' — in struct property 'e' — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ a: U32; b: WgslStruct<...>; }>>> | undefined): TgpuBuffer<...>', gave the following error.Argument of type 'WgslStruct<{ a: U32; b: WgslStruct<{ c: F32; d: WgslStruct<{ e: Bool; }>; }>; }>' is not assignable to parameter of type '"(Error) in struct property 'b' — in struct property 'd' — in struct property 'e' — Bool is not host-shareable, use U32 or I32 instead"'.
+Overload 2 of 4, '(typeSchema: "(Error) in struct property 'b' — in struct property 'd' — in struct property 'e' — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ a: U32; b: WgslStruct<...>; }>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuBuffer<...>', gave the following error.Argument of type 'WgslStruct<{ a: U32; b: WgslStruct<{ c: F32; d: WgslStruct<{ e: Bool; }>; }>; }>' is not assignable to parameter of type '"(Error) in struct property 'b' — in struct property 'd' — in struct property 'e' — Bool is not host-shareable, use U32 or I32 instead"'.`,
     );
   });
 
@@ -734,7 +760,8 @@ describe('TgpuBuffer', () => {
 
     // @ts-expect-error
     attest(root.createBuffer(notFine)).type.errors.snap(
-      "Argument of type 'WgslStruct<{ a: U16; b: U32; }>' is not assignable to parameter of type '\"(Error) in struct property 'a' — U16 is only usable inside arrays for index buffers, use U32 or I32 instead\"'.",
+      `No overload matches this call.Overload 1 of 4, '(typeSchema: "(Error) in struct property 'a' — U16 is only usable inside arrays for index buffers, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ a: U16; b: U32; }>>> | undefined): TgpuBuffer<...>', gave the following error.Argument of type 'WgslStruct<{ a: U16; b: U32; }>' is not assignable to parameter of type '"(Error) in struct property 'a' — U16 is only usable inside arrays for index buffers, use U32 or I32 instead"'.
+Overload 2 of 4, '(typeSchema: "(Error) in struct property 'a' — U16 is only usable inside arrays for index buffers, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ a: U16; b: U32; }>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuBuffer<...>', gave the following error.Argument of type 'WgslStruct<{ a: U16; b: U32; }>' is not assignable to parameter of type '"(Error) in struct property 'a' — U16 is only usable inside arrays for index buffers, use U32 or I32 instead"'.`,
     );
 
     const alsoNotFine = d.struct({
@@ -745,7 +772,8 @@ describe('TgpuBuffer', () => {
 
     // @ts-expect-error
     attest(root.createBuffer(alsoNotFine)).type.errors.snap(
-      "Argument of type 'WgslStruct<{ a: U32; b: WgslArray<U16>; c: F32; }>' is not assignable to parameter of type '\"(Error) in struct property 'b' — in array element — U16 is only usable inside arrays for index buffers, use U32 or I32 instead\"'.",
+      `No overload matches this call.Overload 1 of 4, '(typeSchema: "(Error) in struct property 'b' — in array element — U16 is only usable inside arrays for index buffers, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ a: U32; b: WgslArray<...>; c: F32; }>>> | undefined): TgpuBuffer<...>', gave the following error.Argument of type 'WgslStruct<{ a: U32; b: WgslArray<U16>; c: F32; }>' is not assignable to parameter of type '"(Error) in struct property 'b' — in array element — U16 is only usable inside arrays for index buffers, use U32 or I32 instead"'.
+Overload 2 of 4, '(typeSchema: "(Error) in struct property 'b' — in array element — U16 is only usable inside arrays for index buffers, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ a: U32; b: WgslArray<...>; c: F32; }>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuBuffer<...>', gave the following error.Argument of type 'WgslStruct<{ a: U32; b: WgslArray<U16>; c: F32; }>' is not assignable to parameter of type '"(Error) in struct property 'b' — in array element — U16 is only usable inside arrays for index buffers, use U32 or I32 instead"'.`,
     );
   });
 
@@ -773,6 +801,40 @@ describe('TgpuBuffer', () => {
 
     const written = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
     expect([...new Uint16Array(written, 0, 4)]).toStrictEqual([10, 20, 30, 40]);
+  });
+
+  it('should accept typed views when writing to arrays of atomics at the type level', ({
+    root,
+  }) => {
+    const u32Buffer = root.createBuffer(d.arrayOf(d.atomic(d.u32), 4));
+    const i32Buffer = root.createBuffer(d.arrayOf(d.atomic(d.i32), 4));
+
+    expectTypeOf(u32Buffer.write)
+      .parameter(0)
+      .toEqualTypeOf<number[] | Uint32Array | ArrayBuffer>();
+
+    expectTypeOf(i32Buffer.write).parameter(0).toEqualTypeOf<number[] | Int32Array | ArrayBuffer>();
+  });
+
+  it('should fast-path typed views when writing to arrays of atomics', ({ root, device }) => {
+    const u32Buffer = root.createBuffer(d.arrayOf(d.atomic(d.u32), 4));
+    const i32Buffer = root.createBuffer(d.arrayOf(d.atomic(d.i32), 4));
+    const rawU32Buffer = root.unwrap(u32Buffer);
+    const rawI32Buffer = root.unwrap(i32Buffer);
+
+    u32Buffer.write(new Uint32Array([10, 20, 30, 40]));
+    i32Buffer.write(new Int32Array([-1, -2, -3, -4]));
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawU32Buffer, 0, expect.any(ArrayBuffer), 0, 16],
+      [rawI32Buffer, 0, expect.any(ArrayBuffer), 0, 16],
+    ]);
+
+    const writtenU32 = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const writtenI32 = device.mock.queue.writeBuffer.mock.calls[1]?.[2] as ArrayBuffer;
+
+    expect([...new Uint32Array(writtenU32, 0, 4)]).toStrictEqual([10, 20, 30, 40]);
+    expect([...new Int32Array(writtenI32, 0, 4)]).toStrictEqual([-1, -2, -3, -4]);
   });
 
   it('should allow an array of u32 to be used as an index buffer as well as any other usage', ({
@@ -1225,6 +1287,139 @@ describe('ValidateBufferSchema', () => {
     expect([...headings[1]!]).toStrictEqual([4, 5, 6]);
   });
 
+  it('should treat atomics like normal scalars when writing SoA', ({ root, device }) => {
+    const Entry = d.struct({
+      id: d.atomic(d.u32),
+      states: d.arrayOf(d.atomic(d.i32), 4),
+    });
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      id: new Uint32Array([1000, 2000]),
+      states: new Int32Array([1, 2, 3, 4, 5, 6, 7, 8]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+
+    const ids = [
+      new DataView(uploadedBuffer).getUint32(0, true),
+      new DataView(uploadedBuffer).getUint32(20, true),
+    ];
+    const states = [new Int32Array(uploadedBuffer, 4, 4), new Int32Array(uploadedBuffer, 24, 4)];
+
+    expect(ids).toStrictEqual([1000, 2000]);
+    expect([...states[0]!]).toStrictEqual([1, 2, 3, 4]);
+    expect([...states[1]!]).toStrictEqual([5, 6, 7, 8]);
+  });
+
+  it('should treat decorated types like normal types when writing SoA', ({ root, device }) => {
+    const Entry = d.struct({
+      magic: d.u32,
+      id: d.align(16, d.u32),
+      pos: d.size(64, d.vec3f),
+      someData: d.arrayOf(d.f32, 4),
+    });
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      magic: new Uint32Array([10, 20]),
+      id: new Uint32Array([100, 200]),
+      pos: new Float32Array([1, 2, 3, 4, 5, 6]),
+      someData: new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+
+    const magics = [
+      new DataView(uploadedBuffer).getUint32(0, true),
+      new DataView(uploadedBuffer).getUint32(112, true),
+    ];
+    const ids = [
+      new DataView(uploadedBuffer).getUint32(16, true),
+      new DataView(uploadedBuffer).getUint32(128, true),
+    ];
+    const positions = [
+      new Float32Array(uploadedBuffer, 32, 3),
+      new Float32Array(uploadedBuffer, 144, 3),
+    ];
+    const someData = [
+      new Float32Array(uploadedBuffer, 96, 4),
+      new Float32Array(uploadedBuffer, 208, 4),
+    ];
+
+    expect(magics).toStrictEqual([10, 20]);
+    expect(ids).toStrictEqual([100, 200]);
+    expect([...positions[0]!]).toStrictEqual([1, 2, 3]);
+    expect([...positions[1]!]).toStrictEqual([4, 5, 6]);
+    expect([...someData[0]!].map((value) => Number(value.toFixed(6)))).toStrictEqual([
+      0.1, 0.2, 0.3, 0.4,
+    ]);
+    expect([...someData[1]!].map((value) => Number(value.toFixed(6)))).toStrictEqual([
+      0.5, 0.6, 0.7, 0.8,
+    ]);
+  });
+
+  it('should treat decorated array fields like normal types when writing SoA', ({
+    root,
+    device,
+  }) => {
+    const Entry = d.struct({
+      id: d.u32,
+      values: d.align(16, d.arrayOf(d.f32, 4)),
+    });
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      id: new Uint32Array([7, 8]),
+      values: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const ids = [
+      new DataView(uploadedBuffer).getUint32(0, true),
+      new DataView(uploadedBuffer).getUint32(32, true),
+    ];
+    const values = [
+      new Float32Array(uploadedBuffer, 16, 4),
+      new Float32Array(uploadedBuffer, 48, 4),
+    ];
+
+    expect(ids).toStrictEqual([7, 8]);
+    expect([...values[0]!]).toStrictEqual([1, 2, 3, 4]);
+    expect([...values[1]!]).toStrictEqual([5, 6, 7, 8]);
+  });
+
+  it('should write SoA data for decorated array fields with padded elements', ({
+    root,
+    device,
+  }) => {
+    const Entry = d.struct({
+      values: d.align(16, d.arrayOf(d.vec3f, 2)),
+    });
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      values: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const result = new Float32Array(uploadedBuffer);
+
+    expect([...result]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0, 10, 11, 12, 0]);
+  });
+
   it('should accept SoA input for struct fields that are fixed-size arrays of primitives', () => {
     type Test = {
       a: d.F32;
@@ -1242,6 +1437,18 @@ describe('ValidateBufferSchema', () => {
       d: Float32Array;
       e: Int32Array;
       f: Float32Array;
+    }>();
+  });
+
+  it('should accept SoA input for decorated array fields', () => {
+    type Test = {
+      id: d.U32;
+      values: d.Decorated<d.WgslArray<d.F32>, [d.Align<16>]>;
+    };
+
+    expectTypeOf<common.writeSoA.InputFor<Test>>().toEqualTypeOf<{
+      id: Uint32Array;
+      values: Float32Array;
     }>();
   });
 

@@ -48,7 +48,7 @@ pnpm publish --dry-run # (if alpha, --tag alpha)
 > publishing:
 >
 > ```bash
-> SKIP_ALL_CHECKS=true pnpm publish # (if alpha, --tag alpha)
+> SKIP_TESTS=true pnpm publish # (if alpha, --tag alpha)
 > ```
 
 6. Rebase _release_ branch on _main_

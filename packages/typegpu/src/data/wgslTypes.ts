@@ -62,13 +62,15 @@ export type TypedArrayFor<T> = T extends F32 | Vec2f | Vec3f | Vec4f | Mat2x2f |
   ? Float32Array
   : T extends F16 | Vec2h | Vec3h | Vec4h
     ? Float16Array
-    : T extends I32 | Vec2i | Vec3i | Vec4i
+    : T extends I32 | Vec2i | Vec3i | Vec4i | Atomic<I32>
       ? Int32Array
-      : T extends U32 | Vec2u | Vec3u | Vec4u
+      : T extends U32 | Vec2u | Vec3u | Vec4u | Atomic<U32>
         ? Uint32Array
         : T extends U16
           ? Uint16Array
-          : never;
+          : T extends Decorated<infer TBase>
+            ? TypedArrayFor<TBase>
+            : never;
 
 /**
  * Vector infix notation.
@@ -1709,6 +1711,10 @@ export function isConcrete(value: unknown): boolean {
 
 export function isVoid(value: unknown): value is Void {
   return isMarkedInternal(value) && (value as Void).type === 'void';
+}
+
+export function isBool(value: unknown): value is Bool {
+  return isMarkedInternal(value) && (value as Bool).type === 'bool';
 }
 
 export function isNumericSchema(
