@@ -133,6 +133,10 @@ export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
     import: { reroute: 'typegpu-noise/src/index.ts' },
     typeDef: { reroute: 'typegpu-noise/src/index.ts' },
   },
+  '@typegpu/gl': {
+    import: { reroute: 'typegpu-gl/src/index.ts' },
+    typeDef: { reroute: 'typegpu-gl/src/index.ts' },
+  },
   '@typegpu/color': {
     import: { reroute: 'typegpu-color/src/index.ts' },
     typeDef: { reroute: 'typegpu-color/src/index.ts' },

@@ -44,13 +44,6 @@ export function translateWgslTypeToGlsl(wgslType: string): string {
   return WGSL_TO_GLSL_TYPE[wgslType] ?? wgslType;
 }
 
-/**
- * Resolves a struct and adds its declaration to the resolution context.
- * @param ctx - The resolution context.
- * @param struct - The struct to resolve.
- *
- * @returns The resolved struct name.
- */
 function resolveStruct(ctx: ResolutionCtx, struct: d.WgslStruct) {
   const id = ctx.makeUniqueIdentifier(ShaderGenerator.getName(struct), 'global');
 
@@ -66,9 +59,55 @@ ${Object.entries(struct.propTypes)
 
 const gl_PositionSnippet = tgpu['~unstable'].rawCodeSnippet('gl_Position', d.vec4f, 'private');
 
+interface OutVarInfo {
+  varName: string;
+  propName: string;
+  dataType: d.BaseData;
+}
+
 interface EntryFnState {
   structPropToVarMap: Record<string, string>;
-  outVars: { varName: string; propName: string }[];
+  outVars: OutVarInfo[];
+  /** The first-fragment-color output name, if allocated. */
+  fragColorName?: string;
+  /** The auto-output struct (populated as the body resolves). */
+  autoOutStruct?: {
+    completeStruct: d.WgslStruct;
+    accessProp(key: string): { prop: string; type: d.BaseData } | undefined;
+    provideProp(key: string, type: d.BaseData): { prop: string; type: d.BaseData };
+  };
+}
+
+function undecorateDataType(t: d.BaseData): d.BaseData {
+  return d.isDecorated(t) ? (t.inner as d.BaseData) : t;
+}
+
+function getLocationFromDecorated(type: d.BaseData): number | undefined {
+  if (!d.isDecorated(type)) return undefined;
+  const attr = (type.attribs as d.AnyAttribute[]).find((a) => a.type === '@location');
+  return attr ? (attr.params[0] as number) : undefined;
+}
+
+function getBuiltinKindFromDecorated(type: d.BaseData): string | undefined {
+  if (!d.isDecorated(type)) return undefined;
+  const attr = (type.attribs as d.AnyAttribute[]).find((a) => a.type === '@builtin');
+  return attr ? (attr.params[0] as string) : undefined;
+}
+
+function glslInputForBuiltin(
+  builtinKind: string,
+  functionType: 'vertex' | 'fragment' | 'compute',
+): string | undefined {
+  if (functionType === 'vertex') {
+    if (builtinKind === 'vertex_index') return 'uint(gl_VertexID)';
+    if (builtinKind === 'instance_index') return 'uint(gl_InstanceID)';
+  } else if (functionType === 'fragment') {
+    if (builtinKind === 'position') return 'gl_FragCoord';
+    if (builtinKind === 'front_facing') return 'gl_FrontFacing';
+    if (builtinKind === 'sample_index') return 'uint(gl_SampleID)';
+    if (builtinKind === 'sample_mask') return 'uint(gl_SampleMaskIn[0])';
+  }
+  return undefined;
 }
 
 /**
@@ -81,7 +120,6 @@ export class GlslGenerator extends WgslGenerator {
   #entryFnState: EntryFnState | undefined;
 
   override typeAnnotation(data: d.BaseData): string {
-    // For WGSL identity types (scalars, vectors, common matrices), map to GLSL directly.
     if (!d.isLooseData(data)) {
       const glslName = WGSL_TO_GLSL_TYPE[data.type];
       if (glslName !== undefined) {
@@ -93,7 +131,6 @@ export class GlslGenerator extends WgslGenerator {
       return resolveStruct(this.ctx, data);
     }
 
-    // For all other types (structs, arrays, etc.) delegate to WGSL resolution.
     return super.typeAnnotation(data);
   }
 
@@ -110,79 +147,123 @@ export class GlslGenerator extends WgslGenerator {
   override _returnStatement(statement: Return): string {
     const exprNode = statement[1];
 
-    if (exprNode === undefined) {
-      // Default behavior
+    if (exprNode === undefined || this.#functionType === 'normal' || this.#functionType === undefined) {
       return super._returnStatement(statement);
     }
 
-    if (this.#functionType !== 'normal') {
-      // oxlint-disable-next-line no-non-null-assertion
-      const entryFnState = this.#entryFnState!;
-      const expectedReturnType = this.ctx.topFunctionReturnType;
+    const entryFnState = this.#entryFnState as EntryFnState;
+    const expectedReturnType = this.ctx.topFunctionReturnType;
 
-      if (typeof exprNode === 'object' && exprNode[0] === NODE.objectExpr) {
-        const transformed = Object.entries(exprNode[1]).map(([prop, rhsNode]) => {
-          let name: string | undefined = entryFnState.structPropToVarMap[prop];
-          if (name === undefined) {
-            if (
-              prop === '$position' ||
-              (expectedReturnType &&
-                d.isWgslStruct(expectedReturnType) &&
-                expectedReturnType.propTypes[prop] === d.builtin.position)
-            ) {
-              name = 'gl_Position';
-            } else {
-              name = this.ctx.makeUniqueIdentifier(prop, 'global');
-              entryFnState.outVars.push({ varName: name, propName: prop });
-            }
-            entryFnState.structPropToVarMap[prop] = name;
-          }
-          const rhsExpr = this._expression(rhsNode);
-          const type = rhsExpr.dataType as d.BaseData;
+    // Case 1: Object literal return like `return { $position: ..., uv: ... }`.
+    if (typeof exprNode === 'object' && exprNode[0] === NODE.objectExpr) {
+      return this.#handleStructReturn(
+        exprNode as unknown as [number, Record<string, unknown>],
+        expectedReturnType,
+        entryFnState,
+      );
+    }
 
-          const snippet = tgpu['~unstable'].rawCodeSnippet(name, type as d.AnyData, 'private');
+    // Non-literal return: inspect type to decide how to assign.
+    const expr = expectedReturnType
+      ? this._typedExpression(exprNode, expectedReturnType)
+      : this._expression(exprNode);
 
-          return {
-            name,
-            snippet,
-            assignment: [NODE.assignmentExpr, name, '=', rhsNode],
-          } as const;
-        });
+    if (expr.dataType === UnknownData) {
+      return super._returnStatement(statement);
+    }
 
-        const block = super._block(
-          [NODE.block, [...transformed.map((t) => t.assignment), [NODE.return]]],
-          Object.fromEntries(
-            transformed.map(({ name, snippet }) => {
-              return [name, snippet.$] as const;
-            }),
-          ),
-        );
+    const exprType = (expr.dataType as d.BaseData).type;
 
-        return `${this.ctx.pre}${block}`;
-      } else {
-        // Resolving the expression to inspect it's type
-        // We will resolve it again as part of the modifed statement
-        const expr = expectedReturnType
-          ? this._typedExpression(exprNode, expectedReturnType)
-          : this._expression(exprNode);
+    if (this.#functionType === 'fragment' && typeof exprType === 'string' && exprType.startsWith('vec')) {
+      // Fragment returning a vec directly (typically vec4). Assign to frag color output.
+      const name = entryFnState.fragColorName ?? this.ctx.makeUniqueIdentifier('_fragColor', 'global');
+      entryFnState.fragColorName = name;
+      const colorSnippet = tgpu['~unstable'].rawCodeSnippet(name, expr.dataType as d.AnyData, 'private');
+      const block = super._block(
+        [NODE.block, [[NODE.assignmentExpr, name, '=', exprNode], [NODE.return]]],
+        { [name]: colorSnippet.$ },
+      );
+      return `${this.ctx.pre}${block}`;
+    }
 
-        if (expr.dataType === UnknownData) {
-          // Unknown data type, don't know what to do
-          return super._returnStatement(statement);
-        }
-
-        if (expr.dataType.type.startsWith('vec')) {
-          const block = super._block(
-            [NODE.block, [[NODE.assignmentExpr, 'gl_Position', '=', exprNode], [NODE.return]]],
-            { gl_Position: gl_PositionSnippet.$ },
-          );
-
-          return `${this.ctx.pre}${block}`;
-        }
-      }
+    if (this.#functionType === 'vertex' && typeof exprType === 'string' && exprType.startsWith('vec')) {
+      // Vertex returning a vec directly -> gl_Position.
+      const block = super._block(
+        [NODE.block, [[NODE.assignmentExpr, 'gl_Position', '=', exprNode], [NODE.return]]],
+        { gl_Position: gl_PositionSnippet.$ },
+      );
+      return `${this.ctx.pre}${block}`;
     }
 
     return super._returnStatement(statement);
+  }
+
+  #handleStructReturn(
+    exprNode: [number, Record<string, unknown>],
+    expectedReturnType: d.BaseData | undefined,
+    entryFnState: EntryFnState,
+  ): string {
+    // Is this an auto-detected output struct? If so, register each prop so the
+    // output struct's propTypes reflects what the body actually returns.
+    const isAutoStruct = expectedReturnType !== undefined &&
+      (expectedReturnType as { type?: string }).type === 'auto-struct';
+    const autoStruct = isAutoStruct
+      ? (expectedReturnType as unknown as {
+        completeStruct: d.WgslStruct;
+        accessProp(key: string): { prop: string; type: d.BaseData } | undefined;
+        provideProp(key: string, type: d.BaseData): { prop: string; type: d.BaseData };
+      })
+      : undefined;
+    if (autoStruct) {
+      entryFnState.autoOutStruct = autoStruct;
+    }
+
+    // Resolve each RHS first so module-level references get reserved (and types become
+    // available) before we allocate our LHS output identifiers.
+    const resolved = Object.entries(exprNode[1]).map(([prop, rhsNode]) => {
+      // oxlint-disable-next-line typescript/no-explicit-any
+      const rhsExpr = this._expression(rhsNode as any);
+      const dataType = rhsExpr.dataType as d.BaseData;
+      const rhsStr = this.ctx.resolve(rhsExpr.value, dataType).value;
+      // Register the prop on the auto-struct so the caller's completeStruct picks it up.
+      if (autoStruct) {
+        const existing = autoStruct.accessProp(prop);
+        if (!existing) {
+          autoStruct.provideProp(prop, dataType);
+        }
+      }
+      return { prop, rhsStr, dataType };
+    });
+
+    const lines: string[] = [];
+    for (const { prop, rhsStr, dataType } of resolved) {
+      let name: string | undefined = entryFnState.structPropToVarMap[prop];
+      if (name === undefined) {
+        const isPosition =
+          prop === '$position' ||
+          (expectedReturnType &&
+            d.isWgslStruct(expectedReturnType) &&
+            expectedReturnType.propTypes[prop] === d.builtin.position);
+        if (isPosition) {
+          name = 'gl_Position';
+        } else {
+          // Name varyings consistently between vertex out / fragment in so the GLSL
+          // ES 3.00 linker can match them by name.
+          const wgslKey = prop.replaceAll('$', '');
+          name = this.ctx.makeUniqueIdentifier(`vary_${wgslKey}`, 'global');
+          entryFnState.outVars.push({ varName: name, propName: prop, dataType });
+        }
+        entryFnState.structPropToVarMap[prop] = name;
+      }
+
+      // Copy-wrap the RHS in its type constructor so references get turned into values.
+      const glslType = this.ctx.resolve(undecorateDataType(dataType)).value;
+      lines.push(`${this.ctx.pre}  ${name} = ${glslType}(${rhsStr});`);
+    }
+
+    lines.push(`${this.ctx.pre}  return;`);
+
+    return `${this.ctx.pre}{\n${lines.join('\n')}\n${this.ctx.pre}}`;
   }
 
   override functionDefinition(options: ShaderGenerator.FunctionDefinitionOptions): string {
@@ -190,8 +271,8 @@ export class GlslGenerator extends WgslGenerator {
       this.ctx.reserveIdentifier('gl_Position', 'global');
     }
 
-    // Function body
-    let lastFunctionType = this.#functionType;
+    const lastFunctionType = this.#functionType;
+    const lastEntryFnState = this.#entryFnState;
     this.#functionType = options.functionType;
     if (options.functionType !== 'normal') {
       if (this.#entryFnState) {
@@ -202,29 +283,99 @@ export class GlslGenerator extends WgslGenerator {
 
     try {
       const body = this._block(options.body);
-
-      // Only after generating the body can we determine the return type
       const returnType = options.determineReturnType();
 
       if (options.functionType !== 'normal') {
-        // oxlint-disable-next-line no-non-null-assertion
-        const entryFnState = this.#entryFnState!;
-        if (d.isWgslStruct(returnType)) {
-          for (const { varName, propName } of entryFnState.outVars) {
-            const dataType = returnType.propTypes[propName];
-            if (dataType && d.isDecorated(dataType)) {
-              const location = (dataType.attribs as d.AnyAttribute[]).find(
-                (a) => a.type === '@location',
-              )?.params[0];
-              this.ctx.addDeclaration(`layout(location = ${location}) out ${varName};`);
+        const entryFnState = this.#entryFnState as EntryFnState;
+
+        // --- Emit output declarations (layout(location=N) out TYPE NAME;) ---
+        // Prefer the auto-output struct if we collected one during body resolution;
+        // it carries @location attributes computed via withVaryingLocations.
+        const outStructForDecls = entryFnState.autoOutStruct
+          ? entryFnState.autoOutStruct.completeStruct
+          : d.isWgslStruct(returnType)
+            ? returnType
+            : undefined;
+        if (outStructForDecls) {
+          for (const { varName, dataType } of entryFnState.outVars) {
+            // Varyings (vertex -> fragment) in GLSL ES 3.00 are matched by name,
+            // so we don't emit layout(location=N) qualifiers here.
+            const glslType = this.ctx.resolve(undecorateDataType(dataType)).value;
+            if (options.functionType === 'fragment') {
+              // Fragment color outputs keep location=N since they target draw buffers.
+              this.ctx.addDeclaration(
+                `layout(location = 0) out ${glslType} ${varName};`,
+              );
+            } else {
+              this.ctx.addDeclaration(`out ${glslType} ${varName};`);
             }
           }
+        }
+        // Fragment color output
+        if (entryFnState.fragColorName) {
+          this.ctx.addDeclaration(`layout(location = 0) out vec4 ${entryFnState.fragColorName};`);
+        }
+
+        // --- Emit input-side setup: declare layout(location) in vars, and initialize _arg_N structs ---
+        const prelude: string[] = [];
+        for (const arg of options.args) {
+          if (!arg.used) continue;
+          const argType = arg.decoratedType as d.BaseData;
+          // AutoStruct args (entry fn auto-detected inputs):
+          // Identified via `type === 'auto-struct'`.
+          if ((argType as { type?: string }).type === 'auto-struct') {
+            const autoStruct = argType as unknown as {
+              completeStruct: d.WgslStruct;
+            };
+            const completeStruct = autoStruct.completeStruct;
+            const structTypeName = this.ctx.resolve(completeStruct).value;
+            const initArgs: string[] = [];
+            for (const [prop, propType] of Object.entries(completeStruct.propTypes)) {
+              const builtinKind = getBuiltinKindFromDecorated(propType);
+              if (builtinKind) {
+                const mapped = glslInputForBuiltin(
+                  builtinKind,
+                  options.functionType as 'vertex' | 'fragment' | 'compute',
+                );
+                if (mapped === undefined) {
+                  throw new Error(
+                    `Unsupported builtin for ${options.functionType} shader: ${builtinKind}`,
+                  );
+                }
+                initArgs.push(mapped);
+              } else {
+                const location = getLocationFromDecorated(propType);
+                const glslType = this.ctx.resolve(undecorateDataType(propType)).value;
+                if (options.functionType === 'vertex') {
+                  // Vertex attribute input — keep layout(location=N); safe in ES 3.00.
+                  const inName = this.ctx.makeUniqueIdentifier(`_in_${prop}`, 'global');
+                  this.ctx.addDeclaration(
+                    `layout(location = ${location ?? 0}) in ${glslType} ${inName};`,
+                  );
+                  initArgs.push(inName);
+                } else {
+                  // Fragment varying input — matched by name to the vertex output.
+                  const inName = this.ctx.makeUniqueIdentifier(`vary_${prop}`, 'global');
+                  this.ctx.addDeclaration(`in ${glslType} ${inName};`);
+                  initArgs.push(inName);
+                }
+              }
+            }
+            prelude.push(`  ${structTypeName} ${arg.name} = ${structTypeName}(${initArgs.join(', ')});`);
+          }
+        }
+
+        // Inject prelude into the body: body looks like "{\n<lines>\n}" — we insert after the opening brace.
+        if (prelude.length > 0) {
+          const firstNewlineIdx = body.indexOf('\n');
+          const before = body.slice(0, firstNewlineIdx + 1);
+          const after = body.slice(firstNewlineIdx + 1);
+          return `void main() ${before}${prelude.join('\n')}\n${after}`;
         }
         return `void main() ${body}`;
       }
 
       const argList = options.args
-        // Stripping out unused arguments in entry functions
         .filter((arg) => arg.used || options.functionType === 'normal')
         .map((arg) => {
           return `${this.ctx.resolve(arg.decoratedType).value} ${arg.name}`;
@@ -234,7 +385,7 @@ export class GlslGenerator extends WgslGenerator {
       return `${this.ctx.resolve(returnType).value} ${options.name}(${argList}) ${body}`;
     } finally {
       this.#functionType = lastFunctionType;
-      this.#entryFnState = undefined;
+      this.#entryFnState = lastEntryFnState;
     }
   }
 }
