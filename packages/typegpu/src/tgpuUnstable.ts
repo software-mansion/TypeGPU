@@ -4,9 +4,6 @@ export { declare } from './core/declare/tgpuDeclare.ts';
 export { rawCodeSnippet } from './core/rawCodeSnippet/tgpuRawCodeSnippet.ts';
 export { namespace } from './core/resolve/namespace.ts';
 export { simulate } from './core/simulate/tgpuSimulate.ts';
-// TODO: Export from shaderGenerator_members.ts instead
-export { AutoVertexFn, AutoFragmentFn } from './core/function/autoIO.ts';
-export { matchUpVaryingLocations } from './core/pipeline/renderPipeline.ts';
 
 // DEPRECATED
 

@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import tgpu, { d } from 'typegpu';
-import { GLOptions } from '@typegpu/gl';
+import { GLOptions, initWithGL } from '@typegpu/gl';
 import { translateWgslTypeToGlsl } from '../src/glslGenerator.ts';
+import { _resetUniformCounter } from '../src/tgpuRootWebGL.ts';
+import { it as glIt } from './utils/extendedTest.ts';
 
 describe('translateWgslTypeToGlsl', () => {
   it('translates scalar types', () => {
@@ -205,14 +207,14 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     const result = tgpu.resolve([vertFn], GLOptions());
 
     expect(result).toMatchInlineSnapshot(`
-      "layout(location = 0) out uv_1;
+      "out vec2 vary_uv;
 
       void main() {
         vec4 position = vec4();
         vec2 uv = vec2();
         {
-          gl_Position = position;
-          uv_1 = uv;
+          gl_Position = vec4(position);
+          vary_uv = vec2(uv);
           return;
         }
       }"
@@ -236,12 +238,99 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     expect(result.code).not.toMatch(/\bvec4f\s*\(/);
 
     expect(result.code).toMatchInlineSnapshot(`
-      "void main() {
+      "layout(location = 0) out vec4 _fragColor;
+
+      void main() {
         int gl_Position_1 = 1;
         {
-          gl_Position = vec4(1, 0, 0, 1);
+          _fragColor = vec4(1, 0, 0, 1);
           return;
         }
+      }"
+    `);
+  });
+});
+
+describe('GlslGenerator - uniform resolution', () => {
+  beforeEach(() => {
+    _resetUniformCounter();
+  });
+
+  glIt('emits a uniform declaration and references the name in shader body', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const time = root.createUniform(d.f32);
+
+    const fn = () => {
+      'use gpu';
+      return time.$;
+    };
+
+    const result = tgpu.resolve([fn], GLOptions());
+    expect(result).toMatchInlineSnapshot(`
+      "uniform float _u0;
+
+      float fn() {
+        return _u0;
+      }"
+    `);
+  });
+
+  glIt('emits a vec3f uniform as vec3', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const color = root.createUniform(d.vec3f);
+
+    const fn = () => {
+      'use gpu';
+      return color.$;
+    };
+
+    const result = tgpu.resolve([fn], GLOptions());
+    expect(result).toMatchInlineSnapshot(`
+      "uniform vec3 _u0;
+
+      vec3 fn() {
+        return _u0;
+      }"
+    `);
+  });
+
+  glIt('emits multiple uniforms with sequential names', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const time = root.createUniform(d.f32);
+    const scale = root.createUniform(d.f32);
+
+    const fn = () => {
+      'use gpu';
+      return time.$ * scale.$;
+    };
+
+    const result = tgpu.resolve([fn], GLOptions());
+    expect(result).toMatchInlineSnapshot(`
+      "uniform float _u0;
+
+      uniform float _u1;
+
+      float fn_1() {
+        return (_u0 * _u1);
+      }"
+    `);
+  });
+
+  glIt('emits a mat2x2f uniform as mat2', ({ gl }) => {
+    const root = initWithGL({ gl });
+    const transform = root.createUniform(d.mat2x2f);
+
+    const fn = (v: d.v2f) => {
+      'use gpu';
+      return transform.$ * v;
+    };
+
+    const result = tgpu.resolve([fn], GLOptions());
+    expect(result).toMatchInlineSnapshot(`
+      "uniform mat2 _u0;
+
+      vec2 fn(vec2 v) {
+        return (_u0 * v);
       }"
     `);
   });

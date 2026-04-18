@@ -147,7 +147,11 @@ export class GlslGenerator extends WgslGenerator {
   override _returnStatement(statement: Return): string {
     const exprNode = statement[1];
 
-    if (exprNode === undefined || this.#functionType === 'normal' || this.#functionType === undefined) {
+    if (
+      exprNode === undefined ||
+      this.#functionType === 'normal' ||
+      this.#functionType === undefined
+    ) {
       return super._returnStatement(statement);
     }
 
@@ -174,11 +178,20 @@ export class GlslGenerator extends WgslGenerator {
 
     const exprType = (expr.dataType as d.BaseData).type;
 
-    if (this.#functionType === 'fragment' && typeof exprType === 'string' && exprType.startsWith('vec')) {
+    if (
+      this.#functionType === 'fragment' &&
+      typeof exprType === 'string' &&
+      exprType.startsWith('vec')
+    ) {
       // Fragment returning a vec directly (typically vec4). Assign to frag color output.
-      const name = entryFnState.fragColorName ?? this.ctx.makeUniqueIdentifier('_fragColor', 'global');
+      const name =
+        entryFnState.fragColorName ?? this.ctx.makeUniqueIdentifier('_fragColor', 'global');
       entryFnState.fragColorName = name;
-      const colorSnippet = tgpu['~unstable'].rawCodeSnippet(name, expr.dataType as d.AnyData, 'private');
+      const colorSnippet = tgpu['~unstable'].rawCodeSnippet(
+        name,
+        expr.dataType as d.AnyData,
+        'private',
+      );
       const block = super._block(
         [NODE.block, [[NODE.assignmentExpr, name, '=', exprNode], [NODE.return]]],
         { [name]: colorSnippet.$ },
@@ -186,7 +199,11 @@ export class GlslGenerator extends WgslGenerator {
       return `${this.ctx.pre}${block}`;
     }
 
-    if (this.#functionType === 'vertex' && typeof exprType === 'string' && exprType.startsWith('vec')) {
+    if (
+      this.#functionType === 'vertex' &&
+      typeof exprType === 'string' &&
+      exprType.startsWith('vec')
+    ) {
       // Vertex returning a vec directly -> gl_Position.
       const block = super._block(
         [NODE.block, [[NODE.assignmentExpr, 'gl_Position', '=', exprNode], [NODE.return]]],
@@ -205,14 +222,15 @@ export class GlslGenerator extends WgslGenerator {
   ): string {
     // Is this an auto-detected output struct? If so, register each prop so the
     // output struct's propTypes reflects what the body actually returns.
-    const isAutoStruct = expectedReturnType !== undefined &&
+    const isAutoStruct =
+      expectedReturnType !== undefined &&
       (expectedReturnType as { type?: string }).type === 'auto-struct';
     const autoStruct = isAutoStruct
       ? (expectedReturnType as unknown as {
-        completeStruct: d.WgslStruct;
-        accessProp(key: string): { prop: string; type: d.BaseData } | undefined;
-        provideProp(key: string, type: d.BaseData): { prop: string; type: d.BaseData };
-      })
+          completeStruct: d.WgslStruct;
+          accessProp(key: string): { prop: string; type: d.BaseData } | undefined;
+          provideProp(key: string, type: d.BaseData): { prop: string; type: d.BaseData };
+        })
       : undefined;
     if (autoStruct) {
       entryFnState.autoOutStruct = autoStruct;
@@ -303,9 +321,7 @@ export class GlslGenerator extends WgslGenerator {
             const glslType = this.ctx.resolve(undecorateDataType(dataType)).value;
             if (options.functionType === 'fragment') {
               // Fragment color outputs keep location=N since they target draw buffers.
-              this.ctx.addDeclaration(
-                `layout(location = 0) out ${glslType} ${varName};`,
-              );
+              this.ctx.addDeclaration(`layout(location = 0) out ${glslType} ${varName};`);
             } else {
               this.ctx.addDeclaration(`out ${glslType} ${varName};`);
             }
@@ -316,52 +332,71 @@ export class GlslGenerator extends WgslGenerator {
           this.ctx.addDeclaration(`layout(location = 0) out vec4 ${entryFnState.fragColorName};`);
         }
 
-        // --- Emit input-side setup: declare layout(location) in vars, and initialize _arg_N structs ---
+        // --- Emit input-side setup: declare layout(location) in vars, and initialize
+        //     struct-shaped or scalar-shaped arg variables used by the body ---
         const prelude: string[] = [];
+        const stage = options.functionType as 'vertex' | 'fragment' | 'compute';
+        const resolveInputForField = (prop: string, propType: d.BaseData): string => {
+          const builtinKind = getBuiltinKindFromDecorated(propType);
+          if (builtinKind) {
+            const mapped = glslInputForBuiltin(builtinKind, stage);
+            if (mapped === undefined) {
+              throw new Error(`Unsupported builtin for ${stage} shader: ${builtinKind}`);
+            }
+            return mapped;
+          }
+          const location = getLocationFromDecorated(propType);
+          const glslType = this.ctx.resolve(undecorateDataType(propType)).value;
+          if (stage === 'vertex') {
+            const inName = this.ctx.makeUniqueIdentifier(`_in_${prop}`, 'global');
+            this.ctx.addDeclaration(
+              `layout(location = ${location ?? 0}) in ${glslType} ${inName};`,
+            );
+            return inName;
+          }
+          const inName = this.ctx.makeUniqueIdentifier(`vary_${prop}`, 'global');
+          this.ctx.addDeclaration(`in ${glslType} ${inName};`);
+          return inName;
+        };
+
         for (const arg of options.args) {
           if (!arg.used) continue;
           const argType = arg.decoratedType as d.BaseData;
-          // AutoStruct args (entry fn auto-detected inputs):
-          // Identified via `type === 'auto-struct'`.
+
+          // Auto-detected IO struct (plain-function entry fns)
           if ((argType as { type?: string }).type === 'auto-struct') {
-            const autoStruct = argType as unknown as {
-              completeStruct: d.WgslStruct;
-            };
+            const autoStruct = argType as unknown as { completeStruct: d.WgslStruct };
             const completeStruct = autoStruct.completeStruct;
             const structTypeName = this.ctx.resolve(completeStruct).value;
             const initArgs: string[] = [];
             for (const [prop, propType] of Object.entries(completeStruct.propTypes)) {
-              const builtinKind = getBuiltinKindFromDecorated(propType);
-              if (builtinKind) {
-                const mapped = glslInputForBuiltin(
-                  builtinKind,
-                  options.functionType as 'vertex' | 'fragment' | 'compute',
-                );
-                if (mapped === undefined) {
-                  throw new Error(
-                    `Unsupported builtin for ${options.functionType} shader: ${builtinKind}`,
-                  );
-                }
-                initArgs.push(mapped);
-              } else {
-                const location = getLocationFromDecorated(propType);
-                const glslType = this.ctx.resolve(undecorateDataType(propType)).value;
-                if (options.functionType === 'vertex') {
-                  // Vertex attribute input — keep layout(location=N); safe in ES 3.00.
-                  const inName = this.ctx.makeUniqueIdentifier(`_in_${prop}`, 'global');
-                  this.ctx.addDeclaration(
-                    `layout(location = ${location ?? 0}) in ${glslType} ${inName};`,
-                  );
-                  initArgs.push(inName);
-                } else {
-                  // Fragment varying input — matched by name to the vertex output.
-                  const inName = this.ctx.makeUniqueIdentifier(`vary_${prop}`, 'global');
-                  this.ctx.addDeclaration(`in ${glslType} ${inName};`);
-                  initArgs.push(inName);
-                }
-              }
+              initArgs.push(resolveInputForField(prop, propType));
             }
-            prelude.push(`  ${structTypeName} ${arg.name} = ${structTypeName}(${initArgs.join(', ')});`);
+            prelude.push(
+              `  ${structTypeName} ${arg.name} = ${structTypeName}(${initArgs.join(', ')});`,
+            );
+            continue;
+          }
+
+          // Shell entry-fn IO struct (created from `in: {...}`): a regular WgslStruct with
+          // @builtin / @location decorated fields.
+          if (d.isWgslStruct(argType)) {
+            const structTypeName = this.ctx.resolve(argType).value;
+            const initArgs: string[] = [];
+            for (const [prop, propType] of Object.entries(argType.propTypes)) {
+              initArgs.push(resolveInputForField(prop, propType));
+            }
+            prelude.push(
+              `  ${structTypeName} ${arg.name} = ${structTypeName}(${initArgs.join(', ')});`,
+            );
+            continue;
+          }
+
+          // Shell entry-fn positional arg: a single decorated scalar/vector (builtin or varying).
+          if (d.isDecorated(argType)) {
+            const inputExpr = resolveInputForField(arg.name, argType);
+            const glslType = this.ctx.resolve(undecorateDataType(argType)).value;
+            prelude.push(`  ${glslType} ${arg.name} = ${inputExpr};`);
           }
         }
 
