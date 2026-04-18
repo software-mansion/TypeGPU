@@ -337,54 +337,71 @@ export class GlslGenerator extends WgslGenerator {
           this.ctx.addDeclaration(`layout(location = 0) out vec4 ${entryFnState.fragColorName};`);
         }
 
-        // --- Emit input-side setup: declare layout(location) in vars, and initialize _arg_N structs ---
+        // --- Emit input-side setup: declare layout(location) in vars, and initialize
+        //     struct-shaped or scalar-shaped arg variables used by the body ---
         const prelude: string[] = [];
+        const stage = options.functionType as 'vertex' | 'fragment' | 'compute';
+        const resolveInputForField = (prop: string, propType: d.BaseData): string => {
+          const builtinKind = getBuiltinKindFromDecorated(propType);
+          if (builtinKind) {
+            const mapped = glslInputForBuiltin(builtinKind, stage);
+            if (mapped === undefined) {
+              throw new Error(`Unsupported builtin for ${stage} shader: ${builtinKind}`);
+            }
+            return mapped;
+          }
+          const location = getLocationFromDecorated(propType);
+          const glslType = this.ctx.resolve(undecorateDataType(propType)).value;
+          if (stage === 'vertex') {
+            const inName = this.ctx.makeUniqueIdentifier(`_in_${prop}`, 'global');
+            this.ctx.addDeclaration(
+              `layout(location = ${location ?? 0}) in ${glslType} ${inName};`,
+            );
+            return inName;
+          }
+          const inName = this.ctx.makeUniqueIdentifier(`vary_${prop}`, 'global');
+          this.ctx.addDeclaration(`in ${glslType} ${inName};`);
+          return inName;
+        };
+
         for (const arg of options.args) {
           if (!arg.used) continue;
           const argType = arg.decoratedType as d.BaseData;
-          // AutoStruct args (entry fn auto-detected inputs):
-          // Identified via `type === 'auto-struct'`.
+
+          // Auto-detected IO struct (plain-function entry fns)
           if ((argType as { type?: string }).type === 'auto-struct') {
-            const autoStruct = argType as unknown as {
-              completeStruct: d.WgslStruct;
-            };
+            const autoStruct = argType as unknown as { completeStruct: d.WgslStruct };
             const completeStruct = autoStruct.completeStruct;
             const structTypeName = this.ctx.resolve(completeStruct).value;
             const initArgs: string[] = [];
             for (const [prop, propType] of Object.entries(completeStruct.propTypes)) {
-              const builtinKind = getBuiltinKindFromDecorated(propType);
-              if (builtinKind) {
-                const mapped = glslInputForBuiltin(
-                  builtinKind,
-                  options.functionType as 'vertex' | 'fragment' | 'compute',
-                );
-                if (mapped === undefined) {
-                  throw new Error(
-                    `Unsupported builtin for ${options.functionType} shader: ${builtinKind}`,
-                  );
-                }
-                initArgs.push(mapped);
-              } else {
-                const location = getLocationFromDecorated(propType);
-                const glslType = this.ctx.resolve(undecorateDataType(propType)).value;
-                if (options.functionType === 'vertex') {
-                  // Vertex attribute input — keep layout(location=N); safe in ES 3.00.
-                  const inName = this.ctx.makeUniqueIdentifier(`_in_${prop}`, 'global');
-                  this.ctx.addDeclaration(
-                    `layout(location = ${location ?? 0}) in ${glslType} ${inName};`,
-                  );
-                  initArgs.push(inName);
-                } else {
-                  // Fragment varying input — matched by name to the vertex output.
-                  const inName = this.ctx.makeUniqueIdentifier(`vary_${prop}`, 'global');
-                  this.ctx.addDeclaration(`in ${glslType} ${inName};`);
-                  initArgs.push(inName);
-                }
-              }
+              initArgs.push(resolveInputForField(prop, propType));
             }
             prelude.push(
               `  ${structTypeName} ${arg.name} = ${structTypeName}(${initArgs.join(', ')});`,
             );
+            continue;
+          }
+
+          // Shell entry-fn IO struct (created from `in: {...}`): a regular WgslStruct with
+          // @builtin / @location decorated fields.
+          if (d.isWgslStruct(argType)) {
+            const structTypeName = this.ctx.resolve(argType).value;
+            const initArgs: string[] = [];
+            for (const [prop, propType] of Object.entries(argType.propTypes)) {
+              initArgs.push(resolveInputForField(prop, propType));
+            }
+            prelude.push(
+              `  ${structTypeName} ${arg.name} = ${structTypeName}(${initArgs.join(', ')});`,
+            );
+            continue;
+          }
+
+          // Shell entry-fn positional arg: a single decorated scalar/vector (builtin or varying).
+          if (d.isDecorated(argType)) {
+            const inputExpr = resolveInputForField(arg.name, argType);
+            const glslType = this.ctx.resolve(undecorateDataType(argType)).value;
+            prelude.push(`  ${glslType} ${arg.name} = ${inputExpr};`);
           }
         }
 
