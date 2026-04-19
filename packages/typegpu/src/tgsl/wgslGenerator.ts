@@ -51,6 +51,8 @@ import { mathToStd } from './math.ts';
 import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
+import type { FunctionDefinitionOptions } from './shaderGenerator_members.ts';
+import { getAttributesString } from '../data/attributes.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -239,8 +241,12 @@ ${this.ctx.pre}}`;
     }
   }
 
+  public _blockStatement(block: tinyest.Block, externalMap?: ExternalMap): string {
+    return `${this.ctx.pre}${this._block(block, externalMap)}`;
+  }
+
   public refVariable(id: string, dataType: wgsl.StorableData): string {
-    const varName = this.ctx.makeNameValid(id);
+    const varName = this.ctx.makeUniqueIdentifier(id, 'block');
     const ptrType = ptrFn(dataType);
     const snippet = snip(
       new RefOperator(snip(varName, dataType, 'function'), ptrType),
@@ -278,19 +284,22 @@ ${this.ctx.pre}}`;
       varOrigin = 'runtime';
     }
 
-    const snippet = snip(this.ctx.makeNameValid(id), dataType, /* origin */ varOrigin);
+    const snippet = snip(
+      this.ctx.makeUniqueIdentifier(id, 'block'),
+      dataType,
+      /* origin */ varOrigin,
+    );
     this.ctx.defineVariable(id, snippet);
     return snippet;
   }
 
-  protected emitVarDecl(
-    pre: string,
+  public _emitVarDecl(
     keyword: 'var' | 'let' | 'const',
     name: string,
     _dataType: wgsl.BaseData | UnknownData,
     rhsStr: string,
   ): string {
-    return `${pre}${keyword} ${name} = ${rhsStr};`;
+    return `${this.ctx.pre}${keyword} ${name} = ${rhsStr};`;
   }
 
   public _identifier(id: string): Snippet {
@@ -887,8 +896,36 @@ ${this.ctx.pre}}`;
     assertExhaustive(expression);
   }
 
-  public functionDefinition(body: tinyest.Block): string {
-    return this._block(body);
+  public functionDefinition(options: FunctionDefinitionOptions): string {
+    // Function body
+    const body = this._block(options.body);
+
+    // Only after generating the body can we determine the return type
+    const returnType = options.determineReturnType();
+
+    const argList = options.args
+      // Stripping out unused arguments in entry functions
+      .filter((arg) => arg.used || options.functionType === 'normal')
+      .map((arg) => {
+        return `${getAttributesString(arg.decoratedType)}${arg.name}: ${this.ctx.resolve(arg.decoratedType).value}`;
+      })
+      .join(', ');
+
+    const head =
+      returnType.type !== 'void'
+        ? `(${argList}) -> ${getAttributesString(returnType)}${this.ctx.resolve(returnType).value} `
+        : `(${argList}) `;
+
+    let attributes = '';
+    if (options.functionType === 'compute') {
+      attributes = `@compute @workgroup_size(${options.workgroupSize?.join(', ')}) `;
+    } else if (options.functionType === 'vertex') {
+      attributes = `@vertex `;
+    } else if (options.functionType === 'fragment') {
+      attributes = `@fragment `;
+    }
+
+    return `${attributes}fn ${options.name}${head}${body}`;
   }
 
   /**
@@ -910,6 +947,75 @@ ${this.ctx.pre}}`;
     return snip(stitch`${this.ctx.resolve(schema).value}(${args})`, schema, 'runtime');
   }
 
+  public _returnStatement(statement: tinyest.Return): string {
+    const returnNode = statement[1];
+
+    if (returnNode !== undefined) {
+      const expectedReturnType = this.ctx.topFunctionReturnType;
+      let returnSnippet = expectedReturnType
+        ? this._typedExpression(returnNode, expectedReturnType)
+        : this._expression(returnNode);
+
+      if (returnSnippet.value instanceof RefOperator) {
+        throw new WgslTypeError(
+          stitch`Cannot return references, returning '${returnSnippet.value.snippet}'`,
+        );
+      }
+
+      // Arguments cannot be returned from functions without copying. A simple example why is:
+      // const identity = (x) => {
+      //   'use gpu';
+      //   return x;
+      // };
+      //
+      // const foo = (arg: d.v3f) => {
+      //   'use gpu';
+      //   const marg = identity(arg);
+      //   marg.x = 1; // 'marg's origin would be 'runtime', so we wouldn't be able to track this misuse.
+      // };
+      if (
+        returnSnippet.origin === 'argument' &&
+        !wgsl.isNaturallyEphemeral(returnSnippet.dataType) &&
+        // Only restricting this use in non-entry functions, as the function
+        // is giving up ownership of all references anyway.
+        this.ctx.topFunctionScope?.functionType === 'normal'
+      ) {
+        throw new WgslTypeError(
+          stitch`Cannot return references to arguments, returning '${returnSnippet}'. Copy the argument before returning it.`,
+        );
+      }
+
+      if (
+        !expectedReturnType &&
+        !isEphemeralSnippet(returnSnippet) &&
+        returnSnippet.origin !== 'this-function'
+      ) {
+        const str = this.ctx.resolve(returnSnippet.value, returnSnippet.dataType).value;
+        const typeStr = this.ctx.resolve(unptr(returnSnippet.dataType)).value;
+        throw new WgslTypeError(
+          `'return ${str};' is invalid, cannot return references.
+-----
+Try 'return ${typeStr}(${str});' instead.
+-----`,
+        );
+      }
+
+      returnSnippet = tryConvertSnippet(
+        this.ctx,
+        returnSnippet,
+        unptr(returnSnippet.dataType) as wgsl.AnyWgslData,
+        false,
+      );
+
+      invariant(returnSnippet.dataType !== UnknownData, 'Return type should be known');
+
+      this.ctx.reportReturnType(returnSnippet.dataType);
+      return stitch`${this.ctx.pre}return ${returnSnippet};`;
+    }
+
+    return `${this.ctx.pre}return;`;
+  }
+
   public _statement(statement: tinyest.Statement): string {
     if (typeof statement === 'string') {
       const id = this._identifier(statement);
@@ -923,72 +1029,7 @@ ${this.ctx.pre}}`;
     }
 
     if (statement[0] === NODE.return) {
-      const returnNode = statement[1];
-
-      if (returnNode !== undefined) {
-        const expectedReturnType = this.ctx.topFunctionReturnType;
-        let returnSnippet = expectedReturnType
-          ? this._typedExpression(returnNode, expectedReturnType)
-          : this._expression(returnNode);
-
-        if (returnSnippet.value instanceof RefOperator) {
-          throw new WgslTypeError(
-            stitch`Cannot return references, returning '${returnSnippet.value.snippet}'`,
-          );
-        }
-
-        // Arguments cannot be returned from functions without copying. A simple example why is:
-        // const identity = (x) => {
-        //   'use gpu';
-        //   return x;
-        // };
-        //
-        // const foo = (arg: d.v3f) => {
-        //   'use gpu';
-        //   const marg = identity(arg);
-        //   marg.x = 1; // 'marg's origin would be 'runtime', so we wouldn't be able to track this misuse.
-        // };
-        if (
-          returnSnippet.origin === 'argument' &&
-          !wgsl.isNaturallyEphemeral(returnSnippet.dataType) &&
-          // Only restricting this use in non-entry functions, as the function
-          // is giving up ownership of all references anyway.
-          this.ctx.topFunctionScope?.functionType === 'normal'
-        ) {
-          throw new WgslTypeError(
-            stitch`Cannot return references to arguments, returning '${returnSnippet}'. Copy the argument before returning it.`,
-          );
-        }
-
-        if (
-          !expectedReturnType &&
-          !isEphemeralSnippet(returnSnippet) &&
-          returnSnippet.origin !== 'this-function'
-        ) {
-          const str = this.ctx.resolve(returnSnippet.value, returnSnippet.dataType).value;
-          const typeStr = this.ctx.resolve(unptr(returnSnippet.dataType)).value;
-          throw new WgslTypeError(
-            `'return ${str};' is invalid, cannot return references.
------
-Try 'return ${typeStr}(${str});' instead.
------`,
-          );
-        }
-
-        returnSnippet = tryConvertSnippet(
-          this.ctx,
-          returnSnippet,
-          unptr(returnSnippet.dataType) as wgsl.AnyWgslData,
-          false,
-        );
-
-        invariant(returnSnippet.dataType !== UnknownData, 'Return type should be known');
-
-        this.ctx.reportReturnType(returnSnippet.dataType);
-        return stitch`${this.ctx.pre}return ${returnSnippet};`;
-      }
-
-      return `${this.ctx.pre}return;`;
+      return this._returnStatement(statement);
     }
 
     if (statement[0] === NODE.if) {
@@ -1013,7 +1054,7 @@ Try 'return ${typeStr}(${str});' instead.
           return this._statement(node);
         }
         // simplify 'if (true) {A} else {B}' to '{A}'
-        return `${this.ctx.pre}${this._block(blockifySingleStatement(node))}`;
+        return this._blockStatement(blockifySingleStatement(node));
       }
 
       const consequent = this._block(blockifySingleStatement(consNode));
@@ -1136,17 +1177,11 @@ ${this.ctx.pre}else ${alternate}`;
       const snippet = this.blockVariable(varType, rawId, concretize(dataType), eq.origin);
       const rhsSnippet = tryConvertSnippet(this.ctx, eq, dataType, false);
       const rhsStr = this.ctx.resolve(rhsSnippet.value, rhsSnippet.dataType).value;
-      return this.emitVarDecl(
-        this.ctx.pre,
-        varType,
-        snippet.value as string,
-        concretize(dataType),
-        rhsStr,
-      );
+      return this._emitVarDecl(varType, snippet.value as string, concretize(dataType), rhsStr);
     }
 
     if (statement[0] === NODE.block) {
-      return `${this.ctx.pre}${this._block(statement)}`;
+      return this._blockStatement(statement);
     }
 
     if (statement[0] === NODE.for) {
@@ -1242,12 +1277,9 @@ ${this.ctx.pre}else ${alternate}`;
 
           const blocks = elements.map(
             (e, i) =>
-              `${this.ctx.pre}// unrolled iteration #${i}\n${this.ctx.pre}${this._block(
-                blockified,
-                {
-                  [originalLoopVarName]: e,
-                },
-              )}`,
+              `${this.ctx.pre}// unrolled iteration #${i}\n${this._blockStatement(blockified, {
+                [originalLoopVarName]: e,
+              })}`,
           );
 
           return blocks.join('\n');
@@ -1255,7 +1287,7 @@ ${this.ctx.pre}else ${alternate}`;
 
         this.#unrolling = false;
 
-        const index = this.ctx.makeNameValid('i');
+        const index = this.ctx.makeUniqueIdentifier('i', 'block');
 
         const forHeaderStr = stitch`${this.ctx.pre}for (var ${index} = ${range.start}; ${index} ${range.comparison} ${range.end}; ${index} += ${range.step})`;
 
@@ -1268,7 +1300,7 @@ ${this.ctx.pre}else ${alternate}`;
         } else {
           this.ctx.indent();
           ctxIndent = true;
-          const loopVarName = this.ctx.makeNameValid(originalLoopVarName);
+          const loopVarName = this.ctx.makeUniqueIdentifier(originalLoopVarName, 'block');
           const elementSnippet = forOfUtils.getElementSnippet(
             iterableSnippet,
             snip(index, u32, 'runtime'),
@@ -1282,7 +1314,7 @@ ${this.ctx.pre}else ${alternate}`;
             false,
           )};`;
 
-          bodyStr = `{\n${loopVarDeclStr}\n${this.ctx.pre}${this._block(blockified, {
+          bodyStr = `{\n${loopVarDeclStr}\n${this._blockStatement(blockified, {
             [originalLoopVarName]: snip(loopVarName, elementType, elementSnippet.origin),
           })}\n`;
           this.ctx.dedent();

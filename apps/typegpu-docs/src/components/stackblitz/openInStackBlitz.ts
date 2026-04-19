@@ -2,6 +2,7 @@ import StackBlitzSDK from '@stackblitz/sdk';
 import { parse } from 'yaml';
 import { type } from 'arktype';
 import typegpuColorPackageJson from '@typegpu/color/package.json' with { type: 'json' };
+import typegpuGlPackageJson from '@typegpu/gl/package.json' with { type: 'json' };
 import typegpuNoisePackageJson from '@typegpu/noise/package.json' with { type: 'json' };
 import typegpuSdfPackageJson from '@typegpu/sdf/package.json' with { type: 'json' };
 import typegpuThreePackageJson from '@typegpu/three/package.json' with { type: 'json' };
@@ -120,6 +121,7 @@ ${example.htmlFile.content}
       "three": "${pnpmWorkspaceYaml.catalogs.example.three}",
       "@typegpu/noise": "${typegpuNoisePackageJson.version}",
       "@typegpu/color": "${typegpuColorPackageJson.version}",
+      "@typegpu/gl": "${typegpuGlPackageJson.version}",
       "@typegpu/sdf": "${typegpuSdfPackageJson.version}",
       "@typegpu/three": "${typegpuThreePackageJson.version}"
     }

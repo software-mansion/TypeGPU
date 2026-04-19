@@ -3,9 +3,10 @@ import { undecorate } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { type BaseData, isWgslData, isWgslStruct, Void } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
+import { isValidIdentifier } from '../../nameUtils.ts';
 import { getMetaData, getName } from '../../shared/meta.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
-import type { ResolutionCtx } from '../../types.ts';
+import type { ResolutionCtx, TgpuShaderStage } from '../../types.ts';
 import { applyExternals, type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
 import { extractArgs } from './extractArgs.ts';
 import type { Implementation, SeparatedEntryArgs } from './fnTypes.ts';
@@ -32,7 +33,11 @@ export interface FnCore {
   ): ResolvedSnippet;
 }
 
-export function createFnCore(implementation: Implementation, fnAttribute = ''): FnCore {
+export function createFnCore(
+  implementation: Implementation,
+  functionType: 'normal' | TgpuShaderStage,
+  workgroupSize?: number[],
+): FnCore {
   /**
    * External application has to be deferred until resolution because
    * some externals can reference the owner function which has not been
@@ -61,21 +66,25 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
         applyExternals(externalMap, externals);
       }
 
-      const id = ctx.getUniqueName(this);
+      const id = ctx.makeUniqueIdentifier(getName(this), 'global');
 
       if (typeof implementation === 'string') {
         if (!returnType) {
           throw new Error('Explicit return type is required for string implementation');
         }
 
-        const validArgNames = entryInput
-          ? Object.fromEntries(
-              entryInput.positionalArgs.map((a) => [a.schemaKey, ctx.makeNameValid(a.schemaKey)]),
-            )
-          : undefined;
+        if (entryInput) {
+          for (const arg of entryInput.positionalArgs) {
+            if (!isValidIdentifier(arg.schemaKey)) {
+              throw new Error(`Invalid argument name: ${arg.schemaKey}`);
+            }
+          }
 
-        if (validArgNames && Object.keys(validArgNames).length > 0) {
-          applyExternals(externalMap, { in: validArgNames });
+          applyExternals(externalMap, {
+            in: Object.fromEntries(
+              entryInput.positionalArgs.map((a) => [a.schemaKey, a.schemaKey]),
+            ),
+          });
         }
 
         const replacedImpl = replaceExternalsInWgsl(ctx, externalMap, implementation);
@@ -83,15 +92,15 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
         let header = '';
         let body = '';
 
-        if (fnAttribute !== '' && entryInput && validArgNames) {
+        if (functionType !== 'normal' && entryInput) {
           const { dataSchema, positionalArgs } = entryInput;
           const parts: string[] = [];
           if (dataSchema && isArgUsedInBody('in', replacedImpl)) {
             parts.push(`in: ${ctx.resolve(dataSchema).value}`);
           }
           for (const a of positionalArgs) {
-            const argName = validArgNames[a.schemaKey] ?? '';
-            if (argName !== '' && isArgUsedInBody(argName, replacedImpl)) {
+            const argName = a.schemaKey;
+            if (isArgUsedInBody(argName, replacedImpl)) {
               parts.push(`${getAttributesString(a.type)}${argName}: ${ctx.resolve(a.type).value}`);
             }
           }
@@ -140,7 +149,17 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
           body = replacedImpl.slice(providedArgs.range.end);
         }
 
-        ctx.addDeclaration(`${fnAttribute}fn ${id}${header}${body}`);
+        let attributes = '';
+        if (functionType === 'compute') {
+          attributes = `@compute @workgroup_size(${workgroupSize?.join(', ')}) `;
+        } else if (functionType === 'vertex') {
+          attributes = `@vertex `;
+        } else if (functionType === 'fragment') {
+          attributes = `@fragment `;
+        }
+
+        ctx.addDeclaration(`${attributes}fn ${id}${header}${body}`);
+
         return snip(id, returnType, /* origin */ 'runtime');
       }
 
@@ -178,7 +197,7 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
       // If an entrypoint implementation has a second argument, it represents the output schema.
       // We look at the identifier chosen by the user and add it to externals.
       const maybeSecondArg = ast.params[1];
-      if (maybeSecondArg && maybeSecondArg.type === 'i' && fnAttribute !== '') {
+      if (maybeSecondArg && maybeSecondArg.type === 'i' && functionType !== 'normal') {
         applyExternals(externalMap, {
           // oxlint-disable-next-line typescript/no-non-null-assertion -- entry functions cannot be shellless
           [maybeSecondArg.name]: undecorate(returnType!),
@@ -187,18 +206,10 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
 
       // generate wgsl string
 
-      const {
-        head,
-        body,
-        returnType: actualReturnType,
-      } = ctx.fnToWgsl({
-        functionType: fnAttribute.includes('@compute')
-          ? 'compute'
-          : fnAttribute.includes('@vertex')
-            ? 'vertex'
-            : fnAttribute.includes('@fragment')
-              ? 'fragment'
-              : 'normal',
+      const { code, returnType: actualReturnType } = ctx.resolveFunction({
+        functionType,
+        name: id,
+        workgroupSize,
         argTypes,
         entryInput,
         params: ast.params,
@@ -207,9 +218,7 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
         externalMap,
       });
 
-      ctx.addDeclaration(
-        `${fnAttribute}fn ${id}${ctx.resolve(head).value}${ctx.resolve(body).value}`,
-      );
+      ctx.addDeclaration(code);
 
       return snip(id, actualReturnType, /* origin */ 'runtime');
     },

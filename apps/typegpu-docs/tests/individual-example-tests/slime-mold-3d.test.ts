@@ -382,10 +382,6 @@ describe('slime mold 3d example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct fragmentShader_Input {
-        @location(0) uv: vec2f,
-      }
-
       var<private> seed: vec2f;
 
       fn seed2(value: vec2f) {
@@ -437,6 +433,10 @@ describe('slime mold 3d example', () => {
       @group(1) @binding(0) var state: texture_3d<f32>;
 
       @group(0) @binding(1) var sampler_1: sampler;
+
+      struct fragmentShader_Input {
+        @location(0) uv: vec2f,
+      }
 
       @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
         randSeed2(_arg_0.uv);

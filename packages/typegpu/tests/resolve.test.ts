@@ -1,6 +1,6 @@
 import { describe, expect, vi } from 'vitest';
 import tgpu, { d } from '../src/index.js';
-import { setName } from '../src/shared/meta.ts';
+import { getName, setName } from '../src/shared/meta.ts';
 import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { it } from 'typegpu-testing-utility';
@@ -55,7 +55,7 @@ describe('tgpu resolve', () => {
       } as unknown as number,
 
       [$resolve](ctx: ResolutionCtx) {
-        const name = ctx.getUniqueName(this);
+        const name = ctx.makeUniqueIdentifier(getName(this), 'global');
         ctx.addDeclaration(`@group(0) @binding(0) var<uniform> ${name}: f32;`);
         return snip(name, d.f32, /* origin */ 'runtime');
       },
