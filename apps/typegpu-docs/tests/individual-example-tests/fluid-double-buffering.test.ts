@@ -172,7 +172,7 @@ describe('fluid double buffering example', () => {
 
       fn computeVelocity(x: i32, y: i32) -> vec2f {
         const gravityCost = 0.5;
-        let neighborOffsets = array<vec2i, 4>(vec2i(0, 1), vec2i(0, -1), vec2i(1, 0), vec2i(-1, 0));
+        var neighborOffsets = array<vec2i, 4>(vec2i(0, 1), vec2i(0, -1), vec2i(1, 0), vec2i(-1, 0));
         let cell = getCell(x, y);
         var leastCost = cell.z;
         var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());
@@ -399,7 +399,7 @@ describe('fluid double buffering example', () => {
 
       fn computeVelocity(x: i32, y: i32) -> vec2f {
         const gravityCost = 0.5;
-        let neighborOffsets = array<vec2i, 4>(vec2i(0, 1), vec2i(0, -1), vec2i(1, 0), vec2i(-1, 0));
+        var neighborOffsets = array<vec2i, 4>(vec2i(0, 1), vec2i(0, -1), vec2i(1, 0), vec2i(-1, 0));
         let cell = getCell(x, y);
         var leastCost = cell.z;
         var dirChoices = array<vec2f, 4>(vec2f(), vec2f(), vec2f(), vec2f());

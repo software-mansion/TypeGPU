@@ -587,7 +587,7 @@ describe('mutability tracking', () => {
       const resolved = tgpu.resolve([fn]);
       expect(resolved).toMatchInlineSnapshot(`
         "fn fn_1() {
-          let t = array<vec2f, 1>(vec2f());
+          var t = array<vec2f, 1>(vec2f());
           var result = vec2f();
           for (var i = 0u; i < 1u; i += 1u) {
             let v = (&t[i]);
@@ -610,7 +610,7 @@ describe('mutability tracking', () => {
       const resolved = tgpu.resolve([fn]);
       expect(resolved).toMatchInlineSnapshot(`
         "fn fn_1() {
-          let v = vec2f();
+          var v = vec2f();
           let u = (&v);
         }"
       `);

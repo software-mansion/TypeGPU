@@ -43,7 +43,7 @@ import { resolveData } from '../core/resolve/resolveData.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { _ref, RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
-import { UnrollableIterable } from '../core/unroll/tgpuUnroll.ts';
+import { unroll, UnrollableIterable } from '../core/unroll/tgpuUnroll.ts';
 import { isGenericFn } from '../core/function/tgpuFn.ts';
 import type { AnyFn } from '../core/function/fnTypes.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
@@ -691,7 +691,7 @@ ${this.ctx.pre}}`;
         );
       }
 
-      if (callee.value === _ref && argNodes[0]) {
+      if ((callee.value === _ref || callee.value === unroll) && argNodes[0]) {
         this.tryMarkModified(argNodes[0]);
       }
 
@@ -1261,6 +1261,8 @@ ${this.ctx.pre}else ${alternate}`;
       if (loopVar[0] !== NODE.const) {
         throw new WgslTypeError('Only `for (const ... of ... )` loops are supported');
       }
+
+      this.tryMarkModified(iterable); // overly-defensive, but let's not tempt fate
 
       let ctxIndent = false;
       const prevUnrollingFlag = this.#unrolling;

@@ -31,7 +31,7 @@ describe('tgpu.unroll', () => {
 
       fn f() -> f32 {
         let a = array<i32, 3>(1, 2, 3);
-        let v1 = vec2f(7);
+        var v1 = vec2f(7);
         let v2 = (&v1);
         let arr = (&arr_1);
         return (*arr)[0i];
@@ -503,7 +503,7 @@ describe('tgpu.unroll', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> f32 {
-        let arr = array<i32, 3>(1, 2, 3);
+        var arr = array<i32, 3>(1, 2, 3);
         var res = 0f;
         // unrolled iteration #0
         {
@@ -545,7 +545,7 @@ describe('tgpu.unroll', () => {
         let v1 = vec2f(1);
         let v2 = vec2f(8);
         let v3 = vec2f(2);
-        let arr = array<vec2f, 4>(v1, v2, v2, v3);
+        var arr = array<vec2f, 4>(v1, v2, v2, v3);
         var res = vec2f();
         // unrolled iteration #0
         {
@@ -602,7 +602,7 @@ describe('tgpu.unroll', () => {
       fn f() -> vec2f {
         let b1 = Boid(vec2i(1), vec2f(1));
         let b2 = Boid(vec2i(2), vec2f(2));
-        let arr = array<Boid, 2>(b1, b2);
+        var arr = array<Boid, 2>(b1, b2);
         var res = vec2f();
         // unrolled iteration #0
         {
@@ -685,7 +685,7 @@ describe('tgpu.unroll', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
-        let arr = array<i32, 3>(1, 2, 3);
+        var arr = array<i32, 3>(1, 2, 3);
         var r = 0f;
         // unrolled iteration #0
         {
@@ -791,7 +791,7 @@ describe('tgpu.unroll', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
-        let arr = array<i32, 3>(1, 2, 3);
+        var arr = array<i32, 3>(1, 2, 3);
         // unrolled iteration #0
         {
           for (var i = 0; (i < 2i); i++) {
