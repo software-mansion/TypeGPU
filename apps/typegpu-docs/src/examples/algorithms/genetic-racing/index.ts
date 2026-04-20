@@ -23,6 +23,7 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const STEPS_PER_DISPATCH = 32;
+const RACING_LINE_CAPACITY = 4096;
 
 const BASE_SPATIAL_PARAMS = {
   maxSpeed: 1.6,
@@ -47,6 +48,20 @@ const params = root.createUniform(SimParams, {
   spawnAngle: 0,
   stepsPerDispatch: STEPS_PER_DISPATCH,
   ...BASE_SPATIAL_PARAMS,
+});
+
+const RacingLinePoint = d.struct({
+  position: d.vec2f,
+  speed: d.f32,
+  drive: d.f32,
+  brake: d.f32,
+  turn: d.f32,
+});
+const RacingLineArray = d.arrayOf(RacingLinePoint, RACING_LINE_CAPACITY * 2);
+const RacingLineMeta = d.struct({
+  cursor: d.u32,
+  count: d.u32,
+  peakSpeed: d.f32,
 });
 
 const ga = createGeneticPopulation(root, params);
@@ -142,15 +157,24 @@ const evalNetwork = (genome: d.InferGPU<typeof Genome>, a: d.v4f, b: d.v4f, c: d
   );
 };
 
+const racingLineBuffer = root.createBuffer(RacingLineArray).$usage('storage', 'vertex');
+const racingLineMetaBuffer = root
+  .createBuffer(RacingLineMeta, { cursor: 0, count: 0, peakSpeed: 0 })
+  .$usage('storage');
+
 const simLayout = tgpu.bindGroupLayout({
   state: { storage: CarStateArray, access: 'mutable' },
   genome: { storage: GenomeArray },
+  trail: { storage: RacingLineArray, access: 'mutable' },
+  trailMeta: { storage: RacingLineMeta, access: 'mutable' },
 });
 
 const simBindGroups = [0, 1].map((i) =>
   root.createBindGroup(simLayout, {
     state: ga.stateBuffers[i],
     genome: ga.genomeBuffers[i],
+    trail: racingLineBuffer,
+    trailMeta: racingLineMetaBuffer,
   }),
 );
 
@@ -171,6 +195,17 @@ const simulatePipeline = root.createGuardedComputePipeline((i) => {
   let curAngVel = initCar.angVel;
   let curAliveSteps = initCar.aliveSteps;
   let curStallSteps = initCar.stallSteps;
+  const isChampion = d.u32(i) === 0;
+  const trailCapacity = d.u32(RACING_LINE_CAPACITY);
+  let trailCursor = d.u32(0);
+  let trailCount = d.u32(0);
+  let trailPeakSpeed = d.f32(0);
+
+  if (isChampion) {
+    trailCursor = simLayout.$.trailMeta.cursor;
+    trailCount = simLayout.$.trailMeta.count;
+    trailPeakSpeed = simLayout.$.trailMeta.peakSpeed;
+  }
 
   for (let s = d.u32(0); s < params.$.stepsPerDispatch; s++) {
     if (curAlive === 0) {
@@ -240,6 +275,62 @@ const simulatePipeline = root.createGuardedComputePipeline((i) => {
     curAngVel = std.select(0, angVel, onTrack);
     curAliveSteps = curAliveSteps + 1;
     curStallSteps = stallSteps;
+
+    if (isChampion && curAlive === 1) {
+      const hasPrev = trailCount > 0;
+      let prevPoint = RacingLinePoint({
+        position: curPosition,
+        speed: curSpeed,
+        drive: 0,
+        brake: 0,
+        turn: 0,
+      });
+
+      if (hasPrev) {
+        const prevIndex = std.select(trailCursor - 1, trailCapacity - 1, trailCursor === 0);
+        prevPoint = RacingLinePoint(simLayout.$.trail[prevIndex]);
+      }
+
+      const detailT = std.clamp(std.abs(steer) + std.max(-throttle, 0) * 0.85, 0, 1);
+      const minSpacing =
+        params.$.carSize * std.mix(0.18, 0.3, normSpeed) * std.mix(1.0, 0.52, detailT);
+      const delta = curPosition - prevPoint.position;
+
+      if (!hasPrev || std.dot(delta, delta) > minSpacing * minSpacing) {
+        let driveSignal = std.clamp(std.max(throttle, 0) * std.mix(0.72, 1.0, normSpeed), 0, 1);
+        let brakeSignal = std.clamp(
+          std.max(
+            std.max(-throttle, 0) * 0.9,
+            (std.max(curSpeed - speed, 0) / std.max(params.$.maxSpeed * params.$.dt, 0.0001)) *
+              0.65,
+          ),
+          0,
+          1,
+        );
+        let turnSignal = std.clamp(std.abs(steer) * std.mix(0.58, 1.0, normSpeed), 0, 1);
+
+        if (hasPrev) {
+          driveSignal = std.mix(prevPoint.drive, driveSignal, 0.24);
+          brakeSignal = std.max(brakeSignal, prevPoint.brake * 0.78);
+          brakeSignal = std.mix(prevPoint.brake, brakeSignal, 0.42);
+          turnSignal = std.mix(prevPoint.turn, turnSignal, 0.3);
+        }
+
+        driveSignal = driveSignal * (1 - brakeSignal * 0.72);
+        const point = RacingLinePoint({
+          position: curPosition,
+          speed: curSpeed,
+          drive: driveSignal,
+          brake: brakeSignal,
+          turn: turnSignal,
+        });
+        simLayout.$.trail[trailCursor] = RacingLinePoint(point);
+        simLayout.$.trail[trailCursor + trailCapacity] = RacingLinePoint(point);
+        trailCursor = std.select(trailCursor + 1, d.u32(0), trailCursor + 1 >= trailCapacity);
+        trailCount = std.min(trailCount + 1, trailCapacity);
+        trailPeakSpeed = std.max(trailPeakSpeed, curSpeed);
+      }
+    }
   }
 
   simLayout.$.state[i] = CarState({
@@ -252,6 +343,14 @@ const simulatePipeline = root.createGuardedComputePipeline((i) => {
     aliveSteps: curAliveSteps,
     stallSteps: curStallSteps,
   });
+
+  if (isChampion) {
+    simLayout.$.trailMeta = RacingLineMeta({
+      cursor: trailCursor,
+      count: trailCount,
+      peakSpeed: trailPeakSpeed,
+    });
+  }
 });
 
 // upper 16 bits = quantized fitness [0,65535], lower 16 bits = car index
@@ -379,6 +478,137 @@ const carPipeline = root.createRenderPipeline({
   },
 });
 
+const racingLineRenderLayout = tgpu.bindGroupLayout({
+  trail: { storage: RacingLineArray },
+  trailMeta: { storage: RacingLineMeta },
+});
+
+const racingLineRenderBindGroup = root.createBindGroup(racingLineRenderLayout, {
+  trail: racingLineBuffer,
+  trailMeta: racingLineMetaBuffer,
+});
+
+const racingLineColors = {
+  base: tgpu.const(d.vec3f, d.vec3f(0.34, 0.47, 0.54)),
+  speed: tgpu.const(d.vec3f, d.vec3f(0.58, 0.74, 0.76)),
+  drive: tgpu.const(d.vec3f, d.vec3f(0.47, 0.8, 0.71)),
+  brake: tgpu.const(d.vec3f, d.vec3f(0.92, 0.58, 0.47)),
+  highlight: tgpu.const(d.vec3f, d.vec3f(0.88, 0.93, 0.95)),
+};
+
+const racingLineTint = (action: d.v3f, speedT: number) => {
+  'use gpu';
+  let color = std.mix(
+    racingLineColors.base.$,
+    racingLineColors.speed.$,
+    std.mix(0.28, 0.7, std.clamp(speedT, 0, 1)) + action.z * 0.12,
+  );
+  color = std.mix(color, racingLineColors.drive.$, action.x * 0.38);
+  color = std.mix(color, racingLineColors.brake.$, action.y * 0.82);
+  return color;
+};
+
+const racingLineStart = (count: number, cursor: number) => {
+  'use gpu';
+  return std.select(RACING_LINE_CAPACITY, cursor, count === RACING_LINE_CAPACITY);
+};
+
+const racingLinePointAt = (index: number) => {
+  'use gpu';
+  return RacingLinePoint(racingLineRenderLayout.$.trail[index]);
+};
+
+const normalizeOr = (vector: d.v2f, fallback: d.v2f) => {
+  'use gpu';
+  return std.select(fallback, std.normalize(vector), std.dot(vector, vector) > 0.000001);
+};
+
+const racingLineVertex = tgpu.vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: {
+    pos: d.builtin.position,
+    speedT: d.f32,
+    age: d.f32,
+    side: d.f32,
+    action: d.vec3f,
+  },
+})(({ vertexIndex }) => {
+  'use gpu';
+  const trailMeta = racingLineRenderLayout.$.trailMeta;
+  const count = trailMeta.count;
+  const safeCount = std.max(count, 1);
+  const lastIndex = safeCount - 1;
+  const stripIndex = d.u32(vertexIndex / 2);
+  const localIndex = std.min(stripIndex, lastIndex);
+  const pointIndex = racingLineStart(count, trailMeta.cursor) + localIndex;
+  const point = racingLinePointAt(pointIndex);
+  const prevIndex = std.select(pointIndex - 1, pointIndex, localIndex === 0);
+  const nextIndex = std.select(pointIndex + 1, pointIndex, localIndex >= lastIndex);
+  const tangent = normalizeOr(
+    racingLinePointAt(nextIndex).position - racingLinePointAt(prevIndex).position,
+    d.vec2f(1, 0),
+  );
+  const normal = d.vec2f(-tangent.y, tangent.x);
+  const peakSpeed = std.max(trailMeta.peakSpeed, 0.0001);
+  const speedT = std.clamp(point.speed / peakSpeed, 0, 1);
+  const age = d.f32(localIndex) / d.f32(std.max(lastIndex, 1));
+  const side = std.select(-1, 1, vertexIndex % 2 === 0);
+  const action = d.vec3f(point.drive, point.brake, point.turn);
+  const actionT = std.max(action.y, std.max(action.z * 0.75, action.x * 0.3));
+  const width = std.select(
+    0,
+    params.$.carSize * std.mix(0.36, 0.58, speedT) * std.mix(1.0, 1.48, actionT),
+    count > 1 && stripIndex < count,
+  );
+  const worldPos = point.position + normal * width * side;
+
+  return {
+    pos: d.vec4f(worldPos.x / params.$.aspect, worldPos.y, 0, 1),
+    speedT,
+    age,
+    side,
+    action,
+  };
+});
+
+const racingLineFragment = tgpu.fragmentFn({
+  in: {
+    speedT: d.f32,
+    age: d.f32,
+    side: d.f32,
+    action: d.vec3f,
+  },
+  out: d.vec4f,
+})(({ speedT, age, side, action }) => {
+  'use gpu';
+  const color = racingLineTint(action, speedT);
+  const radius = std.abs(side);
+  const glow = 1 - std.smoothstep(0.44, 1.04, radius);
+  const core = 1 - std.smoothstep(0.1, 0.8, radius);
+  const fade = std.mix(0.5, 0.98, age);
+  const actionT = std.max(action.y, std.max(action.z * 0.45, action.x * 0.2));
+  const alpha = std.clamp(
+    glow * fade * (0.12 + speedT * 0.05) + core * fade * std.mix(0.3, 0.56, actionT),
+    0,
+    0.9,
+  );
+  const highlight = std.mix(color, racingLineColors.highlight.$, 0.06 + action.y * 0.12);
+  const rgb = color * alpha + highlight * core * fade * 0.08;
+  return d.vec4f(rgb, alpha);
+});
+
+const racingLinePipeline = root.createRenderPipeline({
+  vertex: racingLineVertex,
+  fragment: racingLineFragment,
+  primitive: { topology: 'triangle-strip' },
+  targets: {
+    blend: {
+      color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+      alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+    },
+  },
+});
+
 let steps = 0;
 let stepsPerFrame = STEPS_PER_DISPATCH;
 let stepsPerGeneration = 2048;
@@ -388,6 +618,7 @@ let population = DEFAULT_POP;
 let rafHandle = 0;
 let pendingEvolve = false;
 let showBestOnly = false;
+let showRacingLine = false;
 let displayedBestFitness = 0;
 
 const statsDiv = document.querySelector('.stats') as HTMLDivElement;
@@ -412,6 +643,7 @@ function updatePopulation(nextPopulation: number) {
   population = clamped;
   params.patch({ population: clamped });
   ga.reinitCurrent(population);
+  racingLineMetaBuffer.clear();
 }
 
 function frame() {
@@ -423,6 +655,7 @@ function frame() {
       steps = 0;
       params.patch({ generation: ga.generation });
       pendingEvolve = false;
+      racingLineMetaBuffer.clear();
     }
 
     const stepsToRun = Math.min(stepsPerFrame, stepsPerGeneration - steps);
@@ -467,6 +700,13 @@ function frame() {
   statsDiv.textContent = `Gen ${genStr}  Step ${stepStr}/${stepsPerGeneration}  Pop ${population}  Best ${bestStr}${saturatedNote}`;
 
   trackPipeline.withColorAttachment({ view: context, clearValue: [0.04, 0.05, 0.07, 1] }).draw(3);
+
+  if (showRacingLine) {
+    racingLinePipeline
+      .with(racingLineRenderBindGroup)
+      .withColorAttachment({ view: context, loadOp: 'load', storeOp: 'store' })
+      .draw(RACING_LINE_CAPACITY * 2);
+  }
 
   carPipeline
     .withColorAttachment({ view: context, loadOp: 'load', storeOp: 'store' })
@@ -513,6 +753,7 @@ function startSimulation() {
   displayedBestFitness = 0;
   params.patch({ generation: 0 });
   ga.init();
+  racingLineMetaBuffer.clear();
 
   updateAspect();
   updatePopulation(population);
@@ -554,6 +795,12 @@ export const controls = defineControls({
     initial: false,
     onToggleChange: (value: boolean) => {
       showBestOnly = value;
+    },
+  },
+  'Racing line': {
+    initial: false,
+    onToggleChange: (value: boolean) => {
+      showRacingLine = value;
     },
   },
   'Steps per frame': {
