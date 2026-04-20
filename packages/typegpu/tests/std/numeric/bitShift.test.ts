@@ -64,10 +64,10 @@ describe('bit shift', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
-        var shift = vec3u(4);
-        var x = vec3i(256);
-        var y = (x << shift);
-        var z = (x >> shift);
+        let shift = vec3u(4);
+        let x = vec3i(256);
+        let y = (x << shift);
+        let z = (x >> shift);
       }"
     `);
   });
@@ -83,10 +83,10 @@ describe('bit shift', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
-        var shift = vec3u(4);
-        var x = vec3i(256);
-        var y = (x << shift);
-        var z = (x >> shift);
+        let shift = vec3u(4);
+        let x = vec3i(256);
+        let y = (x << shift);
+        let z = (x >> shift);
       }"
     `);
   });
@@ -103,9 +103,9 @@ describe('bit shift', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
         const shift = 4u;
-        var x = vec3i(256);
-        var y = (x << vec3u(shift));
-        var z = (x >> vec3u(shift));
+        let x = vec3i(256);
+        let y = (x << vec3u(shift));
+        let z = (x >> vec3u(shift));
       }"
     `);
   });
@@ -138,8 +138,8 @@ describe('bit shift', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> vec3i {
-        var shift = vec3u(4);
-        var x = vec3i(256);
+        let shift = vec3u(4);
+        let x = vec3i(256);
         return (x << shift);
       }"
     `);
@@ -156,7 +156,7 @@ describe('bit shift', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
-        var shift = vec3u(4);
+        let shift = vec3u(4);
         var x = vec3i(256);
         x >>= shift;
       }"

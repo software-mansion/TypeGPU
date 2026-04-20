@@ -129,7 +129,7 @@ test('+= refOfVec3f', () => {
     "const constant: vec3f = vec3f(-10);
 
     fn foo(arg: vec3f) -> vec3f {
-      var local = vec3f(100, 10, 1);
+      let local = vec3f(100, 10, 1);
       var result = vec3f();
       result += local;
       result += arg;
@@ -154,7 +154,7 @@ describe('num op', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() -> vec3f {
-        var result = vec3f(2, 3, 4);
+        let result = vec3f(2, 3, 4);
         return result;
       }"
     `);
@@ -171,7 +171,7 @@ describe('num op', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() -> vec3f {
-        var result = vec3f(0, -1, -2);
+        let result = vec3f(0, -1, -2);
         return result;
       }"
     `);
@@ -188,7 +188,7 @@ describe('num op', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() -> vec3f {
-        var result = vec3f(2, 4, 6);
+        let result = vec3f(2, 4, 6);
         return result;
       }"
     `);
@@ -205,7 +205,7 @@ describe('num op', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() -> vec3f {
-        var result = vec3f(3, 2, 1);
+        let result = vec3f(3, 2, 1);
         return result;
       }"
     `);

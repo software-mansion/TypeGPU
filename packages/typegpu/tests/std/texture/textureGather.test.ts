@@ -82,16 +82,16 @@ describe('textureGather', () => {
       @group(0) @binding(5) var texdepth2d_array: texture_depth_2d_array;
 
       fn testFn() {
-        var uv2d = vec2f(0.5);
-        var uv3d = vec3f(0.5, 0.5, 0);
+        let uv2d = vec2f(0.5);
+        let uv3d = vec3f(0.5, 0.5, 0);
         const idx = 1.2000000476837158f;
         const component = 0i;
-        var gather2d = textureGather(component, tex2d, sampler_1, uv2d);
-        var gather2d_u32 = textureGather(component, tex2d_u32, sampler_1, uv2d);
-        var gather2d_array = textureGather(component, tex2d_array, sampler_1, uv2d, u32(idx));
-        var gathercube_array = textureGather(component, texcube_array, sampler_1, uv3d, u32(idx));
-        var gatherdepth2d = textureGather(texdepth2d, sampler_1, uv2d);
-        var gatherdepth2d_array = textureGather(texdepth2d_array, sampler_1, uv2d, u32(idx));
+        let gather2d = textureGather(component, tex2d, sampler_1, uv2d);
+        let gather2d_u32 = textureGather(component, tex2d_u32, sampler_1, uv2d);
+        let gather2d_array = textureGather(component, tex2d_array, sampler_1, uv2d, u32(idx));
+        let gathercube_array = textureGather(component, texcube_array, sampler_1, uv3d, u32(idx));
+        let gatherdepth2d = textureGather(texdepth2d, sampler_1, uv2d);
+        let gatherdepth2d_array = textureGather(texdepth2d_array, sampler_1, uv2d, u32(idx));
       }"
     `);
   });

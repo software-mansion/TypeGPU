@@ -618,7 +618,7 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @compute @workgroup_size(1) fn fn_1() {
-        var complexStruct = ComplexStruct(vec3f(1, 2, 3), array<SimpleStruct, 3>(SimpleStruct(0u, array<u32, 4>(9u, 8u, 7u, 6u)), SimpleStruct(1u, array<u32, 4>(8u, 7u, 6u, 5u)), SimpleStruct(2u, array<u32, 4>(7u, 6u, 5u, 4u))));
+        let complexStruct = ComplexStruct(vec3f(1, 2, 3), array<SimpleStruct, 3>(SimpleStruct(0u, array<u32, 4>(9u, 8u, 7u, 6u)), SimpleStruct(1u, array<u32, 4>(8u, 7u, 6u, 5u)), SimpleStruct(2u, array<u32, 4>(7u, 6u, 5u, 4u))));
         log1(complexStruct);
       }"
     `);

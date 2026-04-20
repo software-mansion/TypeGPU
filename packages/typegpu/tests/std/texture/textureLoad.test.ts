@@ -85,18 +85,18 @@ describe('textureLoad', () => {
 
       fn testFn() {
         const coord1d = 0i;
-        var coord2d = vec2i();
-        var coord3d = vec3i();
+        let coord2d = vec2i();
+        let coord3d = vec3i();
         const level = 0i;
         const arrayIndex = 0i;
         const sampleIndex = 0i;
-        var load1d = textureLoad(tex1d, coord1d, level);
-        var load2d = textureLoad(tex2d, coord2d, level);
-        var load2d_u32 = textureLoad(tex2d_u32, coord2d, level);
-        var load2d_i32 = textureLoad(tex2d_i32, coord2d, level);
-        var load2d_array = textureLoad(tex2d_array, coord2d, arrayIndex, level);
-        var load3d = textureLoad(tex3d, coord3d, level);
-        var loadms2d = textureLoad(texms2d, coord2d, sampleIndex);
+        let load1d = textureLoad(tex1d, coord1d, level);
+        let load2d = textureLoad(tex2d, coord2d, level);
+        let load2d_u32 = textureLoad(tex2d_u32, coord2d, level);
+        let load2d_i32 = textureLoad(tex2d_i32, coord2d, level);
+        let load2d_array = textureLoad(tex2d_array, coord2d, arrayIndex, level);
+        let load3d = textureLoad(tex3d, coord3d, level);
+        let loadms2d = textureLoad(texms2d, coord2d, sampleIndex);
         let loaddepth2d = textureLoad(texdepth2d, coord2d, level);
         let loaddepth2d_array = textureLoad(texdepth2d_array, coord2d, arrayIndex, level);
         let loaddepthms2d = textureLoad(texdepthms2d, coord2d, sampleIndex);
@@ -152,15 +152,15 @@ describe('textureLoad', () => {
 
       fn testFn() {
         const coord1d = 0i;
-        var coord2d = vec2i();
-        var coord3d = vec3i();
+        let coord2d = vec2i();
+        let coord3d = vec3i();
         const arrayIndex = 0i;
-        var loadStore1d = textureLoad(store1d, coord1d);
-        var loadStore2d = textureLoad(store2d, coord2d);
-        var loadStore2d_uint = textureLoad(store2d_uint, coord2d);
-        var loadStore2d_sint = textureLoad(store2d_sint, coord2d);
-        var loadStore2d_array = textureLoad(store2d_array, coord2d, arrayIndex);
-        var loadStore3d = textureLoad(store3d, coord3d);
+        let loadStore1d = textureLoad(store1d, coord1d);
+        let loadStore2d = textureLoad(store2d, coord2d);
+        let loadStore2d_uint = textureLoad(store2d_uint, coord2d);
+        let loadStore2d_sint = textureLoad(store2d_sint, coord2d);
+        let loadStore2d_array = textureLoad(store2d_array, coord2d, arrayIndex);
+        let loadStore3d = textureLoad(store3d, coord3d);
       }"
     `);
   });
@@ -184,8 +184,8 @@ describe('textureLoad', () => {
       "@group(0) @binding(0) var texExternal: texture_external;
 
       fn testFn() {
-        var coord2d = vec2i();
-        var loadExternal = textureLoad(texExternal, coord2d);
+        let coord2d = vec2i();
+        let loadExternal = textureLoad(texExternal, coord2d);
       }"
     `);
   });

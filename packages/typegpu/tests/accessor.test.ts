@@ -162,9 +162,9 @@ describe('tgpu.accessor', () => {
       }
 
       fn main() {
-        var color = vec3f(1, 0, 0);
+        let color = vec3f(1, 0, 0);
         let color2 = (&redUniform);
-        var color3 = getColor();
+        let color3 = getColor();
         const colorX = 1f;
         let color2X = redUniform.x;
         let color3X = getColor().x;
@@ -234,7 +234,7 @@ describe('tgpu.accessor', () => {
       }
 
       fn main() {
-        var pixel = getPixel(0i, 0i);
+        let pixel = getPixel(0i, 0i);
       }"
     `);
   });
@@ -276,8 +276,8 @@ describe('tgpu.accessor', () => {
       }
 
       fn main() {
-        var foo = getColor();
-        var bar = getColor_1();
+        let foo = getColor();
+        let bar = getColor_1();
       }"
     `);
   });
@@ -309,7 +309,7 @@ describe('tgpu.accessor', () => {
       }
 
       fn main() {
-        var foo = getColor();
+        let foo = getColor();
       }"
     `);
   });
@@ -358,7 +358,7 @@ describe('tgpu.accessor', () => {
       }
 
       fn main() {
-        var pixel = getPixel(0i, 0i);
+        let pixel = getPixel(0i, 0i);
       }"
     `);
   });

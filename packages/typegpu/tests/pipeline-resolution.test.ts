@@ -50,7 +50,7 @@ describe('resolve', () => {
       }
 
       @vertex fn vertexFn() -> vertexFn_Output {
-        var myBoid = Boid();
+        let myBoid = Boid();
         return vertexFn_Output(vec4f(myBoid.position, 0f, 1f), myBoid.color);
       }
 
@@ -74,7 +74,7 @@ describe('resolve', () => {
       }
 
       @compute @workgroup_size(1, 1, 1) fn computeFn() {
-        var myBoid = Boid(vec2f(), vec4f(1, 0, 0, 1));
+        let myBoid = Boid(vec2f(), vec4f(1, 0, 0, 1));
       }"
     `);
   });
@@ -97,7 +97,7 @@ describe('resolve', () => {
       }
 
       fn wrappedCallback(x: u32, y: u32, z: u32) {
-        var myBoid = Boid(vec2f(), vec4f(f32(x), f32(y), f32(z), 1f));
+        let myBoid = Boid(vec2f(), vec4f(f32(x), f32(y), f32(z), 1f));
       }
 
       @compute @workgroup_size(8, 8, 4) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {

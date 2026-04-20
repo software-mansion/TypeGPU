@@ -102,7 +102,7 @@ describe('not', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
-        var v = vec4<bool>(false, false, true, false);
+        let v = vec4<bool>(false, false, true, false);
       }"
     `);
   });
@@ -142,7 +142,7 @@ describe('not', () => {
       "fn testFn(v: vec3f, a: atomic<u32>, p: ptr<private, u32>) {
         const _b0 = false;
         let _b1 = false;
-        var _b2 = !(vec3<bool>(v));
+        let _b2 = !(vec3<bool>(v));
         let _b3 = false;
         let _b4 = !bool(atomicLoad(&a));
         let _b5 = false;
@@ -233,7 +233,7 @@ describe('not', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
-        var v = vec4<bool>(false, false, true, false);
+        let v = vec4<bool>(false, false, true, false);
       }"
     `);
   });
