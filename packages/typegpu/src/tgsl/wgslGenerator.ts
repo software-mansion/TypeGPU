@@ -914,16 +914,21 @@ ${this.ctx.pre}}`;
     let body = this._block(options.body);
     const scope = this.ctx.topFunctionScope;
     invariant(scope, 'Expected function scope to be present');
-    // TODO: optimize this to one pass
-    body = scope.modifiedVariables.values().reduce((body: string, variable: Snippet) => {
-      const placeholder = scope.placeholderForVariable.get(variable);
-      invariant(
-        placeholder,
-        `Expected placeholder (like #VAR_3#) to be present for ${variable.value}`,
+    const replacements = Object.fromEntries(
+      scope.placeholderForVariable
+        .entries()
+        .map(([variable, placeholder]) => [
+          placeholder,
+          scope.modifiedVariables.has(variable) ? 'var' : 'let',
+        ]),
+    );
+    if (Object.keys(replacements).length > 0) {
+      const regex = new RegExp(Object.keys(replacements).join('|'), 'gi');
+      body = body.replace(
+        regex,
+        (match) => replacements[match as keyof typeof replacements] ?? '#ERR',
       );
-      return body.replaceAll(placeholder, 'var');
-    }, body);
-    body = body.replaceAll(/#VAR_[0-9]+#/g, 'let');
+    }
 
     // Function header
     const returnType = options.determineReturnType();
