@@ -1,0 +1,331 @@
+---
+title: TypeGPU 0.11
+date: 2026-04-14
+tags:
+  - Release notes
+authors:
+  - name: Iwo Plaza
+    title: TypeGPU developer
+    picture: https://avatars.githubusercontent.com/u/7166752?s=200
+cover:
+  alt: A collage of examples introduced alongside TypeGPU 0.11
+  image: banner.webp
+---
+
+Hello fellow GPU enthusiast!
+
+Over the past 2 months, my team and I have been pulling on a few threads that we thought would improve TypeGPU in terms of efficiency, and as a byproduct, we actually made the APIs more convenient. We are also introducing a _lint plugin_ to further improve the diagnostics and feedback you receive while writing TypeGPU shaders, on top of the type safety we already provide.
+
+- [New examples](#new-examples)
+- [Migration guide](#migration-guide)
+- [New and improved write APIs](#new-and-improved-write-apis)
+- [Shader code ergonomics](#shader-code-ergonomics)
+- [Ecosystem updates](#ecosystem-updates)
+- [What's next?](#whats-next)
+
+
+We have been pulling a few more threads than I mentioned here... but for those, you'll have to wait for the next blog post 🤐.
+
+## New examples
+
+My teammate Konrad Reczko [(@reczkok)](https://github.com/reczkok) has outdone himself again, and delivered 3 new examples that push TypeGPU APIs to their limits:
+
+* ["Genetic Racing"](https://typegpu.com/examples/#example=algorithms--genetic-racing) - watch a swarm of cars learn to traverse a procedurally generated race track.
+* ["Mesh Skinning"](https://typegpu.com/examples/#example=simple--mesh-skinning) - an animation and skinning system built from scratch in TypeGPU.
+* ["Parallax Occlusion Mapping"](https://typegpu.com/examples/#example=rendering--pom) - squeezing amazing depth out of just two triangles and a set of textures.
+
+## Migration guide
+
+### Deprecated APIs
+
+The `buffer.writePartial` API is being deprecated in favor of `buffer.patch` [(and here are the reasons why)](#a-better-partial-write).
+To migrate, simply replace any partial write of arrays in the form of `[{ idx: 2, value: foo }, /* ... */]` with `{ 2: foo, /* ... */ }`.
+
+```diff lang=ts
+const buffer = root.createBuffer(d.arrayOf(d.vec3f, 5)).$usage('storage');
+
+- buffer.writePartial([{ idx: 2, value: d.vec3f(1, 2, 3) }]);
++ buffer.patch({ 2: d.vec3f(1, 2, 3) });
+```
+
+### Stabilizing textures and samplers
+
+One by one, we're making our APIs available without the `['~unstable']` prefix, and this time around, it's **textures** and **samplers**.
+Just drop the unstable prefix, and you're good to go.
+
+```diff lang=ts
+- const sampler = root['~unstable'].createSampler({
++ const sampler = root.createSampler({
+  magFilter: 'linear',
+  minFilter: 'linear',
+});
+
+- const texture = root['~unstable'].createTexture({
++ const texture = root.createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm' as const,
+}).$usage('sampled');
+```
+
+## New and improved write APIs
+
+### Efficient data
+
+When writing to a buffer with an array of vectors, it's no longer required to create vector instances (e.g. `d.vec3f()`).
+```ts
+const positionsMutable = root.createMutable(d.arrayOf(d.vec3f, 3));
+
+// existing overload
+positionsMutable.write([d.vec3f(0, 1, 2), d.vec3f(3, 4, 5), d.vec3f(6, 7, 8)]);
+// new overloads ⚡
+positionsMutable.write([[0, 1, 2], [3, 4, 5], [6, 7, 8]]); // tuples
+positionsMutable.write(new Float32Array([0, 1, 2, 0, 3, 4, 5, 0, 6, 7, 8, 0])); // typed arrays (mind the padding)
+// and more...
+```
+Each one is more efficient than the previous, so you can choose the appropriate API for your efficiency needs.
+[More about these new APIs here](https://docs.swmansion.com/TypeGPU/fundamentals/buffers/#writing-to-a-buffer).
+
+### A better partial write
+
+When writing to a buffer, we require the passed in value to exactly match the schema. This specifically means that updating a single field of a single array item was very costly. The `buffer.writePartial` API remedied that by accepting partial records
+for structs, and a list of indices and values to update in arrays. This works fine, but doesn't compose well with more complex data structures:
+
+```ts
+const Node = d.struct({
+  color: d.vec3f,
+  // Indices of neighboring nodes
+  neighbors: d.arrayOf(d.u32, 4),
+});
+
+const nodes = root.createUniform(d.arrayOf(Node, 100));
+
+// Updating the 50th node
+nodes.writePartial([
+  {
+    idx: 50,
+    value: {
+      color: d.vec3f(1, 0, 1),
+      // We cannot pass [48, 49, 51, 52], as we could with nodes.write()
+      neighbors: [{ idx: 0, value: 48 }, { idx: 1, value: 49 }, { idx: 2, value: 51 }, { idx: 3, value: 52 }],
+    },
+  }
+]);
+```
+
+If we loosened the type to accept either partial arrays or full arrays, then we would reach an ambiguity in the following case:
+
+```ts
+const Foo = d.struct({
+  idx: d.u32,
+  value: d.f32,
+});
+
+const foos = root.createUniform(d.arrayOf(Foo, 2));
+
+foos.writePartial([{ idx: 1, value: /* ... */ }, { idx: 0, value: /* ... */ }]);
+```
+
+We could traverse the value deeper to disambiguate, but for the sake of efficiency and being able to reuse optimizations added to `buffer.write` by [Konrad](https://github.com/reczkok), we chose to add a new API:
+
+```diff lang=ts
+- foos.writePartial([{ idx: 1, value: /* ... */ }, { idx: 0, value: /* ... */ }]);
++ foos.patch({ 1: /* ... */, 0: /* ... */ });
+```
+
+[You can read more about .patch in the Buffers guide](/TypeGPU/fundamentals/buffers/#patching-buffers).
+
+### Writing struct-of-arrays (SoA) data
+
+When the buffer schema is an `array<struct<...>>`, you can write the data in a struct-of-arrays form with `writeSoA` from `typegpu/common`. This is useful when your CPU-side data is already stored per-field, such as simulation attributes kept in separate typed arrays.
+
+```ts
+const Particle = d.struct({
+  pos: d.vec3f,
+  vel: d.f32,
+});
+
+const particleBuffer = root.createBuffer(d.arrayOf(Particle, 2));
+
+common.writeSoA(particleBuffer, {
+  pos: new Float32Array([
+    1, 2, 3,
+    4, 5, 6,
+  ]),
+  vel: new Float32Array([10, 20]),
+});
+```
+
+[More about this API can be found in the Buffers guide.](/TypeGPU/fundamentals/buffers/#writing-struct-of-arrays-soa-data)
+
+## Shader code ergonomics
+
+There's been a lot of improvements to our shader generation, mainly in regards to compile-time execution and pruning of unreachable branches.
+I will highlight some of them in the following sections.
+
+### std.range
+
+The new `std.range` function works similarly to `range()` in Python, and returns an array that can be iterated over.
+When combined with `tgpu.unroll`, it's now very easy to produce a set amount of code blocks.
+
+```ts
+let result = d.u32();
+for (const i of tgpu.unroll(std.range(3))) {
+  // this block will be inlined 3 times
+  result += i * 10;
+}
+```
+
+Generates:
+```wgsl
+var result = 0u;
+// unrolled iteration #0
+{
+  result += 0u;
+}
+// unrolled iteration #1
+{
+  result += 10u;
+}
+// unrolled iteration #2
+{
+  result += 20u;
+}
+````
+
+Because `i` is known at compile-time, the `i * 10` is evaluated and injected into the generated code in each block.
+For more, refer to [tgpu.unroll documentation.](/TypeGPU/fundamentals/utils/#tgpuunroll).
+
+### Boolean logic
+
+Logical expressions are now short-circuited if we can determine the result early.
+```ts
+const clampingEnabled = tgpu.accessor(d.bool);
+
+function interpolate(a: number, b: number, t: number) {
+  'use gpu';
+  let value = a + (b - a) * t;
+  if (clampingEnabled.$ && value > 1) {
+    // Constantly increasing, without ever going past 2
+    value = 1 + (value - 1) / value;
+  }
+  return value;
+}
+```
+
+Generated WGSL depending on the value of `clampingEnabled`:
+
+```wgsl
+// clampingEnabled.$ === false
+fn interpolate(a: f32, b: f32, t: f32) -> f32 {
+  var value = a + (b - a) * t;
+  return value;
+}
+
+// clampingEnabled.$ === true
+fn interpolate(a: f32, b: f32, t: f32) -> f32 {
+  var value = a + (b - a) * t;
+  if (value > 1) {
+    value = 1 + (value - 1) / value;
+  }
+  return value;
+}
+```
+
+### Convenience overload for `tgpu.const` API
+
+If you're defining a WGSL constant using an array schema, you no longer have to duplicate the array length both in the value and in the schema.
+The `tgpu.const` function now accepts dynamically-sized schemas.
+
+```diff lang=ts
+const ColorStops = d.arrayOf(d.vec3f);
+
+const colorStops = tgpu.const(
+-  ColorStops(3),
++  ColorStops,
+  [d.vec3f(1, 0, 0), d.vec3f(0, 1, 0), d.vec3f(0, 0, 1)],
+);
+```
+
+## Ecosystem updates
+
+There has been a lot of work outside of the `typegpu` package, both internally and from the community.
+
+### Lint plugin
+
+Aleksander Katan ([@aleksanderkatan](https://github.com/aleksanderkatan)) has been working behind the scenes on an ESLint/Oxlint plugin, capable of catching user errors that types cannot.
+
+```ts
+import tgpu, { d } from 'typegpu';
+
+function increment(n: number) {
+  'use gpu';
+  return n++;
+  //     ^^^
+  // Cannot assign to 'n' since WGSL parameters are immutable.
+  // If you're using d.ref, please either use '.$' or disable this rule
+}
+
+function createBoid() {
+  'use gpu';
+  const boid = { pos: d.vec2f(), size: 1 };
+  //           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  // { pos: d.vec2f(), size: 1 } must be wrapped in a schema call
+  return boid;
+}
+
+function clampTo0(n: number) {
+  'use gpu';
+  let result;
+  //  ^^^^^^
+  // 'result' must have an initial value
+  if (n < 0) {
+    result = 0;
+  } else {
+    result = n;
+  }
+  return result;
+}
+```
+
+[For setup instructions and available rules, refer to the documentation](/TypeGPU/tooling/eslint-plugin-typegpu/)
+
+### New @typegpu/color helpers
+
+There are three new helper functions importable from `@typegpu/color` which can be called at compile-time to create
+color vectors from hexadecimal strings: `hexToRgb`, `hexToRgba` and `hexToOklab`.
+
+```ts
+import { hexToRgb } from '@typegpu/color';
+
+function getGradientColor(t: number) {
+  'use gpu';
+  const from = hexToRgb('#FF00FF');
+  const to = hexToRgb('#00FF00');
+  return std.mix(from, to, t);
+}
+```
+
+Generated WGSL:
+```wgsl
+fn getGradientColor(t: f32) -> vec3f {
+  var from = vec3f(1, 0, 1);
+  var to = vec3f(0, 1, 0);
+  return mix(from, to, t);
+}
+````
+
+### Bundler plugin rewrite
+
+The `unplugin-typegpu` package is what enables TypeScript shaders, and to support its continued development, we rewrote it from
+the ground up. It should now support more bundlers than ever before, out of the box, including `esbuild`.
+
+### Motion GPU
+
+A minimalist WebGPU framework called [Motion GPU](https://motion-gpu.dev/) introduced a way to integrate with TypeGPU, and wrote about it
+in their documentation [(Integrations / TypeGPU)](https://motion-gpu.dev/docs/integrations-typegpu). It's awesome to see the continued adoption
+of TypeGPU in other ecosystems and communities 🎉
+
+## What's next?
+
+There are many more things introduced in TypeGPU 0.11 that I haven't mentioned. If you're curious, you can
+read [the full 0.11.0 changelog](https://github.com/software-mansion/TypeGPU/compare/v0.10.2...v0.11.0).
