@@ -1199,9 +1199,7 @@ ${this.ctx.pre}else ${alternate}`;
       let emittedVarType: string | undefined = varType;
       if (emittedVarType === undefined) {
         const scope = this.ctx.topFunctionScope;
-        const snippet = this.ctx.getById(rawId);
         invariant(scope, `Expected function scope to be present for ${rawId}`);
-        invariant(snippet, `Expected snippet to be present for ${rawId}`);
         emittedVarType = `#VAR_${scope.placeholderForVariable.size}#`;
         scope.placeholderForVariable.set(snippet, emittedVarType);
       }
@@ -1410,7 +1408,7 @@ ${this.ctx.pre}else ${alternate}`;
       const snippet = this.ctx.getById(maybeObject);
       const scope = this.ctx.topFunctionScope;
       if (snippet && scope && scope.placeholderForVariable.has(snippet)) {
-        this.ctx.topFunctionScope?.modifiedVariables.add(snippet);
+        scope.modifiedVariables.add(snippet);
       }
     }
   }
