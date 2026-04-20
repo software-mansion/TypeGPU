@@ -573,5 +573,48 @@ describe('mutability tracking', () => {
       `);
       expect(resolved).toContain('let struct_1 = Struct()');
     });
+
+    it('resolves for..of on a referential array', () => {
+      const fn = () => {
+        'use gpu';
+        const t = [d.vec2f()];
+        let result = d.vec2f();
+        for (const v of t) {
+          result += v;
+        }
+      };
+
+      const resolved = tgpu.resolve([fn]);
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn fn_1() {
+          let t = array<vec2f, 1>(vec2f());
+          var result = vec2f();
+          for (var i = 0u; i < 1u; i += 1u) {
+            let v = (&t[i]);
+            {
+              result += (*v);
+            }
+          }
+        }"
+      `);
+      expect(resolved).toContain('var t = ');
+    });
+
+    it('resolves tgpu.unroll() on a referential element', () => {
+      const fn = () => {
+        'use gpu';
+        const v = d.vec2f();
+        const u = tgpu.unroll(v);
+      };
+
+      const resolved = tgpu.resolve([fn]);
+      expect(resolved).toMatchInlineSnapshot(`
+        "fn fn_1() {
+          let v = vec2f();
+          let u = (&v);
+        }"
+      `);
+      expect(resolved).toContain('var v = ');
+    });
   });
 });
