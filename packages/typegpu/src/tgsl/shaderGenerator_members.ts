@@ -6,6 +6,8 @@ import type { Snippet } from '../data/snippet.ts';
 
 export { UnknownData } from '../data/dataTypes.ts';
 export { getName } from '../shared/meta.ts';
+export { makeDereferencable } from './makeDereferencable.ts';
+export { makeResolvable } from './makeResolvable.ts';
 
 // types
 export type { ResolutionCtx, FunctionArgument, TgpuShaderStage } from '../types.ts';
