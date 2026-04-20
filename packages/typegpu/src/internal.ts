@@ -1,6 +1,8 @@
 // Each export here is available as a member on the 'typegpu/~internal' import.
 
 export { abstractInt, abstractFloat } from './data/numeric.ts';
+export { makeResolvable } from './tgsl/makeResolvable.ts';
+export { makeDereferenceable } from './tgsl/makeDereferenceable.ts';
 export { UnknownData } from './data/dataTypes.ts';
 export { getName } from './shared/meta.ts';
 export { WgslGenerator } from './tgsl/wgslGenerator.ts';
