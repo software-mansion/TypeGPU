@@ -1,6 +1,7 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
+import { f32 } from '../data/numeric.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
@@ -120,12 +121,18 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
     }
   }
 
+  if ((trueSrc.type === 'u32' || trueSrc.type === 'i32') && trueDst.type === 'abstractFloat') {
+    // When one of the types is a float (abstract or not), we don't want to cast it to a non-float type,
+    // which would cause it to lose precision. We instead choose the common type to be f32.
+    return { rank: 1, action: 'cast', targetType: f32 };
+  }
+
   if (trueSrc.type === 'abstractFloat') {
     if (trueDst.type === 'u32') {
-      return { rank: 2, action: 'cast', targetType: trueDst };
+      return { rank: 3, action: 'cast', targetType: trueDst };
     }
     if (trueDst.type === 'i32') {
-      return { rank: 1, action: 'cast', targetType: trueDst };
+      return { rank: 2, action: 'cast', targetType: trueDst };
     }
   }
 
@@ -167,6 +174,10 @@ function findBestType(
   let bestResult: { type: BaseData; details: ConversionRankInfo[]; sum: number } | undefined;
 
   for (const targetType of uniqueTypes) {
+    /**
+     * The type we end up converting to. Will be different than `targetType` if `targetType === abstractFloat`
+     */
+    let destType = targetType;
     const details: ConversionRankInfo[] = [];
     let sum = 0;
     for (const sourceType of types) {
@@ -176,9 +187,12 @@ function findBestType(
         break;
       }
       details.push(conversion);
+      if (conversion.action === 'cast') {
+        destType = conversion.targetType;
+      }
     }
     if (sum < (bestResult?.sum ?? Number.POSITIVE_INFINITY)) {
-      bestResult = { type: targetType, details, sum };
+      bestResult = { type: destType, details, sum };
     }
   }
   if (!bestResult) {
