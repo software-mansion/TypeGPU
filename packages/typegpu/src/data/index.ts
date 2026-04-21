@@ -48,6 +48,11 @@ assignInfixOperator(MatBase, 'mul', Operator.star);
   };
 }
 
+// TODO: Remove this side-effect once we have shaderbits
+import { f32 } from './numeric.ts';
+// oxlint-disable-next-line typescript/no-explicit-any
+(globalThis as any).__TYPEGPU_F32__ = f32;
+
 export { bool, f16, f32, i32, u16, u32 } from './numeric.ts';
 export {
   isAlignAttrib,
