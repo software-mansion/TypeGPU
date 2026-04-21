@@ -31,12 +31,16 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
-import { LogGeneratorImpl, LogGeneratorNullImpl } from './tgsl/consoleLog/logGenerator.ts';
-import type { LogGenerator, LogResources } from './tgsl/consoleLog/types.ts';
-import { getBestConversion } from './tgsl/conversion.ts';
-import { coerceToSnippet, concretize, numericLiteralToSnippet } from './tgsl/generationHelpers.ts';
-import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
-import wgslGenerator from './tgsl/wgslGenerator.ts';
+import { LogGeneratorImpl, LogGeneratorNullImpl } from './codegen/consoleLog/logGenerator.ts';
+import type { LogGenerator, LogResources } from './codegen/consoleLog/types.ts';
+import { getBestConversion } from './codegen/conversion.ts';
+import {
+  coerceToSnippet,
+  concretize,
+  numericLiteralToSnippet,
+} from './codegen/generationHelpers.ts';
+import type { ShaderGenerator } from './codegen/shaderGenerator.ts';
+import wgslGenerator from './codegen/wgslGenerator.ts';
 import type {
   ExecMode,
   ExecState,
@@ -53,7 +57,7 @@ import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
 import { getName, hasTinyestMetadata, setName } from './shared/meta.ts';
 import { FuncParameterType } from 'tinyest';
-import { accessProp } from './tgsl/accessProp.ts';
+import { accessProp } from './codegen/accessProp.ts';
 import { createIoSchema } from './core/function/ioSchema.ts';
 import type { IOData } from './core/function/fnTypes.ts';
 import { AutoStruct } from './data/autoStruct.ts';

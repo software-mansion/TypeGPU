@@ -6,14 +6,14 @@ import {
   convertStructValues,
   convertToCommonType,
   getBestConversion,
-} from '../../src/tgsl/conversion.ts';
+} from '../../src/codegen/conversion.ts';
 import { it } from 'typegpu-testing-utility';
 import { INTERNAL_setCtx } from '../../src/execMode.ts';
 import { CodegenState } from '../../src/types.ts';
 import { UnknownData } from '../../src/data/dataTypes.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { namespace } from '../../src/core/resolve/namespace.ts';
-import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
+import wgslGenerator from '../../src/codegen/wgslGenerator.ts';
 import { INTERNAL_createPtr } from '../../src/data/ptr.ts';
 
 const ctx = new ResolutionCtxImpl({

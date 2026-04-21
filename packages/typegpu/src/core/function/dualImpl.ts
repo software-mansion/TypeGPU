@@ -1,8 +1,8 @@
 import { type MapValueToSnippet, snip } from '../../data/snippet.ts';
 import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
-import { tryConvertSnippet } from '../../tgsl/conversion.ts';
-import { concretize } from '../../tgsl/generationHelpers.ts';
+import { tryConvertSnippet } from '../../codegen/conversion.ts';
+import { concretize } from '../../codegen/generationHelpers.ts';
 import { type DualFn, isKnownAtComptime, NormalState, type ResolutionCtx } from '../../types.ts';
 import { type BaseData, isPtr } from '../../data/wgslTypes.ts';
 

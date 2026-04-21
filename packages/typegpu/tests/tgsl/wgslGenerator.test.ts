@@ -11,12 +11,12 @@ import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
 import { $internal } from '../../src/shared/symbols.ts';
 import * as std from '../../src/std/index.ts';
-import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
+import wgslGenerator from '../../src/codegen/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from 'typegpu-testing-utility';
-import { ArrayExpression } from '../../src/tgsl/generationHelpers.ts';
+import { ArrayExpression } from '../../src/codegen/generationHelpers.ts';
 import { extractSnippetFromFn } from '../utils/parseResolved.ts';
-import { UnknownData } from '../../src/tgsl/shaderGenerator_members.ts';
+import { UnknownData } from '../../src/codegen/shaderGenerator_members.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 

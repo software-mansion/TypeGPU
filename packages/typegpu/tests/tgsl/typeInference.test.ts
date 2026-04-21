@@ -3,7 +3,7 @@ import tgpu, { d, std } from '../../src/index.js';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { CodegenState } from '../../src/types.ts';
-import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
+import wgslGenerator from '../../src/codegen/wgslGenerator.ts';
 
 describe('wgsl generator type inference', () => {
   let ctx: ResolutionCtxImpl;

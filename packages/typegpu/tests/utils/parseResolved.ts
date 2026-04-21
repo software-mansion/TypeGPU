@@ -5,7 +5,7 @@ import type { UnknownData } from '../../src/data/dataTypes.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
-import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
+import wgslGenerator from '../../src/codegen/wgslGenerator.ts';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import type { Snippet } from '../../src/data/snippet.ts';
 import { $internal } from '../../src/shared/symbols.ts';

@@ -5,7 +5,7 @@
 // NOTE: This is a barrel file, internal files should not import things from this file
 
 import { Operator } from 'tsover-runtime';
-import { type InfixOperator, infixOperators } from '../tgsl/accessProp.ts';
+import { type InfixOperator, infixOperators } from '../codegen/accessProp.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
 

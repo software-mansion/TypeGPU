@@ -8,7 +8,7 @@ import type {
   AnyWgslData,
   v4u,
 } from '../data/wgslTypes.ts';
-import { unify } from '../tgsl/conversion.ts';
+import { unify } from '../codegen/conversion.ts';
 
 interface IdentityNumOrVec {
   (e: number): number;

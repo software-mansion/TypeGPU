@@ -2,7 +2,7 @@ import { type MapValueToSnippet, type ResolvedSnippet, snip } from '../../data/s
 import { type BaseData, isPtr } from '../../data/wgslTypes.ts';
 import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
-import { tryConvertSnippet } from '../../tgsl/conversion.ts';
+import { tryConvertSnippet } from '../../codegen/conversion.ts';
 import { type DualFn, isKnownAtComptime, NormalState, type ResolutionCtx } from '../../types.ts';
 import type { AnyFn } from './fnTypes.ts';
 

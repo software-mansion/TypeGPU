@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, vi } from 'vitest';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import tgpu, { d } from '../../src/index.js';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
-import { deserializeAndStringify } from '../../src/tgsl/consoleLog/deserializers.ts';
+import { deserializeAndStringify } from '../../src/codegen/consoleLog/deserializers.ts';
 import { CodegenState } from '../../src/types.ts';
 import { it } from 'typegpu-testing-utility';
 

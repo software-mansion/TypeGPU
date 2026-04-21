@@ -44,7 +44,7 @@ import {
 } from '../data/wgslTypes.ts';
 import { SignatureNotSupportedError } from '../errors.ts';
 import type { Infer } from '../shared/repr.ts';
-import { unify } from '../tgsl/conversion.ts';
+import { unify } from '../codegen/conversion.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { mul, sub } from './operators.ts';
 

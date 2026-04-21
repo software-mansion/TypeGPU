@@ -6,7 +6,7 @@ import { isVec } from '../data/wgslTypes.ts';
 import { vec2f, vec2i, vec3f, vec3i, vec4f, vec4i } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import type { v2f, v2i, v2u, v3f, v3i, v3u, v4f, v4i, v4u } from '../data/wgslTypes.ts';
-import { unify } from '../tgsl/conversion.ts';
+import { unify } from '../codegen/conversion.ts';
 
 export type BitcastU32toF32Overload = ((value: number) => number) &
   ((value: v2u) => v2f) &

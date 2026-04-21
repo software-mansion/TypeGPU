@@ -1,7 +1,7 @@
 import { WgslTypeError } from '../../errors.ts';
 import { setName, type TgpuNamable } from '../../shared/meta.ts';
 import { $getNameForward, $gpuCallable, $internal } from '../../shared/symbols.ts';
-import { coerceToSnippet } from '../../tgsl/generationHelpers.ts';
+import { coerceToSnippet } from '../../codegen/generationHelpers.ts';
 import { type DualFn, isKnownAtComptime } from '../../types.ts';
 
 type AnyFn = (...args: never[]) => unknown;
