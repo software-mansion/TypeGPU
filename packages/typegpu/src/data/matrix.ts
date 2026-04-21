@@ -4,7 +4,7 @@ import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { $repr } from '../shared/symbols.ts';
 import { $internal, $resolve } from '../shared/symbols.ts';
-import { numericLiteralToSnippet } from '../tgsl/generationHelpers.ts';
+import { numericLiteralToSnippet } from '../codegen/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
 import { f32 } from './numeric.ts';
 import { type ResolvedSnippet } from './snippet.ts';

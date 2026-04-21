@@ -22,7 +22,7 @@ import {
   type v3b,
   type v4b,
 } from '../data/wgslTypes.ts';
-import { unify } from '../tgsl/conversion.ts';
+import { unify } from '../codegen/conversion.ts';
 import { sub } from './operators.ts';
 
 function correspondingBooleanVectorSchema(dataType: BaseData) {

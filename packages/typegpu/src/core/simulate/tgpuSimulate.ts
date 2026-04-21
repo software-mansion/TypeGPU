@@ -1,7 +1,7 @@
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx, provideCtx } from '../../execMode.ts';
 import { ResolutionCtxImpl } from '../../resolutionCtx.ts';
-import wgslGenerator from '../../tgsl/wgslGenerator.ts';
+import wgslGenerator from '../../codegen/wgslGenerator.ts';
 import { SimulationState } from '../../types.ts';
 import type { TgpuBuffer } from '../buffer/buffer.ts';
 import { namespace } from '../resolve/namespace.ts';

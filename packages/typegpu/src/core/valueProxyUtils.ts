@@ -1,8 +1,8 @@
 import type { Snippet } from '../data/snippet.ts';
 import { getGPUValue } from '../getGPUValue.ts';
 import { $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
-import { accessIndex } from '../tgsl/accessIndex.ts';
-import { accessProp } from '../tgsl/accessProp.ts';
+import { accessIndex } from '../codegen/accessIndex.ts';
+import { accessProp } from '../codegen/accessProp.ts';
 import { getOwnSnippet, type SelfResolvable, type WithOwnSnippet } from '../types.ts';
 
 export const valueProxyHandler: ProxyHandler<SelfResolvable & WithOwnSnippet> = {

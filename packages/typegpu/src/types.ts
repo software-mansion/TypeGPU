@@ -47,7 +47,7 @@ import {
 import type { TgpuBindGroupLayout, TgpuLayoutEntry } from './tgpuBindGroupLayout.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
 import type { Infer } from './shared/repr.ts';
-import { ShaderGenerator } from './tgsl/shaderGenerator.ts';
+import { ShaderGenerator } from './codegen/shaderGenerator.ts';
 
 export type ResolvableObject =
   | SelfResolvable

@@ -20,7 +20,7 @@ import {
   type vecIToVecU,
 } from '../data/wgslTypes.ts';
 import { SignatureNotSupportedError } from '../errors.ts';
-import { unify } from '../tgsl/conversion.ts';
+import { unify } from '../codegen/conversion.ts';
 
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;

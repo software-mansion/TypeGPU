@@ -16,8 +16,8 @@ import {
   type TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
 import { isGPUCommandEncoder, isGPUComputePassEncoder } from './typeGuards.ts';
-import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
-import type { LogResources } from '../../tgsl/consoleLog/types.ts';
+import { logDataFromGPU } from '../../codegen/consoleLog/deserializers.ts';
+import type { LogResources } from '../../codegen/consoleLog/types.ts';
 import { isGPUBuffer, type ResolutionCtx, type SelfResolvable } from '../../types.ts';
 import { wgslExtensions, wgslExtensionToFeatureName } from '../../wgslExtensions.ts';
 import type { IORecord } from '../function/fnTypes.ts';

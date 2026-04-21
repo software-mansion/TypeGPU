@@ -34,8 +34,8 @@ import {
   type TgpuBindGroupLayout,
   type TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
-import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
-import type { LogResources } from '../../tgsl/consoleLog/types.ts';
+import { logDataFromGPU } from '../../codegen/consoleLog/deserializers.ts';
+import type { LogResources } from '../../codegen/consoleLog/types.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { isGPUBuffer } from '../../types.ts';
 import { wgslExtensions, wgslExtensionToFeatureName } from '../../wgslExtensions.ts';

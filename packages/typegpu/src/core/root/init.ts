@@ -18,8 +18,8 @@ import type {
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
 import { isBindGroup, isBindGroupLayout, TgpuBindGroupImpl } from '../../tgpuBindGroupLayout.ts';
-import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
-import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
+import type { LogGeneratorOptions } from '../../codegen/consoleLog/types.ts';
+import type { ShaderGenerator } from '../../codegen/shaderGenerator.ts';
 import {
   INTERNAL_createBuffer,
   isBuffer,

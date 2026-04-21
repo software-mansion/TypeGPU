@@ -1,5 +1,5 @@
 import { $internal, $resolve } from '../shared/symbols.ts';
-import { numericLiteralToSnippet } from '../tgsl/generationHelpers.ts';
+import { numericLiteralToSnippet } from '../codegen/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
 import { type ResolvedSnippet } from './snippet.ts';

@@ -2,7 +2,7 @@ import type { ResolvedSnippet } from '../../data/snippet.ts';
 import { type NameRegistry, RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry.ts';
 import { getName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
-import { ShelllessRepository } from '../../tgsl/shellless.ts';
+import { ShelllessRepository } from '../../codegen/shellless.ts';
 import type { TgpuLazy, TgpuSlot } from '../slot/slotTypes.ts';
 
 type SlotToValueMap = Map<TgpuSlot<unknown>, unknown>;
