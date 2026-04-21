@@ -159,7 +159,7 @@ common.writeSoA(particleBuffer, {
 
 ## Shader code ergonomics
 
-There's been a lot of improvements to our shader generation, mainly in regards to compile-time execution and pruning of unreachable branches.
+There have been a lot of improvements to our shader generation, mainly regarding comptime execution and pruning of unreachable branches.
 I will highlight some of them in the following sections.
 
 ### std.range
@@ -190,9 +190,9 @@ var result = 0u;
 {
   result += 20u;
 }
-````
+```
 
-Because `i` is known at compile-time, the `i * 10` is evaluated and injected into the generated code in each block.
+Because `i` is known at comptime, the `i * 10` is evaluated and injected into the generated code in each block.
 For more, refer to [tgpu.unroll documentation.](/TypeGPU/fundamentals/utils/#tgpuunroll).
 
 ### Boolean logic
@@ -291,7 +291,7 @@ function clampTo0(n: number) {
 
 ### New @typegpu/color helpers
 
-There are three new helper functions importable from `@typegpu/color` which can be called at compile-time to create
+There are three new helper functions importable from `@typegpu/color` which can be called at comptime to create
 color vectors from hexadecimal strings: `hexToRgb`, `hexToRgba` and `hexToOklab`.
 
 ```ts
@@ -312,7 +312,7 @@ fn getGradientColor(t: f32) -> vec3f {
   var to = vec3f(0, 1, 0);
   return mix(from, to, t);
 }
-````
+```
 
 ### Bundler plugin rewrite
 
