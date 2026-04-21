@@ -1,6 +1,6 @@
 import { $cast, $gpuCallable } from '../shared/symbols.ts';
 import { type GPUCallable, hasCast, isGPUCallable, type ResolutionCtx } from '../types.ts';
-import type { Snippet } from './snippet.ts';
+import type { Snippet } from '../tgsl/snippet.ts';
 import type { BaseData } from './wgslTypes.ts';
 
 /**

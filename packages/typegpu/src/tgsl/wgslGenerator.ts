@@ -1,14 +1,7 @@
 import * as tinyest from 'tinyest';
 import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
-import {
-  type AnyData,
-  ConsoleLog,
-  InfixDispatch,
-  isLooseData,
-  UnknownData,
-  unptr,
-} from '../data/dataTypes.ts';
+import { type AnyData, ConsoleLog, InfixDispatch, isLooseData } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
@@ -18,8 +11,10 @@ import {
   type Origin,
   type ResolvedSnippet,
   snip,
+  UnknownData,
   type Snippet,
-} from '../data/snippet.ts';
+} from './snippet.ts';
+import { unptr } from './snippetTypeUtils.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';

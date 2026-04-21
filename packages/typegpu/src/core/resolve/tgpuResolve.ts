@@ -1,4 +1,4 @@
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { type ResolvedSnippet, snip } from '../../tgsl/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { type ResolutionResult, resolve as resolveImpl } from '../../resolutionCtx.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';

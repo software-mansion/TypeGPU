@@ -24,6 +24,9 @@
   },
   "type": "module",
   "sideEffects": false,
+  "imports": {
+    "#shaderbit": "./src/shaderbit/index.ts"
+  },
   "exports": {
     "./package.json": "./package.json",
     ".": {

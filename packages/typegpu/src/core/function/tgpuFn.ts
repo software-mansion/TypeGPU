@@ -1,4 +1,4 @@
-import type { ResolvedSnippet } from '../../data/snippet.ts';
+import type { ResolvedSnippet } from '../../tgsl/snippet.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type BaseData, Void } from '../../data/wgslTypes.ts';
 import { ExecutionError } from '../../errors.ts';

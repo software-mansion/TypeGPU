@@ -1,6 +1,6 @@
 import { type AnyData, isData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
-import { isSnippet, type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { isSnippet, type ResolvedSnippet, snip } from '../../tgsl/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx, inCodegenMode } from '../../execMode.ts';
 import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';

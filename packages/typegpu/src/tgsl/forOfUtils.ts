@@ -1,5 +1,5 @@
 import { UnknownData } from '../data/dataTypes.ts';
-import { isEphemeralSnippet, snip, type Snippet } from '../data/snippet.ts';
+import { isEphemeralSnippet, snip, type Snippet } from './snippet.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { i32, u32 } from '../data/numeric.ts';

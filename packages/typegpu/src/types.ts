@@ -29,7 +29,7 @@ import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
 import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
 import { type AnyData, UnknownData } from './data/dataTypes.ts';
-import type { MapValueToSnippet, ResolvedSnippet, Snippet } from './data/snippet.ts';
+import type { MapValueToSnippet, ResolvedSnippet, Snippet } from './tgsl/snippet.ts';
 import {
   type AnyMatInstance,
   type AnyVecInstance,

@@ -1,17 +1,23 @@
+import {
+  areTypesEqual,
+  getVectorElementCount,
+  getVectorPrimitive,
+  isPtrType,
+  isVectorType,
+  type StructBit,
+  type TypeBit,
+} from '#shaderbit';
 import { stitch } from '../core/resolve/stitch.ts';
 import { UnknownData } from '../data/dataTypes.ts';
-import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
-import { snip, type Snippet } from '../data/snippet.ts';
+import { snip, type Snippet } from './snippet.ts';
 import {
-  type AnyWgslData,
   type BaseData,
   type F16,
   type F32,
   type I32,
   isMat,
-  isPtr,
   isVec,
   type Ptr,
   type U32,
@@ -26,7 +32,7 @@ import type { ResolutionCtx } from '../types.ts';
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
 
 type ConversionRankInfo =
-  | { rank: number; action: 'cast'; targetType: BaseData }
+  | { rank: number; action: 'cast'; targetType: TypeBit }
   | { rank: number; action: Exclude<ConversionAction, 'cast'> };
 
 const INFINITE_RANK: ConversionRankInfo = {
@@ -34,41 +40,38 @@ const INFINITE_RANK: ConversionRankInfo = {
   action: 'none',
 };
 
-function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInfo {
-  const trueSrc = undecorate(src);
-  const trueDst = undecorate(dest);
-
-  if (trueSrc.type === trueDst.type) {
+function getAutoConversionRank(src: TypeBit, dst: TypeBit): ConversionRankInfo {
+  if (areTypesEqual(src, dst)) {
     return { rank: 0, action: 'none' };
   }
 
-  if (trueSrc.type === 'abstractFloat') {
-    if (trueDst.type === 'f32') return { rank: 1, action: 'none' };
-    if (trueDst.type === 'f16') return { rank: 2, action: 'none' };
+  if (src === 'abstractFloat') {
+    if (dst === 'f32') return { rank: 1, action: 'none' };
+    if (dst === 'f16') return { rank: 2, action: 'none' };
   }
 
-  if (trueSrc.type === 'abstractInt') {
-    if (trueDst.type === 'i32') return { rank: 3, action: 'none' };
-    if (trueDst.type === 'u32') return { rank: 4, action: 'none' };
-    if (trueDst.type === 'abstractFloat') return { rank: 5, action: 'none' };
-    if (trueDst.type === 'f32') return { rank: 6, action: 'none' };
-    if (trueDst.type === 'f16') return { rank: 7, action: 'none' };
+  if (src === 'abstractInt') {
+    if (dst === 'i32') return { rank: 3, action: 'none' };
+    if (dst === 'u32') return { rank: 4, action: 'none' };
+    if (dst === 'abstractFloat') return { rank: 5, action: 'none' };
+    if (dst === 'f32') return { rank: 6, action: 'none' };
+    if (dst === 'f16') return { rank: 7, action: 'none' };
   }
 
   if (
-    isVec(trueSrc) &&
-    isVec(trueDst) &&
+    isVectorType(src) &&
+    isVectorType(dst) &&
     // Same length vectors
-    trueSrc.type[3] === trueDst.type[3]
+    getVectorElementCount(src) === getVectorElementCount(dst)
   ) {
-    return getAutoConversionRank(trueSrc.primitive, trueDst.primitive);
+    return getAutoConversionRank(getVectorPrimitive(src)!, getVectorPrimitive(dst)!);
   }
 
   if (
-    isMat(trueSrc) &&
-    isMat(trueDst) &&
+    isMat(src) &&
+    isMat(dst) &&
     // Same dimensions
-    trueSrc.type[3] === trueDst.type[3]
+    src.type[3] === dst.type[3]
   ) {
     // Matrix conversion rank depends only on component type (always f32 for now)
     return { rank: 0, action: 'none' };
@@ -77,23 +80,17 @@ function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInf
   return INFINITE_RANK;
 }
 
-function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRankInfo {
-  const trueSrc = undecorate(src);
-  const trueDst = undecorate(dest);
-
+function getImplicitConversionRank(src: TypeBit, dst: TypeBit): ConversionRankInfo {
   if (
-    isPtr(trueSrc) &&
+    isPtrType(src) &&
     // Only dereferencing implicit pointers, otherwise we'd have a types mismatch between TS and WGSL
-    trueSrc.implicit &&
-    getAutoConversionRank(trueSrc.inner, trueDst).rank < Number.POSITIVE_INFINITY
+    src.implicit &&
+    getAutoConversionRank(src.inner, dst).rank < Number.POSITIVE_INFINITY
   ) {
     return { rank: 0, action: 'deref' };
   }
 
-  if (
-    isPtr(trueDst) &&
-    getAutoConversionRank(trueSrc, trueDst.inner).rank < Number.POSITIVE_INFINITY
-  ) {
+  if (isPtrType(dst) && getAutoConversionRank(src, dst.inner).rank < Number.POSITIVE_INFINITY) {
     return { rank: 1, action: 'ref' };
   }
 
@@ -106,9 +103,9 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
   } as const;
   type PrimitiveType = keyof typeof primitivePreference;
 
-  if (trueSrc.type in primitivePreference && trueDst.type in primitivePreference) {
-    const srcType = trueSrc.type as PrimitiveType;
-    const destType = trueDst.type as PrimitiveType;
+  if (src.type in primitivePreference && dst.type in primitivePreference) {
+    const srcType = src.type as PrimitiveType;
+    const destType = dst.type as PrimitiveType;
 
     if (srcType !== destType) {
       const srcPref = primitivePreference[srcType];
@@ -116,16 +113,16 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
 
       const rank = destPref < srcPref ? 10 : 20;
 
-      return { rank: rank, action: 'cast', targetType: trueDst };
+      return { rank: rank, action: 'cast', targetType: dst };
     }
   }
 
-  if (trueSrc.type === 'abstractFloat') {
-    if (trueDst.type === 'u32') {
-      return { rank: 2, action: 'cast', targetType: trueDst };
+  if (src === 'abstractFloat') {
+    if (dst === 'u32') {
+      return { rank: 2, action: 'cast', targetType: dst };
     }
-    if (trueDst.type === 'i32') {
-      return { rank: 1, action: 'cast', targetType: trueDst };
+    if (dst === 'i32') {
+      return { rank: 1, action: 'cast', targetType: dst };
     }
   }
 
@@ -133,8 +130,8 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
 }
 
 function getConversionRank(
-  src: BaseData,
-  dest: BaseData,
+  src: TypeBit,
+  dest: TypeBit,
   allowImplicit: boolean,
 ): ConversionRankInfo {
   const autoRank = getAutoConversionRank(src, dest);
@@ -154,17 +151,17 @@ export type ConversionResultAction = {
 };
 
 export type ConversionResult = {
-  targetType: BaseData;
+  targetType: TypeBit;
   actions: ConversionResultAction[];
   hasImplicitConversions?: boolean;
 };
 
 function findBestType(
-  types: BaseData[],
-  uniqueTypes: BaseData[],
+  types: TypeBit[],
+  uniqueTypes: TypeBit[],
   allowImplicit: boolean,
 ): ConversionResult | undefined {
-  let bestResult: { type: BaseData; details: ConversionRankInfo[]; sum: number } | undefined;
+  let bestResult: { type: TypeBit; details: ConversionRankInfo[]; sum: number } | undefined;
 
   for (const targetType of uniqueTypes) {
     const details: ConversionRankInfo[] = [];
@@ -200,12 +197,12 @@ function findBestType(
 }
 
 export function getBestConversion(
-  types: BaseData[],
-  targetTypes?: BaseData[],
+  types: TypeBit[],
+  targetTypes?: TypeBit[],
 ): ConversionResult | undefined {
   if (types.length === 0) return undefined;
 
-  const uniqueTargetTypes = [...new Set((targetTypes || types).map(undecorate))];
+  const uniqueTargetTypes = [...new Set(targetTypes || types)];
 
   const explicitResult = findBestType(types, uniqueTargetTypes, false);
   if (explicitResult) {
@@ -224,7 +221,7 @@ function applyActionToSnippet(
   ctx: ResolutionCtx,
   snippet: Snippet,
   action: ConversionResultAction,
-  targetType: BaseData,
+  targetType: TypeBit,
 ): Snippet {
   if (action.action === 'none') {
     return snip(
@@ -271,7 +268,7 @@ export function unify<T extends (BaseData | UnknownData)[] | []>(
 export function convertToCommonType<T extends Snippet[]>(
   ctx: ResolutionCtx,
   values: T,
-  restrictTo?: BaseData[],
+  restrictTo?: TypeBit[],
   verbose = true,
 ): T | undefined {
   const types = values.map((value) => value.dataType);
@@ -286,7 +283,7 @@ export function convertToCommonType<T extends Snippet[]>(
     );
   }
 
-  const conversion = getBestConversion(types as BaseData[], restrictTo);
+  const conversion = getBestConversion(types as TypeBit[], restrictTo);
   if (!conversion) {
     return undefined;
   }
@@ -295,7 +292,7 @@ export function convertToCommonType<T extends Snippet[]>(
     console.warn(
       `Implicit conversions from [\n${values
         .map((v) => `  ${v.value}: ${safeStringify(v.dataType)}`)
-        .join(',\n')}\n] to ${conversion.targetType.type} are supported, but not recommended.
+        .join(',\n')}\n] to ${conversion.targetType} are supported, but not recommended.
 Consider using explicit conversions instead.`,
     );
   }
@@ -310,7 +307,7 @@ Consider using explicit conversions instead.`,
 export function tryConvertSnippet(
   ctx: ResolutionCtx,
   snippet: Snippet,
-  targetDataTypes: BaseData | BaseData[],
+  targetDataTypes: TypeBit | TypeBit[],
   verbose = true,
 ): Snippet {
   const targets = Array.isArray(targetDataTypes) ? targetDataTypes : [targetDataTypes];
@@ -318,7 +315,7 @@ export function tryConvertSnippet(
   const { value, dataType, origin } = snippet;
 
   if (targets.length === 1) {
-    const target = targets[0] as AnyWgslData;
+    const target = targets[0] as TypeBit;
 
     if (target === dataType) {
       return snip(value, target, origin);
@@ -338,22 +335,22 @@ export function tryConvertSnippet(
   throw new WgslTypeError(
     `Cannot convert value of type '${String(
       dataType,
-    )}' to any of the target types: [${targets.map((t) => t.type).join(', ')}]`,
+    )}' to any of the target types: [${targets.join(', ')}]`,
   );
 }
 
 export function convertStructValues(
   ctx: ResolutionCtx,
-  structType: WgslStruct,
+  structType: StructBit,
   values: Record<string, Snippet>,
 ): Snippet[] {
-  return Object.entries(structType.propTypes).map(([key, targetType]) => {
+  return Object.entries(structType.fields).map(([key, prop]) => {
     const val = values[key];
     if (!val) {
       throw new Error(`Missing property ${key}`);
     }
 
-    const converted = convertToCommonType(ctx, [val], [targetType]);
+    const converted = convertToCommonType(ctx, [val], [prop.type]);
     return converted?.[0] ?? val;
   });
 }

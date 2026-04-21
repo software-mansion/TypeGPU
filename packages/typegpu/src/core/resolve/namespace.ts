@@ -1,4 +1,4 @@
-import type { ResolvedSnippet } from '../../data/snippet.ts';
+import type { ResolvedSnippet } from '../../tgsl/snippet.ts';
 import { type NameRegistry, RandomNameRegistry, StrictNameRegistry } from '../../nameRegistry.ts';
 import { getName } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';

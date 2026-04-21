@@ -2,7 +2,7 @@ import { $internal, $resolve } from '../shared/symbols.ts';
 import { numericLiteralToSnippet } from '../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
 import { bool, f16, f32, i32, u32 } from './numeric.ts';
-import { type ResolvedSnippet } from './snippet.ts';
+import { type ResolvedSnippet } from '../tgsl/snippet.ts';
 import { WORKAROUND_getSchema, type BaseData, type VecKind } from './wgslTypes.ts';
 
 type ElementSchema<S> = BaseData & ((v?: S) => S);

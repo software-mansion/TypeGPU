@@ -15,7 +15,7 @@ import {
 import { getAttributesString } from './data/attributes.ts';
 import { isData, undecorate, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
-import { type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
+import { type ResolvedSnippet, snip, type Snippet } from './tgsl/snippet.ts';
 import { type BaseData, isPtr, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
 import { invariant, MissingSlotValueError, ResolutionError, WgslTypeError } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';

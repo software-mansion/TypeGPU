@@ -1,7 +1,7 @@
 import { createShelllessImpl, type ShelllessImpl } from '../core/function/shelllessImpl.ts';
 import { UnknownData } from '../data/dataTypes.ts';
 import { RefOperator } from '../data/ref.ts';
-import type { Snippet } from '../data/snippet.ts';
+import type { Snippet } from './snippet.ts';
 import { type BaseData, isPtr, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
 import { WgslTypeError } from '../errors.ts';
 import { getMetaData, getName } from '../shared/meta.ts';

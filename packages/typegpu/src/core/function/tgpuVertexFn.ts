@@ -1,6 +1,6 @@
 import type { AnyVertexInputBuiltin, AnyVertexOutputBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { UndecorateRecord } from '../../data/dataTypes.ts';
-import type { ResolvedSnippet } from '../../data/snippet.ts';
+import type { ResolvedSnippet } from '../../tgsl/snippet.ts';
 import type { BaseData, Decorated, Interpolate, Location } from '../../data/wgslTypes.ts';
 import { getName, setName, type TgpuNamable } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';

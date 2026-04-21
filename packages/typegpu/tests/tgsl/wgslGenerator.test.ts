@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, vi } from 'vitest';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
-import { snip } from '../../src/data/snippet.ts';
+import { snip } from '../../src/tgsl/snippet.ts';
 import { Void, type WgslArray } from '../../src/data/wgslTypes.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import tgpu from '../../src/index.js';
@@ -1067,7 +1067,7 @@ describe('wgslGenerator', () => {
     provideCtx(ctx, () => {
       ctx[$internal].itemStateStack.pushFunctionScope(
         'normal',
-        [snip('idx', d.u32, /* origin */ 'runtime')],
+        [snip('idx', 'u32', /* origin */ 'runtime')],
         {},
         d.f32,
         (astInfo.externals as () => Record<string, unknown>)() ?? {},

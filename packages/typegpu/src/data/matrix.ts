@@ -7,7 +7,7 @@ import { $internal, $resolve } from '../shared/symbols.ts';
 import { numericLiteralToSnippet } from '../tgsl/generationHelpers.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
 import { f32 } from './numeric.ts';
-import { type ResolvedSnippet } from './snippet.ts';
+import { type ResolvedSnippet } from '../tgsl/snippet.ts';
 import { vec2f, vec3f, vec4f } from './vector.ts';
 import {
   type BaseData,

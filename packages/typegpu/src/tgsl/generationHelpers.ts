@@ -7,7 +7,7 @@ import {
   type ResolvedSnippet,
   snip,
   type Snippet,
-} from '../data/snippet.ts';
+} from './snippet.ts';
 import {
   type AnyWgslData,
   type BaseData,

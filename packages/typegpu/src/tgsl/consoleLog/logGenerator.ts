@@ -6,7 +6,7 @@ import { arrayOf } from '../../data/array.ts';
 import { atomic } from '../../data/atomic.ts';
 import { UnknownData } from '../../data/dataTypes.ts';
 import { u32 } from '../../data/numeric.ts';
-import { snip, type Snippet } from '../../data/snippet.ts';
+import { snip, type Snippet } from '../snippet.ts';
 import { struct } from '../../data/struct.ts';
 import {
   type AnyWgslData,

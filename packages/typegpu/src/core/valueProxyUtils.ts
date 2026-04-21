@@ -1,4 +1,4 @@
-import type { Snippet } from '../data/snippet.ts';
+import type { Snippet } from '../tgsl/snippet.ts';
 import { getGPUValue } from '../getGPUValue.ts';
 import { $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
 import { accessIndex } from '../tgsl/accessIndex.ts';
