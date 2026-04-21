@@ -1,7 +1,22 @@
-import { undecorate } from './dataTypes.ts';
-import type { UnknownData } from './dataTypes.ts';
+// TODO: Move to packages/typegpu/src/tgsl/, since snippets have more to do with code-gen than schema definitions.
+import { isNumericType, type TypeBit } from '#shaderbit';
 import { DEV } from '../shared/env.ts';
-import { type BaseData, isNumericSchema } from './wgslTypes.ts';
+
+export const UnknownData = Symbol('UNKNOWN');
+export type UnknownData = typeof UnknownData;
+
+export interface PtrImplicitBit {
+  readonly kind: 'ptr-implicit';
+  readonly inner: SnippetType;
+}
+
+export function isPtrImplicitType(data: SnippetType): data is PtrImplicitBit {
+  return (data as PtrImplicitBit)?.kind === 'ptr-implicit';
+}
+
+type UsageDeterminedType = { kind: 'usage-determined-type' };
+
+export type SnippetType = TypeBit | PtrImplicitBit | UsageDeterminedType | UnknownData;
 
 export type Origin =
   | 'uniform'
@@ -70,7 +85,7 @@ export interface Snippet {
    * The type that `value` is assignable to (not necessary exactly inferred as).
    * E.g. `1.1` is assignable to `f32`, but `1.1` itself is an abstract float
    */
-  readonly dataType: BaseData | UnknownData;
+  readonly dataType: SnippetType;
   readonly origin: Origin;
 }
 
@@ -80,7 +95,7 @@ export interface ResolvedSnippet {
    * The type that `value` is assignable to (not necessary exactly inferred as).
    * E.g. `1.1` is assignable to `f32`, but `1.1` itself is an abstract float
    */
-  readonly dataType: BaseData;
+  readonly dataType: Exclude<SnippetType, UnknownData>;
   readonly origin: Origin;
 }
 
@@ -88,10 +103,10 @@ export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };
 
 class SnippetImpl implements Snippet {
   readonly value: unknown;
-  readonly dataType: BaseData | UnknownData;
+  readonly dataType: SnippetType;
   readonly origin: Origin;
 
-  constructor(value: unknown, dataType: BaseData | UnknownData, origin: Origin) {
+  constructor(value: unknown, dataType: SnippetType, origin: Origin) {
     this.value = value;
     this.dataType = dataType;
     this.origin = origin;
@@ -103,14 +118,18 @@ export function isSnippet(value: unknown): value is Snippet {
 }
 
 export function isSnippetNumeric(snippet: Snippet) {
-  return isNumericSchema(snippet.dataType);
+  return isNumericType(snippet.dataType);
 }
 
-export function snip(value: string, dataType: BaseData, origin: Origin): ResolvedSnippet;
-export function snip(value: unknown, dataType: BaseData | UnknownData, origin: Origin): Snippet;
+export function snip(
+  value: string,
+  dataType: Exclude<SnippetType, UnknownData>,
+  origin: Origin,
+): ResolvedSnippet;
+export function snip(value: unknown, dataType: SnippetType, origin: Origin): Snippet;
 export function snip(
   value: unknown,
-  dataType: BaseData | UnknownData,
+  dataType: SnippetType,
   origin: Origin,
 ): Snippet | ResolvedSnippet {
   if (DEV && isSnippet(value)) {
@@ -118,10 +137,5 @@ export function snip(
     throw new Error('Cannot nest snippets');
   }
 
-  return new SnippetImpl(
-    value,
-    // We don't care about attributes in snippet land, so we discard that information.
-    undecorate(dataType as BaseData),
-    origin,
-  );
+  return new SnippetImpl(value, dataType, origin);
 }

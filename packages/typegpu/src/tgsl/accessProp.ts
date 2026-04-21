@@ -10,7 +10,7 @@ import {
 } from '../data/dataTypes.ts';
 import { abstractInt, bool, f16, f32, i32, u32 } from '../data/numeric.ts';
 import { derefSnippet } from '../data/ref.ts';
-import { isEphemeralSnippet, snip, type Snippet } from '../data/snippet.ts';
+import { isEphemeralSnippet, snip, type Snippet } from './snippet.ts';
 import {
   vec2b,
   vec2f,

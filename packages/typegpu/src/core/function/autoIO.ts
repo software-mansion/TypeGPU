@@ -1,6 +1,6 @@
 import { builtin, type OmitBuiltins } from '../../builtin.ts';
 import { AutoStruct } from '../../data/autoStruct.ts';
-import type { ResolvedSnippet } from '../../data/snippet.ts';
+import type { ResolvedSnippet } from '../../tgsl/snippet.ts';
 import { vec4f } from '../../data/vector.ts';
 import type { FormatToWGSLType } from '../../data/vertexFormatData.ts';
 import type { BaseData, v4f } from '../../data/wgslTypes.ts';

@@ -1,7 +1,7 @@
 import type { Block } from 'tinyest';
 import type { BaseData } from '../data/wgslTypes.ts';
 import type { GenerationCtx } from './generationHelpers.ts';
-import type { ResolvedSnippet, Snippet } from '../data/snippet.ts';
+import type { ResolvedSnippet, Snippet } from './snippet.ts';
 
 /**
  * **NOTE: This is an unstable API and may change in the future.**

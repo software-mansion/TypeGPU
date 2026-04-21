@@ -1,5 +1,5 @@
 import { undecorate } from '../../data/dataTypes.ts';
-import { snip, type Snippet } from '../../data/snippet.ts';
+import { snip, type Snippet } from '../../tgsl/snippet.ts';
 import { $internal, $repr } from '../../shared/symbols.ts';
 import { type BaseData, isWgslStruct } from '../../data/wgslTypes.ts';
 

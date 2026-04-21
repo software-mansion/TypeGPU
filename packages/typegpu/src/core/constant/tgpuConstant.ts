@@ -1,5 +1,5 @@
 import { isData, type AnyData } from '../../data/dataTypes.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { type ResolvedSnippet, snip } from '../../tgsl/snippet.ts';
 import {
   type AnyWgslData,
   type BaseData,

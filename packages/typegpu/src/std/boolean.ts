@@ -1,7 +1,7 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { bool, f32 } from '../data/numeric.ts';
-import { isSnippetNumeric, snip } from '../data/snippet.ts';
+import { isSnippetNumeric, snip } from '../tgsl/snippet.ts';
 import { vec2b, vec3b, vec4b } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {

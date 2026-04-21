@@ -1,4 +1,4 @@
-import type { ResolvedSnippet } from '../../data/snippet.ts';
+import type { ResolvedSnippet } from '../../tgsl/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { getName } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';

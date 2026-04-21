@@ -1,12 +1,12 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { WgslTypeError } from '../errors.ts';
+import { isPtrType, type PtrBit } from '../shaderbit/typeBits.ts';
 import { setName } from '../shared/meta.ts';
 import { $gpuCallable, $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
 import type { DualFn, SelfResolvable } from '../types.ts';
-import { UnknownData } from './dataTypes.ts';
 import { createPtrFromOrigin, explicitFrom } from './ptr.ts';
-import { type ResolvedSnippet, snip, type Snippet } from './snippet.ts';
-import { isNaturallyEphemeral, isPtr, type Ptr, type StorableData } from './wgslTypes.ts';
+import { type ResolvedSnippet, snip, type Snippet, UnknownData } from '../tgsl/snippet.ts';
+import { isNaturallyEphemeral, isPtr, type StorableData } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -143,9 +143,9 @@ export class RefOperator implements SelfResolvable {
   readonly [$internal]: true;
   readonly snippet: Snippet;
 
-  readonly #ptrType: Ptr | undefined;
+  readonly #ptrType: PtrBit | undefined;
 
-  constructor(snippet: Snippet, ptrType: Ptr | undefined) {
+  constructor(snippet: Snippet, ptrType: PtrBit | undefined) {
     this[$internal] = true;
     this.snippet = snippet;
     this.#ptrType = ptrType;
@@ -167,7 +167,7 @@ export class RefOperator implements SelfResolvable {
 }
 
 export function derefSnippet(snippet: Snippet): Snippet {
-  if (!isPtr(snippet.dataType)) {
+  if (!isPtrType(snippet.dataType)) {
     return snippet;
   }
 

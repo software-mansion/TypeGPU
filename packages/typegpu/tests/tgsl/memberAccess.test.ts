@@ -1,7 +1,7 @@
 import { describe } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import { expectSnippetOf } from '../utils/parseResolved.ts';
-import { snip } from '../../src/data/snippet.ts';
+import { snip } from '../../src/tgsl/snippet.ts';
 import tgpu, { d } from '../../src/index.js';
 
 describe('Member Access', () => {

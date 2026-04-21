@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { arrayOf } from '../../src/data/array.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../../src/data/matrix.ts';
-import { abstractFloat, abstractInt, bool, f16, f32, i32, u32 } from '../../src/data/numeric.ts';
+import { bool, f16, f32, i32, u32 } from '../../src/data/numeric.ts';
 import { struct } from '../../src/data/struct.ts';
 import { vec2f, vec2i, vec3f, vec3i, vec4f, vec4h } from '../../src/data/vector.ts';
 import { coerceToSnippet, numericLiteralToSnippet } from '../../src/tgsl/generationHelpers.ts';
 import { accessIndex } from '../../src/tgsl/accessIndex.ts';
 import { accessProp } from '../../src/tgsl/accessProp.ts';
 import { UnknownData } from '../../src/data/dataTypes.ts';
-import { snip } from '../../src/data/snippet.ts';
+import { snip } from '../../src/tgsl/snippet.ts';
 import { INTERNAL_setCtx } from '../../src/execMode.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { namespace } from '../../src/core/resolve/namespace.ts';
@@ -27,27 +27,31 @@ describe('generationHelpers', () => {
 
   describe('numericLiteralToSnippet', () => {
     it('should convert numeric literals to correct snippets', () => {
-      expect(numericLiteralToSnippet(1)).toEqual(snip(1, abstractInt, /* origin */ 'constant'));
+      expect(numericLiteralToSnippet(1)).toEqual(snip(1, 'abstractInt', /* origin */ 'constant'));
 
       expect(numericLiteralToSnippet(1.1)).toEqual(
-        snip(1.1, abstractFloat, /* origin */ 'constant'),
+        snip(1.1, 'abstractFloat', /* origin */ 'constant'),
       );
 
       expect(numericLiteralToSnippet(1e10)).toEqual(
-        snip(1e10, abstractInt, /* origin */ 'constant'),
+        snip(1e10, 'abstractInt', /* origin */ 'constant'),
       );
 
       expect(numericLiteralToSnippet(0.5)).toEqual(
-        snip(0.5, abstractFloat, /* origin */ 'constant'),
+        snip(0.5, 'abstractFloat', /* origin */ 'constant'),
       );
 
-      expect(numericLiteralToSnippet(-45)).toEqual(snip(-45, abstractInt, /* origin */ 'constant'));
+      expect(numericLiteralToSnippet(-45)).toEqual(
+        snip(-45, 'abstractInt', /* origin */ 'constant'),
+      );
 
       expect(numericLiteralToSnippet(0x1a)).toEqual(
-        snip(0x1a, abstractInt, /* origin */ 'constant'),
+        snip(0x1a, 'abstractInt', /* origin */ 'constant'),
       );
 
-      expect(numericLiteralToSnippet(0b101)).toEqual(snip(5, abstractInt, /* origin */ 'constant'));
+      expect(numericLiteralToSnippet(0b101)).toEqual(
+        snip(5, 'abstractInt', /* origin */ 'constant'),
+      );
     });
   });
 
@@ -116,7 +120,7 @@ describe('generationHelpers', () => {
     });
 
     it('returns undefined otherwise', () => {
-      const target = snip('foo', f32, /* origin */ 'runtime');
+      const target = snip('foo', 'f32', /* origin */ 'runtime');
       expect(accessIndex(target, index)).toBe(undefined);
     });
   });
@@ -125,15 +129,15 @@ describe('generationHelpers', () => {
     const arr = arrayOf(f32, 2);
 
     it('coerces JS numbers', () => {
-      expect(coerceToSnippet(1)).toEqual(snip(1, abstractInt, /* origin */ 'constant'));
-      expect(coerceToSnippet(2.5)).toEqual(snip(2.5, abstractFloat, /* origin */ 'constant'));
-      expect(coerceToSnippet(-10)).toEqual(snip(-10, abstractInt, /* origin */ 'constant'));
-      expect(coerceToSnippet(0.0)).toEqual(snip(0, abstractInt, /* origin */ 'constant'));
+      expect(coerceToSnippet(1)).toEqual(snip(1, 'abstractInt', /* origin */ 'constant'));
+      expect(coerceToSnippet(2.5)).toEqual(snip(2.5, 'abstractFloat', /* origin */ 'constant'));
+      expect(coerceToSnippet(-10)).toEqual(snip(-10, 'abstractInt', /* origin */ 'constant'));
+      expect(coerceToSnippet(0.0)).toEqual(snip(0, 'abstractInt', /* origin */ 'constant'));
     });
 
     it('coerces JS booleans', () => {
-      expect(coerceToSnippet(true)).toEqual(snip(true, bool, /* origin */ 'constant'));
-      expect(coerceToSnippet(false)).toEqual(snip(false, bool, /* origin */ 'constant'));
+      expect(coerceToSnippet(true)).toEqual(snip(true, 'bool', /* origin */ 'constant'));
+      expect(coerceToSnippet(false)).toEqual(snip(false, 'bool', /* origin */ 'constant'));
     });
 
     it(`coerces schemas to UnknownData (as they're not instance types)`, () => {

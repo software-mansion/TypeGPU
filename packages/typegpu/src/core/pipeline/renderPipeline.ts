@@ -4,7 +4,7 @@ import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation, type UndecorateRecord } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { type ResolvedSnippet, snip } from '../../tgsl/snippet.ts';
 import type {
   WgslTexture,
   WgslTextureDepth2d,

@@ -4,7 +4,7 @@ import { setName } from '../src/shared/meta.ts';
 import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';
 import { it } from 'typegpu-testing-utility';
-import { snip } from '../src/data/snippet.ts';
+import { snip } from '../src/tgsl/snippet.ts';
 
 describe('tgpu resolve', () => {
   it('should resolve an external struct', () => {

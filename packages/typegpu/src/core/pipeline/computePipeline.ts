@@ -1,6 +1,6 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { type ResolvedSnippet, snip } from '../../tgsl/snippet.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { applyBindGroups } from './applyPipelineState.ts';

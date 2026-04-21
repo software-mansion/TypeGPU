@@ -5,7 +5,7 @@ import type {
 } from '../../builtin.ts';
 import type { UndecorateRecord } from '../../data/dataTypes.ts';
 import type { InstanceToSchema } from '../../data/instanceToSchema.ts';
-import type { ResolvedSnippet } from '../../data/snippet.ts';
+import type { ResolvedSnippet } from '../../tgsl/snippet.ts';
 import type {
   BaseData,
   Decorated,

@@ -27,7 +27,7 @@ import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
 import type { WgslExternalTexture, WgslStorageTexture, WgslTexture } from './texture.ts';
-import type { Snippet } from './snippet.ts';
+import type { Snippet } from '../tgsl/snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
@@ -145,13 +145,6 @@ export function undecorate(data: BaseData): BaseData {
   return data;
 }
 
-export function unptr(data: BaseData | UnknownData): BaseData | UnknownData {
-  if (wgsl.isPtr(data)) {
-    return data.inner;
-  }
-  return data;
-}
-
 const looseTypeLiterals = ['unstruct', 'disarray', 'loose-decorated', ...vertexFormats] as const;
 
 export type LooseTypeLiteral = (typeof looseTypeLiterals)[number];
@@ -232,9 +225,6 @@ export type AnyConcreteData = Exclude<
   | WgslSampler
   | WgslComparisonSampler
 >;
-
-export const UnknownData = Symbol('UNKNOWN');
-export type UnknownData = typeof UnknownData;
 
 export class InfixDispatch {
   readonly name: string;

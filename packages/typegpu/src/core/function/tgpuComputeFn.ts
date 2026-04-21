@@ -1,5 +1,5 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
-import type { ResolvedSnippet } from '../../data/snippet.ts';
+import type { ResolvedSnippet } from '../../tgsl/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { getName, setName, type TgpuNamable } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';

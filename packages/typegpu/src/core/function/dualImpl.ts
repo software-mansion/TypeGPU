@@ -1,4 +1,4 @@
-import { type MapValueToSnippet, snip } from '../../data/snippet.ts';
+import { type MapValueToSnippet, snip } from '../../tgsl/snippet.ts';
 import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';

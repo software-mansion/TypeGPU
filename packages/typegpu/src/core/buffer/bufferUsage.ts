@@ -1,5 +1,5 @@
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { type ResolvedSnippet, snip } from '../../tgsl/snippet.ts';
 import { type AnyWgslData, type BaseData, isNaturallyEphemeral } from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
 import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';

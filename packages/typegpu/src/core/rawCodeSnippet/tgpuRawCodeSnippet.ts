@@ -1,5 +1,5 @@
 import type { AnyData } from '../../data/dataTypes.ts';
-import { type Origin, type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { type Origin, type ResolvedSnippet, snip } from '../../tgsl/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import type { InferGPU } from '../../shared/repr.ts';

@@ -1,4 +1,4 @@
-import { isSnippet, type Snippet } from '../../data/snippet.ts';
+import { isSnippet, type Snippet } from '../../tgsl/snippet.ts';
 import { getResolutionCtx } from '../../execMode.ts';
 import type { ResolutionCtx } from '../../types.ts';
 

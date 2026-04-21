@@ -7,7 +7,7 @@ import {
   type WgslTextureProps,
 } from '../../data/texture.ts';
 import { inCodegenMode } from '../../execMode.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { type ResolvedSnippet, snip } from '../../tgsl/snippet.ts';
 import type { F32, Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';

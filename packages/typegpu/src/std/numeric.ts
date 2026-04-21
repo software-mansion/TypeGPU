@@ -3,7 +3,7 @@ import { stitch } from '../core/resolve/stitch.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import { smoothstepScalar } from '../data/numberOps.ts';
 import { abstractFloat, abstractInt, f16, f32, i32, u32 } from '../data/numeric.ts';
-import type { Snippet } from '../data/snippet.ts';
+import type { Snippet } from '../tgsl/snippet.ts';
 import { abstruct } from '../data/struct.ts';
 import {
   vec2f,

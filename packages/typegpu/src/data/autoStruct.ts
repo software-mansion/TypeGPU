@@ -3,7 +3,7 @@ import { isValidProp } from '../nameRegistry.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $internal, $repr, $resolve } from '../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
-import type { ResolvedSnippet } from './snippet.ts';
+import type { ResolvedSnippet } from '../tgsl/snippet.ts';
 import type { BaseData, WgslStruct } from './wgslTypes.ts';
 
 /**

@@ -5,7 +5,7 @@ import { textureExternal, type WgslExternalTexture } from '../../data/texture.ts
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { type ResolvedSnippet, snip } from '../../tgsl/snippet.ts';
 import type { Infer } from '../../shared/repr.ts';
 
 // ----------

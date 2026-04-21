@@ -6,7 +6,7 @@ import { f32, i32, u32 } from './numeric.ts';
 import { vec2f, vec2i, vec2u, vec3f, vec3i, vec3u, vec4f, vec4i, vec4u } from './vector.ts';
 import type { WithCast } from '../types.ts';
 import { schemaCallWrapper, schemaCallWrapperGPU } from './schemaCallWrapper.ts';
-import type { Snippet } from './snippet.ts';
+import type { Snippet } from '../tgsl/snippet.ts';
 import type {
   BaseData,
   F16,
