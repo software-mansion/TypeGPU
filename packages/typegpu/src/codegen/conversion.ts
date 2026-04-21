@@ -3,7 +3,13 @@ import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
-import { snip, type Snippet } from '../data/snippet.ts';
+import {
+  areSnippetTypesEqual,
+  snip,
+  type KnownSnippetType,
+  type Snippet,
+  type SnippetType,
+} from '../data/snippet.ts';
 import {
   type AnyWgslData,
   type BaseData,
@@ -26,7 +32,7 @@ import type { ResolutionCtx } from '../types.ts';
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
 
 type ConversionRankInfo =
-  | { rank: number; action: 'cast'; targetType: BaseData }
+  | { rank: number; action: 'cast'; targetType: KnownSnippetType }
   | { rank: number; action: Exclude<ConversionAction, 'cast'> };
 
 const INFINITE_RANK: ConversionRankInfo = {
@@ -34,25 +40,25 @@ const INFINITE_RANK: ConversionRankInfo = {
   action: 'none',
 };
 
-function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInfo {
-  const trueSrc = undecorate(src);
-  const trueDst = undecorate(dest);
+function getAutoConversionRank(src: KnownSnippetType, dest: KnownSnippetType): ConversionRankInfo {
+  const trueSrc = undecorate(src as BaseData) as KnownSnippetType;
+  const trueDst = undecorate(dest as BaseData) as KnownSnippetType;
 
-  if (trueSrc.type === trueDst.type) {
+  if (areSnippetTypesEqual(trueSrc, trueDst)) {
     return { rank: 0, action: 'none' };
   }
 
-  if (trueSrc.type === 'abstractFloat') {
-    if (trueDst.type === 'f32') return { rank: 1, action: 'none' };
-    if (trueDst.type === 'f16') return { rank: 2, action: 'none' };
+  if (trueSrc === 'abstractFloat') {
+    if (trueDst === 'f32') return { rank: 1, action: 'none' };
+    if (trueDst === 'f16') return { rank: 2, action: 'none' };
   }
 
-  if (trueSrc.type === 'abstractInt') {
-    if (trueDst.type === 'i32') return { rank: 3, action: 'none' };
-    if (trueDst.type === 'u32') return { rank: 4, action: 'none' };
-    if (trueDst.type === 'abstractFloat') return { rank: 5, action: 'none' };
-    if (trueDst.type === 'f32') return { rank: 6, action: 'none' };
-    if (trueDst.type === 'f16') return { rank: 7, action: 'none' };
+  if (trueSrc === 'abstractInt') {
+    if (trueDst === 'i32') return { rank: 3, action: 'none' };
+    if (trueDst === 'u32') return { rank: 4, action: 'none' };
+    if (trueDst === 'abstractFloat') return { rank: 5, action: 'none' };
+    if (trueDst === 'f32') return { rank: 6, action: 'none' };
+    if (trueDst === 'f16') return { rank: 7, action: 'none' };
   }
 
   if (
@@ -77,9 +83,12 @@ function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInf
   return INFINITE_RANK;
 }
 
-function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRankInfo {
-  const trueSrc = undecorate(src);
-  const trueDst = undecorate(dest);
+function getImplicitConversionRank(
+  src: KnownSnippetType,
+  dest: KnownSnippetType,
+): ConversionRankInfo {
+  const trueSrc = undecorate(src as BaseData) as KnownSnippetType;
+  const trueDst = undecorate(dest as BaseData) as KnownSnippetType;
 
   if (
     isPtr(trueSrc) &&
@@ -106,9 +115,14 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
   } as const;
   type PrimitiveType = keyof typeof primitivePreference;
 
-  if (trueSrc.type in primitivePreference && trueDst.type in primitivePreference) {
-    const srcType = trueSrc.type as PrimitiveType;
-    const destType = trueDst.type as PrimitiveType;
+  if (
+    typeof trueSrc === 'string' &&
+    trueSrc in primitivePreference &&
+    typeof trueDst === 'string' &&
+    trueDst in primitivePreference
+  ) {
+    const srcType = trueSrc as PrimitiveType;
+    const destType = trueDst as PrimitiveType;
 
     if (srcType !== destType) {
       const srcPref = primitivePreference[srcType];
@@ -120,11 +134,11 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
     }
   }
 
-  if (trueSrc.type === 'abstractFloat') {
-    if (trueDst.type === 'u32') {
+  if (trueSrc === 'abstractFloat') {
+    if (trueDst === 'u32') {
       return { rank: 2, action: 'cast', targetType: trueDst };
     }
-    if (trueDst.type === 'i32') {
+    if (trueDst === 'i32') {
       return { rank: 1, action: 'cast', targetType: trueDst };
     }
   }
@@ -133,8 +147,8 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
 }
 
 function getConversionRank(
-  src: BaseData,
-  dest: BaseData,
+  src: KnownSnippetType,
+  dest: KnownSnippetType,
   allowImplicit: boolean,
 ): ConversionRankInfo {
   const autoRank = getAutoConversionRank(src, dest);
@@ -154,17 +168,19 @@ export type ConversionResultAction = {
 };
 
 export type ConversionResult = {
-  targetType: BaseData;
+  targetType: KnownSnippetType;
   actions: ConversionResultAction[];
   hasImplicitConversions?: boolean;
 };
 
 function findBestType(
-  types: BaseData[],
-  uniqueTypes: BaseData[],
+  types: KnownSnippetType[],
+  uniqueTypes: KnownSnippetType[],
   allowImplicit: boolean,
 ): ConversionResult | undefined {
-  let bestResult: { type: BaseData; details: ConversionRankInfo[]; sum: number } | undefined;
+  let bestResult:
+    | { type: KnownSnippetType; details: ConversionRankInfo[]; sum: number }
+    | undefined;
 
   for (const targetType of uniqueTypes) {
     const details: ConversionRankInfo[] = [];
@@ -200,12 +216,15 @@ function findBestType(
 }
 
 export function getBestConversion(
-  types: BaseData[],
-  targetTypes?: BaseData[],
+  types: KnownSnippetType[],
+  targetTypes?: KnownSnippetType[],
 ): ConversionResult | undefined {
   if (types.length === 0) return undefined;
 
-  const uniqueTargetTypes = [...new Set((targetTypes || types).map(undecorate))];
+  const uniqueTargetTypes: KnownSnippetType[] = [
+    // Casting here is fine, because undecorate will return the same type if it's not decorated
+    ...new Set((targetTypes || types).map((t) => undecorate(t as BaseData))),
+  ];
 
   const explicitResult = findBestType(types, uniqueTargetTypes, false);
   if (explicitResult) {
@@ -224,7 +243,7 @@ function applyActionToSnippet(
   ctx: ResolutionCtx,
   snippet: Snippet,
   action: ConversionResultAction,
-  targetType: BaseData,
+  targetType: KnownSnippetType,
 ): Snippet {
   if (action.action === 'none') {
     return snip(
@@ -250,28 +269,28 @@ function applyActionToSnippet(
   }
 }
 
-export function unify<T extends (BaseData | UnknownData)[] | []>(
+export function unify<T extends SnippetType[] | []>(
   inTypes: T,
-  restrictTo?: BaseData[],
-): { [K in keyof T]: BaseData } | undefined {
+  restrictTo?: KnownSnippetType[],
+): { [K in keyof T]: KnownSnippetType } | undefined {
   if (inTypes.some((type) => type === UnknownData)) {
     return undefined;
   }
 
-  const conversion = getBestConversion(inTypes as BaseData[], restrictTo);
+  const conversion = getBestConversion(inTypes as KnownSnippetType[], restrictTo);
   if (!conversion) {
     return undefined;
   }
 
   return inTypes.map((type) => (isVec(type) || isMat(type) ? type : conversion.targetType)) as {
-    [K in keyof T]: BaseData;
+    [K in keyof T]: KnownSnippetType;
   };
 }
 
 export function convertToCommonType<T extends Snippet[]>(
   ctx: ResolutionCtx,
   values: T,
-  restrictTo?: BaseData[],
+  restrictTo?: KnownSnippetType[],
   verbose = true,
 ): T | undefined {
   const types = values.map((value) => value.dataType);
@@ -279,6 +298,8 @@ export function convertToCommonType<T extends Snippet[]>(
   if (types.some((type) => type === UnknownData)) {
     return undefined;
   }
+  // We know here that all types are known
+  const knownTypes = types as KnownSnippetType[];
 
   if (DEV && Array.isArray(restrictTo) && restrictTo.length === 0) {
     console.warn(
@@ -286,7 +307,7 @@ export function convertToCommonType<T extends Snippet[]>(
     );
   }
 
-  const conversion = getBestConversion(types as BaseData[], restrictTo);
+  const conversion = getBestConversion(knownTypes, restrictTo);
   if (!conversion) {
     return undefined;
   }
@@ -295,7 +316,7 @@ export function convertToCommonType<T extends Snippet[]>(
     console.warn(
       `Implicit conversions from [\n${values
         .map((v) => `  ${v.value}: ${safeStringify(v.dataType)}`)
-        .join(',\n')}\n] to ${conversion.targetType.type} are supported, but not recommended.
+        .join(',\n')}\n] to ${conversion.targetType} are supported, but not recommended.
 Consider using explicit conversions instead.`,
     );
   }
@@ -310,7 +331,7 @@ Consider using explicit conversions instead.`,
 export function tryConvertSnippet(
   ctx: ResolutionCtx,
   snippet: Snippet,
-  targetDataTypes: BaseData | BaseData[],
+  targetDataTypes: KnownSnippetType | KnownSnippetType[],
   verbose = true,
 ): Snippet {
   const targets = Array.isArray(targetDataTypes) ? targetDataTypes : [targetDataTypes];
@@ -338,7 +359,7 @@ export function tryConvertSnippet(
   throw new WgslTypeError(
     `Cannot convert value of type '${String(
       dataType,
-    )}' to any of the target types: [${targets.map((t) => t.type).join(', ')}]`,
+    )}' to any of the target types: [${targets.map((t) => String(t)).join(', ')}]`,
   );
 }
 

@@ -15,7 +15,13 @@ import {
 import { getAttributesString } from './data/attributes.ts';
 import { isData, undecorate, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
-import { type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
+import {
+  type KnownSnippetType,
+  type ResolvedSnippet,
+  snip,
+  type Snippet,
+  type SnippetType,
+} from './data/snippet.ts';
 import { type BaseData, isPtr, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
 import { invariant, MissingSlotValueError, ResolutionError, WgslTypeError } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
@@ -442,7 +448,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this.#logGenerator.logResources;
   }
 
-  fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl; returnType: BaseData } {
+  fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl; returnType: KnownSnippetType } {
     let fnScopePushed = false;
 
     try {
@@ -573,7 +579,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       const body = this.gen.functionDefinition(options.body);
 
-      let returnType = options.returnType;
+      let returnType: KnownSnippetType | undefined = options.returnType;
       if (returnType instanceof AutoStruct) {
         // We're expecting an "auto" return type, so if there were structs returned,
         // we accept the struct, otherwise we let the rest of the code unify on a
@@ -617,7 +623,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           .map(({ header }) => header);
         const argList = headerParts.join(', ');
         const returnStr =
-          returnType.type !== 'void'
+          typeof returnType === 'object' && returnType.type !== 'void'
             ? `-> ${getAttributesString(returnType)}${this.resolve(returnType).value} `
             : '';
         return { head: `(${argList}) ${returnStr}`, body, returnType };
@@ -858,7 +864,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  resolve(item: unknown, schema?: BaseData | UnknownData): ResolvedSnippet {
+  resolve(item: unknown, schema?: SnippetType): ResolvedSnippet {
     if (isTgpuFn(item) || hasTinyestMetadata(item)) {
       if (
         this.#currentlyResolvedItems.has(item) &&
@@ -899,32 +905,32 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     // This is a value that comes from the outside, maybe we can coerce it
     if (typeof item === 'number') {
-      const realSchema = schema ?? numericLiteralToSnippet(item).dataType;
-      invariant(realSchema !== UnknownData, 'Schema has to be known for resolving numbers');
+      const realType = schema ?? numericLiteralToSnippet(item).dataType;
+      invariant(realType !== UnknownData, 'Schema has to be known for resolving numbers');
 
-      if (realSchema.type === 'abstractInt') {
-        return snip(`${item}`, realSchema, /* origin */ 'constant');
+      if (realType === 'abstractInt') {
+        return snip(`${item}`, realType, /* origin */ 'constant');
       }
-      if (realSchema.type === 'u32') {
-        return snip(`${item}u`, realSchema, /* origin */ 'constant');
+      if (realType === 'u32') {
+        return snip(`${item}u`, realType, /* origin */ 'constant');
       }
-      if (realSchema.type === 'i32') {
-        return snip(`${item}i`, realSchema, /* origin */ 'constant');
+      if (realType === 'i32') {
+        return snip(`${item}i`, realType, /* origin */ 'constant');
       }
 
       const exp = item.toExponential();
       const decimal =
-        realSchema.type === 'abstractFloat' && Number.isInteger(item) ? `${item}.` : `${item}`;
+        realType === 'abstractFloat' && Number.isInteger(item) ? `${item}.` : `${item}`;
 
       // Just picking the shorter one
       const base = exp.length < decimal.length ? exp : decimal;
-      if (realSchema.type === 'f32') {
-        return snip(`${base}f`, realSchema, /* origin */ 'constant');
+      if (realType === 'f32') {
+        return snip(`${base}f`, realType, /* origin */ 'constant');
       }
-      if (realSchema.type === 'f16') {
-        return snip(`${base}h`, realSchema, /* origin */ 'constant');
+      if (realType === 'f16') {
+        return snip(`${base}h`, realType, /* origin */ 'constant');
       }
-      return snip(base, realSchema, /* origin */ 'constant');
+      return snip(base, realType, /* origin */ 'constant');
     }
 
     if (typeof item === 'boolean') {
@@ -1088,12 +1094,10 @@ function isArgUsedInBody(argName: string, body: string): boolean {
   return new RegExp(`\\b${argName}\\b`).test(body);
 }
 
-function resolveFunctionHeader(ctx: ResolutionCtx, args: Snippet[], returnType: BaseData) {
-  const argList = args
-    .map((arg) => `${arg.value}: ${ctx.resolve(arg.dataType as BaseData).value}`)
-    .join(', ');
+function resolveFunctionHeader(ctx: ResolutionCtx, args: Snippet[], returnType: KnownSnippetType) {
+  const argList = args.map((arg) => `${arg.value}: ${ctx.resolve(arg.dataType).value}`).join(', ');
 
-  return returnType.type !== 'void'
+  return typeof returnType === 'object' && returnType.type !== 'void'
     ? `(${argList}) -> ${getAttributesString(returnType)}${ctx.resolve(returnType).value} `
     : `(${argList}) `;
 }

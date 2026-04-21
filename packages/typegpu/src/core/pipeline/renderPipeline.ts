@@ -2,9 +2,14 @@ import type { AnyBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { IndexFlag, IndirectFlag, TgpuBuffer, VertexFlag } from '../../core/buffer/buffer.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { isBuiltin } from '../../data/attributes.ts';
-import { type Disarray, getCustomLocation, type UndecorateRecord } from '../../data/dataTypes.ts';
+import {
+  type Disarray,
+  getCustomLocation,
+  type UndecorateRecord,
+  UnknownData,
+} from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { type ResolvedSnippet, snip, type SnippetType } from '../../data/snippet.ts';
 import type {
   WgslTexture,
   WgslTextureDepth2d,
@@ -1001,7 +1006,7 @@ class RenderPipelineCore implements SelfResolvable {
   private _memo: Memo | undefined;
 
   #latestAutoVertexIn: TgpuVertexFn.In | undefined;
-  #latestAutoFragmentOut: BaseData | undefined;
+  #latestAutoFragmentOut: Exclude<SnippetType, UnknownData> | undefined;
   #performanceCallbackQuerySet: TgpuQuerySet<'timestamp'> | undefined;
 
   constructor(options: RenderPipelineCoreOptions) {

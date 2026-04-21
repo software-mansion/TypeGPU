@@ -597,7 +597,7 @@ export const textureGather = dualImpl({
   normalImpl: textureGatherCpu,
   codegenImpl: (_ctx, args) => stitch`textureGather(${args})`,
   signature: (...args) => {
-    if (args[0].type.startsWith('texture')) {
+    if (typeof args[0] === 'object' && args[0].type.startsWith('texture')) {
       const [texture, sampler, coords, _, ...rest] = args;
 
       const isArrayTexture =
@@ -613,7 +613,8 @@ export const textureGather = dualImpl({
     const [_, texture, sampler, coords, ...rest] = args;
 
     const isArrayTexture =
-      texture.type === 'texture_2d_array' || texture.type === 'texture_cube_array';
+      typeof texture === 'object' &&
+      (texture.type === 'texture_2d_array' || texture.type === 'texture_cube_array');
 
     const argTypes = isArrayTexture
       ? [[u32, i32], texture, sampler, coords, [u32, i32], ...rest]

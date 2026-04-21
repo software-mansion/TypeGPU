@@ -1,15 +1,17 @@
 import { createShelllessImpl, type ShelllessImpl } from '../core/function/shelllessImpl.ts';
 import { UnknownData } from '../data/dataTypes.ts';
 import { RefOperator } from '../data/ref.ts';
-import type { Snippet } from '../data/snippet.ts';
-import { type BaseData, isPtr, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
+import type { KnownSnippetType, Snippet } from '../data/snippet.ts';
+import { isPtr, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
 import { WgslTypeError } from '../errors.ts';
 import { getMetaData, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
 
 type AnyFn = (...args: never[]) => unknown;
 
-function shallowEqualSchemas(a: BaseData, b: BaseData): boolean {
+function shallowEqualSchemas(a: KnownSnippetType, b: KnownSnippetType): boolean {
+  if (a !== b) return false;
+  if (typeof a === 'string' || typeof b === 'string') return a === b;
   if (a.type !== b.type) return false;
   if (isPtr(a) && isPtr(b)) {
     return (
@@ -84,7 +86,7 @@ export class ShelllessRepository {
       const variant = cache.find(
         (v) =>
           v.argTypes.length === argTypes.length &&
-          v.argTypes.every((t, i) => shallowEqualSchemas(t, argTypes[i] as BaseData)),
+          v.argTypes.every((t, i) => shallowEqualSchemas(t, argTypes[i] as KnownSnippetType)),
       );
       if (variant) {
         return variant;

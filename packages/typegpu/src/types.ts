@@ -29,7 +29,13 @@ import type { TgpuExternalTexture } from './core/texture/externalTexture.ts';
 import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuVar } from './core/variable/tgpuVariable.ts';
 import { type AnyData, UnknownData } from './data/dataTypes.ts';
-import type { MapValueToSnippet, ResolvedSnippet, Snippet } from './data/snippet.ts';
+import type {
+  KnownSnippetType,
+  MapValueToSnippet,
+  ResolvedSnippet,
+  Snippet,
+  SnippetType,
+} from './data/snippet.ts';
 import {
   type AnyMatInstance,
   type AnyVecInstance,
@@ -297,7 +303,7 @@ export interface ResolutionCtx {
    * @param item The value to resolve
    * @param schema Additional information about the item's data type
    */
-  resolve(item: unknown, schema?: BaseData | UnknownData): ResolvedSnippet;
+  resolve(item: unknown, schema?: SnippetType): ResolvedSnippet;
 
   /**
    * Equivalent to `snip(ctx.resolve(snippet.value, snippet.dataType).value, snippet.dataType, snippet.origin)`.
@@ -307,7 +313,7 @@ export interface ResolutionCtx {
   fnToWgsl(options: FnToWgslOptions): {
     head: Wgsl;
     body: Wgsl;
-    returnType: BaseData;
+    returnType: KnownSnippetType;
   };
 
   withVaryingLocations<T>(locations: Record<string, number>, callback: () => T): T;
@@ -357,7 +363,9 @@ export function getOwnSnippet(value: unknown): Snippet | undefined {
 
 export interface GPUCallable<TArgs extends unknown[] = unknown[]> {
   [$gpuCallable]: {
-    strictSignature?: { argTypes: (BaseData | BaseData[])[]; returnType: BaseData } | undefined;
+    strictSignature?:
+      | { argTypes: (KnownSnippetType | KnownSnippetType[])[]; returnType: KnownSnippetType }
+      | undefined;
     call(ctx: ResolutionCtx, args: MapValueToSnippet<TArgs>): Snippet;
   };
 }

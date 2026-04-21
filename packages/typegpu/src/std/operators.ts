@@ -1,6 +1,6 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { abstractFloat, f16, f32, i32, u32 } from '../data/numeric.ts';
+import { f16, f32, i32, u32 } from '../data/numeric.ts';
 import { vec2i, vec2u, vec3i, vec3u, vec4i, vec4u, vecTypeToConstructor } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
@@ -21,6 +21,7 @@ import {
 } from '../data/wgslTypes.ts';
 import { SignatureNotSupportedError } from '../errors.ts';
 import { unify } from '../codegen/conversion.ts';
+import type { KnownSnippetType } from '../data/snippet.ts';
 
 type NumVec = AnyNumericVecInstance;
 type Mat = AnyMatInstance;
@@ -28,14 +29,14 @@ type Mat = AnyMatInstance;
 const getPrimitive = (t: BaseData): BaseData => ('primitive' in t ? (t.primitive as BaseData) : t);
 
 const makeBinarySignature =
-  (opts?: { matVecProduct?: boolean; noMat?: boolean; restrict?: BaseData[] }) =>
-  (lhs: BaseData, rhs: BaseData) => {
+  (opts?: { matVecProduct?: boolean; noMat?: boolean; restrict?: KnownSnippetType[] }) =>
+  (lhs: KnownSnippetType, rhs: KnownSnippetType) => {
     const { restrict } = opts ?? {};
     const fail = (msg: string): never => {
       if (restrict) {
         throw new SignatureNotSupportedError([lhs, rhs], restrict);
       }
-      throw new Error(`Cannot apply operator to ${lhs.type} and ${rhs.type}: ${msg}`);
+      throw new Error(`Cannot apply operator to ${String(lhs)} and ${String(rhs)}: ${msg}`);
     };
 
     if (opts?.noMat && (isMat(lhs) || isMat(rhs))) {
@@ -63,9 +64,9 @@ const makeBinarySignature =
 
     // scalar × composite
     const [scalar, composite] = lhsC ? [rhs, lhs] : [lhs, rhs];
-    const unified = unify([scalar], [getPrimitive(composite)]);
+    const unified = unify([scalar], [getPrimitive(composite as BaseData)]);
     if (!unified) {
-      return fail(`scalar not convertible to ${getPrimitive(composite).type}`);
+      return fail(`scalar not convertible to ${getPrimitive(composite as BaseData).type}`);
     }
     return {
       argTypes: lhsC ? [lhs, unified[0]] : [unified[0], rhs],
@@ -77,7 +78,7 @@ const binaryArithmeticSignature = makeBinarySignature();
 const binaryMulSignature = makeBinarySignature({ matVecProduct: true });
 const binaryDivSignature = makeBinarySignature({
   noMat: true,
-  restrict: [f32, f16, abstractFloat],
+  restrict: [f32, f16, 'abstractFloat'],
 });
 
 function cpuAdd(lhs: number, rhs: number): number; // default addition
@@ -295,13 +296,13 @@ const intVecToUnsignedVec = {
   vec4u: vec4u,
 } as const;
 
-const bitShiftSignature = (lhs: BaseData, rhs: BaseData) => {
+const bitShiftSignature = (lhs: KnownSnippetType, rhs: KnownSnippetType) => {
   const lhsUnified = unify([lhs], anyConcreteInteger)?.[0];
   if (!lhsUnified) {
     throw new SignatureNotSupportedError([lhs], anyConcreteInteger);
   }
 
-  let rhsType: BaseData;
+  let rhsType: KnownSnippetType;
   if (isVec(lhsUnified)) {
     const cc = lhsUnified.componentCount;
     const vecU = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;

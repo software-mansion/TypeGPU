@@ -39,6 +39,7 @@ import type { WgslExternalTexture, WgslStorageTexture, WgslTexture } from './tex
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
 import type { _ref as ref } from './ref.ts';
 import type { DualFn } from '../types.ts';
+import type { CompoundBit } from '../shaderbit/compound.ts';
 
 type DecoratedLocation<T extends BaseData> = Decorated<T, Location[]>;
 
@@ -602,7 +603,8 @@ export type mBaseForVec<T extends vecBase> = T extends v2f
  * Boolean schema representing a single WGSL bool value.
  * Cannot be used inside buffers as it is not host-shareable.
  */
-export interface Bool extends BaseData, DualFn<(v?: number | boolean) => boolean> {
+export interface Bool
+  extends BaseData, CompoundBit<'bool'>, DualFn<(v?: number | boolean) => boolean> {
   readonly type: 'bool';
 
   // Type-tokens, not available at runtime
@@ -614,7 +616,8 @@ export interface Bool extends BaseData, DualFn<(v?: number | boolean) => boolean
 /**
  * 32-bit float schema representing a single WGSL f32 value.
  */
-export interface F32 extends BaseData, DualFn<(v?: number | boolean) => number> {
+export interface F32
+  extends BaseData, CompoundBit<'f32'>, DualFn<(v?: number | boolean) => number> {
   readonly type: 'f32';
 
   // Type-tokens, not available at runtime
@@ -628,7 +631,8 @@ export interface F32 extends BaseData, DualFn<(v?: number | boolean) => number> 
 /**
  * 16-bit float schema representing a single WGSL f16 value.
  */
-export interface F16 extends BaseData, DualFn<(v?: number | boolean) => number> {
+export interface F16
+  extends BaseData, CompoundBit<'f16'>, DualFn<(v?: number | boolean) => number> {
   readonly type: 'f16';
 
   // Type-tokens, not available at runtime
@@ -642,7 +646,8 @@ export interface F16 extends BaseData, DualFn<(v?: number | boolean) => number> 
 /**
  * Signed 32-bit integer schema representing a single WGSL i32 value.
  */
-export interface I32 extends BaseData, DualFn<(v?: number | boolean) => number> {
+export interface I32
+  extends BaseData, CompoundBit<'i32'>, DualFn<(v?: number | boolean) => number> {
   readonly type: 'i32';
 
   // Type-tokens, not available at runtime
@@ -657,7 +662,8 @@ export interface I32 extends BaseData, DualFn<(v?: number | boolean) => number> 
 /**
  * Unsigned 32-bit integer schema representing a single WGSL u32 value.
  */
-export interface U32 extends BaseData, DualFn<(v?: number | boolean) => number> {
+export interface U32
+  extends BaseData, CompoundBit<'u32'>, DualFn<(v?: number | boolean) => number> {
   readonly type: 'u32';
 
   // Type-tokens, not available at runtime
@@ -1693,44 +1699,12 @@ export function isDecorated(value: unknown): value is Decorated {
   return isMarkedInternal(value) && (value as Decorated)?.type === 'decorated';
 }
 
-export function isAbstractFloat(value: unknown): value is AbstractFloat {
-  return isMarkedInternal(value) && (value as AbstractFloat).type === 'abstractFloat';
-}
-
-export function isAbstractInt(value: unknown): value is AbstractInt {
-  return isMarkedInternal(value) && (value as AbstractInt).type === 'abstractInt';
-}
-
-export function isAbstract(value: unknown): value is AbstractFloat | AbstractInt {
-  return isAbstractFloat(value) || isAbstractInt(value);
-}
-
-export function isConcrete(value: unknown): boolean {
-  return !isAbstract(value);
-}
-
 export function isVoid(value: unknown): value is Void {
   return isMarkedInternal(value) && (value as Void).type === 'void';
 }
 
 export function isBool(value: unknown): value is Bool {
   return isMarkedInternal(value) && (value as Bool).type === 'bool';
-}
-
-export function isNumericSchema(
-  schema: unknown,
-): schema is AbstractInt | AbstractFloat | F32 | F16 | I32 | U32 {
-  const type = (schema as BaseData)?.type;
-
-  return (
-    isMarkedInternal(schema) &&
-    (type === 'abstractInt' ||
-      type === 'abstractFloat' ||
-      type === 'f32' ||
-      type === 'f16' ||
-      type === 'i32' ||
-      type === 'u32')
-  );
 }
 
 export function isHalfPrecisionSchema(schema: unknown): schema is F16 | Vec2h | Vec3h | Vec4h {

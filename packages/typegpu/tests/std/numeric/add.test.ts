@@ -16,7 +16,6 @@ import {
 } from '../../../src/data/index.ts';
 import { add } from '../../../src/std/index.ts';
 import { expectDataTypeOf } from '../../utils/parseResolved.ts';
-import { abstractFloat, abstractInt } from '../../../src/data/numeric.ts';
 
 describe('add', () => {
   it('computes sum of two vec2f', () => {
@@ -122,10 +121,10 @@ describe('add', () => {
         1 + 2.3;
       };
 
-      expectDataTypeOf(int_int).toBe(abstractInt);
-      expectDataTypeOf(float_float).toBe(abstractFloat);
-      expectDataTypeOf(int_float).toBe(abstractFloat);
-      expectDataTypeOf(float_int).toBe(abstractFloat);
+      expectDataTypeOf(int_int).toBe('abstractInt');
+      expectDataTypeOf(float_float).toBe('abstractFloat');
+      expectDataTypeOf(int_float).toBe('abstractFloat');
+      expectDataTypeOf(float_int).toBe('abstractFloat');
     });
   });
 });

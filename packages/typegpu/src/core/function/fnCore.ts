@@ -1,6 +1,6 @@
 import { getAttributesString } from '../../data/attributes.ts';
 import { undecorate } from '../../data/dataTypes.ts';
-import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { type KnownSnippetType, type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { type BaseData, isWgslData, isWgslStruct, Void } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
 import { getMetaData, getName } from '../../shared/meta.ts';
@@ -18,12 +18,12 @@ export interface FnCore {
      * The argument types can be AutoStruct if they're determined based on usage
      * (like in auto-entry functions).
      */
-    argTypes: BaseData[],
+    argTypes: KnownSnippetType[],
     /**
      * The return type of the function. If undefined, the type should be inferred
      * from the implementation (relevant for shellless functions).
      */
-    returnType: BaseData | undefined,
+    returnType: KnownSnippetType | undefined,
     /**
      * For entry functions: positional args and optional data struct.
      * When provided, takes precedence over `argTypes` for WGSL header generation.

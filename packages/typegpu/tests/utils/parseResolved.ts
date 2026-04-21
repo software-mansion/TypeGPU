@@ -1,13 +1,11 @@
 import type * as tinyest from 'tinyest';
 import { type Assertion, expect } from 'vitest';
-import type { BaseData } from '../../src/data/index.ts';
-import type { UnknownData } from '../../src/data/dataTypes.ts';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
 import wgslGenerator from '../../src/codegen/wgslGenerator.ts';
 import { namespace } from '../../src/core/resolve/namespace.ts';
-import type { Snippet } from '../../src/data/snippet.ts';
+import type { Snippet, SnippetType } from '../../src/data/snippet.ts';
 import { $internal } from '../../src/shared/symbols.ts';
 import { CodegenState } from '../../src/types.ts';
 
@@ -64,6 +62,6 @@ export function expectSnippetOf(cb: () => unknown): Assertion<Snippet> {
   return expect(extractSnippetFromFn(cb));
 }
 
-export function expectDataTypeOf(cb: () => unknown): Assertion<BaseData | UnknownData> {
-  return expect<BaseData | UnknownData>(extractSnippetFromFn(cb).dataType);
+export function expectDataTypeOf(cb: () => unknown): Assertion<SnippetType> {
+  return expect<SnippetType>(extractSnippetFromFn(cb).dataType);
 }

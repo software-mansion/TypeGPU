@@ -1,5 +1,4 @@
-import type { ResolvedSnippet } from '../../data/snippet.ts';
-import type { BaseData } from '../../data/wgslTypes.ts';
+import type { KnownSnippetType, ResolvedSnippet } from '../../data/snippet.ts';
 import { getName } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -23,12 +22,12 @@ import { createFnCore } from './fnCore.ts';
  */
 export interface ShelllessImpl extends SelfResolvable {
   readonly resourceType: 'shellless-impl';
-  readonly argTypes: BaseData[];
+  readonly argTypes: KnownSnippetType[];
   readonly [$getNameForward]: unknown;
 }
 
 export function createShelllessImpl(
-  argTypes: BaseData[],
+  argTypes: KnownSnippetType[],
   implementation: (...args: never[]) => unknown,
 ): ShelllessImpl {
   const core = createFnCore(implementation, '');

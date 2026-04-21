@@ -1,13 +1,7 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { i32, u32 } from '../data/numeric.ts';
-import {
-  type atomicI32,
-  type atomicU32,
-  type BaseData,
-  isAtomic,
-  Void,
-} from '../data/wgslTypes.ts';
+import type { KnownSnippetType } from '../data/snippet.ts';
+import { type atomicI32, type atomicU32, isAtomic, Void } from '../data/wgslTypes.ts';
 import { safeStringify } from '../shared/stringify.ts';
 type AnyAtomic = atomicI32 | atomicU32;
 
@@ -46,21 +40,21 @@ export const atomicLoad = dualImpl<<T extends AnyAtomic>(a: T) => number>({
   codegenImpl: (_ctx, [a]) => stitch`atomicLoad(&${a})`,
 });
 
-const atomicActionSignature = (a: BaseData) => {
+const atomicActionSignature = (a: KnownSnippetType) => {
   if (!isAtomic(a)) {
     throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
   }
   return {
-    argTypes: [a, a.inner.type === 'u32' ? u32 : i32],
+    argTypes: [a, a.inner.type],
     returnType: Void,
   };
 };
 
-const atomicOpSignature = (a: BaseData) => {
+const atomicOpSignature = (a: KnownSnippetType) => {
   if (!isAtomic(a)) {
     throw new Error(`Invalid atomic type: ${safeStringify(a)}`);
   }
-  const paramType = a.inner.type === 'u32' ? u32 : i32;
+  const paramType = a.inner.type;
   return {
     argTypes: [a, paramType],
     returnType: paramType,

@@ -27,7 +27,7 @@ import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
 import type { WgslExternalTexture, WgslStorageTexture, WgslTexture } from './texture.ts';
-import type { Snippet } from './snippet.ts';
+import type { Snippet, SnippetType } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
@@ -145,7 +145,7 @@ export function undecorate(data: BaseData): BaseData {
   return data;
 }
 
-export function unptr(data: BaseData | UnknownData): BaseData | UnknownData {
+export function unptr(data: SnippetType): SnippetType {
   if (wgsl.isPtr(data)) {
     return data.inner;
   }

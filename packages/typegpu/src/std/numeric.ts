@@ -2,8 +2,7 @@ import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { mat2x2f, mat3x3f, mat4x4f } from '../data/matrix.ts';
 import { smoothstepScalar } from '../data/numberOps.ts';
-import { abstractFloat, abstractInt, f16, f32, i32, u32 } from '../data/numeric.ts';
-import type { Snippet } from '../data/snippet.ts';
+import type { KnownSnippetType, Snippet } from '../data/snippet.ts';
 import { abstruct } from '../data/struct.ts';
 import {
   vec2f,
@@ -47,36 +46,37 @@ import type { Infer } from '../shared/repr.ts';
 import { unify } from '../codegen/conversion.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { mul, sub } from './operators.ts';
+import { abstractFloat, abstractInt, f16, f32, i32 } from '../data/numeric.ts';
 
 type NumVec = AnyNumericVecInstance;
 
 // helpers
 
-const unaryIdentitySignature = (arg: BaseData) => {
+const unaryIdentitySignature = (arg: KnownSnippetType) => {
   return {
     argTypes: [arg],
     returnType: arg,
   };
 };
 
-const variadicUnifySignature = (...args: BaseData[]) => {
+const variadicUnifySignature = (...args: KnownSnippetType[]) => {
   const uargs = unify(args) ?? args;
   return {
     argTypes: uargs,
-    returnType: uargs[0] as BaseData,
+    returnType: uargs[0]!,
   };
 };
 
 const unifyRestrictedSignature =
-  (restrict: BaseData[]) =>
-  (...args: BaseData[]) => {
+  (restrict: KnownSnippetType[]) =>
+  (...args: KnownSnippetType[]) => {
     const uargs = unify(args, restrict);
     if (!uargs) {
       throw new SignatureNotSupportedError(args, restrict);
     }
     return {
       argTypes: uargs,
-      returnType: uargs[0] as BaseData,
+      returnType: uargs[0]!,
     };
   };
 
@@ -100,10 +100,10 @@ function variadicStitch(wrapper: string) {
   };
 }
 
-const anyFloatPrimitive = [f32, f16, abstractFloat];
+const anyFloatPrimitive = ['f32', 'f16', 'abstractFloat'] as const;
 const anyFloatVec = [vec2f, vec3f, vec4f, vec2h, vec3h, vec4h];
 const anyFloat = [...anyFloatPrimitive, ...anyFloatVec];
-const anyConcreteIntegerPrimitive = [i32, u32];
+const anyConcreteIntegerPrimitive = ['i32', 'u32'] as const;
 const anyConcreteIntegerVec = [vec2i, vec3i, vec4i, vec2u, vec3u, vec4u];
 const anyConcreteInteger = [...anyConcreteIntegerPrimitive, ...anyConcreteIntegerVec];
 
@@ -371,10 +371,13 @@ export const degrees = dualImpl<typeof cpuDegrees>({
 export const determinant = dualImpl<(value: AnyMatInstance) => number>({
   name: 'determinant',
   signature: (arg) => {
-    if (!(arg.type === 'mat2x2f' || arg.type === 'mat3x3f' || arg.type === 'mat4x4f')) {
+    if (
+      typeof arg !== 'object' ||
+      !(arg.type === 'mat2x2f' || arg.type === 'mat3x3f' || arg.type === 'mat4x4f')
+    ) {
       throw new SignatureNotSupportedError([arg], [mat2x2f, mat3x3f, mat4x4f]);
     }
-    return { argTypes: [arg], returnType: f32 };
+    return { argTypes: [arg], returnType: 'f32' };
   },
   normalImpl:
     'CPU implementation for determinant not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
@@ -399,7 +402,7 @@ export const distance = dualImpl({
     }
     return {
       argTypes: uargs,
-      returnType: isHalfPrecisionSchema(uargs[0]) ? f16 : f32,
+      returnType: isHalfPrecisionSchema(uargs[0]) ? 'f16' : 'f32',
     };
   },
   normalImpl: cpuDistance,
@@ -418,7 +421,7 @@ export const dot = dualImpl({
 
 export const dot4U8Packed = dualImpl<(e1: number, e2: number) => number>({
   name: 'dot4U8Packed',
-  signature: { argTypes: [u32, u32], returnType: u32 },
+  signature: { argTypes: ['u32', 'u32'], returnType: 'u32' },
   normalImpl:
     'CPU implementation for dot4U8Packed not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (_ctx, [e1, e2]) => stitch`dot4U8Packed(${e1}, ${e2})`,
@@ -426,7 +429,7 @@ export const dot4U8Packed = dualImpl<(e1: number, e2: number) => number>({
 
 export const dot4I8Packed = dualImpl<(e1: number, e2: number) => number>({
   name: 'dot4I8Packed',
-  signature: { argTypes: [u32, u32], returnType: i32 },
+  signature: { argTypes: ['u32', 'u32'], returnType: 'i32' },
   normalImpl:
     'CPU implementation for dot4I8Packed not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (_ctx, [e1, e2]) => stitch`dot4I8Packed(${e1}, ${e2})`,
@@ -482,7 +485,7 @@ export const extractBits = dualImpl<typeof cpuExtractBits>({
       throw new SignatureNotSupportedError([arg], anyConcreteInteger);
     }
     return {
-      argTypes: [argRestricted, u32, u32],
+      argTypes: [argRestricted, 'u32', 'u32'],
       returnType: argRestricted,
     };
   },
@@ -599,7 +602,8 @@ export const frexp = dualImpl<FrexpOverload>({
   normalImpl:
     'CPU implementation for frexp not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   signature: (value) => {
-    const returnType = FrexpResults[value.type as keyof typeof FrexpResults];
+    const returnType =
+      FrexpResults[((value as BaseData)?.type ?? value) as keyof typeof FrexpResults];
 
     if (!returnType) {
       throw new SignatureNotSupportedError([value], anyFloat);
@@ -634,7 +638,7 @@ export const insertBits = dualImpl<typeof cpuInsertBits>({
       throw new SignatureNotSupportedError([e, newbits], anyConcreteInteger);
     }
     return {
-      argTypes: [...uargs, u32, u32],
+      argTypes: [...uargs, 'u32', 'u32'],
       returnType: uargs[0],
     };
   },
@@ -676,7 +680,7 @@ function cpuLdexp<T extends AnyFloatVecInstance | number>(
 export const ldexp = dualImpl<typeof cpuLdexp>({
   name: 'ldexp',
   signature: (e1, _e2) => {
-    switch (e1.type) {
+    switch ((e1 as BaseData)?.type ?? e1) {
       case 'abstractFloat':
         return { argTypes: [e1, abstractInt], returnType: e1 };
       case 'f32':
@@ -693,7 +697,7 @@ export const ldexp = dualImpl<typeof cpuLdexp>({
         return { argTypes: [e1, vec4i], returnType: e1 };
       default:
         throw new Error(
-          `Unsupported data type for ldexp: ${e1.type}. Supported types are abstractFloat, f32, f16, vec2f, vec2h, vec3f, vec3h, vec4f, vec4h.`,
+          `Unsupported data type for ldexp: ${String(e1)}. Supported types are abstractFloat, f32, f16, vec2f, vec2h, vec3f, vec3h, vec4f, vec4h.`,
         );
     }
   },
@@ -817,7 +821,11 @@ function cpuMix<T extends AnyFloatVecInstance | number>(e1: T, e2: T, e3: T): T 
 export const mix = dualImpl({
   name: 'mix',
   signature: (e1, e2, e3) => {
-    if (e1.type.startsWith('vec') && !e3.type.startsWith('vec')) {
+    if (
+      typeof e1 === 'object' &&
+      e1.type.startsWith('vec') &&
+      !(typeof e3 === 'object' && e3.type.startsWith('vec'))
+    ) {
       const uarg = unify([e3], [(e1 as unknown as Vec2f).primitive]);
       if (!uarg) {
         throw new SignatureNotSupportedError([e3], [(e1 as unknown as Vec2f).primitive]);
@@ -861,11 +869,11 @@ function cpuModf<T extends AnyFloatVecInstance | number>(
 export const modf: ModfOverload = dualImpl<typeof cpuModf>({
   name: 'modf',
   signature: (e) => {
-    const returnType = ModfResult[e.type as keyof typeof ModfResult];
+    const returnType = ModfResult[((e as BaseData)?.type ?? e) as keyof typeof ModfResult];
 
     if (!returnType) {
       throw new Error(
-        `Unsupported data type for modf: ${e.type}. Supported types are f32, f16, abstractFloat, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h.`,
+        `Unsupported data type for modf: ${String(e)}. Supported types are f32, f16, abstractFloat, vec2f, vec3f, vec4f, vec2h, vec3h, vec4h.`,
       );
     }
 

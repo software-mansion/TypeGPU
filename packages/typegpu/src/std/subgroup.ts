@@ -92,9 +92,9 @@ export const subgroupBroadcast = dualImpl<IdentityNumOrVecWithIdx>({
     const id = unify([args[1]] as [AnyWgslData], [i32, u32]);
     if (!id) {
       throw new Error(
-        `subgroupBroadcast's second argument has to be compatible with i32 or u32. Got: ${
-          args[1].type
-        }`,
+        `subgroupBroadcast's second argument has to be compatible with i32 or u32. Got: ${String(
+          args[1],
+        )}`,
       );
     }
     return { argTypes: [args[0], id[0]], returnType: args[0] };
@@ -165,9 +165,9 @@ export const subgroupShuffle = dualImpl<IdentityNumOrVecWithIdx>({
     const id = unify([args[1]] as [AnyWgslData], [i32, u32]);
     if (!id) {
       throw new Error(
-        `subgroupShuffle's second argument has to be compatible with i32 or u32. Got: ${
-          args[1].type
-        }`,
+        `subgroupShuffle's second argument has to be compatible with i32 or u32. Got: ${String(
+          args[1],
+        )}`,
       );
     }
     return { argTypes: [args[0], id[0]], returnType: args[0] };
@@ -182,7 +182,7 @@ export const subgroupShuffleDown = dualImpl<IdentityNumOrVecWithDelta>({
     const delta = unify([args[1]] as [AnyWgslData], [u32]);
     if (!delta) {
       throw new Error(
-        `subgroupShuffleDown's second argument has to be compatible with u32. Got: ${args[1].type}`,
+        `subgroupShuffleDown's second argument has to be compatible with u32. Got: ${String(args[1])}`,
       );
     }
     return { argTypes: [args[0], delta[0]], returnType: args[0] };
@@ -197,7 +197,7 @@ export const subgroupShuffleUp = dualImpl<IdentityNumOrVecWithDelta>({
     const delta = unify([args[1]] as [AnyWgslData], [u32]);
     if (!delta) {
       throw new Error(
-        `subgroupShuffleUp's second argument has to be compatible with u32. Got: ${args[1].type}`,
+        `subgroupShuffleUp's second argument has to be compatible with u32. Got: ${String(args[1])}`,
       );
     }
     return { argTypes: [args[0], delta[0]], returnType: args[0] };
@@ -212,7 +212,7 @@ export const subgroupShuffleXor = dualImpl<IdentityNumOrVecWithMask>({
     const mask = unify([args[1]] as [AnyWgslData], [u32]);
     if (!mask) {
       throw new Error(
-        `subgroupShuffleXor's second argument has to be compatible with u32. Got: ${args[1].type}`,
+        `subgroupShuffleXor's second argument has to be compatible with u32. Got: ${String(args[1])}`,
       );
     }
     return { argTypes: [args[0], mask[0]], returnType: args[0] };

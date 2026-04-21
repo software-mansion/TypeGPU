@@ -15,10 +15,12 @@ import {
   fallthroughCopyOrigin,
   isEphemeralOrigin,
   isEphemeralSnippet,
+  type KnownSnippetType,
   type Origin,
   type ResolvedSnippet,
   snip,
   type Snippet,
+  type SnippetType,
 } from '../data/snippet.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
@@ -51,6 +53,7 @@ import { mathToStd } from './math.ts';
 import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
+import { isNumericType } from '../data/snippetTypeUtils.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -131,10 +134,11 @@ type Operator =
   | tinyest.LogicalOperator
   | tinyest.UnaryOperator;
 
-function operatorToType<
-  TL extends wgsl.BaseData | UnknownData,
-  TR extends wgsl.BaseData | UnknownData,
->(lhs: TL, op: Operator, rhs?: TR): TL | TR | wgsl.Bool {
+function operatorToType<TL extends SnippetType, TR extends SnippetType>(
+  lhs: TL,
+  op: Operator,
+  rhs?: TR,
+): TL | TR | wgsl.Bool {
   if (!rhs) {
     if (op === '!') {
       return bool;
@@ -172,12 +176,12 @@ const unaryOpCodeToCodegen = {
     if (wgsl.isBool(dataType)) {
       return snip(`!${argStr}`, bool, 'runtime');
     }
-    if (wgsl.isNumericSchema(dataType)) {
+    if (isNumericType(dataType)) {
       const resultStr = `!bool(${argStr})`;
       const nanGuardedStr = // abstractFloat will be resolved as comptime known value
-        dataType.type === 'f32'
+        dataType === 'f32'
           ? `(((bitcast<u32>(${argStr}) & 0x7fffffff) > 0x7f800000) || ${resultStr})`
-          : dataType.type === 'f16'
+          : dataType === 'f16'
             ? `(((bitcast<u32>(${argStr}) & 0x7fff) > 0x7c00) || ${resultStr})`
             : resultStr;
 
@@ -254,7 +258,7 @@ ${this.ctx.pre}}`;
   public blockVariable(
     varType: 'var' | 'let' | 'const',
     id: string,
-    dataType: wgsl.BaseData | UnknownData,
+    dataType: SnippetType,
     origin: Origin,
   ): Snippet {
     const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
@@ -287,7 +291,7 @@ ${this.ctx.pre}}`;
     pre: string,
     keyword: 'var' | 'let' | 'const',
     name: string,
-    _dataType: wgsl.BaseData | UnknownData,
+    _dataType: SnippetType,
     rhsStr: string,
   ): string {
     return `${pre}${keyword} ${name} = ${rhsStr};`;
@@ -316,7 +320,7 @@ ${this.ctx.pre}}`;
    */
   public _typedExpression(
     expression: tinyest.Expression,
-    expectedType: wgsl.BaseData | wgsl.BaseData[],
+    expectedType: KnownSnippetType | KnownSnippetType[],
   ) {
     const prevExpectedType = this.ctx.expectedType;
     this.ctx.expectedType = expectedType;
@@ -826,7 +830,7 @@ ${this.ctx.pre}}`;
       const [_, valueNodes] = expression;
       // Array Expression
       const arrType = this.ctx.expectedType;
-      let elemType: wgsl.BaseData;
+      let elemType: KnownSnippetType;
       let values: Snippet[];
 
       if (wgsl.isWgslArray(arrType)) {
@@ -896,11 +900,14 @@ ${this.ctx.pre}}`;
    * definitions to the shader preamble. This shouldn't be called directly, only
    * through `ctx.resolve` to properly cache the result.
    */
-  public typeAnnotation(data: wgsl.BaseData): string {
+  public typeAnnotation(data: SnippetType): string {
+    if (typeof data === 'string') {
+      return data;
+    }
     return resolveData(this.ctx, data as AnyData);
   }
 
-  public typeInstantiation(schema: wgsl.BaseData, args: readonly Snippet[]): ResolvedSnippet {
+  public typeInstantiation(schema: KnownSnippetType, args: readonly Snippet[]): ResolvedSnippet {
     if (args.length === 1 && args[0]?.dataType === schema) {
       // Already of the desired type, e.g. `bool(false)` or `vec3f(vec3f(1, 2, 3))`
       // We can make this snippet ephemeral, as we know it will be deep copied in JS

@@ -5,6 +5,7 @@ import type { BaseData } from './data/wgslTypes.ts';
 import { getName, hasTinyestMetadata } from './shared/meta.ts';
 import { DEV, TEST } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
+import type { KnownSnippetType } from './data/snippet.ts';
 
 const prefix = 'Invariant failed';
 
@@ -214,11 +215,11 @@ export class WgslTypeError extends Error {
 }
 
 export class SignatureNotSupportedError extends Error {
-  constructor(actual: BaseData[], candidates: BaseData[]) {
+  constructor(actual: KnownSnippetType[], candidates: KnownSnippetType[]) {
     super(
       `Unsupported data types: ${actual
-        .map((a) => a.type)
-        .join(', ')}. Supported types are: ${candidates.map((r) => r.type).join(', ')}.`,
+        .map((a) => String(a))
+        .join(', ')}. Supported types are: ${candidates.map((r) => String(r)).join(', ')}.`,
     );
 
     // Set the prototype explicitly.

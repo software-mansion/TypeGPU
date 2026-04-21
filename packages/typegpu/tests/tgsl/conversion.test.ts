@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, describe, expect } from 'vitest';
-import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import * as d from '../../src/data/index.ts';
 import { snip, type Snippet } from '../../src/data/snippet.ts';
 import {
@@ -38,8 +37,8 @@ describe('getBestConversion', () => {
   const ptrI32 = INTERNAL_createPtr('private', d.i32, 'read-write', /* implicit */ true);
 
   it('returns result for identical types', () => {
-    const res = getBestConversion([d.f32, d.f32]);
-    expect(res?.targetType).toBe(d.f32);
+    const res = getBestConversion(['f32', 'f32']);
+    expect(res?.targetType).toBe('f32');
     expect(res?.actions).toEqual([
       { sourceIndex: 0, action: 'none' },
       { sourceIndex: 1, action: 'none' },
@@ -48,32 +47,32 @@ describe('getBestConversion', () => {
   });
 
   it('handles abstract types automatically', () => {
-    const resFloat = getBestConversion([abstractFloat, d.f32]);
-    expect(resFloat?.targetType).toBe(d.f32);
+    const resFloat = getBestConversion(['abstractFloat', 'f32']);
+    expect(resFloat?.targetType).toBe('f32');
     expect(resFloat?.actions).toEqual([
       { sourceIndex: 0, action: 'none' },
       { sourceIndex: 1, action: 'none' },
     ]);
     expect(resFloat?.hasImplicitConversions).toBeFalsy();
 
-    const resInt = getBestConversion([abstractInt, d.i32]);
-    expect(resInt?.targetType).toBe(d.i32);
+    const resInt = getBestConversion(['abstractInt', 'i32']);
+    expect(resInt?.targetType).toBe('i32');
     expect(resInt?.actions).toEqual([
       { sourceIndex: 0, action: 'none' },
       { sourceIndex: 1, action: 'none' },
     ]);
     expect(resInt?.hasImplicitConversions).toBeFalsy();
 
-    const resMixed = getBestConversion([abstractInt, d.f32]);
-    expect(resMixed?.targetType).toBe(d.f32); // abstractInt -> f32 (rank 6)
+    const resMixed = getBestConversion(['abstractInt', 'f32']);
+    expect(resMixed?.targetType).toBe('f32'); // abstractInt -> f32 (rank 6)
     expect(resMixed?.actions).toEqual([
       { sourceIndex: 0, action: 'none' },
       { sourceIndex: 1, action: 'none' },
     ]);
     expect(resMixed?.hasImplicitConversions).toBeFalsy();
 
-    const resMixed2 = getBestConversion([abstractInt, abstractFloat, d.f16]);
-    expect(resMixed2?.targetType).toBe(d.f16); // abstractInt -> f16 (rank 7), abstractFloat -> f16 (rank 2)
+    const resMixed2 = getBestConversion(['abstractInt', 'abstractFloat', 'f16']);
+    expect(resMixed2?.targetType).toBe('f16'); // abstractInt -> f16 (rank 7), abstractFloat -> f16 (rank 2)
     expect(resMixed2?.actions).toEqual([
       { sourceIndex: 0, action: 'none' },
       { sourceIndex: 1, action: 'none' },
@@ -83,10 +82,10 @@ describe('getBestConversion', () => {
   });
 
   it('handles implicit casts', () => {
-    const res = getBestConversion([d.i32, d.f32]);
-    expect(res?.targetType).toBe(d.f32);
+    const res = getBestConversion(['i32', 'f32']);
+    expect(res?.targetType).toBe('f32');
     expect(res?.actions).toEqual([
-      { sourceIndex: 0, action: 'cast', targetType: d.f32 },
+      { sourceIndex: 0, action: 'cast', targetType: 'f32' },
       { sourceIndex: 1, action: 'none' },
     ]);
     expect(res?.hasImplicitConversions).toBe(true);
@@ -114,39 +113,39 @@ describe('getBestConversion', () => {
     //   Total Rank = 0 + 20 + 20 = 40
     //
     // Lowest rank is 20 for target f16.
-    const res2Result = getBestConversion([d.u32, d.f16, d.i32]);
-    expect(res2Result?.targetType).toBe(d.f16);
+    const res2Result = getBestConversion(['u32', 'f16', 'i32']);
+    expect(res2Result?.targetType).toBe('f16');
     expect(res2Result?.actions).toEqual([
       // Order corresponds to input [u32, f16, i32]
-      { sourceIndex: 0, action: 'cast', targetType: d.f16 }, // u32 -> f16
+      { sourceIndex: 0, action: 'cast', targetType: 'f16' }, // u32 -> f16
       { sourceIndex: 1, action: 'none' }, // f16 -> f16
-      { sourceIndex: 2, action: 'cast', targetType: d.f16 }, // i32 -> f16
+      { sourceIndex: 2, action: 'cast', targetType: 'f16' }, // i32 -> f16
     ]);
     expect(res2Result?.hasImplicitConversions).toBe(true);
   });
 
   it('handles pointer dereferencing', () => {
-    const res = getBestConversion([ptrF32, d.f32]);
-    expect(res?.targetType).toBe(d.f32);
+    const res = getBestConversion([ptrF32, 'f32']);
+    expect(res?.targetType).toBe('f32');
     expect(res?.actions).toEqual([
       { sourceIndex: 0, action: 'deref' },
       { sourceIndex: 1, action: 'none' },
     ]);
     expect(res?.hasImplicitConversions).toBeFalsy();
 
-    const res2 = getBestConversion([ptrF32, d.i32, d.f32]); // Target f32: deref, cast, none
-    expect(res2?.targetType).toBe(d.f32);
+    const res2 = getBestConversion([ptrF32, 'i32', 'f32']); // Target f32: deref, cast, none
+    expect(res2?.targetType).toBe('f32');
     expect(res2?.actions).toEqual([
       { sourceIndex: 0, action: 'deref' },
-      { sourceIndex: 1, action: 'cast', targetType: d.f32 }, // Implicitly derefs then casts
+      { sourceIndex: 1, action: 'cast', targetType: 'f32' }, // Implicitly derefs then casts
       { sourceIndex: 2, action: 'none' },
     ]);
     expect(res2?.hasImplicitConversions).toBe(true); // Because of the cast
   });
 
   it('returns undefined for incompatible types', () => {
-    expect(getBestConversion([d.f32, d.vec2f])).toBeUndefined();
-    expect(getBestConversion([d.struct({ a: d.f32 }), d.f32])).toBeUndefined();
+    expect(getBestConversion(['f32', d.vec2f])).toBeUndefined();
+    expect(getBestConversion([d.struct({ a: d.f32 }), 'f32'])).toBeUndefined();
   });
 
   it('respects targetTypes restriction', () => {
@@ -154,24 +153,24 @@ describe('getBestConversion', () => {
     // i32 -> i32 (rank 0)
     // Common types without restriction: i32
     // Restrict to f32:
-    const res = getBestConversion([abstractInt, d.i32], [d.f32]);
-    expect(res?.targetType).toBe(d.f32);
+    const res = getBestConversion(['abstractInt', 'i32'], ['f32']);
+    expect(res?.targetType).toBe('f32');
     expect(res?.actions).toEqual([
       { sourceIndex: 0, action: 'none' }, // abstractInt -> f32 is auto
-      { sourceIndex: 1, action: 'cast', targetType: d.f32 }, // i32 -> f32 is cast
+      { sourceIndex: 1, action: 'cast', targetType: 'f32' }, // i32 -> f32 is cast
     ]);
     expect(res?.hasImplicitConversions).toBe(true);
 
     // Restrict to incompatible type
-    const resFail = getBestConversion([abstractInt, d.i32], [d.vec2f]);
+    const resFail = getBestConversion(['abstractInt', 'i32'], [d.vec2f]);
     expect(resFail).toBeUndefined();
 
     // Restrict to a type requiring implicit conversion for all
-    const resImplicit = getBestConversion([d.i32, d.u32], [d.f32]);
-    expect(resImplicit?.targetType).toBe(d.f32);
+    const resImplicit = getBestConversion(['i32', 'u32'], ['f32']);
+    expect(resImplicit?.targetType).toBe('f32');
     expect(resImplicit?.actions).toEqual([
-      { sourceIndex: 0, action: 'cast', targetType: d.f32 },
-      { sourceIndex: 1, action: 'cast', targetType: d.f32 },
+      { sourceIndex: 0, action: 'cast', targetType: 'f32' },
+      { sourceIndex: 1, action: 'cast', targetType: 'f32' },
     ]);
     expect(resImplicit?.hasImplicitConversions).toBe(true);
   });
@@ -189,11 +188,11 @@ describe('getBestConversion', () => {
 });
 
 describe('convertToCommonType', () => {
-  const snippetF32 = snip('2.22', d.f32, /* origin */ 'runtime');
-  const snippetI32 = snip('-12', d.i32, /* origin */ 'runtime');
-  const snippetU32 = snip('33', d.u32, /* origin */ 'runtime');
-  const snippetAbsFloat = snip('1.1', abstractFloat, /* origin */ 'runtime');
-  const snippetAbsInt = snip('1', abstractInt, /* origin */ 'runtime');
+  const snippetF32 = snip('2.22', 'f32', /* origin */ 'runtime');
+  const snippetI32 = snip('-12', 'i32', /* origin */ 'runtime');
+  const snippetU32 = snip('33', 'u32', /* origin */ 'runtime');
+  const snippetAbsFloat = snip('1.1', 'abstractFloat', /* origin */ 'runtime');
+  const snippetAbsInt = snip('1', 'abstractInt', /* origin */ 'runtime');
   const snippetPtrF32 = snip(
     'ptr_f32',
     INTERNAL_createPtr('private', d.f32, 'read-write', /* implicit */ true),
@@ -205,9 +204,9 @@ describe('convertToCommonType', () => {
     const result = convertToCommonType(ctx, [snippetF32, snippetF32]);
     expect(result).toBeDefined();
     expect(result?.length).toBe(2);
-    expect(result?.[0]?.dataType).toBe(d.f32);
+    expect(result?.[0]?.dataType).toBe('f32');
     expect(result?.[0]?.value).toBe('2.22');
-    expect(result?.[1]?.dataType).toBe(d.f32);
+    expect(result?.[1]?.dataType).toBe('f32');
     expect(result?.[1]?.value).toBe('2.22');
   });
 
@@ -216,11 +215,11 @@ describe('convertToCommonType', () => {
     // since WGSL handles all abstract types automatically, this should be basically identity
     expect(result).toBeDefined();
     expect(result?.length).toBe(3);
-    expect(result?.[0]?.dataType).toBe(d.f32);
+    expect(result?.[0]?.dataType).toBe('f32');
     expect(result?.[0]?.value).toBe('1.1');
-    expect(result?.[1]?.dataType).toBe(d.f32);
+    expect(result?.[1]?.dataType).toBe('f32');
     expect(result?.[1]?.value).toBe('2.22');
-    expect(result?.[2]?.dataType).toBe(d.f32);
+    expect(result?.[2]?.dataType).toBe('f32');
     expect(result?.[2]?.value).toBe('1');
   });
 
@@ -228,9 +227,9 @@ describe('convertToCommonType', () => {
     const result = convertToCommonType(ctx, [snippetI32, snippetF32]);
     expect(result).toBeDefined();
     expect(result?.length).toBe(2);
-    expect(result?.[0]?.dataType).toBe(d.f32);
+    expect(result?.[0]?.dataType).toBe('f32');
     expect(result?.[0]?.value).toBe('f32(-12)'); // Cast applied
-    expect(result?.[1]?.dataType).toBe(d.f32);
+    expect(result?.[1]?.dataType).toBe('f32');
     expect(result?.[1]?.value).toBe('2.22');
   });
 
@@ -238,9 +237,9 @@ describe('convertToCommonType', () => {
     const result = convertToCommonType(ctx, [snippetPtrF32, snippetF32]);
     expect(result).toBeDefined();
     expect(result?.length).toBe(2);
-    expect(result?.[0]?.dataType).toBe(d.f32);
+    expect(result?.[0]?.dataType).toBe('f32');
     expect(result?.[0]?.value).toBe('(*ptr_f32)'); // Deref applied
-    expect(result?.[1]?.dataType).toBe(d.f32);
+    expect(result?.[1]?.dataType).toBe('f32');
     expect(result?.[1]?.value).toBe('2.22');
   });
 
@@ -308,10 +307,10 @@ describe('convertStructValues', () => {
 
   it('maps values matching types exactly', () => {
     const snippets: Record<string, Snippet> = {
-      a: snip('1.0', d.f32, /* origin */ 'runtime'),
-      b: snip('2', d.i32, /* origin */ 'runtime'),
+      a: snip('1.0', 'f32', /* origin */ 'runtime'),
+      b: snip('2', 'i32', /* origin */ 'runtime'),
       c: snip('vec2f(1.0, 1.0)', d.vec2f, /* origin */ 'runtime'),
-      d: snip('true', d.bool, /* origin */ 'runtime'),
+      d: snip('true', 'bool', /* origin */ 'runtime'),
     };
     const res = convertStructValues(ctx, structType, snippets);
     expect(res.length).toBe(4);
@@ -323,25 +322,25 @@ describe('convertStructValues', () => {
 
   it('maps values requiring implicit casts and warns', () => {
     const snippets: Record<string, Snippet> = {
-      a: snip('1', d.i32, /* origin */ 'runtime'), // i32 -> f32 (cast)
-      b: snip('2', d.u32, /* origin */ 'runtime'), // u32 -> i32 (cast)
-      c: snip('2.22', d.f32, /* origin */ 'runtime'),
-      d: snip('true', d.bool, /* origin */ 'runtime'),
+      a: snip('1', 'i32', /* origin */ 'runtime'), // i32 -> f32 (cast)
+      b: snip('2', 'u32', /* origin */ 'runtime'), // u32 -> i32 (cast)
+      c: snip('2.22', 'f32', /* origin */ 'runtime'),
+      d: snip('true', 'bool', /* origin */ 'runtime'),
     };
     const res = convertStructValues(ctx, structType, snippets);
     expect(res.length).toBe(4);
-    expect(res[0]).toEqual(snip('f32(1)', d.f32, /* origin */ 'runtime')); // Cast applied
-    expect(res[1]).toEqual(snip('i32(2)', d.i32, /* origin */ 'runtime')); // Cast applied
+    expect(res[0]).toEqual(snip('f32(1)', 'f32', /* origin */ 'runtime')); // Cast applied
+    expect(res[1]).toEqual(snip('i32(2)', 'i32', /* origin */ 'runtime')); // Cast applied
     expect(res[2]).toEqual(snippets.c);
     expect(res[3]).toEqual(snippets.d);
   });
 
   it('throws on missing property', () => {
     const snippets: Record<string, Snippet> = {
-      a: snip('1.0', d.f32, /* origin */ 'runtime'),
+      a: snip('1.0', 'f32', /* origin */ 'runtime'),
       // b is missing
       c: snip('vec2f(1.0, 1.0)', d.vec2f, /* origin */ 'runtime'),
-      d: snip('true', d.bool, /* origin */ 'runtime'),
+      d: snip('true', 'bool', /* origin */ 'runtime'),
     };
     expect(() => convertStructValues(ctx, structType, snippets)).toThrow(/Missing property b/);
   });

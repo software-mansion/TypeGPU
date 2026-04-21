@@ -1,9 +1,9 @@
 import { UnknownData } from '../data/dataTypes.ts';
-import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
 import {
   isEphemeralSnippet,
   isSnippet,
+  type KnownSnippetType,
   type ResolvedSnippet,
   snip,
   type Snippet,
@@ -11,8 +11,6 @@ import {
 import {
   type AnyWgslData,
   type BaseData,
-  type F32,
-  type I32,
   isMatInstance,
   isNaturallyEphemeral,
   isVecInstance,
@@ -32,7 +30,7 @@ import { $internal, $resolve } from '../../src/shared/symbols.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
-    return snip(value, abstractFloat, /* origin */ 'constant');
+    return snip(value, 'abstractFloat', /* origin */ 'constant');
   }
   // WGSL AbstractInt uses 64-bit precision, but JS numbers are only safe up to 2^53 - 1.
   // Warn when values exceed this range to prevent precision loss.
@@ -42,18 +40,18 @@ export function numericLiteralToSnippet(value: number): Snippet {
         `The integer ${value} exceeds the safe integer range and may have lost precision.`,
       );
     }
-    return snip(value, abstractInt, /* origin */ 'constant');
+    return snip(value, 'abstractInt', /* origin */ 'constant');
   }
-  return snip(value, abstractFloat, /* origin */ 'constant');
+  return snip(value, 'abstractFloat', /* origin */ 'constant');
 }
 
-export function concretize<T extends BaseData>(type: T): T | F32 | I32 {
-  if (type.type === 'abstractFloat') {
-    return f32;
+export function concretize<T extends KnownSnippetType>(type: T): T | 'f32' | 'i32' {
+  if (type === 'abstractFloat') {
+    return 'f32';
   }
 
-  if (type.type === 'abstractInt') {
-    return i32;
+  if (type === 'abstractInt') {
+    return 'i32';
   }
 
   return type;
@@ -76,10 +74,10 @@ export type GenerationCtx = ResolutionCtx & {
    * It is used exclusively for inferring the types of structs and arrays.
    * It is modified exclusively by `typedExpression` function.
    */
-  expectedType: (BaseData | BaseData[]) | undefined;
+  expectedType: (KnownSnippetType | KnownSnippetType[]) | undefined;
 
   readonly topFunctionScope: FunctionScopeLayer | undefined;
-  readonly topFunctionReturnType: BaseData | undefined;
+  readonly topFunctionReturnType: KnownSnippetType | undefined;
 
   indent(): string;
   dedent(): string;
@@ -96,7 +94,7 @@ export type GenerationCtx = ResolutionCtx & {
    * reported using this function, and used to infer
    * the return type of the owning function.
    */
-  reportReturnType(dataType: BaseData): void;
+  reportReturnType(dataType: KnownSnippetType): void;
 
   readonly shelllessRepo: ShelllessRepository;
 };
@@ -138,7 +136,7 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   if (typeof value === 'boolean') {
-    return snip(value, bool, /* origin */ 'constant');
+    return snip(value, 'bool', /* origin */ 'constant');
   }
 
   return snip(value, UnknownData, /* origin */ 'constant');

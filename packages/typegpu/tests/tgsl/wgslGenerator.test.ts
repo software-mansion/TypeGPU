@@ -2,7 +2,6 @@ import * as tinyest from 'tinyest';
 import { beforeEach, describe, expect, vi } from 'vitest';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import * as d from '../../src/data/index.ts';
-import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
 import { snip } from '../../src/data/snippet.ts';
 import { Void, type WgslArray } from '../../src/data/wgslTypes.ts';
 import { provideCtx } from '../../src/execMode.ts';
@@ -16,7 +15,6 @@ import { CodegenState } from '../../src/types.ts';
 import { it } from 'typegpu-testing-utility';
 import { ArrayExpression } from '../../src/codegen/generationHelpers.ts';
 import { extractSnippetFromFn } from '../utils/parseResolved.ts';
-import { UnknownData } from '../../src/codegen/shaderGenerator_members.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -85,15 +83,15 @@ describe('wgslGenerator', () => {
 
   it('creates correct resources for numeric literals', () => {
     const literals = {
-      intLiteral: { value: '12', wgsl: '12', dataType: abstractInt },
-      floatLiteral: { value: '12.5', wgsl: '12.5', dataType: abstractFloat },
+      intLiteral: { value: '12', wgsl: '12', dataType: 'abstractInt' },
+      floatLiteral: { value: '12.5', wgsl: '12.5', dataType: 'abstractFloat' },
       scientificLiteral: {
         value: '120000000000',
-        dataType: abstractInt,
+        dataType: 'abstractInt',
       },
       scientificNegativeExponentLiteral: {
         value: '0.0012',
-        dataType: abstractFloat,
+        dataType: 'abstractFloat',
       },
     } as const;
 

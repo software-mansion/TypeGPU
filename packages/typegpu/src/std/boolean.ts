@@ -1,7 +1,7 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import { bool, f32 } from '../data/numeric.ts';
-import { isSnippetNumeric, snip } from '../data/snippet.ts';
+import { snip, type KnownSnippetType } from '../data/snippet.ts';
 import { vec2b, vec3b, vec4b } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
@@ -12,9 +12,7 @@ import {
   type AnyVec3Instance,
   type AnyVecInstance,
   type AnyWgslData,
-  type BaseData,
   isBool,
-  isNumericSchema,
   isVec,
   isVecBool,
   isVecInstance,
@@ -24,12 +22,13 @@ import {
 } from '../data/wgslTypes.ts';
 import { unify } from '../codegen/conversion.ts';
 import { sub } from './operators.ts';
+import { isNumericType, isSnippetNumeric } from '../data/snippetTypeUtils.ts';
 
-function correspondingBooleanVectorSchema(dataType: BaseData) {
-  if (dataType.type.includes('2')) {
+function correspondingBooleanVectorSchema(dataType: KnownSnippetType) {
+  if (typeof dataType === 'object' && dataType.type.includes('2')) {
     return vec2b;
   }
-  if (dataType.type.includes('3')) {
+  if (typeof dataType === 'object' && dataType.type.includes('3')) {
     return vec3b;
   }
   return vec4b;
@@ -229,7 +228,8 @@ export const not = dualImpl({
     if (isBool(dataType)) {
       return stitch`!${arg}`;
     }
-    if (isNumericSchema(dataType)) {
+
+    if (isNumericType(dataType)) {
       return stitch`!bool(${arg})`;
     }
 

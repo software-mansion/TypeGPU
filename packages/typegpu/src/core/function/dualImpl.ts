@@ -1,12 +1,12 @@
-import { type MapValueToSnippet, snip } from '../../data/snippet.ts';
+import { type KnownSnippetType, type MapValueToSnippet, snip } from '../../data/snippet.ts';
 import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../codegen/conversion.ts';
 import { concretize } from '../../codegen/generationHelpers.ts';
 import { type DualFn, isKnownAtComptime, NormalState, type ResolutionCtx } from '../../types.ts';
-import { type BaseData, isPtr } from '../../data/wgslTypes.ts';
+import { isPtr } from '../../data/wgslTypes.ts';
 
-type MapValueToDataType<T> = { [K in keyof T]: BaseData };
+type MapValueToDataType<T> = { [K in keyof T]: KnownSnippetType };
 type AnyFn = (...args: never[]) => unknown;
 
 interface DualImplOptions<T extends AnyFn> {
@@ -15,12 +15,12 @@ interface DualImplOptions<T extends AnyFn> {
   readonly codegenImpl: (ctx: ResolutionCtx, args: MapValueToSnippet<Parameters<T>>) => string;
   readonly signature:
     | {
-        argTypes: (BaseData | BaseData[])[];
-        returnType: BaseData;
+        argTypes: (KnownSnippetType | KnownSnippetType[])[];
+        returnType: KnownSnippetType;
       }
     | ((...inArgTypes: MapValueToDataType<Parameters<T>>) => {
-        argTypes: (BaseData | BaseData[])[];
-        returnType: BaseData;
+        argTypes: (KnownSnippetType | KnownSnippetType[])[];
+        returnType: KnownSnippetType;
       });
   /**
    * Whether the function should skip trying to execute the "normal" implementation if
