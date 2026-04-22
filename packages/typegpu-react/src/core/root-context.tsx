@@ -1,13 +1,56 @@
-import {
+import React, {
   createContext,
   type ReactNode,
-  use,
   useContext,
   useEffect,
   useMemo,
   useState,
 } from 'react';
 import tgpu, { type TgpuRoot } from 'typegpu';
+
+function attachPromiseStatus<T>(
+  promise: PromiseLike<T> & {
+    status?: 'pending' | 'fulfilled' | 'rejected';
+    value?: T;
+    reason?: unknown;
+  },
+) {
+  if (!promise.status) {
+    promise.status = 'pending';
+    promise.then(
+      (v) => {
+        promise.status = 'fulfilled';
+        promise.value = v;
+      },
+      (e) => {
+        promise.status = 'rejected';
+        promise.reason = e;
+      },
+    );
+  }
+}
+
+const use =
+  React.use ||
+  // A shim for older React versions
+  function <T>(
+    promise: PromiseLike<T> & {
+      status?: 'pending' | 'fulfilled' | 'rejected';
+      value?: T;
+      reason?: unknown;
+    },
+  ): T {
+    if (promise.status === 'pending') {
+      throw promise;
+    } else if (promise.status === 'fulfilled') {
+      return promise.value as T;
+    } else if (promise.status === 'rejected') {
+      throw promise.reason;
+    } else {
+      attachPromiseStatus(promise);
+      throw promise;
+    }
+  };
 
 type RootContextResult =
   | { status: 'pending'; promise: Promise<TgpuRoot> }
