@@ -55,6 +55,21 @@ describe('d.ref', () => {
     `);
   });
 
+  it('fails when trying to assgin a ref to a new variable', () => {
+    const hello = () => {
+      'use gpu';
+      const position = d.ref(d.vec3f(1, 2, 3));
+      const foo = position;
+    };
+
+    expect(() => tgpu.resolve([hello])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:hello
+      - fn*:hello(): Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead.]
+    `);
+  });
+
   it('fails when creating a ref with a reference, and assigning it to a variable', () => {
     const hello = () => {
       'use gpu';
@@ -205,6 +220,68 @@ describe('d.ref', () => {
         return value;
       }"
     `);
+  });
+
+  it("allows calling d.ref on d.ref if you don't assign the result to a variable", () => {
+    const increment = (value: d.ref<number | d.v2f>) => {
+      'use gpu';
+      value.$ += 1;
+    };
+
+    const main = () => {
+      'use gpu';
+      const x = d.ref(0);
+      increment(d.ref(x));
+      const v = d.ref(d.vec2f(0));
+      increment(d.ref(d.ref(v)));
+      return x.$ + v.$.x + v.$.y;
+    };
+
+    // Works in JS
+    expect(main()).toBe(3);
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn increment(value: ptr<function, i32>) {
+        (*value) += 1i;
+      }
+
+      fn increment_1(value: ptr<function, vec2f>) {
+        (*value) += 1;
+      }
+
+      fn main() -> f32 {
+        var x = 0;
+        increment((&x));
+        var v = vec2f();
+        increment_1((&v));
+        return ((f32(x) + v.x) + v.y);
+      }"
+    `);
+  });
+
+  it('forces explicit copy of numeric values saved in variables', () => {
+    const increment = (value: d.ref<number | d.v2f>) => {
+      'use gpu';
+      value.$ += 1;
+    };
+
+    const f1 = () => {
+      'use gpu';
+      const x = 7;
+      const y = d.ref(x);
+      increment(y);
+    };
+
+    expect(() => tgpu.resolve([f1])).toThrowErrorMatchingInlineSnapshot();
+
+    const f2 = () => {
+      'use gpu';
+      const x = 7;
+      const y = d.ref(d.f32(x));
+      increment(y);
+    };
+
+    expect(tgpu.resolve([f2])).toMatchInlineSnapshot();
   });
 
   it('rejects passing d.ref created from non-refs directly into functions', () => {
