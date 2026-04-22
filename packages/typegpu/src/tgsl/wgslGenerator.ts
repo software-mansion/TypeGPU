@@ -772,10 +772,7 @@ ${this.ctx.pre}}`;
                 );
               }
               // Taking care of abstract numerics and implicit pointers
-              accessed = structType.provideProp(
-                key,
-                unptr(concretize(expr.dataType)) as wgsl.BaseData,
-              );
+              accessed = structType.provideProp(key, unptr(concretize(expr.dataType)));
             }
 
             return [accessed.prop, expr];
