@@ -1,6 +1,6 @@
 {
   "name": "@typegpu/react",
-  "version": "0.11.0-alpha.1",
+  "version": "0.11.0-alpha.2",
   "private": true,
   "description": "The best way to integrate TypeGPU into your React app.",
   "keywords": [
