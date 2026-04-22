@@ -5,6 +5,7 @@ import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
 import {
+  type AbstractFloat,
   type AnyWgslData,
   type BaseData,
   type F16,
@@ -123,10 +124,7 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
   if ((trueSrc.type === 'u32' || trueSrc.type === 'i32') && trueDst.type === 'abstractFloat') {
     // When one of the types is a float (abstract or not), we don't want to cast it to a non-float type,
     // which would cause it to lose precision. We instead choose the common type to be f32.
-
-    // TODO: Remove this side-effect once we have shaderbits
-    // oxlint-disable-next-line typescript/no-explicit-any
-    return { rank: 1, action: 'cast', targetType: (globalThis as any).__TYPEGPU_F32__ };
+    return { rank: 1, action: 'cast', targetType: (trueDst as AbstractFloat).concretized };
   }
 
   if (trueSrc.type === 'abstractFloat') {
