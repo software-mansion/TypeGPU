@@ -15,6 +15,7 @@ import {
   Void,
   type WgslArray,
 } from '../../data/wgslTypes.ts';
+import { invariant } from '../../errors.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { convertToCommonType } from '../conversion.ts';
 import { concretizeSnippet, type GenerationCtx } from '../generationHelpers.ts';
@@ -91,12 +92,17 @@ export class LogGeneratorImpl implements LogGenerator {
     const id = this.#firstUnusedId++;
 
     const concreteArgsWithStrings = args
-      .map((arg) =>
-        typeof arg.dataType === 'symbol'
-          ? arg
-          : convertToCommonType(ctx, [arg], [unptr(arg.dataType)])?.[0],
-      )
-      .filter((arg) => !!arg)
+      .map((arg) => {
+        if (typeof arg.dataType === 'symbol') {
+          return arg;
+        }
+        const converted = convertToCommonType(ctx, [arg], [unptr(arg.dataType)])?.[0];
+        invariant(
+          converted,
+          `Internal error. Expected type ${arg.dataType} to be convertible to ${unptr(arg.dataType)}`,
+        );
+        return converted;
+      })
       .map(concretizeSnippet);
 
     const concreteArgs = concreteArgsWithStrings.filter((arg) => typeof arg.dataType !== 'symbol');
