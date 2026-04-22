@@ -33,22 +33,19 @@ describe('ast to JS transformation', () => {
     it('handles string literals', () => {
       expect(
         stringifyExpression([N.stringLiteral, 'hello'] satisfies tinyest.Str),
-      ).toMatchInlineSnapshot(`"'hello'"`);
+      ).toMatchInlineSnapshot(`""hello""`);
       expect(
         stringifyExpression([N.stringLiteral, "'hello'"] satisfies tinyest.Str),
-      ).toMatchInlineSnapshot(`"''hello''"`); // TODO: fix
+      ).toMatchInlineSnapshot(`""'hello'""`);
       expect(
         stringifyExpression([N.stringLiteral, '"hello"'] satisfies tinyest.Str),
-      ).toMatchInlineSnapshot(`"'"hello"'"`);
+      ).toMatchInlineSnapshot(`""\\"hello\\"""`);
       expect(
         stringifyExpression([N.stringLiteral, '`hello`'] satisfies tinyest.Str),
-      ).toMatchInlineSnapshot(`"'\`hello\`'"`);
+      ).toMatchInlineSnapshot(`""\`hello\`""`);
       expect(
         stringifyExpression([N.stringLiteral, `hello\``] satisfies tinyest.Str),
-      ).toMatchInlineSnapshot(`"'hello\`'"`);
-      expect(
-        stringifyExpression([N.stringLiteral, `hello${1}`] satisfies tinyest.Str),
-      ).toMatchInlineSnapshot(`"'hello1'"`); // TODO: fix
+      ).toMatchInlineSnapshot(`""hello\`""`);
     });
 
     it('handles array expressions', () => {
@@ -60,7 +57,7 @@ describe('ast to JS transformation', () => {
           [N.stringLiteral, 'three'],
         ],
       ];
-      expect(stringifyExpression(node)).toBe("[1, 2, 'three']");
+      expect(stringifyExpression(node)).toBe(`[1, 2, "three"]`);
     });
 
     it('handles binary expressions', () => {
@@ -165,11 +162,11 @@ describe('ast to JS transformation', () => {
         [4, 5];
       };
       expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
-      "{
-        [1, 2, 'three'];
-        [4, 5];
-      }"
-    `);
+        "{
+          [1, 2, "three"];
+          [4, 5];
+        }"
+      `);
     });
 
     it('handles declarations', () => {

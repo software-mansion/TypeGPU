@@ -127,8 +127,7 @@ export function stringifyExpression(node: tinyest.Expression, ident = ''): strin
   }
 
   if (node[0] === NODE.stringLiteral) {
-    // TODO: handle ', ", `, escapes, etc.
-    return `'${node[1]}'`;
+    return JSON.stringify(node[1]);
   }
 
   if (node[0] === NODE.arrayExpr) {
