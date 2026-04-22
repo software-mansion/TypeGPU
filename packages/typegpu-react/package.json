@@ -1,9 +1,19 @@
 {
   "name": "@typegpu/react",
-  "version": "0.10.0-alpha.8",
+  "version": "0.11.0-alpha.1",
+  "private": true,
   "description": "The best way to integrate TypeGPU into your React app.",
-  "keywords": [],
+  "keywords": [
+    "React",
+    "TypeGPU",
+    "WebGPU"
+  ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion/TypeGPU.git",
+    "directory": "packages/typegpu-react"
+  },
   "type": "module",
   "sideEffects": false,
   "types": "./src/browser/index.ts",
@@ -52,7 +62,7 @@
     "react": "^19.0.0",
     "react-native": "*",
     "react-native-wgpu": "*",
-    "typegpu": "^0.10.2"
+    "typegpu": "workspace:^"
   },
   "peerDependenciesMeta": {
     "react-native": {
