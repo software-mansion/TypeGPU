@@ -5,6 +5,7 @@ import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
 import { snip, type Snippet } from '../data/snippet.ts';
 import {
+  type AbstractFloat,
   type AnyWgslData,
   type BaseData,
   type F16,
@@ -126,7 +127,7 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
 
     // TODO: Remove this side-effect once we have shaderbits
     // oxlint-disable-next-line typescript/no-explicit-any
-    return { rank: 1, action: 'cast', targetType: (globalThis as any).__TYPEGPU_F32__ };
+    return { rank: 1, action: 'cast', targetType: (trueDst as AbstractFloat).concretized };
   }
 
   if (trueSrc.type === 'abstractFloat') {
