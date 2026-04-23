@@ -389,6 +389,10 @@ ${this.ctx.pre}}`;
         throw new Error('Please use the === operator instead of ==');
       }
 
+      if (op === '!=') {
+        throw new Error('Please use the !== operator instead of !=');
+      }
+
       if (op === '===' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
         return snip(lhsExpr.value === rhsExpr.value, bool, 'constant');
       }
