@@ -130,13 +130,13 @@ describe('complex use-gpu function AST snapshots', () => {
       "{
         const minJunction = floor(pos);
         const xyz = dotProdGrid(pos, minJunction);
-        const xyZ = dotProdGrid(pos, minJunction + (d.vec3f(0, 0, 1)));
-        const xYz = dotProdGrid(pos, minJunction + (d.vec3f(0, 1, 0)));
-        const xYZ = dotProdGrid(pos, minJunction + (d.vec3f(0, 1, 1)));
-        const Xyz = dotProdGrid(pos, minJunction + (d.vec3f(1, 0, 0)));
-        const XyZ = dotProdGrid(pos, minJunction + (d.vec3f(1, 0, 1)));
-        const XYz = dotProdGrid(pos, minJunction + (d.vec3f(1, 1, 0)));
-        const XYZ = dotProdGrid(pos, minJunction + (d.vec3f(1, 1, 1)));
+        const xyZ = dotProdGrid(pos, minJunction + d.vec3f(0, 0, 1));
+        const xYz = dotProdGrid(pos, minJunction + d.vec3f(0, 1, 0));
+        const xYZ = dotProdGrid(pos, minJunction + d.vec3f(0, 1, 1));
+        const Xyz = dotProdGrid(pos, minJunction + d.vec3f(1, 0, 0));
+        const XyZ = dotProdGrid(pos, minJunction + d.vec3f(1, 0, 1));
+        const XYz = dotProdGrid(pos, minJunction + d.vec3f(1, 1, 0));
+        const XYZ = dotProdGrid(pos, minJunction + d.vec3f(1, 1, 1));
         const partial = pos - minJunction;
         const smoothPartial = quinticInterpolation(partial);
         const xy = mix(xyz, xyZ, smoothPartial.z);
@@ -187,15 +187,15 @@ describe('complex use-gpu function AST snapshots', () => {
         const u = quinticInterpolation(f);
         const du = quinticDerivative(f);
         const ga = getJunctionGradientSlot.$(i);
-        const gb = getJunctionGradientSlot.$(i + (d.vec2i(1, 0)));
-        const gc = getJunctionGradientSlot.$(i + (d.vec2i(0, 1)));
-        const gd = getJunctionGradientSlot.$(i + (d.vec2i(1, 1)));
-        const va = dot(ga, f - (d.vec2f(0, 0)));
-        const vb = dot(gb, f - (d.vec2f(1, 0)));
-        const vc = dot(gc, f - (d.vec2f(0, 1)));
-        const vd = dot(gd, f - (d.vec2f(1, 1)));
+        const gb = getJunctionGradientSlot.$(i + d.vec2i(1, 0));
+        const gc = getJunctionGradientSlot.$(i + d.vec2i(0, 1));
+        const gd = getJunctionGradientSlot.$(i + d.vec2i(1, 1));
+        const va = dot(ga, f - d.vec2f(0, 0));
+        const vb = dot(gb, f - d.vec2f(1, 0));
+        const vc = dot(gc, f - d.vec2f(0, 1));
+        const vd = dot(gd, f - d.vec2f(1, 1));
         const noise = ((va + (u.x * (vb - va))) + (u.y * (vc - va))) + ((u.x * u.y) * (((va - vb) - vc) + vd));
-        const grad = (((ga + (u.x * (gb - ga))) + (u.y * (gc - ga))) + ((u.x * u.y) * (((ga - gb) - gc) + gd))) + (du * (((u.yx * (((va - vb) - vc) + vd)) + (d.vec2f(vb, vc))) - va));
+        const grad = (((ga + (u.x * (gb - ga))) + (u.y * (gc - ga))) + ((u.x * u.y) * (((ga - gb) - gc) + gd))) + (du * (((u.yx * (((va - vb) - vc) + vd)) + d.vec2f(vb, vc)) - va));
         return d.vec3f(noise, grad);
       }"
     `);
@@ -279,10 +279,10 @@ describe('complex use-gpu function AST snapshots', () => {
         }
         const velocity = ((params.$.separationStrength * separation) + (params.$.alignmentStrength * alignment)) + (params.$.cohesionStrength * cohesion);
         self.velocity += velocity;
-        self.velocity = (std.clamp(std.length(self.velocity), 0, 0.01)) * (std.normalize(self.velocity));
+        self.velocity = std.clamp(std.length(self.velocity), 0, 0.01) * std.normalize(self.velocity);
         self.position += self.velocity;
         const domain = (1 + triangleSize) * 2;
-        self.position = ((std.fract((self.position / domain) + 0.5)) - 0.5) * domain;
+        self.position = (std.fract((self.position / domain) + 0.5) - 0.5) * domain;
         layout.$.nextTrianglePos[index] = TriangleData(self);
       }"
     `);
@@ -376,7 +376,7 @@ describe('complex use-gpu function AST snapshots', () => {
         let wallRepulsion = d.vec3f();
         let rayRepulsion = d.vec3f();
         for (let i = 0; i < p.fishAmount; i += 1) {
-          if ((d.u32(i)) === fishIndex) {
+          if (d.u32(i) === fishIndex) {
             continue;
           }
           const other = layout.$.currentFishData[i];
@@ -402,7 +402,7 @@ describe('complex use-gpu function AST snapshots', () => {
         for (const i of tgpu.unroll(std.range(3))) {
           const repulsion = d.vec3f();
           repulsion[i] = 1;
-          const axisAquariumSize = (p.aquariumSize[i]) / 2;
+          const axisAquariumSize = p.aquariumSize[i] / 2;
           const axisPosition = fishData.position[i];
           const distance = p.fishWallRepulsionDistance;
           if (axisPosition > (axisAquariumSize - distance)) {
@@ -417,16 +417,16 @@ describe('complex use-gpu function AST snapshots', () => {
         const proj = projectPointOnLine(fishData.position, layout.$.mouseRay);
         const diff = fishData.position - proj;
         const limit = p.fishMouseRayRepulsionDistance;
-        const str = (std.pow(2, std.clamp(limit - (std.length(diff)), 0, limit))) - 1;
-        rayRepulsion = (std.normalize(diff)) * str;
+        const str = std.pow(2, std.clamp(limit - std.length(diff), 0, limit)) - 1;
+        rayRepulsion = std.normalize(diff) * str;
         let direction = d.vec3f(fishData.direction);
         direction += separation * layout.$.fishBehavior.separationStr;
         direction += alignment * layout.$.fishBehavior.alignmentStr;
         direction += cohesion * layout.$.fishBehavior.cohesionStr;
         direction += wallRepulsion * p.fishWallRepulsionStrength;
         direction += rayRepulsion * p.fishMouseRayRepulsionStrength;
-        direction = (std.normalize(direction)) * (std.clamp(std.length(fishData.direction), 0, 0.01));
-        const translation = direction * ((std.min(999, layout.$.timePassed)) / 8);
+        direction = std.normalize(direction) * std.clamp(std.length(fishData.direction), 0, 0.01);
+        const translation = direction * (std.min(999, layout.$.timePassed) / 8);
         const nextFishData = layout.$.nextFishData[fishIndex];
         nextFishData.position = fishData.position + translation;
         nextFishData.direction = d.vec3f(direction);
@@ -474,12 +474,12 @@ describe('complex use-gpu function AST snapshots', () => {
         const currentId = input.gid.x;
         const current = CelestialBody(computeLayout.$.inState[currentId]);
         if (current.destroyed === 0) {
-          for (let otherId = d.u32(0); otherId < (d.u32(computeLayout.$.celestialBodiesCount)); otherId++) {
+          for (let otherId = d.u32(0); otherId < d.u32(computeLayout.$.celestialBodiesCount); otherId++) {
             const other = computeLayout.$.inState[otherId];
             if ((otherId === currentId) || (other.destroyed === 1)) {
               continue;
             }
-            const dist = std.max((radiusOf(current)) + (radiusOf(other)), std.distance(current.position, other.position));
+            const dist = std.max(radiusOf(current) + radiusOf(other), std.distance(current.position, other.position));
             const gravityForce = ((current.mass * other.mass) / dist) / dist;
             const direction = std.normalize(other.position - current.position);
             current.velocity += (direction * (gravityForce / current.mass)) * dt;
@@ -551,22 +551,22 @@ describe('complex use-gpu function AST snapshots', () => {
         const currentId = input.gid.x;
         const current = CelestialBody(computeLayout.$.inState[currentId]);
         if (current.destroyed === 0) {
-          for (let otherId = d.u32(0); otherId < (d.u32(computeLayout.$.celestialBodiesCount)); otherId++) {
+          for (let otherId = d.u32(0); otherId < d.u32(computeLayout.$.celestialBodiesCount); otherId++) {
             const other = computeLayout.$.inState[otherId];
-            if (((((otherId === currentId) || (other.destroyed === 1)) || (current.collisionBehavior === none)) || (other.collisionBehavior === none)) || ((std.distance(current.position, other.position)) >= ((radiusOf(current)) + (radiusOf(other))))) {
+            if (((((otherId === currentId) || (other.destroyed === 1)) || (current.collisionBehavior === none)) || (other.collisionBehavior === none)) || (std.distance(current.position, other.position) >= (radiusOf(current) + radiusOf(other)))) {
               continue;
             }
             if ((current.collisionBehavior === bounce) && (other.collisionBehavior === bounce)) {
               if (isSmaller(currentId, otherId)) {
                 const dir = std.normalize(current.position - other.position);
-                current.position = other.position + (dir * ((radiusOf(current)) + (radiusOf(other))));
+                current.position = other.position + (dir * (radiusOf(current) + radiusOf(other)));
               }
               const posDiff = current.position - other.position;
               const velDiff = current.velocity - other.velocity;
-              const posDiffFactor = (((2 * other.mass) / (current.mass + other.mass)) * (std.dot(velDiff, posDiff))) / (std.dot(posDiff, posDiff));
+              const posDiffFactor = (((2 * other.mass) / (current.mass + other.mass)) * std.dot(velDiff, posDiff)) / std.dot(posDiff, posDiff);
               current.velocity = (current.velocity - (posDiff * posDiffFactor)) * 0.99;
             } else {
-              const isCurrentAbsorbed = (current.collisionBehavior === bounce) || ((current.collisionBehavior === merge) && (isSmaller(currentId, otherId)));
+              const isCurrentAbsorbed = (current.collisionBehavior === bounce) || ((current.collisionBehavior === merge) && isSmaller(currentId, otherId));
               if (isCurrentAbsorbed) {
                 current.destroyed = 1;
               } else {
@@ -671,7 +671,7 @@ describe('complex use-gpu function AST snapshots', () => {
           angle += (random - 0.5) * 0.1;
         }
         agentsData.$[gid.x] = Agent({ position: newPos, angle: angle });
-        const oldState = (std.textureLoad(computeLayout.$.oldState, d.vec2u(newPos))).rgb;
+        const oldState = std.textureLoad(computeLayout.$.oldState, d.vec2u(newPos)).rgb;
         const newState = oldState + 1;
         std.textureStore(computeLayout.$.newState, d.vec2u(newPos), d.vec4f(newState, 1));
       }"
@@ -822,16 +822,16 @@ describe('complex use-gpu function AST snapshots', () => {
         }
         const reflectDir = std.reflect(v, n);
         const pScaled = p * 50;
-        const roughOffset = ((d.vec3f(perlin3d.sample(pScaled), perlin3d.sample(pScaled + 100), perlin3d.sample(pScaled + 200))) * material.roughness) * 0.3;
+        const roughOffset = (d.vec3f(perlin3d.sample(pScaled), perlin3d.sample(pScaled + 100), perlin3d.sample(pScaled + 200)) * material.roughness) * 0.3;
         const blurredReflectDir = std.normalize(reflectDir + roughOffset);
         const envColor = std.textureSampleLevel(envMapLayout.$.envMap, envMapLayout.$.envSampler, blurredReflectDir, material.roughness * 4);
         const ndotv = std.max(std.dot(n, v), 0);
         const fresnel = fresnelSchlick(ndotv, f0);
         const reflectionTint = std.mix(d.vec3f(1), material.albedo, material.metallic);
         const reflectionStrength = 1 - (material.roughness * 0.85);
-        const envContribution = ((envColor.rgb.mul(fresnel)).mul(reflectionTint)).mul(reflectionStrength);
+        const envContribution = envColor.rgb.mul(fresnel).mul(reflectionTint).mul(reflectionStrength);
         const ambient = material.albedo.mul(material.ao * 0.05);
-        const color = (ambient.add(lo)).add(envContribution);
+        const color = ambient.add(lo).add(envContribution);
         return std.pow(color.div(color.add(1)), d.vec3f(1 / 2.2));
       }"
     `);
@@ -888,12 +888,12 @@ describe('complex use-gpu function AST snapshots', () => {
     };
     expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
       "{
-        const stripe = std.abs((std.fract((local.x * 18) + (local.y * 6))) - 0.5);
+        const stripe = std.abs(std.fract((local.x * 18) + (local.y * 6)) - 0.5);
         const stripeMask = std.clamp(0.55 - (stripe * 1.6), 0, 1);
-        const speck = (std.abs(std.sin((local.x + (local.y * 3)) * 45))) * 0.04;
+        const speck = std.abs(std.sin((local.x + (local.y * 3)) * 45)) * 0.04;
         const texture = (stripeMask * 0.08) + speck;
         const edgeShade = std.clamp(0.35 - (dist * 12), 0, 0.35);
-        const baseColor = WALL_COLOR + ((d.vec3f(1, 0.8, 0.6)) * (edgeShade + texture));
+        const baseColor = WALL_COLOR + (d.vec3f(1, 0.8, 0.6) * (edgeShade + texture));
         return std.mix(baseColor * 0.35, baseColor, daylight);
       }"
     `);

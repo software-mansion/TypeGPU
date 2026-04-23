@@ -81,8 +81,10 @@ describe('ast to JS transformation', () => {
     });
 
     it('handles unary symbol operators', () => {
-      const node: tinyest.UnaryExpression = [N.unaryExpr, '-', 'x'];
-      expect(stringifyExpression(node)).toBe('-x');
+      const nodeA: tinyest.UnaryExpression = [N.unaryExpr, '-', 'x'];
+      expect(stringifyExpression(nodeA)).toBe('-x');
+      const nodeB: tinyest.UnaryExpression = [N.unaryExpr, '-', [N.binaryExpr, 'x', '+', 'y']];
+      expect(stringifyExpression(nodeB)).toBe('-(x + y)');
     });
 
     it('handles unary word operators', () => {
@@ -123,8 +125,14 @@ describe('ast to JS transformation', () => {
     });
 
     it('handles index access', () => {
-      const node: tinyest.IndexAccess = [N.indexAccess, 'arr', [N.numericLiteral, '0']];
-      expect(stringifyExpression(node)).toBe('arr[0]');
+      const nodeA: tinyest.IndexAccess = [N.indexAccess, 'arr', [N.numericLiteral, '0']];
+      expect(stringifyExpression(nodeA)).toBe('arr[0]');
+      const nodeB: tinyest.IndexAccess = [
+        N.indexAccess,
+        [N.arrayExpr, ['a', 'b', 'c']],
+        [N.numericLiteral, '0'],
+      ];
+      expect(stringifyExpression(nodeB)).toBe('[a, b, c][0]');
     });
 
     it('handles post-update', () => {

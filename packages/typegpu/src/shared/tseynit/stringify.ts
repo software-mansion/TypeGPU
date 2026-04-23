@@ -2,45 +2,6 @@ import * as tinyest from 'tinyest';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
-const STATEMENT_NODES: number[] = [
-  NODE.block,
-  NODE.return,
-  NODE.if,
-  NODE.let,
-  NODE.const,
-  NODE.for,
-  NODE.while,
-  NODE.continue,
-  NODE.break,
-  NODE.forOf,
-];
-
-function assertExhaustive(value: never): never {
-  throw new Error(`'${JSON.stringify(value)}' was not handled by the stringify function.`);
-}
-
-function isExpression(node: tinyest.AnyNode): node is tinyest.Expression {
-  if (typeof node === 'string' || typeof node === 'boolean') {
-    return true;
-  }
-  return !STATEMENT_NODES.includes(node[0]);
-}
-
-const SIMPLE_NODES: number[] = [NODE.memberAccess, NODE.stringLiteral, NODE.numericLiteral];
-/**
- * Stringifies expression, and wraps it in parentheses if they cannot be trivially omitted
- */
-function wrapIfComplex(node: tinyest.Expression, ident: string): string {
-  const s = stringifyExpression(node, ident);
-  if (typeof node === 'string' || typeof node === 'boolean') {
-    return s;
-  }
-  if (SIMPLE_NODES.includes(node[0])) {
-    return s;
-  }
-  return `(${s})`;
-}
-
 export function stringifyStatement(node: tinyest.Statement, ident = ''): string {
   if (isExpression(node)) {
     return `${ident}${stringifyExpression(node, ident)};`;
@@ -150,7 +111,7 @@ export function stringifyExpression(node: tinyest.Expression, ident = ''): strin
   if (node[0] === NODE.unaryExpr) {
     // void, instanceof and delete require a space
     const sep = node[1].length > 1 ? ' ' : '';
-    return `${node[1]}${sep}${stringifyExpression(node[2], ident)}`;
+    return `${node[1]}${sep}${wrapIfComplex(node[2], ident)}`;
   }
 
   if (node[0] === NODE.call) {
@@ -168,11 +129,11 @@ export function stringifyExpression(node: tinyest.Expression, ident = ''): strin
   }
 
   if (node[0] === NODE.preUpdate) {
-    return `${node[1]}${stringifyExpression(node[2], ident)}`;
+    return `${node[1]}${wrapIfComplex(node[2], ident)}`;
   }
 
   if (node[0] === NODE.postUpdate) {
-    return `${stringifyExpression(node[2], ident)}${node[1]}`;
+    return `${wrapIfComplex(node[2], ident)}${node[1]}`;
   }
 
   if (node[0] === NODE.objectExpr) {
@@ -183,8 +144,54 @@ export function stringifyExpression(node: tinyest.Expression, ident = ''): strin
   }
 
   if (node[0] === NODE.conditionalExpr) {
-    return `${wrapIfComplex(node[1], ident)} ? ${stringifyExpression(node[2], ident)} : ${stringifyExpression(node[3], ident)}`;
+    return `${wrapIfComplex(node[1], ident)} ? ${wrapIfComplex(node[2], ident)} : ${wrapIfComplex(node[3], ident)}`;
   }
 
   assertExhaustive(node);
+}
+
+const STATEMENT_NODES: number[] = [
+  NODE.block,
+  NODE.return,
+  NODE.if,
+  NODE.let,
+  NODE.const,
+  NODE.for,
+  NODE.while,
+  NODE.continue,
+  NODE.break,
+  NODE.forOf,
+];
+
+function assertExhaustive(value: never): never {
+  throw new Error(`'${JSON.stringify(value)}' was not handled by the stringify function.`);
+}
+
+function isExpression(node: tinyest.AnyNode): node is tinyest.Expression {
+  if (typeof node === 'string' || typeof node === 'boolean') {
+    return true;
+  }
+  return !STATEMENT_NODES.includes(node[0]);
+}
+
+const SIMPLE_NODES: number[] = [
+  NODE.memberAccess, // highest precedence
+  NODE.indexAccess, // highest precedence
+  NODE.call, // highest precedence
+  NODE.arrayExpr, // [] make thinks not ambiguous
+  NODE.stringLiteral,
+  NODE.numericLiteral,
+];
+/**
+ * Stringifies expression, and wraps it in parentheses if they cannot be trivially omitted
+ */
+function wrapIfComplex(node: tinyest.Expression, ident: string): string {
+  const s = stringifyExpression(node, ident);
+  if (typeof node === 'string' || typeof node === 'boolean') {
+    return s;
+  }
+  if (SIMPLE_NODES.includes(node[0])) {
+    return s;
+  }
+  return `(${s})`;
 }
