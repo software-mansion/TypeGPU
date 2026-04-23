@@ -121,6 +121,9 @@ export function stringifyExpression(node: tinyest.Expression, ident = ''): strin
   }
 
   if (node[0] === NODE.memberAccess) {
+    if (Array.isArray(node[1]) && node[1][0] === NODE.numericLiteral) {
+      return `(${stringifyExpression(node[1])}).${node[2]}`;
+    }
     return `${wrapIfComplex(node[1], ident)}.${node[2]}`;
   }
 

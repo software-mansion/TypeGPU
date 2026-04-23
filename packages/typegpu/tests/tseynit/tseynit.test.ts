@@ -120,8 +120,10 @@ describe('ast to JS transformation', () => {
     });
 
     it('handles member access', () => {
-      const node: tinyest.MemberAccess = [N.memberAccess, [N.memberAccess, 'a', 'b'], 'c'];
-      expect(stringifyExpression(node)).toBe('a.b.c');
+      const nodeA: tinyest.MemberAccess = [N.memberAccess, [N.memberAccess, 'a', 'b'], 'c'];
+      expect(stringifyExpression(nodeA)).toBe('a.b.c');
+      const nodeB: tinyest.MemberAccess = [N.memberAccess, [N.numericLiteral, '1'], 'toString'];
+      expect(stringifyExpression(nodeB)).toBe('(1).toString');
     });
 
     it('handles index access', () => {
