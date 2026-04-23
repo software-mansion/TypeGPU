@@ -2215,6 +2215,41 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('throws a readable error when assigning an argument reference', () => {
+    const testFn = tgpu.fn([d.vec3u])((v) => {
+      let u = d.vec3u();
+      u = v;
+    });
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:testFn: 'u = v' is invalid, because argument references cannot be assigned.
+      -----
+      Try 'u = vec3u(v)' to copy the value instead.
+      -----]
+    `);
+  });
+
+  it('throws a readable error when assigning a reference', () => {
+    const testFn = () => {
+      'use gpu';
+      let u = d.vec3u();
+      const v = d.vec3u();
+      u = v;
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): 'u = v' is invalid, because references cannot be assigned.
+      -----
+      Try 'u = vec3u(v)' to copy the value instead.
+      -----]
+    `);
+  });
+
   it('handles unary operator `!` on complex comptime-known operand', () => {
     const slot = tgpu.slot<{ a?: number }>({});
 

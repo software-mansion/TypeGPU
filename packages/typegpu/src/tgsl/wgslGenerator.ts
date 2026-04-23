@@ -462,18 +462,18 @@ ${this.ctx.pre}}`;
           !wgsl.isNaturallyEphemeral(rhsExpr.dataType)
         ) {
           throw new WgslTypeError(
-            `'${lhsStr} = ${rhsStr}' is invalid, because argument references cannot be assigned.\n-----\nTry '${lhsStr} = ${
+            `'${stringifyExpression(expression)}' is invalid, because argument references cannot be assigned.\n-----\nTry '${stringifyExpression(lhs)} = ${
               this.ctx.resolve(rhsExpr.dataType).value
-            }(${rhsStr})' to copy the value instead.\n-----`,
+            }(${stringifyExpression(rhs)})' to copy the value instead.\n-----`,
           );
         }
 
         // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
         if (op === '=' && !isEphemeralSnippet(rhsExpr)) {
           throw new WgslTypeError(
-            `'${lhsStr} = ${rhsStr}' is invalid, because references cannot be assigned.\n-----\nTry '${lhsStr} = ${
+            `'${stringifyExpression(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyExpression(lhs)} = ${
               this.ctx.resolve(rhsExpr.dataType).value
-            }(${rhsStr})' to copy the value instead.\n-----`,
+            }(${stringifyExpression(rhs)})' to copy the value instead.\n-----`,
           );
         }
       }
