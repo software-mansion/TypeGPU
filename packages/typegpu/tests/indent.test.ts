@@ -333,7 +333,7 @@ describe('indents', () => {
     })((input) => {
       'use gpu';
       const uniBoid = layout.$.boids;
-      for (let i = d.u32(); i < std.floor(std.sin(Math.PI / 2)); i++) {
+      for (let i = d.u32(); i < d.u32(std.sin(Math.PI / 2)); i++) {
         const sampled = std.textureSample(layout.$.sampled, layout.$.sampler, d.vec2f(0.5, 0.5), i);
         const someVal = std.textureLoad(layout.$.smoothRender, d.vec2i(), 0);
         if (someVal.x + sampled.x > 0.5) {

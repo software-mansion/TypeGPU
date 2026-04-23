@@ -260,6 +260,12 @@ describe('convertToCommonType', () => {
     expect(result).toBeUndefined();
   });
 
+  it('chooses abstractFloat over i32', () => {
+    const result = convertToCommonType(ctx, [snippetI32, snippetAbsFloat]);
+    expect(result).toBeDefined();
+    expect(result?.[0]?.dataType.type).toBe('f32');
+  });
+
   it('respects restrictTo types', () => {
     // [abstractInt, i32] -> common type i32
     // Restrict to f32: requires cast for i32
