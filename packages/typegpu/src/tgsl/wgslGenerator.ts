@@ -51,6 +51,7 @@ import { mathToStd } from './math.ts';
 import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
+import { stringifyExpression, stringifyStatement } from '../shared/tseynit/stringify.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -381,7 +382,7 @@ ${this.ctx.pre}}`;
 
       if (rhsExpr.value instanceof RefOperator) {
         throw new WgslTypeError(
-          stitch`Cannot assign a ref to an existing variable '${lhsExpr}', define a new variable instead.`,
+          stitch`Cannot assign a ref to an existing variable '${stringifyExpression(lhs)}', define a new variable instead.`,
         );
       }
 
@@ -444,13 +445,13 @@ ${this.ctx.pre}}`;
           convLhs.origin === 'runtime-tgpu-const-ref'
         ) {
           throw new WgslTypeError(
-            `'${lhsStr} = ${rhsStr}' is invalid, because ${lhsStr} is a constant. This error may also occur when assigning to a value defined outside of a TypeGPU function's scope.`,
+            `'${stringifyExpression(expression)}' is invalid, because the left side is a constant.`,
           );
         }
 
         if (lhsExpr.origin === 'argument') {
           throw new WgslTypeError(
-            `'${lhsStr} ${op} ${rhsStr}' is invalid, because non-pointer arguments cannot be mutated.`,
+            `'${stringifyExpression(expression)}' is invalid, because non-pointer arguments cannot be mutated.`,
           );
         }
 

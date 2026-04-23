@@ -20,7 +20,7 @@ describe('function argument origin tracking', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - fn*:foo(i32): 'a += 1i' is invalid, because non-pointer arguments cannot be mutated.]
+      - fn*:foo(i32): 'a += 1' is invalid, because non-pointer arguments cannot be mutated.]
     `);
   });
 
@@ -43,7 +43,7 @@ describe('function argument origin tracking', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - fn*:foo(struct:Foo): '_arg_0.a += 1f' is invalid, because non-pointer arguments cannot be mutated.]
+      - fn*:foo(struct:Foo): 'a += 1' is invalid, because non-pointer arguments cannot be mutated.]
     `);
   });
 
@@ -64,7 +64,7 @@ describe('function argument origin tracking', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - fn*:foo(vec3f): 'a.x += 1f' is invalid, because non-pointer arguments cannot be mutated.]
+      - fn*:foo(vec3f): 'a.x += 1' is invalid, because non-pointer arguments cannot be mutated.]
     `);
   });
 
@@ -85,7 +85,7 @@ describe('function argument origin tracking', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - fn*:foo(vec3f): 'b.x += 1f' is invalid, because non-pointer arguments cannot be mutated.]
+      - fn*:foo(vec3f): 'b.x += 1' is invalid, because non-pointer arguments cannot be mutated.]
     `);
   });
 

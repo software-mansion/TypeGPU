@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as tinyest from 'tinyest';
 import { getMetaData } from '../../src/shared/meta.ts';
 import { stringifyExpression, stringifyStatement } from '../../src/shared/tseynit/stringify.ts';
+import tgpu, { d } from '../../src/index';
 
 function getBodyAst(fn: () => void) {
   const ast = getMetaData(fn)?.ast?.body;
@@ -309,7 +310,7 @@ describe('ast to JS transformation', () => {
       `);
     });
 
-    it('does not retain TS typess', () => {
+    it('does not retain TS types', () => {
       const fn = () => {
         'use gpu';
         let a: number = 0;
@@ -319,6 +320,22 @@ describe('ast to JS transformation', () => {
         "{
           let a = 0;
           const b = 1;
+        }"
+      `);
+    });
+
+    it('handles undefined', () => {
+      const slot = tgpu.slot(d.u32);
+      const fn = () => {
+        'use gpu';
+        if (slot.$ !== undefined) {
+        }
+      };
+      expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
+        "{
+          if (slot.$ !== undefined) {
+
+          }
         }"
       `);
     });

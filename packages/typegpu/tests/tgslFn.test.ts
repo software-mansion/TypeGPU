@@ -1032,7 +1032,7 @@ describe('tgsl fn when using plugin', () => {
     expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:f: '0 = 2' is invalid, because 0 is a constant. This error may also occur when assigning to a value defined outside of a TypeGPU function's scope.]
+      - fn:f: 'a = 2' is invalid, because the left side is a constant.]
     `);
   });
 });

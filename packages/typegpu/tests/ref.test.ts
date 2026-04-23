@@ -51,7 +51,7 @@ describe('d.ref', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:hello
-      - fn*:hello(): Cannot assign a ref to an existing variable '(&foo)', define a new variable instead.]
+      - fn*:hello(): Cannot assign a ref to an existing variable 'foo', define a new variable instead.]
     `);
   });
 
