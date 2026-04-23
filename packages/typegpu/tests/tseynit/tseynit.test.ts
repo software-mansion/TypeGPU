@@ -308,5 +308,19 @@ describe('ast to JS transformation', () => {
         }"
       `);
     });
+
+    it('does not retain TS typess', () => {
+      const fn = () => {
+        'use gpu';
+        let a: number = 0;
+        const b = 1 satisfies unknown;
+      };
+      expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
+        "{
+          let a = 0;
+          const b = 1;
+        }"
+      `);
+    });
   });
 });
