@@ -153,28 +153,34 @@ export function stringifyExpression(node: tinyest.Expression, ident = ''): strin
   assertExhaustive(node);
 }
 
-const STATEMENT_NODES: number[] = [
-  NODE.block,
-  NODE.return,
-  NODE.if,
-  NODE.let,
-  NODE.const,
-  NODE.for,
-  NODE.while,
-  NODE.continue,
-  NODE.break,
-  NODE.forOf,
-];
-
 function assertExhaustive(value: never): never {
   throw new Error(`'${JSON.stringify(value)}' was not handled by the stringify function.`);
 }
 
 function isExpression(node: tinyest.AnyNode): node is tinyest.Expression {
-  if (typeof node === 'string' || typeof node === 'boolean') {
+  if (
+    typeof node === 'string' ||
+    typeof node === 'boolean' ||
+    node[0] === NODE.numericLiteral ||
+    node[0] === NODE.stringLiteral ||
+    node[0] === NODE.arrayExpr ||
+    node[0] === NODE.binaryExpr ||
+    node[0] === NODE.assignmentExpr ||
+    node[0] === NODE.logicalExpr ||
+    node[0] === NODE.unaryExpr ||
+    node[0] === NODE.call ||
+    node[0] === NODE.memberAccess ||
+    node[0] === NODE.indexAccess ||
+    node[0] === NODE.preUpdate ||
+    node[0] === NODE.postUpdate ||
+    node[0] === NODE.objectExpr ||
+    node[0] === NODE.conditionalExpr
+  ) {
+    node satisfies tinyest.Expression;
     return true;
   }
-  return !STATEMENT_NODES.includes(node[0]);
+  node satisfies Exclude<tinyest.AnyNode, tinyest.Expression>;
+  return false;
 }
 
 const SIMPLE_NODES: number[] = [
