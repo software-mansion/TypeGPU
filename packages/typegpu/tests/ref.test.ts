@@ -242,17 +242,14 @@ describe('d.ref', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:foo
-      - fn*:foo(): 'return value;' is invalid, cannot return references.
-      -----
-      Try 'return i32(value);' instead.
-      -----]
+      - fn*:foo(): Cannot return 'value' because it is a d.ref]
     `);
 
     expect(() => tgpu.resolve([bar])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:bar
-      - fn*:bar(): Cannot convert a Symbol value to a string]
+      - fn*:bar(): Cannot return 'd.ref(0)' because it is a d.ref]
     `);
   });
 

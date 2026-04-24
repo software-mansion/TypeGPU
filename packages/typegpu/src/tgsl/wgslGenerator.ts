@@ -913,6 +913,12 @@ ${this.ctx.pre}}`;
         ? this._typedExpression(returnNode, expectedReturnType)
         : this._expression(returnNode);
 
+      if (returnSnippet.value instanceof RefOperator) {
+        throw new WgslTypeError(
+          `Cannot return '${stringifyExpression(returnNode)}' because it is a d.ref`,
+        );
+      }
+
       // Arguments cannot be returned from functions without copying. A simple example why is:
       // const identity = (x) => {
       //   'use gpu';
@@ -937,10 +943,9 @@ ${this.ctx.pre}}`;
       }
 
       if (
-        (!expectedReturnType &&
-          !isEphemeralSnippet(returnSnippet) &&
-          returnSnippet.origin !== 'this-function') ||
-        returnSnippet.value instanceof RefOperator
+        !expectedReturnType &&
+        !isEphemeralSnippet(returnSnippet) &&
+        returnSnippet.origin !== 'this-function'
       ) {
         const str = stringifyExpression(returnNode);
         const typeStr = this.ctx.resolve(unptr(returnSnippet.dataType)).value;
