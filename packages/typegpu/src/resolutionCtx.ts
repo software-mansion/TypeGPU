@@ -50,7 +50,7 @@ import type {
   TgpuShaderStage,
   Wgsl,
 } from './types.ts';
-import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
+import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
 import type { WgslExtension } from './wgslExtensions.ts';
 import { getName, hasTinyestMetadata, setName } from './shared/meta.ts';
 import { FuncParameterType } from 'tinyest';
@@ -59,7 +59,6 @@ import { createIoSchema } from './core/function/ioSchema.ts';
 import type { IOData } from './core/function/fnTypes.ts';
 import { AutoStruct } from './data/autoStruct.ts';
 import { EntryInputRouter } from './core/function/entryInputRouter.ts';
-import type { FunctionArgument } from './tgsl/shaderGenerator_members.ts';
 import { validateIdentifier, sanitizePrimer } from './nameUtils.ts';
 
 /**
@@ -1054,8 +1053,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     throw new WgslTypeError(
-      `Value ${safeStringify(item)} is not resolvable${
-        schema ? ` to type ${safeStringify(schema)}` : ''
+      `Value ${safeStringify(item)} is not resolvable${schema ? ` to type ${safeStringify(schema)}` : ''
       }`,
     );
   }

@@ -35,7 +35,12 @@ import {
 } from './generationHelpers.ts';
 import { accessIndex } from './accessIndex.ts';
 import { accessProp } from './accessProp.ts';
-import type { ShaderGenerator } from './shaderGenerator.ts';
+import type {
+  ShaderGenerator,
+  ConstantDefinitionOptions,
+  FunctionDefinitionOptions,
+  VariableDefinitionOptions,
+} from './shaderGenerator.ts';
 import { resolveData } from '../core/resolve/resolveData.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { _ref, RefOperator } from '../data/ref.ts';
@@ -49,11 +54,6 @@ import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
 import { stringifyNode } from '../shared/tseynit.ts';
-import type {
-  ConstantDefinitionOptions,
-  FunctionDefinitionOptions,
-  VariableDefinitionOptions,
-} from './shaderGenerator_members.ts';
 import { getAttributesString } from '../data/attributes.ts';
 import { validSelectBranchTypes } from '../std/boolean.ts';
 import { isInfixDispatch } from './infixDispatch.ts';
@@ -433,8 +433,7 @@ ${this.ctx.pre}}`;
         // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
         if (op === '=' && isAlias(rhsExpr) && !wgsl.isNaturallyEphemeral(rhsExpr.dataType)) {
           throw new WgslTypeError(
-            `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
-              this.ctx.resolve(rhsExpr.dataType).value
+            `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${this.ctx.resolve(rhsExpr.dataType).value
             }(${stringifyNode(rhs)})' to copy the value instead.\n-----`,
           );
         }
@@ -708,8 +707,7 @@ ${this.ctx.pre}}`;
       }
 
       throw new Error(
-        `Function '${
-          getName(callee.value) ?? String(callee.value)
+        `Function '${getName(callee.value) ?? String(callee.value)
         }' is not marked with the 'use gpu' directive and cannot be used in a shader`,
       );
     }
@@ -1373,8 +1371,8 @@ ${this.ctx.pre}else ${alternate}`;
             : value instanceof ArrayExpression
               ? value.elements
               : Array.from({ length }, (_, i) =>
-                  forOfUtils.getElementSnippet(iterableSnippet, snip(i, u32, 'constant')),
-                );
+                forOfUtils.getElementSnippet(iterableSnippet, snip(i, u32, 'constant')),
+              );
 
           const firstElement = elements[0] as Snippet;
           if (!isAlias(firstElement) && !wgsl.isNaturallyEphemeral(firstElement.dataType)) {
