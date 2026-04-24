@@ -20,6 +20,7 @@
     "@babel/standalone": "^7.28.6",
     "@dimforge/rapier2d-compat": "^0.19.3",
     "@loaders.gl/core": "^4.3.4",
+    "@loaders.gl/gltf": "^4.3.4",
     "@loaders.gl/obj": "^4.3.4",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-select": "^2.2.6",

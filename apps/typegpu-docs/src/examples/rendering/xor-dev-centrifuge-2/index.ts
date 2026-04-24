@@ -108,7 +108,7 @@ let isRunning = true;
 function draw(timestamp: number) {
   if (!isRunning) return;
 
-  paramsUniform.writePartial({
+  paramsUniform.patch({
     aspectRatio: canvas.clientWidth / canvas.clientHeight,
     time: (timestamp * 0.001) % 1000,
   });
@@ -129,7 +129,7 @@ export const controls = defineControls({
     max: 200,
     step: 1,
     onSliderChange(v: number) {
-      paramsUniform.writePartial({ tunnelDepth: v });
+      paramsUniform.patch({ tunnelDepth: v });
     },
   },
   'big strips': {
@@ -138,7 +138,7 @@ export const controls = defineControls({
     max: 60,
     step: 0.01,
     onSliderChange(v: number) {
-      paramsUniform.writePartial({ bigStrips: v });
+      paramsUniform.patch({ bigStrips: v });
     },
   },
   'small strips': {
@@ -147,7 +147,7 @@ export const controls = defineControls({
     max: 10,
     step: 0.01,
     onSliderChange(v: number) {
-      paramsUniform.writePartial({ smallStrips: v });
+      paramsUniform.patch({ smallStrips: v });
     },
   },
   'dolly zoom': {
@@ -156,7 +156,7 @@ export const controls = defineControls({
     max: 1,
     step: 0.01,
     onSliderChange(v: number) {
-      paramsUniform.writePartial({ dollyZoom: v });
+      paramsUniform.patch({ dollyZoom: v });
     },
   },
   'camera pos': {
@@ -165,13 +165,13 @@ export const controls = defineControls({
     initial: d.vec2f(0, -7),
     step: d.vec2f(0.01, 0.01),
     onVectorSliderChange(v) {
-      paramsUniform.writePartial({ cameraPos: v });
+      paramsUniform.patch({ cameraPos: v });
     },
   },
   color: {
     initial: d.vec3f(0.2, 0, 0.3),
     onColorChange(value) {
-      paramsUniform.writePartial({ color: value });
+      paramsUniform.patch({ color: value });
     },
   },
 });

@@ -284,7 +284,7 @@ export const controls = defineControls({
     onSelectChange: async (selected) => {
       if (selected === 'None') {
         currentLUTTexture = defaultLUTTexture;
-        lut.writePartial({ enabled: 0 });
+        lut.patch({ enabled: 0 });
       } else {
         await updateLUT(LUTFiles[selected as keyof typeof LUTFiles]);
       }
@@ -297,7 +297,7 @@ export const controls = defineControls({
     max: 2.0,
     step: 0.1,
     onSliderChange(value) {
-      adjustments.writePartial({ exposure: value });
+      adjustments.patch({ exposure: value });
       render();
     },
   },
@@ -307,7 +307,7 @@ export const controls = defineControls({
     max: 2.0,
     step: 0.1,
     onSliderChange(value) {
-      adjustments.writePartial({ contrast: value });
+      adjustments.patch({ contrast: value });
       render();
     },
   },
@@ -317,7 +317,7 @@ export const controls = defineControls({
     max: 2.0,
     step: 0.1,
     onSliderChange(value) {
-      adjustments.writePartial({ highlights: value });
+      adjustments.patch({ highlights: value });
       render();
     },
   },
@@ -327,7 +327,7 @@ export const controls = defineControls({
     max: 1.9,
     step: 0.1,
     onSliderChange(value) {
-      adjustments.writePartial({ shadows: value });
+      adjustments.patch({ shadows: value });
       render();
     },
   },
@@ -337,7 +337,7 @@ export const controls = defineControls({
     max: 2.0,
     step: 0.1,
     onSliderChange(value) {
-      adjustments.writePartial({ saturation: value });
+      adjustments.patch({ saturation: value });
       render();
     },
   },

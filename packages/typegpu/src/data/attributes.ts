@@ -1,6 +1,8 @@
 import type {
   Infer,
   InferGPU,
+  InferInput,
+  InferPatch,
   InferPartial,
   IsValidStorageSchema,
   IsValidUniformSchema,
@@ -10,10 +12,12 @@ import type {
 import { $internal } from '../shared/symbols.ts';
 import {
   $gpuRepr,
+  $inRepr,
   $invalidSchemaReason,
   $memIdent,
   $repr,
   $reprPartial,
+  $reprPatch,
   $validStorageSchema,
   $validUniformSchema,
   $validVertexSchema,
@@ -352,6 +356,7 @@ class BaseDecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]> {
   declare readonly [$repr]: Infer<TInner>;
   declare readonly [$gpuRepr]: InferGPU<TInner>;
   declare readonly [$reprPartial]: InferPartial<TInner>;
+  declare readonly [$reprPatch]: InferPatch<TInner>;
   // ---
 
   constructor(inner: TInner, attribs: TAttribs) {
@@ -405,6 +410,7 @@ class DecoratedImpl<TInner extends BaseData, TAttribs extends unknown[]>
   public readonly type = 'decorated';
 
   // Type-tokens, not available at runtime
+  declare readonly [$inRepr]: InferInput<TInner>;
   declare readonly [$memIdent]: TAttribs extends Location[]
     ? MemIdentity<TInner> | Decorated<MemIdentity<TInner>, TAttribs>
     : Decorated<MemIdentity<TInner>, TAttribs>;

@@ -174,7 +174,7 @@ export const controls = defineControls({
     step: 0.001,
     onSliderChange: (hue: number) => {
       uniformsValue.hue = hue;
-      uniforms.writePartial({ hue });
+      uniforms.patch({ hue });
       draw();
     },
   },
@@ -194,7 +194,7 @@ export const controls = defineControls({
     step: 0.001,
     onSliderChange: (alpha: number) => {
       uniformsValue.alpha = alpha;
-      uniforms.writePartial({ alpha });
+      uniforms.patch({ alpha });
       draw();
     },
   },

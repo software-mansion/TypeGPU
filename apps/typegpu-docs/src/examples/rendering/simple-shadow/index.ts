@@ -270,12 +270,12 @@ const shadowPipeline = root.createRenderPipeline({
 function updateLightDirection(dir: d.v3f) {
   currentLightDirection = dir;
 
-  light.writePartial({
+  light.patch({
     direction: dir,
   });
 
   const newLightViewProj = makeLightViewProj(currentLightDirection);
-  lightSpaceUniform.writePartial({
+  lightSpaceUniform.patch({
     viewProj: newLightViewProj,
   });
 }
@@ -350,7 +350,7 @@ const resizeObserver = new ResizeObserver(() => {
     100,
     d.mat4x4f(),
   );
-  cameraUniform.writePartial({
+  cameraUniform.patch({
     projection: newProjection,
   });
 });
@@ -369,7 +369,7 @@ export const controls = defineControls({
         d.vec3f(0, 1, 0),
         d.mat4x4f(),
       );
-      cameraUniform.writePartial({
+      cameraUniform.patch({
         view: newView,
         position: d.vec3f(value, 2, 5),
       });

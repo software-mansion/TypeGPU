@@ -1,5 +1,5 @@
 import * as tinyest from 'tinyest';
-import { beforeEach, describe, expect } from 'vitest';
+import { beforeEach, describe, expect, vi } from 'vitest';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
@@ -978,6 +978,30 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('handles "for ... of ..." over `std.range`', ({ root }) => {
+    const testFn = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      'use gpu';
+      for (const bounce of std.range(12)) {
+        const test = d.u32(2) + bounce;
+        return d.f32(test);
+      }
+      return 0;
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "fn testFn() -> f32 {
+        for (var i = 0u; i < 12u; i += 1u) {
+          let test = (2u + i);
+          return f32(test);
+        }
+        return 0f;
+      }"
+    `);
+  });
+
   it('creates correct resources for lazy values and slots', () => {
     const testFn = tgpu.fn([], d.vec4u)(() => lazyV4u.$);
 
@@ -1061,7 +1085,7 @@ describe('wgslGenerator', () => {
   it('creates intermediate representation for array expression', () => {
     const testFn = () => {
       'use gpu';
-      [d.u32(1), 8, 8, 2];
+      return [d.u32(1), 8, 8, 2];
     };
 
     const snippet = extractSnippetFromFn(testFn);
@@ -2067,5 +2091,319 @@ describe('wgslGenerator', () => {
         }
       }"
     `);
+  });
+
+  it('handles unary operator `!` on boolean runtime-known operand', () => {
+    const testFn = tgpu.fn(
+      [d.bool],
+      d.bool,
+    )((b) => {
+      return !b;
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(b: bool) -> bool {
+          return !b;
+        }"
+      `);
+  });
+
+  it('handles unary operator `!` on numeric runtime-known operand', () => {
+    const testFn = tgpu.fn(
+      [d.i32],
+      d.bool,
+    )((n) => {
+      return !n;
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(n: i32) -> bool {
+          return !bool(n);
+        }"
+      `);
+  });
+
+  it('handles unary operator `!` on non-primitive values', ({ root }) => {
+    const buffer = root.createUniform(d.mat4x4f);
+    const testFn = tgpu.fn([d.vec3f, d.atomic(d.u32), d.ptrPrivate(d.u32)])((v, a, p) => {
+      const _b0 = !buffer;
+      const _b1 = !buffer.$;
+      const _b2 = !v;
+      const _b3 = !a;
+      const _b4 = !std.atomicLoad(a);
+      const _b5 = !p;
+      const _b6 = !p.$;
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> buffer: mat4x4f;
+
+      fn testFn(v: vec3f, a: atomic<u32>, p: ptr<private, u32>) {
+        const _b0 = false;
+        const _b1 = false;
+        const _b2 = false;
+        const _b3 = false;
+        let _b4 = !bool(atomicLoad(&a));
+        const _b5 = false;
+        let _b6 = !bool((*p));
+      }"
+    `);
+  });
+
+  it('handles unary operator `!` on numeric and boolean comptime-known operands', () => {
+    const getN = tgpu.comptime(() => 1882);
+
+    const f = () => {
+      'use gpu';
+      if (!(getN() === 7) || !getN()) {
+        return 1;
+      }
+      return -1;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> i32 {
+        {
+          return 1;
+        }
+        return -1;
+      }"
+    `);
+  });
+
+  it('handles unary operator `!` on operands from slots and accessors', () => {
+    const Boid = d.struct({
+      pos: d.vec2f,
+      vel: d.vec2f,
+    });
+
+    const slot = tgpu.slot<d.Infer<typeof Boid>>({ pos: d.vec2f(), vel: d.vec2f() });
+    const accessor = tgpu.accessor(d.vec4u, d.vec4u(1, 8, 8, 2));
+
+    const f = () => {
+      'use gpu';
+      if (!!slot.$ && !!accessor.$) {
+        return 1;
+      }
+      return -1;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> i32 {
+        {
+          return 1;
+        }
+        return -1;
+      }"
+    `);
+  });
+
+  it('handles chained unary operators `!`', () => {
+    const testFn = tgpu.fn(
+      [d.i32],
+      d.bool,
+    )((n) => {
+      // oxlint-disable-next-line
+      return !!!!!false || !!!n;
+    });
+
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      "fn testFn(n: i32) -> bool {
+        return true;
+      }"
+    `);
+  });
+
+  it('handles unary operator `!` on complex comptime-known operand', () => {
+    const slot = tgpu.slot<{ a?: number }>({});
+
+    const f = () => {
+      'use gpu';
+      // oxlint-disable-next-line
+      if (!!slot.$.a) {
+        return slot.$.a;
+      }
+      return 1929;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          return 1929;
+        }"
+      `);
+  });
+
+  describe('short-circuit evaluation', () => {
+    const state = {
+      counter: 0,
+      result: true,
+    };
+
+    const getTrackedBool = tgpu.comptime(() => {
+      state.counter++;
+      return state.result;
+    });
+
+    beforeEach(() => {
+      state.counter = 0;
+      state.result = true;
+    });
+
+    it('handles `||`', () => {
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+        if (true || getTrackedBool()) {
+          res = 1;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          {
+            res = 1i;
+          }
+          return res;
+        }"
+      `);
+      expect(state.counter).toBe(0);
+    });
+
+    it('handles `&&`', () => {
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+        if (false && getTrackedBool()) {
+          res = 1;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          return res;
+        }"
+      `);
+      expect(state.counter).toBe(0);
+    });
+
+    it('handles chained `||`', () => {
+      state.result = false;
+
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+        if (getTrackedBool() || true || getTrackedBool() || getTrackedBool() || getTrackedBool()) {
+          res = 1;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          {
+            res = 1i;
+          }
+          return res;
+        }"
+      `);
+      expect(state.counter).toEqual(1);
+    });
+
+    it('handles chained `&&`', () => {
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+        if (getTrackedBool() && false && getTrackedBool() && getTrackedBool() && getTrackedBool()) {
+          res = 1;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          return res;
+        }"
+      `);
+      expect(state.counter).toBe(1);
+    });
+
+    it('handles mixed logical operators', () => {
+      const f = () => {
+        'use gpu';
+        let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+        if (true || (getTrackedBool() && getTrackedBool())) {
+          res = 1;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          {
+            res = 1i;
+          }
+          return res;
+        }"
+      `);
+      expect(state.counter).toBe(0);
+    });
+
+    it('skips lhs if known at compile time', () => {
+      const f1 = tgpu.fn(
+        [d.bool],
+        d.i32,
+      )((b) => {
+        'use gpu';
+        let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+        if (false || b) {
+          res = 1;
+        }
+        return res;
+      });
+
+      const f2 = tgpu.fn(
+        [d.bool],
+        d.i32,
+      )((b) => {
+        'use gpu';
+        let res = -1;
+        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+        if (true && b) {
+          res = 1;
+        }
+        return res;
+      });
+
+      expect(tgpu.resolve([f1, f2])).toMatchInlineSnapshot(`
+        "fn f1(b: bool) -> i32 {
+          var res = -1;
+          if (b) {
+            res = 1i;
+          }
+          return res;
+        }
+
+        fn f2(b: bool) -> i32 {
+          var res = -1;
+          if (b) {
+            res = 1i;
+          }
+          return res;
+        }"
+      `);
+    });
   });
 });
