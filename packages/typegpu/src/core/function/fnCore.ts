@@ -206,8 +206,10 @@ export function createFnCore(
 
       // generate wgsl string
 
-      const { code, returnType: actualReturnType } = ctx.fnToWgsl({
+      const { code, returnType: actualReturnType } = ctx.resolveFunction({
         functionType,
+        name: id,
+        workgroupSize,
         argTypes,
         entryInput,
         params: ast.params,
@@ -216,7 +218,7 @@ export function createFnCore(
         externalMap,
       });
 
-      ctx.addDeclaration(`${attributes}fn ${id}${code}`);
+      ctx.addDeclaration(code);
 
       return snip(id, actualReturnType, /* origin */ 'runtime');
     },
