@@ -93,7 +93,7 @@ export class LogGeneratorImpl implements LogGenerator {
 
     const concreteArgsWithStrings = args
       .map((arg) => {
-        if (typeof arg.dataType === 'symbol') {
+        if (arg.dataType === UnknownData) {
           return arg;
         }
         const converted = convertToCommonType(ctx, [arg], [unptr(arg.dataType)])?.[0];
@@ -105,7 +105,7 @@ export class LogGeneratorImpl implements LogGenerator {
       })
       .map(concretizeSnippet);
 
-    const concreteArgs = concreteArgsWithStrings.filter((arg) => typeof arg.dataType !== 'symbol');
+    const concreteArgs = concreteArgsWithStrings.filter((arg) => arg.dataType !== UnknownData);
 
     const logFn = createLoggingFunction(
       id,
