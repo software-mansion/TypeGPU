@@ -133,15 +133,11 @@ export function createDrawInteraction({ canvas, onDraw, onStop }: DrawInteractio
     }
   }
 
-  function onContextMenu(e: MouseEvent) {
-    e.preventDefault();
-  }
-
   canvas.addEventListener('mousedown', onMouseDown);
   canvas.addEventListener('mousemove', onMouseMove);
   canvas.addEventListener('mouseup', stop);
   canvas.addEventListener('mouseleave', stop);
-  canvas.addEventListener('contextmenu', onContextMenu);
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   canvas.addEventListener('touchstart', onTouchStart, { passive: false });
   canvas.addEventListener('touchmove', onTouchMove, { passive: false });
   canvas.addEventListener('touchend', onTouchEnd);
