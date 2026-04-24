@@ -160,7 +160,7 @@ describe('function argument origin tracking', () => {
     `);
   });
 
-  it('throws a descriptive error when assigning a const to a ', ({ root }) => {
+  it('throws a descriptive error when assigning a const to let', () => {
     const testFn = () => {
       'use gpu';
       const a = d.vec3f();

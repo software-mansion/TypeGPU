@@ -444,6 +444,11 @@ ${this.ctx.pre}}`;
           convLhs.origin === 'constant-tgpu-const-ref' ||
           convLhs.origin === 'runtime-tgpu-const-ref'
         ) {
+          if (isKnownAtComptime(convLhs)) {
+            throw new WgslTypeError(
+              `'${stringifyExpression(expression)}' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.`,
+            );
+          }
           throw new WgslTypeError(
             `'${stringifyExpression(expression)}' is invalid, because the left side is a constant.`,
           );
@@ -812,7 +817,7 @@ ${this.ctx.pre}}`;
       }
 
       throw new WgslTypeError(
-        `No target type could be inferred for object ${stringifyExpression(expression)}, please wrap the object in the corresponding schema.`,
+        `No target type could be inferred for object '${stringifyExpression(expression)}', please wrap the object in the corresponding schema.`,
       );
     }
 

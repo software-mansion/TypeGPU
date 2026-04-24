@@ -1032,7 +1032,7 @@ describe('tgsl fn when using plugin', () => {
     expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:f: 'a = 2' is invalid, because the left side is a constant.]
+      - fn:f: 'a = 2' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.]
     `);
   });
 });
