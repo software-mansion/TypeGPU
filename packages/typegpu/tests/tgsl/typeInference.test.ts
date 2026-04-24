@@ -267,7 +267,7 @@ describe('wgsl generator type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: No target type could be inferred for object with keys [pos, vel], please wrap the object in the corresponding schema.]
+      - fn:myFn: No target type could be inferred for object { pos: d.vec2f(), vel: d.vec2f() }, please wrap the object in the corresponding schema.]
     `);
   });
 

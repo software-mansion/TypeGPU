@@ -156,7 +156,26 @@ describe('function argument origin tracking', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - fn*:foo(vec3f): Cannot return references to arguments, returning 'a'. Copy the argument before returning it.]
+      - fn*:foo(vec3f): 'return a;' is invalid, cannot return references to arguments. Copy the argument before returning it.]
     `);
+  });
+
+  it('throws a descriptive error when assigning a const to a ', ({ root }) => {
+    const testFn = () => {
+      'use gpu';
+      const a = d.vec3f();
+      let b = a;
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:testFn
+        - fn*:testFn(): 'let b = a' is invalid, because references cannot be assigned to 'let' variable declarations.
+        -----
+        - Try 'let b = vec3f(a)' if you need to reassign 'b' later
+        - Try 'const b = a' if you won't reassign 'b' later.
+        -----]
+      `);
   });
 });

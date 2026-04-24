@@ -560,6 +560,7 @@ ${this.ctx.pre}}`;
         const targetStr = this.ctx.resolve(target.value, target.dataType).value;
         const propertyStr = this.ctx.resolve(property.value, property.dataType).value;
 
+        // TODO: wait for the update of this one to be on main
         throw new Error(
           `Unable to index value ${targetStr} of unknown type with index ${propertyStr}. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
         );
@@ -574,9 +575,7 @@ ${this.ctx.pre}}`;
         typeof expression[1] === 'string'
           ? numericLiteralToSnippet(parseNumericString(expression[1]))
           : numericLiteralToSnippet(expression[1]);
-      if (!type) {
-        throw new Error(`Invalid numeric literal ${expression[1]}`);
-      }
+      invariant(type, `Expected ${stringifyExpression(expression)} to be valid numeric literal`);
       return type;
     }
 
@@ -690,7 +689,7 @@ ${this.ctx.pre}}`;
             const argType = strictSignature.argTypes[i];
             if (!argType) {
               throw new WgslTypeError(
-                `Function '${getName(callee.value)}' was called with too many arguments`,
+                `Call '${stringifyExpression(expression)}' is invalid since the function expected fewer arguments`,
               );
             }
             return this._typedExpression(arg, argType);
@@ -821,9 +820,7 @@ ${this.ctx.pre}}`;
       }
 
       throw new WgslTypeError(
-        `No target type could be inferred for object with keys [${Object.keys(obj).join(
-          ', ',
-        )}], please wrap the object in the corresponding schema.`,
+        `No target type could be inferred for object ${stringifyExpression(expression)}, please wrap the object in the corresponding schema.`,
       );
     }
 
@@ -855,7 +852,7 @@ ${this.ctx.pre}}`;
         const converted = convertToCommonType(this.ctx, valuesSnippets);
         if (!converted) {
           throw new WgslTypeError(
-            'The given values cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema',
+            `Values '${stringifyExpression(expression)}' cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema`,
           );
         }
 
@@ -876,7 +873,7 @@ ${this.ctx.pre}}`;
         return testExpression.value ? this._expression(consequent) : this._expression(alternative);
       } else {
         throw new Error(
-          `Ternary operator is only supported for comptime-known checks (used with '${testExpression.value}'). For runtime checks, please use 'std.select' or if/else statements.`,
+          `Ternary operator '${stringifyExpression(expression)}' is invalid, because only comptime-known checks are supported. For runtime checks, please use 'std.select' or if/else statements.`,
         );
       }
     }
@@ -936,12 +933,6 @@ ${this.ctx.pre}}`;
           ? this._typedExpression(returnNode, expectedReturnType)
           : this._expression(returnNode);
 
-        if (returnSnippet.value instanceof RefOperator) {
-          throw new WgslTypeError(
-            stitch`Cannot return references, returning '${returnSnippet.value.snippet}'`,
-          );
-        }
-
         // Arguments cannot be returned from functions without copying. A simple example why is:
         // const identity = (x) => {
         //   'use gpu';
@@ -961,16 +952,17 @@ ${this.ctx.pre}}`;
           this.ctx.topFunctionScope?.functionType === 'normal'
         ) {
           throw new WgslTypeError(
-            stitch`Cannot return references to arguments, returning '${returnSnippet}'. Copy the argument before returning it.`,
+            `'${stringifyStatement(statement)}' is invalid, cannot return references to arguments. Copy the argument before returning it.`,
           );
         }
 
         if (
-          !expectedReturnType &&
-          !isEphemeralSnippet(returnSnippet) &&
-          returnSnippet.origin !== 'this-function'
+          (!expectedReturnType &&
+            !isEphemeralSnippet(returnSnippet) &&
+            returnSnippet.origin !== 'this-function') ||
+          returnSnippet.value instanceof RefOperator
         ) {
-          const str = this.ctx.resolve(returnSnippet.value, returnSnippet.dataType).value;
+          const str = stringifyExpression(returnNode);
           const typeStr = this.ctx.resolve(unptr(returnSnippet.dataType)).value;
           throw new WgslTypeError(
             `'return ${str};' is invalid, cannot return references.
@@ -1039,16 +1031,14 @@ ${this.ctx.pre}else ${alternate}`;
       const eq = rawValue !== undefined ? this._expression(rawValue) : undefined;
 
       if (!eq) {
-        throw new Error(`Cannot create variable '${rawId}' without an initial value.`);
+        throw new Error(
+          `'${stringifyStatement(statement)}' is invalid because all variables need initializers.`,
+        );
       }
 
       const ephemeral = isEphemeralSnippet(eq);
       let dataType = eq.dataType as wgsl.BaseData;
       const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
-
-      if (isLooseData(eq.dataType)) {
-        throw new Error(`Cannot create variable '${rawId}' with loose data type.`);
-      }
 
       if (eq.value instanceof RefOperator) {
         // We're assigning a newly created `d.ref()`
@@ -1075,7 +1065,7 @@ ${this.ctx.pre}else ${alternate}`;
       if (!ephemeral) {
         // Referential
         if (stmtType === NODE.let) {
-          const rhsStr = this.ctx.resolve(eq.value).value;
+          const rhsStr = stringifyExpression(rawValue ?? '');
           const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
 
           throw new WgslTypeError(
@@ -1123,7 +1113,7 @@ ${this.ctx.pre}else ${alternate}`;
 
           if (eq.origin === 'argument') {
             if (!naturallyEphemeral) {
-              const rhsStr = this.ctx.resolve(eq.value).value;
+              const rhsStr = stringifyExpression(rawValue ?? '');
               const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
 
               throw new WgslTypeError(
@@ -1241,7 +1231,7 @@ ${this.ctx.pre}else ${alternate}`;
             !wgsl.isNaturallyEphemeral(elements[0]?.dataType)
           ) {
             throw new WgslTypeError(
-              'Cannot unroll loop. The elements of iterable are emphemeral but not naturally ephemeral.',
+              `Cannot unroll '${stringifyExpression(iterable)}'. The elements of iterable are constructed in place but are not value types.`,
             );
           }
 

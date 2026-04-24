@@ -1762,6 +1762,85 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('throws a descriptive error when calling a function with too many arguments', () => {
+    const testFn = tgpu.fn([])(() => {});
+    const main = () => {
+      'use gpu';
+      // @ts-ignore
+      testFn(1, 2);
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Call 'testFn(1, 2)' is invalid since the function expected fewer arguments]
+    `);
+  });
+
+  it('throws a descriptive error when creating a non-uniform array', () => {
+    const testFn = () => {
+      'use gpu';
+      const t = [1, 2, d.vec2u()];
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): Values '[1, 2, d.vec2u()]' cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema]
+    `);
+  });
+
+  it('throws a descriptive error when returning a reference', ({ root }) => {
+    const myUniform = root.createUniform(d.vec3u);
+    const testFn = () => {
+      'use gpu';
+      const v = myUniform.$;
+      return v;
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): 'return v;' is invalid, cannot return references.
+      -----
+      Try 'return vec3u(v);' instead.
+      -----]
+    `);
+  });
+
+  it('throws a descriptive error when declaring a variable without initializer', () => {
+    const testFn = () => {
+      'use gpu';
+      // oxlint-disable-next-line typegpu/no-uninitialized-variables
+      let a;
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): 'let a;' is invalid because all variables need initializers.]
+    `);
+  });
+
+  it('throws a descriptive error when declaring a loose variable', ({ root }) => {
+    const Unstruct = d.unstruct({ prop: d.vec4f });
+    const testFn = () => {
+      'use gpu';
+      let a = Unstruct();
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): Function 'Unstruct' is not marked with the 'use gpu' directive and cannot be used in a shader]
+    `);
+  });
+
   it('throws a descriptive error when declaring a const inside TGSL', () => {
     const testFn = tgpu.fn(
       [d.u32],
