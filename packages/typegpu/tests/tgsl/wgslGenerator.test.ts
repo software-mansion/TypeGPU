@@ -1757,7 +1757,7 @@ describe('wgslGenerator', () => {
     expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:testFn: Value undefined (as json: undefined) is not resolvable to type u32]
+      - fn:testFn: Value undefined is not resolvable to type u32]
     `);
   });
 

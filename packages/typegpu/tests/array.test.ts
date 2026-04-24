@@ -192,18 +192,21 @@ describe('array', () => {
   it('generates correct code when array clone is used', () => {
     const ArraySchema = d.arrayOf(d.u32, 1);
 
-    const f = (arr: d.Infer<typeof ArraySchema>) => {
+    function f(arr: d.InferGPU<typeof ArraySchema>) {
       'use gpu';
       const clone = ArraySchema(arr);
-    };
+    }
 
-    const testFn = () => {
+    const external = [3];
+
+    function testFn() {
       'use gpu';
       const myArray = ArraySchema([d.u32(10)]);
       const myClone = ArraySchema(myArray);
+      const myExternal = ArraySchema(external);
       f(myArray);
       return;
-    };
+    }
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn f(arr: array<u32, 1>) {
@@ -213,6 +216,7 @@ describe('array', () => {
       fn testFn() {
         var myArray = array<u32, 1>(10u);
         var myClone = myArray;
+        var myExternal = array<u32, 1>(3u);
         f(myArray);
         return;
       }"
@@ -441,6 +445,21 @@ describe('array', () => {
         const m = 1u;
         var result = array<u32, 3>(1u, n, m);
       }"
+    `);
+  });
+
+  it('throws when trying to resolve an untyped external array', () => {
+    const arr = [1, 2, 3];
+    function main() {
+      'use gpu';
+      arr;
+    }
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Value [1, 2, 3] is not resolvable]
     `);
   });
 });
