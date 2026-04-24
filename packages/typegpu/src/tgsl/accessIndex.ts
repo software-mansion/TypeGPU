@@ -101,17 +101,12 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
     );
   }
 
-  if (isKnownAtComptime(target)) {
-    if (isKnownAtComptime(index)) {
-      // No idea what the type is, so we act on the snippet's value and try to guess
-      return coerceToSnippet(
-        // oxlint-disable-next-line typescript/no-explicit-any -- we're inspecting the value, and it could be any value
-        (target.value as any)[index.value as number],
-      );
-    } else {
-      return undefined; // this will throw an error in wgslGenerator
-    }
-  }
+  if ((isKnownAtComptime(target) && isKnownAtComptime(index))) {
+    // No idea what the type is, so we act on the snippet's value and try to guess
+    return coerceToSnippet(
+      // oxlint-disable-next-line typescript/no-explicit-any -- we're inspecting the value, and it could be any value
+      (target.value as any)[index.value as number],
+    );
 
   if (
     isWgslStruct(target.dataType) &&
