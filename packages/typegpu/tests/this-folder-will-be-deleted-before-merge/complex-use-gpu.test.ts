@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { getMetaData } from '../../src/shared/meta.ts';
-import { stringifyStatement } from '../../src/shared/tseynit.ts';
+import { stringifyNode } from '../../src/shared/tseynit.ts';
 
 // Everything below is a stub — the 'use gpu' arrow functions are never called
 // at runtime; declarations only silence TypeScript overload errors.
@@ -126,7 +126,7 @@ describe('complex use-gpu function AST snapshots', () => {
 
       return mix(x, X, smoothPartial.x);
     };
-    expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
+    expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
       "{
         const minJunction = floor(pos);
         const xyz = dotProdGrid(pos, minJunction);
@@ -180,7 +180,7 @@ describe('complex use-gpu function AST snapshots', () => {
 
       return d.vec3f(noise, grad);
     };
-    expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
+    expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
       "{
         const i = d.vec2i(floor(pos));
         const f = fract(pos);
@@ -248,7 +248,7 @@ describe('complex use-gpu function AST snapshots', () => {
 
       layout.$.nextTrianglePos[index] = TriangleData(self);
     };
-    expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
+    expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
       "{
         const self = TriangleData(layout.$.currentTrianglePos[index]);
         let separation = d.vec2f();
@@ -365,7 +365,7 @@ describe('complex use-gpu function AST snapshots', () => {
       nextFishData.position = fishData.position + translation;
       nextFishData.direction = d.vec3f(direction);
     };
-    expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
+    expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
       "{
         const fishData = layout.$.currentFishData[fishIndex];
         let separation = d.vec3f();
@@ -468,7 +468,7 @@ describe('complex use-gpu function AST snapshots', () => {
 
       computeLayout.$.outState[currentId] = CelestialBody(current);
     };
-    expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
+    expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
       "{
         const dt = timeAccess.$.passed * timeAccess.$.multiplier;
         const currentId = input.gid.x;
@@ -546,7 +546,7 @@ describe('complex use-gpu function AST snapshots', () => {
 
       computeLayout.$.outState[currentId] = CelestialBody(current);
     };
-    expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
+    expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
       "{
         const currentId = input.gid.x;
         const current = CelestialBody(computeLayout.$.inState[currentId]);
@@ -637,7 +637,7 @@ describe('complex use-gpu function AST snapshots', () => {
       const newState = oldState + 1;
       std.textureStore(computeLayout.$.newState, d.vec2u(newPos), d.vec4f(newState, 1));
     };
-    expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
+    expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
       "{
         if (gid.x >= NUM_AGENTS)   return;
         randf.seed((gid.x / NUM_AGENTS) + 0.1);
@@ -704,7 +704,7 @@ describe('complex use-gpu function AST snapshots', () => {
 
       return [bit0, bit1, bit2, bit3];
     };
-    expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
+    expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
       "{
         const l1_sum_a = (n.nw ^ n.n) ^ n.ne;
         const l1_car_a = (n.nw & n.n) | (n.ne & (n.nw ^ n.n));
@@ -747,7 +747,7 @@ describe('complex use-gpu function AST snapshots', () => {
 
       return ((kd * material.albedo) / PI + specular) * radiance * ndotl;
     };
-    expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
+    expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
       "{
         const toLight = light.position - p;
         const dist = std.length(toLight);
@@ -812,7 +812,7 @@ describe('complex use-gpu function AST snapshots', () => {
       const color = ambient.add(lo).add(envContribution);
       return std.pow(color.div(color.add(1)), d.vec3f(1 / 2.2));
     };
-    expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
+    expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
       "{
         const material = materialAccess.$;
         const f0 = std.mix(d.vec3f(0.04), material.albedo, material.metallic);
@@ -845,7 +845,7 @@ describe('complex use-gpu function AST snapshots', () => {
       const denom = NdotH * NdotH * (a2 - 1) + 1;
       return a2 / (Math.PI * denom * denom);
     };
-    expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
+    expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
       "{
         const a = roughness * roughness;
         const a2 = a * a;
@@ -864,7 +864,7 @@ describe('complex use-gpu function AST snapshots', () => {
       const ggx2 = NdotL / (NdotL * (1 - k) + k);
       return ggx1 * ggx2;
     };
-    expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
+    expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
       "{
         const r = roughness + 1;
         const k = (r * r) / 8;
@@ -886,7 +886,7 @@ describe('complex use-gpu function AST snapshots', () => {
       const baseColor = WALL_COLOR + d.vec3f(1, 0.8, 0.6) * (edgeShade + texture);
       return std.mix(baseColor * 0.35, baseColor, daylight);
     };
-    expect(stringifyStatement(getBodyAst(fn))).toMatchInlineSnapshot(`
+    expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
       "{
         const stripe = std.abs(std.fract((local.x * 18) + (local.y * 6)) - 0.5);
         const stripeMask = std.clamp(0.55 - (stripe * 1.6), 0, 1);

@@ -9,7 +9,7 @@ export function stringifyNode(node: tinyest.AnyNode): string {
   return stringifyStatement(node, '');
 }
 
-export function stringifyStatement(node: tinyest.Statement, ident = ''): string {
+function stringifyStatement(node: tinyest.Statement, ident: string): string {
   if (isExpression(node)) {
     return `${ident}${stringifyExpression(node, ident)};`;
   }
@@ -20,7 +20,7 @@ export function stringifyStatement(node: tinyest.Statement, ident = ''): string 
   }
 
   if (node[0] === NODE.return) {
-    const expr = node[1] === undefined ? '' : ` ${stringifyExpression(node[1])}`;
+    const expr = node[1] === undefined ? '' : ` ${stringifyExpression(node[1], '')}`;
     return `${ident}return${expr};`;
   }
 
@@ -36,28 +36,28 @@ export function stringifyStatement(node: tinyest.Statement, ident = ''): string 
 
   if (node[0] === NODE.let) {
     if (node[2] !== undefined) {
-      return `${ident}let ${node[1]} = ${stringifyExpression(node[2])};`;
+      return `${ident}let ${node[1]} = ${stringifyExpression(node[2], ident)};`;
     }
     return `${ident}let ${node[1]};`;
   }
 
   if (node[0] === NODE.const) {
     if (node[2] !== undefined) {
-      return `${ident}const ${node[1]} = ${stringifyExpression(node[2])};`;
+      return `${ident}const ${node[1]} = ${stringifyExpression(node[2], ident)};`;
     }
     return `${ident}const ${node[1]};`;
   }
 
   if (node[0] === NODE.for) {
     const init = node[1] ? stringifyStatement(node[1], '') : ';';
-    const cond = node[2] ? stringifyExpression(node[2]) : '';
+    const cond = node[2] ? stringifyExpression(node[2], ident) : '';
     const update = node[3] ? stringifyStatement(node[3], '') : '';
     const body = stringifyStatement(node[4], ident);
     return `${ident}for (${init} ${cond}; ${update.slice(0, -1) /* trim the ';' */}) ${body}`;
   }
 
   if (node[0] === NODE.while) {
-    const cond = stringifyExpression(node[1]);
+    const cond = stringifyExpression(node[1], ident);
     const body = stringifyStatement(node[2], ident);
     return `${ident}while (${cond}) ${body}`;
   }
@@ -73,7 +73,7 @@ export function stringifyStatement(node: tinyest.Statement, ident = ''): string 
   if (node[0] === NODE.forOf) {
     const leftKind = node[1][0] === NODE.const ? 'const' : 'let';
     const leftName = node[1][1];
-    const right = stringifyExpression(node[2]);
+    const right = stringifyExpression(node[2], ident);
     const body = stringifyStatement(node[3], ident);
     return `${ident}for (${leftKind} ${leftName} of ${right}) ${body}`;
   }
@@ -81,7 +81,7 @@ export function stringifyStatement(node: tinyest.Statement, ident = ''): string 
   assertExhaustive(node);
 }
 
-export function stringifyExpression(node: tinyest.Expression, ident = ''): string {
+function stringifyExpression(node: tinyest.Expression, ident: string): string {
   if (typeof node === 'string') {
     return node;
   }
@@ -129,7 +129,7 @@ export function stringifyExpression(node: tinyest.Expression, ident = ''): strin
 
   if (node[0] === NODE.memberAccess) {
     if (Array.isArray(node[1]) && node[1][0] === NODE.numericLiteral) {
-      return `(${stringifyExpression(node[1])}).${node[2]}`;
+      return `(${stringifyExpression(node[1], ident)}).${node[2]}`;
     }
     return `${wrapIfComplex(node[1], ident)}.${node[2]}`;
   }
