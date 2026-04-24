@@ -199,7 +199,7 @@ describe('tgpu.unroll', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f
-      - fn*:f(): Cannot unroll loop. The elements of iterable are emphemeral but not naturally ephemeral.]
+      - fn*:f(): Cannot unroll 'tgpu.unroll([Boid()])'. The elements of iterable are constructed in place but are not value types.]
     `);
   });
 

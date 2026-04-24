@@ -537,11 +537,7 @@ ${this.ctx.pre}}`;
 
       const accessed = accessProp(target, property);
       if (!accessed) {
-        throw new Error(
-          stitch`Property '${property}' not found on value '${target}' of type ${this.ctx.resolve(
-            target.dataType,
-          )}`,
-        );
+        throw new Error(`Property '${property}' not found on '${stringifyExpression(targetNode)}'`);
       }
       return accessed;
     }
