@@ -33,6 +33,7 @@
     "./data": "./src/data/index.ts",
     "./std": "./src/std/index.ts",
     "./common": "./src/common/index.ts",
+    "./~internals": "./src/internals.ts",
     "./$built$": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
@@ -70,6 +71,10 @@
       "./common": {
         "types": "./dist/common/index.d.ts",
         "default": "./dist/common/index.js"
+      },
+      "./~internals": {
+        "types": "./dist/internals.d.ts",
+        "default": "./dist/internals.js"
       }
     },
     "linkDirectory": false,

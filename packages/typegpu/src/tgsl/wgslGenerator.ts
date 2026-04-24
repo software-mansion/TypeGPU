@@ -38,7 +38,7 @@ import {
 } from './generationHelpers.ts';
 import { accessIndex } from './accessIndex.ts';
 import { accessProp } from './accessProp.ts';
-import type { ShaderGenerator } from './shaderGenerator.ts';
+import type { ShaderGenerator, FunctionDefinitionOptions } from './shaderGenerator.ts';
 import { resolveData } from '../core/resolve/resolveData.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { RefOperator } from '../data/ref.ts';
@@ -51,7 +51,6 @@ import { mathToStd } from './math.ts';
 import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
-import type { FunctionDefinitionOptions } from './shaderGenerator_members.ts';
 import { getAttributesString } from '../data/attributes.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;

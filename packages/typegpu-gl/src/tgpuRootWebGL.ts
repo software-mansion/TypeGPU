@@ -6,11 +6,27 @@
  * Compute operations, storage buffers, textures, etc. throw WebGLFallbackUnsupportedError.
  */
 
-import tgpu, { d, ShaderGenerator, type TgpuFragmentFn, type TgpuVertexFn } from 'typegpu';
-import glslGenerator from './glslGenerator.ts';
+import { BufferWriter, BufferReader } from 'typed-binary';
+import tgpu, {
+  d,
+  type BufferInitialData,
+  type BufferWriteOptions,
+  type TgpuBuffer,
+  type TgpuFragmentFn,
+  type TgpuVertexFn,
+} from 'typegpu';
+import {
+  readData,
+  writeData,
+  AutoFragmentFn,
+  AutoVertexFn,
+  makeDereferencable,
+  makeResolvable,
+  type ShaderGenerator,
+} from 'typegpu/~internals';
 
-const { $gpuValueOf, $internal, $ownSnippet, $resolve, snip, valueProxyHandler, inCodegenMode } =
-  ShaderGenerator;
+import glslGenerator from './glslGenerator.ts';
+import { matchUpVaryingLocations } from './matchUpVaryingLocations.ts';
 
 // ----------
 // Public API
@@ -33,19 +49,22 @@ export interface WebGLRenderContext {
 }
 
 export interface TgpuWebGLRenderPipeline {
+  // TODO: Is 'screen' necessary?
   withColorAttachment(attachment: { view: WebGLRenderContext | 'screen' }): this;
   draw(vertexCount: number, instanceCount?: number, firstVertex?: number): void;
 }
 
 interface WebGLUniform<TData extends d.AnyWgslData = d.AnyWgslData> {
   readonly resourceType: 'uniform';
-  readonly schema: TData;
+  readonly dataType: TData;
   write(data: d.Infer<TData>): void;
+
   readonly $: d.InferGPU<TData>;
+
   /** @internal The stable GLSL identifier for this uniform */
   readonly glslName: string;
-  /** @internal The latest Float32Array representation of the written data */
-  readonly latestData: Float32Array;
+  /** @internal The latest ArrayBuffer representation of the written data */
+  readonly buffer: ArrayBuffer;
 }
 
 // ----------
@@ -157,22 +176,29 @@ function linkProgram(
 interface UniformBinding {
   uniform: WebGLUniform;
   location: WebGLUniformLocation;
-  setter: (gl: WebGL2RenderingContext, loc: WebGLUniformLocation, data: Float32Array) => void;
+  setter: (gl: WebGL2RenderingContext, loc: WebGLUniformLocation, data: ArrayBuffer) => void;
 }
 
 function uniformSetterFor(
   schema: d.AnyWgslData,
-): (gl: WebGL2RenderingContext, loc: WebGLUniformLocation, data: Float32Array) => void {
+): (gl: WebGL2RenderingContext, loc: WebGLUniformLocation, dataView: ArrayBuffer) => void {
   const typeName = (schema as { type: string }).type;
-  if (typeName === 'f32') return (gl, loc, data) => gl.uniform1f(loc, data[0] ?? 0);
-  if (typeName === 'u32') return (gl, loc, data) => gl.uniform1ui(loc, data[0] ?? 0);
-  if (typeName === 'i32') return (gl, loc, data) => gl.uniform1i(loc, data[0] ?? 0);
-  if (typeName === 'vec2f') return (gl, loc, data) => gl.uniform2fv(loc, data);
-  if (typeName === 'vec3f') return (gl, loc, data) => gl.uniform3fv(loc, data.subarray(0, 3));
-  if (typeName === 'vec4f') return (gl, loc, data) => gl.uniform4fv(loc, data);
-  if (typeName === 'mat2x2f') return (gl, loc, data) => gl.uniformMatrix2fv(loc, false, data);
-  if (typeName === 'mat3x3f') return (gl, loc, data) => gl.uniformMatrix3fv(loc, false, data);
-  if (typeName === 'mat4x4f') return (gl, loc, data) => gl.uniformMatrix4fv(loc, false, data);
+  if (typeName === 'f32')
+    return (gl, loc, data) => gl.uniform1f(loc, new Float32Array(data)[0] ?? 0);
+  if (typeName === 'u32')
+    return (gl, loc, data) => gl.uniform1ui(loc, new Float32Array(data)[0] ?? 0);
+  if (typeName === 'i32')
+    return (gl, loc, data) => gl.uniform1i(loc, new Float32Array(data)[0] ?? 0);
+  if (typeName === 'vec2f') return (gl, loc, data) => gl.uniform2fv(loc, new Float32Array(data));
+  if (typeName === 'vec3f')
+    return (gl, loc, data) => gl.uniform3fv(loc, new Float32Array(data).subarray(0, 3));
+  if (typeName === 'vec4f') return (gl, loc, data) => gl.uniform4fv(loc, new Float32Array(data));
+  if (typeName === 'mat2x2f')
+    return (gl, loc, data) => gl.uniformMatrix2fv(loc, false, new Float32Array(data));
+  if (typeName === 'mat3x3f')
+    return (gl, loc, data) => gl.uniformMatrix3fv(loc, false, new Float32Array(data));
+  if (typeName === 'mat4x4f')
+    return (gl, loc, data) => gl.uniformMatrix4fv(loc, false, new Float32Array(data));
   return () => {};
 }
 
@@ -187,7 +213,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
   constructor(
     gl: WebGL2RenderingContext,
     program: WebGLProgram,
-    uniforms: Array<WebGLUniform>,
+    uniforms: WebGLUniform[],
     offscreen: OffscreenCanvas,
   ) {
     this.#gl = gl;
@@ -202,7 +228,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     for (const uniform of uniforms) {
       const location = gl.getUniformLocation(program, uniform.glslName);
       if (location !== null) {
-        bindings.push({ uniform, location, setter: uniformSetterFor(uniform.schema) });
+        bindings.push({ uniform, location, setter: uniformSetterFor(uniform.dataType) });
       }
     }
     this.#uniformBindings = bindings;
@@ -232,7 +258,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
 
     // Upload current uniform values
     for (const b of this.#uniformBindings) {
-      b.setter(gl, b.location, b.uniform.latestData);
+      b.setter(gl, b.location, b.uniform.buffer);
     }
 
     gl.drawArrays(gl.TRIANGLES, firstVertex, vertexCount);
@@ -260,100 +286,119 @@ export function _resetUniformCounter(): void {
 
 class WebGLUniformImpl<TData extends d.AnyWgslData> implements WebGLUniform<TData> {
   readonly resourceType = 'uniform' as const;
-  readonly [$internal] = { dataType: undefined as TData | undefined };
   readonly glslName: string;
-  latestData: Float32Array;
 
-  #schema: TData;
+  readonly #gl: WebGL2RenderingContext;
+  readonly #initial: BufferInitialData<TData> | undefined;
 
-  constructor(schema: TData) {
-    this.#schema = schema;
+  readonly dataType: TData;
+
+  buffer: ArrayBuffer;
+  webglBuffer: WebGLBuffer | undefined;
+
+  declare readonly $: d.InferGPU<TData>;
+
+  constructor(gl: WebGL2RenderingContext, dataType: TData, initial?: BufferInitialData<TData>) {
+    this.#gl = gl;
+    this.dataType = dataType;
+    this.#initial = initial;
     this.glslName = `_u${_uniformCounter++}`;
-    this.latestData = new Float32Array(schemaFloatCount(schema));
+    this.buffer = new ArrayBuffer(d.sizeOf(dataType));
   }
 
-  get schema(): TData {
-    return this.#schema;
+  unwrap() {
+    if (!this.webglBuffer) {
+      const gl = this.#gl;
+      this.webglBuffer = gl.createBuffer();
+      const bindingPoint = 0;
+      gl.bindBufferBase(gl.UNIFORM_BUFFER, bindingPoint, this.webglBuffer);
+      const initialData =
+        typeof this.#initial === 'function' ? (this.#initial as any)(this) : undefined;
+      this.#populateBackingBuffer(initialData);
+
+      gl.bufferData(gl.UNIFORM_BUFFER, this.buffer, gl.DYNAMIC_DRAW);
+      gl.bindBufferBase(gl.UNIFORM_BUFFER, bindingPoint, null);
+    }
+    return this.webglBuffer;
   }
 
-  write(data: d.Infer<TData>): void {
-    this.latestData = flattenToFloat32(data);
+  #populateBackingBuffer(data: d.InferInput<TData>, options?: BufferWriteOptions) {
+    const startOffset = options?.startOffset ?? 0;
+    const endOffset = options?.endOffset ?? this.buffer.byteLength;
+
+    // Fast path: raw byte copy, user guarantees the padded layout
+    if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
+      const src =
+        data instanceof ArrayBuffer
+          ? new Uint8Array(data)
+          : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+      const regionSize = endOffset - startOffset;
+      if (src.byteLength !== regionSize) {
+        console.warn(
+          `Buffer size mismatch: expected ${regionSize} bytes, got ${src.byteLength}. ` +
+            (src.byteLength < regionSize ? 'Data truncated.' : 'Excess ignored.'),
+        );
+      }
+      const copyLen = Math.min(src.byteLength, regionSize);
+      new Uint8Array(this.buffer).set(src.subarray(0, copyLen), startOffset);
+      return;
+    }
+
+    const writer = new BufferWriter(this.buffer);
+    writer.seekTo(startOffset);
+    writeData(writer, this.dataType, data as d.Infer<TData>);
+  }
+
+  write(data: d.InferInput<TData>, options?: BufferWriteOptions): void {
+    this.#populateBackingBuffer(data, options);
+  }
+
+  public patch(_data: d.InferPatch<TData>): void {
+    // TODO(#2410): A lower-level patching API would be helpful here
+    throw new WebGLFallbackUnsupportedError('.patch()');
+  }
+
+  public clear(): void {
+    new Uint8Array(this.buffer).fill(0);
+  }
+
+  copyFrom(_srcBuffer: TgpuBuffer<d.MemIdentity<TData>>): void {
+    throw new WebGLFallbackUnsupportedError('.copyFrom()');
+  }
+
+  read(): Promise<d.Infer<TData>> {
+    return Promise.resolve(readData(new BufferReader(this.buffer), this.dataType));
+  }
+
+  destroy() {
+    if (this.webglBuffer) {
+      this.#gl.deleteBuffer(this.webglBuffer);
+      this.webglBuffer = undefined;
+    }
   }
 
   toString(): string {
     return `uniform:${this.glslName}`;
   }
-
-  // oxlint-disable-next-line typescript/no-explicit-any
-  [$resolve](ctx: any) {
-    const dataType = this.#schema;
-    const glslType = ctx.resolve(dataType).value;
-    ctx.addDeclaration(`uniform ${glslType} ${this.glslName};`);
-    return snip(this.glslName, dataType as d.BaseData, 'uniform');
-  }
-
-  get [$gpuValueOf](): d.InferGPU<TData> {
-    const self = this;
-    const dataType = this.#schema;
-    return new Proxy(
-      {
-        [$internal]: true,
-        get [$ownSnippet]() {
-          return snip(this, dataType as d.BaseData, 'uniform');
-        },
-        // oxlint-disable-next-line typescript/no-explicit-any
-        [$resolve]: (ctx: any) => ctx.resolve(self),
-        toString: () => `uniform:${self.glslName}.$`,
-      },
-      valueProxyHandler,
-    ) as d.InferGPU<TData>;
-  }
-
-  get $(): d.InferGPU<TData> {
-    if (inCodegenMode()) {
-      return this[$gpuValueOf];
-    }
-    throw new Error(
-      'Cannot read WebGL uniform outside of shader code. Use `.write()` to update it.',
-    );
-  }
 }
 
-function schemaFloatCount(schema: d.AnyWgslData): number {
-  const typeName = (schema as { type: string }).type;
-  if (typeName === 'f32' || typeName === 'u32' || typeName === 'i32' || typeName === 'bool') {
-    return 1;
-  }
-  if (typeName?.startsWith('vec2')) return 2;
-  if (typeName?.startsWith('vec3')) return 4; // vec3 is typically stored as vec4 aligned
-  if (typeName?.startsWith('vec4')) return 4;
-  if (typeName?.startsWith('mat2x2')) return 4;
-  if (typeName?.startsWith('mat3x3')) return 9;
-  if (typeName?.startsWith('mat4x4')) return 16;
-  return 1;
-}
-
-function flattenToFloat32(data: unknown): Float32Array {
-  if (data instanceof Float32Array) return data;
-  if (typeof data === 'number') return new Float32Array([data]);
-  if (Array.isArray(data)) {
-    const arr: number[] = [];
-    for (const item of data) {
-      const sub = flattenToFloat32(item);
-      for (const v of sub) arr.push(v);
-    }
-    return new Float32Array(arr);
-  }
-  if (data !== null && typeof data === 'object') {
-    const arr: number[] = [];
-    for (const val of Object.values(data as Record<string, unknown>)) {
-      const sub = flattenToFloat32(val);
-      for (const v of sub) arr.push(v);
-    }
-    return new Float32Array(arr);
-  }
-  return new Float32Array([0]);
-}
+makeDereferencable(
+  makeResolvable(WebGLUniformImpl.prototype, {
+    resolve(ctx) {
+      const glslType = ctx.resolve(this.dataType).value;
+      ctx.addDeclaration(`uniform ${glslType} ${this.glslName};`);
+      return { value: this.glslName, dataType: this.dataType, origin: 'uniform' };
+    },
+    asString() {
+      return `uniform:${this.glslName}`;
+    },
+  }),
+  {
+    getDataTypeAndOrigin(): [dataType: d.BaseData, origin: 'uniform'] {
+      return [this.dataType, 'uniform'];
+    },
+  },
+);
 
 // oxlint-disable-next-line typescript/no-explicit-any
 type AnyFn = (...args: any[]) => any;
@@ -367,7 +412,7 @@ export class TgpuRootWebGL {
 
   #gl: WebGL2RenderingContext;
   #offscreen: OffscreenCanvas;
-  #uniforms: Array<WebGLUniformImpl<d.AnyWgslData>> = [];
+  #uniforms: WebGLUniformImpl<any>[] = [];
   #buffers: WebGLBuffer[] = [];
 
   constructor(gl: WebGL2RenderingContext) {
@@ -381,13 +426,10 @@ export class TgpuRootWebGL {
 
   createUniform<TData extends d.AnyWgslData>(
     typeSchema: TData,
-    _initial?: d.Infer<TData>,
+    initial?: BufferInitialData<TData>,
   ): WebGLUniform<TData> {
-    const uniform = new WebGLUniformImpl(typeSchema);
-    this.#uniforms.push(uniform as WebGLUniformImpl<d.AnyWgslData>);
-    if (_initial !== undefined) {
-      uniform.write(_initial);
-    }
+    const uniform = new WebGLUniformImpl(this.#gl, typeSchema, initial);
+    this.#uniforms.push(uniform);
     return uniform;
   }
 
@@ -462,8 +504,6 @@ export class TgpuRootWebGL {
     fragment: TgpuFragmentFn | AnyFn;
   }): TgpuWebGLRenderPipeline {
     const { vertex, fragment } = descriptor;
-
-    const { AutoVertexFn, AutoFragmentFn, matchUpVaryingLocations } = ShaderGenerator;
 
     const vertexShell = isShellFn(vertex) ? vertex : undefined;
     const fragmentShell = isShellFn(fragment) ? fragment : undefined;
@@ -550,6 +590,9 @@ export class TgpuRootWebGL {
       this.#gl.deleteBuffer(buf);
     }
     this.#buffers = [];
+    for (const uniform of this.#uniforms) {
+      uniform.destroy();
+    }
     this.#uniforms = [];
   }
 }

@@ -49,5 +49,8 @@
   },
   "peerDependencies": {
     "typegpu": "workspace:^"
+  },
+  "dependencies": {
+    "typed-binary": "^4.3.3"
   }
 }
