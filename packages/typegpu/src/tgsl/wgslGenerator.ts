@@ -553,12 +553,8 @@ ${this.ctx.pre}}`;
 
       const accessed = accessIndex(target, property);
       if (!accessed) {
-        const targetStr = this.ctx.resolve(target.value, target.dataType).value;
-        const propertyStr = this.ctx.resolve(property.value, property.dataType).value;
-
-        // TODO: wait for the update of this one to be on main
         throw new Error(
-          `Index access '${targetStr}[${propertyStr}]' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
+          `Index access '${stringifyExpression(expression)}' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
         );
       }
 
