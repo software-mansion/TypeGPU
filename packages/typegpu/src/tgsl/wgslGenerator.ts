@@ -1,14 +1,7 @@
 import * as tinyest from 'tinyest';
 import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
-import {
-  type AnyData,
-  ConsoleLog,
-  InfixDispatch,
-  isLooseData,
-  UnknownData,
-  unptr,
-} from '../data/dataTypes.ts';
+import { type AnyData, ConsoleLog, InfixDispatch, UnknownData, unptr } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
@@ -51,7 +44,7 @@ import { mathToStd } from './math.ts';
 import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
-import { stringifyExpression, stringifyStatement } from '../shared/tseynit.ts';
+import { stringifyNode } from '../shared/tseynit.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -382,7 +375,7 @@ ${this.ctx.pre}}`;
 
       if (rhsExpr.value instanceof RefOperator) {
         throw new WgslTypeError(
-          stitch`Cannot assign a ref to an existing variable '${stringifyExpression(lhs)}', define a new variable instead.`,
+          stitch`Cannot assign a ref to an existing variable '${stringifyNode(lhs)}', define a new variable instead.`,
         );
       }
 
@@ -446,17 +439,17 @@ ${this.ctx.pre}}`;
         ) {
           if (isKnownAtComptime(convLhs)) {
             throw new WgslTypeError(
-              `'${stringifyExpression(expression)}' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.`,
+              `'${stringifyNode(expression)}' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.`,
             );
           }
           throw new WgslTypeError(
-            `'${stringifyExpression(expression)}' is invalid, because the left side is a constant.`,
+            `'${stringifyNode(expression)}' is invalid, because the left side is a constant.`,
           );
         }
 
         if (lhsExpr.origin === 'argument') {
           throw new WgslTypeError(
-            `'${stringifyExpression(expression)}' is invalid, because non-pointer arguments cannot be mutated.`,
+            `'${stringifyNode(expression)}' is invalid, because non-pointer arguments cannot be mutated.`,
           );
         }
 
@@ -467,18 +460,18 @@ ${this.ctx.pre}}`;
           !wgsl.isNaturallyEphemeral(rhsExpr.dataType)
         ) {
           throw new WgslTypeError(
-            `'${stringifyExpression(expression)}' is invalid, because argument references cannot be assigned.\n-----\nTry '${stringifyExpression(lhs)} = ${
+            `'${stringifyNode(expression)}' is invalid, because argument references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
               this.ctx.resolve(rhsExpr.dataType).value
-            }(${stringifyExpression(rhs)})' to copy the value instead.\n-----`,
+            }(${stringifyNode(rhs)})' to copy the value instead.\n-----`,
           );
         }
 
         // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
         if (op === '=' && !isEphemeralSnippet(rhsExpr)) {
           throw new WgslTypeError(
-            `'${stringifyExpression(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyExpression(lhs)} = ${
+            `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
               this.ctx.resolve(rhsExpr.dataType).value
-            }(${stringifyExpression(rhs)})' to copy the value instead.\n-----`,
+            }(${stringifyNode(rhs)})' to copy the value instead.\n-----`,
           );
         }
       }
@@ -542,7 +535,7 @@ ${this.ctx.pre}}`;
 
       const accessed = accessProp(target, property);
       if (!accessed) {
-        throw new Error(`Property '${property}' not found on '${stringifyExpression(targetNode)}'`);
+        throw new Error(`Property '${property}' not found on '${stringifyNode(targetNode)}'`);
       }
       return accessed;
     }
@@ -559,7 +552,7 @@ ${this.ctx.pre}}`;
       const accessed = accessIndex(target, property);
       if (!accessed) {
         throw new Error(
-          `Index access '${stringifyExpression(expression)}' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
+          `Index access '${stringifyNode(expression)}' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
         );
       }
 
@@ -572,7 +565,7 @@ ${this.ctx.pre}}`;
         typeof expression[1] === 'string'
           ? numericLiteralToSnippet(parseNumericString(expression[1]))
           : numericLiteralToSnippet(expression[1]);
-      invariant(type, `Expected ${stringifyExpression(expression)} to be valid numeric literal`);
+      invariant(type, `Expected ${stringifyNode(expression)} to be valid numeric literal`);
       return type;
     }
 
@@ -686,7 +679,7 @@ ${this.ctx.pre}}`;
             const argType = strictSignature.argTypes[i];
             if (!argType) {
               throw new WgslTypeError(
-                `Call '${stringifyExpression(expression)}' is invalid since the function expected fewer arguments`,
+                `Call '${stringifyNode(expression)}' is invalid since the function expected fewer arguments`,
               );
             }
             return this._typedExpression(arg, argType);
@@ -817,7 +810,7 @@ ${this.ctx.pre}}`;
       }
 
       throw new WgslTypeError(
-        `No target type could be inferred for object '${stringifyExpression(expression)}', please wrap the object in the corresponding schema.`,
+        `No target type could be inferred for object '${stringifyNode(expression)}', please wrap the object in the corresponding schema.`,
       );
     }
 
@@ -849,7 +842,7 @@ ${this.ctx.pre}}`;
         const converted = convertToCommonType(this.ctx, valuesSnippets);
         if (!converted) {
           throw new WgslTypeError(
-            `Values '${stringifyExpression(expression)}' cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema`,
+            `Values '${stringifyNode(expression)}' cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema`,
           );
         }
 
@@ -870,7 +863,7 @@ ${this.ctx.pre}}`;
         return testExpression.value ? this._expression(consequent) : this._expression(alternative);
       } else {
         throw new Error(
-          `Ternary operator '${stringifyExpression(expression)}' is invalid, because only comptime-known checks are supported. For runtime checks, please use 'std.select' or if/else statements.`,
+          `Ternary operator '${stringifyNode(expression)}' is invalid, because only comptime-known checks are supported. For runtime checks, please use 'std.select' or if/else statements.`,
         );
       }
     }
@@ -920,7 +913,7 @@ ${this.ctx.pre}}`;
 
       if (returnSnippet.value instanceof RefOperator) {
         throw new WgslTypeError(
-          `Cannot return '${stringifyExpression(returnNode)}' because it is a d.ref`,
+          `Cannot return '${stringifyNode(returnNode)}' because it is a d.ref`,
         );
       }
 
@@ -943,7 +936,7 @@ ${this.ctx.pre}}`;
         this.ctx.topFunctionScope?.functionType === 'normal'
       ) {
         throw new WgslTypeError(
-          `'${stringifyStatement(statement)}' is invalid, cannot return references to arguments. Copy the argument before returning it.`,
+          `'${stringifyNode(statement)}' is invalid, cannot return references to arguments. Copy the argument before returning it.`,
         );
       }
 
@@ -952,7 +945,7 @@ ${this.ctx.pre}}`;
         !isEphemeralSnippet(returnSnippet) &&
         returnSnippet.origin !== 'this-function'
       ) {
-        const str = stringifyExpression(returnNode);
+        const str = stringifyNode(returnNode);
         const typeStr = this.ctx.resolve(unptr(returnSnippet.dataType)).value;
         throw new WgslTypeError(
           `'return ${str};' is invalid, cannot return references.
@@ -1038,7 +1031,7 @@ ${this.ctx.pre}else ${alternate}`;
 
       if (!eq) {
         throw new Error(
-          `'${stringifyStatement(statement)}' is invalid because all variables need initializers.`,
+          `'${stringifyNode(statement)}' is invalid because all variables need initializers.`,
         );
       }
 
@@ -1071,7 +1064,7 @@ ${this.ctx.pre}else ${alternate}`;
       if (!ephemeral) {
         // Referential
         if (stmtType === NODE.let) {
-          const rhsStr = stringifyExpression(rawValue ?? '');
+          const rhsStr = stringifyNode(rawValue ?? '');
           const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
 
           throw new WgslTypeError(
@@ -1119,7 +1112,7 @@ ${this.ctx.pre}else ${alternate}`;
 
           if (eq.origin === 'argument') {
             if (!naturallyEphemeral) {
-              const rhsStr = stringifyExpression(rawValue ?? '');
+              const rhsStr = stringifyNode(rawValue ?? '');
               const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
 
               throw new WgslTypeError(
@@ -1237,7 +1230,7 @@ ${this.ctx.pre}else ${alternate}`;
             !wgsl.isNaturallyEphemeral(elements[0]?.dataType)
           ) {
             throw new WgslTypeError(
-              `Cannot unroll '${stringifyExpression(iterable)}'. The elements of iterable are constructed in place but are not value types.`,
+              `Cannot unroll '${stringifyNode(iterable)}'. The elements of iterable are constructed in place but are not value types.`,
             );
           }
 

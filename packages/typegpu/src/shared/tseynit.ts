@@ -2,6 +2,13 @@ import * as tinyest from 'tinyest';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
+export function stringifyNode(node: tinyest.AnyNode): string {
+  if (isExpression(node)) {
+    return stringifyExpression(node, '');
+  }
+  return stringifyStatement(node, '');
+}
+
 export function stringifyStatement(node: tinyest.Statement, ident = ''): string {
   if (isExpression(node)) {
     return `${ident}${stringifyExpression(node, ident)};`;
