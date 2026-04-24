@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as tinyest from 'tinyest';
-import { stringifyExpression, stringifyStatement } from '../../src/shared/tseynit/stringify.ts';
+import { stringifyExpression, stringifyStatement } from '../../src/shared/tseynit.ts';
 
 const N = tinyest.NodeTypeCatalog;
 

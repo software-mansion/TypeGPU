@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as tinyest from 'tinyest';
 import { getMetaData } from '../../src/shared/meta.ts';
-import { stringifyExpression, stringifyStatement } from '../../src/shared/tseynit/stringify.ts';
+import { stringifyExpression, stringifyStatement } from '../../src/shared/tseynit.ts';
 import tgpu, { d } from '../../src/index';
 
 function getBodyAst(fn: () => void) {

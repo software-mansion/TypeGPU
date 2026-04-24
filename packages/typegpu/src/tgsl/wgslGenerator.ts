@@ -51,7 +51,7 @@ import { mathToStd } from './math.ts';
 import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
-import { stringifyExpression, stringifyStatement } from '../shared/tseynit/stringify.ts';
+import { stringifyExpression, stringifyStatement } from '../shared/tseynit.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 

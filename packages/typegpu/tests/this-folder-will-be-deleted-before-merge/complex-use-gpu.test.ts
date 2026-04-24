@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { getMetaData } from '../../src/shared/meta.ts';
-import { stringifyStatement } from '../../src/shared/tseynit/stringify.ts';
+import { stringifyStatement } from '../../src/shared/tseynit.ts';
 
 // Everything below is a stub — the 'use gpu' arrow functions are never called
 // at runtime; declarations only silence TypeScript overload errors.
