@@ -1761,7 +1761,7 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('throws a descriptive error when accessing an external object with a runtime known index', () => {
+  it('throws an error when accessing an object with a runtime known index', () => {
     const Boid = d.struct({ 0: d.u32 });
 
     const testFn = tgpu.fn([Boid])((b) => {
