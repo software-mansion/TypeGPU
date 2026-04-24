@@ -558,10 +558,6 @@ describe('fluid double buffering example', () => {
         return vertexMain_Output(vec4f(pos[_arg_idx].x, pos[_arg_idx].y, 0f, 1f), uv[_arg_idx]);
       }
 
-      struct fragmentMain_Input {
-        @location(0) uv: vec2f,
-      }
-
       fn coordsToIndex(x: i32, y: i32) -> i32 {
         return (x + (y * 256i));
       }
@@ -593,6 +589,10 @@ describe('fluid double buffering example', () => {
           }
         }
         return false;
+      }
+
+      struct fragmentMain_Input {
+        @location(0) uv: vec2f,
       }
 
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {

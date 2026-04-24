@@ -765,10 +765,6 @@ describe('ripple-cube example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct fragmentMain_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(1) @binding(0) var colorTexture: texture_2d<f32>;
 
       @group(1) @binding(2) var sampler_1: sampler;
@@ -781,6 +777,10 @@ describe('ripple-cube example', () => {
       }
 
       @group(0) @binding(0) var<uniform> bloomUniform: BloomParams;
+
+      struct fragmentMain_Input {
+        @location(0) uv: vec2f,
+      }
 
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
         var color = textureSample(colorTexture, sampler_1, _arg_0.uv);

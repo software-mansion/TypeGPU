@@ -308,13 +308,13 @@ describe('slime mold example', () => {
         return fullScreenTriangle_Output(vec4f(pos[_arg_vertexIndex], 0f, 1f), uv[_arg_vertexIndex]);
       }
 
-      struct fragmentShader_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(1) @binding(0) var state: texture_2d<f32>;
 
       @group(0) @binding(0) var filteringSampler: sampler;
+
+      struct fragmentShader_Input {
+        @location(0) uv: vec2f,
+      }
 
       @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
         return textureSample(state, filteringSampler, _arg_0.uv);

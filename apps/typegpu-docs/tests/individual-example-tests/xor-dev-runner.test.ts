@@ -34,10 +34,6 @@ describe('xor dev runner example', () => {
         return vertexMain_Output(vec4f(pos[_arg_vertexIndex], 0f, 1f), pos[_arg_vertexIndex]);
       }
 
-      struct fragmentMain_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var<uniform> colorUniform: vec3f;
 
       struct Camera {
@@ -80,6 +76,10 @@ describe('xor dev runner example', () => {
 
       fn safeTanh(v: f32) -> f32 {
         return select(tanh(v), sign(v), (abs(v) > 10f));
+      }
+
+      struct fragmentMain_Input {
+        @location(0) uv: vec2f,
       }
 
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
