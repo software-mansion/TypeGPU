@@ -953,14 +953,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       );
     }
 
-    if (Array.isArray(item)) {
-      return snip(
-        stitch`array(${item.map((element) => this.resolve(element))})`,
-        UnknownData,
-        /* origin */ 'runtime',
-      ) as ResolvedSnippet;
-    }
-
     if (schema && isWgslStruct(schema)) {
       return snip(
         stitch`${this.resolve(schema)}(${Object.entries(schema.propTypes).map(([key, propType]) =>
@@ -972,7 +964,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     throw new WgslTypeError(
-      `Value ${item} (as json: ${safeStringify(item)}) is not resolvable${
+      `Value ${safeStringify(item)} is not resolvable${
         schema ? ` to type ${safeStringify(schema)}` : ''
       }`,
     );
