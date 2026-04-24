@@ -1,6 +1,5 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
 import * as sdf from '@typegpu/sdf';
+import tgpu, { d } from 'typegpu';
 
 export interface SceneElement<T extends 'box' | 'disk'> {
   id: string;
@@ -124,8 +123,7 @@ export const sceneSDF = (p: d.v2f) => {
   let minDist = d.f32(2e31);
   let color = d.vec3f();
 
-  for (let i = 0; i < scene.disks.length; i++) {
-    const disk = scene.disks[i];
+  for (const disk of scene.disks) {
     const dist = sdf.sdDisk(p - disk.pos, disk.radius);
 
     if (dist < minDist) {
@@ -134,8 +132,7 @@ export const sceneSDF = (p: d.v2f) => {
     }
   }
 
-  for (let i = 0; i < scene.boxes.length; i++) {
-    const box = scene.boxes[i];
+  for (const box of scene.boxes) {
     const dist = sdf.sdBox2d(p - box.pos, box.size);
 
     if (dist < minDist) {

@@ -20,4 +20,4 @@ export {
 } from './operators.ts';
 
 export { classifySlot, createJumpFlood } from './jumpFlood.ts';
-export type { ColorTexture, JumpFloodExecutor, SdfTexture } from './jumpFlood.ts';
+export * as JumpFlood from './jumpFlood.ts';

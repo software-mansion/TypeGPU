@@ -1,9 +1,7 @@
 import * as rc from '@typegpu/radiance-cascades';
 import * as sdf from '@typegpu/sdf';
-import tgpu from 'typegpu';
-import { fullScreenTriangle } from 'typegpu/common';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
 
@@ -179,7 +177,7 @@ const displayFragment = tgpu.fragmentFn({
 });
 
 const displayPipeline = root.createRenderPipeline({
-  vertex: fullScreenTriangle,
+  vertex: common.fullScreenTriangle,
   fragment: displayFragment,
   targets: { format: presentationFormat },
 });
@@ -231,20 +229,16 @@ function frame() {
     sceneDirty = false;
   }
 
-  displayPipeline
-    .withColorAttachment({
-      view: context.getCurrentTexture().createView(),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .draw(3);
+  displayPipeline.withColorAttachment({ view: context }).draw(3);
 
   frameId = requestAnimationFrame(frame);
 }
 
-export const controls = {
+// #region Example controls and cleanup
+
+export const controls = defineControls({
   'Light Color': {
-    initial: [1, 0.9, 0.7],
+    initial: d.vec3f(1, 0.9, 0.7),
     onColorChange(rgb: readonly [number, number, number]) {
       paramsUniform.writePartial({
         lightColor: d.vec3f(...rgb),
@@ -275,9 +269,11 @@ export const controls = {
       sceneDirty = true;
     },
   },
-};
+});
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
   root.destroy();
 }
+
+// #endregion

@@ -42,7 +42,7 @@ type CascadesOptions = {
     eps: number,
     minStep: number,
     bias: number,
-  ) => d.Infer<typeof RayMarchResult>;
+  ) => d.InferGPU<typeof RayMarchResult>;
   output?: OutputTexture;
   size?: { width: number; height: number };
 };
@@ -106,40 +106,6 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
 
   const cascadeProbesX = cascadeDimX / 2;
   const cascadeProbesY = cascadeDimY / 2;
-
-  console.debug('[radiance-cascades] config:', {
-    output: `${outputWidth}x${outputHeight}`,
-    cascadeDim: `${cascadeDimX}x${cascadeDimY}`,
-    probes: `${cascadeProbesX}x${cascadeProbesY}`,
-    cascadeCount: cascadeAmount,
-    sdfResolution: `${sdfResolution.width}x${sdfResolution.height}`,
-    textureMemory: `${((cascadeDimX * cascadeDimY * cascadeAmount * 8 * 2) / (1024 * 1024)).toFixed(
-      1,
-    )} MB (2x cascade textures)`,
-    dispatchesPerRun: `${cascadeAmount} cascade + 1 build = ${cascadeAmount + 1}`,
-    workgroupsPerCascadeDispatch: `${Math.ceil(cascadeDimX / 8)}x${Math.ceil(
-      cascadeDimY / 8,
-    )} = ${Math.ceil(cascadeDimX / 8) * Math.ceil(cascadeDimY / 8)}`,
-    workgroupsPerBuildDispatch: `${Math.ceil(outputWidth / 8)}x${Math.ceil(
-      outputHeight / 8,
-    )} = ${Math.ceil(outputWidth / 8) * Math.ceil(outputHeight / 8)}`,
-  });
-
-  // Log per-layer probe/ray breakdown
-  for (let l = 0; l < cascadeAmount; l++) {
-    const probesX = Math.max(cascadeProbesX >> l, 1);
-    const probesY = Math.max(cascadeProbesY >> l, 1);
-    const raysDimStored = 2 << l;
-    const raysDimActual = raysDimStored * 2;
-    const usedX = probesX * raysDimStored;
-    const usedY = probesY * raysDimStored;
-    console.debug(
-      `  layer ${l}: probes=${probesX}x${probesY}, rays=${raysDimActual}x${raysDimActual} (stored ${raysDimStored}x${raysDimStored}), used=${usedX}x${usedY} of ${cascadeDimX}x${cascadeDimY} (${(
-        ((usedX * usedY) / (cascadeDimX * cascadeDimY)) *
-        100
-      ).toFixed(0)}%)`,
-    );
-  }
 
   const cascadeTextureA = root
     .createTexture({

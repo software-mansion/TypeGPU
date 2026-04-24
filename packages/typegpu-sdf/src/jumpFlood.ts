@@ -241,19 +241,18 @@ export type ColorTexture = TgpuTexture<{
   StorageFlag &
   SampledFlag;
 
-export type JumpFloodExecutor = {
+export type Executor = {
   /** Run the jump flood algorithm. */
   run(): void;
   /** The SDF output texture (r32float). */
   readonly sdfOutput: SdfTexture;
   /** The color output texture (rgba8unorm). */
   readonly colorOutput: ColorTexture;
-  /** Clean up GPU resources created by this executor. */
   /**
    * Returns a new executor with the additional bind group attached.
    * Use this to pass resources needed by custom classify or getter functions.
    */
-  with(bindGroup: TgpuBindGroup): JumpFloodExecutor;
+  with(bindGroup: TgpuBindGroup): Executor;
   /** Clean up GPU resources created by this executor. */
   destroy(): void;
 };
@@ -291,7 +290,7 @@ type JumpFloodOptions = {
 /**
  * Create a Jump Flood Algorithm executor with separate SDF and color output textures.
  */
-export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
+export function createJumpFlood(options: JumpFloodOptions): Executor {
   const { root, size, classify, getSdf, getColor } = options;
   const { width, height } = size;
 
@@ -384,7 +383,7 @@ export function createJumpFlood(options: JumpFloodOptions): JumpFloodExecutor {
     colorTexture.destroy();
   }
 
-  function createExecutor(additionalBindGroups: TgpuBindGroup[] = []): JumpFloodExecutor {
+  function createExecutor(additionalBindGroups: TgpuBindGroup[] = []): Executor {
     // Pre-cache pipeline+bindgroup combos to avoid re-chaining per frame.
     let prebuiltInitPipeline = initFromSeedPipeline.with(initBG);
     for (const bg of additionalBindGroups) {

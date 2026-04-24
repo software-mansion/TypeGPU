@@ -1,8 +1,6 @@
 import * as sdf from '@typegpu/sdf';
-import tgpu from 'typegpu';
-import { fullScreenTriangle } from 'typegpu/common';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { common, d, std } from 'typegpu';
+import { defineControls } from '../../common/defineControls.ts';
 import { DragController } from './drag-controller.ts';
 import { SceneData, sceneData, sceneDataAccess, sceneSDF, updateElementPosition } from './scene.ts';
 
@@ -16,7 +14,12 @@ context.configure({
   format: presentationFormat,
 });
 
-const OUTPUT_RESOLUTION: [number, number] = [canvas.width, canvas.height];
+const maxOutputResolution = 1024;
+const outputScale = Math.min(1, maxOutputResolution / Math.max(canvas.width, canvas.height));
+const OUTPUT_RESOLUTION: [number, number] = [
+  Math.max(1, Math.floor(canvas.width * outputScale)),
+  Math.max(1, Math.floor(canvas.height * outputScale)),
+];
 const LIGHTING_RESOLUTION = 0.35;
 
 const [outputProbesX, outputProbesY] = OUTPUT_RESOLUTION;
@@ -108,11 +111,6 @@ const cascadePassCompute = tgpu.computeFn({
   const raysDimActual = raysDimStored * 2;
   const rayCountActual = raysDimActual * raysDimActual;
 
-  if (dirStored.x >= raysDimStored || dirStored.y >= raysDimStored) {
-    std.textureStore(cascadePassBGL.$.dst, gid.xy, d.vec4f(0, 0, 0, 1));
-    return;
-  }
-
   const probePos = (d.vec2f(probe) + 0.5) / d.vec2f(probes);
   const cascadeProbesMinVal = d.f32(std.min(cascadeProbes.x, cascadeProbes.y));
   const interval0 = 1 / cascadeProbesMinVal;
@@ -124,7 +122,7 @@ const cascadePassCompute = tgpu.computeFn({
 
   let accum = d.vec4f();
 
-  for (let i = d.u32(0); i < 4; i++) {
+  for (const i of tgpu.unroll(std.range(4))) {
     const dirActual = dirStored * 2 + d.vec2u(i & 1, i >> 1);
     const rayIndex = d.f32(dirActual.y * raysDimActual + dirActual.x) + 0.5;
     const angle = (rayIndex / d.f32(rayCountActual)) * (Math.PI * 2) - Math.PI;
@@ -199,7 +197,7 @@ const buildRadianceFieldCompute = tgpu.computeFn({
   const baseSampleUV = probePixel * invCascadeDim;
 
   let sum = d.vec3f();
-  for (let i = d.u32(0); i < 4; i++) {
+  for (const i of tgpu.unroll(std.range(4))) {
     const offset = d.vec2f(d.f32(i & 1), d.f32(i >> 1)) * uvStride;
     sum += std.textureSampleLevel(
       buildRadianceFieldBGL.$.src,
@@ -401,7 +399,7 @@ const createOverlayDebugBG = (textureIndex: number) =>
 const overlayDebugBindGroups = [createOverlayDebugBG(0), createOverlayDebugBG(1)];
 
 const renderPipeline = root.createRenderPipeline({
-  vertex: fullScreenTriangle,
+  vertex: common.fullScreenTriangle,
   fragment: overlayFrag,
 });
 
@@ -425,6 +423,8 @@ const onDrag = (id: string, position: d.v2f) => {
 
 const dragController = new DragController(canvas, onDrag, onDrag);
 
+// #region Example controls and cleanup
+
 export function onCleanup() {
   dragController.destroy();
   if (frameId !== null) {
@@ -433,7 +433,7 @@ export function onCleanup() {
   root.destroy();
 }
 
-export const controls = {
+export const controls = defineControls({
   'Show Overlay': {
     initial: false,
     onToggleChange: (value: boolean) => {
@@ -450,4 +450,6 @@ export const controls = {
       debugLayer = value;
     },
   },
-};
+});
+
+// #endregion

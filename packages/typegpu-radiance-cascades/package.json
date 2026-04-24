@@ -1,6 +1,7 @@
 {
   "name": "@typegpu/radiance-cascades",
-  "version": "0.9.0",
+  "version": "0.11.0",
+  "private": true,
   "description": "Radiance Cascades implementation for TypeGPU",
   "keywords": [],
   "license": "MIT",
@@ -22,7 +23,6 @@
       }
     },
     "linkDirectory": false,
-    "main": "./dist/index.mjs",
     "types": "./dist/index.d.ts"
   },
   "scripts": {
@@ -39,6 +39,6 @@
     "unplugin-typegpu": "workspace:*"
   },
   "peerDependencies": {
-    "typegpu": "^0.9.0"
+    "typegpu": "workspace:^"
   }
 }

@@ -1,37 +1,27 @@
 <div align="center">
 
-# @typegpu/three
-
-🚧 **Under Construction** 🚧
+# @typegpu/radiance-cascades
 
 </div>
 
-A helper library for using TypeGPU with Three.js.
+A helper library for computing 2D radiance cascades with TypeGPU.
 
 ```ts
-import * as TSL from 'three/tsl';
-import * as t3 from '@typegpu/three';
-import { fract } from 'typegpu/std';
+import { createRadianceCascades } from '@typegpu/radiance-cascades';
 
-const material1 = new THREE.MeshBasicNodeMaterial();
-const pattern = TSL.texture(detailMap, TSL.uv().mul(10));
-// `fromTSL` can be used to access any TSL node from a TypeGPU function
-const patternAccess = t3.fromTSL(pattern, d.vec4f);
-material1.colorNode = t3.toTSL(() => {
-  'use gpu';
-  return patternAccess.$;
+const runner = createRadianceCascades({
+  root,
+  size: { width, height },
+  sdfResolution: { width: sdfWidth, height: sdfHeight },
+  sdf: (uv) => {
+    'use gpu';
+    return sampleSdf(uv);
+  },
+  color: (uv) => {
+    'use gpu';
+    return sampleColor(uv);
+  },
 });
 
-const material2 = new THREE.MeshBasicNodeMaterial();
-material2.colorNode = t3.toTSL(() => {
-  'use gpu';
-  // Many builtin TSL nodes are already reexported as `accessors`
-  const uv = t3.uv().$;
-
-  if (uv.x < 0.5) {
-    return d.vec4f(fract(uv.mul(4)), 0, 1);
-  }
-
-  return d.vec4f(1, 0, 0, 1);
-});
+runner.run();
 ```
