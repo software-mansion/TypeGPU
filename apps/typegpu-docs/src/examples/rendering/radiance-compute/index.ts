@@ -14,48 +14,54 @@ context.configure({
   format: presentationFormat,
 });
 
-const maxOutputResolution = 1024;
-const outputScale = Math.min(1, maxOutputResolution / Math.max(canvas.width, canvas.height));
-const OUTPUT_RESOLUTION: [number, number] = [
-  Math.max(1, Math.floor(canvas.width * outputScale)),
-  Math.max(1, Math.floor(canvas.height * outputScale)),
-];
 const LIGHTING_RESOLUTION = 0.35;
+const maxOutputResolution = 1024;
 
-const [outputProbesX, outputProbesY] = OUTPUT_RESOLUTION;
-const aspect = outputProbesX / outputProbesY;
+function getCascadeDimensions() {
+  const outputProbes = Math.max(1, Math.floor(Math.min(canvas.width, maxOutputResolution)));
+  const diagonal = outputProbes * Math.SQRT2;
+  const optimalProbes = diagonal * LIGHTING_RESOLUTION;
+  const cascadeProbes = 2 ** Math.round(Math.log2(optimalProbes));
 
-const diagonal = Math.sqrt(outputProbesX ** 2 + outputProbesY ** 2);
-const optimalProbes = diagonal * LIGHTING_RESOLUTION;
-const cascadeProbesMin = 2 ** Math.round(Math.log2(optimalProbes));
-const cascadeProbesX = aspect >= 1 ? Math.round(cascadeProbesMin * aspect) : cascadeProbesMin;
-const cascadeProbesY = aspect >= 1 ? cascadeProbesMin : Math.round(cascadeProbesMin / aspect);
-const cascadeDimX = cascadeProbesX * 2;
-const cascadeDimY = cascadeProbesY * 2;
+  return {
+    outputProbes,
+    cascadeProbes,
+    cascadeDim: cascadeProbes * 2,
+  };
+}
 
-const interval0 = 1 / cascadeProbesMin;
+let dimensions = getCascadeDimensions();
+
+const interval0 = 1 / dimensions.cascadeProbes;
 const maxIntervalStart = 1.5;
 const cascadeAmount = Math.ceil(Math.log2((maxIntervalStart * 3) / interval0 + 1) / 2);
 
-const cascadeTextures = Array.from({ length: 2 }, () =>
-  root
+function createCascadeTextures() {
+  return Array.from({ length: 2 }, () =>
+    root
+      .createTexture({
+        size: [dimensions.cascadeDim, dimensions.cascadeDim, cascadeAmount],
+        format: 'rgba16float',
+      })
+      .$usage('storage', 'sampled'),
+  );
+}
+
+function createRadianceFieldTexture() {
+  return root
     .createTexture({
-      size: [cascadeDimX, cascadeDimY, cascadeAmount],
+      size: [dimensions.outputProbes, dimensions.outputProbes],
       format: 'rgba16float',
     })
-    .$usage('storage', 'sampled'),
-);
+    .$usage('storage', 'sampled');
+}
 
-const radianceFieldTex = root
-  .createTexture({
-    size: [outputProbesX, outputProbesY],
-    format: 'rgba16float',
-  })
-  .$usage('storage', 'sampled');
+let cascadeTextures = createCascadeTextures();
+let radianceFieldTex = createRadianceFieldTexture();
 
-const radianceFieldView = radianceFieldTex.createView(d.texture2d());
+let radianceFieldView = radianceFieldTex.createView(d.texture2d());
 
-const radianceFieldStoreView = radianceFieldTex.createView(d.textureStorage2d('rgba16float'));
+let radianceFieldStoreView = radianceFieldTex.createView(d.textureStorage2d('rgba16float'));
 
 const buildRadianceFieldBGL = tgpu.bindGroupLayout({
   src: { texture: d.texture2d(d.f32) },
@@ -63,7 +69,7 @@ const buildRadianceFieldBGL = tgpu.bindGroupLayout({
   dst: { storageTexture: d.textureStorage2d('rgba16float') },
 });
 
-const outputProbesUniform = root.createUniform(d.vec2u, d.vec2u(outputProbesX, outputProbesY));
+const outputProbesUniform = root.createUniform(d.vec2u, d.vec2u(dimensions.outputProbes));
 
 const radianceSampler = root.createSampler({
   magFilter: 'linear',
@@ -74,8 +80,8 @@ const sceneDataUniform = root.createUniform(SceneData, sceneData);
 
 const cascadeIndexUniform = root.createUniform(d.u32);
 const probesUniform = root.createUniform(d.vec2u);
-const cascadeDimUniform = root.createUniform(d.vec2u, d.vec2u(cascadeDimX, cascadeDimY));
-const cascadeProbesUniform = root.createUniform(d.vec2u, d.vec2u(cascadeProbesX, cascadeProbesY));
+const cascadeDimUniform = root.createUniform(d.vec2u, d.vec2u(dimensions.cascadeDim));
+const cascadeProbesUniform = root.createUniform(d.vec2u, d.vec2u(dimensions.cascadeProbes));
 
 const overlayEnabledUniform = root.createUniform(d.u32, 0);
 const overlayDebugCascadeUniform = root.createUniform(d.u32, 0);
@@ -112,13 +118,13 @@ const cascadePassCompute = tgpu.computeFn({
   const rayCountActual = raysDimActual * raysDimActual;
 
   const probePos = (d.vec2f(probe) + 0.5) / d.vec2f(probes);
-  const cascadeProbesMinVal = d.f32(std.min(cascadeProbes.x, cascadeProbes.y));
-  const interval0 = 1 / cascadeProbesMinVal;
+  const cascadeProbesVal = d.f32(cascadeProbes.x);
+  const interval0 = 1 / cascadeProbesVal;
   const pow4 = d.f32(1 << (layer * 2));
   const startUv = (interval0 * (pow4 - 1)) / 3;
   const endUv = startUv + interval0 * pow4;
-  const eps = 0.5 / cascadeProbesMinVal;
-  const minStep = 0.25 / cascadeProbesMinVal;
+  const eps = 0.5 / cascadeProbesVal;
+  const minStep = 0.25 / cascadeProbesVal;
 
   let accum = d.vec4f();
 
@@ -233,7 +239,13 @@ const overlayFrag = tgpu.fragmentFn({
 })(({ uv }) => {
   'use gpu';
   const field = std.textureSample(radianceFieldView.$, radianceSampler.$, uv).xyz;
-  const baseColor = ACESFilm(std.saturate(field));
+  const sceneHit = sceneSDF(uv);
+  const fieldColor = ACESFilm(std.saturate(field));
+  const surfaceColor = ACESFilm(std.saturate(sceneHit.color));
+  const fieldTexel = 1 / d.f32(std.textureDimensions(radianceFieldView.$).x);
+  const edgeWidth = std.max(std.fwidth(sceneHit.dist), fieldTexel);
+  const surfaceAlpha = 1 - std.smoothstep(-edgeWidth, edgeWidth, sceneHit.dist);
+  const baseColor = std.mix(fieldColor, surfaceColor, surfaceAlpha);
 
   if (overlayEnabledUniform.$ === 0) {
     return d.vec4f(baseColor, 1);
@@ -248,11 +260,11 @@ const overlayFrag = tgpu.fragmentFn({
   const raysDimStored = d.u32(2) << debugLayer;
   const raysDimActual = raysDimStored * 2;
   const rayCountActual = raysDimActual * raysDimActual;
-  const cascadeProbesMinVal = d.f32(std.min(cascadeProbes.x, cascadeProbes.y));
-  const interval0 = 1 / cascadeProbesMinVal;
+  const cascadeProbesVal = d.f32(cascadeProbes.x);
+  const interval0 = 1 / cascadeProbesVal;
   const pow4 = d.f32(d.u32(1) << (debugLayer * 2));
   const endUv = (interval0 * (pow4 - 1)) / 3 + interval0 * pow4;
-  const probeSpacing = std.min(1 / probes.x, 1 / probes.y);
+  const probeSpacing = 1 / probes.x;
   const probeRadius = std.max(probeSpacing * 0.08, 0.002);
   const rayThickness = std.max(probeSpacing * 0.03, 0.001);
 
@@ -327,30 +339,34 @@ const cascadePassPipeline = root
   .with(sceneDataAccess, sceneDataUniform)
   .createComputePipeline({ compute: cascadePassCompute });
 
-const cascadePassBindGroups = Array.from({ length: cascadeAmount }, (_, layer) => {
-  const writeToA = (cascadeAmount - 1 - layer) % 2 === 0;
-  const dstTexture = cascadeTextures[writeToA ? 0 : 1];
-  const srcTexture = cascadeTextures[writeToA ? 1 : 0];
+function createCascadePassBindGroups() {
+  return Array.from({ length: cascadeAmount }, (_, layer) => {
+    const writeToA = (cascadeAmount - 1 - layer) % 2 === 0;
+    const dstTexture = cascadeTextures[writeToA ? 0 : 1];
+    const srcTexture = cascadeTextures[writeToA ? 1 : 0];
 
-  return root.createBindGroup(cascadePassBGL, {
-    upper: srcTexture.createView(d.texture2d(d.f32), {
-      baseArrayLayer: Math.min(layer + 1, cascadeAmount - 1),
-      arrayLayerCount: 1,
-    }),
-    upperSampler: cascadeSampler,
-    dst: dstTexture.createView(d.textureStorage2d('rgba16float', 'write-only'), {
-      baseArrayLayer: layer,
-      arrayLayerCount: 1,
-    }),
+    return root.createBindGroup(cascadePassBGL, {
+      upper: srcTexture.createView(d.texture2d(d.f32), {
+        baseArrayLayer: Math.min(layer + 1, cascadeAmount - 1),
+        arrayLayerCount: 1,
+      }),
+      upperSampler: cascadeSampler,
+      dst: dstTexture.createView(d.textureStorage2d('rgba16float', 'write-only'), {
+        baseArrayLayer: layer,
+        arrayLayerCount: 1,
+      }),
+    });
   });
-});
+}
+
+let cascadePassBindGroups = createCascadePassBindGroups();
 
 const buildRadianceFieldPipeline = root.createComputePipeline({
   compute: buildRadianceFieldCompute,
 });
 
-const createBuildRadianceFieldBG = (textureIndex: number) =>
-  root.createBindGroup(buildRadianceFieldBGL, {
+function createBuildRadianceFieldBG(textureIndex: number) {
+  return root.createBindGroup(buildRadianceFieldBGL, {
     src: cascadeTextures[textureIndex].createView(d.texture2d(d.f32), {
       baseArrayLayer: 0,
       arrayLayerCount: 1,
@@ -358,8 +374,9 @@ const createBuildRadianceFieldBG = (textureIndex: number) =>
     srcSampler: cascadeSampler,
     dst: radianceFieldStoreView,
   });
+}
 
-const buildRadianceFieldBindGroups = [createBuildRadianceFieldBG(0), createBuildRadianceFieldBG(1)];
+let buildRadianceFieldBindGroups = [createBuildRadianceFieldBG(0), createBuildRadianceFieldBG(1)];
 
 function buildRadianceField() {
   const cascade0InA = (cascadeAmount - 1) % 2 === 0;
@@ -367,20 +384,25 @@ function buildRadianceField() {
 
   buildRadianceFieldPipeline
     .with(buildRadianceFieldBG)
-    .dispatchWorkgroups(Math.ceil(outputProbesX / 8), Math.ceil(outputProbesY / 8));
+    .dispatchWorkgroups(
+      Math.ceil(dimensions.outputProbes / 8),
+      Math.ceil(dimensions.outputProbes / 8),
+    );
 }
 
 function runCascadesTopDown() {
   for (let layer = cascadeAmount - 1; layer >= 0; layer--) {
-    const probesX = cascadeProbesX >> layer;
-    const probesY = cascadeProbesY >> layer;
+    const probes = Math.max(1, dimensions.cascadeProbes >> layer);
 
     cascadeIndexUniform.write(layer);
-    probesUniform.write(d.vec2u(probesX, probesY));
+    probesUniform.write(d.vec2u(probes));
 
     cascadePassPipeline
       .with(cascadePassBindGroups[layer])
-      .dispatchWorkgroups(Math.ceil(cascadeDimX / 8), Math.ceil(cascadeDimY / 8));
+      .dispatchWorkgroups(
+        Math.ceil(dimensions.cascadeDim / 8),
+        Math.ceil(dimensions.cascadeDim / 8),
+      );
   }
 }
 
@@ -390,23 +412,60 @@ function updateLighting() {
 }
 updateLighting();
 
-const createOverlayDebugBG = (textureIndex: number) =>
-  root.createBindGroup(overlayDebugBGL, {
+function createOverlayDebugBG(textureIndex: number) {
+  return root.createBindGroup(overlayDebugBGL, {
     cascadeTex: cascadeTextures[textureIndex].createView(d.texture2dArray(d.f32)),
     cascadeSampler: cascadeSampler,
   });
+}
 
-const overlayDebugBindGroups = [createOverlayDebugBG(0), createOverlayDebugBG(1)];
+let overlayDebugBindGroups = [createOverlayDebugBG(0), createOverlayDebugBG(1)];
 
-const renderPipeline = root.createRenderPipeline({
-  vertex: common.fullScreenTriangle,
-  fragment: overlayFrag,
-});
+function createRenderPipeline() {
+  return root.with(sceneDataAccess, sceneDataUniform).createRenderPipeline({
+    vertex: common.fullScreenTriangle,
+    fragment: overlayFrag,
+  });
+}
+
+let renderPipeline = createRenderPipeline();
 
 let frameId: number;
 let debugLayer = 0;
 
-async function frame() {
+function updateCascadeDimensions() {
+  dimensions = getCascadeDimensions();
+
+  outputProbesUniform.write(d.vec2u(dimensions.outputProbes));
+  cascadeDimUniform.write(d.vec2u(dimensions.cascadeDim));
+  cascadeProbesUniform.write(d.vec2u(dimensions.cascadeProbes));
+}
+
+function destroySizedResources() {
+  for (const texture of cascadeTextures) {
+    texture.destroy();
+  }
+  radianceFieldTex.destroy();
+}
+
+function recreateSizedResources() {
+  destroySizedResources();
+  updateCascadeDimensions();
+
+  cascadeTextures = createCascadeTextures();
+  radianceFieldTex = createRadianceFieldTexture();
+  radianceFieldView = radianceFieldTex.createView(d.texture2d());
+  radianceFieldStoreView = radianceFieldTex.createView(d.textureStorage2d('rgba16float'));
+
+  cascadePassBindGroups = createCascadePassBindGroups();
+  buildRadianceFieldBindGroups = [createBuildRadianceFieldBG(0), createBuildRadianceFieldBG(1)];
+  overlayDebugBindGroups = [createOverlayDebugBG(0), createOverlayDebugBG(1)];
+  renderPipeline = createRenderPipeline();
+
+  updateLighting();
+}
+
+function frame() {
   const writeToA = (cascadeAmount - 1 - debugLayer) % 2 === 0;
   const overlayDebugBG = overlayDebugBindGroups[writeToA ? 0 : 1];
 
@@ -415,18 +474,27 @@ async function frame() {
 }
 frameId = requestAnimationFrame(frame);
 
-const onDrag = (id: string, position: d.v2f) => {
+function onDrag(id: string, position: d.v2f) {
   updateElementPosition(id, position);
   sceneDataUniform.write(sceneData);
   updateLighting();
-};
+}
 
 const dragController = new DragController(canvas, onDrag, onDrag);
 
 // #region Example controls and cleanup
 
+let resizeTimeout: ReturnType<typeof setTimeout>;
+const resizeObserver = new ResizeObserver(() => {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(recreateSizedResources, 100);
+});
+resizeObserver.observe(canvas);
+
 export function onCleanup() {
   dragController.destroy();
+  resizeObserver.disconnect();
+  clearTimeout(resizeTimeout);
   if (frameId !== null) {
     cancelAnimationFrame(frameId);
   }

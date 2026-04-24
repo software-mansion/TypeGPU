@@ -47,22 +47,26 @@ export class DragController {
   }
 
   private setupEventListeners() {
-    this.canvas.addEventListener('mousedown', this.onMouseDown);
-    this.canvas.addEventListener('mousemove', this.onMouseMove);
-    this.canvas.addEventListener('mouseup', this.onMouseUp);
-    this.canvas.addEventListener('mouseleave', this.onMouseLeave);
+    this.canvas.addEventListener('mousedown', this.onMouseDown.bind(this));
+    this.canvas.addEventListener('mousemove', this.onMouseMove.bind(this));
+    this.canvas.addEventListener('mouseup', this.onMouseUp.bind(this));
+    this.canvas.addEventListener('mouseleave', this.onMouseLeave.bind(this));
+    this.canvas.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: false });
+    this.canvas.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
+    this.canvas.addEventListener('touchend', this.onTouchEnd.bind(this));
+    this.canvas.addEventListener('touchcancel', this.onTouchEnd.bind(this));
   }
 
-  private onMouseDown = (e: MouseEvent) => {
+  private onMouseDown(e: MouseEvent) {
     const target = this.hitTest(e.clientX, e.clientY);
     if (target) {
       this.isDragging = true;
       this.draggedElement = target;
       this.canvas.style.cursor = 'grabbing';
     }
-  };
+  }
 
-  private onMouseMove = (e: MouseEvent) => {
+  private onMouseMove(e: MouseEvent) {
     if (!this.isDragging || !this.draggedElement) {
       const target = this.hitTest(e.clientX, e.clientY);
       this.canvas.style.cursor = target ? 'grab' : 'default';
@@ -71,9 +75,9 @@ export class DragController {
 
     const newPos = this.canvasToUV(e.clientX, e.clientY);
     this.onDragMove(this.draggedElement.id, newPos);
-  };
+  }
 
-  private onMouseUp = (e: MouseEvent) => {
+  private onMouseUp(e: MouseEvent) {
     if (this.isDragging && this.draggedElement) {
       const finalPos = this.canvasToUV(e.clientX, e.clientY);
       this.onDragEnd(this.draggedElement.id, finalPos);
@@ -83,20 +87,65 @@ export class DragController {
       const target = this.hitTest(e.clientX, e.clientY);
       this.canvas.style.cursor = target ? 'grab' : 'default';
     }
-  };
+  }
 
-  private onMouseLeave = () => {
+  private onMouseLeave() {
     if (this.isDragging) {
       this.isDragging = false;
       this.draggedElement = null;
       this.canvas.style.cursor = 'default';
     }
-  };
+  }
+
+  private touchPoint(e: TouchEvent): Touch | null {
+    return e.touches[0] ?? e.changedTouches[0] ?? null;
+  }
+
+  private onTouchStart(e: TouchEvent) {
+    const touch = this.touchPoint(e);
+    if (!touch) {
+      return;
+    }
+
+    const target = this.hitTest(touch.clientX, touch.clientY);
+    if (target) {
+      e.preventDefault();
+      this.isDragging = true;
+      this.draggedElement = target;
+    }
+  }
+
+  private onTouchMove(e: TouchEvent) {
+    if (!this.isDragging || !this.draggedElement) {
+      return;
+    }
+
+    const touch = this.touchPoint(e);
+    if (!touch) {
+      return;
+    }
+
+    e.preventDefault();
+    const newPos = this.canvasToUV(touch.clientX, touch.clientY);
+    this.onDragMove(this.draggedElement.id, newPos);
+  }
+
+  private onTouchEnd(e: TouchEvent) {
+    if (!this.isDragging || !this.draggedElement) {
+      return;
+    }
+
+    const touch = this.touchPoint(e);
+    if (touch) {
+      const finalPos = this.canvasToUV(touch.clientX, touch.clientY);
+      this.onDragEnd(this.draggedElement.id, finalPos);
+    }
+
+    this.isDragging = false;
+    this.draggedElement = null;
+  }
 
   destroy() {
-    this.canvas.removeEventListener('mousedown', this.onMouseDown);
-    this.canvas.removeEventListener('mousemove', this.onMouseMove);
-    this.canvas.removeEventListener('mouseup', this.onMouseUp);
-    this.canvas.removeEventListener('mouseleave', this.onMouseLeave);
+    this.canvas.style.cursor = 'default';
   }
 }

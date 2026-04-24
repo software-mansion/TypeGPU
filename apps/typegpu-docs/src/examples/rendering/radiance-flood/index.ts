@@ -2,6 +2,7 @@ import * as rc from '@typegpu/radiance-cascades';
 import * as sdf from '@typegpu/sdf';
 import tgpu, { common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
+import { createDrawInteraction } from './drawInteraction.ts';
 
 const root = await tgpu.init();
 
@@ -64,20 +65,12 @@ const drawCompute = root.createGuardedComputePipeline((x, y) => {
     return;
   }
 
-  const dims = std.textureDimensions(sceneWriteView.$);
-  const aspectF = dims.x / dims.y;
-  const invDims = 1 / d.vec2f(dims);
-
-  const uv = (d.vec2f(x, y) + 0.5) * invDims;
-  const uvA = uv * d.vec2f(aspectF, 1);
-
-  const mouse = d.vec2f(params.mousePos.x * aspectF, params.mousePos.y);
-  const last = d.vec2f(params.lastMousePos.x * aspectF, params.lastMousePos.y);
+  const uv = (d.vec2f(x, y) + 0.5) / d.vec2f(std.textureDimensions(sceneWriteView.$));
 
   const noLast = std.any(std.lt(params.lastMousePos, d.vec2f(0)));
-  const a = std.select(last, mouse, noLast);
+  const a = std.select(params.lastMousePos, params.mousePos, noLast);
 
-  const dist = sdf.sdLine(uvA, a, mouse);
+  const dist = sdf.sdLine(uv, a, params.mousePos);
   if (dist >= params.brushRadius) {
     return;
   }
@@ -146,16 +139,14 @@ const displayFragment = tgpu.fragmentFn({
   'use gpu';
   let result = d.vec4f(0);
   if (displayModeUniform.$ === 0) {
-    // sample sdf
     const sdfDist = std.textureSampleLevel(floodSdfView.$, linSampler.$, uv, 0).x;
-    if (sdfDist < 0) {
-      // on surface, show seed color
-      const seedColor = std.textureSampleLevel(floodColorView.$, linSampler.$, uv, 0);
-      result = d.vec4f(seedColor.xyz, 1);
-    } else {
-      // sample radiance
-      result = std.textureSampleLevel(radianceRes.$, linSampler.$, uv, 0);
-    }
+    const sdfTexel = 1 / d.f32(std.textureDimensions(floodSdfView.$).x);
+    const edgeWidth = std.max(std.fwidth(sdfDist), sdfTexel);
+    const surfaceAlpha = 1 - std.smoothstep(-edgeWidth, edgeWidth, sdfDist);
+
+    const seedColor = std.textureSampleLevel(floodColorView.$, linSampler.$, uv, 0);
+    const radiance = std.textureSampleLevel(radianceRes.$, linSampler.$, uv, 0);
+    result = d.vec4f(std.mix(radiance.xyz, seedColor.xyz, surfaceAlpha), 1);
   } else {
     const signedDist = std.textureSampleLevel(floodSdfView.$, linSampler.$, uv, 0).x;
     const absDist = std.abs(signedDist);
@@ -182,52 +173,42 @@ const displayPipeline = root.createRenderPipeline({
   targets: { format: presentationFormat },
 });
 
-let lastMousePos = { x: -1, y: -1 };
 let sceneDirty = false;
-let isDrawing = false;
 
-canvas.addEventListener('mousemove', (e) => {
-  paramsUniform.writePartial({
-    lastMousePos: d.vec2f(lastMousePos.x, lastMousePos.y),
-  });
-
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left) / rect.width;
-  const y = (e.clientY - rect.top) / rect.height;
-  lastMousePos = { x, y };
-  paramsUniform.writePartial({
-    mousePos: d.vec2f(x, y),
-  });
-
-  if (isDrawing) {
-    sceneDirty = true;
-  }
-});
-
-canvas.addEventListener('mousedown', () => {
-  isDrawing = true;
+function drawScene() {
+  drawCompute.dispatchThreads(width, height);
   sceneDirty = true;
-  paramsUniform.writePartial({
-    isDrawing: 1,
-  });
-});
+}
 
-canvas.addEventListener('mouseup', () => {
-  isDrawing = false;
-  lastMousePos = { x: -1, y: -1 };
-  paramsUniform.writePartial({
-    isDrawing: 0,
-  });
-});
-
-let frameId = requestAnimationFrame(frame);
-function frame() {
+function updateScene() {
   if (sceneDirty) {
-    drawCompute.dispatchThreads(width, height);
     floodRunner.run();
     radianceRunner.run();
     sceneDirty = false;
   }
+}
+
+const drawInteraction = createDrawInteraction({
+  canvas,
+  onDraw({ last, current, color }) {
+    paramsUniform.patch({
+      lastMousePos: d.vec2f(last?.x ?? -1, last?.y ?? -1),
+      mousePos: d.vec2f(current.x, current.y),
+      lightColor: color,
+      isDrawing: 1,
+    });
+    drawScene();
+  },
+  onStop() {
+    updateScene();
+    paramsUniform.patch({ isDrawing: 0 });
+  },
+});
+
+let frameId = requestAnimationFrame(frame);
+function frame(timestamp: number) {
+  drawInteraction.update(timestamp);
+  updateScene();
 
   displayPipeline.withColorAttachment({ view: context }).draw(3);
 
@@ -237,21 +218,14 @@ function frame() {
 // #region Example controls and cleanup
 
 export const controls = defineControls({
-  'Light Color': {
-    initial: d.vec3f(1, 0.9, 0.7),
-    onColorChange(rgb: readonly [number, number, number]) {
-      paramsUniform.writePartial({
-        lightColor: d.vec3f(...rgb),
-      });
-    },
-  },
+  ...drawInteraction.controls,
   'Brush Size': {
     initial: 0.05,
     min: 0.01,
     max: 0.15,
     step: 0.01,
     onSliderChange(value: number) {
-      paramsUniform.writePartial({
+      paramsUniform.patch({
         brushRadius: value,
       });
     },
