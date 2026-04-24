@@ -556,7 +556,7 @@ ${this.ctx.pre}}`;
         const propertyStr = this.ctx.resolve(property.value, property.dataType).value;
 
         throw new Error(
-          `Unable to index value ${targetStr} of unknown type with index ${propertyStr}. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
+          `Index access '${targetStr}[${propertyStr}]' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
         );
       }
 
