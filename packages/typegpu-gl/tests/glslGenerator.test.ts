@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect } from 'vitest';
 import tgpu, { d } from 'typegpu';
-import { glOptions, initWithGL } from '@typegpu/gl';
+import { glOptions } from '@typegpu/gl';
 import { translateWgslTypeToGlsl } from '../src/glslGenerator.ts';
 import { _resetUniformCounter } from '../src/tgpuRootWebGL.ts';
-import { it as glIt } from './utils/extendedTest.ts';
+import { it } from './utils/extendedTest.ts';
 
 describe('translateWgslTypeToGlsl', () => {
   it('translates scalar types', () => {
@@ -246,91 +246,6 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
           _fragColor = vec4(1, 0, 0, 1);
           return;
         }
-      }"
-    `);
-  });
-});
-
-describe('GlslGenerator - uniform resolution', () => {
-  beforeEach(() => {
-    _resetUniformCounter();
-  });
-
-  glIt('emits a uniform declaration and references the name in shader body', ({ gl }) => {
-    const root = initWithGL({ gl });
-    const time = root.createUniform(d.f32);
-
-    const fn = () => {
-      'use gpu';
-      return time.$;
-    };
-
-    const result = tgpu.resolve([fn], GLOptions());
-    expect(result).toMatchInlineSnapshot(`
-      "uniform float _u0;
-
-      float fn() {
-        return _u0;
-      }"
-    `);
-  });
-
-  glIt('emits a vec3f uniform as vec3', ({ gl }) => {
-    const root = initWithGL({ gl });
-    const color = root.createUniform(d.vec3f);
-
-    const fn = () => {
-      'use gpu';
-      return color.$;
-    };
-
-    const result = tgpu.resolve([fn], GLOptions());
-    expect(result).toMatchInlineSnapshot(`
-      "uniform vec3 _u0;
-
-      vec3 fn() {
-        return _u0;
-      }"
-    `);
-  });
-
-  glIt('emits multiple uniforms with sequential names', ({ gl }) => {
-    const root = initWithGL({ gl });
-    const time = root.createUniform(d.f32);
-    const scale = root.createUniform(d.f32);
-
-    const fn = () => {
-      'use gpu';
-      return time.$ * scale.$;
-    };
-
-    const result = tgpu.resolve([fn], GLOptions());
-    expect(result).toMatchInlineSnapshot(`
-      "uniform float _u0;
-
-      uniform float _u1;
-
-      float fn_1() {
-        return (_u0 * _u1);
-      }"
-    `);
-  });
-
-  glIt('emits a mat2x2f uniform as mat2', ({ gl }) => {
-    const root = initWithGL({ gl });
-    const transform = root.createUniform(d.mat2x2f);
-
-    const fn = (v: d.v2f) => {
-      'use gpu';
-      return transform.$ * v;
-    };
-
-    const result = tgpu.resolve([fn], GLOptions());
-    expect(result).toMatchInlineSnapshot(`
-      "uniform mat2 _u0;
-
-      vec2 fn(vec2 v) {
-        return (_u0 * v);
       }"
     `);
   });

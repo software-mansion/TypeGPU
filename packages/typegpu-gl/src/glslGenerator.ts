@@ -1,14 +1,8 @@
 import { NodeTypeCatalog as NODE } from 'tinyest';
 import type { Return } from 'tinyest';
 import { tgpu, d } from 'typegpu';
-import {
-  WgslGenerator,
-  UnknownData,
-  getName,
-  type ResolutionCtx,
-  type TgpuShaderStage,
-  type FunctionDefinitionOptions,
-} from 'typegpu/~internal';
+import { getName, UnknownData, WgslGenerator } from 'typegpu/~internal';
+import type { ResolutionCtx, TgpuShaderStage, FunctionDefinitionOptions } from 'typegpu/~internal';
 
 // ----------
 // WGSL → GLSL type name mapping

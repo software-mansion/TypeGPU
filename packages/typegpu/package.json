@@ -80,38 +80,37 @@
       "./~internal": {
         "types": "./dist/internal.d.ts",
         "default": "./dist/internal.js"
-      }
+      },
+      "linkDirectory": false,
+      "main": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     },
-    "linkDirectory": false,
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts"
-  },
-  "scripts": {
-    "build": "tsdown",
-    "test:types": "pnpm tsc --p ./tsconfig.test.json --noEmit",
-    "prepublishOnly": "tgpu-dev-cli prepack"
-  },
-  "dependencies": {
-    "tinyest": "workspace:~",
-    "tsover-runtime": "^0.0.7",
-    "typed-binary": "^4.3.3"
-  },
-  "devDependencies": {
-    "@ark/attest": "^0.56.0",
-    "@typegpu/tgpu-dev-cli": "workspace:*",
-    "@types/node": "catalog:types",
-    "@webgpu/types": "catalog:types",
-    "arktype": "catalog:",
-    "jiti": "catalog:build",
-    "jsdom": "^27.0.0",
-    "tsdown": "catalog:build",
-    "typegpu-testing-utility": "workspace:*",
-    "typescript": "catalog:types",
-    "unplugin-typegpu": "workspace:*",
-    "wgpu-matrix": "catalog:example"
-  },
-  "engines": {
-    "node": ">=12.20.0"
-  },
-  "packageManager": "pnpm@11.1.2+sha512.415a1cc25974731e75455c1468371be74c5aa5fb7621b50d4056d222451609f11412f23fd602e6169f1e060466641f798597e1be961a10688836a67b16569499"
-}
+    "scripts": {
+      "build": "tsdown",
+      "test:types": "pnpm tsc --p ./tsconfig.test.json --noEmit",
+      "prepublishOnly": "tgpu-dev-cli prepack"
+    },
+    "dependencies": {
+      "tinyest": "workspace:~",
+      "tsover-runtime": "^0.0.7",
+      "typed-binary": "^4.3.3"
+    },
+    "devDependencies": {
+      "@ark/attest": "^0.56.0",
+      "@typegpu/tgpu-dev-cli": "workspace:*",
+      "@types/node": "catalog:types",
+      "@webgpu/types": "catalog:types",
+      "arktype": "catalog:",
+      "jiti": "catalog:build",
+      "jsdom": "^27.0.0",
+      "tsdown": "catalog:build",
+      "typegpu-testing-utility": "workspace:*",
+      "typescript": "catalog:types",
+      "unplugin-typegpu": "workspace:*",
+      "wgpu-matrix": "catalog:example"
+    },
+    "engines": {
+      "node": ">=12.20.0"
+    },
+    "packageManager": "pnpm@11.1.2+sha512.415a1cc25974731e75455c1468371be74c5aa5fb7621b50d4056d222451609f11412f23fd602e6169f1e060466641f798597e1be961a10688836a67b16569499"
+  }
