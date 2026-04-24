@@ -1840,7 +1840,7 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('throws a descriptive error when declaring a loose variable', ({ root }) => {
+  it('throws a descriptive error when declaring a loose variable', () => {
     const Unstruct = d.unstruct({ prop: d.vec4f });
     const testFn = () => {
       'use gpu';

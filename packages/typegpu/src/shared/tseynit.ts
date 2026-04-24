@@ -116,7 +116,7 @@ function stringifyExpression(node: tinyest.Expression, ident: string): string {
   }
 
   if (node[0] === NODE.unaryExpr) {
-    // void, instanceof and delete require a space
+    // Unary word operators like void, instanceof and delete require a space
     const sep = node[1].length > 1 ? ' ' : '';
     return `${node[1]}${sep}${wrapIfComplex(node[2], ident)}`;
   }
@@ -194,7 +194,7 @@ const SIMPLE_NODES: number[] = [
   NODE.memberAccess, // highest precedence
   NODE.indexAccess, // highest precedence
   NODE.call, // highest precedence
-  NODE.arrayExpr, // [] make thinks not ambiguous
+  NODE.arrayExpr, // [] make things not ambiguous
   NODE.stringLiteral,
   NODE.numericLiteral,
 ];
