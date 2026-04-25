@@ -243,7 +243,7 @@ export type ColorTexture = TgpuTexture<{
 
 export type Executor = {
   /** Run the jump flood algorithm. */
-  run(): void;
+  run(commandEncoder?: GPUCommandEncoder): void;
   /** The SDF output texture (r32float). */
   readonly sdfOutput: SdfTexture;
   /** The color output texture (rgba8unorm). */
@@ -324,15 +324,9 @@ export function createJumpFlood(options: JumpFloodOptions): Executor {
     })
     .$usage('storage');
 
-  const offsetUniform = root.createUniform(d.i32);
-
   const initFromSeedPipeline = root
     .with(classifySlot, classify)
     .createComputePipeline({ compute: initFromSeedCompute });
-
-  const jumpFloodPipeline = root
-    .with(offsetAccessor, offsetUniform)
-    .createComputePipeline({ compute: jumpFloodCompute });
 
   const finalizePipeline = root
     .with(sdfSlot, getSdf)
@@ -375,12 +369,24 @@ export function createJumpFlood(options: JumpFloodOptions): Executor {
 
   // Largest power-of-two strictly less than maxDim.
   const maxRange = 2 ** Math.floor(Math.log2(Math.max(maxDim - 1, 1)));
+  const offsets: number[] = [];
+  for (let offset = maxRange; offset >= 1; offset = Math.floor(offset / 2)) {
+    offsets.push(offset);
+  }
+  const offsetUniforms = offsets.map((offset) => root.createUniform(d.i32, offset));
+  const jumpFloodPipelines = offsetUniforms.map((offsetUniform) =>
+    root.with(offsetAccessor, offsetUniform).createComputePipeline({ compute: jumpFloodCompute }),
+  );
+  const finalizeSourceIdx = offsets.length % 2;
 
   function destroy() {
     floodTextureA.destroy();
     floodTextureB.destroy();
     sdfTexture.destroy();
     colorTexture.destroy();
+    for (const offsetUniform of offsetUniforms) {
+      offsetUniform.buffer.destroy();
+    }
   }
 
   function createExecutor(additionalBindGroups: TgpuBindGroup[] = []): Executor {
@@ -390,8 +396,13 @@ export function createJumpFlood(options: JumpFloodOptions): Executor {
       prebuiltInitPipeline = prebuiltInitPipeline.with(bg);
     }
 
-    const prebuiltFloodPipelines = pingPongBGs.map((bg) => {
-      let p = jumpFloodPipeline.with(bg);
+    const prebuiltFloodPipelines = jumpFloodPipelines.map((pipeline, passIndex) => {
+      const bg = pingPongBGs[passIndex % 2];
+      if (!bg) {
+        throw new Error(`Missing jump flood bind group for pass ${passIndex}.`);
+      }
+
+      let p = pipeline.with(bg);
       for (const addBg of additionalBindGroups) {
         p = p.with(addBg);
       }
@@ -406,21 +417,23 @@ export function createJumpFlood(options: JumpFloodOptions): Executor {
       return p;
     });
 
-    function run() {
-      prebuiltInitPipeline.dispatchWorkgroups(workgroupsX, workgroupsY);
+    function run(commandEncoder?: GPUCommandEncoder) {
+      const encoder = commandEncoder ?? root.device.createCommandEncoder();
 
-      let sourceIdx = 0;
-      let offset = maxRange;
+      prebuiltInitPipeline.with(encoder).dispatchWorkgroups(workgroupsX, workgroupsY);
 
-      while (offset >= 1) {
-        offsetUniform.write(offset);
-        prebuiltFloodPipelines[sourceIdx]?.dispatchWorkgroups(workgroupsX, workgroupsY);
-        sourceIdx ^= 1;
-        offset = Math.floor(offset / 2);
+      for (const floodPipeline of prebuiltFloodPipelines) {
+        floodPipeline.with(encoder).dispatchWorkgroups(workgroupsX, workgroupsY);
       }
 
       // Finalize: JFA+1 at offset=1 fused with distance field output
-      prebuiltFinalizePipelines[sourceIdx]?.dispatchWorkgroups(workgroupsX, workgroupsY);
+      prebuiltFinalizePipelines[finalizeSourceIdx]
+        ?.with(encoder)
+        .dispatchWorkgroups(workgroupsX, workgroupsY);
+
+      if (!commandEncoder) {
+        root.device.queue.submit([encoder.finish()]);
+      }
     }
 
     return {

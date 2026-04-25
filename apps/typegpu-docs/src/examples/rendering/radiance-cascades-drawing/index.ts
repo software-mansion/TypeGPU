@@ -80,7 +80,7 @@ const drawCompute = root.createGuardedComputePipeline((x, y) => {
   std.textureStore(sceneWriteView.$, d.vec2u(x, y), out);
 });
 
-const floodSize = { width: canvas.width, height: canvas.height };
+const floodSize = { width: Math.floor(width / 4), height: Math.floor(height / 4) };
 const floodRunner = sdf
   .createJumpFlood({
     root,
@@ -93,7 +93,7 @@ const floodRunner = sdf
         (d.vec2f(coord) + 0.5) / d.vec2f(size),
         0,
       );
-      return sceneData.w > 0;
+      return sceneData.w > 0.5;
     },
     getSdf: (_coord, size, signedDist) => {
       'use gpu';
@@ -104,7 +104,8 @@ const floodRunner = sdf
       'use gpu';
       const uv = (d.vec2f(insidePx) + 0.5) / d.vec2f(size);
       const seedData = std.textureSampleLevel(sceneDataLayout.$.sceneRead, linSampler.$, uv, 0);
-      return d.vec4f(seedData.xyz, 1);
+      const seedAlpha = std.max(seedData.w, 1e-3);
+      return d.vec4f(seedData.xyz / seedAlpha, 1);
     },
   })
   .with(sceneDataBG);
@@ -116,6 +117,8 @@ const radianceRunner = rc.createRadianceCascades({
   root,
   size: { width: Math.floor(width / 4), height: Math.floor(height / 4) },
   sdfResolution: floodSize,
+  baseStoredRayDim: 1,
+  mergeMode: 'hardware',
   sdf: (uv) => {
     'use gpu';
     if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) {
@@ -182,8 +185,10 @@ function drawScene() {
 
 function updateScene() {
   if (sceneDirty) {
-    floodRunner.run();
-    radianceRunner.run();
+    const encoder = root.device.createCommandEncoder();
+    floodRunner.run(encoder);
+    radianceRunner.run(encoder);
+    root.device.queue.submit([encoder.finish()]);
     sceneDirty = false;
   }
 }

@@ -10,24 +10,48 @@ import {
 } from 'typegpu';
 import * as d from 'typegpu/data';
 import {
+  type BaseStoredRayDim,
   buildRadianceFieldBGL,
-  buildRadianceFieldCompute,
-  BuildRadianceFieldParams,
   cascadePassBGL,
-  cascadePassCompute,
-  CascadeStaticParams,
+  CascadeLayerParams,
   colorSlot,
   defaultRayMarch,
-  getCascadeDim,
+  defaultTraceSegment,
+  getCascadeInfo,
+  makeBuildRadianceFieldCompute,
+  makeCascadePassCompute,
+  MERGE_MODE_BILINEAR_FIX,
+  MERGE_MODE_HARDWARE,
+  maxRayStepsSlot,
+  type MergeMode,
+  rayMarchStepSafetySlot,
+  renderAspectSlot,
   type RayMarchResult,
   rayMarchSlot,
   sdfResolutionSlot,
   sdfSlot,
+  traceSegmentSlot,
 } from './cascades.ts';
 
 type OutputTexture =
   | (TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> & StorageFlag)
   | TgpuTextureView<d.WgslStorageTexture2d<'rgba16float', 'write-only'>>;
+
+type CascadeTexture2D = TgpuTexture<{
+  size: [number, number];
+  format: 'rgba16float';
+}> &
+  StorageFlag &
+  SampledFlag;
+
+type CascadeTextureArray = TgpuTexture<{
+  size: [number, number, number];
+  format: 'rgba16float';
+}> &
+  StorageFlag &
+  SampledFlag;
+
+type CascadeTexture = CascadeTexture2D | CascadeTextureArray;
 
 type CascadesOptions = {
   root: TgpuRoot;
@@ -43,8 +67,28 @@ type CascadesOptions = {
     minStep: number,
     bias: number,
   ) => d.InferGPU<typeof RayMarchResult>;
+  traceSegment?: (
+    p0: d.v2f,
+    p1: d.v2f,
+    aspect: number,
+    eps: number,
+    minStep: number,
+    bias: number,
+  ) => d.InferGPU<typeof RayMarchResult>;
   output?: OutputTexture;
   size?: { width: number; height: number };
+  renderAspect?: number;
+  sdfMetric?: 'short-axis-uv';
+  erodeBiasPx?: number;
+  epsPx?: number;
+  minStepPx?: number;
+  maxRaySteps?: number;
+  stepSafety?: number;
+  intervalOverlapPx?: number | 'upperProbeSpacing';
+  baseStoredRayDim?: BaseStoredRayDim;
+  preaverageRayDim?: 2;
+  mergeMode?: MergeMode;
+  keepCascadeLayers?: boolean;
 };
 
 type OutputTextureProp = TgpuTexture<{
@@ -54,23 +98,115 @@ type OutputTextureProp = TgpuTexture<{
   StorageFlag &
   SampledFlag;
 
-export type RadianceCascadesExecutor = {
-  run(): void;
-  with(bindGroup: TgpuBindGroup): RadianceCascadesExecutor;
+export type RadianceCascadesExecutor<TOutput extends OutputTexture = OutputTexture> = {
+  run(commandEncoder?: GPUCommandEncoder): void;
+  with(bindGroup: TgpuBindGroup): RadianceCascadesExecutor<TOutput>;
   destroy(): void;
-  readonly output: OutputTextureProp;
+  readonly output: TOutput;
+  readonly outputTexture: OutputTextureProp | undefined;
+  readonly ownsOutput: boolean;
 };
 
-export function createRadianceCascades(options: CascadesOptions): RadianceCascadesExecutor {
-  const { root, sdf, color, sdfResolution, output, size, rayMarch } = options;
+export type OwnedRadianceCascadesExecutor = RadianceCascadesExecutor<OutputTextureProp> & {
+  readonly outputTexture: OutputTextureProp;
+  readonly ownsOutput: true;
+};
 
-  const hasOutputProvided = !!output && (isTexture(output) || isTextureView(output));
+function getMergeModeId(mergeMode: MergeMode) {
+  switch (mergeMode) {
+    case 'hardware':
+      return MERGE_MODE_HARDWARE;
+    case 'bilinear-fix':
+      return MERGE_MODE_BILINEAR_FIX;
+    default:
+      throw new Error(`Unsupported radiance cascade merge mode: ${mergeMode satisfies never}`);
+  }
+}
+
+function assertPositiveOption(name: string, value: number) {
+  if (!(value > 0)) {
+    throw new Error(`${name} must be positive.`);
+  }
+}
+
+function assertNonNegativeOption(name: string, value: number) {
+  if (value < 0) {
+    throw new Error(`${name} must be non-negative.`);
+  }
+}
+
+function createCascadeTexture(
+  root: TgpuRoot,
+  cascadeDimX: number,
+  cascadeDimY: number,
+  cascadeCount: number,
+  keepCascadeLayers: boolean,
+): CascadeTexture {
+  if (keepCascadeLayers) {
+    return root
+      .createTexture({
+        size: [cascadeDimX, cascadeDimY, cascadeCount],
+        format: 'rgba16float',
+      })
+      .$usage('storage', 'sampled');
+  }
+
+  return root
+    .createTexture({
+      size: [cascadeDimX, cascadeDimY],
+      format: 'rgba16float',
+    })
+    .$usage('storage', 'sampled');
+}
+
+function createCascadeSampleView(
+  texture: CascadeTexture,
+  layer: number,
+  keepCascadeLayers: boolean,
+) {
+  if (keepCascadeLayers) {
+    return (texture as CascadeTextureArray).createView(d.texture2d(d.f32), {
+      baseArrayLayer: layer,
+      arrayLayerCount: 1,
+    });
+  }
+
+  return (texture as CascadeTexture2D).createView(d.texture2d(d.f32));
+}
+
+function createCascadeStorageView(
+  texture: CascadeTexture,
+  layer: number,
+  keepCascadeLayers: boolean,
+) {
+  if (keepCascadeLayers) {
+    return (texture as CascadeTextureArray).createView(d.textureStorage2d('rgba16float'), {
+      baseArrayLayer: layer,
+      arrayLayerCount: 1,
+    });
+  }
+
+  return (texture as CascadeTexture2D).createView(d.textureStorage2d('rgba16float'));
+}
+
+export function createRadianceCascades(
+  options: CascadesOptions & { output?: undefined },
+): OwnedRadianceCascadesExecutor;
+export function createRadianceCascades<TOutput extends OutputTexture>(
+  options: CascadesOptions & { output: TOutput },
+): RadianceCascadesExecutor<TOutput>;
+export function createRadianceCascades(options: CascadesOptions): RadianceCascadesExecutor {
+  const { root, sdf, color, sdfResolution, output, size, rayMarch, traceSegment } = options;
+
+  if (output !== undefined && !isTexture(output) && !isTextureView(output)) {
+    throw new Error('output must be a TypeGPU texture or texture view.');
+  }
 
   // Determine output dimensions
   let outputWidth: number;
   let outputHeight: number;
 
-  if (hasOutputProvided) {
+  if (output !== undefined) {
     if (isTexture(output)) {
       [outputWidth, outputHeight] = output.props.size;
     } else {
@@ -90,118 +226,210 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
     outputHeight = size.height;
   }
 
+  if (!(sdfResolution.width > 0) || !(sdfResolution.height > 0)) {
+    throw new Error('sdfResolution must be positive.');
+  }
+
+  const sdfMetric = options.sdfMetric ?? 'short-axis-uv';
+  if (sdfMetric !== 'short-axis-uv') {
+    throw new Error('Only the short-axis-uv SDF metric is currently supported.');
+  }
+
+  if (options.preaverageRayDim !== undefined && options.preaverageRayDim !== 2) {
+    throw new Error('Only preaverageRayDim: 2 is currently supported.');
+  }
+
+  const mergeMode = options.mergeMode ?? 'hardware';
+  const mergeModeId = getMergeModeId(mergeMode);
+  const keepCascadeLayers = options.keepCascadeLayers ?? false;
+  const baseStoredRayDim = options.baseStoredRayDim ?? 2;
+  const renderAspect = options.renderAspect ?? outputWidth / outputHeight;
+  const erodeBiasPx = options.erodeBiasPx ?? 1;
+  const epsPx = options.epsPx ?? 0.25;
+  const minStepPx = options.minStepPx ?? 0.125;
+  const maxRaySteps = Math.floor(options.maxRaySteps ?? 64);
+  const stepSafety = options.stepSafety ?? 1;
+  const intervalOverlapPx = options.intervalOverlapPx ?? 0;
+
+  assertPositiveOption('renderAspect', renderAspect);
+  assertNonNegativeOption('erodeBiasPx', erodeBiasPx);
+  assertNonNegativeOption('epsPx', epsPx);
+  assertNonNegativeOption('minStepPx', minStepPx);
+  assertPositiveOption('maxRaySteps', maxRaySteps);
+  assertPositiveOption('stepSafety', stepSafety);
+  if (typeof intervalOverlapPx === 'number') {
+    assertNonNegativeOption('intervalOverlapPx', intervalOverlapPx);
+  }
+
   // Create or use provided output texture
-  const dst = hasOutputProvided
-    ? output
-    : root
-        .createTexture({
-          size: [outputWidth, outputHeight],
-          format: 'rgba16float',
-        })
-        .$usage('storage', 'sampled');
+  const dst =
+    output !== undefined
+      ? output
+      : root
+          .createTexture({
+            size: [outputWidth, outputHeight],
+            format: 'rgba16float',
+          })
+          .$usage('storage', 'sampled');
 
-  const ownsOutput = !hasOutputProvided;
+  const ownsOutput = output === undefined;
 
-  const [cascadeDimX, cascadeDimY, cascadeAmount] = getCascadeDim(outputWidth, outputHeight);
+  const cascadeInfo = getCascadeInfo(outputWidth, outputHeight, { baseStoredRayDim });
+  const [cascadeDimX, cascadeDimY] = cascadeInfo.cascadeDim;
+  const [cascadeProbesX, cascadeProbesY] = cascadeInfo.baseProbes;
+  const cascadeCount = cascadeInfo.cascadeCount;
+  const cascadeProbesMin = Math.min(cascadeProbesX, cascadeProbesY);
+  const sdfTexelSizeMin = 1 / Math.max(Math.min(sdfResolution.width, sdfResolution.height), 1);
+  const epsUv = Math.max(sdfTexelSizeMin, epsPx / cascadeProbesMin);
+  const minStepUv = Math.max(sdfTexelSizeMin * 0.5, minStepPx / cascadeProbesMin);
+  const hitBiasUv = erodeBiasPx / cascadeProbesMin;
 
-  const cascadeProbesX = cascadeDimX / 2;
-  const cascadeProbesY = cascadeDimY / 2;
+  const cascadeTextureA = createCascadeTexture(
+    root,
+    cascadeDimX,
+    cascadeDimY,
+    cascadeCount,
+    keepCascadeLayers,
+  );
 
-  const cascadeTextureA = root
-    .createTexture({
-      size: [cascadeDimX, cascadeDimY, cascadeAmount],
-      format: 'rgba16float',
-    })
-    .$usage('storage', 'sampled');
-
-  const cascadeTextureB = root
-    .createTexture({
-      size: [cascadeDimX, cascadeDimY, cascadeAmount],
-      format: 'rgba16float',
-    })
-    .$usage('storage', 'sampled');
+  const cascadeTextureB = createCascadeTexture(
+    root,
+    cascadeDimX,
+    cascadeDimY,
+    cascadeCount,
+    keepCascadeLayers,
+  );
 
   const cascadeSampler = root.createSampler({
     magFilter: 'linear',
     minFilter: 'linear',
   });
 
-  const staticParamsBuffer = root
-    .createBuffer(CascadeStaticParams, {
-      baseProbes: [cascadeProbesX, cascadeProbesY],
-      cascadeDim: [cascadeDimX, cascadeDimY],
-      cascadeCount: cascadeAmount,
-    })
-    .$usage('uniform');
+  const layerParamsBuffers = cascadeInfo.layers.map((layerInfo) => {
+    let intervalOverlapUv = 0;
+    if (layerInfo.layer < cascadeCount - 1) {
+      intervalOverlapUv =
+        typeof intervalOverlapPx === 'number'
+          ? intervalOverlapPx / cascadeProbesMin
+          : 1 / Math.min(layerInfo.probesU[0], layerInfo.probesU[1]);
+    }
 
-  const layerBuffer = root.createBuffer(d.u32).$usage('uniform');
+    return root
+      .createBuffer(CascadeLayerParams, {
+        layer: layerInfo.layer,
+        probes: layerInfo.probes,
+        probesU: layerInfo.probesU,
+        validDim: layerInfo.validDim,
+        raysDimStored: layerInfo.raysDimStored,
+        raysDimActual: layerInfo.raysDimActual,
+        startUv: layerInfo.startUv,
+        endUv: layerInfo.endUv,
+        intervalOverlapUv,
+      })
+      .$usage('uniform');
+  });
 
-  const cascadePassPipeline = root
+  const cascadePipelineBase = root
     .with(sdfResolutionSlot, d.vec2u(sdfResolution.width, sdfResolution.height))
     .with(sdfSlot, sdf)
     .with(colorSlot, color)
+    .with(renderAspectSlot, renderAspect)
+    .with(maxRayStepsSlot, maxRaySteps)
+    .with(rayMarchStepSafetySlot, stepSafety)
     .with(rayMarchSlot, rayMarch ?? defaultRayMarch)
-    .createComputePipeline({ compute: cascadePassCompute });
+    .with(traceSegmentSlot, traceSegment ?? defaultTraceSegment);
 
-  const cascadePassBindGroups = Array.from({ length: cascadeAmount }, (_, layer) => {
-    const writeToA = (cascadeAmount - 1 - layer) % 2 === 0;
+  const cascadePassSpecialization = {
+    mergeModeId,
+    renderAspect,
+    epsUv,
+    minStepUv,
+    hitBiasUv,
+  };
+
+  const topCascadePipeline = cascadePipelineBase.createComputePipeline({
+    compute: makeCascadePassCompute({
+      ...cascadePassSpecialization,
+      hasUpperCascade: false,
+    }),
+  });
+
+  const mergeCascadePipeline = cascadePipelineBase.createComputePipeline({
+    compute: makeCascadePassCompute({
+      ...cascadePassSpecialization,
+      hasUpperCascade: true,
+    }),
+  });
+
+  const cascadePassBindGroups = Array.from({ length: cascadeCount }, (_, layer) => {
+    const writeToA = (cascadeCount - 1 - layer) % 2 === 0;
     const dstTexture = writeToA ? cascadeTextureA : cascadeTextureB;
     const srcTexture = writeToA ? cascadeTextureB : cascadeTextureA;
+    const layerParams = layerParamsBuffers[layer];
+
+    if (!layerParams) {
+      throw new Error(`Missing radiance cascade layer params for layer ${layer}.`);
+    }
 
     return root.createBindGroup(cascadePassBGL, {
-      staticParams: staticParamsBuffer,
-      layer: layerBuffer,
-      upper: srcTexture.createView(d.texture2d(d.f32), {
-        baseArrayLayer: Math.min(layer + 1, cascadeAmount - 1),
-        arrayLayerCount: 1,
-      }),
+      layerParams,
+      upper: createCascadeSampleView(
+        srcTexture,
+        Math.min(layer + 1, cascadeCount - 1),
+        keepCascadeLayers,
+      ),
       upperSampler: cascadeSampler,
-      dst: dstTexture.createView(d.textureStorage2d('rgba16float'), {
-        baseArrayLayer: layer,
-        arrayLayerCount: 1,
-      }),
+      dst: createCascadeStorageView(dstTexture, layer, keepCascadeLayers),
     });
   });
 
   const buildRadianceFieldPipeline = root.createComputePipeline({
-    compute: buildRadianceFieldCompute,
+    compute: makeBuildRadianceFieldCompute({
+      baseStoredRayDim,
+      cascadeProbes: [cascadeProbesX, cascadeProbesY],
+    }),
   });
 
-  const radianceFieldParamsBuffer = root
-    .createBuffer(BuildRadianceFieldParams, {
-      outputProbes: [outputWidth, outputHeight],
-      cascadeProbes: [cascadeProbesX, cascadeProbesY],
-    })
-    .$usage('uniform');
-
-  const cascade0InA = (cascadeAmount - 1) % 2 === 0;
+  const cascade0InA = (cascadeCount - 1) % 2 === 0;
   const srcCascadeTexture = cascade0InA ? cascadeTextureA : cascadeTextureB;
 
   const buildRadianceFieldBG = root.createBindGroup(buildRadianceFieldBGL, {
-    params: radianceFieldParamsBuffer,
-    src: srcCascadeTexture.createView(d.texture2d(d.f32), {
-      baseArrayLayer: 0,
-      arrayLayerCount: 1,
-    }),
+    src: createCascadeSampleView(srcCascadeTexture, 0, keepCascadeLayers),
     srcSampler: cascadeSampler,
     dst,
   });
 
-  const cascadeWorkgroupsX = Math.ceil(cascadeDimX / 8);
-  const cascadeWorkgroupsY = Math.ceil(cascadeDimY / 8);
+  const cascadeDispatches = cascadeInfo.layers.map(({ validDim }) => ({
+    workgroupsX: Math.ceil(validDim[0] / 8),
+    workgroupsY: Math.ceil(validDim[1] / 8),
+  }));
   const outputWorkgroupsX = Math.ceil(outputWidth / 8);
   const outputWorkgroupsY = Math.ceil(outputHeight / 8);
+  const outputTexture =
+    isTexture(dst) && dst.usableAsSampled ? (dst as OutputTextureProp) : undefined;
+
+  let destroyed = false;
 
   function destroy() {
+    if (destroyed) {
+      return;
+    }
+    destroyed = true;
+
     cascadeTextureA.destroy();
     cascadeTextureB.destroy();
+    for (const layerParamsBuffer of layerParamsBuffers) {
+      layerParamsBuffer.destroy();
+    }
     if (ownsOutput && isTexture(dst)) {
       dst.destroy();
     }
   }
 
   function createExecutor(additionalBindGroups: TgpuBindGroup[] = []): RadianceCascadesExecutor {
-    const prebuiltCascadePipelines = cascadePassBindGroups.map((bg) => {
+    const prebuiltCascadePipelines = cascadePassBindGroups.map((bg, layer) => {
+      const cascadePassPipeline =
+        layer === cascadeCount - 1 ? topCascadePipeline : mergeCascadePipeline;
       let p = cascadePassPipeline.with(bg);
       for (const addBg of additionalBindGroups) {
         p = p.with(addBg);
@@ -214,20 +442,35 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
       prebuiltRadiancePipeline = prebuiltRadiancePipeline.with(bg);
     }
 
-    function run() {
-      for (let layer = cascadeAmount - 1; layer >= 0; layer--) {
-        layerBuffer.write(layer);
-        prebuiltCascadePipelines[layer]?.dispatchWorkgroups(cascadeWorkgroupsX, cascadeWorkgroupsY);
+    function run(commandEncoder?: GPUCommandEncoder) {
+      const encoder = commandEncoder ?? root.device.createCommandEncoder();
+
+      for (let layer = cascadeCount - 1; layer >= 0; layer--) {
+        const dispatch = cascadeDispatches[layer];
+        if (!dispatch) {
+          throw new Error(`Missing radiance cascade dispatch dimensions for layer ${layer}.`);
+        }
+        prebuiltCascadePipelines[layer]
+          ?.with(encoder)
+          .dispatchWorkgroups(dispatch.workgroupsX, dispatch.workgroupsY);
       }
 
-      prebuiltRadiancePipeline.dispatchWorkgroups(outputWorkgroupsX, outputWorkgroupsY);
+      prebuiltRadiancePipeline
+        .with(encoder)
+        .dispatchWorkgroups(outputWorkgroupsX, outputWorkgroupsY);
+
+      if (!commandEncoder) {
+        root.device.queue.submit([encoder.finish()]);
+      }
     }
 
     return {
       run,
       with: (bg) => createExecutor([...additionalBindGroups, bg]),
       destroy,
-      output: dst as OutputTextureProp,
+      output: dst,
+      outputTexture,
+      ownsOutput,
     };
   }
 

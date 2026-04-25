@@ -97,6 +97,46 @@ const cascadeSampler = root.createSampler({
   minFilter: 'linear',
 });
 
+const part1By1 = tgpu.fn(
+  [d.u32],
+  d.u32,
+)((v) => {
+  'use gpu';
+  const x0 = v & 0x0000ffff;
+  const x1 = (x0 | (x0 << 8)) & 0x00ff00ff;
+  const x2 = (x1 | (x1 << 4)) & 0x0f0f0f0f;
+  const x3 = (x2 | (x2 << 2)) & 0x33333333;
+  return (x3 | (x3 << 1)) & 0x55555555;
+});
+
+const compact1By1 = tgpu.fn(
+  [d.u32],
+  d.u32,
+)((v) => {
+  'use gpu';
+  const x0 = v & 0x55555555;
+  const x1 = (x0 ^ (x0 >> 1)) & 0x33333333;
+  const x2 = (x1 ^ (x1 >> 2)) & 0x0f0f0f0f;
+  const x3 = (x2 ^ (x2 >> 4)) & 0x00ff00ff;
+  return (x3 ^ (x3 >> 8)) & 0x0000ffff;
+});
+
+const morton2D = tgpu.fn(
+  [d.u32, d.u32],
+  d.u32,
+)((x, y) => {
+  'use gpu';
+  return part1By1(x) | (part1By1(y) << 1);
+});
+
+const unmorton2D = tgpu.fn(
+  [d.u32],
+  d.vec2u,
+)((index) => {
+  'use gpu';
+  return d.vec2u(compact1By1(index), compact1By1(index >> 1));
+});
+
 const cascadePassPipeline = root
   .with(sceneDataAccess, sceneDataUniform)
   .createGuardedComputePipeline((x, y) => {
@@ -127,7 +167,7 @@ const cascadePassPipeline = root
 
     for (const i of tgpu.unroll(std.range(4))) {
       const dirActual = dirStored * 2 + d.vec2u(i & 1, i >> 1);
-      const rayIndex = d.f32(dirActual.y * raysDimActual + dirActual.x) + 0.5;
+      const rayIndex = d.f32(morton2D(dirActual.x, dirActual.y)) + 0.5;
       const angle = (rayIndex / d.f32(rayCountActual)) * (Math.PI * 2) - Math.PI;
       const rayDir = d.vec2f(std.cos(angle), -std.sin(angle));
 
@@ -295,7 +335,8 @@ const overlayFrag = tgpu.fragmentFn({
         const rayDist = sdf.sdLine(uv, probePos, probePos + rayDir * std.max(rayEndDistance, 0.01));
 
         if (rayDist < minRayDist) {
-          const dirStored = d.vec2u((ri % raysDimActual) >> 1, d.u32(ri / raysDimActual) >> 1);
+          const dirActual = unmorton2D(ri);
+          const dirStored = d.vec2u(dirActual.x >> 1, dirActual.y >> 1);
           const sample = std.textureLoad(
             overlayDebugBGL.$.cascadeTex,
             d.vec2i(dirStored * probes + probe),
