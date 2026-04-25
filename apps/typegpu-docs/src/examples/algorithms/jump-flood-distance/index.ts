@@ -23,6 +23,8 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const context = root.configureContext({ canvas });
 
+const F32_MAX = 3.40282346e38;
+
 let brushSize = 1;
 let isDrawing = false;
 let lastDrawPos: { x: number; y: number } | null = null;
@@ -180,8 +182,8 @@ const jumpFlood = root.createGuardedComputePipeline((x, y) => {
 
   let bestInsideCoord = d.vec2f(-1);
   let bestOutsideCoord = d.vec2f(-1);
-  let bestInsideDist = d.f32(3.4 * 10 ** 38);
-  let bestOutsideDist = d.f32(3.4 * 10 ** 38);
+  let bestInsideDist = d.f32(F32_MAX);
+  let bestOutsideDist = d.f32(F32_MAX);
 
   for (const dx of tgpu.unroll([-1, 0, 1])) {
     for (const dy of tgpu.unroll([-1, 0, 1])) {
@@ -242,8 +244,8 @@ const createDistanceField = root.createGuardedComputePipeline((x, y) => {
   const insideCoord = texel.xy;
   const outsideCoord = texel.zw;
 
-  let insideDist = d.f32(3.4 * 10 ** 38);
-  let outsideDist = d.f32(3.4 * 10 ** 38);
+  let insideDist = d.f32(F32_MAX);
+  let outsideDist = d.f32(F32_MAX);
 
   if (insideCoord.x >= 0) {
     insideDist = std.distance(pos, insideCoord.mul(d.vec2f(size)));

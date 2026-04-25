@@ -97,96 +97,87 @@ const cascadeSampler = root.createSampler({
   minFilter: 'linear',
 });
 
-const cascadePassCompute = tgpu.computeFn({
-  workgroupSize: [8, 8],
-  in: { gid: d.builtin.globalInvocationId },
-})(({ gid }) => {
-  'use gpu';
-  const dim2 = cascadeDimUniform.$;
-  if (gid.x >= dim2.x || gid.y >= dim2.y) {
-    return;
-  }
+const cascadePassPipeline = root
+  .with(sceneDataAccess, sceneDataUniform)
+  .createGuardedComputePipeline((x, y) => {
+    'use gpu';
+    const gid = d.vec2u(x, y);
+    const cascadeDim = cascadeDimUniform.$;
+    const layer = cascadeIndexUniform.$;
+    const probes = probesUniform.$;
+    const cascadeProbes = cascadeProbesUniform.$;
 
-  const layer = cascadeIndexUniform.$;
-  const probes = probesUniform.$;
-  const cascadeProbes = cascadeProbesUniform.$;
+    const dirStored = gid.xy / probes;
+    const probe = gid.xy % probes;
+    const raysDimStored = d.u32(2 << layer);
+    const raysDimActual = raysDimStored * 2;
+    const rayCountActual = raysDimActual * raysDimActual;
 
-  const dirStored = gid.xy / probes;
-  const probe = gid.xy % probes;
-  const raysDimStored = d.u32(2 << layer);
-  const raysDimActual = raysDimStored * 2;
-  const rayCountActual = raysDimActual * raysDimActual;
+    const probePos = (d.vec2f(probe) + 0.5) / d.vec2f(probes);
+    const baseProbeCount = d.f32(cascadeProbes.x);
+    const baseRayInterval = 1 / baseProbeCount;
+    const rayIntervalScale = d.f32(1 << (layer * 2));
+    // Ray intervals are distances in normalized scene space, not texture UV coordinates.
+    const rayStartDistance = (baseRayInterval * (rayIntervalScale - 1)) / 3;
+    const rayEndDistance = rayStartDistance + baseRayInterval * rayIntervalScale;
+    const eps = 0.5 / baseProbeCount;
+    const minStep = 0.25 / baseProbeCount;
 
-  const probePos = (d.vec2f(probe) + 0.5) / d.vec2f(probes);
-  const cascadeProbesVal = d.f32(cascadeProbes.x);
-  const interval0 = 1 / cascadeProbesVal;
-  const pow4 = d.f32(1 << (layer * 2));
-  const startUv = (interval0 * (pow4 - 1)) / 3;
-  const endUv = startUv + interval0 * pow4;
-  const eps = 0.5 / cascadeProbesVal;
-  const minStep = 0.25 / cascadeProbesVal;
+    let accum = d.vec4f();
 
-  let accum = d.vec4f();
+    for (const i of tgpu.unroll(std.range(4))) {
+      const dirActual = dirStored * 2 + d.vec2u(i & 1, i >> 1);
+      const rayIndex = d.f32(dirActual.y * raysDimActual + dirActual.x) + 0.5;
+      const angle = (rayIndex / d.f32(rayCountActual)) * (Math.PI * 2) - Math.PI;
+      const rayDir = d.vec2f(std.cos(angle), -std.sin(angle));
 
-  for (const i of tgpu.unroll(std.range(4))) {
-    const dirActual = dirStored * 2 + d.vec2u(i & 1, i >> 1);
-    const rayIndex = d.f32(dirActual.y * raysDimActual + dirActual.x) + 0.5;
-    const angle = (rayIndex / d.f32(rayCountActual)) * (Math.PI * 2) - Math.PI;
-    const rayDir = d.vec2f(std.cos(angle), -std.sin(angle));
+      let rgb = d.vec3f();
+      let T = d.f32(1);
+      let t = rayStartDistance;
 
-    let rgb = d.vec3f();
-    let T = d.f32(1);
-    let t = startUv;
-
-    for (let step = 0; step < 64; step++) {
-      if (t > endUv) {
-        break;
+      for (let step = 0; step < 64; step++) {
+        if (t > rayEndDistance) {
+          break;
+        }
+        const hit = sceneSDF(probePos + rayDir * t);
+        if (hit.dist <= eps) {
+          rgb = d.vec3f(hit.color);
+          T = d.f32(0);
+          break;
+        }
+        t += std.max(hit.dist, minStep);
       }
-      const hit = sceneSDF(probePos + rayDir * t);
-      if (hit.dist <= eps) {
-        rgb = d.vec3f(hit.color);
-        T = d.f32(0);
-        break;
+
+      if (layer < d.u32(cascadeAmount - 1) && T > 0.01) {
+        const probesU = d.vec2u(std.max(probes.x >> 1, 1), std.max(probes.y >> 1, 1));
+        const tileOrigin = d.vec2f(dirActual) * d.vec2f(probesU);
+        const probePixel = std.clamp(
+          probePos * d.vec2f(probesU),
+          d.vec2f(0.5),
+          d.vec2f(probesU) - 0.5,
+        );
+        const upperCascadeUv = (tileOrigin + probePixel) / d.vec2f(cascadeDim);
+
+        const upper = std.textureSampleLevel(
+          cascadePassBGL.$.upper,
+          cascadePassBGL.$.upperSampler,
+          upperCascadeUv,
+          0,
+        );
+        rgb += upper.xyz * T;
+        T *= upper.w;
       }
-      t += std.max(hit.dist, minStep);
+
+      accum += d.vec4f(rgb, T);
     }
 
-    if (layer < d.u32(cascadeAmount - 1) && T > 0.01) {
-      const probesU = d.vec2u(std.max(probes.x >> 1, 1), std.max(probes.y >> 1, 1));
-      const tileOrigin = d.vec2f(dirActual) * d.vec2f(probesU);
-      const probePixel = std.clamp(
-        probePos * d.vec2f(probesU),
-        d.vec2f(0.5),
-        d.vec2f(probesU) - 0.5,
-      );
-      const uvU = (tileOrigin + probePixel) / d.vec2f(dim2);
+    std.textureStore(cascadePassBGL.$.dst, gid.xy, accum * 0.25);
+  });
 
-      const upper = std.textureSampleLevel(
-        cascadePassBGL.$.upper,
-        cascadePassBGL.$.upperSampler,
-        uvU,
-        0,
-      );
-      rgb += upper.xyz * T;
-      T *= upper.w;
-    }
-
-    accum += d.vec4f(rgb, T);
-  }
-
-  std.textureStore(cascadePassBGL.$.dst, gid.xy, accum * 0.25);
-});
-
-const buildRadianceFieldCompute = tgpu.computeFn({
-  workgroupSize: [8, 8],
-  in: { gid: d.builtin.globalInvocationId },
-})(({ gid }) => {
+const buildRadianceFieldPipeline = root.createGuardedComputePipeline((x, y) => {
   'use gpu';
+  const gid = d.vec2u(x, y);
   const outputProbes = outputProbesUniform.$;
-  if (gid.x >= outputProbes.x || gid.y >= outputProbes.y) {
-    return;
-  }
-
   const cascadeProbes = cascadeProbesUniform.$;
   const cascadeDim = cascadeDimUniform.$;
 
@@ -260,10 +251,11 @@ const overlayFrag = tgpu.fragmentFn({
   const raysDimStored = d.u32(2) << debugLayer;
   const raysDimActual = raysDimStored * 2;
   const rayCountActual = raysDimActual * raysDimActual;
-  const cascadeProbesVal = d.f32(cascadeProbes.x);
-  const interval0 = 1 / cascadeProbesVal;
-  const pow4 = d.f32(d.u32(1) << (debugLayer * 2));
-  const endUv = (interval0 * (pow4 - 1)) / 3 + interval0 * pow4;
+  const baseProbeCount = d.f32(cascadeProbes.x);
+  const baseRayInterval = 1 / baseProbeCount;
+  const rayIntervalScale = d.f32(d.u32(1) << (debugLayer * 2));
+  const rayEndDistance =
+    (baseRayInterval * (rayIntervalScale - 1)) / 3 + baseRayInterval * rayIntervalScale;
   const probeSpacing = 1 / probes.x;
   const probeRadius = std.max(probeSpacing * 0.08, 0.002);
   const rayThickness = std.max(probeSpacing * 0.03, 0.001);
@@ -300,7 +292,7 @@ const overlayFrag = tgpu.fragmentFn({
         const rayIndex = d.f32(ri) + 0.5;
         const angle = (rayIndex / rayCountActual) * (Math.PI * 2) - Math.PI;
         const rayDir = d.vec2f(std.cos(angle), -std.sin(angle));
-        const rayDist = sdf.sdLine(uv, probePos, probePos + rayDir * std.max(endUv, 0.01));
+        const rayDist = sdf.sdLine(uv, probePos, probePos + rayDir * std.max(rayEndDistance, 0.01));
 
         if (rayDist < minRayDist) {
           const dirStored = d.vec2u((ri % raysDimActual) >> 1, d.u32(ri / raysDimActual) >> 1);
@@ -335,10 +327,6 @@ const overlayFrag = tgpu.fragmentFn({
   return d.vec4f(std.mix(baseColor, overlayColor, overlayAlpha), 1);
 });
 
-const cascadePassPipeline = root
-  .with(sceneDataAccess, sceneDataUniform)
-  .createComputePipeline({ compute: cascadePassCompute });
-
 function createCascadePassBindGroups() {
   return Array.from({ length: cascadeAmount }, (_, layer) => {
     const writeToA = (cascadeAmount - 1 - layer) % 2 === 0;
@@ -361,10 +349,6 @@ function createCascadePassBindGroups() {
 
 let cascadePassBindGroups = createCascadePassBindGroups();
 
-const buildRadianceFieldPipeline = root.createComputePipeline({
-  compute: buildRadianceFieldCompute,
-});
-
 function createBuildRadianceFieldBG(textureIndex: number) {
   return root.createBindGroup(buildRadianceFieldBGL, {
     src: cascadeTextures[textureIndex].createView(d.texture2d(d.f32), {
@@ -384,10 +368,7 @@ function buildRadianceField() {
 
   buildRadianceFieldPipeline
     .with(buildRadianceFieldBG)
-    .dispatchWorkgroups(
-      Math.ceil(dimensions.outputProbes / 8),
-      Math.ceil(dimensions.outputProbes / 8),
-    );
+    .dispatchThreads(dimensions.outputProbes, dimensions.outputProbes);
 }
 
 function runCascadesTopDown() {
@@ -399,10 +380,7 @@ function runCascadesTopDown() {
 
     cascadePassPipeline
       .with(cascadePassBindGroups[layer])
-      .dispatchWorkgroups(
-        Math.ceil(dimensions.cascadeDim / 8),
-        Math.ceil(dimensions.cascadeDim / 8),
-      );
+      .dispatchThreads(dimensions.cascadeDim, dimensions.cascadeDim);
   }
 }
 
