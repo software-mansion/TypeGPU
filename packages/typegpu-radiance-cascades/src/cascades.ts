@@ -8,6 +8,8 @@ export const PREAVERAGE_RAY_COUNT = PREAVERAGE_RAY_DIM ** 2;
 export const MERGE_MODE_HARDWARE = 0;
 export const MERGE_MODE_BILINEAR_FIX = 1;
 
+const F32_MAX = 3.40282346e38;
+
 export type MergeMode = 'hardware' | 'bilinear-fix';
 
 export type BaseStoredRayDim = 1 | 2 | 4;
@@ -270,8 +272,8 @@ const rayBoxExitUv = tgpu.fn(
   d.f32,
 )((p, dir) => {
   'use gpu';
-  let tx = d.f32(1e20);
-  let ty = d.f32(1e20);
+  let tx = d.f32(F32_MAX);
+  let ty = d.f32(F32_MAX);
 
   if (std.abs(dir.x) > 1e-6) {
     if (dir.x > 0) {
