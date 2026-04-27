@@ -1,38 +1,56 @@
 import tgpu, { d, std } from 'typegpu';
-import { ioLayout, type LayerData, type Network, weightsBiasesLayout } from './data.ts';
+import type { LayerData, Network } from './data.ts';
 import { downloadLayers } from './helpers.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
 const SIZE = 28;
 
 const root = await tgpu.init({
-  device: {
-    optionalFeatures: ['timestamp-query', 'subgroups'],
-  },
+  device: { optionalFeatures: ['timestamp-query', 'subgroups', 'shader-f16'] },
 });
 const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 const hasSubgroups = root.enabledFeatures.has('subgroups');
+const hasShaderF16 = root.enabledFeatures.has('shader-f16');
 let useSubgroups = hasSubgroups;
+
+const float = hasShaderF16 ? d.f16 : d.f32;
+
+const ioLayout = tgpu.bindGroupLayout({
+  input: { storage: d.arrayOf(float) },
+  output: {
+    storage: d.arrayOf(float),
+    access: 'mutable',
+  },
+});
+
+const weightsBiasesLayout = tgpu.bindGroupLayout({
+  weights: { storage: d.arrayOf(float) },
+  biases: { storage: d.arrayOf(float) },
+});
 
 const canvasData = Array.from({ length: SIZE ** 2 }, () => 0);
 
 // Shaders
 
-const relu = tgpu.fn([d.f32], d.f32)((x) => std.max(0, x));
+function relu(x: number): number {
+  'use gpu';
+  return std.max(0, x);
+}
 
 const defaultCompute = tgpu.computeFn({
-  in: {
-    gid: d.builtin.globalInvocationId,
-  },
-  workgroupSize: [1],
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [64],
 })(({ gid }) => {
-  const inputSize = ioLayout.$.input.length;
-
   const i = gid.x;
-  const weightsOffset = i * inputSize;
-  let sum = d.f32();
+  const inputSize = ioLayout.$.input.length;
+  if (i >= inputSize) {
+    return;
+  }
 
-  for (let j = d.u32(); j < inputSize; j++) {
+  const weightsOffset = i * inputSize;
+  let sum = float();
+
+  for (let j = d.u32(0); j < inputSize; j++) {
     sum = std.fma(ioLayout.$.input[j], weightsBiasesLayout.$.weights[weightsOffset + j], sum);
   }
 
@@ -40,30 +58,30 @@ const defaultCompute = tgpu.computeFn({
   ioLayout.$.output[i] = relu(total);
 });
 
-const workgroupSize = tgpu.const(d.u32, 128);
 const subgroupCompute = tgpu.computeFn({
   in: {
-    lid: d.builtin.localInvocationId,
     wid: d.builtin.workgroupId,
     sid: d.builtin.subgroupInvocationId,
-    ssize: d.builtin.subgroupSize,
+    sgid: d.builtin.subgroupId,
+    nsg: d.builtin.numSubgroups,
   },
-  workgroupSize: [128],
-})(({ lid, wid, sid, ssize }) => {
-  const subgroupId = d.u32(lid.x / ssize);
-  const outputsPerWG = d.u32(workgroupSize.$ / ssize);
-  const neuronIndex = wid.x * outputsPerWG + subgroupId;
-
+  workgroupSize: [64],
+})(({ wid, sid, sgid, nsg }) => {
   const outLen = ioLayout.$.output.length;
-  const valid = neuronIndex < outLen;
-
   const inputSize = ioLayout.$.input.length;
 
-  let partial = d.f32();
+  const neuronIndex = wid.x * nsg + sgid;
+  const valid = neuronIndex < outLen;
+
+  // Actual number of active lanes in this subgroup.
+  const laneCount = std.subgroupAdd(1);
+
+  let partial = float(0);
 
   if (valid) {
     const weightsOffset = neuronIndex * inputSize;
-    for (let j = sid; j < inputSize; j += ssize) {
+
+    for (let j = sid; j < inputSize; j += laneCount) {
       partial = std.fma(
         ioLayout.$.input[j],
         weightsBiasesLayout.$.weights[weightsOffset + j],
@@ -74,7 +92,7 @@ const subgroupCompute = tgpu.computeFn({
 
   const sum = std.subgroupAdd(partial);
 
-  if (valid && sid === 0) {
+  if (valid && std.subgroupElect()) {
     ioLayout.$.output[neuronIndex] = relu(sum + weightsBiasesLayout.$.biases[neuronIndex]);
   }
 });
@@ -107,11 +125,11 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
     return {
       weights: weights.buffer,
       biases: biases.buffer,
-      state: root.createBuffer(d.arrayOf(d.f32, biases.shape[0])).$usage('storage'),
+      state: root.createBuffer(d.arrayOf(float, biases.shape[0])).$usage('storage'),
     };
   });
 
-  const input = root.createBuffer(d.arrayOf(d.f32, layers[0][0].shape[0])).$usage('storage');
+  const input = root.createBuffer(d.arrayOf(float, layers[0][0].shape[0])).$usage('storage');
   const output = buffers[buffers.length - 1].state;
 
   const ioBindGroups = buffers.map((_, i) =>
@@ -180,7 +198,7 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
   };
 }
 
-const network = createNetwork(await downloadLayers(root));
+const network = createNetwork(await downloadLayers(root, float));
 
 // #region Example controls and cleanup
 
@@ -386,7 +404,7 @@ export const controls = defineControls({
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick: () =>
       [defaultCompute, subgroupCompute]
-        .map((fn) => tgpu.resolve([fn], { enableExtensions: ['subgroups'] }))
+        .map((fn) => tgpu.resolve([fn], { enableExtensions: ['subgroups', 'f16'] }))
         .map((r) => root.device.createShaderModule({ code: r })),
   },
 });
