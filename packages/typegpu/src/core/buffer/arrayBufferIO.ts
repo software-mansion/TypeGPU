@@ -1,11 +1,10 @@
 import { BufferReader, BufferWriter, getSystemEndianness } from 'typed-binary';
 import type { BaseData } from '../../data/wgslTypes.ts';
-import type { Infer, InferInput, InferPatch } from '../../shared/repr.ts';
+import type { Infer, InferInput } from '../../shared/repr.ts';
 import type { BufferWriteOptions } from './buffer.ts'; // TODO: move this to a separate file
 import { getCompiledWriter } from '../../data/compiledIO.ts';
 import { readData, writeData } from '../../data/dataIO.ts';
 import { getName } from '../../shared/meta.ts';
-import { getPatchInstructions } from '../../data/partialIO.ts';
 
 const endianness = getSystemEndianness();
 
@@ -62,16 +61,4 @@ export function writeToArrayBuffer<T extends BaseData>(
 
 export function readFromArrayBuffer<T extends BaseData>(buffer: ArrayBuffer, schema: T): Infer<T> {
   return readData(new BufferReader(buffer), schema);
-}
-
-export function patchArrayBuffer<T extends BaseData>(
-  buffer: ArrayBuffer,
-  schema: T,
-  data: InferPatch<T>,
-) {
-  const instructions = getPatchInstructions(schema, data, buffer);
-  const mappedView = new Uint8Array(buffer);
-  for (const { data, gpuOffset } of instructions) {
-    mappedView.set(data, gpuOffset);
-  }
 }
