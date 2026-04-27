@@ -190,8 +190,6 @@ export function isUsableAsIndex<T extends TgpuBuffer<BaseData>>(
 // --------------
 // Implementation
 // --------------
-const endianness = getSystemEndianness();
-
 class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   readonly [$internal] = true;
   readonly resourceType = 'buffer';
