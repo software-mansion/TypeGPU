@@ -1,12 +1,7 @@
-import { BufferReader, BufferWriter, getSystemEndianness } from 'typed-binary';
+import { getSystemEndianness } from 'typed-binary';
 import { getCompiledWriter } from '../../data/compiledIO.ts';
-import { readData, writeData } from '../../data/dataIO.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
-import {
-  type WriteInstruction,
-  convertPartialToPatch,
-  getPatchInstructions,
-} from '../../data/partialIO.ts';
+import { convertPartialToPatch, getPatchInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { isWgslArray, isWgslData } from '../../data/wgslTypes.ts';
@@ -39,7 +34,7 @@ import {
 } from './bufferUsage.ts';
 import { alignmentOf } from '../../data/alignmentOf.ts';
 import { roundUp } from '../../mathUtils.ts';
-import { patchArrayBuffer, writeToArrayBuffer } from './arrayBufferIO.ts';
+import { patchArrayBuffer, readFromArrayBuffer, writeToArrayBuffer } from './arrayBufferIO.ts';
 
 // ----------
 // Public API
@@ -442,14 +437,12 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     const gpuBuffer = this.buffer;
 
     if (gpuBuffer.mapState === 'mapped') {
-      const mapped = this.#getMappedRange();
-      return readData(new BufferReader(mapped), this.dataType);
+      return readFromArrayBuffer(this.#getMappedRange(), this.dataType);
     }
 
     if (gpuBuffer.usage & GPUBufferUsage.MAP_READ) {
       await gpuBuffer.mapAsync(GPUMapMode.READ);
-      const mapped = this.#getMappedRange();
-      const res = readData(new BufferReader(mapped), this.dataType);
+      const res = readFromArrayBuffer(this.#getMappedRange(), this.dataType);
       this.#unmapBuffer();
       return res;
     }
@@ -465,7 +458,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     this.#device.queue.submit([commandEncoder.finish()]);
     await stagingBuffer.mapAsync(GPUMapMode.READ, 0, sizeOf(this.dataType));
 
-    const res = readData(new BufferReader(stagingBuffer.getMappedRange()), this.dataType);
+    const res = readFromArrayBuffer(stagingBuffer.getMappedRange(), this.dataType);
 
     stagingBuffer.unmap();
     stagingBuffer.destroy();
