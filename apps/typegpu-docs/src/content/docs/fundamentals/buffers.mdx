@@ -539,6 +539,53 @@ import ListItem from '../../../components/ListItem.astro';
 </ListItem>
 :::
 
+## ArrayBuffer IO
+
+TypeGPU exports functions for reading and writing to a raw `ArrayBuffer`.
+Signatures are analogous to `buffer.write`, `buffer.patch` and `buffer.read`,
+although each one additionally requires a schema.
+
+```ts twoslash
+import { d, patchArrayBuffer, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+// ---cut---
+const buffer = new ArrayBuffer(16);
+
+// update entire buffer
+writeToArrayBuffer(buffer, d.vec4u, d.vec4u(1, 2, 3, 4));
+```
+
+```ts twoslash
+import { d, patchArrayBuffer, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+// ---cut---
+const buffer = new ArrayBuffer(64);
+const Numbers = d.arrayOf(d.u32, 16);
+
+// update a slice
+const layout = d.memoryLayoutOf(Numbers, (a) => a[4]);
+writeToArrayBuffer(buffer, Numbers, [4, 5, 6, 7], { startOffset: layout.offset });
+```
+
+```ts twoslash
+import { d, patchArrayBuffer, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+// ---cut---
+const buffer = new ArrayBuffer(64);
+const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
+const Boids = d.arrayOf(Boid, 4);
+
+// patch
+patchArrayBuffer(buffer, Boids, { 2: { pos: d.vec2u() } });
+```
+
+```ts twoslash
+import { d, patchArrayBuffer, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+// ---cut---
+const buffer = new ArrayBuffer(64);
+
+// read
+const mat = readFromArrayBuffer(buffer, d.mat4x4f);
+```
+
+
 ## Index Buffers
 TypeGPU also allows for the use of index buffers. An index buffer is a buffer containing a sequence of `u32` or `u16` indices, which indicate in which order vertices will be processed. This is particulary useful for rendering geometry, where vertices are often shared between multiple primitives (e.g., triangles), as it avoids duplicating vertex data.
 You may refer to the [pipelines](/TypeGPU/fundamentals/pipelines/#drawing-with-drawindexed) section for usage details.
