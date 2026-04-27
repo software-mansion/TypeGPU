@@ -17,25 +17,26 @@
       "./package.json": "./dist/package.json",
       ".": {
         "types": "./dist/index.d.ts",
-        "module": "./dist/index.mjs",
-        "import": "./dist/index.mjs",
+        "module": "./dist/index.js",
+        "import": "./dist/index.js",
         "default": "./dist/index.cjs"
       }
     },
     "linkDirectory": false,
+    "main": "./dist/index.js",
     "types": "./dist/index.d.ts"
   },
   "scripts": {
-    "build": "unbuild",
+    "build": "tsdown",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@webgpu/types": "catalog:types",
+    "tsdown": "catalog:build",
     "typegpu": "workspace:*",
     "typescript": "catalog:types",
-    "unbuild": "catalog:build",
     "unplugin-typegpu": "workspace:*"
   },
   "peerDependencies": {
