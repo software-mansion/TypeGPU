@@ -1757,7 +1757,22 @@ describe('wgslGenerator', () => {
     expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:testFn: Value undefined (as json: undefined) is not resolvable to type u32]
+      - fn:testFn: Index access 'array(9, 8, 7, 6)[i]' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.]
+    `);
+  });
+
+  it('throws an error when accessing an object with a runtime known index', () => {
+    const Boid = d.struct({ 0: d.u32 });
+
+    const testFn = tgpu.fn([Boid])((b) => {
+      const i = 0;
+      const v = b[i];
+    });
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:testFn: Index access 'b[i]' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.]
     `);
   });
 
