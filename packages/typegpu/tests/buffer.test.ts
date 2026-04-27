@@ -993,6 +993,37 @@ describe('TgpuBuffer (InferInput)', () => {
 });
 
 describe('TgpuBuffer (.patch() with flexible inputs)', () => {
+  it('should patch a mapped buffer', ({ root }) => {
+    const mappedBuffer = root.device.createBuffer({
+      size: 12,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      mappedAtCreation: true,
+    });
+
+    const buffer = root.createBuffer(d.arrayOf(d.u32, 3), mappedBuffer);
+    buffer.patch({ 1: 67 });
+
+    expect(mappedBuffer.getMappedRange).toHaveBeenCalledExactlyOnceWith();
+    expect(mappedBuffer.unmap).not.toHaveBeenCalled();
+    const writtenBuffer = vi.mocked(mappedBuffer.getMappedRange).mock.results[0]?.value;
+    expect(writtenBuffer).toMatchInlineSnapshot(`
+      ArrayBuffer [
+        0,
+        0,
+        0,
+        0,
+        67,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+      ]
+    `);
+  });
+
   it('should accept tuples, TypedArrays, and number[] for leaf types at the type level', ({
     root,
   }) => {

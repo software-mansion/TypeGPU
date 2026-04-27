@@ -39,7 +39,7 @@ import {
 } from './bufferUsage.ts';
 import { alignmentOf } from '../../data/alignmentOf.ts';
 import { roundUp } from '../../mathUtils.ts';
-import { writeToArrayBuffer } from './arrayBufferIO.ts';
+import { patchArrayBuffer, writeToArrayBuffer } from './arrayBufferIO.ts';
 
 // ----------
 // Public API
@@ -398,29 +398,16 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
 
   /** @deprecated Use {@link patch} instead. */
   public writePartial(data: InferPartial<TData>): void {
-    this.#applyInstructions(
-      getPatchInstructions(
-        this.dataType,
-        convertPartialToPatch(this.dataType, data),
-        this.#hostBuffer,
-      ),
-    );
+    this.patch(convertPartialToPatch(this.dataType, data) as InferPatch<TData>);
   }
 
   public patch(data: InferPatch<TData>): void {
-    this.#applyInstructions(getPatchInstructions(this.dataType, data, this.#hostBuffer));
-  }
-
-  #applyInstructions(instructions: WriteInstruction[]): void {
     const gpuBuffer = this.buffer;
 
     if (gpuBuffer.mapState === 'mapped') {
-      const mappedRange = this.#getMappedRange();
-      const mappedView = new Uint8Array(mappedRange);
-      for (const { data, gpuOffset } of instructions) {
-        mappedView.set(data, gpuOffset);
-      }
+      patchArrayBuffer(this.#getMappedRange(), this.dataType, data);
     } else {
+      const instructions = getPatchInstructions(this.dataType, data, this.#hostBuffer);
       for (const { data, gpuOffset } of instructions) {
         this.#device.queue.writeBuffer(gpuBuffer, gpuOffset, data);
       }
