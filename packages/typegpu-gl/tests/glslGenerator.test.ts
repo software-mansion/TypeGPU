@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect } from 'vitest';
 import tgpu, { d } from 'typegpu';
 import { glOptions } from '@typegpu/gl';
 import { translateWgslTypeToGlsl } from '../src/glslGenerator.ts';
+import { _resetUniformCounter } from '../src/tgpuRootWebGL.ts';
+import { it } from './utils/extendedTest.ts';
 
 describe('translateWgslTypeToGlsl', () => {
   it('translates scalar types', () => {
@@ -205,14 +207,14 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     const result = tgpu.resolve([vertFn], glOptions());
 
     expect(result).toMatchInlineSnapshot(`
-      "layout(location = 0) out uv_1;
+      "out vec2 vary_uv;
 
       void main() {
         vec4 position = vec4();
         vec2 uv = vec2();
         {
-          gl_Position = position;
-          uv_1 = uv;
+          gl_Position = vec4(position);
+          vary_uv = vec2(uv);
           return;
         }
       }"
@@ -236,10 +238,12 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     expect(result.code).not.toMatch(/\bvec4f\s*\(/);
 
     expect(result.code).toMatchInlineSnapshot(`
-      "void main() {
+      "layout(location = 0) out vec4 _fragColor;
+
+      void main() {
         int gl_Position_1 = 1;
         {
-          gl_Position = vec4(1, 0, 0, 1);
+          _fragColor = vec4(1, 0, 0, 1);
           return;
         }
       }"

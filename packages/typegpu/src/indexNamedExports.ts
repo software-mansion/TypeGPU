@@ -25,8 +25,6 @@ export { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
 export { isTgpuVertexFn } from './core/function/tgpuVertexFn.ts';
 export { isTgpuComputeFn } from './core/function/tgpuComputeFn.ts';
 export { isVariable } from './core/variable/tgpuVariable.ts';
-export { ShaderGenerator } from './tgsl/shaderGenerator.ts';
-export { WgslGenerator } from './tgsl/wgslGenerator.ts';
 
 // types
 
@@ -59,6 +57,9 @@ export type {
   ValidUsagesFor,
   Vertex,
   VertexFlag,
+  BufferWriteOptions,
+  BufferInitCallback,
+  BufferInitialData,
 } from './core/buffer/buffer.ts';
 export type {
   TgpuBufferMutable,

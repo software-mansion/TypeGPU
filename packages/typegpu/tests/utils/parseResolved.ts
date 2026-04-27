@@ -1,11 +1,14 @@
 import type * as tinyest from 'tinyest';
 import { NodeTypeCatalog as NODE } from 'tinyest';
 import { type Assertion, expect } from 'vitest';
-import tgpu, { d, ShaderGenerator, WgslGenerator } from 'typegpu';
-
-type Snippet = ShaderGenerator.Snippet;
-type UnknownData = ShaderGenerator.UnknownData;
-type Origin = ShaderGenerator.Origin;
+import tgpu, { d } from 'typegpu';
+import {
+  type Snippet,
+  UnknownData,
+  type Origin,
+  WgslGenerator,
+  type FunctionDefinitionOptions,
+} from 'typegpu/~internals';
 
 class ExtractingGenerator extends WgslGenerator {
   #fnDepth: number;
@@ -17,7 +20,7 @@ class ExtractingGenerator extends WgslGenerator {
     this.#fnDepth = 0;
   }
 
-  public functionDefinition(options: ShaderGenerator.FunctionDefinitionOptions): string {
+  public functionDefinition(options: FunctionDefinitionOptions): string {
     this.#fnDepth++;
     try {
       return super.functionDefinition(options);
