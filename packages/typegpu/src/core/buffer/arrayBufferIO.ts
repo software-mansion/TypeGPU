@@ -1,9 +1,9 @@
-import { BufferWriter, getSystemEndianness } from 'typed-binary';
+import { BufferReader, BufferWriter, getSystemEndianness } from 'typed-binary';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import type { Infer, InferInput, InferPatch } from '../../shared/repr.ts';
 import type { BufferWriteOptions } from './buffer.ts'; // TODO: move this to a separate file
 import { getCompiledWriter } from '../../data/compiledIO.ts';
-import { writeData } from '../../data/dataIO.ts';
+import { readData, writeData } from '../../data/dataIO.ts';
 import { getName } from '../../shared/meta.ts';
 import { getPatchInstructions } from '../../data/partialIO.ts';
 
@@ -60,12 +60,8 @@ export function writeToArrayBuffer<T extends BaseData>(
   writeData(writer, schema, data as Infer<T>);
 }
 
-export function readFromArrayBuffer<T extends BaseData>(
-  buffer: ArrayBuffer,
-  schema: T,
-  options?: BufferWriteOptions,
-): Infer<T> {
-  throw new Error('Not yet implemented!');
+export function readFromArrayBuffer<T extends BaseData>(buffer: ArrayBuffer, schema: T): Infer<T> {
+  return readData(new BufferReader(buffer), schema);
 }
 
 export function patchArrayBuffer<T extends BaseData>(
