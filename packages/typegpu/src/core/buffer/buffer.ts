@@ -39,6 +39,7 @@ import {
 } from './bufferUsage.ts';
 import { alignmentOf } from '../../data/alignmentOf.ts';
 import { roundUp } from '../../mathUtils.ts';
+import { writeToArrayBuffer } from './arrayBufferIO.ts';
 
 // ----------
 // Public API
@@ -261,7 +262,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
         if (this.#initialCallback) {
           this.#initialCallback(this);
         } else if (this.initial) {
-          this.#writeToTarget(this.#getMappedRange(), this.initial);
+          writeToArrayBuffer(this.#getMappedRange(), this.dataType, this.initial);
         }
         this.#unmapBuffer();
       }
@@ -354,56 +355,6 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     getCompiledWriter(this.dataType);
   }
 
-  #writeToTarget(
-    target: ArrayBuffer,
-    data: InferInput<TData> | ArrayBuffer,
-    options?: BufferWriteOptions,
-  ): void {
-    const startOffset = options?.startOffset ?? 0;
-    const endOffset = options?.endOffset ?? target.byteLength;
-
-    // Fast path: raw byte copy, user guarantees the padded layout
-    if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
-      const src =
-        data instanceof ArrayBuffer
-          ? new Uint8Array(data)
-          : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-      const regionSize = endOffset - startOffset;
-      if (src.byteLength !== regionSize) {
-        console.warn(
-          `Buffer size mismatch: expected ${regionSize} bytes, got ${src.byteLength}. ` +
-            (src.byteLength < regionSize ? 'Data truncated.' : 'Excess ignored.'),
-        );
-      }
-      const copyLen = Math.min(src.byteLength, regionSize);
-      new Uint8Array(target).set(src.subarray(0, copyLen), startOffset);
-      return;
-    }
-
-    const dataView = new DataView(target);
-    const isLittleEndian = endianness === 'little';
-
-    const compiledWriter = getCompiledWriter(this.dataType);
-
-    if (compiledWriter) {
-      try {
-        compiledWriter(dataView, startOffset, data, isLittleEndian, endOffset);
-        return;
-      } catch (error) {
-        console.error(
-          `Error when using compiled writer for buffer ${
-            getName(this) ?? '<unnamed>'
-          } - this is likely a bug, please submit an issue at https://github.com/software-mansion/TypeGPU/issues\nUsing fallback writer instead.`,
-          error,
-        );
-      }
-    }
-
-    const writer = new BufferWriter(target);
-    writer.seekTo(startOffset);
-    writeData(writer, this.dataType, data as Infer<TData>);
-  }
-
   write(data: InferInput<TData>, options?: BufferWriteOptions): void;
   write(data: ArrayBuffer, options?: BufferWriteOptions): void;
   write(data: InferInput<TData> | ArrayBuffer, options?: BufferWriteOptions): void {
@@ -433,14 +384,14 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
         // via arrayBuffer. Nothing to do here
         return;
       }
-      this.#writeToTarget(mapped, data, options);
+      writeToArrayBuffer(mapped, this.dataType, data, options);
       return;
     }
 
     // If the caller already wrote directly into #hostBuffer via
     // arrayBuffer, skip the redundant copy, the data is already in place.
     if (!(data instanceof ArrayBuffer && data === this.#hostBuffer)) {
-      this.#writeToTarget(this.#hostBuffer, data, options);
+      writeToArrayBuffer(this.#hostBuffer, this.dataType, data, options);
     }
     this.#device.queue.writeBuffer(gpuBuffer, startOffset, this.#hostBuffer, startOffset, size);
   }
