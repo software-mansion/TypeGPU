@@ -27,7 +27,7 @@ export { isTgpuComputeFn } from './core/function/tgpuComputeFn.ts';
 export { isVariable } from './core/variable/tgpuVariable.ts';
 export { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 export { WgslGenerator } from './tgsl/wgslGenerator.ts';
-export { readFromArrayBuffer, writeToArrayBuffer } from './core/buffer/arrayBufferIO.ts';
+export { readFromArrayBuffer, writeToArrayBuffer } from './data/dataIO.ts';
 export { patchArrayBuffer } from './data/partialIO.ts';
 
 // types

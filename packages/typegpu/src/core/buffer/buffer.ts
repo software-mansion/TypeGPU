@@ -34,7 +34,7 @@ import {
 } from './bufferUsage.ts';
 import { alignmentOf } from '../../data/alignmentOf.ts';
 import { roundUp } from '../../mathUtils.ts';
-import { readFromArrayBuffer, writeToArrayBuffer } from './arrayBufferIO.ts';
+import { readFromArrayBuffer, writeToArrayBuffer } from '../../data/dataIO.ts';
 import { patchArrayBuffer } from '../../data/partialIO.ts';
 
 // ----------
