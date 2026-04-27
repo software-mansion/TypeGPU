@@ -61,7 +61,7 @@ export type RadianceCascadesExecutor<TOutput extends OutputResource = OutputText
 
 export function createRadianceCascades(
   options: CascadesOptions<undefined> & { size: Size },
-): RadianceCascadesExecutor<OutputTexture>;
+): RadianceCascadesExecutor;
 export function createRadianceCascades<TOutput extends OutputResource>(
   options: CascadesOptions<TOutput> & { output: TOutput },
 ): RadianceCascadesExecutor<TOutput>;
