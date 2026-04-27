@@ -5,6 +5,7 @@ import type { BufferWriteOptions } from './buffer.ts'; // TODO: move this to a s
 import { getCompiledWriter } from '../../data/compiledIO.ts';
 import { writeData } from '../../data/dataIO.ts';
 import { getName } from '../../shared/meta.ts';
+import { getPatchInstructions } from '../../data/partialIO.ts';
 
 const endianness = getSystemEndianness();
 
@@ -72,5 +73,9 @@ export function patchArrayBuffer<T extends BaseData>(
   schema: T,
   data: InferPatch<T>,
 ) {
-  throw new Error('Not yet implemented!');
+  const instructions = getPatchInstructions(schema, data, buffer);
+  const mappedView = new Uint8Array(buffer);
+  for (const { data, gpuOffset } of instructions) {
+    mappedView.set(data, gpuOffset);
+  }
 }
