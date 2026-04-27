@@ -220,10 +220,10 @@ function frame(timestamp: number) {
 export const controls = defineControls({
   ...drawInteraction.controls,
   'Brush Size': {
-    initial: 0.05,
-    min: 0.01,
+    initial: 0.015,
+    min: 0.015,
     max: 0.15,
-    step: 0.01,
+    step: 0.015,
     onSliderChange(value: number) {
       paramsUniform.patch({
         brushRadius: value,

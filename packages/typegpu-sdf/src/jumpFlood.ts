@@ -244,7 +244,7 @@ export type ColorTexture = TgpuTexture<{
 export type Executor = {
   /** Run the jump flood algorithm. */
   run(): void;
-  /** The SDF output texture (r32float). */
+  /** The SDF output texture (rgba16float). */
   readonly sdfOutput: SdfTexture;
   /** The color output texture (rgba8unorm). */
   readonly colorOutput: ColorTexture;

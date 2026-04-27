@@ -1,6 +1,5 @@
 import {
   isTexture,
-  isTextureView,
   type SampledFlag,
   type StorageFlag,
   type TgpuBindGroup,
@@ -25,15 +24,21 @@ import {
   sdfSlot,
 } from './cascades.ts';
 
-type OutputTexture =
-  | (TgpuTexture<{ size: [number, number]; format: 'rgba16float' }> & StorageFlag)
-  | TgpuTextureView<d.WgslStorageTexture2d<'rgba16float', 'write-only'>>;
+type OutputTexture = TgpuTexture<{
+  size: [number, number];
+  format: 'rgba16float';
+}> &
+  StorageFlag &
+  SampledFlag;
+type OutputTextureView = TgpuTextureView<d.WgslStorageTexture2d<'rgba16float', 'write-only'>>;
+type OutputResource = OutputTexture | OutputTextureView;
+type Size = { width: number; height: number };
 
-type CascadesOptions = {
+type CascadesOptions<TOutput extends OutputResource | undefined = OutputResource | undefined> = {
   root: TgpuRoot;
   sdf: (uv: d.v2f) => number;
   color: (uv: d.v2f) => d.v3f;
-  sdfResolution: { width: number; height: number };
+  sdfResolution: Size;
   rayMarch?: (
     probePos: d.v2f,
     rayDir: d.v2f,
@@ -43,64 +48,47 @@ type CascadesOptions = {
     minStep: number,
     bias: number,
   ) => d.InferGPU<typeof RayMarchResult>;
-  output?: OutputTexture;
-  size?: { width: number; height: number };
+  output?: TOutput;
+  size?: Size;
 };
 
-type OutputTextureProp = TgpuTexture<{
-  size: [number, number];
-  format: 'rgba16float';
-}> &
-  StorageFlag &
-  SampledFlag;
-
-export type RadianceCascadesExecutor = {
+export type RadianceCascadesExecutor<TOutput extends OutputResource = OutputTexture> = {
   run(): void;
-  with(bindGroup: TgpuBindGroup): RadianceCascadesExecutor;
+  with(bindGroup: TgpuBindGroup): RadianceCascadesExecutor<TOutput>;
   destroy(): void;
-  readonly output: OutputTextureProp;
+  readonly output: TOutput;
 };
 
-export function createRadianceCascades(options: CascadesOptions): RadianceCascadesExecutor {
+export function createRadianceCascades(
+  options: CascadesOptions<undefined> & { size: Size },
+): RadianceCascadesExecutor<OutputTexture>;
+export function createRadianceCascades<TOutput extends OutputResource>(
+  options: CascadesOptions<TOutput> & { output: TOutput },
+): RadianceCascadesExecutor<TOutput>;
+export function createRadianceCascades(
+  options: CascadesOptions,
+): RadianceCascadesExecutor<OutputResource> {
   const { root, sdf, color, sdfResolution, output, size, rayMarch } = options;
 
-  const hasOutputProvided = !!output && (isTexture(output) || isTextureView(output));
-
-  // Determine output dimensions
-  let outputWidth: number;
-  let outputHeight: number;
-
-  if (hasOutputProvided) {
-    if (isTexture(output)) {
-      [outputWidth, outputHeight] = output.props.size;
-    } else {
-      const viewSize = output.size ?? [size?.width, size?.height];
-      if (!viewSize[0] || !viewSize[1]) {
-        throw new Error(
-          'Size could not be inferred from texture view, pass explicit size in options.',
-        );
-      }
-      [outputWidth, outputHeight] = viewSize as [number, number];
-    }
-  } else {
-    if (!size) {
-      throw new Error('Size is required when output texture is not provided.');
-    }
-    outputWidth = size.width;
-    outputHeight = size.height;
+  const outputSize = output
+    ? isTexture(output)
+      ? output.props.size
+      : (output.size ?? (size && [size.width, size.height]))
+    : size && [size.width, size.height];
+  const outputWidth = outputSize?.[0];
+  const outputHeight = outputSize?.[1];
+  if (!outputWidth || !outputHeight) {
+    throw new Error('Size could not be inferred from output, pass explicit size in options.');
   }
 
-  // Create or use provided output texture
-  const dst = hasOutputProvided
-    ? output
-    : root
-        .createTexture({
-          size: [outputWidth, outputHeight],
-          format: 'rgba16float',
-        })
-        .$usage('storage', 'sampled');
-
-  const ownsOutput = !hasOutputProvided;
+  const dst: OutputResource =
+    output ??
+    root
+      .createTexture({
+        size: [outputWidth, outputHeight],
+        format: 'rgba16float',
+      })
+      .$usage('storage', 'sampled');
 
   const [cascadeDimX, cascadeDimY, cascadeAmount] = getCascadeDim(outputWidth, outputHeight);
 
@@ -195,12 +183,14 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
   function destroy() {
     cascadeTextureA.destroy();
     cascadeTextureB.destroy();
-    if (ownsOutput && isTexture(dst)) {
+    if (!output && isTexture(dst)) {
       dst.destroy();
     }
   }
 
-  function createExecutor(additionalBindGroups: TgpuBindGroup[] = []): RadianceCascadesExecutor {
+  function createExecutor(
+    additionalBindGroups: TgpuBindGroup[] = [],
+  ): RadianceCascadesExecutor<OutputResource> {
     const prebuiltCascadePipelines = cascadePassBindGroups.map((bg) => {
       let p = cascadePassPipeline.with(bg);
       for (const addBg of additionalBindGroups) {
@@ -227,7 +217,7 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
       run,
       with: (bg) => createExecutor([...additionalBindGroups, bg]),
       destroy,
-      output: dst as OutputTextureProp,
+      output: dst,
     };
   }
 

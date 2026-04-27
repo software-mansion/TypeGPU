@@ -17,6 +17,12 @@ context.configure({
 const LIGHTING_RESOLUTION = 0.35;
 const maxOutputResolution = 1024;
 
+function getCascadeAmount(cascadeProbes: number) {
+  const interval0 = 1 / cascadeProbes;
+  const maxIntervalStart = 1.5;
+  return Math.ceil(Math.log2((maxIntervalStart * 3) / interval0 + 1) / 2);
+}
+
 function getCascadeDimensions() {
   const outputProbes = Math.max(1, Math.floor(Math.min(canvas.width, maxOutputResolution)));
   const diagonal = outputProbes * Math.SQRT2;
@@ -27,20 +33,17 @@ function getCascadeDimensions() {
     outputProbes,
     cascadeProbes,
     cascadeDim: cascadeProbes * 2,
+    cascadeAmount: getCascadeAmount(cascadeProbes),
   };
 }
 
 let dimensions = getCascadeDimensions();
 
-const interval0 = 1 / dimensions.cascadeProbes;
-const maxIntervalStart = 1.5;
-const cascadeAmount = Math.ceil(Math.log2((maxIntervalStart * 3) / interval0 + 1) / 2);
-
 function createCascadeTextures() {
   return Array.from({ length: 2 }, () =>
     root
       .createTexture({
-        size: [dimensions.cascadeDim, dimensions.cascadeDim, cascadeAmount],
+        size: [dimensions.cascadeDim, dimensions.cascadeDim, dimensions.cascadeAmount],
         format: 'rgba16float',
       })
       .$usage('storage', 'sampled'),
@@ -82,6 +85,7 @@ const cascadeIndexUniform = root.createUniform(d.u32);
 const probesUniform = root.createUniform(d.vec2u);
 const cascadeDimUniform = root.createUniform(d.vec2u, d.vec2u(dimensions.cascadeDim));
 const cascadeProbesUniform = root.createUniform(d.vec2u, d.vec2u(dimensions.cascadeProbes));
+const cascadeAmountUniform = root.createUniform(d.u32, dimensions.cascadeAmount);
 
 const overlayEnabledUniform = root.createUniform(d.u32, 0);
 const overlayDebugCascadeUniform = root.createUniform(d.u32, 0);
@@ -148,7 +152,7 @@ const cascadePassPipeline = root
         t += std.max(hit.dist, minStep);
       }
 
-      if (layer < d.u32(cascadeAmount - 1) && T > 0.01) {
+      if (layer + 1 < cascadeAmountUniform.$ && T > 0.01) {
         const probesU = d.vec2u(std.max(probes.x >> 1, 1), std.max(probes.y >> 1, 1));
         const tileOrigin = d.vec2f(dirActual) * d.vec2f(probesU);
         const probePixel = std.clamp(
@@ -328,14 +332,14 @@ const overlayFrag = tgpu.fragmentFn({
 });
 
 function createCascadePassBindGroups() {
-  return Array.from({ length: cascadeAmount }, (_, layer) => {
-    const writeToA = (cascadeAmount - 1 - layer) % 2 === 0;
+  return Array.from({ length: dimensions.cascadeAmount }, (_, layer) => {
+    const writeToA = (dimensions.cascadeAmount - 1 - layer) % 2 === 0;
     const dstTexture = cascadeTextures[writeToA ? 0 : 1];
     const srcTexture = cascadeTextures[writeToA ? 1 : 0];
 
     return root.createBindGroup(cascadePassBGL, {
       upper: srcTexture.createView(d.texture2d(d.f32), {
-        baseArrayLayer: Math.min(layer + 1, cascadeAmount - 1),
+        baseArrayLayer: Math.min(layer + 1, dimensions.cascadeAmount - 1),
         arrayLayerCount: 1,
       }),
       upperSampler: cascadeSampler,
@@ -363,7 +367,7 @@ function createBuildRadianceFieldBG(textureIndex: number) {
 let buildRadianceFieldBindGroups = [createBuildRadianceFieldBG(0), createBuildRadianceFieldBG(1)];
 
 function buildRadianceField() {
-  const cascade0InA = (cascadeAmount - 1) % 2 === 0;
+  const cascade0InA = (dimensions.cascadeAmount - 1) % 2 === 0;
   const buildRadianceFieldBG = buildRadianceFieldBindGroups[cascade0InA ? 0 : 1];
 
   buildRadianceFieldPipeline
@@ -372,7 +376,7 @@ function buildRadianceField() {
 }
 
 function runCascadesTopDown() {
-  for (let layer = cascadeAmount - 1; layer >= 0; layer--) {
+  for (let layer = dimensions.cascadeAmount - 1; layer >= 0; layer--) {
     const probes = Math.max(1, dimensions.cascadeProbes >> layer);
 
     cascadeIndexUniform.write(layer);
@@ -413,10 +417,13 @@ let debugLayer = 0;
 
 function updateCascadeDimensions() {
   dimensions = getCascadeDimensions();
+  debugLayer = Math.min(debugLayer, dimensions.cascadeAmount - 1);
 
   outputProbesUniform.write(d.vec2u(dimensions.outputProbes));
   cascadeDimUniform.write(d.vec2u(dimensions.cascadeDim));
   cascadeProbesUniform.write(d.vec2u(dimensions.cascadeProbes));
+  cascadeAmountUniform.write(dimensions.cascadeAmount);
+  overlayDebugCascadeUniform.write(debugLayer);
 }
 
 function destroySizedResources() {
@@ -444,7 +451,7 @@ function recreateSizedResources() {
 }
 
 function frame() {
-  const writeToA = (cascadeAmount - 1 - debugLayer) % 2 === 0;
+  const writeToA = (dimensions.cascadeAmount - 1 - debugLayer) % 2 === 0;
   const overlayDebugBG = overlayDebugBindGroups[writeToA ? 0 : 1];
 
   renderPipeline.with(overlayDebugBG).withColorAttachment({ view: context }).draw(3);
@@ -489,11 +496,14 @@ export const controls = defineControls({
   'Cascade Layer': {
     initial: 0,
     min: 0,
-    max: cascadeAmount - 1,
+    max:
+      getCascadeAmount(
+        2 ** Math.round(Math.log2(maxOutputResolution * Math.SQRT2 * LIGHTING_RESOLUTION)),
+      ) - 1,
     step: 1,
     onSliderChange: (value: number) => {
-      overlayDebugCascadeUniform.write(value);
-      debugLayer = value;
+      debugLayer = Math.min(value, dimensions.cascadeAmount - 1);
+      overlayDebugCascadeUniform.write(debugLayer);
     },
   },
 });
