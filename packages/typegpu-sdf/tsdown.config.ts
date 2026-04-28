@@ -4,7 +4,7 @@ import typegpu from 'unplugin-typegpu/rolldown';
 export default defineConfig({
   entry: ['src/index.ts'],
   outDir: 'dist',
-  format: 'esm',
+  format: ['cjs', 'esm'],
   dts: true,
   platform: 'neutral',
   unbundle: true,
