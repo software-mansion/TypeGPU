@@ -15,14 +15,20 @@ const snippetMode = root.createUniform(d.u32);
 const previewSize = { width: 512, height: 512 };
 const floodResolution = 2048;
 
-const sceneSdf = tgpu.fn([d.vec2f], d.f32)((uv) => {
+const sceneSdf = tgpu.fn(
+  [d.vec2f],
+  d.f32,
+)((uv) => {
   'use gpu';
   const circle = sdf.sdDisk(uv - d.vec2f(0.5), 0.18);
   const wall = sdf.sdRoundedBox2d(uv - d.vec2f(0.5, 0.82), d.vec2f(0.42, 0.03), 0.01);
   return sdf.opUnion(circle, wall);
 });
 
-const surfaceColor = tgpu.fn([d.vec2f], d.vec3f)((uv) => {
+const surfaceColor = tgpu.fn(
+  [d.vec2f],
+  d.vec3f,
+)((uv) => {
   'use gpu';
   return std.mix(d.vec3f(1, 0.82, 0.5), d.vec3f(0.28, 0.52, 1), uv.x);
 });
@@ -184,26 +190,33 @@ const basicView = basicRunner.output.createView(d.texture2d());
 const customView = customRunner.output.createView(d.texture2d());
 const generatedView = generatedRunner.output.createView(d.texture2d());
 
-const composePreview = tgpu.fn([d.vec2f, d.vec3f, d.f32, d.vec3f, d.f32], d.vec4f)(
-  (uv, radiance, dist, colorAtSurface, exposure) => {
-    'use gpu';
-    const edge = std.max(std.fwidth(dist), 0.001);
-    const surface = 1 - std.smoothstep(-edge, edge, dist);
-    const bg = std.mix(d.vec3f(0.04, 0.05, 0.07), d.vec3f(0.11, 0.15, 0.22), uv.y);
-    const lit = bg + radiance * exposure;
-    const color = std.mix(lit, colorAtSurface, surface);
+const composePreview = tgpu.fn(
+  [d.vec2f, d.vec3f, d.f32, d.vec3f, d.f32],
+  d.vec4f,
+)((uv, radiance, dist, colorAtSurface, exposure) => {
+  'use gpu';
+  const edge = std.max(std.fwidth(dist), 0.001);
+  const surface = 1 - std.smoothstep(-edge, edge, dist);
+  const bg = std.mix(d.vec3f(0.04, 0.05, 0.07), d.vec3f(0.11, 0.15, 0.22), uv.y);
+  const lit = bg + radiance * exposure;
+  const color = std.mix(lit, colorAtSurface, surface);
 
-    return d.vec4f(std.min(color, d.vec3f(1)), 1);
-  },
-);
+  return d.vec4f(std.min(color, d.vec3f(1)), 1);
+});
 
-const renderBasic = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
+const renderBasic = tgpu.fn(
+  [d.vec2f],
+  d.vec4f,
+)((uv) => {
   'use gpu';
   const radiance = std.textureSampleLevel(basicView.$, sampler.$, uv, 0).xyz;
   return composePreview(uv, radiance, sceneSdf(uv), surfaceColor(uv), 1.55);
 });
 
-const renderGenerated = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
+const renderGenerated = tgpu.fn(
+  [d.vec2f],
+  d.vec4f,
+)((uv) => {
   'use gpu';
   const radiance = std.textureSampleLevel(generatedView.$, sampler.$, uv, 0).xyz;
   const dist = std.textureSampleLevel(floodSdfView.$, sampler.$, uv, 0).x;
@@ -211,7 +224,10 @@ const renderGenerated = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
   return composePreview(uv, radiance, dist, color, 1.45);
 });
 
-const renderCustom = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
+const renderCustom = tgpu.fn(
+  [d.vec2f],
+  d.vec4f,
+)((uv) => {
   'use gpu';
   const radiance = std.textureSampleLevel(customView.$, sampler.$, uv, 0).xyz;
   const dist = sceneSdf(uv);

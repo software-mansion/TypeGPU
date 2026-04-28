@@ -13,7 +13,10 @@ type SdfSnippet = (typeof SDF_SNIPPETS)[number];
 const floodResolution = 2048;
 const snippetMode = root.createUniform(d.u32);
 
-const smoothSceneSdf = tgpu.fn([d.vec2f], d.f32)((p) => {
+const smoothSceneSdf = tgpu.fn(
+  [d.vec2f],
+  d.f32,
+)((p) => {
   'use gpu';
   const disk = sdf.sdDisk(p - d.vec2f(-0.18, 0), 0.22);
   const box = sdf.sdRoundedBox2d(p - d.vec2f(0.18, 0), d.vec2f(0.18), 0.05);
@@ -21,7 +24,10 @@ const smoothSceneSdf = tgpu.fn([d.vec2f], d.f32)((p) => {
   return sdf.opSmoothUnion(disk, box, 0.12);
 });
 
-const sceneSdf3d = tgpu.fn([d.vec3f], d.f32)((p) => {
+const sceneSdf3d = tgpu.fn(
+  [d.vec3f],
+  d.f32,
+)((p) => {
   'use gpu';
   const sphere = sdf.sdSphere(p - d.vec3f(-0.2, 0, 0), 0.32);
   const box = sdf.sdRoundedBox3d(p - d.vec3f(0.22, 0, 0), d.vec3f(0.22), 0.04);
@@ -29,7 +35,10 @@ const sceneSdf3d = tgpu.fn([d.vec3f], d.f32)((p) => {
   return sdf.opSmoothUnion(sphere, box, 0.08);
 });
 
-const normalAt = tgpu.fn([d.vec3f], d.vec3f)((p) => {
+const normalAt = tgpu.fn(
+  [d.vec3f],
+  d.vec3f,
+)((p) => {
   'use gpu';
   const e = 0.002;
   return std.normalize(
@@ -41,7 +50,10 @@ const normalAt = tgpu.fn([d.vec3f], d.vec3f)((p) => {
   );
 });
 
-const march = tgpu.fn([d.vec3f, d.vec3f], d.vec2f)((ro, rd) => {
+const march = tgpu.fn(
+  [d.vec3f, d.vec3f],
+  d.vec2f,
+)((ro, rd) => {
   'use gpu';
   let t = d.f32(0);
   let hit = d.f32(0);
@@ -144,7 +156,10 @@ const sampler = root.createSampler({
   minFilter: 'linear',
 });
 
-const renderRoundedBox = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
+const renderRoundedBox = tgpu.fn(
+  [d.vec2f],
+  d.vec4f,
+)((uv) => {
   'use gpu';
   const p = uv - 0.5;
   const dist = sdf.sdRoundedBox2d(p, d.vec2f(0.26, 0.12), 0.04);
@@ -159,7 +174,10 @@ const renderRoundedBox = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
   return d.vec4f(std.min(color, d.vec3f(1)), 1);
 });
 
-const renderSmoothUnion = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
+const renderSmoothUnion = tgpu.fn(
+  [d.vec2f],
+  d.vec4f,
+)((uv) => {
   'use gpu';
   const p = (uv - 0.5) * 1.08;
   const dist = smoothSceneSdf(p);
@@ -175,7 +193,10 @@ const renderSmoothUnion = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
   return d.vec4f(std.min(color, d.vec3f(1)), 1);
 });
 
-const renderRayMarching = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
+const renderRayMarching = tgpu.fn(
+  [d.vec2f],
+  d.vec4f,
+)((uv) => {
   'use gpu';
   const screen = uv * 2 - 1;
   const ro = d.vec3f(0, 0.05, -2.4);
@@ -208,7 +229,8 @@ const renderRayMarching = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
   const side = std.smoothstep(-0.32, 0.38, p.x);
 
   const fill = std.mix(d.vec3f(0.038, 0.042, 0.06), d.vec3f(0.09, 0.1, 0.13), side);
-  const shaded = fill * (0.22 + diffuse * 0.9 + fillDiffuse * 0.22) +
+  const shaded =
+    fill * (0.22 + diffuse * 0.9 + fillDiffuse * 0.22) +
     d.vec3f(0.16, 0.18, 0.23) * front * 0.3 +
     d.vec3f(0.2, 0.22, 0.26) * top * 0.18;
   const sheen = d.vec3f(0.72, 0.77, 0.86) * specular * 0.34;
@@ -218,7 +240,10 @@ const renderRayMarching = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
   return d.vec4f(std.min(color, d.vec3f(1)), 1);
 });
 
-const renderJumpFlood = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
+const renderJumpFlood = tgpu.fn(
+  [d.vec2f],
+  d.vec4f,
+)((uv) => {
   'use gpu';
   const dist = std.textureSampleLevel(floodSdfView.$, sampler.$, uv, 0).x;
   const seed = std.textureSampleLevel(floodColorView.$, sampler.$, uv, 0).xyz;
@@ -226,9 +251,8 @@ const renderJumpFlood = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
   const alpha = 1 - std.smoothstep(-edge, edge, dist);
   const glow = std.exp(-std.abs(dist) * 28) * 0.18;
   const band = std.abs(std.fract(std.abs(dist) * 22) - 0.5);
-  const contour = (1 - std.smoothstep(0.46, 0.5, band)) *
-    std.smoothstep(0.012, 0.04, std.abs(dist)) *
-    0.12;
+  const contour =
+    (1 - std.smoothstep(0.46, 0.5, band)) * std.smoothstep(0.012, 0.04, std.abs(dist)) * 0.12;
 
   const bg = std.mix(d.vec3f(0.93, 0.95, 0.97), d.vec3f(0.74, 0.82, 0.95), uv.y);
   const field = bg + d.vec3f(0.36, 0.5, 0.76) * contour;
