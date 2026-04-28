@@ -29,6 +29,10 @@ export function ptrHandle<T extends StorableData>(inner: T): Ptr<'handle', T, 'r
   return INTERNAL_createPtr('handle', inner, 'read');
 }
 
+function ptrToString(this: Ptr): string {
+  return `ptr<${this.addressSpace}, ${this.inner}, ${this.access}>`;
+}
+
 export function INTERNAL_createPtr<
   TAddressSpace extends AddressSpace,
   TInner extends BaseData,
@@ -46,13 +50,12 @@ export function INTERNAL_createPtr<
     inner,
     access,
     implicit,
-    toString: () => `ptr<${addressSpace}, ${inner}, ${access}>`,
+    toString: ptrToString, // `toStrictEqual` fails if we create a new function for each `Ptr` instance
   } as Ptr<TAddressSpace, TInner, TAccess>;
 }
 
 export function createPtrFromOrigin(origin: Origin, innerDataType: StorableData): Ptr | undefined {
   const ptrParams = originToPtrParams[origin as keyof OriginToPtrParams];
-
   if (ptrParams) {
     return INTERNAL_createPtr(ptrParams.space, innerDataType, ptrParams.access);
   }
