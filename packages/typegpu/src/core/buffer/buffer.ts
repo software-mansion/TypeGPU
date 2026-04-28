@@ -1,4 +1,3 @@
-import { getSystemEndianness } from 'typed-binary';
 import { getCompiledWriter } from '../../data/compiledIO.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
 import { convertPartialToPatch, getPatchInstructions } from '../../data/partialIO.ts';
