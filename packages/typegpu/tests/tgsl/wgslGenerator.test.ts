@@ -1757,7 +1757,7 @@ describe('wgslGenerator', () => {
     expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:testFn: Index access 'array(9, 8, 7, 6)[i]' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.]
+      - fn:testFn: Index access 'myArray[i]' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.]
     `);
   });
 
@@ -1773,6 +1773,85 @@ describe('wgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn: Index access 'b[i]' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.]
+    `);
+  });
+
+  it('throws a descriptive error when calling a function with too many arguments', () => {
+    const testFn = tgpu.fn([])(() => {});
+    const main = () => {
+      'use gpu';
+      // @ts-ignore
+      testFn(1, 2);
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Call 'testFn(1, 2)' is invalid since the function expected fewer arguments]
+    `);
+  });
+
+  it('throws a descriptive error when creating a non-uniform array', () => {
+    const testFn = () => {
+      'use gpu';
+      const t = [1, 2, d.vec2u()];
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): Values '[1, 2, d.vec2u()]' cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema]
+    `);
+  });
+
+  it('throws a descriptive error when returning a reference', ({ root }) => {
+    const myUniform = root.createUniform(d.vec3u);
+    const testFn = () => {
+      'use gpu';
+      const v = myUniform.$;
+      return v;
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): 'return v;' is invalid, cannot return references.
+      -----
+      Try 'return vec3u(v);' instead.
+      -----]
+    `);
+  });
+
+  it('throws a descriptive error when declaring a variable without initializer', () => {
+    const testFn = () => {
+      'use gpu';
+      // oxlint-disable-next-line typegpu/no-uninitialized-variables
+      let a;
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): 'let a;' is invalid because all variables need initializers.]
+    `);
+  });
+
+  it('throws a descriptive error when declaring a loose variable', () => {
+    const Unstruct = d.unstruct({ prop: d.vec4f });
+    const testFn = () => {
+      'use gpu';
+      let a = Unstruct();
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): Function 'Unstruct' is not marked with the 'use gpu' directive and cannot be used in a shader]
     `);
   });
 
@@ -2226,6 +2305,41 @@ describe('wgslGenerator', () => {
       "fn testFn(n: i32) -> bool {
         return true;
       }"
+    `);
+  });
+
+  it('throws a readable error when assigning an argument reference', () => {
+    const testFn = tgpu.fn([d.vec3u])((v) => {
+      let u = d.vec3u();
+      u = v;
+    });
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:testFn: 'u = v' is invalid, because argument references cannot be assigned.
+      -----
+      Try 'u = vec3u(v)' to copy the value instead.
+      -----]
+    `);
+  });
+
+  it('throws a readable error when assigning a reference', () => {
+    const testFn = () => {
+      'use gpu';
+      let u = d.vec3u();
+      const v = d.vec3u();
+      u = v;
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): 'u = v' is invalid, because references cannot be assigned.
+      -----
+      Try 'u = vec3u(v)' to copy the value instead.
+      -----]
     `);
   });
 

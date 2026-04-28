@@ -76,7 +76,7 @@ describe('Mixed swizzle validation', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn*:main
-        - fn*:main(): Property 'xrgy' not found on value 'vec' of type vec4f]
+        - fn*:main(): Property 'xrgy' not found on 'vec']
       `);
     });
 
@@ -93,7 +93,7 @@ describe('Mixed swizzle validation', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn*:main
-        - fn*:main(): Property 'rgxw' not found on value 'vec' of type vec4f]
+        - fn*:main(): Property 'rgxw' not found on 'vec']
       `);
     });
   });
