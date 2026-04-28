@@ -8,7 +8,6 @@ import { provideCtx } from '../../src/execMode.ts';
 import tgpu from '../../src/index.js';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { getMetaData } from '../../src/shared/meta.ts';
-import { $internal } from '../../src/shared/symbols.ts';
 import * as std from '../../src/std/index.ts';
 import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
@@ -119,17 +118,17 @@ describe('wgslGenerator', () => {
 
     expectDataTypeOf(() => {
       'use gpu';
-      testUsage.$.a;
+      return testUsage.$.a;
     }).toStrictEqual(d.u32);
 
     expectDataTypeOf(() => {
       'use gpu';
-      testUsage.$.b.x;
+      return testUsage.$.b.x;
     }).toStrictEqual(d.u32);
 
     expectDataTypeOf(() => {
       'use gpu';
-      testUsage.$.a + testUsage.$.b.x;
+      return testUsage.$.a + testUsage.$.b.x;
     }).toStrictEqual(d.u32);
   });
 
@@ -140,7 +139,7 @@ describe('wgslGenerator', () => {
 
     expectDataTypeOf(() => {
       'use gpu';
-      testUsage.$[3];
+      return testUsage.$[3];
     }).toStrictEqual(d.u32);
   });
 
@@ -172,7 +171,7 @@ describe('wgslGenerator', () => {
     expectDataTypeOf(() => {
       'use gpu';
       const idx = d.u32(0);
-      std.atomicLoad(testUsage.$.b.aa[idx]!.y);
+      return std.atomicLoad(testUsage.$.b.aa[idx]!.y);
     }).toStrictEqual(d.i32);
 
     // Check for: const vec = std.mix(d.vec4f(), testUsage.$.a, value);
@@ -180,7 +179,7 @@ describe('wgslGenerator', () => {
     expectDataTypeOf(() => {
       'use gpu';
       const value = std.atomicLoad(testUsage.$.b.aa[0]!.y);
-      std.mix(d.vec4f(), testUsage.$.a, value);
+      return std.mix(d.vec4f(), testUsage.$.a, value);
     }).toStrictEqual(d.vec4f);
 
     // Check for: std.atomicStore(testUsage.$.b.aa[idx]!.x, vec.y);
@@ -188,7 +187,7 @@ describe('wgslGenerator', () => {
     expectDataTypeOf(() => {
       'use gpu';
       const idx = d.u32(0);
-      testUsage.$.b.aa[idx]!.x;
+      return testUsage.$.b.aa[idx]!.x;
     }).toStrictEqual(d.atomic(d.u32));
   });
 
@@ -792,7 +791,7 @@ describe('wgslGenerator', () => {
   it('creates correct resources for lazy values and slots', () => {
     expectDataTypeOf(() => {
       'use gpu';
-      lazyV4u.$;
+      return lazyV4u.$;
     }).toStrictEqual(d.vec4u);
 
     const testFn = tgpu.fn([], d.vec4u)(() => lazyV4u.$);
@@ -808,14 +807,14 @@ describe('wgslGenerator', () => {
     expectDataTypeOf(() => {
       'use gpu';
       const idx = d.u32(0);
-      lazyV2f.$[idx];
+      return lazyV2f.$[idx];
     }).toStrictEqual(d.f32);
   });
 
   it('creates intermediate representation for array expression', () => {
     const testFn = () => {
       'use gpu';
-      [d.u32(1), 8, 8, 2];
+      return [d.u32(1), 8, 8, 2];
     };
 
     const snippet = extractSnippetFromFn(testFn);
@@ -914,7 +913,7 @@ describe('wgslGenerator', () => {
     const arraySnippet = extractSnippetFromFn(() => {
       'use gpu';
       const arr = [TestStruct({ x: 1, y: 2 }), TestStruct({ x: 3, y: 4 })];
-      arr;
+      return arr;
     });
 
     expect(d.isWgslArray(arraySnippet.dataType)).toBe(true);
@@ -976,7 +975,7 @@ describe('wgslGenerator', () => {
 
     expectDataTypeOf(() => {
       'use gpu';
-      fnOne().y.x;
+      return fnOne().y.x;
     }).toStrictEqual(d.f32);
   });
 
@@ -1322,7 +1321,22 @@ describe('wgslGenerator', () => {
     expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:testFn: Value undefined (as json: undefined) is not resolvable to type u32]
+      - fn:testFn: Index access 'array(9, 8, 7, 6)[i]' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.]
+    `);
+  });
+
+  it('throws an error when accessing an object with a runtime known index', () => {
+    const Boid = d.struct({ 0: d.u32 });
+
+    const testFn = tgpu.fn([Boid])((b) => {
+      const i = 0;
+      const v = b[i];
+    });
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:testFn: Index access 'b[i]' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.]
     `);
   });
 

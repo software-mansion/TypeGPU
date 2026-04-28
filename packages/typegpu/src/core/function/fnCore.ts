@@ -62,6 +62,15 @@ export function createFnCore(
     ): ResolvedSnippet {
       const externalMap: ExternalMap = {};
 
+      let attributes = '';
+      if (functionType === 'compute') {
+        attributes = `@compute @workgroup_size(${workgroupSize?.join(', ')}) `;
+      } else if (functionType === 'vertex') {
+        attributes = `@vertex `;
+      } else if (functionType === 'fragment') {
+        attributes = `@fragment `;
+      }
+
       for (const externals of externalsToApply) {
         applyExternals(externalMap, externals);
       }
@@ -149,15 +158,6 @@ export function createFnCore(
           body = replacedImpl.slice(providedArgs.range.end);
         }
 
-        let attributes = '';
-        if (functionType === 'compute') {
-          attributes = `@compute @workgroup_size(${workgroupSize?.join(', ')}) `;
-        } else if (functionType === 'vertex') {
-          attributes = `@vertex `;
-        } else if (functionType === 'fragment') {
-          attributes = `@fragment `;
-        }
-
         ctx.addDeclaration(`${attributes}fn ${id}${header}${body}`);
 
         return snip(id, returnType, /* origin */ 'runtime');
@@ -215,15 +215,6 @@ export function createFnCore(
         body: ast.body,
         externalMap,
       });
-
-      let attributes = '';
-      if (functionType === 'compute') {
-        attributes = `@compute @workgroup_size(${workgroupSize?.join(', ')}) `;
-      } else if (functionType === 'vertex') {
-        attributes = `@vertex `;
-      } else if (functionType === 'fragment') {
-        attributes = `@fragment `;
-      }
 
       ctx.addDeclaration(`${attributes}fn ${id}${code}`);
 
