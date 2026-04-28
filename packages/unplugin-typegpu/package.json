@@ -47,8 +47,8 @@
       "./package.json": "./package.json",
       ".": {
         "import": {
-          "types": "./dist/index.d.mts",
-          "default": "./dist/index.mjs"
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
         },
         "require": {
           "types": "./dist/index.d.cts",
@@ -57,8 +57,8 @@
       },
       "./rollup": {
         "import": {
-          "types": "./dist/rollup.d.mts",
-          "default": "./dist/rollup.mjs"
+          "types": "./dist/rollup.d.ts",
+          "default": "./dist/rollup.js"
         },
         "require": {
           "types": "./dist/rollup.d.cts",
@@ -67,8 +67,8 @@
       },
       "./babel": {
         "import": {
-          "types": "./dist/babel.d.mts",
-          "default": "./dist/babel.mjs"
+          "types": "./dist/babel.d.ts",
+          "default": "./dist/babel.js"
         },
         "require": {
           "types": "./dist/babel.d.cts",
@@ -77,8 +77,8 @@
       },
       "./bun": {
         "import": {
-          "types": "./dist/bun.d.mts",
-          "default": "./dist/bun.mjs"
+          "types": "./dist/bun.d.ts",
+          "default": "./dist/bun.js"
         },
         "require": {
           "types": "./dist/bun.d.cts",
@@ -87,8 +87,8 @@
       },
       "./esbuild": {
         "import": {
-          "types": "./dist/esbuild.d.mts",
-          "default": "./dist/esbuild.mjs"
+          "types": "./dist/esbuild.d.ts",
+          "default": "./dist/esbuild.js"
         },
         "require": {
           "types": "./dist/esbuild.d.cts",
@@ -97,8 +97,8 @@
       },
       "./farm": {
         "import": {
-          "types": "./dist/farm.d.mts",
-          "default": "./dist/farm.mjs"
+          "types": "./dist/farm.d.ts",
+          "default": "./dist/farm.js"
         },
         "require": {
           "types": "./dist/farm.d.cts",
@@ -107,8 +107,8 @@
       },
       "./rolldown": {
         "import": {
-          "types": "./dist/rolldown.d.mts",
-          "default": "./dist/rolldown.mjs"
+          "types": "./dist/rolldown.d.ts",
+          "default": "./dist/rolldown.js"
         },
         "require": {
           "types": "./dist/rolldown.d.cts",
@@ -117,8 +117,8 @@
       },
       "./rolldown-browser": {
         "import": {
-          "types": "./dist/rolldown-browser.d.mts",
-          "default": "./dist/rolldown-browser.mjs"
+          "types": "./dist/rolldown-browser.d.ts",
+          "default": "./dist/rolldown-browser.js"
         },
         "require": {
           "types": "./dist/rolldown-browser.d.cts",
@@ -127,8 +127,8 @@
       },
       "./rspack": {
         "import": {
-          "types": "./dist/rspack.d.mts",
-          "default": "./dist/rspack.mjs"
+          "types": "./dist/rspack.d.ts",
+          "default": "./dist/rspack.js"
         },
         "require": {
           "types": "./dist/rspack.d.cts",
@@ -137,8 +137,8 @@
       },
       "./vite": {
         "import": {
-          "types": "./dist/vite.d.mts",
-          "default": "./dist/vite.mjs"
+          "types": "./dist/vite.d.ts",
+          "default": "./dist/vite.js"
         },
         "require": {
           "types": "./dist/vite.d.cts",
@@ -147,8 +147,8 @@
       },
       "./webpack": {
         "import": {
-          "types": "./dist/webpack.d.mts",
-          "default": "./dist/webpack.mjs"
+          "types": "./dist/webpack.d.ts",
+          "default": "./dist/webpack.js"
         },
         "require": {
           "types": "./dist/webpack.d.cts",
@@ -157,8 +157,8 @@
       }
     },
     "linkDirectory": false,
-    "main": "./dist/index.mjs",
-    "types": "./dist/index.d.mts"
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
   },
   "scripts": {
     "build": "tsdown",
