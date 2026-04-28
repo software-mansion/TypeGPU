@@ -223,14 +223,14 @@ test('should allow duplicate name after block end', () => {
   };
 
   expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn main() -> u32 {
-        for (var i = 0; (i < 3i); i++) {
-          let foo = (i + 1i);
-        }
-        const foo = 7u;
-        return foo;
-      }"
-    `);
+    "fn main() -> u32 {
+      for (var i = 0; (i < 3i); i++) {
+        let foo = (i + 1i);
+      }
+      const foo = 7u;
+      return foo;
+    }"
+  `);
 });
 
 test('should give declarations new names when they are shadowed', () => {

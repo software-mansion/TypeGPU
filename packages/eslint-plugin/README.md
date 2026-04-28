@@ -46,6 +46,7 @@ export default defineConfig([
 | [no-invalid-assignment](docs/rules/no-invalid-assignment.md)           | Disallow assignments that will generate invalid WGSL                                        | ⭐  |    |
 | [no-math](docs/rules/no-math.md)                                       | Disallow usage of JavaScript 'Math' methods inside 'use gpu' functions                      |    | ⭐  |
 | [no-uninitialized-variables](docs/rules/no-uninitialized-variables.md) | Disallow variable declarations without initializers inside 'use gpu' functions              | ⭐  |    |
+| [no-unsupported-syntax](docs/rules/no-unsupported-syntax.md)           | Disallow JS syntax that will not be parsed into valid WGSL.                                 | ⭐  |    |
 | [no-unwrapped-objects](docs/rules/no-unwrapped-objects.md)             | Disallow unwrapped Plain Old JavaScript Objects inside 'use gpu' functions (except returns) | ⭐  |    |
 
 <!-- end auto-generated rules list -->

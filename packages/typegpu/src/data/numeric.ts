@@ -2,22 +2,6 @@ import { $internal } from '../shared/symbols.ts';
 import type { AbstractFloat, AbstractInt, Bool, F16, F32, I32, U16, U32 } from './wgslTypes.ts';
 import { callableSchema } from '../core/function/createCallableSchema.ts';
 
-export const abstractInt = {
-  [$internal]: {},
-  type: 'abstractInt',
-  toString() {
-    return 'abstractInt';
-  },
-} as AbstractInt;
-
-export const abstractFloat = {
-  [$internal]: {},
-  type: 'abstractFloat',
-  toString() {
-    return 'abstractFloat';
-  },
-} as AbstractFloat;
-
 const boolCast = callableSchema({
   name: 'bool',
   schema: () => bool,
@@ -299,3 +283,21 @@ export const f16: F16 = Object.assign(f16Cast, {
   [$internal]: {},
   type: 'f16',
 }) as unknown as F16;
+
+export const abstractInt = {
+  [$internal]: {},
+  type: 'abstractInt',
+  toString() {
+    return 'abstractInt';
+  },
+  concretized: i32,
+} as AbstractInt;
+
+export const abstractFloat = {
+  [$internal]: {},
+  type: 'abstractFloat',
+  toString() {
+    return 'abstractFloat';
+  },
+  concretized: f32,
+} as AbstractFloat;

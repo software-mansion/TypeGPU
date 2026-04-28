@@ -1,6 +1,6 @@
 {
   "name": "unplugin-typegpu",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "description": "Build plugins for TypeGPU, enabling seamless JavaScript -> WGSL transpilation and improved debugging.",
   "keywords": [
     "babel-plugin",
@@ -26,7 +26,6 @@
     "directory": "packages/unplugin-typegpu"
   },
   "type": "module",
-  "sideEffects": false,
   "exports": {
     "./package.json": "./package.json",
     ".": "./src/index.ts",

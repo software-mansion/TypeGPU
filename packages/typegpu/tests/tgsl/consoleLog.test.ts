@@ -682,6 +682,72 @@ describe('wgslGenerator with console.log', () => {
     expect(consoleWarnSpy).toHaveBeenCalledWith("Unsupported log method 'trace'.");
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
+
+  it('works with implicit pointers', ({ root }) => {
+    const myUniform = root.createUniform(d.vec2f);
+    const myPipeline = root.createGuardedComputePipeline((x) => {
+      'use gpu';
+      const v = myUniform.$;
+      console.log(v);
+    });
+
+    expect(tgpu.resolve([myPipeline.pipeline])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      @group(0) @binding(1) var<uniform> myUniform: vec2f;
+
+      @group(0) @binding(2) var<storage, read_write> indexBuffer: atomic<u32>;
+
+      struct SerializedLogData {
+        id: u32,
+        serializedData: array<u32, 63>,
+      }
+
+      @group(0) @binding(3) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
+
+      var<private> dataBlockIndex: u32;
+
+      var<private> dataByteIndex: u32;
+
+      fn nextByteIndex() -> u32 {
+        let i = dataByteIndex;
+        dataByteIndex = dataByteIndex + 1u;
+        return i;
+      }
+
+      fn serializeVec2f(v: vec2f) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(v.x);
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(v.y);
+      }
+
+      fn log1serializer(_arg_0: vec2f) {
+        serializeVec2f(_arg_0);
+      }
+
+      fn log1(_arg_0: vec2f) {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
+          return;
+        }
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
+
+        log1serializer(_arg_0);
+      }
+
+      fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
+        let v = (&myUniform);
+        log1((*v));
+      }
+
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        wrappedCallback(id.x, id.y, id.z);
+      }"
+    `);
+  });
 });
 
 describe('deserializeAndStringify', () => {
