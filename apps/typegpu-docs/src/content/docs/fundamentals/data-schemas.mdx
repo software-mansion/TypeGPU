@@ -47,6 +47,8 @@ const result = d.u32(3)/d.u32(2); // 1.5
 ```
 
 To achieve consistent behavior of 'use gpu' functions in JS and on the GPU, TypeGPU wraps all divisions in `f32` casts implicitly.
+
+Our [lint plugin](/TypeGPU/tooling/eslint-plugin-typegpu) helps with detecting situations like these.
 :::
 
 For each of the scalar types, there is a vector schema of 2, 3 and 4 elements of that type.
@@ -364,7 +366,7 @@ Texture schemas serve two main purposes:
 import tgpu, { d, std } from 'typegpu';
 
 const root = await tgpu.init();
-const texture = root['~unstable'].createTexture({
+const texture = root.createTexture({
   size: [256, 256],
   format: 'rgba8unorm',
 }).$usage('sampled', 'storage');

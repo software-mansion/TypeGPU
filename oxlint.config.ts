@@ -2,9 +2,6 @@ import { defineConfig } from 'oxlint';
 import typegpu from 'eslint-plugin-typegpu';
 import eslintPlugin from 'eslint-plugin-eslint-plugin';
 
-const typegpuPreset = typegpu.configs?.recommended;
-const typegpuRules = typegpuPreset && 'rules' in typegpuPreset ? typegpuPreset.rules : {};
-
 export default defineConfig({
   plugins: ['eslint', 'typescript', 'import', 'unicorn', 'oxc'],
   jsPlugins: ['eslint-plugin-typegpu', 'eslint-plugin-eslint-plugin', 'eslint-plugin-internal'],
@@ -13,7 +10,7 @@ export default defineConfig({
     suspicious: 'warn',
   },
   rules: {
-    ...typegpuRules,
+    ...typegpu.configs.recommended.rules,
     'typescript/no-unsafe-enum-comparison': 'off',
     'typescript/restrict-template-expressions': 'off',
     'typescript/no-unsafe-type-assertion': 'off',

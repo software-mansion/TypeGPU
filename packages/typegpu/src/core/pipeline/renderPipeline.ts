@@ -1,6 +1,6 @@
 import type { AnyBuiltin, OmitBuiltins } from '../../builtin.ts';
-import type { IndexFlag, TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
-import type { TgpuQuerySet } from '../querySet/querySet.ts';
+import type { IndexFlag, IndirectFlag, TgpuBuffer, VertexFlag } from '../../core/buffer/buffer.ts';
+import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation, type UndecorateRecord } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
@@ -81,6 +81,11 @@ import {
   type TimestampWritesPriors,
   triggerPerformanceCallback,
 } from './timeable.ts';
+import { type PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
+import { resolveIndirectOffset } from './pipelineUtils.ts';
+
+const DRAW_INDIRECT_SIZE = 16; // 4 x 4
+const DRAW_INDEXED_INDIRECT_SIZE = 20; // 5 x 4
 
 interface RenderPipelineInternals {
   readonly core: RenderPipelineCore;
@@ -185,11 +190,30 @@ export interface TgpuRenderPipeline<in Targets = never>
     firstInstance?: number,
   ): void;
 
-  drawIndirect(indirectBuffer: TgpuBuffer<BaseData> | GPUBuffer, indirectOffset?: GPUSize64): void;
+  /**
+   * Draws primitives using parameters read from a buffer.
+   * The buffer must contain 4 consecutive u32 values (vertexCount, instanceCount, firstVertex, firstInstance).
+   * To get the correct offset within complex data structures, use `d.memoryLayoutOf(...)`.
+   *
+   * @param indirectBuffer - Buffer marked with 'indirect' usage containing draw parameters or raw GPUBuffer
+   * @param indirectOffset - PrimitiveOffsetInfo pointing to the first draw parameter. If not provided, starts at offset 0. To obtain safe offsets, use `d.memoryLayoutOf(...)`.
+   */
+  drawIndirect(
+    indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
+    indirectOffset?: PrimitiveOffsetInfo | number,
+  ): void;
 
+  /**
+   * Draws indexed primitives using parameters read from a buffer.
+   * The buffer must contain 5 consecutive 32-bit integer values (indexCount u32, instanceCount u32, firstIndex u32, baseVertex i32, firstInstance u32).
+   * To get the correct offset within complex data structures, use `d.memoryLayoutOf(...)`.
+   *
+   * @param indirectBuffer - Buffer marked with 'indirect' usage containing draw parameters or raw GPUBuffer
+   * @param indirectOffset - PrimitiveOffsetInfo pointing to the first draw parameter. If not provided, starts at offset 0. To obtain safe offsets, use `d.memoryLayoutOf(...)`.
+   */
   drawIndexedIndirect(
-    indirectBuffer: TgpuBuffer<BaseData> | GPUBuffer,
-    indirectOffset?: GPUSize64,
+    indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
+    indirectOffset?: PrimitiveOffsetInfo | number,
   ): void;
 }
 
@@ -550,11 +574,22 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
   withPerformanceCallback(callback: (start: bigint, end: bigint) => void | Promise<void>): this {
     const internals = this[$internal];
-    const newPriors = createWithPerformanceCallback(
-      internals.priors,
-      callback,
-      internals.core.options.root,
-    );
+
+    if (internals.priors.timestampWrites) {
+      return new TgpuRenderPipelineImpl(internals.core, {
+        ...internals.priors,
+        performanceCallback: callback,
+      }) as this;
+    }
+
+    const querySet = internals.core.performanceCallbackQuerySet;
+    if (!querySet) {
+      console.warn(
+        'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
+      );
+      return this;
+    }
+    const newPriors = createWithPerformanceCallback(internals.priors, callback, querySet);
     return new TgpuRenderPipelineImpl(internals.core, newPriors) as this;
   }
 
@@ -858,26 +893,32 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }
 
   drawIndirect(
-    indirectBuffer: TgpuBuffer<BaseData> | GPUBuffer,
-    indirectOffset: GPUSize64 = 0,
+    indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
+    indirectOffset?: PrimitiveOffsetInfo | number,
   ): void {
     const internals = this[$internal];
     const { root } = internals.core.options;
-    const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : root.unwrap(indirectBuffer);
+    const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : indirectBuffer.buffer;
+    const offset = resolveIndirectOffset(
+      indirectBuffer,
+      indirectOffset,
+      DRAW_INDIRECT_SIZE,
+      'drawIndirect',
+    );
 
     if (internals.priors.externalRenderEncoder) {
       if (_lastAppliedRender.get(internals.priors.externalRenderEncoder) !== this) {
         this._applyRenderState(internals.priors.externalRenderEncoder);
         _lastAppliedRender.set(internals.priors.externalRenderEncoder, this);
       }
-      internals.priors.externalRenderEncoder.drawIndirect(rawBuffer, indirectOffset);
+      internals.priors.externalRenderEncoder.drawIndirect(rawBuffer, offset);
       return;
     }
 
     if (internals.priors.externalEncoder) {
       const pass = this._createRenderPass(internals.priors.externalEncoder);
       this._applyRenderState(pass);
-      pass.drawIndirect(rawBuffer, indirectOffset);
+      pass.drawIndirect(rawBuffer, offset);
       pass.end();
       return;
     }
@@ -887,7 +928,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const commandEncoder = root.device.createCommandEncoder();
     const pass = this._createRenderPass(commandEncoder);
     this._applyRenderState(pass);
-    pass.drawIndirect(rawBuffer, indirectOffset);
+    pass.drawIndirect(rawBuffer, offset);
     pass.end();
     root.device.queue.submit([commandEncoder.finish()]);
 
@@ -901,12 +942,18 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }
 
   drawIndexedIndirect(
-    indirectBuffer: TgpuBuffer<BaseData> | GPUBuffer,
-    indirectOffset: GPUSize64 = 0,
+    indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
+    indirectOffset?: PrimitiveOffsetInfo | number,
   ): void {
     const internals = this[$internal];
     const { root } = internals.core.options;
     const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : root.unwrap(indirectBuffer);
+    const offset = resolveIndirectOffset(
+      indirectBuffer,
+      indirectOffset,
+      DRAW_INDEXED_INDIRECT_SIZE,
+      'drawIndexedIndirect',
+    );
 
     if (internals.priors.externalRenderEncoder) {
       if (_lastAppliedRender.get(internals.priors.externalRenderEncoder) !== this) {
@@ -914,7 +961,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
         this._setIndexBuffer(internals.priors.externalRenderEncoder);
         _lastAppliedRender.set(internals.priors.externalRenderEncoder, this);
       }
-      internals.priors.externalRenderEncoder.drawIndexedIndirect(rawBuffer, indirectOffset);
+      internals.priors.externalRenderEncoder.drawIndexedIndirect(rawBuffer, offset);
       return;
     }
 
@@ -922,7 +969,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       const pass = this._createRenderPass(internals.priors.externalEncoder);
       this._applyRenderState(pass);
       this._setIndexBuffer(pass);
-      pass.drawIndexedIndirect(rawBuffer, indirectOffset);
+      pass.drawIndexedIndirect(rawBuffer, offset);
       pass.end();
       return;
     }
@@ -933,7 +980,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const pass = this._createRenderPass(commandEncoder);
     this._applyRenderState(pass);
     this._setIndexBuffer(pass);
-    pass.drawIndexedIndirect(rawBuffer, indirectOffset);
+    pass.drawIndexedIndirect(rawBuffer, offset);
     pass.end();
     root.device.queue.submit([commandEncoder.finish()]);
 
@@ -955,6 +1002,7 @@ class RenderPipelineCore implements SelfResolvable {
 
   #latestAutoVertexIn: TgpuVertexFn.In | undefined;
   #latestAutoFragmentOut: BaseData | undefined;
+  #performanceCallbackQuerySet: TgpuQuerySet<'timestamp'> | undefined;
 
   constructor(options: RenderPipelineCoreOptions) {
     this.options = options;
@@ -1009,6 +1057,13 @@ class RenderPipelineCore implements SelfResolvable {
 
   toString() {
     return 'renderPipelineCore';
+  }
+
+  get performanceCallbackQuerySet() {
+    if (!this.options.root.enabledFeatures.has('timestamp-query')) {
+      return undefined;
+    }
+    return (this.#performanceCallbackQuerySet ??= this.options.root.createQuerySet('timestamp', 2));
   }
 
   public unwrap(): Memo {

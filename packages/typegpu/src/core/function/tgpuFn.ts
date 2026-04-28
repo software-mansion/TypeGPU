@@ -6,7 +6,7 @@ import { provideInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import { isMarkedInternal } from '../../shared/symbols.ts';
-import type { Infer } from '../../shared/repr.ts';
+import type { InferGPU } from '../../shared/repr.ts';
 import { $getNameForward, $internal, $providing, $resolve } from '../../shared/symbols.ts';
 import type { Prettify } from '../../shared/utilityTypes.ts';
 import type { DualFn, ResolutionCtx, SelfResolvable } from '../../types.ts';
@@ -56,7 +56,7 @@ export type TgpuFnShell<Args extends BaseData[], Return extends BaseData> = Tgpu
   Args,
   Return
 > &
-  (<T extends (...args: InferArgs<Args>) => Infer<Return>>(
+  (<T extends (...args: InferArgs<Args>) => InferGPU<Return>>(
     implementation: T,
   ) => TgpuFn<Prettify<InheritArgNames<(...args: Args) => Return, T>>['result']>) &
   ((implementation: string) => TgpuFn<(...args: Args) => Return>) &

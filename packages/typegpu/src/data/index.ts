@@ -95,14 +95,17 @@ export type {
   U32,
   v2b,
   v2f,
+  v2h,
   v2i,
   v2u,
   v3b,
   v3f,
+  v3h,
   v3i,
   v3u,
   v4b,
   v4f,
+  v4h,
   v4i,
   v4u,
   Vec2b,
@@ -231,4 +234,4 @@ export type {
   BuiltinVertexIndex,
   BuiltinWorkgroupId,
 } from '../builtin.ts';
-export type { Infer, InferGPU, InferInput, InferPartial } from '../shared/repr.ts';
+export type { Infer, InferGPU, InferInput, InferPartial, InferPatch } from '../shared/repr.ts';

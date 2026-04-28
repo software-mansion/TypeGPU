@@ -157,6 +157,35 @@ function operatorToType<
 const unaryOpCodeToCodegen = {
   '-': neg[$gpuCallable].call.bind(neg),
   void: () => snip(undefined, wgsl.Void, 'constant'),
+  '!': (ctx: GenerationCtx, [argExpr]: Snippet[]) => {
+    if (argExpr === undefined) {
+      throw new Error('The unary operator `!` expects 1 argument, but 0 were provided.');
+    }
+
+    if (isKnownAtComptime(argExpr)) {
+      return snip(!argExpr.value, bool, 'constant');
+    }
+
+    const { value, dataType } = argExpr;
+    const argStr = ctx.resolve(value, dataType).value;
+
+    if (wgsl.isBool(dataType)) {
+      return snip(`!${argStr}`, bool, 'runtime');
+    }
+    if (wgsl.isNumericSchema(dataType)) {
+      const resultStr = `!bool(${argStr})`;
+      const nanGuardedStr = // abstractFloat will be resolved as comptime known value
+        dataType.type === 'f32'
+          ? `(((bitcast<u32>(${argStr}) & 0x7fffffff) > 0x7f800000) || ${resultStr})`
+          : dataType.type === 'f16'
+            ? `(((bitcast<u32>(${argStr}) & 0x7fff) > 0x7c00) || ${resultStr})`
+            : resultStr;
+
+      return snip(nanGuardedStr, bool, 'runtime');
+    }
+
+    return snip(false, bool, 'constant');
+  },
 } satisfies Partial<Record<tinyest.UnaryOperator, (...args: never[]) => unknown>>;
 
 const binaryOpCodeToCodegen = {
@@ -323,6 +352,31 @@ ${this.ctx.pre}}`;
       // Logical/Binary/Assignment Expression
       const [exprType, lhs, op, rhs] = expression;
       const lhsExpr = this._expression(lhs);
+
+      // Short Circuit Evaluation
+      if ((op === '||' || op === '&&') && isKnownAtComptime(lhsExpr)) {
+        const evalRhs = op === '&&' ? lhsExpr.value : !lhsExpr.value;
+
+        if (!evalRhs) {
+          return snip(op === '||', bool, 'constant');
+        }
+
+        const rhsExpr = this._expression(rhs);
+
+        if (rhsExpr.dataType === UnknownData) {
+          throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
+        }
+
+        if (isKnownAtComptime(rhsExpr)) {
+          return snip(!!rhsExpr.value, bool, 'constant');
+        }
+
+        // we can skip lhs
+        const convRhs = tryConvertSnippet(this.ctx, rhsExpr, bool, false);
+        const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
+        return snip(rhsStr, bool, 'runtime');
+      }
+
       const rhsExpr = this._expression(rhs);
 
       if (rhsExpr.value instanceof RefOperator) {
@@ -502,7 +556,7 @@ ${this.ctx.pre}}`;
         const propertyStr = this.ctx.resolve(property.value, property.dataType).value;
 
         throw new Error(
-          `Unable to index value ${targetStr} of unknown type with index ${propertyStr}. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
+          `Index access '${targetStr}[${propertyStr}]' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
         );
       }
 
@@ -718,10 +772,7 @@ ${this.ctx.pre}}`;
                 );
               }
               // Taking care of abstract numerics and implicit pointers
-              accessed = structType.provideProp(
-                key,
-                unptr(concretize(expr.dataType)) as wgsl.BaseData,
-              );
+              accessed = structType.provideProp(key, unptr(concretize(expr.dataType)));
             }
 
             return [accessed.prop, expr];
@@ -856,6 +907,75 @@ ${this.ctx.pre}}`;
     return snip(stitch`${this.ctx.resolve(schema).value}(${args})`, schema, 'runtime');
   }
 
+  public _return(statement: tinyest.Return): string {
+    const returnNode = statement[1];
+
+    if (returnNode !== undefined) {
+      const expectedReturnType = this.ctx.topFunctionReturnType;
+      let returnSnippet = expectedReturnType
+        ? this._typedExpression(returnNode, expectedReturnType)
+        : this._expression(returnNode);
+
+      if (returnSnippet.value instanceof RefOperator) {
+        throw new WgslTypeError(
+          stitch`Cannot return references, returning '${returnSnippet.value.snippet}'`,
+        );
+      }
+
+      // Arguments cannot be returned from functions without copying. A simple example why is:
+      // const identity = (x) => {
+      //   'use gpu';
+      //   return x;
+      // };
+      //
+      // const foo = (arg: d.v3f) => {
+      //   'use gpu';
+      //   const marg = identity(arg);
+      //   marg.x = 1; // 'marg's origin would be 'runtime', so we wouldn't be able to track this misuse.
+      // };
+      if (
+        returnSnippet.origin === 'argument' &&
+        !wgsl.isNaturallyEphemeral(returnSnippet.dataType) &&
+        // Only restricting this use in non-entry functions, as the function
+        // is giving up ownership of all references anyway.
+        this.ctx.topFunctionScope?.functionType === 'normal'
+      ) {
+        throw new WgslTypeError(
+          stitch`Cannot return references to arguments, returning '${returnSnippet}'. Copy the argument before returning it.`,
+        );
+      }
+
+      if (
+        !expectedReturnType &&
+        !isEphemeralSnippet(returnSnippet) &&
+        returnSnippet.origin !== 'this-function'
+      ) {
+        const str = this.ctx.resolve(returnSnippet.value, returnSnippet.dataType).value;
+        const typeStr = this.ctx.resolve(unptr(returnSnippet.dataType)).value;
+        throw new WgslTypeError(
+          `'return ${str};' is invalid, cannot return references.
+-----
+Try 'return ${typeStr}(${str});' instead.
+-----`,
+        );
+      }
+
+      returnSnippet = tryConvertSnippet(
+        this.ctx,
+        returnSnippet,
+        unptr(returnSnippet.dataType) as wgsl.AnyWgslData,
+        false,
+      );
+
+      invariant(returnSnippet.dataType !== UnknownData, 'Return type should be known');
+
+      this.ctx.reportReturnType(returnSnippet.dataType);
+      return stitch`${this.ctx.pre}return ${returnSnippet};`;
+    }
+
+    return `${this.ctx.pre}return;`;
+  }
+
   public _statement(statement: tinyest.Statement): string {
     if (typeof statement === 'string') {
       const id = this._identifier(statement);
@@ -869,72 +989,7 @@ ${this.ctx.pre}}`;
     }
 
     if (statement[0] === NODE.return) {
-      const returnNode = statement[1];
-
-      if (returnNode !== undefined) {
-        const expectedReturnType = this.ctx.topFunctionReturnType;
-        let returnSnippet = expectedReturnType
-          ? this._typedExpression(returnNode, expectedReturnType)
-          : this._expression(returnNode);
-
-        if (returnSnippet.value instanceof RefOperator) {
-          throw new WgslTypeError(
-            stitch`Cannot return references, returning '${returnSnippet.value.snippet}'`,
-          );
-        }
-
-        // Arguments cannot be returned from functions without copying. A simple example why is:
-        // const identity = (x) => {
-        //   'use gpu';
-        //   return x;
-        // };
-        //
-        // const foo = (arg: d.v3f) => {
-        //   'use gpu';
-        //   const marg = identity(arg);
-        //   marg.x = 1; // 'marg's origin would be 'runtime', so we wouldn't be able to track this misuse.
-        // };
-        if (
-          returnSnippet.origin === 'argument' &&
-          !wgsl.isNaturallyEphemeral(returnSnippet.dataType) &&
-          // Only restricting this use in non-entry functions, as the function
-          // is giving up ownership of all references anyway.
-          this.ctx.topFunctionScope?.functionType === 'normal'
-        ) {
-          throw new WgslTypeError(
-            stitch`Cannot return references to arguments, returning '${returnSnippet}'. Copy the argument before returning it.`,
-          );
-        }
-
-        if (
-          !expectedReturnType &&
-          !isEphemeralSnippet(returnSnippet) &&
-          returnSnippet.origin !== 'this-function'
-        ) {
-          const str = this.ctx.resolve(returnSnippet.value, returnSnippet.dataType).value;
-          const typeStr = this.ctx.resolve(unptr(returnSnippet.dataType)).value;
-          throw new WgslTypeError(
-            `'return ${str};' is invalid, cannot return references.
------
-Try 'return ${typeStr}(${str});' instead.
------`,
-          );
-        }
-
-        returnSnippet = tryConvertSnippet(
-          this.ctx,
-          returnSnippet,
-          unptr(returnSnippet.dataType) as wgsl.AnyWgslData,
-          false,
-        );
-
-        invariant(returnSnippet.dataType !== UnknownData, 'Return type should be known');
-
-        this.ctx.reportReturnType(returnSnippet.dataType);
-        return stitch`${this.ctx.pre}return ${returnSnippet};`;
-      }
-
-      return `${this.ctx.pre}return;`;
+      return this._return(statement);
     }
 
     if (statement[0] === NODE.if) {
@@ -1209,7 +1264,7 @@ ${this.ctx.pre}else ${alternate}`;
 
         if (isTgpuRange(iterableSnippet.value)) {
           bodyStr = this._block(blockified, {
-            [originalLoopVarName]: snip(index, u32, 'runtime'),
+            [originalLoopVarName]: snip(index, range.start.dataType, 'runtime'), // range.start, .end , .step have the same dataType
           });
         } else {
           this.ctx.indent();

@@ -72,7 +72,7 @@ let [width, height] = [canvas.width * qualityScale, canvas.height * qualityScale
 let textures = createTextures(root, width, height);
 let backgroundTexture = createBackgroundTexture(root, width, height);
 
-const filteringSampler = root['~unstable'].createSampler({
+const filteringSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -816,7 +816,7 @@ async function autoSetQuaility() {
   });
 
   for (let i = 0; i < 8; i++) {
-    const testTexture = root['~unstable']
+    const testTexture = root
       .createTexture({
         size: [canvas.width * resolutionScale, canvas.height * resolutionScale],
         format: 'rgba8unorm',
@@ -885,7 +885,7 @@ export const controls = defineControls({
       const dir1 = std.normalize(d.vec3f(0.18, -0.3, 0.64));
       const dir2 = std.normalize(d.vec3f(-0.5, -0.14, -0.8));
       const finalDir = std.normalize(std.mix(dir1, dir2, v));
-      lightUniform.writePartial({
+      lightUniform.patch({
         direction: finalDir,
       });
     },

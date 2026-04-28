@@ -153,6 +153,7 @@ export {
   textureSampleBias,
   textureSampleCompare,
   textureSampleCompareLevel,
+  textureSampleGrad,
   textureSampleLevel,
   textureStore,
 } from './texture.ts';

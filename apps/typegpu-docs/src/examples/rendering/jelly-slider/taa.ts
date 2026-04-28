@@ -61,7 +61,7 @@ export const taaResolveFn = tgpu.computeFn({
 
 export function createTaaTextures(root: TgpuRoot, width: number, height: number) {
   return [0, 1].map(() => {
-    const texture = root['~unstable']
+    const texture = root
       .createTexture({
         size: [width, height],
         format: 'rgba8unorm',

@@ -69,7 +69,7 @@ function getSkyBoxUrls() {
 
 export async function loadSkyBox(root: TgpuRoot) {
   const size = 2048;
-  const texture = root['~unstable']
+  const texture = root
     .createTexture({
       dimension: '2d',
       size: [size, size, 6],
@@ -128,7 +128,7 @@ export async function loadModel(root: TgpuRoot, modelPath: string) {
 }
 
 export async function loadSphereTextures(root: TgpuRoot) {
-  const texture = root['~unstable']
+  const texture = root
     .createTexture({
       dimension: '2d',
       size: [2048, 1024, sphereTextureNames.length],

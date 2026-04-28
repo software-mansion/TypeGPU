@@ -34,7 +34,7 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const response = await fetch('/TypeGPU/assets/image-tuning/tiger.png');
 const imageBitmap = await createImageBitmap(await response.blob());
 
-const imageTexture = root['~unstable']
+const imageTexture = root
   .createTexture({
     size: [imageBitmap.width, imageBitmap.height],
     format: 'rgba8unorm',
@@ -45,7 +45,7 @@ imageTexture.write(imageBitmap);
 
 const imageView = imageTexture.createView(d.texture2d(d.f32));
 
-const defaultLUTTexture = root['~unstable']
+const defaultLUTTexture = root
   .createTexture({
     size: [1, 1, 1] as [number, number, number],
     format: 'rgba16float',
@@ -62,7 +62,7 @@ const layout = tgpu.bindGroupLayout({
 const lut = root.createUniform(LUTParams);
 const adjustments = root.createUniform(Adjustments);
 
-const lutSampler = root['~unstable'].createSampler({
+const lutSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
   addressModeU: 'clamp-to-edge',
@@ -70,7 +70,7 @@ const lutSampler = root['~unstable'].createSampler({
   addressModeW: 'clamp-to-edge',
 });
 
-const imageSampler = root['~unstable'].createSampler({
+const imageSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -236,7 +236,7 @@ async function updateLUT(file: string) {
     currentLUTTexture.destroy();
   }
 
-  currentLUTTexture = root['~unstable']
+  currentLUTTexture = root
     .createTexture({
       size: [parsed.size, parsed.size, parsed.size],
       format: 'rgba16float',
@@ -284,7 +284,7 @@ export const controls = defineControls({
     onSelectChange: async (selected) => {
       if (selected === 'None') {
         currentLUTTexture = defaultLUTTexture;
-        lut.writePartial({ enabled: 0 });
+        lut.patch({ enabled: 0 });
       } else {
         await updateLUT(LUTFiles[selected as keyof typeof LUTFiles]);
       }
@@ -297,7 +297,7 @@ export const controls = defineControls({
     max: 2.0,
     step: 0.1,
     onSliderChange(value) {
-      adjustments.writePartial({ exposure: value });
+      adjustments.patch({ exposure: value });
       render();
     },
   },
@@ -307,7 +307,7 @@ export const controls = defineControls({
     max: 2.0,
     step: 0.1,
     onSliderChange(value) {
-      adjustments.writePartial({ contrast: value });
+      adjustments.patch({ contrast: value });
       render();
     },
   },
@@ -317,7 +317,7 @@ export const controls = defineControls({
     max: 2.0,
     step: 0.1,
     onSliderChange(value) {
-      adjustments.writePartial({ highlights: value });
+      adjustments.patch({ highlights: value });
       render();
     },
   },
@@ -327,7 +327,7 @@ export const controls = defineControls({
     max: 1.9,
     step: 0.1,
     onSliderChange(value) {
-      adjustments.writePartial({ shadows: value });
+      adjustments.patch({ shadows: value });
       render();
     },
   },
@@ -337,7 +337,7 @@ export const controls = defineControls({
     max: 2.0,
     step: 0.1,
     onSliderChange(value) {
-      adjustments.writePartial({ saturation: value });
+      adjustments.patch({ saturation: value });
       render();
     },
   },
