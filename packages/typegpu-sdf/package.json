@@ -23,8 +23,7 @@
       ".": {
         "types": "./dist/index.d.ts",
         "module": "./dist/index.js",
-        "import": "./dist/index.js",
-        "default": "./dist/index.cjs"
+        "import": "./dist/index.js"
       }
     },
     "linkDirectory": false,
