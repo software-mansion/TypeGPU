@@ -16,6 +16,7 @@ type Context = {
   /** Used to signal to identifiers that they should not treat their resolution as possible external uses. */
   ignoreExternalDepth: number;
   stack: Scope[];
+  ancestorChain: JsNode[];
 };
 
 type JsNode = babel.Node | acorn.AnyNode;
@@ -308,8 +309,11 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
     throw new Error(`Unsupported JS functionality: ${node.type}`);
   }
 
+  ctx.ancestorChain.push(node);
   // @ts-expect-error <too much for typescript, it seems :/ >
-  return transpiler(ctx, node);
+  const result = transpiler(ctx, node);
+  ctx.ancestorChain.pop();
+  return result;
 }
 
 export type TranspilationResult = {
@@ -435,6 +439,7 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
         ),
       },
     ],
+    ancestorChain: [],
   };
 
   const tinyestBody = transpile(ctx, body);
@@ -464,6 +469,7 @@ export function transpileNode(node: JsNode): tinyest.AnyNode {
         declaredNames: [],
       },
     ],
+    ancestorChain: [],
   };
 
   return transpile(ctx, node);
