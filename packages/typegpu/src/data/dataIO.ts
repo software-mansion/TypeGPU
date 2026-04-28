@@ -26,10 +26,11 @@ import {
   vec4u,
 } from './vector.ts';
 import type * as wgsl from './wgslTypes.ts';
-import type { BaseData } from './wgslTypes.ts';
+import { isWgslArray, type BaseData } from './wgslTypes.ts';
 import type { BufferWriteOptions } from '../core/buffer/buffer.ts';
 import { getCompiledWriter } from './compiledIO.ts';
 import { getName } from '../shared/meta.ts';
+import { roundUp } from '../mathUtils.ts';
 
 type DataWriter<TSchema extends wgsl.BaseData> = (
   output: ISerialOutput,
@@ -801,14 +802,36 @@ export function readData<TData extends wgsl.BaseData>(
 
 const endianness = getSystemEndianness();
 
+export function calculateOffsets<T extends BaseData>(
+  options: BufferWriteOptions | undefined,
+  schema: T,
+  data: InferInput<T> | ArrayBuffer,
+): { startOffset: number; endOffset: number } {
+  const bufferSize = sizeOf(schema);
+  const startOffset = options?.startOffset ?? 0;
+  let naturalSize: number | undefined = undefined;
+  if (isWgslArray(schema) && Array.isArray(data)) {
+    const arrayData = data as unknown[];
+    naturalSize =
+      arrayData.length * roundUp(sizeOf(schema.elementType), alignmentOf(schema.elementType));
+  } else if (ArrayBuffer.isView(data) || data instanceof ArrayBuffer) {
+    naturalSize = data.byteLength;
+  }
+  const naturalEndOffset =
+    naturalSize !== undefined ? Math.min(startOffset + naturalSize, bufferSize) : undefined;
+
+  const endOffset = options?.endOffset ?? naturalEndOffset ?? bufferSize;
+
+  return { startOffset, endOffset };
+}
+
 export function writeToArrayBuffer<T extends BaseData>(
   buffer: ArrayBuffer,
   schema: T,
   data: InferInput<T> | ArrayBuffer,
   options?: BufferWriteOptions,
 ) {
-  const startOffset = options?.startOffset ?? 0;
-  const endOffset = options?.endOffset ?? buffer.byteLength;
+  const { startOffset, endOffset } = calculateOffsets(options, schema, data);
 
   // Fast path: raw byte copy, user guarantees the padded layout
   if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
