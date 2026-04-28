@@ -1,3 +1,8 @@
+// This example is a from-scratch implementation of Radiance Cascades.
+// For @typegpu/radiance-cascades package usage, see the docs:
+// https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-radiance-cascades/
+// and the packaged example:
+// https://docs.swmansion.com/TypeGPU/examples#example=rendering--radiance-cascades-drawing
 import * as sdf from '@typegpu/sdf';
 import tgpu, { common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
