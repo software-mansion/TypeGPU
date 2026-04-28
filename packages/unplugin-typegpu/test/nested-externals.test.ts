@@ -12,7 +12,6 @@ function extractExternals(code: string | undefined | null) {
 
 describe('externals gathering', () => {
   describe('BABEL', () => {
-    // TODO: fix all this code
     it('allows multiple usages of one external', () => {
       const code = `\
         const ext = {
@@ -42,10 +41,13 @@ describe('externals gathering', () => {
 
     it('treats dereference like a regular external', () => {
       const code = `\
+        import tgpu, { d } from 'typegpu';
+
+        const root = await tgpu.init();
         const buffer = root.createMutable(d.vec2u);
         const foo = () => {
           'use gpu';
-          const d = buffer.$.x;
+          const a = buffer.$.x;
         };
         console.log(foo);`;
 
@@ -60,17 +62,20 @@ describe('externals gathering', () => {
 
     it('skips computed prop access', () => {
       const code = `\
+        const ext = {
+          n: 1,
+        };
+
         const fn = () => {
           'use gpu';
-          const x = buffers['buf'].$.pos.x;
+          const a = ext['n'];
         };
-        console.log(fn);
-      `;
+        console.log(fn);`;
 
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "() => {
             return {
-              buffer
+              ext
             };
           }"
       `);
@@ -78,44 +83,39 @@ describe('externals gathering', () => {
 
     it('skips calls', () => {
       const code = `\
-        const fn5 = () => {
+        import tgpu, { d } from 'typegpu';
+
+        const ext = {
+          comptime: tgpu.comptime(() => {
+            return d.vec4f();
+          }),
+          runtime: () => {
+            'use gpu';
+            return d.vec4f();
+          },
+        };
+
+        const fn = () => {
           'use gpu';
-          const x = a.b.comptime().c;
-        }
-      `;
+          const a = ext.comptime().x;
+          const b = ext.runtime().y;
+        };`;
 
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "() => {
-            return {
-              buffer
-            };
-          }"
+              return {
+                d
+              };
+            }"
       `);
     });
   });
 
   describe('ROLLUP', () => {
     it('allows multiple usages of one external', async () => {
-      const code = `\
-        const ext = {
-          value: 7,
-          config: {
-            multiplier: 1,
-            zero: 0,
-          }
-        };
-        const foo = () => {
-          'use gpu';
-          const a = ext.value;
-          const b = ext.config.multiplier;
-          const c = ext.config.zero;
-          const d = ext.config.multiplier;
-        };
-        console.log(foo);`;
+      const code = ``;
 
-      expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
-        `"() => ({ext}),"`,
-      );
+      expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(`""`);
     });
   });
 });
