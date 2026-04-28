@@ -19,11 +19,17 @@ export default defineConfig({
   deps: {
     onlyBundle: false,
   },
+  hooks: (hooks) => {
+    hooks.beforeEach((event) => {
+      console.log(event);
+    });
+  },
   outDir: 'dist',
   format: ['cjs', 'esm'],
   tsconfig: './tsconfig.json',
   target: 'es2017',
   platform: 'node',
+  publint: true,
   sourcemap: false,
   dts: true,
 });
