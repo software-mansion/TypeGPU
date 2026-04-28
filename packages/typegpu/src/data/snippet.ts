@@ -74,14 +74,9 @@ export interface Snippet {
   readonly origin: Origin;
 }
 
-export interface ResolvedSnippet {
+export interface ResolvedSnippet extends Snippet {
   readonly value: string;
-  /**
-   * The type that `value` is assignable to (not necessary exactly inferred as).
-   * E.g. `1.1` is assignable to `f32`, but `1.1` itself is an abstract float
-   */
   readonly dataType: BaseData;
-  readonly origin: Origin;
 }
 
 export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };

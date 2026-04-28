@@ -214,10 +214,6 @@ describe('game of life example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct displayFragment_Input {
-        @location(0) uv: vec2f,
-      }
-
       struct ZoomParams {
         enabled: u32,
         level: f32,
@@ -241,6 +237,10 @@ describe('game of life example', () => {
       }
 
       @group(0) @binding(2) var<uniform> viewModeUniform: u32;
+
+      struct displayFragment_Input {
+        @location(0) uv: vec2f,
+      }
 
       @fragment fn displayFragment(_arg_0: displayFragment_Input) -> @location(0) vec4f {
         let zoom = (&zoomUniform);

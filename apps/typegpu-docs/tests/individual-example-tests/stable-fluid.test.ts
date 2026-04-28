@@ -259,15 +259,15 @@ describe('stable-fluid example', () => {
         return renderFn_Output(vec4f(vertices[_arg_idx], 0f, 1f), texCoords[_arg_idx]);
       }
 
-      struct fragmentImageFn_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var result: texture_2d<f32>;
 
       @group(0) @binding(2) var linSampler: sampler;
 
       @group(0) @binding(1) var background: texture_2d<f32>;
+
+      struct fragmentImageFn_Input {
+        @location(0) uv: vec2f,
+      }
 
       @fragment fn fragmentImageFn(_arg_0: fragmentImageFn_Input) -> @location(0) vec4f {
         const pixelStep = 0.001953125f;

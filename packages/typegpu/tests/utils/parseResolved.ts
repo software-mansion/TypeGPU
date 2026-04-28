@@ -1,69 +1,67 @@
 import type * as tinyest from 'tinyest';
+import { NodeTypeCatalog as NODE } from 'tinyest';
 import { type Assertion, expect } from 'vitest';
-import type { BaseData } from '../../src/data/index.ts';
-import type { UnknownData } from '../../src/data/dataTypes.ts';
-import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
-import { provideCtx } from '../../src/execMode.ts';
-import { getMetaData } from '../../src/shared/meta.ts';
-import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
-import { namespace } from '../../src/core/resolve/namespace.ts';
-import type { Snippet } from '../../src/data/snippet.ts';
-import { $internal } from '../../src/shared/symbols.ts';
-import { CodegenState } from '../../src/types.ts';
+import tgpu, { d, ShaderGenerator, WgslGenerator } from 'typegpu';
+
+type Snippet = ShaderGenerator.Snippet;
+type UnknownData = ShaderGenerator.UnknownData;
+type Origin = ShaderGenerator.Origin;
+
+class ExtractingGenerator extends WgslGenerator {
+  #fnDepth: number;
+
+  returnedSnippet: Snippet | undefined;
+
+  constructor() {
+    super();
+    this.#fnDepth = 0;
+  }
+
+  public functionDefinition(options: ShaderGenerator.FunctionDefinitionOptions): string {
+    this.#fnDepth++;
+    try {
+      return super.functionDefinition(options);
+    } finally {
+      this.#fnDepth--;
+    }
+  }
+
+  public _return(statement: tinyest.Return): string {
+    if (this.#fnDepth === 1) {
+      if (this.returnedSnippet) {
+        throw new Error('Cannot inspect multiple return values');
+      }
+      if (!statement[1]) {
+        throw new Error('Cannot inspect if nothing is returned');
+      }
+      this.returnedSnippet = this._expression(statement[1]);
+      return super._return([NODE.return]);
+    }
+
+    // Proceed as usual
+    return super._return(statement);
+  }
+}
 
 export function extractSnippetFromFn(cb: () => unknown): Snippet {
-  const ctx = new ResolutionCtxImpl({
-    namespace: namespace({ names: 'strict' }),
-  });
+  const generator = new ExtractingGenerator();
 
-  return provideCtx(ctx, () => {
-    let pushedFnScope = false;
-    try {
-      const meta = getMetaData(cb);
+  tgpu.resolve([cb], { unstable_shaderGenerator: generator });
 
-      if (!meta || !meta.ast) {
-        throw new Error('No metadata found for the function');
-      }
+  if (!generator.returnedSnippet) {
+    throw new Error('Something must be returned to be inspected');
+  }
 
-      ctx.pushMode(new CodegenState());
-      ctx[$internal].itemStateStack.pushItem();
-      ctx[$internal].itemStateStack.pushFunctionScope(
-        'normal',
-        [],
-        {},
-        undefined,
-        (meta.externals as () => Record<string, string>)() ?? {},
-      );
-      ctx.pushBlockScope();
-      pushedFnScope = true;
-
-      // Extracting the last expression from the block
-      const statements = meta.ast.body[1] ?? [];
-      if (statements.length === 0) {
-        throw new Error(`Expected at least one expression, got ${statements.length}`);
-      }
-
-      wgslGenerator.initGenerator(ctx);
-      // Prewarming statements
-      for (const statement of statements) {
-        wgslGenerator._statement(statement);
-      }
-      return wgslGenerator._expression(statements[statements.length - 1] as tinyest.Expression);
-    } finally {
-      if (pushedFnScope) {
-        ctx.popBlockScope();
-        ctx[$internal].itemStateStack.pop('functionScope');
-        ctx[$internal].itemStateStack.pop('item');
-      }
-      ctx.popMode('codegen');
-    }
-  });
+  return generator.returnedSnippet;
 }
 
-export function expectSnippetOf(cb: () => unknown): Assertion<Snippet> {
-  return expect(extractSnippetFromFn(cb));
+export function expectSnippetOf(
+  cb: () => unknown,
+): Assertion<[unknown, d.BaseData | UnknownData, Origin]> {
+  const snippet = extractSnippetFromFn(cb);
+  return expect([snippet.value, snippet.dataType, snippet.origin]);
 }
 
-export function expectDataTypeOf(cb: () => unknown): Assertion<BaseData | UnknownData> {
-  return expect<BaseData | UnknownData>(extractSnippetFromFn(cb).dataType);
+export function expectDataTypeOf(cb: () => unknown): Assertion<d.BaseData | UnknownData> {
+  return expect<d.BaseData | UnknownData>(extractSnippetFromFn(cb).dataType);
 }

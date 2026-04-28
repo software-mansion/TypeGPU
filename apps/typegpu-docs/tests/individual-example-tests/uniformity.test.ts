@@ -35,10 +35,6 @@ describe('uniformity test example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct fragmentShader_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var<uniform> canvasRatioUniform: f32;
 
       @group(0) @binding(1) var<uniform> gridSizeUniform: f32;
@@ -65,15 +61,15 @@ describe('uniformity test example', () => {
         return sample();
       }
 
+      struct fragmentShader_Input {
+        @location(0) uv: vec2f,
+      }
+
       @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
         var uv = (((_arg_0.uv + 1f) / 2f) * vec2f(canvasRatioUniform, 1f));
         var gridedUV = floor((uv * gridSizeUniform));
         randSeed2(gridedUV);
         return vec4f(vec3f(randFloat01()), 1f);
-      }
-
-      struct fragmentShader_Input_1 {
-        @location(0) uv: vec2f,
       }
 
       var<private> seed_1: u32;
@@ -100,6 +96,10 @@ describe('uniformity test example', () => {
 
       fn randFloat01_1() -> f32 {
         return sample_1();
+      }
+
+      struct fragmentShader_Input_1 {
+        @location(0) uv: vec2f,
       }
 
       @fragment fn fragmentShader_1(_arg_0: fragmentShader_Input_1) -> @location(0) vec4f {
