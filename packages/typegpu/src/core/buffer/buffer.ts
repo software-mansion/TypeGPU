@@ -31,9 +31,7 @@ import {
   type TgpuFixedBufferUsage,
   uniform,
 } from './bufferUsage.ts';
-import { alignmentOf } from '../../data/alignmentOf.ts';
-import { roundUp } from '../../mathUtils.ts';
-import { readFromArrayBuffer, writeToArrayBuffer } from '../../data/dataIO.ts';
+import { calculateOffsets, readFromArrayBuffer, writeToArrayBuffer } from '../../data/dataIO.ts';
 import { patchArrayBuffer } from '../../data/partialIO.ts';
 
 // ----------
@@ -352,23 +350,6 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   write(data: ArrayBuffer, options?: BufferWriteOptions): void;
   write(data: InferInput<TData> | ArrayBuffer, options?: BufferWriteOptions): void {
     const gpuBuffer = this.buffer;
-    const bufferSize = sizeOf(this.dataType);
-    const startOffset = options?.startOffset ?? 0;
-
-    let naturalSize: number | undefined = undefined;
-    if (isWgslArray(this.dataType) && Array.isArray(data)) {
-      const arrayData = data as unknown[];
-      naturalSize =
-        arrayData.length *
-        roundUp(sizeOf(this.dataType.elementType), alignmentOf(this.dataType.elementType));
-    } else if (ArrayBuffer.isView(data) || data instanceof ArrayBuffer) {
-      naturalSize = data.byteLength;
-    }
-    const naturalEndOffset =
-      naturalSize !== undefined ? Math.min(startOffset + naturalSize, bufferSize) : undefined;
-
-    const endOffset = options?.endOffset ?? naturalEndOffset ?? bufferSize;
-    const size = endOffset - startOffset;
 
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = this.#getMappedRange();
@@ -386,6 +367,10 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     if (!(data instanceof ArrayBuffer && data === this.#hostBuffer)) {
       writeToArrayBuffer(this.#hostBuffer, this.dataType, data, options);
     }
+
+    const { startOffset, endOffset } = calculateOffsets(options, this.dataType, data);
+    const size = endOffset - startOffset;
+
     this.#device.queue.writeBuffer(gpuBuffer, startOffset, this.#hostBuffer, startOffset, size);
   }
 

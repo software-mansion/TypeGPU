@@ -50,13 +50,15 @@ describe('arrayBufferIO', () => {
     });
 
     it('respects startOffset', () => {
-      const buffer = new ArrayBuffer(32);
-      const Numbers = d.arrayOf(d.u32, 8);
+      const buffer = new Uint32Array([10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]);
+      const Numbers = d.arrayOf(d.u32, 12);
       const layout = d.memoryLayoutOf(Numbers, (a) => a[4]);
 
-      writeToArrayBuffer(buffer, Numbers, [1, 2, 3, 4], { startOffset: layout.contiguous });
+      writeToArrayBuffer(buffer.buffer, Numbers, [1, 2, 3, 4], { startOffset: layout.offset });
 
-      expect([...new Uint32Array(buffer)]).toStrictEqual([0, 0, 0, 0, 1, 2, 3, 4]);
+      expect([...new Uint32Array(buffer)]).toStrictEqual([
+        10, 10, 10, 10, 1, 2, 3, 4, 10, 10, 10, 10,
+      ]);
     });
 
     it('handles structs', () => {
