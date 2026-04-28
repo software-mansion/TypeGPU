@@ -12,6 +12,7 @@ function extractExternals(code: string | undefined | null) {
 
 describe('externals gathering', () => {
   describe('BABEL', () => {
+    // TODO: fix all this code
     it('allows multiple usages of one external', () => {
       const code = `\
         const ext = {
@@ -34,6 +35,59 @@ describe('externals gathering', () => {
         "() => {
             return {
               ext
+            };
+          }"
+      `);
+    });
+
+    it('treats dereference like a regular external', () => {
+      const code = `\
+        const buffer = root.createMutable(d.vec2u);
+        const foo = () => {
+          'use gpu';
+          const d = buffer.$.x;
+        };
+        console.log(foo);`;
+
+      expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
+        "() => {
+            return {
+              buffer
+            };
+          }"
+      `);
+    });
+
+    it('skips computed prop access', () => {
+      const code = `\
+        const fn = () => {
+          'use gpu';
+          const x = buffers['buf'].$.pos.x;
+        };
+        console.log(fn);
+      `;
+
+      expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
+        "() => {
+            return {
+              buffer
+            };
+          }"
+      `);
+    });
+
+    it('skips calls', () => {
+      const code = `\
+        const fn5 = () => {
+          'use gpu';
+          const x = a.b.comptime().c;
+        }
+      `;
+
+      expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
+        "() => {
+            return {
+              buffer
             };
           }"
       `);
