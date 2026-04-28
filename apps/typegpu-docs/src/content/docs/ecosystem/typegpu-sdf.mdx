@@ -2,48 +2,302 @@
 title: "@typegpu/sdf"
 ---
 
-The `@typegpu/sdf` package offers a set of [signed distance function](https://en.wikipedia.org/wiki/Signed_distance_function) utilities for use in TypeGPU and WebGPU projects.
+import { Image } from 'astro:assets';
+import basicPreview from '../../../assets/docs/typegpu-sdf-basic.png';
+import composingPreview from '../../../assets/docs/typegpu-sdf-composing.png';
+import threeDPreview from '../../../assets/docs/typegpu-sdf-3d.png';
+import jumpFloodPreview from '../../../assets/docs/typegpu-sdf-jump-flood.png';
 
-## Example usage
-
-By definition, signed distance functions return a distance from the given point to the boundary of a shape.
-For example, the `sdf.sdDisk(point, radius)` returns the signed distance from the `point`, to a circle located at point (0, 0) of radius equal to `radius`.
-
-- `sdf.sdDisk(d.vec2f(2, 0), 1)` is equal to 1,
-- `sdf.sdDisk(d.vec2f(1, 0), 1)` is equal to 0,
-- `sdf.sdDisk(d.vec2f(0, 0), 1)` is equal to -1.
-
-:::note
-Every shape is assumed to be located at position (0, 0).
-
-Position, scale and translation of a shape can be adjusted by applying the inverse transformation to the position argument.
+:::note[Recommended reading]
+Most primitive formulas in this package are adapted from Inigo Quilez's work:
+- <a href="https://iquilezles.org/articles/distfunctions2d/" target="_blank" rel="noopener noreferrer">2D Distance Functions</a>
+- <a href="https://iquilezles.org/articles/distfunctions/" target="_blank" rel="noopener noreferrer">3D Distance Functions</a>
 :::
 
-Here is an example of a fragment shader that draws a disk of radius 0.25 on the center of a (presumably square) canvas:
+The `@typegpu/sdf` package provides signed distance functions and small SDF helpers for TypeGPU and WebGPU projects.
+It is meant for shader-side shape logic: UI masks, ray-marched scenes, collision-ish distance checks, and texture-based SDF generation.
+
+A signed distance function returns:
+
+- a negative value inside the shape,
+- `0` on the boundary,
+- a positive value outside the shape.
+
+:::note
+Shape primitives are centered around the origin. To move, scale, or rotate a shape, apply the inverse transform to the point you pass into the SDF.
+:::
+
+## Basic usage
+
+Call SDF helpers from [TypeGPU functions](/TypeGPU/fundamentals/functions/) just like any other TypeGPU resource.
+Resolving the function includes the SDF code and its dependencies automatically.
+
+<div class="my-4 flex justify-center">
+  <Image src={basicPreview} alt="A rounded box SDF rendered with antialiasing" class="w-full max-w-[20rem] rounded-md" />
+</div>
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import tgpu, { d, std } from 'typegpu';
 import * as sdf from '@typegpu/sdf';
 
-const mainFragment = tgpu.fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-})(({ uv }) => {
-  if (sdf.sdDisk(uv.sub(0.5), 0.25) < 0) {
-    return d.vec4f(0, 0, 0, 1);
-  }
-  return d.vec4f(1);
+const renderRoundedBox = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
+  'use gpu';
+  const p = uv - 0.5;
+  const dist = sdf.sdRoundedBox2d(p, d.vec2f(0.26, 0.12), 0.04);
+  const edge = std.max(std.fwidth(dist), 0.001);
+  const alpha = 1 - std.smoothstep(-edge, edge, dist);
+  const glow = std.exp(-std.abs(dist) * 28) * 0.2;
+
+  const bg = std.mix(d.vec3f(0.93, 0.95, 0.97), d.vec3f(0.74, 0.82, 0.95), uv.y);
+  const fill = d.vec3f(0.08, 0.08, 0.1);
+  const color = std.mix(bg, fill, alpha) + d.vec3f(1, 0.55, 0.28) * glow;
+
+  return d.vec4f(std.min(color, d.vec3f(1)), 1);
 });
 ```
 
-## Implemented functions
+## Composing shapes
 
-For the list of all implemented functions see [this file](https://github.com/software-mansion/TypeGPU/blob/release/packages/typegpu-sdf/src/index.ts).
-All functions are documented using JSDoc.
+The package includes a few common operators. They take distances as input, so you can combine any primitive or custom SDF.
 
-For any missing SDFs or utilities, feel free to submit an issue at https://github.com/software-mansion/TypeGPU/issues.
+<div class="my-4 flex justify-center">
+  <Image src={composingPreview} alt="A smooth union of a disk and rounded box SDF" class="w-full max-w-[20rem] rounded-md" />
+</div>
 
-## Further Reading
+```ts twoslash
+import tgpu, { d, std } from 'typegpu';
+import * as sdf from '@typegpu/sdf';
 
-- [2D Distance Functions](https://iquilezles.org/articles/distfunctions2d/) by Íñigo Quílez
-- [3D Distance Functions](https://iquilezles.org/articles/distfunctions/) by Íñigo Quílez
+const sceneSdf = tgpu.fn([d.vec2f], d.f32)((p) => {
+  'use gpu';
+  const disk = sdf.sdDisk(p - d.vec2f(-0.18, 0), 0.22);
+  const box = sdf.sdRoundedBox2d(p - d.vec2f(0.18, 0), d.vec2f(0.18), 0.05);
+
+  return sdf.opSmoothUnion(disk, box, 0.12);
+});
+
+const renderSmoothUnion = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
+  'use gpu';
+  const dist = sceneSdf((uv - 0.5) * 1.08);
+  const edge = std.max(std.fwidth(dist), 0.001);
+  const alpha = 1 - std.smoothstep(-edge, edge, dist);
+  const glow = std.exp(-std.abs(dist) * 26) * 0.2;
+
+  const bg = std.mix(d.vec3f(0.93, 0.95, 0.97), d.vec3f(0.74, 0.82, 0.95), uv.y);
+  const fill = d.vec3f(0.07, 0.075, 0.095);
+  const color = std.mix(bg, fill, alpha) + d.vec3f(1, 0.55, 0.28) * glow;
+
+  return d.vec4f(std.min(color, d.vec3f(1)), 1);
+});
+```
+
+For more on combining distance fields, see Inigo Quilez's [smooth minimum](https://iquilezles.org/articles/smin/) and [distance functions](https://iquilezles.org/articles/distfunctions/) articles.
+
+## 3D SDFs
+
+The 3D primitives follow the same rules as the 2D ones. They are useful for ray marching and for generating volumetric fields.
+
+<div class="my-4 flex justify-center">
+  <Image src={threeDPreview} alt="A ray-marched 3D SDF scene" class="w-full max-w-[20rem] rounded-md" />
+</div>
+
+```ts twoslash
+import tgpu, { d, std } from 'typegpu';
+import * as sdf from '@typegpu/sdf';
+
+const sceneSdf = tgpu.fn([d.vec3f], d.f32)((p) => {
+  'use gpu';
+  const sphere = sdf.sdSphere(p - d.vec3f(-0.2, 0, 0), 0.32);
+  const box = sdf.sdRoundedBox3d(p - d.vec3f(0.22, 0, 0), d.vec3f(0.22), 0.04);
+
+  return sdf.opSmoothUnion(sphere, box, 0.08);
+});
+
+const normalAt = tgpu.fn([d.vec3f], d.vec3f)((p) => {
+  'use gpu';
+  const e = 0.002;
+  return std.normalize(d.vec3f(
+    sceneSdf(p + d.vec3f(e, 0, 0)) - sceneSdf(p - d.vec3f(e, 0, 0)),
+    sceneSdf(p + d.vec3f(0, e, 0)) - sceneSdf(p - d.vec3f(0, e, 0)),
+    sceneSdf(p + d.vec3f(0, 0, e)) - sceneSdf(p - d.vec3f(0, 0, e)),
+  ));
+});
+
+const march = tgpu.fn([d.vec3f, d.vec3f], d.vec2f)((ro, rd) => {
+  'use gpu';
+  let t = d.f32(0);
+  let hit = d.f32(0);
+
+  for (let i = 0; i < 96; i++) {
+    const dist = sceneSdf(ro + rd * t);
+    if (dist < 0.002) {
+      hit = 1;
+      break;
+    }
+    t += dist;
+    if (t > 6) {
+      break;
+    }
+  }
+
+  return d.vec2f(t, hit);
+});
+
+const renderRayMarching = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
+  'use gpu';
+  const screen = uv * 2 - 1;
+  const ro = d.vec3f(0, 0.05, -2.4);
+  const rd = std.normalize(d.vec3f(screen, 1.25));
+  const result = march(ro, rd);
+
+  const bg = std.mix(d.vec3f(0.93, 0.95, 0.97), d.vec3f(0.74, 0.82, 0.95), uv.y);
+  if (result.y < 0.5) {
+    return d.vec4f(bg, 1);
+  }
+
+  const p = ro + rd * result.x;
+  const normal = normalAt(p);
+  const lightDir = std.normalize(d.vec3f(-0.35, 0.7, -0.55));
+  const viewDir = std.normalize(rd * -1);
+  const diffuse = std.max(std.dot(normal, lightDir), 0);
+  const rim = (1 - std.max(std.dot(normal, viewDir), 0)) ** 2;
+
+  const fill = std.mix(d.vec3f(0.04, 0.045, 0.06), d.vec3f(0.09, 0.1, 0.13), p.x + 0.5);
+  const color = fill * (0.28 + diffuse * 0.9) + d.vec3f(1, 0.55, 0.28) * rim * 0.35;
+
+  return d.vec4f(std.min(color, d.vec3f(1)), 1);
+});
+```
+
+For 2D-to-3D shapes, use `opExtrudeX`, `opExtrudeY`, or `opExtrudeZ` with a 2D distance value and a half-height.
+
+## Jump flood textures
+
+`createJumpFlood` builds an executor for the Jump Flood Algorithm. It turns a shader-side classifier into two sampled output textures:
+
+- `sdfOutput`, an `rgba16float` texture with the signed distance in the red channel,
+- `colorOutput`, an `rgba8unorm` texture for data copied from the nearest inside pixel.
+
+Here the source shape is a triangle mask baked into a texture first, then jump flooded into an SDF texture.
+
+<div class="my-4 flex justify-center">
+  <Image src={jumpFloodPreview} alt="A jump-flooded SDF texture visualization" class="w-full max-w-[24rem] rounded-md" />
+</div>
+
+```ts twoslash
+import tgpu, { d, std } from 'typegpu';
+import * as sdf from '@typegpu/sdf';
+
+const root = await tgpu.init();
+
+const sourceTexture = root
+  .createTexture({
+    size: [512, 512],
+    format: 'rgba8unorm',
+  })
+  .$usage('storage', 'sampled');
+
+const sourceWriteView = sourceTexture.createView(d.textureStorage2d('rgba8unorm'));
+const sourceReadView = sourceTexture.createView();
+
+const edge = (p: d.v2f, a: d.v2f, b: d.v2f) => {
+  'use gpu';
+  const ab = b - a;
+  const ap = p - a;
+  return ab.x * ap.y - ab.y * ap.x;
+};
+
+const bakeTriangle = root.createGuardedComputePipeline((x, y) => {
+  'use gpu';
+  const size = std.textureDimensions(sourceWriteView.$);
+  const uv = (d.vec2f(x, y) + 0.5) / d.vec2f(size);
+
+  const a = d.vec2f(0.33, 0.2);
+  const b = d.vec2f(0.77, 0.52);
+  const c = d.vec2f(0.35, 0.84);
+
+  let color = d.vec4f();
+  if (edge(uv, a, b) >= 0 && edge(uv, b, c) >= 0 && edge(uv, c, a) >= 0) {
+    color = d.vec4f(1, 0.82, 0.42, 1);
+  }
+
+  std.textureStore(sourceWriteView.$, d.vec2u(x, y), color);
+});
+
+bakeTriangle.dispatchThreads(512, 512);
+
+const sourceLayout = tgpu.bindGroupLayout({
+  source: { texture: d.texture2d() },
+});
+const sourceBindGroup = root.createBindGroup(sourceLayout, {
+  source: sourceReadView,
+});
+
+const runner = sdf
+  .createJumpFlood({
+    root,
+    size: { width: 512, height: 512 },
+    classify: (coord) => {
+      'use gpu';
+      const source = std.textureLoad(sourceLayout.$.source, coord, 0);
+      return source.w > 0.5;
+    },
+    getSdf: (_coord, size, signedDist) => {
+      'use gpu';
+      const minDim = std.min(size.x, size.y);
+      return signedDist / d.f32(minDim);
+    },
+    getColor: (_coord, _size, _signedDist, insidePx) => {
+      'use gpu';
+      const source = std.textureLoad(sourceLayout.$.source, insidePx, 0);
+      return d.vec4f(source.xyz, 1);
+    },
+  })
+  .with(sourceBindGroup);
+
+runner.run();
+
+const sdfView = runner.sdfOutput.createView();
+const colorView = runner.colorOutput.createView();
+const sampler = root.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+
+const renderJumpFlood = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
+  'use gpu';
+  const dist = std.textureSampleLevel(sdfView.$, sampler.$, uv, 0).x;
+  const seed = std.textureSampleLevel(colorView.$, sampler.$, uv, 0).xyz;
+  const edge = std.max(std.fwidth(dist), 0.0015);
+  const alpha = 1 - std.smoothstep(-edge, edge, dist);
+  const glow = std.exp(-std.abs(dist) * 28) * 0.18;
+  const band = std.abs(std.fract(std.abs(dist) * 22) - 0.5);
+  const contour = (1 - std.smoothstep(0.46, 0.5, band)) *
+    std.smoothstep(0.012, 0.04, std.abs(dist)) *
+    0.12;
+
+  const bg = std.mix(d.vec3f(0.93, 0.95, 0.97), d.vec3f(0.74, 0.82, 0.95), uv.y);
+  const field = bg + d.vec3f(0.36, 0.5, 0.76) * contour;
+  const fill = d.vec3f(0.07, 0.075, 0.095) + seed * 0.045;
+  const color = std.mix(field, fill, alpha) + d.vec3f(1, 0.55, 0.28) * glow;
+
+  return d.vec4f(std.min(color, d.vec3f(1)), 1);
+});
+```
+
+If your classifier or output getters need extra textures, buffers, or samplers, create a bind group for them and attach it with `runner.with(bindGroup)`.
+Call `runner.destroy()` when the generated textures are no longer needed.
+
+## Available utilities
+
+| Group | Exports |
+| --- | --- |
+| 2D primitives | `sdDisk`, `sdBox2d`, `sdRoundedBox2d`, `sdLine`, `sdBezier`, `sdBezierApprox`, `sdPie` |
+| 3D primitives | `sdSphere`, `sdBox3d`, `sdRoundedBox3d`, `sdBoxFrame3d`, `sdLine3d`, `sdPlane`, `sdCapsule` |
+| Operators | `opUnion`, `opSmoothUnion`, `opSmoothDifference`, `opExtrudeX`, `opExtrudeY`, `opExtrudeZ` |
+| Texture generation | `createJumpFlood`, `classifySlot`, `JumpFlood` |
+
+For parameter details, hover the functions in your editor or read the JSDoc in the [package source](https://github.com/software-mansion/TypeGPU/blob/main/packages/typegpu-sdf/src/index.ts).
+
+## Examples
+
+- [Jelly Switch](/TypeGPU/examples#example=rendering--jelly-switch) uses SDFs for a soft 3D interaction.
+- [Suika SDF](/TypeGPU/examples#example=rendering--suika-sdf) mixes texture SDFs with a physics-driven scene.
+- [Radiance Cascades (with drawing)](/TypeGPU/examples#example=rendering--radiance-cascades-drawing) uses `createJumpFlood` as input for global illumination.
