@@ -1,14 +1,10 @@
 {
-  "name": "@typegpu/sdf",
-  "version": "0.11.0",
-  "description": "A set of Signed Distance Field functions for use in WebGPU/TypeGPU apps.",
+  "name": "@typegpu/radiance-cascades",
+  "version": "0.11.0-alpha.1",
+  "private": true,
+  "description": "Radiance Cascades implementation in TypeGPU",
   "keywords": [],
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/software-mansion/TypeGPU.git",
-    "directory": "packages/typegpu-sdf"
-  },
   "type": "module",
   "sideEffects": false,
   "exports": {
@@ -16,7 +12,6 @@
     "./package.json": "./package.json"
   },
   "publishConfig": {
-    "access": "public",
     "directory": "dist",
     "exports": {
       "./package.json": "./dist/package.json",
