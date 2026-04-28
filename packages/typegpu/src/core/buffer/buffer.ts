@@ -3,7 +3,7 @@ import type { AnyData } from '../../data/dataTypes.ts';
 import { convertPartialToPatch, getPatchInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
-import { isWgslArray, isWgslData } from '../../data/wgslTypes.ts';
+import { isWgslData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
