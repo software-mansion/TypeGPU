@@ -4,7 +4,7 @@ import type { TgpuRoot } from '../../core/root/rootTypes.ts';
 import { shaderStageSlot } from '../../core/slot/internalSlots.ts';
 import { arrayOf } from '../../data/array.ts';
 import { atomic } from '../../data/atomic.ts';
-import { UnknownData } from '../../data/dataTypes.ts';
+import { UnknownData, unptr } from '../../data/dataTypes.ts';
 import { u32 } from '../../data/numeric.ts';
 import { snip, type Snippet } from '../../data/snippet.ts';
 import { struct } from '../../data/struct.ts';
@@ -15,8 +15,10 @@ import {
   Void,
   type WgslArray,
 } from '../../data/wgslTypes.ts';
+import { invariant } from '../../errors.ts';
 import { $internal } from '../../shared/symbols.ts';
-import { concretizeSnippets, type GenerationCtx } from '../generationHelpers.ts';
+import { convertToCommonType } from '../conversion.ts';
+import { concretizeSnippet, type GenerationCtx } from '../generationHelpers.ts';
 import { createLoggingFunction } from './serializers.ts';
 import {
   type LogGenerator,
@@ -87,30 +89,46 @@ export class LogGeneratorImpl implements LogGenerator {
       return fallbackSnippet;
     }
 
-    const concreteArgs = concretizeSnippets(args);
     const id = this.#firstUnusedId++;
 
-    const nonStringArgs = concreteArgs.filter((e) => e.dataType !== UnknownData);
+    const concreteArgsWithStrings = args
+      .map((arg) => {
+        if (arg.dataType === UnknownData) {
+          return arg;
+        }
+        const converted = convertToCommonType(ctx, [arg], [unptr(arg.dataType)])?.[0];
+        invariant(
+          converted,
+          `Internal error. Expected type ${arg.dataType} to be convertible to ${unptr(arg.dataType)}`,
+        );
+        return converted;
+      })
+      .map(concretizeSnippet);
+
+    const concreteArgs = concreteArgsWithStrings.filter((arg) => arg.dataType !== UnknownData);
 
     const logFn = createLoggingFunction(
       id,
-      nonStringArgs.map((e) => e.dataType as AnyWgslData),
+      concreteArgs.map((e) => e.dataType as AnyWgslData),
       this.#dataBuffer,
       this.#indexBuffer,
       this.#options,
     );
 
-    const argTypes = concreteArgs.map((e) =>
-      e.dataType === UnknownData ? (e.value as string) : (e.dataType as AnyWgslData),
-    );
-
-    this.#logIdToMeta.set(id, { op: op as SupportedLogOps, argTypes });
-
-    return snip(
-      stitch`${ctx.resolve(logFn).value}(${nonStringArgs})`,
+    const functionSnippet = snip(
+      stitch`${ctx.resolve(logFn).value}(${concreteArgs})`,
       Void,
       /* origin */ 'runtime',
     );
+
+    this.#logIdToMeta.set(id, {
+      op: op as SupportedLogOps,
+      argTypes: concreteArgsWithStrings.map((e) =>
+        e?.dataType === UnknownData ? (e?.value as string) : (e?.dataType as AnyWgslData),
+      ),
+    });
+
+    return functionSnippet;
   }
 
   get logResources(): LogResources | undefined {
