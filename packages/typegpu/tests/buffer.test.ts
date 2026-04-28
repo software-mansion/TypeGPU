@@ -157,6 +157,19 @@ describe('TgpuBuffer', () => {
     expect(mappedBuffer.unmap).not.toHaveBeenCalled();
   });
 
+  it('should write to a mapped buffer', ({ root }) => {
+    const buffer = root.createBuffer(d.arrayOf(d.u32, 3), () => {
+      buffer.write([1, 2, 3]);
+
+      const layout = d.memoryLayoutOf(d.arrayOf(d.u32, 3), (a) => a[1]);
+      buffer.write([22], { startOffset: layout.offset });
+    });
+
+    const rawBuffer = root.unwrap(buffer);
+    const writtenBuffer = vi.mocked(rawBuffer.getMappedRange).mock.results[0]?.value as ArrayBuffer;
+    expect([...new Uint32Array(writtenBuffer)]).toStrictEqual([1, 22, 3]);
+  });
+
   it('should write a scalar array chunk from startOffset through the end when endOffset is omitted', ({
     root,
     device,
