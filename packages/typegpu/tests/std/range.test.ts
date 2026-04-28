@@ -70,7 +70,7 @@ describe('on the GPU', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() -> array<f32, 4> {
-        var result = array<f32, 4>(0f, 2f, 4f, 6f);
+        let result = array<f32, 4>(0f, 2f, 4f, 6f);
         return result;
       }"
     `);
@@ -85,7 +85,7 @@ describe('on the GPU', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() -> array<f32, 4> {
-        var result = array<f32, 4>(0f, 2f, 4f, 6f);
+        let result = array<f32, 4>(0f, 2f, 4f, 6f);
         return result;
       }"
     `);

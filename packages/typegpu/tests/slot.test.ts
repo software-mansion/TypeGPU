@@ -286,13 +286,13 @@ describe('tgpu.slot', () => {
       }
 
       fn func() {
-        var pos = vec3f(1, 2, 3);
+        let pos = vec3f(1, 2, 3);
         const posX = 1f;
         let vel = (&boid.vel);
         let velX = boid.vel.x;
         let vel_ = (&boid.vel);
         let velX_ = boid.vel.x;
-        var color = getColor();
+        let color = getColor();
       }"
     `);
   });
@@ -319,7 +319,7 @@ describe('tgpu.slot', () => {
     // Gamma Correction: OFF
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main(uv: vec2f) -> vec3f {
-        var color = vec3f(1, 0, 1);
+        let color = vec3f(1, 0, 1);
         return color;
       }"
     `);

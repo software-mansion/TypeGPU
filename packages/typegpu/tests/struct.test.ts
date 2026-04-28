@@ -315,7 +315,7 @@ describe('struct', () => {
       }
 
       fn testFunction() {
-        var defaultValue = Outer();
+        let defaultValue = Outer();
       }"
     `);
   });
@@ -339,8 +339,8 @@ describe('struct', () => {
       }
 
       fn testFn() {
-        var myStruct = TestStruct(1u, 2f);
-        var myClone = myStruct;
+        let myStruct = TestStruct(1u, 2f);
+        let myClone = myStruct;
         return;
       }"
     `);
@@ -365,8 +365,8 @@ describe('struct', () => {
       }
 
       fn testFn() {
-        var myStructs = array<TestStruct, 1>(TestStruct(1u, 2f));
-        var myClone = myStructs[0i];
+        let myStructs = array<TestStruct, 1>(TestStruct(1u, 2f));
+        let myClone = myStructs[0i];
         return;
       }"
     `);
@@ -467,7 +467,7 @@ describe('abstruct', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn(x: f32) -> f32 {
-        var result = frexp(x);
+        let result = frexp(x);
         return f32(result.exp);
       }"
     `);

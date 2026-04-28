@@ -26,7 +26,7 @@ describe('square example', () => {
       }
 
       @vertex fn vertex(@builtin(vertex_index) idx: u32, @location(0) color: vec4f) -> vertex_Output {
-        var vertices = array<vec2f, 4>(vec2f(-1), vec2f(1, -1), vec2f(1), vec2f(-1, 1));
+        let vertices = array<vec2f, 4>(vec2f(-1), vec2f(1, -1), vec2f(1), vec2f(-1, 1));
         return vertex_Output(color, vec4f(vertices[idx], 0f, 1f));
       }
 

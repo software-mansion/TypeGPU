@@ -21,7 +21,7 @@ describe('translate', () => {
 
     expect(tgpu.resolve([translateFn])).toMatchInlineSnapshot(`
       "fn translateFn() {
-        var resultExpression = mat4x4f(3, 2, 4, 1, 0, 1, 0, 0, 1, 0, 1, 0, 2, 3, 4, 1);
+        let resultExpression = mat4x4f(3, 2, 4, 1, 0, 1, 0, 0, 1, 0, 1, 0, 2, 3, 4, 1);
       }"
     `);
   });

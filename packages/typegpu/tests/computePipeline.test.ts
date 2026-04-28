@@ -453,7 +453,7 @@ describe('TgpuComputePipeline', () => {
       enable subgroups;
 
       @compute @workgroup_size(1) fn fn_1() {
-        var a = array<f32, 3>();
+        let a = array<f32, 3>();
       }"
     `);
   });

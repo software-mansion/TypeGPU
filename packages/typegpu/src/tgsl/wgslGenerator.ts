@@ -41,9 +41,9 @@ import { accessProp } from './accessProp.ts';
 import type { ShaderGenerator } from './shaderGenerator.ts';
 import { resolveData } from '../core/resolve/resolveData.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
-import { RefOperator } from '../data/ref.ts';
+import { _ref, RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
-import { UnrollableIterable } from '../core/unroll/tgpuUnroll.ts';
+import { unroll, UnrollableIterable } from '../core/unroll/tgpuUnroll.ts';
 import { isGenericFn } from '../core/function/tgpuFn.ts';
 import type { AnyFn } from '../core/function/fnTypes.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
@@ -258,7 +258,7 @@ ${this.ctx.pre}}`;
   }
 
   public blockVariable(
-    varType: 'var' | 'let' | 'const',
+    varType: 'var' | 'let' | 'const' | undefined,
     id: string,
     dataType: wgsl.BaseData | UnknownData,
     origin: Origin,
@@ -293,9 +293,13 @@ ${this.ctx.pre}}`;
     return snippet;
   }
 
+  /**
+   * Creates a variable declaration string.
+   * `keyword` may be a placeholder filled in later.
+   */
   protected emitVarDecl(
     pre: string,
-    keyword: 'var' | 'let' | 'const',
+    keyword: string,
     name: string,
     _dataType: wgsl.BaseData | UnknownData,
     rhsStr: string,
@@ -460,6 +464,8 @@ ${this.ctx.pre}}`;
           );
         }
 
+        this.tryMarkModified(lhs);
+
         // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
         if (
           op === '=' &&
@@ -498,6 +504,8 @@ ${this.ctx.pre}}`;
       const [_, op, arg] = expression;
       const argExpr = this._expression(arg);
       const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
+
+      this.tryMarkModified(arg);
 
       // Result of an operation, so not a reference to anything
       return snip(`${argStr}${op}`, argExpr.dataType, /* origin */ 'runtime');
@@ -681,6 +689,10 @@ ${this.ctx.pre}}`;
           callee.value.op,
           argNodes.map((arg) => this._expression(arg)),
         );
+      }
+
+      if ((callee.value === _ref || callee.value === unroll) && argNodes[0]) {
+        this.tryMarkModified(argNodes[0]);
       }
 
       if (isGPUCallable(callee.value)) {
@@ -899,7 +911,24 @@ ${this.ctx.pre}}`;
 
   public functionDefinition(options: FunctionDefinitionOptions): string {
     // Function body
-    const body = this._block(options.body);
+    let body = this._block(options.body);
+    const scope = this.ctx.topFunctionScope;
+    invariant(scope, 'Expected function scope to be present');
+    const replacements = Object.fromEntries(
+      scope.placeholderForVariable
+        .entries()
+        .map(([variable, placeholder]) => [
+          placeholder,
+          scope.modifiedVariables.has(variable) ? 'var' : 'let',
+        ]),
+    );
+    if (Object.keys(replacements).length > 0) {
+      const regex = new RegExp(Object.keys(replacements).join('|'), 'gi');
+      body = body.replace(
+        regex,
+        (match) => replacements[match as keyof typeof replacements] ?? '#ERR',
+      );
+    }
 
     // Function header
     const returnType = options.determineReturnType();
@@ -1062,7 +1091,7 @@ ${this.ctx.pre}else ${alternate}`;
     }
 
     if (statement[0] === NODE.let || statement[0] === NODE.const) {
-      let varType: 'var' | 'let' | 'const' = 'var';
+      let varType: 'var' | 'let' | 'const' | undefined;
       const [stmtType, rawId, rawValue] = statement;
       const eq = rawValue !== undefined ? this._expression(rawValue) : undefined;
 
@@ -1134,6 +1163,7 @@ ${this.ctx.pre}else ${alternate}`;
             // If what we're assigning is something preceded by `&`, then it's a value
             // created using `d.ref()`. Otherwise, it's an implicit pointer
             dataType = implicitFrom(dataType as wgsl.Ptr);
+            this.tryMarkModified(rawValue);
           }
         }
       } else {
@@ -1169,9 +1199,18 @@ ${this.ctx.pre}else ${alternate}`;
       const snippet = this.blockVariable(varType, rawId, concretize(dataType), eq.origin);
       const rhsSnippet = tryConvertSnippet(this.ctx, eq, dataType, false);
       const rhsStr = this.ctx.resolve(rhsSnippet.value, rhsSnippet.dataType).value;
+
+      let emittedVarType: string | undefined = varType;
+      if (emittedVarType === undefined) {
+        const scope = this.ctx.topFunctionScope;
+        invariant(scope, `Expected function scope to be present for ${rawId}`);
+        emittedVarType = `#VAR_${scope.placeholderForVariable.size}#`;
+        scope.placeholderForVariable.set(snippet, emittedVarType);
+      }
+
       return this.emitVarDecl(
         this.ctx.pre,
-        varType,
+        emittedVarType,
         snippet.value as string,
         concretize(dataType),
         rhsStr,
@@ -1229,6 +1268,8 @@ ${this.ctx.pre}else ${alternate}`;
       if (loopVar[0] !== NODE.const) {
         throw new WgslTypeError('Only `for (const ... of ... )` loops are supported');
       }
+
+      this.tryMarkModified(iterable); // overly-defensive, but let's not tempt fate
 
       let ctxIndent = false;
       const prevUnrollingFlag = this.#unrolling;
@@ -1349,6 +1390,32 @@ ${this.ctx.pre}else ${alternate}`;
     // oxlint-disable-next-line typescript/no-base-to-string
     return resolved ? `${this.ctx.pre}${resolved};` : '';
   }
+
+  /**
+   * Attempts a member access lookup to mark a variable as modified.
+   * @example
+   * // given `let a; a = 1;`
+   * tryMarkModified('a') // `a` is marked in the function scope
+   *
+   * // given `const obj; obj.prop = 1;`
+   * tryMarkModified('obj.prop') // `obj` is marked in the function scope
+   *
+   * // given `this.buffer.$;`
+   * tryMarkModified('this.buffer.$') // `this` is not marked, since there is no placeholder for it
+   */
+  private tryMarkModified(expr?: tinyest.Expression) {
+    if (!expr) {
+      return;
+    }
+    const maybeObject = extractObject(expr);
+    if (maybeObject !== undefined) {
+      const snippet = this.ctx.getById(maybeObject);
+      const scope = this.ctx.topFunctionScope;
+      if (snippet && scope && scope.placeholderForVariable.has(snippet)) {
+        scope.modifiedVariables.add(snippet);
+      }
+    }
+  }
 }
 
 function assertExhaustive(value: never): never {
@@ -1373,6 +1440,19 @@ function blockifySingleStatement(statement: tinyest.Statement): tinyest.Block {
   return typeof statement !== 'object' || statement[0] !== NODE.block
     ? [NODE.block, [statement]]
     : statement;
+}
+
+function extractObject(expr: tinyest.Expression): string | undefined {
+  let object = expr;
+  while (
+    Array.isArray(object) &&
+    (object[0] === NODE.memberAccess || object[0] === NODE.indexAccess)
+  ) {
+    object = object[1];
+  }
+  if (typeof object === 'string') {
+    return object;
+  }
 }
 
 const wgslGenerator: WgslGenerator = new WgslGenerator();

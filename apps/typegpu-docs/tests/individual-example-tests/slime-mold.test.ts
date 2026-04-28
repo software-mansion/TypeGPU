@@ -55,7 +55,7 @@ describe('slime mold example', () => {
 
       fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
         randSeed(((f32(x) / 2e+5f) + 0.1f));
-        var pos = ((randInUnitCircle() * 118f) + vec2f(128));
+        let pos = ((randInUnitCircle() * 118f) + vec2f(128));
         let angle = atan2((128f - pos.y), (128f - pos.x));
         agentsData[x] = Agent(pos, angle);
       }
@@ -82,7 +82,7 @@ describe('slime mold example', () => {
       @group(1) @binding(1) var newState: texture_storage_2d<rgba8unorm, write>;
 
       @compute @workgroup_size(16, 16) fn blur(@builtin(global_invocation_id) gid: vec3u) {
-        var dims = textureDimensions(oldState);
+        let dims = textureDimensions(oldState);
         if (((gid.x >= dims.x) || (gid.y >= dims.y))) {
           return;
         }
@@ -92,30 +92,30 @@ describe('slime mold example', () => {
         {
           // unrolled iteration #0
           {
-            var samplePos = (vec2i(gid.xy) + vec2i(-1));
-            var dimsi = vec2i(dims);
+            let samplePos = (vec2i(gid.xy) + vec2i(-1));
+            let dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              var color = textureLoad(oldState, vec2u(samplePos)).rgb;
+              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
               sum += color;
               count += 1f;
             }
           }
           // unrolled iteration #1
           {
-            var samplePos = (vec2i(gid.xy) + vec2i(0, -1));
-            var dimsi = vec2i(dims);
+            let samplePos = (vec2i(gid.xy) + vec2i(0, -1));
+            let dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              var color = textureLoad(oldState, vec2u(samplePos)).rgb;
+              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
               sum += color;
               count += 1f;
             }
           }
           // unrolled iteration #2
           {
-            var samplePos = (vec2i(gid.xy) + vec2i(1, -1));
-            var dimsi = vec2i(dims);
+            let samplePos = (vec2i(gid.xy) + vec2i(1, -1));
+            let dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              var color = textureLoad(oldState, vec2u(samplePos)).rgb;
+              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
               sum += color;
               count += 1f;
             }
@@ -125,30 +125,30 @@ describe('slime mold example', () => {
         {
           // unrolled iteration #0
           {
-            var samplePos = (vec2i(gid.xy) + vec2i(-1, 0));
-            var dimsi = vec2i(dims);
+            let samplePos = (vec2i(gid.xy) + vec2i(-1, 0));
+            let dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              var color = textureLoad(oldState, vec2u(samplePos)).rgb;
+              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
               sum += color;
               count += 1f;
             }
           }
           // unrolled iteration #1
           {
-            var samplePos = (vec2i(gid.xy) + vec2i());
-            var dimsi = vec2i(dims);
+            let samplePos = (vec2i(gid.xy) + vec2i());
+            let dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              var color = textureLoad(oldState, vec2u(samplePos)).rgb;
+              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
               sum += color;
               count += 1f;
             }
           }
           // unrolled iteration #2
           {
-            var samplePos = (vec2i(gid.xy) + vec2i(1, 0));
-            var dimsi = vec2i(dims);
+            let samplePos = (vec2i(gid.xy) + vec2i(1, 0));
+            let dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              var color = textureLoad(oldState, vec2u(samplePos)).rgb;
+              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
               sum += color;
               count += 1f;
             }
@@ -158,37 +158,37 @@ describe('slime mold example', () => {
         {
           // unrolled iteration #0
           {
-            var samplePos = (vec2i(gid.xy) + vec2i(-1, 1));
-            var dimsi = vec2i(dims);
+            let samplePos = (vec2i(gid.xy) + vec2i(-1, 1));
+            let dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              var color = textureLoad(oldState, vec2u(samplePos)).rgb;
+              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
               sum += color;
               count += 1f;
             }
           }
           // unrolled iteration #1
           {
-            var samplePos = (vec2i(gid.xy) + vec2i(0, 1));
-            var dimsi = vec2i(dims);
+            let samplePos = (vec2i(gid.xy) + vec2i(0, 1));
+            let dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              var color = textureLoad(oldState, vec2u(samplePos)).rgb;
+              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
               sum += color;
               count += 1f;
             }
           }
           // unrolled iteration #2
           {
-            var samplePos = (vec2i(gid.xy) + vec2i(1));
-            var dimsi = vec2i(dims);
+            let samplePos = (vec2i(gid.xy) + vec2i(1));
+            let dimsi = vec2i(dims);
             if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              var color = textureLoad(oldState, vec2u(samplePos)).rgb;
+              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
               sum += color;
               count += 1f;
             }
           }
         }
-        var blurred = (sum / count);
-        var newColor = saturate((blurred - params.evaporationRate));
+        let blurred = (sum / count);
+        let newColor = saturate((blurred - params.evaporationRate));
         textureStore(newState, gid.xy, vec4f(newColor, 1f));
       }
 
@@ -235,12 +235,12 @@ describe('slime mold example', () => {
 
       fn sense(pos: vec2f, angle: f32, sensorAngleOffset: f32) -> f32 {
         let sensorAngle = (angle + sensorAngleOffset);
-        var sensorDir = vec2f(cos(sensorAngle), sin(sensorAngle));
-        var sensorPos = (pos + (sensorDir * params.sensorDistance));
-        var dims = textureDimensions(oldState);
-        var dimsf = vec2f(dims);
-        var sensorPosInt = vec2u(clamp(sensorPos, vec2f(), (dimsf - 1f)));
-        var color = textureLoad(oldState, sensorPosInt).rgb;
+        let sensorDir = vec2f(cos(sensorAngle), sin(sensorAngle));
+        let sensorPos = (pos + (sensorDir * params.sensorDistance));
+        let dims = textureDimensions(oldState);
+        let dimsf = vec2f(dims);
+        let sensorPosInt = vec2u(clamp(sensorPos, vec2f(), (dimsf - 1f)));
+        let color = textureLoad(oldState, sensorPosInt).rgb;
         return ((color.x + color.y) + color.z);
       }
 
@@ -253,7 +253,7 @@ describe('slime mold example', () => {
           return;
         }
         randSeed(((f32(gid.x) / 2e+5f) + 0.1f));
-        var dims = textureDimensions(oldState);
+        let dims = textureDimensions(oldState);
         let agent = (&agentsData[gid.x]);
         let random = randFloat01();
         let weightForward = sense((*agent).position, (*agent).angle, 0f);
@@ -278,9 +278,9 @@ describe('slime mold example', () => {
             }
           }
         }
-        var dir = vec2f(cos(angle), sin(angle));
+        let dir = vec2f(cos(angle), sin(angle));
         var newPos = ((*agent).position + ((dir * params.moveSpeed) * deltaTime));
-        var dimsf = vec2f(dims);
+        let dimsf = vec2f(dims);
         if (((((newPos.x < 0f) || (newPos.x > dimsf.x)) || (newPos.y < 0f)) || (newPos.y > dimsf.y))) {
           newPos = clamp(newPos, vec2f(), (dimsf - 1f));
           if (((newPos.x <= 0f) || (newPos.x >= (dimsf.x - 1f)))) {
@@ -292,8 +292,8 @@ describe('slime mold example', () => {
           angle += ((random - 0.5f) * 0.1f);
         }
         agentsData[gid.x] = Agent(newPos, angle);
-        var oldState_1 = textureLoad(oldState, vec2u(newPos)).rgb;
-        var newState = (oldState_1 + 1f);
+        let oldState_1 = textureLoad(oldState, vec2u(newPos)).rgb;
+        let newState = (oldState_1 + 1f);
         textureStore(newState_1, vec2u(newPos), vec4f(newState, 1f));
       }
 
@@ -303,8 +303,8 @@ describe('slime mold example', () => {
       }
 
       @vertex fn fullScreenTriangle(@builtin(vertex_index) _arg_vertexIndex: u32) -> fullScreenTriangle_Output {
-        var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
-        var uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+        let pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
+        let uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
         return fullScreenTriangle_Output(vec4f(pos[_arg_vertexIndex], 0f, 1f), uv[_arg_vertexIndex]);
       }
 

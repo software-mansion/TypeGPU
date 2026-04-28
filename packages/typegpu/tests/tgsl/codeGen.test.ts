@@ -32,7 +32,7 @@ describe('codeGen', () => {
 
       expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() -> f32 {
-          var size = vec3f(1, 2, 3);
+          let size = vec3f(1, 2, 3);
           return ((size.x * size.y) * size.z);
         }"
       `);

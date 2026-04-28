@@ -835,7 +835,7 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() -> u32 {
-        var arr = array<u32, 3>(1u, 2u, 3u);
+        let arr = array<u32, 3>(1u, 2u, 3u);
         return arr[1i];
       }"
     `);
@@ -856,7 +856,7 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() -> u32 {
-        var arr = array<vec2u, 3>(vec2u(1, 2), vec2u(3, 4), vec2u(5, 6));
+        let arr = array<vec2u, 3>(vec2u(1, 2), vec2u(3, 4), vec2u(5, 6));
         return arr[1i].x;
       }"
     `);
@@ -905,7 +905,7 @@ describe('wgslGenerator', () => {
       }
 
       fn testFn() -> f32 {
-        var arr = array<TestStruct, 2>(TestStruct(1u, 2f), TestStruct(3u, 4f));
+        let arr = array<TestStruct, 2>(TestStruct(1u, 2f), TestStruct(3u, 4f));
         return arr[1i].y;
       }"
     `);
@@ -932,7 +932,7 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() -> f32 {
-        var arr = array<vec2f, 2>(vec2f(44, 88), vec2f(88, 176));
+        let arr = array<vec2f, 2>(vec2f(44, 88), vec2f(88, 176));
         return arr[1i].y;
       }"
     `);
@@ -1850,7 +1850,7 @@ describe('wgslGenerator', () => {
 
       expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
         "fn f() -> i32 {
-          var res = -1;
+          let res = -1;
           return res;
         }"
       `);
@@ -1895,7 +1895,7 @@ describe('wgslGenerator', () => {
 
       expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
         "fn f() -> i32 {
-          var res = -1;
+          let res = -1;
           return res;
         }"
       `);

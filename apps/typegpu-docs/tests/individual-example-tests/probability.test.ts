@@ -55,8 +55,8 @@ describe('probability distribution plot example', () => {
 
       fn randInUnitSphere() -> vec3f {
         let u = sample();
-        var v = vec3f(randNormal(0f, 1f), randNormal(0f, 1f), randNormal(0f, 1f));
-        var vNorm = normalize(v);
+        let v = vec3f(randNormal(0f, 1f), randNormal(0f, 1f), randNormal(0f, 1f));
+        let vNorm = normalize(v);
         return (vNorm * pow(u, 0.33f));
       }
 
@@ -300,13 +300,13 @@ describe('probability distribution plot example', () => {
 
       fn randInUnitSphere() -> vec3f {
         let u = sample();
-        var v = vec3f(randNormal(0f, 1f), randNormal(0f, 1f), randNormal(0f, 1f));
-        var vNorm = normalize(v);
+        let v = vec3f(randNormal(0f, 1f), randNormal(0f, 1f), randNormal(0f, 1f));
+        let vNorm = normalize(v);
         return (vNorm * pow(u, 0.33f));
       }
 
       fn randInUnitHemisphere(normal: vec3f) -> vec3f {
-        var value = randInUnitSphere();
+        let value = randInUnitSphere();
         let alignment = dot(normal, value);
         return (sign(alignment) * value);
       }
@@ -356,7 +356,7 @@ describe('probability distribution plot example', () => {
       }
 
       fn randOnUnitHemisphere(normal: vec3f) -> vec3f {
-        var value = randOnUnitSphere();
+        let value = randOnUnitSphere();
         let alignment = dot(normal, value);
         return (sign(alignment) * value);
       }
