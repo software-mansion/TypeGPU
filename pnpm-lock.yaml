@@ -714,15 +714,15 @@ importers:
       '@webgpu/types':
         specifier: catalog:types
         version: 0.1.66
+      tsdown:
+        specifier: catalog:build
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.34)
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
       typescript:
         specifier: npm:tsover@^5.9.11
         version: tsover@5.9.11
-      unbuild:
-        specifier: catalog:build
-        version: 3.5.0(tsover@5.9.11)
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
