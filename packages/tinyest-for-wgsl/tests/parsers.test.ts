@@ -125,7 +125,11 @@ describe('transpileFn', () => {
       // Only 'external' is external.
       expect(externalNames).toMatchInlineSnapshot(`
         {
-          "external": "external",
+          "external": {
+            "outside": {
+              "prop": "external.outside.prop",
+            },
+          },
         }
       `);
     }),

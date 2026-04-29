@@ -37,6 +37,7 @@ function addExternal(
   ctx: Context,
   node: babel.ThisExpression | acorn.ThisExpression | babel.Identifier | acorn.Identifier,
 ) {
+  // TODO: clean up this mess
   const chain: string[] = [];
   for (let i = ctx.ancestorChain.length - 1; i >= 0; i--) {
     const current = ctx.ancestorChain[i];

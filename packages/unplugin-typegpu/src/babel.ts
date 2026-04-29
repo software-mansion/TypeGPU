@@ -16,6 +16,29 @@ function i(identifier: string): t.Identifier {
   return t.identifier(identifier);
 }
 
+interface Externals {
+  [key: string]: Externals | string;
+}
+
+function externalsToNode(externals: Externals | string): t.Expression {
+  if (typeof externals === 'string') {
+    const chain = externals.split('.');
+    if (!chain[0]) {
+      throw new Error('??');
+    }
+    const base = chain[0] === 'this' ? t.thisExpression() : i(chain[0]);
+    const propAccess = chain
+      .slice(1)
+      .reduce<t.Expression>((obj, prop) => t.memberExpression(obj, t.identifier(prop)), base);
+    return t.arrowFunctionExpression([], propAccess);
+  }
+  return t.objectExpression(
+    Object.entries(externals).map(([name, value]) =>
+      t.objectProperty(i(name), externalsToNode(value), false),
+    ),
+  );
+}
+
 function assignMetadata(
   this: PluginState,
   path: NodePath<t.FunctionDeclaration | t.ArrowFunctionExpression | t.FunctionExpression>,
@@ -26,23 +49,7 @@ function assignMetadata(
     t.objectProperty(i('v'), t.numericLiteral(FORMAT_VERSION)),
     t.objectProperty(i('name'), t.valueToNode(name)),
     t.objectProperty(i('ast'), t.valueToNode(ast)),
-    t.objectProperty(
-      i('externals'),
-      t.arrowFunctionExpression(
-        [],
-        t.blockStatement([
-          t.returnStatement(
-            t.objectExpression(
-              Object.keys(ast.externalNames).map((name) =>
-                name === 'this'
-                  ? t.objectProperty(i('this'), t.thisExpression())
-                  : t.objectProperty(i(name), i(name), false, /* shorthand */ name !== 'this'),
-              ),
-            ),
-          ),
-        ]),
-      ),
-    ),
+    t.objectProperty(i('externals'), externalsToNode(ast.externalNames)),
   ]);
 
   let expression: t.Expression;
