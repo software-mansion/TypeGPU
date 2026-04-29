@@ -40,8 +40,8 @@ function material(albedo: Vec3, roughness: number, metallic = 0, wetness = 0): M
 const materials = {
   floor: material(v3(0.025, 0.028, 0.032), 0.1, 0, 1),
   backdrop: material(v3(0.018, 0.021, 0.029), 0.42),
-  plinth: material(v3(0.045, 0.048, 0.047), 0.14, 0, 0.7),
-  block: material(v3(0.025, 0.027, 0.034), 0.18, 0, 0.5),
+  plinth: material(v3(0.045, 0.048, 0.047), 0.14),
+  block: material(v3(0.025, 0.027, 0.034), 0.18),
   gold: material(v3(1, 0.62, 0.18), 0.18, 0.55),
   ceramic: material(v3(0.18, 0.22, 0.22), 0.16),
   plastic: material(v3(0.025, 0.07, 0.18), 0.16),
