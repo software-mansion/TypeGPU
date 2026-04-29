@@ -8,6 +8,10 @@ export interface Externals {
   [key: string]: Externals | string;
 }
 
+export interface Externals2 {
+  [key: string]: Externals2 | (() => unknown);
+}
+
 export interface MetaData {
   v?: number;
   name?: string | undefined;
@@ -22,6 +26,7 @@ export interface MetaData {
     // Passing a record happens prior to version 0.9.0
     // TODO: Support for this can be removed down the line
     Record<string, unknown> | (() => Record<string, unknown>) | undefined;
+  externals2?: Externals2;
 }
 
 /**
