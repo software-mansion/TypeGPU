@@ -1,7 +1,6 @@
 import { describe, expect, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import { getName } from '../src/shared/meta.ts';
-import { $internal } from '../src/shared/symbols.ts';
 import { bindGroupLayout } from '../src/tgpuBindGroupLayout.ts';
 import { f32 } from '../src/data/numeric.ts';
 
