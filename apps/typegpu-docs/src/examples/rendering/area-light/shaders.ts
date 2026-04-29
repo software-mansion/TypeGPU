@@ -61,11 +61,19 @@ function fbm(p: d.v2f) {
 function waterNormal(N: d.v3f, worldPos: d.v3f, amount: number) {
   'use gpu';
   const t = sceneLayout.$.params.time;
-  const phase = d.vec2f(std.sin(t * 0.035), std.cos(t * 0.027)) * 0.08;
-  const p = worldPos.xz * 0.55 + phase;
+  const phase =
+    d.vec2f(
+      std.sin(t * 0.085) + std.sin(t * 0.041) * 0.45,
+      std.cos(t * 0.071) + std.sin(t * 0.033) * 0.35,
+    ) * 0.12;
+  const p = worldPos.xz * 0.48 + phase;
   const center = fbm(p);
-  const gradient =
-    d.vec2f(fbm(p + d.vec2f(0.12, 0)) - center, fbm(p + d.vec2f(0, 0.12)) - center) * 0.55;
+  const perlinGradient =
+    d.vec2f(fbm(p + d.vec2f(0.12, 0)) - center, fbm(p + d.vec2f(0, 0.12)) - center) * 0.42;
+  const waveGradient =
+    d.vec2f(1.25, 0.42) * std.cos(std.dot(worldPos.xz, d.vec2f(1.25, 0.42)) + t * 0.45) * 0.012 +
+    d.vec2f(-0.66, 1.08) * std.cos(std.dot(worldPos.xz, d.vec2f(-0.66, 1.08)) - t * 0.31) * 0.01;
+  const gradient = perlinGradient + waveGradient;
   const waterN = std.normalize(d.vec3f(std.neg(gradient.x), 1, std.neg(gradient.y)));
 
   return std.normalize(std.mix(N, waterN, amount));
@@ -170,13 +178,13 @@ export const mainFragment = tgpu.fragmentFn({
   const geometricN = std.normalize(normal);
   const V = std.normalize(sceneLayout.$.camera.position.xyz - worldPos);
   const water = wetness * sceneLayout.$.params.wetness * saturate(geometricN.y * 1.35);
-  const film = water * std.mix(0.94, 1, fbm(worldPos.xz * 0.42 + 30.2));
+  const film = water * std.mix(0.97, 1, fbm(worldPos.xz * 0.42 + 30.2));
   const wetSurface = saturate(film);
-  const N = waterNormal(geometricN, worldPos, water);
-  const waterRoughness = std.mix(0.055, 0.01, water);
+  const N = waterNormal(geometricN, worldPos, water * 0.55);
+  const waterRoughness = std.mix(0.065, 0.032, water);
   const materialRoughness = std.clamp(std.mix(roughness, waterRoughness, wetSurface), 0.006, 1);
-  const wetAlbedo = std.mix(albedo, albedo * 0.2, wetSurface);
-  const specularBoost = 1 + film * 5.8;
+  const wetAlbedo = std.mix(albedo, albedo * 0.44, wetSurface);
+  const specularBoost = 1 + film * 3.2;
   const f0 = std.mix(materialF0(albedo, metallic), d.vec3f(0.08), wetSurface * (1 - metallic));
   const direct = directAreaLighting(
     N,

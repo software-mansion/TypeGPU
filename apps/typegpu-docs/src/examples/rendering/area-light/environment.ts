@@ -40,27 +40,27 @@ const FACE_BASES = [
 
 function environmentColor(direction: Vec3): Vec3 {
   const up = clamp(direction[1] * 0.5 + 0.5);
-  const horizon = [0.025, 0.045, 0.08] as Vec3;
-  const zenith = [0.004, 0.01, 0.035] as Vec3;
-  const groundNear = [0.014, 0.015, 0.018] as Vec3;
-  const groundFar = [0.004, 0.005, 0.008] as Vec3;
+  const horizon = [0.046, 0.024, 0.04] as Vec3;
+  const zenith = [0.012, 0.012, 0.02] as Vec3;
+  const groundNear = [0.018, 0.014, 0.016] as Vec3;
+  const groundFar = [0.006, 0.005, 0.007] as Vec3;
 
   const sky = mix(horizon, zenith, up ** 1.6);
   const ground = mix(groundNear, groundFar, clamp(-direction[1] * 1.2));
   let color = direction[1] > 0 ? sky : ground;
 
   const pinkSignDir = normalize([-0.68, 0.05, 0.73]);
-  const cyanSignDir = normalize([0.72, -0.02, 0.48]);
-  const greenSignDir = normalize([0.18, 0.18, -0.97]);
+  const amberSignDir = normalize([-0.2, -0.04, 0.98]);
+  const violetSignDir = normalize([0.74, 0.02, -0.54]);
   const pinkGlow = Math.max(dot(direction, pinkSignDir), 0) ** 36;
-  const cyanGlow = Math.max(dot(direction, cyanSignDir), 0) ** 32;
-  const greenGlow = Math.max(dot(direction, greenSignDir), 0) ** 48;
+  const amberGlow = Math.max(dot(direction, amberSignDir), 0) ** 38;
+  const violetGlow = Math.max(dot(direction, violetSignDir), 0) ** 46;
   const hazeBand = Math.max(1 - Math.abs(direction[1] + 0.04) * 10, 0);
 
-  color = add(color, mul([1.0, 0.06, 0.72], pinkGlow * 0.75));
-  color = add(color, mul([0.0, 0.76, 1.0], cyanGlow * 0.7));
-  color = add(color, mul([0.32, 1.0, 0.45], greenGlow * 0.45));
-  color = add(color, mul([0.12, 0.04, 0.22], hazeBand * 0.16));
+  color = add(color, mul([1, 0.08, 0.58], pinkGlow * 0.68));
+  color = add(color, mul([1, 0.4, 0.08], amberGlow * 0.45));
+  color = add(color, mul([0.38, 0.2, 1], violetGlow * 0.22));
+  color = add(color, mul([0.18, 0.05, 0.11], hazeBand * 0.12));
 
   return color.map((channel) => clamp(channel)) as Vec3;
 }
