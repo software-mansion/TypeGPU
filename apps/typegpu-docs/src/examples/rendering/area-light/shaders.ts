@@ -1,5 +1,7 @@
 import tgpu, { d, std } from 'typegpu';
+import { ENVIRONMENT_MIP_LEVELS } from './environment.ts';
 import {
+  environmentLayout,
   HorizonClip,
   LIGHT_COUNT,
   ltcLayout,
@@ -14,6 +16,7 @@ export { vertexLayout };
 const LUT_SIZE = 64;
 const LUT_SCALE = (LUT_SIZE - 1) / LUT_SIZE;
 const LUT_BIAS = 0.5 / LUT_SIZE;
+const PI = Math.PI;
 
 function saturate(value: number) {
   'use gpu';
@@ -219,6 +222,29 @@ function sampleLtcMat(uv: d.v2f) {
   return d.mat3x3f(d.vec3f(t.x, 0, t.y), d.vec3f(0, 1, 0), d.vec3f(t.z, 0, t.w));
 }
 
+function fresnelSchlick(cosTheta: number, f0: d.v3f) {
+  'use gpu';
+  return f0 + (1 - f0) * (1 - saturate(cosTheta)) ** 5;
+}
+
+function fresnelSchlickRoughness(cosTheta: number, f0: d.v3f, roughness: number) {
+  'use gpu';
+  const roughF0 = std.max(d.vec3f(1 - roughness), f0);
+  return f0 + (roughF0 - f0) * (1 - saturate(cosTheta)) ** 5;
+}
+
+function sampleEnvironment(direction: d.v3f, roughness: number) {
+  'use gpu';
+  const lod = std.clamp(roughness, d.f32(0), d.f32(1)) * d.f32(ENVIRONMENT_MIP_LEVELS - 1);
+  const sample = std.textureSampleLevel(
+    environmentLayout.$.environmentMap,
+    environmentLayout.$.environmentSampler,
+    std.normalize(direction),
+    lod,
+  );
+  return sample.rgb * sceneLayout.$.params.environmentIntensity;
+}
+
 function tonemap(color: d.v3f) {
   'use gpu';
   const exposed = color * sceneLayout.$.params.exposure;
@@ -263,30 +289,62 @@ export const mainFragment = tgpu.fragmentFn({
   const N = std.normalize(normal);
   const V = std.normalize(sceneLayout.$.camera.position.xyz - worldPos);
   const NdotV = saturate(std.dot(N, V));
-  const uv = d.vec2f(std.clamp(roughness, 0.01, 1), std.sqrt(1 - NdotV)) * LUT_SCALE + LUT_BIAS;
+  const materialRoughness = std.clamp(roughness, 0.04, 1);
+  const uv = d.vec2f(materialRoughness, std.sqrt(1 - NdotV)) * LUT_SCALE + LUT_BIAS;
 
   const Minv = sampleLtcMat(uv);
   const brdf = bilinearLoadLtcAmp(uv);
 
   const F0 = std.mix(d.vec3f(0.04), albedo, metallic);
-  const fresnel = F0 * brdf.x + (1 - F0) * brdf.y;
-  const kD = (1 - fresnel) * (1 - metallic);
+  const areaFresnel = F0 * brdf.x + (1 - F0) * brdf.y;
+  const areaDiffuse = (1 - areaFresnel) * (1 - metallic);
 
   let direct = d.vec3f(0);
   for (let i = d.u32(0); i < d.u32(LIGHT_COUNT); i++) {
     const light = sceneLayout.$.lights[i];
-    const diff = ltcEvaluate(N, V, worldPos, d.mat3x3f.identity(), light);
-    const specLtc = ltcEvaluate(N, V, worldPos, Minv, light);
+    const diffuseIntegral = ltcEvaluate(N, V, worldPos, d.mat3x3f.identity(), light);
+    const specularIntegral = ltcEvaluate(N, V, worldPos, Minv, light);
     const radiance = light.color * light.intensity;
-    direct += radiance * (kD * albedo * diff + fresnel * specLtc);
+    direct +=
+      radiance * (areaDiffuse * (albedo / PI) * diffuseIntegral + areaFresnel * specularIntegral);
   }
 
-  const skyFactor = saturate(0.5 * (N.y + 1));
-  const ambient =
-    std.mix(sceneLayout.$.params.ambientGround, sceneLayout.$.params.ambientSky, skyFactor) *
-    albedo;
+  const envFresnel = fresnelSchlickRoughness(NdotV, F0, materialRoughness);
+  const envDiffuse = (1 - envFresnel) * (1 - metallic);
+  const diffuseIbl =
+    envDiffuse * albedo * sampleEnvironment(N, d.f32(1)) * sceneLayout.$.params.diffuseIblStrength;
+  const reflectionDir = std.reflect(std.neg(V), N);
+  const specularIbl =
+    sampleEnvironment(reflectionDir, materialRoughness) *
+    fresnelSchlick(NdotV, F0) *
+    (1 - materialRoughness * 0.35) *
+    sceneLayout.$.params.specularIblStrength;
 
-  return d.vec4f(tonemap(direct + ambient), 1);
+  return d.vec4f(tonemap(direct + diffuseIbl + specularIbl), 1);
+});
+
+export const skyVertex = tgpu.vertexFn({
+  in: { vertexIndex: d.builtin.vertexIndex },
+  out: { pos: d.builtin.position, ndc: d.vec2f },
+})(({ vertexIndex }) => {
+  'use gpu';
+  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
+  return {
+    pos: d.vec4f(pos[vertexIndex], 0, 1),
+    ndc: pos[vertexIndex],
+  };
+});
+
+export const skyFragment = tgpu.fragmentFn({
+  in: { ndc: d.vec2f },
+  out: d.vec4f,
+})(({ ndc }) => {
+  'use gpu';
+  const camera = sceneLayout.$.camera;
+  const farView = camera.projectionInverse * d.vec4f(ndc, 1, 1);
+  const farWorld = camera.viewInverse * d.vec4f(farView.xyz / farView.w, 1);
+  const direction = std.normalize(farWorld.xyz - camera.position.xyz);
+  return d.vec4f(tonemap(sampleEnvironment(direction, d.f32(0))), 1);
 });
 
 export const lightVertex = tgpu.vertexFn({
