@@ -30,6 +30,7 @@ const INITIAL_PARAMS = {
   environmentIntensity: 0.42,
   diffuseIblStrength: 0.06,
   specularIblStrength: 1.15,
+  wetness: 0.78,
 } satisfies d.InferInput<typeof RenderParams>;
 
 const root = await tgpu.init();
@@ -112,7 +113,6 @@ function createDepthTexture() {
 let colorTexture = createColorTexture();
 let depthTexture = createDepthTexture();
 let skyGlow = INITIAL_PARAMS.environmentIntensity;
-let neonStrength = 1;
 let discoEnabled = false;
 let discoMix = 0;
 let discoStartedAt = performance.now();
@@ -123,6 +123,7 @@ const baseLightColors = [
   d.vec3f(...initialLights[1].color),
   d.vec3f(...initialLights[2].color),
 ] as const;
+const baseLightIntensities = new Float32Array(initialLights.map((light) => light.intensity));
 const discoColors = [d.vec3f(), d.vec3f(), d.vec3f()] as const;
 const mixedLightColors = [d.vec3f(), d.vec3f(), d.vec3f()] as const;
 
@@ -211,7 +212,7 @@ function writeHueColor(target: d.v3f, hue: number) {
 function patchLight(index: LightIndex, color: d.v3f, strength = 1) {
   const update = {
     color,
-    intensity: initialLights[index].intensity * neonStrength * strength,
+    intensity: baseLightIntensities[index] * strength,
   };
 
   if (index === 0) {
@@ -223,9 +224,21 @@ function patchLight(index: LightIndex, color: d.v3f, strength = 1) {
   }
 }
 
-function restoreLights() {
-  for (const [index, color] of baseLightColors.entries()) {
-    patchLight(index as LightIndex, color);
+function setLightColor(index: LightIndex, color: d.v3f) {
+  const target = baseLightColors[index];
+  target[0] = color[0];
+  target[1] = color[1];
+  target[2] = color[2];
+
+  if (!discoEnabled && discoMix === 0) {
+    patchLight(index, target);
+  }
+}
+
+function setLightIntensity(index: LightIndex, intensity: number) {
+  baseLightIntensities[index] = intensity;
+  if (!discoEnabled && discoMix === 0) {
+    patchLight(index, baseLightColors[index]);
   }
 }
 
@@ -330,24 +343,45 @@ export const controls = defineControls({
       paramsUniform.patch({ environmentIntensity: skyGlow * (1 - smoothstep(discoMix)) });
     },
   },
-  'wet reflections': {
-    initial: INITIAL_PARAMS.specularIblStrength,
+  'wet street': {
+    initial: INITIAL_PARAMS.wetness,
     min: 0,
-    max: 1.5,
+    max: 1,
     step: 0.01,
-    onSliderChange: (specularIblStrength) => paramsUniform.patch({ specularIblStrength }),
+    onSliderChange: (wetness) => paramsUniform.patch({ wetness }),
   },
-  'neon strength': {
-    initial: neonStrength,
+  'key intensity': {
+    initial: initialLights[0].intensity,
     min: 0,
-    max: 1.5,
-    step: 0.01,
-    onSliderChange: (strength) => {
-      neonStrength = strength;
-      if (!discoEnabled && discoMix === 0) {
-        restoreLights();
-      }
-    },
+    max: 12,
+    step: 0.1,
+    onSliderChange: (intensity) => setLightIntensity(0, intensity),
+  },
+  'key color': {
+    initial: baseLightColors[0],
+    onColorChange: (color) => setLightColor(0, color),
+  },
+  'fill intensity': {
+    initial: initialLights[1].intensity,
+    min: 0,
+    max: 12,
+    step: 0.1,
+    onSliderChange: (intensity) => setLightIntensity(1, intensity),
+  },
+  'fill color': {
+    initial: baseLightColors[1],
+    onColorChange: (color) => setLightColor(1, color),
+  },
+  'rim intensity': {
+    initial: initialLights[2].intensity,
+    min: 0,
+    max: 8,
+    step: 0.1,
+    onSliderChange: (intensity) => setLightIntensity(2, intensity),
+  },
+  'rim color': {
+    initial: baseLightColors[2],
+    onColorChange: (color) => setLightColor(2, color),
   },
 });
 
