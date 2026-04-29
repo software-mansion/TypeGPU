@@ -1,12 +1,14 @@
 import tgpu, { d } from 'typegpu';
 import { Camera } from '../../common/setup-orbit-camera.ts';
 
+export const LIGHT_COUNT = 2;
+
 export const Vertex = d.struct({
   position: d.vec3f,
   normal: d.vec3f,
   albedo: d.vec3f,
   roughness: d.f32,
-  emissive: d.vec3f,
+  metallic: d.f32,
 });
 
 export const RectLight = d.struct({
@@ -18,10 +20,12 @@ export const RectLight = d.struct({
   intensity: d.f32,
 });
 
+export const Lights = d.arrayOf(RectLight, LIGHT_COUNT);
+
 export const RenderParams = d.struct({
   exposure: d.f32,
-  ambient: d.f32,
-  specularStrength: d.f32,
+  ambientSky: d.vec3f,
+  ambientGround: d.vec3f,
 });
 
 export const HorizonClip = d.struct({
@@ -37,7 +41,7 @@ export const vertexLayout = tgpu.vertexLayout(d.arrayOf(Vertex));
 
 export const sceneLayout = tgpu.bindGroupLayout({
   camera: { uniform: Camera },
-  light: { uniform: RectLight },
+  lights: { uniform: Lights },
   params: { uniform: RenderParams },
 });
 

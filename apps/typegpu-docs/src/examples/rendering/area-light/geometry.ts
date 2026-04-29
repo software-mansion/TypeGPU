@@ -2,8 +2,6 @@ import type { ExampleVertex } from './schemas.ts';
 
 type Vec3 = [number, number, number];
 
-const black: Vec3 = [0, 0, 0];
-
 function add(a: Vec3, b: Vec3): Vec3 {
   return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 }
@@ -21,14 +19,14 @@ function normalize(v: Vec3): Vec3 {
   return len > 0 ? [v[0] / len, v[1] / len, v[2] / len] : [0, 1, 0];
 }
 
-function vertex(
-  position: Vec3,
-  normal: Vec3,
-  albedo: Vec3,
-  roughness: number,
-  emissive: Vec3 = black,
-): ExampleVertex {
-  return { position, normal, albedo, roughness, emissive };
+interface Material {
+  albedo: Vec3;
+  roughness: number;
+  metallic: number;
+}
+
+function vertex(position: Vec3, normal: Vec3, mat: Material): ExampleVertex {
+  return { position, normal, albedo: mat.albedo, roughness: mat.roughness, metallic: mat.metallic };
 }
 
 function pushQuad(
@@ -37,31 +35,23 @@ function pushQuad(
   axisU: Vec3,
   axisV: Vec3,
   normal: Vec3,
-  albedo: Vec3,
-  roughness: number,
-  emissive: Vec3 = black,
+  mat: Material,
 ) {
   const p0 = sub(sub(center, axisU), axisV);
   const p1 = sub(add(center, axisU), axisV);
   const p2 = add(add(center, axisU), axisV);
   const p3 = add(sub(center, axisU), axisV);
   vertices.push(
-    vertex(p0, normal, albedo, roughness, emissive),
-    vertex(p1, normal, albedo, roughness, emissive),
-    vertex(p2, normal, albedo, roughness, emissive),
-    vertex(p0, normal, albedo, roughness, emissive),
-    vertex(p2, normal, albedo, roughness, emissive),
-    vertex(p3, normal, albedo, roughness, emissive),
+    vertex(p0, normal, mat),
+    vertex(p1, normal, mat),
+    vertex(p2, normal, mat),
+    vertex(p0, normal, mat),
+    vertex(p2, normal, mat),
+    vertex(p3, normal, mat),
   );
 }
 
-function pushSphere(
-  vertices: ExampleVertex[],
-  center: Vec3,
-  radius: number,
-  albedo: Vec3,
-  roughness: number,
-) {
+function pushSphere(vertices: ExampleVertex[], center: Vec3, radius: number, mat: Material) {
   const segments = 48;
   const rings = 24;
 
@@ -89,83 +79,53 @@ function pushSphere(
       const d = spherePoint(u1, v0);
 
       vertices.push(
-        vertex(a.position, a.normal, albedo, roughness),
-        vertex(b.position, b.normal, albedo, roughness),
-        vertex(c.position, c.normal, albedo, roughness),
-        vertex(a.position, a.normal, albedo, roughness),
-        vertex(c.position, c.normal, albedo, roughness),
-        vertex(d.position, d.normal, albedo, roughness),
+        vertex(a.position, a.normal, mat),
+        vertex(b.position, b.normal, mat),
+        vertex(c.position, c.normal, mat),
+        vertex(a.position, a.normal, mat),
+        vertex(c.position, c.normal, mat),
+        vertex(d.position, d.normal, mat),
       );
     }
   }
 }
 
-export const initialLight = {
-  center: [0, 3.2, -0.6] as Vec3,
-  dirX: [1, 0, 0] as Vec3,
-  dirY: [0, 0, 1] as Vec3,
-  halfSize: [1.25, 0.75] as [number, number],
-  color: [1, 0.78, 0.45] as Vec3,
-  intensity: 5.5,
-};
+export const initialLights = [
+  {
+    center: [0, 3.2, -0.6] as Vec3,
+    dirX: [1, 0, 0] as Vec3,
+    dirY: [0, 0, 1] as Vec3,
+    halfSize: [1.25, 0.75] as [number, number],
+    color: [1, 0.78, 0.45] as Vec3,
+    intensity: 5.5,
+  },
+  {
+    center: [-3.4, 1.6, 1.8] as Vec3,
+    dirX: [0, 0, 1] as Vec3,
+    dirY: [0, 1, 0] as Vec3,
+    halfSize: [0.7, 0.95] as [number, number],
+    color: [0.35, 0.55, 1.0] as Vec3,
+    intensity: 4.0,
+  },
+];
 
-export function createSceneVertices(light = initialLight, surfaceRoughness?: number) {
+const FLOOR_MATERIAL: Material = { albedo: [0.85, 0.83, 0.78], roughness: 0.08, metallic: 0 };
+const BACK_WALL: Material = { albedo: [0.32, 0.36, 0.44], roughness: 0.55, metallic: 0 };
+const LEFT_WALL: Material = { albedo: [0.55, 0.32, 0.3], roughness: 0.5, metallic: 0 };
+const RIGHT_WALL: Material = { albedo: [0.28, 0.42, 0.36], roughness: 0.5, metallic: 0 };
+const GOLD_SPHERE: Material = { albedo: [1.0, 0.78, 0.36], roughness: 0.08, metallic: 1 };
+const PLASTIC_SPHERE: Material = { albedo: [0.16, 0.28, 0.5], roughness: 0.4, metallic: 0 };
+
+export function createSceneVertices() {
   const vertices: ExampleVertex[] = [];
-  const floorRoughness = surfaceRoughness ?? 0.55;
-  const wallRoughness = surfaceRoughness ?? 0.42;
-  const sphereRoughness = surfaceRoughness ?? 0.18;
-  const blueSphereRoughness = surfaceRoughness ?? 0.46;
 
-  pushQuad(
-    vertices,
-    [0, 0, 0],
-    [4.5, 0, 0],
-    [0, 0, -4.5],
-    [0, 1, 0],
-    [0.72, 0.7, 0.65],
-    floorRoughness,
-  );
-  pushQuad(
-    vertices,
-    [0, 1.8, -4.5],
-    [4.5, 0, 0],
-    [0, 1.8, 0],
-    [0, 0, 1],
-    [0.48, 0.53, 0.61],
-    wallRoughness,
-  );
-  pushQuad(
-    vertices,
-    [-4.5, 1.8, 0],
-    [0, 0, -4.5],
-    [0, 1.8, 0],
-    [1, 0, 0],
-    [0.6, 0.44, 0.42],
-    wallRoughness,
-  );
-  pushQuad(
-    vertices,
-    [4.5, 1.8, 0],
-    [0, 0, 4.5],
-    [0, 1.8, 0],
-    [-1, 0, 0],
-    [0.4, 0.52, 0.48],
-    wallRoughness,
-  );
+  pushQuad(vertices, [0, 0, 0], [4.5, 0, 0], [0, 0, -4.5], [0, 1, 0], FLOOR_MATERIAL);
+  pushQuad(vertices, [0, 1.8, -4.5], [4.5, 0, 0], [0, 1.8, 0], [0, 0, 1], BACK_WALL);
+  pushQuad(vertices, [-4.5, 1.8, 0], [0, 0, -4.5], [0, 1.8, 0], [1, 0, 0], LEFT_WALL);
+  pushQuad(vertices, [4.5, 1.8, 0], [0, 0, 4.5], [0, 1.8, 0], [-1, 0, 0], RIGHT_WALL);
 
-  pushSphere(vertices, [-1.15, 0.82, -1.35], 0.82, [0.82, 0.87, 0.9], sphereRoughness);
-  pushSphere(vertices, [1.2, 0.58, 0.25], 0.58, [0.38, 0.62, 0.74], blueSphereRoughness);
-
-  pushQuad(
-    vertices,
-    light.center,
-    mul(light.dirX, light.halfSize[0]),
-    mul(light.dirY, light.halfSize[1]),
-    [0, -1, 0],
-    [1, 1, 1],
-    0.2,
-    light.color.map((channel) => channel * light.intensity) as Vec3,
-  );
+  pushSphere(vertices, [-1.15, 0.82, -1.35], 0.82, GOLD_SPHERE);
+  pushSphere(vertices, [1.2, 0.58, 0.25], 0.58, PLASTIC_SPHERE);
 
   return vertices;
 }
