@@ -38,21 +38,14 @@ const sdTriangleIsosceles = (p: d.v2f, q: d.v2f) => {
   return -std.sqrt(dv.x) * std.sign(dv.y);
 };
 
-// Unions a line-segment shaft with a rotated isosceles-triangle head.
-// `headSize` is vec2(halfBaseWidth, height) — the same convention as sdTriangleIsosceles.
-// The tip of the arrow lands exactly at `to`.
 const sdArrow = (point: d.v2f, from: d.v2f, to: d.v2f, shaftRadius: number, headSize: d.v2f) => {
   'use gpu';
   const dir = std.normalize(to - from);
 
-  // Build a local basis for the arrowhead:
-  //   +X = rightward perpendicular of the arrow
-  //   +Y = pointing back from tip toward tail  (matches sdTriangleIsosceles: apex at 0, body in +Y)
   const right = d.vec2f(dir.y, -dir.x);
   const localP = d.vec2f(std.dot(point - to, right), -std.dot(point - to, dir));
   const head = sdTriangleIsosceles(localP, headSize);
 
-  // Shaft runs from tail to the base of the arrowhead so the union is seamless
   const shaftTip = to - dir * headSize.y;
   const shaft = sdf.sdLine(point, from, shaftTip) - shaftRadius;
 
