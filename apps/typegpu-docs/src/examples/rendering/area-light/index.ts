@@ -30,7 +30,8 @@ const INITIAL_PARAMS = {
   environmentIntensity: 0.42,
   diffuseIblStrength: 0.06,
   specularIblStrength: 1.15,
-  wetness: 0.78,
+  wetness: 0.86,
+  time: 0,
 } satisfies d.InferInput<typeof RenderParams>;
 
 const root = await tgpu.init();
@@ -266,6 +267,7 @@ function updateDisco(time: number) {
 function render(time: number) {
   updateDisco(time);
   previousFrameTime = time;
+  paramsUniform.patch({ time: time * 0.001 });
 
   skyPipeline
     .with(sceneBindGroup)
@@ -343,7 +345,7 @@ export const controls = defineControls({
       paramsUniform.patch({ environmentIntensity: skyGlow * (1 - smoothstep(discoMix)) });
     },
   },
-  'wet street': {
+  'shallow water': {
     initial: INITIAL_PARAMS.wetness,
     min: 0,
     max: 1,
