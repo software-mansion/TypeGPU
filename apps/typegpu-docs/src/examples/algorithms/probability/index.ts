@@ -92,9 +92,11 @@ export const controls = defineControls({
   // this is the only place where some niche distributions are tested
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick() {
-      c.distributions
-        .map((dist) => tgpu.resolve([executor.getPipeline(getPRNG(dist).prng)]))
-        .forEach((r) => root.device.createShaderModule({ code: r }));
+      c.distributions.forEach((dist) =>
+        root.device.createShaderModule({
+          code: tgpu.resolve([executor.getPipeline(getPRNG(dist).prng)]),
+        }),
+      );
     },
   },
 });
