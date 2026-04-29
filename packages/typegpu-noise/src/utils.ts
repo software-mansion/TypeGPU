@@ -46,7 +46,7 @@ export const u32To01F32 = tgpu.fn(
   [d.u32],
   d.f32,
 )((value) => {
-  const mantissa = value >> 9;
+  const mantissa = value & 0x007fffff;
   const bits = 0x3f800000 | mantissa;
   const f = std.bitcastU32toF32(bits);
   return f - 1;
