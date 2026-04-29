@@ -51,6 +51,8 @@ import { mathToStd } from './math.ts';
 import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
+import type { FunctionDefinitionOptions } from './shaderGenerator_members.ts';
+import { getAttributesString } from '../data/attributes.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -556,7 +558,7 @@ ${this.ctx.pre}}`;
         const propertyStr = this.ctx.resolve(property.value, property.dataType).value;
 
         throw new Error(
-          `Unable to index value ${targetStr} of unknown type with index ${propertyStr}. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
+          `Index access '${targetStr}[${propertyStr}]' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.`,
         );
       }
 
@@ -772,10 +774,7 @@ ${this.ctx.pre}}`;
                 );
               }
               // Taking care of abstract numerics and implicit pointers
-              accessed = structType.provideProp(
-                key,
-                unptr(concretize(expr.dataType)) as wgsl.BaseData,
-              );
+              accessed = structType.provideProp(key, unptr(concretize(expr.dataType)));
             }
 
             return [accessed.prop, expr];
@@ -887,8 +886,27 @@ ${this.ctx.pre}}`;
     assertExhaustive(expression);
   }
 
-  public functionDefinition(body: tinyest.Block): string {
-    return this._block(body);
+  public functionDefinition(options: FunctionDefinitionOptions): string {
+    // Function body
+    const body = this._block(options.body);
+
+    // Function header
+    const returnType = options.determineReturnType();
+
+    const argList = options.args
+      // Stripping out unused arguments in entry functions
+      .filter((arg) => arg.used || options.functionType === 'normal')
+      .map((arg) => {
+        return `${getAttributesString(arg.decoratedType)}${arg.name}: ${this.ctx.resolve(arg.decoratedType).value}`;
+      })
+      .join(', ');
+
+    const head =
+      returnType.type !== 'void'
+        ? `(${argList}) -> ${getAttributesString(returnType)}${this.ctx.resolve(returnType).value} `
+        : `(${argList}) `;
+
+    return `${head}${body}`;
   }
 
   /**

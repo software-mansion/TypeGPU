@@ -1,0 +1,265 @@
+---
+title: "@typegpu/radiance-cascades"
+---
+
+import { Image } from 'astro:assets';
+import basicPreview from '../../../assets/docs/typegpu-radiance-cascades-basic.png';
+import generatedSdfPreview from '../../../assets/docs/typegpu-radiance-cascades-generated-sdf.png';
+import customRayMarchingPreview from '../../../assets/docs/typegpu-radiance-cascades-custom-ray-marching.png';
+
+The `@typegpu/radiance-cascades` package provides a small TypeGPU runner for computing 2D radiance cascades.
+It is designed for screen-space lighting where your scene can be described by:
+
+- an SDF callback sampled in normalized UV space,
+- a color callback sampled at hit points,
+- an output texture that stores the resolved radiance field.
+
+The runner owns the cascade textures and dispatches the compute passes in the right order. You provide the scene functions and call `run()` when the scene changes.
+
+:::note
+The package currently focuses on 2D radiance fields. It expects distances in UV-space units, where the visible domain usually spans `[0, 1]` on both axes.
+:::
+
+## Basic usage
+
+<div class="my-4 flex justify-center">
+  <Image src={basicPreview} alt="A simple radiance cascades scene lit from SDF surfaces" class="w-full max-w-[20rem] rounded-md" />
+</div>
+
+```ts twoslash
+import * as rc from '@typegpu/radiance-cascades';
+import * as sdf from '@typegpu/sdf';
+import tgpu, { d, std } from 'typegpu';
+
+const root = await tgpu.init();
+const previewSize = { width: 512, height: 512 };
+
+const sceneSdf = tgpu.fn([d.vec2f], d.f32)((uv) => {
+  'use gpu';
+  const circle = sdf.sdDisk(uv - d.vec2f(0.5), 0.18);
+  const wall = sdf.sdRoundedBox2d(uv - d.vec2f(0.5, 0.82), d.vec2f(0.42, 0.03), 0.01);
+  return sdf.opUnion(circle, wall);
+});
+
+const surfaceColor = tgpu.fn([d.vec2f], d.vec3f)((uv) => {
+  'use gpu';
+  return std.mix(d.vec3f(1, 0.82, 0.5), d.vec3f(0.28, 0.52, 1), uv.x);
+});
+
+const runner = rc.createRadianceCascades({
+  root,
+  size: previewSize,
+  sdfResolution: { width: 1024, height: 1024 },
+  sdf: sceneSdf,
+  color: surfaceColor,
+});
+
+runner.run();
+
+const radianceView = runner.output.createView(d.texture2d());
+const sampler = root.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+
+const renderPreview = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
+  'use gpu';
+  const dist = sceneSdf(uv);
+  const edge = std.max(std.fwidth(dist), 0.001);
+  const surface = 1 - std.smoothstep(-edge, edge, dist);
+  const radiance = std.textureSampleLevel(radianceView.$, sampler.$, uv, 0).xyz;
+
+  const bg = std.mix(d.vec3f(0.04, 0.05, 0.07), d.vec3f(0.11, 0.15, 0.22), uv.y);
+  const lit = bg + radiance * 1.55;
+  const color = std.mix(lit, surfaceColor(uv), surface);
+
+  return d.vec4f(std.min(color, d.vec3f(1)), 1);
+});
+```
+
+`size` controls the output texture resolution when the runner creates the texture for you. `sdfResolution` should match the resolution of the SDF source you are sampling from, or the resolution you use to think about texel-sized marching thresholds.
+
+## Using a generated SDF texture
+
+A common setup is to generate an SDF texture with [`@typegpu/sdf`](/TypeGPU/ecosystem/typegpu-sdf/) and feed it into the radiance runner.
+
+<div class="my-4 flex justify-center">
+  <Image src={generatedSdfPreview} alt="A radiance cascades scene using a generated SDF texture" class="w-full max-w-[24rem] rounded-md" />
+</div>
+
+```ts
+import * as rc from '@typegpu/radiance-cascades';
+import * as sdf from '@typegpu/sdf';
+import tgpu, { d, std } from 'typegpu';
+
+const root = await tgpu.init();
+const floodSize = { width: 2048, height: 2048 };
+const previewSize = { width: 512, height: 512 };
+
+const sourceTexture = root
+  .createTexture({
+    size: [floodSize.width, floodSize.height],
+    format: 'rgba8unorm',
+  })
+  .$usage('storage', 'sampled');
+
+// Draw or bake the source mask into sourceTexture first.
+const sourceLayout = tgpu.bindGroupLayout({
+  source: { texture: d.texture2d() },
+});
+const sourceBindGroup = root.createBindGroup(sourceLayout, {
+  source: sourceTexture.createView(),
+});
+
+const floodRunner = sdf
+  .createJumpFlood({
+    root,
+    size: floodSize,
+    classify: (coord) => {
+      'use gpu';
+      return std.textureLoad(sourceLayout.$.source, coord, 0).w > 0.5;
+    },
+    getSdf: (_coord, size, signedDist) => {
+      'use gpu';
+      return signedDist / d.f32(std.min(size.x, size.y));
+    },
+    getColor: (_coord, _size, _signedDist, insidePx) => {
+      'use gpu';
+      const source = std.textureLoad(sourceLayout.$.source, insidePx, 0);
+      return d.vec4f(source.xyz, 1);
+    },
+  })
+  .with(sourceBindGroup);
+
+floodRunner.run();
+
+const floodSdfView = floodRunner.sdfOutput.createView();
+const floodColorView = floodRunner.colorOutput.createView();
+const sampler = root.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+
+const runner = rc.createRadianceCascades({
+  root,
+  size: previewSize,
+  sdfResolution: floodSize,
+  sdf: (uv) => {
+    'use gpu';
+    if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) {
+      return 1;
+    }
+    return std.textureSampleLevel(floodSdfView.$, sampler.$, uv, 0).x;
+  },
+  color: (uv) => {
+    'use gpu';
+    return std.textureSampleLevel(floodColorView.$, sampler.$, uv, 0).xyz;
+  },
+});
+
+runner.run();
+```
+
+This is the same shape used by the [Radiance Cascades (with drawing)](/TypeGPU/examples#example=rendering--radiance-cascades-drawing) example: draw into a texture, rebuild an SDF with jump flooding, then update the radiance field from that SDF.
+
+## Output textures
+
+If you pass no `output`, the runner creates an `rgba16float` texture with `storage` and `sampled` usage and exposes it as `runner.output`.
+
+You can also pass your own output texture or storage texture view:
+
+```ts
+const output = root
+  .createTexture({
+    size: [width, height],
+    format: 'rgba16float',
+  })
+  .$usage('storage', 'sampled');
+
+const runner = rc.createRadianceCascades({
+  root,
+  output,
+  sdfResolution,
+  sdf: sceneSdf,
+  color: surfaceColor,
+});
+```
+
+When a storage view cannot provide its size, pass `size` explicitly alongside `output`.
+
+## Updating and cleanup
+
+The executor has a small lifecycle:
+
+- `runner.run()` dispatches all cascade passes and writes the current radiance field.
+- `runner.output` is the sampled/storage `rgba16float` result.
+- `runner.with(bindGroup)` returns an executor with an extra bind group attached to all internal passes.
+- `runner.destroy()` releases the cascade textures, and also releases the output texture if the runner created it.
+
+Use `with(bindGroup)` when your SDF, color, or ray marching callback reads resources that are not captured through TypeGPU accessors.
+
+## Custom ray marching
+
+By default, the runner uses `defaultRayMarch`, which sphere-traces through the supplied SDF and samples `color` at the first hit.
+For custom attenuation, translucent surfaces, or non-SDF sources, pass a `rayMarch` callback.
+This example adds near-surface haze and lets part of the light continue after a hit.
+
+<div class="my-4 flex justify-center">
+  <Image src={customRayMarchingPreview} alt="A radiance cascades scene with custom ray marching haze" class="w-full max-w-[24rem] rounded-md" />
+</div>
+
+```ts
+const runner = rc.createRadianceCascades({
+  root,
+  size,
+  sdfResolution,
+  sdf: sceneSdf,
+  color: surfaceColor,
+  rayMarch: (probePos, rayDir, startT, endT, eps, minStep, bias) => {
+    'use gpu';
+    let color = d.vec3f();
+    let transmittance = d.f32(1);
+    let t = startT;
+
+    for (let step = 0; step < 64; step++) {
+      if (t > endT || transmittance < 0.02) {
+        break;
+      }
+
+      const pos = probePos + rayDir * t;
+      if (std.any(std.lt(pos, d.vec2f(0))) || std.any(std.gt(pos, d.vec2f(1)))) {
+        break;
+      }
+
+      const signedDist = sceneSdf(pos);
+      const stepSize = std.max(signedDist + bias, minStep);
+      const haze = std.exp(-std.abs(signedDist) * 34) * stepSize * 18;
+      const hazeColor = std.mix(d.vec3f(1, 0.38, 0.14), d.vec3f(0.22, 0.56, 1), pos.x);
+      color += hazeColor * haze * transmittance;
+
+      if (signedDist + bias <= eps) {
+        color += surfaceColor(pos) * transmittance * 0.65;
+        transmittance *= 0.35;
+        break;
+      }
+
+      transmittance *= std.max(1 - haze * 0.08, 0.72);
+      t += stepSize;
+    }
+
+    return rc.RayMarchResult({
+      color,
+      transmittance,
+    });
+  },
+});
+```
+
+Custom ray marchers should return `RayMarchResult`, where `color` is accumulated radiance and `transmittance` is how much light should continue to the next cascade (`1` means no hit, `0` means fully blocked).
+
+## Advanced exports
+
+Most users only need `createRadianceCascades`. The package also exports lower-level pieces for custom runners and experiments:
+
+| Export | Purpose |
+| --- | --- |
+| `defaultRayMarch` | The built-in ray marcher used by the runner |
+| `RayMarchResult` | Return struct for custom ray marchers |
+| `getCascadeDim` | Computes internal cascade texture dimensions |
+| `sdfSlot`, `colorSlot`, `rayMarchSlot`, `sdfResolutionSlot` | Slots used by the internal cascade compute pass |
+
+See the [package source](https://github.com/software-mansion/TypeGPU/tree/main/packages/typegpu-radiance-cascades/src) for details that are not yet covered here.

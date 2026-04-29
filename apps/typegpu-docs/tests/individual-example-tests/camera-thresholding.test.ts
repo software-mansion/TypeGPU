@@ -32,10 +32,6 @@ describe('camera thresholding example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct mainFrag_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var<uniform> uvTransformUniform: mat2x2f;
 
       @group(1) @binding(0) var inputTexture: texture_external;
@@ -47,6 +43,10 @@ describe('camera thresholding example', () => {
       @group(0) @binding(2) var<uniform> colorUniform: vec3f;
 
       @group(0) @binding(3) var<uniform> thresholdBuffer: f32;
+
+      struct mainFrag_Input {
+        @location(0) uv: vec2f,
+      }
 
       @fragment fn mainFrag(_arg_0: mainFrag_Input) -> @location(0) vec4f {
         var uv2 = ((uvTransformUniform * (_arg_0.uv - 0.5f)) + 0.5f);

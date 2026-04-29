@@ -1,8 +1,8 @@
-import * as t from '@babel/types';
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import defu from 'defu';
 import { transpileFn } from 'tinyest-for-wgsl';
 import { FORMAT_VERSION } from 'tinyest';
+import { t } from './core/babel-types.ts';
 import {
   type PluginState,
   defaultOptions,

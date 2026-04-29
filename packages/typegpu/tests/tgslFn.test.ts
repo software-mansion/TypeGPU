@@ -363,11 +363,7 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
-      "struct fragmentFn_Input {
-        @location(0) uv: vec2f,
-      }
-
-      struct fragmentFn_Output {
+      "struct fragmentFn_Output {
         @builtin(sample_mask) sampleMask: u32,
         @builtin(frag_depth) fragDepth: f32,
         @location(0) out: vec4f,
@@ -410,11 +406,7 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
-      "struct fragmentFn_Input {
-        @location(0) uv: vec2f,
-      }
-
-      struct fragmentFn_Output {
+      "struct fragmentFn_Output {
         @builtin(sample_mask) sampleMask: u32,
         @builtin(frag_depth) fragDepth: f32,
         @location(0) out: vec4f,
@@ -444,11 +436,7 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
-      "struct fragmentFn_Input {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn fragmentFn() -> @location(0) vec4f {
+      "@fragment fn fragmentFn() -> @location(0) vec4f {
         var hmm = vec4f(1.25);
         return hmm;
       }"
@@ -481,11 +469,7 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
-      "struct fragmentFn_Input {
-        @location(0) uv: vec2f,
-      }
-
-      struct fragmentFn_Output {
+      "struct fragmentFn_Output {
         @builtin(sample_mask) sampleMask: u32,
         @builtin(frag_depth) fragDepth: f32,
         @location(0) out: vec4f,

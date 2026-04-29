@@ -18,14 +18,14 @@ describe('ternary operator', () => {
         myFn.with(mySlot, false).$name('falseFn'),
       ]),
     ).toMatchInlineSnapshot(`
-        "fn trueFn() -> u32 {
-          return 10u;
-        }
+      "fn trueFn() -> u32 {
+        return 10u;
+      }
 
-        fn falseFn() -> u32 {
-          return 20u;
-        }"
-      `);
+      fn falseFn() -> u32 {
+        return 20u;
+      }"
+    `);
   });
 
   it('should work for different comptime known expressions', () => {
@@ -72,22 +72,22 @@ describe('ternary operator', () => {
         myFn.with(mySlot, 3).$name('threeFn'),
       ]),
     ).toMatchInlineSnapshot(`
-        "fn myFn() -> u32 {
-          return -1u;
-        }
+      "fn myFn() -> u32 {
+        return -1u;
+      }
 
-        fn oneFn() -> u32 {
-          return 10u;
-        }
+      fn oneFn() -> u32 {
+        return 10u;
+      }
 
-        fn twoFn() -> u32 {
-          return 20u;
-        }
+      fn twoFn() -> u32 {
+        return 20u;
+      }
 
-        fn threeFn() -> u32 {
-          return 30u;
-        }"
-      `);
+      fn threeFn() -> u32 {
+        return 30u;
+      }"
+    `);
   });
 
   it('should not include unused dependencies', ({ root }) => {
@@ -103,20 +103,20 @@ describe('ternary operator', () => {
     });
 
     expect(tgpu.resolve([myFn.with(mySlot, true).$name('trueFn')])).toMatchInlineSnapshot(`
-        "@group(0) @binding(0) var<uniform> myUniform: u32;
+      "@group(0) @binding(0) var<uniform> myUniform: u32;
 
-        fn trueFn() -> u32 {
-          return myUniform;
-        }"
-      `);
+      fn trueFn() -> u32 {
+        return myUniform;
+      }"
+    `);
 
     expect(tgpu.resolve([myFn.with(mySlot, false).$name('falseFn')])).toMatchInlineSnapshot(`
-        "@group(0) @binding(0) var<storage, read> myReadonly: u32;
+      "@group(0) @binding(0) var<storage, read> myReadonly: u32;
 
-        fn falseFn() -> u32 {
-          return myReadonly;
-        }"
-      `);
+      fn falseFn() -> u32 {
+        return myReadonly;
+      }"
+    `);
   });
 
   it('should handle undefined', ({ root }) => {

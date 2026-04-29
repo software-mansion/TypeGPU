@@ -183,7 +183,7 @@ function createFragmentFn(
       [$getNameForward]: FnCore;
     };
 
-  const core = createFnCore(implementation, '@fragment ');
+  const core = createFnCore(implementation, 'fragment');
   const outputType = shell.returnType;
   if (typeof implementation === 'string') {
     addReturnTypeToExternals(implementation, outputType, (externals) =>
