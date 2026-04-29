@@ -10,9 +10,13 @@ type Scope = {
   declaredNames: string[];
 };
 
+interface Externals {
+  [key: string]: Externals | string;
+}
+
 type Context = {
   /** Holds a set of all identifiers that were used in code, but were not declared in code. */
-  externalNames: Set<string>;
+  externalNames: Externals;
   /** Used to signal to identifiers that they should not treat their resolution as possible external uses. */
   ignoreExternalDepth: number;
   stack: Scope[];
@@ -71,14 +75,63 @@ const Transpilers: Partial<{
 
   Identifier(ctx, node) {
     if (ctx.ignoreExternalDepth === 0 && !isDeclared(ctx, node.name)) {
-      ctx.externalNames.add(node.name);
+      ctx.externalNames[node.name] = node.name;
+      return node.name;
+
+      // const chain: string[] = [];
+
+      // for (let i = ctx.ancestorChain.length - 1; i >= 0; i--) {
+      //   const current = ctx.ancestorChain[i];
+
+      //   if (!current) {
+      //     break;
+      //   }
+
+      //   if (current.type === 'Identifier') {
+      //     chain.push(current.name);
+      //   } else if (current.type === 'MemberExpression' && !current.computed) {
+      //     chain.push(`${(current.property as { name: string }).name}`);
+      //   } else {
+      //     break;
+      //   }
+      // }
+
+      // let currentExternals = ctx.externalNames;
+      // for (const elem of chain) {
+      //   let nextExternals = currentExternals.get(elem);
+      //   if (nextExternals) {
+      //     if (typeof nextExternals !== 'string') {
+      //       currentExternals = nextExternals;
+      //     } else {
+      //       // we already need this in externals, so we break
+      //       break;
+      //     }
+      //   } else {
+      //     nextExternals = new Map();
+      //     currentExternals.set(elem, nextExternals);
+      //     currentExternals = nextExternals;
+      //   }
+      // }
+
+      // const lastKey = chain[chain.length - 1];
+      // if (lastKey !== undefined) {
+      //   let parent = ctx.externalNames;
+      //   for (const key of chain.slice(0, -1)) {
+      //     const next = parent.get(key);
+      //     if (!next || typeof next === 'string') break;
+      //     parent = next;
+      //   }
+      //   if (parent.get(lastKey) instanceof Map) {
+      //     parent.set(lastKey, chain.join('.'));
+      //   }
+      // }
     }
 
     return node.name;
   },
 
   ThisExpression(ctx) {
-    ctx.externalNames.add('this');
+    ctx.externalNames['this'] = 'this';
     return 'this';
   },
 
@@ -323,7 +376,7 @@ export type TranspilationResult = {
    * All identifiers found in the function code that are not declared in the
    * function itself, or in the block that is accessing that identifier.
    */
-  externalNames: string[];
+  externalNames: Externals;
 };
 
 export function extractFunctionParts(rootNode: JsNode): {
@@ -428,7 +481,7 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
   const { params, body } = extractFunctionParts(rootNode);
 
   const ctx: Context = {
-    externalNames: new Set(),
+    externalNames: Object.create(null),
     ignoreExternalDepth: 0,
     stack: [
       {
@@ -443,26 +496,25 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
   };
 
   const tinyestBody = transpile(ctx, body);
-  const externalNames = [...ctx.externalNames];
 
   if (body.type === 'BlockStatement') {
     return {
       params,
       body: tinyestBody as tinyest.Block,
-      externalNames,
+      externalNames: ctx.externalNames,
     };
   }
 
   return {
     params,
     body: [NODE.block, [[NODE.return, tinyestBody as tinyest.Expression]]],
-    externalNames,
+    externalNames: ctx.externalNames,
   };
 }
 
 export function transpileNode(node: JsNode): tinyest.AnyNode {
   const ctx: Context = {
-    externalNames: new Set(),
+    externalNames: Object.create(null),
     ignoreExternalDepth: 0,
     stack: [
       {

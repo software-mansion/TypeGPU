@@ -170,7 +170,9 @@ export function createFnCore(implementation: Implementation, fnAttribute = ''): 
       }
 
       // verify all required externals are present
-      const missingExternals = ast.externalNames.filter((name) => !(name in externalMap));
+      const missingExternals = Object.keys(ast.externalNames).filter(
+        (name) => !(name in externalMap),
+      );
       if (missingExternals.length > 0) {
         throw new MissingLinksError(getName(this), missingExternals);
       }

@@ -4,6 +4,10 @@ import type { Block, FuncParameter } from 'tinyest';
 import { DEV, TEST } from './env.ts';
 import { $getNameForward, isMarkedInternal } from './symbols.ts';
 
+export interface Externals {
+  [key: string]: Externals | string;
+}
+
 export interface MetaData {
   v?: number;
   name?: string | undefined;
@@ -11,7 +15,7 @@ export interface MetaData {
     | {
         params: FuncParameter[];
         body: Block;
-        externalNames: string[];
+        externalNames: Externals;
       }
     | undefined;
   externals?:

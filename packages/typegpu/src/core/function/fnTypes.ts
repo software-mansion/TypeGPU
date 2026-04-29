@@ -27,19 +27,6 @@ import type { InferGPU } from '../../shared/repr.ts';
 
 export type AnyFn = (...args: never[]) => unknown;
 
-/**
- * Information extracted from transpiling a JS function.
- */
-export type TranspilationResult = {
-  params: tinyest.FuncParameter[];
-  body: tinyest.Block;
-  /**
-   * All identifiers found in the function code that are not declared in the
-   * function itself, or in the block that is accessing that identifier.
-   */
-  externalNames: string[];
-};
-
 export type InferArgs<T extends unknown[]> = {
   [Idx in keyof T]: InferGPU<T[Idx]>;
 };
