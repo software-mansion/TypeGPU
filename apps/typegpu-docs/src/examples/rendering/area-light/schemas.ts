@@ -9,6 +9,7 @@ export const Vertex = d.struct({
   albedo: d.vec3f,
   roughness: d.f32,
   metallic: d.f32,
+  wetness: d.f32,
 });
 
 export const RectLight = d.struct({
@@ -27,6 +28,7 @@ export const RenderParams = d.struct({
   environmentIntensity: d.f32,
   diffuseIblStrength: d.f32,
   specularIblStrength: d.f32,
+  wetness: d.f32,
 });
 
 export const vertexLayout = tgpu.vertexLayout(d.arrayOf(Vertex));
