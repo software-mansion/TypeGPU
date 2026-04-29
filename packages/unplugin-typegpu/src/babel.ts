@@ -33,7 +33,7 @@ function assignMetadata(
         t.blockStatement([
           t.returnStatement(
             t.objectExpression(
-              ast.externalNames.map((name) =>
+              Object.keys(ast.externalNames).map((name) =>
                 name === 'this'
                   ? t.objectProperty(i('this'), t.thisExpression())
                   : t.objectProperty(i(name), i(name), false, /* shorthand */ name !== 'this'),

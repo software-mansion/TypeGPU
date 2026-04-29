@@ -30,7 +30,7 @@ describe('transpileFn', () => {
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
-      expect(externalNames).toStrictEqual([]);
+      expect(externalNames).toMatchInlineSnapshot(`{}`);
     }),
   );
 
@@ -41,7 +41,7 @@ describe('transpileFn', () => {
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
-      expect(externalNames).toStrictEqual([]);
+      expect(externalNames).toMatchInlineSnapshot(`{}`);
     }),
   );
 
@@ -57,7 +57,11 @@ describe('transpileFn', () => {
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[0,[[10,[1,[1,"a","+","b"],"-","c"]]]]"`,
       );
-      expect(externalNames).toStrictEqual(['c']);
+      expect(externalNames).toMatchInlineSnapshot(`
+        {
+          "c": "c",
+        }
+      `);
     }),
   );
 
@@ -76,7 +80,11 @@ describe('transpileFn', () => {
         `"[0,[[13,"a",[5,"0"]],[2,"c","=",[1,"a","+",[5,"2"]]]]]"`,
       );
       // Only 'c' is external, as 'a' is declared in the same scope.
-      expect(externalNames).toStrictEqual(['c']);
+      expect(externalNames).toMatchInlineSnapshot(`
+        {
+          "c": "c",
+        }
+      `);
     }),
   );
 
@@ -97,7 +105,11 @@ describe('transpileFn', () => {
         `"[0,[[13,"a",[5,"0"]],[0,[[2,"c","=",[1,"a","+",[5,"2"]]]]]]]"`,
       );
       // Only 'c' is external, as 'a' is declared in the outer scope.
-      expect(externalNames).toStrictEqual(['c']);
+      expect(externalNames).toMatchInlineSnapshot(`
+        {
+          "c": "c",
+        }
+      `);
     }),
   );
 
@@ -111,7 +123,11 @@ describe('transpileFn', () => {
         `"[0,[[10,[7,[7,"external","outside"],"prop"]]]]"`,
       );
       // Only 'external' is external.
-      expect(externalNames).toStrictEqual(['external']);
+      expect(externalNames).toMatchInlineSnapshot(`
+        {
+          "external": "external",
+        }
+      `);
     }),
   );
 
@@ -140,7 +156,7 @@ describe('transpileFn', () => {
         },
       ]);
 
-      expect(externalNames).toStrictEqual([]);
+      expect(externalNames).toMatchInlineSnapshot(`{}`);
     }),
   );
 
@@ -186,7 +202,7 @@ describe('transpileFn', () => {
         },
       ]);
 
-      expect(externalNames).toStrictEqual([]);
+      expect(externalNames).toMatchInlineSnapshot(`{}`);
     }),
   );
 
@@ -195,4 +211,29 @@ describe('transpileFn', () => {
 
     expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[7,"x","y"]]]]"`);
   });
+
+  it(
+    'handles complex external trees',
+    dualTest((p) => {
+      const { externalNames } = transpileFn(
+        p(`() => {
+          const a = ext.p;
+          const b = ext.q.a;
+          const c = ext.q.b;
+
+          const d = ext.r.a;
+          const e = ext.r;
+
+          const f = ext.s;
+          const g = ext.s.a;
+        }`),
+      );
+
+      expect(externalNames).toMatchInlineSnapshot(`
+        {
+          "ext": "ext",
+        }
+      `);
+    }),
+  );
 });
