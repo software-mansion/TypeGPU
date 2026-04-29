@@ -15,7 +15,7 @@ import {
   getBlockScope,
 } from './common.ts';
 
-import type { Options, UnpluginPluginState, MetadatableFunction } from './common.ts';
+import type { Options, UnpluginPluginState, MetadatableFunction, Externals } from './common.ts';
 
 // I love CommonJS 💔
 let traverse = _traverse;
@@ -32,19 +32,28 @@ function embedJSON(jsValue: unknown) {
     .replace(/\u2029/g, '\\u2029');
 }
 
+function externalsToString(externals: Externals | string): string {
+  if (typeof externals === 'string') {
+    return `() => ${externals}`;
+  }
+  const entries = Object.entries(externals).map(
+    ([key, value]) => `${key}: ${externalsToString(value)}`,
+  );
+  return `{ ${entries.join(', ')} }`;
+}
+
 function assignMetadata(
   this: UnpluginPluginState,
   path: NodePath<MetadatableFunction>,
   name: string | undefined,
   ast: ReturnType<typeof transpileFn>,
 ): void {
+  // TODO: check if we can omit externalNames here
   const metadata = `{
     v: ${FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
     ast: ${embedJSON(ast)},
-    externals: () => ({${Object.keys(ast.externalNames)
-      .map((e) => (e === 'this' ? '"this": this' : e))
-      .join(', ')}}),
+    externals: ${externalsToString(ast.externalNames)}
   }`;
 
   const visibility = t.isFunctionDeclaration(path.node)

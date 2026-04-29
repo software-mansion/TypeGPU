@@ -19,25 +19,25 @@ const codes = {
         zero: 0,
       }
     };
-    const foo = () => {
+    const fn = () => {
       'use gpu';
       const a = ext.value;
       const b = ext.config.multiplier;
       const c = ext.config.zero;
       const d = ext.config.multiplier;
     };
-    console.log(foo);`,
+    console.log(fn);`,
   // ---
   'treats dereference like a regular external': `\
     import tgpu, { d } from 'typegpu';
 
     const root = await tgpu.init();
     const buffer = root.createMutable(d.vec2u);
-    const foo = () => {
+    const fn = () => {
       'use gpu';
       const a = buffer.$.x;
     };
-    console.log(foo);`,
+    console.log(fn);`,
   // ---
   'skips computed prop access': `\
     const ext = {
@@ -134,7 +134,7 @@ describe('externals gathering', () => {
       const code = codes['allows multiple usages of one external'];
 
       expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
-        `"() => ({ext}),"`,
+        `"{ ext: { value: () => ext.value, config: { multiplier: () => ext.config.multiplier, zero: () => ext.config.zero } } }"`,
       );
     });
 
@@ -142,7 +142,7 @@ describe('externals gathering', () => {
       const code = codes['treats dereference like a regular external'];
 
       expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
-        `"() => ({buffer}),"`,
+        `"{ buffer: { $: { x: () => buffer.$.x } } }"`,
       );
     });
 
@@ -150,14 +150,16 @@ describe('externals gathering', () => {
       const code = codes['skips computed prop access'];
 
       expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
-        `"() => ({ext}),"`,
+        `"{ ext: () => ext }"`,
       );
     });
 
     it('skips calls', async () => {
       const code = codes['skips calls'];
 
-      expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(`"() => ({ext}),"`);
+      expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
+        `"{ ext: { comptime: () => ext.comptime, runtime: () => ext.runtime } }"`,
+      );
     });
   });
 });

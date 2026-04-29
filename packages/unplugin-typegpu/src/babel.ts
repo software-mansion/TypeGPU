@@ -4,6 +4,7 @@ import defu from 'defu';
 import { transpileFn } from 'tinyest-for-wgsl';
 import { FORMAT_VERSION } from 'tinyest';
 import {
+  type Externals,
   type PluginState,
   defaultOptions,
   functionVisitor,
@@ -14,10 +15,6 @@ import { createFilterForId } from './core/filter.ts';
 
 function i(identifier: string): t.Identifier {
   return t.identifier(identifier);
-}
-
-interface Externals {
-  [key: string]: Externals | string;
 }
 
 function externalsToNode(externals: Externals | string): t.Expression {
