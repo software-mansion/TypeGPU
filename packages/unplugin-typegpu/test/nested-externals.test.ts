@@ -79,7 +79,12 @@ describe('externals gathering', () => {
       const code = codes['allows multiple usages of one external'];
 
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
-        "{
+        "() => {
+            return {
+              ext
+            };
+          },
+          externals2: {
             ext: {
               value: () => ext.value,
               config: {
@@ -95,7 +100,12 @@ describe('externals gathering', () => {
       const code = codes['treats dereference like a regular external'];
 
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
-        "{
+        "() => {
+            return {
+              buffer
+            };
+          },
+          externals2: {
             buffer: {
               $: {
                 x: () => buffer.$.x
@@ -109,7 +119,12 @@ describe('externals gathering', () => {
       const code = codes['skips computed prop access'];
 
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
-        "{
+        "() => {
+            return {
+              ext
+            };
+          },
+          externals2: {
             ext: () => ext
           }"
       `);
@@ -119,7 +134,12 @@ describe('externals gathering', () => {
       const code = codes['skips calls'];
 
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
-        "{
+        "() => {
+            return {
+              ext
+            };
+          },
+          externals2: {
             ext: {
               comptime: () => ext.comptime,
               runtime: () => ext.runtime
@@ -134,7 +154,10 @@ describe('externals gathering', () => {
       const code = codes['allows multiple usages of one external'];
 
       expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
-        `"{ ext: { value: () => ext.value, config: { multiplier: () => ext.config.multiplier, zero: () => ext.config.zero } } }"`,
+        `
+        "() => ({ext}),
+            externals2: { ext: { value: () => ext.value, config: { multiplier: () => ext.config.multiplier, zero: () => ext.config.zero } } }"
+      `,
       );
     });
 
@@ -142,7 +165,10 @@ describe('externals gathering', () => {
       const code = codes['treats dereference like a regular external'];
 
       expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
-        `"{ buffer: { $: { x: () => buffer.$.x } } }"`,
+        `
+        "() => ({buffer}),
+            externals2: { buffer: { $: { x: () => buffer.$.x } } }"
+      `,
       );
     });
 
@@ -150,7 +176,10 @@ describe('externals gathering', () => {
       const code = codes['skips computed prop access'];
 
       expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
-        `"{ ext: () => ext }"`,
+        `
+        "() => ({ext}),
+            externals2: { ext: () => ext }"
+      `,
       );
     });
 
@@ -158,7 +187,10 @@ describe('externals gathering', () => {
       const code = codes['skips calls'];
 
       expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
-        `"{ ext: { comptime: () => ext.comptime, runtime: () => ext.runtime } }"`,
+        `
+        "() => ({ext}),
+            externals2: { ext: { comptime: () => ext.comptime, runtime: () => ext.runtime } }"
+      `,
       );
     });
   });

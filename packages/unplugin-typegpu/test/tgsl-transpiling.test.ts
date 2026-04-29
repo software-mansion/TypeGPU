@@ -58,7 +58,13 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
             }
           }
         },
-        externals: {
+        externals: () => {
+          return {
+            counter,
+            d
+          };
+        },
+        externals2: {
           counter: {
             $: {
               x: () => counter.$.x,
@@ -109,7 +115,10 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           body: [0, [[13, "x", true]]],
           externalNames: {}
         },
-        externals: {}
+        externals: () => {
+          return {};
+        },
+        externals2: {}
       }) && $.f)({}));
       const b = tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const y = 2 + 2;
@@ -121,7 +130,10 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           body: [0, [[13, "y", [1, [5, "2"], "+", [5, "2"]]]]],
           externalNames: {}
         },
-        externals: {}
+        externals: () => {
+          return {};
+        },
+        externals2: {}
       }) && $.f)({}));
       const cx = 2;
       const c = tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => cx, {
@@ -134,7 +146,12 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
             cx: "cx"
           }
         },
-        externals: {
+        externals: () => {
+          return {
+            cx
+          };
+        },
+        externals2: {
           cx: () => cx
         }
       }) && $.f)({}));
@@ -191,7 +208,10 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           body: [0, [[13, "x", true]]],
           externalNames: {}
         },
-        externals: {}
+        externals: () => {
+          return {};
+        },
+        externals2: {}
       }) && $.f)({}));
       const funcWithAs = tgpu.computeFn({
         workgroupSize: [1]
@@ -208,7 +228,10 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           body: [0, [[13, "x", true]]],
           externalNames: {}
         },
-        externals: {}
+        externals: () => {
+          return {};
+        },
+        externals2: {}
       }) && $.f)({}));
       const funcWithSatisfies = tgpu.computeFn({
         workgroupSize: [1]
@@ -225,7 +248,10 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           body: [0, [[13, "x", true]]],
           externalNames: {}
         },
-        externals: {}
+        externals: () => {
+          return {};
+        },
+        externals2: {}
       }) && $.f)({}));"
     `);
   });
@@ -270,7 +296,12 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
               }
             }
           },
-          externals: {
+          externals: () => {
+            return {
+              this: this
+            };
+          },
+          externals2: {
             this: {
               myBuffer: {
                 $: () => this.myBuffer.$
@@ -324,7 +355,8 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
           v: 1,
           name: undefined,
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","$"],"x"]],[2,[7,[7,"counter","$"],"x"],"=",[7,[7,"counter","$"],"y"]],[2,[7,[7,"counter","$"],"y"],"+=","tmp"],[2,[7,[7,"counter","$"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":{"counter":{"$":{"x":"counter.$.x","y":"counter.$.y","z":"counter.$.z"}},"d":{"f32":"d.f32"}}},
-          externals: { counter: { $: { x: () => counter.$.x, y: () => counter.$.y, z: () => counter.$.z } }, d: { f32: () => d.f32 } }
+          externals: () => ({counter, d}),
+          externals2: { counter: { $: { x: () => counter.$.x, y: () => counter.$.y, z: () => counter.$.z } }, d: { f32: () => d.f32 } }
         }) && $.f)({})));
       "
     `);
@@ -356,7 +388,8 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
           v: 1,
           name: undefined,
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":{}},
-          externals: {  }
+          externals: () => ({}),
+          externals2: {  }
         }) && $.f)({})));
 
               tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
@@ -364,7 +397,8 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
           v: 1,
           name: undefined,
           ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":{}},
-          externals: {  }
+          externals: () => ({}),
+          externals2: {  }
         }) && $.f)({})));
 
               const cx = 2;
@@ -372,7 +406,8 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
           v: 1,
           name: undefined,
           ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":{"cx":"cx"}},
-          externals: { cx: () => cx }
+          externals: () => ({cx}),
+          externals2: { cx: () => cx }
         }) && $.f)({})));
 
               tgpu.fn([])('() {}');
@@ -429,7 +464,8 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
           v: 1,
           name: undefined,
           ast: {"params":[],"body":[0,[[10,[7,[7,"this","myBuffer"],"$"]]]],"externalNames":{"this":{"myBuffer":{"$":"this.myBuffer.$"}}}},
-          externals: { this: { myBuffer: { $: () => this.myBuffer.$ } } }
+          externals: () => ({"this": this}),
+          externals2: { this: { myBuffer: { $: () => this.myBuffer.$ } } }
         }) && $.f)({})));
             }
 

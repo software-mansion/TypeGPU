@@ -198,6 +198,7 @@ describe('autonaming', () => {
           name: "myFun",
           ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":{}},
           externals: () => ({}),
+          externals2: {  }
         }) && $.f)({}));
 
 
@@ -208,6 +209,7 @@ describe('autonaming', () => {
           name: undefined,
           ast: {"params":[],"body":[0,[[6,"myFun",[]]]],"externalNames":{"myFun":"myFun"}},
           externals: () => ({myFun}),
+          externals2: { myFun: () => myFun }
         }) && $.f)({}))), "main"));
       			return main;
       		}"

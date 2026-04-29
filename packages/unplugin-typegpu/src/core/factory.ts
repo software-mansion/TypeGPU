@@ -53,7 +53,10 @@ function assignMetadata(
     v: ${FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
     ast: ${embedJSON(ast)},
-    externals: ${externalsToString(ast.externalNames)}
+    externals: () => ({${Object.keys(ast.externalNames)
+      .map((e) => (e === 'this' ? '"this": this' : e))
+      .join(', ')}}),
+    externals2: ${externalsToString(ast.externalNames)}
   }`;
 
   const visibility = t.isFunctionDeclaration(path.node)

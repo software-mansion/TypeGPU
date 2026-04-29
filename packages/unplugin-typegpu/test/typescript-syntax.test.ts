@@ -31,7 +31,10 @@ describe('as type', () => {
           body: [0, [[10, [1, "a", "+", "b"]]]],
           externalNames: {}
         },
-        externals: {}
+        externals: () => {
+          return {};
+        },
+        externals2: {}
       }) && $.f)({});"
     `);
   });

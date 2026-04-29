@@ -46,7 +46,24 @@ function assignMetadata(
     t.objectProperty(i('v'), t.numericLiteral(FORMAT_VERSION)),
     t.objectProperty(i('name'), t.valueToNode(name)),
     t.objectProperty(i('ast'), t.valueToNode(ast)),
-    t.objectProperty(i('externals'), externalsToNode(ast.externalNames)),
+    t.objectProperty(
+      i('externals'),
+      t.arrowFunctionExpression(
+        [],
+        t.blockStatement([
+          t.returnStatement(
+            t.objectExpression(
+              Object.keys(ast.externalNames).map((name) =>
+                name === 'this'
+                  ? t.objectProperty(i('this'), t.thisExpression())
+                  : t.objectProperty(i(name), i(name), false, /* shorthand */ name !== 'this'),
+              ),
+            ),
+          ),
+        ]),
+      ),
+    ),
+    t.objectProperty(i('externals2'), externalsToNode(ast.externalNames)),
   ]);
 
   let expression: t.Expression;
