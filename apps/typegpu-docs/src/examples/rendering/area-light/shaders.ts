@@ -126,7 +126,13 @@ function clipQuadToHorizon(p0: d.v3f, p1: d.v3f, p2: d.v3f, p3: d.v3f) {
   return HorizonClip({ l0, l1, l2, l3, l4, count });
 }
 
-function ltcEvaluate(N: d.v3f, V: d.v3f, P: d.v3f, Minv: d.m3x3f, light: d.Infer<typeof RectLight>) {
+function ltcEvaluate(
+  N: d.v3f,
+  V: d.v3f,
+  P: d.v3f,
+  Minv: d.m3x3f,
+  light: d.Infer<typeof RectLight>,
+) {
   'use gpu';
   let T1 = V - N * std.dot(V, N);
   if (std.dot(T1, T1) < 1e-5) {
@@ -276,7 +282,9 @@ export const mainFragment = tgpu.fragmentFn({
   }
 
   const skyFactor = saturate(0.5 * (N.y + 1));
-  const ambient = std.mix(sceneLayout.$.params.ambientGround, sceneLayout.$.params.ambientSky, skyFactor) * albedo;
+  const ambient =
+    std.mix(sceneLayout.$.params.ambientGround, sceneLayout.$.params.ambientSky, skyFactor) *
+    albedo;
 
   return d.vec4f(tonemap(direct + ambient), 1);
 });
@@ -286,8 +294,8 @@ export const lightVertex = tgpu.vertexFn({
   out: { pos: d.builtin.position, color: d.vec3f },
 })(({ vid }) => {
   'use gpu';
-  const lightIdx = std.select(d.u32(0), d.u32(1), vid >= d.u32(6));
-  const cornerVid = vid - lightIdx * d.u32(6);
+  const lightIdx = d.u32(vid / d.u32(6));
+  const cornerVid = vid % d.u32(6);
 
   let signX = d.f32(-1);
   let signY = d.f32(-1);
@@ -303,9 +311,8 @@ export const lightVertex = tgpu.vertexFn({
   }
 
   const light = sceneLayout.$.lights[lightIdx];
-  const worldPos = light.center +
-    light.dirX * light.halfSize.x * signX +
-    light.dirY * light.halfSize.y * signY;
+  const worldPos =
+    light.center + light.dirX * light.halfSize.x * signX + light.dirY * light.halfSize.y * signY;
   const camera = sceneLayout.$.camera;
   return {
     pos: camera.projection * camera.view * d.vec4f(worldPos, 1),

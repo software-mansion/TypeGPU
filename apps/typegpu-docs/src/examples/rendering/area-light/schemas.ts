@@ -1,7 +1,7 @@
 import tgpu, { d } from 'typegpu';
 import { Camera } from '../../common/setup-orbit-camera.ts';
 
-export const LIGHT_COUNT = 2;
+export const LIGHT_COUNT = 3;
 
 export const Vertex = d.struct({
   position: d.vec3f,
