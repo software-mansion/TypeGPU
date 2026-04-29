@@ -21,7 +21,7 @@ import {
 } from '../../types.ts';
 import { isTgpuFn } from '../function/tgpuFn.ts';
 import { getGpuValueRecursively, valueProxyHandler } from '../valueProxyUtils.ts';
-import { slot as slotConstructor } from './slot.ts';
+import { slot } from './slot.ts';
 import type { TgpuAccessor, TgpuMutableAccessor, TgpuSlot } from './slotTypes.ts';
 
 // ----------
@@ -72,7 +72,7 @@ abstract class AccessorBase<
     this.defaultValue = defaultValue;
 
     // NOTE: in certain setups, unplugin can run on package typegpu, so we have to avoid auto-naming triggering here
-    this.slot = slotConstructor(defaultValue);
+    this.slot = (() => slot(defaultValue))();
     this[$getNameForward] = this.slot;
   }
 
