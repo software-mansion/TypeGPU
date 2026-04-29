@@ -29,15 +29,6 @@ export const RenderParams = d.struct({
   specularIblStrength: d.f32,
 });
 
-export const HorizonClip = d.struct({
-  l0: d.vec3f,
-  l1: d.vec3f,
-  l2: d.vec3f,
-  l3: d.vec3f,
-  l4: d.vec3f,
-  count: d.u32,
-});
-
 export const vertexLayout = tgpu.vertexLayout(d.arrayOf(Vertex));
 
 export const sceneLayout = tgpu.bindGroupLayout({
@@ -55,5 +46,3 @@ export const environmentLayout = tgpu.bindGroupLayout({
   environmentMap: { texture: d.textureCube(d.f32) },
   environmentSampler: { sampler: 'filtering' },
 });
-
-export type ExampleVertex = d.InferInput<typeof Vertex>;

@@ -1,8 +1,8 @@
-import tgpu, { d } from 'typegpu';
+import tgpu, { common, d } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import { createEnvironmentFaces, ENVIRONMENT_MIP_LEVELS } from './environment.ts';
-import { createSceneVertices, initialLights } from './geometry.ts';
+import { createSceneMesh, initialLights } from './geometry.ts';
 import { LTC_1, LTC_2 } from './ltcTables.ts';
 import {
   environmentLayout,
@@ -23,35 +23,34 @@ import {
 } from './shaders.ts';
 
 const SAMPLE_COUNT = 4;
+const INITIAL_PARAMS = {
+  exposure: 1.12,
+  environmentIntensity: 0.42,
+  diffuseIblStrength: 0.06,
+  specularIblStrength: 1.15,
+} satisfies d.InferInput<typeof RenderParams>;
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const vertices = createSceneVertices();
+const mesh = createSceneMesh();
 const vertexBuffer = root
-  .createBuffer(vertexLayout.schemaForCount(vertices.length), vertices)
+  .createBuffer(vertexLayout.schemaForCount(mesh.vertexCount), (buffer) =>
+    common.writeSoA(buffer, mesh.data),
+  )
   .$usage('vertex');
 
 const cameraUniform = root.createUniform(Camera);
 const lightsUniform = root.createUniform(Lights, initialLights);
-const paramsUniform = root.createUniform(RenderParams, {
-  exposure: 1.12,
-  environmentIntensity: 0.42,
-  diffuseIblStrength: 0.06,
-  specularIblStrength: 1.15,
-});
+const paramsUniform = root.createUniform(RenderParams, INITIAL_PARAMS);
 
-const ltcMatTexture = root
-  .createTexture({ size: [64, 64], format: 'rgba32float' })
-  .$usage('sampled');
-ltcMatTexture.write(LTC_1);
-
-const ltcAmpTexture = root
-  .createTexture({ size: [64, 64], format: 'rgba32float' })
-  .$usage('sampled');
-ltcAmpTexture.write(LTC_2);
+function createLtcTexture(data: Float32Array) {
+  const texture = root.createTexture({ size: [64, 64], format: 'rgba32float' }).$usage('sampled');
+  texture.write(data);
+  return texture;
+}
 
 const sceneBindGroup = root.createBindGroup(sceneLayout, {
   camera: cameraUniform.buffer,
@@ -60,8 +59,8 @@ const sceneBindGroup = root.createBindGroup(sceneLayout, {
 });
 
 const ltcBindGroup = root.createBindGroup(ltcLayout, {
-  ltcMat: ltcMatTexture,
-  ltcAmp: ltcAmpTexture,
+  ltcMat: createLtcTexture(LTC_1),
+  ltcAmp: createLtcTexture(LTC_2),
 });
 
 const environmentTexture = root
@@ -85,21 +84,30 @@ const environmentBindGroup = root.createBindGroup(environmentLayout, {
   environmentSampler,
 });
 
-let colorTexture = root
-  .createTexture({
-    size: [canvas.width, canvas.height],
-    format: presentationFormat,
-    sampleCount: SAMPLE_COUNT,
-  })
-  .$usage('render');
+const framebufferSize = () => [canvas.width, canvas.height] as [number, number];
 
-let depthTexture = root
-  .createTexture({
-    size: [canvas.width, canvas.height],
-    format: 'depth24plus',
-    sampleCount: SAMPLE_COUNT,
-  })
-  .$usage('render');
+function createColorTexture() {
+  return root
+    .createTexture({
+      size: framebufferSize(),
+      format: presentationFormat,
+      sampleCount: SAMPLE_COUNT,
+    })
+    .$usage('render');
+}
+
+function createDepthTexture() {
+  return root
+    .createTexture({
+      size: framebufferSize(),
+      format: 'depth24plus',
+      sampleCount: SAMPLE_COUNT,
+    })
+    .$usage('render');
+}
+
+let colorTexture = createColorTexture();
+let depthTexture = createDepthTexture();
 
 const skyPipeline = root.createRenderPipeline({
   vertex: skyVertex,
@@ -140,22 +148,9 @@ const { cleanupCamera } = setupOrbitCamera(
 
 const resizeObserver = new ResizeObserver(() => {
   colorTexture.destroy();
-  colorTexture = root
-    .createTexture({
-      size: [canvas.width, canvas.height],
-      format: presentationFormat,
-      sampleCount: SAMPLE_COUNT,
-    })
-    .$usage('render');
-
   depthTexture.destroy();
-  depthTexture = root
-    .createTexture({
-      size: [canvas.width, canvas.height],
-      format: 'depth24plus',
-      sampleCount: SAMPLE_COUNT,
-    })
-    .$usage('render');
+  colorTexture = createColorTexture();
+  depthTexture = createDepthTexture();
 });
 resizeObserver.observe(canvas);
 
@@ -189,7 +184,7 @@ function render() {
       depthLoadOp: 'clear',
       depthStoreOp: 'store',
     })
-    .draw(vertices.length);
+    .draw(mesh.vertexCount);
 
   lightPipeline
     .with(sceneBindGroup)
@@ -211,68 +206,59 @@ function render() {
 
 animationFrameId = requestAnimationFrame(render);
 
+const LIGHT_CONTROLS = [
+  { label: 'key', index: 0, max: 12 },
+  { label: 'fill', index: 1, max: 12 },
+  { label: 'rim', index: 2, max: 8 },
+] as const;
+
+const lightControls = Object.assign(
+  {},
+  ...LIGHT_CONTROLS.map(({ label, index, max }) => ({
+    [`${label} intensity`]: {
+      initial: initialLights[index].intensity,
+      min: 0,
+      max,
+      step: 0.1,
+      onSliderChange: (intensity: number) => lightsUniform.patch({ [index]: { intensity } }),
+    },
+    [`${label} color`]: {
+      initial: d.vec3f(...initialLights[index].color),
+      onColorChange: (color: d.v3f) => lightsUniform.patch({ [index]: { color } }),
+    },
+  })),
+);
+
 export const controls = defineControls({
   exposure: {
-    initial: 1.12,
+    initial: INITIAL_PARAMS.exposure,
     min: 0.2,
     max: 2,
     step: 0.01,
     onSliderChange: (exposure) => paramsUniform.patch({ exposure }),
   },
   environment: {
-    initial: 0.42,
+    initial: INITIAL_PARAMS.environmentIntensity,
     min: 0,
     max: 2,
     step: 0.01,
     onSliderChange: (environmentIntensity) => paramsUniform.patch({ environmentIntensity }),
   },
   'diffuse ibl': {
-    initial: 0.06,
+    initial: INITIAL_PARAMS.diffuseIblStrength,
     min: 0,
     max: 1,
     step: 0.01,
     onSliderChange: (diffuseIblStrength) => paramsUniform.patch({ diffuseIblStrength }),
   },
   'specular ibl': {
-    initial: 1.15,
+    initial: INITIAL_PARAMS.specularIblStrength,
     min: 0,
     max: 1.5,
     step: 0.01,
     onSliderChange: (specularIblStrength) => paramsUniform.patch({ specularIblStrength }),
   },
-  'key intensity': {
-    initial: initialLights[0].intensity,
-    min: 0,
-    max: 12,
-    step: 0.1,
-    onSliderChange: (intensity) => lightsUniform.patch({ 0: { intensity } }),
-  },
-  'key color': {
-    initial: d.vec3f(...initialLights[0].color),
-    onColorChange: (color) => lightsUniform.patch({ 0: { color } }),
-  },
-  'fill intensity': {
-    initial: initialLights[1].intensity,
-    min: 0,
-    max: 12,
-    step: 0.1,
-    onSliderChange: (intensity) => lightsUniform.patch({ 1: { intensity } }),
-  },
-  'fill color': {
-    initial: d.vec3f(...initialLights[1].color),
-    onColorChange: (color) => lightsUniform.patch({ 1: { color } }),
-  },
-  'rim intensity': {
-    initial: initialLights[2].intensity,
-    min: 0,
-    max: 8,
-    step: 0.1,
-    onSliderChange: (intensity) => lightsUniform.patch({ 2: { intensity } }),
-  },
-  'rim color': {
-    initial: d.vec3f(...initialLights[2].color),
-    onColorChange: (color) => lightsUniform.patch({ 2: { color } }),
-  },
+  ...lightControls,
 });
 
 export function onCleanup() {

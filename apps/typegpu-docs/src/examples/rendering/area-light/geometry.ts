@@ -1,23 +1,8 @@
-import type { ExampleVertex } from './schemas.ts';
+import type { common, d } from 'typegpu';
+import type { Lights, Vertex } from './schemas.ts';
 
+type Vec2 = [number, number];
 type Vec3 = [number, number, number];
-
-function add(a: Vec3, b: Vec3): Vec3 {
-  return [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-}
-
-function sub(a: Vec3, b: Vec3): Vec3 {
-  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-}
-
-function mul(v: Vec3, scale: number): Vec3 {
-  return [v[0] * scale, v[1] * scale, v[2] * scale];
-}
-
-function normalize(v: Vec3): Vec3 {
-  const len = Math.hypot(v[0], v[1], v[2]);
-  return len > 0 ? [v[0] / len, v[1] / len, v[2] / len] : [0, 1, 0];
-}
 
 interface Material {
   albedo: Vec3;
@@ -25,12 +10,103 @@ interface Material {
   metallic: number;
 }
 
-function vertex(position: Vec3, normal: Vec3, mat: Material): ExampleVertex {
-  return { position, normal, albedo: mat.albedo, roughness: mat.roughness, metallic: mat.metallic };
+export interface SceneMesh {
+  vertexCount: number;
+  data: common.writeSoA.InputFor<typeof Vertex.propTypes>;
 }
 
+const SPHERE_SEGMENTS = 48;
+const SPHERE_RINGS = 24;
+const QUAD_VERTICES = 6;
+const BOX_VERTICES = QUAD_VERTICES * 6;
+const SPHERE_VERTICES = SPHERE_SEGMENTS * SPHERE_RINGS * QUAD_VERTICES;
+const SCENE_VERTEX_COUNT = QUAD_VERTICES * 2 + BOX_VERTICES * 3 + SPHERE_VERTICES * 4;
+
+const v3 = (x: number, y: number, z: number): Vec3 => [x, y, z];
+const add = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const scale = (v: Vec3, by: number): Vec3 => [v[0] * by, v[1] * by, v[2] * by];
+
+function normalize(v: Vec3): Vec3 {
+  const length = Math.hypot(v[0], v[1], v[2]);
+  return length > 0 ? scale(v, 1 / length) : v3(0, 1, 0);
+}
+
+function material(albedo: Vec3, roughness: number, metallic = 0): Material {
+  return { albedo, roughness, metallic };
+}
+
+const materials = {
+  floor: material(v3(0.025, 0.028, 0.032), 0.08),
+  backdrop: material(v3(0.018, 0.021, 0.029), 0.42),
+  plinth: material(v3(0.045, 0.048, 0.047), 0.12),
+  block: material(v3(0.025, 0.027, 0.034), 0.18),
+  gold: material(v3(1, 0.62, 0.18), 0.18, 0.55),
+  ceramic: material(v3(0.18, 0.22, 0.22), 0.16),
+  plastic: material(v3(0.025, 0.07, 0.18), 0.16),
+} satisfies Record<string, Material>;
+
+export const initialLights = [
+  {
+    center: v3(0, 3.05, -0.55),
+    dirX: v3(1, 0, 0),
+    dirY: v3(0, 0, 1),
+    halfSize: [1.25, 0.75] satisfies Vec2,
+    color: v3(1, 0.16, 0.74),
+    intensity: 9,
+  },
+  {
+    center: v3(-3.4, 1.6, 1.8),
+    dirX: v3(0, 0, 1),
+    dirY: v3(0, 1, 0),
+    halfSize: [0.7, 0.95] satisfies Vec2,
+    color: v3(0.05, 0.78, 1),
+    intensity: 6.5,
+  },
+  {
+    center: v3(3.1, 1.45, -2.5),
+    dirX: v3(1, 0, 0),
+    dirY: v3(0, 1, 0),
+    halfSize: [0.55, 0.8] satisfies Vec2,
+    color: v3(0.25, 1, 0.52),
+    intensity: 5.2,
+  },
+] satisfies d.InferInput<typeof Lights>;
+
+function createMeshWriter(vertexCount: number) {
+  const data = {
+    position: new Float32Array(vertexCount * 3),
+    normal: new Float32Array(vertexCount * 3),
+    albedo: new Float32Array(vertexCount * 3),
+    roughness: new Float32Array(vertexCount),
+    metallic: new Float32Array(vertexCount),
+  } satisfies SceneMesh['data'];
+
+  let cursor = 0;
+
+  function vertex(position: Vec3, normal: Vec3, mat: Material) {
+    const vecOffset = cursor * 3;
+    data.position.set(position, vecOffset);
+    data.normal.set(normal, vecOffset);
+    data.albedo.set(mat.albedo, vecOffset);
+    data.roughness[cursor] = mat.roughness;
+    data.metallic[cursor] = mat.metallic;
+    cursor++;
+  }
+
+  return {
+    data,
+    get vertexCount() {
+      return cursor;
+    },
+    vertex,
+  };
+}
+
+type MeshWriter = ReturnType<typeof createMeshWriter>;
+
 function pushQuad(
-  vertices: ExampleVertex[],
+  mesh: MeshWriter,
   center: Vec3,
   axisU: Vec3,
   axisV: Vec3,
@@ -41,161 +117,76 @@ function pushQuad(
   const p1 = sub(add(center, axisU), axisV);
   const p2 = add(add(center, axisU), axisV);
   const p3 = add(sub(center, axisU), axisV);
-  vertices.push(
-    vertex(p0, normal, mat),
-    vertex(p1, normal, mat),
-    vertex(p2, normal, mat),
-    vertex(p0, normal, mat),
-    vertex(p2, normal, mat),
-    vertex(p3, normal, mat),
-  );
+
+  mesh.vertex(p0, normal, mat);
+  mesh.vertex(p1, normal, mat);
+  mesh.vertex(p2, normal, mat);
+  mesh.vertex(p0, normal, mat);
+  mesh.vertex(p2, normal, mat);
+  mesh.vertex(p3, normal, mat);
 }
 
-function pushBox(vertices: ExampleVertex[], center: Vec3, halfExtents: Vec3, mat: Material) {
+function pushBox(mesh: MeshWriter, center: Vec3, halfExtents: Vec3, mat: Material) {
+  const [x, y, z] = center;
   const [hx, hy, hz] = halfExtents;
+  const face = (offset: Vec3, axisU: Vec3, axisV: Vec3, normal: Vec3) =>
+    pushQuad(mesh, v3(x + offset[0], y + offset[1], z + offset[2]), axisU, axisV, normal, mat);
 
-  pushQuad(
-    vertices,
-    [center[0], center[1] + hy, center[2]],
-    [hx, 0, 0],
-    [0, 0, -hz],
-    [0, 1, 0],
-    mat,
-  );
-  pushQuad(
-    vertices,
-    [center[0], center[1] - hy, center[2]],
-    [hx, 0, 0],
-    [0, 0, hz],
-    [0, -1, 0],
-    mat,
-  );
-  pushQuad(
-    vertices,
-    [center[0], center[1], center[2] + hz],
-    [hx, 0, 0],
-    [0, hy, 0],
-    [0, 0, 1],
-    mat,
-  );
-  pushQuad(
-    vertices,
-    [center[0], center[1], center[2] - hz],
-    [hx, 0, 0],
-    [0, hy, 0],
-    [0, 0, -1],
-    mat,
-  );
-  pushQuad(
-    vertices,
-    [center[0] - hx, center[1], center[2]],
-    [0, 0, hz],
-    [0, hy, 0],
-    [-1, 0, 0],
-    mat,
-  );
-  pushQuad(
-    vertices,
-    [center[0] + hx, center[1], center[2]],
-    [0, 0, hz],
-    [0, hy, 0],
-    [1, 0, 0],
-    mat,
-  );
+  face(v3(0, hy, 0), v3(hx, 0, 0), v3(0, 0, -hz), v3(0, 1, 0));
+  face(v3(0, -hy, 0), v3(hx, 0, 0), v3(0, 0, hz), v3(0, -1, 0));
+  face(v3(0, 0, hz), v3(hx, 0, 0), v3(0, hy, 0), v3(0, 0, 1));
+  face(v3(0, 0, -hz), v3(hx, 0, 0), v3(0, hy, 0), v3(0, 0, -1));
+  face(v3(-hx, 0, 0), v3(0, 0, hz), v3(0, hy, 0), v3(-1, 0, 0));
+  face(v3(hx, 0, 0), v3(0, 0, hz), v3(0, hy, 0), v3(1, 0, 0));
 }
 
-function pushSphere(vertices: ExampleVertex[], center: Vec3, radius: number, mat: Material) {
-  const segments = 48;
-  const rings = 24;
+function spherePoint(center: Vec3, radius: number, u: number, v: number): [Vec3, Vec3] {
+  const theta = v * Math.PI;
+  const phi = u * Math.PI * 2;
+  const normal = normalize(
+    v3(Math.sin(theta) * Math.cos(phi), Math.cos(theta), Math.sin(theta) * Math.sin(phi)),
+  );
 
-  function spherePoint(u: number, v: number): { position: Vec3; normal: Vec3 } {
-    const theta = v * Math.PI;
-    const phi = u * Math.PI * 2;
-    const normal = normalize([
-      Math.sin(theta) * Math.cos(phi),
-      Math.cos(theta),
-      Math.sin(theta) * Math.sin(phi),
-    ]);
-    return { normal, position: add(center, mul(normal, radius)) };
-  }
+  return [add(center, scale(normal, radius)), normal];
+}
 
-  for (let y = 0; y < rings; y++) {
-    const v0 = y / rings;
-    const v1 = (y + 1) / rings;
+function pushSphere(mesh: MeshWriter, center: Vec3, radius: number, mat: Material) {
+  for (let y = 0; y < SPHERE_RINGS; y++) {
+    const v0 = y / SPHERE_RINGS;
+    const v1 = (y + 1) / SPHERE_RINGS;
 
-    for (let x = 0; x < segments; x++) {
-      const u0 = x / segments;
-      const u1 = (x + 1) / segments;
-      const a = spherePoint(u0, v0);
-      const b = spherePoint(u0, v1);
-      const c = spherePoint(u1, v1);
-      const d = spherePoint(u1, v0);
+    for (let x = 0; x < SPHERE_SEGMENTS; x++) {
+      const u0 = x / SPHERE_SEGMENTS;
+      const u1 = (x + 1) / SPHERE_SEGMENTS;
+      const [a, an] = spherePoint(center, radius, u0, v0);
+      const [b, bn] = spherePoint(center, radius, u0, v1);
+      const [c, cn] = spherePoint(center, radius, u1, v1);
+      const [d, dn] = spherePoint(center, radius, u1, v0);
 
-      vertices.push(
-        vertex(a.position, a.normal, mat),
-        vertex(b.position, b.normal, mat),
-        vertex(c.position, c.normal, mat),
-        vertex(a.position, a.normal, mat),
-        vertex(c.position, c.normal, mat),
-        vertex(d.position, d.normal, mat),
-      );
+      mesh.vertex(a, an, mat);
+      mesh.vertex(b, bn, mat);
+      mesh.vertex(c, cn, mat);
+      mesh.vertex(a, an, mat);
+      mesh.vertex(c, cn, mat);
+      mesh.vertex(d, dn, mat);
     }
   }
 }
 
-export const initialLights = [
-  {
-    center: [0, 3.05, -0.55] as Vec3,
-    dirX: [1, 0, 0] as Vec3,
-    dirY: [0, 0, 1] as Vec3,
-    halfSize: [1.25, 0.75] as [number, number],
-    color: [1, 0.16, 0.74] as Vec3,
-    intensity: 9.0,
-  },
-  {
-    center: [-3.4, 1.6, 1.8] as Vec3,
-    dirX: [0, 0, 1] as Vec3,
-    dirY: [0, 1, 0] as Vec3,
-    halfSize: [0.7, 0.95] as [number, number],
-    color: [0.05, 0.78, 1.0] as Vec3,
-    intensity: 6.5,
-  },
-  {
-    center: [3.1, 1.45, -2.5] as Vec3,
-    dirX: [1, 0, 0] as Vec3,
-    dirY: [0, 1, 0] as Vec3,
-    halfSize: [0.55, 0.8] as [number, number],
-    color: [0.25, 1.0, 0.52] as Vec3,
-    intensity: 5.2,
-  },
-];
+export function createSceneMesh(): SceneMesh {
+  const mesh = createMeshWriter(SCENE_VERTEX_COUNT);
 
-const FLOOR_MATERIAL: Material = { albedo: [0.025, 0.028, 0.032], roughness: 0.08, metallic: 0 };
-const BACKDROP_MATERIAL: Material = { albedo: [0.018, 0.021, 0.029], roughness: 0.42, metallic: 0 };
-const PLINTH_MATERIAL: Material = { albedo: [0.045, 0.048, 0.047], roughness: 0.12, metallic: 0 };
-const DARK_BLOCK_MATERIAL: Material = {
-  albedo: [0.025, 0.027, 0.034],
-  roughness: 0.18,
-  metallic: 0,
-};
-const GOLD_SPHERE: Material = { albedo: [1.0, 0.62, 0.18], roughness: 0.18, metallic: 0.55 };
-const CERAMIC_SPHERE: Material = { albedo: [0.18, 0.22, 0.22], roughness: 0.16, metallic: 0 };
-const PLASTIC_SPHERE: Material = { albedo: [0.025, 0.07, 0.18], roughness: 0.16, metallic: 0 };
+  pushQuad(mesh, v3(0, 0, 0), v3(5, 0, 0), v3(0, 0, -4.2), v3(0, 1, 0), materials.floor);
+  pushQuad(mesh, v3(0, 1.45, -3.3), v3(4.2, 0, 0), v3(0, 1.45, 0), v3(0, 0, 1), materials.backdrop);
 
-export function createSceneVertices() {
-  const vertices: ExampleVertex[] = [];
+  pushBox(mesh, v3(0, 0.08, -0.7), v3(2.55, 0.08, 1.25), materials.plinth);
+  pushBox(mesh, v3(-2.55, 0.22, 0.9), v3(0.55, 0.22, 0.55), materials.block);
+  pushBox(mesh, v3(2.25, 0.14, 0.75), v3(0.65, 0.14, 0.45), materials.plinth);
 
-  pushQuad(vertices, [0, 0, 0], [5, 0, 0], [0, 0, -4.2], [0, 1, 0], FLOOR_MATERIAL);
-  pushQuad(vertices, [0, 1.45, -3.3], [4.2, 0, 0], [0, 1.45, 0], [0, 0, 1], BACKDROP_MATERIAL);
+  pushSphere(mesh, v3(-1.25, 0.88, -1.1), 0.72, materials.gold);
+  pushSphere(mesh, v3(0.3, 0.54, 0.35), 0.38, materials.ceramic);
+  pushSphere(mesh, v3(1.25, 0.72, -0.45), 0.56, materials.plastic);
+  pushSphere(mesh, v3(-2.55, 0.92, 0.9), 0.48, materials.plastic);
 
-  pushBox(vertices, [0, 0.08, -0.7], [2.55, 0.08, 1.25], PLINTH_MATERIAL);
-  pushBox(vertices, [-2.55, 0.22, 0.9], [0.55, 0.22, 0.55], DARK_BLOCK_MATERIAL);
-  pushBox(vertices, [2.25, 0.14, 0.75], [0.65, 0.14, 0.45], PLINTH_MATERIAL);
-
-  pushSphere(vertices, [-1.25, 0.88, -1.1], 0.72, GOLD_SPHERE);
-  pushSphere(vertices, [0.3, 0.54, 0.35], 0.38, CERAMIC_SPHERE);
-  pushSphere(vertices, [1.25, 0.72, -0.45], 0.56, PLASTIC_SPHERE);
-  pushSphere(vertices, [-2.55, 0.92, 0.9], 0.48, PLASTIC_SPHERE);
-
-  return vertices;
+  return { vertexCount: mesh.vertexCount, data: mesh.data };
 }
