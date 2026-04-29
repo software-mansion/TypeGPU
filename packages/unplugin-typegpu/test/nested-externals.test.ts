@@ -53,6 +53,12 @@ const codes = {
   'skips calls': `\
     import tgpu, { d } from 'typegpu';
 
+    const fn = () => {
+      'use gpu';
+      const a = ext.comptime().x;
+      const b = ext.runtime().y;
+    };
+
     const ext = {
       comptime: tgpu.comptime(() => {
         return d.vec4f();
@@ -63,12 +69,8 @@ const codes = {
       },
     };
 
-    const fn = () => {
-      'use gpu';
-      const a = ext.comptime().x;
-      const b = ext.runtime().y;
-    };
     console.log(fn);`,
+  // TODO: private access test
 };
 
 describe('externals gathering', () => {
@@ -77,10 +79,14 @@ describe('externals gathering', () => {
       const code = codes['allows multiple usages of one external'];
 
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
-        "() => {
-            return {
-              ext
-            };
+        "{
+            ext: {
+              value: () => ext.value,
+              config: {
+                multiplier: () => ext.config.multiplier,
+                zero: () => ext.config.zero
+              }
+            }
           }"
       `);
     });
@@ -89,10 +95,12 @@ describe('externals gathering', () => {
       const code = codes['treats dereference like a regular external'];
 
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
-        "() => {
-            return {
-              buffer
-            };
+        "{
+            buffer: {
+              $: {
+                x: () => buffer.$.x
+              }
+            }
           }"
       `);
     });
@@ -101,10 +109,8 @@ describe('externals gathering', () => {
       const code = codes['skips computed prop access'];
 
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
-        "() => {
-            return {
-              ext
-            };
+        "{
+            ext: () => ext
           }"
       `);
     });
@@ -113,11 +119,12 @@ describe('externals gathering', () => {
       const code = codes['skips calls'];
 
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
-        "() => {
-              return {
-                d
-              };
-            }"
+        "{
+            ext: {
+              comptime: () => ext.comptime,
+              runtime: () => ext.runtime
+            }
+          }"
       `);
     });
   });
@@ -150,7 +157,7 @@ describe('externals gathering', () => {
     it('skips calls', async () => {
       const code = codes['skips calls'];
 
-      expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(`"() => ({d}),"`);
+      expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(`"() => ({ext}),"`);
     });
   });
 });
