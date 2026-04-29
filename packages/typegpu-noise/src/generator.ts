@@ -70,9 +70,16 @@ export const XOROSHIRO64STARSTAR: StatefulGenerator = (() => {
 
   return {
     seed2: tgpu.fn([d.vec2f])((value) => {
-      const hx = hash(d.u32(value.x) ^ 2135587861);
-      const hy = hash(d.u32(value.y) ^ 2654435769);
+      const hx = hash(d.u32(value.x) ^ 0x4ab57dfb);
+      const hy = hash(d.u32(value.y) ^ 0xacdeda47);
       seed.$ = d.vec2u(hash(hx ^ hy), hash(rotl(hx, 16) ^ hy));
+    }),
+
+    seed3: tgpu.fn([d.vec3f])((value) => {
+      const hx = hash(d.u32(value.x) ^ 0x4ab57dfb);
+      const hy = hash(d.u32(value.y) ^ 0xacdeda47);
+      const hz = hash(d.u32(value.z) ^ 0xbca0294b);
+      seed.$ = d.vec2u(hash(hx ^ rotl(hz, 16)), hash(rotl(hy, 16) ^ hz));
     }),
 
     sample: randomGeneratorShell(() => {
@@ -89,12 +96,25 @@ export const XOROSHIRO64STARSTAR: StatefulGenerator = (() => {
 export const LCG32: StatefulGenerator = (() => {
   const seed = tgpu.privateVar(d.u32);
 
-  const multiplier = d.u32(1664525);
-  const increment = d.u32(1013904223);
+  const multiplier = 0x19660d;
+  const increment = 0x3c6ef35f;
 
   return {
     seed: tgpu.fn([d.f32])((value) => {
-      seed.$ = hash(d.u32(value));
+      seed.$ = hash(d.u32(value) ^ 0x4ab57dfb);
+    }),
+
+    seed2: tgpu.fn([d.vec2f])((value) => {
+      const hx = hash(d.u32(value.x) ^ 0x4ab57dfb);
+      const hy = hash(d.u32(value.y) ^ 0xacdeda47);
+      seed.$ = hash(hx ^ rotl(hy, 16));
+    }),
+
+    seed3: tgpu.fn([d.vec3f])((value) => {
+      const hx = hash(d.u32(value.x) ^ 0x4ab57dfb);
+      const hy = hash(d.u32(value.y) ^ 0xacdeda47);
+      const hz = hash(d.u32(value.z) ^ 0xbca0294b);
+      seed.$ = hash(hash(hx ^ rotl(hy, 16)) ^ hz);
     }),
 
     sample: randomGeneratorShell(() => {
