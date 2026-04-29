@@ -55,6 +55,7 @@ function directAreaLighting(
   roughness: number,
   metallic: number,
   f0: d.v3f,
+  specularBoost: number,
 ) {
   'use gpu';
   const uv = ltcUv(roughness, saturate(std.dot(N, V)));
@@ -69,7 +70,9 @@ function directAreaLighting(
     const diffuseIntegral = evaluateLtcAreaLight(N, V, P, d.mat3x3f.identity(), light);
     const specularIntegral = evaluateLtcAreaLight(N, V, P, Minv, light);
     result +=
-      light.color * light.intensity * (diffuse * diffuseIntegral + fresnel * specularIntegral);
+      light.color *
+      light.intensity *
+      (diffuse * diffuseIntegral + fresnel * specularIntegral * specularBoost);
   }
 
   return result;
@@ -82,6 +85,7 @@ function environmentLighting(
   roughness: number,
   metallic: number,
   f0: d.v3f,
+  specularBoost: number,
 ) {
   'use gpu';
   const NdotV = saturate(std.dot(N, V));
@@ -96,7 +100,8 @@ function environmentLighting(
     sampleEnvironment(std.reflect(std.neg(V), N), roughness) *
     fresnelSchlick(NdotV, f0) *
     (1 - roughness * 0.35) *
-    sceneLayout.$.params.specularIblStrength;
+    sceneLayout.$.params.specularIblStrength *
+    specularBoost;
 
   return diffuse + specular;
 }
@@ -110,8 +115,9 @@ export const mainVertex = tgpu.vertexFn({
     albedo: d.vec3f,
     roughness: d.f32,
     metallic: d.f32,
+    wetness: d.f32,
   },
-})(({ position, normal, albedo, roughness, metallic }) => {
+})(({ position, normal, albedo, roughness, metallic, wetness }) => {
   'use gpu';
   const camera = sceneLayout.$.camera;
   return {
@@ -121,6 +127,7 @@ export const mainVertex = tgpu.vertexFn({
     albedo,
     roughness,
     metallic,
+    wetness,
   };
 });
 
@@ -131,16 +138,29 @@ export const mainFragment = tgpu.fragmentFn({
     albedo: d.vec3f,
     roughness: d.f32,
     metallic: d.f32,
+    wetness: d.f32,
   },
   out: d.vec4f,
-})(({ worldPos, normal, albedo, roughness, metallic }) => {
+})(({ worldPos, normal, albedo, roughness, metallic, wetness }) => {
   'use gpu';
   const N = std.normalize(normal);
   const V = std.normalize(sceneLayout.$.camera.position.xyz - worldPos);
-  const materialRoughness = std.clamp(roughness, 0.04, 1);
-  const f0 = materialF0(albedo, metallic);
-  const direct = directAreaLighting(N, V, worldPos, albedo, materialRoughness, metallic, f0);
-  const ibl = environmentLighting(N, V, albedo, materialRoughness, metallic, f0);
+  const wetSurface = wetness * sceneLayout.$.params.wetness;
+  const materialRoughness = std.clamp(std.mix(roughness, 0.018, wetSurface), 0.012, 1);
+  const wetAlbedo = std.mix(albedo, albedo * 0.35, wetSurface);
+  const specularBoost = 1 + wetSurface * 3.2;
+  const f0 = std.mix(materialF0(albedo, metallic), d.vec3f(0.08), wetSurface * (1 - metallic));
+  const direct = directAreaLighting(
+    N,
+    V,
+    worldPos,
+    wetAlbedo,
+    materialRoughness,
+    metallic,
+    f0,
+    specularBoost,
+  );
+  const ibl = environmentLighting(N, V, wetAlbedo, materialRoughness, metallic, f0, specularBoost);
 
   return d.vec4f(tonemap(direct + ibl), 1);
 });

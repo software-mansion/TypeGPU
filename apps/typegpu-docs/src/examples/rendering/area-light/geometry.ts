@@ -8,6 +8,7 @@ interface Material {
   albedo: Vec3;
   roughness: number;
   metallic: number;
+  wetness: number;
 }
 
 export interface SceneMesh {
@@ -32,15 +33,15 @@ function normalize(v: Vec3): Vec3 {
   return length > 0 ? scale(v, 1 / length) : v3(0, 1, 0);
 }
 
-function material(albedo: Vec3, roughness: number, metallic = 0): Material {
-  return { albedo, roughness, metallic };
+function material(albedo: Vec3, roughness: number, metallic = 0, wetness = 0): Material {
+  return { albedo, roughness, metallic, wetness };
 }
 
 const materials = {
-  floor: material(v3(0.025, 0.028, 0.032), 0.08),
+  floor: material(v3(0.025, 0.028, 0.032), 0.1, 0, 1),
   backdrop: material(v3(0.018, 0.021, 0.029), 0.42),
-  plinth: material(v3(0.045, 0.048, 0.047), 0.12),
-  block: material(v3(0.025, 0.027, 0.034), 0.18),
+  plinth: material(v3(0.045, 0.048, 0.047), 0.14, 0, 0.7),
+  block: material(v3(0.025, 0.027, 0.034), 0.18, 0, 0.5),
   gold: material(v3(1, 0.62, 0.18), 0.18, 0.55),
   ceramic: material(v3(0.18, 0.22, 0.22), 0.16),
   plastic: material(v3(0.025, 0.07, 0.18), 0.16),
@@ -80,6 +81,7 @@ function createMeshWriter(vertexCount: number) {
     albedo: new Float32Array(vertexCount * 3),
     roughness: new Float32Array(vertexCount),
     metallic: new Float32Array(vertexCount),
+    wetness: new Float32Array(vertexCount),
   } satisfies SceneMesh['data'];
 
   let cursor = 0;
@@ -91,6 +93,7 @@ function createMeshWriter(vertexCount: number) {
     data.albedo.set(mat.albedo, vecOffset);
     data.roughness[cursor] = mat.roughness;
     data.metallic[cursor] = mat.metallic;
+    data.wetness[cursor] = mat.wetness;
     cursor++;
   }
 
