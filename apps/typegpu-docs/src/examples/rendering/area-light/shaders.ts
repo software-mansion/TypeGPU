@@ -1,4 +1,5 @@
 import tgpu, { d, std } from 'typegpu';
+import { perlin2d } from '@typegpu/noise';
 import { ENVIRONMENT_MIP_LEVELS } from './environment.ts';
 import { evaluateLtcAreaLight, ltcUv, sampleLtcAmplitude, sampleLtcMatrix } from './ltc.ts';
 import { environmentLayout, LIGHT_COUNT, sceneLayout, Vertex, vertexLayout } from './schemas.ts';
@@ -45,6 +46,29 @@ function tonemap(color: d.v3f) {
 function materialF0(albedo: d.v3f, metallic: number) {
   'use gpu';
   return std.mix(d.vec3f(0.04), albedo, metallic);
+}
+
+function noise01(p: d.v2f) {
+  'use gpu';
+  return perlin2d.sample(p) * 0.5 + 0.5;
+}
+
+function fbm(p: d.v2f) {
+  'use gpu';
+  return noise01(p) * 0.55 + noise01(p * 2.3 + 19.1) * 0.3 + noise01(p * 5.1 - 8.7) * 0.15;
+}
+
+function waterNormal(N: d.v3f, worldPos: d.v3f, amount: number) {
+  'use gpu';
+  const t = sceneLayout.$.params.time;
+  const phase = d.vec2f(std.sin(t * 0.035), std.cos(t * 0.027)) * 0.08;
+  const p = worldPos.xz * 0.55 + phase;
+  const center = fbm(p);
+  const gradient =
+    d.vec2f(fbm(p + d.vec2f(0.12, 0)) - center, fbm(p + d.vec2f(0, 0.12)) - center) * 0.55;
+  const waterN = std.normalize(d.vec3f(std.neg(gradient.x), 1, std.neg(gradient.y)));
+
+  return std.normalize(std.mix(N, waterN, amount));
 }
 
 function directAreaLighting(
@@ -143,12 +167,16 @@ export const mainFragment = tgpu.fragmentFn({
   out: d.vec4f,
 })(({ worldPos, normal, albedo, roughness, metallic, wetness }) => {
   'use gpu';
-  const N = std.normalize(normal);
+  const geometricN = std.normalize(normal);
   const V = std.normalize(sceneLayout.$.camera.position.xyz - worldPos);
-  const wetSurface = wetness * sceneLayout.$.params.wetness;
-  const materialRoughness = std.clamp(std.mix(roughness, 0.018, wetSurface), 0.012, 1);
-  const wetAlbedo = std.mix(albedo, albedo * 0.35, wetSurface);
-  const specularBoost = 1 + wetSurface * 3.2;
+  const water = wetness * sceneLayout.$.params.wetness * saturate(geometricN.y * 1.35);
+  const film = water * std.mix(0.94, 1, fbm(worldPos.xz * 0.42 + 30.2));
+  const wetSurface = saturate(film);
+  const N = waterNormal(geometricN, worldPos, water);
+  const waterRoughness = std.mix(0.055, 0.01, water);
+  const materialRoughness = std.clamp(std.mix(roughness, waterRoughness, wetSurface), 0.006, 1);
+  const wetAlbedo = std.mix(albedo, albedo * 0.2, wetSurface);
+  const specularBoost = 1 + film * 5.8;
   const f0 = std.mix(materialF0(albedo, metallic), d.vec3f(0.08), wetSurface * (1 - metallic));
   const direct = directAreaLighting(
     N,

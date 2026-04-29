@@ -29,6 +29,7 @@ export const RenderParams = d.struct({
   diffuseIblStrength: d.f32,
   specularIblStrength: d.f32,
   wetness: d.f32,
+  time: d.f32,
 });
 
 export const vertexLayout = tgpu.vertexLayout(d.arrayOf(Vertex));
