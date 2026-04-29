@@ -51,6 +51,59 @@ function pushQuad(
   );
 }
 
+function pushBox(vertices: ExampleVertex[], center: Vec3, halfExtents: Vec3, mat: Material) {
+  const [hx, hy, hz] = halfExtents;
+
+  pushQuad(
+    vertices,
+    [center[0], center[1] + hy, center[2]],
+    [hx, 0, 0],
+    [0, 0, -hz],
+    [0, 1, 0],
+    mat,
+  );
+  pushQuad(
+    vertices,
+    [center[0], center[1] - hy, center[2]],
+    [hx, 0, 0],
+    [0, 0, hz],
+    [0, -1, 0],
+    mat,
+  );
+  pushQuad(
+    vertices,
+    [center[0], center[1], center[2] + hz],
+    [hx, 0, 0],
+    [0, hy, 0],
+    [0, 0, 1],
+    mat,
+  );
+  pushQuad(
+    vertices,
+    [center[0], center[1], center[2] - hz],
+    [hx, 0, 0],
+    [0, hy, 0],
+    [0, 0, -1],
+    mat,
+  );
+  pushQuad(
+    vertices,
+    [center[0] - hx, center[1], center[2]],
+    [0, 0, hz],
+    [0, hy, 0],
+    [-1, 0, 0],
+    mat,
+  );
+  pushQuad(
+    vertices,
+    [center[0] + hx, center[1], center[2]],
+    [0, 0, hz],
+    [0, hy, 0],
+    [1, 0, 0],
+    mat,
+  );
+}
+
 function pushSphere(vertices: ExampleVertex[], center: Vec3, radius: number, mat: Material) {
   const segments = 48;
   const rings = 24;
@@ -92,7 +145,7 @@ function pushSphere(vertices: ExampleVertex[], center: Vec3, radius: number, mat
 
 export const initialLights = [
   {
-    center: [0, 3.2, -0.6] as Vec3,
+    center: [0, 3.15, -0.55] as Vec3,
     dirX: [1, 0, 0] as Vec3,
     dirY: [0, 0, 1] as Vec3,
     halfSize: [1.25, 0.75] as [number, number],
@@ -107,25 +160,38 @@ export const initialLights = [
     color: [0.35, 0.55, 1.0] as Vec3,
     intensity: 4.0,
   },
+  {
+    center: [3.1, 1.45, -2.5] as Vec3,
+    dirX: [1, 0, 0] as Vec3,
+    dirY: [0, 1, 0] as Vec3,
+    halfSize: [0.55, 0.8] as [number, number],
+    color: [0.72, 1.0, 0.82] as Vec3,
+    intensity: 2.4,
+  },
 ];
 
-const FLOOR_MATERIAL: Material = { albedo: [0.85, 0.83, 0.78], roughness: 0.08, metallic: 0 };
-const BACK_WALL: Material = { albedo: [0.32, 0.36, 0.44], roughness: 0.55, metallic: 0 };
-const LEFT_WALL: Material = { albedo: [0.55, 0.32, 0.3], roughness: 0.5, metallic: 0 };
-const RIGHT_WALL: Material = { albedo: [0.28, 0.42, 0.36], roughness: 0.5, metallic: 0 };
-const GOLD_SPHERE: Material = { albedo: [1.0, 0.78, 0.36], roughness: 0.08, metallic: 1 };
-const PLASTIC_SPHERE: Material = { albedo: [0.16, 0.28, 0.5], roughness: 0.4, metallic: 0 };
+const FLOOR_MATERIAL: Material = { albedo: [0.74, 0.76, 0.72], roughness: 0.48, metallic: 0 };
+const BACKDROP_MATERIAL: Material = { albedo: [0.28, 0.31, 0.37], roughness: 0.58, metallic: 0 };
+const PLINTH_MATERIAL: Material = { albedo: [0.52, 0.52, 0.48], roughness: 0.38, metallic: 0 };
+const DARK_BLOCK_MATERIAL: Material = { albedo: [0.24, 0.25, 0.29], roughness: 0.44, metallic: 0 };
+const GOLD_SPHERE: Material = { albedo: [1.0, 0.72, 0.26], roughness: 0.3, metallic: 0.12 };
+const CERAMIC_SPHERE: Material = { albedo: [0.82, 0.88, 0.8], roughness: 0.22, metallic: 0 };
+const PLASTIC_SPHERE: Material = { albedo: [0.13, 0.25, 0.5], roughness: 0.38, metallic: 0 };
 
 export function createSceneVertices() {
   const vertices: ExampleVertex[] = [];
 
-  pushQuad(vertices, [0, 0, 0], [4.5, 0, 0], [0, 0, -4.5], [0, 1, 0], FLOOR_MATERIAL);
-  pushQuad(vertices, [0, 1.8, -4.5], [4.5, 0, 0], [0, 1.8, 0], [0, 0, 1], BACK_WALL);
-  pushQuad(vertices, [-4.5, 1.8, 0], [0, 0, -4.5], [0, 1.8, 0], [1, 0, 0], LEFT_WALL);
-  pushQuad(vertices, [4.5, 1.8, 0], [0, 0, 4.5], [0, 1.8, 0], [-1, 0, 0], RIGHT_WALL);
+  pushQuad(vertices, [0, 0, 0], [5, 0, 0], [0, 0, -4.2], [0, 1, 0], FLOOR_MATERIAL);
+  pushQuad(vertices, [0, 1.45, -3.3], [4.2, 0, 0], [0, 1.45, 0], [0, 0, 1], BACKDROP_MATERIAL);
 
-  pushSphere(vertices, [-1.15, 0.82, -1.35], 0.82, GOLD_SPHERE);
-  pushSphere(vertices, [1.2, 0.58, 0.25], 0.58, PLASTIC_SPHERE);
+  pushBox(vertices, [0, 0.08, -0.7], [2.55, 0.08, 1.25], PLINTH_MATERIAL);
+  pushBox(vertices, [-2.55, 0.22, 0.9], [0.55, 0.22, 0.55], DARK_BLOCK_MATERIAL);
+  pushBox(vertices, [2.25, 0.14, 0.75], [0.65, 0.14, 0.45], PLINTH_MATERIAL);
+
+  pushSphere(vertices, [-1.25, 0.88, -1.1], 0.72, GOLD_SPHERE);
+  pushSphere(vertices, [0.3, 0.54, 0.35], 0.38, CERAMIC_SPHERE);
+  pushSphere(vertices, [1.25, 0.72, -0.45], 0.56, PLASTIC_SPHERE);
+  pushSphere(vertices, [-2.55, 0.92, 0.9], 0.48, PLASTIC_SPHERE);
 
   return vertices;
 }
