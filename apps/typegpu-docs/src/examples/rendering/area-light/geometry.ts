@@ -145,38 +145,42 @@ function pushSphere(vertices: ExampleVertex[], center: Vec3, radius: number, mat
 
 export const initialLights = [
   {
-    center: [0, 3.15, -0.55] as Vec3,
+    center: [0, 3.05, -0.55] as Vec3,
     dirX: [1, 0, 0] as Vec3,
     dirY: [0, 0, 1] as Vec3,
     halfSize: [1.25, 0.75] as [number, number],
-    color: [1, 0.78, 0.45] as Vec3,
-    intensity: 5.5,
+    color: [1, 0.16, 0.74] as Vec3,
+    intensity: 9.0,
   },
   {
     center: [-3.4, 1.6, 1.8] as Vec3,
     dirX: [0, 0, 1] as Vec3,
     dirY: [0, 1, 0] as Vec3,
     halfSize: [0.7, 0.95] as [number, number],
-    color: [0.35, 0.55, 1.0] as Vec3,
-    intensity: 4.0,
+    color: [0.05, 0.78, 1.0] as Vec3,
+    intensity: 6.5,
   },
   {
     center: [3.1, 1.45, -2.5] as Vec3,
     dirX: [1, 0, 0] as Vec3,
     dirY: [0, 1, 0] as Vec3,
     halfSize: [0.55, 0.8] as [number, number],
-    color: [0.72, 1.0, 0.82] as Vec3,
-    intensity: 2.4,
+    color: [0.25, 1.0, 0.52] as Vec3,
+    intensity: 5.2,
   },
 ];
 
-const FLOOR_MATERIAL: Material = { albedo: [0.74, 0.76, 0.72], roughness: 0.48, metallic: 0 };
-const BACKDROP_MATERIAL: Material = { albedo: [0.28, 0.31, 0.37], roughness: 0.58, metallic: 0 };
-const PLINTH_MATERIAL: Material = { albedo: [0.52, 0.52, 0.48], roughness: 0.38, metallic: 0 };
-const DARK_BLOCK_MATERIAL: Material = { albedo: [0.24, 0.25, 0.29], roughness: 0.44, metallic: 0 };
-const GOLD_SPHERE: Material = { albedo: [1.0, 0.72, 0.26], roughness: 0.3, metallic: 0.12 };
-const CERAMIC_SPHERE: Material = { albedo: [0.82, 0.88, 0.8], roughness: 0.22, metallic: 0 };
-const PLASTIC_SPHERE: Material = { albedo: [0.13, 0.25, 0.5], roughness: 0.38, metallic: 0 };
+const FLOOR_MATERIAL: Material = { albedo: [0.025, 0.028, 0.032], roughness: 0.08, metallic: 0 };
+const BACKDROP_MATERIAL: Material = { albedo: [0.018, 0.021, 0.029], roughness: 0.42, metallic: 0 };
+const PLINTH_MATERIAL: Material = { albedo: [0.045, 0.048, 0.047], roughness: 0.12, metallic: 0 };
+const DARK_BLOCK_MATERIAL: Material = {
+  albedo: [0.025, 0.027, 0.034],
+  roughness: 0.18,
+  metallic: 0,
+};
+const GOLD_SPHERE: Material = { albedo: [1.0, 0.62, 0.18], roughness: 0.18, metallic: 0.55 };
+const CERAMIC_SPHERE: Material = { albedo: [0.18, 0.22, 0.22], roughness: 0.16, metallic: 0 };
+const PLASTIC_SPHERE: Material = { albedo: [0.025, 0.07, 0.18], roughness: 0.16, metallic: 0 };
 
 export function createSceneVertices() {
   const vertices: ExampleVertex[] = [];

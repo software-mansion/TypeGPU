@@ -24,8 +24,9 @@ export const Lights = d.arrayOf(RectLight, LIGHT_COUNT);
 
 export const RenderParams = d.struct({
   exposure: d.f32,
-  ambientSky: d.vec3f,
-  ambientGround: d.vec3f,
+  environmentIntensity: d.f32,
+  diffuseIblStrength: d.f32,
+  specularIblStrength: d.f32,
 });
 
 export const HorizonClip = d.struct({
@@ -48,6 +49,11 @@ export const sceneLayout = tgpu.bindGroupLayout({
 export const ltcLayout = tgpu.bindGroupLayout({
   ltcMat: { texture: d.texture2d(d.f32), sampleType: 'unfilterable-float' },
   ltcAmp: { texture: d.texture2d(d.f32), sampleType: 'unfilterable-float' },
+});
+
+export const environmentLayout = tgpu.bindGroupLayout({
+  environmentMap: { texture: d.textureCube(d.f32) },
+  environmentSampler: { sampler: 'filtering' },
 });
 
 export type ExampleVertex = d.InferInput<typeof Vertex>;
