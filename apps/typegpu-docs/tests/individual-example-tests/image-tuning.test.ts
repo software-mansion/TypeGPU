@@ -37,10 +37,6 @@ describe('image tuning example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct fragment_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var imageView: texture_2d<f32>;
 
       @group(0) @binding(1) var imageSampler: sampler;
@@ -67,6 +63,10 @@ describe('image tuning example', () => {
       }
 
       @group(0) @binding(4) var<uniform> adjustments: Adjustments;
+
+      struct fragment_Input {
+        @location(0) uv: vec2f,
+      }
 
       @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
         var color = textureSample(imageView, imageSampler, _arg_0.uv).rgb;

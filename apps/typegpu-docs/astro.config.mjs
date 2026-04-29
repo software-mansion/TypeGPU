@@ -208,6 +208,10 @@ export default defineConfig({
               label: '@typegpu/sdf',
               slug: 'ecosystem/typegpu-sdf',
             },
+            {
+              label: '@typegpu/radiance-cascades',
+              slug: 'ecosystem/typegpu-radiance-cascades',
+            },
             DEV && {
               label: '@typegpu/color',
               slug: 'ecosystem/typegpu-color',
@@ -245,6 +249,11 @@ export default defineConfig({
             {
               label: 'Build Plugin',
               slug: 'tooling/unplugin-typegpu',
+            },
+            {
+              label: 'Lint Plugin',
+              slug: 'tooling/eslint-plugin-typegpu',
+              badge: { text: 'new' },
             },
             {
               label: 'Generator CLI',

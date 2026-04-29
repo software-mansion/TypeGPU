@@ -129,6 +129,7 @@ export interface matInfixNotation<T extends matBase> {
  */
 export interface AbstractInt extends BaseData {
   readonly type: 'abstractInt';
+  readonly concretized: I32;
   // Type-tokens, not available at runtime
   readonly [$repr]: number;
   readonly [$invalidSchemaReason]: 'Abstract numerics are not host-shareable';
@@ -140,6 +141,7 @@ export interface AbstractInt extends BaseData {
  */
 export interface AbstractFloat extends BaseData {
   readonly type: 'abstractFloat';
+  readonly concretized: F32;
   // Type-tokens, not available at runtime
   readonly [$repr]: number;
   readonly [$invalidSchemaReason]: 'Abstract numerics are not host-shareable';

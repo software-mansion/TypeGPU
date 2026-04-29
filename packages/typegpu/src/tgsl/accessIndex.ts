@@ -1,5 +1,5 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import { isDisarray, MatrixColumnsAccess, UnknownData } from '../data/dataTypes.ts';
+import { isDisarray, MatrixColumnsAccess } from '../data/dataTypes.ts';
 import { derefSnippet } from '../data/ref.ts';
 import { isEphemeralSnippet, type Origin, snip, type Snippet } from '../data/snippet.ts';
 import { vec2f, vec3f, vec4f } from '../data/vector.ts';
@@ -101,7 +101,7 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
     );
   }
 
-  if ((isKnownAtComptime(target) && isKnownAtComptime(index)) || target.dataType === UnknownData) {
+  if (isKnownAtComptime(target) && isKnownAtComptime(index)) {
     // No idea what the type is, so we act on the snippet's value and try to guess
     return coerceToSnippet(
       // oxlint-disable-next-line typescript/no-explicit-any -- we're inspecting the value, and it could be any value

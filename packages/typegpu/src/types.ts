@@ -99,11 +99,19 @@ export type ItemLayer = {
   usedSlots: Set<TgpuSlot<unknown>>;
 };
 
+export type FunctionArgumentAccess = () => Snippet | undefined;
+
+export interface FunctionArgument {
+  name: string;
+  access: FunctionArgumentAccess;
+  decoratedType: BaseData;
+  used: boolean;
+}
+
 export type FunctionScopeLayer = {
   type: 'functionScope';
   functionType: 'normal' | 'compute' | 'vertex' | 'fragment';
-  args: Snippet[];
-  argAliases: Record<string, Snippet>;
+  argAccess: Record<string, FunctionArgumentAccess>;
   externalMap: Record<string, unknown>;
   /**
    * The return type of the function. If undefined, the type should be inferred
@@ -138,8 +146,7 @@ export interface ItemStateStack {
   pushSlotBindings(pairs: SlotValuePair[]): void;
   pushFunctionScope(
     functionType: 'normal' | TgpuShaderStage,
-    args: Snippet[],
-    argAliases: Record<string, Snippet>,
+    argAccess: Record<string, FunctionArgumentAccess>,
     /**
      * The return type of the function. If undefined, the type should be inferred
      * from the implementation (relevant for shellless functions).
@@ -305,8 +312,7 @@ export interface ResolutionCtx {
   resolveSnippet(snippet: Snippet): ResolvedSnippet;
 
   fnToWgsl(options: FnToWgslOptions): {
-    head: Wgsl;
-    body: Wgsl;
+    code: string;
     returnType: BaseData;
   };
 
