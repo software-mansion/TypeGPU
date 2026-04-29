@@ -196,7 +196,7 @@ describe('autonaming', () => {
       			}), {
           v: 1,
           name: "myFun",
-          ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":{}},
           externals: () => ({}),
         }) && $.f)({}));
 
@@ -206,7 +206,7 @@ describe('autonaming', () => {
       			}), {
           v: 1,
           name: undefined,
-          ast: {"params":[],"body":[0,[[6,"myFun",[]]]],"externalNames":["myFun"]},
+          ast: {"params":[],"body":[0,[[6,"myFun",[]]]],"externalNames":{"myFun":"myFun"}},
           externals: () => ({myFun}),
         }) && $.f)({}))), "main"));
       			return main;

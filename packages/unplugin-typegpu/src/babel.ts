@@ -4,6 +4,7 @@ import { transpileFn } from 'tinyest-for-wgsl';
 import * as t from '@babel/types';
 import {
   METADATA_FORMAT_VERSION,
+  type Externals,
   type PluginState,
   defaultOptions,
   functionVisitor,
@@ -14,10 +15,6 @@ import { createFilterForId } from './core/filter.ts';
 
 function i(identifier: string): t.Identifier {
   return t.identifier(identifier);
-}
-
-interface Externals {
-  [key: string]: Externals | string;
 }
 
 function externalsToNode(externals: Externals | string): t.Expression {
