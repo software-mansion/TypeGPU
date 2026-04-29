@@ -23,6 +23,8 @@ import {
 } from './shaders.ts';
 
 const SAMPLE_COUNT = 4;
+const DISCO_TRANSITION_MS = 1600;
+const DISCO_HUE_SPEED = 0.00008;
 const INITIAL_PARAMS = {
   exposure: 1.12,
   environmentIntensity: 0.42,
@@ -111,8 +113,10 @@ let colorTexture = createColorTexture();
 let depthTexture = createDepthTexture();
 let skyGlow = INITIAL_PARAMS.environmentIntensity;
 let neonStrength = 1;
-let discoMode = false;
+let discoEnabled = false;
+let discoMix = 0;
 let discoStartedAt = performance.now();
+let previousFrameTime = discoStartedAt;
 
 const baseLightColors = [
   d.vec3f(...initialLights[0].color),
@@ -120,6 +124,7 @@ const baseLightColors = [
   d.vec3f(...initialLights[2].color),
 ] as const;
 const discoColors = [d.vec3f(), d.vec3f(), d.vec3f()] as const;
+const mixedLightColors = [d.vec3f(), d.vec3f(), d.vec3f()] as const;
 
 const skyPipeline = root.createRenderPipeline({
   vertex: skyVertex,
@@ -168,6 +173,20 @@ resizeObserver.observe(canvas);
 
 let animationFrameId: number;
 
+function clamp01(value: number) {
+  return Math.min(Math.max(value, 0), 1);
+}
+
+function smoothstep(value: number) {
+  return value * value * (3 - 2 * value);
+}
+
+function mixColor(target: d.v3f, from: d.v3f, to: d.v3f, amount: number) {
+  target[0] = from[0] + (to[0] - from[0]) * amount;
+  target[1] = from[1] + (to[1] - from[1]) * amount;
+  target[2] = from[2] + (to[2] - from[2]) * amount;
+}
+
 function writeHueColor(target: d.v3f, hue: number) {
   const h = (((hue % 1) + 1) % 1) * 6;
   const x = 1 - Math.abs((h % 2) - 1);
@@ -211,19 +230,29 @@ function restoreLights() {
 }
 
 function updateDisco(time: number) {
-  if (!discoMode) {
+  if (!discoEnabled && discoMix === 0) {
     return;
   }
 
-  const t = (time - discoStartedAt) * 0.00014;
+  const delta = Math.min(time - previousFrameTime, 64);
+  const targetMix = discoEnabled ? 1 : 0;
+  discoMix = clamp01(discoMix + Math.sign(targetMix - discoMix) * (delta / DISCO_TRANSITION_MS));
+
+  const blend = smoothstep(discoMix);
+  const t = (time - discoStartedAt) * DISCO_HUE_SPEED;
+  paramsUniform.patch({ environmentIntensity: skyGlow * (1 - blend) });
+
   for (const [index, color] of discoColors.entries()) {
     writeHueColor(color, t + index / discoColors.length);
-    patchLight(index as LightIndex, color, 0.82 + Math.sin(time * 0.003 + index * 1.7) * 0.18);
+    mixColor(mixedLightColors[index], baseLightColors[index], color, blend);
+    const pulse = smoothstep((Math.sin(time * 0.0015 + index * 2.2) + 1) * 0.5);
+    patchLight(index as LightIndex, mixedLightColors[index], 1 + (pulse - 1) * blend);
   }
 }
 
 function render(time: number) {
   updateDisco(time);
+  previousFrameTime = time;
 
   skyPipeline
     .with(sceneBindGroup)
@@ -278,11 +307,9 @@ export const controls = defineControls({
   'disco mode': {
     initial: false,
     onToggleChange: (enabled) => {
-      discoMode = enabled;
-      discoStartedAt = performance.now();
-      paramsUniform.patch({ environmentIntensity: enabled ? 0 : skyGlow });
-      if (!enabled) {
-        restoreLights();
+      discoEnabled = enabled;
+      if (enabled) {
+        discoStartedAt = performance.now();
       }
     },
   },
@@ -300,7 +327,7 @@ export const controls = defineControls({
     step: 0.01,
     onSliderChange: (environmentIntensity) => {
       skyGlow = environmentIntensity;
-      paramsUniform.patch({ environmentIntensity: discoMode ? 0 : skyGlow });
+      paramsUniform.patch({ environmentIntensity: skyGlow * (1 - smoothstep(discoMix)) });
     },
   },
   'wet reflections': {
@@ -317,7 +344,7 @@ export const controls = defineControls({
     step: 0.01,
     onSliderChange: (strength) => {
       neonStrength = strength;
-      if (!discoMode) {
+      if (!discoEnabled && discoMix === 0) {
         restoreLights();
       }
     },
