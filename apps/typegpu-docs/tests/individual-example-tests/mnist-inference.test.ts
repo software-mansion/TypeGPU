@@ -26,13 +26,13 @@ describe('mnist inference example', () => {
       "enable subgroups;
       enable f16;
 
+      @group(0) @binding(1) var<storage, read_write> output: array<f32>;
+
       @group(0) @binding(0) var<storage, read> input: array<f32>;
 
       @group(1) @binding(0) var<storage, read> weights: array<f32>;
 
       @group(1) @binding(1) var<storage, read> biases: array<f32>;
-
-      @group(0) @binding(1) var<storage, read_write> output: array<f32>;
 
       fn relu(x: f32) -> f32 {
         return max(0f, x);
@@ -40,10 +40,11 @@ describe('mnist inference example', () => {
 
       @compute @workgroup_size(64) fn defaultCompute(@builtin(global_invocation_id) gid: vec3u) {
         let i = gid.x;
-        let inputSize = arrayLength(&input);
-        if ((i >= inputSize)) {
+        let outLen = arrayLength(&output);
+        if ((i >= outLen)) {
           return;
         }
+        let inputSize = arrayLength(&input);
         let weightsOffset = (i * inputSize);
         var sum = 0f;
         for (var j = 0u; (j < inputSize); j++) {

@@ -4,6 +4,7 @@ import { downloadLayers } from './helpers.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
 const SIZE = 28;
+const WORKGROUP_SIZE = 64;
 
 const root = await tgpu.init({
   device: { optionalFeatures: ['timestamp-query', 'subgroups', 'shader-f16'] },
@@ -39,14 +40,15 @@ function relu(x: number): number {
 
 const defaultCompute = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
-  workgroupSize: [64],
+  workgroupSize: [WORKGROUP_SIZE],
 })(({ gid }) => {
   const i = gid.x;
-  const inputSize = ioLayout.$.input.length;
-  if (i >= inputSize) {
+  const outLen = ioLayout.$.output.length;
+  if (i >= outLen) {
     return;
   }
 
+  const inputSize = ioLayout.$.input.length;
   const weightsOffset = i * inputSize;
   let sum = float();
 
@@ -65,7 +67,7 @@ const subgroupCompute = tgpu.computeFn({
     sgid: d.builtin.subgroupId,
     nsg: d.builtin.numSubgroups,
   },
-  workgroupSize: [64],
+  workgroupSize: [WORKGROUP_SIZE],
 })(({ wid, sid, sgid, nsg }) => {
   const outLen = ioLayout.$.output.length;
   const inputSize = ioLayout.$.input.length;
@@ -155,7 +157,8 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
     }
     input.write(data);
 
-    const pipeline = useSubgroups && pipelines.subgroup ? pipelines.subgroup : pipelines.default;
+    const subgroupPipeline = useSubgroups ? pipelines.subgroup : null;
+    const pipeline = subgroupPipeline ?? pipelines.default;
 
     // Run the network
     for (let i = 0; i < buffers.length; i++) {
@@ -173,7 +176,10 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
         boundPipeline = boundPipeline.withTimestampWrites(descriptor);
       }
 
-      boundPipeline.dispatchWorkgroups(buffers[i].biases.dataType.elementCount);
+      const outputCount = buffers[i].biases.dataType.elementCount;
+      boundPipeline.dispatchWorkgroups(
+        subgroupPipeline ? outputCount : Math.ceil(outputCount / WORKGROUP_SIZE),
+      );
     }
 
     if (querySet?.available) {
