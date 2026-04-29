@@ -1,5 +1,13 @@
 import tgpu, { d, std } from 'typegpu';
-import { HorizonClip, ltcLayout, sceneLayout, Vertex, vertexLayout } from './schemas.ts';
+import {
+  HorizonClip,
+  LIGHT_COUNT,
+  ltcLayout,
+  RectLight,
+  sceneLayout,
+  Vertex,
+  vertexLayout,
+} from './schemas.ts';
 
 export { vertexLayout };
 
@@ -10,11 +18,6 @@ const LUT_BIAS = 0.5 / LUT_SIZE;
 function saturate(value: number) {
   'use gpu';
   return std.clamp(value, 0, 1);
-}
-
-function luminance(color: d.v3f) {
-  'use gpu';
-  return std.dot(color, d.vec3f(0.2126, 0.7152, 0.0722));
 }
 
 function integrateEdgeVec(v1: d.v3f, v2: d.v3f) {
@@ -123,7 +126,7 @@ function clipQuadToHorizon(p0: d.v3f, p1: d.v3f, p2: d.v3f, p3: d.v3f) {
   return HorizonClip({ l0, l1, l2, l3, l4, count });
 }
 
-function ltcEvaluate(N: d.v3f, V: d.v3f, P: d.v3f, Minv: d.m3x3f) {
+function ltcEvaluate(N: d.v3f, V: d.v3f, P: d.v3f, Minv: d.m3x3f, light: d.Infer<typeof RectLight>) {
   'use gpu';
   let T1 = V - N * std.dot(V, N);
   if (std.dot(T1, T1) < 1e-5) {
@@ -136,7 +139,6 @@ function ltcEvaluate(N: d.v3f, V: d.v3f, P: d.v3f, Minv: d.m3x3f) {
   T1 = std.normalize(T1);
   const T2 = std.cross(N, T1);
 
-  const light = sceneLayout.$.light;
   const ex = light.dirX * light.halfSize.x;
   const ey = light.dirY * light.halfSize.y;
   const p0 = light.center - ex - ey;
@@ -175,51 +177,39 @@ function ltcEvaluate(N: d.v3f, V: d.v3f, P: d.v3f, Minv: d.m3x3f) {
   return std.abs(sum);
 }
 
-function sampleLtcTexelMat(x: number, y: number) {
-  'use gpu';
-  const coord = d.vec2u(d.u32(x), d.u32(y));
-  return std.textureLoad(ltcLayout.$.ltcMat, coord, 0);
-}
-
-function sampleLtcTexelAmp(x: number, y: number) {
-  'use gpu';
-  const coord = d.vec2u(d.u32(x), d.u32(y));
-  return std.textureLoad(ltcLayout.$.ltcAmp, coord, 0);
-}
-
-function sampleLtcBilinearMat(uv: d.v2f) {
+function bilinearLoadLtcMat(uv: d.v2f) {
   'use gpu';
   const pos = std.clamp(uv * LUT_SIZE - 0.5, d.vec2f(0), d.vec2f(LUT_SIZE - 1));
   const base = std.floor(pos);
   const frac = pos - base;
   const next = std.min(base + 1, d.vec2f(LUT_SIZE - 1));
 
-  const t00 = sampleLtcTexelMat(base.x, base.y);
-  const t10 = sampleLtcTexelMat(next.x, base.y);
-  const t01 = sampleLtcTexelMat(base.x, next.y);
-  const t11 = sampleLtcTexelMat(next.x, next.y);
+  const t00 = std.textureLoad(ltcLayout.$.ltcMat, d.vec2u(d.u32(base.x), d.u32(base.y)), 0);
+  const t10 = std.textureLoad(ltcLayout.$.ltcMat, d.vec2u(d.u32(next.x), d.u32(base.y)), 0);
+  const t01 = std.textureLoad(ltcLayout.$.ltcMat, d.vec2u(d.u32(base.x), d.u32(next.y)), 0);
+  const t11 = std.textureLoad(ltcLayout.$.ltcMat, d.vec2u(d.u32(next.x), d.u32(next.y)), 0);
 
   return std.mix(std.mix(t00, t10, frac.x), std.mix(t01, t11, frac.x), frac.y);
 }
 
-function sampleLtcAmp(uv: d.v2f) {
+function bilinearLoadLtcAmp(uv: d.v2f) {
   'use gpu';
   const pos = std.clamp(uv * LUT_SIZE - 0.5, d.vec2f(0), d.vec2f(LUT_SIZE - 1));
   const base = std.floor(pos);
   const frac = pos - base;
   const next = std.min(base + 1, d.vec2f(LUT_SIZE - 1));
 
-  const t00 = sampleLtcTexelAmp(base.x, base.y);
-  const t10 = sampleLtcTexelAmp(next.x, base.y);
-  const t01 = sampleLtcTexelAmp(base.x, next.y);
-  const t11 = sampleLtcTexelAmp(next.x, next.y);
+  const t00 = std.textureLoad(ltcLayout.$.ltcAmp, d.vec2u(d.u32(base.x), d.u32(base.y)), 0);
+  const t10 = std.textureLoad(ltcLayout.$.ltcAmp, d.vec2u(d.u32(next.x), d.u32(base.y)), 0);
+  const t01 = std.textureLoad(ltcLayout.$.ltcAmp, d.vec2u(d.u32(base.x), d.u32(next.y)), 0);
+  const t11 = std.textureLoad(ltcLayout.$.ltcAmp, d.vec2u(d.u32(next.x), d.u32(next.y)), 0);
 
   return std.mix(std.mix(t00, t10, frac.x), std.mix(t01, t11, frac.x), frac.y);
 }
 
 function sampleLtcMat(uv: d.v2f) {
   'use gpu';
-  const t = sampleLtcBilinearMat(uv);
+  const t = bilinearLoadLtcMat(uv);
   return d.mat3x3f(d.vec3f(t.x, 0, t.y), d.vec3f(0, 1, 0), d.vec3f(t.z, 0, t.w));
 }
 
@@ -238,9 +228,9 @@ export const mainVertex = tgpu.vertexFn({
     normal: d.vec3f,
     albedo: d.vec3f,
     roughness: d.f32,
-    emissive: d.vec3f,
+    metallic: d.f32,
   },
-})(({ position, normal, albedo, roughness, emissive }) => {
+})(({ position, normal, albedo, roughness, metallic }) => {
   'use gpu';
   const camera = sceneLayout.$.camera;
   return {
@@ -249,7 +239,7 @@ export const mainVertex = tgpu.vertexFn({
     normal,
     albedo,
     roughness,
-    emissive,
+    metallic,
   };
 });
 
@@ -259,30 +249,74 @@ export const mainFragment = tgpu.fragmentFn({
     normal: d.vec3f,
     albedo: d.vec3f,
     roughness: d.f32,
-    emissive: d.vec3f,
+    metallic: d.f32,
   },
   out: d.vec4f,
-})(({ worldPos, normal, albedo, roughness, emissive }) => {
+})(({ worldPos, normal, albedo, roughness, metallic }) => {
   'use gpu';
-  if (luminance(emissive) > 0) {
-    return d.vec4f(tonemap(emissive), 1);
-  }
-
   const N = std.normalize(normal);
   const V = std.normalize(sceneLayout.$.camera.position.xyz - worldPos);
   const NdotV = saturate(std.dot(N, V));
   const uv = d.vec2f(std.clamp(roughness, 0.01, 1), std.sqrt(1 - NdotV)) * LUT_SCALE + LUT_BIAS;
 
   const Minv = sampleLtcMat(uv);
-  const brdf = sampleLtcAmp(uv);
+  const brdf = bilinearLoadLtcAmp(uv);
 
-  const diffuse = ltcEvaluate(N, V, worldPos, d.mat3x3f.identity());
-  const specularLtc = ltcEvaluate(N, V, worldPos, Minv);
-  const specularColor = d.vec3f(0.04 * sceneLayout.$.params.specularStrength);
-  const specular = (specularColor * brdf.x + (1 - specularColor) * brdf.y) * specularLtc;
+  const F0 = std.mix(d.vec3f(0.04), albedo, metallic);
+  const fresnel = F0 * brdf.x + (1 - F0) * brdf.y;
+  const kD = (1 - fresnel) * (1 - metallic);
 
-  const direct =
-    sceneLayout.$.light.color * sceneLayout.$.light.intensity * (albedo * diffuse + specular);
-  const ambient = albedo * sceneLayout.$.params.ambient;
+  let direct = d.vec3f(0);
+  for (let i = d.u32(0); i < d.u32(LIGHT_COUNT); i++) {
+    const light = sceneLayout.$.lights[i];
+    const diff = ltcEvaluate(N, V, worldPos, d.mat3x3f.identity(), light);
+    const specLtc = ltcEvaluate(N, V, worldPos, Minv, light);
+    const radiance = light.color * light.intensity;
+    direct += radiance * (kD * albedo * diff + fresnel * specLtc);
+  }
+
+  const skyFactor = saturate(0.5 * (N.y + 1));
+  const ambient = std.mix(sceneLayout.$.params.ambientGround, sceneLayout.$.params.ambientSky, skyFactor) * albedo;
+
   return d.vec4f(tonemap(direct + ambient), 1);
+});
+
+export const lightVertex = tgpu.vertexFn({
+  in: { vid: d.builtin.vertexIndex },
+  out: { pos: d.builtin.position, color: d.vec3f },
+})(({ vid }) => {
+  'use gpu';
+  const lightIdx = std.select(d.u32(0), d.u32(1), vid >= d.u32(6));
+  const cornerVid = vid - lightIdx * d.u32(6);
+
+  let signX = d.f32(-1);
+  let signY = d.f32(-1);
+  if (cornerVid === d.u32(1)) {
+    signX = 1;
+    signY = -1;
+  } else if (cornerVid === d.u32(2) || cornerVid === d.u32(4)) {
+    signX = 1;
+    signY = 1;
+  } else if (cornerVid === d.u32(5)) {
+    signX = -1;
+    signY = 1;
+  }
+
+  const light = sceneLayout.$.lights[lightIdx];
+  const worldPos = light.center +
+    light.dirX * light.halfSize.x * signX +
+    light.dirY * light.halfSize.y * signY;
+  const camera = sceneLayout.$.camera;
+  return {
+    pos: camera.projection * camera.view * d.vec4f(worldPos, 1),
+    color: light.color * light.intensity,
+  };
+});
+
+export const lightFragment = tgpu.fragmentFn({
+  in: { color: d.vec3f },
+  out: d.vec4f,
+})(({ color }) => {
+  'use gpu';
+  return d.vec4f(tonemap(color), 1);
 });
