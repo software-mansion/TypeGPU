@@ -290,8 +290,8 @@ import {
 const LCG32: StatefulGenerator = (() => {
   const seed = tgpu.privateVar(d.u32);
 
- const multiplier = d.u32(1664525);
- const increment = d.u32(1013904223);
+ const multiplier = 1664525;
+ const increment = 1013904223;
 
  return {
    seed: tgpu.fn([d.f32])((value) => {

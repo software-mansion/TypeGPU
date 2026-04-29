@@ -100,8 +100,8 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  root.destroy();
   plotter.destroy();
+  root.destroy();
 }
 
 // #endregion

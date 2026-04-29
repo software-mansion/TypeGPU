@@ -23,7 +23,6 @@ import {
   type v4b,
 } from '../data/wgslTypes.ts';
 import { unify } from '../tgsl/conversion.ts';
-import { isKnownAtComptime } from '../types.ts';
 import { sub } from './operators.ts';
 
 function correspondingBooleanVectorSchema(dataType: BaseData) {
