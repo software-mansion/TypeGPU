@@ -27,10 +27,10 @@ const DISCO_TRANSITION_MS = 1600;
 const DISCO_HUE_SPEED = 0.00008;
 const INITIAL_PARAMS = {
   exposure: 1.12,
-  environmentIntensity: 0.42,
+  environmentIntensity: 0.34,
   diffuseIblStrength: 0.06,
-  specularIblStrength: 1.15,
-  wetness: 0.86,
+  specularIblStrength: 0.95,
+  wetness: 0.42,
   time: 0,
 } satisfies d.InferInput<typeof RenderParams>;
 
@@ -274,7 +274,7 @@ function render(time: number) {
     .with(environmentBindGroup)
     .withColorAttachment({
       view: colorTexture,
-      clearValue: [0.02, 0.022, 0.025, 1],
+      clearValue: [0.014, 0.012, 0.016, 1],
       loadOp: 'clear',
       storeOp: 'store',
     })
@@ -348,7 +348,7 @@ export const controls = defineControls({
   'shallow water': {
     initial: INITIAL_PARAMS.wetness,
     min: 0,
-    max: 1,
+    max: 0.5,
     step: 0.01,
     onSliderChange: (wetness) => paramsUniform.patch({ wetness }),
   },

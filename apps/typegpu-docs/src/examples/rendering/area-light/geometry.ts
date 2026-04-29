@@ -38,13 +38,13 @@ function material(albedo: Vec3, roughness: number, metallic = 0, wetness = 0): M
 }
 
 const materials = {
-  floor: material(v3(0.025, 0.028, 0.032), 0.1, 0, 1),
-  backdrop: material(v3(0.018, 0.021, 0.029), 0.42),
-  plinth: material(v3(0.045, 0.048, 0.047), 0.14),
-  block: material(v3(0.025, 0.027, 0.034), 0.18),
+  floor: material(v3(0.026, 0.022, 0.026), 0.1, 0, 1),
+  backdrop: material(v3(0.026, 0.019, 0.028), 0.42),
+  plinth: material(v3(0.052, 0.04, 0.046), 0.14),
+  block: material(v3(0.03, 0.024, 0.032), 0.18),
   gold: material(v3(1, 0.62, 0.18), 0.18, 0.55),
-  ceramic: material(v3(0.18, 0.22, 0.22), 0.16),
-  plastic: material(v3(0.025, 0.07, 0.18), 0.16),
+  ceramic: material(v3(0.2, 0.17, 0.17), 0.16),
+  plastic: material(v3(0.045, 0.028, 0.075), 0.16),
 } satisfies Record<string, Material>;
 
 export const initialLights = [
@@ -53,24 +53,24 @@ export const initialLights = [
     dirX: v3(1, 0, 0),
     dirY: v3(0, 0, 1),
     halfSize: [1.25, 0.75] satisfies Vec2,
-    color: v3(1, 0.16, 0.74),
-    intensity: 9,
+    color: v3(1, 0.26, 0.62),
+    intensity: 8.2,
   },
   {
     center: v3(-3.4, 1.6, 1.8),
     dirX: v3(0, 0, 1),
     dirY: v3(0, 1, 0),
     halfSize: [0.7, 0.95] satisfies Vec2,
-    color: v3(0.05, 0.78, 1),
-    intensity: 6.5,
+    color: v3(1, 0.48, 0.16),
+    intensity: 4.4,
   },
   {
     center: v3(3.1, 1.45, -2.5),
     dirX: v3(1, 0, 0),
     dirY: v3(0, 1, 0),
     halfSize: [0.55, 0.8] satisfies Vec2,
-    color: v3(0.25, 1, 0.52),
-    intensity: 5.2,
+    color: v3(0.56, 0.24, 1),
+    intensity: 2.6,
   },
 ] satisfies d.InferInput<typeof Lights>;
 
