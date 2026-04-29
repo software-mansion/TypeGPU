@@ -226,12 +226,27 @@ describe('transpileFn', () => {
 
           const f = ext.s;
           const g = ext.s.a;
+
+          const h = ext.t.fn().x;
+          const i = ext.t.comp['computed'].x;
         }`),
       );
 
       expect(externalNames).toMatchInlineSnapshot(`
         {
-          "ext": "ext",
+          "ext": {
+            "p": "ext.p",
+            "q": {
+              "a": "ext.q.a",
+              "b": "ext.q.b",
+            },
+            "r": "ext.r",
+            "s": "ext.s",
+            "t": {
+              "comp": "ext.t.comp",
+              "fn": "ext.t.fn",
+            },
+          },
         }
       `);
     }),

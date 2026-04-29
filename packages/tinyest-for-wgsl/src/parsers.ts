@@ -37,56 +37,57 @@ function addExternal(
   ctx: Context,
   node: babel.ThisExpression | acorn.ThisExpression | babel.Identifier | acorn.Identifier,
 ) {
-  const name = node.type === 'Identifier' ? node.name : 'this';
-  ctx.externalNames[name] = name;
+  const chain: string[] = [];
+  for (let i = ctx.ancestorChain.length - 1; i >= 0; i--) {
+    const current = ctx.ancestorChain[i];
 
-  // const chain: string[] = [];
+    if (!current) {
+      break;
+    }
 
-  // for (let i = ctx.ancestorChain.length - 1; i >= 0; i--) {
-  //   const current = ctx.ancestorChain[i];
+    if (current.type === 'Identifier') {
+      chain.push(current.name);
+    } else if (current.type === 'ThisExpression') {
+      chain.push('this');
+    } else if (current.type === 'MemberExpression' && !current.computed) {
+      chain.push(`${(current.property as { name: string }).name}`); // TODO: better handling of other nodes
+    } else {
+      break;
+    }
+  }
 
-  //   if (!current) {
-  //     break;
-  //   }
+  let currentExternals = ctx.externalNames;
+  if (typeof currentExternals !== 'object') {
+    throw new Error('??');
+  }
+  for (const elem of chain) {
+    let nextExternals = currentExternals[elem];
+    if (nextExternals) {
+      if (typeof nextExternals !== 'string') {
+        currentExternals = nextExternals;
+      } else {
+        // we already need this in externals, so we break
+        break;
+      }
+    } else {
+      const newExt = Object.create(null);
+      currentExternals[elem] = newExt;
+      currentExternals = newExt;
+    }
+  }
 
-  //   if (current.type === 'Identifier') {
-  //     chain.push(current.name);
-  //   } else if (current.type === 'MemberExpression' && !current.computed) {
-  //     chain.push(`${(current.property as { name: string }).name}`);
-  //   } else {
-  //     break;
-  //   }
-  // }
-
-  // let currentExternals = ctx.externalNames;
-  // for (const elem of chain) {
-  //   let nextExternals = currentExternals.get(elem);
-  //   if (nextExternals) {
-  //     if (typeof nextExternals !== 'string') {
-  //       currentExternals = nextExternals;
-  //     } else {
-  //       // we already need this in externals, so we break
-  //       break;
-  //     }
-  //   } else {
-  //     nextExternals = new Map();
-  //     currentExternals.set(elem, nextExternals);
-  //     currentExternals = nextExternals;
-  //   }
-  // }
-
-  // const lastKey = chain[chain.length - 1];
-  // if (lastKey !== undefined) {
-  //   let parent = ctx.externalNames;
-  //   for (const key of chain.slice(0, -1)) {
-  //     const next = parent.get(key);
-  //     if (!next || typeof next === 'string') break;
-  //     parent = next;
-  //   }
-  //   if (parent.get(lastKey) instanceof Map) {
-  //     parent.set(lastKey, chain.join('.'));
-  //   }
-  // }
+  const lastKey = chain[chain.length - 1];
+  if (lastKey !== undefined) {
+    let parent = ctx.externalNames;
+    for (const key of chain.slice(0, -1)) {
+      const next = parent[key];
+      if (!next || typeof next === 'string') break;
+      parent = next;
+    }
+    if (typeof parent[lastKey] === 'object') {
+      parent[lastKey] = chain.join('.');
+    }
+  }
 }
 
 const Transpilers: Partial<{
