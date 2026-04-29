@@ -34,6 +34,7 @@ const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+type LightIndex = 0 | 1 | 2;
 
 const mesh = createSceneMesh();
 const vertexBuffer = root
@@ -108,6 +109,17 @@ function createDepthTexture() {
 
 let colorTexture = createColorTexture();
 let depthTexture = createDepthTexture();
+let skyGlow = INITIAL_PARAMS.environmentIntensity;
+let neonStrength = 1;
+let discoMode = false;
+let discoStartedAt = performance.now();
+
+const baseLightColors = [
+  d.vec3f(...initialLights[0].color),
+  d.vec3f(...initialLights[1].color),
+  d.vec3f(...initialLights[2].color),
+] as const;
+const discoColors = [d.vec3f(), d.vec3f(), d.vec3f()] as const;
 
 const skyPipeline = root.createRenderPipeline({
   vertex: skyVertex,
@@ -156,7 +168,63 @@ resizeObserver.observe(canvas);
 
 let animationFrameId: number;
 
-function render() {
+function writeHueColor(target: d.v3f, hue: number) {
+  const h = (((hue % 1) + 1) % 1) * 6;
+  const x = 1 - Math.abs((h % 2) - 1);
+  const [r, g, b] =
+    h < 1
+      ? [1, x, 0]
+      : h < 2
+        ? [x, 1, 0]
+        : h < 3
+          ? [0, 1, x]
+          : h < 4
+            ? [0, x, 1]
+            : h < 5
+              ? [x, 0, 1]
+              : [1, 0, x];
+
+  target[0] = r;
+  target[1] = g;
+  target[2] = b;
+}
+
+function patchLight(index: LightIndex, color: d.v3f, strength = 1) {
+  const update = {
+    color,
+    intensity: initialLights[index].intensity * neonStrength * strength,
+  };
+
+  if (index === 0) {
+    lightsUniform.patch({ 0: update });
+  } else if (index === 1) {
+    lightsUniform.patch({ 1: update });
+  } else {
+    lightsUniform.patch({ 2: update });
+  }
+}
+
+function restoreLights() {
+  for (const [index, color] of baseLightColors.entries()) {
+    patchLight(index as LightIndex, color);
+  }
+}
+
+function updateDisco(time: number) {
+  if (!discoMode) {
+    return;
+  }
+
+  const t = (time - discoStartedAt) * 0.00014;
+  for (const [index, color] of discoColors.entries()) {
+    writeHueColor(color, t + index / discoColors.length);
+    patchLight(index as LightIndex, color, 0.82 + Math.sin(time * 0.003 + index * 1.7) * 0.18);
+  }
+}
+
+function render(time: number) {
+  updateDisco(time);
+
   skyPipeline
     .with(sceneBindGroup)
     .with(environmentBindGroup)
@@ -206,30 +274,18 @@ function render() {
 
 animationFrameId = requestAnimationFrame(render);
 
-const LIGHT_CONTROLS = [
-  { label: 'key', index: 0, max: 12 },
-  { label: 'fill', index: 1, max: 12 },
-  { label: 'rim', index: 2, max: 8 },
-] as const;
-
-const lightControls = Object.assign(
-  {},
-  ...LIGHT_CONTROLS.map(({ label, index, max }) => ({
-    [`${label} intensity`]: {
-      initial: initialLights[index].intensity,
-      min: 0,
-      max,
-      step: 0.1,
-      onSliderChange: (intensity: number) => lightsUniform.patch({ [index]: { intensity } }),
-    },
-    [`${label} color`]: {
-      initial: d.vec3f(...initialLights[index].color),
-      onColorChange: (color: d.v3f) => lightsUniform.patch({ [index]: { color } }),
-    },
-  })),
-);
-
 export const controls = defineControls({
+  'disco mode': {
+    initial: false,
+    onToggleChange: (enabled) => {
+      discoMode = enabled;
+      discoStartedAt = performance.now();
+      paramsUniform.patch({ environmentIntensity: enabled ? 0 : skyGlow });
+      if (!enabled) {
+        restoreLights();
+      }
+    },
+  },
   exposure: {
     initial: INITIAL_PARAMS.exposure,
     min: 0.2,
@@ -237,28 +293,35 @@ export const controls = defineControls({
     step: 0.01,
     onSliderChange: (exposure) => paramsUniform.patch({ exposure }),
   },
-  environment: {
+  'sky glow': {
     initial: INITIAL_PARAMS.environmentIntensity,
     min: 0,
     max: 2,
     step: 0.01,
-    onSliderChange: (environmentIntensity) => paramsUniform.patch({ environmentIntensity }),
+    onSliderChange: (environmentIntensity) => {
+      skyGlow = environmentIntensity;
+      paramsUniform.patch({ environmentIntensity: discoMode ? 0 : skyGlow });
+    },
   },
-  'diffuse ibl': {
-    initial: INITIAL_PARAMS.diffuseIblStrength,
-    min: 0,
-    max: 1,
-    step: 0.01,
-    onSliderChange: (diffuseIblStrength) => paramsUniform.patch({ diffuseIblStrength }),
-  },
-  'specular ibl': {
+  'wet reflections': {
     initial: INITIAL_PARAMS.specularIblStrength,
     min: 0,
     max: 1.5,
     step: 0.01,
     onSliderChange: (specularIblStrength) => paramsUniform.patch({ specularIblStrength }),
   },
-  ...lightControls,
+  'neon strength': {
+    initial: neonStrength,
+    min: 0,
+    max: 1.5,
+    step: 0.01,
+    onSliderChange: (strength) => {
+      neonStrength = strength;
+      if (!discoMode) {
+        restoreLights();
+      }
+    },
+  },
 });
 
 export function onCleanup() {
