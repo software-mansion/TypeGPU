@@ -26,9 +26,9 @@ const vertexBuffer = root
 const cameraUniform = root.createUniform(Camera);
 const lightsUniform = root.createUniform(Lights, initialLights);
 const paramsUniform = root.createUniform(RenderParams, {
-  exposure: 0.85,
-  ambientSky: [0.04, 0.05, 0.08],
-  ambientGround: [0.025, 0.022, 0.02],
+  exposure: 0.9,
+  ambientSky: [0.055, 0.06, 0.085],
+  ambientGround: [0.035, 0.032, 0.028],
 });
 
 const ltcMatTexture = root
@@ -76,10 +76,10 @@ const lightPipeline = root.createRenderPipeline({
 const { cleanupCamera } = setupOrbitCamera(
   canvas,
   {
-    initPos: d.vec4f(4.2, 2.35, 5.1, 1),
-    target: d.vec4f(0, 1.05, -1.1, 1),
-    minZoom: 2.5,
-    maxZoom: 9,
+    initPos: d.vec4f(4.1, 2.25, 4.8, 1),
+    target: d.vec4f(0, 0.8, -0.65, 1),
+    minZoom: 1.8,
+    maxZoom: 10,
   },
   (updates) => cameraUniform.patch(updates),
 );
@@ -130,7 +130,7 @@ animationFrameId = requestAnimationFrame(render);
 
 export const controls = defineControls({
   exposure: {
-    initial: 0.85,
+    initial: 0.9,
     min: 0.2,
     max: 2,
     step: 0.01,
@@ -157,6 +157,17 @@ export const controls = defineControls({
   'fill color': {
     initial: d.vec3f(...initialLights[1].color),
     onColorChange: (color) => lightsUniform.patch({ 1: { color } }),
+  },
+  'rim intensity': {
+    initial: initialLights[2].intensity,
+    min: 0,
+    max: 8,
+    step: 0.1,
+    onSliderChange: (intensity) => lightsUniform.patch({ 2: { intensity } }),
+  },
+  'rim color': {
+    initial: d.vec3f(...initialLights[2].color),
+    onColorChange: (color) => lightsUniform.patch({ 2: { color } }),
   },
 });
 
