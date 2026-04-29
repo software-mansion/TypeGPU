@@ -363,7 +363,7 @@ ${this.ctx.pre}}`;
 
       const rhsExpr = this._expression(rhs);
 
-      // they are not know at comptime
+      // they are not known at comptime
       if (lhsExpr.dataType === UnknownData) {
         throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
       }

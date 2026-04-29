@@ -44,7 +44,7 @@ const boolCast = callableSchema({
 
       const nanGuardedStr =
         dataType.type === 'f32' || dataType.type === 'f16'
-          ? `(((bitcast<u32>(${dataType.type === 'f16' ? `f32(${argStr})` : argStr}) & 0x7fffffff) <= 0x7f800000) && ${resultStr})`
+          ? `(((bitcast<u32>(${dataType.type === 'f16' ? `f32(${argStr})` : argStr}) << 1u) - 1u) < 0xff000000)`
           : resultStr;
 
       return snip(nanGuardedStr, bool, 'runtime');

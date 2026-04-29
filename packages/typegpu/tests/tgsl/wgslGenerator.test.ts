@@ -1,5 +1,5 @@
 import * as tinyest from 'tinyest';
-import { beforeEach, describe, expect, vi } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import * as d from '../../src/data/index.ts';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
@@ -2258,9 +2258,9 @@ describe('wgslGenerator', () => {
 
     it('numeric runtime-known operand', () => {
       const testFn = tgpu.fn(
-        [d.i32, d.f32],
+        [d.i32, d.f32, d.f16],
         d.i32,
-      )((n, f) => {
+      )((n, f, h) => {
         let res = -1;
         if (n) {
           res = 1;
@@ -2268,17 +2268,23 @@ describe('wgslGenerator', () => {
         if (f) {
           res = 2;
         }
+        if (h) {
+          res = 3;
+        }
         return res;
       });
 
       expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-        "fn testFn(n: i32, f: f32) -> i32 {
+        "fn testFn(n: i32, f: f32, h: f16) -> i32 {
           var res = -1;
           if (bool(n)) {
             res = 1i;
           }
-          if ((((bitcast<u32>(f) & 0x7fffffff) <= 0x7f800000) && bool(f))) {
+          if ((((bitcast<u32>(f) << 1u) - 1u) < 0xff000000)) {
             res = 2i;
+          }
+          if ((((bitcast<u32>(f32(h)) << 1u) - 1u) < 0xff000000)) {
+            res = 3i;
           }
           return res;
         }"
@@ -2300,12 +2306,6 @@ describe('wgslGenerator', () => {
         }
         if (v) {
           res = 2;
-        }
-        if (a) {
-          res = 3;
-        }
-        if (std.atomicLoad(a)) {
-          res = 4;
         }
         if (p) {
           res = 5;
@@ -2329,16 +2329,39 @@ describe('wgslGenerator', () => {
             res = 2i;
           }
           {
-            res = 3i;
-          }
-          if (bool(atomicLoad(&a))) {
-            res = 4i;
-          }
-          {
             res = 5i;
           }
           if (bool((*p))) {
             res = 6i;
+          }
+          return res;
+        }"
+      `);
+    });
+
+    it('atomic', () => {
+      const testFn = tgpu.fn(
+        [d.atomic(d.u32)],
+        d.i32,
+      )((a) => {
+        let res = -1;
+        if (a) {
+          res = 3;
+        }
+        if (std.atomicLoad(a)) {
+          res = 4;
+        }
+        return res;
+      });
+
+      expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(a: atomic<u32>) -> i32 {
+          var res = -1;
+          {
+            res = 3i;
+          }
+          if (bool(atomicLoad(&a))) {
+            res = 4i;
           }
           return res;
         }"
