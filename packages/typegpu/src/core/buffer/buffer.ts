@@ -1,15 +1,9 @@
-import { BufferReader, BufferWriter, getSystemEndianness } from 'typed-binary';
 import { getCompiledWriter } from '../../data/compiledIO.ts';
-import { readData, writeData } from '../../data/dataIO.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
-import {
-  type WriteInstruction,
-  convertPartialToPatch,
-  getPatchInstructions,
-} from '../../data/partialIO.ts';
+import { convertPartialToPatch, getPatchInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
-import { isWgslArray, isWgslData } from '../../data/wgslTypes.ts';
+import { isWgslData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
@@ -37,8 +31,8 @@ import {
   type TgpuFixedBufferUsage,
   uniform,
 } from './bufferUsage.ts';
-import { alignmentOf } from '../../data/alignmentOf.ts';
-import { roundUp } from '../../mathUtils.ts';
+import { calculateOffsets, readFromArrayBuffer, writeToArrayBuffer } from '../../data/dataIO.ts';
+import { patchArrayBuffer } from '../../data/partialIO.ts';
 
 // ----------
 // Public API
@@ -193,8 +187,6 @@ export function isUsableAsIndex<T extends TgpuBuffer<BaseData>>(
 // --------------
 // Implementation
 // --------------
-const endianness = getSystemEndianness();
-
 class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   readonly [$internal] = true;
   readonly resourceType = 'buffer';
@@ -261,7 +253,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
         if (this.#initialCallback) {
           this.#initialCallback(this);
         } else if (this.initial) {
-          this.#writeToTarget(this.#getMappedRange(), this.initial);
+          writeToArrayBuffer(this.#getMappedRange(), this.dataType, this.initial);
         }
         this.#unmapBuffer();
       }
@@ -354,77 +346,10 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     getCompiledWriter(this.dataType);
   }
 
-  #writeToTarget(
-    target: ArrayBuffer,
-    data: InferInput<TData> | ArrayBuffer,
-    options?: BufferWriteOptions,
-  ): void {
-    const startOffset = options?.startOffset ?? 0;
-    const endOffset = options?.endOffset ?? target.byteLength;
-
-    // Fast path: raw byte copy, user guarantees the padded layout
-    if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
-      const src =
-        data instanceof ArrayBuffer
-          ? new Uint8Array(data)
-          : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-      const regionSize = endOffset - startOffset;
-      if (src.byteLength !== regionSize) {
-        console.warn(
-          `Buffer size mismatch: expected ${regionSize} bytes, got ${src.byteLength}. ` +
-            (src.byteLength < regionSize ? 'Data truncated.' : 'Excess ignored.'),
-        );
-      }
-      const copyLen = Math.min(src.byteLength, regionSize);
-      new Uint8Array(target).set(src.subarray(0, copyLen), startOffset);
-      return;
-    }
-
-    const dataView = new DataView(target);
-    const isLittleEndian = endianness === 'little';
-
-    const compiledWriter = getCompiledWriter(this.dataType);
-
-    if (compiledWriter) {
-      try {
-        compiledWriter(dataView, startOffset, data, isLittleEndian, endOffset);
-        return;
-      } catch (error) {
-        console.error(
-          `Error when using compiled writer for buffer ${
-            getName(this) ?? '<unnamed>'
-          } - this is likely a bug, please submit an issue at https://github.com/software-mansion/TypeGPU/issues\nUsing fallback writer instead.`,
-          error,
-        );
-      }
-    }
-
-    const writer = new BufferWriter(target);
-    writer.seekTo(startOffset);
-    writeData(writer, this.dataType, data as Infer<TData>);
-  }
-
   write(data: InferInput<TData>, options?: BufferWriteOptions): void;
   write(data: ArrayBuffer, options?: BufferWriteOptions): void;
   write(data: InferInput<TData> | ArrayBuffer, options?: BufferWriteOptions): void {
     const gpuBuffer = this.buffer;
-    const bufferSize = sizeOf(this.dataType);
-    const startOffset = options?.startOffset ?? 0;
-
-    let naturalSize: number | undefined = undefined;
-    if (isWgslArray(this.dataType) && Array.isArray(data)) {
-      const arrayData = data as unknown[];
-      naturalSize =
-        arrayData.length *
-        roundUp(sizeOf(this.dataType.elementType), alignmentOf(this.dataType.elementType));
-    } else if (ArrayBuffer.isView(data) || data instanceof ArrayBuffer) {
-      naturalSize = data.byteLength;
-    }
-    const naturalEndOffset =
-      naturalSize !== undefined ? Math.min(startOffset + naturalSize, bufferSize) : undefined;
-
-    const endOffset = options?.endOffset ?? naturalEndOffset ?? bufferSize;
-    const size = endOffset - startOffset;
 
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = this.#getMappedRange();
@@ -433,43 +358,34 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
         // via arrayBuffer. Nothing to do here
         return;
       }
-      this.#writeToTarget(mapped, data, options);
+      writeToArrayBuffer(mapped, this.dataType, data, options);
       return;
     }
 
     // If the caller already wrote directly into #hostBuffer via
     // arrayBuffer, skip the redundant copy, the data is already in place.
     if (!(data instanceof ArrayBuffer && data === this.#hostBuffer)) {
-      this.#writeToTarget(this.#hostBuffer, data, options);
+      writeToArrayBuffer(this.#hostBuffer, this.dataType, data, options);
     }
+
+    const { startOffset, endOffset } = calculateOffsets(options, this.dataType, data);
+    const size = endOffset - startOffset;
+
     this.#device.queue.writeBuffer(gpuBuffer, startOffset, this.#hostBuffer, startOffset, size);
   }
 
   /** @deprecated Use {@link patch} instead. */
   public writePartial(data: InferPartial<TData>): void {
-    this.#applyInstructions(
-      getPatchInstructions(
-        this.dataType,
-        convertPartialToPatch(this.dataType, data),
-        this.#hostBuffer,
-      ),
-    );
+    this.patch(convertPartialToPatch(this.dataType, data) as InferPatch<TData>);
   }
 
   public patch(data: InferPatch<TData>): void {
-    this.#applyInstructions(getPatchInstructions(this.dataType, data, this.#hostBuffer));
-  }
-
-  #applyInstructions(instructions: WriteInstruction[]): void {
     const gpuBuffer = this.buffer;
 
     if (gpuBuffer.mapState === 'mapped') {
-      const mappedRange = this.#getMappedRange();
-      const mappedView = new Uint8Array(mappedRange);
-      for (const { data, gpuOffset } of instructions) {
-        mappedView.set(data, gpuOffset);
-      }
+      patchArrayBuffer(this.#getMappedRange(), this.dataType, data);
     } else {
+      const instructions = getPatchInstructions(this.dataType, data, this.#hostBuffer);
       for (const { data, gpuOffset } of instructions) {
         this.#device.queue.writeBuffer(gpuBuffer, gpuOffset, data);
       }
@@ -504,14 +420,12 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     const gpuBuffer = this.buffer;
 
     if (gpuBuffer.mapState === 'mapped') {
-      const mapped = this.#getMappedRange();
-      return readData(new BufferReader(mapped), this.dataType);
+      return readFromArrayBuffer(this.#getMappedRange(), this.dataType);
     }
 
     if (gpuBuffer.usage & GPUBufferUsage.MAP_READ) {
       await gpuBuffer.mapAsync(GPUMapMode.READ);
-      const mapped = this.#getMappedRange();
-      const res = readData(new BufferReader(mapped), this.dataType);
+      const res = readFromArrayBuffer(this.#getMappedRange(), this.dataType);
       this.#unmapBuffer();
       return res;
     }
@@ -527,7 +441,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     this.#device.queue.submit([commandEncoder.finish()]);
     await stagingBuffer.mapAsync(GPUMapMode.READ, 0, sizeOf(this.dataType));
 
-    const res = readData(new BufferReader(stagingBuffer.getMappedRange()), this.dataType);
+    const res = readFromArrayBuffer(stagingBuffer.getMappedRange(), this.dataType);
 
     stagingBuffer.unmap();
     stagingBuffer.destroy();
