@@ -1,5 +1,4 @@
-import tgpu, { d, type TgpuFnShell, type TgpuSlot } from 'typegpu';
-import { cos, dot, fract } from 'typegpu/std';
+import tgpu, { d, type TgpuFnShell, type TgpuSlot, std } from 'typegpu';
 import { hash, rotl, u32To01F32 } from './utils.ts';
 
 export interface StatefulGenerator {
@@ -40,10 +39,10 @@ export const BPETER: StatefulGenerator = (() => {
 
     sample: randomGeneratorShell(() => {
       'use gpu';
-      const a = dot(seed.$, d.vec2f(23.14077926, 232.61690225));
-      const b = dot(seed.$, d.vec2f(54.47856553, 345.84153136));
-      seed.$.x = fract(cos(a) * 136.8168);
-      seed.$.y = fract(cos(b) * 534.7645);
+      const a = std.dot(seed.$, d.vec2f(23.14077926, 232.61690225));
+      const b = std.dot(seed.$, d.vec2f(54.47856553, 345.84153136));
+      seed.$.x = std.fract(std.cos(a) * 136.8168);
+      seed.$.y = std.fract(std.cos(b) * 534.7645);
       return seed.$.y;
     }).$name('sample'),
   };
@@ -70,15 +69,17 @@ export const XOROSHIRO64STARSTAR: StatefulGenerator = (() => {
 
   return {
     seed2: tgpu.fn([d.vec2f])((value) => {
-      const hx = hash(d.u32(value.x) ^ 0x4ab57dfb);
-      const hy = hash(d.u32(value.y) ^ 0xacdeda47);
+      const u32Value = std.bitcastF32toU32(value);
+      const hx = hash(u32Value.x ^ 0x4ab57dfb);
+      const hy = hash(u32Value.y ^ 0xacdeda47);
       seed.$ = d.vec2u(hash(hx ^ hy), hash(rotl(hx, 16) ^ hy));
     }),
 
     seed3: tgpu.fn([d.vec3f])((value) => {
-      const hx = hash(d.u32(value.x) ^ 0x4ab57dfb);
-      const hy = hash(d.u32(value.y) ^ 0xacdeda47);
-      const hz = hash(d.u32(value.z) ^ 0xbca0294b);
+      const u32Value = std.bitcastF32toU32(value);
+      const hx = hash(u32Value.x ^ 0x4ab57dfb);
+      const hy = hash(u32Value.y ^ 0xacdeda47);
+      const hz = hash(u32Value.z ^ 0xbca0294b);
       seed.$ = d.vec2u(hash(hx ^ rotl(hz, 16)), hash(rotl(hy, 16) ^ hz));
     }),
 
@@ -101,19 +102,21 @@ export const LCG32: StatefulGenerator = (() => {
 
   return {
     seed: tgpu.fn([d.f32])((value) => {
-      seed.$ = hash(d.u32(value) ^ 0x4ab57dfb);
+      seed.$ = hash(std.bitcastF32toU32(value)) ^ 0x4ab57dfb;
     }),
 
     seed2: tgpu.fn([d.vec2f])((value) => {
-      const hx = hash(d.u32(value.x) ^ 0x4ab57dfb);
-      const hy = hash(d.u32(value.y) ^ 0xacdeda47);
+      const u32Value = std.bitcastF32toU32(value);
+      const hx = hash(u32Value.x ^ 0x4ab57dfb);
+      const hy = hash(u32Value.y ^ 0xacdeda47);
       seed.$ = hash(hx ^ rotl(hy, 16));
     }),
 
     seed3: tgpu.fn([d.vec3f])((value) => {
-      const hx = hash(d.u32(value.x) ^ 0x4ab57dfb);
-      const hy = hash(d.u32(value.y) ^ 0xacdeda47);
-      const hz = hash(d.u32(value.z) ^ 0xbca0294b);
+      const u32Value = std.bitcastF32toU32(value);
+      const hx = hash(u32Value.x ^ 0x4ab57dfb);
+      const hy = hash(u32Value.y ^ 0xacdeda47);
+      const hz = hash(u32Value.z ^ 0xbca0294b);
       seed.$ = hash(hash(hx ^ rotl(hy, 16)) ^ hz);
     }),
 
