@@ -60,6 +60,34 @@ function cloudMap(direction: d.v3f) {
   return std.smoothstep(0.3, 0.7, cover) * lowerSky * fadeToZenith;
 }
 
+function lowerClouds(direction: d.v3f) {
+  'use gpu';
+  const cloudDirection = std.normalize(
+    d.vec3f(direction.x, -direction.y * 0.24 + 0.34, direction.z),
+  );
+  const p = cloudDirection * 1.25 + d.vec3f(-4.8, 2.6, -1.7);
+  const warp = d.vec3f(fbm(p - 9.4), fbm(p + 3.7), fbm(p + d.vec3f(5.1, -2.8, 6.3))) - 0.5;
+  const clouds = std.smoothstep(0.34, 0.82, fbm(p + warp * 0.75));
+  let color = std.mix(d.vec3f(0.007, 0.006, 0.011), d.vec3f(0.28, 0.11, 0.22), clouds * 0.72);
+
+  color += glow(
+    cloudDirection,
+    d.vec3f(-0.36, 0.46, 0.82),
+    d.vec3f(0.72, 0.2, 0.44),
+    d.f32(10),
+    0.16,
+  );
+  color += glow(
+    cloudDirection,
+    d.vec3f(-0.2, -0.02, 0.98),
+    d.vec3f(1, 0.34, 0.08),
+    d.f32(16),
+    0.08,
+  );
+
+  return color;
+}
+
 function environmentColor(direction: d.v3f) {
   'use gpu';
   const skyBlend = std.smoothstep(-0.28, 0.85, direction.y);
@@ -67,6 +95,7 @@ function environmentColor(direction: d.v3f) {
   const night = std.mix(d.vec3f(0.006, 0.005, 0.008), d.vec3f(0.033, 0.018, 0.034), skyBlend);
   const ground = std.mix(d.vec3f(0.004, 0.004, 0.005), d.vec3f(0.024, 0.014, 0.019), groundBlend);
   let color = std.mix(ground, night, std.smoothstep(-0.12, 0.12, direction.y));
+  color = std.mix(color, lowerClouds(direction), std.smoothstep(0.02, 0.72, -direction.y));
 
   const clouds = cloudMap(direction);
   const cloudTint = std.mix(d.vec3f(0.2, 0.1, 0.17), d.vec3f(0.72, 0.38, 0.54), clouds);
