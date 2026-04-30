@@ -86,6 +86,7 @@ async function main() {
     const args = [
       'publish',
       '--provenance',
+      '--no-git-checks',
       ...(tag === 'latest' ? [] : ['--tag', tag]),
       ...(isDryRun ? ['--dry-run'] : []),
     ];
