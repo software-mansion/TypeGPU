@@ -31,7 +31,7 @@ import {
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
 import { LogGeneratorImpl, LogGeneratorNullImpl } from './tgsl/consoleLog/logGenerator.ts';
-import type { LogGenerator, LogResources } from './tgsl/consoleLog/types.ts';
+import type { LogGenerator, LogResources, SupportedLogOp } from './tgsl/consoleLog/types.ts';
 import { getBestConversion } from './tgsl/conversion.ts';
 import { coerceToSnippet, concretize, numericLiteralToSnippet } from './tgsl/generationHelpers.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
@@ -458,7 +458,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this._itemStateStack.clearBlockExternals();
   }
 
-  generateLog(op: string, args: Snippet[]): Snippet {
+  generateLog(op: SupportedLogOp, args: Snippet[]): Snippet {
     return this.#logGenerator.generateLog(this, op, args);
   }
 

@@ -261,13 +261,3 @@ export class MatrixColumnsAccess {
     this.matrix = matrix;
   }
 }
-
-export class ConsoleLog {
-  [$internal] = true;
-  readonly op: string;
-
-  constructor(op: string) {
-    this.op = op;
-    setName(this, 'consoleLog');
-  }
-}

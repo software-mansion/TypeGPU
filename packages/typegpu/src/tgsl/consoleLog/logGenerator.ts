@@ -19,6 +19,7 @@ import { invariant } from '../../errors.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { convertToCommonType } from '../conversion.ts';
 import { concretizeSnippet, type GenerationCtx } from '../generationHelpers.ts';
+import { supportedLogOps } from '../math.ts';
 import { createLoggingFunction } from './serializers.ts';
 import {
   type LogGenerator,
@@ -26,8 +27,7 @@ import {
   type LogMeta,
   type LogResources,
   type SerializedLogCallData,
-  type SupportedLogOps,
-  supportedLogOps,
+  type SupportedLogOp,
 } from './types.ts';
 
 const defaultOptions: Required<LogGeneratorOptions> = {
@@ -78,14 +78,9 @@ export class LogGeneratorImpl implements LogGenerator {
    * @param args Argument snippets. Snippets of UnknownType will be treated as string literals.
    * @returns A snippet containing the call to the logging function.
    */
-  generateLog(ctx: GenerationCtx, op: string, args: Snippet[]): Snippet {
+  generateLog(ctx: GenerationCtx, op: SupportedLogOp, args: Snippet[]): Snippet {
     if (shaderStageSlot.$ === 'vertex') {
       console.warn(`'console.${op}' is not supported in vertex shaders.`);
-      return fallbackSnippet;
-    }
-
-    if (!supportedLogOps.includes(op as SupportedLogOps)) {
-      console.warn(`Unsupported log method '${op}'.`);
       return fallbackSnippet;
     }
 
@@ -122,7 +117,7 @@ export class LogGeneratorImpl implements LogGenerator {
     );
 
     this.#logIdToMeta.set(id, {
-      op: op as SupportedLogOps,
+      op,
       argTypes: concreteArgsWithStrings.map((e) =>
         e?.dataType === UnknownData ? (e?.value as string) : (e?.dataType as AnyWgslData),
       ),

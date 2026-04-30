@@ -1,14 +1,7 @@
 import * as tinyest from 'tinyest';
 import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
-import {
-  type AnyData,
-  ConsoleLog,
-  InfixDispatch,
-  isLooseData,
-  UnknownData,
-  unptr,
-} from '../data/dataTypes.ts';
+import { type AnyData, InfixDispatch, isLooseData, UnknownData, unptr } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
@@ -47,7 +40,7 @@ import { UnrollableIterable } from '../core/unroll/tgpuUnroll.ts';
 import { isGenericFn } from '../core/function/tgpuFn.ts';
 import type { AnyFn } from '../core/function/fnTypes.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
-import { mathToStd } from './math.ts';
+import { mathToStd, supportedLogOps } from './math.ts';
 import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
@@ -517,10 +510,6 @@ ${this.ctx.pre}}`;
       const [_, targetNode, property] = expression;
       const target = this._expression(targetNode);
 
-      if (target.value === console) {
-        return snip(new ConsoleLog(property), UnknownData, /* origin */ 'runtime');
-      }
-
       const accessed = accessProp(target, property);
       if (!accessed) {
         throw new Error(
@@ -569,11 +558,16 @@ ${this.ctx.pre}}`;
     if (expression[0] === NODE.call) {
       // Function Call
       const [_, calleeNode, argNodes] = expression;
-      let callee = this._expression(calleeNode);
+      const _callee = this._expression(calleeNode);
+      const callee = mathToStd.has(_callee.value as AnyFn)
+        ? snip(mathToStd.get(_callee.value as AnyFn) as DualFn<AnyFn>, UnknownData, 'runtime')
+        : _callee;
 
-      if (mathToStd.has(callee.value as AnyFn)) {
-        const mockedFn = mathToStd.get(callee.value as AnyFn) as DualFn<AnyFn>;
-        callee = snip(mockedFn, UnknownData, 'runtime');
+      if (supportedLogOps.includes(callee.value as AnyFn)) {
+        return this.ctx.generateLog(
+          callee.value as AnyFn,
+          argNodes.map((arg) => this._expression(arg)),
+        );
       }
 
       if (wgsl.isWgslStruct(callee.value)) {
@@ -662,13 +656,6 @@ ${this.ctx.pre}}`;
         return callee.value.operator(this.ctx, [callee.value.lhs, rhs]);
       }
 
-      if (callee.value instanceof ConsoleLog) {
-        return this.ctx.generateLog(
-          callee.value.op,
-          argNodes.map((arg) => this._expression(arg)),
-        );
-      }
-
       if (isGPUCallable(callee.value)) {
         const callable = callee.value[$gpuCallable];
         const strictSignature = callable.strictSignature;
@@ -737,6 +724,25 @@ ${this.ctx.pre}}`;
         if (shelllessCall) {
           return shelllessCall;
         }
+      }
+
+      // try to throw a descriptive error
+      if (
+        Object.getOwnPropertyNames(Math).some(
+          (prop) => Math[prop as keyof typeof Math] === callee.value,
+        )
+      ) {
+        throw new Error(
+          `Unsupported Math functionality '${callee.value}'. Use an std alternative, or implement the function manually.`,
+        );
+      }
+
+      if (
+        Object.getOwnPropertyNames(console).some(
+          (prop) => console[prop as keyof typeof console] === callee.value,
+        )
+      ) {
+        throw new Error(`Unsupported console functionality used.`);
       }
 
       throw new Error(

@@ -661,9 +661,7 @@ describe('wgslGenerator with console.log', () => {
     `);
   });
 
-  it('Fallbacks and warns when using an unsupported feature', ({ root }) => {
-    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
+  it('Throws when using an unsupported feature', ({ root }) => {
     const fn = tgpu.computeFn({
       workgroupSize: [1],
       in: { gid: d.builtin.globalInvocationId },
@@ -673,14 +671,13 @@ describe('wgslGenerator with console.log', () => {
 
     const pipeline = root.createComputePipeline({ compute: fn });
 
-    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-      "@compute @workgroup_size(1) fn fn_1() {
-        /* console.log() */;
-      }"
+    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - computePipeline:pipeline
+      - computePipelineCore
+      - computeFn:fn: Unsupported console functionality used.]
     `);
-
-    expect(consoleWarnSpy).toHaveBeenCalledWith("Unsupported log method 'trace'.");
-    expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('works with implicit pointers', ({ root }) => {
