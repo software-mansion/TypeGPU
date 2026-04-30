@@ -1,21 +1,41 @@
 import { $internal } from '../shared/symbols.ts';
+import { isBool, isNumericSchema } from './wgslTypes.ts';
 import type { AbstractFloat, AbstractInt, Bool, F16, F32, I32, U16, U32 } from './wgslTypes.ts';
 import { callableSchema } from '../core/function/createCallableSchema.ts';
+import { snip } from './snippet.ts';
 
 const boolCast = callableSchema({
   name: 'bool',
   schema: () => bool,
   argTypes: (arg) => (arg ? [arg] : []),
-  normalImpl(v?: number | boolean) {
-    if (v === undefined) {
-      return false;
-    }
-    if (typeof v === 'boolean') {
-      return v;
-    }
+  normalImpl(v?: unknown) {
     return !!v;
   },
-  codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(bool, args),
+  codegenImpl: (ctx, [arg]) => {
+    if (arg === undefined) {
+      return snip(false, bool, 'constant');
+    }
+
+    const { dataType } = arg;
+
+    if (isBool(dataType)) {
+      return ctx.gen.typeInstantiation(bool, [arg]);
+    }
+
+    if (isNumericSchema(dataType)) {
+      const argStr = ctx.resolveSnippet(arg).value;
+      const resultStr = `bool(${argStr})`;
+
+      const nanGuardedStr =
+        dataType.type === 'f32' || dataType.type === 'f16'
+          ? `(((bitcast<u32>(${dataType.type === 'f16' ? `f32(${argStr})` : argStr}) << 1u) - 1u) < 0xff000000)`
+          : resultStr;
+
+      return snip(nanGuardedStr, bool, 'runtime');
+    }
+
+    return snip(true, bool, 'constant');
+  },
 });
 
 /**
