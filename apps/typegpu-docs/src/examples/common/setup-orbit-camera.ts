@@ -15,6 +15,9 @@ export interface CameraOptions {
   target?: d.v4f;
   minZoom?: number;
   maxZoom?: number;
+  minPitch?: number;
+  maxPitch?: number;
+  minCameraY?: number;
   invertCamera?: boolean;
 }
 
@@ -22,6 +25,9 @@ const cameraDefaults: Partial<CameraOptions> = {
   target: d.vec4f(0, 0, 0, 1),
   minZoom: 1,
   maxZoom: 100,
+  minPitch: -Math.PI / 2 + 0.01,
+  maxPitch: Math.PI / 2 - 0.01,
+  minCameraY: Number.NEGATIVE_INFINITY,
   invertCamera: false,
 };
 
@@ -56,12 +62,13 @@ export function setupOrbitCamera(
     cameraState.pitch = Math.asin(cameraVector.y / cameraState.radius);
     cameraState.target = tgt;
 
-    const view = calculateView(newPos, cameraState.target);
+    const position = currentCameraPosition();
+    const view = calculateView(position, cameraState.target);
     const projection = calculateProj(canvas.clientWidth / canvas.clientHeight);
 
     callback(
       Camera({
-        position: newPos,
+        position,
         targetPos: cameraState.target,
         view,
         projection,
@@ -75,14 +82,8 @@ export function setupOrbitCamera(
     const orbitSensitivity = 0.005;
     cameraState.yaw += -dx * orbitSensitivity * (options.invertCamera ? -1 : 1);
     cameraState.pitch += dy * orbitSensitivity * (options.invertCamera ? -1 : 1);
-    cameraState.pitch = std.clamp(cameraState.pitch, -Math.PI / 2 + 0.01, Math.PI / 2 - 0.01);
 
-    const newCameraPos = calculatePos(
-      cameraState.target,
-      cameraState.radius,
-      cameraState.pitch,
-      cameraState.yaw,
-    );
+    const newCameraPos = currentCameraPosition();
 
     const newView = calculateView(newCameraPos, cameraState.target);
 
@@ -97,12 +98,7 @@ export function setupOrbitCamera(
     cameraState.radius += delta * 0.05;
     cameraState.radius = std.clamp(cameraState.radius, options.minZoom, options.maxZoom);
 
-    const newPos = calculatePos(
-      cameraState.target,
-      cameraState.radius,
-      cameraState.pitch,
-      cameraState.yaw,
-    );
+    const newPos = currentCameraPosition();
     const newView = calculateView(newPos, cameraState.target);
 
     callback({
@@ -213,6 +209,22 @@ export function setupOrbitCamera(
   window.addEventListener('touchmove', touchMoveEventListener, {
     passive: false,
   });
+
+  function currentCameraPosition() {
+    const minPitchForHeight = Number.isFinite(options.minCameraY)
+      ? Math.asin(
+          std.clamp((options.minCameraY - cameraState.target.y) / cameraState.radius, -1, 1),
+        )
+      : options.minPitch;
+
+    cameraState.pitch = std.clamp(
+      cameraState.pitch,
+      Math.max(options.minPitch, minPitchForHeight),
+      options.maxPitch,
+    );
+
+    return calculatePos(cameraState.target, cameraState.radius, cameraState.pitch, cameraState.yaw);
+  }
 
   canvas.addEventListener(
     'touchmove',

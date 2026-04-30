@@ -1,7 +1,13 @@
 import tgpu, { common, d } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
-import { createEnvironmentFaces, ENVIRONMENT_MIP_LEVELS } from './environment.ts';
+import {
+  ENVIRONMENT_MIP_LEVELS,
+  ENVIRONMENT_SIZE,
+  environmentFragment,
+  environmentGenerationLayout,
+  environmentVertex,
+} from './environment.ts';
 import { createSceneMesh, initialLights } from './geometry.ts';
 import { LTC_1, LTC_2 } from './ltcTables.ts';
 import {
@@ -27,7 +33,7 @@ const DISCO_TRANSITION_MS = 1600;
 const DISCO_HUE_SPEED = 0.00008;
 const INITIAL_PARAMS = {
   exposure: 1.12,
-  environmentIntensity: 0.34,
+  environmentIntensity: 0.42,
   diffuseIblStrength: 0.06,
   specularIblStrength: 0.95,
   wetness: 0.42,
@@ -70,12 +76,40 @@ const ltcBindGroup = root.createBindGroup(ltcLayout, {
 
 const environmentTexture = root
   .createTexture({
-    size: [256, 256, 6],
+    size: [ENVIRONMENT_SIZE, ENVIRONMENT_SIZE, 6],
     format: 'rgba8unorm',
     mipLevelCount: ENVIRONMENT_MIP_LEVELS,
   })
   .$usage('sampled', 'render');
-environmentTexture.write(createEnvironmentFaces());
+
+const environmentFaceUniform = root.createUniform(d.u32);
+const environmentGenerationBindGroup = root.createBindGroup(environmentGenerationLayout, {
+  face: environmentFaceUniform.buffer,
+});
+const environmentPipeline = root.createRenderPipeline({
+  vertex: environmentVertex,
+  fragment: environmentFragment,
+  targets: { format: 'rgba8unorm' },
+});
+const environmentFaceViews = Array.from({ length: 6 }, (_, face) =>
+  environmentTexture.createView('render', {
+    baseArrayLayer: face,
+    arrayLayerCount: 1,
+    mipLevelCount: 1,
+  }),
+);
+
+environmentFaceViews.forEach((view, face) => {
+  environmentFaceUniform.write(face);
+  environmentPipeline
+    .with(environmentGenerationBindGroup)
+    .withColorAttachment({
+      view,
+      loadOp: 'clear',
+      storeOp: 'store',
+    })
+    .draw(3);
+});
 environmentTexture.generateMipmaps();
 
 const environmentSampler = root.createSampler({
@@ -161,6 +195,7 @@ const { cleanupCamera } = setupOrbitCamera(
     target: d.vec4f(0, 0.55, -0.55, 1),
     minZoom: 1.8,
     maxZoom: 10,
+    minCameraY: 0.22,
   },
   (updates) => cameraUniform.patch(updates),
 );
