@@ -1,0 +1,25 @@
+{
+  "name": "eslint-plugin-internal",
+  "version": "0.11.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@typescript-eslint/utils": "^8.57.2"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "@typescript-eslint/rule-tester": "^8.57.2",
+    "eslint": "^9.39.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.17"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0"
+  }
+}

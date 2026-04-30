@@ -4,7 +4,7 @@ import eslintPlugin from 'eslint-plugin-eslint-plugin';
 
 export default defineConfig({
   plugins: ['eslint', 'typescript', 'import', 'unicorn', 'oxc'],
-  jsPlugins: ['eslint-plugin-typegpu', 'eslint-plugin-eslint-plugin'],
+  jsPlugins: ['eslint-plugin-typegpu', 'eslint-plugin-eslint-plugin', 'eslint-plugin-internal'],
   categories: {
     correctness: 'warn',
     suspicious: 'warn',
@@ -21,6 +21,7 @@ export default defineConfig({
     'eslint-plugin-import/no-named-as-default': 'off',
     'eslint-plugin-import/no-named-as-default-member': 'off',
     'eslint-plugin-import/extensions': ['error', 'always', { ignorePackages: true }],
+    'eslint-plugin-internal/no-useless-path-segments': 'error',
   },
   ignorePatterns: ['**/*.astro', '**/*.mjs'],
   overrides: [
@@ -41,6 +42,10 @@ export default defineConfig({
       rules: {
         ...(eslintPlugin.configs.recommended.rules as Record<string, 'error' | 'warn' | 'off'>),
       },
+    },
+    {
+      files: ['apps/typegpu-docs/src/examples/**/*.ts'],
+      rules: { 'eslint-plugin-internal/no-long-imports': 'error' },
     },
   ],
   env: {
