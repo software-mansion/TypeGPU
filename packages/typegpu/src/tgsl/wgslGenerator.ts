@@ -27,7 +27,7 @@ import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared
 import { safeStringify } from '../shared/stringify.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
-import { isGPUCallable, isKnownAtComptime } from '../types.ts';
+import { isGPUCallable, isKnownAtComptime, type DualFn } from '../types.ts';
 import { convertStructValues, convertToCommonType, tryConvertSnippet } from './conversion.ts';
 import {
   ArrayExpression,
@@ -521,17 +521,6 @@ ${this.ctx.pre}}`;
         return snip(new ConsoleLog(property), UnknownData, /* origin */ 'runtime');
       }
 
-      if (target.value === Math) {
-        if (property in mathToStd && mathToStd[property]) {
-          return snip(mathToStd[property], UnknownData, /* origin */ 'runtime');
-        }
-        if (typeof Math[property as keyof typeof Math] === 'function') {
-          throw new Error(
-            `Unsupported functionality 'Math.${property}'. Use an std alternative, or implement the function manually.`,
-          );
-        }
-      }
-
       const accessed = accessProp(target, property);
       if (!accessed) {
         throw new Error(
@@ -580,7 +569,12 @@ ${this.ctx.pre}}`;
     if (expression[0] === NODE.call) {
       // Function Call
       const [_, calleeNode, argNodes] = expression;
-      const callee = this._expression(calleeNode);
+      let callee = this._expression(calleeNode);
+
+      if (mathToStd.has(callee.value as AnyFn)) {
+        const mockedFn = mathToStd.get(callee.value as AnyFn) as DualFn<AnyFn>;
+        callee = snip(mockedFn, UnknownData, 'runtime');
+      }
 
       if (wgsl.isWgslStruct(callee.value)) {
         // Struct schema call.
