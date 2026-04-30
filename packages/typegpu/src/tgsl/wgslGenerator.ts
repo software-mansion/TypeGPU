@@ -40,7 +40,7 @@ import { UnrollableIterable } from '../core/unroll/tgpuUnroll.ts';
 import { isGenericFn } from '../core/function/tgpuFn.ts';
 import type { AnyFn } from '../core/function/fnTypes.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
-import { mathToStd, supportedLogOps } from './math.ts';
+import { mathToStd, supportedLogOps } from './jsPolyfills.ts';
 import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';

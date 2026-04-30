@@ -19,7 +19,7 @@ import { invariant } from '../../errors.ts';
 import { $internal } from '../../shared/symbols.ts';
 import { convertToCommonType } from '../conversion.ts';
 import { concretizeSnippet, type GenerationCtx } from '../generationHelpers.ts';
-import { supportedLogOps } from '../math.ts';
+import { supportedLogOps } from '../jsPolyfills.ts';
 import { createLoggingFunction } from './serializers.ts';
 import {
   type LogGenerator,
