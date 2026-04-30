@@ -1,5 +1,5 @@
 import { createIoSchema } from '../core/function/ioSchema.ts';
-import { isValidProp } from '../nameRegistry.ts';
+import { validateProp } from '../nameUtils.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $internal, $repr, $resolve } from '../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../types.ts';
@@ -75,8 +75,9 @@ export class AutoStruct implements BaseData, SelfResolvable {
           `Property name '${wgslKey}' causes naming clashes. Choose a different name.`,
         );
       }
-      if (!isValidProp(wgslKey)) {
-        throw new Error(`Property key '${key}' is a reserved WGSL word. Choose a different name.`);
+      const result = validateProp(wgslKey);
+      if (!result.success) {
+        throw new Error(`Invalid property key '${key}'${result.error ? `: ${result.error}` : ''}`);
       }
 
       this.#usedWgslKeys.add(wgslKey);
