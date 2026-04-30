@@ -9,6 +9,7 @@ export default defineConfig({
     'src/esbuild.ts',
     'src/farm.ts',
     'src/rolldown.ts',
+    'src/rolldown-browser.ts',
     'src/rspack.ts',
     'src/vite.ts',
     'src/webpack.ts',
