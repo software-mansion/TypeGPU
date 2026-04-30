@@ -1,5 +1,5 @@
 import { describe, expect, vi } from 'vitest';
-import tgpu, { d } from '../src/index.js';
+import tgpu, { d } from 'typegpu';
 import { setName } from '../src/shared/meta.ts';
 import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../src/shared/symbols.ts';
 import type { ResolutionCtx } from '../src/types.ts';

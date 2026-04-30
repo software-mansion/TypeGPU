@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
-import tgpu, { std } from '../src/index.js';
+import tgpu, { std } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('TgpuGenericFn - shellless callback wrapper', () => {

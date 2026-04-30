@@ -21,8 +21,10 @@ import {
   vec2f,
   vec2u,
   vec3f,
-} from '../../src/data/index.ts';
-import { ptrPrivate, ptrStorage, ptrWorkgroup } from '../../src/data/ptr.ts';
+  ptrPrivate,
+  ptrStorage,
+  ptrWorkgroup,
+} from 'typegpu/data';
 
 describe('deepEqual', () => {
   it('compares simple types', () => {

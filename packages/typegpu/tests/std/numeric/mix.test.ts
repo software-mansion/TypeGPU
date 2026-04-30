@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f, vec4h } from '../../../src/data/index.ts';
-import { mix } from '../../../src/std/index.ts';
+import { vec2f, vec3f, vec4h } from 'typegpu/data';
+import { mix } from 'typegpu/std';
 
 describe('mix', () => {
   it('should blend scalar values correctly', () => {

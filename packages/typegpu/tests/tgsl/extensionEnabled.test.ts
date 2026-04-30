@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 
-import tgpu, { d, std } from '../../src/index.js';
+import tgpu, { d, std } from 'typegpu';
 
 describe('extension based pruning', () => {
   it('should include extension code when the feature is used', () => {

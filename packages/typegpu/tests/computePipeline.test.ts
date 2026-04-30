@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
-import { d, MissingBindGroupsError, tgpu, type TgpuComputePipeline } from '../src/index.js';
+import { d, MissingBindGroupsError, tgpu, type TgpuComputePipeline } from 'typegpu';
 import { $internal } from '../src/shared/symbols.ts';
 import { it } from 'typegpu-testing-utility';
 import { extensionEnabled } from '../src/std/extensions.ts';
