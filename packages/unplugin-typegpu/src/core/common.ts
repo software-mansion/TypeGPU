@@ -30,6 +30,10 @@ export interface Options {
   earlyPruning?: boolean | undefined;
 }
 
+export interface Externals {
+  [key: string]: Externals | string;
+}
+
 export type MetadatableFunction =
   | t.FunctionDeclaration
   | t.FunctionExpression

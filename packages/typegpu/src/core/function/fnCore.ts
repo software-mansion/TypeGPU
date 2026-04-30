@@ -3,7 +3,7 @@ import { undecorate } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { type BaseData, isWgslData, isWgslStruct, Void } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
-import { getMetaData, getName } from '../../shared/meta.ts';
+import { getMetaData, getName, type Externals2 } from '../../shared/meta.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx, TgpuShaderStage } from '../../types.ts';
 import { applyExternals, type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
@@ -162,11 +162,14 @@ export function createFnCore(
       const pluginData = getMetaData(implementation);
 
       // Passing a record happens prior to version 0.9.0
+      // Passing a function happens prior to version 0.12.0
       // TODO: Support for this can be removed down the line
-      const pluginExternals =
-        typeof pluginData?.externals === 'function'
-          ? pluginData.externals()
-          : pluginData?.externals;
+      let pluginExternals: ExternalMap | Record<string, unknown> | undefined =
+        pluginData?.externals2
+          ? externals2ToExternalMap(pluginData.externals2)
+          : typeof pluginData?.externals === 'function'
+            ? pluginData.externals()
+            : pluginData?.externals;
 
       if (pluginExternals) {
         const missing = Object.fromEntries(
@@ -184,7 +187,9 @@ export function createFnCore(
       }
 
       // verify all required externals are present
-      const missingExternals = ast.externalNames.filter((name) => !(name in externalMap));
+      const missingExternals = Object.keys(ast.externalNames).filter(
+        (name) => !(name in externalMap),
+      );
       if (missingExternals.length > 0) {
         throw new MissingLinksError(getName(this), missingExternals);
       }
@@ -218,6 +223,22 @@ export function createFnCore(
   };
 
   return core;
+}
+
+// TODO: deslopify, document, make sure it works as intended
+function externals2ToExternalMap(ext2: Externals2): ExternalMap {
+  const result: ExternalMap = {};
+  for (const [key, value] of Object.entries(ext2)) {
+    if (typeof value === 'function') {
+      Object.defineProperty(result, key, {
+        get: value,
+        enumerable: true,
+      });
+    } else {
+      result[key] = externals2ToExternalMap(value);
+    }
+  }
+  return result;
 }
 
 function isArgUsedInBody(argName: string, body: string): boolean {
