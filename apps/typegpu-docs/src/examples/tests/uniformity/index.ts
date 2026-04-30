@@ -1,56 +1,138 @@
 import { randf, randomGeneratorSlot } from '@typegpu/noise';
-import tgpu, { common, d, std, type TgpuRenderPipeline } from 'typegpu';
+import tgpu, { common, d, std, type TgpuGuardedComputePipeline } from 'typegpu';
 
 import * as c from './constants.ts';
-import { getPRNG, type PRNG } from './prngs.ts';
+import { initialPRNG, prngKeys, prngs, type PRNGKey } from './prngs.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
-const root = await tgpu.init();
+const root = await tgpu.init({ device: { requiredFeatures: ['timestamp-query'] } });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const gridSizeUniform = root.createUniform(d.f32, c.initialGridSize);
-const canvasRatioUniform = root.createUniform(d.f32, canvas.width / canvas.height);
-
-const fragmentShader = tgpu.fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-})((input) => {
-  'use gpu';
-  const uv = ((input.uv + 1) / 2) * d.vec2f(canvasRatioUniform.$, 1);
-  const gridedUV = std.floor(uv * gridSizeUniform.$);
-
-  randf.seed2(gridedUV);
-
-  return d.vec4f(d.vec3f(randf.sample()), 1);
+const Config = d.struct({
+  gridSize: d.f32,
+  canvasRatio: d.f32,
+  samplesPerThread: d.u32,
+  takeAverage: d.u32,
 });
 
-const pipelineCache = new Map<PRNG, TgpuRenderPipeline<d.Vec4f>>();
-let prng: PRNG = c.initialPRNG;
+const configUniform = root.createUniform(Config, {
+  gridSize: c.initialGridSize,
+  canvasRatio: canvas.width / canvas.height,
+  samplesPerThread: c.initialSamplesPerThread,
+  takeAverage: d.u32(c.initialTakeAverage),
+});
 
-const redraw = () => {
-  let pipeline = pipelineCache.get(prng);
-  if (!pipeline) {
-    pipeline = root.with(randomGeneratorSlot, getPRNG(prng)).createRenderPipeline({
-      vertex: common.fullScreenTriangle,
-      fragment: fragmentShader,
-      targets: { format: presentationFormat },
-    });
-    pipelineCache.set(prng, pipeline);
+const layouts = {
+  compute: tgpu.bindGroupLayout({
+    texture: { storageTexture: d.textureStorage2d('r32float', 'write-only') },
+  }),
+  display: tgpu.bindGroupLayout({
+    texture: { storageTexture: d.textureStorage2d('r32float', 'read-only') },
+  }),
+};
+
+const bindGroups = Object.fromEntries(
+  c.gridSizes.map((size) => {
+    const texture = root
+      .createTexture({ size: [size, size], format: 'r32float' })
+      .$usage('storage', 'sampled');
+    return [
+      size,
+      {
+        compute: root.createBindGroup(layouts.compute, { texture }),
+        display: root.createBindGroup(layouts.display, { texture }),
+      },
+    ];
+  }),
+);
+
+const displayPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: ({ uv }) => {
+    'use gpu';
+    const adjustedUv = uv * d.vec2f(configUniform.$.canvasRatio, 1);
+    const gridSize = configUniform.$.gridSize;
+    const coords = d.vec2u(std.floor(adjustedUv * gridSize));
+    const value = std.textureLoad(layouts.display.$.texture, coords).r;
+    return d.vec4f(d.vec3f(value), 1);
+  },
+  targets: { format: presentationFormat },
+});
+
+const computeFn = (x: number, y: number) => {
+  'use gpu';
+  const gridSize = configUniform.$.gridSize;
+
+  if (!randomGeneratorSlot.$.seed2) {
+    randf.seed(d.f32(x + 1) * gridSize + d.f32(y + 1));
+  } else {
+    randf.seed2(d.vec2f(x, y) + 1);
   }
 
-  pipeline.withColorAttachment({ view: context }).draw(3);
+  let i = d.u32(0);
+  const samplesPerThread = configUniform.$.samplesPerThread;
+  let samples = d.f32(0);
+  while (i < samplesPerThread - 1) {
+    samples += randf.sample();
+    i += 1;
+  }
+
+  let result = randf.sample();
+  if (configUniform.$.takeAverage === 1) {
+    result = (result + samples) / samplesPerThread;
+  }
+
+  std.textureStore(layouts.compute.$.texture, d.vec2u(x, y), d.vec4f(result, 0, 0, 0));
+};
+
+const computePipelineCache = new Map<PRNGKey, TgpuGuardedComputePipeline<[number, number]>>();
+const getComputePipeline = (key: PRNGKey) => {
+  let pipeline = computePipelineCache.get(key);
+  if (!pipeline) {
+    pipeline = root
+      .with(randomGeneratorSlot, prngs[key].generator)
+      .createGuardedComputePipeline(computeFn)
+      .withPerformanceCallback((start, end) => {
+        console.log(`[${key}] - ${Number(end - start) / 1_000_000} ms.`);
+      });
+    computePipelineCache.set(key, pipeline);
+  }
+  return pipeline;
+};
+
+let prng = initialPRNG;
+let gridSize = c.initialGridSize;
+
+const redraw = () => {
+  getComputePipeline(prng).with(bindGroups[gridSize].compute).dispatchThreads(gridSize, gridSize);
+  displayPipeline.withColorAttachment({ view: context }).with(bindGroups[gridSize].display).draw(3);
 };
 
 // #region Example controls & Cleanup
 export const controls = defineControls({
   PRNG: {
-    initial: c.initialPRNG,
-    options: c.prngs,
+    initial: initialPRNG,
+    options: prngKeys,
     onSelectChange: (value) => {
       prng = value;
+      redraw();
+    },
+  },
+  'Samples per thread': {
+    initial: c.initialSamplesPerThread,
+    options: c.samplesPerThread,
+    onSelectChange: (value) => {
+      configUniform.writePartial({ samplesPerThread: value });
+      redraw();
+    },
+  },
+  'Take Average': {
+    initial: c.initialTakeAverage,
+    onToggleChange: (value) => {
+      configUniform.writePartial({ takeAverage: d.u32(value) });
       redraw();
     },
   },
@@ -58,33 +140,23 @@ export const controls = defineControls({
     initial: c.initialGridSize,
     options: c.gridSizes,
     onSelectChange: (value) => {
-      gridSizeUniform.write(value);
+      gridSize = value;
+      configUniform.writePartial({ gridSize });
       redraw();
     },
   },
+  // this is the only place where some niche prngs are tested
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick: () => {
-      const namespace = tgpu['~unstable'].namespace();
-      c.prngs
-        .map((prng) =>
-          tgpu.resolve(
-            [
-              root.with(randomGeneratorSlot, getPRNG(prng)).createRenderPipeline({
-                vertex: common.fullScreenTriangle,
-                fragment: fragmentShader,
-                targets: { format: presentationFormat },
-              }),
-            ],
-            { names: namespace },
-          ),
-        )
-        .map((r) => root.device.createShaderModule({ code: r }));
+      prngKeys
+        .map((key) => tgpu.resolve([getComputePipeline(key).pipeline]))
+        .forEach((r) => root.device.createShaderModule({ code: r }));
     },
   },
 });
 
 const resizeObserver = new ResizeObserver(() => {
-  canvasRatioUniform.write(canvas.width / canvas.height);
+  configUniform.writePartial({ canvasRatio: canvas.width / canvas.height });
   redraw();
 });
 resizeObserver.observe(canvas);

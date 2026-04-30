@@ -99,6 +99,9 @@ const main = tgpu.fragmentFn({
 });
 ```
 
+### Available PRNGs
+
+
 :::tip
 Due to limited float precision, for large seeds the samples tend to repeat quickly. To avoid this, keep the seed in the range `[0, 1]`.
 :::
@@ -277,34 +280,33 @@ const f = tgpu.computeFn({ workgroupSize: [1] })(() => {
 });
 // ---cut---
 import {
+  hash,
+  randomGeneratorShell,
   randomGeneratorSlot,
+  u32To01F32,
   type StatefulGenerator,
 } from '@typegpu/noise';
 
-const LCG: StatefulGenerator = (() => {
+const LCG32: StatefulGenerator = (() => {
   const seed = tgpu.privateVar(d.u32);
 
-  const u32To01Float = tgpu.fn([d.u32], d.f32)((value) => {
-    const mantissa = value >> 9;
-    const bits = 0x3F800000 | mantissa;
-    const f = std.bitcastU32toF32(bits);
-    return f - 1;
-  });
+ const multiplier = 1664525;
+ const increment = 1013904223;
 
-  return {
-    seed2: (value: d.v2f) => {
-      'use gpu';
-      seed.$ = d.u32(value.x * std.pow(32, 3) + value.y * std.pow(32, 2));
-    },
-    sample: () => {
-      'use gpu';
-      seed.$ = seed.$ * 1664525 + 1013904223; // % 2 ^ 32
-      return u32To01Float(seed.$);
-    },
-  };
+ return {
+   seed: tgpu.fn([d.f32])((value) => {
+     seed.$ = hash(d.u32(value));
+   }),
+
+   sample: randomGeneratorShell(() => {
+     'use gpu';
+     seed.$ = multiplier * seed.$ + increment; // % 2 ^ 32
+     return u32To01F32(seed.$);
+   }).$name('sample'),
+ };
 })();
 
 const pipeline = root
-  .with(randomGeneratorSlot, LCG)
+  .with(randomGeneratorSlot, LCG32)
   .createComputePipeline({ compute: f });
 ```
