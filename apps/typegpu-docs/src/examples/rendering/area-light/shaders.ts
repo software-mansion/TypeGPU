@@ -1,5 +1,5 @@
 import tgpu, { d, std } from 'typegpu';
-import { perlin2d } from '@typegpu/noise';
+import { perlin3d } from '@typegpu/noise';
 import { ENVIRONMENT_MIP_LEVELS } from './environment.ts';
 import { evaluateLtcAreaLight, ltcUv, sampleLtcAmplitude, sampleLtcMatrix } from './ltc.ts';
 import { environmentLayout, LIGHT_COUNT, sceneLayout, Vertex, vertexLayout } from './schemas.ts';
@@ -48,31 +48,35 @@ function materialF0(albedo: d.v3f, metallic: number) {
   return std.mix(d.vec3f(0.04), albedo, metallic);
 }
 
-function noise01(p: d.v2f) {
+function noise01(p: d.v3f) {
   'use gpu';
-  return perlin2d.sample(p) * 0.5 + 0.5;
+  return perlin3d.sample(p) * 0.5 + 0.5;
 }
 
-function fbm(p: d.v2f) {
+function fbm(p: d.v3f) {
   'use gpu';
-  return noise01(p) * 0.55 + noise01(p * 2.3 + 19.1) * 0.3 + noise01(p * 5.1 - 8.7) * 0.15;
+  return (
+    noise01(p) * 0.52 +
+    noise01(p * 2.15 + d.vec3f(8.4, -3.2, 5.7)) * 0.31 +
+    noise01(p * 4.4 + d.vec3f(-6.1, 4.8, 11.3)) * 0.17
+  );
 }
 
 function waterNormal(N: d.v3f, worldPos: d.v3f, amount: number) {
   'use gpu';
   const t = sceneLayout.$.params.time;
-  const phase =
+  const drift =
     d.vec2f(
-      std.sin(t * 0.085) + std.sin(t * 0.041) * 0.45,
-      std.cos(t * 0.071) + std.sin(t * 0.033) * 0.35,
-    ) * 0.12;
-  const p = worldPos.xz * 0.48 + phase;
+      std.sin(t * 0.12) + std.sin(t * 0.047) * 0.5,
+      std.cos(t * 0.097) + std.sin(t * 0.059) * 0.4,
+    ) * 0.14;
+  const p = d.vec3f(worldPos.xz * 0.46 + drift, t * 0.18);
   const center = fbm(p);
   const perlinGradient =
-    d.vec2f(fbm(p + d.vec2f(0.12, 0)) - center, fbm(p + d.vec2f(0, 0.12)) - center) * 0.42;
+    d.vec2f(fbm(p + d.vec3f(0.14, 0, 0)) - center, fbm(p + d.vec3f(0, 0.14, 0)) - center) * 0.62;
   const waveGradient =
-    d.vec2f(1.25, 0.42) * std.cos(std.dot(worldPos.xz, d.vec2f(1.25, 0.42)) + t * 0.45) * 0.012 +
-    d.vec2f(-0.66, 1.08) * std.cos(std.dot(worldPos.xz, d.vec2f(-0.66, 1.08)) - t * 0.31) * 0.01;
+    d.vec2f(1.25, 0.42) * std.cos(std.dot(worldPos.xz, d.vec2f(1.25, 0.42)) + t * 0.68) * 0.015 +
+    d.vec2f(-0.66, 1.08) * std.cos(std.dot(worldPos.xz, d.vec2f(-0.66, 1.08)) - t * 0.52) * 0.013;
   const gradient = perlinGradient + waveGradient;
   const waterN = std.normalize(d.vec3f(std.neg(gradient.x), 1, std.neg(gradient.y)));
 
@@ -178,9 +182,11 @@ export const mainFragment = tgpu.fragmentFn({
   const geometricN = std.normalize(normal);
   const V = std.normalize(sceneLayout.$.camera.position.xyz - worldPos);
   const water = wetness * sceneLayout.$.params.wetness * saturate(geometricN.y * 1.35);
-  const film = water * std.mix(0.97, 1, fbm(worldPos.xz * 0.42 + 30.2));
+  const film =
+    water *
+    std.mix(0.96, 1, fbm(d.vec3f(worldPos.xz * 0.38 + 30.2, sceneLayout.$.params.time * 0.08)));
   const wetSurface = saturate(film);
-  const N = waterNormal(geometricN, worldPos, water * 0.55);
+  const N = waterNormal(geometricN, worldPos, water * 0.66);
   const waterRoughness = std.mix(0.065, 0.032, water);
   const materialRoughness = std.clamp(std.mix(roughness, waterRoughness, wetSurface), 0.006, 1);
   const wetAlbedo = std.mix(albedo, albedo * 0.44, wetSurface);
