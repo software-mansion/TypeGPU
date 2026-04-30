@@ -443,6 +443,38 @@ describe('array', () => {
       }"
     `);
   });
+
+  it('array expressions can be indexed into with a comptime-known index', () => {
+    function foo() {
+      'use gpu';
+      const i = 2;
+      const a = [i, 2][0];
+      const b = [i, 2][1];
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() {
+        const i = 2;
+        const a = i;
+        const b = 2i;
+      }"
+    `);
+  });
+
+  it('array expressions can be indexed into with a runtime-known index', () => {
+    function foo() {
+      'use gpu';
+      const i = 0;
+      const a = [1, 2][i];
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() {
+        const i = 0;
+        let a = array<i32, 2>(1, 2)[i];
+      }"
+    `);
+  });
 });
 
 describe('array.length', () => {
