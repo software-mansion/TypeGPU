@@ -50,6 +50,7 @@
     "oxlint": "^1.57.0",
     "oxlint-tsgolint": "^0.17.4",
     "pkg-pr-new": "^0.0.66",
+    "publint": "^0.3.18",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*",
     "vite-imagetools": "catalog:frontend",

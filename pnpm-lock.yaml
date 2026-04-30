@@ -100,6 +100,9 @@ importers:
       pkg-pr-new:
         specifier: ^0.0.66
         version: 0.0.66
+      publint:
+        specifier: ^0.3.18
+        version: 0.3.18
       typescript:
         specifier: npm:tsover@^5.9.11
         version: tsover@5.9.11
@@ -130,7 +133,7 @@ importers:
     devDependencies:
       '@types/bun':
         specifier: latest
-        version: 1.3.12
+        version: 1.3.13
 
   apps/infra-benchmarks:
     devDependencies:
@@ -174,7 +177,7 @@ importers:
         version: 9.5.4(tsover@5.9.11)(webpack@5.104.1)
       tsdown:
         specifier: ^0.15.6
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.34)
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(publint@0.3.18)(tsover@5.9.11)(unrun@0.2.34)
       tsx:
         specifier: ^4.19.2
         version: 4.20.6
@@ -437,7 +440,7 @@ importers:
         version: 3.3.2(eslint@9.39.2(jiti@2.6.1))(prettier@3.8.0)(tsover@5.9.11)
       tsdown:
         specifier: ^0.20.3
-        version: 0.20.3(tsover@5.9.11)
+        version: 0.20.3(publint@0.3.18)(tsover@5.9.11)
       typescript:
         specifier: npm:tsover@^5.9.11
         version: tsover@5.9.11
@@ -505,7 +508,7 @@ importers:
         version: link:../tgpu-dev-cli
       tsdown:
         specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.34)
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(publint@0.3.18)(tsover@5.9.11)(unrun@0.2.34)
       typescript:
         specifier: npm:tsover@^5.9.11
         version: tsover@5.9.11
@@ -531,7 +534,7 @@ importers:
         version: 8.14.1
       tsdown:
         specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.34)
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(publint@0.3.18)(tsover@5.9.11)(unrun@0.2.34)
       typescript:
         specifier: npm:tsover@^5.9.11
         version: tsover@5.9.11
@@ -572,7 +575,7 @@ importers:
         version: 27.0.0(canvas@3.2.0)(postcss@8.5.8)
       tsdown:
         specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.34)
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(publint@0.3.18)(tsover@5.9.11)(unrun@0.2.34)
       typegpu-testing-utility:
         specifier: workspace:*
         version: link:../typegpu-testing-utility
@@ -644,7 +647,7 @@ importers:
         version: link:../tinyest
       tsdown:
         specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.34)
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(publint@0.3.18)(tsover@5.9.11)(unrun@0.2.34)
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -694,7 +697,7 @@ importers:
         version: 0.1.66
       tsdown:
         specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.34)
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(publint@0.3.18)(tsover@5.9.11)(unrun@0.2.34)
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -716,7 +719,7 @@ importers:
         version: 0.1.66
       tsdown:
         specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.34)
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(publint@0.3.18)(tsover@5.9.11)(unrun@0.2.34)
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -860,7 +863,7 @@ importers:
         version: 4.60.1
       tsdown:
         specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.34)
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(publint@0.3.18)(tsover@5.9.11)(unrun@0.2.34)
       typescript:
         specifier: npm:tsover@^5.9.11
         version: tsover@5.9.11
@@ -2529,6 +2532,10 @@ packages:
   '@protobufjs/utf8@1.1.0':
     resolution: {integrity: sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw==}
 
+  '@publint/pack@0.1.4':
+    resolution: {integrity: sha512-HDVTWq3H0uTXiU0eeSQntcVUTPP3GamzeXI41+x7uU9J65JgWQh3qWZHblR1i0npXfFtF+mxBiU2nJH8znxWnQ==}
+    engines: {node: '>=18'}
+
   '@quansync/fs@1.0.0':
     resolution: {integrity: sha512-4TJ3DFtlf1L5LDMaM6CanJ/0lckGNtJcMjQ1NAV6zDmA0tEHKZtxNKin8EgPaVX1YzljbxckyT2tJrpQKAtngQ==}
 
@@ -3564,6 +3571,9 @@ packages:
   '@types/bun@1.3.12':
     resolution: {integrity: sha512-DBv81elK+/VSwXHDlnH3Qduw+KxkTIWi7TXkAeh24zpi5l0B2kUg9Ga3tb4nJaPcOFswflgi/yAvMVBPrxMB+A==}
 
+  '@types/bun@1.3.13':
+    resolution: {integrity: sha512-9fqXWk5YIHGGnUau9TEi+qdlTYDAnOj+xLCmSTwXfAIqXr2x4tytJb43E9uCvt09zJURKXwAtkoH4nLQfzeTXw==}
+
   '@types/chai@5.2.2':
     resolution: {integrity: sha512-8kB30R7Hwqf40JPiKhVzodJs2Qc1ZJ5zuT3uzw5Hq/dhNCl3G3l83jfpdI1e20BP348+fV7VIL/+FxaXkqBmWg==}
 
@@ -4219,6 +4229,9 @@ packages:
 
   bun-types@1.3.12:
     resolution: {integrity: sha512-HqOLj5PoFajAQciOMRiIZGNoKxDJSr6qigAttOX40vJuSp6DN/CxWp9s3C1Xwm4oH7ybueITwiaOcWXoYVoRkA==}
+
+  bun-types@1.3.13:
+    resolution: {integrity: sha512-QXKeHLlOLqQX9LgYaHJfzdBaV21T63HhFJnvuRCcjZiaUDpbs5ED1MgxbMra71CsryN/1dAoXuJJJwIv/2drVA==}
 
   bun@1.3.10:
     resolution: {integrity: sha512-S/CXaXXIyA4CMjdMkYQ4T2YMqnAn4s0ysD3mlsY4bUiOCqGlv28zck4Wd4H4kpvbekx15S9mUeLQ7Uxd0tYTLA==}
@@ -6196,6 +6209,10 @@ packages:
       react-dom:
         optional: true
 
+  mri@1.2.0:
+    resolution: {integrity: sha512-tzzskb3bG8LvYGFF/mDTpq3jpI6Q9wc3LEmBaghu+DdCssd1FakN7Bc0hVNmEyGq1bq3RgfkCb3cmQLpNPOroA==}
+    engines: {node: '>=4'}
+
   mrmime@2.0.1:
     resolution: {integrity: sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ==}
     engines: {node: '>=10'}
@@ -6717,6 +6734,11 @@ packages:
   psl@1.15.0:
     resolution: {integrity: sha512-JZd3gMVBAVQkSs6HdNZo9Sdo0LNcQeMNP3CozBJb3JYC/QUYZTnKxP+f8oWRX4rHP5EurWxqAHTSwUCjlNKa1w==}
 
+  publint@0.3.18:
+    resolution: {integrity: sha512-JRJFeBTrfx4qLwEuGFPk+haJOJN97KnPuK01yj+4k/Wj5BgoOK5uNsivporiqBjk2JDaslg7qJOhGRnpltGeog==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   pump@3.0.4:
     resolution: {integrity: sha512-VS7sjc6KR7e1ukRFhQSY5LM2uBWAUPiOPa/A3mkKmiMwSmRFUITt0xuj+/lesgnCv+dPIEYlkzrcyXgquIHMcA==}
 
@@ -7028,6 +7050,10 @@ packages:
 
   rw@1.3.3:
     resolution: {integrity: sha512-PdhdWy89SiZogBLaw42zdeqtRJ//zFd2PgQavcICDUgJT5oW10QCRKbJ6bg4r0/UY2M6BWd5tkxuGFRvCkgfHQ==}
+
+  sade@1.8.1:
+    resolution: {integrity: sha512-xal3CZX1Xlo/k4ApwCFrHVACi9fBqJ7V+mwhBsuf/1IOKbBy098Fex+Wa/5QMubw09pSZ/u8EY8PWgevJsXp1A==}
+    engines: {node: '>=6'}
 
   safe-buffer@5.2.1:
     resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
@@ -9834,6 +9860,8 @@ snapshots:
 
   '@protobufjs/utf8@1.1.0': {}
 
+  '@publint/pack@0.1.4': {}
+
   '@quansync/fs@1.0.0':
     dependencies:
       quansync: 1.0.0
@@ -10647,6 +10675,10 @@ snapshots:
   '@types/bun@1.3.12':
     dependencies:
       bun-types: 1.3.12
+
+  '@types/bun@1.3.13':
+    dependencies:
+      bun-types: 1.3.13
 
   '@types/chai@5.2.2':
     dependencies:
@@ -11565,6 +11597,10 @@ snapshots:
       '@types/node': 24.10.0
 
   bun-types@1.3.12:
+    dependencies:
+      '@types/node': 24.10.0
+
+  bun-types@1.3.13:
     dependencies:
       '@types/node': 24.10.0
 
@@ -13970,6 +14006,8 @@ snapshots:
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
 
+  mri@1.2.0: {}
+
   mrmime@2.0.1: {}
 
   ms@2.1.3: {}
@@ -14587,6 +14625,13 @@ snapshots:
       punycode: 2.3.1
     optional: true
 
+  publint@0.3.18:
+    dependencies:
+      '@publint/pack': 0.1.4
+      package-manager-detector: 1.6.0
+      picocolors: 1.1.1
+      sade: 1.8.1
+
   pump@3.0.4:
     dependencies:
       end-of-stream: 1.4.5
@@ -15072,6 +15117,10 @@ snapshots:
 
   rw@1.3.3: {}
 
+  sade@1.8.1:
+    dependencies:
+      mri: 1.2.0
+
   safe-buffer@5.2.1: {}
 
   safer-buffer@2.1.2: {}
@@ -15545,7 +15594,7 @@ snapshots:
     optionalDependencies:
       typescript: tsover@5.9.11
 
-  tsdown@0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.34):
+  tsdown@0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(publint@0.3.18)(tsover@5.9.11)(unrun@0.2.34):
     dependencies:
       ansis: 4.2.0
       cac: 6.7.14
@@ -15562,6 +15611,7 @@ snapshots:
       tree-kill: 1.2.2
       unconfig: 7.4.2
     optionalDependencies:
+      publint: 0.3.18
       typescript: tsover@5.9.11
       unrun: 0.2.34
     transitivePeerDependencies:
@@ -15573,7 +15623,7 @@ snapshots:
       - supports-color
       - vue-tsc
 
-  tsdown@0.20.3(tsover@5.9.11):
+  tsdown@0.20.3(publint@0.3.18)(tsover@5.9.11):
     dependencies:
       ansis: 4.2.0
       cac: 6.7.14
@@ -15592,6 +15642,7 @@ snapshots:
       unconfig-core: 7.5.0
       unrun: 0.2.31
     optionalDependencies:
+      publint: 0.3.18
       typescript: tsover@5.9.11
     transitivePeerDependencies:
       - '@ts-macro/tsc'
