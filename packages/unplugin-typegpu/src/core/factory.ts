@@ -6,7 +6,7 @@ import _traverse, { type NodePath } from '@babel/traverse';
 import { FORMAT_VERSION } from 'tinyest';
 import { transpileFn } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
-import { t } from './babel-types.ts';
+import * as t from '@babel/types';
 import {
   defaultOptions,
   earlyPruneRegex,

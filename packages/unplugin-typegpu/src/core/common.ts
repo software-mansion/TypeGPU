@@ -1,4 +1,4 @@
-import { t } from './babel-types.ts';
+import * as t from '@babel/types';
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import type { FilterPattern } from 'unplugin';
 import { MagicStringAST } from 'magic-string-ast';
