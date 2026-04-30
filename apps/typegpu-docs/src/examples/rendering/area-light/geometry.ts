@@ -180,7 +180,7 @@ export function createSceneMesh(): SceneMesh {
   const mesh = createMeshWriter(SCENE_VERTEX_COUNT);
 
   pushQuad(mesh, v3(0, 0, 0), v3(5.8, 0, 0), v3(0, 0, -4.9), v3(0, 1, 0), materials.floor);
-  pushQuad(mesh, v3(0, 1.15, -3.3), v3(4.2, 0, 0), v3(0, 1.15, 0), v3(0, 0, 1), materials.backdrop);
+  pushQuad(mesh, v3(0, 1.3, -3.3), v3(4.2, 0, 0), v3(0, 1.3, 0), v3(0, 0, 1), materials.backdrop);
 
   pushBox(mesh, v3(0, 0.08, -0.7), v3(2.55, 0.08, 1.25), materials.plinth);
   pushBox(mesh, v3(-2.55, 0.22, 0.9), v3(0.55, 0.22, 0.55), materials.block);
