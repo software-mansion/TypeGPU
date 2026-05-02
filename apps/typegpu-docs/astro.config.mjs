@@ -179,6 +179,11 @@ export default defineConfig({
               slug: 'fundamentals/utils',
               badge: { text: 'new' },
             },
+            {
+              label: 'Passing by Reference',
+              slug: 'fundamentals/passing-by-reference',
+              badge: { text: 'new' },
+            },
             // {
             //   label: 'Basic Principles',
             //   slug: 'guides/basic-principles',
