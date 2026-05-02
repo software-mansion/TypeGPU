@@ -145,11 +145,13 @@ export {
   BPETER,
   // The default (Can change between releases to improve uniformity).
   DefaultGenerator,
+  XOROSHIRO64STARSTAR,
   // ---
   randomGeneratorShell,
   randomGeneratorSlot,
   type StatefulGenerator,
 } from './generator.ts';
 
+export { hash, u32To01F32, rotl } from './utils.ts';
 export * as perlin2d from './perlin-2d/index.ts';
 export * as perlin3d from './perlin-3d/index.ts';
