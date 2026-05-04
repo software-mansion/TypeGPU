@@ -683,7 +683,7 @@ describe('wgslGenerator with console.log', () => {
       - <root>
       - computePipeline:pipeline
       - computePipelineCore
-      - computeFn:fn: Unsupported console functionality used.]
+      - computeFn:fn: Unsupported console functionality 'console.trace()'.]
     `);
   });
 

@@ -727,22 +727,20 @@ ${this.ctx.pre}}`;
       }
 
       // try to throw a descriptive error
-      if (
-        Object.getOwnPropertyNames(Math).some(
-          (prop) => Math[prop as keyof typeof Math] === callee.value,
-        )
-      ) {
+      const maybeMathMethod = Object.getOwnPropertyNames(Math).find(
+        (prop) => Math[prop as keyof typeof Math] === callee.value,
+      );
+      if (maybeMathMethod) {
         throw new Error(
-          `Unsupported Math functionality '${callee.value}'. Use an std alternative, or implement the function manually.`,
+          `Unsupported Math functionality 'Math.${maybeMathMethod}()'. Use an std alternative, or implement the function manually.`,
         );
       }
 
-      if (
-        Object.getOwnPropertyNames(console).some(
-          (prop) => console[prop as keyof typeof console] === callee.value,
-        )
-      ) {
-        throw new Error(`Unsupported console functionality used.`);
+      const maybeConsoleMethod = Object.getOwnPropertyNames(console).find(
+        (prop) => console[prop as keyof typeof console] === callee.value,
+      );
+      if (maybeConsoleMethod) {
+        throw new Error(`Unsupported console functionality 'console.${maybeConsoleMethod}()'.`);
       }
 
       throw new Error(
