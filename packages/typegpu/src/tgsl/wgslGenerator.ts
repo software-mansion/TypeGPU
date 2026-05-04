@@ -25,7 +25,7 @@ import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import {
   $gpuCallable,
-  $infixOperator,
+  $infixDispatch,
   $internal,
   $providing,
   isMarkedInternal,
@@ -663,11 +663,12 @@ ${this.ctx.pre}}`;
         );
       }
 
-      if (callee.value instanceof InfixDispatch) {
+      if ($infixDispatch in callee.value) {
+        console.log('$infixDispatch found on callee');
         // Infix operator dispatch.
         if (!argNodes[0]) {
           throw new WgslTypeError(
-            `An infix operator '${callee.value.name}' was called without any arguments`,
+            `An infix operator '${callee.value.opName}' was called without any arguments`,
           );
         }
         const rhs = this._expression(argNodes[0]);

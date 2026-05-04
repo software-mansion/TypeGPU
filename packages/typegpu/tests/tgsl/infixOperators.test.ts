@@ -107,13 +107,13 @@ describe('wgslGenerator', () => {
       return v1.mul(2).mul(3);
     };
 
+    expect(testFn()).toStrictEqual(d.vec2f(6, 12));
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() -> vec2f {
         var v1 = vec2f(1, 2);
         return ((v1 * 2f) * 3f);
       }"
     `);
-    expect(testFn()).toStrictEqual(d.vec2f(6, 12));
   });
 
   it('resolves mul infix operator on a function return value', () => {
@@ -127,6 +127,7 @@ describe('wgslGenerator', () => {
       return getVec().mul(getVec()).mul(2);
     };
 
+    expect(testFn()).toStrictEqual(d.vec3f(2, 8, 18));
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn getVec() -> vec3f {
         return vec3f(1, 2, 3);
@@ -136,7 +137,6 @@ describe('wgslGenerator', () => {
         return ((getVec() * getVec()) * 2f);
       }"
     `);
-    expect(testFn()).toStrictEqual(d.vec3f(2, 8, 18));
   });
 
   it('resolves mul infix operator on a struct property', () => {
@@ -148,6 +148,7 @@ describe('wgslGenerator', () => {
       return s.vec.mul(s.vec).mul(2);
     };
 
+    expect(testFn()).toStrictEqual(d.vec3f(8));
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "struct Struct {
         vec: vec3f,
@@ -158,7 +159,6 @@ describe('wgslGenerator', () => {
         return ((s.vec * s.vec) * 2f);
       }"
     `);
-    expect(testFn()).toStrictEqual(d.vec3f(8));
   });
 
   it('resolves mul infix operator on uniform vector', ({ root }) => {
@@ -192,6 +192,7 @@ describe('wgslGenerator', () => {
       return v1.add(v2).add(v3);
     };
 
+    expect(testFn()).toStrictEqual(d.vec3f(26));
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() -> vec3f {
         var v1 = vec3f(4);
@@ -200,6 +201,38 @@ describe('wgslGenerator', () => {
         return ((v1 + v2) + v3);
       }"
     `);
-    expect(testFn()).toStrictEqual(d.vec3f(26));
+  });
+
+  it('resolves mul infix operator on accessors', () => {
+    const vAccess = tgpu.accessor(d.vec2i, d.vec2i(1, 2));
+
+    const main = () => {
+      'use gpu';
+      return vAccess.$.mul(2).mul(3);
+    };
+
+    // expect(main()).toMatchInlineSnapshot(d.vec2i(6, 12));
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> vec2i {
+        return vec2i(6, 12);
+      }"
+    `);
+  });
+
+  it('correctly casts types', () => {
+    const main = () => {
+      'use gpu';
+      const a = d.u32(1);
+      const b = d.vec3f(2);
+      return b.mul(a);
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> vec3f {
+        const a = 1u;
+        var b = vec3f(2);
+        return (b * f32(a));
+      }"
+    `);
   });
 });

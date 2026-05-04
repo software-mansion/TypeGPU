@@ -8,7 +8,7 @@ import { Operator } from 'tsover-runtime';
 import { type InfixOperator, infixOperators } from '../tgsl/accessProp.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
-import { $infixOperator } from '../shared/symbols.ts';
+import { infixDispatch } from '../tgsl/infix.ts';
 
 function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
   object: T,
@@ -17,12 +17,13 @@ function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
 ) {
   // oxlint-disable-next-line typescript/no-explicit-any -- anything is possible
   const proto = object.prototype as any;
-  const opImpl = infixOperators[operator] as (lhs: unknown, rhs: unknown) => unknown;
+  const opImpl = infixOperators[operator] as (lhs: unknown, rhs: unknown) => unknown; // dualFn operator
 
-  proto[operator] = function (this: unknown, other: unknown): unknown {
-    return opImpl(this, other);
-  };
-  proto[operator][$infixOperator] = true;
+  Object.defineProperty(proto, operator, {
+    get(this) {
+      return infixDispatch(operator, this, opImpl);
+    },
+  });
 
   proto[operatorSymbol] = (lhs: unknown, rhs: unknown): unknown => {
     return opImpl(lhs, rhs);

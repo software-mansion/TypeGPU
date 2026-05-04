@@ -1,13 +1,7 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
 import { EntryInputRouter } from '../core/function/entryInputRouter.ts';
-import {
-  InfixDispatch,
-  isUnstruct,
-  MatrixColumnsAccess,
-  undecorate,
-  UnknownData,
-} from '../data/dataTypes.ts';
+import { isUnstruct, MatrixColumnsAccess, undecorate, UnknownData } from '../data/dataTypes.ts';
 import { abstractInt, bool, f16, f32, i32, u32 } from '../data/numeric.ts';
 import { derefSnippet } from '../data/ref.ts';
 import { isEphemeralSnippet, isSnippet, snip, type Snippet } from '../data/snippet.ts';
@@ -41,6 +35,7 @@ import { $gpuCallable } from '../shared/symbols.ts';
 import { add, bitShiftLeft, bitShiftRight, div, mod, mul, sub } from '../std/operators.ts';
 import { isKnownAtComptime } from '../types.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
+import { infixDispatch } from './infix.ts';
 
 const infixKinds = [
   'vec2f',
@@ -66,8 +61,8 @@ export const infixOperators = {
   mul,
   div,
   mod,
-  bitShiftLeft,
-  bitShiftRight,
+  bitShiftLeft, // ???
+  bitShiftRight, // ???
 } as const;
 
 export type InfixOperator = keyof typeof infixOperators;
@@ -111,11 +106,7 @@ const swizzleLenToType: Record<SwizzleableType, Record<SwizzleLength, BaseData>>
 export function accessProp(target: Snippet, propName: string): Snippet | undefined {
   if (infixKinds.includes((target.dataType as BaseData).type) && propName in infixOperators) {
     const operator = infixOperators[propName as InfixOperator];
-    return snip(
-      new InfixDispatch(propName, target, operator[$gpuCallable].call.bind(operator)),
-      UnknownData,
-      /* origin */ target.origin,
-    );
+    return snip(infixDispatch(propName, target, operator), UnknownData, /* origin */ target.origin);
   }
 
   if (isWgslArray(target.dataType) && propName === 'length') {
@@ -191,15 +182,12 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
   }
 
   const propLength = propName.length;
-  if (isVec(target.dataType) && propLength >= 1 && propLength <= 4) {
-    const isXYZW = /^[xyzw]+$/.test(propName);
-    const isRGBA = /^[rgba]+$/.test(propName);
-
-    if (!isXYZW && !isRGBA) {
-      // Not a valid swizzle
-      return undefined;
-    }
-
+  if (
+    isVec(target.dataType) &&
+    propLength >= 1 &&
+    propLength <= 4 &&
+    /^[xyzw]+$|^[rgba]+$/.test(propName)
+  ) {
     const swizzleTypeChar = target.dataType.type.includes('bool')
       ? 'b'
       : (target.dataType.type[4] as SwizzleableType);

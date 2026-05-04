@@ -208,19 +208,20 @@ export const controls = defineControls({
         .dispatchThreads(),
   },
   'Different log functionalities': {
-    onButtonClick: async () =>
-      root
-        .createGuardedComputePipeline(() => {
-          'use gpu';
-          console.log('This message should be cleared.');
-          console.clear();
-          console.log('This is a log message.', 'Index:', 1);
-          console.debug('This is a debug message.', 'Index:', 2);
-          console.info('This is an info message.', 'Index:', 3);
-          console.warn('This is a warn message.', 'Index:', 4);
-          console.error('This is an error message.', 'Index:', 5);
-        })
-        .dispatchThreads(),
+    onButtonClick: async () => {
+      const pipeline = root.createGuardedComputePipeline(() => {
+        'use gpu';
+        console.log('This message should be cleared.');
+        console.clear();
+        console.log('This is a log message.', 'Index:', 1);
+        console.debug('This is a debug message.', 'Index:', 2);
+        console.info('This is an info message.', 'Index:', 3);
+        console.warn('This is a warn message.', 'Index:', 4);
+        console.error('This is an error message.', 'Index:', 5); // something's wrong here!!
+      });
+      console.log(tgpu.resolve([pipeline.pipeline]));
+      pipeline.dispatchThreads();
+    },
   },
   'Render pipeline': {
     onButtonClick: () => {

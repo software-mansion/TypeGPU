@@ -23,7 +23,6 @@ import type {
   $reprPatch,
   $validVertexSchema,
 } from '../shared/symbols.ts';
-import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
 import type { WgslExternalTexture, WgslStorageTexture, WgslTexture } from './texture.ts';
@@ -31,7 +30,6 @@ import type { Snippet } from './snippet.ts';
 import type { PackedData } from './vertexFormatData.ts';
 import * as wgsl from './wgslTypes.ts';
 import type { WgslComparisonSampler, WgslSampler } from './sampler.ts';
-import type { ResolutionCtx } from '../types.ts';
 import type { BaseData } from './wgslTypes.ts';
 
 /**
@@ -237,22 +235,6 @@ export type AnyConcreteData = Exclude<
 
 export const UnknownData = Symbol('UNKNOWN');
 export type UnknownData = typeof UnknownData;
-
-export class InfixDispatch {
-  readonly name: string;
-  readonly lhs: Snippet;
-  readonly operator: (ctx: ResolutionCtx, args: [lhs: Snippet, rhs: Snippet]) => Snippet;
-
-  constructor(
-    name: string,
-    lhs: Snippet,
-    operator: (ctx: ResolutionCtx, args: [lhs: Snippet, rhs: Snippet]) => Snippet,
-  ) {
-    this.name = name;
-    this.lhs = lhs;
-    this.operator = operator;
-  }
-}
 
 export class MatrixColumnsAccess {
   readonly matrix: Snippet;
