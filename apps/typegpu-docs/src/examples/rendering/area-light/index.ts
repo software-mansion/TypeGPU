@@ -1,8 +1,8 @@
+import { perlin3d } from '@typegpu/noise';
 import tgpu, { common, d } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import {
-  ENVIRONMENT_MIP_LEVELS,
   ENVIRONMENT_SIZE,
   environmentFragment,
   environmentGenerationLayout,
@@ -33,10 +33,10 @@ const DISCO_TRANSITION_MS = 1600;
 const DISCO_HUE_SPEED = 0.00008;
 const INITIAL_PARAMS = {
   exposure: 1.12,
-  environmentIntensity: 0.42,
+  environmentIntensity: 0.25,
   diffuseIblStrength: 0.06,
   specularIblStrength: 0.95,
-  wetness: 0.42,
+  wetness: 0.12,
   time: 0,
 } satisfies d.InferInput<typeof RenderParams>;
 
@@ -44,6 +44,7 @@ const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const perlinCache = perlin3d.staticCache({ root, size: d.vec3u(128, 128, 128) });
 type LightIndex = 0 | 1 | 2;
 
 const mesh = createSceneMesh();
@@ -78,7 +79,6 @@ const environmentTexture = root
   .createTexture({
     size: [ENVIRONMENT_SIZE, ENVIRONMENT_SIZE, 6],
     format: 'rgba8unorm',
-    mipLevelCount: ENVIRONMENT_MIP_LEVELS,
   })
   .$usage('sampled', 'render');
 
@@ -86,7 +86,7 @@ const environmentFaceUniform = root.createUniform(d.u32);
 const environmentGenerationBindGroup = root.createBindGroup(environmentGenerationLayout, {
   face: environmentFaceUniform.buffer,
 });
-const environmentPipeline = root.createRenderPipeline({
+const environmentPipeline = root.pipe(perlinCache.inject()).createRenderPipeline({
   vertex: environmentVertex,
   fragment: environmentFragment,
   targets: { format: 'rgba8unorm' },
@@ -95,7 +95,6 @@ const environmentFaceViews = Array.from({ length: 6 }, (_, face) =>
   environmentTexture.createView('render', {
     baseArrayLayer: face,
     arrayLayerCount: 1,
-    mipLevelCount: 1,
   }),
 );
 
@@ -110,12 +109,10 @@ environmentFaceViews.forEach((view, face) => {
     })
     .draw(3);
 });
-environmentTexture.generateMipmaps();
 
 const environmentSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
-  mipmapFilter: 'linear',
 });
 
 const environmentBindGroup = root.createBindGroup(environmentLayout, {
@@ -154,9 +151,9 @@ let discoStartedAt = performance.now();
 let previousFrameTime = discoStartedAt;
 
 const baseLightColors = [
-  d.vec3f(...initialLights[0].color),
-  d.vec3f(...initialLights[1].color),
-  d.vec3f(...initialLights[2].color),
+  d.vec3f(initialLights[0].color),
+  d.vec3f(initialLights[1].color),
+  d.vec3f(initialLights[2].color),
 ] as const;
 const baseLightIntensities = new Float32Array(initialLights.map((light) => light.intensity));
 const discoColors = [d.vec3f(), d.vec3f(), d.vec3f()] as const;
@@ -373,7 +370,7 @@ export const controls = defineControls({
   'sky glow': {
     initial: INITIAL_PARAMS.environmentIntensity,
     min: 0,
-    max: 2,
+    max: 0.5,
     step: 0.01,
     onSliderChange: (environmentIntensity) => {
       skyGlow = environmentIntensity;
@@ -428,5 +425,6 @@ export function onCleanup() {
   resizeObserver.disconnect();
   colorTexture.destroy();
   depthTexture.destroy();
+  perlinCache.destroy();
   root.destroy();
 }
