@@ -745,6 +745,57 @@ describe('wgslGenerator with console.log', () => {
       }"
     `);
   });
+
+  it('works with detached methods', ({ root }) => {
+    const log = console.log;
+    const myPipeline = root.createGuardedComputePipeline((x) => {
+      'use gpu';
+      log();
+    });
+
+    expect(tgpu.resolve([myPipeline.pipeline])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
+
+      struct SerializedLogData {
+        id: u32,
+        serializedData: array<u32, 63>,
+      }
+
+      @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
+
+      var<private> dataBlockIndex: u32;
+
+      var<private> dataByteIndex: u32;
+
+      fn log1serializer() {
+
+      }
+
+      fn log1() {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
+          return;
+        }
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
+
+        log1serializer();
+      }
+
+      fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
+        log1();
+      }
+
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        wrappedCallback(id.x, id.y, id.z);
+      }"
+    `);
+  });
 });
 
 describe('deserializeAndStringify', () => {

@@ -105,4 +105,18 @@ describe('Math', () => {
       }"
     `);
   });
+
+  it('works with detached methods', () => {
+    const sin = Math.sin;
+    const myFn = () => {
+      'use gpu';
+      const a = sin(0);
+    };
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() {
+        const a = 0.;
+      }"
+    `);
+  });
 });
