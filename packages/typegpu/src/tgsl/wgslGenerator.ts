@@ -563,7 +563,7 @@ ${this.ctx.pre}}`;
         ? snip(mathToStd.get(_callee.value as AnyFn) as DualFn<AnyFn>, UnknownData, 'runtime')
         : _callee;
 
-      if (supportedLogOps.includes(callee.value as AnyFn)) {
+      if (supportedLogOps().includes(callee.value as AnyFn)) {
         return this.ctx.generateLog(
           callee.value as AnyFn,
           argNodes.map((arg) => this._expression(arg)),

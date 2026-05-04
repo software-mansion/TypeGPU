@@ -4,7 +4,7 @@ import type { AnyWgslData, Atomic, U32, WgslArray, WgslStruct } from '../../data
 import type { GenerationCtx } from '../generationHelpers.ts';
 import type { supportedLogOps } from '../jsPolyfills.ts';
 
-export type SupportedLogOp = (typeof supportedLogOps)[number];
+export type SupportedLogOp = ReturnType<typeof supportedLogOps>[number];
 
 /**
  * Options for configuring GPU log generation.

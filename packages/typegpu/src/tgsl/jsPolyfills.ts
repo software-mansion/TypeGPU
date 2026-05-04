@@ -73,11 +73,6 @@ export const mathToStd = new Map<AnyFn, DualFn<AnyFn>>([
   // [Math.round, ???], // round(2.5) is 3 in JS and 2 in WGSL
 ]);
 
-export const supportedLogOps = [
-  console.log,
-  console.debug,
-  console.info,
-  console.warn,
-  console.error,
-  console.clear,
-] as const;
+// deferring the array creation lets us handle console mocks
+export const supportedLogOps = () =>
+  [console.log, console.debug, console.info, console.warn, console.error, console.clear] as const;
