@@ -31,7 +31,6 @@ import {
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
-import { $gpuCallable } from '../shared/symbols.ts';
 import { add, bitShiftLeft, bitShiftRight, div, mod, mul, sub } from '../std/operators.ts';
 import { isKnownAtComptime } from '../types.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
@@ -65,7 +64,8 @@ export const infixOperators = {
   bitShiftRight, // ???
 } as const;
 
-export type InfixOperator = keyof typeof infixOperators;
+export type InfixOperatorName = keyof typeof infixOperators;
+export type InfixOperator = (typeof infixOperators)[InfixOperatorName];
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -105,7 +105,7 @@ const swizzleLenToType: Record<SwizzleableType, Record<SwizzleLength, BaseData>>
 
 export function accessProp(target: Snippet, propName: string): Snippet | undefined {
   if (infixKinds.includes((target.dataType as BaseData).type) && propName in infixOperators) {
-    const operator = infixOperators[propName as InfixOperator];
+    const operator = infixOperators[propName as InfixOperatorName];
     return snip(infixDispatch(propName, target, operator), UnknownData, /* origin */ target.origin);
   }
 

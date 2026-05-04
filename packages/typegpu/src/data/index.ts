@@ -5,19 +5,19 @@
 // NOTE: This is a barrel file, internal files should not import things from this file
 
 import { Operator } from 'tsover-runtime';
-import { type InfixOperator, infixOperators } from '../tgsl/accessProp.ts';
+import { type InfixOperatorName, infixOperators } from '../tgsl/accessProp.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
 import { infixDispatch } from '../tgsl/infix.ts';
 
 function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
   object: T,
-  operator: InfixOperator,
+  operator: InfixOperatorName,
   operatorSymbol: symbol,
 ) {
   // oxlint-disable-next-line typescript/no-explicit-any -- anything is possible
   const proto = object.prototype as any;
-  const opImpl = infixOperators[operator] as (lhs: unknown, rhs: unknown) => unknown; // dualFn operator
+  const opImpl = infixOperators[operator]; // dualFn operator
 
   Object.defineProperty(proto, operator, {
     get(this) {
@@ -25,9 +25,7 @@ function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
     },
   });
 
-  proto[operatorSymbol] = (lhs: unknown, rhs: unknown): unknown => {
-    return opImpl(lhs, rhs);
-  };
+  proto[operatorSymbol] = opImpl;
 }
 
 assignInfixOperator(VecBase, 'add', Operator.plus);

@@ -1,5 +1,5 @@
 import { setName, type TgpuNamable } from '../shared/meta.ts';
-import { isMarkedInternal } from '../shared/symbols.ts';
+import { $internal, isMarkedInternal } from '../shared/symbols.ts';
 import type {
   Infer,
   InferGPURecord,
