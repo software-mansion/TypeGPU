@@ -1,39 +1,37 @@
 import tgpu, { d, std } from 'typegpu';
-import { perlin3d } from '@typegpu/noise';
-import { ENVIRONMENT_MIP_LEVELS } from './environment.ts';
 import { evaluateLtcAreaLight, ltcUv, sampleLtcAmplitude, sampleLtcMatrix } from './ltc.ts';
 import { environmentLayout, LIGHT_COUNT, sceneLayout, Vertex, vertexLayout } from './schemas.ts';
 
 export { vertexLayout };
 
 const PI = Math.PI;
-
-function saturate(value: number) {
-  'use gpu';
-  return std.clamp(value, 0, 1);
-}
+const SCALAR_ENVIRONMENT_LUMA = 0.085;
 
 function fresnelSchlick(cosTheta: number, f0: d.v3f) {
   'use gpu';
-  return f0 + (1 - f0) * (1 - saturate(cosTheta)) ** 5;
+  return f0 + (1 - f0) * (1 - std.saturate(cosTheta)) ** 5;
 }
 
 function fresnelSchlickRoughness(cosTheta: number, f0: d.v3f, roughness: number) {
   'use gpu';
   const roughF0 = std.max(d.vec3f(1 - roughness), f0);
-  return f0 + (roughF0 - f0) * (1 - saturate(cosTheta)) ** 5;
+  return f0 + (roughF0 - f0) * (1 - std.saturate(cosTheta)) ** 5;
 }
 
-function sampleEnvironment(direction: d.v3f, roughness: number) {
+function sampleSkyEnvironment(direction: d.v3f) {
   'use gpu';
-  const lod = std.clamp(roughness, d.f32(0), d.f32(1)) * d.f32(ENVIRONMENT_MIP_LEVELS - 1);
   const sample = std.textureSampleLevel(
     environmentLayout.$.environmentMap,
     environmentLayout.$.environmentSampler,
     std.normalize(direction),
-    lod,
+    0,
   );
   return sample.rgb * sceneLayout.$.params.environmentIntensity;
+}
+
+function environmentScalar() {
+  'use gpu';
+  return sceneLayout.$.params.environmentIntensity * SCALAR_ENVIRONMENT_LUMA;
 }
 
 function tonemap(color: d.v3f) {
@@ -48,36 +46,44 @@ function materialF0(albedo: d.v3f, metallic: number) {
   return std.mix(d.vec3f(0.04), albedo, metallic);
 }
 
-function noise01(p: d.v3f) {
+function waveSlope(
+  xz: d.v2f,
+  direction: d.v2f,
+  frequency: number,
+  speed: number,
+  amplitude: number,
+  t: number,
+) {
   'use gpu';
-  return perlin3d.sample(p) * 0.5 + 0.5;
+  const dir = std.normalize(direction);
+  const phase = std.dot(xz, dir) * frequency + t * speed;
+  return dir * (std.cos(phase) * amplitude * frequency);
 }
 
-function fbm(p: d.v3f) {
+function waveGradient(worldPos: d.v3f, t: number) {
   'use gpu';
+  const xz = worldPos.xz;
   return (
-    noise01(p) * 0.52 +
-    noise01(p * 2.15 + d.vec3f(8.4, -3.2, 5.7)) * 0.31 +
-    noise01(p * 4.4 + d.vec3f(-6.1, 4.8, 11.3)) * 0.17
+    waveSlope(xz, d.vec2f(1, 0.18), 5.6, 1.15, 0.035, t) +
+    waveSlope(xz, d.vec2f(-0.42, 1), 4.1, -0.8, 0.028, t) +
+    waveSlope(xz, d.vec2f(0.73, -0.64), 8.2, 1.9, 0.012, t) +
+    waveSlope(xz, d.vec2f(-0.95, -0.28), 10.6, -2.2, 0.007, t)
   );
+}
+
+function waterFilm(worldPos: d.v3f, t: number) {
+  'use gpu';
+  const xz = worldPos.xz;
+  const shimmer =
+    std.sin(std.dot(xz, d.vec2f(1.4, 0.34)) + t * 0.62) * 0.5 +
+    std.sin(std.dot(xz, d.vec2f(-0.46, 1.25)) - t * 0.47) * 0.5;
+  return std.saturate(0.93 + shimmer * 0.06);
 }
 
 function waterNormal(N: d.v3f, worldPos: d.v3f, amount: number) {
   'use gpu';
   const t = sceneLayout.$.params.time;
-  const drift =
-    d.vec2f(
-      std.sin(t * 0.12) + std.sin(t * 0.047) * 0.5,
-      std.cos(t * 0.097) + std.sin(t * 0.059) * 0.4,
-    ) * 0.14;
-  const p = d.vec3f(worldPos.xz * 0.46 + drift, t * 0.18);
-  const center = fbm(p);
-  const perlinGradient =
-    d.vec2f(fbm(p + d.vec3f(0.14, 0, 0)) - center, fbm(p + d.vec3f(0, 0.14, 0)) - center) * 0.62;
-  const waveGradient =
-    d.vec2f(1.25, 0.42) * std.cos(std.dot(worldPos.xz, d.vec2f(1.25, 0.42)) + t * 0.68) * 0.015 +
-    d.vec2f(-0.66, 1.08) * std.cos(std.dot(worldPos.xz, d.vec2f(-0.66, 1.08)) - t * 0.52) * 0.013;
-  const gradient = perlinGradient + waveGradient;
+  const gradient = waveGradient(worldPos, t);
   const waterN = std.normalize(d.vec3f(std.neg(gradient.x), 1, std.neg(gradient.y)));
 
   return std.normalize(std.mix(N, waterN, amount));
@@ -94,7 +100,7 @@ function directAreaLighting(
   specularBoost: number,
 ) {
   'use gpu';
-  const uv = ltcUv(roughness, saturate(std.dot(N, V)));
+  const uv = ltcUv(roughness, std.saturate(std.dot(N, V)));
   const Minv = sampleLtcMatrix(uv);
   const brdf = sampleLtcAmplitude(uv);
   const fresnel = f0 * brdf.x + (1 - f0) * brdf.y;
@@ -124,17 +130,14 @@ function environmentLighting(
   specularBoost: number,
 ) {
   'use gpu';
-  const NdotV = saturate(std.dot(N, V));
+  const NdotV = std.saturate(std.dot(N, V));
+  const env = environmentScalar();
   const fresnel = fresnelSchlickRoughness(NdotV, f0, roughness);
   const diffuse =
-    (1 - fresnel) *
-    (1 - metallic) *
-    albedo *
-    sampleEnvironment(N, d.f32(1)) *
-    sceneLayout.$.params.diffuseIblStrength;
+    (1 - fresnel) * (1 - metallic) * albedo * env * sceneLayout.$.params.diffuseIblStrength;
   const specular =
-    sampleEnvironment(std.reflect(std.neg(V), N), roughness) *
     fresnelSchlick(NdotV, f0) *
+    env *
     (1 - roughness * 0.35) *
     sceneLayout.$.params.specularIblStrength *
     specularBoost;
@@ -175,18 +178,18 @@ export const mainFragment = tgpu.fragmentFn({
     roughness: d.f32,
     metallic: d.f32,
     wetness: d.f32,
+    frontFacing: d.builtin.frontFacing,
   },
   out: d.vec4f,
-})(({ worldPos, normal, albedo, roughness, metallic, wetness }) => {
+})(({ worldPos, normal, albedo, roughness, metallic, wetness, frontFacing }) => {
   'use gpu';
-  const geometricN = std.normalize(normal);
+  const meshN = std.normalize(normal);
+  const geometricN = std.select(std.neg(meshN), meshN, frontFacing);
   const V = std.normalize(sceneLayout.$.camera.position.xyz - worldPos);
-  const water = wetness * sceneLayout.$.params.wetness * saturate(geometricN.y * 1.35);
-  const film =
-    water *
-    std.mix(0.96, 1, fbm(d.vec3f(worldPos.xz * 0.38 + 30.2, sceneLayout.$.params.time * 0.08)));
-  const wetSurface = saturate(film);
-  const N = waterNormal(geometricN, worldPos, water * 0.66);
+  const water = wetness * sceneLayout.$.params.wetness * std.saturate(geometricN.y * 1.35);
+  const film = water * waterFilm(worldPos, sceneLayout.$.params.time);
+  const wetSurface = std.saturate(film);
+  const N = waterNormal(geometricN, worldPos, std.saturate(water * 1.35));
   const waterRoughness = std.mix(0.065, 0.032, water);
   const materialRoughness = std.clamp(std.mix(roughness, waterRoughness, wetSurface), 0.006, 1);
   const wetAlbedo = std.mix(albedo, albedo * 0.44, wetSurface);
@@ -228,7 +231,7 @@ export const skyFragment = tgpu.fragmentFn({
   const farView = camera.projectionInverse * d.vec4f(ndc, 1, 1);
   const farWorld = camera.viewInverse * d.vec4f(farView.xyz / farView.w, 1);
   const direction = std.normalize(farWorld.xyz - camera.position.xyz);
-  return d.vec4f(tonemap(sampleEnvironment(direction, d.f32(0))), 1);
+  return d.vec4f(tonemap(sampleSkyEnvironment(direction)), 1);
 });
 
 export const lightVertex = tgpu.vertexFn({
@@ -236,7 +239,7 @@ export const lightVertex = tgpu.vertexFn({
   out: { pos: d.builtin.position, color: d.vec3f },
 })(({ vid }) => {
   'use gpu';
-  const lightIdx = d.u32(vid / d.u32(6));
+  const lightIdx = std.floor(vid / 6);
   const corners = [
     d.vec2f(-1, -1),
     d.vec2f(1, -1),

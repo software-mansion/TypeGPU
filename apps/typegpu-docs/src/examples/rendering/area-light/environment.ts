@@ -2,7 +2,7 @@ import { perlin3d } from '@typegpu/noise';
 import tgpu, { d, std } from 'typegpu';
 
 export const ENVIRONMENT_SIZE = 256;
-export const ENVIRONMENT_MIP_LEVELS = Math.floor(Math.log2(ENVIRONMENT_SIZE)) + 1;
+const ENVIRONMENT_EDGE_SCALE = ENVIRONMENT_SIZE / (ENVIRONMENT_SIZE - 1);
 
 export const environmentGenerationLayout = tgpu.bindGroupLayout({
   face: { uniform: d.u32 },
@@ -95,6 +95,9 @@ export const environmentFragment = tgpu.fragmentFn({
   out: d.vec4f,
 })(({ uv }) => {
   'use gpu';
-  const direction = cubeFaceDirection(environmentGenerationLayout.$.face, uv);
+  const direction = cubeFaceDirection(
+    environmentGenerationLayout.$.face,
+    uv * ENVIRONMENT_EDGE_SCALE,
+  );
   return d.vec4f(environmentColor(direction), 1);
 });
