@@ -8,6 +8,7 @@ import { Operator } from 'tsover-runtime';
 import { type InfixOperator, infixOperators } from '../tgsl/accessProp.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
+import { $infixOperator } from '../shared/symbols.ts';
 
 function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
   object: T,
@@ -21,6 +22,7 @@ function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
   proto[operator] = function (this: unknown, other: unknown): unknown {
     return opImpl(this, other);
   };
+  proto[operator][$infixOperator] = true;
 
   proto[operatorSymbol] = (lhs: unknown, rhs: unknown): unknown => {
     return opImpl(lhs, rhs);

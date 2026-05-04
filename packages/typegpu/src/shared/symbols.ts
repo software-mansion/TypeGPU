@@ -34,6 +34,11 @@ export const $cast = Symbol(`typegpu:${version}:$cast`);
  * Can be called on the GPU
  */
 export const $gpuCallable = Symbol(`typegpu:${version}:$gpuCallable`);
+/**
+ * A marker for functions that come into shader while already being an infix operator dispatch.
+ * This may happen when code like `external.mul(2)` appears.
+ */
+export const $infixOperator = Symbol(`typegpu:${version}:$infixOperator`);
 
 //
 // Type tokens

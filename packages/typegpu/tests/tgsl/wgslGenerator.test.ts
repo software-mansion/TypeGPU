@@ -1971,4 +1971,20 @@ describe('wgslGenerator', () => {
       `);
     });
   });
+
+  // TODO: handle these in the future
+  it('handles external infix operators', () => {
+    const vec = d.vec2u(1);
+    const fn = () => {
+      'use gpu';
+      const x = vec.mul(2);
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Infix operators on external values are unsupported, use 'std' functions instead.]
+    `);
+  });
 });

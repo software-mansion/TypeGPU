@@ -23,7 +23,13 @@ import {
 import * as wgsl from '../data/wgslTypes.ts';
 import { invariant, ResolutionError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
-import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared/symbols.ts';
+import {
+  $gpuCallable,
+  $infixOperator,
+  $internal,
+  $providing,
+  isMarkedInternal,
+} from '../shared/symbols.ts';
 import { safeStringify } from '../shared/stringify.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
