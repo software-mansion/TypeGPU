@@ -81,5 +81,3 @@ export const supportedLogOps = [
   console.error,
   console.clear,
 ] as const;
-
-// TODO: rename this file
