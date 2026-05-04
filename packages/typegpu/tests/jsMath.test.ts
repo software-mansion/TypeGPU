@@ -88,7 +88,7 @@ describe('Math', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:myFn
-      - fn*:myFn(): Unsupported functionality 'Math.log1p'. Use an std alternative, or implement the function manually.]
+      - fn*:myFn(): Unsupported Math functionality 'function log1p() { [native code] }'. Use an std alternative, or implement the function manually.]
     `);
   });
 
