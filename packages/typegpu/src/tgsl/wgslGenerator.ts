@@ -658,7 +658,8 @@ ${this.ctx.pre}}`;
           );
         }
         const rhs = this._expression(argNodes[0]);
-        return callee.value.operator(this.ctx, [callee.value.lhs, rhs]);
+        const callable = callee.value.operator[$gpuCallable];
+        return callable.call(this.ctx, [callee.value.lhs, rhs]);
       }
 
       if (callee.value instanceof ConsoleLog) {

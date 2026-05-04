@@ -1,15 +1,17 @@
 import type { Snippet } from '../data/snippet.ts';
 import { $internal, isMarkedInternal } from '../shared/symbols.ts';
-import type { ResolutionCtx } from '../types.ts';
 import type { InfixOperator } from './accessProp.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
 
+// Two possible infixDispatch variants
+// string, number | vector | matrix, InfixOperator => number | vector | matrix => number | vector | matrix
+// string, stnippet, InfixOperator albo samo GPUCallable => Snippet => Snippet
 export interface InfixDispatch {
   [$internal]: true;
   type: 'infix-disptach';
   readonly opName: string;
   readonly lhs: Snippet;
-  readonly operator: (ctx: ResolutionCtx, args: [lhs: Snippet, rhs: Snippet]) => Snippet;
+  readonly operator: InfixOperator;
   (other: unknown): unknown;
 }
 
