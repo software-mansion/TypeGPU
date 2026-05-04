@@ -1,10 +1,11 @@
 import type { Snippet } from '../data/snippet.ts';
-import { $infixDispatch } from '../shared/symbols.ts';
+import { $internal, isMarkedInternal } from '../shared/symbols.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
 
 export interface InfixDispatch {
-  [$infixDispatch]: true;
+  [$internal]: true;
+  type: 'infix-disptach';
   readonly opName: string;
   readonly lhs: Snippet;
   readonly operator: (ctx: ResolutionCtx, args: [lhs: Snippet, rhs: Snippet]) => Snippet;
@@ -22,10 +23,15 @@ export function infixDispatch(
     return operator(lhs, other);
   };
   const infix = Object.assign(callable, {
-    [$infixDispatch]: true as const,
+    [$internal]: true,
+    type: 'infix-disptach',
     opName,
     lhs: lhsSnippet,
     operator,
   });
   return infix;
+}
+
+export function isInfixDispatch(o: unknown): o is InfixDispatch {
+  return isMarkedInternal(o) && (o as InfixDispatch)?.type === 'infix-disptach';
 }
