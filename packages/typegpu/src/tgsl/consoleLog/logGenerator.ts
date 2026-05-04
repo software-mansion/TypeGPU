@@ -79,7 +79,7 @@ export class LogGeneratorImpl implements LogGenerator {
    */
   generateLog(ctx: GenerationCtx, op: SupportedLogOp, args: Snippet[]): Snippet {
     if (shaderStageSlot.$ === 'vertex') {
-      console.warn(`'console.${op}' is not supported in vertex shaders.`);
+      console.warn(`'console' operations are not supported in vertex shaders.`);
       return fallbackSnippet;
     }
 

@@ -140,6 +140,8 @@ describe('wgslGenerator with console.log', () => {
   });
 
   it('Generates an overload for a function used on both stages', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
     const myLog = (n: number) => {
       'use gpu';
       console.log(n);
@@ -221,6 +223,11 @@ describe('wgslGenerator with console.log', () => {
         return vec4f();
       }"
     `);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "'console' operations are not supported in vertex shaders.",
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('Works for shellless entry functions', ({ root }) => {
