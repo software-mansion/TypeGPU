@@ -174,7 +174,7 @@ export function logDataFromGPU(resources: LogResources) {
         if (results.length === 0) {
           results.push('');
         }
-        op(
+        op.bind(console)(
           `%c${options.messagePrefix}%c ${results[0]}`,
           'background: #936ff5; color: white;',
           'color: inherit; background: none',
