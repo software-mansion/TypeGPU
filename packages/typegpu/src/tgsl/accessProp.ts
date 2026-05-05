@@ -60,8 +60,8 @@ export const infixOperators = {
   mul,
   div,
   mod,
-  bitShiftLeft, // ???
-  bitShiftRight, // ???
+  bitShiftLeft,
+  bitShiftRight,
 } as const;
 
 export type InfixOperatorName = keyof typeof infixOperators;
