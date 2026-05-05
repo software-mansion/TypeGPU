@@ -8,10 +8,7 @@ export const environmentGenerationLayout = tgpu.bindGroupLayout({
   face: { uniform: d.u32 },
 });
 
-const cubeFaceDirection = tgpu.fn(
-  [d.u32, d.vec2f],
-  d.vec3f,
-)((face, uv) => {
+function cubeFaceDirection(face: number, uv: d.v2f) {
   'use gpu';
   let direction = d.vec3f(1, -uv.y, -uv.x);
 
@@ -28,7 +25,7 @@ const cubeFaceDirection = tgpu.fn(
   }
 
   return std.normalize(direction);
-});
+}
 
 function noise01(p: d.v3f) {
   'use gpu';

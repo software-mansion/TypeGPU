@@ -45,7 +45,7 @@ export function sampleLtcAmplitude(uv: d.v2f) {
   return bilinearLut(ltcLayout.$.ltcAmp, uv);
 }
 
-function integrateEdgeVec(v1: d.v3f, v2: d.v3f) {
+function integrateEdge(v1: d.v3f, v2: d.v3f) {
   'use gpu';
   const x = std.dot(v1, v2);
   const y = std.abs(x);
@@ -53,12 +53,7 @@ function integrateEdgeVec(v1: d.v3f, v2: d.v3f) {
   const b = 3.417594 + (4.1616724 + y) * y;
   const v = a / b;
   const thetaSinTheta = std.select(0.5 * std.inverseSqrt(std.max(1 - x * x, 1e-7)) - v, v, x > 0);
-  return std.cross(v1, v2) * thetaSinTheta;
-}
-
-function integrateEdge(v1: d.v3f, v2: d.v3f) {
-  'use gpu';
-  return integrateEdgeVec(v1, v2).z;
+  return (std.cross(v1, v2) * thetaSinTheta).z;
 }
 
 function clipQuadToHorizon(p0: d.v3f, p1: d.v3f, p2: d.v3f, p3: d.v3f) {
