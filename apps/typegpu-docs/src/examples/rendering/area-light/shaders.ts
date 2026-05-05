@@ -1,11 +1,21 @@
 import tgpu, { d, std } from 'typegpu';
 import { evaluateLtcAreaLight, ltcUv, sampleLtcAmplitude, sampleLtcMatrix } from './ltc.ts';
-import { environmentLayout, LIGHT_COUNT, sceneLayout, Vertex, vertexLayout } from './schemas.ts';
+import { environmentLayout, LIGHT_COUNT, sceneLayout, vertexLayout } from './schemas.ts';
 
 export { vertexLayout };
 
-const PI = Math.PI;
 const SCALAR_ENVIRONMENT_LUMA = 0.085;
+
+const Surface = d.struct({
+  normal: d.vec3f,
+  viewDir: d.vec3f,
+  worldPos: d.vec3f,
+  albedo: d.vec3f,
+  f0: d.vec3f,
+  roughness: d.f32,
+  metallic: d.f32,
+  specularBoost: d.f32,
+});
 
 function fresnelSchlick(cosTheta: number, f0: d.v3f) {
   'use gpu';
@@ -14,8 +24,8 @@ function fresnelSchlick(cosTheta: number, f0: d.v3f) {
 
 function fresnelSchlickRoughness(cosTheta: number, f0: d.v3f, roughness: number) {
   'use gpu';
-  const roughF0 = std.max(d.vec3f(1 - roughness), f0);
-  return f0 + (roughF0 - f0) * (1 - std.saturate(cosTheta)) ** 5;
+  const clampedF0 = std.max(d.vec3f(1 - roughness), f0);
+  return f0 + (clampedF0 - f0) * (1 - std.saturate(cosTheta)) ** 5;
 }
 
 function sampleSkyEnvironment(direction: d.v3f) {
@@ -70,69 +80,63 @@ function waterFilm(worldPos: d.v3f, t: number) {
   return std.saturate(0.93 + shimmer * 0.06);
 }
 
-function waterNormal(N: d.v3f, worldPos: d.v3f, amount: number) {
+function waterNormal(baseNormal: d.v3f, worldPos: d.v3f, intensity: number) {
   'use gpu';
-  const t = sceneLayout.$.params.time;
-  const gradient = waveGradient(worldPos, t);
-  const waterN = std.normalize(d.vec3f(std.neg(gradient.x), 1, std.neg(gradient.y)));
+  const slope = waveGradient(worldPos, sceneLayout.$.params.time);
+  const rippledNormal = std.normalize(d.vec3f(std.neg(slope.x), 1, std.neg(slope.y)));
 
-  return std.normalize(std.mix(N, waterN, amount));
+  return std.normalize(std.mix(baseNormal, rippledNormal, intensity));
 }
 
-function directAreaLighting(
-  N: d.v3f,
-  V: d.v3f,
-  P: d.v3f,
-  albedo: d.v3f,
-  roughness: number,
-  metallic: number,
-  f0: d.v3f,
-  specularBoost: number,
-) {
+function evaluateLighting(surface: d.Infer<typeof Surface>) {
   'use gpu';
-  const uv = ltcUv(roughness, std.saturate(std.dot(N, V)));
-  const Minv = sampleLtcMatrix(uv);
-  const brdf = sampleLtcAmplitude(uv);
-  const fresnel = f0 * brdf.x + (1 - f0) * brdf.y;
-  const diffuse = (1 - fresnel) * (1 - metallic) * (albedo / PI);
+  const NdotV = std.saturate(std.dot(surface.normal, surface.viewDir));
 
-  let result = d.vec3f(0);
-  for (let i = d.u32(0); i < d.u32(LIGHT_COUNT); i++) {
+  const lutUv = ltcUv(surface.roughness, NdotV);
+  const ltcInverseTransform = sampleLtcMatrix(lutUv);
+  const ltcCoeffs = sampleLtcAmplitude(lutUv);
+  const ltcFresnel = surface.f0 * ltcCoeffs.x + (1 - surface.f0) * ltcCoeffs.y;
+  const diffuseLobe = (1 - ltcFresnel) * (1 - surface.metallic) * (surface.albedo / Math.PI);
+
+  let directLight = d.vec3f(0);
+  for (const i of tgpu.unroll(std.range(LIGHT_COUNT))) {
     const light = sceneLayout.$.lights[i];
-    const diffuseIntegral = evaluateLtcAreaLight(N, V, P, d.mat3x3f.identity(), light);
-    const specularIntegral = evaluateLtcAreaLight(N, V, P, Minv, light);
-    result +=
+    const diffuseFormFactor = evaluateLtcAreaLight(
+      surface.normal,
+      surface.viewDir,
+      surface.worldPos,
+      d.mat3x3f.identity(),
+      light,
+    );
+    const specularFormFactor = evaluateLtcAreaLight(
+      surface.normal,
+      surface.viewDir,
+      surface.worldPos,
+      ltcInverseTransform,
+      light,
+    );
+    directLight +=
       light.color *
       light.intensity *
-      (diffuse * diffuseIntegral + fresnel * specularIntegral * specularBoost);
+      (diffuseLobe * diffuseFormFactor + ltcFresnel * specularFormFactor * surface.specularBoost);
   }
 
-  return result;
-}
-
-function environmentLighting(
-  N: d.v3f,
-  V: d.v3f,
-  albedo: d.v3f,
-  roughness: number,
-  metallic: number,
-  f0: d.v3f,
-  specularBoost: number,
-) {
-  'use gpu';
-  const NdotV = std.saturate(std.dot(N, V));
-  const env = sceneLayout.$.params.environmentIntensity * SCALAR_ENVIRONMENT_LUMA;
-  const fresnel = fresnelSchlickRoughness(NdotV, f0, roughness);
-  const diffuse =
-    (1 - fresnel) * (1 - metallic) * albedo * env * sceneLayout.$.params.diffuseIblStrength;
-  const specular =
-    fresnelSchlick(NdotV, f0) *
-    env *
-    (1 - roughness * 0.35) *
+  const envLuminance = sceneLayout.$.params.environmentIntensity * SCALAR_ENVIRONMENT_LUMA;
+  const envFresnel = fresnelSchlickRoughness(NdotV, surface.f0, surface.roughness);
+  const indirectDiffuse =
+    (1 - envFresnel) *
+    (1 - surface.metallic) *
+    surface.albedo *
+    envLuminance *
+    sceneLayout.$.params.diffuseIblStrength;
+  const indirectSpecular =
+    fresnelSchlick(NdotV, surface.f0) *
+    envLuminance *
+    (1 - surface.roughness * 0.35) *
     sceneLayout.$.params.specularIblStrength *
-    specularBoost;
+    surface.specularBoost;
 
-  return diffuse + specular;
+  return directLight + indirectDiffuse + indirectSpecular;
 }
 
 export const mainFragment = tgpu.fragmentFn({
@@ -149,35 +153,27 @@ export const mainFragment = tgpu.fragmentFn({
   const roughness = material.x;
   const metallic = material.y;
   const wetness = material.z;
-  const meshN = std.normalize(normal);
-  const geometricN = std.select(std.neg(meshN), meshN, frontFacing);
-  const V = std.normalize(sceneLayout.$.camera.position.xyz - worldPos);
-  const water = wetness * sceneLayout.$.params.wetness * std.saturate(geometricN.y * 1.35);
-  const film = water * waterFilm(worldPos, sceneLayout.$.params.time);
-  const wetSurface = std.saturate(film);
-  const N = waterNormal(geometricN, worldPos, std.saturate(water * 1.35));
-  const waterRoughness = std.mix(0.065, 0.032, water);
-  const materialRoughness = std.clamp(std.mix(roughness, waterRoughness, wetSurface), 0.006, 1);
-  const wetAlbedo = std.mix(albedo, albedo * 0.44, wetSurface);
-  const specularBoost = 1 + film * 3.2;
-  const f0 = std.mix(
-    std.mix(d.vec3f(0.04), albedo, metallic),
-    d.vec3f(0.08),
-    wetSurface * (1 - metallic),
-  );
-  const direct = directAreaLighting(
-    N,
-    V,
-    worldPos,
-    wetAlbedo,
-    materialRoughness,
-    metallic,
-    f0,
-    specularBoost,
-  );
-  const ibl = environmentLighting(N, V, wetAlbedo, materialRoughness, metallic, f0, specularBoost);
 
-  return d.vec4f(tonemap(direct + ibl), 1);
+  const vertexNormal = std.normalize(normal);
+  const surfaceNormal = std.select(std.neg(vertexNormal), vertexNormal, frontFacing);
+  const viewDir = std.normalize(sceneLayout.$.camera.position.xyz - worldPos);
+
+  const wetMask = wetness * sceneLayout.$.params.wetness * std.saturate(surfaceNormal.y * 1.35);
+  const film = wetMask * waterFilm(worldPos, sceneLayout.$.params.time);
+  const shadingNormal = waterNormal(surfaceNormal, worldPos, std.saturate(wetMask * 1.35));
+
+  const surface = Surface({
+    normal: shadingNormal,
+    viewDir,
+    worldPos,
+    albedo: std.mix(albedo, albedo * 0.44, film),
+    f0: std.mix(std.mix(d.vec3f(0.04), albedo, metallic), d.vec3f(0.08), film * (1 - metallic)),
+    roughness: std.clamp(std.mix(roughness, std.mix(0.065, 0.032, wetMask), film), 0.006, 1),
+    metallic,
+    specularBoost: 1 + film * 3.2,
+  });
+
+  return d.vec4f(tonemap(evaluateLighting(surface)), 1);
 });
 
 export const skyVertex = tgpu.vertexFn({
