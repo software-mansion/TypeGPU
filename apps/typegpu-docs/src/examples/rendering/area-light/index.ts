@@ -1,5 +1,5 @@
 import { perlin3d } from '@typegpu/noise';
-import tgpu, { common, d, std, type AutoFragmentIn, type TgpuFragmentFn } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import {
@@ -20,8 +20,6 @@ import {
   vertexLayout,
 } from './schemas.ts';
 import { lightFragment, lightVertex, mainFragment, skyFragment, skyVertex } from './shaders.ts';
-import type { InferGPURecord } from '../../../../../../packages/typegpu/src/shared/repr.ts';
-import type { AnyFragmentInputBuiltin } from '../../../../../../packages/typegpu/src/builtin.ts';
 
 const SAMPLE_COUNT = 4;
 const DISCO_TRANSITION_MS = 1600;
@@ -150,30 +148,6 @@ const lightState = initialLights.map((light) => ({
   intensity: light.intensity,
 }));
 
-type test = TgpuFragmentFn<
-  {
-    worldPos: d.Vec3f;
-    normal: d.Vec3f;
-    albedo: d.Vec3f;
-    roughness: d.F32;
-    metallic: d.F32;
-    wetness: d.F32;
-  } & Record<string, AnyFragmentInputBuiltin>,
-  d.Vec4f
->;
-
-type test2 = TgpuFragmentFn<
-  {
-    worldPos: d.Vec3f;
-    normal: d.Vec3f;
-    albedo: d.Vec3f;
-    roughness: d.F32;
-    metallic: d.F32;
-    wetness: d.F32;
-  },
-  d.Vec4f
->;
-
 const skyPipeline = root.createRenderPipeline({
   vertex: skyVertex,
   fragment: skyFragment,
@@ -231,43 +205,25 @@ resizeObserver.observe(canvas);
 let animationFrameId: number;
 
 function hueColor(hue: number) {
-  const h = (((hue % 1) + 1) % 1) * 6;
-  const x = 1 - std.abs((h % 2) - 1);
-  const [r, g, b] =
-    h < 1
-      ? [1, x, 0]
-      : h < 2
-        ? [x, 1, 0]
-        : h < 3
-          ? [0, 1, x]
-          : h < 4
-            ? [0, x, 1]
-            : h < 5
-              ? [x, 0, 1]
-              : [1, 0, x];
-
-  return d.vec3f(r, g, b);
+  const h = ((hue % 1) + 1) % 1;
+  const channel = (n: number) => {
+    const k = (n + h * 6) % 6;
+    return 1 - Math.max(0, Math.min(k, 4 - k, 1));
+  };
+  return d.vec3f(channel(5), channel(3), channel(1));
 }
 
 function patchLight(index: number, color = lightState[index].color, strength = 1) {
-  lightsUniform.patch({
-    [index]: {
-      color,
-      intensity: lightState[index].intensity * strength,
-    },
-  });
+  lightsUniform.patch({ [index]: { color, intensity: lightState[index].intensity * strength } });
 }
 
-function setLightColor(index: number, color: d.v3f) {
-  lightState[index].color = d.vec3f(color);
-
-  if (!discoEnabled && discoMix === 0) {
-    patchLight(index);
+function updateUserLight(index: number, patch: { color?: d.v3f; intensity?: number }) {
+  if (patch.color) {
+    lightState[index].color = d.vec3f(patch.color);
   }
-}
-
-function setLightIntensity(index: number, intensity: number) {
-  lightState[index].intensity = intensity;
+  if (patch.intensity !== undefined) {
+    lightState[index].intensity = patch.intensity;
+  }
   if (!discoEnabled && discoMix === 0) {
     patchLight(index);
   }
@@ -354,6 +310,34 @@ function render(time: number) {
 
 animationFrameId = requestAnimationFrame(render);
 
+const LIGHTS = [
+  { name: 'key', maxIntensity: 12 },
+  { name: 'fill', maxIntensity: 12 },
+  { name: 'rim', maxIntensity: 8 },
+] as const;
+
+const lightControls = Object.fromEntries(
+  LIGHTS.flatMap(({ name, maxIntensity }, i) => [
+    [
+      `${name} intensity`,
+      {
+        initial: initialLights[i].intensity,
+        min: 0,
+        max: maxIntensity,
+        step: 0.1,
+        onSliderChange: (intensity: number) => updateUserLight(i, { intensity }),
+      },
+    ],
+    [
+      `${name} color`,
+      {
+        initial: lightState[i].color,
+        onColorChange: (color: d.v3f) => updateUserLight(i, { color }),
+      },
+    ],
+  ]),
+);
+
 export const controls = defineControls({
   'disco mode': {
     initial: false,
@@ -390,39 +374,7 @@ export const controls = defineControls({
     step: 0.01,
     onSliderChange: (wetness) => paramsUniform.patch({ wetness }),
   },
-  'key intensity': {
-    initial: initialLights[0].intensity,
-    min: 0,
-    max: 12,
-    step: 0.1,
-    onSliderChange: (intensity) => setLightIntensity(0, intensity),
-  },
-  'key color': {
-    initial: lightState[0].color,
-    onColorChange: (color) => setLightColor(0, color),
-  },
-  'fill intensity': {
-    initial: initialLights[1].intensity,
-    min: 0,
-    max: 12,
-    step: 0.1,
-    onSliderChange: (intensity) => setLightIntensity(1, intensity),
-  },
-  'fill color': {
-    initial: lightState[1].color,
-    onColorChange: (color) => setLightColor(1, color),
-  },
-  'rim intensity': {
-    initial: initialLights[2].intensity,
-    min: 0,
-    max: 8,
-    step: 0.1,
-    onSliderChange: (intensity) => setLightIntensity(2, intensity),
-  },
-  'rim color': {
-    initial: lightState[2].color,
-    onColorChange: (color) => setLightColor(2, color),
-  },
+  ...lightControls,
 });
 
 export function onCleanup() {

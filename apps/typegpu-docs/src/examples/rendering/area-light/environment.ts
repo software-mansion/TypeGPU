@@ -41,9 +41,16 @@ function fbm(p: d.v3f) {
   );
 }
 
+const GLOWS = [
+  { dir: d.vec3f(-0.36, 0.46, 0.82), tint: d.vec3f(0.76, 0.24, 0.46), power: 9, strength: 0.22 },
+  { dir: d.vec3f(-0.68, 0.04, 0.73), tint: d.vec3f(1, 0.08, 0.58), power: 24, strength: 0.55 },
+  { dir: d.vec3f(-0.2, -0.02, 0.98), tint: d.vec3f(1, 0.42, 0.08), power: 28, strength: 0.34 },
+  { dir: d.vec3f(0.74, 0.03, -0.54), tint: d.vec3f(0.5, 0.2, 1), power: 34, strength: 0.22 },
+];
+
 function glow(direction: d.v3f, source: d.v3f, color: d.v3f, power: number, strength: number) {
   'use gpu';
-  return color * std.max(std.dot(direction, std.normalize(source)), 0) ** power * strength;
+  return color * std.max(std.dot(direction, std.normalize(source)), 0) ** d.f32(power) * strength;
 }
 
 function cloudDensity(direction: d.v3f) {
@@ -67,10 +74,10 @@ function environmentColor(direction: d.v3f) {
 
   const horizonHaze = 1 - std.smoothstep(0.02, 0.36, std.abs(direction.y + 0.03));
   color += d.vec3f(0.16, 0.045, 0.085) * horizonHaze * 0.16;
-  color += glow(direction, d.vec3f(-0.36, 0.46, 0.82), d.vec3f(0.76, 0.24, 0.46), d.f32(9), 0.22);
-  color += glow(direction, d.vec3f(-0.68, 0.04, 0.73), d.vec3f(1, 0.08, 0.58), d.f32(24), 0.55);
-  color += glow(direction, d.vec3f(-0.2, -0.02, 0.98), d.vec3f(1, 0.42, 0.08), d.f32(28), 0.34);
-  color += glow(direction, d.vec3f(0.74, 0.03, -0.54), d.vec3f(0.5, 0.2, 1), d.f32(34), 0.22);
+
+  for (const g of tgpu.unroll(GLOWS)) {
+    color += glow(direction, g.dir, g.tint, g.power, g.strength);
+  }
 
   return std.clamp(color, d.vec3f(0), d.vec3f(1));
 }
