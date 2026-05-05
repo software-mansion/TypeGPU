@@ -64,10 +64,6 @@ describe('liquid-glass example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct fragmentShader_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var<uniform> mousePosUniform: vec2f;
 
       struct Params {
@@ -135,6 +131,10 @@ describe('liquid-glass example', () => {
 
       fn applyTint(color: vec3f, tint: TintParams) -> vec4f {
         return mix(vec4f(color, 1f), vec4f(tint.color, 1f), tint.strength);
+      }
+
+      struct fragmentShader_Input {
+        @location(0) uv: vec2f,
       }
 
       @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {

@@ -1,12 +1,7 @@
-import { undecorate } from '../../data/dataTypes.ts';
-import { snip, type Snippet } from '../../data/snippet.ts';
+import { type Snippet } from '../../data/snippet.ts';
 import { $internal, $repr } from '../../shared/symbols.ts';
 import { type BaseData, isWgslStruct } from '../../data/wgslTypes.ts';
-
-interface PositionalArgEntry {
-  argName: string;
-  type: BaseData;
-}
+import type { FunctionArgumentAccess } from '../../types.ts';
 
 /**
  * Routes `(input) => { input.x }` style property access to the correct WGSL
@@ -18,38 +13,32 @@ export class EntryInputRouter implements BaseData {
   readonly type = 'entry-input-router' as const;
   // Type-token only, not present at runtime:
   declare readonly [$repr]: never;
-  readonly structArgName: string;
-  readonly dataSchema: BaseData | undefined;
+
+  readonly structArg: FunctionArgumentAccess | undefined;
   /** Maps schemaKey → { WGSL arg name, type } */
-  readonly positionalArgsMap: Map<string, PositionalArgEntry>;
+  readonly positionalArgsMap: Map<string, FunctionArgumentAccess>;
 
   constructor(
-    structArgName: string,
-    dataSchema: BaseData | undefined,
-    positionalArgs: { schemaKey: string; argName: string; type: BaseData }[],
+    structArg: FunctionArgumentAccess | undefined,
+    positionalArgs: { schemaKey: string; arg: FunctionArgumentAccess }[],
   ) {
-    this.structArgName = structArgName;
-    this.dataSchema = dataSchema;
-    this.positionalArgsMap = new Map(
-      positionalArgs.map((a) => [a.schemaKey, { argName: a.argName, type: a.type }]),
-    );
+    this.structArg = structArg;
+    this.positionalArgsMap = new Map(positionalArgs.map((a) => [a.schemaKey, a.arg]));
   }
 
   toString(): string {
     return 'entry-input-router';
   }
 
-  accessProp(propName: string): Snippet | undefined {
+  accessProp(propName: string): Snippet | { target: Snippet; prop: string } | undefined {
     const positionalEntry = this.positionalArgsMap.get(propName);
     if (positionalEntry) {
-      return snip(positionalEntry.argName, positionalEntry.type, 'argument');
+      return positionalEntry();
     }
 
-    if (this.dataSchema && isWgslStruct(this.dataSchema)) {
-      const propType = this.dataSchema.propTypes[propName];
-      if (propType) {
-        return snip(`${this.structArgName}.${propName}`, undecorate(propType), 'argument');
-      }
+    const structSnippet = this.structArg?.();
+    if (structSnippet && isWgslStruct(structSnippet.dataType)) {
+      return { target: structSnippet, prop: propName };
     }
 
     return undefined;

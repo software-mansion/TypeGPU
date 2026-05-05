@@ -41,11 +41,11 @@ describe('point light shadow example', () => {
         return vertexDepth_Output(pos, worldPos);
       }
 
+      @group(0) @binding(1) var<uniform> lightPosition: vec3f;
+
       struct fragmentDepth_Input {
         @location(0) worldPos: vec3f,
       }
-
-      @group(0) @binding(1) var<uniform> lightPosition: vec3f;
 
       @fragment fn fragmentDepth(_arg_0: fragmentDepth_Input) -> @builtin(frag_depth) f32 {
         let dist = length((_arg_0.worldPos - lightPosition));
@@ -74,12 +74,6 @@ describe('point light shadow example', () => {
         return vertexMain_Output(pos, worldPos, uv, worldNormal);
       }
 
-      struct fragmentMain_Input {
-        @location(0) worldPos: vec3f,
-        @location(1) uv: vec2f,
-        @location(2) normal: vec3f,
-      }
-
       @group(1) @binding(3) var<uniform> lightPosition: vec3f;
 
       struct item {
@@ -96,6 +90,12 @@ describe('point light shadow example', () => {
       @group(1) @binding(1) var shadowDepthCube: texture_depth_cube;
 
       @group(1) @binding(2) var shadowSampler: sampler_comparison;
+
+      struct fragmentMain_Input {
+        @location(0) worldPos: vec3f,
+        @location(1) uv: vec2f,
+        @location(2) normal: vec3f,
+      }
 
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
         let lightPos = (&lightPosition);

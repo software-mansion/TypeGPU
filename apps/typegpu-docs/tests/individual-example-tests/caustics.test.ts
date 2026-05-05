@@ -31,10 +31,6 @@ describe('caustics example', () => {
         return mainVertex_Output(vec4f(pos[vertexIndex], 0f, 1f), uv[vertexIndex]);
       }
 
-      struct mainFragment_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var<uniform> tileDensity: f32;
 
       fn tilePattern(uv: vec2f) -> f32 {
@@ -118,6 +114,10 @@ describe('caustics example', () => {
 
       fn rotateXY(angle: f32) -> mat2x2f {
         return mat2x2f(vec2f(cos(angle), sin(angle)), vec2f(-(sin(angle)), cos(angle)));
+      }
+
+      struct mainFragment_Input {
+        @location(0) uv: vec2f,
       }
 
       @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {

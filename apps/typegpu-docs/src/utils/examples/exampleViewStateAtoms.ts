@@ -1,8 +1,9 @@
+import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 
 const storageOptions = { getOnInit: true };
 
-export const menuShownAtom = atomWithStorage('menu-shown', false, undefined, storageOptions);
+export const menuShownAtom = atom(false);
 
 export const codeEditorShownAtom = atomWithStorage(
   'code-editor-shown',

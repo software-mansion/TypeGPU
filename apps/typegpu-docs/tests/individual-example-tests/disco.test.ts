@@ -32,10 +32,6 @@ describe('disco example', () => {
         return mainVertex_Output(vec4f(pos[vertexIndex], 0f, 1f), uv[vertexIndex]);
       }
 
-      struct mainFragment2_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var<uniform> resolutionUniform: vec2f;
 
       fn aspectCorrected(uv: vec2f) -> vec2f {
@@ -63,6 +59,10 @@ describe('disco example', () => {
 
       fn accumulate(acc: vec3f, col: vec3f, weight: f32) -> vec3f {
         return (acc + (col * weight));
+      }
+
+      struct mainFragment2_Input {
+        @location(0) uv: vec2f,
       }
 
       @fragment fn mainFragment2(_arg_0: mainFragment2_Input) -> @location(0) vec4f {
@@ -243,10 +243,6 @@ describe('disco example', () => {
         return mainVertex_Output(vec4f(pos[vertexIndex], 0f, 1f), uv[vertexIndex]);
       }
 
-      struct mainFragment1_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var<uniform> resolutionUniform: vec2f;
 
       fn aspectCorrected(uv: vec2f) -> vec2f {
@@ -274,6 +270,10 @@ describe('disco example', () => {
 
       fn accumulate(acc: vec3f, col: vec3f, weight: f32) -> vec3f {
         return (acc + (col * weight));
+      }
+
+      struct mainFragment1_Input {
+        @location(0) uv: vec2f,
       }
 
       @fragment fn mainFragment1(_arg_0: mainFragment1_Input) -> @location(0) vec4f {

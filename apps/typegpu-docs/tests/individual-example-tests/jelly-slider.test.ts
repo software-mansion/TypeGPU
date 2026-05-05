@@ -66,10 +66,6 @@ describe('jelly-slider example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct raymarchFn_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var<uniform> randomUniform: vec2f;
 
       var<private> seed: vec2f;
@@ -583,6 +579,10 @@ describe('jelly-slider example', () => {
         return background;
       }
 
+      struct raymarchFn_Input {
+        @location(0) uv: vec2f,
+      }
+
       @fragment fn raymarchFn(_arg_0: raymarchFn_Input) -> @location(0) vec4f {
         randSeed2((randomUniform * _arg_0.uv));
         var ndc = vec2f(((_arg_0.uv.x * 2f) - 1f), -(((_arg_0.uv.y * 2f) - 1f)));
@@ -713,13 +713,13 @@ describe('jelly-slider example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct fragmentMain_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(1) @binding(0) var currentTexture: texture_2d<f32>;
 
       @group(0) @binding(0) var filteringSampler: sampler;
+
+      struct fragmentMain_Input {
+        @location(0) uv: vec2f,
+      }
 
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
         return textureSample(currentTexture, filteringSampler, _arg_0.uv);

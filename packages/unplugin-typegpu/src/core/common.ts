@@ -1,5 +1,5 @@
-import type { NodePath, TraverseOptions } from '@babel/traverse';
 import * as t from '@babel/types';
+import type { NodePath, TraverseOptions } from '@babel/traverse';
 import type { FilterPattern } from 'unplugin';
 import { MagicStringAST } from 'magic-string-ast';
 import { transpileFn } from 'tinyest-for-wgsl';

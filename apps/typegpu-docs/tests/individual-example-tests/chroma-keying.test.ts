@@ -32,10 +32,6 @@ describe('chroma keying example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct fragment_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var<uniform> uvTransform: mat2x2f;
 
       @group(1) @binding(0) var inputTexture: texture_external;
@@ -47,6 +43,10 @@ describe('chroma keying example', () => {
       @group(0) @binding(2) var<uniform> color: vec3f;
 
       @group(0) @binding(3) var<uniform> threshold: f32;
+
+      struct fragment_Input {
+        @location(0) uv: vec2f,
+      }
 
       @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
         var uv2 = ((uvTransform * (_arg_0.uv - 0.5f)) + 0.5f);

@@ -79,10 +79,6 @@ describe('vaporrave example', () => {
         return vertexMain_Output(vec4f(pos[idx], 0f, 1f), uv[idx]);
       }
 
-      struct fragmentMain_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var<uniform> resolutionUniform: vec2f;
 
       struct Ray {
@@ -218,6 +214,10 @@ describe('vaporrave example', () => {
       }
 
       @group(0) @binding(5) var<uniform> glowIntensityUniform: f32;
+
+      struct fragmentMain_Input {
+        @location(0) uv: vec2f,
+      }
 
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
         var uv = ((_arg_0.uv * 2f) - 1f);

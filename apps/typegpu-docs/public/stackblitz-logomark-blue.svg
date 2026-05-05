@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="15.308061"
+   height="22.260975"
+   viewBox="0 0 15.308061 22.260975"
+   fill="none"
+   version="1.1"
+   id="svg11"
+   sodipodi:docname="stackblitz-logomark-blue.svg"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs11" />
+  <sodipodi:namedview
+     id="namedview11"
+     pagecolor="#ffffff"
+     bordercolor="#999999"
+     borderopacity="1"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="5.5384615"
+     inkscape:cx="47.125"
+     inkscape:cy="13.722222"
+     inkscape:window-width="2560"
+     inkscape:window-height="1387"
+     inkscape:window-x="0"
+     inkscape:window-y="25"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg11" />
+  <path
+     d="m 6.4040486,13.780468 c 0.1,-0.2 -0.1,-0.4 -0.3,-0.4 H 0.30405164 c -0.3,0 -0.39999956,-0.3 -0.2,-0.5 L 11.204009,0.08050832 c 0.2,-0.200005 0.6,0 0.5,0.3 L 9.0040486,8.5805083 c -0.1,0.2 0,0.39996 0.2,0.39996 h 5.7999604 c 0.3,0 0.4,0.3 0.2,0.5 L 4.1040486,22.180468 c -0.2,0.2 -0.6,0 -0.5,-0.3 z"
+     fill="#1389fd"
+     id="path1" />
+</svg>

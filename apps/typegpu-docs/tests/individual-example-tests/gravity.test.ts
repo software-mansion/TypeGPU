@@ -192,13 +192,13 @@ describe('gravity example', () => {
         return skyBoxVertex_Output((camera.projection * vec4f(viewPos, 1f)), _arg_position.xyz);
       }
 
-      struct skyBoxFragment_Input {
-        @location(0) texCoord: vec3f,
-      }
-
       @group(0) @binding(1) var skyBox: texture_cube<f32>;
 
       @group(0) @binding(2) var sampler_1: sampler;
+
+      struct skyBoxFragment_Input {
+        @location(0) texCoord: vec3f,
+      }
 
       @fragment fn skyBoxFragment(_arg_0: skyBoxFragment_Input) -> @location(0) vec4f {
         return textureSample(skyBox, sampler_1, normalize(_arg_0.texCoord));
@@ -250,6 +250,12 @@ describe('gravity example', () => {
         return mainVertex_Output(positionOnCanvas, _arg_uv, _arg_normal, worldPosition, (*currentBody).textureIndex, (*currentBody).destroyed, (*currentBody).ambientLightFactor);
       }
 
+      @group(1) @binding(0) var celestialBodyTextures: texture_2d_array<f32>;
+
+      @group(0) @binding(1) var sampler_1: sampler;
+
+      @group(0) @binding(2) var<uniform> lightSource: vec3f;
+
       struct mainFragment_Input {
         @location(0) uv: vec2f,
         @location(1) normals: vec3f,
@@ -258,12 +264,6 @@ describe('gravity example', () => {
         @location(4) @interpolate(flat) destroyed: u32,
         @location(5) ambientLightFactor: f32,
       }
-
-      @group(1) @binding(0) var celestialBodyTextures: texture_2d_array<f32>;
-
-      @group(0) @binding(1) var sampler_1: sampler;
-
-      @group(0) @binding(2) var<uniform> lightSource: vec3f;
 
       @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
         if ((_arg_0.destroyed == 1u)) {
