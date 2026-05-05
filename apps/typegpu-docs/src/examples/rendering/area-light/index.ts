@@ -1,5 +1,5 @@
 import { perlin3d } from '@typegpu/noise';
-import tgpu, { common, d } from 'typegpu';
+import tgpu, { common, d, std, type AutoFragmentIn, type TgpuFragmentFn } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import {
@@ -19,14 +19,9 @@ import {
   sceneLayout,
   vertexLayout,
 } from './schemas.ts';
-import {
-  lightFragment,
-  lightVertex,
-  mainFragment,
-  mainVertex,
-  skyFragment,
-  skyVertex,
-} from './shaders.ts';
+import { lightFragment, lightVertex, mainFragment, skyFragment, skyVertex } from './shaders.ts';
+import type { InferGPURecord } from '../../../../../../packages/typegpu/src/shared/repr.ts';
+import type { AnyFragmentInputBuiltin } from '../../../../../../packages/typegpu/src/builtin.ts';
 
 const SAMPLE_COUNT = 4;
 const DISCO_TRANSITION_MS = 1600;
@@ -45,7 +40,6 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const perlinCache = perlin3d.staticCache({ root, size: d.vec3u(128, 128, 128) });
-type LightIndex = 0 | 1 | 2;
 
 const mesh = createSceneMesh();
 const vertexBuffer = root
@@ -86,29 +80,27 @@ const environmentFaceUniform = root.createUniform(d.u32);
 const environmentGenerationBindGroup = root.createBindGroup(environmentGenerationLayout, {
   face: environmentFaceUniform.buffer,
 });
+
 const environmentPipeline = root.pipe(perlinCache.inject()).createRenderPipeline({
   vertex: environmentVertex,
   fragment: environmentFragment,
   targets: { format: 'rgba8unorm' },
 });
-const environmentFaceViews = Array.from({ length: 6 }, (_, face) =>
-  environmentTexture.createView('render', {
-    baseArrayLayer: face,
-    arrayLayerCount: 1,
-  }),
-);
 
-environmentFaceViews.forEach((view, face) => {
+for (let face = 0; face < 6; face++) {
   environmentFaceUniform.write(face);
   environmentPipeline
     .with(environmentGenerationBindGroup)
     .withColorAttachment({
-      view,
+      view: environmentTexture.createView('render', {
+        baseArrayLayer: face,
+        arrayLayerCount: 1,
+      }),
       loadOp: 'clear',
       storeOp: 'store',
     })
     .draw(3);
-});
+}
 
 const environmentSampler = root.createSampler({
   magFilter: 'linear',
@@ -120,44 +112,67 @@ const environmentBindGroup = root.createBindGroup(environmentLayout, {
   environmentSampler,
 });
 
-const framebufferSize = () => [canvas.width, canvas.height] as [number, number];
+function createRenderTargets() {
+  const size = [canvas.width, canvas.height] as [number, number];
 
-function createColorTexture() {
-  return root
-    .createTexture({
-      size: framebufferSize(),
-      format: presentationFormat,
-      sampleCount: SAMPLE_COUNT,
-    })
-    .$usage('render');
+  return {
+    color: root
+      .createTexture({
+        size,
+        format: presentationFormat,
+        sampleCount: SAMPLE_COUNT,
+      })
+      .$usage('render'),
+    depth: root
+      .createTexture({
+        size,
+        format: 'depth24plus',
+        sampleCount: SAMPLE_COUNT,
+      })
+      .$usage('render'),
+  };
 }
 
-function createDepthTexture() {
-  return root
-    .createTexture({
-      size: framebufferSize(),
-      format: 'depth24plus',
-      sampleCount: SAMPLE_COUNT,
-    })
-    .$usage('render');
+function destroyRenderTargets(renderTargets: ReturnType<typeof createRenderTargets>) {
+  renderTargets.color.destroy();
+  renderTargets.depth.destroy();
 }
 
-let colorTexture = createColorTexture();
-let depthTexture = createDepthTexture();
+let targets = createRenderTargets();
 let skyGlow = INITIAL_PARAMS.environmentIntensity;
 let discoEnabled = false;
 let discoMix = 0;
 let discoStartedAt = performance.now();
 let previousFrameTime = discoStartedAt;
 
-const baseLightColors = [
-  d.vec3f(initialLights[0].color),
-  d.vec3f(initialLights[1].color),
-  d.vec3f(initialLights[2].color),
-] as const;
-const baseLightIntensities = new Float32Array(initialLights.map((light) => light.intensity));
-const discoColors = [d.vec3f(), d.vec3f(), d.vec3f()] as const;
-const mixedLightColors = [d.vec3f(), d.vec3f(), d.vec3f()] as const;
+const lightState = initialLights.map((light) => ({
+  color: d.vec3f(light.color),
+  intensity: light.intensity,
+}));
+
+type test = TgpuFragmentFn<
+  {
+    worldPos: d.Vec3f;
+    normal: d.Vec3f;
+    albedo: d.Vec3f;
+    roughness: d.F32;
+    metallic: d.F32;
+    wetness: d.F32;
+  } & Record<string, AnyFragmentInputBuiltin>,
+  d.Vec4f
+>;
+
+type test2 = TgpuFragmentFn<
+  {
+    worldPos: d.Vec3f;
+    normal: d.Vec3f;
+    albedo: d.Vec3f;
+    roughness: d.F32;
+    metallic: d.F32;
+    wetness: d.F32;
+  },
+  d.Vec4f
+>;
 
 const skyPipeline = root.createRenderPipeline({
   vertex: skyVertex,
@@ -168,7 +183,17 @@ const skyPipeline = root.createRenderPipeline({
 
 const scenePipeline = root.createRenderPipeline({
   attribs: vertexLayout.attrib,
-  vertex: mainVertex,
+  vertex: ({ position, normal, albedo, roughness, metallic, wetness }) => {
+    'use gpu';
+    const camera = sceneLayout.$.camera;
+    return {
+      $position: camera.projection * camera.view * d.vec4f(position, 1),
+      worldPos: position,
+      normal,
+      albedo,
+      material: d.vec3f(roughness, metallic, wetness),
+    };
+  },
   fragment: mainFragment,
   targets: { format: presentationFormat },
   depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
@@ -198,32 +223,16 @@ const { cleanupCamera } = setupOrbitCamera(
 );
 
 const resizeObserver = new ResizeObserver(() => {
-  colorTexture.destroy();
-  depthTexture.destroy();
-  colorTexture = createColorTexture();
-  depthTexture = createDepthTexture();
+  destroyRenderTargets(targets);
+  targets = createRenderTargets();
 });
 resizeObserver.observe(canvas);
 
 let animationFrameId: number;
 
-function clamp01(value: number) {
-  return Math.min(Math.max(value, 0), 1);
-}
-
-function smoothstep(value: number) {
-  return value * value * (3 - 2 * value);
-}
-
-function mixColor(target: d.v3f, from: d.v3f, to: d.v3f, amount: number) {
-  target[0] = from[0] + (to[0] - from[0]) * amount;
-  target[1] = from[1] + (to[1] - from[1]) * amount;
-  target[2] = from[2] + (to[2] - from[2]) * amount;
-}
-
-function writeHueColor(target: d.v3f, hue: number) {
+function hueColor(hue: number) {
   const h = (((hue % 1) + 1) % 1) * 6;
-  const x = 1 - Math.abs((h % 2) - 1);
+  const x = 1 - std.abs((h % 2) - 1);
   const [r, g, b] =
     h < 1
       ? [1, x, 0]
@@ -237,41 +246,30 @@ function writeHueColor(target: d.v3f, hue: number) {
               ? [x, 0, 1]
               : [1, 0, x];
 
-  target[0] = r;
-  target[1] = g;
-  target[2] = b;
+  return d.vec3f(r, g, b);
 }
 
-function patchLight(index: LightIndex, color: d.v3f, strength = 1) {
-  const update = {
-    color,
-    intensity: baseLightIntensities[index] * strength,
-  };
+function patchLight(index: number, color = lightState[index].color, strength = 1) {
+  lightsUniform.patch({
+    [index]: {
+      color,
+      intensity: lightState[index].intensity * strength,
+    },
+  });
+}
 
-  if (index === 0) {
-    lightsUniform.patch({ 0: update });
-  } else if (index === 1) {
-    lightsUniform.patch({ 1: update });
-  } else {
-    lightsUniform.patch({ 2: update });
+function setLightColor(index: number, color: d.v3f) {
+  lightState[index].color = d.vec3f(color);
+
+  if (!discoEnabled && discoMix === 0) {
+    patchLight(index);
   }
 }
 
-function setLightColor(index: LightIndex, color: d.v3f) {
-  const target = baseLightColors[index];
-  target[0] = color[0];
-  target[1] = color[1];
-  target[2] = color[2];
-
+function setLightIntensity(index: number, intensity: number) {
+  lightState[index].intensity = intensity;
   if (!discoEnabled && discoMix === 0) {
-    patchLight(index, target);
-  }
-}
-
-function setLightIntensity(index: LightIndex, intensity: number) {
-  baseLightIntensities[index] = intensity;
-  if (!discoEnabled && discoMix === 0) {
-    patchLight(index, baseLightColors[index]);
+    patchLight(index);
   }
 }
 
@@ -280,19 +278,25 @@ function updateDisco(time: number) {
     return;
   }
 
-  const delta = Math.min(time - previousFrameTime, 64);
+  const delta = std.min(time - previousFrameTime, 64);
   const targetMix = discoEnabled ? 1 : 0;
-  discoMix = clamp01(discoMix + Math.sign(targetMix - discoMix) * (delta / DISCO_TRANSITION_MS));
+  discoMix = std.clamp(
+    discoMix + std.sign(targetMix - discoMix) * (delta / DISCO_TRANSITION_MS),
+    0,
+    1,
+  );
 
-  const blend = smoothstep(discoMix);
+  const blend = std.smoothstep(0, 1, discoMix);
   const t = (time - discoStartedAt) * DISCO_HUE_SPEED;
   paramsUniform.patch({ environmentIntensity: skyGlow * (1 - blend) });
 
-  for (const [index, color] of discoColors.entries()) {
-    writeHueColor(color, t + index / discoColors.length);
-    mixColor(mixedLightColors[index], baseLightColors[index], color, blend);
-    const pulse = smoothstep((Math.sin(time * 0.0015 + index * 2.2) + 1) * 0.5);
-    patchLight(index as LightIndex, mixedLightColors[index], 1 + (pulse - 1) * blend);
+  for (const [index, light] of lightState.entries()) {
+    const pulse = std.smoothstep(0, 1, (std.sin(time * 0.0015 + index * 2.2) + 1) * 0.5);
+    patchLight(
+      index,
+      std.mix(light.color, hueColor(t + index / lightState.length), blend),
+      1 + (pulse - 1) * blend,
+    );
   }
 }
 
@@ -305,7 +309,7 @@ function render(time: number) {
     .with(sceneBindGroup)
     .with(environmentBindGroup)
     .withColorAttachment({
-      view: colorTexture,
+      view: targets.color,
       clearValue: [0.014, 0.012, 0.016, 1],
       loadOp: 'clear',
       storeOp: 'store',
@@ -318,12 +322,12 @@ function render(time: number) {
     .with(environmentBindGroup)
     .with(vertexLayout, vertexBuffer)
     .withColorAttachment({
-      view: colorTexture,
+      view: targets.color,
       loadOp: 'load',
       storeOp: 'store',
     })
     .withDepthStencilAttachment({
-      view: depthTexture,
+      view: targets.depth,
       depthClearValue: 1,
       depthLoadOp: 'clear',
       depthStoreOp: 'store',
@@ -333,13 +337,13 @@ function render(time: number) {
   lightPipeline
     .with(sceneBindGroup)
     .withColorAttachment({
-      view: colorTexture,
+      view: targets.color,
       resolveTarget: context,
       loadOp: 'load',
       storeOp: 'store',
     })
     .withDepthStencilAttachment({
-      view: depthTexture,
+      view: targets.depth,
       depthLoadOp: 'load',
       depthStoreOp: 'store',
     })
@@ -374,7 +378,9 @@ export const controls = defineControls({
     step: 0.01,
     onSliderChange: (environmentIntensity) => {
       skyGlow = environmentIntensity;
-      paramsUniform.patch({ environmentIntensity: skyGlow * (1 - smoothstep(discoMix)) });
+      paramsUniform.patch({
+        environmentIntensity: skyGlow * (1 - std.smoothstep(0, 1, discoMix)),
+      });
     },
   },
   'shallow water': {
@@ -392,7 +398,7 @@ export const controls = defineControls({
     onSliderChange: (intensity) => setLightIntensity(0, intensity),
   },
   'key color': {
-    initial: baseLightColors[0],
+    initial: lightState[0].color,
     onColorChange: (color) => setLightColor(0, color),
   },
   'fill intensity': {
@@ -403,7 +409,7 @@ export const controls = defineControls({
     onSliderChange: (intensity) => setLightIntensity(1, intensity),
   },
   'fill color': {
-    initial: baseLightColors[1],
+    initial: lightState[1].color,
     onColorChange: (color) => setLightColor(1, color),
   },
   'rim intensity': {
@@ -414,7 +420,7 @@ export const controls = defineControls({
     onSliderChange: (intensity) => setLightIntensity(2, intensity),
   },
   'rim color': {
-    initial: baseLightColors[2],
+    initial: lightState[2].color,
     onColorChange: (color) => setLightColor(2, color),
   },
 });
@@ -423,8 +429,7 @@ export function onCleanup() {
   cancelAnimationFrame(animationFrameId);
   cleanupCamera();
   resizeObserver.disconnect();
-  colorTexture.destroy();
-  depthTexture.destroy();
+  destroyRenderTargets(targets);
   perlinCache.destroy();
   root.destroy();
 }

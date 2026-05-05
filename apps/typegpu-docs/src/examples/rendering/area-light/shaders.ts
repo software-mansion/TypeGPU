@@ -29,21 +29,11 @@ function sampleSkyEnvironment(direction: d.v3f) {
   return sample.rgb * sceneLayout.$.params.environmentIntensity;
 }
 
-function environmentScalar() {
-  'use gpu';
-  return sceneLayout.$.params.environmentIntensity * SCALAR_ENVIRONMENT_LUMA;
-}
-
 function tonemap(color: d.v3f) {
   'use gpu';
   const exposed = color * sceneLayout.$.params.exposure;
   const mapped = exposed / (exposed + 1);
   return std.pow(std.max(mapped, d.vec3f(0)), d.vec3f(1 / 2.2));
-}
-
-function materialF0(albedo: d.v3f, metallic: number) {
-  'use gpu';
-  return std.mix(d.vec3f(0.04), albedo, metallic);
 }
 
 function waveSlope(
@@ -131,7 +121,7 @@ function environmentLighting(
 ) {
   'use gpu';
   const NdotV = std.saturate(std.dot(N, V));
-  const env = environmentScalar();
+  const env = sceneLayout.$.params.environmentIntensity * SCALAR_ENVIRONMENT_LUMA;
   const fresnel = fresnelSchlickRoughness(NdotV, f0, roughness);
   const diffuse =
     (1 - fresnel) * (1 - metallic) * albedo * env * sceneLayout.$.params.diffuseIblStrength;
@@ -145,44 +135,20 @@ function environmentLighting(
   return diffuse + specular;
 }
 
-export const mainVertex = tgpu.vertexFn({
-  in: Vertex.propTypes,
-  out: {
-    pos: d.builtin.position,
-    worldPos: d.vec3f,
-    normal: d.vec3f,
-    albedo: d.vec3f,
-    roughness: d.f32,
-    metallic: d.f32,
-    wetness: d.f32,
-  },
-})(({ position, normal, albedo, roughness, metallic, wetness }) => {
-  'use gpu';
-  const camera = sceneLayout.$.camera;
-  return {
-    pos: camera.projection * camera.view * d.vec4f(position, 1),
-    worldPos: position,
-    normal,
-    albedo,
-    roughness,
-    metallic,
-    wetness,
-  };
-});
-
 export const mainFragment = tgpu.fragmentFn({
   in: {
     worldPos: d.vec3f,
     normal: d.vec3f,
     albedo: d.vec3f,
-    roughness: d.f32,
-    metallic: d.f32,
-    wetness: d.f32,
+    material: d.vec3f,
     frontFacing: d.builtin.frontFacing,
   },
   out: d.vec4f,
-})(({ worldPos, normal, albedo, roughness, metallic, wetness, frontFacing }) => {
+})(({ worldPos, normal, albedo, material, frontFacing }) => {
   'use gpu';
+  const roughness = material.x;
+  const metallic = material.y;
+  const wetness = material.z;
   const meshN = std.normalize(normal);
   const geometricN = std.select(std.neg(meshN), meshN, frontFacing);
   const V = std.normalize(sceneLayout.$.camera.position.xyz - worldPos);
@@ -194,7 +160,11 @@ export const mainFragment = tgpu.fragmentFn({
   const materialRoughness = std.clamp(std.mix(roughness, waterRoughness, wetSurface), 0.006, 1);
   const wetAlbedo = std.mix(albedo, albedo * 0.44, wetSurface);
   const specularBoost = 1 + film * 3.2;
-  const f0 = std.mix(materialF0(albedo, metallic), d.vec3f(0.08), wetSurface * (1 - metallic));
+  const f0 = std.mix(
+    std.mix(d.vec3f(0.04), albedo, metallic),
+    d.vec3f(0.08),
+    wetSurface * (1 - metallic),
+  );
   const direct = directAreaLighting(
     N,
     V,
