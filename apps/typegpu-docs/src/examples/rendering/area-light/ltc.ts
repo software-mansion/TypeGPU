@@ -45,15 +45,19 @@ export function sampleLtcAmplitude(uv: d.v2f) {
   return bilinearLut(ltcLayout.$.ltcAmp, uv);
 }
 
-function integrateEdge(v1: d.v3f, v2: d.v3f) {
+function integrateEdge(from: d.v3f, to: d.v3f) {
   'use gpu';
-  const x = std.dot(v1, v2);
-  const y = std.abs(x);
-  const a = 0.8543985 + (0.4965155 + 0.0145206 * y) * y;
-  const b = 3.417594 + (4.1616724 + y) * y;
-  const v = a / b;
-  const thetaSinTheta = std.select(0.5 * std.inverseSqrt(std.max(1 - x * x, 1e-7)) - v, v, x > 0);
-  return (std.cross(v1, v2) * thetaSinTheta).z;
+  const cosAngle = std.dot(from, to);
+  const absCos = std.abs(cosAngle);
+  const numer = 0.8543985 + (0.4965155 + 0.0145206 * absCos) * absCos;
+  const denom = 3.417594 + (4.1616724 + absCos) * absCos;
+  const approx = numer / denom;
+  const thetaSinTheta = std.select(
+    0.5 * std.inverseSqrt(std.max(1 - cosAngle * cosAngle, 1e-7)) - approx,
+    approx,
+    cosAngle > 0,
+  );
+  return (std.cross(from, to) * thetaSinTheta).z;
 }
 
 function clipQuadToHorizon(p0: d.v3f, p1: d.v3f, p2: d.v3f, p3: d.v3f) {
@@ -147,39 +151,39 @@ function clipQuadToHorizon(p0: d.v3f, p1: d.v3f, p2: d.v3f, p3: d.v3f) {
 }
 
 export function evaluateLtcAreaLight(
-  N: d.v3f,
-  V: d.v3f,
-  P: d.v3f,
-  Minv: d.m3x3f,
+  normal: d.v3f,
+  viewDir: d.v3f,
+  worldPos: d.v3f,
+  ltcInverseTransform: d.m3x3f,
   light: d.Infer<typeof RectLight>,
 ) {
   'use gpu';
-  let T1 = V - N * std.dot(V, N);
-  if (std.dot(T1, T1) < 1e-5) {
+  let tangent = viewDir - normal * std.dot(viewDir, normal);
+  if (std.dot(tangent, tangent) < 1e-5) {
     let up = d.vec3f(0, 0, 1);
-    if (std.abs(N.z) > 0.999) {
+    if (std.abs(normal.z) > 0.999) {
       up = d.vec3f(0, 1, 0);
     }
-    T1 = std.cross(up, N);
+    tangent = std.cross(up, normal);
   }
-  T1 = std.normalize(T1);
-  const T2 = std.cross(N, T1);
+  tangent = std.normalize(tangent);
+  const bitangent = std.cross(normal, tangent);
 
-  const ex = light.dirX * light.halfSize.x;
-  const ey = light.dirY * light.halfSize.y;
-  const p0 = light.center - ex - ey;
-  const p1 = light.center + ex - ey;
-  const p2 = light.center + ex + ey;
-  const p3 = light.center - ex + ey;
+  const edgeU = light.dirX * light.halfSize.x;
+  const edgeV = light.dirY * light.halfSize.y;
+  const corner0 = light.center - edgeU - edgeV;
+  const corner1 = light.center + edgeU - edgeV;
+  const corner2 = light.center + edgeU + edgeV;
+  const corner3 = light.center - edgeU + edgeV;
 
-  const basis = std.transpose(d.mat3x3f(T1, T2, N));
-  const transform = Minv * basis;
+  const tangentBasis = std.transpose(d.mat3x3f(tangent, bitangent, normal));
+  const worldToLtc = ltcInverseTransform * tangentBasis;
 
   const clipped = clipQuadToHorizon(
-    transform * (p0 - P),
-    transform * (p1 - P),
-    transform * (p2 - P),
-    transform * (p3 - P),
+    worldToLtc * (corner0 - worldPos),
+    worldToLtc * (corner1 - worldPos),
+    worldToLtc * (corner2 - worldPos),
+    worldToLtc * (corner3 - worldPos),
   );
 
   if (clipped.count === d.u32(0)) {
