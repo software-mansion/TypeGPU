@@ -237,14 +237,14 @@ describe('wgslGenerator', () => {
   });
 
   it('works when application is deferred', ({ root }) => {
-    const vec1 = d.vec2f(1, 2).mul;
-    const vec2 = tgpu.comptime(() => d.vec2f(3, 4).mul);
+    const v = d.vec2f(1, 2).mul;
+    const u = tgpu.comptime(() => d.vec2f(3, 4).mul);
     const buf = tgpu.comptime(() => root.createUniform(d.vec2f, [5, 6]).$.add);
 
     const fn = () => {
       'use gpu';
-      const a = vec1(7);
-      const b = vec2()(8);
+      const a = v(7);
+      const b = u()(8);
       const c = buf()(9);
     };
 

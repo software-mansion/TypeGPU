@@ -1,39 +1,50 @@
-import type { Snippet } from '../data/snippet.ts';
+import { isSnippet, type Snippet } from '../data/snippet.ts';
+import type { AnyMatInstance, AnyNumericVecInstance } from '../data/wgslTypes.ts';
 import { $internal, isMarkedInternal } from '../shared/symbols.ts';
 import type { InfixOperator } from './accessProp.ts';
-import { coerceToSnippet } from './generationHelpers.ts';
 
-// Two possible infixDispatch variants
-// string, number | vector | matrix, InfixOperator => number | vector | matrix => number | vector | matrix
-// string, stnippet, InfixOperator albo samo GPUCallable => Snippet => Snippet
+type Numeric = number | AnyNumericVecInstance | AnyMatInstance;
+
+/**
+ * In wgslGenerator, the lhs may either be Numeric or Snippet,
+ * and InfixDispatch is recognized by the $internal symbol.
+ * InfixDispatch is not called in wgslGenerator.
+ * @example
+ * const dispatch = d.vec2u(1).mul;
+ * const fn = () => {
+ *    'use gpu';
+ *    dispatch(2); // lhs is Numeric
+ *    d.vec2u(1).mul(2) // lhs is a snippet
+ * }
+ *
+ * In JS, the lhs is always numeric, and InfixDispatch is callable.
+ * @example
+ * const dispatch = d.vec2u(1).mul;
+ * dispatch(2);
+ */
 export interface InfixDispatch {
   [$internal]: true;
   type: 'infix-disptach';
-  readonly opName: string;
-  readonly lhs: Snippet;
+  readonly lhs: Snippet | Numeric;
   readonly operator: InfixOperator;
-  (other: unknown): unknown;
+  (other: Numeric): Numeric;
 }
 
-export function infixDispatch(
-  opName: string,
-  lhs: unknown,
-  operator: InfixOperator,
-): InfixDispatch {
-  const lhsSnippet = coerceToSnippet(lhs);
-  const callable = (other: unknown) => {
-    console.log('infix dispatch called');
-    // oxlint-disable-next-line typescript/no-explicit-any
-    return operator(lhs as any, other as any);
+export function infixDispatch(lhs: Snippet | Numeric, operator: InfixOperator): InfixDispatch {
+  const callable = (other: Numeric | Snippet) => {
+    if (isSnippet(lhs)) {
+      throw new Error('Unexpected snippet lhs in JS infix operator.');
+    }
+    // operator will perform all necessary type checks
+    return operator(lhs as never, other as never);
   };
   const infix = Object.assign(callable, {
-    [$internal]: true,
+    [$internal]: true as const,
     type: 'infix-disptach' as const,
-    opName,
-    lhs: lhsSnippet,
+    lhs,
     operator,
   });
-  return infix as InfixDispatch;
+  return infix;
 }
 
 export function isInfixDispatch(o: unknown): o is InfixDispatch {

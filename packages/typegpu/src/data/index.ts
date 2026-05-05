@@ -23,7 +23,7 @@ function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
 
   Object.defineProperty(base.prototype, operator, {
     get() {
-      return infixDispatch(operator, this, opImpl);
+      return infixDispatch(this, opImpl);
     },
   });
 }

@@ -106,7 +106,7 @@ const swizzleLenToType: Record<SwizzleableType, Record<SwizzleLength, BaseData>>
 export function accessProp(target: Snippet, propName: string): Snippet | undefined {
   if (infixKinds.includes((target.dataType as BaseData).type) && propName in infixOperators) {
     const operator = infixOperators[propName as InfixOperatorName];
-    return snip(infixDispatch(propName, target, operator), UnknownData, /* origin */ target.origin);
+    return snip(infixDispatch(target, operator), UnknownData, /* origin */ target.origin);
   }
 
   if (isWgslArray(target.dataType) && propName === 'length') {

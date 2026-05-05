@@ -654,12 +654,13 @@ ${this.ctx.pre}}`;
       if (isInfixDispatch(callee.value)) {
         if (!argNodes[0]) {
           throw new WgslTypeError(
-            `An infix operator '${callee.value.opName}' was called without any arguments`,
+            `An infix operator '${getName(callee.value.operator)}' was called without any arguments`,
           );
         }
+        const lhs = coerceToSnippet(callee.value.lhs);
         const rhs = this._expression(argNodes[0]);
         const callable = callee.value.operator[$gpuCallable];
-        return callable.call(this.ctx, [callee.value.lhs, rhs]);
+        return callable.call(this.ctx, [lhs, rhs]);
       }
 
       if (callee.value instanceof ConsoleLog) {
