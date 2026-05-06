@@ -1,8 +1,6 @@
 import tgpu, { d, std } from 'typegpu';
-import { ltcFiltering } from './ltcConfig.ts';
-import { ltcLayout, RectLight } from './schemas.ts';
-
-const ltcFilteringEnabled = tgpu.comptime(ltcFiltering);
+import { RectLight } from './schemas.ts';
+import type { LtcLayout } from './schemas.ts';
 
 const LUT_SIZE = 64;
 const LUT_SCALE = (LUT_SIZE - 1) / LUT_SIZE;
@@ -37,24 +35,30 @@ function bilinearLut(texture: d.texture2d<d.F32>, uv: d.v2f) {
   return std.mix(std.mix(t00, t10, frac.x), std.mix(t01, t11, frac.x), frac.y);
 }
 
-function sampleLtcTexture(texture: d.texture2d<d.F32>, uv: d.v2f) {
-  'use gpu';
-  if (ltcFilteringEnabled()) {
-    return std.textureSampleLevel(texture, ltcLayout.$.ltcSampler, uv, 0);
-  } else {
-    return bilinearLut(texture, uv);
+export function createLtcSampling(ltcLayout: LtcLayout, filterable: boolean) {
+  const ltcFilteringEnabled = tgpu.comptime(() => filterable);
+
+  function sampleLtcTexture(texture: d.texture2d<d.F32>, uv: d.v2f) {
+    'use gpu';
+    if (ltcFilteringEnabled()) {
+      return std.textureSampleLevel(texture, ltcLayout.$.ltcSampler, uv, 0);
+    } else {
+      return bilinearLut(texture, uv);
+    }
   }
-}
 
-export function sampleLtcMatrix(uv: d.v2f) {
-  'use gpu';
-  const t = sampleLtcTexture(ltcLayout.$.ltcMat, uv);
-  return d.mat3x3f(d.vec3f(t.x, 0, t.y), d.vec3f(0, 1, 0), d.vec3f(t.z, 0, t.w));
-}
+  function sampleLtcMatrix(uv: d.v2f) {
+    'use gpu';
+    const t = sampleLtcTexture(ltcLayout.$.ltcMat, uv);
+    return d.mat3x3f(d.vec3f(t.x, 0, t.y), d.vec3f(0, 1, 0), d.vec3f(t.z, 0, t.w));
+  }
 
-export function sampleLtcAmplitude(uv: d.v2f) {
-  'use gpu';
-  return sampleLtcTexture(ltcLayout.$.ltcAmp, uv);
+  function sampleLtcAmplitude(uv: d.v2f) {
+    'use gpu';
+    return sampleLtcTexture(ltcLayout.$.ltcAmp, uv);
+  }
+
+  return { sampleLtcAmplitude, sampleLtcMatrix };
 }
 
 function integrateEdge(from: d.v3f, to: d.v3f) {
