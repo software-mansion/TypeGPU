@@ -1,14 +1,7 @@
 import * as tinyest from 'tinyest';
 import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
-import {
-  type AnyData,
-  ConsoleLog,
-  InfixDispatch,
-  isLooseData,
-  UnknownData,
-  unptr,
-} from '../data/dataTypes.ts';
+import { type AnyData, InfixDispatch, isLooseData, UnknownData, unptr } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
@@ -27,7 +20,7 @@ import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared
 import { safeStringify } from '../shared/stringify.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
-import { isGPUCallable, isKnownAtComptime } from '../types.ts';
+import { isGPUCallable, isKnownAtComptime, type DualFn } from '../types.ts';
 import { convertStructValues, convertToCommonType, tryConvertSnippet } from './conversion.ts';
 import {
   ArrayExpression,
@@ -47,7 +40,7 @@ import { UnrollableIterable } from '../core/unroll/tgpuUnroll.ts';
 import { isGenericFn } from '../core/function/tgpuFn.ts';
 import type { AnyFn } from '../core/function/fnTypes.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
-import { mathToStd } from './math.ts';
+import { mathToStd, supportedLogOps } from './jsPolyfills.ts';
 import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
@@ -517,21 +510,6 @@ ${this.ctx.pre}}`;
       const [_, targetNode, property] = expression;
       const target = this._expression(targetNode);
 
-      if (target.value === console) {
-        return snip(new ConsoleLog(property), UnknownData, /* origin */ 'runtime');
-      }
-
-      if (target.value === Math) {
-        if (property in mathToStd && mathToStd[property]) {
-          return snip(mathToStd[property], UnknownData, /* origin */ 'runtime');
-        }
-        if (typeof Math[property as keyof typeof Math] === 'function') {
-          throw new Error(
-            `Unsupported functionality 'Math.${property}'. Use an std alternative, or implement the function manually.`,
-          );
-        }
-      }
-
       const accessed = accessProp(target, property);
       if (!accessed) {
         throw new Error(
@@ -580,7 +558,17 @@ ${this.ctx.pre}}`;
     if (expression[0] === NODE.call) {
       // Function Call
       const [_, calleeNode, argNodes] = expression;
-      const callee = this._expression(calleeNode);
+      const _callee = this._expression(calleeNode);
+      const callee = mathToStd.has(_callee.value as AnyFn)
+        ? snip(mathToStd.get(_callee.value as AnyFn) as DualFn<AnyFn>, UnknownData, 'runtime')
+        : _callee;
+
+      if (supportedLogOps().includes(callee.value as AnyFn)) {
+        return this.ctx.generateLog(
+          callee.value as AnyFn,
+          argNodes.map((arg) => this._expression(arg)),
+        );
+      }
 
       if (wgsl.isWgslStruct(callee.value)) {
         // Struct schema call.
@@ -668,13 +656,6 @@ ${this.ctx.pre}}`;
         return callee.value.operator(this.ctx, [callee.value.lhs, rhs]);
       }
 
-      if (callee.value instanceof ConsoleLog) {
-        return this.ctx.generateLog(
-          callee.value.op,
-          argNodes.map((arg) => this._expression(arg)),
-        );
-      }
-
       if (isGPUCallable(callee.value)) {
         const callable = callee.value[$gpuCallable];
         const strictSignature = callable.strictSignature;
@@ -743,6 +724,23 @@ ${this.ctx.pre}}`;
         if (shelllessCall) {
           return shelllessCall;
         }
+      }
+
+      // try to throw a descriptive error
+      const maybeMathMethod = Object.getOwnPropertyNames(Math).find(
+        (prop) => Math[prop as keyof typeof Math] === callee.value,
+      );
+      if (maybeMathMethod) {
+        throw new Error(
+          `Unsupported Math functionality 'Math.${maybeMathMethod}()'. Use an std alternative, or implement the function manually.`,
+        );
+      }
+
+      const maybeConsoleMethod = Object.getOwnPropertyNames(console).find(
+        (prop) => console[prop as keyof typeof console] === callee.value,
+      );
+      if (maybeConsoleMethod) {
+        throw new Error(`Unsupported console functionality 'console.${maybeConsoleMethod}()'.`);
       }
 
       throw new Error(

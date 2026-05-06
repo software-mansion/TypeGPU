@@ -29,6 +29,7 @@ import type { ShelllessRepository } from './shellless.ts';
 import { stitch } from '../../src/core/resolve/stitch.ts';
 import { WgslTypeError } from '../../src/errors.ts';
 import { $internal, $resolve } from '../../src/shared/symbols.ts';
+import type { SupportedLogOp } from './consoleLog/types.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
@@ -85,7 +86,7 @@ export type GenerationCtx = ResolutionCtx & {
   dedent(): string;
   pushBlockScope(): void;
   popBlockScope(): void;
-  generateLog(op: string, args: Snippet[]): Snippet;
+  generateLog(op: SupportedLogOp, args: Snippet[]): Snippet;
   getById(id: string): Snippet | null;
   defineVariable(id: string, snippet: Snippet): void;
   setBlockExternals(externals: Record<string, Snippet>): void;
