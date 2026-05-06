@@ -82,26 +82,15 @@ function environmentColor(direction: d.v3f) {
   return std.clamp(color, d.vec3f(0), d.vec3f(1));
 }
 
-export const environmentVertex = tgpu.vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, uv: d.vec2f },
-})(({ vertexIndex }) => {
-  'use gpu';
-  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-  return {
-    pos: d.vec4f(pos[vertexIndex], 0, 1),
-    uv: pos[vertexIndex],
-  };
-});
-
 export const environmentFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
   'use gpu';
+  const ndc = uv * d.vec2f(2, -2) + d.vec2f(-1, 1);
   const direction = cubeFaceDirection(
     environmentGenerationLayout.$.face,
-    uv * ENVIRONMENT_EDGE_SCALE,
+    ndc * ENVIRONMENT_EDGE_SCALE,
   );
   return d.vec4f(environmentColor(direction), 1);
 });

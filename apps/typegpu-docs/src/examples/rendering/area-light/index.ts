@@ -6,11 +6,22 @@ import {
   ENVIRONMENT_SIZE,
   environmentFragment,
   environmentGenerationLayout,
-  environmentVertex,
 } from './environment.ts';
 import { createSceneMesh, initialLights } from './geometry.ts';
+import { configureLtcFiltering } from './ltcConfig.ts';
 import { LTC_1, LTC_2 } from './ltcTables.ts';
-import {
+
+const SAMPLE_COUNT = 4;
+const DISCO_TRANSITION_MS = 1600;
+const DISCO_HUE_SPEED = 0.00008;
+
+const root = await tgpu.init({
+  device: { optionalFeatures: ['float32-filterable'] },
+});
+const canFilterF32 = root.enabledFeatures.has('float32-filterable');
+configureLtcFiltering(canFilterF32);
+
+const {
   environmentLayout,
   LIGHT_COUNT,
   Lights,
@@ -18,12 +29,9 @@ import {
   RenderParams,
   sceneLayout,
   vertexLayout,
-} from './schemas.ts';
-import { lightFragment, lightVertex, mainFragment, skyFragment, skyVertex } from './shaders.ts';
+} = await import('./schemas.ts');
+const { lightFragment, lightVertex, mainFragment, skyFragment } = await import('./shaders.ts');
 
-const SAMPLE_COUNT = 4;
-const DISCO_TRANSITION_MS = 1600;
-const DISCO_HUE_SPEED = 0.00008;
 const INITIAL_PARAMS = {
   exposure: 1.12,
   environmentIntensity: 0.25,
@@ -32,8 +40,6 @@ const INITIAL_PARAMS = {
   wetness: 0.12,
   time: 0,
 } satisfies d.InferInput<typeof RenderParams>;
-
-const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -65,6 +71,10 @@ const sceneBindGroup = root.createBindGroup(sceneLayout, {
 const ltcBindGroup = root.createBindGroup(ltcLayout, {
   ltcMat: createLtcTexture(LTC_1),
   ltcAmp: createLtcTexture(LTC_2),
+  ltcSampler: root.createSampler({
+    magFilter: 'linear',
+    minFilter: 'linear',
+  }),
 });
 
 const environmentTexture = root
@@ -80,7 +90,7 @@ const environmentGenerationBindGroup = root.createBindGroup(environmentGeneratio
 });
 
 const environmentPipeline = root.pipe(perlinCache.inject()).createRenderPipeline({
-  vertex: environmentVertex,
+  vertex: common.fullScreenTriangle,
   fragment: environmentFragment,
   targets: { format: 'rgba8unorm' },
 });
@@ -149,7 +159,7 @@ const lightState = initialLights.map((light) => ({
 }));
 
 const skyPipeline = root.createRenderPipeline({
-  vertex: skyVertex,
+  vertex: common.fullScreenTriangle,
   fragment: skyFragment,
   targets: { format: presentationFormat },
   multisample: { count: SAMPLE_COUNT },
@@ -187,8 +197,8 @@ const lightPipeline = root.createRenderPipeline({
 const { cleanupCamera } = setupOrbitCamera(
   canvas,
   {
-    initPos: d.vec4f(4.25, 2.45, 5.15, 1),
-    target: d.vec4f(0, 0.55, -0.55, 1),
+    initPos: d.vec4f(4.1, 2.25, 5, 1),
+    target: d.vec4f(-0.35, 0.52, -0.45, 1),
     minZoom: 1.8,
     maxZoom: 14,
     minCameraY: 0.22,
@@ -303,7 +313,7 @@ function render(time: number) {
       depthLoadOp: 'load',
       depthStoreOp: 'store',
     })
-    .draw(6 * LIGHT_COUNT);
+    .draw(6, LIGHT_COUNT);
 
   animationFrameId = requestAnimationFrame(render);
 }

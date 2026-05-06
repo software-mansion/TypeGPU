@@ -1,5 +1,5 @@
 import { d, std } from 'typegpu';
-import { ltcLayout, RectLight } from './schemas.ts';
+import { CAN_FILTER_FLOAT32_LTC, ltcLayout, RectLight } from './schemas.ts';
 
 const LUT_SIZE = 64;
 const LUT_SCALE = (LUT_SIZE - 1) / LUT_SIZE;
@@ -26,23 +26,32 @@ function bilinearLut(texture: d.texture2d<d.F32>, uv: d.v2f) {
   const frac = pos - base;
   const next = std.min(base + 1, d.vec2f(LUT_SIZE - 1));
 
-  const t00 = std.textureLoad(texture, d.vec2u(d.u32(base.x), d.u32(base.y)), 0);
-  const t10 = std.textureLoad(texture, d.vec2u(d.u32(next.x), d.u32(base.y)), 0);
-  const t01 = std.textureLoad(texture, d.vec2u(d.u32(base.x), d.u32(next.y)), 0);
-  const t11 = std.textureLoad(texture, d.vec2u(d.u32(next.x), d.u32(next.y)), 0);
+  const t00 = std.textureLoad(texture, d.vec2u(base.x, base.y), 0);
+  const t10 = std.textureLoad(texture, d.vec2u(next.x, base.y), 0);
+  const t01 = std.textureLoad(texture, d.vec2u(base.x, next.y), 0);
+  const t11 = std.textureLoad(texture, d.vec2u(next.x, next.y), 0);
 
   return std.mix(std.mix(t00, t10, frac.x), std.mix(t01, t11, frac.x), frac.y);
 }
 
+function sampleLtcTexture(texture: d.texture2d<d.F32>, uv: d.v2f) {
+  'use gpu';
+  if (CAN_FILTER_FLOAT32_LTC) {
+    return std.textureSampleLevel(texture, ltcLayout.$.ltcSampler, uv, 0);
+  } else {
+    return bilinearLut(texture, uv);
+  }
+}
+
 export function sampleLtcMatrix(uv: d.v2f) {
   'use gpu';
-  const t = bilinearLut(ltcLayout.$.ltcMat, uv);
+  const t = sampleLtcTexture(ltcLayout.$.ltcMat, uv);
   return d.mat3x3f(d.vec3f(t.x, 0, t.y), d.vec3f(0, 1, 0), d.vec3f(t.z, 0, t.w));
 }
 
 export function sampleLtcAmplitude(uv: d.v2f) {
   'use gpu';
-  return bilinearLut(ltcLayout.$.ltcAmp, uv);
+  return sampleLtcTexture(ltcLayout.$.ltcAmp, uv);
 }
 
 function integrateEdge(from: d.v3f, to: d.v3f) {
@@ -150,7 +159,7 @@ function clipQuadToHorizon(p0: d.v3f, p1: d.v3f, p2: d.v3f, p3: d.v3f) {
   return HorizonClip({ l0, l1, l2, l3, l4, count });
 }
 
-export function evaluateLtcAreaLight(
+export function evaluateTwoSidedLtcRectFormFactor(
   normal: d.v3f,
   viewDir: d.v3f,
   worldPos: d.v3f,
