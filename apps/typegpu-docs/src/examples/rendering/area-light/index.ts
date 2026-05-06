@@ -2,21 +2,25 @@ import tgpu, { common, d, std } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import { createSceneMesh, initialLights } from './geometry.ts';
-import { ltcFiltering } from './ltcConfig.ts';
 import { LTC_1, LTC_2 } from './ltcTables.ts';
+import {
+  LIGHT_COUNT,
+  Lights,
+  RenderParams,
+  createLtcLayout,
+  sceneLayout,
+  vertexLayout,
+} from './schemas.ts';
+import { createMainFragment, lightFragment, lightVertex, skyFragment } from './shaders.ts';
 
 const SAMPLE_COUNT = 4;
 const DISCO_TRANSITION_MS = 1600;
 const DISCO_HUE_SPEED = 0.00008;
 
-const root = await tgpu.init({
-  device: { optionalFeatures: ['float32-filterable'] },
-});
-ltcFiltering(root.enabledFeatures.has('float32-filterable'));
-
-const { LIGHT_COUNT, Lights, ltcLayout, RenderParams, sceneLayout, vertexLayout } =
-  await import('./schemas.ts');
-const { lightFragment, lightVertex, mainFragment, skyFragment } = await import('./shaders.ts');
+const root = await tgpu.init({ device: { optionalFeatures: ['float32-filterable'] } });
+const ltcFilterable = root.enabledFeatures.has('float32-filterable');
+const ltcLayout = createLtcLayout(ltcFilterable);
+const mainFragment = createMainFragment(ltcLayout, ltcFilterable);
 
 const INITIAL_PARAMS = {
   exposure: 1.12,
@@ -53,10 +57,17 @@ const sceneBindGroup = root.createBindGroup(sceneLayout, {
 const ltcBindGroup = root.createBindGroup(ltcLayout, {
   ltcMat: createLtcTexture(LTC_1),
   ltcAmp: createLtcTexture(LTC_2),
-  ltcSampler: root.createSampler({
-    magFilter: 'linear',
-    minFilter: 'linear',
-  }),
+  ltcSampler: root.createSampler(
+    ltcFilterable
+      ? {
+          magFilter: 'linear',
+          minFilter: 'linear',
+        }
+      : {
+          magFilter: 'nearest',
+          minFilter: 'nearest',
+        },
+  ),
 });
 
 function createRenderTargets() {
