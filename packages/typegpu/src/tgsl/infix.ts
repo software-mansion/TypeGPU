@@ -24,7 +24,7 @@ type Numeric = number | AnyNumericVecInstance | AnyMatInstance;
  */
 export interface InfixDispatch {
   [$internal]: true;
-  type: 'infix-disptach';
+  type: 'infix-dispatch';
   readonly lhs: Snippet | Numeric;
   readonly operator: InfixOperator;
   (other: Numeric): Numeric;
@@ -40,7 +40,7 @@ export function infixDispatch(lhs: Snippet | Numeric, operator: InfixOperator): 
   };
   const infix = Object.assign(callable, {
     [$internal]: true as const,
-    type: 'infix-disptach' as const,
+    type: 'infix-dispatch' as const,
     lhs,
     operator,
   });
@@ -48,5 +48,5 @@ export function infixDispatch(lhs: Snippet | Numeric, operator: InfixOperator): 
 }
 
 export function isInfixDispatch(o: unknown): o is InfixDispatch {
-  return isMarkedInternal(o) && (o as InfixDispatch)?.type === 'infix-disptach';
+  return isMarkedInternal(o) && (o as InfixDispatch)?.type === 'infix-dispatch';
 }
