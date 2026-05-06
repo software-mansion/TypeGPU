@@ -5,11 +5,25 @@ import {
   sampleLtcAmplitude,
   sampleLtcMatrix,
 } from './ltc.ts';
-import { environmentLayout, LIGHT_COUNT, sceneLayout, vertexLayout } from './schemas.ts';
+import { LIGHT_COUNT, sceneLayout, vertexLayout } from './schemas.ts';
 
 export { vertexLayout };
 
 const SCALAR_ENVIRONMENT_LUMA = 0.085;
+const DIFFUSE_IBL_STRENGTH = 0.06;
+const SPECULAR_IBL_STRENGTH = 0.95;
+const WETNESS = 0.12;
+
+const ENV_GROUND = d.vec3f(0.012, 0.008, 0.018);
+const ENV_HORIZON = d.vec3f(0.062, 0.026, 0.072);
+const ENV_ZENITH = d.vec3f(0.02, 0.013, 0.036);
+const ENV_HORIZON_GLOW = d.vec3f(0.22, 0.06, 0.1);
+
+const ENV_GLOWS = [
+  { dir: d.vec3f(-0.5, 0.18, 0.85), tint: d.vec3f(1, 0.2, 0.5), power: 16, strength: 0.5 },
+  { dir: d.vec3f(0.7, 0.08, -0.65), tint: d.vec3f(0.55, 0.22, 1), power: 22, strength: 0.3 },
+  { dir: d.vec3f(-0.25, -0.05, 1), tint: d.vec3f(1, 0.45, 0.12), power: 28, strength: 0.25 },
+];
 
 const lightQuadCorners = tgpu.const(d.arrayOf(d.vec2f, 6), [
   d.vec2f(-1, -1),
@@ -42,15 +56,27 @@ function fresnelSchlickRoughness(cosTheta: number, f0: d.v3f, roughness: number)
   return f0 + (clampedF0 - f0) * (1 - std.saturate(cosTheta)) ** 5;
 }
 
+function sampleEnvironment(direction: d.v3f) {
+  'use gpu';
+  const dir = std.normalize(direction);
+  const t = std.saturate(dir.y * 0.5 + 0.5);
+  const upMask = std.smoothstep(0.5, 1, t);
+  const downMask = 1 - std.smoothstep(0, 0.5, t);
+  let color = std.mix(std.mix(ENV_HORIZON, ENV_ZENITH, upMask), ENV_GROUND, downMask);
+
+  const horizonBand = 1 - std.smoothstep(0, 0.22, std.abs(dir.y));
+  color += ENV_HORIZON_GLOW * horizonBand * 0.45;
+
+  for (const g of tgpu.unroll(ENV_GLOWS)) {
+    const lobe = std.max(std.dot(dir, std.normalize(g.dir)), 0) ** d.f32(g.power);
+    color += g.tint * lobe * g.strength;
+  }
+  return color;
+}
+
 function sampleSkyEnvironment(direction: d.v3f) {
   'use gpu';
-  const sample = std.textureSampleLevel(
-    environmentLayout.$.environmentMap,
-    environmentLayout.$.environmentSampler,
-    std.normalize(direction),
-    0,
-  );
-  return sample.rgb * sceneLayout.$.params.environmentIntensity;
+  return sampleEnvironment(direction) * sceneLayout.$.params.environmentIntensity;
 }
 
 function tonemap(color: d.v3f) {
@@ -142,12 +168,12 @@ function evaluateLighting(surface: d.Infer<typeof Surface>) {
     (1 - surface.metallic) *
     surface.albedo *
     envLuminance *
-    sceneLayout.$.params.diffuseIblStrength;
+    DIFFUSE_IBL_STRENGTH;
   const indirectSpecular =
     fresnelSchlick(NdotV, surface.f0) *
     envLuminance *
     (1 - surface.roughness * 0.35) *
-    sceneLayout.$.params.specularIblStrength *
+    SPECULAR_IBL_STRENGTH *
     surface.specularBoost;
 
   return directLight + indirectDiffuse + indirectSpecular;
@@ -172,7 +198,7 @@ export const mainFragment = tgpu.fragmentFn({
   const surfaceNormal = std.select(std.neg(vertexNormal), vertexNormal, frontFacing);
   const viewDir = std.normalize(sceneLayout.$.camera.position.xyz - worldPos);
 
-  const wetMask = wetness * sceneLayout.$.params.wetness * std.saturate(surfaceNormal.y * 1.35);
+  const wetMask = wetness * WETNESS * std.saturate(surfaceNormal.y * 1.35);
   const film = wetMask * waterFilm(worldPos, sceneLayout.$.params.time);
   const shadingNormal = waterNormal(surfaceNormal, worldPos, std.saturate(wetMask * 1.35));
 

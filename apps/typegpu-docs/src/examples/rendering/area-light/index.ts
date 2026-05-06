@@ -1,14 +1,8 @@
-import { perlin3d } from '@typegpu/noise';
 import tgpu, { common, d, std } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
-import {
-  ENVIRONMENT_SIZE,
-  environmentFragment,
-  environmentGenerationLayout,
-} from './environment.ts';
 import { createSceneMesh, initialLights } from './geometry.ts';
-import { configureLtcFiltering } from './ltcConfig.ts';
+import { ltcFiltering } from './ltcConfig.ts';
 import { LTC_1, LTC_2 } from './ltcTables.ts';
 
 const SAMPLE_COUNT = 4;
@@ -18,32 +12,20 @@ const DISCO_HUE_SPEED = 0.00008;
 const root = await tgpu.init({
   device: { optionalFeatures: ['float32-filterable'] },
 });
-const canFilterF32 = root.enabledFeatures.has('float32-filterable');
-configureLtcFiltering(canFilterF32);
+ltcFiltering(root.enabledFeatures.has('float32-filterable'));
 
-const {
-  environmentLayout,
-  LIGHT_COUNT,
-  Lights,
-  ltcLayout,
-  RenderParams,
-  sceneLayout,
-  vertexLayout,
-} = await import('./schemas.ts');
+const { LIGHT_COUNT, Lights, ltcLayout, RenderParams, sceneLayout, vertexLayout } =
+  await import('./schemas.ts');
 const { lightFragment, lightVertex, mainFragment, skyFragment } = await import('./shaders.ts');
 
 const INITIAL_PARAMS = {
   exposure: 1.12,
   environmentIntensity: 0.25,
-  diffuseIblStrength: 0.06,
-  specularIblStrength: 0.95,
-  wetness: 0.12,
   time: 0,
 } satisfies d.InferInput<typeof RenderParams>;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-const perlinCache = perlin3d.staticCache({ root, size: d.vec3u(128, 128, 128) });
 
 const mesh = createSceneMesh();
 const vertexBuffer = root
@@ -77,49 +59,6 @@ const ltcBindGroup = root.createBindGroup(ltcLayout, {
   }),
 });
 
-const environmentTexture = root
-  .createTexture({
-    size: [ENVIRONMENT_SIZE, ENVIRONMENT_SIZE, 6],
-    format: 'rgba8unorm',
-  })
-  .$usage('sampled', 'render');
-
-const environmentFaceUniform = root.createUniform(d.u32);
-const environmentGenerationBindGroup = root.createBindGroup(environmentGenerationLayout, {
-  face: environmentFaceUniform.buffer,
-});
-
-const environmentPipeline = root.pipe(perlinCache.inject()).createRenderPipeline({
-  vertex: common.fullScreenTriangle,
-  fragment: environmentFragment,
-  targets: { format: 'rgba8unorm' },
-});
-
-for (let face = 0; face < 6; face++) {
-  environmentFaceUniform.write(face);
-  environmentPipeline
-    .with(environmentGenerationBindGroup)
-    .withColorAttachment({
-      view: environmentTexture.createView('render', {
-        baseArrayLayer: face,
-        arrayLayerCount: 1,
-      }),
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .draw(3);
-}
-
-const environmentSampler = root.createSampler({
-  magFilter: 'linear',
-  minFilter: 'linear',
-});
-
-const environmentBindGroup = root.createBindGroup(environmentLayout, {
-  environmentMap: environmentTexture.createView(d.textureCube(d.f32)),
-  environmentSampler,
-});
-
 function createRenderTargets() {
   const size = [canvas.width, canvas.height] as [number, number];
 
@@ -147,7 +86,6 @@ function destroyRenderTargets(renderTargets: ReturnType<typeof createRenderTarge
 }
 
 let targets = createRenderTargets();
-let skyGlow = INITIAL_PARAMS.environmentIntensity;
 let discoEnabled = false;
 let discoMix = 0;
 let discoStartedAt = performance.now();
@@ -254,7 +192,9 @@ function updateDisco(time: number) {
 
   const blend = std.smoothstep(0, 1, discoMix);
   const t = (time - discoStartedAt) * DISCO_HUE_SPEED;
-  paramsUniform.patch({ environmentIntensity: skyGlow * (1 - blend) });
+  paramsUniform.patch({
+    environmentIntensity: INITIAL_PARAMS.environmentIntensity * (1 - blend),
+  });
 
   for (const [index, light] of lightState.entries()) {
     const pulse = std.smoothstep(0, 1, (std.sin(time * 0.0015 + index * 2.2) + 1) * 0.5);
@@ -273,7 +213,6 @@ function render(time: number) {
 
   skyPipeline
     .with(sceneBindGroup)
-    .with(environmentBindGroup)
     .withColorAttachment({
       view: targets.color,
       clearValue: [0.014, 0.012, 0.016, 1],
@@ -285,7 +224,6 @@ function render(time: number) {
   scenePipeline
     .with(sceneBindGroup)
     .with(ltcBindGroup)
-    .with(environmentBindGroup)
     .with(vertexLayout, vertexBuffer)
     .withColorAttachment({
       view: targets.color,
@@ -365,25 +303,6 @@ export const controls = defineControls({
     step: 0.01,
     onSliderChange: (exposure) => paramsUniform.patch({ exposure }),
   },
-  'sky glow': {
-    initial: INITIAL_PARAMS.environmentIntensity,
-    min: 0,
-    max: 0.5,
-    step: 0.01,
-    onSliderChange: (environmentIntensity) => {
-      skyGlow = environmentIntensity;
-      paramsUniform.patch({
-        environmentIntensity: skyGlow * (1 - std.smoothstep(0, 1, discoMix)),
-      });
-    },
-  },
-  'shallow water': {
-    initial: INITIAL_PARAMS.wetness,
-    min: 0,
-    max: 0.5,
-    step: 0.01,
-    onSliderChange: (wetness) => paramsUniform.patch({ wetness }),
-  },
   ...lightControls,
 });
 
@@ -392,6 +311,5 @@ export function onCleanup() {
   cleanupCamera();
   resizeObserver.disconnect();
   destroyRenderTargets(targets);
-  perlinCache.destroy();
   root.destroy();
 }
