@@ -1,10 +1,24 @@
 import tgpu, { d, std } from 'typegpu';
-import { evaluateLtcAreaLight, ltcUv, sampleLtcAmplitude, sampleLtcMatrix } from './ltc.ts';
+import {
+  evaluateTwoSidedLtcRectFormFactor,
+  ltcUv,
+  sampleLtcAmplitude,
+  sampleLtcMatrix,
+} from './ltc.ts';
 import { environmentLayout, LIGHT_COUNT, sceneLayout, vertexLayout } from './schemas.ts';
 
 export { vertexLayout };
 
 const SCALAR_ENVIRONMENT_LUMA = 0.085;
+
+const lightQuadCorners = tgpu.const(d.arrayOf(d.vec2f, 6), [
+  d.vec2f(-1, -1),
+  d.vec2f(1, -1),
+  d.vec2f(1, 1),
+  d.vec2f(-1, -1),
+  d.vec2f(1, 1),
+  d.vec2f(-1, 1),
+]);
 
 const Surface = d.struct({
   normal: d.vec3f,
@@ -96,19 +110,19 @@ function evaluateLighting(surface: d.Infer<typeof Surface>) {
   const ltcInverseTransform = sampleLtcMatrix(lutUv);
   const ltcCoeffs = sampleLtcAmplitude(lutUv);
   const ltcFresnel = surface.f0 * ltcCoeffs.x + (1 - surface.f0) * ltcCoeffs.y;
-  const diffuseLobe = (1 - ltcFresnel) * (1 - surface.metallic) * (surface.albedo / Math.PI);
+  const diffuseLobe = (1 - ltcFresnel) * (1 - surface.metallic) * surface.albedo;
 
   let directLight = d.vec3f(0);
   for (const i of tgpu.unroll(std.range(LIGHT_COUNT))) {
     const light = sceneLayout.$.lights[i];
-    const diffuseFormFactor = evaluateLtcAreaLight(
+    const diffuseFormFactor = evaluateTwoSidedLtcRectFormFactor(
       surface.normal,
       surface.viewDir,
       surface.worldPos,
       d.mat3x3f.identity(),
       light,
     );
-    const specularFormFactor = evaluateLtcAreaLight(
+    const specularFormFactor = evaluateTwoSidedLtcRectFormFactor(
       surface.normal,
       surface.viewDir,
       surface.worldPos,
@@ -176,23 +190,12 @@ export const mainFragment = tgpu.fragmentFn({
   return d.vec4f(tonemap(evaluateLighting(surface)), 1);
 });
 
-export const skyVertex = tgpu.vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { pos: d.builtin.position, ndc: d.vec2f },
-})(({ vertexIndex }) => {
-  'use gpu';
-  const pos = [d.vec2f(-1, -1), d.vec2f(3, -1), d.vec2f(-1, 3)];
-  return {
-    pos: d.vec4f(pos[vertexIndex], 0, 1),
-    ndc: pos[vertexIndex],
-  };
-});
-
 export const skyFragment = tgpu.fragmentFn({
-  in: { ndc: d.vec2f },
+  in: { uv: d.vec2f },
   out: d.vec4f,
-})(({ ndc }) => {
+})(({ uv }) => {
   'use gpu';
+  const ndc = uv * d.vec2f(2, -2) + d.vec2f(-1, 1);
   const camera = sceneLayout.$.camera;
   const farView = camera.projectionInverse * d.vec4f(ndc, 1, 1);
   const farWorld = camera.viewInverse * d.vec4f(farView.xyz / farView.w, 1);
@@ -201,20 +204,11 @@ export const skyFragment = tgpu.fragmentFn({
 });
 
 export const lightVertex = tgpu.vertexFn({
-  in: { vid: d.builtin.vertexIndex },
+  in: { vid: d.builtin.vertexIndex, lightIdx: d.builtin.instanceIndex },
   out: { pos: d.builtin.position, color: d.vec3f },
-})(({ vid }) => {
+})(({ vid, lightIdx }) => {
   'use gpu';
-  const lightIdx = std.floor(vid / 6);
-  const corners = [
-    d.vec2f(-1, -1),
-    d.vec2f(1, -1),
-    d.vec2f(1, 1),
-    d.vec2f(-1, -1),
-    d.vec2f(1, 1),
-    d.vec2f(-1, 1),
-  ];
-  const corner = corners[vid % d.u32(6)];
+  const corner = lightQuadCorners.$[vid];
   const light = sceneLayout.$.lights[lightIdx];
   const worldPos =
     light.center +
