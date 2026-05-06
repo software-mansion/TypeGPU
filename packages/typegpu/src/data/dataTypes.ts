@@ -1,5 +1,5 @@
-import { setName, type TgpuNamable } from '../shared/meta.ts';
-import { $internal, isMarkedInternal } from '../shared/symbols.ts';
+import { type TgpuNamable } from '../shared/meta.ts';
+import { isMarkedInternal } from '../shared/symbols.ts';
 import type {
   Infer,
   InferGPURecord,
@@ -241,15 +241,5 @@ export class MatrixColumnsAccess {
 
   constructor(matrix: Snippet) {
     this.matrix = matrix;
-  }
-}
-
-export class ConsoleLog {
-  [$internal] = true;
-  readonly op: string;
-
-  constructor(op: string) {
-    this.op = op;
-    setName(this, 'consoleLog');
   }
 }
