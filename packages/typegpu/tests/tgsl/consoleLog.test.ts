@@ -140,6 +140,8 @@ describe('wgslGenerator with console.log', () => {
   });
 
   it('Generates an overload for a function used on both stages', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
     const myLog = (n: number) => {
       'use gpu';
       console.log(n);
@@ -221,6 +223,11 @@ describe('wgslGenerator with console.log', () => {
         return vec4f();
       }"
     `);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "'console' operations are not supported in vertex shaders.",
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('Works for shellless entry functions', ({ root }) => {
@@ -661,9 +668,7 @@ describe('wgslGenerator with console.log', () => {
     `);
   });
 
-  it('Fallbacks and warns when using an unsupported feature', ({ root }) => {
-    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
+  it('Throws when using an unsupported feature', ({ root }) => {
     const fn = tgpu.computeFn({
       workgroupSize: [1],
       in: { gid: d.builtin.globalInvocationId },
@@ -673,14 +678,13 @@ describe('wgslGenerator with console.log', () => {
 
     const pipeline = root.createComputePipeline({ compute: fn });
 
-    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-      "@compute @workgroup_size(1) fn fn_1() {
-        /* console.log() */;
-      }"
+    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - computePipeline:pipeline
+      - computePipelineCore
+      - computeFn:fn: Unsupported console functionality 'console.trace()'.]
     `);
-
-    expect(consoleWarnSpy).toHaveBeenCalledWith("Unsupported log method 'trace'.");
-    expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('works with implicit pointers', ({ root }) => {
@@ -738,6 +742,57 @@ describe('wgslGenerator with console.log', () => {
       fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
         let v = (&myUniform);
         log1((*v));
+      }
+
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        wrappedCallback(id.x, id.y, id.z);
+      }"
+    `);
+  });
+
+  it('works with detached methods', ({ root }) => {
+    const log = console.log;
+    const myPipeline = root.createGuardedComputePipeline((x) => {
+      'use gpu';
+      log();
+    });
+
+    expect(tgpu.resolve([myPipeline.pipeline])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
+
+      struct SerializedLogData {
+        id: u32,
+        serializedData: array<u32, 63>,
+      }
+
+      @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
+
+      var<private> dataBlockIndex: u32;
+
+      var<private> dataByteIndex: u32;
+
+      fn log1serializer() {
+
+      }
+
+      fn log1() {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
+          return;
+        }
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
+
+        log1serializer();
+      }
+
+      fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
+        log1();
       }
 
       @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
