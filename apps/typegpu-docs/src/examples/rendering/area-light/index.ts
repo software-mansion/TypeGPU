@@ -150,7 +150,6 @@ const { cleanupCamera } = setupOrbitCamera(
     target: d.vec4f(-0.35, 0.52, -0.45, 1),
     minZoom: 1.8,
     maxZoom: 14,
-    minCameraY: 0.22,
   },
   (updates) => cameraUniform.patch(updates),
 );
