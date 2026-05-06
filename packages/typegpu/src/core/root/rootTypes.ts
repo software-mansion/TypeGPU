@@ -839,6 +839,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
     initial?: ((buffer: TgpuBuffer<NoInfer<TData>>) => void) | InferInput<NoInfer<TData>>,
   ): TgpuBuffer<TData>;
 
+  // This is a separate overload so that LSP does not hint `destroy()` etc when initializing with a struct.
   /**
    * Allocates memory on the GPU, allows passing data between host and shader.
    *
@@ -867,6 +868,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
     initial?: ((buffer: TgpuBuffer<NoInfer<TData>>) => void) | InferInput<NoInfer<TData>>,
   ): TgpuUniform<TData>;
 
+  // This is a separate overload so that LSP does not hint `destroy()` etc when initializing with a struct.
   /**
    * Allocates memory on the GPU, allows passing data between host and shader.
    * Read-only on the GPU, optimized for small data. For a general-purpose buffer,
@@ -894,6 +896,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
     initial?: ((buffer: TgpuBuffer<NoInfer<TData>>) => void) | InferInput<NoInfer<TData>>,
   ): TgpuMutable<TData>;
 
+  // This is a separate overload so that LSP does not hint `destroy()` etc when initializing with a struct.
   /**
    * Allocates memory on the GPU, allows passing data between host and shader.
    * Can be mutated in-place on the GPU. For a general-purpose buffer,
@@ -921,6 +924,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
     initial?: ((buffer: TgpuBuffer<NoInfer<TData>>) => void) | InferInput<NoInfer<TData>>,
   ): TgpuReadonly<TData>;
 
+  // This is a separate overload so that LSP does not hint `destroy()` etc when initializing with a struct.
   /**
    * Allocates memory on the GPU, allows passing data between host and shader.
    * Read-only on the GPU, optimized for large data. For a general-purpose buffer,
