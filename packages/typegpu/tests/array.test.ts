@@ -1,12 +1,13 @@
 import { attest } from '@ark/attest';
 import { BufferReader, BufferWriter } from 'typed-binary';
-import { describe, expect, expectTypeOf, it } from 'vitest';
+import { describe, expect, expectTypeOf } from 'vitest';
 import { readData, writeData } from '../src/data/dataIO.ts';
 import { d, tgpu } from '../src/index.js';
 import { namespace } from '../src/core/resolve/namespace.ts';
 import { resolve } from '../src/resolutionCtx.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { arrayLength } from '../src/std/array.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('array', () => {
   it('produces a visually pleasant type', () => {
@@ -440,6 +441,100 @@ describe('array', () => {
       "fn foo(n: u32) {
         const m = 1u;
         var result = array<u32, 3>(1u, n, m);
+      }"
+    `);
+  });
+
+  it('array expressions can be indexed into with a comptime-known index', () => {
+    function foo() {
+      'use gpu';
+      const i = 2;
+      const a = [i, 2][0];
+      const b = [i, 2][1];
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() {
+        const i = 2;
+        const a = i;
+        const b = 2i;
+      }"
+    `);
+  });
+
+  it('array expressions can be indexed into with a runtime-known index', () => {
+    function foo() {
+      'use gpu';
+      const i = 0;
+      const a = [1, 2][i];
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() {
+        const i = 0;
+        let a = array<i32, 2>(1, 2)[i];
+      }"
+    `);
+  });
+
+  it('allows picking among references using comptime-known indices', () => {
+    function foo() {
+      'use gpu';
+      const x = d.vec3f(1, 2, 3);
+      // `const y = [x, d.vec3f()]` would throw, but since
+      // we're never constructing the array, it's equivalent
+      // to writing `const y = x;`
+      const y = [x, d.vec3f()][0];
+      return y;
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() -> vec3f {
+        var x = vec3f(1, 2, 3);
+        let y = (&x);
+        return (*y);
+      }"
+    `);
+  });
+
+  it('resolves array expression elements when accessed with comptime-known index', () => {
+    let n = 0;
+    const next = tgpu.comptime(() => n++);
+
+    function foo() {
+      'use gpu';
+      const a = [next(), next()][0];
+      const b = [next(), next()][1];
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() {
+        const a = 0;
+        const b = 3;
+      }"
+    `);
+  });
+
+  it('prunes definitions in array expressions accessed with comptime-known index', ({ root }) => {
+    const u1 = root.createUniform(d.u32, 1);
+    const u2 = root.createUniform(d.u32, 2);
+    const u3 = root.createUniform(d.u32, 3);
+    const u4 = root.createUniform(d.u32, 4);
+
+    function foo() {
+      'use gpu';
+      const a = [u1.$, u2.$][0];
+      const b = [u3.$, u4.$][1];
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> u1: u32;
+
+      @group(0) @binding(1) var<uniform> u4: u32;
+
+      fn foo() {
+        let a = u1;
+        let b = u4;
       }"
     `);
   });
