@@ -1,5 +1,6 @@
 import tgpu, { d } from 'typegpu';
 import { Camera } from '../../common/setup-orbit-camera.ts';
+import { getCanFilterFloat32Ltc } from './ltcConfig.ts';
 
 export const LIGHT_COUNT = 3;
 
@@ -40,9 +41,18 @@ export const sceneLayout = tgpu.bindGroupLayout({
   params: { uniform: RenderParams },
 });
 
+export const CAN_FILTER_FLOAT32_LTC = getCanFilterFloat32Ltc();
+
 export const ltcLayout = tgpu.bindGroupLayout({
-  ltcMat: { texture: d.texture2d(d.f32), sampleType: 'unfilterable-float' },
-  ltcAmp: { texture: d.texture2d(d.f32), sampleType: 'unfilterable-float' },
+  ltcMat: {
+    texture: d.texture2d(d.f32),
+    sampleType: CAN_FILTER_FLOAT32_LTC ? 'float' : 'unfilterable-float',
+  },
+  ltcAmp: {
+    texture: d.texture2d(d.f32),
+    sampleType: CAN_FILTER_FLOAT32_LTC ? 'float' : 'unfilterable-float',
+  },
+  ltcSampler: { sampler: 'filtering' },
 });
 
 export const environmentLayout = tgpu.bindGroupLayout({
