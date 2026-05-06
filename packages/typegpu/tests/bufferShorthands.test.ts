@@ -51,6 +51,18 @@ Overload 2 of 4, '(typeSchema: "(Error) in array element — Bool is not host-sh
 Overload 2 of 4, '(typeSchema: "(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ foo: Bool; }>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuMutable<...>', gave the following error.Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead"'.`,
     );
   });
+
+  it('hints initial struct props in mutable', ({ root }) => {
+    const Boid = d.struct({ id: d.u32, prop: d.vec2u });
+    attest(() =>
+      root.createMutable(Boid, {
+        // @ts-expect-error
+        '': undefined,
+      }),
+    ).completions({
+      '': ['id', 'prop'],
+    });
+  });
 });
 
 describe('root.createReadonly', () => {
@@ -93,6 +105,18 @@ Overload 2 of 4, '(typeSchema: "(Error) in array element — Bool is not host-sh
 Overload 2 of 4, '(typeSchema: "(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ foo: Bool; }>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuReadonly<...>', gave the following error.Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead"'.`,
     );
   });
+
+  it('hints initial struct props in readonly', ({ root }) => {
+    const Boid = d.struct({ id: d.u32, prop: d.vec2u });
+    attest(() =>
+      root.createReadonly(Boid, {
+        // @ts-expect-error
+        '': undefined,
+      }),
+    ).completions({
+      '': ['id', 'prop'],
+    });
+  });
 });
 
 describe('root.createUniform', () => {
@@ -134,5 +158,17 @@ Overload 2 of 4, '(typeSchema: "(Error) in array element — Bool is not host-sh
       `No overload matches this call.Overload 1 of 4, '(typeSchema: "(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ foo: Bool; }>>> | undefined): TgpuUniform<...>', gave the following error.Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead"'.
 Overload 2 of 4, '(typeSchema: "(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ foo: Bool; }>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuUniform<...>', gave the following error.Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead"'.`,
     );
+  });
+
+  it('hints initial struct props in uniform', ({ root }) => {
+    const Boid = d.struct({ id: d.u32, prop: d.vec2u });
+    attest(() =>
+      root.createUniform(Boid, {
+        // @ts-expect-error
+        '': undefined,
+      }),
+    ).completions({
+      '': ['id', 'prop'],
+    });
   });
 });
