@@ -990,6 +990,18 @@ describe('TgpuBuffer (InferInput)', () => {
       Array(d.sizeOf(Schema) - countLayout.offset).fill(0),
     );
   });
+
+  it('hints initial struct props in uniforms', ({ root }) => {
+    const Boid = d.struct({ id: d.u32, prop: d.vec2u });
+    attest(() =>
+      root.createBuffer(Boid, {
+        // @ts-expect-error
+        '': undefined,
+      }),
+    ).completions({
+      '': ['id', 'prop'],
+    });
+  });
 });
 
 describe('TgpuBuffer (.patch() with flexible inputs)', () => {

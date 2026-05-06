@@ -836,12 +836,12 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
   createBuffer<TData extends AnyData>(
     typeSchema: ValidateBufferSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initializer: (buffer: TgpuBuffer<NoInfer<TData>>) => void,
+    initial?: InferInput<NoInfer<TData>>,
   ): TgpuBuffer<TData>;
   createBuffer<TData extends AnyData>(
     typeSchema: ValidateBufferSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: InferInput<NoInfer<TData>>,
+    initializer: (buffer: TgpuBuffer<NoInfer<TData>>) => void,
   ): TgpuBuffer<TData>;
   createBuffer<TData extends AnyData>(
     typeSchema: ValidateBufferSchema<TData>,
