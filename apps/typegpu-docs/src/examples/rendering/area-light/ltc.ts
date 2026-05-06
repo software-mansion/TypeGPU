@@ -1,5 +1,8 @@
-import { d, std } from 'typegpu';
-import { CAN_FILTER_FLOAT32_LTC, ltcLayout, RectLight } from './schemas.ts';
+import tgpu, { d, std } from 'typegpu';
+import { ltcFiltering } from './ltcConfig.ts';
+import { ltcLayout, RectLight } from './schemas.ts';
+
+const ltcFilteringEnabled = tgpu.comptime(ltcFiltering);
 
 const LUT_SIZE = 64;
 const LUT_SCALE = (LUT_SIZE - 1) / LUT_SIZE;
@@ -36,7 +39,7 @@ function bilinearLut(texture: d.texture2d<d.F32>, uv: d.v2f) {
 
 function sampleLtcTexture(texture: d.texture2d<d.F32>, uv: d.v2f) {
   'use gpu';
-  if (CAN_FILTER_FLOAT32_LTC) {
+  if (ltcFilteringEnabled()) {
     return std.textureSampleLevel(texture, ltcLayout.$.ltcSampler, uv, 0);
   } else {
     return bilinearLut(texture, uv);
