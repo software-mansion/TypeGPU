@@ -873,12 +873,12 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    */
   createUniform<TData extends AnyWgslData>(
     typeSchema: ValidateUniformSchema<TData>,
-    initializer: (buffer: TgpuBuffer<NoInfer<TData>>) => void,
+    // NoInfer is there to infer the schema type just based on the first parameter
+    initial?: InferInput<NoInfer<TData>>,
   ): TgpuUniform<TData>;
   createUniform<TData extends AnyWgslData>(
     typeSchema: ValidateUniformSchema<TData>,
-    // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: InferInput<NoInfer<TData>>,
+    initializer: (buffer: TgpuBuffer<NoInfer<TData>>) => void,
   ): TgpuUniform<TData>;
   createUniform<TData extends AnyWgslData>(
     typeSchema: ValidateUniformSchema<TData>,
@@ -909,12 +909,12 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    */
   createMutable<TData extends AnyWgslData>(
     typeSchema: ValidateStorageSchema<TData>,
-    initializer: (buffer: TgpuBuffer<NoInfer<TData>>) => void,
+    // NoInfer is there to infer the schema type just based on the first parameter
+    initial?: InferInput<NoInfer<TData>>,
   ): TgpuMutable<TData>;
   createMutable<TData extends AnyWgslData>(
     typeSchema: ValidateStorageSchema<TData>,
-    // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: InferInput<NoInfer<TData>>,
+    initializer: (buffer: TgpuBuffer<NoInfer<TData>>) => void,
   ): TgpuMutable<TData>;
   createMutable<TData extends AnyWgslData>(
     typeSchema: ValidateStorageSchema<TData>,
@@ -945,12 +945,12 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    */
   createReadonly<TData extends AnyWgslData>(
     typeSchema: ValidateStorageSchema<TData>,
-    initializer: (buffer: TgpuBuffer<NoInfer<TData>>) => void,
+    // NoInfer is there to infer the schema type just based on the first parameter
+    initial?: InferInput<NoInfer<TData>>,
   ): TgpuReadonly<TData>;
   createReadonly<TData extends AnyWgslData>(
     typeSchema: ValidateStorageSchema<TData>,
-    // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: InferInput<NoInfer<TData>>,
+    initializer: (buffer: TgpuBuffer<NoInfer<TData>>) => void,
   ): TgpuReadonly<TData>;
   createReadonly<TData extends AnyWgslData>(
     typeSchema: ValidateStorageSchema<TData>,
