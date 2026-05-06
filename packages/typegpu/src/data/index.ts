@@ -8,7 +8,7 @@ import { Operator } from 'tsover-runtime';
 import { type InfixOperatorName, infixOperators } from '../tgsl/accessProp.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
-import { infixDispatch } from '../tgsl/infix.ts';
+import { infixDispatch } from '../tgsl/infixDispatch.ts';
 
 function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
   base: T,

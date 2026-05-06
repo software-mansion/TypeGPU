@@ -46,7 +46,7 @@ import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
 import type { FunctionDefinitionOptions } from './shaderGenerator_members.ts';
 import { getAttributesString } from '../data/attributes.ts';
-import { isInfixDispatch } from './infix.ts';
+import { isInfixDispatch } from './infixDispatch.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 

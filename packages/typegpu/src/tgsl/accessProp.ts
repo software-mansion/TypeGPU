@@ -34,7 +34,7 @@ import {
 import { add, bitShiftLeft, bitShiftRight, div, mod, mul, sub } from '../std/operators.ts';
 import { isKnownAtComptime } from '../types.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
-import { infixDispatch } from './infix.ts';
+import { infixDispatch } from './infixDispatch.ts';
 
 const infixKinds = [
   'vec2f',
