@@ -1,0 +1,307 @@
+---
+title: Your first GPU program
+description: Create and call a small TypeGPU compute shader, then store and read its result.
+---
+
+import { Card, CardGrid, Steps } from '@astrojs/starlight/components';
+import FirstGpuProgramExample from '../../../components/FirstGpuProgramExample.astro';
+
+Running code on the GPU might sound intimidating, but **compute shaders** make it pretty easy to run arbitrary calculations. Most GPU programming guides start by creating a triangle (since that is what GPUs were primarily made for historically), but modern graphics programming is no longer bound by the classic execution model. We can **parallelize all kinds of work** with much less effort.
+
+The one major difference between calling **GPU functions** and **standard JavaScript functions** is that GPU functions require a little more ceremony. Since the code runs in an entirely different execution environment, it is not as simple as feeding another line to the JavaScript interpreter. We have to **compile** the code we want to run, **allocate** the needed memory, and **pass resource handles** back and forth.
+
+Thankfully, when using TypeGPU, most of this can **(optionally!)** be done for you. Let's take a look at possibly the simplest program we can run on the GPU:
+
+## The first program
+
+:::tip
+Most code snippets on this page are inspectable: hover over an identifier to see TypeScript language server hints.
+:::
+
+```ts twoslash
+import tgpu from 'typegpu';
+
+const root = await tgpu.init();
+
+const program = root.createGuardedComputePipeline(() => {
+  'use gpu';
+  const hello = 12;
+});
+
+program.dispatchThreads();
+```
+
+And that's it! You just ran your first GPU program from JavaScript. Of course, it does not do anything meaningful yet, but before we change that, let's take a look at it line by line.
+
+<Steps>
+
+1. **Initialize the `root`**, which holds the reference to the GPU device and serves as the middleman when creating GPU resources:
+
+   ```ts
+   import tgpu from 'typegpu';
+
+   // ---cut---
+   const root = await tgpu.init();
+   ```
+
+2. **Create a guarded compute pipeline**, which we can think of for now as a function that will run on the GPU:
+
+   ```ts
+   import tgpu from 'typegpu';
+
+   const root = await tgpu.init();
+
+   // ---cut---
+   const program = root.createGuardedComputePipeline(() => {
+     'use gpu';
+     const hello = 12;
+   });
+   ```
+
+3. **Dispatch threads**, or a single thread in this case. This tells TypeGPU to compile the program, attach any resources (there are none here), and submit the work to the GPU:
+
+   ```ts
+   import tgpu from 'typegpu';
+
+   const root = await tgpu.init();
+
+   const program = root.createGuardedComputePipeline(() => {
+     'use gpu';
+     const hello = 12;
+   });
+
+   // ---cut---
+   program.dispatchThreads();
+   ```
+
+</Steps>
+
+## Adding state
+
+Of course, running a program that literally does nothing is not particularly useful. Right now we submit work to the GPU, but we never display anything or read anything back.
+
+When we need **global memory** on the GPU, we usually choose between two resource types:
+
+<CardGrid>
+  <Card title="Buffers" icon="external">
+    Flexible, general-purpose GPU memory. Buffers can store arbitrary data, as long as the layout is host-shareable.
+  </Card>
+  <Card title="Textures" icon="pen">
+    Image-oriented GPU memory. Textures can also store non-image data, but they have their own rules, which we will cover later.
+  </Card>
+</CardGrid>
+
+In raw WebGPU, allocating a buffer starts with a **size in bytes** and a set of **usage flags**. That sounds simple, but manually calculating layouts and keeping CPU/GPU interpretations in sync gets tedious. TypeGPU asks for a **schema** instead. The schema describes how the data is interpreted in shader code and gives TypeGPU enough information to handle the CPU side too.
+
+That gives us a few useful properties:
+
+1. **No manual size calculation.** The schema defines the byte layout for you.
+2. **Automatic serialization.** The schema tells TypeGPU how values should be serialized and deserialized, while still leaving fast paths available when serialization would become a bottleneck.
+3. **Type safety.** Schema changes surface type errors in both shader code and CPU-side logic.
+
+Let's use that to create a simple GPU program that actually writes data to GPU memory.
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+
+const countMutable = root.createMutable(d.u32);
+
+const program = root.createGuardedComputePipeline(() => {
+  'use gpu';
+  countMutable.$++;
+});
+
+function increment() {
+  program.dispatchThreads();
+}
+increment();
+```
+
+That's it: we now have a GPU program that increments a GPU value. Each time we call `increment()`, the shader increments `countMutable` by one.
+
+But how do we prove that? Since the value lives on the GPU, JavaScript cannot read it like a normal variable. For quick debugging, TypeGPU lets shader code write to the console:
+
+<FirstGpuProgramExample example="consoleLog" />
+
+This is useful for fast debugging, but `console.log` only displays the value. It does not give JavaScript a copy it can keep. To retrieve a value from GPU memory, use the `.read()` method:
+
+<FirstGpuProgramExample example="readValue" />
+
+`read()` returns a promise that resolves with JavaScript data serialized according to the schema. In this case, the schema is `d.u32`, so the value we get back is a single `number`.
+
+## But wait, what is a "Mutable"?
+
+In the previous examples, we used `createMutable()` without paying much attention to what it creates. In short, it allocates GPU memory that can be accessed directly from a TypeGPU shader and modified from shader code. You might wonder why you could not just do something like:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+let counter = 0;
+
+const program = root.createGuardedComputePipeline(() => {
+  'use gpu';
+  counter++;
+});
+```
+
+:::danger[Invalid code]
+Apart from being conceptually wrong, this code will also fail to compile.
+:::
+
+This will not work because of how TypeGPU handles functions marked with `'use gpu'`. They are translated into code that runs on the GPU, so they do not close over JavaScript variables the way normal JavaScript functions do. A plain `let counter` is CPU-side state, not writable GPU memory.
+
+That is why we use buffers for state that the GPU can read or write. You can think of each allocated buffer as a handle to a particular piece of GPU memory. Inside shader code, you access that memory with the `.$` property. The `.read()` method does not let JavaScript access the GPU memory directly; it creates a copy and reads that copy back to the CPU.
+
+The `createMutable()` function is a shorthand for creating a storage buffer and viewing it as mutable:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+
+// ---cut---
+const countMutable = root.createBuffer(d.u32).$usage('storage').as('mutable');
+```
+
+This shorthand is useful when the buffer only needs that one role. If you need the same buffer in more than one role, create it explicitly and add the usages you need. For now, we will focus only on the buffer usages that make data accessible inside a compute shader.
+
+| Usage | Can shader code mutate it? | Alignment requirement | Size requirement |
+| --- | --- | --- | --- |
+| `uniform` | No | 16-byte alignment for structs and arrays, unless supported device features allow a looser layout | Multiple of 4 bytes; must fit within the uniform buffer binding limit (commonly 64 KiB) |
+| `readonly` | No | None beyond the schema layout | Multiple of 4 bytes; must fit within the storage buffer binding limit (commonly 128 MiB) |
+| `mutable` | Yes | None beyond the schema layout | Multiple of 4 bytes; must fit within the storage buffer binding limit (commonly 128 MiB) |
+
+:::note
+The size limits listed here are guaranteed minimums. Most devices support higher limits when explicitly requested.
+:::
+
+As a rule of thumb, if data can be a `uniform`, it probably should be. If it needs storage-buffer size but does not need to be modified by shader code, keep it `readonly`.
+
+## Passing data to the GPU
+
+So far, we know how to allocate GPU buffers, update them from inside shaders, and read back the values. But what if we have a CPU value that we want to pass to the GPU?
+
+With our current knowledge, we could just write a shader that writes some values to the buffer:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const stateMutable = root.createMutable(
+  d.struct({ counter: d.u32, incrementBy: d.u32 }),
+);
+
+const initializeBuffer = root.createGuardedComputePipeline(() => {
+  'use gpu';
+  stateMutable.$.incrementBy = 10;
+});
+
+const program = root.createGuardedComputePipeline(() => {
+  'use gpu';
+  stateMutable.$.counter += stateMutable.$.incrementBy;
+});
+
+initializeBuffer.dispatchThreads();
+program.dispatchThreads();
+```
+
+This will work correctly (as long as we never want to update the `incrementBy` field), and sometimes it is the right thing to do, especially when the initial data is computed on demand and highly parallelizable. In our current use case, though, it is overkill.
+
+For now, we will explore three additional ways to pass CPU values to buffers: the `.write()` and `.patch()` methods, and the initial data passed when creating the buffer.
+
+These are simple because the schema gives TypeGPU enough information to serialize values for us.
+
+<FirstGpuProgramExample example="updateIncrementBy" />
+
+As we can see, our program grew quite a bit. Let's examine what changed:
+
+1. **Add a new value to our GPU state**, which we will use to control each increment step. We used `d.struct`, which works exactly like you would expect a struct to: it lets us group data together.
+
+   ```ts twoslash
+   import tgpu, { d } from 'typegpu';
+
+   const root = await tgpu.init();
+
+   // ---cut---
+   const stateMutable = root.createMutable(
+     d.struct({ counter: d.u32, incrementBy: d.u32 }),
+   );
+   ```
+
+2. **Add initial data.** Apart from the schema, buffer constructors also take a second argument, which lets you efficiently write data at buffer creation time.
+
+   ```ts twoslash
+   import tgpu, { d } from 'typegpu';
+
+   const root = await tgpu.init();
+
+   // ---cut---
+   let incrementBy = 10;
+
+   const stateMutable = root.createMutable(
+     d.struct({ counter: d.u32, incrementBy: d.u32 }),
+     { counter: 0, incrementBy },
+   );
+   ```
+
+   This data will be typed according to the schema, so there is no byte counting involved. If you want to modify a buffer after it has been created, you can use the `.write()` method, which takes the same data shape.
+
+   ```ts twoslash
+   import tgpu, { d } from 'typegpu';
+
+   const root = await tgpu.init();
+
+   const stateMutable = root.createMutable(
+     d.struct({ counter: d.u32, incrementBy: d.u32 }),
+     { counter: 0, incrementBy: 10 },
+   );
+
+   // ---cut---
+   stateMutable.write({ counter: 0, incrementBy: 10 });
+   ```
+
+3. **Update the shader code** so that it uses the new field and increments `counter` by the current `incrementBy` value.
+
+   ```ts twoslash
+   import tgpu, { d } from 'typegpu';
+
+   const root = await tgpu.init();
+
+   const stateMutable = root.createMutable(
+     d.struct({ counter: d.u32, incrementBy: d.u32 }),
+     { counter: 0, incrementBy: 10 },
+   );
+
+   // ---cut---
+   const program = root.createGuardedComputePipeline(() => {
+     'use gpu';
+     stateMutable.$.counter += stateMutable.$.incrementBy;
+   });
+   ```
+
+4. **Use `.patch()` to update just one buffer field.** By default, `.write()` expects you to write the entire buffer at once. Since we do not have the current `counter` value available on the CPU side, we would need to read it each time (or track mirrored state on the CPU) - in short, not something we want to do. The `.patch()` API allows us to pass a subset of the buffer and write only the present values.
+
+   ```ts twoslash
+   import tgpu, { d } from 'typegpu';
+
+   const root = await tgpu.init();
+
+   let incrementBy = 10;
+
+   const stateMutable = root.createMutable(
+     d.struct({ counter: d.u32, incrementBy: d.u32 }),
+     { counter: 0, incrementBy },
+   );
+
+   // ---cut---
+   stateMutable.patch({ incrementBy });
+   ```
+
+## Summary
+
+You now know how to run a function on the GPU, allocate GPU buffers, and read from or write to them. In the next sections, we will focus on more meaningful shader code; so far, all our examples have used just one logical GPU thread, while real workloads commonly dispatch thousands or even millions of them.
