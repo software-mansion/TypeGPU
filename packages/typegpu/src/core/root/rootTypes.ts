@@ -831,7 +831,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    * Typed wrapper around a GPUBuffer.
    *
    * @param typeSchema The type of data that this buffer will hold.
-   * @param initial The initial value of the buffer. (optional)
+   * @param initial Either initial value of the buffer, or an initializer to execute on the mapped buffer. (optional)
    */
   createBuffer<TData extends AnyData>(
     typeSchema: ValidateBufferSchema<TData>,
@@ -860,7 +860,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    * use {@link TgpuRoot.createBuffer}.
    *
    * @param typeSchema The type of data that this buffer will hold.
-   * @param initial The initial value of the buffer. (optional)
+   * @param initial Either initial value of the buffer, or an initializer to execute on the mapped buffer. (optional)
    */
   createUniform<TData extends AnyWgslData>(
     typeSchema: ValidateUniformSchema<TData>,
@@ -888,7 +888,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    * use {@link TgpuRoot.createBuffer}.
    *
    * @param typeSchema The type of data that this buffer will hold.
-   * @param initial The initial value of the buffer. (optional)
+   * @param initial Either initial value of the buffer, or an initializer to execute on the mapped buffer. (optional)
    */
   createMutable<TData extends AnyWgslData>(
     typeSchema: ValidateStorageSchema<TData>,
@@ -916,7 +916,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    * use {@link TgpuRoot.createBuffer}.
    *
    * @param typeSchema The type of data that this buffer will hold.
-   * @param initial The initial value of the buffer. (optional)
+   * @param initial Either initial value of the buffer, or an initializer to execute on the mapped buffer. (optional)
    */
   createReadonly<TData extends AnyWgslData>(
     typeSchema: ValidateStorageSchema<TData>,
