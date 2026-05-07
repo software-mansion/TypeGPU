@@ -244,6 +244,19 @@ export default defineConfig({
           ]),
         },
         {
+          label: 'Migrations',
+          items: stripFalsy([
+            DEV && {
+              label: 'Migrating to 0.12',
+              slug: 'migrations/0-12',
+            },
+            {
+              label: 'Migrating to 0.11',
+              slug: 'migrations/0-11',
+            },
+          ]),
+        },
+        {
           label: 'Tooling',
           items: stripFalsy([
             {
