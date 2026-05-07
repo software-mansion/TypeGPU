@@ -14,4 +14,3 @@ export const prngs = {
 export type PRNGKey = keyof typeof prngs;
 
 export const prngKeys = Object.keys(prngs) as PRNGKey[];
-export const initialPRNG: PRNGKey = prngKeys[0];
