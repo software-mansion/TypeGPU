@@ -421,6 +421,43 @@ describe('struct', () => {
       }"
     `);
   });
+
+  it('copies?', () => {
+    const Boid = d.struct({
+      pos: d.vec3f,
+      vel: d.vec3f,
+    });
+
+    const Boid2 = d.struct({
+      pos: d.vec3f,
+      vel: d.vec3f,
+    });
+
+    function main() {
+      'use gpu';
+      const boid = Boid();
+      const boid2 = Boid2(boid);
+      return boid2;
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+        vel: vec3f,
+      }
+
+      struct Boid2 {
+        pos: vec3f,
+        vel: vec3f,
+      }
+
+      fn main() -> Boid2 {
+        var boid = Boid();
+        var boid2 = boid;
+        return boid2;
+      }"
+    `);
+  });
 });
 
 describe('WgslStruct', () => {
