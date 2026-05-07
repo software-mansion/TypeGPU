@@ -66,11 +66,12 @@ describe('root.createMutable', () => {
       id: d.u32,
       values: d.vec3f,
     });
+    const Entries = d.arrayOf(Entry, 2);
 
-    () =>
-      root.createMutable(d.arrayOf(Entry, 2), (mappedBuffer) => {
-        mappedBuffer.write([{ id: 1, values: d.vec3f() }]);
-      });
+    root.createMutable(Entries, (mappedBuffer) => {
+      expectTypeOf(mappedBuffer).toEqualTypeOf<TgpuBuffer<typeof Entries>>();
+      mappedBuffer.write([{ id: 1, values: d.vec3f() }]);
+    });
   });
 });
 
@@ -129,11 +130,12 @@ describe('root.createReadonly', () => {
       id: d.u32,
       values: d.vec3f,
     });
+    const Entries = d.arrayOf(Entry, 2);
 
-    () =>
-      root.createReadonly(d.arrayOf(Entry, 2), (mappedBuffer) => {
-        mappedBuffer.write([{ id: 1, values: d.vec3f() }]);
-      });
+    root.createReadonly(Entries, (mappedBuffer) => {
+      expectTypeOf(mappedBuffer).toEqualTypeOf<TgpuBuffer<typeof Entries>>();
+      mappedBuffer.write([{ id: 1, values: d.vec3f() }]);
+    });
   });
 });
 
@@ -192,10 +194,11 @@ describe('root.createUniform', () => {
       id: d.u32,
       values: d.vec3f,
     });
+    const Entries = d.arrayOf(Entry, 2);
 
-    () =>
-      root.createUniform(d.arrayOf(Entry, 2), (mappedBuffer) => {
-        mappedBuffer.write([{ id: 1, values: d.vec3f() }]);
-      });
+    root.createUniform(Entries, (mappedBuffer) => {
+      expectTypeOf(mappedBuffer).toEqualTypeOf<TgpuBuffer<typeof Entries>>();
+      mappedBuffer.write([{ id: 1, values: d.vec3f() }]);
+    });
   });
 });

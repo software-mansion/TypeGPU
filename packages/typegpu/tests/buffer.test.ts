@@ -988,7 +988,7 @@ describe('TgpuBuffer (InferInput)', () => {
     );
   });
 
-  it('hints initial struct props in uniforms', ({ root }) => {
+  it('hints initial struct props in buffers', ({ root }) => {
     const Boid = d.struct({ id: d.u32, prop: d.vec2u });
     attest(() =>
       root.createBuffer(Boid, {
