@@ -6,7 +6,7 @@ description: Create and call a small TypeGPU compute shader, then store and read
 import { Card, CardGrid, Steps } from '@astrojs/starlight/components';
 import FirstGpuProgramExample from '../../../components/FirstGpuProgramExample.astro';
 
-Running code on the GPU might sound intimidating, but **compute shaders** make it pretty easy to run arbitrary calculations. Most GPU programming guides start by creating a triangle (since that is what GPUs were primarily made for historically), but modern graphics programming is no longer bound by the classic execution model. This style is often called **GPGPU**: using graphics processors for general-purpose work. We can **parallelize all kinds of work** with much less effort.
+Running code on the GPU might sound intimidating, but **compute shaders** make it pretty easy to run arbitrary calculations. Most GPU programming guides start by creating a triangle (since that is what GPUs were primarily made for historically), but modern graphics programming is no longer bound by the classic execution model. We can **parallelize all kinds of work** with much less effort.
 
 The one major difference between calling **GPU functions** and **standard JavaScript functions** is that GPU functions require a little more ceremony. Since the code runs in an entirely different execution environment, it is not as simple as feeding another line to the JavaScript interpreter. We have to **compile** the code we want to run, **allocate** the needed memory, and **pass resource handles** back and forth.
 
@@ -38,12 +38,20 @@ And that's it! You just ran your first GPU program from JavaScript. Of course, i
 1. **Initialize the `root`**, which holds the reference to the GPU device and serves as the middleman when creating GPU resources:
 
    ```ts
+   import tgpu from 'typegpu';
+
+   // ---cut---
    const root = await tgpu.init();
    ```
 
 2. **Create a guarded compute pipeline**, which we can think of for now as a function that will run on the GPU:
 
    ```ts
+   import tgpu from 'typegpu';
+
+   const root = await tgpu.init();
+
+   // ---cut---
    const program = root.createGuardedComputePipeline(() => {
      'use gpu';
      const hello = 12;
@@ -53,6 +61,16 @@ And that's it! You just ran your first GPU program from JavaScript. Of course, i
 3. **Dispatch threads**, or a single thread in this case. This tells TypeGPU to compile the program, attach any resources (there are none here), and submit the work to the GPU:
 
    ```ts
+   import tgpu from 'typegpu';
+
+   const root = await tgpu.init();
+
+   const program = root.createGuardedComputePipeline(() => {
+     'use gpu';
+     const hello = 12;
+   });
+
+   // ---cut---
    program.dispatchThreads();
    ```
 
@@ -66,10 +84,10 @@ When we need **global memory** on the GPU, we usually choose between two resourc
 
 <CardGrid>
   <Card title="Buffers" icon="external">
-    Flexible, general-purpose GPU memory. Buffers can store arbitrary data, as long as the layout is host-shareable (which most regular data types apart from booleans are). You can learn more about buffers in the [Buffers guide](/TypeGPU/apis/buffers).
+    Flexible, general-purpose GPU memory. Buffers can store arbitrary data, as long as the layout is host-shareable.
   </Card>
   <Card title="Textures" icon="pen">
-    Image-oriented GPU memory. Textures are great for data laid out in a 2D or 3D grid, not just images, and the [Textures guide](/TypeGPU/apis/textures) walks through where they fit best.
+    Image-oriented GPU memory. Textures can also store non-image data, but they have their own rules, which we will cover later.
   </Card>
 </CardGrid>
 
@@ -158,7 +176,7 @@ This shorthand is useful when the buffer only needs that one role. If you need t
 | `mutable` | Yes | None beyond the schema layout | Multiple of 4 bytes; must fit within the storage buffer binding limit (commonly 128 MiB) |
 
 :::note
-The size limits listed here are guaranteed minimums. Most devices support higher limits when [explicitly requested](/TypeGPU/advanced/enabling-features/).
+The size limits listed here are guaranteed minimums. Most devices support higher limits when explicitly requested.
 :::
 
 As a rule of thumb, if data can be a `uniform`, it probably should be. If it needs storage-buffer size but does not need to be modified by shader code, keep it `readonly`.
@@ -192,30 +210,7 @@ initializeBuffer.dispatchThreads();
 program.dispatchThreads();
 ```
 
-This will work correctly (as long as we always want to increment by 10), and sometimes it is the right thing to do, especially when the initial data is computed on demand and highly parallelizable. In our current use case, though, it is overkill.
-
-:::note
-Because this version always increments by `10`, we could also drop the `incrementBy` field from our GPU state and capture a JavaScript constant instead. Captured constants are inlined into the generated shader, so this only works for values that do not need to change at runtime.
-
-```ts twoslash
-import tgpu, { d } from 'typegpu';
-
-const root = await tgpu.init();
-// ---cut---
-const stateMutable = root.createMutable(
-  d.struct({ counter: d.u32 }),
-);
-
-const incrementBy = 10;
-
-const program = root.createGuardedComputePipeline(() => {
-  'use gpu';
-  stateMutable.$.counter += incrementBy;
-});
-
-program.dispatchThreads();
-```
-:::
+This will work correctly (as long as we never want to update the `incrementBy` field), and sometimes it is the right thing to do, especially when the initial data is computed on demand and highly parallelizable. In our current use case, though, it is overkill.
 
 For now, we will explore three additional ways to pass CPU values to buffers: the `.write()` and `.patch()` methods, and the initial data passed when creating the buffer.
 
@@ -269,9 +264,6 @@ As we can see, our program grew quite a bit. Let's examine what changed:
    // ---cut---
    stateMutable.write({ counter: 0, incrementBy: 10 });
    ```
-   :::note
-   Passing initial data to a buffer is functionally equivalent to writing it after creation, but it is a little more efficient because, instead of copying the data to the buffer, it is written directly to the buffer's memory.
-   :::
 
 3. **Update the shader code** so that it uses the new field and increments `counter` by the current `incrementBy` value.
 
