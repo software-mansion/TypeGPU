@@ -125,6 +125,16 @@ export const i32: I32 = Object.assign(i32Cast, {
   type: 'i32',
 }) as unknown as I32;
 
+export type f32 = number;
+// export type f32 = number & {
+//   __brand: 'f32';
+//   [Symbol.operatorPlus](lhs: f32 | number, rhs: f32 | number): f32;
+//   [Symbol.operatorMinus](lhs: f32 | number, rhs: f32 | number): f32;
+//   [Symbol.operatorStar](lhs: f32 | number, rhs: f32 | number): f32;
+//   [Symbol.operatorSlash](lhs: f32 | number, rhs: f32 | number): f32;
+//   [Symbol.operatorPercent](lhs: f32 | number, rhs: f32 | number): f32;
+// };
+
 const f32Cast = callableSchema({
   name: 'f32',
   schema: () => f32,

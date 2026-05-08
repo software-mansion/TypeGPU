@@ -1150,14 +1150,15 @@ ${this.ctx.pre}else ${alternate}`;
         }
       }
 
-      const snippet = this.blockVariable(varType, rawId, concretize(dataType), eq.origin);
-      const rhsSnippet = tryConvertSnippet(this.ctx, eq, dataType, false);
+      const concreteDataType = concretize(dataType);
+      const snippet = this.blockVariable(varType, rawId, concreteDataType, eq.origin);
+      const rhsSnippet = tryConvertSnippet(this.ctx, eq, concreteDataType, false);
       const rhsStr = this.ctx.resolve(rhsSnippet.value, rhsSnippet.dataType).value;
       return this.emitVarDecl(
         this.ctx.pre,
         varType,
         snippet.value as string,
-        concretize(dataType),
+        concreteDataType,
         rhsStr,
       );
     }
