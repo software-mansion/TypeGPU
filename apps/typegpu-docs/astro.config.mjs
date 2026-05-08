@@ -118,7 +118,13 @@ export default defineConfig({
         },
         {
           label: 'Fundamentals',
-          items: stripFalsy([]),
+          items: stripFalsy([
+            {
+              label: 'Your first GPU program',
+              slug: 'new-fundamentals/your-first-gpu-program',
+              badge: { text: 'new' },
+            },
+          ]),
         },
         {
           label: 'Advanced',
