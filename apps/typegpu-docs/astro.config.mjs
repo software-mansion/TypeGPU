@@ -19,7 +19,7 @@ import remarkMath from 'remark-math';
  * @param {T[]} items
  */
 const stripFalsy = (items) =>
-  items.filter(/** @return {item is Exclude<T, boolean>} */(item) => !!item);
+  items.filter(/** @return {item is Exclude<T, boolean>} */ (item) => !!item);
 
 const DEV = import.meta.env.DEV;
 
