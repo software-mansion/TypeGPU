@@ -56,12 +56,15 @@ export const openInStackBlitz = (example: Example, common: ExampleCommonFile[]) 
       .replaceAll('../../common', './common');
   }
 
+  const styleCss = `@import "tailwindcss";`;
+
   StackBlitzSDK.openProject(
     {
       template: 'node',
       title: example.metadata.title,
       files: {
         'index.ts': index.replaceAll(/\/\/\s*@ts-ignore\s*\n/g, ''),
+        'style.css': styleCss,
         ...tsFiles,
         'index.html': `\
 <!DOCTYPE html>
@@ -70,6 +73,7 @@ export const openInStackBlitz = (example: Example, common: ExampleCommonFile[]) 
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${example.metadata.title}</title>
+    <link href="/style.css" rel="stylesheet">
 </head>
 <body>
 ${example.htmlFile.content}
@@ -96,42 +100,58 @@ ${example.htmlFile.content}
     "include": ["src", "index.ts"]
 }`,
         'package.json': `{
-    "name": "typegpu-example-sandbox",
-    "private": true,
-    "version": "0.0.0",
-    "type": "module",
-    "scripts": {
-      "dev": "vite",
-      "build": "tsc && vite build",
-      "preview": "vite preview"
+  "name": "typegpu-example-sandbox",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "${pnpmWorkspaceYaml.catalogs.types.typescript}",
+    "vite": "^6.1.1",
+    "@webgpu/types": "${pnpmWorkspaceYaml.catalogs.types['@webgpu/types']}",
+    "@types/three": "${pnpmWorkspaceYaml.catalogs.types['@types/three']}",
+    "tailwindcss": "^4.1.11",
+    "@tailwindcss/vite": "^4.1.18"
+  },
+  "dependencies": ${JSON.stringify(
+    {
+      typegpu: `^${typegpuPackageJson.version}`,
+      'unplugin-typegpu': `^${unpluginPackageJson.version}`,
+      'wgpu-matrix': pnpmWorkspaceYaml.catalogs.example['wgpu-matrix'],
+      '@loaders.gl/core': typegpuDocsPackageJson.dependencies['@loaders.gl/core'],
+      '@loaders.gl/obj': typegpuDocsPackageJson.dependencies['@loaders.gl/obj'],
+      '@loaders.gl/gltf': typegpuDocsPackageJson.dependencies['@loaders.gl/gltf'],
+      three: pnpmWorkspaceYaml.catalogs.example.three,
+      '@typegpu/noise': typegpuNoisePackageJson.version,
+      '@typegpu/color': typegpuColorPackageJson.version,
+      '@typegpu/sdf': typegpuSdfPackageJson.version,
+      '@typegpu/three': typegpuThreePackageJson.version,
+      ...(example.usedApis.includes('@typegpu/react')
+        ? {
+            '@typegpu/react': typegpuReactPackageJson.version,
+            react: '^19.2.0',
+            'react-dom': '^19.2.0',
+          }
+        : {}),
     },
-    "devDependencies": {
-      "typescript": "${pnpmWorkspaceYaml.catalogs.types.typescript}",
-      "vite": "^6.1.1",
-      "@webgpu/types": "${pnpmWorkspaceYaml.catalogs.types['@webgpu/types']}",
-      "@types/three": "${pnpmWorkspaceYaml.catalogs.types['@types/three']}"
-    },
-    "dependencies": {
-      "typegpu": "^${typegpuPackageJson.version}",
-      "unplugin-typegpu": "^${unpluginPackageJson.version}",
-      "wgpu-matrix": "${pnpmWorkspaceYaml.catalogs.example['wgpu-matrix']}",
-      "@loaders.gl/core": "${typegpuDocsPackageJson.dependencies['@loaders.gl/core']}",
-      "@loaders.gl/obj": "${typegpuDocsPackageJson.dependencies['@loaders.gl/obj']}",
-      "@loaders.gl/gltf": "${typegpuDocsPackageJson.dependencies['@loaders.gl/gltf']}",
-      "three": "${pnpmWorkspaceYaml.catalogs.example.three}",
-      "@typegpu/noise": "${typegpuNoisePackageJson.version}",
-      "@typegpu/color": "${typegpuColorPackageJson.version}",
-      "@typegpu/sdf": "${typegpuSdfPackageJson.version}",
-      "@typegpu/three": "${typegpuThreePackageJson.version}"
-      "@typegpu/react": "${typegpuReactPackageJson.version}"
-    }
+    undefined,
+    2,
+  ).replaceAll('\n', '\n  ')}
 }`,
         'vite.config.js': `\
 import { defineConfig } from 'vite';
 import typegpuPlugin from 'unplugin-typegpu/vite';
+import tailwindVite from '@tailwindcss/vite';
 
 export default defineConfig({
-  plugins: [typegpuPlugin()],
+  plugins: [
+    tailwindVite(),
+    typegpuPlugin(),
+  ],
 });
 `,
       },

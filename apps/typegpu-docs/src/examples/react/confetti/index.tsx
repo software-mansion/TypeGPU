@@ -7,7 +7,7 @@ import {
   useConfigureContext,
   useBindGroup,
 } from '@typegpu/react';
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 
 // constants
 

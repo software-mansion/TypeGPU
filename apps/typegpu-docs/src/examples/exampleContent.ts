@@ -155,6 +155,7 @@ const API_RULES: { id: string; pattern: RegExp }[] = [
   { id: '@typegpu/noise', pattern: /@typegpu\/noise/ },
   { id: '@typegpu/sdf', pattern: /@typegpu\/sdf/ },
   { id: '@typegpu/color', pattern: /@typegpu\/color/ },
+  { id: '@typegpu/react', pattern: /@typegpu\/react/ },
   { id: 'wgpu-matrix', pattern: /wgpu-matrix/ },
 ];
 
