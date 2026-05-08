@@ -11,8 +11,8 @@ Compute pipelines are great for, well, computations, but they are not the best c
 The other type of pipelines supported by WebGPU are render pipelines.
 Render pipelines are used for drawing points, lines and triangles onto textures.
 
-Where compute pipelines execute threads on a grid you define, render pipelines work in stages.
-You configure the pipeline on what kind of shape (either points, lines or triangles) to draw, and during the draw call:
+Whereas compute pipelines execute threads on a grid you define, render pipelines work in stages.
+You configure the pipeline to draw a kind of shape (points, lines, or triangles), and during the draw call:
 
 1. The **vertex** function runs once per vertex and outputs a screen position for it.
 2. The GPU calculates which pixels each shape covers in a process called **rasterization**.
@@ -185,7 +185,7 @@ pipeline.withColorAttachment({ view: context }).draw(3);
 
 import colorfulPixels from './colorful-pixels.png';
 
-<Image src={colorfulPixels} alt="Three pixels, one red, one blue and one green." />
+<Image src={colorfulPixels} alt="Three pixels, one red, one green and one blue." />
 
 Each pixel ends up colored by the value returned by its vertex.
 
@@ -285,7 +285,7 @@ We divide by `1000` to get seconds and write that into `timeUniform`, which the 
 
 Before, we drew points and lines in a very low resolution. 
 On high resolution canvases, they are barely visible.
-Unfortunately, there is no way change the thickness of the drawn points and lines. 
+Unfortunately, there is no way to change the thickness of the drawn points and lines. 
 To draw bigger points and lines, people usually use many triangles to approximate the shape.
 
 There is however a different approach, that skips the geometry altogether.
