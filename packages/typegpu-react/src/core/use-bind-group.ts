@@ -1,13 +1,10 @@
-import { d, type LayoutEntryToInput, type TgpuBindGroup, type TgpuBindGroupLayout } from 'typegpu';
+import type { LayoutEntryToInput, TgpuBindGroup, TgpuBindGroupLayout } from 'typegpu';
 
 import { useRoot } from './root-context.tsx';
-import type { UniformValue } from './use-uniform-value.ts';
 import { $buffer } from './symbols.ts';
 
 type ExtractInputFromEntries<T extends TgpuBindGroupLayout['entries']> = {
-  [Key in keyof T]: T[Key] extends { uniform: d.BaseData }
-    ? LayoutEntryToInput<T[Key]> | UniformValue<T[Key]['uniform'], d.Infer<T[Key]['uniform']>>
-    : LayoutEntryToInput<T[Key]>;
+  [Key in keyof T]: LayoutEntryToInput<T[Key]>;
 };
 
 /**
