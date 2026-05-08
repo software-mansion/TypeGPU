@@ -18,7 +18,7 @@ const useResizer: UseResizerHook = () => {
     const el = entry.target as HTMLCanvasElement;
 
     // Despite what the types say this property does not exist in Safari (hence the optional chaining).
-    const dpcb = entry.devicePixelContentBoxSize?.[0] as ResizeObserverSize | undefined;
+    const dpcb = entry.devicePixelContentBoxSize?.[0];
 
     const dpr = dpcb ? 1 : window.devicePixelRatio || 1;
     const box =

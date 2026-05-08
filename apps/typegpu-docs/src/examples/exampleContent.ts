@@ -84,8 +84,7 @@ const exampleTsFiles = R.pipe(
       exampleKey: pathToExampleKey(key),
       path: pathToRelativePath(key),
       content,
-      tsnotoverContent:
-        exampleTsnotoverFiles[`${replaceExt(key, `.tsnotover${pathe.extname(key)}`)}`],
+      tsnotoverContent: exampleTsnotoverFiles[replaceExt(key, `.tsnotover${pathe.extname(key)}`)],
     }),
   ),
   R.groupBy(R.prop('exampleKey')),
