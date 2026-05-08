@@ -17,16 +17,13 @@ type ExtractInputFromEntries<T extends TgpuBindGroupLayout['entries']> = {
  * ```ts
  * const fooLayout = tgpu.bindGroupLayout({
  *  foo: { uniform: d.vec3f },
- *  bar: { texture: 'float' },
  * });
  *
  * function App() {
  *   const fooBuffer = useBuffer(...);
- *   const barTexture = useTexture(...);
  *
  *   const fooBindGroup = useBindGroup(fooLayout, {
  *    foo: fooBuffer,
- *    bar: barTexture,
  *   });
  *
  *   // ...
