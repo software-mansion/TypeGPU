@@ -147,14 +147,6 @@ export default defineConfig({
               slug: 'advanced/naming-convention',
               badge: { text: 'dev', variant: 'note' },
             },
-            {
-              label: '@typegpu/three',
-              slug: 'ecosystem/typegpu-three',
-            },
-            {
-              label: '@typegpu/react',
-              slug: 'ecosystem/typegpu-react',
-            },
             DEV && {
               label: 'Shader Generation',
               slug: 'advanced/shader-generation',
@@ -193,6 +185,10 @@ export default defineConfig({
             {
               label: '@typegpu/three',
               slug: 'ecosystem/typegpu-three',
+            },
+            {
+              label: '@typegpu/react',
+              slug: 'ecosystem/typegpu-react',
             },
             {
               label: '@typegpu/sdf',
