@@ -122,6 +122,7 @@ export default defineConfig({
             {
               label: 'Vertices and fragments',
               slug: 'fundamentals/vertices-and-fragments',
+              badge: { text: 'new' },
             },
           ]),
         },
