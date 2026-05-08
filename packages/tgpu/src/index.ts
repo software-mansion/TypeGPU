@@ -15,28 +15,13 @@ import { ensureWebgpuTypes } from './steps/webgpu-types.ts';
 import { ensureTypegpu } from './steps/typegpu.ts';
 import { ensureVite } from './steps/vite.ts';
 
-async function runViteFlow(cwd: string, pm: Agent, pkg: PackageJson): Promise<void> {
+async function runViteFlow(cwd: string, pm: Agent, pkg: PackageJson) {
   await ensureWebgpuTypes(cwd, pm, pkg);
   await ensureVite(cwd, pm, pkg);
   await ensureTypegpu(pm, pkg);
 }
 
-// async function runReactNativeFlow(cwd: string, pm: Agent, pkg: PackageJson | null): Promise<void> {
-//   const isExpo = isExpoProject(pkg);
-
-//   await ensureWebgpuTypes(cwd, pm, pkg);
-//   await ensureReactNativeWgpu(pm, pkg);
-//   await ensureBabel(cwd, pm, pkg);
-
-//   if (isExpo) await expoCustomize(cwd, pm);
-
-//   await ensureTypegpu(pm, pkg);
-
-//   if (isExpo) {
-//     await expoClearCache(cwd, pm);
-//     await expoPrebuild(cwd, pm);
-//     await podInstall(cwd);
-//   }
+// async function runReactNativeFlow(cwd: string, pm: Agent, pkg: PackageJson) {
 // }
 
 // real script starts here
