@@ -121,7 +121,7 @@ export default defineConfig({
           items: stripFalsy([
             {
               label: 'Your first GPU program',
-              slug: 'new-fundamentals/your-first-gpu-program',
+              slug: 'fundamentals/your-first-gpu-program',
               badge: { text: 'new' },
             },
             {
