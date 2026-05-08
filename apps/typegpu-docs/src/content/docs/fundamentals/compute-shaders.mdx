@@ -3,6 +3,7 @@ title: Compute shaders
 description: Creating and calling non-trivial compute shaders in TypeGPU.
 ---
 
+import { Tabs, TabItem } from '@astrojs/starlight/components';
 import ComputeShadersExample from '../../../components/ComputeShadersExample.astro';
 
 In the previous section, we went over the basics of creating compute shaders and managing GPU memory. In this section, we will write a compute shader that runs more than one thread in parallel and look at what that changes.
@@ -137,7 +138,94 @@ This is the main reason to use a 2D dispatch for grid-shaped data: the shader ca
 
 ## Swapping resources
 
-For now we exclusively used the `createMutable()` method to create a buffer that we can write/read to directly from the shader. This is very convenient for simple shaders, but sometimes we might want to swap which buffer (or any other resource which we will go over later) is being used by the shader in that particular dispatch.
-For that there exist a mechanism called Bind Group Layouts which you can think of as a way to define what schemas the resources should adhere to without explicitly providing that GPU resource up front.
+So far, we have used `createMutable()` to create buffers that shader code can read and write directly. This is very convenient for simple shaders and requires no additional setup. We refer to this path as [**Fixed Resources**](/TypeGPU/apis/buffers/#using-fixed-resources): the shader closes over one particular GPU resource and TypeGPU binds it for us.
 
-When it comes to layouts for buffers we can
+Sometimes, though, we want to swap which buffer, or any other resource type we will cover later, is used by the shader for a particular dispatch. For that, TypeGPU offers [**Laid Out Resources**](/TypeGPU/apis/bind-groups/).
+
+Laid out resources are described with bind group layouts. A bind group layout defines what schemas the resources should adhere to without providing the concrete GPU resources up front.
+
+For buffers, each layout entry uses the same schema we would use to create the buffer. If the entry is a storage buffer, it can also include an access mode:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const bindGroupLayout = tgpu.bindGroupLayout({
+  counter: { storage: d.u32, access: 'mutable' },
+  values: { storage: d.arrayOf(d.u32, 16) },
+});
+```
+
+Each key in the bind group layout maps to a single resource. For the buffer resources we have explored so far, the equivalent layout entries look like this:
+
+| Fixed Resources shorthand | Laid Out Resources entry |
+| --- | --- |
+| `root.createUniform(d.u32)` | `{ uniform: d.u32 }` |
+| `root.createReadonly(d.u32)` | `{ storage: d.u32 }` |
+| `root.createMutable(d.u32)` | `{ storage: d.u32, access: 'mutable' }` |
+
+:::tip
+Storage entries are readonly by default, so `{ storage: d.u32 }` and `{ storage: d.u32, access: 'readonly' }` describe the same shader access.
+:::
+
+The two snippets below perform the same simulation step. The Fixed Resources version closes over one particular set of resources, while the Laid Out Resources version keeps the pipeline reusable and supplies the resources when dispatching.
+
+<Tabs>
+  <TabItem label="Laid Out Resources">
+    ```ts twoslash
+    import tgpu, { d } from 'typegpu';
+
+    const root = await tgpu.init();
+
+    const Particle = d.struct({
+      position: d.vec3f,
+      velocity: d.vec3f,
+    });
+
+    const deltaTimeBuffer = root.createBuffer(d.f32).$usage('uniform');
+    const particlesBuffer = root.createBuffer(d.arrayOf(Particle, 512)).$usage('storage');
+
+    const simulationLayout = tgpu.bindGroupLayout({
+      deltaTime: { uniform: d.f32 },
+      particles: { storage: d.arrayOf(Particle), access: 'mutable' },
+    });
+
+    const bindGroup = root.createBindGroup(simulationLayout, {
+      deltaTime: deltaTimeBuffer,
+      particles: particlesBuffer,
+    });
+
+    const simulate = root.createGuardedComputePipeline((x) => {
+      'use gpu';
+      const particle = simulationLayout.$.particles[x];
+      simulationLayout.$.particles[x].position =
+        particle.position + particle.velocity * simulationLayout.$.deltaTime;
+    });
+
+    simulate.with(bindGroup).dispatchThreads(512);
+    ```
+  </TabItem>
+  <TabItem label="Fixed Resources">
+    ```ts twoslash
+    import tgpu, { d } from 'typegpu';
+
+    const root = await tgpu.init();
+
+    const Particle = d.struct({
+      position: d.vec3f,
+      velocity: d.vec3f,
+    });
+
+    const deltaTimeUniform = root.createUniform(d.f32);
+    const particlesMutable = root.createMutable(d.arrayOf(Particle, 512));
+
+    const simulate = root.createGuardedComputePipeline((x) => {
+      'use gpu';
+      const particle = particlesMutable.$[x];
+      particlesMutable.$[x].position =
+        particle.position + particle.velocity * deltaTimeUniform.$;
+    });
+
+    simulate.dispatchThreads(512);
+    ```
+  </TabItem>
+</Tabs>
