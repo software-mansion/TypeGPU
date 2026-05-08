@@ -75,7 +75,7 @@ Let us go through the code step by step.
    const root = await tgpu.init();
    ```
 
-2. **Create the render pipeline**, while setting its topology to `'point-list'`.
+2. **Create the render pipeline** with [`root.createRenderPipeline`](/TypeGPU/apis/pipelines/#creating-pipelines), setting its topology to `'point-list'`.
 This will make the pipeline draw a point for each returned vertex.
 
    ```ts
@@ -207,7 +207,7 @@ import colorfulLine from './colorful-line.png';
 The fragment now runs for every pixel along the line between the first and second vertices, and again between the second and third.
 
 Notice that the line's color transitions smoothly from red to green to blue.
-Each fragment receives values that are **interpolated** across the primitive based on its position.
+Each fragment receives values that are **interpolated** across the shape based on its position.
 If the first vertex returns color `d.vec3f(1, 0, 0)` and the second returns color `d.vec3f(0, 1, 0)`, then a pixel exactly halfway between them sees `d.vec3f(0.5, 0.5, 0)`.
 This applies to every extra prop returned by vertex, and this is a core principle of render pipelines.
 
