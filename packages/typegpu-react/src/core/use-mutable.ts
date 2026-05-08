@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import type { TgpuMutable, ValidateStorageSchema, d } from 'typegpu';
+import type { TgpuBuffer, TgpuMutable, ValidateStorageSchema, d } from 'typegpu';
 
 import { useRoot } from './root-context.tsx';
 import { useChangeDetection, useDeferredCleanup, useStableSchema } from './helper-hooks.ts';
 
 export interface UseMutableOptions<TSchema extends d.AnyWgslData> {
-  // TODO: Allow passing a function once it's possible for vanilla shorthands
-  // initial?: ((buffer: TgpuBuffer<TSchema>) => void) | d.InferInput<NoInfer<TSchema>>;
-  initial?: d.InferInput<NoInfer<TSchema>>;
+  initial?: ((buffer: TgpuBuffer<NoInfer<TSchema>>) => void) | d.InferInput<NoInfer<TSchema>>;
   onInit?: (buffer: TgpuMutable<TSchema>) => void;
 }
 

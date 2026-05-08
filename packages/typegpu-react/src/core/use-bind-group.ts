@@ -46,7 +46,7 @@ export function useBindGroup<TLayout extends TgpuBindGroupLayout>(
 ): TgpuBindGroup<TLayout['entries']> {
   const root = useRoot();
 
-  // TODO: Think about memoizing this, and measuring if it's more performant than just recreating
+  // TODO(#2461): Think about memoizing this, and measuring if it's more performant than just recreating
   // this bind group on every React render.
   return root.createBindGroup(
     layout,

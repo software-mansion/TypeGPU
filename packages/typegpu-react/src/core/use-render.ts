@@ -49,11 +49,12 @@ export function useRender(options: UseRenderOptions) {
   const ctxRef = useRef<GPUCanvasContext>(null);
   const root = useRoot();
 
+  // TODO(#2462): Iterate on useRender
   // Only considering the first passed-in shaders function.
   // This assumes that users won't swap shaders in the same useRender call,
   // but we can make this more robust by computing a hash with unplugin-typegpu.
-  // TODO: You can also use the React Nook trick to track functions based on their
-  //       place in the code. Simpler and more reliable? ((x)=>x)``
+  // You can also use the React Nook trick to track functions based on their
+  // place in the code. Simpler and more reliable? ((x)=>x)``
   const vertexRef = useRef(options.vertex);
   const fragmentRef = useRef(options.fragment);
 
