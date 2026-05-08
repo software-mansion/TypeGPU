@@ -22,23 +22,19 @@ describe('react/shifting-gradient example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      struct fullScreenTriangle_Output {
+      "struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      @group(0) @binding(0) var<uniform> item: f32;
+      @group(0) @binding(0) var<uniform> time: f32;
 
       fn computeMaxSaturation(a: f32, b: f32) -> f32 {
         var k0 = 0f;
@@ -222,11 +218,11 @@ describe('react/shifting-gradient example', () => {
       @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
         var fromStart = vec3f(0.6279553771018982, 0.22486300766468048, 0.1258462816476822);
         var fromEnd = vec3f(0.45201370120048523, -0.03245693817734718, -0.31152817606925964);
-        var from_1 = mix(fromStart, fromEnd, ((sin(item) * 0.5f) + 0.5f));
+        var from_1 = mix(fromStart, fromEnd, ((sin(time) * 0.5f) + 0.5f));
         var toStart = vec3f(0.8664395809173584, -0.2338874489068985, 0.17949843406677246);
         var toEnd = vec3f(0.7016738653182983, 0.27456632256507874, -0.16915608942508698);
-        var to = mix(toStart, toEnd, ((cos((item * 1.5f)) * 0.5f) + 0.5f));
-        var mixed = mix(from_1, to, ((((_arg_0.uv.x * 2f) - 1f) * 0.5f) + (sin((item + (_arg_0.uv.y * 3f))) * 0.5f)));
+        var to = mix(toStart, toEnd, ((cos((time * 1.5f)) * 0.5f) + 0.5f));
+        var mixed = mix(from_1, to, ((((_arg_0.uv.x * 2f) - 1f) * 0.5f) + (sin((time + (_arg_0.uv.y * 3f))) * 0.5f)));
         return vec4f(oklabToRgb(mixed), 1f);
       }"
     `);

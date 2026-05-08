@@ -42,15 +42,11 @@ describe('react/confetti example', () => {
         (*particleData_1).position += ((((*particleData_1).velocity * deltaTime) / 20f) + vec2f((sin(phase) / 600f), (cos(phase) / 500f)));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        simulate(in.id.x, in.id.y, in.id.z);
+        simulate(id.x, id.y, id.z);
       }
 
       fn rotate(v: vec2f, angle: f32) -> vec2f {
