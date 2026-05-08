@@ -120,6 +120,11 @@ export default defineConfig({
           label: 'Fundamentals',
           items: stripFalsy([
             {
+              label: 'Your first GPU program',
+              slug: 'new-fundamentals/your-first-gpu-program',
+              badge: { text: 'new' },
+            },
+            {
               label: 'Vertices and fragments',
               slug: 'fundamentals/vertices-and-fragments',
               badge: { text: 'new' },

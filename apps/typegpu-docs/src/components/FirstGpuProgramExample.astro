@@ -1,0 +1,18 @@
+---
+import { Code } from "@astrojs/starlight/components";
+import RunnableTypeGpuExample, {
+  FIRST_GPU_PROGRAM_SNIPPETS,
+  type FirstGpuProgramExampleKey,
+} from "./RunnableTypeGpuExample.tsx";
+
+interface Props {
+  example: FirstGpuProgramExampleKey;
+}
+
+const { example } = Astro.props as Props;
+const code = FIRST_GPU_PROGRAM_SNIPPETS[example];
+---
+
+<RunnableTypeGpuExample client:load example={example}>
+  <Code code={code} lang="ts" meta="twoslash {5, 15}" />
+</RunnableTypeGpuExample>
