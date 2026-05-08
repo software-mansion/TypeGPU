@@ -164,6 +164,6 @@ export const SANDBOX_MODULES: Record<string, SandboxModuleDefinition> = {
     typeDef: { reroute: 'typegpu-sdf/src/index.ts' },
   },
   '@typegpu/react': {
-    typeDef: { reroute: 'typegpu-react/src/index.ts' },
+    typeDef: { reroute: 'typegpu-react/src/browser/index.ts' },
   },
 };

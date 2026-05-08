@@ -47,7 +47,7 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
     const root = useRoot();
     const rootChanged = useChangeDetection(root);
 
-    // If the root changed, and the context as been previously configured, we need to reconfigure it.
+    // If the root changed, and the context has been previously configured, we need to reconfigure it.
     if (rootChanged && ctxRef.current) {
       ctxRef.current.configure({
         device: root.device,

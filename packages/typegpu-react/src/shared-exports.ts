@@ -1,4 +1,4 @@
-export { Root, useRoot } from './core/root-context.tsx';
+export { Root, useRoot, useRootOrError, useRootWithStatus } from './core/root-context.tsx';
 export { useFrame } from './core/use-frame.ts';
 export { useMutable } from './core/use-mutable.ts';
 export { useReadonly } from './core/use-readonly.ts';

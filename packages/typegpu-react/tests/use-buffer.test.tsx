@@ -1,9 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
 import { useBuffer } from '@typegpu/react';
-import { d, TgpuBuffer, TgpuUniform } from 'typegpu';
+import { d, type TgpuBuffer } from 'typegpu';
 import { it } from './utils/extended-test.tsx';
-import { $buffer } from '../src/symbols.ts';
 
 describe('useBuffer', () => {
   beforeEach(() => {

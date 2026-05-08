@@ -1,9 +1,9 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
 import { useMirroredUniform } from '@typegpu/react';
-import { d, TgpuUniform } from 'typegpu';
+import { d, type TgpuUniform } from 'typegpu';
 import { it } from './utils/extended-test.tsx';
-import { $buffer } from '../src/symbols.ts';
+import { $buffer } from '../src/core/symbols.ts';
 
 describe('useMirroredUniform', () => {
   beforeEach(() => {
