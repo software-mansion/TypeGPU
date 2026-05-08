@@ -118,7 +118,12 @@ export default defineConfig({
         },
         {
           label: 'Fundamentals',
-          items: stripFalsy([]),
+          items: stripFalsy([
+            {
+              label: 'Vertices and fragments',
+              slug: 'fundamentals/vertices-and-fragments',
+            }
+          ]),
         },
         {
           label: 'Advanced',
