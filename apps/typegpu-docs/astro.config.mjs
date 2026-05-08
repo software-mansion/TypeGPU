@@ -124,6 +124,11 @@ export default defineConfig({
               slug: 'new-fundamentals/your-first-gpu-program',
               badge: { text: 'new' },
             },
+            {
+              label: 'Vertices and fragments',
+              slug: 'fundamentals/vertices-and-fragments',
+              badge: { text: 'new' },
+            },
           ]),
         },
         {
