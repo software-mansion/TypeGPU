@@ -15,14 +15,20 @@ import { ensureWebgpuTypes } from './steps/webgpu-types.ts';
 import { ensureTypegpu } from './steps/typegpu.ts';
 import { ensureVite } from './steps/vite.ts';
 
+// 0-255 range
+function rgbText(text: string, r: number, g: number, b: number) {
+  return `\x1b[38;2;${r};${g};${b}m${text}\x1b[39m`;
+}
+
 async function runViteFlow(cwd: string, pm: Agent, pkg: PackageJson) {
   await ensureWebgpuTypes(cwd, pm, pkg);
   await ensureVite(cwd, pm, pkg);
   await ensureTypegpu(pm, pkg);
 }
 
-// async function runReactNativeFlow(cwd: string, pm: Agent, pkg: PackageJson) {
-// }
+async function runReactNativeFlow(cwd: string, pm: Agent, pkg: PackageJson) {
+  await ensureWebgpuTypes(cwd, pm, pkg);
+}
 
 // real script starts here
 const argv = mri(process.argv.slice(2), {
@@ -31,7 +37,7 @@ const argv = mri(process.argv.slice(2), {
 });
 
 if (argv.help) {
-  console.log('Usage: node tgpu'); // TODO: change this after publish
+  console.log('Usage: node tgpu');
   process.exit(0);
 }
 
@@ -57,8 +63,8 @@ if (pkg instanceof type.errors) {
 const projectKind = await p.select({
   message: 'What kind of project is this?',
   options: [
-    { value: 'vite', label: 'Vite' },
-    { value: 'react-native', label: 'React Native' },
+    { value: 'vite', label: rgbText('Vite', 175, 105, 245) },
+    { value: 'react-native', label: rgbText('React Native', 100, 108, 238) },
   ],
 });
 if (p.isCancel(projectKind)) {
@@ -76,4 +82,4 @@ switch (projectKind) {
     failAndExit('Unsupported project kind.');
 }
 await pmInstall(pm.agent);
-p.outro('Done! Get ready for shaderful experience.');
+p.outro('Done! Get ready for a shaderful experience.');

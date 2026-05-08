@@ -4,13 +4,26 @@ import { resolveCommand } from '@antfu/ni';
 import type { Agent } from 'package-manager-detector';
 import { failAndExit } from './prompts.ts';
 
-async function runCommand(command: string, args: string[]) {
-  const child = spawn(command, args, { stdio: ['inherit', 'ignore', 'inherit'] });
+type RunCommandOptions = {
+  cwd?: string;
+  interactive?: boolean;
+};
 
-  return await new Promise((resolve, reject) => {
+async function runCommand(command: string, args: string[], options: RunCommandOptions = {}) {
+  const child = spawn(command, args, {
+    cwd: options.cwd,
+    stdio: options.interactive ? 'inherit' : ['inherit', 'ignore', 'inherit'],
+  });
+
+  return await new Promise<number>((resolve, reject) => {
     child.on('error', reject);
     child.on('close', (code) => resolve(code ?? 1));
   });
+}
+
+export function runInteractive(command: string, args: string[], cwd?: string) {
+  const result = spawn.sync(command, args, { cwd, stdio: 'inherit' });
+  return result.status ?? 1;
 }
 
 export async function pmAdd(pm: Agent, pkgs: string[], dev: boolean) {
@@ -45,4 +58,34 @@ export async function pmInstall(pm: Agent) {
     failAndExit('Dependency installation failed.');
   }
   s.stop('Installed dependencies');
+}
+
+export async function pmExec(
+  pm: Agent,
+  bin: string,
+  args: string[] = [],
+  options: RunCommandOptions = {},
+) {
+  const cmd = resolveCommand(pm, 'execute-local', [bin, ...args]);
+  if (!cmd) {
+    failAndExit(`Cannot resolve exec command for ${pm}.`);
+  }
+
+  const label = `${cmd.command}${cmd.args.length ? ` ${cmd.args.join(' ')}` : ''}`;
+  if (options.interactive) {
+    const status = await runCommand(cmd.command, cmd.args, options);
+    if (status !== 0) {
+      failAndExit(`\`${label}\` failed.`);
+    }
+    return;
+  }
+
+  const s = p.spinner();
+  s.start(`Running \`${label}\``);
+  const status = await runCommand(cmd.command, cmd.args, options);
+  if (status !== 0) {
+    s.stop(`\`${label}\` failed.`, 1);
+    failAndExit('Command failed.');
+  }
+  s.stop(`\`${label}\` done.`);
 }
