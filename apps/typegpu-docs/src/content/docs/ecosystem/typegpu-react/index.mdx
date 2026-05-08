@@ -2,6 +2,11 @@
 title: "@typegpu/react"
 ---
 
+import { Image } from 'astro:assets';
+import uvImage from './uv.png';
+import uvModImage from './uv-mod.png';
+import uvWavesVideo from './uv-waves.webm';
+
 Setting up and managing TypeGPU resources in React components is not a trivial task, which is why we provide a set of hooks and utilities to
 help with it.
 
@@ -60,7 +65,7 @@ const renderPipeline = useMemo(
   () =>
     root.createRenderPipeline({
       vertex: common.fullScreenTriangle,
-      fragment: ({ uv }) => {
+      fragment: () => {
         'use gpu';
         //             r  g  b  a
         return d.vec4f(1, 0, 0, 1);
@@ -88,7 +93,50 @@ Then we call the `useConfigureContext` hook, which will give us a `ref` to pass 
 }
 ```
 
+We'll draw to the canvas each frame using `useFrame`:
+
+```ts
+useFrame(() => {
+  if (!ctxRef.current) return;
+
+  renderPipeline
+    .withColorAttachment({ view: ctxRef.current })
+    .draw(3); // 3 vertices of the full-screen triangle
+});
+````
+
 After these changes, you should see a blank red canvas on your webpage. Let's make the effect more interesting.
+
+### Pixel variance
+
+Right now, each pixel is calculating exactly the same value, which is why we get a single color output.
+The fragment function received contextual information as an argument, and can use it to vary the output
+along the image.
+
+```diff lang=ts
+const renderPipeline = useMemo(
+  () =>
+    root.createRenderPipeline({
+      vertex: common.fullScreenTriangle,
+-      fragment: () => {
++      fragment: ({ uv }) => {
+        'use gpu';
+        //             r  g  b  a
+-        return d.vec4f(1, 0, 0, 1);
++        return d.vec4f(uv, 0, 1);
+      },
+    }),
+  [root],
+);
+```
+
+The `uv` value is a 2d vector provided by the vertex shader `common.fullScreenTriangle`, and ranges from 0 to 1 in both axes.
+Since it consists of `x` and `y` components, it can be placed inside the `d.vec4f()` constructor and fills up the red and green
+channels.
+
+<div class="w-fit mx-auto">
+    <Image alt="a red-green gradient" src={uvImage} className="w-64" />
+</div>
 
 ### Dynamic values
 
@@ -96,9 +144,49 @@ To pass dynamic values to your shader without having to recompile it (compilatio
 - [`useUniform`](#useuniform) - allocates a uniform that can be updated outside of the React lifecycle.
 - [`useMirroredUniform`](#usemirroreduniform) - allocates a uniform and keeps it synchronized with the latest value.
 
-```ts
+We're going to define a time variable to use in our shader. Since it's a value that will get updated each frame, we want it
+to be done outside of the React lifecycle to not trigger deadly re-renders. Let's choose `useUniform`:
 
+```diff lang=ts
+const root = useRoot();
++const time = useUniform(d.f32);
+
+const renderPipeline = useMemo(
+  () =>
+    root.createRenderPipeline({
+    vertex: common.fullScreenTriangle,
+      fragment: ({ uv }) => {
+        'use gpu';
+-        return d.vec4f(uv, 0, 1);
++        return d.vec4f((uv * 5 + time.$) % 1, 0, 1);
+      },
+    }),
+  [root, time],
+);
 ```
+
+We have just tiled the pattern with multiplication and modulo, but since we're not updating `time`, it's a still image.
+
+<div className="mx-auto w-fit">
+    <Image alt="a static gradient repeated 5 times" src={uvModImage} className="w-64 h-64" />
+</div>
+
+We can update `time` each frame to get the desired result:
+
+```diff lang=ts
+-useFrame(() => {
++useFrame(({ elapsedSeconds }) => {
+  if (!ctxRef.current) return;
+
++  time.write(elapsedSeconds);
+
+  renderPipeline.withColorAttachment({ view: ctxRef.current }).draw(3);
+});
+```
+
+<div className="mx-auto w-fit">
+<video muted autoplay loop src={uvWavesVideo} className="w-64 h-64" />
+</div>
 
 ### Complete example
 
