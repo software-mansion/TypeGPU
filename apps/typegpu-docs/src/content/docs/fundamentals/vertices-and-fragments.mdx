@@ -11,10 +11,10 @@ Compute pipelines are great for, well, computations, but they are not the best c
 The other type of pipelines supported by WebGPU are render pipelines.
 Render pipelines are used for drawing points, lines and triangles onto textures.
 
-Where compute pipelines executes threads on a grid you define, render pipelines work in stages.
+Where compute pipelines execute threads on a grid you define, render pipelines work in stages.
 You configure the pipeline on what kind of shape (either points, lines or triangles) to draw, and during the draw call:
 
-1. The **vertex** function runs once per vertex and outputs a position for it.
+1. The **vertex** function runs once per vertex and outputs a screen position for it.
 2. The GPU calculates which pixels each shape covers in a process called **rasterization**.
 3. The **fragment** function runs once per covered pixel and outputs a color.
 
@@ -62,12 +62,12 @@ import redPixels from './red-pixels.png';
 
 <Image src={redPixels} alt="Three red pixels" />
 
-It is a little more complicated than creating a dispatching a compute pipeline.
+It is a little more complicated than creating and dispatching a compute pipeline.
 Let us go through the code step by step.
 
 <Steps>
 
-1. **Initialize the `root`**, just like we did in the previous article.
+1. **Initialize the `root`**, just like we did in a previous guide.
 
    ```ts
    import tgpu, { d } from 'typegpu';
@@ -76,7 +76,7 @@ Let us go through the code step by step.
    ```
 
 2. **Create the render pipeline** with [`root.createRenderPipeline`](/TypeGPU/apis/pipelines/#creating-pipelines), setting its topology to `'point-list'`.
-This will make the pipeline draw a point for each returned vertex.
+This will make the pipeline draw a point for each position returned from the vertex function.
 
    ```ts
    const pipeline = root.createRenderPipeline({
@@ -126,7 +126,7 @@ This particular fragment function always returns red.
    const canvas = document.querySelector('canvas') as HTMLCanvasElement;
    ```
 
-6. **Call `root.configureContext`**. This will crete and configure a context for the provided canvas.
+6. **Call `root.configureContext`**. This will create and configure a context for the provided canvas.
 This context can be then used to render onto the canvas.
 
    ```ts
@@ -147,7 +147,7 @@ In the example above, the `$position` is the only value returned from the vertex
 We can actually return more values.
 In the example below, we pass in an additional color prop.
 
-```ts twoslash
+```ts twoslash {12-18, 20, 22}
 import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
@@ -211,8 +211,7 @@ Each fragment receives values that are **interpolated** across the shape based o
 If the first vertex returns color `d.vec3f(1, 0, 0)` and the second returns color `d.vec3f(0, 1, 0)`, then a pixel exactly halfway between them sees `d.vec3f(0.5, 0.5, 0)`.
 This applies to every extra prop returned by vertex, and this is a core principle of render pipelines.
 
-Let's change topology once more, this time to `'triangle-list'` — the most widely used option.
-Vertices are grouped in threes, and the fragment runs for every pixel covered by the triangle they define.
+Let's change topology once more, this time to `'triangle-list'` - the most widely used option.
 
 ```diff lang=ts
 -  primitive: { topology: 'line-strip' },
@@ -229,21 +228,22 @@ import colorfulTriangleSmooth from './colorful-triangle-smooth.png';
 
 <Image src={colorfulTriangleSmooth} alt="A smooth triangle with a red-green-blue gradient." />
 
+A triangle is drawn for each 3 vertices passed, and the fragment runs for every pixel covered by the triangle they define.
 To draw more triangles, return more positions from the vertex function and pass a matching count to `draw()`.
-For larger meshes, store the positions in a buffer instead of inlining them in the shader.
+Two triangles require 6 vertices, three triangles require 9 and so on.
 
 ## Moving image
 
 In all examples above, we draw once and stop.
 To animate, two things change: we call `pipeline.draw()` every frame, and we pass a value from JS into the shader that each frame can vary.
 
-```ts twoslash
+```ts twoslash {1, 13-15, 23-28}
 import tgpu, { d, std } from 'typegpu';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-
+// ---cut---
 const timeUniform = root.createUniform(d.f32);
 
 const pipeline = root.createRenderPipeline({
@@ -256,11 +256,9 @@ const pipeline = root.createRenderPipeline({
       d.vec2f(0.5, -0.5),
     ];
 
-    const offset = d
-      .vec2f(std.sin(timeUniform.$), std.cos(timeUniform.$))
-      .mul(0.3);
+    const offset = d.vec2f(std.sin(timeUniform.$), std.cos(timeUniform.$)) * 0.3;
 
-    return { $position: d.vec4f(positions[vid].add(offset), 0, 1) };
+    return { $position: d.vec4f(positions[vid] + offset, 0, 1) };
   },
   fragment: () => {
     'use gpu';
@@ -287,7 +285,7 @@ We divide by `1000` to get seconds and write that into `timeUniform`, which the 
 
 Before, we drew points and lines in a very low resolution. 
 On high resolution canvases, they are barely visible.
-Unfortunately, there is no way change the width of the drawn points and lines. 
+Unfortunately, there is no way change the thickness of the drawn points and lines. 
 To draw bigger points and lines, people usually use many triangles to approximate the shape.
 
 There is however a different approach, that skips the geometry altogether.
@@ -324,5 +322,5 @@ Alongside `$position` it outputs `uv`, a 2D coordinate that runs from `(0, 0)` t
 The fragment function receives the interpolated `uv` in each pixel.
 
 Each pixel then colors itself based on the distance from its `uv` to the center `(0.5, 0.5)`: closer than `0.2` is red, otherwise black.
-That distance check is a **signed distance function** (SDF) — a way to describe shapes using functions instead of geometry.
-For more, see [Inigo Quilez's 2D distance functions](https://iquilezles.org/articles/distfunctions2d/).
+
+{/* TODO: example with multiple pipelines per frame */}
