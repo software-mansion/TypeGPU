@@ -50,6 +50,8 @@
     "@webgpu/types": "catalog:types",
     "jiti": "catalog:build",
     "jsdom": "^27.0.0",
+    "react": "catalog:",
+    "react-dom": "catalog:",
     "react-native": "0.84.1",
     "tsdown": "catalog:build",
     "typegpu": "workspace:*",
