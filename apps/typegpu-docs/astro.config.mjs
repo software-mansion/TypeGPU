@@ -132,6 +132,67 @@ export default defineConfig({
           ]),
         },
         {
+          label: 'APIs',
+          items: stripFalsy([
+            {
+              label: 'Roots',
+              slug: 'apis/roots',
+            },
+            {
+              label: 'Functions',
+              slug: 'apis/functions',
+            },
+            {
+              label: 'Pipelines',
+              slug: 'apis/pipelines',
+              badge: { text: 'new' },
+            },
+            {
+              label: 'Buffers',
+              slug: 'apis/buffers',
+            },
+            {
+              label: 'Textures',
+              slug: 'apis/textures',
+              badge: { text: 'new' },
+            },
+            {
+              label: 'Variables',
+              slug: 'apis/variables',
+            },
+            {
+              label: 'Data Schemas',
+              slug: 'apis/data-schemas',
+            },
+            {
+              label: 'Bind Groups',
+              slug: 'apis/bind-groups',
+            },
+            {
+              label: 'Resolve',
+              slug: 'apis/resolve',
+            },
+            {
+              label: 'Vertex Layouts',
+              slug: 'apis/vertex-layouts',
+            },
+
+            {
+              label: 'Slots',
+              slug: 'apis/slots',
+            },
+            {
+              label: 'Accessors',
+              slug: 'apis/accessors',
+            },
+            {
+              label: 'Utilities',
+              slug: 'apis/utils',
+              badge: { text: 'new' },
+            },
+          ]),
+        },
+        {
           label: 'Advanced',
           items: stripFalsy([
             {
@@ -224,67 +285,6 @@ export default defineConfig({
               badge: { text: 'dev', variant: 'note' },
             },
           ],
-        },
-        {
-          label: 'APIs',
-          items: stripFalsy([
-            {
-              label: 'Roots',
-              slug: 'apis/roots',
-            },
-            {
-              label: 'Functions',
-              slug: 'apis/functions',
-            },
-            {
-              label: 'Pipelines',
-              slug: 'apis/pipelines',
-              badge: { text: 'new' },
-            },
-            {
-              label: 'Buffers',
-              slug: 'apis/buffers',
-            },
-            {
-              label: 'Textures',
-              slug: 'apis/textures',
-              badge: { text: 'new' },
-            },
-            {
-              label: 'Variables',
-              slug: 'apis/variables',
-            },
-            {
-              label: 'Data Schemas',
-              slug: 'apis/data-schemas',
-            },
-            {
-              label: 'Bind Groups',
-              slug: 'apis/bind-groups',
-            },
-            {
-              label: 'Resolve',
-              slug: 'apis/resolve',
-            },
-            {
-              label: 'Vertex Layouts',
-              slug: 'apis/vertex-layouts',
-            },
-
-            {
-              label: 'Slots',
-              slug: 'apis/slots',
-            },
-            {
-              label: 'Accessors',
-              slug: 'apis/accessors',
-            },
-            {
-              label: 'Utilities',
-              slug: 'apis/utils',
-              badge: { text: 'new' },
-            },
-          ]),
         },
         {
           label: 'Tooling',
