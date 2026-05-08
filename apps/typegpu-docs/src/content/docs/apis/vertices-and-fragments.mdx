@@ -184,6 +184,8 @@ This will make the pipeline change the behavior, and draw lines instead of pixel
 +  primitive: { topology: 'line-strip' },
 ```
 
+// IMAGE
+
 Now, instead of calling the fragment only for the returned positions, it is called for all pixels on the line between the first and second, as well as second and third returned positions. 
 This is not the only thing of note -- the line's color smoothly transitions from red to green to blue. 
 This happens because the value received by the fragment function is actually interpolated between the vertices.
@@ -197,6 +199,11 @@ Vertices are grouped into sets of three, and all pixels on the triangle defined 
 -  primitive: { topology: 'line-strip' },
 -  primitive: { topology: 'triangle-list' },
 ```
+
+// IMAGE
+
+If you wish to draw more triangles, simply adapt the vertex shader to return more positions, and call `draw()` with an appropriate number of vertices.
+Storage and vertex buffers are helpful for automating passing in more positions.
 
 ## Moving image
 
@@ -244,7 +251,13 @@ function frame(timestamp: number) {
 requestAnimationFrame(frame);
 ```
 
-Before we drew low resolution points and lines. 
+// IMAGE
+
+
+
+## Extra: per-pixel evaluation
+
+Before, we drew points and lines in a very low resolution. 
 On high resolution canvases, they are barely visible.
 Unfortunately, there is no way change the width of the drawn points and lines. 
 To draw bigger points and lines, people usually use many triangles to approximate the shape.
@@ -273,6 +286,8 @@ const pipeline = root.createRenderPipeline({
 
 pipeline.withColorAttachment({ view: context }).draw(3);
 ```
+
+// IMAGE
 
 In the code above, a `fullScreenTriangle` vertex fragment is used. 
 This function returns vertex positions that actually are outside of the clip space, so that one triangle will cover the entire screen.
