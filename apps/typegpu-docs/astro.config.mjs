@@ -201,10 +201,6 @@ export default defineConfig({
               slug: 'ecosystem/typegpu-noise',
             },
             {
-              label: '@typegpu/three',
-              slug: 'ecosystem/typegpu-three',
-            },
-            {
               label: '@typegpu/sdf',
               slug: 'ecosystem/typegpu-sdf',
             },
@@ -215,6 +211,14 @@ export default defineConfig({
             DEV && {
               label: '@typegpu/color',
               slug: 'ecosystem/typegpu-color',
+            },
+            {
+              label: '@typegpu/three',
+              slug: 'ecosystem/typegpu-three',
+            },
+            {
+              label: '@typegpu/react',
+              slug: 'ecosystem/typegpu-react',
             },
             DEV && {
               label: 'Third-party',

@@ -32,6 +32,7 @@
     "@typegpu/geometry": "workspace:*",
     "@typegpu/noise": "workspace:*",
     "@typegpu/radiance-cascades": "workspace:*",
+    "@typegpu/react": "workspace:*",
     "@typegpu/sdf": "workspace:*",
     "@typegpu/sort": "workspace:*",
     "@typegpu/three": "workspace:*",
