@@ -63,7 +63,7 @@ This buffer can then be used and/or updated by a WGSL shader.
 ## Creating a buffer
 
 To create a buffer, you will need to define its schema by composing data types imported from `typegpu/data`. Every WGSL data-type can be represented as JS schemas, including
-structs and arrays. They will be explored in more detail in [a following chapter](/TypeGPU/fundamentals/data-schemas).
+structs and arrays. They will be explored in more detail in [a following chapter](/TypeGPU/apis/data-schemas).
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
@@ -541,7 +541,7 @@ import ListItem from '../../../components/ListItem.astro';
 
 ## Index Buffers
 TypeGPU also allows for the use of index buffers. An index buffer is a buffer containing a sequence of `u32` or `u16` indices, which indicate in which order vertices will be processed. This is particulary useful for rendering geometry, where vertices are often shared between multiple primitives (e.g., triangles), as it avoids duplicating vertex data.
-You may refer to the [pipelines](/TypeGPU/fundamentals/pipelines/#drawing-with-drawindexed) section for usage details.
+You may refer to the [pipelines](/TypeGPU/apis/pipelines/#drawing-with-drawindexed) section for usage details.
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
@@ -562,7 +562,7 @@ There are two approaches provided by TypeGPU.
 ### Manual binding
 
 The default option is to create bind group layouts and bind your buffers via bind groups.
-Read more in the chapter dedicated to [bind groups](/TypeGPU/fundamentals/bind-groups).
+Read more in the chapter dedicated to [bind groups](/TypeGPU/apis/bind-groups).
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
@@ -620,4 +620,4 @@ pipeline.dispatchThreads(100);
 
 TypeGPU automatically generates a "catch-all" bind group and populates it with the fixed resources.
 
-You can also use [`resolveWithContext`](/TypeGPU/fundamentals/resolve/#resolvewithcontext) to access the automatically generated bind group and layout containing your fixed resources.
+You can also use [`resolveWithContext`](/TypeGPU/apis/resolve/#resolvewithcontext) to access the automatically generated bind group and layout containing your fixed resources.

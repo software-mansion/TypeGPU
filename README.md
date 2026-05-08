@@ -1,7 +1,7 @@
 <div align="center">
 
-![TypeGPU (light mode)](./apps/typegpu-docs/public/typegpu-logo-light.svg#gh-light-mode-only)
-![TypeGPU (dark mode)](./apps/typegpu-docs/public/typegpu-logo-dark.svg#gh-dark-mode-only)
+![TypeGPU (light mode)](https://typegpu.com/typegpu-logo-light.svg#gh-light-mode-only)
+![TypeGPU (dark mode)](https://typegpu.com/typegpu-logo-dark.svg#gh-dark-mode-only)
 
 [Website](https://docs.swmansion.com/TypeGPU) —
 [Documentation](https://docs.swmansion.com/TypeGPU/getting-started)

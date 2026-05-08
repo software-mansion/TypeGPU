@@ -6,7 +6,7 @@ description: A guide on how to use TypeGPU render and compute pipelines.
 :::note[Recommended reading]
 It is assumed that you are familiar with the following concepts:
 - <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html" target="_blank" rel="noopener noreferrer">WebGPU Fundamentals</a>
-- [TypeGPU Functions](/TypeGPU/fundamentals/functions)
+- [TypeGPU Functions](/TypeGPU/apis/functions)
 :::
 
 TypeGPU introduces a custom API to easily define and execute render and compute pipelines.
@@ -14,7 +14,7 @@ It abstracts away the standard WebGPU procedures to offer a convenient, type-saf
 
 ## Creating pipelines
 
-A pipeline can be defined with one of the following methods on the [root](/TypeGPU/fundamentals/roots) object:
+A pipeline can be defined with one of the following methods on the [root](/TypeGPU/apis/roots) object:
 - [createRenderPipeline](#createrenderpipeline)
 - [createComputePipeline](#createcomputepipeline)
 - [createGuardedComputePipeline](#createguardedcomputepipeline)
@@ -288,7 +288,7 @@ renderPipeline
 
 ### Resource bindings
 
-Before executing pipelines, it is necessary to bind all of the utilized resources, like bind groups, vertex buffers and slots. It is done using the `with` method. It accepts either [a bind group](/TypeGPU/fundamentals/bind-groups) (render and compute pipelines) or [a vertex layout and a vertex buffer](/TypeGPU/fundamentals/vertex-layouts) (render pipelines only).
+Before executing pipelines, it is necessary to bind all of the utilized resources, like bind groups, vertex buffers and slots. It is done using the `with` method. It accepts either [a bind group](/TypeGPU/apis/bind-groups) (render and compute pipelines) or [a vertex layout and a vertex buffer](/TypeGPU/apis/vertex-layouts) (render pipelines only).
 
 ```ts
 // vertex layout
@@ -327,7 +327,7 @@ computePipeline
 ### Timing performance
 
 Pipelines also expose the `withPerformanceCallback` and `withTimestampWrites` methods for timing the execution time on the GPU.
-For more info about them, refer to the [Timing Your Pipelines guide](/TypeGPU/fundamentals/timestamp-queries/).
+For more info about them, refer to the [Timing Your Pipelines guide](/TypeGPU/advanced/timestamp-queries/).
 
 ### *draw*, *dispatchWorkgroups*
 
@@ -339,7 +339,7 @@ Compute pipelines are executed using the `dispatchWorkgroups` method, which acce
 
 ### Drawing with `drawIndexed`
 
-The `drawIndexed` is analogous to draw, but takes advantage of [index buffer](/TypeGPU/fundamentals/buffers/#index-buffers) to explicitly map vertex data onto primitives. When using an index buffer, you don't need to list every vertex for every primitive explicitly. Instead, you provide a list of unique vertices in a vertex buffer. Then, the index buffer defines how these vertices are connected to form primitives.
+The `drawIndexed` is analogous to draw, but takes advantage of [index buffer](/TypeGPU/apis/buffers/#index-buffers) to explicitly map vertex data onto primitives. When using an index buffer, you don't need to list every vertex for every primitive explicitly. Instead, you provide a list of unique vertices in a vertex buffer. Then, the index buffer defines how these vertices are connected to form primitives.
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
