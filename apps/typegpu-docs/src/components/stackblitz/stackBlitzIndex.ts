@@ -68,7 +68,7 @@ if (body.firstChild) {
 
 // Execute example
 // @ts-expect-error
-const example = await import('./src/index.ts');
+const example = await import('./src/index');
 
 // Create example controls
 for (const controls of Object.values(example)) {

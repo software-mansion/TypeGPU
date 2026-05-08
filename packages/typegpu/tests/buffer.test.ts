@@ -727,7 +727,7 @@ describe('TgpuBuffer', () => {
 
     // @ts-expect-error: boolean is not allowed in buffer schemas
     attest(root.createBuffer(boolSchema)).type.errors.snap(
-      "No overload matches this call.Overload 1 of 4, '(typeSchema: \"(Error) in struct property 'b' — Bool is not host-shareable, use U32 or I32 instead\", initial?: InferInput<NoInfer<WgslStruct<{ a: U32; b: Bool; }>>> | undefined): TgpuBuffer<...>', gave the following error.Argument of type 'WgslStruct<{ a: U32; b: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'b' — Bool is not host-shareable, use U32 or I32 instead\"'.\nOverload 2 of 4, '(typeSchema: \"(Error) in struct property 'b' — Bool is not host-shareable, use U32 or I32 instead\", initial?: InferInput<NoInfer<WgslStruct<{ a: U32; b: Bool; }>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuBuffer<...>', gave the following error.Argument of type 'WgslStruct<{ a: U32; b: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'b' — Bool is not host-shareable, use U32 or I32 instead\"'.",
+      "Argument of type 'WgslStruct<{ a: U32; b: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'b' — Bool is not host-shareable, use U32 or I32 instead\"'.",
     );
 
     const nestedBoolSchema = d.struct({
@@ -742,8 +742,7 @@ describe('TgpuBuffer', () => {
 
     // @ts-expect-error: boolean is not allowed in buffer schemas
     attest(root.createBuffer(nestedBoolSchema)).type.errors.snap(
-      `No overload matches this call.Overload 1 of 4, '(typeSchema: "(Error) in struct property 'b' — in struct property 'd' — in struct property 'e' — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ a: U32; b: WgslStruct<...>; }>>> | undefined): TgpuBuffer<...>', gave the following error.Argument of type 'WgslStruct<{ a: U32; b: WgslStruct<{ c: F32; d: WgslStruct<{ e: Bool; }>; }>; }>' is not assignable to parameter of type '"(Error) in struct property 'b' — in struct property 'd' — in struct property 'e' — Bool is not host-shareable, use U32 or I32 instead"'.
-Overload 2 of 4, '(typeSchema: "(Error) in struct property 'b' — in struct property 'd' — in struct property 'e' — Bool is not host-shareable, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ a: U32; b: WgslStruct<...>; }>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuBuffer<...>', gave the following error.Argument of type 'WgslStruct<{ a: U32; b: WgslStruct<{ c: F32; d: WgslStruct<{ e: Bool; }>; }>; }>' is not assignable to parameter of type '"(Error) in struct property 'b' — in struct property 'd' — in struct property 'e' — Bool is not host-shareable, use U32 or I32 instead"'.`,
+      "Argument of type 'WgslStruct<{ a: U32; b: WgslStruct<{ c: F32; d: WgslStruct<{ e: Bool; }>; }>; }>' is not assignable to parameter of type '\"(Error) in struct property 'b' — in struct property 'd' — in struct property 'e' — Bool is not host-shareable, use U32 or I32 instead\"'.",
     );
   });
 
@@ -760,8 +759,7 @@ Overload 2 of 4, '(typeSchema: "(Error) in struct property 'b' — in struct pro
 
     // @ts-expect-error
     attest(root.createBuffer(notFine)).type.errors.snap(
-      `No overload matches this call.Overload 1 of 4, '(typeSchema: "(Error) in struct property 'a' — U16 is only usable inside arrays for index buffers, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ a: U16; b: U32; }>>> | undefined): TgpuBuffer<...>', gave the following error.Argument of type 'WgslStruct<{ a: U16; b: U32; }>' is not assignable to parameter of type '"(Error) in struct property 'a' — U16 is only usable inside arrays for index buffers, use U32 or I32 instead"'.
-Overload 2 of 4, '(typeSchema: "(Error) in struct property 'a' — U16 is only usable inside arrays for index buffers, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ a: U16; b: U32; }>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuBuffer<...>', gave the following error.Argument of type 'WgslStruct<{ a: U16; b: U32; }>' is not assignable to parameter of type '"(Error) in struct property 'a' — U16 is only usable inside arrays for index buffers, use U32 or I32 instead"'.`,
+      "Argument of type 'WgslStruct<{ a: U16; b: U32; }>' is not assignable to parameter of type '\"(Error) in struct property 'a' — U16 is only usable inside arrays for index buffers, use U32 or I32 instead\"'.",
     );
 
     const alsoNotFine = d.struct({
@@ -772,8 +770,7 @@ Overload 2 of 4, '(typeSchema: "(Error) in struct property 'a' — U16 is only u
 
     // @ts-expect-error
     attest(root.createBuffer(alsoNotFine)).type.errors.snap(
-      `No overload matches this call.Overload 1 of 4, '(typeSchema: "(Error) in struct property 'b' — in array element — U16 is only usable inside arrays for index buffers, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ a: U32; b: WgslArray<...>; c: F32; }>>> | undefined): TgpuBuffer<...>', gave the following error.Argument of type 'WgslStruct<{ a: U32; b: WgslArray<U16>; c: F32; }>' is not assignable to parameter of type '"(Error) in struct property 'b' — in array element — U16 is only usable inside arrays for index buffers, use U32 or I32 instead"'.
-Overload 2 of 4, '(typeSchema: "(Error) in struct property 'b' — in array element — U16 is only usable inside arrays for index buffers, use U32 or I32 instead", initial?: InferInput<NoInfer<WgslStruct<{ a: U32; b: WgslArray<...>; c: F32; }>>> | ((buffer: TgpuBuffer<...>) => void) | undefined): TgpuBuffer<...>', gave the following error.Argument of type 'WgslStruct<{ a: U32; b: WgslArray<U16>; c: F32; }>' is not assignable to parameter of type '"(Error) in struct property 'b' — in array element — U16 is only usable inside arrays for index buffers, use U32 or I32 instead"'.`,
+      "Argument of type 'WgslStruct<{ a: U32; b: WgslArray<U16>; c: F32; }>' is not assignable to parameter of type '\"(Error) in struct property 'b' — in array element — U16 is only usable inside arrays for index buffers, use U32 or I32 instead\"'.",
     );
   });
 
@@ -989,6 +986,18 @@ describe('TgpuBuffer (InferInput)', () => {
     expect([...new Uint8Array(data, countLayout.offset)]).toStrictEqual(
       Array(d.sizeOf(Schema) - countLayout.offset).fill(0),
     );
+  });
+
+  it('hints initial struct props in buffers', ({ root }) => {
+    const Boid = d.struct({ id: d.u32, prop: d.vec2u });
+    attest(() =>
+      root.createBuffer(Boid, {
+        // @ts-expect-error
+        '': undefined,
+      }),
+    ).completions({
+      '': ['id', 'prop'],
+    });
   });
 });
 
