@@ -236,6 +236,11 @@ If you pass an unmapped buffer, the data will be written to the buffer using `GP
 If you passed your own buffer to the `root.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the `write` method.
 :::
 
+:::tip
+To write to, patch, or read from an `ArrayBuffer` directly, TypeGPU provides [a dedicated API](/TypeGPU/apis/data-schemas/#arraybuffer-io) for that purpose. 
+The same API is used internally for buffer writes.
+:::
+
 ### Permissive write inputs
 
 `.write()` accepts several equivalent forms — you don't need to construct typed instances:

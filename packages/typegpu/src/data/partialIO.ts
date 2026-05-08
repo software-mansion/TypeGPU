@@ -7,7 +7,8 @@ import { isDisarray, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
 import type * as wgsl from './wgslTypes.ts';
-import { isWgslArray, isWgslStruct } from './wgslTypes.ts';
+import { isWgslArray, isWgslStruct, type BaseData } from './wgslTypes.ts';
+import type { InferPatch } from '../shared/repr.ts';
 
 export interface WriteInstruction {
   data: Uint8Array<ArrayBuffer>;
@@ -159,4 +160,16 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
   }
 
   return instructions;
+}
+
+export function patchArrayBuffer<T extends BaseData>(
+  buffer: ArrayBuffer,
+  schema: T,
+  data: InferPatch<T>,
+) {
+  const instructions = getPatchInstructions(schema, data, buffer);
+  const mappedView = new Uint8Array(buffer);
+  for (const { data, gpuOffset } of instructions) {
+    mappedView.set(data, gpuOffset);
+  }
 }
