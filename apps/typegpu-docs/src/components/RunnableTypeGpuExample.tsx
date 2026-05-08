@@ -18,7 +18,7 @@ const program = root.createGuardedComputePipeline(() => {
   'use gpu';
   const currentCount = countMutable.$;
   console.log('current count:', currentCount);
-  countMutable.$ = currentCount + 1;
+  countMutable.$++;
 });
 
 function increment() {
@@ -120,10 +120,48 @@ async function waitForGpuLogs(root: TgpuRoot) {
   await new Promise((resolve) => setTimeout(resolve, GPU_LOG_SETTLE_DELAY_MS));
 }
 
+function stringifyConsoleArg(arg: unknown) {
+  if (typeof arg === 'string') {
+    return arg;
+  }
+  if (arg instanceof Error) {
+    return `${arg.name}: ${arg.message}`;
+  }
+  return String(arg);
+}
+
+function formatConsoleArgs(args: unknown[]) {
+  const [firstArg, ...rest] = args;
+
+  if (typeof firstArg === 'string') {
+    const styleMarkerCount = firstArg.match(/%c/g)?.length ?? 0;
+    const text = firstArg.replaceAll('%c', '');
+    const visibleArgs = rest.slice(styleMarkerCount).map(stringifyConsoleArg);
+    return [text, ...visibleArgs].filter((part) => part.length > 0).join(' ');
+  }
+
+  return args.map(stringifyConsoleArg).join(' ');
+}
+
+class WebGpuInitializationError extends Error {
+  constructor(error: unknown) {
+    super(stringifyConsoleArg(error));
+    this.name = 'WebGpuInitializationError';
+  }
+}
+
+async function createRoot() {
+  try {
+    return await tgpu.init();
+  } catch (error) {
+    throw new WebGpuInitializationError(error);
+  }
+}
+
 async function createCounterProgram(
   options: { logBeforeIncrement?: boolean } = {},
 ): Promise<CounterProgramState> {
-  const root = await tgpu.init();
+  const root = await createRoot();
   const countMutable = root.createMutable(d.u32);
 
   const program = options.logBeforeIncrement
@@ -131,7 +169,7 @@ async function createCounterProgram(
         'use gpu';
         const currentCount = countMutable.$;
         console.log('current count:', currentCount);
-        countMutable.$ = currentCount + 1;
+        countMutable.$++;
       })
     : root.createGuardedComputePipeline(() => {
         'use gpu';
@@ -142,7 +180,7 @@ async function createCounterProgram(
 }
 
 async function createIncrementByProgram(): Promise<IncrementByProgramState> {
-  const root = await tgpu.init();
+  const root = await createRoot();
   const stateMutable = root.createMutable(CounterState, {
     counter: 0,
     incrementBy: 10,
@@ -189,27 +227,12 @@ const runnableExamples = {
   },
 } satisfies Record<FirstGpuProgramExampleKey, RunnableExample>;
 
-function stringifyConsoleArg(arg: unknown) {
-  if (typeof arg === 'string') {
-    return arg;
+function appendOutput(current: string, lines: string[]) {
+  const nextOutput = lines.filter((line) => line.length > 0).join('\n');
+  if (!nextOutput) {
+    return current;
   }
-  if (arg instanceof Error) {
-    return `${arg.name}: ${arg.message}`;
-  }
-  return String(arg);
-}
-
-function formatConsoleArgs(args: unknown[]) {
-  const [firstArg, ...rest] = args;
-
-  if (typeof firstArg === 'string') {
-    const styleMarkerCount = firstArg.match(/%c/g)?.length ?? 0;
-    const text = firstArg.replaceAll('%c', '');
-    const visibleArgs = rest.slice(styleMarkerCount).map(stringifyConsoleArg);
-    return [text, ...visibleArgs].filter((part) => part.length > 0).join(' ');
-  }
-
-  return args.map(stringifyConsoleArg).join(' ');
+  return current ? `${current}\n${nextOutput}` : nextOutput;
 }
 
 export default function RunnableTypeGpuExample({ children, example }: Props) {
@@ -223,35 +246,25 @@ export default function RunnableTypeGpuExample({ children, example }: Props) {
   useEffect(() => {
     let cancelled = false;
 
-    function checkSupport() {
+    async function checkSupport() {
       if (!navigator.gpu) {
         setSupported(false);
         return;
       }
 
-      setSupported(true);
-
-      void navigator.gpu
-        .requestAdapter()
-        .then((adapter) => {
-          if (!cancelled && adapter === null) {
-            setSupported(false);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setSupported(false);
-          }
-        });
-    }
-
-    try {
-      checkSupport();
-    } catch {
-      if (!cancelled) {
-        setSupported(false);
+      try {
+        const adapter = await navigator.gpu.requestAdapter();
+        if (!cancelled) {
+          setSupported(adapter !== null);
+        }
+      } catch {
+        if (!cancelled) {
+          setSupported(false);
+        }
       }
     }
+
+    void checkSupport();
 
     return () => {
       cancelled = true;
@@ -288,17 +301,18 @@ export default function RunnableTypeGpuExample({ children, example }: Props) {
       programRef.current ??= await runnableExample.createState();
       await runnableExample.execute(programRef.current);
 
-      setOutput((current) => {
-        const nextOutput = capturedLines.join('\n');
-        if (!nextOutput) {
-          return current;
-        }
-        return current ? `${current}\n${nextOutput}` : nextOutput;
-      });
-    } catch {
-      setSupported(false);
+      setOutput((current) => appendOutput(current, capturedLines));
+    } catch (error) {
       programRef.current?.root.destroy();
       programRef.current = null;
+
+      if (error instanceof WebGpuInitializationError) {
+        setSupported(false);
+      } else {
+        setOutput((current) =>
+          appendOutput(current, [...capturedLines, stringifyConsoleArg(error)]),
+        );
+      }
     } finally {
       for (const method of consoleMethods) {
         console[method] = originals[method];
@@ -308,13 +322,13 @@ export default function RunnableTypeGpuExample({ children, example }: Props) {
   }
 
   return (
-    <div className="not-content my-6 overflow-hidden rounded-sm border border-[var(--sl-color-gray-5)] bg-[var(--sl-color-bg)] md:grid md:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
+    <div className="not-content my-6 overflow-hidden rounded-sm border border-[var(--sl-color-gray-5)] bg-[var(--sl-color-bg)] md:grid md:grid-cols-[minmax(0,1fr)_8rem]">
       <div className="min-w-0 overflow-auto [&_.expressive-code]:m-0 [&_.expressive-code_figure.frame]:rounded-none">
         {children}
       </div>
       <div className="grid min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden border-t border-[var(--sl-color-gray-5)] md:h-0 md:min-h-full md:border-l md:border-t-0">
         {supported === false ? (
-          <div className="flex min-h-48 min-w-0 items-center bg-[var(--sl-color-bg-inline-code)] p-4 text-sm leading-6 text-[var(--sl-color-text)] md:min-h-0">
+          <div className="flex min-h-48 min-w-0 items-center bg-[var(--sl-color-bg-inline-code)] p-3 text-xs leading-5 text-[var(--sl-color-text)] md:min-h-0">
             <p className="m-0">
               Running this code snippet requires WebGPU support, but a compatible GPU device could
               not be acquired in this browser.
@@ -325,7 +339,7 @@ export default function RunnableTypeGpuExample({ children, example }: Props) {
             <pre
               aria-label="Console output"
               aria-readonly="true"
-              className="m-0 min-h-48 min-w-0 overflow-auto bg-[var(--sl-color-bg-inline-code)] p-3 font-mono text-sm leading-6 text-[var(--sl-color-text)] focus:outline-none md:min-h-0"
+              className="m-0 min-h-48 min-w-0 overflow-auto whitespace-pre-wrap break-words bg-[var(--sl-color-bg-inline-code)] p-2 font-mono text-xs leading-5 text-[var(--sl-color-text)] focus:outline-none md:min-h-0"
               ref={outputRef}
               role="textbox"
               tabIndex={0}
@@ -336,9 +350,9 @@ export default function RunnableTypeGpuExample({ children, example }: Props) {
                 </span>
               )}
             </pre>
-            <div className="flex justify-center border-t border-[var(--sl-color-gray-5)] bg-[var(--sl-color-bg)] p-3">
+            <div className="flex justify-center border-t border-[var(--sl-color-gray-5)] bg-[var(--sl-color-bg)] p-2">
               <button
-                className="rounded-sm border border-[var(--sl-color-gray-5)] bg-[var(--sl-color-bg)] px-3 py-1.5 text-sm font-medium text-[var(--sl-color-text)] hover:border-[var(--sl-color-text-accent)] hover:text-[var(--sl-color-text-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--sl-color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-sm border border-[var(--sl-color-gray-5)] bg-[var(--sl-color-bg)] px-2 py-1 text-xs font-medium text-[var(--sl-color-text)] hover:border-[var(--sl-color-text-accent)] hover:text-[var(--sl-color-text-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--sl-color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={supported !== true}
                 onClick={() => void runCode()}
                 type="button"
