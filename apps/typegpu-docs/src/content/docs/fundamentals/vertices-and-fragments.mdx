@@ -4,6 +4,7 @@ description: TODO
 ---
 
 import { Steps } from '@astrojs/starlight/components';
+import { Image } from 'astro:assets';
 
 Compute pipeline are great for, well, computations, but they are not the best for drawing shapes. 
 The other type of pipelines supported by WebGPU are render pipelines.
@@ -49,7 +50,9 @@ const context = root.configureContext({ canvas });
 pipeline.withColorAttachment({ view: context }).draw(3);
 ```
 
-// IMAGE
+import redPixels from './red-pixels.png';
+
+<Image src={redPixels} alt="Three red pixels" />
 
 It is a little more complicated than creating a dispatching a compute pipeline.
 Let us go through the code step by step.
@@ -108,7 +111,7 @@ This particular function always returns the color red.
    ```
 
 5. **Query the canvas**. This example code assumes that your page has a canvas defined.
-In the visualizations, the canvas is 31x31 pixels, with `imageRendering` style set to `'pixelated'`.
+In the visualizations, the canvases are 31x31 pixels, with `imageRendering` style set to `'pixelated'`.
 
    ```ts
    const canvas = document.querySelector('canvas') as HTMLCanvasElement;
