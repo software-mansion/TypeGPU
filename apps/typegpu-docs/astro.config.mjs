@@ -129,6 +129,11 @@ export default defineConfig({
               slug: 'fundamentals/vertices-and-fragments',
               badge: { text: 'new' },
             },
+            {
+              label: 'Compute Shaders',
+              slug: 'fundamentals/compute-shaders',
+              badge: { text: 'new' },
+            },
           ]),
         },
         {

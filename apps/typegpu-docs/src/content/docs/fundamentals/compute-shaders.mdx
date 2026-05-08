@@ -1,0 +1,143 @@
+---
+title: Compute shaders
+description: Creating and calling non-trivial compute shaders in TypeGPU.
+---
+
+import ComputeShadersExample from '../../../components/ComputeShadersExample.astro';
+
+In the previous section, we went over the basics of creating compute shaders and managing GPU memory. In this section, we will write a compute shader that runs more than one thread in parallel and look at what that changes.
+
+So far, most of our shaders have looked like this:
+
+```ts twoslash
+import tgpu from 'typegpu';
+
+const root = await tgpu.init();
+
+const program = root.createGuardedComputePipeline(() => {
+  'use gpu';
+  // Run some code.
+});
+
+program.dispatchThreads();
+```
+
+The `createGuardedComputePipeline()` method is a simple way to create a function that runs on the GPU. Calling `dispatchThreads()` without arguments dispatches one logical GPU thread. That is useful for the smallest examples, but most compute workloads are interesting because they run many copies of the same program in parallel.
+
+## From one thread to many
+
+To run more than one thread, add a positional argument to the shader function and pass a thread count to `dispatchThreads()`. In a one-dimensional dispatch, that argument is the thread index.
+
+Let's create a program that increments an entire array of values instead of incrementing a single value:
+
+<ComputeShadersExample />
+
+Each time you run the example, it chooses a random thread count between `1` and `16`. If it dispatches 6 threads, thread `0` increments array element `0`, thread `1` increments array element `1`, and so on until thread `5`. The preview highlights the part of the array touched by the latest dispatch.
+
+## Dispatch size and bounds
+
+The `dispatchThreads()` method controls how many logical GPU threads will run the shader function. If we dispatch 16 threads for a 16-element array, we increment the whole array. If we dispatch 4 threads, only the first 4 elements are incremented because `x` takes values from `0` to `dispatchThreads - 1`.
+
+We still have to be careful not to read or write outside the bounds of the array. The GPU will not actually read or write past the array, but it will not crash either. Instead, out-of-bounds access produces a value that is not well-defined.
+
+:::tip
+If the dispatch size might be larger than the buffer length, guard the array access inside the shader:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+
+const valuesMutable = root.createMutable(d.arrayOf(d.u32, 16));
+
+// ---cut---
+const program = root.createGuardedComputePipeline((x) => {
+  'use gpu';
+  if (x >= valuesMutable.$.length) {
+    return;
+  }
+
+  valuesMutable.$[x]++;
+});
+```
+:::
+
+## A useful mental model
+
+For the increment example above, you can think of the shader as something close to this JavaScript loop:
+
+```ts twoslash
+const values = Array.from({ length: 16 }, () => 0);
+
+for (let x = 0; x < values.length; x++) {
+  values[x]++;
+}
+```
+
+This is a useful analogy for understanding how the thread index maps to data. But it is only an analogy. The shader invocations run in parallel, and their execution order is not guaranteed.
+
+:::caution
+When one thread reads data that another thread may be writing, the loop analogy breaks down:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+
+const valuesMutable = root.createMutable(
+  d.arrayOf(d.u32, 16),
+  Array.from({ length: 16 }, (_, i) => i),
+);
+
+// ---cut---
+const program = root.createGuardedComputePipeline((x) => {
+  'use gpu';
+  if (x >= valuesMutable.$.length || x === 0) {
+    return;
+  }
+
+  const sum = valuesMutable.$[x - 1] + valuesMutable.$[x];
+  valuesMutable.$[x] = sum;
+});
+```
+
+The result is nondeterministic because each thread may read `valuesMutable.$[x - 1]` before or after the neighboring thread writes to it. When shader invocations need to coordinate, the algorithm has to account for that explicitly.
+:::
+
+## Multi-dimensional compute shaders
+
+When using `createGuardedComputePipeline()`, we can pass a function that takes up to three arguments: `x`, `y`, and `z`. These are the thread indices along the x, y, and z axes, respectively.
+
+On a high level, a 2D compute shader can often be reduced to a 1D compute shader by flattening the coordinates into one index. The same is true for 3D work. That translation is sometimes useful, but it can make the shader harder to read because the first thing each thread has to do is recover the coordinates it actually cares about.
+
+:::note
+There is also a practical reason to keep work split across dimensions. WebGPU limits how many threads can be dispatched along a single axis. The limit is high, but large workloads can still run into it.
+
+For grid-shaped workloads, spreading the work across `x` and `y` lets the dispatch shape match the data while staying within those per-axis limits.
+:::
+
+Let's take a look at a simple 2D compute shader that increments a randomly sized rectangle inside a grid:
+
+<ComputeShadersExample example="grid" />
+
+This time, the shader callback receives two indices. The `x` argument selects the outer array, and the `y` argument selects the inner array, so `valuesMutable.$[x][y]` points at one cell in the grid.
+
+The dispatch uses the same shape, only now we provide two counts instead of one:
+
+```ts
+const dispatchWidth = Math.floor(Math.random() * WIDTH) + 1;
+const dispatchHeight = Math.floor(Math.random() * HEIGHT) + 1;
+
+program.dispatchThreads(dispatchWidth, dispatchHeight);
+```
+
+This asks TypeGPU to run `dispatchWidth * dispatchHeight` logical threads, but each thread still receives its own coordinate pair. For a `4 x 2` dispatch, `x` ranges from `0` to `3`, while `y` ranges from `0` to `1`. The preview highlights the rectangle touched by the latest dispatch.
+
+This is the main reason to use a 2D dispatch for grid-shaped data: the shader can stay in the same coordinate system as the problem. The same pattern extends to 3D by adding a third callback argument and passing a third number to `dispatchThreads()`.
+
+## Swapping resources
+
+For now we exclusively used the `createMutable()` method to create a buffer that we can write/read to directly from the shader. This is very convenient for simple shaders, but sometimes we might want to swap which buffer (or any other resource which we will go over later) is being used by the shader in that particular dispatch.
+For that there exist a mechanism called Bind Group Layouts which you can think of as a way to define what schemas the resources should adhere to without explicitly providing that GPU resource up front.
+
+When it comes to layouts for buffers we can

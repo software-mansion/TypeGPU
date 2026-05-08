@@ -1,0 +1,27 @@
+---
+import { Code } from '@astrojs/starlight/components';
+import ComputeShadersArrayExample, {
+  COMPUTE_SHADER_ARRAY_SNIPPET,
+} from './ComputeShadersArrayExample.tsx';
+import ComputeShadersGridExample, {
+  COMPUTE_SHADER_GRID_SNIPPET,
+} from './ComputeShadersGridExample.tsx';
+
+interface Props {
+  example?: 'array' | 'grid';
+}
+
+const { example = 'array' } = Astro.props as Props;
+---
+
+{
+  example === 'grid' ? (
+    <ComputeShadersGridExample client:load>
+      <Code code={COMPUTE_SHADER_GRID_SNIPPET} lang="ts" meta="twoslash {9-10, 13-16, 19-21}" />
+    </ComputeShadersGridExample>
+  ) : (
+    <ComputeShadersArrayExample client:load>
+      <Code code={COMPUTE_SHADER_ARRAY_SNIPPET} lang="ts" meta="twoslash {7-10, 13-14}" />
+    </ComputeShadersArrayExample>
+  )
+}
