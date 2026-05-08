@@ -252,34 +252,120 @@ If you'd like to handle these cases yourself, you can use `useRootOrError` or
 
 ### useUniform
 
+```ts
+const foo = useUniform(schema, { /* options */ });
+```
+
+| Option | Description |
+|-|-|
+| initial | An initial value given to the *uniform buffer* on component mount. Alternatively, a function can be passed in to imperatively write to the buffer while its still mapped to CPU memory. |
+| onInit | A function that will be called after the buffer is initialized. An example of where this is useful is populating the buffer with a compute shader. |
+
 ```tsx twoslash
 import { d } from 'typegpu';
-import React from 'react';
-import { useUniform } from '@typegpu/react';
+import React, { useCallback } from 'react';
+import { useUniform, useFrame } from '@typegpu/react';
 
 function App() {
 // ---cut---
-const bruh = useUniform(d.f32);
+// creating a resource to be updated outside of the React lifecycle
+const time = useUniform(d.f32);
+
+const updateTime = useCallback((value: number) => {
+  time.write(value);
+}, [time]);
 // ---cut-after---
   return null;
 }
 ```
 
+### useMutable
+
+```ts
+const foo = useMutable(schema, { /* options */ });
+```
+
+| Option | Description |
+|-|-|
+| initial | An initial value given to the *mutable buffer* on component mount. Alternatively, a function can be passed in to imperatively write to the buffer while its still mapped to CPU memory. |
+| onInit | A function that will be called after the buffer is initialized. An example of where this is useful is populating the buffer with a compute shader. |
+
+```tsx twoslash
+import { d } from 'typegpu';
+import React, { useMemo, useEffectEvent } from 'react';
+import { useRoot, useMutable, useFrame } from '@typegpu/react';
+
+function App() {
+  const root = useRoot();
+// ---cut---
+// creating a mutable resource to be updated outside of the React lifecycle
+const counter = useMutable(d.f32);
+
+// a compute shader that increments the counter in-place
+const incrementPipeline = useMemo(() => {
+  return root.createGuardedComputePipeline(() => {
+    'use gpu';
+    // Direct memory access through .$
+    counter.$ += 1;
+  });
+}, [root, counter]);
+
+// a function that dispatches the shader and reads the result asynchronously
+const increment = useEffectEvent(async (value: number) => {
+  incrementPipeline.dispatchThreads();
+  return await counter.read();
+});
+// ---cut-after---
+  return null;
+}
+```
+
+### useReadonly
+
+```ts
+const foo = useReadonly(schema, { /* options */ });
+```
+
+| Option | Description |
+|-|-|
+| initial | An initial value given to the *readonly buffer* on component mount. Alternatively, a function can be passed in to imperatively write to the buffer while its still mapped to CPU memory. |
+| onInit | A function that will be called after the buffer is initialized. An example of where this is useful is populating the buffer with a compute shader. |
+
 ### useMirroredUniform
+
+```ts
+const foo = useMirroredUniform(schema, valueToMirror);
+```
+
+On each React re-render, the uniform will be updated with the latest value of `valueToMirror`.
 
 ```tsx twoslash
 import { d } from 'typegpu';
 import React from 'react';
 import { useMirroredUniform } from '@typegpu/react';
 
-function App({ albedo }: { albedo: d.v3f }) {
+declare const useTheme: () => { primaryColor: [number, number, number] };
+
+function UIElement() {
 // ---cut---
-const bruh = useMirroredUniform(d.vec3f, albedo);
-// ---cut-after---
-  return null;
+// a value accessible in the React lifecycle
+const theme = useTheme();
+
+// making it accessible in a shader
+const primaryColor = useMirroredUniform(d.vec3f, d.vec3f(...theme.primaryColor));
+
+// ...
+  // ---cut-after---
 }
 ```
 
+## useBindGroup
+
+```ts
+const group = useBindGroup(layout, { /* entries */ });
+```
+
+Creates a bind group out of the given resources. The API matches `root.createBindGroup`.
 
 ### The `<Root>` component
 
