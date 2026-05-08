@@ -1,24 +1,32 @@
 ---
 title: Vertices and fragments
-description: TODO
+description: Draw simple shapes with render pipelines in TypeGPU.
 ---
 
 import { Steps } from '@astrojs/starlight/components';
 import { Image } from 'astro:assets';
 
-Compute pipeline are great for, well, computations, but they are not the best for drawing shapes. 
+Compute pipelines are great for, well, computations, but they are not the best choice for drawing shapes.
+
 The other type of pipelines supported by WebGPU are render pipelines.
+Render pipelines are used for drawing points, lines and triangles onto textures.
 
-Render pipelines are used for drawing simple shapes, like points, lines and triangles, onto textures.
+Where compute pipelines executes threads on a grid you define, render pipelines work in stages.
+You configure the pipeline on what kind of shape (either points, lines or triangles) to draw, and during the draw call:
 
-When creating a compute pipeline, you define a grid, and threads are dispatched for each cell of that grid.
-Render pipeline works on a different principle.
-It is split into two stages: vertex and fragment.
-Roughly speaking, vertex stage is responsible for determining the position of drawn shapes, and fragment is responsible for coloring the pixels inside of the shape.
+1. The **vertex** function runs once per vertex and outputs a position for it.
+2. The GPU calculates which pixels each shape covers in a process called **rasterization**.
+3. The **fragment** function runs once per covered pixel and outputs a color.
 
 ## Drawing pixels
 
-The following example draws three red pixels on the canvas.
+The following example draws three red points. 
+Each point lands on a single pixel, since `'point-list'` topology rasterizes each vertex to one pixel regardless of canvas size.
+
+:::note
+The demo canvases on this page are 31×31 pixels with `imageRendering: pixelated`, so individual pixels stay visible.
+The code itself works on a canvas of any size.
+:::
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
@@ -67,19 +75,19 @@ Let us go through the code step by step.
    const root = await tgpu.init();
    ```
 
-2. **Create the render pipeline**, while setting its topology to `'point-list'`. 
+2. **Create the render pipeline**, while setting its topology to `'point-list'`.
 This will make the pipeline draw a point for each returned vertex.
 
    ```ts
    const pipeline = root.createRenderPipeline({
      primitive: { topology: 'point-list' },
      // ...
-   )};
+   });
    ```
 
-3. **Define a vertex function**, that is responsible for telling the GPU where exactly to draw the pixels.
-When calling the pipeline later, we pass in the draw target (in our case, it will be a HTML canvas), as well as the number of vertices to draw.
-GPU will call this function that many times, with a different `$vertexIndex` each time.
+3. **Define a vertex function**, which tells the GPU where each vertex is located.
+When dispatching the pipeline later, we'll specify how many vertices to draw.
+The GPU runs this function once per vertex, with `$vertexIndex` going from `0` up to `count - 1`.
 
    ```ts
    vertex: ({ $vertexIndex: vid }) => {
@@ -95,15 +103,15 @@ GPU will call this function that many times, with a different `$vertexIndex` eac
    },
    ```
 
-   Note that the returned position is actually a 4-dimensional vector.
-   The returned value is in clip space coordinates, where X goes from -1 on the left to 1 on the right, and Y goes from -1 on the bottom to 1 on the top.
-   The Z value is used for depth testing, irrelevant in our case, and the W transforms the 3D position into [homogeneous coordinates](https://en.wikipedia.org/wiki/Homogeneous_coordinates), also irrelevant in our case.
+   The returned position is a 4-dimensional vector in **clip space**: X goes from `-1` on the left to `1` on the right, and Y goes from `-1` on the bottom to `1` on the top. 
+   Z is used for depth testing (irrelevant here), 
+   and W can stay `1` for now, see [homogeneous coordinates](https://en.wikipedia.org/wiki/Homogeneous_coordinates) if you're curious.
 
-   {/* include a visualization of the clip space */}
+   {/* TODO: clip space visualization */}
 
-4. **Define a fragment function**, that will be called by GPU on each pixel that is deemed to be inside of the drawn shape.
-In case of `point-list` topology, this function will be called exactly once for each position returned by the vertex function.
-This particular function always returns the color red.
+4. **Define a fragment function**, which the GPU calls for each pixel covered by a shape.
+For `'point-list'` topology, that's exactly once per returned vertex.
+This particular fragment function always returns red.
 
    ```ts
      fragment: () => {
@@ -112,8 +120,7 @@ This particular function always returns the color red.
      },
    ```
 
-5. **Query the canvas**. This example code assumes that your page has a canvas defined.
-In the visualizations, the canvases are 31x31 pixels, with `imageRendering` style set to `'pixelated'`.
+5. **Query the canvas.** This example assumes your page has a `<canvas>` element.
 
    ```ts
    const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -126,8 +133,8 @@ This context can be then used to render onto the canvas.
    const context = root.configureContext({ canvas });
    ```
 
-7. **Dispatch pipeline** by providing a color attachment and then calling `.draw()`.
-Color attachment specifies the draw target, as well as some optional props like `clearValue` and `loadOp`
+7. **Dispatch the pipeline** by providing a color attachment and calling `.draw(count)`, where `count` is the number of vertices to draw.
+The color attachment specifies the draw target, plus optional props like `clearValue` and `loadOp`.
 
    ```ts
     pipeline.withColorAttachment({ view: context }).draw(3);
@@ -136,8 +143,9 @@ Color attachment specifies the draw target, as well as some optional props like 
 
 ## Coloring pixels
 
-In the example above, the special `$position` builtin is the only thing returned from the vertex function.
-We can actually return more values. In the example below, we pass in an additional color prop, and use it to color the pixels accordingly.
+In the example above, the `$position` is the only value returned from the vertex function.
+We can actually return more values.
+In the example below, we pass in an additional color prop.
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
@@ -179,12 +187,13 @@ import colorfulPixels from './colorful-pixels.png';
 
 <Image src={colorfulPixels} alt="Three pixels, one red, one blue and one green." />
 
-As we can see, the color is passed down to the fragment stage, and now each pixel is colored differently.
+Each pixel ends up colored by the value returned by its vertex.
 
 ## Lines and triangles
 
 Let's change the topology from `'point-list'` to `'line-strip'`.
-This will make the pipeline change the behavior, and draw lines instead of pixels.
+The vertex and fragment functions stay exactly the same.
+This changes how the GPU connects the vertices together.
 
 ```diff lang=ts
 -  primitive: { topology: 'point-list' },
@@ -195,18 +204,19 @@ import colorfulLine from './colorful-line.png';
 
 <Image src={colorfulLine} alt="A slanted line going smoothly from red to green to blue." />
 
-Now, instead of calling the fragment only for the returned positions, it is called for all pixels on the line between the first and second, as well as second and third returned positions. 
-This is not the only thing of note -- the line's color smoothly transitions from red to green to blue. 
-This happens because the value received by the fragment function is actually interpolated between the vertices.
-This means, that given that the first vertex returns color `d.vec3f(1, 0, 0)`, and the second returns `d.vec3f(0, 1, 0)`, then all pixels on the line between those two will receive some mix between those two values, with the one in the middle receiving exactly `d.vec3f(0.5, 0.5, 0)`.
+The fragment now runs for every pixel along the line between the first and second vertices, and again between the second and third.
 
-Let's change the topology again, let's now use `triangle-list`.
-This is the most widely used topology.
-Vertices are grouped into sets of three, and all pixels on the triangle defined by these is colored by the fragment function.
+Notice that the line's color transitions smoothly from red to green to blue.
+Each fragment receives values that are **interpolated** across the primitive based on its position.
+If the first vertex returns color `d.vec3f(1, 0, 0)` and the second returns color `d.vec3f(0, 1, 0)`, then a pixel exactly halfway between them sees `d.vec3f(0.5, 0.5, 0)`.
+This applies to every extra prop returned by vertex, and this is a core principle of render pipelines.
+
+Let's change topology once more, this time to `'triangle-list'` — the most widely used option.
+Vertices are grouped in threes, and the fragment runs for every pixel covered by the triangle they define.
 
 ```diff lang=ts
 -  primitive: { topology: 'line-strip' },
--  primitive: { topology: 'triangle-list' },
++  primitive: { topology: 'triangle-list' },
 ```
 
 import colorfulTriangle from './colorful-triangle.png';
@@ -219,15 +229,13 @@ import colorfulTriangleSmooth from './colorful-triangle-smooth.png';
 
 <Image src={colorfulTriangleSmooth} alt="A smooth triangle with a red-green-blue gradient." />
 
-If you wish to draw more triangles, simply adapt the vertex shader to return more positions, and call `draw()` with an appropriate number of vertices.
-Storage and vertex buffers are helpful for automating passing in more positions.
+To draw more triangles, return more positions from the vertex function and pass a matching count to `draw()`.
+For larger meshes, store the positions in a buffer instead of inlining them in the shader.
 
 ## Moving image
 
-In all examples above, we draw once and then never again. 
-In order for the image to move, we need to do two things. 
-Firstly, we need to call `pipeline.draw()` in a loop.
-Secondly, we need to pass in some values from JS to the shader, so that each draw will be different.
+In all examples above, we draw once and stop.
+To animate, two things change: we call `pipeline.draw()` every frame, and we pass a value from JS into the shader that each frame can vary.
 
 ```ts twoslash
 import tgpu, { d, std } from 'typegpu';
@@ -272,14 +280,17 @@ import movingTriangle from './moving-triangle.mp4';
 
 <video src={movingTriangle} autoPlay loop muted playsInline />
 
-## Extra: per-pixel evaluation
+`requestAnimationFrame` calls `frame` once per repaint and passes a timestamp in milliseconds.
+We divide by `1000` to get seconds and write that into `timeUniform`, which the vertex function reads as `timeUniform.$`.
+
+## Skipping the geometry
 
 Before, we drew points and lines in a very low resolution. 
 On high resolution canvases, they are barely visible.
 Unfortunately, there is no way change the width of the drawn points and lines. 
 To draw bigger points and lines, people usually use many triangles to approximate the shape.
 
-There is however one different approach.
+There is however a different approach, that skips the geometry altogether.
 
 ```ts twoslash
 import tgpu, { d, std } from 'typegpu';
@@ -308,8 +319,10 @@ import circleSdf from './circle-sdf.png';
 
 <Image src={circleSdf} alt="A perfect red circle on a black canvas." />
 
-In the code above, a `fullScreenTriangle` vertex fragment is used. 
-This function returns vertex positions that actually are outside of the clip space, so that one triangle will cover the entire screen.
-Then, each pixel determines its color based on the distance between it's uv ([0, 1] x [0, 1] coordinate), and the middle of the canvas.
+The `fullScreenTriangle` vertex function (from `typegpu/common`) returns positions that lie outside clip space, so a single triangle ends up covering the entire visible canvas.
+Alongside `$position` it outputs `uv`, a 2D coordinate that runs from `(0, 0)` to `(1, 1)` across the canvas. 
+The fragment function receives the interpolated `uv` in each pixel.
 
-To see more fullScreenTriangle tricks like this one, see more on [signed distance fields](https://iquilezles.org/articles/distfunctions2d/).
+Each pixel then colors itself based on the distance from its `uv` to the center `(0.5, 0.5)`: closer than `0.2` is red, otherwise black.
+That distance check is a **signed distance function** (SDF) — a way to describe shapes using functions instead of geometry.
+For more, see [Inigo Quilez's 2D distance functions](https://iquilezles.org/articles/distfunctions2d/).
