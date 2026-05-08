@@ -66,8 +66,11 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
       }
 
       if (el) {
-        canvasRef.current = el;
-        ctxRef.current = root.configureContext({ canvas: el, ...restOptions });
+        const ctx = root.configureContext({ canvas: el, ...restOptions });
+        // In react-native-wgpu, the canvas stored on the context is actually different than the canvas
+        // the callback is called on. This one actually has properties like `clientWidth`.
+        canvasRef.current = ctx.canvas as HTMLCanvasElement;
+        ctxRef.current = ctx;
       } else {
         canvasRef.current = null;
         ctxRef.current = null;
