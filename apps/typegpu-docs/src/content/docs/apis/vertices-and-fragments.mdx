@@ -3,13 +3,19 @@ title: Vertices and fragments
 description: TODO
 ---
 
+import { Steps } from '@astrojs/starlight/components';
+
 Compute pipeline are great for, well, computations, but they are not the best for drawing shapes. 
-A second (and last) type of pipeline supported by WebGPU is a render pipeline.
+The other type of pipelines supported by WebGPU are render pipelines.
 
 Render pipelines are used for drawing simple shapes, like points, lines and triangles, onto textures.
 
-All example codes will assume that your page has a canvas defined.
-Furthermore, the canvas is 31x31 pixels, with `imageRendering` style set to `'pixelated'`.
+When creating a compute pipeline, you define a grid, and threads are dispatched for each cell of that grid.
+Render pipeline works on a different principle.
+It is split into two stages: vertex and fragment.
+Roughly speaking, vertex stage is responsible for determining the position of drawn shapes, and fragment is responsible for coloring the pixels inside of the shape.
+
+## Drawing pixels
 
 The following example draws three red pixels on the canvas.
 
@@ -17,8 +23,6 @@ The following example draws three red pixels on the canvas.
 import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const pipeline = root.createRenderPipeline({
   primitive: { topology: 'point-list' },
@@ -39,32 +43,93 @@ const pipeline = root.createRenderPipeline({
   },
 });
 
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas });
+
 pipeline.withColorAttachment({ view: context }).draw(3);
 ```
 
-There is a lot to explain in the code snippet above.
+// IMAGE
 
-We start with initializing the root, just like we did when using compute pipelines.
+It is a little more complicated than creating a dispatching a compute pipeline.
+Let us go through the code step by step.
 
-Then, we query the canvas and use the `root.configureContext` method that creates a WebGPU context.
-This context holds info about the device (root) and the canvas, and it will be the render target of our render pipeline.
+<Steps>
 
-When creating a compute pipeline, you define a grid, and threads are dispatched for each cell of that grid.
+1. **Initialize the `root`**, just like we did in the previous article.
 
-Render pipeline works on a different principle.
-It is split into two stages: vertex and fragment.
-Roughly speaking, vertex stage is responsible for determining the position of drawn shapes, and fragment is responsible for the color of a given pixel.
+   ```ts
+   import tgpu, { d } from 'typegpu';
 
-A number of threads that execute the vertex function is specified in the `.draw()` method.
-Each one can access their ID by a special builtin variable called `$vertexId`, and each one must return a `$position`. TODO clipspace, why 4d
+   const root = await tgpu.init();
+   ```
 
-What happens next is defined by the `topology` of the pipeline. 
-In case of `'point-list'` topology, the fragment function is simply executed for each of the returned positions. 
+2. **Create the render pipeline**, while setting its topology to `'point-list'`. 
+This will make the pipeline draw a point for each returned vertex.
 
-Finally, the last step is calling the `draw()` method. 
-Note that before that, we need to specify where the pipeline should draw on, and that's where the previously created context comes into play.
+   ```ts
+   const pipeline = root.createRenderPipeline({
+     primitive: { topology: 'point-list' },
+   ```
 
-// ---
+3. **Define a vertex function**, that is responsible for telling the GPU where exactly to draw the pixels.
+When calling the pipeline later, we pass in the draw target (in our case, it will be a HTML canvas), as well as the number of vertices to draw.
+GPU will call this function that many times, with a different `$vertexIndex` each time.
+
+   ```ts
+   vertex: ({ $vertexIndex: vid }) => {
+     'use gpu';
+
+     const positions = [
+       d.vec2f(0.0, 0.5),
+       d.vec2f(-0.5, -0.5),
+       d.vec2f(0.5, -0.5),
+     ];
+
+     return { $position: d.vec4f(positions[vid], 0, 1) };
+   },
+   ```
+
+   Note that the returned position is actually a 4-dimensional vector.
+   The returned value is in clip space coordinates, where X goes from -1 on the left to 1 on the right, and Y goes from -1 on the bottom to 1 on the top.
+   The Z value is used for depth testing, irrelevant in our case, and the W transforms the 3D position into [homogeneous coordinates](https://en.wikipedia.org/wiki/Homogeneous_coordinates), also irrelevant in our case.
+
+   {/* include a visualization of the clip space */}
+
+4. **Define a fragment function**, that will be called by GPU on each pixel that is deemed to be inside of the drawn shape.
+In case of `point-list` topology, this function will be called exactly once for each position returned by the vertex function.
+This particular function always returns the color red.
+
+   ```ts
+     fragment: () => {
+       'use gpu';
+       return d.vec4f(1, 0, 0, 1);
+     },
+   ```
+
+5. **Query the canvas**. This example code assumes that your page has a canvas defined.
+In the visualizations, the canvas is 31x31 pixels, with `imageRendering` style set to `'pixelated'`.
+
+   ```ts
+   const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+   ```
+
+6. **Call `root.configureContext`**. This will crete and configure a context for the provided canvas.
+This context can be then used to render onto the canvas.
+
+   ```ts
+   const context = root.configureContext({ canvas });
+   ```
+
+7. **Dispatch pipeline** by providing a color attachment and then calling `.draw()`.
+Color attachment specifies the draw target, as well as some optional props like `clearValue` and `loadOp`
+
+   ```ts
+    pipeline.withColorAttachment({ view: context }).draw(3);
+   ```
+</Steps>
+
+## Coloring pixels
 
 In the example above, the special `$position` builtin is the only thing returned from the vertex function.
 We can actually return more values. In the example below, we pass in an additional color prop, and use it to color the pixels accordingly.
@@ -76,6 +141,7 @@ const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
+// ---cut---
 const pipeline = root.createRenderPipeline({
   primitive: { topology: 'point-list' },
   vertex: ({ $vertexIndex: vid }) => {
@@ -87,7 +153,11 @@ const pipeline = root.createRenderPipeline({
       d.vec2f(0.5, -0.5),
     ];
 
-    const colors = [d.vec3f(1, 0, 0), d.vec3f(0, 1, 0), d.vec3f(0, 0, 1)];
+    const colors = [
+      d.vec3f(1, 0, 0),
+      d.vec3f(0, 1, 0),
+      d.vec3f(0, 0, 1)
+    ];
 
     return { $position: d.vec4f(positions[vid], 0, 1), color: colors[vid] };
   },
@@ -99,83 +169,36 @@ const pipeline = root.createRenderPipeline({
 
 pipeline.withColorAttachment({ view: context }).draw(3);
 ```
+
+// IMAGE
 
 As we can see, the color is passed down to the fragment stage, and now each pixel is colored differently.
 
-Let's change the topology `'from point-list'` to `'line-strip'`.
+## Lines and triangles
 
-```ts twoslash
-import tgpu, { d } from 'typegpu';
+Let's change the topology from `'point-list'` to `'line-strip'`.
+This will make the pipeline change the behavior, and draw lines instead of pixels.
 
-const root = await tgpu.init();
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-
-const pipeline = root.createRenderPipeline({
-  primitive: { topology: 'line-strip' },
-  vertex: ({ $vertexIndex: vid }) => {
-    'use gpu';
-
-    const positions = [
-      d.vec2f(0.0, 0.5),
-      d.vec2f(-0.5, -0.5),
-      d.vec2f(0.5, -0.5),
-    ];
-
-    const colors = [d.vec3f(1, 0, 0), d.vec3f(0, 1, 0), d.vec3f(0, 0, 1)];
-
-    return { $position: d.vec4f(positions[vid], 0, 1), color: colors[vid] };
-  },
-  fragment: ({ color }) => {
-    'use gpu';
-    return d.vec4f(color, 1);
-  },
-});
-
-pipeline.withColorAttachment({ view: context }).draw(3);
+```diff lang=ts
+-  primitive: { topology: 'point-list' },
++  primitive: { topology: 'line-strip' },
 ```
 
-The behavior of the pipeline has changed. 
-Now, instead of calling the fragment only for the returned positions, it is called for all pixels on the line between the first and second, as well as second and third vertices. 
-This is not the only thing of note.
-On this line, the color smoothly transitions from red to green to blue. 
+Now, instead of calling the fragment only for the returned positions, it is called for all pixels on the line between the first and second, as well as second and third returned positions. 
+This is not the only thing of note -- the line's color smoothly transitions from red to green to blue. 
 This happens because the value received by the fragment function is actually interpolated between the vertices.
 This means, that given that the first vertex returns color `d.vec3f(1, 0, 0)`, and the second returns `d.vec3f(0, 1, 0)`, then all pixels on the line between those two will receive some mix between those two values, with the one in the middle receiving exactly `d.vec3f(0.5, 0.5, 0)`.
 
-Let's change the topology for the last time, let's now use `triangle-list`.
+Let's change the topology again, let's now use `triangle-list`.
 This is the most widely used topology.
 Vertices are grouped into sets of three, and all pixels on the triangle defined by these is colored by the fragment function.
 
-```ts twoslash
-import tgpu, { d } from 'typegpu';
-
-const root = await tgpu.init();
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-
-const pipeline = root.createRenderPipeline({
-  primitive: { topology: 'triangle-list' },
-  vertex: ({ $vertexIndex: vid }) => {
-    'use gpu';
-
-    const positions = [
-      d.vec2f(0.0, 0.5),
-      d.vec2f(-0.5, -0.5),
-      d.vec2f(0.5, -0.5),
-    ];
-
-    const colors = [d.vec3f(1, 0, 0), d.vec3f(0, 1, 0), d.vec3f(0, 0, 1)];
-
-    return { $position: d.vec4f(positions[vid], 0, 1), color: colors[vid] };
-  },
-  fragment: ({ color }) => {
-    'use gpu';
-    return d.vec4f(color, 1);
-  },
-});
-
-pipeline.withColorAttachment({ view: context }).draw(3);
+```diff lang=ts
+-  primitive: { topology: 'line-strip' },
+-  primitive: { topology: 'triangle-list' },
 ```
+
+## Moving image
 
 In all examples above, we draw once and then never again. 
 In order for the image to move, we need to do two things. 
@@ -254,6 +277,4 @@ pipeline.withColorAttachment({ view: context }).draw(3);
 In the code above, a `fullScreenTriangle` vertex fragment is used. 
 This function returns vertex positions that actually are outside of the clip space, so that one triangle will cover the entire screen.
 Then, each pixel determines its color based on the distance between it's uv ([0, 1] x [0, 1] coordinate), and the middle of the canvas.
-
-TODO: attachment loadop
 
