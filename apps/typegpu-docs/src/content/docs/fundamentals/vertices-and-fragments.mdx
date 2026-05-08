@@ -73,6 +73,8 @@ This will make the pipeline draw a point for each returned vertex.
    ```ts
    const pipeline = root.createRenderPipeline({
      primitive: { topology: 'point-list' },
+     // ...
+   )};
    ```
 
 3. **Define a vertex function**, that is responsible for telling the GPU where exactly to draw the pixels.
@@ -173,7 +175,9 @@ const pipeline = root.createRenderPipeline({
 pipeline.withColorAttachment({ view: context }).draw(3);
 ```
 
-// IMAGE
+import colorfulPixels from './colorful-pixels.png';
+
+<Image src={colorfulPixels} alt="Three pixels, one red, one blue and one green." />
 
 As we can see, the color is passed down to the fragment stage, and now each pixel is colored differently.
 
@@ -187,7 +191,9 @@ This will make the pipeline change the behavior, and draw lines instead of pixel
 +  primitive: { topology: 'line-strip' },
 ```
 
-// IMAGE
+import colorfulLine from './colorful-line.png';
+
+<Image src={colorfulLine} alt="A slanted line going smoothly from red to green to blue." />
 
 Now, instead of calling the fragment only for the returned positions, it is called for all pixels on the line between the first and second, as well as second and third returned positions. 
 This is not the only thing of note -- the line's color smoothly transitions from red to green to blue. 
@@ -203,7 +209,15 @@ Vertices are grouped into sets of three, and all pixels on the triangle defined 
 -  primitive: { topology: 'triangle-list' },
 ```
 
-// IMAGE
+import colorfulTriangle from './colorful-triangle.png';
+
+<Image src={colorfulTriangle} alt="A triangle with a red-green-blue gradient." />
+
+Here's how it looks on a high-resolution canvas.
+
+import colorfulTriangleSmooth from './colorful-triangle-smooth.png';
+
+<Image src={colorfulTriangleSmooth} alt="A smooth triangle with a red-green-blue gradient." />
 
 If you wish to draw more triangles, simply adapt the vertex shader to return more positions, and call `draw()` with an appropriate number of vertices.
 Storage and vertex buffers are helpful for automating passing in more positions.
@@ -254,9 +268,9 @@ function frame(timestamp: number) {
 requestAnimationFrame(frame);
 ```
 
-// IMAGE
+import movingTriangle from './moving-triangle.mp4';
 
-
+<video src={movingTriangle} autoPlay loop muted playsInline />
 
 ## Extra: per-pixel evaluation
 
@@ -290,9 +304,12 @@ const pipeline = root.createRenderPipeline({
 pipeline.withColorAttachment({ view: context }).draw(3);
 ```
 
-// IMAGE
+import circleSdf from './circle-sdf.png';
+
+<Image src={circleSdf} alt="A perfect red circle on a black canvas." />
 
 In the code above, a `fullScreenTriangle` vertex fragment is used. 
 This function returns vertex positions that actually are outside of the clip space, so that one triangle will cover the entire screen.
 Then, each pixel determines its color based on the distance between it's uv ([0, 1] x [0, 1] coordinate), and the middle of the canvas.
 
+To see more fullScreenTriangle tricks like this one, see more on [signed distance fields](https://iquilezles.org/articles/distfunctions2d/).
