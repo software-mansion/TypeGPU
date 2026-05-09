@@ -14,103 +14,179 @@ describe('fluid with atomics example', () => {
       {
         category: 'simulation',
         name: 'fluid-with-atomics',
-        expectedCalls: 2,
+        expectedCalls: 3,
       },
       device,
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> size: vec2u;
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
-      fn getIndex(x: u32, y: u32) -> u32 {
-        let h = size.y;
-        let w = size.x;
-        return (((y % h) * w) + (x % w));
+      struct BrushParams {
+        start: vec2f,
+        end: vec2f,
+        radius: f32,
+        cellKind: u32,
+        waterAmount: u32,
+        erasing: u32,
       }
 
-      @group(0) @binding(1) var<storage, read> currentStateBuffer: array<u32, 1048576>;
+      @group(0) @binding(1) var<uniform> brushParams: BrushParams;
 
-      fn getCell(x: u32, y: u32) -> u32 {
-        return currentStateBuffer[getIndex(x, y)];
+      fn sdLine(point: vec2f, A: vec2f, B: vec2f) -> f32 {
+        let pa = (point - A);
+        let ba = (B - A);
+        let h = max(0f, min(1f, (dot(pa, ba) / dot(ba, ba))));
+        return distance(pa, (ba * h));
       }
 
-      fn isClearCell(x: u32, y: u32) -> bool {
-        return ((getCell(x, y) >> 24u) == 4u);
+      struct SimParams {
+        resolution: vec2u,
+        viscosity: u32,
       }
 
-      @group(0) @binding(2) var<storage, read_write> nextState: array<atomic<u32>, 1048576>;
+      @group(0) @binding(2) var<uniform> simParams: SimParams;
 
-      fn updateCell(x: u32, y: u32, value: u32) {
-        atomicStore(&nextState[getIndex(x, y)], value);
+      fn getIndex(coord: vec2u) -> u32 {
+        return ((coord.y * simParams.resolution.x) + coord.x);
       }
 
-      fn isWall(x: u32, y: u32) -> bool {
-        return ((getCell(x, y) >> 24u) == 1u);
+      @group(1) @binding(0) var<storage, read_write> flags: array<u32>;
+
+      const CELL_EMPTY: u32 = 0u;
+
+      @group(1) @binding(1) var<storage, read_write> currentWater: array<u32>;
+
+      @group(1) @binding(2) var<storage, read_write> nextWater: array<atomic<u32>>;
+
+      fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
+        let brushPoint = vec2f(f32(x), f32(y));
+        let brush = (&brushParams);
+        var brushDistance = 0f;
+        if ((((*brush).start.x == (*brush).end.x) && ((*brush).start.y == (*brush).end.y))) {
+          brushDistance = distance(brushPoint, (*brush).start);
+        }
+        else {
+          brushDistance = sdLine(brushPoint, (*brush).start, (*brush).end);
+        }
+        if ((brushDistance > (*brush).radius)) {
+          return;
+        }
+        let index = getIndex(vec2u(x, y));
+        if (((*brush).erasing != 0u)) {
+          flags[index] = CELL_EMPTY;
+          currentWater[index] = 0u;
+          atomicStore(&nextWater[index], 0u);
+          return;
+        }
+        if (((*brush).waterAmount != 0u)) {
+          if ((flags[index] == CELL_EMPTY)) {
+            currentWater[index] = (*brush).waterAmount;
+            atomicStore(&nextWater[index], (*brush).waterAmount);
+          }
+          return;
+        }
+        flags[index] = (*brush).cellKind;
+        currentWater[index] = 0u;
+        atomicStore(&nextWater[index], 0u);
+      }
+
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        wrappedCallback(id.x, id.y, id.z);
+      }
+
+      @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      struct SimParams {
+        resolution: vec2u,
+        viscosity: u32,
+      }
+
+      @group(0) @binding(1) var<uniform> simParams: SimParams;
+
+      fn getIndex(coord: vec2u) -> u32 {
+        return ((coord.y * simParams.resolution.x) + coord.x);
+      }
+
+      @group(1) @binding(0) var<storage, read> flags: array<u32>;
+
+      fn getFlags(coord: vec2u) -> u32 {
+        return flags[getIndex(coord)];
+      }
+
+      const CELL_WALL: u32 = 1u;
+
+      const CELL_DRAIN: u32 = 3u;
+
+      fn isBoundary(coord: vec2u) -> bool {
+        return ((((coord.x == 0u) || (coord.y == 0u)) || (coord.x == (simParams.resolution.x - 1u))) || (coord.y == (simParams.resolution.y - 1u)));
+      }
+
+      @group(1) @binding(2) var<storage, read_write> nextWater: array<atomic<u32>>;
+
+      fn clearNextWater(coord: vec2u) {
+        atomicStore(&nextWater[getIndex(coord)], 0u);
+      }
+
+      const CELL_SOURCE: u32 = 2u;
+
+      fn isInBounds(coord: vec2u) -> bool {
+        return ((coord.x < simParams.resolution.x) && (coord.y < simParams.resolution.y));
+      }
+
+      fn isDrainTarget(coord: vec2u) -> bool {
+        return ((!isInBounds(coord) || (getFlags(coord) == CELL_DRAIN)) || isBoundary(coord));
+      }
+
+      fn canStoreWater(coord: vec2u) -> bool {
+        return (!isDrainTarget(coord) && (getFlags(coord) != CELL_WALL));
       }
 
       const MAX_WATER_LEVEL: u32 = 16777215u;
 
-      fn persistFlags(x: u32, y: u32) {
-        let cell = getCell(x, y);
-        let waterLevel = (cell & MAX_WATER_LEVEL);
-        let flags = (cell >> 24u);
-        updateCell(x, y, ((flags << 24u) | waterLevel));
+      fn addNextWater(coord: vec2u, amount: u32) {
+        if (((amount == 0u) || !canStoreWater(coord))) {
+          return;
+        }
+        let index = getIndex(coord);
+        let previous = atomicAdd(&nextWater[index], amount);
+        if (((previous + amount) > MAX_WATER_LEVEL)) {
+          atomicMin(&nextWater[index], MAX_WATER_LEVEL);
+        }
       }
 
-      fn isWaterSource(x: u32, y: u32) -> bool {
-        return ((getCell(x, y) >> 24u) == 2u);
-      }
+      const SOURCE_RATE: u32 = 20u;
 
-      fn getCellNext(x: u32, y: u32) -> u32 {
-        return atomicLoad(&nextState[getIndex(x, y)]);
-      }
-
-      fn addToCell(x: u32, y: u32, value: u32) {
-        let cell = getCellNext(x, y);
-        let waterLevel = (cell & MAX_WATER_LEVEL);
-        let newWaterLevel = min((waterLevel + value), MAX_WATER_LEVEL);
-        atomicAdd(&nextState[getIndex(x, y)], (newWaterLevel - waterLevel));
-      }
-
-      fn isWaterDrain(x: u32, y: u32) -> bool {
-        return ((getCell(x, y) >> 24u) == 3u);
-      }
-
-      fn getWaterLevel(x: u32, y: u32) -> u32 {
-        return (getCell(x, y) & MAX_WATER_LEVEL);
-      }
-
-      fn subtractFromCell(x: u32, y: u32, value: u32) {
-        let cell = getCellNext(x, y);
-        let waterLevel = (cell & MAX_WATER_LEVEL);
-        let newWaterLevel = max((waterLevel - min(value, waterLevel)), 0u);
-        atomicSub(&nextState[getIndex(x, y)], (waterLevel - newWaterLevel));
-      }
-
-      fn checkForFlagsAndBounds(x: u32, y: u32) -> bool {
-        if (isClearCell(x, y)) {
-          updateCell(x, y, 0u);
+      fn handleCellFlags(coord: vec2u) -> bool {
+        let flags_1 = getFlags(coord);
+        if ((((flags_1 == CELL_WALL) || (flags_1 == CELL_DRAIN)) || isBoundary(coord))) {
+          clearNextWater(coord);
           return true;
         }
-        if (isWall(x, y)) {
-          persistFlags(x, y);
-          return true;
-        }
-        if (isWaterSource(x, y)) {
-          persistFlags(x, y);
-          addToCell(x, y, 20u);
-          return false;
-        }
-        if (isWaterDrain(x, y)) {
-          persistFlags(x, y);
-          updateCell(x, y, (3 << 24u));
-          return true;
-        }
-        if (((((y == 0u) || (y == (size.y - 1u))) || (x == 0u)) || (x == (size.x - 1u)))) {
-          subtractFromCell(x, y, getWaterLevel(x, y));
-          return true;
+        if ((flags_1 == CELL_SOURCE)) {
+          addNextWater(coord, SOURCE_RATE);
         }
         return false;
+      }
+
+      @group(1) @binding(1) var<storage, read> currentWater: array<u32>;
+
+      fn getWaterLevel(coord: vec2u) -> u32 {
+        return currentWater[getIndex(coord)];
+      }
+
+      fn isFlowBlocked(coord: vec2u) -> bool {
+        return (!isInBounds(coord) || (getFlags(coord) == CELL_WALL));
+      }
+
+      fn getTargetWaterLevel(coord: vec2u) -> u32 {
+        if (isDrainTarget(coord)) {
+          return 0u;
+        }
+        return getWaterLevel(coord);
       }
 
       const MAX_WATER_LEVEL_UNPRESSURIZED: u32 = 255u;
@@ -128,121 +204,173 @@ describe('fluid with atomics example', () => {
         return MAX_WATER_LEVEL_UNPRESSURIZED;
       }
 
-      @group(0) @binding(3) var<uniform> viscosity: u32;
+      fn subtractNextWater(coord: vec2u, amount: u32) {
+        if ((amount == 0u)) {
+          return;
+        }
+        atomicSub(&nextWater[getIndex(coord)], amount);
+      }
 
-      fn decideWaterLevel(x: u32, y: u32) {
-        if (checkForFlagsAndBounds(x, y)) {
+      fn applyFlow(source: vec2u, target_1: vec2u, amount: u32) {
+        subtractNextWater(source, amount);
+        if (!isDrainTarget(target_1)) {
+          addNextWater(target_1, amount);
+        }
+      }
+
+      fn flowDown(coord: vec2u, remainingWater: ptr<function, u32>) {
+        if ((((*remainingWater) == 0u) || (coord.y == 0u))) {
           return;
         }
-        var remainingWater = getWaterLevel(x, y);
+        let target_1 = vec2u(coord.x, (coord.y - 1u));
+        if (isFlowBlocked(target_1)) {
+          return;
+        }
+        let targetWater = getTargetWaterLevel(target_1);
+        let stable = getStableStateBelow((*remainingWater), targetWater);
+        if ((targetWater >= stable)) {
+          return;
+        }
+        let flow = min((stable - targetWater), simParams.viscosity);
+        applyFlow(coord, target_1, flow);
+        (*remainingWater) -= flow;
+      }
+
+      fn flowSideways(coord: vec2u, remainingWater: ptr<function, u32>, waterLevelBefore: u32, left: bool) {
+        if (((*remainingWater) == 0u)) {
+          return;
+        }
+        if ((left && (coord.x == 0u))) {
+          return;
+        }
+        if ((!left && ((coord.x + 1u) >= simParams.resolution.x))) {
+          return;
+        }
+        let targetX = select((coord.x + 1u), (coord.x - 1u), left);
+        let target_1 = vec2u(targetX, coord.y);
+        if (isFlowBlocked(target_1)) {
+          return;
+        }
+        let flowRaw = (i32(waterLevelBefore) - i32(getTargetWaterLevel(target_1)));
+        if ((flowRaw <= 0i)) {
+          return;
+        }
+        let change = max(min(4u, (*remainingWater)), u32((f32(flowRaw) / 4f)));
+        let flow = min(change, simParams.viscosity);
+        applyFlow(coord, target_1, flow);
+        (*remainingWater) -= flow;
+      }
+
+      fn flowUp(coord: vec2u, remainingWater: ptr<function, u32>) {
+        if ((((*remainingWater) == 0u) || ((coord.y + 1u) >= simParams.resolution.y))) {
+          return;
+        }
+        let target_1 = vec2u(coord.x, (coord.y + 1u));
+        if (isFlowBlocked(target_1)) {
+          return;
+        }
+        let stable = getStableStateBelow(getTargetWaterLevel(target_1), (*remainingWater));
+        if ((stable >= (*remainingWater))) {
+          return;
+        }
+        let flow = min(((*remainingWater) - stable), simParams.viscosity);
+        applyFlow(coord, target_1, flow);
+        (*remainingWater) -= flow;
+      }
+
+      fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
+        let coord = vec2u(x, y);
+        if (handleCellFlags(coord)) {
+          return;
+        }
+        var remainingWater = getWaterLevel(coord);
         if ((remainingWater == 0u)) {
           return;
         }
-        if (!isWall(x, (y - 1u))) {
-          let waterLevelBelow = getWaterLevel(x, (y - 1u));
-          let stable = getStableStateBelow(remainingWater, waterLevelBelow);
-          if ((waterLevelBelow < stable)) {
-            let change = (stable - waterLevelBelow);
-            let flow = min(change, viscosity);
-            subtractFromCell(x, y, flow);
-            addToCell(x, (y - 1u), flow);
-            remainingWater -= flow;
-          }
-        }
-        if ((remainingWater == 0u)) {
-          return;
-        }
+        flowDown(coord, (&remainingWater));
         let waterLevelBefore = remainingWater;
-        if (!isWall((x - 1u), y)) {
-          let flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel((x - 1u), y)));
-          if ((flowRaw > 0i)) {
-            let change = max(min(4u, remainingWater), u32((f32(flowRaw) / 4f)));
-            let flow = min(change, viscosity);
-            subtractFromCell(x, y, flow);
-            addToCell((x - 1u), y, flow);
-            remainingWater -= flow;
-          }
-        }
-        if ((remainingWater == 0u)) {
-          return;
-        }
-        if (!isWall((x + 1u), y)) {
-          let flowRaw = (i32(waterLevelBefore) - i32(getWaterLevel((x + 1u), y)));
-          if ((flowRaw > 0i)) {
-            let change = max(min(4u, remainingWater), u32((f32(flowRaw) / 4f)));
-            let flow = min(change, viscosity);
-            subtractFromCell(x, y, flow);
-            addToCell((x + 1u), y, flow);
-            remainingWater -= flow;
-          }
-        }
-        if ((remainingWater == 0u)) {
-          return;
-        }
-        if (!isWall(x, (y + 1u))) {
-          let stable = getStableStateBelow(getWaterLevel(x, (y + 1u)), remainingWater);
-          if ((stable < remainingWater)) {
-            let flow = min((remainingWater - stable), viscosity);
-            subtractFromCell(x, y, flow);
-            addToCell(x, (y + 1u), flow);
-            remainingWater -= flow;
-          }
-        }
+        flowSideways(coord, (&remainingWater), waterLevelBefore, true);
+        flowSideways(coord, (&remainingWater), waterLevelBefore, false);
+        flowUp(coord, (&remainingWater));
       }
 
-      @compute @workgroup_size(1, 1) fn compute(@builtin(global_invocation_id) gid: vec3u) {
-        decideWaterLevel(gid.x, gid.y);
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        wrappedCallback(id.x, id.y, id.z);
       }
 
-      @group(0) @binding(0) var<uniform> size: vec2u;
-
-      struct vertex_Output {
+      struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
-        @location(0) cell: f32,
+        @location(0) uv: vec2f,
       }
 
-      @vertex fn vertex(@location(0) squareData: vec2f, @location(1) currentStateData: u32, @builtin(instance_index) idx: u32) -> vertex_Output {
-        let w = size.x;
-        let h = size.y;
-        let gridX = (idx % w);
-        let gridY = u32((f32(idx) / f32(w)));
-        let maxDim = max(w, h);
-        let x = (((2f * (f32(gridX) + squareData.x)) - f32(w)) / f32(maxDim));
-        let y = (((2f * (f32(gridY) + squareData.y)) - f32(h)) / f32(maxDim));
-        let cellFlags = (currentStateData >> 24u);
-        var cell = f32((currentStateData & 16777215u));
-        if ((cellFlags == 1u)) {
-          cell = -1f;
-        }
-        if ((cellFlags == 2u)) {
-          cell = -2f;
-        }
-        if ((cellFlags == 3u)) {
-          cell = -3f;
-        }
-        return vertex_Output(vec4f(x, y, 0f, 1f), cell);
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct fragment_Input {
-        @location(0) cell: f32,
+      struct SimParams {
+        resolution: vec2u,
+        viscosity: u32,
       }
 
-      @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
-        if ((_arg_0.cell == -1f)) {
+      @group(0) @binding(0) var<uniform> simParams: SimParams;
+
+      fn coordFromUv(uv: vec2f) -> vec2u {
+        let clampedUv = saturate(uv);
+        let gridUv = vec2f(clampedUv.x, (1f - clampedUv.y));
+        let resolution = vec2f(simParams.resolution);
+        return vec2u(min((gridUv * resolution), (resolution - 1f)));
+      }
+
+      fn getIndex(coord: vec2u) -> u32 {
+        return ((coord.y * simParams.resolution.x) + coord.x);
+      }
+
+      @group(1) @binding(0) var<storage, read> flags: array<u32>;
+
+      fn getFlags(coord: vec2u) -> u32 {
+        return flags[getIndex(coord)];
+      }
+
+      const CELL_WALL: u32 = 1u;
+
+      const CELL_SOURCE: u32 = 2u;
+
+      const CELL_DRAIN: u32 = 3u;
+
+      @group(1) @binding(1) var<storage, read> currentWater: array<u32>;
+
+      fn getWaterLevel(coord: vec2u) -> u32 {
+        return currentWater[getIndex(coord)];
+      }
+
+      struct FragmentIn {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
+        let coord = coordFromUv(_arg_0.uv);
+        let flags_1 = getFlags(coord);
+        if ((flags_1 == CELL_WALL)) {
           return vec4f(0.5, 0.5, 0.5, 1);
         }
-        if ((_arg_0.cell == -2f)) {
+        if ((flags_1 == CELL_SOURCE)) {
           return vec4f(0, 1, 0, 1);
         }
-        if ((_arg_0.cell == -3f)) {
+        if ((flags_1 == CELL_DRAIN)) {
           return vec4f(1, 0, 0, 1);
         }
-        let normalized = min((_arg_0.cell / 255f), 1f);
+        let normalized = min((f32(getWaterLevel(coord)) / 255f), 1f);
         if ((normalized == 0f)) {
           return vec4f();
         }
-        let res = (1f / (1f + exp((-((normalized - 0.2f)) * 10f))));
-        return vec4f(0f, 0f, res, res);
+        let water = (1f / (1f + exp((-((normalized - 0.2f)) * 10f))));
+        return vec4f(0f, 0f, water, water);
       }"
     `);
   });
