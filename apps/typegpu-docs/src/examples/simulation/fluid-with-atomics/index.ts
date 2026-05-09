@@ -680,7 +680,6 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);
-  destroyGridState();
   root.destroy();
 }
 
