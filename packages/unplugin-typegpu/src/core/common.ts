@@ -1,7 +1,7 @@
 import * as t from '@babel/types';
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import type { FilterPattern } from 'unplugin';
-import { MagicStringAST } from 'magic-string-ast';
+import MagicString from 'magic-string';
 import { transpileFn } from 'tinyest-for-wgsl';
 
 export interface Options {
@@ -105,8 +105,16 @@ export interface PluginState extends TransformMethods {
   alreadyTransformed: WeakSet<t.Node>;
 }
 
+export interface NodeLocation {
+  start?: number | null;
+  end?: number | null;
+}
+
 export interface UnpluginPluginState extends PluginState {
-  magicString: MagicStringAST;
+  magicString: MagicString;
+  slice(node: NodeLocation): string;
+  remove(node: NodeLocation): void;
+  overwrite(node: NodeLocation, content: string): void;
 }
 
 export function initPluginState(state: PluginState, methods: TransformMethods): void {
