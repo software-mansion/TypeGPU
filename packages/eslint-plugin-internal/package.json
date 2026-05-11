@@ -16,8 +16,8 @@
     "@types/node": "catalog:types",
     "@typescript-eslint/rule-tester": "^8.57.2",
     "eslint": "^9.39.2",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.17"
+    "typescript": "catalog:types",
+    "vitest": "catalog:test"
   },
   "peerDependencies": {
     "eslint": "^9.0.0"
