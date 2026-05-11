@@ -840,7 +840,7 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() -> u32 {
-        var arr = array<u32, 3>(1u, 2u, 3u);
+        let arr = array<u32, 3>(1u, 2u, 3u);
         return arr[1i];
       }"
     `);

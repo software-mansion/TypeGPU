@@ -267,11 +267,11 @@ describe('jump flood (distance) example', () => {
       @group(2) @binding(0) var distTexture: texture_storage_2d<rgba16float, write>;
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
-        var pos = vec2f(f32(x), f32(y));
-        var size = textureDimensions(readView);
-        var texel = textureLoad(readView, vec2i(i32(x), i32(y)));
-        var insideCoord = texel.xy;
-        var outsideCoord = texel.zw;
+        let pos = vec2f(f32(x), f32(y));
+        let size = textureDimensions(readView);
+        let texel = textureLoad(readView, vec2i(i32(x), i32(y)));
+        let insideCoord = texel.xy;
+        let outsideCoord = texel.zw;
         var insideDist = 3.4028234663852886e+38f;
         var outsideDist = 3.4028234663852886e+38f;
         if ((insideCoord.x >= 0f)) {

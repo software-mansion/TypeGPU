@@ -437,7 +437,7 @@ describe('TGSL tgpu.fn function', () => {
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
       "@fragment fn fragmentFn() -> @location(0) vec4f {
-        var hmm = vec4f(1.25);
+        let hmm = vec4f(1.25);
         return hmm;
       }"
     `);
