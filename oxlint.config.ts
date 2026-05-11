@@ -43,10 +43,6 @@ export default defineConfig({
         ...(eslintPlugin.configs.recommended.rules as Record<string, 'error' | 'warn' | 'off'>),
       },
     },
-    {
-      files: ['apps/typegpu-docs/src/examples/**/*.ts'],
-      rules: { 'eslint-plugin-internal/no-long-imports': 'error' },
-    },
   ],
   env: {
     builtin: true,
