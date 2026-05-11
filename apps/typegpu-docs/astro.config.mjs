@@ -208,6 +208,10 @@ export default defineConfig({
               label: '@typegpu/sdf',
               slug: 'ecosystem/typegpu-sdf',
             },
+            {
+              label: '@typegpu/radiance-cascades',
+              slug: 'ecosystem/typegpu-radiance-cascades',
+            },
             DEV && {
               label: '@typegpu/color',
               slug: 'ecosystem/typegpu-color',

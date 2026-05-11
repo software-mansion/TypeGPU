@@ -60,7 +60,7 @@ import type { IOData } from './core/function/fnTypes.ts';
 import { AutoStruct } from './data/autoStruct.ts';
 import { EntryInputRouter } from './core/function/entryInputRouter.ts';
 import type { FunctionArgument } from './tgsl/shaderGenerator_members.ts';
-import { isValidIdentifier, sanitizePrimer } from './nameUtils.ts';
+import { validateIdentifier, sanitizePrimer } from './nameUtils.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -424,7 +424,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   makeUniqueIdentifier(primer: string = 'item', scope: 'global' | 'block'): string {
-    if (scope === 'block' && isValidIdentifier(primer) && !this.isIdentifierTaken(primer)) {
+    if (
+      scope === 'block' &&
+      validateIdentifier(primer).success &&
+      !this.isIdentifierTaken(primer)
+    ) {
       // Preserving local definitions as they are, provided they are valid and not already taken.
       this.reserveIdentifier(primer, 'block');
       return primer;

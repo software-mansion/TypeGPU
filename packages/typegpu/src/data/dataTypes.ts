@@ -145,6 +145,8 @@ export function undecorate(data: BaseData): BaseData {
   return data;
 }
 
+export function unptr(data: BaseData): BaseData;
+export function unptr(data: BaseData | UnknownData): BaseData | UnknownData;
 export function unptr(data: BaseData | UnknownData): BaseData | UnknownData {
   if (wgsl.isPtr(data)) {
     return data.inner;

@@ -3,7 +3,7 @@ import { undecorate } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { type BaseData, isWgslData, isWgslStruct, Void } from '../../data/wgslTypes.ts';
 import { MissingLinksError } from '../../errors.ts';
-import { isValidIdentifier } from '../../nameUtils.ts';
+import { validateIdentifier } from '../../nameUtils.ts';
 import { getMetaData, getName } from '../../shared/meta.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx, TgpuShaderStage } from '../../types.ts';
@@ -84,8 +84,11 @@ export function createFnCore(
 
         if (entryInput) {
           for (const arg of entryInput.positionalArgs) {
-            if (!isValidIdentifier(arg.schemaKey)) {
-              throw new Error(`Invalid argument name: ${arg.schemaKey}`);
+            const result = validateIdentifier(arg.schemaKey);
+            if (!result.success) {
+              throw new Error(
+                `Invalid argument name "${arg.schemaKey}"${result.error ? `: ${result.error}` : ''}`,
+              );
             }
           }
 

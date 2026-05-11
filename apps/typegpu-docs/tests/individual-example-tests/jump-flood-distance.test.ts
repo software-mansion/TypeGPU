@@ -77,8 +77,8 @@ describe('jump flood (distance) example', () => {
         let pos = vec2f(f32(x), f32(y));
         var bestInsideCoord = vec2f(-1);
         var bestOutsideCoord = vec2f(-1);
-        var bestInsideDist = 1e+20;
-        var bestOutsideDist = 1e+20;
+        var bestInsideDist = 3.4028234663852886e+38f;
+        var bestOutsideDist = 3.4028234663852886e+38f;
         // unrolled iteration #0
         {
           // unrolled iteration #0
@@ -267,13 +267,13 @@ describe('jump flood (distance) example', () => {
       @group(2) @binding(0) var distTexture: texture_storage_2d<rgba16float, write>;
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
-        let pos = vec2f(f32(x), f32(y));
-        let size = textureDimensions(readView);
-        let texel = textureLoad(readView, vec2i(i32(x), i32(y)));
-        let insideCoord = texel.xy;
-        let outsideCoord = texel.zw;
-        var insideDist = 1e+20;
-        var outsideDist = 1e+20;
+        var pos = vec2f(f32(x), f32(y));
+        var size = textureDimensions(readView);
+        var texel = textureLoad(readView, vec2i(i32(x), i32(y)));
+        var insideCoord = texel.xy;
+        var outsideCoord = texel.zw;
+        var insideDist = 3.4028234663852886e+38f;
+        var outsideDist = 3.4028234663852886e+38f;
         if ((insideCoord.x >= 0f)) {
           insideDist = distance(pos, (insideCoord * vec2f(size)));
         }

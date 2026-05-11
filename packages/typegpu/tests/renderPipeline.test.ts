@@ -1327,7 +1327,7 @@ describe('root.createRenderPipeline', () => {
       - <root>
       - renderPipeline:pipeline
       - renderPipelineCore
-      - autoVertexFn: Invalid identifier '__myProp'. Choose an identifier without whitespaces or leading underscores.]
+      - autoVertexFn: Invalid property key '__myProp': Identifiers cannot start with double underscores.]
     `);
   });
 
@@ -1349,7 +1349,7 @@ describe('root.createRenderPipeline', () => {
       - <root>
       - renderPipeline:pipeline
       - renderPipelineCore
-      - autoVertexFn: Property key 'loop' is a reserved WGSL word. Choose a different name.]
+      - autoVertexFn: Invalid property key 'loop': Identifiers cannot start with reserved keywords.]
     `);
   });
 

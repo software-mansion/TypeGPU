@@ -362,45 +362,99 @@ export const builtins = new Set([
 /*#__NO_SIDE_EFFECTS__*/
 export function sanitizePrimer(primer: string | undefined) {
   if (primer) {
-    // sanitizing
-    return primer
+    const base = primer
       .replaceAll(/\s/g, '_') // whitespaces
       .replaceAll(/[^\w\d]/g, ''); // removing illegal characters
+
+    if (base === '_' || base === '' || base.startsWith('__')) {
+      return 'item';
+    }
+    return base;
   }
   return 'item';
 }
+
+type ValidationResult =
+  | {
+      success: true;
+      error?: undefined;
+    }
+  | {
+      success: false;
+      error?: string | undefined;
+    };
 
 /**
  * A function for checking whether an identifier needs renaming.
  * Throws if provided with an invalid identifier that cannot be easily renamed.
  * @example
- * isValidIdentifier("ident"); // true
- * isValidIdentifier("struct"); // false
- * isValidIdentifier("struct_1"); // false
- * isValidIdentifier("_"); // ERROR
- * isValidIdentifier("my variable"); // ERROR
+ * validateIdentifier("ident"); // { success: true }
+ * validateIdentifier("struct"); // { success: false, error: "Identifiers cannot start with reserved keywords." }
+ * validateIdentifier("struct_1"); { success: false, error: "Identifiers cannot start with reserved keywords." }
+ * validateIdentifier("_"); // { success: false }
+ * validateIdentifier("my variable"); // { success: false, error: "Identifiers cannot contain whitespace." }
  */
 /*#__NO_SIDE_EFFECTS__*/
-export function isValidIdentifier(ident: string): boolean {
-  if (ident === '_' || ident.startsWith('__') || /\s/.test(ident)) {
-    throw new Error(
-      `Invalid identifier '${ident}'. Choose an identifier without whitespaces or leading underscores.`,
-    );
+export function validateIdentifier(ident: string): ValidationResult {
+  if (ident === '_') {
+    return {
+      success: false,
+    };
+  }
+  if (/\s/.test(ident)) {
+    return {
+      success: false,
+      error: `Identifiers cannot contain whitespace.`,
+    };
+  }
+  if (ident.startsWith('__')) {
+    return {
+      success: false,
+      error: `Identifiers cannot start with double underscores.`,
+    };
   }
   const prefix = ident.split('_')[0] as string;
-  return !bannedTokens.has(prefix) && !builtins.has(prefix);
+  if (bannedTokens.has(prefix) || builtins.has(prefix)) {
+    return {
+      success: false,
+      error: `Identifiers cannot start with reserved keywords.`,
+    };
+  }
+  return {
+    success: true,
+  };
 }
 
 /**
- * Same as `isValidIdentifier`, except does not check for builtin clashes.
+ * Same as `validateIdentifier`, except does not check for builtin clashes.
  */
 /*#__NO_SIDE_EFFECTS__*/
-export function isValidProp(ident: string): boolean {
-  if (ident === '_' || ident.startsWith('__') || /\s/.test(ident)) {
-    throw new Error(
-      `Invalid identifier '${ident}'. Choose an identifier without whitespaces or leading underscores.`,
-    );
+export function validateProp(ident: string): ValidationResult {
+  if (ident === '_') {
+    return {
+      success: false,
+    };
+  }
+  if (/\s/.test(ident)) {
+    return {
+      success: false,
+      error: `Identifiers cannot contain whitespace.`,
+    };
+  }
+  if (ident.startsWith('__')) {
+    return {
+      success: false,
+      error: `Identifiers cannot start with double underscores.`,
+    };
   }
   const prefix = ident.split('_')[0] as string;
-  return !bannedTokens.has(prefix);
+  if (bannedTokens.has(prefix)) {
+    return {
+      success: false,
+      error: `Identifiers cannot start with reserved keywords.`,
+    };
+  }
+  return {
+    success: true,
+  };
 }

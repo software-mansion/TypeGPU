@@ -160,11 +160,22 @@ export function ExampleView({ example, common }: Props) {
                 ))}
               </div>
 
-              <div className="absolute right-0 z-5 md:top-15 md:right-8">
+              <div className="absolute right-0 z-5 md:top-15 md:right-8 md:hidden">
+                <Button onClick={() => openInStackBlitz(example, common)}>
+                  <span className="font-bold">Edit </span>
+                  <img
+                    src="/TypeGPU/stackblitz-logomark-blue.svg"
+                    alt="stackblitz logo"
+                    className="h-4"
+                  />
+                </Button>
+              </div>
+
+              <div className="absolute right-0 z-5 md:top-15 md:right-8 hidden md:block">
                 <Button onClick={() => openInStackBlitz(example, common)}>
                   <span className="font-bold">Edit on</span>
                   <img
-                    src="https://developer.stackblitz.com/img/logo/stackblitz-logo-black_blue.svg"
+                    src="/TypeGPU/stackblitz-logo-black_blue.svg"
                     alt="stackblitz logo"
                     className="h-4"
                   />
