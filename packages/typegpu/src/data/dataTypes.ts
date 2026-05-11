@@ -1,4 +1,4 @@
-import { setName, type TgpuNamable } from '../shared/meta.ts';
+import { type TgpuNamable } from '../shared/meta.ts';
 import { isMarkedInternal } from '../shared/symbols.ts';
 import type {
   Infer,
@@ -23,7 +23,6 @@ import type {
   $reprPatch,
   $validVertexSchema,
 } from '../shared/symbols.ts';
-import { $internal } from '../shared/symbols.ts';
 import type { Prettify } from '../shared/utilityTypes.ts';
 import { vertexFormats } from '../shared/vertexFormat.ts';
 import type { WgslExternalTexture, WgslStorageTexture, WgslTexture } from './texture.ts';
@@ -259,15 +258,5 @@ export class MatrixColumnsAccess {
 
   constructor(matrix: Snippet) {
     this.matrix = matrix;
-  }
-}
-
-export class ConsoleLog {
-  [$internal] = true;
-  readonly op: string;
-
-  constructor(op: string) {
-    this.op = op;
-    setName(this, 'consoleLog');
   }
 }

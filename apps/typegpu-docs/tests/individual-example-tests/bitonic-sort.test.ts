@@ -118,11 +118,11 @@ describe('bitonic sort example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
+      @group(0) @binding(0) var<storage, read> data_1: array<u32>;
+
       struct fragmentFn_Input {
         @location(0) uv: vec2f,
       }
-
-      @group(0) @binding(0) var<storage, read> data_1: array<u32>;
 
       @fragment fn fragmentFn(_arg_0: fragmentFn_Input) -> @location(0) vec4f {
         let data = (&data_1);

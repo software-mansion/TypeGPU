@@ -1,0 +1,314 @@
+---
+title: Resolve
+description: Resolve API can be used to extend shader code with WGSL definitions of TypeGPU-defined objects.
+---
+
+Defining shader schemas and objects in JS/TS has lots of benefits, but having to keep them in sync with the corresponding WGSL code is hard to maintain.
+The `tgpu.resolve` API takes in TypeGPU resources (and optionally a WGSL template) and generates a ready-to-use WGSL bundle containing all transitive dependencies of the passed in objects.
+
+:::note
+`tgpu.resolve` is essentially a dedicated TypeGPU linker.
+:::
+
+## Resolving resources
+
+The first `tgpu.resolve` overload takes in an array of items to resolve, and an optional argument with options. Here's a simple example:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+// ---cut---
+const Boid = d.struct({
+  size: d.f32,
+  color: d.vec4f,
+});
+
+const UnrelatedStruct = d.struct({ id: d.u32 });
+
+const createSmallBoid = tgpu.fn([], Boid)(() => {
+  return Boid({ size: 1, color: d.vec4f(0, 1, 0, 1) });
+});
+
+const createBigBoid = tgpu.fn([], Boid)(() => {
+  return Boid({ size: 10, color: d.vec4f(1, 0, 0, 1) });
+});
+
+const resolved = tgpu.resolve([createSmallBoid, createBigBoid]);
+```
+
+Resolved WGSL shader code is as follows:
+
+```wgsl
+struct Boid_1 {
+  size: f32,
+  color: vec4f,
+}
+
+fn createSmallBoid_0() -> Boid_1 {
+  return Boid_1(1f, vec4f(0, 1, 0, 1));
+}
+
+fn createBigBoid_2() -> Boid_1 {
+  return Boid_1(10f, vec4f(1, 0, 0, 1));
+}
+```
+
+As you may note, the resolved WGSL code contains exactly the set of definitions required for the objects passed in the argument to be valid.
+
+You can also resolve other resources, like consts, buffers, textures, entry point functions or even entire pipelines. Here's an example with a pipeline:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+// ---cut---
+const root = await tgpu.init();
+
+const dataMutable = root
+  .createMutable(d.arrayOf(d.u32, 8), [1, 2, 3, 4, 5, 6, 7, 8]);
+
+const computeMain = tgpu.computeFn({
+  workgroupSize: [1],
+  in: { gid: d.builtin.globalInvocationId },
+})((input) => {
+  const index = input.gid.x;
+  dataMutable.$[index] *= 2;
+});
+
+const multiplyPipeline = root.createComputePipeline({ compute: computeMain });
+
+const resolved = tgpu.resolve([multiplyPipeline]);
+```
+
+Resolved WGSL shader code is as follows:
+
+```wgsl
+@group(0) @binding(0) var<storage, read_write> dataMutable_1: array<u32, 8>;
+
+struct computeMain_Input_2 {
+  @builtin(global_invocation_id) gid: vec3u,
+}
+
+@compute @workgroup_size(1) fn computeMain_0(input: computeMain_Input_2) {
+  var index = input.gid.x;
+  dataMutable_1[index] *= 2u;
+}
+```
+
+:::note
+If you already are using TypeGPU pipelines, 
+the `.draw()` and `.dispatchWorkgroups()` methods perform the resolution and shader compilation under the hood, 
+eliminating the need for manual resolve calls.
+:::
+
+:::tip
+To resolve all items from a layout, you can use `tgpu.resolve([layout])`.
+:::
+
+
+## Resolving with a template
+
+The second `tgpu.resolve` overload has only one argument -- an object with options, that requires two extra props: `template` and `externals`.
+The goal of this overload is to extend the existing WGSL code provided as `template`, with additional definitions from `externals`.
+
+:::tip
+This variant of `tgpu.resolve` can often be omitted by using [WGSL-implemented functions](/TypeGPU/apis/functions/#implementing-functions-in-wgsl).
+Use it when you are already provided with existing WGSL code and want to extend it.
+:::
+
+Here's an example:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const timeUniform = root.createUniform(d.u32);
+const rangeUniform = root.createUniform(d.f32);
+const offsetConst = tgpu.const(d.f32, 7);
+
+const resolved = tgpu.resolve({
+  template: /* wgsl */ `
+fn calculateEffectStrength() -> f32 {
+  return sin(buffers.time) * buffers.range + offset;
+}`,
+  externals: {
+    offset: offsetConst,
+    buffers: {
+      time: timeUniform,
+      range: rangeUniform,
+    },
+  },
+});
+```
+
+Resolved WGSL shader code is as follows:
+
+```wgsl
+const offsetConst_0: f32 = 7f;
+@group(0) @binding(0) var<uniform> timeUniform_1: u32;
+@group(0) @binding(1) var<uniform> rangeUniform_2: f32;
+
+fn calculateEffectStrength() -> f32 {
+  return sin(timeUniform_1) * rangeUniform_2 + offsetConst_0;
+}
+```
+
+As you may note, in this case `tgpu.resolve` uses the structure of the `externals` property to detect that `buffers.time`, `buffers.range` and `offset` need to be replaced, and that their definitions should be included.
+
+Here is another example. Assume, that the bind group index `0` is already taken by some existing code:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+// ---cut---
+const LightSource = d.struct({
+  ambientColor: d.vec3f,
+  intensity: d.f32,
+}).$name('Source');
+// ^ giving the struct an explicit name (optional)
+
+const layout = tgpu
+  .bindGroupLayout({
+    lightSource: { uniform: LightSource },
+    sampling: { sampler: 'filtering' },
+    bgTexture: { externalTexture: d.textureExternal() },
+  })
+  .$idx(1);
+// ^ forces code-gen to assign `1` as the group index (optional)
+
+const rawShader = /* wgsl */ `
+<existing code>
+
+@fragment
+fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
+  var bgColor = textureSampleBaseClampToEdge(layout.$.bgTexture, layout.$.sampling, uv).rgb;
+
+  var newSource: LightSource;
+  newSource.ambientColor = (bgColor + layout.$.lightSource.ambientColor) * factor;
+  newSource.intensity = 0.6;
+
+  return vec4f(newSource.ambientColor, newSource.intensity);
+}
+`;
+
+const resolved = tgpu.resolve({
+  template: rawShader,
+  externals: {
+    LightSource,
+    factor: d.vec3f(0.4, 0.6, 1.0),
+    layout,
+  },
+});
+```
+
+Resolved WGSL shader code is as follows:
+
+```wgsl
+struct Source_0 {
+  ambientColor: vec3f,
+  intensity: f32,
+}
+
+@group(1) @binding(2) var bgTexture_1: texture_external;
+@group(1) @binding(1) var sampling_2: sampler;
+@group(1) @binding(0) var<uniform> lightSource_3: Source_0;
+
+<existing code>
+
+@fragment
+fn main(@location(0) uv: vec2f) -> @location(0) vec4f {
+  var bgColor = textureSampleBaseClampToEdge(bgTexture_1, sampling_2, uv).rgb;
+
+  var newSource: Source_0;
+  newSource.ambientColor = (bgColor + lightSource_3.ambientColor) * vec3f(0.4000000059604645, 0.6000000238418579, 1);
+  newSource.intensity = 0.6;
+
+  return vec4f(newSource.ambientColor, newSource.intensity);
+}
+```
+
+## Naming scheme
+
+When items are being resolved, they are given new unique names based on their name in code and the specified naming scheme (`names` parameter in options).
+
+The default naming scheme is `"random"`.
+It uses labels assigned to the objects via `.$name("foo")` method or, if they aren't present, the keys in the *externals* record.
+In this mode labels are later transformed to match the allowed identifier pattern, as well as include some unique suffix to ensure that no identifiers conflict with each other.
+
+Another allowed value of the parameter is `"strict"` which names resolved objects in the WGSL code exactly as they are labeled by the user in JS, unless there is a name conflict, in which case a suffix is added.
+If there is no `.$name` call, an object is named based on its associated key in *externals*.
+This approach makes all the generated identifiers predictable, but demands that all labels are valid identifiers
+and requires explicit naming (via `.$name`) of all objects that aren't immediate values in the *externals* record.
+
+:::note
+If you are using the [TypeGPU Build Plugin](/TypeGPU/tooling/unplugin-typegpu), then most TypeGPU resources will be auto-named for you.
+
+```ts
+// before unplugin-typegpu
+const myStruct = d.struct({ pos: d.vec3f });
+
+// after unplugin-typegpu
+const myStruct = d.struct({ pos: d.vec3f }).$name("myStruct");
+```
+
+This does not work for all resources.
+For example, a resource created in a function return statement will not be auto-named.
+:::
+
+## *resolveWithContext*
+
+Sometimes, it may not be clear which bind group layouts were used in a given resolution.
+This may occur especially when using:
+
+- Buffer usages/shorthands, which use a hidden, automatically created "catchall" bind group,
+- TypeGPU functions implemented in JavaScript/TypeScript, which generate their externals automatically.
+
+For these cases, you can use `tgpu.resolveWithContext`, which has the same input API as `tgpu.resolve`, but in addition to the resolved code, it also returns information about the layouts used. `tgpu.resolveWithContext` returns an object with 3 props:
+
+- `code` - the resolved code,
+- `usedBindGroupLayouts` - a list of used `tgpu.bindGroupLayout`,
+- `catchall` - a two-element array containing the bind group constructed for buffer usages and buffer shorthands, preceded by its index.
+
+An example, where the "catchall" bind group is created:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const countMutable = root.createMutable(d.u32);
+
+const { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
+  template: `
+    fn exampleFn() {
+      countMutable += 1;
+    }
+  `,
+  externals: { countMutable },
+});
+
+console.log(code); // same as tgpu.resolve(...)
+console.log(usedBindGroupLayouts); // an array containing the catchall bind group layout
+console.log(catchall?.[0]); // 0 - the group index of the catchall bind group
+console.log(catchall?.[1]); // the catchall bind group
+```
+
+An example, where a bind group layout is automatically included via a TypeScript function:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const myLayout = tgpu.bindGroupLayout({ count: { uniform: d.u32 } });
+
+function exampleFn() {
+  'use gpu';
+  myLayout.$.count += 1;
+}
+
+const { code, usedBindGroupLayouts, catchall } = tgpu.resolveWithContext({
+  externals: { exampleFn },
+});
+
+console.log(code); // same as tgpu.resolve(...)
+console.log(usedBindGroupLayouts); // [myLayout]
+console.log(catchall); // undefined
+```

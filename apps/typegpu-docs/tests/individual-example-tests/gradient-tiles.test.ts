@@ -32,11 +32,11 @@ describe('gradient tiles example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
+      @group(0) @binding(0) var<uniform> spanUniform: vec2f;
+
       struct fragment_Input {
         @location(0) uv: vec2f,
       }
-
-      @group(0) @binding(0) var<uniform> spanUniform: vec2f;
 
       @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
         let red = (floor((_arg_0.uv.x * spanUniform.x)) / spanUniform.x);

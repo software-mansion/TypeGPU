@@ -173,7 +173,7 @@ function createFn<ImplSchema extends AnyFn>(
     implementation = _implementation;
   }
 
-  const core = createFnCore(implementation as Implementation, '');
+  const core = createFnCore(implementation as Implementation, 'normal');
 
   const fnBase = {
     shell,

@@ -74,6 +74,9 @@ export default defineConfig({
           navigation: 'none',
         }),
         starlightTypeDoc({
+          sidebar: {
+            label: 'Reference',
+          },
           entryPoints: [
             '../../packages/typegpu/src/index.d.ts',
             '../../packages/typegpu/src/data/index.ts',
@@ -117,104 +120,98 @@ export default defineConfig({
           label: 'Fundamentals',
           items: stripFalsy([
             {
+              label: 'Your first GPU program',
+              slug: 'fundamentals/your-first-gpu-program',
+              badge: { text: 'new' },
+            },
+            {
+              label: 'Vertices and fragments',
+              slug: 'fundamentals/vertices-and-fragments',
+              badge: { text: 'new' },
+            },
+          ]),
+        },
+        {
+          label: 'APIs',
+          items: stripFalsy([
+            {
               label: 'Roots',
-              slug: 'fundamentals/roots',
+              slug: 'apis/roots',
             },
             {
               label: 'Functions',
-              slug: 'fundamentals/functions',
+              slug: 'apis/functions',
             },
             {
               label: 'Pipelines',
-              slug: 'fundamentals/pipelines',
+              slug: 'apis/pipelines',
               badge: { text: 'new' },
             },
             {
               label: 'Buffers',
-              slug: 'fundamentals/buffers',
+              slug: 'apis/buffers',
             },
             {
               label: 'Textures',
-              slug: 'fundamentals/textures',
+              slug: 'apis/textures',
               badge: { text: 'new' },
             },
             {
               label: 'Variables',
-              slug: 'fundamentals/variables',
+              slug: 'apis/variables',
             },
             {
               label: 'Data Schemas',
-              slug: 'fundamentals/data-schemas',
+              slug: 'apis/data-schemas',
             },
             {
               label: 'Bind Groups',
-              slug: 'fundamentals/bind-groups',
+              slug: 'apis/bind-groups',
             },
             {
               label: 'Resolve',
-              slug: 'fundamentals/resolve',
+              slug: 'apis/resolve',
             },
             {
               label: 'Vertex Layouts',
-              slug: 'fundamentals/vertex-layouts',
+              slug: 'apis/vertex-layouts',
             },
-            {
-              label: 'Enabling Features',
-              slug: 'fundamentals/enabling-features',
-            },
-            {
-              label: 'Timing Your Pipelines',
-              slug: 'fundamentals/timestamp-queries',
-            },
+
             {
               label: 'Slots',
-              slug: 'fundamentals/slots',
+              slug: 'apis/slots',
             },
             {
               label: 'Accessors',
-              slug: 'fundamentals/accessors',
+              slug: 'apis/accessors',
             },
             {
               label: 'Utilities',
-              slug: 'fundamentals/utils',
+              slug: 'apis/utils',
               badge: { text: 'new' },
             },
-            // {
-            //   label: 'Basic Principles',
-            //   slug: 'guides/basic-principles',
-            // },
-            // {
-            //   label: 'State Management',
-            //   slug: 'guides/state-management',
-            // },
-            // {
-            //   label: 'Parametrized Functions',
-            //   slug: 'guides/parametrized-functions',
-            // },
           ]),
         },
         {
-          label: 'Ecosystem',
+          label: 'Advanced',
           items: stripFalsy([
             {
-              label: '@typegpu/noise',
-              slug: 'ecosystem/typegpu-noise',
+              label: 'Enabling Features',
+              slug: 'advanced/enabling-features',
             },
             {
-              label: '@typegpu/three',
-              slug: 'ecosystem/typegpu-three',
-            },
-            {
-              label: '@typegpu/sdf',
-              slug: 'ecosystem/typegpu-sdf',
+              label: 'Timing Your Pipelines',
+              slug: 'advanced/timestamp-queries',
             },
             DEV && {
-              label: '@typegpu/color',
-              slug: 'ecosystem/typegpu-color',
+              label: 'Naming Convention',
+              slug: 'advanced/naming-convention',
+              badge: { text: 'dev', variant: 'note' },
             },
             DEV && {
-              label: 'Third-party',
-              slug: 'ecosystem/third-party',
+              label: 'Shader Generation',
+              slug: 'advanced/shader-generation',
+              badge: { text: 'dev', variant: 'note' },
             },
           ]),
         },
@@ -240,6 +237,56 @@ export default defineConfig({
           ]),
         },
         {
+          label: 'Ecosystem',
+          items: stripFalsy([
+            {
+              label: '@typegpu/noise',
+              slug: 'ecosystem/typegpu-noise',
+            },
+            {
+              label: '@typegpu/three',
+              slug: 'ecosystem/typegpu-three',
+            },
+            {
+              label: '@typegpu/react',
+              slug: 'ecosystem/typegpu-react',
+            },
+            {
+              label: '@typegpu/sdf',
+              slug: 'ecosystem/typegpu-sdf',
+            },
+            {
+              label: '@typegpu/radiance-cascades',
+              slug: 'ecosystem/typegpu-radiance-cascades',
+            },
+            DEV && {
+              label: '@typegpu/color',
+              slug: 'ecosystem/typegpu-color',
+              badge: { text: 'dev', variant: 'note' },
+            },
+            DEV && {
+              label: 'Third-party',
+              slug: 'ecosystem/third-party',
+              badge: { text: 'dev', variant: 'note' },
+            },
+          ]),
+        },
+        DEV && {
+          label: 'Tutorials',
+          items: [
+            {
+              label: 'From a Triangle to Simulating Boids: Step-by-step Tutorial',
+              slug: 'tutorials/triangle-to-boids',
+              badge: { text: 'dev', variant: 'note' },
+            },
+            {
+              label: 'Game of life tutorial',
+              slug: 'tutorials/game-of-life',
+              badge: { text: 'dev', variant: 'note' },
+            },
+          ],
+        },
+        {
           label: 'Tooling',
           items: stripFalsy([
             {
@@ -257,33 +304,7 @@ export default defineConfig({
             },
           ]),
         },
-        DEV && {
-          label: 'Tutorials',
-          items: [
-            {
-              label: 'From a Triangle to Simulating Boids: Step-by-step Tutorial',
-              slug: 'tutorials/triangle-to-boids',
-            },
-            {
-              label: 'Game of life tutorial',
-              slug: 'tutorials/game-of-life',
-            },
-          ],
-        },
-        {
-          label: 'Reference',
-          items: stripFalsy([
-            DEV && {
-              label: 'Naming Convention',
-              slug: 'reference/naming-convention',
-            },
-            DEV && {
-              label: 'Shader Generation',
-              slug: 'reference/shader-generation',
-            },
-            typeDocSidebarGroup,
-          ]),
-        },
+        typeDocSidebarGroup,
       ]),
     }),
     react(),

@@ -257,13 +257,13 @@ describe('cubemap reflection example', () => {
         return cubeVertexFn_Output((camera.projection * vec4f(viewPos, 1f)), _arg_position.xyz);
       }
 
-      struct cubeFragmentFn_Input {
-        @location(0) texCoord: vec3f,
-      }
-
       @group(1) @binding(0) var cubemap: texture_cube<f32>;
 
       @group(1) @binding(1) var texSampler: sampler;
+
+      struct cubeFragmentFn_Input {
+        @location(0) texCoord: vec3f,
+      }
 
       @fragment fn cubeFragmentFn(_arg_0: cubeFragmentFn_Input) -> @location(0) vec4f {
         return textureSample(cubemap, texSampler, normalize(_arg_0.texCoord));
@@ -287,11 +287,6 @@ describe('cubemap reflection example', () => {
         return vertexFn_Output((camera.projection * (camera.view * _arg_position)), _arg_normal, _arg_position);
       }
 
-      struct fragmentFn_Input {
-        @location(0) normal: vec4f,
-        @location(1) worldPos: vec4f,
-      }
-
       struct DirectionalLight {
         direction: vec3f,
         color: vec3f,
@@ -313,6 +308,11 @@ describe('cubemap reflection example', () => {
       @group(1) @binding(0) var cubemap: texture_cube<f32>;
 
       @group(1) @binding(1) var texSampler: sampler;
+
+      struct fragmentFn_Input {
+        @location(0) normal: vec4f,
+        @location(1) worldPos: vec4f,
+      }
 
       @fragment fn fragmentFn(_arg_0: fragmentFn_Input) -> @location(0) vec4f {
         var normalizedNormal = normalize(_arg_0.normal.xyz);
