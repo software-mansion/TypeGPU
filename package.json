@@ -76,7 +76,8 @@
       "@types/node": "catalog:types",
       "typescript": "catalog:types",
       "three": "catalog:example",
-      "@typescript-eslint/utils": "^8.57.2"
+      "@typescript-eslint/utils": "^8.57.2",
+      "protobufjs": "7.5.5"
     }
   }
 }
