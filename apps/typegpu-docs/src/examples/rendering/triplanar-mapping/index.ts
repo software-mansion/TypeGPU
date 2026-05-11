@@ -2,11 +2,11 @@ import tgpu, { d, std } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import { loadModel } from './load-model.ts';
+import { createSplitComparison } from './split-comparison.ts';
 import {
   DEFAULT_MATERIAL,
   INITIAL_PARAMS,
   MATERIAL_IDS,
-  MAPPING_MODES,
   TriplanarParams,
   VertexOutput,
   VIEW_MODES,
@@ -92,12 +92,13 @@ function applyMaterialImages(images: MaterialImages) {
   closeImages(images);
 }
 
+let disposed = false;
 let materialLoadRequestId = 0;
 async function setMaterial(material: MaterialId) {
   const requestId = ++materialLoadRequestId;
   const images = await loadMaterialImages(material);
 
-  if (requestId !== materialLoadRequestId) {
+  if (disposed || requestId !== materialLoadRequestId) {
     closeImages(images);
     return;
   }
@@ -140,6 +141,14 @@ const { cleanupCamera } = setupOrbitCamera(
   (updates) => cameraUniform.patch(updates),
 );
 
+const splitComparison = createSplitComparison(canvas, {
+  leftLabel: 'Triplanar Mapping',
+  rightLabel: 'Mesh UVs',
+  onChange(ratio) {
+    paramsUniform.patch({ splitX: canvas.width * ratio });
+  },
+});
+
 function triplanarWeights(n: d.v3f, sharpness: number) {
   'use gpu';
   const w = std.pow(std.abs(n), d.vec3f(sharpness));
@@ -178,17 +187,29 @@ function sampleNormal(uv: d.v2f) {
   return std.normalize(d.vec3f(decoded.x, -decoded.y, decoded.z));
 }
 
-function triplanarNormal(n: d.v3f, weights: d.v3f, uvX: d.v2f, uvY: d.v2f, uvZ: d.v2f) {
+function triplanarNormal(
+  n: d.v3f,
+  weights: d.v3f,
+  uvX: d.v2f,
+  uvY: d.v2f,
+  uvZ: d.v2f,
+  ratio: number,
+) {
   'use gpu';
   const tx = sampleNormal(uvX);
   const ty = sampleNormal(uvY);
   const tz = sampleNormal(uvZ);
 
-  const nx = std.normalize(d.vec3f(tx.z * axisSign(n.x), tx.y, tx.x));
-  const ny = std.normalize(d.vec3f(ty.x, ty.z * axisSign(n.y), ty.y));
-  const nz = std.normalize(d.vec3f(tz.x, tz.y, tz.z * axisSign(n.z)));
+  const baseX = d.vec3f(axisSign(n.x), 0, 0);
+  const baseY = d.vec3f(0, axisSign(n.y), 0);
+  const baseZ = d.vec3f(0, 0, axisSign(n.z));
 
-  return std.normalize(nx * weights.x + ny * weights.y + nz * weights.z);
+  const nx = std.normalize(d.vec3f(tx.z * baseX.x, tx.y, tx.x));
+  const ny = std.normalize(d.vec3f(ty.x, ty.z * baseY.y, ty.y));
+  const nz = std.normalize(d.vec3f(tz.x, tz.y, tz.z * baseZ.z));
+
+  const detail = (nx - baseX) * weights.x + (ny - baseY) * weights.y + (nz - baseZ) * weights.z;
+  return std.normalize(std.mix(n, std.normalize(n + detail), ratio));
 }
 
 function meshUvNormal(uv: d.v2f, worldNormal: d.v3f, worldTangent: d.v4f, ratio: number) {
@@ -284,7 +305,7 @@ const fragmentShader = tgpu.fragmentFn({
     sampleMetallic(uvY) * weights.y +
     sampleMetallic(uvZ) * weights.z;
 
-  const triNormal = triplanarNormal(meshNormal, weights, uvX, uvY, uvZ);
+  const triNormal = triplanarNormal(meshNormal, weights, uvX, uvY, uvZ, params.materialNormalRatio);
   const meshUv = d.vec2f(input.uv.x, 1 - input.uv.y) * params.uvScale;
   const meshAlbedo = sampleAlbedo(meshUv);
   const meshAo = sampleAo(meshUv);
@@ -298,14 +319,12 @@ const fragmentShader = tgpu.fragmentFn({
   );
 
   let albedo = d.vec3f(triAlbedo);
-  let normal = std.normalize(std.mix(meshNormal, triNormal, params.materialNormalRatio));
+  let normal = d.vec3f(triNormal);
   let ao = triAo;
   let roughness = triRoughness;
   let metallic = triMetallic;
 
-  const showMeshUvs =
-    params.mappingMode === 1 ||
-    (params.mappingMode === 2 && input.clipPosition.x > params.viewportSize.x * 0.5);
+  const showMeshUvs = input.clipPosition.x > params.splitX;
   if (showMeshUvs) {
     albedo = d.vec3f(meshAlbedo);
     normal = d.vec3f(meshMappedNormal);
@@ -361,7 +380,7 @@ const pipeline = root
   .with(materialBindGroup);
 
 function createDepthTexture() {
-  paramsUniform.patch({ viewportSize: [canvas.width, canvas.height] });
+  splitComparison.sync();
   return root
     .createTexture({
       size: [canvas.width, canvas.height],
@@ -396,13 +415,6 @@ export const controls = defineControls({
     options: MATERIAL_IDS,
     onSelectChange(material) {
       void setMaterial(material);
-    },
-  },
-  mapping: {
-    initial: 'triplanar',
-    options: MAPPING_MODES,
-    onSelectChange(mode) {
-      paramsUniform.patch({ mappingMode: MAPPING_MODES.indexOf(mode) });
     },
   },
   view: {
@@ -457,9 +469,11 @@ const resizeObserver = new ResizeObserver(() => {
 resizeObserver.observe(canvas);
 
 export function onCleanup() {
+  disposed = true;
   cancelAnimationFrame(frameId);
   cleanupCamera();
   resizeObserver.disconnect();
+  splitComparison.destroy();
   root.destroy();
 }
 

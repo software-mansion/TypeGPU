@@ -22,9 +22,8 @@ export const TriplanarParams = d.struct({
   uvScale: d.f32,
   sharpness: d.f32,
   materialNormalRatio: d.f32,
+  splitX: d.f32,
   debugMode: d.u32,
-  mappingMode: d.u32,
-  viewportSize: d.vec2f,
   lightDir: d.vec3f,
 });
 
@@ -37,8 +36,6 @@ export const VIEW_MODES = [
   'Z projection',
   'normal',
 ] as const;
-
-export const MAPPING_MODES = ['triplanar', 'mesh UVs', 'split compare'] as const;
 
 export const MATERIAL_IDS = [
   'rocks',
@@ -58,8 +55,7 @@ export const INITIAL_PARAMS: d.InferInput<typeof TriplanarParams> = {
   uvScale: 5,
   sharpness: 8,
   materialNormalRatio: 0.7,
+  splitX: 0.5,
   debugMode: 0,
-  mappingMode: 0,
-  viewportSize: [1, 1],
   lightDir: [-0.4, 0.2, -0.35],
 };
