@@ -9,6 +9,7 @@ describe('noUselessPathSegments', () => {
   ruleTester.run('noUselessPathSegments', noUselessPathSegments, {
     valid: [
       { code: "import item from './file.ts';", filename },
+      { code: 'import item from "./file.ts";', filename },
       { code: "import item from '../file.ts';", filename },
       { code: "import item from '../../file.ts';", filename },
       { code: "import item from '../folder/file.ts';", filename },
