@@ -800,7 +800,9 @@ describe('TgpuBuffer', () => {
   }) => {
     const buffer = root.createBuffer(d.arrayOf(d.u16, 32));
 
-    expectTypeOf(buffer.write).parameter(0).toEqualTypeOf<number[] | Uint16Array | ArrayBuffer>();
+    expectTypeOf(buffer.write)
+      .parameter(0)
+      .toEqualTypeOf<number[] | readonly number[] | Uint16Array | ArrayBuffer>();
   });
 
   it('should write an arrayOf(u16) buffer from a Uint16Array', ({ root, device }) => {
@@ -821,9 +823,11 @@ describe('TgpuBuffer', () => {
 
     expectTypeOf(u32Buffer.write)
       .parameter(0)
-      .toEqualTypeOf<number[] | Uint32Array | ArrayBuffer>();
+      .toEqualTypeOf<number[] | readonly number[] | Uint32Array | ArrayBuffer>();
 
-    expectTypeOf(i32Buffer.write).parameter(0).toEqualTypeOf<number[] | Int32Array | ArrayBuffer>();
+    expectTypeOf(i32Buffer.write)
+      .parameter(0)
+      .toEqualTypeOf<number[] | readonly number[] | Int32Array | ArrayBuffer>();
   });
 
   it('should fast-path typed views when writing to arrays of atomics', ({ root, device }) => {
@@ -886,29 +890,32 @@ describe('TgpuBuffer (InferInput)', () => {
 
     expectTypeOf(vec3fBuf.write)
       .parameter(0)
-      .toEqualTypeOf<d.v3f | [number, number, number] | Float32Array | ArrayBuffer>();
+      .toEqualTypeOf<d.v3f | readonly [number, number, number] | Float32Array | ArrayBuffer>();
 
     expectTypeOf(vec2iBuf.write)
       .parameter(0)
-      .toEqualTypeOf<d.v2i | [number, number] | Int32Array | ArrayBuffer>();
+      .toEqualTypeOf<d.v2i | readonly [number, number] | Int32Array | ArrayBuffer>();
 
     expectTypeOf(mat3x3fBuf.write)
       .parameter(0)
-      .toEqualTypeOf<d.m3x3f | number[] | Float32Array | ArrayBuffer>();
+      .toEqualTypeOf<d.m3x3f | readonly number[] | Float32Array | ArrayBuffer>();
 
     expectTypeOf(mat4x4fBuf.write)
       .parameter(0)
-      .toEqualTypeOf<d.m4x4f | number[] | Float32Array | ArrayBuffer>();
+      .toEqualTypeOf<d.m4x4f | readonly number[] | Float32Array | ArrayBuffer>();
 
     expectTypeOf(arrBuf.write)
       .parameter(0)
       .toEqualTypeOf<
-        (d.v3f | [number, number, number] | Float32Array)[] | Float32Array | ArrayBuffer | d.v3f[]
+        | readonly (d.v3f | readonly [number, number, number] | Float32Array)[]
+        | Float32Array
+        | ArrayBuffer
+        | d.v3f[]
       >();
 
     expectTypeOf(scalarArrBuf.write)
       .parameter(0)
-      .toEqualTypeOf<number[] | Float32Array | ArrayBuffer>();
+      .toEqualTypeOf<number[] | readonly number[] | Float32Array | ArrayBuffer>();
   });
 
   it('should write a vec3f from a plain tuple', ({ root, device }) => {
@@ -1054,11 +1061,11 @@ describe('TgpuBuffer (.patch() with flexible inputs)', () => {
     );
 
     expectTypeOf<InferPatch<d.Vec3f>>().toEqualTypeOf<
-      d.v3f | [number, number, number] | Float32Array | undefined
+      d.v3f | readonly [number, number, number] | Float32Array | undefined
     >();
 
     expectTypeOf<InferPatch<d.Mat3x3f>>().toEqualTypeOf<
-      d.m3x3f | number[] | Float32Array | undefined
+      d.m3x3f | readonly number[] | Float32Array | undefined
     >();
 
     // Struct patch should accept flexible types for fields
