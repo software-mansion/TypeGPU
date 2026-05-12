@@ -58,18 +58,16 @@ describe('generationHelpers', () => {
     });
 
     it('should return struct property types', () => {
-      const target = snip('foo', MyStruct, 'function');
-      expect(accessProp(target, 'foo')).toStrictEqual(snip('foo.foo', f32, /* origin */ 'runtime'));
-      expect(accessProp(target, 'bar')).toStrictEqual(
-        snip('foo.bar', vec3f, /* origin */ 'function'),
-      );
+      const target = snip('foo', MyStruct, 'local');
+      expect(accessProp(target, 'foo')).toStrictEqual(snip('foo.foo', f32, /* origin */ 'local'));
+      expect(accessProp(target, 'bar')).toStrictEqual(snip('foo.bar', vec3f, /* origin */ 'local'));
       expect(accessProp(target, 'notfound')).toStrictEqual(undefined);
     });
 
     it('should return swizzle types on vectors', () => {
-      const target = snip('foo', vec4f, 'function');
+      const target = snip('foo', vec4f, 'local');
 
-      expect(accessProp(target, 'x')).toStrictEqual(snip('foo.x', f32, /* origin */ 'runtime'));
+      expect(accessProp(target, 'x')).toStrictEqual(snip('foo.x', f32, /* origin */ 'local'));
       expect(accessProp(target, 'yz')).toStrictEqual(snip('foo.yz', vec2f, /* origin */ 'runtime'));
       expect(accessProp(target, 'xyzw')).toStrictEqual(
         snip('foo.xyzw', vec4f, /* origin */ 'runtime'),

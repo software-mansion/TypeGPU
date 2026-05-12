@@ -1482,7 +1482,7 @@ describe('wgslGenerator', () => {
         // unrolled iteration #0
         {
           const y = 100;
-          const x = y;
+          let x = y;
           return x;
         }
       }"
@@ -1872,7 +1872,7 @@ describe('wgslGenerator', () => {
     expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:testFn: 'u = v' is invalid, because argument references cannot be assigned.
+      - fn:testFn: 'u = v' is invalid, because references cannot be assigned.
       -----
       Try 'u = vec3u(v)' to copy the value instead.
       -----]
