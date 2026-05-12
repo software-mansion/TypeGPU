@@ -1,0 +1,32 @@
+{
+  "name": "typegpu-vite-vanilla-template",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "check": "oxlint && oxfmt --check",
+    "fix": "oxlint --fix && oxfmt"
+  },
+  "dependencies": {
+    "typegpu": "^0.10.2"
+  },
+  "devDependencies": {
+    "eslint-plugin-typegpu": "^0.10.0",
+    "oxfmt": "^0.45.0",
+    "oxlint": "^1.60.0",
+    "typescript": "npm:tsover@6.0.0",
+    "unplugin-typegpu": "^0.10.2",
+    "vite": "^8.0.4"
+  },
+  "overrides": {
+    "typescript": "npm:tsover@6.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "typescript": "npm:tsover@6.0.0"
+    }
+  }
+}
