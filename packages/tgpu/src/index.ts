@@ -2,6 +2,7 @@
 
 import mri from 'mri';
 import { enhanceProject } from './enhance.ts';
+import { createProject } from './create.ts';
 
 const helpMessage = `\
 Usage: tgpu [OPTION]...
@@ -12,7 +13,6 @@ Options:
   -e, --enhance           enhance an existing TypeGPU project
 `;
 
-// real script starts here
 const argv = mri<{ enhance?: boolean; help?: boolean }>(process.argv.slice(2), {
   alias: { e: 'enhance', h: 'help' },
   boolean: ['enhance', 'help'],
@@ -28,4 +28,5 @@ const cwd = process.cwd();
 if (argv.enhance) {
   await enhanceProject(cwd);
 } else {
+  await createProject(cwd);
 }

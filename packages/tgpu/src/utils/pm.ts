@@ -4,6 +4,24 @@ import { resolveCommand } from '@antfu/ni';
 import type { Agent } from 'package-manager-detector';
 import { failAndExit } from './prompts.ts';
 
+function parseUserAgent(userAgent: string | undefined): string | undefined {
+  if (!userAgent) return undefined;
+  const pkgSpec = userAgent.split(' ')[0];
+  if (!pkgSpec) return undefined;
+  const pkgSpecArr = pkgSpec.split('/');
+  if (!pkgSpecArr[0] || !pkgSpecArr[1]) return undefined;
+
+  return pkgSpecArr[0];
+}
+
+export function pmFromUserAgent(userAgent: string | undefined): Agent {
+  const pm = parseUserAgent(userAgent);
+  if (pm === undefined) {
+    failAndExit(`Cannot determine package manager from user agent env.`);
+  }
+  return pm as unknown as Agent;
+}
+
 function runCommand(command: string, args: string[], interactive?: boolean) {
   const { status, error } = spawn.sync(command, args, {
     stdio: interactive ? 'inherit' : ['inherit', 'ignore', 'inherit'],

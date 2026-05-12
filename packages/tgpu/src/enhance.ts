@@ -65,5 +65,5 @@ export async function enhanceProject(cwd: string) {
     pmInstall(pm.agent);
   }
 
-  p.outro('Get ready for a shaderful experience.');
+  p.outro('Done! Get ready for a shaderful experience.');
 }
