@@ -1191,47 +1191,108 @@ describe('replaces function statements marked with "use gpu" in place when condi
 
 test('hoists exported marked function statements', async () => {
   const code = `\
+    import { d } from 'typegpu';
+
     console.log(add);
     console.log(mul);
 
     /** ADD */
     export function add(a, b) {
       'use gpu';
-      return a + b;
+      return d.u32(a + b);
     }
 
     /** MUL */
     export function mul(a, b) {
       'use gpu';
-      return a * b;
+      return d.u32(a * b);
     }
-
   `;
 
+  expect(babelTransform(code)).toMatchInlineSnapshot(`
+    "const mul = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function mul(a, b) {
+      'use gpu';
+
+      return d.u32(__tsover_mul(a, b));
+    }, {
+      v: 1,
+      name: "mul",
+      ast: {
+        params: [{
+          type: "i",
+          name: "a"
+        }, {
+          type: "i",
+          name: "b"
+        }],
+        body: [0, [[10, [6, [7, "d", "u32"], [[1, "a", "*", "b"]]]]]],
+        externalNames: ["d"]
+      },
+      externals: () => {
+        return {
+          d
+        };
+      }
+    }) && $.f)({});
+    const add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
+      'use gpu';
+
+      return d.u32(__tsover_add(a, b));
+    }, {
+      v: 1,
+      name: "add",
+      ast: {
+        params: [{
+          type: "i",
+          name: "a"
+        }, {
+          type: "i",
+          name: "b"
+        }],
+        body: [0, [[10, [6, [7, "d", "u32"], [[1, "a", "+", "b"]]]]]],
+        externalNames: ["d"]
+      },
+      externals: () => {
+        return {
+          d
+        };
+      }
+    }) && $.f)({});
+    import { d } from 'typegpu';
+    console.log(add);
+    console.log(mul);
+
+    /** ADD */
+
+    /** MUL */"
+  `);
+
   expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-    "/** MUL */
+    "import { d } from 'typegpu';
+
+    /** MUL */
     const mul = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function mul(a, b) {
           'use gpu';
-          return __tsover_mul(a, b);
+          return d.u32(__tsover_mul(a, b));
         }), {
         v: 1,
         name: "mul",
-        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]],"externalNames":[]},
-        externals: () => ({}),
+        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[6,[7,"d","u32"],[[1,"a","*","b"]]]]]],"externalNames":["d"]},
+        externals: () => ({d}),
       }) && $.f)({}));
 
     /** ADD */
     const add = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (function add(a, b) {
           'use gpu';
-          return __tsover_add(a, b);
+          return d.u32(__tsover_add(a, b));
         }), {
         v: 1,
         name: "add",
-        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-        externals: () => ({}),
+        ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[6,[7,"d","u32"],[[1,"a","+","b"]]]]]],"externalNames":["d"]},
+        externals: () => ({d}),
       }) && $.f)({}));
 
-    console.log(add);
+        console.log(add);
         console.log(mul);
 
     export { add, mul };
