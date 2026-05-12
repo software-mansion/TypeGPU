@@ -57,21 +57,3 @@ export function pmRun(pm: Agent, args: string[] = []) {
   runCommand(cmd.command, cmd.args, true);
   process.exit(0);
 }
-
-export async function pmExec(pm: Agent, bin: string, args: string[] = [], interactive: boolean) {
-  const cmd = resolveCommand(pm, 'execute-local', [bin, ...args]);
-  if (!cmd) {
-    failAndExit(`Cannot resolve exec command for ${pm}.`);
-  }
-
-  const label = `${cmd.command}${cmd.args.length ? ` ${cmd.args.join(' ')}` : ''}`;
-  if (interactive) {
-    runCommand(cmd.command, cmd.args, true);
-    return;
-  }
-
-  const s = p.spinner();
-  s.start(`Running \`${label}\`.`);
-  runCommand(cmd.command, cmd.args);
-  s.stop(`\`${label}\` done.`);
-}
