@@ -470,7 +470,7 @@ ${this.ctx.pre}}`;
 
     if (expression[0] === NODE.postUpdate) {
       throw new Error(
-        `${stringifyNode(expression)} is invalid because update is only allowed as a statement.`,
+        `'${stringifyNode(expression)}' is invalid because update is only allowed as a statement.`,
       );
     }
 
