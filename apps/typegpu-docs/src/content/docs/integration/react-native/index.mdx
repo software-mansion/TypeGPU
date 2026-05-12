@@ -108,7 +108,7 @@ that you can use in your app:
 import { useEffect } from 'react';
 import { Canvas } from 'react-native-wgpu';
 import tgpu, { d } from 'typegpu';
-import { useRoot, useConfigureContext } from '@typegpu/react';
+import { useRoot, useFrame, useConfigureContext } from '@typegpu/react';
 
 const positions = tgpu.const(d.arrayOf(d.vec2f), [
   d.vec2f(0.0, 0.5),
@@ -137,13 +137,14 @@ export function Triangle() {
   const { ref, ctxRef } = useConfigureContext({ alphaMode: 'premultiplied' });
 
   useFrame(() => {
-    if (!ctxRef.current) return;
+    const ctx = ctxRef.current;
+    if (!ctx) return;
       
-    pipeline.withColorAttachment({ view: context }).draw(3);
+    pipeline.withColorAttachment({ view: ctx }).draw(3);
 
     // A react-native-wgpu requirement for flushing the rendered effect
-    context.present();
-  }, [root, device, context, presentationFormat]);
+    ctx.present?.();
+  });
 
   return <Canvas ref={ref} style={{ aspectRatio: 1 }} transparent />;
 }
