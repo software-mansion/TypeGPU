@@ -233,41 +233,23 @@ describe('std.copy', () => {
       `);
     });
 
-    it('produces a mutable result', () => {
+    it('produces a mutable result for const', () => {
+      const v = tgpu.const(d.vec2u, d.vec2u(1, 2));
+
       const fn = () => {
         'use gpu';
-        const a = d.vec2u(1, 2);
-        const b = std.copy(a);
-        b.x = 3;
+        const a = std.copy(v.$);
+        a.x = 3;
       };
 
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "fn fn_1() {
-          var a = vec2u(1, 2);
-          var b = a;
-          b.x = 3u;
+        "const v: vec2u = vec2u(1, 2);
+
+        fn fn_1() {
+          var a = v;
+          a.x = 3u;
         }"
       `);
-    });
-
-    it('is not allowed on LHS of assignment', () => {
-      const fn = () => {
-        'use gpu';
-        const a = d.vec2u(1, 2);
-        std.copy(a).x = 2;
-      };
-
-      expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
-    });
-
-    it('cannot be used to copy d.ref', () => {
-      const fn = () => {
-        'use gpu';
-        const a = d.vec2u(1, 2);
-        std.copy(d.ref(a));
-      };
-
-      expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
     });
 
     it('cannot be used in d.ref', () => {
