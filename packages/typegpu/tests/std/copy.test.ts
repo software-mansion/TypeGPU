@@ -4,6 +4,11 @@ import tgpu, { d, std } from '../../src/index.js';
 
 describe('std.copy', () => {
   describe('on the CPU', () => {
+    it('copies booleans', () => {
+      expect(std.copy(true)).toBe(true);
+      expect(std.copy(false)).toBe(false);
+    });
+
     it('copies numerics', () => {
       expect(std.copy(1)).toBe(1);
       expect(std.copy(1.5)).toBe(1.5);
@@ -41,6 +46,28 @@ describe('std.copy', () => {
 
       expect(copy).toStrictEqual(arr);
       expect(copy).not.toBe(arr);
+    });
+
+    it('deeply copies nested structs', () => {
+      const Inner = d.struct({ pos: d.vec2u });
+      const Outer = d.struct({ inner: Inner });
+      const struct = Outer({ inner: Inner({ pos: d.vec2u(1, 2) }) });
+      const copy = std.copy(struct);
+
+      expect(copy).toStrictEqual(struct);
+      expect(copy).not.toBe(struct);
+      expect(copy.inner).not.toBe(struct.inner);
+      expect(copy.inner.pos).not.toBe(struct.inner.pos);
+    });
+
+    it('deeply copies nested arrays', () => {
+      const arr = [[d.vec2u(1, 2)]] as const;
+      const copy = std.copy(arr);
+
+      expect(copy).toStrictEqual(arr);
+      expect(copy).not.toBe(arr);
+      expect(copy[0]).not.toBe(arr[0]);
+      expect(copy[0][0]).not.toBe(arr[0][0]);
     });
   });
 
@@ -126,16 +153,6 @@ describe('std.copy', () => {
       `);
     });
 
-    it('is not allowed on LHS of assignment', () => {
-      const fn = () => {
-        'use gpu';
-        const a = d.vec2u(1, 2);
-        std.copy(a).x = 2;
-      };
-
-      expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
-    });
-
     it('can be used to copy a buffer', ({ root }) => {
       const uniform = root.createUniform(d.vec2u, [1, 2]);
 
@@ -151,6 +168,96 @@ describe('std.copy', () => {
           var v = uniform_1;
         }"
       `);
+    });
+
+    it('works for nested structs', () => {
+      const Inner = d.struct({ pos: d.vec2u });
+      const Outer = d.struct({ inner: Inner, count: d.u32 });
+
+      const fn = () => {
+        'use gpu';
+        const struct = Outer({ inner: Inner({ pos: d.vec2u(1, 2) }), count: 3 });
+        const copy = std.copy(struct);
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "struct Inner {
+          pos: vec2u,
+        }
+
+        struct Outer {
+          inner: Inner,
+          count: u32,
+        }
+
+        fn fn_1() {
+          var struct_1 = Outer(Inner(vec2u(1, 2)), 3u);
+          var copy = struct_1;
+        }"
+      `);
+    });
+
+    it('works for struct prop access', () => {
+      const Boid = d.struct({ pos: d.vec2u });
+
+      const fn = () => {
+        'use gpu';
+        const boid = Boid({ pos: d.vec2u(1, 2) });
+        const prop = std.copy(boid.pos);
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "struct Boid {
+          pos: vec2u,
+        }
+
+        fn fn_1() {
+          var boid = Boid(vec2u(1, 2));
+          var prop = boid.pos;
+        }"
+      `);
+    });
+
+    it('works for array element access', () => {
+      const fn = () => {
+        'use gpu';
+        const arr = [1, 2, 3];
+        const elem = std.copy(arr[0]);
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() {
+          var arr = array<i32, 3>(1, 2, 3);
+          let elem = arr[0i];
+        }"
+      `);
+    });
+
+    it('produces a mutable result', () => {
+      const fn = () => {
+        'use gpu';
+        const a = d.vec2u(1, 2);
+        const b = std.copy(a);
+        b.x = 3;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() {
+          var a = vec2u(1, 2);
+          var b = a;
+          b.x = 3u;
+        }"
+      `);
+    });
+
+    it('is not allowed on LHS of assignment', () => {
+      const fn = () => {
+        'use gpu';
+        const a = d.vec2u(1, 2);
+        std.copy(a).x = 2;
+      };
+
+      expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot();
     });
 
     it('cannot be used to copy d.ref', () => {
