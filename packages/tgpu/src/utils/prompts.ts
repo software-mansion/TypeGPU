@@ -18,3 +18,8 @@ export async function confirmStep(message: string) {
   }
   return res;
 }
+
+// 0-255 range
+export function rgbText(text: string, r: number, g: number, b: number) {
+  return `\x1b[38;2;${r};${g};${b}m${text}\x1b[39m`;
+}

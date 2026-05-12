@@ -5,10 +5,11 @@ import type { Agent } from 'package-manager-detector';
 import { loadFile, writeFile } from 'magicast';
 import { addVitePlugin } from 'magicast/helpers';
 
+import { findConfig } from '../utils/config.ts';
 import { hasDependency } from '../utils/pkg.ts';
 import { pmAdd } from '../utils/pm.ts';
 import { confirmStep } from '../utils/prompts.ts';
-import type { PackageJson } from '../utils/types.ts';
+import type { PackageJsonWithDeps } from '../utils/types.ts';
 
 const VITE_CONFIG_NAMES = [
   'vite.config.ts',
@@ -19,21 +20,13 @@ const VITE_CONFIG_NAMES = [
   'vite.config.cjs',
 ];
 
-const TEMPLATE = `import { defineConfig } from 'vite';
+const VITE_CONFIG_TEMPLATE = `import { defineConfig } from 'vite';
 import typegpuPlugin from 'unplugin-typegpu/vite';
 
 export default defineConfig({
   plugins: [typegpuPlugin()],
 });
 `;
-
-function findViteConfig(cwd: string) {
-  for (const name of VITE_CONFIG_NAMES) {
-    const viteConfigPath = path.join(cwd, name);
-    if (fs.existsSync(viteConfigPath)) return viteConfigPath;
-  }
-  return undefined;
-}
 
 async function setupViteConfig(filePath: string) {
   const config = await loadFile(filePath);
@@ -43,11 +36,11 @@ async function setupViteConfig(filePath: string) {
 }
 
 function createViteConfig(cwd: string) {
-  fs.writeFileSync(path.join(cwd, 'vite.config.ts'), TEMPLATE);
+  fs.writeFileSync(path.join(cwd, 'vite.config.ts'), VITE_CONFIG_TEMPLATE);
   p.log.success('Created vite.config.ts.');
 }
 
-export async function ensureVite(cwd: string, pm: Agent, pkg: PackageJson) {
+export async function ensureVite(cwd: string, pm: Agent, pkg: PackageJsonWithDeps) {
   if (hasDependency(pkg, 'unplugin-typegpu')) {
     p.log.info('unplugin-typegpu is already installed.');
     return;
@@ -57,9 +50,9 @@ export async function ensureVite(cwd: string, pm: Agent, pkg: PackageJson) {
     return;
   }
 
-  await pmAdd(pm, ['unplugin-typegpu'], true);
+  pmAdd(pm, ['unplugin-typegpu'], true);
 
-  const viteConfigPath = findViteConfig(cwd);
+  const viteConfigPath = findConfig(cwd, VITE_CONFIG_NAMES);
   if (viteConfigPath) {
     await setupViteConfig(viteConfigPath);
   } else if (await confirmStep('No vite config found. Create vite.config.ts?')) {
