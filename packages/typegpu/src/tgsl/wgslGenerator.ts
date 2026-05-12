@@ -1294,14 +1294,13 @@ ${this.ctx.pre}else ${alternate}`;
     }
 
     if (statement[0] === NODE.postUpdate) {
-      // Post-Update Expression
+      // Post-update statement
       const [_, op, arg] = statement;
       const argExpr = this._expression(arg);
       const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
 
       validateSnippetMutation(argExpr, statement);
 
-      // Result of an operation, so not a reference to anything
       return `${this.ctx.pre}${argStr}${op};`;
     }
 
