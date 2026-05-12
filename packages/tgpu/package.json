@@ -19,8 +19,7 @@
     "dev": "tsdown && node ./dist/index.js",
     "build": "tsdown",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
-    "prepublishOnly": "pnpm run build",
-    "test:vite-project": "tsdown && cd .test/vite && node ../../dist/index.js"
+    "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
     "@antfu/ni": "^25.0.0",

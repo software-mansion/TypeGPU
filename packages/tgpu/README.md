@@ -1,8 +1,8 @@
 # tgpu
-Enhance your project with TypeGPU.
+Create a new TypeGPU project or enhance an existing one.
 
-## Usage
-Run inside the root of an existing Vite or React Native project:
+## Creating
+To run interactive project scaffolding
 
 ```sh
 pnpm dlx tgpu@latest
@@ -14,6 +14,18 @@ yarn dlx tgpu@latest
 bunx tgpu@latest
 ```
 
+## Enhancing
+Run inside the root of an existing Vite or React Native project:
+
+```sh
+pnpm dlx tgpu@latest -e
+# or
+npx tgpu@latest -e
+# or
+yarn dlx tgpu@latest -e
+# or
+bunx tgpu@latest -e
+```
+
 > [!CAUTION]
 > **Back up your project before running this tool.** Even though every modification is gated behind an explicit "yes/no" prompt, the changes the script makes are not reversible by it.
----
