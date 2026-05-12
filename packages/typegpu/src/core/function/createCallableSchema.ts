@@ -1,4 +1,4 @@
-import { type MapValueToSnippet, type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { type MapValueToSnippet, snip, type Snippet } from '../../data/snippet.ts';
 import { type BaseData, isPtr } from '../../data/wgslTypes.ts';
 import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
@@ -12,10 +12,7 @@ interface CallableSchemaOptions<T extends AnyFn> {
   readonly name: string;
   readonly schema: () => BaseData;
   readonly normalImpl: T;
-  readonly codegenImpl: (
-    ctx: ResolutionCtx,
-    args: MapValueToSnippet<Parameters<T>>,
-  ) => ResolvedSnippet;
+  readonly codegenImpl: (ctx: ResolutionCtx, args: MapValueToSnippet<Parameters<T>>) => Snippet;
   readonly argTypes: (
     ...inArgTypes: MapValueToDataType<Parameters<T>>
   ) => (BaseData | BaseData[])[];
