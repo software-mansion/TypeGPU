@@ -143,7 +143,7 @@ describe('ternary operator', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Ternary operator is only supported for comptime-known checks (used with '(n > 0u)'). For runtime checks, please use 'std.select' or if/else statements.]
+      - fn:myFn: Ternary operator '(n > 0) ? n : (-n)' is invalid, because only comptime-known checks are supported. For runtime checks, please use 'std.select' or if/else statements.]
     `);
   });
 });

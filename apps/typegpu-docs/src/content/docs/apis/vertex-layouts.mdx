@@ -70,7 +70,7 @@ This will align the `color` field to 16 bytes, making the size of `LooseParticle
 
 ## Using vertex layouts
 
-You can utilize [`root.unwrap`](/TypeGPU/fundamentals/roots) to get the raw `GPUVertexBufferLayout` from a typed vertex layout. It will automatically calculate the stride and attributes for you, according to the vertex layout you provided.
+You can utilize [`root.unwrap`](/TypeGPU/apis/roots) to get the raw `GPUVertexBufferLayout` from a typed vertex layout. It will automatically calculate the stride and attributes for you, according to the vertex layout you provided.
 
 :::caution
 Make sure that all attributes in the vertex layout are marked with the appropriate location. You can use the `d.location` function to specify the location of each attribute.

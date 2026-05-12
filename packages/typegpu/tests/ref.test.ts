@@ -51,7 +51,7 @@ describe('d.ref', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:hello
-      - fn*:hello(): Cannot assign a ref to an existing variable '(&foo)', define a new variable instead.]
+      - fn*:hello(): Cannot assign a ref to an existing variable 'foo', define a new variable instead.]
     `);
   });
 
@@ -242,14 +242,14 @@ describe('d.ref', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:foo
-      - fn*:foo(): Cannot return references, returning 'value']
+      - fn*:foo(): Cannot return 'value' because it is a d.ref]
     `);
 
     expect(() => tgpu.resolve([bar])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:bar
-      - fn*:bar(): Cannot return references, returning '0']
+      - fn*:bar(): Cannot return 'd.ref(0)' because it is a d.ref]
     `);
   });
 

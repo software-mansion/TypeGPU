@@ -278,7 +278,7 @@ const instance = Fish({ kind: 0, state: { pos: d.vec3f(), vel: d.vec3f() } });
 ```
 
 :::caution
-You cannot use nested structs in [vertex layouts](/TypeGPU/fundamentals/vertex-layouts).
+You cannot use nested structs in [vertex layouts](/TypeGPU/apis/vertex-layouts).
 :::
 
 If you wish to extract the JS type equivalent of a TypeGPU schema, you can do so with `d.Infer`:
@@ -343,7 +343,7 @@ const myDefaultArray = MyArray(); // [0, 0, 0, 0]
 const myInitializedArray = MyArray([1, 0, 0.5, 20]);
 ```
 
-You can also call `d.arrayOf` without specifying the array length. This returns a partially applied schema function, allowing you to provide the length later or use the schema to declare WGSL [runtime-sized arrays](/TypeGPU/fundamentals/bind-groups#runtime-sized-example).
+You can also call `d.arrayOf` without specifying the array length. This returns a partially applied schema function, allowing you to provide the length later or use the schema to declare WGSL [runtime-sized arrays](/TypeGPU/apis/bind-groups#runtime-sized-example).
 
 ```ts twoslash
 import { d } from 'typegpu';
@@ -576,4 +576,50 @@ fn myFn(){
   var s2 = s1; // copies s1 into s2
   s2.n = 1; // s1 is not modified
 }
+```
+
+## ArrayBuffer IO
+
+TypeGPU exports functions for reading and writing to a raw `ArrayBuffer`.
+Signatures are analogous to `buffer.write`, `buffer.patch` and `buffer.read`,
+although each one additionally requires a data schema.
+
+```ts twoslash
+import { d, patchArrayBuffer, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+// ---cut---
+const buffer = new ArrayBuffer(16);
+
+// update entire buffer
+writeToArrayBuffer(buffer, d.vec4u, d.vec4u(1, 2, 3, 4));
+```
+
+```ts twoslash
+import { d, patchArrayBuffer, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+// ---cut---
+const buffer = new ArrayBuffer(64);
+const Numbers = d.arrayOf(d.u32, 16);
+
+// update a slice
+const layout = d.memoryLayoutOf(Numbers, (a) => a[4]);
+writeToArrayBuffer(buffer, Numbers, [4, 5, 6, 7], { startOffset: layout.offset });
+```
+
+```ts twoslash
+import { d, patchArrayBuffer, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+// ---cut---
+const buffer = new ArrayBuffer(64);
+const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
+const Boids = d.arrayOf(Boid, 4);
+
+// patch
+patchArrayBuffer(buffer, Boids, { 2: { pos: d.vec2u() } });
+```
+
+```ts twoslash
+import { d, patchArrayBuffer, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+// ---cut---
+const buffer = new ArrayBuffer(64);
+
+// read
+const mat = readFromArrayBuffer(buffer, d.mat4x4f);
 ```

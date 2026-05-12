@@ -106,7 +106,7 @@ const baz = d.f16(123); // generates: const baz = 123h;
 To make this all work, we perform a small transformation to functions marked with `'use gpu'`. Every project's setup is different, and we want to be as non-invasive as possible. The [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu) package hooks into existing bundlers and build tools, extracts ASTs from TypeGPU functions and compacts them into our custom format called [tinyest](https://www.npmjs.com/package/tinyest). This metadata is injected into the final JS bundle, then used to efficiently generate equivalent WGSL at runtime.
 
 :::tip
-If all your shader code is predetermined, or you want to precompute a set of variants ahead of time, you can combine [unplugin-macros](https://github.com/unplugin/unplugin-macros) and our [resolve API](/TypeGPU/fundamentals/resolve).
+If all your shader code is predetermined, or you want to precompute a set of variants ahead of time, you can combine [unplugin-macros](https://github.com/unplugin/unplugin-macros) and our [resolve API](/TypeGPU/apis/resolve).
 :::
 
 
@@ -240,7 +240,7 @@ fact that these values are known at shader compilation time, and can be optimize
 since they use values known only during shader execution.
 
 :::tip
-To avoid inlining, use [tgpu.const](/TypeGPU/fundamentals/variables#const-variables).
+To avoid inlining, use [tgpu.const](/TypeGPU/apis/variables#const-variables).
 :::
 
 After seeing this, you might be tempted to use this mechanism for sharing data between the CPU and GPU, or for defining
@@ -274,8 +274,8 @@ pipeline.dispatchThreads();
 ```
 
 There are explicit mechanisms that allow you to achieve this:
-- [Use buffers to efficiently share data between the CPU and GPU](/TypeGPU/fundamentals/buffers)
-- [Use variables to share state between functions](/TypeGPU/fundamentals/variables)
+- [Use buffers to efficiently share data between the CPU and GPU](/TypeGPU/apis/buffers)
+- [Use variables to share state between functions](/TypeGPU/apis/variables)
 
 ### Supported JavaScript functionality
 
@@ -292,7 +292,7 @@ Without it, you can still use operators for numbers,
 but for vectors and matrices you have to use supplementary functions from `typegpu/std` (*add, mul, eq, lt, ge...*), or use a fluent interface (*abc.mul(xyz), ...*)
 
 * **Calling other functions** --
-Only functions marked with `'use gpu'` can be called from within a shader. There are two exceptions to that rule: [`console.log`](/TypeGPU/fundamentals/utils#consolelog), which allows for tracking runtime behavior
+Only functions marked with `'use gpu'` can be called from within a shader. There are two exceptions to that rule: [`console.log`](/TypeGPU/apis/utils#consolelog), which allows for tracking runtime behavior
 of shaders in a familiar way, as well as most `Math` functions.
 
 :::caution
@@ -324,7 +324,7 @@ function manhattanDistance(a: d.v3f, b: d.v3f) {
 ## Function shells
 
 In order to limit a function's signature to specific types, you can wrap it in a *shell*, an object holding only the input and output types.
-The shell constructor `tgpu.fn` relies on [TypeGPU schemas](/TypeGPU/fundamentals/data-schemas), objects that represent WGSL data types and assist in generating shader code at runtime.
+The shell constructor `tgpu.fn` relies on [TypeGPU schemas](/TypeGPU/apis/data-schemas), objects that represent WGSL data types and assist in generating shader code at runtime.
 It accepts two arguments:
 
 - An array of schemas representing argument types,
@@ -418,7 +418,7 @@ const getGradientColor = tgpu.fn([d.f32], d.vec4f)`(ratio) {
 `.$uses({ purple, get_blue: getBlue });
 ```
 
-You can see for yourself what `getGradientColor` resolves to by calling [`tgpu.resolve`](/TypeGPU/fundamentals/resolve), all relevant definitions will be automatically included:
+You can see for yourself what `getGradientColor` resolves to by calling [`tgpu.resolve`](/TypeGPU/apis/resolve), all relevant definitions will be automatically included:
 
 ```wgsl
 // results of calling tgpu.resolve([getGradientColor])
@@ -625,7 +625,7 @@ struct mainFragment_Input {
 Pipelines are an *unstable* feature. The API may be subject to change in the near future.
 :::
 
-Typed functions are crucial for simplified [pipeline](/TypeGPU/fundamentals/pipelines) creation offered by TypeGPU. You can define and run pipelines as follows:
+Typed functions are crucial for simplified [pipeline](/TypeGPU/apis/pipelines) creation offered by TypeGPU. You can define and run pipelines as follows:
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
