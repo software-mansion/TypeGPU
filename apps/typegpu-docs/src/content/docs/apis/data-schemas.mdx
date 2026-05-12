@@ -514,7 +514,7 @@ WGSL needs the `unrestricted_pointer_parameters` extension.
 This extension is enabled automatically when available.
 :::
 
-## Copy constructors
+## References and copying data
 
 One of the biggest differences between JavaScript and WGSL is the existence of value/reference types.
 Let's take a look at a simple TypeGPU function and the WGSL code it resolves to.
@@ -545,38 +545,45 @@ fn myFn(){
 }
 ```
 
-In JavaScript, `s2` is a reference to `s1` and therefore `s1` is modified when `s2` is modified.
-On the WGSL side, we make `s2` a reference to `s1` and modifying `s2.n` is translated to modifying `(*s2).n`.
-
-Schemas can be used to create deep copies of values.
+In both cases, modifying `s2` results in a change to `s1`.
+This is intuitive to JS developers, but it may be also problematic in some cases:
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
+// ---cut---
+function myFn(arg: d.v2u | d.v3u | d.v4u) {
+  'use gpu';
+  const vec = arg;
+  vec.x++; // ❌ cannot modify function's parameter
+}
+```
+
+In such cases use, `std.copy`.
+
+```ts twoslash
+import tgpu, { d, std } from 'typegpu';
+// ---cut---
+function myFn(arg: d.v2u | d.v3u | d.v4u) {
+  'use gpu';
+  const vec = std.copy(arg);
+  vec.x++; 
+}
+```
+
+:::note
+If the schema of the copied variable is known, it may be used instead.
+```ts twoslash
+import tgpu, { d, std } from 'typegpu';
 // ---cut---
 const MyStruct = d.struct({ n: d.u32 });
 
 function myFn() {
   'use gpu';
-  const s1 = MyStruct({ n: 0 });
-  const s2 = MyStruct(s1); // deep copy of s1
-  s2.n = 1; // s1 is not modified
+  const copy = MyStruct({ n: 0 });
 }
 ```
+:::
 
-The TypeGPU shader generator understands this and generates a simple assignment, which copies the value of `s1` into `s2`.
-
-```wgsl
-// WGSL
-struct MyStruct {
-  n: u32,
-}
-
-fn myFn(){
-  var s1 = MyStruct(0);
-  var s2 = s1; // copies s1 into s2
-  s2.n = 1; // s1 is not modified
-}
-```
 
 ## ArrayBuffer IO
 
