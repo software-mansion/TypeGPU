@@ -469,15 +469,9 @@ ${this.ctx.pre}}`;
     }
 
     if (expression[0] === NODE.postUpdate) {
-      // Post-Update Expression
-      const [_, op, arg] = expression;
-      const argExpr = this._expression(arg);
-      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
-
-      validateSnippetMutation(argExpr, expression);
-
-      // Result of an operation, so not a reference to anything
-      return snip(`${argStr}${op}`, argExpr.dataType, /* origin */ 'runtime');
+      throw new Error(
+        `'${stringifyNode(expression)}' is invalid because update is only allowed as a statement.`,
+      );
     }
 
     if (expression[0] === NODE.unaryExpr) {
@@ -1297,6 +1291,17 @@ ${this.ctx.pre}else ${alternate}`;
         this.#unrolling = prevUnrollingFlag;
         this.ctx.popBlockScope();
       }
+    }
+
+    if (statement[0] === NODE.postUpdate) {
+      // Post-update statement
+      const [_, op, arg] = statement;
+      const argExpr = this._expression(arg);
+      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
+
+      validateSnippetMutation(argExpr, statement);
+
+      return `${this.ctx.pre}${argStr}${op};`;
     }
 
     if (statement[0] === NODE.continue) {
