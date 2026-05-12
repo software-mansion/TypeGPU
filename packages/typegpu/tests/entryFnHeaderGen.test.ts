@@ -123,4 +123,39 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
         }"
     `);
   });
+
+  it('renames arguments to not shadow local declarations', () => {
+    const mainVertex = tgpu.vertexFn({
+      in: { vi: d.builtin.vertexIndex },
+      out: { outPos: d.builtin.position },
+    })(/* wgsl */ `{
+  var pos = array<vec2f, 3>(
+    vec2(0.0, 0.5),
+    vec2(-0.5, -0.5),
+    vec2(0.5, -0.5)
+  );
+
+  var vi = in.vi;
+
+  return Out(vec4f(pos[in.vertexIndex], 0.0, 1.0));
+}`);
+
+    expect(tgpu.resolve([mainVertex])).toMatchInlineSnapshot(`
+      "struct mainVertex_Output {
+        @builtin(position) outPos: vec4f,
+      }
+
+      @vertex fn mainVertex(@builtin(vertex_index) vi: u32) -> mainVertex_Output {
+        var pos = array<vec2f, 3>(
+          vec2(0.0, 0.5),
+          vec2(-0.5, -0.5),
+          vec2(0.5, -0.5)
+        );
+
+        var vi = vi;
+
+        return mainVertex_Output(vec4f(pos[in.vertexIndex], 0.0, 1.0));
+      }"
+    `);
+  });
 });
