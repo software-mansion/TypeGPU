@@ -5,7 +5,6 @@ import { isMatInstance, isVecInstance, WORKAROUND_getSchema } from '../data/wgsl
 function cpuCopy<T>(e: T): T {
   if (isVecInstance(e) || isMatInstance(e)) {
     const schema = WORKAROUND_getSchema(e);
-    console.log(schema);
     return schema(e as never) as T;
   }
 
@@ -21,7 +20,7 @@ function cpuCopy<T>(e: T): T {
 }
 
 export const copy = dualImpl({
-  name: 'arrayLength',
+  name: 'copy',
   signature: (arg) => {
     return {
       argTypes: [arg],

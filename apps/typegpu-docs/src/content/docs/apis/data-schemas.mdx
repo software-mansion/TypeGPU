@@ -558,7 +558,7 @@ function myFn(arg: d.v2u | d.v3u | d.v4u) {
 }
 ```
 
-In such cases use, `std.copy`.
+In such cases use `std.copy`.
 
 ```ts twoslash
 import tgpu, { d, std } from 'typegpu';
@@ -579,7 +579,8 @@ const MyStruct = d.struct({ n: d.u32 });
 
 function myFn() {
   'use gpu';
-  const copy = MyStruct({ n: 0 });
+  const struct = MyStruct({ n: 0 })
+  const copy = MyStruct(struct);
 }
 ```
 :::
