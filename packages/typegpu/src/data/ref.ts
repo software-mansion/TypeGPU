@@ -6,7 +6,7 @@ import type { DualFn, SelfResolvable } from '../types.ts';
 import { UnknownData } from './dataTypes.ts';
 import { createPtrFromOrigin, explicitFrom } from './ptr.ts';
 import { type ResolvedSnippet, snip, type Snippet } from './snippet.ts';
-import { isNaturallyEphemeral, isPtr, type Ptr, type StorableData } from './wgslTypes.ts';
+import { isPtr, type Ptr, type StorableData } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -172,11 +172,10 @@ export function derefSnippet(snippet: Snippet): Snippet {
   }
 
   const innerType = snippet.dataType.inner;
-  const origin = isNaturallyEphemeral(innerType) ? 'runtime' : snippet.origin;
 
   if (snippet.value instanceof RefOperator) {
-    return snip(stitch`${snippet.value.snippet}`, innerType, origin);
+    return snip(stitch`${snippet.value.snippet}`, innerType, snippet.origin);
   }
 
-  return snip(stitch`(*${snippet})`, innerType, origin);
+  return snip(stitch`(*${snippet})`, innerType, snippet.origin);
 }

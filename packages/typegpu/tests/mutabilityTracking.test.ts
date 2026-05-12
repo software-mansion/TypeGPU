@@ -407,7 +407,7 @@ describe('mutability tracking', () => {
 
       const fn = fnShell((arg) => {
         'use gpu';
-        let a = d.ref(d.u32(arg.x));
+        const a = d.ref(d.u32(arg.x));
         const b = d.vec4u(arg);
 
         modify(a, d.ref(b));

@@ -1,5 +1,5 @@
 import { UnknownData } from '../data/dataTypes.ts';
-import { isEphemeralSnippet, snip, type Snippet } from '../data/snippet.ts';
+import { isAlias, snip, type Snippet } from '../data/snippet.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { i32, u32 } from '../data/numeric.ts';
@@ -27,6 +27,9 @@ export function getElementSnippet(iterableSnippet: Snippet, index: Snippet) {
   return elementSnippet;
 }
 
+/**
+ * Determines the type of the element as accessible inside of the `for .. of` loop body
+ */
 export function getElementType(elementSnippet: Snippet, iterableSnippet: Snippet) {
   let elementType = elementSnippet.dataType;
   if (elementType === UnknownData) {
@@ -36,7 +39,9 @@ export function getElementType(elementSnippet: Snippet, iterableSnippet: Snippet
   }
 
   if (
-    isEphemeralSnippet(elementSnippet) ||
+    wgsl.isNaturallyEphemeral(elementSnippet.dataType) ||
+    elementSnippet.origin === 'runtime' ||
+    elementSnippet.origin === 'constant' ||
     elementSnippet.origin === 'constant-tgpu-const-ref' ||
     elementSnippet.origin === 'runtime-tgpu-const-ref'
   ) {
@@ -74,7 +79,7 @@ export function getRangeSnippets(
     };
   }
 
-  if (!unroll && isEphemeralSnippet(iterableSnippet)) {
+  if (!unroll && !isAlias(iterableSnippet)) {
     throw new Error(
       `\`for ... of ...\` loops only support std.range or iterables stored in variables.
 -----

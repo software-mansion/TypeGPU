@@ -32,7 +32,7 @@ describe('d.ref', () => {
     `);
   });
 
-  it('fails when trying to assign a ref to an existing variable', () => {
+  it('fails when trying to initialize a `let` declaration', () => {
     const update = (value: d.ref<number>) => {
       'use gpu';
       value.$ += 1;
@@ -40,10 +40,8 @@ describe('d.ref', () => {
 
     const hello = () => {
       'use gpu';
-      let foo = d.ref(0);
-      update(foo);
       // Nuh-uh
-      foo = d.ref(1);
+      let foo = d.ref(0);
       update(foo);
     };
 
@@ -51,7 +49,10 @@ describe('d.ref', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:hello
-      - fn*:hello(): Cannot assign a ref to an existing variable 'foo', define a new variable instead.]
+      - fn*:hello(): 'let foo = d.ref(0)' is invalid, cannot initialize 'let' variables with d.ref()
+      -----
+      - Try 'const foo = d.ref(0)'.
+      -----]
     `);
   });
 

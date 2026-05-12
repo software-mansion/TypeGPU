@@ -1,6 +1,6 @@
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import { type AnyWgslData, type BaseData, isNaturallyEphemeral } from '../../data/wgslTypes.ts';
+import { type AnyWgslData, type BaseData } from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
 import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
@@ -129,7 +129,7 @@ class TgpuFixedBufferImpl<TData extends BaseData, TUsage extends BindableBufferU
       `@group(${group}) @binding(${binding}) var<${usage}> ${id}: ${ctx.resolve(dataType).value};`,
     );
 
-    return snip(id, dataType, isNaturallyEphemeral(dataType) ? 'runtime' : this.usage);
+    return snip(id, dataType, this.usage);
   }
 
   toString(): string {
@@ -144,7 +144,7 @@ class TgpuFixedBufferImpl<TData extends BaseData, TUsage extends BindableBufferU
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, dataType, isNaturallyEphemeral(dataType) ? 'runtime' : usage);
+          return snip(this, dataType, usage);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,
@@ -251,7 +251,7 @@ export class TgpuLaidOutBufferImpl<TData extends BaseData, TUsage extends Bindab
       };`,
     );
 
-    return snip(id, this.dataType, isNaturallyEphemeral(this.dataType) ? 'runtime' : this.usage);
+    return snip(id, this.dataType, this.usage);
   }
 
   toString(): string {
@@ -266,7 +266,7 @@ export class TgpuLaidOutBufferImpl<TData extends BaseData, TUsage extends Bindab
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema, isNaturallyEphemeral(schema) ? 'runtime' : usage);
+          return snip(this, schema, usage);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,
