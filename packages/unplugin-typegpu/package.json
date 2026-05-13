@@ -171,7 +171,7 @@
     "@babel/types": "catalog:",
     "ast-kit": "^2.2.0",
     "defu": "^6.1.4",
-    "magic-string-ast": "^1.0.3",
+    "magic-string": "^0.30.21",
     "pathe": "^2.0.3",
     "picomatch": "^4.0.4",
     "tinyest": "workspace:~0.3.1",

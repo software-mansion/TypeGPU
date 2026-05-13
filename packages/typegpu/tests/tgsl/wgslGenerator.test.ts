@@ -1912,6 +1912,21 @@ describe('wgslGenerator', () => {
       `);
   });
 
+  it('throws a readable error on update as expression', () => {
+    const fn = () => {
+      'use gpu';
+      let a = 1;
+      const b = a++;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): 'a++' is invalid because update is only allowed as a statement.]
+    `);
+  });
+
   describe('short-circuit evaluation', () => {
     const state = {
       counter: 0,
