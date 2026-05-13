@@ -103,7 +103,7 @@ useFrame(() => {
     .withColorAttachment({ view: ctxRef.current })
     .draw(3); // 3 vertices of the full-screen triangle
 });
-````
+```
 
 After these changes, you should see a blank red canvas on your webpage. Let's make the effect more interesting.
 
@@ -249,6 +249,27 @@ If the root hasn't been initialized yet, it will suspend the component until it 
 This hook will also throw if there is an error initializing the root (like no WebGPU support).
 If you'd like to handle these cases yourself, you can use `useRootOrError` or
 `useRootWithStatus` instead.
+
+### useFrame
+
+```ts
+useFrame((frameCtx) => {
+  /* ... */
+});
+```
+
+The `useFrame` hook schedules the passed-in callback to be ran every frame using `requestAnimationFrame`. The callback recieves an object of type `FrameCtx` that contains
+the following:
+
+| Value | Type | Description |
+|-|-|-|
+| deltaSeconds | `number` | Time elapsed since the last frame. |
+| elapsedSeconds | `number` | Time elapsed since the mounting of this hook. |
+
+:::note
+No need to wrap the callback in `useCallback` or `useEffectEvent`, the callback will naturally have access to the
+latest values of each declaration in the React component.
+:::
 
 ### useUniform
 
