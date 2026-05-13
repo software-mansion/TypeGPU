@@ -72,7 +72,7 @@ function BufferControls({ onSelect, runner, selected }: BufferControlsProps) {
       return;
     }
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const program = await runner.getProgram();
         if (!cancelled) {
@@ -132,7 +132,7 @@ export default function ComputeShadersBindGroupsExample({ children }: Props) {
   const selectedStepCount = stepCounts[selectedBuffer] ?? 0;
 
   return (
-    <RunnableSnippet<BindGroupProgram, void>
+    <RunnableSnippet<BindGroupProgram>
       controls={({ runner }) => (
         <BufferControls onSelect={setSelectedBuffer} runner={runner} selected={selectedBuffer} />
       )}

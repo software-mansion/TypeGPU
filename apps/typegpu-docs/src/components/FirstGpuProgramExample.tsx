@@ -154,7 +154,7 @@ function renderConsolePreview({ output, runner }: ConsolePreviewState) {
 export default function FirstGpuProgramExample({ children, example }: Props) {
   if (example === 'consoleLog') {
     return (
-      <RunnableSnippet<CounterProgram, void>
+      <RunnableSnippet<CounterProgram>
         captureConsole
         createProgram={() => createCounterProgram(true)}
         preview={renderConsolePreview}
@@ -169,7 +169,7 @@ export default function FirstGpuProgramExample({ children, example }: Props) {
 
   if (example === 'readValue') {
     return (
-      <RunnableSnippet<CounterProgram, void>
+      <RunnableSnippet<CounterProgram>
         captureConsole
         createProgram={() => createCounterProgram(false)}
         preview={renderConsolePreview}
@@ -184,7 +184,7 @@ export default function FirstGpuProgramExample({ children, example }: Props) {
   }
 
   return (
-    <RunnableSnippet<Awaited<ReturnType<typeof createIncrementByProgram>>, void>
+    <RunnableSnippet<Awaited<ReturnType<typeof createIncrementByProgram>>>
       captureConsole
       createProgram={() => createIncrementByProgram()}
       preview={renderConsolePreview}
