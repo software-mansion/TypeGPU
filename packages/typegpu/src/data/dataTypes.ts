@@ -50,7 +50,7 @@ export interface Disarray<out TElement extends wgsl.BaseData = wgsl.BaseData>
 
   // Type-tokens, not available at runtime
   readonly [$repr]: Infer<TElement>[];
-  readonly [$inRepr]: InferInput<TElement>[] | wgsl.TypedArrayFor<TElement>;
+  readonly [$inRepr]: readonly InferInput<TElement>[] | wgsl.TypedArrayFor<TElement>;
   readonly [$reprPartial]: { idx: number; value: InferPartial<TElement> }[] | undefined;
   readonly [$reprPatch]:
     | Record<number, InferPatch<TElement>>

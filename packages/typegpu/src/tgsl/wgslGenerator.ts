@@ -435,27 +435,7 @@ ${this.ctx.pre}}`;
       const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
       if (exprType === NODE.assignmentExpr) {
-        if (
-          convLhs.origin === 'constant' ||
-          convLhs.origin === 'constant-tgpu-const-ref' ||
-          convLhs.origin === 'runtime-tgpu-const-ref'
-        ) {
-          if (isKnownAtComptime(convLhs)) {
-            throw new WgslTypeError(
-              `'${stringifyNode(expression)}' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.`,
-            );
-          }
-          throw new WgslTypeError(
-            `'${stringifyNode(expression)}' is invalid, because the left side is a constant.`,
-          );
-        }
-
-        if (lhsExpr.origin === 'argument') {
-          throw new WgslTypeError(
-            `'${stringifyNode(expression)}' is invalid, because non-pointer arguments cannot be mutated.`,
-          );
-        }
-
+        validateSnippetMutation(convLhs, expression);
         // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
         if (
           op === '=' &&
@@ -490,13 +470,9 @@ ${this.ctx.pre}}`;
     }
 
     if (expression[0] === NODE.postUpdate) {
-      // Post-Update Expression
-      const [_, op, arg] = expression;
-      const argExpr = this._expression(arg);
-      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
-
-      // Result of an operation, so not a reference to anything
-      return snip(`${argStr}${op}`, argExpr.dataType, /* origin */ 'runtime');
+      throw new Error(
+        `'${stringifyNode(expression)}' is invalid because update is only allowed as a statement.`,
+      );
     }
 
     if (expression[0] === NODE.unaryExpr) {
@@ -1319,6 +1295,17 @@ ${this.ctx.pre}else ${alternate}`;
       }
     }
 
+    if (statement[0] === NODE.postUpdate) {
+      // Post-update statement
+      const [_, op, arg] = statement;
+      const argExpr = this._expression(arg);
+      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
+
+      validateSnippetMutation(argExpr, statement);
+
+      return `${this.ctx.pre}${argStr}${op};`;
+    }
+
     if (statement[0] === NODE.continue) {
       if (this.#unrolling) {
         throw new WgslTypeError('Cannot unroll loop containing `continue`');
@@ -1337,6 +1324,29 @@ ${this.ctx.pre}else ${alternate}`;
     const resolved = expr.value && this.ctx.resolve(expr.value).value;
     // oxlint-disable-next-line typescript/no-base-to-string
     return resolved ? `${this.ctx.pre}${resolved};` : '';
+  }
+}
+
+function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
+  if (
+    mutated.origin === 'constant' ||
+    mutated.origin === 'constant-tgpu-const-ref' ||
+    mutated.origin === 'runtime-tgpu-const-ref'
+  ) {
+    if (isKnownAtComptime(mutated)) {
+      throw new WgslTypeError(
+        `'${stringifyNode(expr)}' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.`,
+      );
+    }
+    throw new WgslTypeError(
+      `'${stringifyNode(expr)}' is invalid, because the left side is a constant.`,
+    );
+  }
+
+  if (mutated.origin === 'argument') {
+    throw new WgslTypeError(
+      `'${stringifyNode(expr)}' is invalid, because non-pointer arguments cannot be mutated.`,
+    );
   }
 }
 
