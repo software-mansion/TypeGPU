@@ -79,7 +79,7 @@ export default function ComputeShadersArrayExample({ children }: Props) {
                   : `${threadCount} thread${threadCount === 1 ? '' : 's'}`
               }
             />
-            <LinearCellGrid columns={2} highlightCount={threadCount} values={values} />
+            <LinearCellGrid columns={VALUE_COUNT} highlightCount={threadCount} values={values} />
           </>
         );
       }}

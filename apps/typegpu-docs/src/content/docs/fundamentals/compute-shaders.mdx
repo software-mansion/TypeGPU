@@ -1,6 +1,6 @@
 ---
-title: Compute shaders
-description: Creating and calling non-trivial compute shaders in TypeGPU.
+title: Going parallel with reusable resources
+description: Creating and calling non-trivial compute shaders in TypeGPU and managing reusable resources with bind groups.
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
@@ -138,7 +138,7 @@ This is the main reason to use a 2D dispatch for grid-shaped data: the shader ca
 
 ## Swapping resources
 
-So far, we have used `createMutable()` to create buffers that shader code can read and write directly. This is very convenient for simple shaders and requires no additional setup. We refer to this path as [**Fixed Resources**](/TypeGPU/apis/buffers/#using-fixed-resources): the shader closes over one particular GPU resource and TypeGPU binds it for us.
+So far, we have used `createMutable()` to create buffers that shader code can read and write directly. This is very convenient for simple shaders and requires no additional setup. We refer to this path as [**Fixed Resources**](/TypeGPU/apis/buffers/#using-fixed-resources): the shader references one particular GPU resource and TypeGPU binds it for us.
 
 Sometimes, though, we want to swap which buffer is used by the shader for a particular dispatch. Later, the same idea will apply to other resource types too. For that, TypeGPU offers [**Laid Out Resources**](/TypeGPU/apis/bind-groups/).
 
@@ -216,7 +216,7 @@ Here is that resource swap in a small particle simulation. The shader stays the 
 
 <ComputeShadersExample example="bindGroups" />
 
-Now the same simulation step can be written in either style. The Fixed Resources version closes over one particular set of resources, while the Laid Out Resources version keeps the pipeline reusable and supplies the resources when dispatching.
+Now the same simulation step can be written in either style. The Fixed Resources version is bound to one particular set of resources, while the Laid Out Resources version keeps the pipeline reusable and supplies the resources when dispatching.
 
 <Tabs>
   <TabItem label="Laid Out Resources">
@@ -279,10 +279,14 @@ Now the same simulation step can be written in either style. The Fixed Resources
   </TabItem>
 </Tabs>
 
-The tradeoff is a little more setup, but the shader no longer closes over one concrete resource. It can be separated cleanly from runtime resource setup and reused with different bind groups.
+The tradeoff is a little more setup, but the shader is no longer bound to one concrete resource. It can be separated cleanly from runtime resource setup and reused with different bind groups.
 
 :::tip
-Layouts are the only way to swap resources for a shader after pipeline creation, but they are not the only way to create modular shaders. We will cover [slots](/TypeGPU/apis/slots/) and [accessors](/TypeGPU/apis/accessors/) in later sections. They provide a similar way of defining resource-independent shaders, but each change requires creating a new shader module.
+Layouts are the only way to swap resources for a shader after pipeline creation, but they are not the only way to create modular shaders. We will cover [slots](/TypeGPU/apis/slots/) and [accessors](/TypeGPU/apis/accessors/) in later sections. They provide a similar way of defining resource-independent shaders, but each change requires recompiling the shader, which can degrade performance.
 :::
 
 Since bind groups are immutable by nature, you need to create a new bind group each time you want to use a new resource. If you have a limited set of combinations, you can cache and reuse them.
+
+## Summary
+
+You now know how to dispatch many GPU threads, map them to 1D and 2D data, and keep shader accesses in bounds. You have also seen when fixed resources are enough and when bind groups are useful for reusing the same shader with different buffers.

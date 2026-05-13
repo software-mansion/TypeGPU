@@ -6,13 +6,14 @@ import { useConsoleCapture } from './useConsoleCapture.ts';
 const unsupportedMessage =
   'Running this code snippet requires WebGPU support, but a compatible GPU device could not be acquired in this browser.';
 
+const DEFAULT_CANVAS_SIZE = 768;
 const GPU_LOG_SETTLE_DELAY_MS = 100;
 
 export type RootedProgram = {
   root: TgpuRoot;
 };
 
-export function stringifyError(error: unknown) {
+function stringifyError(error: unknown) {
   if (error instanceof Error) {
     return error.message;
   }
@@ -34,7 +35,7 @@ export async function createExampleRoot() {
   }
 }
 
-export async function waitForGpuLogs(root: TgpuRoot) {
+async function waitForGpuLogs(root: TgpuRoot) {
   await root.device.queue.onSubmittedWorkDone();
   await new Promise((resolve) => setTimeout(resolve, GPU_LOG_SETTLE_DELAY_MS));
 }
@@ -48,7 +49,7 @@ export type RunnerHandle<TProgram extends RootedProgram> = {
   supported: boolean | null;
 };
 
-export function useWebGpuProgram<TProgram extends RootedProgram>(
+function useWebGpuProgram<TProgram extends RootedProgram>(
   createProgram: () => Promise<TProgram>,
 ): RunnerHandle<TProgram> {
   const [supported, setSupported] = useState<boolean | null>(null);
@@ -166,80 +167,127 @@ export function RunnablePreviewHeader({ label, value }: RunnablePreviewHeaderPro
   );
 }
 
-type RunnableSnippetShellProps<TProgram extends RootedProgram> = {
+type RunnerStatus = Pick<RunnerHandle<RootedProgram>, 'error' | 'isRunning' | 'supported'>;
+
+type RunnableSnippetShellProps = {
   children: ReactNode;
+  compactPreview?: boolean;
   controls?: ReactNode;
   onRun: () => void;
-  panelWidth?: string;
   preview: ReactNode;
-  runner: Pick<RunnerHandle<TProgram>, 'error' | 'isRunning' | 'supported'>;
-  tall?: boolean;
+  runner: RunnerStatus;
+  scrollCode?: boolean;
 };
 
-export function RunnableSnippetShell<TProgram extends RootedProgram>({
-  children,
-  controls,
-  onRun,
-  panelWidth = '10rem',
-  preview,
-  runner,
-  tall = false,
-}: RunnableSnippetShellProps<TProgram>) {
-  const outerStyle = {
-    '--runnable-panel-width': panelWidth,
-  } as React.CSSProperties;
+type RunButtonProps = {
+  onRun: () => void;
+  runner: Pick<RunnerStatus, 'isRunning' | 'supported'>;
+};
 
+function RunButton({ onRun, runner }: RunButtonProps) {
+  return (
+    <button
+      className="inline-grid w-24 grid-cols-[auto_1fr] items-center gap-1.5 rounded-sm border border-[var(--sl-color-gray-5)] bg-[var(--sl-color-bg)] px-2 py-1 text-xs font-medium text-[var(--sl-color-text)] hover:text-[var(--sl-color-text-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--sl-color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
+      disabled={runner.supported !== true || runner.isRunning}
+      onClick={onRun}
+      type="button"
+    >
+      <Play aria-hidden="true" className="h-3.5 w-3.5" />
+      <span>{runner.isRunning ? 'Running...' : 'Run'}</span>
+    </button>
+  );
+}
+
+type PreviewPaneProps = {
+  children: ReactNode;
+  compact: boolean;
+  error: string;
+  fixedHeight: boolean;
+};
+
+function PreviewPane({ children, compact, error, fixedHeight }: PreviewPaneProps) {
   return (
     <div
       className={cx(
-        'not-content my-6 overflow-hidden rounded-sm border border-[var(--sl-color-gray-5)] bg-[var(--sl-color-bg)] md:grid md:grid-cols-[minmax(0,1fr)_var(--runnable-panel-width)]',
-        tall && 'md:h-[34rem]',
+        'min-w-0 overflow-auto bg-[var(--sl-color-bg-inline-code)] p-3',
+        fixedHeight ? (compact ? 'h-36' : 'h-56') : 'min-h-56 md:min-h-0',
       )}
-      style={outerStyle}
     >
+      {children}
+      {error ? (
+        <p className="mt-3 break-words text-xs leading-5 text-[var(--sl-color-text)]">{error}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function RunnableSnippetShell({
+  children,
+  compactPreview = false,
+  controls,
+  onRun,
+  preview,
+  runner,
+  scrollCode = false,
+}: RunnableSnippetShellProps) {
+  const hasControls = controls !== undefined && controls !== null;
+  const runButton = <RunButton onRun={onRun} runner={runner} />;
+
+  return (
+    <div className="not-content my-6 overflow-hidden rounded-sm border border-[var(--sl-color-gray-5)] bg-[var(--sl-color-bg)]">
       <div
         className={cx(
           'min-w-0 overflow-auto [&_.expressive-code]:m-0 [&_.expressive-code_figure.frame]:rounded-none',
-          tall && 'h-[28rem] md:h-full',
+          scrollCode && 'h-[28rem]',
         )}
       >
         {children}
       </div>
-      <div
-        className={cx(
-          'grid min-h-0 min-w-0 overflow-hidden border-t border-[var(--sl-color-gray-5)] md:h-0 md:min-h-full md:border-l md:border-t-0',
-          controls ? 'grid-rows-[auto_minmax(0,1fr)_auto]' : 'grid-rows-[minmax(0,1fr)_auto]',
-        )}
-      >
-        {runner.supported === false ? (
-          <div className="flex min-w-0 items-center bg-[var(--sl-color-bg-inline-code)] p-3 text-xs leading-5 text-[var(--sl-color-text)] md:min-h-0">
-            <p className="m-0">{unsupportedMessage}</p>
+      {runner.supported === false ? (
+        <div className="flex min-w-0 items-center border-t border-[var(--sl-color-gray-5)] bg-[var(--sl-color-bg-inline-code)] p-3 text-xs leading-5 text-[var(--sl-color-text)]">
+          <p className="m-0">{unsupportedMessage}</p>
+        </div>
+      ) : (
+        <div
+          className={cx(
+            'grid min-h-0 min-w-0 overflow-hidden border-t border-[var(--sl-color-gray-5)]',
+            hasControls
+              ? 'md:grid-cols-[minmax(0,1fr)_12rem]'
+              : 'md:grid-cols-[minmax(0,1fr)_8rem]',
+          )}
+        >
+          <PreviewPane compact={compactPreview} error={runner.error} fixedHeight={!hasControls}>
+            {preview}
+          </PreviewPane>
+          <div
+            className={cx(
+              'grid border-t border-[var(--sl-color-gray-5)] bg-[var(--sl-color-bg)] md:border-l md:border-t-0',
+              hasControls
+                ? 'min-w-0 grid-rows-[auto_minmax(0,1fr)_auto]'
+                : 'md:grid-rows-[minmax(0,1fr)_auto]',
+            )}
+          >
+            {hasControls ? (
+              <>
+                <div className="min-w-0">{controls}</div>
+                <div aria-hidden="true" />
+              </>
+            ) : (
+              <div aria-hidden="true" className="hidden md:block" />
+            )}
+            <div
+              className={cx(
+                'grid place-items-center p-2',
+                hasControls
+                  ? 'border-t border-[var(--sl-color-gray-5)]'
+                  : 'md:border-t md:border-[var(--sl-color-gray-5)] md:px-3',
+              )}
+            >
+              {runButton}
+            </div>
           </div>
-        ) : (
-          <>
-            {controls}
-            <div className="min-h-56 min-w-0 overflow-auto bg-[var(--sl-color-bg-inline-code)] p-3 md:min-h-0">
-              {preview}
-              {runner.error ? (
-                <p className="mt-3 break-words text-xs leading-5 text-[var(--sl-color-text)]">
-                  {runner.error}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex justify-center border-t border-[var(--sl-color-gray-5)] bg-[var(--sl-color-bg)] p-2">
-              <button
-                className="inline-flex items-center gap-1.5 rounded-sm border border-[var(--sl-color-gray-5)] bg-[var(--sl-color-bg)] px-2 py-1 text-xs font-medium text-[var(--sl-color-text)] hover:text-[var(--sl-color-text-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--sl-color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={runner.supported !== true || runner.isRunning}
-                onClick={onRun}
-                type="button"
-              >
-                <Play aria-hidden="true" className="h-3.5 w-3.5" />
-                {runner.isRunning ? 'Running...' : 'Run'}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -257,14 +305,12 @@ export type RunnableSnippetProps<TProgram extends RootedProgram, TResult> = {
   children: ReactNode;
   controls?: (state: RunnableSnippetState<TProgram, TResult>) => ReactNode;
   createProgram: (ctx: { canvas: HTMLCanvasElement | null }) => Promise<TProgram>;
-  panelWidth?: string;
   preview: (state: RunnableSnippetState<TProgram, TResult>) => ReactNode;
   run: (
     program: TProgram,
     ctx: { previousResult: TResult | null; runIndex: number },
   ) => TResult | Promise<TResult>;
-  tall?: boolean;
-  withCanvas?: { ariaLabel?: string; size: number };
+  withCanvas?: { ariaLabel?: string };
 };
 
 export function RunnableSnippet<TProgram extends RootedProgram, TResult = void>({
@@ -272,10 +318,8 @@ export function RunnableSnippet<TProgram extends RootedProgram, TResult = void>(
   children,
   controls,
   createProgram,
-  panelWidth,
   preview,
   run,
-  tall,
   withCanvas,
 }: RunnableSnippetProps<TProgram, TResult>) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -325,9 +369,9 @@ export function RunnableSnippet<TProgram extends RootedProgram, TResult = void>(
     <canvas
       aria-label={withCanvas.ariaLabel}
       className="block aspect-square w-full rounded-sm border border-[var(--sl-color-gray-5)] bg-[#171526]"
-      height={withCanvas.size}
+      height={DEFAULT_CANVAS_SIZE}
       ref={canvasRef}
-      width={withCanvas.size}
+      width={DEFAULT_CANVAS_SIZE}
     />
   ) : null;
 
@@ -341,12 +385,12 @@ export function RunnableSnippet<TProgram extends RootedProgram, TResult = void>(
 
   return (
     <RunnableSnippetShell
+      compactPreview={captureConsole && !controls && !withCanvas}
       controls={controls?.(state)}
       onRun={() => void handleRun()}
-      panelWidth={panelWidth}
       preview={preview(state)}
       runner={runner}
-      tall={tall}
+      scrollCode={withCanvas !== undefined}
     >
       {children}
     </RunnableSnippetShell>

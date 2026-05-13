@@ -7,8 +7,6 @@ import {
   WebGpuInitializationError,
 } from './runnable/index.ts';
 
-const CANVAS_SIZE = 256;
-
 type BufferOption = {
   colorCss: string;
   label: string;
@@ -37,11 +35,7 @@ const particleLayout = tgpu.bindGroupLayout({
   particles: { storage: ParticleArray, access: 'mutable' },
 });
 
-declare const initialStates: [
-  Array<{ position: d.v2f; velocity: d.v2f }>,
-  Array<{ position: d.v2f; velocity: d.v2f }>,
-  Array<{ position: d.v2f; velocity: d.v2f }>,
-];
+declare const initialStates: { position: d.v2f; velocity: d.v2f }[][]
 
 const particleBuffers = initialStates.map((state) =>
   root.createBuffer(ParticleArray, state).$usage('storage'),
@@ -112,15 +106,15 @@ function BufferControls({ onSelect, runner, selected }: BufferControlsProps) {
   }, [selected, runner.supported]);
 
   return (
-    <div className="border-b border-[var(--sl-color-gray-5)] bg-[var(--sl-color-bg)] p-2">
-      <div className="grid grid-cols-3 gap-1">
+    <div className="bg-[var(--sl-color-bg)] p-2">
+      <div className="grid grid-cols-3 gap-1 md:grid-cols-1">
         {BUFFER_OPTIONS.map((option, index) => {
           const isSelected = selected === index;
 
           return (
             <button
               aria-pressed={isSelected}
-              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-sm border px-2 py-1 text-xs font-medium transition-colors ${
+              className={`grid min-w-0 grid-cols-[auto_1fr] items-center gap-1.5 rounded-sm border px-2 py-1 text-left text-xs font-medium transition-colors ${
                 isSelected
                   ? 'border-[var(--sl-color-text-accent)] text-[var(--sl-color-text-accent)]'
                   : 'border-[var(--sl-color-gray-5)] text-[var(--sl-color-text)] hover:text-[var(--sl-color-text-accent)]'
@@ -149,7 +143,9 @@ type Props = {
 
 export default function ComputeShadersBindGroupsExample({ children }: Props) {
   const [selectedBuffer, setSelectedBuffer] = useState<BufferIndex>(0);
-  const [stepCounts, setStepCounts] = useState<[number, number, number]>([0, 0, 0]);
+  const [stepCounts, setStepCounts] = useState(() => BUFFER_OPTIONS.map(() => 0));
+  const selectedOption = BUFFER_OPTIONS[selectedBuffer];
+  const selectedStepCount = stepCounts[selectedBuffer] ?? 0;
 
   return (
     <RunnableSnippet<BindGroupProgram, void>
@@ -157,14 +153,11 @@ export default function ComputeShadersBindGroupsExample({ children }: Props) {
         <BufferControls onSelect={setSelectedBuffer} runner={runner} selected={selectedBuffer} />
       )}
       createProgram={({ canvas }) => initBindGroupProgram(canvas)}
-      panelWidth="16rem"
       preview={({ canvas }) => (
         <>
           <RunnablePreviewHeader
-            label={BUFFER_OPTIONS[selectedBuffer].name}
-            value={`${stepCounts[selectedBuffer]} step${
-              stepCounts[selectedBuffer] === 1 ? '' : 's'
-            }`}
+            label={selectedOption.name}
+            value={`${selectedStepCount} step${selectedStepCount === 1 ? '' : 's'}`}
           />
           {canvas}
         </>
@@ -176,19 +169,12 @@ export default function ComputeShadersBindGroupsExample({ children }: Props) {
         }
         simulate.with(bindGroup).dispatchThreads(particleCount);
         draw(selectedBuffer);
-        setStepCounts(
-          (current) =>
-            current.map((count, index) => (index === selectedBuffer ? count + 1 : count)) as [
-              number,
-              number,
-              number,
-            ],
+        setStepCounts((current) =>
+          current.map((count, index) => (index === selectedBuffer ? count + 1 : count)),
         );
       }}
-      tall
       withCanvas={{
-        ariaLabel: `${BUFFER_OPTIONS[selectedBuffer].label} particle state`,
-        size: CANVAS_SIZE,
+        ariaLabel: `${selectedOption.label} particle state`,
       }}
     >
       {children}

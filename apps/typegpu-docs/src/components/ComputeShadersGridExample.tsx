@@ -7,16 +7,16 @@ import {
   RunnableSnippet,
 } from './runnable/index.ts';
 
-const GRID_WIDTH = 6;
-const GRID_HEIGHT = 8;
+const GRID_WIDTH = 8;
+const GRID_HEIGHT = 6;
 const GridSchema = d.arrayOf(d.arrayOf(d.u32, GRID_HEIGHT), GRID_WIDTH);
 
 export const COMPUTE_SHADER_GRID_SNIPPET = `import tgpu, { d } from 'typegpu';
 
 const root = await tgpu.init();
 
-const WIDTH = 6;
-const HEIGHT = 8;
+const WIDTH = 8;
+const HEIGHT = 6;
 
 const valuesMutable = root.createMutable(
   d.arrayOf(d.arrayOf(d.u32, HEIGHT), WIDTH),
@@ -75,7 +75,6 @@ export default function ComputeShadersGridExample({ children }: Props) {
   return (
     <RunnableSnippet<GridProgram, GridResult>
       createProgram={() => createGridProgram()}
-      panelWidth="13rem"
       preview={({ lastResult }) => {
         const dispatch = lastResult?.dispatch ?? null;
         const values = lastResult?.values ?? INITIAL_GRID;

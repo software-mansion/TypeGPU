@@ -127,11 +127,23 @@ export async function createBindGroupProgram(canvas: HTMLCanvasElement) {
     },
   });
 
+  function resizeCanvasToDisplaySize() {
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    const width = Math.min(1024, Math.max(1, Math.round(canvas.clientWidth * pixelRatio)));
+    const height = Math.min(1024, Math.max(1, Math.round(canvas.clientHeight * pixelRatio)));
+
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+  }
+
   function draw(bufferIndex: BufferIndex) {
     const displayBindGroup = displayBindGroups[bufferIndex];
     if (!displayBindGroup) {
       return;
     }
+    resizeCanvasToDisplaySize();
     particleColor.write(BUFFER_COLORS[bufferIndex]);
     render.with(displayBindGroup).withColorAttachment({ view: context }).draw(3);
   }

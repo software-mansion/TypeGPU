@@ -140,20 +140,27 @@ type Props = {
   example: FirstGpuProgramExampleKey;
 };
 
+type ConsolePreviewState = {
+  output: string;
+  runner: { supported: boolean | null };
+};
+
+function renderConsolePreview({ output, runner }: ConsolePreviewState) {
+  return (
+    <ConsolePreview
+      output={output}
+      placeholder={runner.supported === null ? 'Checking WebGPU support...' : 'Console output'}
+    />
+  );
+}
+
 export default function FirstGpuProgramExample({ children, example }: Props) {
   if (example === 'consoleLog') {
     return (
       <RunnableSnippet<CounterProgram, void>
         captureConsole
         createProgram={() => createConsoleLogProgram()}
-        preview={({ output, runner }) => (
-          <ConsolePreview
-            output={output}
-            placeholder={
-              runner.supported === null ? 'Checking WebGPU support...' : 'Console output'
-            }
-          />
-        )}
+        preview={renderConsolePreview}
         run={({ program }) => {
           program.dispatchThreads();
         }}
@@ -168,14 +175,7 @@ export default function FirstGpuProgramExample({ children, example }: Props) {
       <RunnableSnippet<CounterProgram, void>
         captureConsole
         createProgram={() => createReadValueProgram()}
-        preview={({ output, runner }) => (
-          <ConsolePreview
-            output={output}
-            placeholder={
-              runner.supported === null ? 'Checking WebGPU support...' : 'Console output'
-            }
-          />
-        )}
+        preview={renderConsolePreview}
         run={async ({ countMutable, program }) => {
           program.dispatchThreads();
           console.log(`Read value: ${await countMutable.read()}`);
@@ -190,7 +190,7 @@ export default function FirstGpuProgramExample({ children, example }: Props) {
     <RunnableSnippet<Awaited<ReturnType<typeof createIncrementByProgram>>, void>
       captureConsole
       createProgram={() => createIncrementByProgram()}
-      preview={({ output }) => <ConsolePreview output={output} />}
+      preview={renderConsolePreview}
       run={async ({ incrementBy, program, stateMutable }) => {
         incrementBy.current++;
         stateMutable.patch({ incrementBy: incrementBy.current });

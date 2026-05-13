@@ -44,24 +44,22 @@ export function useConsoleCapture(): ConsoleCapture {
   const [output, setOutput] = useState('');
 
   async function captureDuring<T>(fn: () => T | Promise<T>): Promise<T> {
-    const captured: string[] = [];
     const originals = Object.fromEntries(
       consoleMethods.map((method) => [method, console[method]]),
     ) as Record<ConsoleMethod, (...args: unknown[]) => void>;
 
     for (const method of consoleMethods) {
       console[method] = (...args: unknown[]) => {
-        captured.push(formatArgs(args));
+        setOutput((current) => appendOutput(current, [formatArgs(args)]));
         originals[method](...args);
       };
     }
 
     try {
       const result = await fn();
-      setOutput((current) => appendOutput(current, captured));
       return result;
     } catch (error) {
-      setOutput((current) => appendOutput(current, [...captured, stringifyArg(error)]));
+      setOutput((current) => appendOutput(current, [stringifyArg(error)]));
       throw error;
     } finally {
       for (const method of consoleMethods) {

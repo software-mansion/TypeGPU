@@ -18,7 +18,7 @@ export function ConsolePreview({ output, placeholder = 'Console output' }: Conso
     <pre
       aria-label="Console output"
       aria-readonly="true"
-      className="m-0 min-w-0 whitespace-pre-wrap break-words font-mono text-xs leading-5 text-[var(--sl-color-text)] focus:outline-none"
+      className="m-0 h-full min-w-0 overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-5 text-[var(--sl-color-text)] focus:outline-none"
       ref={preRef}
       role="textbox"
       tabIndex={0}
