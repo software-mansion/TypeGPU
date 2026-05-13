@@ -33,13 +33,13 @@ Let's create a program that increments an entire array of values instead of incr
 
 <ComputeShadersExample />
 
-Each time you run the example, it chooses a random thread count between `1` and `16`. If it dispatches 6 threads, thread `0` increments array element `0`, thread `1` increments array element `1`, and so on until thread `5`. The preview highlights the part of the array touched by the latest dispatch.
+Each time you run the example, it chooses a random thread count between `1` and `16`. If it dispatches 6 threads, thread `0` increments array element `0`, thread `1` increments array element `1`, and so on, up to thread `5`. The preview highlights the part of the array touched by the latest dispatch.
 
 ## Dispatch size and bounds
 
-The `dispatchThreads()` method controls how many logical GPU threads will run the shader function. If we dispatch 16 threads for a 16-element array, we increment the whole array. If we dispatch 4 threads, only the first 4 elements are incremented because `x` takes values from `0` to `dispatchThreads - 1`.
+The `dispatchThreads()` method controls how many logical GPU threads will run the shader function. If we dispatch 16 threads for a 16-element array, we increment the whole array. If we dispatch 4 threads, only the first 4 elements are incremented because `x` takes values from `0` to the passed count minus `1`.
 
-We still have to be careful not to read or write outside the bounds of the array. The GPU will not actually read or write past the array, but it will not crash either. Instead, out-of-bounds access produces a value that is not well-defined.
+We still have to be careful not to read or write outside the bounds of the array. WebGPU prevents those accesses from reaching memory outside the binding, but that does not make them useful. The shader may still continue with meaningless data, or a write you expected may not happen.
 
 :::tip
 If the dispatch size might be larger than the buffer length, guard the array access inside the shader:
@@ -112,7 +112,7 @@ When using `createGuardedComputePipeline()`, we can pass a function that takes u
 On a high level, a 2D compute shader can often be reduced to a 1D compute shader by flattening the coordinates into one index. The same is true for 3D work. That translation is sometimes useful, but it can make the shader harder to read because the first thing each thread has to do is recover the coordinates it actually cares about.
 
 :::note
-There is also a practical reason to keep work split across dimensions. WebGPU limits how many threads can be dispatched along a single axis. The limit is high, but large workloads can still run into it.
+There is also a practical reason to keep work split across dimensions. WebGPU limits how much work can be dispatched along a single axis. The limit is high, but large workloads can still run into it.
 
 For grid-shaped workloads, spreading the work across `x` and `y` lets the dispatch shape match the data while staying within those per-axis limits.
 :::
@@ -140,11 +140,13 @@ This is the main reason to use a 2D dispatch for grid-shaped data: the shader ca
 
 So far, we have used `createMutable()` to create buffers that shader code can read and write directly. This is very convenient for simple shaders and requires no additional setup. We refer to this path as [**Fixed Resources**](/TypeGPU/apis/buffers/#using-fixed-resources): the shader closes over one particular GPU resource and TypeGPU binds it for us.
 
-Sometimes, though, we want to swap which buffer, or any other resource type we will cover later, is used by the shader for a particular dispatch. For that, TypeGPU offers [**Laid Out Resources**](/TypeGPU/apis/bind-groups/).
+Sometimes, though, we want to swap which buffer is used by the shader for a particular dispatch. Later, the same idea will apply to other resource types too. For that, TypeGPU offers [**Laid Out Resources**](/TypeGPU/apis/bind-groups/).
 
-Laid out resources are described with bind group layouts. A bind group layout defines what schemas the resources should adhere to without providing the concrete GPU resources up front.
+Laid out resources split the setup into two pieces:
+- A **bind group layout** describes the shape of the resources the shader expects.
+- A **bind group** provides the concrete GPU resources that satisfy that layout.
 
-For buffers, each layout entry uses the same schema we would use to create the buffer. If the entry is a storage buffer, it can also include an access mode:
+The layout is created first, without providing any actual buffers. For buffers, each layout entry uses the same schema we would use to create the buffer. If the entry is a storage buffer, it can also include an access mode:
 
 ```ts twoslash
 import tgpu, { d } from 'typegpu';
@@ -163,15 +165,62 @@ Each key in the bind group layout maps to a single resource. For the buffer reso
 | `root.createReadonly(d.u32)` | `{ storage: d.u32 }` |
 | `root.createMutable(d.u32)` | `{ storage: d.u32, access: 'mutable' }` |
 
-:::tip
 Storage entries are readonly by default, so `{ storage: d.u32 }` and `{ storage: d.u32, access: 'readonly' }` describe the same shader access.
+
+To provide the resources, create a bind group with `root.createBindGroup(layout, entries)`:
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+
+const bindGroupLayout = tgpu.bindGroupLayout({
+  counter: { storage: d.u32, access: 'mutable' },
+  values: { storage: d.arrayOf(d.u32, 16) },
+});
+// ---cut---
+const counterBuffer = root.createBuffer(d.u32).$usage('storage');
+const valuesBuffer = root.createBuffer(d.arrayOf(d.u32, 16)).$usage('storage');
+
+const bindGroup = root.createBindGroup(bindGroupLayout, {
+  counter: counterBuffer,
+  values: valuesBuffer,
+});
+```
+
+:::note
+Because bind group entries are typed, providing a resource with the wrong schema or usage is a TypeScript error.
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+
+const bindGroupLayout = tgpu.bindGroupLayout({
+  counter: { storage: d.u32, access: 'mutable' },
+  values: { storage: d.arrayOf(d.u32, 16) },
+});
+
+const valuesBuffer = root.createBuffer(d.arrayOf(d.u32, 16)).$usage('storage');
+// ---cut---
+const wrongBuffer = root.createBuffer(d.f32).$usage('storage');
+// @errors: 2322
+const invalidBindGroup = root.createBindGroup(bindGroupLayout, {
+  counter: wrongBuffer,
+  values: valuesBuffer,
+});
+```
 :::
 
-The two snippets below perform the same simulation step. The Fixed Resources version closes over one particular set of resources, while the Laid Out Resources version keeps the pipeline reusable and supplies the resources when dispatching.
+Here is that resource swap in a small particle simulation. The shader stays the same, while the selected bind group decides which particle buffer is advanced:
+
+<ComputeShadersExample example="bindGroups" />
+
+Now the same simulation step can be written in either style. The Fixed Resources version closes over one particular set of resources, while the Laid Out Resources version keeps the pipeline reusable and supplies the resources when dispatching.
 
 <Tabs>
   <TabItem label="Laid Out Resources">
-    ```ts twoslash
+    ```ts twoslash {13-16, 18-21}
     import tgpu, { d } from 'typegpu';
 
     const root = await tgpu.init();
@@ -205,7 +254,7 @@ The two snippets below perform the same simulation step. The Fixed Resources ver
     ```
   </TabItem>
   <TabItem label="Fixed Resources">
-    ```ts twoslash
+    ```ts twoslash {10-11}
     import tgpu, { d } from 'typegpu';
 
     const root = await tgpu.init();
@@ -229,3 +278,11 @@ The two snippets below perform the same simulation step. The Fixed Resources ver
     ```
   </TabItem>
 </Tabs>
+
+The tradeoff is a little more setup, but the shader no longer closes over one concrete resource. It can be separated cleanly from runtime resource setup and reused with different bind groups.
+
+:::tip
+Layouts are the only way to swap resources for a shader after pipeline creation, but they are not the only way to create modular shaders. We will cover [slots](/TypeGPU/apis/slots/) and [accessors](/TypeGPU/apis/accessors/) in later sections. They provide a similar way of defining resource-independent shaders, but each change requires creating a new shader module.
+:::
+
+Since bind groups are immutable by nature, you need to create a new bind group each time you want to use a new resource. If you have a limited set of combinations, you can cache and reuse them.
