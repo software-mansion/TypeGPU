@@ -81,12 +81,7 @@ export function createFnCore(
           throw new Error('Explicit return type is required for string implementation');
         }
 
-        const validArgNames = entryInput
-          ? Object.fromEntries(
-              entryInput.positionalArgs.map((a) => [a.schemaKey, ctx.makeNameValid(a.schemaKey)]),
-            )
-          : undefined;
-
+        const validArgNames = validateRawWgslArgNames(ctx, implementation, entryInput);
         if (validArgNames && Object.keys(validArgNames).length > 0) {
           applyExternals(externalMap, { in: validArgNames });
         }
@@ -245,4 +240,34 @@ function checkAndReturnType(
   }
 
   return wgslType;
+}
+
+/**
+ * Picks a valid WGSL identifier for each positional entry-fn argument,
+ * so the generated header doesn't shadow any local `var`/`let`/`const` declared in the implementation.
+ * Also makes sure that no two arguments get the same name.
+ */
+function validateRawWgslArgNames(
+  ctx: ResolutionCtx,
+  implementation: string,
+  entryInput: SeparatedEntryArgs | undefined,
+) {
+  const usedArgNames = new Set<string>();
+  return entryInput
+    ? Object.fromEntries(
+        entryInput.positionalArgs.map(({ schemaKey }) => {
+          let i = 0;
+          let primer = schemaKey;
+          while (
+            usedArgNames.has(primer) ||
+            new RegExp(`(var|let|const) ${primer}`, 'g').test(implementation)
+          ) {
+            primer = `${schemaKey}_${i++}`;
+          }
+          const name = ctx.makeNameValid(primer);
+          usedArgNames.add(name);
+          return [schemaKey, name];
+        }),
+      )
+    : undefined;
 }
