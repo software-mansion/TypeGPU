@@ -126,35 +126,28 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
 
   it('renames arguments to not shadow local declarations', () => {
     const mainVertex = tgpu.vertexFn({
-      in: { vi: d.builtin.vertexIndex },
+      in: { vi: d.builtin.vertexIndex, ii: d.builtin.instanceIndex },
       out: { outPos: d.builtin.position },
     })(/* wgsl */ `{
-  var pos = array<vec2f, 3>(
-    vec2(0.0, 0.5),
-    vec2(-0.5, -0.5),
-    vec2(0.5, -0.5)
-  );
-
   var vi = in.vi;
+  let ii = in.ii;
 
-  return Out(vec4f(pos[in.vertexIndex], 0.0, 1.0));
+  return Out(vec4f(vi, ii, 0, 1));
 }`);
 
-    expect(tgpu.resolve([mainVertex])).toMatchInlineSnapshot(`
+    const resolved = tgpu.resolve([mainVertex]);
+    expect(resolved).not.toContain('vi = vi;');
+    expect(resolved).not.toContain('ii = ii;');
+    expect(resolved).toMatchInlineSnapshot(`
       "struct mainVertex_Output {
         @builtin(position) outPos: vec4f,
       }
 
-      @vertex fn mainVertex(@builtin(vertex_index) vi: u32) -> mainVertex_Output {
-        var pos = array<vec2f, 3>(
-          vec2(0.0, 0.5),
-          vec2(-0.5, -0.5),
-          vec2(0.5, -0.5)
-        );
+      @vertex fn mainVertex(@builtin(vertex_index) vi_0: u32, @builtin(instance_index) ii_0: u32) -> mainVertex_Output {
+        var vi = vi_0;
+        let ii = ii_0;
 
-        var vi = vi;
-
-        return mainVertex_Output(vec4f(pos[in.vertexIndex], 0.0, 1.0));
+        return mainVertex_Output(vec4f(vi, ii, 0, 1));
       }"
     `);
   });
