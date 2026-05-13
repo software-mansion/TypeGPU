@@ -4,7 +4,7 @@ import { resolveCommand } from '@antfu/ni';
 import type { Agent } from 'package-manager-detector';
 import { failAndExit } from './prompts.ts';
 
-function parseUserAgent(userAgent: string | undefined): string | undefined {
+function parseUserAgent(userAgent: string | undefined) {
   if (!userAgent) return undefined;
   const pkgSpec = userAgent.split(' ')[0];
   if (!pkgSpec) return undefined;
@@ -14,7 +14,7 @@ function parseUserAgent(userAgent: string | undefined): string | undefined {
   return pkgSpecArr[0];
 }
 
-export function pmFromUserAgent(userAgent: string | undefined): Agent {
+export function pmFromUserAgent(userAgent: string | undefined) {
   const pm = parseUserAgent(userAgent);
   if (pm === undefined) {
     failAndExit(`Cannot determine package manager from user agent env.`);
@@ -65,13 +65,11 @@ export function pmInstall(pm: Agent) {
   s.stop('Installed dependencies');
 }
 
-// this function exits the current process
-export function pmRun(pm: Agent, args: string[] = []) {
+export function pmRun(pm: Agent, args: string[]) {
   const cmd = resolveCommand(pm, 'run', [...args]);
   if (!cmd) {
     failAndExit(`Cannot resolve run command for ${pm}.`);
   }
 
   runCommand(cmd.command, cmd.args, true);
-  process.exit(0);
 }

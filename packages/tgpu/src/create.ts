@@ -5,6 +5,7 @@ import { pmFromUserAgent, pmInstall, pmRun } from './utils/pm.ts';
 import { cancelExit, rgbText } from './utils/prompts.ts';
 import { copyTemplate, prepareDirectory } from './utils/files.ts';
 import { getPackageName, getProjectDirectory } from './utils/inputs.ts';
+import { resolveCommand } from 'package-manager-detector';
 
 const DEFAULT_PROJECT_DIR = 'tgpu-project';
 
@@ -41,7 +42,7 @@ export async function createProject(cwd: string) {
   );
   copyTemplate(templateDir, root, packageName);
 
-  p.log.success(`Scaffolded project at ${projectDir}`);
+  p.log.success(`Scaffolded project at ${projectDir}.`);
 
   const pm = pmFromUserAgent(process.env.npm_config_user_agent);
   const installAndRun = await p.confirm({
@@ -56,10 +57,20 @@ export async function createProject(cwd: string) {
     process.chdir(root);
     pmInstall(pm);
     pmRun(pm, ['dev']);
-    // end of the scaffolding process
-  } else {
-    // TODO
+    return;
   }
 
-  p.outro('Done! Get ready for a shaderful experience.');
+  let msg = 'Done!\n';
+  const cdPath = path.relative(cwd, root);
+  const installCmd = resolveCommand(pm, 'install', []);
+  const runCmd = resolveCommand(pm, 'run', ['dev']);
+
+  if (installCmd && runCmd) {
+    msg += `   To have a shaderful experience run:\n`;
+    msg += `\n   cd ${cdPath}\n`;
+    msg += `   ${installCmd.command} ${installCmd.args.join(' ')}\n`;
+    msg += `   ${runCmd.command} ${runCmd.args.join(' ')} `;
+  }
+
+  p.outro(msg);
 }
