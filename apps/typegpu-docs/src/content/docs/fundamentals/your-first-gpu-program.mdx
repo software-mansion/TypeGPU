@@ -225,8 +225,6 @@ These are simple because the schema gives TypeGPU enough information to serializ
 
 As we can see, our program grew quite a bit. Let's examine what changed:
 
-<Steps>
-
 1. **Add a new value to our GPU state**, which we will use to control each increment step. We used `d.struct`, which works exactly like you would expect a struct to: it lets us group data together.
 
    ```ts twoslash
@@ -311,8 +309,6 @@ As we can see, our program grew quite a bit. Let's examine what changed:
    // ---cut---
    stateMutable.patch({ incrementBy });
    ```
-
-</Steps>
 
 ## Summary
 
