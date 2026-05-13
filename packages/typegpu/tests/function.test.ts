@@ -170,3 +170,28 @@ describe('InheritArgNames', () => {
     attest(isEvenWithNames).type.toString.snap('(num: number) => boolean');
   });
 });
+
+describe('externals', () => {
+  it('should rename externals to avoid clashes with variables', () => {
+    const jsConst = tgpu.const(d.u32, 1).$name('myConst');
+    const fn = tgpu.fn([])`() {
+  const myConst = 0;
+  const otherConst = extConst;
+}`.$uses({ extConst: jsConst });
+
+    const result = tgpu.resolve([fn]);
+    expect(result).not.toContain('otherConst = myConst;');
+    expect(result).toMatchInlineSnapshot();
+  });
+
+  it('should rename externals to avoid clashes with arguments', () => {
+    const jsConst = tgpu.const(d.u32, 1).$name('myConst');
+    const fn = tgpu.fn([d.u32])`(myConst) {
+  const otherConst = extConst;
+}`.$uses({ extConst: jsConst });
+
+    const result = tgpu.resolve([fn]);
+    expect(result).not.toContain('otherConst = myConst;');
+    expect(result).toMatchInlineSnapshot();
+  });
+});
