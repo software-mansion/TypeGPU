@@ -5,7 +5,7 @@ import viteLogo from './assets/vite.svg';
 import { setupCounter } from './counter.ts';
 import tgpu, { common, d } from 'typegpu';
 
-document.querySelector<HTMLDivElement>('#app').innerHTML = `
+document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 <section id="center">
   <div class="hero">
     <canvas id="canvas" width="256" height="256"></canvas>
@@ -56,12 +56,12 @@ document.querySelector<HTMLDivElement>('#app').innerHTML = `
 <section id="spacer"></section>
 `;
 
-setupCounter(document.querySelector<HTMLButtonElement>('#counter'));
+setupCounter(document.querySelector<HTMLButtonElement>('#counter')!);
 
 // Setting up TypeGPU
 const root = await tgpu.init();
 
-const canvas = document.querySelector<HTMLCanvasElement>('#canvas');
+const canvas = document.querySelector<HTMLCanvasElement>('#canvas')!;
 const context = root.configureContext({ canvas });
 
 const pipeline = root.createRenderPipeline({
