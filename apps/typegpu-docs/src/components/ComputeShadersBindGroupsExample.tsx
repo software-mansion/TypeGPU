@@ -1,11 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { type BufferIndex, createBindGroupProgram } from './ComputeShadersBindGroupsRuntime.ts';
-import {
-  RunnablePreviewHeader,
-  RunnableSnippet,
-  type RunnerHandle,
-  WebGpuInitializationError,
-} from './runnable/index.ts';
+import { RunnablePreviewHeader, RunnableSnippet, type RunnerHandle } from './runnable/index.ts';
 
 type BufferOption = {
   colorCss: string;
@@ -64,17 +59,6 @@ export function run(selected: number) {
 `;
 
 type BindGroupProgram = Awaited<ReturnType<typeof createBindGroupProgram>>;
-
-async function initBindGroupProgram(canvas: HTMLCanvasElement | null) {
-  if (!canvas) {
-    throw new Error('The WebGPU canvas is not ready yet.');
-  }
-  try {
-    return await createBindGroupProgram(canvas);
-  } catch (error) {
-    throw new WebGpuInitializationError(error);
-  }
-}
 
 type BufferControlsProps = {
   onSelect: (index: BufferIndex) => void;
@@ -152,7 +136,12 @@ export default function ComputeShadersBindGroupsExample({ children }: Props) {
       controls={({ runner }) => (
         <BufferControls onSelect={setSelectedBuffer} runner={runner} selected={selectedBuffer} />
       )}
-      createProgram={({ canvas }) => initBindGroupProgram(canvas)}
+      createProgram={({ canvas }) => {
+        if (!canvas) {
+          throw new Error('The WebGPU canvas is not ready yet.');
+        }
+        return createBindGroupProgram(canvas);
+      }}
       preview={({ canvas }) => (
         <>
           <RunnablePreviewHeader

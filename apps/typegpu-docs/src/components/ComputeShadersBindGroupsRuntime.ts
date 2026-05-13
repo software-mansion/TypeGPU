@@ -1,5 +1,6 @@
 import { sdBox2d } from '@typegpu/sdf';
 import tgpu, { common, d, std } from 'typegpu';
+import { createExampleRoot } from './runnable/index.ts';
 
 const PARTICLE_COUNT = 96;
 const PARTICLE_HALF_SIZE = 0.0065;
@@ -69,7 +70,7 @@ function createBurstState(): ParticleValue[] {
 const INITIAL_STATES = [createOrbitState(), createDriftState(), createBurstState()] as const;
 
 export async function createBindGroupProgram(canvas: HTMLCanvasElement) {
-  const root = await tgpu.init();
+  const root = await createExampleRoot();
   const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
   const computeLayout = tgpu.bindGroupLayout({

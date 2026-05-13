@@ -296,7 +296,6 @@ export type RunnableSnippetState<TProgram extends RootedProgram, TResult> = {
   canvas: ReactNode | null;
   lastResult: TResult | null;
   output: string;
-  runIndex: number;
   runner: RunnerHandle<TProgram>;
 };
 
@@ -306,10 +305,7 @@ export type RunnableSnippetProps<TProgram extends RootedProgram, TResult> = {
   controls?: (state: RunnableSnippetState<TProgram, TResult>) => ReactNode;
   createProgram: (ctx: { canvas: HTMLCanvasElement | null }) => Promise<TProgram>;
   preview: (state: RunnableSnippetState<TProgram, TResult>) => ReactNode;
-  run: (
-    program: TProgram,
-    ctx: { previousResult: TResult | null; runIndex: number },
-  ) => TResult | Promise<TResult>;
+  run: (program: TProgram) => TResult | Promise<TResult>;
   withCanvas?: { ariaLabel?: string };
 };
 
@@ -325,12 +321,6 @@ export function RunnableSnippet<TProgram extends RootedProgram, TResult = void>(
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const consoleCapture = useConsoleCapture();
   const [lastResult, setLastResult] = useState<TResult | null>(null);
-  const [runIndex, setRunIndex] = useState(0);
-  const lastResultRef = useRef<TResult | null>(null);
-  const runIndexRef = useRef(0);
-
-  lastResultRef.current = lastResult;
-  runIndexRef.current = runIndex;
 
   const runner = useWebGpuProgram<TProgram>(() => {
     const canvas = withCanvas ? canvasRef.current : null;
@@ -340,27 +330,17 @@ export function RunnableSnippet<TProgram extends RootedProgram, TResult = void>(
     return createProgram({ canvas });
   });
 
-  async function executeRun(program: TProgram) {
-    const nextRunIndex = runIndexRef.current + 1;
-    const result = await run(program, {
-      previousResult: lastResultRef.current,
-      runIndex: nextRunIndex,
-    });
-    setLastResult(result);
-    setRunIndex(nextRunIndex);
-  }
-
   async function handleRun() {
     await runner.runExclusive(async (program) => {
       if (captureConsole) {
         await consoleCapture.captureDuring(async () => {
-          await executeRun(program);
+          setLastResult(await run(program));
           // GPU-side console.log fires after submitted work completes; wait
           // before tearing down the capture so shader logs are recorded.
           await waitForGpuLogs(program.root);
         });
       } else {
-        await executeRun(program);
+        setLastResult(await run(program));
       }
     });
   }
@@ -379,7 +359,6 @@ export function RunnableSnippet<TProgram extends RootedProgram, TResult = void>(
     canvas: canvasNode,
     lastResult,
     output: consoleCapture.output,
-    runIndex,
     runner,
   };
 

@@ -98,25 +98,22 @@ type IncrementByProgram = {
   stateMutable: TgpuMutable<typeof CounterState>;
 };
 
-async function createConsoleLogProgram(): Promise<CounterProgram> {
+async function createCounterProgram(withLog: boolean): Promise<CounterProgram> {
   const root = await createExampleRoot();
   const countMutable = root.createMutable(d.u32);
-  const program = root.createGuardedComputePipeline(() => {
-    'use gpu';
-    const currentCount = countMutable.$;
-    console.log('current count:', currentCount);
-    countMutable.$++;
-  });
-  return { countMutable, program, root };
-}
-
-async function createReadValueProgram(): Promise<CounterProgram> {
-  const root = await createExampleRoot();
-  const countMutable = root.createMutable(d.u32);
-  const program = root.createGuardedComputePipeline(() => {
-    'use gpu';
-    countMutable.$++;
-  });
+  const program = root.createGuardedComputePipeline(
+    withLog
+      ? () => {
+          'use gpu';
+          const currentCount = countMutable.$;
+          console.log('current count:', currentCount);
+          countMutable.$++;
+        }
+      : () => {
+          'use gpu';
+          countMutable.$++;
+        },
+  );
   return { countMutable, program, root };
 }
 
@@ -159,7 +156,7 @@ export default function FirstGpuProgramExample({ children, example }: Props) {
     return (
       <RunnableSnippet<CounterProgram, void>
         captureConsole
-        createProgram={() => createConsoleLogProgram()}
+        createProgram={() => createCounterProgram(true)}
         preview={renderConsolePreview}
         run={({ program }) => {
           program.dispatchThreads();
@@ -174,7 +171,7 @@ export default function FirstGpuProgramExample({ children, example }: Props) {
     return (
       <RunnableSnippet<CounterProgram, void>
         captureConsole
-        createProgram={() => createReadValueProgram()}
+        createProgram={() => createCounterProgram(false)}
         preview={renderConsolePreview}
         run={async ({ countMutable, program }) => {
           program.dispatchThreads();

@@ -4,6 +4,5 @@ export {
   createExampleRoot,
   RunnablePreviewHeader,
   RunnableSnippet,
-  WebGpuInitializationError,
   type RunnerHandle,
 } from './RunnableSnippet.tsx';

@@ -11,10 +11,6 @@ const incrementPipeline = root.createGuardedComputePipeline(() => {
   counter.$ += 1;
 });
 
-const test = Array.from({ length: 16 }, (_, i) => i);
-test[22]++;
-console.log(test);
-
 async function increment() {
   // Dispatch and read the result
   incrementPipeline.dispatchThreads();
