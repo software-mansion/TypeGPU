@@ -252,6 +252,50 @@ describe('std.copy', () => {
       `);
     });
 
+    it('works for overloaded functions', () => {
+      const Boid = d.struct({ prop: d.vec2u });
+
+      const fn = <T extends number | d.v2u | d.Infer<typeof Boid>>(arg: T): T => {
+        'use gpu';
+        const copy = std.copy(arg);
+        return copy;
+      };
+
+      const main = () => {
+        'use gpu';
+        const a = fn(1);
+        const b = fn(d.vec2u());
+        const c = fn(Boid({ prop: d.vec2u() }));
+      };
+
+      expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+        "fn fn_1(arg: i32) -> i32 {
+          let copy = arg;
+          return copy;
+        }
+
+        fn fn_2(arg: vec2u) -> vec2u {
+          var copy = arg;
+          return copy;
+        }
+
+        struct Boid {
+          prop: vec2u,
+        }
+
+        fn fn_3(arg: Boid) -> Boid {
+          var copy = arg;
+          return copy;
+        }
+
+        fn main() {
+          let a = fn_1(1i);
+          var b = fn_2(vec2u());
+          var c = fn_3(Boid(vec2u()));
+        }"
+      `);
+    });
+
     it('cannot be used in d.ref', () => {
       const modify = (v: d.ref<d.v2u>) => {
         'use gpu';
