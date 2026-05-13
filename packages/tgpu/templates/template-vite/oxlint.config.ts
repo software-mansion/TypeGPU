@@ -14,6 +14,7 @@ export default defineConfig({
   rules: {
     ...typegpuRules,
     'import/no-named-as-default': 'off',
+    '@typescript-eslint/no-non-null-assertion': 'error',
   } as Record<string, AllowWarnDeny>,
   env: {
     builtin: true,
