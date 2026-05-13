@@ -3,7 +3,7 @@ title: Your first GPU program
 description: Create and call a small TypeGPU compute shader, then store and read its result.
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid, Steps } from '@astrojs/starlight/components';
 import FirstGpuProgramExample from '../../../components/FirstGpuProgramExample.astro';
 
 Running code on the GPU might sound intimidating, but **compute shaders** make it pretty easy to run arbitrary calculations. Most GPU programming guides start by creating a triangle (since that is what GPUs were primarily made for historically), but modern graphics programming is no longer bound by the classic execution model. This style is often called **GPGPU**: using graphics processors for general-purpose work. We can **parallelize all kinds of work** with much less effort.
@@ -33,6 +33,8 @@ program.dispatchThreads();
 
 And that's it! You just ran your first GPU program from JavaScript. Of course, it does not do anything meaningful yet, but before we change that, let's take a look at it line by line.
 
+<Steps>
+
 1. **Initialize the `root`**, which holds the reference to the GPU device and serves as the middleman when creating GPU resources:
 
    ```ts
@@ -53,6 +55,8 @@ And that's it! You just ran your first GPU program from JavaScript. Of course, i
    ```ts
    program.dispatchThreads();
    ```
+
+</Steps>
 
 ## Adding state
 
@@ -221,6 +225,8 @@ These are simple because the schema gives TypeGPU enough information to serializ
 
 As we can see, our program grew quite a bit. Let's examine what changed:
 
+<Steps>
+
 1. **Add a new value to our GPU state**, which we will use to control each increment step. We used `d.struct`, which works exactly like you would expect a struct to: it lets us group data together.
 
    ```ts twoslash
@@ -305,6 +311,8 @@ As we can see, our program grew quite a bit. Let's examine what changed:
    // ---cut---
    stateMutable.patch({ incrementBy });
    ```
+
+</Steps>
 
 ## Summary
 
