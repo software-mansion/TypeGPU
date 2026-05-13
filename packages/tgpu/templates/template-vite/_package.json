@@ -11,22 +11,22 @@
     "fix": "oxlint --fix && oxfmt"
   },
   "dependencies": {
-    "typegpu": "^0.10.2"
+    "typegpu": "^0.11.4"
   },
   "devDependencies": {
-    "eslint-plugin-typegpu": "^0.10.0",
-    "oxfmt": "^0.45.0",
-    "oxlint": "^1.60.0",
-    "typescript": "npm:tsover@6.0.0",
-    "unplugin-typegpu": "^0.10.2",
-    "vite": "^8.0.4"
+    "eslint-plugin-typegpu": "^0.11.1",
+    "oxfmt": "^0.49.0",
+    "oxlint": "^1.64.0",
+    "typescript": "npm:tsover@6.0.1",
+    "unplugin-typegpu": "^0.11.3",
+    "vite": "^8.0.12"
   },
   "overrides": {
-    "typescript": "npm:tsover@6.0.0"
+    "typescript": "npm:tsover@6.0.1"
   },
   "pnpm": {
     "overrides": {
-      "typescript": "npm:tsover@6.0.0"
+      "typescript": "npm:tsover@6.0.1"
     }
   }
 }
