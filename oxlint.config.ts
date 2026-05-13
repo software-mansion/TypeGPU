@@ -22,7 +22,7 @@ export default defineConfig({
     'eslint-plugin-import/no-named-as-default-member': 'off',
     'eslint-plugin-import/extensions': ['error', 'always', { ignorePackages: true }],
   },
-  ignorePatterns: ['**/*.astro', '**/*.mjs', 'packages/tgpu/templates/**'],
+  ignorePatterns: ['**/*.astro', '**/*.mjs'],
   overrides: [
     {
       files: ['**/*.test.ts', '**/tests/**'],

@@ -5,6 +5,7 @@ import viteLogo from './assets/vite.svg';
 import { setupCounter } from './counter.ts';
 import tgpu, { common, d } from 'typegpu';
 
+// oxlint-disable-next-line typescript/no-non-null-assertion
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 <section id="center">
   <div class="hero">
@@ -56,11 +57,13 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 <section id="spacer"></section>
 `;
 
+// oxlint-disable-next-line typescript/no-non-null-assertion
 setupCounter(document.querySelector<HTMLButtonElement>('#counter')!);
 
 // Setting up TypeGPU
 const root = await tgpu.init();
 
+// oxlint-disable-next-line typescript/no-non-null-assertion
 const canvas = document.querySelector<HTMLCanvasElement>('#canvas')!;
 const context = root.configureContext({ canvas });
 

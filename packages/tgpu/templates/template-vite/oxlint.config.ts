@@ -13,6 +13,7 @@ export default defineConfig({
   },
   rules: {
     ...typegpuRules,
+    'import/no-named-as-default': 'off',
   } as Record<string, AllowWarnDeny>,
   env: {
     builtin: true,
