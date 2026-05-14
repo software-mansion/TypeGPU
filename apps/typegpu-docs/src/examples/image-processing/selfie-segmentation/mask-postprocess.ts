@@ -1,15 +1,7 @@
 import tgpu, { d, std } from 'typegpu';
-import type {
-  SampledFlag,
-  StorageFlag,
-  TgpuBindGroup,
-  TgpuComputePipeline,
-  TgpuRoot,
-  TgpuTexture,
-  TgpuTextureView,
-} from 'typegpu';
+import type { SampledFlag, StorageFlag, TgpuRoot, TgpuTexture, TgpuTextureView } from 'typegpu';
 import { MODEL_HEIGHT, MODEL_WIDTH } from './inference.ts';
-import { type MaskBuffer, WORKGROUP_SIZE } from './kernels.ts';
+import { type KernelHandle, type MaskBuffer, WORKGROUP_SIZE } from './kernels.ts';
 
 type MaskTexture = TgpuTexture<{
   size: readonly [typeof MODEL_WIDTH, typeof MODEL_HEIGHT];
@@ -22,6 +14,7 @@ type SampledMaskView = TgpuTextureView<d.WgslTexture2d<d.F32>>;
 type StorageMaskView = TgpuTextureView<d.WgslStorageTexture2d<'rgba8unorm', 'write-only'>>;
 
 const TOTAL_PIXELS = MODEL_WIDTH * MODEL_HEIGHT;
+const WORKGROUPS = Math.ceil(TOTAL_PIXELS / WORKGROUP_SIZE);
 const MIN_BLEND = 0.08;
 const MAX_BLEND = 1;
 const CERTAINTY_LOW = 0.55;
@@ -181,72 +174,74 @@ export const rawMaskToTextureKernel = tgpu.computeFn({
 });
 
 export class MaskPostProcessor {
-  readonly maskTexture: MaskTexture;
   readonly maskView: SampledMaskView;
 
-  private readonly maskStorageView: StorageMaskView;
-  private readonly paramsBuffer;
-  private readonly temporalBuffer: MaskBuffer;
-  private readonly workgroups = Math.ceil(TOTAL_PIXELS / WORKGROUP_SIZE);
-  private readonly temporalPipeline: TgpuComputePipeline;
-  private readonly blurPipeline: TgpuComputePipeline;
-  private readonly rawToTexturePipeline: TgpuComputePipeline;
-  private readonly temporalBindGroup: TgpuBindGroup;
-  private readonly blurBindGroup: TgpuBindGroup;
-  private readonly rawToTextureBindGroup: TgpuBindGroup;
-  private initialized = false;
+  readonly #paramsBuffer;
+  readonly #temporal: KernelHandle;
+  readonly #blur: KernelHandle;
+  readonly #rawToTexture: KernelHandle;
+  #initialized = false;
 
   constructor(root: TgpuRoot, rawMask: MaskBuffer) {
-    this.paramsBuffer = root.createBuffer(postProcessParams, { initialized: 0 }).$usage('uniform');
-    this.temporalBuffer = createMaskBuffer(root);
-    this.maskTexture = root
+    const paramsBuffer = root.createBuffer(postProcessParams, { initialized: 0 }).$usage('uniform');
+    const temporalBuffer = createMaskBuffer(root);
+    const maskTexture = root
       .createTexture({
         size: [MODEL_WIDTH, MODEL_HEIGHT],
         format: 'rgba8unorm',
       })
       .$usage('storage', 'sampled') as MaskTexture;
-    this.maskView = this.maskTexture.createView(d.texture2d(d.f32));
-    this.maskStorageView = this.maskTexture.createView(
+    this.maskView = maskTexture.createView(d.texture2d(d.f32));
+    const maskStorageView = maskTexture.createView(
       d.textureStorage2d('rgba8unorm', 'write-only'),
-    );
-    this.temporalPipeline = root.createComputePipeline({ compute: temporalAccumulatorKernel });
-    this.blurPipeline = root.createComputePipeline({ compute: softBlurToTextureKernel });
-    this.rawToTexturePipeline = root.createComputePipeline({ compute: rawMaskToTextureKernel });
-    this.temporalBindGroup = root.createBindGroup(temporalLayout, {
-      params: this.paramsBuffer,
-      raw: rawMask,
-      temporal: this.temporalBuffer,
-    });
-    this.blurBindGroup = root.createBindGroup(blurToTextureLayout, {
-      src: this.temporalBuffer,
-      output: this.maskStorageView,
-    });
-    this.rawToTextureBindGroup = root.createBindGroup(rawToTextureLayout, {
-      raw: rawMask,
-      output: this.maskStorageView,
-    });
+    ) as StorageMaskView;
+
+    this.#paramsBuffer = paramsBuffer;
+    this.#temporal = {
+      pipeline: root.createComputePipeline({ compute: temporalAccumulatorKernel }),
+      bindGroup: root.createBindGroup(temporalLayout, {
+        params: paramsBuffer,
+        raw: rawMask,
+        temporal: temporalBuffer,
+      }),
+      workgroups: WORKGROUPS,
+    };
+    this.#blur = {
+      pipeline: root.createComputePipeline({ compute: softBlurToTextureKernel }),
+      bindGroup: root.createBindGroup(blurToTextureLayout, {
+        src: temporalBuffer,
+        output: maskStorageView,
+      }),
+      workgroups: WORKGROUPS,
+    };
+    this.#rawToTexture = {
+      pipeline: root.createComputePipeline({ compute: rawMaskToTextureKernel }),
+      bindGroup: root.createBindGroup(rawToTextureLayout, {
+        raw: rawMask,
+        output: maskStorageView,
+      }),
+      workgroups: WORKGROUPS,
+    };
   }
 
   reset(): void {
-    this.initialized = false;
+    this.#initialized = false;
   }
 
   encode(pass: GPUComputePassEncoder): void {
-    this.paramsBuffer.write({ initialized: this.initialized ? 1 : 0 });
-    this.temporalPipeline
-      .with(pass)
-      .with(this.temporalBindGroup)
-      .dispatchWorkgroups(this.workgroups);
-    this.blurPipeline.with(pass).with(this.blurBindGroup).dispatchWorkgroups(this.workgroups);
-    this.initialized = true;
+    this.#paramsBuffer.write({ initialized: this.#initialized ? 1 : 0 });
+    dispatch(pass, this.#temporal);
+    dispatch(pass, this.#blur);
+    this.#initialized = true;
   }
 
   encodeRaw(pass: GPUComputePassEncoder): void {
-    this.rawToTexturePipeline
-      .with(pass)
-      .with(this.rawToTextureBindGroup)
-      .dispatchWorkgroups(this.workgroups);
+    dispatch(pass, this.#rawToTexture);
   }
+}
+
+function dispatch(pass: GPUComputePassEncoder, handle: KernelHandle): void {
+  handle.pipeline.with(pass).with(handle.bindGroup).dispatchWorkgroups(handle.workgroups);
 }
 
 function createMaskBuffer(root: TgpuRoot): MaskBuffer {

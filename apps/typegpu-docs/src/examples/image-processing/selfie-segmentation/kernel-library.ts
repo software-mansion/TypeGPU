@@ -33,160 +33,38 @@ import {
   head2x2SigmoidKernel,
   resize2xKernel,
 } from './inference-kernels.ts';
-import type {
-  BinaryBuffers,
-  HeadBuffers,
-  KernelHandle,
-  PackedWeightsBuffer,
-  PoolBuffers,
-  WeightedBuffers,
-} from './kernel-types.ts';
+import type { KernelHandle, MaskBuffer, PackedWeightsBuffer, Vec4Buffer } from './kernel-types.ts';
 import { WORKGROUP_SIZE } from './kernel-types.ts';
 
 const activationOps = [identityOp, reluOp, hardSwishOp, sigmoidOp] as const;
 
-export class SegmenterKernelLibrary {
-  private readonly pipelines = new Map<bigint, TgpuComputePipeline>();
+export function createSegmenterDispatches(
+  root: TgpuRoot,
+  records: readonly DispatchRecord[],
+  slots: readonly Vec4Buffer[],
+  mask: MaskBuffer,
+  weights: PackedWeightsBuffer,
+): KernelHandle[] {
+  const pipelines = new Map<bigint, TgpuComputePipeline>();
 
-  constructor(
-    private readonly root: TgpuRoot,
-    private readonly weights: PackedWeightsBuffer,
-  ) {}
-
-  createConv(record: DispatchRecord, buffers: WeightedBuffers): KernelHandle {
-    const shape = shapeForConv(record);
-    const compute = convKernel(record);
-    const pipeline = this.specializedPipeline(
-      [
-        record.opKind,
-        ...record.kernel,
-        ...record.stride,
-        ...record.pad,
-        ...record.input,
-        ...record.output,
-        record.activation,
-      ],
-      () =>
-        this.root
-          .with(convShapeAccess, shape)
-          .with(activationSlot, activationOp(record.activation))
-          .createComputePipeline({ compute }),
-    );
-    return this.weightedHandle(record, pipeline, buffers, shape.total);
-  }
-
-  createDepthwise(record: DispatchRecord, buffers: WeightedBuffers): KernelHandle {
-    const shape = shapeForConv(record);
-    const compute = depthwiseKernel(record);
-    const pipeline = this.specializedPipeline(
-      [
-        record.opKind,
-        ...record.kernel,
-        ...record.stride,
-        ...record.pad,
-        ...record.input,
-        ...record.output,
-        record.activation,
-      ],
-      () =>
-        this.root
-          .with(convShapeAccess, shape)
-          .with(activationSlot, activationOp(record.activation))
-          .createComputePipeline({ compute }),
-    );
-    return this.weightedHandle(record, pipeline, buffers, shape.total);
-  }
-
-  createGlobalPool(record: DispatchRecord, buffers: PoolBuffers): KernelHandle {
-    const shape = shapeForPool(record);
-    const pipeline = this.specializedPipeline(
-      [record.opKind, ...record.input, ...record.kernel],
-      () =>
-        this.root.with(poolShapeAccess, shape).createComputePipeline({ compute: globalPoolKernel }),
-    );
-    return {
-      pipeline,
-      bindGroup: this.root.createBindGroup(poolLayout, buffers),
-      workgroups: shape.blocks,
-    };
-  }
-
-  createResize2x(record: DispatchRecord, buffers: PoolBuffers): KernelHandle {
-    const shape = shapeForResize(record);
-    const pipeline = this.specializedPipeline(
-      [record.opKind, ...record.input, ...record.output],
-      () =>
-        this.root.with(resizeShapeAccess, shape).createComputePipeline({ compute: resize2xKernel }),
-    );
-    return {
-      pipeline,
-      bindGroup: this.root.createBindGroup(poolLayout, buffers),
-      workgroups: Math.ceil(shape.total / WORKGROUP_SIZE),
-    };
-  }
-
-  createBinary(record: DispatchRecord, buffers: BinaryBuffers): KernelHandle {
-    const shape = shapeForBinary(record);
-    const pipeline = this.specializedPipeline([record.opKind, ...record.output, record.flags], () =>
-      this.root
-        .with(binaryShapeAccess, shape)
-        .with(binaryOpSlot, record.opKind === OpKind.Mul ? mulOp : addOp)
-        .createComputePipeline({ compute: binaryKernel }),
-    );
-    return {
-      pipeline,
-      bindGroup: this.root.createBindGroup(binaryLayout, buffers),
-      workgroups: Math.ceil(shape.total / WORKGROUP_SIZE),
-    };
-  }
-
-  createHead(record: DispatchRecord, buffers: HeadBuffers): KernelHandle {
-    const shape = shapeForHead(record);
-    const pipeline = this.specializedPipeline(
-      [record.opKind, ...record.input, ...record.output],
-      () =>
-        this.root
-          .with(headShapeAccess, shape)
-          .createComputePipeline({ compute: head2x2SigmoidKernel }),
-    );
-    const offsets = this.root
-      .createBuffer(weightedOffsets, {
-        weightBase: record.weights,
-        biasBase: record.bias,
-      })
-      .$usage('uniform');
-    return {
-      pipeline,
-      bindGroup: this.root.createBindGroup(headLayout, {
-        offsets,
-        src: buffers.src,
-        weights: this.weights,
-        dst: buffers.dst,
-      }),
-      workgroups: Math.ceil(shape.total / WORKGROUP_SIZE),
-    };
-  }
-
-  private specializedPipeline(
-    keyParts: number[],
-    create: () => TgpuComputePipeline,
-  ): TgpuComputePipeline {
+  const specializedPipeline = (keyParts: number[], create: () => TgpuComputePipeline) => {
     const key = pipelineKey(keyParts);
-    let pipeline = this.pipelines.get(key);
+    let pipeline = pipelines.get(key);
     if (!pipeline) {
       pipeline = create();
-      this.pipelines.set(key, pipeline);
+      pipelines.set(key, pipeline);
     }
     return pipeline;
-  }
+  };
 
-  private weightedHandle(
+  const weightedHandle = (
     record: DispatchRecord,
     pipeline: TgpuComputePipeline,
-    buffers: WeightedBuffers,
+    src: Vec4Buffer,
+    dst: Vec4Buffer,
     total: number,
-  ): KernelHandle {
-    const offsets = this.root
+  ): KernelHandle => {
+    const offsets = root
       .createBuffer(weightedOffsets, {
         weightBase: record.weights,
         biasBase: record.bias,
@@ -194,15 +72,124 @@ export class SegmenterKernelLibrary {
       .$usage('uniform');
     return {
       pipeline,
-      bindGroup: this.root.createBindGroup(weightedLayout, {
+      bindGroup: root.createBindGroup(weightedLayout, {
         offsets,
-        src: buffers.src,
-        weights: this.weights,
-        dst: buffers.dst,
+        src,
+        weights,
+        dst,
       }),
       workgroups: Math.ceil(total / WORKGROUP_SIZE),
     };
-  }
+  };
+
+  const convHandle = (record: DispatchRecord, compute: typeof conv1x1Kernel) => {
+    const [srcA, , dst] = record.slots;
+    const shape = shapeForConv(record);
+    const pipeline = specializedPipeline(
+      [
+        record.opKind,
+        ...record.kernel,
+        ...record.stride,
+        ...record.pad,
+        ...record.input,
+        ...record.output,
+        record.activation,
+      ],
+      () =>
+        root
+          .with(convShapeAccess, shape)
+          .with(activationSlot, activationOp(record.activation))
+          .createComputePipeline({ compute }),
+    );
+    return weightedHandle(record, pipeline, slots[srcA], slots[dst], shape.total);
+  };
+
+  return records.map((record) => {
+    const [srcA, srcB, dst] = record.slots;
+    switch (record.opKind) {
+      case OpKind.Conv:
+        return convHandle(record, convKernel(record));
+      case OpKind.DwConv:
+        return convHandle(record, depthwiseKernel(record));
+      case OpKind.AvgPool: {
+        const shape = shapeForPool(record);
+        const pipeline = specializedPipeline(
+          [record.opKind, ...record.input, ...record.kernel],
+          () =>
+            root.with(poolShapeAccess, shape).createComputePipeline({ compute: globalPoolKernel }),
+        );
+        return {
+          pipeline,
+          bindGroup: root.createBindGroup(poolLayout, {
+            src: slots[srcA],
+            dst: slots[dst],
+          }),
+          workgroups: shape.blocks,
+        };
+      }
+      case OpKind.Resize2x: {
+        const shape = shapeForResize(record);
+        const pipeline = specializedPipeline(
+          [record.opKind, ...record.input, ...record.output],
+          () =>
+            root.with(resizeShapeAccess, shape).createComputePipeline({ compute: resize2xKernel }),
+        );
+        return {
+          pipeline,
+          bindGroup: root.createBindGroup(poolLayout, {
+            src: slots[srcA],
+            dst: slots[dst],
+          }),
+          workgroups: Math.ceil(shape.total / WORKGROUP_SIZE),
+        };
+      }
+      case OpKind.Add:
+      case OpKind.Mul: {
+        const shape = shapeForBinary(record);
+        const pipeline = specializedPipeline([record.opKind, ...record.output, record.flags], () =>
+          root
+            .with(binaryShapeAccess, shape)
+            .with(binaryOpSlot, record.opKind === OpKind.Mul ? mulOp : addOp)
+            .createComputePipeline({ compute: binaryKernel }),
+        );
+        return {
+          pipeline,
+          bindGroup: root.createBindGroup(binaryLayout, {
+            a: slots[srcA],
+            b: slots[srcB],
+            dst: slots[dst],
+          }),
+          workgroups: Math.ceil(shape.total / WORKGROUP_SIZE),
+        };
+      }
+      case OpKind.Head: {
+        const shape = shapeForHead(record);
+        const pipeline = specializedPipeline(
+          [record.opKind, ...record.input, ...record.output],
+          () =>
+            root
+              .with(headShapeAccess, shape)
+              .createComputePipeline({ compute: head2x2SigmoidKernel }),
+        );
+        const offsets = root
+          .createBuffer(weightedOffsets, {
+            weightBase: record.weights,
+            biasBase: record.bias,
+          })
+          .$usage('uniform');
+        return {
+          pipeline,
+          bindGroup: root.createBindGroup(headLayout, {
+            offsets,
+            src: slots[srcA],
+            weights,
+            dst: mask,
+          }),
+          workgroups: Math.ceil(shape.total / WORKGROUP_SIZE),
+        };
+      }
+    }
+  });
 }
 
 function convKernel(record: DispatchRecord) {

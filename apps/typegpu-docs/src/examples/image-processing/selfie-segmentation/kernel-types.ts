@@ -12,24 +12,3 @@ export interface KernelHandle {
   bindGroup: TgpuBindGroup;
   workgroups: number;
 }
-
-export interface WeightedBuffers {
-  src: Vec4Buffer;
-  dst: Vec4Buffer;
-}
-
-export interface HeadBuffers {
-  src: Vec4Buffer;
-  dst: MaskBuffer;
-}
-
-export interface BinaryBuffers {
-  a: Vec4Buffer;
-  b: Vec4Buffer;
-  dst: Vec4Buffer;
-}
-
-export interface PoolBuffers {
-  src: Vec4Buffer;
-  dst: Vec4Buffer;
-}

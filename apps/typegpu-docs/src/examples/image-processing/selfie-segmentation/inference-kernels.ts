@@ -131,7 +131,7 @@ const createDepthwiseKernel = (taps: readonly number[], kernelSize: number) =>
               weightedLayout.$.offsets.weightBase +
               out.z * (kernelSize * kernelSize) +
               d.u32(ky * kernelSize + kx);
-            acc += value * packedWeightAt(weightIndex);
+            acc = std.fma(value, packedWeightAt(weightIndex), acc);
           }
         }
       }
