@@ -390,6 +390,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this.#namespaceInternal.nameRegistry.makeValid(name);
   }
 
+  withReservedNames<T>(names: Set<string>, cb: () => T): T {
+    this.#namespaceInternal.nameRegistry.pushFunctionScope(names);
+    const result = cb();
+    this.#namespaceInternal.nameRegistry.popFunctionScope();
+    return result;
+  }
+
   get pre(): string {
     return this._indentController.pre;
   }
