@@ -63,6 +63,7 @@
     "three": "catalog:example",
     "tinybench": "^3.1.0",
     "tsover-monaco-editor": "^0.55.1",
+    "typed-binary": "^4.3.3",
     "typedoc": "^0.28.17",
     "typedoc-plugin-markdown": "4.10.0",
     "typegpu": "workspace:*",
