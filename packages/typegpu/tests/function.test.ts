@@ -224,7 +224,21 @@ describe('externals', () => {
     expect(() => tgpu.resolve([fn1, fn2])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:fn2: Name clash on external and variable 'myConst_1' and external 'myConst' that was automatically renamed to 'myConst_1'. Please either rename the variable, or give the external a different name using '.$name()'.]
+      - fn:fn2: Name clash on external and variable 'myConst_1' and external 'myConst' that was resolved to 'myConst_1'. If you're using rawCodeSnippets or slotted strings, wrap the string value in parentheses. Otherwise, please either rename the variable, or give the external a different name using '.$name()'.]
+    `);
+  });
+
+  it('throws a readable error when using rawCodeSnippet', () => {
+    const snippet = tgpu['~unstable'].rawCodeSnippet('x', d.u32, 'runtime');
+
+    const fn = tgpu.fn([d.u32])`(x) {
+  return snip;
+}`.$uses({ snip: snippet });
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:fn: Name clash on external and variable 'x' and external 'snip' that was resolved to 'x'. If you're using rawCodeSnippets or slotted strings, wrap the string value in parentheses. Otherwise, please either rename the variable, or give the external a different name using '.$name()'.]
     `);
   });
 });

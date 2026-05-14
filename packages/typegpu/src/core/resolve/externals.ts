@@ -98,7 +98,7 @@ export function replaceExternalsInWgsl(
       const externalName = ctx.resolve(external).value;
       if (forbiddenNames?.has(externalName)) {
         throw new Error(
-          `Name clash on external and variable '${externalName}' and external '${typeof external === 'string' ? external : getName(external)}' that was automatically renamed to '${externalName}'. Please either rename the variable, or give the external a different name using '.$name()'.`,
+          `Name clash on external and variable '${externalName}' and external '${typeof external === 'string' ? external : getName(external)}' that was resolved to '${externalName}'. If you're using rawCodeSnippets or slotted strings, wrap the string value in parentheses. Otherwise, please either rename the variable, or give the external a different name using '.$name()'.`,
         );
       }
       return acc.replaceAll(externalRegex, externalName);
