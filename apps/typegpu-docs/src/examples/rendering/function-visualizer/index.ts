@@ -83,7 +83,7 @@ const computePointsFn = (x: number) => {
 
 const createComputePipeline = (exprCode: string) => {
   return root
-    .with(functionExprSlot, tgpu['~unstable'].rawCodeSnippet(exprCode, d.f32, 'runtime'))
+    .with(functionExprSlot, tgpu['~unstable'].rawCodeSnippet(`(${exprCode})`, d.f32, 'runtime'))
     .createGuardedComputePipeline(computePointsFn);
 };
 

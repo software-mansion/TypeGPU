@@ -34,7 +34,7 @@ describe('function visualizer example', () => {
       @group(0) @binding(1) var<uniform> propertiesUniform: Properties;
 
       fn interpolatedFunction(x: f32) -> f32 {
-        return x;
+        return (x);
       }
 
       @group(1) @binding(0) var<storage, read_write> lineVertices: array<vec2f>;
@@ -68,7 +68,7 @@ describe('function visualizer example', () => {
       @group(0) @binding(1) var<uniform> propertiesUniform: Properties;
 
       fn interpolatedFunction(x: f32) -> f32 {
-        return cos(x*5)/3-x;
+        return (cos(x*5)/3-x);
       }
 
       @group(1) @binding(0) var<storage, read_write> lineVertices: array<vec2f>;
@@ -102,7 +102,7 @@ describe('function visualizer example', () => {
       @group(0) @binding(1) var<uniform> propertiesUniform: Properties;
 
       fn interpolatedFunction(x: f32) -> f32 {
-        return x*sin(log(abs(x)));
+        return (x*sin(log(abs(x))));
       }
 
       @group(1) @binding(0) var<storage, read_write> lineVertices: array<vec2f>;
