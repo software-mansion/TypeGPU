@@ -1,7 +1,13 @@
 import { d } from 'typegpu';
 import type { TgpuRoot } from 'typegpu';
 import { type DispatchRecord, loadSegmenterPlan, OpKind, type SegmenterPlan } from './bundle.ts';
-import { type KernelHandle, SegmenterKernelLibrary, type Vec4Buffer } from './kernels.ts';
+import {
+  type KernelHandle,
+  type MaskBuffer,
+  type PackedWeightsBuffer,
+  SegmenterKernelLibrary,
+  type Vec4Buffer,
+} from './kernels.ts';
 import {
   createVideoPreprocessor,
   type VideoFrameCrop,
@@ -24,39 +30,31 @@ export class SelfieSegmenterInference {
   }
 
   private readonly slots: Vec4Buffer[];
+  private readonly mask: MaskBuffer;
   private readonly dispatches: KernelHandle[];
   private readonly video: VideoPreprocessor;
 
   private constructor(root: TgpuRoot, plan: SegmenterPlan) {
-    const [inputWidth, inputHeight] = plan.inputSize;
-    const [outputWidth, outputHeight] = plan.outputSize;
-    if (
-      inputWidth !== MODEL_WIDTH ||
-      inputHeight !== MODEL_HEIGHT ||
-      outputWidth !== MODEL_WIDTH ||
-      outputHeight !== MODEL_HEIGHT
-    ) {
-      throw new Error(
-        `Bundle declares ${inputWidth}×${inputHeight} -> ` +
-          `${outputWidth}×${outputHeight}; expected fixed ` +
-          `${MODEL_WIDTH}×${MODEL_HEIGHT} segmentation.`,
-      );
-    }
-    this.slots = plan.slotSizesVec4.map(
-      (n) => root.createBuffer(d.arrayOf(d.vec4f, n)).$usage('storage') as Vec4Buffer,
+    this.mask = root
+      .createBuffer(d.arrayOf(d.f32, plan.slotSizesVec4[1]))
+      .$usage('storage') as MaskBuffer;
+    this.slots = plan.slotSizesVec4.map((n, slot) =>
+      slot === 1
+        ? (this.mask as unknown as Vec4Buffer)
+        : (root.createBuffer(d.arrayOf(d.vec4f, n)).$usage('storage') as Vec4Buffer),
     );
     const weights = root
-      .createBuffer(d.arrayOf(d.vec4f, plan.weights.byteLength / 16))
-      .$usage('storage') as Vec4Buffer;
+      .createBuffer(d.arrayOf(d.u32, plan.weights.byteLength / Uint32Array.BYTES_PER_ELEMENT))
+      .$usage('storage') as PackedWeightsBuffer;
     weights.write(plan.weights);
 
     const kernels = new SegmenterKernelLibrary(root, weights);
     this.dispatches = plan.dispatches.map((record) => this.buildDispatch(record, kernels));
-    this.video = createVideoPreprocessor(root, inputWidth, inputHeight);
+    this.video = createVideoPreprocessor(root, MODEL_WIDTH, MODEL_HEIGHT);
   }
 
-  get maskBuffer(): Vec4Buffer {
-    return this.slots[1];
+  get maskBuffer(): MaskBuffer {
+    return this.mask;
   }
 
   encodeVideoFrame(
@@ -103,7 +101,7 @@ export class SelfieSegmenterInference {
       case OpKind.Head:
         return kernels.createHead(record, {
           src: this.slots[srcA],
-          dst: this.slots[dst],
+          dst: this.mask,
         });
     }
   }

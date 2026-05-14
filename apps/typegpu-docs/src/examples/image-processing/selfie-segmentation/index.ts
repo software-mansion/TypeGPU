@@ -1,11 +1,11 @@
 import tgpu, { common, d, std } from 'typegpu';
-import type { StorageFlag, TgpuBuffer } from 'typegpu';
+import type { TgpuTextureView } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
-import { MODEL_HEIGHT, MODEL_WIDTH, SelfieSegmenterInference } from './inference.ts';
+import { SelfieSegmenterInference } from './inference.ts';
 import type { VideoFrameCrop } from './inference.ts';
 import { MaskPostProcessor } from './mask-postprocess.ts';
 
-type MaskBuffer = TgpuBuffer<d.WgslArray<d.Vec4f>> & StorageFlag;
+type MaskView = TgpuTextureView<d.WgslTexture2d<d.F32>>;
 
 const compositeParams = d.struct({
   sourceSize: d.vec2u,
@@ -17,34 +17,8 @@ const compositeLayout = tgpu.bindGroupLayout({
   params: { uniform: compositeParams },
   frame: { externalTexture: d.textureExternal() },
   sampler: { sampler: 'filtering' },
-  mask: { storage: d.arrayOf(d.vec4f) },
+  mask: { texture: d.texture2d(d.f32) },
 });
-
-const maskIndex = (coord: d.v2u) => {
-  'use gpu';
-  return coord.y * MODEL_WIDTH + coord.x;
-};
-
-const sampleMask = (uv: d.v2f) => {
-  'use gpu';
-  const src = uv * d.vec2f(MODEL_WIDTH, MODEL_HEIGHT) - 0.5;
-  const base = std.floor(src);
-  const lerp = src - base;
-  const maxCoord = d.vec2f(MODEL_WIDTH - 1, MODEL_HEIGHT - 1);
-  const p0 = d.vec2u(std.clamp(base, d.vec2f(0), maxCoord));
-  const p1 = d.vec2u(std.clamp(base + 1, d.vec2f(0), maxCoord));
-  const top = std.mix(
-    compositeLayout.$.mask[maskIndex(p0)].x,
-    compositeLayout.$.mask[maskIndex(d.vec2u(p1.x, p0.y))].x,
-    lerp.x,
-  );
-  const bottom = std.mix(
-    compositeLayout.$.mask[maskIndex(d.vec2u(p0.x, p1.y))].x,
-    compositeLayout.$.mask[maskIndex(p1)].x,
-    lerp.x,
-  );
-  return std.mix(top, bottom, lerp.y);
-};
 
 export const compositeFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
@@ -60,7 +34,12 @@ export const compositeFragment = tgpu.fragmentFn({
     compositeLayout.$.sampler,
     cameraUv,
   );
-  const personAlpha = std.smoothstep(0.28, 0.72, sampleMask(uv));
+  const personMask = std.textureSampleBaseClampToEdge(
+    compositeLayout.$.mask,
+    compositeLayout.$.sampler,
+    uv,
+  ).r;
+  const personAlpha = std.smoothstep(0.28, 0.72, personMask);
   const vertical = std.mix(d.vec3f(0.09, 0.2, 0.62), d.vec3f(0.96, 0.3, 0.45), uv.y);
   const gradient = std.mix(vertical, d.vec3f(1, 0.84, 0.38), uv.x * 0.35);
   return d.vec4f(std.mix(gradient, cameraColor.rgb, personAlpha), 1);
@@ -110,7 +89,7 @@ video.srcObject = await navigator.mediaDevices.getUserMedia({
   audio: false,
 });
 
-let videoFrameCallbackId: number | undefined;
+let videoFrameCallbackId = 0;
 let postProcessingEnabled = true;
 
 function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
@@ -127,14 +106,11 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   inference.encodeVideoFrame(pass, externalTexture, crop);
   if (postProcessingEnabled) {
     postProcessor.encode(pass);
+  } else {
+    postProcessor.encodeRaw(pass);
   }
   pass.end();
-  renderComposite(
-    encoder,
-    externalTexture,
-    postProcessingEnabled ? postProcessor.outputBuffer : inference.maskBuffer,
-    crop,
-  );
+  renderComposite(encoder, externalTexture, postProcessor.maskView, crop);
   root.device.queue.submit([encoder.finish()]);
 
   videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
@@ -172,9 +148,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  if (videoFrameCallbackId !== undefined) {
-    video.cancelVideoFrameCallback(videoFrameCallbackId);
-  }
+  video.cancelVideoFrameCallback(videoFrameCallbackId);
   if (video.srcObject) {
     for (const track of (video.srcObject as MediaStream).getTracks()) {
       track.stop();
@@ -194,7 +168,7 @@ function setPostProcessingEnabled(enabled: boolean) {
 function renderComposite(
   encoder: GPUCommandEncoder,
   externalTexture: GPUExternalTexture,
-  maskBuffer: MaskBuffer,
+  maskTexture: MaskView,
   crop: VideoFrameCrop,
 ) {
   compositeParamsBuffer.write({
@@ -209,7 +183,7 @@ function renderComposite(
         params: compositeParamsBuffer,
         frame: externalTexture,
         sampler,
-        mask: maskBuffer,
+        mask: maskTexture,
       }),
     )
     .withColorAttachment({

@@ -1,7 +1,25 @@
 import tgpu, { d, std } from 'typegpu';
-import type { TgpuBindGroup, TgpuComputePipeline, TgpuRoot } from 'typegpu';
+import type {
+  SampledFlag,
+  StorageFlag,
+  TgpuBindGroup,
+  TgpuComputePipeline,
+  TgpuRoot,
+  TgpuTexture,
+  TgpuTextureView,
+} from 'typegpu';
 import { MODEL_HEIGHT, MODEL_WIDTH } from './inference.ts';
-import { WORKGROUP_SIZE, type Vec4Buffer } from './kernels.ts';
+import { type MaskBuffer, WORKGROUP_SIZE } from './kernels.ts';
+
+type MaskTexture = TgpuTexture<{
+  size: readonly [typeof MODEL_WIDTH, typeof MODEL_HEIGHT];
+  format: 'rgba8unorm';
+}> &
+  StorageFlag &
+  SampledFlag;
+
+type SampledMaskView = TgpuTextureView<d.WgslTexture2d<d.F32>>;
+type StorageMaskView = TgpuTextureView<d.WgslStorageTexture2d<'rgba8unorm', 'write-only'>>;
 
 const TOTAL_PIXELS = MODEL_WIDTH * MODEL_HEIGHT;
 const MIN_BLEND = 0.08;
@@ -23,19 +41,19 @@ const postProcessParams = d.struct({
 
 const temporalLayout = tgpu.bindGroupLayout({
   params: { uniform: postProcessParams },
-  raw: { storage: d.arrayOf(d.vec4f), access: 'readonly' },
-  temporal: { storage: d.arrayOf(d.vec4f), access: 'mutable' },
+  raw: { storage: d.arrayOf(d.f32), access: 'readonly' },
+  temporal: { storage: d.arrayOf(d.f32), access: 'mutable' },
 });
 
-const blurLayout = tgpu.bindGroupLayout({
-  src: { storage: d.arrayOf(d.vec4f), access: 'readonly' },
-  dst: { storage: d.arrayOf(d.vec4f), access: 'mutable' },
+const blurToTextureLayout = tgpu.bindGroupLayout({
+  src: { storage: d.arrayOf(d.f32), access: 'readonly' },
+  output: { storageTexture: d.textureStorage2d('rgba8unorm', 'write-only') },
 });
 
-const maskValue = (alpha: number) => {
-  'use gpu';
-  return d.vec4f(alpha, 0, 0, 0);
-};
+const rawToTextureLayout = tgpu.bindGroupLayout({
+  raw: { storage: d.arrayOf(d.f32), access: 'readonly' },
+  output: { storageTexture: d.textureStorage2d('rgba8unorm', 'write-only') },
+});
 
 const maskCoord = (i: number) => {
   'use gpu';
@@ -57,12 +75,12 @@ const nextCoord = (value: number) => {
 
 const maskAt = (x: number, y: number) => {
   'use gpu';
-  return blurLayout.$.src[y * MODEL_WIDTH + x].x;
+  return blurToTextureLayout.$.src[y * MODEL_WIDTH + x];
 };
 
 const rawAt = (x: number, y: number) => {
   'use gpu';
-  return temporalLayout.$.raw[y * MODEL_WIDTH + x].x;
+  return temporalLayout.$.raw[y * MODEL_WIDTH + x];
 };
 
 export const temporalAccumulatorKernel = tgpu.computeFn({
@@ -75,13 +93,13 @@ export const temporalAccumulatorKernel = tgpu.computeFn({
     return;
   }
 
-  const raw = temporalLayout.$.raw[i].x;
+  const raw = temporalLayout.$.raw[i];
   if (temporalLayout.$.params.initialized === 0) {
-    temporalLayout.$.temporal[i] = maskValue(raw);
+    temporalLayout.$.temporal[i] = raw;
     return;
   }
 
-  const previous = temporalLayout.$.temporal[i].x;
+  const previous = temporalLayout.$.temporal[i];
   const coord = maskCoord(i);
   const left = prevCoord(coord.x);
   const right = nextCoord(coord.x);
@@ -116,10 +134,10 @@ export const temporalAccumulatorKernel = tgpu.computeFn({
     MEMORY_STRENGTH;
   const carriedRaw = std.clamp(raw + (previous - 0.5) * memoryWeight, 0, 1);
   const filtered = std.mix(previous, carriedRaw, blend);
-  temporalLayout.$.temporal[i] = maskValue(filtered);
+  temporalLayout.$.temporal[i] = filtered;
 });
 
-export const softBlurKernel = tgpu.computeFn({
+export const softBlurToTextureKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [WORKGROUP_SIZE],
 })(({ gid }) => {
@@ -145,35 +163,67 @@ export const softBlurKernel = tgpu.computeFn({
     maskAt(coord.x, bottom) * 0.125 +
     maskAt(right, bottom) * 0.0625;
 
-  blurLayout.$.dst[i] = maskValue(alpha);
+  std.textureStore(blurToTextureLayout.$.output, coord, d.vec4f(alpha, alpha, alpha, 1));
+});
+
+export const rawMaskToTextureKernel = tgpu.computeFn({
+  in: { gid: d.builtin.globalInvocationId },
+  workgroupSize: [WORKGROUP_SIZE],
+})(({ gid }) => {
+  'use gpu';
+  const i = gid.x;
+  if (i >= TOTAL_PIXELS) {
+    return;
+  }
+
+  const alpha = rawToTextureLayout.$.raw[i];
+  std.textureStore(rawToTextureLayout.$.output, maskCoord(i), d.vec4f(alpha, alpha, alpha, 1));
 });
 
 export class MaskPostProcessor {
-  readonly outputBuffer: Vec4Buffer;
+  readonly maskTexture: MaskTexture;
+  readonly maskView: SampledMaskView;
 
+  private readonly maskStorageView: StorageMaskView;
   private readonly paramsBuffer;
-  private readonly temporalBuffer: Vec4Buffer;
+  private readonly temporalBuffer: MaskBuffer;
   private readonly workgroups = Math.ceil(TOTAL_PIXELS / WORKGROUP_SIZE);
   private readonly temporalPipeline: TgpuComputePipeline;
   private readonly blurPipeline: TgpuComputePipeline;
+  private readonly rawToTexturePipeline: TgpuComputePipeline;
   private readonly temporalBindGroup: TgpuBindGroup;
   private readonly blurBindGroup: TgpuBindGroup;
+  private readonly rawToTextureBindGroup: TgpuBindGroup;
   private initialized = false;
 
-  constructor(root: TgpuRoot, rawMask: Vec4Buffer) {
+  constructor(root: TgpuRoot, rawMask: MaskBuffer) {
     this.paramsBuffer = root.createBuffer(postProcessParams, { initialized: 0 }).$usage('uniform');
-    this.temporalBuffer = createVec4Buffer(root);
-    this.outputBuffer = createVec4Buffer(root);
+    this.temporalBuffer = createMaskBuffer(root);
+    this.maskTexture = root
+      .createTexture({
+        size: [MODEL_WIDTH, MODEL_HEIGHT],
+        format: 'rgba8unorm',
+      })
+      .$usage('storage', 'sampled') as MaskTexture;
+    this.maskView = this.maskTexture.createView(d.texture2d(d.f32));
+    this.maskStorageView = this.maskTexture.createView(
+      d.textureStorage2d('rgba8unorm', 'write-only'),
+    );
     this.temporalPipeline = root.createComputePipeline({ compute: temporalAccumulatorKernel });
-    this.blurPipeline = root.createComputePipeline({ compute: softBlurKernel });
+    this.blurPipeline = root.createComputePipeline({ compute: softBlurToTextureKernel });
+    this.rawToTexturePipeline = root.createComputePipeline({ compute: rawMaskToTextureKernel });
     this.temporalBindGroup = root.createBindGroup(temporalLayout, {
       params: this.paramsBuffer,
       raw: rawMask,
       temporal: this.temporalBuffer,
     });
-    this.blurBindGroup = root.createBindGroup(blurLayout, {
+    this.blurBindGroup = root.createBindGroup(blurToTextureLayout, {
       src: this.temporalBuffer,
-      dst: this.outputBuffer,
+      output: this.maskStorageView,
+    });
+    this.rawToTextureBindGroup = root.createBindGroup(rawToTextureLayout, {
+      raw: rawMask,
+      output: this.maskStorageView,
     });
   }
 
@@ -190,8 +240,15 @@ export class MaskPostProcessor {
     this.blurPipeline.with(pass).with(this.blurBindGroup).dispatchWorkgroups(this.workgroups);
     this.initialized = true;
   }
+
+  encodeRaw(pass: GPUComputePassEncoder): void {
+    this.rawToTexturePipeline
+      .with(pass)
+      .with(this.rawToTextureBindGroup)
+      .dispatchWorkgroups(this.workgroups);
+  }
 }
 
-function createVec4Buffer(root: TgpuRoot): Vec4Buffer {
-  return root.createBuffer(d.arrayOf(d.vec4f, TOTAL_PIXELS)).$usage('storage') as Vec4Buffer;
+function createMaskBuffer(root: TgpuRoot): MaskBuffer {
+  return root.createBuffer(d.arrayOf(d.f32, TOTAL_PIXELS)).$usage('storage') as MaskBuffer;
 }

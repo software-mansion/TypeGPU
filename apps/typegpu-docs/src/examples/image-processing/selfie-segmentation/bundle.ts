@@ -1,9 +1,6 @@
 import bin, { BufferReader, type Parsed } from 'typed-binary';
 
 const SSG1_MAGIC = 'SSG1';
-const SSG1_VERSION = 1;
-const HEADER_BYTES = 40;
-const DISPATCH_RECORD_BYTES = 88;
 
 export const OpKind = {
   Conv: 0,
@@ -29,7 +26,7 @@ export const BroadcastFlag = { H: 1, W: 2, C: 4 } as const;
 export type Size2 = readonly [width: number, height: number];
 export type Shape3 = readonly [width: number, height: number, channels: number];
 export type DispatchSlots = readonly [srcA: number, srcB: number, dst: number];
-export type ByteRange = readonly [offset: number, length: number];
+export type Vec4Offset = number;
 
 const HeaderSchema = bin.object({
   magic: bin.chars(4),
@@ -40,6 +37,7 @@ const HeaderSchema = bin.object({
   dispatchCount: bin.u32,
   weightsOffset: bin.u32,
   weightsLength: bin.u32,
+  bytesPerVec4: bin.u32,
 });
 
 const DispatchRecordSchema = bin.object({
@@ -66,15 +64,13 @@ export interface DispatchRecord {
   kernel: Size2;
   stride: Size2;
   pad: Size2;
-  weights: ByteRange;
-  bias: ByteRange;
+  weights: Vec4Offset;
+  bias: Vec4Offset;
   activation: Activation;
   flags: number;
 }
 
 export interface SegmenterPlan {
-  inputSize: Size2;
-  outputSize: Size2;
   slotSizesVec4: number[];
   weights: ArrayBuffer;
   dispatches: DispatchRecord[];
@@ -89,38 +85,38 @@ export async function loadSegmenterPlan(url: string): Promise<SegmenterPlan> {
 }
 
 export function parseSegmenterPlan(buffer: ArrayBuffer): SegmenterPlan {
-  if (buffer.byteLength < HEADER_BYTES) {
-    throw new Error('SSG1 bundle too short');
-  }
   const reader = new BufferReader(buffer, { endianness: 'little' });
   const header = HeaderSchema.read(reader);
-  const { magic, version, slotCount, dispatchCount, weightsOffset, weightsLength } = header;
-  if (magic !== SSG1_MAGIC || version !== SSG1_VERSION) {
-    throw new Error(`Unsupported bundle magic=${magic} version=${version}`);
-  }
-  const slotTableOffset = HEADER_BYTES;
-  const dispatchTableOffset = slotTableOffset + slotCount * 4;
-  if (weightsOffset !== dispatchTableOffset + dispatchCount * DISPATCH_RECORD_BYTES) {
-    throw new Error('SSG1 weights offset mismatch');
+  const { magic, slotCount, dispatchCount, weightsOffset, weightsLength, bytesPerVec4 } = header;
+  if (magic !== SSG1_MAGIC) {
+    throw new Error(`Unsupported bundle magic=${magic}`);
   }
   const slotSizesVec4 = Array.from(bin.u32Array(slotCount).read(reader));
   const dispatches = bin
     .arrayOf(DispatchRecordSchema, dispatchCount)
     .read(reader)
-    .map(toDispatchRecord);
+    .map((record) => toDispatchRecord(record, bytesPerVec4));
   return {
-    inputSize: header.inputSize,
-    outputSize: header.outputSize,
     slotSizesVec4,
     weights: buffer.slice(weightsOffset, weightsOffset + weightsLength),
     dispatches,
   };
 }
 
-function toDispatchRecord(record: ParsedDispatchRecord): DispatchRecord {
+function toDispatchRecord(record: ParsedDispatchRecord, bytesPerVec4: number): DispatchRecord {
   return {
     ...record,
     opKind: record.opKind as OpKind,
+    weights: toVec4Offset(record.weights, bytesPerVec4),
+    bias: toVec4Offset(record.bias, bytesPerVec4),
     activation: record.activation as Activation,
   };
+}
+
+function toVec4Offset(
+  range: readonly [offset: number, length: number],
+  bytesPerVec4: number,
+): Vec4Offset {
+  const [offset] = range;
+  return offset < 0 ? offset : offset / bytesPerVec4;
 }
