@@ -76,7 +76,8 @@
       "@types/node": "catalog:types",
       "typescript": "catalog:types",
       "three": "catalog:example",
-      "@typescript-eslint/utils": "^8.57.2"
+      "@typescript-eslint/utils": "^8.57.2",
+      "@ungap/structured-clone": "1.3.1"
     }
   }
 }
