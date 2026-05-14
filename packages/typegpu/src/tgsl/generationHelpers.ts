@@ -54,7 +54,7 @@ export function concretize<T extends BaseData>(type: T): T | F32 | I32 {
   }
 
   if (type.type === 'abstractInt') {
-    return i32;
+    return f32;
   }
 
   return type;
