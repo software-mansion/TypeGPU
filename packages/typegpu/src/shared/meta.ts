@@ -2,7 +2,7 @@
 import { version } from '../../package.json';
 import { DEV, TEST } from './env.ts';
 import { $getNameForward, isMarkedInternal } from './symbols.ts';
-import { normalizeMetadata, type FunctionMetadata, type RawMetadata } from './normalizeMetadata.ts';
+import { normalizeMetadata, type Metadata, type RawMetadata } from './normalizeMetadata.ts';
 
 // --- globalExt ---
 /**
@@ -70,14 +70,14 @@ export function setName(definition: object, name: string): void {
 }
 
 // --- METADATA ---
-const metadataMap = new WeakMap<object, FunctionMetadata>();
+const metadataMap = new WeakMap<object, Metadata>();
 
 /**
  * Retrieves normalized (non-raw) function metadata.
  * If `globalExt.__TYPEGPU_META__` contains raw metadata for the function,
  * it is normalized, and then deleted to avoid unnecessary re-normalization.
  */
-export function getFunctionMetadata(definition: object): FunctionMetadata {
+export function getFunctionMetadata(definition: object): Metadata {
   // it's fine, if it's not an object, the get will return undefined
   const maybeRawMeta = globalExt.__TYPEGPU_META__?.get(definition);
   if (maybeRawMeta) {

@@ -22,14 +22,14 @@ export interface RawMetadataV2 {
 }
 
 /**
- * Holds all info collected by typegpu-unplugin
+ * Holds all function info collected by typegpu-unplugin
  */
 export type RawMetadata = RawMetadataV1 | RawMetadataV2;
 
 /**
  * Holds normalized function metadata required for WGSL generation
  */
-export interface FunctionMetadata {
+export interface Metadata {
   ast?: { params: FuncParameter[]; body: Block; externalNames: string[] } | undefined;
   externals?: Record<string, unknown> | undefined;
 }
@@ -54,7 +54,7 @@ function normalizeExternalsV2(externals: ExternalsV2): Record<string, unknown> {
   return result;
 }
 
-export function normalizeMetadata(meta: RawMetadata): FunctionMetadata {
+export function normalizeMetadata(meta: RawMetadata): Metadata {
   if (meta.v === 1) {
     const externals = typeof meta?.externals === 'function' ? meta.externals() : meta?.externals;
     return { ...meta, externals };
