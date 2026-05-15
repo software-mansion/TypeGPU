@@ -4,7 +4,7 @@ import { DEV, TEST } from './env.ts';
 import { $getNameForward, isMarkedInternal } from './symbols.ts';
 import { normalizeMetadata, type FunctionMetadata, type RawMetadata } from './normalizeMetadata.ts';
 
-// --- globalWithMeta ---
+// --- globalExt ---
 /**
  * Don't use or you WILL get fired from your job.
  *
@@ -15,21 +15,21 @@ import { normalizeMetadata, type FunctionMetadata, type RawMetadata } from './no
  * @internal
  */
 export type INTERNAL_GlobalExt = typeof globalThis & {
-  __TYPEGPU_VERSION__: string | undefined;
-  __TYPEGPU_META__: WeakMap<object, RawMetadata>;
-  __TYPEGPU_AUTONAME__: <T>(exp: T, label: string) => T;
+  __TYPEGPU_VERSION__?: string;
+  __TYPEGPU_META__?: WeakMap<object, RawMetadata>;
+  __TYPEGPU_AUTONAME__?: <T>(exp: T, label: string) => T;
   __TYPEGPU_MEASURE_PERF__?: boolean | undefined;
-  __TYPEGPU_PERF_RECORDS__?: Map<string, unknown[]> | undefined;
+  __TYPEGPU_PERF_RECORDS__?: Map<string, unknown[]>;
 };
 
-const globalWithMeta = globalThis as INTERNAL_GlobalExt;
-if (globalWithMeta.__TYPEGPU_VERSION__ !== undefined) {
+const globalExt = globalThis as INTERNAL_GlobalExt;
+if (globalExt.__TYPEGPU_VERSION__ !== undefined) {
   console.warn(
-    `Found duplicate TypeGPU version. First was ${globalWithMeta.__TYPEGPU_VERSION__}, this one is ${version}. This may cause unexpected behavior.`,
+    `Found duplicate TypeGPU version. First was ${globalExt.__TYPEGPU_VERSION__}, this one is ${version}. This may cause unexpected behavior.`,
   );
 }
-globalWithMeta.__TYPEGPU_VERSION__ = version;
-globalWithMeta.__TYPEGPU_AUTONAME__ = <T>(exp: T, label: string): T =>
+globalExt.__TYPEGPU_VERSION__ = version;
+globalExt.__TYPEGPU_AUTONAME__ = <T>(exp: T, label: string): T =>
   isNamable(exp) && isMarkedInternal(exp) && !getName(exp) ? exp.$name(label) : exp;
 
 // --- NAMING ---
@@ -57,8 +57,7 @@ export function getName(definition: unknown): string | undefined {
     return getName(definition[$getNameForward]);
   }
   return (
-    nameMap.get(definition as object) ??
-    globalWithMeta.__TYPEGPU_META__?.get(definition as object)?.name
+    nameMap.get(definition as object) ?? globalExt.__TYPEGPU_META__?.get(definition as object)?.name
   );
 }
 
@@ -83,16 +82,16 @@ const metadataMap = new WeakMap<object, FunctionMetadata>();
  */
 export function getFunctionMetadata(definition: object): FunctionMetadata {
   // it's fine, if it's not an object, the get will return undefined
-  const maybeRawMeta = globalWithMeta.__TYPEGPU_META__?.get(definition as object);
+  const maybeRawMeta = globalExt.__TYPEGPU_META__?.get(definition);
   if (maybeRawMeta) {
-    globalWithMeta.__TYPEGPU_META__?.delete(definition as object);
+    globalExt.__TYPEGPU_META__?.delete(definition);
     const normalized = normalizeMetadata(maybeRawMeta);
-    metadataMap.set(definition as object, normalized);
-    if (maybeRawMeta.name && nameMap.get(definition as object) === undefined) {
-      nameMap.set(definition as object, maybeRawMeta.name);
+    metadataMap.set(definition, normalized);
+    if (maybeRawMeta.name && nameMap.get(definition) === undefined) {
+      nameMap.set(definition, maybeRawMeta.name);
     }
   }
-  return metadataMap.get(definition as object) ?? {};
+  return metadataMap.get(definition) ?? {};
 }
 
 /**
@@ -109,10 +108,10 @@ export function hasTinyestMetadata(value: unknown): value is (...args: never[]) 
 export const PERF =
   ((DEV || TEST) && {
     get enabled() {
-      return !!globalWithMeta.__TYPEGPU_MEASURE_PERF__;
+      return !!globalExt.__TYPEGPU_MEASURE_PERF__;
     },
     record(name: string, data: unknown) {
-      const records = (globalWithMeta.__TYPEGPU_PERF_RECORDS__ ??= new Map());
+      const records = (globalExt.__TYPEGPU_PERF_RECORDS__ ??= new Map());
       let entries = records.get(name);
       if (!entries) {
         entries = [];

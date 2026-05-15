@@ -7,7 +7,7 @@ import type { RawMetadata, RawMetadataV1, RawMetadataV2 } from '../src/shared/no
 
 describe('meta', () => {
   function assignMetadata(fn: object, meta: RawMetadata) {
-    (globalThis as INTERNAL_GlobalExt).__TYPEGPU_META__.set(fn, meta);
+    ((globalThis as INTERNAL_GlobalExt).__TYPEGPU_META__ ??= new WeakMap()).set(fn, meta);
   }
 
   it('throws a readable error when metadata is missing', () => {

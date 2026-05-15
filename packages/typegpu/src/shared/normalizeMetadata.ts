@@ -1,6 +1,5 @@
 import type { Block, FuncParameter } from 'tinyest';
 
-// TODO: check external names
 export interface RawMetadataV1 {
   v: 1;
   name?: string;
