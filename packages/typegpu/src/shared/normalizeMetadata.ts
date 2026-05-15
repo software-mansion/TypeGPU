@@ -1,4 +1,5 @@
 import type { Block, FuncParameter } from 'tinyest';
+import { safeStringify } from './stringify.ts';
 
 export interface RawMetadataV1 {
   v: 1;
@@ -45,7 +46,7 @@ function normalizeExternalsV2(externals: ExternalsV2): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(externals)) {
     if (typeof value === 'function') {
-      Object.defineProperty(result, key, { get: value });
+      Object.defineProperty(result, key, { get: value, enumerable: true });
     } else {
       result[key] = normalizeExternalsV2(value);
     }
@@ -64,5 +65,5 @@ export function normalizeMetadata(meta: RawMetadata): FunctionMetadata {
     return { ...meta, externals };
   }
 
-  throw new Error(`Unrecognized TypeGPU metadata format: ${JSON.stringify(meta)}`);
+  throw new Error(`Unrecognized TypeGPU metadata format: ${safeStringify(meta)}`);
 }

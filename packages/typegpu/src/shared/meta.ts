@@ -74,7 +74,7 @@ const metadataMap = new WeakMap<object, FunctionMetadata>();
 
 /**
  * Retrieves normalized (non-raw) function metadata.
- * If `globalWithMeta.__TYPEGPU_META__` contains raw metadata for the function,
+ * If `globalExt.__TYPEGPU_META__` contains raw metadata for the function,
  * it is normalized, and then deleted to avoid unnecessary re-normalization.
  */
 export function getFunctionMetadata(definition: object): FunctionMetadata {
