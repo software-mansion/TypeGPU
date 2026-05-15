@@ -5,30 +5,30 @@ import { DEV, TEST } from './env.ts';
 import { $getNameForward, isMarkedInternal } from './symbols.ts';
 
 // TODO: check external names
-interface RawMetadataV1 {
+export interface RawMetadataV1 {
   v: 1;
-  name?: string | undefined;
-  ast?: { params: FuncParameter[]; body: Block; externalNames: string[] } | undefined;
+  name?: string;
+  ast?: { params: FuncParameter[]; body: Block; externalNames: string[] };
   externals?:
     // Passing a record happens prior to version 0.9.0
-    Record<string, unknown> | (() => Record<string, unknown>) | undefined;
+    Record<string, unknown> | (() => Record<string, unknown>);
 }
 
 interface ExternalsV2 {
   [key: string]: ExternalsV2 | (() => unknown);
 }
 
-interface RawMetadataV2 {
+export interface RawMetadataV2 {
   v: 2;
-  name?: string | undefined;
-  ast?: { params: FuncParameter[]; body: Block; externalNames: string[] } | undefined;
+  name?: string;
+  ast?: { params: FuncParameter[]; body: Block; externalNames: string[] };
   externals?: ExternalsV2;
 }
 
 /**
  * Holds all info collected by typegpu-unplugin
  */
-type RawMetadata = RawMetadataV1 | RawMetadataV2;
+export type RawMetadata = RawMetadataV1 | RawMetadataV2;
 
 /**
  * Holds normalized function metadata required for WGSL generation
