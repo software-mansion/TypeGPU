@@ -4,20 +4,33 @@ import type { Block, FuncParameter } from 'tinyest';
 import { DEV, TEST } from './env.ts';
 import { $getNameForward, isMarkedInternal } from './symbols.ts';
 
-export interface MetaData {
-  v?: number;
+// TODO: check external names
+// TODO: what needs to be exported?
+export interface RawMetadataV1 {
+  v: 1;
   name?: string | undefined;
-  ast?:
-    | {
-        params: FuncParameter[];
-        body: Block;
-        externalNames: string[];
-      }
-    | undefined;
+  ast?: { params: FuncParameter[]; body: Block; externalNames: string[] } | undefined;
   externals?:
     // Passing a record happens prior to version 0.9.0
-    // TODO: Support for this can be removed down the line
     Record<string, unknown> | (() => Record<string, unknown>) | undefined;
+}
+
+export interface ExternalsV2 {
+  [key: string]: ExternalsV2 | (() => unknown);
+}
+
+export interface RawMetadataV2 {
+  v: 2;
+  name?: string | undefined;
+  ast?: { params: FuncParameter[]; body: Block; externalNames: string[] } | undefined;
+  externals?: ExternalsV2;
+}
+
+export type RawMetadata = RawMetadataV1 | RawMetadataV2;
+
+export interface MetaData {
+  ast?: { params: FuncParameter[]; body: Block; externalNames: string[] } | undefined;
+  externals?: Record<string, unknown> | undefined;
 }
 
 /**
@@ -31,7 +44,7 @@ export interface MetaData {
  */
 export type INTERNAL_GlobalExt = typeof globalThis & {
   __TYPEGPU_VERSION__: string | undefined;
-  __TYPEGPU_META__: WeakMap<object, MetaData>;
+  __TYPEGPU_META__: WeakMap<object, RawMetadata>;
   __TYPEGPU_AUTONAME__: <T>(exp: T, label: string) => T;
   __TYPEGPU_MEASURE_PERF__?: boolean | undefined;
   __TYPEGPU_PERF_RECORDS__?: Map<string, unknown[]> | undefined;
@@ -77,7 +90,7 @@ export function getName(definition: unknown): string | undefined {
   if (isForwarded(definition)) {
     return getName(definition[$getNameForward]);
   }
-  return getMetaData(definition)?.name;
+  return getMetaName(definition as object);
 }
 
 export function setName(definition: object, name: string | undefined): void {
@@ -85,7 +98,7 @@ export function setName(definition: object, name: string | undefined): void {
     setName(definition[$getNameForward] as object, name);
     return;
   }
-  setMetaData(definition, { name });
+  setMetaData(definition, name);
 }
 
 /**
@@ -108,15 +121,64 @@ export function hasTinyestMetadata(value: unknown): value is (...args: never[]) 
   return !!getMetaData(value)?.ast;
 }
 
-export function getMetaData(definition: unknown): MetaData | undefined {
-  return globalWithMeta.__TYPEGPU_META__.get(
-    // it's fine, if it's not an object, the get will return undefined
-    definition as object,
-  );
+// TODO: deslopify, document, make sure it works as intended
+export function normalizeExternalsV2(ext2: ExternalsV2): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(ext2)) {
+    if (typeof value === 'function') {
+      Object.defineProperty(result, key, {
+        get: value,
+        enumerable: true,
+      });
+    } else {
+      result[key] = normalizeExternalsV2(value);
+    }
+  }
+  return result;
 }
 
-export function setMetaData(definition: object, metaData: object) {
-  globalWithMeta.__TYPEGPU_META__ ??= new WeakMap();
-  const map = globalWithMeta.__TYPEGPU_META__;
-  map.set(definition, { ...map.get(definition), ...metaData });
+export function normalizeMetadata(meta: RawMetadata): MetaData {
+  if (meta.v === 1) {
+    const externals = typeof meta?.externals === 'function' ? meta.externals() : meta?.externals;
+    return { ...meta, externals };
+  }
+
+  // if (meta.v === 2) {
+  //   const externals = meta?.externals ? normalizeExternalsV2(meta?.externals) : undefined;
+  //   return { ...meta, externals };
+  // }
+
+  throw new Error(`Unrecognized TypeGPU metadata format: ${JSON.stringify(meta)}`);
+}
+
+const metadataMap = new WeakMap<object, MetaData>();
+const nameMap = new WeakMap<object, string>();
+
+export function getMetaData(definition: unknown): MetaData & { name: string | undefined } {
+  // it's fine, if it's not an object, the get will return undefined
+  const maybeRawMeta = globalWithMeta.__TYPEGPU_META__?.get(definition as object);
+  if (maybeRawMeta) {
+    globalWithMeta.__TYPEGPU_META__?.delete(definition as object);
+    const normalized = normalizeMetadata(maybeRawMeta);
+    metadataMap.set(definition as object, normalized);
+    if (maybeRawMeta.name && nameMap.get(definition as object) === undefined) {
+      nameMap.set(definition as object, maybeRawMeta.name);
+    }
+  }
+  return { ...metadataMap.get(definition as object), name: nameMap.get(definition as object) };
+}
+
+// TODO: rename to setName
+export function setMetaData(definition: object, name: string | undefined) {
+  if (!name) {
+    return;
+  }
+  nameMap.set(definition, name);
+}
+
+// TODO: rename to getName
+export function getMetaName(definition: object): string | undefined {
+  return (
+    nameMap.get(definition) ?? globalWithMeta.__TYPEGPU_META__?.get(definition as object)?.name
+  );
 }
