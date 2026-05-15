@@ -125,6 +125,11 @@ export default defineConfig({
               badge: { text: 'new' },
             },
             {
+              label: 'Going parallel with reusable resources',
+              slug: 'fundamentals/compute-shaders',
+              badge: { text: 'new' },
+            },
+            {
               label: 'Vertices and fragments',
               slug: 'fundamentals/vertices-and-fragments',
               badge: { text: 'new' },
