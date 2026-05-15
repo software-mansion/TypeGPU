@@ -41,7 +41,7 @@ function assignMetadata(
   const metadata = `{
     v: ${FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
-    ast: ${embedJSON(ast)},
+    ast: ${embedJSON(ast)}, // TODO (#2504): remove externalNames from ast
     externals: () => ({${ast.externalNames
       .map((e) => (e === 'this' ? '"this": this' : e))
       .join(', ')}}),
