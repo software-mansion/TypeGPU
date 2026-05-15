@@ -38,10 +38,11 @@ function assignMetadata(
   name: string | undefined,
   ast: ReturnType<typeof transpileFn>,
 ): void {
+  // TODO (#2504): remove externalNames from ast
   const metadata = `{
     v: ${FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
-    ast: ${embedJSON(ast)}, // TODO (#2504): remove externalNames from ast
+    ast: ${embedJSON(ast)},
     externals: () => ({${ast.externalNames
       .map((e) => (e === 'this' ? '"this": this' : e))
       .join(', ')}}),

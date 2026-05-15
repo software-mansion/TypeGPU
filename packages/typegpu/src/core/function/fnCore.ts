@@ -2,7 +2,7 @@ import { getAttributesString } from '../../data/attributes.ts';
 import { undecorate } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { type BaseData, isWgslData, isWgslStruct, Void } from '../../data/wgslTypes.ts';
-import { getFunctionMetadata, getName } from '../../shared/meta.ts';
+import { getFunctionMetadata } from '../../shared/meta.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx, TgpuShaderStage } from '../../types.ts';
 import { applyExternals, type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
