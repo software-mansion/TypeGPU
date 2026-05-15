@@ -1,4 +1,4 @@
-const popovers = document.querySelectorAll('[data-challenges-signup-popover="true"]');
+const popovers = document.querySelectorAll('[data-academy-signup-popover="true"]');
 
 class DialogBox {
   readonly dialogElement: HTMLDialogElement;
