@@ -122,14 +122,17 @@ export default defineConfig({
             {
               label: 'Your first GPU program',
               slug: 'fundamentals/your-first-gpu-program',
+              badge: { text: 'new' },
             },
             {
               label: 'Going parallel with reusable resources',
               slug: 'fundamentals/compute-shaders',
+              badge: { text: 'new' },
             },
             {
               label: 'Vertices and fragments',
               slug: 'fundamentals/vertices-and-fragments',
+              badge: { text: 'new' },
             },
           ]),
         },
