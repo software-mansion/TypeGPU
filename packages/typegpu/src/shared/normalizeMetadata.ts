@@ -3,9 +3,9 @@ import { safeStringify } from './stringify.ts';
 
 export interface RawMetadataV1 {
   v: 1;
-  name?: string;
-  ast?: { params: FuncParameter[]; body: Block; externalNames: string[] };
-  externals?:
+  name: string;
+  ast: { params: FuncParameter[]; body: Block; externalNames: string[] };
+  externals:
     // Passing a record happens prior to version 0.9.0
     Record<string, unknown> | (() => Record<string, unknown>);
 }
@@ -16,9 +16,9 @@ interface ExternalsV2 {
 
 export interface RawMetadataV2 {
   v: 2;
-  name?: string;
-  ast?: { params: FuncParameter[]; body: Block; externalNames: string[] };
-  externals?: ExternalsV2;
+  name: string;
+  ast: { params: FuncParameter[]; body: Block; externalNames: string[] };
+  externals: ExternalsV2;
 }
 
 /**
@@ -30,8 +30,8 @@ export type RawMetadata = RawMetadataV1 | RawMetadataV2;
  * Holds normalized function metadata required for WGSL generation
  */
 export interface Metadata {
-  ast?: { params: FuncParameter[]; body: Block; externalNames: string[] } | undefined;
-  externals?: Record<string, unknown> | undefined;
+  ast: { params: FuncParameter[]; body: Block; externalNames: string[] };
+  externals: Record<string, unknown>;
 }
 
 /**
@@ -61,7 +61,7 @@ export function normalizeMetadata(meta: RawMetadata): Metadata {
   }
 
   if (meta.v === 2) {
-    const externals = meta?.externals ? normalizeExternalsV2(meta?.externals) : undefined;
+    const externals = normalizeExternalsV2(meta?.externals);
     return { ...meta, externals };
   }
 

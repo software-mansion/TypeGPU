@@ -84,7 +84,7 @@ describe('wgslGenerator', () => {
       const scientificNegativeExponentLiteral = 1.2e-3;
     };
 
-    const parsedBody = getFunctionMetadata(main)?.ast?.body as tinyest.Block;
+    const parsedBody = getFunctionMetadata(main)?.ast.body as tinyest.Block;
 
     expect(parsedBody).toStrictEqual([
       NODE.block,
@@ -208,12 +208,12 @@ describe('wgslGenerator', () => {
       }
     };
 
-    const parsed1 = getFunctionMetadata(main1)?.ast?.body;
+    const parsed1 = getFunctionMetadata(main1)?.ast.body;
     expect(JSON.stringify(parsed1)).toMatchInlineSnapshot(
       `"[0,[[13,"arr",[100,[[5,"1"],[5,"2"],[5,"3"]]]],[18,[13,"foo"],"arr",[0,[[16]]]]]]"`,
     );
 
-    const parsed2 = getFunctionMetadata(main2)?.ast?.body;
+    const parsed2 = getFunctionMetadata(main2)?.ast.body;
     expect(JSON.stringify(parsed2)).toMatchInlineSnapshot(
       `"[0,[[13,"arr",[100,[[5,"1"],[5,"2"],[5,"3"]]]],[18,[12,"foo"],"arr",[0,[[16]]]]]]"`,
     );

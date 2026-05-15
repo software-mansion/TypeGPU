@@ -34,7 +34,9 @@ export class ShelllessRepository {
 
   get(fn: AnyFn, argSnippets: Snippet[] | undefined): ShelllessImpl | undefined {
     const meta = getFunctionMetadata(fn);
-    if (!meta?.ast) return undefined;
+    if (!meta) {
+      return undefined;
+    }
     if (!argSnippets && meta.ast.params.length > 0) {
       throw new Error(
         `Cannot resolve '${getName(

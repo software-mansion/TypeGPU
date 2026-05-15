@@ -77,7 +77,7 @@ const metadataMap = new WeakMap<object, Metadata>();
  * If `globalExt.__TYPEGPU_META__` contains raw metadata for the function,
  * it is normalized, and then deleted to avoid unnecessary re-normalization.
  */
-export function getFunctionMetadata(definition: object): Metadata {
+export function getFunctionMetadata(definition: object): Metadata | undefined {
   // it's fine, if it's not an object, the get will return undefined
   const maybeRawMeta = globalExt.__TYPEGPU_META__?.get(definition);
   if (maybeRawMeta) {
@@ -88,14 +88,14 @@ export function getFunctionMetadata(definition: object): Metadata {
       nameMap.set(definition, maybeRawMeta.name);
     }
   }
-  return metadataMap.get(definition) ?? {};
+  return metadataMap.get(definition);
 }
 
 /**
  * AST's are given to functions with a 'use gpu' directive, which this function checks for.
  */
 export function hasTinyestMetadata(value: unknown): value is (...args: never[]) => unknown {
-  return typeof value === 'function' && !!getFunctionMetadata(value)?.ast;
+  return typeof value === 'function' && !!getFunctionMetadata(value);
 }
 
 // --- PERF ---

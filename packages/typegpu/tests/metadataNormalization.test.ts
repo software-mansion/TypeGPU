@@ -15,7 +15,6 @@ describe('meta', () => {
 
   it('throws a readable error when metadata is missing', () => {
     const fn = () => {};
-    assignMetadata(fn, { v: 1 });
 
     expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
