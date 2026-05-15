@@ -329,6 +329,20 @@ export interface ResolutionCtx {
    * @param name the temporary name to assign to the item (if missing, just returns `callback()`)
    */
   withRenamed<T>(item: object, name: string | undefined, callback: () => T): T;
+  /**
+   * Temporarily reserves the set of names.
+   * Useful for resolving externals of wgsl-implemented functions,
+   * since we have to prevent externals receiving names used by the function.
+   * Example where this would be an issue:
+   * ```ts
+   * const jsConst = tgpu.const(d.u32, 1).$name('myConst');
+   * const fn = tgpu.fn([])`() {
+   *   const myConst = 0;
+   *   const otherConst = extConst;
+   * }`.$uses({ extConst: jsConst });
+   * ```
+   */
+  withReservedNames<T>(names: Set<string>, cb: () => T): T;
 
   getUniqueName(resource: object): string;
   makeNameValid(name: string): string;

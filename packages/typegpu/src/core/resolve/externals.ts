@@ -75,6 +75,7 @@ function identifierRegex(name: string) {
  * @param ctx - The resolution context.
  * @param externalMap - The external map.
  * @param wgsl - The WGSL code.
+ * @param forbiddenNames - A set of names that when used will likely generate invalid WGSL.
  *
  * @returns The WGSL code with all external names replaced with their resolved values.
  */
@@ -82,6 +83,7 @@ export function replaceExternalsInWgsl(
   ctx: ResolutionCtx,
   externalMap: ExternalMap,
   wgsl: string,
+  forbiddenNames?: Set<string>,
 ): string {
   return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
     const externalRegex = identifierRegex(externalName);
@@ -91,7 +93,15 @@ export function replaceExternalsInWgsl(
     }
 
     if (isWgsl(external) || isLooseData(external) || hasTinyestMetadata(external)) {
-      return acc.replaceAll(externalRegex, ctx.resolve(external).value);
+      // If this is the first time resolving external, then its name will not collide with forbidden names.
+      // If it was generated already, a collision may occur.
+      const externalName = ctx.resolve(external).value;
+      if (forbiddenNames?.has(externalName)) {
+        throw new Error(
+          `Name clash on external and variable '${externalName}' and external '${typeof external === 'string' ? external : getName(external)}' that was resolved to '${externalName}'. If you're using rawCodeSnippets or slotted strings, wrap the string value in parentheses. Otherwise, please either rename the variable, or give the external a different name using '.$name()'.`,
+        );
+      }
+      return acc.replaceAll(externalRegex, externalName);
     }
 
     if (external !== null && typeof external === 'object') {
@@ -116,6 +126,7 @@ export function replaceExternalsInWgsl(
                   [`${externalName}.${prop}`]: external[prop as keyof typeof external],
                 },
                 innerAcc,
+                forbiddenNames,
               )
             : innerAcc,
         acc,

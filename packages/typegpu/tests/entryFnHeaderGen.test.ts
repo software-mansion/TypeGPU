@@ -123,4 +123,88 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
         }"
     `);
   });
+
+  it('renames arguments to not shadow local declarations', () => {
+    const mainVertex = tgpu.vertexFn({
+      in: { vi: d.builtin.vertexIndex, ii: d.builtin.instanceIndex },
+      out: { outPos: d.builtin.position },
+    })(/* wgsl */ `{
+  var vi = in.vi;
+  let ii = in.ii;
+
+  return Out(vec4f(vi, ii, 0, 1));
+}`);
+
+    const resolved = tgpu.resolve([mainVertex]);
+    expect(resolved).not.toContain('vi = vi;');
+    expect(resolved).not.toContain('ii = ii;');
+    expect(resolved).toMatchInlineSnapshot(`
+      "struct mainVertex_Output {
+        @builtin(position) outPos: vec4f,
+      }
+
+      @vertex fn mainVertex(@builtin(vertex_index) vi_1: u32, @builtin(instance_index) ii_1: u32) -> mainVertex_Output {
+        var vi = vi_1;
+        let ii = ii_1;
+
+        return mainVertex_Output(vec4f(vi, ii, 0, 1));
+      }"
+    `);
+  });
+
+  it('does not rename arguments causing new clashes with other variables', () => {
+    const mainVertex = tgpu.vertexFn({
+      in: { vi: d.builtin.vertexIndex },
+      out: { outPos: d.builtin.position },
+    })(/* wgsl */ `{
+  var vi_1 = 0;
+  var vi = in.vi;
+
+  return Out(vec4f(vi, vi_1, 0, 1));
+}`);
+
+    const resolved = tgpu.resolve([mainVertex]);
+    expect(resolved).not.toContain('vi = vi;');
+    expect(resolved).not.toContain('vi = vi_1;');
+    expect(resolved).toMatchInlineSnapshot(`
+      "struct mainVertex_Output {
+        @builtin(position) outPos: vec4f,
+      }
+
+      @vertex fn mainVertex(@builtin(vertex_index) vi_2: u32) -> mainVertex_Output {
+        var vi_1 = 0;
+        var vi = vi_2;
+
+        return mainVertex_Output(vec4f(vi, vi_1, 0, 1));
+      }"
+    `);
+  });
+
+  it('does not cause clashes with other parameters', () => {
+    const mainVertex = tgpu.vertexFn({
+      in: { vi: d.builtin.vertexIndex, vi_1: d.builtin.instanceIndex },
+      out: { outPos: d.builtin.position },
+    })(/* wgsl */ `{
+  var vi = 0;
+  var a = in.vi;
+  var b = in.vi_1;
+
+  return Out(vec4f(a, b, 0, 1));
+}`);
+
+    const resolved = tgpu.resolve([mainVertex]);
+    expect(resolved).toMatchInlineSnapshot(`
+      "struct mainVertex_Output {
+        @builtin(position) outPos: vec4f,
+      }
+
+      @vertex fn mainVertex(@builtin(vertex_index) vi_1: u32, @builtin(instance_index) vi_1_1: u32) -> mainVertex_Output {
+        var vi = 0;
+        var a = vi_1;
+        var b = vi_1_1;
+
+        return mainVertex_Output(vec4f(a, b, 0, 1));
+      }"
+    `);
+  });
 });

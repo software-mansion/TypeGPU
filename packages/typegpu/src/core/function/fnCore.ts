@@ -10,6 +10,24 @@ import { applyExternals, type ExternalMap, replaceExternalsInWgsl } from '../res
 import { extractArgs } from './extractArgs.ts';
 import type { Implementation, SeparatedEntryArgs } from './fnTypes.ts';
 
+/**
+ * Extracts all names declared in the raw wgsl.
+ * This includes all var/let/const declarations,
+ * and parameters of non-entry-point functions (you don't write a header for entry).
+ */
+// TODO: deslopify
+export function extractDeclaredNames(codeString: string) {
+  // The Regex pattern
+  const regex =
+    /(?:\b(?:var|let|const)\s+(?<varName>[a-zA-Z_$][\w$]*))|(?<=\(|,)\s*(?<argName>[a-zA-Z_$][\w$]*)\s*(?=:|,|\))/g;
+
+  // Extract the named groups from all matches
+  return Array.from(
+    codeString.matchAll(regex),
+    (match) => match.groups?.varName || (match.groups?.argName as string),
+  );
+}
+
 export interface FnCore {
   applyExternals: (newExternals: ExternalMap) => void;
   resolve(
@@ -81,17 +99,23 @@ export function createFnCore(
           throw new Error('Explicit return type is required for string implementation');
         }
 
-        const validArgNames = entryInput
-          ? Object.fromEntries(
-              entryInput.positionalArgs.map((a) => [a.schemaKey, ctx.makeNameValid(a.schemaKey)]),
-            )
-          : undefined;
+        const declaredNames = new Set(extractDeclaredNames(implementation));
+        const [validArgNames, replacedImpl] = ctx.withReservedNames(declaredNames, () => {
+          const validArgNames = entryInput
+            ? Object.fromEntries(
+                entryInput.positionalArgs.map((a) => [a.schemaKey, ctx.makeNameValid(a.schemaKey)]),
+              )
+            : undefined;
 
-        if (validArgNames && Object.keys(validArgNames).length > 0) {
-          applyExternals(externalMap, { in: validArgNames });
-        }
+          if (validArgNames && Object.keys(validArgNames).length > 0) {
+            applyExternals(externalMap, { in: validArgNames });
+          }
 
-        const replacedImpl = replaceExternalsInWgsl(ctx, externalMap, implementation);
+          return [
+            validArgNames,
+            replaceExternalsInWgsl(ctx, externalMap, implementation, declaredNames),
+          ];
+        });
 
         let header = '';
         let body = '';

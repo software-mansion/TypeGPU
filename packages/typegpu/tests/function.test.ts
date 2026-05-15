@@ -170,3 +170,75 @@ describe('InheritArgNames', () => {
     attest(isEvenWithNames).type.toString.snap('(num: number) => boolean');
   });
 });
+
+describe('externals', () => {
+  it('should rename externals to avoid clashes with variables', () => {
+    const jsConst = tgpu.const(d.u32, 1).$name('myConst');
+    const fn = tgpu.fn([])`() {
+  const myConst = 0;
+  const otherConst = extConst;
+}`.$uses({ extConst: jsConst });
+
+    const result = tgpu.resolve([fn]);
+    expect(result).not.toContain('otherConst = myConst;');
+    expect(result).toMatchInlineSnapshot(`
+      "const myConst_1: u32 = 1u;
+
+      fn fn_1() {
+        const myConst = 0;
+        const otherConst = myConst_1;
+      }"
+    `);
+  });
+
+  it('should rename externals to avoid clashes with arguments', () => {
+    const jsConst = tgpu.const(d.u32, 1).$name('myConst');
+    const fn = tgpu.fn([d.u32])`(myConst) {
+  const otherConst = extConst;
+}`.$uses({ extConst: jsConst });
+
+    const result = tgpu.resolve([fn]);
+    expect(result).not.toContain('otherConst = myConst;');
+    expect(result).toMatchInlineSnapshot(`
+      "const myConst_1: u32 = 1u;
+
+      fn fn_1(myConst: u32) {
+        const otherConst = myConst_1;
+      }"
+    `);
+  });
+
+  it('should throw when we cannot salvage', () => {
+    const jsConst = tgpu.const(d.u32, 1).$name('myConst');
+
+    const fn1 = tgpu.fn([])`() {
+  let myConst = 0;
+  let outer = extConst;
+}`.$uses({ extConst: jsConst });
+
+    const fn2 = tgpu.fn([])`() {
+  let myConst_1 = 0;
+  let outer = extConst;
+}`.$uses({ extConst: jsConst });
+
+    expect(() => tgpu.resolve([fn1, fn2])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:fn2: Name clash on external and variable 'myConst_1' and external 'myConst' that was resolved to 'myConst_1'. If you're using rawCodeSnippets or slotted strings, wrap the string value in parentheses. Otherwise, please either rename the variable, or give the external a different name using '.$name()'.]
+    `);
+  });
+
+  it('throws a readable error when using rawCodeSnippet', () => {
+    const snippet = tgpu['~unstable'].rawCodeSnippet('x', d.u32, 'runtime');
+
+    const fn = tgpu.fn([d.u32])`(x) {
+  return snip;
+}`.$uses({ snip: snippet });
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:fn: Name clash on external and variable 'x' and external 'snip' that was resolved to 'x'. If you're using rawCodeSnippets or slotted strings, wrap the string value in parentheses. Otherwise, please either rename the variable, or give the external a different name using '.$name()'.]
+    `);
+  });
+});

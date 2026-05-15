@@ -385,7 +385,7 @@ export interface NameRegistry {
    */
   makeValid(primer: string): string;
 
-  pushFunctionScope(): void;
+  pushFunctionScope(initial?: Set<string>): void;
   popFunctionScope(): void;
   pushBlockScope(): void;
   popBlockScope(): void;
@@ -498,11 +498,11 @@ abstract class NameRegistryImpl implements NameRegistry {
     return this.#usedNames.has(name) || this.#isUsedInBlocksBefore(name);
   }
 
-  pushFunctionScope(): void {
+  pushFunctionScope(initial?: Set<string>): void {
     this.#scopeStack.push({ type: 'functionScope' });
     this.#scopeStack.push({
       type: 'blockScope',
-      usedBlockScopeNames: new Set(),
+      usedBlockScopeNames: new Set(initial ?? []),
     });
   }
 
