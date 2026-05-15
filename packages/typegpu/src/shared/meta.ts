@@ -5,8 +5,7 @@ import { DEV, TEST } from './env.ts';
 import { $getNameForward, isMarkedInternal } from './symbols.ts';
 
 // TODO: check external names
-// TODO: what needs to be exported?
-export interface RawMetadataV1 {
+interface RawMetadataV1 {
   v: 1;
   name?: string | undefined;
   ast?: { params: FuncParameter[]; body: Block; externalNames: string[] } | undefined;
@@ -15,19 +14,25 @@ export interface RawMetadataV1 {
     Record<string, unknown> | (() => Record<string, unknown>) | undefined;
 }
 
-export interface ExternalsV2 {
+interface ExternalsV2 {
   [key: string]: ExternalsV2 | (() => unknown);
 }
 
-export interface RawMetadataV2 {
+interface RawMetadataV2 {
   v: 2;
   name?: string | undefined;
   ast?: { params: FuncParameter[]; body: Block; externalNames: string[] } | undefined;
   externals?: ExternalsV2;
 }
 
-export type RawMetadata = RawMetadataV1 | RawMetadataV2;
+/**
+ * Holds all info collected by typegpu-unplugin
+ */
+type RawMetadata = RawMetadataV1 | RawMetadataV2;
 
+/**
+ * Holds normalized function metadata required for WGSL generation
+ */
 export interface MetaData {
   ast?: { params: FuncParameter[]; body: Block; externalNames: string[] } | undefined;
   externals?: Record<string, unknown> | undefined;
@@ -128,7 +133,7 @@ export function hasTinyestMetadata(value: unknown): value is (...args: never[]) 
 }
 
 // TODO: deslopify, document, make sure it works as intended
-export function normalizeExternalsV2(ext2: ExternalsV2): Record<string, unknown> {
+function normalizeExternalsV2(ext2: ExternalsV2): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(ext2)) {
     if (typeof value === 'function') {
@@ -143,16 +148,16 @@ export function normalizeExternalsV2(ext2: ExternalsV2): Record<string, unknown>
   return result;
 }
 
-export function normalizeMetadata(meta: RawMetadata): MetaData {
+function normalizeMetadata(meta: RawMetadata): MetaData {
   if (meta.v === 1) {
     const externals = typeof meta?.externals === 'function' ? meta.externals() : meta?.externals;
     return { ...meta, externals };
   }
 
-  // if (meta.v === 2) {
-  //   const externals = meta?.externals ? normalizeExternalsV2(meta?.externals) : undefined;
-  //   return { ...meta, externals };
-  // }
+  if (meta.v === 2) {
+    const externals = meta?.externals ? normalizeExternalsV2(meta?.externals) : undefined;
+    return { ...meta, externals };
+  }
 
   throw new Error(`Unrecognized TypeGPU metadata format: ${JSON.stringify(meta)}`);
 }
