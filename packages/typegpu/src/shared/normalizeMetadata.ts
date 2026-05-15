@@ -30,7 +30,7 @@ export type RawMetadata = RawMetadataV1 | RawMetadataV2;
  * Holds normalized function metadata required for WGSL generation
  */
 export interface Metadata {
-  ast: { params: FuncParameter[]; body: Block; externalNames: string[] };
+  ast: { params: FuncParameter[]; body: Block };
   externals: Record<string, unknown>;
 }
 
