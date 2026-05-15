@@ -132,15 +132,19 @@ export function hasTinyestMetadata(value: unknown): value is (...args: never[]) 
   return typeof value === 'function' && !!getMetaData(value)?.ast;
 }
 
-// TODO: deslopify, document, make sure it works as intended
-function normalizeExternalsV2(ext2: ExternalsV2): Record<string, unknown> {
+/**
+ * The values of ExternalsV2 are zero-argument functions for accessing the value.
+ * Since they would be recognized by the wgslGenerator as regular, non 'use gpu' functions,
+ * we turn them into getters.
+ *
+ * @example
+ * normalizeExternalsV2({ ext: { prop: () => ext.prop; }}); // { ext: { prop: [Getter] } }
+ */
+function normalizeExternalsV2(externals: ExternalsV2): Record<string, unknown> {
   const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(ext2)) {
+  for (const [key, value] of Object.entries(externals)) {
     if (typeof value === 'function') {
-      Object.defineProperty(result, key, {
-        get: value,
-        enumerable: true,
-      });
+      Object.defineProperty(result, key, { get: value });
     } else {
       result[key] = normalizeExternalsV2(value);
     }
