@@ -99,29 +99,29 @@ cd ios && pod install && cd ..
 ```
 
 To run React Native WebGPU on the iOS simulator, you need to disable the Metal validation API.
-Open XCode, select Edit Scheme:
+Open Xcode, select Edit Scheme:
 
-import XCode1 from "./xcode-1.png";
+import Xcode1 from "./xcode-1.png";
 
 <div style="display: flex; flex-wrap: wrap;">
   <img
     width="300"
     style="margin: 0;"
-    alt="editing a scheme in XCode"
-    src={XCode1.src}
+    alt="editing a scheme in Xcode"
+    src={Xcode1.src}
   />
 </div>
 
 and in Diagnostics tab deselect Metal API Validation:
 
-import XCode2 from "./xcode-2.png";
+import Xcode2 from "./xcode-2.png";
 
 <div style="display: flex; flex-wrap: wrap;">
   <img
     width="300"
     style="margin: 0;"
     alt="deselect Metal Api Validation"
-    src={XCode2.src}
+    src={Xcode2.src}
   />
 </div>
 
@@ -131,7 +131,7 @@ If you want to quickly test if the installation was successful, here's a simple 
 that you can use in your app:
 
 ```ts
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Canvas } from 'react-native-wgpu';
 import tgpu, { d } from 'typegpu';
 import { useRoot, useFrame, useConfigureContext } from '@typegpu/react';
