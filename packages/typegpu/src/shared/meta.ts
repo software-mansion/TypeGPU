@@ -1,43 +1,10 @@
 // The version is inlined during build-time 🎉
 import { version } from '../../package.json';
-import type { Block, FuncParameter } from 'tinyest';
 import { DEV, TEST } from './env.ts';
 import { $getNameForward, isMarkedInternal } from './symbols.ts';
+import { normalizeMetadata, type MetaData, type RawMetadata } from './normalizeMetadata.ts';
 
-// TODO: check external names
-export interface RawMetadataV1 {
-  v: 1;
-  name?: string;
-  ast?: { params: FuncParameter[]; body: Block; externalNames: string[] };
-  externals?:
-    // Passing a record happens prior to version 0.9.0
-    Record<string, unknown> | (() => Record<string, unknown>);
-}
-
-interface ExternalsV2 {
-  [key: string]: ExternalsV2 | (() => unknown);
-}
-
-export interface RawMetadataV2 {
-  v: 2;
-  name?: string;
-  ast?: { params: FuncParameter[]; body: Block; externalNames: string[] };
-  externals?: ExternalsV2;
-}
-
-/**
- * Holds all info collected by typegpu-unplugin
- */
-export type RawMetadata = RawMetadataV1 | RawMetadataV2;
-
-/**
- * Holds normalized function metadata required for WGSL generation
- */
-export interface MetaData {
-  ast?: { params: FuncParameter[]; body: Block; externalNames: string[] } | undefined;
-  externals?: Record<string, unknown> | undefined;
-}
-
+// --- globalWithMeta ---
 /**
  * Don't use or you WILL get fired from your job.
  *
@@ -56,36 +23,30 @@ export type INTERNAL_GlobalExt = typeof globalThis & {
 };
 
 const globalWithMeta = globalThis as INTERNAL_GlobalExt;
-
 if (globalWithMeta.__TYPEGPU_VERSION__ !== undefined) {
   console.warn(
     `Found duplicate TypeGPU version. First was ${globalWithMeta.__TYPEGPU_VERSION__}, this one is ${version}. This may cause unexpected behavior.`,
   );
 }
-
 globalWithMeta.__TYPEGPU_VERSION__ = version;
 globalWithMeta.__TYPEGPU_AUTONAME__ = <T>(exp: T, label: string): T =>
   isNamable(exp) && isMarkedInternal(exp) && !getName(exp) ? exp.$name(label) : exp;
 
+// --- NAMING ---
+const nameMap = new WeakMap<object, string>();
+
 /**
- * Performance measurements are only enabled in dev & test environments for now
+ * Can be assigned a name. Not to be confused with just having a name.
+ * The `$name` function should use `setName` to rename the object itself,
+ * even if `$getNameForward` symbol is present.
  */
-export const PERF =
-  ((DEV || TEST) && {
-    get enabled() {
-      return !!globalWithMeta.__TYPEGPU_MEASURE_PERF__;
-    },
-    record(name: string, data: unknown) {
-      const records = (globalWithMeta.__TYPEGPU_PERF_RECORDS__ ??= new Map());
-      let entries = records.get(name);
-      if (!entries) {
-        entries = [];
-        records.set(name, entries);
-      }
-      entries.push(data);
-    },
-  }) ||
-  undefined;
+export interface TgpuNamable {
+  $name(label: string): this;
+}
+
+export function isNamable(value: unknown): value is TgpuNamable {
+  return !!(value as TgpuNamable)?.$name;
+}
 
 function isForwarded(value: unknown): value is { [$getNameForward]: unknown } {
   return !!(value as { [$getNameForward]?: unknown })?.[$getNameForward];
@@ -112,62 +73,8 @@ export function setName(definition: object, name: string | undefined): void {
   nameMap.set(definition, name);
 }
 
-/**
- * Can be assigned a name. Not to be confused with just having a name.
- * The `$name` function should use `setName` to rename the object itself,
- * even if `$getNameForward` symbol is present.
- */
-export interface TgpuNamable {
-  $name(label: string): this;
-}
-
-export function isNamable(value: unknown): value is TgpuNamable {
-  return !!(value as TgpuNamable)?.$name;
-}
-
-/**
- * AST's are given to functions with a 'use gpu' directive, which this function checks for.
- */
-export function hasTinyestMetadata(value: unknown): value is (...args: never[]) => unknown {
-  return typeof value === 'function' && !!getMetaData(value)?.ast;
-}
-
-/**
- * The values of ExternalsV2 are zero-argument functions for accessing the value.
- * Since they would be recognized by the wgslGenerator as regular, non 'use gpu' functions,
- * we turn them into getters.
- *
- * @example
- * normalizeExternalsV2({ ext: { prop: () => ext.prop; }}); // { ext: { prop: [Getter] } }
- */
-function normalizeExternalsV2(externals: ExternalsV2): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(externals)) {
-    if (typeof value === 'function') {
-      Object.defineProperty(result, key, { get: value });
-    } else {
-      result[key] = normalizeExternalsV2(value);
-    }
-  }
-  return result;
-}
-
-function normalizeMetadata(meta: RawMetadata): MetaData {
-  if (meta.v === 1) {
-    const externals = typeof meta?.externals === 'function' ? meta.externals() : meta?.externals;
-    return { ...meta, externals };
-  }
-
-  if (meta.v === 2) {
-    const externals = meta?.externals ? normalizeExternalsV2(meta?.externals) : undefined;
-    return { ...meta, externals };
-  }
-
-  throw new Error(`Unrecognized TypeGPU metadata format: ${JSON.stringify(meta)}`);
-}
-
+// --- METADATA ---
 const metadataMap = new WeakMap<object, MetaData>();
-const nameMap = new WeakMap<object, string>();
 
 /**
  * Retrieves normalized (non-raw) function metadata.
@@ -187,3 +94,31 @@ export function getMetaData(definition: object): MetaData {
   }
   return metadataMap.get(definition as object) ?? {};
 }
+
+/**
+ * AST's are given to functions with a 'use gpu' directive, which this function checks for.
+ */
+export function hasTinyestMetadata(value: unknown): value is (...args: never[]) => unknown {
+  return typeof value === 'function' && !!getMetaData(value)?.ast;
+}
+
+// --- PERF ---
+/**
+ * Performance measurements are only enabled in dev & test environments for now
+ */
+export const PERF =
+  ((DEV || TEST) && {
+    get enabled() {
+      return !!globalWithMeta.__TYPEGPU_MEASURE_PERF__;
+    },
+    record(name: string, data: unknown) {
+      const records = (globalWithMeta.__TYPEGPU_PERF_RECORDS__ ??= new Map());
+      let entries = records.get(name);
+      if (!entries) {
+        entries = [];
+        records.set(name, entries);
+      }
+      entries.push(data);
+    },
+  }) ||
+  undefined;
