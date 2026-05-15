@@ -1,5 +1,6 @@
 import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
+import * as tinyest from 'tinyest';
 import { it } from 'typegpu-testing-utility';
 import type { INTERNAL_GlobalExt } from '../src/shared/meta.ts';
 import { tgpu } from '../src/index.js';
@@ -9,6 +10,7 @@ describe('meta', () => {
   function assignMetadata(fn: object, meta: RawMetadata) {
     ((globalThis as INTERNAL_GlobalExt).__TYPEGPU_META__ ??= new WeakMap()).set(fn, meta);
   }
+  const NODE = tinyest.NodeTypeCatalog;
 
   it('throws a readable error when metadata is missing', () => {
     const fn = () => {
@@ -36,7 +38,7 @@ describe('meta', () => {
       externals: { EXT },
       ast: {
         params: [],
-        body: [0, [[12, 'a', [7, [7, 'EXT', 'N'], '$']]]],
+        body: [NODE.block, [[NODE.let, 'a', [NODE.memberAccess, [NODE.memberAccess, 'EXT', 'N'], '$']]]],
         externalNames: ['EXT'],
       },
     };
@@ -63,7 +65,7 @@ describe('meta', () => {
       externals: () => ({ EXT }),
       ast: {
         params: [],
-        body: [0, [[12, 'a', [7, [7, 'EXT', 'N'], '$']]]],
+        body: [NODE.block, [[NODE.let, 'a', [NODE.memberAccess, [NODE.memberAccess, 'EXT', 'N'], '$']]]],
         externalNames: ['EXT'],
       },
     };
@@ -90,7 +92,7 @@ describe('meta', () => {
       externals: { EXT: { N: { $: () => EXT.N.$ } } },
       ast: {
         params: [],
-        body: [0, [[12, 'a', [7, [7, 'EXT', 'N'], '$']]]],
+        body: [NODE.block, [[NODE.let, 'a', [NODE.memberAccess, [NODE.memberAccess, 'EXT', 'N'], '$']]]],
         externalNames: ['EXT'],
       },
     };
