@@ -124,7 +124,7 @@ export function isNamable(value: unknown): value is TgpuNamable {
  * AST's are given to functions with a 'use gpu' directive, which this function checks for.
  */
 export function hasTinyestMetadata(value: unknown): value is (...args: never[]) => unknown {
-  return !!getMetaData(value)?.ast;
+  return typeof value === 'function' && !!getMetaData(value)?.ast;
 }
 
 // TODO: deslopify, document, make sure it works as intended
@@ -160,7 +160,12 @@ export function normalizeMetadata(meta: RawMetadata): MetaData {
 const metadataMap = new WeakMap<object, MetaData>();
 const nameMap = new WeakMap<object, string>();
 
-export function getMetaData(definition: unknown): MetaData & { name: string | undefined } {
+/**
+ * Retrieves normalized (non-raw) function metadata.
+ * If `globalWithMeta.__TYPEGPU_META__` contains raw metadata for the function,
+ * it is normalized, and then deleted to avoid unnecessary re-normalization.
+ */
+export function getMetaData(definition: object): MetaData {
   // it's fine, if it's not an object, the get will return undefined
   const maybeRawMeta = globalWithMeta.__TYPEGPU_META__?.get(definition as object);
   if (maybeRawMeta) {
@@ -171,5 +176,5 @@ export function getMetaData(definition: unknown): MetaData & { name: string | un
       nameMap.set(definition as object, maybeRawMeta.name);
     }
   }
-  return { ...metadataMap.get(definition as object), name: nameMap.get(definition as object) };
+  return metadataMap.get(definition as object) ?? {};
 }
