@@ -2,55 +2,103 @@ import tgpu, { d, std } from 'typegpu';
 import type { SampledFlag, StorageFlag, TgpuRoot, TgpuTexture, TgpuTextureView } from 'typegpu';
 import { MODEL_HEIGHT, MODEL_WIDTH } from './inference.ts';
 import { type KernelHandle, type MaskBuffer, WORKGROUP_SIZE } from './kernels.ts';
+import type { VideoFrameCrop } from './video-preprocess.ts';
+
+export const maskPostProcessProfiles = ['raw', 'temporal', 'balanced'] as const;
+export type MaskPostProcessProfile = (typeof maskPostProcessProfiles)[number];
+
+export interface MaskOutputSize {
+  width: number;
+  height: number;
+}
 
 type MaskTexture = TgpuTexture<{
-  size: readonly [typeof MODEL_WIDTH, typeof MODEL_HEIGHT];
-  format: 'rgba8unorm';
+  size: readonly [number, number];
+  format: 'rgba16float';
 }> &
   StorageFlag &
   SampledFlag;
 
 type SampledMaskView = TgpuTextureView<d.WgslTexture2d<d.F32>>;
-type StorageMaskView = TgpuTextureView<d.WgslStorageTexture2d<'rgba8unorm', 'write-only'>>;
+type StorageMaskView = TgpuTextureView<d.WgslStorageTexture2d<'rgba16float', 'write-only'>>;
+
+interface MaskTextureViews {
+  texture: MaskTexture;
+  sampleView: SampledMaskView;
+  storageView: StorageMaskView;
+}
+
+interface KernelHandle2d {
+  pipeline: KernelHandle['pipeline'];
+  workgroupsX: number;
+  workgroupsY: number;
+}
 
 const TOTAL_PIXELS = MODEL_WIDTH * MODEL_HEIGHT;
 const WORKGROUPS = Math.ceil(TOTAL_PIXELS / WORKGROUP_SIZE);
-const MIN_BLEND = 0.08;
-const MAX_BLEND = 1;
-const CERTAINTY_LOW = 0.55;
-const CERTAINTY_HIGH = 0.92;
-const AGREEMENT_LOW = 0.07;
-const AGREEMENT_HIGH = 0.2;
-const MIN_SUPPORT_SCALE = 0.45;
-const HIGH_CERTAINTY_SCALE = 0.75;
-const HIGH_CERTAINTY_LOW = 0.86;
-const MEMORY_STRENGTH = 0.7;
-const MEMORY_CERTAINTY_LOW = 0.28;
-const MEMORY_CERTAINTY_HIGH = 0.62;
+const MODEL_SIZE = d.vec2f(MODEL_WIDTH, MODEL_HEIGHT);
+const MAX_MASK_COORD = d.vec2i(MODEL_WIDTH - 1, MODEL_HEIGHT - 1);
+const EPSILON = 1e-4;
+const ALPHA_MIN = 0.08;
+const ALPHA_MAX = 0.85;
+const CERTAINTY_EXPONENT = 1.5;
+const AGREEMENT_LOW = 0.05;
+const AGREEMENT_HIGH = 0.18;
+const BACKGROUND_FAST_ALPHA = 0.75;
+const CORE_SEED_LOW = 0.75;
+const CORE_SEED_HIGH = 0.9;
+const CORE_RADIUS = 6;
+const CORE_RADIUS_F = 6;
+const CORE_SIGMA = 0.42;
+const BETA_OUT = 0.2;
+const UNCERTAIN_LOW = 0.15;
+const UNCERTAIN_HIGH = 0.85;
+const UPSAMPLE_BAND_LOW = 0.05;
+const UPSAMPLE_BAND_HIGH = 0.95;
+const UPSAMPLE_RADIUS = 2;
+const UPSAMPLE_SPATIAL_SIGMA = 1.6;
+const UPSAMPLE_COLOR_SIGMA = 0.12;
 
 const postProcessParams = d.struct({
   initialized: d.u32,
 });
 
+const upsampleParams = d.struct({
+  sourceSize: d.vec2u,
+  cropOrigin: d.vec2f,
+  cropSize: d.vec2f,
+  edgeAware: d.u32,
+});
+
 const temporalLayout = tgpu.bindGroupLayout({
   params: { uniform: postProcessParams },
   raw: { storage: d.arrayOf(d.f32), access: 'readonly' },
-  temporal: { storage: d.arrayOf(d.f32), access: 'mutable' },
+  historyLogits: { storage: d.arrayOf(d.f32), access: 'mutable' },
+  filtered: { storage: d.arrayOf(d.f32), access: 'mutable' },
 });
 
-const blurToTextureLayout = tgpu.bindGroupLayout({
+const priorLayout = tgpu.bindGroupLayout({
   src: { storage: d.arrayOf(d.f32), access: 'readonly' },
-  output: { storageTexture: d.textureStorage2d('rgba8unorm', 'write-only') },
+  dst: { storage: d.arrayOf(d.f32), access: 'mutable' },
 });
 
-const rawToTextureLayout = tgpu.bindGroupLayout({
-  raw: { storage: d.arrayOf(d.f32), access: 'readonly' },
-  output: { storageTexture: d.textureStorage2d('rgba8unorm', 'write-only') },
+const upsampleLayout = tgpu.bindGroupLayout({
+  params: { uniform: upsampleParams },
+  frame: { externalTexture: d.textureExternal() },
+  sampler: { sampler: 'filtering' },
+  src: { storage: d.arrayOf(d.f32), access: 'readonly' },
+  output: { storageTexture: d.textureStorage2d('rgba16float', 'write-only') },
 });
 
 const maskCoord = (i: number) => {
   'use gpu';
   return d.vec2u(i & 255, std.bitShiftRight(i, 8));
+};
+
+const maskIndex = (coord: d.v2i) => {
+  'use gpu';
+  const clamped = std.clamp(coord, d.vec2i(0), MAX_MASK_COORD);
+  return d.u32(clamped.y) * MODEL_WIDTH + d.u32(clamped.x);
 };
 
 const prevCoord = (value: number) => {
@@ -66,14 +114,78 @@ const nextCoord = (value: number) => {
   return std.min(value + 1, 255);
 };
 
-const maskAt = (x: number, y: number) => {
+const clampProbability = (p: number) => {
   'use gpu';
-  return blurToTextureLayout.$.src[y * MODEL_WIDTH + x];
+  return std.clamp(p, EPSILON, 1 - EPSILON);
+};
+
+const logitProbability = (p: number) => {
+  'use gpu';
+  const clamped = clampProbability(p);
+  return std.log(clamped / (1 - clamped));
+};
+
+const sigmoidLogit = (z: number) => {
+  'use gpu';
+  return 1 / (1 + std.exp(0 - z));
 };
 
 const rawAt = (x: number, y: number) => {
   'use gpu';
-  return temporalLayout.$.raw[y * MODEL_WIDTH + x];
+  return clampProbability(temporalLayout.$.raw[y * MODEL_WIDTH + x]);
+};
+
+const priorSourceAt = (coord: d.v2i) => {
+  'use gpu';
+  return clampProbability(priorLayout.$.src[maskIndex(coord)]);
+};
+
+const upsampleSourceAt = (coord: d.v2i) => {
+  'use gpu';
+  return clampProbability(upsampleLayout.$.src[maskIndex(coord)]);
+};
+
+const centerPrior = (uv: d.v2f) => {
+  'use gpu';
+  const centered = (uv - d.vec2f(0.5)) / CORE_SIGMA;
+  return std.exp((0 - std.dot(centered, centered)) * 0.5);
+};
+
+const uncertaintyBand = (p: number) => {
+  'use gpu';
+  return (
+    std.smoothstep(UNCERTAIN_LOW, UNCERTAIN_LOW + 0.1, p) *
+    (1 - std.smoothstep(UNCERTAIN_HIGH - 0.1, UNCERTAIN_HIGH, p))
+  );
+};
+
+const cameraUvFromScreenUv = (uv: d.v2f) => {
+  'use gpu';
+  const cropUv = d.vec2f(1 - uv.x, uv.y);
+  const sourcePixel =
+    upsampleLayout.$.params.cropOrigin + cropUv * upsampleLayout.$.params.cropSize;
+  return sourcePixel / d.vec2f(upsampleLayout.$.params.sourceSize);
+};
+
+const cameraColorAtScreenUv = (uv: d.v2f) => {
+  'use gpu';
+  return std.textureSampleBaseClampToEdge(
+    upsampleLayout.$.frame,
+    upsampleLayout.$.sampler,
+    cameraUvFromScreenUv(uv),
+  ).rgb;
+};
+
+const sampleMaskBilinear = (uv: d.v2f) => {
+  'use gpu';
+  const pixel = uv * MODEL_SIZE - 0.5;
+  const base = d.vec2i(std.floor(pixel));
+  const frac = pixel - d.vec2f(base);
+  const a = upsampleSourceAt(base);
+  const b = upsampleSourceAt(base + d.vec2i(1, 0));
+  const c = upsampleSourceAt(base + d.vec2i(0, 1));
+  const e = upsampleSourceAt(base + d.vec2i(1, 1));
+  return std.mix(std.mix(a, b, frac.x), std.mix(c, e, frac.x), frac.y);
 };
 
 export const temporalAccumulatorKernel = tgpu.computeFn({
@@ -86,13 +198,14 @@ export const temporalAccumulatorKernel = tgpu.computeFn({
     return;
   }
 
-  const raw = temporalLayout.$.raw[i];
+  const raw = clampProbability(temporalLayout.$.raw[i]);
+  const rawLogit = logitProbability(raw);
   if (temporalLayout.$.params.initialized === 0) {
-    temporalLayout.$.temporal[i] = raw;
+    temporalLayout.$.historyLogits[i] = rawLogit;
+    temporalLayout.$.filtered[i] = raw;
     return;
   }
 
-  const previous = temporalLayout.$.temporal[i];
   const coord = maskCoord(i);
   const left = prevCoord(coord.x);
   const right = nextCoord(coord.x);
@@ -107,30 +220,18 @@ export const temporalAccumulatorKernel = tgpu.computeFn({
     0.2;
 
   const certainty = std.abs(raw - 0.5) * 2;
-  const certaintyBlend = std.mix(
-    MIN_BLEND,
-    MAX_BLEND,
-    std.smoothstep(CERTAINTY_LOW, CERTAINTY_HIGH, certainty),
-  );
+  const certaintyBlend = std.mix(ALPHA_MIN, ALPHA_MAX, std.pow(certainty, CERTAINTY_EXPONENT));
   const agreement = 1 - std.smoothstep(AGREEMENT_LOW, AGREEMENT_HIGH, std.abs(raw - localMean));
-  const supportFloor = std.mix(
-    MIN_SUPPORT_SCALE,
-    HIGH_CERTAINTY_SCALE,
-    std.smoothstep(HIGH_CERTAINTY_LOW, MAX_BLEND, certainty),
-  );
-  const supportScale = std.mix(supportFloor, MAX_BLEND, agreement);
-  const blend = certaintyBlend * supportScale;
-  const previousCertainty = std.abs(previous - 0.5) * 2;
-  const memoryWeight =
-    previousCertainty *
-    (1 - std.smoothstep(MEMORY_CERTAINTY_LOW, MEMORY_CERTAINTY_HIGH, certainty)) *
-    MEMORY_STRENGTH;
-  const carriedRaw = std.clamp(raw + (previous - 0.5) * memoryWeight, 0, 1);
-  const filtered = std.mix(previous, carriedRaw, blend);
-  temporalLayout.$.temporal[i] = filtered;
+  const supportScale = std.mix(0.55, 1, agreement);
+  const confidentBackground = 1 - std.smoothstep(0.08, 0.2, raw);
+  const alpha = std.max(certaintyBlend * supportScale, confidentBackground * BACKGROUND_FAST_ALPHA);
+  const filteredLogit = std.mix(temporalLayout.$.historyLogits[i], rawLogit, alpha);
+
+  temporalLayout.$.historyLogits[i] = filteredLogit;
+  temporalLayout.$.filtered[i] = sigmoidLogit(filteredLogit);
 });
 
-export const softBlurToTextureKernel = tgpu.computeFn({
+export const personCorePriorKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
   workgroupSize: [WORKGROUP_SIZE],
 })(({ gid }) => {
@@ -140,87 +241,163 @@ export const softBlurToTextureKernel = tgpu.computeFn({
     return;
   }
 
-  const coord = maskCoord(i);
-  const left = prevCoord(coord.x);
-  const right = nextCoord(coord.x);
-  const top = prevCoord(coord.y);
-  const bottom = nextCoord(coord.y);
-  const alpha =
-    maskAt(left, top) * 0.0625 +
-    maskAt(coord.x, top) * 0.125 +
-    maskAt(right, top) * 0.0625 +
-    maskAt(left, coord.y) * 0.125 +
-    maskAt(coord.x, coord.y) * 0.25 +
-    maskAt(right, coord.y) * 0.125 +
-    maskAt(left, bottom) * 0.0625 +
-    maskAt(coord.x, bottom) * 0.125 +
-    maskAt(right, bottom) * 0.0625;
+  const coord = d.vec2i(maskCoord(i));
+  const p = clampProbability(priorLayout.$.src[i]);
+  const uv = (d.vec2f(coord) + 0.5) / MODEL_SIZE;
+  const centerWeight = centerPrior(uv);
+  let support = d.f32(0);
+  let totalWeight = d.f32(0);
 
-  std.textureStore(blurToTextureLayout.$.output, coord, d.vec4f(alpha, alpha, alpha, 1));
+  for (let dy = -CORE_RADIUS; dy <= CORE_RADIUS; dy++) {
+    for (let dx = -CORE_RADIUS; dx <= CORE_RADIUS; dx++) {
+      const offset = d.vec2i(dx, dy);
+      const dist2 = d.f32(dx * dx + dy * dy);
+      if (dist2 <= CORE_RADIUS_F * CORE_RADIUS_F) {
+        const sampleCoord = coord + offset;
+        const sampleValue = priorSourceAt(sampleCoord);
+        const sampleUv =
+          (d.vec2f(std.clamp(sampleCoord, d.vec2i(0), MAX_MASK_COORD)) + 0.5) / MODEL_SIZE;
+        const seed = std.smoothstep(CORE_SEED_LOW, CORE_SEED_HIGH, sampleValue);
+        const spatialWeight = std.exp((0 - dist2) / (2 * CORE_RADIUS_F * CORE_RADIUS_F));
+        const weightedSeed = seed * std.mix(0.4, 1, centerPrior(sampleUv));
+        support += weightedSeed * spatialWeight;
+        totalWeight += spatialWeight;
+      }
+    }
+  }
+
+  const normalizedSupport = support / std.max(totalWeight, 1e-4);
+  const protection = normalizedSupport * std.mix(0.45, 1, centerWeight);
+  const outside = 1 - std.smoothstep(0.035, 0.12, protection);
+  const uncertaintyProtection = uncertaintyBand(p) * 0.35;
+  const attenuation = std.mix(1, BETA_OUT, outside * (1 - uncertaintyProtection));
+  priorLayout.$.dst[i] = p * attenuation;
 });
 
-export const rawMaskToTextureKernel = tgpu.computeFn({
+export const upsampleToTextureKernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
-  workgroupSize: [WORKGROUP_SIZE],
+  workgroupSize: [16, 16],
 })(({ gid }) => {
   'use gpu';
-  const i = gid.x;
-  if (i >= TOTAL_PIXELS) {
+  const outputDims = std.textureDimensions(upsampleLayout.$.output);
+  if (gid.x >= outputDims.x || gid.y >= outputDims.y) {
     return;
   }
 
-  const alpha = rawToTextureLayout.$.raw[i];
-  std.textureStore(rawToTextureLayout.$.output, maskCoord(i), d.vec4f(alpha, alpha, alpha, 1));
+  const outputCoord = d.vec2u(gid.xy);
+  const uv = (d.vec2f(outputCoord) + 0.5) / d.vec2f(outputDims);
+  const baseMask = sampleMaskBilinear(uv);
+  if (
+    upsampleLayout.$.params.edgeAware === 0 ||
+    baseMask <= UPSAMPLE_BAND_LOW ||
+    baseMask >= UPSAMPLE_BAND_HIGH
+  ) {
+    std.textureStore(upsampleLayout.$.output, outputCoord, d.vec4f(baseMask, 0, 0, 1));
+    return;
+  }
+
+  const centerColor = cameraColorAtScreenUv(uv);
+  const modelPixel = uv * MODEL_SIZE - 0.5;
+  const baseCoord = d.vec2i(std.floor(modelPixel));
+  let weightedMask = d.f32(0);
+  let totalWeight = d.f32(0);
+
+  for (let dy = -UPSAMPLE_RADIUS; dy <= UPSAMPLE_RADIUS; dy++) {
+    for (let dx = -UPSAMPLE_RADIUS; dx <= UPSAMPLE_RADIUS; dx++) {
+      const sampleCoord = baseCoord + d.vec2i(dx, dy);
+      const clampedCoord = std.clamp(sampleCoord, d.vec2i(0), MAX_MASK_COORD);
+      const sampleUv = (d.vec2f(clampedCoord) + 0.5) / MODEL_SIZE;
+      const sampleColor = cameraColorAtScreenUv(sampleUv);
+      const colorDelta = centerColor - sampleColor;
+      const colorDist2 = std.dot(colorDelta, colorDelta);
+      const spatialDist2 = d.f32(dx * dx + dy * dy);
+      const spatialWeight = std.exp(
+        (0 - spatialDist2) / (2 * UPSAMPLE_SPATIAL_SIGMA * UPSAMPLE_SPATIAL_SIGMA),
+      );
+      const colorWeight = std.exp(
+        (0 - colorDist2) / (2 * UPSAMPLE_COLOR_SIGMA * UPSAMPLE_COLOR_SIGMA),
+      );
+      const weight = spatialWeight * colorWeight;
+      weightedMask += upsampleSourceAt(clampedCoord) * weight;
+      totalWeight += weight;
+    }
+  }
+
+  const refinedMask = weightedMask / std.max(totalWeight, 1e-4);
+  std.textureStore(upsampleLayout.$.output, outputCoord, d.vec4f(refinedMask, 0, 0, 1));
 });
 
 export class MaskPostProcessor {
-  readonly maskView: SampledMaskView;
+  maskView: SampledMaskView;
 
+  readonly #root: TgpuRoot;
+  readonly #rawMask: MaskBuffer;
   readonly #paramsBuffer;
+  readonly #upsampleParamsBuffer;
+  readonly #sampler;
+  readonly #temporalMask: MaskBuffer;
+  readonly #priorMask: MaskBuffer;
   readonly #temporal: KernelHandle;
-  readonly #blur: KernelHandle;
-  readonly #rawToTexture: KernelHandle;
+  readonly #prior: KernelHandle;
+  readonly #upsample: KernelHandle2d;
+  #maskTexture: MaskTexture;
+  #maskStorageView: StorageMaskView;
+  #outputWidth = 0;
+  #outputHeight = 0;
   #initialized = false;
 
   constructor(root: TgpuRoot, rawMask: MaskBuffer) {
     const paramsBuffer = root.createBuffer(postProcessParams, { initialized: 0 }).$usage('uniform');
-    const temporalBuffer = createMaskBuffer(root);
-    const maskTexture = root
-      .createTexture({
-        size: [MODEL_WIDTH, MODEL_HEIGHT],
-        format: 'rgba8unorm',
+    const upsampleParamsBuffer = root
+      .createBuffer(upsampleParams, {
+        sourceSize: d.vec2u(1, 1),
+        cropOrigin: d.vec2f(0),
+        cropSize: d.vec2f(1),
+        edgeAware: 0,
       })
-      .$usage('storage', 'sampled') as MaskTexture;
-    this.maskView = maskTexture.createView(d.texture2d(d.f32));
-    const maskStorageView = maskTexture.createView(
-      d.textureStorage2d('rgba8unorm', 'write-only'),
-    ) as StorageMaskView;
+      .$usage('uniform');
+    const historyLogits = createMaskBuffer(root);
+    const temporalMask = createMaskBuffer(root);
+    const priorMask = createMaskBuffer(root);
+    const mask = createMaskTexture(root, 1, 1);
 
+    this.#root = root;
+    this.#rawMask = rawMask;
     this.#paramsBuffer = paramsBuffer;
+    this.#upsampleParamsBuffer = upsampleParamsBuffer;
+    this.#sampler = root.createSampler({
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge',
+      magFilter: 'linear',
+      minFilter: 'linear',
+    });
+    this.#temporalMask = temporalMask;
+    this.#priorMask = priorMask;
+    this.#maskTexture = mask.texture;
+    this.maskView = mask.sampleView;
+    this.#maskStorageView = mask.storageView;
     this.#temporal = {
       pipeline: root.createComputePipeline({ compute: temporalAccumulatorKernel }),
       bindGroup: root.createBindGroup(temporalLayout, {
         params: paramsBuffer,
         raw: rawMask,
-        temporal: temporalBuffer,
+        historyLogits,
+        filtered: temporalMask,
       }),
       workgroups: WORKGROUPS,
     };
-    this.#blur = {
-      pipeline: root.createComputePipeline({ compute: softBlurToTextureKernel }),
-      bindGroup: root.createBindGroup(blurToTextureLayout, {
-        src: temporalBuffer,
-        output: maskStorageView,
+    this.#prior = {
+      pipeline: root.createComputePipeline({ compute: personCorePriorKernel }),
+      bindGroup: root.createBindGroup(priorLayout, {
+        src: temporalMask,
+        dst: priorMask,
       }),
       workgroups: WORKGROUPS,
     };
-    this.#rawToTexture = {
-      pipeline: root.createComputePipeline({ compute: rawMaskToTextureKernel }),
-      bindGroup: root.createBindGroup(rawToTextureLayout, {
-        raw: rawMask,
-        output: maskStorageView,
-      }),
-      workgroups: WORKGROUPS,
+    this.#upsample = {
+      pipeline: root.createComputePipeline({ compute: upsampleToTextureKernel }),
+      workgroupsX: 1,
+      workgroupsY: 1,
     };
   }
 
@@ -228,15 +405,66 @@ export class MaskPostProcessor {
     this.#initialized = false;
   }
 
-  encode(pass: GPUComputePassEncoder): void {
-    this.#paramsBuffer.write({ initialized: this.#initialized ? 1 : 0 });
-    dispatch(pass, this.#temporal);
-    dispatch(pass, this.#blur);
-    this.#initialized = true;
+  encode(
+    pass: GPUComputePassEncoder,
+    externalTexture: GPUExternalTexture,
+    crop: VideoFrameCrop,
+    outputSize: MaskOutputSize,
+    profile: MaskPostProcessProfile,
+  ): void {
+    this.#ensureOutputTexture(outputSize);
+
+    let source = this.#rawMask;
+    let edgeAware = 0;
+    if (profile !== 'raw') {
+      this.#paramsBuffer.write({ initialized: this.#initialized ? 1 : 0 });
+      dispatch(pass, this.#temporal);
+      source = this.#temporalMask;
+      this.#initialized = true;
+    }
+
+    if (profile === 'balanced') {
+      dispatch(pass, this.#prior);
+      source = this.#priorMask;
+      edgeAware = 1;
+    }
+
+    this.#upsampleParamsBuffer.write({
+      sourceSize: d.vec2u(crop.sourceWidth, crop.sourceHeight),
+      cropOrigin: d.vec2f(crop.x, crop.y),
+      cropSize: d.vec2f(crop.width, crop.height),
+      edgeAware,
+    });
+    this.#upsample.pipeline
+      .with(pass)
+      .with(
+        this.#root.createBindGroup(upsampleLayout, {
+          params: this.#upsampleParamsBuffer,
+          frame: externalTexture,
+          sampler: this.#sampler,
+          src: source,
+          output: this.#maskStorageView,
+        }),
+      )
+      .dispatchWorkgroups(this.#upsample.workgroupsX, this.#upsample.workgroupsY);
   }
 
-  encodeRaw(pass: GPUComputePassEncoder): void {
-    dispatch(pass, this.#rawToTexture);
+  #ensureOutputTexture({ width, height }: MaskOutputSize): void {
+    const nextWidth = Math.max(1, Math.floor(width));
+    const nextHeight = Math.max(1, Math.floor(height));
+    if (nextWidth === this.#outputWidth && nextHeight === this.#outputHeight) {
+      return;
+    }
+
+    const mask = createMaskTexture(this.#root, nextWidth, nextHeight);
+    this.#maskTexture.destroy();
+    this.#maskTexture = mask.texture;
+    this.maskView = mask.sampleView;
+    this.#maskStorageView = mask.storageView;
+    this.#outputWidth = nextWidth;
+    this.#outputHeight = nextHeight;
+    this.#upsample.workgroupsX = Math.ceil(nextWidth / 16);
+    this.#upsample.workgroupsY = Math.ceil(nextHeight / 16);
   }
 }
 
@@ -246,4 +474,18 @@ function dispatch(pass: GPUComputePassEncoder, handle: KernelHandle): void {
 
 function createMaskBuffer(root: TgpuRoot): MaskBuffer {
   return root.createBuffer(d.arrayOf(d.f32, TOTAL_PIXELS)).$usage('storage') as MaskBuffer;
+}
+
+function createMaskTexture(root: TgpuRoot, width: number, height: number): MaskTextureViews {
+  const texture = root
+    .createTexture({
+      size: [width, height],
+      format: 'rgba16float',
+    })
+    .$usage('storage', 'sampled') as MaskTexture;
+  return {
+    texture,
+    sampleView: texture.createView(d.texture2d(d.f32)),
+    storageView: texture.createView(d.textureStorage2d('rgba16float', 'write-only')),
+  };
 }

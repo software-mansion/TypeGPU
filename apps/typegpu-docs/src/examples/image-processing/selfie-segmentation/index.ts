@@ -3,7 +3,11 @@ import type { TgpuTextureView } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 import { SelfieSegmenterInference } from './inference.ts';
 import type { VideoFrameCrop } from './inference.ts';
-import { MaskPostProcessor } from './mask-postprocess.ts';
+import {
+  MaskPostProcessor,
+  maskPostProcessProfiles,
+  type MaskPostProcessProfile,
+} from './mask-postprocess.ts';
 
 type MaskView = TgpuTextureView<d.WgslTexture2d<d.F32>>;
 
@@ -39,7 +43,7 @@ export const compositeFragment = tgpu.fragmentFn({
     compositeLayout.$.sampler,
     uv,
   ).r;
-  const personAlpha = std.smoothstep(0.28, 0.72, personMask);
+  const personAlpha = std.smoothstep(0.35, 0.65, personMask);
   const vertical = std.mix(d.vec3f(0.09, 0.2, 0.62), d.vec3f(0.96, 0.3, 0.45), uv.y);
   const gradient = std.mix(vertical, d.vec3f(1, 0.84, 0.38), uv.x * 0.35);
   return d.vec4f(std.mix(gradient, cameraColor.rgb, personAlpha), 1);
@@ -90,7 +94,7 @@ video.srcObject = await navigator.mediaDevices.getUserMedia({
 });
 
 let videoFrameCallbackId = 0;
-let postProcessingEnabled = true;
+let postProcessProfile: MaskPostProcessProfile = 'balanced';
 
 function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   if (video.readyState < 2) {
@@ -104,11 +108,13 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   const encoder = root.device.createCommandEncoder();
   const pass = encoder.beginComputePass();
   inference.encodeVideoFrame(pass, externalTexture, crop);
-  if (postProcessingEnabled) {
-    postProcessor.encode(pass);
-  } else {
-    postProcessor.encodeRaw(pass);
-  }
+  postProcessor.encode(
+    pass,
+    externalTexture,
+    crop,
+    { width: canvas.width, height: canvas.height },
+    postProcessProfile,
+  );
   pass.end();
   renderComposite(encoder, externalTexture, postProcessor.maskView, crop);
   root.device.queue.submit([encoder.finish()]);
@@ -142,8 +148,9 @@ function resizeCanvas() {
 
 export const controls = defineControls({
   'post processing': {
-    initial: postProcessingEnabled,
-    onToggleChange: setPostProcessingEnabled,
+    initial: postProcessProfile,
+    options: maskPostProcessProfiles,
+    onSelectChange: setPostProcessProfile,
   },
 });
 
@@ -158,11 +165,9 @@ export function onCleanup() {
   root.destroy();
 }
 
-function setPostProcessingEnabled(enabled: boolean) {
-  postProcessingEnabled = enabled;
-  if (enabled) {
-    postProcessor.reset();
-  }
+function setPostProcessProfile(profile: MaskPostProcessProfile) {
+  postProcessProfile = profile;
+  postProcessor.reset();
 }
 
 function renderComposite(
