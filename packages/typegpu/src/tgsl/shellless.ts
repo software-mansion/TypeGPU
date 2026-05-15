@@ -4,7 +4,7 @@ import { RefOperator } from '../data/ref.ts';
 import type { Snippet } from '../data/snippet.ts';
 import { type BaseData, isPtr, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
 import { WgslTypeError } from '../errors.ts';
-import { getMetaData, getName } from '../shared/meta.ts';
+import { getFunctionMetadata, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
 
 type AnyFn = (...args: never[]) => unknown;
@@ -33,7 +33,7 @@ export class ShelllessRepository {
   cache = new Map<AnyFn, ShelllessImpl[]>();
 
   get(fn: AnyFn, argSnippets: Snippet[] | undefined): ShelllessImpl | undefined {
-    const meta = getMetaData(fn);
+    const meta = getFunctionMetadata(fn);
     if (!meta?.ast) return undefined;
     if (!argSnippets && meta.ast.params.length > 0) {
       throw new Error(

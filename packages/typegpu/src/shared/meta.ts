@@ -2,7 +2,7 @@
 import { version } from '../../package.json';
 import { DEV, TEST } from './env.ts';
 import { $getNameForward, isMarkedInternal } from './symbols.ts';
-import { normalizeMetadata, type MetaData, type RawMetadata } from './normalizeMetadata.ts';
+import { normalizeMetadata, type FunctionMetadata, type RawMetadata } from './normalizeMetadata.ts';
 
 // --- globalWithMeta ---
 /**
@@ -74,14 +74,14 @@ export function setName(definition: object, name: string | undefined): void {
 }
 
 // --- METADATA ---
-const metadataMap = new WeakMap<object, MetaData>();
+const metadataMap = new WeakMap<object, FunctionMetadata>();
 
 /**
  * Retrieves normalized (non-raw) function metadata.
  * If `globalWithMeta.__TYPEGPU_META__` contains raw metadata for the function,
  * it is normalized, and then deleted to avoid unnecessary re-normalization.
  */
-export function getMetaData(definition: object): MetaData {
+export function getFunctionMetadata(definition: object): FunctionMetadata {
   // it's fine, if it's not an object, the get will return undefined
   const maybeRawMeta = globalWithMeta.__TYPEGPU_META__?.get(definition as object);
   if (maybeRawMeta) {
@@ -99,7 +99,7 @@ export function getMetaData(definition: object): MetaData {
  * AST's are given to functions with a 'use gpu' directive, which this function checks for.
  */
 export function hasTinyestMetadata(value: unknown): value is (...args: never[]) => unknown {
-  return typeof value === 'function' && !!getMetaData(value)?.ast;
+  return typeof value === 'function' && !!getFunctionMetadata(value)?.ast;
 }
 
 // --- PERF ---

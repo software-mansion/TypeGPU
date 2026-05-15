@@ -1,16 +1,12 @@
 import { describe, expect } from 'vitest';
 import * as d from '../src/data/index.ts';
 import { it } from 'typegpu-testing-utility';
-import type {
-  INTERNAL_GlobalExt,
-  RawMetadata,
-  RawMetadataV1,
-  RawMetadataV2,
-} from '../src/shared/meta.ts';
+import type { INTERNAL_GlobalExt } from '../src/shared/meta.ts';
 import { tgpu } from '../src/index.js';
+import type { RawMetadata, RawMetadataV1, RawMetadataV2 } from '../src/shared/normalizeMetadata.ts';
 
 describe('meta', () => {
-  function assignMetaData(fn: object, meta: RawMetadata) {
+  function assignMetadata(fn: object, meta: RawMetadata) {
     (globalThis as INTERNAL_GlobalExt).__TYPEGPU_META__.set(fn, meta);
   }
 
@@ -18,7 +14,7 @@ describe('meta', () => {
     const fn = () => {
       'use gpu';
     };
-    assignMetaData(fn, { v: 1 });
+    assignMetadata(fn, { v: 1 });
 
     expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
@@ -44,7 +40,7 @@ describe('meta', () => {
         externalNames: ['EXT'],
       },
     };
-    assignMetaData(fn, meta);
+    assignMetadata(fn, meta);
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "const N: u32 = 1u;
@@ -71,7 +67,7 @@ describe('meta', () => {
         externalNames: ['EXT'],
       },
     };
-    assignMetaData(fn, meta);
+    assignMetadata(fn, meta);
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "const N: u32 = 1u;
@@ -98,7 +94,7 @@ describe('meta', () => {
         externalNames: ['EXT'],
       },
     };
-    assignMetaData(fn, meta);
+    assignMetadata(fn, meta);
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "const N: u32 = 1u;
@@ -113,7 +109,7 @@ describe('meta', () => {
     const fn = () => {
       'use gpu';
     };
-    assignMetaData(fn, {} as RawMetadata);
+    assignMetadata(fn, {} as RawMetadata);
 
     expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:

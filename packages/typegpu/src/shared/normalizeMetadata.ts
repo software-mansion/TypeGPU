@@ -29,8 +29,7 @@ export type RawMetadata = RawMetadataV1 | RawMetadataV2;
 /**
  * Holds normalized function metadata required for WGSL generation
  */
-// TODO: rename
-export interface MetaData {
+export interface FunctionMetadata {
   ast?: { params: FuncParameter[]; body: Block; externalNames: string[] } | undefined;
   externals?: Record<string, unknown> | undefined;
 }
@@ -55,7 +54,7 @@ function normalizeExternalsV2(externals: ExternalsV2): Record<string, unknown> {
   return result;
 }
 
-export function normalizeMetadata(meta: RawMetadata): MetaData {
+export function normalizeMetadata(meta: RawMetadata): FunctionMetadata {
   if (meta.v === 1) {
     const externals = typeof meta?.externals === 'function' ? meta.externals() : meta?.externals;
     return { ...meta, externals };
