@@ -90,15 +90,21 @@ export function getName(definition: unknown): string | undefined {
   if (isForwarded(definition)) {
     return getName(definition[$getNameForward]);
   }
-  return getMetaName(definition as object);
+  return (
+    nameMap.get(definition as object) ??
+    globalWithMeta.__TYPEGPU_META__?.get(definition as object)?.name
+  );
 }
 
 export function setName(definition: object, name: string | undefined): void {
+  if (!name) {
+    return;
+  }
   if (isForwarded(definition)) {
     setName(definition[$getNameForward] as object, name);
     return;
   }
-  setMetaData(definition, name);
+  nameMap.set(definition, name);
 }
 
 /**
@@ -166,19 +172,4 @@ export function getMetaData(definition: unknown): MetaData & { name: string | un
     }
   }
   return { ...metadataMap.get(definition as object), name: nameMap.get(definition as object) };
-}
-
-// TODO: rename to setName
-export function setMetaData(definition: object, name: string | undefined) {
-  if (!name) {
-    return;
-  }
-  nameMap.set(definition, name);
-}
-
-// TODO: rename to getName
-export function getMetaName(definition: object): string | undefined {
-  return (
-    nameMap.get(definition) ?? globalWithMeta.__TYPEGPU_META__?.get(definition as object)?.name
-  );
 }
