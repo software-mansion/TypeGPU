@@ -4,13 +4,13 @@ import {
   activationSlot,
   binaryLayout,
   binaryOpSlot,
-  binaryShapeAccess,
-  convShapeAccess,
+  binaryShapeConst,
+  convShapeConst,
   headLayout,
-  headShapeAccess,
+  headShapeConst,
   poolLayout,
-  poolShapeAccess,
-  resizeShapeAccess,
+  poolShapeConst,
+  resizeShapeConst,
   weightedLayout,
 } from './kernel-layouts.ts';
 import {
@@ -35,7 +35,7 @@ export const conv1x1Kernel = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE],
 })(({ gid }) => {
   'use gpu';
-  const shape = convShapeAccess.$;
+  const shape = convShapeConst.$;
   const i = gid.x;
   if (i >= shape.total) {
     return;
@@ -62,7 +62,7 @@ const createConvKernel = (taps: readonly number[], kernelSize: number) =>
     workgroupSize: [WORKGROUP_SIZE],
   })(({ gid }) => {
     'use gpu';
-    const shape = convShapeAccess.$;
+    const shape = convShapeConst.$;
     const i = gid.x;
     if (i >= shape.total) {
       return;
@@ -106,7 +106,7 @@ const createDepthwiseKernel = (taps: readonly number[], kernelSize: number) =>
     workgroupSize: [WORKGROUP_SIZE],
   })(({ gid }) => {
     'use gpu';
-    const shape = convShapeAccess.$;
+    const shape = convShapeConst.$;
     const i = gid.x;
     if (i >= shape.total) {
       return;
@@ -153,7 +153,7 @@ export const globalPoolKernel = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE],
 })(({ localIndex, workgroupId }) => {
   'use gpu';
-  const shape = poolShapeAccess.$;
+  const shape = poolShapeConst.$;
   const block = workgroupId.x;
   let sum = d.vec4f(0);
   let offset = localIndex;
@@ -188,7 +188,7 @@ export const resize2xKernel = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE],
 })(({ gid }) => {
   'use gpu';
-  const shape = resizeShapeAccess.$;
+  const shape = resizeShapeConst.$;
   const i = gid.x;
   if (i >= shape.total) {
     return;
@@ -222,7 +222,7 @@ export const binaryKernel = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE],
 })(({ gid }) => {
   'use gpu';
-  const shape = binaryShapeAccess.$;
+  const shape = binaryShapeConst.$;
   const i = gid.x;
   if (i >= shape.total) {
     return;
@@ -258,7 +258,7 @@ export const head2x2SigmoidKernel = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE],
 })(({ gid }) => {
   'use gpu';
-  const shape = headShapeAccess.$;
+  const shape = headShapeConst.$;
   const i = gid.x;
   if (i >= shape.total) {
     return;

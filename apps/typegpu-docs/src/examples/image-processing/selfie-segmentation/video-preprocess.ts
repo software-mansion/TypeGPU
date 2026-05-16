@@ -25,10 +25,12 @@ const videoFrameShape = d.struct({
   total: d.u32,
 });
 
-export const videoFrameShapeAccess = tgpu.accessor(videoFrameShape, {
+export const videoFrameShapeSlot = tgpu.slot({
   inputSize: d.vec2u(1),
   total: 1,
 });
+
+const videoFrameShapeConst = tgpu.lazy(() => tgpu.const(videoFrameShape, videoFrameShapeSlot.$));
 
 const videoFrameLayout = tgpu.bindGroupLayout({
   params: { uniform: videoFrameParams },
@@ -51,7 +53,7 @@ export const videoPreprocessKernel = tgpu.computeFn({
   workgroupSize: [WORKGROUP_SIZE],
 })(({ gid }) => {
   'use gpu';
-  const shape = videoFrameShapeAccess.$;
+  const shape = videoFrameShapeConst.$;
   const i = gid.x;
   if (i >= shape.total) {
     return;
@@ -82,7 +84,7 @@ export function createVideoPreprocessor(
   const workgroups = Math.ceil(total / WORKGROUP_SIZE);
 
   const pipeline = root
-    .with(videoFrameShapeAccess, {
+    .with(videoFrameShapeSlot, {
       inputSize: d.vec2u(width, height),
       total,
     })

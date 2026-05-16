@@ -6,17 +6,17 @@ import {
   addOp,
   binaryLayout,
   binaryOpSlot,
-  binaryShapeAccess,
-  convShapeAccess,
+  binaryShapeSlot,
+  convShapeSlot,
   hardSwishOp,
   headLayout,
-  headShapeAccess,
+  headShapeSlot,
   identityOp,
   mulOp,
   poolLayout,
-  poolShapeAccess,
+  poolShapeSlot,
   reluOp,
-  resizeShapeAccess,
+  resizeShapeSlot,
   sigmoidOp,
   weightedLayout,
   weightedOffsets,
@@ -97,7 +97,7 @@ export function createSegmenterDispatches(
       ],
       () =>
         root
-          .with(convShapeAccess, shape)
+          .with(convShapeSlot, shape)
           .with(activationSlot, activationOp(record.activation))
           .createComputePipeline({ compute }),
     );
@@ -116,7 +116,7 @@ export function createSegmenterDispatches(
         const pipeline = specializedPipeline(
           [record.opKind, ...record.input, ...record.kernel],
           () =>
-            root.with(poolShapeAccess, shape).createComputePipeline({ compute: globalPoolKernel }),
+            root.with(poolShapeSlot, shape).createComputePipeline({ compute: globalPoolKernel }),
         );
         return {
           pipeline,
@@ -132,7 +132,7 @@ export function createSegmenterDispatches(
         const pipeline = specializedPipeline(
           [record.opKind, ...record.input, ...record.output],
           () =>
-            root.with(resizeShapeAccess, shape).createComputePipeline({ compute: resize2xKernel }),
+            root.with(resizeShapeSlot, shape).createComputePipeline({ compute: resize2xKernel }),
         );
         return {
           pipeline,
@@ -148,7 +148,7 @@ export function createSegmenterDispatches(
         const shape = shapeForBinary(record);
         const pipeline = specializedPipeline([record.opKind, ...record.output, record.flags], () =>
           root
-            .with(binaryShapeAccess, shape)
+            .with(binaryShapeSlot, shape)
             .with(binaryOpSlot, record.opKind === OpKind.Mul ? mulOp : addOp)
             .createComputePipeline({ compute: binaryKernel }),
         );
@@ -168,7 +168,7 @@ export function createSegmenterDispatches(
           [record.opKind, ...record.input, ...record.output],
           () =>
             root
-              .with(headShapeAccess, shape)
+              .with(headShapeSlot, shape)
               .createComputePipeline({ compute: head2x2SigmoidKernel }),
         );
         const offsets = root

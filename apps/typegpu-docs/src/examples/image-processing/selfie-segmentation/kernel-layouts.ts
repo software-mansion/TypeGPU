@@ -43,7 +43,7 @@ export const headShape = d.struct({
   total: d.u32,
 });
 
-export const convShapeAccess = tgpu.accessor(convShape, {
+export const convShapeSlot = tgpu.slot({
   input: d.vec3u(1),
   output: d.vec3u(1),
   blocks: d.vec2u(1),
@@ -53,7 +53,9 @@ export const convShapeAccess = tgpu.accessor(convShape, {
   total: 1,
 });
 
-export const binaryShapeAccess = tgpu.accessor(binaryShape, {
+export const convShapeConst = tgpu.lazy(() => tgpu.const(convShape, convShapeSlot.$));
+
+export const binaryShapeSlot = tgpu.slot({
   output: d.vec3u(1),
   outputBlocks: 1,
   bShape: d.vec2u(1),
@@ -61,25 +63,33 @@ export const binaryShapeAccess = tgpu.accessor(binaryShape, {
   total: 1,
 });
 
-export const poolShapeAccess = tgpu.accessor(poolShape, {
+export const binaryShapeConst = tgpu.lazy(() => tgpu.const(binaryShape, binaryShapeSlot.$));
+
+export const poolShapeSlot = tgpu.slot({
   input: d.vec3u(1),
   blocks: 1,
   window: d.vec2u(1),
 });
 
-export const resizeShapeAccess = tgpu.accessor(resizeShape, {
+export const poolShapeConst = tgpu.lazy(() => tgpu.const(poolShape, poolShapeSlot.$));
+
+export const resizeShapeSlot = tgpu.slot({
   input: d.vec3u(1),
   output: d.vec3u(1),
   blocks: 1,
   total: 1,
 });
 
-export const headShapeAccess = tgpu.accessor(headShape, {
+export const resizeShapeConst = tgpu.lazy(() => tgpu.const(resizeShape, resizeShapeSlot.$));
+
+export const headShapeSlot = tgpu.slot({
   input: d.vec3u(1),
   output: d.vec3u(1),
   inputBlocks: 1,
   total: 1,
 });
+
+export const headShapeConst = tgpu.lazy(() => tgpu.const(headShape, headShapeSlot.$));
 
 export const weightedLayout = tgpu.bindGroupLayout({
   offsets: { uniform: weightedOffsets },
