@@ -1,0 +1,796 @@
+<div>
+    <table>
+        <thead>
+            <tr>
+                <th>description</th>
+                <th>current</th>
+                <th>after</th>
+                <th>notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td colspan="4"><strong>basic</strong></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const a = 1;
+return a;</pre
+                    >
+                </td>
+                <td><pre>[..., i32, 'constant']</pre></td>
+                <td>
+                    <pre>[..., i32, snippet(1, i32, 'constant')]</pre>
+                </td>
+                <td>
+                    <pre>It is required for the d.ref case mentioned above</pre>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const a = 1;
+const b = a;
+return b;</pre
+                    >
+                </td>
+                <td><pre>[..., i32, 'constant']</pre></td>
+                <td>
+                    <pre>[..., i32, snippet(1, i32, 'constant')]</pre>
+                </td>
+                <td>
+                    <pre>
+ Note that b 'references' a in the code, but the origin points
+ to the highest snippet in the chain.</pre
+                    >
+                </td>
+            </tr>
+            <tr>
+                <td><pre>fn([i32])((a) => return a);</pre></td>
+                <td><pre>[..., i32, 'argument']</pre></td>
+                <td><pre>[..., i32, 'argument']</pre></td>
+                <td>
+                    <pre>
+Non-ref arguments are copied, so a is the highest origin</pre
+                    >
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+fn([i32])((a) => {
+  const b = a;
+  return b;
+})</pre
+                    >
+                </td>
+                <td><pre>[..., i32, 'runtime']</pre></td>
+                <td><pre>[..., i32, snippet(a, i32, 'argument')]</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><pre>return getOne();</pre></td>
+                <td><pre>[..., i32, 'runtime']</pre></td>
+                <td><pre>[..., i32, 'runtime']</pre></td>
+                <td>
+                    <pre>
+Here, we can potentially run into issue with getById, calls should be represented by separate snippets</pre
+                    >
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = getOne();
+return b;</pre
+                    >
+                </td>
+                <td><pre>[..., i32, 'runtime']</pre></td>
+                <td>
+                    <pre>[..., i32, snippet('getOne()', i32, 'runtime')]</pre>
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>return vec2i(7);</pre>
+                </td>
+                <td>
+                    <pre>[..., vec2i, 'constant']</pre>
+                </td>
+                <td>
+                    <pre>[..., vec2i, 'constant']</pre>
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const a = vec2i(7);
+return a;</pre
+                    >
+                </td>
+                <td>
+                    <pre>[..., vec2i, 'this-function']</pre>
+                </td>
+                <td>
+                    <pre>
+[..., vec2i, snippet(vec2i(7), vec2i, 'constant')]</pre
+                    >
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const a = vec2i(7);
+const b = a;
+return b;</pre
+                    >
+                </td>
+                <td>
+                    <pre>
+[..., iptr&lt;function,vec2i,rw&gt;, 'this-function']</pre
+                    >
+                </td>
+                <td>
+                    <pre>
+[..., iptr&lt;function,vec2i,rw&gt;, snippet(vec2i(7), vec2i, 'constant')]</pre
+                    >
+                </td>
+                <td><pre>Note, how datatype has changed</pre></td>
+            </tr>
+            <tr>
+                <td><pre>fn([vec2i])((a) => return a);</pre></td>
+                <td><pre>[..., vec2i, 'argument']</pre></td>
+                <td><pre>[..., vec2i, 'argument']</pre></td>
+                <td><pre>Uninterrupted flow :)</pre></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+fn([vec2i])((a) => {
+  const b = a;
+  return b;
+})</pre
+                    >
+                </td>
+                <td><pre>[..., vec2i, 'argument']</pre></td>
+                <td>
+                    <pre>[..., vec2i, snippet(a, vec2i, 'argument')]</pre>
+                </td>
+                <td>
+                    <pre>
+Implicit pointer btw, but currently cannot take pointer to te argument. TODO: carefully handle this case</pre
+                    >
+                </td>
+            </tr>
+            <tr>
+                <td><pre>fn([vec2i])((a) => return a.x);</pre></td>
+                <td><pre>[..., i32, 'argument']</pre></td>
+                <td><pre>[..., i32, 'argument']</pre></td>
+                <td><pre>Uninterrupted flow :)</pre></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+fn([vec2i])((a) => {
+  const b = a.x;
+  return b;
+})</pre
+                    >
+                </td>
+                <td><pre>[..., i32, 'runtime']</pre></td>
+                <td><pre>[..., i32, snippet('a.x', i32, 'argument')]</pre></td>
+                <td>
+                    <pre>
+Comparing to the above flow, origin has changed. Maybe it should remain 'runtime'</pre
+                    >
+                </td>
+            </tr>
+            <tr>
+                <td><pre>return getV();</pre></td>
+                <td><pre>[..., vec3f, 'runtime']</pre></td>
+                <td><pre>[..., vec3f, 'runtime']</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = getV();
+return b;</pre
+                    >
+                </td>
+                <td>
+                    <pre>[..., vec3f, 'this-function']</pre>
+                </td>
+                <td>
+                    <pre>[..., vec3f, snippet('getV()', vec3f, 'runtime')]</pre>
+                </td>
+                <td>
+                    Cannot really put 'this-function' origin here, what if we
+                    assign the result to a buffer?
+                </td>
+            </tr>
+            <tr>
+                <td colspan="4"><strong>uniform</strong></td>
+            </tr>
+            <tr>
+                <td><pre>return buf.$;</pre></td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td><pre>Buffer element is naturally ephemeral</pre></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = buf.$;
+return b;</pre
+                    >
+                </td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td><pre>[..., f32, snippet('buf', f32, 'runtime')]</pre></td>
+                <td>
+                    <pre>
+On the contrary to the function call, we should distribute only
+1 reference to buffer access snippet</pre
+                    >
+                </td>
+            </tr>
+            <tr>
+                <td><pre>return buf.$;</pre></td>
+                <td><pre>[..., vec3f, 'uniform']</pre></td>
+                <td><pre>[..., vec3f, 'uniform']</pre></td>
+                <td><pre>Buffer element is NOT naturally ephemeral</pre></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = buf.$;
+return b;</pre
+                    >
+                </td>
+                <td>
+                    <pre>[..., iptr&lt;uniform,vec3f,r&gt;, 'uniform']</pre>
+                </td>
+                <td>
+                    <pre>
+[..., iptr&lt;uniform,vec3f,r&gt;, snippet('buf', vec3f, 'uniform')]</pre
+                    >
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td colspan="4"><strong>readonly</strong></td>
+            </tr>
+            <tr>
+                <td><pre>return buf.$;</pre></td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = buf.$;
+return b;</pre
+                    >
+                </td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td><pre>[..., f32, snippet('buf', f32, 'runtime')]</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><pre>return buf.$;</pre></td>
+                <td><pre>[..., vec3f, 'readonly']</pre></td>
+                <td><pre>[..., vec3f, 'readonly']</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = buf.$;
+return b;</pre
+                    >
+                </td>
+                <td>
+                    <pre>[..., iptr&lt;storage,vec3f,r&gt;, 'readonly']</pre>
+                </td>
+                <td>
+                    <pre>
+[..., iptr&lt;storage,vec3f,r&gt;, snippet('buf', vec3f, 'readonly')]</pre
+                    >
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td colspan="4"><strong>mutable</strong></td>
+            </tr>
+            <tr>
+                <td><pre>return buf.$;</pre></td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = buf.$;
+return b;</pre
+                    >
+                </td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td><pre>[..., f32, snippet('buf', f32, 'runtime')]</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><pre>return buf.$;</pre></td>
+                <td><pre>[..., vec3f, 'mutable']</pre></td>
+                <td><pre>[..., vec3f, 'mutable']</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = buf.$;
+return b;</pre
+                    >
+                </td>
+                <td>
+                    <pre>[..., iptr&lt;storage,vec3f,rw&gt;, 'mutable']</pre>
+                </td>
+                <td>
+                    <pre>
+[..., iptr&lt;storage,vec3f,rw&gt;, snippet('buf', vec3f, 'mutable')]</pre
+                    >
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td colspan="4"><strong>private</strong></td>
+            </tr>
+            <tr>
+                <td><pre>return pv.$;</pre></td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = pv.$;
+return b;</pre
+                    >
+                </td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td><pre>[..., f32, snippet('pv', f32, 'runtime')]</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><pre>return pv.$;</pre></td>
+                <td><pre>[..., vec3f, 'private']</pre></td>
+                <td><pre>[..., vec3f, 'private']</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = pv.$;
+return b;</pre
+                    >
+                </td>
+                <td>
+                    <pre>[..., iptr&lt;private,vec3f,rw&gt;, 'private']</pre>
+                </td>
+                <td>
+                    <pre>
+[..., iptr&lt;private,vec3f,rw&gt;, snippet('pv', vec3f, 'private')]</pre
+                    >
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td colspan="4"><strong>workgroup</strong></td>
+            </tr>
+            <tr>
+                <td><pre>return wgv.$;</pre></td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = wgv.$;
+return b;</pre
+                    >
+                </td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td><pre>[..., f32, snippet('wgv', f32, 'runtime')]</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><pre>return wgv.$;</pre></td>
+                <td><pre>[..., vec3f, 'workgroup']</pre></td>
+                <td><pre>[..., vec3f, 'workgroup']</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = wgv.$;
+return b;</pre
+                    >
+                </td>
+                <td>
+                    <pre>
+[..., iptr&lt;workgroup,vec3f,rw&gt;, 'workgroup']</pre
+                    >
+                </td>
+                <td>
+                    <pre>
+[..., iptr&lt;workgroup,vec3f,rw&gt;, snippet('wgv', vec3f, 'workgroup')]</pre
+                    >
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td colspan="4"><strong>handle</strong></td>
+            </tr>
+            <tr>
+                <td><pre>return layout.$.s;</pre></td>
+                <td><pre>[..., sampler, 'handle']</pre></td>
+                <td><pre>[..., sampler, 'handle']</pre></td>
+                <td>
+                    <pre>
+For now, you cannot assign sampler or texture to a variable</pre
+                    >
+                </td>
+            </tr>
+            <tr>
+                <td colspan="4"><strong>tgpu.const</strong></td>
+            </tr>
+            <tr>
+                <td><pre>return c.$;</pre></td>
+                <td><pre>[..., u32, 'constant']</pre></td>
+                <td><pre>[..., u32, 'constant']</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = c.$;
+return b;</pre
+                    >
+                </td>
+                <td><pre>[..., u32, 'constant']</pre></td>
+                <td><pre>[..., u32, snippet('c', u32, 'constant')]</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><pre>return c.$;</pre></td>
+                <td>
+                    <pre>[..., vec3f, 'constant-tgpu-const-ref']</pre>
+                </td>
+                <td>
+                    <pre>[..., vec3f, 'constant-tgpu-const-ref']</pre>
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = c.$;
+return b;</pre
+                    >
+                </td>
+                <td>
+                    <pre>[..., vec3f, 'constant-tgpu-const-ref']</pre>
+                </td>
+                <td>
+                    <pre>
+[..., vec3f, snippet('c', vec3f, 'constant-tgpu-const-ref')]</pre
+                    >
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><pre>fn([i32])((i) => return arr.$[i]);</pre></td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+fn([i32])((i) => {
+  const b = arr.$[i];
+  return b;
+})</pre
+                    >
+                </td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td>
+                    <pre>[..., f32, snippet('arr[i]', f32, 'runtime')]</pre>
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><pre>fn([i32])((i) => return arr.$[i]);</pre></td>
+                <td>
+                    <pre>[..., vec3f, 'runtime-tgpu-const-ref']</pre>
+                </td>
+                <td>
+                    <pre>[..., vec3f, 'runtime-tgpu-const-ref']</pre>
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+fn([i32])((i) => {
+  const b = arr.$[i];
+  return b;
+})</pre
+                    >
+                </td>
+                <td>
+                    <pre>[..., vec3f, 'runtime-tgpu-const-ref']</pre>
+                </td>
+                <td>
+                    <pre>
+[..., vec3f, snippet('arr[i]', vec3f, 'runtime-tgpu-const-ref')]</pre
+                    >
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td colspan="4"><strong>struct</strong></td>
+            </tr>
+            <tr>
+                <td><pre>return buf.$.count;</pre></td>
+                <td><pre>[..., u32, 'runtime']</pre></td>
+                <td><pre>[..., u32, 'runtime']</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = buf.$.count;
+return b;</pre
+                    >
+                </td>
+                <td><pre>[..., u32, 'runtime']</pre></td>
+                <td>
+                    <pre>[..., u32, snippet('buf.count', u32, 'runtime')]</pre>
+                </td>
+                <td>
+                    <pre>
+Access to struct should be distributed as reference to one unique snippet</pre
+                    >
+                </td>
+            </tr>
+            <tr>
+                <td><pre>return buf.$.pos;</pre></td>
+                <td><pre>[..., vec3f, 'uniform']</pre></td>
+                <td><pre>[..., vec3f, 'uniform']</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = buf.$.pos;
+return b;</pre
+                    >
+                </td>
+                <td>
+                    <pre>[..., iptr&lt;uniform,vec3f,r&gt;, 'uniform']</pre>
+                </td>
+                <td>
+                    <pre>
+[..., iptr&lt;uniform,vec3f,r&gt;, snippet('buf.$.pos', vec3f, 'uniform')]</pre
+                    >
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td colspan="4"><strong>swizzle</strong></td>
+            </tr>
+            <tr>
+                <td><pre>fn([vec3f])((v) => return v.x);</pre></td>
+                <td><pre>[..., f32, 'argument']</pre></td>
+                <td><pre>[..., f32, 'argument']</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+fn([vec3f])((v) => {
+  const b = v.x;
+  return b;
+})</pre
+                    >
+                </td>
+                <td><pre>[..., f32, 'runtime']</pre></td>
+                <td><pre>[..., f32, snippet('v.x', f32, 'runtime')]</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><pre>fn([vec3f])((v) => return v.xy);</pre></td>
+                <td><pre>[..., vec2f, 'runtime']</pre></td>
+                <td><pre>[..., vec2f, 'runtime']</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+fn([vec3f])((v) => {
+  const b = v.xy;
+  return b;
+})</pre
+                    >
+                </td>
+                <td>
+                    <pre>[..., vec2f, 'this-function']</pre>
+                </td>
+                <td>
+                    <pre>[..., vec2f, snippet('v.xy', vec2f, 'runtime')]</pre>
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td colspan="4"><strong>d.ref</strong></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = d.ref(u32(0));
+return b;</pre
+                    >
+                </td>
+                <td>
+                    <pre>[..., ptr&lt;function,u32,rw&gt;, 'function']</pre>
+                </td>
+                <td>
+                    <pre>
+[..., ptr&lt;function,u32,rw&gt;, snippet(u32(0), u32, 'constant')]</pre
+                    >
+                </td>
+                <td><pre>Not sure about that</pre></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = d.ref(vec2f());
+return b;</pre
+                    >
+                </td>
+                <td>
+                    <pre>[..., ptr&lt;function,vec2f,rw&gt;, 'function']</pre>
+                </td>
+                <td>
+                    <pre>
+[..., ptr&lt;function,vec2f,rw&gt;, snippet(vec2f(0), vec2f, 'constant')]</pre
+                    >
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td colspan="4">
+                    <strong>mixed origins in complex types</strong>
+                </td>
+            </tr>
+            <tr>
+                <td><pre>return vec4f(7).xz;</pre></td>
+                <td><pre>[..., vec2f, 'constant']</pre></td>
+                <td><pre>[..., vec2f, 'constant']</pre></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = vec4f(7).xz;
+return b;</pre
+                    >
+                </td>
+                <td><pre>[..., vec2f, 'this-function']</pre></td>
+                <td>
+                    <pre>
+[..., vec2f, snippet(vec4f(7).xz, vec2f, 'constant')]</pre
+                    >
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td><pre>return vec4f(buf.$, 1).xw;</pre></td>
+                <td><pre>[..., vec2f, 'runtime']</pre></td>
+                <td>
+                    <pre>[..., vec2f, 'runtime']</pre>
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const b = vec4f(buf.$, 1).xw;
+return b;</pre
+                    >
+                </td>
+                <td><pre>[..., vec2f, 'this-function']</pre></td>
+                <td>
+                    <pre>
+[..., vec2f, snippet(vec4f(buf.$, 1), vec2f, 'runtime')]</pre
+                    >
+                </td>
+                <td><pre>Constructors perform deep copy :))</pre></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const a = Boid();
+return a.pos;</pre
+                    >
+                </td>
+                <td><pre>[..., vec2f, 'this-function']</pre></td>
+                <td><pre>[..., vec2f, 'this-function']</pre></td>
+                <td>
+                    <pre>
+Not sure about that because there is nothing to be referenced</pre
+                    >
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const a = Boid();
+const b = a.pos;
+return b;</pre
+                    >
+                </td>
+                <td>
+                    <pre>
+[..., iptr&lt;function,vec2f,rw&gt;, 'this-function']</pre
+                    >
+                </td>
+                <td>
+                    <pre>
+[..., iptr&lt;function,vec2f,rw&gt;, snippet(a.pos, vec2f, 'this-function')]</pre
+                    >
+                </td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const a = Boid({ pos: buf.$, ... });
+return a.pos;</pre
+                    >
+                </td>
+                <td><pre>[..., vec2f, 'this-function']</pre></td>
+                <td><pre>[..., vec2f, 'this-function']</pre></td>
+                <td><pre>Again, constructors perform deep copy</pre></td>
+            </tr>
+            <tr>
+                <td>
+                    <pre>
+const a = Boid({ pos: buf.$, ... });
+const b = a.pos;
+return b;</pre
+                    >
+                </td>
+                <td>
+                    <pre>
+[..., iptr&lt;function,vec2f,rw&gt;, 'this-function']</pre
+                    >
+                </td>
+                <td>
+                    <pre>
+[..., iptr&lt;function,vec2f,rw&gt;, snippet(a.pos, vec2f, 'this-function')]</pre
+                    >
+                </td>
+                <td></td>
+            </tr>
+        </tbody>
+    </table>
+</div>

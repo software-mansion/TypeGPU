@@ -43,25 +43,24 @@ class ExtractingGenerator extends WgslGenerator {
   }
 }
 
-export function extractSnippetFromFn(cb: () => unknown): Snippet {
+export function extractSnippetFromFn(cb: (...args: never[]) => unknown): Snippet {
   const generator = new ExtractingGenerator();
-
   tgpu.resolve([cb], { unstable_shaderGenerator: generator });
-
   if (!generator.returnedSnippet) {
     throw new Error('Something must be returned to be inspected');
   }
-
   return generator.returnedSnippet;
 }
 
 export function expectSnippetOf(
-  cb: () => unknown,
+  cb: (...args: never[]) => unknown,
 ): Assertion<[unknown, d.BaseData | UnknownData, Origin]> {
   const snippet = extractSnippetFromFn(cb);
   return expect([snippet.value, snippet.dataType, snippet.origin]);
 }
 
-export function expectDataTypeOf(cb: () => unknown): Assertion<d.BaseData | UnknownData> {
+export function expectDataTypeOf(
+  cb: (...args: never[]) => unknown,
+): Assertion<d.BaseData | UnknownData> {
   return expect<d.BaseData | UnknownData>(extractSnippetFromFn(cb).dataType);
 }
