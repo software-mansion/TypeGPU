@@ -106,10 +106,10 @@ describe('boids example', () => {
         @location(0) color: vec4f,
       }
 
-      @vertex fn mainVert(@location(0) _arg_v: vec2f, @location(1) _arg_center: vec2f, @location(2) _arg_velocity: vec2f) -> mainVert_Output {
-        let angle = getRotationFromVelocity(_arg_velocity);
-        let rotated = rotate(_arg_v, angle);
-        let pos = vec4f((rotated + _arg_center), 0f, 1f);
+      @vertex fn mainVert(@location(0) v: vec2f, @location(1) center: vec2f, @location(2) velocity: vec2f) -> mainVert_Output {
+        let angle = getRotationFromVelocity(velocity);
+        let rotated = rotate(v, angle);
+        let pos = vec4f((rotated + center), 0f, 1f);
         let color = vec4f(((sin((colorPalette + angle)) * 0.45f) + 0.45f), 1f);
         return mainVert_Output(pos, color);
       }

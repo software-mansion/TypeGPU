@@ -38,9 +38,9 @@ describe('stable-fluid example', () => {
 
       @group(0) @binding(3) var linSampler: sampler;
 
-      @compute @workgroup_size(16, 16) fn advectFn(@builtin(global_invocation_id) _arg_gid: vec3u) {
+      @compute @workgroup_size(16, 16) fn advectFn(@builtin(global_invocation_id) gid: vec3u) {
         let texSize = textureDimensions(src);
-        let pixelPos = _arg_gid.xy;
+        let pixelPos = gid.xy;
         if (((((pixelPos.x >= (texSize.x - 1u)) || (pixelPos.y >= (texSize.y - 1u))) || (pixelPos.x <= 0u)) || (pixelPos.y <= 0u))) {
           textureStore(dst, pixelPos, vec4f(0, 0, 0, 1));
           return;
@@ -86,8 +86,8 @@ describe('stable-fluid example', () => {
 
       @group(0) @binding(1) var out: texture_storage_2d<rgba16float, write>;
 
-      @compute @workgroup_size(16, 16) fn diffusionFn(@builtin(global_invocation_id) _arg_gid: vec3u) {
-        let pixelPos = vec2i(_arg_gid.xy);
+      @compute @workgroup_size(16, 16) fn diffusionFn(@builtin(global_invocation_id) gid: vec3u) {
+        let pixelPos = vec2i(gid.xy);
         let texSize = vec2i(textureDimensions(in));
         let centerVal = textureLoad(in, pixelPos, 0);
         let neighbors = getNeighbors(pixelPos, texSize);
@@ -128,8 +128,8 @@ describe('stable-fluid example', () => {
 
       @group(0) @binding(1) var div: texture_storage_2d<rgba16float, write>;
 
-      @compute @workgroup_size(16, 16) fn divergenceFn(@builtin(global_invocation_id) _arg_gid: vec3u) {
-        let pixelPos = vec2i(_arg_gid.xy);
+      @compute @workgroup_size(16, 16) fn divergenceFn(@builtin(global_invocation_id) gid: vec3u) {
+        let pixelPos = vec2i(gid.xy);
         let texSize = vec2i(textureDimensions(vel));
         let neighbors = getNeighbors(pixelPos, texSize);
         let leftVel = textureLoad(vel, neighbors[0i], 0);
@@ -167,8 +167,8 @@ describe('stable-fluid example', () => {
 
       @group(0) @binding(2) var out: texture_storage_2d<rgba16float, write>;
 
-      @compute @workgroup_size(16, 16) fn pressureFn(@builtin(global_invocation_id) _arg_gid: vec3u) {
-        let pixelPos = vec2i(_arg_gid.xy);
+      @compute @workgroup_size(16, 16) fn pressureFn(@builtin(global_invocation_id) gid: vec3u) {
+        let pixelPos = vec2i(gid.xy);
         let texSize = vec2i(textureDimensions(x));
         let neighbors = getNeighbors(pixelPos, texSize);
         let leftPressure = textureLoad(x, neighbors[0i], 0);
@@ -207,8 +207,8 @@ describe('stable-fluid example', () => {
 
       @group(0) @binding(2) var out: texture_storage_2d<rgba16float, write>;
 
-      @compute @workgroup_size(16, 16) fn projectFn(@builtin(global_invocation_id) _arg_gid: vec3u) {
-        let pixelPos = vec2i(_arg_gid.xy);
+      @compute @workgroup_size(16, 16) fn projectFn(@builtin(global_invocation_id) gid: vec3u) {
+        let pixelPos = vec2i(gid.xy);
         let texSize = vec2i(textureDimensions(vel));
         let velocity = textureLoad(vel, pixelPos, 0);
         let neighbors = getNeighbors(pixelPos, texSize);
@@ -236,9 +236,9 @@ describe('stable-fluid example', () => {
 
       @group(0) @binding(2) var dst: texture_storage_2d<rgba16float, write>;
 
-      @compute @workgroup_size(16, 16) fn advectInkFn(@builtin(global_invocation_id) _arg_gid: vec3u) {
+      @compute @workgroup_size(16, 16) fn advectInkFn(@builtin(global_invocation_id) gid: vec3u) {
         let texSize = textureDimensions(src);
-        let pixelPos = _arg_gid.xy;
+        let pixelPos = gid.xy;
         let velocity = textureLoad(vel, pixelPos, 0).xy;
         let timeStep = simParams.dt;
         let prevPos = (vec2f(pixelPos) - (timeStep * velocity));
@@ -253,10 +253,10 @@ describe('stable-fluid example', () => {
         @location(0) uv: vec2f,
       }
 
-      @vertex fn renderFn(@builtin(vertex_index) _arg_idx: u32) -> renderFn_Output {
+      @vertex fn renderFn(@builtin(vertex_index) idx: u32) -> renderFn_Output {
         let vertices = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
         let texCoords = array<vec2f, 3>(vec2f(), vec2f(2, 0), vec2f(0, 2));
-        return renderFn_Output(vec4f(vertices[_arg_idx], 0f, 1f), texCoords[_arg_idx]);
+        return renderFn_Output(vec4f(vertices[idx], 0f, 1f), texCoords[idx]);
       }
 
       @group(0) @binding(0) var result: texture_2d<f32>;
