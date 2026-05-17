@@ -120,9 +120,6 @@ function wgslToGlslFixups(code: string): string {
     },
   );
 
-  // Empty vector constructors `vecN()` are illegal in GLSL; default to zero.
-  out = out.replaceAll(/\b(vec[234]|ivec[234]|uvec[234]|bvec[234])\s*\(\s*\)/g, '$1(0)');
-
   return out;
 }
 

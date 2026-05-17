@@ -1,8 +1,14 @@
 import { NodeTypeCatalog as NODE } from 'tinyest';
 import type { Return } from 'tinyest';
 import { tgpu, d } from 'typegpu';
-import { getName, UnknownData, WgslGenerator } from 'typegpu/~internal';
-import type { ResolutionCtx, TgpuShaderStage, FunctionDefinitionOptions } from 'typegpu/~internal';
+import { abstractInt, getName, snip, UnknownData, WgslGenerator } from 'typegpu/~internal';
+import type {
+  ResolutionCtx,
+  TgpuShaderStage,
+  FunctionDefinitionOptions,
+  Snippet,
+  ResolvedSnippet,
+} from 'typegpu/~internal';
 
 // ----------
 // WGSL → GLSL type name mapping
@@ -48,8 +54,8 @@ function resolveStruct(ctx: ResolutionCtx, struct: d.WgslStruct) {
   ctx.addDeclaration(`\
 struct ${id} {
 ${Object.entries(struct.propTypes)
-      .map(([prop, type]) => `  ${ctx.resolve(type).value} ${prop};\n`)
-      .join('')}\
+  .map(([prop, type]) => `  ${ctx.resolve(type).value} ${prop};\n`)
+  .join('')}\
 };`);
 
   return id;
@@ -136,6 +142,15 @@ export class GlslGenerator extends WgslGenerator {
     }
 
     return super.typeAnnotation(data);
+  }
+
+  override typeInstantiation(schema: d.BaseData, args: Snippet[]): ResolvedSnippet {
+    // Empty vector constructors `vecN()` are illegal in GLSL; replacing with vecN(0).
+    if (schema.type.startsWith('vec') && args.length === 0) {
+      return super.typeInstantiation(schema, [snip(0, abstractInt, 'constant')]);
+    }
+
+    return super.typeInstantiation(schema, args);
   }
 
   override _emitVarDecl(
@@ -230,10 +245,10 @@ export class GlslGenerator extends WgslGenerator {
     const isAutoStruct = expectedReturnType?.type === 'auto-struct';
     const autoStruct = isAutoStruct
       ? (expectedReturnType as unknown as {
-        completeStruct: d.WgslStruct;
-        accessProp(key: string): { prop: string; type: d.BaseData } | undefined;
-        provideProp(key: string, type: d.BaseData): { prop: string; type: d.BaseData };
-      })
+          completeStruct: d.WgslStruct;
+          accessProp(key: string): { prop: string; type: d.BaseData } | undefined;
+          provideProp(key: string, type: d.BaseData): { prop: string; type: d.BaseData };
+        })
       : undefined;
 
     // Resolve each RHS first so module-level references get reserved (and types become
