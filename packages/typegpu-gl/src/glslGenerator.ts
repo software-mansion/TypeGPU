@@ -132,10 +132,14 @@ export class GlslGenerator extends WgslGenerator {
   }
 
   override globalConstDefinition(id: string, schema: d.BaseData, init: Snippet): string {
-    const resolvedDataType = this.ctx.resolve(schema).value;
-    const resolvedValue = this.ctx.resolveSnippet(init).value;
+    const initStr = this.ctx.resolveSnippet(init).value;
 
-    return `const ${resolvedDataType} ${id} = ${resolvedValue};`;
+    if (d.isWgslArray(schema)) {
+      const elemTypeStr = this.ctx.resolve(schema.elementType).value;
+      return `const ${elemTypeStr} ${id}[] = ${initStr};`;
+    }
+    const typeStr = this.ctx.resolve(schema).value;
+    return `const ${typeStr} ${id} = ${initStr};`;
   }
 
   override globalVarDefinition(options: VariableDefinitionOptions): string {
