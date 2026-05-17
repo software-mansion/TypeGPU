@@ -148,7 +148,7 @@ describe('GlslGenerator - function definitions', () => {
       };
 
       Boid createBoid() {
-        return Boid(vec3(), vec3(0, 1, 0));
+        return Boid(vec3(0), vec3(0, 1, 0));
       }
 
       void main() {
@@ -210,8 +210,8 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       "out vec2 vary_uv;
 
       void main() {
-        vec4 position = vec4();
-        vec2 uv = vec2();
+        vec4 position = vec4(0);
+        vec2 uv = vec2(0);
         {
           gl_Position = position;
           vary_uv = uv;

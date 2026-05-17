@@ -1,8 +1,14 @@
 import { NodeTypeCatalog as NODE } from 'tinyest';
 import type { Return } from 'tinyest';
 import tgpu, { d } from 'typegpu';
-import { getName, UnknownData, WgslGenerator } from 'typegpu/~internals';
-import type { ResolutionCtx, TgpuShaderStage, FunctionDefinitionOptions } from 'typegpu/~internals';
+import { abstractInt, getName, snip, UnknownData, WgslGenerator } from 'typegpu/~internals';
+import type {
+  ResolutionCtx,
+  TgpuShaderStage,
+  FunctionDefinitionOptions,
+  Snippet,
+  ResolvedSnippet,
+} from 'typegpu/~internals';
 
 // ----------
 // WGSL → GLSL type name mapping
@@ -136,6 +142,15 @@ export class GlslGenerator extends WgslGenerator {
     }
 
     return super.typeAnnotation(data);
+  }
+
+  override typeInstantiation(schema: d.BaseData, args: Snippet[]): ResolvedSnippet {
+    // Empty vector constructors `vecN()` are illegal in GLSL; replacing with vecN(0).
+    if (schema.type.startsWith('vec') && args.length === 0) {
+      return super.typeInstantiation(schema, [snip(0, abstractInt, 'constant')]);
+    }
+
+    return super.typeInstantiation(schema, args);
   }
 
   override _emitVarDecl(
