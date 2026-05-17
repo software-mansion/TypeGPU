@@ -1,7 +1,6 @@
 {
   "name": "@typegpu/gl",
   "version": "0.11.0-alpha.1",
-  "private": true,
   "description": "WebGL and GLSL utilities for TypeGPU",
   "keywords": [],
   "license": "MIT",
@@ -36,6 +35,9 @@
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit && pnpm tsc --p ./tsconfig.test.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
+  "dependencies": {
+    "typed-binary": "^4.3.3"
+  },
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@webgpu/types": "catalog:types",
@@ -49,8 +51,5 @@
   },
   "peerDependencies": {
     "typegpu": "workspace:^"
-  },
-  "dependencies": {
-    "typed-binary": "^4.3.3"
   }
 }

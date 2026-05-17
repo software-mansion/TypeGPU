@@ -303,7 +303,9 @@ class WebGLUniformImpl<TData extends d.AnyWgslData> implements WebGLUniform<TDat
       const bindingPoint = 0;
       gl.bindBufferBase(gl.UNIFORM_BUFFER, bindingPoint, this.webglBuffer);
       const initialData =
-        typeof this.#initial === 'function' ? (this.#initial as any)(this) : undefined;
+        typeof this.#initial === 'function'
+          ? (this.#initial as (buffer: this) => d.InferInput<TData>)(this)
+          : (this.#initial as d.InferInput<TData>);
       writeToArrayBuffer(this.buffer, this.dataType, initialData);
 
       gl.bufferData(gl.UNIFORM_BUFFER, this.buffer, gl.DYNAMIC_DRAW);
@@ -365,7 +367,7 @@ makeDereferencable(
 export class TgpuRootWebGL {
   #gl: WebGL2RenderingContext;
   #offscreen: OffscreenCanvas;
-  #uniforms: WebGLUniformImpl<any>[] = [];
+  #uniforms: WebGLUniformImpl<d.AnyWgslData>[] = [];
   #buffers: WebGLBuffer[] = [];
 
   constructor(gl: WebGL2RenderingContext) {
@@ -382,7 +384,7 @@ export class TgpuRootWebGL {
     initial?: BufferInitialData<TData>,
   ): WebGLUniform<TData> {
     const uniform = new WebGLUniformImpl(this.#gl, typeSchema, initial);
-    this.#uniforms.push(uniform);
+    this.#uniforms.push(uniform as unknown as WebGLUniformImpl<d.AnyWgslData>);
     return uniform;
   }
 
