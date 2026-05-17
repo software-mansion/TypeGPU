@@ -19,3 +19,23 @@ test('constant with a scalar value', () => {
     }"
   `);
 });
+
+// TODO: Emit a proper array initialization
+test('constant with an array value', () => {
+  const FOO = tgpu.const(d.arrayOf(d.f32), [0.5, 0.2, 1.6]);
+
+  function main() {
+    'use gpu';
+    const arr = FOO.$;
+    return arr[0];
+  }
+
+  expect(tgpu.resolve([main], glOptions({ shaderStage: 'none' }))).toMatchInlineSnapshot(`
+    "const float FOO[] = array<float, 3>(0.5f, 0.2f, 1.6f);
+
+    float main() {
+      array<float, 3> arr = FOO;
+      return arr[0i];
+    }"
+  `);
+});
