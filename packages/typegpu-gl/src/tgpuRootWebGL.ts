@@ -79,10 +79,9 @@ vec4 saturate(vec4 x) { return clamp(x, 0.0, 1.0); }
  * Applies post-processing fixups to WGSL-like output produced by the resolution
  * pipeline so it becomes valid GLSL ES 3.0.
  *
- * Some resolutions (like `tgpu.const`) emit WGSL syntax (e.g. `const x: T = ...;`)
- * that we can't cleanly intercept from a generator alone; we rewrite those here.
+ * This should be removed as soon as the other systems allow for sufficient customization.
  */
-function wgslToGlslFixups(code: string): string {
+export function WORKAROUND_wgslToGlslFixups(code: string): string {
   let out = code;
 
   // WGSL f32 literal suffixes -> GLSL float literals. A trailing `f` always marks a float,
@@ -443,8 +442,8 @@ export class TgpuRootWebGL {
       unstable_shaderGenerator: fragmentGlslGenerator,
     });
 
-    const vertexGlsl = GLSL_HEADER + wgslToGlslFixups(vertexCode);
-    const fragmentGlsl = GLSL_HEADER + wgslToGlslFixups(fragmentCode);
+    const vertexGlsl = GLSL_HEADER + WORKAROUND_wgslToGlslFixups(vertexCode);
+    const fragmentGlsl = GLSL_HEADER + WORKAROUND_wgslToGlslFixups(fragmentCode);
 
     const program = linkProgram(this.#gl, vertexGlsl, fragmentGlsl);
 
