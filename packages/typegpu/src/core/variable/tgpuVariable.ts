@@ -88,15 +88,11 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.makeUniqueIdentifier(getName(this), 'global');
-    const pre = `var<${this.#scope}> ${id}: ${ctx.resolve(this.#dataType).value}`;
+    const init = this.#initialValue
+      ? snip(this.#initialValue, this.#dataType, 'constant')
+      : undefined;
 
-    if (this.#initialValue) {
-      ctx.addDeclaration(`${pre} = ${ctx.resolve(this.#initialValue, this.#dataType).value};`);
-    } else {
-      ctx.addDeclaration(`${pre};`);
-    }
-
-    return snip(id, this.#dataType, this.#scope);
+    return ctx.gen.declareGlobalVar({ scope: this.#scope, id, dataType: this.#dataType, init });
   }
 
   $name(label: string) {

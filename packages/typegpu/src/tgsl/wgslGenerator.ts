@@ -19,7 +19,12 @@ import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared
 import { safeStringify } from '../shared/stringify.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
-import { isGPUCallable, isKnownAtComptime, type DualFn } from '../types.ts';
+import {
+  isGPUCallable,
+  isKnownAtComptime,
+  type BindableBufferUsage,
+  type DualFn,
+} from '../types.ts';
 import { convertStructValues, convertToCommonType, tryConvertSnippet } from './conversion.ts';
 import {
   ArrayExpression,
@@ -44,10 +49,15 @@ import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
 import { stringifyNode } from '../shared/tseynit.ts';
-import type { FunctionDefinitionOptions } from './shaderGenerator_members.ts';
+import type {
+  ConstantDefinitionOptions,
+  FunctionDefinitionOptions,
+  VariableDefinitionOptions,
+} from './shaderGenerator_members.ts';
 import { getAttributesString } from '../data/attributes.ts';
 import { validSelectBranchTypes } from '../std/boolean.ts';
 import { isInfixDispatch } from './infixDispatch.ts';
+import type { VariableScope } from '../core/variable/tgpuVariable.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -192,6 +202,14 @@ const binaryOpCodeToCodegen = {
   '/': div[$gpuCallable].call.bind(div),
   '**': pow[$gpuCallable].call.bind(pow),
 } satisfies Partial<Record<tinyest.BinaryOperator, (...args: never[]) => unknown>>;
+
+const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage, string> = {
+  private: 'private',
+  workgroup: 'workgroup',
+  uniform: 'uniform',
+  mutable: 'storage, read_write',
+  readonly: 'storage, read',
+};
 
 export class WgslGenerator implements ShaderGenerator {
   #ctx: GenerationCtx | undefined = undefined;
@@ -842,6 +860,41 @@ ${this.ctx.pre}}`;
     }
 
     assertExhaustive(expression);
+  }
+
+  public declareGlobalConst(options: ConstantDefinitionOptions): ResolvedSnippet {
+    const resolvedDataType = this.ctx.resolve(options.dataType).value;
+    const resolvedValue = this.ctx.resolveSnippet(options.init).value;
+
+    this.ctx.addDeclaration(`const ${options.id}: ${resolvedDataType} = ${resolvedValue};`);
+
+    return snip(options.id, options.dataType, 'constant-immutable-def');
+  }
+
+  public declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet {
+    let pre = '';
+
+    if (options.group !== undefined) {
+      pre += `@group(${options.group}) `;
+    }
+
+    if (options.binding !== undefined) {
+      pre += `@binding(${options.binding}) `;
+    }
+
+    if (options.scope in usageToVarTemplateMap) {
+      pre += `var<${usageToVarTemplateMap[options.scope as keyof typeof usageToVarTemplateMap]}> `;
+    } else {
+      pre += `var `;
+    }
+
+    pre += `${options.id}: ${this.ctx.resolve(options.dataType).value}`;
+
+    this.ctx.addDeclaration(
+      options.init ? `${pre} = ${this.ctx.resolveSnippet(options.init).value};` : `${pre};`,
+    );
+
+    return snip(options.id, options.dataType, options.scope);
   }
 
   public functionDefinition(options: FunctionDefinitionOptions): string {
