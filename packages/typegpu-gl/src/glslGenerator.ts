@@ -6,6 +6,7 @@ import type {
   ResolutionCtx,
   TgpuShaderStage,
   FunctionDefinitionOptions,
+  VariableDefinitionOptions,
   Snippet,
   ResolvedSnippet,
 } from 'typegpu/~internals';
@@ -125,9 +126,33 @@ export class GlslGenerator extends WgslGenerator {
   }
 
   override initGenerator(ctx: ResolutionCtx) {
-    // oxlint-disable-next-line typescript/no-explicit-any -- the GenerationCtx tpye is not exported
+    // oxlint-disable-next-line typescript/no-explicit-any -- the GenerationCtx type is not exported
     super.initGenerator(ctx as any);
     this.#vertexOutPropToVarMap = {};
+  }
+
+  override globalConstDefinition(id: string, schema: d.BaseData, init: Snippet): string {
+    const resolvedDataType = this.ctx.resolve(schema).value;
+    const resolvedValue = this.ctx.resolveSnippet(init).value;
+
+    return `const ${resolvedDataType} ${id} = ${resolvedValue};`;
+  }
+
+  override globalVarDefinition(options: VariableDefinitionOptions): string {
+    let pre = `${this.ctx.resolve(options.dataType).value} ${options.name}`;
+
+    if (options.scope === 'private') {
+      // Nothing to add
+    } else if (options.scope === 'uniform') {
+      pre = 'uniform ' + pre;
+    } else {
+      throw new Error(`Cannot define ${options.scope} variables when generating GLSL.`);
+    }
+
+    if (options.init) {
+      return `${pre} = ${this.ctx.resolveSnippet(options.init).value};`;
+    }
+    return `${pre};`;
   }
 
   override typeAnnotation(data: d.BaseData): string {
@@ -300,7 +325,9 @@ export class GlslGenerator extends WgslGenerator {
 
   override functionDefinition(options: FunctionDefinitionOptions): string {
     if (options.functionType !== 'normal') {
+      // Reserving GLSL keywords
       this.ctx.reserveIdentifier('gl_Position', 'global');
+      this.ctx.reserveIdentifier('sample', 'global'); // `sample` is a reserved word in GLSL ES (for multisample interpolation qualifiers),
     }
 
     const lastFunctionType = this.#functionType;

@@ -85,9 +85,6 @@ vec4 saturate(vec4 x) { return clamp(x, 0.0, 1.0); }
 function wgslToGlslFixups(code: string): string {
   let out = code;
 
-  // WGSL integer literal suffix: `5i` -> `5`, `5u` -> `5` (GLSL happily accepts bare ints).
-  out = out.replaceAll(/(\d+)[iu]\b/g, '$1');
-
   // WGSL f32 literal suffixes -> GLSL float literals. A trailing `f` always marks a float,
   // but GLSL requires a decimal point to disambiguate floats from ints.
   // Handle scientific notation first (`1e-3f` -> `1e-3`), so the plain-int rule below doesn't
@@ -96,29 +93,8 @@ function wgslToGlslFixups(code: string): string {
   out = out.replaceAll(/(\d+\.\d+)f\b/g, '$1');
   out = out.replaceAll(/(\d+)f\b/g, '$1.0');
 
-  // WGSL private module var -> GLSL global var.
-  out = out.replaceAll(/\bvar<private>\s+([A-Za-z_]\w*)\s*:\s*([^;=]+?)\s*;/g, '$2 $1;');
-  out = out.replaceAll(/\bvar<private>\s+([A-Za-z_]\w*)\s*:\s*([^;=]+?)\s*=\s*/g, '$2 $1 = ');
-
-  // `sample` is a reserved word in GLSL ES (for multisample interpolation qualifiers),
-  // so rename any identifier `sample` used as a function or variable name.
-  out = out.replaceAll(/\bsample\b/g, 'sample_');
-
   // WGSL array type in expressions `array<T, N>(...)` -> `T[N](...)`
   out = out.replaceAll(/array<([^,<>]+?),\s*(\d+)>/g, '$1[$2]');
-
-  // WGSL const decls: `const NAME: TYPE = VALUE;` -> GLSL style.
-  //   TYPE can include brackets if it started as `array<T, N>` (already rewritten to `T[N]`).
-  //   For GLSL arrays, the brackets go AFTER the identifier: `const T NAME[N] = ...`.
-  out = out.replaceAll(
-    /\bconst\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)(\[[^\]]+\])?\s*=\s*/g,
-    (_m, name, baseType, arraySuffix) => {
-      if (arraySuffix) {
-        return `const ${baseType} ${name}${arraySuffix} = `;
-      }
-      return `const ${baseType} ${name} = `;
-    },
-  );
 
   return out;
 }

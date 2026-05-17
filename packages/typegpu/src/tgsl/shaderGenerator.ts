@@ -22,7 +22,7 @@ export interface ConstantDefinitionOptions {
 }
 
 export interface VariableDefinitionOptions {
-  readonly scope: VariableScope | BindableBufferUsage;
+  readonly scope: VariableScope | BindableBufferUsage | 'handle';
   readonly id: string;
   readonly dataType: BaseData;
   readonly init: Snippet | undefined;
