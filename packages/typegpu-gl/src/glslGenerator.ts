@@ -48,8 +48,8 @@ function resolveStruct(ctx: ResolutionCtx, struct: d.WgslStruct) {
   ctx.addDeclaration(`\
 struct ${id} {
 ${Object.entries(struct.propTypes)
-  .map(([prop, type]) => `  ${ctx.resolve(type).value} ${prop};\n`)
-  .join('')}\
+      .map(([prop, type]) => `  ${ctx.resolve(type).value} ${prop};\n`)
+      .join('')}\
 };`);
 
   return id;
@@ -116,6 +116,18 @@ function glslInputForBuiltin(
 export class GlslGenerator extends WgslGenerator {
   #functionType: TgpuShaderStage | 'normal' | undefined;
   #entryFnState: EntryFnState | undefined;
+  #vertexOutPropToVarMap: Record<string, string>;
+  #shaderStageToEmit: 'none' | 'vertex' | 'fragment';
+
+  constructor(shaderStageToEmit: 'none' | 'vertex' | 'fragment') {
+    super();
+    this.#shaderStageToEmit = shaderStageToEmit;
+  }
+
+  override initGenerator(ctx: ResolutionCtx) {
+    super.initGenerator(ctx as any);
+    this.#vertexOutPropToVarMap = {};
+  }
 
   override typeAnnotation(data: d.BaseData): string {
     if (!d.isLooseData(data)) {
@@ -226,10 +238,10 @@ export class GlslGenerator extends WgslGenerator {
       (expectedReturnType as { type?: string }).type === 'auto-struct';
     const autoStruct = isAutoStruct
       ? (expectedReturnType as unknown as {
-          completeStruct: d.WgslStruct;
-          accessProp(key: string): { prop: string; type: d.BaseData } | undefined;
-          provideProp(key: string, type: d.BaseData): { prop: string; type: d.BaseData };
-        })
+        completeStruct: d.WgslStruct;
+        accessProp(key: string): { prop: string; type: d.BaseData } | undefined;
+        provideProp(key: string, type: d.BaseData): { prop: string; type: d.BaseData };
+      })
       : undefined;
     if (autoStruct) {
       entryFnState.autoOutStruct = autoStruct;
@@ -266,11 +278,13 @@ export class GlslGenerator extends WgslGenerator {
         } else {
           // Name varyings consistently between vertex out / fragment in so the GLSL
           // ES 3.00 linker can match them by name.
-          const wgslKey = prop.replaceAll('$', '');
-          name = this.ctx.makeUniqueIdentifier(`vary_${wgslKey}`, 'global');
+          name = this.ctx.makeUniqueIdentifier(`vary_${prop}`, 'global');
           entryFnState.outVars.push({ varName: name, propName: prop, dataType });
         }
         entryFnState.structPropToVarMap[prop] = name;
+        if (this.#functionType === 'vertex') {
+          this.#vertexOutPropToVarMap[prop] = name;
+        }
       }
 
       // Copy-wrap the RHS in its type constructor so references get turned into values.
@@ -303,6 +317,14 @@ export class GlslGenerator extends WgslGenerator {
       const returnType = options.determineReturnType();
 
       if (options.functionType !== 'normal') {
+        if (
+          this.#shaderStageToEmit === 'none' ||
+          this.#shaderStageToEmit !== options.functionType
+        ) {
+          // Not the entry function this generation is supposed to generate
+          return '';
+        }
+
         const entryFnState = this.#entryFnState as EntryFnState;
 
         // --- Emit output declarations (layout(location=N) out TYPE NAME;) ---
@@ -353,7 +375,7 @@ export class GlslGenerator extends WgslGenerator {
             );
             return inName;
           }
-          const inName = this.ctx.makeUniqueIdentifier(`vary_${prop}`, 'global');
+          const inName = this.#vertexOutPropToVarMap[prop]!;
           this.ctx.addDeclaration(`in ${glslType} ${inName};`);
           return inName;
         };
@@ -424,5 +446,6 @@ export class GlslGenerator extends WgslGenerator {
   }
 }
 
-const glslGenerator: GlslGenerator = new GlslGenerator();
-export default glslGenerator;
+export const glslGenerator: GlslGenerator = new GlslGenerator('none');
+export const vertexGlslGenerator: GlslGenerator = new GlslGenerator('vertex');
+export const fragmentGlslGenerator: GlslGenerator = new GlslGenerator('fragment');

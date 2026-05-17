@@ -4,7 +4,6 @@ export { UnknownData } from './data/dataTypes.ts';
 export { getName } from './shared/meta.ts';
 export { makeDereferencable } from './tgsl/makeDereferencable.ts';
 export { makeResolvable } from './tgsl/makeResolvable.ts';
-export { AutoFragmentFn, AutoVertexFn } from './core/function/autoIO.ts';
 export { WgslGenerator } from './tgsl/wgslGenerator.ts';
 
 // types
