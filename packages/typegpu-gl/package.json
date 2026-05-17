@@ -36,12 +36,11 @@
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
-    "typed-binary": "^4.3.3"
+    "tinyest": "workspace:^0.3.0"
   },
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@webgpu/types": "catalog:types",
-    "tinyest": "workspace:^0.3.0",
     "tsdown": "catalog:build",
     "typegpu": "workspace:*",
     "typegpu-testing-utility": "workspace:*",

@@ -762,9 +762,9 @@ importers:
 
   packages/typegpu-gl:
     dependencies:
-      typed-binary:
-        specifier: ^4.3.3
-        version: 4.3.3
+      tinyest:
+        specifier: workspace:^0.3.0
+        version: link:../tinyest
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -772,9 +772,6 @@ importers:
       '@webgpu/types':
         specifier: catalog:types
         version: 0.1.69
-      tinyest:
-        specifier: workspace:^0.3.0
-        version: link:../tinyest
       tsdown:
         specifier: catalog:build
         version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
