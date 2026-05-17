@@ -118,7 +118,7 @@ class TgpuFixedBufferImpl<TData extends BaseData, TUsage extends BindableBufferU
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const dataType = this.buffer.dataType;
-    const id = ctx.getUniqueName(this);
+    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const { group, binding } = ctx.allocateFixedEntry(
       this.usage === 'uniform' ? { uniform: dataType } : { storage: dataType, access: this.usage },
       this.buffer,
@@ -241,7 +241,7 @@ export class TgpuLaidOutBufferImpl<TData extends BaseData, TUsage extends Bindab
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.getUniqueName(this);
+    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const group = ctx.allocateLayoutEntry(this.#membership.layout);
     const usage = usageToVarTemplateMap[this.usage];
 

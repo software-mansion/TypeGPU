@@ -1,4 +1,4 @@
-import { isValidProp } from '../nameRegistry.ts';
+import { validateProp } from '../nameUtils.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $internal } from '../shared/symbols.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
@@ -40,8 +40,9 @@ export function INTERNAL_createStruct<TProps extends Record<string, BaseData>>(
   isAbstruct: boolean,
 ): WgslStruct<TProps> {
   Object.keys(props).forEach((key) => {
-    if (!isValidProp(key)) {
-      throw new Error(`Property key '${key}' is a reserved WGSL word. Choose a different name.`);
+    const result = validateProp(key);
+    if (!result.success) {
+      throw new Error(`Invalid property key '${key}'${result.error ? `: ${result.error}` : ''}`);
     }
   });
 
