@@ -213,8 +213,8 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
         vec4 position = vec4();
         vec2 uv = vec2();
         {
-          gl_Position = vec4(position);
-          vary_uv = vec2(uv);
+          gl_Position = position;
+          vary_uv = uv;
           return;
         }
       }"
@@ -238,7 +238,7 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
     expect(result.code).not.toMatch(/\bvec4f\s*\(/);
 
     expect(result.code).toMatchInlineSnapshot(`
-      "layout(location = 0) out vec4 _fragColor;
+      "layout(location=0) out vec4 _fragColor;
 
       void main() {
         int gl_Position_1 = 1;
