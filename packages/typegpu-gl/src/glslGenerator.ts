@@ -77,13 +77,13 @@ interface EntryFnState {
 }
 
 function undecorateDataType(t: d.BaseData): d.BaseData {
-  return d.isDecorated(t) ? (t.inner as d.BaseData) : t;
+  return d.isDecorated(t) ? t.inner : t;
 }
 
 function getLocationFromDecorated(type: d.BaseData): number | undefined {
   if (!d.isDecorated(type)) return undefined;
   const attr = (type.attribs as d.AnyAttribute[]).find((a) => a.type === '@location');
-  return attr ? (attr.params[0] as number) : undefined;
+  return attr ? attr.params[0] : undefined;
 }
 
 function getBuiltinKindFromDecorated(type: d.BaseData): string | undefined {
@@ -125,6 +125,7 @@ export class GlslGenerator extends WgslGenerator {
   }
 
   override initGenerator(ctx: ResolutionCtx) {
+    // oxlint-disable-next-line typescript/no-explicit-any -- the GenerationCtx tpye is not exported
     super.initGenerator(ctx as any);
     this.#vertexOutPropToVarMap = {};
   }
@@ -196,7 +197,7 @@ export class GlslGenerator extends WgslGenerator {
       return super._return(statement);
     }
 
-    const exprType = (expr.dataType as d.BaseData).type;
+    const exprType = expr.dataType.type;
 
     if (
       this.#functionType === 'fragment' &&
@@ -364,14 +365,17 @@ export class GlslGenerator extends WgslGenerator {
             this.ctx.addDeclaration(`layout(location=${location ?? 0}) in ${glslType} ${inName};`);
             return inName;
           }
-          const inName = this.#vertexOutPropToVarMap[prop]!;
+          const inName = this.#vertexOutPropToVarMap[prop];
+          if (!inName) {
+            throw new Error(`Unknown varying: ${prop}`);
+          }
           this.ctx.addDeclaration(`in ${glslType} ${inName};`);
           return inName;
         };
 
         for (const arg of options.args) {
           if (!arg.used) continue;
-          const argType = arg.decoratedType as d.BaseData;
+          const argType = arg.decoratedType;
 
           // Auto-detected IO struct (plain-function entry fns)
           if ((argType as { type?: string }).type === 'auto-struct') {
