@@ -710,9 +710,9 @@ importers:
 
   packages/typegpu-gl:
     dependencies:
-      typed-binary:
-        specifier: ^4.3.3
-        version: 4.3.3
+      tinyest:
+        specifier: workspace:^0.3.0
+        version: link:../tinyest
     devDependencies:
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
@@ -720,9 +720,6 @@ importers:
       '@webgpu/types':
         specifier: catalog:types
         version: 0.1.69
-      tinyest:
-        specifier: workspace:^0.3.0
-        version: link:../tinyest
       tsdown:
         specifier: catalog:build
         version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.34(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
@@ -11871,9 +11868,7 @@ snapshots:
       metro-runtime: 0.83.5
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
     optional: true
 
   '@react-native/normalize-colors@0.84.1': {}
