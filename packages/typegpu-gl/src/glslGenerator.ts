@@ -68,12 +68,6 @@ interface EntryFnState {
   outVars: OutVarInfo[];
   /** The first-fragment-color output name, if allocated. */
   fragColorName?: string;
-  /** The auto-output struct (populated as the body resolves). */
-  autoOutStruct?: {
-    completeStruct: d.WgslStruct;
-    accessProp(key: string): { prop: string; type: d.BaseData } | undefined;
-    provideProp(key: string, type: d.BaseData): { prop: string; type: d.BaseData };
-  };
 }
 
 function undecorateDataType(t: d.BaseData): d.BaseData {
@@ -116,7 +110,7 @@ function glslInputForBuiltin(
 export class GlslGenerator extends WgslGenerator {
   #functionType: TgpuShaderStage | 'normal' | undefined;
   #entryFnState: EntryFnState | undefined;
-  #vertexOutPropToVarMap: Record<string, string>;
+  #vertexOutPropToVarMap: Record<string, string> = {};
   #shaderStageToEmit: 'none' | 'vertex' | 'fragment';
 
   constructor(shaderStageToEmit: 'none' | 'vertex' | 'fragment') {
@@ -233,9 +227,7 @@ export class GlslGenerator extends WgslGenerator {
   ): string {
     // Is this an auto-detected output struct? If so, register each prop so the
     // output struct's propTypes reflects what the body actually returns.
-    const isAutoStruct =
-      expectedReturnType !== undefined &&
-      (expectedReturnType as { type?: string }).type === 'auto-struct';
+    const isAutoStruct = expectedReturnType?.type === 'auto-struct';
     const autoStruct = isAutoStruct
       ? (expectedReturnType as unknown as {
         completeStruct: d.WgslStruct;
@@ -243,9 +235,6 @@ export class GlslGenerator extends WgslGenerator {
         provideProp(key: string, type: d.BaseData): { prop: string; type: d.BaseData };
       })
       : undefined;
-    if (autoStruct) {
-      entryFnState.autoOutStruct = autoStruct;
-    }
 
     // Resolve each RHS first so module-level references get reserved (and types become
     // available) before we allocate our LHS output identifiers.
@@ -276,8 +265,6 @@ export class GlslGenerator extends WgslGenerator {
         if (isPosition) {
           name = 'gl_Position';
         } else {
-          // Name varyings consistently between vertex out / fragment in so the GLSL
-          // ES 3.00 linker can match them by name.
           name = this.ctx.makeUniqueIdentifier(`vary_${prop}`, 'global');
           entryFnState.outVars.push({ varName: name, propName: prop, dataType });
         }
@@ -287,9 +274,7 @@ export class GlslGenerator extends WgslGenerator {
         }
       }
 
-      // Copy-wrap the RHS in its type constructor so references get turned into values.
-      const glslType = this.ctx.resolve(undecorateDataType(dataType)).value;
-      lines.push(`${this.ctx.pre}  ${name} = ${glslType}(${rhsStr});`);
+      lines.push(`${this.ctx.pre}  ${name} = ${rhsStr};`);
     }
 
     lines.push(`${this.ctx.pre}  return;`);
@@ -327,30 +312,21 @@ export class GlslGenerator extends WgslGenerator {
 
         const entryFnState = this.#entryFnState as EntryFnState;
 
-        // --- Emit output declarations (layout(location=N) out TYPE NAME;) ---
-        // Prefer the auto-output struct if we collected one during body resolution;
-        // it carries @location attributes computed via withVaryingLocations.
-        const outStructForDecls = entryFnState.autoOutStruct
-          ? entryFnState.autoOutStruct.completeStruct
-          : d.isWgslStruct(returnType)
-            ? returnType
-            : undefined;
-        if (outStructForDecls) {
-          for (const { varName, dataType } of entryFnState.outVars) {
+        for (const { varName, dataType } of entryFnState.outVars) {
+          const glslType = this.ctx.resolve(undecorateDataType(dataType)).value;
+          if (options.functionType === 'fragment') {
+            // Fragment color outputs keep location=N since they target draw buffers.
+            this.ctx.addDeclaration(`layout(location=0) out ${glslType} ${varName};`);
+          } else {
             // Varyings (vertex -> fragment) in GLSL ES 3.00 are matched by name,
             // so we don't emit layout(location=N) qualifiers here.
-            const glslType = this.ctx.resolve(undecorateDataType(dataType)).value;
-            if (options.functionType === 'fragment') {
-              // Fragment color outputs keep location=N since they target draw buffers.
-              this.ctx.addDeclaration(`layout(location = 0) out ${glslType} ${varName};`);
-            } else {
-              this.ctx.addDeclaration(`out ${glslType} ${varName};`);
-            }
+            this.ctx.addDeclaration(`out ${glslType} ${varName};`);
           }
         }
+
         // Fragment color output
         if (entryFnState.fragColorName) {
-          this.ctx.addDeclaration(`layout(location = 0) out vec4 ${entryFnState.fragColorName};`);
+          this.ctx.addDeclaration(`layout(location=0) out vec4 ${entryFnState.fragColorName};`);
         }
 
         // --- Emit input-side setup: declare layout(location) in vars, and initialize
@@ -370,9 +346,7 @@ export class GlslGenerator extends WgslGenerator {
           const glslType = this.ctx.resolve(undecorateDataType(propType)).value;
           if (stage === 'vertex') {
             const inName = this.ctx.makeUniqueIdentifier(`_in_${prop}`, 'global');
-            this.ctx.addDeclaration(
-              `layout(location = ${location ?? 0}) in ${glslType} ${inName};`,
-            );
+            this.ctx.addDeclaration(`layout(location=${location ?? 0}) in ${glslType} ${inName};`);
             return inName;
           }
           const inName = this.#vertexOutPropToVarMap[prop]!;
@@ -432,10 +406,7 @@ export class GlslGenerator extends WgslGenerator {
       }
 
       const argList = options.args
-        .filter((arg) => arg.used || options.functionType === 'normal')
-        .map((arg) => {
-          return `${this.ctx.resolve(arg.decoratedType).value} ${arg.name}`;
-        })
+        .map((arg) => `${this.ctx.resolve(arg.decoratedType).value} ${arg.name}`)
         .join(', ');
 
       return `${this.ctx.resolve(returnType).value} ${options.name}(${argList}) ${body}`;
