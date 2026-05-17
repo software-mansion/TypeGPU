@@ -12,4 +12,8 @@ export { snip } from './data/snippet.ts';
 export type { ResolutionCtx, FunctionArgument, TgpuShaderStage } from './types.ts';
 export type { Snippet, ResolvedSnippet, Origin } from './data/snippet.ts';
 
-export type { ShaderGenerator, FunctionDefinitionOptions } from './tgsl/shaderGenerator.ts';
+export type {
+  ShaderGenerator,
+  FunctionDefinitionOptions,
+  VariableDefinitionOptions,
+} from './tgsl/shaderGenerator.ts';
