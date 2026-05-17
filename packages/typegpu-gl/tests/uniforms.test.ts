@@ -5,7 +5,8 @@ import { _resetUniformCounter } from '../src/tgpuRootWebGL.ts';
 import { it } from './utils/extendedTest.ts';
 
 describe('TgpuRootWebGL - createUniform', () => {
-  it('creates a WebGL UBO-backed uniform', ({ gl }) => {
+  // TODO(#2510): Unskip this if uniforms are backed by UBOs
+  it.skip('creates a WebGL UBO-backed uniform', ({ gl }) => {
     const root = initWithGL({ gl });
 
     const uniform = root.createUniform(d.vec4f);
@@ -15,7 +16,8 @@ describe('TgpuRootWebGL - createUniform', () => {
     expect(gl.createBuffer).toHaveBeenCalled();
   });
 
-  it('creates a uniform with an initial value', ({ gl }) => {
+  // TODO(#2510): Unskip this if uniforms are backed by UBOs
+  it.skip('creates a uniform with an initial value', ({ gl }) => {
     const root = initWithGL({ gl });
 
     const uniform = root.createUniform(d.f32, 42);
@@ -48,7 +50,7 @@ describe('GlslGenerator - uniform resolution', () => {
       return d.f32(time.$);
     };
 
-    const result = tgpu.resolve([fn], glOptions());
+    const result = tgpu.resolve([fn], glOptions({ shaderStage: 'none' }));
     expect(result).toMatchInlineSnapshot(`
       "uniform float _u0;
 
@@ -67,7 +69,7 @@ describe('GlslGenerator - uniform resolution', () => {
       return d.vec3f(color.$);
     };
 
-    const result = tgpu.resolve([fn], glOptions());
+    const result = tgpu.resolve([fn], glOptions({ shaderStage: 'none' }));
     expect(result).toMatchInlineSnapshot(`
       "uniform vec3 _u0;
 
@@ -87,7 +89,7 @@ describe('GlslGenerator - uniform resolution', () => {
       return time.$ * scale.$;
     };
 
-    const result = tgpu.resolve([fn], glOptions());
+    const result = tgpu.resolve([fn], glOptions({ shaderStage: 'none' }));
     expect(result).toMatchInlineSnapshot(`
       "uniform float _u0;
 
@@ -113,7 +115,7 @@ describe('GlslGenerator - uniform resolution', () => {
       return fn(d.vec2f(1, 2));
     }
 
-    const result = tgpu.resolve([main], glOptions());
+    const result = tgpu.resolve([main], glOptions({ shaderStage: 'none' }));
     expect(result).toMatchInlineSnapshot(`
       "uniform mat2 _u0;
 

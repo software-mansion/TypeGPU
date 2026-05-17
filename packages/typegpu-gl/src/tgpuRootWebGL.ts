@@ -14,19 +14,12 @@ import tgpu, {
   type BufferInitialData,
   type BufferWriteOptions,
   type TgpuBuffer,
-  type TgpuFragmentFn,
+  type TgpuRenderPipeline,
   type TgpuVertexFn,
 } from 'typegpu';
-import {
-  AutoFragmentFn,
-  AutoVertexFn,
-  makeDereferencable,
-  makeResolvable,
-  type ShaderGenerator,
-} from 'typegpu/~internals';
+import { makeDereferencable, makeResolvable } from 'typegpu/~internals';
 
-import glslGenerator from './glslGenerator.ts';
-import { matchUpVaryingLocations } from './matchUpVaryingLocations.ts';
+import { fragmentGlslGenerator, vertexGlslGenerator } from './glslGenerator.ts';
 
 // ----------
 // Public API
@@ -372,16 +365,7 @@ makeDereferencable(
   },
 );
 
-// oxlint-disable-next-line typescript/no-explicit-any
-type AnyFn = (...args: any[]) => any;
-
-function isShellFn(value: unknown): value is TgpuVertexFn | TgpuFragmentFn {
-  return typeof value === 'object' && value !== null && 'shell' in value;
-}
-
 export class TgpuRootWebGL {
-  readonly #shaderGenerator: ShaderGenerator = glslGenerator;
-
   #gl: WebGL2RenderingContext;
   #offscreen: OffscreenCanvas;
   #uniforms: WebGLUniformImpl<any>[] = [];
@@ -471,61 +455,21 @@ export class TgpuRootWebGL {
     };
   }
 
-  createRenderPipeline(descriptor: {
-    vertex: TgpuVertexFn | AnyFn;
-    fragment: TgpuFragmentFn | AnyFn;
-  }): TgpuWebGLRenderPipeline {
-    const { vertex, fragment } = descriptor;
+  createRenderPipeline(descriptor: TgpuRenderPipeline.Descriptor): TgpuWebGLRenderPipeline {
+    const fakeRoot = tgpu.initFromDevice({ device: {} as GPUDevice });
+    // oxlint-disable-next-line typescript/no-explicit-any
+    const fakePipeline = fakeRoot.createRenderPipeline(descriptor as any);
 
-    const vertexShell = isShellFn(vertex) ? vertex : undefined;
-    const fragmentShell = isShellFn(fragment) ? fragment : undefined;
-
-    const locations = matchUpVaryingLocations(
-      vertexShell?.shell?.out,
-      fragmentShell?.shell?.in,
-      '<vertex>',
-      '<fragment>',
-    );
-
-    const vertexResolvable = vertexShell ?? new AutoVertexFn(vertex as AnyFn, {}, locations);
-    const fragmentFromAuto = fragmentShell === undefined;
-
-    const vertexNamespace = tgpu['~unstable'].namespace();
-    const vertexCode = tgpu.resolve([vertexResolvable], {
-      unstable_shaderGenerator: this.#shaderGenerator,
-      names: vertexNamespace,
+    const vertexCode = tgpu.resolve([fakePipeline], {
+      unstable_shaderGenerator: vertexGlslGenerator,
     });
 
-    // For the fragment, we want to know the vertex output varyings to route them as inputs.
-    // When using an auto-vertex-fn, we need the completed struct.
-    let varyings: Record<string, d.BaseData> = {};
-    if (vertexResolvable instanceof AutoVertexFn) {
-      const outStruct = vertexResolvable.autoOut.completeStruct;
-      varyings = Object.fromEntries(
-        Object.entries(outStruct.propTypes).filter(([, type]) => !d.isBuiltin(type)),
-      );
-    } else if (vertexShell?.shell?.out) {
-      varyings = Object.fromEntries(
-        Object.entries(vertexShell.shell.out as Record<string, d.BaseData>).filter(
-          ([, type]) => !d.isBuiltin(type),
-        ),
-      );
-    }
-
-    const fragmentResolvable =
-      fragmentShell ?? new AutoFragmentFn(fragment as AnyFn, varyings, locations);
-
-    const fragmentNamespace = tgpu['~unstable'].namespace();
-    const fragmentCode = tgpu.resolve([fragmentResolvable], {
-      unstable_shaderGenerator: this.#shaderGenerator,
-      names: fragmentNamespace,
+    const fragmentCode = tgpu.resolve([fakePipeline], {
+      unstable_shaderGenerator: fragmentGlslGenerator,
     });
 
     const vertexGlsl = GLSL_HEADER + wgslToGlslFixups(vertexCode);
     const fragmentGlsl = GLSL_HEADER + wgslToGlslFixups(fragmentCode);
-
-    // Silence unused variable lints for the shell-only fallback
-    void fragmentFromAuto;
 
     const program = linkProgram(this.#gl, vertexGlsl, fragmentGlsl);
 
