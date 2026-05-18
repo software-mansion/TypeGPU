@@ -217,7 +217,7 @@ describe('array', () => {
       fn testFn() {
         let myArray = array<u32, 1>(10u);
         let myClone = myArray;
-        var myExternal = array<u32, 1>(3u);
+        let myExternal = array<u32, 1>(3u);
         f(myArray);
         return;
       }"
@@ -444,7 +444,7 @@ describe('array', () => {
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo(n: u32) {
         const m = 1u;
-        var result = array<u32, 3>(1u, n, m);
+        let result = array<u32, 3>(1u, n, m);
       }"
     `);
   });
@@ -494,7 +494,7 @@ describe('array', () => {
 
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() -> vec3f {
-        var x = vec3f(1, 2, 3);
+        let x = vec3f(1, 2, 3);
         let y = (&x);
         return (*y);
       }"

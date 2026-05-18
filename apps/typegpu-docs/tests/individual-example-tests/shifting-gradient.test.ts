@@ -123,7 +123,7 @@ describe('react/shifting-gradient example', () => {
 
       fn findCusp(a: f32, b: f32) -> LC {
         let S_cusp = computeMaxSaturation(a, b);
-        var rgb_at_max = oklabToLinearRgb(vec3f(1f, (S_cusp * a), (S_cusp * b)));
+        let rgb_at_max = oklabToLinearRgb(vec3f(1f, (S_cusp * a), (S_cusp * b)));
         let L_cusp = cbrt((1f / max(max(rgb_at_max.x, rgb_at_max.y), rgb_at_max.z)));
         let C_cusp = (L_cusp * S_cusp);
         return LC(L_cusp, C_cusp);
@@ -196,7 +196,7 @@ describe('react/shifting-gradient example', () => {
         let Ld = (L - 0.5f);
         let e1 = ((0.5f + abs(Ld)) + (alpha * C));
         let L0 = (0.5f * (1f + (sign(Ld) * (e1 - sqrt(max(0f, ((e1 * e1) - (2f * abs(Ld)))))))));
-        var cusp = findCusp(a_, b_);
+        let cusp = findCusp(a_, b_);
         let t = clamp(findGamutIntersection(a_, b_, L, C, L0, cusp), 0f, 1f);
         let L_clipped = mix(L0, L, t);
         let C_clipped = (t * C);
@@ -216,13 +216,13 @@ describe('react/shifting-gradient example', () => {
       }
 
       @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
-        var fromStart = vec3f(0.6279553771018982, 0.22486300766468048, 0.1258462816476822);
-        var fromEnd = vec3f(0.45201370120048523, -0.03245693817734718, -0.31152817606925964);
-        var from_1 = mix(fromStart, fromEnd, ((sin(time) * 0.5f) + 0.5f));
-        var toStart = vec3f(0.8664395809173584, -0.2338874489068985, 0.17949843406677246);
-        var toEnd = vec3f(0.7016738653182983, 0.27456632256507874, -0.16915608942508698);
-        var to = mix(toStart, toEnd, ((cos((time * 1.5f)) * 0.5f) + 0.5f));
-        var mixed = mix(from_1, to, ((((_arg_0.uv.x * 2f) - 1f) * 0.5f) + (sin((time + (_arg_0.uv.y * 3f))) * 0.5f)));
+        let fromStart = vec3f(0.6279553771018982, 0.22486300766468048, 0.1258462816476822);
+        let fromEnd = vec3f(0.45201370120048523, -0.03245693817734718, -0.31152817606925964);
+        let from_1 = mix(fromStart, fromEnd, ((sin(time) * 0.5f) + 0.5f));
+        let toStart = vec3f(0.8664395809173584, -0.2338874489068985, 0.17949843406677246);
+        let toEnd = vec3f(0.7016738653182983, 0.27456632256507874, -0.16915608942508698);
+        let to = mix(toStart, toEnd, ((cos((time * 1.5f)) * 0.5f) + 0.5f));
+        let mixed = mix(from_1, to, ((((_arg_0.uv.x * 2f) - 1f) * 0.5f) + (sin((time + (_arg_0.uv.y * 3f))) * 0.5f)));
         return vec4f(oklabToRgb(mixed), 1f);
       }"
     `);

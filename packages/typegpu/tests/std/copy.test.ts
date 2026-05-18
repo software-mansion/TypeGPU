@@ -96,8 +96,8 @@ describe('std.copy', () => {
 
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() {
-          var a = vec2u(1, 2);
-          var b = a;
+          let a = vec2u(1, 2);
+          let b = a;
         }"
       `);
     });
@@ -132,8 +132,8 @@ describe('std.copy', () => {
         }
 
         fn fn_1() {
-          var boid = Boid(vec2u(1, 2));
-          var copy = boid;
+          let boid = Boid(vec2u(1, 2));
+          let copy = boid;
         }"
       `);
     });
@@ -147,8 +147,8 @@ describe('std.copy', () => {
 
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() {
-          var arr = array<i32, 3>(1, 2, 3);
-          var copy = arr;
+          let arr = array<i32, 3>(1, 2, 3);
+          let copy = arr;
         }"
       `);
     });
@@ -165,7 +165,7 @@ describe('std.copy', () => {
         "@group(0) @binding(0) var<uniform> uniform_1: vec2u;
 
         fn fn_1() {
-          var v = uniform_1;
+          let v = uniform_1;
         }"
       `);
     });
@@ -191,8 +191,8 @@ describe('std.copy', () => {
         }
 
         fn fn_1() {
-          var struct_1 = Outer(Inner(vec2u(1, 2)), 3u);
-          var copy = struct_1;
+          let struct_1 = Outer(Inner(vec2u(1, 2)), 3u);
+          let copy = struct_1;
         }"
       `);
     });
@@ -212,8 +212,8 @@ describe('std.copy', () => {
         }
 
         fn fn_1() {
-          var boid = Boid(vec2u(1, 2));
-          var prop = boid.pos;
+          let boid = Boid(vec2u(1, 2));
+          let prop = boid.pos;
         }"
       `);
     });
@@ -227,7 +227,7 @@ describe('std.copy', () => {
 
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "fn fn_1() {
-          var arr = array<i32, 3>(1, 2, 3);
+          let arr = array<i32, 3>(1, 2, 3);
           let elem = arr[0i];
         }"
       `);
@@ -275,7 +275,7 @@ describe('std.copy', () => {
         }
 
         fn fn_2(arg: vec2u) -> vec2u {
-          var copy = arg;
+          let copy = arg;
           return copy;
         }
 
@@ -284,14 +284,14 @@ describe('std.copy', () => {
         }
 
         fn fn_3(arg: Boid) -> Boid {
-          var copy = arg;
+          let copy = arg;
           return copy;
         }
 
         fn main() {
           let a = fn_1(1i);
-          var b = fn_2(vec2u());
-          var c = fn_3(Boid(vec2u()));
+          let b = fn_2(vec2u());
+          let c = fn_3(Boid(vec2u()));
         }"
       `);
     });
