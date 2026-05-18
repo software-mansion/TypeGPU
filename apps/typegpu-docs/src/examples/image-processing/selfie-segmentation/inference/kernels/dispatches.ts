@@ -9,26 +9,28 @@ import {
   WORKGROUP_SIZE,
 } from './types.ts';
 import {
-  activationSlot,
-  addOp,
   binaryLayout,
-  binaryOpSlot,
   binaryShapeSlot,
   convShapeSlot,
-  hardSwishOp,
   headLayout,
   headShapeSlot,
-  identityOp,
-  mulOp,
   poolLayout,
   poolShapeSlot,
-  reluOp,
   resizeShapeSlot,
-  sigmoidOp,
   weightedLayout,
   weightedOffsets,
-  type Vec4Op,
 } from './layouts.ts';
+import {
+  activationSlot,
+  addOp,
+  binaryOpSlot,
+  hardSwishOp,
+  identityOp,
+  mulOp,
+  reluOp,
+  sigmoidOp,
+  type Vec4Op,
+} from './helpers.ts';
 import {
   binaryKernel,
   conv1x1Kernel,
@@ -50,10 +52,10 @@ export function createSegmenterDispatches(
   mask: MaskBuffer,
   weights: PackedWeightsBuffer,
 ): KernelHandle[] {
-  const pipelines = new Map<bigint, TgpuComputePipeline>();
+  const pipelines = new Map<string, TgpuComputePipeline>();
 
   const specializedPipeline = (keyParts: number[], create: () => TgpuComputePipeline) => {
-    const key = pipelineKey(keyParts);
+    const key = keyParts.join(',');
     let pipeline = pipelines.get(key);
     if (!pipeline) {
       pipeline = create();
@@ -215,11 +217,11 @@ function shapeForConv(record: DispatchRecord) {
   return {
     input: d.vec3u(inputW, inputH, inputC),
     output: d.vec3u(outputW, outputH, outputC),
-    blocks: d.vec2u(c4(inputC), c4(outputC)),
+    blocks: d.vec2u(channelBlocks(inputC), channelBlocks(outputC)),
     kernel: d.vec2u(kernelW, kernelH),
     stride: d.vec2u(strideW, strideH),
     pad: d.vec2u(padLeft, padTop),
-    total: outputH * outputW * c4(outputC),
+    total: outputH * outputW * channelBlocks(outputC),
   };
 }
 
@@ -229,7 +231,7 @@ function shapeForPool(record: DispatchRecord) {
   const [kernelW, kernelH] = record.kernel;
   return {
     input: d.vec3u(inputW, inputH, inputC),
-    blocks: c4(outputC),
+    blocks: channelBlocks(outputC),
     window: d.vec2u(kernelW, kernelH),
   };
 }
@@ -240,14 +242,14 @@ function shapeForResize(record: DispatchRecord) {
   return {
     input: d.vec3u(inputW, inputH, inputC),
     output: d.vec3u(outputW, outputH, outputC),
-    blocks: c4(outputC),
-    total: outputH * outputW * c4(outputC),
+    blocks: channelBlocks(outputC),
+    total: outputH * outputW * channelBlocks(outputC),
   };
 }
 
 function shapeForBinary(record: DispatchRecord) {
   const [outputW, outputH, outputC] = record.output;
-  const outputBlocks = c4(outputC);
+  const outputBlocks = channelBlocks(outputC);
   return {
     output: d.vec3u(outputW, outputH, outputC),
     outputBlocks,
@@ -266,7 +268,7 @@ function shapeForHead(record: DispatchRecord) {
   return {
     input: d.vec3u(inputW, inputH, inputC),
     output: d.vec3u(outputW, outputH, outputC),
-    inputBlocks: c4(inputC),
+    inputBlocks: channelBlocks(inputC),
     total: inputH * inputW,
   };
 }
@@ -275,15 +277,6 @@ function activationOp(kind: Activation): Vec4Op {
   return activationOps[kind] as Vec4Op;
 }
 
-function c4(channels: number): number {
+function channelBlocks(channels: number): number {
   return Math.ceil(channels / 4);
-}
-
-function pipelineKey(parts: number[]): bigint {
-  let hash = 0xcbf29ce484222325n;
-  for (const part of parts) {
-    hash ^= BigInt.asUintN(64, BigInt(part));
-    hash = BigInt.asUintN(64, hash * 0x100000001b3n);
-  }
-  return hash;
 }

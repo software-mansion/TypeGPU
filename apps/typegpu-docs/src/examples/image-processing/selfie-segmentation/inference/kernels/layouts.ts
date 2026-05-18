@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { d } from 'typegpu';
 
 export const weightedOffsets = d.struct({
   weightBase: d.u32,
@@ -115,39 +115,3 @@ export const poolLayout = tgpu.bindGroupLayout({
   src: { storage: d.arrayOf(d.vec4f), access: 'readonly' },
   dst: { storage: d.arrayOf(d.vec4f), access: 'mutable' },
 });
-
-export type Vec4Op = (value: d.v4f) => d.v4f;
-export type BinaryOp = (a: d.v4f, b: d.v4f) => d.v4f;
-
-export const identityOp = (value: d.v4f) => {
-  'use gpu';
-  return d.vec4f(value);
-};
-
-export const reluOp = (value: d.v4f) => {
-  'use gpu';
-  return std.max(value, d.vec4f(0));
-};
-
-export const hardSwishOp = (value: d.v4f) => {
-  'use gpu';
-  return value * std.saturate((value + 3) / 6);
-};
-
-export const sigmoidOp = (value: d.v4f) => {
-  'use gpu';
-  return d.vec4f(1) / (d.vec4f(1) + std.exp(value * -1));
-};
-
-export const addOp = (a: d.v4f, b: d.v4f) => {
-  'use gpu';
-  return a + b;
-};
-
-export const mulOp = (a: d.v4f, b: d.v4f) => {
-  'use gpu';
-  return a * b;
-};
-
-export const activationSlot = tgpu.slot<Vec4Op>(identityOp);
-export const binaryOpSlot = tgpu.slot<BinaryOp>(addOp);

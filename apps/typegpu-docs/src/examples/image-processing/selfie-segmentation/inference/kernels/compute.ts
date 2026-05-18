@@ -1,9 +1,7 @@
 import tgpu, { d, std } from 'typegpu';
 import { BroadcastFlag } from '../bundle.ts';
 import {
-  activationSlot,
   binaryLayout,
-  binaryOpSlot,
   binaryShapeConst,
   convShapeConst,
   headLayout,
@@ -14,6 +12,8 @@ import {
   weightedLayout,
 } from './layouts.ts';
 import {
+  activationSlot,
+  binaryOpSlot,
   blockedPixel,
   hwc4Index,
   inputCoord,
