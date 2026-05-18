@@ -12,9 +12,9 @@ giving easy access to the device's GPU rendering and computing capabilities.
 You can check out the [typegpu-rn-examples](https://github.com/software-mansion-labs/typegpu-rn-examples) project,
 showcasing a few examples from our _live examples_ page in a simple mobile application.
 
-import FishExample from './example-fish.png';
-import Fluid1Example from './example-fluid-1.png';
-import Fluid2Example from './example-fluid-2.png';
+import FishExample from "./example-fish.png";
+import Fluid1Example from "./example-fluid-1.png";
+import Fluid2Example from "./example-fluid-2.png";
 
 <div style="display: flex; flex-wrap: wrap;">
   <img
@@ -38,47 +38,43 @@ import Fluid2Example from './example-fluid-2.png';
 </div>
 ## Setup
 
+Before installing TypeGPU packages, make sure to upgrade `react-native-reanimated` and `react-native-worklets` packages to the newest version.
+
 To use TypeGPU in your React Native application, install the following packages:
 
 ```sh
-npm install react-native-wgpu
-npm install typegpu
+npm i react-native-wgpu typegpu @typegpu/react
+npm i --save-dev unplugin-typegpu @webgpu/types
 ```
 
-Since WebGPU is still yet to reach baseline in browsers, types for it need to be installed separately:
+Since WebGPU is still yet to reach baseline in browsers, types for it need to be installed and setup manually:
 
-```sh
-npm i --save-dev @webgpu/types
-```
-
-```js title="tsconfig.json"
+```json title="tsconfig.json"
 {
   "compilerOptions": {
     "types": ["@webgpu/types"]
-  },
+  }
 }
 ```
 
-If you want to be able to implement TypeGPU functions in JavaScript/TypeScript, you need to install the [unplugin-typegpu](https://www.npmjs.com/package/unplugin-typegpu) package.
+:::tip
+If you don't want to have the ability to write shaders in TypeScript, you can skip installing `unplugin-typegpu`.
+:::
 
-```sh
-npm install --save-dev unplugin-typegpu
-```
-
-And enable it in your project.
+If you're using Expo and you don't have a custom `babel.config.js` file yet, create one using the following command:
 
 ```sh
 npm exec expo customize
 ```
 
-Select `babel.config.js` and add `unplugin-typegpu/babel` to the list of plugins in the config file.
+Add `unplugin-typegpu/babel` to the list of plugins in the `babel.config.js` file.
 
-```js title="babel.config.js"
+```diff lang=js title="babel.config.js"
 module.exports = (api) => {
-  api.cache(true);
++  api.cache(true);
   return {
     presets: ['babel-preset-expo'],
-    plugins: ['unplugin-typegpu/babel'],
++    plugins: ['unplugin-typegpu/babel'],
   };
 };
 ```
@@ -103,7 +99,31 @@ cd ios && pod install && cd ..
 ```
 
 To run React Native WebGPU on the iOS simulator, you need to disable the Metal validation API.
-In _Edit Scheme_ uncheck _Metal Validation_.
+Open Xcode, select Edit Scheme:
+
+import Xcode1 from "./xcode-1.png";
+
+<div style="display: flex; flex-wrap: wrap;">
+  <img
+    width="300"
+    style="margin: 0;"
+    alt="editing a scheme in Xcode"
+    src={Xcode1.src}
+  />
+</div>
+
+and in Diagnostics tab deselect Metal API Validation:
+
+import Xcode2 from "./xcode-2.png";
+
+<div style="display: flex; flex-wrap: wrap;">
+  <img
+    width="300"
+    style="margin: 0;"
+    alt="deselect Metal Api Validation"
+    src={Xcode2.src}
+  />
+</div>
 
 ## Hello world example
 
@@ -111,45 +131,26 @@ If you want to quickly test if the installation was successful, here's a simple 
 that you can use in your app:
 
 ```ts
-import { useEffect } from 'react';
-import { Canvas, useDevice, useGPUContext } from 'react-native-wgpu';
+import { useMemo } from 'react';
+import { Canvas } from 'react-native-wgpu';
 import tgpu, { d } from 'typegpu';
+import { useRoot, useFrame, useConfigureContext } from '@typegpu/react';
 
-const positions = tgpu.const(d.arrayOf(d.vec2f, 3), [
+const positions = tgpu.const(d.arrayOf(d.vec2f), [
   d.vec2f(0.0, 0.5),
   d.vec2f(-0.5, -0.5),
   d.vec2f(0.5, -0.5),
 ]);
 
-const uvs = tgpu.const(d.arrayOf(d.vec2f, 3), [
-  d.vec2f(0.5, 1.0),
-  d.vec2f(0.0, 0.0),
-  d.vec2f(1.0, 0.0),
-]);
-
 export function Triangle() {
-  const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-  const { device = null } = useDevice();
-  const root = device ? tgpu.initFromDevice({ device }) : null;
-  const { ref, context } = useGPUContext();
+  const root = useRoot();
 
-  useEffect(() => {
-    if (!root || !device || !context) {
-      return;
-    }
-
-    context.configure({
-      device: device,
-      format: presentationFormat,
-      alphaMode: 'premultiplied',
-    });
-
-    const pipeline = root.createRenderPipeline({
+  const pipeline = useMemo(() => {
+    return root.createRenderPipeline({
       vertex: ({ $vertexIndex: vid }) => {
         'use gpu';
         return {
           $position: d.vec4f(positions.$[vid], 0, 1),
-          uv: uvs.$[vid],
         };
       },
       fragment: () => {
@@ -157,20 +158,21 @@ export function Triangle() {
         return d.vec4f(0.114, 0.447, 0.941, 1);
       },
     });
-      
-    pipeline
-      .withColorAttachment({ view: context })
-      .draw(3);
+  }, []);
 
-    context.present();
-  }, [root, device, context, presentationFormat]);
+  const { ref, ctxRef } = useConfigureContext({ alphaMode: 'premultiplied' });
 
-  return (
-    <>
-      <Canvas />
-      <Canvas ref={ref} style={{ aspectRatio: 1 }} transparent />
-    </>
-  );
+  useFrame(() => {
+    const ctx = ctxRef.current;
+    if (!ctx) return;
+
+    pipeline.withColorAttachment({ view: ctx }).draw(3);
+
+    // A react-native-wgpu requirement for flushing the rendered effect
+    ctx.present?.();
+  });
+
+  return <Canvas ref={ref} style={{ aspectRatio: 1 }} transparent />;
 }
 ```
 

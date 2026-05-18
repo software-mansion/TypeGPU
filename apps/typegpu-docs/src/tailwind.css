@@ -69,7 +69,7 @@ input {
   font-family: inherit;
 }
 
-.sl-badge {
+.sl-badge.default {
   font-size: 0.75rem !important;
   color: rgb(164, 137, 255);
   position: relative;

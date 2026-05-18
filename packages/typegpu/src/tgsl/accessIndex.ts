@@ -13,7 +13,7 @@ import {
 } from '../data/wgslTypes.ts';
 import { isKnownAtComptime } from '../types.ts';
 import { accessProp } from './accessProp.ts';
-import { coerceToSnippet } from './generationHelpers.ts';
+import { ArrayExpression, coerceToSnippet } from './generationHelpers.ts';
 
 const indexableTypeToResult = {
   mat2x2f: vec2f,
@@ -52,6 +52,10 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
     } else {
       // Everything else must be produced at runtime
       origin = 'runtime';
+    }
+
+    if (target.value instanceof ArrayExpression && isKnownAtComptime(index)) {
+      return target.value.elements[index.value as number];
     }
 
     return snip(

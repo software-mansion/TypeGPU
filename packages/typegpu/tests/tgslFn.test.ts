@@ -1007,16 +1007,35 @@ describe('tgsl fn when using plugin', () => {
     `);
   });
 
-  it('throws a readable error when assigning to a value defined outside of tgsl', () => {
+  it('throws a readable error when assigning to a value defined outside of scope', () => {
     let a = 0;
-    const f = tgpu.fn([])(() => {
+    const f = () => {
+      'use gpu';
+      // oxlint-disable-next-line typegpu/no-invalid-assignment
       a = 2;
-    });
+    };
 
     expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:f: '0 = 2' is invalid, because 0 is a constant. This error may also occur when assigning to a value defined outside of a TypeGPU function's scope.]
+      - fn*:f
+      - fn*:f(): 'a = 2' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.]
+    `);
+  });
+
+  it('throws a readable error when updating a value defined outside of scope', () => {
+    let a = 0;
+    const f = () => {
+      'use gpu';
+      // oxlint-disable-next-line typegpu/no-invalid-assignment
+      a++;
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): 'a++' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.]
     `);
   });
 });
