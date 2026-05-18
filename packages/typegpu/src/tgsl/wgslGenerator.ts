@@ -252,7 +252,7 @@ ${this.ctx.pre}}`;
   }
 
   public blockVariable(
-    varType: 'var' | 'let' | 'const' | undefined,
+    varType: 'var' | 'let' | 'const' | '<deferred>',
     id: string,
     dataType: wgsl.BaseData | UnknownData,
     origin: Origin,
@@ -293,7 +293,7 @@ ${this.ctx.pre}}`;
    */
   protected emitVarDecl(
     pre: string,
-    keyword: string,
+    keyword: 'var' | 'let' | 'const' | `#VAR_${number}#`,
     name: string,
     _dataType: wgsl.BaseData | UnknownData,
     rhsStr: string,
@@ -1058,7 +1058,7 @@ ${this.ctx.pre}else ${alternate}`;
     }
 
     if (statement[0] === NODE.let || statement[0] === NODE.const) {
-      let varType: 'var' | 'let' | 'const' | undefined;
+      let varType: 'var' | 'let' | 'const' | '<deferred>' = '<deferred>';
       const [stmtType, rawId, rawValue] = statement;
       const eq = rawValue !== undefined ? this._expression(rawValue) : undefined;
 
@@ -1165,12 +1165,14 @@ ${this.ctx.pre}else ${alternate}`;
       const rhsSnippet = tryConvertSnippet(this.ctx, eq, dataType, false);
       const rhsStr = this.ctx.resolve(rhsSnippet.value, rhsSnippet.dataType).value;
 
-      let emittedVarType: string | undefined = varType;
-      if (emittedVarType === undefined) {
+      let emittedVarType: 'var' | 'let' | 'const' | `#VAR_${number}#`;
+      if (varType === '<deferred>') {
         const scope = this.ctx.topFunctionScope;
         invariant(scope, `Expected function scope to be present for ${rawId}`);
         emittedVarType = `#VAR_${scope.placeholderForVariable.size}#`;
         scope.placeholderForVariable.set(snippet, emittedVarType);
+      } else {
+        emittedVarType = varType;
       }
 
       return this.emitVarDecl(
