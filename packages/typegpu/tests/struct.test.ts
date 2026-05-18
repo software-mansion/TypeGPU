@@ -422,22 +422,20 @@ describe('struct', () => {
     `);
   });
 
-  it('copies?', () => {
-    const Boid = d.struct({
+  it('copies props one by one when the struct is different', () => {
+    const props = {
       pos: d.vec3f,
       vel: d.vec3f,
-    });
+    } as const;
 
-    const Boid2 = d.struct({
-      pos: d.vec3f,
-      vel: d.vec3f,
-    });
+    const Boid = d.struct(props);
+    const Bird = d.struct(props);
 
     function main() {
       'use gpu';
       const boid = Boid();
-      const boid2 = Boid2(boid);
-      return boid2;
+      const clone = Boid(boid); // no prop listing
+      const bird = Bird(boid); // prop listing
     }
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
@@ -446,17 +444,78 @@ describe('struct', () => {
         vel: vec3f,
       }
 
-      struct Boid2 {
-        pos: vec3f,
-        vel: vec3f,
-      }
-
-      fn main() -> Boid2 {
+      fn main() {
         var boid = Boid();
-        var boid2 = boid;
-        return boid2;
+        var clone = boid;
+        var bird = boid;
       }"
     `);
+  });
+
+  it('copies only required props for a supertype', () => {
+    const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
+    const Bird = d.struct({ pos: d.vec2u });
+
+    function main() {
+      'use gpu';
+      const boid = Boid();
+      const bird = Bird(boid);
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec2u,
+        id: u32,
+      }
+
+      fn main() {
+        var boid = Boid();
+        var bird = boid;
+      }"
+    `);
+  });
+
+  it('throws a descriptive error when trying to copy a subtype', () => {
+    const Boid = d.struct({ pos: d.vec2u });
+    const Bird = d.struct({ pos: d.vec2u, id: d.u32 });
+
+    function main() {
+      'use gpu';
+      const boid = Boid();
+      // @ts-expect-error
+      const bird = Bird(boid);
+    }
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
+  });
+
+  it('TODO: remove', () => {
+    const Boid = d.struct({ pos: d.vec2u });
+    const boid = Boid({ pos: d.vec2u(1, 2) });
+
+    function main() {
+      'use gpu';
+      const b = Boid(boid);
+    }
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
+  });
+
+  it('requires aliases in struct calls', () => {
+    const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
+    const Bird = d.struct({ pos: d.vec2u, id: d.u32 });
+
+    const reallyExpensiveAndAlsoModifiedPrivateVarsBtw = () => {
+      'use gpu';
+      return Boid();
+    };
+
+    const main = () => {
+      'use gpu';
+      const bird = Bird(reallyExpensiveAndAlsoModifiedPrivateVarsBtw());
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
   });
 });
 
