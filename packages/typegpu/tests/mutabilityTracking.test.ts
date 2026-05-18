@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import tgpu, { std } from '../src/index.js';
+import tgpu, { d, std } from '../src/index.js';
 
 const fnShell = tgpu.fn([d.vec4u], d.u32);
 
