@@ -1,6 +1,13 @@
 import { d } from 'typegpu';
 import type { TgpuComputePipeline, TgpuRoot } from 'typegpu';
-import { BroadcastFlag, type DispatchRecord, OpKind } from './bundle.ts';
+import { BroadcastFlag, type DispatchRecord, OpKind, type Activation } from '../bundle.ts';
+import {
+  type KernelHandle,
+  type MaskBuffer,
+  type PackedWeightsBuffer,
+  type Vec4Buffer,
+  WORKGROUP_SIZE,
+} from './types.ts';
 import {
   activationSlot,
   addOp,
@@ -21,7 +28,7 @@ import {
   weightedLayout,
   weightedOffsets,
   type Vec4Op,
-} from './kernel-layouts.ts';
+} from './layouts.ts';
 import {
   binaryKernel,
   conv1x1Kernel,
@@ -32,9 +39,7 @@ import {
   globalPoolKernel,
   head2x2SigmoidKernel,
   resize2xKernel,
-} from './inference-kernels.ts';
-import type { KernelHandle, MaskBuffer, PackedWeightsBuffer, Vec4Buffer } from './kernel-types.ts';
-import { WORKGROUP_SIZE } from './kernel-types.ts';
+} from './compute.ts';
 
 const activationOps = [identityOp, reluOp, hardSwishOp, sigmoidOp] as const;
 
@@ -266,7 +271,7 @@ function shapeForHead(record: DispatchRecord) {
   };
 }
 
-function activationOp(kind: number): Vec4Op {
+function activationOp(kind: Activation): Vec4Op {
   return activationOps[kind] as Vec4Op;
 }
 

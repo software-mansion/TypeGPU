@@ -1,5 +1,5 @@
 import tgpu, { d, std } from 'typegpu';
-import { BroadcastFlag } from './bundle.ts';
+import { BroadcastFlag } from '../bundle.ts';
 import {
   activationSlot,
   binaryLayout,
@@ -12,7 +12,7 @@ import {
   poolShapeConst,
   resizeShapeConst,
   weightedLayout,
-} from './kernel-layouts.ts';
+} from './layouts.ts';
 import {
   blockedPixel,
   hwc4Index,
@@ -22,13 +22,11 @@ import {
   packedHeadWeightAt,
   packedWeightAt,
   sigmoidScalar,
-} from './kernel-helpers.ts';
-import { WORKGROUP_SIZE } from './kernel-types.ts';
+} from './helpers.ts';
+import { WORKGROUP_SIZE } from './types.ts';
 
 const KERNEL_3 = [0, 1, 2] as const;
 const KERNEL_5 = [0, 1, 2, 3, 4] as const;
-
-const poolWorkgroupSums = tgpu.workgroupVar(d.arrayOf(d.vec4f, WORKGROUP_SIZE));
 
 export const conv1x1Kernel = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
@@ -145,6 +143,8 @@ export const conv5x5Kernel = createConvKernel(KERNEL_5, 5);
 export const depthwise3x3Kernel = createDepthwiseKernel(KERNEL_3, 3);
 export const depthwise5x5Kernel = createDepthwiseKernel(KERNEL_5, 5);
 
+const poolWorkgroupSums = tgpu.workgroupVar(d.arrayOf(d.vec4f, WORKGROUP_SIZE));
+
 export const globalPoolKernel = tgpu.computeFn({
   in: {
     localIndex: d.builtin.localInvocationIndex,
@@ -179,7 +179,7 @@ export const globalPoolKernel = tgpu.computeFn({
   }
 
   if (localIndex === 0) {
-    poolLayout.$.dst[block] = poolWorkgroupSums.$[0] / d.f32(pixels);
+    poolLayout.$.dst[block] = poolWorkgroupSums.$[0] / pixels;
   }
 });
 
@@ -196,14 +196,14 @@ export const resize2xKernel = tgpu.computeFn({
 
   const block = i % shape.blocks;
   const pixel = d.u32(i / shape.blocks);
-  const outX = pixel % shape.output.x;
-  const outY = d.u32(pixel / shape.output.x);
-  const src = d.vec2f(outX, outY) * 0.5 - 0.25;
+  const out = d.vec2u(pixel % shape.output.x, d.u32(pixel / shape.output.x));
+  const src = d.vec2f(out) * 0.5 - 0.25;
   const base = std.floor(src);
   const lerp = src - base;
-  const maxCoord = d.vec2f(shape.input.xy) - d.vec2f(1);
+  const maxCoord = d.vec2f(shape.input.xy) - 1;
   const p0 = d.vec2u(std.clamp(base, d.vec2f(0), maxCoord));
   const p1 = d.vec2u(std.clamp(base + 1, d.vec2f(0), maxCoord));
+
   const top = std.mix(
     poolLayout.$.src[hwc4Index(p0.y, p0.x, block, shape.input.x, shape.blocks)],
     poolLayout.$.src[hwc4Index(p0.y, p1.x, block, shape.input.x, shape.blocks)],
@@ -214,6 +214,7 @@ export const resize2xKernel = tgpu.computeFn({
     poolLayout.$.src[hwc4Index(p1.y, p1.x, block, shape.input.x, shape.blocks)],
     lerp.x,
   );
+
   poolLayout.$.dst[i] = std.mix(top, bottom, lerp.y);
 });
 
@@ -230,16 +231,18 @@ export const binaryKernel = tgpu.computeFn({
 
   const block = i % shape.outputBlocks;
   const pixel = d.u32(i / shape.outputBlocks);
-  const outX = pixel % shape.output.x;
-  const outY = d.u32(pixel / shape.output.x);
-  let bY = outY;
+  const out = d.vec2u(pixel % shape.output.x, d.u32(pixel / shape.output.x));
+
+  let bY = out.y;
   if ((shape.flags & BroadcastFlag.H) !== 0) {
     bY = 0;
   }
-  let bX = outX;
+
+  let bX = out.x;
   if ((shape.flags & BroadcastFlag.W) !== 0) {
     bX = 0;
   }
+
   let bBlock = block;
   if ((shape.flags & BroadcastFlag.C) !== 0) {
     bBlock = 0;
@@ -250,6 +253,7 @@ export const binaryKernel = tgpu.computeFn({
   if ((shape.flags & BroadcastFlag.C) !== 0) {
     b = d.vec4f(b.x);
   }
+
   binaryLayout.$.dst[i] = binaryOpSlot.$(a, b);
 });
 
@@ -264,8 +268,7 @@ export const head2x2SigmoidKernel = tgpu.computeFn({
     return;
   }
 
-  const inX = i % shape.input.x;
-  const inY = d.u32(i / shape.input.x);
+  const inputPixel = d.vec2u(i % shape.input.x, d.u32(i / shape.input.x));
   const bias = packedHeadWeightAt(headLayout.$.offsets.biasBase).x;
 
   for (const ky of tgpu.unroll([0, 1])) {
@@ -275,7 +278,9 @@ export const head2x2SigmoidKernel = tgpu.computeFn({
       let inBlock = d.u32(0);
       while (inBlock < shape.inputBlocks) {
         const value =
-          headLayout.$.src[hwc4Index(inY, inX, inBlock, shape.input.x, shape.inputBlocks)];
+          headLayout.$.src[
+            hwc4Index(inputPixel.y, inputPixel.x, inBlock, shape.input.x, shape.inputBlocks)
+          ];
         const weight = packedHeadWeightAt(
           headLayout.$.offsets.weightBase + spatial * shape.inputBlocks + inBlock,
         );
@@ -283,9 +288,8 @@ export const head2x2SigmoidKernel = tgpu.computeFn({
         inBlock += 1;
       }
 
-      const outX = inX * 2 + d.u32(kx);
-      const outY = inY * 2 + d.u32(ky);
-      const outIndex = outY * shape.output.x + outX;
+      const out = inputPixel * 2 + d.vec2u(kx, ky);
+      const outIndex = out.y * shape.output.x + out.x;
       headLayout.$.dst[outIndex] = sigmoidScalar(sum);
     }
   }

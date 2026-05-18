@@ -1,5 +1,5 @@
 import { d, std } from 'typegpu';
-import { headLayout, weightedLayout } from './kernel-layouts.ts';
+import { headLayout, weightedLayout } from './layouts.ts';
 
 export const hwc4Index = (y: number, x: number, block: number, width: number, blocks: number) => {
   'use gpu';
