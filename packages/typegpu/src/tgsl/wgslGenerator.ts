@@ -236,8 +236,12 @@ ${this.ctx.pre}}`;
     }
   }
 
+  public _blockStatement(block: tinyest.Block, externalMap?: ExternalMap): string {
+    return `${this.ctx.pre}${this._block(block, externalMap)}`;
+  }
+
   public refVariable(id: string, dataType: wgsl.StorableData): string {
-    const varName = this.ctx.makeNameValid(id);
+    const varName = this.ctx.makeUniqueIdentifier(id, 'block');
     const ptrType = ptrFn(dataType);
     const snippet = snip(
       new RefOperator(snip(varName, dataType, 'function'), ptrType),
@@ -275,7 +279,11 @@ ${this.ctx.pre}}`;
       varOrigin = 'runtime';
     }
 
-    const snippet = snip(this.ctx.makeNameValid(id), dataType, /* origin */ varOrigin);
+    const snippet = snip(
+      this.ctx.makeUniqueIdentifier(id, 'block'),
+      dataType,
+      /* origin */ varOrigin,
+    );
     this.ctx.defineVariable(id, snippet);
     return snippet;
   }
@@ -1010,7 +1018,7 @@ Try 'return ${typeStr}(${str});' instead.
           return this._statement(node);
         }
         // simplify 'if (true) {A} else {B}' to '{A}'
-        return `${this.ctx.pre}${this._block(blockifySingleStatement(node))}`;
+        return this._blockStatement(blockifySingleStatement(node));
       }
 
       const consequent = this._block(blockifySingleStatement(consNode));
@@ -1141,7 +1149,7 @@ ${this.ctx.pre}else ${alternate}`;
     }
 
     if (statement[0] === NODE.block) {
-      return `${this.ctx.pre}${this._block(statement)}`;
+      return this._blockStatement(statement);
     }
 
     if (statement[0] === NODE.for) {
@@ -1237,12 +1245,9 @@ ${this.ctx.pre}else ${alternate}`;
 
           const blocks = elements.map(
             (e, i) =>
-              `${this.ctx.pre}// unrolled iteration #${i}\n${this.ctx.pre}${this._block(
-                blockified,
-                {
-                  [originalLoopVarName]: e,
-                },
-              )}`,
+              `${this.ctx.pre}// unrolled iteration #${i}\n${this._blockStatement(blockified, {
+                [originalLoopVarName]: e,
+              })}`,
           );
 
           return blocks.join('\n');
@@ -1250,7 +1255,7 @@ ${this.ctx.pre}else ${alternate}`;
 
         this.#unrolling = false;
 
-        const index = this.ctx.makeNameValid('i');
+        const index = this.ctx.makeUniqueIdentifier('i', 'block');
 
         const forHeaderStr = stitch`${this.ctx.pre}for (var ${index} = ${range.start}; ${index} ${range.comparison} ${range.end}; ${index} += ${range.step})`;
 
@@ -1263,7 +1268,7 @@ ${this.ctx.pre}else ${alternate}`;
         } else {
           this.ctx.indent();
           ctxIndent = true;
-          const loopVarName = this.ctx.makeNameValid(originalLoopVarName);
+          const loopVarName = this.ctx.makeUniqueIdentifier(originalLoopVarName, 'block');
           const elementSnippet = forOfUtils.getElementSnippet(
             iterableSnippet,
             snip(index, u32, 'runtime'),
@@ -1277,7 +1282,7 @@ ${this.ctx.pre}else ${alternate}`;
             false,
           )};`;
 
-          bodyStr = `{\n${loopVarDeclStr}\n${this.ctx.pre}${this._block(blockified, {
+          bodyStr = `{\n${loopVarDeclStr}\n${this._blockStatement(blockified, {
             [originalLoopVarName]: snip(loopVarName, elementType, elementSnippet.origin),
           })}\n`;
           this.ctx.dedent();
