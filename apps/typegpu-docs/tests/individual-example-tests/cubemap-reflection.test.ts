@@ -42,8 +42,8 @@ describe('cubemap reflection example', () => {
       @group(0) @binding(2) var<uniform> smoothFlag_1: u32;
 
       fn unpackVec2u(packed: vec2u) -> vec4f {
-        var xy = unpack2x16float(packed.x);
-        var zw = unpack2x16float(packed.y);
+        let xy = unpack2x16float(packed.x);
+        let zw = unpack2x16float(packed.y);
         return vec4f(xy, zw);
       }
 
@@ -52,8 +52,8 @@ describe('cubemap reflection example', () => {
       }
 
       fn getAverageNormal(v1: vec4f, v2: vec4f, v3: vec4f) -> vec4f {
-        var edge1 = (v2.xyz - v1.xyz);
-        var edge2 = (v3.xyz - v1.xyz);
+        let edge1 = (v2.xyz - v1.xyz);
+        let edge2 = (v3.xyz - v1.xyz);
         return normalize(vec4f(cross(edge1, edge2), 0f));
       }
 
@@ -73,12 +73,12 @@ describe('cubemap reflection example', () => {
           return;
         }
         let baseIndexPrev = (triangleIndex * 3u);
-        var v1 = unpackVec2u((*prevVertices)[baseIndexPrev].position);
-        var v2 = unpackVec2u((*prevVertices)[(baseIndexPrev + 1u)].position);
-        var v3 = unpackVec2u((*prevVertices)[(baseIndexPrev + 2u)].position);
-        var v12 = vec4f(normalize(calculateMidpoint(v1, v2).xyz), 1f);
-        var v23 = vec4f(normalize(calculateMidpoint(v2, v3).xyz), 1f);
-        var v31 = vec4f(normalize(calculateMidpoint(v3, v1).xyz), 1f);
+        let v1 = unpackVec2u((*prevVertices)[baseIndexPrev].position);
+        let v2 = unpackVec2u((*prevVertices)[(baseIndexPrev + 1u)].position);
+        let v3 = unpackVec2u((*prevVertices)[(baseIndexPrev + 2u)].position);
+        let v12 = vec4f(normalize(calculateMidpoint(v1, v2).xyz), 1f);
+        let v23 = vec4f(normalize(calculateMidpoint(v2, v3).xyz), 1f);
+        let v31 = vec4f(normalize(calculateMidpoint(v3, v1).xyz), 1f);
         var newVertices = array<vec4f, 12>(v1, v12, v31, v2, v23, v12, v3, v31, v23, v12, v23, v31);
         let baseIndexNext = (triangleIndex * 12u);
         // unrolled iteration #0
@@ -253,7 +253,7 @@ describe('cubemap reflection example', () => {
       }
 
       @vertex fn cubeVertexFn(@location(0) _arg_position: vec3f) -> cubeVertexFn_Output {
-        var viewPos = (camera.view * vec4f(_arg_position.xyz, 0f)).xyz;
+        let viewPos = (camera.view * vec4f(_arg_position.xyz, 0f)).xyz;
         return cubeVertexFn_Output((camera.projection * vec4f(viewPos, 1f)), _arg_position.xyz);
       }
 
@@ -315,19 +315,19 @@ describe('cubemap reflection example', () => {
       }
 
       @fragment fn fragmentFn(_arg_0: fragmentFn_Input) -> @location(0) vec4f {
-        var normalizedNormal = normalize(_arg_0.normal.xyz);
-        var normalizedLightDir = normalize(light.direction);
-        var ambientLight = ((material.ambient * light.color) * light.intensity);
+        let normalizedNormal = normalize(_arg_0.normal.xyz);
+        let normalizedLightDir = normalize(light.direction);
+        let ambientLight = ((material.ambient * light.color) * light.intensity);
         let diffuseFactor = max(dot(normalizedNormal, normalizedLightDir), 0f);
-        var diffuseLight = (((material.diffuse * light.color) * light.intensity) * diffuseFactor);
-        var viewDirection = normalize((camera.position.xyz - _arg_0.worldPos.xyz));
-        var reflectionDirection = reflect(-(normalizedLightDir), normalizedNormal);
+        let diffuseLight = (((material.diffuse * light.color) * light.intensity) * diffuseFactor);
+        let viewDirection = normalize((camera.position.xyz - _arg_0.worldPos.xyz));
+        let reflectionDirection = reflect(-(normalizedLightDir), normalizedNormal);
         let specularFactor = pow(max(dot(viewDirection, reflectionDirection), 0f), material.shininess);
-        var specularLight = (((material.specular * light.color) * light.intensity) * specularFactor);
-        var reflectionVector = reflect(-(viewDirection), normalizedNormal);
-        var environmentColor = textureSample(cubemap, texSampler, reflectionVector);
-        var directLighting = (ambientLight + (diffuseLight + specularLight));
-        var finalColor = mix(directLighting, environmentColor.rgb, material.reflectivity);
+        let specularLight = (((material.specular * light.color) * light.intensity) * specularFactor);
+        let reflectionVector = reflect(-(viewDirection), normalizedNormal);
+        let environmentColor = textureSample(cubemap, texSampler, reflectionVector);
+        let directLighting = (ambientLight + (diffuseLight + specularLight));
+        let finalColor = mix(directLighting, environmentColor.rgb, material.reflectivity);
         return vec4f(finalColor, 1f);
       }"
     `);

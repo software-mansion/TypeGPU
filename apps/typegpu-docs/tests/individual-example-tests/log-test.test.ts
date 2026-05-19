@@ -976,13 +976,13 @@ describe('console log example', () => {
       }
 
       fn wrappedCallback(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-        var simpleStruct = SimpleStruct(vec3u(1, 2, 3), 4u);
+        let simpleStruct = SimpleStruct(vec3u(1, 2, 3), 4u);
         log1(simpleStruct);
-        var complexStruct = ComplexStruct(simpleStruct, true);
+        let complexStruct = ComplexStruct(simpleStruct, true);
         log2_1(complexStruct);
-        var simpleArray = array<u32, 2>(1u, 2u);
+        let simpleArray = array<u32, 2>(1u, 2u);
         log3(simpleArray);
-        var complexArray = array<array<u32, 2>, 3>(array<u32, 2>(3u, 4u), array<u32, 2>(5u, 6u), array<u32, 2>(7u, 8u));
+        let complexArray = array<array<u32, 2>, 3>(array<u32, 2>(3u, 4u), array<u32, 2>(5u, 6u), array<u32, 2>(7u, 8u));
         log4(complexArray);
       }
 
@@ -1449,7 +1449,7 @@ describe('console log example', () => {
       }
 
       @vertex fn mainVertex(@builtin(vertex_index) _arg_vertexIndex: u32) -> mainVertex_Output {
-        var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
+        let positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
         return mainVertex_Output(vec4f(positions[_arg_vertexIndex], 0f, 1f));
       }
 
@@ -1502,7 +1502,7 @@ describe('console log example', () => {
       }
 
       @vertex fn mainVertex(@builtin(vertex_index) _arg_vertexIndex: u32) -> mainVertex_Output {
-        var positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
+        let positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
         return mainVertex_Output(vec4f(positions[_arg_vertexIndex], 0f, 1f));
       }
 

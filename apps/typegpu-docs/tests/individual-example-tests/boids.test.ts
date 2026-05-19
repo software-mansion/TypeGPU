@@ -73,7 +73,7 @@ describe('boids example', () => {
           cohesion /= f32(cohesionCount);
           cohesion -= self_1.position;
         }
-        var velocity = (((paramsBuffer.separationStrength * separation) + (paramsBuffer.alignmentStrength * alignment)) + (paramsBuffer.cohesionStrength * cohesion));
+        let velocity = (((paramsBuffer.separationStrength * separation) + (paramsBuffer.alignmentStrength * alignment)) + (paramsBuffer.cohesionStrength * cohesion));
         self_1.velocity += velocity;
         self_1.velocity = (clamp(length(self_1.velocity), 0f, 0.01f) * normalize(self_1.velocity));
         self_1.position += self_1.velocity;
@@ -108,9 +108,9 @@ describe('boids example', () => {
 
       @vertex fn mainVert(@location(0) _arg_v: vec2f, @location(1) _arg_center: vec2f, @location(2) _arg_velocity: vec2f) -> mainVert_Output {
         let angle = getRotationFromVelocity(_arg_velocity);
-        var rotated = rotate(_arg_v, angle);
-        var pos = vec4f((rotated + _arg_center), 0f, 1f);
-        var color = vec4f(((sin((colorPalette + angle)) * 0.45f) + 0.45f), 1f);
+        let rotated = rotate(_arg_v, angle);
+        let pos = vec4f((rotated + _arg_center), 0f, 1f);
+        let color = vec4f(((sin((colorPalette + angle)) * 0.45f) + 0.45f), 1f);
         return mainVert_Output(pos, color);
       }
 

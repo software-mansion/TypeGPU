@@ -14,11 +14,11 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
-        var v1 = vec4f(1);
-        var v2 = vec3f(3, 4, 5);
-        var v3 = vec2f(6);
-        var m1 = mat2x2f(0, 0, 0, 0);
-        var m2 = mat3x3f(0, 0, 0, 0, 0, 0, 0, 0, 0);
+        let v1 = vec4f(1);
+        let v2 = vec3f(3, 4, 5);
+        let v3 = vec2f(6);
+        let m1 = mat2x2f(0, 0, 0, 0);
+        let m2 = mat3x3f(0, 0, 0, 0, 0, 0, 0, 0, 0);
       }"
     `);
   });
@@ -34,11 +34,11 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
-        var v1 = vec4f(-1);
-        var v2 = vec3f(-1, -2, -3);
-        var v3 = vec2f();
-        var m1 = mat2x2f(0, 0, 0, 0);
-        var m2 = mat3x3f(0, 0, 0, 0, 0, 0, 0, 0, 0);
+        let v1 = vec4f(-1);
+        let v2 = vec3f(-1, -2, -3);
+        let v3 = vec2f();
+        let m1 = mat2x2f(0, 0, 0, 0);
+        let m2 = mat3x3f(0, 0, 0, 0, 0, 0, 0, 0, 0);
       }"
     `);
   });
@@ -58,14 +58,14 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
-        var v1 = vec2f(6);
-        var v2 = vec3f(4, 6, 8);
-        var v3 = vec4f();
-        var v4 = vec3f();
-        var m1 = mat2x2f(0, 0, 0, 0);
-        var m2 = vec3f();
-        var m3 = mat4x4f(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        var m4 = mat2x2f(0, 0, 0, 0);
+        let v1 = vec2f(6);
+        let v2 = vec3f(4, 6, 8);
+        let v3 = vec4f();
+        let v4 = vec3f();
+        let m1 = mat2x2f(0, 0, 0, 0);
+        let m2 = vec3f();
+        let m3 = mat4x4f(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        let m4 = mat2x2f(0, 0, 0, 0);
       }"
     `);
   });
@@ -79,9 +79,9 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
-        var v1 = vec4f(0.5);
-        var v2 = vec3f(6, 3, 2);
-        var v3 = vec2f(0.25);
+        let v1 = vec4f(0.5);
+        let v2 = vec3f(6, 3, 2);
+        let v3 = vec2f(0.25);
       }"
     `);
   });
@@ -94,8 +94,8 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
-        var v1 = vec4f(1);
-        var v2 = vec3f(0.5, 1.5, 3.5);
+        let v1 = vec4f(1);
+        let v2 = vec3f(0.5, 1.5, 3.5);
       }"
     `);
   });
@@ -110,7 +110,7 @@ describe('wgslGenerator', () => {
     expect(testFn()).toStrictEqual(d.vec2f(6, 12));
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() -> vec2f {
-        var v1 = vec2f(1, 2);
+        let v1 = vec2f(1, 2);
         return ((v1 * 2f) * 3f);
       }"
     `);
@@ -155,7 +155,7 @@ describe('wgslGenerator', () => {
       }
 
       fn testFn() -> vec3f {
-        var s = Struct(vec3f(2));
+        let s = Struct(vec3f(2));
         return ((s.vec * s.vec) * 2f);
       }"
     `);
@@ -174,9 +174,9 @@ describe('wgslGenerator', () => {
       "@group(0) @binding(0) var<uniform> fooUniform: vec3f;
 
       fn testFn() {
-        var v1 = (fooUniform * 2f);
-        var v2 = (vec3f(1, 2, 3) * fooUniform);
-        var v3 = ((fooUniform * fooUniform) * 2f);
+        let v1 = (fooUniform * 2f);
+        let v2 = (vec3f(1, 2, 3) * fooUniform);
+        let v3 = ((fooUniform * fooUniform) * 2f);
       }"
     `);
   });
@@ -195,9 +195,9 @@ describe('wgslGenerator', () => {
     expect(testFn()).toStrictEqual(d.vec3f(26));
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() -> vec3f {
-        var v1 = vec3f(4);
-        var v2 = vec3f(6);
-        var v3 = vec3f(16);
+        let v1 = vec3f(4);
+        let v2 = vec3f(6);
+        let v3 = vec3f(16);
         return ((v1 + v2) + v3);
       }"
     `);
@@ -230,7 +230,7 @@ describe('wgslGenerator', () => {
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn main() -> vec3f {
         const a = 1u;
-        var b = vec3f(2);
+        let b = vec3f(2);
         return (b * f32(a));
       }"
     `);
