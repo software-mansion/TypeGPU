@@ -5,40 +5,9 @@
 // NOTE: This is a barrel file, internal files should not import things from this file
 
 import { Operator } from 'tsover-runtime';
-import { type InfixOperatorName, infixOperators } from '../tgsl/accessProp.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
-import { InfixDispatch } from '../tgsl/infixDispatch.ts';
-import { inCodegenMode } from '../execMode.ts';
-
-function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
-  base: T,
-  operator: InfixOperatorName,
-  operatorSymbol: symbol,
-) {
-  const opImpl = infixOperators[operator];
-
-  Object.defineProperty(base.prototype, operatorSymbol, {
-    value: opImpl,
-  });
-
-  // To optimize infix operators on JS side,
-  // we return this function instead of creating an infix dispatch.
-  // Returning this from a getter will work as if this was a vector/matrix's method.
-  function jsInfix(this: unknown, arg: unknown) {
-    // operator will perform all necessary type checks
-    return opImpl(this as never, arg as never);
-  }
-
-  Object.defineProperty(base.prototype, operator, {
-    get() {
-      if (inCodegenMode()) {
-        return new InfixDispatch(this, opImpl);
-      }
-      return jsInfix;
-    },
-  });
-}
+import { assignInfixOperator } from '../tgsl/infixDispatch.ts';
 
 assignInfixOperator(VecBase, 'add', Operator.plus);
 assignInfixOperator(MatBase, 'add', Operator.plus);

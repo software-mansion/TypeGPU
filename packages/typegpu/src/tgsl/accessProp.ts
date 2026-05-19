@@ -31,10 +31,9 @@ import {
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
-import { add, bitShiftLeft, bitShiftRight, div, mod, mul, sub } from '../std/operators.ts';
 import { isKnownAtComptime } from '../types.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
-import { InfixDispatch } from './infixDispatch.ts';
+import { InfixDispatch, infixOperators, type InfixOperatorName } from './infixDispatch.ts';
 
 const infixKinds = [
   'vec2f',
@@ -53,19 +52,6 @@ const infixKinds = [
   'mat3x3f',
   'mat4x4f',
 ];
-
-export const infixOperators = {
-  add,
-  sub,
-  mul,
-  div,
-  mod,
-  bitShiftLeft,
-  bitShiftRight,
-} as const;
-
-export type InfixOperatorName = keyof typeof infixOperators;
-export type InfixOperator = (typeof infixOperators)[InfixOperatorName];
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
