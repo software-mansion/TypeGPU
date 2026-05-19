@@ -22,7 +22,7 @@ function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
     value: opImpl,
   });
 
-  // To optimize infix operators on JS side, this function,
+  // To optimize infix operators on JS side,
   // we return this function instead of creating an infix dispatch.
   // Returning this from a getter will work as if this was a vector/matrix's method.
   function jsInfix(this: unknown, arg: unknown) {
