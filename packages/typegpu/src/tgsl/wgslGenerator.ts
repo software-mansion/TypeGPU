@@ -1428,6 +1428,18 @@ function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
     );
   }
 
+  if (mutated.origin === 'uniform') {
+    throw new WgslTypeError(
+      `'${stringifyNode(expr)}' is invalid, because uniform buffers cannot be mutated.`,
+    );
+  }
+
+  if (mutated.origin === 'readonly') {
+    throw new WgslTypeError(
+      `'${stringifyNode(expr)}' is invalid, because readonly buffers cannot be mutated.`,
+    );
+  }
+
   if (mutated.origin === 'argument') {
     throw new WgslTypeError(
       `'${stringifyNode(expr)}' is invalid, because non-pointer arguments cannot be mutated.`,
