@@ -26,7 +26,7 @@ describe('xor dev centrifuge example', () => {
       }
 
       @vertex fn vertexMain(@builtin(vertex_index) _arg_vertexIndex: u32) -> vertexMain_Output {
-        var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
+        let pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
         return vertexMain_Output(vec4f(pos[_arg_vertexIndex], 0f, 1f), pos[_arg_vertexIndex]);
       }
 
@@ -53,16 +53,16 @@ describe('xor dev centrifuge example', () => {
 
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
         let params = (&paramsUniform);
-        var ratio = vec2f((*params).aspectRatio, 1f);
-        var dir = normalize(vec3f((_arg_0.uv * ratio), -1f));
+        let ratio = vec2f((*params).aspectRatio, 1f);
+        let dir = normalize(vec3f((_arg_0.uv * ratio), -1f));
         var z = 0f;
         var acc = vec3f();
         for (var i = 0; (i < (*params).tunnelDepth); i++) {
           var p = (dir * z);
           p.x += (*params).cameraPos.x;
           p.y += (*params).cameraPos.y;
-          var coords = vec3f(((atan2(p.y, p.x) * (*params).bigStrips) + (*params).time), ((p.z * (*params).dollyZoom) - (5f * (*params).time)), (length(p.xy) - 11f));
-          var coords2 = (cos((coords + cos((coords * (*params).smallStrips)))) - 1f);
+          let coords = vec3f(((atan2(p.y, p.x) * (*params).bigStrips) + (*params).time), ((p.z * (*params).dollyZoom) - (5f * (*params).time)), (length(p.xy) - 11f));
+          let coords2 = (cos((coords + cos((coords * (*params).smallStrips)))) - 1f);
           let dd = ((length(vec4f(coords.z, coords2)) * 0.5f) - 0.1f);
           acc += ((1.2f - cos(((*params).color * p.z))) / dd);
           z += dd;

@@ -28,8 +28,8 @@ describe('indents', () => {
       }
 
       fn updateParicle(particle: Particle, gravity: vec3f, deltaTime: f32) -> Particle {
-        var newVelocity = ((particle.velocity * gravity) * deltaTime);
-        var newPosition = (particle.position + (newVelocity * deltaTime));
+        let newVelocity = ((particle.velocity * gravity) * deltaTime);
+        let newPosition = (particle.position + (newVelocity * deltaTime));
         return Particle(newPosition, newVelocity);
       }"
     `);
@@ -90,8 +90,8 @@ describe('indents', () => {
       @group(0) @binding(0) var<storage, read> systemData: SystemData;
 
       fn updateParicle(particle: Particle, gravity: vec3f, deltaTime: f32) -> Particle {
-        var newVelocity = ((particle.velocity * gravity) * deltaTime);
-        var newPosition = (particle.position + (newVelocity * deltaTime));
+        let newVelocity = ((particle.velocity * gravity) * deltaTime);
+        let newPosition = (particle.position + (newVelocity * deltaTime));
         return Particle(newPosition, newVelocity);
       }
 
@@ -207,9 +207,9 @@ describe('indents', () => {
 
       fn updateParticle(particle: Particle, gravity: vec3f, deltaTime: f32) -> Particle {
         let density = getDensityAt(particle.physics.position);
-        var force = (gravity * density);
-        var newVelocity = (particle.physics.velocity + (force * deltaTime));
-        var newPosition = (particle.physics.position + (newVelocity * deltaTime));
+        let force = (gravity * density);
+        let newVelocity = (particle.physics.velocity + (force * deltaTime));
+        let newPosition = (particle.physics.position + (newVelocity * deltaTime));
         return Particle(particle.id, PhysicsData(particle.physics.weight, newVelocity, newPosition));
       }
 
@@ -375,16 +375,16 @@ describe('indents', () => {
       @vertex fn someVertex(@location(0) _arg_position: vec4f, @location(1) _arg_something: vec4f) -> someVertex_Output {
         let uniBoid = (&boids);
         for (var i = 0u; (i < 1u); i++) {
-          var sampled_1 = textureSample(sampled, sampler_1, vec2f(0.5), i);
-          var someVal = textureLoad(smoothRender, vec2i(), 0);
+          let sampled_1 = textureSample(sampled, sampler_1, vec2f(0.5), i);
+          let someVal = textureLoad(smoothRender, vec2i(), 0);
           if (((someVal.x + sampled_1.x) > 0.5f)) {
-            var newPos = ((*uniBoid).position + vec4f(1, 2, 3, 4));
+            let newPos = ((*uniBoid).position + vec4f(1, 2, 3, 4));
           }
           else {
             while (true) {
-              var newPos = ((*uniBoid).position + vec4f(1, 2, 3, 4));
+              let newPos = ((*uniBoid).position + vec4f(1, 2, 3, 4));
               if ((newPos.x > 0f)) {
-                var evenNewer = (newPos + _arg_position);
+                let evenNewer = (newPos + _arg_position);
               }
             }
           }

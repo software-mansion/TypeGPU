@@ -122,6 +122,14 @@ export type FunctionScopeLayer = {
    * All types used in `return` statements.
    */
   reportedReturnTypes: Set<BaseData>;
+  /**
+   * Maps variables to their modifier placeholders
+   */
+  placeholderForVariable: Map<Snippet, string>;
+  /**
+   * Local variables that need `var` modifier.
+   */
+  modifiedVariables: Set<Snippet>;
 };
 
 export type SlotBindingLayer = {

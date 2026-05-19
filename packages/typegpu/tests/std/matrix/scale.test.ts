@@ -21,7 +21,7 @@ describe('scale', () => {
 
     expect(tgpu.resolve([scaleFn])).toMatchInlineSnapshot(`
       "fn scaleFn() {
-        var resultExpression = mat4x4f(2, 0, 0, 1, 0, 2, 0, 0, 2, 0, 4, 0, 0, 2, 0, 1);
+        let resultExpression = mat4x4f(2, 0, 0, 1, 0, 2, 0, 0, 2, 0, 4, 0, 0, 2, 0, 1);
       }"
     `);
   });
