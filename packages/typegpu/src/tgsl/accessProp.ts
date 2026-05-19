@@ -39,7 +39,7 @@ import {
 import { $gpuCallable } from '../shared/symbols.ts';
 import { add, bitShiftLeft, bitShiftRight, div, mod, mul, sub } from '../std/operators.ts';
 import { isKnownAtComptime } from '../types.ts';
-import { coerceToSnippet } from './generationHelpers.ts';
+import { accessStructProp, coerceToSnippet } from './generationHelpers.ts';
 
 const infixKinds = [
   'vec2f',
@@ -131,13 +131,7 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
   }
 
   if (isWgslStruct(target.dataType) || isUnstruct(target.dataType)) {
-    let propType = target.dataType.propTypes[propName];
-    if (!propType) {
-      return undefined;
-    }
-    propType = undecorate(propType);
-
-    return snip(stitch`${target}.${propName}`, propType, /* origin */ target.origin);
+    return accessStructProp(target, propName);
   }
 
   if (target.dataType instanceof AutoStruct) {
