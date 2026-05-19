@@ -14,7 +14,7 @@ import { isTgpuRange } from '../std/range.ts';
 export function getLoopVarKind(elementSnippet: Snippet) {
   // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
   // an implicit pointer to it
-  return elementSnippet.origin === 'constant-tgpu-const-ref' ? 'const' : 'let';
+  return elementSnippet.origin === 'constant-immutable-def' ? 'const' : 'let';
 }
 
 export function getElementSnippet(iterableSnippet: Snippet, index: Snippet) {
@@ -42,8 +42,8 @@ export function getElementType(elementSnippet: Snippet, iterableSnippet: Snippet
     wgsl.isNaturallyEphemeral(elementSnippet.dataType) ||
     elementSnippet.origin === 'runtime' ||
     elementSnippet.origin === 'constant' ||
-    elementSnippet.origin === 'constant-tgpu-const-ref' ||
-    elementSnippet.origin === 'runtime-tgpu-const-ref'
+    elementSnippet.origin === 'constant-immutable-def' ||
+    elementSnippet.origin === 'runtime-immutable-def'
   ) {
     return elementType;
   }

@@ -56,7 +56,7 @@ describe('Member Access', () => {
       // Taking a reference that is local to this function
       const boidRef = boid;
       return boidRef.pos;
-    }).toStrictEqual(['(*boidRef).pos', d.vec3f, 'local']);
+    }).toStrictEqual(['(*boidRef).pos', d.vec3f, 'local-def']);
   });
 
   it('derefs access to storage with proper address space', ({ root }) => {

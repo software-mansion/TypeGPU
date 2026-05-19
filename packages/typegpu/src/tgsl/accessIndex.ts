@@ -23,9 +23,9 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
 
     let origin: Origin;
 
-    if (target.origin === 'constant-tgpu-const-ref') {
+    if (target.origin === 'constant-immutable-def') {
       // Constant refs stay const unless the element/index forces runtime materialization
-      origin = index.origin === 'constant' ? 'constant-tgpu-const-ref' : 'runtime-tgpu-const-ref';
+      origin = index.origin === 'constant' ? 'constant-immutable-def' : 'runtime-immutable-def';
     } else if (target.origin === 'constant') {
       // Ephemeral constants indexed with constants stay constant, otherwise they become runtime-known
       origin = index.origin === 'constant' ? 'constant' : 'runtime';

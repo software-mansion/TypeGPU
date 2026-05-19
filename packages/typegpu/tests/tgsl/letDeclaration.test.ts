@@ -11,7 +11,7 @@ describe('let declarations', () => {
       return a;
     }
 
-    expectSnippetOf(foo).toStrictEqual(['a', d.f32, 'local']);
+    expectSnippetOf(foo).toStrictEqual(['a', d.f32, 'local-def']);
 
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() -> f32 {
@@ -28,7 +28,7 @@ describe('let declarations', () => {
       return a;
     }
 
-    expectSnippetOf(foo).toStrictEqual(['a', d.i32, 'local']);
+    expectSnippetOf(foo).toStrictEqual(['a', d.i32, 'local-def']);
 
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() -> i32 {

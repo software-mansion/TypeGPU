@@ -206,7 +206,7 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
       // Swizzling creates new vectors (unless they're on the lhs of an assignment, but that's not yet supported in WGSL)
       /* origin */ propLength === 1
         ? target.origin
-        : target.origin === 'constant' || target.origin === 'constant-tgpu-const-ref'
+        : target.origin === 'constant' || target.origin === 'constant-immutable-def'
           ? 'constant'
           : 'runtime',
     );
