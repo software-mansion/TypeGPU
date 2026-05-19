@@ -113,7 +113,7 @@ export async function createBindGroupProgram(canvas: HTMLCanvasElement) {
       let particleDistance = d.f32(1);
       for (const particle of displayLayout.$.particles) {
         const offset = std.abs(uv - particle.position);
-        const wrappedOffset = std.min(offset, d.vec2f(1) - offset);
+        const wrappedOffset = std.min(offset, 1 - offset);
         particleDistance = std.min(
           particleDistance,
           sdBox2d(wrappedOffset, d.vec2f(PARTICLE_HALF_SIZE)),
