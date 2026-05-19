@@ -71,11 +71,11 @@ describe('clouds example', () => {
       @group(1) @binding(2) var sampler_1: sampler;
 
       fn noise3d(pos: vec3f) -> f32 {
-        var idx = floor(pos);
-        var frac = fract(pos);
-        var smooth_1 = ((frac * frac) * (3f - (2f * frac)));
-        var texCoord0 = fract((((idx.xy + frac.xy) + (vec2f(37, 239) * idx.z)) / 256f));
-        var texCoord1 = fract((((idx.xy + frac.xy) + (vec2f(37, 239) * (idx.z + 1f))) / 256f));
+        let idx = floor(pos);
+        let frac = fract(pos);
+        let smooth_1 = ((frac * frac) * (3f - (2f * frac)));
+        let texCoord0 = fract((((idx.xy + frac.xy) + (vec2f(37, 239) * idx.z)) / 256f));
+        let texCoord1 = fract((((idx.xy + frac.xy) + (vec2f(37, 239) * (idx.z + 1f))) / 256f));
         let val0 = textureSampleLevel(noiseTexture, sampler_1, texCoord0, 0).x;
         let val1 = textureSampleLevel(noiseTexture, sampler_1, texCoord1, 0).x;
         return ((mix(val0, val1, smooth_1.z) * 2f) - 1f);
@@ -116,17 +116,17 @@ describe('clouds example', () => {
         let stepSize = (1f / f32(maxSteps));
         var dist = (randFloat01() * stepSize);
         for (var i = 0; (i < maxSteps); i++) {
-          var samplePos = (rayOrigin + ((rayDir * dist) * maxDepth));
+          let samplePos = (rayOrigin + ((rayDir * dist) * maxDepth));
           let cloudDensity = sampleDensity(samplePos);
           if ((cloudDensity > 0f)) {
-            var shadowPos = (samplePos + sunDir);
+            let shadowPos = (samplePos + sunDir);
             let shadowDensity = sampleDensityCheap(shadowPos);
             let shadow = saturate((cloudDensity - shadowDensity));
             let lightVal = mix(0.3f, 1f, shadow);
-            var light = (vec3f(0.6600000262260437, 0.4949999749660492, 0.824999988079071) + ((vec3f(1, 0.699999988079071, 0.30000001192092896) * lightVal) * 0.9f));
-            var color = mix(vec3f(1), vec3f(0.20000000298023224), cloudDensity);
-            var lit = (color * light);
-            var contrib = ((vec4f(lit, 1f) * cloudDensity) * (0.88f - accum.a));
+            let light = (vec3f(0.6600000262260437, 0.4949999749660492, 0.824999988079071) + ((vec3f(1, 0.699999988079071, 0.30000001192092896) * lightVal) * 0.9f));
+            let color = mix(vec3f(1), vec3f(0.20000000298023224), cloudDensity);
+            let lit = (color * light);
+            let contrib = ((vec4f(lit, 1f) * cloudDensity) * (0.88f - accum.a));
             accum += contrib;
             if ((accum.a >= 0.879f)) {
               break;
@@ -147,16 +147,16 @@ describe('clouds example', () => {
         let aspect = ((*screenRes).x / (*screenRes).y);
         var screenPos = ((_arg_0.uv - 0.5f) * 2f);
         screenPos = vec2f((screenPos.x * max(aspect, 1f)), (screenPos.y * max((1f / aspect), 1f)));
-        var sunDir = vec3f(1, 0, 0);
+        let sunDir = vec3f(1, 0, 0);
         let time = params.time;
-        var rayOrigin = vec3f((sin((time * 0.6f)) * 0.5f), ((cos((time * 0.8f)) * 0.5f) - 1f), (time * 1f));
-        var rayDir = normalize(vec3f(screenPos.x, screenPos.y, 1f));
+        let rayOrigin = vec3f((sin((time * 0.6f)) * 0.5f), ((cos((time * 0.8f)) * 0.5f) - 1f), (time * 1f));
+        let rayDir = normalize(vec3f(screenPos.x, screenPos.y, 1f));
         let sunDot = saturate(dot(rayDir, sunDir));
         let sunGlow = pow(sunDot, 1.371742112482853f);
         var skyCol = (vec3f(0.75, 0.6600000262260437, 0.8999999761581421) - ((vec3f(1, 0.699999988079071, 0.4300000071525574) * rayDir.y) * 0.35f));
         skyCol += (vec3f(1, 0.3700000047683716, 0.17000000178813934) * sunGlow);
-        var cloudCol = raymarch(rayOrigin, rayDir, sunDir);
-        var finalCol = ((skyCol * (1.1f - cloudCol.a)) + cloudCol.rgb);
+        let cloudCol = raymarch(rayOrigin, rayDir, sunDir);
+        let finalCol = ((skyCol * (1.1f - cloudCol.a)) + cloudCol.rgb);
         return vec4f(finalCol, 1f);
       }"
     `);

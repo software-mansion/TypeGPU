@@ -828,10 +828,10 @@ describe('v3f', () => {
 
       expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() {
-          var planarPosLocal = vec2f(1, 2);
-          var one = vec3f(1, 2, 12);
-          var two = vec3f(planarPosLocal, 12f);
-          var three = vec3f(1, 2, 12);
+          let planarPosLocal = vec2f(1, 2);
+          let one = vec3f(1, 2, 12);
+          let two = vec3f(planarPosLocal, 12f);
+          let three = vec3f(1, 2, 12);
         }"
       `);
     });
@@ -875,10 +875,10 @@ describe('v4f', () => {
 
       expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() {
-          var green = vec3f(0, 1, 0);
-          var one = vec4f(0.125, 0.25, 0.375, 1);
-          var two = vec4f(green, 1f);
-          var three = vec4f(0, 0, 1, 1);
+          let green = vec3f(0, 1, 0);
+          let one = vec4f(0.125, 0.25, 0.375, 1);
+          let two = vec4f(green, 1f);
+          let three = vec4f(0, 0, 1, 1);
         }"
       `);
     });
@@ -904,10 +904,10 @@ describe('v4f', () => {
 
       expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() {
-          var fooLocal = vec3f(0.25, 0.5, 0.75);
-          var one = vec4f(0.25, 0.25, 0.5, 0.75);
-          var two = vec4f(0.1f, fooLocal);
-          var three = vec4f(0.125, 0.25, 0.5, 0.75);
+          let fooLocal = vec3f(0.25, 0.5, 0.75);
+          let one = vec4f(0.25, 0.25, 0.5, 0.75);
+          let two = vec4f(0.1f, fooLocal);
+          let three = vec4f(0.125, 0.25, 0.5, 0.75);
         }"
       `);
     });
@@ -959,10 +959,10 @@ describe('v4b', () => {
 
       expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() {
-          var vecLocal = vec3<bool>(true);
-          var one = vec4<bool>(true, false, true, true);
-          var two = vec4<bool>(vecLocal, false);
-          var three = vec4<bool>(false, false, true, true);
+          let vecLocal = vec3<bool>(true);
+          let one = vec4<bool>(true, false, true, true);
+          let two = vec4<bool>(vecLocal, false);
+          let three = vec4<bool>(false, false, true, true);
         }"
       `);
     });
@@ -1000,8 +1000,8 @@ describe('type predicates', () => {
       }
 
       fn main() {
-        var foo = ceil_1(vec3f(1, 2, 3));
-        var bar = ceil_2(vec3i(1, 2, 3));
+        let foo = ceil_1(vec3f(1, 2, 3));
+        let bar = ceil_2(vec3i(1, 2, 3));
       }"
     `);
   });
@@ -1203,7 +1203,7 @@ describe('RGBA swizzles', () => {
 
       expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() -> vec3f {
-          var color = vec4f(1, 0.5, 0.25, 1);
+          let color = vec4f(1, 0.5, 0.25, 1);
           return color.rgb;
         }"
       `);
@@ -1220,7 +1220,7 @@ describe('RGBA swizzles', () => {
 
       expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() -> vec4f {
-          var color = vec4f(1, 0.5, 0.25, 1);
+          let color = vec4f(1, 0.5, 0.25, 1);
           return color.bgra;
         }"
       `);
@@ -1252,7 +1252,7 @@ describe('RGBA swizzles', () => {
 
       expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
         "fn main() -> f32 {
-          var color = vec4f(1, 0.5, 0.25, 0.75);
+          let color = vec4f(1, 0.5, 0.25, 0.75);
           return color.a;
         }"
       `);

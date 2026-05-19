@@ -40,10 +40,10 @@ describe('wgsl resolution example', () => {
 
       @vertex fn vertex_shader(@location(0) _arg_v: vec2f, @location(1) _arg_center: vec2f, @location(2) _arg_velocity: vec2f) -> vertex_shader_Output {
         let angle = get_rotation_from_velocity_util(_arg_velocity);
-        var rotated = rotate_util(_arg_v, angle);
-        var pos = vec4f((rotated.x + _arg_center.x), (rotated.y + _arg_center.y), 0f, 1f);
+        let rotated = rotate_util(_arg_v, angle);
+        let pos = vec4f((rotated.x + _arg_center.x), (rotated.y + _arg_center.y), 0f, 1f);
         let colorPalette = (&colorPalette_1);
-        var color = vec4f(((sin((angle + (*colorPalette).x)) * 0.45f) + 0.45f), ((sin((angle + (*colorPalette).y)) * 0.45f) + 0.45f), ((sin((angle + (*colorPalette).z)) * 0.45f) + 0.45f), 1f);
+        let color = vec4f(((sin((angle + (*colorPalette).x)) * 0.45f) + 0.45f), ((sin((angle + (*colorPalette).y)) * 0.45f) + 0.45f), ((sin((angle + (*colorPalette).z)) * 0.45f) + 0.45f), 1f);
         return vertex_shader_Output(pos, color);
       }
 

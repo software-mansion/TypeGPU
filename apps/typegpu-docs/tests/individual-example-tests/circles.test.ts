@@ -58,7 +58,7 @@ describe('circles example', () => {
       const PI: f32 = 3.141592653589793f;
 
       fn circle(vertexIndex: u32) -> vec2f {
-        var subdiv = getSubdivLevel(vertexIndex);
+        let subdiv = getSubdivLevel(vertexIndex);
         let i = consecutiveTriangleVertexIndex(subdiv.vertexIndexInLevel);
         let pointCount = subdiv.pointCount;
         let angle = (((2f * PI) * f32(i)) / f32(pointCount));
@@ -73,8 +73,8 @@ describe('circles example', () => {
 
       @vertex fn mainVertexMaxArea(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) instanceIndex: u32) -> mainVertexMaxArea_Output {
         let C = (&circles[instanceIndex]);
-        var unit = circle(vertexIndex);
-        var pos = ((*C).position + (unit * (*C).radius));
+        let unit = circle(vertexIndex);
+        let pos = ((*C).position + (unit * (*C).radius));
         return mainVertexMaxArea_Output(vec4f(pos, 0f, 1f), unit, instanceIndex);
       }
 
@@ -84,7 +84,7 @@ describe('circles example', () => {
       }
 
       @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
-        var color = vec3f(1f, cos(f32(_arg_0.instanceIndex)), sin((5f * f32(_arg_0.instanceIndex))));
+        let color = vec3f(1f, cos(f32(_arg_0.instanceIndex)), sin((5f * f32(_arg_0.instanceIndex))));
         let r = length(_arg_0.uv);
         return vec4f(mix(color, vec3f(), clamp(((r - 0.9f) * 20f), 0f, 0.5f)), 1f);
       }"

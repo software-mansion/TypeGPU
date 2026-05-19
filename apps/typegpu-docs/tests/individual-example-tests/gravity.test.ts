@@ -98,11 +98,11 @@ describe('gravity example', () => {
             }
             if (((current.collisionBehavior == 1u) && ((*other).collisionBehavior == 1u))) {
               if (isSmaller(currentId, otherId)) {
-                var dir = normalize((current.position - (*other).position));
+                let dir = normalize((current.position - (*other).position));
                 current.position = ((*other).position + (dir * (radiusOf(current) + radiusOf((*other)))));
               }
-              var posDiff = (current.position - (*other).position);
-              var velDiff = (current.velocity - (*other).velocity);
+              let posDiff = (current.position - (*other).position);
+              let velDiff = (current.velocity - (*other).velocity);
               let posDiffFactor = ((((2f * (*other).mass) / (current.mass + (*other).mass)) * dot(velDiff, posDiff)) / dot(posDiff, posDiff));
               current.velocity = ((current.velocity - (posDiff * posDiffFactor)) * 0.99f);
             }
@@ -163,7 +163,7 @@ describe('gravity example', () => {
             }
             let dist = max((radiusOf(current) + radiusOf((*other))), distance(current.position, (*other).position));
             let gravityForce = (((current.mass * (*other).mass) / dist) / dist);
-            var direction = normalize(((*other).position - current.position));
+            let direction = normalize(((*other).position - current.position));
             current.velocity += ((direction * (gravityForce / current.mass)) * dt);
           }
           current.position += (current.velocity * dt);
@@ -188,7 +188,7 @@ describe('gravity example', () => {
       }
 
       @vertex fn skyBoxVertex(@location(0) _arg_position: vec3f) -> skyBoxVertex_Output {
-        var viewPos = (camera.view * vec4f(_arg_position, 0f)).xyz;
+        let viewPos = (camera.view * vec4f(_arg_position, 0f)).xyz;
         return skyBoxVertex_Output((camera.projection * vec4f(viewPos, 1f)), _arg_position.xyz);
       }
 
@@ -244,9 +244,9 @@ describe('gravity example', () => {
 
       @vertex fn mainVertex(@location(0) _arg_position: vec3f, @location(1) _arg_normal: vec3f, @location(2) _arg_uv: vec2f, @builtin(instance_index) _arg_instanceIndex: u32) -> mainVertex_Output {
         let currentBody = (&celestialBodies[_arg_instanceIndex]);
-        var worldPosition = ((*currentBody).position + (_arg_position.xyz * radiusOf((*currentBody))));
+        let worldPosition = ((*currentBody).position + (_arg_position.xyz * radiusOf((*currentBody))));
         let camera = (&camera_1);
-        var positionOnCanvas = (((*camera).projection * (*camera).view) * vec4f(worldPosition, 1f));
+        let positionOnCanvas = (((*camera).projection * (*camera).view) * vec4f(worldPosition, 1f));
         return mainVertex_Output(positionOnCanvas, _arg_uv, _arg_normal, worldPosition, (*currentBody).textureIndex, (*currentBody).destroyed, (*currentBody).ambientLightFactor);
       }
 
@@ -269,13 +269,13 @@ describe('gravity example', () => {
         if ((_arg_0.destroyed == 1u)) {
           discard;;
         }
-        var lightColor = vec3f(1, 0.8999999761581421, 0.8999999761581421);
-        var textureColor = textureSample(celestialBodyTextures, sampler_1, _arg_0.uv, _arg_0.sphereTextureIndex).rgb;
-        var ambient = ((textureColor * lightColor) * _arg_0.ambientLightFactor);
+        let lightColor = vec3f(1, 0.8999999761581421, 0.8999999761581421);
+        let textureColor = textureSample(celestialBodyTextures, sampler_1, _arg_0.uv, _arg_0.sphereTextureIndex).rgb;
+        let ambient = ((textureColor * lightColor) * _arg_0.ambientLightFactor);
         let normal = _arg_0.normals;
-        var lightDirection = normalize((lightSource - _arg_0.worldPosition));
+        let lightDirection = normalize((lightSource - _arg_0.worldPosition));
         let cosTheta = dot(normal, lightDirection);
-        var diffuse = ((textureColor * lightColor) * max(0f, cosTheta));
+        let diffuse = ((textureColor * lightColor) * max(0f, cosTheta));
         return vec4f((ambient + diffuse), 1f);
       }"
     `);
