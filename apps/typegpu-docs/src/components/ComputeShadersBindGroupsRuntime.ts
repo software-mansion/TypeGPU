@@ -95,7 +95,7 @@ export async function createBindGroupProgram(canvas: HTMLCanvasElement) {
   const simulate = root.createGuardedComputePipeline((i) => {
     'use gpu';
     const particle = computeLayout.$.particles[i];
-    computeLayout.$.particles[i].position = std.fract(particle.position.add(particle.velocity));
+    computeLayout.$.particles[i].position = std.fract(particle.position + particle.velocity);
   });
 
   const render = root.createRenderPipeline({
@@ -104,7 +104,7 @@ export async function createBindGroupProgram(canvas: HTMLCanvasElement) {
       'use gpu';
       const background = d.vec3f(0.09, 0.08, 0.15);
       const gridColor = d.vec3f(0.19, 0.18, 0.29);
-      const gridUv = std.fract(uv.mul(8));
+      const gridUv = std.fract(uv * 8);
       const verticalGrid = std.min(gridUv.x, 1 - gridUv.x);
       const horizontalGrid = std.min(gridUv.y, 1 - gridUv.y);
       const gridDistance = std.min(verticalGrid, horizontalGrid);
@@ -112,8 +112,8 @@ export async function createBindGroupProgram(canvas: HTMLCanvasElement) {
 
       let particleDistance = d.f32(1);
       for (const particle of displayLayout.$.particles) {
-        const offset = std.abs(uv.sub(particle.position));
-        const wrappedOffset = std.min(offset, d.vec2f(1).sub(offset));
+        const offset = std.abs(uv - particle.position);
+        const wrappedOffset = std.min(offset, d.vec2f(1) - offset);
         particleDistance = std.min(
           particleDistance,
           sdBox2d(wrappedOffset, d.vec2f(PARTICLE_HALF_SIZE)),
