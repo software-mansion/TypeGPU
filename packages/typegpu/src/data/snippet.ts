@@ -4,7 +4,7 @@ import { DEV } from '../shared/env.ts';
 import { type BaseData, isNumericSchema } from './wgslTypes.ts';
 
 export type Origin =
-  // ADDRESS SPACE ORIGINS
+  // --- ADDRESS SPACE ORIGINS
   | 'uniform' /*   defined in the 'uniform' address space  */
   | 'readonly' /*  defined in the 'storage' address space, with 'read' access  */
   | 'mutable' /*   defined in the 'storage' address space, with 'read-write' access  */
@@ -12,28 +12,26 @@ export type Origin =
   | 'private' /*   defined in the 'private' address space  */
   | 'handle' /*    defined in the 'handle' address space  */
   | 'function' /*  defined in a callee, passed down to us as an argument ('function' address space)  */
+  // --- DEFINITIONS
+  // defined in the current function
+  | 'local-def'
+  // A reference to a deeply immutable definition, recognized by WGSL as a 'constant'.
+  // This is the usual case, read about 'runtime-immutable-def' to know when this doesn't apply.
+  // A reference to a tgpu.const().$ value (which is frozen) fits into this category.
+  | 'constant-immutable-def'
+  // A reference to a deeply immutable definition, NOT recognized by WGSL as a 'constant'.
+  // This can happen if say a constant is accessed with a runtime-known index. WGSL doesn't treat it like
+  // a 'constant' anymore, but it's still a frozen value in JS, so we must treat it like it's immutable.
+  | 'runtime-immutable-def'
   // ---------
   // non-pointer function arguments (or part of an argument).
   | 'argument'
-  // defined in the current function
-  | 'local'
   // not a reference to anything, known at runtime
   | 'runtime'
   // an ephemeral value that is a valid WGSL 'constant' (not to be confused with 'comptime')
   // doesn't always lead to creating a `const` variable, as we cannot always guarantee that
   // the value won't be mutated in JS
-  | 'constant'
-  //
-  // TGPU.CONST REFERENCES
-  // A reference to a tgpu.const().$ value (which is frozen), that is treated by WGSL as a 'constant'.
-  // This is the usual case, read about 'runtime-tgpu-const-ref' to know when this doesn't apply.
-  // Turns into a `const` when assigned to a variable
-  | 'constant-tgpu-const-ref'
-  // A reference to a tgpu.const().$ value (which is frozen), that is NOT treated by WGSL as a 'constant'.
-  // This can happen if say a constant is accessed with a runtime-known index. WGSL doesn't treat it like
-  // a 'constant' anymore, but it's still a frozen value in JS, so we must treat it like it's immutable.
-  // Turns into a `let` when assigned to a variable
-  | 'runtime-tgpu-const-ref';
+  | 'constant';
 
 /**
  * What happens to a snippet's origin when it's deep copied in JS, and left as is in WGSL?
@@ -82,7 +80,7 @@ export const originToPtrParams = {
   private: { space: 'private', access: 'read-write' },
   function: { space: 'function', access: 'read-write' },
   // Local declarations are also in the `function` address space
-  local: { space: 'function', access: 'read-write' },
+  'local-def': { space: 'function', access: 'read-write' },
 } as const;
 export type OriginToPtrParams = typeof originToPtrParams;
 

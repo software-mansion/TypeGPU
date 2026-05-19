@@ -927,7 +927,7 @@ ${this.ctx.pre}}`;
         !expectedReturnType &&
         isAlias(returnSnippet) &&
         !wgsl.isNaturallyEphemeral(returnSnippet.dataType) &&
-        returnSnippet.origin !== 'local'
+        returnSnippet.origin !== 'local-def'
       ) {
         const str = stringifyNode(returnNode);
         const typeStr = this.ctx.resolve(unptr(returnSnippet.dataType)).value;
@@ -1006,7 +1006,7 @@ Try 'return ${typeStr}(${str});' instead.
     const snippet = snip(
       this.ctx.makeUniqueIdentifier(rawId, 'block'),
       concreteType,
-      /* origin */ 'local',
+      /* origin */ 'local-def',
     );
     this.ctx.defineVariable(rawId, snippet);
 
@@ -1056,7 +1056,7 @@ Try 'return ${typeStr}(${str});' instead.
     }
 
     const rhsNaturallyEphemeral = wgsl.isNaturallyEphemeral(eq.dataType);
-    let varOrigin: Origin = 'local';
+    let varOrigin: Origin = 'local-def';
     let varType: 'var' | 'let' | 'const' | '<deferred>' = '<deferred>';
     let definitionDataType = eq.dataType;
 
@@ -1077,25 +1077,25 @@ Try 'return ${typeStr}(${str});' instead.
       // the variable now loses the restrictions of an argument, and becomes just a regular
       // variable. For vectors and other non-naturally ephemeral values, the restrictions of
       // arguments are kept.
-      varOrigin = rhsNaturallyEphemeral ? 'local' : 'argument';
-    } else if (eq.origin === 'constant-tgpu-const-ref') {
+      varOrigin = rhsNaturallyEphemeral ? 'local-def' : 'argument';
+    } else if (eq.origin === 'constant-immutable-def') {
       varType = 'const';
-      varOrigin = 'constant-tgpu-const-ref';
-    } else if (eq.origin === 'runtime-tgpu-const-ref') {
+      varOrigin = 'constant-immutable-def';
+    } else if (eq.origin === 'runtime-immutable-def') {
       varType = 'let';
-      varOrigin = 'runtime-tgpu-const-ref';
+      varOrigin = 'runtime-immutable-def';
     } else if (rhsNaturallyEphemeral) {
       varType = eq.origin === 'constant' ? 'const' : 'let';
       // Constants are also local declarations. We lose some information here, meaning
       // when we look at a variable's snippet, we cannot tell if it's a constant or not.
       // This is mostly because we plan to determine this fact later, after all of the
       // function code has been processed, so at least currently, we lose that info.
-      varOrigin = 'local';
+      varOrigin = 'local-def';
     } else if (!isAlias(eq)) {
       // Not a reference, but also not naturally ephemeral, so we cannot guarantee it won't be mutated.
       // We defer the decision for now.
       varType = '<deferred>';
-      varOrigin = 'local';
+      varOrigin = 'local-def';
     } else {
       // Assigning a reference to a `const` variable means we store the pointer
       // of the rhs.
@@ -1415,8 +1415,8 @@ ${this.ctx.pre}else ${alternate}`;
 function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
   if (
     mutated.origin === 'constant' ||
-    mutated.origin === 'constant-tgpu-const-ref' ||
-    mutated.origin === 'runtime-tgpu-const-ref'
+    mutated.origin === 'constant-immutable-def' ||
+    mutated.origin === 'runtime-immutable-def'
   ) {
     if (isKnownAtComptime(mutated)) {
       throw new WgslTypeError(
