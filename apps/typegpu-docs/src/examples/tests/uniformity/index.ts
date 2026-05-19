@@ -8,14 +8,13 @@ import { defineControls } from '../../common/defineControls.ts';
 type Mode = '2d' | '3d';
 
 const modes: Mode[] = ['2d', '3d'];
-const initialOpacityPerStep = 0.02;
 const gridSizes = [8, 16, 32, 64, 128, 256];
 const samplesPerThread = [1, 8, 16, 64, 256, 1024, 131072];
 const initialSamplesPerThread = samplesPerThread[0];
 const initialTakeAverage = false;
-let multiplier = 1;
+const initialMultiplier = 1;
 
-let mode = '2d' as Mode;
+let mode = modes[1];
 let prng = prngKeys[0];
 let gridSize = gridSizes[2];
 
@@ -30,7 +29,6 @@ const Config = d.struct({
   samplesPerThread: d.i32,
   takeAverage: d.i32,
   multiplier: d.f32,
-  opacityPerStep: d.f32,
   canvasRatio: d.f32,
 });
 
@@ -38,8 +36,7 @@ const configUniform = root.createUniform(Config, {
   gridSize,
   samplesPerThread: initialSamplesPerThread,
   takeAverage: d.i32(initialTakeAverage),
-  opacityPerStep: initialOpacityPerStep,
-  multiplier,
+  multiplier: initialMultiplier,
   canvasRatio: canvas.width / canvas.height,
 });
 
@@ -131,11 +128,65 @@ const displayPipeline2d = root.createRenderPipeline({
 });
 
 const cameraUniform = root.createUniform(Camera);
-// HERE
+const BoxIntersection = d.struct({ tNear: d.f32, tFar: d.f32, hit: d.bool });
+
+// based on: https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-box-intersection.html
+const getBoxIntersection = (rayOrigin: d.v3f, rayDir: d.v3f, boxMin: d.v3f, boxMax: d.v3f) => {
+  'use gpu';
+  const invDir = 1 / rayDir;
+  const t0 = (boxMin - rayOrigin) * invDir;
+  const t1 = (boxMax - rayOrigin) * invDir;
+  const tmin = std.min(t0, t1);
+  const tmax = std.max(t0, t1);
+  const tNear = std.max(tmin.x, tmin.y, tmin.z);
+  const tFar = std.min(tmax.x, tmax.y, tmax.z);
+  return BoxIntersection({ tNear, tFar, hit: tFar >= tNear });
+};
+
+const STEPS = 64;
+const displayPipeline3d = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: ({ uv }) => {
+    'use gpu';
+    const ndc = d.vec2f(uv.x * 2 - 1, 1 - uv.y * 2);
+    const invViewProj = cameraUniform.$.viewInverse * cameraUniform.$.projectionInverse;
+    const worldNear = invViewProj * d.vec4f(ndc, 0, 1);
+    const worldFar = invViewProj * d.vec4f(ndc, 1, 1);
+    const rayOrigin = worldNear.xyz / worldNear.w;
+    const rayDir = std.normalize(worldFar.xyz / worldFar.w - rayOrigin);
+
+    const gridSize = configUniform.$.gridSize;
+    const boxMax = d.vec3f(gridSize);
+    const isect = getBoxIntersection(rayOrigin, rayDir, d.vec3f(0), boxMax);
+    if (!isect.hit) {
+      return d.vec4f();
+    }
+
+    const stepSize = (isect.tFar - isect.tNear) / STEPS;
+    const opacity = (stepSize / gridSize) * 3;
+    let transmittance = d.f32(1);
+    let accum = d.f32();
+    let i = 0;
+    while (i < STEPS && transmittance > 1e-3) {
+      const t = isect.tNear + (d.f32(i) + 0.5) * stepSize;
+      const pos = rayOrigin + rayDir * t;
+      const value = std.textureLoad(
+        layouts.display.$.texture,
+        d.vec3u(std.clamp(pos, d.vec3f(0), boxMax - 1)),
+      ).r;
+      accum += value * opacity * transmittance;
+      transmittance *= 1 - opacity;
+      i += 1;
+    }
+
+    return d.vec4f(d.vec3f(accum), 1 - transmittance);
+  },
+  targets: { format: presentationFormat },
+});
 
 const displayPipelines = {
   '2d': displayPipeline2d,
-  '3d': displayPipeline2d,
+  '3d': displayPipeline3d,
 };
 
 const resample = () => {
@@ -152,6 +203,20 @@ const redraw = () => {
     .with(bindGroups[gridSize].display)
     .draw(3);
 };
+
+const { cleanupCamera, targetCamera } = setupOrbitCamera(
+  canvas,
+  {
+    initPos: d.vec4f(d.vec3f(2 * gridSize), 1),
+    target: d.vec4f(d.vec3f(0.5 * gridSize), 1),
+    minZoom: 10,
+    maxZoom: 1000,
+  },
+  (updates) => {
+    cameraUniform.patch(updates);
+    redraw();
+  },
+);
 
 export const controls = defineControls({
   Mode: {
@@ -177,6 +242,7 @@ export const controls = defineControls({
     options: gridSizes,
     onSelectChange: (value) => {
       gridSize = value;
+      targetCamera(d.vec4f(d.vec3f(2 * gridSize), 1), d.vec4f(d.vec3f(0.5 * gridSize), 1));
       resample();
       redraw();
     },
@@ -199,9 +265,9 @@ export const controls = defineControls({
     },
   },
   'Seed Multiplier': {
-    initial: multiplier,
-    min: 0.0001,
-    max: 1000,
+    initial: initialMultiplier,
+    min: 0.00001,
+    max: 2000,
     step: 1,
     onSliderChange: (value) => {
       configUniform.patch({ multiplier: value });
@@ -224,6 +290,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  cleanupCamera();
   root.destroy();
 }
 
