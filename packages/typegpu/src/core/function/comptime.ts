@@ -2,7 +2,7 @@ import { WgslTypeError } from '../../errors.ts';
 import { setName, type TgpuNamable } from '../../shared/meta.ts';
 import { $getNameForward, $gpuCallable, $internal } from '../../shared/symbols.ts';
 import { coerceToSnippet } from '../../tgsl/generationHelpers.ts';
-import { type DualFn, isKnownAtComptime } from '../../types.ts';
+import { type DualFn, isKnownAtComptime, NormalState } from '../../types.ts';
 
 type AnyFn = (...args: never[]) => unknown;
 
@@ -48,7 +48,7 @@ export function comptime<T extends (...args: never[]) => unknown>(func: T): Tgpu
   impl.toString = () => 'comptime';
   impl[$getNameForward] = func;
   impl[$gpuCallable] = {
-    call(_ctx, args) {
+    call(ctx, args) {
       if (!args.every((s) => isKnownAtComptime(s))) {
         throw new WgslTypeError(
           `Called comptime function with runtime-known values: ${args
@@ -58,7 +58,10 @@ export function comptime<T extends (...args: never[]) => unknown>(func: T): Tgpu
         );
       }
 
-      return coerceToSnippet(func(...(args.map((s) => s.value) as never[])));
+      ctx.pushMode(new NormalState());
+      const result = coerceToSnippet(func(...(args.map((s) => s.value) as never[])));
+      ctx.popMode();
+      return result;
     },
   };
   impl.$name = (label: string) => {
