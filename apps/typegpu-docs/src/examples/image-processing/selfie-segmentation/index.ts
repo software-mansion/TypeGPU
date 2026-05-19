@@ -19,10 +19,7 @@ const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 
-const video = document.createElement('video');
-video.autoplay = true;
-video.muted = true;
-video.playsInline = true;
+const video = document.querySelector('video') as HTMLVideoElement;
 
 const sampler = root.createSampler({
   magFilter: 'linear',
