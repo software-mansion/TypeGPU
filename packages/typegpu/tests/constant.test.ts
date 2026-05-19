@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { d, tgpu } from '../src/index.js';
+import { extractSnippetFromFn } from './utils/parseResolved.ts';
 
 const Boid = d.struct({
   pos: d.vec3f,
@@ -189,5 +190,17 @@ describe('tgpu.const', () => {
       - fn*:testFn
       - fn*:testFn(): 'c.$.x = 1' is invalid, because the left side is a constant.]
     `);
+  });
+
+  it('allows for tgpu.const-tgpu.const index access', () => {
+    const myConstArray = tgpu.const(d.arrayOf(d.u32, 2), [1, 2]);
+    const myConstIndex = tgpu.const(d.u32, 1);
+
+    const fn = () => {
+      'use gpu';
+      return myConstArray.$[myConstIndex.$];
+    };
+
+    expect(extractSnippetFromFn(fn).origin).toBe('constant-immutable-def');
   });
 });

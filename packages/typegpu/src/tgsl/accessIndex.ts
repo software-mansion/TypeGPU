@@ -25,10 +25,16 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
 
     if (target.origin === 'constant-immutable-def') {
       // Constant refs stay const unless the element/index forces runtime materialization
-      origin = index.origin === 'constant' ? 'constant-immutable-def' : 'runtime-immutable-def';
+      origin =
+        index.origin === 'constant' || index.origin === 'constant-immutable-def'
+          ? 'constant-immutable-def'
+          : 'runtime-immutable-def';
     } else if (target.origin === 'constant') {
       // Ephemeral constants indexed with constants stay constant, otherwise they become runtime-known
-      origin = index.origin === 'constant' ? 'constant' : 'runtime';
+      origin =
+        index.origin === 'constant' || index.origin === 'constant-immutable-def'
+          ? 'constant'
+          : 'runtime';
     } else {
       // Fallthrough
       origin = target.origin;
