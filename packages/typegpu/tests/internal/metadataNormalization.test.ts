@@ -50,7 +50,7 @@ describe('meta', () => {
       "const N: u32 = 1u;
 
       fn fn_1() {
-        var a = N;
+        let a = N;
       }"
     `);
   });
@@ -79,7 +79,7 @@ describe('meta', () => {
       "const N: u32 = 1u;
 
       fn fn_1() {
-        var a = N;
+        let a = N;
       }"
     `);
   });
@@ -108,7 +108,7 @@ describe('meta', () => {
       "const N: u32 = 1u;
 
       fn fn_1() {
-        var a = N;
+        let a = N;
       }"
     `);
   });
