@@ -15,20 +15,17 @@ type Numeric = number | AnyNumericVecInstance | AnyMatInstance;
  *    d.vec2u(1).mul(2) // lhs is a snippet
  * }
  */
-export interface InfixDispatch {
-  [$internal]: true;
-  type: 'infix-dispatch';
+export class InfixDispatch {
+  [$internal] = true;
+  type = 'infix-dispatch';
+
   readonly lhs: Snippet | Numeric;
   readonly operator: InfixOperator;
-}
 
-export function infixDispatch(lhs: Snippet | Numeric, operator: InfixOperator): InfixDispatch {
-  return {
-    [$internal]: true as const,
-    type: 'infix-dispatch' as const,
-    lhs,
-    operator,
-  };
+  constructor(lhs: Snippet | Numeric, operator: InfixOperator) {
+    this.lhs = lhs;
+    this.operator = operator;
+  }
 }
 
 export function isInfixDispatch(o: unknown): o is InfixDispatch {

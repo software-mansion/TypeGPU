@@ -8,7 +8,7 @@ import { Operator } from 'tsover-runtime';
 import { type InfixOperatorName, infixOperators } from '../tgsl/accessProp.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
-import { infixDispatch } from '../tgsl/infixDispatch.ts';
+import { InfixDispatch } from '../tgsl/infixDispatch.ts';
 import { inCodegenMode } from '../execMode.ts';
 
 function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
@@ -33,7 +33,7 @@ function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
   Object.defineProperty(base.prototype, operator, {
     get() {
       if (inCodegenMode()) {
-        return infixDispatch(this, opImpl);
+        return new InfixDispatch(this, opImpl);
       }
       return jsInfix;
     },

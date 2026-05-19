@@ -34,7 +34,7 @@ import {
 import { add, bitShiftLeft, bitShiftRight, div, mod, mul, sub } from '../std/operators.ts';
 import { isKnownAtComptime } from '../types.ts';
 import { coerceToSnippet } from './generationHelpers.ts';
-import { infixDispatch } from './infixDispatch.ts';
+import { InfixDispatch } from './infixDispatch.ts';
 
 const infixKinds = [
   'vec2f',
@@ -106,7 +106,7 @@ const swizzleLenToType: Record<SwizzleableType, Record<SwizzleLength, BaseData>>
 export function accessProp(target: Snippet, propName: string): Snippet | undefined {
   if (infixKinds.includes((target.dataType as BaseData).type) && propName in infixOperators) {
     const operator = infixOperators[propName as InfixOperatorName];
-    return snip(infixDispatch(target, operator), UnknownData, /* origin */ target.origin);
+    return snip(new InfixDispatch(target, operator), UnknownData, /* origin */ target.origin);
   }
 
   if (isWgslArray(target.dataType) && propName === 'length') {
