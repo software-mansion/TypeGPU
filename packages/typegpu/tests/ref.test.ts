@@ -283,7 +283,7 @@ describe('d.ref', () => {
 
   it('turns an implicit pointer into an explicit one', () => {
     const layout = tgpu.bindGroupLayout({
-      positions: { storage: d.arrayOf(d.vec3f) },
+      positions: { storage: d.arrayOf(d.vec3f), access: 'mutable' },
     });
 
     const advance = (value: d.ref<d.v3f>) => {
@@ -299,9 +299,9 @@ describe('d.ref', () => {
     };
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<storage, read> positions: array<vec3f>;
+      "@group(0) @binding(0) var<storage, read_write> positions: array<vec3f>;
 
-      fn advance(value: ptr<storage, vec3f, read>) {
+      fn advance(value: ptr<storage, vec3f, read_write>) {
         (*value).x += 1f;
       }
 

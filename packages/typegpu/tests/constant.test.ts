@@ -159,4 +159,35 @@ describe('tgpu.const', () => {
       }"
     `);
   });
+
+  it('forbids assignment to consts', () => {
+    const c = tgpu.const(d.vec2u, d.vec2u(1, 2));
+    const testFn = () => {
+      'use gpu';
+      // @ts-expect-error
+      c.$ = d.vec2u();
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): 'c.$ = d.vec2u()' is invalid, because the left side is a constant.]
+    `);
+  });
+
+  it('forbids assignment to const props', () => {
+    const c = tgpu.const(d.vec2u, d.vec2u(1, 2));
+    const testFn = () => {
+      'use gpu';
+      c.$.x = 1;
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): 'c.$.x = 1' is invalid, because the left side is a constant.]
+    `);
+  });
 });

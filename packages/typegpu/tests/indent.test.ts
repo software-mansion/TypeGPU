@@ -48,7 +48,7 @@ describe('indents', () => {
     });
 
     const layout = tgpu.bindGroupLayout({
-      systemData: { storage: SystemData },
+      systemData: { storage: SystemData, access: 'mutable' },
     });
 
     const updateParicle = tgpu.fn(
@@ -87,7 +87,7 @@ describe('indents', () => {
         deltaTime: f32,
       }
 
-      @group(0) @binding(0) var<storage, read> systemData: SystemData;
+      @group(0) @binding(0) var<storage, read_write> systemData: SystemData;
 
       fn updateParicle(particle: Particle, gravity: vec3f, deltaTime: f32) -> Particle {
         let newVelocity = ((particle.velocity * gravity) * deltaTime);
@@ -123,11 +123,11 @@ describe('indents', () => {
     });
 
     const layout = tgpu.bindGroupLayout({
-      systemData: { storage: SystemData },
+      systemData: { storage: SystemData, access: 'mutable' },
       densityField: {
         storageTexture: d.textureStorage3d('r32float', 'read-only'),
       },
-      counter: { storage: d.u32 },
+      counter: { storage: d.u32, access: 'mutable' },
     });
 
     const getDensityAt = tgpu.fn(
@@ -174,7 +174,7 @@ describe('indents', () => {
     });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "@group(0) @binding(2) var<storage, read> counter: u32;
+      "@group(0) @binding(2) var<storage, read_write> counter: u32;
 
       fn incrementCounter() {
         counter += 1u;
@@ -197,7 +197,7 @@ describe('indents', () => {
         deltaTime: f32,
       }
 
-      @group(0) @binding(0) var<storage, read> systemData: SystemData;
+      @group(0) @binding(0) var<storage, read_write> systemData: SystemData;
 
       @group(0) @binding(1) var densityField: texture_storage_3d<r32float, read>;
 
