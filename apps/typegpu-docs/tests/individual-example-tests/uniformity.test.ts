@@ -63,11 +63,11 @@ describe('uniformity test example', () => {
       }
 
       fn getBoxIntersection(rayOrigin: vec3f, rayDir: vec3f, boxMin: vec3f, boxMax: vec3f) -> BoxIntersection {
-        var invDir = (1f / rayDir);
-        var t0 = ((boxMin - rayOrigin) * invDir);
-        var t1 = ((boxMax - rayOrigin) * invDir);
-        var tmin = min(t0, t1);
-        var tmax = max(t0, t1);
+        let invDir = (1f / rayDir);
+        let t0 = ((boxMin - rayOrigin) * invDir);
+        let t1 = ((boxMax - rayOrigin) * invDir);
+        let tmin = min(t0, t1);
+        let tmax = max(t0, t1);
         let tNear = max(max(tmin.x, tmin.y), tmin.z);
         let tFar = min(min(tmax.x, tmax.y), tmax.z);
         return BoxIntersection(tNear, tFar, (tFar >= tNear));
@@ -80,15 +80,15 @@ describe('uniformity test example', () => {
       }
 
       @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
-        var ndc = vec2f(((_arg_0.uv.x * 2f) - 1f), (1f - (_arg_0.uv.y * 2f)));
-        var invViewProj = (cameraUniform.viewInverse * cameraUniform.projectionInverse);
-        var worldNear = (invViewProj * vec4f(ndc, 0f, 1f));
-        var worldFar = (invViewProj * vec4f(ndc, 1f, 1f));
-        var rayOrigin = (worldNear.xyz / worldNear.w);
-        var rayDir = normalize(((worldFar.xyz / worldFar.w) - rayOrigin));
+        let ndc = vec2f(((_arg_0.uv.x * 2f) - 1f), (1f - (_arg_0.uv.y * 2f)));
+        let invViewProj = (cameraUniform.viewInverse * cameraUniform.projectionInverse);
+        let worldNear = (invViewProj * vec4f(ndc, 0f, 1f));
+        let worldFar = (invViewProj * vec4f(ndc, 1f, 1f));
+        let rayOrigin = (worldNear.xyz / worldNear.w);
+        let rayDir = normalize(((worldFar.xyz / worldFar.w) - rayOrigin));
         let gridSize = configUniform.gridSize;
-        var boxMax = vec3f(gridSize);
-        var isect = getBoxIntersection(rayOrigin, rayDir, vec3f(), boxMax);
+        let boxMax = vec3f(gridSize);
+        let isect = getBoxIntersection(rayOrigin, rayDir, vec3f(), boxMax);
         if (!isect.hit) {
           return vec4f();
         }
@@ -99,7 +99,7 @@ describe('uniformity test example', () => {
         var i = 0;
         while (((i < 64i) && (transmittance > 1e-3f))) {
           let t = (isect.tNear + ((f32(i) + 0.5f) * stepSize));
-          var pos = (rayOrigin + (rayDir * t));
+          let pos = (rayOrigin + (rayDir * t));
           let value = textureLoad(texture, vec3u(clamp(pos, vec3f(), (boxMax - 1f)))).r;
           accum += ((value * opacity) * transmittance);
           transmittance *= (1f - opacity);
@@ -197,7 +197,7 @@ describe('uniformity test example', () => {
       var<private> seed: u32;
 
       fn seed2(value: vec2f) {
-        var u32Value = bitcast<vec2u>(value);
+        let u32Value = bitcast<vec2u>(value);
         let hx = hash((u32Value.x ^ 1253408251u));
         let hy = hash((u32Value.y ^ 2900286023u));
         seed = hash((hx ^ rotl(hy, 16u)));
@@ -278,7 +278,7 @@ describe('uniformity test example', () => {
       var<private> seed: vec2u;
 
       fn seed2(value: vec2f) {
-        var u32Value = bitcast<vec2u>(value);
+        let u32Value = bitcast<vec2u>(value);
         let hx = hash((u32Value.x ^ 1253408251u));
         let hy = hash((u32Value.y ^ 2900286023u));
         seed = vec2u(hash((hx ^ hy)), hash((rotl(hx, 16u) ^ hy)));
@@ -427,7 +427,7 @@ describe('uniformity test example', () => {
       var<private> seed: u32;
 
       fn seed3(value: vec3f) {
-        var u32Value = bitcast<vec3u>(value);
+        let u32Value = bitcast<vec3u>(value);
         let hx = hash((u32Value.x ^ 1253408251u));
         let hy = hash((u32Value.y ^ 2900286023u));
         let hz = hash((u32Value.z ^ 3164612939u));
@@ -509,7 +509,7 @@ describe('uniformity test example', () => {
       var<private> seed: vec2u;
 
       fn seed3(value: vec3f) {
-        var u32Value = bitcast<vec3u>(value);
+        let u32Value = bitcast<vec3u>(value);
         let hx = hash((u32Value.x ^ 1253408251u));
         let hy = hash((u32Value.y ^ 2900286023u));
         let hz = hash((u32Value.z ^ 3164612939u));
