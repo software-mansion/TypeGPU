@@ -9,6 +9,7 @@ import { type InfixOperatorName, infixOperators } from '../tgsl/accessProp.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
 import { infixDispatch } from '../tgsl/infixDispatch.ts';
+import { inCodegenMode } from '../execMode.ts';
 
 function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
   base: T,
@@ -21,9 +22,20 @@ function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
     value: opImpl,
   });
 
+  // To optimize infix operators on JS side, this function,
+  // we return this function instead of creating an infix dispatch.
+  // Returning this from a getter will work as if this was a vector/matrix's method.
+  function jsInfix(this: unknown, arg: unknown) {
+    // operator will perform all necessary type checks
+    return opImpl(this as never, arg as never);
+  }
+
   Object.defineProperty(base.prototype, operator, {
     get() {
-      return infixDispatch(this, opImpl);
+      if (inCodegenMode()) {
+        return infixDispatch(this, opImpl);
+      }
+      return jsInfix;
     },
   });
 }

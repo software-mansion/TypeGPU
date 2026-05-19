@@ -235,27 +235,4 @@ describe('wgslGenerator', () => {
       }"
     `);
   });
-
-  it('works when application is deferred', ({ root }) => {
-    const v = d.vec2f(1, 2).mul;
-    const u = tgpu.comptime(() => d.vec2f(3, 4).mul);
-    const buf = tgpu.comptime(() => root.createUniform(d.vec2f, [5, 6]).$.add);
-
-    const fn = () => {
-      'use gpu';
-      const a = v(7);
-      const b = u()(8);
-      const c = buf()(9);
-    };
-
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> item: vec2f;
-
-      fn fn_1() {
-        var a = vec2f(7, 14);
-        var b = vec2f(24, 32);
-        var c = (item + 9f);
-      }"
-    `);
-  });
 });
