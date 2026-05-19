@@ -14,21 +14,25 @@ import {
   isMat,
   isPtr,
   isVec,
+  isWgslStruct,
   type Ptr,
   type U32,
   type WgslStruct,
 } from '../data/wgslTypes.ts';
 import { invariant, WgslTypeError } from '../errors.ts';
 import { DEV, TEST } from '../shared/env.ts';
+import { getName } from '../shared/meta.ts';
 import { safeStringify } from '../shared/stringify.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../types.ts';
+import { accessStructProp } from './generationHelpers.ts';
 
-type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
+type ConversionAction = 'ref' | 'deref' | 'cast' | 'none' | 'unrollProps';
 
 type ConversionRankInfo =
+  | { rank: number; action: 'unrollProps'; targetType: BaseData }
   | { rank: number; action: 'cast'; targetType: BaseData }
-  | { rank: number; action: Exclude<ConversionAction, 'cast'> };
+  | { rank: number; action: Exclude<ConversionAction, 'cast' | 'unrollProps'> };
 
 const INFINITE_RANK: ConversionRankInfo = {
   rank: Number.POSITIVE_INFINITY,
@@ -40,6 +44,9 @@ function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInf
   const trueDst = undecorate(dest);
 
   if (trueSrc.type === trueDst.type) {
+    if (trueSrc.type === 'struct' && trueSrc !== trueDst) {
+      return { rank: 0, action: 'unrollProps', targetType: dest };
+    }
     return { rank: 0, action: 'none' };
   }
 
@@ -261,6 +268,30 @@ function applyActionToSnippet(
     case 'cast': {
       // Casting means calling the schema with the snippet as an argument.
       return schemaCallWrapperGPU(ctx, targetType, snippet);
+    }
+    case 'unrollProps': {
+      if (!isWgslStruct(targetType)) {
+        throw new Error('AAA');
+      }
+      const propSnips = Object.entries(targetType.propTypes).map(([key, dataType]) => {
+        const access = accessStructProp(snippet, key) as unknown as Snippet;
+        if (!access) {
+          throw new Error(
+            `Cannot auto-convert struct '${getName(snippet.dataType) ?? '<unnamed>'}' to '${getName(targetType) ?? '<unnamed>'}' because the property '${key}' is missing.`,
+          );
+        }
+        const converted = convertToCommonType(ctx, [access], [dataType]);
+        if (!converted || !converted[0]) {
+          throw new Error('AAA');
+        }
+        return converted[0];
+      });
+      const targetSnippet = ctx.resolve(targetType).value;
+      return snip(
+        `${targetSnippet}(${propSnips.map((snip) => snip.value).join(', ')})`,
+        targetType,
+        'runtime',
+      );
     }
     default: {
       assertExhaustive(action.action, 'applyActionToSnippet');

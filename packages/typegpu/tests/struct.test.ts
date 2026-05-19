@@ -444,10 +444,79 @@ describe('struct', () => {
         vel: vec3f,
       }
 
+      struct Bird {
+        pos: vec3f,
+        vel: vec3f,
+      }
+
       fn main() {
         var boid = Boid();
         var clone = boid;
-        var bird = boid;
+        var bird = Bird(boid.pos, boid.vel);
+      }"
+    `);
+  });
+
+  it('coerces prop types between structs', () => {
+    const Boid = d.struct({ a: d.u32, b: d.f32 });
+    const Bird = d.struct({ a: d.i32, b: d.i32 });
+
+    function main() {
+      'use gpu';
+      const boid = Boid();
+      const bird = Bird(boid);
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct Boid {
+        a: u32,
+        b: f32,
+      }
+
+      struct Bird {
+        a: i32,
+        b: i32,
+      }
+
+      fn main() {
+        var boid = Boid();
+        var bird = Bird(i32(boid.a), i32(boid.b));
+      }"
+    `);
+  });
+
+  it('copies nested structs', () => {
+    const Boid = d.struct({ prop: d.struct({ a: d.u32, b: d.f32 }) });
+    const Bird = d.struct({ prop: d.struct({ a: d.i32, b: d.i32 }) });
+
+    function main() {
+      'use gpu';
+      const boid = Boid();
+      const bird = Bird(boid);
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct prop {
+        a: u32,
+        b: f32,
+      }
+
+      struct Boid {
+        prop: prop,
+      }
+
+      struct prop_1 {
+        a: i32,
+        b: i32,
+      }
+
+      struct Bird {
+        prop: prop_1,
+      }
+
+      fn main() {
+        var boid = Boid();
+        var bird = Bird(prop_1(i32(boid.prop.a), i32(boid.prop.b)));
       }"
     `);
   });
@@ -468,9 +537,13 @@ describe('struct', () => {
         id: u32,
       }
 
+      struct Bird {
+        pos: vec2u,
+      }
+
       fn main() {
         var boid = Boid();
-        var bird = boid;
+        var bird = Bird(boid.pos);
       }"
     `);
   });
@@ -486,19 +559,33 @@ describe('struct', () => {
       const bird = Bird(boid);
     }
 
-    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Cannot auto-convert struct 'Boid' to 'Bird' because the property 'id' is missing.]
+    `);
   });
 
   it('TODO: remove', () => {
-    const Boid = d.struct({ pos: d.vec2u });
-    const boid = Boid({ pos: d.vec2u(1, 2) });
+    const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
+    const boid = Boid({ id: 4, pos: d.vec2u(1, 2) });
 
     function main() {
       'use gpu';
       const b = Boid(boid);
     }
 
-    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec2u,
+        id: u32,
+      }
+
+      fn main() {
+        var b = Boid(vec2u(1, 2), 4u);
+      }"
+    `);
   });
 
   it('requires aliases in struct calls', () => {
