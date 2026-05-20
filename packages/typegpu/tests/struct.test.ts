@@ -625,6 +625,24 @@ describe('struct', () => {
     `);
   });
 
+  it('throws a descriptive error when resolving fails', () => {
+    const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
+    const Bird = d.struct({ pos: d.vec2u, id: d.vec2u });
+
+    const main = tgpu.fn([])(() => {
+      'use gpu';
+      const boid = Boid();
+      // @ts-expect-error
+      const bird = Bird(boid);
+    });
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:main: Cannot auto-convert struct 'Boid' to 'Bird' because type 'u32' is not convertible to 'vec2u'.]
+    `);
+  });
+
   // TODO(#2519): make this resolve throw an error
   // it('does not resolve struct casts when it needs a ref', () => {
   //   const Boid = d.struct({ pos: d.vec2u, id: d.u32 });

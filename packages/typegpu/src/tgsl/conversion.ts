@@ -266,10 +266,13 @@ function applyActionToSnippet(
       return derefSnippet(snippet);
     case 'cast': {
       if (isWgslStruct(snippet.dataType) && isWgslStruct(targetType)) {
+        const typeName = getName(snippet.dataType) ?? '<unnamed>';
+        const targetName = getName(targetType) ?? '<unnamed>';
+
         // Struct to struct casting
         if (!isAlias(snippet)) {
           throw new Error(
-            `Cannot resolve struct cast from '${getName(snippet.dataType) ?? '<unnamed>'}' to '${getName(targetType) ?? '<unnamed>'}'. Store the casted value in a variable first.`,
+            `Cannot resolve struct cast from '${typeName}' to '${targetName}'. Store the casted value in a variable first.`,
           );
         }
 
@@ -277,12 +280,14 @@ function applyActionToSnippet(
           const access = accessStructProp(snippet, key) as unknown as Snippet;
           if (!access) {
             throw new Error(
-              `Cannot auto-convert struct '${getName(snippet.dataType) ?? '<unnamed>'}' to '${getName(targetType) ?? '<unnamed>'}' because the property '${key}' is missing.`,
+              `Cannot auto-convert struct '${typeName}' to '${targetName}' because the property '${key}' is missing.`,
             );
           }
           const converted = convertToCommonType(ctx, [access], [dataType]);
           if (!converted || !converted[0]) {
-            throw new Error('AAA');
+            throw new Error(
+              `Cannot auto-convert struct '${typeName}' to '${targetName}' because type '${getName(access.dataType) ?? '<unnamed>'}' is not convertible to '${getName(dataType) ?? '<unnamed>'}'.`,
+            );
           }
           return converted[0];
         });
