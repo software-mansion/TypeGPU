@@ -190,4 +190,4 @@ export { bitcastU32toF32, bitcastU32toI32 } from './bitcast.ts';
 
 export { range } from './range.ts';
 
-export { runsOn, type Runtime } from './runsOn.ts';
+export { isBeingTraspiled } from './environment.ts';
