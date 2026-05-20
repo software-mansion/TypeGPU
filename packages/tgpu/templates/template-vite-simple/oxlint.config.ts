@@ -1,8 +1,5 @@
-import { type AllowWarnDeny, defineConfig } from 'oxlint';
+import { defineConfig } from 'oxlint';
 import typegpu from 'eslint-plugin-typegpu';
-
-const typegpuPreset = typegpu.configs?.recommended;
-const typegpuRules = typegpuPreset && 'rules' in typegpuPreset ? typegpuPreset.rules : {};
 
 export default defineConfig({
   plugins: ['typescript', 'import', 'unicorn', 'oxc'],
@@ -12,10 +9,12 @@ export default defineConfig({
     suspicious: 'warn',
   },
   rules: {
-    ...typegpuRules,
+    ...typegpu.configs.recommended.rules,
+    'typescript/no-non-null-assertion': 'error',
+    'typescript/no-explicit-any': 'error',
+    'typescript/no-unsafe-type-assertion': 'off',
     'import/no-named-as-default': 'off',
-    '@typescript-eslint/no-non-null-assertion': 'error',
-  } as Record<string, AllowWarnDeny>,
+  },
   env: {
     builtin: true,
   },

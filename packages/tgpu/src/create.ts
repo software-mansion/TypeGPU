@@ -11,8 +11,8 @@ const DEFAULT_PROJECT_DIR = 'tgpu-project';
 
 const PROJECT_TEMPLATES = [
   {
-    value: 'vite',
-    label: rgbText('Vite', 175, 105, 245),
+    value: 'vite-simple',
+    label: rgbText('Vite (Simple)', 175, 105, 245),
   },
 ];
 

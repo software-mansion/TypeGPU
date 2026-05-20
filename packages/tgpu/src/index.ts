@@ -7,10 +7,10 @@ import { createProject } from './create.ts';
 const helpMessage = `\
 Usage: tgpu [OPTION]...
 
-Create a new TypeGPU project or enhance an existing one.
+Create a new TypeGPU project or enhance the existing one.
 
 Options:
-  -e, --enhance           enhance an existing TypeGPU project
+  -e, --enhance           enhance the existing TypeGPU project
 `;
 
 const argv = mri<{ enhance?: boolean; help?: boolean }>(process.argv.slice(2), {

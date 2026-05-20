@@ -12,6 +12,7 @@ export const renameFiles = {
   _vscode: '.vscode',
   _nvmrc: '.nvmrc',
   '_package.json': 'package.json',
+  '_oxfmtrc.json': '.oxfmtrc.json',
 } as Record<string, string>;
 
 function isEmptyDir(dir: string) {

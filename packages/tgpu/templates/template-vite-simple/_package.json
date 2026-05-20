@@ -1,5 +1,5 @@
 {
-  "name": "typegpu-vite-vanilla-template",
+  "name": "typegpu-vanilla-vite-simple-project",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -11,9 +11,12 @@
     "fix": "oxlint --fix && oxfmt"
   },
   "dependencies": {
+    "@typegpu/color": "^0.11.0",
+    "@typegpu/noise": "^0.11.0",
     "typegpu": "^0.11.4"
   },
   "devDependencies": {
+    "@webgpu/types": "^0.1.70",
     "eslint-plugin-typegpu": "^0.11.1",
     "oxfmt": "^0.49.0",
     "oxlint": "^1.64.0",

@@ -16,7 +16,6 @@
   ],
   "type": "module",
   "scripts": {
-    "dev": "tsdown && node ./dist/index.js",
     "build": "tsdown",
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
     "prepublishOnly": "pnpm run build"
