@@ -12,9 +12,9 @@ giving easy access to the device's GPU rendering and computing capabilities.
 You can check out the [typegpu-rn-examples](https://github.com/software-mansion-labs/typegpu-rn-examples) project,
 showcasing a few examples from our _live examples_ page in a simple mobile application.
 
-import FishExample from './example-fish.png';
-import Fluid1Example from './example-fluid-1.png';
-import Fluid2Example from './example-fluid-2.png';
+import FishExample from "./example-fish.png";
+import Fluid1Example from "./example-fluid-1.png";
+import Fluid2Example from "./example-fluid-2.png";
 
 <div style="display: flex; flex-wrap: wrap;">
   <img
@@ -38,6 +38,8 @@ import Fluid2Example from './example-fluid-2.png';
 </div>
 ## Setup
 
+Before installing TypeGPU packages, make sure to upgrade `react-native-reanimated` and `react-native-worklets` packages to the newest version.
+
 To use TypeGPU in your React Native application, install the following packages:
 
 ```sh
@@ -51,7 +53,7 @@ Since WebGPU is still yet to reach baseline in browsers, types for it need to be
 {
   "compilerOptions": {
     "types": ["@webgpu/types"]
-  },
+  }
 }
 ```
 
@@ -97,7 +99,31 @@ cd ios && pod install && cd ..
 ```
 
 To run React Native WebGPU on the iOS simulator, you need to disable the Metal validation API.
-In _Edit Scheme_ uncheck _Metal Validation_.
+Open Xcode, select Edit Scheme:
+
+import Xcode1 from "./xcode-1.png";
+
+<div style="display: flex; flex-wrap: wrap;">
+  <img
+    width="300"
+    style="margin: 0;"
+    alt="editing a scheme in Xcode"
+    src={Xcode1.src}
+  />
+</div>
+
+and in Diagnostics tab deselect Metal API Validation:
+
+import Xcode2 from "./xcode-2.png";
+
+<div style="display: flex; flex-wrap: wrap;">
+  <img
+    width="300"
+    style="margin: 0;"
+    alt="deselect Metal Api Validation"
+    src={Xcode2.src}
+  />
+</div>
 
 ## Hello world example
 
@@ -105,7 +131,7 @@ If you want to quickly test if the installation was successful, here's a simple 
 that you can use in your app:
 
 ```ts
-import { useEffect } from 'react';
+import { useMemo } from 'react';
 import { Canvas } from 'react-native-wgpu';
 import tgpu, { d } from 'typegpu';
 import { useRoot, useFrame, useConfigureContext } from '@typegpu/react';
@@ -139,7 +165,7 @@ export function Triangle() {
   useFrame(() => {
     const ctx = ctxRef.current;
     if (!ctx) return;
-      
+
     pipeline.withColorAttachment({ view: ctx }).draw(3);
 
     // A react-native-wgpu requirement for flushing the rendered effect

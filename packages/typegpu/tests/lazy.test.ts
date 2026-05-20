@@ -152,7 +152,7 @@ describe('TgpuLazy', () => {
       @group(0) @binding(0) var<uniform> boid: Boid;
 
       fn func() {
-        var pos = vec3f(2, 4, 6);
+        let pos = vec3f(2, 4, 6);
         const posX = 2f;
         let vel = (&boid.vel);
         let velX = boid.vel.x;
@@ -237,11 +237,11 @@ describe('TgpuLazy', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn foo() {
-        var array_1 = array<f32, 4>();
+        let array_1 = array<f32, 4>();
       }
 
       fn foo_1() {
-        var array_1 = array<f16, 4>();
+        let array_1 = array<f16, 4>();
       }
 
       fn main() {

@@ -315,7 +315,7 @@ describe('struct', () => {
       }
 
       fn testFunction() {
-        var defaultValue = Outer();
+        let defaultValue = Outer();
       }"
     `);
   });
@@ -339,8 +339,8 @@ describe('struct', () => {
       }
 
       fn testFn() {
-        var myStruct = TestStruct(1u, 2f);
-        var myClone = myStruct;
+        let myStruct = TestStruct(1u, 2f);
+        let myClone = myStruct;
         return;
       }"
     `);
@@ -365,8 +365,8 @@ describe('struct', () => {
       }
 
       fn testFn() {
-        var myStructs = array<TestStruct, 1>(TestStruct(1u, 2f));
-        var myClone = myStructs[0i];
+        let myStructs = array<TestStruct, 1>(TestStruct(1u, 2f));
+        let myClone = myStructs[0i];
         return;
       }"
     `);
@@ -374,13 +374,13 @@ describe('struct', () => {
 
   it('throws when struct prop has whitespace in name', () => {
     expect(() => struct({ 'my prop': f32 })).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Invalid identifier 'my prop'. Choose an identifier without whitespaces or leading underscores.]`,
+      `[Error: Invalid property key 'my prop': Identifiers cannot contain whitespace.]`,
     );
   });
 
   it('throws when struct prop uses a reserved word', () => {
     expect(() => struct({ struct: f32 })).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Property key 'struct' is a reserved WGSL word. Choose a different name.]`,
+      `[Error: Invalid property key 'struct': Identifiers cannot start with reserved keywords.]`,
     );
   });
 
@@ -467,7 +467,7 @@ describe('abstruct', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn(x: f32) -> f32 {
-        var result = frexp(x);
+        let result = frexp(x);
         return f32(result.exp);
       }"
     `);

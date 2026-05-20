@@ -1,6 +1,4 @@
-import { invariant } from './errors.ts';
-
-const bannedTokens = new Set([
+export const bannedTokens = new Set([
   // keywords
   'alias',
   'break',
@@ -181,7 +179,7 @@ const bannedTokens = new Set([
   'storage',
 ]);
 
-const builtins = new Set([
+export const builtins = new Set([
   // constructors
   'array',
   'bool',
@@ -361,198 +359,102 @@ const builtins = new Set([
   'quadSwapY',
 ]);
 
-export interface NameRegistry {
-  /**
-   * Creates a valid WGSL identifier, each guaranteed to be unique
-   * in the lifetime of a single resolution process
-   * (excluding non-global identifiers from popped scopes).
-   * Should append "_" to primer, followed by some id.
-   * @param primer Used in the generation process, makes the identifier more recognizable.
-   * @param global Whether the name should be registered in the global scope (true), or in the current function scope (false)
-   */
-  makeUnique(primer: string | undefined, global: boolean): string;
-
-  /**
-   * Creates a valid WGSL identifier.
-   * Renames identifiers that are WGSL reserved words.
-   * @param primer Used in the generation process.
-   *
-   * @example
-   * makeValid("notAKeyword"); // "notAKeyword"
-   * makeValid("struct"); // makeUnique("struct")
-   * makeValid("struct_1"); // makeUnique("struct_1") (to avoid potential name collisions)
-   * makeValid("_"); // ERROR (too difficult to make valid to care)
-   */
-  makeValid(primer: string): string;
-
-  pushFunctionScope(): void;
-  popFunctionScope(): void;
-  pushBlockScope(): void;
-  popBlockScope(): void;
-}
-
-function sanitizePrimer(primer: string | undefined) {
+/*#__NO_SIDE_EFFECTS__*/
+export function sanitizePrimer(primer: string | undefined) {
   if (primer) {
-    // sanitizing
-    return primer
+    const base = primer
       .replaceAll(/\s/g, '_') // whitespaces
       .replaceAll(/[^\w\d]/g, ''); // removing illegal characters
+
+    if (base === '_' || base === '' || base.startsWith('__')) {
+      return 'item';
+    }
+    return base;
   }
   return 'item';
 }
+
+type ValidationResult =
+  | {
+      success: true;
+      error?: undefined;
+    }
+  | {
+      success: false;
+      error?: string | undefined;
+    };
 
 /**
  * A function for checking whether an identifier needs renaming.
  * Throws if provided with an invalid identifier that cannot be easily renamed.
  * @example
- * isValidIdentifier("ident"); // true
- * isValidIdentifier("struct"); // false
- * isValidIdentifier("struct_1"); // false
- * isValidIdentifier("_"); // ERROR
- * isValidIdentifier("my variable"); // ERROR
+ * validateIdentifier("ident"); // { success: true }
+ * validateIdentifier("struct"); // { success: false, error: "Identifiers cannot start with reserved keywords." }
+ * validateIdentifier("struct_1"); { success: false, error: "Identifiers cannot start with reserved keywords." }
+ * validateIdentifier("_"); // { success: false }
+ * validateIdentifier("my variable"); // { success: false, error: "Identifiers cannot contain whitespace." }
  */
-function isValidIdentifier(ident: string): boolean {
-  if (ident === '_' || ident.startsWith('__') || /\s/.test(ident)) {
-    throw new Error(
-      `Invalid identifier '${ident}'. Choose an identifier without whitespaces or leading underscores.`,
-    );
+/*#__NO_SIDE_EFFECTS__*/
+export function validateIdentifier(ident: string): ValidationResult {
+  if (ident === '_') {
+    return {
+      success: false,
+    };
+  }
+  if (/\s/.test(ident)) {
+    return {
+      success: false,
+      error: `Identifiers cannot contain whitespace.`,
+    };
+  }
+  if (ident.startsWith('__')) {
+    return {
+      success: false,
+      error: `Identifiers cannot start with double underscores.`,
+    };
   }
   const prefix = ident.split('_')[0] as string;
-  return !bannedTokens.has(prefix) && !builtins.has(prefix);
+  if (bannedTokens.has(prefix) || builtins.has(prefix)) {
+    return {
+      success: false,
+      error: `Identifiers cannot start with reserved keywords.`,
+    };
+  }
+  return {
+    success: true,
+  };
 }
 
 /**
- * Same as `isValidIdentifier`, except does not check for builtin clashes.
+ * Same as `validateIdentifier`, except does not check for builtin clashes.
  */
-export function isValidProp(ident: string): boolean {
-  if (ident === '_' || ident.startsWith('__') || /\s/.test(ident)) {
-    throw new Error(
-      `Invalid identifier '${ident}'. Choose an identifier without whitespaces or leading underscores.`,
-    );
+/*#__NO_SIDE_EFFECTS__*/
+export function validateProp(ident: string): ValidationResult {
+  if (ident === '_') {
+    return {
+      success: false,
+    };
+  }
+  if (/\s/.test(ident)) {
+    return {
+      success: false,
+      error: `Identifiers cannot contain whitespace.`,
+    };
+  }
+  if (ident.startsWith('__')) {
+    return {
+      success: false,
+      error: `Identifiers cannot start with double underscores.`,
+    };
   }
   const prefix = ident.split('_')[0] as string;
-  return !bannedTokens.has(prefix);
-}
-type FunctionScopeLayer = {
-  type: 'functionScope';
-};
-
-type BlockScopeLayer = {
-  type: 'blockScope';
-  usedBlockScopeNames: Set<string>;
-};
-
-type ScopeLayer = FunctionScopeLayer | BlockScopeLayer;
-
-abstract class NameRegistryImpl implements NameRegistry {
-  abstract getUniqueVariant(base: string): string;
-
-  readonly #usedNames: Set<string>;
-  readonly #scopeStack: ScopeLayer[];
-
-  constructor() {
-    this.#usedNames = new Set<string>([...bannedTokens, ...builtins]);
-    this.#scopeStack = [];
+  if (bannedTokens.has(prefix)) {
+    return {
+      success: false,
+      error: `Identifiers cannot start with reserved keywords.`,
+    };
   }
-
-  get #usedBlockScopeNames(): Set<string> | undefined {
-    return (this.#scopeStack[this.#scopeStack.length - 1] as BlockScopeLayer | undefined)
-      ?.usedBlockScopeNames;
-  }
-
-  makeUnique(primer: string | undefined, global: boolean): string {
-    const sanitizedPrimer = sanitizePrimer(primer);
-    const name = this.getUniqueVariant(sanitizedPrimer);
-
-    if (global) {
-      this.#usedNames.add(name);
-    } else {
-      this.#usedBlockScopeNames?.add(name);
-    }
-
-    return name;
-  }
-
-  #isUsedInBlocksBefore(name: string): boolean {
-    const functionScopeIndex = this.#scopeStack.findLastIndex(
-      (scope) => scope.type === 'functionScope',
-    );
-    return this.#scopeStack
-      .slice(functionScopeIndex + 1)
-      .some((scope) => (scope as BlockScopeLayer).usedBlockScopeNames.has(name));
-  }
-
-  makeValid(primer: string): string {
-    if (
-      isValidIdentifier(primer) &&
-      !this.#usedNames.has(primer) &&
-      !this.#isUsedInBlocksBefore(primer)
-    ) {
-      this.#usedBlockScopeNames?.add(primer);
-      return primer;
-    }
-    return this.makeUnique(primer, false);
-  }
-
-  isUsed(name: string): boolean {
-    return this.#usedNames.has(name) || this.#isUsedInBlocksBefore(name);
-  }
-
-  pushFunctionScope(): void {
-    this.#scopeStack.push({ type: 'functionScope' });
-    this.#scopeStack.push({
-      type: 'blockScope',
-      usedBlockScopeNames: new Set(),
-    });
-  }
-
-  popFunctionScope(): void {
-    const functionScopeIndex = this.#scopeStack.findLastIndex(
-      (scope) => scope.type === 'functionScope',
-    );
-
-    if (functionScopeIndex === -1) {
-      throw new Error('Tried to pop function scope when no scope was present.');
-    }
-
-    this.#scopeStack.splice(functionScopeIndex);
-  }
-
-  pushBlockScope(): void {
-    this.#scopeStack.push({
-      type: 'blockScope',
-      usedBlockScopeNames: new Set(),
-    });
-  }
-  popBlockScope(): void {
-    invariant(
-      this.#scopeStack[this.#scopeStack.length - 1]?.type === 'blockScope',
-      'Tried to pop block scope, but it is not present',
-    );
-    this.#scopeStack.pop();
-  }
-}
-
-export class RandomNameRegistry extends NameRegistryImpl {
-  #lastUniqueId = 0;
-
-  getUniqueVariant(base: string): string {
-    let name = `${base}_${this.#lastUniqueId++}`;
-    while (this.isUsed(name)) {
-      name = `${base}_${this.#lastUniqueId++}`;
-    }
-    return name;
-  }
-}
-
-export class StrictNameRegistry extends NameRegistryImpl {
-  getUniqueVariant(base: string): string {
-    let index = 0;
-    let name = base;
-    while (this.isUsed(name)) {
-      index++;
-      name = `${base}_${index}`;
-    }
-    return name;
-  }
+  return {
+    success: true,
+  };
 }

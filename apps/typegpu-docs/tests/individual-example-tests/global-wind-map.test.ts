@@ -45,9 +45,9 @@ describe('global wind map example', () => {
         let currentPosIndex = (frameCount % 20u);
         let prevPosIndex = (((20u + frameCount) - 1u) % 20u);
         let pos = (&(*particle).positions[prevPosIndex]);
-        var v0 = vectorField((*pos));
-        var v1 = vectorField(((*pos) + (v0 * (0.5f * stepSize))));
-        var newPos = ((*pos) + (v1 * stepSize));
+        let v0 = vectorField((*pos));
+        let v1 = vectorField(((*pos) + (v0 * (0.5f * stepSize))));
+        let newPos = ((*pos) + (v1 * stepSize));
         (*particle).positions[currentPosIndex] = newPos;
         particles[particleIndex] = (*particle);
       }
@@ -99,13 +99,13 @@ describe('global wind map example', () => {
         let b = (distance_1.y * sinDivLen);
         let c = (distance_1.x * sinDivLen);
         let d = (distance_1.y * cosDivLen);
-        var nL = vec2f((a - b), (c + d));
-        var nR = vec2f((a + b), (-(c) + d));
+        let nL = vec2f((a - b), (c + d));
+        let nR = vec2f((a + b), (-(c) + d));
         return ExternalNormals(nL, nR);
       }
 
       fn miterPointNoCheck(a: vec2f, b: vec2f) -> vec2f {
-        var ab = (a + b);
+        let ab = (a + b);
         return (ab * (2f / dot(ab, ab)));
       }
 
@@ -125,10 +125,10 @@ describe('global wind map example', () => {
         let tooCloseToJoinR = (dot(eAB.nR, eBC.nR) > 0.99f);
         let shouldJoinL = (isHairpin || (underLimitL && !tooCloseToJoinL));
         let shouldJoinR = (isHairpin || (underLimitR && !tooCloseToJoinR));
-        var dLMiter = miterPointNoCheck(eAB.nL, eBC.nL);
-        var dRMiter = miterPointNoCheck(eBC.nR, eAB.nR);
-        var dL = select(eBC.nL, dLMiter, (!isCap && !shouldJoinL));
-        var dR = select(eBC.nR, dRMiter, (!isCap && !shouldJoinR));
+        let dLMiter = miterPointNoCheck(eAB.nL, eBC.nL);
+        let dRMiter = miterPointNoCheck(eBC.nR, eAB.nR);
+        let dL = select(eBC.nL, dLMiter, (!isCap && !shouldJoinL));
+        let dR = select(eBC.nR, dRMiter, (!isCap && !shouldJoinR));
         return JoinResult(dL, dR, shouldJoinL, shouldJoinR, isHairpin);
       }
 
@@ -143,10 +143,10 @@ describe('global wind map example', () => {
       }
 
       fn intersectLines(A1: vec2f, A2: vec2f, B1: vec2f, B2: vec2f) -> Intersection {
-        var a = (A2 - A1);
-        var b = (B2 - B1);
+        let a = (A2 - A1);
+        let b = (B2 - B1);
         let axb = cross2d(a, b);
-        var AB = (B1 - A1);
+        let AB = (B1 - A1);
         let t = (cross2d(AB, b) / axb);
         return Intersection((((axb != 0f) && (t >= 0f)) && (t <= 1f)), t, (A1 + (a * t)));
       }
@@ -167,12 +167,12 @@ describe('global wind map example', () => {
       }
 
       fn arrow(join: JoinInput, joinVertexIndex: u32, _maxJoinCount: u32) -> vec2f {
-        var bw = -(normalize(join.fw));
-        var vert = rot90ccw(bw);
+        let bw = -(normalize(join.fw));
+        let vert = rot90ccw(bw);
         let sgn = sign(cross2d(bw, join.d));
-        var svert = (vert * sgn);
-        var v0 = (svert + (bw * 7.5f));
-        var v1 = (v0 + ((bw + svert) * 1.5f));
+        let svert = (vert * sgn);
+        let v0 = (svert + (bw * 7.5f));
+        let v1 = (v0 + ((bw + svert) * 1.5f));
         if ((joinVertexIndex == 0u)) {
           return (join.C.position + (v0 * join.C.radius));
         }
@@ -183,10 +183,10 @@ describe('global wind map example', () => {
       }
 
       fn butt(join: JoinInput, _joinVertexIndex: u32, _maxJoinCount: u32) -> vec2f {
-        var fw = normalize(join.fw);
-        var vert = rot90ccw(fw);
+        let fw = normalize(join.fw);
+        let vert = rot90ccw(fw);
         let sgn = sign(cross2d(fw, join.d));
-        var svert = (vert * sgn);
+        let svert = (vert * sgn);
         return (join.C.position + (svert * join.C.radius));
       }
 
@@ -197,9 +197,9 @@ describe('global wind map example', () => {
       fn bisectCcw(a: vec2f, b: vec2f) -> vec2f {
         let sin_1 = cross2d(a, b);
         let sinSign = select(-1f, 1f, (sin_1 >= 0f));
-        var orthoA = rot90ccw(a);
-        var orthoB = rot90cw(b);
-        var dir = select(((a + b) * sinSign), (orthoA + orthoB), (dot(a, b) < 0f));
+        let orthoA = rot90ccw(a);
+        let orthoB = rot90cw(b);
+        let dir = select(((a + b) * sinSign), (orthoA + orthoB), (dot(a, b) < 0f));
         return normalize(dir);
       }
 
@@ -208,7 +208,7 @@ describe('global wind map example', () => {
       }
 
       fn slerpApprox(a: vec2f, b: vec2f, t: f32) -> vec2f {
-        var mid = bisectNoCheck(a, b);
+        let mid = bisectNoCheck(a, b);
         var a_ = a;
         var b_ = mid;
         var t_ = (2f * t);
@@ -224,15 +224,15 @@ describe('global wind map example', () => {
         if ((joinVertexIndex == 0u)) {
           return join.v;
         }
-        var dir = slerpApprox(join.d, bisectCcw(join.start, join.end), (f32(joinVertexIndex) / f32(maxJoinCount)));
+        let dir = slerpApprox(join.d, bisectCcw(join.start, join.end), (f32(joinVertexIndex) / f32(maxJoinCount)));
         return (join.C.position + (dir * join.C.radius));
       }
 
       fn lineSegmentVariableWidth(vertexIndex: u32, A: LineControlPoint, B: LineControlPoint, C: LineControlPoint, D: LineControlPoint, maxJoinCount: u32) -> LineSegmentOutput {
-        var AB = (B.position - A.position);
-        var BC = (C.position - B.position);
-        var DC = (C.position - D.position);
-        var CB = -(BC);
+        let AB = (B.position - A.position);
+        let BC = (C.position - B.position);
+        let DC = (C.position - D.position);
+        let CB = -(BC);
         let radiusABDelta = (A.radius - B.radius);
         let radiusBCDelta = (B.radius - C.radius);
         let radiusCDDelta = (C.radius - D.radius);
@@ -241,10 +241,10 @@ describe('global wind map example', () => {
         }
         let isCapB = (dot(AB, AB) <= (radiusABDelta * radiusABDelta));
         let isCapC = (dot(DC, DC) <= (radiusCDDelta * radiusCDDelta));
-        var eAB = externalNormals(AB, A.radius, B.radius);
-        var eBC = externalNormals(BC, B.radius, C.radius);
-        var eCB = ExternalNormals(eBC.nR, eBC.nL);
-        var eDC = externalNormals(DC, D.radius, C.radius);
+        let eAB = externalNormals(AB, A.radius, B.radius);
+        let eBC = externalNormals(BC, B.radius, C.radius);
+        let eCB = ExternalNormals(eBC.nR, eBC.nL);
+        let eDC = externalNormals(DC, D.radius, C.radius);
         let joinLimit = dot(eBC.nL, BC);
         var joinB = solveJoin(AB, BC, eAB, eBC, joinLimit, isCapB);
         var joinC = solveJoin(DC, CB, eDC, eCB, -(joinLimit), isCapC);
@@ -252,16 +252,16 @@ describe('global wind map example', () => {
         let d3 = (&joinB.dR);
         let d4 = (&joinC.dL);
         let d5 = (&joinC.dR);
-        var v2orig = (B.position + ((*d2) * B.radius));
-        var v3orig = (B.position + ((*d3) * B.radius));
-        var v4orig = (C.position + ((*d4) * C.radius));
-        var v5orig = (C.position + ((*d5) * C.radius));
-        var limL = intersectLines(B.position, v2orig, C.position, v5orig);
-        var limR = intersectLines(B.position, v3orig, C.position, v4orig);
-        var v2 = select(v2orig, limL.point, limL.valid);
-        var v5 = select(v5orig, limL.point, limL.valid);
-        var v3 = select(v3orig, limR.point, limR.valid);
-        var v4 = select(v4orig, limR.point, limR.valid);
+        let v2orig = (B.position + ((*d2) * B.radius));
+        let v3orig = (B.position + ((*d3) * B.radius));
+        let v4orig = (C.position + ((*d4) * C.radius));
+        let v5orig = (C.position + ((*d5) * C.radius));
+        let limL = intersectLines(B.position, v2orig, C.position, v5orig);
+        let limR = intersectLines(B.position, v3orig, C.position, v4orig);
+        let v2 = select(v2orig, limL.point, limL.valid);
+        let v5 = select(v5orig, limL.point, limL.valid);
+        let v3 = select(v3orig, limR.point, limR.valid);
+        let v4 = select(v4orig, limR.point, limR.valid);
         if ((vertexIndex == 0u)) {
           return LineSegmentOutput(B.position, (1f / B.radius));
         }
@@ -319,11 +319,11 @@ describe('global wind map example', () => {
         let iB = trailIndex;
         let iC = (((20i + trailIndex) - 1i) % 20i);
         let iD = (((20i + trailIndex) - 2i) % 20i);
-        var A = LineControlPoint((*particle).positions[iA], lineWidth((f32(trailIndexOriginal) / 19f)));
-        var B = LineControlPoint((*particle).positions[iB], lineWidth((f32((trailIndexOriginal + 1u)) / 19f)));
-        var C = LineControlPoint((*particle).positions[iC], lineWidth((f32((trailIndexOriginal + 2u)) / 19f)));
-        var D = LineControlPoint((*particle).positions[iD], lineWidth((f32((trailIndexOriginal + 3u)) / 19f)));
-        var result = lineSegmentVariableWidth(vertexIndex, A, B, C, D, 3u);
+        let A = LineControlPoint((*particle).positions[iA], lineWidth((f32(trailIndexOriginal) / 19f)));
+        let B = LineControlPoint((*particle).positions[iB], lineWidth((f32((trailIndexOriginal + 1u)) / 19f)));
+        let C = LineControlPoint((*particle).positions[iC], lineWidth((f32((trailIndexOriginal + 2u)) / 19f)));
+        let D = LineControlPoint((*particle).positions[iD], lineWidth((f32((trailIndexOriginal + 3u)) / 19f)));
+        let result = lineSegmentVariableWidth(vertexIndex, A, B, C, D, 3u);
         return mainVertex_Output(vec4f(result.vertexPosition, 0f, 1f), result.vertexPosition, (f32(trailIndexOriginal) / 19f));
       }
 
