@@ -15,7 +15,7 @@ bunx tgpu@latest
 ```
 
 ## Enhancing
-Run inside the root of an existing Vite or React Native project:
+Run inside the root of an existing Vite project:
 
 ```sh
 pnpm dlx tgpu@latest -e
