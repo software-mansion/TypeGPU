@@ -210,7 +210,7 @@ function PreviewPane({ children, compact, error, fixedHeight }: PreviewPaneProps
     <div
       className={cx(
         'min-w-0 overflow-auto bg-[var(--sl-color-bg-inline-code)] p-3',
-        fixedHeight ? (compact ? 'h-36' : 'h-56') : 'min-h-56 md:min-h-0',
+        fixedHeight && (compact ? 'h-36' : 'h-56'),
       )}
     >
       {children}
@@ -256,15 +256,13 @@ function RunnableSnippetShell({
               : 'md:grid-cols-[minmax(0,1fr)_8rem]',
           )}
         >
-          <PreviewPane compact={compactPreview} error={runner.error} fixedHeight={!hasControls}>
+          <PreviewPane compact={compactPreview} error={runner.error} fixedHeight={compactPreview}>
             {preview}
           </PreviewPane>
           <div
             className={cx(
               'grid border-t border-[var(--sl-color-gray-5)] bg-[var(--sl-color-bg)] md:border-l md:border-t-0',
-              hasControls
-                ? 'min-w-0 grid-rows-[auto_minmax(0,1fr)_auto]'
-                : 'md:grid-rows-[minmax(0,1fr)_auto]',
+              hasControls ? 'min-w-0 grid-rows-[auto_minmax(0,1fr)_auto]' : 'place-items-center',
             )}
           >
             {hasControls ? (
@@ -272,15 +270,11 @@ function RunnableSnippetShell({
                 <div className="min-w-0">{controls}</div>
                 <div aria-hidden="true" />
               </>
-            ) : (
-              <div aria-hidden="true" className="hidden md:block" />
-            )}
+            ) : null}
             <div
               className={cx(
                 'grid place-items-center p-2',
-                hasControls
-                  ? 'border-t border-[var(--sl-color-gray-5)]'
-                  : 'md:border-t md:border-[var(--sl-color-gray-5)] md:px-3',
+                hasControls ? 'border-t border-[var(--sl-color-gray-5)]' : 'md:px-3',
               )}
             >
               {runButton}

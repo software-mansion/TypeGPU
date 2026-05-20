@@ -552,10 +552,10 @@ describe('fluid double buffering example', () => {
         @location(0) uv: vec2f,
       }
 
-      @vertex fn vertexMain(@builtin(vertex_index) _arg_idx: u32) -> vertexMain_Output {
+      @vertex fn vertexMain(@builtin(vertex_index) idx: u32) -> vertexMain_Output {
         let pos = array<vec2f, 4>(vec2f(1), vec2f(-1, 1), vec2f(1, -1), vec2f(-1));
         let uv = array<vec2f, 4>(vec2f(1), vec2f(0, 1), vec2f(1, 0), vec2f());
-        return vertexMain_Output(vec4f(pos[_arg_idx].x, pos[_arg_idx].y, 0f, 1f), uv[_arg_idx]);
+        return vertexMain_Output(vec4f(pos[idx].x, pos[idx].y, 0f, 1f), uv[idx]);
       }
 
       fn coordsToIndex(x: i32, y: i32) -> i32 {

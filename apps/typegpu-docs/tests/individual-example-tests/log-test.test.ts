@@ -1448,9 +1448,9 @@ describe('console log example', () => {
         @builtin(position) pos: vec4f,
       }
 
-      @vertex fn mainVertex(@builtin(vertex_index) _arg_vertexIndex: u32) -> mainVertex_Output {
+      @vertex fn mainVertex(@builtin(vertex_index) vertexIndex: u32) -> mainVertex_Output {
         let positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
-        return mainVertex_Output(vec4f(positions[_arg_vertexIndex], 0f, 1f));
+        return mainVertex_Output(vec4f(positions[vertexIndex], 0f, 1f));
       }
 
       @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
@@ -1501,9 +1501,9 @@ describe('console log example', () => {
         @builtin(position) pos: vec4f,
       }
 
-      @vertex fn mainVertex(@builtin(vertex_index) _arg_vertexIndex: u32) -> mainVertex_Output {
+      @vertex fn mainVertex(@builtin(vertex_index) vertexIndex: u32) -> mainVertex_Output {
         let positions = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
-        return mainVertex_Output(vec4f(positions[_arg_vertexIndex], 0f, 1f));
+        return mainVertex_Output(vec4f(positions[vertexIndex], 0f, 1f));
       }
 
       @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
