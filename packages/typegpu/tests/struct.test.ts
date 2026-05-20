@@ -422,7 +422,7 @@ describe('struct', () => {
     `);
   });
 
-  it('copies props one by one when the struct is different', () => {
+  it('resolves struct casts', () => {
     const props = {
       pos: d.vec3f,
       vel: d.vec3f,
@@ -457,7 +457,7 @@ describe('struct', () => {
     `);
   });
 
-  it('coerces prop types between structs', () => {
+  it('resolves struct casts and coerces props accordingly', () => {
     const Boid = d.struct({ a: d.u32, b: d.f32 });
     const Bird = d.struct({ a: d.i32, b: d.i32 });
 
@@ -485,7 +485,7 @@ describe('struct', () => {
     `);
   });
 
-  it('copies nested structs', () => {
+  it('resolves nested struct casts', () => {
     const Boid = d.struct({ prop: d.struct({ a: d.u32, b: d.f32 }) });
     const Bird = d.struct({ prop: d.struct({ a: d.i32, b: d.i32 }) });
 
@@ -521,7 +521,7 @@ describe('struct', () => {
     `);
   });
 
-  it('copies only required props for a supertype', () => {
+  it('resolves struct subtype to supertype casts', () => {
     const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
     const Bird = d.struct({ pos: d.vec2u });
 
@@ -548,7 +548,7 @@ describe('struct', () => {
     `);
   });
 
-  it('throws a descriptive error when trying to copy a subtype', () => {
+  it('does not resolve struct casts when trying to copy with missing props', () => {
     const Boid = d.struct({ pos: d.vec2u });
     const Bird = d.struct({ pos: d.vec2u, id: d.u32 });
 
@@ -567,28 +567,7 @@ describe('struct', () => {
     `);
   });
 
-  it('TODO: remove', () => {
-    const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
-    const boid = Boid({ id: 4, pos: d.vec2u(1, 2) });
-
-    function main() {
-      'use gpu';
-      const b = Boid(boid);
-    }
-
-    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "struct Boid {
-        pos: vec2u,
-        id: u32,
-      }
-
-      fn main() {
-        var b = Boid(vec2u(1, 2), 4u);
-      }"
-    `);
-  });
-
-  it('requires aliases in struct calls', () => {
+  it('does not resolve struct casts when this would modify code behavior', () => {
     const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
     const Bird = d.struct({ pos: d.vec2u, id: d.u32 });
 
@@ -602,8 +581,69 @@ describe('struct', () => {
       const bird = Bird(reallyExpensiveAndAlsoModifiedPrivateVarsBtw());
     };
 
-    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - fn*:reallyExpensiveAndAlsoModifiedPrivateVarsBtw(): Expected function to have a single return type, got [struct:Boid]. Cast explicitly to the desired type.]
+    `);
   });
+
+  it('resolves struct casts in function calls', () => {
+    const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
+    const Bird = d.struct({ pos: d.vec2u, id: d.u32 });
+
+    const helper = tgpu.fn([Bird])((bird) => {
+      'use gpu';
+    });
+
+    const main = tgpu.fn([])(() => {
+      'use gpu';
+      const boid = Boid();
+      helper(boid);
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec2u,
+        id: u32,
+      }
+
+      struct Bird {
+        pos: vec2u,
+        id: u32,
+      }
+
+      fn helper(bird: Bird) {
+
+      }
+
+      fn main() {
+        var boid = Boid();
+        helper(Bird(boid.pos, boid.id));
+      }"
+    `);
+  });
+
+  // TODO(#2519): make this resolve throw an error
+  // it('does not resolve struct casts when it needs a ref', () => {
+  //   const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
+  //   const Bird = d.struct({ pos: d.vec2u, id: d.u32 });
+
+  //   const modify = tgpu.fn([d.ptrFn(Bird)])((bird) => {
+  //     'use gpu';
+  //     bird.$.id += 1;
+  //   });
+
+  //   const main = tgpu.fn([])(() => {
+  //     'use gpu';
+  //     const boid = Boid();
+  //     modify(d.ref(boid));
+  //   });
+
+  //   expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
+  // });
 });
 
 describe('WgslStruct', () => {
