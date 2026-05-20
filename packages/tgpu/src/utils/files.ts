@@ -37,16 +37,13 @@ export async function prepareDirectory(cwd: string, projectDir: string) {
       message: `Directory ${dir} is not empty.`,
       options: [
         { value: 'no', label: 'Cancel operation' },
-        { value: 'ignore', label: 'Ignore existing files and continue' },
         { value: 'yes', label: 'Remove existing files and continue' },
       ],
     });
     if (p.isCancel(overwrite) || overwrite === 'no') {
       cancelExit();
     }
-    if (overwrite === 'yes') {
-      emptyDir(dir);
-    }
+    emptyDir(dir);
   }
 
   return dir;
