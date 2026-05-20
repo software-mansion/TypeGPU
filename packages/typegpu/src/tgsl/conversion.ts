@@ -27,12 +27,11 @@ import { assertExhaustive } from '../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { accessStructProp } from './generationHelpers.ts';
 
-type ConversionAction = 'ref' | 'deref' | 'cast' | 'none' | 'unrollProps';
+type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
 
 type ConversionRankInfo =
-  | { rank: number; action: 'unrollProps'; targetType: BaseData }
   | { rank: number; action: 'cast'; targetType: BaseData }
-  | { rank: number; action: Exclude<ConversionAction, 'cast' | 'unrollProps'> };
+  | { rank: number; action: Exclude<ConversionAction, 'cast'> };
 
 const INFINITE_RANK: ConversionRankInfo = {
   rank: Number.POSITIVE_INFINITY,
@@ -45,7 +44,7 @@ function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInf
 
   if (trueSrc.type === trueDst.type) {
     if (trueSrc.type === 'struct' && trueSrc !== trueDst) {
-      return { rank: 0, action: 'unrollProps', targetType: dest };
+      return { rank: 0, action: 'cast', targetType: dest };
     }
     return { rank: 0, action: 'none' };
   }
@@ -266,32 +265,30 @@ function applyActionToSnippet(
     case 'deref':
       return derefSnippet(snippet);
     case 'cast': {
+      if (isWgslStruct(snippet.dataType) && isWgslStruct(targetType)) {
+        // Struct to struct casting
+        const propSnips = Object.entries(targetType.propTypes).map(([key, dataType]) => {
+          const access = accessStructProp(snippet, key) as unknown as Snippet;
+          if (!access) {
+            throw new Error(
+              `Cannot auto-convert struct '${getName(snippet.dataType) ?? '<unnamed>'}' to '${getName(targetType) ?? '<unnamed>'}' because the property '${key}' is missing.`,
+            );
+          }
+          const converted = convertToCommonType(ctx, [access], [dataType]);
+          if (!converted || !converted[0]) {
+            throw new Error('AAA');
+          }
+          return converted[0];
+        });
+        const targetSnippet = ctx.resolve(targetType).value;
+        return snip(
+          `${targetSnippet}(${propSnips.map((snip) => snip.value).join(', ')})`,
+          targetType,
+          'runtime',
+        );
+      }
       // Casting means calling the schema with the snippet as an argument.
       return schemaCallWrapperGPU(ctx, targetType, snippet);
-    }
-    case 'unrollProps': {
-      if (!isWgslStruct(targetType)) {
-        throw new Error('AAA');
-      }
-      const propSnips = Object.entries(targetType.propTypes).map(([key, dataType]) => {
-        const access = accessStructProp(snippet, key) as unknown as Snippet;
-        if (!access) {
-          throw new Error(
-            `Cannot auto-convert struct '${getName(snippet.dataType) ?? '<unnamed>'}' to '${getName(targetType) ?? '<unnamed>'}' because the property '${key}' is missing.`,
-          );
-        }
-        const converted = convertToCommonType(ctx, [access], [dataType]);
-        if (!converted || !converted[0]) {
-          throw new Error('AAA');
-        }
-        return converted[0];
-      });
-      const targetSnippet = ctx.resolve(targetType).value;
-      return snip(
-        `${targetSnippet}(${propSnips.map((snip) => snip.value).join(', ')})`,
-        targetType,
-        'runtime',
-      );
     }
     default: {
       assertExhaustive(action.action, 'applyActionToSnippet');
