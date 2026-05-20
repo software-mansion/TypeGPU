@@ -25,9 +25,9 @@ describe('xor dev centrifuge example', () => {
         @location(0) uv: vec2f,
       }
 
-      @vertex fn vertexMain(@builtin(vertex_index) _arg_vertexIndex: u32) -> vertexMain_Output {
+      @vertex fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> vertexMain_Output {
         let pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
-        return vertexMain_Output(vec4f(pos[_arg_vertexIndex], 0f, 1f), pos[_arg_vertexIndex]);
+        return vertexMain_Output(vec4f(pos[vertexIndex], 0f, 1f), pos[vertexIndex]);
       }
 
       struct Params {

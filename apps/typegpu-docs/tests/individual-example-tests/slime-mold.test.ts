@@ -302,10 +302,10 @@ describe('slime mold example', () => {
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(@builtin(vertex_index) _arg_vertexIndex: u32) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         let pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
         let uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
-        return fullScreenTriangle_Output(vec4f(pos[_arg_vertexIndex], 0f, 1f), uv[_arg_vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0f, 1f), uv[vertexIndex]);
       }
 
       @group(1) @binding(0) var state: texture_2d<f32>;

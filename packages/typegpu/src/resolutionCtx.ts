@@ -573,7 +573,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           // Create named arg snippets, then a proxy for property access routing.
           const proxyEntries: Array<{ schemaKey: string; arg: FunctionArgumentAccess }> = [];
           for (const a of positionalArgs) {
-            const argName = this.makeUniqueIdentifier(`_arg_${a.schemaKey}`, 'block');
+            const argName = this.makeUniqueIdentifier(a.schemaKey, 'block');
             const arg = createArgument(argName, a.type);
             args.push(arg);
             proxyEntries.push({ schemaKey: a.schemaKey, arg: arg.access });

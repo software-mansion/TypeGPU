@@ -63,12 +63,12 @@ describe('cubemap reflection example', () => {
         return vec2u(xy, zw);
       }
 
-      @compute @workgroup_size(256, 1, 1) fn computeFn(@builtin(global_invocation_id) _arg_gid: vec3u) {
+      @compute @workgroup_size(256, 1, 1) fn computeFn(@builtin(global_invocation_id) gid: vec3u) {
         let prevVertices = (&prevVertices_1);
         let nextVertices = (&nextVertices_1);
         let smoothFlag = smoothFlag_1;
         let triangleCount = u32((f32(arrayLength(&(*prevVertices))) / 3f));
-        let triangleIndex = (_arg_gid.x + (_arg_gid.y * 65535u));
+        let triangleIndex = (gid.x + (gid.y * 65535u));
         if ((triangleIndex >= triangleCount)) {
           return;
         }
@@ -252,9 +252,9 @@ describe('cubemap reflection example', () => {
         @location(0) texCoord: vec3f,
       }
 
-      @vertex fn cubeVertexFn(@location(0) _arg_position: vec3f) -> cubeVertexFn_Output {
-        let viewPos = (camera.view * vec4f(_arg_position.xyz, 0f)).xyz;
-        return cubeVertexFn_Output((camera.projection * vec4f(viewPos, 1f)), _arg_position.xyz);
+      @vertex fn cubeVertexFn(@location(0) position: vec3f) -> cubeVertexFn_Output {
+        let viewPos = (camera.view * vec4f(position.xyz, 0f)).xyz;
+        return cubeVertexFn_Output((camera.projection * vec4f(viewPos, 1f)), position.xyz);
       }
 
       @group(1) @binding(0) var cubemap: texture_cube<f32>;
@@ -283,8 +283,8 @@ describe('cubemap reflection example', () => {
         @location(1) worldPos: vec4f,
       }
 
-      @vertex fn vertexFn(@location(0) _arg_position: vec4f, @location(1) _arg_normal: vec4f) -> vertexFn_Output {
-        return vertexFn_Output((camera.projection * (camera.view * _arg_position)), _arg_normal, _arg_position);
+      @vertex fn vertexFn(@location(0) position: vec4f, @location(1) normal: vec4f) -> vertexFn_Output {
+        return vertexFn_Output((camera.projection * (camera.view * position)), normal, position);
       }
 
       struct DirectionalLight {

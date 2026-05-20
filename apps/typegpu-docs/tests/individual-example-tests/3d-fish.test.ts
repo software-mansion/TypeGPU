@@ -285,11 +285,11 @@ describe('3d fish example', () => {
         @location(5) @interpolate(flat) applySeaDesaturation: u32,
       }
 
-      @vertex fn vertexShader(@location(0) _arg_modelPosition: vec3f, @location(1) _arg_modelNormal: vec3f, @location(2) _arg_textureUV: vec2f, @builtin(instance_index) _arg_instanceIndex: u32) -> vertexShader_Output {
-        let currentModelData = (&modelData[_arg_instanceIndex]);
-        var wavedVertex = PosAndNormal(_arg_modelPosition, _arg_modelNormal);
+      @vertex fn vertexShader(@location(0) modelPosition: vec3f, @location(1) modelNormal: vec3f, @location(2) textureUV: vec2f, @builtin(instance_index) instanceIndex: u32) -> vertexShader_Output {
+        let currentModelData = (&modelData[instanceIndex]);
+        var wavedVertex = PosAndNormal(modelPosition, modelNormal);
         if (((*currentModelData).applySinWave == 1u)) {
-          wavedVertex = applySinWave(_arg_instanceIndex, PosAndNormal(_arg_modelPosition, _arg_modelNormal), currentTime);
+          wavedVertex = applySinWave(instanceIndex, PosAndNormal(modelPosition, modelNormal), currentTime);
         }
         let direction = normalize((*currentModelData).direction);
         let yaw = (-(atan2(direction.z, direction.x)) + 3.141592653589793f);
@@ -302,7 +302,7 @@ describe('3d fish example', () => {
         let worldNormal = normalize(((yawMatrix * pitchMatrix) * vec4f(wavedVertex.normal, 1f)).xyz);
         let worldPositionUniform = (&worldPosition);
         let canvasPosition = ((camera.projection * camera.view) * (*worldPositionUniform));
-        return vertexShader_Output(worldPosition.xyz, worldNormal, canvasPosition, (*currentModelData).variant, _arg_textureUV, (*currentModelData).applySeaFog, (*currentModelData).applySeaDesaturation);
+        return vertexShader_Output(worldPosition.xyz, worldNormal, canvasPosition, (*currentModelData).variant, textureUV, (*currentModelData).applySeaFog, (*currentModelData).applySeaDesaturation);
       }
 
       @group(0) @binding(1) var modelTexture: texture_2d<f32>;
