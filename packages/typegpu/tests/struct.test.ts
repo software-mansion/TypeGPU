@@ -450,9 +450,9 @@ describe('struct', () => {
       }
 
       fn main() {
-        var boid = Boid();
-        var clone = boid;
-        var bird = Bird(boid.pos, boid.vel);
+        let boid = Boid();
+        let clone = boid;
+        let bird = Bird(boid.pos, boid.vel);
       }"
     `);
   });
@@ -479,8 +479,8 @@ describe('struct', () => {
       }
 
       fn main() {
-        var boid = Boid();
-        var bird = Bird(i32(boid.a), i32(boid.b));
+        let boid = Boid();
+        let bird = Bird(i32(boid.a), i32(boid.b));
       }"
     `);
   });
@@ -515,8 +515,8 @@ describe('struct', () => {
       }
 
       fn main() {
-        var boid = Boid();
-        var bird = Bird(prop_1(i32(boid.prop.a), i32(boid.prop.b)));
+        let boid = Boid();
+        let bird = Bird(prop_1(i32(boid.prop.a), i32(boid.prop.b)));
       }"
     `);
   });
@@ -542,8 +542,8 @@ describe('struct', () => {
       }
 
       fn main() {
-        var boid = Boid();
-        var bird = Bird(boid.pos);
+        let boid = Boid();
+        let bird = Bird(boid.pos);
       }"
     `);
   });
@@ -619,7 +619,7 @@ describe('struct', () => {
       }
 
       fn main() {
-        var boid = Boid();
+        let boid = Boid();
         helper(Bird(boid.pos, boid.id));
       }"
     `);
