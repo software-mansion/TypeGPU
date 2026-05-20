@@ -3,7 +3,7 @@ import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
-import { snip, type Snippet } from '../data/snippet.ts';
+import { isAlias, snip, type Snippet } from '../data/snippet.ts';
 import {
   type AbstractFloat,
   type AnyWgslData,
@@ -267,6 +267,12 @@ function applyActionToSnippet(
     case 'cast': {
       if (isWgslStruct(snippet.dataType) && isWgslStruct(targetType)) {
         // Struct to struct casting
+        if (!isAlias(snippet)) {
+          throw new Error(
+            `Cannot resolve struct cast from '${getName(snippet.dataType) ?? '<unnamed>'}' to '${getName(targetType) ?? '<unnamed>'}'. Store the casted value in a variable first.`,
+          );
+        }
+
         const propSnips = Object.entries(targetType.propTypes).map(([key, dataType]) => {
           const access = accessStructProp(snippet, key) as unknown as Snippet;
           if (!access) {

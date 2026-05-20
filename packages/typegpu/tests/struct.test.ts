@@ -585,8 +585,7 @@ describe('struct', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
-      - fn*:main()
-      - fn*:reallyExpensiveAndAlsoModifiedPrivateVarsBtw(): Expected function to have a single return type, got [struct:Boid]. Cast explicitly to the desired type.]
+      - fn*:main(): Cannot resolve struct cast from 'Boid' to 'Bird'. Store the casted value in a variable first.]
     `);
   });
 
