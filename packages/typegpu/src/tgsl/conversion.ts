@@ -277,16 +277,16 @@ function applyActionToSnippet(
         }
 
         const propSnips = Object.entries(targetType.propTypes).map(([key, dataType]) => {
-          const access = accessStructProp(snippet, key) as unknown as Snippet;
-          if (!access) {
+          const accessedProp = accessStructProp(snippet, key);
+          if (!accessedProp) {
             throw new Error(
               `Cannot auto-convert struct '${typeName}' to '${targetName}' because the property '${key}' is missing.`,
             );
           }
-          const converted = convertToCommonType(ctx, [access], [dataType]);
+          const converted = convertToCommonType(ctx, [accessedProp], [dataType]);
           if (!converted || !converted[0]) {
             throw new Error(
-              `Cannot auto-convert struct '${typeName}' to '${targetName}' because type '${getName(access.dataType) ?? '<unnamed>'}' is not convertible to '${getName(dataType) ?? '<unnamed>'}'.`,
+              `Cannot auto-convert struct '${typeName}' to '${targetName}' because type '${getName(accessedProp.dataType) ?? '<unnamed>'}' is not convertible to '${getName(dataType) ?? '<unnamed>'}'.`,
             );
           }
           return converted[0];
