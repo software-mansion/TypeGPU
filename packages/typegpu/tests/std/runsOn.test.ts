@@ -67,6 +67,19 @@ describe('runsOn', () => {
     `);
   });
 
+  it('correctly determines cpu runtime in simulate', () => {
+    const counter = tgpu.privateVar(d.u32, 0);
+
+    const result = tgpu['~unstable'].simulate(() => {
+      if (runsOn('cpu')) {
+        counter.$ += 1;
+      }
+      return counter.$;
+    });
+
+    expect(result.value).toBe(1);
+  });
+
   it('correctly branches on cpu/gpu runtime during execution', () => {
     const f = () => {
       'use gpu';
