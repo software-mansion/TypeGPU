@@ -882,12 +882,10 @@ ${this.ctx.pre}}`;
     const scope = this.ctx.topFunctionScope;
     invariant(scope, 'Expected function scope to be present');
     const replacements = Object.fromEntries(
-      scope.placeholderForVariable
-        .entries()
-        .map(([variable, placeholder]) => [
-          placeholder,
-          scope.modifiedVariables.has(variable) ? 'var' : 'let',
-        ]),
+      [...scope.placeholderForVariable.entries()].map(([variable, placeholder]) => [
+        placeholder,
+        scope.modifiedVariables.has(variable) ? 'var' : 'let',
+      ]),
     );
     if (Object.keys(replacements).length > 0) {
       const regex = new RegExp(Object.keys(replacements).join('|'), 'gi');
