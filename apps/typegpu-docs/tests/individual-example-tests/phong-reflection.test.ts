@@ -48,9 +48,9 @@ describe('phong reflection example', () => {
       }
 
       @vertex fn vertexShader(@location(0) _arg_modelPosition: vec3f, @location(1) _arg_modelNormal: vec3f) -> vertexShader_Output {
-        var worldPosition = vec4f(_arg_modelPosition, 1f);
+        let worldPosition = vec4f(_arg_modelPosition, 1f);
         let camera = (&cameraUniform);
-        var canvasPosition = (((*camera).projection * (*camera).view) * worldPosition);
+        let canvasPosition = (((*camera).projection * (*camera).view) * worldPosition);
         return vertexShader_Output(_arg_modelPosition, _arg_modelNormal, canvasPosition);
       }
 
@@ -70,18 +70,18 @@ describe('phong reflection example', () => {
       }
 
       @fragment fn fragmentShader(_arg_0: fragmentShader_Input) -> @location(0) vec4f {
-        var lightColor = normalize(exampleControlsUniform.lightColor);
-        var lightDirection = normalize(exampleControlsUniform.lightDirection);
+        let lightColor = normalize(exampleControlsUniform.lightColor);
+        let lightDirection = normalize(exampleControlsUniform.lightDirection);
         let ambientColor = (&exampleControlsUniform.ambientColor);
         let ambientStrength = exampleControlsUniform.ambientStrength;
         let specularStrength = exampleControlsUniform.specularExponent;
-        var ambient = ((*ambientColor) * ambientStrength);
+        let ambient = ((*ambientColor) * ambientStrength);
         let cosTheta = dot(_arg_0.worldNormal, lightDirection);
-        var diffuse = (lightColor * max(0f, cosTheta));
-        var reflectionDirection = reflect((lightDirection * -1f), _arg_0.worldNormal);
-        var viewDirection = normalize((cameraUniform.position.xyz - _arg_0.worldPosition));
-        var specular = (lightColor * pow(max(0f, dot(reflectionDirection, viewDirection)), specularStrength));
-        var color = ((ambient + diffuse) + specular);
+        let diffuse = (lightColor * max(0f, cosTheta));
+        let reflectionDirection = reflect((lightDirection * -1f), _arg_0.worldNormal);
+        let viewDirection = normalize((cameraUniform.position.xyz - _arg_0.worldPosition));
+        let specular = (lightColor * pow(max(0f, dot(reflectionDirection, viewDirection)), specularStrength));
+        let color = ((ambient + diffuse) + specular);
         return vec4f(color, 1f);
       }"
     `);

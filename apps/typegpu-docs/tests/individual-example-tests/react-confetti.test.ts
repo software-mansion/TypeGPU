@@ -50,7 +50,7 @@ describe('react/confetti example', () => {
       }
 
       fn rotate(v: vec2f, angle: f32) -> vec2f {
-        var pos = vec2f(((v.x * cos(angle)) - (v.y * sin(angle))), ((v.x * sin(angle)) + (v.y * cos(angle))));
+        let pos = vec2f(((v.x * cos(angle)) - (v.y * sin(angle))), ((v.x * sin(angle)) + (v.y * cos(angle))));
         return pos;
       }
 
@@ -72,7 +72,7 @@ describe('react/confetti example', () => {
       @vertex fn vertexShader(input: VertexIn) -> VertexOut {
         let width = input.tilt;
         let height = (input.tilt / 2f);
-        var verts = array<vec2f, 4>(vec2f(), vec2f(width, 0f), vec2f(0f, height), vec2f(width, height));
+        let verts = array<vec2f, 4>(vec2f(), vec2f(width, 0f), vec2f(0f, height), vec2f(width, height));
         var pos = (rotate((verts[input.vertexIndex] / 350f), input.angle) + input.center);
         if ((aspectRatio < 1f)) {
           pos.x /= aspectRatio;

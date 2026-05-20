@@ -61,18 +61,18 @@ describe('TGSL tgpu.fn function', () => {
 
     expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-        var color = vec3f();
-        var color2 = vec3f(1, 2, 3);
+        let color = vec3f();
+        let color2 = vec3f(1, 2, 3);
         return color;
       }
 
       fn getX() -> f32 {
-        var color = getColor();
+        let color = getColor();
         return 3f;
       }
 
       fn getY() -> f32 {
-        var c = getColor();
+        let c = getColor();
         return getX();
       }"
     `);
@@ -273,7 +273,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @vertex fn vertex_fn(@builtin(vertex_index) _arg_vi: u32, @builtin(instance_index) _arg_ii: u32, @location(0) _arg_color: vec4f) -> vertex_fn_Output {
-        var myOutput = vertex_fn_Output(vec4f(_arg_color.w, f32(_arg_ii), f32(_arg_vi), 1f), vec2f(_arg_color.w, f32(_arg_vi)));
+        let myOutput = vertex_fn_Output(vec4f(_arg_color.w, f32(_arg_ii), f32(_arg_vi), 1f), vec2f(_arg_color.w, f32(_arg_vi)));
         return myOutput;
       }"
     `);
@@ -297,7 +297,7 @@ describe('TGSL tgpu.fn function', () => {
         let index = _arg_gid.x;
         const iterationF = 0f;
         const sign_1 = 0;
-        var change = vec4f();
+        let change = vec4f();
       }"
     `);
   });
@@ -320,7 +320,7 @@ describe('TGSL tgpu.fn function', () => {
         let index = gid.x;
         const iterationF = 0f;
         const sign_1 = 0;
-        var change = vec4f();
+        let change = vec4f();
       }"
     `);
   });
@@ -437,7 +437,7 @@ describe('TGSL tgpu.fn function', () => {
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
       "@fragment fn fragmentFn() -> @location(0) vec4f {
-        var hmm = vec4f(1.25);
+        let hmm = vec4f(1.25);
         return hmm;
       }"
     `);
@@ -567,7 +567,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @compute @workgroup_size(24) fn compute_fn() {
-        var testStruct = getTestStruct();
+        let testStruct = getTestStruct();
       }"
     `);
   });
@@ -646,7 +646,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       fn fun(_arg_0: Input) {
-        var vector = vec2u(u32(_arg_0.value));
+        let vector = vec2u(u32(_arg_0.value));
       }"
     `);
   });
@@ -666,7 +666,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       fn fun(input: Input) {
-        var vector = vec2u(u32(input.value));
+        let vector = vec2u(u32(input.value));
       }"
     `);
   });
@@ -686,7 +686,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       fn fun(_arg_0: Input) {
-        var vector = vec2u(u32(_arg_0.value));
+        let vector = vec2u(u32(_arg_0.value));
       }"
     `);
   });
@@ -706,7 +706,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       fn fun(_arg_0: Input, x: i32, _arg_2: Input) {
-        var vector = vec3u(u32(_arg_0.value), u32(x), u32(_arg_2.value));
+        let vector = vec3u(u32(_arg_0.value), u32(x), u32(_arg_2.value));
       }"
     `);
   });
