@@ -11,10 +11,7 @@ import { ensureWebgpuTypes } from './steps/webgpu-types.ts';
 import { ensureTypegpu } from './steps/typegpu.ts';
 import { ensureVite } from './steps/vite.ts';
 
-const PROJECT_KINDS = [
-  { value: 'vite', label: rgbText('Vite', 175, 105, 245) },
-  { value: 'react-native', label: rgbText('React Native', 100, 108, 238) },
-];
+const PROJECT_KINDS = [{ value: 'vite', label: rgbText('Vite', 175, 105, 245) }];
 
 async function runViteFlow(cwd: string, pm: Agent, pkg: PackageJsonWithDeps) {
   await ensureWebgpuTypes(cwd, pm, pkg);
@@ -55,8 +52,6 @@ export async function enhanceProject(cwd: string) {
     case 'vite':
       await runViteFlow(cwd, pm.agent, pkg);
       break;
-    // case 'react-native':
-    //   break;
     default:
       failAndExit('Unsupported project kind.');
   }
