@@ -176,17 +176,3 @@ export class ArrayExpression implements SelfResolvable {
     return snip(stitch`${arrayType}(${this.elements})`, this.type, /* origin */ 'runtime');
   }
 }
-
-export function accessStructProp(target: Snippet, propName: string) {
-  invariant(
-    isWgslStruct(target.dataType) || isUnstruct(target.dataType),
-    'Expected snippet type to be struct/unstruct.',
-  );
-  let propType = target.dataType.propTypes[propName];
-  if (!propType) {
-    return undefined;
-  }
-  propType = undecorate(propType);
-
-  return snip(stitch`${target}.${propName}`, propType, /* origin */ target.origin);
-}

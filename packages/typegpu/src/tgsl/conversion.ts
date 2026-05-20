@@ -25,7 +25,7 @@ import { getName } from '../shared/meta.ts';
 import { safeStringify } from '../shared/stringify.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
 import type { ResolutionCtx } from '../types.ts';
-import { accessStructProp } from './generationHelpers.ts';
+import { accessStructProp } from './accessStructProp.ts';
 
 type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
 

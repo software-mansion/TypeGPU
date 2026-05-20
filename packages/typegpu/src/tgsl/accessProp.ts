@@ -33,7 +33,8 @@ import {
 import { $gpuCallable } from '../shared/symbols.ts';
 import { add, bitShiftLeft, bitShiftRight, div, mod, mul, sub } from '../std/operators.ts';
 import { isKnownAtComptime } from '../types.ts';
-import { accessStructProp, coerceToSnippet } from './generationHelpers.ts';
+import { coerceToSnippet } from './generationHelpers.ts';
+import { accessStructProp } from './accessStructProp.ts';
 
 const infixKinds = [
   'vec2f',
