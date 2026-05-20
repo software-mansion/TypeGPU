@@ -14,11 +14,11 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
-        var v1 = vec4f(1);
-        var v2 = vec3f(3, 4, 5);
-        var v3 = vec2f(6);
-        var m1 = mat2x2f(0, 0, 0, 0);
-        var m2 = mat3x3f(0, 0, 0, 0, 0, 0, 0, 0, 0);
+        let v1 = vec4f(1);
+        let v2 = vec3f(3, 4, 5);
+        let v3 = vec2f(6);
+        let m1 = mat2x2f(0, 0, 0, 0);
+        let m2 = mat3x3f(0, 0, 0, 0, 0, 0, 0, 0, 0);
       }"
     `);
   });
@@ -34,11 +34,11 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
-        var v1 = vec4f(-1);
-        var v2 = vec3f(-1, -2, -3);
-        var v3 = vec2f();
-        var m1 = mat2x2f(0, 0, 0, 0);
-        var m2 = mat3x3f(0, 0, 0, 0, 0, 0, 0, 0, 0);
+        let v1 = vec4f(-1);
+        let v2 = vec3f(-1, -2, -3);
+        let v3 = vec2f();
+        let m1 = mat2x2f(0, 0, 0, 0);
+        let m2 = mat3x3f(0, 0, 0, 0, 0, 0, 0, 0, 0);
       }"
     `);
   });
@@ -58,14 +58,14 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
-        var v1 = vec2f(6);
-        var v2 = vec3f(4, 6, 8);
-        var v3 = vec4f();
-        var v4 = vec3f();
-        var m1 = mat2x2f(0, 0, 0, 0);
-        var m2 = vec3f();
-        var m3 = mat4x4f(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        var m4 = mat2x2f(0, 0, 0, 0);
+        let v1 = vec2f(6);
+        let v2 = vec3f(4, 6, 8);
+        let v3 = vec4f();
+        let v4 = vec3f();
+        let m1 = mat2x2f(0, 0, 0, 0);
+        let m2 = vec3f();
+        let m3 = mat4x4f(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        let m4 = mat2x2f(0, 0, 0, 0);
       }"
     `);
   });
@@ -90,7 +90,7 @@ describe('wgslGenerator', () => {
       }
 
       fn testFn() {
-        var v1 = (getVec() * getVec());
+        let v1 = (getVec() * getVec());
       }"
     `);
   });
@@ -110,8 +110,8 @@ describe('wgslGenerator', () => {
       }
 
       fn testFn() {
-        var s = Struct(vec3f());
-        var v1 = (s.vec * s.vec);
+        let s = Struct(vec3f());
+        let v1 = (s.vec * s.vec);
       }"
     `);
   });
@@ -125,9 +125,9 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
-        var v1 = vec4f(0.5);
-        var v2 = vec3f(6, 3, 2);
-        var v3 = vec2f(0.25);
+        let v1 = vec4f(0.5);
+        let v2 = vec3f(6, 3, 2);
+        let v3 = vec2f(0.25);
       }"
     `);
   });
@@ -140,8 +140,8 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
-        var v1 = vec4f(1);
-        var v2 = vec3f(0.5, 1.5, 3.5);
+        let v1 = vec4f(1);
+        let v2 = vec3f(0.5, 1.5, 3.5);
       }"
     `);
   });
@@ -162,9 +162,9 @@ describe('wgslGenerator', () => {
       @group(0) @binding(1) var<uniform> barUniform: vec3f;
 
       fn testFn() {
-        var v1 = (fooUniform + 2f);
-        var v2 = (vec3f(1, 2, 3) + barUniform);
-        var v3 = (fooUniform + barUniform);
+        let v1 = (fooUniform + 2f);
+        let v2 = (vec3f(1, 2, 3) + barUniform);
+        let v3 = (fooUniform + barUniform);
       }"
     `);
   });
@@ -177,8 +177,8 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
-        var v1 = vec3f(6, 7, 8);
-        var v2 = vec3f(4);
+        let v1 = vec3f(6, 7, 8);
+        let v2 = vec3f(4);
       }"
     `);
   });

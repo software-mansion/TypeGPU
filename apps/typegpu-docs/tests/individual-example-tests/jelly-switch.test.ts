@@ -64,14 +64,14 @@ describe('jelly switch example', () => {
       }
 
       fn getRay(ndc: vec2f) -> Ray {
-        var clipPos = vec4f(ndc.x, ndc.y, -1f, 1f);
+        let clipPos = vec4f(ndc.x, ndc.y, -1f, 1f);
         let invView = (&uniform_1.viewInv);
         let invProj = (&uniform_1.projInv);
-        var viewPos = ((*invProj) * clipPos);
-        var viewPosNormalized = vec4f((viewPos.xyz / viewPos.w), 1f);
-        var worldPos = ((*invView) * viewPosNormalized);
-        var rayOrigin = (*invView)[3i].xyz;
-        var rayDir = normalize((worldPos.xyz - rayOrigin));
+        let viewPos = ((*invProj) * clipPos);
+        let viewPosNormalized = vec4f((viewPos.xyz / viewPos.w), 1f);
+        let worldPos = ((*invView) * viewPosNormalized);
+        let rayOrigin = (*invView)[3i].xyz;
+        let rayDir = normalize((worldPos.xyz - rayOrigin));
         return Ray(rayOrigin, rayDir);
       }
 
@@ -80,7 +80,7 @@ describe('jelly switch example', () => {
       }
 
       fn sdRoundedBox2d(point: vec2f, size: vec2f, cornerRadius: f32) -> f32 {
-        var d = ((abs(point) - size) + vec2f(cornerRadius));
+        let d = ((abs(point) - size) + vec2f(cornerRadius));
         return ((length(max(d, vec2f())) + min(max(d.x, d.y), 0f)) - cornerRadius);
       }
 
@@ -91,7 +91,7 @@ describe('jelly switch example', () => {
       }
 
       fn opExtrudeY(point: vec3f, dd: f32, halfHeight: f32) -> f32 {
-        var w = vec2f(dd, (abs(point.y) - halfHeight));
+        let w = vec2f(dd, (abs(point.y) - halfHeight));
         return (min(max(w.x, w.y), 0f) + length(max(w, vec2f())));
       }
 
@@ -121,20 +121,20 @@ describe('jelly switch example', () => {
       fn opCheapBend(p: vec3f, k: f32) -> vec3f {
         let c = cos((k * p.x));
         let s = sin((k * p.x));
-        var m = mat2x2f(c, -(s), s, c);
+        let m = mat2x2f(c, -(s), s, c);
         return vec3f((m * p.xy), p.z);
       }
 
       fn sdRoundedBox3d(point: vec3f, size: vec3f, cornerRadius: f32) -> f32 {
-        var d = ((abs(point) - size) + vec3f(cornerRadius));
+        let d = ((abs(point) - size) + vec3f(cornerRadius));
         return ((length(max(d, vec3f())) + min(max(max(d.x, d.y), d.z), 0f)) - cornerRadius);
       }
 
       fn getJellyDist(position: vec3f) -> f32 {
         let state = (&stateUniform);
-        var jellyOrigin = vec3f(((((*state).progress - 0.5f) * 0.4f) - (((*state).squashX * ((*state).progress - 0.5f)) * 0.2f)), 0.15000000596046448f, 0f);
-        var jellyInvScale = vec3f((1f - (*state).squashX), 1f, (1f - (*state).squashZ));
-        var localPos = opRotateAxisAngle(((position - jellyOrigin) * jellyInvScale), vec3f(0, 0, 1), (*state).wiggleX);
+        let jellyOrigin = vec3f(((((*state).progress - 0.5f) * 0.4f) - (((*state).squashX * ((*state).progress - 0.5f)) * 0.2f)), 0.15000000596046448f, 0f);
+        let jellyInvScale = vec3f((1f - (*state).squashX), 1f, (1f - (*state).squashZ));
+        let localPos = opRotateAxisAngle(((position - jellyOrigin) * jellyInvScale), vec3f(0, 0, 1), (*state).wiggleX);
         return sdRoundedBox3d(opCheapBend(localPos, 0.8f), vec3f(0.25, 0.20000001788139343, 0.20000001788139343), 0.1f);
       }
 
@@ -160,7 +160,7 @@ describe('jelly switch example', () => {
 
       fn getApproxNormal(p: vec3f, e: f32) -> vec3f {
         let dist = getSceneDist(p).distance;
-        var n = vec3f((getSceneDist((p + vec3f(e, 0f, 0f))).distance - dist), (getSceneDist((p + vec3f(0f, e, 0f))).distance - dist), (getSceneDist((p + vec3f(0f, 0f, e))).distance - dist));
+        let n = vec3f((getSceneDist((p + vec3f(e, 0f, 0f))).distance - dist), (getSceneDist((p + vec3f(0f, e, 0f))).distance - dist), (getSceneDist((p + vec3f(0f, 0f, e))).distance - dist));
         return normalize(n);
       }
 
@@ -197,17 +197,17 @@ describe('jelly switch example', () => {
       }
 
       fn calculateLighting(hitPosition: vec3f, normal: vec3f, rayOrigin: vec3f) -> vec3f {
-        var lightDir = -(lightUniform.direction);
-        var fakeShadow = getFakeShadow(hitPosition, lightDir);
+        let lightDir = -(lightUniform.direction);
+        let fakeShadow = getFakeShadow(hitPosition, lightDir);
         let diffuse = max(dot(normal, lightDir), 0f);
-        var viewDir = normalize((rayOrigin - hitPosition));
-        var reflectDir = reflect(-(lightDir), normal);
+        let viewDir = normalize((rayOrigin - hitPosition));
+        let reflectDir = reflect(-(lightDir), normal);
         let specularFactor = pow(max(dot(viewDir, reflectDir), 0f), 10f);
-        var specular = (lightUniform.color * (specularFactor * 0.6f));
-        var baseColor = vec3f(0.8999999761581421);
-        var directionalLight = (((baseColor * lightUniform.color) * diffuse) * fakeShadow);
-        var ambientLight = ((baseColor * vec3f(0.6000000238418579)) * 0.6f);
-        var finalSpecular = (specular * fakeShadow);
+        let specular = (lightUniform.color * (specularFactor * 0.6f));
+        let baseColor = vec3f(0.8999999761581421);
+        let directionalLight = (((baseColor * lightUniform.color) * diffuse) * fakeShadow);
+        let ambientLight = ((baseColor * vec3f(0.6000000238418579)) * 0.6f);
+        let finalSpecular = (specular * fakeShadow);
         return saturate(((directionalLight + ambientLight) + finalSpecular));
       }
 
@@ -225,7 +225,7 @@ describe('jelly switch example', () => {
         const stepDistance = 0.03333333333333333;
         for (var i = 1; (i <= 3i); i++) {
           let sampleHeight = (stepDistance * f32(i));
-          var samplePosition = (position + (normal * sampleHeight));
+          let samplePosition = (position + (normal * sampleHeight));
           let distanceToSurface = (getSceneDistForAO(samplePosition) - 5e-3f);
           let occlusionContribution = max(0f, (sampleHeight - distanceToSurface));
           totalOcclusion += (occlusionContribution * sampleWeight);
@@ -240,22 +240,22 @@ describe('jelly switch example', () => {
 
       fn applyAO(litColor: vec3f, hitPosition: vec3f, normal: vec3f) -> vec4f {
         let ao = calculateAO(hitPosition, normal);
-        var finalColor = (litColor * ao);
+        let finalColor = (litColor * ao);
         return vec4f(finalColor, 1f);
       }
 
       fn renderBackground(rayOrigin: vec3f, rayDirection: vec3f, backgroundHitDist: f32) -> vec4f {
         let state = (&stateUniform);
-        var hitPosition = (rayOrigin + (rayDirection * backgroundHitDist));
-        var newNormal = getNormal(hitPosition);
+        let hitPosition = (rayOrigin + (rayDirection * backgroundHitDist));
+        let newNormal = getNormal(hitPosition);
         let switchX = (((*state).progress - 0.5f) * 0.4f);
         let jellyColor = (&jellyColorUniform);
         let sqDist = sqLength((hitPosition - vec3f(switchX, 0f, 0f)));
-        var bounceLight = ((*jellyColor).rgb * ((1f / ((sqDist * 15f) + 1f)) * 0.4f));
-        var sideBounceLight = (((*jellyColor).rgb * ((1f / ((sqDist * 40f) + 1f)) * 0.3f)) * abs(newNormal.z));
+        let bounceLight = ((*jellyColor).rgb * ((1f / ((sqDist * 15f) + 1f)) * 0.4f));
+        let sideBounceLight = (((*jellyColor).rgb * ((1f / ((sqDist * 40f) + 1f)) * 0.3f)) * abs(newNormal.z));
         let emission = ((smoothstep(0.7f, 1f, (*state).progress) * 2f) + 0.7f);
-        var litColor = calculateLighting(hitPosition, newNormal, rayOrigin);
-        var backgroundColor = ((applyAO((select(vec3f(1), vec3f(0.20000000298023224), (darkModeUniform == 1u)) * litColor), hitPosition, newNormal) + vec4f((bounceLight * emission), 0f)) + vec4f((sideBounceLight * emission), 0f));
+        let litColor = calculateLighting(hitPosition, newNormal, rayOrigin);
+        let backgroundColor = ((applyAO((select(vec3f(1), vec3f(0.20000000298023224), (darkModeUniform == 1u)) * litColor), hitPosition, newNormal) + vec4f((bounceLight * emission), 0f)) + vec4f((sideBounceLight * emission), 0f));
         return vec4f(backgroundColor.rgb, 1f);
       }
 
@@ -275,11 +275,11 @@ describe('jelly switch example', () => {
       }
 
       fn intersectBox(rayOrigin: vec3f, rayDirection: vec3f, box: BoundingBox) -> BoxIntersection {
-        var invDir = (vec3f(1) / rayDirection);
-        var t1 = ((box.min - rayOrigin) * invDir);
-        var t2 = ((box.max - rayOrigin) * invDir);
-        var tMinVec = min(t1, t2);
-        var tMaxVec = max(t1, t2);
+        let invDir = (vec3f(1) / rayDirection);
+        let t1 = ((box.min - rayOrigin) * invDir);
+        let t2 = ((box.max - rayOrigin) * invDir);
+        let tMinVec = min(t1, t2);
+        let tMaxVec = max(t1, t2);
         let tMin = max(max(tMinVec.x, tMinVec.y), tMinVec.z);
         let tMax = min(min(tMaxVec.x, tMaxVec.y), tMaxVec.z);
         var result = BoxIntersection();
@@ -298,7 +298,7 @@ describe('jelly switch example', () => {
         var distanceFromOrigin = 0f;
         var hit = 0f;
         for (var i = 0; (i < 6i); i++) {
-          var p = (rayOrigin + (rayDirection * distanceFromOrigin));
+          let p = (rayOrigin + (rayDirection * distanceFromOrigin));
           hit = getMainSceneDist(p);
           distanceFromOrigin += hit;
           if (((distanceFromOrigin > 10f) || (hit < 0.01f))) {
@@ -319,16 +319,16 @@ describe('jelly switch example', () => {
         var totalSteps = 0u;
         var backgroundDist = 0f;
         for (var i = 0; (i < 64i); i++) {
-          var p = (rayOrigin + (rayDirection * backgroundDist));
+          let p = (rayOrigin + (rayDirection * backgroundDist));
           let hit = getMainSceneDist(p);
           backgroundDist += hit;
           if ((hit < 1e-3f)) {
             break;
           }
         }
-        var background = renderBackground(rayOrigin, rayDirection, backgroundDist);
-        var bbox = getJellyBounds();
-        var intersection = intersectBox(rayOrigin, rayDirection, bbox);
+        let background = renderBackground(rayOrigin, rayDirection, backgroundDist);
+        let bbox = getJellyBounds();
+        let intersection = intersectBox(rayOrigin, rayDirection, bbox);
         if (!intersection.hit) {
           return background;
         }
@@ -337,41 +337,41 @@ describe('jelly switch example', () => {
           if ((totalSteps >= 64u)) {
             break;
           }
-          var currentPosition = (rayOrigin + (rayDirection * distanceFromOrigin));
-          var hitInfo = getSceneDist(currentPosition);
+          let currentPosition = (rayOrigin + (rayDirection * distanceFromOrigin));
+          let hitInfo = getSceneDist(currentPosition);
           distanceFromOrigin += hitInfo.distance;
           totalSteps++;
           if ((hitInfo.distance < 1e-3f)) {
-            var hitPosition = (rayOrigin + (rayDirection * distanceFromOrigin));
+            let hitPosition = (rayOrigin + (rayDirection * distanceFromOrigin));
             if (!(hitInfo.objectType == 1i)) {
               break;
             }
-            var N = getNormal(hitPosition);
+            let N = getNormal(hitPosition);
             let I = rayDirection;
             let cosi = min(1f, max(0f, dot(-(I), N)));
             let F = fresnelSchlick(cosi, 1f, 1.4199999570846558f);
-            var reflection = saturate(vec3f((hitPosition.y + 0.2f)));
+            let reflection = saturate(vec3f((hitPosition.y + 0.2f)));
             const eta = 0.7042253521126761;
             let k = (1f - ((eta * eta) * (1f - (cosi * cosi))));
             var refractedColor = vec3f();
             if ((k > 0f)) {
-              var refrDir = normalize(((I * eta) + (N * ((eta * cosi) - sqrt(k)))));
-              var p = (hitPosition + (refrDir * 2e-3f));
-              var exitPos = (p + (refrDir * 2e-3f));
-              var env = rayMarchNoJelly(exitPos, refrDir);
+              let refrDir = normalize(((I * eta) + (N * ((eta * cosi) - sqrt(k)))));
+              let p = (hitPosition + (refrDir * 2e-3f));
+              let exitPos = (p + (refrDir * 2e-3f));
+              let env = rayMarchNoJelly(exitPos, refrDir);
               let jellyColor = (&jellyColorUniform);
-              var scatterTint = ((*jellyColor).rgb * 1.5f);
+              let scatterTint = ((*jellyColor).rgb * 1.5f);
               const density = 20f;
-              var absorb = ((vec3f(1) - (*jellyColor).rgb) * density);
+              let absorb = ((vec3f(1) - (*jellyColor).rgb) * density);
               let state = (&stateUniform);
               let progress = (saturate(mix(1f, 0.6f, ((hitPosition.y * 1.6666666004392863f) + 0.25f))) * (*state).progress);
-              var T = beerLambert((absorb * pow(progress, 2f)), 0.08f);
-              var lightDir = -(lightUniform.direction);
+              let T = beerLambert((absorb * pow(progress, 2f)), 0.08f);
+              let lightDir = -(lightUniform.direction);
               let forward = max(0f, dot(lightDir, refrDir));
-              var scatter = (scatterTint * ((3f * forward) * pow(progress, 3f)));
+              let scatter = (scatterTint * ((3f * forward) * pow(progress, 3f)));
               refractedColor = ((env * T) + scatter);
             }
-            var jelly = ((reflection * F) + (refractedColor * (1f - F)));
+            let jelly = ((reflection * F) + (refractedColor * (1f - F)));
             return vec4f(jelly, 1f);
           }
           if ((distanceFromOrigin > backgroundDist)) {
@@ -387,9 +387,9 @@ describe('jelly switch example', () => {
 
       @fragment fn raymarchFn(_arg_0: raymarchFn_Input) -> @location(0) vec4f {
         randSeed2((randomUniform * _arg_0.uv));
-        var ndc = vec2f(((_arg_0.uv.x * 2f) - 1f), -(((_arg_0.uv.y * 2f) - 1f)));
-        var ray = getRay(ndc);
-        var color = rayMarch(ray.origin, ray.direction, _arg_0.uv);
+        let ndc = vec2f(((_arg_0.uv.x * 2f) - 1f), -(((_arg_0.uv.y * 2f) - 1f)));
+        let ray = getRay(ndc);
+        let color = rayMarch(ray.origin, ray.direction, _arg_0.uv);
         let exposure = select(1.5, 2., (darkModeUniform == 1u));
         return vec4f(tanh((color.rgb * exposure)), 1f);
       }
@@ -401,34 +401,34 @@ describe('jelly switch example', () => {
       @group(0) @binding(2) var outputTexture: texture_storage_2d<rgba8unorm, write>;
 
       @compute @workgroup_size(16, 16) fn taaResolveFn(@builtin(global_invocation_id) gid: vec3u) {
-        var currentColor = textureLoad(currentTexture, gid.xy, 0);
-        var historyColor = textureLoad(historyTexture, gid.xy, 0);
+        let currentColor = textureLoad(currentTexture, gid.xy, 0);
+        let historyColor = textureLoad(historyTexture, gid.xy, 0);
         var minColor = vec3f(9999);
         var maxColor = vec3f(-9999);
-        var dimensions = textureDimensions(currentTexture);
+        let dimensions = textureDimensions(currentTexture);
         // unrolled iteration #0
         {
           // unrolled iteration #0
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i(-1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i(-1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
           // unrolled iteration #1
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i(-1, 0));
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i(-1, 0));
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
           // unrolled iteration #2
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i(-1, 1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i(-1, 1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
@@ -437,25 +437,25 @@ describe('jelly switch example', () => {
         {
           // unrolled iteration #0
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i(0, -1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i(0, -1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
           // unrolled iteration #1
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i());
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i());
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
           // unrolled iteration #2
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i(0, 1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i(0, 1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
@@ -464,32 +464,32 @@ describe('jelly switch example', () => {
         {
           // unrolled iteration #0
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i(1, -1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i(1, -1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
           // unrolled iteration #1
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i(1, 0));
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i(1, 0));
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
           // unrolled iteration #2
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i(1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i(1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
         }
-        var historyColorClamped = clamp(historyColor.rgb, minColor, maxColor);
+        let historyColorClamped = clamp(historyColor.rgb, minColor, maxColor);
         const blendFactor = 0.8999999761581421f;
-        var resolvedColor = vec4f(mix(currentColor.rgb, historyColorClamped, blendFactor), 1f);
+        let resolvedColor = vec4f(mix(currentColor.rgb, historyColorClamped, blendFactor), 1f);
         textureStore(outputTexture, vec2u(gid.x, gid.y), resolvedColor);
       }
 

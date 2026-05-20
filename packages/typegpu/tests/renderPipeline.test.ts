@@ -1456,7 +1456,7 @@ describe('root.createRenderPipeline', () => {
       }
 
       @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
-        var pos = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
+        let pos = array<vec2f, 3>(vec2f(0, 0.5), vec2f(-0.5), vec2f(0.5, -0.5));
         return VertexOut(vec4f(pos[_arg_0.vertexIndex], 0f, 1f), (pos[_arg_0.vertexIndex] + vec2f(0.5)));
       }
 
@@ -1566,7 +1566,7 @@ describe('root.createRenderPipeline', () => {
       }
 
       @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
-        var uv = array<vec2f, 3>(vec2f(0.5, 1), vec2f(), vec2f(1, 0));
+        let uv = array<vec2f, 3>(vec2f(0.5, 1), vec2f(), vec2f(1, 0));
         return VertexOut(vec4f(_arg_0.localPos, 1f), uv[_arg_0.vertexIndex]);
       }
 

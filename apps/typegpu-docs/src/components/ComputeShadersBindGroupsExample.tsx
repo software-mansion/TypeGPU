@@ -44,7 +44,7 @@ const simulate = root.createGuardedComputePipeline((i) => {
   'use gpu';
   const particle = particleLayout.$.particles[i];
   particleLayout.$.particles[i].position = std.fract(
-    particle.position.add(particle.velocity),
+    particle.position + particle.velocity,
   );
 });
 
