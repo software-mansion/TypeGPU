@@ -1,4 +1,4 @@
-import { isUnstruct, undecorate, UnknownData } from '../data/dataTypes.ts';
+import { UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
 import { isAlias, isSnippet, type ResolvedSnippet, snip, type Snippet } from '../data/snippet.ts';
@@ -10,7 +10,6 @@ import {
   isMatInstance,
   isNaturallyEphemeral,
   isVecInstance,
-  isWgslStruct,
   type WgslArray,
   WORKAROUND_getSchema,
 } from '../data/wgslTypes.ts';
@@ -22,7 +21,7 @@ import {
 } from '../types.ts';
 import type { ShelllessRepository } from './shellless.ts';
 import { stitch } from '../../src/core/resolve/stitch.ts';
-import { invariant, WgslTypeError } from '../../src/errors.ts';
+import { WgslTypeError } from '../../src/errors.ts';
 import { $internal, $resolve } from '../../src/shared/symbols.ts';
 import type { SupportedLogOp } from './consoleLog/types.ts';
 
