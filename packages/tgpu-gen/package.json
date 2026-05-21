@@ -1,8 +1,13 @@
 {
   "name": "tgpu-gen",
-  "version": "0.2.0",
+  "version": "0.11.0",
   "description": "A CLI tool for automatic TypeGPU code generation.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion/TypeGPU.git",
+    "directory": "packages/tgpu-gen"
+  },
   "bin": {
     "tgpu-gen": "./tgpu-gen.mjs"
   },

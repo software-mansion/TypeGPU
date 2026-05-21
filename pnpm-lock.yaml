@@ -574,11 +574,11 @@ importers:
   packages/typegpu:
     dependencies:
       tinyest:
-        specifier: workspace:~0.3.1
+        specifier: workspace:~
         version: link:../tinyest
       tsover-runtime:
-        specifier: ^0.0.6
-        version: 0.0.6
+        specifier: ^0.0.7
+        version: 0.0.7
       typed-binary:
         specifier: ^4.3.3
         version: 4.3.3
@@ -8634,8 +8634,8 @@ packages:
   tsover-monaco-editor@0.55.1:
     resolution: {integrity: sha512-tyPBs+0yzkiC+5m2LvXM+F0Vtx+om6slAFbWNUgyyCgYncpocIITqtLCNNuAYgXLXEkc1w4V+RqYdfvWeT/Ghw==}
 
-  tsover-runtime@0.0.6:
-    resolution: {integrity: sha512-5h/j9l4SwMSVfTMLVC/d+dkRjgh2xj+WHkivs5hhSwqACbG3JKXxp+9jneRoT07oJRHb97b5nKafsPtZEAdQMg==}
+  tsover-runtime@0.0.7:
+    resolution: {integrity: sha512-FHHwMJzZbnP23+fU1PxXljy7j0RRRosL2r1/CRUNTqfW+l7m35JsUkM615x/cAzw4GqRdXPIl3axKMj9qzpZtQ==}
 
   tsover@5.9.11:
     resolution: {integrity: sha512-l3kN4gSwpdAbtWB/dXnssSxJnuOqR20n94Wx0gKBY5n5ZtVcfjBN846VwuBBz4Jv7epcEmsMC1LWlIh0tHkgDw==}
@@ -18178,7 +18178,7 @@ snapshots:
 
   tsover-monaco-editor@0.55.1: {}
 
-  tsover-runtime@0.0.6: {}
+  tsover-runtime@0.0.7: {}
 
   tsover@5.9.11:
     dependencies:

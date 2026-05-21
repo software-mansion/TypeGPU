@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import * as tinyest from 'tinyest';
-import { getMetaData } from '../../src/shared/meta.ts';
+import { getFunctionMetadata } from '../../src/shared/meta.ts';
 import { stringifyNode } from '../../src/shared/tseynit.ts';
 import tgpu, { d } from 'typegpu';
 
 function getBodyAst(fn: () => void) {
-  const ast = getMetaData(fn)?.ast?.body;
-  if (!ast) {
+  const meta = getFunctionMetadata(fn);
+  if (!meta) {
     throw new Error('Expected ast to be defined');
   }
-  return ast;
+  return meta.ast.body;
 }
 
 describe('ast to JS transformation', () => {

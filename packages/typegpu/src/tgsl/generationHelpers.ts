@@ -1,13 +1,7 @@
 import { UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
-import {
-  isEphemeralSnippet,
-  isSnippet,
-  type ResolvedSnippet,
-  snip,
-  type Snippet,
-} from '../data/snippet.ts';
+import { isAlias, isSnippet, type ResolvedSnippet, snip, type Snippet } from '../data/snippet.ts';
 import {
   type AnyWgslData,
   type BaseData,
@@ -167,10 +161,7 @@ export class ArrayExpression implements SelfResolvable {
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     for (const elem of this.elements) {
       // We check if there are no references among the elements
-      if (
-        (elem.origin === 'argument' && !isNaturallyEphemeral(elem.dataType)) ||
-        !isEphemeralSnippet(elem)
-      ) {
+      if (isAlias(elem) && !isNaturallyEphemeral(elem.dataType)) {
         const snippetStr = ctx.resolve(elem.value, elem.dataType).value;
         const snippetType = ctx.resolve(concretize(elem.dataType as BaseData)).value;
         throw new WgslTypeError(
