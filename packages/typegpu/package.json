@@ -82,8 +82,8 @@
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
-    "tinyest": "workspace:~0.3.1",
-    "tsover-runtime": "^0.0.6",
+    "tinyest": "workspace:~",
+    "tsover-runtime": "^0.0.7",
     "typed-binary": "^4.3.3"
   },
   "devDependencies": {
