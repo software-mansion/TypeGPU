@@ -189,3 +189,5 @@ export { extensionEnabled } from './extensions.ts';
 export { bitcastU32toF32, bitcastU32toI32 } from './bitcast.ts';
 
 export { range } from './range.ts';
+
+export { typeOf } from './typeOf.ts';
