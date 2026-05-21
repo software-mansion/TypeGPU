@@ -1,10 +1,12 @@
+import { comptime } from '../core/function/comptime.ts';
 import { bool } from '../data/numeric.ts';
 import { snip } from '../data/snippet.ts';
+import { getExecMode, getResolutionCtx } from '../execMode.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
 import type { DualFn } from '../types.ts';
 
 const impl = (() => false) as DualFn<() => boolean>;
-impl.toString = () => 'isBeingTraspiled';
+impl.toString = () => 'isBeingTranspiled';
 impl[$gpuCallable] = {
   call(_ctx, _args) {
     return snip(true, bool, 'constant');
@@ -17,7 +19,7 @@ impl[$gpuCallable] = {
  * @example
  * const f = () => {
  *   'use gpu';
- *   return isBeingTraspiled() ? 1 : 0;
+ *   return isBeingTranspiled() ? 1 : 0;
  * };
  *
  * f() // returns 0, but resolved WGSL looks like this:
@@ -26,17 +28,35 @@ impl[$gpuCallable] = {
  *   return 1;
  * }
  *
+ * @note
+ * Inside `comptime`, `lazy` or `simulate`, it always returns `false`.
+ */
+export const isBeingTranspiled = impl;
+
+/**
+ * Returns `wgsl` if invoked during the resolution process; otherwise, returns `undefined`.
+ *
+ * @example
+ * const f = () => {
+ *   'use gpu';
+ *   return getTargetShaderLanguage() === 'wgsl';
+ * };
+ *
+ * f() // returns false, but resolved WGSL looks like this:
+ *
+ * fn f() -> bool {
+ *   return true;
+ * }
  *
  * @note
- * Inside `comptime`, `lazy` or `simulate`, this always returns `false`.
+ * Inside `lazy`, it always returns `wgsl`.
+ * Inside `simulate`, it always returns `undefined`.
+ * Inside `comptime`, if wrapping comptime is called during resolution process, it returns `wgsl`; otherwise, `undefined`.
  */
-export const isBeingTraspiled = impl;
-
-// getTargetShaderLanguage -> string | undefined;
-// export const isBeingTraspiled = comptime(() => {
-//   const ctx = getResolutionCtx();
-//   if (ctx === undefined) {
-//     return false;
-//   }
-//   return getExecMode().type !== 'simulate';
-// });
+export const getTargetShaderLanguage = comptime((() => {
+  const ctx = getResolutionCtx();
+  if (!ctx) {
+    return undefined;
+  }
+  return getExecMode().type !== 'simulate' ? 'wgsl' : undefined;
+}) as () => string | undefined);
