@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import tgpu, { d } from '../../src/index.js';
+import tgpu, { d } from 'typegpu';
 
 describe('function argument origin tracking', () => {
   it('should fail on mutation of primitive arguments', () => {

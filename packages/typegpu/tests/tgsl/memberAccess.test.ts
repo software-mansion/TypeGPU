@@ -1,7 +1,7 @@
 import { describe } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import { expectSnippetOf } from '../utils/parseResolved.ts';
-import tgpu, { d } from '../../src/index.js';
+import tgpu, { d } from 'typegpu';
 
 describe('Member Access', () => {
   const Boid = d.struct({
