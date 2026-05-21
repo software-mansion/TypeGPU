@@ -15,27 +15,12 @@ import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
 import { namespace } from '../../src/core/resolve/namespace.ts';
 import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { INTERNAL_createPtr } from '../../src/data/ptr.ts';
-
-const ctx = new ResolutionCtxImpl({
-  namespace: namespace({ names: 'strict' }),
-  shaderGenerator: wgslGenerator,
-});
-wgslGenerator.initGenerator(ctx);
-ctx.pushMode(new CodegenState());
-
-beforeAll(() => {
-  INTERNAL_setCtx(ctx);
-});
-
-afterAll(() => {
-  INTERNAL_setCtx(undefined);
-});
+import { expectDataTypeOf, expectSnippetOf } from '../utils/parseResolved.ts';
+import tgpu from '../../src/index.js';
 
 describe('getBestConversion', () => {
   // d.ptrPrivate(d.f32)
   const ptrF32 = INTERNAL_createPtr('private', d.f32, 'read-write', /* implicit */ true);
-  // d.ptrPrivate(d.i32)
-  const ptrI32 = INTERNAL_createPtr('private', d.i32, 'read-write', /* implicit */ true);
 
   it('returns result for identical types', () => {
     const res = getBestConversion([d.f32, d.f32]);
@@ -176,7 +161,7 @@ describe('getBestConversion', () => {
     expect(resImplicit?.hasImplicitConversions).toBe(true);
   });
 
-  // TODO: This would require multiple passes of the conversion algorithm - maybe something to consider in the future
+  // TODO(#2519): This would require multiple passes of the conversion algorithm - maybe something to consider in the future
   // it('handles types needing deref and cast', () => {
   //   const res = getBestConversion([ptrI32, f32]);
   //   expect(res?.targetType).toBe(f32);
@@ -189,81 +174,124 @@ describe('getBestConversion', () => {
 });
 
 describe('convertToCommonType', () => {
-  const snippetF32 = snip('2.22', d.f32, /* origin */ 'runtime');
-  const snippetI32 = snip('-12', d.i32, /* origin */ 'runtime');
-  const snippetU32 = snip('33', d.u32, /* origin */ 'runtime');
-  const snippetAbsFloat = snip('1.1', abstractFloat, /* origin */ 'runtime');
-  const snippetAbsInt = snip('1', abstractInt, /* origin */ 'runtime');
-  const snippetPtrF32 = snip(
-    'ptr_f32',
-    INTERNAL_createPtr('private', d.f32, 'read-write', /* implicit */ true),
-    /* origin */ 'function',
-  );
-  const snippetUnknown = snip('?', UnknownData, /* origin */ 'runtime');
-
   it('converts identical types', () => {
-    const result = convertToCommonType(ctx, [snippetF32, snippetF32]);
-    expect(result).toBeDefined();
-    expect(result?.length).toBe(2);
-    expect(result?.[0]?.dataType).toBe(d.f32);
-    expect(result?.[0]?.value).toBe('2.22');
-    expect(result?.[1]?.dataType).toBe(d.f32);
-    expect(result?.[1]?.value).toBe('2.22');
+    const fn = () => {
+      'use gpu';
+      const t = [d.f32(1), d.f32(2)];
+      return t[0];
+    };
+
+    expectDataTypeOf(fn).toBe(d.f32);
   });
 
   it('handles abstract types automatically', () => {
-    const result = convertToCommonType(ctx, [snippetAbsFloat, snippetF32, snippetAbsInt]);
-    // since WGSL handles all abstract types automatically, this should be basically identity
-    expect(result).toBeDefined();
-    expect(result?.length).toBe(3);
-    expect(result?.[0]?.dataType).toBe(d.f32);
-    expect(result?.[0]?.value).toBe('1.1');
-    expect(result?.[1]?.dataType).toBe(d.f32);
-    expect(result?.[1]?.value).toBe('2.22');
-    expect(result?.[2]?.dataType).toBe(d.f32);
-    expect(result?.[2]?.value).toBe('1');
+    const fn = () => {
+      'use gpu';
+      const t = [1.5, d.f32(2), 1];
+      return t[0];
+    };
+
+    expectDataTypeOf(fn).toBe(d.f32);
   });
 
   it('performs implicit casts and warns', () => {
-    const result = convertToCommonType(ctx, [snippetI32, snippetF32]);
-    expect(result).toBeDefined();
-    expect(result?.length).toBe(2);
-    expect(result?.[0]?.dataType).toBe(d.f32);
-    expect(result?.[0]?.value).toBe('f32(-12)'); // Cast applied
-    expect(result?.[1]?.dataType).toBe(d.f32);
-    expect(result?.[1]?.value).toBe('2.22');
+    const fn = () => {
+      'use gpu';
+      const t = [d.i32(1), d.f32(2)];
+      return t[0];
+    };
+
+    expectDataTypeOf(fn).toBe(d.f32);
   });
 
   it('performs pointer dereferencing', () => {
-    const result = convertToCommonType(ctx, [snippetPtrF32, snippetF32]);
-    expect(result).toBeDefined();
-    expect(result?.length).toBe(2);
-    expect(result?.[0]?.dataType).toBe(d.f32);
-    expect(result?.[0]?.value).toBe('(*ptr_f32)'); // Deref applied
-    expect(result?.[1]?.dataType).toBe(d.f32);
-    expect(result?.[1]?.value).toBe('2.22');
+    const fn = tgpu.fn(
+      [d.ptrFn(d.f32)],
+      d.f32,
+    )((a) => {
+      const t = [a.$, d.f32(2)];
+      return t[0] as number;
+    });
+
+    expectDataTypeOf(fn).toBe(d.f32);
   });
 
   it('returns undefined for incompatible types', () => {
-    const snippetVec2f = snip('v2', d.vec2f, /* origin */ 'runtime');
-    const result = convertToCommonType(ctx, [snippetF32, snippetVec2f]);
-    expect(result).toBeUndefined();
+    const fn = () => {
+      'use gpu';
+      const t = [d.vec2f(1), d.f32(2)];
+      return t[0];
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Values '[d.vec2f(1), d.f32(2)]' cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema]
+    `);
   });
 
   it('returns undefined if any type is UnknownData', () => {
-    const result = convertToCommonType(ctx, [snippetF32, snippetUnknown]);
-    expect(result).toBeUndefined();
+    const fn = () => {
+      'use gpu';
+      const t = ['unknownData', d.f32(2)];
+      return t[0];
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Values '["unknownData", d.f32(2)]' cannot be automatically converted to a common type. Consider wrapping the array in an appropriate schema]
+    `);
   });
 
   it('returns undefined for empty input', () => {
-    const result = convertToCommonType(ctx, []);
-    expect(result).toBeUndefined();
+    const fn = () => {
+      'use gpu';
+      const t = [] as number[];
+      return t[0];
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Cannot infer the type of an empty array literal.]
+    `);
   });
 
   it('chooses abstractFloat over i32', () => {
-    const result = convertToCommonType(ctx, [snippetI32, snippetAbsFloat]);
-    expect(result).toBeDefined();
-    expect(result?.[0]?.dataType.type).toBe('f32');
+    const fn = () => {
+      'use gpu';
+      const t = [d.i32(1), 1.5];
+      return t[0];
+    };
+
+    expectDataTypeOf(fn).toBe(d.f32);
+  });
+});
+
+describe('with restrictTo', () => {
+  const snippetF32 = snip('2.22', d.f32, /* origin */ 'runtime');
+  const snippetI32 = snip('-12', d.i32, /* origin */ 'runtime');
+  const snippetAbsFloat = snip('1.1', abstractFloat, /* origin */ 'runtime');
+  const snippetAbsInt = snip('1', abstractInt, /* origin */ 'runtime');
+
+  let ctx: ResolutionCtxImpl;
+
+  beforeAll(() => {
+    ctx = new ResolutionCtxImpl({
+      namespace: namespace({ names: 'strict' }),
+      shaderGenerator: wgslGenerator,
+    });
+    wgslGenerator.initGenerator(ctx);
+    ctx.pushMode(new CodegenState());
+    INTERNAL_setCtx(ctx);
+  });
+
+  afterAll(() => {
+    INTERNAL_setCtx(undefined);
   });
 
   it('respects restrictTo types', () => {
@@ -302,9 +330,7 @@ describe('convertToCommonType', () => {
     const result = convertToCommonType(ctx, [snippetF32], [d.Void]);
     expect(result).toBeUndefined();
   });
-});
 
-describe('convertStructValues', () => {
   const structType = d.struct({
     a: d.f32,
     b: d.i32,
