@@ -198,4 +198,45 @@ describe('bitcast in shaders', () => {
       }"
     `);
   });
+
+  it('throws an error for unsupported signatures', () => {
+    const f1 = () => {
+      'use gpu';
+      // @ts-expect-error
+      return std.bitcastU32toF32(d.vec2i());
+    };
+    expect(() => tgpu.resolve([f1])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f1
+      - fn*:f1()
+      - fn:bitcastU32toF32: Unsupported data types: vec2i. Supported types are: u32, vec2u, vec3u, vec4u.]
+    `);
+
+    const f2 = () => {
+      'use gpu';
+      // @ts-expect-error
+      return std.bitcastU32toI32(d.vec3f());
+    };
+    expect(() => tgpu.resolve([f2])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f2
+      - fn*:f2()
+      - fn:bitcastU32toI32: Unsupported data types: vec3f. Supported types are: u32, vec2u, vec3u, vec4u.]
+    `);
+
+    const f3 = () => {
+      'use gpu';
+      // @ts-expect-error
+      return std.bitcastF32toU32(d.vec2h());
+    };
+    expect(() => tgpu.resolve([f3])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f3
+      - fn*:f3()
+      - fn:bitcastF32toU32: Unsupported data types: vec2h. Supported types are: f32, vec2f, vec3f, vec4f.]
+    `);
+  });
 });
