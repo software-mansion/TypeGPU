@@ -162,4 +162,63 @@ describe('convertToCommonType', () => {
       - fn*:fn(): Missing property b in object literal for struct struct:Struct]
     `);
   });
+
+  it('automatically converts on index access', () => {
+    const fn = () => {
+      'use gpu';
+      const arr = [1, 2, 3, 4];
+      const x = arr[d.f32(1)];
+      const y = arr[d.f16(1)];
+      const z = arr[d.i32(1)];
+      const t = arr[d.u32(1)];
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        let arr = array<i32, 4>(1, 2, 3, 4);
+        let x = arr[1u];
+        let y = arr[1u];
+        let z = arr[1i];
+        let t = arr[1u];
+      }"
+    `);
+  });
+
+  it('automatically converts on assignment', () => {
+    const fn = () => {
+      'use gpu';
+      let a = d.u32(1);
+      a = d.f32(2);
+      a = d.i32(3);
+      a = 4.5;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        var a = 1u;
+        a = 2u;
+        a = 3u;
+        a = 4u;
+      }"
+    `);
+  });
+
+  it('automatically converts on update', () => {
+    const fn = () => {
+      'use gpu';
+      let a = d.u32(1);
+      a += d.f32(2);
+      a += d.i32(3);
+      a += 4.5;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        var a = 1u;
+        a += 2u;
+        a += 3u;
+        a += 4u;
+      }"
+    `);
+  });
 });
