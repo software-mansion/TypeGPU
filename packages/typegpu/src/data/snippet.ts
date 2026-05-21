@@ -4,34 +4,34 @@ import { DEV } from '../shared/env.ts';
 import { type BaseData, isNumericSchema } from './wgslTypes.ts';
 
 export type Origin =
-  | 'uniform'
-  | 'readonly' // equivalent to ptr<storage, ..., read>
-  | 'mutable' // equivalent to ptr<storage, ..., read-write>
-  | 'workgroup'
-  | 'private'
-  | 'function'
-  | 'this-function'
-  | 'handle'
-  // is an argument (or part of an argument) given to the
-  // function we're resolving. This includes primitives, to
-  // catch cases where we update an argument's primitive member
-  // prop, e.g.: `vec.x += 1;`
+  // --- ADDRESS SPACE ORIGINS
+  | 'uniform' /*   defined in the 'uniform' address space  */
+  | 'readonly' /*  defined in the 'storage' address space, with 'read' access  */
+  | 'mutable' /*   defined in the 'storage' address space, with 'read-write' access  */
+  | 'workgroup' /* defined in the 'workgroup' address space  */
+  | 'private' /*   defined in the 'private' address space  */
+  | 'handle' /*    defined in the 'handle' address space  */
+  | 'function' /*  defined in a callee, passed down to us as an argument ('function' address space)  */
+  // --- DEFINITIONS
+  // defined in the current function
+  | 'local-def'
+  // A reference to a deeply immutable definition, recognized by WGSL as a 'constant'.
+  // This is the usual case, read about 'runtime-immutable-def' to know when this doesn't apply.
+  // A reference to a tgpu.const().$ value (which is frozen) fits into this category.
+  | 'constant-immutable-def'
+  // A reference to a deeply immutable definition, NOT recognized by WGSL as a 'constant'.
+  // This can happen if say a constant is accessed with a runtime-known index. WGSL doesn't treat it like
+  // a 'constant' anymore, but it's still a frozen value in JS, so we must treat it like it's immutable.
+  | 'runtime-immutable-def'
+  // ---------
+  // non-pointer function arguments (or part of an argument).
   | 'argument'
-  // not a ref to anything, known at runtime
+  // not a reference to anything, known at runtime
   | 'runtime'
-  // not a ref to anything, known at pipeline creation time
-  // (not to be confused with 'comptime')
-  // note that this doesn't automatically mean the value can be stored in a `const`
-  // variable, more so that it's valid to do so in WGSL (but not necessarily safe to do in JS shaders)
-  | 'constant'
-  // don't even get me started on these. They're references to non-primitive values that originate
-  // from a tgpu.const(...).$ call.
-  | 'constant-tgpu-const-ref' /* turns into a `const` when assigned to a variable */
-  | 'runtime-tgpu-const-ref' /* turns into a `let` when assigned to a variable */;
-
-export function isEphemeralOrigin(space: Origin) {
-  return space === 'runtime' || space === 'constant' || space === 'argument';
-}
+  // an ephemeral value that is a valid WGSL 'constant' (not to be confused with 'comptime')
+  // doesn't always lead to creating a `const` variable, as we cannot always guarantee that
+  // the value won't be mutated in JS
+  | 'constant';
 
 /**
  * What happens to a snippet's origin when it's deep copied in JS, and left as is in WGSL?
@@ -49,8 +49,27 @@ export function fallthroughCopyOrigin(origin: Origin): Origin {
   return 'runtime';
 }
 
-export function isEphemeralSnippet(snippet: Snippet) {
-  return isEphemeralOrigin(snippet.origin);
+/**
+ * Whether a snippet aliases a value that lives outside the current expression.
+ *
+ * @example
+ * ```ts
+ * function foo(a: number) {
+ *   const color = d.vec3f(1, 2, 3);
+ *   return color * a;
+ * }
+ *
+ * // References:
+ * // -  color
+ * // -  a
+ * //
+ * // Not references:
+ * // - d.vec3f(1, 2, 3)
+ * // - color * a
+ * ```
+ */
+export function isAlias(snippet: Snippet) {
+  return !(snippet.origin === 'runtime' || snippet.origin === 'constant');
 }
 
 export const originToPtrParams = {
@@ -60,7 +79,8 @@ export const originToPtrParams = {
   workgroup: { space: 'workgroup', access: 'read-write' },
   private: { space: 'private', access: 'read-write' },
   function: { space: 'function', access: 'read-write' },
-  'this-function': { space: 'function', access: 'read-write' },
+  // Local declarations are also in the `function` address space
+  'local-def': { space: 'function', access: 'read-write' },
 } as const;
 export type OriginToPtrParams = typeof originToPtrParams;
 
@@ -74,14 +94,9 @@ export interface Snippet {
   readonly origin: Origin;
 }
 
-export interface ResolvedSnippet {
+export interface ResolvedSnippet extends Snippet {
   readonly value: string;
-  /**
-   * The type that `value` is assignable to (not necessary exactly inferred as).
-   * E.g. `1.1` is assignable to `f32`, but `1.1` itself is an abstract float
-   */
   readonly dataType: BaseData;
-  readonly origin: Origin;
 }
 
 export type MapValueToSnippet<T> = { [K in keyof T]: Snippet };

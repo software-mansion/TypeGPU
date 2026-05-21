@@ -158,7 +158,7 @@ function createVertexFn(
       [$getNameForward]: FnCore;
     };
 
-  const core = createFnCore(implementation, '@vertex ');
+  const core = createFnCore(implementation, 'vertex');
   const entryInput: SeparatedEntryArgs = separateAllAsPositional(shell.in ?? {});
 
   const result: This = {

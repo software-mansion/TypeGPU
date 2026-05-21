@@ -1,6 +1,7 @@
 import { useSetAtom } from 'jotai';
 import type { ReactNode } from 'react';
-import { useId, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
+import cs from 'classnames';
 import CrossSvg from '../assets/cross.svg';
 import HamburgerSvg from '../assets/hamburger.svg';
 import {
@@ -22,23 +23,36 @@ export function ExampleLayout(props: ExampleLayoutProps) {
   const [menuShown, setMenuShown] = useHydratedAtom(menuShownAtom, false);
   const [codeShown, setCodeShown] = useHydratedAtom(codeEditorShownAtom, false);
 
+  useEffect(() => {
+    // Opening the side menu on large screens by default
+    if (window.innerWidth >= 768) {
+      setMenuShown(true);
+    }
+  }, []);
+
   return (
     <>
-      <div className="absolute top-4 left-4 z-50 flex gap-2 text-sm md:hidden">
+      <div
+        className={cs(
+          'absolute top-4 left-4 md:top-5 md:left-5 z-50 flex gap-2 text-sm',
+          menuShown && 'md:left-84',
+        )}
+      >
         {!menuShown && (
           <Button onClick={() => setMenuShown(true)}>
-            <img src={HamburgerSvg.src} alt="menu" className="-m-2 h-6 w-6" />
+            <img src={HamburgerSvg.src} alt="menu" className="-m-2 h-6 w-6 mr-1" />
+            Explore
           </Button>
         )}
 
         <Button onClick={() => setCodeShown((prev) => !prev)}>
-          {/* Applying the actual label only after the component has been hydrated */}
-          {codeShown ? 'Preview' : 'Code'}
+          <span className="md:hidden">{codeShown ? 'Preview' : 'Code'}</span>
+          <span className="hidden md:block">{codeShown ? 'Hide Code' : 'Show Code'}</span>
         </Button>
       </div>
-
       <div className="box-border flex h-dvh gap-4 bg-tameplum-50 p-4">
         {menuShown && <SideMenu />}
+
         {props.children}
       </div>
     </>
@@ -57,17 +71,24 @@ function SideMenu() {
   const groupByCategoryToggleId = useId();
 
   return (
-    <aside className="absolute inset-0 z-50 box-border flex w-full flex-col bg-white md:static md:w-75 md:rounded-2xl">
+    <aside className="absolute inset-0 z-50 box-border flex w-full flex-col bg-white md:relative md:w-75 md:rounded-2xl">
       <header className="px-5 py-3">
         <div className="grid place-items-center">
           <a href="/TypeGPU" className="box-border grid h-12 cursor-pointer place-content-center">
             <img className="w-40" src="/TypeGPU/typegpu-logo-light.svg" alt="TypeGPU Logo" />
           </a>
         </div>
-        <div className="absolute top-5 right-5 md:hidden">
-          <Button onClick={() => setMenuShown(false)}>
+        <div className="absolute top-5 right-5 md:top-2.5 md:right-2.5">
+          <button
+            className={cs(
+              'box-border inline-flex items-center justify-center gap-2 rounded-[6.25rem] px-2.5 py-2.5 text-sm focus:ring-2 focus:ring-gradient-blue',
+              'bg-white hover:bg-tameplum-20',
+            )}
+            type="button"
+            onClick={() => setMenuShown(false)}
+          >
             <img src={CrossSvg.src} alt="Close menu" className="h-3 w-3" />
-          </Button>
+          </button>
         </div>
       </header>
 

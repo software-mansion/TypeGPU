@@ -1,6 +1,7 @@
 import type { AnyComputeBuiltin, AnyFragmentInputBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
 import type { AnyData, Disarray, UndecorateRecord } from '../../data/dataTypes.ts';
+import type { InstanceToSchema } from '../../data/instanceToSchema.ts';
 import type { WgslComparisonSamplerProps, WgslSamplerProps } from '../../data/sampler.ts';
 import type {
   AnyWgslData,
@@ -12,6 +13,7 @@ import type {
   Void,
   WgslArray,
 } from '../../data/wgslTypes.ts';
+import type { TgpuNamable } from '../../shared/meta.ts';
 import type {
   ExtractInvalidSchemaError,
   InferGPURecord,
@@ -33,7 +35,13 @@ import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
 import type { TgpuMutable, TgpuReadonly, TgpuUniform } from '../buffer/bufferShorthand.ts';
-import type { TgpuFixedComparisonSampler, TgpuFixedSampler } from '../sampler/sampler.ts';
+import type {
+  AnyAutoCustoms,
+  AutoFragmentIn,
+  AutoFragmentOut,
+  AutoVertexIn,
+  AutoVertexOut,
+} from '../function/autoIO.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type {
   FragmentInConstrained,
@@ -44,6 +52,7 @@ import type {
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
 import type { FragmentOutToTargets, TgpuRenderPipeline } from '../pipeline/renderPipeline.ts';
+import type { TgpuFixedComparisonSampler, TgpuFixedSampler } from '../sampler/sampler.ts';
 import type { Eventual, TgpuAccessor, TgpuMutableAccessor, TgpuSlot } from '../slot/slotTypes.ts';
 import type { TgpuTexture } from '../texture/texture.ts';
 import type {
@@ -52,15 +61,6 @@ import type {
 } from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
-import type { TgpuNamable } from '../../shared/meta.ts';
-import type {
-  AnyAutoCustoms,
-  AutoFragmentIn,
-  AutoFragmentOut,
-  AutoVertexIn,
-  AutoVertexOut,
-} from '../function/autoIO.ts';
-import type { InstanceToSchema } from '../../data/instanceToSchema.ts';
 
 // ----------
 // Public API
@@ -79,6 +79,24 @@ export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> e
    * Analogous to `TgpuComputePipeline.with(encoder)`.
    */
   with(encoder: GPUCommandEncoder): TgpuGuardedComputePipeline<TArgs>;
+
+  /**
+   * Returns a pipeline wrapper with the given performance callback attached.
+   * Analogous to `TgpuComputePipeline.withPerformanceCallback(callback)`.
+   */
+  withPerformanceCallback(
+    callback: (start: bigint, end: bigint) => void | Promise<void>,
+  ): TgpuGuardedComputePipeline<TArgs>;
+
+  /**
+   * Returns a pipeline wrapper with the given timestamp writes configuration.
+   * Analogous to `TgpuComputePipeline.withTimestampWrites(options)`.
+   */
+  withTimestampWrites(options: {
+    querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
+    beginningOfPassWriteIndex?: number;
+    endOfPassWriteIndex?: number;
+  }): TgpuGuardedComputePipeline<TArgs>;
 
   /**
    * Dispatches the pipeline.
@@ -378,7 +396,7 @@ export interface WithBinding extends Withable<WithBinding> {
 
   /**
    * Creates a compute pipeline that executes the given callback in an exact number of threads.
-   * This is different from `withCompute(...).createPipeline()` in that it does a bounds check on the
+   * This is different from `createComputePipeline()` in that it does a bounds check on the
    * thread id, where as regular pipelines do not and work in units of workgroups.
    *
    * @param callback A function converted to WGSL and executed on the GPU.
@@ -831,24 +849,15 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    * Typed wrapper around a GPUBuffer.
    *
    * @param typeSchema The type of data that this buffer will hold.
-   * @param initial The initial value of the buffer. (optional)
+   * @param initial Either initial value of the buffer, or an initializer to execute on the mapped buffer. (optional)
    */
-  createBuffer<TData extends AnyData>(
-    typeSchema: ValidateBufferSchema<TData>,
-    // NoInfer is there to infer the schema type just based on the first parameter
-    initializer: (buffer: TgpuBuffer<NoInfer<TData>>) => void,
-  ): TgpuBuffer<TData>;
-  createBuffer<TData extends AnyData>(
-    typeSchema: ValidateBufferSchema<TData>,
-    // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: InferInput<NoInfer<TData>>,
-  ): TgpuBuffer<TData>;
   createBuffer<TData extends AnyData>(
     typeSchema: ValidateBufferSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
     initial?: ((buffer: TgpuBuffer<NoInfer<TData>>) => void) | InferInput<NoInfer<TData>>,
   ): TgpuBuffer<TData>;
 
+  // This is a separate overload so that LSP does not hint `destroy()` etc when initializing with a struct.
   /**
    * Allocates memory on the GPU, allows passing data between host and shader.
    *
@@ -869,23 +878,15 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    * use {@link TgpuRoot.createBuffer}.
    *
    * @param typeSchema The type of data that this buffer will hold.
-   * @param initial The initial value of the buffer. (optional)
+   * @param initial Either initial value of the buffer, or an initializer to execute on the mapped buffer. (optional)
    */
-  createUniform<TData extends AnyWgslData>(
-    typeSchema: ValidateUniformSchema<TData>,
-    initializer: (buffer: TgpuBuffer<NoInfer<TData>>) => void,
-  ): TgpuUniform<TData>;
-  createUniform<TData extends AnyWgslData>(
-    typeSchema: ValidateUniformSchema<TData>,
-    // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: InferInput<NoInfer<TData>>,
-  ): TgpuUniform<TData>;
   createUniform<TData extends AnyWgslData>(
     typeSchema: ValidateUniformSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
     initial?: ((buffer: TgpuBuffer<NoInfer<TData>>) => void) | InferInput<NoInfer<TData>>,
   ): TgpuUniform<TData>;
 
+  // This is a separate overload so that LSP does not hint `destroy()` etc when initializing with a struct.
   /**
    * Allocates memory on the GPU, allows passing data between host and shader.
    * Read-only on the GPU, optimized for small data. For a general-purpose buffer,
@@ -905,23 +906,15 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    * use {@link TgpuRoot.createBuffer}.
    *
    * @param typeSchema The type of data that this buffer will hold.
-   * @param initial The initial value of the buffer. (optional)
+   * @param initial Either initial value of the buffer, or an initializer to execute on the mapped buffer. (optional)
    */
-  createMutable<TData extends AnyWgslData>(
-    typeSchema: ValidateStorageSchema<TData>,
-    initializer: (buffer: TgpuBuffer<NoInfer<TData>>) => void,
-  ): TgpuMutable<TData>;
-  createMutable<TData extends AnyWgslData>(
-    typeSchema: ValidateStorageSchema<TData>,
-    // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: InferInput<NoInfer<TData>>,
-  ): TgpuMutable<TData>;
   createMutable<TData extends AnyWgslData>(
     typeSchema: ValidateStorageSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
     initial?: ((buffer: TgpuBuffer<NoInfer<TData>>) => void) | InferInput<NoInfer<TData>>,
   ): TgpuMutable<TData>;
 
+  // This is a separate overload so that LSP does not hint `destroy()` etc when initializing with a struct.
   /**
    * Allocates memory on the GPU, allows passing data between host and shader.
    * Can be mutated in-place on the GPU. For a general-purpose buffer,
@@ -941,23 +934,15 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    * use {@link TgpuRoot.createBuffer}.
    *
    * @param typeSchema The type of data that this buffer will hold.
-   * @param initial The initial value of the buffer. (optional)
+   * @param initial Either initial value of the buffer, or an initializer to execute on the mapped buffer. (optional)
    */
-  createReadonly<TData extends AnyWgslData>(
-    typeSchema: ValidateStorageSchema<TData>,
-    initializer: (buffer: TgpuBuffer<NoInfer<TData>>) => void,
-  ): TgpuReadonly<TData>;
-  createReadonly<TData extends AnyWgslData>(
-    typeSchema: ValidateStorageSchema<TData>,
-    // NoInfer is there to infer the schema type just based on the first parameter
-    initial?: InferInput<NoInfer<TData>>,
-  ): TgpuReadonly<TData>;
   createReadonly<TData extends AnyWgslData>(
     typeSchema: ValidateStorageSchema<TData>,
     // NoInfer is there to infer the schema type just based on the first parameter
     initial?: ((buffer: TgpuBuffer<NoInfer<TData>>) => void) | InferInput<NoInfer<TData>>,
   ): TgpuReadonly<TData>;
 
+  // This is a separate overload so that LSP does not hint `destroy()` etc when initializing with a struct.
   /**
    * Allocates memory on the GPU, allows passing data between host and shader.
    * Read-only on the GPU, optimized for large data. For a general-purpose buffer,

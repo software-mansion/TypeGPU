@@ -46,7 +46,9 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
     return options.normalImpl(...args);
   }) as DualFn<T>;
 
-  setName(impl, options.name);
+  if (options.name) {
+    setName(impl, options.name);
+  }
   impl.toString = () => options.name ?? '<unknown>';
   impl[$gpuCallable] = {
     get strictSignature() {

@@ -1,6 +1,10 @@
 import { isMatInstance, isVecInstance } from '../data/wgslTypes.ts';
 
 export function safeStringify(item: unknown): string {
+  if (Array.isArray(item)) {
+    return `[${item.map(safeStringify).join(', ')}]`;
+  }
+
   const asString = String(item);
   if (asString !== '[object Object]') {
     return asString;

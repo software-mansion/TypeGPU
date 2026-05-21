@@ -10,7 +10,7 @@ import {
 } from '../data/dataTypes.ts';
 import { abstractInt, bool, f16, f32, i32, u32 } from '../data/numeric.ts';
 import { derefSnippet } from '../data/ref.ts';
-import { isEphemeralSnippet, snip, type Snippet } from '../data/snippet.ts';
+import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import {
   vec2b,
   vec2f,
@@ -31,7 +31,6 @@ import {
 import {
   type BaseData,
   isMat,
-  isNaturallyEphemeral,
   isPtr,
   isVec,
   isWgslArray,
@@ -138,17 +137,7 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
     }
     propType = undecorate(propType);
 
-    return snip(
-      stitch`${target}.${propName}`,
-      propType,
-      /* origin */ target.origin === 'argument'
-        ? 'argument'
-        : !isEphemeralSnippet(target) && !isNaturallyEphemeral(propType)
-          ? target.origin
-          : target.origin === 'constant' || target.origin === 'constant-tgpu-const-ref'
-            ? 'constant'
-            : 'runtime',
-    );
+    return snip(stitch`${target}.${propName}`, propType, /* origin */ target.origin);
   }
 
   if (target.dataType instanceof AutoStruct) {
@@ -160,7 +149,14 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
   }
 
   if (target.dataType instanceof EntryInputRouter) {
-    return target.dataType.accessProp(propName);
+    const result = target.dataType.accessProp(propName);
+    if (isSnippet(result)) {
+      return result;
+    }
+    if (result) {
+      return accessProp(result.target, result.prop);
+    }
+    return undefined;
   }
 
   if (isPtr(target.dataType)) {
@@ -208,9 +204,9 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
         : stitch`${target}.${propName}`,
       swizzleType,
       // Swizzling creates new vectors (unless they're on the lhs of an assignment, but that's not yet supported in WGSL)
-      /* origin */ target.origin === 'argument' && propLength === 1
-        ? 'argument'
-        : target.origin === 'constant' || target.origin === 'constant-tgpu-const-ref'
+      /* origin */ propLength === 1
+        ? target.origin
+        : target.origin === 'constant' || target.origin === 'constant-immutable-def'
           ? 'constant'
           : 'runtime',
     );

@@ -32,10 +32,6 @@ describe('camera thresholding example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct mainFrag_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var<uniform> uvTransformUniform: mat2x2f;
 
       @group(1) @binding(0) var inputTexture: texture_external;
@@ -48,11 +44,15 @@ describe('camera thresholding example', () => {
 
       @group(0) @binding(3) var<uniform> thresholdBuffer: f32;
 
+      struct mainFrag_Input {
+        @location(0) uv: vec2f,
+      }
+
       @fragment fn mainFrag(_arg_0: mainFrag_Input) -> @location(0) vec4f {
-        var uv2 = ((uvTransformUniform * (_arg_0.uv - 0.5f)) + 0.5f);
+        let uv2 = ((uvTransformUniform * (_arg_0.uv - 0.5f)) + 0.5f);
         var col = textureSampleBaseClampToEdge(inputTexture, sampler_1, uv2);
-        var ycbcr = (col.rgb * rgbToYcbcrMatrix);
-        var colycbcr = (colorUniform * rgbToYcbcrMatrix);
+        let ycbcr = (col.rgb * rgbToYcbcrMatrix);
+        let colycbcr = (colorUniform * rgbToYcbcrMatrix);
         let crDiff = abs((ycbcr.y - colycbcr.y));
         let cbDiff = abs((ycbcr.z - colycbcr.z));
         let distance_1 = length(vec2f(crDiff, cbDiff));

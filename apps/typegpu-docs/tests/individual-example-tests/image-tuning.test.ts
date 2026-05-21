@@ -37,10 +37,6 @@ describe('image tuning example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct fragment_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var imageView: texture_2d<f32>;
 
       @group(0) @binding(1) var imageSampler: sampler;
@@ -68,16 +64,20 @@ describe('image tuning example', () => {
 
       @group(0) @binding(4) var<uniform> adjustments: Adjustments;
 
+      struct fragment_Input {
+        @location(0) uv: vec2f,
+      }
+
       @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
-        var color = textureSample(imageView, imageSampler, _arg_0.uv).rgb;
+        let color = textureSample(imageView, imageSampler, _arg_0.uv).rgb;
         let inputLuminance = dot(color, vec3f(0.29899999499320984, 0.5870000123977661, 0.11400000005960464));
-        var normColor = saturate(((color - lut.min) / (lut.max - lut.min)));
-        var lutColor = select(color, textureSampleLevel(currentLUTTexture, lutSampler, normColor, 0).rgb, bool(lut.enabled));
-        var lutColorNormalized = saturate(lutColor);
+        let normColor = saturate(((color - lut.min) / (lut.max - lut.min)));
+        let lutColor = select(color, textureSampleLevel(currentLUTTexture, lutSampler, normColor, 0).rgb, bool(lut.enabled));
+        let lutColorNormalized = saturate(lutColor);
         let exposureBiased = (adjustments.exposure * 0.25f);
-        var exposureColor = clamp((lutColorNormalized * pow(2f, exposureBiased)), vec3f(), vec3f(2));
+        let exposureColor = clamp((lutColorNormalized * pow(2f, exposureBiased)), vec3f(), vec3f(2));
         let exposureLuminance = clamp((inputLuminance * pow(2f, exposureBiased)), 0f, 2f);
-        var contrastColor = (((exposureColor - 0.5f) * adjustments.contrast) + 0.5f);
+        let contrastColor = (((exposureColor - 0.5f) * adjustments.contrast) + 0.5f);
         let contrastLuminance = (((exposureLuminance - 0.5f) * adjustments.contrast) + 0.5f);
         let contrastColorLuminance = dot(contrastColor, vec3f(0.29899999499320984, 0.5870000123977661, 0.11400000005960464));
         let highlightShift = (adjustments.highlights - 1f);
@@ -86,15 +86,15 @@ describe('image tuning example', () => {
         let highlightWeight = smoothstep(0.5f, 1f, contrastColorLuminance);
         let highlightLuminanceAdjust = (contrastLuminance * highlightFactor);
         let highlightLuminance = mix(contrastLuminance, saturate(highlightLuminanceAdjust), highlightWeight);
-        var highlightColor = mix(contrastColor, saturate((contrastColor * highlightFactor)), highlightWeight);
+        let highlightColor = mix(contrastColor, saturate((contrastColor * highlightFactor)), highlightWeight);
         let shadowWeight = (1f - contrastColorLuminance);
-        var shadowAdjust = pow(highlightColor, vec3f((1f / adjustments.shadows)));
+        let shadowAdjust = pow(highlightColor, vec3f((1f / adjustments.shadows)));
         let shadowLuminanceAdjust = pow(highlightLuminance, (1f / adjustments.shadows));
-        var toneColor = mix(highlightColor, shadowAdjust, shadowWeight);
+        let toneColor = mix(highlightColor, shadowAdjust, shadowWeight);
         let toneLuminance = mix(highlightLuminance, shadowLuminanceAdjust, shadowWeight);
-        var finalToneColor = saturate(toneColor);
-        var grayscaleColor = vec3f(toneLuminance);
-        var finalColor = mix(grayscaleColor, finalToneColor, adjustments.saturation);
+        let finalToneColor = saturate(toneColor);
+        let grayscaleColor = vec3f(toneLuminance);
+        let finalColor = mix(grayscaleColor, finalToneColor, adjustments.saturation);
         return vec4f(finalColor, 1f);
       }"
     `);

@@ -140,6 +140,8 @@ describe('wgslGenerator with console.log', () => {
   });
 
   it('Generates an overload for a function used on both stages', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
     const myLog = (n: number) => {
       'use gpu';
       console.log(n);
@@ -221,6 +223,11 @@ describe('wgslGenerator with console.log', () => {
         return vec4f();
       }"
     `);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "'console' operations are not supported in vertex shaders.",
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('Works for shellless entry functions', ({ root }) => {
@@ -618,7 +625,7 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @compute @workgroup_size(1) fn fn_1() {
-        var complexStruct = ComplexStruct(vec3f(1, 2, 3), array<SimpleStruct, 3>(SimpleStruct(0u, array<u32, 4>(9u, 8u, 7u, 6u)), SimpleStruct(1u, array<u32, 4>(8u, 7u, 6u, 5u)), SimpleStruct(2u, array<u32, 4>(7u, 6u, 5u, 4u))));
+        let complexStruct = ComplexStruct(vec3f(1, 2, 3), array<SimpleStruct, 3>(SimpleStruct(0u, array<u32, 4>(9u, 8u, 7u, 6u)), SimpleStruct(1u, array<u32, 4>(8u, 7u, 6u, 5u)), SimpleStruct(2u, array<u32, 4>(7u, 6u, 5u, 4u))));
         log1(complexStruct);
       }"
     `);
@@ -661,9 +668,7 @@ describe('wgslGenerator with console.log', () => {
     `);
   });
 
-  it('Fallbacks and warns when using an unsupported feature', ({ root }) => {
-    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
+  it('Throws when using an unsupported feature', ({ root }) => {
     const fn = tgpu.computeFn({
       workgroupSize: [1],
       in: { gid: d.builtin.globalInvocationId },
@@ -673,14 +678,130 @@ describe('wgslGenerator with console.log', () => {
 
     const pipeline = root.createComputePipeline({ compute: fn });
 
-    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-      "@compute @workgroup_size(1) fn fn_1() {
-        /* console.log() */;
+    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - computePipeline:pipeline
+      - computePipelineCore
+      - computeFn:fn: Unsupported console functionality 'console.trace()'.]
+    `);
+  });
+
+  it('works with implicit pointers', ({ root }) => {
+    const myUniform = root.createUniform(d.vec2f);
+    const myPipeline = root.createGuardedComputePipeline((x) => {
+      'use gpu';
+      const v = myUniform.$;
+      console.log(v);
+    });
+
+    expect(tgpu.resolve([myPipeline.pipeline])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      @group(0) @binding(1) var<uniform> myUniform: vec2f;
+
+      @group(0) @binding(2) var<storage, read_write> indexBuffer: atomic<u32>;
+
+      struct SerializedLogData {
+        id: u32,
+        serializedData: array<u32, 63>,
+      }
+
+      @group(0) @binding(3) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
+
+      var<private> dataBlockIndex: u32;
+
+      var<private> dataByteIndex: u32;
+
+      fn nextByteIndex() -> u32 {
+        let i = dataByteIndex;
+        dataByteIndex = dataByteIndex + 1u;
+        return i;
+      }
+
+      fn serializeVec2f(v: vec2f) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(v.x);
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(v.y);
+      }
+
+      fn log1serializer(_arg_0: vec2f) {
+        serializeVec2f(_arg_0);
+      }
+
+      fn log1(_arg_0: vec2f) {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
+          return;
+        }
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
+
+        log1serializer(_arg_0);
+      }
+
+      fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
+        let v = (&myUniform);
+        log1((*v));
+      }
+
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        wrappedCallback(id.x, id.y, id.z);
       }"
     `);
+  });
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith("Unsupported log method 'trace'.");
-    expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+  it('works with detached methods', ({ root }) => {
+    const log = console.log;
+    const myPipeline = root.createGuardedComputePipeline((x) => {
+      'use gpu';
+      log();
+    });
+
+    expect(tgpu.resolve([myPipeline.pipeline])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
+
+      struct SerializedLogData {
+        id: u32,
+        serializedData: array<u32, 63>,
+      }
+
+      @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
+
+      var<private> dataBlockIndex: u32;
+
+      var<private> dataByteIndex: u32;
+
+      fn log1serializer() {
+
+      }
+
+      fn log1() {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
+          return;
+        }
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
+
+        log1serializer();
+      }
+
+      fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
+        log1();
+      }
+
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        wrappedCallback(id.x, id.y, id.z);
+      }"
+    `);
   });
 });
 

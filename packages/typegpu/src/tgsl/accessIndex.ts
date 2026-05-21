@@ -1,19 +1,12 @@
 import { stitch } from '../core/resolve/stitch.ts';
-import { isDisarray, MatrixColumnsAccess, UnknownData } from '../data/dataTypes.ts';
+import { isDisarray, MatrixColumnsAccess } from '../data/dataTypes.ts';
 import { derefSnippet } from '../data/ref.ts';
-import { isEphemeralSnippet, type Origin, snip, type Snippet } from '../data/snippet.ts';
+import { type Origin, snip, type Snippet } from '../data/snippet.ts';
 import { vec2f, vec3f, vec4f } from '../data/vector.ts';
-import {
-  type BaseData,
-  isNaturallyEphemeral,
-  isPtr,
-  isVec,
-  isWgslArray,
-  isWgslStruct,
-} from '../data/wgslTypes.ts';
+import { type BaseData, isPtr, isVec, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
 import { isKnownAtComptime } from '../types.ts';
 import { accessProp } from './accessProp.ts';
-import { coerceToSnippet } from './generationHelpers.ts';
+import { ArrayExpression, coerceToSnippet } from './generationHelpers.ts';
 
 const indexableTypeToResult = {
   mat2x2f: vec2f,
@@ -27,31 +20,28 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
   // array
   if (isWgslArray(target.dataType) || isDisarray(target.dataType)) {
     const elementType = target.dataType.elementType;
-    const isElementNatEph = isNaturallyEphemeral(elementType);
-    const isTargetEphemeral = isEphemeralSnippet(target);
-    const isIndexConstant = index.origin === 'constant';
 
     let origin: Origin;
 
-    if (target.origin === 'constant-tgpu-const-ref') {
+    if (target.origin === 'constant-immutable-def') {
       // Constant refs stay const unless the element/index forces runtime materialization
-      if (isIndexConstant) {
-        origin = isElementNatEph ? 'constant' : 'constant-tgpu-const-ref';
-      } else {
-        origin = isElementNatEph ? 'runtime' : 'runtime-tgpu-const-ref';
-      }
-    } else if (target.origin === 'runtime-tgpu-const-ref') {
-      // Runtime refs keep their ref semantics unless the element is ephemeral only
-      origin = isElementNatEph ? 'runtime' : 'runtime-tgpu-const-ref';
-    } else if (!isTargetEphemeral && !isElementNatEph) {
-      // Stable containers can forward their origin information
-      origin = target.origin;
-    } else if (isIndexConstant && target.origin === 'constant') {
-      // Plain constants indexed with constants stay constant
-      origin = 'constant';
+      origin =
+        index.origin === 'constant' || index.origin === 'constant-immutable-def'
+          ? 'constant-immutable-def'
+          : 'runtime-immutable-def';
+    } else if (target.origin === 'constant') {
+      // Ephemeral constants indexed with constants stay constant, otherwise they become runtime-known
+      origin =
+        index.origin === 'constant' || index.origin === 'constant-immutable-def'
+          ? 'constant'
+          : 'runtime';
     } else {
-      // Everything else must be produced at runtime
-      origin = 'runtime';
+      // Fallthrough
+      origin = target.origin;
+    }
+
+    if (target.value instanceof ArrayExpression && isKnownAtComptime(index)) {
+      return target.value.elements[index.value as number];
     }
 
     return snip(
@@ -72,9 +62,7 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
           (target.value as any)[index.value as any]
         : stitch`${target}[${index}]`,
       target.dataType.primitive,
-      /* origin */ target.origin === 'constant' || target.origin === 'constant-tgpu-const-ref'
-        ? 'constant'
-        : 'runtime',
+      /* origin */ target.origin,
     );
   }
 
@@ -101,7 +89,7 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
     );
   }
 
-  if ((isKnownAtComptime(target) && isKnownAtComptime(index)) || target.dataType === UnknownData) {
+  if (isKnownAtComptime(target) && isKnownAtComptime(index)) {
     // No idea what the type is, so we act on the snippet's value and try to guess
     return coerceToSnippet(
       // oxlint-disable-next-line typescript/no-explicit-any -- we're inspecting the value, and it could be any value
