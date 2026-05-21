@@ -1,10 +1,14 @@
 import { describe, expect } from 'vitest';
-import * as d from '../src/data/index.ts';
+import * as d from '../../src/data/index.ts';
 import * as tinyest from 'tinyest';
 import { it } from 'typegpu-testing-utility';
-import { getName, setName, type INTERNAL_GlobalExt } from '../src/shared/meta.ts';
-import { tgpu } from '../src/index.js';
-import type { RawMetadata, RawMetadataV1, RawMetadataV2 } from '../src/shared/normalizeMetadata.ts';
+import { getName, setName, type INTERNAL_GlobalExt } from '../../src/shared/meta.ts';
+import { tgpu } from '../../src/index.js';
+import type {
+  RawMetadata,
+  RawMetadataV1,
+  RawMetadataV2,
+} from '../../src/shared/normalizeMetadata.ts';
 
 // functions in this file intentionally have no 'use gpu' directive
 describe('meta', () => {

@@ -93,14 +93,14 @@ describe('jelly-slider example', () => {
       }
 
       fn getRay(ndc: vec2f) -> Ray {
-        var clipPos = vec4f(ndc.x, ndc.y, -1f, 1f);
+        let clipPos = vec4f(ndc.x, ndc.y, -1f, 1f);
         let invView = (&uniform_1.viewInv);
         let invProj = (&uniform_1.projInv);
-        var viewPos = ((*invProj) * clipPos);
-        var viewPosNormalized = vec4f((viewPos.xyz / viewPos.w), 1f);
-        var worldPos = ((*invView) * viewPosNormalized);
-        var rayOrigin = (*invView)[3i].xyz;
-        var rayDir = normalize((worldPos.xyz - rayOrigin));
+        let viewPos = ((*invProj) * clipPos);
+        let viewPosNormalized = vec4f((viewPos.xyz / viewPos.w), 1f);
+        let worldPos = ((*invView) * viewPosNormalized);
+        let rayOrigin = (*invView)[3i].xyz;
+        let rayDir = normalize((worldPos.xyz - rayOrigin));
         return Ray(rayOrigin, rayDir);
       }
 
@@ -109,7 +109,7 @@ describe('jelly-slider example', () => {
       }
 
       fn sdRoundedBox2d(point: vec2f, size: vec2f, cornerRadius: f32) -> f32 {
-        var d = ((abs(point) - size) + vec2f(cornerRadius));
+        let d = ((abs(point) - size) + vec2f(cornerRadius));
         return ((length(max(d, vec2f())) + min(max(d.x, d.y), 0f)) - cornerRadius);
       }
 
@@ -119,7 +119,7 @@ describe('jelly-slider example', () => {
       }
 
       fn opExtrudeY(point: vec3f, dd: f32, halfHeight: f32) -> f32 {
-        var w = vec2f(dd, (abs(point.y) - halfHeight));
+        let w = vec2f(dd, (abs(point.y) - halfHeight));
         return (min(max(w.x, w.y), 0f) + length(max(w, vec2f())));
       }
 
@@ -177,16 +177,16 @@ describe('jelly-slider example', () => {
       }
 
       fn getNormalFromSdf(position: vec3f, epsilon: f32) -> vec3f {
-        var k = vec3f(1, -1, 0);
-        var offset1 = (k.xyy * epsilon);
-        var offset2 = (k.yyx * epsilon);
-        var offset3 = (k.yxy * epsilon);
-        var offset4 = (k.xxx * epsilon);
-        var sample1 = (offset1 * getMainSceneDist((position + offset1)));
-        var sample2 = (offset2 * getMainSceneDist((position + offset2)));
-        var sample3 = (offset3 * getMainSceneDist((position + offset3)));
-        var sample4 = (offset4 * getMainSceneDist((position + offset4)));
-        var gradient = (((sample1 + sample2) + sample3) + sample4);
+        let k = vec3f(1, -1, 0);
+        let offset1 = (k.xyy * epsilon);
+        let offset2 = (k.yyx * epsilon);
+        let offset3 = (k.yxy * epsilon);
+        let offset4 = (k.xxx * epsilon);
+        let sample1 = (offset1 * getMainSceneDist((position + offset1)));
+        let sample2 = (offset2 * getMainSceneDist((position + offset2)));
+        let sample3 = (offset3 * getMainSceneDist((position + offset3)));
+        let sample4 = (offset4 * getMainSceneDist((position + offset4)));
+        let gradient = (((sample1 + sample2) + sample3) + sample4);
         return normalize(gradient);
       }
 
@@ -215,10 +215,10 @@ describe('jelly-slider example', () => {
           return ((vec3f(1) * edgeDarkening) * (lightGradient * 0.5f));
         }
         else {
-          var finalUV = vec2f((((position.x - ((position.z * lightDir.x) * sign(lightDir.z))) * 0.5f) + 0.5f), ((1f - ((-(position.z) / lightDir.z) * 0.5f)) - 0.2f));
-          var data = textureSampleLevel(bezierTexture, filteringSampler, finalUV, 0);
+          let finalUV = vec2f((((position.x - ((position.z * lightDir.x) * sign(lightDir.z))) * 0.5f) + 0.5f), ((1f - ((-(position.z) / lightDir.z) * 0.5f)) - 0.2f));
+          let data = textureSampleLevel(bezierTexture, filteringSampler, finalUV, 0);
           let jellySaturation = mix(0f, data.y, saturate(((position.x * 1.5f) + 1.1f)));
-          var shadowColor = mix(vec3f(), (*jellyColor).rgb, jellySaturation);
+          let shadowColor = mix(vec3f(), (*jellyColor).rgb, jellySaturation);
           let contrast = ((20f * saturate(finalUV.y)) * (0.8f + (endCapX * 0.2f)));
           const shadowOffset = -0.3;
           const featherSharpness = 10f;
@@ -229,17 +229,17 @@ describe('jelly-slider example', () => {
       }
 
       fn calculateLighting(hitPosition: vec3f, normal: vec3f, rayOrigin: vec3f) -> vec3f {
-        var lightDir = -(lightUniform.direction);
-        var fakeShadow = getFakeShadow(hitPosition, lightDir);
+        let lightDir = -(lightUniform.direction);
+        let fakeShadow = getFakeShadow(hitPosition, lightDir);
         let diffuse = max(dot(normal, lightDir), 0f);
-        var viewDir = normalize((rayOrigin - hitPosition));
-        var reflectDir = reflect(-(lightDir), normal);
+        let viewDir = normalize((rayOrigin - hitPosition));
+        let reflectDir = reflect(-(lightDir), normal);
         let specularFactor = pow(max(dot(viewDir, reflectDir), 0f), 10f);
-        var specular = (lightUniform.color * (specularFactor * 0.6f));
-        var baseColor = vec3f(0.8999999761581421);
-        var directionalLight = (((baseColor * lightUniform.color) * diffuse) * fakeShadow);
-        var ambientLight = ((baseColor * vec3f(0.6000000238418579)) * 0.6f);
-        var finalSpecular = (specular * fakeShadow);
+        let specular = (lightUniform.color * (specularFactor * 0.6f));
+        let baseColor = vec3f(0.8999999761581421);
+        let directionalLight = (((baseColor * lightUniform.color) * diffuse) * fakeShadow);
+        let ambientLight = ((baseColor * vec3f(0.6000000238418579)) * 0.6f);
+        let finalSpecular = (specular * fakeShadow);
         return saturate(((directionalLight + ambientLight) + finalSpecular));
       }
 
@@ -261,28 +261,28 @@ describe('jelly-slider example', () => {
       }
 
       fn sdInflatedPolyline2D(p: vec2f) -> LineInfo {
-        var bbox = getSliderBbox();
-        var uv = vec2f(((p.x - bbox.left) / (bbox.right - bbox.left)), ((bbox.top - p.y) / (bbox.top - bbox.bottom)));
-        var clampedUV = saturate(uv);
-        var sampledColor = textureSampleLevel(bezierTexture, filteringSampler, clampedUV, 0);
+        let bbox = getSliderBbox();
+        let uv = vec2f(((p.x - bbox.left) / (bbox.right - bbox.left)), ((bbox.top - p.y) / (bbox.top - bbox.bottom)));
+        let clampedUV = saturate(uv);
+        let sampledColor = textureSampleLevel(bezierTexture, filteringSampler, clampedUV, 0);
         let segUnsigned = sampledColor.x;
         let progress = sampledColor.y;
-        var normal = sampledColor.zw;
+        let normal = sampledColor.zw;
         return LineInfo(progress, segUnsigned, normal);
       }
 
       fn opExtrudeZ(point: vec3f, dd: f32, halfHeight: f32) -> f32 {
-        var w = vec2f(dd, (abs(point.z) - halfHeight));
+        let w = vec2f(dd, (abs(point.z) - halfHeight));
         return (min(max(w.x, w.y), 0f) + length(max(w, vec2f())));
       }
 
       fn sliderApproxDist(position: vec3f) -> f32 {
-        var bbox = getSliderBbox();
-        var p = position.xy;
+        let bbox = getSliderBbox();
+        let p = position.xy;
         if (((((p.x < bbox.left) || (p.x > bbox.right)) || (p.y < bbox.bottom)) || (p.y > bbox.top))) {
           return 1000000000;
         }
-        var poly2D = sdInflatedPolyline2D(p);
+        let poly2D = sdInflatedPolyline2D(p);
         let dist3D = (opExtrudeZ(position, poly2D.distance, 0.17f) - 0.024f);
         return dist3D;
       }
@@ -299,7 +299,7 @@ describe('jelly-slider example', () => {
         const stepDistance = 0.03333333333333333;
         for (var i = 1; (i <= 3i); i++) {
           let sampleHeight = (stepDistance * f32(i));
-          var samplePosition = (position + (normal * sampleHeight));
+          let samplePosition = (position + (normal * sampleHeight));
           let distanceToSurface = (getSceneDistForAO(samplePosition) - 5e-3f);
           let occlusionContribution = max(0f, (sampleHeight - distanceToSurface));
           totalOcclusion += (occlusionContribution * sampleWeight);
@@ -314,13 +314,13 @@ describe('jelly-slider example', () => {
 
       fn applyAO(litColor: vec3f, hitPosition: vec3f, normal: vec3f) -> vec4f {
         let ao = calculateAO(hitPosition, normal);
-        var finalColor = (litColor * ao);
+        let finalColor = (litColor * ao);
         return vec4f(finalColor, 1f);
       }
 
       fn renderBackground(rayOrigin: vec3f, rayDirection: vec3f, backgroundHitDist: f32, offset: f32) -> vec4f {
-        var hitPosition = (rayOrigin + (rayDirection * backgroundHitDist));
-        var percentageSample = renderPercentageOnGround(hitPosition, vec3f(0.7200000286102295, 0, 0), u32(((endCapUniform.x + 0.43f) * 84f)));
+        let hitPosition = (rayOrigin + (rayDirection * backgroundHitDist));
+        let percentageSample = renderPercentageOnGround(hitPosition, vec3f(0.7200000286102295, 0, 0), u32(((endCapUniform.x + 0.43f) * 84f)));
         var highlights = 0f;
         const highlightWidth = 1f;
         const highlightHeight = 0.2;
@@ -335,8 +335,8 @@ describe('jelly-slider example', () => {
         if (((abs((hitPosition.x + offsetX)) < highlightWidth) && (abs((hitPosition.z + offsetZ)) < highlightHeight))) {
           let uvX_orig = ((((hitPosition.x + offsetX) + (highlightWidth * 2f)) / highlightWidth) * 0.5f);
           let uvZ_orig = ((((hitPosition.z + offsetZ) + (highlightHeight * 2f)) / highlightHeight) * 0.5f);
-          var centeredUV = vec2f((uvX_orig - 0.5f), (uvZ_orig - 0.5f));
-          var finalUV = vec2f(centeredUV.x, (1f - (pow((abs((centeredUV.y - 0.5f)) * 2f), 2f) * 0.3f)));
+          let centeredUV = vec2f((uvX_orig - 0.5f), (uvZ_orig - 0.5f));
+          let finalUV = vec2f(centeredUV.x, (1f - (pow((abs((centeredUV.y - 0.5f)) * 2f), 2f) * 0.3f)));
           let density = max(0f, ((textureSampleLevel(bezierTexture, filteringSampler, finalUV, 0).x - 0.25f) * 8f));
           let fadeX = smoothstep(0f, -0.2f, (hitPosition.x - endCapX));
           let fadeZ = (1f - pow((abs((centeredUV.y - 0.5f)) * 2f), 3f));
@@ -345,15 +345,15 @@ describe('jelly-slider example', () => {
           highlights = ((((pow(density, 3f) * edgeFade) * 3f) * (1f + (*lightDir).z)) / 1.5f);
         }
         let originYBound = saturate((rayOrigin.y + 0.01f));
-        var posOffset = (hitPosition + (vec3f(0, 1, 0) * ((offset * (originYBound / (1f + originYBound))) * (1f + (randFloat01() / 2f)))));
-        var newNormal = getNormalMain(posOffset);
+        let posOffset = (hitPosition + (vec3f(0, 1, 0) * ((offset * (originYBound / (1f + originYBound))) * (1f + (randFloat01() / 2f)))));
+        let newNormal = getNormalMain(posOffset);
         let jellyColor = (&jellyColorUniform);
         let sqDist = sqLength((hitPosition - vec3f(endCapX, 0f, 0f)));
-        var bounceLight = ((*jellyColor).rgb * ((1f / ((sqDist * 15f) + 1f)) * 0.4f));
-        var sideBounceLight = (((*jellyColor).rgb * ((1f / ((sqDist * 40f) + 1f)) * 0.3f)) * abs(newNormal.z));
-        var litColor = calculateLighting(posOffset, newNormal, rayOrigin);
-        var backgroundColor = ((applyAO((vec3f(1) * litColor), posOffset, newNormal) + vec4f(bounceLight, 0f)) + vec4f(sideBounceLight, 0f));
-        var textColor = saturate((backgroundColor.rgb * vec3f(0.5)));
+        let bounceLight = ((*jellyColor).rgb * ((1f / ((sqDist * 15f) + 1f)) * 0.4f));
+        let sideBounceLight = (((*jellyColor).rgb * ((1f / ((sqDist * 40f) + 1f)) * 0.3f)) * abs(newNormal.z));
+        let litColor = calculateLighting(posOffset, newNormal, rayOrigin);
+        let backgroundColor = ((applyAO((vec3f(1) * litColor), posOffset, newNormal) + vec4f(bounceLight, 0f)) + vec4f(sideBounceLight, 0f));
+        let textColor = saturate((backgroundColor.rgb * vec3f(0.5)));
         return vec4f((mix(backgroundColor.rgb, textColor, percentageSample.x) * (1f + highlights)), 1f);
       }
 
@@ -364,11 +364,11 @@ describe('jelly-slider example', () => {
       }
 
       fn intersectBox(rayOrigin: vec3f, rayDirection: vec3f, boxMin: vec3f, boxMax: vec3f) -> BoxIntersection {
-        var invDir = (vec3f(1) / rayDirection);
-        var t1 = ((boxMin - rayOrigin) * invDir);
-        var t2 = ((boxMax - rayOrigin) * invDir);
-        var tMinVec = min(t1, t2);
-        var tMaxVec = max(t1, t2);
+        let invDir = (vec3f(1) / rayDirection);
+        let t1 = ((boxMin - rayOrigin) * invDir);
+        let t2 = ((boxMax - rayOrigin) * invDir);
+        let tMinVec = min(t1, t2);
+        let tMaxVec = max(t1, t2);
         let tMin = max(max(tMinVec.x, tMinVec.y), tMinVec.z);
         let tMax = min(min(tMaxVec.x, tMaxVec.y), tMaxVec.z);
         var result = BoxIntersection();
@@ -388,10 +388,10 @@ describe('jelly-slider example', () => {
 
       fn cap3D(position: vec3f) -> f32 {
         let endCap = (&endCapUniform);
-        var secondLastPoint = vec2f((*endCap).x, (*endCap).y);
-        var lastPoint = vec2f((*endCap).z, (*endCap).w);
+        let secondLastPoint = vec2f((*endCap).x, (*endCap).y);
+        let lastPoint = vec2f((*endCap).z, (*endCap).w);
         let angle = atan2((lastPoint.y - secondLastPoint.y), (lastPoint.x - secondLastPoint.x));
-        var rot = mat2x2f(cos(angle), -(sin(angle)), sin(angle), cos(angle));
+        let rot = mat2x2f(cos(angle), -(sin(angle)), sin(angle), cos(angle));
         var pieP = (position - vec3f(secondLastPoint, 0f));
         pieP = vec3f((rot * pieP.xy), pieP.z);
         let hmm = sdPie(pieP.zx, vec2f(1, 0), 0.17f);
@@ -400,7 +400,7 @@ describe('jelly-slider example', () => {
       }
 
       fn sliderSdf3D(position: vec3f) -> LineInfo {
-        var poly2D = sdInflatedPolyline2D(position.xy);
+        let poly2D = sdInflatedPolyline2D(position.xy);
         var finalDist = 0f;
         if ((poly2D.t > 0.94f)) {
           finalDist = cap3D(position);
@@ -420,7 +420,7 @@ describe('jelly-slider example', () => {
 
       fn getSceneDist(position: vec3f) -> HitInfo {
         let mainScene = getMainSceneDist(position);
-        var poly3D = sliderSdf3D(position);
+        let poly3D = sliderSdf3D(position);
         var hitInfo = HitInfo();
         if ((poly3D.distance < mainScene)) {
           hitInfo.distance = poly3D.distance;
@@ -435,16 +435,16 @@ describe('jelly-slider example', () => {
       }
 
       fn getNormalFromSdf_1(position: vec3f, epsilon: f32) -> vec3f {
-        var k = vec3f(1, -1, 0);
-        var offset1 = (k.xyy * epsilon);
-        var offset2 = (k.yyx * epsilon);
-        var offset3 = (k.yxy * epsilon);
-        var offset4 = (k.xxx * epsilon);
-        var sample1 = (offset1 * cap3D((position + offset1)));
-        var sample2 = (offset2 * cap3D((position + offset2)));
-        var sample3 = (offset3 * cap3D((position + offset3)));
-        var sample4 = (offset4 * cap3D((position + offset4)));
-        var gradient = (((sample1 + sample2) + sample3) + sample4);
+        let k = vec3f(1, -1, 0);
+        let offset1 = (k.xyy * epsilon);
+        let offset2 = (k.yyx * epsilon);
+        let offset3 = (k.yxy * epsilon);
+        let offset4 = (k.xxx * epsilon);
+        let sample1 = (offset1 * cap3D((position + offset1)));
+        let sample2 = (offset2 * cap3D((position + offset2)));
+        let sample3 = (offset3 * cap3D((position + offset3)));
+        let sample4 = (offset4 * cap3D((position + offset4)));
+        let gradient = (((sample1 + sample2) + sample3) + sample4);
         return normalize(gradient);
       }
 
@@ -462,15 +462,15 @@ describe('jelly-slider example', () => {
         const edgeContrib = 0.9;
         let zContrib = (1f - edgeContrib);
         let zDirection = sign(position.z);
-        var zAxisVector = vec3f(0f, 0f, zDirection);
+        let zAxisVector = vec3f(0f, 0f, zDirection);
         let edgeBlendDistance = ((edgeContrib * 0.024f) + (zContrib * 0.17f));
         let blendFactor = smoothstep(edgeBlendDistance, 0f, ((zDistance * zContrib) + (edgeDistance * edgeContrib)));
-        var normal2D = vec3f((*gradient2D).xy, 0f);
-        var blendedNormal = mix(zAxisVector, normal2D, ((blendFactor * 0.5f) + 0.5f));
+        let normal2D = vec3f((*gradient2D).xy, 0f);
+        let blendedNormal = mix(zAxisVector, normal2D, ((blendFactor * 0.5f) + 0.5f));
         var normal = normalize(blendedNormal);
         if ((hitInfo.t > 0.94f)) {
           let ratio = ((hitInfo.t - 0.94f) / 0.02f);
-          var fullNormal = getNormalCap(position);
+          let fullNormal = getNormalCap(position);
           normal = normalize(mix(normal, fullNormal, ratio));
         }
         return normal;
@@ -494,7 +494,7 @@ describe('jelly-slider example', () => {
         var distanceFromOrigin = 0f;
         var hit = 0f;
         for (var i = 0; (i < 6i); i++) {
-          var p = (rayOrigin + (rayDirection * distanceFromOrigin));
+          let p = (rayOrigin + (rayDirection * distanceFromOrigin));
           hit = getMainSceneDist(p);
           distanceFromOrigin += hit;
           if (((distanceFromOrigin > 10f) || (hit < 0.01f))) {
@@ -515,19 +515,19 @@ describe('jelly-slider example', () => {
         var totalSteps = 0u;
         var backgroundDist = 0f;
         for (var i = 0; (i < 64i); i++) {
-          var p = (rayOrigin + (rayDirection * backgroundDist));
+          let p = (rayOrigin + (rayDirection * backgroundDist));
           let hit = getMainSceneDist(p);
           backgroundDist += hit;
           if ((hit < 1e-3f)) {
             break;
           }
         }
-        var background = renderBackground(rayOrigin, rayDirection, backgroundDist, 0f);
-        var bbox = getSliderBbox();
+        let background = renderBackground(rayOrigin, rayDirection, backgroundDist, 0f);
+        let bbox = getSliderBbox();
         const zDepth = 0.25f;
-        var sliderMin = vec3f(bbox.left, bbox.bottom, -(zDepth));
-        var sliderMax = vec3f(bbox.right, bbox.top, zDepth);
-        var intersection = intersectBox(rayOrigin, rayDirection, sliderMin, sliderMax);
+        let sliderMin = vec3f(bbox.left, bbox.bottom, -(zDepth));
+        let sliderMax = vec3f(bbox.right, bbox.top, zDepth);
+        let intersection = intersectBox(rayOrigin, rayDirection, sliderMin, sliderMax);
         if (!intersection.hit) {
           return background;
         }
@@ -536,40 +536,40 @@ describe('jelly-slider example', () => {
           if ((totalSteps >= 64u)) {
             break;
           }
-          var currentPosition = (rayOrigin + (rayDirection * distanceFromOrigin));
-          var hitInfo = getSceneDist(currentPosition);
+          let currentPosition = (rayOrigin + (rayDirection * distanceFromOrigin));
+          let hitInfo = getSceneDist(currentPosition);
           distanceFromOrigin += hitInfo.distance;
           totalSteps++;
           if ((hitInfo.distance < 1e-3f)) {
-            var hitPosition = (rayOrigin + (rayDirection * distanceFromOrigin));
+            let hitPosition = (rayOrigin + (rayDirection * distanceFromOrigin));
             if (!(hitInfo.objectType == 1i)) {
               break;
             }
-            var N = getNormal(hitPosition, hitInfo);
+            let N = getNormal(hitPosition, hitInfo);
             let I = rayDirection;
             let cosi = min(1f, max(0f, dot(-(I), N)));
             let F = fresnelSchlick(cosi, 1f, 1.4199999570846558f);
-            var reflection = saturate(vec3f((hitPosition.y + 0.2f)));
+            let reflection = saturate(vec3f((hitPosition.y + 0.2f)));
             const eta = 0.7042253521126761;
             let k = (1f - ((eta * eta) * (1f - (cosi * cosi))));
             var refractedColor = vec3f();
             if ((k > 0f)) {
-              var refrDir = normalize(((I * eta) + (N * ((eta * cosi) - sqrt(k)))));
-              var p = (hitPosition + (refrDir * 2e-3f));
-              var exitPos = (p + (refrDir * 2e-3f));
-              var env = rayMarchNoJelly(exitPos, refrDir);
+              let refrDir = normalize(((I * eta) + (N * ((eta * cosi) - sqrt(k)))));
+              let p = (hitPosition + (refrDir * 2e-3f));
+              let exitPos = (p + (refrDir * 2e-3f));
+              let env = rayMarchNoJelly(exitPos, refrDir);
               let progress = hitInfo.t;
               let jellyColor = (&jellyColorUniform);
-              var scatterTint = ((*jellyColor).rgb * 1.5f);
+              let scatterTint = ((*jellyColor).rgb * 1.5f);
               const density = 20f;
-              var absorb = ((vec3f(1) - (*jellyColor).rgb) * density);
-              var T = beerLambert((absorb * pow(progress, 2f)), 0.08f);
-              var lightDir = -(lightUniform.direction);
+              let absorb = ((vec3f(1) - (*jellyColor).rgb) * density);
+              let T = beerLambert((absorb * pow(progress, 2f)), 0.08f);
+              let lightDir = -(lightUniform.direction);
               let forward = max(0f, dot(lightDir, refrDir));
-              var scatter = (scatterTint * ((3f * forward) * pow(progress, 3f)));
+              let scatter = (scatterTint * ((3f * forward) * pow(progress, 3f)));
               refractedColor = ((env * T) + scatter);
             }
-            var jelly = ((reflection * F) + (refractedColor * (1f - F)));
+            let jelly = ((reflection * F) + (refractedColor * (1f - F)));
             return vec4f(jelly, 1f);
           }
           if ((distanceFromOrigin > backgroundDist)) {
@@ -585,9 +585,9 @@ describe('jelly-slider example', () => {
 
       @fragment fn raymarchFn(_arg_0: raymarchFn_Input) -> @location(0) vec4f {
         randSeed2((randomUniform * _arg_0.uv));
-        var ndc = vec2f(((_arg_0.uv.x * 2f) - 1f), -(((_arg_0.uv.y * 2f) - 1f)));
-        var ray = getRay(ndc);
-        var color = rayMarch(ray.origin, ray.direction, _arg_0.uv);
+        let ndc = vec2f(((_arg_0.uv.x * 2f) - 1f), -(((_arg_0.uv.y * 2f) - 1f)));
+        let ray = getRay(ndc);
+        let color = rayMarch(ray.origin, ray.direction, _arg_0.uv);
         return vec4f(tanh((color.rgb * 1.3f)), 1f);
       }
 
@@ -598,34 +598,34 @@ describe('jelly-slider example', () => {
       @group(0) @binding(2) var outputTexture: texture_storage_2d<rgba8unorm, write>;
 
       @compute @workgroup_size(16, 16) fn taaResolveFn(@builtin(global_invocation_id) gid: vec3u) {
-        var currentColor = textureLoad(currentTexture, gid.xy, 0);
-        var historyColor = textureLoad(historyTexture, gid.xy, 0);
+        let currentColor = textureLoad(currentTexture, gid.xy, 0);
+        let historyColor = textureLoad(historyTexture, gid.xy, 0);
         var minColor = vec3f(9999);
         var maxColor = vec3f(-9999);
-        var dimensions = textureDimensions(currentTexture);
+        let dimensions = textureDimensions(currentTexture);
         // unrolled iteration #0
         {
           // unrolled iteration #0
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i(-1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i(-1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
           // unrolled iteration #1
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i(-1, 0));
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i(-1, 0));
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
           // unrolled iteration #2
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i(-1, 1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i(-1, 1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
@@ -634,25 +634,25 @@ describe('jelly-slider example', () => {
         {
           // unrolled iteration #0
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i(0, -1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i(0, -1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
           // unrolled iteration #1
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i());
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i());
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
           // unrolled iteration #2
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i(0, 1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i(0, 1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
@@ -661,31 +661,31 @@ describe('jelly-slider example', () => {
         {
           // unrolled iteration #0
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i(1, -1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i(1, -1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
           // unrolled iteration #1
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i(1, 0));
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i(1, 0));
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
           // unrolled iteration #2
           {
-            var sampleCoord = (vec2i(gid.xy) + vec2i(1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
-            var neighborColor = textureLoad(currentTexture, clampedCoord, 0);
+            let sampleCoord = (vec2i(gid.xy) + vec2i(1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), (vec2i(dimensions.xy) - vec2i(1)));
+            let neighborColor = textureLoad(currentTexture, clampedCoord, 0);
             minColor = min(minColor, neighborColor.rgb);
             maxColor = max(maxColor, neighborColor.rgb);
           }
         }
-        var historyColorClamped = clamp(historyColor.rgb, minColor, maxColor);
-        var uv = (vec2f(gid.xy) / vec2f(dimensions.xy));
+        let historyColorClamped = clamp(historyColor.rgb, minColor, maxColor);
+        let uv = (vec2f(gid.xy) / vec2f(dimensions.xy));
         const textRegionMinX = 0.7099999785423279f;
         const textRegionMaxX = 0.8500000238418579f;
         const textRegionMinY = 0.4699999988079071f;
@@ -697,7 +697,7 @@ describe('jelly-slider example', () => {
         let fadeOutY = (1f - smoothstep((textRegionMaxY - borderSize), (textRegionMaxY + borderSize), uv.y));
         let inTextRegion = (((fadeInX * fadeOutX) * fadeInY) * fadeOutY);
         let blendFactor = mix(0.8999999761581421f, 0.699999988079071f, inTextRegion);
-        var resolvedColor = vec4f(mix(currentColor.rgb, historyColorClamped, blendFactor), 1f);
+        let resolvedColor = vec4f(mix(currentColor.rgb, historyColorClamped, blendFactor), 1f);
         textureStore(outputTexture, vec2u(gid.x, gid.y), resolvedColor);
       }
 
@@ -738,10 +738,10 @@ describe('jelly-slider example', () => {
       }
 
       fn sdBezier(point: vec2f, A: vec2f, B: vec2f, C: vec2f) -> f32 {
-        var a = (B - A);
-        var b = ((A - (B * 2f)) + C);
-        var c = (a * 2f);
-        var d = (A - point);
+        let a = (B - A);
+        let b = ((A - (B * 2f)) + C);
+        let c = (a * 2f);
+        let d = (A - point);
         let dotB = max(dot(b, b), 1e-4f);
         let kk = (1f / dotB);
         let kx = (kk * dot(a, b));
@@ -754,8 +754,8 @@ describe('jelly-slider example', () => {
         var h = ((q * q) + (4f * p3));
         if ((h >= 0f)) {
           h = sqrt(h);
-          var x = ((vec2f(h, -(h)) - q) * 0.5f);
-          var uv = (sign(x) * pow(abs(x), vec2f(0.3333333432674408)));
+          let x = ((vec2f(h, -(h)) - q) * 0.5f);
+          let uv = (sign(x) * pow(abs(x), vec2f(0.3333333432674408)));
           let t = saturate(((uv.x + uv.y) - kx));
           res = dot2((d + ((c + (b * t)) * t)));
         }
@@ -764,22 +764,22 @@ describe('jelly-slider example', () => {
           let v = (acos((q / ((p * z) * 2f))) / 3f);
           let m = cos(v);
           let n = (sin(v) * 1.732050808f);
-          var t = saturate(((vec3f((m + m), (-(n) - m), (n - m)) * z) - kx));
+          let t = saturate(((vec3f((m + m), (-(n) - m), (n - m)) * z) - kx));
           res = min(dot2((d + ((c + (b * t.x)) * t.x))), dot2((d + ((c + (b * t.y)) * t.y))));
         }
         return sqrt(res);
       }
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
-        var size = textureDimensions(bezierWriteView);
-        var pixelUV = ((vec2f(f32(x), f32(y)) + 0.5f) / vec2f(size));
-        var sliderPos = vec2f((-1.0189999997615815f + (pixelUV.x * 2.108999973535538f)), (0.65f - (pixelUV.y * 0.95f)));
+        let size = textureDimensions(bezierWriteView);
+        let pixelUV = ((vec2f(f32(x), f32(y)) + 0.5f) / vec2f(size));
+        let sliderPos = vec2f((-1.0189999997615815f + (pixelUV.x * 2.108999973535538f)), (0.65f - (pixelUV.y * 0.95f)));
         var minDist = 1e+10f;
         var closestSegment = 0i;
         var closestT = 0f;
         const epsilon = 0.029999999329447746f;
-        var xOffset = vec2f(epsilon, 0f);
-        var yOffset = vec2f(0f, epsilon);
+        let xOffset = vec2f(epsilon, 0f);
+        let yOffset = vec2f(0f, epsilon);
         var xPlusDist = 1e+10f;
         var xMinusDist = 1e+10f;
         var yPlusDist = 1e+10f;
@@ -792,8 +792,8 @@ describe('jelly-slider example', () => {
           if ((dist < minDist)) {
             minDist = dist;
             closestSegment = i;
-            var AB = ((*B) - (*A));
-            var AP = (sliderPos - (*A));
+            let AB = ((*B) - (*A));
+            let AP = (sliderPos - (*A));
             let ABLength = length(AB);
             if ((ABLength > 0f)) {
               closestT = clamp((dot(AP, AB) / (ABLength * ABLength)), 0f, 1f);

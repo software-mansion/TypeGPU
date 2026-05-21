@@ -87,8 +87,8 @@ describe('gravity example', () => {
 
       @group(0) @binding(2) var<storage, read_write> outState: array<CelestialBody>;
 
-      @compute @workgroup_size(1) fn computeCollisionsShader(@builtin(global_invocation_id) _arg_gid: vec3u) {
-        let currentId = _arg_gid.x;
+      @compute @workgroup_size(1) fn computeCollisionsShader(@builtin(global_invocation_id) gid: vec3u) {
+        let currentId = gid.x;
         var current = inState[currentId];
         if ((current.destroyed == 0u)) {
           for (var otherId = 0u; (otherId < u32(celestialBodiesCount)); otherId++) {
@@ -98,11 +98,11 @@ describe('gravity example', () => {
             }
             if (((current.collisionBehavior == 1u) && ((*other).collisionBehavior == 1u))) {
               if (isSmaller(currentId, otherId)) {
-                var dir = normalize((current.position - (*other).position));
+                let dir = normalize((current.position - (*other).position));
                 current.position = ((*other).position + (dir * (radiusOf(current) + radiusOf((*other)))));
               }
-              var posDiff = (current.position - (*other).position);
-              var velDiff = (current.velocity - (*other).velocity);
+              let posDiff = (current.position - (*other).position);
+              let velDiff = (current.velocity - (*other).velocity);
               let posDiffFactor = ((((2f * (*other).mass) / (current.mass + (*other).mass)) * dot(velDiff, posDiff)) / dot(posDiff, posDiff));
               current.velocity = ((current.velocity - (posDiff * posDiffFactor)) * 0.99f);
             }
@@ -151,9 +151,9 @@ describe('gravity example', () => {
 
       @group(1) @binding(2) var<storage, read_write> outState: array<CelestialBody>;
 
-      @compute @workgroup_size(1) fn computeGravityShader(@builtin(global_invocation_id) _arg_gid: vec3u) {
+      @compute @workgroup_size(1) fn computeGravityShader(@builtin(global_invocation_id) gid: vec3u) {
         let dt = (time.passed * time.multiplier);
-        let currentId = _arg_gid.x;
+        let currentId = gid.x;
         var current = inState[currentId];
         if ((current.destroyed == 0u)) {
           for (var otherId = 0u; (otherId < u32(celestialBodiesCount)); otherId++) {
@@ -163,7 +163,7 @@ describe('gravity example', () => {
             }
             let dist = max((radiusOf(current) + radiusOf((*other))), distance(current.position, (*other).position));
             let gravityForce = (((current.mass * (*other).mass) / dist) / dist);
-            var direction = normalize(((*other).position - current.position));
+            let direction = normalize(((*other).position - current.position));
             current.velocity += ((direction * (gravityForce / current.mass)) * dt);
           }
           current.position += (current.velocity * dt);
@@ -187,9 +187,9 @@ describe('gravity example', () => {
         @location(0) texCoord: vec3f,
       }
 
-      @vertex fn skyBoxVertex(@location(0) _arg_position: vec3f) -> skyBoxVertex_Output {
-        var viewPos = (camera.view * vec4f(_arg_position, 0f)).xyz;
-        return skyBoxVertex_Output((camera.projection * vec4f(viewPos, 1f)), _arg_position.xyz);
+      @vertex fn skyBoxVertex(@location(0) position: vec3f) -> skyBoxVertex_Output {
+        let viewPos = (camera.view * vec4f(position, 0f)).xyz;
+        return skyBoxVertex_Output((camera.projection * vec4f(viewPos, 1f)), position.xyz);
       }
 
       @group(0) @binding(1) var skyBox: texture_cube<f32>;
@@ -242,12 +242,12 @@ describe('gravity example', () => {
         @location(5) ambientLightFactor: f32,
       }
 
-      @vertex fn mainVertex(@location(0) _arg_position: vec3f, @location(1) _arg_normal: vec3f, @location(2) _arg_uv: vec2f, @builtin(instance_index) _arg_instanceIndex: u32) -> mainVertex_Output {
-        let currentBody = (&celestialBodies[_arg_instanceIndex]);
-        var worldPosition = ((*currentBody).position + (_arg_position.xyz * radiusOf((*currentBody))));
+      @vertex fn mainVertex(@location(0) position: vec3f, @location(1) normal: vec3f, @location(2) uv: vec2f, @builtin(instance_index) instanceIndex: u32) -> mainVertex_Output {
+        let currentBody = (&celestialBodies[instanceIndex]);
+        let worldPosition = ((*currentBody).position + (position.xyz * radiusOf((*currentBody))));
         let camera = (&camera_1);
-        var positionOnCanvas = (((*camera).projection * (*camera).view) * vec4f(worldPosition, 1f));
-        return mainVertex_Output(positionOnCanvas, _arg_uv, _arg_normal, worldPosition, (*currentBody).textureIndex, (*currentBody).destroyed, (*currentBody).ambientLightFactor);
+        let positionOnCanvas = (((*camera).projection * (*camera).view) * vec4f(worldPosition, 1f));
+        return mainVertex_Output(positionOnCanvas, uv, normal, worldPosition, (*currentBody).textureIndex, (*currentBody).destroyed, (*currentBody).ambientLightFactor);
       }
 
       @group(1) @binding(0) var celestialBodyTextures: texture_2d_array<f32>;
@@ -269,13 +269,13 @@ describe('gravity example', () => {
         if ((_arg_0.destroyed == 1u)) {
           discard;;
         }
-        var lightColor = vec3f(1, 0.8999999761581421, 0.8999999761581421);
-        var textureColor = textureSample(celestialBodyTextures, sampler_1, _arg_0.uv, _arg_0.sphereTextureIndex).rgb;
-        var ambient = ((textureColor * lightColor) * _arg_0.ambientLightFactor);
+        let lightColor = vec3f(1, 0.8999999761581421, 0.8999999761581421);
+        let textureColor = textureSample(celestialBodyTextures, sampler_1, _arg_0.uv, _arg_0.sphereTextureIndex).rgb;
+        let ambient = ((textureColor * lightColor) * _arg_0.ambientLightFactor);
         let normal = _arg_0.normals;
-        var lightDirection = normalize((lightSource - _arg_0.worldPosition));
+        let lightDirection = normalize((lightSource - _arg_0.worldPosition));
         let cosTheta = dot(normal, lightDirection);
-        var diffuse = ((textureColor * lightColor) * max(0f, cosTheta));
+        let diffuse = ((textureColor * lightColor) * max(0f, cosTheta));
         return vec4f((ambient + diffuse), 1f);
       }"
     `);

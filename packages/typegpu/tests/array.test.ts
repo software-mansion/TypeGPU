@@ -185,7 +185,7 @@ describe('array', () => {
 
     expect(tgpu.resolve([testFunction])).toMatchInlineSnapshot(`
       "fn testFunction() {
-        var defaultValue = array<array<f32, 1>, 2>();
+        let defaultValue = array<array<f32, 1>, 2>();
       }"
     `);
   });
@@ -211,13 +211,13 @@ describe('array', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn f(arr: array<u32, 1>) {
-        var clone = arr;
+        let clone = arr;
       }
 
       fn testFn() {
-        var myArray = array<u32, 1>(10u);
-        var myClone = myArray;
-        var myExternal = array<u32, 1>(3u);
+        let myArray = array<u32, 1>(10u);
+        let myClone = myArray;
+        let myExternal = array<u32, 1>(3u);
         f(myArray);
         return;
       }"
@@ -235,8 +235,8 @@ describe('array', () => {
 
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn() {
-        var myArrays = array<array<i32, 1>, 1>(array<i32, 1>(10i));
-        var myClone = myArrays[0i];
+        let myArrays = array<array<i32, 1>, 1>(array<i32, 1>(10i));
+        let myClone = myArrays[0i];
         return;
       }"
     `);
@@ -251,7 +251,7 @@ describe('array', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
-        var arr = array<f32, 2>(6f, 7f);
+        let arr = array<f32, 2>(6f, 7f);
         return;
       }"
     `);
@@ -275,11 +275,11 @@ describe('array', () => {
       "fn f(v: vec4f) {
         var v2 = vec4f(3);
         let v3 = (&v2);
-        var arr = array<vec4f, 3>(v, v2, (*v3));
+        let arr = array<vec4f, 3>(v, v2, (*v3));
       }
 
       fn main() {
-        var v1 = vec4f(7);
+        let v1 = vec4f(7);
         f(v1);
         return;
       }"
@@ -295,7 +295,7 @@ describe('array', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
-        var arr = array<f32, 3>(5f, 6.7f, 8f);
+        let arr = array<f32, 3>(5f, 6.7f, 8f);
         return;
       }"
     `);
@@ -308,7 +308,7 @@ describe('array', () => {
 
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 4>();
+        let result = array<f32, 4>();
       }"
     `);
   });
@@ -320,7 +320,7 @@ describe('array', () => {
 
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 4>();
+        let result = array<f32, 4>();
       }"
     `);
   });
@@ -355,7 +355,7 @@ describe('array', () => {
 
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 4>(1f, 2f, 3f, 4f);
+        let result = array<f32, 4>(1f, 2f, 3f, 4f);
       }"
     `);
   });
@@ -367,7 +367,7 @@ describe('array', () => {
 
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 4>(4f, 3f, 2f, 1f);
+        let result = array<f32, 4>(4f, 3f, 2f, 1f);
       }"
     `);
   });
@@ -381,7 +381,7 @@ describe('array', () => {
 
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 4>(4f, 3f, 2f, 1f);
+        let result = array<f32, 4>(4f, 3f, 2f, 1f);
       }"
     `);
   });
@@ -397,7 +397,7 @@ describe('array', () => {
 
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 8>(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f);
+        let result = array<f32, 8>(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f);
       }"
     `);
   });
@@ -444,7 +444,7 @@ describe('array', () => {
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo(n: u32) {
         const m = 1u;
-        var result = array<u32, 3>(1u, n, m);
+        let result = array<u32, 3>(1u, n, m);
       }"
     `);
   });
@@ -460,7 +460,7 @@ describe('array', () => {
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
         const i = 2;
-        const a = i;
+        let a = i;
         const b = 2i;
       }"
     `);
@@ -494,7 +494,7 @@ describe('array', () => {
 
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() -> vec3f {
-        var x = vec3f(1, 2, 3);
+        let x = vec3f(1, 2, 3);
         let y = (&x);
         return (*y);
       }"

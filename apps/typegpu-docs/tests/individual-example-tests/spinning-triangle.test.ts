@@ -27,7 +27,7 @@ describe('react/spinning-triangle example', () => {
       @group(0) @binding(0) var<uniform> time: f32;
 
       fn rotate(v: vec2f, angle: f32) -> vec2f {
-        var pos = vec2f(((v.x * cos(angle)) - (v.y * sin(angle))), ((v.x * sin(angle)) + (v.y * cos(angle))));
+        let pos = vec2f(((v.x * cos(angle)) - (v.y * sin(angle))), ((v.x * sin(angle)) + (v.y * cos(angle))));
         return pos;
       }
 
@@ -44,7 +44,7 @@ describe('react/spinning-triangle example', () => {
 
       @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
         let local = vertices[_arg_0.vertexIndex];
-        var rotated = rotate(local, (time * 0.1f));
+        let rotated = rotate(local, (time * 0.1f));
         return VertexOut(vec4f((rotated * 0.7f), 0f, 1f), length((local - vertices[0i])), length((local - vertices[1i])), length((local - vertices[2i])));
       }
 
@@ -135,7 +135,7 @@ describe('react/spinning-triangle example', () => {
 
       fn findCusp(a: f32, b: f32) -> LC {
         let S_cusp = computeMaxSaturation(a, b);
-        var rgb_at_max = oklabToLinearRgb(vec3f(1f, (S_cusp * a), (S_cusp * b)));
+        let rgb_at_max = oklabToLinearRgb(vec3f(1f, (S_cusp * a), (S_cusp * b)));
         let L_cusp = cbrt((1f / max(max(rgb_at_max.x, rgb_at_max.y), rgb_at_max.z)));
         let C_cusp = (L_cusp * S_cusp);
         return LC(L_cusp, C_cusp);
@@ -208,7 +208,7 @@ describe('react/spinning-triangle example', () => {
         let Ld = (L - 0.5f);
         let e1 = ((0.5f + abs(Ld)) + (alpha * C));
         let L0 = (0.5f * (1f + (sign(Ld) * (e1 - sqrt(max(0f, ((e1 * e1) - (2f * abs(Ld)))))))));
-        var cusp = findCusp(a_, b_);
+        let cusp = findCusp(a_, b_);
         let t = clamp(findGamutIntersection(a_, b_, L, C, L0, cusp), 0f, 1f);
         let L_clipped = mix(L0, L, t);
         let C_clipped = (t * C);
@@ -235,7 +235,7 @@ describe('react/spinning-triangle example', () => {
 
       @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
         let dist = (1f / (1.4f - min(min(_arg_0.dist0, _arg_0.dist1), _arg_0.dist2)));
-        var albedo = getGradientColor((((fract(((dist * 2f) - time)) * 2f) - 1f) + cos(time)));
+        let albedo = getGradientColor((((fract(((dist * 2f) - time)) * 2f) - 1f) + cos(time)));
         return vec4f(albedo, 1f);
       }"
     `);

@@ -74,8 +74,8 @@ describe('vaporrave example', () => {
       }
 
       @vertex fn vertexMain(@builtin(vertex_index) idx: u32) -> vertexMain_Output {
-        var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
-        var uv = array<vec2f, 3>(vec2f(), vec2f(2, 0), vec2f(0, 2));
+        let pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
+        let uv = array<vec2f, 3>(vec2f(), vec2f(2, 0), vec2f(0, 2));
         return vertexMain_Output(vec4f(pos[idx], 0f, 1f), uv[idx]);
       }
 
@@ -91,9 +91,9 @@ describe('vaporrave example', () => {
       }
 
       fn circles(uv: vec2f, angle: f32) -> vec3f {
-        var uvRotated = (rotateXY(angle) * vec2f(uv.x, (uv.y - 12f)));
-        var uvNormalized = fract((vec2f(uvRotated.x, uvRotated.y) / 1.2f));
-        var diff2 = pow((vec2f(0.5) - uvNormalized), vec2f(2));
+        let uvRotated = (rotateXY(angle) * vec2f(uv.x, (uv.y - 12f)));
+        let uvNormalized = fract((vec2f(uvRotated.x, uvRotated.y) / 1.2f));
+        let diff2 = pow((vec2f(0.5) - uvNormalized), vec2f(2));
         let distO = pow((diff2.x + diff2.y), 0.5f);
         return mix(vec3f(), vec3f(0.9200000166893005, 0.20999999344348907, 0.9599999785423279), exp((-5f * distO)));
       }
@@ -119,7 +119,7 @@ describe('vaporrave example', () => {
       @group(0) @binding(2) var<storage, read> memoryBuffer: array<vec3f, 343>;
 
       fn getJunctionGradient(pos: vec3i) -> vec3f {
-        var size_i = vec3i(7);
+        let size_i = vec3i(7);
         let x = (((pos.x % size_i.x) + size_i.x) % size_i.x);
         let y = (((pos.y % size_i.y) + size_i.y) % size_i.y);
         let z = (((pos.z % size_i.z) + size_i.z) % size_i.z);
@@ -127,8 +127,8 @@ describe('vaporrave example', () => {
       }
 
       fn dotProdGrid(pos: vec3f, junction: vec3f) -> f32 {
-        var relative = (pos - junction);
-        var gridVector = getJunctionGradient(vec3i(junction));
+        let relative = (pos - junction);
+        let gridVector = getJunctionGradient(vec3i(junction));
         return dot(relative, gridVector);
       }
 
@@ -137,7 +137,7 @@ describe('vaporrave example', () => {
       }
 
       fn sample(pos: vec3f) -> f32 {
-        var minJunction = floor(pos);
+        let minJunction = floor(pos);
         let xyz = dotProdGrid(pos, minJunction);
         let xyZ = dotProdGrid(pos, (minJunction + vec3f(0, 0, 1)));
         let xYz = dotProdGrid(pos, (minJunction + vec3f(0, 1, 0)));
@@ -146,8 +146,8 @@ describe('vaporrave example', () => {
         let XyZ = dotProdGrid(pos, (minJunction + vec3f(1, 0, 1)));
         let XYz = dotProdGrid(pos, (minJunction + vec3f(1, 1, 0)));
         let XYZ = dotProdGrid(pos, (minJunction + vec3f(1)));
-        var partial = (pos - minJunction);
-        var smoothPartial = quinticInterpolation(partial);
+        let partial = (pos - minJunction);
+        let smoothPartial = quinticInterpolation(partial);
         let xy = mix(xyz, xyZ, smoothPartial.z);
         let xY = mix(xYz, xYZ, smoothPartial.z);
         let Xy = mix(Xyz, XyZ, smoothPartial.z);
@@ -158,10 +158,10 @@ describe('vaporrave example', () => {
       }
 
       fn getSphere(p: vec3f, sphereColor: vec3f, sphereCenter: vec3f, angle: f32) -> Ray {
-        var localP = (p - sphereCenter);
-        var rotMatZ = rotateAroundZ((-(angle) * 0.3f));
-        var rotMatX = rotateAroundX((-(angle) * 0.7f));
-        var rotatedP = ((localP * rotMatZ) * rotMatX);
+        let localP = (p - sphereCenter);
+        let rotMatZ = rotateAroundZ((-(angle) * 0.3f));
+        let rotMatX = rotateAroundX((-(angle) * 0.7f));
+        let rotatedP = ((localP * rotMatZ) * rotMatX);
         let radius = (3f + sin(angle));
         let rawDist = sdSphere(rotatedP, radius);
         var noise = 0f;
@@ -180,8 +180,8 @@ describe('vaporrave example', () => {
       }
 
       fn getSceneRay(p: vec3f) -> Ray {
-        var floor_1 = Ray(circles(p.xz, floorAngleUniform), sdPlane(p, vec3f(0, 1, 0), 1f));
-        var sphere = getSphere(p, sphereColorUniform, vec3f(0, 6, 12), sphereAngleUniform);
+        let floor_1 = Ray(circles(p.xz, floorAngleUniform), sdPlane(p, vec3f(0, 1, 0), 1f));
+        let sphere = getSphere(p, sphereColorUniform, vec3f(0, 6, 12), sphereAngleUniform);
         return rayUnion(floor_1, sphere);
       }
 
@@ -195,9 +195,9 @@ describe('vaporrave example', () => {
         var result = Ray(vec3f(), 19f);
         var glow = vec3f();
         for (var i = 0; (i < 1000i); i++) {
-          var p = ((rd * distOrigin) + ro);
-          var scene = getSceneRay(p);
-          var sphereDist = getSphere(p, sphereColorUniform, vec3f(0, 6, 12), sphereAngleUniform);
+          let p = ((rd * distOrigin) + ro);
+          let scene = getSceneRay(p);
+          let sphereDist = getSphere(p, sphereColorUniform, vec3f(0, 6, 12), sphereAngleUniform);
           glow += (sphereColorUniform * exp(-(sphereDist.dist)));
           distOrigin += scene.dist;
           if ((distOrigin > 19f)) {
@@ -222,11 +222,11 @@ describe('vaporrave example', () => {
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
         var uv = ((_arg_0.uv * 2f) - 1f);
         uv.x *= (resolutionUniform.x / resolutionUniform.y);
-        var ro = vec3f(0, 2, -1);
-        var rd = normalize(vec3f(uv.x, uv.y, 1f));
-        var march = rayMarch(ro, rd);
+        let ro = vec3f(0, 2, -1);
+        let rd = normalize(vec3f(uv.x, uv.y, 1f));
+        let march = rayMarch(ro, rd);
         let y = (((rd.y * march.ray.dist) + ro.y) - 2f);
-        var sky = mix(vec4f(0.10000000149011612, 0, 0.20000000298023224, 1), vec4f(0.2800000011920929, 0, 0.5400000214576721, 1), (y / 19f));
+        let sky = mix(vec4f(0.10000000149011612, 0, 0.20000000298023224, 1), vec4f(0.2800000011920929, 0, 0.5400000214576721, 1), (y / 19f));
         let fog = min((march.ray.dist / 19f), 1f);
         return mix(mix(vec4f(march.ray.color, 1f), sky, fog), vec4f(march.glow, 1f), glowIntensityUniform);
       }"

@@ -1,6 +1,6 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import { type BaseData, isNaturallyEphemeral } from '../../data/wgslTypes.ts';
+import type { BaseData } from '../../data/wgslTypes.ts';
 import { IllegalVarAccessError } from '../../errors.ts';
 import { getExecMode, isInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -87,7 +87,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.getUniqueName(this);
+    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const pre = `var<${this.#scope}> ${id}: ${ctx.resolve(this.#dataType).value}`;
 
     if (this.#initialValue) {
@@ -96,7 +96,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
       ctx.addDeclaration(`${pre};`);
     }
 
-    return snip(id, this.#dataType, isNaturallyEphemeral(this.#dataType) ? 'runtime' : this.#scope);
+    return snip(id, this.#dataType, this.#scope);
   }
 
   $name(label: string) {
@@ -110,7 +110,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
 
   get [$gpuValueOf](): InferGPU<TDataType> {
     const dataType = this.#dataType;
-    const origin = isNaturallyEphemeral(dataType) ? 'runtime' : this.#scope;
+    const origin = this.#scope;
 
     return new Proxy(
       {
