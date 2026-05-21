@@ -203,4 +203,29 @@ describe('tgpu.const', () => {
 
     expect(extractSnippetFromFn(fn).origin).toBe('constant-immutable-def');
   });
+
+  it('forbids assignment to runtime-known consts', () => {
+    const c = tgpu.const(d.arrayOf(d.f32), [1, 2, 3]);
+    function testFn() {
+      'use gpu';
+      const index = 0;
+      // @ts-expect-error
+      c.$[index] = 1;
+    }
+
+    expect(
+      extractSnippetFromFn(() => {
+        'use gpu';
+        const index = 0;
+        return c.$[index];
+      }).origin,
+    ).toEqual('runtime-immutable-def');
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): 'c.$[index] = 1' is invalid, because the left side is a constant.]
+    `);
+  });
 });

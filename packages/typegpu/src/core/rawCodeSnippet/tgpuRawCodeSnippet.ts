@@ -28,7 +28,7 @@ export interface TgpuRawCodeSnippet<TDataType extends BaseData> {
 // we would have access to this value anyway. Same goes for 'argument' and 'local-def',
 // the values literally exist in the function we're writing.
 //
-// '*-tgpu-const-ref' were excluded because they're a special origin reserved for tgpu.const values.
+// '*-immutable-def' were excluded because they're a special origin reserved for tgpu.const values.
 export type RawCodeSnippetOrigin = Exclude<
   Origin,
   'function' | 'local-def' | 'argument' | 'constant-immutable-def' | 'runtime-immutable-def'
