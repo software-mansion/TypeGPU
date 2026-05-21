@@ -125,6 +125,7 @@ ${example.htmlFile.content}
       '@loaders.gl/core': typegpuDocsPackageJson.dependencies['@loaders.gl/core'],
       '@loaders.gl/obj': typegpuDocsPackageJson.dependencies['@loaders.gl/obj'],
       '@loaders.gl/gltf': typegpuDocsPackageJson.dependencies['@loaders.gl/gltf'],
+      'typed-binary': typegpuDocsPackageJson.dependencies['typed-binary'],
       three: pnpmWorkspaceYaml.catalogs.example.three,
       '@typegpu/noise': typegpuNoisePackageJson.version,
       '@typegpu/color': typegpuColorPackageJson.version,
