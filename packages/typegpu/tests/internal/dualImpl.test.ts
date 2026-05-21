@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { dualImpl, MissingCpuImplError } from '../../src/core/function/dualImpl.ts';
-import { Void } from '../../src/data/wgslTypes.ts';
-import tgpu from '../../src/index.js';
+import tgpu, { d } from 'typegpu';
 import { getName } from '../../src/shared/meta.ts';
 
 describe('dualImpl', () => {
   it('names functions created by dualImpl', () => {
     const dual = dualImpl({
       normalImpl: () => {},
-      signature: () => ({ argTypes: [], returnType: Void }),
+      signature: () => ({ argTypes: [], returnType: d.Void }),
       codegenImpl: () => 'code',
       name: 'myDualImpl',
     });
