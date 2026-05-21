@@ -11,8 +11,9 @@ export function failAndExit(message: string, detail?: string): never {
   process.exit(1);
 }
 
-export async function confirmStep(message: string) {
-  const res = await p.confirm({ message });
+export async function confirmStep(message: string, initialValue?: boolean) {
+  const confirmOptions = initialValue !== undefined ? { message, initialValue } : { message };
+  const res = await p.confirm(confirmOptions);
   if (p.isCancel(res)) {
     cancelExit();
   }

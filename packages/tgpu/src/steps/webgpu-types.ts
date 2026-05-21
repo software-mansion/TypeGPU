@@ -32,7 +32,7 @@ function addWebgpuTypesToTsconfig(filePath: string) {
     tsconfig.compilerOptions.types = [];
   }
 
-  if (tsconfig.compilerOptions.types?.includes('@webgpu/types')) {
+  if (tsconfig.compilerOptions.types.includes('@webgpu/types')) {
     return;
   }
 

@@ -456,12 +456,12 @@ importers:
 
   packages/tgpu:
     dependencies:
-      '@antfu/ni':
-        specifier: ^25.0.0
-        version: 25.0.0
       '@clack/prompts':
         specifier: ^0.9.1
         version: 0.9.1
+      arktype:
+        specifier: 'catalog:'
+        version: 2.1.28
       comment-json:
         specifier: ^5.0.0
         version: 5.0.0
@@ -484,9 +484,6 @@ importers:
       '@types/node':
         specifier: ^24.10.0
         version: 24.10.0
-      arktype:
-        specifier: 'catalog:'
-        version: 2.1.28
       tsdown:
         specifier: catalog:build
         version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.34(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
@@ -988,10 +985,6 @@ packages:
   '@ampproject/remapping@2.3.0':
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
-
-  '@antfu/ni@25.0.0':
-    resolution: {integrity: sha512-9q/yCljni37pkMr4sPrI3G4jqdIk074+iukc5aFJl7kmDCCsiJrbZ6zKxnES1Gwg+i9RcDZwvktl23puGslmvA==}
-    hasBin: true
 
   '@ark/attest@0.56.0':
     resolution: {integrity: sha512-Pngs8f1UJiWbeO8LKVdyBL0K3rT/PDVACR7TPyCEULNcN8V1rVec6dKvUnQVpQSj60p4ejlK6dKs+fQoqdUMqA==}
@@ -5891,9 +5884,6 @@ packages:
     resolution: {integrity: sha512-trLf4SzuuUxfusZADLINj+dE8clK1frKdmqiJNb1Es75fmI5oY6X2mxLVUciLLjxqw/xr72Dhy+lER6dGd02FQ==}
     engines: {node: '>=10'}
 
-  fzf@0.5.2:
-    resolution: {integrity: sha512-Tt4kuxLXFKHy8KT40zwsUPUkg1CrsgY25FxA2U/j/0WgEDCk3ddc/zLTCCcbSHX9FcKtLuVaDGtGE/STWC+j3Q==}
-
   gensync@1.0.0-beta.2:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
     engines: {node: '>=6.9.0'}
@@ -9522,13 +9512,6 @@ snapshots:
     dependencies:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
-
-  '@antfu/ni@25.0.0':
-    dependencies:
-      ansis: 4.2.0
-      fzf: 0.5.2
-      package-manager-detector: 1.6.0
-      tinyexec: 1.1.1
 
   '@ark/attest@0.56.0(tsover@5.9.11)':
     dependencies:
@@ -14654,8 +14637,6 @@ snapshots:
   function-bind@1.1.2: {}
 
   fuse.js@7.1.0: {}
-
-  fzf@0.5.2: {}
 
   gensync@1.0.0-beta.2: {}
 

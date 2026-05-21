@@ -6,7 +6,7 @@ function isValidProjectDirectory(projectDir: string) {
 }
 
 function isValidPackageName(packageName: string) {
-  return /^(?:@[a-z\d][a-z\d\-._]*\/)?[a-z\d\][a-z\d\-._]*$/.test(packageName.trim());
+  return /^(?:@[a-z\d][a-z\d\-._]*\/)?[a-z\d][a-z\d\-._]*$/.test(packageName.trim());
 }
 
 export async function getProjectDirectory(initialValue: string) {

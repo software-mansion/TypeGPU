@@ -1,7 +1,6 @@
 import spawn from 'cross-spawn';
 import * as p from '@clack/prompts';
-import { resolveCommand } from '@antfu/ni';
-import type { Agent } from 'package-manager-detector';
+import { type Agent, resolveCommand } from 'package-manager-detector';
 import { failAndExit } from './prompts.ts';
 
 function parseUserAgent(userAgent: string | undefined) {

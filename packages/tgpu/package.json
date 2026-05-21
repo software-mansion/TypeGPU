@@ -22,8 +22,8 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "@antfu/ni": "^25.0.0",
     "@clack/prompts": "^0.9.1",
+    "arktype": "catalog:",
     "comment-json": "^5.0.0",
     "cross-spawn": "^7.0.6",
     "magicast": "^0.5.2",
@@ -33,12 +33,10 @@
   "devDependencies": {
     "@types/cross-spawn": "^6.0.6",
     "@types/node": "catalog:types",
-    "arktype": "catalog:",
     "tsdown": "catalog:build",
     "typescript": "catalog:types"
   },
   "engines": {
     "node": ">=24.0.0"
-  },
-  "packageManager": "pnpm@10.15.1"
+  }
 }

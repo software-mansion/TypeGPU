@@ -2,10 +2,10 @@ import path from 'node:path';
 import * as p from '@clack/prompts';
 
 import { pmFromUserAgent, pmInstall, pmRun } from './utils/pm.ts';
-import { cancelExit, rgbText } from './utils/prompts.ts';
+import { cancelExit, confirmStep, rgbText } from './utils/prompts.ts';
 import { copyTemplate, prepareDirectory } from './utils/files.ts';
 import { getPackageName, getProjectDirectory } from './utils/inputs.ts';
-import { resolveCommand } from 'package-manager-detector';
+import { detect, resolveCommand } from 'package-manager-detector';
 
 const DEFAULT_PROJECT_DIR = 'tgpu-project';
 
@@ -44,14 +44,9 @@ export async function createProject(cwd: string) {
 
   p.log.success(`Scaffolded project at ${projectDir}.`);
 
-  const pm = pmFromUserAgent(process.env.npm_config_user_agent);
-  const installAndRun = await p.confirm({
-    message: `Install with ${pm} and start now?`,
-    initialValue: true,
-  });
-  if (p.isCancel(installAndRun)) {
-    cancelExit();
-  }
+  const detected = await detect({ cwd });
+  const pm = detected?.agent ?? pmFromUserAgent(process.env.npm_config_user_agent);
+  const installAndRun = await confirmStep(`Install with ${pm} and start now?`, true);
 
   if (installAndRun) {
     process.chdir(root);
@@ -69,7 +64,7 @@ export async function createProject(cwd: string) {
     msg += `   To have a shaderful experience run:\n`;
     msg += `\n   cd ${cdPath}\n`;
     msg += `   ${installCmd.command} ${installCmd.args.join(' ')}\n`;
-    msg += `   ${runCmd.command} ${runCmd.args.join(' ')} `;
+    msg += `   ${runCmd.command} ${runCmd.args.join('')} `;
   }
 
   p.outro(msg);

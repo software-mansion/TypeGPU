@@ -8,7 +8,7 @@ import { addVitePlugin } from 'magicast/helpers';
 import { findConfig } from '../utils/config.ts';
 import { hasDependency } from '../utils/pkg.ts';
 import { pmAdd } from '../utils/pm.ts';
-import { confirmStep } from '../utils/prompts.ts';
+import { confirmStep, failAndExit } from '../utils/prompts.ts';
 import type { PackageJsonWithDeps } from '../utils/types.ts';
 
 const VITE_CONFIG_NAMES = [
@@ -29,7 +29,13 @@ export default defineConfig({
 `;
 
 async function setupViteConfig(filePath: string) {
-  const config = await loadFile(filePath);
+  let config;
+  try {
+    config = await loadFile(filePath);
+  } catch {
+    failAndExit(`Could not parse ${path.basename(filePath)}.`);
+  }
+
   addVitePlugin(config, { from: 'unplugin-typegpu/vite', constructor: 'typegpuPlugin' });
   await writeFile(config, filePath);
   p.log.success(`Updated ${path.basename(filePath)}.`);

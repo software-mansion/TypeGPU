@@ -6,7 +6,3 @@ export function hasDependency(pkg: PackageJsonWithDeps, name: string) {
   const peerDeps = pkg.peerDependencies ?? {};
   return name in deps || name in devDeps || name in peerDeps;
 }
-
-export function isExpoProject(pkg: PackageJsonWithDeps) {
-  return hasDependency(pkg, 'expo');
-}

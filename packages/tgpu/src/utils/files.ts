@@ -6,13 +6,13 @@ import { cancelExit, failAndExit } from './prompts.ts';
 import { PackageJsonWithNameSchema } from './types.ts';
 import { type } from 'arktype';
 
-export const renameFiles = {
+const renameFiles = {
   _gitignore: '.gitignore',
   _zed: '.zed',
   _vscode: '.vscode',
   _nvmrc: '.nvmrc',
-  '_package.json': 'package.json',
   '_oxfmtrc.json': '.oxfmtrc.json',
+  /* '_package.json': 'package.json' - explicitly renamed */
 } as Record<string, string>;
 
 function isEmptyDir(dir: string) {
