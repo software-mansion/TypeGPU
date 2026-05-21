@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import {
   type BitonicSorter,
   type BitonicSorterOptions,
@@ -6,7 +6,6 @@ import {
   decomposeWorkgroups,
 } from '@typegpu/sort';
 import { randf } from '@typegpu/noise';
-import { fullScreenTriangle } from 'typegpu/common';
 import { defineControls } from '../../common/defineControls.ts';
 
 const maxBufferSize = await navigator.gpu.requestAdapter().then((adapter) => {
@@ -32,7 +31,10 @@ const querySet = hasTimestampQuery ? root.createQuerySet('timestamp', 2) : null;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+});
 
 const maxSide = Math.floor(Math.sqrt(maxBufferSize / 4));
 const minLog = 2; // log_2(4)
@@ -75,17 +77,11 @@ const state = {
 const WORKGROUP_SIZE = 256;
 
 const renderLayout = tgpu.bindGroupLayout({
-  data: {
-    storage: d.arrayOf(d.u32),
-    access: 'readonly',
-  },
+  data: { storage: d.arrayOf(d.u32), access: 'readonly' },
 });
 
 const initLayout = tgpu.bindGroupLayout({
-  data: {
-    storage: d.arrayOf(d.u32),
-    access: 'mutable',
-  },
+  data: { storage: d.arrayOf(d.u32), access: 'mutable' },
 });
 
 const initSeed = root.createUniform(d.f32, 0);
@@ -135,9 +131,8 @@ const initKernel = tgpu.computeFn({
 });
 
 const renderPipeline = root.createRenderPipeline({
-  vertex: fullScreenTriangle,
+  vertex: common.fullScreenTriangle,
   fragment: fragmentFn,
-  targets: { format: presentationFormat },
 });
 
 const initPipeline = root.createComputePipeline({ compute: initKernel });
@@ -275,6 +270,7 @@ export function onCleanup() {
   for (const s of Object.values(sorters)) {
     s.destroy();
   }
+  detachAutoResizer();
   root.destroy();
 }
 
