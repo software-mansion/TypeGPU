@@ -352,8 +352,9 @@ function createGenericFn<T extends AnyFn>(inner: T, pairs: SlotValuePair[]): Tgp
   const genericFn = Object.assign(call, fnBase) as unknown as TgpuGenericFn<T>;
 
   // Inheriting name from `inner`, if it exists
-  if (getName(inner)) {
-    setName(genericFn, getName(inner));
+  const innerName = getName(inner);
+  if (innerName) {
+    setName(genericFn, innerName);
   }
 
   Object.defineProperty(genericFn, 'toString', {
