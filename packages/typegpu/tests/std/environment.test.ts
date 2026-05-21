@@ -9,7 +9,7 @@ describe('isBeingTraspiled', () => {
     expect(isBeingTraspiled()).toBe(false);
   });
 
-  it('returns true at function resolution time', () => {
+  it('returns true during function resolution', () => {
     const f = () => {
       'use gpu';
       if (isBeingTraspiled()) {
@@ -28,7 +28,7 @@ describe('isBeingTraspiled', () => {
     `);
   });
 
-  it('works in comptime', () => {
+  it('returns false inside comptime', () => {
     const checkTranspilation = tgpu.comptime(isBeingTraspiled);
     expect(checkTranspilation()).toBe(false);
 
@@ -39,14 +39,14 @@ describe('isBeingTraspiled', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
-        const _transpilation = true;
+        const _transpilation = false;
       }"
     `);
 
     expect(checkTranspilation()).toBe(false);
   });
 
-  it('works in lazy', () => {
+  it('returns false inside lazy', () => {
     const checkTranspilation = tgpu.lazy(isBeingTraspiled);
 
     const f = () => {
@@ -56,12 +56,12 @@ describe('isBeingTraspiled', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
-        const _transpilation = true;
+        const _transpilation = false;
       }"
     `);
   });
 
-  it('correctly determines cpu runtime in simulate', () => {
+  it('returns false inside simulate', () => {
     const counter = tgpu.privateVar(d.u32, 0);
 
     const result = tgpu['~unstable'].simulate(() => {
@@ -74,7 +74,7 @@ describe('isBeingTraspiled', () => {
     expect(result.value).toBe(1);
   });
 
-  it('correctly branches during execution', () => {
+  it('correctly branches during js execution', () => {
     const f = () => {
       'use gpu';
       if (isBeingTraspiled()) {

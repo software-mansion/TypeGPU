@@ -1,24 +1,42 @@
-import { comptime } from '../core/function/comptime.ts';
-import { getExecMode, getResolutionCtx } from '../execMode.ts';
+import { bool } from '../data/numeric.ts';
+import { snip } from '../data/snippet.ts';
+import { $gpuCallable } from '../shared/symbols.ts';
+import type { DualFn } from '../types.ts';
 
-// getTargetShaderLanguage -> string | undefined
-// export type Runtime = 'cpu' | 'gpu';
-// const impl = ((runtime: Runtime): boolean => runtime === 'cpu') as DualFn<
-//   (runtime: Runtime) => boolean
-// >;
-// impl.toString = () => 'runsOn';
-// impl[$gpuCallable] = {
-//   call(_ctx, args) {
-//     return snip((args[0].value as Runtime) === 'gpu', bool, 'constant');
-//   },
-// };
+const impl = (() => false) as DualFn<() => boolean>;
+impl.toString = () => 'isBeingTraspiled';
+impl[$gpuCallable] = {
+  call(_ctx, _args) {
+    return snip(true, bool, 'constant');
+  },
+};
 
-// export const runsOn = impl;
+/**
+ * Returns `true` when the direct callee is being transpiled for GPU, otherwise `false`.
+ *
+ * @example
+ * const f = () => {
+ *   'use gpu';
+ *   return isBeingTraspiled() ? 1 : 0;
+ * };
+ *
+ * f() // returns 0, but resolved WGSL looks like this:
+ *
+ * fn f() -> i32 {
+ *   return 1;
+ * }
+ *
+ *
+ * @note
+ * Inside `comptime`, `lazy` or `simulate`, this always returns `false`.
+ */
+export const isBeingTraspiled = impl;
 
-export const isBeingTraspiled = comptime(() => {
-  const ctx = getResolutionCtx();
-  if (ctx === undefined) {
-    return false;
-  }
-  return getExecMode().type !== 'simulate';
-});
+// getTargetShaderLanguage -> string | undefined;
+// export const isBeingTraspiled = comptime(() => {
+//   const ctx = getResolutionCtx();
+//   if (ctx === undefined) {
+//     return false;
+//   }
+//   return getExecMode().type !== 'simulate';
+// });
