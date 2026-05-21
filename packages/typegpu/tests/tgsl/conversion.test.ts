@@ -288,26 +288,8 @@ describe('convertToCommonType', () => {
 
     expectDataTypeOf(fn).toBe(d.f32);
   });
-});
 
-describe('with restrictTo', () => {
-  let ctx: ResolutionCtxImpl;
-
-  beforeAll(() => {
-    ctx = new ResolutionCtxImpl({
-      namespace: namespace({ names: 'strict' }),
-      shaderGenerator: wgslGenerator,
-    });
-    wgslGenerator.initGenerator(ctx);
-    ctx.pushMode(new CodegenState());
-    INTERNAL_setCtx(ctx);
-  });
-
-  afterAll(() => {
-    INTERNAL_setCtx(undefined);
-  });
-
-  const structType = d.struct({
+  const Struct = d.struct({
     a: d.f32,
     b: d.i32,
     c: d.vec2f,
@@ -315,42 +297,57 @@ describe('with restrictTo', () => {
   });
 
   it('maps values matching types exactly', () => {
-    const snippets: Record<string, Snippet> = {
-      a: snip('1.0', d.f32, /* origin */ 'runtime'),
-      b: snip('2', d.i32, /* origin */ 'runtime'),
-      c: snip('vec2f(1.0, 1.0)', d.vec2f, /* origin */ 'runtime'),
-      d: snip('true', d.bool, /* origin */ 'runtime'),
+    const fn = () => {
+      'use gpu';
+      const s = Struct({ a: d.f32(1), b: d.i32(2), c: d.vec2f(1), d: true });
     };
-    const res = convertStructValues(ctx, structType, snippets);
-    expect(res.length).toBe(4);
-    expect(res[0]).toEqual(snippets.a);
-    expect(res[1]).toEqual(snippets.b);
-    expect(res[2]).toEqual(snippets.c);
-    expect(res[3]).toEqual(snippets.d);
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "struct Struct {
+        a: f32,
+        b: i32,
+        c: vec2f,
+        d: bool,
+      }
+
+      fn fn_1() {
+        let s = Struct(1f, 2i, vec2f(1), true);
+      }"
+    `);
   });
 
   it('maps values requiring implicit casts and warns', () => {
-    const snippets: Record<string, Snippet> = {
-      a: snip('1', d.i32, /* origin */ 'runtime'), // i32 -> f32 (cast)
-      b: snip('2', d.u32, /* origin */ 'runtime'), // u32 -> i32 (cast)
-      c: snip('2.22', d.f32, /* origin */ 'runtime'),
-      d: snip('true', d.bool, /* origin */ 'runtime'),
+    const fn = () => {
+      'use gpu';
+      const s = Struct({ a: d.i32(1), b: d.u32(2), c: d.vec2f(1), d: true });
     };
-    const res = convertStructValues(ctx, structType, snippets);
-    expect(res.length).toBe(4);
-    expect(res[0]).toEqual(snip('f32(1)', d.f32, /* origin */ 'runtime')); // Cast applied
-    expect(res[1]).toEqual(snip('i32(2)', d.i32, /* origin */ 'runtime')); // Cast applied
-    expect(res[2]).toEqual(snippets.c);
-    expect(res[3]).toEqual(snippets.d);
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "struct Struct {
+        a: f32,
+        b: i32,
+        c: vec2f,
+        d: bool,
+      }
+
+      fn fn_1() {
+        let s = Struct(1f, 2i, vec2f(1), true);
+      }"
+    `);
   });
 
   it('throws on missing property', () => {
-    const snippets: Record<string, Snippet> = {
-      a: snip('1.0', d.f32, /* origin */ 'runtime'),
-      // b is missing
-      c: snip('vec2f(1.0, 1.0)', d.vec2f, /* origin */ 'runtime'),
-      d: snip('true', d.bool, /* origin */ 'runtime'),
+    const fn = () => {
+      'use gpu';
+      // @ts-expect-error
+      const s = Struct({ a: d.i32(1), c: d.vec2f(1), d: true });
     };
-    expect(() => convertStructValues(ctx, structType, snippets)).toThrow(/Missing property b/);
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Missing property b in object literal for struct struct:Struct]
+    `);
   });
 });
