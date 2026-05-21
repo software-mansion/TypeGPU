@@ -38,11 +38,11 @@ const UPSAMPLE_RADIUS = 2;
 const UPSAMPLE_SPATIAL_SIGMA = 1.6;
 const UPSAMPLE_COLOR_SIGMA = 0.12;
 
-export const postProcessParams = d.struct({
+export const PostProcessParams = d.struct({
   initialized: d.u32,
 });
 
-export const upsampleParams = d.struct({
+export const UpsampleParams = d.struct({
   sourceSize: d.vec2u,
   cropOrigin: d.vec2f,
   cropSize: d.vec2f,
@@ -55,7 +55,7 @@ export const initialUpsampleParams = {
 };
 
 export const temporalLayout = tgpu.bindGroupLayout({
-  params: { uniform: postProcessParams },
+  params: { uniform: PostProcessParams },
   raw: { storage: d.arrayOf(d.f32), access: 'readonly' },
   historyLogits: { storage: d.arrayOf(d.f32), access: 'mutable' },
   filtered: { storage: d.arrayOf(d.f32), access: 'mutable' },
@@ -67,7 +67,7 @@ export const priorLayout = tgpu.bindGroupLayout({
 });
 
 export const upsampleParamsLayout = tgpu.bindGroupLayout({
-  params: { uniform: upsampleParams },
+  params: { uniform: UpsampleParams },
 });
 
 export const upsampleFrameLayout = tgpu.bindGroupLayout({

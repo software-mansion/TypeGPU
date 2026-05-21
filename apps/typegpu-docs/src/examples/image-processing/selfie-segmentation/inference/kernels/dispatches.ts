@@ -18,7 +18,7 @@ import {
   poolShapeSlot,
   resizeShapeSlot,
   weightedLayout,
-  weightedOffsets,
+  WeightedOffsets,
 } from './layouts.ts';
 import {
   activationSlot,
@@ -72,7 +72,7 @@ export function createSegmenterDispatches(
     total: number,
   ): KernelHandle => {
     const offsets = root
-      .createBuffer(weightedOffsets, {
+      .createBuffer(WeightedOffsets, {
         weightBase: record.weights,
         biasBase: record.bias,
       })
@@ -179,7 +179,7 @@ export function createSegmenterDispatches(
               .createComputePipeline({ compute: head2x2SigmoidKernel }),
         );
         const offsets = root
-          .createBuffer(weightedOffsets, {
+          .createBuffer(WeightedOffsets, {
             weightBase: record.weights,
             biasBase: record.bias,
           })

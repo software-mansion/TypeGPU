@@ -2,7 +2,7 @@ import tgpu, { common, d, std } from 'typegpu';
 import type { TgpuBindGroup } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 import {
-  frameCropParams,
+  FrameCropParams,
   initialFrameCropParams,
   squareCrop,
   type VideoFrameCrop,
@@ -29,7 +29,7 @@ const sampler = root.createSampler({
 const PERSON_ALPHA_LOW = 0.35;
 const PERSON_ALPHA_HIGH = 0.65;
 
-const compositeUniform = root.createUniform(frameCropParams, initialFrameCropParams);
+const compositeUniform = root.createUniform(FrameCropParams, initialFrameCropParams);
 
 const compositeFrameLayout = tgpu.bindGroupLayout({
   frame: { externalTexture: d.textureExternal() },

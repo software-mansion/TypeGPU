@@ -1,6 +1,6 @@
 import tgpu, { d, std } from 'typegpu';
 import type { TgpuBindGroup, TgpuRoot } from 'typegpu';
-import { frameCropParams, initialFrameCropParams, type VideoFrameCrop } from '../frame.ts';
+import { FrameCropParams, initialFrameCropParams, type VideoFrameCrop } from '../frame.ts';
 import { WORKGROUP_SIZE, type Vec4Buffer } from './kernels/types.ts';
 
 const MODEL_WIDTH = 256;
@@ -12,7 +12,7 @@ const MODEL_COORD_SHIFT = 8;
 const MODEL_SIZE = d.vec2f(MODEL_WIDTH, MODEL_HEIGHT);
 
 const videoFrameParamsLayout = tgpu.bindGroupLayout({
-  params: { uniform: frameCropParams },
+  params: { uniform: FrameCropParams },
 });
 
 const videoFrameFrameLayout = tgpu.bindGroupLayout({
@@ -63,7 +63,7 @@ export const videoPreprocessKernel = tgpu.computeFn({
 export function createVideoPreprocessor(root: TgpuRoot): VideoPreprocessor {
   const workgroups = Math.ceil(MODEL_PIXELS / WORKGROUP_SIZE);
   const pipeline = root.createComputePipeline({ compute: videoPreprocessKernel });
-  const paramsBuffer = root.createBuffer(frameCropParams, initialFrameCropParams).$usage('uniform');
+  const paramsBuffer = root.createBuffer(FrameCropParams, initialFrameCropParams).$usage('uniform');
   const sampler = root.createSampler({
     magFilter: 'linear',
     minFilter: 'linear',

@@ -5,14 +5,14 @@ import {
   initialUpsampleParams,
   personCorePriorKernel,
   MODEL_PIXELS,
+  PostProcessParams,
   POST_PROCESS_WORKGROUPS,
-  postProcessParams,
   priorLayout,
   temporalAccumulatorKernel,
   temporalLayout,
+  UpsampleParams,
   upsampleFrameLayout,
   upsampleMaskLayout,
-  upsampleParams,
   upsampleParamsLayout,
   upsampleSamplerLayout,
   upsampleToTextureKernel,
@@ -45,9 +45,9 @@ export class MaskPostProcessor {
   #initialized = false;
 
   constructor(root: TgpuRoot, rawMask: MaskBuffer) {
-    const paramsBuffer = root.createBuffer(postProcessParams, { initialized: 0 }).$usage('uniform');
+    const paramsBuffer = root.createBuffer(PostProcessParams, { initialized: 0 }).$usage('uniform');
     const upsampleParamsBuffer = root
-      .createBuffer(upsampleParams, initialUpsampleParams)
+      .createBuffer(UpsampleParams, initialUpsampleParams)
       .$usage('uniform');
     const historyLogits = createMaskBuffer(root);
     const temporalMask = createMaskBuffer(root);

@@ -6,7 +6,7 @@ export interface VideoFrameCrop {
   cropSize: [number, number];
 }
 
-export const frameCropParams = d.struct({
+export const FrameCropParams = d.struct({
   sourceSize: d.vec2u,
   cropOrigin: d.vec2f,
   cropSize: d.vec2f,

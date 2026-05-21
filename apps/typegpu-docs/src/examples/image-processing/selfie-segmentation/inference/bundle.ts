@@ -28,11 +28,15 @@ export type Shape3 = readonly [width: number, height: number, channels: number];
 export type DispatchSlots = readonly [srcA: number, srcB: number, dst: number];
 export type Vec4Offset = number;
 
+const vec2u = bin.tupleOf([bin.u32, bin.u32]);
+const vec3i = bin.tupleOf([bin.i32, bin.i32, bin.i32]);
+const vec3u = bin.tupleOf([bin.u32, bin.u32, bin.u32]);
+
 const HeaderSchema = bin.object({
   magic: bin.chars(4),
   version: bin.u32,
-  inputSize: bin.tupleOf([bin.u32, bin.u32]),
-  outputSize: bin.tupleOf([bin.u32, bin.u32]),
+  inputSize: vec2u,
+  outputSize: vec2u,
   slotCount: bin.u32,
   dispatchCount: bin.u32,
   weightsOffset: bin.u32,
@@ -42,12 +46,12 @@ const HeaderSchema = bin.object({
 
 const DispatchRecordSchema = bin.object({
   opKind: bin.i32,
-  slots: bin.tupleOf([bin.i32, bin.i32, bin.i32]),
-  input: bin.tupleOf([bin.u32, bin.u32, bin.u32]),
-  output: bin.tupleOf([bin.u32, bin.u32, bin.u32]),
-  kernel: bin.tupleOf([bin.u32, bin.u32]),
-  stride: bin.tupleOf([bin.u32, bin.u32]),
-  pad: bin.tupleOf([bin.u32, bin.u32]),
+  slots: vec3i,
+  input: vec3u,
+  output: vec3u,
+  kernel: vec2u,
+  stride: vec2u,
+  pad: vec2u,
   weights: bin.tupleOf([bin.i32, bin.u32]),
   bias: bin.tupleOf([bin.i32, bin.u32]),
   activation: bin.u32,
