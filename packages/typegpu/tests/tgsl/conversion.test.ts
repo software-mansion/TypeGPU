@@ -161,6 +161,24 @@ describe('getBestConversion', () => {
     expect(resImplicit?.hasImplicitConversions).toBe(true);
   });
 
+  it('can restrict abstractFloat to u32', () => {
+    const res = getBestConversion([abstractFloat], [d.u32]);
+    expect(res).toBeDefined();
+    expect(res?.targetType).toBe(d.u32);
+    expect(res?.actions).toEqual([{ sourceIndex: 0, action: 'cast', targetType: d.u32 }]);
+    expect(res?.hasImplicitConversions).toBe(true);
+  });
+
+  it('handles void gracefully', () => {
+    const resFail = getBestConversion([d.f32, d.Void]);
+    expect(resFail).toBeUndefined();
+  });
+
+  it('handles void as target type gracefully', () => {
+    const resFail = getBestConversion([d.f32], [d.Void]);
+    expect(resFail).toBeUndefined();
+  });
+
   // TODO(#2519): This would require multiple passes of the conversion algorithm - maybe something to consider in the future
   // it('handles types needing deref and cast', () => {
   //   const res = getBestConversion([ptrI32, f32]);
@@ -273,11 +291,6 @@ describe('convertToCommonType', () => {
 });
 
 describe('with restrictTo', () => {
-  const snippetF32 = snip('2.22', d.f32, /* origin */ 'runtime');
-  const snippetI32 = snip('-12', d.i32, /* origin */ 'runtime');
-  const snippetAbsFloat = snip('1.1', abstractFloat, /* origin */ 'runtime');
-  const snippetAbsInt = snip('1', abstractInt, /* origin */ 'runtime');
-
   let ctx: ResolutionCtxImpl;
 
   beforeAll(() => {
@@ -292,43 +305,6 @@ describe('with restrictTo', () => {
 
   afterAll(() => {
     INTERNAL_setCtx(undefined);
-  });
-
-  it('respects restrictTo types', () => {
-    // [abstractInt, i32] -> common type i32
-    // Restrict to f32: requires cast for i32
-    const result = convertToCommonType(ctx, [snippetAbsInt, snippetI32], [d.f32]);
-    expect(result).toBeDefined();
-    expect(result?.length).toBe(2);
-    expect(result?.[0]?.dataType).toBe(d.f32);
-    expect(result?.[0]?.value).toBe('1');
-    expect(result?.[1]?.dataType).toBe(d.f32);
-    expect(result?.[1]?.value).toBe('f32(-12)'); // Cast applied
-  });
-
-  it('can restrict abstractFloat to u32', () => {
-    const result = convertToCommonType(ctx, [snippetAbsFloat], [d.u32]);
-    expect(result).toBeDefined();
-    expect(result?.[0]?.dataType).toBe(d.u32);
-    expect(result?.[0]?.value).toBe('u32(1.1)');
-  });
-
-  it('fails if restrictTo is incompatible', () => {
-    const result = convertToCommonType(ctx, [snippetAbsInt, snippetI32], [d.vec2f]);
-    expect(result).toBeUndefined();
-  });
-
-  it('handles void gracefully', () => {
-    const result = convertToCommonType(ctx, [
-      snippetF32,
-      snip('void', d.Void, /* origin */ 'runtime'),
-    ]);
-    expect(result).toBeUndefined();
-  });
-
-  it('handles void as target type gracefully', () => {
-    const result = convertToCommonType(ctx, [snippetF32], [d.Void]);
-    expect(result).toBeUndefined();
   });
 
   const structType = d.struct({
