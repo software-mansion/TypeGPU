@@ -4,7 +4,7 @@ import { RefOperator } from '../data/ref.ts';
 import type { Snippet } from '../data/snippet.ts';
 import { type BaseData, isPtr, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
 import { WgslTypeError } from '../errors.ts';
-import { getMetaData, getName } from '../shared/meta.ts';
+import { getFunctionMetadata, getName } from '../shared/meta.ts';
 import { concretize } from './generationHelpers.ts';
 
 type AnyFn = (...args: never[]) => unknown;
@@ -33,8 +33,10 @@ export class ShelllessRepository {
   cache = new Map<AnyFn, ShelllessImpl[]>();
 
   get(fn: AnyFn, argSnippets: Snippet[] | undefined): ShelllessImpl | undefined {
-    const meta = getMetaData(fn);
-    if (!meta?.ast) return undefined;
+    const meta = getFunctionMetadata(fn);
+    if (!meta) {
+      return undefined;
+    }
     if (!argSnippets && meta.ast.params.length > 0) {
       throw new Error(
         `Cannot resolve '${getName(
@@ -55,7 +57,7 @@ export class ShelllessRepository {
 
       if (s.dataType === UnknownData) {
         throw new Error(
-          `Passed illegal value ${s.value} as the #${index} argument to ${meta.name}(...)\n` +
+          `Passed illegal value ${s.value} as the #${index} argument to ${getName(fn) ?? '<unnamed>'}(...)\n` +
             `Shellless functions can only accept arguments representing WGSL resources: constructible WGSL types, d.refs, samplers or texture views.\n` +
             `Remember, that arguments such as samplers, texture views, accessors, slots etc. should be dereferenced via '.$' first.`,
         );

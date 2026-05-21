@@ -3,7 +3,6 @@ import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import type { UnpluginBuildContext, UnpluginContext, UnpluginFactory } from 'unplugin';
 import _traverse, { type NodePath } from '@babel/traverse';
-import { FORMAT_VERSION } from 'tinyest';
 import { transpileFn } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
@@ -13,6 +12,7 @@ import {
   initPluginState,
   functionVisitor,
   getBlockScope,
+  METADATA_FORMAT_VERSION,
 } from './common.ts';
 
 import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
@@ -39,7 +39,7 @@ function assignMetadata(
   ast: ReturnType<typeof transpileFn>,
 ): void {
   const metadata = `{
-    v: ${FORMAT_VERSION},
+    v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
     ast: ${embedJSON(ast)},
     externals: () => ({${ast.externalNames

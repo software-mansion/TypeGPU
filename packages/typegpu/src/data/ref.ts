@@ -5,7 +5,7 @@ import { $gpuCallable, $internal, $ownSnippet, $resolve } from '../shared/symbol
 import type { DualFn, SelfResolvable } from '../types.ts';
 import { UnknownData } from './dataTypes.ts';
 import { createPtrFromOrigin, explicitFrom } from './ptr.ts';
-import { type ResolvedSnippet, snip, type Snippet } from './snippet.ts';
+import { isAlias, type ResolvedSnippet, snip, type Snippet } from './snippet.ts';
 import { isNaturallyEphemeral, isPtr, type Ptr, type StorableData } from './wgslTypes.ts';
 
 // ----------
@@ -47,10 +47,30 @@ export const _ref = (() => {
   impl.toString = () => 'ref';
   impl[$internal] = true;
   impl[$gpuCallable] = {
-    call(_ctx, [value]) {
+    call(ctx, [value]) {
       if (value.origin === 'argument') {
         throw new WgslTypeError(
-          stitch`d.ref(${value}) is illegal, cannot take a reference of an argument. Copy the value locally first, and take a reference of the copy.`,
+          stitch`d.ref(${value}) is illegal, cannot take a reference of an argument. Copy the value first, and take a reference of the copy.`,
+        );
+      }
+
+      if (value.origin === 'constant-immutable-def' || value.origin === 'runtime-immutable-def') {
+        const typeStr = ctx.resolve(value.dataType).value;
+        throw new WgslTypeError(
+          stitch`d.ref(${value}) is illegal, cannot take a reference to a constant.
+-----
+- Try 'd.ref(${typeStr}(${value}));' instead to create a new referencable value.
+-----`,
+        );
+      }
+
+      if (isAlias(value) && isNaturallyEphemeral(value.dataType)) {
+        const typeStr = ctx.resolve(value.dataType).value;
+        throw new WgslTypeError(
+          stitch`d.ref(${value}) is illegal, cannot take a reference to a scalar value.
+-----
+- Try 'd.ref(${typeStr}(${value}));' instead to create a new referencable scalar.
+-----`,
         );
       }
 
@@ -172,11 +192,10 @@ export function derefSnippet(snippet: Snippet): Snippet {
   }
 
   const innerType = snippet.dataType.inner;
-  const origin = isNaturallyEphemeral(innerType) ? 'runtime' : snippet.origin;
 
   if (snippet.value instanceof RefOperator) {
-    return snip(stitch`${snippet.value.snippet}`, innerType, origin);
+    return snip(stitch`${snippet.value.snippet}`, innerType, snippet.origin);
   }
 
-  return snip(stitch`(*${snippet})`, innerType, origin);
+  return snip(stitch`(*${snippet})`, innerType, snippet.origin);
 }

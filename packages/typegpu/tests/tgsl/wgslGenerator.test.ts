@@ -7,7 +7,7 @@ import { type WgslArray } from '../../src/data/wgslTypes.ts';
 import { provideCtx } from '../../src/execMode.ts';
 import tgpu from '../../src/index.js';
 import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
-import { getMetaData } from '../../src/shared/meta.ts';
+import { getFunctionMetadata } from '../../src/shared/meta.ts';
 import * as std from '../../src/std/index.ts';
 import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
 import { CodegenState } from '../../src/types.ts';
@@ -84,7 +84,7 @@ describe('wgslGenerator', () => {
       const scientificNegativeExponentLiteral = 1.2e-3;
     };
 
-    const parsedBody = getMetaData(main)?.ast?.body as tinyest.Block;
+    const parsedBody = getFunctionMetadata(main)?.ast.body as tinyest.Block;
 
     expect(parsedBody).toStrictEqual([
       NODE.block,
@@ -208,12 +208,12 @@ describe('wgslGenerator', () => {
       }
     };
 
-    const parsed1 = getMetaData(main1)?.ast?.body;
+    const parsed1 = getFunctionMetadata(main1)?.ast.body;
     expect(JSON.stringify(parsed1)).toMatchInlineSnapshot(
       `"[0,[[13,"arr",[100,[[5,"1"],[5,"2"],[5,"3"]]]],[18,[13,"foo"],"arr",[0,[[16]]]]]]"`,
     );
 
-    const parsed2 = getMetaData(main2)?.ast?.body;
+    const parsed2 = getFunctionMetadata(main2)?.ast.body;
     expect(JSON.stringify(parsed2)).toMatchInlineSnapshot(
       `"[0,[[13,"arr",[100,[[5,"1"],[5,"2"],[5,"3"]]]],[18,[12,"foo"],"arr",[0,[[16]]]]]]"`,
     );
@@ -1482,7 +1482,7 @@ describe('wgslGenerator', () => {
         // unrolled iteration #0
         {
           const y = 100;
-          const x = y;
+          let x = y;
           return x;
         }
       }"
@@ -1872,7 +1872,7 @@ describe('wgslGenerator', () => {
     expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:testFn: 'u = v' is invalid, because argument references cannot be assigned.
+      - fn:testFn: 'u = v' is invalid, because references cannot be assigned.
       -----
       Try 'u = vec3u(v)' to copy the value instead.
       -----]
