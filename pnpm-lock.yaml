@@ -349,6 +349,9 @@ importers:
       tsover-monaco-editor:
         specifier: ^0.55.1
         version: 0.55.1
+      typed-binary:
+        specifier: ^4.3.3
+        version: 4.3.3
       typedoc:
         specifier: ^0.28.17
         version: 0.28.17(tsover@5.9.11)
