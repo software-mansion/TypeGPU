@@ -31,11 +31,6 @@ const querySet = hasTimestampQuery ? root.createQuerySet('timestamp', 2) : null;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 
-const detachAutoResizer = common.attachAutoResizer({
-  root,
-  canvas,
-});
-
 const maxSide = Math.floor(Math.sqrt(maxBufferSize / 4));
 const minLog = 2; // log_2(4)
 const maxLog = Math.floor(Math.log2(maxSide));
@@ -240,6 +235,14 @@ async function sort() {
   showOverlay(`\u2714 Sorted${timeStr}`, false);
   hideOverlay();
 }
+
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    render();
+  },
+});
 
 // #region Example controls & Cleanup
 

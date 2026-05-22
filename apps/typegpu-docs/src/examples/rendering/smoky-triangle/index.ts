@@ -1,5 +1,5 @@
 import { perlin3d } from '@typegpu/noise';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 
 const Params = d.struct({
   fromColor: d.vec3f,
@@ -93,6 +93,8 @@ function frame(timestamp: number) {
 }
 frameId = requestAnimationFrame(frame);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 export const controls = {
   Distortion: {
     initial: 0.05,
@@ -164,5 +166,6 @@ export const controls = {
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
+  detachAutoResizer();
   root.destroy();
 }

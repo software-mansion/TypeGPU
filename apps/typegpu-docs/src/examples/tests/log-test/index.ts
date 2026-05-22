@@ -1,4 +1,4 @@
-import tgpu, { d, std, type TgpuVertexFn } from 'typegpu';
+import tgpu, { common, d, std, type TgpuVertexFn } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init({
@@ -288,7 +288,10 @@ export const controls = defineControls({
   },
 });
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 export function onCleanup() {
+  detachAutoResizer();
   root.destroy();
 }
 

@@ -1,5 +1,5 @@
 import type { TgpuGuardedComputePipeline, TgpuRawCodeSnippet } from 'typegpu';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
 import { defineControls } from '../../common/defineControls.ts';
 
@@ -398,6 +398,8 @@ const resizeObserver = new ResizeObserver(() => {
 
 resizeObserver.observe(canvas);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 // #region Example controls and cleanup
 
 export const controls = defineControls({
@@ -457,6 +459,7 @@ export function onCleanup() {
   window.removeEventListener('touchmove', touchMoveEventListener);
   window.removeEventListener('touchend', touchEndEventListener);
   resizeObserver.disconnect();
+  detachAutoResizer();
   root.destroy();
 }
 

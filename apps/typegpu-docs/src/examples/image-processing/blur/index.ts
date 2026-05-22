@@ -171,7 +171,13 @@ function render() {
 
   renderPipeline.withColorAttachment({ view: context }).draw(3);
 }
-render();
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    render();
+  },
+});
 
 // #region Example controls & Cleanup
 
@@ -200,6 +206,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  detachAutoResizer();
   root.destroy();
 }
 

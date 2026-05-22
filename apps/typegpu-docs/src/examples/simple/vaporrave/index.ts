@@ -1,6 +1,6 @@
 import { perlin3d } from '@typegpu/noise';
 import { sdPlane } from '@typegpu/sdf';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 
 import * as c from './constants.ts';
 import { circles, grid } from './floor.ts';
@@ -157,10 +157,13 @@ function run(timestamp: number) {
 
 animationFrame = requestAnimationFrame(run);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 // #region Example controls and cleanup
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);
+  detachAutoResizer();
   root.destroy();
 }
 

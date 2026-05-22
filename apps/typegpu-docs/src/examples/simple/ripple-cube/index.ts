@@ -1,6 +1,6 @@
 import { perlin3d, randf } from '@typegpu/noise';
 import * as sdf from '@typegpu/sdf';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { createBackgroundCubemap } from './background.ts';
 import { GRID_SIZE, halton, LIGHT_COUNT, MAX_DIST, MAX_STEPS, SURF_DIST } from './constants.ts';
@@ -223,6 +223,8 @@ function run(timestamp: number) {
 
 animationFrame = requestAnimationFrame(run);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 export const controls = defineControls({
   metallic: {
     min: 0,
@@ -299,5 +301,6 @@ export const controls = defineControls({
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);
   cameraResult.cleanupCamera();
+  detachAutoResizer();
   root.destroy();
 }

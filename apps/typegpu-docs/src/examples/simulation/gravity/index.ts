@@ -1,4 +1,4 @@
-import tgpu, { d, type StorageFlag, type TgpuBindGroup, type TgpuBuffer } from 'typegpu';
+import tgpu, { common, d, type StorageFlag, type TgpuBindGroup, type TgpuBuffer } from 'typegpu';
 import { computeCollisionsShader, computeGravityShader } from './compute.ts';
 import {
   collisionBehaviors,
@@ -260,6 +260,8 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 function hideHelp() {
   const helpElem = document.getElementById('help');
   if (helpElem) {
@@ -274,6 +276,7 @@ export function onCleanup() {
   destroyed = true;
   cleanupCamera();
   resizeObserver.unobserve(canvas);
+  detachAutoResizer();
   root.destroy();
 }
 

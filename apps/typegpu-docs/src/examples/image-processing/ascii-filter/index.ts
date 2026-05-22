@@ -241,6 +241,11 @@ if (isIOS) {
 
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+});
+
 export const controls = defineControls({
   'use extended characters': {
     initial: false,
@@ -279,5 +284,6 @@ export function onCleanup() {
     }
   }
 
+  detachAutoResizer();
   root.destroy();
 }

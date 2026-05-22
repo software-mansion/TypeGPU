@@ -545,10 +545,13 @@ function handleResize() {
   bindGroups = createBindGroups();
 }
 
-const resizeObserver = new ResizeObserver(() => {
-  handleResize();
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    handleResize();
+  },
 });
-resizeObserver.observe(canvas);
 
 animationFrameHandle = requestAnimationFrame(render);
 
@@ -684,7 +687,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrameHandle);
-  resizeObserver.disconnect();
+  detachAutoResizer();
   root.destroy();
 }
 

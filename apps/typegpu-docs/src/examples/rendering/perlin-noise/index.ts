@@ -80,6 +80,8 @@ function draw(timestamp: number) {
 
 requestAnimationFrame(draw);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 export const controls = defineControls({
   'grid size': {
     initial: '4',
@@ -109,5 +111,6 @@ export const controls = defineControls({
 
 export function onCleanup() {
   isRunning = false;
+  detachAutoResizer();
   root.destroy();
 }

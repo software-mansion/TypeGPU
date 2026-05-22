@@ -1,5 +1,5 @@
 import { linearToSrgb, srgbToLinear } from '@typegpu/color';
-import tgpu, { d, type TgpuFragmentFn, type TgpuVertexFn } from 'typegpu';
+import tgpu, { common, d, type TgpuFragmentFn, type TgpuVertexFn } from 'typegpu';
 import { discard, max, min, mul, normalize, pow, sub } from 'typegpu/std';
 import { mat4 } from 'wgpu-matrix';
 import { defineControls } from '../../common/defineControls.ts';
@@ -274,6 +274,8 @@ const runner = (timestamp: number) => {
 };
 animationFrameId = requestAnimationFrame(runner);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 // #region Example controls and cleanup
 
 export const controls = defineControls({
@@ -320,6 +322,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrameId);
+  detachAutoResizer();
   root.destroy();
 }
 

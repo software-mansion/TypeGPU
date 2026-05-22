@@ -270,6 +270,8 @@ function frame() {
   frameId = requestAnimationFrame(frame);
 }
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 function setSnippet(snippet: RcSnippet) {
   snippetMode.write(RC_SNIPPETS.indexOf(snippet));
 }
@@ -283,6 +285,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  detachAutoResizer();
   cancelAnimationFrame(frameId);
   basicRunner.destroy();
   customRunner.destroy();

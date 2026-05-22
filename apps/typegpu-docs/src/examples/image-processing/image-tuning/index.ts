@@ -344,10 +344,17 @@ export const controls = defineControls({
   },
 });
 
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    render();
+  },
+});
+
 export function onCleanup() {
+  detachAutoResizer();
   root.destroy();
 }
 
 // #endregion
-
-render();

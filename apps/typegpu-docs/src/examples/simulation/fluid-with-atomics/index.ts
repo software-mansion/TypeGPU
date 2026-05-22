@@ -625,6 +625,8 @@ function run(timestamp: number) {
 }
 animationFrame = requestAnimationFrame(run);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 export const controls = defineControls({
   size: {
     initial: 32,
@@ -694,6 +696,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);
+  detachAutoResizer();
   root.destroy();
 }
 

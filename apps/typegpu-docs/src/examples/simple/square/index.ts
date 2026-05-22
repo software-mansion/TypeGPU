@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import tgpu, { common, d } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
@@ -61,7 +61,14 @@ const pipeline = root
 function render() {
   pipeline.with(vertexLayout, colorBuffer).withColorAttachment({ view: context }).drawIndexed(6);
 }
-render();
+
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    render();
+  },
+});
 
 // #region Example controls & Cleanup
 
@@ -92,6 +99,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  detachAutoResizer();
   root.destroy();
 }
 // #endregion
