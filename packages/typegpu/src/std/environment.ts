@@ -51,7 +51,7 @@ export const isBeingTranspiled = impl;
  * @note
  * Inside `lazy`, it always returns `wgsl`.
  * Inside `simulate`, it always returns `undefined`.
- * Inside `comptime`, if wrapping comptime is called during resolution process, it returns `wgsl`; otherwise, `undefined`.
+ * Inside `comptime`, it returns `wgsl` if called during the resolution process; otherwise, `undefined`.
  */
 export const getTargetShaderLanguage = comptime((() => {
   const ctx = getResolutionCtx();
