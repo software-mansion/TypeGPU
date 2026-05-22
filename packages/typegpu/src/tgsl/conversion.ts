@@ -44,7 +44,7 @@ function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInf
 
   if (trueSrc.type === trueDst.type) {
     if (trueSrc.type === 'struct' && trueSrc !== trueDst) {
-      return { rank: 0, action: 'cast', targetType: dest };
+      return { rank: 1, action: 'cast', targetType: dest };
     }
     return { rank: 0, action: 'none' };
   }
