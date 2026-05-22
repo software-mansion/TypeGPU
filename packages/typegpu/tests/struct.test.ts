@@ -1,5 +1,5 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
-import { describe, expect, expectTypeOf, it } from 'vitest';
+import { describe, expect, expectTypeOf } from 'vitest';
 import { readData, writeData } from '../src/data/dataIO.ts';
 import {
   alignmentOf,
@@ -22,6 +22,7 @@ import tgpu from '../src/index.js';
 import * as d from '../src/data/index.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { frexp } from '../src/std/numeric.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('struct', () => {
   it('aligns struct properties when measuring', () => {
@@ -622,6 +623,67 @@ describe('struct', () => {
         let boid = Boid();
         helper(Bird(boid.pos, boid.id));
       }"
+    `);
+  });
+
+  it('resolves struct casts for entry IO', ({ root }) => {
+    const Boid = d.struct({ pos: d.vec4f, id: d.f32 });
+
+    const pipeline = root.createRenderPipeline({
+      vertex: tgpu.vertexFn({ out: { pos: d.builtin.position, id: d.f32 } })(() => {
+        'use gpu';
+        const boid = Boid();
+        return boid;
+      }),
+      fragment: () => {
+        'use gpu';
+        return d.vec4f();
+      },
+    });
+
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec4f,
+        id: f32,
+      }
+
+      struct vertex_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) id: f32,
+      }
+
+      @vertex fn vertex() -> vertex_Output {
+        let boid = Boid();
+        return vertex_Output(boid.pos, boid.id);
+      }
+
+      @fragment fn fragment() -> @location(0) vec4f {
+        return vec4f();
+      }"
+    `);
+  });
+
+  it('throws a descriptive error when it cannot resolve struct casts for entry IO', ({ root }) => {
+    const Boid = d.struct({ pos: d.vec3f, id: d.f32 });
+
+    const pipeline = root.createRenderPipeline({
+      vertex: tgpu.vertexFn({ out: { pos: d.builtin.position, id: d.f32 } })(() => {
+        'use gpu';
+        const boid = Boid();
+        return boid as unknown as { pos: d.v4f; id: number };
+      }),
+      fragment: () => {
+        'use gpu';
+        return d.vec4f();
+      },
+    });
+
+    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - renderPipeline:pipeline
+      - renderPipelineCore
+      - vertexFn:vertex: Cannot auto-convert struct 'Boid' to 'vertex_Output' because type 'vec3f' is not convertible to '<unnamed>'.]
     `);
   });
 
