@@ -6,8 +6,7 @@ import { bool, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
   fallthroughCopyOrigin,
-  isEphemeralOrigin,
-  isEphemeralSnippet,
+  isAlias,
   type Origin,
   type ResolvedSnippet,
   snip,
@@ -251,42 +250,6 @@ ${this.ctx.pre}}`;
     return varName;
   }
 
-  public blockVariable(
-    varType: 'var' | 'let' | 'const' | '<deferred>',
-    id: string,
-    dataType: wgsl.BaseData | UnknownData,
-    origin: Origin,
-  ): Snippet {
-    const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
-
-    let varOrigin: Origin;
-    if (origin === 'constant-tgpu-const-ref' || origin === 'runtime-tgpu-const-ref') {
-      // Even types that aren't naturally referential (like vectors or structs) should
-      // be treated as constant references when assigned to a const.
-      varOrigin = origin;
-    } else if (origin === 'argument') {
-      if (naturallyEphemeral) {
-        varOrigin = 'runtime';
-      } else {
-        varOrigin = 'argument';
-      }
-    } else if (!naturallyEphemeral) {
-      varOrigin = isEphemeralOrigin(origin) ? 'this-function' : origin;
-    } else if (origin === 'constant' && varType === 'const') {
-      varOrigin = 'constant';
-    } else {
-      varOrigin = 'runtime';
-    }
-
-    const snippet = snip(
-      this.ctx.makeUniqueIdentifier(id, 'block'),
-      dataType,
-      /* origin */ varOrigin,
-    );
-    this.ctx.defineVariable(id, snippet);
-    return snippet;
-  }
-
   /**
    * Creates a variable declaration string.
    * `keyword` may be a placeholder filled in later.
@@ -449,20 +412,7 @@ ${this.ctx.pre}}`;
         validateSnippetMutation(convLhs, expression);
         this.tryMarkModified(lhs);
         // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
-        if (
-          op === '=' &&
-          rhsExpr.origin === 'argument' &&
-          !wgsl.isNaturallyEphemeral(rhsExpr.dataType)
-        ) {
-          throw new WgslTypeError(
-            `'${stringifyNode(expression)}' is invalid, because argument references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
-              this.ctx.resolve(rhsExpr.dataType).value
-            }(${stringifyNode(rhs)})' to copy the value instead.\n-----`,
-          );
-        }
-
-        // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
-        if (op === '=' && !isEphemeralSnippet(rhsExpr)) {
+        if (op === '=' && isAlias(rhsExpr) && !wgsl.isNaturallyEphemeral(rhsExpr.dataType)) {
           throw new WgslTypeError(
             `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
               this.ctx.resolve(rhsExpr.dataType).value
@@ -972,9 +922,12 @@ ${this.ctx.pre}}`;
       }
 
       if (
+        // The existence of `expectedReturnType` implies a function shell, which in turn implies that the
+        // value will be copied on return anyway
         !expectedReturnType &&
-        !isEphemeralSnippet(returnSnippet) &&
-        returnSnippet.origin !== 'this-function'
+        isAlias(returnSnippet) &&
+        !wgsl.isNaturallyEphemeral(returnSnippet.dataType) &&
+        returnSnippet.origin !== 'local-def'
       ) {
         const str = stringifyNode(returnNode);
         const typeStr = this.ctx.resolve(unptr(returnSnippet.dataType)).value;
@@ -1000,6 +953,191 @@ Try 'return ${typeStr}(${str});' instead.
     }
 
     return `${this.ctx.pre}return;`;
+  }
+
+  public _letStatement(statement: tinyest.Let): string {
+    const [_, rawId, eqNode] = statement;
+
+    if (eqNode === undefined) {
+      throw new Error(
+        `'${stringifyNode(statement)}' is invalid because all variables need initializers.`,
+      );
+    }
+
+    const eq = this._expression(eqNode);
+
+    if (eq.value instanceof RefOperator) {
+      const rhsStr = stringifyNode(eqNode);
+      throw new WgslTypeError(
+        `'let ${rawId} = ${rhsStr}' is invalid, cannot initialize 'let' variables with d.ref()
+-----
+- Try 'const ${rawId} = ${rhsStr}'.
+-----`,
+      );
+    }
+
+    const definitionDataType = eq.dataType;
+
+    if (definitionDataType === UnknownData) {
+      const rhsStr = stringifyNode(eqNode);
+      throw new WgslTypeError(
+        `'let ${rawId} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'
+-----
+- Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'let ${rawId} = Schema(${rhsStr})'
+-----`,
+      );
+    }
+
+    if (isAlias(eq) && !wgsl.isNaturallyEphemeral(eq.dataType)) {
+      // `let` declarations cannot store references
+      const rhsStr = stringifyNode(eqNode);
+      const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
+
+      throw new WgslTypeError(
+        `'let ${rawId} = ${rhsStr}' is invalid, because references cannot be assigned to 'let' variable declarations.
+-----
+- Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
+- Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
+-----`,
+      );
+    }
+
+    const concreteType = concretize(definitionDataType);
+    const snippet = snip(
+      this.ctx.makeUniqueIdentifier(rawId, 'block'),
+      concreteType,
+      /* origin */ 'local-def',
+    );
+    this.ctx.defineVariable(rawId, snippet);
+
+    const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
+    const rhsStr = this.ctx.resolve(rhsSnippet.value, rhsSnippet.dataType).value;
+
+    // Even though the user defined a 'let' (expecting it to be reassigned), the
+    // reassignment might happen in a pruned branch, in which case we can generate
+    // more optimised code by emitting 'let' or 'const' instead of 'var'.
+    const scope = this.ctx.topFunctionScope;
+    invariant(scope, `Expected function scope to be present for ${rawId}`);
+    const emittedVarType = `#VAR_${scope.placeholderForVariable.size}#` as const;
+    scope.placeholderForVariable.set(snippet, emittedVarType);
+
+    return this.emitVarDecl(this.ctx.pre, emittedVarType, snippet.value, concreteType, rhsStr);
+  }
+
+  public _constStatement(statement: tinyest.Const) {
+    const [_, rawId, eqNode] = statement;
+
+    if (eqNode === undefined) {
+      throw new Error(
+        `'${stringifyNode(statement)}' is invalid because all variables need initializers.`,
+      );
+    }
+
+    const eq = this._expression(eqNode);
+
+    if (eq.value instanceof RefOperator) {
+      // We're assigning a newly created `d.ref()`
+      if (eq.dataType !== UnknownData) {
+        throw new WgslTypeError(
+          `Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead.`,
+        );
+      }
+      const refSnippet = eq.value.snippet;
+      const varName = this.refVariable(
+        rawId,
+        concretize(refSnippet.dataType as wgsl.BaseData) as wgsl.StorableData,
+      );
+      return stitch`${this.ctx.pre}var ${varName} = ${tryConvertSnippet(
+        this.ctx,
+        refSnippet,
+        refSnippet.dataType as wgsl.AnyWgslData,
+        false,
+      )};`;
+    }
+
+    const rhsNaturallyEphemeral = wgsl.isNaturallyEphemeral(eq.dataType);
+    let varOrigin: Origin = 'local-def';
+    let varType: 'var' | 'let' | 'const' | '<deferred>' = '<deferred>';
+    let definitionDataType = eq.dataType;
+
+    if (definitionDataType === UnknownData) {
+      const rhsStr = stringifyNode(eqNode);
+      throw new WgslTypeError(
+        `'const ${rawId} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'
+-----
+- Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const ${rawId} = Schema(${rhsStr})'
+-----`,
+      );
+    }
+
+    if (eq.origin === 'argument') {
+      // Arguments are immutable, so we 'let' them be (kill me)
+      varType = 'let';
+      // When we declare a new variable with a naturally ephemeral value (e.g. a scalar)
+      // the variable now loses the restrictions of an argument, and becomes just a regular
+      // variable. For vectors and other non-naturally ephemeral values, the restrictions of
+      // arguments are kept.
+      varOrigin = rhsNaturallyEphemeral ? 'local-def' : 'argument';
+    } else if (eq.origin === 'constant-immutable-def') {
+      varType = 'const';
+      varOrigin = 'constant-immutable-def';
+    } else if (eq.origin === 'runtime-immutable-def') {
+      varType = 'let';
+      varOrigin = 'runtime-immutable-def';
+    } else if (rhsNaturallyEphemeral) {
+      varType = eq.origin === 'constant' ? 'const' : 'let';
+      // Constants are also local declarations. We lose some information here, meaning
+      // when we look at a variable's snippet, we cannot tell if it's a constant or not.
+      // This is mostly because we plan to determine this fact later, after all of the
+      // function code has been processed, so at least currently, we lose that info.
+      varOrigin = 'local-def';
+    } else if (!isAlias(eq)) {
+      // Not a reference, but also not naturally ephemeral, so we cannot guarantee it won't be mutated.
+      // We defer the decision for now.
+      varType = '<deferred>';
+      varOrigin = 'local-def';
+    } else {
+      // Assigning a reference to a `const` variable means we store the pointer
+      // of the rhs.
+      varType = 'let';
+      varOrigin = eq.origin; // we pass on the origin
+      if (!wgsl.isPtr(eq.dataType)) {
+        const ptrType = createPtrFromOrigin(
+          eq.origin,
+          concretize(eq.dataType as wgsl.BaseData) as wgsl.StorableData,
+        );
+        invariant(ptrType !== undefined, `Creating pointer type from origin ${eq.origin}`);
+        definitionDataType = ptrType;
+      }
+
+      // Making the pointer implicit, meaning the fact it's a pointer isn't
+      // reflected in the JS source code.
+      definitionDataType = implicitFrom(definitionDataType as wgsl.Ptr);
+      this.tryMarkModified(eqNode);
+    }
+
+    const concreteType = concretize(definitionDataType);
+    const snippet = snip(
+      this.ctx.makeUniqueIdentifier(rawId, 'block'),
+      concreteType,
+      /* origin */ varOrigin,
+    );
+    this.ctx.defineVariable(rawId, snippet);
+
+    const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
+    const rhsStr = this.ctx.resolve(rhsSnippet.value, rhsSnippet.dataType).value;
+
+    let emittedVarType: 'var' | 'let' | 'const' | `#VAR_${number}#`;
+    if (varType === '<deferred>') {
+      const scope = this.ctx.topFunctionScope;
+      invariant(scope, `Expected function scope to be present for ${rawId}`);
+      emittedVarType = `#VAR_${scope.placeholderForVariable.size}#`;
+      scope.placeholderForVariable.set(snippet, emittedVarType);
+    } else {
+      emittedVarType = varType;
+    }
+
+    return this.emitVarDecl(this.ctx.pre, emittedVarType, snippet.value, concreteType, rhsStr);
   }
 
   public _statement(statement: tinyest.Statement): string {
@@ -1055,131 +1193,12 @@ ${this.ctx.pre}if (${condition}) ${consequent}
 ${this.ctx.pre}else ${alternate}`;
     }
 
-    if (statement[0] === NODE.let || statement[0] === NODE.const) {
-      let varType: 'var' | 'let' | 'const' | '<deferred>' = '<deferred>';
-      const [stmtType, rawId, rawValue] = statement;
-      const eq = rawValue !== undefined ? this._expression(rawValue) : undefined;
+    if (statement[0] === NODE.let) {
+      return this._letStatement(statement);
+    }
 
-      if (!eq) {
-        throw new Error(
-          `'${stringifyNode(statement)}' is invalid because all variables need initializers.`,
-        );
-      }
-
-      const ephemeral = isEphemeralSnippet(eq);
-      let dataType = eq.dataType as wgsl.BaseData;
-      const naturallyEphemeral = wgsl.isNaturallyEphemeral(dataType);
-
-      if (eq.value instanceof RefOperator) {
-        // We're assigning a newly created `d.ref()`
-        if (eq.dataType !== UnknownData) {
-          throw new WgslTypeError(
-            `Cannot store d.ref() in a variable if it references another value. Copy the value passed into d.ref() instead.`,
-          );
-        }
-        const refSnippet = eq.value.snippet;
-        const varName = this.refVariable(
-          rawId,
-          concretize(refSnippet.dataType as wgsl.BaseData) as wgsl.StorableData,
-        );
-        return stitch`${this.ctx.pre}var ${varName} = ${tryConvertSnippet(
-          this.ctx,
-          refSnippet,
-          refSnippet.dataType as wgsl.AnyWgslData,
-          false,
-        )};`;
-      }
-
-      // Assigning a reference to a `const` variable means we store the pointer
-      // of the rhs.
-      if (!ephemeral) {
-        // Referential
-        if (stmtType === NODE.let) {
-          const rhsStr = stringifyNode(rawValue ?? '');
-          const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
-
-          throw new WgslTypeError(
-            `'let ${rawId} = ${rhsStr}' is invalid, because references cannot be assigned to 'let' variable declarations.
------
-- Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
-- Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
------`,
-          );
-        }
-
-        if (eq.origin === 'constant-tgpu-const-ref') {
-          varType = 'const';
-        } else if (eq.origin === 'runtime-tgpu-const-ref') {
-          varType = 'let';
-        } else {
-          varType = 'let';
-          if (!wgsl.isPtr(dataType)) {
-            const ptrType = createPtrFromOrigin(
-              eq.origin,
-              concretize(dataType) as wgsl.StorableData,
-            );
-            invariant(ptrType !== undefined, `Creating pointer type from origin ${eq.origin}`);
-            dataType = ptrType;
-          }
-
-          if (!(eq.value instanceof RefOperator)) {
-            // If what we're assigning is something preceded by `&`, then it's a value
-            // created using `d.ref()`. Otherwise, it's an implicit pointer
-            dataType = implicitFrom(dataType as wgsl.Ptr);
-            this.tryMarkModified(rawValue);
-          }
-        }
-      } else {
-        // Non-referential
-
-        if (stmtType === NODE.const) {
-          if (eq.origin === 'argument') {
-            // Arguments cannot be mutated, so we 'let' them be (kill me)
-            varType = 'let';
-          } else if (naturallyEphemeral) {
-            varType = eq.origin === 'constant' ? 'const' : 'let';
-          }
-        } else {
-          // stmtType === NODE.let
-
-          if (eq.origin === 'argument') {
-            if (!naturallyEphemeral) {
-              const rhsStr = stringifyNode(rawValue ?? '');
-              const rhsTypeStr = this.ctx.resolve(unptr(eq.dataType)).value;
-
-              throw new WgslTypeError(
-                `'let ${rawId} = ${rhsStr}' is invalid, because references to arguments cannot be assigned to 'let' variable declarations.
-  -----
-  - Try 'let ${rawId} = ${rhsTypeStr}(${rhsStr})' if you need to reassign '${rawId}' later
-  - Try 'const ${rawId} = ${rhsStr}' if you won't reassign '${rawId}' later.
-  -----`,
-              );
-            }
-          }
-        }
-      }
-
-      const snippet = this.blockVariable(varType, rawId, concretize(dataType), eq.origin);
-      const rhsSnippet = tryConvertSnippet(this.ctx, eq, dataType, false);
-      const rhsStr = this.ctx.resolve(rhsSnippet.value, rhsSnippet.dataType).value;
-
-      let emittedVarType: 'var' | 'let' | 'const' | `#VAR_${number}#`;
-      if (varType === '<deferred>') {
-        const scope = this.ctx.topFunctionScope;
-        invariant(scope, `Expected function scope to be present for ${rawId}`);
-        emittedVarType = `#VAR_${scope.placeholderForVariable.size}#`;
-        scope.placeholderForVariable.set(snippet, emittedVarType);
-      } else {
-        emittedVarType = varType;
-      }
-
-      return this.emitVarDecl(
-        this.ctx.pre,
-        emittedVarType,
-        snippet.value as string,
-        concretize(dataType),
-        rhsStr,
-      );
+    if (statement[0] === NODE.const) {
+      return this._constStatement(statement);
     }
 
     if (statement[0] === NODE.block) {
@@ -1270,10 +1289,8 @@ ${this.ctx.pre}else ${alternate}`;
                   forOfUtils.getElementSnippet(iterableSnippet, snip(i, u32, 'constant')),
                 );
 
-          if (
-            isEphemeralSnippet(elements[0] as Snippet) &&
-            !wgsl.isNaturallyEphemeral(elements[0]?.dataType)
-          ) {
+          const firstElement = elements[0] as Snippet;
+          if (!isAlias(firstElement) && !wgsl.isNaturallyEphemeral(firstElement.dataType)) {
             throw new WgslTypeError(
               `Cannot unroll '${stringifyNode(iterable)}'. The elements of iterable are constructed in place but are not value types.`,
             );
@@ -1398,8 +1415,8 @@ ${this.ctx.pre}else ${alternate}`;
 function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
   if (
     mutated.origin === 'constant' ||
-    mutated.origin === 'constant-tgpu-const-ref' ||
-    mutated.origin === 'runtime-tgpu-const-ref'
+    mutated.origin === 'constant-immutable-def' ||
+    mutated.origin === 'runtime-immutable-def'
   ) {
     if (isKnownAtComptime(mutated)) {
       throw new WgslTypeError(
@@ -1408,6 +1425,18 @@ function validateSnippetMutation(mutated: Snippet, expr: tinyest.AnyNode) {
     }
     throw new WgslTypeError(
       `'${stringifyNode(expr)}' is invalid, because the left side is a constant.`,
+    );
+  }
+
+  if (mutated.origin === 'uniform') {
+    throw new WgslTypeError(
+      `'${stringifyNode(expr)}' is invalid, because uniform buffers cannot be mutated.`,
+    );
+  }
+
+  if (mutated.origin === 'readonly') {
+    throw new WgslTypeError(
+      `'${stringifyNode(expr)}' is invalid, because readonly buffers cannot be mutated.`,
     );
   }
 

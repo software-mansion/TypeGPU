@@ -460,7 +460,7 @@ describe('array', () => {
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
         const i = 2;
-        const a = i;
+        let a = i;
         const b = 2i;
       }"
     `);
