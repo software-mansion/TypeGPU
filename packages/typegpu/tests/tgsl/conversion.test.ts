@@ -1,4 +1,4 @@
-import { describe, expect } from 'vitest';
+import { describe, expect, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import { expectDataTypeOf } from '../utils/parseResolved.ts';
 import tgpu, { d } from 'typegpu';
@@ -25,6 +25,8 @@ describe('convertToCommonType', () => {
   });
 
   it('performs implicit casts and warns', () => {
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
     const fn = () => {
       'use gpu';
       const t = [d.i32(1), d.f32(2)];
@@ -32,6 +34,20 @@ describe('convertToCommonType', () => {
     };
 
     expectDataTypeOf(fn).toBe(d.f32);
+
+    expect(consoleSpy.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          "Implicit conversions from [
+        1i: i32,
+        2f: f32
+      ] to f32 are supported, but not recommended.
+      Consider using explicit conversions instead.",
+        ],
+      ]
+    `);
+
+    consoleSpy.mockRestore();
   });
 
   it('performs pointer dereferencing', () => {
@@ -129,6 +145,8 @@ describe('convertToCommonType', () => {
   });
 
   it('maps values requiring implicit casts and warns', () => {
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
     const fn = () => {
       'use gpu';
       const s = Struct({ a: d.i32(1), b: d.u32(2), c: d.vec2f(1), d: true });
@@ -146,6 +164,25 @@ describe('convertToCommonType', () => {
         let s = Struct(1f, 2i, vec2f(1), true);
       }"
     `);
+
+    expect(consoleSpy.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          "Implicit conversions from [
+        1i: i32
+      ] to f32 are supported, but not recommended.
+      Consider using explicit conversions instead.",
+        ],
+        [
+          "Implicit conversions from [
+        2u: u32
+      ] to i32 are supported, but not recommended.
+      Consider using explicit conversions instead.",
+        ],
+      ]
+    `);
+
+    consoleSpy.mockRestore();
   });
 
   it('throws on missing property', () => {
