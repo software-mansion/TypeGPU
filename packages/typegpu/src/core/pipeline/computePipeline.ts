@@ -1,5 +1,5 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
-import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
+import type { TgpuQuerySet } from '../querySet/querySet.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { Void } from '../../data/wgslTypes.ts';
