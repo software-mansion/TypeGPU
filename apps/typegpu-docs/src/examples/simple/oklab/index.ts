@@ -143,9 +143,13 @@ function draw() {
   pipeline.withColorAttachment({ view: context }).draw(3);
 }
 
-setTimeout(() => {
-  draw();
-}, 100);
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    draw();
+  },
+});
 
 // #region Example controls and cleanup
 
@@ -211,6 +215,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  detachAutoResizer();
   root.destroy();
   cleanupController.abort();
 }

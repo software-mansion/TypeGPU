@@ -1,4 +1,5 @@
 import tgpu, {
+  common,
   d,
   type TgpuBindGroup,
   type TgpuComputeFn,
@@ -362,6 +363,8 @@ function loop() {
 
 loop();
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 // #region Example controls and cleanup
 
 canvas.addEventListener('mousedown', (e) => {
@@ -484,6 +487,7 @@ export const controls = defineControls({
 export function onCleanup() {
   window.removeEventListener('mouseup', mouseUpEventListener);
   window.removeEventListener('touchend', touchEndEventListener);
+  detachAutoResizer();
   root.destroy();
 }
 

@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { d, std, type RenderFlag, type TgpuTexture } from 'typegpu';
+import tgpu, { common, d, std, type RenderFlag, type TgpuTexture } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import {
@@ -483,13 +483,18 @@ export const controls = defineControls({
   },
 });
 
-const resizeObserver = new ResizeObserver(createDepthTexture);
-resizeObserver.observe(canvas);
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    createDepthTexture();
+  },
+});
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
   cleanupCamera();
-  resizeObserver.unobserve(canvas);
+  detachAutoResizer();
   depthTexture.destroy();
   root.destroy();
 }

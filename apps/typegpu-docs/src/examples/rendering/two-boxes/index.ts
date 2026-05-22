@@ -1,5 +1,5 @@
 import type { RenderFlag, TgpuBindGroup, TgpuBuffer, TgpuTexture, VertexFlag } from 'typegpu';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
 
 // Initialization
@@ -465,6 +465,8 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 export function onCleanup() {
   cancelAnimationFrame(animationFrameId);
   window.removeEventListener('mouseup', mouseUpEventListener);
@@ -472,6 +474,7 @@ export function onCleanup() {
   window.removeEventListener('touchend', touchEndEventListener);
   window.removeEventListener('touchmove', touchMoveEventListener);
   resizeObserver.disconnect();
+  detachAutoResizer();
   root.destroy();
 }
 

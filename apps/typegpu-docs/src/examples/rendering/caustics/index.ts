@@ -1,5 +1,5 @@
 import { perlin3d } from '@typegpu/noise';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const mainVertex = tgpu.vertexFn({
@@ -146,6 +146,8 @@ function draw(timestamp: number) {
 }
 requestAnimationFrame(draw);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 // #region Example controls and cleanup
 
 export const controls = defineControls({
@@ -162,6 +164,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   isRunning = false;
+  detachAutoResizer();
   root.destroy();
 }
 

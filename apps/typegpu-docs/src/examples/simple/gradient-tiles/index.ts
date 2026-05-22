@@ -33,7 +33,13 @@ function draw(spanXValue: number, spanYValue: number) {
 let spanX = 10;
 let spanY = 10;
 
-draw(spanX, spanY);
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    draw(spanX, spanY);
+  },
+});
 
 // #region Example controls and cleanup
 
@@ -62,6 +68,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  detachAutoResizer();
   root.destroy();
 }
 

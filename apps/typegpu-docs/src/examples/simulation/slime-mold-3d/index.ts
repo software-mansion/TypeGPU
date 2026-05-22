@@ -471,6 +471,8 @@ function frame(timestamp: number) {
 }
 requestAnimationFrame(frame);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 // #region Example controls and cleanup
 
 let isDragging = false;
@@ -620,6 +622,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  detachAutoResizer();
   root.destroy();
 }
 
