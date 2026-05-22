@@ -8,7 +8,7 @@ import {
   undecorate,
   UnknownData,
 } from '../data/dataTypes.ts';
-import { abstractInt, bool, f16, f32, i32, u32 } from '../data/numeric.ts';
+import { bool, f16, f32, i32, u32 } from '../data/numeric.ts';
 import { derefSnippet } from '../data/ref.ts';
 import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import {
@@ -39,7 +39,7 @@ import {
 import { $gpuCallable } from '../shared/symbols.ts';
 import { add, bitShiftLeft, bitShiftRight, div, mod, mul, sub } from '../std/operators.ts';
 import { isKnownAtComptime } from '../types.ts';
-import { coerceToSnippet } from './generationHelpers.ts';
+import { coerceToSnippet, numericLiteralToSnippet } from './generationHelpers.ts';
 
 const infixKinds = [
   'vec2f',
@@ -114,20 +114,31 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
       new InfixDispatch(propName, target, operator[$gpuCallable].call.bind(operator)),
       UnknownData,
       /* origin */ target.origin,
+      target.possibleSideEffects,
     );
   }
 
   if (isWgslArray(target.dataType) && propName === 'length') {
     if (target.dataType.elementCount === 0) {
       // Dynamically-sized array
-      return snip(stitch`arrayLength(&${target})`, u32, /* origin */ 'runtime');
+      return snip(
+        stitch`arrayLength(&${target})`,
+        u32,
+        /* origin */ 'runtime',
+        target.possibleSideEffects,
+      );
     }
 
-    return snip(target.dataType.elementCount, abstractInt, /* origin */ 'constant');
+    return numericLiteralToSnippet(target.dataType.elementCount);
   }
 
   if (isMat(target.dataType) && propName === 'columns') {
-    return snip(new MatrixColumnsAccess(target), UnknownData, /* origin */ target.origin);
+    return snip(
+      new MatrixColumnsAccess(target),
+      UnknownData,
+      /* origin */ target.origin,
+      target.possibleSideEffects,
+    );
   }
 
   if (isWgslStruct(target.dataType) || isUnstruct(target.dataType)) {
@@ -137,7 +148,12 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
     }
     propType = undecorate(propType);
 
-    return snip(stitch`${target}.${propName}`, propType, /* origin */ target.origin);
+    return snip(
+      stitch`${target}.${propName}`,
+      propType,
+      /* origin */ target.origin,
+      target.possibleSideEffects,
+    );
   }
 
   if (target.dataType instanceof AutoStruct) {
@@ -145,7 +161,12 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
     if (!result) {
       return undefined;
     }
-    return snip(stitch`${target}.${result.prop}`, result.type, 'argument');
+    return snip(
+      stitch`${target}.${result.prop}`,
+      result.type,
+      'argument',
+      target.possibleSideEffects,
+    );
   }
 
   if (target.dataType instanceof EntryInputRouter) {
@@ -175,7 +196,8 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
   if (isVec(target.dataType)) {
     // Example: d.vec3f().kind === 'vec3f'
     if (propName === 'kind') {
-      return snip(target.dataType.type, UnknownData, 'constant');
+      // The snippet has no side-effects
+      return snip(target.dataType.type, UnknownData, 'constant', /* possibleSideEffects */ false);
     }
   }
 
@@ -209,6 +231,7 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
         : target.origin === 'constant' || target.origin === 'constant-immutable-def'
           ? 'constant'
           : 'runtime',
+      target.possibleSideEffects,
     );
   }
 

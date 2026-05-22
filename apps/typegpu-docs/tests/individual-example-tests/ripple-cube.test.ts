@@ -262,7 +262,7 @@ describe('ripple-cube example', () => {
         const cellSize = 0.0047169811320754715;
         let p = ((vec3f(f32(x), f32(y), f32(z)) + 0.5f) * cellSize);
         let r = (timeUniform * 0.15f);
-        let iterCount = select(5, 11, (extendedRippleUniform == 1u));
+        let iterCount = select(5i, 11i, (extendedRippleUniform == 1u));
         var shellD = 1e+10f;
         for (var ix = 0; (ix < iterCount); ix++) {
           for (var iy = 0; (iy < iterCount); iy++) {
