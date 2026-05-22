@@ -1,6 +1,6 @@
 import { beforeEach, expect, type MockInstance, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import tgpu, { d } from 'typegpu';
+import tgpu, { d } from '../../src/index.js';
 
 let warnSpy: MockInstance<typeof console.warn>;
 

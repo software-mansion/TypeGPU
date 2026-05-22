@@ -7,7 +7,7 @@ import tgpu, {
   type TgpuSlot,
   type TgpuTextureView,
   type TgpuUniform,
-} from 'typegpu';
+} from '../../src/index.js';
 import { it } from 'typegpu-testing-utility';
 
 describe('shellless', () => {

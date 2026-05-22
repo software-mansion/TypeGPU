@@ -1,6 +1,6 @@
 import { describe, expect, vi } from 'vitest';
-import tgpu, { d } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
+import tgpu, { d } from '../../src/index.js';
 
 describe('wgslGenerator with console.log', () => {
   it('Parses console.log in a stray function to a comment and warns', () => {

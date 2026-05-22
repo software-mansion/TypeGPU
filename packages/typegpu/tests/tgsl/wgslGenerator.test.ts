@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect } from 'vitest';
-import tgpu, { d, std } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 import { expectDataTypeOf, extractSnippetFromFn } from '../utils/parseResolved.ts';
+import tgpu, { d, std } from '../../src/index.js';
 
 const numberSlot = tgpu.slot(44);
 const lazyV4u = tgpu.lazy(() => d.vec4u(1, 2, 3, 4).mul(numberSlot.$));

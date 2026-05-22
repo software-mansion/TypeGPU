@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest';
-import { d } from 'typegpu';
 import { deserializeAndStringify } from '../../src/tgsl/consoleLog/deserializers.ts';
 import { it } from 'typegpu-testing-utility';
+import { d } from '../../src/index.js';
 
 describe('deserializeAndStringify', () => {
   it('works for string literals', () => {

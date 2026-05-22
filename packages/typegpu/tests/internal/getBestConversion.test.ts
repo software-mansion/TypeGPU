@@ -1,9 +1,9 @@
 import { describe, expect } from 'vitest';
 import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
-import { d } from 'typegpu';
 import { getBestConversion } from '../../src/tgsl/conversion.ts';
 import { it } from 'typegpu-testing-utility';
 import { INTERNAL_createPtr } from '../../src/data/ptr.ts';
+import { d } from '../../src/index.js';
 
 describe('getBestConversion', () => {
   // d.ptrPrivate(d.f32)

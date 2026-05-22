@@ -1,7 +1,7 @@
 import { describe, expect, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import { expectDataTypeOf } from '../utils/parseResolved.ts';
-import tgpu, { d } from 'typegpu';
+import tgpu, { d } from '../../src/index.js';
 
 describe('convertToCommonType', () => {
   it('converts identical types', () => {
