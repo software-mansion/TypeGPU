@@ -6,7 +6,6 @@ export * as common from './common/index.ts';
 
 export {
   MissingBindGroupsError,
-  MissingLinksError,
   MissingSlotValueError,
   MissingVertexBuffersError,
   NotUniformError,
@@ -112,6 +111,7 @@ export type { TgpuVertexFn, TgpuVertexFnShell } from './core/function/tgpuVertex
 export type { TgpuFragmentFn, TgpuFragmentFnShell } from './core/function/tgpuFragmentFn.ts';
 export type { TgpuComputeFn, TgpuComputeFnShell } from './core/function/tgpuComputeFn.ts';
 export type {
+  AnyAutoCustoms,
   /** @deprecated use TgpuFragmentFn.AutoIn */
   AutoFragmentIn,
   /** @deprecated use TgpuFragmentFn.AutoOut */

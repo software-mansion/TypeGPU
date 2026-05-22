@@ -126,7 +126,13 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
   }
 
   if (isWgslStruct(target.dataType) || isUnstruct(target.dataType)) {
-    return accessStructProp(target, propName);
+    let propType = target.dataType.propTypes[propName];
+    if (!propType) {
+      return undefined;
+    }
+    propType = undecorate(propType);
+
+    return snip(stitch`${target}.${propName}`, propType, /* origin */ target.origin);
   }
 
   if (target.dataType instanceof AutoStruct) {
