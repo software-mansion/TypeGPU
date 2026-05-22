@@ -20,7 +20,7 @@ describe('function argument origin tracking', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - fn*:foo(i32): 'a += 1i' is invalid, because non-pointer arguments cannot be mutated.]
+      - fn*:foo(i32): 'a += 1' is invalid, because non-pointer arguments cannot be mutated.]
     `);
   });
 
@@ -43,7 +43,7 @@ describe('function argument origin tracking', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - fn*:foo(struct:Foo): '_arg_0.a += 1f' is invalid, because non-pointer arguments cannot be mutated.]
+      - fn*:foo(struct:Foo): 'a += 1' is invalid, because non-pointer arguments cannot be mutated.]
     `);
   });
 
@@ -64,7 +64,7 @@ describe('function argument origin tracking', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - fn*:foo(vec3f): 'a.x += 1f' is invalid, because non-pointer arguments cannot be mutated.]
+      - fn*:foo(vec3f): 'a.x += 1' is invalid, because non-pointer arguments cannot be mutated.]
     `);
   });
 
@@ -85,7 +85,35 @@ describe('function argument origin tracking', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - fn*:foo(vec3f): 'b.x += 1f' is invalid, because non-pointer arguments cannot be mutated.]
+      - fn*:foo(vec3f): 'b.x += 1' is invalid, because non-pointer arguments cannot be mutated.]
+    `);
+  });
+
+  it('should fail on update of primitive arguments', () => {
+    const foo = tgpu.fn([d.u32])((a) => {
+      'use gpu';
+      // oxlint-disable-next-line typegpu/no-invalid-assignment -- this is a test
+      a++;
+    });
+
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:foo: 'a++' is invalid, because non-pointer arguments cannot be mutated.]
+    `);
+  });
+
+  it('should fail on update of non-primitive arguments', () => {
+    const foo = tgpu.fn([d.vec3f])((a: d.v3f) => {
+      'use gpu';
+      const b = a;
+      b.x++;
+    });
+
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:foo: 'b.x++' is invalid, because non-pointer arguments cannot be mutated.]
     `);
   });
 
@@ -156,7 +184,26 @@ describe('function argument origin tracking', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - fn*:foo(vec3f): Cannot return references to arguments, returning 'a'. Copy the argument before returning it.]
+      - fn*:foo(vec3f): 'return a;' is invalid, cannot return references to arguments. Copy the argument before returning it.]
     `);
+  });
+
+  it('throws a descriptive error when assigning a const to let', () => {
+    const testFn = () => {
+      'use gpu';
+      const a = d.vec3f();
+      let b = a;
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:testFn
+        - fn*:testFn(): 'let b = a' is invalid, because references cannot be assigned to 'let' variable declarations.
+        -----
+        - Try 'let b = vec3f(a)' if you need to reassign 'b' later
+        - Try 'const b = a' if you won't reassign 'b' later.
+        -----]
+      `);
   });
 });

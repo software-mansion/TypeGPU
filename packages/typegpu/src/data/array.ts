@@ -1,4 +1,4 @@
-import { comptime } from '../core/function/comptime.ts';
+import { comptime, type TgpuComptime } from '../core/function/comptime.ts';
 import { $internal } from '../shared/symbols.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
 import { sizeOf } from './sizeOf.ts';
@@ -32,7 +32,10 @@ interface WgslArrayConstructor {
  * @param elementType The type of elements in the array.
  * @param elementCount The number of elements in the array.
  */
-export const arrayOf = comptime(((elementType, elementCount) => {
+export const arrayOf: TgpuComptime<WgslArrayConstructor> = comptime(((
+  elementType,
+  elementCount,
+) => {
   if (elementCount === undefined) {
     return comptime((count: number) => cpu_arrayOf(elementType, count));
   }

@@ -13,7 +13,7 @@ const gammaCorrection = root.createUniform(d.f32);
 const glyphSize = root.createUniform(d.u32, 8);
 const uvTransformBuffer = root.createUniform(d.mat2x2f, d.mat2x2f.identity());
 
-const shaderSampler = root['~unstable'].createSampler({
+const shaderSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });

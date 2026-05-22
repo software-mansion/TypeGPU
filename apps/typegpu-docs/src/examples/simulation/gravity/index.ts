@@ -33,7 +33,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 // static resources (created on the example load)
 
-const sampler = root['~unstable'].createSampler({
+const sampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
@@ -46,7 +46,7 @@ const { cleanupCamera, targetCamera } = setupOrbitCamera(
     minZoom: 10,
     maxZoom: 800,
   },
-  (updates) => camera.writePartial(updates),
+  (updates) => camera.patch(updates),
 );
 
 const skyBoxVertexBuffer = root
@@ -160,7 +160,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
   if (destroyed) {
     return;
   }
-  time.writePartial({
+  time.patch({
     passed: Math.min((timestamp - lastTimestamp) / 1000, 0.1),
   });
   lastTimestamp = timestamp;
@@ -245,7 +245,7 @@ export const controls = defineControls({
     max: 5,
     step: 1,
     onSliderChange: (newValue: number) => {
-      time.writePartial({ multiplier: 2 ** newValue });
+      time.patch({ multiplier: 2 ** newValue });
     },
   },
 });

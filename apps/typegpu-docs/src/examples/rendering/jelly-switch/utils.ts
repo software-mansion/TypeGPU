@@ -35,7 +35,7 @@ export const intersectBox = (rayOrigin: d.v3f, rayDirection: d.v3f, box: Boundin
 
 export function createTextures(root: TgpuRoot, width: number, height: number) {
   return [0, 1].map(() => {
-    const texture = root['~unstable']
+    const texture = root
       .createTexture({
         size: [width, height],
         format: 'rgba8unorm',
@@ -50,7 +50,7 @@ export function createTextures(root: TgpuRoot, width: number, height: number) {
 }
 
 export function createBackgroundTexture(root: TgpuRoot, width: number, height: number) {
-  const texture = root['~unstable']
+  const texture = root
     .createTexture({
       size: [width, height],
       format: 'rgba16float',

@@ -1,18 +1,12 @@
-import type { v2f } from 'typegpu/data';
-import { addMul } from '../../utils.ts';
-import { capShell } from './common.ts';
+import { vec2f } from 'typegpu/data';
+import { normalize } from 'typegpu/std';
+import type { JoinInput } from '../types.ts';
 
-export const triangleCap = capShell((vertexIndex, joinPath, V, vu, vd, right, dir, left) => {
+export function triangle(join: JoinInput, joinVertexIndex: number, _maxJoinCount: number) {
   'use gpu';
-  if (joinPath.depth >= 0) {
-    const remove = [right, left];
-    const dm = remove[joinPath.joinIndex & 0x1] as v2f;
-    return addMul(V.position, dm, V.radius);
+  if (joinVertexIndex === 0) {
+    return vec2f(join.v);
   }
-
-  const v1 = addMul(V.position, right, V.radius);
-  const v2 = addMul(V.position, dir, V.radius);
-  const v3 = addMul(V.position, left, V.radius);
-  const points = [vu, v1, v2, v3, vd];
-  return points[vertexIndex % 5] as v2f;
-});
+  const fw = normalize(join.fw);
+  return join.C.position + fw * join.C.radius;
+}

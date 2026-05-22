@@ -5,6 +5,11 @@ export function setupCommonMocks() {
   beforeEach(() => {
     vi.resetAllMocks();
 
+    Object.defineProperty(navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
+    });
+
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => {
       return createDeepNoopProxy(
         {} as unknown as CanvasRenderingContext2D,
@@ -75,11 +80,13 @@ export function mockFonts() {
 export function mockResizeObserver() {
   vi.stubGlobal(
     'ResizeObserver',
-    vi.fn(() => ({
-      observe: vi.fn(),
-      unobserve: vi.fn(),
-      disconnect: vi.fn(),
-    })),
+    vi.fn(function () {
+      return {
+        observe: vi.fn(),
+        unobserve: vi.fn(),
+        disconnect: vi.fn(),
+      };
+    }),
   );
 }
 
@@ -158,12 +165,14 @@ const mockAudioBufferSourceNode = {
 export function mockAudioLoading() {
   vi.stubGlobal(
     'AudioContext',
-    vi.fn(() => ({
-      createGain: vi.fn(() => mockGainNode),
-      destination: {},
-      createBufferSource: vi.fn(() => mockAudioBufferSourceNode),
-      decodeAudioData: vi.fn(async () => null),
-    })),
+    vi.fn(function () {
+      return {
+        createGain: vi.fn(() => mockGainNode),
+        destination: {},
+        createBufferSource: vi.fn(() => mockAudioBufferSourceNode),
+        decodeAudioData: vi.fn(async () => null),
+      };
+    }),
   );
 
   if (fetchMockMap.has(audioRegExp)) return;

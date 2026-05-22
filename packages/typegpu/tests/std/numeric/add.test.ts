@@ -104,22 +104,22 @@ describe('add', () => {
     it('infers types when adding constants', () => {
       const int_int = () => {
         'use gpu';
-        1 + 2;
+        return 1 + 2;
       };
 
       const float_float = () => {
         'use gpu';
-        1.1 + 2.3;
+        return 1.1 + 2.3;
       };
 
       const int_float = () => {
         'use gpu';
-        1.1 + 2;
+        return 1.1 + 2;
       };
 
       const float_int = () => {
         'use gpu';
-        1 + 2.3;
+        return 1 + 2.3;
       };
 
       expectDataTypeOf(int_int).toBe(abstractInt);

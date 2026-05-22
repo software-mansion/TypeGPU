@@ -45,19 +45,15 @@ describe('function visualizer example', () => {
         let end = ((*properties).transformation * vec4f(1, 0, 0, 1)).x;
         let pointX = (start + (((end - start) / (f32((*properties).interpolationPoints) - 1f)) * f32(x)));
         let pointY = interpolatedFunction(pointX);
-        var result = ((*properties).inverseTransformation * vec4f(pointX, pointY, 0f, 1f));
+        let result = ((*properties).inverseTransformation * vec4f(pointX, pointY, 0f, 1f));
         lineVertices[x] = result.xy;
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        computePointsFn(in.id.x, in.id.y, in.id.z);
+        computePointsFn(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -83,19 +79,15 @@ describe('function visualizer example', () => {
         let end = ((*properties).transformation * vec4f(1, 0, 0, 1)).x;
         let pointX = (start + (((end - start) / (f32((*properties).interpolationPoints) - 1f)) * f32(x)));
         let pointY = interpolatedFunction(pointX);
-        var result = ((*properties).inverseTransformation * vec4f(pointX, pointY, 0f, 1f));
+        let result = ((*properties).inverseTransformation * vec4f(pointX, pointY, 0f, 1f));
         lineVertices[x] = result.xy;
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        computePointsFn(in.id.x, in.id.y, in.id.z);
+        computePointsFn(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -121,19 +113,15 @@ describe('function visualizer example', () => {
         let end = ((*properties).transformation * vec4f(1, 0, 0, 1)).x;
         let pointX = (start + (((end - start) / (f32((*properties).interpolationPoints) - 1f)) * f32(x)));
         let pointY = interpolatedFunction(pointX);
-        var result = ((*properties).inverseTransformation * vec4f(pointX, pointY, 0f, 1f));
+        let result = ((*properties).inverseTransformation * vec4f(pointX, pointY, 0f, 1f));
         lineVertices[x] = result.xy;
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(256, 1, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        computePointsFn(in.id.x, in.id.y, in.id.z);
+        computePointsFn(id.x, id.y, id.z);
       }
 
       struct Properties {
@@ -149,19 +137,14 @@ describe('function visualizer example', () => {
         @builtin(position) pos: vec4f,
       }
 
-      struct backgroundVertex_Input {
-        @builtin(vertex_index) vid: u32,
-        @builtin(instance_index) iid: u32,
-      }
-
-      @vertex fn backgroundVertex(_arg_0: backgroundVertex_Input) -> backgroundVertex_Output {
+      @vertex fn backgroundVertex(@builtin(vertex_index) vid: u32, @builtin(instance_index) iid: u32) -> backgroundVertex_Output {
         let properties = (&propertiesUniform);
-        var leftBot = ((*properties).transformation * vec4f(-1, -1, 0, 1));
-        var rightTop = ((*properties).transformation * vec4f(1, 1, 0, 1));
+        let leftBot = ((*properties).transformation * vec4f(-1, -1, 0, 1));
+        let rightTop = ((*properties).transformation * vec4f(1, 1, 0, 1));
         let aspectRatio = ((rightTop.x - leftBot.x) / (rightTop.y - leftBot.y));
-        var transformedPoints = array<vec2f, 4>(vec2f(leftBot.x, 0f), vec2f(rightTop.x, 0f), vec2f(0f, leftBot.y), vec2f(0f, rightTop.y));
-        var currentPoint = ((*properties).inverseTransformation * vec4f(transformedPoints[((2u * _arg_0.iid) + u32((f32(_arg_0.vid) / 2f)))].xy, 0f, 1f));
-        return backgroundVertex_Output(vec4f((currentPoint.x + (((f32(_arg_0.iid) * select(-1f, 1f, ((_arg_0.vid % 2u) == 0u))) * 5e-3f) / aspectRatio)), (currentPoint.y + ((f32((1u - _arg_0.iid)) * select(-1f, 1f, ((_arg_0.vid % 2u) == 0u))) * 5e-3f)), currentPoint.zw));
+        let transformedPoints = array<vec2f, 4>(vec2f(leftBot.x, 0f), vec2f(rightTop.x, 0f), vec2f(0f, leftBot.y), vec2f(0f, rightTop.y));
+        let currentPoint = ((*properties).inverseTransformation * vec4f(transformedPoints[((2u * iid) + u32((f32(vid) / 2f)))].xy, 0f, 1f));
+        return backgroundVertex_Output(vec4f((currentPoint.x + (((f32(iid) * select(-1f, 1f, ((vid % 2u) == 0u))) * 5e-3f) / aspectRatio)), (currentPoint.y + ((f32((1u - iid)) * select(-1f, 1f, ((vid % 2u) == 0u))) * 5e-3f)), currentPoint.zw));
       }
 
       @fragment fn backgroundFragment() -> @location(0) vec4f {
@@ -180,8 +163,8 @@ describe('function visualizer example', () => {
       @group(1) @binding(0) var<storage, read> lineVertices_1: array<vec2f>;
 
       fn orthonormalForLine(p1: vec2f, p2: vec2f) -> vec2f {
-        var line = (p2 - p1);
-        var ortho = vec2f(-(line.y), line.x);
+        let line = (p2 - p1);
+        let ortho = vec2f(-(line.y), line.x);
         return normalize(ortho);
       }
 
@@ -193,9 +176,9 @@ describe('function visualizer example', () => {
         let previous = (&(*lineVertices)[u32((index - 1f))]);
         let current = (&(*lineVertices)[u32(index)]);
         let next = (&(*lineVertices)[u32((index + 1f))]);
-        var n1 = orthonormalForLine((*previous), (*current));
-        var n2 = orthonormalForLine((*current), (*next));
-        var avg = ((n1 + n2) / 2f);
+        let n1 = orthonormalForLine((*previous), (*current));
+        let n2 = orthonormalForLine((*current), (*next));
+        let avg = ((n1 + n2) / 2f);
         return normalize(avg);
       }
 
@@ -203,20 +186,16 @@ describe('function visualizer example', () => {
         @builtin(position) pos: vec4f,
       }
 
-      struct vertex_Input {
-        @builtin(vertex_index) vid: u32,
-      }
-
-      @vertex fn vertex(_arg_0: vertex_Input) -> vertex_Output {
+      @vertex fn vertex(@builtin(vertex_index) vid: u32) -> vertex_Output {
         let properties = (&propertiesUniform);
         let lineVertices = (&lineVertices_1);
-        let currentVertex = (f32(_arg_0.vid) / 2f);
-        var orthonormal = orthonormalForVertex(currentVertex);
-        var offset = ((orthonormal * (*properties).lineWidth) * select(-1f, 1f, ((_arg_0.vid % 2u) == 0u)));
-        var leftBot = ((*properties).transformation * vec4f(-1, -1, 0, 1));
-        var rightTop = ((*properties).transformation * vec4f(1, 1, 0, 1));
+        let currentVertex = (f32(vid) / 2f);
+        let orthonormal = orthonormalForVertex(currentVertex);
+        let offset = ((orthonormal * (*properties).lineWidth) * select(-1f, 1f, ((vid % 2u) == 0u)));
+        let leftBot = ((*properties).transformation * vec4f(-1, -1, 0, 1));
+        let rightTop = ((*properties).transformation * vec4f(1, 1, 0, 1));
         let canvasRatio = ((rightTop.x - leftBot.x) / (rightTop.y - leftBot.y));
-        var adjustedOffset = vec2f((offset.x / canvasRatio), offset.y);
+        let adjustedOffset = vec2f((offset.x / canvasRatio), offset.y);
         return vertex_Output(vec4f(((*lineVertices)[u32(currentVertex)] + adjustedOffset), 0f, 1f));
       }
 

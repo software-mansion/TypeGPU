@@ -1,7 +1,6 @@
 {
   "name": "tinyest",
   "version": "0.3.1",
-  "private": true,
   "description": "A compact, fast, and embeddable JavaScript AST for transpilation.",
   "keywords": [
     "ast",
@@ -14,12 +13,14 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/software-mansion/TypeGPU.git"
+    "url": "git+https://github.com/software-mansion/TypeGPU.git",
+    "directory": "packages/tinyest"
   },
   "type": "module",
   "sideEffects": false,
   "exports": "./src/index.ts",
   "publishConfig": {
+    "access": "public",
     "directory": "dist",
     "exports": {
       "./package.json": "./package.json",

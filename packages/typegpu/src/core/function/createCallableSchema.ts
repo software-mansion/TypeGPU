@@ -1,4 +1,4 @@
-import { type MapValueToSnippet, ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { type MapValueToSnippet, type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { type BaseData, isPtr } from '../../data/wgslTypes.ts';
 import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';

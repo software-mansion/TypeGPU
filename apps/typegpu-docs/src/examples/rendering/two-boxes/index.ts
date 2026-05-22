@@ -198,7 +198,7 @@ function createDepthAndMsaaTextures() {
   if (depthTexture) {
     depthTexture.destroy();
   }
-  depthTexture = root['~unstable']
+  depthTexture = root
     .createTexture({
       size: [canvas.width, canvas.height],
       format: 'depth24plus',
@@ -209,7 +209,7 @@ function createDepthAndMsaaTextures() {
   if (msaaTexture) {
     msaaTexture.destroy();
   }
-  msaaTexture = root['~unstable']
+  msaaTexture = root
     .createTexture({
       size: [canvas.width, canvas.height],
       format: presentationFormat,

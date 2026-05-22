@@ -29,13 +29,9 @@ describe('xor dev runner example', () => {
         @location(0) uv: vec2f,
       }
 
-      struct vertexMain_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      @vertex fn vertexMain(input: vertexMain_Input) -> vertexMain_Output {
-        var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
-        return vertexMain_Output(vec4f(pos[input.vertexIndex], 0f, 1f), pos[input.vertexIndex]);
+      @vertex fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> vertexMain_Output {
+        let pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
+        return vertexMain_Output(vec4f(pos[vertexIndex], 0f, 1f), pos[vertexIndex]);
       }
 
       @group(0) @binding(0) var<uniform> colorUniform: vec3f;
@@ -58,9 +54,9 @@ describe('xor dev runner example', () => {
 
       fn getRayForUV(uv: vec2f) -> Ray {
         let camera = (&cameraUniform);
-        var farView = ((*camera).projectionInverse * vec4f(uv, 1f, 1f));
-        var farWorld = ((*camera).viewInverse * vec4f((farView.xyz / farView.w), 1f));
-        var direction = normalize((farWorld.xyz - (*camera).pos.xyz));
+        let farView = ((*camera).projectionInverse * vec4f(uv, 1f, 1f));
+        let farWorld = ((*camera).viewInverse * vec4f((farView.xyz / farView.w), 1f));
+        let direction = normalize((farWorld.xyz - (*camera).pos.xyz));
         return Ray((*camera).pos, vec4f(direction, 0f));
       }
 
@@ -87,12 +83,12 @@ describe('xor dev runner example', () => {
       }
 
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
-        var icolor = (colorUniform * 4f);
-        var ray = getRayForUV(_arg_0.uv);
+        let icolor = (colorUniform * 4f);
+        let ray = getRayForUV(_arg_0.uv);
         var acc = vec3f();
         var z = 0f;
         for (var l = 0; (l < 30i); l++) {
-          var p = ((((vec3f(3, 0, 3) + controlsOffsetUniform) + autoMoveOffsetUniform) + ray.origin.xyz) + (ray.direction.xyz * z));
+          let p = ((((vec3f(3, 0, 3) + controlsOffsetUniform) + autoMoveOffsetUniform) + ray.origin.xyz) + (ray.direction.xyz * z));
           var q = p;
           var prox = p.y;
           for (var i = 40.1; (i > 0.01f); i *= 0.2f) {

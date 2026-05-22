@@ -27,18 +27,17 @@ export function isExternalTexture(value: unknown): value is TgpuExternalTexture 
 export class TgpuExternalTextureImpl implements TgpuExternalTexture, SelfResolvable {
   readonly resourceType = 'external-texture';
   readonly [$internal] = true;
+  readonly schema: WgslExternalTexture;
   readonly #membership: LayoutMembership;
 
-  constructor(
-    public readonly schema: WgslExternalTexture,
-    membership: LayoutMembership,
-  ) {
+  constructor(schema: WgslExternalTexture, membership: LayoutMembership) {
+    this.schema = schema;
     this.#membership = membership;
     setName(this, membership.key);
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.getUniqueName(this);
+    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const group = ctx.allocateLayoutEntry(this.#membership.layout);
 
     ctx.addDeclaration(

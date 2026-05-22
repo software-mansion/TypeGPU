@@ -1,7 +1,7 @@
-import type { Block } from 'tinyest';
 import type { BaseData } from '../data/wgslTypes.ts';
 import type { GenerationCtx } from './generationHelpers.ts';
 import type { ResolvedSnippet, Snippet } from '../data/snippet.ts';
+import type { FunctionDefinitionOptions } from './shaderGenerator_members.ts';
 
 /**
  * **NOTE: This is an unstable API and may change in the future.**
@@ -12,7 +12,7 @@ import type { ResolvedSnippet, Snippet } from '../data/snippet.ts';
 export interface ShaderGenerator {
   initGenerator(ctx: GenerationCtx): void;
 
-  functionDefinition(body: Block): string;
+  functionDefinition(options: FunctionDefinitionOptions): string;
   typeInstantiation(schema: BaseData, args: readonly Snippet[]): ResolvedSnippet;
   typeAnnotation(schema: BaseData): string;
 }

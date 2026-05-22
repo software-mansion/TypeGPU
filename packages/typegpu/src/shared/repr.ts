@@ -10,6 +10,7 @@ import type {
   $memIdent,
   $repr,
   $reprPartial,
+  $reprPatch,
   $validStorageSchema,
   $validUniformSchema,
   $validVertexSchema,
@@ -38,11 +39,15 @@ export type Infer<T> = T extends { readonly [$repr]: infer TRepr } ? TRepr : T;
  * const arrayOfStructs = d.arrayOf(d.struct({ pos: d.vec3f, id: d.f32 }), 4);
  * type D = d.InferInput<typeof arrayOfStructs>; // { pos: d.v3f | Float32Array<ArrayBufferLike> | [number, number, number]; id: number; }[]
  */
-export type InferInput<T> = T extends { readonly [$inRepr]: infer TRepr } ? TRepr : Infer<T>;
+export type InferInput<T> =
+  | Infer<T>
+  | (T extends { readonly [$inRepr]: infer TRepr } ? TRepr : never);
 
 /**
  * Extracts a sparse/partial inferred representation of a resource.
  * Used by the `buffer.writePartial` API.
+ *
+ * @deprecated
  *
  * @example
  * type A = InferPartial<F32> // => number | undefined
@@ -73,8 +78,26 @@ export type InferInputRecord<T extends Record<string | number | symbol, unknown>
   [Key in keyof T]: InferInput<T[Key]>;
 };
 
+/** @deprecated */
 export type InferPartialRecord<T extends Record<string | number | symbol, unknown>> = {
   [Key in keyof T]?: InferPartial<T[Key]>;
+};
+
+/**
+ * Extracts the patch representation of a resource.
+ * Used by the `buffer.patch` API.
+ *
+ * @example
+ * type A = InferPatch<F32> // => number | undefined
+ * type B = InferPatch<WgslStruct<{ a: F32 }>> // => { a?: number | undefined }
+ * type C = InferPatch<WgslArray<F32>> // => Record<number, number | undefined> | number[] | undefined
+ */
+export type InferPatch<T> = T extends { readonly [$reprPatch]: infer TRepr }
+  ? TRepr
+  : InferInput<T> | undefined;
+
+export type InferPatchRecord<T extends Record<string | number | symbol, unknown>> = {
+  [Key in keyof T]?: InferPatch<T[Key]>;
 };
 
 export type InferGPURecord<T extends Record<string | number | symbol, unknown>> = {

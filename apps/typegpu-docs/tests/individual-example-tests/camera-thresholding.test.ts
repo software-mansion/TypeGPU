@@ -20,20 +20,16 @@ describe('camera thresholding example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      struct fullScreenTriangle_Output {
+      "struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
       @group(0) @binding(0) var<uniform> uvTransformUniform: mat2x2f;
@@ -52,11 +48,11 @@ describe('camera thresholding example', () => {
         @location(0) uv: vec2f,
       }
 
-      @fragment fn mainFrag(input: mainFrag_Input) -> @location(0) vec4f {
-        var uv2 = ((uvTransformUniform * (input.uv - 0.5f)) + 0.5f);
+      @fragment fn mainFrag(_arg_0: mainFrag_Input) -> @location(0) vec4f {
+        let uv2 = ((uvTransformUniform * (_arg_0.uv - 0.5f)) + 0.5f);
         var col = textureSampleBaseClampToEdge(inputTexture, sampler_1, uv2);
-        var ycbcr = (col.rgb * rgbToYcbcrMatrix);
-        var colycbcr = (colorUniform * rgbToYcbcrMatrix);
+        let ycbcr = (col.rgb * rgbToYcbcrMatrix);
+        let colycbcr = (colorUniform * rgbToYcbcrMatrix);
         let crDiff = abs((ycbcr.y - colycbcr.y));
         let cbDiff = abs((ycbcr.z - colycbcr.z));
         let distance_1 = length(vec2f(crDiff, cbDiff));

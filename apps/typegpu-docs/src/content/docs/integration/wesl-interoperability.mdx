@@ -124,15 +124,12 @@ const buffer = root.createBuffer(FishArray(512)).$usage('storage');
 //    ^?
 
 // Updating the 123rd fish's position
-buffer.writePartial([
-  {
-    idx: 123,
-    value: {
-      state: {
-        posit
-        //   ^|
-      },
-    }
+buffer.patch({
+  123: {
+    state: {
+      posit
+      //   ^|
+    },
   }
-]);
+});
 ```

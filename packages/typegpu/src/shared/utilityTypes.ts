@@ -56,7 +56,7 @@ export type Mutable<T> = {
 };
 
 /**
- * Source: https://code.lol/post/programming/higher-kinded-types/
+ * Source: https://code.lol/post/programming/higher-kinded-types
  */
 export type Assume<T, U> = T extends U ? T : U;
 
@@ -74,3 +74,16 @@ export type TypedArray =
 export function assertExhaustive(x: never, location: string): never {
   throw new Error(`Failed to handle ${x} at ${location}`);
 }
+
+/**
+ * Source: https://futurestud.io/tutorials/typescript-how-to-remove-index-signature-from-a-type
+ */
+export type RemoveIndexSignature<T> = {
+  [K in keyof T as string extends K
+    ? never
+    : number extends K
+      ? never
+      : symbol extends K
+        ? never
+        : K]: T[K];
+};

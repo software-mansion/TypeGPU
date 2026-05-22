@@ -464,24 +464,28 @@ const DEFAULT_READONLY_VISIBILITY: TgpuShaderStage[] = ['compute', 'vertex', 'fr
 class TgpuBindGroupLayoutImpl<
   Entries extends Record<string, TgpuLayoutEntry | null>,
 > implements TgpuBindGroupLayout<Entries> {
-  public readonly [$internal]: BindGroupLayoutInternals<Entries>;
-  private _index: number | undefined;
+  #index: number | undefined;
 
-  public readonly resourceType = 'bind-group-layout' as const;
+  readonly [$internal]: BindGroupLayoutInternals<Entries>;
+  readonly resourceType = 'bind-group-layout' as const;
 
-  public readonly value = {} as {
+  readonly value = {} as {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
 
-  public readonly $ = this.value as {
+  readonly $ = this.value as {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
+
+  readonly entries: Entries;
 
   get [$gpuValueOf]() {
     return this.$;
   }
 
-  constructor(public readonly entries: Entries) {
+  constructor(entries: Entries) {
+    this.entries = entries;
+
     let idx = 0;
 
     const bound = {} as { [K in keyof Entries]: BindLayoutEntry<Entries[K]> };
@@ -550,7 +554,7 @@ class TgpuBindGroupLayoutImpl<
   }
 
   get index(): number | undefined {
-    return this._index;
+    return this.#index;
   }
 
   $name(label: string): this {
@@ -563,7 +567,7 @@ class TgpuBindGroupLayoutImpl<
   }
 
   $idx(index?: number): this {
-    this._index = index;
+    this.#index = index;
     return this;
   }
 
@@ -649,12 +653,17 @@ class TgpuBindGroupLayoutImpl<
 export class TgpuBindGroupImpl<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
 > implements TgpuBindGroup<Entries> {
-  public readonly resourceType = 'bind-group' as const;
+  readonly resourceType = 'bind-group' as const;
+  readonly layout: TgpuBindGroupLayout<Entries>;
+  readonly entries: ExtractBindGroupInputFromLayout<Entries>;
 
   constructor(
-    public readonly layout: TgpuBindGroupLayout<Entries>,
-    public readonly entries: ExtractBindGroupInputFromLayout<Entries>,
+    layout: TgpuBindGroupLayout<Entries>,
+    entries: ExtractBindGroupInputFromLayout<Entries>,
   ) {
+    this.layout = layout;
+    this.entries = entries;
+
     // Checking if all entries are present.
     for (const key of Object.keys(layout.entries)) {
       if (layout.entries[key] !== null && !(key in entries)) {

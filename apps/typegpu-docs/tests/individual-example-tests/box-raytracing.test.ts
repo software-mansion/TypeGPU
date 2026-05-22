@@ -29,19 +29,19 @@ describe('box raytracing example', () => {
 
       @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
-      struct mainVertex_Output {
-        @builtin(position) pos: vec4f,
+      struct VertexOut {
+        @builtin(position) position: vec4f,
         @location(0) rayWorldOrigin: vec3f,
       }
 
-      struct mainVertex_Input {
+      struct VertexIn {
         @builtin(vertex_index) vertexIndex: u32,
       }
 
-      @vertex fn mainVertex(input: mainVertex_Input) -> mainVertex_Output {
-        var pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
-        var rayWorldOrigin = (uniforms.invViewMatrix * vec4f(0, 0, 0, 1)).xyz;
-        return mainVertex_Output(vec4f(pos[input.vertexIndex], 0f, 1f), rayWorldOrigin);
+      @vertex fn mainVertex(_arg_0: VertexIn) -> VertexOut {
+        let pos = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
+        let rayWorldOrigin = (uniforms.invViewMatrix * vec4f(0, 0, 0, 1)).xyz;
+        return VertexOut(vec4f(pos[_arg_0.vertexIndex], 0f, 1f), rayWorldOrigin);
       }
 
       struct Ray {
@@ -130,19 +130,19 @@ describe('box raytracing example', () => {
         return select((12.92f * linear), ((1.055f * pow(linear, vec3f(0.4166666567325592))) - vec3f(0.054999999701976776)), (linear > vec3f(0.0031308000907301903)));
       }
 
-      struct fragmentFunction_Input {
+      struct FragmentIn {
         @builtin(position) position: vec4f,
         @location(0) rayWorldOrigin: vec3f,
       }
 
-      @fragment fn fragmentFunction(input: fragmentFunction_Input) -> @location(0) vec4f {
-        var boxSize3 = vec3f(uniforms.boxSize);
-        var halfBoxSize3 = (0.5f * boxSize3);
-        var halfCanvasDims = (0.5f * uniforms.canvasDims);
+      @fragment fn fragmentFunction(_arg_0: FragmentIn) -> @location(0) vec4f {
+        let boxSize3 = vec3f(uniforms.boxSize);
+        let halfBoxSize3 = (0.5f * boxSize3);
+        let halfCanvasDims = (0.5f * uniforms.canvasDims);
         let minDim = min(uniforms.canvasDims.x, uniforms.canvasDims.y);
-        var viewCoords = ((input.position.xy - halfCanvasDims) / minDim);
-        var ray = Ray(input.rayWorldOrigin, (uniforms.invViewMatrix * vec4f(normalize(vec3f(viewCoords, 1f)), 0f)).xyz);
-        var bigBoxIntersection = getBoxIntersection(AxisAlignedBounds((-1f * halfBoxSize3), (vec3f(7) + halfBoxSize3)), ray);
+        let viewCoords = ((_arg_0.position.xy - halfCanvasDims) / minDim);
+        let ray = Ray(_arg_0.rayWorldOrigin, (uniforms.invViewMatrix * vec4f(normalize(vec3f(viewCoords, 1f)), 0f)).xyz);
+        let bigBoxIntersection = getBoxIntersection(AxisAlignedBounds((-1f * halfBoxSize3), (vec3f(7) + halfBoxSize3)), ray);
         if (!bigBoxIntersection.intersects) {
           discard;;
           return vec4f();
@@ -156,21 +156,21 @@ describe('box raytracing example', () => {
               if ((boxMatrix[i][j][k].isActive == 0u)) {
                 continue;
               }
-              var ijkScaled = vec3f(f32(i), f32(j), f32(k));
-              var intersection = getBoxIntersection(AxisAlignedBounds((ijkScaled - halfBoxSize3), (ijkScaled + halfBoxSize3)), ray);
+              let ijkScaled = vec3f(f32(i), f32(j), f32(k));
+              let intersection = getBoxIntersection(AxisAlignedBounds((ijkScaled - halfBoxSize3), (ijkScaled + halfBoxSize3)), ray);
               if (intersection.intersects) {
                 let boxDensity = (max(0f, (intersection.tMax - intersection.tMin)) * pow(uniforms.materialDensity, 2f));
                 density += boxDensity;
-                invColor = (invColor + (boxDensity * (vec3f(1) / boxMatrix[i][j][k].albedo)));
+                invColor += (boxDensity * (1f / boxMatrix[i][j][k].albedo));
                 intersectionFound = true;
               }
             }
           }
         }
-        var linear = (vec3f(1) / invColor);
-        var srgb = linearToSrgb(linear);
+        let linear = (1f / invColor);
+        let srgb = linearToSrgb(linear);
         const gamma = 2.2;
-        var corrected = pow(srgb, vec3f((1f / gamma)));
+        let corrected = pow(srgb, vec3f((1f / gamma)));
         if (intersectionFound) {
           return (min(density, 1f) * vec4f(min(corrected, vec3f(1)), 1f));
         }

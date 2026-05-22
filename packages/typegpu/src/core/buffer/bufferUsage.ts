@@ -97,14 +97,16 @@ class TgpuFixedBufferImpl<TData extends BaseData, TUsage extends BindableBufferU
 {
   /** Type-token, not available at runtime */
   declare readonly [$repr]: Infer<TData>;
+
   readonly resourceType = 'buffer-usage' as const;
+  readonly usage: TUsage;
+  readonly buffer: TgpuBuffer<TData>;
   readonly [$internal]: { readonly dataType: TData };
   readonly [$getNameForward]: TgpuBuffer<TData>;
 
-  constructor(
-    public readonly usage: TUsage,
-    public readonly buffer: TgpuBuffer<TData>,
-  ) {
+  constructor(usage: TUsage, buffer: TgpuBuffer<TData>) {
+    this.usage = usage;
+    this.buffer = buffer;
     this[$internal] = { dataType: buffer.dataType };
     this[$getNameForward] = buffer;
   }
@@ -116,7 +118,7 @@ class TgpuFixedBufferImpl<TData extends BaseData, TUsage extends BindableBufferU
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const dataType = this.buffer.dataType;
-    const id = ctx.getUniqueName(this);
+    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const { group, binding } = ctx.allocateFixedEntry(
       this.usage === 'uniform' ? { uniform: dataType } : { storage: dataType, access: this.usage },
       this.buffer,
@@ -222,22 +224,24 @@ export class TgpuLaidOutBufferImpl<TData extends BaseData, TUsage extends Bindab
 {
   /** Type-token, not available at runtime */
   declare readonly [$repr]: Infer<TData>;
+
   readonly [$internal]: { readonly dataType: TData };
   readonly resourceType = 'buffer-usage' as const;
+  readonly usage: TUsage;
+  readonly dataType: TData;
+
   readonly #membership: LayoutMembership;
 
-  constructor(
-    public readonly usage: TUsage,
-    public readonly dataType: TData,
-    membership: LayoutMembership,
-  ) {
+  constructor(usage: TUsage, dataType: TData, membership: LayoutMembership) {
     this[$internal] = { dataType };
+    this.usage = usage;
+    this.dataType = dataType;
     this.#membership = membership;
     setName(this, membership.key);
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.getUniqueName(this);
+    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const group = ctx.allocateLayoutEntry(this.#membership.layout);
     const usage = usageToVarTemplateMap[this.usage];
 

@@ -31,14 +31,14 @@ for (let i = 0; i < noiseData.length; i += 1) {
   noiseData[i] = Math.random() * 255;
 }
 
-const sampler = root['~unstable'].createSampler({
+const sampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
   addressModeU: 'repeat',
   addressModeV: 'repeat',
 });
 
-const noiseTexture = root['~unstable']
+const noiseTexture = root
   .createTexture({
     size: [NOISE_TEXTURE_SIZE, NOISE_TEXTURE_SIZE],
     format: 'r8unorm',
@@ -94,7 +94,7 @@ resizeObserver.observe(canvas);
 let frameId: number;
 
 function render(timestamp: number) {
-  paramsUniform.writePartial({ time: (timestamp / 1000) % 500 });
+  paramsUniform.patch({ time: (timestamp / 1000) % 500 });
 
   pipeline
     .with(bindGroup)
@@ -137,7 +137,7 @@ export const controls = defineControls({
     initial: 'medium',
     options: ['very high', 'high', 'medium', 'low', 'very low'],
     onSelectChange(value) {
-      paramsUniform.writePartial(qualityOptions[value]);
+      paramsUniform.patch(qualityOptions[value]);
     },
   },
 });

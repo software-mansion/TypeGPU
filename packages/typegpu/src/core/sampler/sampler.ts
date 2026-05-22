@@ -84,14 +84,13 @@ export class TgpuLaidOutSamplerImpl<
   T extends WgslSampler | WgslComparisonSampler,
 > implements SelfResolvable {
   declare readonly [$repr]: Infer<T>;
-  public readonly [$internal]: SamplerInternals = { unwrap: undefined };
-  public readonly resourceType: T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
+  readonly [$internal]: SamplerInternals = { unwrap: undefined };
+  readonly resourceType: T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
+  readonly schema: T;
   readonly #membership: LayoutMembership;
 
-  constructor(
-    readonly schema: T,
-    membership: LayoutMembership,
-  ) {
+  constructor(schema: T, membership: LayoutMembership) {
+    this.schema = schema;
     this.#membership = membership;
     this.resourceType = (
       schema.type === 'sampler_comparison' ? 'sampler-comparison' : 'sampler'
@@ -100,7 +99,7 @@ export class TgpuLaidOutSamplerImpl<
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.getUniqueName(this);
+    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const group = ctx.allocateLayoutEntry(this.#membership.layout);
 
     ctx.addDeclaration(
@@ -150,19 +149,17 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
   implements SelfResolvable, TgpuNamable
 {
   declare readonly [$repr]: Infer<T>;
-  public readonly [$internal]: SamplerInternals;
-  public readonly resourceType: T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
+  readonly [$internal]: SamplerInternals;
+  readonly resourceType: T extends WgslComparisonSampler ? 'sampler-comparison' : 'sampler';
+  readonly schema: T;
 
   #filtering: boolean;
   #sampler: GPUSampler | null = null;
   #props: WgslSamplerProps | WgslComparisonSamplerProps;
   #branch: Unwrapper;
 
-  constructor(
-    readonly schema: T,
-    props: WgslSamplerProps | WgslComparisonSamplerProps,
-    branch: Unwrapper,
-  ) {
+  constructor(schema: T, props: WgslSamplerProps | WgslComparisonSamplerProps, branch: Unwrapper) {
+    this.schema = schema;
     this.#props = props;
     this.#branch = branch;
     this.resourceType = (
@@ -189,7 +186,7 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.getUniqueName(this);
+    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
 
     const { group, binding } = ctx.allocateFixedEntry(
       this.schema.type === 'sampler_comparison'

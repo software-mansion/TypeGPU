@@ -8,11 +8,7 @@ import {
   type ExampleControlParam,
   exampleControlsAtom,
 } from '../utils/examples/exampleControlAtom.ts';
-import {
-  codeEditorShownAtom,
-  menuShownAtom,
-  tsoverUsedAtom,
-} from '../utils/examples/exampleViewStateAtoms.ts';
+import { tsoverUsedAtom } from '../utils/examples/exampleViewStateAtoms.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
 import { Button } from './design/Button.tsx';
 import { ColorPicker } from './design/ColorPicker.tsx';
@@ -282,13 +278,9 @@ function paramToControlRow(param: ExampleControlParam) {
 const unreachable = (_: never) => null;
 
 export function ControlPanel() {
-  const [menuShowing, setMenuShowing] = useAtom(menuShownAtom);
-  const [codeEditorShowing, setCodeEditorShowing] = useAtom(codeEditorShownAtom);
   const [tsoverUsed, setTsoverUsed] = useAtom(tsoverUsedAtom);
   const exampleControlParams = useAtomValue(exampleControlsAtom);
 
-  const showLeftMenuId = useId();
-  const showCodeEditorId = useId();
   const tsoverUsedId = useId();
 
   return (
@@ -302,28 +294,6 @@ export function ControlPanel() {
       <div className="hidden flex-col gap-4 md:flex">
         <h2 className="font-medium text-xl">Control panel</h2>
 
-        <label
-          htmlFor={showLeftMenuId}
-          className="flex cursor-pointer items-center justify-between gap-3 text-sm"
-        >
-          <span>Show left menu</span>
-          <Toggle
-            id={showLeftMenuId}
-            checked={menuShowing}
-            onChange={(e) => setMenuShowing(e.target.checked)}
-          />
-        </label>
-        <label
-          htmlFor={showCodeEditorId}
-          className="flex cursor-pointer items-center justify-between gap-3 text-sm"
-        >
-          <span>Show code editor</span>
-          <Toggle
-            id={showCodeEditorId}
-            checked={codeEditorShowing}
-            onChange={(e) => setCodeEditorShowing(e.target.checked)}
-          />
-        </label>
         <label
           htmlFor={tsoverUsedId}
           className="flex cursor-pointer items-center justify-between gap-3 text-sm"

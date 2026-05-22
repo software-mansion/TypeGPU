@@ -20,20 +20,16 @@ describe('ascii filter example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
-      }
-
-      struct fullScreenTriangle_Output {
+      "struct fullScreenTriangle_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
       @group(0) @binding(0) var<uniform> uvTransformBuffer: mat2x2f;
@@ -49,7 +45,7 @@ describe('ascii filter example', () => {
       @group(0) @binding(4) var<uniform> charsetExtended: u32;
 
       fn characterFn(n: u32, p: vec2f) -> f32 {
-        var pos = floor(((p * vec2f(-4, 4)) + 2.5f));
+        let pos = floor(((p * vec2f(-4, 4)) + 2.5f));
         if (((((pos.x < 0f) || (pos.x > 4f)) || (pos.y < 0f)) || (pos.y > 4f))) {
           return 0f;
         }
@@ -64,13 +60,13 @@ describe('ascii filter example', () => {
       }
 
       @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
-        var uv2 = ((uvTransformBuffer * (_arg_0.uv - 0.5f)) + 0.5f);
-        var textureSize = vec2f(textureDimensions(externalTexture));
-        var pix = (uv2 * textureSize);
+        let uv2 = ((uvTransformBuffer * (_arg_0.uv - 0.5f)) + 0.5f);
+        let textureSize = vec2f(textureDimensions(externalTexture));
+        let pix = (uv2 * textureSize);
         let cellSize = f32(glyphSize);
         let halfCell = (cellSize * 0.5f);
-        var blockCoord = ((floor((pix / cellSize)) * cellSize) / textureSize);
-        var color = textureSampleBaseClampToEdge(externalTexture, shaderSampler, blockCoord);
+        let blockCoord = ((floor((pix / cellSize)) * cellSize) / textureSize);
+        let color = textureSampleBaseClampToEdge(externalTexture, shaderSampler, blockCoord);
         let rawGray = (((0.3f * color.x) + (0.59f * color.y)) + (0.11f * color.z));
         let gray = pow(rawGray, gammaCorrection);
         var n = 4096u;
@@ -225,7 +221,7 @@ describe('ascii filter example', () => {
             n = 11512810u;
           }
         }
-        var p = vec2f((((pix.x / halfCell) % 2f) - 1f), (((pix.y / halfCell) % 2f) - 1f));
+        let p = vec2f((((pix.x / halfCell) % 2f) - 1f), (((pix.y / halfCell) % 2f) - 1f));
         let charValue = characterFn(n, p);
         var resultColor = vec3f(1);
         if ((displayMode == 0u)) {

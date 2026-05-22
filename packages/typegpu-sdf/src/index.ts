@@ -18,3 +18,6 @@ export {
   opSmoothUnion,
   opUnion,
 } from './operators.ts';
+
+export { classifySlot, createJumpFlood } from './jumpFlood.ts';
+export * as JumpFlood from './jumpFlood.ts';

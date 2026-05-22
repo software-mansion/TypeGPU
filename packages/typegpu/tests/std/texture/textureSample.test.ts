@@ -12,7 +12,7 @@ describe('textureSample', () => {
         minFilter: 'linear',
         magFilter: 'linear',
       });
-      const someTexture = root['~unstable']
+      const someTexture = root
         .createTexture({
           size: [256, 256],
           format: 'rgba8unorm',

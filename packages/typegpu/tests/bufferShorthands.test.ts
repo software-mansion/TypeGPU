@@ -48,6 +48,31 @@ describe('root.createMutable', () => {
       "Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead\"'.",
     );
   });
+
+  it('hints initial struct props in mutable', ({ root }) => {
+    const Boid = d.struct({ id: d.u32, prop: d.vec2u });
+    attest(() =>
+      root.createMutable(Boid, {
+        // @ts-expect-error
+        '': undefined,
+      }),
+    ).completions({
+      '': ['id', 'prop'],
+    });
+  });
+
+  it('auto types buffer on mapped initialized in mutable', ({ root }) => {
+    const Entry = d.struct({
+      id: d.u32,
+      values: d.vec3f,
+    });
+    const Entries = d.arrayOf(Entry, 2);
+
+    root.createMutable(Entries, (mappedBuffer) => {
+      expectTypeOf(mappedBuffer).toEqualTypeOf<TgpuBuffer<typeof Entries>>();
+      mappedBuffer.write([{ id: 1, values: d.vec3f() }]);
+    });
+  });
 });
 
 describe('root.createReadonly', () => {
@@ -87,6 +112,31 @@ describe('root.createReadonly', () => {
       "Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead\"'.",
     );
   });
+
+  it('hints initial struct props in readonly', ({ root }) => {
+    const Boid = d.struct({ id: d.u32, prop: d.vec2u });
+    attest(() =>
+      root.createReadonly(Boid, {
+        // @ts-expect-error
+        '': undefined,
+      }),
+    ).completions({
+      '': ['id', 'prop'],
+    });
+  });
+
+  it('auto types buffer on mapped initialized in readonly', ({ root }) => {
+    const Entry = d.struct({
+      id: d.u32,
+      values: d.vec3f,
+    });
+    const Entries = d.arrayOf(Entry, 2);
+
+    root.createReadonly(Entries, (mappedBuffer) => {
+      expectTypeOf(mappedBuffer).toEqualTypeOf<TgpuBuffer<typeof Entries>>();
+      mappedBuffer.write([{ id: 1, values: d.vec3f() }]);
+    });
+  });
 });
 
 describe('root.createUniform', () => {
@@ -125,5 +175,30 @@ describe('root.createUniform', () => {
     attest(() => root.createUniform(d.struct({ foo: d.bool }))).type.errors.snap(
       "Argument of type 'WgslStruct<{ foo: Bool; }>' is not assignable to parameter of type '\"(Error) in struct property 'foo' — Bool is not host-shareable, use U32 or I32 instead\"'.",
     );
+  });
+
+  it('hints initial struct props in uniform', ({ root }) => {
+    const Boid = d.struct({ id: d.u32, prop: d.vec2u });
+    attest(() =>
+      root.createUniform(Boid, {
+        // @ts-expect-error
+        '': undefined,
+      }),
+    ).completions({
+      '': ['id', 'prop'],
+    });
+  });
+
+  it('auto types buffer on mapped initialized in uniform', ({ root }) => {
+    const Entry = d.struct({
+      id: d.u32,
+      values: d.vec3f,
+    });
+    const Entries = d.arrayOf(Entry, 2);
+
+    root.createUniform(Entries, (mappedBuffer) => {
+      expectTypeOf(mappedBuffer).toEqualTypeOf<TgpuBuffer<typeof Entries>>();
+      mappedBuffer.write([{ id: 1, values: d.vec3f() }]);
+    });
   });
 });

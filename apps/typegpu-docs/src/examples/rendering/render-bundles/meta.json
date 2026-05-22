@@ -1,5 +1,6 @@
 {
   "title": "Render Bundles",
   "category": "rendering",
-  "tags": ["experimental", "3d", "rasterization", "performance"]
+  "tags": ["3d", "rasterization", "performance"],
+  "coolFactor": 5
 }

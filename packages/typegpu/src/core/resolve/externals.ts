@@ -85,7 +85,7 @@ export function replaceExternalsInWgsl(
 ): string {
   return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
     const externalRegex = identifierRegex(externalName);
-    if (wgsl && externalName !== 'Out' && externalName !== 'In' && !externalRegex.test(wgsl)) {
+    if (wgsl && externalName !== 'Out' && externalName !== 'in' && !externalRegex.test(wgsl)) {
       console.warn(`The external '${externalName}' wasn't used in the resolved template.`);
       // continue anyway, we still might need to resolve the external
     }

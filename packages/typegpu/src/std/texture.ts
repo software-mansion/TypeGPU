@@ -764,6 +764,92 @@ function textureSampleBaseClampToEdgeCpu<T extends texture2d | textureExternal>(
   );
 }
 
+function sampleGradCpu<T extends texture2d>(
+  texture: T,
+  sampler: sampler,
+  coords: v2f,
+  ddx: v2f,
+  ddy: v2f,
+): v4f;
+function sampleGradCpu<T extends texture2d>(
+  texture: T,
+  sampler: sampler,
+  coords: v2f,
+  ddx: v2f,
+  ddy: v2f,
+  offset: v2i,
+): v4f;
+function sampleGradCpu<T extends texture2dArray>(
+  texture: T,
+  sampler: sampler,
+  coords: v2f,
+  arrayIndex: number,
+  ddx: v2f,
+  ddy: v2f,
+): v4f;
+function sampleGradCpu<T extends texture2dArray>(
+  texture: T,
+  sampler: sampler,
+  coords: v2f,
+  arrayIndex: number,
+  ddx: v2f,
+  ddy: v2f,
+  offset: v2i,
+): v4f;
+function sampleGradCpu<T extends texture3d>(
+  texture: T,
+  sampler: sampler,
+  coords: v3f,
+  ddx: v3f,
+  ddy: v3f,
+): v4f;
+function sampleGradCpu<T extends texture3d>(
+  texture: T,
+  sampler: sampler,
+  coords: v3f,
+  ddx: v3f,
+  ddy: v3f,
+  offset: v3i,
+): v4f;
+function sampleGradCpu<T extends textureCube>(
+  texture: T,
+  sampler: sampler,
+  coords: v3f,
+  ddx: v3f,
+  ddy: v3f,
+): v4f;
+function sampleGradCpu<T extends textureCubeArray>(
+  texture: T,
+  sampler: sampler,
+  coords: v3f,
+  arrayIndex: number,
+  ddx: v3f,
+  ddy: v3f,
+): v4f;
+function sampleGradCpu(
+  _texture: WgslTexture,
+  _sampler: sampler,
+  _coords: v2f | v3f,
+  _ddxOrArrayIndex: v2f | v3f | number,
+  _ddyOrDdx?: v2f | v3f,
+  _offsetOrDdy?: v2i | v3i | v2f | v3f,
+  _maybeOffset?: v2i | v3i,
+): v4f {
+  throw new MissingCpuImplError(
+    'Texture sampling with gradients relies on GPU resources and cannot be executed outside of a draw call',
+  );
+}
+
+export const textureSampleGrad = dualImpl({
+  name: 'textureSampleGrad',
+  normalImpl: sampleGradCpu,
+  codegenImpl: (_ctx, args) => stitch`textureSampleGrad(${args})`,
+  signature: (...args) => ({
+    argTypes: args,
+    returnType: vec4f,
+  }),
+});
+
 export const textureSampleBaseClampToEdge = dualImpl({
   name: 'textureSampleBaseClampToEdge',
   normalImpl: textureSampleBaseClampToEdgeCpu,

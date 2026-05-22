@@ -23,6 +23,8 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const context = root.configureContext({ canvas });
 
+const F32_MAX = 3.40282346e38;
+
 let brushSize = 1;
 let isDrawing = false;
 let lastDrawPos: { x: number; y: number } | null = null;
@@ -49,14 +51,14 @@ const paramsUniform = root.createUniform(VisualizationParams, {
   showOutside: 1,
 });
 
-const filteringSampler = root['~unstable'].createSampler({
+const filteringSampler = root.createSampler({
   magFilter: 'linear',
   minFilter: 'linear',
 });
 
 function createResources() {
   const textures = [0, 1].map(() =>
-    root['~unstable']
+    root
       .createTexture({
         size: [width, height],
         format: 'rgba16float',
@@ -64,14 +66,14 @@ function createResources() {
       .$usage('storage'),
   ) as [FloodTexture, FloodTexture];
 
-  const maskTexture = root['~unstable']
+  const maskTexture = root
     .createTexture({
       size: [width, height],
       format: 'r32uint',
     })
     .$usage('storage') as MaskTexture;
 
-  const distanceTexture = root['~unstable']
+  const distanceTexture = root
     .createTexture({
       size: [width, height],
       format: 'rgba16float',
@@ -180,8 +182,8 @@ const jumpFlood = root.createGuardedComputePipeline((x, y) => {
 
   let bestInsideCoord = d.vec2f(-1);
   let bestOutsideCoord = d.vec2f(-1);
-  let bestInsideDist = 1e20;
-  let bestOutsideDist = 1e20;
+  let bestInsideDist = d.f32(F32_MAX);
+  let bestOutsideDist = d.f32(F32_MAX);
 
   for (const dx of tgpu.unroll([-1, 0, 1])) {
     for (const dy of tgpu.unroll([-1, 0, 1])) {
@@ -242,8 +244,8 @@ const createDistanceField = root.createGuardedComputePipeline((x, y) => {
   const insideCoord = texel.xy;
   const outsideCoord = texel.zw;
 
-  let insideDist = 1e20;
-  let outsideDist = 1e20;
+  let insideDist = d.f32(F32_MAX);
+  let outsideDist = d.f32(F32_MAX);
 
   if (insideCoord.x >= 0) {
     insideDist = std.distance(pos, insideCoord.mul(d.vec2f(size)));
@@ -300,7 +302,7 @@ function runFlood() {
 
 function drawAtPosition(canvasX: number, canvasY: number) {
   const rect = canvas.getBoundingClientRect();
-  brushUniform.writePartial({
+  brushUniform.patch({
     center: d.vec2f((canvasX * width) / rect.width, (canvasY * height) / rect.height),
   });
   drawSeed.with(resources.maskBindGroup).dispatchThreads(width, height);
@@ -371,7 +373,7 @@ const onMouseDown = (e: MouseEvent) => {
   if (e.button !== 0 && e.button !== 2) {
     return;
   }
-  brushUniform.writePartial({ erasing: e.button === 2 ? 1 : 0 });
+  brushUniform.patch({ erasing: e.button === 2 ? 1 : 0 });
   isDrawing = true;
   lastDrawPos = null;
   const rect = canvas.getBoundingClientRect();
@@ -395,7 +397,7 @@ const onTouchStart = (e: TouchEvent) => {
   isDrawing = true;
   lastDrawPos = null;
   const rect = canvas.getBoundingClientRect();
-  brushUniform.writePartial({ erasing: e.touches.length === 2 ? 1 : 0 });
+  brushUniform.patch({ erasing: e.touches.length === 2 ? 1 : 0 });
   const pos = getTouchPosition(rect, e.touches);
   interpolateAndDraw(pos.x, pos.y);
 };
@@ -405,7 +407,7 @@ const onTouchMove = (e: TouchEvent) => {
     return;
   }
   e.preventDefault();
-  brushUniform.writePartial({ erasing: e.touches.length === 2 ? 1 : 0 });
+  brushUniform.patch({ erasing: e.touches.length === 2 ? 1 : 0 });
   const rect = canvas.getBoundingClientRect();
   const pos = getTouchPosition(rect, e.touches);
   interpolateAndDraw(pos.x, pos.y);
@@ -427,7 +429,7 @@ canvas.addEventListener('touchend', onTouchEnd);
 canvas.addEventListener('touchcancel', onTouchEnd);
 
 function updateBrushSize() {
-  brushUniform.writePartial({
+  brushUniform.patch({
     radius: Math.ceil(Math.min(width, height) * brushSize),
   });
 }
@@ -449,14 +451,14 @@ export const controls = defineControls({
   'Show positive distance': {
     initial: true,
     onToggleChange(value: boolean) {
-      paramsUniform.writePartial({ showOutside: value ? 1 : 0 });
+      paramsUniform.patch({ showOutside: value ? 1 : 0 });
       render();
     },
   },
   'Show negative distance': {
     initial: false,
     onToggleChange(value: boolean) {
-      paramsUniform.writePartial({ showInside: value ? 1 : 0 });
+      paramsUniform.patch({ showInside: value ? 1 : 0 });
       render();
     },
   },

@@ -9,6 +9,7 @@ export const SdCircle = d.struct({
   level: d.i32,
   angle: d.f32,
   speed: d.f32,
+  danger: d.f32,
 });
 
 export const INACTIVE_CIRCLE = {
@@ -17,6 +18,7 @@ export const INACTIVE_CIRCLE = {
   level: 0,
   angle: 0,
   speed: 0,
+  danger: 0,
 };
 
 export const Frame = d.struct({
@@ -36,6 +38,7 @@ export interface ActiveFruit {
   dead: boolean;
   spawnTime: number;
   isMerge: boolean;
+  dangerStartTime: number | null;
 }
 
 export const LEVEL_F32_ZEROS = Array.from({ length: LEVEL_COUNT }, () => 0);

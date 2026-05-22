@@ -1,6 +1,6 @@
-import { it as base, vi } from 'vitest';
+import { test as base, vi } from 'vitest';
 // oxlint-disable-next-line import/no-unassigned-import -- imported for side effects
-import './webgpuGlobals.ts';
+import 'typegpu-testing-utility';
 
 function createMockOffscreenCanvas(width = 256, height = 256) {
   const canvas = {

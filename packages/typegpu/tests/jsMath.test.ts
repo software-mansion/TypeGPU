@@ -88,7 +88,7 @@ describe('Math', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:myFn
-      - fn*:myFn(): Unsupported functionality 'Math.log1p'. Use an std alternative, or implement the function manually.]
+      - fn*:myFn(): Unsupported Math functionality 'Math.log1p()'. Use an std alternative, or implement the function manually.]
     `);
   });
 
@@ -102,6 +102,20 @@ describe('Math', () => {
     expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "fn myFn() {
         const a = 16777216f;
+      }"
+    `);
+  });
+
+  it('works with detached methods', () => {
+    const sin = Math.sin;
+    const myFn = () => {
+      'use gpu';
+      const a = sin(0);
+    };
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() {
+        const a = 0.;
       }"
     `);
   });

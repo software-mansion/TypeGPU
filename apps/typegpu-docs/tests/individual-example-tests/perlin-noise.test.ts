@@ -64,19 +64,11 @@ describe('perlin noise example', () => {
         memory[idx] = computeJunctionGradient(vec3i(i32(x), i32(y), i32(z)));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(8, 8, 4) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(8, 8, 4) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        mainCompute_1(in.id.x, in.id.y, in.id.z);
-      }
-
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
+        mainCompute_1(id.x, id.y, id.z);
       }
 
       struct fullScreenTriangle_Output {
@@ -84,11 +76,11 @@ describe('perlin noise example', () => {
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
       @group(0) @binding(0) var<uniform> gridSize: f32;
@@ -100,7 +92,7 @@ describe('perlin noise example', () => {
       @group(1) @binding(1) var<storage, read> perlin3dCache__memory: array<vec3f>;
 
       fn getJunctionGradient(pos: vec3i) -> vec3f {
-        var size = vec3i(perlin3dCache__size.xyz);
+        let size = vec3i(perlin3dCache__size.xyz);
         let x = (((pos.x % size.x) + size.x) % size.x);
         let y = (((pos.y % size.y) + size.y) % size.y);
         let z = (((pos.z % size.z) + size.z) % size.z);
@@ -108,8 +100,8 @@ describe('perlin noise example', () => {
       }
 
       fn dotProdGrid(pos: vec3f, junction: vec3f) -> f32 {
-        var relative = (pos - junction);
-        var gridVector = getJunctionGradient(vec3i(junction));
+        let relative = (pos - junction);
+        let gridVector = getJunctionGradient(vec3i(junction));
         return dot(relative, gridVector);
       }
 
@@ -118,7 +110,7 @@ describe('perlin noise example', () => {
       }
 
       fn sample(pos: vec3f) -> f32 {
-        var minJunction = floor(pos);
+        let minJunction = floor(pos);
         let xyz = dotProdGrid(pos, minJunction);
         let xyZ = dotProdGrid(pos, (minJunction + vec3f(0, 0, 1)));
         let xYz = dotProdGrid(pos, (minJunction + vec3f(0, 1, 0)));
@@ -127,8 +119,8 @@ describe('perlin noise example', () => {
         let XyZ = dotProdGrid(pos, (minJunction + vec3f(1, 0, 1)));
         let XYz = dotProdGrid(pos, (minJunction + vec3f(1, 1, 0)));
         let XYZ = dotProdGrid(pos, (minJunction + vec3f(1)));
-        var partial = (pos - minJunction);
-        var smoothPartial = quinticInterpolation(partial);
+        let partial = (pos - minJunction);
+        let smoothPartial = quinticInterpolation(partial);
         let xy = mix(xyz, xyZ, smoothPartial.z);
         let xY = mix(xYz, xYZ, smoothPartial.z);
         let Xy = mix(Xyz, XyZ, smoothPartial.z);
@@ -149,12 +141,12 @@ describe('perlin noise example', () => {
       }
 
       @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
-        var suv = (gridSize * _arg_0.uv);
+        let suv = (gridSize * _arg_0.uv);
         let n = sample(vec3f(suv, time));
         let sharp = exponentialSharpen(n, sharpness);
         let n01 = ((sharp * 0.5f) + 0.5f);
-        var dark = vec3f(0, 0.20000000298023224, 1);
-        var light = vec3f(1, 0.30000001192092896, 0.5);
+        let dark = vec3f(0, 0.20000000298023224, 1);
+        let light = vec3f(1, 0.30000001192092896, 0.5);
         return vec4f(mix(dark, light, n01), 1f);
       }"
     `);

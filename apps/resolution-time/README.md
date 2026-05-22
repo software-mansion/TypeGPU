@@ -18,14 +18,14 @@ const myLeafFn = tgpu.comptime(() => {
 
 ### Recursive instruction
 
-Use `tgpu.unroll` over `arrayForUnroll(BRANCHING)` and call `instructions[choice()]()()` to branch into other instructions. The `choice()` function handles depth tracking and picks a leaf when at max depth.
+Use `tgpu.unroll` over `std.range(n)` and call `instructions[choice()]()()` to branch into other instructions. The `choice()` function handles depth tracking and picks a leaf when at max depth.
 
 ```ts
 const myRecursiveFn = tgpu.comptime(() => {
   return tgpu.fn(() => {
     'use gpu';
     // ...
-    for (const _i of tgpu.unroll(arrayForUnroll(BRANCHING))) {
+    for (const _i of tgpu.unroll(std.range(n))) {
       instructions[choice()]()();
     }
     popDepth(); // REQUIRED — always call at the end, after the unroll

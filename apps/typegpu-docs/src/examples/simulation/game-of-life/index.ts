@@ -290,7 +290,7 @@ const recreateResources = (size: number) => {
   const isBitpacked = chosenPipeline === 'bitpacked';
 
   dataTextures = Array.from({ length: 2 }, () =>
-    root['~unstable']
+    root
       .createTexture({
         size: [isBitpacked ? size / 32 : size, size],
         format: 'r32uint',

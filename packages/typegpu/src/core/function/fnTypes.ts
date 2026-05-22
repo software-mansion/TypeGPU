@@ -2,6 +2,7 @@ import type * as tinyest from 'tinyest';
 import type { BuiltinClipDistances } from '../../builtin.ts';
 import type { AnyAttribute } from '../../data/attributes.ts';
 import type {
+  BaseData,
   Bool,
   Decorated,
   F16,
@@ -22,7 +23,7 @@ import type {
   Vec4u,
   Void,
 } from '../../data/wgslTypes.ts';
-import type { Infer } from '../../shared/repr.ts';
+import type { InferGPU } from '../../shared/repr.ts';
 
 export type AnyFn = (...args: never[]) => unknown;
 
@@ -40,7 +41,7 @@ export type TranspilationResult = {
 };
 
 export type InferArgs<T extends unknown[]> = {
-  [Idx in keyof T]: Infer<T[Idx]>;
+  [Idx in keyof T]: InferGPU<T[Idx]>;
 };
 
 type InheritTupleValues<T, From> = {
@@ -64,7 +65,7 @@ export type InheritArgNames<T extends AnyFn, From extends AnyFn> = {
 
 export type InferImplSchema<ImplSchema extends AnyFn> = (
   ...args: InferArgs<Parameters<ImplSchema>>
-) => Infer<ReturnType<ImplSchema>>;
+) => InferGPU<ReturnType<ImplSchema>>;
 
 export type Implementation<ImplSchema extends AnyFn = AnyFn> = string | InferImplSchema<ImplSchema>;
 
@@ -100,7 +101,17 @@ export type IOLayout<TElementType extends IOData = IOData> =
   | Void;
 
 export type InferIO<T> = T extends { type: string }
-  ? Infer<T>
+  ? InferGPU<T>
   : T extends Record<string, unknown>
-    ? { [K in keyof T]: Infer<T[K]> }
+    ? { [K in keyof T]: InferGPU<T[K]> }
     : T;
+
+export interface PositionalArgInfo {
+  schemaKey: string;
+  type: BaseData;
+}
+
+export interface SeparatedEntryArgs {
+  dataSchema: BaseData | undefined;
+  positionalArgs: PositionalArgInfo[];
+}

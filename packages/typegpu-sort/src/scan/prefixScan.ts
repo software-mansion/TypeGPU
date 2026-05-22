@@ -27,12 +27,19 @@ export class PrefixScanComputer {
   #scanPipeline?: TgpuComputePipeline;
   #reducePipeline?: TgpuComputePipeline;
   #opPipeline?: TgpuComputePipeline;
+  #root: TgpuRoot;
+  #operation: BinaryOp['operation'];
+  #identityElement: BinaryOp['identityElement'];
 
   constructor(
-    private root: TgpuRoot,
-    private operation: BinaryOp['operation'],
-    private identityElement: BinaryOp['identityElement'],
-  ) {}
+    root: TgpuRoot,
+    operation: BinaryOp['operation'],
+    identityElement: BinaryOp['identityElement'],
+  ) {
+    this.#root = root;
+    this.#operation = operation;
+    this.#identityElement = identityElement;
+  }
 
   private getScanPipeline(onlyGreatestElement: boolean): TgpuComputePipeline {
     const cached = onlyGreatestElement ? this.#reducePipeline : this.#scanPipeline;
@@ -41,9 +48,9 @@ export class PrefixScanComputer {
       return cached;
     }
 
-    const pipeline = this.root
-      .with(operatorSlot, this.operation)
-      .with(identitySlot, this.identityElement)
+    const pipeline = this.#root
+      .with(operatorSlot, this.#operation)
+      .with(identitySlot, this.#identityElement)
       .with(onlyGreatestElementSlot, onlyGreatestElement)
       .createComputePipeline({
         compute: computeBlock,
@@ -59,14 +66,14 @@ export class PrefixScanComputer {
   }
 
   private get opPipeline(): TgpuComputePipeline {
-    this.#opPipeline ??= this.root.with(operatorSlot, this.operation).createComputePipeline({
+    this.#opPipeline ??= this.#root.with(operatorSlot, this.#operation).createComputePipeline({
       compute: uniformOp,
     });
     return this.#opPipeline;
   }
 
   private getScratchBuffer(size: number): TgpuBuffer<d.WgslArray<d.F32>> & StorageFlag {
-    return this.root.createBuffer(d.arrayOf(d.f32, size)).$usage('storage');
+    return this.#root.createBuffer(d.arrayOf(d.f32, size)).$usage('storage');
   }
 
   private recursiveScan(
@@ -82,7 +89,7 @@ export class PrefixScanComputer {
     // Base case: single workgroup
     if (numWorkgroups === 1) {
       const finalSums = this.getScratchBuffer(1);
-      const bg = this.root.createBindGroup(scanLayout, {
+      const bg = this.#root.createBindGroup(scanLayout, {
         input: buffer,
         sums: finalSums,
       });
@@ -102,7 +109,7 @@ export class PrefixScanComputer {
     // Recursive case:
     let sumsBuffer = this.getScratchBuffer(numWorkgroups);
 
-    const scanBg = this.root.createBindGroup(scanLayout, {
+    const scanBg = this.#root.createBindGroup(scanLayout, {
       input: buffer,
       sums: sumsBuffer,
     });
@@ -128,7 +135,7 @@ export class PrefixScanComputer {
       return sumsBuffer;
     }
 
-    const opBg = this.root.createBindGroup(uniformOpLayout, {
+    const opBg = this.#root.createBindGroup(uniformOpLayout, {
       input: buffer,
       sums: sumsBuffer,
     });

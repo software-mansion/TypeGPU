@@ -37,13 +37,9 @@ describe('mnist inference example', () => {
         return max(0f, x);
       }
 
-      struct defaultCompute_Input {
-        @builtin(global_invocation_id) gid: vec3u,
-      }
-
-      @compute @workgroup_size(1) fn defaultCompute(_arg_0: defaultCompute_Input) {
+      @compute @workgroup_size(1) fn defaultCompute(@builtin(global_invocation_id) gid: vec3u) {
         let inputSize = arrayLength(&input);
-        let i = _arg_0.gid.x;
+        let i = gid.x;
         let weightsOffset = (i * inputSize);
         var sum = 0f;
         for (var j = 0u; (j < inputSize); j++) {
@@ -69,29 +65,22 @@ describe('mnist inference example', () => {
         return max(0f, x);
       }
 
-      struct subgroupCompute_Input {
-        @builtin(local_invocation_id) lid: vec3u,
-        @builtin(workgroup_id) wid: vec3u,
-        @builtin(subgroup_invocation_id) sid: u32,
-        @builtin(subgroup_size) ssize: u32,
-      }
-
-      @compute @workgroup_size(128) fn subgroupCompute(_arg_0: subgroupCompute_Input) {
-        let subgroupId = u32((f32(_arg_0.lid.x) / f32(_arg_0.ssize)));
-        let outputsPerWG = u32((f32(workgroupSize) / f32(_arg_0.ssize)));
-        let neuronIndex = ((_arg_0.wid.x * outputsPerWG) + subgroupId);
+      @compute @workgroup_size(128) fn subgroupCompute(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(subgroup_invocation_id) sid: u32, @builtin(subgroup_size) ssize: u32) {
+        let subgroupId = u32((f32(lid.x) / f32(ssize)));
+        let outputsPerWG = u32((f32(workgroupSize) / f32(ssize)));
+        let neuronIndex = ((wid.x * outputsPerWG) + subgroupId);
         let outLen = arrayLength(&output);
         let valid = (neuronIndex < outLen);
         let inputSize = arrayLength(&input);
         var partial = 0f;
         if (valid) {
           let weightsOffset = (neuronIndex * inputSize);
-          for (var j = _arg_0.sid; (j < inputSize); j += _arg_0.ssize) {
+          for (var j = sid; (j < inputSize); j += ssize) {
             partial = fma(input[j], weights[(weightsOffset + j)], partial);
           }
         }
         let sum = subgroupAdd(partial);
-        if ((valid && (_arg_0.sid == 0u))) {
+        if ((valid && (sid == 0u))) {
           output[neuronIndex] = relu((sum + biases[neuronIndex]));
         }
       }"

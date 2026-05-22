@@ -87,12 +87,33 @@ describe('tgpu.const', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): 'boid.pos = vec3f()' is invalid, because boid.pos is a constant. This error may also occur when assigning to a value defined outside of a TypeGPU function's scope.]
+      - fn*:fn(): 'boid.$.pos = d.vec3f(0, 0, 0)' is invalid, because the left side is a constant.]
     `);
 
     // Since we freeze the object, we cannot mutate when running the function in JS either
     expect(() => fn()).toThrowErrorMatchingInlineSnapshot(
       `[TypeError: Cannot assign to read only property 'pos' of object '#<Object>']`,
+    );
+  });
+
+  it('cannot be updated', () => {
+    const boid = tgpu.const(d.vec3f, d.vec3f());
+
+    const fn = () => {
+      'use gpu';
+      boid.$.x++;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): 'boid.$.x++' is invalid, because the left side is a constant.]
+    `);
+
+    // Since we freeze the object, we cannot mutate when running the function in JS either
+    expect(() => fn()).toThrowErrorMatchingInlineSnapshot(
+      `[TypeError: Cannot assign to read only property 'e0' of object '[object Array]']`,
     );
   });
 

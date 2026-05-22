@@ -63,15 +63,11 @@ describe('ripple-cube example', () => {
         memoryBuffer[idx] = computeJunctionGradient(vec3i(i32(x), i32(y), i32(z)));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(8, 8, 4) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(8, 8, 4) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -115,15 +111,11 @@ describe('ripple-cube example', () => {
         memoryBuffer[idx] = computeJunctionGradient(vec3i(i32(x), i32(y), i32(z)));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(8, 8, 4) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(8, 8, 4) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -139,7 +131,7 @@ describe('ripple-cube example', () => {
       @group(0) @binding(2) var<storage, read> memoryBuffer: array<vec3f, 2097152>;
 
       fn getJunctionGradient(pos: vec3i) -> vec3f {
-        var size_i = vec3i(128);
+        let size_i = vec3i(128);
         let x = (((pos.x % size_i.x) + size_i.x) % size_i.x);
         let y = (((pos.y % size_i.y) + size_i.y) % size_i.y);
         let z = (((pos.z % size_i.z) + size_i.z) % size_i.z);
@@ -147,8 +139,8 @@ describe('ripple-cube example', () => {
       }
 
       fn dotProdGrid(pos: vec3f, junction: vec3f) -> f32 {
-        var relative = (pos - junction);
-        var gridVector = getJunctionGradient(vec3i(junction));
+        let relative = (pos - junction);
+        let gridVector = getJunctionGradient(vec3i(junction));
         return dot(relative, gridVector);
       }
 
@@ -157,7 +149,7 @@ describe('ripple-cube example', () => {
       }
 
       fn sample(pos: vec3f) -> f32 {
-        var minJunction = floor(pos);
+        let minJunction = floor(pos);
         let xyz = dotProdGrid(pos, minJunction);
         let xyZ = dotProdGrid(pos, (minJunction + vec3f(0, 0, 1)));
         let xYz = dotProdGrid(pos, (minJunction + vec3f(0, 1, 0)));
@@ -166,8 +158,8 @@ describe('ripple-cube example', () => {
         let XyZ = dotProdGrid(pos, (minJunction + vec3f(1, 0, 1)));
         let XYz = dotProdGrid(pos, (minJunction + vec3f(1, 1, 0)));
         let XYZ = dotProdGrid(pos, (minJunction + vec3f(1)));
-        var partial = (pos - minJunction);
-        var smoothPartial = quinticInterpolation(partial);
+        let partial = (pos - minJunction);
+        let smoothPartial = quinticInterpolation(partial);
         let xy = mix(xyz, xyZ, smoothPartial.z);
         let xY = mix(xYz, xYZ, smoothPartial.z);
         let Xy = mix(Xyz, XyZ, smoothPartial.z);
@@ -183,11 +175,11 @@ describe('ripple-cube example', () => {
         let n3 = ((sample(((rd * 5f) + 150f)) * 0.5f) + 0.5f);
         let n4 = ((sample(((rd * 0.8f) + 300f)) * 0.5f) + 0.5f);
         let colorShift = ((sample(((rd * 0.5f) + 500f)) * 0.5f) + 0.5f);
-        var purple = (vec3f(0.6000000238418579, 0.10000000149011612, 0.800000011920929) * (pow(n1, 1.8f) * 0.5f));
-        var blue = (vec3f(0.10000000149011612, 0.30000001192092896, 0.699999988079071) * (pow(n2, 2f) * 0.4f));
-        var cyan = (vec3f(0.10000000149011612, 0.6000000238418579, 0.6000000238418579) * (pow((n3 * n4), 1.5f) * 0.3f));
-        var pink = (vec3f(0.699999988079071, 0.20000000298023224, 0.4000000059604645) * ((pow((1f - n1), 3f) * n2) * 0.4f));
-        var gold = (vec3f(0.800000011920929, 0.5, 0.10000000149011612) * (pow((n2 * n3), 3f) * 0.6f));
+        let purple = (vec3f(0.6000000238418579, 0.10000000149011612, 0.800000011920929) * (pow(n1, 1.8f) * 0.5f));
+        let blue = (vec3f(0.10000000149011612, 0.30000001192092896, 0.699999988079071) * (pow(n2, 2f) * 0.4f));
+        let cyan = (vec3f(0.10000000149011612, 0.6000000238418579, 0.6000000238418579) * (pow((n3 * n4), 1.5f) * 0.3f));
+        let pink = (vec3f(0.699999988079071, 0.20000000298023224, 0.4000000059604645) * ((pow((1f - n1), 3f) * n2) * 0.4f));
+        let gold = (vec3f(0.800000011920929, 0.5, 0.10000000149011612) * (pow((n2 * n3), 3f) * 0.6f));
         var color = (((vec3f(0.009999999776482582, 0.009999999776482582, 0.029999999329447746) + mix(purple, blue, colorShift)) + mix(pink, cyan, n4)) + gold);
         color = (color + (mix(vec3f(0.800000011920929, 0.4000000059604645, 1), vec3f(0.4000000059604645, 0.800000011920929, 1), colorShift) * (pow(((n1 * n2) * n3), 4f) * 2f)));
         return color;
@@ -217,15 +209,15 @@ describe('ripple-cube example', () => {
 
       fn spaceBackground(rd: vec3f) -> vec3f {
         var color = spaceNebula(rd);
-        var starPos = (rd * 50f);
+        let starPos = (rd * 50f);
         randSeed3(floor(starPos));
-        var starCenter = ((vec3f(randFloat01(), randFloat01(), randFloat01()) * 0.6f) + 0.2f);
+        let starCenter = ((vec3f(randFloat01(), randFloat01(), randFloat01()) * 0.6f) + 0.2f);
         let starDist = length((fract(starPos) - starCenter));
         let starHash = randFloat01();
         color = (color + (mix(vec3f(1, 0.8999999761581421, 0.800000011920929), vec3f(0.800000011920929, 0.8999999761581421, 1), starHash) * ((pow(max((1f - (starDist * 4f)), 0f), 4f) * step(0.85f, starHash)) * 3f)));
-        var bigStarPos = (rd * 20f);
+        let bigStarPos = (rd * 20f);
         randSeed3(floor(bigStarPos));
-        var bigStarCenter = ((vec3f(randFloat01(), randFloat01(), randFloat01()) * 0.5f) + 0.25f);
+        let bigStarCenter = ((vec3f(randFloat01(), randFloat01(), randFloat01()) * 0.5f) + 0.25f);
         let bigStarDist = length((fract(bigStarPos) - bigStarCenter));
         color = (color + (vec3f(1, 0.949999988079071, 0.8999999761581421) * ((pow(max((1f - (bigStarDist * 3f)), 0f), 3f) * step(0.95f, randFloat01())) * 8f)));
         return color;
@@ -237,20 +229,16 @@ describe('ripple-cube example', () => {
         let u = ((((f32(x) + 0.5f) / 1024f) * 2f) - 1f);
         let v = ((((f32(y) + 0.5f) / 1024f) * 2f) - 1f);
         let basis = (&faceBasisUniform);
-        var direction = normalize((((*basis).forward + ((*basis).right * u)) + ((*basis).up * v)));
-        var color = spaceBackground(direction);
+        let direction = normalize((((*basis).forward + ((*basis).right * u)) + ((*basis).up * v)));
+        let color = spaceBackground(direction);
         textureStore(outputTexture, vec2u(x, y), vec4f(color, 1f));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -272,7 +260,7 @@ describe('ripple-cube example', () => {
 
       fn wrappedCallback(x: u32, y: u32, z: u32) {
         const cellSize = 0.0047169811320754715;
-        var p = ((vec3f(f32(x), f32(y), f32(z)) + 0.5f) * cellSize);
+        let p = ((vec3f(f32(x), f32(y), f32(z)) + 0.5f) * cellSize);
         let r = (timeUniform * 0.15f);
         let iterCount = select(5, 11, (extendedRippleUniform == 1u));
         var shellD = 1e+10f;
@@ -285,7 +273,7 @@ describe('ripple-cube example', () => {
               let qx = select((ox + p.x), (ox - p.x), ((ix % 2i) == 0i));
               let qy = select((oy + p.y), (oy - p.y), ((iy % 2i) == 0i));
               let qz = select((oz + p.z), (oz - p.z), ((iz % 2i) == 0i));
-              var q = vec3f(qx, qy, qz);
+              let q = vec3f(qx, qy, qz);
               shellD = opSmoothUnion(shellD, (abs((length(q) - r)) - 5e-3f), blendFactorUniform);
             }
           }
@@ -293,15 +281,11 @@ describe('ripple-cube example', () => {
         textureStore(sdfWriteView, vec3u(x, y, z), vec4f(shellD, 0f, 0f, 1f));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(8, 8, 4) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(8, 8, 4) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -340,11 +324,11 @@ describe('ripple-cube example', () => {
 
       fn getRayForUV(uv: vec2f) -> Ray {
         let camera = (&cameraUniform);
-        var jitteredUV = (uv + jitterUniform);
-        var ndc = (((jitteredUV * 2f) - 1f) * vec2f(1, -1));
-        var farView = ((*camera).projectionInverse * vec4f(ndc.xy, 1f, 1f));
-        var farWorld = ((*camera).viewInverse * vec4f((farView.xyz / farView.w), 1f));
-        var direction = normalize((farWorld.xyz - (*camera).position.xyz));
+        let jitteredUV = (uv + jitterUniform);
+        let ndc = (((jitteredUV * 2f) - 1f) * vec2f(1, -1));
+        let farView = ((*camera).projectionInverse * vec4f(ndc.xy, 1f, 1f));
+        let farWorld = ((*camera).viewInverse * vec4f((farView.xyz / farView.w), 1f));
+        let direction = normalize((farWorld.xyz - (*camera).position.xyz));
         return Ray((*camera).position, vec4f(direction, 0f));
       }
 
@@ -353,13 +337,13 @@ describe('ripple-cube example', () => {
       @group(1) @binding(1) var sdfSampler: sampler;
 
       fn sdBox3d(point: vec3f, size: vec3f) -> f32 {
-        var d = (abs(point) - size);
+        let d = (abs(point) - size);
         return (length(max(d, vec3f())) + min(max(max(d.x, d.y), d.z), 0f));
       }
 
       fn sdBoxFrame3d(point: vec3f, size: vec3f, thickness: f32) -> f32 {
-        var p1 = (abs(point) - size);
-        var q = (abs((p1 + thickness)) - vec3f(thickness));
+        let p1 = (abs(point) - size);
+        let q = (abs((p1 + thickness)) - vec3f(thickness));
         let d1 = (length(max(vec3f(p1.x, q.y, q.z), vec3f())) + min(max(p1.x, max(q.y, q.z)), 0f));
         let d2 = (length(max(vec3f(q.x, p1.y, q.z), vec3f())) + min(max(q.x, max(p1.y, q.z)), 0f));
         let d3 = (length(max(vec3f(q.x, q.y, p1.z), vec3f())) + min(max(q.x, max(q.y, p1.z)), 0f));
@@ -367,7 +351,7 @@ describe('ripple-cube example', () => {
       }
 
       fn sceneSDF(p: vec3f) -> f32 {
-        var uv = (abs(p) * 2f);
+        let uv = (abs(p) * 2f);
         let sdfValue = textureSampleLevel(sdfTexture, sdfSampler, uv, 0).x;
         let interior = max(sdBox3d(p, vec3f(0.5)), sdfValue);
         return min(sdBoxFrame3d(p, vec3f(0.5), 5e-3f), interior);
@@ -420,26 +404,26 @@ describe('ripple-cube example', () => {
       }
 
       fn evaluateLight(p: vec3f, n: vec3f, v: vec3f, light: Light, material: Material, f0: vec3f) -> vec3f {
-        var toLight = (light.position - p);
+        let toLight = (light.position - p);
         let dist = length(toLight);
-        var l = normalize(toLight);
-        var h = normalize((v + l));
-        var radiance = (light.color / pow(dist, 2f));
+        let l = normalize(toLight);
+        let h = normalize((v + l));
+        let radiance = (light.color / pow(dist, 2f));
         let ndotl = max(dot(n, l), 0f);
         let ndoth = max(dot(n, h), 0f);
         let ndotv = max(dot(n, v), 1e-3f);
         let ndf = distributionGGX(ndoth, material.roughness);
         let g = geometrySmith(ndotv, ndotl, material.roughness);
-        var fresnel = fresnelSchlick(ndoth, f0);
-        var specular = ((fresnel * (ndf * g)) / (((4f * ndotv) * ndotl) + 1e-3f));
-        var kd = ((1f - fresnel) * (1f - material.metallic));
+        let fresnel = fresnelSchlick(ndoth, f0);
+        let specular = ((fresnel * (ndf * g)) / (((4f * ndotv) * ndotl) + 1e-3f));
+        let kd = ((1f - fresnel) * (1f - material.metallic));
         return (((((kd * material.albedo) / 3.141592653589793f) + specular) * radiance) * ndotl);
       }
 
       @group(0) @binding(7) var<storage, read> memoryBuffer: array<vec3f, 32768>;
 
       fn getJunctionGradient(pos: vec3i) -> vec3f {
-        var size_i = vec3i(32);
+        let size_i = vec3i(32);
         let x = (((pos.x % size_i.x) + size_i.x) % size_i.x);
         let y = (((pos.y % size_i.y) + size_i.y) % size_i.y);
         let z = (((pos.z % size_i.z) + size_i.z) % size_i.z);
@@ -447,8 +431,8 @@ describe('ripple-cube example', () => {
       }
 
       fn dotProdGrid(pos: vec3f, junction: vec3f) -> f32 {
-        var relative = (pos - junction);
-        var gridVector = getJunctionGradient(vec3i(junction));
+        let relative = (pos - junction);
+        let gridVector = getJunctionGradient(vec3i(junction));
         return dot(relative, gridVector);
       }
 
@@ -457,7 +441,7 @@ describe('ripple-cube example', () => {
       }
 
       fn sample(pos: vec3f) -> f32 {
-        var minJunction = floor(pos);
+        let minJunction = floor(pos);
         let xyz = dotProdGrid(pos, minJunction);
         let xyZ = dotProdGrid(pos, (minJunction + vec3f(0, 0, 1)));
         let xYz = dotProdGrid(pos, (minJunction + vec3f(0, 1, 0)));
@@ -466,8 +450,8 @@ describe('ripple-cube example', () => {
         let XyZ = dotProdGrid(pos, (minJunction + vec3f(1, 0, 1)));
         let XYz = dotProdGrid(pos, (minJunction + vec3f(1, 1, 0)));
         let XYZ = dotProdGrid(pos, (minJunction + vec3f(1)));
-        var partial = (pos - minJunction);
-        var smoothPartial = quinticInterpolation(partial);
+        let partial = (pos - minJunction);
+        let smoothPartial = quinticInterpolation(partial);
         let xy = mix(xyz, xyZ, smoothPartial.z);
         let xY = mix(xYz, xYZ, smoothPartial.z);
         let Xy = mix(Xyz, XyZ, smoothPartial.z);
@@ -479,7 +463,7 @@ describe('ripple-cube example', () => {
 
       fn shade(p: vec3f, n: vec3f, v: vec3f) -> vec3f {
         let material = (&materialUniform);
-        var f0 = mix(vec3f(0.03999999910593033), (*material).albedo, (*material).metallic);
+        let f0 = mix(vec3f(0.03999999910593033), (*material).albedo, (*material).metallic);
         var lo = vec3f();
         // unrolled iteration #0
         {
@@ -489,33 +473,33 @@ describe('ripple-cube example', () => {
         {
           lo += evaluateLight(p, n, v, lightsUniform[1i], (*material), f0);
         }
-        var reflectDir = reflect(v, n);
-        var pScaled = (p * 50f);
-        var roughOffset = ((vec3f(sample(pScaled), sample((pScaled + 100f)), sample((pScaled + 200f))) * (*material).roughness) * 0.3f);
-        var blurredReflectDir = normalize((reflectDir + roughOffset));
-        var envColor = textureSampleLevel(envMap, envSampler, blurredReflectDir, ((*material).roughness * 4f));
+        let reflectDir = reflect(v, n);
+        let pScaled = (p * 50f);
+        let roughOffset = ((vec3f(sample(pScaled), sample((pScaled + 100f)), sample((pScaled + 200f))) * (*material).roughness) * 0.3f);
+        let blurredReflectDir = normalize((reflectDir + roughOffset));
+        let envColor = textureSampleLevel(envMap, envSampler, blurredReflectDir, ((*material).roughness * 4f));
         let ndotv = max(dot(n, v), 0f);
-        var fresnel = fresnelSchlick(ndotv, f0);
-        var reflectionTint = mix(vec3f(1), (*material).albedo, (*material).metallic);
+        let fresnel = fresnelSchlick(ndotv, f0);
+        let reflectionTint = mix(vec3f(1), (*material).albedo, (*material).metallic);
         let reflectionStrength = (1f - ((*material).roughness * 0.85f));
-        var envContribution = (((envColor.rgb * fresnel) * reflectionTint) * reflectionStrength);
-        var ambient = ((*material).albedo * ((*material).ao * 0.05f));
-        var color = ((ambient + lo) + envContribution);
+        let envContribution = (((envColor.rgb * fresnel) * reflectionTint) * reflectionStrength);
+        let ambient = ((*material).albedo * ((*material).ao * 0.05f));
+        let color = ((ambient + lo) + envContribution);
         return pow((color / (color + 1f)), vec3f(0.4545454680919647));
       }
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
         randSeed2((vec2f(f32(x), f32(y)) + timeUniform));
-        var textureSize = textureDimensions(writeView);
-        var uv = ((vec2f(f32(x), f32(y)) + 0.5f) / vec2f(textureSize));
-        var ray = getRayForUV(uv);
-        var ro = ray.origin.xyz;
-        var rd = ray.direction.xyz;
+        let textureSize = textureDimensions(writeView);
+        let uv = ((vec2f(f32(x), f32(y)) + 0.5f) / vec2f(textureSize));
+        let ray = getRayForUV(uv);
+        let ro = ray.origin.xyz;
+        let rd = ray.direction.xyz;
         var totalDist = 0f;
         var lastDist = 5f;
         var hit = false;
         for (var i = 0; (i < 48i); i++) {
-          var p = (ro + (rd * totalDist));
+          let p = (ro + (rd * totalDist));
           lastDist = sceneSDF(p);
           if ((lastDist < 1e-3f)) {
             hit = true;
@@ -531,26 +515,22 @@ describe('ripple-cube example', () => {
         }
         var finalColor = textureSampleLevel(envMap, envSampler, rd, 0).rgb;
         if (hit) {
-          var p = (ro + (rd * totalDist));
-          var n = getNormal(p);
-          var v = normalize((ro - p));
-          var sceneColor = shade(p, n, v);
+          let p = (ro + (rd * totalDist));
+          let n = getNormal(p);
+          let v = normalize((ro - p));
+          let sceneColor = shade(p, n, v);
           let fog = exp((-(totalDist) * 0.05f));
-          var fogColor = vec3f(0.019999999552965164, 0.019999999552965164, 0.03999999910593033);
+          let fogColor = vec3f(0.019999999552965164, 0.019999999552965164, 0.03999999910593033);
           finalColor = mix(fogColor, sceneColor, fog);
         }
         textureStore(writeView, vec2u(x, y), vec4f(finalColor, 1f));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -562,34 +542,34 @@ describe('ripple-cube example', () => {
       @group(1) @binding(2) var outputTexture: texture_storage_2d<rgba16float, write>;
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
-        var coord = vec2i(i32(x), i32(y));
-        var current = textureLoad(currentTexture, coord, 0);
-        var historyColor = textureLoad(historyTexture, coord, 0);
+        let coord = vec2i(i32(x), i32(y));
+        let current = textureLoad(currentTexture, coord, 0);
+        let historyColor = textureLoad(historyTexture, coord, 0);
         var minColor = vec3f(9999);
         var maxColor = vec3f(-9999);
         // unrolled iteration #0
         {
           // unrolled iteration #0
           {
-            var sampleCoord = (coord + vec2i(-1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            var neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+            let sampleCoord = (coord + vec2i(-1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
             minColor = min(minColor, neighbor);
             maxColor = max(maxColor, neighbor);
           }
           // unrolled iteration #1
           {
-            var sampleCoord = (coord + vec2i(-1, 0));
-            var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            var neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+            let sampleCoord = (coord + vec2i(-1, 0));
+            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
             minColor = min(minColor, neighbor);
             maxColor = max(maxColor, neighbor);
           }
           // unrolled iteration #2
           {
-            var sampleCoord = (coord + vec2i(-1, 1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            var neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+            let sampleCoord = (coord + vec2i(-1, 1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
             minColor = min(minColor, neighbor);
             maxColor = max(maxColor, neighbor);
           }
@@ -598,25 +578,25 @@ describe('ripple-cube example', () => {
         {
           // unrolled iteration #0
           {
-            var sampleCoord = (coord + vec2i(0, -1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            var neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+            let sampleCoord = (coord + vec2i(0, -1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
             minColor = min(minColor, neighbor);
             maxColor = max(maxColor, neighbor);
           }
           // unrolled iteration #1
           {
-            var sampleCoord = (coord + vec2i());
-            var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            var neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+            let sampleCoord = (coord + vec2i());
+            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
             minColor = min(minColor, neighbor);
             maxColor = max(maxColor, neighbor);
           }
           // unrolled iteration #2
           {
-            var sampleCoord = (coord + vec2i(0, 1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            var neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+            let sampleCoord = (coord + vec2i(0, 1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
             minColor = min(minColor, neighbor);
             maxColor = max(maxColor, neighbor);
           }
@@ -625,43 +605,39 @@ describe('ripple-cube example', () => {
         {
           // unrolled iteration #0
           {
-            var sampleCoord = (coord + vec2i(1, -1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            var neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+            let sampleCoord = (coord + vec2i(1, -1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
             minColor = min(minColor, neighbor);
             maxColor = max(maxColor, neighbor);
           }
           // unrolled iteration #1
           {
-            var sampleCoord = (coord + vec2i(1, 0));
-            var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            var neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+            let sampleCoord = (coord + vec2i(1, 0));
+            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
             minColor = min(minColor, neighbor);
             maxColor = max(maxColor, neighbor);
           }
           // unrolled iteration #2
           {
-            var sampleCoord = (coord + vec2i(1));
-            var clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
-            var neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
+            let sampleCoord = (coord + vec2i(1));
+            let clampedCoord = clamp(sampleCoord, vec2i(), vec2i(181));
+            let neighbor = textureLoad(currentTexture, clampedCoord, 0).rgb;
             minColor = min(minColor, neighbor);
             maxColor = max(maxColor, neighbor);
           }
         }
-        var clampedHistory = clamp(historyColor.rgb, minColor, maxColor);
-        var blended = mix(current.rgb, clampedHistory, 0.85f);
+        let clampedHistory = clamp(historyColor.rgb, minColor, maxColor);
+        let blended = mix(current.rgb, clampedHistory, 0.85f);
         textureStore(outputTexture, vec2u(x, y), vec4f(blended, 1f));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -671,19 +647,15 @@ describe('ripple-cube example', () => {
       @group(1) @binding(1) var outputTexture: texture_storage_2d<rgba16float, write>;
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
-        var color = textureLoad(inputTexture, vec2i(i32(x), i32(y)), 0);
+        let color = textureLoad(inputTexture, vec2i(i32(x), i32(y)), 0);
         textureStore(outputTexture, vec2u(x, y), color);
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -702,25 +674,21 @@ describe('ripple-cube example', () => {
       @group(0) @binding(1) var<uniform> bloomUniform: BloomParams;
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
-        var dimensions = textureDimensions(outputTexture);
-        var uv = ((vec2f(f32(x), f32(y)) + 0.5f) / vec2f(dimensions));
-        var color = textureSampleLevel(inputTexture, sampler_1, uv, 0);
+        let dimensions = textureDimensions(outputTexture);
+        let uv = ((vec2f(f32(x), f32(y)) + 0.5f) / vec2f(dimensions));
+        let color = textureSampleLevel(inputTexture, sampler_1, uv, 0);
         let brightness = dot(color.rgb, vec3f(0.2125999927520752, 0.7152000069618225, 0.0722000002861023));
         let threshold = bloomUniform.threshold;
         let bright = (max((brightness - threshold), 0f) / max(brightness, 1e-4f));
-        var bloomColor = (color.rgb * bright);
+        let bloomColor = (color.rgb * bright);
         textureStore(outputTexture, vec2u(x, y), vec4f(bloomColor, 1f));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -732,14 +700,14 @@ describe('ripple-cube example', () => {
       @group(1) @binding(1) var outputTexture: texture_storage_2d<rgba16float, write>;
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
-        var dimensions = textureDimensions(inputTexture);
-        var texelSize = (1f / vec2f(dimensions));
-        var uv = ((vec2f(f32(x), f32(y)) + 0.5f) / vec2f(dimensions));
-        var offsetDir = vec2f(1, 0);
+        let dimensions = textureDimensions(inputTexture);
+        let texelSize = (1f / vec2f(dimensions));
+        let uv = ((vec2f(f32(x), f32(y)) + 0.5f) / vec2f(dimensions));
+        let offsetDir = vec2f(1, 0);
         var result = vec3f();
         var totalWeight = 0f;
         for (var i = -8; (i <= 8i); i++) {
-          var offset = ((offsetDir * f32(i)) * texelSize);
+          let offset = ((offsetDir * f32(i)) * texelSize);
           let weight = exp((-(f32((i * i))) / 16f));
           result += (textureSampleLevel(inputTexture, sampler_1, (uv + offset), 0).rgb * weight);
           totalWeight += weight;
@@ -747,15 +715,11 @@ describe('ripple-cube example', () => {
         textureStore(outputTexture, vec2u(x, y), vec4f((result / totalWeight), 1f));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -767,14 +731,14 @@ describe('ripple-cube example', () => {
       @group(1) @binding(1) var outputTexture: texture_storage_2d<rgba16float, write>;
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
-        var dimensions = textureDimensions(inputTexture);
-        var texelSize = (1f / vec2f(dimensions));
-        var uv = ((vec2f(f32(x), f32(y)) + 0.5f) / vec2f(dimensions));
-        var offsetDir = vec2f(0, 1);
+        let dimensions = textureDimensions(inputTexture);
+        let texelSize = (1f / vec2f(dimensions));
+        let uv = ((vec2f(f32(x), f32(y)) + 0.5f) / vec2f(dimensions));
+        let offsetDir = vec2f(0, 1);
         var result = vec3f();
         var totalWeight = 0f;
         for (var i = -8; (i <= 8i); i++) {
-          var offset = ((offsetDir * f32(i)) * texelSize);
+          let offset = ((offsetDir * f32(i)) * texelSize);
           let weight = exp((-(f32((i * i))) / 16f));
           result += (textureSampleLevel(inputTexture, sampler_1, (uv + offset), 0).rgb * weight);
           totalWeight += weight;
@@ -782,19 +746,11 @@ describe('ripple-cube example', () => {
         textureStore(outputTexture, vec2u(x, y), vec4f((result / totalWeight), 1f));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
-      }
-
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       struct fullScreenTriangle_Output {
@@ -802,11 +758,11 @@ describe('ripple-cube example', () => {
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
       @group(1) @binding(0) var colorTexture: texture_2d<f32>;
@@ -827,10 +783,10 @@ describe('ripple-cube example', () => {
       }
 
       @fragment fn fragmentMain(_arg_0: fragmentMain_Input) -> @location(0) vec4f {
-        var color = textureSample(colorTexture, sampler_1, _arg_0.uv);
-        var bloomColor = textureSample(bloomTexture, sampler_1, _arg_0.uv);
+        let color = textureSample(colorTexture, sampler_1, _arg_0.uv);
+        let bloomColor = textureSample(bloomTexture, sampler_1, _arg_0.uv);
         var final_1 = (color.rgb + (bloomColor.rgb * bloomUniform.intensity));
-        var centeredUV = ((_arg_0.uv - 0.5f) * 2f);
+        let centeredUV = ((_arg_0.uv - 0.5f) * 2f);
         let vignette = (1f - (dot(centeredUV, centeredUV) * 0.15f));
         final_1 *= vignette;
         return vec4f(final_1, 1f);

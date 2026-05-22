@@ -46,13 +46,9 @@ describe('simple shadow example', () => {
         @builtin(position) pos: vec4f,
       }
 
-      struct shadowVert_Input {
-        @location(0) position: vec4f,
-      }
-
-      @vertex fn shadowVert(_arg_0: shadowVert_Input) -> shadowVert_Output {
-        var world = (instanceInfo.modelMatrix * _arg_0.position);
-        var clip = (lightSpaceUniform.viewProj * world);
+      @vertex fn shadowVert(@location(0) position: vec4f) -> shadowVert_Output {
+        let world = (instanceInfo.modelMatrix * position);
+        let clip = (lightSpaceUniform.viewProj * world);
         return shadowVert_Output(clip);
       }
 
@@ -84,17 +80,12 @@ describe('simple shadow example', () => {
         @location(1) worldPos: vec3f,
       }
 
-      struct mainVert_Input {
-        @location(0) position: vec4f,
-        @location(1) normal: vec4f,
-      }
-
-      @vertex fn mainVert(_arg_0: mainVert_Input) -> mainVert_Output {
+      @vertex fn mainVert(@location(0) position: vec4f, @location(1) normal: vec4f) -> mainVert_Output {
         let modelMatrixUniform = (&instanceInfo.modelMatrix);
-        var worldPos = ((*modelMatrixUniform) * _arg_0.position);
-        var viewPos = (cameraUniform.view * worldPos);
-        var clipPos = (cameraUniform.projection * viewPos);
-        var transformedNormal = ((*modelMatrixUniform) * _arg_0.normal);
+        let worldPos = ((*modelMatrixUniform) * position);
+        let viewPos = (cameraUniform.view * worldPos);
+        let clipPos = (cameraUniform.projection * viewPos);
+        let transformedNormal = ((*modelMatrixUniform) * normal);
         return mainVert_Output(clipPos, transformedNormal, worldPos.xyz);
       }
 
@@ -129,12 +120,12 @@ describe('simple shadow example', () => {
 
       @fragment fn mainFrag(_arg_0: mainFrag_Input) -> @location(0) vec4f {
         let instanceInfo_1 = (&instanceInfo);
-        var N = normalize(_arg_0.normal.xyz);
-        var L = normalize(-(light.direction));
-        var V = normalize((cameraUniform.position - _arg_0.worldPos));
-        var R = reflect(-(L), N);
-        var lp4 = (lightSpaceUniform.viewProj * vec4f(_arg_0.worldPos, 1f));
-        var ndc = (lp4.xyz / lp4.w);
+        let N = normalize(_arg_0.normal.xyz);
+        let L = normalize(-(light.direction));
+        let V = normalize((cameraUniform.position - _arg_0.worldPos));
+        let R = reflect(-(L), N);
+        let lp4 = (lightSpaceUniform.viewProj * vec4f(_arg_0.worldPos, 1f));
+        let ndc = (lp4.xyz / lp4.w);
         var uv = ((ndc.xy * 0.5f) + 0.5f);
         uv = vec2f(uv.x, (1f - uv.y));
         let currentDepth = ndc.z;
@@ -143,13 +134,13 @@ describe('simple shadow example', () => {
         if (!inBounds) {
           shadowFactor = 1f;
         }
-        var ambient = ((*instanceInfo_1).material.ambient * light.color);
+        let ambient = ((*instanceInfo_1).material.ambient * light.color);
         let diff = max(0f, dot(N, L));
-        var diffuse = (((*instanceInfo_1).material.diffuse * light.color) * diff);
+        let diffuse = (((*instanceInfo_1).material.diffuse * light.color) * diff);
         let spec = pow(max(0f, dot(V, R)), (*instanceInfo_1).material.shininess);
-        var specular = (((*instanceInfo_1).material.specular * light.color) * spec);
-        var lit = ((diffuse + specular) * shadowFactor);
-        var finalColor = (ambient + lit);
+        let specular = (((*instanceInfo_1).material.specular * light.color) * spec);
+        let lit = ((diffuse + specular) * shadowFactor);
+        let finalColor = (ambient + lit);
         if ((paramsUniform.shadowOnly == 1f)) {
           return vec4f(vec3f(shadowFactor), 1f);
         }

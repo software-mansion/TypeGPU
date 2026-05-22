@@ -13,8 +13,11 @@ import type { BaseData } from '../../data/wgslTypes.ts';
  */
 export class UnrollableIterable implements SelfResolvable {
   readonly [$internal] = true;
+  readonly snippet: Snippet;
 
-  constructor(public readonly snippet: Snippet) {}
+  constructor(snippet: Snippet) {
+    this.snippet = snippet;
+  }
 
   [$resolve](_ctx: ResolutionCtx): ResolvedSnippet {
     return snip(stitch`${this.snippet}`, this.snippet.dataType as BaseData, this.snippet.origin);

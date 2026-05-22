@@ -1,6 +1,6 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
-import { type RefObject, useEffect, useRef, useState } from 'react';
+import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom.ts';
 import { codeEditorShownAtom, tsoverUsedAtom } from '../utils/examples/exampleViewStateAtoms.ts';
 import { ExecutionCancelledError } from '../utils/examples/errors.ts';
@@ -28,9 +28,10 @@ function useExample(
   const exampleRef = useRef<ExampleState | null>(null);
   const setExampleControlParams = useSetAtom(exampleControlsAtom);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     let cancelled = false;
     setSnackbarText(undefined);
+    setExampleControlParams([]);
 
     executeExample(tsImport)
       .then((example) => {
@@ -66,20 +67,21 @@ function useExample(
 export function ExampleView({ example, common }: Props) {
   const { tsFiles: srcFiles, tsImport, htmlFile } = example;
 
+  const tsFiles = filterRelevantTsFiles(srcFiles, common);
+  const filePaths = tsFiles.map((file) => file.path);
+  const entryFile = filePaths.find((path) => path.startsWith('index.ts')) as string;
+  const editorTabsList = [
+    entryFile,
+    ...filePaths.filter((name) => name !== entryFile),
+    'index.html',
+  ];
+
   const [snackbarText, setSnackbarText] = useAtom(currentSnackbarAtom);
-  const [currentFilePath, setCurrentFilePath] = useState<string>('index.ts');
+  const [currentFilePath, setCurrentFilePath] = useState(entryFile);
 
   const codeEditorShown = useAtomValue(codeEditorShownAtom);
   const tsoverUsed = useAtomValue(tsoverUsedAtom);
   const exampleHtmlRef = useRef<HTMLDivElement>(null);
-
-  const tsFiles = filterRelevantTsFiles(srcFiles, common);
-  const filePaths = tsFiles.map((file) => file.path);
-  const editorTabsList = [
-    'index.ts',
-    ...filePaths.filter((name) => name !== 'index.ts'),
-    'index.html',
-  ];
 
   useEffect(() => {
     if (!exampleHtmlRef.current) {
@@ -159,11 +161,22 @@ export function ExampleView({ example, common }: Props) {
                 ))}
               </div>
 
-              <div className="absolute right-0 z-5 md:top-15 md:right-8">
+              <div className="absolute right-0 z-5 md:top-15 md:right-8 md:hidden">
+                <Button onClick={() => openInStackBlitz(example, common)}>
+                  <span className="font-bold">Edit </span>
+                  <img
+                    src="/TypeGPU/stackblitz-logomark-blue.svg"
+                    alt="stackblitz logo"
+                    className="h-4"
+                  />
+                </Button>
+              </div>
+
+              <div className="absolute right-0 z-5 md:top-15 md:right-8 hidden md:block">
                 <Button onClick={() => openInStackBlitz(example, common)}>
                   <span className="font-bold">Edit on</span>
                   <img
-                    src="https://developer.stackblitz.com/img/logo/stackblitz-logo-black_blue.svg"
+                    src="/TypeGPU/stackblitz-logo-black_blue.svg"
                     alt="stackblitz logo"
                     className="h-4"
                   />

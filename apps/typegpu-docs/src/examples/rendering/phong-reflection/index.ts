@@ -29,7 +29,7 @@ const { cleanupCamera } = setupOrbitCamera(
     minZoom: 8,
     maxZoom: 40,
   },
-  (updates) => cameraUniform.writePartial(updates),
+  (updates) => cameraUniform.patch(updates),
 );
 
 // shaders
@@ -127,7 +127,7 @@ export const controls = defineControls({
   'light color': {
     initial: p.initialControls.lightColor,
     onColorChange(value) {
-      exampleControlsUniform.writePartial({ lightColor: value });
+      exampleControlsUniform.patch({ lightColor: value });
     },
   },
   'light direction': {
@@ -136,13 +136,13 @@ export const controls = defineControls({
     initial: p.initialControls.lightDirection,
     step: d.vec3f(0.01, 0.01, 0.01),
     onVectorSliderChange(v) {
-      exampleControlsUniform.writePartial({ lightDirection: v });
+      exampleControlsUniform.patch({ lightDirection: v });
     },
   },
   'ambient color': {
     initial: p.initialControls.ambientColor,
     onColorChange(value) {
-      exampleControlsUniform.writePartial({ ambientColor: value });
+      exampleControlsUniform.patch({ ambientColor: value });
     },
   },
   'ambient strength': {
@@ -151,7 +151,7 @@ export const controls = defineControls({
     initial: p.initialControls.ambientStrength,
     step: 0.01,
     onSliderChange(v) {
-      exampleControlsUniform.writePartial({ ambientStrength: v });
+      exampleControlsUniform.patch({ ambientStrength: v });
     },
   },
   'specular exponent': {
@@ -160,7 +160,7 @@ export const controls = defineControls({
     initial: p.initialControls.specularExponent,
     step: 0.1,
     onSliderChange(v) {
-      exampleControlsUniform.writePartial({ specularExponent: v });
+      exampleControlsUniform.patch({ specularExponent: v });
     },
   },
 });

@@ -13,6 +13,10 @@ import {
   type AnyVecInstance,
   type AnyWgslData,
   type BaseData,
+  isBool,
+  isNumericSchema,
+  isVec,
+  isVecBool,
   isVecInstance,
   type v2b,
   type v3b,
@@ -164,19 +168,82 @@ export const ge = dualImpl({
 
 // logical ops
 
-const cpuNot = <T extends AnyBooleanVecInstance>(value: T): T => VectorOps.neg[value.kind](value);
+type VecInstanceToBooleanVecInstance<T extends AnyVecInstance> = T extends AnyVec2Instance
+  ? v2b
+  : T extends AnyVec3Instance
+    ? v3b
+    : v4b;
+
+function cpuNot(value: boolean): boolean;
+function cpuNot(value: number): boolean;
+function cpuNot<T extends AnyVecInstance>(value: T): VecInstanceToBooleanVecInstance<T>;
+function cpuNot(value: unknown): boolean;
+function cpuNot(value: unknown): boolean | AnyBooleanVecInstance {
+  if (typeof value === 'number' && isNaN(value)) {
+    return false;
+  }
+
+  if (isVecInstance(value)) {
+    if (value.length === 2) {
+      return vec2b(cpuNot(value.x), cpuNot(value.y));
+    }
+    if (value.length === 3) {
+      return vec3b(cpuNot(value.x), cpuNot(value.y), cpuNot(value.z));
+    }
+    if (value.length === 4) {
+      return vec4b(cpuNot(value.x), cpuNot(value.y), cpuNot(value.z), cpuNot(value.w));
+    }
+  }
+
+  return !value;
+}
 
 /**
- * Returns **component-wise** `!value`.
+ * Returns the logical negation of the given value.
+ * For scalars (bool, number), returns `!value`.
+ * For boolean vectors, returns **component-wise** `!value`.
+ * For numeric vectors, returns a boolean vector with component-wise truthiness negation.
+ * For all other types, returns the truthiness negation (in WGSL, this applies only if the value is known at compile-time).
  * @example
- * not(vec2b(false, true)) // returns vec2b(true, false)
+ * not(true) // returns false
+ * not(-1) // returns false
+ * not(0) // returns true
  * not(vec3b(true, true, false)) // returns vec3b(false, false, true)
+ * not(vec3f(1.0, 0.0, -1.0)) // returns vec3b(false, true, false)
+ * not({a: 1882}) // returns false
+ * not(NaN) // returns false **as in WGSL**
  */
 export const not = dualImpl({
   name: 'not',
-  signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
+  signature: (arg) => {
+    const returnType = isVec(arg) ? correspondingBooleanVectorSchema(arg) : bool;
+    return {
+      argTypes: [arg],
+      returnType,
+    };
+  },
   normalImpl: cpuNot,
-  codegenImpl: (_ctx, [arg]) => stitch`!(${arg})`,
+  codegenImpl: (_ctx, [arg]) => {
+    const { dataType } = arg;
+
+    if (isBool(dataType)) {
+      return stitch`!${arg}`;
+    }
+    if (isNumericSchema(dataType)) {
+      return stitch`!bool(${arg})`;
+    }
+
+    if (isVecBool(dataType)) {
+      return stitch`!(${arg})`;
+    }
+
+    if (isVec(dataType)) {
+      const vecConstructorStr = `vec${dataType.componentCount}<bool>`;
+      return stitch`!(${vecConstructorStr}(${arg}))`;
+    }
+
+    return 'false';
+  },
 });
 
 const cpuOr = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) => VectorOps.or[lhs.kind](lhs, rhs);

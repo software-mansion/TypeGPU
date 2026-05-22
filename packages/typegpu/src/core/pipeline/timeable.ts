@@ -19,27 +19,19 @@ export type TimestampWritesPriors = {
     endOfPassWriteIndex?: number;
   };
   readonly performanceCallback?: (start: bigint, end: bigint) => void | Promise<void>;
-  readonly hasAutoQuerySet?: boolean;
 };
 
 export function createWithPerformanceCallback<T extends TimestampWritesPriors>(
   currentPriors: T,
   callback: (start: bigint, end: bigint) => void | Promise<void>,
-  root: ExperimentalTgpuRoot,
+  querySet: TgpuQuerySet<'timestamp'>,
 ): T {
-  if (!root.enabledFeatures.has('timestamp-query')) {
-    throw new Error(
-      'Performance callback requires the "timestamp-query" feature to be enabled on GPU device.',
-    );
-  }
-
   if (!currentPriors.timestampWrites) {
     return {
       ...currentPriors,
       performanceCallback: callback,
-      hasAutoQuerySet: true,
       timestampWrites: {
-        querySet: root.createQuerySet('timestamp', 2),
+        querySet,
         beginningOfPassWriteIndex: 0,
         endOfPassWriteIndex: 1,
       },
@@ -67,10 +59,6 @@ export function createWithTimestampWrites<T extends TimestampWritesPriors>(
     );
   }
 
-  if (currentPriors.hasAutoQuerySet && currentPriors.timestampWrites) {
-    currentPriors.timestampWrites.querySet.destroy();
-  }
-
   const timestampWrites: TimestampWritesPriors['timestampWrites'] = {
     querySet: options.querySet,
   };
@@ -84,7 +72,6 @@ export function createWithTimestampWrites<T extends TimestampWritesPriors>(
 
   return {
     ...currentPriors,
-    hasAutoQuerySet: false,
     timestampWrites,
   };
 }

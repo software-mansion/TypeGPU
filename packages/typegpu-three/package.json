@@ -1,9 +1,14 @@
 {
   "name": "@typegpu/three",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "description": "Utilities for integrating TypeGPU with Three.js",
   "keywords": [],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion/TypeGPU.git",
+    "directory": "packages/typegpu-three"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {
@@ -11,6 +16,7 @@
     "./package.json": "./package.json"
   },
   "publishConfig": {
+    "access": "public",
     "directory": "dist",
     "exports": {
       "./package.json": "./dist/package.json",
@@ -41,6 +47,6 @@
   },
   "peerDependencies": {
     "three": ">0.126.0",
-    "typegpu": "^0.10.2"
+    "typegpu": "workspace:^"
   }
 }

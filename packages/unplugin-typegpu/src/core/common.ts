@@ -1,7 +1,7 @@
-import type { NodePath, TraverseOptions } from '@babel/traverse';
 import * as t from '@babel/types';
+import type { NodePath, TraverseOptions } from '@babel/traverse';
 import type { FilterPattern } from 'unplugin';
-import { MagicStringAST } from 'magic-string-ast';
+import MagicString from 'magic-string';
 import { transpileFn } from 'tinyest-for-wgsl';
 
 export interface Options {
@@ -105,8 +105,16 @@ export interface PluginState extends TransformMethods {
   alreadyTransformed: WeakSet<t.Node>;
 }
 
+export interface NodeLocation {
+  start?: number | null;
+  end?: number | null;
+}
+
 export interface UnpluginPluginState extends PluginState {
-  magicString: MagicStringAST;
+  magicString: MagicString;
+  slice(node: NodeLocation): string;
+  remove(node: NodeLocation): void;
+  overwrite(node: NodeLocation, content: string): void;
 }
 
 export function initPluginState(state: PluginState, methods: TransformMethods): void {
@@ -314,7 +322,7 @@ const resourceConstructors: string[] = [
  * Since it is mostly for debugging and clean WGSL generation,
  * some false positives and false negatives are admissible.
  */
-function containsResourceConstructorCall(node: babel.Node, state: PluginState) {
+function containsResourceConstructorCall(node: t.Node, state: PluginState) {
   if (node.type === 'CallExpression') {
     if (isShellImplementationCall(node, state)) {
       return true;
@@ -353,7 +361,7 @@ function containsResourceConstructorCall(node: babel.Node, state: PluginState) {
  * tryFindIdentifier('this.myBuffer'); // 'myBuffer'
  * tryFindIdentifier('[a, b]'); // undefined
  */
-function tryFindIdentifier(node: babel.Node): string | undefined {
+function tryFindIdentifier(node: t.Node): string | undefined {
   if (node.type === 'Identifier') {
     return node.name;
   }

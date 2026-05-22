@@ -44,9 +44,75 @@
   #attribution a:hover {
     text-decoration: underline;
   }
+
+  #lose-screen {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    background: rgba(38, 14, 14, 0.55);
+    backdrop-filter: blur(6px);
+  }
+
+  #lose-screen[hidden] {
+    display: none;
+  }
+
+  #lose-card {
+    min-width: 15rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 1rem;
+    background: rgba(255, 247, 240, 0.94);
+    box-shadow:
+      0 1rem 2.5rem rgba(0, 0, 0, 0.3),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+    text-align: center;
+    color: #4d2216;
+    font-family: 'Fredoka One', cursive;
+  }
+
+  #lose-card h2 {
+    margin: 0 0 0.625rem;
+    font-size: 2rem;
+    color: #c63d2f;
+  }
+
+  #lose-score {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+  }
+
+  #reset-button {
+    border: 0;
+    border-radius: 999px;
+    padding: 0.65rem 1.2rem;
+    background: linear-gradient(180deg, #ffb45b, #ef7d32);
+    color: white;
+    font: inherit;
+    cursor: pointer;
+    box-shadow: 0 0.35rem 0 rgba(168, 78, 26, 0.9);
+  }
+
+  #reset-button:hover {
+    filter: brightness(1.05);
+  }
+
+  #reset-button:active {
+    transform: translateY(0.15rem);
+    box-shadow: 0 0.2rem 0 rgba(168, 78, 26, 0.9);
+  }
 </style>
 
 <div id="score">0</div>
+
+<div id="lose-screen" hidden>
+  <div id="lose-card">
+    <h2>Game Over</h2>
+    <div id="lose-score">Score: <span id="final-score">0</span></div>
+    <button id="reset-button" type="button">Reset</button>
+  </div>
+</div>
 
 <div id="attribution">
   Assets by

@@ -30,7 +30,7 @@ describe('tgpu.unroll', () => {
       "@group(0) @binding(0) var<storage, read> arr_1: array<f32>;
 
       fn f() -> f32 {
-        var a = array<i32, 3>(1, 2, 3);
+        let a = array<i32, 3>(1, 2, 3);
         var v1 = vec2f(7);
         let v2 = (&v1);
         let arr = (&arr_1);
@@ -80,7 +80,7 @@ describe('tgpu.unroll', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
-        var foo = vec3f(6);
+        let foo = vec3f(6);
         // unrolled iteration #0
         {
           const boo = 1;
@@ -199,19 +199,19 @@ describe('tgpu.unroll', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f
-      - fn*:f(): Cannot unroll loop. The elements of iterable are emphemeral but not naturally ephemeral.]
+      - fn*:f(): Cannot unroll 'tgpu.unroll([Boid()])'. The elements of iterable are constructed in place but are not value types.]
     `);
   });
 
   it('unrolls array expression of struct field names - (simple)', () => {
     const values = { a: 1, b: 2, c: 3 };
-    const list = Object.keys(values) as (keyof typeof values)[];
+    const keys = Object.keys(values) as (keyof typeof values)[];
 
     const f = () => {
       'use gpu';
       let result = d.u32(0);
-      for (const prop of tgpu.unroll(list)) {
-        result += values[prop];
+      for (const key of tgpu.unroll(keys)) {
+        result += values[key];
       }
       return result;
     };
@@ -385,7 +385,7 @@ describe('tgpu.unroll', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> i32 {
-        var v = vec3f(7);
+        let v = vec3f(7);
         var res = 0;
         // unrolled iteration #0
         {
@@ -542,9 +542,9 @@ describe('tgpu.unroll', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> vec2f {
-        var v1 = vec2f(1);
-        var v2 = vec2f(8);
-        var v3 = vec2f(2);
+        let v1 = vec2f(1);
+        let v2 = vec2f(8);
+        let v3 = vec2f(2);
         var arr = array<vec2f, 4>(v1, v2, v2, v3);
         var res = vec2f();
         // unrolled iteration #0
@@ -600,8 +600,8 @@ describe('tgpu.unroll', () => {
       }
 
       fn f() -> vec2f {
-        var b1 = Boid(vec2i(1), vec2f(1));
-        var b2 = Boid(vec2i(2), vec2f(2));
+        let b1 = Boid(vec2i(1), vec2f(1));
+        let b2 = Boid(vec2i(2), vec2f(2));
         var arr = array<Boid, 2>(b1, b2);
         var res = vec2f();
         // unrolled iteration #0
@@ -703,7 +703,7 @@ describe('tgpu.unroll', () => {
     `);
     expect(tgpu.resolve([tgpu.fn(f).with(unroll, false)])).toMatchInlineSnapshot(`
       "fn f() {
-        var arr = array<i32, 3>(1, 2, 3);
+        let arr = array<i32, 3>(1, 2, 3);
         var r = 0f;
         for (var i = 0u; i < 3u; i += 1u) {
           let foo = arr[i];
@@ -868,7 +868,7 @@ describe('tgpu.unroll', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> i32 {
-        var a = 0;
+        let a = 0;
         return a;
       }"
     `);

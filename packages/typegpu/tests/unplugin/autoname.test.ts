@@ -43,15 +43,15 @@ describe('autonaming', () => {
     const myGuardedPipeline = root.createGuardedComputePipeline(() => {
       'use gpu';
     });
-    const myTexture = root['~unstable'].createTexture({
+    const myTexture = root.createTexture({
       size: [1, 1],
       format: 'rgba8unorm',
     });
-    const mySampler = root['~unstable'].createSampler({
+    const mySampler = root.createSampler({
       magFilter: 'linear',
       minFilter: 'linear',
     });
-    const myComparisonSampler = root['~unstable'].createComparisonSampler({
+    const myComparisonSampler = root.createComparisonSampler({
       compare: 'equal',
     });
 
@@ -79,7 +79,7 @@ describe('autonaming', () => {
   });
 
   it('names views', ({ root }) => {
-    const texture = root['~unstable']
+    const texture = root
       .createTexture({
         size: [256, 256],
         format: 'rgba8unorm',

@@ -5,17 +5,20 @@
  * If the key can be garbage collected, it will be.
  */
 export class WeakMemo<TKey extends object, TValue, TArgs extends unknown[]> {
-  private readonly _map = new WeakMap<TKey, TValue>();
+  readonly #map = new WeakMap<TKey, TValue>();
+  readonly #make: (key: TKey, ...args: TArgs) => TValue;
 
-  constructor(private readonly _make: (key: TKey, ...args: TArgs) => TValue) {}
+  constructor(make: (key: TKey, ...args: TArgs) => TValue) {
+    this.#make = make;
+  }
 
   getOrMake(key: TKey, ...args: TArgs): TValue {
-    if (this._map.has(key)) {
-      return this._map.get(key) as TValue;
+    if (this.#map.has(key)) {
+      return this.#map.get(key) as TValue;
     }
 
-    const value = this._make(key, ...args);
-    this._map.set(key, value);
+    const value = this.#make(key, ...args);
+    this.#map.set(key, value);
     return value;
   }
 }

@@ -34,7 +34,7 @@ export class PointLight {
     this.far = options.far ?? 100.0;
     const shadowMapSize = options.shadowMapSize ?? 512;
 
-    this.#depthCubeTexture = root['~unstable']
+    this.#depthCubeTexture = root
       .createTexture({
         size: [shadowMapSize, shadowMapSize, 6],
         dimension: '2d',

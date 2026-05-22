@@ -94,13 +94,13 @@ function deepFreeze<T extends object>(object: T): T {
 class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType>, SelfResolvable {
   readonly [$internal] = {};
   readonly resourceType: 'const';
+  readonly dataType: TDataType;
+
   readonly #value: DeepReadonly<InferGPU<TDataType>>;
 
-  constructor(
-    public readonly dataType: TDataType,
-    value: InferGPU<TDataType>,
-  ) {
+  constructor(dataType: TDataType, value: InferGPU<TDataType>) {
     this.resourceType = 'const';
+    this.dataType = dataType;
     this.#value =
       value && typeof value === 'object'
         ? (deepFreeze(value) as DeepReadonly<InferGPU<TDataType>>)
@@ -113,7 +113,7 @@ class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType>,
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.getUniqueName(this);
+    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const resolvedDataType = ctx.resolve(this.dataType).value;
     const resolvedValue = ctx.resolve(this.#value, this.dataType).value;
 

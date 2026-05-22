@@ -5,10 +5,9 @@ import * as d from '../src/data/index.ts';
 import { sizeOf } from '../src/data/sizeOf.ts';
 import type { ValidateBufferSchema, ValidUsagesFor } from '../src/index.js';
 import { getName } from '../src/shared/meta.ts';
-import type { IsValidBufferSchema, IsValidUniformSchema } from '../src/shared/repr.ts';
+import type { InferPatch, IsValidBufferSchema, IsValidUniformSchema } from '../src/shared/repr.ts';
 import type { TypedArray } from '../src/shared/utilityTypes.ts';
 import { it } from 'typegpu-testing-utility';
-import { buildWriter } from '../src/data/compiledIO.ts';
 
 function toUint8Array(...arrays: Array<TypedArray>): Uint8Array {
   let totalByteLength = 0;
@@ -156,6 +155,19 @@ describe('TgpuBuffer', () => {
 
     expect(mappedBuffer.getMappedRange).toHaveBeenCalled();
     expect(mappedBuffer.unmap).not.toHaveBeenCalled();
+  });
+
+  it('should write to a mapped buffer', ({ root }) => {
+    const buffer = root.createBuffer(d.arrayOf(d.u32, 3), () => {
+      buffer.write([1, 2, 3]);
+
+      const layout = d.memoryLayoutOf(d.arrayOf(d.u32, 3), (a) => a[1]);
+      buffer.write([22], { startOffset: layout.offset });
+    });
+
+    const rawBuffer = root.unwrap(buffer);
+    const writtenBuffer = vi.mocked(rawBuffer.getMappedRange).mock.results[0]?.value as ArrayBuffer;
+    expect([...new Uint32Array(writtenBuffer)]).toStrictEqual([1, 22, 3]);
   });
 
   it('should write a scalar array chunk from startOffset through the end when endOffset is omitted', ({
@@ -470,29 +482,24 @@ describe('TgpuBuffer', () => {
 
   it('should allow for partial writes', ({ root, device }) => {
     const buffer = root.createBuffer(d.struct({ a: d.u32, b: d.u32 }));
-
-    buffer.writePartial({ a: 3 });
-
     const rawBuffer = root.unwrap(buffer);
     expect(rawBuffer).toBeDefined();
 
+    buffer.writePartial({ a: 3 });
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 0, toUint8Array(new Uint32Array([3])), 0, 4],
+      [rawBuffer, 0, toUint8Array(new Uint32Array([3]))],
     ]);
+    device.mock.queue.writeBuffer.mockClear();
 
     buffer.writePartial({ b: 4 });
-
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 0, toUint8Array(new Uint32Array([3])), 0, 4],
-      [rawBuffer, 4, toUint8Array(new Uint32Array([4])), 0, 4],
+      [rawBuffer, 4, toUint8Array(new Uint32Array([4]))],
     ]);
+    device.mock.queue.writeBuffer.mockClear();
 
     buffer.writePartial({ a: 5, b: 6 }); // should merge the writes
-
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 0, toUint8Array(new Uint32Array([3])), 0, 4],
-      [rawBuffer, 4, toUint8Array(new Uint32Array([4])), 0, 4],
-      [rawBuffer, 0, toUint8Array(new Uint32Array([5, 6])), 0, 8],
+      [rawBuffer, 0, toUint8Array(new Uint32Array([5, 6]))],
     ]);
   });
 
@@ -504,22 +511,20 @@ describe('TgpuBuffer', () => {
         d: d.arrayOf(d.u32, 3),
       }),
     );
-
-    buffer.writePartial({ a: 3 });
-
     const rawBuffer = root.unwrap(buffer);
     expect(rawBuffer).toBeDefined();
 
+    buffer.writePartial({ a: 3 });
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 0, toUint8Array(new Uint32Array([3])), 0, 4],
+      [rawBuffer, 0, toUint8Array(new Uint32Array([3]))],
     ]);
+    device.mock.queue.writeBuffer.mockClear();
 
     buffer.writePartial({ b: { c: d.vec2f(1, 2) } });
-
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 0, toUint8Array(new Uint32Array([3])), 0, 4],
-      [rawBuffer, 8, toUint8Array(new Float32Array([1, 2])), 0, 8],
+      [rawBuffer, 8, toUint8Array(new Float32Array([1, 2]))],
     ]);
+    device.mock.queue.writeBuffer.mockClear();
 
     buffer.writePartial({
       d: [
@@ -527,13 +532,11 @@ describe('TgpuBuffer', () => {
         { idx: 2, value: 3 },
       ],
     });
-
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 0, toUint8Array(new Uint32Array([3])), 0, 4],
-      [rawBuffer, 8, toUint8Array(new Float32Array([1, 2])), 0, 8],
-      [rawBuffer, 16, toUint8Array(new Uint32Array([1])), 0, 4],
-      [rawBuffer, 24, toUint8Array(new Uint32Array([3])), 0, 4],
+      [rawBuffer, 16, toUint8Array(new Uint32Array([1]))],
+      [rawBuffer, 24, toUint8Array(new Uint32Array([3]))],
     ]);
+    device.mock.queue.writeBuffer.mockClear();
 
     buffer.writePartial({
       b: { c: d.vec2f(3, 4) },
@@ -542,13 +545,8 @@ describe('TgpuBuffer', () => {
         { idx: 1, value: 3 },
       ],
     }); // should merge the writes
-
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 0, toUint8Array(new Uint32Array([3])), 0, 4],
-      [rawBuffer, 8, toUint8Array(new Float32Array([1, 2])), 0, 8],
-      [rawBuffer, 16, toUint8Array(new Uint32Array([1])), 0, 4],
-      [rawBuffer, 24, toUint8Array(new Uint32Array([3])), 0, 4],
-      [rawBuffer, 8, toUint8Array(new Float32Array([3, 4]), new Uint32Array([2, 3])), 0, 16],
+      [rawBuffer, 8, toUint8Array(new Float32Array([3, 4]), new Uint32Array([2, 3]))],
     ]);
   });
 
@@ -567,22 +565,22 @@ describe('TgpuBuffer', () => {
     expect(rawBuffer).toBeDefined();
 
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 8, new Uint8Array([255, 127, 255, 127]), 0, 4],
+      [rawBuffer, 8, new Uint8Array([0, 128, 0, 128])],
     ]);
 
     buffer.writePartial({ b: d.vec2f(-0.5, 0.5) });
 
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 8, new Uint8Array([255, 127, 255, 127]), 0, 4],
-      [rawBuffer, 16, new Uint8Array([193, 64]), 0, 2],
+      [rawBuffer, 8, new Uint8Array([0, 128, 0, 128])],
+      [rawBuffer, 16, new Uint8Array([193, 64])],
     ]);
 
     buffer.writePartial({ c: { d: 3 } });
 
     expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
-      [rawBuffer, 8, new Uint8Array([255, 127, 255, 127]), 0, 4],
-      [rawBuffer, 16, new Uint8Array([193, 64]), 0, 2],
-      [rawBuffer, 18, new Uint8Array([3, 0, 0, 0]), 0, 4],
+      [rawBuffer, 8, new Uint8Array([0, 128, 0, 128])],
+      [rawBuffer, 16, new Uint8Array([193, 64])],
+      [rawBuffer, 18, new Uint8Array([3, 0, 0, 0])],
     ]);
   });
 
@@ -707,6 +705,31 @@ describe('TgpuBuffer', () => {
     ]);
   });
 
+  it('should fast-path aligned raw input for a buffer with decorated data', ({ root, device }) => {
+    const DecoratedSchema = d.struct({
+      a: d.size(12, d.f32),
+      b: d.align(16, d.u32),
+      c: d.arrayOf(d.u32, 3),
+    });
+
+    const decoratedBuffer = root.createBuffer(DecoratedSchema);
+    const rawDecoratedBuffer = root.unwrap(decoratedBuffer);
+
+    const aligned = new ArrayBuffer(32);
+    new Float32Array(aligned, 0, 1)[0] = 1.0;
+    new Uint32Array(aligned, 16, 1)[0] = 2;
+    new Uint32Array(aligned, 20, 3).set([3, 4, 5]);
+
+    decoratedBuffer.write(aligned);
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawDecoratedBuffer, 0, expect.any(ArrayBuffer), 0, 32],
+    ]);
+
+    const uploaded = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    expect([...new Uint8Array(uploaded)]).toStrictEqual([...new Uint8Array(aligned)]);
+  });
+
   it('should throw an error on the type level when using a schema containing boolean', ({
     root,
   }) => {
@@ -777,7 +800,9 @@ describe('TgpuBuffer', () => {
   }) => {
     const buffer = root.createBuffer(d.arrayOf(d.u16, 32));
 
-    expectTypeOf(buffer.write).parameter(0).toEqualTypeOf<number[] | Uint16Array | ArrayBuffer>();
+    expectTypeOf(buffer.write)
+      .parameter(0)
+      .toEqualTypeOf<number[] | readonly number[] | Uint16Array | ArrayBuffer>();
   });
 
   it('should write an arrayOf(u16) buffer from a Uint16Array', ({ root, device }) => {
@@ -788,6 +813,42 @@ describe('TgpuBuffer', () => {
 
     const written = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
     expect([...new Uint16Array(written, 0, 4)]).toStrictEqual([10, 20, 30, 40]);
+  });
+
+  it('should accept typed views when writing to arrays of atomics at the type level', ({
+    root,
+  }) => {
+    const u32Buffer = root.createBuffer(d.arrayOf(d.atomic(d.u32), 4));
+    const i32Buffer = root.createBuffer(d.arrayOf(d.atomic(d.i32), 4));
+
+    expectTypeOf(u32Buffer.write)
+      .parameter(0)
+      .toEqualTypeOf<number[] | readonly number[] | Uint32Array | ArrayBuffer>();
+
+    expectTypeOf(i32Buffer.write)
+      .parameter(0)
+      .toEqualTypeOf<number[] | readonly number[] | Int32Array | ArrayBuffer>();
+  });
+
+  it('should fast-path typed views when writing to arrays of atomics', ({ root, device }) => {
+    const u32Buffer = root.createBuffer(d.arrayOf(d.atomic(d.u32), 4));
+    const i32Buffer = root.createBuffer(d.arrayOf(d.atomic(d.i32), 4));
+    const rawU32Buffer = root.unwrap(u32Buffer);
+    const rawI32Buffer = root.unwrap(i32Buffer);
+
+    u32Buffer.write(new Uint32Array([10, 20, 30, 40]));
+    i32Buffer.write(new Int32Array([-1, -2, -3, -4]));
+
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawU32Buffer, 0, expect.any(ArrayBuffer), 0, 16],
+      [rawI32Buffer, 0, expect.any(ArrayBuffer), 0, 16],
+    ]);
+
+    const writtenU32 = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const writtenI32 = device.mock.queue.writeBuffer.mock.calls[1]?.[2] as ArrayBuffer;
+
+    expect([...new Uint32Array(writtenU32, 0, 4)]).toStrictEqual([10, 20, 30, 40]);
+    expect([...new Int32Array(writtenI32, 0, 4)]).toStrictEqual([-1, -2, -3, -4]);
   });
 
   it('should allow an array of u32 to be used as an index buffer as well as any other usage', ({
@@ -829,29 +890,32 @@ describe('TgpuBuffer (InferInput)', () => {
 
     expectTypeOf(vec3fBuf.write)
       .parameter(0)
-      .toEqualTypeOf<d.v3f | [number, number, number] | Float32Array | ArrayBuffer>();
+      .toEqualTypeOf<d.v3f | readonly [number, number, number] | Float32Array | ArrayBuffer>();
 
     expectTypeOf(vec2iBuf.write)
       .parameter(0)
-      .toEqualTypeOf<d.v2i | [number, number] | Int32Array | ArrayBuffer>();
+      .toEqualTypeOf<d.v2i | readonly [number, number] | Int32Array | ArrayBuffer>();
 
     expectTypeOf(mat3x3fBuf.write)
       .parameter(0)
-      .toEqualTypeOf<d.m3x3f | number[] | Float32Array | ArrayBuffer>();
+      .toEqualTypeOf<d.m3x3f | readonly number[] | Float32Array | ArrayBuffer>();
 
     expectTypeOf(mat4x4fBuf.write)
       .parameter(0)
-      .toEqualTypeOf<d.m4x4f | number[] | Float32Array | ArrayBuffer>();
+      .toEqualTypeOf<d.m4x4f | readonly number[] | Float32Array | ArrayBuffer>();
 
     expectTypeOf(arrBuf.write)
       .parameter(0)
       .toEqualTypeOf<
-        (d.v3f | [number, number, number] | Float32Array)[] | Float32Array | ArrayBuffer
+        | readonly (d.v3f | readonly [number, number, number] | Float32Array)[]
+        | Float32Array
+        | ArrayBuffer
+        | d.v3f[]
       >();
 
     expectTypeOf(scalarArrBuf.write)
       .parameter(0)
-      .toEqualTypeOf<number[] | Float32Array | ArrayBuffer>();
+      .toEqualTypeOf<number[] | readonly number[] | Float32Array | ArrayBuffer>();
   });
 
   it('should write a vec3f from a plain tuple', ({ root, device }) => {
@@ -942,6 +1006,215 @@ describe('TgpuBuffer (InferInput)', () => {
     expect([...new Uint8Array(data, countLayout.offset)]).toStrictEqual(
       Array(d.sizeOf(Schema) - countLayout.offset).fill(0),
     );
+  });
+
+  it('hints initial struct props in buffers', ({ root }) => {
+    const Boid = d.struct({ id: d.u32, prop: d.vec2u });
+    attest(() =>
+      root.createBuffer(Boid, {
+        // @ts-expect-error
+        '': undefined,
+      }),
+    ).completions({
+      '': ['id', 'prop'],
+    });
+  });
+});
+
+describe('TgpuBuffer (.patch() with flexible inputs)', () => {
+  it('should patch a mapped buffer', ({ root }) => {
+    const mappedBuffer = root.device.createBuffer({
+      size: 12,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      mappedAtCreation: true,
+    });
+
+    const buffer = root.createBuffer(d.arrayOf(d.u32, 3), mappedBuffer);
+    buffer.patch({ 1: 67 });
+
+    expect(mappedBuffer.getMappedRange).toHaveBeenCalledExactlyOnceWith();
+    expect(mappedBuffer.unmap).not.toHaveBeenCalled();
+    const writtenBuffer = vi.mocked(mappedBuffer.getMappedRange).mock.results[0]?.value;
+    expect(writtenBuffer).toMatchInlineSnapshot(`
+      ArrayBuffer [
+        0,
+        0,
+        0,
+        0,
+        67,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+      ]
+    `);
+  });
+
+  it('should accept tuples, TypedArrays, and number[] for leaf types at the type level', ({
+    root,
+  }) => {
+    const structBuf = root.createBuffer(
+      d.struct({ pos: d.vec3f, color: d.vec4f, transform: d.mat3x3f }),
+    );
+
+    expectTypeOf<InferPatch<d.Vec3f>>().toEqualTypeOf<
+      d.v3f | readonly [number, number, number] | Float32Array | undefined
+    >();
+
+    expectTypeOf<InferPatch<d.Mat3x3f>>().toEqualTypeOf<
+      d.m3x3f | readonly number[] | Float32Array | undefined
+    >();
+
+    // Struct patch should accept flexible types for fields
+    structBuf.patch({ pos: [1, 2, 3] });
+    structBuf.patch({ pos: new Float32Array([1, 2, 3]) });
+    structBuf.patch({ transform: [1, 2, 3, 4, 5, 6, 7, 8, 9] });
+    structBuf.patch({ transform: new Float32Array(12) });
+  });
+
+  it('should accept both sparse and full-replacement forms for arrays at the type level', ({
+    root,
+  }) => {
+    const arrBuf = root.createBuffer(d.struct({ items: d.arrayOf(d.vec3f, 4), count: d.u32 }));
+
+    // Sparse form (Record<number, T>)
+    arrBuf.patch({ items: { 0: d.vec3f(1, 2, 3) } });
+    arrBuf.patch({ items: { 0: [1, 2, 3] } });
+
+    // Full replacement with plain array
+    arrBuf.patch({
+      items: [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9],
+        [10, 11, 12],
+      ],
+    });
+
+    // Full replacement with TypedArray
+    arrBuf.patch({ items: new Float32Array(64) });
+  });
+
+  it('should patch a vec3f struct field from a tuple', ({ root, device }) => {
+    const buffer = root.createBuffer(d.struct({ a: d.u32, b: d.vec3f }));
+
+    buffer.patch({ b: [1, 2, 3] });
+
+    const rawBuffer = root.unwrap(buffer);
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 16, toUint8Array(new Float32Array([1, 2, 3]))],
+    ]);
+  });
+
+  it('should patch a vec3f struct field from a Float32Array', ({ root, device }) => {
+    const buffer = root.createBuffer(d.struct({ a: d.u32, b: d.vec3f }));
+
+    buffer.patch({ b: new Float32Array([4, 5, 6]) });
+
+    const rawBuffer = root.unwrap(buffer);
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 16, toUint8Array(new Float32Array([4, 5, 6]))],
+    ]);
+  });
+
+  it('should patch a mat3x3f struct field from a packed number[]', ({ root, device }) => {
+    const buffer = root.createBuffer(d.struct({ a: d.u32, b: d.mat3x3f }));
+
+    // 9 packed floats (no column padding)
+    buffer.patch({ b: [1, 2, 3, 4, 5, 6, 7, 8, 9] });
+
+    const rawBuffer = root.unwrap(buffer);
+    // mat3x3f is padded: each column is 16 bytes (vec3f + 4 bytes padding)
+    // Offset: a=u32 (4 bytes) + padding to 16 = 16
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 16, toUint8Array(new Float32Array([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]))],
+    ]);
+  });
+
+  it('should patch a mat3x3f struct field from a padded Float32Array', ({ root, device }) => {
+    const buffer = root.createBuffer(d.struct({ a: d.u32, b: d.mat3x3f }));
+
+    // 12-element padded Float32Array (with column padding)
+    buffer.patch({ b: new Float32Array([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]) });
+
+    const rawBuffer = root.unwrap(buffer);
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 16, toUint8Array(new Float32Array([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]))],
+    ]);
+  });
+
+  it('should patch an array field with full TypedArray replacement', ({ root, device }) => {
+    const buffer = root.createBuffer(d.struct({ tag: d.u32, values: d.arrayOf(d.f32, 3) }));
+
+    buffer.patch({ values: new Float32Array([10, 20, 30]) });
+
+    const rawBuffer = root.unwrap(buffer);
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 4, toUint8Array(new Float32Array([10, 20, 30]))],
+    ]);
+  });
+
+  it('should patch an array field with full plain-array replacement', ({ root, device }) => {
+    const buffer = root.createBuffer(d.struct({ tag: d.u32, values: d.arrayOf(d.u32, 3) }));
+
+    buffer.patch({ values: [100, 200, 300] });
+
+    const rawBuffer = root.unwrap(buffer);
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 4, toUint8Array(new Uint32Array([100, 200, 300]))],
+    ]);
+  });
+
+  it('should patch an array of vec3f with full replacement using tuples', ({ root, device }) => {
+    const buffer = root.createBuffer(d.struct({ values: d.arrayOf(d.vec3f, 2) }));
+
+    buffer.patch({
+      values: [
+        [1, 2, 3],
+        [4, 5, 6],
+      ],
+    });
+
+    const rawBuffer = root.unwrap(buffer);
+    // vec3f elements are 12 bytes each with 4 bytes padding between them
+    // (the trailing padding after the last element is not included)
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 0, toUint8Array(new Float32Array([1, 2, 3, 0, 4, 5, 6]))],
+    ]);
+  });
+
+  it('should patch an array with sparse indexed updates using flexible value types', ({
+    root,
+    device,
+  }) => {
+    const buffer = root.createBuffer(d.arrayOf(d.vec3f, 4));
+
+    buffer.patch({
+      3: [40, 50, 60],
+      1: [10, 20, 30],
+    });
+
+    const rawBuffer = root.unwrap(buffer);
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 16, toUint8Array(new Float32Array([10, 20, 30]))],
+      [rawBuffer, 48, toUint8Array(new Float32Array([40, 50, 60]))],
+    ]);
+  });
+
+  it('should not false-positive on struct elements with idx/value fields', ({ root, device }) => {
+    const WeirdSchema = d.struct({ idx: d.u32, value: d.f32 });
+    const buffer = root.createBuffer(d.arrayOf(WeirdSchema, 4));
+
+    // Sparse: update index 1 only
+    buffer.patch({ 1: { idx: 42, value: 3.14 } });
+
+    const rawBuffer = root.unwrap(buffer);
+    expect(device.mock.queue.writeBuffer.mock.calls).toStrictEqual([
+      [rawBuffer, 8, toUint8Array(new Uint32Array([42]), new Float32Array([3.14]))],
+    ]);
   });
 });
 
@@ -1074,6 +1347,139 @@ describe('ValidateBufferSchema', () => {
     expect([...headings[1]!]).toStrictEqual([4, 5, 6]);
   });
 
+  it('should treat atomics like normal scalars when writing SoA', ({ root, device }) => {
+    const Entry = d.struct({
+      id: d.atomic(d.u32),
+      states: d.arrayOf(d.atomic(d.i32), 4),
+    });
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      id: new Uint32Array([1000, 2000]),
+      states: new Int32Array([1, 2, 3, 4, 5, 6, 7, 8]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+
+    const ids = [
+      new DataView(uploadedBuffer).getUint32(0, true),
+      new DataView(uploadedBuffer).getUint32(20, true),
+    ];
+    const states = [new Int32Array(uploadedBuffer, 4, 4), new Int32Array(uploadedBuffer, 24, 4)];
+
+    expect(ids).toStrictEqual([1000, 2000]);
+    expect([...states[0]!]).toStrictEqual([1, 2, 3, 4]);
+    expect([...states[1]!]).toStrictEqual([5, 6, 7, 8]);
+  });
+
+  it('should treat decorated types like normal types when writing SoA', ({ root, device }) => {
+    const Entry = d.struct({
+      magic: d.u32,
+      id: d.align(16, d.u32),
+      pos: d.size(64, d.vec3f),
+      someData: d.arrayOf(d.f32, 4),
+    });
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      magic: new Uint32Array([10, 20]),
+      id: new Uint32Array([100, 200]),
+      pos: new Float32Array([1, 2, 3, 4, 5, 6]),
+      someData: new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+
+    const magics = [
+      new DataView(uploadedBuffer).getUint32(0, true),
+      new DataView(uploadedBuffer).getUint32(112, true),
+    ];
+    const ids = [
+      new DataView(uploadedBuffer).getUint32(16, true),
+      new DataView(uploadedBuffer).getUint32(128, true),
+    ];
+    const positions = [
+      new Float32Array(uploadedBuffer, 32, 3),
+      new Float32Array(uploadedBuffer, 144, 3),
+    ];
+    const someData = [
+      new Float32Array(uploadedBuffer, 96, 4),
+      new Float32Array(uploadedBuffer, 208, 4),
+    ];
+
+    expect(magics).toStrictEqual([10, 20]);
+    expect(ids).toStrictEqual([100, 200]);
+    expect([...positions[0]!]).toStrictEqual([1, 2, 3]);
+    expect([...positions[1]!]).toStrictEqual([4, 5, 6]);
+    expect([...someData[0]!].map((value) => Number(value.toFixed(6)))).toStrictEqual([
+      0.1, 0.2, 0.3, 0.4,
+    ]);
+    expect([...someData[1]!].map((value) => Number(value.toFixed(6)))).toStrictEqual([
+      0.5, 0.6, 0.7, 0.8,
+    ]);
+  });
+
+  it('should treat decorated array fields like normal types when writing SoA', ({
+    root,
+    device,
+  }) => {
+    const Entry = d.struct({
+      id: d.u32,
+      values: d.align(16, d.arrayOf(d.f32, 4)),
+    });
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      id: new Uint32Array([7, 8]),
+      values: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const ids = [
+      new DataView(uploadedBuffer).getUint32(0, true),
+      new DataView(uploadedBuffer).getUint32(32, true),
+    ];
+    const values = [
+      new Float32Array(uploadedBuffer, 16, 4),
+      new Float32Array(uploadedBuffer, 48, 4),
+    ];
+
+    expect(ids).toStrictEqual([7, 8]);
+    expect([...values[0]!]).toStrictEqual([1, 2, 3, 4]);
+    expect([...values[1]!]).toStrictEqual([5, 6, 7, 8]);
+  });
+
+  it('should write SoA data for decorated array fields with padded elements', ({
+    root,
+    device,
+  }) => {
+    const Entry = d.struct({
+      values: d.align(16, d.arrayOf(d.vec3f, 2)),
+    });
+
+    const schema = d.arrayOf(Entry, 2);
+    const buffer = root.createBuffer(schema);
+    root.unwrap(buffer);
+
+    common.writeSoA(buffer, {
+      values: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+    });
+
+    const uploadedBuffer = device.mock.queue.writeBuffer.mock.calls[0]?.[2] as ArrayBuffer;
+    const result = new Float32Array(uploadedBuffer);
+
+    expect([...result]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0, 10, 11, 12, 0]);
+  });
+
   it('should accept SoA input for struct fields that are fixed-size arrays of primitives', () => {
     type Test = {
       a: d.F32;
@@ -1091,6 +1497,18 @@ describe('ValidateBufferSchema', () => {
       d: Float32Array;
       e: Int32Array;
       f: Float32Array;
+    }>();
+  });
+
+  it('should accept SoA input for decorated array fields', () => {
+    type Test = {
+      id: d.U32;
+      values: d.Decorated<d.WgslArray<d.F32>, [d.Align<16>]>;
+    };
+
+    expectTypeOf<common.writeSoA.InputFor<Test>>().toEqualTypeOf<{
+      id: Uint32Array;
+      values: Float32Array;
     }>();
   });
 

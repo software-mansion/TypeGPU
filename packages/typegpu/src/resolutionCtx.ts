@@ -1,5 +1,5 @@
 import { isTgpuFn } from './core/function/tgpuFn.ts';
-import { getUniqueName, type Namespace, type NamespaceInternal } from './core/resolve/namespace.ts';
+import type { Namespace, NamespaceInternal } from './core/resolve/namespace.ts';
 import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
 import type { Configurable, ExperimentalTgpuRoot } from './core/root/rootTypes.ts';
@@ -12,10 +12,9 @@ import {
   type TgpuLazy,
   type TgpuSlot,
 } from './core/slot/slotTypes.ts';
-import { getAttributesString } from './data/attributes.ts';
 import { isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
-import { type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
+import { type Origin, type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
 import { type BaseData, isPtr, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
 import { invariant, MissingSlotValueError, ResolutionError, WgslTypeError } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
@@ -32,15 +31,17 @@ import {
   type TgpuLayoutEntry,
 } from './tgpuBindGroupLayout.ts';
 import { LogGeneratorImpl, LogGeneratorNullImpl } from './tgsl/consoleLog/logGenerator.ts';
-import type { LogGenerator, LogResources } from './tgsl/consoleLog/types.ts';
+import type { LogGenerator, LogResources, SupportedLogOp } from './tgsl/consoleLog/types.ts';
 import { getBestConversion } from './tgsl/conversion.ts';
 import { coerceToSnippet, concretize, numericLiteralToSnippet } from './tgsl/generationHelpers.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 import wgslGenerator from './tgsl/wgslGenerator.ts';
 import type {
+  BlockScopeLayer,
   ExecMode,
   ExecState,
   FnToWgslOptions,
+  FunctionArgumentAccess,
   FunctionScopeLayer,
   ItemLayer,
   ItemStateStack,
@@ -57,6 +58,9 @@ import { accessProp } from './tgsl/accessProp.ts';
 import { createIoSchema } from './core/function/ioSchema.ts';
 import type { IOData } from './core/function/fnTypes.ts';
 import { AutoStruct } from './data/autoStruct.ts';
+import { EntryInputRouter } from './core/function/entryInputRouter.ts';
+import type { FunctionArgument } from './tgsl/shaderGenerator_members.ts';
+import { validateIdentifier, sanitizePrimer } from './nameUtils.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -97,6 +101,10 @@ class ItemStateStackImpl implements ItemStateStack {
     return this._stack.findLast((e) => e.type === 'functionScope');
   }
 
+  get topBlockScope(): BlockScopeLayer | undefined {
+    return this._stack.findLast((e) => e.type === 'blockScope');
+  }
+
   pushItem() {
     this._itemDepth++;
     this._stack.push({
@@ -114,19 +122,19 @@ class ItemStateStackImpl implements ItemStateStack {
 
   pushFunctionScope(
     functionType: 'normal' | TgpuShaderStage,
-    args: Snippet[],
-    argAliases: Record<string, Snippet>,
+    argAccess: Record<string, FunctionArgumentAccess>,
     returnType: BaseData | undefined,
     externalMap: Record<string, unknown>,
   ): FunctionScopeLayer {
     const scope: FunctionScopeLayer = {
       type: 'functionScope',
       functionType,
-      args,
-      argAliases,
+      argAccess,
       returnType,
       externalMap,
       reportedReturnTypes: new Set(),
+      placeholderForVariable: new Map(),
+      modifiedVariables: new Set(),
     };
 
     this._stack.push(scope);
@@ -136,6 +144,7 @@ class ItemStateStackImpl implements ItemStateStack {
   pushBlockScope() {
     this._stack.push({
       type: 'blockScope',
+      takenLocalIdentifiers: new Set(),
       declarations: new Map(),
       externals: new Map(),
     });
@@ -183,13 +192,9 @@ class ItemStateStackImpl implements ItemStateStack {
       const layer = this._stack[i];
 
       if (layer?.type === 'functionScope') {
-        const arg = layer.args.find((a) => a.value === id);
-        if (arg !== undefined) {
-          return arg;
-        }
-
-        if (layer.argAliases[id]) {
-          return layer.argAliases[id];
+        const access = layer.argAccess[id];
+        if (access) {
+          return access();
         }
 
         const external = layer.externalMap[id];
@@ -215,6 +220,26 @@ class ItemStateStackImpl implements ItemStateStack {
     }
 
     return undefined;
+  }
+
+  isIdentifierTakenLocally(id: string): boolean {
+    for (let i = this._stack.length - 1; i >= 0; --i) {
+      const layer = this._stack[i];
+
+      if (layer?.type === 'functionScope') {
+        // Since functions cannot access resources from the calling scope, we
+        // return early here.
+        return false;
+      }
+
+      if (layer?.type === 'blockScope') {
+        if (layer.takenLocalIdentifiers.has(id)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   defineBlockVariable(id: string, snippet: Snippet): void {
@@ -310,6 +335,39 @@ interface FixedBindingConfig {
   resource: object;
 }
 
+function createArgument(
+  name: string,
+  type: BaseData,
+  origin: Origin = 'argument',
+): FunctionArgument {
+  let used = false;
+
+  return {
+    name,
+    access: () => {
+      used = true;
+      return snip(name, type, origin);
+    },
+    decoratedType: type,
+    get used() {
+      return used;
+    },
+  };
+}
+
+function createArgumentPropAccess(
+  argAccess: FunctionArgumentAccess,
+  prop: string,
+): FunctionArgumentAccess {
+  return () => {
+    const argSnippet = argAccess();
+    if (!argSnippet) {
+      return undefined;
+    }
+    return accessProp(argSnippet, prop);
+  };
+}
+
 export class ResolutionCtxImpl implements ResolutionCtx {
   readonly #namespaceInternal: NamespaceInternal;
 
@@ -346,6 +404,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public readonly enableExtensions: WgslExtension[] | undefined;
   public expectedType: BaseData | undefined;
 
+  /**
+   * A counter used to generate unique identifiers for globally-scoped definitions in the 'random' strategy.
+   */
+  #lastUniqueId = 0;
+
   constructor(opts: ResolutionCtxImplOptions) {
     this.enableExtensions = opts.enableExtensions;
     this.gen = opts.shaderGenerator ?? wgslGenerator;
@@ -353,12 +416,46 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.#namespaceInternal = opts.namespace[$internal];
   }
 
-  getUniqueName(resource: object): string {
-    return getUniqueName(this.#namespaceInternal, resource);
+  isIdentifierTaken(name: string): boolean {
+    return (
+      this.#namespaceInternal.takenGlobalIdentifiers.has(name) ||
+      this._itemStateStack.isIdentifierTakenLocally(name)
+    );
   }
 
-  makeNameValid(name: string): string {
-    return this.#namespaceInternal.nameRegistry.makeValid(name);
+  makeUniqueIdentifier(primer: string = 'item', scope: 'global' | 'block'): string {
+    if (
+      scope === 'block' &&
+      validateIdentifier(primer).success &&
+      !this.isIdentifierTaken(primer)
+    ) {
+      // Preserving local definitions as they are, provided they are valid and not already taken.
+      this.reserveIdentifier(primer, 'block');
+      return primer;
+    }
+
+    const base = sanitizePrimer(primer);
+    let index = 0;
+    const random = this.#namespaceInternal.strategy === 'random';
+    let name = random ? `${base}_${this.#lastUniqueId++}` : base;
+    while (this.isIdentifierTaken(name)) {
+      name = random ? `${base}_${this.#lastUniqueId++}` : `${base}_${++index}`;
+    }
+
+    this.reserveIdentifier(name, scope);
+    return name;
+  }
+
+  reserveIdentifier(name: string, scope: 'global' | 'block'): void {
+    if (scope === 'block') {
+      const blockScope = this._itemStateStack.topBlockScope;
+      if (blockScope) {
+        blockScope.takenLocalIdentifiers.add(name);
+        return;
+      }
+      // Fall through if no block scope is present, treating as global.
+    }
+    this.#namespaceInternal.takenGlobalIdentifiers.add(name);
   }
 
   get pre(): string {
@@ -412,12 +509,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   pushBlockScope() {
-    this.#namespaceInternal.nameRegistry.pushBlockScope();
     this._itemStateStack.pushBlockScope();
   }
 
   popBlockScope() {
-    this.#namespaceInternal.nameRegistry.popBlockScope();
     this._itemStateStack.pop('blockScope');
   }
 
@@ -429,7 +524,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this._itemStateStack.clearBlockExternals();
   }
 
-  generateLog(op: string, args: Snippet[]): Snippet {
+  generateLog(op: SupportedLogOp, args: Snippet[]): Snippet {
     return this.#logGenerator.generateLog(this, op, args);
   }
 
@@ -437,121 +532,189 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this.#logGenerator.logResources;
   }
 
-  fnToWgsl(options: FnToWgslOptions): { head: Wgsl; body: Wgsl; returnType: BaseData } {
-    let fnScopePushed = false;
-
+  fnToWgsl(options: FnToWgslOptions): { code: string; returnType: BaseData } {
     try {
-      this.#namespaceInternal.nameRegistry.pushFunctionScope();
-      const args: Snippet[] = [];
-      const argAliases: [string, Snippet][] = [];
-
-      for (const [i, argType] of options.argTypes.entries()) {
-        const astParam = options.params[i];
-        // We know if arguments are passed by reference or by value, because we
-        // enforce that based on the whether the argument is a pointer or not.
-        //
-        // It still applies for shell-less functions, since we determine the type
-        // of the argument based on the argument's referentiality.
-        // In other words, if we pass a reference to a function, it's typed as a pointer,
-        // otherwise it's typed as a value.
-        const origin = isPtr(argType)
-          ? argType.addressSpace === 'storage'
-            ? argType.access === 'read'
-              ? 'readonly'
-              : 'mutable'
-            : argType.addressSpace
-          : 'argument';
-
-        switch (astParam?.type) {
-          case FuncParameterType.identifier: {
-            const rawName = astParam.name;
-            const snippet = snip(this.makeNameValid(rawName), argType, origin);
-            args.push(snippet);
-            if (snippet.value !== rawName) {
-              argAliases.push([rawName, snippet]);
-            }
-            break;
-          }
-          case FuncParameterType.destructuredObject: {
-            const objSnippet = snip(`_arg_${i}`, argType, origin);
-            args.push(objSnippet);
-            argAliases.push(
-              ...astParam.props.map(
-                ({ name, alias }) => [alias, accessProp(objSnippet, name)] as [string, Snippet],
-              ),
-            );
-            break;
-          }
-          case undefined: {
-            // Only push the argument if it's not an auto-struct.
-            // If we're not using an auto-struct, it's not going to
-            // have any properties anyway.
-            if (!(argType instanceof AutoStruct)) {
-              args.push(snip(`_arg_${i}`, argType, origin));
-            }
-          }
-        }
-      }
-
       const scope = this._itemStateStack.pushFunctionScope(
         options.functionType,
-        args,
-        Object.fromEntries(argAliases),
+        {},
         options.returnType,
         options.externalMap,
       );
-      fnScopePushed = true;
+      // Pushing a block scope as well, so that any identifiers declared at this point will be scoped to the function body.
+      this._itemStateStack.pushBlockScope();
 
-      const body = this.gen.functionDefinition(options.body);
+      const args: FunctionArgument[] = [];
 
-      let returnType = options.returnType;
-      if (returnType instanceof AutoStruct) {
-        // We're expecting an "auto" return type, so if there were structs returned,
-        // we accept the struct, otherwise we let the rest of the code unify on a
-        // primitive type.
-        if (isWgslStruct(scope.reportedReturnTypes.values().next().value)) {
-          returnType = returnType.completeStruct;
+      if (options.entryInput) {
+        const { dataSchema, positionalArgs } = options.entryInput;
+        const firstParam = options.params[0];
+
+        const structArg = dataSchema
+          ? createArgument(this.makeUniqueIdentifier('_arg_0', 'block'), dataSchema)
+          : undefined;
+
+        if (structArg) {
+          args.push(structArg);
+        }
+
+        if (firstParam?.type === FuncParameterType.destructuredObject) {
+          // Route each destructured prop to a positional arg or struct field.
+          for (const { name, alias } of firstParam.props) {
+            const argInfo = positionalArgs.find((a) => a.schemaKey === name);
+            if (argInfo) {
+              const arg = createArgument(this.makeUniqueIdentifier(alias, 'block'), argInfo.type);
+              args.push(arg);
+              scope.argAccess[alias] = arg.access;
+            } else if (structArg) {
+              scope.argAccess[alias] = createArgumentPropAccess(structArg.access, name);
+            }
+          }
+        } else if (firstParam?.type === FuncParameterType.identifier) {
+          // Create named arg snippets, then a proxy for property access routing.
+          const proxyEntries: Array<{ schemaKey: string; arg: FunctionArgumentAccess }> = [];
+          for (const a of positionalArgs) {
+            const argName = this.makeUniqueIdentifier(a.schemaKey, 'block');
+            const arg = createArgument(argName, a.type);
+            args.push(arg);
+            proxyEntries.push({ schemaKey: a.schemaKey, arg: arg.access });
+          }
+          const router = new EntryInputRouter(structArg?.access, proxyEntries);
+          scope.argAccess[firstParam.name] = () => snip('N/A', router, 'argument');
         } else {
-          returnType = undefined;
+          // No first param: push positional args with schema key names.
+          for (const a of positionalArgs) {
+            const argName = this.makeUniqueIdentifier(`_arg_${a.schemaKey}`, 'block');
+            const arg = createArgument(argName, a.type);
+            args.push(arg);
+            scope.argAccess[argName] = arg.access;
+          }
+        }
+      } else {
+        for (const [i, argType] of options.argTypes.entries()) {
+          const astParam = options.params[i];
+          // We know if arguments are passed by reference or by value, because we
+          // enforce that based on the whether the argument is a pointer or not.
+          //
+          // It still applies for shell-less functions, since we determine the type
+          // of the argument based on the argument's referentiality.
+          // In other words, if we pass a reference to a function, it's typed as a pointer,
+          // otherwise it's typed as a value.
+          const origin = isPtr(argType)
+            ? argType.addressSpace === 'storage'
+              ? argType.access === 'read'
+                ? 'readonly'
+                : 'mutable'
+              : argType.addressSpace
+            : 'argument';
+
+          switch (astParam?.type) {
+            case FuncParameterType.identifier: {
+              const arg = createArgument(
+                this.makeUniqueIdentifier(astParam.name, 'block'),
+                argType,
+                origin,
+              );
+              args.push(arg);
+              scope.argAccess[astParam.name] = arg.access;
+              break;
+            }
+            case FuncParameterType.destructuredObject: {
+              const objArg = createArgument(
+                this.makeUniqueIdentifier(`_arg_${i}`, 'block'),
+                argType,
+                origin,
+              );
+              args.push(objArg);
+              for (const { name, alias } of astParam.props) {
+                scope.argAccess[alias] = createArgumentPropAccess(objArg.access, name);
+              }
+              break;
+            }
+            case undefined: {
+              // Only push the argument if it's not an auto-struct.
+              // If we're not using an auto-struct, it's not going to
+              // have any properties anyway.
+              if (!(argType instanceof AutoStruct)) {
+                args.push({
+                  name: this.makeUniqueIdentifier(`_arg_${i}`, 'block'),
+                  access: () => {
+                    throw new Error(
+                      `Unreachable: Accessing an argument that wasn't named in the function signature`,
+                    );
+                  },
+                  decoratedType: argType,
+                  used: false,
+                });
+              }
+            }
+          }
         }
       }
 
-      if (!returnType) {
-        const returnTypes = [...scope.reportedReturnTypes];
-        if (returnTypes.length === 0) {
-          returnType = Void;
-        } else {
-          const conversion = getBestConversion(returnTypes);
-          if (conversion && !conversion.hasImplicitConversions) {
-            returnType = conversion.targetType;
+      let returnType: BaseData | undefined;
+
+      const code = this.gen.functionDefinition({
+        functionType: options.functionType,
+        args,
+        body: options.body,
+        determineReturnType: () => {
+          if (returnType) {
+            // Already determined
+            return returnType;
           }
-        }
 
-        if (!returnType) {
-          throw new Error(
-            `Expected function to have a single return type, got [${returnTypes.join(
-              ', ',
-            )}]. Cast explicitly to the desired type.`,
-          );
-        }
+          returnType = options.returnType;
+          if (returnType instanceof AutoStruct) {
+            // We're expecting an "auto" return type, so if there were structs returned,
+            // we accept the struct, otherwise we let the rest of the code unify on a
+            // primitive type.
+            if (isWgslStruct(scope.reportedReturnTypes.values().next().value)) {
+              returnType = returnType.completeStruct;
+            } else {
+              returnType = undefined;
+            }
+          }
 
-        returnType = concretize(returnType);
+          if (!returnType) {
+            const returnTypes = [...scope.reportedReturnTypes];
+            if (returnTypes.length === 0) {
+              returnType = Void;
+            } else {
+              const conversion = getBestConversion(returnTypes);
+              if (conversion && !conversion.hasImplicitConversions) {
+                returnType = conversion.targetType;
+              }
+            }
 
-        if (options.functionType === 'vertex' || options.functionType === 'fragment') {
-          returnType = createIoSchema(returnType as IOData);
-        }
+            if (!returnType) {
+              throw new Error(
+                `Expected function to have a single return type, got [${returnTypes.join(
+                  ', ',
+                )}]. Cast explicitly to the desired type.`,
+              );
+            }
+
+            returnType = concretize(returnType);
+
+            if (options.functionType === 'vertex' || options.functionType === 'fragment') {
+              returnType = createIoSchema(returnType as IOData);
+            }
+          }
+          return returnType;
+        },
+      });
+
+      if (!returnType) {
+        throw new Error(`Failed to determine return type`);
       }
 
       return {
-        head: resolveFunctionHeader(this, args, returnType),
-        body,
+        code,
         returnType,
       };
     } finally {
-      if (fnScopePushed) {
-        this._itemStateStack.pop('functionScope');
-      }
-      this.#namespaceInternal.nameRegistry.popFunctionScope();
+      this._itemStateStack.pop('blockScope');
+      this._itemStateStack.pop('functionScope');
     }
   }
 
@@ -876,14 +1039,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       );
     }
 
-    if (Array.isArray(item)) {
-      return snip(
-        stitch`array(${item.map((element) => this.resolve(element))})`,
-        UnknownData,
-        /* origin */ 'runtime',
-      ) as ResolvedSnippet;
-    }
-
     if (schema && isWgslStruct(schema)) {
       return snip(
         stitch`${this.resolve(schema)}(${Object.entries(schema.propTypes).map(([key, propType]) =>
@@ -895,7 +1050,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     throw new WgslTypeError(
-      `Value ${item} (as json: ${safeStringify(item)}) is not resolvable${
+      `Value ${safeStringify(item)} is not resolvable${
         schema ? ` to type ${safeStringify(schema)}` : ''
       }`,
     );
@@ -1001,14 +1156,4 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
     catchall,
     logResources: ctx.logResources,
   };
-}
-
-function resolveFunctionHeader(ctx: ResolutionCtx, args: Snippet[], returnType: BaseData) {
-  const argList = args
-    .map((arg) => `${arg.value}: ${ctx.resolve(arg.dataType as BaseData).value}`)
-    .join(', ');
-
-  return returnType.type !== 'void'
-    ? `(${argList}) -> ${getAttributesString(returnType)}${ctx.resolve(returnType).value} `
-    : `(${argList}) `;
 }

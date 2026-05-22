@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { arrayOf, type } from 'arktype';
+import { type } from 'arktype';
 import * as fs from 'node:fs/promises';
 import { ResultsTable } from './resultsTable.ts';
 
@@ -11,7 +11,7 @@ const ResultRecord = type({
   size: 'number',
 });
 
-const BenchmarkResults = arrayOf(ResultRecord);
+const BenchmarkResults = ResultRecord.array();
 
 function groupResultsByTest(results: typeof BenchmarkResults.infer) {
   const grouped: Record<string, Record<string, number>> = {};

@@ -2,8 +2,10 @@
   "compilerOptions": {
     "outDir": "${configDir}/dist",
     "declaration": true,
-    "lib": ["ESNext", "DOM"],
+    "lib": ["ES2024", "DOM"],
     "emitDeclarationOnly": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
     "target": "ESNext",
     "module": "ESNext",
     "strict": true,

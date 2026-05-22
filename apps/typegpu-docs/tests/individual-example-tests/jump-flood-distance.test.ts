@@ -29,26 +29,22 @@ describe('jump flood (distance) example', () => {
       @group(1) @binding(0) var maskTexture: texture_storage_2d<r32uint, read>;
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
-        var size = textureDimensions(writeView);
-        var pos = vec2f(f32(x), f32(y));
-        var uv = (pos / vec2f(size));
+        let size = textureDimensions(writeView);
+        let pos = vec2f(f32(x), f32(y));
+        let uv = (pos / vec2f(size));
         let mask = textureLoad(maskTexture, vec2i(i32(x), i32(y))).x;
         let inside = (mask > 0u);
-        var invalid = vec2f(-1);
-        var insideCoord = select(invalid, uv, inside);
-        var outsideCoord = select(uv, invalid, inside);
+        let invalid = vec2f(-1);
+        let insideCoord = select(invalid, uv, inside);
+        let outsideCoord = select(uv, invalid, inside);
         textureStore(writeView, vec2i(i32(x), i32(y)), vec4f(insideCoord, outsideCoord));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -63,13 +59,13 @@ describe('jump flood (distance) example', () => {
       }
 
       fn sampleWithOffset(tex: texture_storage_2d<rgba16float, read>, pos: vec2i, offset: vec2i) -> SampleResult {
-        var dims = textureDimensions(tex);
-        var samplePos = (pos + offset);
+        let dims = textureDimensions(tex);
+        let samplePos = (pos + offset);
         let outOfBounds = ((((samplePos.x < 0i) || (samplePos.y < 0i)) || (samplePos.x >= i32(dims.x))) || (samplePos.y >= i32(dims.y)));
-        var safePos = clamp(samplePos, vec2i(), vec2i((dims - 1u)));
-        var loaded = textureLoad(tex, safePos);
-        var inside = loaded.xy;
-        var outside = loaded.zw;
+        let safePos = clamp(samplePos, vec2i(), vec2i((dims - 1u)));
+        let loaded = textureLoad(tex, safePos);
+        let inside = loaded.xy;
+        let outside = loaded.zw;
         return SampleResult(select(inside, vec2f(-1), outOfBounds), select(outside, vec2f(-1), outOfBounds));
       }
 
@@ -77,17 +73,17 @@ describe('jump flood (distance) example', () => {
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
         let offset = offsetUniform;
-        var size = textureDimensions(readView);
-        var pos = vec2f(f32(x), f32(y));
+        let size = textureDimensions(readView);
+        let pos = vec2f(f32(x), f32(y));
         var bestInsideCoord = vec2f(-1);
         var bestOutsideCoord = vec2f(-1);
-        var bestInsideDist = 1e+20;
-        var bestOutsideDist = 1e+20;
+        var bestInsideDist = 3.4028234663852886e+38f;
+        var bestOutsideDist = 3.4028234663852886e+38f;
         // unrolled iteration #0
         {
           // unrolled iteration #0
           {
-            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (-1i * offset)));
+            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (-1i * offset)));
             if ((sample.inside.x >= 0f)) {
               let dInside = distance(pos, (sample.inside * vec2f(size)));
               if ((dInside < bestInsideDist)) {
@@ -105,7 +101,7 @@ describe('jump flood (distance) example', () => {
           }
           // unrolled iteration #1
           {
-            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (0i * offset)));
+            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (0i * offset)));
             if ((sample.inside.x >= 0f)) {
               let dInside = distance(pos, (sample.inside * vec2f(size)));
               if ((dInside < bestInsideDist)) {
@@ -123,7 +119,7 @@ describe('jump flood (distance) example', () => {
           }
           // unrolled iteration #2
           {
-            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (1i * offset)));
+            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (1i * offset)));
             if ((sample.inside.x >= 0f)) {
               let dInside = distance(pos, (sample.inside * vec2f(size)));
               if ((dInside < bestInsideDist)) {
@@ -144,7 +140,7 @@ describe('jump flood (distance) example', () => {
         {
           // unrolled iteration #0
           {
-            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (-1i * offset)));
+            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (-1i * offset)));
             if ((sample.inside.x >= 0f)) {
               let dInside = distance(pos, (sample.inside * vec2f(size)));
               if ((dInside < bestInsideDist)) {
@@ -162,7 +158,7 @@ describe('jump flood (distance) example', () => {
           }
           // unrolled iteration #1
           {
-            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (0i * offset)));
+            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (0i * offset)));
             if ((sample.inside.x >= 0f)) {
               let dInside = distance(pos, (sample.inside * vec2f(size)));
               if ((dInside < bestInsideDist)) {
@@ -180,7 +176,7 @@ describe('jump flood (distance) example', () => {
           }
           // unrolled iteration #2
           {
-            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (1i * offset)));
+            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (1i * offset)));
             if ((sample.inside.x >= 0f)) {
               let dInside = distance(pos, (sample.inside * vec2f(size)));
               if ((dInside < bestInsideDist)) {
@@ -201,7 +197,7 @@ describe('jump flood (distance) example', () => {
         {
           // unrolled iteration #0
           {
-            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (-1i * offset)));
+            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (-1i * offset)));
             if ((sample.inside.x >= 0f)) {
               let dInside = distance(pos, (sample.inside * vec2f(size)));
               if ((dInside < bestInsideDist)) {
@@ -219,7 +215,7 @@ describe('jump flood (distance) example', () => {
           }
           // unrolled iteration #1
           {
-            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (0i * offset)));
+            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (0i * offset)));
             if ((sample.inside.x >= 0f)) {
               let dInside = distance(pos, (sample.inside * vec2f(size)));
               if ((dInside < bestInsideDist)) {
@@ -237,7 +233,7 @@ describe('jump flood (distance) example', () => {
           }
           // unrolled iteration #2
           {
-            var sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (1i * offset)));
+            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (1i * offset)));
             if ((sample.inside.x >= 0f)) {
               let dInside = distance(pos, (sample.inside * vec2f(size)));
               if ((dInside < bestInsideDist)) {
@@ -257,15 +253,11 @@ describe('jump flood (distance) example', () => {
         textureStore(writeView, vec2i(i32(x), i32(y)), vec4f(bestInsideCoord, bestOutsideCoord));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
@@ -275,13 +267,13 @@ describe('jump flood (distance) example', () => {
       @group(2) @binding(0) var distTexture: texture_storage_2d<rgba16float, write>;
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
-        var pos = vec2f(f32(x), f32(y));
-        var size = textureDimensions(readView);
-        var texel = textureLoad(readView, vec2i(i32(x), i32(y)));
-        var insideCoord = texel.xy;
-        var outsideCoord = texel.zw;
-        var insideDist = 1e+20;
-        var outsideDist = 1e+20;
+        let pos = vec2f(f32(x), f32(y));
+        let size = textureDimensions(readView);
+        let texel = textureLoad(readView, vec2i(i32(x), i32(y)));
+        let insideCoord = texel.xy;
+        let outsideCoord = texel.zw;
+        var insideDist = 3.4028234663852886e+38f;
+        var outsideDist = 3.4028234663852886e+38f;
         if ((insideCoord.x >= 0f)) {
           insideDist = distance(pos, (insideCoord * vec2f(size)));
         }
@@ -292,19 +284,11 @@ describe('jump flood (distance) example', () => {
         textureStore(distTexture, vec2i(i32(x), i32(y)), vec4f(signedDist, 0f, 0f, 0f));
       }
 
-      struct mainCompute_Input {
-        @builtin(global_invocation_id) id: vec3u,
-      }
-
-      @compute @workgroup_size(16, 16, 1) fn mainCompute(in: mainCompute_Input) {
-        if (any(in.id >= sizeUniform)) {
+      @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
           return;
         }
-        wrappedCallback(in.id.x, in.id.y, in.id.z);
-      }
-
-      struct fullScreenTriangle_Input {
-        @builtin(vertex_index) vertexIndex: u32,
+        wrappedCallback(id.x, id.y, id.z);
       }
 
       struct fullScreenTriangle_Output {
@@ -312,11 +296,11 @@ describe('jump flood (distance) example', () => {
         @location(0) uv: vec2f,
       }
 
-      @vertex fn fullScreenTriangle(in: fullScreenTriangle_Input) -> fullScreenTriangle_Output {
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
         const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
         const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
 
-        return fullScreenTriangle_Output(vec4f(pos[in.vertexIndex], 0, 1), uv[in.vertexIndex]);
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
       @group(1) @binding(0) var distTexture: texture_2d<f32>;
@@ -339,7 +323,7 @@ describe('jump flood (distance) example', () => {
       }
 
       @fragment fn distanceFrag(_arg_0: distanceFrag_Input) -> @location(0) vec4f {
-        var size = textureDimensions(distTexture);
+        let size = textureDimensions(distTexture);
         var dist = textureSample(distTexture, sampler_1, _arg_0.uv).x;
         if (((paramsUniform.showInside == 0u) && (dist < 0f))) {
           dist = 0f;
@@ -353,15 +337,15 @@ describe('jump flood (distance) example', () => {
         let gradientPos = (t * 4f);
         let idx = u32(gradientPos);
         let frac = fract(gradientPos);
-        var outsideBase = mix(outsideGradient[min(idx, 4u)], outsideGradient[min((idx + 1u), 4u)], frac);
-        var insideBase = mix(insideGradient[min(idx, 4u)], insideGradient[min((idx + 1u), 4u)], frac);
+        let outsideBase = mix(outsideGradient[min(idx, 4u)], outsideGradient[min((idx + 1u), 4u)], frac);
+        let insideBase = mix(insideGradient[min(idx, 4u)], insideGradient[min((idx + 1u), 4u)], frac);
         var baseColor = outsideBase;
         if ((dist < 0f)) {
           baseColor = insideBase;
         }
         let contourFreq = (maxDist / 12f);
         let contour = smoothstep(0f, 0.15f, abs((fract((unsigned / contourFreq)) - 0.5f)));
-        var color = (baseColor * (0.7f + (0.3f * contour)));
+        let color = (baseColor * (0.7f + (0.3f * contour)));
         return vec4f(color, 1f);
       }"
     `);

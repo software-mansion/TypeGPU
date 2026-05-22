@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 /**
  * This can be used to branch functionality between "dev" and "prod" modes, so that our
  * library can omit doing unnecessary work once it's out in the wild
