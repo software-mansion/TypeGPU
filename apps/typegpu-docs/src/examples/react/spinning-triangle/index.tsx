@@ -57,13 +57,21 @@ function App() {
 
   const { ref, ctxRef } = useConfigureContext({ alphaMode: 'premultiplied' });
   useFrame(({ elapsedSeconds }) => {
-    if (!ctxRef.current) return;
+    const ctx = ctxRef.current;
+    if (!ctx) return;
 
     time.write(elapsedSeconds);
-    renderPipeline.withColorAttachment({ view: ctxRef.current }).draw(3);
+    renderPipeline.withColorAttachment({ view: ctx }).draw(3);
   });
 
-  return <canvas ref={ref} className="aspect-square h-full max-h-[100vw]" />;
+  return (
+    <>
+      <canvas ref={ref} className="aspect-square h-full max-h-[100vw]" />
+      <button type="button" onClick={() => root.destroy()}>
+        Destroy
+      </button>
+    </>
+  );
 }
 
 // #region Example controls and cleanup

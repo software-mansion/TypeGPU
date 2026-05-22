@@ -29,8 +29,8 @@ const useResizer: UseResizerHook = () => {
       return;
     }
 
-    el.width = Math.round(box.inlineSize * dpr);
-    el.height = Math.round(box.blockSize * dpr);
+    el.width = Math.max(1, Math.round(box.inlineSize * dpr));
+    el.height = Math.max(1, Math.round(box.blockSize * dpr));
   });
 
   const attachResizing = useEffectEvent((el: HTMLCanvasElement | OffscreenCanvas | null) => {
