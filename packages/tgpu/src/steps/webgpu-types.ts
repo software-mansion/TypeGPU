@@ -1,15 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { type } from 'arktype';
 import * as p from '@clack/prompts';
 import { parse, stringify } from 'comment-json';
+import type { Agent } from 'package-manager-detector';
 
 import { hasDependency } from '../utils/pkg.ts';
 import { findConfig } from '../utils/config.ts';
 import { pmAdd } from '../utils/pm.ts';
 import { confirmStep, failAndExit } from '../utils/prompts.ts';
 import { TsConfigSchema, type PackageJsonWithDeps } from '../utils/types.ts';
-import type { Agent } from 'package-manager-detector';
-import { type } from 'arktype';
 
 const TS_CONFIG_NAMES = ['tsconfig.app.json', 'tsconfig.json'];
 

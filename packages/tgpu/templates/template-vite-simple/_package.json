@@ -13,7 +13,7 @@
   "dependencies": {
     "@typegpu/color": "^0.11.0",
     "@typegpu/noise": "^0.11.0",
-    "typegpu": "^0.11.4"
+    "typegpu": "^0.11.6"
   },
   "devDependencies": {
     "@webgpu/types": "^0.1.70",
@@ -21,7 +21,7 @@
     "oxfmt": "^0.49.0",
     "oxlint": "^1.64.0",
     "typescript": "npm:tsover@6.0.1",
-    "unplugin-typegpu": "^0.11.3",
+    "unplugin-typegpu": "^0.11.4",
     "vite": "^8.0.12"
   },
   "overrides": {

@@ -61,10 +61,10 @@ export async function createProject(cwd: string) {
   const runCmd = resolveCommand(pm, 'run', ['dev']);
 
   if (installCmd && runCmd) {
-    msg += `   To have a shaderful experience run:\n`;
-    msg += `\n   cd ${cdPath}\n`;
+    msg += `   To have a shaderful experience run:\n\n`;
+    msg += `   cd ${cdPath}\n`;
     msg += `   ${installCmd.command} ${installCmd.args.join(' ')}\n`;
-    msg += `   ${runCmd.command} ${runCmd.args.join('')} `;
+    msg += `   ${runCmd.command} ${runCmd.args.join(' ')}`;
   }
 
   p.outro(msg);

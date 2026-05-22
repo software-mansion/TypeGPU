@@ -14,11 +14,25 @@ const pipeline = root.createRenderPipeline({
   },
 });
 
-const resizeObserver = new ResizeObserver(() => {
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = canvas.clientWidth * dpr;
-  canvas.height = canvas.clientHeight * dpr;
-
+function render() {
   pipeline.withColorAttachment({ view: context }).draw(3);
+}
+const observer = new ResizeObserver(([entry]) => {
+  if (!entry) {
+    return;
+  }
+  const width =
+    entry.devicePixelContentBoxSize?.[0].inlineSize ||
+    entry.contentBoxSize[0].inlineSize * window.devicePixelRatio;
+  const height =
+    entry.devicePixelContentBoxSize?.[0].blockSize ||
+    entry.contentBoxSize[0].blockSize * window.devicePixelRatio;
+  canvas.width = Math.max(1, Math.min(width, root.device.limits.maxTextureDimension2D));
+  canvas.height = Math.max(1, Math.min(height, root.device.limits.maxTextureDimension2D));
+  render();
 });
-resizeObserver.observe(canvas);
+try {
+  observer.observe(canvas, { box: 'device-pixel-content-box' });
+} catch {
+  observer.observe(canvas, { box: 'content-box' });
+}
