@@ -20,9 +20,9 @@ import {
   type SelfResolvable,
 } from '../types.ts';
 import type { ShelllessRepository } from './shellless.ts';
-import { stitch } from '../../src/core/resolve/stitch.ts';
-import { WgslTypeError } from '../../src/errors.ts';
-import { $internal, $resolve } from '../../src/shared/symbols.ts';
+import { stitch } from '../core/resolve/stitch.ts';
+import { WgslTypeError } from '../errors.ts';
+import { $internal, $resolve } from '../shared/symbols.ts';
 import type { SupportedLogOp } from './consoleLog/types.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
