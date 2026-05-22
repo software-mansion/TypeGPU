@@ -683,7 +683,7 @@ describe('struct', () => {
       - <root>
       - renderPipeline:pipeline
       - renderPipelineCore
-      - vertexFn:vertex: Cannot auto-convert struct 'Boid' to 'vertex_Output' because type 'vec3f' is not convertible to '<unnamed>'.]
+      - vertexFn:vertex: Cannot auto-convert struct 'Boid' to 'vertex_Output' because type 'vec3f' is not convertible to 'vec4f'.]
     `);
   });
 

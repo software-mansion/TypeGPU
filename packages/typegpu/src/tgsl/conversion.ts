@@ -286,7 +286,7 @@ function applyActionToSnippet(
           const converted = convertToCommonType(ctx, [accessedProp], [dataType]);
           if (!converted || !converted[0]) {
             throw new Error(
-              `Cannot auto-convert struct '${typeName}' to '${targetName}' because type '${getName(accessedProp.dataType) ?? '<unnamed>'}' is not convertible to '${getName(dataType) ?? '<unnamed>'}'.`,
+              `Cannot auto-convert struct '${typeName}' to '${targetName}' because type '${getName(accessedProp.dataType) ?? '<unnamed>'}' is not convertible to '${getName(undecorate(dataType)) ?? '<unnamed>'}'.`,
             );
           }
           return converted[0];
