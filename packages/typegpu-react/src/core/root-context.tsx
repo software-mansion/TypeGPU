@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import tgpu, { type TgpuRoot } from 'typegpu';
@@ -58,6 +59,7 @@ type RootContextResult =
   | { status: 'rejected'; error: unknown };
 
 interface RootContext {
+  readonly rootRequested: boolean;
   initOrGetRoot(): RootContextResult;
 }
 
@@ -71,6 +73,10 @@ class OwnRootContext implements RootContext {
         promise: tgpu.init().then(
           (root) => {
             this.#result = { status: 'resolved', value: root };
+            root.device.lost.then(() => {
+              // TODO: React to reason
+              this.#result = undefined;
+            });
             return root;
           },
           (error) => {
@@ -83,6 +89,10 @@ class OwnRootContext implements RootContext {
 
     return this.#result;
   }
+
+  get rootRequested() {
+    return this.#result !== undefined;
+  }
 }
 
 class ExistingRootContext implements RootContext {
@@ -94,6 +104,10 @@ class ExistingRootContext implements RootContext {
 
   initOrGetRoot(): RootContextResult {
     return this.result;
+  }
+
+  get rootRequested() {
+    return this.result !== undefined;
   }
 }
 
@@ -144,7 +158,32 @@ export function useRoot(): TgpuRoot {
   if (result.status === 'rejected') {
     throw result.error as Error;
   }
-  return result.status === 'pending' ? use(result.promise) : result.value;
+  const root = result.status === 'pending' ? use(result.promise) : result.value;
+
+  // NOTE: Useful docs: https://toji.dev/webgpu-best-practices/device-loss.html
+  const [_, rerender] = useState(0);
+  const lostRootsRef = useRef<WeakSet<TgpuRoot>>(new WeakSet());
+  useEffect(() => {
+    let cancelled = false;
+
+    root.device.lost.then(() => {
+      // TODO: React to reason
+      if (cancelled || lostRootsRef.current.has(root)) {
+        return;
+      }
+      lostRootsRef.current.add(root);
+
+      if (!context.rootRequested) {
+        rerender((a) => a + 1);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [root]);
+
+  return root;
 }
 
 /**
