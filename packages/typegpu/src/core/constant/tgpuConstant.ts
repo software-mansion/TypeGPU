@@ -1,11 +1,6 @@
 import { isData, type AnyData } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import {
-  type AnyWgslData,
-  type BaseData,
-  isNaturallyEphemeral,
-  type WgslArray,
-} from '../../data/wgslTypes.ts';
+import { type AnyWgslData, type BaseData, type WgslArray } from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
@@ -119,11 +114,7 @@ class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType>,
 
     ctx.addDeclaration(`const ${id}: ${resolvedDataType} = ${resolvedValue};`);
 
-    return snip(
-      id,
-      this.dataType,
-      isNaturallyEphemeral(this.dataType) ? 'constant' : 'constant-tgpu-const-ref',
-    );
+    return snip(id, this.dataType, 'constant-immutable-def');
   }
 
   toString() {
@@ -137,11 +128,7 @@ class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType>,
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(
-            this,
-            dataType,
-            isNaturallyEphemeral(dataType) ? 'constant' : 'constant-tgpu-const-ref',
-          );
+          return snip(this, dataType, 'constant-immutable-def');
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `const:${getName(this) ?? '<unnamed>'}.$`,

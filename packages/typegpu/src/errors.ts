@@ -147,19 +147,6 @@ export class NotUniformError extends Error {
   }
 }
 
-export class MissingLinksError extends Error {
-  constructor(fnLabel: string | undefined, externalNames: string[]) {
-    super(
-      `The function '${
-        fnLabel ?? '<unnamed>'
-      }' is missing links to the following external values: ${externalNames}.`,
-    );
-
-    // Set the prototype explicitly.
-    Object.setPrototypeOf(this, MissingLinksError.prototype);
-  }
-}
-
 export class MissingBindGroupsError extends Error {
   constructor(layouts: Iterable<TgpuBindGroupLayout>) {
     super(

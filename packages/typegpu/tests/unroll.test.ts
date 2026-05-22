@@ -116,7 +116,7 @@ describe('tgpu.unroll', () => {
         {
           const boo = 1;
           {
-            const foo = boo;
+            let foo = boo;
             fooResult += f32(foo);
           }
           const bar = 1;
@@ -125,7 +125,7 @@ describe('tgpu.unroll', () => {
         {
           const boo = 2;
           {
-            const foo = boo;
+            let foo = boo;
             fooResult += f32(foo);
           }
           const bar = 2;

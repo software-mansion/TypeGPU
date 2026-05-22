@@ -790,7 +790,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       setName(item, name);
       return callback();
     } finally {
-      setName(item, oldName);
+      if (oldName) {
+        setName(item, oldName);
+      }
     }
   }
 
