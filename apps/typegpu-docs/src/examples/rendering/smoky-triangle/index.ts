@@ -4,6 +4,7 @@ import tgpu, { d, std } from 'typegpu';
 const Params = d.struct({
   fromColor: d.vec3f,
   toColor: d.vec3f,
+  intensity: d.f32,
   polarCoords: d.u32,
   squashed: d.u32,
   sharpness: d.f32,
@@ -18,10 +19,13 @@ const paramsUniform = root.createUniform(Params);
 const getGradientColor = (ratio: number) => {
   'use gpu';
   const p = paramsUniform.$;
+  const fromColor = p.fromColor * p.intensity;
+  const toColor = p.toColor * p.intensity;
+
   if (p.squashed === 1) {
-    return std.mix(p.fromColor, p.toColor, std.smoothstep(0.1, 0.9, ratio));
+    return std.mix(fromColor, toColor, std.smoothstep(0.1, 0.9, ratio));
   }
-  return std.mix(p.fromColor, p.toColor, ratio);
+  return std.mix(fromColor, toColor, ratio);
 };
 
 const tanhVec = (v: d.v2f): d.v2f => {
@@ -73,12 +77,18 @@ const pipeline = root.pipe(perlinCache.inject()).createRenderPipeline({
     } else {
       factor = (p.x + p.y) * 0.7; // How far along the diagonal we are
     }
-    return std.saturate(d.vec4f(grain(getGradientColor(factor), uv), 1));
+    return d.vec4f(grain(getGradientColor(factor), uv), 1);
   },
+  targets: { format: 'rgba16float' },
 });
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+const context = root.configureContext({
+  canvas,
+  alphaMode: 'premultiplied',
+  format: 'rgba16float',
+  toneMapping: { mode: 'extended' },
+});
 
 let frameId: number;
 function frame(timestamp: number) {
@@ -113,15 +123,24 @@ export const controls = {
     },
   },
   'From Color': {
-    initial: [0.057, 0.2235, 0.4705],
+    initial: [0.0285, 0.11175, 0.23525],
     onColorChange(value: readonly [number, number, number]) {
       paramsUniform.patch({ fromColor: d.vec3f(...value) });
     },
   },
   'To Color': {
-    initial: [1.538, 0.784, 2],
+    initial: [0.769, 0.392, 1.0],
     onColorChange(value: readonly [number, number, number]) {
       paramsUniform.patch({ toColor: d.vec3f(...value) });
+    },
+  },
+  'Color Intensity': {
+    initial: 2,
+    min: 0.05,
+    max: 3,
+    step: 0.05,
+    onSliderChange(v: number) {
+      paramsUniform.patch({ intensity: v });
     },
   },
   'Polar Coordinates': {
@@ -141,8 +160,9 @@ export const controls = {
       paramsUniform.patch({
         distortion: 0.05,
         sharpness: 4.5 ** 2,
-        fromColor: d.vec3f(0.057, 0.2235, 0.4705),
-        toColor: d.vec3f(1.538, 0.784, 2),
+        fromColor: d.vec3f(0.0285, 0.11175, 0.23525),
+        toColor: d.vec3f(0.769, 0.392, 1.0),
+        intensity: 2,
         polarCoords: 0,
         squashed: 1,
       });
@@ -153,8 +173,9 @@ export const controls = {
       paramsUniform.patch({
         distortion: 0.1,
         sharpness: 7 ** 2,
-        fromColor: d.vec3f(2, 0.4, 0.5),
-        toColor: d.vec3f(0, 0, 0.4),
+        fromColor: d.vec3f(1, 0.2, 0.25),
+        toColor: d.vec3f(0, 0, 0.2),
+        intensity: 2,
         polarCoords: 1,
         squashed: 0,
       });
