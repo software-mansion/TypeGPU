@@ -1,6 +1,6 @@
 {
   "name": "tgpu",
-  "version": "0.0.1",
+  "version": "0.11.0",
   "description": "Add TypeGPU to your project",
   "license": "MIT",
   "repository": {
