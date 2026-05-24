@@ -1,8 +1,24 @@
 import { dualImpl } from '../core/function/dualImpl.ts';
 import { stitch } from '../core/resolve/stitch.ts';
-import { bool, f32 } from '../data/numeric.ts';
+import { bool, f16, f32, i32, u32 } from '../data/numeric.ts';
 import { isSnippetNumeric, snip } from '../data/snippet.ts';
-import { vec2b, vec3b, vec4b } from '../data/vector.ts';
+import {
+  vec2b,
+  vec2f,
+  vec2h,
+  vec2i,
+  vec2u,
+  vec3b,
+  vec3f,
+  vec3h,
+  vec3i,
+  vec3u,
+  vec4b,
+  vec4f,
+  vec4h,
+  vec4i,
+  vec4u,
+} from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import {
   type AnyBooleanVecInstance,
@@ -374,6 +390,29 @@ function cpuSelect<T extends number | boolean | AnyVecInstance>(
   );
 }
 
+export const validSelectBranchTypes: AnyWgslData[] = [
+  f32,
+  f16,
+  i32,
+  u32,
+  bool,
+  vec2f,
+  vec3f,
+  vec4f,
+  vec2h,
+  vec3h,
+  vec4h,
+  vec2i,
+  vec3i,
+  vec4i,
+  vec2u,
+  vec3u,
+  vec4u,
+  vec2b,
+  vec3b,
+  vec4b,
+];
+
 /**
  * Returns `t` if `cond` is `true`, and `f` otherwise.
  * Component-wise if `cond` is a vector.
@@ -386,9 +425,27 @@ function cpuSelect<T extends number | boolean | AnyVecInstance>(
 export const select = dualImpl({
   name: 'select',
   signature: (f, t, cond) => {
-    const [uf, ut] = unify([f, t]) ?? ([f, t] as const);
+    const [uf, ut] = unify([f, t], validSelectBranchTypes) ?? ([f, t] as const);
     return { argTypes: [uf, ut, cond], returnType: uf };
   },
   normalImpl: cpuSelect,
-  codegenImpl: (_ctx, [f, t, cond]) => stitch`select(${f}, ${t}, ${cond})`,
+  codegenImpl: (ctx, [f, t, cond]) => {
+    const result = stitch`select(${f}, ${t}, ${cond})`;
+    if (
+      !validSelectBranchTypes.includes(f.dataType as AnyWgslData) ||
+      !validSelectBranchTypes.includes(t.dataType as AnyWgslData)
+    ) {
+      throw new Error(
+        `'${result}' is invalid, std.select requires both branches to be either scalars or vectors.`,
+      );
+    }
+    if (f.dataType !== t.dataType) {
+      const fStr = ctx.resolve(f.dataType);
+      const tStr = ctx.resolve(t.dataType);
+      throw new Error(
+        `'${result}' is invalid, std.select requires both branches to be the same type, got [${fStr.value}, ${tStr.value}].`,
+      );
+    }
+    return result;
+  },
 });

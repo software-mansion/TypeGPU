@@ -251,7 +251,7 @@ describe('probability distribution plot example', () => {
         let face = u32((sample() * 6f));
         let axis = (face % 3u);
         var result = vec3f();
-        result[axis] = f32(select(0, 1, (face > 2u)));
+        result[axis] = f32(select(0i, 1i, (face > 2u)));
         result[((axis + 1u) % 3u)] = sample();
         result[((axis + 2u) % 3u)] = sample();
         return result;

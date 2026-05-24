@@ -6,7 +6,6 @@ export * as common from './common/index.ts';
 
 export {
   MissingBindGroupsError,
-  MissingLinksError,
   MissingSlotValueError,
   MissingVertexBuffersError,
   NotUniformError,

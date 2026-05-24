@@ -2,7 +2,6 @@ import { getAttributesString } from '../../data/attributes.ts';
 import { undecorate } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { type BaseData, isWgslData, isWgslStruct, Void } from '../../data/wgslTypes.ts';
-import { MissingLinksError } from '../../errors.ts';
 import { validateIdentifier } from '../../nameUtils.ts';
 import { getFunctionMetadata, getName } from '../../shared/meta.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
@@ -183,12 +182,6 @@ export function createFnCore(
         throw new Error(
           "Missing metadata for tgpu.fn function body (either missing 'use gpu' directive, or misconfigured `unplugin-typegpu`)",
         );
-      }
-
-      // verify all required externals are present
-      const missingExternals = ast.externalNames.filter((name) => !(name in externalMap));
-      if (missingExternals.length > 0) {
-        throw new MissingLinksError(getName(this), missingExternals);
       }
 
       // If an entrypoint implementation has a second argument, it represents the output schema.

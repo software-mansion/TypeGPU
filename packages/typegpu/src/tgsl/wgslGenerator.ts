@@ -46,6 +46,7 @@ import { isTgpuRange } from '../std/range.ts';
 import { stringifyNode } from '../shared/tseynit.ts';
 import type { FunctionDefinitionOptions } from './shaderGenerator_members.ts';
 import { getAttributesString } from '../data/attributes.ts';
+import { validSelectBranchTypes } from '../std/boolean.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -804,13 +805,29 @@ ${this.ctx.pre}}`;
 
     if (expression[0] === NODE.conditionalExpr) {
       // ternary operator
-      const [_, test, consequent, alternative] = expression;
-      const testExpression = this._expression(test);
-      if (isKnownAtComptime(testExpression)) {
-        return testExpression.value ? this._expression(consequent) : this._expression(alternative);
+      const [_, testNode, consequentNode, alternativeNode] = expression;
+      const test = this._expression(testNode);
+
+      if (isKnownAtComptime(test)) {
+        return test.value ? this._expression(consequentNode) : this._expression(alternativeNode);
       } else {
-        throw new Error(
-          `Ternary operator '${stringifyNode(expression)}' is invalid, because only comptime-known checks are supported. For runtime checks, please use 'std.select' or if/else statements.`,
+        const consequent = this._expression(consequentNode);
+        const alternative = this._expression(alternativeNode);
+        const [con, alt] =
+          convertToCommonType(this.ctx, [consequent, alternative], validSelectBranchTypes) ?? [];
+
+        if (!con || !alt || consequent.possibleSideEffects || alternative.possibleSideEffects) {
+          throw new Error(
+            `Ternary operator '${stringifyNode(expression)}' is invalid. For more complex branching, please use 'std.select' or if/else statements.`,
+          );
+        }
+
+        return snip(
+          stitch`select(${alt}, ${con}, ${test})`,
+          con.dataType,
+          'runtime',
+          // this select has side-effects only if the condition has side-effects
+          test.possibleSideEffects,
         );
       }
     }
@@ -1007,6 +1024,8 @@ Try 'return ${typeStr}(${str});' instead.
       this.ctx.makeUniqueIdentifier(rawId, 'block'),
       concreteType,
       /* origin */ 'local-def',
+      // Accessing variable declarations is side-effect free.
+      /* possibleSideEffects */ false,
     );
     this.ctx.defineVariable(rawId, snippet);
 
@@ -1121,6 +1140,8 @@ Try 'return ${typeStr}(${str});' instead.
       this.ctx.makeUniqueIdentifier(rawId, 'block'),
       concreteType,
       /* origin */ varOrigin,
+      // Accessing variable declarations is side-effect free.
+      /* possibleSideEffects */ false,
     );
     this.ctx.defineVariable(rawId, snippet);
 

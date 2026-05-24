@@ -132,6 +132,55 @@ describe('ternary operator', () => {
     `);
   });
 
+  it('should generate select() when branches are scalars', () => {
+    function foo() {
+      'use gpu';
+      const cond = false;
+      return cond ? 1 : 0;
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() -> i32 {
+        const cond = false;
+        return select(0i, 1i, cond);
+      }"
+    `);
+  });
+
+  it('should generate select() when branches are vector constructors', () => {
+    function foo() {
+      'use gpu';
+      const count = 10;
+      const anchor = count > 0 ? d.vec2f(1, 2) : d.vec2f();
+      return anchor;
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() -> vec2f {
+        const count = 10;
+        let anchor = select(vec2f(), vec2f(1, 2), (count > 0i));
+        return anchor;
+      }"
+    `);
+  });
+
+  it('should generate select() when branches contain side-effect free array indexing', () => {
+    function foo() {
+      'use gpu';
+      const array = [0];
+      const cond = false;
+      return cond ? d.vec2f(array[0]!) : d.vec2f();
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() -> vec2f {
+        let array_1 = array<i32, 1>(0);
+        const cond = false;
+        return select(vec2f(), vec2f(f32(array_1[0i])), cond);
+      }"
+    `);
+  });
+
   it('should throw when test is not comptime known', () => {
     const myFn = tgpu.fn(
       [d.u32],
@@ -143,7 +192,7 @@ describe('ternary operator', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Ternary operator '(n > 0) ? n : (-n)' is invalid, because only comptime-known checks are supported. For runtime checks, please use 'std.select' or if/else statements.]
+      - fn:myFn: Ternary operator '(n > 0) ? n : (-n)' is invalid. For more complex branching, please use 'std.select' or if/else statements.]
     `);
   });
 });

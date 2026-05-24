@@ -1,5 +1,5 @@
 import type { AnyComputeBuiltin, AnyFragmentInputBuiltin, OmitBuiltins } from '../../builtin.ts';
-import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
+import type { TgpuQuerySet } from '../querySet/querySet.ts';
 import type { AnyData, Disarray, UndecorateRecord } from '../../data/dataTypes.ts';
 import type { InstanceToSchema } from '../../data/instanceToSchema.ts';
 import type { WgslComparisonSamplerProps, WgslSamplerProps } from '../../data/sampler.ts';
@@ -60,7 +60,7 @@ import type {
   LayoutToAllowedAttribs,
 } from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
-import type { TgpuComputeFn } from './../function/tgpuComputeFn.ts';
+import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 
 // ----------
 // Public API

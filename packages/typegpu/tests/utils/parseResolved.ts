@@ -67,3 +67,7 @@ export function expectDataTypeOf(
 ): Assertion<d.BaseData | UnknownData> {
   return expect<d.BaseData | UnknownData>(extractSnippetFromFn(cb).dataType);
 }
+
+export function expectSideEffects(cb: () => unknown): Assertion<boolean> {
+  return expect<boolean>(extractSnippetFromFn(cb).possibleSideEffects);
+}

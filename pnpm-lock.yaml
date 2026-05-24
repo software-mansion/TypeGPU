@@ -49,7 +49,7 @@ catalogs:
       version: 0.181.0
     '@webgpu/types':
       specifier: ^0.1.66
-      version: 0.1.66
+      version: 0.1.69
 
 overrides:
   rollup: ^4.60.0
@@ -78,7 +78,7 @@ importers:
         version: 3.1.2(@vitest/browser@3.2.4(msw@2.10.2(@types/node@24.10.0)(tsover@5.9.11))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))(vitest@4.1.2))(vitest@4.1.2)
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.66
+        version: 0.1.69
       bun:
         specifier: 'catalog:'
         version: 1.3.10
@@ -88,6 +88,9 @@ importers:
       eslint-plugin-eslint-plugin:
         specifier: ^7.3.2
         version: 7.3.2(eslint@9.39.2(jiti@2.6.1))
+      eslint-plugin-internal:
+        specifier: workspace:*
+        version: link:packages/eslint-plugin-internal
       eslint-plugin-typegpu:
         specifier: workspace:*
         version: link:packages/eslint-plugin
@@ -400,7 +403,7 @@ importers:
         version: 4.1.2(msw@2.10.2(@types/node@24.10.0)(tsover@5.9.11))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))(vitest@4.1.2)
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.66
+        version: 0.1.69
       astro-vtbot:
         specifier: ^2.1.10
         version: 2.1.10(prettier@3.8.0)(tsover@5.9.11)
@@ -456,6 +459,28 @@ importers:
       vitest:
         specifier: ^4.0.17
         version: 4.0.18(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(@vitest/browser-preview@4.1.2(msw@2.10.2(@types/node@24.10.0)(tsover@5.9.11))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))(vitest@4.1.2))(esbuild@0.27.5)(jiti@2.6.1)(jsdom@27.0.0(canvas@3.2.0)(postcss@8.5.8))(msw@2.10.2(@types/node@24.10.0)(tsover@5.9.11))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
+
+  packages/eslint-plugin-internal:
+    dependencies:
+      '@typescript-eslint/utils':
+        specifier: ^8.57.2
+        version: 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@5.9.11)
+    devDependencies:
+      '@types/node':
+        specifier: ^24.10.0
+        version: 24.10.0
+      '@typescript-eslint/rule-tester':
+        specifier: ^8.57.2
+        version: 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@5.9.11)
+      eslint:
+        specifier: ^9.39.2
+        version: 9.39.2(jiti@2.6.1)
+      typescript:
+        specifier: npm:tsover@^5.9.11
+        version: tsover@5.9.11
+      vitest:
+        specifier: catalog:test
+        version: 4.1.2(@types/node@24.10.0)(@vitest/browser-preview@4.1.2)(jsdom@27.0.0(canvas@3.2.0)(postcss@8.5.8))(msw@2.10.2(@types/node@24.10.0)(tsover@5.9.11))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))
 
   packages/tgpu-dev-cli:
     dependencies:
@@ -572,7 +597,7 @@ importers:
         version: 24.10.0
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.66
+        version: 0.1.69
       arktype:
         specifier: 'catalog:'
         version: 2.1.28
@@ -599,6 +624,43 @@ importers:
         version: 3.4.0
     publishDirectory: dist
 
+  packages/typegpu-cli:
+    dependencies:
+      '@clack/prompts':
+        specifier: ^0.9.1
+        version: 0.9.1
+      arktype:
+        specifier: 'catalog:'
+        version: 2.1.28
+      comment-json:
+        specifier: ^5.0.0
+        version: 5.0.0
+      cross-spawn:
+        specifier: ^7.0.6
+        version: 7.0.6
+      magicast:
+        specifier: ^0.5.2
+        version: 0.5.2
+      mri:
+        specifier: ^1.2.0
+        version: 1.2.0
+      package-manager-detector:
+        specifier: ^1.3.0
+        version: 1.6.0
+    devDependencies:
+      '@types/cross-spawn':
+        specifier: ^6.0.6
+        version: 6.0.6
+      '@types/node':
+        specifier: ^24.10.0
+        version: 24.10.0
+      tsdown:
+        specifier: catalog:build
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.34(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
+      typescript:
+        specifier: npm:tsover@^5.9.11
+        version: tsover@5.9.11
+
   packages/typegpu-color:
     devDependencies:
       '@typegpu/tgpu-dev-cli':
@@ -606,7 +668,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.66
+        version: 0.1.69
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -628,7 +690,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.66
+        version: 0.1.69
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -650,7 +712,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.66
+        version: 0.1.69
       tinyest:
         specifier: workspace:^0.3.0
         version: link:../tinyest
@@ -681,7 +743,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.66
+        version: 0.1.69
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -703,7 +765,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.66
+        version: 0.1.69
       tsdown:
         specifier: catalog:build
         version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.34(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
@@ -741,7 +803,7 @@ importers:
         version: 19.1.6(@types/react@19.1.8)
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.66
+        version: 0.1.69
       jiti:
         specifier: catalog:build
         version: 2.6.1
@@ -781,7 +843,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.66
+        version: 0.1.69
       tsdown:
         specifier: catalog:build
         version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.34(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
@@ -803,7 +865,7 @@ importers:
         version: link:../tgpu-dev-cli
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.66
+        version: 0.1.69
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -848,7 +910,7 @@ importers:
         version: 0.181.0
       '@webgpu/types':
         specifier: catalog:types
-        version: 0.1.66
+        version: 0.1.69
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -1488,8 +1550,14 @@ packages:
     resolution: {integrity: sha512-VERIM64vtTP1C4mxQ5thVT9fK0apjPFobqybMtA1UdUujWka24ERHbRHFGmpbbhp73MhV+KSsHQH9C6uOTdEQA==}
     engines: {node: '>=18'}
 
+  '@clack/core@0.4.1':
+    resolution: {integrity: sha512-Pxhij4UXg8KSr7rPek6Zowm+5M22rbd2g1nfojHJkxp5YkFqiZ2+YLEM/XGVIzvGOcM0nqjIFxrpDwWRZYWYjA==}
+
   '@clack/core@1.1.0':
     resolution: {integrity: sha512-SVcm4Dqm2ukn64/8Gub2wnlA5nS2iWJyCkdNHcvNHPIeBTGojpdJ+9cZKwLfmqy7irD4N5qLteSilJlE0WLAtA==}
+
+  '@clack/prompts@0.9.1':
+    resolution: {integrity: sha512-JIpyaboYZeWYlyP0H+OoPPxd6nqueG/CmN6ixBiNFsIDHREevjIf0n0Ohh5gr5C8pEDknzgvz+pIJ8dMhzWIeg==}
 
   '@clack/prompts@1.1.0':
     resolution: {integrity: sha512-pkqbPGtohJAvm4Dphs2M8xE29ggupihHdy1x84HNojZuMtFsHiUlRvqD24tM2+XmI+61LlfNceM3Wr7U5QES5g==}
@@ -4067,6 +4135,9 @@ packages:
   '@types/cookie@0.6.0':
     resolution: {integrity: sha512-4Kh9a6B2bQciAhf7FSuMRRkUWecJgJu9nPnx3yzpsfXX/c50REIqpHY4C82bXP90qrLtXtkDxTZosYO3UpOwlA==}
 
+  '@types/cross-spawn@6.0.6':
+    resolution: {integrity: sha512-fXRhhUkG4H3TQk5dBhQ7m/JDdSNHKwR2BBia62lhwEIq9xGiQKLxd6LymNhn47SjXhsUEPmxi+PKw2OkW4LLjA==}
+
   '@types/debug@4.1.12':
     resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
 
@@ -4470,8 +4541,8 @@ packages:
   '@webassemblyjs/wast-printer@1.14.1':
     resolution: {integrity: sha512-kPSSXE6De1XOR820C90RIo2ogvZG+c3KiHzqUoO/F34Y2shGzesfqv7o57xrxovZJH/MetF5UjroJ/R/3isoiw==}
 
-  '@webgpu/types@0.1.66':
-    resolution: {integrity: sha512-YA2hLrwLpDsRueNDXIMqN9NTzD6bCDkuXbOSe0heS+f8YE8usA6Gbv1prj81pzVHrbaAma7zObnIC+I6/sXJgA==}
+  '@webgpu/types@0.1.69':
+    resolution: {integrity: sha512-RPmm6kgRbI8e98zSD3RVACvnuktIja5+yLgDAkTmxLr90BEwdTXRQWNLF3ETTTyH/8mKhznZuN5AveXYFEsMGQ==}
 
   '@webpack-cli/configtest@3.0.1':
     resolution: {integrity: sha512-u8d0pJ5YFgneF/GuvEiDA61Tf1VDomHHYMjv/wc9XzYj7nopltpG96nXN5dJRstxZhcNpV1g+nT6CydO7pHbjA==}
@@ -4633,6 +4704,9 @@ packages:
 
   array-iterate@2.0.1:
     resolution: {integrity: sha512-I1jXZMjAgCMmxT4qxXfPXa6SthSoE8h6gkSI9BGGNv8mP8G/v0blc+qFnZu6K42vTOiuME596QaLO0TP3Lk0xg==}
+
+  array-timsort@1.0.3:
+    resolution: {integrity: sha512-/+3GRL7dDAGEfM6TseQk/U+mi18TU2Ms9I3UlLdUMhz2hbvGNTKdj9xniwXfUqgYhHxRx0+8UnKkvlNwVU+cWQ==}
 
   asap@2.0.6:
     resolution: {integrity: sha512-BSHWgDSAiKs50o2Re8ppvp3seVHXSRM44cdSsT9FfNEUUZLOGWVCsiWaRPWM1Znn+mqZ1OfVZ3z3DWEzSp7hRA==}
@@ -5004,6 +5078,10 @@ packages:
   commander@8.3.0:
     resolution: {integrity: sha512-OkTL9umf+He2DZkUq8f8J9of7yL6RJKI24dVITBmNfZBmri9zYZQrKkuXiKhyfPSu8tUhnVBB1iKXevvnlR4Ww==}
     engines: {node: '>= 12'}
+
+  comment-json@5.0.0:
+    resolution: {integrity: sha512-uiqLcOiVDJtBP8WGkZHEP+FZIhTzP1dxvn59EfoYUi9gqupjrBWVQkO2atDrbnKPwLeotFYDsuNb26uBMqB+hw==}
+    engines: {node: '>= 6'}
 
   common-ancestor-path@2.0.0:
     resolution: {integrity: sha512-dnN3ibLeoRf2HNC+OlCiNc5d2zxbLJXOtiZUudNFSXZrNSydxcCsSpRzXwfu7BBWCIfHPw+xTayeBvJCP/D8Ng==}
@@ -5853,9 +5931,6 @@ packages:
   get-stream@9.0.1:
     resolution: {integrity: sha512-kVCxPF3vQM/N0B1PmoqVUqgHP+EeVjmZSQn+1oCRPxd2P21P2F19lIgbR3HBosbB1PUhOAoctJnfEn2GbN2eZA==}
     engines: {node: '>=18'}
-
-  get-tsconfig@4.13.6:
-    resolution: {integrity: sha512-shZT/QMiSHc/YBLxxOkMtgSid5HFoauqCE3/exfsEcwg1WkeqjG+V40yBbBrsD+jW2HDXcs28xOfcbm2jI8Ddw==}
 
   get-tsconfig@4.13.7:
     resolution: {integrity: sha512-7tN6rFgBlMgpBML5j8typ92BKFi2sFQvIdpAqLA2beia5avZDrMs0FLZiM5etShWq5irVyGcGMEA1jcDaK7A/Q==}
@@ -7089,6 +7164,10 @@ packages:
         optional: true
       react-dom:
         optional: true
+
+  mri@1.2.0:
+    resolution: {integrity: sha512-tzzskb3bG8LvYGFF/mDTpq3jpI6Q9wc3LEmBaghu+DdCssd1FakN7Bc0hVNmEyGq1bq3RgfkCb3cmQLpNPOroA==}
+    engines: {node: '>=4'}
 
   mrmime@2.0.1:
     resolution: {integrity: sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ==}
@@ -9530,7 +9609,7 @@ snapshots:
       '@volar/language-server': 2.4.27
       '@volar/language-service': 2.4.27
       muggle-string: 0.4.1
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.16
       volar-service-css: 0.0.68(@volar/language-service@2.4.27)
       volar-service-emmet: 0.0.68(@volar/language-service@2.4.27)
       volar-service-html: 0.0.68(@volar/language-service@2.4.27)
@@ -10273,8 +10352,19 @@ snapshots:
     dependencies:
       fontkitten: 1.0.3
 
+  '@clack/core@0.4.1':
+    dependencies:
+      picocolors: 1.1.1
+      sisteransi: 1.0.5
+
   '@clack/core@1.1.0':
     dependencies:
+      sisteransi: 1.0.5
+
+  '@clack/prompts@0.9.1':
+    dependencies:
+      '@clack/core': 0.4.1
+      picocolors: 1.1.1
       sisteransi: 1.0.5
 
   '@clack/prompts@1.1.0':
@@ -11774,7 +11864,9 @@ snapshots:
       metro-runtime: 0.83.5
     transitivePeerDependencies:
       - '@babel/core'
+      - bufferutil
       - supports-color
+      - utf-8-validate
     optional: true
 
   '@react-native/normalize-colors@0.84.1': {}
@@ -12399,6 +12491,10 @@ snapshots:
   '@types/cookie@0.6.0':
     optional: true
 
+  '@types/cross-spawn@6.0.6':
+    dependencies:
+      '@types/node': 24.10.0
+
   '@types/debug@4.1.12':
     dependencies:
       '@types/ms': 2.1.0
@@ -12506,7 +12602,7 @@ snapshots:
       '@tweenjs/tween.js': 23.1.3
       '@types/stats.js': 0.17.4
       '@types/webxr': 0.5.22
-      '@webgpu/types': 0.1.66
+      '@webgpu/types': 0.1.69
       fflate: 0.8.2
       meshoptimizer: 0.22.0
 
@@ -12996,7 +13092,7 @@ snapshots:
       '@webassemblyjs/ast': 1.14.1
       '@xtuc/long': 4.2.2
 
-  '@webgpu/types@0.1.66': {}
+  '@webgpu/types@0.1.69': {}
 
   '@webpack-cli/configtest@3.0.1(webpack-cli@6.0.1)(webpack@5.104.1)':
     dependencies:
@@ -13121,6 +13217,8 @@ snapshots:
       arkregex: 0.0.4
 
   array-iterate@2.0.1: {}
+
+  array-timsort@1.0.3: {}
 
   asap@2.0.6: {}
 
@@ -13634,6 +13732,11 @@ snapshots:
   commander@7.2.0: {}
 
   commander@8.3.0: {}
+
+  comment-json@5.0.0:
+    dependencies:
+      array-timsort: 1.0.3
+      esprima: 4.0.1
 
   common-ancestor-path@2.0.0: {}
 
@@ -14577,10 +14680,6 @@ snapshots:
     dependencies:
       '@sec-ant/readable-stream': 0.4.1
       is-stream: 4.0.1
-
-  get-tsconfig@4.13.6:
-    dependencies:
-      resolve-pkg-maps: 1.0.0
 
   get-tsconfig@4.13.7:
     dependencies:
@@ -16304,6 +16403,8 @@ snapshots:
     optionalDependencies:
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
+
+  mri@1.2.0: {}
 
   mrmime@2.0.1: {}
 
@@ -18166,7 +18267,7 @@ snapshots:
   tsx@4.20.6:
     dependencies:
       esbuild: 0.25.12
-      get-tsconfig: 4.13.6
+      get-tsconfig: 4.13.7
     optionalDependencies:
       fsevents: 2.3.3
 
@@ -18406,7 +18507,7 @@ snapshots:
 
   unplugin@2.3.5:
     dependencies:
-      acorn: 8.15.0
+      acorn: 8.16.0
       picomatch: 4.0.4
       webpack-virtual-modules: 0.6.2
 

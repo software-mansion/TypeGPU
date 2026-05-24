@@ -390,7 +390,7 @@ describe('jelly switch example', () => {
         let ndc = vec2f(((_arg_0.uv.x * 2f) - 1f), -(((_arg_0.uv.y * 2f) - 1f)));
         let ray = getRay(ndc);
         let color = rayMarch(ray.origin, ray.direction, _arg_0.uv);
-        let exposure = select(1.5, 2., (darkModeUniform == 1u));
+        let exposure = select(1.5f, 2f, (darkModeUniform == 1u));
         return vec4f(tanh((color.rgb * exposure)), 1f);
       }
 
