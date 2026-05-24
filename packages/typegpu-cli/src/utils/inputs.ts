@@ -9,11 +9,10 @@ function isValidPackageName(packageName: string) {
   return /^(?:@[a-z\d][a-z\d\-._]*\/)?[a-z\d][a-z\d\-._]*$/.test(packageName.trim());
 }
 
-export async function getProjectDirectory(initialValue: string) {
+export async function getProjectDirectory(defaultValue: string) {
   let projectDir = await p.text({
     message: 'Project directory:',
-    placeholder: initialValue,
-    initialValue,
+    placeholder: defaultValue,
     validate: (value) => {
       return value && !isValidProjectDirectory(value) ? 'Invalid project directory.' : undefined;
     },
@@ -23,17 +22,16 @@ export async function getProjectDirectory(initialValue: string) {
     cancelExit();
   }
 
-  projectDir ??= '.';
-  return projectDir.trim();
+  projectDir = projectDir?.trim() || defaultValue;
+  return projectDir;
 }
 
-export async function getPackageName(initialValue: string) {
+export async function getPackageName(defaultValue: string) {
   const packageName = await p.text({
     message: 'Package name:',
-    placeholder: initialValue,
-    initialValue,
+    placeholder: defaultValue,
     validate: (value) => {
-      return !value || !isValidPackageName(value) ? 'Invalid package name.' : undefined;
+      return value && !isValidPackageName(value) ? 'Invalid package name.' : undefined;
     },
   });
 
@@ -41,5 +39,5 @@ export async function getPackageName(initialValue: string) {
     cancelExit();
   }
 
-  return packageName.trim();
+  return packageName?.trim() || defaultValue;
 }
