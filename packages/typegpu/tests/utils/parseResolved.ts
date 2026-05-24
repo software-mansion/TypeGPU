@@ -1,7 +1,7 @@
 import type * as tinyest from 'tinyest';
 import { NodeTypeCatalog as NODE } from 'tinyest';
 import { type Assertion, expect } from 'vitest';
-import tgpu, { d, ShaderGenerator, WgslGenerator } from 'typegpu';
+import tgpu, { d, ShaderGenerator, WgslGenerator, type TgpuFn } from 'typegpu';
 
 type Snippet = ShaderGenerator.Snippet;
 type UnknownData = ShaderGenerator.UnknownData;
@@ -43,7 +43,7 @@ class ExtractingGenerator extends WgslGenerator {
   }
 }
 
-export function extractSnippetFromFn(cb: () => unknown): Snippet {
+export function extractSnippetFromFn(cb: TgpuFn | (() => unknown)): Snippet {
   const generator = new ExtractingGenerator();
 
   tgpu.resolve([cb], { unstable_shaderGenerator: generator });
@@ -56,13 +56,15 @@ export function extractSnippetFromFn(cb: () => unknown): Snippet {
 }
 
 export function expectSnippetOf(
-  cb: () => unknown,
+  cb: TgpuFn | (() => unknown),
 ): Assertion<[unknown, d.BaseData | UnknownData, Origin]> {
   const snippet = extractSnippetFromFn(cb);
   return expect([snippet.value, snippet.dataType, snippet.origin]);
 }
 
-export function expectDataTypeOf(cb: () => unknown): Assertion<d.BaseData | UnknownData> {
+export function expectDataTypeOf(
+  cb: TgpuFn | (() => unknown),
+): Assertion<d.BaseData | UnknownData> {
   return expect<d.BaseData | UnknownData>(extractSnippetFromFn(cb).dataType);
 }
 
