@@ -1,7 +1,7 @@
 import path from 'node:path';
 import * as p from '@clack/prompts';
 
-import { pmFromUserAgent, pmInstall, pmRun } from './utils/pm.ts';
+import { pmFromUserAgent, pmInstall } from './utils/pm.ts';
 import { cancelExit, confirmStep, rgbText } from './utils/prompts.ts';
 import { copyTemplate, prepareDirectory } from './utils/files.ts';
 import { getPackageName, getProjectDirectory } from './utils/inputs.ts';
@@ -46,24 +46,26 @@ export async function createProject(cwd: string) {
 
   const detected = await detect({ cwd });
   const pm = detected?.agent ?? pmFromUserAgent(process.env.npm_config_user_agent);
-  const installAndRun = await confirmStep(`Install with ${pm} and start now?`, true);
+  const shouldInstall = await confirmStep(`Install dependencies with ${pm}?`, true);
 
-  if (installAndRun) {
+  if (shouldInstall) {
     process.chdir(root);
     pmInstall(pm);
-    pmRun(pm, ['dev']);
-    return;
   }
 
-  let msg = 'Done!\n';
   const cdPath = path.relative(cwd, root);
   const installCmd = resolveCommand(pm, 'install', []);
   const runCmd = resolveCommand(pm, 'run', ['dev']);
 
-  if (installCmd && runCmd) {
-    msg += `   To have a shaderful experience run:\n\n`;
+  let msg = 'Done!\n';
+  msg += `   To get started run:\n\n`;
+  if (!shouldInstall && installCmd) {
     msg += `   cd ${cdPath}\n`;
     msg += `   ${installCmd.command} ${installCmd.args.join(' ')}\n`;
+  } else if (cdPath) {
+    msg += `   cd ${cdPath}\n`;
+  }
+  if (runCmd) {
     msg += `   ${runCmd.command} ${runCmd.args.join(' ')}`;
   }
 
