@@ -1,5 +1,5 @@
 {
-  "name": "tgpu",
+  "name": "@typegpu/cli",
   "version": "0.11.0-alpha.0",
   "description": "Add TypeGPU to your project",
   "license": "MIT",
