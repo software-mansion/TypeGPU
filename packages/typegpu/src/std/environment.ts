@@ -1,15 +1,14 @@
 import { comptime } from '../core/function/comptime.ts';
-import { bool } from '../data/numeric.ts';
-import { snip } from '../data/snippet.ts';
 import { getExecMode, getResolutionCtx } from '../execMode.ts';
 import { $gpuCallable } from '../shared/symbols.ts';
+import { coerceToSnippet } from '../tgsl/generationHelpers.ts';
 import type { DualFn } from '../types.ts';
 
 const impl = (() => false) as DualFn<() => boolean>;
 impl.toString = () => 'isBeingTranspiled';
 impl[$gpuCallable] = {
   call(_ctx, _args) {
-    return snip(true, bool, 'constant');
+    return coerceToSnippet(true);
   },
 };
 
@@ -22,7 +21,7 @@ impl[$gpuCallable] = {
  *   return isBeingTranspiled() ? 1 : 0;
  * };
  *
- * f() // returns 0, but resolved WGSL looks like this:
+ * f(); // returns 0, but resolved WGSL looks like this:
  *
  * fn f() -> i32 {
  *   return 1;
@@ -42,7 +41,7 @@ export const isBeingTranspiled = impl;
  *   return getTargetShaderLanguage() === 'wgsl';
  * };
  *
- * f() // returns false, but resolved WGSL looks like this:
+ * f(); // returns false, but resolved WGSL looks like this:
  *
  * fn f() -> bool {
  *   return true;

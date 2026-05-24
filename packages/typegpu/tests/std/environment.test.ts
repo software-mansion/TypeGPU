@@ -1,7 +1,7 @@
 import { it } from 'typegpu-testing-utility';
 import { expect, describe } from 'vitest';
 
-import tgpu, { d, std } from '../../src/index.js';
+import tgpu, { d, std } from 'typegpu';
 
 describe('isBeingTranspiled', () => {
   it('returns false top level', () => {
