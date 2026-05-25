@@ -12,7 +12,6 @@ export default defineConfig({
     ...typegpu.configs.recommended.rules,
     'typescript/no-non-null-assertion': 'error',
     'typescript/no-explicit-any': 'error',
-    'typescript/no-unsafe-type-assertion': 'off',
     'import/no-named-as-default': 'off',
   },
   env: {
