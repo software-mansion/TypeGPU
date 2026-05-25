@@ -6,6 +6,7 @@ import type {
   ResolutionCtx,
   TgpuShaderStage,
   FunctionDefinitionOptions,
+  ConstantDefinitionOptions,
   VariableDefinitionOptions,
   Snippet,
   ResolvedSnippet,
@@ -131,19 +132,22 @@ export class GlslGenerator extends WgslGenerator {
     this.#vertexOutPropToVarMap = {};
   }
 
-  override globalConstDefinition(id: string, schema: d.BaseData, init: Snippet): string {
-    const initStr = this.ctx.resolveSnippet(init).value;
+  override declareGlobalConst(options: ConstantDefinitionOptions): ResolvedSnippet {
+    const initStr = this.ctx.resolveSnippet(options.init).value;
 
-    if (d.isWgslArray(schema)) {
-      const elemTypeStr = this.ctx.resolve(schema.elementType).value;
-      return `const ${elemTypeStr} ${id}[] = ${initStr};`;
+    if (d.isWgslArray(options.dataType)) {
+      const elemTypeStr = this.ctx.resolve(options.dataType.elementType).value;
+      this.ctx.addDeclaration(`const ${elemTypeStr} ${options.id}[] = ${initStr};`);
+    } else {
+      const typeStr = this.ctx.resolve(options.dataType).value;
+      this.ctx.addDeclaration(`const ${typeStr} ${options.id} = ${initStr};`);
     }
-    const typeStr = this.ctx.resolve(schema).value;
-    return `const ${typeStr} ${id} = ${initStr};`;
+
+    return snip(options.id, options.dataType, 'constant-immutable-def');
   }
 
-  override globalVarDefinition(options: VariableDefinitionOptions): string {
-    let pre = `${this.ctx.resolve(options.dataType).value} ${options.name}`;
+  override declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet {
+    let pre = `${this.ctx.resolve(options.dataType).value} ${options.id}`;
 
     if (options.scope === 'private') {
       // Nothing to add
@@ -153,10 +157,11 @@ export class GlslGenerator extends WgslGenerator {
       throw new Error(`Cannot define ${options.scope} variables when generating GLSL.`);
     }
 
-    if (options.init) {
-      return `${pre} = ${this.ctx.resolveSnippet(options.init).value};`;
-    }
-    return `${pre};`;
+    this.ctx.addDeclaration(
+      options.init ? `${pre} = ${this.ctx.resolveSnippet(options.init).value};` : `${pre};`,
+    );
+
+    return snip(options.id, options.dataType, options.scope);
   }
 
   override typeAnnotation(data: d.BaseData): string {
