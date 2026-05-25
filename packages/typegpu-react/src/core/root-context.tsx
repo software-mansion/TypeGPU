@@ -79,10 +79,12 @@ class OwnRootContext implements RootContext {
         promise: tgpu.init().then(
           (root) => {
             if (this.#destroyed) {
-              return tgpu.initFromDevice({ device: {} as GPUDevice });
+              root.destroy();
+              this.#result = undefined;
+            } else {
+              this.#result = { status: 'resolved', value: root };
             }
 
-            this.#result = { status: 'resolved', value: root };
             return root;
           },
           (error) => {
@@ -149,13 +151,11 @@ export const Root = ({ children, root }: RootProps) => {
     return undefined;
   }, [root]);
 
-  const rootCtx = existingRootCtx ?? ownCtx;
-
   useDeferredCleanup(() => {
-    rootCtx.unmount();
+    ownCtx.unmount();
   });
 
-  return <rootContext.Provider value={rootCtx}>{children}</rootContext.Provider>;
+  return <rootContext.Provider value={existingRootCtx ?? ownCtx}>{children}</rootContext.Provider>;
 };
 
 /**
