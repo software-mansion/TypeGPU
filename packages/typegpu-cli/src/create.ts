@@ -1,7 +1,7 @@
 import path from 'node:path';
 import * as p from '@clack/prompts';
 
-import { pmFromUserAgent, pmInstall, pmRun } from './utils/pm.ts';
+import { pmFromUserAgent, pmInstall } from './utils/pm.ts';
 import { cancelExit, confirmStep, rgbText } from './utils/prompts.ts';
 import { copyTemplate, prepareDirectory } from './utils/files.ts';
 import { getPackageName, getProjectDirectory } from './utils/inputs.ts';
@@ -46,13 +46,11 @@ export async function createProject(cwd: string) {
 
   const detected = await detect({ cwd });
   const pm = detected?.agent ?? pmFromUserAgent(process.env.npm_config_user_agent);
-  const installAndRun = await confirmStep(`Install with ${pm} and start now?`, true);
+  const install = await confirmStep(`Install with ${pm} now?`, true);
 
-  if (installAndRun) {
+  if (install) {
     process.chdir(root);
     pmInstall(pm);
-    pmRun(pm, ['dev']);
-    return;
   }
 
   let msg = 'Done!\n';
@@ -60,10 +58,12 @@ export async function createProject(cwd: string) {
   const installCmd = resolveCommand(pm, 'install', []);
   const runCmd = resolveCommand(pm, 'run', ['dev']);
 
-  if (installCmd && runCmd) {
+  if (runCmd) {
     msg += `   To have a shaderful experience run:\n\n`;
     msg += `   cd ${cdPath}\n`;
-    msg += `   ${installCmd.command} ${installCmd.args.join(' ')}\n`;
+    if (!install && installCmd) {
+      msg += `   ${installCmd.command} ${installCmd.args.join(' ')}\n`;
+    }
     msg += `   ${runCmd.command} ${runCmd.args.join(' ')}`;
   }
 

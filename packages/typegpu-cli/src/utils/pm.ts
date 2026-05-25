@@ -23,7 +23,7 @@ export function pmFromUserAgent(userAgent: string | undefined) {
 
 function runCommand(command: string, args: string[], interactive?: boolean) {
   const { status, error } = spawn.sync(command, args, {
-    stdio: interactive ? 'inherit' : ['inherit', 'ignore', 'inherit'],
+    stdio: interactive ? 'inherit' : ['inherit', 'inherit', 'inherit'],
   });
 
   const label = `${command}${args.length ? ` ${args.join(' ')}` : ''}`;
