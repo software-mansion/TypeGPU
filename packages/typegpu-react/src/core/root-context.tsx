@@ -7,6 +7,7 @@ import React, {
   useState,
 } from 'react';
 import tgpu, { type TgpuRoot } from 'typegpu';
+import { useDeferredCleanup } from './helper-hooks.ts';
 
 function attachPromiseStatus<T>(
   promise: PromiseLike<T> & {
@@ -59,17 +60,28 @@ type RootContextResult =
 
 interface RootContext {
   initOrGetRoot(): RootContextResult;
+  unmount(): void;
 }
 
 class OwnRootContext implements RootContext {
   #result: RootContextResult | undefined;
+  #destroyed: boolean = false;
 
   initOrGetRoot(): RootContextResult {
+    if (this.#destroyed) {
+      console.warn(`[@typegpu/react]: Tried to init an already destroyed root.`);
+      return { status: 'rejected', error: new Error('Already destroyed') };
+    }
+
     if (!this.#result) {
       this.#result = {
         status: 'pending',
         promise: tgpu.init().then(
           (root) => {
+            if (this.#destroyed) {
+              return tgpu.initFromDevice({ device: {} as GPUDevice });
+            }
+
             this.#result = { status: 'resolved', value: root };
             return root;
           },
@@ -83,6 +95,15 @@ class OwnRootContext implements RootContext {
 
     return this.#result;
   }
+
+  unmount(): void {
+    this.#destroyed = true;
+
+    if (this.#result?.status === 'resolved') {
+      this.#result.value.destroy();
+    }
+    this.#result = undefined;
+  }
 }
 
 class ExistingRootContext implements RootContext {
@@ -94,6 +115,10 @@ class ExistingRootContext implements RootContext {
 
   initOrGetRoot(): RootContextResult {
     return this.result;
+  }
+
+  unmount(): void {
+    // Nothing to do on unmount
   }
 }
 
@@ -124,7 +149,13 @@ export const Root = ({ children, root }: RootProps) => {
     return undefined;
   }, [root]);
 
-  return <rootContext.Provider value={existingRootCtx ?? ownCtx}>{children}</rootContext.Provider>;
+  const rootCtx = existingRootCtx ?? ownCtx;
+
+  useDeferredCleanup(() => {
+    rootCtx.unmount();
+  });
+
+  return <rootContext.Provider value={rootCtx}>{children}</rootContext.Provider>;
 };
 
 /**
