@@ -4,6 +4,7 @@ export const wgslExtensions = [
   'dual_source_blending',
   'subgroups',
   'primitive_index',
+  'linear_indexing',
 ] as const;
 export type WgslExtension = (typeof wgslExtensions)[number];
 
@@ -13,4 +14,5 @@ export const wgslExtensionToFeatureName: Record<WgslExtension, GPUFeatureName> =
   dual_source_blending: 'dual-source-blending',
   subgroups: 'subgroups',
   primitive_index: 'primitive-index' as GPUFeatureName,
+  linear_indexing: 'linear-indexing' as GPUFeatureName,
 };
