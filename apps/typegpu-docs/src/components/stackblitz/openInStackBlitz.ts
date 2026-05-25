@@ -2,6 +2,7 @@ import StackBlitzSDK from '@stackblitz/sdk';
 import { parse } from 'yaml';
 import { type } from 'arktype';
 import typegpuColorPackageJson from '@typegpu/color/package.json' with { type: 'json' };
+import typegpuGlPackageJson from '@typegpu/gl/package.json' with { type: 'json' };
 import typegpuNoisePackageJson from '@typegpu/noise/package.json' with { type: 'json' };
 import typegpuSdfPackageJson from '@typegpu/sdf/package.json' with { type: 'json' };
 import typegpuThreePackageJson from '@typegpu/three/package.json' with { type: 'json' };
@@ -118,30 +119,31 @@ ${example.htmlFile.content}
     "@tailwindcss/vite": "^4.1.18"
   },
   "dependencies": ${JSON.stringify(
-    {
-      typegpu: `^${typegpuPackageJson.version}`,
-      'unplugin-typegpu': `^${unpluginPackageJson.version}`,
-      'wgpu-matrix': pnpmWorkspaceYaml.catalogs.example['wgpu-matrix'],
-      '@loaders.gl/core': typegpuDocsPackageJson.dependencies['@loaders.gl/core'],
-      '@loaders.gl/obj': typegpuDocsPackageJson.dependencies['@loaders.gl/obj'],
-      '@loaders.gl/gltf': typegpuDocsPackageJson.dependencies['@loaders.gl/gltf'],
-      'typed-binary': typegpuDocsPackageJson.dependencies['typed-binary'],
-      three: pnpmWorkspaceYaml.catalogs.example.three,
-      '@typegpu/noise': typegpuNoisePackageJson.version,
-      '@typegpu/color': typegpuColorPackageJson.version,
-      '@typegpu/sdf': typegpuSdfPackageJson.version,
-      '@typegpu/three': typegpuThreePackageJson.version,
-      ...(example.usedApis.includes('@typegpu/react')
-        ? {
-            '@typegpu/react': typegpuReactPackageJson.version,
-            react: '^19.2.0',
-            'react-dom': '^19.2.0',
-          }
-        : {}),
-    },
-    undefined,
-    2,
-  ).replaceAll('\n', '\n  ')}
+          {
+            typegpu: `^${typegpuPackageJson.version}`,
+            'unplugin-typegpu': `^${unpluginPackageJson.version}`,
+            'wgpu-matrix': pnpmWorkspaceYaml.catalogs.example['wgpu-matrix'],
+            '@loaders.gl/core': typegpuDocsPackageJson.dependencies['@loaders.gl/core'],
+            '@loaders.gl/obj': typegpuDocsPackageJson.dependencies['@loaders.gl/obj'],
+            '@loaders.gl/gltf': typegpuDocsPackageJson.dependencies['@loaders.gl/gltf'],
+            'typed-binary': typegpuDocsPackageJson.dependencies['typed-binary'],
+            three: pnpmWorkspaceYaml.catalogs.example.three,
+            '@typegpu/noise': typegpuNoisePackageJson.version,
+            '@typegpu/color': typegpuColorPackageJson.version,
+            '@typegpu/gl': typegpuGlPackageJson.version,
+            '@typegpu/sdf': typegpuSdfPackageJson.version,
+            '@typegpu/three': typegpuThreePackageJson.version,
+            ...(example.usedApis.includes('@typegpu/react')
+              ? {
+                '@typegpu/react': typegpuReactPackageJson.version,
+                react: '^19.2.0',
+                'react-dom': '^19.2.0',
+              }
+              : {}),
+          },
+          undefined,
+          2,
+        ).replaceAll('\n', '\n  ')}
 }`,
         'vite.config.js': `\
 import { defineConfig } from 'vite';

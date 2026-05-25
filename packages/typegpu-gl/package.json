@@ -1,7 +1,6 @@
 {
   "name": "@typegpu/gl",
-  "version": "0.11.0-alpha.1",
-  "private": true,
+  "version": "0.11.0-alpha.2",
   "description": "WebGL and GLSL utilities for TypeGPU",
   "keywords": [],
   "license": "MIT",
@@ -23,12 +22,12 @@
       "./package.json": "./dist/package.json",
       ".": {
         "types": "./dist/index.d.ts",
-        "module": "./dist/index.mjs",
-        "import": "./dist/index.mjs"
+        "module": "./dist/index.js",
+        "import": "./dist/index.js"
       }
     },
     "linkDirectory": false,
-    "main": "./dist/index.mjs",
+    "main": "./dist/index.js",
     "types": "./dist/index.d.ts"
   },
   "scripts": {
@@ -36,10 +35,12 @@
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit && pnpm tsc --p ./tsconfig.test.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
+  "dependencies": {
+    "tinyest": "workspace:^0.3.0"
+  },
   "devDependencies": {
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@webgpu/types": "catalog:types",
-    "tinyest": "workspace:^0.3.0",
     "tsdown": "catalog:build",
     "typegpu": "workspace:*",
     "typegpu-testing-utility": "workspace:*",

@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect } from 'vitest';
 import tgpu, { d } from 'typegpu';
 import { glOptions } from '@typegpu/gl';
 import { translateWgslTypeToGlsl } from '../src/glslGenerator.ts';
+import { _resetUniformCounter } from '../src/tgpuRootWebGL.ts';
+import { it } from './utils/extendedTest.ts';
 
 describe('translateWgslTypeToGlsl', () => {
   it('translates scalar types', () => {
@@ -56,7 +58,7 @@ describe('GlslGenerator - variable declarations', () => {
       return color;
     };
 
-    const result = tgpu.resolveWithContext([main], glOptions());
+    const result = tgpu.resolveWithContext([main], glOptions({ shaderStage: 'none' }));
     // Should contain the resolved function code
     expect(result.code).toBeDefined();
     expect(result.code.length).toBeGreaterThan(0);
@@ -75,7 +77,7 @@ describe('GlslGenerator - variable declarations', () => {
       return d.vec4f(x, 0, 0, 1);
     });
 
-    const result = tgpu.resolveWithContext([fragFn], glOptions());
+    const result = tgpu.resolveWithContext([fragFn], glOptions({ shaderStage: 'fragment' }));
     expect(result.code).toBeDefined();
     // Variable declaration for f32 should be `float`
     expect(result.code).toContain('float ');
@@ -94,7 +96,7 @@ describe('GlslGenerator - function definitions', () => {
       return add(1.5, 1.2);
     }
 
-    const result = tgpu.resolveWithContext([main], glOptions());
+    const result = tgpu.resolveWithContext([main], glOptions({ shaderStage: 'none' }));
 
     expect(result.code).toMatchInlineSnapshot(`
       "float add(float a, float b) {
@@ -116,7 +118,7 @@ describe('GlslGenerator - function definitions', () => {
       return d.vec4f(color[0], color[1], color[2], 1.0);
     });
 
-    const result = tgpu.resolveWithContext([fragFn], glOptions());
+    const result = tgpu.resolveWithContext([fragFn], glOptions({ shaderStage: 'fragment' }));
     expect(result.code).toContain('vec3(');
     expect(result.code).not.toMatch(/\bvec3f\s*\(/);
     expect(result.code).toContain('vec4(');
@@ -138,7 +140,7 @@ describe('GlslGenerator - function definitions', () => {
       const boid = createBoid();
     }
 
-    const result = tgpu.resolve([main], glOptions());
+    const result = tgpu.resolve([main], glOptions({ shaderStage: 'none' }));
     expect(result).toMatchInlineSnapshot(`
       "struct Boid {
         vec3 pos;
@@ -146,7 +148,7 @@ describe('GlslGenerator - function definitions', () => {
       };
 
       Boid createBoid() {
-        return Boid(vec3(), vec3(0, 1, 0));
+        return Boid(vec3(0), vec3(0, 1, 0));
       }
 
       void main() {
@@ -165,7 +167,7 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       return Out({ pos: d.vec4f(0.0, 0.0, 0.0, 1.0) });
     });
 
-    const result = tgpu.resolveWithContext([vertFn], glOptions());
+    const result = tgpu.resolveWithContext([vertFn], glOptions({ shaderStage: 'vertex' }));
     expect(result.code).toBeDefined();
     expect(result.code.length).toBeGreaterThan(0);
     // The body should have translated type names
@@ -202,17 +204,17 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       };
     });
 
-    const result = tgpu.resolve([vertFn], glOptions());
+    const result = tgpu.resolve([vertFn], glOptions({ shaderStage: 'vertex' }));
 
     expect(result).toMatchInlineSnapshot(`
-      "layout(location = 0) out uv_1;
+      "out vec2 vary_uv;
 
       void main() {
-        vec4 position = vec4();
-        vec2 uv = vec2();
+        vec4 position = vec4(0);
+        vec2 uv = vec2(0);
         {
           gl_Position = position;
-          uv_1 = uv;
+          vary_uv = uv;
           return;
         }
       }"
@@ -230,16 +232,18 @@ describe('GlslGenerator - entry point generation with JS functions', () => {
       return d.vec4f(1.0, 0.0, 0.0, 1.0);
     });
 
-    const result = tgpu.resolveWithContext([fragFn], glOptions());
+    const result = tgpu.resolveWithContext([fragFn], glOptions({ shaderStage: 'fragment' }));
     expect(result.code).toBeDefined();
     expect(result.code).toContain('vec4(');
     expect(result.code).not.toMatch(/\bvec4f\s*\(/);
 
     expect(result.code).toMatchInlineSnapshot(`
-      "void main() {
+      "layout(location=0) out vec4 _fragColor;
+
+      void main() {
         int gl_Position_1 = 1;
         {
-          gl_Position = vec4(1, 0, 0, 1);
+          _fragColor = vec4(1, 0, 0, 1);
           return;
         }
       }"
