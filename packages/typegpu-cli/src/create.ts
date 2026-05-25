@@ -57,16 +57,22 @@ export async function createProject(cwd: string) {
   const installCmd = resolveCommand(pm, 'install', []);
   const runCmd = resolveCommand(pm, 'run', ['dev']);
 
-  let msg = 'Done!\n';
-  msg += `   To get started run:\n\n`;
+  const steps: string[] = [];
+  const shouldCd = (!shouldInstall && !!installCmd) || !!runCmd || !!cdPath;
+  if (shouldCd && cdPath) {
+    steps.push(`   cd ${cdPath}`);
+  }
   if (!shouldInstall && installCmd) {
-    msg += `   cd ${cdPath}\n`;
-    msg += `   ${installCmd.command} ${installCmd.args.join(' ')}\n`;
-  } else if (cdPath) {
-    msg += `   cd ${cdPath}\n`;
+    steps.push(`   ${installCmd.command} ${installCmd.args.join(' ')}`);
   }
   if (runCmd) {
-    msg += `   ${runCmd.command} ${runCmd.args.join(' ')}`;
+    steps.push(`   ${runCmd.command} ${runCmd.args.join(' ')}`);
+  }
+
+  let msg = 'Done!\n';
+  if (steps.length > 0) {
+    msg += `   To get started run:\n\n`;
+    msg += steps.join('\n');
   }
 
   p.outro(msg);

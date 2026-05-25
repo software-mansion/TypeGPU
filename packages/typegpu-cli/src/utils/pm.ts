@@ -58,7 +58,7 @@ export function pmInstall(pm: Agent) {
     failAndExit(`Cannot resolve install command for ${pm}`);
   }
 
-  const label = `${cmd.command} ${cmd.args.join(' ')}`;
+  const label = `${cmd.command}${cmd.args.length ? ` ${cmd.args.join(' ')}` : ''}`;
   p.log.step(`Running ${label}...`);
   runCommand(cmd.command, cmd.args, true);
   p.log.success('Installed dependencies.');
