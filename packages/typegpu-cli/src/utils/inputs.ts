@@ -1,6 +1,5 @@
 import * as p from '@clack/prompts';
 import { cancelExit } from './prompts.ts';
-import { typegpuPkgs } from './pkg.ts';
 
 function isValidProjectDirectory(projectDir: string) {
   return !/[<>:"\\|?*\s]|\/+$/.test(projectDir.trim());
@@ -45,10 +44,10 @@ export async function getPackageName(initialValue: string) {
   return packageName.trim();
 }
 
-export async function selectTypegpuPkgs() {
+export async function selectPkgs(options: { value: string; hint: string }[]) {
   const packages = await p.multiselect({
     message: "Pick packages to add ('space' to select, 'enter' to confirm):",
-    options: typegpuPkgs,
+    options: options,
     required: false,
   });
   return typeof packages === 'symbol' ? [] : packages;
