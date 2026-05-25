@@ -4,7 +4,7 @@ import * as p from '@clack/prompts';
 import { pmFromUserAgent, pmInstall, pmRun } from './utils/pm.ts';
 import { cancelExit, confirmStep, rgbText } from './utils/prompts.ts';
 import { copyTemplate, prepareDirectory } from './utils/files.ts';
-import { getPackageName, getProjectDirectory } from './utils/inputs.ts';
+import { getProjectName } from './utils/inputs.ts';
 import { detect, resolveCommand } from 'package-manager-detector';
 
 const DEFAULT_PROJECT_DIR = 'tgpu-project';
@@ -19,11 +19,12 @@ const PROJECT_TEMPLATES = [
 export async function createProject(cwd: string) {
   p.intro('Creating a new TypeGPU project.');
 
-  const projectDir = await getProjectDirectory(DEFAULT_PROJECT_DIR);
+  const projectName = await getProjectName(DEFAULT_PROJECT_DIR);
+  const projectDir = projectName;
 
   const root = await prepareDirectory(cwd, projectDir);
 
-  const packageName = await getPackageName(projectDir);
+  const packageName = projectName;
 
   const projectTemplate = await p.select({
     message: 'Select a template:',

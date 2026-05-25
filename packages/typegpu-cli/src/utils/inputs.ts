@@ -9,37 +9,25 @@ function isValidPackageName(packageName: string) {
   return /^(?:@[a-z\d][a-z\d\-._]*\/)?[a-z\d][a-z\d\-._]*$/.test(packageName.trim());
 }
 
-export async function getProjectDirectory(initialValue: string) {
-  let projectDir = await p.text({
-    message: 'Project directory:',
+export async function getProjectName(initialValue: string) {
+  const projectName = await p.text({
+    message: 'Project name:',
     placeholder: initialValue,
     initialValue,
     validate: (value) => {
-      return value && !isValidProjectDirectory(value) ? 'Invalid project directory.' : undefined;
+      if (!value) {
+        return 'Invalid project name.';
+      }
+
+      return !isValidProjectDirectory(value) || !isValidPackageName(value)
+        ? 'Invalid project name.'
+        : undefined;
     },
   });
 
-  if (p.isCancel(projectDir)) {
+  if (p.isCancel(projectName)) {
     cancelExit();
   }
 
-  projectDir ??= '.';
-  return projectDir.trim();
-}
-
-export async function getPackageName(initialValue: string) {
-  const packageName = await p.text({
-    message: 'Package name:',
-    placeholder: initialValue,
-    initialValue,
-    validate: (value) => {
-      return !value || !isValidPackageName(value) ? 'Invalid package name.' : undefined;
-    },
-  });
-
-  if (p.isCancel(packageName)) {
-    cancelExit();
-  }
-
-  return packageName.trim();
+  return projectName.trim();
 }
