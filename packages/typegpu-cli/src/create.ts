@@ -1,10 +1,10 @@
 import path from 'node:path';
 import * as p from '@clack/prompts';
 
-import { pmFromUserAgent, pmInstall, pmRun } from './utils/pm.ts';
+import { pmAdd, pmFromUserAgent, pmInstall, pmRun } from './utils/pm.ts';
 import { cancelExit, confirmStep, rgbText } from './utils/prompts.ts';
 import { copyTemplate, prepareDirectory } from './utils/files.ts';
-import { getPackageName, getProjectDirectory } from './utils/inputs.ts';
+import { getPackageName, getProjectDirectory, selectTypegpuPkgs } from './utils/inputs.ts';
 import { detect, resolveCommand } from 'package-manager-detector';
 
 const DEFAULT_PROJECT_DIR = 'tgpu-project';
@@ -46,10 +46,12 @@ export async function createProject(cwd: string) {
 
   const detected = await detect({ cwd });
   const pm = detected?.agent ?? pmFromUserAgent(process.env.npm_config_user_agent);
-  const installAndRun = await confirmStep(`Install with ${pm} and start now?`, true);
+  process.chdir(root);
 
+  pmAdd(pm, await selectTypegpuPkgs(), false);
+
+  const installAndRun = await confirmStep(`Install with ${pm} and start now?`, true);
   if (installAndRun) {
-    process.chdir(root);
     pmInstall(pm);
     pmRun(pm, ['dev']);
     return;

@@ -43,3 +43,15 @@ export async function getPackageName(initialValue: string) {
 
   return packageName.trim();
 }
+
+export async function selectTypegpuPkgs() {
+  const packages = await p.multiselect({
+    message: "Pick packages to add ('space' to select, 'enter' to confirm):",
+    options: [
+      { value: '@typegpu/noise', hint: 'randomness' },
+      { value: '@typegpu/sdf', hint: 'sdfs' },
+    ],
+    required: false,
+  });
+  return typeof packages === 'symbol' ? [] : packages;
+}
