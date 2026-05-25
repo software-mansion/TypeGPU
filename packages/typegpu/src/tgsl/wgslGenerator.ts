@@ -966,6 +966,32 @@ ${this.ctx.pre}}`;
     return snip(stitch`${this.ctx.resolve(schema).value}(${args})`, schema, 'runtime');
   }
 
+  public numericLiteral(value: number, schema: wgsl.BaseData): ResolvedSnippet {
+    if (schema.type === 'abstractInt') {
+      return snip(`${value}`, schema, /* origin */ 'constant');
+    }
+    if (schema.type === 'u32') {
+      return snip(`${value}u`, schema, /* origin */ 'constant');
+    }
+    if (schema.type === 'i32') {
+      return snip(`${value}i`, schema, /* origin */ 'constant');
+    }
+
+    const exp = value.toExponential();
+    const decimal =
+      schema.type === 'abstractFloat' && Number.isInteger(value) ? `${value}.` : `${value}`;
+
+    // Just picking the shorter one
+    const base = exp.length < decimal.length ? exp : decimal;
+    if (schema.type === 'f32') {
+      return snip(`${base}f`, schema, /* origin */ 'constant');
+    }
+    if (schema.type === 'f16') {
+      return snip(`${base}h`, schema, /* origin */ 'constant');
+    }
+    return snip(base, schema, /* origin */ 'constant');
+  }
+
   protected _return(statement: tinyest.Return): string {
     const returnNode = statement[1];
 
