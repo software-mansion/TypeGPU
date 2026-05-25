@@ -988,29 +988,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       const realSchema = schema ?? numericLiteralToSnippet(item).dataType;
       invariant(realSchema !== UnknownData, 'Schema has to be known for resolving numbers');
 
-      if (realSchema.type === 'abstractInt') {
-        return snip(`${item}`, realSchema, /* origin */ 'constant');
-      }
-      if (realSchema.type === 'u32') {
-        return snip(`${item}u`, realSchema, /* origin */ 'constant');
-      }
-      if (realSchema.type === 'i32') {
-        return snip(`${item}i`, realSchema, /* origin */ 'constant');
-      }
-
-      const exp = item.toExponential();
-      const decimal =
-        realSchema.type === 'abstractFloat' && Number.isInteger(item) ? `${item}.` : `${item}`;
-
-      // Just picking the shorter one
-      const base = exp.length < decimal.length ? exp : decimal;
-      if (realSchema.type === 'f32') {
-        return snip(`${base}f`, realSchema, /* origin */ 'constant');
-      }
-      if (realSchema.type === 'f16') {
-        return snip(`${base}h`, realSchema, /* origin */ 'constant');
-      }
-      return snip(base, realSchema, /* origin */ 'constant');
+      return this.gen.numericLiteral(item, realSchema);
     }
 
     if (typeof item === 'boolean') {

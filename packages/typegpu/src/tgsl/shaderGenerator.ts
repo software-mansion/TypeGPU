@@ -22,6 +22,7 @@ export interface ShaderGenerator {
 
   typeInstantiation(schema: BaseData, args: readonly Snippet[]): ResolvedSnippet;
   typeAnnotation(schema: BaseData): string;
+  numericLiteral(value: number, schema: BaseData): ResolvedSnippet;
 }
 
 export * as ShaderGenerator from './shaderGenerator_members.ts';
