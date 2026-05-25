@@ -43,6 +43,10 @@ export function pmAdd(pm: Agent, pkgs: string[], dev: boolean) {
   if (!cmd) {
     failAndExit(`Cannot resolve add command for ${pm}`);
   }
+  if (pkgs.length === 0) {
+    p.log.success('No packages to install.');
+    return;
+  }
 
   // we can assume that pkgs.length > 0
   const label = pkgs.join(', ');

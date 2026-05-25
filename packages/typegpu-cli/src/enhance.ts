@@ -8,7 +8,7 @@ import { PackageJsonWithDepsSchema, type PackageJsonWithDeps } from './utils/typ
 import { pmInstall } from './utils/pm.ts';
 import { cancelExit, confirmStep, failAndExit, rgbText } from './utils/prompts.ts';
 import { ensureWebgpuTypes } from './steps/webgpu-types.ts';
-import { ensureTypegpu } from './steps/typegpu.ts';
+import { askForPkgs, ensureTypegpu } from './steps/typegpu.ts';
 import { ensureVite } from './steps/vite.ts';
 
 const PROJECT_KINDS = [{ value: 'vite', label: rgbText('Vite', 175, 105, 245) }];
@@ -17,6 +17,7 @@ async function runViteFlow(cwd: string, pm: Agent, pkg: PackageJsonWithDeps) {
   await ensureWebgpuTypes(cwd, pm, pkg);
   await ensureVite(cwd, pm, pkg);
   await ensureTypegpu(pm, pkg);
+  await askForPkgs(pm, pkg);
 }
 
 export async function enhanceProject(cwd: string) {
