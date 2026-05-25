@@ -1,6 +1,5 @@
 import { isTgpuFn } from './core/function/tgpuFn.ts';
 import type { Namespace, NamespaceInternal } from './core/resolve/namespace.ts';
-import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
 import type { Configurable, ExperimentalTgpuRoot } from './core/root/rootTypes.ts';
 import {
@@ -1011,23 +1010,18 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         );
       }
 
-      const elementTypeString = this.resolve(schema.elementType);
-      return snip(
-        stitch`array<${elementTypeString}, ${schema.elementCount}>(${item.map((element) =>
-          snip(element, schema.elementType, /* origin */ 'runtime'),
-        )})`,
+      return this.gen.typeInstantiation(
         schema,
-        /* origin */ 'runtime',
+        item.map((element) => snip(element, schema.elementType, /* origin */ 'runtime')),
       );
     }
 
     if (schema && isWgslStruct(schema)) {
-      return snip(
-        stitch`${this.resolve(schema)}(${Object.entries(schema.propTypes).map(([key, propType]) =>
-          snip((item as Infer<typeof schema>)[key], propType, /* origin */ 'runtime'),
-        )})`,
+      return this.gen.typeInstantiation(
         schema,
-        /* origin */ 'runtime', // a new struct, not referenced from anywhere
+        Object.entries(schema.propTypes).map(([key, propType]) =>
+          snip((item as Infer<typeof schema>)[key], propType, /* origin */ 'runtime'),
+        ),
       );
     }
 
