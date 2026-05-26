@@ -3,7 +3,7 @@ import * as p from '@clack/prompts';
 
 import { pmFromUserAgent, pmInstall } from './utils/pm.ts';
 import { cancelExit, confirmStep, rgbText } from './utils/prompts.ts';
-import { copyTemplate, prepareDirectory } from './utils/files.ts';
+import { scaffoldProject, prepareDirectory } from './utils/files.ts';
 import { getPackageName, getProjectDirectory } from './utils/inputs.ts';
 import { detect, resolveCommand } from 'package-manager-detector';
 
@@ -40,7 +40,7 @@ export async function createProject(cwd: string) {
     '../templates',
     `template-${projectTemplate}`,
   );
-  copyTemplate(templateDir, root, packageName);
+  await scaffoldProject(templateDir, root, packageName);
 
   p.log.success(`Scaffolded project at ${projectDir}.`);
 

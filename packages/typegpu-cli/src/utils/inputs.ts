@@ -1,5 +1,7 @@
 import * as p from '@clack/prompts';
 import { cancelExit } from './prompts.ts';
+import type { PackageJson } from './types.ts';
+import { hasDependency, typegpuPkgs, VERSION } from './pkg.ts';
 
 function isValidProjectDirectory(projectDir: string) {
   return !/[<>:"\\|?*\s]|\/+$/.test(projectDir.trim());
@@ -42,4 +44,24 @@ export async function getPackageName(initialValue: string) {
   }
 
   return packageName.trim();
+}
+
+export async function multiselectPkgs(pkg: PackageJson) {
+  const options = typegpuPkgs.filter((entry) => !hasDependency(pkg, entry.value));
+  if (options.length === 0) {
+    p.log.info('All typegpu ecosystem packages are already installed.');
+    return;
+  }
+
+  const packages = await p.multiselect({
+    message: "Pick packages to add ('space' to select, 'enter' to confirm):",
+    options: options,
+    required: false,
+  });
+
+  if (p.isCancel(packages)) {
+    cancelExit();
+  }
+
+  return packages.map((pkgName) => ({ pkg: pkgName, ver: VERSION }));
 }

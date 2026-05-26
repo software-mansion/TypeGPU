@@ -3,8 +3,9 @@ import path from 'node:path';
 import * as p from '@clack/prompts';
 
 import { cancelExit, failAndExit } from './prompts.ts';
-import { PackageJsonWithNameSchema } from './types.ts';
 import { type } from 'arktype';
+import { PackageJsonSchema } from './types.ts';
+import { multiselectPkgs } from './inputs.ts';
 
 const renameFiles = {
   _gitignore: '.gitignore',
@@ -49,7 +50,11 @@ export async function prepareDirectory(cwd: string, projectDir: string) {
   return dir;
 }
 
-export function copyTemplate(templateDir: string, projectDir: string, packageName: string) {
+export async function scaffoldProject(
+  templateDir: string,
+  projectDir: string,
+  packageName: string,
+) {
   const entries = fs.readdirSync(templateDir);
   for (const entry of entries.filter((f) => f !== '_package.json' && f !== 'index.html')) {
     const src = path.join(templateDir, entry);
@@ -65,10 +70,18 @@ export function copyTemplate(templateDir: string, projectDir: string, packageNam
 
   const srcPackage = path.join(templateDir, '_package.json');
   const destPackage = path.join(projectDir, 'package.json');
-  const pkg = PackageJsonWithNameSchema(JSON.parse(fs.readFileSync(srcPackage, 'utf-8')));
+  const pkg = PackageJsonSchema(JSON.parse(fs.readFileSync(srcPackage, 'utf-8')));
   if (pkg instanceof type.errors) {
     failAndExit(`[INTERNAL] Invalid package.json in template ${templateDir}`, pkg.summary);
   }
   pkg.name = packageName;
+  const pkgs = await multiselectPkgs(pkg);
+  if (pkgs) {
+    pkg.dependencies ??= {};
+    for (const { pkg: dep, ver } of pkgs) {
+      pkg.dependencies[dep] = ver;
+    }
+  }
+
   fs.writeFileSync(destPackage, JSON.stringify(pkg, null, 2) + '\n' /* to make oxfmt happy */);
 }
