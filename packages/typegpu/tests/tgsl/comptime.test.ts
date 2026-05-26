@@ -100,6 +100,30 @@ describe('comptime', () => {
     `);
   });
 
+  it('can read and work with accessors in comptime', () => {
+    const valueAccess = tgpu.accessor(d.f32, 1);
+    const doubleValue = tgpu.comptime(() => valueAccess.$ * 2);
+
+    const myFn = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      return doubleValue();
+    });
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() -> f32 {
+        return NaNf;
+      }"
+    `);
+
+    expect(tgpu.resolve([myFn.with(valueAccess, 2)])).toMatchInlineSnapshot(`
+      "fn myFn() -> f32 {
+        return NaNf;
+      }"
+    `);
+  });
+
   it('throws when a comptime-read accessor has no value', () => {
     const value = tgpu.accessor(d.f32);
     const readValue = tgpu.comptime(() => value.$);
