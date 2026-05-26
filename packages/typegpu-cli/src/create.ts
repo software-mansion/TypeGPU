@@ -45,10 +45,10 @@ export async function createProject(cwd: string) {
 
   p.log.success(`Scaffolded project at ${projectDir}.`);
 
-  process.chdir(root);
   const detected = await detect({ cwd });
   const pm = detected?.agent ?? pmFromUserAgent(process.env.npm_config_user_agent);
   const shouldInstall = await confirmStep(`Install dependencies with ${pm}?`, true);
+  process.chdir(root);
 
   if (shouldInstall) {
     pmInstall(pm);
