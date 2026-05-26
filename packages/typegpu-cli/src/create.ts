@@ -1,7 +1,7 @@
 import path from 'node:path';
 import * as p from '@clack/prompts';
 
-import { pmFromUserAgent, pmInstall } from './utils/pm.ts';
+import { pmExec, pmFromUserAgent, pmInstall } from './utils/pm.ts';
 import { cancelExit, confirmStep, rgbText } from './utils/prompts.ts';
 import { copyTemplate, prepareDirectory } from './utils/files.ts';
 import { getPackageName, getProjectDirectory } from './utils/inputs.ts';
@@ -51,6 +51,11 @@ export async function createProject(cwd: string) {
   if (shouldInstall) {
     process.chdir(root);
     pmInstall(pm);
+  }
+
+  const shouldAddSkills = await confirmStep(`Download agent skills for typegpu?`, true);
+  if (shouldAddSkills) {
+    pmExec(pm, ['skills', 'add', 'software-mansion-labs/skills', '-s', 'typegpu']);
   }
 
   const cdPath = path.relative(cwd, root);
