@@ -103,17 +103,16 @@ describe('comptime', () => {
   it('throws when a comptime-read accessor has no value', () => {
     const value = tgpu.accessor(d.f32);
     const readValue = tgpu.comptime(() => value.$);
-    const myFn = tgpu.fn(
-      [],
-      d.f32,
-    )(() => {
+    const myFn = () => {
+      'use gpu';
       return readValue();
-    });
+    };
 
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn
+      - fn*:myFn
+      - fn*:myFn()
       - fn:readValue: Missing value for 'slot:value']
     `);
   });
