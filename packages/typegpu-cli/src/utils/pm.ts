@@ -18,7 +18,7 @@ export function pmFromUserAgent(userAgent: string | undefined) {
   if (pm === undefined) {
     failAndExit(`Cannot determine package manager from user agent env.`);
   }
-  return pm as unknown as Agent;
+  return pm as Agent;
 }
 
 function runCommand(command: string, args: string[], interactive?: boolean) {
