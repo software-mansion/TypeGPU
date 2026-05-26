@@ -10,7 +10,7 @@ export function hasDependency(pkg: PackageJsonWithDeps, name: string) {
 export const typegpuPkgs = [
   { value: '@typegpu/color', hint: 'helpers for converting color spaces' },
   // { value: '@typegpu/geometry', hint: 'helpers for drawing points and lines' },
-  { value: '@typegpu/gl', hint: 'WebGL utilities for TypeGPU integration' },
+  // { value: '@typegpu/gl', hint: 'WebGL utilities for TypeGPU integration' },
   {
     value: '@typegpu/noise',
     hint: 'helpers for Perlin noise and general purpose random number generation.',
