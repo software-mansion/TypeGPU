@@ -1,13 +1,13 @@
 import type { Agent } from 'package-manager-detector';
 import * as p from '@clack/prompts';
 
-import { appendVersion, hasDependency, typegpuPkgs, VERSION } from '../utils/pkg.ts';
-import type { PackageJsonWithDeps } from '../utils/types.ts';
+import { appendVersion, hasDependency } from '../utils/pkg.ts';
+import type { PackageJson } from '../utils/types.ts';
 import { pmAdd } from '../utils/pm.ts';
 import { confirmStep } from '../utils/prompts.ts';
-import { selectPkgs } from '../utils/inputs.ts';
+import { multiselectPkgs } from '../utils/inputs.ts';
 
-export async function ensureTypegpu(pm: Agent, pkg: PackageJsonWithDeps): Promise<boolean> {
+export async function ensureTypegpu(pm: Agent, pkg: PackageJson): Promise<boolean> {
   if (hasDependency(pkg, 'typegpu')) {
     p.log.info('typegpu is already installed.');
     return true;
@@ -18,13 +18,9 @@ export async function ensureTypegpu(pm: Agent, pkg: PackageJsonWithDeps): Promis
   return true;
 }
 
-export async function askForPkgs(pm: Agent, pkg: PackageJsonWithDeps) {
-  const options = typegpuPkgs.filter((entry) => !hasDependency(pkg, entry.value));
-  if (options.length === 0) {
-    p.log.info('All typegpu ecosystem packages are already installed.');
-    return;
+export async function askForPkgs(pm: Agent, pkg: PackageJson) {
+  const pkgs = (await multiselectPkgs(pkg))?.map(({ pkg, ver }) => appendVersion(pkg, ver));
+  if (pkgs) {
+    pmAdd(pm, pkgs, false);
   }
-  const packages = await selectPkgs(options);
-  const versionedPackages = packages.map((p) => appendVersion(p, VERSION));
-  pmAdd(pm, versionedPackages, false);
 }

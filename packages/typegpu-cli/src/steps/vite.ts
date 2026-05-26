@@ -9,7 +9,7 @@ import { findConfig } from '../utils/config.ts';
 import { hasDependency } from '../utils/pkg.ts';
 import { pmAdd } from '../utils/pm.ts';
 import { confirmStep, failAndExit } from '../utils/prompts.ts';
-import type { PackageJsonWithDeps } from '../utils/types.ts';
+import type { PackageJson } from '../utils/types.ts';
 
 const VITE_CONFIG_NAMES = [
   'vite.config.ts',
@@ -46,7 +46,7 @@ function createViteConfig(cwd: string) {
   p.log.success('Created vite.config.ts.');
 }
 
-export async function askForVite(cwd: string, pm: Agent, pkg: PackageJsonWithDeps) {
+export async function askForVite(cwd: string, pm: Agent, pkg: PackageJson) {
   if (hasDependency(pkg, 'unplugin-typegpu')) {
     p.log.info('unplugin-typegpu is already installed.');
     return;

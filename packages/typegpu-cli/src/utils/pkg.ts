@@ -1,6 +1,6 @@
-import type { PackageJsonWithDeps } from './types.ts';
+import type { PackageJson } from './types.ts';
 
-export function hasDependency(pkg: PackageJsonWithDeps, name: string) {
+export function hasDependency(pkg: PackageJson, name: string) {
   const deps = pkg.dependencies ?? {};
   const devDeps = pkg.devDependencies ?? {};
   const peerDeps = pkg.peerDependencies ?? {};

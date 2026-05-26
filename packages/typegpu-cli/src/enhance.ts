@@ -4,7 +4,7 @@ import * as p from '@clack/prompts';
 import { detect, type Agent } from 'package-manager-detector';
 import { type } from 'arktype';
 
-import { PackageJsonWithDepsSchema, type PackageJsonWithDeps } from './utils/types.ts';
+import { PackageJsonSchema, type PackageJson } from './utils/types.ts';
 import { pmInstall } from './utils/pm.ts';
 import { cancelExit, confirmStep, failAndExit, rgbText } from './utils/prompts.ts';
 import { askForWebgpuTypes } from './steps/webgpu-types.ts';
@@ -13,7 +13,7 @@ import { askForVite } from './steps/vite.ts';
 
 const PROJECT_KINDS = [{ value: 'vite', label: rgbText('Vite', 175, 105, 245) }];
 
-async function runViteFlow(cwd: string, pm: Agent, pkg: PackageJsonWithDeps) {
+async function runViteFlow(cwd: string, pm: Agent, pkg: PackageJson) {
   await askForWebgpuTypes(cwd, pm, pkg);
   await askForVite(cwd, pm, pkg);
   if (!(await ensureTypegpu(pm, pkg))) {
@@ -38,7 +38,7 @@ export async function enhanceProject(cwd: string) {
   }
 
   // normal JSON.parse is fine because package.json cannot contain comments
-  const pkg = PackageJsonWithDepsSchema(JSON.parse(fs.readFileSync(pkgPath, 'utf-8')));
+  const pkg = PackageJsonSchema(JSON.parse(fs.readFileSync(pkgPath, 'utf-8')));
   if (pkg instanceof type.errors) {
     failAndExit('Could not parse package.json.', pkg.summary);
   }
