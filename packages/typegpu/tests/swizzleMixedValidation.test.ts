@@ -71,7 +71,7 @@ describe('Mixed swizzle validation', () => {
         return mixed;
       };
 
-      // The resolution should fail because accessProp returns undefined for mixed swizzles
+      // The resolution should fail because accessProp won't match any prop and will return undefined
       expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>

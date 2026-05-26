@@ -1,6 +1,5 @@
 import { isTgpuFn } from './core/function/tgpuFn.ts';
 import type { Namespace, NamespaceInternal } from './core/resolve/namespace.ts';
-import { stitch } from './core/resolve/stitch.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
 import type { Configurable, ExperimentalTgpuRoot } from './core/root/rootTypes.ts';
 import {
@@ -40,7 +39,7 @@ import type {
   BlockScopeLayer,
   ExecMode,
   ExecState,
-  FnToWgslOptions,
+  ResolveFunctionOptions,
   FunctionArgumentAccess,
   FunctionScopeLayer,
   ItemLayer,
@@ -532,7 +531,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     return this.#logGenerator.logResources;
   }
 
-  fnToWgsl(options: FnToWgslOptions): { code: string; returnType: BaseData } {
+  resolveFunction(options: ResolveFunctionOptions): { code: string; returnType: BaseData } {
     try {
       const scope = this._itemStateStack.pushFunctionScope(
         options.functionType,
@@ -655,6 +654,8 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
       const code = this.gen.functionDefinition({
         functionType: options.functionType,
+        name: options.name,
+        workgroupSize: options.workgroupSize,
         args,
         body: options.body,
         determineReturnType: () => {
@@ -986,29 +987,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       const realSchema = schema ?? numericLiteralToSnippet(item).dataType;
       invariant(realSchema !== UnknownData, 'Schema has to be known for resolving numbers');
 
-      if (realSchema.type === 'abstractInt') {
-        return snip(`${item}`, realSchema, /* origin */ 'constant');
-      }
-      if (realSchema.type === 'u32') {
-        return snip(`${item}u`, realSchema, /* origin */ 'constant');
-      }
-      if (realSchema.type === 'i32') {
-        return snip(`${item}i`, realSchema, /* origin */ 'constant');
-      }
-
-      const exp = item.toExponential();
-      const decimal =
-        realSchema.type === 'abstractFloat' && Number.isInteger(item) ? `${item}.` : `${item}`;
-
-      // Just picking the shorter one
-      const base = exp.length < decimal.length ? exp : decimal;
-      if (realSchema.type === 'f32') {
-        return snip(`${base}f`, realSchema, /* origin */ 'constant');
-      }
-      if (realSchema.type === 'f16') {
-        return snip(`${base}h`, realSchema, /* origin */ 'constant');
-      }
-      return snip(base, realSchema, /* origin */ 'constant');
+      return this.gen.numericLiteral(item, realSchema);
     }
 
     if (typeof item === 'boolean') {
@@ -1031,23 +1010,18 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         );
       }
 
-      const elementTypeString = this.resolve(schema.elementType);
-      return snip(
-        stitch`array<${elementTypeString}, ${schema.elementCount}>(${item.map((element) =>
-          snip(element, schema.elementType, /* origin */ 'runtime'),
-        )})`,
+      return this.gen.typeInstantiation(
         schema,
-        /* origin */ 'runtime',
+        item.map((element) => snip(element, schema.elementType, /* origin */ 'runtime')),
       );
     }
 
     if (schema && isWgslStruct(schema)) {
-      return snip(
-        stitch`${this.resolve(schema)}(${Object.entries(schema.propTypes).map(([key, propType]) =>
-          snip((item as Infer<typeof schema>)[key], propType, /* origin */ 'runtime'),
-        )})`,
+      return this.gen.typeInstantiation(
         schema,
-        /* origin */ 'runtime', // a new struct, not referenced from anywhere
+        Object.entries(schema.propTypes).map(([key, propType]) =>
+          snip((item as Infer<typeof schema>)[key], propType, /* origin */ 'runtime'),
+        ),
       );
     }
 

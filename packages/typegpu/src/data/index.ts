@@ -5,48 +5,20 @@
 // NOTE: This is a barrel file, internal files should not import things from this file
 
 import { Operator } from 'tsover-runtime';
-import { type InfixOperator, infixOperators } from '../tgsl/accessProp.ts';
 import { MatBase } from './matrix.ts';
 import { VecBase } from './vectorImpl.ts';
-
-function assignInfixOperator<T extends typeof VecBase | typeof MatBase>(
-  object: T,
-  operator: InfixOperator,
-  operatorSymbol: symbol,
-) {
-  // oxlint-disable-next-line typescript/no-explicit-any -- anything is possible
-  const proto = object.prototype as any;
-  const opImpl = infixOperators[operator] as (lhs: unknown, rhs: unknown) => unknown;
-
-  proto[operator] = function (this: unknown, other: unknown): unknown {
-    return opImpl(this, other);
-  };
-
-  proto[operatorSymbol] = (lhs: unknown, rhs: unknown): unknown => {
-    return opImpl(lhs, rhs);
-  };
-}
+import { assignInfixOperator } from '../tgsl/infixDispatch.ts';
 
 assignInfixOperator(VecBase, 'add', Operator.plus);
+assignInfixOperator(MatBase, 'add', Operator.plus);
 assignInfixOperator(VecBase, 'sub', Operator.minus);
+assignInfixOperator(MatBase, 'sub', Operator.minus);
 assignInfixOperator(VecBase, 'mul', Operator.star);
+assignInfixOperator(MatBase, 'mul', Operator.star);
 assignInfixOperator(VecBase, 'div', Operator.slash);
 assignInfixOperator(VecBase, 'mod', Operator.percent);
-assignInfixOperator(MatBase, 'add', Operator.plus);
-assignInfixOperator(MatBase, 'sub', Operator.minus);
-assignInfixOperator(MatBase, 'mul', Operator.star);
-
-// bitShift does not yet have tsover operator symbol
-{
-  // oxlint-disable-next-line typescript/no-explicit-any -- anything is possible
-  const proto = VecBase.prototype as any;
-  proto.bitShiftLeft = function (this: unknown, other: unknown) {
-    return (infixOperators.bitShiftLeft as (a: unknown, b: unknown) => unknown)(this, other);
-  };
-  proto.bitShiftRight = function (this: unknown, other: unknown) {
-    return (infixOperators.bitShiftRight as (a: unknown, b: unknown) => unknown)(this, other);
-  };
-}
+assignInfixOperator(VecBase, 'bitShiftLeft', Symbol()); // bitShift does not yet have tsover operator symbol
+assignInfixOperator(VecBase, 'bitShiftRight', Symbol()); // bitShift does not yet have tsover operator symbol
 
 export { bool, f16, f32, i32, u16, u32 } from './numeric.ts';
 export {
