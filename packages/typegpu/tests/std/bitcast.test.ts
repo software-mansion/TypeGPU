@@ -238,5 +238,18 @@ describe('bitcast in shaders', () => {
       - fn*:f3()
       - fn:bitcastF32toU32: Unsupported data types: vec2h. Supported types are: f32, vec2f, vec3f, vec4f.]
     `);
+
+    const f4 = () => {
+      'use gpu';
+      const u = d.u32(1);
+      return std.bitcastF32toU32(u);
+    };
+    expect(() => tgpu.resolve([f4])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f4
+      - fn*:f4()
+      - fn:bitcastF32toU32: Unsupported data types: u32. Supported types are: f32, vec2f, vec3f, vec4f.]
+    `);
   });
 });

@@ -286,6 +286,25 @@ export function unify<T extends (BaseData | UnknownData)[] | []>(
   };
 }
 
+export function unifyStrict<T extends (BaseData | UnknownData)[] | []>(
+  inTypes: T,
+  restrictTo?: BaseData[],
+): { [K in keyof T]: BaseData } | undefined {
+  if (inTypes.some((type) => type === UnknownData)) {
+    return undefined;
+  }
+
+  const uniqueTargetTypes = [...new Set(((restrictTo || inTypes) as BaseData[]).map(undecorate))];
+  const conversion = findBestType(inTypes as BaseData[], uniqueTargetTypes, false);
+  if (!conversion) {
+    return undefined;
+  }
+
+  return inTypes.map((type) => (isVec(type) || isMat(type) ? type : conversion.targetType)) as {
+    [K in keyof T]: BaseData;
+  };
+}
+
 export function convertToCommonType<T extends Snippet[]>(
   ctx: ResolutionCtx,
   values: T,

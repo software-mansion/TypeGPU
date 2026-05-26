@@ -10,7 +10,7 @@ import { isVec } from '../data/wgslTypes.ts';
 import { vec2f, vec2i, vec2u, vec3f, vec3i, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
 import { VectorOps } from '../data/vectorOps.ts';
 import type { v2f, v2i, v2u, v3f, v3i, v3u, v4f, v4i, v4u } from '../data/wgslTypes.ts';
-import { unify } from '../tgsl/conversion.ts';
+import { unifyStrict } from '../tgsl/conversion.ts';
 import { SignatureNotSupportedError } from '../errors.ts';
 
 type BitcastU32toF32Overload = <T extends number | v2u | v3u | v4u>(
@@ -29,7 +29,7 @@ export const bitcastU32toF32 = dualImpl({
   }) as BitcastU32toF32Overload,
   codegenImpl: (_ctx, [n]) => stitch`bitcast<f32>(${n})`,
   signature: (...arg) => {
-    const uargs = unify(arg, u32AllowedSchemas);
+    const uargs = unifyStrict(arg, u32AllowedSchemas);
     if (!uargs) {
       throw new SignatureNotSupportedError(arg, u32AllowedSchemas);
     }
@@ -60,7 +60,7 @@ export const bitcastU32toI32 = dualImpl({
   }) as BitcastU32toI32Overload,
   codegenImpl: (_ctx, [n]) => stitch`bitcast<i32>(${n})`,
   signature: (...arg) => {
-    const uargs = unify(arg, u32AllowedSchemas);
+    const uargs = unifyStrict(arg, u32AllowedSchemas);
     if (!uargs) {
       throw new SignatureNotSupportedError(arg, u32AllowedSchemas);
     }
@@ -97,7 +97,7 @@ export const bitcastF32toU32 = dualImpl({
       : stitch`bitcast<u32>(${n})`;
   },
   signature: (...arg) => {
-    const uargs = unify(arg, f32AllowedSchemas);
+    const uargs = unifyStrict(arg, f32AllowedSchemas);
     if (!uargs) {
       throw new SignatureNotSupportedError(arg, f32AllowedSchemas);
     }
