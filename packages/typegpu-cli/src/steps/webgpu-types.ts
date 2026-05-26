@@ -40,7 +40,7 @@ function addWebgpuTypesToTsconfig(filePath: string) {
   fs.writeFileSync(filePath, stringify(tsconfig, null, 2) + '\n');
 }
 
-export async function ensureWebgpuTypes(cwd: string, pm: Agent, pkg: PackageJsonWithDeps) {
+export async function askForWebgpuTypes(cwd: string, pm: Agent, pkg: PackageJsonWithDeps) {
   if (hasDependency(pkg, '@webgpu/types')) {
     p.log.info('@webgpu/types package is already installed.');
     return;

@@ -7,14 +7,15 @@ import { pmAdd } from '../utils/pm.ts';
 import { confirmStep } from '../utils/prompts.ts';
 import { selectPkgs } from '../utils/inputs.ts';
 
-export async function ensureTypegpu(pm: Agent, pkg: PackageJsonWithDeps) {
+export async function ensureTypegpu(pm: Agent, pkg: PackageJsonWithDeps): Promise<boolean> {
   if (hasDependency(pkg, 'typegpu')) {
     p.log.info('typegpu is already installed.');
-    return;
+    return true;
   }
-  if (!(await confirmStep('Install typegpu?'))) return;
+  if (!(await confirmStep('Install typegpu?'))) return false;
   pmAdd(pm, ['typegpu'], false);
   // no p.log.success because pmAdd already logs it
+  return true;
 }
 
 export async function askForPkgs(pm: Agent, pkg: PackageJsonWithDeps) {

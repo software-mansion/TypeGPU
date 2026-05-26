@@ -46,7 +46,7 @@ function createViteConfig(cwd: string) {
   p.log.success('Created vite.config.ts.');
 }
 
-export async function ensureVite(cwd: string, pm: Agent, pkg: PackageJsonWithDeps) {
+export async function askForVite(cwd: string, pm: Agent, pkg: PackageJsonWithDeps) {
   if (hasDependency(pkg, 'unplugin-typegpu')) {
     p.log.info('unplugin-typegpu is already installed.');
     return;

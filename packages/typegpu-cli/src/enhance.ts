@@ -7,16 +7,18 @@ import { type } from 'arktype';
 import { PackageJsonWithDepsSchema, type PackageJsonWithDeps } from './utils/types.ts';
 import { pmInstall } from './utils/pm.ts';
 import { cancelExit, confirmStep, failAndExit, rgbText } from './utils/prompts.ts';
-import { ensureWebgpuTypes } from './steps/webgpu-types.ts';
+import { askForWebgpuTypes } from './steps/webgpu-types.ts';
 import { askForPkgs, ensureTypegpu } from './steps/typegpu.ts';
-import { ensureVite } from './steps/vite.ts';
+import { askForVite } from './steps/vite.ts';
 
 const PROJECT_KINDS = [{ value: 'vite', label: rgbText('Vite', 175, 105, 245) }];
 
 async function runViteFlow(cwd: string, pm: Agent, pkg: PackageJsonWithDeps) {
-  await ensureWebgpuTypes(cwd, pm, pkg);
-  await ensureVite(cwd, pm, pkg);
-  await ensureTypegpu(pm, pkg);
+  await askForWebgpuTypes(cwd, pm, pkg);
+  await askForVite(cwd, pm, pkg);
+  if (!(await ensureTypegpu(pm, pkg))) {
+    return;
+  }
   await askForPkgs(pm, pkg);
 }
 
