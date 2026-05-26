@@ -50,5 +50,10 @@ export async function selectPkgs(options: { value: string; hint: string }[]) {
     options: options,
     required: false,
   });
-  return typeof packages === 'symbol' ? [] : packages;
+
+  if (p.isCancel(packages)) {
+    cancelExit();
+  }
+
+  return packages;
 }
