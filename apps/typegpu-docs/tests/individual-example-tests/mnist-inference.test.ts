@@ -10,7 +10,12 @@ import { mockMnistWeights } from './utils/commonMocks.ts';
 describe('mnist inference example', () => {
   setupCommonMocks();
 
-  it('should produce valid code', async ({ device }) => {
+  it('should produce valid code', async ({ adapter, device }) => {
+    for (const feature of ['subgroups', 'shader-f16'] satisfies GPUFeatureName[]) {
+      adapter.features.add(feature);
+      (device.features as Set<GPUFeatureName>).add(feature);
+    }
+
     const shaderCodes = await runExampleTest(
       {
         category: 'algorithms',
@@ -26,16 +31,16 @@ describe('mnist inference example', () => {
       "enable subgroups;
       enable f16;
 
-      @group(0) @binding(1) var<storage, read_write> output: array<f32>;
+      @group(0) @binding(1) var<storage, read_write> output: array<f16>;
 
-      @group(0) @binding(0) var<storage, read> input: array<f32>;
+      @group(0) @binding(0) var<storage, read> input: array<f16>;
 
-      @group(1) @binding(0) var<storage, read> weights: array<f32>;
+      @group(1) @binding(0) var<storage, read> weights: array<f16>;
 
-      @group(1) @binding(1) var<storage, read> biases: array<f32>;
+      @group(1) @binding(1) var<storage, read> biases: array<f16>;
 
-      fn relu(x: f32) -> f32 {
-        return max(0f, x);
+      fn relu(x: f16) -> f16 {
+        return max(0h, x);
       }
 
       @compute @workgroup_size(64) fn defaultCompute(@builtin(global_invocation_id) gid: vec3u) {
@@ -46,7 +51,7 @@ describe('mnist inference example', () => {
         }
         let inputSize = arrayLength(&input);
         let weightsOffset = (i * inputSize);
-        var sum = 0f;
+        var sum = 0h;
         for (var j = 0u; (j < inputSize); j++) {
           sum = fma(input[j], weights[(weightsOffset + j)], sum);
         }
@@ -57,28 +62,27 @@ describe('mnist inference example', () => {
       enable subgroups;
       enable f16;
 
-      @group(0) @binding(1) var<storage, read_write> output: array<f32>;
+      @group(0) @binding(1) var<storage, read_write> output: array<f16>;
 
-      @group(0) @binding(0) var<storage, read> input: array<f32>;
+      @group(0) @binding(0) var<storage, read> input: array<f16>;
 
-      @group(1) @binding(0) var<storage, read> weights: array<f32>;
+      @group(1) @binding(0) var<storage, read> weights: array<f16>;
 
-      @group(1) @binding(1) var<storage, read> biases: array<f32>;
+      @group(1) @binding(1) var<storage, read> biases: array<f16>;
 
-      fn relu(x: f32) -> f32 {
-        return max(0f, x);
+      fn relu(x: f16) -> f16 {
+        return max(0h, x);
       }
 
-      @compute @workgroup_size(64) fn subgroupCompute(@builtin(workgroup_id) wid: vec3u, @builtin(subgroup_invocation_id) sid: u32, @builtin(subgroup_id) sgid: u32, @builtin(num_subgroups) nsg: u32) {
+      @compute @workgroup_size(64) fn subgroupCompute(@builtin(workgroup_id) wid: vec3u, @builtin(subgroup_invocation_id) sid: u32, @builtin(subgroup_id) sgid: u32, @builtin(subgroup_size) subgroupSize: u32) {
         let outLen = arrayLength(&output);
         let inputSize = arrayLength(&input);
-        let neuronIndex = ((wid.x * nsg) + sgid);
-        let valid = (neuronIndex < outLen);
-        let laneCount = subgroupAdd(1);
-        var partial = 0f;
+        let neuronIndex = wid.x;
+        let valid = ((sgid == 0u) && (neuronIndex < outLen));
+        var partial = 0h;
         if (valid) {
           let weightsOffset = (neuronIndex * inputSize);
-          for (var j = sid; (j < inputSize); j += u32(laneCount)) {
+          for (var j = sid; (j < inputSize); j += subgroupSize) {
             partial = fma(input[j], weights[(weightsOffset + j)], partial);
           }
         }

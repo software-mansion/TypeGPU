@@ -65,25 +65,22 @@ const subgroupCompute = tgpu.computeFn({
     wid: d.builtin.workgroupId,
     sid: d.builtin.subgroupInvocationId,
     sgid: d.builtin.subgroupId,
-    nsg: d.builtin.numSubgroups,
+    subgroupSize: d.builtin.subgroupSize,
   },
   workgroupSize: [WORKGROUP_SIZE],
-})(({ wid, sid, sgid, nsg }) => {
+})(({ wid, sid, sgid, subgroupSize }) => {
   const outLen = ioLayout.$.output.length;
   const inputSize = ioLayout.$.input.length;
 
-  const neuronIndex = wid.x * nsg + sgid;
-  const valid = neuronIndex < outLen;
-
-  // Actual number of active lanes in this subgroup.
-  const laneCount = std.subgroupAdd(1);
+  const neuronIndex = wid.x;
+  const valid = sgid === 0 && neuronIndex < outLen;
 
   let partial = float(0);
 
   if (valid) {
     const weightsOffset = neuronIndex * inputSize;
 
-    for (let j = sid; j < inputSize; j += laneCount) {
+    for (let j = sid; j < inputSize; j += subgroupSize) {
       partial = std.fma(
         ioLayout.$.input[j],
         weightsBiasesLayout.$.weights[weightsOffset + j],
@@ -213,6 +210,7 @@ const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
 const bars = Array.from(document.querySelectorAll('.bar')) as HTMLDivElement[];
 const subgroupsEl = document.getElementById('subgroups-status') as HTMLSpanElement;
+const precisionEl = document.getElementById('precision-status') as HTMLSpanElement;
 const inferenceTimeEl = document.getElementById('inference-time') as HTMLSpanElement;
 
 const uiState = {
@@ -276,6 +274,8 @@ function updateSubgroupsStatus() {
 }
 
 updateSubgroupsStatus();
+precisionEl.textContent = hasShaderF16 ? 'f16' : 'f32';
+precisionEl.className = hasShaderF16 ? 'enabled' : 'disabled';
 
 run();
 
@@ -409,8 +409,15 @@ export const controls = defineControls({
   },
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick: () =>
-      [defaultCompute, subgroupCompute]
-        .map((fn) => tgpu.resolve([fn], { enableExtensions: ['subgroups', 'f16'] }))
+      [defaultCompute, ...(hasSubgroups ? [subgroupCompute] : [])]
+        .map((fn) =>
+          tgpu.resolve([fn], {
+            enableExtensions: [
+              ...(hasSubgroups ? ['subgroups' as const] : []),
+              ...(hasShaderF16 ? ['f16' as const] : []),
+            ],
+          }),
+        )
         .map((r) => root.device.createShaderModule({ code: r })),
   },
 });

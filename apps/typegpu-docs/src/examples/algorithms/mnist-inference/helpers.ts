@@ -39,7 +39,7 @@ function getLayerData(layer: ArrayBuffer): {
 
 export function downloadLayers(
   root: TgpuRoot,
-  floatShcema: d.F32 | d.F16,
+  floatSchema: d.F32 | d.F16,
 ): Promise<[LayerData, LayerData][]> {
   const downloadLayer = async (fileName: string): Promise<LayerData> => {
     const buffer = await fetch(`/TypeGPU/assets/mnist-weights/${fileName}`).then((res) =>
@@ -49,7 +49,7 @@ export function downloadLayers(
     const { shape, data } = getLayerData(buffer);
 
     const layerBuffer = root
-      .createBuffer(d.arrayOf(floatShcema, data.length), [...data])
+      .createBuffer(d.arrayOf(floatSchema, data.length), [...data])
       .$usage('storage');
 
     return {
