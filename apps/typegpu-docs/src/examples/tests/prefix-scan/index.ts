@@ -2,6 +2,7 @@ import tgpu from 'typegpu';
 import * as d from 'typegpu/data';
 import { type BinaryOp, prefixScan, scan } from '@typegpu/sort';
 import * as std from 'typegpu/std';
+import { defineControls } from '../../common/defineControls.ts';
 import { addFn, concat10, isArrayEqual, mulFn, prefixScanJS, scanJS } from './functions.ts';
 
 const root = await tgpu.init({
@@ -322,24 +323,49 @@ const table = document.querySelector<HTMLDivElement>('.result');
 if (!table) {
   throw new Error('Nowhere to display the results');
 }
-void runTests().then(async (result) => {
-  if (!result) {
+
+let testsPassed: boolean | null = null;
+let benchmarkPromise: Promise<void> | null = null;
+
+void runTests().then((result) => {
+  testsPassed = result;
+  table.innerText = `Tests ${result ? 'succeeded' : 'failed'}.`;
+});
+
+async function startBenchmarks(): Promise<void> {
+  if (testsPassed === null) {
+    table.innerText = 'Tests are still running.';
+    return;
+  }
+
+  if (!testsPassed) {
     table.innerText = 'Tests failed. Benchmarks skipped.';
     return;
   }
 
-  const shouldRunBenchmarks = new URLSearchParams(window.location.search).get('bench') === '1';
-  if (!shouldRunBenchmarks) {
-    table.innerText = "Tests succeeded. Benchmarks skipped (enable with '?bench=1' in the URL).";
-    return;
+  if (benchmarkPromise) {
+    return benchmarkPromise;
   }
 
   table.innerText = 'Tests succeeded. Running benchmarks...';
-  await runBenchmarks();
-  table.innerText = 'Tests succeeded. Benchmark complete (see console).';
-});
+  benchmarkPromise = runBenchmarks()
+    .then(() => {
+      table.innerText = 'Tests succeeded. Benchmark complete (see console).';
+    })
+    .finally(() => {
+      benchmarkPromise = null;
+    });
+
+  return benchmarkPromise;
+}
 
 // #region Example controls and cleanup
+
+export const controls = defineControls({
+  'Run benchmarks': {
+    onButtonClick: startBenchmarks,
+  },
+});
 
 export function onCleanup() {
   root.destroy();
