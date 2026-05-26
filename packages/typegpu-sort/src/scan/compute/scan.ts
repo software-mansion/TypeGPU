@@ -1,7 +1,6 @@
 import tgpu, { d, std } from 'typegpu';
 import {
   ELEMENTS_PER_THREAD,
-  ELEMENTS_RANGE,
   identitySlot,
   onlyGreatestElementSlot,
   operatorSlot,
@@ -33,7 +32,7 @@ export const computeBlock = tgpu.computeFn({
   let prev = identitySlot.$;
   let lastIdx = d.u32(0);
 
-  for (const i of tgpu.unroll(ELEMENTS_RANGE)) {
+  for (const i of tgpu.unroll(std.range(ELEMENTS_PER_THREAD))) {
     if (baseIdx + i < scanLayout.$.input.length) {
       partialSums[i] = operatorSlot.$(prev, scanLayout.$.input[baseIdx + i] as number);
       prev = partialSums[i];
@@ -58,7 +57,7 @@ export const computeBlock = tgpu.computeFn({
 
     const scannedSum = workgroupMemory.$[localIdx];
 
-    for (const i of tgpu.unroll(ELEMENTS_RANGE)) {
+    for (const i of tgpu.unroll(std.range(ELEMENTS_PER_THREAD))) {
       if (baseIdx + i < scanLayout.$.input.length) {
         if (i === 0) {
           scanLayout.$.input[baseIdx + i] = scannedSum;

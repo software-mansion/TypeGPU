@@ -244,22 +244,27 @@ const BENCH_WARMUP = 3;
 const BENCH_RUNS = 10;
 
 async function benchmarkSize(size: number): Promise<number> {
-  const buf = root.createBuffer(d.arrayOf(d.f32, size)).$usage('storage');
+  const inputData = Array.from({ length: size }, () => 1);
+  const inputBuffer = root.createBuffer(d.arrayOf(d.f32, size), inputData).$usage('storage');
+  const outputBuffer = root.createBuffer(d.arrayOf(d.f32, size)).$usage('storage');
 
   for (let i = 0; i < BENCH_WARMUP; i++) {
-    prefixScan(root, { inputBuffer: buf, operation: addFn, identityElement: 0 });
+    prefixScan(root, { inputBuffer, outputBuffer, operation: addFn, identityElement: 0 });
     await root.device.queue.onSubmittedWorkDone();
   }
 
   let total = 0;
   for (let i = 0; i < BENCH_RUNS; i++) {
     const t0 = performance.now();
-    prefixScan(root, { inputBuffer: buf, operation: addFn, identityElement: 0 });
+    prefixScan(root, { inputBuffer, outputBuffer, operation: addFn, identityElement: 0 });
     await root.device.queue.onSubmittedWorkDone();
     total += performance.now() - t0;
   }
 
-  return total / BENCH_RUNS;
+  const avgMs = total / BENCH_RUNS;
+  inputBuffer.destroy();
+  outputBuffer.destroy();
+  return avgMs;
 }
 
 async function runBenchmarks(): Promise<void> {
@@ -318,9 +323,20 @@ if (!table) {
   throw new Error('Nowhere to display the results');
 }
 void runTests().then(async (result) => {
-  table.innerText = `Tests ${result ? 'succeeded' : 'failed'}. Running benchmarks...`;
+  if (!result) {
+    table.innerText = 'Tests failed. Benchmarks skipped.';
+    return;
+  }
+
+  const shouldRunBenchmarks = new URLSearchParams(window.location.search).get('bench') === '1';
+  if (!shouldRunBenchmarks) {
+    table.innerText = "Tests succeeded. Benchmarks skipped (enable with '?bench=1' in the URL).";
+    return;
+  }
+
+  table.innerText = 'Tests succeeded. Running benchmarks...';
   await runBenchmarks();
-  table.innerText = `Tests ${result ? 'succeeded' : 'failed'}. Benchmark complete (see console).`;
+  table.innerText = 'Tests succeeded. Benchmark complete (see console).';
 });
 
 // #region Example controls and cleanup
