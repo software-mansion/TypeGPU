@@ -21,6 +21,7 @@ export async function ensureTypegpu(pm: Agent, pkg: PackageJsonWithDeps): Promis
 export async function askForPkgs(pm: Agent, pkg: PackageJsonWithDeps) {
   const options = typegpuPkgs.filter((entry) => !hasDependency(pkg, entry.value));
   if (options.length === 0) {
+    p.log.info('All typegpu ecosystem packages are already installed.');
     return;
   }
   const packages = await selectPkgs(options);
