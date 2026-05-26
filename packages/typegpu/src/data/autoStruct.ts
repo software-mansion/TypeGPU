@@ -1,4 +1,4 @@
-import { createIoSchema } from '../core/function/ioSchema.ts';
+import { createIoSchema, type IoSchemaOptions } from '../core/function/ioSchema.ts';
 import { validateProp } from '../nameUtils.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $internal, $repr, $resolve } from '../shared/symbols.ts';
@@ -34,17 +34,20 @@ export class AutoStruct implements BaseData, SelfResolvable {
   #locations: Record<string, number> | undefined;
   #cachedStruct: WgslStruct | undefined;
   #typeForExtraProps: BaseData | undefined;
+  #options: IoSchemaOptions;
 
   constructor(
     validProps: Record<string, BaseData>,
     typeForExtraProps: BaseData | undefined,
     locations?: Record<string, number>,
+    options: IoSchemaOptions = {},
   ) {
     this.#validProps = validProps;
     this.#typeForExtraProps = typeForExtraProps;
     this.#allocated = {};
     this.#locations = locations;
     this.#usedWgslKeys = new Set();
+    this.#options = options;
   }
 
   /**
@@ -97,6 +100,7 @@ export class AutoStruct implements BaseData, SelfResolvable {
           }),
         ),
         this.#locations,
+        this.#options,
       );
       const ownName = getName(this);
       // Passing the given name forward

@@ -2,12 +2,20 @@ import {
   type Decorate,
   type HasCustomLocation,
   type IsBuiltin,
+  interpolate,
   location,
 } from '../../data/attributes.ts';
 import { isBuiltin } from '../../data/attributes.ts';
-import { getCustomLocation, isData } from '../../data/dataTypes.ts';
+import { getCustomLocation, isData, undecorate } from '../../data/dataTypes.ts';
 import { INTERNAL_createStruct } from '../../data/struct.ts';
-import { type BaseData, isVoid, type Location, type WgslStruct } from '../../data/wgslTypes.ts';
+import {
+  type BaseData,
+  type FlatInterpolatableData,
+  isInterpolateAttrib,
+  isVoid,
+  type Location,
+  type WgslStruct,
+} from '../../data/wgslTypes.ts';
 import type { SeparatedEntryArgs } from './fnTypes.ts';
 
 export type WithLocations<T extends Record<string, BaseData>> = {
@@ -28,9 +36,39 @@ export type IOLayoutToSchema<T> = T extends BaseData
       ? void
       : never;
 
+const integerVaryingTypes = new Set([
+  'i32',
+  'u32',
+  'vec2i',
+  'vec2u',
+  'vec3i',
+  'vec3u',
+  'vec4i',
+  'vec4u',
+]);
+
+export type IoSchemaOptions = {
+  readonly autoInterpolateIntegerVaryings?: boolean;
+};
+
+function hasInterpolation(data: BaseData) {
+  return (data as { attribs?: unknown[] }).attribs?.some(isInterpolateAttrib) ?? false;
+}
+
+function maybeInterpolateIntegerVarying(data: BaseData, options: IoSchemaOptions) {
+  if (!options.autoInterpolateIntegerVaryings || hasInterpolation(data)) {
+    return data;
+  }
+
+  return integerVaryingTypes.has(undecorate(data).type)
+    ? interpolate('flat', data as FlatInterpolatableData)
+    : data;
+}
+
 export function withLocations<T extends BaseData>(
   members: Record<string, T> | undefined,
   locations: Record<string, number> = {},
+  options: IoSchemaOptions = {},
 ): Record<string, BaseData> {
   let nextLocation = 0;
   const usedCustomLocations = new Set<number>();
@@ -54,21 +92,22 @@ export function withLocations<T extends BaseData>(
           // skipping builtins
           return [key, member];
         }
+        const memberWithInterpolation = maybeInterpolateIntegerVarying(member, options);
 
         if (getCustomLocation(member) !== undefined) {
           // this member is already marked
-          return [key, member];
+          return [key, memberWithInterpolation];
         }
 
         if (locations[key]) {
           // location has been determined by a previous procedure
-          return [key, location(locations[key], member)];
+          return [key, location(locations[key], memberWithInterpolation)];
         }
 
         while (usedCustomLocations.has(nextLocation)) {
           nextLocation++;
         }
-        return [key, location(nextLocation++, member)];
+        return [key, location(nextLocation++, memberWithInterpolation)];
       }),
   );
 }
@@ -76,6 +115,7 @@ export function withLocations<T extends BaseData>(
 export function separateBuiltins(
   schema: Record<string, BaseData>,
   locations: Record<string, number> = {},
+  options: IoSchemaOptions = {},
 ): SeparatedEntryArgs {
   const positionalArgs: SeparatedEntryArgs['positionalArgs'] = [];
   const dataFields: Record<string, BaseData> = {};
@@ -90,7 +130,7 @@ export function separateBuiltins(
 
   const dataSchema =
     Object.keys(dataFields).length > 0
-      ? INTERNAL_createStruct(withLocations(dataFields, locations), /* isAbstruct */ false)
+      ? INTERNAL_createStruct(withLocations(dataFields, locations, options), /* isAbstruct */ false)
       : undefined;
 
   return { dataSchema, positionalArgs };
@@ -105,6 +145,7 @@ export function separateAllAsPositional(schema: Record<string, BaseData>): Separ
 export function createIoSchema<T extends BaseData | Record<string, BaseData>>(
   layout: T,
   locations: Record<string, number> = {},
+  options: IoSchemaOptions = {},
 ) {
   return (
     isData(layout)
@@ -116,7 +157,7 @@ export function createIoSchema<T extends BaseData | Record<string, BaseData>>(
             ? layout
             : location(0, layout)
       : INTERNAL_createStruct(
-          withLocations(layout as Record<string, BaseData>, locations),
+          withLocations(layout as Record<string, BaseData>, locations, options),
           /* isAbstruct */ false,
         )
   ) as IOLayoutToSchema<T>;

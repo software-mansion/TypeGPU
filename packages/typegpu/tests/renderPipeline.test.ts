@@ -269,7 +269,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
           @location(1) bar: vec3f,
           @location(0) baz: vec3f,
           @location(5) baz2: f32,
-          @location(3) baz3: u32,
+          @location(3) @interpolate(flat) baz3: u32,
           @builtin(position) pos: vec4f,
         }
 
@@ -320,13 +320,13 @@ describe('root.withVertex(...).withFragment(...)', () => {
           @builtin(position) position: vec4f,
           @location(0) baz: vec3f,
           @location(5) baz2: f32,
-          @location(3) baz3: u32,
+          @location(3) @interpolate(flat) baz3: u32,
         }
 
         @vertex fn vertexMain() -> vertexMain_Output { return vertexMain_Output(); }
 
         struct fragmentMain_Input {
-          @location(3) baz3: u32,
+          @location(3) @interpolate(flat) baz3: u32,
           @location(1) bar: vec3f,
           @location(2) foo: vec3f,
           @location(5) baz2: f32,
@@ -1268,7 +1268,7 @@ describe('root.createRenderPipeline', () => {
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct VertexOut {
         @builtin(position) position: vec4f,
-        @location(0) prop: i32,
+        @location(0) @interpolate(flat) prop: i32,
       }
 
       @vertex fn vertex() -> VertexOut {
@@ -1276,7 +1276,7 @@ describe('root.createRenderPipeline', () => {
       }
 
       struct FragmentIn {
-        @location(0) prop: i32,
+        @location(0) @interpolate(flat) prop: i32,
       }
 
       @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {

@@ -211,7 +211,9 @@ function createFragmentFn(
     },
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-      const entryInput = separateBuiltins(shell.in ?? {}, ctx.varyingLocations ?? {});
+      const entryInput = separateBuiltins(shell.in ?? {}, ctx.varyingLocations ?? {}, {
+        autoInterpolateIntegerVaryings: true,
+      });
 
       if (entryInput.dataSchema && isNamable(entryInput.dataSchema)) {
         entryInput.dataSchema.$name(`${getName(this) ?? ''}_Input`);
