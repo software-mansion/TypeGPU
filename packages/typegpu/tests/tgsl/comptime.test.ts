@@ -100,7 +100,7 @@ describe('comptime', () => {
     `);
   });
 
-  it('still throws when a comptime-read accessor has no value', () => {
+  it('throws when a comptime-read accessor has no value', () => {
     const value = tgpu.accessor(d.f32);
     const readValue = tgpu.comptime(() => value.$);
     const myFn = tgpu.fn(
