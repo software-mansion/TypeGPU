@@ -1,7 +1,7 @@
 import type { Agent } from 'package-manager-detector';
 import * as p from '@clack/prompts';
 
-import { hasDependency, typegpuPkgs } from '../utils/pkg.ts';
+import { appendVersion, hasDependency, typegpuPkgs, VERSION } from '../utils/pkg.ts';
 import type { PackageJsonWithDeps } from '../utils/types.ts';
 import { pmAdd } from '../utils/pm.ts';
 import { confirmStep } from '../utils/prompts.ts';
@@ -25,5 +25,6 @@ export async function askForPkgs(pm: Agent, pkg: PackageJsonWithDeps) {
     return;
   }
   const packages = await selectPkgs(options);
-  pmAdd(pm, packages, false);
+  const versionedPackages = packages.map((p) => appendVersion(p, VERSION));
+  pmAdd(pm, versionedPackages, false);
 }

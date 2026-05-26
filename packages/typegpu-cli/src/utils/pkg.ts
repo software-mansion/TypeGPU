@@ -7,6 +7,8 @@ export function hasDependency(pkg: PackageJsonWithDeps, name: string) {
   return name in deps || name in devDeps || name in peerDeps;
 }
 
+export const VERSION = '^0.11.0';
+
 export const typegpuPkgs = [
   { value: '@typegpu/color', hint: 'helpers for converting color spaces' },
   // { value: '@typegpu/geometry', hint: 'helpers for drawing points and lines' },
@@ -21,3 +23,7 @@ export const typegpuPkgs = [
   // { value: '@typegpu/sort', hint: 'implementations of scanning and sorting algorithms' },
   { value: '@typegpu/three', hint: 'Three.js utilities for TypeGPU integration' },
 ] as const satisfies { value: string; hint: string }[];
+
+export function appendVersion(pkg: string, version: string) {
+  return `${pkg}@${version}`;
+}
