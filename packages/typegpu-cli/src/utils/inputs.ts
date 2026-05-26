@@ -31,7 +31,6 @@ export async function getPackageName(initialValue: string) {
   const packageName = await p.text({
     message: 'Package name:',
     placeholder: initialValue,
-    initialValue,
     validate: (value) => {
       return !value || !isValidPackageName(value) ? 'Invalid package name.' : undefined;
     },
