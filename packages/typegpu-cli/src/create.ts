@@ -1,7 +1,7 @@
 import path from 'node:path';
 import * as p from '@clack/prompts';
 
-import { pmExec, pmFromUserAgent, pmInstall } from './utils/pm.ts';
+import { pmFromUserAgent, pmInstall } from './utils/pm.ts';
 import { cancelExit, confirmStep, rgbText } from './utils/prompts.ts';
 import { copyTemplate, prepareDirectory } from './utils/files.ts';
 import { getPackageName, getProjectDirectory } from './utils/inputs.ts';
@@ -45,12 +45,12 @@ export async function createProject(cwd: string) {
 
   p.log.success(`Scaffolded project at ${projectDir}.`);
 
+  process.chdir(root);
   const detected = await detect({ cwd });
   const pm = detected?.agent ?? pmFromUserAgent(process.env.npm_config_user_agent);
   const shouldInstall = await confirmStep(`Install dependencies with ${pm}?`, true);
 
   if (shouldInstall) {
-    process.chdir(root);
     pmInstall(pm);
   }
 
