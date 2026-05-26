@@ -8,11 +8,10 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "check": "oxlint && oxfmt --check",
-    "fix": "oxlint --fix && oxfmt"
+    "fix": "oxlint --fix && oxfmt",
+    "types": "tsc --p ./tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@typegpu/color": "^0.11.0",
-    "@typegpu/noise": "^0.11.0",
     "typegpu": "^0.11.6"
   },
   "devDependencies": {
