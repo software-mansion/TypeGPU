@@ -4,7 +4,7 @@ import * as p from '@clack/prompts';
 import { pmFromUserAgent, pmInstall } from './utils/pm.ts';
 import { cancelExit, confirmStep, rgbText } from './utils/prompts.ts';
 import { copyTemplate, prepareDirectory } from './utils/files.ts';
-import { getPackageName, getProjectDirectory } from './utils/inputs.ts';
+import { getProjectDirectory } from './utils/inputs.ts';
 import { detect, resolveCommand } from 'package-manager-detector';
 
 const DEFAULT_PROJECT_DIR = 'tgpu-project';
@@ -23,7 +23,7 @@ export async function createProject(cwd: string) {
 
   const root = await prepareDirectory(cwd, projectDir);
 
-  const packageName = await getPackageName(projectDir);
+  const packageName = path.basename(root);
 
   const projectTemplate = await p.select({
     message: 'Select a template:',
