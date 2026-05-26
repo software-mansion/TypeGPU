@@ -76,6 +76,11 @@ export async function createProject(cwd: string) {
   if (steps.length > 0) {
     msg += `   To get started run:\n\n`;
     msg += steps.join('\n');
+    msg += `\n\n`;
+    msg += `\
+   Note: If you are using VS Code or Cursor, you may need to run
+   “TypeScript: Select TypeScript Version” and choose
+   “Use Workspace Version” to enable tsover.`;
   }
 
   p.outro(msg);

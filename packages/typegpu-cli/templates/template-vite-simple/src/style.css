@@ -69,58 +69,6 @@ p {
   margin: 0;
 }
 
-.slider {
-  appearance: none;
-  width: 200px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--accent-bg);
-  border: none;
-  outline: none;
-  cursor: pointer;
-  touch-action: pan-y;
-  margin-bottom: 24px;
-
-  &::-webkit-slider-runnable-track {
-    height: 4px;
-    background: var(--accent-bg);
-    border-radius: 2px;
-  }
-
-  &::-webkit-slider-thumb {
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    margin-top: -7px;
-    border-radius: 50%;
-    background: var(--accent);
-    cursor: pointer;
-    transition: opacity 0.2s;
-  }
-
-  &::-moz-range-track {
-    height: 4px;
-    background: var(--accent-bg);
-    border-radius: 2px;
-    border: none;
-  }
-
-  &::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--accent);
-    cursor: pointer;
-    border: none;
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 4px;
-    border-radius: 4px;
-  }
-}
-
 #typegpu picture {
   display: flex;
   align-items: center;

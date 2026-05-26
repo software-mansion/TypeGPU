@@ -70,5 +70,5 @@ export function copyTemplate(templateDir: string, projectDir: string, packageNam
     failAndExit(`[INTERNAL] Invalid package.json in template ${templateDir}`, pkg.summary);
   }
   pkg.name = packageName;
-  fs.writeFileSync(destPackage, JSON.stringify(pkg, null, 2));
+  fs.writeFileSync(destPackage, JSON.stringify(pkg, null, 2) + '\n' /* to make oxfmt happy */);
 }
