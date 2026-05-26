@@ -6,6 +6,7 @@ import { cancelExit, confirmStep, rgbText } from './utils/prompts.ts';
 import { copyTemplate, prepareDirectory } from './utils/files.ts';
 import { getPackageName, getProjectDirectory } from './utils/inputs.ts';
 import { detect, resolveCommand } from 'package-manager-detector';
+import { askForAgentSkills } from './steps/skills.ts';
 
 const DEFAULT_PROJECT_DIR = 'tgpu-project';
 
@@ -53,10 +54,7 @@ export async function createProject(cwd: string) {
     pmInstall(pm);
   }
 
-  const shouldAddSkills = await confirmStep(`Download agent skills for typegpu?`, true);
-  if (shouldAddSkills) {
-    pmExec(pm, ['skills', 'add', 'software-mansion-labs/skills', '-s', 'typegpu']);
-  }
+  await askForAgentSkills(pm);
 
   const cdPath = path.relative(cwd, root);
   const installCmd = resolveCommand(pm, 'install', []);
