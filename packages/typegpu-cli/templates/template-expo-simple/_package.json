@@ -1,0 +1,40 @@
+{
+  "name": "typegpu-examples",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "fix": "biome check --write ."
+  },
+  "dependencies": {
+    "@typegpu/react": "^0.11.0",
+    "expo": "~54.0.21",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-safe-area-context": "^5.6.2",
+    "react-native-web": "^0.21.0",
+    "react-native-wgpu": "^0.5.9",
+    "typegpu": "^0.11.6",
+    "unplugin-typegpu": "^0.11.4"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.28.5",
+    "@biomejs/biome": "^2.2.5",
+    "@types/react": "~19.2.2",
+    "@webgpu/types": "^0.1.69",
+    "typescript": "npm:tsover@6.0.1"
+  },
+  "overrides": {
+    "typescript": "npm:tsover@6.0.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "typescript": "npm:tsover@6.0.1"
+    }
+  }
+}
