@@ -75,4 +75,46 @@ describe('comptime', () => {
       }"
     `);
   });
+
+  it('can read accessors during shader resolution', () => {
+    const value = tgpu.accessor(d.f32, 1);
+    const readValue = tgpu.comptime(() => value.$);
+
+    const myFn = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      return readValue();
+    });
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn myFn() -> f32 {
+        return 1f;
+      }"
+    `);
+
+    expect(tgpu.resolve([myFn.with(value, 2)])).toMatchInlineSnapshot(`
+      "fn myFn() -> f32 {
+        return 2f;
+      }"
+    `);
+  });
+
+  it('still throws when a comptime-read accessor has no value', () => {
+    const value = tgpu.accessor(d.f32);
+    const readValue = tgpu.comptime(() => value.$);
+    const myFn = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      return readValue();
+    });
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:myFn
+      - fn:readValue: Missing value for 'slot:value']
+    `);
+  });
 });
