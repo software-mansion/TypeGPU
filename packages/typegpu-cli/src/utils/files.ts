@@ -83,5 +83,5 @@ export async function scaffoldProject(
     }
   }
 
-  fs.writeFileSync(destPackage, JSON.stringify(pkg, null, 2));
+  fs.writeFileSync(destPackage, JSON.stringify(pkg, null, 2) + '\n' /* to make oxfmt happy */);
 }

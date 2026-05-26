@@ -198,7 +198,7 @@ class TgpuFixedBufferImpl<TData extends BaseData, TUsage extends BindableBufferU
 
     if (mode.type === 'codegen') {
       // The WGSL generator handles buffer assignment, and does not defer to
-      // whatever's being assigned to to generate the WGSL.
+      // whatever's being assigned to generate the WGSL.
       throw new Error('Unreachable bufferUsage.ts#TgpuFixedBufferImpl/$');
     }
 
