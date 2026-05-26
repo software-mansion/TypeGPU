@@ -63,5 +63,5 @@ export async function multiselectPkgs(pkg: PackageJson) {
     cancelExit();
   }
 
-  return packages.map((p) => ({ pkg: p, ver: VERSION }));
+  return packages.map((pkgName) => ({ pkg: pkgName, ver: VERSION }));
 }
