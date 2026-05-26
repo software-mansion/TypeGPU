@@ -1,7 +1,6 @@
-import { tgpu, d } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import {
   ELEMENTS_PER_THREAD,
-  ELEMENTS_RANGE,
   operatorSlot,
   uniformOpLayout,
   WORKGROUP_SIZE,
@@ -19,7 +18,7 @@ export const uniformOp = tgpu.computeFn({
   const baseIdx = globalIdx * ELEMENTS_PER_THREAD;
   const opValue = uniformOpLayout.$.sums[workgroupId];
 
-  for (const i of tgpu.unroll(ELEMENTS_RANGE)) {
+  for (const i of tgpu.unroll(std.range(ELEMENTS_PER_THREAD))) {
     if (baseIdx + i < uniformOpLayout.$.input.length) {
       (uniformOpLayout.$.input[baseIdx + i] as number) = operatorSlot.$(
         opValue as number,
