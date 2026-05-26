@@ -2,7 +2,6 @@ import tgpu, { common, d } from 'typegpu';
 
 const root = await tgpu.init();
 
-// oxlint-disable-next-line typescript/no-non-null-assertion
 const canvas = document.querySelector<HTMLCanvasElement>('#canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 
