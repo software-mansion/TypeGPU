@@ -67,8 +67,11 @@ export async function createProject(cwd: string) {
 
   p.log.success(`Scaffolded project at ${projectName}.`);
 
-  const detected = await detect({ cwd });
-  const pm = detected?.agent ?? pmFromUserAgent(process.env.npm_config_user_agent);
+  const detected = await detect({ cwd: root });
+  const pm =
+    projectTemplate === 'expo-simple'
+      ? 'pnpm'
+      : (detected?.agent ?? pmFromUserAgent(process.env.npm_config_user_agent));
   const shouldInstall = await confirmStep(`Install dependencies with ${pm}?`, true);
   process.chdir(root);
 
@@ -82,7 +85,7 @@ export async function createProject(cwd: string) {
   const installCmd = resolveCommand(pm, 'install', []);
   const runCmd =
     projectTemplate === 'expo-simple'
-      ? resolveCommand(pm, 'run', ['start'])
+      ? resolveCommand(pm, 'run', ['ios'])
       : resolveCommand(pm, 'run', ['dev']);
 
   const steps: string[] = [];
