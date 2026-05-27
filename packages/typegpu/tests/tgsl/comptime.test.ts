@@ -100,7 +100,7 @@ describe('comptime', () => {
     `);
   });
 
-  it('can read and work with accessors in comptime', () => {
+  it('can read and work with accessors', () => {
     const valueAccess = tgpu.accessor(d.f32, 1);
     const doubleValue = tgpu.comptime(() => valueAccess.$ * 2);
 
@@ -124,7 +124,7 @@ describe('comptime', () => {
     `);
   });
 
-  it('can read "use gpu" callback accessor in comptime', () => {
+  it('can read "use gpu" callback accessors', () => {
     const colorAccess = tgpu.accessor(d.vec3f, () => {
       'use gpu';
       return d.vec3f(0, 1, 0);
@@ -149,7 +149,7 @@ describe('comptime', () => {
     `);
   });
 
-  it('can read GPU-resource-backed accessor in comptime', ({ root }) => {
+  it('can read GPU-resource accessors', ({ root }) => {
     const Camera = d.struct({ pos: d.vec3f });
     const camera = root.createUniform(Camera);
 
