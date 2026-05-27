@@ -38,6 +38,11 @@ function runCommand(command: string, args: string[], interactive?: boolean) {
 }
 
 export function pmAdd(pm: Agent, pkgs: string[], dev: boolean) {
+  if (pkgs.length === 0) {
+    p.log.success('No packages to install.');
+    return;
+  }
+
   const args = dev ? ['-D', ...pkgs] : pkgs;
   const cmd = resolveCommand(pm, 'add', args);
   if (!cmd) {
