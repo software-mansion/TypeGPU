@@ -113,13 +113,65 @@ describe('comptime', () => {
 
     expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "fn myFn() -> f32 {
-        return NaNf;
+        return 2f;
       }"
     `);
 
     expect(tgpu.resolve([myFn.with(valueAccess, 2)])).toMatchInlineSnapshot(`
       "fn myFn() -> f32 {
-        return NaNf;
+        return 4f;
+      }"
+    `);
+  });
+
+  it('can read "use gpu" callback accessor in comptime', () => {
+    const colorAccess = tgpu.accessor(d.vec3f, () => {
+      'use gpu';
+      return d.vec3f(0, 1, 0);
+    });
+    const readColor = tgpu.comptime(() => colorAccess.$);
+
+    const myFn = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
+      return readColor();
+    });
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "fn colorAccess() -> vec3f {
+        return vec3f(0, 1, 0);
+      }
+
+      fn myFn() -> vec3f {
+        return colorAccess();
+      }"
+    `);
+  });
+
+  it('can read GPU-resource-backed accessor in comptime', ({ root }) => {
+    const Camera = d.struct({ pos: d.vec3f });
+    const camera = root.createUniform(Camera);
+
+    const posAccess = tgpu.accessor(d.vec3f, () => camera.$.pos);
+    const readPos = tgpu.comptime(() => posAccess.$);
+
+    const myFn = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
+      return readPos();
+    });
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "struct Camera {
+        pos: vec3f,
+      }
+
+      @group(0) @binding(0) var<uniform> camera: Camera;
+
+      fn myFn() -> vec3f {
+        return camera.pos;
       }"
     `);
   });

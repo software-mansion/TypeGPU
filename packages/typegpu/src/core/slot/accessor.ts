@@ -2,7 +2,7 @@ import { type AnyData, isData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { isSnippet, type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
-import { getResolutionCtx } from '../../execMode.ts';
+import { getExecMode, getResolutionCtx } from '../../execMode.ts';
 import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
 import {
@@ -14,7 +14,9 @@ import {
 } from '../../shared/symbols.ts';
 import type { UnwrapRuntimeConstructor } from '../../tgpuBindGroupLayout.ts';
 import {
+  CodegenState,
   getOwnSnippet,
+  isKnownAtComptime,
   NormalState,
   type ResolutionCtx,
   type SelfResolvable,
@@ -174,13 +176,33 @@ export class TgpuAccessorImpl<T extends BaseData>
   }
 
   get $(): InferGPU<T> {
-    if (getResolutionCtx()) {
-      return this[$gpuValueOf];
+    const ctx = getResolutionCtx();
+    if (!ctx) {
+      throw new Error(
+        '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
+      );
     }
 
-    throw new Error(
-      '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
-    );
+    if (getExecMode().type !== 'codegen') {
+      const slotValue = ctx.unwrap(this.slot);
+
+      if (
+        typeof slotValue !== 'function' &&
+        !hasTinyestMetadata(slotValue) &&
+        !isTgpuFn(slotValue)
+      ) {
+        return slotValue as unknown as InferGPU<T>;
+      }
+
+      ctx.pushMode(new CodegenState());
+      try {
+        return this[$gpuValueOf];
+      } finally {
+        ctx.popMode('codegen');
+      }
+    }
+
+    return this[$gpuValueOf];
   }
 }
 
