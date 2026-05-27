@@ -25,10 +25,9 @@ const PROJECT_TEMPLATES = [
 ] as const;
 
 const coloredLabelsTemplates = PROJECT_TEMPLATES.map((template, i) => {
-  const n = PROJECT_TEMPLATES.length;
-  const t = n <= 1 ? 0 : i / (n - 1);
+  const t = i / (PROJECT_TEMPLATES.length - 1);
   const [r, g, b] = Array.from({ length: 3 }, (_, j) =>
-    Math.round((GRADIENT_START[j] as number) * (1 - t) + (GRADIENT_END[j] as number) * t * 255),
+    Math.round(((GRADIENT_START[j] as number) * (1 - t) + (GRADIENT_END[j] as number) * t) * 255),
   ) as [number, number, number];
   return {
     value: template.value,
