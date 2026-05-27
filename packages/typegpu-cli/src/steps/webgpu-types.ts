@@ -9,7 +9,7 @@ import { hasDependency } from '../utils/pkg.ts';
 import { findConfig } from '../utils/config.ts';
 import { pmAdd } from '../utils/pm.ts';
 import { confirmStep, failAndExit } from '../utils/prompts.ts';
-import { TsConfigSchema, type PackageJsonWithDeps } from '../utils/types.ts';
+import { TsConfigSchema, type PackageJson } from '../utils/types.ts';
 
 const TS_CONFIG_NAMES = ['tsconfig.app.json', 'tsconfig.json'];
 
@@ -40,7 +40,7 @@ function addWebgpuTypesToTsconfig(filePath: string) {
   fs.writeFileSync(filePath, stringify(tsconfig, null, 2) + '\n');
 }
 
-export async function ensureWebgpuTypes(cwd: string, pm: Agent, pkg: PackageJsonWithDeps) {
+export async function askForWebgpuTypes(cwd: string, pm: Agent, pkg: PackageJson) {
   if (hasDependency(pkg, '@webgpu/types')) {
     p.log.info('@webgpu/types package is already installed.');
     return;

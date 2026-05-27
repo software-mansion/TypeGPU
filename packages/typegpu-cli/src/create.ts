@@ -3,9 +3,10 @@ import * as p from '@clack/prompts';
 
 import { pmFromUserAgent, pmInstall } from './utils/pm.ts';
 import { cancelExit, confirmStep, rgbText } from './utils/prompts.ts';
-import { copyTemplate, prepareDirectory } from './utils/files.ts';
-import { getPackageName, getProjectDirectory } from './utils/inputs.ts';
+import { scaffoldProject, prepareDirectory } from './utils/files.ts';
+import { getProjectName, isValidPackageName, getPackageName } from './utils/inputs.ts';
 import { detect, resolveCommand } from 'package-manager-detector';
+import { askForAgentSkills } from './steps/skills.ts';
 
 const DEFAULT_PROJECT_DIR = 'tgpu-project';
 
@@ -19,11 +20,11 @@ const PROJECT_TEMPLATES = [
 export async function createProject(cwd: string) {
   p.intro('Creating a new TypeGPU project.');
 
-  const projectDir = await getProjectDirectory(DEFAULT_PROJECT_DIR);
+  const projectName = await getProjectName(DEFAULT_PROJECT_DIR); // also directory name
 
-  const root = await prepareDirectory(cwd, projectDir);
+  const root = await prepareDirectory(cwd, projectName);
 
-  const packageName = await getPackageName(projectDir);
+  const packageName = isValidPackageName(projectName) ? projectName : await getPackageName();
 
   const projectTemplate = await p.select({
     message: 'Select a template:',
@@ -33,25 +34,27 @@ export async function createProject(cwd: string) {
     cancelExit();
   }
 
-  p.log.step(`Scaffolding project in ${projectDir}...`);
+  p.log.step(`Scaffolding project in ${projectName}...`);
 
   const templateDir = path.resolve(
     import.meta.dirname,
     '../templates',
     `template-${projectTemplate}`,
   );
-  copyTemplate(templateDir, root, packageName);
+  await scaffoldProject(templateDir, root, packageName);
 
-  p.log.success(`Scaffolded project at ${projectDir}.`);
+  p.log.success(`Scaffolded project at ${projectName}.`);
 
   const detected = await detect({ cwd });
   const pm = detected?.agent ?? pmFromUserAgent(process.env.npm_config_user_agent);
   const shouldInstall = await confirmStep(`Install dependencies with ${pm}?`, true);
+  process.chdir(root);
 
   if (shouldInstall) {
-    process.chdir(root);
     pmInstall(pm);
   }
+
+  await askForAgentSkills(pm);
 
   const cdPath = path.relative(cwd, root);
   const installCmd = resolveCommand(pm, 'install', []);
@@ -73,6 +76,11 @@ export async function createProject(cwd: string) {
   if (steps.length > 0) {
     msg += `   To get started run:\n\n`;
     msg += steps.join('\n');
+    msg += `\n\n`;
+    msg += `\
+   Note: If you are using VS Code or Cursor, you may need to run
+   “TypeScript: Select TypeScript Version” and choose
+   “Use Workspace Version” to enable tsover.`;
   }
 
   p.outro(msg);

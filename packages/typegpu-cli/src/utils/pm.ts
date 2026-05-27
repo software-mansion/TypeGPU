@@ -18,7 +18,7 @@ export function pmFromUserAgent(userAgent: string | undefined) {
   if (pm === undefined) {
     failAndExit(`Cannot determine package manager from user agent env.`);
   }
-  return pm as unknown as Agent;
+  return pm as Agent;
 }
 
 function runCommand(command: string, args: string[], interactive?: boolean) {
@@ -38,6 +38,11 @@ function runCommand(command: string, args: string[], interactive?: boolean) {
 }
 
 export function pmAdd(pm: Agent, pkgs: string[], dev: boolean) {
+  if (pkgs.length === 0) {
+    p.log.success('No packages to install.');
+    return;
+  }
+
   const args = dev ? ['-D', ...pkgs] : pkgs;
   const cmd = resolveCommand(pm, 'add', args);
   if (!cmd) {
@@ -68,6 +73,15 @@ export function pmRun(pm: Agent, args: string[]) {
   const cmd = resolveCommand(pm, 'run', [...args]);
   if (!cmd) {
     failAndExit(`Cannot resolve run command for ${pm}.`);
+  }
+
+  runCommand(cmd.command, cmd.args, true);
+}
+
+export function pmExec(pm: Agent, args: string[]) {
+  const cmd = resolveCommand(pm, 'execute', [...args]);
+  if (!cmd) {
+    failAndExit(`Cannot resolve execute command for ${pm}.`);
   }
 
   runCommand(cmd.command, cmd.args, true);

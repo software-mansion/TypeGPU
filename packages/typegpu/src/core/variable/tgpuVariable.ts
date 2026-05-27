@@ -166,7 +166,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
 
     if (mode.type === 'codegen') {
       // The WGSL generator handles variable assignment, and does not defer to
-      // whatever's being assigned to to generate the WGSL.
+      // whatever's being assigned to generate the WGSL.
       throw new Error('Unreachable tgpuVariable.ts#TgpuVarImpl/$');
     }
 
