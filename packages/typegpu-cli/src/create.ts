@@ -6,6 +6,7 @@ import { cancelExit, confirmStep, rgbText } from './utils/prompts.ts';
 import { scaffoldProject, prepareDirectory } from './utils/files.ts';
 import { getProjectName, isValidPackageName, getPackageName } from './utils/inputs.ts';
 import { detect, resolveCommand } from 'package-manager-detector';
+import { askForAgentSkills } from './steps/skills.ts';
 
 const DEFAULT_PROJECT_DIR = 'tgpu-project';
 
@@ -66,11 +67,13 @@ export async function createProject(cwd: string) {
   const detected = await detect({ cwd });
   const pm = detected?.agent ?? pmFromUserAgent(process.env.npm_config_user_agent);
   const shouldInstall = await confirmStep(`Install dependencies with ${pm}?`, true);
+  process.chdir(root);
 
   if (shouldInstall) {
-    process.chdir(root);
     pmInstall(pm);
   }
+
+  await askForAgentSkills(pm);
 
   const cdPath = path.relative(cwd, root);
   const installCmd = resolveCommand(pm, 'install', []);

@@ -77,3 +77,12 @@ export function pmRun(pm: Agent, args: string[]) {
 
   runCommand(cmd.command, cmd.args, true);
 }
+
+export function pmExec(pm: Agent, args: string[]) {
+  const cmd = resolveCommand(pm, 'execute', [...args]);
+  if (!cmd) {
+    failAndExit(`Cannot resolve execute command for ${pm}.`);
+  }
+
+  runCommand(cmd.command, cmd.args, true);
+}
