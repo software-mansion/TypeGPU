@@ -9,12 +9,32 @@ import { detect, resolveCommand } from 'package-manager-detector';
 
 const DEFAULT_PROJECT_DIR = 'tgpu-project';
 
+const GRADIENT_START = [212, 141, 255] as const;
+const GRADIENT_END = [55, 67, 209] as const;
+
 const PROJECT_TEMPLATES = [
   {
     value: 'vite-simple',
-    label: rgbText('Vite (Simple)', 175, 105, 245),
+    label: 'Vite (Simple)',
   },
-];
+  {
+    value: 'vite-react',
+    label: 'Vite + React',
+  },
+] as const;
+
+const coloredLabelsTemplates = PROJECT_TEMPLATES.map((template, i) => {
+  const n = PROJECT_TEMPLATES.length;
+  const t = n <= 1 ? 0 : i / (n - 1);
+  const [r, g, b] = Array.from(
+    { length: 3 },
+    (_, j) => (GRADIENT_START[j] as number) * (1 - t) + (GRADIENT_END[j] as number) * t,
+  ) as [number, number, number];
+  return {
+    value: template.value,
+    label: rgbText(template.label, r, g, b),
+  };
+});
 
 export async function createProject(cwd: string) {
   p.intro('Creating a new TypeGPU project.');
@@ -27,7 +47,7 @@ export async function createProject(cwd: string) {
 
   const projectTemplate = await p.select({
     message: 'Select a template:',
-    options: PROJECT_TEMPLATES,
+    options: coloredLabelsTemplates,
   });
   if (p.isCancel(projectTemplate)) {
     cancelExit();

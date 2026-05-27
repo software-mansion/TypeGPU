@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { common, d } from 'typegpu';
 import { useConfigureContext, useFrame, useRoot } from '@typegpu/react';
 
