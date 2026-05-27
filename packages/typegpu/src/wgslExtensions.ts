@@ -1,18 +1,16 @@
-export const wgslExtensions = [
+export const wgslEnableExtensions = [
   'f16',
   'clip_distances',
   'dual_source_blending',
   'subgroups',
   'primitive_index',
-  'linear_indexing',
 ] as const;
-export type WgslExtension = (typeof wgslExtensions)[number];
+export type WgslEnableExtension = (typeof wgslEnableExtensions)[number];
 
-export const wgslExtensionToFeatureName: Record<WgslExtension, GPUFeatureName> = {
+export const wgslEnableExtensionToFeatureName: Record<WgslEnableExtension, GPUFeatureName> = {
   f16: 'shader-f16',
   clip_distances: 'clip-distances',
   dual_source_blending: 'dual-source-blending',
   subgroups: 'subgroups',
-  primitive_index: 'primitive-index' as GPUFeatureName,
-  linear_indexing: 'linear-indexing' as GPUFeatureName,
+  primitive_index: 'primitive-index',
 };
