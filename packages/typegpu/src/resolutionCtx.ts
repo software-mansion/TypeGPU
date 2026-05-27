@@ -50,7 +50,7 @@ import type {
   Wgsl,
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
-import type { WgslExtension } from './wgslExtensions.ts';
+import type { WgslEnableExtension } from './wgslExtensions.ts';
 import { getName, hasTinyestMetadata, setName } from './shared/meta.ts';
 import { FuncParameterType } from 'tinyest';
 import { accessProp } from './tgsl/accessProp.ts';
@@ -73,7 +73,7 @@ import { validateIdentifier, sanitizePrimer } from './nameUtils.ts';
 const CATCHALL_BIND_GROUP_IDX_MARKER = '#CATCHALL#';
 
 export type ResolutionCtxImplOptions = {
-  readonly enableExtensions?: WgslExtension[] | undefined;
+  readonly enableExtensions?: WgslEnableExtension[] | undefined;
   readonly shaderGenerator?: ShaderGenerator | undefined;
   readonly config?: ((cfg: Configurable) => Configurable) | undefined;
   readonly root?: ExperimentalTgpuRoot | undefined;
@@ -400,7 +400,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
 
-  public readonly enableExtensions: WgslExtension[] | undefined;
+  public readonly enableExtensions: WgslEnableExtension[] | undefined;
   public expectedType: BaseData | undefined;
 
   /**

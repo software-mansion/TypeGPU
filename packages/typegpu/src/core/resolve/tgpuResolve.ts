@@ -5,7 +5,7 @@ import { $internal, $resolve } from '../../shared/symbols.ts';
 import { isBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { ResolvableObject, SelfResolvable, Wgsl } from '../../types.ts';
-import type { WgslExtension } from '../../wgslExtensions.ts';
+import type { WgslEnableExtension } from '../../wgslExtensions.ts';
 import { isPipeline } from '../pipeline/typeGuards.ts';
 import type { Configurable, ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { applyExternals, replaceExternalsInWgsl } from './externals.ts';
@@ -32,7 +32,7 @@ export interface TgpuResolveOptions {
   /**
    * List of WGSL shader extensions to enable.
    */
-  enableExtensions?: WgslExtension[] | undefined;
+  enableExtensions?: WgslEnableExtension[] | undefined;
   /**
    * **NOTE: This is an unstable API and may change in the future.**
    *
