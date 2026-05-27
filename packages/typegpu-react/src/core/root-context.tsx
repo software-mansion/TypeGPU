@@ -57,12 +57,23 @@ type RootContextResult =
   | { status: 'resolved'; value: TgpuRoot }
   | { status: 'rejected'; error: unknown };
 
+export interface RootContextConfig {
+  readonly disableWorklets: boolean;
+}
+
 interface RootContext {
+  readonly config: RootContextConfig;
+
   initOrGetRoot(): RootContextResult;
 }
 
 class OwnRootContext implements RootContext {
   #result: RootContextResult | undefined;
+  readonly config: RootContextConfig;
+
+  constructor(config: RootContextConfig) {
+    this.config = config;
+  }
 
   initOrGetRoot(): RootContextResult {
     if (!this.#result) {
@@ -88,7 +99,10 @@ class OwnRootContext implements RootContext {
 class ExistingRootContext implements RootContext {
   result: { status: 'resolved'; value: TgpuRoot };
 
-  constructor(root: TgpuRoot) {
+  readonly config: RootContextConfig;
+
+  constructor(root: TgpuRoot, config: RootContextConfig) {
+    this.config = config;
     this.result = { status: 'resolved', value: root };
   }
 
@@ -100,7 +114,7 @@ class ExistingRootContext implements RootContext {
 /**
  * Used in case no provider is mounted
  */
-const globalRootContextValue = new OwnRootContext();
+const globalRootContextValue = new OwnRootContext({ disableWorklets: false });
 
 const rootContext = createContext<RootContext | null>(null);
 
@@ -113,18 +127,38 @@ export interface RootProps {
    */
   root?: TgpuRoot | undefined;
   children?: ReactNode | undefined;
+
+  /**
+   * NOTE: Only applies to React Native apps
+   *
+   * If `true`, hooks used under this provider work fully on the React Native thread, as opposed
+   * to being split between the UI and React Native threads.
+   *
+   * @default false
+   */
+  disableWorklets?: boolean | undefined;
 }
 
-export const Root = ({ children, root }: RootProps) => {
-  const [ownCtx] = useState(() => new OwnRootContext());
+export const Root = ({ children, root, disableWorklets = false }: RootProps) => {
+  const [ownCtx] = useState(() => new OwnRootContext({ disableWorklets }));
   const existingRootCtx = useMemo(() => {
     if (root) {
-      return new ExistingRootContext(root);
+      return new ExistingRootContext(root, { disableWorklets });
     }
     return undefined;
   }, [root]);
 
-  return <rootContext.Provider value={existingRootCtx ?? ownCtx}>{children}</rootContext.Provider>;
+  const ctx = existingRootCtx ?? ownCtx;
+
+  useEffect(() => {
+    if (ctx.config.disableWorklets !== disableWorklets) {
+      console.warn(`[@typegpu/react]: The config value 'disabledWorklets' changed after mounting. It controls hook behavior on a fundamental level, therefore this is not allowed.
+In order to change this flag dynamically, change the provider component's key along with it, for example:
+  <Root disableWorklets={flag} key={flag ? 'worklets-disabled' : 'worklets-enabled'}>`);
+    }
+  }, [disableWorklets]);
+
+  return <rootContext.Provider value={ctx}>{children}</rootContext.Provider>;
 };
 
 /**
