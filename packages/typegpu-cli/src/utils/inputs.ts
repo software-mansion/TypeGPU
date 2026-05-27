@@ -15,9 +15,9 @@ export async function getProjectName(initialValue: string) {
   let projectName = await p.text({
     message: 'Project name:',
     placeholder: initialValue,
-    initialValue,
+    defaultValue: initialValue,
     validate: (value) => {
-      return value && !isValidProjectDirectory(value) ? 'Invalid project name.' : undefined;
+      return !isValidProjectDirectory(value) ? 'Invalid project name.' : undefined;
     },
   });
 
@@ -25,14 +25,12 @@ export async function getProjectName(initialValue: string) {
     cancelExit();
   }
 
-  projectName ??= '.';
   return projectName.trim();
 }
 
 export async function getPackageName() {
   const packageName = await p.text({
     message: 'Package name:',
-    initialValue: '',
     validate: (value) => {
       return !value || !isValidPackageName(value) ? 'Invalid package name.' : undefined;
     },
