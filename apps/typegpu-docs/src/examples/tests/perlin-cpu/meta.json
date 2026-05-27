@@ -1,0 +1,7 @@
+{
+  "title": "Perlin CPU",
+  "category": "tests",
+  "tags": ["test"],
+  "dev": true,
+  "coolFactor": 1
+}
