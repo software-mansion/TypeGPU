@@ -10,6 +10,7 @@ import { cancelExit, confirmStep, failAndExit, rgbText } from './utils/prompts.t
 import { askForWebgpuTypes } from './steps/webgpu-types.ts';
 import { askForPkgs, ensureTypegpu } from './steps/typegpu.ts';
 import { askForVite } from './steps/vite.ts';
+import { askForAgentSkills } from './steps/skills.ts';
 
 const PROJECT_KINDS = [{ value: 'vite', label: rgbText('Vite', 175, 105, 245) }];
 
@@ -20,6 +21,7 @@ async function runViteFlow(cwd: string, pm: Agent, pkg: PackageJson) {
     return;
   }
   await askForPkgs(pm, pkg);
+  await askForAgentSkills(pm);
 }
 
 export async function enhanceProject(cwd: string) {
