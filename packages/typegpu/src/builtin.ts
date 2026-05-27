@@ -66,7 +66,10 @@ export const builtin = {
   localInvocationId: defineBuiltin<BuiltinLocalInvocationId>(vec3u, 'local_invocation_id'),
   localInvocationIndex: defineBuiltin<BuiltinLocalInvocationIndex>(u32, 'local_invocation_index'),
   globalInvocationId: defineBuiltin<BuiltinGlobalInvocationId>(vec3u, 'global_invocation_id'),
-  globalInvocationIndex: defineBuiltin<BuiltinGlobalInvocationIndex>(u32, 'global_invocation_index'),
+  globalInvocationIndex: defineBuiltin<BuiltinGlobalInvocationIndex>(
+    u32,
+    'global_invocation_index',
+  ),
   workgroupId: defineBuiltin<BuiltinWorkgroupId>(vec3u, 'workgroup_id'),
   workgroupIndex: defineBuiltin<BuiltinWorkgroupIndex>(u32, 'workgroup_index'),
   numWorkgroups: defineBuiltin<BuiltinNumWorkgroups>(vec3u, 'num_workgroups'),

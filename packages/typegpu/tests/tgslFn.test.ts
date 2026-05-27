@@ -303,23 +303,18 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves linear compute builtins', () => {
-    const computeFn = tgpu
-      .computeFn({
-        in: {
-          globalIndex: builtin.globalInvocationIndex,
-          workgroupIndex: builtin.workgroupIndex,
-        },
-        workgroupSize: [24],
-      })((input) => {
-        const index = input.globalIndex + input.workgroupIndex;
-      })
-      .$name('compute_fn');
+    const computeFn = tgpu.computeFn({
+      in: {
+        globalIndex: builtin.globalInvocationIndex,
+        workgroupIndex: builtin.workgroupIndex,
+      },
+      workgroupSize: [24],
+    })((input) => {
+      const index = input.globalIndex + input.workgroupIndex;
+    });
 
-    expect(tgpu.resolve([computeFn], { enableExtensions: ['linear_indexing'] }))
-      .toMatchInlineSnapshot(`
-      "enable linear_indexing;
-
-      @compute @workgroup_size(24) fn compute_fn(@builtin(global_invocation_index) globalIndex: u32, @builtin(workgroup_index) workgroupIndex: u32) {
+    expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
+      "@compute @workgroup_size(24) fn computeFn(@builtin(global_invocation_index) globalIndex: u32, @builtin(workgroup_index) workgroupIndex: u32) {
         let index = (globalIndex + workgroupIndex);
       }"
     `);
