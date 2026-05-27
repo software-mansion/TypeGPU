@@ -135,7 +135,12 @@ const addNextWater = (coord: d.v2u, amount: number) => {
 
   const index = getIndex(coord);
   const previous = std.atomicAdd(stateLayout.$.nextWater[index], amount);
-  if (previous + amount > MAX_WATER_LEVEL.$) {
+  if (previous > MAX_WATER_LEVEL.$) {
+    std.atomicMin(stateLayout.$.nextWater[index], MAX_WATER_LEVEL.$);
+    return;
+  }
+
+  if (amount > MAX_WATER_LEVEL.$ - previous) {
     std.atomicMin(stateLayout.$.nextWater[index], MAX_WATER_LEVEL.$);
   }
 };
@@ -213,27 +218,17 @@ const flowDown = (coord: d.v2u, remainingWater: d.ref<number>) => {
   remainingWater.$ -= flow;
 };
 
-const flowSideways = (
+const flowSidewaysTo = (
   coord: d.v2u,
+  target: d.v2u,
   remainingWater: d.ref<number>,
   waterLevelBefore: number,
-  left: boolean,
 ) => {
   'use gpu';
   if (remainingWater.$ === 0) {
     return;
   }
 
-  if (left && coord.x === 0) {
-    return;
-  }
-
-  if (!left && coord.x + 1 >= simParams.$.resolution.x) {
-    return;
-  }
-
-  const targetX = std.select(coord.x + 1, coord.x - 1, left);
-  const target = d.vec2u(targetX, coord.y);
   if (isFlowBlocked(target)) {
     return;
   }
@@ -249,9 +244,27 @@ const flowSideways = (
   remainingWater.$ -= flow;
 };
 
+const flowLeft = (coord: d.v2u, remainingWater: d.ref<number>, waterLevelBefore: number) => {
+  'use gpu';
+  if (coord.x === 0) {
+    return;
+  }
+
+  flowSidewaysTo(coord, d.vec2u(coord.x - 1, coord.y), remainingWater, waterLevelBefore);
+};
+
+const flowRight = (coord: d.v2u, remainingWater: d.ref<number>, waterLevelBefore: number) => {
+  'use gpu';
+  if (coord.x >= simParams.$.resolution.x - 1) {
+    return;
+  }
+
+  flowSidewaysTo(coord, d.vec2u(coord.x + 1, coord.y), remainingWater, waterLevelBefore);
+};
+
 const flowUp = (coord: d.v2u, remainingWater: d.ref<number>) => {
   'use gpu';
-  if (remainingWater.$ === 0 || coord.y + 1 >= simParams.$.resolution.y) {
+  if (remainingWater.$ === 0 || coord.y >= simParams.$.resolution.y - 1) {
     return;
   }
 
@@ -285,8 +298,8 @@ const simulationPipeline = root.createGuardedComputePipeline((x: number, y: numb
   flowDown(coord, remainingWater);
 
   const waterLevelBefore = remainingWater.$;
-  flowSideways(coord, remainingWater, waterLevelBefore, true);
-  flowSideways(coord, remainingWater, waterLevelBefore, false);
+  flowLeft(coord, remainingWater, waterLevelBefore);
+  flowRight(coord, remainingWater, waterLevelBefore);
 
   flowUp(coord, remainingWater);
 });

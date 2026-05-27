@@ -145,7 +145,11 @@ describe('fluid with atomics example', () => {
         }
         let index = getIndex(coord);
         let previous = atomicAdd(&nextWater[index], amount);
-        if (((previous + amount) > MAX_WATER_LEVEL)) {
+        if ((previous > MAX_WATER_LEVEL)) {
+          atomicMin(&nextWater[index], MAX_WATER_LEVEL);
+          return;
+        }
+        if ((amount > (MAX_WATER_LEVEL - previous))) {
           atomicMin(&nextWater[index], MAX_WATER_LEVEL);
         }
       }
@@ -228,18 +232,10 @@ describe('fluid with atomics example', () => {
         (*remainingWater) -= flow;
       }
 
-      fn flowSideways(coord: vec2u, remainingWater: ptr<function, u32>, waterLevelBefore: u32, left: bool) {
+      fn flowSidewaysTo(coord: vec2u, target_1: vec2u, remainingWater: ptr<function, u32>, waterLevelBefore: u32) {
         if (((*remainingWater) == 0u)) {
           return;
         }
-        if ((left && (coord.x == 0u))) {
-          return;
-        }
-        if ((!left && ((coord.x + 1u) >= simParams.resolution.x))) {
-          return;
-        }
-        let targetX = select((coord.x + 1u), (coord.x - 1u), left);
-        let target_1 = vec2u(targetX, coord.y);
         if (isFlowBlocked(target_1)) {
           return;
         }
@@ -253,8 +249,22 @@ describe('fluid with atomics example', () => {
         (*remainingWater) -= flow;
       }
 
+      fn flowLeft(coord: vec2u, remainingWater: ptr<function, u32>, waterLevelBefore: u32) {
+        if ((coord.x == 0u)) {
+          return;
+        }
+        flowSidewaysTo(coord, vec2u((coord.x - 1u), coord.y), remainingWater, waterLevelBefore);
+      }
+
+      fn flowRight(coord: vec2u, remainingWater: ptr<function, u32>, waterLevelBefore: u32) {
+        if ((coord.x >= (simParams.resolution.x - 1u))) {
+          return;
+        }
+        flowSidewaysTo(coord, vec2u((coord.x + 1u), coord.y), remainingWater, waterLevelBefore);
+      }
+
       fn flowUp(coord: vec2u, remainingWater: ptr<function, u32>) {
-        if ((((*remainingWater) == 0u) || ((coord.y + 1u) >= simParams.resolution.y))) {
+        if ((((*remainingWater) == 0u) || (coord.y >= (simParams.resolution.y - 1u)))) {
           return;
         }
         let target_1 = vec2u(coord.x, (coord.y + 1u));
@@ -281,8 +291,8 @@ describe('fluid with atomics example', () => {
         }
         flowDown(coord, (&remainingWater));
         let waterLevelBefore = remainingWater;
-        flowSideways(coord, (&remainingWater), waterLevelBefore, true);
-        flowSideways(coord, (&remainingWater), waterLevelBefore, false);
+        flowLeft(coord, (&remainingWater), waterLevelBefore);
+        flowRight(coord, (&remainingWater), waterLevelBefore);
         flowUp(coord, (&remainingWater));
       }
 
