@@ -19,7 +19,7 @@ import { isGPUCommandEncoder, isGPUComputePassEncoder } from './typeGuards.ts';
 import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
 import { isGPUBuffer, type ResolutionCtx, type SelfResolvable } from '../../types.ts';
-import { wgslExtensions, wgslExtensionToFeatureName } from '../../wgslExtensions.ts';
+import { wgslEnableExtensions, wgslEnableExtensionToFeatureName } from '../../wgslExtensions.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import { namespace } from '../resolve/namespace.ts';
@@ -355,8 +355,8 @@ class ComputePipelineCore implements SelfResolvable {
   public unwrap(): Memo {
     if (this._memo === undefined) {
       const device = this.root.device;
-      const enableExtensions = wgslExtensions.filter((extension) =>
-        this.root.enabledFeatures.has(wgslExtensionToFeatureName[extension]),
+      const enableExtensions = wgslEnableExtensions.filter((extension) =>
+        this.root.enabledFeatures.has(wgslEnableExtensionToFeatureName[extension]),
       );
 
       // Resolving code
