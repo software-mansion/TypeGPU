@@ -23,7 +23,7 @@ export default defineConfig({
     'eslint-plugin-import/extensions': ['error', 'always', { ignorePackages: true }],
     'eslint-plugin-internal/no-useless-path-segments': 'error',
   },
-  ignorePatterns: ['**/*.astro', '**/*.mjs'],
+  ignorePatterns: ['**/*.astro', '**/*.mjs', 'apps/typegpu-docs/public/assets/**/*.js'],
   overrides: [
     {
       files: ['**/*.test.ts', '**/tests/**'],
