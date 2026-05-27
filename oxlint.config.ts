@@ -26,7 +26,11 @@ export default defineConfig({
   ignorePatterns: ['**/*.astro', '**/*.mjs'],
   overrides: [
     {
-      files: ['**/*.test.ts', '**/tests/**'],
+      files: [
+        '**/*.test.ts',
+        '**/tests/**',
+        'packages/typegpu-cli/templates/template-expo-simple/tsconfig.json',
+      ],
       rules: {
         'typescript/unbound-method': 'off',
         'typescript/no-non-null-assertion': 'off',
