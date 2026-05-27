@@ -21,7 +21,6 @@ import {
   type SelfResolvable,
 } from '../types.ts';
 import type { ShelllessRepository } from './shellless.ts';
-import { stitch } from '../core/resolve/stitch.ts';
 import { WgslTypeError } from '../errors.ts';
 import { $internal, $resolve } from '../shared/symbols.ts';
 import type { SupportedLogOp } from './consoleLog/types.ts';
@@ -176,8 +175,6 @@ export class ArrayExpression implements SelfResolvable {
       }
     }
 
-    const arrayType = `array<${ctx.resolve(this.type.elementType).value}, ${this.elements.length}>`;
-
-    return snip(stitch`${arrayType}(${this.elements})`, this.type, /* origin */ 'runtime');
+    return ctx.gen.typeInstantiation(this.type, this.elements);
   }
 }

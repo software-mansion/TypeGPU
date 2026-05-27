@@ -613,11 +613,14 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
       this,
     );
 
-    ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var ${id}: ${ctx.resolve(this.schema).value};`,
-    );
-
-    return snip(id, this.schema, /* origin */ 'handle');
+    return ctx.gen.declareGlobalVar({
+      group,
+      binding,
+      id,
+      dataType: this.schema,
+      scope: 'handle',
+      init: undefined,
+    });
   }
 }
 
