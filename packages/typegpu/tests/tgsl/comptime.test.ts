@@ -176,6 +176,30 @@ describe('comptime', () => {
     `);
   });
 
+  it('throws when reading "use gpu" callback accessor in js', () => {
+    const colorAccess = tgpu.accessor(d.vec3f, () => {
+      'use gpu';
+      return d.vec3f(0, 1, 0);
+    });
+    const readColor = tgpu.comptime(() => colorAccess.$);
+
+    expect(() => readColor()).toThrowErrorMatchingInlineSnapshot(
+      `[Error: \`tgpu.accessor\` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call]`,
+    );
+  });
+
+  it('throws when reading GPU-resource accessor in js', ({ root }) => {
+    const Camera = d.struct({ pos: d.vec3f });
+    const camera = root.createUniform(Camera);
+
+    const posAccess = tgpu.accessor(d.vec3f, () => camera.$.pos);
+    const readPos = tgpu.comptime(() => posAccess.$);
+
+    expect(() => readPos()).toThrowErrorMatchingInlineSnapshot(
+      `[Error: \`tgpu.accessor\` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call]`,
+    );
+  });
+
   it('throws when a comptime-read accessor has no value', () => {
     const value = tgpu.accessor(d.f32);
     const readValue = tgpu.comptime(() => value.$);

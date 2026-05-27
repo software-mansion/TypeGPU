@@ -16,7 +16,6 @@ import type { UnwrapRuntimeConstructor } from '../../tgpuBindGroupLayout.ts';
 import {
   CodegenState,
   getOwnSnippet,
-  isKnownAtComptime,
   NormalState,
   type ResolutionCtx,
   type SelfResolvable,
