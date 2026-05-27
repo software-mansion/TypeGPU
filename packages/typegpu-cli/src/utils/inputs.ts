@@ -4,11 +4,15 @@ import type { PackageJson } from './types.ts';
 import { hasDependency, typegpuPkgs, VERSION } from './pkg.ts';
 
 function isValidProjectDirectory(projectDir: string) {
-  return !/[<>:"\\|?*\s]|\/+$/.test(projectDir.trim());
+  const trimmedDir = projectDir.trim();
+  return (
+    projectDir.length === 0 || (trimmedDir.length > 0 && !/[<>:"\\|?*\s]|\/+$/.test(trimmedDir))
+  );
 }
 
 export function isValidPackageName(packageName: string) {
-  return /^(?:@[a-z\d][a-z\d\-._]*\/)?[a-z\d][a-z\d\-._]*$/.test(packageName.trim());
+  const trimmedName = packageName.trim();
+  return /^(?:@[a-z\d][a-z\d\-._]*\/)?[a-z\d][a-z\d\-._]*$/.test(trimmedName);
 }
 
 export async function getProjectName(initialValue: string) {
@@ -32,7 +36,7 @@ export async function getPackageName() {
   const packageName = await p.text({
     message: 'Package name:',
     validate: (value) => {
-      return !value || !isValidPackageName(value) ? 'Invalid package name.' : undefined;
+      return !isValidPackageName(value) ? 'Invalid package name.' : undefined;
     },
   });
 
