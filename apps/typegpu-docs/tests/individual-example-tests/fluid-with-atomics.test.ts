@@ -53,8 +53,6 @@ describe('fluid with atomics example', () => {
 
       @group(1) @binding(0) var<storage, read_write> flags: array<u32>;
 
-      const CELL_EMPTY: u32 = 0u;
-
       @group(1) @binding(1) var<storage, read_write> currentWater: array<u32>;
 
       @group(1) @binding(2) var<storage, read_write> nextWater: array<atomic<u32>>;
@@ -74,13 +72,13 @@ describe('fluid with atomics example', () => {
         }
         let index = getIndex(vec2u(x, y));
         if (((*brush).erasing != 0u)) {
-          flags[index] = CELL_EMPTY;
+          flags[index] = 0u;
           currentWater[index] = 0u;
           atomicStore(&nextWater[index], 0u);
           return;
         }
         if (((*brush).waterAmount != 0u)) {
-          if ((flags[index] == CELL_EMPTY)) {
+          if ((flags[index] == 0u)) {
             currentWater[index] = (*brush).waterAmount;
             atomicStore(&nextWater[index], (*brush).waterAmount);
           }
@@ -117,10 +115,6 @@ describe('fluid with atomics example', () => {
         return flags[getIndex(coord)];
       }
 
-      const CELL_WALL: u32 = 1u;
-
-      const CELL_DRAIN: u32 = 3u;
-
       fn isBoundary(coord: vec2u) -> bool {
         return ((((coord.x == 0u) || (coord.y == 0u)) || (coord.x == (simParams.resolution.x - 1u))) || (coord.y == (simParams.resolution.y - 1u)));
       }
@@ -131,18 +125,16 @@ describe('fluid with atomics example', () => {
         atomicStore(&nextWater[getIndex(coord)], 0u);
       }
 
-      const CELL_SOURCE: u32 = 2u;
-
       fn isInBounds(coord: vec2u) -> bool {
         return ((coord.x < simParams.resolution.x) && (coord.y < simParams.resolution.y));
       }
 
       fn isDrainTarget(coord: vec2u) -> bool {
-        return ((!isInBounds(coord) || (getFlags(coord) == CELL_DRAIN)) || isBoundary(coord));
+        return ((!isInBounds(coord) || (getFlags(coord) == 3u)) || isBoundary(coord));
       }
 
       fn canStoreWater(coord: vec2u) -> bool {
-        return (!isDrainTarget(coord) && (getFlags(coord) != CELL_WALL));
+        return (!isDrainTarget(coord) && (getFlags(coord) != 1u));
       }
 
       const MAX_WATER_LEVEL: u32 = 16777215u;
@@ -162,11 +154,11 @@ describe('fluid with atomics example', () => {
 
       fn handleCellFlags(coord: vec2u) -> bool {
         let flags_1 = getFlags(coord);
-        if ((((flags_1 == CELL_WALL) || (flags_1 == CELL_DRAIN)) || isBoundary(coord))) {
+        if ((((flags_1 == 1u) || (flags_1 == 3u)) || isBoundary(coord))) {
           clearNextWater(coord);
           return true;
         }
-        if ((flags_1 == CELL_SOURCE)) {
+        if ((flags_1 == 2u)) {
           addNextWater(coord, SOURCE_RATE);
         }
         return false;
@@ -179,7 +171,7 @@ describe('fluid with atomics example', () => {
       }
 
       fn isFlowBlocked(coord: vec2u) -> bool {
-        return (!isInBounds(coord) || (getFlags(coord) == CELL_WALL));
+        return (!isInBounds(coord) || (getFlags(coord) == 1u));
       }
 
       fn getTargetWaterLevel(coord: vec2u) -> u32 {
@@ -337,12 +329,6 @@ describe('fluid with atomics example', () => {
         return flags[getIndex(coord)];
       }
 
-      const CELL_WALL: u32 = 1u;
-
-      const CELL_SOURCE: u32 = 2u;
-
-      const CELL_DRAIN: u32 = 3u;
-
       @group(1) @binding(1) var<storage, read> currentWater: array<u32>;
 
       fn getWaterLevel(coord: vec2u) -> u32 {
@@ -356,13 +342,13 @@ describe('fluid with atomics example', () => {
       @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
         let coord = coordFromUv(_arg_0.uv);
         let flags_1 = getFlags(coord);
-        if ((flags_1 == CELL_WALL)) {
+        if ((flags_1 == 1u)) {
           return vec4f(0.5, 0.5, 0.5, 1);
         }
-        if ((flags_1 == CELL_SOURCE)) {
+        if ((flags_1 == 2u)) {
           return vec4f(0, 1, 0, 1);
         }
-        if ((flags_1 == CELL_DRAIN)) {
+        if ((flags_1 == 3u)) {
           return vec4f(1, 0, 0, 1);
         }
         let normalized = min((f32(getWaterLevel(coord)) / 255f), 1f);

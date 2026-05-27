@@ -23,11 +23,6 @@ const MAX_WATER_LEVEL_UNPRESSURIZED = tgpu.const(d.u32, 0xff);
 const MAX_WATER_LEVEL = tgpu.const(d.u32, (1 << 24) - 1);
 const MAX_PRESSURE = tgpu.const(d.u32, 12);
 
-const CELL_EMPTY = tgpu.const(d.u32, CellKind.empty);
-const CELL_WALL = tgpu.const(d.u32, CellKind.wall);
-const CELL_SOURCE = tgpu.const(d.u32, CellKind.source);
-const CELL_DRAIN = tgpu.const(d.u32, CellKind.drain);
-
 const BrushConfig = {
   wall: { cellKind: CellKind.wall, waterAmount: 0 },
   source: { cellKind: CellKind.source, waterAmount: 0 },
@@ -110,17 +105,17 @@ const getWaterLevel = (coord: d.v2u): number => {
 
 const isFlowBlocked = (coord: d.v2u): boolean => {
   'use gpu';
-  return !isInBounds(coord) || getFlags(coord) === CELL_WALL.$;
+  return !isInBounds(coord) || getFlags(coord) === CellKind.wall;
 };
 
 const isDrainTarget = (coord: d.v2u): boolean => {
   'use gpu';
-  return !isInBounds(coord) || getFlags(coord) === CELL_DRAIN.$ || isBoundary(coord);
+  return !isInBounds(coord) || getFlags(coord) === CellKind.drain || isBoundary(coord);
 };
 
 const canStoreWater = (coord: d.v2u): boolean => {
   'use gpu';
-  return !isDrainTarget(coord) && getFlags(coord) !== CELL_WALL.$;
+  return !isDrainTarget(coord) && getFlags(coord) !== CellKind.wall;
 };
 
 const getTargetWaterLevel = (coord: d.v2u): number => {
@@ -184,12 +179,12 @@ const handleCellFlags = (coord: d.v2u): boolean => {
   'use gpu';
   const flags = getFlags(coord);
 
-  if (flags === CELL_WALL.$ || flags === CELL_DRAIN.$ || isBoundary(coord)) {
+  if (flags === CellKind.wall || flags === CellKind.drain || isBoundary(coord)) {
     clearNextWater(coord);
     return true;
   }
 
-  if (flags === CELL_SOURCE.$) {
+  if (flags === CellKind.source) {
     addNextWater(coord, SOURCE_RATE.$);
   }
 
@@ -313,14 +308,14 @@ const brushPipeline = root.createGuardedComputePipeline((x, y) => {
 
   const index = getIndex(d.vec2u(x, y));
   if (brush.erasing !== 0) {
-    brushStateLayout.$.flags[index] = CELL_EMPTY.$;
+    brushStateLayout.$.flags[index] = CellKind.empty;
     brushStateLayout.$.currentWater[index] = 0;
     std.atomicStore(brushStateLayout.$.nextWater[index], 0);
     return;
   }
 
   if (brush.waterAmount !== 0) {
-    if (brushStateLayout.$.flags[index] === CELL_EMPTY.$) {
+    if (brushStateLayout.$.flags[index] === CellKind.empty) {
       brushStateLayout.$.currentWater[index] = brush.waterAmount;
       std.atomicStore(brushStateLayout.$.nextWater[index], brush.waterAmount);
     }
@@ -347,13 +342,13 @@ const renderPipeline = root.createRenderPipeline({
     const coord = coordFromUv(uv);
     const flags = getFlags(coord);
 
-    if (flags === CELL_WALL.$) {
+    if (flags === CellKind.wall) {
       return d.vec4f(0.5, 0.5, 0.5, 1);
     }
-    if (flags === CELL_SOURCE.$) {
+    if (flags === CellKind.source) {
       return d.vec4f(0, 1, 0, 1);
     }
-    if (flags === CELL_DRAIN.$) {
+    if (flags === CellKind.drain) {
       return d.vec4f(1, 0, 0, 1);
     }
 
@@ -518,6 +513,11 @@ const pointerCellFromCanvasOffset = (offsetX: number, offsetY: number) => {
   };
 };
 
+const pointerCellFromTouch = (touch: Touch) => {
+  const canvasPos = canvas.getBoundingClientRect();
+  return pointerCellFromCanvasOffset(touch.clientX - canvasPos.left, touch.clientY - canvasPos.top);
+};
+
 const handleDrawing = (x: number, y: number) => {
   const point = { x, y };
   applyBrushStroke(
@@ -539,6 +539,8 @@ canvas.addEventListener('contextmenu', (event) => {
 
 canvas.onmousedown = (event) => {
   startDrawing(event.button === 2);
+  const cell = pointerCellFromCanvasOffset(event.offsetX, event.offsetY);
+  handleDrawing(cell.x, cell.y);
 };
 
 canvas.onmouseup = stopDrawing;
@@ -555,12 +557,15 @@ canvas.onmousemove = (event) => {
 canvas.ontouchstart = (event) => {
   event.preventDefault();
   touchMoved = false;
+  const cell = pointerCellFromTouch(event.touches[0]);
   longTouchTimeout = window.setTimeout(() => {
     if (!touchMoved) {
       startDrawing(true);
+      handleDrawing(cell.x, cell.y);
     }
   }, 500);
   startDrawing(false);
+  handleDrawing(cell.x, cell.y);
 };
 
 canvas.ontouchend = (event) => {
@@ -576,11 +581,7 @@ canvas.ontouchmove = (event) => {
   }
 
   const touch = event.touches[0];
-  const canvasPos = canvas.getBoundingClientRect();
-  const cell = pointerCellFromCanvasOffset(
-    touch.clientX - canvasPos.left,
-    touch.clientY - canvasPos.top,
-  );
+  const cell = pointerCellFromTouch(touch);
   handleDrawing(cell.x, cell.y);
 };
 
