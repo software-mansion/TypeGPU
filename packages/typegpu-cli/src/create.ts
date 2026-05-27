@@ -9,8 +9,8 @@ import { detect, resolveCommand } from 'package-manager-detector';
 
 const DEFAULT_PROJECT_DIR = 'tgpu-project';
 
-const GRADIENT_START = [212, 141, 255] as const;
-const GRADIENT_END = [55, 67, 209] as const;
+const GRADIENT_START = [0.831, 0.553, 1.0] as const;
+const GRADIENT_END = [0.216, 0.263, 0.82] as const;
 
 const PROJECT_TEMPLATES = [
   {
@@ -26,9 +26,8 @@ const PROJECT_TEMPLATES = [
 const coloredLabelsTemplates = PROJECT_TEMPLATES.map((template, i) => {
   const n = PROJECT_TEMPLATES.length;
   const t = n <= 1 ? 0 : i / (n - 1);
-  const [r, g, b] = Array.from(
-    { length: 3 },
-    (_, j) => (GRADIENT_START[j] as number) * (1 - t) + (GRADIENT_END[j] as number) * t,
+  const [r, g, b] = Array.from({ length: 3 }, (_, j) =>
+    Math.round((GRADIENT_START[j] as number) * (1 - t) + (GRADIENT_END[j] as number) * t * 255),
   ) as [number, number, number];
   return {
     value: template.value,
