@@ -22,6 +22,10 @@ const PROJECT_TEMPLATES = [
     value: 'vite-react',
     label: 'Vite + React',
   },
+  {
+    value: 'expo-simple',
+    label: 'Expo RN',
+  },
 ] as const;
 
 const coloredLabelsTemplates = PROJECT_TEMPLATES.map((template, i) => {
@@ -76,7 +80,10 @@ export async function createProject(cwd: string) {
 
   const cdPath = path.relative(cwd, root);
   const installCmd = resolveCommand(pm, 'install', []);
-  const runCmd = resolveCommand(pm, 'run', ['dev']);
+  const runCmd =
+    projectTemplate === 'expo-simple'
+      ? resolveCommand(pm, 'run', ['start'])
+      : resolveCommand(pm, 'run', ['dev']);
 
   const steps: string[] = [];
   const shouldCd = (!shouldInstall && !!installCmd) || !!runCmd || !!cdPath;

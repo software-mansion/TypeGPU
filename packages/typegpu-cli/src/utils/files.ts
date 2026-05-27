@@ -64,9 +64,14 @@ export async function scaffoldProject(
 
   const srcIndex = path.join(templateDir, 'index.html');
   const destIndex = path.join(projectDir, 'index.html');
-  const srcContent = fs.readFileSync(srcIndex, 'utf-8');
-  const updatedContent = srcContent.replace(/<title>.*?<\/title>/, `<title>${packageName}</title>`);
-  fs.writeFileSync(destIndex, updatedContent);
+  if (fs.existsSync(srcIndex)) {
+    const srcContent = fs.readFileSync(srcIndex, 'utf-8');
+    const updatedContent = srcContent.replace(
+      /<title>.*?<\/title>/,
+      `<title>${packageName}</title>`,
+    );
+    fs.writeFileSync(destIndex, updatedContent);
+  }
 
   const srcPackage = path.join(templateDir, '_package.json');
   const destPackage = path.join(projectDir, 'package.json');
