@@ -133,12 +133,12 @@ describe('tgpu.fn', () => {
       .$uses({ EXT: { Z: 3 } });
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-    "fn fn_1() {
-      let a = EXT.X;
-      let b = EXT.Y;
-      let c = 3;
-    }"
-  `);
+      "fn fn_1() {
+        let a = 1;
+        let b = 2;
+        let c = 3;
+      }"
+    `);
   });
 });
 

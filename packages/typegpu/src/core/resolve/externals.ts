@@ -9,6 +9,10 @@ import { isWgsl, type ResolutionCtx } from '../../types.ts';
  */
 export type ExternalMap = Record<string, unknown>;
 
+function isResolvable(value: unknown) {
+  return isWgsl(value) || isLooseData(value) || hasTinyestMetadata(value);
+}
+
 /**
  * Merges two external maps into one. If a key is present in both maps, the value from the new map is used.
  * If the external value is a namable object, it is given a name if it does not already have one.
@@ -17,11 +21,17 @@ export type ExternalMap = Record<string, unknown>;
  */
 export function applyExternals(existing: ExternalMap, newExternals: ExternalMap) {
   for (const [key, value] of Object.entries(newExternals)) {
-    existing[key] = value;
+    const existingValue = existing[key];
+    if (existingValue && !isResolvable(existingValue) && !isResolvable(value)) {
+      applyExternals(existingValue as ExternalMap, value as ExternalMap);
+    } else {
+      existing[key] = value;
+    }
 
     // Giving name to external value, if it does not already have one.
     if (
       value &&
+      isResolvable(value) &&
       (typeof value === 'object' || typeof value === 'function') &&
       getName(value) === undefined
     ) {
@@ -90,7 +100,7 @@ export function replaceExternalsInWgsl(
       // continue anyway, we still might need to resolve the external
     }
 
-    if (isWgsl(external) || isLooseData(external) || hasTinyestMetadata(external)) {
+    if (isResolvable(external)) {
       return acc.replaceAll(externalRegex, ctx.resolve(external).value);
     }
 
