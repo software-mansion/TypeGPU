@@ -26,9 +26,10 @@
   },
   "devDependencies": {
     "@babel/core": "^7.28.5",
-    "babel-preset-expo": "^56.0.13",
     "@types/react": "~19.2.2",
     "@webgpu/types": "^0.1.69",
+    "babel-preset-expo": "^56.0.13",
+    "eslint": "^10.4.0",
     "eslint-plugin-typegpu": "^0.11.1",
     "oxfmt": "^0.49.0",
     "oxlint": "^1.64.0",
