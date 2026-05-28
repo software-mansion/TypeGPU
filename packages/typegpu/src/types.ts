@@ -45,7 +45,7 @@ import {
   $resolve,
 } from './shared/symbols.ts';
 import type { TgpuBindGroupLayout, TgpuLayoutEntry } from './tgpuBindGroupLayout.ts';
-import type { WgslExtension } from './wgslExtensions.ts';
+import type { WgslEnableExtension } from './wgslExtensions.ts';
 import type { Infer } from './shared/repr.ts';
 import { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 
@@ -275,7 +275,7 @@ export interface ResolutionCtx {
   };
 
   readonly mode: ExecState;
-  readonly enableExtensions: WgslExtension[] | undefined;
+  readonly enableExtensions: WgslEnableExtension[] | undefined;
   readonly gen: ShaderGenerator;
 
   addDeclaration(declaration: string): void;
