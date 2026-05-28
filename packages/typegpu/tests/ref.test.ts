@@ -15,7 +15,7 @@ describe('d.ref', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:foo
-      - fn*:foo(): Cannot use refs (d.ref(...)) from the outer scope.]
+      - fn*:foo(): 'sup.$ += 1' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.]
     `);
   });
 
