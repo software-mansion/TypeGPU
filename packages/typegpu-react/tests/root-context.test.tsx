@@ -63,7 +63,7 @@ describe('Root unmount cleanup', () => {
       resolveInit = resolve;
     });
 
-    using _initSpy = vi.spyOn(tgpu, 'init').mockReturnValue(initPromise as Promise<TgpuRoot>);
+    using _initSpy = vi.spyOn(tgpu, 'init').mockReturnValue(initPromise);
     const destroySpy = vi.spyOn(fixtureRoot, 'destroy');
 
     function TestConsumer() {
