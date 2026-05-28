@@ -22,7 +22,7 @@ describe('[BABEL] auto naming', () => {
       const bindGroupLayout = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.bindGroupLayout({}), "bindGroupLayout");
       const vertexLayout = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexLayout(d.arrayOf(d.u32)), "vertexLayout");
       var fn = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {}, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [],
@@ -126,7 +126,7 @@ describe('[BABEL] auto naming', () => {
       "import tgpu from 'typegpu';
       import * as d from 'typegpu/data';
       const myFunction = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => 0, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [],
@@ -138,7 +138,7 @@ describe('[BABEL] auto naming', () => {
       const myComputeFn = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.computeFn({
         workgroupSize: [1]
       })(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {}, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [],
@@ -154,7 +154,7 @@ describe('[BABEL] auto naming', () => {
       })(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => ({
         ret: 0
       }), {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [],
@@ -171,7 +171,7 @@ describe('[BABEL] auto naming', () => {
         },
         out: d.vec4f
       })(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => d.vec4f(), {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [],
@@ -327,7 +327,7 @@ describe('[BABEL] auto naming', () => {
 
         return 0;
       }, {
-        v: 1,
+        v: 2,
         name: "myFun3",
         ast: {
           params: [],
@@ -341,7 +341,7 @@ describe('[BABEL] auto naming', () => {
 
         return 0;
       }, {
-        v: 1,
+        v: 2,
         name: "myFun1",
         ast: {
           params: [],
@@ -355,7 +355,7 @@ describe('[BABEL] auto naming', () => {
 
         return 0;
       }, {
-        v: 1,
+        v: 2,
         name: "myFun2",
         ast: {
           params: [],
@@ -503,7 +503,7 @@ describe('[BABEL] auto naming', () => {
       const myGuardedPipeline = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createGuardedComputePipeline(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         'use gpu';
       }, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [],
@@ -515,7 +515,7 @@ describe('[BABEL] auto naming', () => {
       const anotherGuardedPipeline = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createGuardedComputePipeline(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         'use gpu';
       }, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [],
@@ -553,7 +553,7 @@ describe('[ROLLUP] auto naming', () => {
             const vertexLayout = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexLayout(d.arrayOf(d.u32)), "vertexLayout"));
             (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([]), "shell"));
             (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {}), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[]],"externalNames":{}},
           externals: {  }
@@ -637,14 +637,14 @@ describe('[ROLLUP] auto naming', () => {
       import * as d from 'typegpu/data';
 
       (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => 0), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":{}},
           externals: {  }
         }) && $.f)({}))), "myFunction"));
             (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.computeFn({ workgroupSize: [1] })(
               (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {}), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[]],"externalNames":{}},
           externals: {  }
@@ -652,7 +652,7 @@ describe('[ROLLUP] auto naming', () => {
             ), "myComputeFn"));
             (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexFn({ out: { ret: d.i32 } })(
               (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => ({ ret: 0 })), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[[10,[104,{"ret":[5,"0"]}]]]],"externalNames":{}},
           externals: {  }
@@ -663,7 +663,7 @@ describe('[ROLLUP] auto naming', () => {
               out: d.vec4f,
             })(
               (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => d.vec4f()), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[[10,[6,[7,"d","vec4f"],[]]]]],"externalNames":{"d":{"vec4f":"d.vec4f"}}},
           externals: { d: { vec4f: () => d.vec4f } }
@@ -818,7 +818,7 @@ describe('[ROLLUP] auto naming', () => {
               'use gpu';
               return 0;
             }), {
-          v: 1,
+          v: 2,
           name: "myFun3",
           ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":{}},
           externals: {  }
@@ -828,7 +828,7 @@ describe('[ROLLUP] auto naming', () => {
               'use gpu';
               return 0;
             }), {
-          v: 1,
+          v: 2,
           name: "myFun1",
           ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":{}},
           externals: {  }
@@ -838,7 +838,7 @@ describe('[ROLLUP] auto naming', () => {
               'use gpu';
               return 0;
             }), {
-          v: 1,
+          v: 2,
           name: "myFun2",
           ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":{}},
           externals: {  }
@@ -1015,7 +1015,7 @@ describe('[ROLLUP] auto naming', () => {
             const myGuardedPipeline = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createGuardedComputePipeline((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
               'use gpu';
             }), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[]],"externalNames":{}},
           externals: {  }
@@ -1025,7 +1025,7 @@ describe('[ROLLUP] auto naming', () => {
               .createGuardedComputePipeline((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                 'use gpu';
               }), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[]],"externalNames":{}},
           externals: {  }

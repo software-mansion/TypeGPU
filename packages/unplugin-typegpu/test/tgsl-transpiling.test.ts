@@ -37,7 +37,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         counter.$.y += tmp;
         counter.$.z += d.f32(input.num.x);
       }, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [{
@@ -99,7 +99,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       })(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
         const x = true;
       }, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [{
@@ -114,7 +114,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       const b = tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const y = 2 + 2;
       }, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [],
@@ -125,7 +125,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       }) && $.f)({}));
       const cx = 2;
       const c = tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => cx, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [],
@@ -181,7 +181,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       })(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
         const x = true;
       }, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [{
@@ -198,7 +198,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       })(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
         const x = true as boolean;
       }, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [{
@@ -215,7 +215,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       })(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
         const x = true satisfies boolean;
       }, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [{
@@ -257,7 +257,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         myFn = tgpu.fn([], d.u32)(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
           return this.myBuffer.$;
         }, {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {
             params: [],
@@ -321,7 +321,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                   counter.$.y += tmp;
                   counter.$.z += d.f32(input.num.x);
                   }), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","$"],"x"]],[2,[7,[7,"counter","$"],"x"],"=",[7,[7,"counter","$"],"y"]],[2,[7,[7,"counter","$"],"y"],"+=","tmp"],[2,[7,[7,"counter","$"],"z"],"+=",[6,[7,"d","f32"],[[7,[7,"input","num"],"x"]]]]]],"externalNames":{"counter":{"$":{"x":"counter.$.x","y":"counter.$.y","z":"counter.$.z"}},"d":{"f32":"d.f32"}}},
           externals: { counter: { $: { x: () => counter.$.x, y: () => counter.$.y, z: () => counter.$.z } }, d: { f32: () => d.f32 } }
@@ -353,7 +353,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
 
       tgpu.computeFn({ workgroupSize: [1] })((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((input) => {
               }), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":{}},
           externals: {  }
@@ -361,7 +361,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
 
               tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
               }), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":{}},
           externals: {  }
@@ -369,7 +369,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
 
               const cx = 2;
               tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => cx), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":{"cx":"cx"}},
           externals: { cx: () => cx }
@@ -426,7 +426,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               myFn = tgpu.fn([], d.u32)((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
                 return this.myBuffer.$;
               }), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[[10,[7,[7,"this","myBuffer"],"$"]]]],"externalNames":{"this":{"myBuffer":{"$":"this.myBuffer.$"}}}},
           externals: { this: { myBuffer: { $: () => this.myBuffer.$ } } }

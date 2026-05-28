@@ -194,20 +194,20 @@ describe('autonaming', () => {
       				"use gpu";
       				return 0;
       			}), {
-          v: 1,
+          v: 2,
           name: "myFun",
           ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":{}},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
 
 
       			const main = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(__vite_ssr_import_2__.default.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
       				myFun();
       			}), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[[6,"myFun",[]]]],"externalNames":{"myFun":"myFun"}},
-          externals: () => ({myFun}),
+          externals: { myFun: () => myFun }
         }) && $.f)({}))), "main"));
       			return main;
       		}"
