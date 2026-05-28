@@ -1,4 +1,4 @@
-import { d, std, type TgpuRoot } from 'typegpu';
+import { d, type TgpuRoot } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { CameraData } from './types.ts';
 

@@ -1889,7 +1889,7 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('throws a readable error on when nan/infinity appears implicitly', () => {
+  it('throws a readable error when encountering NaN or Infinity', () => {
     const fn1 = tgpu.fn([])(() => {
       'use gpu';
       const n = Infinity;
