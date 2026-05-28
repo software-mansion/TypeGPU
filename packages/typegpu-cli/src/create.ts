@@ -16,15 +16,19 @@ const GRADIENT_END = [0.216, 0.263, 0.82] as const;
 const PROJECT_TEMPLATES = [
   {
     value: 'vite-simple',
-    label: 'Vite (Simple)',
+    label: 'Vite (Bare)',
+  },
+  {
+    value: 'vite-complex',
+    label: 'Vite (Complex - Domain Warping)',
   },
   {
     value: 'vite-react',
-    label: 'Vite + React',
+    label: 'Vite + React (Bare)',
   },
   {
     value: 'expo-simple',
-    label: 'Expo RN',
+    label: 'Expo RN (Bare)',
   },
 ] as const;
 
