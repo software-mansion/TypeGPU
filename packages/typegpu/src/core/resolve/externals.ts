@@ -5,7 +5,7 @@ import { isWgsl, type ResolutionCtx } from '../../types.ts';
 
 /**
  * A key-value mapping where keys represent identifiers within shader code,
- * and values can be any type that can be resolved to a code string.
+ * and values can either be another ExternalMap, or be any type that can be resolved to a code string.
  */
 export type ExternalMap = Record<string, unknown>;
 
@@ -14,16 +14,16 @@ function isResolvable(value: unknown) {
 }
 
 /**
- * Merges two external maps into one. If a key is present in both maps, the value from the new map is used.
+ * Merges two external maps into one.
  * If the external value is a namable object, it is given a name if it does not already have one.
  * @param existing - The existing external map.
  * @param newExternals - The new external map.
  */
-export function applyExternals(existing: ExternalMap, newExternals: ExternalMap) {
+export function mergeExternals(existing: ExternalMap, newExternals: ExternalMap) {
   for (const [key, value] of Object.entries(newExternals)) {
     const existingValue = existing[key];
     if (existingValue && !isResolvable(existingValue) && !isResolvable(value)) {
-      applyExternals(existingValue as ExternalMap, value as ExternalMap);
+      mergeExternals(existingValue as ExternalMap, value as ExternalMap);
     } else {
       existing[key] = value;
     }
@@ -31,7 +31,6 @@ export function applyExternals(existing: ExternalMap, newExternals: ExternalMap)
     // Giving name to external value, if it does not already have one.
     if (
       value &&
-      isResolvable(value) &&
       (typeof value === 'object' || typeof value === 'function') &&
       getName(value) === undefined
     ) {
