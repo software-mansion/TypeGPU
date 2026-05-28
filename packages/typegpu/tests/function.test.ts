@@ -83,6 +83,63 @@ describe('tgpu.fn', () => {
       TgpuFn<(arg_0: d.F32, arg_1: d.U32) => d.Bool>
     >();
   });
+
+  it('applies multiple externals', () => {
+    const fn = tgpu.fn([])`() {
+  let a = X;
+  let b = Y;
+  let c = Z;
+}`
+      .$uses({ X: 1 })
+      .$uses({ Y: 2 })
+      .$uses({ Z: 3 });
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        let a = 1;
+        let b = 2;
+        let c = 3;
+      }"
+    `);
+  });
+
+  it('applies multiple externals in correct order', () => {
+    const fn = tgpu.fn([])`() {
+  let a = X;
+  let b = Y;
+  let c = Z;
+}`
+      .$uses({ X: 'Y' })
+      .$uses({ Y: 'Z' })
+      .$uses({ Z: 3 });
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+    "fn fn_1() {
+      let a = 3;
+      let b = 3;
+      let c = 3;
+    }"
+  `);
+  });
+
+  it('applies multiple nested externals', () => {
+    const fn = tgpu.fn([])`() {
+  let a = EXT.X;
+  let b = EXT.Y;
+  let c = EXT.Z;
+}`
+      .$uses({ EXT: { X: 1 } })
+      .$uses({ EXT: { Y: 2 } })
+      .$uses({ EXT: { Z: 3 } });
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+    "fn fn_1() {
+      let a = EXT.X;
+      let b = EXT.Y;
+      let c = 3;
+    }"
+  `);
+  });
 });
 
 describe('tgpu.computeFn', () => {
