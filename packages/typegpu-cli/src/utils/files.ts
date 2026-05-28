@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { rimraf } from 'rimraf';
 import path from 'node:path';
 import * as p from '@clack/prompts';
 
@@ -21,10 +22,10 @@ function isEmptyDir(dir: string) {
   return entries.length === 0 || (entries.length === 1 && entries[0] === '.git');
 }
 
-function emptyDir(dir: string) {
+async function emptyDir(dir: string) {
   for (const entry of fs.readdirSync(dir)) {
     if (entry === '.git') continue;
-    fs.rmSync(path.join(dir, entry), { recursive: true, force: true });
+    await rimraf(path.join(dir, entry));
   }
 }
 
@@ -44,7 +45,7 @@ export async function prepareDirectory(cwd: string, projectDir: string) {
     if (p.isCancel(overwrite) || overwrite === 'no') {
       cancelExit();
     }
-    emptyDir(dir);
+    await emptyDir(dir);
   }
 
   return dir;
@@ -64,9 +65,14 @@ export async function scaffoldProject(
 
   const srcIndex = path.join(templateDir, 'index.html');
   const destIndex = path.join(projectDir, 'index.html');
-  const srcContent = fs.readFileSync(srcIndex, 'utf-8');
-  const updatedContent = srcContent.replace(/<title>.*?<\/title>/, `<title>${packageName}</title>`);
-  fs.writeFileSync(destIndex, updatedContent);
+  if (fs.existsSync(srcIndex)) {
+    const srcContent = fs.readFileSync(srcIndex, 'utf-8');
+    const updatedContent = srcContent.replace(
+      /<title>.*?<\/title>/,
+      `<title>${packageName}</title>`,
+    );
+    fs.writeFileSync(destIndex, updatedContent);
+  }
 
   const srcPackage = path.join(templateDir, '_package.json');
   const destPackage = path.join(projectDir, 'package.json');
