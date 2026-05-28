@@ -85,9 +85,11 @@ export async function createProject(cwd: string) {
 
   const cdPath = path.relative(cwd, root);
   const installCmd = resolveCommand(pm, 'install', []);
+  const prebuildCmd =
+    projectTemplate === 'expo-simple' ? { command: 'npx', args: ['expo', 'prebuild'] } : undefined;
   const runCmd =
     projectTemplate === 'expo-simple'
-      ? resolveCommand(pm, 'run', ['start'])
+      ? resolveCommand(pm, 'run', ['ios # or android'])
       : resolveCommand(pm, 'run', ['dev']);
 
   const steps: string[] = [];
@@ -97,6 +99,9 @@ export async function createProject(cwd: string) {
   }
   if (!shouldInstall && installCmd) {
     steps.push(`   ${installCmd.command} ${installCmd.args.join(' ')}`);
+  }
+  if (prebuildCmd) {
+    steps.push(`   ${prebuildCmd.command} ${prebuildCmd.args.join(' ')}`);
   }
   if (runCmd) {
     steps.push(`   ${runCmd.command} ${runCmd.args.join(' ')}`);
