@@ -69,10 +69,7 @@ export async function createProject(cwd: string) {
 
   const detected = await detect({ cwd: root });
   const inferredPm = detected?.agent ?? pmFromUserAgent(process.env.npm_config_user_agent);
-  const pm =
-    projectTemplate === 'expo-simple' && inferredPm === 'npm'
-      ? 'yarn'
-      : inferredPm;
+  const pm = projectTemplate === 'expo-simple' && inferredPm === 'npm' ? 'yarn' : inferredPm;
   const shouldInstall = await confirmStep(`Install dependencies with ${pm}?`, true);
   process.chdir(root);
 
