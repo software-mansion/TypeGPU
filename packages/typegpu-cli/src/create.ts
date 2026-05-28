@@ -85,7 +85,7 @@ export async function createProject(cwd: string) {
   const installCmd = resolveCommand(pm, 'install', []);
   const runCmd =
     projectTemplate === 'expo-simple'
-      ? resolveCommand(pm, 'run', ['ios'])
+      ? resolveCommand(pm, 'run', ['start'])
       : resolveCommand(pm, 'run', ['dev']);
 
   const steps: string[] = [];
