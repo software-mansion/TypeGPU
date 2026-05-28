@@ -1,4 +1,4 @@
-import { d, type TgpuRoot } from 'typegpu';
+import { d, std, type TgpuRoot } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { CameraData } from './types.ts';
 
@@ -17,6 +17,13 @@ export class Camera {
     this.#near = near;
     this.#far = far;
     this.#uniform = root.createUniform(CameraData, this.#computeData());
+  }
+
+  setView(position: d.v3f, target: d.v3f, up: d.v3f) {
+    this.#position = position;
+    this.#target = target;
+    this.#up = up;
+    this.#update();
   }
 
   set position(pos: d.v3f) {
