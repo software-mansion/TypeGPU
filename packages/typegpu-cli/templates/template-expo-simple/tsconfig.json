@@ -20,5 +20,5 @@
 
     "allowJs": true
   },
-  "include": ["**/*.ts", "**/*.tsx", "**/*.mts"]
+  "include": ["**/*.ts", "**/*.tsx"]
 }
