@@ -78,3 +78,26 @@ describe('TGSL', () => {
     `);
   });
 });
+
+describe('Edge cases', () => {
+  it('throws when called on +Infinity', () => {
+    expect(() => d.f32(Infinity)).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot cast 'Infinity' to f32 because of the Finite Math Assumption.]`);
+    expect(() => d.f16(Infinity)).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot cast 'Infinity' to f16 because of the Finite Math Assumption.]`);
+    expect(() => d.i32(Infinity)).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot cast 'Infinity' to i32 because of the Finite Math Assumption.]`);
+    expect(() => d.u32(Infinity)).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot cast 'Infinity' to u32 because of the Finite Math Assumption.]`);
+  });
+
+  it('throws when called on -Infinity', () => {
+    expect(() => d.f32(-Infinity)).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot cast '-Infinity' to f32 because of the Finite Math Assumption.]`);
+    expect(() => d.f16(-Infinity)).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot cast '-Infinity' to f16 because of the Finite Math Assumption.]`);
+    expect(() => d.i32(-Infinity)).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot cast '-Infinity' to i32 because of the Finite Math Assumption.]`);
+    expect(() => d.u32(-Infinity)).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot cast '-Infinity' to u32 because of the Finite Math Assumption.]`);
+  });
+
+  it('throws when called on NaN', () => {
+    expect(() => d.f32(NaN)).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot cast 'NaN' to f32 because of the Finite Math Assumption.]`);
+    expect(() => d.f16(NaN)).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot cast 'NaN' to f16 because of the Finite Math Assumption.]`);
+    expect(() => d.i32(NaN)).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot cast 'NaN' to i32 because of the Finite Math Assumption.]`);
+    expect(() => d.u32(NaN)).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot cast 'NaN' to u32 because of the Finite Math Assumption.]`);
+  });
+});

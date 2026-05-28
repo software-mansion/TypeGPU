@@ -48,6 +48,9 @@ const u32Cast = callableSchema({
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
+    if (!Number.isFinite(v)) {
+      throw new Error(`Cannot cast '${v}' to u32 because of the Finite Math Assumption.`);
+    }
     if (!Number.isInteger(v)) {
       const truncated = Math.trunc(v);
       if (truncated < 0) {
@@ -96,6 +99,9 @@ const i32Cast = callableSchema({
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
+    if (!Number.isFinite(v)) {
+      throw new Error(`Cannot cast '${v}' to i32 because of the Finite Math Assumption.`);
+    }
     return v | 0;
   },
   codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(i32, args),
@@ -135,6 +141,9 @@ const f32Cast = callableSchema({
     }
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
+    }
+    if (!Number.isFinite(v)) {
+      throw new Error(`Cannot cast '${v}' to f32 because of the Finite Math Assumption.`);
     }
     return Math.fround(v);
   },
@@ -258,6 +267,9 @@ const f16Cast = callableSchema({
     }
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
+    }
+    if (!Number.isFinite(v)) {
+      throw new Error(`Cannot cast '${v}' to f16 because of the Finite Math Assumption.`);
     }
     return roundToF16(v);
   },
