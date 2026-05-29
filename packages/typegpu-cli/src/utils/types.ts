@@ -8,6 +8,14 @@ export const PackageJsonSchema = type({
 });
 export type PackageJson = typeof PackageJsonSchema.infer;
 
+export const AppJsonSchema = type({
+  expo: {
+    name: 'string',
+    slug: 'string',
+  },
+});
+export type AppJson = typeof AppJsonSchema.infer;
+
 export const TsConfigSchema = type({
   'compilerOptions?': {
     'types?': 'string[]',

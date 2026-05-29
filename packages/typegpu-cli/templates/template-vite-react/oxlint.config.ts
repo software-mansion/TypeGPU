@@ -19,4 +19,5 @@ export default defineConfig({
     builtin: true,
     browser: true,
   },
+  ignorePatterns: ['.agents/**'],
 });

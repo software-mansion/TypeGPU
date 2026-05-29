@@ -1,11 +1,10 @@
 import fs from 'node:fs';
-import { rimraf } from 'rimraf';
 import path from 'node:path';
 import * as p from '@clack/prompts';
 
 import { cancelExit, failAndExit } from './prompts.ts';
 import { type } from 'arktype';
-import { PackageJsonSchema } from './types.ts';
+import { PackageJsonSchema, AppJsonSchema } from './types.ts';
 import { multiselectPkgs } from './inputs.ts';
 
 const renameFiles = {
@@ -22,10 +21,15 @@ function isEmptyDir(dir: string) {
   return entries.length === 0 || (entries.length === 1 && entries[0] === '.git');
 }
 
-async function emptyDir(dir: string) {
+function emptyDir(dir: string) {
   for (const entry of fs.readdirSync(dir)) {
     if (entry === '.git') continue;
-    await rimraf(path.join(dir, entry));
+    fs.rmSync(path.join(dir, entry), {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 100,
+    });
   }
 }
 
@@ -45,7 +49,7 @@ export async function prepareDirectory(cwd: string, projectDir: string) {
     if (p.isCancel(overwrite) || overwrite === 'no') {
       cancelExit();
     }
-    await emptyDir(dir);
+    emptyDir(dir);
   }
 
   return dir;
@@ -57,7 +61,9 @@ export async function scaffoldProject(
   packageName: string,
 ) {
   const entries = fs.readdirSync(templateDir);
-  for (const entry of entries.filter((f) => f !== '_package.json' && f !== 'index.html')) {
+  for (const entry of entries.filter(
+    (f) => f !== '_package.json' && f !== 'index.html' && f !== 'app.json',
+  )) {
     const src = path.join(templateDir, entry);
     const dest = path.join(projectDir, renameFiles[entry] ?? entry);
     fs.cpSync(src, dest, { recursive: true });
@@ -72,6 +78,19 @@ export async function scaffoldProject(
       `<title>${packageName}</title>`,
     );
     fs.writeFileSync(destIndex, updatedContent);
+  }
+
+  const srcApp = path.join(templateDir, 'app.json');
+  const destApp = path.join(projectDir, 'app.json');
+  if (fs.existsSync(srcApp)) {
+    const app = AppJsonSchema(JSON.parse(fs.readFileSync(srcApp, 'utf-8')));
+    if (app instanceof type.errors) {
+      failAndExit(`[INTERNAL] Invalid app.json in template ${templateDir}`, app.summary);
+    }
+    app.expo.name = packageName;
+    app.expo.slug = packageName;
+
+    fs.writeFileSync(destApp, JSON.stringify(app, null, 2) + '\n' /* to make oxfmt happy */);
   }
 
   const srcPackage = path.join(templateDir, '_package.json');
