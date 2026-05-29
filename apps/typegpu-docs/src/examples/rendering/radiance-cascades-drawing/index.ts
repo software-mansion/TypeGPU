@@ -215,6 +215,8 @@ function frame(timestamp: number) {
   frameId = requestAnimationFrame(frame);
 }
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 // #region Example controls and cleanup
 
 export const controls = defineControls({
@@ -247,6 +249,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
+  detachAutoResizer();
   root.destroy();
 }
 

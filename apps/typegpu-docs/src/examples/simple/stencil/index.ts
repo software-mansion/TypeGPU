@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import tgpu, { common, d } from 'typegpu';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -124,9 +124,12 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 export function onCleanup() {
   if (frameId) {
     cancelAnimationFrame(frameId);
   }
+  detachAutoResizer();
   root.destroy();
 }

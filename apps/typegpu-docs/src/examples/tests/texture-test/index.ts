@@ -135,6 +135,8 @@ function render() {
 }
 requestAnimationFrame(render);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 export const controls = defineControls({
   Format: {
     initial: currentFormat,
@@ -179,5 +181,6 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  detachAutoResizer();
   root.destroy();
 }

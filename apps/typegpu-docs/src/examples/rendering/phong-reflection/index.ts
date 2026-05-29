@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import * as p from './params.ts';
 import {
   ExampleControls,
@@ -175,10 +175,13 @@ const resizeObserver = new ResizeObserver(() => {
 });
 resizeObserver.observe(canvas);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 export function onCleanup() {
   cancelAnimationFrame(frameId);
   cleanupCamera();
   resizeObserver.unobserve(canvas);
+  detachAutoResizer();
   root.destroy();
 }
 

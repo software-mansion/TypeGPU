@@ -295,6 +295,11 @@ async function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata
 }
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+});
+
 // #region Example controls & Cleanup
 
 export const controls = defineControls({
@@ -355,6 +360,7 @@ export function onCleanup() {
     adapter.requestDevice = oldRequestDevice;
   }
 
+  detachAutoResizer();
   root.destroy();
 }
 

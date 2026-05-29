@@ -109,6 +109,8 @@ function render(timestamp: number) {
 
 frameId = requestAnimationFrame(render);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 const qualityOptions = {
   'very high': {
     maxSteps: 150,
@@ -145,5 +147,6 @@ export const controls = defineControls({
 export function onCleanup() {
   cancelAnimationFrame(frameId);
   resizeObserver.disconnect();
+  detachAutoResizer();
   root.destroy();
 }

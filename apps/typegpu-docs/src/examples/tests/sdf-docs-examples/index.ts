@@ -291,6 +291,8 @@ function frame() {
   frameId = requestAnimationFrame(frame);
 }
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 function setSnippet(snippet: SdfSnippet) {
   snippetMode.write(SDF_SNIPPETS.indexOf(snippet));
 }
@@ -304,6 +306,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  detachAutoResizer();
   cancelAnimationFrame(frameId);
   floodRunner.destroy();
   sourceTexture.destroy();

@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const triangleAmount = 1000;
@@ -242,6 +242,8 @@ function frame() {
 
 animationFrameId = requestAnimationFrame(frame);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 // #region Example controls and cleanup
 
 export const controls = defineControls({
@@ -288,6 +290,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrameId);
+  detachAutoResizer();
   root.destroy();
 }
 

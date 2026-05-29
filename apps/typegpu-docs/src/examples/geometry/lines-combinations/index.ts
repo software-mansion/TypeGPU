@@ -9,7 +9,7 @@ import {
   lineSegmentWireframeIndices,
   startCapSlot,
 } from '@typegpu/geometry';
-import tgpu, { type ColorAttachment } from 'typegpu';
+import tgpu, { common, type ColorAttachment } from 'typegpu';
 import {
   arrayOf,
   builtin,
@@ -406,6 +406,8 @@ const runAnimationFrame = (timeMs: number) => {
 };
 runAnimationFrame(0);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 const fillOptions = {
   none: 0,
   solid: 1,
@@ -502,6 +504,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  detachAutoResizer();
   root.destroy();
   cancelAnimationFrame(frameId);
 }

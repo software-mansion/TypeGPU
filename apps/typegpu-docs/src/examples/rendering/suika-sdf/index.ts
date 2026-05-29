@@ -1,5 +1,5 @@
 import * as sdf from '@typegpu/sdf';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import {
   DROP_Y,
@@ -414,18 +414,21 @@ const renderPipeline = root.createRenderPipeline({
   },
 });
 
-const resizeObserver = new ResizeObserver(() => {
-  mergedField.distance.destroy();
-  mergedField.info.destroy();
-  mergedField = createMergedFieldResources();
-  distanceView = mergedField.distance.createView(d.texture2d());
-  infoView = mergedField.info.createView(d.texture2d());
-  mergedFieldBindGroup = root.createBindGroup(mergedFieldLayout, {
-    distance: distanceView,
-    info: infoView,
-  });
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    mergedField.distance.destroy();
+    mergedField.info.destroy();
+    mergedField = createMergedFieldResources();
+    distanceView = mergedField.distance.createView(d.texture2d());
+    infoView = mergedField.info.createView(d.texture2d());
+    mergedFieldBindGroup = root.createBindGroup(mergedFieldLayout, {
+      distance: distanceView,
+      info: infoView,
+    });
+  },
 });
-resizeObserver.observe(canvas);
 
 canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false, signal });
 canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false, signal });
@@ -676,6 +679,6 @@ export const controls = defineControls({
 export function onCleanup() {
   cleanupController.abort();
   cancelAnimationFrame(animationFrameId);
-  resizeObserver.disconnect();
+  detachAutoResizer();
   root.destroy();
 }

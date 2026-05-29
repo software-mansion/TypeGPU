@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import tgpu, { common, d } from 'typegpu';
 import { resolutionAccess, timeAccess } from './consts.ts';
 import {
   mainFragment1,
@@ -61,8 +61,14 @@ function render(timestamp: number) {
 
 frameId = requestAnimationFrame(render);
 
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+});
+
 export function onCleanup() {
   cancelAnimationFrame(frameId);
+  detachAutoResizer();
   root.destroy();
 }
 

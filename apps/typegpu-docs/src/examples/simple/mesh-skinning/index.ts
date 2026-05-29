@@ -525,6 +525,8 @@ function render(frameTimeMs: number) {
 let animationId: number | undefined;
 animationId = requestAnimationFrame(render);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 export const controls = defineControls({
   Animation: {
     initial: toLabel(selectedVariant.id),
@@ -561,5 +563,6 @@ export function onCleanup() {
   }
   resizeObserver.disconnect();
   cleanupCamera();
+  detachAutoResizer();
   root.destroy();
 }

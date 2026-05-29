@@ -1,5 +1,5 @@
 import { circle, circleVertexCount } from '@typegpu/geometry';
-import tgpu, { d, std as s } from 'typegpu';
+import tgpu, { common, d, std as s } from 'typegpu';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas');
@@ -128,29 +128,34 @@ const pipeline = root.createRenderPipeline({
   multisample: { count: multisample ? 4 : 1 },
 });
 
-setTimeout(() => {
-  pipeline
-    .with(uniformsBindGroup)
-    .withColorAttachment({
-      ...(multisample
-        ? {
-            view: msaaTextureView,
-            resolveTarget: context,
-          }
-        : { view: context }),
-      clearValue: [0, 0, 0, 0],
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .withPerformanceCallback((a, b) => {
-      console.log((Number(b - a) * 1e-6).toFixed(3), 'ms');
-    })
-    .draw(circleVertexCount(4), circleCount);
-}, 100);
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    pipeline
+      .with(uniformsBindGroup)
+      .withColorAttachment({
+        ...(multisample
+          ? {
+              view: msaaTextureView,
+              resolveTarget: context,
+            }
+          : { view: context }),
+        clearValue: [0, 0, 0, 0],
+        loadOp: 'clear',
+        storeOp: 'store',
+      })
+      .withPerformanceCallback((a, b) => {
+        console.log((Number(b - a) * 1e-6).toFixed(3), 'ms');
+      })
+      .draw(circleVertexCount(4), circleCount);
+  },
+});
 
 // #region Example controls & Cleanup
 
 export function onCleanup() {
+  detachAutoResizer();
   root.destroy();
 }
 

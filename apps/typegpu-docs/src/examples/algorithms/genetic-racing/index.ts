@@ -532,6 +532,11 @@ applyGridSize(...GRID_SIZES[gridSizeKey]);
 applyTrack(generateGridTrack(trackSeed, ...GRID_SIZES[gridSizeKey]));
 startSimulation();
 
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+});
+
 // #region Example controls & Cleanup
 
 export const controls = defineControls({
@@ -605,6 +610,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(rafHandle);
+  detachAutoResizer();
   root.destroy();
 }
 

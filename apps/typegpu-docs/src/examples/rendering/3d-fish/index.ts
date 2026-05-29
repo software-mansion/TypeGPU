@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { simulate } from './compute.ts';
 import { loadModel } from './load-model.ts';
@@ -421,23 +421,26 @@ window.addEventListener('touchmove', touchMoveEventListener);
 
 // observer and cleanup
 
-const resizeObserver = new ResizeObserver(() => {
-  camera.projection = m.mat4.perspective(
-    Math.PI / 4,
-    canvas.clientWidth / canvas.clientHeight,
-    0.1,
-    1000,
-    d.mat4x4f(),
-  );
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    camera.projection = m.mat4.perspective(
+      Math.PI / 4,
+      canvas.clientWidth / canvas.clientHeight,
+      0.1,
+      1000,
+      d.mat4x4f(),
+    );
 
-  depthTexture.destroy();
-  depthTexture = root.device.createTexture({
-    size: [canvas.width, canvas.height, 1],
-    format: 'depth24plus',
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  });
+    depthTexture.destroy();
+    depthTexture = root.device.createTexture({
+      size: [canvas.width, canvas.height, 1],
+      format: 'depth24plus',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+  },
 });
-resizeObserver.observe(canvas);
 
 export function onCleanup() {
   disposed = true;
@@ -445,7 +448,7 @@ export function onCleanup() {
   window.removeEventListener('mouseup', mouseUpEventListener);
   window.removeEventListener('mousemove', mouseMoveEventListener);
   window.removeEventListener('touchmove', touchMoveEventListener);
-  resizeObserver.disconnect();
+  detachAutoResizer();
   root.destroy();
 }
 

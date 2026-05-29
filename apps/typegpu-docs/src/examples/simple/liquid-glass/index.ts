@@ -187,6 +187,8 @@ function render() {
 }
 frameId = requestAnimationFrame(render);
 
+const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+
 export const controls = defineControls({
   'Rectangle dims': {
     initial: defaultParams.rectDims,
@@ -305,5 +307,6 @@ export function onCleanup() {
     cancelAnimationFrame(frameId);
   }
   window.removeEventListener('mousemove', handleMouseMove);
+  detachAutoResizer();
   root.destroy();
 }
