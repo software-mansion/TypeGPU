@@ -5,7 +5,7 @@ import { inCodegenMode } from '../../execMode.ts';
 import type { InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { applyExternals, type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
+import { mergeExternals, type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 
 // ----------
@@ -112,7 +112,7 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
     const externalMap: ExternalMap = {};
 
     for (const externals of this.#externalsToApply) {
-      applyExternals(externalMap, externals);
+      mergeExternals(externalMap, externals);
     }
 
     const replacedExpression = replaceExternalsInWgsl(ctx, externalMap, this.#expression);

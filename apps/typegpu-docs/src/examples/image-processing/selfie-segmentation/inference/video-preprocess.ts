@@ -46,10 +46,11 @@ export const videoPreprocessKernel = tgpu.computeFn({
   const coord = d.vec2u(i & MODEL_COORD_MASK, std.bitShiftRight(i, MODEL_COORD_SHIFT));
   const pixel = d.vec2f(coord) + 0.5;
   const cropUv = d.vec2f(MODEL_SIZE.x - pixel.x, pixel.y) / MODEL_SIZE;
-  const uv =
+  const sourceUv =
     (videoFrameParamsLayout.$.params.cropOrigin +
       cropUv * videoFrameParamsLayout.$.params.cropSize) /
     d.vec2f(videoFrameParamsLayout.$.params.sourceSize);
+  const uv = videoFrameParamsLayout.$.params.uvTransform * (sourceUv - 0.5) + 0.5;
 
   const color = std.textureSampleBaseClampToEdge(
     videoFrameFrameLayout.$.frame,
