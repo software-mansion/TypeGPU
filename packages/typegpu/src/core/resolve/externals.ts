@@ -5,19 +5,43 @@ import { isWgsl, type ResolutionCtx } from '../../types.ts';
 
 /**
  * A key-value mapping where keys represent identifiers within shader code,
- * and values can be any type that can be resolved to a code string.
+ * and values can either be another ExternalMap, or be any type that can be resolved to a code string.
  */
 export type ExternalMap = Record<string, unknown>;
 
+function isResolvable(value: unknown) {
+  return isWgsl(value) || isLooseData(value) || hasTinyestMetadata(value);
+}
+
 /**
- * Merges two external maps into one. If a key is present in both maps, the value from the new map is used.
+ * Merges two external maps into one.
  * If the external value is a namable object, it is given a name if it does not already have one.
  * @param existing - The existing external map.
  * @param newExternals - The new external map.
+ *
+ * NOTE:
+ * This function attempts to avoid accidental reference modification
+ * by performing a shallow copy before each modification,
+ * but it cannot avoid `existing` modification.
+ * Make sure that `existing` is created internally, instead of being passed in by users.
  */
-export function applyExternals(existing: ExternalMap, newExternals: ExternalMap) {
+export function mergeExternals(existing: ExternalMap, newExternals: ExternalMap) {
   for (const [key, value] of Object.entries(newExternals)) {
-    existing[key] = value;
+    const existingValue = existing[key];
+    if (
+      existingValue !== null &&
+      typeof existingValue === 'object' &&
+      value !== null &&
+      typeof value === 'object' &&
+      !isResolvable(existingValue) &&
+      !isResolvable(value)
+    ) {
+      const copiedValue = { ...(existingValue as ExternalMap) };
+      mergeExternals(copiedValue, value as ExternalMap);
+      existing[key] = copiedValue;
+    } else {
+      existing[key] = value;
+    }
 
     // Giving name to external value, if it does not already have one.
     if (
@@ -90,7 +114,7 @@ export function replaceExternalsInWgsl(
       // continue anyway, we still might need to resolve the external
     }
 
-    if (isWgsl(external) || isLooseData(external) || hasTinyestMetadata(external)) {
+    if (isResolvable(external)) {
       return acc.replaceAll(externalRegex, ctx.resolve(external).value);
     }
 
