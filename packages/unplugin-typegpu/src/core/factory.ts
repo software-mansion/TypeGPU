@@ -13,6 +13,7 @@ import {
   functionVisitor,
   getBlockScope,
   METADATA_FORMAT_VERSION,
+  makeAstBackwardsCompatible,
 } from './common.ts';
 
 import type {
@@ -58,7 +59,7 @@ function assignMetadata(
   const metadata = `{
     v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
-    ast: ${embedJSON(ast)},
+    ast: ${embedJSON(makeAstBackwardsCompatible(ast))},
     externals: ${externalsToString(ast.externalNames)}
   }`;
 

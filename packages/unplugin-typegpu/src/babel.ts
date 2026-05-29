@@ -10,6 +10,7 @@ import {
   functionVisitor,
   getBlockScope,
   initPluginState,
+  makeAstBackwardsCompatible,
 } from './core/common.ts';
 import { createFilterForId } from './core/filter.ts';
 
@@ -45,7 +46,7 @@ function assignMetadata(
   const metadata = t.objectExpression([
     t.objectProperty(i('v'), t.numericLiteral(METADATA_FORMAT_VERSION)),
     t.objectProperty(i('name'), t.valueToNode(name)),
-    t.objectProperty(i('ast'), t.valueToNode(ast)),
+    t.objectProperty(i('ast'), t.valueToNode(makeAstBackwardsCompatible(ast))),
     t.objectProperty(i('externals'), externalsToNode(ast.externalNames)),
   ]);
 
