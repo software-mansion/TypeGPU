@@ -75,4 +75,20 @@ describe('external prop access', () => {
       }"
     `);
   });
+
+  it('supports TS syntax', () => {
+    const vecs: { v: d.v2i } | undefined = { v: d.vec2i() };
+    const fn = () => {
+      'use gpu';
+      const a = vecs!.v;
+      const b = (vecs as { v: d.v2i }).v;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        let a = vec2i();
+        let b = vec2i();
+      }"
+    `);
+  });
 });

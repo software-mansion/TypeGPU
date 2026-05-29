@@ -233,6 +233,8 @@ describe('transpileFn', () => {
 
           const h = ext.t.fn().x;
           const i = ext.t.comp['computed'].x;
+
+          const j = (ext).u;
         }`),
       );
 
@@ -250,6 +252,7 @@ describe('transpileFn', () => {
               "comp": "ext.t.comp",
               "fn": "ext.t.fn",
             },
+            "u": "ext.u",
           },
         }
       `);
