@@ -18,12 +18,20 @@ function isResolvable(value: unknown) {
  * If the external value is a namable object, it is given a name if it does not already have one.
  * @param existing - The existing external map.
  * @param newExternals - The new external map.
+ *
+ * NOTE:
+ * This function attempts to avoid accidental reference modification
+ * by performing a shallow copy before each modification,
+ * but it cannot avoid `existing` modification.
+ * Make sure that `existing` is created internally, instead of being passed in by users.
  */
 export function mergeExternals(existing: ExternalMap, newExternals: ExternalMap) {
   for (const [key, value] of Object.entries(newExternals)) {
     const existingValue = existing[key];
     if (existingValue && !isResolvable(existingValue) && !isResolvable(value)) {
-      mergeExternals(existingValue as ExternalMap, value as ExternalMap);
+      const copiedValue = { ...(existingValue as ExternalMap) };
+      mergeExternals(copiedValue, value as ExternalMap);
+      existing[key] = copiedValue;
     } else {
       existing[key] = value;
     }

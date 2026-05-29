@@ -140,6 +140,56 @@ describe('tgpu.fn', () => {
       }"
     `);
   });
+
+  it('does not mutate original externals', () => {
+    const SHARED_EXT = { X: 1 };
+
+    const fn = tgpu.fn([])`() {
+  let a = X;
+  let b = Y;
+}`
+      .$uses(SHARED_EXT)
+      .$uses({ Y: 2 });
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        let a = 1;
+        let b = 2;
+      }"
+    `);
+    expect(SHARED_EXT).toStrictEqual({ X: 1 });
+  });
+
+  it('does not mutate values of original externals', () => {
+    const SHARED_EXT = { EXT: { X: 1 } };
+
+    const fn = tgpu.fn([])`() {
+  let a = EXT.X;
+  let b = EXT.Y;
+}`
+      .$uses(SHARED_EXT)
+      .$uses({ EXT: { Y: 2 } });
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        let a = 1;
+        let b = 2;
+      }"
+    `);
+    expect(SHARED_EXT).toStrictEqual({ EXT: { X: 1 } });
+  });
+
+  it('does not break when an unused unresolvable external is passed', () => {
+    const fn = tgpu.fn([])`() {
+  let a = ext;
+}`.$uses({ ext: 1, unused: () => {} });
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() {
+        let a = 1;
+      }"
+    `);
+  });
 });
 
 describe('tgpu.computeFn', () => {
