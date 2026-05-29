@@ -28,7 +28,14 @@ function isResolvable(value: unknown) {
 export function mergeExternals(existing: ExternalMap, newExternals: ExternalMap) {
   for (const [key, value] of Object.entries(newExternals)) {
     const existingValue = existing[key];
-    if (existingValue && !isResolvable(existingValue) && !isResolvable(value)) {
+    if (
+      existingValue !== null &&
+      typeof existingValue === 'object' &&
+      value !== null &&
+      typeof value === 'object' &&
+      !isResolvable(existingValue) &&
+      !isResolvable(value)
+    ) {
       const copiedValue = { ...(existingValue as ExternalMap) };
       mergeExternals(copiedValue, value as ExternalMap);
       existing[key] = copiedValue;
