@@ -1,14 +1,9 @@
 import type { Externals, JsNode } from './types.ts';
 
 /**
- * Traverses ancestor chain and updates externals accordingly.
- * @example
- * addExternal(chainFrom`this.color.add`, {}); // { this: { color: { add: 'this.color.add' } } }
- * addExternal(chainFrom`this.color`, { this: { count: 'this.count' } }); // { this: { count: 'this.count', color: 'this.color' } }
- * addExternal(chainFrom`ext`, { ext: { count: 'ext.count' } }); // { ext: 'ext' }
+ * Returns an array of prop accesses.
  */
-export function addExternal(ancestorChain: JsNode[], externals: Externals) {
-  // TODO: clean up this mess
+function extractPropAccessChain(ancestorChain: JsNode[]): string[] {
   const chain: string[] = [];
   for (let i = ancestorChain.length - 1; i >= 0; i--) {
     const current = ancestorChain[i];
@@ -27,37 +22,47 @@ export function addExternal(ancestorChain: JsNode[], externals: Externals) {
       break;
     }
   }
+  return chain;
+}
 
-  let currentExternals = externals;
-  if (typeof currentExternals !== 'object') {
-    throw new Error('??');
+/**
+ * Traverses externals through the chain, and updates the last value with given string.
+ * NOTE: to achieve better complexity, chain is expected to be passed in reversed (e.g. ['mul', 'prop', 'ext']), and it will be mutated.
+ */
+function addExternalValue(externals: Externals, chain: string[], value: string) {
+  let elem = chain.pop();
+  if (elem === undefined) {
+    throw new Error('Internal error, expected element to be defined.');
   }
-  for (const elem of chain) {
-    let nextExternals = currentExternals[elem];
-    if (nextExternals) {
-      if (typeof nextExternals !== 'string') {
-        currentExternals = nextExternals;
-      } else {
-        // we already need this in externals, so we break
-        break;
-      }
+
+  if (chain.length === 0) {
+    externals[elem] = value;
+    return;
+  }
+
+  let nextExternals = externals[elem];
+  if (nextExternals) {
+    if (typeof nextExternals !== 'string') {
+      addExternalValue(nextExternals, chain, value);
     } else {
-      const newExt = Object.create(null);
-      currentExternals[elem] = newExt;
-      currentExternals = newExt;
+      // we already need this in externals, so we break
+      return;
     }
+  } else {
+    const newExternals = Object.create(null);
+    externals[elem] = newExternals;
+    return addExternalValue(newExternals, chain, value);
   }
+}
 
-  const lastKey = chain[chain.length - 1];
-  if (lastKey !== undefined) {
-    let parent = externals;
-    for (const key of chain.slice(0, -1)) {
-      const next = parent[key];
-      if (!next || typeof next === 'string') break;
-      parent = next;
-    }
-    if (typeof parent[lastKey] === 'object') {
-      parent[lastKey] = chain.join('.');
-    }
-  }
+/**
+ * Traverses ancestor chain and updates externals accordingly.
+ * @example
+ * addExternal({}, chainFrom`this.color.add`); // { this: { color: { add: 'this.color.add' } } }
+ * addExternal({ this: { count: 'this.count' } }, chainFrom`this.color`); // { this: { count: 'this.count', color: 'this.color' } }
+ * addExternal({ ext: { count: 'ext.count' } }, chainFrom`ext`); // { ext: 'ext' }
+ */
+export function addExternal(externals: Externals, ancestorChain: JsNode[]) {
+  const chain = extractPropAccessChain(ancestorChain);
+  addExternalValue(externals, chain.toReversed(), chain.join('.'));
 }

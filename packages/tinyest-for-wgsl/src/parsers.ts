@@ -57,13 +57,13 @@ const Transpilers: Partial<{
 
   Identifier(ctx, node) {
     if (ctx.ignoreExternalDepth === 0 && !isDeclared(ctx, node.name)) {
-      addExternal(ctx.ancestorChain, ctx.externalNames);
+      addExternal(ctx.externalNames, ctx.ancestorChain);
     }
     return node.name;
   },
 
   ThisExpression(ctx) {
-    addExternal(ctx.ancestorChain, ctx.externalNames);
+    addExternal(ctx.externalNames, ctx.ancestorChain);
     return 'this';
   },
 
