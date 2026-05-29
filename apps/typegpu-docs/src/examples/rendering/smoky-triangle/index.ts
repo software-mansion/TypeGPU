@@ -1,6 +1,8 @@
 import { perlin3d } from '@typegpu/noise';
 import tgpu, { d, std } from 'typegpu';
 
+import { defineControls } from '../../common/defineControls.ts';
+
 const Params = d.struct({
   fromColor: d.vec3f,
   toColor: d.vec3f,
@@ -15,6 +17,29 @@ const Params = d.struct({
 
 const root = await tgpu.init();
 const paramsUniform = root.createUniform(Params);
+
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+
+let rgba16floatAvailable = true;
+try {
+  root.configureContext({
+    canvas,
+    format: 'rgba16float',
+  });
+} catch {
+  rgba16floatAvailable = false;
+}
+
+const onChromium = navigator.vendor?.includes('Google');
+const hdr = rgba16floatAvailable && onChromium;
+
+const presentationFormat = hdr ? 'rgba16float' : navigator.gpu.getPreferredCanvasFormat();
+
+let context = root.configureContext({
+  canvas,
+  alphaMode: 'premultiplied',
+  format: presentationFormat,
+});
 
 const getGradientColor = (ratio: number) => {
   'use gpu';
@@ -79,15 +104,7 @@ const pipeline = root.pipe(perlinCache.inject()).createRenderPipeline({
     }
     return d.vec4f(grain(getGradientColor(factor), uv), 1);
   },
-  targets: { format: 'rgba16float' },
-});
-
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = root.configureContext({
-  canvas,
-  alphaMode: 'premultiplied',
-  format: 'rgba16float',
-  toneMapping: { mode: 'extended' },
+  targets: { format: presentationFormat },
 });
 
 let frameId: number;
@@ -103,7 +120,23 @@ function frame(timestamp: number) {
 }
 frameId = requestAnimationFrame(frame);
 
-export const controls = {
+const controls = hdr
+  ? defineControls({
+      HDR: {
+        initial: false,
+        onToggleChange(value: boolean) {
+          context = root.configureContext({
+            canvas,
+            alphaMode: 'premultiplied',
+            format: 'rgba16float',
+            toneMapping: { mode: value ? 'extended' : 'standard' },
+          });
+        },
+      },
+    })
+  : {};
+
+const baseControls = defineControls({
   Distortion: {
     initial: 0.05,
     min: 0,
@@ -123,22 +156,22 @@ export const controls = {
     },
   },
   'From Color': {
-    initial: [0.0285, 0.11175, 0.23525],
-    onColorChange(value: readonly [number, number, number]) {
-      paramsUniform.patch({ fromColor: d.vec3f(...value) });
+    initial: d.vec3f(0.0285, 0.11175, 0.23525),
+    onColorChange(value: d.v3f) {
+      paramsUniform.patch({ fromColor: value });
     },
   },
   'To Color': {
-    initial: [0.769, 0.392, 1.0],
-    onColorChange(value: readonly [number, number, number]) {
-      paramsUniform.patch({ toColor: d.vec3f(...value) });
+    initial: d.vec3f(0.769, 0.392, 1.0),
+    onColorChange(value: d.v3f) {
+      paramsUniform.patch({ toColor: value });
     },
   },
   'Color Intensity': {
     initial: 2,
-    min: 0.05,
-    max: 3,
-    step: 0.05,
+    min: 0,
+    max: 4,
+    step: 0.1,
     onSliderChange(v: number) {
       paramsUniform.patch({ intensity: v });
     },
@@ -181,7 +214,11 @@ export const controls = {
       });
     },
   },
-};
+});
+
+Object.assign(controls, baseControls);
+
+export { controls };
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
