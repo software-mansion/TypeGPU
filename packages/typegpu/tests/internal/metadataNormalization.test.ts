@@ -141,4 +141,70 @@ describe('meta', () => {
 
     expect(getName(fn)).toBe('newName');
   });
+
+  it('allows variable recapture for v1', () => {
+    let a = 1;
+    const fn = () => {
+      'use gpu';
+      return a;
+    };
+
+    const meta: RawMetadataV1 = {
+      v: 1,
+      name: 'fn',
+      externals: () => ({ a }),
+      ast: {
+        params: [],
+        body: [NODE.block, [[NODE.return, 'a']]],
+        externalNames: ['a'],
+      },
+    };
+    assignMetadata(fn, meta);
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 1;
+      }"
+    `);
+
+    a = 2;
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 2;
+      }"
+    `);
+  });
+
+  it('allows variable recapture for v2', () => {
+    let a = 1;
+    const fn = () => {
+      'use gpu';
+      return a;
+    };
+
+    const meta: RawMetadataV2 = {
+      v: 2,
+      name: 'fn',
+      externals: { a: () => a },
+      ast: {
+        params: [],
+        body: [NODE.block, [[NODE.return, 'a']]],
+        externalNames: ['a'],
+      },
+    };
+    assignMetadata(fn, meta);
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 1;
+      }"
+    `);
+
+    a = 2;
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 2;
+      }"
+    `);
+  });
 });
