@@ -1056,4 +1056,25 @@ describe('tgsl fn when using plugin', () => {
       - fn*:f(): 'a++' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.]
     `);
   });
+
+  it('allows external variable recapture', () => {
+    let a = 1;
+    const fn = () => {
+      'use gpu';
+      return a;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 1;
+      }"
+    `);
+
+    a = 2;
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 2;
+      }"
+    `);
+  });
 });
