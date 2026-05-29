@@ -1,30 +1,30 @@
-# tgpu
+# @typegpu/cli
 Create a new TypeGPU project or enhance an existing one.
 
 ## Creating
-To run interactive project scaffolding
+To run interactive project scaffolding:
 
 ```sh
-pnpm dlx tgpu@latest
+pnpm dlx typegpu@latest
 # or
-npx tgpu@latest
+npx typegpu@latest
 # or
-yarn dlx tgpu@latest
+yarn dlx typegpu@latest
 # or
-bunx tgpu@latest
+bunx typegpu@latest
 ```
 
 ## Enhancing
-Run inside the root of an existing Vite project:
+Run inside the root of an existing project:
 
 ```sh
-pnpm dlx tgpu@latest -e
+pnpm dlx typegpu@latest -e
 # or
-npx tgpu@latest -e
+npx typegpu@latest -e
 # or
-yarn dlx tgpu@latest -e
+yarn dlx typegpu@latest -e
 # or
-bunx tgpu@latest -e
+bunx typegpu@latest -e
 ```
 
 > [!CAUTION]
