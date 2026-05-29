@@ -145,7 +145,6 @@ describe('meta', () => {
   it('allows variable recapture for v1', () => {
     let a = 1;
     const fn = () => {
-      'use gpu';
       return a;
     };
 
@@ -178,7 +177,6 @@ describe('meta', () => {
   it('allows variable recapture for v2', () => {
     let a = 1;
     const fn = () => {
-      'use gpu';
       return a;
     };
 
