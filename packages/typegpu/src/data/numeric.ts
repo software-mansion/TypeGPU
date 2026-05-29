@@ -1,6 +1,7 @@
 import { $internal } from '../shared/symbols.ts';
 import type { AbstractFloat, AbstractInt, Bool, F16, F32, I32, U16, U32 } from './wgslTypes.ts';
 import { callableSchema } from '../core/function/createCallableSchema.ts';
+import { FiniteMathAssumptionError } from '../errors.ts';
 
 const boolCast = callableSchema({
   name: 'bool',
@@ -49,7 +50,7 @@ const u32Cast = callableSchema({
       return v ? 1 : 0;
     }
     if (!Number.isFinite(v)) {
-      throw new Error(`Cannot cast '${v}' to u32 because of the Finite Math Assumption.`);
+      throw new FiniteMathAssumptionError(v, u32);
     }
     if (!Number.isInteger(v)) {
       const truncated = Math.trunc(v);
@@ -100,7 +101,7 @@ const i32Cast = callableSchema({
       return v ? 1 : 0;
     }
     if (!Number.isFinite(v)) {
-      throw new Error(`Cannot cast '${v}' to i32 because of the Finite Math Assumption.`);
+      throw new FiniteMathAssumptionError(v, i32);
     }
     return v | 0;
   },
@@ -143,7 +144,7 @@ const f32Cast = callableSchema({
       return v ? 1 : 0;
     }
     if (!Number.isFinite(v)) {
-      throw new Error(`Cannot cast '${v}' to f32 because of the Finite Math Assumption.`);
+      throw new FiniteMathAssumptionError(v, f32);
     }
     return Math.fround(v);
   },
@@ -269,7 +270,7 @@ const f16Cast = callableSchema({
       return v ? 1 : 0;
     }
     if (!Number.isFinite(v)) {
-      throw new Error(`Cannot cast '${v}' to f16 because of the Finite Math Assumption.`);
+      throw new FiniteMathAssumptionError(v, f16);
     }
     return roundToF16(v);
   },

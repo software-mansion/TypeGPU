@@ -212,3 +212,13 @@ export class SignatureNotSupportedError extends Error {
     Object.setPrototypeOf(this, SignatureNotSupportedError.prototype);
   }
 }
+
+export class FiniteMathAssumptionError extends Error {
+  constructor(value: number, type: BaseData) {
+    super(
+      `Cannot convert value '${value}' to type ${type.type} because of the Finite Math Assumption.`,
+    );
+
+    Object.setPrototypeOf(this, FiniteMathAssumptionError.prototype);
+  }
+}
