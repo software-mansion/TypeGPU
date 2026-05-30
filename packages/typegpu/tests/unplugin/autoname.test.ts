@@ -273,4 +273,21 @@ describe('autonaming', () => {
 
     expect(getName(myController.myBuffer)).toBe('myBuffer');
   });
+
+  it('autonames functions with illegal WGSL characters', () => {
+    function $hello() {
+      'use gpu';
+      return d.vec3f(1, 0, 0);
+    }
+
+    const names = tgpu['~unstable'].namespace();
+
+    // Letting the function's definition be generated
+    tgpu.resolve([$hello], { names });
+
+    // Generating just the name
+    expect(
+      tgpu.resolve({ template: '$hello', externals: { $hello }, names }),
+    ).toMatchInlineSnapshot(`"hello"`);
+  });
 });
