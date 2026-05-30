@@ -18,5 +18,4 @@ export default defineConfig({
   env: {
     builtin: true,
   },
-  ignorePatterns: ['.agents/**'],
 });

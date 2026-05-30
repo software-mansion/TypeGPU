@@ -21,7 +21,7 @@ export async function getProjectName(initialValue: string) {
     placeholder: initialValue,
     defaultValue: initialValue,
     validate: (value) => {
-      return !isValidProjectDirectory(value) ? 'Invalid project name.' : undefined;
+      return value && !isValidProjectDirectory(value) ? 'Invalid project name.' : undefined;
     },
   });
 
@@ -36,7 +36,7 @@ export async function getPackageName() {
   const packageName = await p.text({
     message: 'Package name:',
     validate: (value) => {
-      return !isValidPackageName(value) ? 'Invalid package name.' : undefined;
+      return value && !isValidPackageName(value) ? 'Invalid package name.' : undefined;
     },
   });
 
