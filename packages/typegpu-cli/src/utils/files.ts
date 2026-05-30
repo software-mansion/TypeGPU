@@ -5,7 +5,7 @@ import * as p from '@clack/prompts';
 import { cancelExit, failAndExit } from './prompts.ts';
 import { type } from 'arktype';
 import { PackageJsonSchema, AppJsonSchema } from './types.ts';
-import { multiselectPkgs } from './inputs.ts';
+import { multiselectPkgs, sanitizeToExpoSlug } from './inputs.ts';
 
 const renameFiles = {
   _gitignore: '.gitignore',
@@ -88,7 +88,7 @@ export async function scaffoldProject(
       failAndExit(`[INTERNAL] Invalid app.json in template ${templateDir}`, app.summary);
     }
     app.expo.name = packageName;
-    app.expo.slug = packageName;
+    app.expo.slug = sanitizeToExpoSlug(packageName);
 
     fs.writeFileSync(destApp, JSON.stringify(app, null, 2) + '\n' /* to make oxfmt happy */);
   }

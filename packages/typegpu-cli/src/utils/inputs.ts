@@ -15,6 +15,17 @@ export function isValidPackageName(packageName: string) {
   return /^(?:@[a-z\d][a-z\d\-._]*\/)?[a-z\d][a-z\d\-._]*$/.test(trimmedName);
 }
 
+export function sanitizeToExpoSlug(packageName: string) {
+  const baseName = packageName.includes('/') ? packageName.split('/').pop() : packageName;
+
+  const slug = baseName
+    ?.replace(/[._]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return slug || 'typegpu-expo-simple-project';
+}
+
 export async function getProjectName(initialValue: string) {
   let projectName = await p.text({
     message: 'Project name:',
