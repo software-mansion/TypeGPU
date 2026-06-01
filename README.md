@@ -10,9 +10,9 @@
 
 </div>
 
-[![Ad](https://swm-delivery.com/www/images/zone-gh-typeGPU-1?n=1)](https://swm-delivery.com/www/delivery/ck.php?zoneid=zone-gh-typeGPU-1&n=1)
-[![Ad](https://swm-delivery.com/www/images/zone-gh-typeGPU-2?n=1)](https://swm-delivery.com/www/delivery/ck.php?zoneid=zone-gh-typeGPU-2&n=1)
-[![Ad](https://swm-delivery.com/www/images/zone-gh-typeGPU-3?n=1)](https://swm-delivery.com/www/delivery/ck.php?zoneid=zone-gh-typeGPU-3&n=1)
+[![Ad](https://swm-delivery.com/www/images/zone-gh-typeGPU-1?n=1)](https://swm-delivery.com/www/delivery/ck-slug.php?zoneid=zone-gh-typeGPU-1&n=1)
+[![Ad](https://swm-delivery.com/www/images/zone-gh-typeGPU-2?n=1)](https://swm-delivery.com/www/delivery/ck-slug.php?zoneid=zone-gh-typeGPU-2&n=1)
+[![Ad](https://swm-delivery.com/www/images/zone-gh-typeGPU-3?n=1)](https://swm-delivery.com/www/delivery/ck-slug.php?zoneid=zone-gh-typeGPU-3&n=1)
 
 **TypeGPU** is a modular and open-ended toolkit for WebGPU, with advanced type
 inference and the ability to write shaders in TypeScript.
