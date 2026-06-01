@@ -31,7 +31,7 @@ export type RawMetadata = RawMetadataV1 | RawMetadataV2;
  */
 export interface Metadata {
   ast: { params: FuncParameter[]; body: Block };
-  externals: Record<string, unknown>;
+  externals: () => Record<string, unknown>;
 }
 
 /**
@@ -56,13 +56,14 @@ function normalizeExternalsV2(externals: ExternalsV2): Record<string, unknown> {
 
 export function normalizeMetadata(meta: RawMetadata): Metadata {
   if (meta.v === 1) {
-    const externals = typeof meta?.externals === 'function' ? meta.externals() : meta?.externals;
+    const rawExternals = meta.externals;
+    const externals = typeof rawExternals === 'function' ? rawExternals : () => rawExternals;
     return { ...meta, externals };
   }
 
   if (meta.v === 2) {
     const externals = normalizeExternalsV2(meta?.externals);
-    return { ...meta, externals };
+    return { ...meta, externals: () => externals };
   }
 
   throw new Error(`Unrecognized TypeGPU metadata format: ${safeStringify(meta)}`);

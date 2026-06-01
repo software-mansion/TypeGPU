@@ -1,12 +1,12 @@
 {
   "name": "@typegpu/cli",
-  "version": "0.11.1",
+  "version": "0.11.2",
   "description": "Add TypeGPU to your project",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/software-mansion/TypeGPU.git#main",
-    "directory": "packages/tgpu"
+    "directory": "packages/typegpu-cli"
   },
   "bin": "./dist/index.js",
   "files": [
