@@ -302,6 +302,24 @@ describe('TGSL tgpu.fn function', () => {
     `);
   });
 
+  it('resolves linear compute builtins', () => {
+    const computeFn = tgpu.computeFn({
+      in: {
+        globalIndex: builtin.globalInvocationIndex,
+        workgroupIndex: builtin.workgroupIndex,
+      },
+      workgroupSize: [24],
+    })((input) => {
+      const index = input.globalIndex + input.workgroupIndex;
+    });
+
+    expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
+      "@compute @workgroup_size(24) fn computeFn(@builtin(global_invocation_index) globalIndex: u32, @builtin(workgroup_index) workgroupIndex: u32) {
+        let index = (globalIndex + workgroupIndex);
+      }"
+    `);
+  });
+
   it('allows destructuring the input argument in computeFn', () => {
     const computeFn = tgpu
       .computeFn({
@@ -1036,6 +1054,27 @@ describe('tgsl fn when using plugin', () => {
       - <root>
       - fn*:f
       - fn*:f(): 'a++' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.]
+    `);
+  });
+
+  it('allows external variable recapture', () => {
+    let a = 1;
+    const fn = () => {
+      'use gpu';
+      return a;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 1;
+      }"
+    `);
+
+    a = 2;
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 2;
+      }"
     `);
   });
 });

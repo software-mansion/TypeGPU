@@ -1,16 +1,12 @@
 import { type } from 'arktype';
 
-export const PackageJsonWithDepsSchema = type({
+export const PackageJsonSchema = type({
+  name: 'string',
   'dependencies?': 'Record<string, string>',
   'devDependencies?': 'Record<string, string>',
   'peerDependencies?': 'Record<string, string>',
 });
-export type PackageJsonWithDeps = typeof PackageJsonWithDepsSchema.infer;
-
-export const PackageJsonWithNameSchema = type({
-  name: 'string',
-});
-export type PackageJsonWithName = typeof PackageJsonWithNameSchema.infer;
+export type PackageJson = typeof PackageJsonSchema.infer;
 
 export const TsConfigSchema = type({
   'compilerOptions?': {

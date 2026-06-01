@@ -1,6 +1,6 @@
 {
   "name": "tinyest-for-wgsl",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Transforms JavaScript into its 'tinyest' form, to be used in generating equivalent (or close to) WGSL code.",
   "keywords": [
     "compute",

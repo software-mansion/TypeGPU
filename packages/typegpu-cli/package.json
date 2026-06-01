@@ -1,16 +1,14 @@
 {
   "name": "@typegpu/cli",
-  "version": "0.11.0-alpha.0",
+  "version": "0.11.2",
   "description": "Add TypeGPU to your project",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/software-mansion/TypeGPU.git#main",
-    "directory": "packages/tgpu"
+    "directory": "packages/typegpu-cli"
   },
-  "bin": {
-    "tgpu": "./dist/index.js"
-  },
+  "bin": "./dist/index.js",
   "files": [
     "dist",
     "templates"
@@ -28,7 +26,8 @@
     "cross-spawn": "^7.0.6",
     "magicast": "^0.5.2",
     "mri": "^1.2.0",
-    "package-manager-detector": "^1.3.0"
+    "package-manager-detector": "^1.3.0",
+    "rimraf": "^6.1.3"
   },
   "devDependencies": {
     "@types/cross-spawn": "^6.0.6",
@@ -37,6 +36,6 @@
     "typescript": "catalog:types"
   },
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=22.0.0"
   }
 }

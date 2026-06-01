@@ -1,10 +1,12 @@
 import fs from 'node:fs';
+import { rimraf } from 'rimraf';
 import path from 'node:path';
 import * as p from '@clack/prompts';
 
 import { cancelExit, failAndExit } from './prompts.ts';
-import { PackageJsonWithNameSchema } from './types.ts';
 import { type } from 'arktype';
+import { PackageJsonSchema } from './types.ts';
+import { multiselectPkgs } from './inputs.ts';
 
 const renameFiles = {
   _gitignore: '.gitignore',
@@ -20,10 +22,10 @@ function isEmptyDir(dir: string) {
   return entries.length === 0 || (entries.length === 1 && entries[0] === '.git');
 }
 
-function emptyDir(dir: string) {
+async function emptyDir(dir: string) {
   for (const entry of fs.readdirSync(dir)) {
     if (entry === '.git') continue;
-    fs.rmSync(path.join(dir, entry), { recursive: true, force: true });
+    await rimraf(path.join(dir, entry));
   }
 }
 
@@ -43,13 +45,17 @@ export async function prepareDirectory(cwd: string, projectDir: string) {
     if (p.isCancel(overwrite) || overwrite === 'no') {
       cancelExit();
     }
-    emptyDir(dir);
+    await emptyDir(dir);
   }
 
   return dir;
 }
 
-export function copyTemplate(templateDir: string, projectDir: string, packageName: string) {
+export async function scaffoldProject(
+  templateDir: string,
+  projectDir: string,
+  packageName: string,
+) {
   const entries = fs.readdirSync(templateDir);
   for (const entry of entries.filter((f) => f !== '_package.json' && f !== 'index.html')) {
     const src = path.join(templateDir, entry);
@@ -59,16 +65,29 @@ export function copyTemplate(templateDir: string, projectDir: string, packageNam
 
   const srcIndex = path.join(templateDir, 'index.html');
   const destIndex = path.join(projectDir, 'index.html');
-  const srcContent = fs.readFileSync(srcIndex, 'utf-8');
-  const updatedContent = srcContent.replace(/<title>.*?<\/title>/, `<title>${packageName}</title>`);
-  fs.writeFileSync(destIndex, updatedContent);
+  if (fs.existsSync(srcIndex)) {
+    const srcContent = fs.readFileSync(srcIndex, 'utf-8');
+    const updatedContent = srcContent.replace(
+      /<title>.*?<\/title>/,
+      `<title>${packageName}</title>`,
+    );
+    fs.writeFileSync(destIndex, updatedContent);
+  }
 
   const srcPackage = path.join(templateDir, '_package.json');
   const destPackage = path.join(projectDir, 'package.json');
-  const pkg = PackageJsonWithNameSchema(JSON.parse(fs.readFileSync(srcPackage, 'utf-8')));
+  const pkg = PackageJsonSchema(JSON.parse(fs.readFileSync(srcPackage, 'utf-8')));
   if (pkg instanceof type.errors) {
     failAndExit(`[INTERNAL] Invalid package.json in template ${templateDir}`, pkg.summary);
   }
   pkg.name = packageName;
+  const pkgs = await multiselectPkgs(pkg);
+  if (pkgs) {
+    pkg.dependencies ??= {};
+    for (const { pkg: dep, ver } of pkgs) {
+      pkg.dependencies[dep] = ver;
+    }
+  }
+
   fs.writeFileSync(destPackage, JSON.stringify(pkg, null, 2) + '\n' /* to make oxfmt happy */);
 }
