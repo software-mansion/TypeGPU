@@ -287,7 +287,7 @@ describe('autonaming', () => {
 
     // Generating just the name
     expect(
-      tgpu.resolve({ template: '$hello', externals: { $hello }, names }),
-    ).toMatchInlineSnapshot(`"hello"`);
+      tgpu.resolve({ template: '$hello()', externals: { $hello }, names }),
+    ).toMatchInlineSnapshot(`"hello()"`);
   });
 });
