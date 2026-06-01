@@ -182,7 +182,7 @@ export class TgpuAccessorImpl<T extends BaseData>
       );
     }
 
-    if (getExecMode().type !== 'codegen') {
+    if (ctx.mode.type !== 'codegen') {
       const slotValue = ctx.unwrap(this.slot);
 
       if (
