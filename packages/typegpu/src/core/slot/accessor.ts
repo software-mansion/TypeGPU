@@ -2,7 +2,7 @@ import { type AnyData, isData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { isSnippet, type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
-import { getExecMode, getResolutionCtx } from '../../execMode.ts';
+import { getResolutionCtx } from '../../execMode.ts';
 import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
 import {
