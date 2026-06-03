@@ -297,6 +297,7 @@ export default defineConfig({
             {
               label: 'TypeGPU CLI',
               slug: 'tooling/typegpu-cli',
+              badge: { text: 'new' },
             },
             {
               label: 'Build Plugin',
@@ -310,6 +311,7 @@ export default defineConfig({
             {
               label: 'AI Tools',
               slug: 'tooling/ai-tools',
+              badge: { text: 'new' },
             },
             {
               label: 'WGSL to TypeGPU',
