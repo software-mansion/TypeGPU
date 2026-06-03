@@ -60,7 +60,7 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
     getDefaultPackageName(cwd, projectName) ??
     (nonInteractive ? undefined : await getPackageName());
 
-  if (!packageName || !isValidPackageName(packageName)) {
+  if (!packageName) {
     failAndExit(
       `Cannot infer a valid package name from ${projectName}. Choose a valid project directory name.`,
     );

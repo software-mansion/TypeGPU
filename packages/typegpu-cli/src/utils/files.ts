@@ -95,7 +95,7 @@ export async function scaffoldProject(
   const pkgs = packageNames
     ? packageNames.map((pkgName) => ({ pkg: pkgName, ver: VERSION }))
     : await multiselectPkgs(pkg);
-  if (pkgs) {
+  if (pkgs?.length) {
     pkg.dependencies ??= {};
     for (const { pkg: dep, ver } of pkgs) {
       if (!hasDependency(pkg, dep)) {
