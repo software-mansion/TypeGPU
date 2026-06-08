@@ -13,19 +13,23 @@ function isResolvable(value: unknown) {
   return isWgsl(value) || isLooseData(value) || hasTinyestMetadata(value);
 }
 
-/**
- * Merges two external maps into one.
- * If the external value is a namable object, it is given a name if it does not already have one.
- * @param existing - The existing external map.
- * @param newExternals - The new external map.
- *
- * NOTE:
- * This function attempts to avoid accidental reference modification
- * by performing a shallow copy before each modification,
- * but it cannot avoid `existing` modification.
- * Make sure that `existing` is created internally, instead of being passed in by users.
- */
-export function mergeExternals(existing: ExternalMap, newExternals: ExternalMap) {
+function renameExternals(externals: ExternalMap) {
+  for (const [key, value] of Object.entries(externals)) {
+    if (value !== null && typeof value === 'object' && !isResolvable(value)) {
+      renameExternals(value as ExternalMap);
+    } else {
+      if (
+        value &&
+        (typeof value === 'object' || typeof value === 'function') &&
+        getName(value) === undefined
+      ) {
+        setName(value, key);
+      }
+    }
+  }
+}
+
+function mergeExternals(existing: ExternalMap, newExternals: ExternalMap) {
   for (const [key, value] of Object.entries(newExternals)) {
     const existingValue = existing[key];
     if (
@@ -42,16 +46,23 @@ export function mergeExternals(existing: ExternalMap, newExternals: ExternalMap)
     } else {
       existing[key] = value;
     }
-
-    // Giving name to external value, if it does not already have one.
-    if (
-      value &&
-      (typeof value === 'object' || typeof value === 'function') &&
-      getName(value) === undefined
-    ) {
-      setName(value, key);
-    }
   }
+}
+
+/**
+ * Traverses the second map and renames unnamed externals, then merges the second map into the first one.
+ * @param existing - The existing external map.
+ * @param newExternals - The new external map.
+ *
+ * NOTE:
+ * This function attempts to avoid accidental reference modification
+ * by performing a shallow copy before each modification,
+ * but it cannot avoid `existing` modification.
+ * Make sure that `existing` is created internally, instead of being passed in by users.
+ */
+export function renameAndMergeExternals(existing: ExternalMap, newExternals: ExternalMap) {
+  renameExternals(newExternals);
+  mergeExternals(existing, newExternals);
 }
 
 export function addArgTypesToExternals(

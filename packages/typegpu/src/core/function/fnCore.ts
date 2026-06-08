@@ -6,7 +6,11 @@ import { validateIdentifier } from '../../nameUtils.ts';
 import { getFunctionMetadata, getName } from '../../shared/meta.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx, TgpuShaderStage } from '../../types.ts';
-import { mergeExternals, type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
+import {
+  renameAndMergeExternals,
+  type ExternalMap,
+  replaceExternalsInWgsl,
+} from '../resolve/externals.ts';
 import { extractArgs } from './extractArgs.ts';
 import type { Implementation, SeparatedEntryArgs } from './fnTypes.ts';
 
@@ -71,7 +75,7 @@ export function createFnCore(
       }
 
       for (const externals of externalsToApply) {
-        mergeExternals(externalMap, externals);
+        renameAndMergeExternals(externalMap, externals);
       }
 
       const id = ctx.makeUniqueIdentifier(getName(this), 'global');
@@ -91,7 +95,7 @@ export function createFnCore(
             }
           }
 
-          mergeExternals(externalMap, {
+          renameAndMergeExternals(externalMap, {
             in: Object.fromEntries(
               entryInput.positionalArgs.map((a) => [a.schemaKey, a.schemaKey]),
             ),
@@ -174,7 +178,7 @@ export function createFnCore(
           Object.entries(pluginExternals).filter(([name]) => !(name in externalMap)),
         );
 
-        mergeExternals(externalMap, missing);
+        renameAndMergeExternals(externalMap, missing);
       }
 
       const ast = pluginData?.ast;
@@ -188,7 +192,7 @@ export function createFnCore(
       // We look at the identifier chosen by the user and add it to externals.
       const maybeSecondArg = ast.params[1];
       if (maybeSecondArg && maybeSecondArg.type === 'i' && functionType !== 'normal') {
-        mergeExternals(externalMap, {
+        renameAndMergeExternals(externalMap, {
           // oxlint-disable-next-line typescript/no-non-null-assertion -- entry functions cannot be shellless
           [maybeSecondArg.name]: undecorate(returnType!),
         });
