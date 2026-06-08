@@ -17,7 +17,13 @@ function extractPropAccessChain(ancestorChain: JsNode[]): string[] {
     } else if (current.type === 'ThisExpression') {
       chain.push('this');
     } else if (current.type === 'MemberExpression' && !current.computed) {
-      chain.push(`${(current.property as { name: string }).name}`); // TODO: better handling of other nodes
+      if (current.computed) {
+        break;
+      } else if (current.property.type === 'Identifier') {
+        chain.push(current.property.name);
+      } else {
+        break;
+      }
     } else {
       break;
     }
@@ -61,6 +67,7 @@ function addExternalValue(externals: Externals, chain: string[], value: string) 
  * addExternal({}, chainFrom`this.color.add`); // { this: { color: { add: 'this.color.add' } } }
  * addExternal({ this: { count: 'this.count' } }, chainFrom`this.color`); // { this: { count: 'this.count', color: 'this.color' } }
  * addExternal({ ext: { count: 'ext.count' } }, chainFrom`ext`); // { ext: 'ext' }
+ * addExternal({ ext: 'ext' }, chainFrom`ext.count`); // { ext: 'ext' }
  */
 export function addExternal(externals: Externals, ancestorChain: JsNode[]) {
   const chain = extractPropAccessChain(ancestorChain);

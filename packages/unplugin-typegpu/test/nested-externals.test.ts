@@ -5,6 +5,9 @@ function extractExternals(code: string | undefined | null) {
   if (!code) {
     throw new Error('Expected code to be truthy.');
   }
+  if (!code.includes('externals:')) {
+    throw new Error("Expected 'externals' to be present in code.");
+  }
   const startIndex = code.indexOf('externals:') + 'externals:'.length;
   const endIndex = code.indexOf('}) && $.f');
   return code.slice(startIndex, endIndex).trim();
@@ -70,7 +73,7 @@ const codes = {
     };
 
     console.log(fn);`,
-  // TODO: private access test
+  // TODO(#2591): private access test
 };
 
 describe('externals gathering', () => {

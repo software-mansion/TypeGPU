@@ -93,7 +93,7 @@ describe('external prop access', () => {
   });
 
   it('supports TS syntax', () => {
-    const vecs: { v: d.v2i } | undefined = { v: d.vec2i() };
+    const vecs = { v: d.vec2i() } as { v: d.v2i } | undefined;
     const fn = () => {
       'use gpu';
       const a = vecs!.v;
