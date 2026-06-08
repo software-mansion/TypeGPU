@@ -39,7 +39,7 @@ export const sceneLayout = tgpu.bindGroupLayout({
 
 export function createLtcLayout(filterable: boolean) {
   const texture = {
-    texture: d.texture2d(d.f32),
+    texture: d.texture2d(),
     sampleType: filterable ? ('float' as const) : ('unfilterable-float' as const),
   };
 

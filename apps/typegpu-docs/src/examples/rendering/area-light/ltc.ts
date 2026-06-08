@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { d, std } from 'typegpu';
 import { RectLight } from './schemas.ts';
 import type { LtcLayout } from './schemas.ts';
 
@@ -36,11 +36,9 @@ function bilinearLut(texture: d.texture2d<d.F32>, uv: d.v2f) {
 }
 
 export function createLtcSampling(ltcLayout: LtcLayout, filterable: boolean) {
-  const ltcFilteringEnabled = tgpu.comptime(() => filterable);
-
   function sampleLtcTexture(texture: d.texture2d<d.F32>, uv: d.v2f) {
     'use gpu';
-    if (ltcFilteringEnabled()) {
+    if (filterable) {
       return std.textureSampleLevel(texture, ltcLayout.$.ltcSampler, uv, 0);
     } else {
       return bilinearLut(texture, uv);
