@@ -62,17 +62,17 @@ describe('slime mold 3d example', () => {
         direction: vec3f,
       }
 
-      @group(0) @binding(1) var<storage, read_write> 0: array<Agent, 800000>;
+      @group(0) @binding(1) var<storage, read_write> item: array<Agent, 800000>;
 
-      @group(0) @binding(2) var<storage, read_write> 1: array<Agent, 800000>;
+      @group(0) @binding(2) var<storage, read_write> item_1: array<Agent, 800000>;
 
       fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
         randSeed((f32(x) / 8e+5f));
         let pos = ((randInUnitSphere() * 64f) + vec3f(128));
         let center = vec3f(128);
         let dir = normalize((center - pos));
-        0[x] = Agent(pos, dir);
-        1[x] = Agent(pos, dir);
+        item[x] = Agent(pos, dir);
+        item_1[x] = Agent(pos, dir);
       }
 
       @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {

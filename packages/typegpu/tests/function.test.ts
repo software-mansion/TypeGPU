@@ -219,13 +219,13 @@ describe('tgpu.fn', () => {
     };
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> 0: u32;
+      "@group(0) @binding(0) var<uniform> item: u32;
 
-      @group(0) @binding(1) var<uniform> 1: u32;
+      @group(0) @binding(1) var<uniform> item_1: u32;
 
       fn fn_1() {
-        let a = 0;
-        let b = 1;
+        let a = item;
+        let b = item_1;
       }"
     `);
   });

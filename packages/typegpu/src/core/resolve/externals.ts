@@ -15,7 +15,12 @@ function isResolvable(value: unknown) {
 
 function renameExternals(externals: ExternalMap) {
   for (const [key, value] of Object.entries(externals)) {
-    if (value !== null && typeof value === 'object' && !isResolvable(value)) {
+    if (
+      value !== null &&
+      typeof value === 'object' &&
+      !isResolvable(value) &&
+      !Array.isArray(value) // TODO(#2592): remove this check
+    ) {
       renameExternals(value as ExternalMap);
     } else {
       if (
