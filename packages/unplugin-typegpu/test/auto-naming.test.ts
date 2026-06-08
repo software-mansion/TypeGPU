@@ -384,6 +384,20 @@ describe('[BABEL] auto naming', () => {
     `);
   });
 
+  it('works with class private properties', () => {
+    const code = `\
+      class Foo {
+        #const = tgpu.const(d.u32, 1);
+      }
+    `;
+
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
+      "class Foo {
+        #const = tgpu.const(d.u32, 1);
+      }"
+    `);
+  });
+
   it('works with object properties', () => {
     const code = `\
       import tgpu from 'typegpu';
@@ -871,6 +885,23 @@ describe('[ROLLUP] auto naming', () => {
             }
 
             console.log(MyController);
+      "
+    `);
+  });
+
+  it('works with class private properties', async () => {
+    const code = `\
+      class Foo {
+        #const = tgpu.const(d.u32, 1);
+      }
+      console.log(Foo);
+    `;
+
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
+      "class Foo {
+              #const = tgpu.const(d.u32, 1);
+            }
+            console.log(Foo);
       "
     `);
   });
