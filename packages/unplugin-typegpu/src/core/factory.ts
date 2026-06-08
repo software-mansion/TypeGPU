@@ -38,7 +38,7 @@ function externalsToString(externals: Externals | string): string {
     return `() => ${externals}`;
   }
   const entries = Object.entries(externals).map(
-    ([key, value]) => `${key}: ${externalsToString(value)}`,
+    ([key, value]) => `"${key}": ${externalsToString(value)}`,
   );
   return `{ ${entries.join(', ')} }`;
 }

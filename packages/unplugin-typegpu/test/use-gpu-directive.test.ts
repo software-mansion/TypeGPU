@@ -477,7 +477,7 @@ describe('marked object methods', () => {
           v: 2,
           name: "isPrime",
           ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[11,[1,"n","<=",[5,"1"]],[0,[[10,false]]]],[14,[12,"i",[5,"2"]],[1,"i","<","n"],[102,"++","i"],[0,[[11,[1,[6,[7,"obj","mod"],["n","i"]],"===",[5,"0"]],[0,[[10,false]]]]]]],[10,true]]],"externalNames":["obj"]},
-          externals: { obj: { mod: () => obj.mod } }
+          externals: { "obj": { "mod": () => obj.mod } }
         }) && $.f)({}));
 
           console.log(obj, isPrime);
@@ -561,7 +561,7 @@ describe('transforms numeric operations', () => {
           v: 2,
           name: "main",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[12,"c",[1,[1,"a","+","b"],"+",[5,"2"]]],[2,"c","+=",[1,[5,"2"],"*","b"]],[2,[7,"countMutable","$"],"+=",[5,"3"]]]],"externalNames":["countMutable"]},
-          externals: { countMutable: { $: () => countMutable.$ } }
+          externals: { "countMutable": { "$": () => countMutable.$ } }
         }) && $.f)({}));
 
           console.log(main);
@@ -998,7 +998,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
           v: 2,
           name: "mul",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","*","b"],"*","c"]]]],"externalNames":["c"]},
-          externals: { c: () => c }
+          externals: { "c": () => c }
         }) && $.f)({}));
 
       /** ADD */
@@ -1010,7 +1010,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
           v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","+","b"],"+","c"]]]],"externalNames":["c"]},
-          externals: { c: () => c }
+          externals: { "c": () => c }
         }) && $.f)({}));
 
       console.log(add, mul);
@@ -1131,7 +1131,7 @@ describe('replaces function statements marked with "use gpu" in place when condi
           v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","+","b"],"+","c"]]]],"externalNames":["c"]},
-          externals: { c: () => c }
+          externals: { "c": () => c }
         }) && $.f)({}));
 
 
@@ -1146,7 +1146,7 @@ describe('replaces function statements marked with "use gpu" in place when condi
           v: 2,
           name: "mul",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","*","b"],"*","c"]]]],"externalNames":["c"]},
-          externals: { c: () => c }
+          externals: { "c": () => c }
         }) && $.f)({}));
 
 
