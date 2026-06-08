@@ -21,7 +21,7 @@ function externalsToNode(externals: Externals | string): t.Expression {
   if (typeof externals === 'string') {
     const chain = externals.split('.');
     if (!chain[0]) {
-      throw new Error('??');
+      throw new Error('Internal error, expected chain to not be empty');
     }
     const base = chain[0] === 'this' ? t.thisExpression() : i(chain[0]);
     const propAccess = chain

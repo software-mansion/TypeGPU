@@ -30,7 +30,7 @@ function extractPropAccessChain(ancestorChain: JsNode[]): string[] {
  * NOTE: to achieve better complexity, chain is expected to be passed in reversed (e.g. ['mul', 'prop', 'ext']), and it will be mutated.
  */
 function addExternalValue(externals: Externals, chain: string[], value: string) {
-  let elem = chain.pop();
+  const elem = chain.pop();
   if (elem === undefined) {
     throw new Error('Internal error, expected element to be defined.');
   }
@@ -40,7 +40,7 @@ function addExternalValue(externals: Externals, chain: string[], value: string) 
     return;
   }
 
-  let nextExternals = externals[elem];
+  const nextExternals = externals[elem];
   if (nextExternals) {
     if (typeof nextExternals !== 'string') {
       addExternalValue(nextExternals, chain, value);
