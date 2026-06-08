@@ -393,8 +393,26 @@ describe('[BABEL] auto naming', () => {
 
     expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
       "class Foo {
-        #const = tgpu.const(d.u32, 1);
+        #const = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 1), "const");
       }"
+    `);
+  });
+
+  it('works with anonymous classes', () => {
+    const code = `\
+      const cls = new (class {
+        myConst = tgpu.const(d.u32, 0);
+        #const = tgpu.const(d.u32, 1);
+      })();
+      console.log(cls);
+    `;
+
+    expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
+      "const cls = new class {
+        myConst = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 0), "myConst");
+        #const = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 1), "const");
+      }();
+      console.log(cls);"
     `);
   });
 
@@ -899,9 +917,28 @@ describe('[ROLLUP] auto naming', () => {
 
     expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
       "class Foo {
-              #const = tgpu.const(d.u32, 1);
+              #const = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 1), "const"));
             }
             console.log(Foo);
+      "
+    `);
+  });
+
+  it('works with anonymous classes', async () => {
+    const code = `\
+      const cls = new (class {
+        myConst = tgpu.const(d.u32, 0);
+        #const = tgpu.const(d.u32, 1);
+      })();
+      console.log(cls);
+    `;
+
+    expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
+      "const cls = new (class {
+              myConst = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 0), "myConst"));
+              #const = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 1), "const"));
+            })();
+            console.log(cls);
       "
     `);
   });

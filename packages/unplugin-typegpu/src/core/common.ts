@@ -278,6 +278,15 @@ function extractLabelledExpression(path: NodePath): [string, NodePath<t.Expressi
     //	 key = value;
     // }
     return [path.node.key.name, path.get('value') as NodePath<t.Expression>];
+  } else if (
+    path.node.type === 'ClassPrivateProperty' &&
+    path.node.value &&
+    path.node.key.type === 'PrivateName'
+  ) {
+    // class Class {
+    //   #key = value;
+    // }
+    return [path.node.key.id.name, path.get('value') as NodePath<t.Expression>];
   }
 }
 
@@ -381,7 +390,7 @@ function tryFindIdentifier(node: t.Node): string | undefined {
 
 /**
  * Checks if `node` contains a label and a tgpu expression that could be named.
- * If so, it calls the provided callback. Nodes selected for naming include:
+ * If so, it calls the provided callback. Nodes selected for naming include (but are not limited to):
  *
  * `let name = tgpu.bindGroupLayout({});` (VariableDeclarator)
  *
@@ -493,6 +502,12 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   },
 
   ClassProperty(path, state) {
+    performExpressionNaming(state, path, (pathToName, name) =>
+      state.wrapInAutoName(pathToName, name),
+    );
+  },
+
+  ClassPrivateProperty(path, state) {
     performExpressionNaming(state, path, (pathToName, name) =>
       state.wrapInAutoName(pathToName, name),
     );
