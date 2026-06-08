@@ -219,7 +219,33 @@ export class TgpuMutableAccessorImpl<T extends BaseData>
   }
 
   get $(): InferGPU<T> {
-    if (getResolutionCtx()) {
+    const ctx = getResolutionCtx();
+    if (!ctx) {
+      throw new Error(
+        '`tgpu.mutableAccessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
+      );
+    }
+
+    if (ctx.mode.type !== 'codegen') {
+      const slotValue = ctx.unwrap(this.slot);
+
+      if (
+        typeof slotValue !== 'function' &&
+        !hasTinyestMetadata(slotValue) &&
+        !isTgpuFn(slotValue)
+      ) {
+        return slotValue as unknown as InferGPU<T>;
+      }
+
+      ctx.pushMode(new CodegenState());
+      try {
+        return this[$gpuValueOf];
+      } finally {
+        ctx.popMode('codegen');
+      }
+    }
+
+    return this[$gpuValueOf];
       return this[$gpuValueOf];
     }
 
