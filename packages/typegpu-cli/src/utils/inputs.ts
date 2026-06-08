@@ -47,7 +47,7 @@ export async function getPackageName() {
   const packageName = await p.text({
     message: 'Package name:',
     validate: (value) => {
-      return value && !isValidPackageName(value) ? 'Invalid package name.' : undefined;
+      return !value || !isValidPackageName(value) ? 'Invalid package name.' : undefined;
     },
   });
 
