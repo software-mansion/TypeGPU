@@ -389,6 +389,13 @@ function tryFindIdentifier(node: t.Node): string | undefined {
 }
 
 /**
+ * Checks if the given prop in externals needs to be wrapped in ""
+ */
+export function requiresQuotation(prop: string): boolean {
+  return prop.startsWith('#');
+}
+
+/**
  * Checks if `node` contains a label and a tgpu expression that could be named.
  * If so, it calls the provided callback. Nodes selected for naming include (but are not limited to):
  *

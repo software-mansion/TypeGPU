@@ -179,8 +179,8 @@ describe('[BABEL] auto naming', () => {
           externalNames: ["d"]
         },
         externals: {
-          "d": {
-            "vec4f": () => d.vec4f
+          d: {
+            vec4f: () => d.vec4f
           }
         }
       }) && $.f)({})), "myFragmentFn");"
@@ -694,7 +694,7 @@ describe('[ROLLUP] auto naming', () => {
           v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[[10,[6,[7,"d","vec4f"],[]]]]],"externalNames":["d"]},
-          externals: { "d": { "vec4f": () => d.vec4f } }
+          externals: { d: { vec4f: () => d.vec4f } }
         }) && $.f)({})),
             ), "myFragmentFn"));
       "

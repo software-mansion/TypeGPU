@@ -14,6 +14,7 @@ import {
   getBlockScope,
   METADATA_FORMAT_VERSION,
   makeAstBackwardsCompatible,
+  requiresQuotation,
 } from './common.ts';
 
 import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
@@ -38,7 +39,7 @@ function externalsToString(externals: Externals | string): string {
     return `() => ${externals}`;
   }
   const entries = Object.entries(externals).map(
-    ([key, value]) => `"${key}": ${externalsToString(value)}`,
+    ([key, value]) => `${requiresQuotation(key) ? `"${key}"` : key}: ${externalsToString(value)}`,
   );
   return `{ ${entries.join(', ')} }`;
 }
