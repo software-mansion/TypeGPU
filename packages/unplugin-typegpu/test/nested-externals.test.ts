@@ -73,7 +73,25 @@ const codes = {
     };
 
     console.log(fn);`,
-  // TODO(#2591): private access test
+  'allows for private access': `\
+    import tgpu, { d } from 'typegpu';
+
+    const cls = new (class {
+      #const;
+
+      constructor() {
+        this.#const = tgpu.const(d.u32, 1);
+      }
+
+      get fn() {
+        return () => {
+          'use gpu';
+          const a = this.#const.$;
+        };
+      }
+    })();
+
+    console.log(cls);`,
 };
 
 describe('externals gathering', () => {
@@ -130,6 +148,20 @@ describe('externals gathering', () => {
           }"
       `);
     });
+
+    it('allows for private access', () => {
+      const code = codes['allows for private access'];
+
+      expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
+        "{
+                this: {
+                  #const: {
+                    $: () => this.#const.$
+                  }
+                }
+              }"
+      `);
+    });
   });
 
   describe('ROLLUP', () => {
@@ -162,6 +194,14 @@ describe('externals gathering', () => {
 
       expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
         `"{ "ext": { "comptime": () => ext.comptime, "runtime": () => ext.runtime } }"`,
+      );
+    });
+
+    it('allows for private access', async () => {
+      const code = codes['allows for private access'];
+
+      expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
+        `"{ "this": { "#const": { "$": () => this.#const.$ } } }"`,
       );
     });
   });

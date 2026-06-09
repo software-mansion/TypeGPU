@@ -112,6 +112,14 @@ const Transpilers: Partial<{
     return [NODE.memberAccess, object, property];
   },
 
+  PrivateName(ctx, node) {
+    return `#${node.id.name}`;
+  },
+
+  PrivateIdentifier(ctx, node) {
+    return `#${node.name}`;
+  },
+
   UpdateExpression(ctx, node) {
     const operator = node.operator;
     const argument = transpile(ctx, node.argument) as tinyest.Expression;

@@ -107,4 +107,44 @@ describe('external prop access', () => {
       }"
     `);
   });
+
+  it('supports private property access', () => {
+    class Cls {
+      #const = tgpu.const(d.u32, 1);
+
+      fn = () => {
+        'use gpu';
+        const a = this.#const.$;
+      };
+    }
+
+    const cls = new Cls();
+
+    expect(tgpu.resolve([cls.fn])).toMatchInlineSnapshot(`
+      "const const_1: u32 = 1u;
+
+      fn fn_1() {
+        const a = const_1;
+      }"
+    `);
+  });
+
+  it('supports private property access in anonymous class', () => {
+    const cls = new (class {
+      #const = tgpu.const(d.u32, 1);
+
+      fn = () => {
+        'use gpu';
+        const a = this.#const.$;
+      };
+    })();
+
+    expect(tgpu.resolve([cls.fn])).toMatchInlineSnapshot(`
+      "const const_1: u32 = 1u;
+
+      fn fn_1() {
+        const a = const_1;
+      }"
+    `);
+  });
 });

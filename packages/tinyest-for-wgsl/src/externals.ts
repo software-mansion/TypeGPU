@@ -16,9 +16,14 @@ function extractPropAccessChain(ancestorChain: JsNode[]): string[] {
       chain.push(current.name);
     } else if (current.type === 'ThisExpression') {
       chain.push('this');
-    } else if (current.type === 'MemberExpression' && !current.computed) {
+    } else if (current.type === 'MemberExpression') {
       if (current.computed) {
         break;
+      }
+      if (current.property.type === 'PrivateName') {
+        chain.push(`#${current.property.id.name}`);
+      } else if (current.property.type === 'PrivateIdentifier') {
+        chain.push(`#${current.property.name}`);
       } else if (current.property.type === 'Identifier') {
         chain.push(current.property.name);
       } else {
