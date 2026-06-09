@@ -195,6 +195,23 @@ export default defineConfig({
               slug: 'apis/utils',
               badge: { text: 'new' },
             },
+            {
+              label: 'Passing by Reference',
+              slug: 'fundamentals/passing-by-reference',
+              badge: { text: 'new' },
+            },
+            // {
+            //   label: 'Basic Principles',
+            //   slug: 'guides/basic-principles',
+            // },
+            // {
+            //   label: 'State Management',
+            //   slug: 'guides/state-management',
+            // },
+            // {
+            //   label: 'Parametrized Functions',
+            //   slug: 'guides/parametrized-functions',
+            // },
           ]),
         },
         {
