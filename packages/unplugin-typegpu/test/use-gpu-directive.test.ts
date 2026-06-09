@@ -436,8 +436,8 @@ describe('marked object methods', () => {
           externalNames: ["obj"]
         },
         externals: {
-          obj: {
-            mod: () => obj.mod
+          "obj": {
+            "mod": () => obj.mod
           }
         }
       }) && $.f)({});
@@ -534,8 +534,8 @@ describe('transforms numeric operations', () => {
           externalNames: ["countMutable"]
         },
         externals: {
-          countMutable: {
-            $: () => countMutable.$
+          "countMutable": {
+            "$": () => countMutable.$
           }
         }
       }) && $.f)({});
@@ -953,7 +953,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
             externalNames: ["c"]
           },
           externals: {
-            c: () => c
+            "c": () => c
           }
         }) && $.f)({});
         /** ADD */
@@ -977,7 +977,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
             externalNames: ["c"]
           },
           externals: {
-            c: () => c
+            "c": () => c
           }
         }) && $.f)({});
         console.log(add, mul);
@@ -1081,7 +1081,7 @@ describe('replaces function statements marked with "use gpu" in place when condi
               externalNames: ["c"]
             },
             externals: {
-              c: () => c
+              "c": () => c
             }
           }) && $.f)({});
           break;
@@ -1107,7 +1107,7 @@ describe('replaces function statements marked with "use gpu" in place when condi
               externalNames: ["c"]
             },
             externals: {
-              c: () => c
+              "c": () => c
             }
           }) && $.f)({});
           break;

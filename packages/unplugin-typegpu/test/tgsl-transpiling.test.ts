@@ -48,15 +48,15 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           externalNames: ["counter", "d"]
         },
         externals: {
-          counter: {
-            $: {
-              x: () => counter.$.x,
-              y: () => counter.$.y,
-              z: () => counter.$.z
+          "counter": {
+            "$": {
+              "x": () => counter.$.x,
+              "y": () => counter.$.y,
+              "z": () => counter.$.z
             }
           },
-          d: {
-            f32: () => d.f32
+          "d": {
+            "f32": () => d.f32
           }
         }
       }) && $.f)({}));"
@@ -122,7 +122,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           externalNames: ["cx"]
         },
         externals: {
-          cx: () => cx
+          "cx": () => cx
         }
       }) && $.f)({}));
       const d = tgpu.fn([])('() {}');"
@@ -252,9 +252,9 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
             externalNames: ["this"]
           },
           externals: {
-            this: {
-              myBuffer: {
-                $: () => this.myBuffer.$
+            "this": {
+              "myBuffer": {
+                "$": () => this.myBuffer.$
               }
             }
           }

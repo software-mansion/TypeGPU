@@ -31,7 +31,7 @@ function externalsToNode(externals: Externals | string): t.Expression {
   }
   return t.objectExpression(
     Object.entries(externals).map(([name, value]) =>
-      t.objectProperty(i(name), externalsToNode(value), false),
+      t.objectProperty(t.stringLiteral(name), externalsToNode(value), false),
     ),
   );
 }

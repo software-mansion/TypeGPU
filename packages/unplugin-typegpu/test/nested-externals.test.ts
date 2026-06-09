@@ -101,11 +101,11 @@ describe('externals gathering', () => {
 
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "{
-            ext: {
-              value: () => ext.value,
-              config: {
-                multiplier: () => ext.config.multiplier,
-                zero: () => ext.config.zero
+            "ext": {
+              "value": () => ext.value,
+              "config": {
+                "multiplier": () => ext.config.multiplier,
+                "zero": () => ext.config.zero
               }
             }
           }"
@@ -117,9 +117,9 @@ describe('externals gathering', () => {
 
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "{
-            buffer: {
-              $: {
-                x: () => buffer.$.x
+            "buffer": {
+              "$": {
+                "x": () => buffer.$.x
               }
             }
           }"
@@ -131,7 +131,7 @@ describe('externals gathering', () => {
 
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "{
-            ext: () => ext
+            "ext": () => ext
           }"
       `);
     });
@@ -141,9 +141,9 @@ describe('externals gathering', () => {
 
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "{
-            ext: {
-              comptime: () => ext.comptime,
-              runtime: () => ext.runtime
+            "ext": {
+              "comptime": () => ext.comptime,
+              "runtime": () => ext.runtime
             }
           }"
       `);
@@ -154,9 +154,9 @@ describe('externals gathering', () => {
 
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "{
-                this: {
-                  #const: {
-                    $: () => this.#const.$
+                "this": {
+                  "#const": {
+                    "$": () => this.#const.$
                   }
                 }
               }"

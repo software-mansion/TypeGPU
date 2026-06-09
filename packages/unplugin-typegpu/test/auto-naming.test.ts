@@ -179,8 +179,8 @@ describe('[BABEL] auto naming', () => {
           externalNames: ["d"]
         },
         externals: {
-          d: {
-            vec4f: () => d.vec4f
+          "d": {
+            "vec4f": () => d.vec4f
           }
         }
       }) && $.f)({})), "myFragmentFn");"
