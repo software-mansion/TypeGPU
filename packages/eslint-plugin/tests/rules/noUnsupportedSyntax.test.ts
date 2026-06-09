@@ -8,6 +8,7 @@ describe('noUnsupportedSyntax', () => {
       "const fn = () => { 'use gpu'; const x = 1; }",
       "const fn = () => { 'use gpu'; const x = Struct({ prop: 1}); }",
       "const fn = () => { 'use gpu'; let x = 1; }",
+      "const fn = () => { 'use gpu'; obj.#buffer.$ = 1; }",
     ],
     invalid: [
       {
@@ -206,15 +207,6 @@ describe('noUnsupportedSyntax', () => {
           {
             messageId: 'unexpected',
             data: { snippet: 'new Foo()', syntax: "'new' expression" },
-          },
-        ],
-      },
-      {
-        code: "const fn = () => { 'use gpu'; obj.#buffer.$ = 1; }",
-        errors: [
-          {
-            messageId: 'unexpected',
-            data: { snippet: '#buffer', syntax: 'private identifier' },
           },
         ],
       },

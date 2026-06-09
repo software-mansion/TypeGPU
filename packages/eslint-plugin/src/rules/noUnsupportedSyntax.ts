@@ -140,13 +140,6 @@ export const noUnsupportedSyntax = createRule({
         report(node, `'new' expression`);
       },
 
-      PrivateIdentifier(node) {
-        if (!directives.getEnclosingTypegpuFunction()) {
-          return;
-        }
-        report(node, 'private identifier');
-      },
-
       Property(node) {
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
