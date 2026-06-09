@@ -8,7 +8,7 @@ describe('noUnsupportedSyntax', () => {
       "const fn = () => { 'use gpu'; const x = 1; }",
       "const fn = () => { 'use gpu'; const x = Struct({ prop: 1}); }",
       "const fn = () => { 'use gpu'; let x = 1; }",
-      "const fn = () => { 'use gpu'; obj.#buffer.$ = 1; }",
+      "const cls = new (class { #priv = 1; fn = () => { 'use gpu'; const a = this.#priv; } } )()",
     ],
     invalid: [
       {
