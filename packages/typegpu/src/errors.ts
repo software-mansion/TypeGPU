@@ -216,7 +216,7 @@ export class SignatureNotSupportedError extends Error {
 export class FiniteMathAssumptionError extends Error {
   constructor(value: number, type: BaseData) {
     super(
-      `Cannot convert value '${value}' to type ${type.type} because of the Finite Math Assumption.`,
+      `Cannot convert value '${value}' to type ${type.type} because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)`,
     );
 
     Object.setPrototypeOf(this, FiniteMathAssumptionError.prototype);

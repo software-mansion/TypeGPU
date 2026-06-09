@@ -82,46 +82,46 @@ describe('TGSL', () => {
 describe('Edge cases', () => {
   it('throws when called on +Infinity', () => {
     expect(() => d.f32(Infinity)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot convert value 'Infinity' to type f32 because of the Finite Math Assumption.]`,
+      `[Error: Cannot convert value 'Infinity' to type f32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
     );
     expect(() => d.f16(Infinity)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot convert value 'Infinity' to type f16 because of the Finite Math Assumption.]`,
+      `[Error: Cannot convert value 'Infinity' to type f16 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
     );
     expect(() => d.i32(Infinity)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot convert value 'Infinity' to type i32 because of the Finite Math Assumption.]`,
+      `[Error: Cannot convert value 'Infinity' to type i32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
     );
     expect(() => d.u32(Infinity)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot convert value 'Infinity' to type u32 because of the Finite Math Assumption.]`,
+      `[Error: Cannot convert value 'Infinity' to type u32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
     );
   });
 
   it('throws when called on -Infinity', () => {
     expect(() => d.f32(-Infinity)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot convert value '-Infinity' to type f32 because of the Finite Math Assumption.]`,
+      `[Error: Cannot convert value '-Infinity' to type f32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
     );
     expect(() => d.f16(-Infinity)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot convert value '-Infinity' to type f16 because of the Finite Math Assumption.]`,
+      `[Error: Cannot convert value '-Infinity' to type f16 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
     );
     expect(() => d.i32(-Infinity)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot convert value '-Infinity' to type i32 because of the Finite Math Assumption.]`,
+      `[Error: Cannot convert value '-Infinity' to type i32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
     );
     expect(() => d.u32(-Infinity)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot convert value '-Infinity' to type u32 because of the Finite Math Assumption.]`,
+      `[Error: Cannot convert value '-Infinity' to type u32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
     );
   });
 
   it('throws when called on NaN', () => {
     expect(() => d.f32(NaN)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot convert value 'NaN' to type f32 because of the Finite Math Assumption.]`,
+      `[Error: Cannot convert value 'NaN' to type f32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
     );
     expect(() => d.f16(NaN)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot convert value 'NaN' to type f16 because of the Finite Math Assumption.]`,
+      `[Error: Cannot convert value 'NaN' to type f16 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
     );
     expect(() => d.i32(NaN)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot convert value 'NaN' to type i32 because of the Finite Math Assumption.]`,
+      `[Error: Cannot convert value 'NaN' to type i32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
     );
     expect(() => d.u32(NaN)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot convert value 'NaN' to type u32 because of the Finite Math Assumption.]`,
+      `[Error: Cannot convert value 'NaN' to type u32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
     );
   });
 });

@@ -969,7 +969,7 @@ ${this.ctx.pre}}`;
   public numericLiteral(value: number, schema: wgsl.BaseData): ResolvedSnippet {
     if (!Number.isFinite(value)) {
       throw new Error(
-        `Value '${value}' (${schema.type}) cannot be resolved due to WGSL's Finite Math Assumption. This value might be a result of a comptime-evaluated operation.`,
+        `Value '${value}' (${schema.type}) cannot be resolved due to WGSL's Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption). This value might be a result of a comptime-evaluated operation.`,
       );
     }
 
