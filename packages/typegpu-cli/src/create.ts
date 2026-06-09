@@ -11,7 +11,7 @@ import { askForAgentSkills } from './steps/skills.ts';
 const DEFAULT_PROJECT_DIR = 'tgpu-project';
 
 const GRADIENT_START = [0.831, 0.553, 1.0] as const;
-const GRADIENT_END = [0.216, 0.263, 0.82] as const;
+const GRADIENT_END = [0.32, 0.4, 0.95] as const;
 
 const PROJECT_TEMPLATES = [
   {
@@ -72,8 +72,7 @@ export async function createProject(cwd: string) {
   p.log.success(`Scaffolded project at ${projectName}.`);
 
   const detected = await detect({ cwd: root });
-  const inferredPm = detected?.agent ?? pmFromUserAgent(process.env.npm_config_user_agent);
-  const pm = projectTemplate === 'expo-simple' && inferredPm === 'npm' ? 'yarn' : inferredPm;
+  const pm = detected?.agent ?? pmFromUserAgent(process.env.npm_config_user_agent);
   const shouldInstall = await confirmStep(`Install dependencies with ${pm}?`, true);
   process.chdir(root);
 
@@ -85,10 +84,12 @@ export async function createProject(cwd: string) {
 
   const cdPath = path.relative(cwd, root);
   const installCmd = resolveCommand(pm, 'install', []);
-  const runCmd =
-    projectTemplate === 'expo-simple'
-      ? resolveCommand(pm, 'run', ['start'])
-      : resolveCommand(pm, 'run', ['dev']);
+  const prebuildCmd = projectTemplate.includes('expo')
+    ? { command: 'npx', args: ['expo', 'prebuild'] }
+    : undefined;
+  const runCmd = projectTemplate.includes('expo')
+    ? resolveCommand(pm, 'run', ['ios # or android'])
+    : resolveCommand(pm, 'run', ['dev']);
 
   const steps: string[] = [];
   const shouldCd = (!shouldInstall && !!installCmd) || !!runCmd || !!cdPath;
@@ -97,6 +98,9 @@ export async function createProject(cwd: string) {
   }
   if (!shouldInstall && installCmd) {
     steps.push(`   ${installCmd.command} ${installCmd.args.join(' ')}`);
+  }
+  if (prebuildCmd) {
+    steps.push(`   ${prebuildCmd.command} ${prebuildCmd.args.join(' ')}`);
   }
   if (runCmd) {
     steps.push(`   ${runCmd.command} ${runCmd.args.join(' ')}`);
