@@ -20,11 +20,13 @@ To scaffold with defaults without prompts:
 npx typegpu@latest my-app --yes
 ```
 
-You can also choose a template and ecosystem packages explicitly:
+You can also choose a template and optional TypeGPU add-ons explicitly:
 
 ```sh
-npx typegpu@latest my-app --yes --template vite-react --packages @typegpu/sdf --packages @typegpu/noise
+npx typegpu@latest my-app --yes --template vite-react --addons @typegpu/sdf,@typegpu/noise
 ```
+
+Available templates: `vite-bare`, `vite-complex`, `vite-react`, `expo-bare`.
 
 ## Enhancing
 Run inside the root of an existing project:
@@ -39,23 +41,19 @@ yarn dlx typegpu@latest -e
 bunx typegpu@latest -e
 ```
 
-To run the recommended enhance flow without prompts:
+To run the standard enhance flow without prompts:
 
 ```sh
-npx typegpu@latest --enhance --yes --recommended
+npx typegpu@latest --enhance --yes
 ```
 
-To include the TypeGPU agent skill while creating a project:
+To include optional add-ons while enhancing:
 
 ```sh
-npx typegpu@latest my-app --yes --agent-skills
+npx typegpu@latest --enhance --yes --addons @typegpu/sdf,@typegpu/noise
 ```
 
-For an existing project, run:
-
-```sh
-npx typegpu@latest --enhance --yes --agent-skills
-```
+The TypeGPU agent skill is included automatically when using `--yes`.
 
 If the CLI cannot detect a package manager, pass `--package-manager npm`, `pnpm`, `yarn`, or `bun`.
 

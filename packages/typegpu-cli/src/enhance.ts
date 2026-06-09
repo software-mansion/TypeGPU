@@ -24,9 +24,9 @@ async function runViteFlow(
   await askForWebgpuTypes(cwd, pm, pkg);
   await askForVite(cwd, pm, pkg);
 
-  if (options?.packages.length) {
+  if (options?.addons.length) {
     setupTypegpu(pm, pkg);
-    addTypegpuPkgs(pm, pkg, options.packages);
+    addTypegpuPkgs(pm, pkg, options.addons);
   } else {
     if (!(await ensureTypegpu(pm, pkg))) {
       return;
@@ -34,11 +34,7 @@ async function runViteFlow(
     await askForPkgs(pm, pkg);
   }
 
-  if (options?.agentSkills) {
-    addAgentSkills(pm);
-  } else {
-    await askForAgentSkills(pm);
-  }
+  await askForAgentSkills(pm);
 }
 
 async function runNonInteractiveEnhance(
@@ -47,25 +43,11 @@ async function runNonInteractiveEnhance(
   pkg: PackageJson,
   options: EnhanceProjectOptions,
 ) {
-  if (!options.recommended && options.packages.length === 0 && !options.agentSkills) {
-    failAndExit(
-      'Nothing to do in non-interactive enhance mode. Pass --recommended, --packages, or --agent-skills.',
-    );
-  }
-
-  if (options.recommended) {
-    setupWebgpuTypes(cwd, pm, pkg);
-    await setupVite(cwd, pm, pkg, { createConfigIfMissing: true });
-  }
-
-  if (options.recommended || options.packages.length > 0) {
-    setupTypegpu(pm, pkg);
-  }
-  addTypegpuPkgs(pm, pkg, options.packages);
-
-  if (options.agentSkills) {
-    addAgentSkills(pm);
-  }
+  setupWebgpuTypes(cwd, pm, pkg);
+  await setupVite(cwd, pm, pkg, { createConfigIfMissing: true });
+  setupTypegpu(pm, pkg);
+  addTypegpuPkgs(pm, pkg, options.addons);
+  addAgentSkills(pm, { nonInteractive: true });
 }
 
 export async function enhanceProject(cwd: string, options?: EnhanceProjectOptions) {
@@ -95,7 +77,7 @@ export async function enhanceProject(cwd: string, options?: EnhanceProjectOption
     failAndExit('Could not parse package.json.', pkg.summary);
   }
 
-  if (options?.nonInteractive || options?.recommended) {
+  if (options?.nonInteractive) {
     await runNonInteractiveEnhance(cwd, pmAgent, pkg, options);
     p.outro('Done! Get ready for a shaderful experience.');
     return;

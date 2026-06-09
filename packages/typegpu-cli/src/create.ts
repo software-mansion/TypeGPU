@@ -81,7 +81,7 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
     templateDir,
     root,
     packageName,
-    options?.packages.length ? options.packages : nonInteractive ? [] : undefined,
+    options?.addons.length ? options.addons : nonInteractive ? [] : undefined,
   );
 
   p.log.success(`Scaffolded project at ${projectName}.`);
@@ -104,9 +104,9 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
     pmInstall(pm);
   }
 
-  if (options?.agentSkills) {
-    addAgentSkills(pm);
-  } else if (!nonInteractive) {
+  if (nonInteractive) {
+    addAgentSkills(pm, { nonInteractive: true });
+  } else {
     await askForAgentSkills(pm);
   }
 

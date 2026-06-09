@@ -4,13 +4,13 @@ import { typegpuPkgs } from './utils/pkg.ts';
 import { failAndExit } from './utils/prompts.ts';
 
 export const DEFAULT_PROJECT_DIR = 'tgpu-project';
-export const DEFAULT_PROJECT_TEMPLATE = 'vite-simple';
+export const DEFAULT_PROJECT_TEMPLATE = 'vite-bare';
 
 export const PROJECT_TEMPLATES = [
-  { value: 'vite-simple', label: 'Vite (Bare)' },
+  { value: 'vite-bare', label: 'Vite (Bare)' },
   { value: 'vite-complex', label: 'Vite (Complex - Domain Warping)' },
   { value: 'vite-react', label: 'Vite + React (Bare)' },
-  { value: 'expo-simple', label: 'Expo RN (Bare)' },
+  { value: 'expo-bare', label: 'Expo RN (Bare)' },
 ] as const;
 
 const PACKAGE_MANAGERS = ['npm', 'pnpm', 'pnpm@6', 'yarn', 'yarn@berry', 'bun'] as const;
@@ -20,8 +20,7 @@ export type ProjectTemplate = (typeof PROJECT_TEMPLATES)[number]['value'];
 type CommonOptions = {
   nonInteractive: boolean;
   packageManager?: Agent;
-  packages: string[];
-  agentSkills: boolean;
+  addons: string[];
 };
 
 export type CreateProjectOptions = CommonOptions & {
@@ -29,9 +28,7 @@ export type CreateProjectOptions = CommonOptions & {
   template?: ProjectTemplate;
 };
 
-export type EnhanceProjectOptions = CommonOptions & {
-  recommended: boolean;
-};
+export type EnhanceProjectOptions = CommonOptions;
 
 function getStringOption(value: string | string[] | undefined, name: string) {
   if (Array.isArray(value)) {
@@ -41,18 +38,19 @@ function getStringOption(value: string | string[] | undefined, name: string) {
   return value;
 }
 
-export function parsePackages(value: string | string[] | undefined) {
-  const values = (Array.isArray(value) ? value : value ? [value] : [])
-    .flatMap((entry) => entry.split(','))
+export function parseAddons(value: string | string[] | undefined) {
+  const addons = getStringOption(value, '--addons');
+  const values = (addons ? [addons] : [])
+    .flatMap((entry) => entry.split(/[,\s]+/))
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
 
-  const knownPackages = new Set<string>(typegpuPkgs.map((pkg) => pkg.value));
-  const unknown = values.filter((pkg) => !knownPackages.has(pkg));
+  const knownAddons = new Set<string>(typegpuPkgs.map((pkg) => pkg.value));
+  const unknown = values.filter((pkg) => !knownAddons.has(pkg));
   if (unknown.length > 0) {
     failAndExit(
-      `Unknown TypeGPU package${unknown.length === 1 ? '' : 's'}: ${unknown.join(', ')}. ` +
-        `Expected one of: ${Array.from(knownPackages).join(', ')}.`,
+      `Unknown TypeGPU add-on${unknown.length === 1 ? '' : 's'}: ${unknown.join(', ')}. ` +
+        `Expected one of: ${Array.from(knownAddons).join(', ')}.`,
     );
   }
 
