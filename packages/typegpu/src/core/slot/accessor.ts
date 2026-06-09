@@ -246,11 +246,5 @@ export class TgpuMutableAccessorImpl<T extends BaseData>
     }
 
     return this[$gpuValueOf];
-      return this[$gpuValueOf];
-    }
-
-    throw new Error(
-      '`tgpu.mutableAccessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
-    );
   }
 }
