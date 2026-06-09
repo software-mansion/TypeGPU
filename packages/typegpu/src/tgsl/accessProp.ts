@@ -1,8 +1,8 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
 import { EntryInputRouter } from '../core/function/entryInputRouter.ts';
-import { InfixDispatch, isUnstruct, MatrixColumnsAccess, UnknownData } from '../data/dataTypes.ts';
-import { abstractInt, bool, f16, f32, i32, u32 } from '../data/numeric.ts';
+import { isUnstruct, MatrixColumnsAccess, UnknownData } from '../data/dataTypes.ts';
+import { bool, f16, f32, i32, u32 } from '../data/numeric.ts';
 import { derefSnippet } from '../data/ref.ts';
 import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
 import {

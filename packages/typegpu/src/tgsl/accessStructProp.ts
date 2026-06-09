@@ -18,5 +18,10 @@ export function accessStructProp(target: Snippet, propName: string) {
   }
   propType = undecorate(propType);
 
-  return snip(stitch`${target}.${propName}`, propType, /* origin */ target.origin);
+  return snip(
+    stitch`${target}.${propName}`,
+    propType,
+    /* origin */ target.origin,
+    target.possibleSideEffects,
+  );
 }
