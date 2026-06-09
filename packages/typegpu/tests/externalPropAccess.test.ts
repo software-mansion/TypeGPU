@@ -147,4 +147,23 @@ describe('external prop access', () => {
       }"
     `);
   });
+
+  it('supports props containing #', () => {
+    const cls = new (class {
+      '#const' = tgpu.const(d.u32, 0);
+
+      fn = () => {
+        'use gpu';
+        const a = this['#const'].$;
+      };
+    })();
+
+    expect(tgpu.resolve([cls.fn])).toMatchInlineSnapshot(`
+      "const item: u32 = 0u;
+
+      fn fn_1() {
+        const a = item;
+      }"
+    `);
+  });
 });

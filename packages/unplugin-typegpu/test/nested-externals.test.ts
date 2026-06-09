@@ -77,18 +77,12 @@ const codes = {
     import tgpu, { d } from 'typegpu';
 
     const cls = new (class {
-      #const;
+      #const = tgpu.const(d.u32, 1);
 
-      constructor() {
-        this.#const = tgpu.const(d.u32, 1);
-      }
-
-      get fn() {
-        return () => {
-          'use gpu';
-          const a = this.#const.$;
-        };
-      }
+      fn = () => {
+        'use gpu';
+        const a = this.#const.$;
+      };
     })();
 
     console.log(cls);`,
@@ -154,12 +148,12 @@ describe('externals gathering', () => {
 
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "{
-                this: {
-                  "#const": {
-                    $: () => this.#const.$
-                  }
+              this: {
+                "#const": {
+                  $: () => this.#const.$
                 }
-              }"
+              }
+            }"
       `);
     });
   });

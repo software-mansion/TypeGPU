@@ -388,12 +388,21 @@ describe('[BABEL] auto naming', () => {
     const code = `\
       class Foo {
         #const = tgpu.const(d.u32, 1);
+        #buff;
+
+        constructor() {
+          this.#buff = root.createUniform(d.u32);
+        }
       }
     `;
 
     expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
       "class Foo {
         #const = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 1), "const");
+        #buff;
+        constructor() {
+          this.#buff = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createUniform(d.u32), "buff");
+        }
       }"
     `);
   });
@@ -911,6 +920,11 @@ describe('[ROLLUP] auto naming', () => {
     const code = `\
       class Foo {
         #const = tgpu.const(d.u32, 1);
+        #buff;
+
+        constructor() {
+          this.#buff = root.createUniform(d.u32);
+        }
       }
       console.log(Foo);
     `;
@@ -918,6 +932,11 @@ describe('[ROLLUP] auto naming', () => {
     expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
       "class Foo {
               #const = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 1), "const"));
+              #buff;
+
+              constructor() {
+                this.#buff = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createUniform(d.u32), "buff"));
+              }
             }
             console.log(Foo);
       "

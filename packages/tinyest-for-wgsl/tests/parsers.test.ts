@@ -260,7 +260,7 @@ describe('transpileFn', () => {
   );
 
   it(
-    'handles property access via private name',
+    'handles private property access',
     dualTest((p) => {
       // `this.#v` is only valid inside a class body, so we parse a class and pluck out the arrow function.
       const tree = p(`
