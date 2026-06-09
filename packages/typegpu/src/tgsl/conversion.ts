@@ -3,7 +3,7 @@ import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
-import { isAlias, snip, type Snippet } from '../data/snippet.ts';
+import { isAlias, snip, withDataType, type Snippet } from '../data/snippet.ts';
 import {
   type AbstractFloat,
   type AnyWgslData,
@@ -251,12 +251,7 @@ function applyActionToSnippet(
       return snippet;
     }
 
-    return snip(
-      snippet.value,
-      targetType,
-      // if it was a ref, then it's still a ref
-      /* origin */ snippet.origin,
-    );
+    return withDataType(targetType, snippet);
   }
 
   switch (action.action) {

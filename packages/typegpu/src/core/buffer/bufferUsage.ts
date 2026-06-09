@@ -86,12 +86,6 @@ export function isUsableAsUniform<T extends TgpuBuffer<BaseData>>(
 // Implementation
 // --------------
 
-const usageToVarTemplateMap: Record<BindableBufferUsage, string> = {
-  uniform: 'uniform',
-  mutable: 'storage, read_write',
-  readonly: 'storage, read',
-};
-
 class TgpuFixedBufferImpl<TData extends BaseData, TUsage extends BindableBufferUsage>
   implements TgpuBufferUsage<TData, TUsage>, SelfResolvable, TgpuFixedBufferUsage<TData>
 {
@@ -123,13 +117,15 @@ class TgpuFixedBufferImpl<TData extends BaseData, TUsage extends BindableBufferU
       this.usage === 'uniform' ? { uniform: dataType } : { storage: dataType, access: this.usage },
       this.buffer,
     );
-    const usage = usageToVarTemplateMap[this.usage];
 
-    ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var<${usage}> ${id}: ${ctx.resolve(dataType).value};`,
-    );
-
-    return snip(id, dataType, this.usage);
+    return ctx.gen.declareGlobalVar({
+      group,
+      binding,
+      scope: this.usage,
+      id,
+      dataType,
+      init: undefined,
+    });
   }
 
   toString(): string {
@@ -202,7 +198,7 @@ class TgpuFixedBufferImpl<TData extends BaseData, TUsage extends BindableBufferU
 
     if (mode.type === 'codegen') {
       // The WGSL generator handles buffer assignment, and does not defer to
-      // whatever's being assigned to to generate the WGSL.
+      // whatever's being assigned to generate the WGSL.
       throw new Error('Unreachable bufferUsage.ts#TgpuFixedBufferImpl/$');
     }
 
@@ -243,15 +239,15 @@ export class TgpuLaidOutBufferImpl<TData extends BaseData, TUsage extends Bindab
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const group = ctx.allocateLayoutEntry(this.#membership.layout);
-    const usage = usageToVarTemplateMap[this.usage];
 
-    ctx.addDeclaration(
-      `@group(${group}) @binding(${this.#membership.idx}) var<${usage}> ${id}: ${
-        ctx.resolve(this.dataType).value
-      };`,
-    );
-
-    return snip(id, this.dataType, this.usage);
+    return ctx.gen.declareGlobalVar({
+      group,
+      binding: this.#membership.idx,
+      scope: this.usage,
+      id,
+      dataType: this.dataType,
+      init: undefined,
+    });
   }
 
   toString(): string {

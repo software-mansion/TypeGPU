@@ -38,7 +38,7 @@ import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { isGPUBuffer } from '../../types.ts';
-import { wgslExtensions, wgslExtensionToFeatureName } from '../../wgslExtensions.ts';
+import { wgslEnableExtensions, wgslEnableExtensionToFeatureName } from '../../wgslExtensions.ts';
 import {
   type AnyAutoCustoms,
   AutoFragmentFn,
@@ -1073,8 +1073,8 @@ class RenderPipelineCore implements SelfResolvable {
 
     const { root, descriptor: tgpuDescriptor } = this.options;
     const device = root.device;
-    const enableExtensions = wgslExtensions.filter((extension) =>
-      root.enabledFeatures.has(wgslExtensionToFeatureName[extension]),
+    const enableExtensions = wgslEnableExtensions.filter((extension) =>
+      root.enabledFeatures.has(wgslEnableExtensionToFeatureName[extension]),
     );
 
     // Resolving code

@@ -45,7 +45,7 @@ import {
   $resolve,
 } from './shared/symbols.ts';
 import type { TgpuBindGroupLayout, TgpuLayoutEntry } from './tgpuBindGroupLayout.ts';
-import type { WgslExtension } from './wgslExtensions.ts';
+import type { WgslEnableExtension } from './wgslExtensions.ts';
 import type { Infer } from './shared/repr.ts';
 import { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 
@@ -76,8 +76,10 @@ export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
-export interface FnToWgslOptions {
+export interface ResolveFunctionOptions {
   functionType: 'normal' | TgpuShaderStage;
+  workgroupSize?: readonly number[] | undefined;
+  name: string;
   argTypes: BaseData[];
   /**
    * The return type of the function. If undefined, the type should be inferred
@@ -273,7 +275,7 @@ export interface ResolutionCtx {
   };
 
   readonly mode: ExecState;
-  readonly enableExtensions: WgslExtension[] | undefined;
+  readonly enableExtensions: WgslEnableExtension[] | undefined;
   readonly gen: ShaderGenerator;
 
   addDeclaration(declaration: string): void;
@@ -321,7 +323,7 @@ export interface ResolutionCtx {
    */
   resolveSnippet(snippet: Snippet): ResolvedSnippet;
 
-  fnToWgsl(options: FnToWgslOptions): {
+  resolveFunction(options: ResolveFunctionOptions): {
     code: string;
     returnType: BaseData;
   };

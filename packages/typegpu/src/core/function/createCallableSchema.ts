@@ -1,4 +1,10 @@
-import { type MapValueToSnippet, type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import {
+  type MapValueToSnippet,
+  noSideEffects,
+  type ResolvedSnippet,
+  snip,
+  type Snippet,
+} from '../../data/snippet.ts';
 import { type BaseData, isPtr } from '../../data/wgslTypes.ts';
 import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
@@ -51,10 +57,11 @@ export function callableSchema<T extends AnyFn>(options: CallableSchemaOptions<T
         return tryConvertSnippet(ctx, s, argType, false);
       }) as MapValueToSnippet<Parameters<T>>;
 
+      let result: Snippet;
       if (converted.every((s) => isKnownAtComptime(s))) {
         ctx.pushMode(new NormalState());
         try {
-          return snip(
+          result = snip(
             options.normalImpl(...(converted.map((s) => s.value) as never[])),
             options.schema(),
             // Functions give up ownership of their return value
@@ -63,9 +70,14 @@ export function callableSchema<T extends AnyFn>(options: CallableSchemaOptions<T
         } finally {
           ctx.popMode('normal');
         }
+      } else {
+        result = options.codegenImpl(ctx, converted);
       }
 
-      return options.codegenImpl(ctx, converted);
+      if (!args.some((a) => a.possibleSideEffects)) {
+        return noSideEffects(result);
+      }
+      return result;
     },
   };
 

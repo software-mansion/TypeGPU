@@ -1,7 +1,8 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { isDisarray, MatrixColumnsAccess } from '../data/dataTypes.ts';
 import { derefSnippet } from '../data/ref.ts';
-import { type Origin, snip, type Snippet } from '../data/snippet.ts';
+import { snip } from '../data/snippet.ts';
+import type { Origin, Snippet } from '../data/snippet.ts';
 import { vec2f, vec3f, vec4f } from '../data/vector.ts';
 import { type BaseData, isPtr, isVec, isWgslArray, isWgslStruct } from '../data/wgslTypes.ts';
 import { isKnownAtComptime } from '../types.ts';
@@ -51,6 +52,7 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
         : stitch`${target}[${index}]`,
       elementType,
       /* origin */ origin,
+      target.possibleSideEffects || index.possibleSideEffects,
     );
   }
 
@@ -63,6 +65,7 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
         : stitch`${target}[${index}]`,
       target.dataType.primitive,
       /* origin */ target.origin,
+      target.possibleSideEffects || index.possibleSideEffects,
     );
   }
 
@@ -79,7 +82,12 @@ export function accessIndex(target: Snippet, indexArg: Snippet | number): Snippe
         (target.value.matrix.dataType as BaseData).type as keyof typeof indexableTypeToResult
       ];
 
-    return snip(stitch`${target.value.matrix}[${index}]`, propType, /* origin */ target.origin);
+    return snip(
+      stitch`${target.value.matrix}[${index}]`,
+      propType,
+      /* origin */ target.origin,
+      target.possibleSideEffects || index.possibleSideEffects,
+    );
   }
 
   // matrix

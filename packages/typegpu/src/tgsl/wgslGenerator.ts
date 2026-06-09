@@ -1,7 +1,7 @@
 import * as tinyest from 'tinyest';
 import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
-import { type AnyData, InfixDispatch, UnknownData, unptr } from '../data/dataTypes.ts';
+import { type AnyData, UnknownData, unptr } from '../data/dataTypes.ts';
 import { bool, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
@@ -19,7 +19,12 @@ import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared
 import { safeStringify } from '../shared/stringify.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
-import { isGPUCallable, isKnownAtComptime, type DualFn } from '../types.ts';
+import {
+  isGPUCallable,
+  isKnownAtComptime,
+  type BindableBufferUsage,
+  type DualFn,
+} from '../types.ts';
 import { convertStructValues, convertToCommonType, tryConvertSnippet } from './conversion.ts';
 import {
   ArrayExpression,
@@ -44,8 +49,15 @@ import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
 import { stringifyNode } from '../shared/tseynit.ts';
-import type { FunctionDefinitionOptions } from './shaderGenerator_members.ts';
+import type {
+  ConstantDefinitionOptions,
+  FunctionDefinitionOptions,
+  VariableDefinitionOptions,
+} from './shaderGenerator_members.ts';
 import { getAttributesString } from '../data/attributes.ts';
+import { validSelectBranchTypes } from '../std/boolean.ts';
+import { isInfixDispatch } from './infixDispatch.ts';
+import type { VariableScope } from '../core/variable/tgpuVariable.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -191,6 +203,14 @@ const binaryOpCodeToCodegen = {
   '**': pow[$gpuCallable].call.bind(pow),
 } satisfies Partial<Record<tinyest.BinaryOperator, (...args: never[]) => unknown>>;
 
+const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage, string> = {
+  private: 'private',
+  workgroup: 'workgroup',
+  uniform: 'uniform',
+  mutable: 'storage, read_write',
+  readonly: 'storage, read',
+};
+
 export class WgslGenerator implements ShaderGenerator {
   #ctx: GenerationCtx | undefined = undefined;
   // used to detect `continue` and `break` nodes in loop body
@@ -209,7 +229,7 @@ export class WgslGenerator implements ShaderGenerator {
     return this.#ctx;
   }
 
-  public _block([_, statements]: tinyest.Block, externalMap?: ExternalMap): string {
+  protected _block([_, statements]: tinyest.Block, externalMap?: ExternalMap): string {
     this.ctx.pushBlockScope();
 
     if (externalMap) {
@@ -234,7 +254,7 @@ ${this.ctx.pre}}`;
     }
   }
 
-  public _blockStatement(block: tinyest.Block, externalMap?: ExternalMap): string {
+  protected _blockStatement(block: tinyest.Block, externalMap?: ExternalMap): string {
     return `${this.ctx.pre}${this._block(block, externalMap)}`;
   }
 
@@ -254,17 +274,16 @@ ${this.ctx.pre}}`;
    * Creates a variable declaration string.
    * `keyword` may be a placeholder filled in later.
    */
-  protected emitVarDecl(
-    pre: string,
+  protected _emitVarDecl(
     keyword: 'var' | 'let' | 'const' | `#VAR_${number}#`,
     name: string,
     _dataType: wgsl.BaseData | UnknownData,
     rhsStr: string,
   ): string {
-    return `${pre}${keyword} ${name} = ${rhsStr};`;
+    return `${this.ctx.pre}${keyword} ${name} = ${rhsStr};`;
   }
 
-  public _identifier(id: string): Snippet {
+  protected _identifier(id: string): Snippet {
     if (!id) {
       throw new Error('Cannot resolve an empty identifier');
     }
@@ -285,7 +304,7 @@ ${this.ctx.pre}}`;
    * A wrapper for `generateExpression` that updates `ctx.expectedType`
    * and tries to convert the result when it does not match the expected type.
    */
-  public _typedExpression(
+  protected _typedExpression(
     expression: tinyest.Expression,
     expectedType: wgsl.BaseData | wgsl.BaseData[],
   ) {
@@ -306,7 +325,7 @@ ${this.ctx.pre}}`;
     }
   }
 
-  public _expression(expression: tinyest.Expression): Snippet {
+  protected _expression(expression: tinyest.Expression): Snippet {
     if (typeof expression === 'string') {
       return this._identifier(expression);
     }
@@ -585,15 +604,16 @@ ${this.ctx.pre}}`;
         );
       }
 
-      if (callee.value instanceof InfixDispatch) {
-        // Infix operator dispatch.
+      if (isInfixDispatch(callee.value)) {
         if (!argNodes[0]) {
           throw new WgslTypeError(
-            `An infix operator '${callee.value.name}' was called without any arguments`,
+            `An infix operator '${getName(callee.value.operator)}' was called without any arguments`,
           );
         }
+        const lhs = coerceToSnippet(callee.value.lhs);
         const rhs = this._expression(argNodes[0]);
-        return callee.value.operator(this.ctx, [callee.value.lhs, rhs]);
+        const callable = callee.value.operator[$gpuCallable];
+        return callable.call(this.ctx, [lhs, rhs]);
       }
 
       if ((callee.value === _ref || callee.value === unroll) && argNodes[0]) {
@@ -804,13 +824,29 @@ ${this.ctx.pre}}`;
 
     if (expression[0] === NODE.conditionalExpr) {
       // ternary operator
-      const [_, test, consequent, alternative] = expression;
-      const testExpression = this._expression(test);
-      if (isKnownAtComptime(testExpression)) {
-        return testExpression.value ? this._expression(consequent) : this._expression(alternative);
+      const [_, testNode, consequentNode, alternativeNode] = expression;
+      const test = this._expression(testNode);
+
+      if (isKnownAtComptime(test)) {
+        return test.value ? this._expression(consequentNode) : this._expression(alternativeNode);
       } else {
-        throw new Error(
-          `Ternary operator '${stringifyNode(expression)}' is invalid, because only comptime-known checks are supported. For runtime checks, please use 'std.select' or if/else statements.`,
+        const consequent = this._expression(consequentNode);
+        const alternative = this._expression(alternativeNode);
+        const [con, alt] =
+          convertToCommonType(this.ctx, [consequent, alternative], validSelectBranchTypes) ?? [];
+
+        if (!con || !alt || consequent.possibleSideEffects || alternative.possibleSideEffects) {
+          throw new Error(
+            `Ternary operator '${stringifyNode(expression)}' is invalid. For more complex branching, please use 'std.select' or if/else statements.`,
+          );
+        }
+
+        return snip(
+          stitch`select(${alt}, ${con}, ${test})`,
+          con.dataType,
+          'runtime',
+          // this select has side-effects only if the condition has side-effects
+          test.possibleSideEffects,
         );
       }
     }
@@ -824,6 +860,41 @@ ${this.ctx.pre}}`;
     }
 
     assertExhaustive(expression);
+  }
+
+  public declareGlobalConst(options: ConstantDefinitionOptions): ResolvedSnippet {
+    const resolvedDataType = this.ctx.resolve(options.dataType).value;
+    const resolvedValue = this.ctx.resolveSnippet(options.init).value;
+
+    this.ctx.addDeclaration(`const ${options.id}: ${resolvedDataType} = ${resolvedValue};`);
+
+    return snip(options.id, options.dataType, 'constant-immutable-def');
+  }
+
+  public declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet {
+    let pre = '';
+
+    if (options.group !== undefined) {
+      pre += `@group(${options.group}) `;
+    }
+
+    if (options.binding !== undefined) {
+      pre += `@binding(${options.binding}) `;
+    }
+
+    if (options.scope in usageToVarTemplateMap) {
+      pre += `var<${usageToVarTemplateMap[options.scope as keyof typeof usageToVarTemplateMap]}> `;
+    } else {
+      pre += `var `;
+    }
+
+    pre += `${options.id}: ${this.ctx.resolve(options.dataType).value}`;
+
+    this.ctx.addDeclaration(
+      options.init ? `${pre} = ${this.ctx.resolveSnippet(options.init).value};` : `${pre};`,
+    );
+
+    return snip(options.id, options.dataType, options.scope);
   }
 
   public functionDefinition(options: FunctionDefinitionOptions): string {
@@ -845,7 +916,7 @@ ${this.ctx.pre}}`;
       );
     }
 
-    // Function header
+    // Only after generating the body can we determine the return type
     const returnType = options.determineReturnType();
 
     const argList = options.args
@@ -861,7 +932,19 @@ ${this.ctx.pre}}`;
         ? `(${argList}) -> ${getAttributesString(returnType)}${this.ctx.resolve(returnType).value} `
         : `(${argList}) `;
 
-    return `${head}${body}`;
+    let attributes = '';
+    if (options.functionType === 'compute') {
+      if (!options.workgroupSize) {
+        throw new Error('Compute shaders must have a workgroup size');
+      }
+      attributes = `@compute @workgroup_size(${options.workgroupSize.join(', ')}) `;
+    } else if (options.functionType === 'vertex') {
+      attributes = `@vertex `;
+    } else if (options.functionType === 'fragment') {
+      attributes = `@fragment `;
+    }
+
+    return `${attributes}fn ${options.name}${head}${body}`;
   }
 
   /**
@@ -883,7 +966,33 @@ ${this.ctx.pre}}`;
     return snip(stitch`${this.ctx.resolve(schema).value}(${args})`, schema, 'runtime');
   }
 
-  public _return(statement: tinyest.Return): string {
+  public numericLiteral(value: number, schema: wgsl.BaseData): ResolvedSnippet {
+    if (schema.type === 'abstractInt') {
+      return snip(`${value}`, schema, /* origin */ 'constant');
+    }
+    if (schema.type === 'u32') {
+      return snip(`${value}u`, schema, /* origin */ 'constant');
+    }
+    if (schema.type === 'i32') {
+      return snip(`${value}i`, schema, /* origin */ 'constant');
+    }
+
+    const exp = value.toExponential();
+    const decimal =
+      schema.type === 'abstractFloat' && Number.isInteger(value) ? `${value}.` : `${value}`;
+
+    // Just picking the shorter one
+    const base = exp.length < decimal.length ? exp : decimal;
+    if (schema.type === 'f32') {
+      return snip(`${base}f`, schema, /* origin */ 'constant');
+    }
+    if (schema.type === 'f16') {
+      return snip(`${base}h`, schema, /* origin */ 'constant');
+    }
+    return snip(base, schema, /* origin */ 'constant');
+  }
+
+  protected _return(statement: tinyest.Return): string {
     const returnNode = statement[1];
 
     if (returnNode !== undefined) {
@@ -955,7 +1064,7 @@ Try 'return ${typeStr}(${str});' instead.
     return `${this.ctx.pre}return;`;
   }
 
-  public _letStatement(statement: tinyest.Let): string {
+  protected _letStatement(statement: tinyest.Let): string {
     const [_, rawId, eqNode] = statement;
 
     if (eqNode === undefined) {
@@ -1007,6 +1116,8 @@ Try 'return ${typeStr}(${str});' instead.
       this.ctx.makeUniqueIdentifier(rawId, 'block'),
       concreteType,
       /* origin */ 'local-def',
+      // Accessing variable declarations is side-effect free.
+      /* possibleSideEffects */ false,
     );
     this.ctx.defineVariable(rawId, snippet);
 
@@ -1021,10 +1132,10 @@ Try 'return ${typeStr}(${str});' instead.
     const emittedVarType = `#VAR_${scope.placeholderForVariable.size}#` as const;
     scope.placeholderForVariable.set(snippet, emittedVarType);
 
-    return this.emitVarDecl(this.ctx.pre, emittedVarType, snippet.value, concreteType, rhsStr);
+    return this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr);
   }
 
-  public _constStatement(statement: tinyest.Const) {
+  protected _constStatement(statement: tinyest.Const) {
     const [_, rawId, eqNode] = statement;
 
     if (eqNode === undefined) {
@@ -1121,6 +1232,8 @@ Try 'return ${typeStr}(${str});' instead.
       this.ctx.makeUniqueIdentifier(rawId, 'block'),
       concreteType,
       /* origin */ varOrigin,
+      // Accessing variable declarations is side-effect free.
+      /* possibleSideEffects */ false,
     );
     this.ctx.defineVariable(rawId, snippet);
 
@@ -1137,10 +1250,10 @@ Try 'return ${typeStr}(${str});' instead.
       emittedVarType = varType;
     }
 
-    return this.emitVarDecl(this.ctx.pre, emittedVarType, snippet.value, concreteType, rhsStr);
+    return this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr);
   }
 
-  public _statement(statement: tinyest.Statement): string {
+  protected _statement(statement: tinyest.Statement): string {
     if (typeof statement === 'string') {
       const id = this._identifier(statement);
       const resolved = id.value && this.ctx.resolve(id.value).value;

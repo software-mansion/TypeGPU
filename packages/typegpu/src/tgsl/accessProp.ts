@@ -30,10 +30,9 @@ import {
   isWgslArray,
   isWgslStruct,
 } from '../data/wgslTypes.ts';
-import { $gpuCallable } from '../shared/symbols.ts';
-import { add, bitShiftLeft, bitShiftRight, div, mod, mul, sub } from '../std/operators.ts';
 import { isKnownAtComptime } from '../types.ts';
-import { coerceToSnippet } from './generationHelpers.ts';
+import { coerceToSnippet, numericLiteralToSnippet } from './generationHelpers.ts';
+import { InfixDispatch, infixOperators, type InfixOperatorName } from './infixDispatch.ts';
 import { accessStructProp } from './accessStructProp.ts';
 
 const infixKinds = [
@@ -53,18 +52,6 @@ const infixKinds = [
   'mat3x3f',
   'mat4x4f',
 ];
-
-export const infixOperators = {
-  add,
-  sub,
-  mul,
-  div,
-  mod,
-  bitShiftLeft,
-  bitShiftRight,
-} as const;
-
-export type InfixOperator = keyof typeof infixOperators;
 
 type SwizzleableType = 'f' | 'h' | 'i' | 'u' | 'b';
 type SwizzleLength = 1 | 2 | 3 | 4;
@@ -104,25 +91,36 @@ const swizzleLenToType: Record<SwizzleableType, Record<SwizzleLength, BaseData>>
 
 export function accessProp(target: Snippet, propName: string): Snippet | undefined {
   if (infixKinds.includes((target.dataType as BaseData).type) && propName in infixOperators) {
-    const operator = infixOperators[propName as InfixOperator];
+    const operator = infixOperators[propName as InfixOperatorName];
     return snip(
-      new InfixDispatch(propName, target, operator[$gpuCallable].call.bind(operator)),
+      new InfixDispatch(target, operator),
       UnknownData,
       /* origin */ target.origin,
+      target.possibleSideEffects,
     );
   }
 
   if (isWgslArray(target.dataType) && propName === 'length') {
     if (target.dataType.elementCount === 0) {
       // Dynamically-sized array
-      return snip(stitch`arrayLength(&${target})`, u32, /* origin */ 'runtime');
+      return snip(
+        stitch`arrayLength(&${target})`,
+        u32,
+        /* origin */ 'runtime',
+        target.possibleSideEffects,
+      );
     }
 
-    return snip(target.dataType.elementCount, abstractInt, /* origin */ 'constant');
+    return numericLiteralToSnippet(target.dataType.elementCount);
   }
 
   if (isMat(target.dataType) && propName === 'columns') {
-    return snip(new MatrixColumnsAccess(target), UnknownData, /* origin */ target.origin);
+    return snip(
+      new MatrixColumnsAccess(target),
+      UnknownData,
+      /* origin */ target.origin,
+      target.possibleSideEffects,
+    );
   }
 
   if (isWgslStruct(target.dataType) || isUnstruct(target.dataType)) {
@@ -134,7 +132,12 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
     if (!result) {
       return undefined;
     }
-    return snip(stitch`${target}.${result.prop}`, result.type, 'argument');
+    return snip(
+      stitch`${target}.${result.prop}`,
+      result.type,
+      'argument',
+      target.possibleSideEffects,
+    );
   }
 
   if (target.dataType instanceof EntryInputRouter) {
@@ -164,20 +167,18 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
   if (isVec(target.dataType)) {
     // Example: d.vec3f().kind === 'vec3f'
     if (propName === 'kind') {
-      return snip(target.dataType.type, UnknownData, 'constant');
+      // The snippet has no side-effects
+      return snip(target.dataType.type, UnknownData, 'constant', /* possibleSideEffects */ false);
     }
   }
 
   const propLength = propName.length;
-  if (isVec(target.dataType) && propLength >= 1 && propLength <= 4) {
-    const isXYZW = /^[xyzw]+$/.test(propName);
-    const isRGBA = /^[rgba]+$/.test(propName);
-
-    if (!isXYZW && !isRGBA) {
-      // Not a valid swizzle
-      return undefined;
-    }
-
+  if (
+    isVec(target.dataType) &&
+    propLength >= 1 &&
+    propLength <= 4 &&
+    /^[xyzw]+$|^[rgba]+$/.test(propName)
+  ) {
     const swizzleTypeChar = target.dataType.type.includes('bool')
       ? 'b'
       : (target.dataType.type[4] as SwizzleableType);
@@ -198,6 +199,7 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
         : target.origin === 'constant' || target.origin === 'constant-immutable-def'
           ? 'constant'
           : 'runtime',
+      target.possibleSideEffects,
     );
   }
 

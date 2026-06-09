@@ -119,7 +119,7 @@ abstract class AccessorBase<
     try {
       // Doing a deep copy each time so that we don't have to deal with refs
       const cloned = schemaCallWrapper(this.schema, value);
-      return snip(cloned, this.schema, 'constant');
+      return snip(cloned, this.schema, 'constant', /* possibleSideEffects */ false);
     } finally {
       ctx.popMode('normal');
     }

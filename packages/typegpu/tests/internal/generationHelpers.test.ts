@@ -27,27 +27,33 @@ describe('generationHelpers', () => {
 
   describe('numericLiteralToSnippet', () => {
     it('should convert numeric literals to correct snippets', () => {
-      expect(numericLiteralToSnippet(1)).toEqual(snip(1, abstractInt, /* origin */ 'constant'));
+      expect(numericLiteralToSnippet(1)).toEqual(
+        snip(1, abstractInt, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
 
       expect(numericLiteralToSnippet(1.1)).toEqual(
-        snip(1.1, abstractFloat, /* origin */ 'constant'),
+        snip(1.1, abstractFloat, /* origin */ 'constant', /* possibleSideEffects */ false),
       );
 
       expect(numericLiteralToSnippet(1e10)).toEqual(
-        snip(1e10, abstractInt, /* origin */ 'constant'),
+        snip(1e10, abstractInt, /* origin */ 'constant', /* possibleSideEffects */ false),
       );
 
       expect(numericLiteralToSnippet(0.5)).toEqual(
-        snip(0.5, abstractFloat, /* origin */ 'constant'),
+        snip(0.5, abstractFloat, /* origin */ 'constant', /* possibleSideEffects */ false),
       );
 
-      expect(numericLiteralToSnippet(-45)).toEqual(snip(-45, abstractInt, /* origin */ 'constant'));
+      expect(numericLiteralToSnippet(-45)).toEqual(
+        snip(-45, abstractInt, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
 
       expect(numericLiteralToSnippet(0x1a)).toEqual(
-        snip(0x1a, abstractInt, /* origin */ 'constant'),
+        snip(0x1a, abstractInt, /* origin */ 'constant', /* possibleSideEffects */ false),
       );
 
-      expect(numericLiteralToSnippet(0b101)).toEqual(snip(5, abstractInt, /* origin */ 'constant'));
+      expect(numericLiteralToSnippet(0b101)).toEqual(
+        snip(5, abstractInt, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
     });
   });
 
@@ -127,21 +133,39 @@ describe('generationHelpers', () => {
     const arr = arrayOf(f32, 2);
 
     it('coerces JS numbers', () => {
-      expect(coerceToSnippet(1)).toEqual(snip(1, abstractInt, /* origin */ 'constant'));
-      expect(coerceToSnippet(2.5)).toEqual(snip(2.5, abstractFloat, /* origin */ 'constant'));
-      expect(coerceToSnippet(-10)).toEqual(snip(-10, abstractInt, /* origin */ 'constant'));
-      expect(coerceToSnippet(0.0)).toEqual(snip(0, abstractInt, /* origin */ 'constant'));
+      expect(coerceToSnippet(1)).toEqual(
+        snip(1, abstractInt, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
+      expect(coerceToSnippet(2.5)).toEqual(
+        snip(2.5, abstractFloat, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
+      expect(coerceToSnippet(-10)).toEqual(
+        snip(-10, abstractInt, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
+      expect(coerceToSnippet(0.0)).toEqual(
+        snip(0, abstractInt, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
     });
 
     it('coerces JS booleans', () => {
-      expect(coerceToSnippet(true)).toEqual(snip(true, bool, /* origin */ 'constant'));
-      expect(coerceToSnippet(false)).toEqual(snip(false, bool, /* origin */ 'constant'));
+      expect(coerceToSnippet(true)).toEqual(
+        snip(true, bool, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
+      expect(coerceToSnippet(false)).toEqual(
+        snip(false, bool, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
     });
 
     it(`coerces schemas to UnknownData (as they're not instance types)`, () => {
-      expect(coerceToSnippet(f32)).toEqual(snip(f32, UnknownData, /* origin */ 'constant'));
-      expect(coerceToSnippet(vec3i)).toEqual(snip(vec3i, UnknownData, /* origin */ 'constant'));
-      expect(coerceToSnippet(arr)).toEqual(snip(arr, UnknownData, /* origin */ 'constant'));
+      expect(coerceToSnippet(f32)).toEqual(
+        snip(f32, UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
+      expect(coerceToSnippet(vec3i)).toEqual(
+        snip(vec3i, UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
+      expect(coerceToSnippet(arr)).toEqual(
+        snip(arr, UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
     });
 
     it('coerces arrays to unknown', () => {
@@ -165,14 +189,22 @@ describe('generationHelpers', () => {
     });
 
     it('returns UnknownData for other types', () => {
-      expect(coerceToSnippet('foo')).toEqual(snip('foo', UnknownData, /* origin */ 'constant'));
-      expect(coerceToSnippet({})).toEqual(snip({}, UnknownData, /* origin */ 'constant'));
-      expect(coerceToSnippet(null)).toEqual(snip(null, UnknownData, /* origin */ 'constant'));
+      expect(coerceToSnippet('foo')).toEqual(
+        snip('foo', UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
+      expect(coerceToSnippet({})).toEqual(
+        snip({}, UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
+      expect(coerceToSnippet(null)).toEqual(
+        snip(null, UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
       expect(coerceToSnippet(undefined)).toEqual(
-        snip(undefined, UnknownData, /* origin */ 'constant'),
+        snip(undefined, UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false),
       );
       const fn = () => {};
-      expect(coerceToSnippet(fn)).toEqual(snip(fn, UnknownData, /* origin */ 'constant'));
+      expect(coerceToSnippet(fn)).toEqual(
+        snip(fn, UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false),
+      );
     });
   });
 });

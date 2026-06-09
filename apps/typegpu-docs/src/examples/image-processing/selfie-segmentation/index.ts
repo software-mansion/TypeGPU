@@ -70,7 +70,8 @@ export const compositeFragment = tgpu.fragmentFn({
   'use gpu';
   const cropUv = d.vec2f(1 - uv.x, uv.y);
   const sourcePixel = compositeUniform.$.cropOrigin + cropUv * compositeUniform.$.cropSize;
-  const cameraUv = sourcePixel / d.vec2f(compositeUniform.$.sourceSize);
+  const sourceUv = sourcePixel / d.vec2f(compositeUniform.$.sourceSize);
+  const cameraUv = compositeUniform.$.uvTransform * (sourceUv - 0.5) + 0.5;
   const cameraColor = std.textureSampleBaseClampToEdge(
     compositeFrameLayout.$.frame,
     sampler.$,
@@ -108,13 +109,33 @@ video.srcObject = await navigator.mediaDevices.getUserMedia({
 
 let videoFrameCallbackId = 0;
 let postProcessProfile: MaskPostProcessProfile = 'balanced';
+let uvTransform = d.mat2x2f.identity();
+
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+function setUVTransformForIOS() {
+  const angle = screen.orientation.type;
+
+  uvTransform = d.mat2x2f.identity();
+  if (angle === 'portrait-primary') {
+    uvTransform = d.mat2x2f(0, -1, 1, 0);
+  } else if (angle === 'portrait-secondary') {
+    uvTransform = d.mat2x2f(0, 1, -1, 0);
+  } else if (angle === 'landscape-primary') {
+    uvTransform = d.mat2x2f(-1, 0, 0, -1);
+  }
+}
+
+if (isIOS) {
+  setUVTransformForIOS();
+  window.addEventListener('orientationchange', setUVTransformForIOS);
+}
 
 function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   if (video.readyState < 2) {
     videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
     return;
   }
-  const crop = squareCrop(metadata.width, metadata.height);
+  const crop = squareCrop(metadata.width, metadata.height, uvTransform);
   const externalTexture = root.device.importExternalTexture({ source: video });
   const encoder = root.device.createCommandEncoder();
   const pass = encoder.beginComputePass();
@@ -175,6 +196,9 @@ export const controls = defineControls({
 
 export function onCleanup() {
   video.cancelVideoFrameCallback(videoFrameCallbackId);
+  if (isIOS) {
+    window.removeEventListener('orientationchange', setUVTransformForIOS);
+  }
   if (video.srcObject) {
     for (const track of (video.srcObject as MediaStream).getTracks()) {
       track.stop();

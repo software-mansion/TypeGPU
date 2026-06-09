@@ -109,12 +109,12 @@ class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType>,
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.makeUniqueIdentifier(getName(this), 'global');
-    const resolvedDataType = ctx.resolve(this.dataType).value;
-    const resolvedValue = ctx.resolve(this.#value, this.dataType).value;
 
-    ctx.addDeclaration(`const ${id}: ${resolvedDataType} = ${resolvedValue};`);
-
-    return snip(id, this.dataType, 'constant-immutable-def');
+    return ctx.gen.declareGlobalConst({
+      id,
+      dataType: this.dataType,
+      init: snip(this.#value, this.dataType, 'constant'),
+    });
   }
 
   toString() {

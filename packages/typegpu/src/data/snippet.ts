@@ -92,6 +92,7 @@ export interface Snippet {
    */
   readonly dataType: BaseData | UnknownData;
   readonly origin: Origin;
+  readonly possibleSideEffects: boolean;
 }
 
 export interface ResolvedSnippet extends Snippet {
@@ -105,11 +106,18 @@ class SnippetImpl implements Snippet {
   readonly value: unknown;
   readonly dataType: BaseData | UnknownData;
   readonly origin: Origin;
+  readonly possibleSideEffects: boolean;
 
-  constructor(value: unknown, dataType: BaseData | UnknownData, origin: Origin) {
+  constructor(
+    value: unknown,
+    dataType: BaseData | UnknownData,
+    origin: Origin,
+    possibleSideEffects: boolean,
+  ) {
     this.value = value;
     this.dataType = dataType;
     this.origin = origin;
+    this.possibleSideEffects = possibleSideEffects;
   }
 }
 
@@ -121,12 +129,23 @@ export function isSnippetNumeric(snippet: Snippet) {
   return isNumericSchema(snippet.dataType);
 }
 
-export function snip(value: string, dataType: BaseData, origin: Origin): ResolvedSnippet;
-export function snip(value: unknown, dataType: BaseData | UnknownData, origin: Origin): Snippet;
+export function snip(
+  value: string,
+  dataType: BaseData,
+  origin: Origin,
+  possibleSideEffects?: boolean,
+): ResolvedSnippet;
 export function snip(
   value: unknown,
   dataType: BaseData | UnknownData,
   origin: Origin,
+  possibleSideEffects?: boolean,
+): Snippet;
+export function snip(
+  value: unknown,
+  dataType: BaseData | UnknownData,
+  origin: Origin,
+  possibleSideEffects: boolean = true,
 ): Snippet | ResolvedSnippet {
   if (DEV && isSnippet(value)) {
     // An early error, but not worth checking every time in production
@@ -138,5 +157,30 @@ export function snip(
     // We don't care about attributes in snippet land, so we discard that information.
     undecorate(dataType as BaseData),
     origin,
+    possibleSideEffects,
   );
+}
+
+export function withDataType(
+  dataType: BaseData | UnknownData,
+  snippet: ResolvedSnippet,
+): ResolvedSnippet;
+export function withDataType(dataType: BaseData | UnknownData, snippet: Snippet): Snippet;
+export function withDataType(dataType: BaseData | UnknownData, snippet: Snippet): Snippet {
+  return new SnippetImpl(snippet.value, dataType, snippet.origin, snippet.possibleSideEffects);
+}
+
+export function withSideEffects(
+  possibleSideEffects: boolean,
+  snippet: ResolvedSnippet,
+): ResolvedSnippet;
+export function withSideEffects(possibleSideEffects: boolean, snippet: Snippet): Snippet;
+export function withSideEffects(possibleSideEffects: boolean, snippet: Snippet): Snippet {
+  return new SnippetImpl(snippet.value, snippet.dataType, snippet.origin, possibleSideEffects);
+}
+
+export function noSideEffects(snippet: ResolvedSnippet): ResolvedSnippet;
+export function noSideEffects(snippet: Snippet): Snippet;
+export function noSideEffects(snippet: Snippet): Snippet {
+  return withSideEffects(/* possibleSideEffects */ false, snippet);
 }

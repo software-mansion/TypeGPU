@@ -1,37 +1,13 @@
-import * as tinyest from 'tinyest';
-import { beforeEach, describe, expect, vi } from 'vitest';
-import { namespace } from '../../src/core/resolve/namespace.ts';
-import * as d from '../../src/data/index.ts';
-import { abstractFloat, abstractInt } from '../../src/data/numeric.ts';
-import { type WgslArray } from '../../src/data/wgslTypes.ts';
-import { provideCtx } from '../../src/execMode.ts';
-import tgpu from '../../src/index.js';
-import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
-import { getFunctionMetadata } from '../../src/shared/meta.ts';
-import * as std from '../../src/std/index.ts';
-import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
-import { CodegenState } from '../../src/types.ts';
+import { beforeEach, describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import { ArrayExpression } from '../../src/tgsl/generationHelpers.ts';
 import { expectDataTypeOf, extractSnippetFromFn } from '../utils/parseResolved.ts';
-
-const { NodeTypeCatalog: NODE } = tinyest;
+import tgpu, { d, std } from '../../src/index.js';
 
 const numberSlot = tgpu.slot(44);
 const lazyV4u = tgpu.lazy(() => d.vec4u(1, 2, 3, 4).mul(numberSlot.$));
 const lazyV2f = tgpu.lazy(() => d.vec2f(1, 2).mul(numberSlot.$));
 
 describe('wgslGenerator', () => {
-  let ctx: ResolutionCtxImpl;
-  beforeEach(() => {
-    ctx = new ResolutionCtxImpl({
-      namespace: namespace({ names: 'strict' }),
-      shaderGenerator: wgslGenerator,
-    });
-    ctx.pushMode(new CodegenState());
-    wgslGenerator.initGenerator(ctx);
-  });
-
   it('creates a simple return statement', () => {
     const main = () => {
       'use gpu';
@@ -63,48 +39,33 @@ describe('wgslGenerator', () => {
   });
 
   it('creates correct resources for numeric literals', () => {
-    const literals = {
-      intLiteral: { value: '12', wgsl: '12', dataType: abstractInt },
-      floatLiteral: { value: '12.5', wgsl: '12.5', dataType: abstractFloat },
-      scientificLiteral: {
-        value: '120000000000',
-        dataType: abstractInt,
-      },
-      scientificNegativeExponentLiteral: {
-        value: '0.0012',
-        dataType: abstractFloat,
-      },
-    } as const;
+    expect(
+      extractSnippetFromFn(() => {
+        'use gpu';
+        return 12;
+      }).dataType.toString(),
+    ).toBe('abstractInt');
 
-    const main = () => {
-      'use gpu';
-      const intLiteral = 12;
-      const floatLiteral = 12.5;
-      const scientificLiteral = 12e10;
-      const scientificNegativeExponentLiteral = 1.2e-3;
-    };
+    expect(
+      extractSnippetFromFn(() => {
+        'use gpu';
+        return 12.5;
+      }).dataType.toString(),
+    ).toBe('abstractFloat');
 
-    const parsedBody = getFunctionMetadata(main)?.ast.body as tinyest.Block;
+    expect(
+      extractSnippetFromFn(() => {
+        'use gpu';
+        return 12e10;
+      }).dataType.toString(),
+    ).toBe('abstractInt');
 
-    expect(parsedBody).toStrictEqual([
-      NODE.block,
-      Object.entries(literals).map(([key, { value }]) => [
-        NODE.const,
-        key,
-        [NODE.numericLiteral, value],
-      ]),
-    ]);
-
-    provideCtx(ctx, () => {
-      for (const stmt of parsedBody[1]) {
-        const letStatement = stmt as tinyest.Let;
-        const [_, name, numLiteral] = letStatement;
-        const generatedExpr = wgslGenerator._expression(numLiteral as tinyest.Num);
-        const expected = literals[name as keyof typeof literals];
-
-        expect(generatedExpr.dataType).toStrictEqual(expected.dataType);
-      }
-    });
+    expect(
+      extractSnippetFromFn(() => {
+        'use gpu';
+        return 1.2e-3;
+      }).dataType.toString(),
+    ).toBe('abstractFloat');
   });
 
   it('generates correct resources for member access expressions', ({ root }) => {
@@ -208,15 +169,24 @@ describe('wgslGenerator', () => {
       }
     };
 
-    const parsed1 = getFunctionMetadata(main1)?.ast.body;
-    expect(JSON.stringify(parsed1)).toMatchInlineSnapshot(
-      `"[0,[[13,"arr",[100,[[5,"1"],[5,"2"],[5,"3"]]]],[18,[13,"foo"],"arr",[0,[[16]]]]]]"`,
-    );
+    expect(tgpu.resolve([main1])).toMatchInlineSnapshot(`
+      "fn main1() {
+        var arr = array<i32, 3>(1, 2, 3);
+        for (var i = 0u; i < 3u; i += 1u) {
+          let foo = arr[i];
+          {
+            continue;
+          }
+        }
+      }"
+    `);
 
-    const parsed2 = getFunctionMetadata(main2)?.ast.body;
-    expect(JSON.stringify(parsed2)).toMatchInlineSnapshot(
-      `"[0,[[13,"arr",[100,[[5,"1"],[5,"2"],[5,"3"]]]],[18,[12,"foo"],"arr",[0,[[16]]]]]]"`,
-    );
+    expect(() => tgpu.resolve([main2])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main2
+      - fn*:main2(): Only \`for (const ... of ... )\` loops are supported]
+    `);
   });
 
   it('creates correct code for "for ... of ..." statement using array of primitives', () => {
@@ -816,19 +786,6 @@ describe('wgslGenerator', () => {
     }).toStrictEqual(d.f32);
   });
 
-  it('creates intermediate representation for array expression', () => {
-    const testFn = () => {
-      'use gpu';
-      return [d.u32(1), 8, 8, 2];
-    };
-
-    const snippet = extractSnippetFromFn(testFn);
-
-    expect(snippet.value instanceof ArrayExpression).toBe(true);
-    expect((snippet.value as ArrayExpression).type.elementType.type).toStrictEqual('u32');
-    expect((snippet.value as ArrayExpression).type.elementCount).toStrictEqual(4);
-  });
-
   it('generates correct code for array expressions', () => {
     const testFn = tgpu.fn(
       [],
@@ -922,8 +879,8 @@ describe('wgslGenerator', () => {
     });
 
     expect(d.isWgslArray(arraySnippet.dataType)).toBe(true);
-    expect((arraySnippet.dataType as unknown as WgslArray).elementCount).toBe(2);
-    expect((arraySnippet.dataType as unknown as WgslArray).elementType).toBe(TestStruct);
+    expect((arraySnippet.dataType as unknown as d.WgslArray).elementCount).toBe(2);
+    expect((arraySnippet.dataType as unknown as d.WgslArray).elementType).toBe(TestStruct);
   });
 
   it('generates correct code for array expressions with lazy elements', () => {
