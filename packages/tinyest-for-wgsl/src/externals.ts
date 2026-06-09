@@ -32,36 +32,6 @@ function extractPropAccessChain(ancestorChain: JsNode[]): string[] {
 }
 
 /**
- * Traverses externals through the chain, and updates the last value with given string.
- * NOTE: to achieve better complexity, chain is expected to be passed in reversed (e.g. ['mul', 'prop', 'ext']), and it will be mutated.
- */
-function addExternalValue(externals: Externals, chain: string[], value: string) {
-  const elem = chain.pop();
-  if (elem === undefined) {
-    throw new Error('Internal error, expected element to be defined.');
-  }
-
-  if (chain.length === 0) {
-    externals[elem] = value;
-    return;
-  }
-
-  const nextExternals = externals[elem];
-  if (nextExternals) {
-    if (typeof nextExternals !== 'string') {
-      addExternalValue(nextExternals, chain, value);
-    } else {
-      // we already need this in externals, so we break
-      return;
-    }
-  } else {
-    const newExternals = Object.create(null);
-    externals[elem] = newExternals;
-    return addExternalValue(newExternals, chain, value);
-  }
-}
-
-/**
  * Traverses ancestor chain and updates externals accordingly.
  * @example
  * addExternal({}, chainFrom`this.color.add`); // { this: { color: { add: 'this.color.add' } } }
@@ -71,5 +41,5 @@ function addExternalValue(externals: Externals, chain: string[], value: string) 
  */
 export function addExternal(externals: Externals, ancestorChain: JsNode[]) {
   const chain = extractPropAccessChain(ancestorChain);
-  addExternalValue(externals, chain.toReversed(), chain.join('.'));
+  externals.push(chain.join('.'));
 }

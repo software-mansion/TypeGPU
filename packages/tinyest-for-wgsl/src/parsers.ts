@@ -403,7 +403,7 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
   const { params, body } = extractFunctionParts(rootNode);
 
   const ctx: Context = {
-    externalNames: Object.create(null),
+    externalNames: [],
     ignoreExternalDepth: 0,
     stack: [
       {
@@ -436,7 +436,7 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
 
 export function transpileNode(node: JsNode): tinyest.AnyNode {
   const ctx: Context = {
-    externalNames: Object.create(null),
+    externalNames: [],
     ignoreExternalDepth: 0,
     stack: [
       {

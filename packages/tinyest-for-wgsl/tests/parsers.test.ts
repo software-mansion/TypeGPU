@@ -239,22 +239,18 @@ describe('transpileFn', () => {
       );
 
       expect(externalNames).toMatchInlineSnapshot(`
-        {
-          "ext": {
-            "p": "ext.p",
-            "q": {
-              "a": "ext.q.a",
-              "b": "ext.q.b",
-            },
-            "r": "ext.r",
-            "s": "ext.s",
-            "t": {
-              "comp": "ext.t.comp",
-              "fn": "ext.t.fn",
-            },
-            "u": "ext.u",
-          },
-        }
+        [
+          "ext.p",
+          "ext.q.a",
+          "ext.q.b",
+          "ext.r.a",
+          "ext.r",
+          "ext.s",
+          "ext.s.a",
+          "ext.t.fn",
+          "ext.t.comp",
+          "ext.u",
+        ]
       `);
     }),
   );
