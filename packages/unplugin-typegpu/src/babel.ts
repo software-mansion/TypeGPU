@@ -17,6 +17,7 @@ function i(identifier: string): t.Identifier {
   return t.identifier(identifier);
 }
 
+// TODO: simplify
 function externalsToNode(externals: Externals | string): t.Expression {
   if (typeof externals === 'string') {
     const chain = externals.split('.');
@@ -30,9 +31,7 @@ function externalsToNode(externals: Externals | string): t.Expression {
     return t.arrowFunctionExpression([], propAccess);
   }
   return t.objectExpression(
-    Object.entries(externals).map(([name, value]) =>
-      t.objectProperty(i(name), externalsToNode(value), false),
-    ),
+    externals.map((key) => t.objectProperty(t.stringLiteral(key), externalsToNode(key), false)),
   );
 }
 

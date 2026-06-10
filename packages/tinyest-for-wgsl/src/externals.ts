@@ -1,45 +1,22 @@
-import type { Externals, JsNode } from './types.ts';
+import type { Context, JsNode } from './types.ts';
 
-/**
- * Returns an array of prop accesses.
- */
-function extractPropAccessChain(ancestorChain: JsNode[]): string[] {
-  const chain: string[] = [];
-  for (let i = ancestorChain.length - 1; i >= 0; i--) {
-    const current = ancestorChain[i];
-
-    if (!current) {
-      break;
-    }
-
-    if (current.type === 'Identifier') {
-      chain.push(current.name);
-    } else if (current.type === 'ThisExpression') {
-      chain.push('this');
-    } else if (current.type === 'MemberExpression' && !current.computed) {
-      if (current.computed) {
-        break;
-      } else if (current.property.type === 'Identifier') {
-        chain.push(current.property.name);
-      } else {
-        break;
-      }
-    } else {
-      break;
-    }
-  }
-  return chain;
+export function isDeclared(ctx: Context, name: string) {
+  return ctx.stack.some((scope) => scope.declaredNames.includes(name));
 }
 
-/**
- * Traverses ancestor chain and updates externals accordingly.
- * @example
- * addExternal({}, chainFrom`this.color.add`); // { this: { color: { add: 'this.color.add' } } }
- * addExternal({ this: { count: 'this.count' } }, chainFrom`this.color`); // { this: { count: 'this.count', color: 'this.color' } }
- * addExternal({ ext: { count: 'ext.count' } }, chainFrom`ext`); // { ext: 'ext' }
- * addExternal({ ext: 'ext' }, chainFrom`ext.count`); // { ext: 'ext' }
- */
-export function addExternal(externals: Externals, ancestorChain: JsNode[]) {
-  const chain = extractPropAccessChain(ancestorChain);
-  externals.push(chain.join('.'));
+// TODO: docs
+// TODO: optimize with a map of failed lookups
+export function tryFindExternalChain(ctx: Context, node: JsNode): string | undefined {
+  if (node.type === 'Identifier' && !isDeclared(ctx, node.name)) {
+    return node.name;
+  }
+  if (node.type === 'ThisExpression') {
+    return 'this';
+  }
+  if (node.type === 'MemberExpression' && !node.computed && node.property.type === 'Identifier') {
+    const lhs = tryFindExternalChain(ctx, node.object);
+    if (lhs) {
+      return `${lhs}.${node.property.name}`;
+    }
+  }
 }

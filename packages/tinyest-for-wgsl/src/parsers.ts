@@ -3,13 +3,9 @@ import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import { FuncParameterType } from 'tinyest';
 import type { Context, JsNode, TranspilationResult } from './types';
-import { addExternal } from './externals.ts';
+import { tryFindExternalChain } from './externals.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
-
-function isDeclared(ctx: Context, name: string) {
-  return ctx.stack.some((scope) => scope.declaredNames.includes(name));
-}
 
 const tsFallthrough = (ctx: Context, node: { expression: babel.Expression }): tinyest.AnyNode => {
   return transpile(ctx, node.expression);
@@ -56,14 +52,10 @@ const Transpilers: Partial<{
       : [NODE.return],
 
   Identifier(ctx, node) {
-    if (ctx.ignoreExternalDepth === 0 && !isDeclared(ctx, node.name)) {
-      addExternal(ctx.externalNames, ctx.ancestorChain);
-    }
     return node.name;
   },
 
-  ThisExpression(ctx) {
-    addExternal(ctx.externalNames, ctx.ancestorChain);
+  ThisExpression() {
     return 'this';
   },
 
@@ -292,6 +284,17 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
 
   if (!transpiler) {
     throw new Error(`Unsupported JS functionality: ${node.type}`);
+  }
+
+  // TODO: document
+  if (ctx.ignoreExternalDepth === 0) {
+    const externalChain = tryFindExternalChain(ctx, node);
+    if (externalChain) {
+      if (!ctx.externalNames.includes(externalChain)) {
+        ctx.externalNames.push(externalChain);
+      }
+      return externalChain;
+    }
   }
 
   ctx.ancestorChain.push(node);

@@ -433,7 +433,7 @@ export function makeAstBackwardsCompatible(ast: ReturnType<typeof transpileFn>) 
   return {
     params: ast.params,
     body: ast.body,
-    externalNames: Object.keys(ast.externalNames),
+    externalNames: [...new Set(ast.externalNames.map((name) => name.split('.').at(0)))],
   };
 }
 

@@ -33,13 +33,12 @@ function embedJSON(jsValue: unknown) {
     .replace(/\u2029/g, '\\u2029');
 }
 
+// TODO: simplify
 function externalsToString(externals: Externals | string): string {
   if (typeof externals === 'string') {
     return `() => ${externals}`;
   }
-  const entries = Object.entries(externals).map(
-    ([key, value]) => `${key}: ${externalsToString(value)}`,
-  );
+  const entries = externals.map((key) => `"${key}": () => ${key}`);
   return `{ ${entries.join(', ')} }`;
 }
 
