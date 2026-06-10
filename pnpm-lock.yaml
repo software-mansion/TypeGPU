@@ -147,7 +147,7 @@ importers:
         specifier: ^3.1.0
         version: 3.1.1
 
-  apps/react-rendering-test:
+  apps/react-prerendering-test:
     dependencies:
       '@typegpu/noise':
         specifier: workspace:*
