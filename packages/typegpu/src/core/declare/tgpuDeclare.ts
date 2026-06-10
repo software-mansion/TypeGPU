@@ -2,7 +2,11 @@ import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { mergeExternals, type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
+import {
+  renameAndMergeExternals,
+  type ExternalMap,
+  replaceExternalsInWgsl,
+} from '../resolve/externals.ts';
 
 // ----------
 // Public API
@@ -49,7 +53,7 @@ class TgpuDeclareImpl implements TgpuDeclare, SelfResolvable {
     const externalMap: ExternalMap = {};
 
     for (const externals of this.#externalsToApply) {
-      mergeExternals(externalMap, externals);
+      renameAndMergeExternals(externalMap, externals);
     }
 
     const replacedDeclaration = replaceExternalsInWgsl(ctx, externalMap, this.#declaration);

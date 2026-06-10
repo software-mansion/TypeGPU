@@ -1,10 +1,11 @@
 import { attest } from '@ark/attest';
-import { describe, expect, expectTypeOf, it } from 'vitest';
+import { describe, expect, expectTypeOf } from 'vitest';
 import type { InferIO, InheritArgNames, IOLayout } from '../src/core/function/fnTypes.ts';
 import * as d from '../src/data/index.ts';
 import { Void } from '../src/data/wgslTypes.ts';
-import tgpu, { type TgpuFn, type TgpuFnShell } from '../src/index.js';
+import tgpu, { type TgpuFn, type TgpuFnShell, type TgpuUniform } from '../src/index.js';
 import type { Prettify } from '../src/shared/utilityTypes.ts';
+import { it } from 'typegpu-testing-utility';
 
 const empty = tgpu.fn([])`() {
   // do nothing
@@ -187,6 +188,44 @@ describe('tgpu.fn', () => {
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "fn fn_1() {
         let a = 1;
+      }"
+    `);
+  });
+
+  it('renames nested externals', ({ root }) => {
+    const uniform = (() => root.createUniform(d.u32))();
+    const fn = tgpu.fn([])`() {
+  let a = ext.prop;
+}`.$uses({ ext: { prop: uniform } });
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> prop: u32;
+
+      fn fn_1() {
+        let a = prop;
+      }"
+    `);
+  });
+
+  it('does not rename arrays', ({ root }) => {
+    const uniforms = [0, 1].map(() => root.createUniform(d.u32)) as [
+      TgpuUniform<d.U32>,
+      TgpuUniform<d.U32>,
+    ];
+    const fn = () => {
+      'use gpu';
+      const a = uniforms[0].$;
+      const b = uniforms[1].$;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> item: u32;
+
+      @group(0) @binding(1) var<uniform> item_1: u32;
+
+      fn fn_1() {
+        let a = item;
+        let b = item_1;
       }"
     `);
   });
