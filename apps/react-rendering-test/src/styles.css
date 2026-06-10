@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+
+@layer base {
+  html, body {
+    @apply m-0 bg-black;
+  }
+}
