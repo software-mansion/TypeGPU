@@ -3,7 +3,7 @@ import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import type { UnpluginBuildContext, UnpluginContext, UnpluginFactory } from 'unplugin';
 import _traverse, { type NodePath } from '@babel/traverse';
-import { transpileFn } from 'tinyest-for-wgsl';
+import { transpileFn, type Externals } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
 import {
@@ -13,6 +13,7 @@ import {
   functionVisitor,
   getBlockScope,
   METADATA_FORMAT_VERSION,
+  makeAstBackwardsCompatible,
 } from './common.ts';
 
 import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
@@ -32,6 +33,16 @@ function embedJSON(jsValue: unknown) {
     .replace(/\u2029/g, '\\u2029');
 }
 
+function externalsToString(externals: Externals | string): string {
+  if (typeof externals === 'string') {
+    return `() => ${externals}`;
+  }
+  const entries = Object.entries(externals).map(
+    ([key, value]) => `${key}: ${externalsToString(value)}`,
+  );
+  return `{ ${entries.join(', ')} }`;
+}
+
 function assignMetadata(
   this: UnpluginPluginState,
   path: NodePath<MetadatableFunction>,
@@ -42,10 +53,8 @@ function assignMetadata(
   const metadata = `{
     v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
-    ast: ${embedJSON(ast)},
-    externals: () => ({${ast.externalNames
-      .map((e) => (e === 'this' ? '"this": this' : e))
-      .join(', ')}}),
+    ast: ${embedJSON(makeAstBackwardsCompatible(ast))},
+    externals: ${externalsToString(ast.externalNames)}
   }`;
 
   const visibility = t.isFunctionDeclaration(path.node)

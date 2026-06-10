@@ -34,7 +34,7 @@ describe('react/shifting-gradient example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      @group(0) @binding(0) var<uniform> time: f32;
+      @group(0) @binding(0) var<uniform> item: f32;
 
       fn computeMaxSaturation(a: f32, b: f32) -> f32 {
         var k0 = 0f;
@@ -218,11 +218,11 @@ describe('react/shifting-gradient example', () => {
       @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
         let fromStart = vec3f(0.6279553771018982, 0.22486300766468048, 0.1258462816476822);
         let fromEnd = vec3f(0.45201370120048523, -0.03245693817734718, -0.31152817606925964);
-        let from_1 = mix(fromStart, fromEnd, ((sin(time) * 0.5f) + 0.5f));
+        let from_1 = mix(fromStart, fromEnd, ((sin(item) * 0.5f) + 0.5f));
         let toStart = vec3f(0.8664395809173584, -0.2338874489068985, 0.17949843406677246);
         let toEnd = vec3f(0.7016738653182983, 0.27456632256507874, -0.16915608942508698);
-        let to = mix(toStart, toEnd, ((cos((time * 1.5f)) * 0.5f) + 0.5f));
-        let mixed = mix(from_1, to, ((((_arg_0.uv.x * 2f) - 1f) * 0.5f) + (sin((time + (_arg_0.uv.y * 3f))) * 0.5f)));
+        let to = mix(toStart, toEnd, ((cos((item * 1.5f)) * 0.5f) + 0.5f));
+        let mixed = mix(from_1, to, ((((_arg_0.uv.x * 2f) - 1f) * 0.5f) + (sin((item + (_arg_0.uv.y * 3f))) * 0.5f)));
         return vec4f(oklabToRgb(mixed), 1f);
       }"
     `);

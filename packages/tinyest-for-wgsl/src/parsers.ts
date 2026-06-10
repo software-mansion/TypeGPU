@@ -2,23 +2,10 @@ import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import { FuncParameterType } from 'tinyest';
+import type { Context, JsNode, TranspilationResult } from './types';
+import { addExternal } from './externals.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
-
-type Scope = {
-  /** identifiers declared in this scope */
-  declaredNames: string[];
-};
-
-type Context = {
-  /** Holds a set of all identifiers that were used in code, but were not declared in code. */
-  externalNames: Set<string>;
-  /** Used to signal to identifiers that they should not treat their resolution as possible external uses. */
-  ignoreExternalDepth: number;
-  stack: Scope[];
-};
-
-type JsNode = babel.Node | acorn.AnyNode;
 
 function isDeclared(ctx: Context, name: string) {
   return ctx.stack.some((scope) => scope.declaredNames.includes(name));
@@ -70,14 +57,13 @@ const Transpilers: Partial<{
 
   Identifier(ctx, node) {
     if (ctx.ignoreExternalDepth === 0 && !isDeclared(ctx, node.name)) {
-      ctx.externalNames.add(node.name);
+      addExternal(ctx.externalNames, ctx.ancestorChain);
     }
-
     return node.name;
   },
 
   ThisExpression(ctx) {
-    ctx.externalNames.add('this');
+    addExternal(ctx.externalNames, ctx.ancestorChain);
     return 'this';
   },
 
@@ -308,19 +294,12 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
     throw new Error(`Unsupported JS functionality: ${node.type}`);
   }
 
+  ctx.ancestorChain.push(node);
   // @ts-expect-error <too much for typescript, it seems :/ >
-  return transpiler(ctx, node);
+  const result = transpiler(ctx, node);
+  ctx.ancestorChain.pop();
+  return result;
 }
-
-export type TranspilationResult = {
-  params: tinyest.FuncParameter[];
-  body: tinyest.Block;
-  /**
-   * All identifiers found in the function code that are not declared in the
-   * function itself, or in the block that is accessing that identifier.
-   */
-  externalNames: string[];
-};
 
 export function extractFunctionParts(rootNode: JsNode): {
   params: tinyest.FuncParameter[];
@@ -424,7 +403,7 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
   const { params, body } = extractFunctionParts(rootNode);
 
   const ctx: Context = {
-    externalNames: new Set(),
+    externalNames: Object.create(null),
     ignoreExternalDepth: 0,
     stack: [
       {
@@ -435,35 +414,36 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
         ),
       },
     ],
+    ancestorChain: [],
   };
 
   const tinyestBody = transpile(ctx, body);
-  const externalNames = [...ctx.externalNames];
 
   if (body.type === 'BlockStatement') {
     return {
       params,
       body: tinyestBody as tinyest.Block,
-      externalNames,
+      externalNames: ctx.externalNames,
     };
   }
 
   return {
     params,
     body: [NODE.block, [[NODE.return, tinyestBody as tinyest.Expression]]],
-    externalNames,
+    externalNames: ctx.externalNames,
   };
 }
 
 export function transpileNode(node: JsNode): tinyest.AnyNode {
   const ctx: Context = {
-    externalNames: new Set(),
+    externalNames: Object.create(null),
     ignoreExternalDepth: 0,
     stack: [
       {
         declaredNames: [],
       },
     ],
+    ancestorChain: [],
   };
 
   return transpile(ctx, node);

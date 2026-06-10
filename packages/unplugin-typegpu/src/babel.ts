@@ -1,6 +1,6 @@
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import defu from 'defu';
-import { transpileFn } from 'tinyest-for-wgsl';
+import { transpileFn, type Externals } from 'tinyest-for-wgsl';
 import * as t from '@babel/types';
 import {
   METADATA_FORMAT_VERSION,
@@ -9,11 +9,31 @@ import {
   functionVisitor,
   getBlockScope,
   initPluginState,
+  makeAstBackwardsCompatible,
 } from './core/common.ts';
 import { createFilterForId } from './core/filter.ts';
 
 function i(identifier: string): t.Identifier {
   return t.identifier(identifier);
+}
+
+function externalsToNode(externals: Externals | string): t.Expression {
+  if (typeof externals === 'string') {
+    const chain = externals.split('.');
+    if (!chain[0]) {
+      throw new Error('Internal error, expected chain to not be empty');
+    }
+    const base = chain[0] === 'this' ? t.thisExpression() : i(chain[0]);
+    const propAccess = chain
+      .slice(1)
+      .reduce<t.Expression>((obj, prop) => t.memberExpression(obj, t.identifier(prop)), base);
+    return t.arrowFunctionExpression([], propAccess);
+  }
+  return t.objectExpression(
+    Object.entries(externals).map(([name, value]) =>
+      t.objectProperty(i(name), externalsToNode(value), false),
+    ),
+  );
 }
 
 function assignMetadata(
@@ -25,24 +45,8 @@ function assignMetadata(
   const metadata = t.objectExpression([
     t.objectProperty(i('v'), t.numericLiteral(METADATA_FORMAT_VERSION)),
     t.objectProperty(i('name'), t.valueToNode(name)),
-    t.objectProperty(i('ast'), t.valueToNode(ast)),
-    t.objectProperty(
-      i('externals'),
-      t.arrowFunctionExpression(
-        [],
-        t.blockStatement([
-          t.returnStatement(
-            t.objectExpression(
-              ast.externalNames.map((name) =>
-                name === 'this'
-                  ? t.objectProperty(i('this'), t.thisExpression())
-                  : t.objectProperty(i(name), i(name), false, /* shorthand */ name !== 'this'),
-              ),
-            ),
-          ),
-        ]),
-      ),
-    ),
+    t.objectProperty(i('ast'), t.valueToNode(makeAstBackwardsCompatible(ast))),
+    t.objectProperty(i('externals'), externalsToNode(ast.externalNames)),
   ]);
 
   let expression: t.Expression;

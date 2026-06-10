@@ -16,16 +16,14 @@ describe('[BABEL] tgpu alias gathering', () => {
       const increment = hello.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const x = 2 + 2;
       }, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [],
           body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({}));"
     `);
   });
@@ -44,16 +42,14 @@ describe('[BABEL] tgpu alias gathering', () => {
       const increment = t.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const x = 2 + 2;
       }, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [],
           body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({}));"
     `);
   });
@@ -72,16 +68,14 @@ describe('[BABEL] tgpu alias gathering', () => {
       const increment = t.tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const x = 2 + 2;
       }, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [],
           body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({}));"
     `);
   });
@@ -101,10 +95,10 @@ describe('[ROLLUP] tgpu alias gathering', () => {
 
       hello.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({})));
       "
     `);
@@ -124,10 +118,10 @@ describe('[ROLLUP] tgpu alias gathering', () => {
 
       tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({})));
       "
     `);
@@ -147,10 +141,10 @@ describe('[ROLLUP] tgpu alias gathering', () => {
 
       t.tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({})));
       "
     `);

@@ -26,7 +26,7 @@ describe('"use gpu" marked arrow function, assigned to a const', () => {
 
         return __tsover_add(a, b);
       }, {
-        v: 1,
+        v: 2,
         name: "addGPU",
         ast: {
           params: [{
@@ -39,9 +39,7 @@ describe('"use gpu" marked arrow function, assigned to a const', () => {
           body: [0, [[10, [1, "a", "+", "b"]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({});
       const addCPU = (a, b) => {
         return a + b;
@@ -58,10 +56,10 @@ describe('"use gpu" marked arrow function, assigned to a const', () => {
             'use gpu';
             return __tsover_add(a, b);
           }), {
-          v: 1,
+          v: 2,
           name: "addGPU",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
 
           const addCPU = (a, b) => {
@@ -99,7 +97,7 @@ describe('marked arrow functions passed to shells', () => {
 
         return __tsover_add(a, b);
       }, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [{
@@ -112,9 +110,7 @@ describe('marked arrow functions passed to shells', () => {
           body: [0, [[10, [1, "a", "+", "b"]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({}));
       shell((a, b) => {
         return a + b;
@@ -132,10 +128,10 @@ describe('marked arrow functions passed to shells', () => {
             'use gpu';
             return __tsover_add(a, b);
           }), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({})));
 
           shell((a, b) => {
@@ -171,7 +167,7 @@ describe('marked anonymous function expressions passed to shells', () => {
 
         return __tsover_add(a, b);
       }, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [{
@@ -184,9 +180,7 @@ describe('marked anonymous function expressions passed to shells', () => {
           body: [0, [[10, [1, "a", "+", "b"]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({}));
       shell(function (a, b) {
         return a + b;
@@ -204,10 +198,10 @@ describe('marked anonymous function expressions passed to shells', () => {
             'use gpu';
             return __tsover_add(a, b);
           }), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({})));
 
           shell(function(a, b) {
@@ -243,7 +237,7 @@ describe('marked named function expressions passed to shells', () => {
 
         return __tsover_add(a, b);
       }, {
-        v: 1,
+        v: 2,
         name: "addGPU",
         ast: {
           params: [{
@@ -256,9 +250,7 @@ describe('marked named function expressions passed to shells', () => {
           body: [0, [[10, [1, "a", "+", "b"]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({}));
       shell(function addCPU(a, b) {
         return a + b;
@@ -276,10 +268,10 @@ describe('marked named function expressions passed to shells', () => {
             'use gpu';
             return __tsover_add(a, b);
           }), {
-          v: 1,
+          v: 2,
           name: "addGPU",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({})));
 
           shell(function addCPU(a, b) {
@@ -316,7 +308,7 @@ describe('marked function statements', () => {
         // hello there
         return __tsover_add(a, b);
       }, {
-        v: 1,
+        v: 2,
         name: "addGPU",
         ast: {
           params: [{
@@ -329,9 +321,7 @@ describe('marked function statements', () => {
           body: [0, [[10, [1, "a", "+", "b"]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({});
       function addCPU(a, b) {
         return a + b;
@@ -348,10 +338,10 @@ describe('marked function statements', () => {
             // hello there
             return __tsover_add(a, b);
           }), {
-          v: 1,
+          v: 2,
           name: "addGPU",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
 
 
@@ -404,7 +394,7 @@ describe('marked object methods', () => {
 
           return __tsover_mod(a, b);
         }, {
-          v: 1,
+          v: 2,
           name: "mod",
           ast: {
             params: [{
@@ -417,9 +407,7 @@ describe('marked object methods', () => {
             body: [0, [[10, [1, "a", "%", "b"]]]],
             externalNames: []
           },
-          externals: () => {
-            return {};
-          }
+          externals: {}
         }) && $.f)({})
       };
 
@@ -437,7 +425,7 @@ describe('marked object methods', () => {
         }
         return true;
       }, {
-        v: 1,
+        v: 2,
         name: "isPrime",
         ast: {
           params: [{
@@ -447,10 +435,10 @@ describe('marked object methods', () => {
           body: [0, [[11, [1, "n", "<=", [5, "1"]], [0, [[10, false]]]], [14, [12, "i", [5, "2"]], [1, "i", "<", "n"], [102, "++", "i"], [0, [[11, [1, [6, [7, "obj", "mod"], ["n", "i"]], "===", [5, "0"]], [0, [[10, false]]]]]]], [10, true]]],
           externalNames: ["obj"]
         },
-        externals: () => {
-          return {
-            obj
-          };
+        externals: {
+          obj: {
+            mod: () => obj.mod
+          }
         }
       }) && $.f)({});
       console.log(obj, isPrime);"
@@ -465,10 +453,10 @@ describe('marked object methods', () => {
               'use gpu';
               return __tsover_mod(a, b);
             }), {
-          v: 1,
+          v: 2,
           name: "mod",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","%","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}))
           };
 
@@ -486,10 +474,10 @@ describe('marked object methods', () => {
             }
             return true;
           }), {
-          v: 1,
+          v: 2,
           name: "isPrime",
           ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[11,[1,"n","<=",[5,"1"]],[0,[[10,false]]]],[14,[12,"i",[5,"2"]],[1,"i","<","n"],[102,"++","i"],[0,[[11,[1,[6,[7,"obj","mod"],["n","i"]],"===",[5,"0"]],[0,[[10,false]]]]]]],[10,true]]],"externalNames":["obj"]},
-          externals: () => ({obj}),
+          externals: { obj: { mod: () => obj.mod } }
         }) && $.f)({}));
 
           console.log(obj, isPrime);
@@ -532,7 +520,7 @@ describe('transforms numeric operations', () => {
         c = __tsover_add(c, __tsover_mul(2, b));
         countMutable.$ = __tsover_add(countMutable.$, 3);
       }, {
-        v: 1,
+        v: 2,
         name: "main",
         ast: {
           params: [{
@@ -545,10 +533,10 @@ describe('transforms numeric operations', () => {
           body: [0, [[12, "c", [1, [1, "a", "+", "b"], "+", [5, "2"]]], [2, "c", "+=", [1, [5, "2"], "*", "b"]], [2, [7, "countMutable", "$"], "+=", [5, "3"]]]],
           externalNames: ["countMutable"]
         },
-        externals: () => {
-          return {
-            countMutable
-          };
+        externals: {
+          countMutable: {
+            $: () => countMutable.$
+          }
         }
       }) && $.f)({});
       console.log(main);"
@@ -570,10 +558,10 @@ describe('transforms numeric operations', () => {
             c = __tsover_add(c, __tsover_mul(2, b));
             countMutable.$ = __tsover_add(countMutable.$, 3);
           }), {
-          v: 1,
+          v: 2,
           name: "main",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[12,"c",[1,[1,"a","+","b"],"+",[5,"2"]]],[2,"c","+=",[1,[5,"2"],"*","b"]],[2,[7,"countMutable","$"],"+=",[5,"3"]]]],"externalNames":["countMutable"]},
-          externals: () => ({countMutable}),
+          externals: { countMutable: { $: () => countMutable.$ } }
         }) && $.f)({}));
 
           console.log(main);
@@ -611,7 +599,7 @@ describe('hoists global function statements marked with "use gpu"', () => {
 
         return __tsover_mul(a, b);
       }, {
-        v: 1,
+        v: 2,
         name: "mul",
         ast: {
           params: [{
@@ -624,9 +612,7 @@ describe('hoists global function statements marked with "use gpu"', () => {
           body: [0, [[10, [1, "a", "*", "b"]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({});
       /** ADD */
       // another comment
@@ -635,7 +621,7 @@ describe('hoists global function statements marked with "use gpu"', () => {
 
         return __tsover_add(a, b);
       }, {
-        v: 1,
+        v: 2,
         name: "add",
         ast: {
           params: [{
@@ -648,9 +634,7 @@ describe('hoists global function statements marked with "use gpu"', () => {
           body: [0, [[10, [1, "a", "+", "b"]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({});
       console.log(add, mul);"
     `);
@@ -664,10 +648,10 @@ describe('hoists global function statements marked with "use gpu"', () => {
             'use gpu';
             return __tsover_mul(a, b);
           }), {
-          v: 1,
+          v: 2,
           name: "mul",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
 
       /** ADD */
@@ -676,10 +660,10 @@ describe('hoists global function statements marked with "use gpu"', () => {
             'use gpu';
             return __tsover_add(a, b);
           }), {
-          v: 1,
+          v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
 
       console.log(add, mul);
@@ -719,7 +703,7 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
 
           return __tsover_mul(a, b);
         }, {
-          v: 1,
+          v: 2,
           name: "mul",
           ast: {
             params: [{
@@ -732,9 +716,7 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
             body: [0, [[10, [1, "a", "*", "b"]]]],
             externalNames: []
           },
-          externals: () => {
-            return {};
-          }
+          externals: {}
         }) && $.f)({});
         /** ADD */
         // another comment
@@ -743,7 +725,7 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
 
           return __tsover_add(a, b);
         }, {
-          v: 1,
+          v: 2,
           name: "add",
           ast: {
             params: [{
@@ -756,9 +738,7 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
             body: [0, [[10, [1, "a", "+", "b"]]]],
             externalNames: []
           },
-          externals: () => {
-            return {};
-          }
+          externals: {}
         }) && $.f)({});
         console.log(add, mul);
       }"
@@ -774,10 +754,10 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
               'use gpu';
               return __tsover_mul(a, b);
             }), {
-          v: 1,
+          v: 2,
           name: "mul",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
 
       /** ADD */
@@ -786,10 +766,10 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
               'use gpu';
               return __tsover_add(a, b);
             }), {
-          v: 1,
+          v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
 
       console.log(add, mul);
@@ -840,7 +820,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
 
           return __tsover_mul(a, b);
         }, {
-          v: 1,
+          v: 2,
           name: "mul",
           ast: {
             params: [{
@@ -853,9 +833,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
             body: [0, [[10, [1, "a", "*", "b"]]]],
             externalNames: []
           },
-          externals: () => {
-            return {};
-          }
+          externals: {}
         }) && $.f)({});
         /** ADD */
         // another comment
@@ -864,7 +842,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
 
           return __tsover_add(a, b);
         }, {
-          v: 1,
+          v: 2,
           name: "add",
           ast: {
             params: [{
@@ -877,9 +855,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
             body: [0, [[10, [1, "a", "+", "b"]]]],
             externalNames: []
           },
-          externals: () => {
-            return {};
-          }
+          externals: {}
         }) && $.f)({});
         console.log(add, mul);
       };"
@@ -895,10 +871,10 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
               'use gpu';
               return __tsover_mul(a, b);
             }), {
-          v: 1,
+          v: 2,
           name: "mul",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
 
       /** ADD */
@@ -907,10 +883,10 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
               'use gpu';
               return __tsover_add(a, b);
             }), {
-          v: 1,
+          v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
 
       console.log(add, mul);
@@ -963,7 +939,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
 
           return __tsover_mul(__tsover_mul(a, b), c);
         }, {
-          v: 1,
+          v: 2,
           name: "mul",
           ast: {
             params: [{
@@ -976,10 +952,8 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
             body: [0, [[10, [1, [1, "a", "*", "b"], "*", "c"]]]],
             externalNames: ["c"]
           },
-          externals: () => {
-            return {
-              c
-            };
+          externals: {
+            c: () => c
           }
         }) && $.f)({});
         /** ADD */
@@ -989,7 +963,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
 
           return __tsover_add(__tsover_add(a, b), c);
         }, {
-          v: 1,
+          v: 2,
           name: "add",
           ast: {
             params: [{
@@ -1002,10 +976,8 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
             body: [0, [[10, [1, [1, "a", "+", "b"], "+", "c"]]]],
             externalNames: ["c"]
           },
-          externals: () => {
-            return {
-              c
-            };
+          externals: {
+            c: () => c
           }
         }) && $.f)({});
         console.log(add, mul);
@@ -1023,10 +995,10 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
               'use gpu';
               return __tsover_mul(__tsover_mul(a, b), c);
             }), {
-          v: 1,
+          v: 2,
           name: "mul",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","*","b"],"*","c"]]]],"externalNames":["c"]},
-          externals: () => ({c}),
+          externals: { c: () => c }
         }) && $.f)({}));
 
       /** ADD */
@@ -1035,10 +1007,10 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
               'use gpu';
               return __tsover_add(__tsover_add(a, b), c);
             }), {
-          v: 1,
+          v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","+","b"],"+","c"]]]],"externalNames":["c"]},
-          externals: () => ({c}),
+          externals: { c: () => c }
         }) && $.f)({}));
 
       console.log(add, mul);
@@ -1095,7 +1067,7 @@ describe('replaces function statements marked with "use gpu" in place when condi
 
             return __tsover_add(__tsover_add(a, b), c);
           }, {
-            v: 1,
+            v: 2,
             name: "add",
             ast: {
               params: [{
@@ -1108,10 +1080,8 @@ describe('replaces function statements marked with "use gpu" in place when condi
               body: [0, [[10, [1, [1, "a", "+", "b"], "+", "c"]]]],
               externalNames: ["c"]
             },
-            externals: () => {
-              return {
-                c
-              };
+            externals: {
+              c: () => c
             }
           }) && $.f)({});
           break;
@@ -1123,7 +1093,7 @@ describe('replaces function statements marked with "use gpu" in place when condi
 
             return __tsover_mul(__tsover_mul(a, b), c);
           }, {
-            v: 1,
+            v: 2,
             name: "mul",
             ast: {
               params: [{
@@ -1136,10 +1106,8 @@ describe('replaces function statements marked with "use gpu" in place when condi
               body: [0, [[10, [1, [1, "a", "*", "b"], "*", "c"]]]],
               externalNames: ["c"]
             },
-            externals: () => {
-              return {
-                c
-              };
+            externals: {
+              c: () => c
             }
           }) && $.f)({});
           break;
@@ -1160,10 +1128,10 @@ describe('replaces function statements marked with "use gpu" in place when condi
                 'use gpu';
                 return __tsover_add(__tsover_add(a, b), c);
               }), {
-          v: 1,
+          v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","+","b"],"+","c"]]]],"externalNames":["c"]},
-          externals: () => ({c}),
+          externals: { c: () => c }
         }) && $.f)({}));
 
 
@@ -1175,10 +1143,10 @@ describe('replaces function statements marked with "use gpu" in place when condi
                 'use gpu';
                 return __tsover_mul(__tsover_mul(a, b), c);
               }), {
-          v: 1,
+          v: 2,
           name: "mul",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","*","b"],"*","c"]]]],"externalNames":["c"]},
-          externals: () => ({c}),
+          externals: { c: () => c }
         }) && $.f)({}));
 
 
@@ -1214,10 +1182,10 @@ test('hoists exported marked function statements', async () => {
           'use gpu';
           return __tsover_mul(a, b);
         }), {
-        v: 1,
+        v: 2,
         name: "mul",
         ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]],"externalNames":[]},
-        externals: () => ({}),
+        externals: {  }
       }) && $.f)({}));
 
     /** ADD */
@@ -1225,10 +1193,10 @@ test('hoists exported marked function statements', async () => {
           'use gpu';
           return __tsover_add(a, b);
         }), {
-        v: 1,
+        v: 2,
         name: "add",
         ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-        externals: () => ({}),
+        externals: {  }
       }) && $.f)({}));
 
     console.log(add);
