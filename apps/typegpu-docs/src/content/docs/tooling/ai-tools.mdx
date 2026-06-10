@@ -1,0 +1,30 @@
+---
+title: AI Tools
+description: A guide to using TypeGPU resources with AI coding agents.
+---
+
+TypeGPU provides optional tools for AI coding agents working with TypeGPU projects.
+They help agents find TypeGPU-specific guidance and inspect generated shader code while debugging.
+
+## TypeGPU Skill
+
+The official TypeGPU Skill gives agents guidance for TypeGPU schemas, functions, shaders, buffers, textures, pipelines, and common error patterns.
+
+To install it directly, run:
+
+```sh
+npx skills add software-mansion-labs/skills -s typegpu
+```
+
+:::tip
+The TypeGPU project starter can install the skill for you. Run `npx typegpu@latest` and enable AI skills when prompted.
+For a non-interactive setup, run `npx typegpu@latest my-app --yes --agent-skills`.
+For an existing project, run `npx typegpu@latest --enhance --yes --agent-skills`.
+:::
+
+## TypeGPU MCP
+
+The experimental [TypeGPU Runtime Inspector MCP](https://www.npmjs.com/package/typegpu-runtime-inspector-mcp) exposes runtime inspection data to agent tools.
+It helps agents catch runtime errors and inspect generated WGSL code alongside other useful TypeGPU runtime information.
+
+Use it when your agent environment supports MCP servers and you want runtime feedback while iterating on TypeGPU programs.

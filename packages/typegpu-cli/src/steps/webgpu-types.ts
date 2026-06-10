@@ -40,13 +40,9 @@ function addWebgpuTypesToTsconfig(filePath: string) {
   fs.writeFileSync(filePath, stringify(tsconfig, null, 2) + '\n');
 }
 
-export async function askForWebgpuTypes(cwd: string, pm: Agent, pkg: PackageJson) {
+export function setupWebgpuTypes(cwd: string, pm: Agent, pkg: PackageJson) {
   if (hasDependency(pkg, '@webgpu/types')) {
     p.log.info('@webgpu/types package is already installed.');
-    return;
-  }
-
-  if (!(await confirmStep('Install @webgpu/types and add to tsconfig?'))) {
     return;
   }
 
@@ -59,4 +55,17 @@ export async function askForWebgpuTypes(cwd: string, pm: Agent, pkg: PackageJson
 
   addWebgpuTypesToTsconfig(tsconfig);
   p.log.success(`Added @webgpu/types to ${path.basename(tsconfig)}.`);
+}
+
+export async function askForWebgpuTypes(cwd: string, pm: Agent, pkg: PackageJson) {
+  if (hasDependency(pkg, '@webgpu/types')) {
+    p.log.info('@webgpu/types package is already installed.');
+    return;
+  }
+
+  if (!(await confirmStep('Install @webgpu/types and add to tsconfig?'))) {
+    return;
+  }
+
+  setupWebgpuTypes(cwd, pm, pkg);
 }
