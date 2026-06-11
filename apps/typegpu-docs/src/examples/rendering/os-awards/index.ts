@@ -247,8 +247,7 @@ const shadeDirectLight = (
 const epoxyBoundsMin = d.vec3f(-0.02, -0.16, -0.17);
 const epoxyBoundsMax = d.vec3f(0.02, 0.28, 0.17);
 
-const epoxyWarpFrequency = 34;
-const epoxyWarpStrength = 0.22;
+const epoxyWarpFrequency = 2;
 
 const epoxyTint = d.vec3f(0.9, 0.98, 1.05);
 const epoxyAlbedoMix = 0.08;
@@ -258,7 +257,18 @@ const isInEpoxyRegion = (modelPos: d.v3f): boolean => {
   return std.all(std.ge(modelPos, epoxyBoundsMin)) && std.all(std.le(modelPos, epoxyBoundsMax));
 };
 
-const shadeEpoxy = (modelPos: d.v3f, worldPos: d.v3f, normal: d.v3f, albedo: d.v3f): d.v3f => {
+function doubleSidedPow(v: number, factor: number) {
+  'use gpu';
+  return std.sign(v) * std.abs(v) ** factor;
+}
+
+const shadeEpoxy = (
+  modelPos: d.v3f,
+  worldPos: d.v3f,
+  normal: d.v3f,
+  tangent: d.v3f,
+  albedo: d.v3f,
+): d.v3f => {
   'use gpu';
   const p = modelPos * epoxyWarpFrequency;
   const warp = d.vec3f(
@@ -266,44 +276,27 @@ const shadeEpoxy = (modelPos: d.v3f, worldPos: d.v3f, normal: d.v3f, albedo: d.v
     std.sin(p.z * 1.31 + p.x),
     std.sin(p.x * 0.73 - p.y * 1.19),
   );
-  const secondaryWarp = d.vec3f(
-    std.sin(p.x * 2.1 + p.y * 0.4),
-    std.sin(p.y * 1.7 - p.z * 0.9),
-    std.sin(p.z * 1.4 + p.x * 0.6),
-  );
-  const distortedNormal = std.normalize(normal + warp * 0.18 + secondaryWarp * 0.07);
   const viewDir = std.normalize(worldPos - camera.$.position.xyz);
-  const reflected = std.reflect(viewDir, distortedNormal);
-  const throughDir = std.normalize(d.vec3f(viewDir.x, -viewDir.y, viewDir.z) + warp * 0.12);
-  const mirrorDir = std.normalize(d.vec3f(reflected.x, -reflected.y, reflected.z) + warp * 0.2);
-  const smearDir = std.normalize(
-    std.mix(throughDir, d.vec3f(-mirrorDir.z, mirrorDir.y, mirrorDir.x), 0.35) +
-      secondaryWarp * epoxyWarpStrength,
-  );
 
-  const transmitted = std.textureSampleBias(
+  const viewAlignment = 1 - std.max(0, -std.dot(viewDir, normal)) ** 4;
+  const columns = std.mix(6, 3, viewAlignment);
+  const tan = std.dot(worldPos, tangent);
+  const columnDir =
+    std.normalize(
+      normal +
+        viewDir * -0.4 +
+        tangent * (doubleSidedPow(std.sin(tan * 10 * columns * 1.542), 0.4) * 0.2 + tan),
+    ) * -1;
+
+  const distorted = std.textureSampleBias(
     envLayout.$.cubemap,
     envLayout.$.linearSampler,
-    throughDir,
-    0.45,
-  ).rgb;
-  const mirrored = std.textureSampleBias(
-    envLayout.$.cubemap,
-    envLayout.$.linearSampler,
-    mirrorDir,
-    1.2,
-  ).rgb;
-  const smeared = std.textureSampleBias(
-    envLayout.$.cubemap,
-    envLayout.$.linearSampler,
-    smearDir,
-    2.2,
+    columnDir,
+    2 + viewAlignment * 4,
   ).rgb;
 
-  const rim = std.pow(std.saturate(1 - std.abs(std.dot(normal, viewDir))), 4);
-  const sceneThrough =
-    (transmitted * 0.62 + mirrored * 0.28 + smeared * 0.1) * epoxyTint +
-    d.vec3f(0.45, 0.65, 0.9) * rim * 0.18;
+  const sceneThrough = distorted * epoxyTint;
+
   const woodGrain = std.sin(modelPos.z * 95 + modelPos.y * 48 + warp.x * 1.4) * 0.5 + 0.5;
   const lowerWoodMask = std.saturate(1 - std.smoothstep(-0.145, -0.13, modelPos.y));
   const disturbedWood =
@@ -318,6 +311,7 @@ const awardVertex = tgpu.vertexFn({
   out: {
     pos: d.builtin.position,
     normal: d.vec3f,
+    tangent: d.vec3f,
     uv: d.vec2f,
     modelPos: d.vec3f,
     worldPos: d.vec3f,
@@ -328,6 +322,7 @@ const awardVertex = tgpu.vertexFn({
   return {
     pos: camera.$.projection * (camera.$.view * worldPos),
     normal: (awardTransform.$ * d.vec4f(input.normal, 0)).xyz,
+    tangent: (awardTransform.$ * d.vec4f(d.vec3f(1, 0, 0), 0)).xyz,
     uv: input.uv,
     modelPos: input.position,
     worldPos: worldPos.xyz,
@@ -337,6 +332,7 @@ const awardVertex = tgpu.vertexFn({
 const awardFragment = tgpu.fragmentFn({
   in: {
     normal: d.vec3f,
+    tangent: d.vec3f,
     uv: d.vec2f,
     modelPos: d.vec3f,
     worldPos: d.vec3f,
@@ -346,6 +342,7 @@ const awardFragment = tgpu.fragmentFn({
 })((input) => {
   'use gpu';
   const normal = std.normalize(std.select(std.neg(input.normal), input.normal, input.frontFacing));
+  const tangent = std.normalize(input.tangent);
   const albedo =
     std.textureSample(awardLayout.$.baseColor, awardLayout.$.textureSampler, input.uv).rgb *
     awardMaterial.$.baseColorFactor.rgb;
@@ -360,7 +357,7 @@ const awardFragment = tgpu.fragmentFn({
 
   // Texture samples must stay in uniform control flow, so both looks are
   // computed unconditionally and selected per fragment afterwards.
-  const epoxyColor = shadeEpoxy(input.modelPos, input.worldPos, normal, albedo);
+  const epoxyColor = shadeEpoxy(input.modelPos, input.worldPos, normal, tangent, albedo);
   const isEpoxy = isInEpoxyRegion(input.modelPos);
   const color = std.select(opaqueColor, epoxyColor, isEpoxy);
   return d.vec4f(tonemapForDisplay(color), 1);
