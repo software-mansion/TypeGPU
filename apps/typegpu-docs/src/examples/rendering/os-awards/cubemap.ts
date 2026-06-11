@@ -37,20 +37,15 @@ export async function loadEnvironmentCubemap(root: TgpuRoot, url: string) {
   const response = await fetch(url);
   const bitmap = await createImageBitmap(await response.blob());
 
-  const equirectMipCount = Math.floor(Math.log2(Math.max(bitmap.width, bitmap.height))) + 1;
   const equirectTexture = root
     .createTexture({
       size: [bitmap.width, bitmap.height],
       format: 'rgba8unorm',
       viewFormats: ['rgba8unorm-srgb'],
-      mipLevelCount: equirectMipCount,
     })
     .$usage('sampled', 'render');
   equirectTexture.write(bitmap);
-  equirectTexture.generateMipmaps();
 
-  // Capped at 1024 — the cubemap only feeds (mostly blurry) reflections and
-  // irradiance, the background is sampled straight from the equirect.
   const faceSize = Math.min(Math.floor(bitmap.width / 4), 1024);
   const mipLevelCount = Math.floor(Math.log2(faceSize)) + 1;
   const cubemapTexture = root
@@ -85,7 +80,5 @@ export async function loadEnvironmentCubemap(root: TgpuRoot, url: string) {
   convertPipeline.with(convertBindGroup).dispatchThreads(faceSize, faceSize, 6);
   cubemapTexture.generateMipmaps();
 
-  // The equirect texture is kept alive so the background can be sampled at
-  // full resolution, instead of through the lower-resolution cubemap faces.
   return { texture: cubemapTexture, equirectTexture, mipLevelCount };
 }

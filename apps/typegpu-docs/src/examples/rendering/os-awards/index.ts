@@ -32,8 +32,6 @@ const envLayout = tgpu.bindGroupLayout({
   cubemap: { texture: d.textureCube(d.f32) },
   equirect: { texture: d.texture2d(d.f32) },
   linearSampler: { sampler: 'filtering' },
-  // Repeats horizontally so bilinear filtering wraps correctly across the
-  // equirect seam at the back of the panorama.
   wrappingSampler: { sampler: 'filtering' },
 });
 
@@ -46,7 +44,6 @@ const envBindGroup = root.createBindGroup(envLayout, {
   wrappingSampler: root.createSampler({
     magFilter: 'linear',
     minFilter: 'linear',
-    mipmapFilter: 'linear',
     addressModeU: 'repeat',
   }),
 });
@@ -69,25 +66,12 @@ const envFragment = tgpu.fragmentFn({
   const viewPos = camera.$.projectionInverse * ndc;
   const viewDir = std.normalize(viewPos.xyz / viewPos.w);
   const worldDir = camera.$.viewInverse * d.vec4f(viewDir, 0);
-  // Sampled from the full-resolution equirect (not the cubemap) for a sharper
-  // background. The `u` coordinate jumps by 1 at the panorama seam, which
-  // would select the smallest mip there — so mip gradients are taken from
-  // whichever of the two half-shifted parametrizations is locally continuous.
   const uv = directionToEquirectUv(worldDir.xyz);
-  const uvAlt = d.vec2f(std.fract(uv.x + 0.5), uv.y);
-  const ddxMain = std.dpdx(uv);
-  const ddyMain = std.dpdy(uv);
-  const ddxAlt = std.dpdx(uvAlt);
-  const ddyAlt = std.dpdy(uvAlt);
-  const altIsSmoother =
-    std.dot(ddxAlt, ddxAlt) + std.dot(ddyAlt, ddyAlt) <
-    std.dot(ddxMain, ddxMain) + std.dot(ddyMain, ddyMain);
-  const color = std.textureSampleGrad(
+  const color = std.textureSampleLevel(
     envLayout.$.equirect,
     envLayout.$.wrappingSampler,
     uv,
-    std.select(ddxMain, ddxAlt, altIsSmoother),
-    std.select(ddyMain, ddyAlt, altIsSmoother),
+    0,
   ).rgb;
   return d.vec4f(tonemapForDisplay(color), 1);
 });
@@ -164,6 +148,9 @@ const yellowTopRimDirection = std.normalize(d.vec3f(0.39, 0.67, 0.63));
 const yellowTopRimColor = d.vec3f(1, 0.76, 0.32);
 const yellowTopRimStrength = 0.45;
 
+const cameraFillColor = d.vec3f(1, 0.96, 0.9);
+const cameraFillStrength = 0.4;
+
 const ambientStrength = 0.3;
 const warmVenueBounceColor = d.vec3f(1, 0.58, 0.36);
 const warmVenueBounceStrength = 0.015;
@@ -229,6 +216,17 @@ const shadeOpaque = (
       yellowTopRimDirection,
       yellowTopRimColor,
       yellowTopRimStrength,
+    ) +
+    shadeDirectLight(
+      albedo,
+      materialRoughness,
+      materialMetallic,
+      F0,
+      normal,
+      viewDir,
+      viewDir,
+      cameraFillColor,
+      cameraFillStrength,
     );
 
   const ambientF = fresnelSchlick(NdotV, F0);
@@ -289,9 +287,11 @@ const shadeDirectLight = (
 const epoxyBoundsMin = d.vec3f(-0.02, -0.16, -0.17);
 const epoxyBoundsMax = d.vec3f(0.02, 0.28, 0.17);
 
+const epoxyWarpFrequency = 34;
+const epoxyWarpStrength = 0.22;
+
 const epoxyTint = d.vec3f(0.9, 0.98, 1.05);
 const epoxyAlbedoMix = 0.08;
-const epoxyIorRatio = 1 / 1.5;
 
 const isInEpoxyRegion = (modelPos: d.v3f): boolean => {
   'use gpu';
@@ -300,17 +300,31 @@ const isInEpoxyRegion = (modelPos: d.v3f): boolean => {
 
 const shadeEpoxy = (modelPos: d.v3f, worldPos: d.v3f, normal: d.v3f, albedo: d.v3f): d.v3f => {
   'use gpu';
+  const p = modelPos * epoxyWarpFrequency;
+  const warp = d.vec3f(
+    std.sin(p.y + p.z * 0.37),
+    std.sin(p.z * 1.31 + p.x),
+    std.sin(p.x * 0.73 - p.y * 1.19),
+  );
+  const secondaryWarp = d.vec3f(
+    std.sin(p.x * 2.1 + p.y * 0.4),
+    std.sin(p.y * 1.7 - p.z * 0.9),
+    std.sin(p.z * 1.4 + p.x * 0.6),
+  );
+  const distortedNormal = std.normalize(normal + warp * 0.18 + secondaryWarp * 0.07);
   const viewDir = std.normalize(worldPos - camera.$.position.xyz);
-  // The lens-like look comes from refraction through the actual curved
-  // surface — the varying normals magnify and bend the venue seen through
-  // the epoxy, instead of a procedural warp pattern.
-  const refracted = std.refract(viewDir, normal, epoxyIorRatio);
-  const mirrorDir = std.reflect(viewDir, normal);
+  const reflected = std.reflect(viewDir, distortedNormal);
+  const throughDir = std.normalize(d.vec3f(viewDir.x, -viewDir.y, viewDir.z) + warp * 0.12);
+  const mirrorDir = std.normalize(d.vec3f(reflected.x, -reflected.y, reflected.z) + warp * 0.2);
+  const smearDir = std.normalize(
+    std.mix(throughDir, d.vec3f(-mirrorDir.z, mirrorDir.y, mirrorDir.x), 0.35) +
+      secondaryWarp * epoxyWarpStrength,
+  );
 
   const transmitted = std.textureSampleLevel(
     envLayout.$.cubemap,
     envLayout.$.linearSampler,
-    refracted,
+    throughDir,
     0.45,
   ).rgb;
   const mirrored = std.textureSampleLevel(
@@ -319,13 +333,18 @@ const shadeEpoxy = (modelPos: d.v3f, worldPos: d.v3f, normal: d.v3f, albedo: d.v
     mirrorDir,
     1.2,
   ).rgb;
+  const smeared = std.textureSampleLevel(
+    envLayout.$.cubemap,
+    envLayout.$.linearSampler,
+    smearDir,
+    2.2,
+  ).rgb;
 
-  const facing = std.saturate(1 - std.abs(std.dot(normal, viewDir)));
-  const fresnel = 0.04 + 0.96 * std.pow(facing, 5);
-  const rim = std.pow(facing, 4);
+  const rim = std.pow(std.saturate(1 - std.abs(std.dot(normal, viewDir))), 4);
   const sceneThrough =
-    std.mix(transmitted, mirrored, fresnel) * epoxyTint + d.vec3f(0.45, 0.65, 0.9) * rim * 0.18;
-  const woodGrain = std.sin(modelPos.z * 95 + modelPos.y * 48) * 0.5 + 0.5;
+    (transmitted * 0.62 + mirrored * 0.28 + smeared * 0.1) * epoxyTint +
+    d.vec3f(0.45, 0.65, 0.9) * rim * 0.18;
+  const woodGrain = std.sin(modelPos.z * 95 + modelPos.y * 48 + warp.x * 1.4) * 0.5 + 0.5;
   const lowerWoodMask = std.saturate(1 - std.smoothstep(-0.145, -0.13, modelPos.y));
   const disturbedWood =
     std.mix(albedo * d.vec3f(0.95, 0.72, 0.48), d.vec3f(0.28, 0.13, 0.045), 0.72) *
