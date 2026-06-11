@@ -1,7 +1,10 @@
 import Editor, { type Monaco, type OnMount } from '@monaco-editor/react';
 import type { editor } from 'tsover-monaco-editor';
 import { entries, filter, fromEntries, isTruthy, map, pipe } from 'remeda';
-import { SANDBOX_MODULES } from '../utils/examples/sandboxModules.ts';
+import {
+  sandboxModulesAtom,
+  type SandboxModuleDefinition,
+} from '../utils/examples/sandboxModules.ts';
 import type { ExampleCommonFile, ExampleSrcFile } from '../utils/examples/types.ts';
 import {
   tsnotoverCompilerOptions,
@@ -23,6 +26,7 @@ import cssWorker from 'tsover-monaco-editor/esm/vs/language/css/css.worker?worke
 import htmlWorker from 'tsover-monaco-editor/esm/vs/language/html/html.worker?worker';
 // oxlint-disable-next-line import/default
 import tsWorker from 'tsover-monaco-editor/esm/vs/language/typescript/ts.worker?worker';
+import { useAtomValue } from 'jotai';
 
 self.MonacoEnvironment = {
   getWorker(_, label) {
@@ -44,39 +48,42 @@ self.MonacoEnvironment = {
 
 loader.config({ monaco });
 
-const handleEditorWillMount = (tsover: boolean) => (monaco: Monaco) => {
-  const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
+const handleEditorWillMount =
+  (tsover: boolean, sandboxModules: Record<string, SandboxModuleDefinition>) =>
+  (monaco: Monaco) => {
+    const tsDefaults = monaco?.languages.typescript.typescriptDefaults;
 
-  const reroutes = pipe(
-    entries(SANDBOX_MODULES),
-    map(([key, moduleDef]) => {
-      if ('reroute' in moduleDef.typeDef) {
-        return [key, [moduleDef.typeDef.reroute]] as [string, string[]];
-      }
-      return null;
-    }),
-    filter(isTruthy),
-    fromEntries(),
-  );
+    const sandboxModulesEntries = entries(sandboxModules);
+    const reroutes = pipe(
+      sandboxModulesEntries,
+      map(([key, moduleDef]) => {
+        if ('reroute' in moduleDef.typeDef) {
+          return [key, [moduleDef.typeDef.reroute]] as [string, string[]];
+        }
+        return null;
+      }),
+      filter(isTruthy),
+      fromEntries(),
+    );
 
-  for (const [moduleKey, moduleDef] of entries(SANDBOX_MODULES)) {
-    if ('content' in moduleDef.typeDef) {
-      tsDefaults.addExtraLib(moduleDef.typeDef.content, moduleDef.typeDef.filename);
+    for (const [moduleKey, moduleDef] of sandboxModulesEntries) {
+      if ('content' in moduleDef.typeDef) {
+        tsDefaults.addExtraLib(moduleDef.typeDef.content, moduleDef.typeDef.filename);
 
-      if (
-        moduleDef.typeDef.filename &&
-        moduleDef.typeDef.filename !== moduleKey // the redirect is not a no-op
-      ) {
-        reroutes[moduleKey] = [...(reroutes[moduleKey] ?? []), moduleDef.typeDef.filename];
+        if (
+          moduleDef.typeDef.filename &&
+          moduleDef.typeDef.filename !== moduleKey // the redirect is not a no-op
+        ) {
+          reroutes[moduleKey] = [...(reroutes[moduleKey] ?? []), moduleDef.typeDef.filename];
+        }
       }
     }
-  }
 
-  tsDefaults.setCompilerOptions({
-    ...(tsover ? tsoverCompilerOptions : tsnotoverCompilerOptions),
-    paths: reroutes,
-  });
-};
+    tsDefaults.setCompilerOptions({
+      ...(tsover ? tsoverCompilerOptions : tsnotoverCompilerOptions),
+      paths: reroutes,
+    });
+  };
 
 function handleEditorOnMount(editor: editor.IStandaloneCodeEditor) {
   // Folding regions in code automatically. Useful for code not strictly
@@ -93,6 +100,7 @@ type Props = {
 
 export function CodeEditor(props: Props) {
   const { language, tsoverEnabled, file, shown } = props;
+  const sandboxModules = useAtomValue(sandboxModulesAtom);
 
   // Monaco needs relative paths to work correctly and '../../common/file.ts' will not do
   const path =
@@ -104,7 +112,11 @@ export function CodeEditor(props: Props) {
         defaultLanguage={language}
         value={tsoverEnabled ? file.content : (file.tsnotoverContent ?? file.content)}
         path={path}
-        beforeMount={language === 'typescript' ? handleEditorWillMount(tsoverEnabled) : undefined}
+        beforeMount={
+          language === 'typescript'
+            ? handleEditorWillMount(tsoverEnabled, sandboxModules)
+            : undefined
+        }
         onMount={language === 'typescript' ? (handleEditorOnMount as OnMount) : undefined}
         options={{
           minimap: {
