@@ -430,29 +430,16 @@ export function validateIdentifier(ident: string): ValidationResult {
 }
 
 /**
- * Same as `validateIdentifier`, except does not check for builtin clashes.
+ * Same as `validateIdentifier`, except also checks for bannedToken clashes.
  */
 /*#__NO_SIDE_EFFECTS__*/
 export function validateProp(ident: string): ValidationResult {
-  if (ident === '_') {
-    return {
-      success: false,
-    };
+  const identResult = validateIdentifier(ident);
+  if (!identResult.success) {
+    return identResult;
   }
-  if (/\s/.test(ident)) {
-    return {
-      success: false,
-      error: `Identifiers cannot contain whitespace.`,
-    };
-  }
-  if (ident.startsWith('__')) {
-    return {
-      success: false,
-      error: `Identifiers cannot start with double underscores.`,
-    };
-  }
-  const prefix = ident.split('_')[0] as string;
-  if (bannedTokens.has(prefix)) {
+
+  if (bannedTokens.has(ident)) {
     return {
       success: false,
       error: `Identifiers cannot start with reserved keywords.`,

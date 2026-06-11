@@ -1141,7 +1141,9 @@ describe('wgslGenerator', () => {
   });
 
   it('throws when struct prop is named wrongly', () => {
-    expect(() => tgpu.resolve([d.struct({ '0': d.u32 })])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([d.struct({ '0': d.u32 })])).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Invalid property key '0': Identifier is not compliant with the WGSL guideline.]`,
+    );
     expect(() => tgpu.resolve([d.struct({ __: d.u32 })])).toThrowErrorMatchingInlineSnapshot(
       `[Error: Invalid property key '__': Identifiers cannot start with double underscores.]`,
     );
@@ -1321,21 +1323,6 @@ describe('wgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn: Index access 'myArray[i]' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.]
-    `);
-  });
-
-  it('throws an error when accessing an object with a runtime known index', () => {
-    const Boid = d.struct({ 0: d.u32 });
-
-    const testFn = tgpu.fn([Boid])((b) => {
-      const i = 0;
-      const v = b[i];
-    });
-
-    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn:testFn: Index access 'b[i]' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.]
     `);
   });
 
