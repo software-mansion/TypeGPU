@@ -36,42 +36,6 @@ interface GLTFMaterial {
   };
 }
 
-function computeSmoothNormals(positions: Float32Array, indices: Uint16Array | Uint32Array) {
-  const normals = new Float32Array(positions.length);
-
-  for (let i = 0; i < indices.length; i += 3) {
-    const a = indices[i] * 3;
-    const b = indices[i + 1] * 3;
-    const c = indices[i + 2] * 3;
-
-    const abx = positions[b] - positions[a];
-    const aby = positions[b + 1] - positions[a + 1];
-    const abz = positions[b + 2] - positions[a + 2];
-    const acx = positions[c] - positions[a];
-    const acy = positions[c + 1] - positions[a + 1];
-    const acz = positions[c + 2] - positions[a + 2];
-
-    const nx = aby * acz - abz * acy;
-    const ny = abz * acx - abx * acz;
-    const nz = abx * acy - aby * acx;
-
-    for (const vertex of [a, b, c]) {
-      normals[vertex] += nx;
-      normals[vertex + 1] += ny;
-      normals[vertex + 2] += nz;
-    }
-  }
-
-  for (let i = 0; i < normals.length; i += 3) {
-    const length = Math.hypot(normals[i], normals[i + 1], normals[i + 2]) || 1;
-    normals[i] /= length;
-    normals[i + 1] /= length;
-    normals[i + 2] /= length;
-  }
-
-  return normals;
-}
-
 export async function loadModel(root: TgpuRoot, url: string) {
   const model = await load(url, GLBLoader);
   const { arrayBuffer, byteOffset, byteLength } = model.binChunks[0];
@@ -92,10 +56,7 @@ export async function loadModel(root: TgpuRoot, url: string) {
   const positions = getTypedArray(primitive.attributes.POSITION) as Float32Array;
   const uvs = getTypedArray(primitive.attributes.TEXCOORD_0) as Float32Array;
   const indices = getTypedArray(primitive.indices) as Uint16Array | Uint32Array;
-  const normals =
-    primitive.attributes.NORMAL !== undefined
-      ? (getTypedArray(primitive.attributes.NORMAL) as Float32Array)
-      : computeSmoothNormals(positions, indices);
+  const normals = getTypedArray(primitive.attributes.NORMAL) as Float32Array;
   const vertexCount = positions.length / 3;
 
   const vertexBuffer = root

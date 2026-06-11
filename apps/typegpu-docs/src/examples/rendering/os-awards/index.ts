@@ -370,7 +370,6 @@ const awardPipeline = root.createRenderPipeline({
   attribs: awardVertexLayout.attrib,
   vertex: awardVertex,
   fragment: awardFragment,
-  primitive: { cullMode: 'none' },
   depthStencil: {
     format: 'depth24plus',
     depthWriteEnabled: true,
