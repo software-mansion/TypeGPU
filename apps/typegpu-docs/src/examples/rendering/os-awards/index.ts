@@ -67,12 +67,7 @@ const envFragment = tgpu.fragmentFn({
   const viewDir = std.normalize(viewPos.xyz / viewPos.w);
   const worldDir = camera.$.viewInverse * d.vec4f(viewDir, 0);
   const uv = directionToEquirectUv(worldDir.xyz);
-  const color = std.textureSampleLevel(
-    envLayout.$.equirect,
-    envLayout.$.wrappingSampler,
-    uv,
-    0,
-  ).rgb;
+  const color = std.textureSampleBias(envLayout.$.equirect, envLayout.$.wrappingSampler, uv, 0).rgb;
   return d.vec4f(tonemapForDisplay(color), 1);
 });
 
@@ -94,6 +89,12 @@ const awardMaterial = root.createUniform(AwardMaterial, {
   baseColorFactor: award.baseColorFactor,
   metallicFactor: award.metallicFactor,
   roughnessFactor: award.roughnessFactor,
+});
+
+const DirectLight = d.struct({
+  direction: d.vec3f,
+  color: d.vec3f,
+  strength: d.f32,
 });
 
 const awardLayout = tgpu.bindGroupLayout({
@@ -132,21 +133,12 @@ function updateAwardTransform(timeMs: number) {
   awardTransform.write(transformDraft);
 }
 
-const blueSceneDirection = std.normalize(d.vec3f(-0.78, 0.37, 0.5));
-const blueSceneColor = d.vec3f(0.32, 0.52, 1);
-const blueSceneStrength = 0.85;
-
-const blueScreenDirection = std.normalize(d.vec3f(-0.04, 0.18, 0.98));
-const blueScreenColor = d.vec3f(0.45, 0.56, 1);
-const blueScreenStrength = 0.38;
-
-const yellowTopDirection = std.normalize(d.vec3f(0.03, 0.78, 0.62));
-const yellowTopColor = d.vec3f(1, 0.68, 0.24);
-const yellowTopStrength = 1.25;
-
-const yellowTopRimDirection = std.normalize(d.vec3f(0.39, 0.67, 0.63));
-const yellowTopRimColor = d.vec3f(1, 0.76, 0.32);
-const yellowTopRimStrength = 0.45;
+const sceneLights = [
+  { direction: d.vec3f(-0.78, 0.37, 0.5), color: d.vec3f(0.32, 0.52, 1), strength: 0.85 },
+  { direction: d.vec3f(-0.04, 0.18, 0.98), color: d.vec3f(0.45, 0.56, 1), strength: 0.38 },
+  { direction: d.vec3f(0.03, 0.78, 0.62), color: d.vec3f(1, 0.68, 0.24), strength: 1.25 },
+  { direction: d.vec3f(0.39, 0.67, 0.63), color: d.vec3f(1, 0.76, 0.32), strength: 0.45 },
+] as const;
 
 const cameraFillColor = d.vec3f(1, 0.96, 0.9);
 const cameraFillStrength = 0.4;
@@ -172,67 +164,36 @@ const shadeOpaque = (
   const NdotV = std.max(std.dot(normal, viewDir), 0);
   const F0 = std.mix(d.vec3f(0.04), albedo, materialMetallic);
 
-  const direct =
-    shadeDirectLight(
+  let direct = d.vec3f();
+  for (const light of tgpu.unroll(sceneLights)) {
+    direct += shadeDirectLight(
       albedo,
       materialRoughness,
       materialMetallic,
       F0,
       normal,
       viewDir,
-      blueSceneDirection,
-      blueSceneColor,
-      blueSceneStrength,
-    ) +
-    shadeDirectLight(
-      albedo,
-      materialRoughness,
-      materialMetallic,
-      F0,
-      normal,
-      viewDir,
-      blueScreenDirection,
-      blueScreenColor,
-      blueScreenStrength,
-    ) +
-    shadeDirectLight(
-      albedo,
-      materialRoughness,
-      materialMetallic,
-      F0,
-      normal,
-      viewDir,
-      yellowTopDirection,
-      yellowTopColor,
-      yellowTopStrength,
-    ) +
-    shadeDirectLight(
-      albedo,
-      materialRoughness,
-      materialMetallic,
-      F0,
-      normal,
-      viewDir,
-      yellowTopRimDirection,
-      yellowTopRimColor,
-      yellowTopRimStrength,
-    ) +
-    shadeDirectLight(
-      albedo,
-      materialRoughness,
-      materialMetallic,
-      F0,
-      normal,
-      viewDir,
-      viewDir,
-      cameraFillColor,
-      cameraFillStrength,
+      DirectLight(light),
     );
+  }
+  direct += shadeDirectLight(
+    albedo,
+    materialRoughness,
+    materialMetallic,
+    F0,
+    normal,
+    viewDir,
+    DirectLight({
+      direction: viewDir,
+      color: cameraFillColor,
+      strength: cameraFillStrength,
+    }),
+  );
 
   const ambientF = fresnelSchlick(NdotV, F0);
   const ambientKD = (1 - ambientF) * (1 - materialMetallic);
   const ambientDiffuseBRDF = (ambientKD * albedo) / Math.PI;
-  const irradiance = std.textureSampleLevel(
+  const irradiance = std.textureSampleBias(
     envLayout.$.cubemap,
     envLayout.$.linearSampler,
     normal,
@@ -241,7 +202,7 @@ const shadeOpaque = (
   const ambientDiffuse = irradiance * ambientDiffuseBRDF * ambientStrength;
 
   const reflected = std.reflect(std.neg(viewDir), normal);
-  const reflection = std.textureSampleLevel(
+  const reflection = std.textureSampleBias(
     envLayout.$.cubemap,
     envLayout.$.linearSampler,
     reflected,
@@ -261,11 +222,10 @@ const shadeDirectLight = (
   F0: d.v3f,
   normal: d.v3f,
   viewDir: d.v3f,
-  lightDirection: d.v3f,
-  lightColor: d.v3f,
-  lightStrength: number,
+  light: d.Infer<typeof DirectLight>,
 ): d.v3f => {
   'use gpu';
+  const lightDirection = std.normalize(light.direction);
   const halfDir = std.normalize(viewDir + lightDirection);
 
   const NdotL = std.max(std.dot(normal, lightDirection), 0);
@@ -280,7 +240,7 @@ const shadeDirectLight = (
   const kD = (1 - F) * (1 - materialMetallic);
   const diffuse = (kD * albedo) / Math.PI;
   const specular = (F * D * G) / std.max(4 * NdotV * NdotL, 0.001);
-  return (diffuse + specular) * lightColor * (NdotL * lightStrength);
+  return (diffuse + specular) * light.color * (NdotL * light.strength);
 };
 
 // Hard-coded model-space epoxy fill bounds.
@@ -321,19 +281,19 @@ const shadeEpoxy = (modelPos: d.v3f, worldPos: d.v3f, normal: d.v3f, albedo: d.v
       secondaryWarp * epoxyWarpStrength,
   );
 
-  const transmitted = std.textureSampleLevel(
+  const transmitted = std.textureSampleBias(
     envLayout.$.cubemap,
     envLayout.$.linearSampler,
     throughDir,
     0.45,
   ).rgb;
-  const mirrored = std.textureSampleLevel(
+  const mirrored = std.textureSampleBias(
     envLayout.$.cubemap,
     envLayout.$.linearSampler,
     mirrorDir,
     1.2,
   ).rgb;
-  const smeared = std.textureSampleLevel(
+  const smeared = std.textureSampleBias(
     envLayout.$.cubemap,
     envLayout.$.linearSampler,
     smearDir,
