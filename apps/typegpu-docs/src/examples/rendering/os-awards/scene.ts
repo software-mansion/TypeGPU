@@ -4,10 +4,10 @@ const environmentMipCount = 11;
 
 export const scene = {
   camera: {
-    awayFromStagePosition: d.vec4f(0, 0, 2, 1),
+    awayFromStagePosition: d.vec4f(-1, 0, 2.5, 1),
     target: d.vec4f(0, 0, 0, 1),
-    minZoom: 0.5,
-    maxZoom: 2.5,
+    minZoom: 1,
+    maxZoom: 3,
   },
   display: {
     exposure: 0.67,
@@ -43,18 +43,20 @@ export const scene = {
       min: d.vec3f(-0.02, -0.16, -0.17),
       max: d.vec3f(0.02, 0.28, 0.17),
     },
-    warp: {
-      frequency: 34,
-      strength: 0.22,
+    warp: { frequency: 2 },
+    columnDistortion: {
+      edgeColumns: 6,
+      faceColumns: 3,
+      waveFrequency: 10,
+      waveSkew: 1.542,
+      wavePower: 0.4,
+      waveStrength: 0.2,
+      viewPull: -0.4,
+      mipBiasBase: 2,
+      mipBiasAlignmentScale: 4,
     },
     tint: d.vec3f(0.9, 0.98, 1.05),
     albedoMix: 0.08,
-    rimColor: d.vec3f(0.45, 0.65, 0.9),
-    environmentSamples: [
-      { weight: 0.62, bias: 0.45 },
-      { weight: 0.28, bias: 1.2 },
-      { weight: 0.1, bias: 2.2 },
-    ],
     wood: {
       warm: d.vec3f(0.95, 0.72, 0.48),
       dark: d.vec3f(0.28, 0.13, 0.045),
