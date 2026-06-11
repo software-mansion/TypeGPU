@@ -1,4 +1,5 @@
-import tgpu, { d, std } from 'typegpu';
+import { sdLine } from '@typegpu/sdf';
+import tgpu, { common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
@@ -6,99 +7,169 @@ const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
-canvas.addEventListener('contextmenu', (event) => {
-  if (event.target === canvas) {
-    event.preventDefault();
-  }
-});
+const CellKind = {
+  empty: 0,
+  wall: 1,
+  source: 2,
+  drain: 3,
+} as const;
 
+const BrushTypes = ['wall', 'source', 'drain', 'water'] as const;
+type BrushType = (typeof BrushTypes)[number];
+
+const WATER_BRUSH_LEVEL = 100;
+const SOURCE_RATE = tgpu.const(d.u32, 20);
 const MAX_WATER_LEVEL_UNPRESSURIZED = tgpu.const(d.u32, 0xff);
 const MAX_WATER_LEVEL = tgpu.const(d.u32, (1 << 24) - 1);
 const MAX_PRESSURE = tgpu.const(d.u32, 12);
+
+const BrushConfig = {
+  wall: { cellKind: CellKind.wall, waterAmount: 0 },
+  source: { cellKind: CellKind.source, waterAmount: 0 },
+  drain: { cellKind: CellKind.drain, waterAmount: 0 },
+  water: { cellKind: CellKind.empty, waterAmount: WATER_BRUSH_LEVEL },
+} as const;
+
+const WaterArray = d.arrayOf(d.u32);
+const AtomicWaterArray = d.arrayOf(d.atomic(d.u32));
+const FlagsArray = d.arrayOf(d.u32);
+
+const SimParams = d.struct({
+  resolution: d.vec2u,
+  viscosity: d.u32,
+});
+
+const stateLayout = tgpu.bindGroupLayout({
+  flags: { storage: FlagsArray, access: 'readonly' },
+  currentWater: { storage: WaterArray, access: 'readonly' },
+  nextWater: { storage: AtomicWaterArray, access: 'mutable' },
+});
+
+const brushStateLayout = tgpu.bindGroupLayout({
+  flags: { storage: FlagsArray, access: 'mutable' },
+  currentWater: { storage: WaterArray, access: 'mutable' },
+  nextWater: { storage: AtomicWaterArray, access: 'mutable' },
+});
+
+const simParams = root.createUniform(SimParams);
+
+const BrushParams = d.struct({
+  start: d.vec2f,
+  end: d.vec2f,
+  radius: d.f32,
+  cellKind: d.u32,
+  waterAmount: d.u32,
+  erasing: d.u32,
+});
+
+const brushParams = root.createUniform(BrushParams);
 
 const options = {
   size: 32,
   timestep: 25,
   stepsPerTimestep: 1,
-  workgroupSize: 1,
   viscosity: 1000,
   brushSize: 0,
-  brushType: 'water',
+  brushType: 'water' as BrushType,
 };
 
-const BrushTypes = ['wall', 'source', 'drain', 'water'];
-function encodeBrushType(brushType: (typeof BrushTypes)[number]) {
-  switch (brushType) {
-    case 'wall':
-      return 1 << 24;
-    case 'source':
-      return 2 << 24;
-    case 'drain':
-      return 3 << 24;
-    default:
-      return 100;
+const getIndex = (coord: d.v2u): number => {
+  'use gpu';
+  return coord.y * simParams.$.resolution.x + coord.x;
+};
+
+const isInBounds = (coord: d.v2u): boolean => {
+  'use gpu';
+  return coord.x < simParams.$.resolution.x && coord.y < simParams.$.resolution.y;
+};
+
+const isBoundary = (coord: d.v2u): boolean => {
+  'use gpu';
+  return (
+    coord.x === 0 ||
+    coord.y === 0 ||
+    coord.x === simParams.$.resolution.x - 1 ||
+    coord.y === simParams.$.resolution.y - 1
+  );
+};
+
+const getFlags = (coord: d.v2u): number => {
+  'use gpu';
+  return stateLayout.$.flags[getIndex(coord)];
+};
+
+const getWaterLevel = (coord: d.v2u): number => {
+  'use gpu';
+  return stateLayout.$.currentWater[getIndex(coord)];
+};
+
+const isFlowBlocked = (coord: d.v2u): boolean => {
+  'use gpu';
+  return !isInBounds(coord) || getFlags(coord) === CellKind.wall;
+};
+
+const isDrainTarget = (coord: d.v2u): boolean => {
+  'use gpu';
+  return !isInBounds(coord) || getFlags(coord) === CellKind.drain || isBoundary(coord);
+};
+
+const canStoreWater = (coord: d.v2u): boolean => {
+  'use gpu';
+  return !isDrainTarget(coord) && getFlags(coord) !== CellKind.wall;
+};
+
+const getTargetWaterLevel = (coord: d.v2u): number => {
+  'use gpu';
+  if (isDrainTarget(coord)) {
+    return d.u32(0);
   }
-}
 
-const size = root.createUniform(d.vec2u);
-const viscosity = root.createUniform(d.u32);
+  return getWaterLevel(coord);
+};
 
-const currentStateBuffer = root
-  .createBuffer(d.arrayOf(d.u32, 1024 ** 2))
-  .$usage('storage', 'vertex');
-const currentStateStorage = currentStateBuffer.as('readonly');
+const addNextWater = (coord: d.v2u, amount: number) => {
+  'use gpu';
+  if (amount === 0 || !canStoreWater(coord)) {
+    return;
+  }
 
-const nextState = root.createMutable(d.arrayOf(d.atomic(d.u32), 1024 ** 2));
+  const index = getIndex(coord);
+  const previous = std.atomicAdd(stateLayout.$.nextWater[index], amount);
+  if (previous > MAX_WATER_LEVEL.$) {
+    std.atomicMin(stateLayout.$.nextWater[index], MAX_WATER_LEVEL.$);
+    return;
+  }
 
-const squareBuffer = root
-  .createBuffer(d.arrayOf(d.vec2f, 4), [d.vec2f(0, 0), d.vec2f(0, 1), d.vec2f(1, 0), d.vec2f(1, 1)])
-  .$usage('vertex');
+  if (amount > MAX_WATER_LEVEL.$ - previous) {
+    std.atomicMin(stateLayout.$.nextWater[index], MAX_WATER_LEVEL.$);
+  }
+};
 
-const getIndex = tgpu.fn(
-  [d.u32, d.u32],
-  d.u32,
-)((x, y) => {
-  const h = size.$.y;
-  const w = size.$.x;
-  return (y % h) * w + (x % w);
-});
+const subtractNextWater = (coord: d.v2u, amount: number) => {
+  'use gpu';
+  if (amount === 0) {
+    return;
+  }
 
-const getCell = tgpu.fn([d.u32, d.u32], d.u32)((x, y) => currentStateStorage.$[getIndex(x, y)]);
+  std.atomicSub(stateLayout.$.nextWater[getIndex(coord)], amount);
+};
 
-const getCellNext = tgpu.fn(
-  [d.u32, d.u32],
-  d.u32,
-)((x, y) => std.atomicLoad(nextState.$[getIndex(x, y)]));
+const clearNextWater = (coord: d.v2u) => {
+  'use gpu';
+  std.atomicStore(stateLayout.$.nextWater[getIndex(coord)], d.u32(0));
+};
 
-const updateCell = tgpu.fn([d.u32, d.u32, d.u32])((x, y, value) => {
-  std.atomicStore(nextState.$[getIndex(x, y)], value);
-});
+const applyFlow = (source: d.v2u, target: d.v2u, amount: number) => {
+  'use gpu';
+  subtractNextWater(source, amount);
 
-const addToCell = tgpu.fn([d.u32, d.u32, d.u32])((x, y, value) => {
-  const cell = getCellNext(x, y);
-  const waterLevel = cell & MAX_WATER_LEVEL.$;
-  const newWaterLevel = std.min(waterLevel + value, MAX_WATER_LEVEL.$);
-  std.atomicAdd(nextState.$[getIndex(x, y)], newWaterLevel - waterLevel);
-});
+  if (!isDrainTarget(target)) {
+    addNextWater(target, amount);
+  }
+};
 
-const subtractFromCell = tgpu.fn([d.u32, d.u32, d.u32])((x, y, value) => {
-  const cell = getCellNext(x, y);
-  const waterLevel = cell & MAX_WATER_LEVEL.$;
-  const newWaterLevel = std.max(waterLevel - std.min(value, waterLevel), 0);
-  std.atomicSub(nextState.$[getIndex(x, y)], waterLevel - newWaterLevel);
-});
-
-const persistFlags = tgpu.fn([d.u32, d.u32])((x, y) => {
-  const cell = getCell(x, y);
-  const waterLevel = cell & MAX_WATER_LEVEL.$;
-  const flags = cell >> 24;
-  updateCell(x, y, (flags << 24) | waterLevel);
-});
-
-const getStableStateBelow = tgpu.fn(
-  [d.u32, d.u32],
-  d.u32,
-)((upper, lower) => {
+const getStableStateBelow = (upper: number, lower: number): number => {
+  'use gpu';
   const totalMass = upper + lower;
   if (totalMass <= MAX_WATER_LEVEL_UNPRESSURIZED.$) {
     return totalMass;
@@ -107,249 +178,322 @@ const getStableStateBelow = tgpu.fn(
     return d.u32(totalMass / 2) + MAX_PRESSURE.$;
   }
   return MAX_WATER_LEVEL_UNPRESSURIZED.$;
-});
+};
 
-const isWall = tgpu.fn([d.u32, d.u32], d.bool)((x, y) => getCell(x, y) >> 24 === 1);
+const handleCellFlags = (coord: d.v2u): boolean => {
+  'use gpu';
+  const flags = getFlags(coord);
 
-const isWaterSource = tgpu.fn([d.u32, d.u32], d.bool)((x, y) => getCell(x, y) >> 24 === 2);
-
-const isWaterDrain = tgpu.fn([d.u32, d.u32], d.bool)((x, y) => getCell(x, y) >> 24 === 3);
-
-const isClearCell = tgpu.fn([d.u32, d.u32], d.bool)((x, y) => getCell(x, y) >> 24 === 4);
-
-const getWaterLevel = tgpu.fn([d.u32, d.u32], d.u32)((x, y) => getCell(x, y) & MAX_WATER_LEVEL.$);
-
-const checkForFlagsAndBounds = tgpu.fn(
-  [d.u32, d.u32],
-  d.bool,
-)((x, y) => {
-  if (isClearCell(x, y)) {
-    updateCell(x, y, 0);
+  if (flags === CellKind.wall || flags === CellKind.drain || isBoundary(coord)) {
+    clearNextWater(coord);
     return true;
   }
 
-  if (isWall(x, y)) {
-    persistFlags(x, y);
-    return true;
-  }
-
-  if (isWaterSource(x, y)) {
-    persistFlags(x, y);
-    addToCell(x, y, 20);
-    return false;
-  }
-
-  if (isWaterDrain(x, y)) {
-    persistFlags(x, y);
-    updateCell(x, y, 3 << 24);
-    return true;
-  }
-
-  if (y === 0 || y === size.$.y - 1 || x === 0 || x === size.$.x - 1) {
-    subtractFromCell(x, y, getWaterLevel(x, y));
-    return true;
+  if (flags === CellKind.source) {
+    addNextWater(coord, SOURCE_RATE.$);
   }
 
   return false;
+};
+
+const flowDown = (coord: d.v2u, remainingWater: d.ref<number>) => {
+  'use gpu';
+  if (remainingWater.$ === 0 || coord.y === 0) {
+    return;
+  }
+
+  const target = d.vec2u(coord.x, coord.y - 1);
+  if (isFlowBlocked(target)) {
+    return;
+  }
+
+  const targetWater = getTargetWaterLevel(target);
+  const stable = getStableStateBelow(remainingWater.$, targetWater);
+  if (targetWater >= stable) {
+    return;
+  }
+
+  const flow = std.min(stable - targetWater, simParams.$.viscosity);
+  applyFlow(coord, target, flow);
+  remainingWater.$ -= flow;
+};
+
+const flowSidewaysTo = (
+  coord: d.v2u,
+  target: d.v2u,
+  remainingWater: d.ref<number>,
+  waterLevelBefore: number,
+) => {
+  'use gpu';
+  if (remainingWater.$ === 0) {
+    return;
+  }
+
+  if (isFlowBlocked(target)) {
+    return;
+  }
+
+  const flowRaw = d.i32(waterLevelBefore) - d.i32(getTargetWaterLevel(target));
+  if (flowRaw <= 0) {
+    return;
+  }
+
+  const change = std.max(std.min(d.u32(4), remainingWater.$), d.u32(flowRaw / 4));
+  const flow = std.min(change, simParams.$.viscosity);
+  applyFlow(coord, target, flow);
+  remainingWater.$ -= flow;
+};
+
+const flowLeft = (coord: d.v2u, remainingWater: d.ref<number>, waterLevelBefore: number) => {
+  'use gpu';
+  if (coord.x === 0) {
+    return;
+  }
+
+  flowSidewaysTo(coord, d.vec2u(coord.x - 1, coord.y), remainingWater, waterLevelBefore);
+};
+
+const flowRight = (coord: d.v2u, remainingWater: d.ref<number>, waterLevelBefore: number) => {
+  'use gpu';
+  if (coord.x >= simParams.$.resolution.x - 1) {
+    return;
+  }
+
+  flowSidewaysTo(coord, d.vec2u(coord.x + 1, coord.y), remainingWater, waterLevelBefore);
+};
+
+const flowUp = (coord: d.v2u, remainingWater: d.ref<number>) => {
+  'use gpu';
+  if (remainingWater.$ === 0 || coord.y >= simParams.$.resolution.y - 1) {
+    return;
+  }
+
+  const target = d.vec2u(coord.x, coord.y + 1);
+  if (isFlowBlocked(target)) {
+    return;
+  }
+
+  const stable = getStableStateBelow(getTargetWaterLevel(target), remainingWater.$);
+  if (stable >= remainingWater.$) {
+    return;
+  }
+
+  const flow = std.min(remainingWater.$ - stable, simParams.$.viscosity);
+  applyFlow(coord, target, flow);
+  remainingWater.$ -= flow;
+};
+
+const simulationPipeline = root.createGuardedComputePipeline((x: number, y: number) => {
+  'use gpu';
+  const coord = d.vec2u(x, y);
+  if (handleCellFlags(coord)) {
+    return;
+  }
+
+  const remainingWater = d.ref(getWaterLevel(coord));
+  if (remainingWater.$ === 0) {
+    return;
+  }
+
+  flowDown(coord, remainingWater);
+
+  const waterLevelBefore = remainingWater.$;
+  flowLeft(coord, remainingWater, waterLevelBefore);
+  flowRight(coord, remainingWater, waterLevelBefore);
+
+  flowUp(coord, remainingWater);
 });
 
-const decideWaterLevel = tgpu.fn([d.u32, d.u32])((x, y) => {
-  if (checkForFlagsAndBounds(x, y)) {
+const brushPipeline = root.createGuardedComputePipeline((x, y) => {
+  'use gpu';
+  const brushPoint = d.vec2f(x, y);
+  const brush = brushParams.$;
+  let brushDistance = d.f32(0);
+  if (brush.start.x === brush.end.x && brush.start.y === brush.end.y) {
+    brushDistance = std.distance(brushPoint, brush.start);
+  } else {
+    brushDistance = sdLine(brushPoint, brush.start, brush.end);
+  }
+
+  if (brushDistance > brush.radius) {
     return;
   }
 
-  let remainingWater = getWaterLevel(x, y);
-
-  if (remainingWater === 0) {
+  const index = getIndex(d.vec2u(x, y));
+  if (brush.erasing !== 0) {
+    brushStateLayout.$.flags[index] = CellKind.empty;
+    brushStateLayout.$.currentWater[index] = 0;
+    std.atomicStore(brushStateLayout.$.nextWater[index], 0);
     return;
   }
 
-  if (!isWall(x, y - 1)) {
-    const waterLevelBelow = getWaterLevel(x, y - 1);
-    const stable = getStableStateBelow(remainingWater, waterLevelBelow);
-    if (waterLevelBelow < stable) {
-      const change = stable - waterLevelBelow;
-      const flow = std.min(change, viscosity.$);
-      subtractFromCell(x, y, flow);
-      addToCell(x, y - 1, flow);
-      remainingWater -= flow;
+  if (brush.waterAmount !== 0) {
+    if (brushStateLayout.$.flags[index] === CellKind.empty) {
+      brushStateLayout.$.currentWater[index] = brush.waterAmount;
+      std.atomicStore(brushStateLayout.$.nextWater[index], brush.waterAmount);
     }
-  }
-
-  if (remainingWater === 0) {
     return;
   }
 
-  const waterLevelBefore = remainingWater;
-  if (!isWall(x - 1, y)) {
-    const flowRaw = d.i32(waterLevelBefore) - d.i32(getWaterLevel(x - 1, y));
-    if (flowRaw > 0) {
-      const change = std.max(std.min(4, remainingWater), d.u32(flowRaw / 4));
-      const flow = std.min(change, viscosity.$);
-      subtractFromCell(x, y, flow);
-      addToCell(x - 1, y, flow);
-      remainingWater -= flow;
-    }
-  }
-
-  if (remainingWater === 0) {
-    return;
-  }
-
-  if (!isWall(x + 1, y)) {
-    const flowRaw = d.i32(waterLevelBefore) - d.i32(getWaterLevel(x + 1, y));
-    if (flowRaw > 0) {
-      const change = std.max(std.min(4, remainingWater), d.u32(flowRaw / 4));
-      const flow = std.min(change, viscosity.$);
-      subtractFromCell(x, y, flow);
-      addToCell(x + 1, y, flow);
-      remainingWater -= flow;
-    }
-  }
-
-  if (remainingWater === 0) {
-    return;
-  }
-
-  if (!isWall(x, y + 1)) {
-    const stable = getStableStateBelow(getWaterLevel(x, y + 1), remainingWater);
-    if (stable < remainingWater) {
-      const flow = std.min(remainingWater - stable, viscosity.$);
-      subtractFromCell(x, y, flow);
-      addToCell(x, y + 1, flow);
-      remainingWater -= flow;
-    }
-  }
+  brushStateLayout.$.flags[index] = brush.cellKind;
+  brushStateLayout.$.currentWater[index] = 0;
+  std.atomicStore(brushStateLayout.$.nextWater[index], 0);
 });
 
-const vertex = tgpu.vertexFn({
-  in: {
-    squareData: d.vec2f,
-    currentStateData: d.u32,
-    idx: d.builtin.instanceIndex,
+const coordFromUv = (uv: d.v2f): d.v2u => {
+  'use gpu';
+  const clampedUv = std.saturate(uv);
+  const gridUv = d.vec2f(clampedUv.x, 1 - clampedUv.y);
+  const resolution = d.vec2f(simParams.$.resolution);
+  return d.vec2u(std.min(gridUv * resolution, resolution - 1));
+};
+
+const renderPipeline = root.createRenderPipeline({
+  vertex: common.fullScreenTriangle,
+  fragment: ({ uv }) => {
+    'use gpu';
+    const coord = coordFromUv(uv);
+    const flags = getFlags(coord);
+
+    if (flags === CellKind.wall) {
+      return d.vec4f(0.5, 0.5, 0.5, 1);
+    }
+    if (flags === CellKind.source) {
+      return d.vec4f(0, 1, 0, 1);
+    }
+    if (flags === CellKind.drain) {
+      return d.vec4f(1, 0, 0, 1);
+    }
+
+    const normalized = std.min(getWaterLevel(coord) / 0xff, 1);
+    if (normalized === 0) {
+      return d.vec4f();
+    }
+
+    const water = 1 / (1 + std.exp(-(normalized - 0.2) * 10));
+    return d.vec4f(0, 0, water, water);
   },
-  out: { pos: d.builtin.position, cell: d.f32 },
-})((input) => {
-  const w = size.$.x;
-  const h = size.$.y;
-  const gridX = input.idx % w;
-  const gridY = d.u32(input.idx / w);
-  const maxDim = std.max(w, h);
-  const x = (2 * (d.f32(gridX) + input.squareData.x) - d.f32(w)) / maxDim;
-  const y = (2 * (d.f32(gridY) + input.squareData.y) - d.f32(h)) / maxDim;
-
-  const cellFlags = input.currentStateData >> 24;
-  let cell = d.f32(input.currentStateData & 0xffffff);
-  if (cellFlags === 1) {
-    cell = -1;
-  }
-  if (cellFlags === 2) {
-    cell = -2;
-  }
-  if (cellFlags === 3) {
-    cell = -3;
-  }
-  return { pos: d.vec4f(x, y, 0, 1), cell };
 });
 
-const fragment = tgpu.fragmentFn({
-  in: { cell: d.f32 },
-  out: d.vec4f,
-})((input) => {
-  if (input.cell === -1) {
-    return d.vec4f(0.5, 0.5, 0.5, 1);
-  }
-  if (input.cell === -2) {
-    return d.vec4f(0, 1, 0, 1);
-  }
-  if (input.cell === -3) {
-    return d.vec4f(1, 0, 0, 1);
-  }
+type GridPoint = { x: number; y: number };
 
-  const normalized = std.min(input.cell / d.f32(0xff), 1);
+function writeSimParams() {
+  simParams.write({
+    resolution: d.vec2u(options.size, options.size),
+    viscosity: options.viscosity,
+  });
+}
 
-  if (normalized === 0) {
-    return d.vec4f();
-  }
+function createGridState(size: number) {
+  const cellCount = size * size;
+  const flagsBuffer = root.createBuffer(FlagsArray(cellCount)).$usage('storage');
+  const currentWaterBuffer = root.createBuffer(WaterArray(cellCount)).$usage('storage');
+  const nextWaterBuffer = root.createBuffer(AtomicWaterArray(cellCount)).$usage('storage');
 
-  const res = 1 / (1 + std.exp(-(normalized - 0.2) * 10));
-  return d.vec4f(0, 0, res, res);
-});
+  const bindGroup = root.createBindGroup(stateLayout, {
+    flags: flagsBuffer,
+    currentWater: currentWaterBuffer,
+    nextWater: nextWaterBuffer,
+  });
+  const brushBindGroup = root.createBindGroup(brushStateLayout, {
+    flags: flagsBuffer,
+    currentWater: currentWaterBuffer,
+    nextWater: nextWaterBuffer,
+  });
 
-const vertexInstanceLayout = tgpu.vertexLayout(d.arrayOf(d.u32), 'instance');
-const vertexLayout = tgpu.vertexLayout(d.arrayOf(d.vec2f), 'vertex');
+  return {
+    flagsBuffer,
+    currentWaterBuffer,
+    nextWaterBuffer,
+    bindGroup,
+    brushBindGroup,
+  };
+}
 
-let drawCanvasData: Record<number, number> = {};
-
+let gridState: ReturnType<typeof createGridState> | null = null;
 let msSinceLastTick = 0;
-let render: () => void;
-let applyDrawCanvas: () => void;
-let renderChanges: () => void;
+
+function destroyGridState() {
+  gridState?.flagsBuffer.destroy();
+  gridState?.currentWaterBuffer.destroy();
+  gridState?.nextWaterBuffer.destroy();
+  gridState = null;
+}
+
+function stepSimulation() {
+  if (!gridState) {
+    return;
+  }
+
+  simulationPipeline.with(gridState.bindGroup).dispatchThreads(options.size, options.size);
+  gridState.currentWaterBuffer.copyFrom(gridState.nextWaterBuffer);
+}
+
+function drawFrame() {
+  if (!gridState) {
+    return;
+  }
+
+  renderPipeline.with(gridState.bindGroup).withColorAttachment({ view: context }).draw(3);
+}
+
+function applyBrushStroke(
+  start: GridPoint,
+  end: GridPoint,
+  radius: number,
+  brushType: BrushType,
+  erasing = false,
+) {
+  if (!gridState) {
+    return;
+  }
+
+  const brushConfig = BrushConfig[brushType];
+  brushParams.write({
+    start: d.vec2f(start.x, start.y),
+    end: d.vec2f(end.x, end.y),
+    radius,
+    cellKind: brushConfig.cellKind,
+    waterAmount: brushConfig.waterAmount,
+    erasing: erasing ? 1 : 0,
+  });
+  brushPipeline.with(gridState.brushBindGroup).dispatchThreads(options.size, options.size);
+}
+
+function createSampleScene() {
+  const middlePoint = Math.floor(options.size / 2);
+  const radius = Math.floor(options.size / 8);
+  const center = { x: middlePoint, y: middlePoint };
+  applyBrushStroke(center, center, radius, 'wall');
+
+  const sourceY = middlePoint + Math.floor(options.size / 4);
+  const smallRadius = Math.min(Math.floor(radius / 8), 6);
+  const source = { x: middlePoint, y: sourceY };
+  applyBrushStroke(source, source, smallRadius, 'source');
+
+  applyBrushStroke({ x: 0, y: 0 }, { x: options.size - 1, y: 0 }, 0.5, 'wall');
+
+  const sideWallTop = Math.floor(options.size / 8) - 1;
+  if (sideWallTop >= 0) {
+    applyBrushStroke({ x: 0, y: 0 }, { x: 0, y: sideWallTop }, 0.5, 'wall');
+    applyBrushStroke(
+      { x: options.size - 1, y: 0 },
+      { x: options.size - 1, y: sideWallTop },
+      0.5,
+      'wall',
+    );
+  }
+}
 
 function resetGameData() {
-  drawCanvasData = {};
-
-  const compute = tgpu.computeFn({
-    in: { gid: d.builtin.globalInvocationId },
-    workgroupSize: [options.workgroupSize, options.workgroupSize],
-  })((input) => {
-    decideWaterLevel(input.gid.x, input.gid.y);
-  });
-
-  const computePipeline = root.createComputePipeline({
-    compute,
-  });
-
-  const renderPipeline = root
-    .createRenderPipeline({
-      attribs: {
-        squareData: vertexLayout.attrib,
-        currentStateData: vertexInstanceLayout.attrib,
-      },
-      vertex,
-      fragment,
-
-      primitive: {
-        topology: 'triangle-strip',
-      },
-    })
-    .with(vertexLayout, squareBuffer)
-    .with(vertexInstanceLayout, currentStateBuffer);
-
-  currentStateBuffer.write(Array.from({ length: 1024 ** 2 }, () => 0));
-  nextState.write(Array.from({ length: 1024 ** 2 }, () => 0));
-  size.write(d.vec2u(options.size, options.size));
-
-  render = () => {
-    // compute
-    computePipeline.dispatchWorkgroups(
-      options.size / options.workgroupSize,
-      options.size / options.workgroupSize,
-    );
-
-    // render
-    renderPipeline.withColorAttachment({ view: context }).draw(4, options.size ** 2);
-
-    currentStateBuffer.copyFrom(nextState.buffer);
-  };
-
-  applyDrawCanvas = () => {
-    nextState.patch(drawCanvasData);
-
-    drawCanvasData = {};
-  };
-
-  renderChanges = () => {
-    renderPipeline
-      .withColorAttachment({ view: context })
-      .with(vertexLayout, squareBuffer)
-      .with(vertexInstanceLayout, currentStateBuffer)
-      .draw(4, options.size ** 2);
-  };
+  destroyGridState();
+  writeSimParams();
+  gridState = createGridState(options.size);
+  msSinceLastTick = 0;
 
   createSampleScene();
-  applyDrawCanvas();
-  render();
+  stepSimulation();
+  drawFrame();
 }
 
 let isDrawing = false;
@@ -367,54 +511,49 @@ const startDrawing = (erase: boolean) => {
 const stopDrawing = () => {
   isDrawing = false;
   lastPoint = null;
-  renderChanges();
+  drawFrame();
   if (longTouchTimeout) {
     clearTimeout(longTouchTimeout);
     longTouchTimeout = null;
   }
 };
 
-const handleDrawing = (x: number, y: number) => {
-  const { brushSize, size, brushType } = options;
-  const drawValue = isErasing ? 4 << 24 : encodeBrushType(brushType);
-
-  const drawAtPoint = (px: number, py: number) => {
-    for (let i = -brushSize; i <= brushSize; i++) {
-      const cellX = px + i;
-      if (cellX < 0 || cellX >= size) continue;
-      const iSq = i * i;
-
-      for (let j = -brushSize; j <= brushSize; j++) {
-        const cellY = py + j;
-        if (cellY < 0 || cellY >= size) continue;
-        if (iSq + j * j > brushSize * brushSize) continue;
-
-        const index = cellY * size + cellX;
-        drawCanvasData[index] = drawValue;
-      }
-    }
+const pointerCellFromCanvasOffset = (offsetX: number, offsetY: number) => {
+  const cellSize = canvas.width / options.size;
+  return {
+    x: Math.floor((offsetX * window.devicePixelRatio) / cellSize),
+    y: options.size - Math.floor((offsetY * window.devicePixelRatio) / cellSize) - 1,
   };
-
-  if (lastPoint) {
-    const dx = x - lastPoint.x;
-    const dy = y - lastPoint.y;
-    const steps = Math.max(Math.abs(dx), Math.abs(dy));
-    for (let step = 0; step <= steps; step++) {
-      const interpX = Math.round(lastPoint.x + (dx * step) / steps);
-      const interpY = Math.round(lastPoint.y + (dy * step) / steps);
-      drawAtPoint(interpX, interpY);
-    }
-  } else {
-    drawAtPoint(x, y);
-  }
-
-  lastPoint = { x, y };
-  applyDrawCanvas();
-  renderChanges();
 };
+
+const pointerCellFromTouch = (touch: Touch) => {
+  const canvasPos = canvas.getBoundingClientRect();
+  return pointerCellFromCanvasOffset(touch.clientX - canvasPos.left, touch.clientY - canvasPos.top);
+};
+
+const handleDrawing = (x: number, y: number) => {
+  const point = { x, y };
+  applyBrushStroke(
+    lastPoint ?? point,
+    point,
+    options.brushSize + 0.5,
+    options.brushType,
+    isErasing,
+  );
+  lastPoint = point;
+  drawFrame();
+};
+
+canvas.addEventListener('contextmenu', (event) => {
+  if (event.target === canvas) {
+    event.preventDefault();
+  }
+});
 
 canvas.onmousedown = (event) => {
   startDrawing(event.button === 2);
+  const cell = pointerCellFromCanvasOffset(event.offsetX, event.offsetY);
+  handleDrawing(cell.x, cell.y);
 };
 
 canvas.onmouseup = stopDrawing;
@@ -424,22 +563,22 @@ canvas.onmousemove = (event) => {
     return;
   }
 
-  const cellSize = canvas.width / options.size;
-  const x = Math.floor((event.offsetX * window.devicePixelRatio) / cellSize);
-  const y = options.size - Math.floor((event.offsetY * window.devicePixelRatio) / cellSize) - 1;
-
-  handleDrawing(x, y);
+  const cell = pointerCellFromCanvasOffset(event.offsetX, event.offsetY);
+  handleDrawing(cell.x, cell.y);
 };
 
 canvas.ontouchstart = (event) => {
   event.preventDefault();
   touchMoved = false;
+  const cell = pointerCellFromTouch(event.touches[0]);
   longTouchTimeout = window.setTimeout(() => {
     if (!touchMoved) {
       startDrawing(true);
+      handleDrawing(cell.x, cell.y);
     }
   }, 500);
   startDrawing(false);
+  handleDrawing(cell.x, cell.y);
 };
 
 canvas.ontouchend = (event) => {
@@ -455,52 +594,12 @@ canvas.ontouchmove = (event) => {
   }
 
   const touch = event.touches[0];
-  const cellSize = canvas.width / options.size;
-  const canvasPos = canvas.getBoundingClientRect();
-  const x = Math.floor(((touch.clientX - canvasPos.left) * window.devicePixelRatio) / cellSize);
-  const y =
-    options.size -
-    Math.floor(((touch.clientY - canvasPos.top) * window.devicePixelRatio) / cellSize) -
-    1;
-
-  handleDrawing(x, y);
-};
-
-const createSampleScene = () => {
-  const middlePoint = Math.floor(options.size / 2);
-  const radius = Math.floor(options.size / 8);
-  for (let i = -radius; i <= radius; i++) {
-    for (let j = -radius; j <= radius; j++) {
-      if (i * i + j * j <= radius * radius) {
-        drawCanvasData[(middlePoint + j) * options.size + middlePoint + i] = 1 << 24;
-      }
-    }
-  }
-
-  const smallRadius = Math.min(Math.floor(radius / 8), 6);
-  for (let i = -smallRadius; i <= smallRadius; i++) {
-    for (let j = -smallRadius; j <= smallRadius; j++) {
-      if (i * i + j * j <= smallRadius * smallRadius) {
-        drawCanvasData[(middlePoint + j + options.size / 4) * options.size + middlePoint + i] =
-          2 << 24;
-      }
-    }
-  }
-
-  for (let i = 0; i < options.size; i++) {
-    drawCanvasData[i] = 1 << 24;
-  }
-
-  for (let i = 0; i < Math.floor(options.size / 8); i++) {
-    drawCanvasData[i * options.size] = 1 << 24;
-  }
-
-  for (let i = 0; i < Math.floor(options.size / 8); i++) {
-    drawCanvasData[i * options.size + options.size - 1] = 1 << 24;
-  }
+  const cell = pointerCellFromTouch(touch);
+  handleDrawing(cell.x, cell.y);
 };
 
 resetGameData();
+
 // #region UI
 
 let paused = false;
@@ -515,8 +614,9 @@ function run(timestamp: number) {
   if (msSinceLastTick >= options.timestep) {
     if (!paused) {
       for (let i = 0; i < options.stepsPerTimestep; i++) {
-        render?.();
+        stepSimulation();
       }
+      drawFrame();
     }
     msSinceLastTick -= options.timestep;
   }
@@ -535,9 +635,9 @@ export const controls = defineControls({
     },
   },
 
-  'timestep (ms)': {
+  'min timestep (ms)': {
     initial: 25,
-    min: 15,
+    min: 4,
     max: 100,
     step: 1,
     onSliderChange: (value) => {
@@ -548,19 +648,10 @@ export const controls = defineControls({
   'steps per timestep': {
     initial: 1,
     min: 1,
-    max: 50,
+    max: 200,
     step: 1,
     onSliderChange: (value) => {
       options.stepsPerTimestep = value;
-    },
-  },
-
-  'workgroup size': {
-    initial: 1,
-    options: [1, 2, 4, 8, 16],
-    onSelectChange: (value) => {
-      options.workgroupSize = value;
-      resetGameData();
     },
   },
 
@@ -571,7 +662,7 @@ export const controls = defineControls({
     step: 0.01,
     onSliderChange: (value) => {
       options.viscosity = 1000 - value * 990;
-      viscosity.write(options.viscosity);
+      writeSimParams();
     },
   },
 
