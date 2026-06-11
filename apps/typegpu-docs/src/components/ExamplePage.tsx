@@ -49,11 +49,7 @@ function ExamplePage() {
     return <ExampleNotFound />;
   })();
 
-  return (
-    <main className="max-w-full flex-1">
-      <Suspense fallback={'Loading...'}>{content}</Suspense>
-    </main>
-  );
+  return <main className="max-w-full flex-1">{content}</main>;
 }
 
 export default ExamplePage;

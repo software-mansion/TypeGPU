@@ -8,6 +8,7 @@ import { defineConfig } from 'astro/config';
 import starlightBlog from 'starlight-blog';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import typegpu from 'unplugin-typegpu/rollup';
+import macros from 'unplugin-macros/vite';
 import { imagetools } from 'vite-imagetools';
 import wasm from 'vite-plugin-wasm';
 import basicSsl from '@vitejs/plugin-basic-ssl';
@@ -54,6 +55,7 @@ export default defineConfig({
       tailwindVite(),
       typegpu({ include: [/\.m?[jt]sx?/] }),
       imagetools(),
+      macros(),
       {
         ...basicSsl(),
         apply(_, { mode }) {

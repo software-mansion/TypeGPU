@@ -88,6 +88,7 @@
     "tailwindcss": "^4.1.11",
     "tailwindcss-motion": "^1.1.1",
     "typegpu-testing-utility": "workspace:*",
+    "unplugin-macros": "^0.20.0",
     "vite-imagetools": "catalog:frontend",
     "vite-plugin-wasm": "^3.5.0",
     "yaml": "^2.8.3"
