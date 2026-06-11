@@ -1113,6 +1113,39 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('renames items that would result in invalid WGSL', () => {
+    const myConst1 = tgpu.const(d.u32, 1).$name('0');
+    const myConst2 = tgpu.const(d.u32, 1).$name('__');
+    const myConst3 = tgpu.const(d.u32, 1).$name('struct');
+
+    const main = () => {
+      'use gpu';
+      const a = myConst1.$;
+      const b = myConst2.$;
+      const c = myConst3.$;
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "const 0: u32 = 1u;
+
+      const item: u32 = 1u;
+
+      const struct_1: u32 = 1u;
+
+      fn main() {
+        const a = 0;
+        const b = item;
+        const c = struct_1;
+      }"
+    `);
+  });
+
+  it('throws when struct prop is named wrongly', () => {
+    expect(() => tgpu.resolve([d.struct({ '0': d.u32 })])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([d.struct({ __: d.u32 })])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([d.struct({ struct: d.u32 })])).toThrowErrorMatchingInlineSnapshot();
+  });
+
   it('renames parameters that would result in invalid WGSL', () => {
     const main = tgpu.fn(
       [d.i32, d.i32],
