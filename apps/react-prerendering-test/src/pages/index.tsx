@@ -6,6 +6,6 @@ export default function HomePage() {
 
 export const getConfig = async () => {
   return {
-    render: 'static',
+    render: 'dynamic',
   } as const;
 };
