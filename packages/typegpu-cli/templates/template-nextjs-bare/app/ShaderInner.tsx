@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { useConfigureContext, useFrame, useRoot } from '@typegpu/react';
 import { common, d } from 'typegpu';
 
-export default function CanvasInner({ className }: { className?: string }) {
+export default function ShaderInner({ className }: { className?: string }) {
   const { ref, ctxRef } = useConfigureContext({ autoResize: true, alphaMode: 'premultiplied' });
 
   const root = useRoot();

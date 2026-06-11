@@ -1,6 +1,6 @@
 import React from 'react';
 
-import Canvas from './Canvas.tsx';
+import Shader from './Shader.tsx';
 import typegpuLogoDark from '../public/typegpu-logo-dark.svg';
 import typegpuLogoLight from '../public/typegpu-logo-light.svg';
 import nextLogo from '../public/next.svg';
@@ -13,7 +13,7 @@ export default function Page() {
   return (
     <div className="mx-auto flex h-svh w-[1126px] max-w-full flex-col border-x border-border">
       <section className="flex grow flex-col place-content-center place-items-center pt-8 pb-8 max-[1024px]:pt-8 max-[1024px]:pb-6">
-        <Canvas className="h-[min(55vw,55svh)] w-[min(55vw,55svh)] max-w-full" />
+        <Shader className="h-[min(55vw,55svh)] w-[min(55vw,55svh)] max-w-full" />
       </section>
 
       <div className="ticks" />
