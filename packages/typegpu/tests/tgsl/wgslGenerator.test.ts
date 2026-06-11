@@ -1126,15 +1126,15 @@ describe('wgslGenerator', () => {
     };
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "const 0: u32 = 1u;
+      "const item: u32 = 1u;
 
-      const item: u32 = 1u;
+      const item_1: u32 = 1u;
 
       const struct_1: u32 = 1u;
 
       fn main() {
-        const a = 0;
-        const b = item;
+        const a = item;
+        const b = item_1;
         const c = struct_1;
       }"
     `);
@@ -1142,8 +1142,12 @@ describe('wgslGenerator', () => {
 
   it('throws when struct prop is named wrongly', () => {
     expect(() => tgpu.resolve([d.struct({ '0': d.u32 })])).toThrowErrorMatchingInlineSnapshot();
-    expect(() => tgpu.resolve([d.struct({ __: d.u32 })])).toThrowErrorMatchingInlineSnapshot();
-    expect(() => tgpu.resolve([d.struct({ struct: d.u32 })])).toThrowErrorMatchingInlineSnapshot();
+    expect(() => tgpu.resolve([d.struct({ __: d.u32 })])).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Invalid property key '__': Identifiers cannot start with double underscores.]`,
+    );
+    expect(() => tgpu.resolve([d.struct({ struct: d.u32 })])).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Invalid property key 'struct': Identifiers cannot start with reserved keywords.]`,
+    );
   });
 
   it('renames parameters that would result in invalid WGSL', () => {
