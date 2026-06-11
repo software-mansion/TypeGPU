@@ -5,7 +5,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'typegpu-nextjs-simple-project',
+  title: 'typegpu-nextjs-bare-project',
   description: 'TypeGPU + Next.js',
 };
 
