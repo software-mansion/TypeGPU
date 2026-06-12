@@ -392,12 +392,7 @@ class ComputePipelineCore implements SelfResolvable {
         })
         .then((pipeline) => {
           // resolve
-          this._memo = {
-            pipeline,
-            usedBindGroupLayouts,
-            catchall,
-            logResources,
-          };
+          this._memo = { pipeline, usedBindGroupLayouts, catchall, logResources };
 
           this.performanceCollector.measureCompile(device);
           this._initAsyncPromise = undefined;
@@ -406,34 +401,39 @@ class ComputePipelineCore implements SelfResolvable {
     return this._initAsyncPromise;
   }
 
-  public unwrap(): Memo {
-    if (this._initAsyncPromise) {
+  initSync() {
+    if (this._memo !== undefined) {
+      return;
+    }
+
+    if (this._initAsyncPromise !== undefined) {
       throw new Error("'pipeline.initAsync()' was called and is not yet resolved.");
     }
 
-    if (this._memo === undefined) {
-      const device = this.root.device;
-      const { resolutionResult, module } = this.resolveAndCreateShaderModule();
-      const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
+    const device = this.root.device;
+    const { resolutionResult, module } = this.resolveAndCreateShaderModule();
+    const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
 
-      this._memo = {
-        pipeline: device.createComputePipeline({
-          label: getName(this) ?? '<unnamed>',
-          layout: device.createPipelineLayout({
-            label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
-            bindGroupLayouts: usedBindGroupLayouts.map((l) => this.root.unwrap(l)),
-          }),
-          compute: { module },
+    this._memo = {
+      pipeline: device.createComputePipeline({
+        label: getName(this) ?? '<unnamed>',
+        layout: device.createPipelineLayout({
+          label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
+          bindGroupLayouts: usedBindGroupLayouts.map((l) => this.root.unwrap(l)),
         }),
-        usedBindGroupLayouts,
-        catchall,
-        logResources,
-      };
+        compute: { module },
+      }),
+      usedBindGroupLayouts,
+      catchall,
+      logResources,
+    };
 
-      this.performanceCollector.measureCompile(device);
-    }
+    this.performanceCollector.measureCompile(device);
+  }
 
-    return this._memo;
+  public unwrap(): Memo {
+    this.initSync();
+    return this._memo as Memo;
   }
 
   private resolveAndCreateShaderModule() {
