@@ -35,6 +35,7 @@ const buffers = {
 let bindGroup = createBindGroup();
 
 const pipelines = createPipelines();
+await Promise.all([pipelines['gpu-optimized'].initAsync(), pipelines['gpu-simple'].initAsync()]);
 
 function createBindGroup() {
   return root.createBindGroup(computeLayout, {
