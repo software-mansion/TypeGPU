@@ -1889,6 +1889,41 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('throws a readable error when encountering NaN or Infinity', () => {
+    const fn1 = tgpu.fn([])(() => {
+      'use gpu';
+      const n = Infinity;
+    });
+
+    const fn2 = tgpu.fn([])(() => {
+      'use gpu';
+      const n = 1 / 0;
+    });
+
+    const fn3 = tgpu.fn([])(() => {
+      'use gpu';
+      const n = std.div(0, 0);
+    });
+
+    expect(() => tgpu.resolve([fn1])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:fn1: Value 'Infinity' (abstractFloat) cannot be resolved due to WGSL's Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption). This value might be a result of a comptime-evaluated operation.]
+    `);
+
+    expect(() => tgpu.resolve([fn2])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:fn2: Value 'Infinity' (abstractFloat) cannot be resolved due to WGSL's Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption). This value might be a result of a comptime-evaluated operation.]
+    `);
+
+    expect(() => tgpu.resolve([fn3])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:fn3: Value 'NaN' (abstractFloat) cannot be resolved due to WGSL's Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption). This value might be a result of a comptime-evaluated operation.]
+    `);
+  });
+
   describe('short-circuit evaluation', () => {
     const state = {
       counter: 0,
