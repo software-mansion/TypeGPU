@@ -75,20 +75,12 @@ export async function loadModel(root: TgpuRoot, url: string) {
   const createTextureFromBitmap = (bitmap: ImageBitmap, srgb: boolean) => {
     const mipLevelCount = Math.floor(Math.log2(Math.max(bitmap.width, bitmap.height))) + 1;
     const texture = root
-      .createTexture(
-        srgb
-          ? {
-              size: [bitmap.width, bitmap.height],
-              format: 'rgba8unorm',
-              viewFormats: ['rgba8unorm-srgb'],
-              mipLevelCount,
-            }
-          : {
-              size: [bitmap.width, bitmap.height],
-              format: 'rgba8unorm',
-              mipLevelCount,
-            },
-      )
+      .createTexture({
+        size: [bitmap.width, bitmap.height],
+        format: 'rgba8unorm',
+        mipLevelCount,
+        ...(srgb ? { viewFormats: ['rgba8unorm-srgb'] } : {}),
+      })
       .$usage('sampled', 'render');
     texture.write(bitmap);
     texture.generateMipmaps();
