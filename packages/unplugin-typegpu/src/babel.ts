@@ -94,7 +94,16 @@ function assignMetadata(
     // Hoisting the declaration to the top of the scope
     visibility.unshiftContainer('body', replacement as t.Statement);
     this.alreadyTransformed.add(expression);
-    path.remove();
+    const id = t.isFunctionDeclaration(path.node) ? path.node.id : undefined;
+    if (id && path.parentPath.isExportNamedDeclaration()) {
+      path.parentPath.replaceWith(
+        t.exportNamedDeclaration(null, [t.exportSpecifier(t.cloneNode(id), t.cloneNode(id))]),
+      );
+    } else if (id && path.parentPath.isExportDefaultDeclaration()) {
+      path.parentPath.replaceWith(t.exportDefaultDeclaration(t.cloneNode(id)));
+    } else {
+      path.remove();
+    }
   } else {
     path.replaceWith(replacement);
   }
