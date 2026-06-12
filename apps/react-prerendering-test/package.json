@@ -1,30 +1,29 @@
 {
-  "name": "react-rendering-test",
+  "name": "react-prerendering-test",
   "version": "0.0.0",
   "private": true,
-  "type": "module",
   "scripts": {
-    "dev": "waku dev",
-    "build": "waku build",
-    "start": "waku start",
-    "typegen": "waku router typegen"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "dev:no-ssr": "DISABLE_SSR=1 next dev",
+    "build:no-ssr": "DISABLE_SSR=1 next build",
+    "check-ssr": "node checkSsr.mts"
   },
   "dependencies": {
+    "@typegpu/color": "workspace:*",
     "@typegpu/noise": "workspace:*",
     "@typegpu/react": "workspace:*",
-    "hono": "^4.12.14",
+    "next": "^16.2.7",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-server-dom-webpack": "~19.2.6",
-    "typegpu": "workspace:*",
-    "waku": "1.0.0-beta.2"
+    "typegpu": "workspace:*"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "4.3.0",
+    "@types/node": "catalog:types",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "tailwindcss": "^4.3.0",
+    "@webgpu/types": "catalog:types",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*"
   }
