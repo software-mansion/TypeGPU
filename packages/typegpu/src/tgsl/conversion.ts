@@ -291,7 +291,7 @@ function applyActionToSnippet(
           `${targetSnippet}(${propSnips.map((snip) => snip.value).join(', ')})`,
           targetType,
           'runtime',
-          false
+          false,
         );
       }
       // Casting means calling the schema with the snippet as an argument.
