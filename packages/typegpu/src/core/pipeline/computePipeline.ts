@@ -342,9 +342,10 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 class ComputePipelineCore implements SelfResolvable {
   readonly [$internal] = true;
   readonly root: ExperimentalTgpuRoot;
-  private _initAsyncPromise: Promise<void> | undefined;
-  private _memo: Memo | undefined;
-  private performanceTracker: PerformanceTracker;
+  #performanceTracker: PerformanceTracker;
+
+  #initAsyncPromise: Promise<void> | undefined;
+  #memo: Memo | undefined;
 
   #slotBindings: [TgpuSlot<unknown>, unknown][];
   #descriptor: TgpuComputePipeline.Descriptor;
@@ -358,7 +359,7 @@ class ComputePipelineCore implements SelfResolvable {
     this.root = root;
     this.#slotBindings = slotBindings;
     this.#descriptor = descriptor;
-    this.performanceTracker = PERF?.enabled
+    this.#performanceTracker = PERF?.enabled
       ? new PerformanceTrackerImpl()
       : new NullPerformanceTracker();
   }
@@ -388,18 +389,18 @@ class ComputePipelineCore implements SelfResolvable {
    * we want it to return the same promise each time.
    */
   initAsync(): Promise<void> {
-    if (this._memo !== undefined) {
+    if (this.#memo !== undefined) {
       // the pipeline was already resolved & compiled
       return Promise.resolve();
     }
 
-    if (this._initAsyncPromise === undefined) {
+    if (this.#initAsyncPromise === undefined) {
       // the pipeline did not start resolution & compilation
       const device = this.root.device;
       const { resolutionResult, module } = this.resolveAndCreateShaderModule();
       const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
 
-      this._initAsyncPromise = device
+      this.#initAsyncPromise = device
         .createComputePipelineAsync({
           label: getName(this) ?? '<unnamed>',
           layout: device.createPipelineLayout({
@@ -409,22 +410,20 @@ class ComputePipelineCore implements SelfResolvable {
           compute: { module },
         })
         .then((pipeline) => {
-          // resolve
-          this._memo = { pipeline, usedBindGroupLayouts, catchall, logResources };
-
-          this.performanceTracker.measureCompile(device);
-          this._initAsyncPromise = undefined;
+          this.#memo = { pipeline, usedBindGroupLayouts, catchall, logResources };
+          this.#performanceTracker.measureCompile(device);
+          this.#initAsyncPromise = undefined;
         });
     }
-    return this._initAsyncPromise;
+    return this.#initAsyncPromise;
   }
 
   initSync() {
-    if (this._memo !== undefined) {
+    if (this.#memo !== undefined) {
       return;
     }
 
-    if (this._initAsyncPromise !== undefined) {
+    if (this.#initAsyncPromise !== undefined) {
       throw new Error("'pipeline.initAsync()' was called and is not yet resolved.");
     }
 
@@ -432,7 +431,7 @@ class ComputePipelineCore implements SelfResolvable {
     const { resolutionResult, module } = this.resolveAndCreateShaderModule();
     const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
 
-    this._memo = {
+    this.#memo = {
       pipeline: device.createComputePipeline({
         label: getName(this) ?? '<unnamed>',
         layout: device.createPipelineLayout({
@@ -446,12 +445,12 @@ class ComputePipelineCore implements SelfResolvable {
       logResources,
     };
 
-    this.performanceTracker.measureCompile(device);
+    this.#performanceTracker.measureCompile(device);
   }
 
   public unwrap(): Memo {
     this.initSync();
-    return this._memo as Memo;
+    return this.#memo as Memo;
   }
 
   private resolveAndCreateShaderModule() {
@@ -462,7 +461,7 @@ class ComputePipelineCore implements SelfResolvable {
 
     // Resolving code
     const ns = namespace({ names: this.root.nameRegistrySetting });
-    const resolutionResult = this.performanceTracker.measureResolve(() =>
+    const resolutionResult = this.#performanceTracker.measureResolve(() =>
       resolve(this, {
         namespace: ns,
         enableExtensions,
