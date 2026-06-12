@@ -464,32 +464,8 @@ class ComputePipelineCore implements SelfResolvable {
 
     if (this._memo === undefined) {
       const device = this.root.device;
-      const enableExtensions = wgslEnableExtensions.filter((extension) =>
-        this.root.enabledFeatures.has(wgslEnableExtensionToFeatureName[extension]),
-      );
-
-      // Resolving code
-      const ns = namespace({ names: this.root.nameRegistrySetting });
-      const { code, usedBindGroupLayouts, catchall, logResources } =
-        this.performanceCollector.measureResolve(() =>
-          resolve(this, {
-            namespace: ns,
-            enableExtensions,
-            shaderGenerator: this.root.shaderGenerator,
-            root: this.root,
-          }),
-        );
-
-      if (catchall !== undefined) {
-        usedBindGroupLayouts[catchall[0]]?.$name(
-          `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
-        );
-      }
-
-      const module = device.createShaderModule({
-        label: `${getName(this) ?? '<unnamed>'} - Shader`,
-        code,
-      });
+      const { resolutionResult, module } = this.resolveAndCreateShaderModule();
+      const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
 
       this._memo = {
         pipeline: device.createComputePipeline({
@@ -509,6 +485,38 @@ class ComputePipelineCore implements SelfResolvable {
     }
 
     return this._memo;
+  }
+
+  private resolveAndCreateShaderModule() {
+    const device = this.root.device;
+    const enableExtensions = wgslEnableExtensions.filter((extension) =>
+      this.root.enabledFeatures.has(wgslEnableExtensionToFeatureName[extension]),
+    );
+
+    // Resolving code
+    const ns = namespace({ names: this.root.nameRegistrySetting });
+    const resolutionResult = this.performanceCollector.measureResolve(() =>
+      resolve(this, {
+        namespace: ns,
+        enableExtensions,
+        shaderGenerator: this.root.shaderGenerator,
+        root: this.root,
+      }),
+    );
+    const { code, usedBindGroupLayouts, catchall } = resolutionResult;
+
+    if (catchall !== undefined) {
+      usedBindGroupLayouts[catchall[0]]?.$name(
+        `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
+      );
+    }
+
+    const module = device.createShaderModule({
+      label: `${getName(this) ?? '<unnamed>'} - Shader`,
+      code,
+    });
+
+    return { resolutionResult, module };
   }
 }
 
