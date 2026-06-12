@@ -7,7 +7,7 @@ export const scene = {
     awayFromStagePosition: d.vec4f(-1, 0, 2.5, 1),
     target: d.vec4f(0, 0, 0, 1),
     minZoom: 1,
-    maxZoom: 3,
+    maxZoom: 4.5,
   },
   display: {
     exposure: 0.67,
@@ -37,6 +37,16 @@ export const scene = {
   environment: {
     irradianceMipBias: environmentMipCount - 2,
     maxSpecularMipBias: environmentMipCount - 6,
+  },
+  sdfEpoxy: {
+    ior: 1.5,
+    f0: d.vec3f(0.04),
+    surfaceRoughness: 0.05,
+    wallF0: d.vec3f(0.9),
+    mirrorWobble: { frequency: 10, strength: 0.04 },
+    woodLod: 2,
+    exitLod: 1,
+    absorption: d.vec3f(2.6, 1.0, 0.5),
   },
   epoxy: {
     bounds: {
