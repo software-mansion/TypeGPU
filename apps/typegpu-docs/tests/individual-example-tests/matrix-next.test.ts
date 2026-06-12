@@ -15,7 +15,7 @@ describe('matrix(next) example', () => {
         category: 'algorithms',
         name: 'matrix-next',
         controlTriggers: ['Compute'],
-        expectedCalls: 1,
+        expectedCalls: 2,
       },
       device,
     );
@@ -84,6 +84,39 @@ describe('matrix(next) example', () => {
           let outputIndex = getIndex(globalRow, globalCol, (*dimensions).secondColumnCount);
           resultMatrix[outputIndex] = accumulatedResult;
         }
+      }
+
+      struct MatrixInfo {
+        firstRowCount: u32,
+        firstColumnCount: u32,
+        secondColumnCount: u32,
+      }
+
+      @group(0) @binding(3) var<uniform> dimensions: MatrixInfo;
+
+      fn getIndex(row: u32, col: u32, columns: u32) -> u32 {
+        return (col + (row * columns));
+      }
+
+      @group(0) @binding(0) var<storage, read> firstMatrix: array<i32>;
+
+      @group(0) @binding(1) var<storage, read> secondMatrix: array<i32>;
+
+      @group(0) @binding(2) var<storage, read_write> resultMatrix: array<i32>;
+
+      @compute @workgroup_size(16, 16) fn computeSimple(@builtin(global_invocation_id) gid: vec3u) {
+        let row = gid.x;
+        let col = gid.y;
+        if (((row >= dimensions.firstRowCount) || (col >= dimensions.secondColumnCount))) {
+          return;
+        }
+        var result = 0;
+        for (var k = 0u; (k < dimensions.firstColumnCount); k++) {
+          let aValue = firstMatrix[getIndex(row, k, dimensions.firstColumnCount)];
+          let bValue = secondMatrix[getIndex(k, col, dimensions.secondColumnCount)];
+          result += (aValue * bValue);
+        }
+        resultMatrix[getIndex(row, col, dimensions.secondColumnCount)] = result;
       }"
     `);
   });

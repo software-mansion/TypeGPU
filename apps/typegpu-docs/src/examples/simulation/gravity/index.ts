@@ -113,6 +113,8 @@ const renderPipeline = root
     },
   });
 
+await Promise.all([computeCollisionsPipeline.initAsync(), computeGravityPipeline.initAsync()]);
+
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
   format: 'depth24plus',

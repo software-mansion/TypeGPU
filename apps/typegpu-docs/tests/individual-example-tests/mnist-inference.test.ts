@@ -23,7 +23,31 @@ describe('mnist inference example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "enable subgroups;
+      "@group(0) @binding(0) var<storage, read> input: array<f32>;
+
+      @group(1) @binding(0) var<storage, read> weights: array<f32>;
+
+      @group(1) @binding(1) var<storage, read> biases: array<f32>;
+
+      @group(0) @binding(1) var<storage, read_write> output: array<f32>;
+
+      fn relu(x: f32) -> f32 {
+        return max(0f, x);
+      }
+
+      @compute @workgroup_size(1) fn defaultCompute(@builtin(global_invocation_id) gid: vec3u) {
+        let inputSize = arrayLength(&input);
+        let i = gid.x;
+        let weightsOffset = (i * inputSize);
+        var sum = 0f;
+        for (var j = 0u; (j < inputSize); j++) {
+          sum = fma(input[j], weights[(weightsOffset + j)], sum);
+        }
+        let total = (sum + biases[i]);
+        output[i] = relu(total);
+      }
+
+      enable subgroups;
 
       @group(0) @binding(0) var<storage, read> input: array<f32>;
 

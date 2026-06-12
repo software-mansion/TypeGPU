@@ -68,6 +68,22 @@ export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeab
   dispatchWorkgroups(x: number, y?: number, z?: number): void;
 
   /**
+   * Immediately resolves the pipeline, then calls `device.createComputePipelineAsync()`.
+   *
+   * NOTE: while it is not necessary to initialize pipeline manually,
+   * it is generally preferable to use this method whenever possible,
+   * as it prevents blocking of GPU operation execution on pipeline compilation.
+   */
+  initAsync(): Promise<void>;
+
+  /**
+   * Immediately resolves the pipeline and creates WebGPU resources.
+   *
+   * NOTE: it is not necessary to initialize pipeline manually.
+   */
+  initSync(): void;
+
+  /**
    * Dispatches compute workgroups using parameters read from a buffer.
    * The buffer must contain 3 consecutive u32 values (x, y, z workgroup counts).
    * To get the correct offset within complex data structures, use `d.memoryLayoutOf(...)`.
@@ -249,6 +265,14 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     this._executeComputePass((pass) => pass.dispatchWorkgroupsIndirect(rawBuffer, offset));
   }
 
+  initAsync(): Promise<void> {
+    return this.#core.initAsync();
+  }
+
+  initSync() {
+    this.#core.initSync();
+  }
+
   private _applyComputeState(pass: GPUComputePassEncoder): void {
     const memo = this.#core.unwrap();
     const { root } = this.#core;
@@ -318,7 +342,10 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 class ComputePipelineCore implements SelfResolvable {
   readonly [$internal] = true;
   readonly root: ExperimentalTgpuRoot;
-  private _memo: Memo | undefined;
+  #performanceTracker: PerformanceTracker;
+
+  #initAsyncPromise: Promise<void> | undefined;
+  #memo: Memo | undefined;
 
   #slotBindings: [TgpuSlot<unknown>, unknown][];
   #descriptor: TgpuComputePipeline.Descriptor;
@@ -332,6 +359,9 @@ class ComputePipelineCore implements SelfResolvable {
     this.root = root;
     this.#slotBindings = slotBindings;
     this.#descriptor = descriptor;
+    this.#performanceTracker = PERF?.enabled
+      ? new PerformanceTrackerImpl()
+      : new NullPerformanceTracker();
   }
 
   [$resolve](ctx: ResolutionCtx) {
@@ -352,82 +382,150 @@ class ComputePipelineCore implements SelfResolvable {
     return (this.#performanceCallbackQuerySet ??= this.root.createQuerySet('timestamp', 2));
   }
 
-  public unwrap(): Memo {
-    if (this._memo === undefined) {
+  /**
+   * @privateRemarks
+   * This function cannot be a regular async function
+   * because when called multiple times before the promise finishes,
+   * we want it to return the same promise each time.
+   */
+  initAsync(): Promise<void> {
+    if (this.#memo !== undefined) {
+      // the pipeline was already resolved & compiled
+      return Promise.resolve();
+    }
+
+    if (this.#initAsyncPromise === undefined) {
+      // the pipeline did not start resolution & compilation
       const device = this.root.device;
-      const enableExtensions = wgslEnableExtensions.filter((extension) =>
-        this.root.enabledFeatures.has(wgslEnableExtensionToFeatureName[extension]),
-      );
+      const { resolutionResult, module } = this.resolveAndCreateShaderModule();
+      const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
 
-      // Resolving code
-      let resolutionResult: ResolutionResult;
-
-      let resolveMeasure: PerformanceMeasure | undefined;
-      const ns = namespace({ names: this.root.nameRegistrySetting });
-      if (PERF?.enabled) {
-        const resolveStart = performance.mark('typegpu:resolution:start');
-        resolutionResult = resolve(this, {
-          namespace: ns,
-          enableExtensions,
-          shaderGenerator: this.root.shaderGenerator,
-          root: this.root,
-        });
-        resolveMeasure = performance.measure('typegpu:resolution', {
-          start: resolveStart.name,
-        });
-      } else {
-        resolutionResult = resolve(this, {
-          namespace: ns,
-          enableExtensions,
-          shaderGenerator: this.root.shaderGenerator,
-          root: this.root,
-        });
-      }
-
-      const { code, usedBindGroupLayouts, catchall, logResources } = resolutionResult;
-
-      if (catchall !== undefined) {
-        usedBindGroupLayouts[catchall[0]]?.$name(
-          `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
-        );
-      }
-
-      const module = device.createShaderModule({
-        label: `${getName(this) ?? '<unnamed>'} - Shader`,
-        code,
-      });
-
-      this._memo = {
-        pipeline: device.createComputePipeline({
+      this.#initAsyncPromise = device
+        .createComputePipelineAsync({
           label: getName(this) ?? '<unnamed>',
           layout: device.createPipelineLayout({
             label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
             bindGroupLayouts: usedBindGroupLayouts.map((l) => this.root.unwrap(l)),
           }),
           compute: { module },
-        }),
-        usedBindGroupLayouts,
-        catchall,
-        logResources,
-      };
+        })
+        .then((pipeline) => {
+          this.#memo = { pipeline, usedBindGroupLayouts, catchall, logResources };
+          this.#performanceTracker.measureCompile(device);
+          this.#initAsyncPromise = undefined;
+        });
+    }
+    return this.#initAsyncPromise;
+  }
 
-      if (PERF?.enabled) {
-        void (async () => {
-          const start = performance.mark('typegpu:compile-start');
-          await device.queue.onSubmittedWorkDone();
-          const compileMeasure = performance.measure('typegpu:compiled', {
-            start: start.name,
-          });
-
-          PERF?.record('resolution', {
-            resolveDuration: resolveMeasure?.duration,
-            compileDuration: compileMeasure.duration,
-            wgslSize: code.length,
-          });
-        })();
-      }
+  initSync() {
+    if (this.#memo !== undefined) {
+      return;
     }
 
-    return this._memo;
+    if (this.#initAsyncPromise !== undefined) {
+      throw new Error("'pipeline.initAsync()' was called and is not yet resolved.");
+    }
+
+    const device = this.root.device;
+    const { resolutionResult, module } = this.resolveAndCreateShaderModule();
+    const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
+
+    this.#memo = {
+      pipeline: device.createComputePipeline({
+        label: getName(this) ?? '<unnamed>',
+        layout: device.createPipelineLayout({
+          label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
+          bindGroupLayouts: usedBindGroupLayouts.map((l) => this.root.unwrap(l)),
+        }),
+        compute: { module },
+      }),
+      usedBindGroupLayouts,
+      catchall,
+      logResources,
+    };
+
+    this.#performanceTracker.measureCompile(device);
   }
+
+  public unwrap(): Memo {
+    this.initSync();
+    return this.#memo as Memo;
+  }
+
+  private resolveAndCreateShaderModule() {
+    const device = this.root.device;
+    const enableExtensions = wgslEnableExtensions.filter((extension) =>
+      this.root.enabledFeatures.has(wgslEnableExtensionToFeatureName[extension]),
+    );
+
+    // Resolving code
+    const ns = namespace({ names: this.root.nameRegistrySetting });
+    const resolutionResult = this.#performanceTracker.measureResolve(() =>
+      resolve(this, {
+        namespace: ns,
+        enableExtensions,
+        shaderGenerator: this.root.shaderGenerator,
+        root: this.root,
+      }),
+    );
+    const { code, usedBindGroupLayouts, catchall } = resolutionResult;
+
+    if (catchall !== undefined) {
+      usedBindGroupLayouts[catchall[0]]?.$name(
+        `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
+      );
+    }
+
+    const module = device.createShaderModule({
+      label: `${getName(this) ?? '<unnamed>'} - Shader`,
+      code,
+    });
+
+    return { resolutionResult, module };
+  }
+}
+
+interface PerformanceTracker {
+  measureResolve(callback: () => ResolutionResult): ResolutionResult;
+  measureCompile(device: GPUDevice): void;
+}
+
+class PerformanceTrackerImpl implements PerformanceTracker {
+  #resolveMeasure: PerformanceMeasure | undefined;
+  #wgslSize: number | undefined;
+
+  measureResolve(callback: () => ResolutionResult): ResolutionResult {
+    const resolveStart = performance.mark('typegpu:resolution:start');
+    const result = callback();
+    this.#resolveMeasure = performance.measure('typegpu:resolution', {
+      start: resolveStart.name,
+    });
+    this.#wgslSize = result.code.length;
+    return result;
+  }
+
+  measureCompile(device: GPUDevice): void {
+    void (async () => {
+      const start = performance.mark('typegpu:compile-start');
+      await device.queue.onSubmittedWorkDone();
+      const compileMeasure = performance.measure('typegpu:compiled', {
+        start: start.name,
+      });
+
+      PERF?.record('resolution', {
+        resolveDuration: this.#resolveMeasure?.duration,
+        compileDuration: compileMeasure.duration,
+        wgslSize: this.#wgslSize,
+      });
+    })();
+  }
+}
+
+class NullPerformanceTracker implements PerformanceTracker {
+  measureResolve(callback: () => ResolutionResult): ResolutionResult {
+    return callback();
+  }
+
+  measureCompile(): void {}
 }

@@ -126,6 +126,19 @@ const projectPipeline = createComputePipeline(c.projectFn);
 const advectInkPipeline = createComputePipeline(c.advectInkFn);
 const addInkPipeline = createComputePipeline(c.addInkFn);
 
+// Eagerly initialize all pipelines
+await Promise.all([
+  brushPipeline.initAsync(),
+  addForcePipeline.initAsync(),
+  advectPipeline.initAsync(),
+  diffusionPipeline.initAsync(),
+  divergencePipeline.initAsync(),
+  pressurePipeline.initAsync(),
+  projectPipeline.initAsync(),
+  advectInkPipeline.initAsync(),
+  addInkPipeline.initAsync(),
+]);
+
 // Create render pipelines
 function createRenderPipeline(fragmentFn: TgpuFragmentFn<{ uv: d.Vec2f }, d.Vec4f>) {
   return root.createRenderPipeline({

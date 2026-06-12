@@ -85,6 +85,7 @@ const pipelines = {
     ? root.createComputePipeline({ compute: subgroupCompute })
     : null,
 };
+await Promise.all([pipelines.default.initAsync(), pipelines.subgroup?.initAsync()]);
 
 // Definitions for the network
 

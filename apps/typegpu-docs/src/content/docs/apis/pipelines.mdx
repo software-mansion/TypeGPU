@@ -242,6 +242,29 @@ tgpu.resolve([innerPipeline]);
 ```
 :::
 
+## Initialization
+
+Pipeline initialization involves resolving the pipeline code, creating the shader module, and creating the underlying WebGPU pipeline.
+This happens automatically the first time the pipeline is executed via `.draw`, `.dispatchWorkgroups`, or a similar method.
+The `initSync` and `initAsync` methods let you perform this work ahead of time, avoiding a stall on first execution.
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+const mainCompute = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+const pipeline = root.createComputePipeline({
+  compute: mainCompute,
+});
+const myPipelines = [root.createComputePipeline({
+  compute: mainCompute,
+})];
+// ---cut---
+pipeline.initSync();
+
+await Promise.all(myPipelines.map((pipeline) => pipeline.initAsync()));
+```
+
+
 ## Execution
 
 ```ts
