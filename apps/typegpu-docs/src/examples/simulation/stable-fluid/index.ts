@@ -128,15 +128,15 @@ const addInkPipeline = createComputePipeline(c.addInkFn);
 
 // Eagerly initialize all pipelines
 await Promise.all([
-  brushPipeline.initSync(),
-  addForcePipeline.initSync(),
-  advectPipeline.initSync(),
-  diffusionPipeline.initSync(),
-  divergencePipeline.initSync(),
-  pressurePipeline.initSync(),
-  projectPipeline.initSync(),
-  advectInkPipeline.initSync(),
-  addInkPipeline.initSync(),
+  brushPipeline.initAsync(),
+  addForcePipeline.initAsync(),
+  advectPipeline.initAsync(),
+  diffusionPipeline.initAsync(),
+  divergencePipeline.initAsync(),
+  pressurePipeline.initAsync(),
+  projectPipeline.initAsync(),
+  advectInkPipeline.initAsync(),
+  addInkPipeline.initAsync(),
 ]);
 
 // Create render pipelines
