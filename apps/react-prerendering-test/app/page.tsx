@@ -8,5 +8,5 @@ const ShaderNoSSR = dynamic(() => import('../components/Shader.tsx'), {
 });
 
 export default function Page() {
-  return process.env.DISABLE_SSR ? <ShaderNoSSR /> : <Shader />;
+  return process.env.NEXT_PUBLIC_DISABLE_SSR ? <ShaderNoSSR /> : <Shader />;
 }

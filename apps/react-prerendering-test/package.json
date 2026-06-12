@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "dev:no-ssr": "DISABLE_SSR=1 next dev",
-    "build:no-ssr": "DISABLE_SSR=1 next build",
+    "dev:no-ssr": "NEXT_PUBLIC_DISABLE_SSR=1 next dev",
+    "build:no-ssr": "NEXT_PUBLIC_DISABLE_SSR=1 next build",
     "check-ssr": "node checkSsr.mts"
   },
   "dependencies": {
