@@ -18,5 +18,5 @@ console.log(ssr.failed ? '\n' + ssr.output : 'OK');
 console.log('========================================\n');
 
 console.log('Building with SSR disabled...');
-const noSsr = build({ DISABLE_SSR: '1' });
+const noSsr = build({ NEXT_PUBLIC_DISABLE_SSR: '1' });
 console.error(noSsr.failed ? noSsr.output : 'OK');
