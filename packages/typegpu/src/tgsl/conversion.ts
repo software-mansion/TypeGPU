@@ -267,7 +267,7 @@ function applyActionToSnippet(
         // Struct to struct casting
         if (!isAlias(snippet)) {
           throw new Error(
-            `Cannot resolve struct cast from '${typeName}' to '${targetName}'. Store the casted value in a variable first.`,
+            `Cannot resolve struct cast from '${typeName}' to '${targetName}'. Store the value to a variable first, then cast it.`,
           );
         }
 
@@ -291,6 +291,7 @@ function applyActionToSnippet(
           `${targetSnippet}(${propSnips.map((snip) => snip.value).join(', ')})`,
           targetType,
           'runtime',
+          false
         );
       }
       // Casting means calling the schema with the snippet as an argument.
