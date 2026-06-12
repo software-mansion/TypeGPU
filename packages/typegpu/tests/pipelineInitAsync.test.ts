@@ -18,6 +18,7 @@ describe('initAsync', () => {
 
         }"
       `);
+      expect(device.mock.createComputePipeline).not.toHaveBeenCalled();
     });
 
     it('throws when attempting to unwrap when not resolved', async ({ root, device }) => {
@@ -45,6 +46,7 @@ describe('initAsync', () => {
       root.unwrap(pipeline); // resolves & compiles the pipeline
       await pipeline.initAsync(); // should not enqueue device operations
 
+      expect(device.mock.createComputePipeline).toHaveBeenCalled();
       expect(device.mock.createComputePipelineAsync).not.toHaveBeenCalled();
     });
   });

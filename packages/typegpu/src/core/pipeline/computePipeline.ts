@@ -326,6 +326,7 @@ class ComputePipelineCore implements SelfResolvable {
   readonly root: ExperimentalTgpuRoot;
   private _initAsyncPromise: Promise<void> | undefined;
   private _memo: Memo | undefined;
+  private performanceCollector: PerformanceCollector;
 
   #slotBindings: [TgpuSlot<unknown>, unknown][];
   #descriptor: TgpuComputePipeline.Descriptor;
@@ -339,6 +340,9 @@ class ComputePipelineCore implements SelfResolvable {
     this.root = root;
     this.#slotBindings = slotBindings;
     this.#descriptor = descriptor;
+    this.performanceCollector = PERF?.enabled
+      ? new PerformanceCollectorImpl()
+      : new PerformanceCollectorNullImpl();
   }
 
   [$resolve](ctx: ResolutionCtx) {
@@ -465,31 +469,16 @@ class ComputePipelineCore implements SelfResolvable {
       );
 
       // Resolving code
-      let resolutionResult: ResolutionResult;
-
-      let resolveMeasure: PerformanceMeasure | undefined;
       const ns = namespace({ names: this.root.nameRegistrySetting });
-      if (PERF?.enabled) {
-        const resolveStart = performance.mark('typegpu:resolution:start');
-        resolutionResult = resolve(this, {
-          namespace: ns,
-          enableExtensions,
-          shaderGenerator: this.root.shaderGenerator,
-          root: this.root,
-        });
-        resolveMeasure = performance.measure('typegpu:resolution', {
-          start: resolveStart.name,
-        });
-      } else {
-        resolutionResult = resolve(this, {
-          namespace: ns,
-          enableExtensions,
-          shaderGenerator: this.root.shaderGenerator,
-          root: this.root,
-        });
-      }
-
-      const { code, usedBindGroupLayouts, catchall, logResources } = resolutionResult;
+      const { code, usedBindGroupLayouts, catchall, logResources } =
+        this.performanceCollector.measureResolve(() =>
+          resolve(this, {
+            namespace: ns,
+            enableExtensions,
+            shaderGenerator: this.root.shaderGenerator,
+            root: this.root,
+          }),
+        );
 
       if (catchall !== undefined) {
         usedBindGroupLayouts[catchall[0]]?.$name(
@@ -516,23 +505,53 @@ class ComputePipelineCore implements SelfResolvable {
         logResources,
       };
 
-      if (PERF?.enabled) {
-        void (async () => {
-          const start = performance.mark('typegpu:compile-start');
-          await device.queue.onSubmittedWorkDone();
-          const compileMeasure = performance.measure('typegpu:compiled', {
-            start: start.name,
-          });
-
-          PERF?.record('resolution', {
-            resolveDuration: resolveMeasure?.duration,
-            compileDuration: compileMeasure.duration,
-            wgslSize: code.length,
-          });
-        })();
-      }
+      this.performanceCollector.measureCompile(device);
     }
 
     return this._memo;
   }
+}
+
+interface PerformanceCollector {
+  measureResolve(callback: () => ResolutionResult): ResolutionResult;
+  measureCompile(device: GPUDevice): void;
+}
+
+class PerformanceCollectorImpl implements PerformanceCollector {
+  resolveMeasure: PerformanceMeasure | undefined;
+  wgslSize: number | undefined;
+
+  measureResolve(callback: () => ResolutionResult): ResolutionResult {
+    const resolveStart = performance.mark('typegpu:resolution:start');
+    const result = callback();
+    this.resolveMeasure = performance.measure('typegpu:resolution', {
+      start: resolveStart.name,
+    });
+    this.wgslSize = result.code.length;
+    return result;
+  }
+
+  measureCompile(device: GPUDevice): void {
+    void (async () => {
+      const start = performance.mark('typegpu:compile-start');
+      await device.queue.onSubmittedWorkDone();
+      const compileMeasure = performance.measure('typegpu:compiled', {
+        start: start.name,
+      });
+
+      PERF?.record('resolution', {
+        resolveDuration: this.resolveMeasure?.duration,
+        compileDuration: compileMeasure.duration,
+        wgslSize: this.wgslSize,
+      });
+    })();
+  }
+}
+
+class PerformanceCollectorNullImpl implements PerformanceCollector {
+  measureResolve(callback: () => ResolutionResult): ResolutionResult {
+    return callback();
+  }
+
+  measureCompile(): void {}
 }
