@@ -70,15 +70,16 @@ export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeab
   /**
    * Immediately resolves the pipeline, then calls `device.createComputePipelineAsync()`.
    *
-   * NOTE: while it is not necessary to initialize pipeline manually (it is initialized automatically when necessary),
-   * it is generally preferable to use this method whenever possible, as it prevents blocking of GPU operation execution on pipeline compilation.
+   * NOTE: while it is not necessary to initialize pipeline manually,
+   * it is generally preferable to use this method whenever possible,
+   * as it prevents blocking of GPU operation execution on pipeline compilation.
    */
   initAsync(): Promise<void>;
 
   /**
    * Immediately resolves the pipeline and creates WebGPU resources.
    *
-   * NOTE: it is not necessary to initialize pipeline manually (it is initialized automatically when necessary).
+   * NOTE: it is not necessary to initialize pipeline manually.
    */
   initSync(): void;
 
@@ -343,7 +344,7 @@ class ComputePipelineCore implements SelfResolvable {
   readonly root: ExperimentalTgpuRoot;
   private _initAsyncPromise: Promise<void> | undefined;
   private _memo: Memo | undefined;
-  private performanceCollector: PerformanceCollector;
+  private performanceTracker: PerformanceTracker;
 
   #slotBindings: [TgpuSlot<unknown>, unknown][];
   #descriptor: TgpuComputePipeline.Descriptor;
@@ -357,9 +358,9 @@ class ComputePipelineCore implements SelfResolvable {
     this.root = root;
     this.#slotBindings = slotBindings;
     this.#descriptor = descriptor;
-    this.performanceCollector = PERF?.enabled
-      ? new PerformanceCollectorImpl()
-      : new PerformanceCollectorNullImpl();
+    this.performanceTracker = PERF?.enabled
+      ? new PerformanceTrackerImpl()
+      : new NullPerformanceTracker();
   }
 
   [$resolve](ctx: ResolutionCtx) {
@@ -411,7 +412,7 @@ class ComputePipelineCore implements SelfResolvable {
           // resolve
           this._memo = { pipeline, usedBindGroupLayouts, catchall, logResources };
 
-          this.performanceCollector.measureCompile(device);
+          this.performanceTracker.measureCompile(device);
           this._initAsyncPromise = undefined;
         });
     }
@@ -445,7 +446,7 @@ class ComputePipelineCore implements SelfResolvable {
       logResources,
     };
 
-    this.performanceCollector.measureCompile(device);
+    this.performanceTracker.measureCompile(device);
   }
 
   public unwrap(): Memo {
@@ -461,7 +462,7 @@ class ComputePipelineCore implements SelfResolvable {
 
     // Resolving code
     const ns = namespace({ names: this.root.nameRegistrySetting });
-    const resolutionResult = this.performanceCollector.measureResolve(() =>
+    const resolutionResult = this.performanceTracker.measureResolve(() =>
       resolve(this, {
         namespace: ns,
         enableExtensions,
@@ -486,22 +487,22 @@ class ComputePipelineCore implements SelfResolvable {
   }
 }
 
-interface PerformanceCollector {
+interface PerformanceTracker {
   measureResolve(callback: () => ResolutionResult): ResolutionResult;
   measureCompile(device: GPUDevice): void;
 }
 
-class PerformanceCollectorImpl implements PerformanceCollector {
-  resolveMeasure: PerformanceMeasure | undefined;
-  wgslSize: number | undefined;
+class PerformanceTrackerImpl implements PerformanceTracker {
+  #resolveMeasure: PerformanceMeasure | undefined;
+  #wgslSize: number | undefined;
 
   measureResolve(callback: () => ResolutionResult): ResolutionResult {
     const resolveStart = performance.mark('typegpu:resolution:start');
     const result = callback();
-    this.resolveMeasure = performance.measure('typegpu:resolution', {
+    this.#resolveMeasure = performance.measure('typegpu:resolution', {
       start: resolveStart.name,
     });
-    this.wgslSize = result.code.length;
+    this.#wgslSize = result.code.length;
     return result;
   }
 
@@ -514,15 +515,15 @@ class PerformanceCollectorImpl implements PerformanceCollector {
       });
 
       PERF?.record('resolution', {
-        resolveDuration: this.resolveMeasure?.duration,
+        resolveDuration: this.#resolveMeasure?.duration,
         compileDuration: compileMeasure.duration,
-        wgslSize: this.wgslSize,
+        wgslSize: this.#wgslSize,
       });
     })();
   }
 }
 
-class PerformanceCollectorNullImpl implements PerformanceCollector {
+class NullPerformanceTracker implements PerformanceTracker {
   measureResolve(callback: () => ResolutionResult): ResolutionResult {
     return callback();
   }
