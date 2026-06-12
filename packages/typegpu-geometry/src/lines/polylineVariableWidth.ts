@@ -1,20 +1,16 @@
 import tgpu from 'typegpu';
 import { u32, vec2f } from 'typegpu/data';
-import { dot, neg, select } from 'typegpu/std';
-import { intersectLines } from '../utils.ts';
+import { dot, neg, normalize, select } from 'typegpu/std';
+import { intersectLines, rot90ccw, rot90cw } from '../utils.ts';
 import { ExternalNormals, externalNormals } from './externalNormals.ts';
-import { round } from './joins/round.ts';
 import { solveJoin } from './solveJoin.ts';
 import { JoinInput, LineControlPoint, LineSegmentOutput } from './types.ts';
+import { endCapSlot, joinSlot, startCapSlot } from './slots.ts';
 
-export const joinSlot = tgpu.slot(round);
-export const startCapSlot = tgpu.slot(round);
-export const endCapSlot = tgpu.slot(round);
-
-export const lineSegmentVariableWidth = tgpu.fn(
-  [u32, LineControlPoint, LineControlPoint, LineControlPoint, LineControlPoint, u32],
+export const polylineVariableWidth = tgpu.fn(
+  [LineControlPoint, LineControlPoint, LineControlPoint, LineControlPoint, u32, u32],
   LineSegmentOutput,
-)((vertexIndex, A, B, C, D, maxJoinCount) => {
+)((A, B, C, D, vertexIndex, maxJoinCount) => {
   'use gpu';
   const AB = B.position - A.position;
   const BC = C.position - B.position;
@@ -70,42 +66,57 @@ export const lineSegmentVariableWidth = tgpu.fn(
   const coreVertexIndex = (vertexIndex - 2) & 0b11;
   const joinVertexIndex = (vertexIndex - 2) >> 2;
   let join = JoinInput();
+  let isCap = false;
+  let shouldJoin = false;
+
+  const normBC = normalize(BC);
+  const normCB = neg(normBC);
+  const crossL = rot90ccw(normBC);
+  const crossR = rot90cw(normBC);
 
   // oxfmt-ignore
   if (coreVertexIndex === 0) {
+    isCap = isCapB;
+    shouldJoin = joinB.shouldJoinL;
     join = JoinInput({
-      C: B, v: v2, d: d2, shouldJoin: joinB.shouldJoinL, isCap: isCapB, fw: CB,
+      C: B, v: v2, d: d2, fw: normCB, cross: crossL,
       start: d2,
       end: select(eAB.nL, d3, joinB.isHairpin || isCapB),
     });
   } else if (coreVertexIndex === 1) {
+    isCap = isCapB;
+    shouldJoin = joinB.shouldJoinR;
     join = JoinInput({
-      C: B, v: v3, d: d3, shouldJoin: joinB.shouldJoinR, isCap: isCapB, fw: CB,
+      C: B, v: v3, d: d3, fw: normCB, cross: crossR,
       start: select(eAB.nR, d2, joinB.isHairpin || isCapB),
       end: d3,
     });
   } else if (coreVertexIndex === 2) {
+    isCap = isCapC;
+    shouldJoin = joinC.shouldJoinL;
     join = JoinInput({
-      C: C, v: v4, d: d4, shouldJoin: joinC.shouldJoinL, isCap: isCapC, fw: BC,
+      C: C, v: v4, d: d4, fw: normBC, cross: crossR,
       start: d4,
       end: select(eDC.nL, d5, joinC.isHairpin || isCapC),
     });
   } else {
+    isCap = isCapC;
+    shouldJoin = joinC.shouldJoinR;
     join = JoinInput({
-      C: C, v: v5, d: d5, shouldJoin: joinC.shouldJoinR, isCap: isCapC, fw: BC,
+      C: C, v: v5, d: d5, fw: normBC, cross: crossL,
       start: select(eDC.nR, d4, joinC.isHairpin || isCapC),
       end: d5,
     });
   }
 
   let vertexPosition = vec2f(join.v);
-  if (join.isCap) {
+  if (isCap) {
     if (coreVertexIndex < 2) {
       vertexPosition = startCapSlot.$(join, joinVertexIndex, maxJoinCount);
     } else {
       vertexPosition = endCapSlot.$(join, joinVertexIndex, maxJoinCount);
     }
-  } else if (join.shouldJoin) {
+  } else if (shouldJoin) {
     vertexPosition = joinSlot.$(join, joinVertexIndex, maxJoinCount);
   }
 

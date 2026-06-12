@@ -129,10 +129,9 @@ describe('lines combinations example', () => {
         v: vec2f,
         d: vec2f,
         fw: vec2f,
+        cross: vec2f,
         start: vec2f,
         end: vec2f,
-        shouldJoin: bool,
-        isCap: bool,
       }
 
       fn rot90ccw(v: vec2f) -> vec2f {
@@ -177,7 +176,7 @@ describe('lines combinations example', () => {
         return (join.C.position + (dir * join.C.radius));
       }
 
-      fn lineSegmentVariableWidth(vertexIndex: u32, A: LineControlPoint, B: LineControlPoint, C: LineControlPoint, D: LineControlPoint, maxJoinCount: u32) -> LineSegmentOutput {
+      fn polylineVariableWidth(A: LineControlPoint, B: LineControlPoint, C: LineControlPoint, D: LineControlPoint, vertexIndex: u32, maxJoinCount: u32) -> LineSegmentOutput {
         let AB = (B.position - A.position);
         let BC = (C.position - B.position);
         let DC = (C.position - D.position);
@@ -220,24 +219,38 @@ describe('lines combinations example', () => {
         let coreVertexIndex = ((vertexIndex - 2u) & 3u);
         let joinVertexIndex = ((vertexIndex - 2u) >> 2u);
         var join = JoinInput();
+        var isCap = false;
+        var shouldJoin = false;
+        let normBC = normalize(BC);
+        let normCB = -(normBC);
+        let crossL = rot90ccw(normBC);
+        let crossR = rot90cw(normBC);
         if ((coreVertexIndex == 0u)) {
-          join = JoinInput(B, v2, (*d2), CB, (*d2), select(eAB.nL, (*d3), (joinB.isHairpin || isCapB)), joinB.shouldJoinL, isCapB);
+          isCap = isCapB;
+          shouldJoin = joinB.shouldJoinL;
+          join = JoinInput(B, v2, (*d2), normCB, crossL, (*d2), select(eAB.nL, (*d3), (joinB.isHairpin || isCapB)));
         }
         else {
           if ((coreVertexIndex == 1u)) {
-            join = JoinInput(B, v3, (*d3), CB, select(eAB.nR, (*d2), (joinB.isHairpin || isCapB)), (*d3), joinB.shouldJoinR, isCapB);
+            isCap = isCapB;
+            shouldJoin = joinB.shouldJoinR;
+            join = JoinInput(B, v3, (*d3), normCB, crossR, select(eAB.nR, (*d2), (joinB.isHairpin || isCapB)), (*d3));
           }
           else {
             if ((coreVertexIndex == 2u)) {
-              join = JoinInput(C, v4, (*d4), BC, (*d4), select(eDC.nL, (*d5), (joinC.isHairpin || isCapC)), joinC.shouldJoinL, isCapC);
+              isCap = isCapC;
+              shouldJoin = joinC.shouldJoinL;
+              join = JoinInput(C, v4, (*d4), normBC, crossR, (*d4), select(eDC.nL, (*d5), (joinC.isHairpin || isCapC)));
             }
             else {
-              join = JoinInput(C, v5, (*d5), BC, select(eDC.nR, (*d4), (joinC.isHairpin || isCapC)), (*d5), joinC.shouldJoinR, isCapC);
+              isCap = isCapC;
+              shouldJoin = joinC.shouldJoinR;
+              join = JoinInput(C, v5, (*d5), normBC, crossL, select(eDC.nR, (*d4), (joinC.isHairpin || isCapC)), (*d5));
             }
           }
         }
         var vertexPosition = join.v;
-        if (join.isCap) {
+        if (isCap) {
           if ((coreVertexIndex < 2u)) {
             vertexPosition = round_1(join, joinVertexIndex, maxJoinCount);
           }
@@ -246,7 +259,7 @@ describe('lines combinations example', () => {
           }
         }
         else {
-          if (join.shouldJoin) {
+          if (shouldJoin) {
             vertexPosition = round_1(join, joinVertexIndex, maxJoinCount);
           }
         }
@@ -263,7 +276,7 @@ describe('lines combinations example', () => {
         if (((((A.radius < 0f) || (B.radius < 0f)) || (C.radius < 0f)) || (D.radius < 0f))) {
           return mainVertex_Output();
         }
-        let result = lineSegmentVariableWidth(vertexIndex, A, B, C, D, 6u);
+        let result = polylineVariableWidth(A, B, C, D, vertexIndex, 6u);
         return mainVertex_Output(vec4f((result.vertexPosition * result.w), 0f, result.w), result.vertexPosition, vec2f(0f, select(0f, 1f, (vertexIndex > 1u))), instanceIndex, vertexIndex, 0u);
       }
 
