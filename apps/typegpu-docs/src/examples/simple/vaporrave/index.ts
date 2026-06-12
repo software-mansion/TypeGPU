@@ -21,7 +21,7 @@ const glowIntensityUniform = root.createUniform(d.f32, c.INITIAL_GLOW_INTENSITY)
 const resolutionUniform = root.createUniform(d.vec2f);
 const sphereColorUniform = root.createUniform(d.vec3f, c.initialSphereColor);
 
-let floorSpeed = 0.1;
+let floorSpeed = 0.25;
 let sphereSpeed = 1;
 
 const floorPatternSlot = tgpu.slot(circles);
