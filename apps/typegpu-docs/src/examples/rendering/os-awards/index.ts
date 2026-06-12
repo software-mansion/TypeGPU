@@ -33,6 +33,7 @@ const awardVertexLayout = tgpu.vertexLayout(d.arrayOf(ModelVertex));
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const loadingScreen = document.querySelector('.spinner-background') as HTMLDivElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const camera = root.createUniform(Camera);
@@ -388,6 +389,7 @@ const resizeObserver = new ResizeObserver(() => {
 resizeObserver.observe(canvas);
 
 let exampleDestroyed = false;
+let firstFrameDrawn = false;
 
 function frame(timeMs: number) {
   if (exampleDestroyed) {
@@ -408,6 +410,11 @@ function frame(timeMs: number) {
     .with(awardVertexLayout, award.vertexBuffer)
     .withIndexBuffer(award.indexBuffer)
     .drawIndexed(award.indexCount);
+
+  if (!firstFrameDrawn) {
+    loadingScreen.style.display = 'none';
+    firstFrameDrawn = true;
+  }
 
   requestAnimationFrame(frame);
 }
