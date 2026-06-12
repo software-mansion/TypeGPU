@@ -67,6 +67,12 @@ export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeab
 
   dispatchWorkgroups(x: number, y?: number, z?: number): void;
 
+  /**
+   * Immediately resolves the pipeline, then calls `device.createComputePipelineAsync()`.
+   *
+   * NOTE: while it is not necessary to initialize pipeline manually (it is initialized automatically when necessary),
+   * it is generally preferable to use this method whenever possible, as it prevents blocking of GPU operation execution on pipeline compilation.
+   */
   initAsync(): Promise<void>;
 
   /**
