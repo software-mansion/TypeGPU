@@ -76,6 +76,13 @@ export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeab
   initAsync(): Promise<void>;
 
   /**
+   * Immediately resolves the pipeline and creates WebGPU resources.
+   *
+   * NOTE: it is not necessary to initialize pipeline manually (it is initialized automatically when necessary).
+   */
+  initSync(): void;
+
+  /**
    * Dispatches compute workgroups using parameters read from a buffer.
    * The buffer must contain 3 consecutive u32 values (x, y, z workgroup counts).
    * To get the correct offset within complex data structures, use `d.memoryLayoutOf(...)`.
@@ -261,6 +268,10 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     return this.#core.initAsync();
   }
 
+  initSync() {
+    this.#core.initSync();
+  }
+
   private _applyComputeState(pass: GPUComputePassEncoder): void {
     const memo = this.#core.unwrap();
     const { root } = this.#core;
@@ -369,6 +380,12 @@ class ComputePipelineCore implements SelfResolvable {
     return (this.#performanceCallbackQuerySet ??= this.root.createQuerySet('timestamp', 2));
   }
 
+  /**
+   * @privateRemarks
+   * This function cannot be a regular async function
+   * because when called multiple times before the promise finishes,
+   * we want it to return the same promise each time.
+   */
   initAsync(): Promise<void> {
     if (this._memo !== undefined) {
       // the pipeline was already resolved & compiled
