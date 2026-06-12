@@ -359,6 +359,10 @@ export const builtins = new Set([
   'quadSwapY',
 ]);
 
+/**
+ * Sanitizes the primer so that it is compliant with WGSL guidelines.
+ * This primer is not necessarily a valid identifier yet, as it may still collide with other idents or reserved keywords.
+ */
 /*#__NO_SIDE_EFFECTS__*/
 export function sanitizePrimer(primer: string | undefined) {
   if (primer) {
@@ -366,7 +370,7 @@ export function sanitizePrimer(primer: string | undefined) {
       .replaceAll(/\s/g, '_') // whitespaces
       .replaceAll(/[^\w\d]/g, ''); // removing illegal characters
 
-    if (base === '_' || base === '' || base.startsWith('__')) {
+    if (!validateIdentifier(base).success) {
       return 'item';
     }
     return base;
@@ -385,20 +389,20 @@ type ValidationResult =
     };
 
 /**
- * A function for checking whether an identifier needs renaming.
- * Throws if provided with an invalid identifier that cannot be easily renamed.
+ * A function for checking whether an identifier is valid.
+ * If `ident` passes the checks, it is not necessarily a valid identifier yet, as it may still collide with other idents or reserved keywords.
  * @example
  * validateIdentifier("ident"); // { success: true }
- * validateIdentifier("struct"); // { success: false, error: "Identifiers cannot start with reserved keywords." }
- * validateIdentifier("struct_1"); { success: false, error: "Identifiers cannot start with reserved keywords." }
- * validateIdentifier("_"); // { success: false }
+ * validateIdentifier("_"); // { success: false, error: `Identifiers cannot be equal to '' or '_'` }
  * validateIdentifier("my variable"); // { success: false, error: "Identifiers cannot contain whitespace." }
+ * validateIdentifier("0"); // { success: false, error: "Identifier is not compliant with the WGSL guideline." }
  */
 /*#__NO_SIDE_EFFECTS__*/
 export function validateIdentifier(ident: string): ValidationResult {
-  if (ident === '_') {
+  if (ident === '_' || ident === '') {
     return {
       success: false,
+      error: `Identifiers cannot be equal to '' or '_'`,
     };
   }
   if (/\s/.test(ident)) {
@@ -413,11 +417,11 @@ export function validateIdentifier(ident: string): ValidationResult {
       error: `Identifiers cannot start with double underscores.`,
     };
   }
-  const prefix = ident.split('_')[0] as string;
-  if (bannedTokens.has(prefix) || builtins.has(prefix)) {
+  // see: https://www.w3.org/TR/WGSL/#syntax-ident_pattern_token
+  if (!/^(([_\p{XID_Start}][\p{XID_Continue}]+)|([\p{XID_Start}]))$/u.test(ident)) {
     return {
       success: false,
-      error: `Identifiers cannot start with reserved keywords.`,
+      error: `Identifier is not compliant with the WGSL guideline.`,
     };
   }
   return {
@@ -426,29 +430,16 @@ export function validateIdentifier(ident: string): ValidationResult {
 }
 
 /**
- * Same as `validateIdentifier`, except does not check for builtin clashes.
+ * Same as `validateIdentifier`, except also checks for bannedToken clashes.
  */
 /*#__NO_SIDE_EFFECTS__*/
 export function validateProp(ident: string): ValidationResult {
-  if (ident === '_') {
-    return {
-      success: false,
-    };
+  const identResult = validateIdentifier(ident);
+  if (!identResult.success) {
+    return identResult;
   }
-  if (/\s/.test(ident)) {
-    return {
-      success: false,
-      error: `Identifiers cannot contain whitespace.`,
-    };
-  }
-  if (ident.startsWith('__')) {
-    return {
-      success: false,
-      error: `Identifiers cannot start with double underscores.`,
-    };
-  }
-  const prefix = ident.split('_')[0] as string;
-  if (bannedTokens.has(prefix)) {
+
+  if (bannedTokens.has(ident)) {
     return {
       success: false,
       error: `Identifiers cannot start with reserved keywords.`,
