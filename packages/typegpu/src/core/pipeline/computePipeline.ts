@@ -366,56 +366,14 @@ class ComputePipelineCore implements SelfResolvable {
   initAsync(): Promise<void> {
     if (this._memo !== undefined) {
       // the pipeline was already resolved & compiled
-      console.log('memo was present');
       return Promise.resolve();
     }
-    console.log('memo was not present');
 
-    if (!this._initAsyncPromise) {
+    if (this._initAsyncPromise === undefined) {
       // the pipeline did not start resolution & compilation
-
       const device = this.root.device;
-      const enableExtensions = wgslEnableExtensions.filter((extension) =>
-        this.root.enabledFeatures.has(wgslEnableExtensionToFeatureName[extension]),
-      );
-
-      // Resolving code
-      let resolutionResult: ResolutionResult;
-
-      let resolveMeasure: PerformanceMeasure | undefined;
-      const ns = namespace({ names: this.root.nameRegistrySetting });
-      if (PERF?.enabled) {
-        const resolveStart = performance.mark('typegpu:resolution:start');
-        resolutionResult = resolve(this, {
-          namespace: ns,
-          enableExtensions,
-          shaderGenerator: this.root.shaderGenerator,
-          root: this.root,
-        });
-        resolveMeasure = performance.measure('typegpu:resolution', {
-          start: resolveStart.name,
-        });
-      } else {
-        resolutionResult = resolve(this, {
-          namespace: ns,
-          enableExtensions,
-          shaderGenerator: this.root.shaderGenerator,
-          root: this.root,
-        });
-      }
-
-      const { code, usedBindGroupLayouts, catchall, logResources } = resolutionResult;
-
-      if (catchall !== undefined) {
-        usedBindGroupLayouts[catchall[0]]?.$name(
-          `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
-        );
-      }
-
-      const module = device.createShaderModule({
-        label: `${getName(this) ?? '<unnamed>'} - Shader`,
-        code,
-      });
+      const { resolutionResult, module } = this.resolveAndCreateShaderModule();
+      const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
 
       this._initAsyncPromise = device
         .createComputePipelineAsync({
@@ -435,22 +393,7 @@ class ComputePipelineCore implements SelfResolvable {
             logResources,
           };
 
-          if (PERF?.enabled) {
-            void (async () => {
-              const start = performance.mark('typegpu:compile-start');
-              await device.queue.onSubmittedWorkDone();
-              const compileMeasure = performance.measure('typegpu:compiled', {
-                start: start.name,
-              });
-
-              PERF?.record('resolution', {
-                resolveDuration: resolveMeasure?.duration,
-                compileDuration: compileMeasure.duration,
-                wgslSize: code.length,
-              });
-            })();
-          }
-
+          this.performanceCollector.measureCompile(device);
           this._initAsyncPromise = undefined;
         });
     }
