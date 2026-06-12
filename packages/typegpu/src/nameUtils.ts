@@ -390,7 +390,7 @@ type ValidationResult =
 
 /**
  * A function for checking whether an identifier is valid.
- * If `ident` passes the cheks, it is not necessarily a valid identifier yet, as it may still collide with other idents or reserved keywords.
+ * If `ident` passes the checks, it is not necessarily a valid identifier yet, as it may still collide with other idents or reserved keywords.
  * @example
  * validateIdentifier("ident"); // { success: true }
  * validateIdentifier("_"); // { success: false, error: `Identifiers cannot be equal to '' or '_'` }

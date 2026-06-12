@@ -1114,15 +1114,17 @@ describe('wgslGenerator', () => {
   });
 
   it('renames items that would result in invalid WGSL', () => {
+    const myConst0 = tgpu.const(d.u32, 1).$name('');
     const myConst1 = tgpu.const(d.u32, 1).$name('0');
     const myConst2 = tgpu.const(d.u32, 1).$name('__');
     const myConst3 = tgpu.const(d.u32, 1).$name('struct');
 
     const main = () => {
       'use gpu';
-      const a = myConst1.$;
-      const b = myConst2.$;
-      const c = myConst3.$;
+      const a = myConst0.$;
+      const b = myConst1.$;
+      const c = myConst2.$;
+      const d = myConst3.$;
     };
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
@@ -1130,17 +1132,23 @@ describe('wgslGenerator', () => {
 
       const item_1: u32 = 1u;
 
+      const item_2: u32 = 1u;
+
       const struct_1: u32 = 1u;
 
       fn main() {
         const a = item;
         const b = item_1;
-        const c = struct_1;
+        const c = item_2;
+        const d = struct_1;
       }"
     `);
   });
 
   it('throws when struct prop is named wrongly', () => {
+    expect(() => tgpu.resolve([d.struct({ '': d.u32 })])).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Invalid property key '': Identifiers cannot be equal to '' or '_']`,
+    );
     expect(() => tgpu.resolve([d.struct({ '0': d.u32 })])).toThrowErrorMatchingInlineSnapshot(
       `[Error: Invalid property key '0': Identifier is not compliant with the WGSL guideline.]`,
     );
