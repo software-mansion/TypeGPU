@@ -5,9 +5,12 @@ import type {
   Example,
   ExampleCommonFile,
   ExampleMetadata,
+  ExampleSource,
   ExampleSrcFile,
+  PendingExampleSrcFile,
   ThumbnailPair,
 } from '../utils/examples/types.ts';
+import { atom } from 'jotai';
 
 function extractUrlFromViteImport(importFn: () => void): [URL | undefined, boolean] {
   const filePath = String(importFn);
@@ -69,10 +72,9 @@ const exampleTsnotoverFiles = import.meta.glob(
   ['./*/**/*.tsnotover.ts', './*/**/*.tsnotover.tsx'],
   {
     query: 'raw',
-    eager: true,
     import: 'default',
   },
-) as Record<string, string>;
+) as Record<string, () => Promise<string>>;
 
 function replaceExt(key: string, newExt: string) {
   return `${key.substring(0, key.length - pathe.extname(key).length)}${newExt}`;
@@ -82,17 +84,17 @@ const exampleTsFiles = R.pipe(
   // './<category>/<example>/[<subdir>/]<file>.tsx?'
   import.meta.glob(['./*/**/*.ts', './*/**/*.tsx'], {
     query: 'raw',
-    eager: true,
     import: 'default',
-  }) as Record<string, string>,
+  }) as Record<string, () => Promise<string>>,
   R.entries(),
   R.filter(([key]) => !key.includes('.tsnotover.')),
   R.map(
-    ([key, content]): ExampleSrcFile => ({
+    ([key, getContent]): PendingExampleSrcFile => ({
       exampleKey: pathToExampleKey(key),
       path: pathToRelativePath(key),
-      content,
-      tsnotoverContent: exampleTsnotoverFiles[replaceExt(key, `.tsnotover${pathe.extname(key)}`)],
+      getContent,
+      getTsnotoverContent:
+        exampleTsnotoverFiles[replaceExt(key, `.tsnotover${pathe.extname(key)}`)],
     }),
   ),
   R.groupBy(R.prop('exampleKey')),
@@ -106,15 +108,14 @@ const tsFilesImportFunctions = R.pipe(
 const htmlFiles = R.pipe(
   import.meta.glob('./**/index.html', {
     query: 'raw',
-    eager: true,
     import: 'default',
-  }) as Record<string, string>,
+  }) as Record<string, () => Promise<string>>,
   R.entries(),
   R.map(
-    ([key, content]): ExampleSrcFile => ({
+    ([key, getContent]): PendingExampleSrcFile => ({
       exampleKey: pathToExampleKey(key),
       path: pathToRelativePath(key),
-      content,
+      getContent,
     }),
   ),
   R.groupBy(R.prop('exampleKey')),
@@ -167,9 +168,24 @@ const API_RULES: { id: string; pattern: RegExp }[] = [
   { id: 'wgpu-matrix', pattern: /wgpu-matrix/ },
 ];
 
-function detectUsedApis(tsFiles: ExampleSrcFile[]): string[] {
-  const allContent = tsFiles.map((f) => f.content).join('\n');
-  return API_RULES.filter((r) => r.pattern.test(allContent)).map((r) => r.id);
+// TODO: Detect used APIs using `unplugin-macros`
+// function detectUsedApis(_tsFiles: ExampleSrcFile[]): string[] {
+//   const allContent = tsFiles.map((f) => f.content).join('\n');
+//   return API_RULES.filter((r) => r.pattern.test(allContent)).map((r) => r.id);
+// }
+
+async function resolveExampleSrcFile(pending: PendingExampleSrcFile): Promise<ExampleSrcFile> {
+  const [content, tsnotoverContent] = await Promise.all([
+    pending.getContent(),
+    pending.getTsnotoverContent?.(),
+  ]);
+
+  return {
+    exampleKey: pending.exampleKey,
+    path: pending.path,
+    content,
+    tsnotoverContent,
+  };
 }
 
 export const examples = R.pipe(
@@ -179,11 +195,20 @@ export const examples = R.pipe(
       ({
         key,
         metadata: value,
-        tsFiles: exampleTsFiles[key] ?? [],
+        sourceAtom: atom(async (): Promise<ExampleSource> => {
+          const [tsFiles, htmlFile] = await Promise.all([
+            Promise.all(exampleTsFiles[key].map(resolveExampleSrcFile)),
+            resolveExampleSrcFile(htmlFiles[key]?.[0]),
+          ]);
+
+          return {
+            tsFiles,
+            htmlFile,
+          };
+        }),
         tsImport: () => noCacheImport(tsFilesImportFunctions[key]),
-        htmlFile: htmlFiles[key]?.[0] ?? '',
         thumbnails: thumbnailFiles[key],
-        usedApis: detectUsedApis(exampleTsFiles[key] ?? []),
+        usedApis: API_RULES.map((r) => r.id),
       }) satisfies Example,
   ),
 );

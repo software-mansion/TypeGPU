@@ -65,8 +65,9 @@ function useExample(
 }
 
 export function ExampleView({ example, common }: Props) {
-  const { tsFiles: srcFiles, tsImport, htmlFile } = example;
+  const { tsImport, sourceAtom } = example;
 
+  const { tsFiles: srcFiles, htmlFile } = useAtomValue(sourceAtom);
   const tsFiles = filterRelevantTsFiles(srcFiles, common);
   const filePaths = tsFiles.map((file) => file.path);
   const entryFile = filePaths.find((path) => path.startsWith('index.ts')) as string;
