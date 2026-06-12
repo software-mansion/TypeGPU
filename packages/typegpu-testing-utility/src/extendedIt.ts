@@ -114,6 +114,7 @@ export const it = base
         return commandEncoder;
       }),
       createComputePipeline: vi.fn(() => mockComputePipeline),
+      createComputePipelineAsync: vi.fn(async () => mockComputePipeline),
       createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),
       createQuerySet: vi.fn(({ type, count }: GPUQuerySetDescriptor) => {
         const querySet = Object.create(mockQuerySet);

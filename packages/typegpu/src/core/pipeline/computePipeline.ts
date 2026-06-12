@@ -67,6 +67,8 @@ export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeab
 
   dispatchWorkgroups(x: number, y?: number, z?: number): void;
 
+  initAsync(): Promise<void>;
+
   /**
    * Dispatches compute workgroups using parameters read from a buffer.
    * The buffer must contain 3 consecutive u32 values (x, y, z workgroup counts).
@@ -249,6 +251,10 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     this._executeComputePass((pass) => pass.dispatchWorkgroupsIndirect(rawBuffer, offset));
   }
 
+  initAsync(): Promise<void> {
+    return this.#core.initAsync();
+  }
+
   private _applyComputeState(pass: GPUComputePassEncoder): void {
     const memo = this.#core.unwrap();
     const { root } = this.#core;
@@ -318,6 +324,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 class ComputePipelineCore implements SelfResolvable {
   readonly [$internal] = true;
   readonly root: ExperimentalTgpuRoot;
+  private _initAsyncPromise: Promise<void> | undefined;
   private _memo: Memo | undefined;
 
   #slotBindings: [TgpuSlot<unknown>, unknown][];
@@ -352,7 +359,105 @@ class ComputePipelineCore implements SelfResolvable {
     return (this.#performanceCallbackQuerySet ??= this.root.createQuerySet('timestamp', 2));
   }
 
+  initAsync(): Promise<void> {
+    if (this._memo !== undefined) {
+      // the pipeline was already resolved & compiled
+      console.log('memo was present');
+      return Promise.resolve();
+    }
+    console.log('memo was not present');
+
+    if (!this._initAsyncPromise) {
+      // the pipeline did not start resolution & compilation
+
+      const device = this.root.device;
+      const enableExtensions = wgslEnableExtensions.filter((extension) =>
+        this.root.enabledFeatures.has(wgslEnableExtensionToFeatureName[extension]),
+      );
+
+      // Resolving code
+      let resolutionResult: ResolutionResult;
+
+      let resolveMeasure: PerformanceMeasure | undefined;
+      const ns = namespace({ names: this.root.nameRegistrySetting });
+      if (PERF?.enabled) {
+        const resolveStart = performance.mark('typegpu:resolution:start');
+        resolutionResult = resolve(this, {
+          namespace: ns,
+          enableExtensions,
+          shaderGenerator: this.root.shaderGenerator,
+          root: this.root,
+        });
+        resolveMeasure = performance.measure('typegpu:resolution', {
+          start: resolveStart.name,
+        });
+      } else {
+        resolutionResult = resolve(this, {
+          namespace: ns,
+          enableExtensions,
+          shaderGenerator: this.root.shaderGenerator,
+          root: this.root,
+        });
+      }
+
+      const { code, usedBindGroupLayouts, catchall, logResources } = resolutionResult;
+
+      if (catchall !== undefined) {
+        usedBindGroupLayouts[catchall[0]]?.$name(
+          `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
+        );
+      }
+
+      const module = device.createShaderModule({
+        label: `${getName(this) ?? '<unnamed>'} - Shader`,
+        code,
+      });
+
+      this._initAsyncPromise = device
+        .createComputePipelineAsync({
+          label: getName(this) ?? '<unnamed>',
+          layout: device.createPipelineLayout({
+            label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
+            bindGroupLayouts: usedBindGroupLayouts.map((l) => this.root.unwrap(l)),
+          }),
+          compute: { module },
+        })
+        .then((pipeline) => {
+          // resolve
+          this._memo = {
+            pipeline,
+            usedBindGroupLayouts,
+            catchall,
+            logResources,
+          };
+
+          if (PERF?.enabled) {
+            void (async () => {
+              const start = performance.mark('typegpu:compile-start');
+              await device.queue.onSubmittedWorkDone();
+              const compileMeasure = performance.measure('typegpu:compiled', {
+                start: start.name,
+              });
+
+              PERF?.record('resolution', {
+                resolveDuration: resolveMeasure?.duration,
+                compileDuration: compileMeasure.duration,
+                wgslSize: code.length,
+              });
+            })();
+          }
+
+          this._initAsyncPromise = undefined;
+        });
+    }
+    return this._initAsyncPromise;
+  }
+
   public unwrap(): Memo {
+    if (this._initAsyncPromise) {
+      throw new Error("'pipeline.initAsync()' was called and is not yet resolved.");
+    }
+
     if (this._memo === undefined) {
       const device = this.root.device;
       const enableExtensions = wgslEnableExtensions.filter((extension) =>
