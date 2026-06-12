@@ -586,7 +586,7 @@ describe('struct', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
-      - fn*:main(): Cannot resolve struct cast from 'Boid' to 'Bird'. Store the casted value in a variable first.]
+      - fn*:main(): Cannot resolve struct cast from 'Boid' to 'Bird'. Store the value to a variable first, then cast it.]
     `);
   });
 
