@@ -39,7 +39,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "arktype": "catalog:",
-    "astro": "^6.0.8",
+    "astro": "^6.1.10",
     "classnames": "^2.5.1",
     "expressive-code-twoslash": "^0.5.3",
     "fuse.js": "catalog:frontend",
@@ -90,6 +90,6 @@
     "typegpu-testing-utility": "workspace:*",
     "vite-imagetools": "catalog:frontend",
     "vite-plugin-wasm": "^3.5.0",
-    "yaml": "^2.8.3"
+    "yaml": "^2.8.4"
   }
 }
