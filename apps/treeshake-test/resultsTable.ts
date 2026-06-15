@@ -50,6 +50,7 @@ export class ResultsTable {
     output += '|---------';
     for (const _ of this.#bundlers) {
       output += '|---------';
+      output += '|---------';
     }
     output += ' |\n';
 
