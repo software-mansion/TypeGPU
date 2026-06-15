@@ -17,11 +17,11 @@ export function setupTypegpu(pm: Agent, pkg: PackageJson) {
 }
 
 export async function ensureTypegpu(pm: Agent, pkg: PackageJson): Promise<boolean> {
-  if (hasDependency(pkg, 'typegpu')) {
-    p.log.info('typegpu is already installed.');
-    return true;
-  }
-  if (!(await confirmStep('Install typegpu?'))) return false;
+  const message = hasDependency(pkg, 'typegpu')
+    ? 'Do you want to add TypeGPU ecosystem packages?'
+    : 'Install typegpu?';
+  if (!(await confirmStep(message))) return false;
+
   setupTypegpu(pm, pkg);
   return true;
 }

@@ -13,9 +13,17 @@ export const PROJECT_TEMPLATES = [
   { value: 'expo-bare', label: 'Expo RN (Bare)' },
 ] as const;
 
-const PACKAGE_MANAGERS = ['npm', 'pnpm', 'pnpm@6', 'yarn', 'yarn@berry', 'bun'] as const;
+export const PACKAGE_MANAGERS = [
+  { value: 'npm' },
+  { value: 'pnpm' },
+  { value: 'pnpm@6' },
+  { value: 'yarn' },
+  { value: 'yarn@berry' },
+  { value: 'bun' },
+] as const;
 
 export type ProjectTemplate = (typeof PROJECT_TEMPLATES)[number]['value'];
+type PackageManager = (typeof PACKAGE_MANAGERS)[number]['value'];
 
 type CommonOptions = {
   nonInteractive: boolean;
@@ -63,9 +71,10 @@ export function parsePackageManager(value: string | string[] | undefined): Agent
     return undefined;
   }
 
-  if (!PACKAGE_MANAGERS.includes(packageManager as (typeof PACKAGE_MANAGERS)[number])) {
+  const knownPackageManagers = PACKAGE_MANAGERS.map((entry) => entry.value);
+  if (!knownPackageManagers.includes(packageManager as PackageManager)) {
     failAndExit(
-      `Unknown package manager: ${packageManager}. Expected one of: ${PACKAGE_MANAGERS.join(', ')}.`,
+      `Unknown package manager: ${packageManager}. Expected one of: ${knownPackageManagers.join(', ')}.`,
     );
   }
 

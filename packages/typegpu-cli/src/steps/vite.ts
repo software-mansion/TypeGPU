@@ -54,10 +54,9 @@ export async function setupVite(
 ) {
   if (hasDependency(pkg, 'unplugin-typegpu')) {
     p.log.info('unplugin-typegpu is already installed.');
-    return;
+  } else {
+    pmAdd(pm, ['unplugin-typegpu'], true);
   }
-
-  pmAdd(pm, ['unplugin-typegpu'], true);
 
   const viteConfigPath = findConfig(cwd, VITE_CONFIG_NAMES);
   if (viteConfigPath) {
@@ -68,11 +67,6 @@ export async function setupVite(
 }
 
 export async function askForVite(cwd: string, pm: Agent, pkg: PackageJson) {
-  if (hasDependency(pkg, 'unplugin-typegpu')) {
-    p.log.info('unplugin-typegpu is already installed.');
-    return;
-  }
-
   if (!(await confirmStep('Install unplugin-typegpu and configure vite?'))) {
     return;
   }

@@ -55,14 +55,11 @@ export async function enhanceProject(cwd: string, options?: EnhanceProjectOption
 
   const detected = await detect({ cwd });
   let pmAgent = options?.packageManager ?? detected?.agent;
-  if (!pmAgent && options?.nonInteractive && process.env.npm_config_user_agent) {
+  if (!pmAgent && process.env.npm_config_user_agent) {
     pmAgent = pmFromUserAgent(process.env.npm_config_user_agent);
   }
-  if (!pmAgent && options?.nonInteractive) {
-    failAndExit('Could not detect package manager. Pass --package-manager <pm>.');
-  }
   if (!pmAgent) {
-    failAndExit('Could not detect package manager.');
+    failAndExit('Could not detect package manager. Pass --package-manager <pm>.');
   }
   p.log.info(`Detected package manager: ${pmAgent}.`);
 

@@ -47,6 +47,12 @@ To run the standard enhance flow without prompts:
 npx typegpu@latest --enhance --yes
 ```
 
+You can also pass the project directory explicitly:
+
+```sh
+npx typegpu@latest my-app --enhance --yes
+```
+
 To include optional add-ons while enhancing:
 
 ```sh
@@ -55,7 +61,7 @@ npx typegpu@latest --enhance --yes --addons @typegpu/sdf,@typegpu/noise
 
 The TypeGPU agent skill is included automatically when using `--yes`.
 
-If the CLI cannot detect a package manager, pass `--package-manager npm`, `pnpm`, `yarn`, or `bun`.
+If the CLI cannot detect a package manager, pass `--package-manager npm`, `pnpm`, `pnpm@6`, `yarn`, `yarn@berry`, or `bun`.
 
 > [!CAUTION]
 > **Back up your project before running the enhance flow.** The changes the script makes are not reversible by it.

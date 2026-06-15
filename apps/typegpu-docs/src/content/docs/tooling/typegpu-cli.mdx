@@ -55,15 +55,10 @@ npx typegpu@latest my-app --yes
 You can still select the important setup choices explicitly:
 
 ```sh
-npx typegpu@latest my-app --yes --template vite-react --packages @typegpu/sdf --packages @typegpu/noise
+npx typegpu@latest my-app --yes --template vite-react --addons @typegpu/sdf,@typegpu/noise
 ```
 
-`--yes` skips dependency installation.
-Use `--agent-skills` when you want the TypeGPU AI skill installed during project creation:
-
-```sh
-npx typegpu@latest my-app --yes --agent-skills
-```
+`--yes` skips dependency installation and installs the TypeGPU AI skill automatically.
 
 ## Enhancing an existing project
 
@@ -92,21 +87,27 @@ Run the CLI with `--enhance` from the root of an existing project:
   </TabItem>
 </Tabs>
 
+You can also pass the project directory explicitly:
+
+```sh
+npx typegpu@latest my-app --enhance
+```
+
 ### Non-interactive enhancement
 
-Use `--recommended` with `--yes` to apply the standard Vite-oriented TypeGPU setup without prompts:
+Use `--yes` to apply the standard Vite-oriented TypeGPU setup without prompts:
 
 ```sh
-npx typegpu@latest --enhance --yes --recommended
+npx typegpu@latest --enhance --yes
 ```
 
-You can also add ecosystem packages or the TypeGPU AI skill in the same pass:
+You can also add ecosystem packages in the same pass:
 
 ```sh
-npx typegpu@latest --enhance --yes --recommended --packages @typegpu/sdf --agent-skills
+npx typegpu@latest --enhance --yes --addons @typegpu/sdf
 ```
 
-If the CLI cannot detect a package manager, pass `--package-manager npm`, `pnpm`, `yarn`, or `bun`.
+If the CLI cannot detect a package manager, pass `--package-manager npm`, `pnpm`, `pnpm@6`, `yarn`, `yarn@berry`, or `bun`.
 
 :::caution
 Back up your project before running the enhance flow.
@@ -116,11 +117,9 @@ The CLI does not provide an automatic rollback.
 ## Options
 
 - `-y`, `--yes`: skip prompts and use defaults.
-- `--template <name>`: choose `vite-simple`, `vite-complex`, `vite-react`, or `expo-simple`.
-- `--packages <name>`: add a TypeGPU ecosystem package. Repeat the flag to add more.
-- `--agent-skills`: download the official TypeGPU AI skill.
+- `--template <name>`: choose `vite-bare`, `vite-complex`, `vite-react`, or `expo-bare`.
+- `--addons <name1>,<name2>`: add TypeGPU ecosystem packages.
 - `--package-manager <pm>`: choose the package manager for dependency and skill commands.
-- `--recommended`: use the recommended enhance setup.
 
 ## Related tools
 
