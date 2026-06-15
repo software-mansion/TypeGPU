@@ -454,6 +454,7 @@ export const textureStore = dualImpl({
   normalImpl: textureStoreCpu,
   codegenImpl: (_ctx, args) => stitch`textureStore(${args})`,
   signature: (...args) => ({ argTypes: args, returnType: Void }),
+  sideEffects: true,
 });
 
 function textureDimensionsCpu<T extends texture1d | textureStorage1d>(texture: T): number;

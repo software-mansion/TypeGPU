@@ -29,6 +29,12 @@ interface DualImplOptions<T extends AnyFn> {
    */
   readonly noComptime?: boolean | undefined;
   readonly ignoreImplicitCastWarning?: boolean | undefined;
+  /**
+   * Whether the function always has side effects. If `true`, the result always
+   * has `possibleSideEffects: true` regardless of argument side-effects. If
+   * `false` (default), the result has side effects only when any argument does.
+   */
+  readonly sideEffects?: boolean | undefined;
 }
 
 export class MissingCpuImplError extends Error {
@@ -108,7 +114,7 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
         /* origin */ 'runtime',
       );
 
-      if (!args.some((a) => a.possibleSideEffects)) {
+      if (!options.sideEffects && !args.some((a) => a.possibleSideEffects)) {
         return noSideEffects(result);
       }
       return result;
