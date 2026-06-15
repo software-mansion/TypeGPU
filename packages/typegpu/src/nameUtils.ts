@@ -368,7 +368,7 @@ export function sanitizePrimer(primer: string | undefined) {
   if (primer) {
     const base = primer
       .replaceAll(/\s/g, '_') // whitespaces
-      .replaceAll(/[^\w\d]/g, ''); // removing illegal characters
+      .replaceAll(/[^\w]/g, ''); // removing illegal characters
 
     if (!validateIdentifier(base).success) {
       return 'item';
