@@ -1,55 +1,47 @@
 import * as fs from 'node:fs/promises';
-import * as tgpuAll from 'typegpu';
-import * as dAll from 'typegpu/data';
-import * as stdAll from 'typegpu/std';
+import { tgpu, d, std, common } from 'typegpu';
 
 const TESTS_DIR = new URL('./tests/', import.meta.url);
 
 async function generateTestFiles() {
   await fs.mkdir(TESTS_DIR, { recursive: true });
 
-  const tgpuAllImports = Object.keys(tgpuAll)
-    .filter((key) => key !== 'default')
-    .map((exportName) => ({
-      export: exportName,
-      from: 'typegpu',
-      log: exportName,
-    }));
-
-  const dAllImports = Object.keys(dAll).map((exportName) => ({
-    export: exportName,
-    from: 'typegpu/data',
-    log: exportName,
-  }));
-
-  const stdAllImports = Object.keys(stdAll).map((exportName) => ({
-    export: exportName,
-    from: 'typegpu/std',
-    log: exportName,
-  }));
-
-  const tgpuImports = Object.keys(tgpuAll.tgpu)
+  const tgpuImports = Object.keys(tgpu)
     .filter((key) => key !== '~unstable')
-    .map((exportName) => ({
-      export: 'tgpu',
-      from: 'typegpu',
-      log: `tgpu.${exportName}`,
+    .map((importName) => ({
+      import: 'tgpu',
+      item: importName,
     }));
 
-  const imports: { export: string; from: string; log: string }[] = [
-    ...tgpuAllImports,
-    ...dAllImports,
-    ...stdAllImports,
+  const dImports = Object.keys(d).map((importName) => ({
+    import: 'd',
+    item: importName,
+  }));
+
+  const stdImports = Object.keys(std).map((importName) => ({
+    import: 'std',
+    item: importName,
+  }));
+
+  const commonImports = Object.keys(common).map((importName) => ({
+    import: 'common',
+    item: importName,
+  }));
+
+  const imports: { import: string; item: string }[] = [
     ...tgpuImports,
+    ...dImports,
+    ...stdImports,
+    ...commonImports,
   ];
 
-  for (const { export: exportName, from, log } of imports) {
+  for (const { import: importName, item } of imports) {
     const testContent = `
-import { ${exportName} } from '${from}/$built$';
-console.log(${log});
+import { ${importName} } from 'typegpu/$built$';
+console.log(${importName}.${item});
     `;
 
-    const fileName = `${log}_from_${from.replaceAll('/', '')}.ts`;
+    const fileName = `${importName}_${item}.ts`;
     await fs.writeFile(new URL(fileName, TESTS_DIR), testContent);
   }
 }
