@@ -1,5 +1,5 @@
 import { useAtomValue, useSetAtom } from 'jotai';
-import { Suspense, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
 import { common, examples } from '../examples/exampleContent.ts';
 import { ExampleNotFound } from './ExampleNotFound.tsx';

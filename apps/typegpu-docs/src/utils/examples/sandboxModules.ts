@@ -1,4 +1,3 @@
-// oxlint-disable typescript/no-unnecessary-type-assertion -- import.meta.glob is inferred incorrectly by oxlint
 import { atom } from 'jotai';
 import { entries, fromEntries } from 'remeda';
 

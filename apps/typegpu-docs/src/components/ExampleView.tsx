@@ -1,5 +1,5 @@
 import cs from 'classnames';
-import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom, useStore } from 'jotai';
 import {
   type RefObject,
   Suspense,
@@ -76,6 +76,7 @@ function useExample(
 export function ExampleView({ example, common }: Props) {
   const { tsImport, sourceAtom } = example;
 
+  const store = useStore();
   const { tsFiles: srcFiles, htmlFile } = useAtomValue(sourceAtom);
   const tsFiles = filterRelevantTsFiles(srcFiles, common);
   const filePaths = tsFiles.map((file) => file.path);
@@ -180,7 +181,7 @@ export function ExampleView({ example, common }: Props) {
               </div>
 
               <div className="absolute right-0 z-5 md:top-15 md:right-8 md:hidden">
-                <Button onClick={() => openInStackBlitz(example, common)}>
+                <Button onClick={() => openInStackBlitz(store, example, common)}>
                   <span className="font-bold">Edit </span>
                   <img
                     src="/TypeGPU/stackblitz-logomark-blue.svg"
@@ -191,7 +192,7 @@ export function ExampleView({ example, common }: Props) {
               </div>
 
               <div className="absolute right-0 z-5 md:top-15 md:right-8 hidden md:block">
-                <Button onClick={() => openInStackBlitz(example, common)}>
+                <Button onClick={() => openInStackBlitz(store, example, common)}>
                   <span className="font-bold">Edit on</span>
                   <img
                     src="/TypeGPU/stackblitz-logo-black_blue.svg"
