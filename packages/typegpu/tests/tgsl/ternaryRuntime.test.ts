@@ -4,8 +4,11 @@ import tgpu, { d } from '../../src/index.js';
 
 describe('runtime ternary operator', () => {
   it('should handle subtraction in branches with function params', () => {
-    const myFn = tgpu.fn([d.u32, d.u32], d.u32)((b, w) => {
-      return (b > w) ? (b - w) : (w - b);
+    const myFn = tgpu.fn(
+      [d.u32, d.u32],
+      d.u32,
+    )((b, w) => {
+      return b > w ? b - w : w - b;
     });
 
     expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
@@ -19,8 +22,11 @@ describe('runtime ternary operator', () => {
     const RotLut2Gpu = tgpu.const(d.arrayOf(d.u32, 2), [10, 20]);
     const RotLut3Gpu = tgpu.const(d.arrayOf(d.u32, 3), [30, 40, 50]);
 
-    const myFn = tgpu.fn([d.u32, d.u32], d.u32)((r, bitU) => {
-      return (r === d.u32(2)) ? RotLut2Gpu.$[bitU] as number : RotLut3Gpu.$[bitU] as number;
+    const myFn = tgpu.fn(
+      [d.u32, d.u32],
+      d.u32,
+    )((r, bitU) => {
+      return r === d.u32(2) ? (RotLut2Gpu.$[bitU] as number) : (RotLut3Gpu.$[bitU] as number);
     });
 
     expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
@@ -35,8 +41,11 @@ describe('runtime ternary operator', () => {
   });
 
   it('should handle nested runtime ternaries', () => {
-    const myFn = tgpu.fn([d.u32, d.u32, d.u32, d.u32], d.u32)((r, v1, v2, v3) => {
-      return (r === d.u32(1)) ? v1 : ((r === d.u32(2)) ? v2 : v3);
+    const myFn = tgpu.fn(
+      [d.u32, d.u32, d.u32, d.u32],
+      d.u32,
+    )((r, v1, v2, v3) => {
+      return r === d.u32(1) ? v1 : r === d.u32(2) ? v2 : v3;
     });
 
     expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
@@ -47,8 +56,11 @@ describe('runtime ternary operator', () => {
   });
 
   it('should handle bit shift in branch with function param', () => {
-    const myFn = tgpu.fn([d.bool], d.u32)((isCustom) => {
-      return isCustom ? (d.u32(1) << d.u32(20)) : d.u32(0);
+    const myFn = tgpu.fn(
+      [d.bool],
+      d.u32,
+    )((isCustom) => {
+      return isCustom ? d.u32(1) << d.u32(20) : d.u32(0);
     });
 
     expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
@@ -64,7 +76,10 @@ describe('runtime ternary operator', () => {
       high: d.u32,
     });
 
-    const myFn = tgpu.fn([d.bool, Cw, Cw], d.u32)((isCustom, customCw, stdCw) => {
+    const myFn = tgpu.fn(
+      [d.bool, Cw, Cw],
+      d.u32,
+    )((isCustom, customCw, stdCw) => {
       return isCustom ? customCw.low : stdCw.low;
     });
 
@@ -92,7 +107,10 @@ describe('runtime ternary operator', () => {
 
     const layout = root.createUniform(Layout, d.ref);
 
-    const myFn = tgpu.fn([d.bool, d.u32], d.u32)((isCustom, cwIdx) => {
+    const myFn = tgpu.fn(
+      [d.bool, d.u32],
+      d.u32,
+    )((isCustom, cwIdx) => {
       return isCustom ? layout.$.codewords[cwIdx]!.low : layout.$.codewords[cwIdx + d.u32(1)]!.low;
     });
 
@@ -115,7 +133,10 @@ describe('runtime ternary operator', () => {
   });
 
   it('should handle ternary with comparison and unary negation in branches', () => {
-    const myFn = tgpu.fn([d.u32], d.u32)((n) => {
+    const myFn = tgpu.fn(
+      [d.u32],
+      d.u32,
+    )((n) => {
       return n > 0 ? n : -n;
     });
 
@@ -127,7 +148,10 @@ describe('runtime ternary operator', () => {
   });
 
   it('should throw when a ternary branch contains an assignment', () => {
-    const myFn = tgpu.fn([d.i32], d.i32)((a) => {
+    const myFn = tgpu.fn(
+      [d.i32],
+      d.i32,
+    )((a) => {
       let b = 0;
       return a > 0 ? (b = a) : 0;
     });

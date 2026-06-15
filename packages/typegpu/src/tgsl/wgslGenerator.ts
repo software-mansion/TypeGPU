@@ -447,7 +447,9 @@ ${this.ctx.pre}}`;
         type,
         // Result of an operation, so not a reference to anything
         /* origin */ 'runtime',
-        exprType === NODE.assignmentExpr || lhsExpr.possibleSideEffects || rhsExpr.possibleSideEffects,
+        exprType === NODE.assignmentExpr ||
+          lhsExpr.possibleSideEffects ||
+          rhsExpr.possibleSideEffects,
       );
     }
 
