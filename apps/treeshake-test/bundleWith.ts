@@ -10,7 +10,7 @@ import webpack from 'webpack';
 export type ResultRecord = {
   testFilename: string;
   bundler: string;
-  size: number;
+  size: { direct?: number; endpoint?: number };
 };
 
 export async function bundleWithEsbuild(entryUrl: URL, outDir: URL): Promise<URL> {

@@ -8,17 +8,37 @@ import {
 
 type Bundler = (entryUrl: URL, outDir: URL) => Promise<URL>;
 
-const DIST_DIR = new URL('./dist/', import.meta.url);
-const TESTS_DIR = new URL('./tests/', import.meta.url);
+async function exists(url: URL): Promise<boolean> {
+  try {
+    await fs.access(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const TESTS_DIRECT_DIR = new URL('./tests/direct/', import.meta.url);
+const DIST_DIRECT_DIR = new URL('./dist/direct/', import.meta.url);
+const TESTS_ENDPOINT_DIR = new URL('./tests/endpoint/', import.meta.url);
+const DIST_ENDPOINT_DIR = new URL('./dist/endpoint/', import.meta.url);
 
 async function bundleTest(
   testFilename: string,
   bundler: string,
   bundle: Bundler,
 ): Promise<ResultRecord> {
-  const testUrl = new URL(testFilename, TESTS_DIR);
-  const outUrl = await bundle(testUrl, DIST_DIR);
-  const size = await getFileSize(outUrl);
+  // each test may have two variants: direct imports and dedicated endpoints
+  const size: ResultRecord['size'] = {};
+  const testDirectUrl = new URL(testFilename, TESTS_DIRECT_DIR);
+  if (await exists(testDirectUrl)) {
+    const outDirectUrl = await bundle(testDirectUrl, DIST_DIRECT_DIR);
+    size.direct = await getFileSize(outDirectUrl);
+  }
+  const testEndpointUrl = new URL(testFilename, TESTS_ENDPOINT_DIR);
+  if (await exists(testEndpointUrl)) {
+    const outEndpointUrl = await bundle(testEndpointUrl, DIST_ENDPOINT_DIR);
+    size.endpoint = await getFileSize(outEndpointUrl);
+  }
 
   return { testFilename, bundler, size };
 }
@@ -28,7 +48,8 @@ async function bundleTest(
  */
 async function main() {
   console.log('Starting bundler efficiency measurement...');
-  await fs.mkdir(DIST_DIR, { recursive: true });
+  await fs.mkdir(DIST_DIRECT_DIR, { recursive: true });
+  await fs.mkdir(DIST_ENDPOINT_DIR, { recursive: true });
   const availableBundlers: Record<string, Bundler> = {
     // https://github.com/software-mansion/TypeGPU/issues/2026
     // esbuild: bundleWithEsbuild,
@@ -51,10 +72,15 @@ async function main() {
 
   console.log(`Running for bundlers: [${bundlers.map((e) => e[0])}].`);
 
-  const tests = await fs.readdir(TESTS_DIR);
+  const testNames = [
+    ...new Set([
+      ...(await fs.readdir(TESTS_DIRECT_DIR)),
+      ...(await fs.readdir(TESTS_ENDPOINT_DIR)),
+    ]),
+  ];
 
   const results = await Promise.allSettled(
-    tests.flatMap((test) =>
+    testNames.flatMap((test) =>
       bundlers.map(([bundlerName, bundler]) => bundleTest(test, bundlerName, bundler)),
     ),
   );
