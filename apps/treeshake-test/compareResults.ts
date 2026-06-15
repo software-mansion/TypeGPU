@@ -17,7 +17,7 @@ const LegacyBenchmarkResult = LegacyResultRecord.array();
 const ResultRecord = type({
   testFilename: 'string',
   bundler: 'string',
-  size: { direct: 'number', endpoint: 'number' },
+  size: { direct: 'number?', endpoint: 'number?' },
 });
 
 const BenchmarkResults = ResultRecord.array();
