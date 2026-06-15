@@ -50,9 +50,7 @@ export class PointLight {
   #configureCameras() {
     FACE_CONFIGS.forEach((config, i) => {
       const camera = this.#shadowCameras[i];
-      camera.position = this.#position;
-      camera.target = this.#position.add(config.dir);
-      camera.up = config.up;
+      camera.setView(this.#position, this.#position.add(config.dir), config.up);
     });
   }
 
