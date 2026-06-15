@@ -345,7 +345,7 @@ function createArgument(
     name,
     access: () => {
       used = true;
-      return snip(name, type, origin);
+      return snip(name, type, origin, /* possibleSideEffects */ false);
     },
     decoratedType: type,
     get used() {
