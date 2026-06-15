@@ -7,7 +7,7 @@ export function getExampleURLs(
 } {
   return {
     html: `../../../src/examples/${category}/${name}/index.html?raw`,
-    ts: `../../../src/examples/${category}/${name}/index.ts`,
+    ts: `../../../src/examples/${category}/${name}/index`,
   };
 }
 

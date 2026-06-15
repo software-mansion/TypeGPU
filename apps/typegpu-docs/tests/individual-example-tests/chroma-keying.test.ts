@@ -32,10 +32,6 @@ describe('chroma keying example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct fragment_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var<uniform> uvTransform: mat2x2f;
 
       @group(1) @binding(0) var inputTexture: texture_external;
@@ -48,11 +44,15 @@ describe('chroma keying example', () => {
 
       @group(0) @binding(3) var<uniform> threshold: f32;
 
+      struct fragment_Input {
+        @location(0) uv: vec2f,
+      }
+
       @fragment fn fragment(_arg_0: fragment_Input) -> @location(0) vec4f {
-        var uv2 = ((uvTransform * (_arg_0.uv - 0.5f)) + 0.5f);
-        var col = textureSampleBaseClampToEdge(inputTexture, sampler_1, uv2);
-        var ycbcr = (col.rgb * rgbToYcbcrMatrix);
-        var colycbcr = (color * rgbToYcbcrMatrix);
+        let uv2 = ((uvTransform * (_arg_0.uv - 0.5f)) + 0.5f);
+        let col = textureSampleBaseClampToEdge(inputTexture, sampler_1, uv2);
+        let ycbcr = (col.rgb * rgbToYcbcrMatrix);
+        let colycbcr = (color * rgbToYcbcrMatrix);
         let crDiff = abs((ycbcr.y - colycbcr.y));
         let cbDiff = abs((ycbcr.z - colycbcr.z));
         let distance_1 = length(vec2f(crDiff, cbDiff));

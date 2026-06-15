@@ -46,6 +46,17 @@ export default defineConfig([
 | [no-invalid-assignment](docs/rules/no-invalid-assignment.md)           | Disallow assignments that will generate invalid WGSL                                        | ⭐  |    |
 | [no-math](docs/rules/no-math.md)                                       | Disallow usage of JavaScript 'Math' methods inside 'use gpu' functions                      |    | ⭐  |
 | [no-uninitialized-variables](docs/rules/no-uninitialized-variables.md) | Disallow variable declarations without initializers inside 'use gpu' functions              | ⭐  |    |
+| [no-unsupported-syntax](docs/rules/no-unsupported-syntax.md)           | Disallow JS syntax that will not be parsed into valid WGSL.                                 | ⭐  |    |
 | [no-unwrapped-objects](docs/rules/no-unwrapped-objects.md)             | Disallow unwrapped Plain Old JavaScript Objects inside 'use gpu' functions (except returns) | ⭐  |    |
 
 <!-- end auto-generated rules list -->
+
+## TypeGPU is created by Software Mansion
+
+[![swm](https://logo.swmansion.com/logo?color=white&variant=desktop&width=150&tag=typegpu-github 'Software Mansion')](https://swmansion.com)
+
+Since 2012 [Software Mansion](https://swmansion.com) is a software agency with
+experience in building web and mobile apps. We are Core React Native
+Contributors and experts in dealing with all kinds of React Native issues. We
+can help you build your next dream product –
+[Hire us](https://swmansion.com/contact/projects?utm_source=typegpu&utm_medium=readme).

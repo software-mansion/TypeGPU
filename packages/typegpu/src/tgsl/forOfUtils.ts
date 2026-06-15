@@ -1,5 +1,5 @@
 import { UnknownData } from '../data/dataTypes.ts';
-import { isEphemeralSnippet, snip, type Snippet } from '../data/snippet.ts';
+import { isAlias, snip, type Snippet } from '../data/snippet.ts';
 import { stitch } from '../core/resolve/stitch.ts';
 import * as wgsl from '../data/wgslTypes.ts';
 import { i32, u32 } from '../data/numeric.ts';
@@ -14,7 +14,7 @@ import { isTgpuRange } from '../std/range.ts';
 export function getLoopVarKind(elementSnippet: Snippet) {
   // If it's ephemeral, it's a value that cannot change. If it's a reference, we take
   // an implicit pointer to it
-  return elementSnippet.origin === 'constant-tgpu-const-ref' ? 'const' : 'let';
+  return elementSnippet.origin === 'constant-immutable-def' ? 'const' : 'let';
 }
 
 export function getElementSnippet(iterableSnippet: Snippet, index: Snippet) {
@@ -27,6 +27,9 @@ export function getElementSnippet(iterableSnippet: Snippet, index: Snippet) {
   return elementSnippet;
 }
 
+/**
+ * Determines the type of the element as accessible inside of the `for .. of` loop body
+ */
 export function getElementType(elementSnippet: Snippet, iterableSnippet: Snippet) {
   let elementType = elementSnippet.dataType;
   if (elementType === UnknownData) {
@@ -36,9 +39,11 @@ export function getElementType(elementSnippet: Snippet, iterableSnippet: Snippet
   }
 
   if (
-    isEphemeralSnippet(elementSnippet) ||
-    elementSnippet.origin === 'constant-tgpu-const-ref' ||
-    elementSnippet.origin === 'runtime-tgpu-const-ref'
+    wgsl.isNaturallyEphemeral(elementSnippet.dataType) ||
+    elementSnippet.origin === 'runtime' ||
+    elementSnippet.origin === 'constant' ||
+    elementSnippet.origin === 'constant-immutable-def' ||
+    elementSnippet.origin === 'runtime-immutable-def'
   ) {
     return elementType;
   }
@@ -74,7 +79,7 @@ export function getRangeSnippets(
     };
   }
 
-  if (!unroll && isEphemeralSnippet(iterableSnippet)) {
+  if (!unroll && !isAlias(iterableSnippet)) {
     throw new Error(
       `\`for ... of ...\` loops only support std.range or iterables stored in variables.
 -----

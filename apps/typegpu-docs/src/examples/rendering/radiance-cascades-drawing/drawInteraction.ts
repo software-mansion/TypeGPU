@@ -25,8 +25,8 @@ export function createDrawInteraction({ canvas, onDraw, onStop }: DrawInteractio
   let isDrawing = false;
   let activeButton: 0 | 2 = 0;
   let primaryColor = d.vec3f(1, 0.9, 0.7);
-  let secondaryColor = d.vec3f(0.25, 0.55, 1);
-  let animateColor = false;
+  let secondaryColor = d.vec3f();
+  let animateColor = true;
 
   function brushColor(timestamp = performance.now()) {
     if (activeButton === 2) {
@@ -158,7 +158,7 @@ export function createDrawInteraction({ canvas, onDraw, onStop }: DrawInteractio
         },
       },
       'Animated Color': {
-        initial: false,
+        initial: true,
         onToggleChange(value: boolean) {
           animateColor = value;
         },

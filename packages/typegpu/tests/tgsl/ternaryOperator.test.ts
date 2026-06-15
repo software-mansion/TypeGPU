@@ -18,14 +18,14 @@ describe('ternary operator', () => {
         myFn.with(mySlot, false).$name('falseFn'),
       ]),
     ).toMatchInlineSnapshot(`
-        "fn trueFn() -> u32 {
-          return 10u;
-        }
+      "fn trueFn() -> u32 {
+        return 10u;
+      }
 
-        fn falseFn() -> u32 {
-          return 20u;
-        }"
-      `);
+      fn falseFn() -> u32 {
+        return 20u;
+      }"
+    `);
   });
 
   it('should work for different comptime known expressions', () => {
@@ -72,22 +72,22 @@ describe('ternary operator', () => {
         myFn.with(mySlot, 3).$name('threeFn'),
       ]),
     ).toMatchInlineSnapshot(`
-        "fn myFn() -> u32 {
-          return -1u;
-        }
+      "fn myFn() -> u32 {
+        return -1u;
+      }
 
-        fn oneFn() -> u32 {
-          return 10u;
-        }
+      fn oneFn() -> u32 {
+        return 10u;
+      }
 
-        fn twoFn() -> u32 {
-          return 20u;
-        }
+      fn twoFn() -> u32 {
+        return 20u;
+      }
 
-        fn threeFn() -> u32 {
-          return 30u;
-        }"
-      `);
+      fn threeFn() -> u32 {
+        return 30u;
+      }"
+    `);
   });
 
   it('should not include unused dependencies', ({ root }) => {
@@ -103,20 +103,20 @@ describe('ternary operator', () => {
     });
 
     expect(tgpu.resolve([myFn.with(mySlot, true).$name('trueFn')])).toMatchInlineSnapshot(`
-        "@group(0) @binding(0) var<uniform> myUniform: u32;
+      "@group(0) @binding(0) var<uniform> myUniform: u32;
 
-        fn trueFn() -> u32 {
-          return myUniform;
-        }"
-      `);
+      fn trueFn() -> u32 {
+        return myUniform;
+      }"
+    `);
 
     expect(tgpu.resolve([myFn.with(mySlot, false).$name('falseFn')])).toMatchInlineSnapshot(`
-        "@group(0) @binding(0) var<storage, read> myReadonly: u32;
+      "@group(0) @binding(0) var<storage, read> myReadonly: u32;
 
-        fn falseFn() -> u32 {
-          return myReadonly;
-        }"
-      `);
+      fn falseFn() -> u32 {
+        return myReadonly;
+      }"
+    `);
   });
 
   it('should handle undefined', ({ root }) => {
@@ -132,6 +132,55 @@ describe('ternary operator', () => {
     `);
   });
 
+  it('should generate select() when branches are scalars', () => {
+    function foo() {
+      'use gpu';
+      const cond = false;
+      return cond ? 1 : 0;
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() -> i32 {
+        const cond = false;
+        return select(0i, 1i, cond);
+      }"
+    `);
+  });
+
+  it('should generate select() when branches are vector constructors', () => {
+    function foo() {
+      'use gpu';
+      const count = 10;
+      const anchor = count > 0 ? d.vec2f(1, 2) : d.vec2f();
+      return anchor;
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() -> vec2f {
+        const count = 10;
+        let anchor = select(vec2f(), vec2f(1, 2), (count > 0i));
+        return anchor;
+      }"
+    `);
+  });
+
+  it('should generate select() when branches contain side-effect free array indexing', () => {
+    function foo() {
+      'use gpu';
+      const array = [0];
+      const cond = false;
+      return cond ? d.vec2f(array[0]!) : d.vec2f();
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "fn foo() -> vec2f {
+        let array_1 = array<i32, 1>(0);
+        const cond = false;
+        return select(vec2f(), vec2f(f32(array_1[0i])), cond);
+      }"
+    `);
+  });
+
   it('should throw when test is not comptime known', () => {
     const myFn = tgpu.fn(
       [d.u32],
@@ -143,7 +192,7 @@ describe('ternary operator', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Ternary operator is only supported for comptime-known checks (used with '(n > 0u)'). For runtime checks, please use 'std.select' or if/else statements.]
+      - fn:myFn: Ternary operator '(n > 0) ? n : (-n)' is invalid. For more complex branching, please use 'std.select' or if/else statements.]
     `);
   });
 });

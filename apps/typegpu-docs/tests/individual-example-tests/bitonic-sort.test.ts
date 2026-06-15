@@ -33,10 +33,10 @@ describe('bitonic sort example', () => {
 
       @group(0) @binding(0) var<storage, read> src: array<u32>;
 
-      @compute @workgroup_size(256) fn copyPadKernel(@builtin(global_invocation_id) _arg_gid: vec3u, @builtin(num_workgroups) _arg_numWorkgroups: vec3u) {
-        let spanX = (_arg_numWorkgroups.x * 256u);
-        let spanY = (_arg_numWorkgroups.y * spanX);
-        let idx = ((_arg_gid.x + (_arg_gid.y * spanX)) + (_arg_gid.z * spanY));
+      @compute @workgroup_size(256) fn copyPadKernel(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
+        let spanX = (numWorkgroups.x * 256u);
+        let spanY = (numWorkgroups.y * spanX);
+        let idx = ((gid.x + (gid.y * spanX)) + (gid.z * spanY));
         let dstLength = params.dstLength;
         let srcLength = params.srcLength;
         if ((idx >= dstLength)) {
@@ -58,10 +58,10 @@ describe('bitonic sort example', () => {
         return (a < b);
       }
 
-      @compute @workgroup_size(256) fn bitonicStepKernel(@builtin(global_invocation_id) _arg_gid: vec3u, @builtin(num_workgroups) _arg_numWorkgroups: vec3u) {
-        let spanX = (_arg_numWorkgroups.x * 256u);
-        let spanY = (_arg_numWorkgroups.y * spanX);
-        let tid = ((_arg_gid.x + (_arg_gid.y * spanX)) + (_arg_gid.z * spanY));
+      @compute @workgroup_size(256) fn bitonicStepKernel(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
+        let spanX = (numWorkgroups.x * 256u);
+        let spanY = (numWorkgroups.y * spanX);
+        let tid = ((gid.x + (gid.y * spanX)) + (gid.z * spanY));
         let k = uniforms.k;
         let shift = uniforms.jShift;
         let dataLength = arrayLength(&data);
@@ -97,10 +97,10 @@ describe('bitonic sort example', () => {
 
       @group(0) @binding(0) var<storage, read> src: array<u32>;
 
-      @compute @workgroup_size(256) fn copyBackKernel(@builtin(global_invocation_id) _arg_gid: vec3u, @builtin(num_workgroups) _arg_numWorkgroups: vec3u) {
-        let spanX = (_arg_numWorkgroups.x * 256u);
-        let spanY = (_arg_numWorkgroups.y * spanX);
-        let idx = ((_arg_gid.x + (_arg_gid.y * spanX)) + (_arg_gid.z * spanY));
+      @compute @workgroup_size(256) fn copyBackKernel(@builtin(global_invocation_id) gid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
+        let spanX = (numWorkgroups.x * 256u);
+        let spanY = (numWorkgroups.y * spanX);
+        let idx = ((gid.x + (gid.y * spanX)) + (gid.z * spanY));
         if ((idx < params.srcLength)) {
           dst[idx] = src[idx];
         }
@@ -118,11 +118,11 @@ describe('bitonic sort example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
+      @group(0) @binding(0) var<storage, read> data_1: array<u32>;
+
       struct fragmentFn_Input {
         @location(0) uv: vec2f,
       }
-
-      @group(0) @binding(0) var<storage, read> data_1: array<u32>;
 
       @fragment fn fragmentFn(_arg_0: fragmentFn_Input) -> @location(0) vec4f {
         let data = (&data_1);

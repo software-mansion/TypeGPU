@@ -27,7 +27,7 @@ export const computeBlock = tgpu.computeFn({
 
   const partialSums = d.arrayOf(d.f32, 8)(fillIdentityArray());
 
-  let prev = identitySlot.$;
+  let prev = d.f32(identitySlot.$);
   let lastIdx = d.u32(0);
 
   // TODO: use `tgpu.unroll(8)`

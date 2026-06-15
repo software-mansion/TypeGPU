@@ -11,6 +11,7 @@ const entry = [
 export default defineConfig({
   entry,
   outDir: 'dist',
+  copy: ['./bin.mjs'],
   format: 'esm',
   dts: true,
   platform: 'neutral',

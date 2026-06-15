@@ -45,8 +45,8 @@ describe('blur example', () => {
       @compute @workgroup_size(32, 1, 1) fn computeFn(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: vec3u) {
         let settings = (&settingsUniform);
         let filterOffset = i32((f32(((*settings).filterDim - 1i)) / 2f));
-        var dims = vec2i(textureDimensions(inTexture));
-        var baseIndex = (vec2i(((wid.xy * vec2u((*settings).blockDim, 4u)) + (lid.xy * vec2u(4, 1)))) - vec2i(filterOffset, 0i));
+        let dims = vec2i(textureDimensions(inTexture));
+        let baseIndex = (vec2i(((wid.xy * vec2u((*settings).blockDim, 4u)) + (lid.xy * vec2u(4, 1)))) - vec2i(filterOffset, 0i));
         // unrolled iteration #0
         {
           // unrolled iteration #0
@@ -470,13 +470,13 @@ describe('blur example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct renderFragment_Input {
-        @location(0) uv: vec2f,
-      }
-
       @group(0) @binding(0) var renderView: texture_2d<f32>;
 
       @group(0) @binding(1) var sampler_1: sampler;
+
+      struct renderFragment_Input {
+        @location(0) uv: vec2f,
+      }
 
       @fragment fn renderFragment(_arg_0: renderFragment_Input) -> @location(0) vec4f {
         return textureSample(renderView, sampler_1, _arg_0.uv);

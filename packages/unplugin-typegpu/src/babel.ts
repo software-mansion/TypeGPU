@@ -1,9 +1,9 @@
-import * as t from '@babel/types';
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import defu from 'defu';
 import { transpileFn } from 'tinyest-for-wgsl';
-import { FORMAT_VERSION } from 'tinyest';
+import * as t from '@babel/types';
 import {
+  METADATA_FORMAT_VERSION,
   type PluginState,
   defaultOptions,
   functionVisitor,
@@ -23,7 +23,7 @@ function assignMetadata(
   ast: ReturnType<typeof transpileFn>,
 ): void {
   const metadata = t.objectExpression([
-    t.objectProperty(i('v'), t.numericLiteral(FORMAT_VERSION)),
+    t.objectProperty(i('v'), t.numericLiteral(METADATA_FORMAT_VERSION)),
     t.objectProperty(i('name'), t.valueToNode(name)),
     t.objectProperty(i('ast'), t.valueToNode(ast)),
     t.objectProperty(

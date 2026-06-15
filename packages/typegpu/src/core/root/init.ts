@@ -1,9 +1,5 @@
 import { type AnyComputeBuiltin, builtin, type OmitBuiltins } from '../../builtin.ts';
-import {
-  INTERNAL_createQuerySet,
-  isQuerySet,
-  type TgpuQuerySet,
-} from '../../core/querySet/querySet.ts';
+import { INTERNAL_createQuerySet, isQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
 import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type { AnyWgslData, BaseData, v3u, Vec3u, WgslArray } from '../../data/wgslTypes.ts';
 import { invariant } from '../../errors.ts';
@@ -147,6 +143,30 @@ export class TgpuGuardedComputePipelineImpl<
     return new TgpuGuardedComputePipelineImpl(
       this.#root,
       this.#pipeline.with(bindGroupOrEncoder as TgpuBindGroup & GPUCommandEncoder),
+      this.#sizeUniform,
+      this.#workgroupSize,
+    );
+  }
+
+  withPerformanceCallback(
+    callback: (start: bigint, end: bigint) => void | Promise<void>,
+  ): TgpuGuardedComputePipeline<TArgs> {
+    return new TgpuGuardedComputePipelineImpl(
+      this.#root,
+      this.#pipeline.withPerformanceCallback(callback),
+      this.#sizeUniform,
+      this.#workgroupSize,
+    );
+  }
+
+  withTimestampWrites(options: {
+    querySet: TgpuQuerySet<'timestamp'> | GPUQuerySet;
+    beginningOfPassWriteIndex?: number;
+    endOfPassWriteIndex?: number;
+  }): TgpuGuardedComputePipeline<TArgs> {
+    return new TgpuGuardedComputePipelineImpl(
+      this.#root,
+      this.#pipeline.withTimestampWrites(options),
       this.#sizeUniform,
       this.#workgroupSize,
     );

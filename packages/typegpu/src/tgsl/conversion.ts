@@ -3,7 +3,7 @@ import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
-import { snip, type Snippet } from '../data/snippet.ts';
+import { snip, withDataType, type Snippet } from '../data/snippet.ts';
 import {
   type AbstractFloat,
   type AnyWgslData,
@@ -241,12 +241,11 @@ function applyActionToSnippet(
   targetType: BaseData,
 ): Snippet {
   if (action.action === 'none') {
-    return snip(
-      snippet.value,
-      targetType,
-      // if it was a ref, then it's still a ref
-      /* origin */ snippet.origin,
-    );
+    if (targetType === snippet.dataType) {
+      return snippet;
+    }
+
+    return withDataType(targetType, snippet);
   }
 
   switch (action.action) {
@@ -308,7 +307,7 @@ export function convertToCommonType<T extends Snippet[]>(
   if ((TEST || DEV) && verbose && conversion.hasImplicitConversions) {
     console.warn(
       `Implicit conversions from [\n${values
-        .map((v) => `  ${v.value}: ${safeStringify(v.dataType)}`)
+        .map((v) => `  ${ctx.resolveSnippet(v).value}: ${safeStringify(v.dataType)}`)
         .join(',\n')}\n] to ${conversion.targetType.type} are supported, but not recommended.
 Consider using explicit conversions instead.`,
     );

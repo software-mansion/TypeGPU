@@ -1,9 +1,9 @@
 import { stitch } from '../resolve/stitch.ts';
-import { $gpuCallable, $internal, $resolve } from '../../../src/shared/symbols.ts';
-import { setName } from '../../../src/shared/meta.ts';
-import type { DualFn } from '../../../src/types.ts';
-import { type ResolvedSnippet, snip, type Snippet } from '../../../src/data/snippet.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../../src/types.ts';
+import { $gpuCallable, $internal, $resolve } from '../../shared/symbols.ts';
+import { setName } from '../../shared/meta.ts';
+import type { DualFn } from '../../types.ts';
+import { type ResolvedSnippet, snip, type Snippet } from '../../data/snippet.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 
 /**

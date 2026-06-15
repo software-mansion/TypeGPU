@@ -5,7 +5,24 @@ description: A guide on how to start using the TypeGPU library.
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-## Installing locally
+All you need to get started in most cases, is to just run the following command:
+
+```sh
+npx typegpu@latest
+```
+
+It allows you to:
+- Select from a range of **templates** in various frameworks
+- Pick and choose from our wide variety of **ecosystem packages**
+- Install relevant **AI Skills**
+
+### Live Examples
+
+Our [live examples](/TypeGPU/examples) showcase many use-cases of TypeGPU. Feel free to check them out! You can also open each of them on StackBlitz in order to edit the code and see the preview update live, or to bootstrap your own project.
+
+## Manual setup
+
+### Installing locally
 
 Install TypeGPU using the package manager of your choice.
 
@@ -81,11 +98,11 @@ function foo() {
 We provide a [lint plugin](/TypeGPU/tooling/eslint-plugin-typegpu) that helps with writing 'use gpu' functions.
 :::
 
-## Live Examples
+### AI Tools
 
-Our [live examples](/TypeGPU/examples) showcase many use-cases of TypeGPU. Feel free to check them out! You can also open each of them on StackBlitz in order to edit the code and see the preview update live, or to bootstrap your own project.
-
-## Troubleshooting
+To install the official TypeGPU Skill, head to the [Software Mansion Skills repository](https://github.com/software-mansion-labs/skills) and select the TypeGPU skill during the setup process.
+You can also use the experimental [TypeGPU MCP](https://www.npmjs.com/package/typegpu-runtime-inspector-mcp) to make it easier for agents to catch runtime errors and inspect the generated WGSL code along with other useful runtime information.
+### Troubleshooting
 
 <details>
 <summary>WebGPU types are not available</summary>

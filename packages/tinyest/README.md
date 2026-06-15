@@ -7,8 +7,6 @@ Tiny Embeddable Syntax Tree -
 
 </div>
 
-**WIP: Under Construction**
-
 A compact, fast, and embeddable JavaScript AST for transpilation.
 
 ### Projects using tinyest

@@ -1,5 +1,5 @@
 import { setName, type TgpuNamable } from '../../shared/meta.ts';
-import type { ExperimentalTgpuRoot } from '../../core/root/rootTypes.ts';
+import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
 
 export interface TgpuQuerySet<T extends GPUQueryType> extends TgpuNamable {

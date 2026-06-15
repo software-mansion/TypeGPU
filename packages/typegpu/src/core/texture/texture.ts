@@ -600,7 +600,7 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.getUniqueName(this);
+    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const { group, binding } = ctx.allocateFixedEntry(
       isWgslStorageTexture(this.schema)
         ? {
@@ -613,11 +613,14 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
       this,
     );
 
-    ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var ${id}: ${ctx.resolve(this.schema).value};`,
-    );
-
-    return snip(id, this.schema, /* origin */ 'handle');
+    return ctx.gen.declareGlobalVar({
+      group,
+      binding,
+      id,
+      dataType: this.schema,
+      scope: 'handle',
+      init: undefined,
+    });
   }
 }
 
@@ -642,7 +645,7 @@ export class TgpuLaidOutTextureViewImpl<T extends WgslTexture | WgslStorageTextu
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.getUniqueName(this);
+    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const group = ctx.allocateLayoutEntry(this.#membership.layout);
 
     ctx.addDeclaration(

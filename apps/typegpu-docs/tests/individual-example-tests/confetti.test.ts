@@ -59,16 +59,16 @@ describe('confetti example', () => {
 
       struct VertexIn {
         @location(0) tilt: f32,
-        @location(1) angle: f32,
-        @location(2) color: vec4f,
-        @location(3) center: vec2f,
         @builtin(vertex_index) vertexIndex: u32,
+        @location(1) angle: f32,
+        @location(2) center: vec2f,
+        @location(3) color: vec4f,
       }
 
       @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
         let width = (_arg_0.tilt / 350f);
         let height = (width / 2f);
-        var local = array<vec2f, 4>(vec2f(), vec2f(width, 0f), vec2f(0f, height), vec2f(width, height));
+        let local = array<vec2f, 4>(vec2f(), vec2f(width, 0f), vec2f(0f, height), vec2f(width, height));
         var pos = (rotate(local[_arg_0.vertexIndex], _arg_0.angle) + _arg_0.center);
         if ((aspectRatio < 1f)) {
           pos.x /= aspectRatio;
