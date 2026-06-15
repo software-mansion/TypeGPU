@@ -8,13 +8,13 @@ import { emptyResultsString, ResultsTable } from './resultsTable.ts';
 const ResultRecord = type({
   testFilename: 'string',
   bundler: 'string',
-  size: 'number',
+  size: { direct: 'number', endpoint: 'number' },
 });
 
 const BenchmarkResults = ResultRecord.array();
 
 function groupResultsByTest(results: typeof BenchmarkResults.infer) {
-  const grouped: Record<string, Record<string, number>> = {};
+  const grouped: Record<string, Record<string, { direct: number; endpoint: number }>> = {};
   for (const result of results) {
     if (!grouped[result.testFilename]) {
       grouped[result.testFilename] = {};
@@ -53,13 +53,15 @@ async function generateReport(
 
   for (const test of allTests) {
     for (const bundler of allBundlers) {
-      const prSize = prGrouped[test]?.[bundler];
-      const targetSize = targetGrouped[test]?.[bundler];
+      for (const importType of ['direct', 'endpoint'] as const) {
+        const prSize = prGrouped[test]?.[bundler]?.[importType];
+        const targetSize = targetGrouped[test]?.[bundler]?.[importType];
 
-      if (targetSize === undefined || prSize === undefined) totalUnknown++;
-      else if (prSize > targetSize) totalIncreased++;
-      else if (prSize < targetSize) totalDecreased++;
-      else totalUnchanged++;
+        if (targetSize === undefined || prSize === undefined) totalUnknown++;
+        else if (prSize > targetSize) totalIncreased++;
+        else if (prSize < targetSize) totalDecreased++;
+        else totalUnchanged++;
+      }
     }
   }
 

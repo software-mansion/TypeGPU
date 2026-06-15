@@ -1,8 +1,8 @@
 type TestName = string;
 type BundlerName = string;
-type ResultSize = number | undefined;
-type TestResults = Record<BundlerName, ResultSize>;
-type Row = Map<BundlerName, { pr: ResultSize; target: ResultSize }>;
+type Result = { direct: number | undefined; endpoint: number | undefined };
+type TestResults = Record<BundlerName, Result>;
+type Row = Map<BundlerName, { pr: Result; target: Result }>;
 
 export const emptyResultsString = '*No major changes.*';
 
@@ -24,8 +24,8 @@ export class ResultsTable {
     const row: Row = new Map();
     for (const bundlerName of this.#bundlers) {
       row.set(bundlerName, {
-        pr: prResults?.[bundlerName],
-        target: targetResults?.[bundlerName],
+        pr: prResults?.[bundlerName] as Result,
+        target: targetResults?.[bundlerName] as Result,
       });
     }
 
@@ -42,7 +42,8 @@ export class ResultsTable {
     let output = '';
     output += '| Test';
     for (const bundler of this.#bundlers) {
-      output += ` | ${bundler}`;
+      output += ` | ${bundler} (direct)`;
+      output += ` | ${bundler} (endpoint)`;
     }
     output += ' |\n';
 
@@ -64,7 +65,8 @@ export class ResultsTable {
         const prSize = row.get(bundler)?.pr;
         const targetSize = row.get(bundler)?.target;
 
-        output += ` | ${prettifySize(prSize)} ${calculateTrendMessage(prSize, targetSize)}`;
+        output += ` | ${prettifySize(prSize?.direct)} ${calculateTrendMessage(prSize?.direct, targetSize?.direct)}`;
+        output += ` | ${prettifySize(prSize?.endpoint)} ${calculateTrendMessage(prSize?.endpoint, targetSize?.endpoint)}`;
       }
       output += ' |\n';
     }
@@ -88,8 +90,11 @@ ${output}
   #maxAbsoluteChange(row: Row): number {
     let max = 0;
     for (const { pr, target } of row.values()) {
-      if (pr !== undefined && target !== undefined && target !== 0) {
-        max = Math.max(max, Math.abs((pr - target) / target));
+      if (pr.direct !== undefined && target.direct !== undefined && target.direct !== 0) {
+        max = Math.max(max, Math.abs((pr.direct - target.direct) / target.direct));
+      }
+      if (pr.endpoint !== undefined && target.endpoint !== undefined && target.endpoint !== 0) {
+        max = Math.max(max, Math.abs((pr.endpoint - target.endpoint) / target.endpoint));
       }
     }
     return max;
@@ -102,7 +107,19 @@ ${output}
       if (pr && target === undefined) {
         return true;
       }
-      if (pr && target && Math.max(pr / target, target / pr) >= 1 + this.#threshold) {
+      if (
+        pr.direct &&
+        target.direct &&
+        Math.max(pr.direct / target.direct, target.direct / pr.direct) >= 1 + this.#threshold
+      ) {
+        return true;
+      }
+      if (
+        pr.endpoint &&
+        target.endpoint &&
+        Math.max(pr.endpoint / target.endpoint, target.endpoint / pr.endpoint) >=
+          1 + this.#threshold
+      ) {
         return true;
       }
     }
