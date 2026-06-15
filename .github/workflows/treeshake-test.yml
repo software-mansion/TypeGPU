@@ -35,14 +35,6 @@ jobs:
           path: target-branch
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_branch || github.base_ref }}
 
-      - name: Install dependencies (PR branch)
-        working-directory: pr-branch
-        run: pnpm install
-
-      - name: Install dependencies (target branch)
-        working-directory: target-branch
-        run: pnpm install
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -51,6 +43,14 @@ jobs:
           cache-dependency-path: |
             pr-branch/pnpm-lock.yaml
             target-branch/pnpm-lock.yaml
+
+      - name: Install dependencies (PR branch)
+        working-directory: pr-branch
+        run: pnpm install --frozen-lockfile
+
+      - name: Install dependencies (target branch)
+        working-directory: target-branch
+        run: pnpm install --frozen-lockfile
 
       - name: Generate import tests on PR branch
         working-directory: pr-branch
