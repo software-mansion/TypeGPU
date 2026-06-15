@@ -4,6 +4,8 @@ type ResultSize = number | undefined;
 type TestResults = Record<BundlerName, ResultSize>;
 type Row = Map<BundlerName, { pr: ResultSize; target: ResultSize }>;
 
+export const emptyResultsString = '*No major changes.*';
+
 export class ResultsTable {
   #bundlers: Set<BundlerName>;
   #results: Map<TestName, Row>;
@@ -34,7 +36,7 @@ export class ResultsTable {
 
   toString() {
     if (this.#results.size === 0) {
-      return '*No major changes.*';
+      return emptyResultsString;
     }
 
     let output = '';

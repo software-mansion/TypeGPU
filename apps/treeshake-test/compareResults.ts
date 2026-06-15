@@ -2,7 +2,7 @@
 
 import { type } from 'arktype';
 import * as fs from 'node:fs/promises';
-import { ResultsTable } from './resultsTable.ts';
+import { emptyResultsString, ResultsTable } from './resultsTable.ts';
 
 // Define schema for benchmark results
 const ResultRecord = type({
@@ -82,6 +82,9 @@ async function generateReport(
     allTable.addRow(test, prResults, targetResults);
   });
 
+  const staticTableString = staticTable.toString();
+  const dynamicTableString = dynamicTable.toString();
+
   // Markdown generation
   let output = '';
 
@@ -90,9 +93,11 @@ async function generateReport(
   output += '| :---: | :---: | :---: | :---: |\n';
   output += `| **${totalDecreased}** | **${totalUnchanged}** | **${totalIncreased}** | **${totalUnknown}** |\n\n`;
 
-  output += `## 👀 Notable results\n\n`;
-  output += `### Static test results:\n${staticTable}\n\n`;
-  output += `### Dynamic test results:\n${dynamicTable}\n\n`;
+  if (staticTableString !== emptyResultsString || dynamicTableString !== emptyResultsString) {
+    output += `## 👀 Notable results\n\n`;
+    output += `### Static test results:\n${staticTable}\n\n`;
+    output += `### Dynamic test results:\n${dynamicTable}\n\n`;
+  }
 
   output += `## 📋 All results\n\n`;
   output += `${allTable}\n\n`;
