@@ -4,6 +4,15 @@ import { type } from 'arktype';
 import * as fs from 'node:fs/promises';
 import { emptyResultsString, ResultsTable } from './resultsTable.ts';
 
+// TODO(???): Remove this
+const LegacyResultRecord = type({
+  testFilename: 'string',
+  bundler: 'string',
+  size: 'number',
+});
+
+const LegacyBenchmarkResult = LegacyResultRecord.array();
+
 // Define schema for benchmark results
 const ResultRecord = type({
   testFilename: 'string',
@@ -136,6 +145,14 @@ async function main() {
       targetResults = BenchmarkResults.assert(JSON.parse(targetContent));
     } catch (error) {
       console.warn('Could not read or validate target results:', error);
+      console.warn('Attempting to read in legacy format and reinterpret them');
+      const targetContent = await fs.readFile(targetFile, 'utf8');
+      const legacyTargetResults = LegacyBenchmarkResult.assert(JSON.parse(targetContent));
+      targetResults = legacyTargetResults.map((record) => ({
+        testFilename: record.testFilename,
+        bundler: record.bundler,
+        size: { direct: record.size, endpoint: record.size },
+      }));
     }
   }
 
