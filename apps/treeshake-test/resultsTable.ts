@@ -105,10 +105,9 @@ ${output}
     for (const cell of row) {
       const pr = cell[1].pr;
       const target = cell[1].target;
-      const resultNumbers = [pr.direct, pr.endpoint, target.direct, target.endpoint];
       if (
-        resultNumbers.some((v) => v === undefined) &&
-        resultNumbers.some((v) => v !== undefined)
+        (pr.direct && target.direct === undefined) ||
+        (pr.endpoint && target.endpoint === undefined)
       ) {
         return true;
       }

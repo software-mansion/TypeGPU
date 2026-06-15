@@ -51,8 +51,8 @@ async function generateReport(
   const allTests = new Set([...Object.keys(prGrouped), ...Object.keys(targetGrouped)]);
 
   // Split tests into static and dynamic
-  const staticTests = [...allTests].filter((t) => !t.includes('STATIC')).toSorted();
-  const dynamicTests = [...allTests].filter((t) => t.includes('STATIC')).toSorted();
+  const staticTests = [...allTests].filter((t) => t.includes('STATIC')).toSorted();
+  const dynamicTests = [...allTests].filter((t) => !t.includes('STATIC')).toSorted();
 
   // Summary statistics
   let totalDecreased = 0;
