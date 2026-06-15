@@ -1,10 +1,10 @@
 import * as fs from 'node:fs/promises';
 import { tgpu, d, std, common } from 'typegpu';
-
-const TESTS_DIR = new URL('./tests/', import.meta.url);
+import { TESTS_DIRECT_DIR, TESTS_ENDPOINT_DIR } from './urls.ts';
 
 async function generateTestFiles() {
-  await fs.mkdir(TESTS_DIR, { recursive: true });
+  await fs.mkdir(TESTS_DIRECT_DIR, { recursive: true });
+  await fs.mkdir(TESTS_ENDPOINT_DIR, { recursive: true });
 
   const tgpuImports = Object.keys(tgpu)
     .filter((key) => key !== '~unstable')
@@ -47,14 +47,14 @@ import { ${importName} } from 'typegpu/$built$';
 console.log(${importName}.${item});
     `;
 
-    await fs.writeFile(new URL(fileName, `${TESTS_DIR}direct/`), testDirectContent);
+    await fs.writeFile(new URL(fileName, TESTS_DIRECT_DIR), testDirectContent);
 
     const testEndpointContent = `
 import * as ${importName} from '${endpoint}/$built$';
 console.log(${importName}.${item});
     `;
 
-    await fs.writeFile(new URL(fileName, `${TESTS_DIR}endpoint/`), testEndpointContent);
+    await fs.writeFile(new URL(fileName, TESTS_ENDPOINT_DIR), testEndpointContent);
   }
 }
 

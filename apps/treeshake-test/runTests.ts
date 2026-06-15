@@ -5,6 +5,12 @@ import {
   getFileSize,
   type ResultRecord,
 } from './bundleWith.ts';
+import {
+  DIST_DIRECT_DIR,
+  DIST_ENDPOINT_DIR,
+  TESTS_DIRECT_DIR,
+  TESTS_ENDPOINT_DIR,
+} from './urls.ts';
 
 type Bundler = (entryUrl: URL, outDir: URL) => Promise<URL>;
 
@@ -16,11 +22,6 @@ async function exists(url: URL): Promise<boolean> {
     return false;
   }
 }
-
-const TESTS_DIRECT_DIR = new URL('./tests/direct/', import.meta.url);
-const DIST_DIRECT_DIR = new URL('./dist/direct/', import.meta.url);
-const TESTS_ENDPOINT_DIR = new URL('./tests/endpoint/', import.meta.url);
-const DIST_ENDPOINT_DIR = new URL('./dist/endpoint/', import.meta.url);
 
 async function bundleTest(
   testFilename: string,
