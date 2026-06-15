@@ -1,6 +1,7 @@
 import { $internal } from '../shared/symbols.ts';
 import type { AbstractFloat, AbstractInt, Bool, F16, F32, I32, U16, U32 } from './wgslTypes.ts';
 import { callableSchema } from '../core/function/createCallableSchema.ts';
+import { FiniteMathAssumptionError } from '../errors.ts';
 
 const boolCast = callableSchema({
   name: 'bool',
@@ -47,6 +48,9 @@ const u32Cast = callableSchema({
     }
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
+    }
+    if (!Number.isFinite(v)) {
+      throw new FiniteMathAssumptionError(v, u32);
     }
     if (!Number.isInteger(v)) {
       const truncated = Math.trunc(v);
@@ -96,6 +100,9 @@ const i32Cast = callableSchema({
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
+    if (!Number.isFinite(v)) {
+      throw new FiniteMathAssumptionError(v, i32);
+    }
     return v | 0;
   },
   codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(i32, args),
@@ -135,6 +142,9 @@ const f32Cast = callableSchema({
     }
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
+    }
+    if (!Number.isFinite(v)) {
+      throw new FiniteMathAssumptionError(v, f32);
     }
     return Math.fround(v);
   },
@@ -258,6 +268,9 @@ const f16Cast = callableSchema({
     }
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
+    }
+    if (!Number.isFinite(v)) {
+      throw new FiniteMathAssumptionError(v, f16);
     }
     return roundToF16(v);
   },
