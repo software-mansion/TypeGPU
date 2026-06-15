@@ -511,4 +511,26 @@ describe('tgpu.accessor', () => {
       '`tgpu.mutableAccessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use `tgpu.slot` for non-WGSL values instead.',
     );
   });
+
+  it('allows for arbitrarily nested access functions', ({ root }) => {
+    const counterMutable = root.createMutable(d.u32);
+
+    const counterAccess = tgpu.accessor(d.u32, () => () => () => counterMutable.$);
+
+    const main = () => {
+      'use gpu';
+      return counterAccess.$ / 2;
+    };
+
+    expectTypeOf(counterAccess).toEqualTypeOf<TgpuAccessor<d.U32>>();
+    expectTypeOf<typeof counterAccess.$>().toEqualTypeOf<number>();
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<storage, read_write> counterMutable: u32;
+
+      fn main() -> f32 {
+        return (f32(counterMutable) / 2f);
+      }"
+    `);
+  });
 });
