@@ -179,7 +179,7 @@ export class TgpuAccessorImpl<T extends BaseData>
     }
 
     throw new Error(
-      '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
+      '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use a tgpu.slot instead.',
     );
   }
 }
@@ -203,7 +203,7 @@ export class TgpuMutableAccessorImpl<T extends BaseData>
     }
 
     throw new Error(
-      '`tgpu.mutableAccessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
+      '`tgpu.mutableAccessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use a tgpu.slot instead.',
     );
   }
 }
