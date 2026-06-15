@@ -11,38 +11,50 @@ async function generateTestFiles() {
     .map((importName) => ({
       import: 'tgpu',
       item: importName,
+      endpoint: 'typegpu',
     }));
 
   const dImports = Object.keys(d).map((importName) => ({
     import: 'd',
     item: importName,
+    endpoint: 'typegpu/data',
   }));
 
   const stdImports = Object.keys(std).map((importName) => ({
     import: 'std',
     item: importName,
+    endpoint: 'typegpu/std',
   }));
 
   const commonImports = Object.keys(common).map((importName) => ({
     import: 'common',
     item: importName,
+    endpoint: 'typegpu/common',
   }));
 
-  const imports: { import: string; item: string }[] = [
+  const imports: { import: string; item: string; endpoint: string }[] = [
     ...tgpuImports,
     ...dImports,
     ...stdImports,
     ...commonImports,
   ];
 
-  for (const { import: importName, item } of imports) {
-    const testContent = `
+  for (const { import: importName, item, endpoint } of imports) {
+    const fileName = `${importName}_${item}.ts`;
+
+    const testDirectContent = `
 import { ${importName} } from 'typegpu/$built$';
 console.log(${importName}.${item});
     `;
 
-    const fileName = `${importName}_${item}.ts`;
-    await fs.writeFile(new URL(fileName, TESTS_DIR), testContent);
+    await fs.writeFile(new URL(fileName, `${TESTS_DIR}direct/`), testDirectContent);
+
+    const testEndpointContent = `
+import * as ${importName} from '${endpoint}/$built$';
+console.log(${importName}.${item});
+    `;
+
+    await fs.writeFile(new URL(fileName, `${TESTS_DIR}endpoint/`), testEndpointContent);
   }
 }
 
