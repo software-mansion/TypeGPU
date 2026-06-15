@@ -1,6 +1,6 @@
 type TestName = string;
 type BundlerName = string;
-type Result = { direct: number | undefined; endpoint: number | undefined };
+type Result = { direct?: number; endpoint?: number };
 type TestResults = Record<BundlerName, Result>;
 type Row = Map<BundlerName, { pr: Result; target: Result }>;
 
@@ -24,8 +24,8 @@ export class ResultsTable {
     const row: Row = new Map();
     for (const bundlerName of this.#bundlers) {
       row.set(bundlerName, {
-        pr: prResults?.[bundlerName] as Result,
-        target: targetResults?.[bundlerName] as Result,
+        pr: prResults?.[bundlerName] ?? {},
+        target: targetResults?.[bundlerName] ?? {},
       });
     }
 
