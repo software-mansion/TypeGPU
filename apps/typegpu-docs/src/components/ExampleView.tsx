@@ -1,6 +1,14 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
-import { type RefObject, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  type RefObject,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  lazy,
+} from 'react';
 import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom.ts';
 import { codeEditorShownAtom, tsoverUsedAtom } from '../utils/examples/exampleViewStateAtoms.ts';
 import { ExecutionCancelledError } from '../utils/examples/errors.ts';
@@ -9,7 +17,6 @@ import { executeExample } from '../utils/examples/exampleRunner.ts';
 import type { ExampleState } from '../utils/examples/exampleState.ts';
 import type { Example, ExampleCommonFile, ExampleSrcFile } from '../utils/examples/types.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
-import { CodeEditor } from './CodeEditor.tsx';
 import { ControlPanel } from './ControlPanel.tsx';
 import { Button } from './design/Button.tsx';
 import { Snackbar } from './design/Snackbar.tsx';
@@ -20,6 +27,8 @@ type Props = {
   common: ExampleCommonFile[];
   isPlayground?: boolean;
 };
+
+const CodeEditor = lazy(() => import('./CodeEditor.tsx'));
 
 function useExample(
   tsImport: () => Promise<unknown>,

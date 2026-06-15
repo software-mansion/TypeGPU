@@ -98,7 +98,7 @@ type Props = {
   shown: boolean;
 };
 
-export function CodeEditor(props: Props) {
+export default function CodeEditor(props: Props) {
   const { language, tsoverEnabled, file, shown } = props;
   const sandboxModules = useAtomValue(sandboxModulesAtom);
 
