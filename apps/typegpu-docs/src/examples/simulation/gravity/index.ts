@@ -113,7 +113,10 @@ const renderPipeline = root
     },
   });
 
-await Promise.all([computeCollisionsPipeline.initAsync(), computeGravityPipeline.initAsync()]);
+const pipelinePromises = [
+  computeCollisionsPipeline.initAsync(),
+  computeGravityPipeline.initAsync(),
+];
 
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
@@ -169,6 +172,7 @@ function frame(timestamp: DOMHighResTimeStamp) {
   render();
   requestAnimationFrame(frame);
 }
+await Promise.all(pipelinePromises);
 requestAnimationFrame(frame);
 
 async function loadPreset(preset: Preset): Promise<DynamicResources> {

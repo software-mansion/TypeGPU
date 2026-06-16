@@ -35,7 +35,10 @@ const buffers = {
 let bindGroup = createBindGroup();
 
 const pipelines = createPipelines();
-await Promise.all([pipelines['gpu-optimized'].initAsync(), pipelines['gpu-simple'].initAsync()]);
+const pipelinePromises = [
+  pipelines['gpu-optimized'].initAsync(),
+  pipelines['gpu-simple'].initAsync(),
+];
 
 function createBindGroup() {
   return root.createBindGroup(computeLayout, {
@@ -108,6 +111,7 @@ function updateInputDisplays() {
 
 let isComputing = false;
 
+await Promise.all(pipelinePromises);
 async function compute() {
   if (isComputing) {
     console.warn('Computation already in progress');
