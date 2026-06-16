@@ -124,6 +124,18 @@ describe('rawCodeSnippet', () => {
     `);
   });
 
+  it("throws when '$uses' is called multiple times", ({ root }) => {
+    const myBuffer = root.createUniform(d.u32, 7);
+
+    const rawSnippet = tgpu['~unstable']
+      .rawCodeSnippet('myBuffer', d.u32, 'uniform')
+      .$uses({ myBuffer });
+
+    expect(() => rawSnippet.$uses({ myBuffer })).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.]`,
+    );
+  });
+
   it('should be accessed transitively through a slot', () => {
     const exprSlot = tgpu.slot(tgpu['~unstable'].rawCodeSnippet('0.5 + 0.2', d.f32, 'constant'));
 

@@ -5,7 +5,7 @@ import { inCodegenMode } from '../../execMode.ts';
 import type { InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { mergeExternals, type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
+import { type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 
 // ----------
@@ -92,7 +92,7 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
   readonly origin: RawCodeSnippetOrigin;
 
   #expression: string;
-  #externalsToApply: ExternalMap[];
+  #externals: ExternalMap | undefined;
 
   constructor(expression: string, type: TDataType, origin: RawCodeSnippetOrigin) {
     this[$internal] = true;
@@ -100,22 +100,24 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
     this.origin = origin;
 
     this.#expression = expression;
-    this.#externalsToApply = [];
   }
 
   $uses(dependencyMap: Record<string, unknown>): this {
-    this.#externalsToApply.push(dependencyMap);
+    if (this.#externals !== undefined) {
+      throw new Error(
+        "Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.",
+      );
+    }
+    this.#externals = dependencyMap;
     return this;
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const externalMap: ExternalMap = {};
-
-    for (const externals of this.#externalsToApply) {
-      mergeExternals(externalMap, externals);
-    }
-
-    const replacedExpression = replaceExternalsInWgsl(ctx, externalMap, this.#expression);
+    const replacedExpression = replaceExternalsInWgsl(
+      ctx,
+      this.#externals ?? {},
+      this.#expression,
+    );
 
     return snip(replacedExpression, this.dataType, this.origin);
   }
