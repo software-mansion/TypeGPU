@@ -421,7 +421,7 @@ export function validateIdentifier(ident: string): ValidationResult {
   if (!/^(([_\p{XID_Start}][\p{XID_Continue}]+)|([\p{XID_Start}]))$/u.test(ident)) {
     return {
       success: false,
-      error: `Identifier is not compliant with the WGSL guideline.`,
+      error: `Not compliant with WGSL guidelines.`,
     };
   }
   return {
