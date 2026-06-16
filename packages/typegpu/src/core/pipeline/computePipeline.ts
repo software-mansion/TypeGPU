@@ -412,6 +412,8 @@ class ComputePipelineCore implements SelfResolvable {
         .then((pipeline) => {
           this.#memo = { pipeline, usedBindGroupLayouts, catchall, logResources };
           this.#performanceTracker.measureCompile(device);
+        })
+        .finally(() => {
           this.#initAsyncPromise = undefined;
         });
     }
