@@ -198,7 +198,7 @@ const segmentMetricLength = tgpu.fn(
   d.f32,
 )((delta) => {
   'use gpu';
-  const aspect = renderAspectSlot.$;
+  const aspect = d.f32(renderAspectSlot.$);
   if (aspect >= 1) {
     return std.length(d.vec2f(delta.x * aspect, delta.y));
   }
@@ -530,7 +530,7 @@ export function makeCascadePassCompute({
       const dirActual = dirStored * PREAVERAGE_RAY_DIM + d.vec2u(i & 1, i >> 1);
       const rayIndexU = morton2D(dirActual.x, dirActual.y);
       const rayIndex = d.f32(rayIndexU) + 0.5;
-      const rayDir = rayDirection(rayIndex, rayCountActual, renderAspect);
+      const rayDir = rayDirection(rayIndex, rayCountActual, aspect);
       const exitUv = rayBoxExitUv(probePos, rayDir);
       const clippedMarchEndUv = std.min(marchEndUv, exitUv);
 
