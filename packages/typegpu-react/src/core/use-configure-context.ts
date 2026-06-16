@@ -6,7 +6,7 @@ import { useChangeDetection } from './helper-hooks.ts';
 
 /**
  * Only used to capture the canvas element. Has to be extremely vague to
- * encompass both the react-native-wgpu canvas, as well as the HTML canvas.
+ * encompass both the react-native-webgpu canvas, as well as the HTML canvas.
  */
 export interface CanvasRef {
   getContext(contextName: 'webgpu'): CanvasContext | null;
@@ -20,7 +20,7 @@ export type UseConfigureContextOptions = Omit<GPUCanvasConfiguration, 'device' |
     autoResize?: boolean;
   };
 
-// react-native-wgpu requires you to call `present` on the canvas context
+// react-native-webgpu requires you to call `present` on the canvas context
 // submit the rendered frame, we reflect that on the type level
 type CanvasContext = GPUCanvasContext & { present?: () => void };
 
@@ -67,7 +67,7 @@ export function createUseConfigureContextHook(useResizer: UseResizerHook) {
 
       if (el) {
         const ctx = root.configureContext({ canvas: el, ...restOptions });
-        // In react-native-wgpu, the canvas stored on the context is actually different than the canvas
+        // In react-native-webgpu, the canvas stored on the context is actually different than the canvas
         // the callback is called on. This one actually has properties like `clientWidth`.
         canvasRef.current = ctx.canvas as HTMLCanvasElement;
         ctxRef.current = ctx;
