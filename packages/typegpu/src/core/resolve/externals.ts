@@ -1,6 +1,6 @@
 import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
-import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
+import { getName, hasTinyestMetadata, isNamable, setName } from '../../shared/meta.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
 
 /**
@@ -106,6 +106,9 @@ export function replaceExternalsInWgsl(
     }
 
     if (isResolvable(external)) {
+      if (isNamable(external) && getName(external) === undefined) {
+        setName(external, externalName.split('.').at(-1) as string);
+      }
       return acc.replaceAll(externalRegex, ctx.resolve(external).value);
     }
 
