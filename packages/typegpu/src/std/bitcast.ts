@@ -35,6 +35,7 @@ export const bitcastU32toF32 = dualImpl({
         : f32,
     };
   },
+  sideEffects: false,
 });
 
 export type BitcastU32toI32Overload = ((value: number) => number) &
@@ -64,4 +65,5 @@ export const bitcastU32toI32 = dualImpl({
         : i32,
     };
   },
+  sideEffects: false,
 });

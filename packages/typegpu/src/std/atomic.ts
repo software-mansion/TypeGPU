@@ -47,6 +47,7 @@ export const atomicLoad = dualImpl<<T extends AnyAtomic>(a: T) => number>({
     return { argTypes: [a], returnType: a.inner };
   },
   codegenImpl: (_ctx, [a]) => stitch`atomicLoad(&${a})`,
+  sideEffects: false,
 });
 
 const atomicActionSignature = (a: BaseData) => {

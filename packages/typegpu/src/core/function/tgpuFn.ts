@@ -238,6 +238,7 @@ function createFn<ImplSchema extends AnyFn>(
       }),
     codegenImpl: (ctx, args) =>
       ctx.withResetIndentLevel(() => stitch`${ctx.resolve(fn).value}(${args})`),
+    sideEffects: false,
   });
 
   const fn = Object.assign(call, fnBase) as TgpuFn<ImplSchema>;
@@ -297,6 +298,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
     normalImpl: innerFn,
     codegenImpl: (ctx, args) =>
       ctx.withResetIndentLevel(() => stitch`${ctx.resolve(fn).value}(${args})`),
+    sideEffects: false,
   });
 
   const fn = Object.assign(call, fnBase) as TgpuFn<ImplSchema>;

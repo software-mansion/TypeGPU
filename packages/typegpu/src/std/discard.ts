@@ -6,4 +6,5 @@ export const discard = dualImpl<() => never>({
   normalImpl: '`discard` relies on GPU resources and cannot be executed outside of a draw call',
   signature: { argTypes: [], returnType: Void },
   codegenImpl: () => 'discard;',
+  sideEffects: false,
 });

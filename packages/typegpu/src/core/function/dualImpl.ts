@@ -32,9 +32,9 @@ interface DualImplOptions<T extends AnyFn> {
   /**
    * Whether the function always has side effects. If `true`, the result always
    * has `possibleSideEffects: true` regardless of argument side-effects. If
-   * `false` (default), the result has side effects only when any argument does.
+   * `false`, the result has side effects only when any argument does.
    */
-  readonly sideEffects?: boolean | undefined;
+  readonly sideEffects: boolean;
 }
 
 export class MissingCpuImplError extends Error {
