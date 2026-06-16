@@ -10,8 +10,16 @@ import { mergeExternals, type ExternalMap, replaceExternalsInWgsl } from '../res
 import { extractArgs } from './extractArgs.ts';
 import type { Implementation, SeparatedEntryArgs } from './fnTypes.ts';
 
+export type FnExternals = {
+  userProvided?: ExternalMap;
+  pluginProvided?: ExternalMap;
+  args?: ExternalMap;
+  out?: ExternalMap;
+};
+
 export interface FnCore {
   applyExternals: (newExternals: ExternalMap) => void;
+  setExternals: (key: keyof FnExternals, newExternal: ExternalMap) => void;
   resolve(
     ctx: ResolutionCtx,
     /**
@@ -44,6 +52,7 @@ export function createFnCore(
    * entry fn).
    */
   const externalsToApply: ExternalMap[] = [];
+  const externals: FnExternals = {};
 
   const core = {
     // Making the implementation the holder of the name, as long as it's
@@ -51,6 +60,17 @@ export function createFnCore(
     [$getNameForward]: typeof implementation === 'function' ? implementation : undefined,
     applyExternals(newExternals: ExternalMap): void {
       externalsToApply.push(newExternals);
+    },
+
+    setExternals(key: keyof typeof externals, newExternal: ExternalMap): void {
+      if (key in externals) {
+        if (key === 'userProvided') {
+          throw new Error(
+            "Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.",
+          );
+        }
+      }
+      externals[key] = newExternal;
     },
 
     resolve(

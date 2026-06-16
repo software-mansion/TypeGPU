@@ -166,6 +166,7 @@ function createVertexFn(
 
     $uses(newExternals) {
       core.applyExternals(newExternals);
+      core.setExternals('userProvided', newExternals);
       return this;
     },
 
@@ -183,6 +184,7 @@ function createVertexFn(
 
       if (typeof implementation === 'string') {
         core.applyExternals({ Out: outputWithLocation });
+        core.setExternals('out', { Out: outputWithLocation });
       }
 
       return ctx.withSlots([[shaderStageSlot, 'vertex']], () =>

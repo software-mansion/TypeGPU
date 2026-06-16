@@ -182,6 +182,7 @@ function createFn<ImplSchema extends AnyFn>(
 
     $uses(newExternals: Record<string, unknown>) {
       core.applyExternals(newExternals);
+      core.setExternals('userProvided', newExternals);
       return this;
     },
 
