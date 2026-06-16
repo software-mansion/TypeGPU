@@ -794,13 +794,13 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
 
       console.log(add, mul);
 
+            
+            
+            
 
-
-
-
-
-
-
+            
+            
+            
           }
 
       export { scope };
@@ -915,13 +915,13 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
 
       console.log(add, mul);
 
+            
+            
+            
 
-
-
-
-
-
-
+            
+            
+            
           };
 
       export { scope };
@@ -1043,13 +1043,13 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
 
       console.log(add, mul);
 
+            
+            
+            
 
-
-
-
-
-
-
+            
+            
+            
           }
       "
     `);
