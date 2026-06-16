@@ -109,6 +109,22 @@ export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> e
   dispatchThreads(...args: TArgs): void;
 
   /**
+   * Immediately resolves the pipeline, then calls `device.createComputePipelineAsync()`.
+   *
+   * NOTE: while it is not necessary to initialize pipeline manually,
+   * it is generally preferable to use this method whenever possible,
+   * as it prevents blocking of GPU operation execution on pipeline compilation.
+   */
+  initAsync(): Promise<void>;
+
+  /**
+   * Immediately resolves the pipeline and creates WebGPU resources.
+   *
+   * NOTE: it is not necessary to initialize pipeline manually.
+   */
+  initSync(): void;
+
+  /**
    * The underlying pipeline used during `dispatchThreads`.
    */
   pipeline: TgpuComputePipeline;

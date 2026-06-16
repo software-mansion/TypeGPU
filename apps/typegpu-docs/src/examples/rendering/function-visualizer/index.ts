@@ -90,7 +90,7 @@ const createComputePipeline = (exprCode: string) => {
 const computePipelines: Array<TgpuGuardedComputePipeline> = initialFunctions.map(
   (functionData, _) => createComputePipeline(functionData.code),
 );
-await Promise.all(computePipelines.map((guarded) => guarded.pipeline.initAsync()));
+await Promise.all(computePipelines.map((guarded) => guarded.initAsync()));
 
 // Render background shader
 
