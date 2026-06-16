@@ -195,14 +195,11 @@ function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionRes
     );
   }
 
-  const dependencies = {} as Record<string, Wgsl>;
-  mergeExternals(dependencies, externals ?? {});
-
   const resolutionObj: SelfResolvable = {
     [$internal]: true,
     [$resolve](ctx): ResolvedSnippet {
       return snip(
-        replaceExternalsInWgsl(ctx, dependencies, template ?? ''),
+        replaceExternalsInWgsl(ctx, externals, template ?? ''),
         Void,
         /* origin */ 'runtime',
       );
