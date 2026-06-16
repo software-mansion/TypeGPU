@@ -13,7 +13,7 @@ import type { Example, ExampleCommonFile } from '../../utils/examples/types.ts';
 import index from './stackBlitzIndex.ts?raw';
 
 // Precomputing the parsing of the workspace yaml file
-import { pnpmWorkspaceYaml } from './pnpmWorkspace.ts' with { type: 'macro' };
+import { pnpmWorkspaceYaml } from './pnpmWorkspace.ts';
 
 export async function openInStackBlitz(
   store: Store,
