@@ -1,4 +1,4 @@
-import { type MapValueToSnippet, noSideEffects, snip } from '../../data/snippet.ts';
+import { type MapValueToSnippet, snip } from '../../data/snippet.ts';
 import { setName } from '../../shared/meta.ts';
 import { $gpuCallable } from '../../shared/symbols.ts';
 import { tryConvertSnippet } from '../../tgsl/conversion.ts';
@@ -107,17 +107,15 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
         }
       }
 
-      const result = snip(
+      const possibleSideEffects = options.sideEffects || args.some((a) => a.possibleSideEffects);
+
+      return snip(
         options.codegenImpl(ctx, converted),
         concretize(returnType),
         // Functions give up ownership of their return value
         /* origin */ 'runtime',
+        possibleSideEffects,
       );
-
-      if (!options.sideEffects && !args.some((a) => a.possibleSideEffects)) {
-        return noSideEffects(result);
-      }
-      return result;
     },
   };
 
