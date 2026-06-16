@@ -186,10 +186,7 @@ function createFragmentFn(
   const core = createFnCore(implementation, 'fragment');
   const outputType = shell.returnType;
   if (typeof implementation === 'string') {
-    addReturnTypeToExternals(implementation, outputType, (externals) => {
-      core.applyExternals(externals);
-      core.setExternals('out', externals);
-    });
+    addReturnTypeToExternals(implementation, outputType, core);
   }
 
   const result: This = {

@@ -204,8 +204,8 @@ function createFn<ImplSchema extends AnyFn>(
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
       if (typeof implementation === 'string') {
-        addArgTypesToExternals(implementation, shell.argTypes, core.applyExternals);
-        addReturnTypeToExternals(implementation, shell.returnType, core.applyExternals);
+        addArgTypesToExternals(implementation, shell.argTypes, core);
+        addReturnTypeToExternals(implementation, shell.returnType, core);
       }
 
       return core.resolve(ctx, shell.argTypes, shell.returnType);

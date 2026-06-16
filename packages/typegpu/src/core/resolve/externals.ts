@@ -2,6 +2,7 @@ import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
 import { getName, hasTinyestMetadata, isNamable, setName } from '../../shared/meta.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
+import type { FnCore, FnExternals } from '../function/fnCore.ts';
 
 /**
  * A key-value mapping where keys represent identifiers within shader code,
@@ -11,6 +12,35 @@ export type ExternalMap = Record<string, unknown>;
 
 function isResolvable(value: unknown) {
   return isWgsl(value) || isLooseData(value) || hasTinyestMetadata(value);
+}
+
+/**
+ * Merges function externals into one map.
+ * Assumes that there is at most one map with non-trivial structure.
+ */
+export function mergeFunctionExternals(fnExternals: FnExternals): ExternalMap {
+  console.log('MERGING');
+  console.log(fnExternals);
+
+  if (fnExternals.pluginProvided !== undefined && fnExternals.userProvided !== undefined) {
+    throw new Error(
+      "Cannot call '$uses' on functions whose metadata was provided by unplugin-typegpu.",
+    );
+  }
+  const base = fnExternals.pluginProvided ?? fnExternals.userProvided ?? {};
+  // avoid calling any of the getters
+  const result: ExternalMap = Object.defineProperties({}, Object.getOwnPropertyDescriptors(base));
+  for (const flatExternal of [fnExternals.args, fnExternals.out].filter((e) => e !== undefined)) {
+    for (const [key, value] of Object.entries(flatExternal)) {
+      if (key in result) {
+        throw new Error(
+          `Key '${key}' appears in externals while being reserved for internals. Please rename this external.`,
+        );
+      }
+      result[key] = value;
+    }
+  }
+  return result;
 }
 
 /**
@@ -45,35 +75,33 @@ export function mergeExternals(existing: ExternalMap, newExternals: ExternalMap)
   }
 }
 
-export function addArgTypesToExternals(
-  implementation: string,
-  argTypes: unknown[],
-  applyExternals: (externals: ExternalMap) => void,
-) {
+export function addArgTypesToExternals(implementation: string, argTypes: unknown[], core: FnCore) {
   const argTypeNames = [...implementation.matchAll(/:\s*(?<arg>.*?)\s*[,)]/g)].map((found) =>
     found ? found[1] : undefined,
   );
 
-  applyExternals(
-    Object.fromEntries(
-      argTypes.flatMap((argType, i) => {
-        const argTypeName = argTypeNames ? argTypeNames[i] : undefined;
-        return isWgslStruct(argType) && argTypeName !== undefined ? [[argTypeName, argType]] : [];
-      }),
-    ),
+  const args = Object.fromEntries(
+    argTypes.flatMap((argType, i) => {
+      const argTypeName = argTypeNames ? argTypeNames[i] : undefined;
+      return isWgslStruct(argType) && argTypeName !== undefined ? [[argTypeName, argType]] : [];
+    }),
   );
+
+  core.applyExternals(args);
+  core.setExternals('args', args);
 }
 
 export function addReturnTypeToExternals(
   implementation: string,
   returnType: unknown,
-  applyExternals: (externals: ExternalMap) => void,
+  core: FnCore,
 ) {
   const matched = implementation.match(/->\s(?<output>[\w\d_]+)\s{/);
   const outputName = matched ? matched[1]?.trim() : undefined;
 
   if (isWgslStruct(returnType) && outputName && !/\s/g.test(outputName)) {
-    applyExternals({ [outputName]: returnType });
+    core.applyExternals({ [outputName]: returnType });
+    core.setExternals('out', { [outputName]: returnType });
   }
 }
 

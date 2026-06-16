@@ -6,7 +6,12 @@ import { validateIdentifier } from '../../nameUtils.ts';
 import { getFunctionMetadata, getName } from '../../shared/meta.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx, TgpuShaderStage } from '../../types.ts';
-import { mergeExternals, type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
+import {
+  mergeExternals,
+  type ExternalMap,
+  replaceExternalsInWgsl,
+  mergeFunctionExternals,
+} from '../resolve/externals.ts';
 import { extractArgs } from './extractArgs.ts';
 import type { Implementation, SeparatedEntryArgs } from './fnTypes.ts';
 
@@ -62,7 +67,7 @@ export function createFnCore(
       externalsToApply.push(newExternals);
     },
 
-    setExternals(key: keyof typeof externals, newExternal: ExternalMap): void {
+    setExternals(key: keyof FnExternals, newExternal: ExternalMap): void {
       if (key in externals) {
         if (key === 'userProvided') {
           throw new Error(
@@ -121,9 +126,22 @@ export function createFnCore(
               entryInput.positionalArgs.map((a) => [a.schemaKey, a.schemaKey]),
             ),
           });
+          this.setExternals('args', {
+            in: Object.fromEntries(
+              entryInput.positionalArgs.map((a) => [a.schemaKey, a.schemaKey]),
+            ),
+          });
         }
 
+        console.log(externalsToApply);
+        console.log(externalMap);
+        console.log(externals);
         const replacedImpl = replaceExternalsInWgsl(ctx, externalMap, implementation);
+        // const replacedImpl = replaceExternalsInWgsl(
+        //   ctx,
+        //   mergeFunctionExternals(externals),
+        //   implementation,
+        // );
 
         let header = '';
         let body = '';
