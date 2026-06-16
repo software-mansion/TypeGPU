@@ -537,7 +537,17 @@ const runner = (timestamp: number) => {
 
 animationFrameId = requestAnimationFrame(runner);
 
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    primary.render();
+  },
+});
 
 export const controls = defineControls({
   'source intensity': {

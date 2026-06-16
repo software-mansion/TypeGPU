@@ -32,9 +32,18 @@ function createComputePipeline(fn: TgpuComputeFn) {
   return root.createComputePipeline({ compute: fn });
 }
 
-function toGrid(x: number, y: number): [number, number] {
-  const gx = Math.floor((x / canvas.width) * p.SIM_N);
-  const gy = Math.floor(((canvas.height - y) / canvas.height) * p.SIM_N);
+function toGrid(clientX: number, clientY: number): [number, number] {
+  const rect = canvas.getBoundingClientRect();
+
+  // Taking into account the square aspect ratio
+  const centerX = rect.x + rect.width / 2;
+  const centerY = rect.y + rect.height / 2;
+  const size = Math.min(rect.width, rect.height);
+  const squareLeft = centerX - size / 2;
+  const squareTop = centerY - size / 2;
+
+  const gx = Math.floor(((clientX - squareLeft) / size) * p.SIM_N);
+  const gy = Math.floor((1 - (clientY - squareTop) / size) * p.SIM_N);
   return [gx, gy];
 }
 
@@ -273,10 +282,39 @@ const renderBindGroups = {
   ],
 };
 
+function render() {
+  let renderBG: TgpuBindGroup<{
+    result: { texture: d.WgslTexture2d<d.F32> };
+    background: { texture: d.WgslTexture2d<d.F32> };
+  }>;
+  let pipeline: TgpuRenderPipeline<d.Vec4f>;
+
+  switch (p.params.displayMode) {
+    case 'ink':
+      renderBG = renderBindGroups.ink[inkBuffer.currentIndex];
+      pipeline = renderPipelineInk;
+      break;
+    case 'image':
+      renderBG = renderBindGroups.ink[inkBuffer.currentIndex];
+      pipeline = renderPipelineImage;
+      break;
+    case 'velocity':
+      renderBG = renderBindGroups.velocity[velBuffer.currentIndex];
+      pipeline = renderPipelineVel;
+      break;
+    default:
+      throw new Error('Invalid display mode');
+  }
+
+  pipeline.withColorAttachment({ view: context }).with(renderBG).draw(3);
+}
+
 // Main rendering loop
+let handle: number;
 function loop() {
+  handle = requestAnimationFrame(loop);
+
   if (p.params.paused) {
-    requestAnimationFrame(loop);
     return;
   }
 
@@ -333,45 +371,28 @@ function loop() {
     .dispatchWorkgroups(dispatchX, dispatchY);
   inkBuffer.swap();
 
-  let renderBG: TgpuBindGroup<{
-    result: { texture: d.WgslTexture2d<d.F32> };
-    background: { texture: d.WgslTexture2d<d.F32> };
-  }>;
-  let pipeline: TgpuRenderPipeline<d.Vec4f>;
-
-  switch (p.params.displayMode) {
-    case 'ink':
-      renderBG = renderBindGroups.ink[inkBuffer.currentIndex];
-      pipeline = renderPipelineInk;
-      break;
-    case 'image':
-      renderBG = renderBindGroups.ink[inkBuffer.currentIndex];
-      pipeline = renderPipelineImage;
-      break;
-    case 'velocity':
-      renderBG = renderBindGroups.velocity[velBuffer.currentIndex];
-      pipeline = renderPipelineVel;
-      break;
-    default:
-      throw new Error('Invalid display mode');
-  }
-
-  pipeline.withColorAttachment({ view: context }).with(renderBG).draw(3);
-
-  requestAnimationFrame(loop);
+  render();
 }
 
-loop();
+handle = requestAnimationFrame(loop);
 
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 // #region Example controls and cleanup
 
 canvas.addEventListener('mousedown', (e) => {
-  const x = e.offsetX * devicePixelRatio;
-  const y = e.offsetY * devicePixelRatio;
   brushState = {
-    pos: toGrid(x, y),
+    pos: toGrid(e.clientX, e.clientY),
     delta: [0, 0],
     isDown: true,
   };
@@ -381,11 +402,8 @@ canvas.addEventListener(
   (e) => {
     e.preventDefault();
     const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const x = (touch.clientX - rect.left) * devicePixelRatio;
-    const y = (touch.clientY - rect.top) * devicePixelRatio;
     brushState = {
-      pos: toGrid(x, y),
+      pos: toGrid(touch.clientX, touch.clientY),
       delta: [0, 0],
       isDown: true,
     };
@@ -404,9 +422,7 @@ const touchEndEventListener = () => {
 window.addEventListener('touchend', touchEndEventListener);
 
 canvas.addEventListener('mousemove', (e) => {
-  const x = e.offsetX * devicePixelRatio;
-  const y = e.offsetY * devicePixelRatio;
-  const [newX, newY] = toGrid(x, y);
+  const [newX, newY] = toGrid(e.clientX, e.clientY);
   brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
   brushState.pos = [newX, newY];
 });
@@ -415,10 +431,7 @@ canvas.addEventListener(
   (e) => {
     e.preventDefault();
     const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const x = (touch.clientX - rect.left) * devicePixelRatio;
-    const y = (touch.clientY - rect.top) * devicePixelRatio;
-    const [newX, newY] = toGrid(x, y);
+    const [newX, newY] = toGrid(touch.clientX, touch.clientY);
     brushState.delta = [newX - brushState.pos[0], newY - brushState.pos[1]];
     brushState.pos = [newX, newY];
   },
@@ -488,6 +501,7 @@ export function onCleanup() {
   window.removeEventListener('mouseup', mouseUpEventListener);
   window.removeEventListener('touchend', touchEndEventListener);
   detachAutoResizer();
+  cancelAnimationFrame(handle);
   root.destroy();
 }
 

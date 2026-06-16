@@ -285,6 +285,8 @@ const detachAutoResizer = common.attachAutoResizer({
       d.mat4x4f(),
     );
     cameraBuffer.patch({ projection: newProj });
+
+    render();
   },
 });
 

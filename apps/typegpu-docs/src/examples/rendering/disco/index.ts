@@ -42,11 +42,7 @@ let currentPipeline = pipelines[0];
 let startTime: null | number = null;
 let frameId: number;
 
-function render(timestamp: number) {
-  if (startTime === null) {
-    startTime = timestamp;
-  }
-  time.write((timestamp - startTime) / 1000);
+function render() {
   resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
 
   currentPipeline
@@ -55,15 +51,27 @@ function render(timestamp: number) {
       clearValue: [0, 0, 0, 1],
     })
     .draw(6);
-
-  frameId = requestAnimationFrame(render);
 }
 
-frameId = requestAnimationFrame(render);
+function frame(timestamp: number) {
+  if (startTime === null) {
+    startTime = timestamp;
+  }
+  time.write((timestamp - startTime) / 1000);
+
+  render();
+
+  frameId = requestAnimationFrame(frame);
+}
+
+frameId = requestAnimationFrame(frame);
 
 const detachAutoResizer = common.attachAutoResizer({
   root,
   canvas,
+  onResize() {
+    render();
+  },
 });
 
 export function onCleanup() {

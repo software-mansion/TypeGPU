@@ -250,17 +250,18 @@ export const controls = defineControls({
   },
 });
 
-const resizeObserver = new ResizeObserver(() => {
-  depthTexture.destroy();
-  depthTexture = root.device.createTexture({
-    size: [canvas.width, canvas.height, 1],
-    format: 'depth24plus',
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  });
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    depthTexture.destroy();
+    depthTexture = root.device.createTexture({
+      size: [canvas.width, canvas.height, 1],
+      format: 'depth24plus',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+  },
 });
-resizeObserver.observe(canvas);
-
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
 
 function hideHelp() {
   const helpElem = document.getElementById('help');
@@ -275,7 +276,6 @@ for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
 export function onCleanup() {
   destroyed = true;
   cleanupCamera();
-  resizeObserver.unobserve(canvas);
   detachAutoResizer();
   root.destroy();
 }

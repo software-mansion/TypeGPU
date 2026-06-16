@@ -267,7 +267,17 @@ const runAnimationFrame = () => {
 };
 runAnimationFrame();
 
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    draw();
+  },
+});
 
 // #region Example controls & Cleanup
 

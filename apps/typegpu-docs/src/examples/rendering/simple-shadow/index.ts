@@ -280,11 +280,7 @@ function updateLightDirection(dir: d.v3f) {
   });
 }
 
-// Render loop
-let frameId: number | null = null;
 function render() {
-  frameId = requestAnimationFrame(render);
-
   root['~unstable'].beginRenderPass(
     {
       colorAttachments: [],
@@ -338,7 +334,15 @@ function render() {
     },
   );
 }
-frameId = requestAnimationFrame(render);
+
+// Render loop
+let frameId: number | null = null;
+function frame() {
+  frameId = requestAnimationFrame(frame);
+
+  render();
+}
+frameId = requestAnimationFrame(frame);
 
 const detachAutoResizer = common.attachAutoResizer({
   root,
@@ -356,6 +360,8 @@ const detachAutoResizer = common.attachAutoResizer({
     cameraUniform.patch({
       projection: newProjection,
     });
+
+    render();
   },
 });
 

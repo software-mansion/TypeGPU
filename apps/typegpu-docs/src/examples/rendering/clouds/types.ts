@@ -2,6 +2,7 @@ import tgpu, { d } from 'typegpu';
 
 export const CloudsParams = d.struct({
   time: d.f32,
+  aspectRatio: d.f32,
   maxSteps: d.i32,
   maxDistance: d.f32,
 });

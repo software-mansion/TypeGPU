@@ -103,28 +103,34 @@ function frame(timestamp: number) {
 }
 frameId = requestAnimationFrame(frame);
 
-const resizeObserver = new ResizeObserver(() => {
-  stencilTexture = root
-    .createTexture({
-      size: [canvas.width, canvas.height],
-      format: 'stencil8',
-    })
-    .$usage('render');
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
 
-  rotationUniform.write(d.mat2x2f.identity());
+    stencilTexture = root
+      .createTexture({
+        size: [canvas.width, canvas.height],
+        format: 'stencil8',
+      })
+      .$usage('render');
 
-  writeStencilPipeline
-    .withDepthStencilAttachment({
-      view: stencilTexture,
-      stencilClearValue: 0,
-      stencilLoadOp: 'clear',
-      stencilStoreOp: 'store',
-    })
-    .draw(3);
+    rotationUniform.write(d.mat2x2f.identity());
+
+    writeStencilPipeline
+      .withDepthStencilAttachment({
+        view: stencilTexture,
+        stencilClearValue: 0,
+        stencilLoadOp: 'clear',
+        stencilStoreOp: 'store',
+      })
+      .draw(3);
+  },
 });
-resizeObserver.observe(canvas);
-
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
 
 export function onCleanup() {
   if (frameId) {

@@ -45,8 +45,6 @@ const createDepthAndMsaaTextures = () => {
 };
 
 createDepthAndMsaaTextures();
-const resizeObserver = new ResizeObserver(createDepthAndMsaaTextures);
-resizeObserver.observe(canvas);
 
 // const Uniforms = d.struct({});
 
@@ -132,6 +130,13 @@ const detachAutoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+
+    createDepthAndMsaaTextures();
+
     pipeline
       .with(uniformsBindGroup)
       .withColorAttachment({

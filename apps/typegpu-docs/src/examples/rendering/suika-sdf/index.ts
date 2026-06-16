@@ -427,6 +427,8 @@ const detachAutoResizer = common.attachAutoResizer({
       distance: distanceView,
       info: infoView,
     });
+
+    render();
   },
 });
 
@@ -529,6 +531,24 @@ function restart() {
     circleData[i] = { ...INACTIVE_CIRCLE };
   }
   circleUniform.write(circleData);
+}
+
+function render() {
+  frameUniform.patch({
+    canvasAspect: canvas.width / canvas.height,
+  });
+
+  mergedFieldPipeline
+    .withColorAttachment({
+      distance: { view: distanceView },
+      info: { view: infoView },
+    })
+    .draw(3);
+
+  renderPipeline
+    .with(mergedFieldBindGroup)
+    .withColorAttachment({ view: context, clearValue: { r: 0, g: 0, b: 0, a: 1 } })
+    .draw(3);
 }
 
 let lastTime = 0;
@@ -645,18 +665,7 @@ function frame(now: number) {
         },
   });
 
-  mergedFieldPipeline
-    .withColorAttachment({
-      distance: { view: distanceView },
-      info: { view: infoView },
-    })
-    .draw(3);
-
-  renderPipeline
-    .with(mergedFieldBindGroup)
-    .withColorAttachment({ view: context, clearValue: { r: 0, g: 0, b: 0, a: 1 } })
-    .draw(3);
-
+  render();
   animationFrameId = requestAnimationFrame(frame);
 }
 animationFrameId = requestAnimationFrame(frame);

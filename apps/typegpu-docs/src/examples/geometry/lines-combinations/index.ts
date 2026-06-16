@@ -73,8 +73,6 @@ const createDepthAndMsaaTextures = () => {
 };
 
 createDepthAndMsaaTextures();
-const resizeObserver = new ResizeObserver(createDepthAndMsaaTextures);
-resizeObserver.observe(canvas);
 
 const Uniforms = struct({
   time: f32,
@@ -409,7 +407,19 @@ const runAnimationFrame = (timeMs: number) => {
 };
 runAnimationFrame(0);
 
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+
+    createDepthAndMsaaTextures();
+    draw(time);
+  },
+});
 
 const fillOptions = {
   none: 0,

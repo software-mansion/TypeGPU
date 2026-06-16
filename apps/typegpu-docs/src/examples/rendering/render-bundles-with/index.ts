@@ -147,11 +147,7 @@ setCubeCount(INITIAL_CUBE_COUNT);
 
 let useBundles = true;
 
-let disposed = false;
-
-function frame() {
-  if (disposed) return;
-
+function render() {
   if (depthTexture.width !== canvas.width || depthTexture.height !== canvas.height) {
     depthTexture.destroy();
     depthTexture = root.device.createTexture({
@@ -191,13 +187,27 @@ function frame() {
 
   pass.end();
   root.device.queue.submit([encoder.finish()]);
+}
+
+let disposed = false;
+
+function frame() {
+  if (disposed) return;
+
+  render();
 
   requestAnimationFrame(frame);
 }
 
 requestAnimationFrame(frame);
 
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    render();
+  },
+});
 
 // #region Example controls and cleanup
 

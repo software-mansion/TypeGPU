@@ -481,6 +481,11 @@ const detachAutoResizer = common.attachAutoResizer({
   onResize() {
     clearTimeout(resizeTimeout);
     resizeTimeout = setTimeout(recreateSizedResources, 100);
+
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
   },
 });
 

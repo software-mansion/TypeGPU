@@ -203,15 +203,28 @@ function updateCropBounds(aspectRatio: number) {
   });
 }
 
-function onVideoChange(size: { width: number; height: number }) {
-  const aspectRatio = size.width / size.height;
-  video.style.height = `${video.clientWidth / aspectRatio}px`;
-  if (canvas.parentElement) {
-    canvas.parentElement.style.aspectRatio = `${aspectRatio}`;
-    canvas.parentElement.style.height = `min(100cqh, calc(100cqw/(${aspectRatio})))`;
+let frameSize: { width: number; height: number } | undefined;
+
+function handleResize() {
+  if (!frameSize) {
+    return;
+  }
+  const size = frameSize;
+
+  const targetAspectRatio = size.width / size.height;
+  video.style.height = `${video.clientWidth / targetAspectRatio}px`;
+
+  const domAspectRatio = canvas.clientWidth / canvas.clientHeight;
+
+  if (targetAspectRatio > domAspectRatio) {
+    // the surface is wider than the container
+    canvas.height = canvas.width / targetAspectRatio;
+  } else {
+    // the surface is taller than the container
+    canvas.width = canvas.height * targetAspectRatio;
   }
 
-  updateCropBounds(aspectRatio);
+  updateCropBounds(targetAspectRatio);
 
   blurredTextures = [0, 1].map(() =>
     root
@@ -241,7 +254,6 @@ function onVideoChange(size: { width: number; height: number }) {
 }
 
 let videoFrameCallbackId: number | undefined;
-let lastFrameSize: { width: number; height: number } | undefined;
 
 async function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   if (video.readyState < 2) {
@@ -252,13 +264,9 @@ async function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata
   const frameWidth = metadata.width;
   const frameHeight = metadata.height;
 
-  if (
-    !lastFrameSize ||
-    lastFrameSize.width !== frameWidth ||
-    lastFrameSize.height !== frameHeight
-  ) {
-    lastFrameSize = { width: frameWidth, height: frameHeight };
-    onVideoChange(lastFrameSize);
+  if (!frameSize || frameSize.width !== frameWidth || frameSize.height !== frameHeight) {
+    frameSize = { width: frameWidth, height: frameHeight };
+    handleResize();
   }
 
   blurredTextures[0].write(video);
@@ -298,6 +306,9 @@ videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 const detachAutoResizer = common.attachAutoResizer({
   root,
   canvas,
+  onResize() {
+    handleResize();
+  },
 });
 
 // #region Example controls & Cleanup
@@ -335,8 +346,8 @@ export const controls = defineControls({
     initial: useSquareCrop,
     onToggleChange(value) {
       useSquareCrop = value;
-      if (lastFrameSize) {
-        updateCropBounds(lastFrameSize.width / lastFrameSize.height);
+      if (frameSize) {
+        updateCropBounds(frameSize.width / frameSize.height);
       }
     },
   },

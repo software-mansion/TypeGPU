@@ -1,4 +1,5 @@
 import tgpu, { common, d, std } from 'typegpu';
+import { randf } from '@typegpu/noise';
 import {
   FOV_FACTOR,
   NOISE_TEXTURE_SIZE,
@@ -11,7 +12,6 @@ import {
 } from './consts.ts';
 import { raymarch } from './utils.ts';
 import { cloudsLayout, CloudsParams } from './types.ts';
-import { randf } from '@typegpu/noise';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
@@ -21,10 +21,10 @@ const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const paramsUniform = root.createUniform(CloudsParams, {
   time: 0,
+  aspectRatio: 1,
   maxSteps: 50,
   maxDistance: 10.0,
 });
-const resolutionUniform = root.createUniform(d.vec2f, d.vec2f(canvas.width, canvas.height));
 
 const noiseData = new Uint8Array(NOISE_TEXTURE_SIZE * NOISE_TEXTURE_SIZE);
 for (let i = 0; i < noiseData.length; i += 1) {
@@ -57,8 +57,7 @@ const pipeline = root.createRenderPipeline({
   fragment: ({ uv }) => {
     'use gpu';
     randf.seed2(uv * cloudsLayout.$.params.time);
-    const screenRes = resolutionUniform.$;
-    const aspect = screenRes.x / screenRes.y;
+    const aspect = cloudsLayout.$.params.aspectRatio;
 
     let screenPos = (uv - 0.5) * 2;
     screenPos = d.vec2f(screenPos.x * std.max(aspect, 1), screenPos.y * std.max(1 / aspect, 1));
@@ -86,16 +85,7 @@ const pipeline = root.createRenderPipeline({
   targets: { format: presentationFormat },
 });
 
-const resizeObserver = new ResizeObserver(() => {
-  resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
-});
-resizeObserver.observe(canvas);
-
-let frameId: number;
-
-function render(timestamp: number) {
-  paramsUniform.patch({ time: (timestamp / 1000) % 500 });
-
+function render() {
   pipeline
     .with(bindGroup)
     .withColorAttachment({
@@ -103,13 +93,33 @@ function render(timestamp: number) {
       clearValue: [0, 0, 0, 1],
     })
     .draw(6);
-
-  frameId = requestAnimationFrame(render);
 }
 
-frameId = requestAnimationFrame(render);
+let frameId: number;
 
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+function frame(timestamp: number) {
+  paramsUniform.patch({ time: (timestamp / 1000) % 500 });
+  render();
+  frameId = requestAnimationFrame(frame);
+}
+
+frameId = requestAnimationFrame(frame);
+
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // The clouds are very blurry, so there is no benefit from full-resolution
+    canvas.width = Math.max(1, canvas.width / 4);
+    canvas.height = Math.max(1, canvas.height / 4);
+
+    paramsUniform.patch({
+      aspectRatio: canvas.width / canvas.height,
+    });
+
+    render();
+  },
+});
 
 const qualityOptions = {
   'very high': {
@@ -146,7 +156,6 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
-  resizeObserver.disconnect();
   detachAutoResizer();
   root.destroy();
 }

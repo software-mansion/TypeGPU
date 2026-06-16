@@ -30,7 +30,7 @@ const vertexLayout = tgpu.vertexLayout(d.arrayOf(Vertex));
 
 // Scene Setup
 
-const aspect = canvas.clientWidth / canvas.clientHeight;
+const aspect = 1;
 const target = d.vec3f(0, 0, 0);
 const cameraInitialPos = d.vec4f(12, 5, 12, 1);
 
@@ -460,12 +460,18 @@ canvas.addEventListener(
   { passive: false },
 );
 
-const resizeObserver = new ResizeObserver(() => {
-  createDepthAndMsaaTextures();
-});
-resizeObserver.observe(canvas);
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
 
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+    createDepthAndMsaaTextures();
+  },
+});
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrameId);
@@ -473,7 +479,6 @@ export function onCleanup() {
   window.removeEventListener('mousemove', mouseMoveEventListener);
   window.removeEventListener('touchend', touchEndEventListener);
   window.removeEventListener('touchmove', touchMoveEventListener);
-  resizeObserver.disconnect();
   detachAutoResizer();
   root.destroy();
 }

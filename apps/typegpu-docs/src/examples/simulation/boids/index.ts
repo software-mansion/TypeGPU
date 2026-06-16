@@ -222,13 +222,8 @@ const computeBindGroups = [0, 1].map((idx) =>
 );
 
 let even = false;
-let animationFrameId: number;
 
-function frame() {
-  even = !even;
-
-  simulatePipeline.with(computeBindGroups[even ? 0 : 1]).dispatchThreads(triangleAmount);
-
+function render() {
   renderPipeline
     .withColorAttachment({
       view: context,
@@ -236,13 +231,33 @@ function frame() {
     })
     .with(instanceLayout, trianglePosBuffers[even ? 1 : 0])
     .draw(3, triangleAmount);
+}
+
+let animationFrameId: number;
+
+function frame() {
+  even = !even;
+
+  simulatePipeline.with(computeBindGroups[even ? 0 : 1]).dispatchThreads(triangleAmount);
+
+  render();
 
   animationFrameId = requestAnimationFrame(frame);
 }
 
 animationFrameId = requestAnimationFrame(frame);
 
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 // #region Example controls and cleanup
 

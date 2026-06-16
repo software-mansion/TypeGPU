@@ -1,6 +1,6 @@
 <div class="loading">🤖 Downloading the model...</div>
-<div class="example">
-  <canvas></canvas>
+<div class="example gap-4 flex-col md:flex-row">
+  <canvas class="w-80 h-80"></canvas>
   <div class="predictions-container">
     <div class="bars-container">
       <div class="bar">O</div>
@@ -36,7 +36,7 @@
   }
 
   .loading.loaded ~ .example {
-    display: contents;
+    display: flex;
   }
 
   .predictions-container {

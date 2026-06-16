@@ -3,7 +3,7 @@ import type { TgpuRoot } from '../core/root/rootTypes.ts';
 export interface AttachAutoResizerOptions {
   root: TgpuRoot;
   canvas: HTMLCanvasElement;
-  onResize?(): void;
+  onResize?: (() => void) | undefined;
 }
 
 export function attachAutoResizer({

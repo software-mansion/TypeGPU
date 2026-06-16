@@ -383,22 +383,22 @@ window.addEventListener('touchend', touchEndEventListener);
 
 // Resize observer and cleanup
 
-const resizeObserver = new ResizeObserver(() => {
-  queuePropertiesBufferUpdate();
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    queuePropertiesBufferUpdate();
 
-  msTexture.destroy();
-  msTexture = device.createTexture({
-    size: [canvas.width, canvas.height],
-    sampleCount: 4,
-    format: presentationFormat,
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  });
-  msView = msTexture.createView();
+    msTexture.destroy();
+    msTexture = device.createTexture({
+      size: [canvas.width, canvas.height],
+      sampleCount: 4,
+      format: presentationFormat,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    msView = msTexture.createView();
+  },
 });
-
-resizeObserver.observe(canvas);
-
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
 
 // #region Example controls and cleanup
 
@@ -458,7 +458,6 @@ export function onCleanup() {
   window.removeEventListener('mousemove', mouseMoveEventListener);
   window.removeEventListener('touchmove', touchMoveEventListener);
   window.removeEventListener('touchend', touchEndEventListener);
-  resizeObserver.disconnect();
   detachAutoResizer();
   root.destroy();
 }

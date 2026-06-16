@@ -219,22 +219,7 @@ const computeBindGroups = [0, 1].map((idx) =>
   }),
 );
 
-// frame
-
-let odd = false;
-let lastTimestamp: DOMHighResTimeStamp = 0;
-let animationFrameId: number;
-
-function frame(timestamp: DOMHighResTimeStamp) {
-  odd = !odd;
-
-  currentTimeBuffer.write(timestamp);
-  timePassedBuffer.write((timestamp - lastTimestamp) * speedMultiplier);
-  lastTimestamp = timestamp;
-  cameraBuffer.write(camera);
-
-  simulatePipeline.with(computeBindGroups[odd ? 1 : 0]).dispatchThreads(p.fishAmount);
-
+function render() {
   renderPipeline
     .withColorAttachment({
       view: context,
@@ -267,6 +252,25 @@ function frame(timestamp: DOMHighResTimeStamp) {
     .with(renderInstanceLayout, fishDataBuffers[odd ? 1 : 0])
     .with(renderFishBindGroups[odd ? 1 : 0])
     .draw(fishModel.polygonCount, p.fishAmount);
+}
+
+// frame
+
+let odd = false;
+let lastTimestamp: DOMHighResTimeStamp = 0;
+let animationFrameId: number;
+
+function frame(timestamp: DOMHighResTimeStamp) {
+  odd = !odd;
+
+  currentTimeBuffer.write(timestamp);
+  timePassedBuffer.write((timestamp - lastTimestamp) * speedMultiplier);
+  lastTimestamp = timestamp;
+  cameraBuffer.write(camera);
+
+  simulatePipeline.with(computeBindGroups[odd ? 1 : 0]).dispatchThreads(p.fishAmount);
+
+  render();
 
   animationFrameId = requestAnimationFrame(frame);
 }
@@ -433,12 +437,18 @@ const detachAutoResizer = common.attachAutoResizer({
       d.mat4x4f(),
     );
 
+    cameraBuffer.patch({
+      projection: camera.projection,
+    });
+
     depthTexture.destroy();
     depthTexture = root.device.createTexture({
       size: [canvas.width, canvas.height, 1],
       format: 'depth24plus',
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
+
+    render();
   },
 });
 

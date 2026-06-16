@@ -246,6 +246,10 @@ const pipeline = root.createRenderPipeline({
 
 // UI
 
+function render() {
+  pipeline.withColorAttachment({ view: context }).draw(3);
+}
+
 let animationFrameId: number;
 let lastTime: number | null = null;
 
@@ -269,12 +273,22 @@ const runner = (timestamp: number) => {
 
   frame += (rotationSpeed * deltaTime) / 1000;
 
-  pipeline.withColorAttachment({ view: context }).draw(3);
+  render();
   animationFrameId = requestAnimationFrame(runner);
 };
 animationFrameId = requestAnimationFrame(runner);
 
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 // #region Example controls and cleanup
 

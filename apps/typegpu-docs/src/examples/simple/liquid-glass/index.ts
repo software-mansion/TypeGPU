@@ -180,14 +180,28 @@ canvas.addEventListener('touchmove', handleTouchMove, { passive: true });
 canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
 canvas.addEventListener('click', handleClick);
 
-let frameId: number;
 function render() {
-  frameId = requestAnimationFrame(render);
   pipeline.withColorAttachment({ view: context }).draw(3);
 }
-frameId = requestAnimationFrame(render);
 
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+let frameId: number;
+function frame() {
+  frameId = requestAnimationFrame(frame);
+  render();
+}
+frameId = requestAnimationFrame(frame);
+
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 export const controls = defineControls({
   'Rectangle dims': {

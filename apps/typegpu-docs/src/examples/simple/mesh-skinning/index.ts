@@ -112,7 +112,7 @@ const context = root.configureContext({ canvas });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 function createDepthTexture() {
-  return root['~unstable']
+  return root
     .createTexture({
       size: [canvas.width, canvas.height],
       format: 'depth24plus',
@@ -122,7 +122,7 @@ function createDepthTexture() {
 }
 
 function createMsaaTexture() {
-  return root['~unstable']
+  return root
     .createTexture({
       size: [canvas.width, canvas.height],
       format: presentationFormat,
@@ -274,12 +274,6 @@ const pipelineConfig = {
 
 const lbsPipeline = root.createRenderPipeline({ vertex, ...pipelineConfig });
 const dqsPipeline = root.createRenderPipeline({ vertex: dqsVertex, ...pipelineConfig });
-
-const resizeObserver = new ResizeObserver(() => {
-  depthTexture = createDepthTexture();
-  msaaTexture = createMsaaTexture();
-});
-resizeObserver.observe(canvas);
 
 const state = {
   selectedVariantId,
@@ -525,7 +519,14 @@ function render(frameTimeMs: number) {
 let animationId: number | undefined;
 animationId = requestAnimationFrame(render);
 
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    depthTexture = createDepthTexture();
+    msaaTexture = createMsaaTexture();
+  },
+});
 
 export const controls = defineControls({
   Animation: {
@@ -561,7 +562,6 @@ export function onCleanup() {
   if (animationId !== undefined) {
     cancelAnimationFrame(animationId);
   }
-  resizeObserver.disconnect();
   cleanupCamera();
   detachAutoResizer();
   root.destroy();

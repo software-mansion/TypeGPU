@@ -404,8 +404,7 @@ function createDepthTexture() {
 }
 createDepthTexture();
 
-let frameId: number;
-function frame() {
+function render() {
   pipeline
     .withColorAttachment({ view: context, clearValue: [0, 0, 0, 1] })
     .withDepthStencilAttachment({
@@ -415,9 +414,23 @@ function frame() {
       depthStoreOp: 'store',
     })
     .drawIndexed(planeMesh.indexCount);
+}
+
+let frameId: number;
+function frame() {
+  render();
   frameId = requestAnimationFrame(frame);
 }
 frameId = requestAnimationFrame(frame);
+
+const detachAutoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    createDepthTexture();
+    render();
+  },
+});
 
 // #region Example controls and cleanup
 
@@ -480,14 +493,6 @@ export const controls = defineControls({
       sunAngle = (v * Math.PI) / 180;
       pomParams.patch({ lightDir: computeLightDir(sunAngle, sunHeight) });
     },
-  },
-});
-
-const detachAutoResizer = common.attachAutoResizer({
-  root,
-  canvas,
-  onResize() {
-    createDepthTexture();
   },
 });
 
