@@ -1150,7 +1150,7 @@ describe('wgslGenerator', () => {
       `[Error: Invalid property key '': Identifiers cannot be equal to '' or '_']`,
     );
     expect(() => tgpu.resolve([d.struct({ '0': d.u32 })])).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Invalid property key '0': Identifier is not compliant with the WGSL guideline.]`,
+      `[Error: Invalid property key '0': Not compliant with WGSL guidelines.]`,
     );
     expect(() => tgpu.resolve([d.struct({ __: d.u32 })])).toThrowErrorMatchingInlineSnapshot(
       `[Error: Invalid property key '__': Identifiers cannot start with double underscores.]`,
