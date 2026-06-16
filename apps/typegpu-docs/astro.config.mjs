@@ -56,7 +56,7 @@ export default defineConfig({
       typegpu({ include: [/\.m?[jt]sx?/] }),
       imagetools(),
       {
-        ...comptime(),
+        ...comptime({ timeout: 60_000 }),
         enforce: 'post',
       },
       {
