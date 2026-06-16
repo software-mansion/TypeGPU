@@ -11,8 +11,6 @@ import typegpuDocsPackageJson from '../../../package.json' with { type: 'json' }
 import type { Example, ExampleCommonFile } from '../../utils/examples/types.ts';
 // oxlint-disable-next-line import/default
 import index from './stackBlitzIndex.ts?raw';
-
-// Precomputing the parsing of the workspace yaml file
 import { pnpmWorkspaceYaml } from './pnpmWorkspace.ts';
 
 export async function openInStackBlitz(

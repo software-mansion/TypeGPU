@@ -13,12 +13,7 @@ import type {
 } from '../utils/examples/types.ts';
 import { pathToExampleKey } from './pathToExampleKey.ts';
 import { metaContent, tsContentLazy, tsnotoverContentLazy } from './importers.ts';
-
-// ----
-// Precomputing APIs used across examples. This is done at build-time to avoid loading
-// all example source code into the browser unless its required.
 import { usedApis } from './usedApis.ts';
-// ----
 
 function extractUrlFromViteImport(importFn: () => void): [URL | undefined, boolean] {
   const filePath = String(importFn);

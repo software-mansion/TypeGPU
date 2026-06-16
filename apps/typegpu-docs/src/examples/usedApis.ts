@@ -1,6 +1,10 @@
 import { comptime } from 'comptime';
 import { pathToExampleKey } from './pathToExampleKey.ts';
 
+/**
+ * Precomputed ahead of time to not eagerly load all example source code into the user's browser
+ * just to compute what APIs each example uses.
+ */
 export const usedApis = comptime(async () => {
   const sourceFiles = import.meta.glob(['./*/**/*.ts', './*/**/*.tsx'], {
     import: 'default',

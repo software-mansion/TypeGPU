@@ -28,6 +28,7 @@ type Props = {
   isPlayground?: boolean;
 };
 
+// Lazy-loading the CodeEditor component, as the Monaco editor is quite heavy
 const CodeEditor = lazy(() => import('./CodeEditor.tsx'));
 
 function useExample(
