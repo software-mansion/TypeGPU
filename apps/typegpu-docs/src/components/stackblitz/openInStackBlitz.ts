@@ -1,5 +1,4 @@
 import StackBlitzSDK from '@stackblitz/sdk';
-import type { Store } from 'jotai/vanilla/store';
 import typegpuColorPackageJson from '@typegpu/color/package.json' with { type: 'json' };
 import typegpuNoisePackageJson from '@typegpu/noise/package.json' with { type: 'json' };
 import typegpuSdfPackageJson from '@typegpu/sdf/package.json' with { type: 'json' };
@@ -8,21 +7,19 @@ import typegpuReactPackageJson from '@typegpu/react/package.json' with { type: '
 import typegpuPackageJson from 'typegpu/package.json' with { type: 'json' };
 import unpluginPackageJson from 'unplugin-typegpu/package.json' with { type: 'json' };
 import typegpuDocsPackageJson from '../../../package.json' with { type: 'json' };
-import type { Example, ExampleCommonFile } from '../../utils/examples/types.ts';
+import type { Example, ExampleCommonFile, ExampleSource } from '../../utils/examples/types.ts';
 // oxlint-disable-next-line import/default
 import index from './stackBlitzIndex.ts?raw';
 import { pnpmWorkspaceYaml } from './pnpmWorkspace.ts';
 
 export async function openInStackBlitz(
-  store: Store,
   example: Example,
+  exampleSource: ExampleSource,
   common: ExampleCommonFile[],
 ) {
   const tsFiles: Record<string, string> = {};
 
-  const source = await store.get(example.sourceAtom);
-
-  for (const file of source.tsFiles) {
+  for (const file of exampleSource.tsFiles) {
     tsFiles[`src/${file.path}`] = file.tsnotoverContent ?? file.content;
   }
   for (const file of common) {
@@ -56,7 +53,7 @@ export async function openInStackBlitz(
     <link href="/style.css" rel="stylesheet">
 </head>
 <body>
-${source.htmlFile.content}
+${exampleSource.htmlFile.content}
 <script type="module" src="/index.ts"></script>
 </body>
 </html>`,
