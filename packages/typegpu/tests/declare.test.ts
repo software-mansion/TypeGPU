@@ -105,4 +105,14 @@ struct Output {
       }"
     `);
   });
+
+  it("throws when '$uses' is called multiple times", () => {
+    const declaration = tgpu['~unstable']
+      .declare('@group(0) @binding(0) var<myStruct> val: f32;')
+      .$uses({ myStruct: d.struct({ p: d.u32 }) });
+
+    expect(() =>
+      declaration.$uses({ myStruct: d.struct({ p: d.u32 }) }),
+    ).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.]`);
+  });
 });
