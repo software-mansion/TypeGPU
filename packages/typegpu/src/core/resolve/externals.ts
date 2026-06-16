@@ -42,15 +42,6 @@ export function mergeExternals(existing: ExternalMap, newExternals: ExternalMap)
     } else {
       existing[key] = value;
     }
-
-    // Giving name to external value, if it does not already have one.
-    if (
-      value &&
-      (typeof value === 'object' || typeof value === 'function') &&
-      getName(value) === undefined
-    ) {
-      setName(value, key);
-    }
   }
 }
 
