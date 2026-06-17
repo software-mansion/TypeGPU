@@ -1670,6 +1670,37 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('prunes inequalities if comptime known (>=)', () => {
+    const renderAspect = 1.5;
+
+    const fn = () => {
+      'use gpu';
+      let rayDir = d.vec2f();
+
+      if (renderAspect >= 1) {
+        rayDir = d.vec2f(1, 0);
+      } else {
+        rayDir = d.vec2f(0, 1);
+      }
+
+      if (renderAspect < 0) {
+        return d.vec2f(-1, -1);
+      }
+
+      return rayDir;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> vec2f {
+        var rayDir = vec2f();
+        {
+          rayDir = vec2f(1, 0);
+        }
+        return rayDir;
+      }"
+    `);
+  });
+
   it('dedents multinested comptime if/else without else blocks', () => {
     const v = 3 as number;
 
