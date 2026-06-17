@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it, assertType } from 'vitest';
 import {
   vec2f,
   vec2i,
@@ -163,6 +163,34 @@ describe('bitcast', () => {
 
     // Smallest negative subnormal
     expect(std.bitcastF32toU32(floatFromHex('80000001'))).toBe(0x80000001);
+  });
+
+  it('handles union of types', () => {
+    const f1 = (x: number | d.v2u) => {
+      'use gpu';
+      return std.bitcastU32toF32(x);
+    };
+    expectTypeOf(f1).returns.toEqualTypeOf<number | d.v2f>();
+
+    const f2 = (x: number | d.v2u) => {
+      'use gpu';
+      return std.bitcastU32toI32(x);
+    };
+    expectTypeOf(f2).returns.toEqualTypeOf<number | d.v2i>();
+
+    const f3 = (x: number | d.v2f) => {
+      'use gpu';
+      return std.bitcastF32toU32(x);
+    };
+    expectTypeOf(f3).returns.toEqualTypeOf<number | d.v2u>();
+  });
+
+  it('type error on invalid argument', () => {
+    const _f = (x: number | d.v2f) => {
+      'use gpu';
+      // @ts-expect-error
+      return std.bitcastU32toI32(x);
+    };
   });
 });
 

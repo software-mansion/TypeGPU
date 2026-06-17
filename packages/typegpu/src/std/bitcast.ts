@@ -27,7 +27,11 @@ export const bitcastU32toF32 = dualImpl({
     }
     return VectorOps.bitcastU32toF32[value.kind](value);
   }) as BitcastU32toF32Overload,
-  codegenImpl: (_ctx, [n]) => stitch`bitcast<f32>(${n})`,
+  codegenImpl: (_ctx, [n]) => {
+    return isVec(n.dataType)
+      ? stitch`bitcast<vec${n.dataType.componentCount}f>(${n})`
+      : stitch`bitcast<f32>(${n})`;
+  },
   signature: (...arg) => {
     const uargs = unifyStrict(arg, u32AllowedSchemas);
     if (!uargs) {
@@ -58,7 +62,11 @@ export const bitcastU32toI32 = dualImpl({
     }
     return VectorOps.bitcastU32toI32[value.kind](value);
   }) as BitcastU32toI32Overload,
-  codegenImpl: (_ctx, [n]) => stitch`bitcast<i32>(${n})`,
+  codegenImpl: (_ctx, [n]) => {
+    return isVec(n.dataType)
+      ? stitch`bitcast<vec${n.dataType.componentCount}i>(${n})`
+      : stitch`bitcast<i32>(${n})`;
+  },
   signature: (...arg) => {
     const uargs = unifyStrict(arg, u32AllowedSchemas);
     if (!uargs) {
