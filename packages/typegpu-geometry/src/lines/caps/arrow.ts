@@ -1,16 +1,17 @@
 import { vec2f } from 'typegpu/data';
-import { neg, normalize, sign } from 'typegpu/std';
-import { cross2d, rot90ccw } from '../../utils.ts';
 import type { JoinInput } from '../types.ts';
+import tgpu from 'typegpu';
+
+export const arrowCapParamsSlot = tgpu.slot({
+  length: 7.5,
+  width: 1.5,
+  slant: 0.8,
+});
 
 export function arrow(join: JoinInput, joinVertexIndex: number, _maxJoinCount: number) {
   'use gpu';
-  const bw = neg(normalize(join.fw));
-  const vert = rot90ccw(bw);
-  const sgn = sign(cross2d(bw, join.d));
-  const svert = vert * sgn;
-  const v0 = svert + bw * 7.5;
-  const v1 = v0 + (bw + svert) * 1.5;
+  const v0 = join.cross - join.fw * arrowCapParamsSlot.$.length;
+  const v1 = v0 + (join.cross - join.fw * arrowCapParamsSlot.$.slant) * arrowCapParamsSlot.$.width;
   if (joinVertexIndex === 0) {
     return join.C.position + v0 * join.C.radius;
   }
