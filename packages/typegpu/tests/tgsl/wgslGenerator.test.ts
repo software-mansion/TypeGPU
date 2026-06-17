@@ -1671,7 +1671,7 @@ describe('wgslGenerator', () => {
   });
 
   it('prunes inequalities if comptime known (>=)', () => {
-    const renderAspect = 1.5 as number;
+    const renderAspect = 1.5;
 
     const fn = () => {
       'use gpu';
