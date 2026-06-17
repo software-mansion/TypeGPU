@@ -273,7 +273,7 @@ export interface TopBarBannerProps {
   setBannerHeight?: (height: number) => void;
   /**
    * Rotation interval in ms — time the active banner is held before the next
-   * slide starts. Defaults to 1000. Floored at the slide duration ({@link
+   * slide starts. Defaults to 4000. Floored at the slide duration ({@link
    * SLIDE_MS}) so ticks aren't silently dropped mid-slide. Single zone never
    * rotates.
    */
