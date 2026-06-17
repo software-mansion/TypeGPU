@@ -69,14 +69,11 @@ async function generateReport(
     }
   }
 
-  // Comparison tables
   const notableTable = new ResultsTable(allBundlers, 0.005);
-  const allTable = new ResultsTable(allBundlers, 0);
 
   allTests.forEach((test) => {
     const result = grouped[test];
     notableTable.addRow(test, result);
-    allTable.addRow(test, result);
   });
 
   const notableTableString = notableTable.toString();
@@ -85,7 +82,8 @@ async function generateReport(
   // Markdown generation
   let output = '';
 
-  output += '## Bundle Size Comparison\n\n';
+  output +=
+    '## Bundle Size Comparison (`import * as ...` in PR vs `import * as ...` in target):\n\n';
   output += '| 🟢 Decreased | ➖ Unchanged | 🔴 Increased | ❔ Unknown |\n';
   output += '| :---: | :---: | :---: | :---: |\n';
   output += `| **${totalDecreased}** | **${totalUnchanged}** | **${totalIncreased}** | **${totalUnknown}** |\n\n`;
@@ -94,17 +92,16 @@ async function generateReport(
     notableTableString !== emptyResultsString ||
     notableDirectTableString !== emptyResultsString
   ) {
-    output += `## Notable results\n\n`;
+    output += `## Notable changes\n\n`;
     if (notableTableString !== emptyResultsString) {
-      output += `### Compared against target branch:\n${notableTableString}\n\n`;
+      output += `### \`import * as ...\` in PR vs \`import * as ...\` in target (did bundle size increase?):\n${notableTableString}\n\n`;
     }
     if (notableDirectTableString !== emptyResultsString) {
-      output += `### Compared against entrypoint imports:\n${notableDirectTableString}\n\n`;
+      output += `### \`import { ... }\` in PR vs \`import * as ...\` in PR (is the library tree-shakable?):\n${notableDirectTableString}\n\n`;
     }
+  } else {
+    output += `No notable changes.\n\n`;
   }
-
-  output += `## All results\n\n`;
-  output += `${allTable}\n\n`;
 
   if (allBundlers.size === 1) {
     output += `If you wish to run a comparison for other, slower bundlers, run the 'Tree-shake test' from the GitHub Actions menu.\n`;
