@@ -71,7 +71,7 @@ export class ResultsTable {
     sortedRows: (readonly [string, Row])[],
     stringifyCell: (result: Result | undefined) => string,
   ) {
-    if (this.#results.size === 0) {
+    if (sortedRows.length === 0) {
       return emptyResultsString;
     }
 
@@ -98,12 +98,10 @@ export class ResultsTable {
     }
     output += '\n';
 
-    if (this.#results.size > 20) {
+    if (sortedRows.length > 50) {
       output = `
 <details>
-<summary><b>${
-        this.#threshold > 0 ? '‼️ ' : ''
-      }Click to reveal the results table (${this.#results.size} entries).</b></summary>
+<summary><b>Click to reveal the results table (${sortedRows.length} entries).</b></summary>
 
 ${output}
 
