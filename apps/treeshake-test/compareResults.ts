@@ -76,8 +76,8 @@ async function generateReport(
     notableTable.addRow(test, result);
   });
 
-  const notableTableString = notableTable.toString();
-  const notableNamedTableString = notableTable.getProblematicNamedImports();
+  const bundleSizeTableString = notableTable.getBundleSizeTable();
+  const treeShakabilityTableString = notableTable.getTreeShakabilityTable();
 
   // Markdown generation
   let output = '';
@@ -89,14 +89,14 @@ async function generateReport(
   output += `| **${totalDecreased}** | **${totalUnchanged}** | **${totalIncreased}** | **${totalUnknown}** |\n\n`;
 
   if (
-    notableTableString !== emptyResultsString ||
-    notableNamedTableString !== emptyResultsString
+    bundleSizeTableString !== emptyResultsString ||
+    treeShakabilityTableString !== emptyResultsString
   ) {
-    if (notableTableString !== emptyResultsString) {
-      output += `### \`import * as ...\` in PR vs \`import * as ...\` in target (did bundle size increase?):\n${notableTableString}\n\n`;
+    if (bundleSizeTableString !== emptyResultsString) {
+      output += `### \`import * as ...\` in PR vs \`import * as ...\` in target (did bundle size increase?):\n${bundleSizeTableString}\n\n`;
     }
-    if (notableNamedTableString !== emptyResultsString) {
-      output += `### \`import { ... }\` in PR vs \`import * as ...\` in PR (is the library tree-shakable?):\n${notableNamedTableString}\n\n`;
+    if (treeShakabilityTableString !== emptyResultsString) {
+      output += `### \`import { ... }\` in PR vs \`import * as ...\` in PR (is the library tree-shakable?):\n${treeShakabilityTableString}\n\n`;
     }
   } else {
     output += `No notable changes.\n\n`;

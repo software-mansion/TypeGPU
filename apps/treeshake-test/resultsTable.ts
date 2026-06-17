@@ -25,33 +25,33 @@ export class ResultsTable {
     }
   }
 
-  toString() {
+  getBundleSizeTable() {
     const sortedResults = [...this.#results.entries()]
       .map(([test, row]) => [test, row, this.#maxAbsoluteChange(row)] as const)
       .toSorted(([, , scoreA], [, , scoreB]) => scoreB - scoreA)
       .map(([test, row]) => [test, row] as const);
 
-    return this.getTable(
+    return this.#getTable(
       sortedResults,
       (result) =>
         `${prettifySize(result?.prNamespace)} ${calculateTrendMessage(result?.prNamespace, result?.prNamed)}`,
     );
   }
 
-  getProblematicNamedImports() {
+  getTreeShakabilityTable() {
     const sortedResults = [...this.#results.entries()]
       .map(([test, row]) => [test, row, this.#maxAbsoluteNamedChange(row)] as const)
       .toSorted(([, , scoreA], [, , scoreB]) => scoreB - scoreA)
       .filter(([, , score]) => score > this.#threshold)
       .map(([test, row]) => [test, row] as const);
 
-    return this.getTable(
+    return this.#getTable(
       sortedResults,
       (result) => `${calculateTrendMessage(result?.prNamed, result?.prNamespace)}`,
     );
   }
 
-  getTable(
+  #getTable(
     sortedRows: (readonly [string, Row])[],
     stringifyCell: (result: Result | undefined) => string,
   ) {
