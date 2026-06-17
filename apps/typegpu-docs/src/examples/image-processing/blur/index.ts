@@ -180,8 +180,6 @@ const detachAutoResizer = common.attachAutoResizer({
     canvas.width = size;
     canvas.height = size;
     render();
-
-    render();
   },
 });
 

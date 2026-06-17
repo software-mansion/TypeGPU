@@ -239,6 +239,8 @@ function reset() {
   void runFloodAnimated(currentRunId);
 }
 
+reset();
+
 const detachAutoResizer = common.attachAutoResizer({
   root,
   canvas,
