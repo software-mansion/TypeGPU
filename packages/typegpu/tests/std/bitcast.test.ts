@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, it, assertType } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   vec2f,
   vec2i,
