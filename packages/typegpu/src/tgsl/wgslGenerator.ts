@@ -391,13 +391,22 @@ ${this.ctx.pre}}`;
         return snip(lhsExpr.value !== rhsExpr.value, bool, 'constant');
       }
 
-      if (isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
-        const left = lhsExpr.value as number;
-        const right = rhsExpr.value as number;
+      if (
+        (op === '>=' || op === '<=' || op === '>' || op === '<') &&
+        isKnownAtComptime(lhsExpr) &&
+        isKnownAtComptime(rhsExpr)
+      ) {
+        const left = lhsExpr.value;
+        const right = rhsExpr.value;
+        if (typeof left !== 'number' || typeof right !== 'number') {
+          throw new WgslTypeError(
+            `Inequality comparison '${op}' requires numeric operands, got '${typeof left}' and '${typeof right}'`,
+          );
+        }
         if (op === '>=') return snip(left >= right, bool, 'constant');
         if (op === '<=') return snip(left <= right, bool, 'constant');
         if (op === '>') return snip(left > right, bool, 'constant');
-        if (op === '<') return snip(left < right, bool, 'constant');
+        return snip(left < right, bool, 'constant');
       }
 
       if (lhsExpr.dataType === UnknownData) {
