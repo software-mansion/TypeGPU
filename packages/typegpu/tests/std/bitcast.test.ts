@@ -77,13 +77,13 @@ describe('bitcast', () => {
   });
 
   it('bitcastF32toU32 vectors', () => {
-    const v2 = vec2f(floatFromHex('7f800000'), floatFromHex('7fc00000')); // +inf, quiet nan
+    const v2 = vec2f(floatFromHex('7c800001'), floatFromHex('100008c7'));
     const cast2 = std.bitcastF32toU32(v2);
-    expect(cast2).toStrictEqual(vec2u(2139095040, 2143289344));
+    expect(cast2).toStrictEqual(vec2u(2088763393, 268437703));
 
-    const v3 = vec3f(floatFromHex('ff800000'), floatFromHex('00000001'), floatFromHex('80000001'));
+    const v3 = vec3f(floatFromHex('ff000000'), floatFromHex('00000001'), floatFromHex('80000001'));
     const cast3 = std.bitcastF32toU32(v3);
-    expect(cast3).toStrictEqual(vec3u(4286578688, 1, 2147483649));
+    expect(cast3).toStrictEqual(vec3u(4278190080, 1, 2147483649));
 
     const v4 = vec4f(
       floatFromHex('84220925'),
@@ -142,6 +142,27 @@ describe('bitcast', () => {
     const v4 = vec4u(0x80000000, 0x00000001, 0x00000000, 0x7fffffff);
     const c4 = std.bitcastU32toI32(v4);
     expect(c4).toEqual(vec4i(-2147483648, 1, 0, 2147483647));
+  });
+
+  it('bitcastF32toU32 specials (NaN, infinities etc)', () => {
+    // +0
+    expect(std.bitcastF32toU32(+0)).toBe(0x00000000);
+
+    // -0
+    expect(std.bitcastF32toU32(-0)).toBe(0x80000000);
+
+    // +Inf / -Inf
+    expect(std.bitcastF32toU32(Number.POSITIVE_INFINITY)).toBe(0x7f800000);
+    expect(std.bitcastF32toU32(Number.NEGATIVE_INFINITY)).toBe(0xff800000);
+
+    // NaN
+    expect(std.bitcastF32toU32(Number.NaN)).toBe(0x7fc00000);
+
+    // Smallest positive subnormal
+    expect(std.bitcastF32toU32(floatFromHex('00000001'))).toBe(0x00000001);
+
+    // Smallest negative subnormal
+    expect(std.bitcastF32toU32(floatFromHex('80000001'))).toBe(0x80000001);
   });
 });
 
