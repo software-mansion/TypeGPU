@@ -234,7 +234,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  autoResizer();
+  autoResizer.detach();
   root.destroy();
   cleanupController.abort();
 }
