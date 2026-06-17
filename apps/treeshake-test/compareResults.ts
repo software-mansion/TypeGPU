@@ -83,7 +83,7 @@ async function generateReport(
   let output = '';
 
   output +=
-    '## Bundle Size Comparison (`import * as ...` in PR vs `import * as ...` in target):\n\n';
+    '### Bundle size comparison (`import * as ...` in PR vs `import * as ...` in target):\n\n';
   output += '| 🟢 Decreased | ➖ Unchanged | 🔴 Increased | ❔ Unknown |\n';
   output += '| :---: | :---: | :---: | :---: |\n';
   output += `| **${totalDecreased}** | **${totalUnchanged}** | **${totalIncreased}** | **${totalUnknown}** |\n\n`;
@@ -92,7 +92,6 @@ async function generateReport(
     notableTableString !== emptyResultsString ||
     notableDirectTableString !== emptyResultsString
   ) {
-    output += `## Notable changes\n\n`;
     if (notableTableString !== emptyResultsString) {
       output += `### \`import * as ...\` in PR vs \`import * as ...\` in target (did bundle size increase?):\n${notableTableString}\n\n`;
     }

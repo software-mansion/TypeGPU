@@ -73,7 +73,7 @@ export class ResultsTable {
     output += ' |\n';
 
     for (const [test, row] of sortedRows) {
-      output += `| ${test.replaceAll('_', ' ')}`;
+      output += `| ${test}`;
 
       for (const bundler of this.#bundlers) {
         output += ` | ${stringifyCell(row[bundler])}`;
