@@ -141,12 +141,12 @@ export function getCascadeDim(width: number, height: number, options: CascadeInf
 
 export const sdfSlot = tgpu.slot<(uv: d.v2f) => number>();
 export const colorSlot = tgpu.slot<(uv: d.v2f) => d.v3f>();
-export const renderAspectSlot = tgpu.slot<number>(1);
-export const maxRayStepsSlot = tgpu.slot<number>(64);
-export const rayMarchStepSafetySlot = tgpu.slot<number>(1);
+export const renderAspectAccess = tgpu.accessor(d.f32, 1);
+export const maxRayStepsAccess = tgpu.accessor(d.u32, 64);
+export const rayMarchStepSafetyAccess = tgpu.accessor(d.f32, 1);
 
-// Slot for SDF resolution to calculate proper texel-based eps/minStep (so we don't do redundant sub-texel steps)
-export const sdfResolutionSlot = tgpu.slot<d.v2u>();
+// Used to calculate proper texel-based eps/minStep, avoiding redundant sub-texel steps.
+export const sdfResolutionAccess = tgpu.accessor(d.vec2u);
 
 export const RayMarchResult = d.struct({
   color: d.vec3f,
@@ -164,7 +164,7 @@ export const defaultRayMarch = tgpu.fn(
   let hitPos = d.vec2f();
   let didHit = false;
 
-  for (let step = 0; step < maxRayStepsSlot.$; step++) {
+  for (let step = d.u32(); step < maxRayStepsAccess.$; step++) {
     if (t > endT) {
       break;
     }
@@ -181,7 +181,7 @@ export const defaultRayMarch = tgpu.fn(
       T = 0;
       break;
     }
-    t += std.max(std.max(signedDist, 0) * rayMarchStepSafetySlot.$, minStep);
+    t += std.max(std.max(signedDist, 0) * rayMarchStepSafetyAccess.$, minStep);
   }
 
   if (didHit) {
@@ -198,7 +198,7 @@ const segmentMetricLength = tgpu.fn(
   d.f32,
 )((delta) => {
   'use gpu';
-  const aspect = d.f32(renderAspectSlot.$);
+  const aspect = renderAspectAccess.$;
   if (aspect >= 1) {
     return std.length(d.vec2f(delta.x * aspect, delta.y));
   }
@@ -211,7 +211,7 @@ export const defaultTraceSegment = tgpu.fn(
 )((p0, p1, _aspect, eps, minStep, bias) => {
   'use gpu';
   const delta = p1 - p0;
-  // Uses renderAspectSlot so the aspect branch resolves during specialization.
+  // Uses renderAspectAccess so the aspect branch resolves during specialization.
   const endT = segmentMetricLength(delta);
 
   if (endT <= 0) {
@@ -334,7 +334,7 @@ const traceDirectRay = (
     biasUv,
   );
 
-  return d.vec4f(d.vec3f(marchResult.color), d.f32(marchResult.transmittance));
+  return d.vec4f(marchResult.color, marchResult.transmittance);
 };
 
 const traceHardwareMergeRay = (
@@ -376,7 +376,7 @@ const traceHardwareMergeRay = (
       uvU,
       0,
     );
-    rgb = rgb + upper.xyz * T;
+    rgb += upper.xyz * T;
     T *= upper.w;
   }
 
@@ -428,7 +428,7 @@ const traceBilinearFork = (
 
   if (mergedT > 0.01 && exitUv > marchEndUv) {
     const upper = std.textureLoad(cascadePassBGL.$.upper, d.vec2i(tileOriginU + upperProbe), 0);
-    mergedRgb = mergedRgb + upper.xyz * mergedT;
+    mergedRgb += upper.xyz * mergedT;
     mergedT *= upper.w;
   }
 
@@ -457,7 +457,7 @@ const traceBilinearFixMergeRay = (
 
   let forkAccum = d.vec4f();
 
-  for (const fork of tgpu.unroll([0, 1, 2, 3])) {
+  for (const fork of tgpu.unroll(std.range(PREAVERAGE_RAY_COUNT))) {
     const forkOffset = d.vec2u(fork & 1, fork >> 1);
     const upperProbe = std.min(upperBaseProbe + forkOffset, probesU - 1);
     const weight = bilinearWeight(forkOffset, bilinear);
@@ -526,7 +526,7 @@ export function makeCascadePassCompute({
 
     let accum = d.vec4f();
 
-    for (const i of tgpu.unroll([0, 1, 2, 3])) {
+    for (const i of tgpu.unroll(std.range(PREAVERAGE_RAY_COUNT))) {
       const dirActual = dirStored * PREAVERAGE_RAY_DIM + d.vec2u(i & 1, i >> 1);
       const rayIndexU = morton2D(dirActual.x, dirActual.y);
       const rayIndex = d.f32(rayIndexU) + 0.5;
@@ -591,6 +591,8 @@ export function makeBuildRadianceFieldCompute({
 }: BuildRadianceFieldSpecialization) {
   const [cascadeProbesX, cascadeProbesY] = cascadeProbes;
   const storedRayCount = baseStoredRayDim * baseStoredRayDim;
+  const rayMask = baseStoredRayDim - 1;
+  const rayShift = baseStoredRayDim >> 1;
 
   return tgpu.computeFn({
     workgroupSize: [8, 8],
@@ -618,41 +620,17 @@ export function makeBuildRadianceFieldCompute({
 
     let sum = d.vec3f();
 
-    if (baseStoredRayDim === 1) {
+    for (const i of tgpu.unroll(std.range(storedRayCount))) {
+      const offset = d.vec2f(i & rayMask, i >> rayShift) * uvStride;
       const sample = std.textureSampleLevel(
         buildRadianceFieldBGL.$.src,
         buildRadianceFieldBGL.$.srcSampler,
-        baseSampleUV,
+        baseSampleUV + offset,
         0,
       );
-      sum = sum + sample.xyz;
-    } else if (baseStoredRayDim === 2) {
-      for (const i of tgpu.unroll([0, 1, 2, 3])) {
-        const offset = d.vec2f(i & 1, i >> 1) * uvStride;
-        const sample = std.textureSampleLevel(
-          buildRadianceFieldBGL.$.src,
-          buildRadianceFieldBGL.$.srcSampler,
-          baseSampleUV + offset,
-          0,
-        );
-        sum = sum + sample.xyz;
-      }
-    } else {
-      for (const i of tgpu.unroll([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])) {
-        const offset = d.vec2f(i & 3, i >> 2) * uvStride;
-        const sample = std.textureSampleLevel(
-          buildRadianceFieldBGL.$.src,
-          buildRadianceFieldBGL.$.srcSampler,
-          baseSampleUV + offset,
-          0,
-        );
-        sum = sum + sample.xyz;
-      }
+      sum += sample.xyz;
     }
 
-    const avg = sum / d.f32(storedRayCount);
-    const res = d.vec3f(avg);
-
-    std.textureStore(buildRadianceFieldBGL.$.dst, gid.xy, d.vec4f(res, 1));
+    std.textureStore(buildRadianceFieldBGL.$.dst, gid.xy, d.vec4f(sum / d.f32(storedRayCount), 1));
   });
 }

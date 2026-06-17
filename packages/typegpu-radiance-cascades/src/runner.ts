@@ -22,13 +22,13 @@ import {
   makeCascadePassCompute,
   MERGE_MODE_BILINEAR_FIX,
   MERGE_MODE_HARDWARE,
-  maxRayStepsSlot,
+  maxRayStepsAccess,
   type MergeMode,
-  rayMarchStepSafetySlot,
-  renderAspectSlot,
+  rayMarchStepSafetyAccess,
+  renderAspectAccess,
   type RayMarchResult,
   rayMarchSlot,
-  sdfResolutionSlot,
+  sdfResolutionAccess,
   sdfSlot,
   traceSegmentSlot,
 } from './cascades.ts';
@@ -330,12 +330,12 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
   });
 
   const cascadePipelineBase = root
-    .with(sdfResolutionSlot, d.vec2u(sdfResolution.width, sdfResolution.height))
+    .with(sdfResolutionAccess, d.vec2u(sdfResolution.width, sdfResolution.height))
     .with(sdfSlot, sdf)
     .with(colorSlot, color)
-    .with(renderAspectSlot, renderAspect)
-    .with(maxRayStepsSlot, maxRaySteps)
-    .with(rayMarchStepSafetySlot, stepSafety)
+    .with(renderAspectAccess, renderAspect)
+    .with(maxRayStepsAccess, maxRaySteps)
+    .with(rayMarchStepSafetyAccess, stepSafety)
     .with(rayMarchSlot, rayMarch ?? defaultRayMarch)
     .with(traceSegmentSlot, traceSegment ?? defaultTraceSegment);
 
@@ -361,15 +361,10 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
     }),
   });
 
-  const cascadePassBindGroups = Array.from({ length: cascadeCount }, (_, layer) => {
+  const cascadePassBindGroups = layerParamsBuffers.map((layerParams, layer) => {
     const writeToA = (cascadeCount - 1 - layer) % 2 === 0;
     const dstTexture = writeToA ? cascadeTextureA : cascadeTextureB;
     const srcTexture = writeToA ? cascadeTextureB : cascadeTextureA;
-    const layerParams = layerParamsBuffers[layer];
-
-    if (!layerParams) {
-      throw new Error(`Missing radiance cascade layer params for layer ${layer}.`);
-    }
 
     return root.createBindGroup(cascadePassBGL, {
       layerParams,
@@ -445,14 +440,12 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
     function run(commandEncoder?: GPUCommandEncoder) {
       const encoder = commandEncoder ?? root.device.createCommandEncoder();
 
-      for (let layer = cascadeCount - 1; layer >= 0; layer--) {
-        const dispatch = cascadeDispatches[layer];
-        if (!dispatch) {
-          throw new Error(`Missing radiance cascade dispatch dimensions for layer ${layer}.`);
-        }
-        prebuiltCascadePipelines[layer]
-          ?.with(encoder)
-          .dispatchWorkgroups(dispatch.workgroupsX, dispatch.workgroupsY);
+      for (let layer = cascadeDispatches.length - 1; layer >= 0; layer--) {
+        const dispatch = cascadeDispatches[layer]!;
+        prebuiltCascadePipelines[layer]!.with(encoder).dispatchWorkgroups(
+          dispatch.workgroupsX,
+          dispatch.workgroupsY,
+        );
       }
 
       prebuiltRadiancePipeline

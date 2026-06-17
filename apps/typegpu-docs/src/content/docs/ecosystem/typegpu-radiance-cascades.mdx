@@ -260,6 +260,6 @@ Most users only need `createRadianceCascades`. The package also exports lower-le
 | `defaultRayMarch` | The built-in ray marcher used by the runner |
 | `RayMarchResult` | Return struct for custom ray marchers |
 | `getCascadeDim` | Computes internal cascade texture dimensions |
-| `sdfSlot`, `colorSlot`, `rayMarchSlot`, `sdfResolutionSlot` | Slots used by the internal cascade compute pass |
+| `sdfSlot`, `colorSlot`, `rayMarchSlot`, `traceSegmentSlot`, `sdfResolutionAccess`, `renderAspectAccess`, `maxRayStepsAccess`, `rayMarchStepSafetyAccess` | Injection points used by the internal cascade compute pass |
 
 See the [package source](https://github.com/software-mansion/TypeGPU/tree/main/packages/typegpu-radiance-cascades/src) for details that are not yet covered here.
