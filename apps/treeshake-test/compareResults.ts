@@ -41,8 +41,8 @@ async function generateReport(
 ) {
   const grouped = groupResultsByTest(prNamespaceResults, prNamedResults, targetNamespaceResults);
 
-  // All unique tests from both branches
-  const allTests = new Set(Object.keys(grouped));
+  // All tests from the current branch (we are not interested in removed tests)
+  const allTests = Object.values(prNamespaceResults).map((r) => r.testFilename);
 
   // All unique bundlers from both branches
   const allBundlers = new Set(
@@ -57,8 +57,7 @@ async function generateReport(
   let totalUnchanged = 0;
   let totalUnknown = 0;
 
-  // only iterate on tests that are in this PR
-  for (const test of Object.values(prNamespaceResults).map((r) => r.testFilename)) {
+  for (const test of allTests) {
     for (const bundler of allBundlers) {
       const result = grouped[test]?.[bundler];
       const { prNamespace: prSize, targetNamespace: targetSize } = result ?? {};

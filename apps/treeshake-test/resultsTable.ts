@@ -35,7 +35,11 @@ export class ResultsTable {
             maxAbsoluteForRow(row, (row) => calculateChange(row.prNamespace, row.targetNamespace)),
           ] as const,
       )
-      .filter(([, , score]) => score !== undefined && Math.abs(score) > this.#threshold)
+      .filter(
+        ([, row, score]) =>
+          (score !== undefined && Math.abs(score) > this.#threshold) ||
+          Object.values(row).some((result) => result.targetNamespace === undefined),
+      ) // a result is interesting if the score is big, or if the test is new (target is undefined)
       .toSorted(([, , scoreA], [, , scoreB]) => scoreB - scoreA)
       .map(([test, row]) => [test, row] as const);
 

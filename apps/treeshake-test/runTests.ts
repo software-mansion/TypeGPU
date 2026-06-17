@@ -83,7 +83,7 @@ async function main() {
   // Save results as JSON
   await fs.writeFile(`results_${testVariant}.json`, JSON.stringify(successfulResults, null, 2));
 
-  console.log('\nMeasurement complete. Results saved to results.json');
+  console.log(`\nMeasurement complete. Results saved to results_${testVariant}.json`);
 }
 
 await main();
