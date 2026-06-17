@@ -1,8 +1,11 @@
 type TestName = string;
 type BundlerName = string;
-type Result = { direct?: number; endpoint?: number };
-type TestResults = Record<BundlerName, Result>;
-type Row = Map<BundlerName, { pr: Result; target: Result }>;
+export type Result = {
+  prEntrypoint?: number;
+  prDirect?: number;
+  targetEntrypoint?: number;
+};
+type Row = Record<BundlerName, Result>;
 
 export const emptyResultsString = '*No major changes.*';
 
@@ -16,21 +19,9 @@ export class ResultsTable {
     this.#threshold = threshold;
   }
 
-  addRow(
-    testName: string,
-    prResults: TestResults | undefined,
-    targetResults: TestResults | undefined,
-  ) {
-    const row: Row = new Map();
-    for (const bundlerName of this.#bundlers) {
-      row.set(bundlerName, {
-        pr: prResults?.[bundlerName] ?? {},
-        target: targetResults?.[bundlerName] ?? {},
-      });
-    }
-
-    if (this.#isInteresting(row)) {
-      this.#results.set(testName, row);
+  addRow(testName: string, result: Row | undefined) {
+    if (result !== undefined && this.#isInteresting(result)) {
+      this.#results.set(testName, result);
     }
   }
 
@@ -42,14 +33,12 @@ export class ResultsTable {
     let output = '';
     output += '| Test';
     for (const bundler of this.#bundlers) {
-      output += ` | ${bundler} (direct)`;
-      output += ` | ${bundler} (endpoint)`;
+      output += ` | ${bundler}`;
     }
     output += ' |\n';
 
     output += '|---------';
     for (const _ of this.#bundlers) {
-      output += '|---------';
       output += '|---------';
     }
     output += ' |\n';
@@ -63,11 +52,10 @@ export class ResultsTable {
       output += `| ${test.replaceAll('_', ' ')}`;
 
       for (const bundler of this.#bundlers) {
-        const prSize = row.get(bundler)?.pr;
-        const targetSize = row.get(bundler)?.target;
+        const prSize = row[bundler]?.prEntrypoint;
+        const targetSize = row[bundler]?.targetEntrypoint;
 
-        output += ` | ${prettifySize(prSize?.direct)} ${calculateTrendMessage(prSize?.direct, targetSize?.direct)}`;
-        output += ` | ${prettifySize(prSize?.endpoint)} ${calculateTrendMessage(prSize?.endpoint, targetSize?.endpoint)}`;
+        output += ` | ${prettifySize(prSize)} ${calculateTrendMessage(prSize, targetSize)}`;
       }
       output += ' |\n';
     }
@@ -90,39 +78,32 @@ ${output}
 
   #maxAbsoluteChange(row: Row): number {
     let max = 0;
-    for (const { pr, target } of row.values()) {
-      if (pr.direct !== undefined && target.direct !== undefined && target.direct !== 0) {
-        max = Math.max(max, Math.abs((pr.direct - target.direct) / target.direct));
-      }
-      if (pr.endpoint !== undefined && target.endpoint !== undefined && target.endpoint !== 0) {
-        max = Math.max(max, Math.abs((pr.endpoint - target.endpoint) / target.endpoint));
+    for (const { prEntrypoint, targetEntrypoint } of Object.values(row)) {
+      if (prEntrypoint !== undefined && targetEntrypoint !== undefined && targetEntrypoint !== 0) {
+        max = Math.max(max, Math.abs((prEntrypoint - targetEntrypoint) / targetEntrypoint));
       }
     }
     return max;
   }
 
   #isInteresting(row: Row) {
-    for (const cell of row) {
-      const pr = cell[1].pr;
-      const target = cell[1].target;
+    for (const cell of Object.values(row)) {
+      const { prEntrypoint, prDirect, targetEntrypoint } = cell;
+      if (targetEntrypoint === undefined) {
+        return true;
+      }
+
       if (
-        (pr.direct && target.direct === undefined) ||
-        (pr.endpoint && target.endpoint === undefined)
+        prEntrypoint !== undefined &&
+        reachesThreshold(prEntrypoint, targetEntrypoint, this.#threshold)
       ) {
         return true;
       }
+
       if (
-        pr.direct &&
-        target.direct &&
-        Math.max(pr.direct / target.direct, target.direct / pr.direct) >= 1 + this.#threshold
-      ) {
-        return true;
-      }
-      if (
-        pr.endpoint &&
-        target.endpoint &&
-        Math.max(pr.endpoint / target.endpoint, target.endpoint / pr.endpoint) >=
-          1 + this.#threshold
+        prEntrypoint !== undefined &&
+        prDirect !== undefined &&
+        reachesThreshold(prEntrypoint, prDirect, this.#threshold)
       ) {
         return true;
       }
@@ -160,4 +141,8 @@ function calculateTrendMessage(prSize: number | undefined, targetSize: number | 
     return `($\${\\color{red}+${percent}\\\\%}$$)`;
   }
   return `($\${\\color{green}${percent}\\\\%}$$)`;
+}
+
+function reachesThreshold(valueA: number, valueB: number, threshold: number) {
+  return Math.max(valueA / valueB, valueB / valueA) >= 1 + threshold;
 }

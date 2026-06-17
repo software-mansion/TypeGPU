@@ -2,53 +2,54 @@
 
 import { type } from 'arktype';
 import * as fs from 'node:fs/promises';
-import { emptyResultsString, ResultsTable } from './resultsTable.ts';
-
-// TODO(???): Remove this
-const LegacyResultRecord = type({
-  testFilename: 'string',
-  bundler: 'string',
-  size: 'number',
-});
-
-const LegacyBenchmarkResult = LegacyResultRecord.array();
+import { emptyResultsString, ResultsTable, type Result } from './resultsTable.ts';
 
 // Define schema for benchmark results
 const ResultRecord = type({
   testFilename: 'string',
   bundler: 'string',
-  size: { direct: 'number?', endpoint: 'number?' },
+  size: 'number',
 });
 
 const BenchmarkResults = ResultRecord.array();
 
-function groupResultsByTest(results: typeof BenchmarkResults.infer) {
-  const grouped: Record<string, Record<string, { direct: number; endpoint: number }>> = {};
-  for (const result of results) {
-    if (!grouped[result.testFilename]) {
-      grouped[result.testFilename] = {};
+function groupResultsByTest(
+  prEntrypointResults: typeof BenchmarkResults.infer,
+  prDirectResults: typeof BenchmarkResults.infer,
+  targetEntrypointResults: typeof BenchmarkResults.infer,
+) {
+  // testFilename -> bundler -> result
+  const grouped: Record<string, Record<string, Result>> = {};
+
+  const assign = (results: typeof BenchmarkResults.infer, resultsType: keyof Result) => {
+    for (const { testFilename, bundler, size } of results) {
+      ((grouped[testFilename] ??= {})[bundler] ??= {})[resultsType] = size;
     }
-    // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there...
-    grouped[result.testFilename]![result.bundler] = result.size;
-  }
+  };
+
+  assign(prEntrypointResults, 'prEntrypoint');
+  assign(prDirectResults, 'prDirect');
+  assign(targetEntrypointResults, 'targetEntrypoint');
+
   return grouped;
 }
 
 async function generateReport(
-  prResults: typeof BenchmarkResults.infer,
-  targetResults: typeof BenchmarkResults.infer,
+  prEntrypointResults: typeof BenchmarkResults.infer,
+  prDirectResults: typeof BenchmarkResults.infer,
+  targetEntrypointResults: typeof BenchmarkResults.infer,
 ) {
-  const prGrouped = groupResultsByTest(prResults);
-  const targetGrouped = groupResultsByTest(targetResults);
-
-  // All unique bundlers from both branches
-  const allBundlers = new Set([
-    ...new Set(prResults.map((r) => r.bundler)),
-    ...new Set(targetResults.map((r) => r.bundler)),
-  ]);
+  const grouped = groupResultsByTest(prEntrypointResults, prDirectResults, targetEntrypointResults);
 
   // All unique tests from both branches
-  const allTests = new Set([...Object.keys(prGrouped), ...Object.keys(targetGrouped)]);
+  const allTests = new Set(Object.keys(grouped));
+
+  // All unique bundlers from both branches
+  const allBundlers = new Set(
+    Object.values(grouped)
+      .map((r) => Object.keys(r))
+      .flat(),
+  );
 
   // Split tests into static and dynamic
   const staticTests = [...allTests].filter((t) => t.includes('STATIC')).toSorted();
@@ -62,15 +63,13 @@ async function generateReport(
 
   for (const test of allTests) {
     for (const bundler of allBundlers) {
-      for (const importType of ['direct', 'endpoint'] as const) {
-        const prSize = prGrouped[test]?.[bundler]?.[importType];
-        const targetSize = targetGrouped[test]?.[bundler]?.[importType];
+      const result = grouped[test]?.[bundler];
+      const { prEntrypoint: prSize, targetEntrypoint: targetSize } = result ?? {};
 
-        if (targetSize === undefined || prSize === undefined) totalUnknown++;
-        else if (prSize > targetSize) totalIncreased++;
-        else if (prSize < targetSize) totalDecreased++;
-        else totalUnchanged++;
-      }
+      if (targetSize === undefined || prSize === undefined) totalUnknown++;
+      else if (prSize > targetSize) totalIncreased++;
+      else if (prSize < targetSize) totalDecreased++;
+      else totalUnchanged++;
     }
   }
 
@@ -80,17 +79,15 @@ async function generateReport(
   const allTable = new ResultsTable(allBundlers, 0);
 
   staticTests.forEach((test) => {
-    const prResults = prGrouped[test];
-    const targetResults = targetGrouped[test];
-    staticTable.addRow(test, prResults, targetResults);
-    allTable.addRow(test, prResults, targetResults);
+    const result = grouped[test];
+    staticTable.addRow(test, result);
+    allTable.addRow(test, result);
   });
 
   dynamicTests.forEach((test) => {
-    const prResults = prGrouped[test];
-    const targetResults = targetGrouped[test];
-    dynamicTable.addRow(test, prResults, targetResults);
-    allTable.addRow(test, prResults, targetResults);
+    const result = grouped[test];
+    staticTable.addRow(test, result);
+    allTable.addRow(test, result);
   });
 
   const staticTableString = staticTable.toString();
@@ -121,43 +118,46 @@ async function generateReport(
 }
 
 async function main() {
-  const [prFile, targetFile] = process.argv.slice(2);
+  const [prEntrypointFile, targetEntrypointFile, prDirectFile] = process.argv.slice(2);
 
-  if (!prFile || !targetFile) {
-    console.error('Usage: compare-results.js <pr-results.json> [target-results.json]');
+  if (!prEntrypointFile || !targetEntrypointFile || !prDirectFile) {
+    console.error(
+      'Usage: compare-results.js <pr-entrypoint-results.json> <target-entrypoint-results.json> <pr-direct-results.json>',
+    );
     process.exit(1);
   }
 
-  // Read and validate PR results
-  let prResults: typeof BenchmarkResults.infer;
+  let prEntrypointResults: typeof BenchmarkResults.infer;
   try {
-    const prContent = await fs.readFile(prFile, 'utf8');
-    prResults = BenchmarkResults.assert(JSON.parse(prContent));
+    const content = await fs.readFile(prEntrypointFile, 'utf8');
+    prEntrypointResults = BenchmarkResults.assert(JSON.parse(content));
   } catch (error) {
-    throw new Error('PR results validation failed', { cause: error });
+    throw new Error('PR entrypoint results validation failed', { cause: error });
   }
 
-  // Read and validate target results
-  let targetResults: typeof BenchmarkResults.infer = [];
-  if (targetFile) {
-    try {
-      const targetContent = await fs.readFile(targetFile, 'utf8');
-      targetResults = BenchmarkResults.assert(JSON.parse(targetContent));
-    } catch (error) {
-      console.warn('Could not read or validate target results:', error);
-      console.warn('Attempting to read in legacy format and reinterpret them');
-      const targetContent = await fs.readFile(targetFile, 'utf8');
-      const legacyTargetResults = LegacyBenchmarkResult.assert(JSON.parse(targetContent));
-      targetResults = legacyTargetResults.map((record) => ({
-        testFilename: record.testFilename,
-        bundler: record.bundler,
-        size: { direct: record.size, endpoint: record.size },
-      }));
-    }
+  let prDirectResults: typeof BenchmarkResults.infer;
+  try {
+    const content = await fs.readFile(prDirectFile, 'utf8');
+    prDirectResults = BenchmarkResults.assert(JSON.parse(content));
+  } catch (error) {
+    throw new Error('PR entrypoint results validation failed', { cause: error });
+  }
+
+  let targetEntrypointResults: typeof BenchmarkResults.infer = [];
+  try {
+    const targetContent = await fs.readFile(targetEntrypointFile, 'utf8');
+    targetEntrypointResults = BenchmarkResults.assert(JSON.parse(targetContent));
+  } catch (error) {
+    console.warn('Could not read or validate target results:', error);
+    console.warn('Returning empty results instead.');
   }
 
   // Generate appropriate report
-  const markdownReport = await generateReport(prResults, targetResults);
+  const markdownReport = await generateReport(
+    prEntrypointResults,
+    prDirectResults,
+    targetEntrypointResults,
+  );
   console.log(markdownReport);
 }
 
