@@ -182,7 +182,7 @@ function createCascadeStorageView(
 }
 
 export function createRadianceCascades(
-  options: CascadesOptions & { output?: undefined },
+  options: CascadesOptions & { output?: undefined; size: OutputSize },
 ): OwnedRadianceCascadesExecutor;
 export function createRadianceCascades<TOutput extends OutputTexture>(
   options: CascadesOptions & { output: TOutput },
@@ -266,13 +266,14 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
     minFilter: 'linear',
   });
 
-  const cascadePasses = layers.map((layerInfo, layer) => {
-    const intervalOverlapUv =
-      layerInfo.layer === cascadeCount - 1
-        ? 0
-        : typeof intervalOverlapPx === 'number'
-          ? intervalOverlapPx / cascadeProbesMin
-          : 1 / Math.min(layerInfo.probesU[0], layerInfo.probesU[1]);
+  const cascadePasses = layers.map((layerInfo) => {
+    const { layer, validDim } = layerInfo;
+    const isTopCascade = layer === cascadeCount - 1;
+    const intervalOverlapUv = isTopCascade
+      ? 0
+      : typeof intervalOverlapPx === 'number'
+        ? intervalOverlapPx / cascadeProbesMin
+        : 1 / Math.min(layerInfo.probesU[0], layerInfo.probesU[1]);
     const writeToA = (cascadeCount - 1 - layer) % 2 === 0;
     const dstTexture = writeToA ? cascadeTextureA : cascadeTextureB;
     const srcTexture = writeToA ? cascadeTextureB : cascadeTextureA;
@@ -302,10 +303,8 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
         upperSampler: cascadeSampler,
         dst: createCascadeStorageView(dstTexture, layer, keepCascadeLayers),
       }),
-      workgroups: [
-        Math.ceil(layerInfo.validDim[0] / 8),
-        Math.ceil(layerInfo.validDim[1] / 8),
-      ] as const,
+      workgroups: [Math.ceil(validDim[0] / 8), Math.ceil(validDim[1] / 8)] as const,
+      isTopCascade,
     };
   });
 
@@ -380,9 +379,8 @@ export function createRadianceCascades(options: CascadesOptions): RadianceCascad
 
   function createExecutor(additionalBindGroups: TgpuBindGroup[] = []): RadianceCascadesExecutor {
     const prebuiltCascadePasses = cascadePasses
-      .map(({ bindGroup, workgroups }, layer) => {
-        const cascadePassPipeline =
-          layer === cascadeCount - 1 ? topCascadePipeline : mergeCascadePipeline;
+      .map(({ bindGroup, workgroups, isTopCascade }) => {
+        const cascadePassPipeline = isTopCascade ? topCascadePipeline : mergeCascadePipeline;
         let pipeline = cascadePassPipeline.with(bindGroup);
         for (const addBg of additionalBindGroups) {
           pipeline = pipeline.with(addBg);
