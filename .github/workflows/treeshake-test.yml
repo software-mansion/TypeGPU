@@ -32,8 +32,9 @@ jobs:
       - name: Checkout target branch
         uses: actions/checkout@v4
         with:
-          path: target-branch
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_branch || github.base_ref }}
+          path: pr-branch
+          # path: target-branch
+          # ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_branch || github.base_ref }}
 
       - name: Install dependencies (PR branch)
         working-directory: pr-branch
