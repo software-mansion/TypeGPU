@@ -29,16 +29,60 @@
   "exports": {
     "./package.json": "./package.json",
     ".": "./src/index.ts",
+    "./$built$": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./rollup": "./src/rollup.ts",
+    "./rollup/$built$": {
+      "types": "./dist/rollup.d.ts",
+      "default": "./dist/rollup.js"
+    },
     "./babel": "./src/babel.ts",
+    "./babel/$built$": {
+      "types": "./dist/babel.d.ts",
+      "default": "./dist/babel.js"
+    },
     "./bun": "./src/bun.ts",
+    "./bun/$built$": {
+      "types": "./dist/bun.d.ts",
+      "default": "./dist/bun.js"
+    },
     "./esbuild": "./src/esbuild.ts",
+    "./esbuild/$built$": {
+      "types": "./dist/esbuild.d.ts",
+      "default": "./dist/esbuild.js"
+    },
     "./farm": "./src/farm.ts",
+    "./farm/$built$": {
+      "types": "./dist/farm.d.ts",
+      "default": "./dist/farm.js"
+    },
     "./rolldown": "./src/rolldown.ts",
+    "./rolldown/$built$": {
+      "types": "./dist/rolldown.d.ts",
+      "default": "./dist/rolldown.js"
+    },
     "./rolldown-browser": "./src/rolldown-browser.ts",
+    "./rolldown-browser/$built$": {
+      "types": "./dist/rolldown-browser.d.ts",
+      "default": "./dist/rolldown-browser.js"
+    },
     "./rspack": "./src/rspack.ts",
+    "./rspack/$built$": {
+      "types": "./dist/rspack.d.ts",
+      "default": "./dist/rspack.js"
+    },
     "./vite": "./src/vite.ts",
-    "./webpack": "./src/webpack.ts"
+    "./vite/$built$": {
+      "types": "./dist/vite.d.ts",
+      "default": "./dist/vite.js"
+    },
+    "./webpack": "./src/webpack.ts",
+    "./webpack/$built$": {
+      "types": "./dist/webpack.d.ts",
+      "default": "./dist/webpack.js"
+    }
   },
   "publishConfig": {
     "access": "public",
