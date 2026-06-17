@@ -125,7 +125,7 @@ function frame() {
 }
 frameId = requestAnimationFrame(frame);
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -185,7 +185,7 @@ export const controls = defineControls({
 export function onCleanup() {
   cancelAnimationFrame(frameId);
   cleanupCamera();
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }
 

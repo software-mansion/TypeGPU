@@ -146,7 +146,7 @@ const render = () => {
     .draw(circleVertexCount(4), circleCount);
 };
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -164,7 +164,7 @@ const detachAutoResizer = common.attachAutoResizer({
 // #region Example controls & Cleanup
 
 export function onCleanup() {
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }
 

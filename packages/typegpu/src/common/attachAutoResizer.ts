@@ -6,11 +6,15 @@ export interface AttachAutoResizerOptions {
   onResize?: (() => void) | undefined;
 }
 
+export interface AutoResizer {
+  detach: () => void;
+}
+
 export function attachAutoResizer({
   root,
   canvas,
   onResize,
-}: AttachAutoResizerOptions): () => void {
+}: AttachAutoResizerOptions): AutoResizer {
   const observer = new ResizeObserver((entries) => {
     for (const entry of entries) {
       if (!entry) {
@@ -36,7 +40,9 @@ export function attachAutoResizer({
     observer.observe(canvas, { box: 'content-box' });
   }
 
-  return () => {
-    observer.disconnect();
+  return {
+    detach: () => {
+      observer.disconnect();
+    },
   };
 }

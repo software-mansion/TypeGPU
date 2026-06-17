@@ -151,7 +151,7 @@ const runner = (timestamp: number) => {
 
 animationFrameId = requestAnimationFrame(runner);
 
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+const autoResizer = common.attachAutoResizer({ root, canvas });
 
 // example controls and cleanup
 
@@ -163,6 +163,6 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrameId);
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }

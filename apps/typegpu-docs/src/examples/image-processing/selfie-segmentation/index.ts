@@ -20,7 +20,7 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 const video = document.querySelector('video') as HTMLVideoElement;
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -206,7 +206,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   video.cancelVideoFrameCallback(videoFrameCallbackId);
-  detachAutoResizer();
+  autoResizer.detach();
   if (isIOS) {
     window.removeEventListener('orientationchange', setUVTransformForIOS);
   }

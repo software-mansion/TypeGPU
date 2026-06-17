@@ -542,7 +542,7 @@ function handleResize() {
   render();
 }
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -696,7 +696,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrameHandle);
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }
 

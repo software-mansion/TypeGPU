@@ -201,7 +201,7 @@ function frame() {
 
 requestAnimationFrame(frame);
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -232,6 +232,6 @@ export function onCleanup() {
   cleanupCamera();
   perlinCache.destroy();
   depthTexture.destroy();
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }

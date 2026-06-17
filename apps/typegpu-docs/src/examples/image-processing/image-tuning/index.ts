@@ -344,7 +344,7 @@ export const controls = defineControls({
   },
 });
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -357,7 +357,7 @@ const detachAutoResizer = common.attachAutoResizer({
 });
 
 export function onCleanup() {
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }
 

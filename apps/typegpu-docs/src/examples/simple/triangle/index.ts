@@ -47,7 +47,7 @@ const context = root.configureContext({
   alphaMode: 'premultiplied',
 });
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -64,7 +64,7 @@ const detachAutoResizer = common.attachAutoResizer({
 // #region Cleanup
 
 export function onCleanup() {
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }
 

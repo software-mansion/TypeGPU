@@ -17,7 +17,7 @@ context.configure({
   format: presentationFormat,
 });
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -258,7 +258,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }
 

@@ -250,7 +250,7 @@ export const controls = defineControls({
   },
 });
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -276,7 +276,7 @@ for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
 export function onCleanup() {
   destroyed = true;
   cleanupCamera();
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }
 

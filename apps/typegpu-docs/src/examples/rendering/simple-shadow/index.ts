@@ -344,7 +344,7 @@ function frame() {
 }
 frameId = requestAnimationFrame(frame);
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -460,6 +460,6 @@ export function onCleanup() {
   if (frameId !== null) {
     cancelAnimationFrame(frameId);
   }
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }

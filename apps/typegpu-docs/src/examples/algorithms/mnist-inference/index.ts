@@ -255,7 +255,7 @@ updateSubgroupsStatus();
 
 run();
 
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+const autoResizer = common.attachAutoResizer({ root, canvas });
 
 canvas.addEventListener('mousedown', () => {
   uiState.isDrawing = true;
@@ -397,7 +397,7 @@ export function onCleanup() {
   cancelAnimationFrame(animationFrameId);
   window.removeEventListener('mouseup', mouseUpEventListener);
   window.removeEventListener('touchend', touchEndEventListener);
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }
 

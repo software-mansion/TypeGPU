@@ -234,7 +234,7 @@ function run(timestamp: number) {
 
 animationFrame = requestAnimationFrame(run);
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -319,6 +319,6 @@ export const controls = defineControls({
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);
   cameraResult.cleanupCamera();
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }

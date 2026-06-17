@@ -120,7 +120,7 @@ function draw(timestamp: number) {
 
 requestAnimationFrame(draw);
 
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+const autoResizer = common.attachAutoResizer({ root, canvas });
 
 // #region Example controls and cleanup
 
@@ -180,7 +180,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   isRunning = false;
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }
 

@@ -139,7 +139,7 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
 }
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize: handleResize,
@@ -172,7 +172,7 @@ export function onCleanup() {
       track.stop();
     }
   }
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }
 

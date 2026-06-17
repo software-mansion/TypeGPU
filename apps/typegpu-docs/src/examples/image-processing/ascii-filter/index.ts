@@ -245,7 +245,7 @@ if (isIOS) {
 
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -291,6 +291,6 @@ export function onCleanup() {
     }
   }
 
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }

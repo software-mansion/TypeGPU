@@ -236,7 +236,7 @@ async function sort() {
   hideOverlay();
 }
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -273,7 +273,7 @@ export function onCleanup() {
   for (const s of Object.values(sorters)) {
     s.destroy();
   }
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }
 

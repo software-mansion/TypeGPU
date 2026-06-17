@@ -288,10 +288,10 @@ export const controls = defineControls({
   },
 });
 
-const detachAutoResizer = common.attachAutoResizer({ root, canvas });
+const autoResizer = common.attachAutoResizer({ root, canvas });
 
 export function onCleanup() {
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }
 

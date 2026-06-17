@@ -475,7 +475,7 @@ const dragController = new DragController(canvas, onDrag, onDrag);
 // #region Example controls and cleanup
 
 let resizeTimeout: ReturnType<typeof setTimeout>;
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -491,7 +491,7 @@ const detachAutoResizer = common.attachAutoResizer({
 
 export function onCleanup() {
   dragController.destroy();
-  detachAutoResizer();
+  autoResizer.detach();
   clearTimeout(resizeTimeout);
   if (frameId !== null) {
     cancelAnimationFrame(frameId);

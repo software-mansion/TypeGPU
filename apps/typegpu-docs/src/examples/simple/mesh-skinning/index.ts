@@ -519,7 +519,7 @@ function render(frameTimeMs: number) {
 let animationId: number | undefined;
 animationId = requestAnimationFrame(render);
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -563,6 +563,6 @@ export function onCleanup() {
     cancelAnimationFrame(animationId);
   }
   cleanupCamera();
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }

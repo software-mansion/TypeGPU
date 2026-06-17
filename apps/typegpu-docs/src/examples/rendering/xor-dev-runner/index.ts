@@ -172,7 +172,7 @@ function draw() {
 
 requestAnimationFrame(draw);
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
 });
@@ -215,7 +215,7 @@ export const controls = defineControls({
 export function onCleanup() {
   isRunning = false;
   cleanupCamera();
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }
 

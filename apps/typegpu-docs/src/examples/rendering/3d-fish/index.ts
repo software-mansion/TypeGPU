@@ -425,7 +425,7 @@ window.addEventListener('touchmove', touchMoveEventListener);
 
 // observer and cleanup
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -458,7 +458,7 @@ export function onCleanup() {
   window.removeEventListener('mouseup', mouseUpEventListener);
   window.removeEventListener('mousemove', mouseMoveEventListener);
   window.removeEventListener('touchmove', touchMoveEventListener);
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }
 

@@ -273,7 +273,7 @@ loop();
 
 // #region Example controls and cleanup
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -497,7 +497,7 @@ export function onCleanup() {
   window.removeEventListener('mousemove', mouseMoveEventListener);
   window.removeEventListener('touchmove', touchMoveEventListener);
   window.removeEventListener('touchend', touchEndEventListener);
-  detachAutoResizer();
+  autoResizer.detach();
   icosphereGenerator.destroy();
   root.destroy();
 }

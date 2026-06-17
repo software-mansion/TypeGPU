@@ -424,7 +424,7 @@ function frame(timestamp: number) {
 
 animationFrameId = requestAnimationFrame(frame);
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -658,7 +658,7 @@ export function onCleanup() {
   window.removeEventListener('mousemove', mouseMoveEventListener);
   window.removeEventListener('touchend', touchEndEventListener);
   window.removeEventListener('touchmove', touchMoveEventListener);
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }
 

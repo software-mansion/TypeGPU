@@ -376,7 +376,7 @@ function loop() {
 
 handle = requestAnimationFrame(loop);
 
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -500,7 +500,7 @@ export const controls = defineControls({
 export function onCleanup() {
   window.removeEventListener('mouseup', mouseUpEventListener);
   window.removeEventListener('touchend', touchEndEventListener);
-  detachAutoResizer();
+  autoResizer.detach();
   cancelAnimationFrame(handle);
   root.destroy();
 }

@@ -398,7 +398,7 @@ function render() {
 }
 
 let depth = createDepthTexture();
-const detachAutoResizer = common.attachAutoResizer({
+const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
@@ -440,6 +440,6 @@ export const controls = defineControls({
 export function onCleanup() {
   exampleDestroyed = true;
   cleanupCamera();
-  detachAutoResizer();
+  autoResizer.detach();
   root.destroy();
 }
