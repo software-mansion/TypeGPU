@@ -156,23 +156,22 @@ describe('global wind map example', () => {
         v: vec2f,
         d: vec2f,
         fw: vec2f,
+        cross: vec2f,
         start: vec2f,
         end: vec2f,
-        shouldJoin: bool,
-        isCap: bool,
       }
 
       fn rot90ccw(v: vec2f) -> vec2f {
         return vec2f(-(v.y), v.x);
       }
 
+      fn rot90cw(v: vec2f) -> vec2f {
+        return vec2f(v.y, -(v.x));
+      }
+
       fn arrow(join: JoinInput, joinVertexIndex: u32, _maxJoinCount: u32) -> vec2f {
-        let bw = -(normalize(join.fw));
-        let vert = rot90ccw(bw);
-        let sgn = sign(cross2d(bw, join.d));
-        let svert = (vert * sgn);
-        let v0 = (svert + (bw * 7.5f));
-        let v1 = (v0 + ((bw + svert) * 1.5f));
+        let v0 = (join.cross - (join.fw * 7.5f));
+        let v1 = (v0 + ((join.cross - (join.fw * 0.8f)) * 1.5f));
         if ((joinVertexIndex == 0u)) {
           return (join.C.position + (v0 * join.C.radius));
         }
@@ -183,15 +182,7 @@ describe('global wind map example', () => {
       }
 
       fn butt(join: JoinInput, _joinVertexIndex: u32, _maxJoinCount: u32) -> vec2f {
-        let fw = normalize(join.fw);
-        let vert = rot90ccw(fw);
-        let sgn = sign(cross2d(fw, join.d));
-        let svert = (vert * sgn);
-        return (join.C.position + (svert * join.C.radius));
-      }
-
-      fn rot90cw(v: vec2f) -> vec2f {
-        return vec2f(v.y, -(v.x));
+        return (join.C.position + (join.cross * join.C.radius));
       }
 
       fn bisectCcw(a: vec2f, b: vec2f) -> vec2f {
@@ -228,7 +219,7 @@ describe('global wind map example', () => {
         return (join.C.position + (dir * join.C.radius));
       }
 
-      fn lineSegmentVariableWidth(vertexIndex: u32, A: LineControlPoint, B: LineControlPoint, C: LineControlPoint, D: LineControlPoint, maxJoinCount: u32) -> LineSegmentOutput {
+      fn polylineVariableWidth(A: LineControlPoint, B: LineControlPoint, C: LineControlPoint, D: LineControlPoint, vertexIndex: u32, maxJoinCount: u32) -> LineSegmentOutput {
         let AB = (B.position - A.position);
         let BC = (C.position - B.position);
         let DC = (C.position - D.position);
@@ -271,24 +262,38 @@ describe('global wind map example', () => {
         let coreVertexIndex = ((vertexIndex - 2u) & 3u);
         let joinVertexIndex = ((vertexIndex - 2u) >> 2u);
         var join = JoinInput();
+        var isCap = false;
+        var shouldJoin = false;
+        let normBC = normalize(BC);
+        let normCB = -(normBC);
+        let crossL = rot90ccw(normBC);
+        let crossR = rot90cw(normBC);
         if ((coreVertexIndex == 0u)) {
-          join = JoinInput(B, v2, (*d2), CB, (*d2), select(eAB.nL, (*d3), (joinB.isHairpin || isCapB)), joinB.shouldJoinL, isCapB);
+          isCap = isCapB;
+          shouldJoin = joinB.shouldJoinL;
+          join = JoinInput(B, v2, (*d2), normCB, crossL, (*d2), select(eAB.nL, (*d3), (joinB.isHairpin || isCapB)));
         }
         else {
           if ((coreVertexIndex == 1u)) {
-            join = JoinInput(B, v3, (*d3), CB, select(eAB.nR, (*d2), (joinB.isHairpin || isCapB)), (*d3), joinB.shouldJoinR, isCapB);
+            isCap = isCapB;
+            shouldJoin = joinB.shouldJoinR;
+            join = JoinInput(B, v3, (*d3), normCB, crossR, select(eAB.nR, (*d2), (joinB.isHairpin || isCapB)), (*d3));
           }
           else {
             if ((coreVertexIndex == 2u)) {
-              join = JoinInput(C, v4, (*d4), BC, (*d4), select(eDC.nL, (*d5), (joinC.isHairpin || isCapC)), joinC.shouldJoinL, isCapC);
+              isCap = isCapC;
+              shouldJoin = joinC.shouldJoinL;
+              join = JoinInput(C, v4, (*d4), normBC, crossR, (*d4), select(eDC.nL, (*d5), (joinC.isHairpin || isCapC)));
             }
             else {
-              join = JoinInput(C, v5, (*d5), BC, select(eDC.nR, (*d4), (joinC.isHairpin || isCapC)), (*d5), joinC.shouldJoinR, isCapC);
+              isCap = isCapC;
+              shouldJoin = joinC.shouldJoinR;
+              join = JoinInput(C, v5, (*d5), normBC, crossL, select(eDC.nR, (*d4), (joinC.isHairpin || isCapC)), (*d5));
             }
           }
         }
         var vertexPosition = join.v;
-        if (join.isCap) {
+        if (isCap) {
           if ((coreVertexIndex < 2u)) {
             vertexPosition = arrow(join, joinVertexIndex, maxJoinCount);
           }
@@ -297,7 +302,7 @@ describe('global wind map example', () => {
           }
         }
         else {
-          if (join.shouldJoin) {
+          if (shouldJoin) {
             vertexPosition = round_1(join, joinVertexIndex, maxJoinCount);
           }
         }
@@ -323,7 +328,7 @@ describe('global wind map example', () => {
         let B = LineControlPoint((*particle).positions[iB], lineWidth((f32((trailIndexOriginal + 1u)) / 19f)));
         let C = LineControlPoint((*particle).positions[iC], lineWidth((f32((trailIndexOriginal + 2u)) / 19f)));
         let D = LineControlPoint((*particle).positions[iD], lineWidth((f32((trailIndexOriginal + 3u)) / 19f)));
-        let result = lineSegmentVariableWidth(vertexIndex, A, B, C, D, 3u);
+        let result = polylineVariableWidth(A, B, C, D, vertexIndex, 3u);
         return mainVertex_Output(vec4f(result.vertexPosition, 0f, 1f), result.vertexPosition, (f32(trailIndexOriginal) / 19f));
       }
 
