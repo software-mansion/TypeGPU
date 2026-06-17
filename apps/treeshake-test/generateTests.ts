@@ -50,7 +50,7 @@ console.log(${importName}.${item});
     await fs.writeFile(new URL(fileName, TESTS_NAMED_DIR), testNamedContent);
 
     const testNamespaceContent = `
-import * as ${importName} from '${namespace}/$built$';
+import${importName === 'tgpu' ? '' : ' * as'} ${importName} from '${namespace}/$built$';
 console.log(${importName}.${item});
     `;
 
