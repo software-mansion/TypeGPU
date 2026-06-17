@@ -57,7 +57,8 @@ async function generateReport(
   let totalUnchanged = 0;
   let totalUnknown = 0;
 
-  for (const test of allTests) {
+  // only iterate on tests that are in this PR
+  for (const test of Object.values(prNamespaceResults).map((r) => r.testFilename)) {
     for (const bundler of allBundlers) {
       const result = grouped[test]?.[bundler];
       const { prNamespace: prSize, targetNamespace: targetSize } = result ?? {};
