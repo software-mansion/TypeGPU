@@ -263,7 +263,7 @@ const vertexShader = tgpu.vertexFn({
   const camera = cameraUniform.$;
 
   return {
-    clipPosition: camera.projection * camera.view * worldPosition,
+    canvasPosition: camera.projection * camera.view * worldPosition,
     worldPos: input.position,
     worldNormal: std.normalize(input.normal),
     worldTangent: d.vec4f(std.normalize(input.tangent.xyz), input.tangent.w),
@@ -324,7 +324,7 @@ const fragmentShader = tgpu.fragmentFn({
   let roughness = triRoughness;
   let metallic = triMetallic;
 
-  const showMeshUvs = input.clipPosition.x > params.splitX;
+  const showMeshUvs = input.canvasPosition.x > params.splitX;
   if (showMeshUvs) {
     albedo = d.vec3f(meshAlbedo);
     normal = d.vec3f(meshMappedNormal);
@@ -380,7 +380,6 @@ const pipeline = root
   .with(materialBindGroup);
 
 function createDepthTexture() {
-  splitComparison.sync();
   return root
     .createTexture({
       size: [canvas.width, canvas.height],
@@ -414,7 +413,9 @@ export const controls = defineControls({
     initial: DEFAULT_MATERIAL,
     options: MATERIAL_IDS,
     onSelectChange(material) {
-      void setMaterial(material);
+      void setMaterial(material).catch((error) => {
+        console.error(`Failed to load triplanar material "${material}"`, error);
+      });
     },
   },
   view: {
@@ -465,6 +466,7 @@ export const controls = defineControls({
 const resizeObserver = new ResizeObserver(() => {
   depthTexture.destroy();
   depthTexture = createDepthTexture();
+  splitComparison.sync();
 });
 resizeObserver.observe(canvas);
 

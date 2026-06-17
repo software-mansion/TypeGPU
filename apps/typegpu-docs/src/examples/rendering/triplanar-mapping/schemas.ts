@@ -10,7 +10,7 @@ export const ModelVertex = d.struct({
 export const modelVertexLayout = tgpu.vertexLayout(d.arrayOf(ModelVertex));
 
 export const VertexOutput = {
-  clipPosition: d.builtin.position,
+  canvasPosition: d.builtin.position,
   worldPos: d.vec3f,
   worldNormal: d.vec3f,
   worldTangent: d.vec4f,
