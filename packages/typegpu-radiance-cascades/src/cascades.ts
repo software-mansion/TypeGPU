@@ -411,18 +411,21 @@ export function makeCascadePassCompute({
   minStepUv,
   hitBiasUv,
 }: CascadePassSpecialization) {
-  const rayDirection =
-    renderAspect >= 1
-      ? (rayIndex: number, rayCountActual: number) => {
-          'use gpu';
-          const angle = (rayIndex / rayCountActual) * (Math.PI * 2) - Math.PI;
-          return d.vec2f(std.cos(angle) / renderAspect, -std.sin(angle));
-        }
-      : (rayIndex: number, rayCountActual: number) => {
-          'use gpu';
-          const angle = (rayIndex / rayCountActual) * (Math.PI * 2) - Math.PI;
-          return d.vec2f(std.cos(angle), -std.sin(angle) * renderAspect);
-        };
+  const rayDirection = (rayIndex: number, rayCountActual: number) => {
+    'use gpu';
+    const angle = (rayIndex / rayCountActual) * (Math.PI * 2) - Math.PI;
+    const cosA = std.cos(angle);
+    const sinA = -std.sin(angle);
+    let dir = d.vec2f();
+
+    if (renderAspect >= 1) {
+      dir = d.vec2f(cosA / renderAspect, sinA);
+    } else {
+      dir = d.vec2f(cosA, sinA * renderAspect);
+    }
+
+    return dir;
+  };
 
   return tgpu.computeFn({
     workgroupSize: [8, 8],
