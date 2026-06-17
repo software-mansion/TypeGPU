@@ -1670,6 +1670,82 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('prunes inequalities if comptime known (>=)', () => {
+    const renderAspect = 1.5 as number;
+
+    const fn = () => {
+      'use gpu';
+      let rayDir = d.vec2f();
+
+      if (renderAspect >= 1) {
+        rayDir = d.vec2f(1, 0);
+      } else {
+        rayDir = d.vec2f(0, 1);
+      }
+      return rayDir;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> vec2f {
+        var rayDir = vec2f();
+        {
+          rayDir = vec2f(1, 0);
+        }
+        return rayDir;
+      }"
+    `);
+  });
+
+  it('prunes inequalities if comptime known (<)', () => {
+    const threshold = 0.5 as number;
+
+    const fn = () => {
+      'use gpu';
+      let x = 0;
+      if (threshold < 1) {
+        x = 1;
+      } else {
+        x = 2;
+      }
+      return x;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        var x = 0;
+        {
+          x = 1i;
+        }
+        return x;
+      }"
+    `);
+  });
+
+  it('prunes inequalities if comptime known (<=)', () => {
+    const value = 0 as number;
+
+    const fn = () => {
+      'use gpu';
+      let result = false;
+      if (value <= 0) {
+        result = true;
+      } else {
+        result = false;
+      }
+      return result;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> bool {
+        var result = false;
+        {
+          result = true;
+        }
+        return result;
+      }"
+    `);
+  });
+
   it('dedents multinested comptime if/else without else blocks', () => {
     const v = 3 as number;
 

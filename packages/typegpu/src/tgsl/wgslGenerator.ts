@@ -387,6 +387,19 @@ ${this.ctx.pre}}`;
         return snip(lhsExpr.value === rhsExpr.value, bool, 'constant');
       }
 
+      if (op === '!==' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
+        return snip(lhsExpr.value !== rhsExpr.value, bool, 'constant');
+      }
+
+      if (isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
+        const left = lhsExpr.value as number;
+        const right = rhsExpr.value as number;
+        if (op === '>=') return snip(left >= right, bool, 'constant');
+        if (op === '<=') return snip(left <= right, bool, 'constant');
+        if (op === '>') return snip(left > right, bool, 'constant');
+        if (op === '<') return snip(left < right, bool, 'constant');
+      }
+
       if (lhsExpr.dataType === UnknownData) {
         throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
       }
