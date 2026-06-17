@@ -48,9 +48,9 @@ jobs:
         working-directory: pr-branch
         run: pnpm install --frozen-lockfile
 
-      - name: Install dependencies (target branch)
-        working-directory: target-branch
-        run: pnpm install --frozen-lockfile
+      # - name: Install dependencies (target branch)
+      #   working-directory: target-branch
+      #   run: pnpm install --frozen-lockfile
 
       - name: Generate import tests on PR branch
         working-directory: pr-branch
