@@ -9,9 +9,7 @@ export {
   maxRayStepsAccess,
   rayMarchStepSafetyAccess,
   RayMarchResult,
-  renderAspectAccess,
   rayMarchSlot,
-  sdfResolutionAccess,
   sdfSlot,
   traceSegmentSlot,
 } from './cascades.ts';

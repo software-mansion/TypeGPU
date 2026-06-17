@@ -70,19 +70,14 @@ export function getCascadeInfo(
   assertBaseStoredRayDim(baseStoredRayDim);
 
   const aspect = width / height;
-  const diagonal = Math.sqrt(width ** 2 + height ** 2);
+  const diagonal = Math.hypot(width, height);
 
   const closestPowerOfTwo = Math.max(MIN_BASE_PROBES, 2 ** Math.floor(Math.log2(diagonal)));
 
-  let baseProbesX: number;
-  let baseProbesY: number;
-  if (aspect >= 1) {
-    baseProbesX = closestPowerOfTwo;
-    baseProbesY = Math.max(MIN_BASE_PROBES, Math.round(closestPowerOfTwo / aspect));
-  } else {
-    baseProbesX = Math.max(MIN_BASE_PROBES, Math.round(closestPowerOfTwo * aspect));
-    baseProbesY = closestPowerOfTwo;
-  }
+  const [baseProbesX, baseProbesY] =
+    aspect >= 1
+      ? [closestPowerOfTwo, Math.max(MIN_BASE_PROBES, Math.round(closestPowerOfTwo / aspect))]
+      : [Math.max(MIN_BASE_PROBES, Math.round(closestPowerOfTwo * aspect)), closestPowerOfTwo];
 
   const baseProbesMin = Math.min(baseProbesX, baseProbesY);
   const interval0 = 1 / baseProbesMin;
@@ -136,17 +131,13 @@ export function getCascadeInfo(
 
 export function getCascadeDim(width: number, height: number, options: CascadeInfoOptions = {}) {
   const info = getCascadeInfo(width, height, options);
-  return [info.cascadeDim[0], info.cascadeDim[1], info.cascadeCount] as const;
+  return [...info.cascadeDim, info.cascadeCount] as const;
 }
 
 export const sdfSlot = tgpu.slot<(uv: d.v2f) => number>();
 export const colorSlot = tgpu.slot<(uv: d.v2f) => d.v3f>();
-export const renderAspectAccess = tgpu.accessor(d.f32, 1);
 export const maxRayStepsAccess = tgpu.accessor(d.u32, 64);
 export const rayMarchStepSafetyAccess = tgpu.accessor(d.f32, 1);
-
-// Used to calculate proper texel-based eps/minStep, avoiding redundant sub-texel steps.
-export const sdfResolutionAccess = tgpu.accessor(d.vec2u);
 
 export const RayMarchResult = d.struct({
   color: d.vec3f,
@@ -158,11 +149,7 @@ export const defaultRayMarch = tgpu.fn(
   RayMarchResult,
 )((probePos, rayDir, startT, endT, eps, minStep, bias) => {
   'use gpu';
-  let rgb = d.vec3f();
-  let T = d.f32(1);
   let t = startT;
-  let hitPos = d.vec2f();
-  let didHit = false;
 
   for (let step = d.u32(); step < maxRayStepsAccess.$; step++) {
     if (t > endT) {
@@ -176,43 +163,28 @@ export const defaultRayMarch = tgpu.fn(
     const signedDist = sdfSlot.$(pos);
     const hitDist = signedDist + bias;
     if (hitDist <= eps) {
-      hitPos = d.vec2f(pos);
-      didHit = true;
-      T = 0;
-      break;
+      return RayMarchResult({ color: colorSlot.$(pos), transmittance: 0 });
     }
     t += std.max(std.max(signedDist, 0) * rayMarchStepSafetyAccess.$, minStep);
   }
 
-  if (didHit) {
-    rgb = colorSlot.$(hitPos);
-  }
-
-  return RayMarchResult({ color: rgb, transmittance: T });
+  return RayMarchResult({ color: d.vec3f(), transmittance: 1 });
 });
 
 export const rayMarchSlot = tgpu.slot(defaultRayMarch);
 
-const segmentMetricLength = tgpu.fn(
-  [d.vec2f],
-  d.f32,
-)((delta) => {
-  'use gpu';
-  const aspect = renderAspectAccess.$;
-  if (aspect >= 1) {
-    return std.length(d.vec2f(delta.x * aspect, delta.y));
-  }
-  return std.length(d.vec2f(delta.x, delta.y / aspect));
-});
-
 export const defaultTraceSegment = tgpu.fn(
   [d.vec2f, d.vec2f, d.f32, d.f32, d.f32, d.f32],
   RayMarchResult,
-)((p0, p1, _aspect, eps, minStep, bias) => {
+)((p0, p1, aspect, eps, minStep, bias) => {
   'use gpu';
   const delta = p1 - p0;
-  // Uses renderAspectAccess so the aspect branch resolves during specialization.
-  const endT = segmentMetricLength(delta);
+  const metricDelta = std.select(
+    d.vec2f(delta.x, delta.y / aspect),
+    d.vec2f(delta.x * aspect, delta.y),
+    aspect >= 1,
+  );
+  const endT = std.length(metricDelta);
 
   if (endT <= 0) {
     return RayMarchResult({ color: d.vec3f(), transmittance: 1 });
@@ -256,17 +228,6 @@ export type BuildRadianceFieldSpecialization = {
   cascadeProbes: [number, number];
 };
 
-const rayDirection = (rayIndex: number, rayCountActual: number, aspect: number) => {
-  'use gpu';
-  const angle = (rayIndex / rayCountActual) * (Math.PI * 2) - Math.PI;
-  const cosA = std.cos(angle);
-  const sinA = -std.sin(angle);
-  if (aspect >= 1) {
-    return d.vec2f(cosA / aspect, sinA);
-  }
-  return d.vec2f(cosA, sinA * aspect);
-};
-
 const rayBoxExitUv = tgpu.fn(
   [d.vec2f, d.vec2f],
   d.f32,
@@ -276,19 +237,11 @@ const rayBoxExitUv = tgpu.fn(
   let ty = d.f32(F32_MAX);
 
   if (std.abs(dir.x) > 1e-6) {
-    if (dir.x > 0) {
-      tx = (1 - p.x) / dir.x;
-    } else {
-      tx = -p.x / dir.x;
-    }
+    tx = std.select(-p.x / dir.x, (1 - p.x) / dir.x, dir.x > 0);
   }
 
   if (std.abs(dir.y) > 1e-6) {
-    if (dir.y > 0) {
-      ty = (1 - p.y) / dir.y;
-    } else {
-      ty = -p.y / dir.y;
-    }
+    ty = std.select(-p.y / dir.y, (1 - p.y) / dir.y, dir.y > 0);
   }
 
   return std.max(0, std.min(tx, ty));
@@ -314,29 +267,6 @@ const morton2D = tgpu.fn(
   return part1By1(x) | (part1By1(y) << 1);
 });
 
-const traceDirectRay = (
-  probePos: d.v2f,
-  rayDir: d.v2f,
-  startUv: number,
-  clippedMarchEndUv: number,
-  eps: number,
-  minStep: number,
-  biasUv: number,
-) => {
-  'use gpu';
-  const marchResult = rayMarchSlot.$(
-    probePos,
-    rayDir,
-    startUv,
-    clippedMarchEndUv,
-    eps,
-    minStep,
-    biasUv,
-  );
-
-  return d.vec4f(marchResult.color, marchResult.transmittance);
-};
-
 const traceHardwareMergeRay = (
   dim2: d.v2u,
   probePos: d.v2f,
@@ -352,7 +282,7 @@ const traceHardwareMergeRay = (
   biasUv: number,
 ) => {
   'use gpu';
-  const marchResult = traceDirectRay(
+  const marchResult = rayMarchSlot.$(
     probePos,
     rayDir,
     startUv,
@@ -361,12 +291,9 @@ const traceHardwareMergeRay = (
     minStep,
     biasUv,
   );
-  let rgb = d.vec3f(marchResult.xyz);
-  let T = d.f32(marchResult.w);
 
-  if (T > 0.01 && exitUv > marchEndUv) {
-    const tileOriginU = dirActual * probesU;
-    const tileOrigin = d.vec2f(tileOriginU);
+  if (marchResult.transmittance > 0.01 && exitUv > marchEndUv) {
+    const tileOrigin = d.vec2f(dirActual * probesU);
     const probePixel = std.clamp(probePos * d.vec2f(probesU), d.vec2f(0.5), d.vec2f(probesU) - 0.5);
     const uvU = (tileOrigin + probePixel) / d.vec2f(dim2);
 
@@ -376,30 +303,20 @@ const traceHardwareMergeRay = (
       uvU,
       0,
     );
-    rgb += upper.xyz * T;
-    T *= upper.w;
+    return d.vec4f(
+      marchResult.color + upper.xyz * marchResult.transmittance,
+      marchResult.transmittance * upper.w,
+    );
   }
 
-  return d.vec4f(rgb, T);
+  return d.vec4f(marchResult.color, marchResult.transmittance);
 };
 
 const bilinearWeight = (forkOffset: d.v2u, bilinear: d.v2f) => {
   'use gpu';
-  let weight = d.f32(1);
-
-  if (forkOffset.x === 0) {
-    weight *= 1 - bilinear.x;
-  } else {
-    weight *= bilinear.x;
-  }
-
-  if (forkOffset.y === 0) {
-    weight *= 1 - bilinear.y;
-  } else {
-    weight *= bilinear.y;
-  }
-
-  return weight;
+  const weightX = std.select(bilinear.x, 1 - bilinear.x, forkOffset.x === 0);
+  const weightY = std.select(bilinear.y, 1 - bilinear.y, forkOffset.y === 0);
+  return weightX * weightY;
 };
 
 const traceBilinearFork = (
@@ -419,20 +336,21 @@ const traceBilinearFork = (
 ) => {
   'use gpu';
   const upperProbePos = (d.vec2f(upperProbe) + 0.5) / d.vec2f(probesU);
-  const nearStart = probePos + rayDir * startUv;
-  const upperStart = upperProbePos + rayDir * clippedMarchEndUv;
-  const near = traceSegmentSlot.$(nearStart, upperStart, aspect, eps, minStep, biasUv);
+  const near = traceSegmentSlot.$(
+    probePos + rayDir * startUv,
+    upperProbePos + rayDir * clippedMarchEndUv,
+    aspect,
+    eps,
+    minStep,
+    biasUv,
+  );
 
-  let mergedRgb = d.vec3f(near.color);
-  let mergedT = d.f32(near.transmittance);
-
-  if (mergedT > 0.01 && exitUv > marchEndUv) {
+  if (near.transmittance > 0.01 && exitUv > marchEndUv) {
     const upper = std.textureLoad(cascadePassBGL.$.upper, d.vec2i(tileOriginU + upperProbe), 0);
-    mergedRgb += upper.xyz * mergedT;
-    mergedT *= upper.w;
+    return d.vec4f(near.color + upper.xyz * near.transmittance, near.transmittance * upper.w);
   }
 
-  return d.vec4f(mergedRgb, mergedT);
+  return d.vec4f(near.color, near.transmittance);
 };
 
 const traceBilinearFixMergeRay = (
@@ -493,6 +411,19 @@ export function makeCascadePassCompute({
   minStepUv,
   hitBiasUv,
 }: CascadePassSpecialization) {
+  const rayDirection =
+    renderAspect >= 1
+      ? (rayIndex: number, rayCountActual: number) => {
+          'use gpu';
+          const angle = (rayIndex / rayCountActual) * (Math.PI * 2) - Math.PI;
+          return d.vec2f(std.cos(angle) / renderAspect, -std.sin(angle));
+        }
+      : (rayIndex: number, rayCountActual: number) => {
+          'use gpu';
+          const angle = (rayIndex / rayCountActual) * (Math.PI * 2) - Math.PI;
+          return d.vec2f(std.cos(angle), -std.sin(angle) * renderAspect);
+        };
+
   return tgpu.computeFn({
     workgroupSize: [8, 8],
     in: { gid: d.builtin.globalInvocationId },
@@ -530,7 +461,7 @@ export function makeCascadePassCompute({
       const dirActual = dirStored * PREAVERAGE_RAY_DIM + d.vec2u(i & 1, i >> 1);
       const rayIndexU = morton2D(dirActual.x, dirActual.y);
       const rayIndex = d.f32(rayIndexU) + 0.5;
-      const rayDir = rayDirection(rayIndex, rayCountActual, aspect);
+      const rayDir = rayDirection(rayIndex, rayCountActual);
       const exitUv = rayBoxExitUv(probePos, rayDir);
       const clippedMarchEndUv = std.min(marchEndUv, exitUv);
 
@@ -571,7 +502,16 @@ export function makeCascadePassCompute({
           );
         }
       } else {
-        accum += traceDirectRay(probePos, rayDir, startUv, clippedMarchEndUv, eps, minStep, biasUv);
+        const ray = rayMarchSlot.$(
+          probePos,
+          rayDir,
+          startUv,
+          clippedMarchEndUv,
+          eps,
+          minStep,
+          biasUv,
+        );
+        accum += d.vec4f(ray.color, ray.transmittance);
       }
     }
 
@@ -605,17 +545,13 @@ export function makeBuildRadianceFieldCompute({
     }
 
     const srcDim = std.textureDimensions(buildRadianceFieldBGL.$.src);
-    const cascadeProbeDim = d.vec2u(cascadeProbesX, cascadeProbesY);
+    const cascadeProbeDim = d.vec2f(cascadeProbesX, cascadeProbesY);
     const invSrcDim = 1 / d.vec2f(srcDim);
     const uv = (d.vec2f(gid.xy) + 0.5) / d.vec2f(dstDim);
 
-    const probePixel = std.clamp(
-      uv * d.vec2f(cascadeProbeDim),
-      d.vec2f(0.5),
-      d.vec2f(cascadeProbeDim) - 0.5,
-    );
+    const probePixel = std.clamp(uv * cascadeProbeDim, d.vec2f(0.5), cascadeProbeDim - 0.5);
 
-    const uvStride = d.vec2f(cascadeProbeDim) * invSrcDim;
+    const uvStride = cascadeProbeDim * invSrcDim;
     const baseSampleUV = probePixel * invSrcDim;
 
     let sum = d.vec3f();
