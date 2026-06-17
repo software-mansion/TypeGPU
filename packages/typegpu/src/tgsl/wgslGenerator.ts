@@ -384,7 +384,36 @@ ${this.ctx.pre}}`;
       }
 
       if (op === '===' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
-        return snip(lhsExpr.value === rhsExpr.value, bool, 'constant');
+        return snip(lhsExpr.value === rhsExpr.value, bool, 'constant', false);
+      }
+
+      if (op === '!==' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
+        return snip(lhsExpr.value !== rhsExpr.value, bool, 'constant', false);
+      }
+
+      if (
+        (op === '<' || op === '<=' || op === '>' || op === '>=') &&
+        isKnownAtComptime(lhsExpr) &&
+        isKnownAtComptime(rhsExpr)
+      ) {
+        const left = lhsExpr.value;
+        const right = rhsExpr.value;
+        if (typeof left !== 'number' || typeof right !== 'number') {
+          throw new WgslTypeError(
+            `Inequality comparison '${op}' requires numeric operands, got '${typeof left}' and '${typeof right}'`,
+          );
+        }
+
+        switch (op) {
+          case '<':
+            return snip(left < right, bool, 'constant', false);
+          case '<=':
+            return snip(left <= right, bool, 'constant', false);
+          case '>':
+            return snip(left > right, bool, 'constant', false);
+          case '>=':
+            return snip(left >= right, bool, 'constant', false);
+        }
       }
 
       if (lhsExpr.dataType === UnknownData) {
