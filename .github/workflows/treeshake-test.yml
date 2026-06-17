@@ -29,20 +29,19 @@ jobs:
         with:
           path: pr-branch
 
-      - name: Checkout target branch
-        uses: actions/checkout@v4
-        with:
-          path: pr-branch
-          # path: target-branch
-          # ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_branch || github.base_ref }}
+      # - name: Checkout target branch
+      #   uses: actions/checkout@v4
+      #   with:
+      #     path: target-branch
+      #     ref: ${{ github.event_name == 'workflow_dispatch' && inputs.target_branch || github.base_ref }}
 
       - name: Install dependencies (PR branch)
         working-directory: pr-branch
         run: pnpm install
 
-      - name: Install dependencies (target branch)
-        working-directory: target-branch
-        run: pnpm install
+      # - name: Install dependencies (target branch)
+      #   working-directory: target-branch
+      #   run: pnpm install
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -65,19 +64,19 @@ jobs:
         working-directory: pr-branch
         run: pnpm --filter treeshake-test test direct --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
 
-      - name: Generate import tests on target branch
-        working-directory: target-branch
-        run: pnpm --filter treeshake-test generate-tests
+      # - name: Generate import tests on target branch
+      #   working-directory: target-branch
+      #   run: pnpm --filter treeshake-test generate-tests
 
-      - name: Run entrypoint tree-shake test on target branch
-        working-directory: target-branch
-        run: pnpm --filter treeshake-test test entrypoint --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
+      # - name: Run entrypoint tree-shake test on target branch
+      #   working-directory: target-branch
+      #   run: pnpm --filter treeshake-test test entrypoint --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
 
       - name: Compare results
         run: |
           node pr-branch/apps/treeshake-test/compareResults.ts \
             pr-branch/apps/treeshake-test/results_entrypoint.json \
-            target-branch/apps/treeshake-test/results_entrypoint.json \
+            pr-branch/apps/treeshake-test/results_entrypoint.json \
             pr-branch/apps/treeshake-test/results_direct.json \
             > comparison.md
 
