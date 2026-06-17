@@ -8,4 +8,4 @@ Minimal Next.js app for testing how `@typegpu/react` behaves during prerendering
 
 ## Dev
 
-SSR is disabled with the `DISABLE_SSR` env var.
+SSR is disabled with the `NEXT_PUBLIC_DISABLE_SSR` env var.

@@ -66,11 +66,9 @@ export default function Shader() {
     const dark = hexToOklab('#0f092b');
 
     const factor1 = std.smoothstep(0.25, 0.5, t);
-
     const factor2 = std.smoothstep(0.5, 0.7, t);
 
     const mixed = std.mix(std.mix(dark, blue, factor1), purple, factor2);
-
     return oklabToRgb(mixed);
   }
 
@@ -88,7 +86,6 @@ export default function Shader() {
 
           const dx = d.vec3f(0.04, 0, (sampleRight - sample) * 0.4);
           const dy = d.vec3f(0, 0.04, (sampleDown - sample) * 0.4);
-
           const normal = std.normalize(std.cross(dx, dy));
 
           const lightDir = std.normalize(d.vec3f(0.0, -1.0, 1.0));
