@@ -42,7 +42,7 @@ export class ResultsTable {
     return this.#getTable(
       sortedResults,
       (result) =>
-        `${prettifySize(result?.prNamespace)} ${calculateTrendMessage(result?.prNamespace, result?.prNamed)}`,
+        `${prettifySize(result?.prNamespace)} ${calculateTrendMessage(result?.prNamespace, result?.targetNamespace)}`,
     );
   }
 
@@ -62,7 +62,8 @@ export class ResultsTable {
 
     return this.#getTable(
       sortedResults,
-      (result) => `${calculateTrendMessage(result?.prNamed, result?.prNamespace)}`,
+      (result) =>
+        `${prettifySize(result?.prNamed)} ${calculateTrendMessage(result?.prNamed, result?.prNamespace)}`,
     );
   }
 
