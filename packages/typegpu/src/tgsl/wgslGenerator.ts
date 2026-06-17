@@ -384,11 +384,11 @@ ${this.ctx.pre}}`;
       }
 
       if (op === '===' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
-        return snip(lhsExpr.value === rhsExpr.value, bool, 'constant');
+        return snip(lhsExpr.value === rhsExpr.value, bool, 'constant', false);
       }
 
       if (op === '!==' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
-        return snip(lhsExpr.value !== rhsExpr.value, bool, 'constant');
+        return snip(lhsExpr.value !== rhsExpr.value, bool, 'constant', false);
       }
 
       if (
@@ -406,13 +406,13 @@ ${this.ctx.pre}}`;
 
         switch (op) {
           case '<':
-            return snip(left < right, bool, 'constant');
+            return snip(left < right, bool, 'constant', false);
           case '<=':
-            return snip(left <= right, bool, 'constant');
+            return snip(left <= right, bool, 'constant', false);
           case '>':
-            return snip(left > right, bool, 'constant');
+            return snip(left > right, bool, 'constant', false);
           case '>=':
-            return snip(left >= right, bool, 'constant');
+            return snip(left >= right, bool, 'constant', false);
         }
       }
 
