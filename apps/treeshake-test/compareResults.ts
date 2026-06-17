@@ -51,10 +51,6 @@ async function generateReport(
       .flat(),
   );
 
-  // Split tests into static and dynamic
-  const staticTests = [...allTests].filter((t) => t.includes('STATIC')).toSorted();
-  const dynamicTests = [...allTests].filter((t) => !t.includes('STATIC')).toSorted();
-
   // Summary statistics
   let totalDecreased = 0;
   let totalIncreased = 0;
@@ -74,40 +70,31 @@ async function generateReport(
   }
 
   // Comparison tables
-  const staticTable = new ResultsTable(allBundlers, 0.005);
-  const dynamicTable = new ResultsTable(allBundlers, 0.005);
+  const notableTable = new ResultsTable(allBundlers, 0.005);
   const allTable = new ResultsTable(allBundlers, 0);
 
-  staticTests.forEach((test) => {
+  allTests.forEach((test) => {
     const result = grouped[test];
-    staticTable.addRow(test, result);
+    notableTable.addRow(test, result);
     allTable.addRow(test, result);
   });
 
-  dynamicTests.forEach((test) => {
-    const result = grouped[test];
-    staticTable.addRow(test, result);
-    allTable.addRow(test, result);
-  });
-
-  const staticTableString = staticTable.toString();
-  const dynamicTableString = dynamicTable.toString();
+  const notableTableString = notableTable.toString();
 
   // Markdown generation
   let output = '';
 
-  output += '## 📊 Bundle Size Comparison\n\n';
+  output += '## Bundle Size Comparison\n\n';
   output += '| 🟢 Decreased | ➖ Unchanged | 🔴 Increased | ❔ Unknown |\n';
   output += '| :---: | :---: | :---: | :---: |\n';
   output += `| **${totalDecreased}** | **${totalUnchanged}** | **${totalIncreased}** | **${totalUnknown}** |\n\n`;
 
-  if (staticTableString !== emptyResultsString || dynamicTableString !== emptyResultsString) {
-    output += `## 👀 Notable results\n\n`;
-    output += `### Static test results:\n${staticTable}\n\n`;
-    output += `### Dynamic test results:\n${dynamicTable}\n\n`;
+  if (notableTableString !== emptyResultsString) {
+    output += `## Notable results\n\n`;
+    output += `### Static test results:\n${notableTable}\n\n`;
   }
 
-  output += `## 📋 All results\n\n`;
+  output += `## All results\n\n`;
   output += `${allTable}\n\n`;
 
   if (allBundlers.size === 1) {
