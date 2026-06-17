@@ -1,4 +1,5 @@
 import {
+  d,
   isTexture,
   isTextureView,
   type SampledFlag,
@@ -8,7 +9,6 @@ import {
   type TgpuTexture,
   type TgpuTextureView,
 } from 'typegpu';
-import * as d from 'typegpu/data';
 import {
   type BaseStoredRayDim,
   buildRadianceFieldBGL,

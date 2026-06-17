@@ -1,7 +1,7 @@
 import { sdBox2d, sdDisk } from '@typegpu/sdf';
 import type { AnySceneElement } from './scene.ts';
 import { sceneElements } from './scene.ts';
-import * as d from 'typegpu/data';
+import { d } from 'typegpu';
 
 type DragTarget = AnySceneElement;
 
