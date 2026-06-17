@@ -20,14 +20,22 @@ export class ResultsTable {
   }
 
   addRow(testName: string, result: Row | undefined) {
-    if (result !== undefined && this.#isInteresting(result)) {
+    if (result !== undefined) {
       this.#results.set(testName, result);
     }
   }
 
   getBundleSizeTable() {
     const sortedResults = [...this.#results.entries()]
-      .map(([test, row]) => [test, row, this.#maxAbsoluteChange(row)] as const)
+      .map(
+        ([test, row]) =>
+          [
+            test,
+            row,
+            maxAbsoluteForRow(row, (row) => calculateChange(row.prNamespace, row.targetNamespace)),
+          ] as const,
+      )
+      .filter(([, , score]) => score !== undefined && Math.abs(score) > this.#threshold)
       .toSorted(([, , scoreA], [, , scoreB]) => scoreB - scoreA)
       .map(([test, row]) => [test, row] as const);
 
@@ -40,9 +48,16 @@ export class ResultsTable {
 
   getTreeShakabilityTable() {
     const sortedResults = [...this.#results.entries()]
-      .map(([test, row]) => [test, row, this.#maxAbsoluteNamedChange(row)] as const)
+      .map(
+        ([test, row]) =>
+          [
+            test,
+            row,
+            maxAbsoluteForRow(row, (row) => calculateChange(row.prNamed, row.prNamespace)),
+          ] as const,
+      )
+      .filter(([, , score]) => score !== undefined && Math.abs(score) > this.#threshold)
       .toSorted(([, , scoreA], [, , scoreB]) => scoreB - scoreA)
-      .filter(([, , score]) => score > this.#threshold)
       .map(([test, row]) => [test, row] as const);
 
     return this.#getTable(
@@ -96,51 +111,6 @@ ${output}
 
     return output;
   }
-
-  #maxAbsoluteChange(row: Row): number {
-    let max = 0;
-    for (const { prNamespace, targetNamespace } of Object.values(row)) {
-      if (prNamespace !== undefined && targetNamespace !== undefined && targetNamespace !== 0) {
-        max = Math.max(max, Math.abs((prNamespace - targetNamespace) / targetNamespace));
-      }
-    }
-    return max;
-  }
-
-  #maxAbsoluteNamedChange(row: Row): number {
-    let max = 0;
-    for (const { prNamespace, prNamed } of Object.values(row)) {
-      if (prNamespace !== undefined && prNamed !== undefined && prNamed !== 0) {
-        max = Math.max(max, Math.abs((prNamespace - prNamed) / prNamed));
-      }
-    }
-    return max;
-  }
-
-  #isInteresting(row: Row) {
-    for (const cell of Object.values(row)) {
-      const { prNamespace, prNamed, targetNamespace } = cell;
-      if (targetNamespace === undefined) {
-        return true;
-      }
-
-      if (
-        prNamespace !== undefined &&
-        reachesThreshold(prNamespace, targetNamespace, this.#threshold)
-      ) {
-        return true;
-      }
-
-      if (
-        prNamespace !== undefined &&
-        prNamed !== undefined &&
-        reachesThreshold(prNamespace, prNamed, this.#threshold)
-      ) {
-        return true;
-      }
-    }
-    return false;
-  }
 }
 
 function prettifySize(size: number | undefined) {
@@ -174,6 +144,26 @@ function calculateTrendMessage(prSize: number | undefined, targetSize: number | 
   return `($\${\\color{green}${percent}\\\\%}$$)`;
 }
 
-function reachesThreshold(valueA: number, valueB: number, threshold: number) {
-  return Math.max(valueA / valueB, valueB / valueA) >= 1 + threshold;
+/**
+ * @example
+ * calculateChange(100, 20); // 4 (+400%)
+ * calculateChange(100, 200); // -0.5 (-50%)
+ * calculateChange(100, undefined); // undefined
+ */
+function calculateChange(value: number | undefined, base: number | undefined) {
+  if (value === undefined || !base) {
+    return undefined;
+  }
+  return (value - base) / base;
+}
+
+function maxAbsoluteForRow(row: Row, mapFn: (result: Result) => number | undefined) {
+  let max = 0;
+  for (const result of Object.values(row)) {
+    const score = mapFn(result);
+    if (score !== undefined && Math.abs(score) > Math.abs(max)) {
+      max = score;
+    }
+  }
+  return max;
 }
