@@ -392,7 +392,7 @@ ${this.ctx.pre}}`;
       }
 
       if (
-        (op === '>=' || op === '<=' || op === '>' || op === '<') &&
+        (op === '<' || op === '<=' || op === '>' || op === '>=') &&
         isKnownAtComptime(lhsExpr) &&
         isKnownAtComptime(rhsExpr)
       ) {
@@ -403,10 +403,17 @@ ${this.ctx.pre}}`;
             `Inequality comparison '${op}' requires numeric operands, got '${typeof left}' and '${typeof right}'`,
           );
         }
-        if (op === '>=') return snip(left >= right, bool, 'constant');
-        if (op === '<=') return snip(left <= right, bool, 'constant');
-        if (op === '>') return snip(left > right, bool, 'constant');
-        return snip(left < right, bool, 'constant');
+
+        switch (op) {
+          case '<':
+            return snip(left < right, bool, 'constant');
+          case '<=':
+            return snip(left <= right, bool, 'constant');
+          case '>':
+            return snip(left > right, bool, 'constant');
+          case '>=':
+            return snip(left >= right, bool, 'constant');
+        }
       }
 
       if (lhsExpr.dataType === UnknownData) {
