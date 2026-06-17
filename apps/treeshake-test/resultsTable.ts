@@ -26,6 +26,35 @@ export class ResultsTable {
   }
 
   toString() {
+    const sortedResults = [...this.#results.entries()]
+      .map(([test, row]) => [test, row, this.#maxAbsoluteChange(row)] as const)
+      .toSorted(([, , scoreA], [, , scoreB]) => scoreB - scoreA)
+      .map(([test, row]) => [test, row] as const);
+
+    return this.getTable(
+      sortedResults,
+      (result) =>
+        `${prettifySize(result?.prEntrypoint)} ${calculateTrendMessage(result?.prEntrypoint, result?.prDirect)}`,
+    );
+  }
+
+  getProblematicDirectImports() {
+    const sortedResults = [...this.#results.entries()]
+      .map(([test, row]) => [test, row, this.#maxAbsoluteDirectChange(row)] as const)
+      .toSorted(([, , scoreA], [, , scoreB]) => scoreB - scoreA)
+      .filter(([, , score]) => score > this.#threshold)
+      .map(([test, row]) => [test, row] as const);
+
+    return this.getTable(
+      sortedResults,
+      (result) => `${calculateTrendMessage(result?.prDirect, result?.prEntrypoint)}`,
+    );
+  }
+
+  getTable(
+    sortedRows: (readonly [string, Row])[],
+    stringifyCell: (result: Result | undefined) => string,
+  ) {
     if (this.#results.size === 0) {
       return emptyResultsString;
     }
@@ -43,19 +72,11 @@ export class ResultsTable {
     }
     output += ' |\n';
 
-    const sortedResults = [...this.#results.entries()]
-      .map(([test, row]) => [test, row, this.#maxAbsoluteChange(row)] as const)
-      .toSorted(([, , scoreA], [, , scoreB]) => scoreB - scoreA)
-      .map(([test, row]) => [test, row] as const);
-
-    for (const [test, row] of sortedResults) {
+    for (const [test, row] of sortedRows) {
       output += `| ${test.replaceAll('_', ' ')}`;
 
       for (const bundler of this.#bundlers) {
-        const prSize = row[bundler]?.prEntrypoint;
-        const targetSize = row[bundler]?.targetEntrypoint;
-
-        output += ` | ${prettifySize(prSize)} ${calculateTrendMessage(prSize, targetSize)}`;
+        output += ` | ${stringifyCell(row[bundler])}`;
       }
       output += ' |\n';
     }
@@ -81,6 +102,16 @@ ${output}
     for (const { prEntrypoint, targetEntrypoint } of Object.values(row)) {
       if (prEntrypoint !== undefined && targetEntrypoint !== undefined && targetEntrypoint !== 0) {
         max = Math.max(max, Math.abs((prEntrypoint - targetEntrypoint) / targetEntrypoint));
+      }
+    }
+    return max;
+  }
+
+  #maxAbsoluteDirectChange(row: Row): number {
+    let max = 0;
+    for (const { prEntrypoint, prDirect } of Object.values(row)) {
+      if (prEntrypoint !== undefined && prDirect !== undefined && prDirect !== 0) {
+        max = Math.max(max, Math.abs((prEntrypoint - prDirect) / prDirect));
       }
     }
     return max;

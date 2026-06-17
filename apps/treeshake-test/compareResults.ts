@@ -80,6 +80,7 @@ async function generateReport(
   });
 
   const notableTableString = notableTable.toString();
+  const notableDirectTableString = notableTable.getProblematicDirectImports();
 
   // Markdown generation
   let output = '';
@@ -89,9 +90,17 @@ async function generateReport(
   output += '| :---: | :---: | :---: | :---: |\n';
   output += `| **${totalDecreased}** | **${totalUnchanged}** | **${totalIncreased}** | **${totalUnknown}** |\n\n`;
 
-  if (notableTableString !== emptyResultsString) {
+  if (
+    notableTableString !== emptyResultsString ||
+    notableDirectTableString !== emptyResultsString
+  ) {
     output += `## Notable results\n\n`;
-    output += `### Static test results:\n${notableTable}\n\n`;
+    if (notableTableString !== emptyResultsString) {
+      output += `### Compared against target branch:\n${notableTableString}\n\n`;
+    }
+    if (notableDirectTableString !== emptyResultsString) {
+      output += `### Compared against entrypoint imports:\n${notableDirectTableString}\n\n`;
+    }
   }
 
   output += `## All results\n\n`;
