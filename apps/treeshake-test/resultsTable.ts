@@ -1,9 +1,9 @@
 type TestName = string;
 type BundlerName = string;
 export type Result = {
-  prEntrypoint?: number;
-  prDirect?: number;
-  targetEntrypoint?: number;
+  prNamespace?: number;
+  prNamed?: number;
+  targetNamespace?: number;
 };
 type Row = Record<BundlerName, Result>;
 
@@ -34,20 +34,20 @@ export class ResultsTable {
     return this.getTable(
       sortedResults,
       (result) =>
-        `${prettifySize(result?.prEntrypoint)} ${calculateTrendMessage(result?.prEntrypoint, result?.prDirect)}`,
+        `${prettifySize(result?.prNamespace)} ${calculateTrendMessage(result?.prNamespace, result?.prNamed)}`,
     );
   }
 
-  getProblematicDirectImports() {
+  getProblematicNamedImports() {
     const sortedResults = [...this.#results.entries()]
-      .map(([test, row]) => [test, row, this.#maxAbsoluteDirectChange(row)] as const)
+      .map(([test, row]) => [test, row, this.#maxAbsoluteNamedChange(row)] as const)
       .toSorted(([, , scoreA], [, , scoreB]) => scoreB - scoreA)
       .filter(([, , score]) => score > this.#threshold)
       .map(([test, row]) => [test, row] as const);
 
     return this.getTable(
       sortedResults,
-      (result) => `${calculateTrendMessage(result?.prDirect, result?.prEntrypoint)}`,
+      (result) => `${calculateTrendMessage(result?.prNamed, result?.prNamespace)}`,
     );
   }
 
@@ -99,19 +99,19 @@ ${output}
 
   #maxAbsoluteChange(row: Row): number {
     let max = 0;
-    for (const { prEntrypoint, targetEntrypoint } of Object.values(row)) {
-      if (prEntrypoint !== undefined && targetEntrypoint !== undefined && targetEntrypoint !== 0) {
-        max = Math.max(max, Math.abs((prEntrypoint - targetEntrypoint) / targetEntrypoint));
+    for (const { prNamespace, targetNamespace } of Object.values(row)) {
+      if (prNamespace !== undefined && targetNamespace !== undefined && targetNamespace !== 0) {
+        max = Math.max(max, Math.abs((prNamespace - targetNamespace) / targetNamespace));
       }
     }
     return max;
   }
 
-  #maxAbsoluteDirectChange(row: Row): number {
+  #maxAbsoluteNamedChange(row: Row): number {
     let max = 0;
-    for (const { prEntrypoint, prDirect } of Object.values(row)) {
-      if (prEntrypoint !== undefined && prDirect !== undefined && prDirect !== 0) {
-        max = Math.max(max, Math.abs((prEntrypoint - prDirect) / prDirect));
+    for (const { prNamespace, prNamed } of Object.values(row)) {
+      if (prNamespace !== undefined && prNamed !== undefined && prNamed !== 0) {
+        max = Math.max(max, Math.abs((prNamespace - prNamed) / prNamed));
       }
     }
     return max;
@@ -119,22 +119,22 @@ ${output}
 
   #isInteresting(row: Row) {
     for (const cell of Object.values(row)) {
-      const { prEntrypoint, prDirect, targetEntrypoint } = cell;
-      if (targetEntrypoint === undefined) {
+      const { prNamespace, prNamed, targetNamespace } = cell;
+      if (targetNamespace === undefined) {
         return true;
       }
 
       if (
-        prEntrypoint !== undefined &&
-        reachesThreshold(prEntrypoint, targetEntrypoint, this.#threshold)
+        prNamespace !== undefined &&
+        reachesThreshold(prNamespace, targetNamespace, this.#threshold)
       ) {
         return true;
       }
 
       if (
-        prEntrypoint !== undefined &&
-        prDirect !== undefined &&
-        reachesThreshold(prEntrypoint, prDirect, this.#threshold)
+        prNamespace !== undefined &&
+        prNamed !== undefined &&
+        reachesThreshold(prNamespace, prNamed, this.#threshold)
       ) {
         return true;
       }

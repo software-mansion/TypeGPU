@@ -6,10 +6,10 @@ import {
   type ResultRecord,
 } from './bundleWith.ts';
 import {
-  DIST_DIRECT_DIR,
-  DIST_ENDPOINT_DIR,
-  TESTS_DIRECT_DIR,
-  TESTS_ENDPOINT_DIR,
+  DIST_NAMED_DIR,
+  DIST_NAMESPACE_DIR,
+  TESTS_NAMED_DIR,
+  TESTS_NAMESPACE_DIR,
 } from './urls.ts';
 
 type Bundler = (entryUrl: URL, outDir: URL) => Promise<URL>;
@@ -26,13 +26,13 @@ async function bundleTest(
 }
 
 /**
- * Runs selected tests (direct/entrypoint) bundlers that are included in options.
+ * Runs selected tests (named/namespace) bundlers that are included in options.
  */
 async function main() {
   console.log('Starting bundler efficiency measurement...');
-  const testVariant = process.argv[2] === 'direct' ? 'direct' : 'entrypoint';
-  const sourceDir = testVariant === 'direct' ? TESTS_DIRECT_DIR : TESTS_ENDPOINT_DIR;
-  const distDir = testVariant === 'direct' ? DIST_DIRECT_DIR : DIST_ENDPOINT_DIR;
+  const testVariant = process.argv[2] === 'named' ? 'named' : 'namespace';
+  const sourceDir = testVariant === 'named' ? TESTS_NAMED_DIR : TESTS_NAMESPACE_DIR;
+  const distDir = testVariant === 'named' ? DIST_NAMED_DIR : DIST_NAMESPACE_DIR;
 
   await fs.mkdir(distDir, { recursive: true });
   const availableBundlers: Record<string, Bundler> = {

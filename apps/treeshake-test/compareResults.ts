@@ -14,9 +14,9 @@ const ResultRecord = type({
 const BenchmarkResults = ResultRecord.array();
 
 function groupResultsByTest(
-  prEntrypointResults: typeof BenchmarkResults.infer,
-  prDirectResults: typeof BenchmarkResults.infer,
-  targetEntrypointResults: typeof BenchmarkResults.infer,
+  prNamespaceResults: typeof BenchmarkResults.infer,
+  prNamedResults: typeof BenchmarkResults.infer,
+  targetNamespaceResults: typeof BenchmarkResults.infer,
 ) {
   // testFilename -> bundler -> result
   const grouped: Record<string, Record<string, Result>> = {};
@@ -27,19 +27,19 @@ function groupResultsByTest(
     }
   };
 
-  assign(prEntrypointResults, 'prEntrypoint');
-  assign(prDirectResults, 'prDirect');
-  assign(targetEntrypointResults, 'targetEntrypoint');
+  assign(prNamespaceResults, 'prNamespace');
+  assign(prNamedResults, 'prNamed');
+  assign(targetNamespaceResults, 'targetNamespace');
 
   return grouped;
 }
 
 async function generateReport(
-  prEntrypointResults: typeof BenchmarkResults.infer,
-  prDirectResults: typeof BenchmarkResults.infer,
-  targetEntrypointResults: typeof BenchmarkResults.infer,
+  prNamespaceResults: typeof BenchmarkResults.infer,
+  prNamedResults: typeof BenchmarkResults.infer,
+  targetNamespaceResults: typeof BenchmarkResults.infer,
 ) {
-  const grouped = groupResultsByTest(prEntrypointResults, prDirectResults, targetEntrypointResults);
+  const grouped = groupResultsByTest(prNamespaceResults, prNamedResults, targetNamespaceResults);
 
   // All unique tests from both branches
   const allTests = new Set(Object.keys(grouped));
@@ -60,7 +60,7 @@ async function generateReport(
   for (const test of allTests) {
     for (const bundler of allBundlers) {
       const result = grouped[test]?.[bundler];
-      const { prEntrypoint: prSize, targetEntrypoint: targetSize } = result ?? {};
+      const { prNamespace: prSize, targetNamespace: targetSize } = result ?? {};
 
       if (targetSize === undefined || prSize === undefined) totalUnknown++;
       else if (prSize > targetSize) totalIncreased++;
@@ -77,7 +77,7 @@ async function generateReport(
   });
 
   const notableTableString = notableTable.toString();
-  const notableDirectTableString = notableTable.getProblematicDirectImports();
+  const notableNamedTableString = notableTable.getProblematicNamedImports();
 
   // Markdown generation
   let output = '';
@@ -90,13 +90,13 @@ async function generateReport(
 
   if (
     notableTableString !== emptyResultsString ||
-    notableDirectTableString !== emptyResultsString
+    notableNamedTableString !== emptyResultsString
   ) {
     if (notableTableString !== emptyResultsString) {
       output += `### \`import * as ...\` in PR vs \`import * as ...\` in target (did bundle size increase?):\n${notableTableString}\n\n`;
     }
-    if (notableDirectTableString !== emptyResultsString) {
-      output += `### \`import { ... }\` in PR vs \`import * as ...\` in PR (is the library tree-shakable?):\n${notableDirectTableString}\n\n`;
+    if (notableNamedTableString !== emptyResultsString) {
+      output += `### \`import { ... }\` in PR vs \`import * as ...\` in PR (is the library tree-shakable?):\n${notableNamedTableString}\n\n`;
     }
   } else {
     output += `No notable changes.\n\n`;
@@ -110,35 +110,35 @@ async function generateReport(
 }
 
 async function main() {
-  const [prEntrypointFile, targetEntrypointFile, prDirectFile] = process.argv.slice(2);
+  const [prNamespaceFile, targetNamespaceFile, prNamedFile] = process.argv.slice(2);
 
-  if (!prEntrypointFile || !targetEntrypointFile || !prDirectFile) {
+  if (!prNamespaceFile || !targetNamespaceFile || !prNamedFile) {
     console.error(
-      'Usage: compare-results.js <pr-entrypoint-results.json> <target-entrypoint-results.json> <pr-direct-results.json>',
+      'Usage: compare-results.js <pr-namespace-results.json> <target-namespace-results.json> <pr-named-results.json>',
     );
     process.exit(1);
   }
 
-  let prEntrypointResults: typeof BenchmarkResults.infer;
+  let prNamespaceResults: typeof BenchmarkResults.infer;
   try {
-    const content = await fs.readFile(prEntrypointFile, 'utf8');
-    prEntrypointResults = BenchmarkResults.assert(JSON.parse(content));
+    const content = await fs.readFile(prNamespaceFile, 'utf8');
+    prNamespaceResults = BenchmarkResults.assert(JSON.parse(content));
   } catch (error) {
-    throw new Error('PR entrypoint results validation failed', { cause: error });
+    throw new Error('PR namespace results validation failed', { cause: error });
   }
 
-  let prDirectResults: typeof BenchmarkResults.infer;
+  let prNamedResults: typeof BenchmarkResults.infer;
   try {
-    const content = await fs.readFile(prDirectFile, 'utf8');
-    prDirectResults = BenchmarkResults.assert(JSON.parse(content));
+    const content = await fs.readFile(prNamedFile, 'utf8');
+    prNamedResults = BenchmarkResults.assert(JSON.parse(content));
   } catch (error) {
-    throw new Error('PR entrypoint results validation failed', { cause: error });
+    throw new Error('PR named results validation failed', { cause: error });
   }
 
-  let targetEntrypointResults: typeof BenchmarkResults.infer = [];
+  let targetNamespaceResults: typeof BenchmarkResults.infer = [];
   try {
-    const targetContent = await fs.readFile(targetEntrypointFile, 'utf8');
-    targetEntrypointResults = BenchmarkResults.assert(JSON.parse(targetContent));
+    const targetContent = await fs.readFile(targetNamespaceFile, 'utf8');
+    targetNamespaceResults = BenchmarkResults.assert(JSON.parse(targetContent));
   } catch (error) {
     console.warn('Could not read or validate target results:', error);
     console.warn('Returning empty results instead.');
@@ -146,9 +146,9 @@ async function main() {
 
   // Generate appropriate report
   const markdownReport = await generateReport(
-    prEntrypointResults,
-    prDirectResults,
-    targetEntrypointResults,
+    prNamespaceResults,
+    prNamedResults,
+    targetNamespaceResults,
   );
   console.log(markdownReport);
 }

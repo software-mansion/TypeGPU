@@ -56,28 +56,28 @@ jobs:
         working-directory: pr-branch
         run: pnpm --filter treeshake-test generate-tests
 
-      - name: Run entrypoint tree-shake test on PR branch
+      - name: Run namespace tree-shake test on PR branch
         working-directory: pr-branch
-        run: pnpm --filter treeshake-test test entrypoint --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
+        run: pnpm --filter treeshake-test test namespace --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
 
-      - name: Run direct tree-shake test on PR branch
+      - name: Run named tree-shake test on PR branch
         working-directory: pr-branch
-        run: pnpm --filter treeshake-test test direct --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
+        run: pnpm --filter treeshake-test test named --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
 
       # - name: Generate import tests on target branch
       #   working-directory: target-branch
       #   run: pnpm --filter treeshake-test generate-tests
 
-      # - name: Run entrypoint tree-shake test on target branch
+      # - name: Run namespace tree-shake test on target branch
       #   working-directory: target-branch
-      #   run: pnpm --filter treeshake-test test entrypoint --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
+      #   run: pnpm --filter treeshake-test test namespace --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
 
       - name: Compare results
         run: |
           node pr-branch/apps/treeshake-test/compareResults.ts \
-            pr-branch/apps/treeshake-test/results_entrypoint.json \
-            pr-branch/apps/treeshake-test/results_entrypoint.json \
-            pr-branch/apps/treeshake-test/results_direct.json \
+            pr-branch/apps/treeshake-test/results_namespace.json \
+            pr-branch/apps/treeshake-test/results_namespace.json \
+            pr-branch/apps/treeshake-test/results_named.json \
             > comparison.md
 
       - name: Comment PR with results

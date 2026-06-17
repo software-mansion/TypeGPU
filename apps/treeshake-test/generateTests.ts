@@ -1,60 +1,60 @@
 import * as fs from 'node:fs/promises';
 import { tgpu, d, std, common } from 'typegpu';
-import { TESTS_DIRECT_DIR, TESTS_ENDPOINT_DIR } from './urls.ts';
+import { TESTS_NAMED_DIR, TESTS_NAMESPACE_DIR } from './urls.ts';
 
 async function generateTestFiles() {
-  await fs.mkdir(TESTS_DIRECT_DIR, { recursive: true });
-  await fs.mkdir(TESTS_ENDPOINT_DIR, { recursive: true });
+  await fs.mkdir(TESTS_NAMED_DIR, { recursive: true });
+  await fs.mkdir(TESTS_NAMESPACE_DIR, { recursive: true });
 
   const tgpuImports = Object.keys(tgpu)
     .filter((key) => key !== '~unstable')
     .map((importName) => ({
       import: 'tgpu',
       item: importName,
-      endpoint: 'typegpu',
+      namespace: 'typegpu',
     }));
 
   const dImports = Object.keys(d).map((importName) => ({
     import: 'd',
     item: importName,
-    endpoint: 'typegpu/data',
+    namespace: 'typegpu/data',
   }));
 
   const stdImports = Object.keys(std).map((importName) => ({
     import: 'std',
     item: importName,
-    endpoint: 'typegpu/std',
+    namespace: 'typegpu/std',
   }));
 
   const commonImports = Object.keys(common).map((importName) => ({
     import: 'common',
     item: importName,
-    endpoint: 'typegpu/common',
+    namespace: 'typegpu/common',
   }));
 
-  const imports: { import: string; item: string; endpoint: string }[] = [
+  const imports: { import: string; item: string; namespace: string }[] = [
     ...tgpuImports,
     ...dImports,
     ...stdImports,
     ...commonImports,
   ];
 
-  for (const { import: importName, item, endpoint } of imports) {
+  for (const { import: importName, item, namespace } of imports) {
     const fileName = `${importName}_${item}.ts`;
 
-    const testDirectContent = `
+    const testNamedContent = `
 import { ${importName} } from 'typegpu/$built$';
 console.log(${importName}.${item});
     `;
 
-    await fs.writeFile(new URL(fileName, TESTS_DIRECT_DIR), testDirectContent);
+    await fs.writeFile(new URL(fileName, TESTS_NAMED_DIR), testNamedContent);
 
-    const testEndpointContent = `
-import * as ${importName} from '${endpoint}/$built$';
+    const testNamespaceContent = `
+import * as ${importName} from '${namespace}/$built$';
 console.log(${importName}.${item});
     `;
 
-    await fs.writeFile(new URL(fileName, TESTS_ENDPOINT_DIR), testEndpointContent);
+    await fs.writeFile(new URL(fileName, TESTS_NAMESPACE_DIR), testNamespaceContent);
   }
 }
 
