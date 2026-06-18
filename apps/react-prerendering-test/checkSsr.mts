@@ -20,3 +20,5 @@ console.log('========================================\n');
 console.log('Building with SSR disabled...');
 const noSsr = build({ NEXT_PUBLIC_DISABLE_SSR: '1' });
 console.log(noSsr.failed ? noSsr.output : 'OK');
+
+process.exit(ssr.failed || noSsr.failed ? 1 : 0);
