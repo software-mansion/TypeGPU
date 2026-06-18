@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { common, d } from 'typegpu';
 import { useWindowDimensions } from 'react-native';
-import { Canvas } from 'react-native-wgpu';
+import { Canvas } from 'react-native-webgpu';
 import { useConfigureContext, useFrame, useRoot } from '@typegpu/react';
 
 export function Shader() {
