@@ -911,6 +911,42 @@ describe('tgsl fn when using plugin', () => {
     `);
   });
 
+  it('throws when it detects simple recursion', () => {
+    function increment(n: number, k: number): number {
+      'use gpu';
+      if (k === 0) return n;
+      return increment(n, k - 1) + 1;
+    }
+
+    const f1 = () => {
+      'use gpu';
+      return increment(d.u32(7), d.u32(3));
+    };
+
+    expect(() => tgpu.resolve([f1])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f1
+      - fn*:f1()
+      - fn*:increment(u32, u32): Recursive function fn*:increment(u32, u32) detected. Recursion is not allowed on the GPU.]
+    `);
+
+    const wrappedIncrement = tgpu.fn(increment);
+
+    const f2 = () => {
+      'use gpu';
+      return wrappedIncrement(d.u32(7), d.u32(3));
+    };
+
+    expect(() => tgpu.resolve([f2])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f2
+      - fn*:f2()
+      - fn*:increment(u32, u32): Recursive function fn*:increment(u32, u32) detected. Recursion is not allowed on the GPU.]
+    `);
+  });
+
   it('throws when it detects a cyclic dependency (recursion)', () => {
     let bar: TgpuFn;
     let foo: TgpuFn;
