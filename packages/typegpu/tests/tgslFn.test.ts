@@ -1113,4 +1113,36 @@ describe('tgsl fn when using plugin', () => {
       }"
     `);
   });
+
+  it('names used externals', () => {
+    const myConst = (() => tgpu.const(d.u32, 1))(); // unnamed
+    const fn = () => {
+      'use gpu';
+      return myConst.$;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "const myConst: u32 = 1u;
+
+      fn fn_1() -> u32 {
+        return myConst;
+      }"
+    `);
+  });
+
+  it('names used nested externals', () => {
+    const EXT = { myConst: (() => tgpu.const(d.u32, 1))() /* unnamed */ };
+    const fn = () => {
+      'use gpu';
+      return EXT.myConst.$;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "const myConst: u32 = 1u;
+
+      fn fn_1() -> u32 {
+        return myConst;
+      }"
+    `);
+  });
 });
