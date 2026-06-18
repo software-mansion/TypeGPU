@@ -87,6 +87,14 @@ function assignMetadata(
       t.variableDeclarator(path.node.id, callExpr),
     ]);
     t.inheritLeadingComments(declaration, path.node);
+
+    if (
+      path.parentPath &&
+      (path.parentPath.isExportNamedDeclaration() || path.parentPath.isExportDefaultDeclaration())
+    ) {
+      t.inheritLeadingComments(declaration, path.parentPath.node);
+      path.parentPath.node.leadingComments = null;
+    }
     replacement = declaration;
   }
 
