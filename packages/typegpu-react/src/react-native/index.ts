@@ -1,4 +1,4 @@
-import { WebGPUModule } from 'react-native-wgpu';
+import { WebGPUModule } from 'react-native-webgpu';
 
 // Making sure the WebGPU module is installed before navigator.gpu is accessed
 WebGPUModule.install();
