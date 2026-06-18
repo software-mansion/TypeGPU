@@ -51,7 +51,7 @@ import type {
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslEnableExtension } from './wgslExtensions.ts';
-import { getName, hasTinyestMetadata, setName } from './shared/meta.ts';
+import { getName, hasTinyestMetadata, isNamable, setName } from './shared/meta.ts';
 import { FuncParameterType } from 'tinyest';
 import { accessProp } from './tgsl/accessProp.ts';
 import { createIoSchema } from './core/function/ioSchema.ts';
@@ -197,6 +197,9 @@ class ItemStateStackImpl implements ItemStateStack {
         }
 
         const external = layer.externalMap[id];
+        if (isNamable(external) && getName(external) === undefined) {
+          setName(external, id);
+        }
 
         if (external !== undefined && external !== null) {
           return coerceToSnippet(external);
