@@ -1,4 +1,3 @@
-import { isTgpuFn } from './core/function/tgpuFn.ts';
 import type { Namespace, NamespaceInternal } from './core/resolve/namespace.ts';
 import { ConfigurableImpl } from './core/root/configurableImpl.ts';
 import type { Configurable, ExperimentalTgpuRoot } from './core/root/rootTypes.ts';
@@ -51,10 +50,12 @@ import type {
 } from './types.ts';
 import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
 import type { WgslEnableExtension } from './wgslExtensions.ts';
-import { getName, hasTinyestMetadata, setName } from './shared/meta.ts';
+import { getName, hasTinyestMetadata, isNamable, setName } from './shared/meta.ts';
 import { FuncParameterType } from 'tinyest';
 import { accessProp } from './tgsl/accessProp.ts';
 import { createIoSchema } from './core/function/ioSchema.ts';
+import { isShelllessImpl } from './core/function/shelllessImpl.ts';
+import { isTgpuFn } from './core/function/tgpuFn.ts';
 import type { IOData } from './core/function/fnTypes.ts';
 import { AutoStruct } from './data/autoStruct.ts';
 import { EntryInputRouter } from './core/function/entryInputRouter.ts';
@@ -197,6 +198,9 @@ class ItemStateStackImpl implements ItemStateStack {
         }
 
         const external = layer.externalMap[id];
+        if (isNamable(external) && getName(external) === undefined) {
+          setName(external, id);
+        }
 
         if (external !== undefined && external !== null) {
           return coerceToSnippet(external);
@@ -948,7 +952,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolve(item: unknown, schema?: BaseData | UnknownData): ResolvedSnippet {
-    if (isTgpuFn(item) || hasTinyestMetadata(item)) {
+    if (isTgpuFn(item) || isShelllessImpl(item)) {
       if (
         this.#currentlyResolvedItems.has(item) &&
         !this.#namespaceInternal.memoizedResolves.has(item)
