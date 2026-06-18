@@ -3,7 +3,7 @@ import {
   endCapSlot,
   LineControlPoint,
   lineSegmentIndices,
-  lineSegmentVariableWidth,
+  polylineVariableWidth,
   startCapSlot,
 } from '@typegpu/geometry';
 import tgpu from 'typegpu';
@@ -177,7 +177,7 @@ const mainVertex = tgpu.vertexFn({
     radius: lineWidth(f32(trailIndexOriginal + 3) / (TRAIL_LENGTH - 1)),
   });
 
-  const result = lineSegmentVariableWidth(vertexIndex, A, B, C, D, MAX_JOIN_COUNT);
+  const result = polylineVariableWidth(A, B, C, D, vertexIndex, MAX_JOIN_COUNT);
 
   return {
     outPos: vec4f(result.vertexPosition, 0, 1),
