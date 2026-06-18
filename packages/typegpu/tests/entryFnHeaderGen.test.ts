@@ -123,4 +123,33 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
         }"
     `);
   });
+
+  it('marks integer vertex output varyings as flat', () => {
+    const vertex = tgpu.vertexFn({
+      out: {
+        pos: d.builtin.position,
+        flag: d.u32,
+      },
+    }) /* wgsl */ `{ return Out(vec4f(), 1u); }`;
+
+    const fragment = tgpu.fragmentFn({
+      in: { flag: d.u32 },
+      out: d.vec4f,
+    }) /* wgsl */ `{ return vec4f(f32(in.flag)); }`;
+
+    expect(tgpu.resolve([vertex, fragment])).toMatchInlineSnapshot(`
+      "struct vertex_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) @interpolate(flat) flag: u32,
+      }
+
+      @vertex fn vertex() -> vertex_Output { return vertex_Output(vec4f(), 1u); }
+
+      struct fragment_Input {
+        @location(0) @interpolate(flat) flag: u32,
+      }
+
+      @fragment fn fragment(in: fragment_Input) -> @location(0)  vec4f { return vec4f(f32(in.flag)); }"
+    `);
+  });
 });

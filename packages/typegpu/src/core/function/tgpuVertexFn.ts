@@ -177,9 +177,9 @@ function createVertexFn(
     },
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-      const outputWithLocation = createIoSchema(shell.out, ctx.varyingLocations).$name(
-        `${getName(this) ?? ''}_Output`,
-      );
+      const outputWithLocation = createIoSchema(shell.out, ctx.varyingLocations, {
+        autoInterpolateIntegerVaryings: true,
+      }).$name(`${getName(this) ?? ''}_Output`);
 
       if (typeof implementation === 'string') {
         core.applyExternals({ Out: outputWithLocation });
