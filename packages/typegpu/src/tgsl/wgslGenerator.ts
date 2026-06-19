@@ -19,6 +19,8 @@ import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared
 import { safeStringify } from '../shared/stringify.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
+import { eq, ne, lt, le, gt, ge } from '../std/boolean.ts';
+
 import {
   isGPUCallable,
   isKnownAtComptime,
@@ -85,6 +87,14 @@ const parenthesizedOps = [
 ];
 
 const binaryLogicalOps = ['&&', '||', '==', '!=', '===', '!==', '<', '<=', '>', '>='];
+const binaryRelationalOpToStdMap: Record<string, string> = {
+  '===': eq.toString(),
+  '!==': ne.toString(),
+  '<': lt.toString(),
+  '<=': le.toString(),
+  '>': gt.toString(),
+  '>=': ge.toString(),
+};
 
 const bitShiftOps: string[] = ['<<', '>>', '<<=', '>>='];
 
@@ -383,24 +393,26 @@ ${this.ctx.pre}}`;
         throw new Error('Please use the !== operator instead of !=');
       }
 
-      if (op === '===' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
-        return snip(lhsExpr.value === rhsExpr.value, bool, 'constant', false);
-      }
-
-      if (op === '!==' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
-        return snip(lhsExpr.value !== rhsExpr.value, bool, 'constant', false);
-      }
-
-      if (
-        (op === '<' || op === '<=' || op === '>' || op === '>=') &&
-        isKnownAtComptime(lhsExpr) &&
-        isKnownAtComptime(rhsExpr)
-      ) {
+      const stdBinaryRelationalOp = binaryRelationalOpToStdMap[op];
+      if (stdBinaryRelationalOp && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
         const left = lhsExpr.value;
         const right = rhsExpr.value;
+
+        switch (op) {
+          case '===':
+            return snip(left === right, bool, 'constant', false);
+          case '!==':
+            return snip(left !== right, bool, 'constant', false);
+        }
+
         if (typeof left !== 'number' || typeof right !== 'number') {
+          const bothVectors = wgsl.isVec(lhsExpr.dataType) && wgsl.isVec(rhsExpr.dataType);
           throw new WgslTypeError(
-            `Inequality comparison '${op}' requires numeric operands, got '${typeof left}' and '${typeof right}'`,
+            `Comparison '${op}' requires numeric operands.${
+              bothVectors
+                ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}''.`
+                : ''
+            }`,
           );
         }
 
