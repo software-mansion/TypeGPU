@@ -1,5 +1,5 @@
 {
-  "name": "typegpu-expo-simple-project",
+  "name": "typegpu-expo-bare-project",
   "version": "1.0.0",
   "private": true,
   "main": "index.ts",

@@ -302,6 +302,11 @@ export default defineConfig({
           label: 'Tooling',
           items: stripFalsy([
             {
+              label: 'TypeGPU CLI',
+              slug: 'tooling/typegpu-cli',
+              badge: { text: 'new' },
+            },
+            {
               label: 'Build Plugin',
               slug: 'tooling/unplugin-typegpu',
             },
@@ -311,7 +316,12 @@ export default defineConfig({
               badge: { text: 'new' },
             },
             {
-              label: 'Generator CLI',
+              label: 'AI Tools',
+              slug: 'tooling/ai-tools',
+              badge: { text: 'new' },
+            },
+            {
+              label: 'WGSL to TypeGPU',
               slug: 'tooling/tgpu-gen',
             },
           ]),
