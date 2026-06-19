@@ -73,21 +73,23 @@ export default defineConfig({
         starlightBlog({
           navigation: 'none',
         }),
-        starlightTypeDoc({
-          sidebar: {
-            label: 'Reference',
-          },
-          entryPoints: [
-            '../../packages/typegpu/src/index.d.ts',
-            '../../packages/typegpu/src/data/index.ts',
-            '../../packages/typegpu/src/std/index.ts',
-          ],
-          tsconfig: '../../packages/typegpu/tsconfig.json',
-          typeDoc: {
-            excludeInternal: true,
-            excludeReferences: true,
-          },
-        }),
+        // Only generating typedoc in production to speed up the dev server
+        !DEV &&
+          starlightTypeDoc({
+            sidebar: {
+              label: 'Reference',
+            },
+            entryPoints: [
+              '../../packages/typegpu/src/index.d.ts',
+              '../../packages/typegpu/src/data/index.ts',
+              '../../packages/typegpu/src/std/index.ts',
+            ],
+            tsconfig: '../../packages/typegpu/tsconfig.json',
+            typeDoc: {
+              excludeInternal: true,
+              excludeReferences: true,
+            },
+          }),
       ]),
       logo: {
         light: './src/assets/typegpu-logo-light.svg',
