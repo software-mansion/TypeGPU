@@ -1,4 +1,4 @@
-import tgpu, { common, d } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
@@ -6,7 +6,8 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const imageBitmap = await createImageBitmap(await (await fetch('/TypeGPU/plums.jpg')).blob());
+const imageBlob = await (await fetch('/TypeGPU/plums.jpg')).blob();
+const imageBitmap = await createImageBitmap(imageBlob);
 
 const testFormats = [
   'rgba8unorm',
@@ -20,14 +21,7 @@ const testFormats = [
 ] as const;
 
 type TestFormat = (typeof testFormats)[number];
-
-const sizePresets = {
-  Original: [imageBitmap.width, imageBitmap.height],
-  '256x256': [256, 256],
-  '512x512': [512, 512],
-  '1024x1024': [1024, 1024],
-  '300x500': [300, 500],
-} as const;
+type WriteKind = 'resize' | 'crop' | 'blob' | 'greenToRed' | 'clear';
 
 const hasFloat32Filterable = root.device.features.has('float32-filterable');
 
@@ -36,7 +30,11 @@ function isFilterable(format: GPUTextureFormat): boolean {
 }
 
 let currentFormat: TestFormat = 'rgba16float';
-let currentSize = sizePresets.Original;
+let currentSize: readonly [number, number] = [imageBitmap.width, imageBitmap.height];
+let cropX = 25;
+let cropY = 25;
+let cropSize = 50;
+let activeWrite: WriteKind = 'resize';
 
 function calculateMipLevels(width: number, height: number): number {
   return Math.floor(Math.log2(Math.min(width, height))) + 1;
@@ -88,20 +86,15 @@ function createPipelineForFormat(format: TestFormat) {
   const fragmentFunction = tgpu.fragmentFn({
     in: { uv: d.vec2f },
     out: d.vec4f,
-  })`{
-    let color = textureSampleBias(layout.$.myTexture, sampler, in.uv, bias);
+  })(({ uv }) => {
+    const color = std.textureSampleBias(layout.$.myTexture, sampler.$, uv, biasUniform.$);
 
-    if (channel == 1) { return vec4f(color.rrr, 1.0); }
-    if (channel == 2) { return vec4f(color.ggg, 1.0); }
-    if (channel == 3) { return vec4f(color.bbb, 1.0); }
-    if (channel == 4) { return vec4f(color.aaa, 1.0); }
+    if (channelUniform.$ === 1) return d.vec4f(color.rrr, 1);
+    if (channelUniform.$ === 2) return d.vec4f(color.ggg, 1);
+    if (channelUniform.$ === 3) return d.vec4f(color.bbb, 1);
+    if (channelUniform.$ === 4) return d.vec4f(color.aaa, 1);
 
     return color;
-  }`.$uses({
-    layout,
-    sampler,
-    bias: biasUniform,
-    channel: channelUniform,
   });
 
   const pipeline = root.createRenderPipeline({
@@ -114,18 +107,89 @@ function createPipelineForFormat(format: TestFormat) {
 }
 
 let texture = createTestTexture(currentFormat, currentSize);
-texture.write(imageBitmap);
-texture.generateMipmaps();
+
+function cropRect() {
+  const sourceSize: readonly [number, number] = [
+    Math.max(1, Math.floor((imageBitmap.width * cropSize) / 100)),
+    Math.max(1, Math.floor((imageBitmap.height * cropSize) / 100)),
+  ];
+  const sourceOrigin: readonly [number, number] = [
+    Math.floor(((imageBitmap.width - sourceSize[0]) * cropX) / 100),
+    Math.floor(((imageBitmap.height - sourceSize[1]) * cropY) / 100),
+  ];
+  return { sourceOrigin, sourceSize };
+}
+
+function writeResizedContent() {
+  texture.write(imageBitmap, { resize: true });
+  texture.generateMipmaps();
+}
+
+function writeCroppedContent() {
+  texture.write({
+    source: imageBitmap,
+    ...cropRect(),
+    size: currentSize,
+    resize: true,
+    filter: 'nearest',
+  });
+  texture.generateMipmaps();
+}
+
+async function writeBlobContent() {
+  const target = texture;
+  await target.writeAsync({ source: imageBlob, size: currentSize, resize: true });
+  if (!target.destroyed) {
+    target.generateMipmaps();
+  }
+}
+
+function writeGreenToRedContent() {
+  texture.clear();
+  texture.write({
+    channels: {
+      r: { source: imageBitmap, from: 'g' },
+    },
+    size: currentSize,
+    resize: true,
+  });
+  texture.generateMipmaps();
+}
+
+function clearContent() {
+  texture.clear();
+}
+
+async function writeActiveContent() {
+  if (activeWrite === 'resize') {
+    writeResizedContent();
+  } else if (activeWrite === 'crop') {
+    writeCroppedContent();
+  } else if (activeWrite === 'blob') {
+    await writeBlobContent();
+  } else if (activeWrite === 'greenToRed') {
+    writeGreenToRedContent();
+  } else {
+    clearContent();
+  }
+}
+
+await writeActiveContent();
 
 let { layout, pipeline } = createPipelineForFormat(currentFormat);
 let bindGroup = root.createBindGroup(layout, { myTexture: texture });
 
 function recreateTexture() {
+  texture.destroy();
   texture = createTestTexture(currentFormat, currentSize);
-  texture.write(imageBitmap);
-  texture.generateMipmaps();
   ({ layout, pipeline } = createPipelineForFormat(currentFormat));
   bindGroup = root.createBindGroup(layout, { myTexture: texture });
+}
+
+function write(writeKind = activeWrite) {
+  activeWrite = writeKind;
+  recreateTexture();
+  return writeActiveContent();
 }
 
 function render() {
@@ -141,23 +205,64 @@ export const controls = defineControls({
     options: [...testFormats],
     onSelectChange: (value) => {
       currentFormat = value;
-      recreateTexture();
+      void write();
     },
   },
-  Size: {
-    initial: 'Original',
-    options: [...Object.keys(sizePresets), 'Random'],
-    onSelectChange: (value) => {
-      if (value === 'Random') {
-        const randomWidth = Math.floor(Math.random() * 1024) + 64;
-        const randomHeight = Math.floor(Math.random() * 1024) + 64;
-        currentSize = [randomWidth, randomHeight];
-        console.log(`Random size selected: ${randomWidth}x${randomHeight}`);
-      } else {
-        currentSize = sizePresets[value as keyof typeof sizePresets] as readonly [number, number];
-      }
-      recreateTexture();
+  'Target width': {
+    initial: currentSize[0],
+    min: 64,
+    max: 1024,
+    step: 1,
+    onSliderChange: (value) => {
+      currentSize = [Math.round(value), currentSize[1]];
+      void write();
     },
+  },
+  'Target height': {
+    initial: currentSize[1],
+    min: 64,
+    max: 1024,
+    step: 1,
+    onSliderChange: (value) => {
+      currentSize = [currentSize[0], Math.round(value)];
+      void write();
+    },
+  },
+  'Crop X': {
+    initial: cropX,
+    min: 0,
+    max: 100,
+    step: 1,
+    onSliderChange: (value) => {
+      cropX = value;
+      void write('crop');
+    },
+  },
+  'Crop Y': {
+    initial: cropY,
+    min: 0,
+    max: 100,
+    step: 1,
+    onSliderChange: (value) => {
+      cropY = value;
+      void write('crop');
+    },
+  },
+  'Crop size': {
+    initial: cropSize,
+    min: 1,
+    max: 100,
+    step: 1,
+    onSliderChange: (value) => {
+      cropSize = value;
+      void write('crop');
+    },
+  },
+  'Write blob': {
+    onButtonClick: () => write('blob'),
+  },
+  'Write G->R': {
+    onButtonClick: () => write('greenToRed'),
   },
   Channel: {
     initial: 'RGBA',
@@ -174,7 +279,7 @@ export const controls = defineControls({
     onSliderChange: (value) => biasUniform.write(value),
   },
   Clear: {
-    onButtonClick: () => texture.clear(),
+    onButtonClick: () => write('clear'),
   },
 });
 
