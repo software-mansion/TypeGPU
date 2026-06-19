@@ -63,7 +63,7 @@ describe('addArgTypesToExternals', () => {
 });
 
 describe('external name collisions', () => {
-  it("throws when rawWgsl fn has an 'Out' external", () => {
+  it("throws when rawWgsl entrypoint has an 'Out' external", () => {
     const vertexFn = tgpu.vertexFn({
       out: { position: d.builtin.position },
     })`{ return Out(); }`.$uses({ Out: d.struct({ prop: d.u32 }) });
@@ -74,17 +74,17 @@ describe('external name collisions', () => {
     expect(() => tgpu.resolve([vertexFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - vertexFn:vertexFn: Key 'Out' appears in externals while being reserved for internals. Please rename this external.]
+      - vertexFn:vertexFn: Key 'Out' appears in externals despite already being used for argument/return type. Please rename this external.]
     `);
 
     expect(() => tgpu.resolve([fragmentFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fragmentFn:fragmentFn: Key 'Out' appears in externals while being reserved for internals. Please rename this external.]
+      - fragmentFn:fragmentFn: Key 'Out' appears in externals despite already being used for argument/return type. Please rename this external.]
     `);
   });
 
-  it("allows an 'Out' external in TGSL implemented functions", () => {
+  it("allows an 'Out' external in TGSL implemented entrypoints", () => {
     const Out = d.struct({ prop: d.u32 });
     const vertexFn = tgpu.vertexFn({
       out: { position: d.builtin.position },
@@ -128,7 +128,7 @@ describe('external name collisions', () => {
     `);
   });
 
-  it("throws when rawWgsl fn has an 'in' external", () => {
+  it("throws when rawWgsl entrypoint has an 'in' external", () => {
     const vertexFn = tgpu.vertexFn({
       in: { vId: d.builtin.vertexIndex },
       out: { position: d.builtin.position },
@@ -141,16 +141,16 @@ describe('external name collisions', () => {
     expect(() => tgpu.resolve([vertexFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - vertexFn:vertexFn: Key 'in' appears in externals while being reserved for internals. Please rename this external.]
+      - vertexFn:vertexFn: Key 'in' appears in externals despite already being used for argument/return type. Please rename this external.]
     `);
     expect(() => tgpu.resolve([fragmentFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fragmentFn:fragmentFn: Key 'in' appears in externals while being reserved for internals. Please rename this external.]
+      - fragmentFn:fragmentFn: Key 'in' appears in externals despite already being used for argument/return type. Please rename this external.]
     `);
   });
 
-  it("allows an 'in' external in TGSL implemented functions", () => {
+  it("allows an 'in' external in TGSL implemented entrypoints", () => {
     const EXT = { in: 1 };
     const vertexFn = tgpu.vertexFn({
       out: { position: d.builtin.position },
@@ -182,6 +182,54 @@ describe('external name collisions', () => {
         const x = 1;
         return vec4f();
       }"
+    `);
+  });
+
+  it('throws when rawWgsl fn has an external colliding with argument type', () => {
+    const Schema = d.struct({ p: d.u32 });
+    const myFn = tgpu.fn([Schema])`(a: S) { let b = S(); }`.$uses({ S: 1 });
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:myFn: Key 'S' appears in externals despite already being used for argument/return type. Please rename this external.]
+    `);
+  });
+
+  it('allows redundant external colliding with argument type', () => {
+    const Schema = d.struct({ p: d.u32 });
+    const myFn = tgpu.fn([Schema])`(a: S) { let b = S(); }`.$uses({ S: Schema });
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "struct Schema {
+        p: u32,
+      }
+
+      fn myFn(a: Schema) { let b = Schema(); }"
+    `);
+  });
+
+  it('throws when rawWgsl fn has an external colliding with return type', () => {
+    const Schema = d.struct({ p: d.u32 });
+    const myFn = tgpu.fn([], Schema)`() -> S { let a = S(); }`.$uses({ S: 1 });
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:myFn: Key 'S' appears in externals despite already being used for argument/return type. Please rename this external.]
+    `);
+  });
+
+  it('allows redundant external colliding with return type', () => {
+    const Schema = d.struct({ p: d.u32 });
+    const myFn = tgpu.fn([], Schema)`() -> S { let a = S(); }`.$uses({ S: Schema });
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "struct Schema {
+        p: u32,
+      }
+
+      fn myFn() -> Schema { let a = Schema(); }"
     `);
   });
 });

@@ -24,9 +24,9 @@ export function mergeFunctionExternals(fnExternals: FnExternals): ExternalMap {
   const result: ExternalMap = Object.defineProperties({}, Object.getOwnPropertyDescriptors(base));
   for (const flatExternal of [fnExternals.args, fnExternals.out].filter((e) => e !== undefined)) {
     for (const [key, value] of Object.entries(flatExternal)) {
-      if (key in result) {
+      if (key in result && result[key] !== value) {
         throw new Error(
-          `Key '${key}' appears in externals while being reserved for internals. Please rename this external.`,
+          `Key '${key}' appears in externals despite already being used for argument/return type. Please rename this external.`,
         );
       }
       result[key] = value;
