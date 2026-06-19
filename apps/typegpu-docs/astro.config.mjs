@@ -8,6 +8,7 @@ import { defineConfig } from 'astro/config';
 import starlightBlog from 'starlight-blog';
 import starlightTypeDoc, { typeDocSidebarGroup } from 'starlight-typedoc';
 import typegpu from 'unplugin-typegpu/rollup';
+import { comptime } from 'comptime/vite';
 import { imagetools } from 'vite-imagetools';
 import wasm from 'vite-plugin-wasm';
 import basicSsl from '@vitejs/plugin-basic-ssl';
@@ -55,6 +56,10 @@ export default defineConfig({
       typegpu({ include: [/\.m?[jt]sx?/] }),
       imagetools(),
       {
+        ...comptime({ timeout: 60_000 }),
+        enforce: 'post',
+      },
+      {
         ...basicSsl(),
         apply(_, { mode }) {
           return DEV && mode === 'https';
@@ -73,21 +78,23 @@ export default defineConfig({
         starlightBlog({
           navigation: 'none',
         }),
-        starlightTypeDoc({
-          sidebar: {
-            label: 'Reference',
-          },
-          entryPoints: [
-            '../../packages/typegpu/src/index.d.ts',
-            '../../packages/typegpu/src/data/index.ts',
-            '../../packages/typegpu/src/std/index.ts',
-          ],
-          tsconfig: '../../packages/typegpu/tsconfig.json',
-          typeDoc: {
-            excludeInternal: true,
-            excludeReferences: true,
-          },
-        }),
+        // Only generating typedoc in production to speed up the dev server
+        !DEV &&
+          starlightTypeDoc({
+            sidebar: {
+              label: 'Reference',
+            },
+            entryPoints: [
+              '../../packages/typegpu/src/index.d.ts',
+              '../../packages/typegpu/src/data/index.ts',
+              '../../packages/typegpu/src/std/index.ts',
+            ],
+            tsconfig: '../../packages/typegpu/tsconfig.json',
+            typeDoc: {
+              excludeInternal: true,
+              excludeReferences: true,
+            },
+          }),
       ]),
       logo: {
         light: './src/assets/typegpu-logo-light.svg',
