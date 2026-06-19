@@ -60,7 +60,7 @@ import type { IOData } from './core/function/fnTypes.ts';
 import { AutoStruct } from './data/autoStruct.ts';
 import { EntryInputRouter } from './core/function/entryInputRouter.ts';
 import type { FunctionArgument } from './tgsl/shaderGenerator_members.ts';
-import { validateIdentifier, sanitizePrimer } from './nameUtils.ts';
+import { validateIdentifier, sanitizePrimer, bannedTokens } from './nameUtils.ts';
 
 /**
  * Inserted into bind group entry definitions that belong
@@ -417,6 +417,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     this.gen = opts.shaderGenerator ?? wgslGenerator;
     this.#logGenerator = opts.root ? new LogGeneratorImpl(opts.root) : new LogGeneratorNullImpl();
     this.#namespaceInternal = opts.namespace[$internal];
+  }
+
+  isIdentifierBanned(name: string): boolean {
+    return bannedTokens.has(name);
   }
 
   isIdentifierTaken(name: string): boolean {
