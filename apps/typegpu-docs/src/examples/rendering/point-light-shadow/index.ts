@@ -7,7 +7,6 @@ import { CameraData, InstanceData, instanceLayout, VertexData, vertexLayout } fr
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
-const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -356,28 +355,11 @@ let lastTime: number | null = null;
 let time = 0;
 let animationFrameId: number;
 
-function render(timestamp: number) {
-  const dt = lastTime !== null ? (timestamp - lastTime) / 1000 : 0;
-  lastTime = timestamp;
-  time += dt;
-
-  for (let i = 0; i < orbitingCubes.length; i++) {
-    const offset = (i / orbitingCubes.length) * Math.PI * 2;
-    const angle = time * 0.5 + offset;
-    const radius = 4 + Math.sin(time * 2 + offset * 3) * 0.5;
-    const x = Math.cos(angle) * radius;
-    const z = Math.sin(angle) * radius;
-    const y = 2 + Math.sin(time * 1.5 + offset * 2) * 1.5;
-    orbitingCubes[i].position = d.vec3f(x, y, z);
-    orbitingCubes[i].rotation = d.vec3f(time, time * 0.5, 0);
-  }
-
-  scene.update();
+function render() {
   pointLight.renderShadowMaps(pipelineDepthOne, renderLayout, scene);
 
   if (showDepthPreview) {
     pipelinePreview.withColorAttachment({ view: context }).draw(3);
-    animationFrameId = requestAnimationFrame(render);
     return;
   }
 
@@ -415,17 +397,41 @@ function render(timestamp: number) {
     .withIndexBuffer(BoxGeometry.indexBuffer)
     .with(vertexLayout, BoxGeometry.vertexBuffer)
     .drawIndexed(BoxGeometry.indexCount);
-
-  animationFrameId = requestAnimationFrame(render);
 }
-animationFrameId = requestAnimationFrame(render);
 
-const resizeObserver = new ResizeObserver((entries) => {
-  for (const entry of entries) {
-    const width = entry.contentBoxSize[0].inlineSize;
-    const height = entry.contentBoxSize[0].blockSize;
-    canvas.width = Math.max(1, Math.min(width, device.limits.maxTextureDimension2D));
-    canvas.height = Math.max(1, Math.min(height, device.limits.maxTextureDimension2D));
+function frame(timestamp: number) {
+  animationFrameId = requestAnimationFrame(frame);
+
+  const dt = lastTime !== null ? (timestamp - lastTime) / 1000 : 0;
+  lastTime = timestamp;
+  time += dt;
+
+  for (let i = 0; i < orbitingCubes.length; i++) {
+    const offset = (i / orbitingCubes.length) * Math.PI * 2;
+    const angle = time * 0.5 + offset;
+    const radius = 4 + Math.sin(time * 2 + offset * 3) * 0.5;
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+    const y = 2 + Math.sin(time * 1.5 + offset * 2) * 1.5;
+    orbitingCubes[i].position = d.vec3f(x, y, z);
+    orbitingCubes[i].rotation = d.vec3f(time, time * 0.5, 0);
+  }
+
+  scene.update();
+
+  render();
+}
+
+animationFrameId = requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
 
     depthTexture = root
       .createTexture({
@@ -441,9 +447,10 @@ const resizeObserver = new ResizeObserver((entries) => {
         sampleCount: 4,
       })
       .$usage('render');
-  }
+
+    render();
+  },
 });
-resizeObserver.observe(canvas);
 
 const initialCamPos = { x: 5, y: 5, z: -5 };
 let theta = Math.atan2(initialCamPos.z, initialCamPos.x);
@@ -651,7 +658,7 @@ export function onCleanup() {
   window.removeEventListener('mousemove', mouseMoveEventListener);
   window.removeEventListener('touchend', touchEndEventListener);
   window.removeEventListener('touchmove', touchMoveEventListener);
-  resizeObserver.disconnect();
+  autoResizer.detach();
   root.destroy();
 }
 

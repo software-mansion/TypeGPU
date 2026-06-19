@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { type CubemapNames, cubeVertices, loadCubemap } from './cubemap.ts';
 import { Camera, CubeVertex, DirectionalLight, Material, Vertex } from './dataTypes.ts';
@@ -273,13 +273,10 @@ loop();
 
 // #region Example controls and cleanup
 
-const resizeObserver = new ResizeObserver((entries) => {
-  for (const entry of entries) {
-    const dpr = window.devicePixelRatio;
-    const width = entry.contentRect.width;
-    const height = entry.contentRect.height;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
     const newProj = m.mat4.perspective(
       Math.PI / 4,
       canvas.width / canvas.height,
@@ -288,9 +285,10 @@ const resizeObserver = new ResizeObserver((entries) => {
       d.mat4x4f(),
     );
     cameraBuffer.patch({ projection: newProj });
-  }
+
+    render();
+  },
 });
-resizeObserver.observe(canvas);
 
 // Variables for mouse interaction.
 let isDragging = false;
@@ -499,7 +497,7 @@ export function onCleanup() {
   window.removeEventListener('mousemove', mouseMoveEventListener);
   window.removeEventListener('touchmove', touchMoveEventListener);
   window.removeEventListener('touchend', touchEndEventListener);
-  resizeObserver.unobserve(canvas);
+  autoResizer.detach();
   icosphereGenerator.destroy();
   root.destroy();
 }

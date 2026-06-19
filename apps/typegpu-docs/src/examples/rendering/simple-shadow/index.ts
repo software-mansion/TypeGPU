@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
 import { createCuboid, createPlane } from './geometry.ts';
 import {
@@ -280,11 +280,7 @@ function updateLightDirection(dir: d.v3f) {
   });
 }
 
-// Render loop
-let frameId: number | null = null;
 function render() {
-  frameId = requestAnimationFrame(render);
-
   root['~unstable'].beginRenderPass(
     {
       colorAttachments: [],
@@ -338,23 +334,36 @@ function render() {
     },
   );
 }
-frameId = requestAnimationFrame(render);
 
-const resizeObserver = new ResizeObserver(() => {
-  canvasTextures = createCanvasTextures();
+// Render loop
+let frameId: number | null = null;
+function frame() {
+  frameId = requestAnimationFrame(frame);
 
-  const newProjection = mat4.perspective(
-    Math.PI / 4,
-    canvas.width / canvas.height,
-    0.1,
-    100,
-    d.mat4x4f(),
-  );
-  cameraUniform.patch({
-    projection: newProjection,
-  });
+  render();
+}
+frameId = requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    canvasTextures = createCanvasTextures();
+
+    const newProjection = mat4.perspective(
+      Math.PI / 4,
+      canvas.width / canvas.height,
+      0.1,
+      100,
+      d.mat4x4f(),
+    );
+    cameraUniform.patch({
+      projection: newProjection,
+    });
+
+    render();
+  },
 });
-resizeObserver.observe(canvas);
 
 export const controls = defineControls({
   'camera X': {
@@ -451,6 +460,6 @@ export function onCleanup() {
   if (frameId !== null) {
     cancelAnimationFrame(frameId);
   }
-  resizeObserver.disconnect();
+  autoResizer.detach();
   root.destroy();
 }

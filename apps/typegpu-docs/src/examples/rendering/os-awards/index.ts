@@ -381,22 +381,7 @@ function createDepthTexture() {
   return { texture, view: texture.createView() };
 }
 
-let depth = createDepthTexture();
-const resizeObserver = new ResizeObserver(() => {
-  depth.texture.destroy();
-  depth = createDepthTexture();
-});
-resizeObserver.observe(canvas);
-
-let exampleDestroyed = false;
-let firstFrameDrawn = false;
-
-function frame(timeMs: number) {
-  if (exampleDestroyed) {
-    return;
-  }
-  updateAwardTransform(timeMs);
-
+function render() {
   envPipeline.withColorAttachment({ view: context }).draw(3);
 
   awardPipeline
@@ -410,6 +395,29 @@ function frame(timeMs: number) {
     .with(awardVertexLayout, award.vertexBuffer)
     .withIndexBuffer(award.indexBuffer)
     .drawIndexed(award.indexCount);
+}
+
+let depth = createDepthTexture();
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    depth.texture.destroy();
+    depth = createDepthTexture();
+    render();
+  },
+});
+
+let exampleDestroyed = false;
+let firstFrameDrawn = false;
+
+function frame(timeMs: number) {
+  if (exampleDestroyed) {
+    return;
+  }
+  updateAwardTransform(timeMs);
+
+  render();
 
   if (!firstFrameDrawn) {
     loadingScreen.style.display = 'none';
@@ -432,6 +440,6 @@ export const controls = defineControls({
 export function onCleanup() {
   exampleDestroyed = true;
   cleanupCamera();
-  resizeObserver.unobserve(canvas);
+  autoResizer.detach();
   root.destroy();
 }

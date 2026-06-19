@@ -625,6 +625,18 @@ function run(timestamp: number) {
 }
 animationFrame = requestAnimationFrame(run);
 
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    drawFrame();
+  },
+});
+
 export const controls = defineControls({
   size: {
     initial: 32,
@@ -694,6 +706,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);
+  autoResizer.detach();
   root.destroy();
 }
 

@@ -1,5 +1,5 @@
 import type { RenderFlag, TgpuBindGroup, TgpuBuffer, TgpuTexture, VertexFlag } from 'typegpu';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
 
 // Initialization
@@ -30,7 +30,7 @@ const vertexLayout = tgpu.vertexLayout(d.arrayOf(Vertex));
 
 // Scene Setup
 
-const aspect = canvas.clientWidth / canvas.clientHeight;
+const aspect = 1;
 const target = d.vec3f(0, 0, 0);
 const cameraInitialPos = d.vec4f(12, 5, 12, 1);
 
@@ -460,10 +460,18 @@ canvas.addEventListener(
   { passive: false },
 );
 
-const resizeObserver = new ResizeObserver(() => {
-  createDepthAndMsaaTextures();
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+
+    createDepthAndMsaaTextures();
+  },
 });
-resizeObserver.observe(canvas);
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrameId);
@@ -471,7 +479,7 @@ export function onCleanup() {
   window.removeEventListener('mousemove', mouseMoveEventListener);
   window.removeEventListener('touchend', touchEndEventListener);
   window.removeEventListener('touchmove', touchMoveEventListener);
-  resizeObserver.disconnect();
+  autoResizer.detach();
   root.destroy();
 }
 

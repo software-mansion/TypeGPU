@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
@@ -7,7 +7,7 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-const resolution = d.vec2f(canvas.width, canvas.height);
+const resolution = d.vec2f(1024, 1024);
 
 const Agent = d.struct({
   position: d.vec2f,
@@ -217,9 +217,16 @@ const renderBindGroups = [0, 1].map((i) =>
   }),
 );
 
-let lastTime: number | null = null;
 let currentTexture = 0;
 
+function render() {
+  renderPipeline
+    .withColorAttachment({ view: context })
+    .with(renderBindGroups[1 - currentTexture])
+    .draw(3);
+}
+
+let lastTime: number | null = null;
 function frame(now: number) {
   const deltaTimeValue = Math.min(lastTime !== null ? (now - lastTime) / 1000 : 0, 0.1);
   lastTime = now;
@@ -232,16 +239,25 @@ function frame(now: number) {
 
   computePipeline.with(bindGroups[currentTexture]).dispatchWorkgroups(Math.ceil(NUM_AGENTS / 64));
 
-  renderPipeline
-    .withColorAttachment({ view: context })
-    .with(renderBindGroups[1 - currentTexture])
-    .draw(3);
+  render();
 
   currentTexture = 1 - currentTexture;
 
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 // #region Example controls and cleanup
 
@@ -294,6 +310,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  autoResizer.detach();
   root.destroy();
 }
 

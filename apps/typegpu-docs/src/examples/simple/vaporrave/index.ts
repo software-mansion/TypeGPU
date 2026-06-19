@@ -1,6 +1,6 @@
 import { perlin3d } from '@typegpu/noise';
 import { sdPlane } from '@typegpu/sdf';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 
 import * as c from './constants.ts';
 import { circles, grid } from './floor.ts';
@@ -132,6 +132,14 @@ let renderPipeline = root
     fragment: fragmentMain,
   });
 
+function render() {
+  floorAngleUniform.write(floorAngle);
+  sphereAngleUniform.write(sphereAngle);
+  resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
+
+  renderPipeline.withColorAttachment({ view: context }).draw(3);
+}
+
 let animationFrame: number;
 let floorAngle = 0;
 let sphereAngle = 0;
@@ -146,21 +154,26 @@ function run(timestamp: number) {
   sphereAngle += delta * sphereSpeed;
   sphereAngle %= c.NUM_CYCLES * Math.PI * 2;
 
-  floorAngleUniform.write(floorAngle);
-  sphereAngleUniform.write(sphereAngle);
-  resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
-
-  renderPipeline.withColorAttachment({ view: context }).draw(3);
+  render();
 
   animationFrame = requestAnimationFrame(run);
 }
 
 animationFrame = requestAnimationFrame(run);
 
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    render();
+  },
+});
+
 // #region Example controls and cleanup
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);
+  autoResizer.detach();
   root.destroy();
 }
 

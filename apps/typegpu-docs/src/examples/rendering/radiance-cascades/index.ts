@@ -475,15 +475,23 @@ const dragController = new DragController(canvas, onDrag, onDrag);
 // #region Example controls and cleanup
 
 let resizeTimeout: ReturnType<typeof setTimeout>;
-const resizeObserver = new ResizeObserver(() => {
-  clearTimeout(resizeTimeout);
-  resizeTimeout = setTimeout(recreateSizedResources, 100);
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(recreateSizedResources, 100);
+
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+  },
 });
-resizeObserver.observe(canvas);
 
 export function onCleanup() {
   dragController.destroy();
-  resizeObserver.disconnect();
+  autoResizer.detach();
   clearTimeout(resizeTimeout);
   if (frameId !== null) {
     cancelAnimationFrame(frameId);

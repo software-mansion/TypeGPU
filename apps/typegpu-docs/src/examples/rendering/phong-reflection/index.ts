@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import * as p from './params.ts';
 import {
   ExampleControls,
@@ -101,9 +101,7 @@ let depthTexture = root.device.createTexture({
   usage: GPUTextureUsage.RENDER_ATTACHMENT,
 });
 
-// frame
-let frameId: number;
-function frame() {
+function render() {
   renderPipeline
     .withColorAttachment({
       view: context,
@@ -117,10 +115,29 @@ function frame() {
     })
     .with(modelVertexLayout, model.vertexBuffer)
     .draw(model.polygonCount);
+}
 
+// frame
+let frameId: number;
+function frame() {
+  render();
   frameId = requestAnimationFrame(frame);
 }
 frameId = requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    depthTexture.destroy();
+    depthTexture = root.device.createTexture({
+      size: [canvas.width, canvas.height, 1],
+      format: 'depth24plus',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    render();
+  },
+});
 
 // #region Example controls and cleanup
 export const controls = defineControls({
@@ -165,20 +182,10 @@ export const controls = defineControls({
   },
 });
 
-const resizeObserver = new ResizeObserver(() => {
-  depthTexture.destroy();
-  depthTexture = root.device.createTexture({
-    size: [canvas.width, canvas.height, 1],
-    format: 'depth24plus',
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  });
-});
-resizeObserver.observe(canvas);
-
 export function onCleanup() {
   cancelAnimationFrame(frameId);
   cleanupCamera();
-  resizeObserver.unobserve(canvas);
+  autoResizer.detach();
   root.destroy();
 }
 

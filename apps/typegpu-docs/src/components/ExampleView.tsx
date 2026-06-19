@@ -1,6 +1,6 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
-import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom.ts';
 import { codeEditorShownAtom, tsoverUsedAtom } from '../utils/examples/exampleViewStateAtoms.ts';
 import { ExecutionCancelledError } from '../utils/examples/errors.ts';
@@ -91,7 +91,6 @@ export function ExampleView({ example, common }: Props) {
   }, [htmlFile]);
 
   useExample(tsImport, setSnackbarText);
-  useResizableCanvas(exampleHtmlRef);
 
   return (
     <>
@@ -205,85 +204,6 @@ function GPUUnsupportedPanel() {
       </a>
     </div>
   );
-}
-
-function useResizableCanvas(exampleHtmlRef: RefObject<HTMLDivElement | null>) {
-  useEffect(() => {
-    const canvases = exampleHtmlRef.current?.querySelectorAll('canvas') as
-      | HTMLCanvasElement[]
-      | undefined;
-    const observers: ResizeObserver[] = [];
-
-    for (const canvas of canvases ?? []) {
-      if ('width' in canvas.attributes || 'height' in canvas.attributes) {
-        continue;
-      }
-
-      const newCanvas = document.createElement('canvas');
-      const container = document.createElement('div');
-      const frame = document.createElement('div');
-
-      frame.appendChild(newCanvas);
-      container.appendChild(frame);
-
-      container.className = 'flex flex-1 justify-center items-center w-full h-full md:w-auto';
-      container.style.containerType = 'size';
-
-      frame.className = 'relative';
-
-      if (canvas.dataset.fitToContainer !== undefined) {
-        frame.style.width = '100%';
-        frame.style.height = '100%';
-      } else {
-        const aspectRatio = canvas.dataset.aspectRatio ?? '1';
-        frame.style.aspectRatio = aspectRatio;
-        frame.style.height = `min(100cqh, calc(100cqw/(${aspectRatio})))`;
-      }
-
-      for (const prop of canvas.style) {
-        // @ts-expect-error
-        newCanvas.style[prop] = canvas.style[prop];
-      }
-      for (const attribute of canvas.attributes) {
-        // @ts-expect-error
-        newCanvas[attribute.name] = attribute.value;
-      }
-      newCanvas.className = 'absolute w-full h-full';
-
-      canvas.parentElement?.replaceChild(container, canvas);
-
-      const onResize: ResizeObserverCallback = ([entry]) => {
-        if (!entry) {
-          return;
-        }
-
-        // Despite what the types say this property does not exist in Safari (hence the optional chaining).
-        const dpcb = entry.devicePixelContentBoxSize?.[0] as ResizeObserverSize | undefined;
-
-        const dpr = dpcb ? 1 : window.devicePixelRatio || 1;
-        const box =
-          dpcb ??
-          (Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize);
-
-        if (!box) {
-          return;
-        }
-
-        newCanvas.width = Math.round(box.inlineSize * dpr);
-        newCanvas.height = Math.round(box.blockSize * dpr);
-      };
-
-      const observer = new ResizeObserver(onResize);
-      observer.observe(newCanvas);
-      observers.push(observer);
-    }
-
-    return () => {
-      for (const observer of observers) {
-        observer.disconnect();
-      }
-    };
-  }, [exampleHtmlRef]);
 }
 
 /**

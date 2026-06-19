@@ -345,6 +345,16 @@ const stepOnce = (timestamp: number) => {
     );
 };
 
+function render() {
+  const chosenDisplayPipeline =
+    chosenPipeline === 'bitpacked' ? bitpackedDisplayPipeline : displayPipeline;
+
+  chosenDisplayPipeline
+    .withColorAttachment({ view: context })
+    .with(displayBindGroups[1 - even])
+    .draw(3);
+}
+
 let frameId: number;
 
 function frame(timestamp: number) {
@@ -390,17 +400,23 @@ function frame(timestamp: number) {
     }
   }
 
-  const chosenDisplayPipeline =
-    chosenPipeline === 'bitpacked' ? bitpackedDisplayPipeline : displayPipeline;
-
-  chosenDisplayPipeline
-    .withColorAttachment({ view: context })
-    .with(displayBindGroups[1 - even])
-    .draw(3);
+  render();
 
   frameId = requestAnimationFrame(frame);
 }
 frameId = requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 // #region Example controls & Cleanup
 
@@ -506,6 +522,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
+  autoResizer.detach();
   root.destroy();
 }
 

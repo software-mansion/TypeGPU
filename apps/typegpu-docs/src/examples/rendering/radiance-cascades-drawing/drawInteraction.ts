@@ -42,9 +42,17 @@ export function createDrawInteraction({ canvas, onDraw, onStop }: DrawInteractio
 
   function mousePosition(e: MouseEvent): Point {
     const rect = canvas.getBoundingClientRect();
+
+    // Taking into account the square aspect ratio
+    const centerX = rect.x + rect.width / 2;
+    const centerY = rect.y + rect.height / 2;
+    const size = Math.min(rect.width, rect.height);
+    const squareLeft = centerX - size / 2;
+    const squareTop = centerY - size / 2;
+
     return {
-      x: (e.clientX - rect.left) / rect.width,
-      y: (e.clientY - rect.top) / rect.height,
+      x: (e.clientX - squareLeft) / size,
+      y: (e.clientY - squareTop) / size,
     };
   }
 

@@ -1,4 +1,4 @@
-import tgpu, { d, type StorageFlag, type TgpuBindGroup, type TgpuBuffer } from 'typegpu';
+import tgpu, { common, d, type StorageFlag, type TgpuBindGroup, type TgpuBuffer } from 'typegpu';
 import { computeCollisionsShader, computeGravityShader } from './compute.ts';
 import {
   collisionBehaviors,
@@ -250,15 +250,18 @@ export const controls = defineControls({
   },
 });
 
-const resizeObserver = new ResizeObserver(() => {
-  depthTexture.destroy();
-  depthTexture = root.device.createTexture({
-    size: [canvas.width, canvas.height, 1],
-    format: 'depth24plus',
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  });
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    depthTexture.destroy();
+    depthTexture = root.device.createTexture({
+      size: [canvas.width, canvas.height, 1],
+      format: 'depth24plus',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+  },
 });
-resizeObserver.observe(canvas);
 
 function hideHelp() {
   const helpElem = document.getElementById('help');
@@ -273,7 +276,7 @@ for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
 export function onCleanup() {
   destroyed = true;
   cleanupCamera();
-  resizeObserver.unobserve(canvas);
+  autoResizer.detach();
   root.destroy();
 }
 

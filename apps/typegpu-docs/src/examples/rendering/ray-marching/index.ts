@@ -1,5 +1,5 @@
 import { sdBoxFrame3d, sdPlane, sdSphere } from '@typegpu/sdf';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -232,7 +232,13 @@ function run(timestamp: number) {
 
 animationFrame = requestAnimationFrame(run);
 
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+});
+
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);
+  autoResizer.detach();
   root.destroy();
 }

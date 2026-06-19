@@ -1,5 +1,5 @@
 import { perlin3d } from '@typegpu/noise';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const mainVertex = tgpu.vertexFn({
@@ -135,16 +135,30 @@ const pipeline = root.createRenderPipeline({
 
 let isRunning = true;
 
-function draw(timestamp: number) {
+function render() {
+  pipeline.withColorAttachment({ view: context }).draw(3);
+}
+
+function frame(timestamp: number) {
   if (!isRunning) return;
 
   time.write((timestamp * 0.001) % 1000);
-
-  pipeline.withColorAttachment({ view: context }).draw(3);
-
-  requestAnimationFrame(draw);
+  render();
+  requestAnimationFrame(frame);
 }
-requestAnimationFrame(draw);
+requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 // #region Example controls and cleanup
 
@@ -162,6 +176,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   isRunning = false;
+  autoResizer.detach();
   root.destroy();
 }
 

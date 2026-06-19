@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import { ioLayout, type LayerData, type Network, weightsBiasesLayout } from './data.ts';
 import { downloadLayers } from './helpers.ts';
 import { defineControls } from '../../common/defineControls.ts';
@@ -255,6 +255,8 @@ updateSubgroupsStatus();
 
 run();
 
+const autoResizer = common.attachAutoResizer({ root, canvas });
+
 canvas.addEventListener('mousedown', () => {
   uiState.isDrawing = true;
 });
@@ -395,6 +397,7 @@ export function onCleanup() {
   cancelAnimationFrame(animationFrameId);
   window.removeEventListener('mouseup', mouseUpEventListener);
   window.removeEventListener('touchend', touchEndEventListener);
+  autoResizer.detach();
   root.destroy();
 }
 

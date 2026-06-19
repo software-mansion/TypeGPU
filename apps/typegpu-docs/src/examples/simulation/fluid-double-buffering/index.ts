@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { d, std, type TgpuBufferMutable, type TgpuBufferReadonly } from 'typegpu';
+import tgpu, { common, d, std, type TgpuBufferMutable, type TgpuBufferReadonly } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const MAX_GRID_SIZE = 1024;
@@ -537,6 +537,18 @@ const runner = (timestamp: number) => {
 
 animationFrameId = requestAnimationFrame(runner);
 
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    primary.render();
+  },
+});
+
 export const controls = defineControls({
   'source intensity': {
     initial: sourceIntensity,
@@ -598,5 +610,6 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrameId);
+  autoResizer.detach();
   root.destroy();
 }

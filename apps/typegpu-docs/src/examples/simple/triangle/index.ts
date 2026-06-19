@@ -1,22 +1,22 @@
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 
 // Constants and helper functions
 
 const purple = d.vec4f(0.769, 0.392, 1, 1);
 const blue = d.vec4f(0.114, 0.447, 0.941, 1);
 
-const getGradientColor = (ratio: number) => {
+function getGradientColor(ratio: number) {
   'use gpu';
   return std.mix(purple, blue, ratio);
-};
+}
 
-const pos = tgpu.const(d.arrayOf(d.vec2f, 3), [
+const pos = tgpu.const(d.arrayOf(d.vec2f), [
   d.vec2f(0.0, 0.5),
   d.vec2f(-0.5, -0.5),
   d.vec2f(0.5, -0.5),
 ]);
 
-const uv = tgpu.const(d.arrayOf(d.vec2f, 3), [
+const uv = tgpu.const(d.arrayOf(d.vec2f), [
   d.vec2f(0.5, 1.0),
   d.vec2f(0.0, 0.0),
   d.vec2f(1.0, 0.0),
@@ -39,18 +39,32 @@ const pipeline = root.createRenderPipeline({
   },
 });
 
-// Setting up the canvas and drawing to it
+// Setting up the canvas
 
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({
-  canvas: document.querySelector('canvas') as HTMLCanvasElement,
+  canvas,
   alphaMode: 'premultiplied',
 });
 
-pipeline.withColorAttachment({ view: context }).draw(3);
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+
+    // Drawing once, and then each time the canvas resizes
+    pipeline.withColorAttachment({ view: context }).draw(3);
+  },
+});
 
 // #region Cleanup
 
 export function onCleanup() {
+  autoResizer.detach();
   root.destroy();
 }
 

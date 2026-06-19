@@ -6,7 +6,7 @@ import {
   polylineVariableWidth,
   startCapSlot,
 } from '@typegpu/geometry';
-import tgpu from 'typegpu';
+import tgpu, { common } from 'typegpu';
 import { arrayOf, builtin, f32, i32, struct, u16, u32, vec2f, vec4f } from 'typegpu/data';
 import { clamp, mix, normalize, select } from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';
@@ -267,6 +267,18 @@ const runAnimationFrame = () => {
 };
 runAnimationFrame();
 
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    draw();
+  },
+});
+
 // #region Example controls & Cleanup
 
 export const controls = defineControls({
@@ -279,6 +291,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  autoResizer.detach();
   root.destroy();
   root.device.destroy();
   cancelAnimationFrame(frameId);

@@ -1,5 +1,5 @@
 import { perlin2d } from '@typegpu/noise';
-import tgpu, { d } from 'typegpu';
+import tgpu, { common, d } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { defineControls } from '../../common/defineControls.ts';
 import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
@@ -147,9 +147,7 @@ let useBundles = true;
 
 let disposed = false;
 
-function frame() {
-  if (disposed) return;
-
+function render() {
   if (depthTexture.width !== canvas.width || depthTexture.height !== canvas.height) {
     depthTexture.destroy();
     depthTexture = root.device.createTexture({
@@ -191,11 +189,25 @@ function frame() {
       }
     }
   });
+}
+
+function frame() {
+  if (disposed) return;
+
+  render();
 
   requestAnimationFrame(frame);
 }
 
 requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    render();
+  },
+});
 
 // #region Example controls and cleanup
 
@@ -218,6 +230,7 @@ export const controls = defineControls({
 export function onCleanup() {
   disposed = true;
   cleanupCamera();
+  autoResizer.detach();
   perlinCache.destroy();
   depthTexture.destroy();
   root.destroy();

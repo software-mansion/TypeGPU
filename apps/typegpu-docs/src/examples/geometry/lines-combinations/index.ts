@@ -10,7 +10,7 @@ import {
   startCapSlot,
   arrowCapParamsSlot,
 } from '@typegpu/geometry';
-import tgpu, { type ColorAttachment } from 'typegpu';
+import tgpu, { common, type ColorAttachment } from 'typegpu';
 import {
   arrayOf,
   builtin,
@@ -73,8 +73,6 @@ const createDepthAndMsaaTextures = () => {
 };
 
 createDepthAndMsaaTextures();
-const resizeObserver = new ResizeObserver(createDepthAndMsaaTextures);
-resizeObserver.observe(canvas);
 
 const Uniforms = struct({
   time: f32,
@@ -409,6 +407,20 @@ const runAnimationFrame = (timeMs: number) => {
 };
 runAnimationFrame(0);
 
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+
+    createDepthAndMsaaTextures();
+    draw(time);
+  },
+});
+
 const fillOptions = {
   none: 0,
   solid: 1,
@@ -505,6 +517,7 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
+  autoResizer.detach();
   root.destroy();
   cancelAnimationFrame(frameId);
 }

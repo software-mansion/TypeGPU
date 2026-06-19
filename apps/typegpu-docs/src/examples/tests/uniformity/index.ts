@@ -83,14 +83,17 @@ export const controls = defineControls({
   },
 });
 
-const resizeObserver = new ResizeObserver(() => {
-  canvasRatioUniform.write(canvas.width / canvas.height);
-  redraw();
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    canvasRatioUniform.write(canvas.width / canvas.height);
+    redraw();
+  },
 });
-resizeObserver.observe(canvas);
 
 export function onCleanup() {
-  resizeObserver.disconnect();
+  autoResizer.detach();
   root.destroy();
 }
 

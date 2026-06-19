@@ -4,6 +4,8 @@ import tgpu, { common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 import { createDrawInteraction } from './drawInteraction.ts';
 
+const [sceneWidth, sceneHeight] = [1024, 1024];
+
 const root = await tgpu.init();
 
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
@@ -15,12 +17,21 @@ context.configure({
   format: presentationFormat,
 });
 
-const [width, height] = [canvas.width, canvas.height];
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+  },
+});
 
 // Scene texture + views.
 const sceneTexture = root
   .createTexture({
-    size: [width, height],
+    size: [sceneWidth, sceneHeight],
     format: 'rgba16float',
   })
   .$usage('storage', 'sampled');
@@ -80,7 +91,7 @@ const drawCompute = root.createGuardedComputePipeline((x, y) => {
   std.textureStore(sceneWriteView.$, d.vec2u(x, y), out);
 });
 
-const floodSize = { width: canvas.width, height: canvas.height };
+const floodSize = { width: sceneWidth, height: sceneHeight };
 const floodRunner = sdf
   .createJumpFlood({
     root,
@@ -114,7 +125,7 @@ const floodColorView = floodRunner.colorOutput.createView();
 
 const radianceRunner = rc.createRadianceCascades({
   root,
-  size: { width: Math.floor(width / 4), height: Math.floor(height / 4) },
+  size: { width: Math.floor(sceneWidth / 4), height: Math.floor(sceneHeight / 4) },
   sdfResolution: floodSize,
   sdf: (uv) => {
     'use gpu';
@@ -176,7 +187,7 @@ const displayPipeline = root.createRenderPipeline({
 let sceneDirty = false;
 
 function drawScene() {
-  drawCompute.dispatchThreads(width, height);
+  drawCompute.dispatchThreads(sceneWidth, sceneHeight);
   sceneDirty = true;
 }
 
@@ -247,6 +258,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
+  autoResizer.detach();
   root.destroy();
 }
 

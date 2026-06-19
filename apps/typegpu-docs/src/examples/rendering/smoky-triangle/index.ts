@@ -1,5 +1,5 @@
 import { perlin3d } from '@typegpu/noise';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 
 const Params = d.struct({
   fromColor: d.vec3f,
@@ -80,6 +80,10 @@ const pipeline = root.pipe(perlinCache.inject()).createRenderPipeline({
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
+function render() {
+  pipeline.withColorAttachment({ view: context }).draw(3);
+}
+
 let frameId: number;
 function frame(timestamp: number) {
   paramsUniform.patch({
@@ -87,11 +91,23 @@ function frame(timestamp: number) {
     grainSeed: Math.floor(Math.random() * 100),
   });
 
-  pipeline.withColorAttachment({ view: context }).draw(3);
+  render();
 
   frameId = requestAnimationFrame(frame);
 }
 frameId = requestAnimationFrame(frame);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+    render();
+  },
+});
 
 export const controls = {
   Distortion: {
@@ -164,5 +180,6 @@ export const controls = {
 
 export function onCleanup() {
   cancelAnimationFrame(frameId);
+  autoResizer.detach();
   root.destroy();
 }

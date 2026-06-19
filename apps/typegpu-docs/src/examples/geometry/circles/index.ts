@@ -1,5 +1,5 @@
 import { circle, circleVertexCount } from '@typegpu/geometry';
-import tgpu, { d, std as s } from 'typegpu';
+import tgpu, { common, d, std as s } from 'typegpu';
 
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 const canvas = document.querySelector('canvas');
@@ -45,8 +45,6 @@ const createDepthAndMsaaTextures = () => {
 };
 
 createDepthAndMsaaTextures();
-const resizeObserver = new ResizeObserver(createDepthAndMsaaTextures);
-resizeObserver.observe(canvas);
 
 // const Uniforms = d.struct({});
 
@@ -128,7 +126,7 @@ const pipeline = root.createRenderPipeline({
   multisample: { count: multisample ? 4 : 1 },
 });
 
-setTimeout(() => {
+const render = () => {
   pipeline
     .with(uniformsBindGroup)
     .withColorAttachment({
@@ -146,11 +144,27 @@ setTimeout(() => {
       console.log((Number(b - a) * 1e-6).toFixed(3), 'ms');
     })
     .draw(circleVertexCount(4), circleCount);
-}, 100);
+};
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    // Keeping the aspect ratio 1:1
+    const size = Math.min(canvas.width, canvas.height);
+    canvas.width = size;
+    canvas.height = size;
+
+    createDepthAndMsaaTextures();
+
+    render();
+  },
+});
 
 // #region Example controls & Cleanup
 
 export function onCleanup() {
+  autoResizer.detach();
   root.destroy();
 }
 

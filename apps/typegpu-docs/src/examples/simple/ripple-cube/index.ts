@@ -1,6 +1,6 @@
 import { perlin3d, randf } from '@typegpu/noise';
 import * as sdf from '@typegpu/sdf';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { createBackgroundCubemap } from './background.ts';
 import { GRID_SIZE, halton, LIGHT_COUNT, MAX_DIST, MAX_STEPS, SURF_DIST } from './constants.ts';
@@ -19,7 +19,7 @@ const perlinCache = perlin3d.staticCache({
   size: d.vec3u(32, 32, 32),
 });
 
-const [width, height] = [canvas.width / 1.4, canvas.height / 1.4];
+const resolutionScale = 1 / 1.4;
 
 const cameraUniform = root.createUniform(Camera);
 const timeUniform = root.createUniform(d.f32);
@@ -112,7 +112,12 @@ const envMapBindGroup = root.createBindGroup(envMapLayout, {
   }),
 });
 
-const postProcessing = createPostProcessingPipelines(root, width, height, initialBloom);
+const postProcessing = createPostProcessingPipelines(
+  root,
+  canvas.width * resolutionScale,
+  canvas.height * resolutionScale,
+  initialBloom,
+);
 
 const cameraResult = setupOrbitCamera(
   canvas,
@@ -138,7 +143,7 @@ const rayMarchPipeline = root
   .createGuardedComputePipeline((x, y) => {
     'use gpu';
     randf.seed2(d.vec2f(d.f32(x), d.f32(y)).add(timeUniform.$));
-    const textureSize = std.textureDimensions(postProcessing.result.writeView.$);
+    const textureSize = std.textureDimensions(postProcessing.$.result);
     const uv = d.vec2f(x, y).add(0.5).div(d.vec2f(textureSize));
     const ray = getRayForUV(uv);
 
@@ -186,7 +191,7 @@ const rayMarchPipeline = root
       finalColor = std.mix(fogColor, sceneColor, fog);
     }
 
-    std.textureStore(postProcessing.result.writeView.$, d.vec2u(x, y), d.vec4f(finalColor, 1));
+    std.textureStore(postProcessing.$.result, d.vec2u(x, y), d.vec4f(finalColor, 1));
   });
 
 let animationFrame: number;
@@ -196,6 +201,25 @@ let accumulatedTime = 0;
 let lastTimestamp = 0;
 let isExtendedRipplesEnabled = false;
 
+function render() {
+  const jitterX = (halton(frameIndex % 16, 2) - 0.5) / postProcessing.width;
+  const jitterY = (halton(frameIndex % 16, 3) - 0.5) / postProcessing.height;
+  jitterUniform.write(d.vec2f(jitterX, jitterY));
+  frameIndex++;
+
+  sdfPrecalcPipeline.dispatchThreads(GRID_SIZE / 2, GRID_SIZE / 2, GRID_SIZE / 2);
+
+  rayMarchPipeline
+    .with(envMapBindGroup)
+    .with(sdfBindGroup)
+    .with(postProcessing.userGroup)
+    .dispatchThreads(postProcessing.width, postProcessing.height);
+
+  postProcessing.runTaa();
+  postProcessing.runBloom();
+  postProcessing.render(context);
+}
+
 function run(timestamp: number) {
   const deltaTime = lastTimestamp === 0 ? 0 : (timestamp - lastTimestamp) / 1000;
   lastTimestamp = timestamp;
@@ -203,25 +227,21 @@ function run(timestamp: number) {
   accumulatedTime = Math.min(maxTime, Math.max(0, accumulatedTime + deltaTime * timeScale));
   timeUniform.write(accumulatedTime);
 
-  const jitterX = (halton(frameIndex % 16, 2) - 0.5) / width;
-  const jitterY = (halton(frameIndex % 16, 3) - 0.5) / height;
-  jitterUniform.write(d.vec2f(jitterX, jitterY));
-  frameIndex++;
-
-  sdfPrecalcPipeline.dispatchThreads(GRID_SIZE / 2, GRID_SIZE / 2, GRID_SIZE / 2);
-
-  rayMarchPipeline.with(envMapBindGroup).with(sdfBindGroup).dispatchThreads(width, height);
-
-  postProcessing.runTaa();
-
-  postProcessing.runBloom();
-
-  postProcessing.render(context);
+  render();
 
   animationFrame = requestAnimationFrame(run);
 }
 
 animationFrame = requestAnimationFrame(run);
+
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    postProcessing.resize(canvas.width * resolutionScale, canvas.height * resolutionScale);
+    render();
+  },
+});
 
 export const controls = defineControls({
   metallic: {
@@ -299,5 +319,6 @@ export const controls = defineControls({
 export function onCleanup() {
   cancelAnimationFrame(animationFrame);
   cameraResult.cleanupCamera();
+  autoResizer.detach();
   root.destroy();
 }

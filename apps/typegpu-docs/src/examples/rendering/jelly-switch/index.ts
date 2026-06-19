@@ -484,7 +484,6 @@ const renderPipeline = root.createRenderPipeline({
   targets: { format: presentationFormat },
 });
 
-let lastTimestamp: number | null = null;
 let frameCount = 0;
 const taaResolver = new TAAResolver(root, width, height);
 
@@ -503,18 +502,12 @@ function createBindGroups() {
 
 let bindGroups = createBindGroups();
 
-let animationFrameHandle: number;
-function render(timestamp: number) {
+function render() {
   frameCount++;
-  camera.jitter();
-  const deltaTime = Math.min(lastTimestamp !== null ? (timestamp - lastTimestamp) * 0.001 : 0, 0.1);
-  lastTimestamp = timestamp;
-
-  randomUniform.write(d.vec2f((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2));
-
-  switchBehavior.update(deltaTime);
-
   const currentFrame = frameCount % 2;
+
+  camera.jitter();
+  randomUniform.write(d.vec2f((Math.random() - 0.5) * 2, (Math.random() - 0.5) * 2));
 
   rayMarchPipeline
     .withColorAttachment({
@@ -530,11 +523,14 @@ function render(timestamp: number) {
     .withColorAttachment({ view: context })
     .with(bindGroups.render[currentFrame])
     .draw(3);
-
-  animationFrameHandle = requestAnimationFrame(render);
 }
 
 function handleResize() {
+  // Keeping the aspect ratio 1:1
+  const size = Math.min(canvas.width, canvas.height);
+  canvas.width = size;
+  canvas.height = size;
+
   [width, height] = [canvas.width * qualityScale, canvas.height * qualityScale];
   camera.updateProjection(Math.PI / 4, width, height);
   textures = createTextures(root, width, height);
@@ -543,14 +539,30 @@ function handleResize() {
   frameCount = 0;
 
   bindGroups = createBindGroups();
+  render();
 }
 
-const resizeObserver = new ResizeObserver(() => {
-  handleResize();
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    handleResize();
+  },
 });
-resizeObserver.observe(canvas);
 
-animationFrameHandle = requestAnimationFrame(render);
+let lastTimestamp: number | null = null;
+let animationFrameHandle: number;
+function frame(timestamp: number) {
+  const deltaTime = Math.min(lastTimestamp !== null ? (timestamp - lastTimestamp) * 0.001 : 0, 0.1);
+  lastTimestamp = timestamp;
+
+  switchBehavior.update(deltaTime);
+
+  render();
+
+  animationFrameHandle = requestAnimationFrame(frame);
+}
+animationFrameHandle = requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
 
@@ -684,7 +696,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   cancelAnimationFrame(animationFrameHandle);
-  resizeObserver.disconnect();
+  autoResizer.detach();
   root.destroy();
 }
 

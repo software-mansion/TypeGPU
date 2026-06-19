@@ -10,7 +10,7 @@
  * ```
  */
 
-import tgpu, { d } from 'typegpu';
+import tgpu, { common, d } from 'typegpu';
 import { abs, atan2, cos, gt, length, normalize, select, sign, tanh } from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';
 
@@ -120,6 +120,8 @@ function draw(timestamp: number) {
 
 requestAnimationFrame(draw);
 
+const autoResizer = common.attachAutoResizer({ root, canvas });
+
 // #region Example controls and cleanup
 
 export const controls = defineControls({
@@ -178,6 +180,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   isRunning = false;
+  autoResizer.detach();
   root.destroy();
 }
 

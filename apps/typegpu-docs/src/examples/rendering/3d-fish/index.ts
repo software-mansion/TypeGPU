@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { simulate } from './compute.ts';
 import { loadModel } from './load-model.ts';
@@ -219,22 +219,7 @@ const computeBindGroups = [0, 1].map((idx) =>
   }),
 );
 
-// frame
-
-let odd = false;
-let lastTimestamp: DOMHighResTimeStamp = 0;
-let animationFrameId: number;
-
-function frame(timestamp: DOMHighResTimeStamp) {
-  odd = !odd;
-
-  currentTimeBuffer.write(timestamp);
-  timePassedBuffer.write((timestamp - lastTimestamp) * speedMultiplier);
-  lastTimestamp = timestamp;
-  cameraBuffer.write(camera);
-
-  simulatePipeline.with(computeBindGroups[odd ? 1 : 0]).dispatchThreads(p.fishAmount);
-
+function render() {
   renderPipeline
     .withColorAttachment({
       view: context,
@@ -267,6 +252,25 @@ function frame(timestamp: DOMHighResTimeStamp) {
     .with(renderInstanceLayout, fishDataBuffers[odd ? 1 : 0])
     .with(renderFishBindGroups[odd ? 1 : 0])
     .draw(fishModel.polygonCount, p.fishAmount);
+}
+
+// frame
+
+let odd = false;
+let lastTimestamp: DOMHighResTimeStamp = 0;
+let animationFrameId: number;
+
+function frame(timestamp: DOMHighResTimeStamp) {
+  odd = !odd;
+
+  currentTimeBuffer.write(timestamp);
+  timePassedBuffer.write((timestamp - lastTimestamp) * speedMultiplier);
+  lastTimestamp = timestamp;
+  cameraBuffer.write(camera);
+
+  simulatePipeline.with(computeBindGroups[odd ? 1 : 0]).dispatchThreads(p.fishAmount);
+
+  render();
 
   animationFrameId = requestAnimationFrame(frame);
 }
@@ -421,23 +425,32 @@ window.addEventListener('touchmove', touchMoveEventListener);
 
 // observer and cleanup
 
-const resizeObserver = new ResizeObserver(() => {
-  camera.projection = m.mat4.perspective(
-    Math.PI / 4,
-    canvas.clientWidth / canvas.clientHeight,
-    0.1,
-    1000,
-    d.mat4x4f(),
-  );
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    camera.projection = m.mat4.perspective(
+      Math.PI / 4,
+      canvas.clientWidth / canvas.clientHeight,
+      0.1,
+      1000,
+      d.mat4x4f(),
+    );
 
-  depthTexture.destroy();
-  depthTexture = root.device.createTexture({
-    size: [canvas.width, canvas.height, 1],
-    format: 'depth24plus',
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  });
+    cameraBuffer.patch({
+      projection: camera.projection,
+    });
+
+    depthTexture.destroy();
+    depthTexture = root.device.createTexture({
+      size: [canvas.width, canvas.height, 1],
+      format: 'depth24plus',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+
+    render();
+  },
 });
-resizeObserver.observe(canvas);
 
 export function onCleanup() {
   disposed = true;
@@ -445,7 +458,7 @@ export function onCleanup() {
   window.removeEventListener('mouseup', mouseUpEventListener);
   window.removeEventListener('mousemove', mouseMoveEventListener);
   window.removeEventListener('touchmove', touchMoveEventListener);
-  resizeObserver.disconnect();
+  autoResizer.detach();
   root.destroy();
 }
 

@@ -1,5 +1,5 @@
 import * as sdf from '@typegpu/sdf';
-import tgpu, { d, std } from 'typegpu';
+import tgpu, { common, d, std } from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import {
   DROP_Y,
@@ -414,18 +414,23 @@ const renderPipeline = root.createRenderPipeline({
   },
 });
 
-const resizeObserver = new ResizeObserver(() => {
-  mergedField.distance.destroy();
-  mergedField.info.destroy();
-  mergedField = createMergedFieldResources();
-  distanceView = mergedField.distance.createView(d.texture2d());
-  infoView = mergedField.info.createView(d.texture2d());
-  mergedFieldBindGroup = root.createBindGroup(mergedFieldLayout, {
-    distance: distanceView,
-    info: infoView,
-  });
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    mergedField.distance.destroy();
+    mergedField.info.destroy();
+    mergedField = createMergedFieldResources();
+    distanceView = mergedField.distance.createView(d.texture2d());
+    infoView = mergedField.info.createView(d.texture2d());
+    mergedFieldBindGroup = root.createBindGroup(mergedFieldLayout, {
+      distance: distanceView,
+      info: infoView,
+    });
+
+    render();
+  },
 });
-resizeObserver.observe(canvas);
 
 canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false, signal });
 canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false, signal });
@@ -526,6 +531,24 @@ function restart() {
     circleData[i] = { ...INACTIVE_CIRCLE };
   }
   circleUniform.write(circleData);
+}
+
+function render() {
+  frameUniform.patch({
+    canvasAspect: canvas.width / canvas.height,
+  });
+
+  mergedFieldPipeline
+    .withColorAttachment({
+      distance: { view: distanceView },
+      info: { view: infoView },
+    })
+    .draw(3);
+
+  renderPipeline
+    .with(mergedFieldBindGroup)
+    .withColorAttachment({ view: context, clearValue: { r: 0, g: 0, b: 0, a: 1 } })
+    .draw(3);
 }
 
 let lastTime = 0;
@@ -642,18 +665,7 @@ function frame(now: number) {
         },
   });
 
-  mergedFieldPipeline
-    .withColorAttachment({
-      distance: { view: distanceView },
-      info: { view: infoView },
-    })
-    .draw(3);
-
-  renderPipeline
-    .with(mergedFieldBindGroup)
-    .withColorAttachment({ view: context, clearValue: { r: 0, g: 0, b: 0, a: 1 } })
-    .draw(3);
-
+  render();
   animationFrameId = requestAnimationFrame(frame);
 }
 animationFrameId = requestAnimationFrame(frame);
@@ -676,6 +688,6 @@ export const controls = defineControls({
 export function onCleanup() {
   cleanupController.abort();
   cancelAnimationFrame(animationFrameId);
-  resizeObserver.disconnect();
+  autoResizer.detach();
   root.destroy();
 }
