@@ -30,7 +30,11 @@ async function bundleTest(
  */
 async function main() {
   console.log('Starting bundler efficiency measurement...');
-  const testVariant = process.argv[2] === 'named' ? 'named' : 'namespace';
+  const testVariant = process.argv[2];
+  if (!(testVariant === 'named' || testVariant === 'namespace')) {
+    console.error(`Test variant must either be 'named' or 'namespace' (was ${testVariant}).`);
+    process.exit(1);
+  }
   const sourceDir = testVariant === 'named' ? TESTS_NAMED_DIR : TESTS_NAMESPACE_DIR;
   const distDir = testVariant === 'named' ? DIST_NAMED_DIR : DIST_NAMESPACE_DIR;
 
