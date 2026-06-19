@@ -42,7 +42,7 @@ async function generateReport(
   const grouped = groupResultsByTest(prNamespaceResults, targetNamespaceResults, prNamedResults);
 
   // All tests from the current branch (we are not interested in removed tests)
-  const allTests = new Set(...Object.values(prNamespaceResults).map((r) => r.testFilename));
+  const allTests = new Set(Object.values(prNamespaceResults).map((r) => r.testFilename));
 
   // All unique bundlers from both branches
   const allBundlers = new Set(
