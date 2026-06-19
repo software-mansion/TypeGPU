@@ -354,6 +354,7 @@ export interface ResolutionCtx {
    */
   makeUniqueIdentifier(primer: string | undefined, scope: 'global' | 'block'): string;
 
+  isIdentifierBanned(name: string): boolean;
   isIdentifierTaken(name: string): boolean;
 
   /**
