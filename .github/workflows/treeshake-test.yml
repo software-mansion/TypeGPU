@@ -70,7 +70,7 @@ jobs:
 
       - name: Run namespace tree-shake test on target branch
         working-directory: target-branch
-        continue-on-error: true # if this fails, compareResults will list all results instead of a comparison
+        continue-on-error: true # if this fails, compareResults will display all results instead of a comparison
         run: pnpm --filter treeshake-test test namespace --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
 
       - name: Compare results

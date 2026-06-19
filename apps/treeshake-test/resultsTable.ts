@@ -32,12 +32,14 @@ export class ResultsTable {
           [
             test,
             row,
-            maxAbsoluteForRow(row, (row) => calculateChange(row.prNamespace, row.targetNamespace)),
+            maxAbsoluteForRow(row, (result) =>
+              calculateChange(result.prNamespace, result.targetNamespace),
+            ),
           ] as const,
       )
       .filter(
         ([, row, score]) =>
-          (score !== undefined && Math.abs(score) > this.#threshold) ||
+          (score !== undefined && Math.abs(score) >= this.#threshold) ||
           Object.values(row).some((result) => result.targetNamespace === undefined),
       ) // a result is interesting if the score is big, or if the test is new (target is undefined)
       .toSorted(([, , scoreA], [, , scoreB]) => scoreB - scoreA)
@@ -50,17 +52,17 @@ export class ResultsTable {
     );
   }
 
-  getTreeShakabilityTable() {
+  getTreeShakeTable() {
     const sortedResults = [...this.#results.entries()]
       .map(
         ([test, row]) =>
           [
             test,
             row,
-            maxAbsoluteForRow(row, (row) => calculateChange(row.prNamed, row.prNamespace)),
+            maxAbsoluteForRow(row, (result) => calculateChange(result.prNamed, result.prNamespace)),
           ] as const,
       )
-      .filter(([, , score]) => score !== undefined && Math.abs(score) > this.#threshold)
+      .filter(([, , score]) => score !== undefined && Math.abs(score) >= this.#threshold)
       .toSorted(([, , scoreA], [, , scoreB]) => scoreB - scoreA)
       .map(([test, row]) => [test, row] as const);
 
