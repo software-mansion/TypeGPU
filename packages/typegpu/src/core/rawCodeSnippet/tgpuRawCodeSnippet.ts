@@ -113,11 +113,7 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const replacedExpression = replaceExternalsInWgsl(
-      ctx,
-      this.#externals ?? {},
-      this.#expression,
-    );
+    const replacedExpression = replaceExternalsInWgsl(ctx, this.#externals ?? {}, this.#expression);
 
     return snip(replacedExpression, this.dataType, this.origin);
   }

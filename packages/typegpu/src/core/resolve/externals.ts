@@ -19,9 +19,6 @@ function isResolvable(value: unknown) {
  * Assumes that there is at most one map with non-trivial structure.
  */
 export function mergeFunctionExternals(fnExternals: FnExternals): ExternalMap {
-  console.log('MERGING');
-  console.log(fnExternals);
-
   if (fnExternals.pluginProvided !== undefined && fnExternals.userProvided !== undefined) {
     throw new Error(
       "Cannot call '$uses' on functions whose metadata was provided by unplugin-typegpu.",
@@ -41,38 +38,6 @@ export function mergeFunctionExternals(fnExternals: FnExternals): ExternalMap {
     }
   }
   return result;
-}
-
-/**
- * Merges two external maps into one.
- * If the external value is a namable object, it is given a name if it does not already have one.
- * @param existing - The existing external map.
- * @param newExternals - The new external map.
- *
- * NOTE:
- * This function attempts to avoid accidental reference modification
- * by performing a shallow copy before each modification,
- * but it cannot avoid `existing` modification.
- * Make sure that `existing` is created internally, instead of being passed in by users.
- */
-export function mergeExternals(existing: ExternalMap, newExternals: ExternalMap) {
-  for (const [key, value] of Object.entries(newExternals)) {
-    const existingValue = existing[key];
-    if (
-      existingValue !== null &&
-      typeof existingValue === 'object' &&
-      value !== null &&
-      typeof value === 'object' &&
-      !isResolvable(existingValue) &&
-      !isResolvable(value)
-    ) {
-      const copiedValue = { ...(existingValue as ExternalMap) };
-      mergeExternals(copiedValue, value as ExternalMap);
-      existing[key] = copiedValue;
-    } else {
-      existing[key] = value;
-    }
-  }
 }
 
 export function addArgTypesToExternals(implementation: string, argTypes: unknown[], core: FnCore) {

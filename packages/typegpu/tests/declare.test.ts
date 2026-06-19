@@ -113,6 +113,8 @@ struct Output {
 
     expect(() =>
       declaration.$uses({ myStruct: d.struct({ p: d.u32 }) }),
-    ).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.]`);
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.]`,
+    );
   });
 });

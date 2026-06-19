@@ -22,7 +22,6 @@ export type FnExternals = {
 };
 
 export interface FnCore {
-  applyExternals: (newExternals: ExternalMap) => void;
   setExternals: (key: keyof FnExternals, newExternal: ExternalMap) => void;
   resolve(
     ctx: ResolutionCtx,
