@@ -31,7 +31,7 @@ export type FnExternals = {
    */
   args?: ExternalMap;
   /**
-   * Function return type, for example `{ Out: ... }` in rawWgsl entrypoint functions.
+   * Function return type, for example `{ Out: ... }` in both rawWgsl entrypoint functions and `vertexFnShell(in, Out)`.
    * Must be flat (every value must be resolvable).
    */
   out?: ExternalMap;
