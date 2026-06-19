@@ -214,7 +214,9 @@ function createFragmentFn(
       if (entryInput.dataSchema && isNamable(entryInput.dataSchema)) {
         entryInput.dataSchema.$name(`${getName(this) ?? ''}_Input`);
       }
-      core.setExternals('out', { Out: outputType });
+      if (typeof implementation === 'string') {
+        core.setExternals('out', { Out: outputType });
+      }
 
       return ctx.withSlots([[shaderStageSlot, 'fragment']], () =>
         core.resolve(ctx, [], shell.returnType, entryInput),
