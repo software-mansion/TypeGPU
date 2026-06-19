@@ -60,6 +60,11 @@ overrides:
   three: ^0.181.0
   '@typescript-eslint/utils': ^8.57.2
 
+patchedDependencies:
+  comptime@0.1.0:
+    hash: 25f674816463552a18b4f0ceda95d2537c0fb2b492de70f80330641bf9e20bf4
+    path: patches/comptime@0.1.0.patch
+
 importers:
 
   .:
@@ -410,6 +415,9 @@ importers:
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.21(postcss@8.5.8)
+      comptime:
+        specifier: ^0.1.0
+        version: 0.1.0(patch_hash=25f674816463552a18b4f0ceda95d2537c0fb2b492de70f80330641bf9e20bf4)(rolldown@1.0.0-rc.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))
       magic-string:
         specifier: ^0.30.21
         version: 0.30.21
@@ -5092,6 +5100,15 @@ packages:
 
   commondir@1.0.1:
     resolution: {integrity: sha512-W9pAhw0ja1Edb5GVdIF1mjZw/ASI0AlShXM83UUGe2DVr5TdAPEA1OA8m/g8zWp9x6On7gqufY+FatDbC3MDQg==}
+
+  comptime@0.1.0:
+    resolution: {integrity: sha512-MfJWCKUr3D1lPjxt/IBeXLGLI0G9dx9OYgo1zoHoBLhteSXpCpa9gI4+ibre04QHBaKrGgc+bz9N0pCMbYA2GQ==}
+    peerDependencies:
+      rolldown: ^1.0.0
+      vite: 8.0.5
+    peerDependenciesMeta:
+      vite:
+        optional: true
 
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
@@ -13759,6 +13776,14 @@ snapshots:
   common-ancestor-path@2.0.0: {}
 
   commondir@1.0.1: {}
+
+  comptime@0.1.0(patch_hash=25f674816463552a18b4f0ceda95d2537c0fb2b492de70f80330641bf9e20bf4)(rolldown@1.0.0-rc.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)):
+    dependencies:
+      devalue: 5.6.4
+      magic-string: 0.30.21
+      rolldown: 1.0.0-rc.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+    optionalDependencies:
+      vite: 8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
 
   concat-map@0.0.1: {}
 

@@ -1,0 +1,83 @@
+diff --git a/dist/vite.js b/dist/vite.js
+index 6ac54dde5a8d9f632852e5da488c354cf9eecfc2..400fa45f6296ce2dd266d4f800bd70a7a8587ecd 100644
+--- a/dist/vite.js
++++ b/dist/vite.js
+@@ -932,7 +932,10 @@ class ModuleRunnerEvaluator {
+   constructor(options) {
+     this.#core = options.core;
+     this.#cwd = options.cwd ?? process.cwd();
+-    this.#runner = new ModuleRunner({
++    this.#runner = this.#createRunner();
++  }
++  #createRunner() {
++    return new ModuleRunner({
+       hmr: false,
+       sourcemapInterceptor: "prepareStackTrace",
+       transport: {
+@@ -950,6 +953,9 @@ class ModuleRunnerEvaluator {
+     this.#host = host;
+   }
+   async evaluate(virtualId) {
++    if (this.#runner.isClosed()) {
++      this.#runner = this.#createRunner();
++    }
+     this.#invalidate(virtualId);
+     let module = await this.#runner.import(virtualId);
+     return readDefaultExport(module);
+@@ -985,6 +991,22 @@ class ModuleRunnerEvaluator {
+     }
+     if (isBuiltin(id)) {
+       return { externalize: id, type: "builtin" };
++    }
++    if (isRawRequest(id)) {
++      let loaded = await this.#loadRawModule(id, importer);
++      let transformed = await moduleRunnerTransform(`${loaded.file}.raw.js`, loaded.code, {
++        sourcemap: true
++      });
++      if (transformed.errors.length > 0) {
++        throw transformed.errors[0] ?? new Error("Rolldown moduleRunnerTransform failed");
++      }
++      return {
++        code: transformed.code,
++        file: loaded.file,
++        id: loaded.id,
++        url: loaded.id,
++        invalidate: true
++      };
+     }
+     let hostImporter = toHostImporter(importer);
+     let hostResolved = await this.#host?.resolve(id, hostImporter);
+@@ -1028,6 +1044,14 @@ class ModuleRunnerEvaluator {
+     let resolved = this.#resolve(id, importer);
+     return await this.#loadResolvedModule(resolved);
+   }
++  async#loadRawModule(id, importer) {
++    let resolved = this.#resolve(stripQuery(id), importer);
++    return {
++      id,
++      file: resolved,
++      code: `export default ${JSON.stringify(await readFile(resolved, "utf8"))};`
++    };
++  }
+   async#loadResolvedModule(resolved) {
+     let virtual = this.#core.resolveId(resolved);
+     if (virtual) {
+@@ -1102,6 +1126,9 @@ function createTransformFilename(id, cwd) {
+     return `${evaluationPath}.comptime${extension}`;
+   }
+   return id.startsWith("\x00") ? resolve2(cwd, `${sanitizeVirtualId(id)}.ts`) : id;
++}
++function isRawRequest(id) {
++  return id.includes("?") && new URLSearchParams(id.slice(id.indexOf("?") + 1)).has("raw");
+ }
+ function parseInvokeRequest(payload) {
+   if (!isRecord2(payload)) {
+@@ -1259,7 +1265,7 @@ function comptime(options) {
+     configResolved(config) {
+       evaluator = new ViteEvaluator({
+         fallback: new ModuleRunnerEvaluator({ core, cwd: config.root }),
+-        getServer: () => server
++        getServer: () => config.command === "serve" ? server : undefined
+       });
+     },
+     configureServer(nextServer) {
