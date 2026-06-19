@@ -120,7 +120,6 @@ function createComputeFn<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     shell,
 
     $uses(newExternals) {
-      core.applyExternals(newExternals);
       core.setExternals('userProvided', newExternals);
       return this;
     },

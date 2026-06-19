@@ -194,7 +194,6 @@ function createFragmentFn(
     outputType,
 
     $uses(newExternals) {
-      core.applyExternals(newExternals);
       core.setExternals('userProvided', newExternals);
       return this;
     },
@@ -215,7 +214,6 @@ function createFragmentFn(
       if (entryInput.dataSchema && isNamable(entryInput.dataSchema)) {
         entryInput.dataSchema.$name(`${getName(this) ?? ''}_Input`);
       }
-      core.applyExternals({ Out: outputType });
       core.setExternals('out', { Out: outputType });
 
       return ctx.withSlots([[shaderStageSlot, 'fragment']], () =>

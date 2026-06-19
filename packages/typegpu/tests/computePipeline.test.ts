@@ -280,11 +280,9 @@ describe('TgpuComputePipeline', () => {
         data: buffer,
       });
 
-      const entryFn = tgpu
-        .computeFn({ workgroupSize: [1] })(() => {
-          layout.$.data;
-        })
-        .$uses({ layout });
+      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
+        layout.$.data;
+      });
 
       const querySet = root.createQuerySet('timestamp', 4);
 

@@ -87,7 +87,6 @@ export function addArgTypesToExternals(implementation: string, argTypes: unknown
     }),
   );
 
-  core.applyExternals(args);
   core.setExternals('args', args);
 }
 
@@ -100,7 +99,6 @@ export function addReturnTypeToExternals(
   const outputName = matched ? matched[1]?.trim() : undefined;
 
   if (isWgslStruct(returnType) && outputName && !/\s/g.test(outputName)) {
-    core.applyExternals({ [outputName]: returnType });
     core.setExternals('out', { [outputName]: returnType });
   }
 }
