@@ -19,11 +19,6 @@ function isResolvable(value: unknown) {
  * Assumes that there is at most one map with non-trivial structure.
  */
 export function mergeFunctionExternals(fnExternals: FnExternals): ExternalMap {
-  if (fnExternals.pluginProvided !== undefined && fnExternals.userProvided !== undefined) {
-    throw new Error(
-      "Cannot call '$uses' on functions whose metadata was provided by unplugin-typegpu.",
-    );
-  }
   const base = fnExternals.pluginProvided ?? fnExternals.userProvided ?? {};
   // avoid calling any of the getters
   const result: ExternalMap = Object.defineProperties({}, Object.getOwnPropertyDescriptors(base));
