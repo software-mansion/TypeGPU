@@ -79,6 +79,13 @@ export type {
   TgpuRawCodeSnippet,
 } from './core/rawCodeSnippet/tgpuRawCodeSnippet.ts';
 export type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
+export type {
+  TextureBlobWrite,
+  TextureChannel,
+  TextureChannelWrite,
+  TextureImageWrite,
+  TextureWriteOptions,
+} from './core/texture/textureWrite.ts';
 export type { TextureProps } from './core/texture/textureProps.ts';
 export type { RenderFlag, SampledFlag } from './core/texture/usageExtension.ts';
 export type { InitFromDeviceOptions, InitOptions } from './core/root/init.ts';

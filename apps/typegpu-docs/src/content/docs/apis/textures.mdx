@@ -28,10 +28,9 @@ const texture = root.createTexture({
 
 const response = await fetch('path/to/image.png');
 const blob = await response.blob();
-const image = await createImageBitmap(blob);
 
-// Uploading image data to the texture (will be resampled if sizes differ)
-texture.write(image);
+// Decode and upload the image data to the texture
+await texture.writeAsync({ source: blob, size: [256, 256], resize: true });
 
 // Creating a view to use in shader
 const sampledView = texture.createView();
@@ -101,7 +100,16 @@ The `.write()` method provides multiple overloads for different data sources:
 
 ```ts
 // Image sources (single or array)
-write(source: ExternalImageSource | ExternalImageSource[]): void
+write(source: GPUCopyExternalImageSource | GPUCopyExternalImageSource[], options?: Pick<TextureWriteOptions, 'resize' | 'filter'>): void
+
+// Image source with destination/source rectangles
+write(source: TextureImageWrite): void
+
+// Single destination channel writes
+write(source: TextureChannelWrite): void
+
+// Blob decode/resize path
+writeAsync(source: Blob | TextureBlobWrite): Promise<void>
 
 // Raw binary data with optional mip level
 write(source: ArrayBuffer | TypedArray | DataView, mipLevel?: number): void
@@ -109,7 +117,7 @@ write(source: ArrayBuffer | TypedArray | DataView, mipLevel?: number): void
 
 ### Writing image data
 
-You can write various image sources to textures. `ExternalImageSource` includes:
+You can write various image sources to textures. `GPUCopyExternalImageSource` includes:
 - `HTMLCanvasElement`
 - `HTMLImageElement`
 - `HTMLVideoElement`
@@ -131,7 +139,7 @@ const texture = root.createTexture({
 const response = await fetch('path/to/image.png');
 const blob = await response.blob();
 const imageBitmap = await createImageBitmap(blob);
-texture.write(imageBitmap);
+texture.write(imageBitmap, { resize: true });
 
 // From an HTMLCanvasElement
 const canvas = document.createElement('canvas');
@@ -141,8 +149,100 @@ texture.write(canvas);
 ```
 
 :::tip
-If image dimensions don't match the texture size, the image will be automatically resampled to fit (requires 'render' usage).
+Synchronous image writes require matching source and destination sizes by default. Pass `resize: true` when you want TypeGPU to resample an image source.
 :::
+
+### Writing image regions
+
+Use a descriptor with `source`, `origin` and `size` to write into a destination rectangle. `origin` is the destination origin in texture pixels, and `size` is the destination extent in pixels.
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+declare const imageBitmap: ImageBitmap;
+// ---cut---
+const texture = root.createTexture({
+  size: [512, 512],
+  format: 'rgba8unorm',
+}).$usage('sampled');
+
+texture.write({
+  source: imageBitmap,
+  origin: [128, 64],
+  size: [256, 256],
+  resize: true,
+});
+```
+
+You can crop the source before writing:
+
+```ts
+texture.write({
+  source: imageBitmap,
+  sourceOrigin: [16, 16],
+  sourceSize: [128, 128],
+  origin: [0, 0],
+});
+```
+
+### Writing blobs
+
+Use `writeAsync` when you want TypeGPU to decode a `Blob`. Blob writes use `createImageBitmap`, so resizing happens before upload:
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const texture = root.createTexture({
+  size: [512, 512],
+  format: 'rgba8unorm',
+}).$usage('sampled');
+
+const blob = await (await fetch('path/to/image.png')).blob();
+
+await texture.writeAsync({
+  source: blob,
+  size: [512, 512],
+  resize: true,
+});
+```
+
+### Writing single channels
+
+Use `channels` when you want to update individual destination channels while leaving the others unchanged.
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+declare const roughnessMap: ImageBitmap;
+declare const metalnessMap: ImageBitmap;
+declare const maskMap: ImageBitmap;
+// ---cut---
+const texture = root.createTexture({
+  size: [512, 512],
+  format: 'rgba8unorm',
+}).$usage('sampled');
+
+texture.write({
+  channels: {
+    r: roughnessMap,
+    g: metalnessMap,
+    a: { source: maskMap, from: 'r' },
+  },
+});
+```
+
+Only single destination channels are supported for now: `r`, `g`, `b`, and `a`. Region options apply to the grouped write:
+
+```ts
+texture.write({
+  channels: {
+    r: roughnessMap,
+  },
+  origin: [32, 16],
+  size: [128, 128],
+});
+```
 
 ### Writing arrays of images
 
