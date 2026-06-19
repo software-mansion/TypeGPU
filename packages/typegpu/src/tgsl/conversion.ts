@@ -303,6 +303,9 @@ function applyActionToSnippet(
   }
 }
 
+/**
+ * Unifies input types to a common type.
+ */
 export function unify<T extends (BaseData | UnknownData)[] | []>(
   inTypes: T,
   restrictTo?: BaseData[],
@@ -321,6 +324,10 @@ export function unify<T extends (BaseData | UnknownData)[] | []>(
   };
 }
 
+/**
+ * Unifies input types to a common type.
+ * Unlike `unify`, it does not allow implicit conversions.
+ */
 export function unifyStrict<T extends (BaseData | UnknownData)[] | []>(
   inTypes: T,
   restrictTo?: BaseData[],
