@@ -1,7 +1,6 @@
 import { describe, expect } from 'vitest';
-import tgpu, { d, std } from '../src/index.js';
+import tgpu, { d, std } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
-import { getName } from '../src/shared/meta.ts';
 
 const RED = 'vec3f(1., 0., 0.)';
 const GREEN = 'vec3f(0., 1., 0.)';
@@ -380,9 +379,9 @@ describe('tgpu.slot', () => {
     const getRed = getColor.with(colorSlot, d.vec3f(1, 0, 0)).$name('redFn');
     const getBlue = getColor.with(colorSlot, d.vec3f(0, 0, 1)).$name('blueFn');
 
-    expect(getName(getColor)).toBe('colorFn');
-    expect(getName(getRed)).toBe('redFn');
-    expect(getName(getBlue)).toBe('blueFn');
+    expect(getColor.toString()).toContain('colorFn');
+    expect(tgpu.resolve([getRed])).toContain('fn redFn() -> vec3f');
+    expect(tgpu.resolve([getBlue])).toContain('fn blueFn() -> vec3f');
   });
 
   it('uses bound name for code generation', () => {

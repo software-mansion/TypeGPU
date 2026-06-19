@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu, { d, std } from '../../../src/index.js';
+import tgpu, { d, std } from 'typegpu';
 
 describe('min', () => {
   it('acts as identity when called with one argument', () => {

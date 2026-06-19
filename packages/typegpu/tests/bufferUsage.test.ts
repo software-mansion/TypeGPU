@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 
-import { d, tgpu } from '../src/index.js';
-import type { Infer } from '../src/shared/repr.ts';
+import { d, tgpu } from 'typegpu';
+import type { Infer } from 'typegpu/data';
 import { it } from 'typegpu-testing-utility';
 
 describe('TgpuBufferUniform', () => {
