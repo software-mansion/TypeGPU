@@ -156,7 +156,7 @@ function calculateTrendMessage(prSize: number | undefined, targetSize: number | 
  * calculateChange(100, undefined); // undefined
  */
 function calculateChange(value: number | undefined, base: number | undefined) {
-  if (value === undefined || !base) {
+  if (value === undefined || base === undefined) {
     return undefined;
   }
   return (value - base) / base;
