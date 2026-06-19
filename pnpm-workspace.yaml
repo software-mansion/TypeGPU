@@ -46,3 +46,6 @@ overrides:
   typescript: 'catalog:types'
   three: 'catalog:example'
   '@typescript-eslint/utils': ^8.57.2
+
+patchedDependencies:
+  comptime@0.1.0: 'patches/comptime@0.1.0.patch'
