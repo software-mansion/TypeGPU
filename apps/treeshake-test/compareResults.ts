@@ -15,8 +15,8 @@ const BenchmarkResults = ResultRecord.array();
 
 function groupResultsByTest(
   prNamespaceResults: typeof BenchmarkResults.infer,
-  prNamedResults: typeof BenchmarkResults.infer,
   targetNamespaceResults: typeof BenchmarkResults.infer,
+  prNamedResults: typeof BenchmarkResults.infer,
 ) {
   // testFilename -> bundler -> result
   const grouped: Record<string, Record<string, Result>> = {};
@@ -28,16 +28,16 @@ function groupResultsByTest(
   };
 
   assign(prNamespaceResults, 'prNamespace');
-  assign(prNamedResults, 'prNamed');
   assign(targetNamespaceResults, 'targetNamespace');
+  assign(prNamedResults, 'prNamed');
 
   return grouped;
 }
 
 async function generateReport(
   prNamespaceResults: typeof BenchmarkResults.infer,
-  prNamedResults: typeof BenchmarkResults.infer,
   targetNamespaceResults: typeof BenchmarkResults.infer,
+  prNamedResults: typeof BenchmarkResults.infer,
 ) {
   const grouped = groupResultsByTest(prNamespaceResults, prNamedResults, targetNamespaceResults);
 
@@ -77,7 +77,7 @@ async function generateReport(
   });
 
   const bundleSizeTableString = notableTable.getBundleSizeTable();
-  const treeShakabilityTableString = notableTable.getTreeShakabilityTable();
+  const treeShakeTableString = notableTable.getTreeShakeTable();
 
   // Markdown generation
   let output = '';
@@ -88,15 +88,12 @@ async function generateReport(
   output += '| :---: | :---: | :---: | :---: |\n';
   output += `| **${totalDecreased}** | **${totalUnchanged}** | **${totalIncreased}** | **${totalUnknown}** |\n\n`;
 
-  if (
-    bundleSizeTableString !== emptyResultsString ||
-    treeShakabilityTableString !== emptyResultsString
-  ) {
+  if (bundleSizeTableString !== emptyResultsString || treeShakeTableString !== emptyResultsString) {
     if (bundleSizeTableString !== emptyResultsString) {
       output += `### \`import * as ...\` in PR vs \`import * as ...\` in target (did bundle size increase?):\n${bundleSizeTableString}\n\n`;
     }
-    if (treeShakabilityTableString !== emptyResultsString) {
-      output += `### \`import { ... }\` in PR vs \`import * as ...\` in PR (is the library tree-shakable?):\n${treeShakabilityTableString}\n\n`;
+    if (treeShakeTableString !== emptyResultsString) {
+      output += `### \`import { ... }\` in PR vs \`import * as ...\` in PR (is the library tree-Shakeable?):\n${treeShakeTableString}\n\n`;
     }
   } else {
     output += `No notable changes.\n\n`;
@@ -127,14 +124,6 @@ async function main() {
     throw new Error('PR namespace results validation failed', { cause: error });
   }
 
-  let prNamedResults: typeof BenchmarkResults.infer;
-  try {
-    const content = await fs.readFile(prNamedFile, 'utf8');
-    prNamedResults = BenchmarkResults.assert(JSON.parse(content));
-  } catch (error) {
-    throw new Error('PR named results validation failed', { cause: error });
-  }
-
   let targetNamespaceResults: typeof BenchmarkResults.infer = [];
   try {
     const targetContent = await fs.readFile(targetNamespaceFile, 'utf8');
@@ -144,11 +133,19 @@ async function main() {
     console.warn('Returning empty results instead.');
   }
 
+  let prNamedResults: typeof BenchmarkResults.infer;
+  try {
+    const content = await fs.readFile(prNamedFile, 'utf8');
+    prNamedResults = BenchmarkResults.assert(JSON.parse(content));
+  } catch (error) {
+    throw new Error('PR named results validation failed', { cause: error });
+  }
+
   // Generate appropriate report
   const markdownReport = await generateReport(
     prNamespaceResults,
-    prNamedResults,
     targetNamespaceResults,
+    prNamedResults,
   );
   console.log(markdownReport);
 }
