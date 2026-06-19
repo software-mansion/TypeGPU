@@ -1,56 +1,60 @@
 import * as fs from 'node:fs/promises';
-import * as tgpuAll from 'typegpu';
-import * as dAll from 'typegpu/data';
-import * as stdAll from 'typegpu/std';
-
-const TESTS_DIR = new URL('./tests/', import.meta.url);
+import { tgpu, d, std, common } from 'typegpu';
+import { TESTS_NAMED_DIR, TESTS_NAMESPACE_DIR } from './urls.ts';
 
 async function generateTestFiles() {
-  await fs.mkdir(TESTS_DIR, { recursive: true });
+  await fs.mkdir(TESTS_NAMED_DIR, { recursive: true });
+  await fs.mkdir(TESTS_NAMESPACE_DIR, { recursive: true });
 
-  const tgpuAllImports = Object.keys(tgpuAll)
-    .filter((key) => key !== 'default')
-    .map((exportName) => ({
-      export: exportName,
-      from: 'typegpu',
-      log: exportName,
-    }));
-
-  const dAllImports = Object.keys(dAll).map((exportName) => ({
-    export: exportName,
-    from: 'typegpu/data',
-    log: exportName,
-  }));
-
-  const stdAllImports = Object.keys(stdAll).map((exportName) => ({
-    export: exportName,
-    from: 'typegpu/std',
-    log: exportName,
-  }));
-
-  const tgpuImports = Object.keys(tgpuAll.tgpu)
+  const tgpuImports = Object.keys(tgpu)
     .filter((key) => key !== '~unstable')
-    .map((exportName) => ({
-      export: 'tgpu',
-      from: 'typegpu',
-      log: `tgpu.${exportName}`,
+    .map((importName) => ({
+      import: 'tgpu',
+      item: importName,
+      namespace: 'typegpu',
     }));
 
-  const imports: { export: string; from: string; log: string }[] = [
-    ...tgpuAllImports,
-    ...dAllImports,
-    ...stdAllImports,
+  const dImports = Object.keys(d).map((importName) => ({
+    import: 'd',
+    item: importName,
+    namespace: 'typegpu/data',
+  }));
+
+  const stdImports = Object.keys(std).map((importName) => ({
+    import: 'std',
+    item: importName,
+    namespace: 'typegpu/std',
+  }));
+
+  const commonImports = Object.keys(common).map((importName) => ({
+    import: 'common',
+    item: importName,
+    namespace: 'typegpu/common',
+  }));
+
+  const imports: { import: string; item: string; namespace: string }[] = [
     ...tgpuImports,
+    ...dImports,
+    ...stdImports,
+    ...commonImports,
   ];
 
-  for (const { export: exportName, from, log } of imports) {
-    const testContent = `
-import { ${exportName} } from '${from}/$built$';
-console.log(${log});
+  for (const { import: importName, item, namespace } of imports) {
+    const fileName = `${importName}_${item}.ts`;
+
+    const testNamedContent = `
+import { ${importName} } from 'typegpu/$built$';
+console.log(${importName}.${item});
     `;
 
-    const fileName = `${log}_from_${from.replaceAll('/', '')}.ts`;
-    await fs.writeFile(new URL(fileName, TESTS_DIR), testContent);
+    await fs.writeFile(new URL(fileName, TESTS_NAMED_DIR), testNamedContent);
+
+    const testNamespaceContent = `
+import${importName === 'tgpu' ? '' : ' * as'} ${importName} from '${namespace}/$built$';
+console.log(${importName}.${item});
+    `;
+
+    await fs.writeFile(new URL(fileName, TESTS_NAMESPACE_DIR), testNamespaceContent);
   }
 }
 
