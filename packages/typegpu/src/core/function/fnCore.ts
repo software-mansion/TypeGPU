@@ -15,9 +15,25 @@ import { extractArgs } from './extractArgs.ts';
 import type { Implementation, SeparatedEntryArgs } from './fnTypes.ts';
 
 export type FnExternals = {
+  /**
+   * Externals provided by calling `$uses()`.
+   * May be nested.
+   */
   userProvided?: ExternalMap;
+  /**
+   * Externals provided by unplugin-typegpu via function metadata.
+   * May be nested.
+   */
   pluginProvided?: ExternalMap;
+  /**
+   * Function arguments, for example `{ S: Schema }` in `tgpu.fn([Schema])('(arg: S) => {}')`.
+   * Must be flat (every value must be resolvable).
+   */
   args?: ExternalMap;
+  /**
+   * Function return type, for example `{ Out: ... }` in rawWgsl entrypoint functions.
+   * Must be flat (every value must be resolvable).
+   */
   out?: ExternalMap;
 };
 
