@@ -266,6 +266,80 @@ describe('TgpuBindGroup', () => {
         ],
       });
     });
+
+    it('populates a uniform layout with a buffer shorthand', ({ root }) => {
+      const uniform = root.createUniform(d.vec3f);
+      const bindGroup = root.createBindGroup(layout, { foo: uniform });
+
+      root.unwrap(bindGroup);
+
+      expect(root.device.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout),
+        entries: [
+          {
+            binding: 0,
+            resource: {
+              buffer: root.unwrap(uniform.buffer),
+            },
+          },
+        ],
+      });
+    });
+  });
+
+  describe('simple storage layout', () => {
+    let layout: TgpuBindGroupLayout<{
+      foo: { storage: d.Vec3f; access: 'mutable' };
+    }>;
+
+    beforeEach(() => {
+      layout = tgpu
+        .bindGroupLayout({
+          foo: { storage: d.vec3f, access: 'mutable' },
+        })
+        .$name('example');
+    });
+
+    it('populates a storage layout with a mutable shorthand', ({ root }) => {
+      const mutable = root.createMutable(d.vec3f);
+      const bindGroup = root.createBindGroup(layout, { foo: mutable });
+
+      root.unwrap(bindGroup);
+
+      expect(root.device.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout),
+        entries: [
+          {
+            binding: 0,
+            resource: {
+              buffer: root.unwrap(mutable.buffer),
+            },
+          },
+        ],
+      });
+    });
+
+    it('populates a storage layout with a readonly shorthand', ({ root }) => {
+      const readonly = root.createReadonly(d.vec3f);
+      const bindGroup = root.createBindGroup(layout, { foo: readonly });
+
+      root.unwrap(bindGroup);
+
+      expect(root.device.createBindGroup).toBeCalledWith({
+        label: 'example',
+        layout: root.unwrap(layout),
+        entries: [
+          {
+            binding: 0,
+            resource: {
+              buffer: root.unwrap(readonly.buffer),
+            },
+          },
+        ],
+      });
+    });
   });
 
   describe('simple layout with atomics', () => {
