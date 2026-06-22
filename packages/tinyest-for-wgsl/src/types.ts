@@ -21,8 +21,8 @@ export type TranspilationResult = {
   params: tinyest.FuncParameter[];
   body: tinyest.Block;
   /**
-   * All identifiers found in the function code that are not declared in the
-   * function itself, or in the block that is accessing that identifier.
+   * All identifiers found in the function code that are not declared in the function itself.
+   * Included identifiers are already flattened, so this array may contain identifiers like `EXT.vec.x`.
    */
   externalNames: Externals;
 };
