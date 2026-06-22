@@ -2,7 +2,7 @@ import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
 import { getName, hasTinyestMetadata, isNamable, setName } from '../../shared/meta.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
-import type { FnCore, FnExternals } from '../function/fnCore.ts';
+import type { FnExternals } from '../function/fnCore.ts';
 
 /**
  * A key-value mapping where keys represent identifiers within shader code,
