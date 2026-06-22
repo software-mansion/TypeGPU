@@ -16,7 +16,6 @@ function isResolvable(value: unknown) {
 
 /**
  * Merges function externals into one map.
- * Assumes that there is at most one map with non-trivial structure.
  */
 export function mergeFunctionExternals(fnExternals: FnExternals): ExternalMap {
   const base = fnExternals.pluginProvided ?? fnExternals.userProvided ?? {};

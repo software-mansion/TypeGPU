@@ -3,7 +3,6 @@ import { addArgTypesToExternals, type ExternalMap } from '../src/core/resolve/ex
 import * as d from '../src/data/index.ts';
 import tgpu from '../src/index.js';
 
-// TODO: fix these tests
 describe('addArgTypesToExternals', () => {
   const Particle = d.struct({
     position: d.vec3f,
@@ -53,14 +52,14 @@ describe('addArgTypesToExternals', () => {
     const externals: ExternalMap[] = [];
     addArgTypesToExternals(
       ` WorkGroupID : vec3u
-        ,
-          a   : A   ,
-          (@builtin(workgroup_id) b
-
-    : B,
-
-          c: C
-        ) -> vec4f {}`,
+      , 
+        a   : A   , 
+        (@builtin(workgroup_id) b
+        
+  : B, 
+         
+        c: C
+      ) -> vec4f {}`,
       [d.vec3u, Particle, Particle, Particle],
       {
         setExternals(_, result) {

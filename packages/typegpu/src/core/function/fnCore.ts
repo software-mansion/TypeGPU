@@ -17,22 +17,18 @@ import type { Implementation, SeparatedEntryArgs } from './fnTypes.ts';
 export type FnExternals = {
   /**
    * Externals provided by calling `$uses()`.
-   * May be nested.
    */
   userProvided?: ExternalMap;
   /**
    * Externals provided by unplugin-typegpu via function metadata.
-   * May be nested.
    */
   pluginProvided?: ExternalMap;
   /**
-   * Function arguments, for example `{ S: Schema }` in `tgpu.fn([Schema])('(arg: S) => {}')`.
-   * Must be flat (every value must be resolvable).
+   * Function arguments, for example `{ in: { S: Schema } }` in `tgpu.fn([Schema])('(arg: S) => {}')`.
    */
   args?: ExternalMap;
   /**
    * Function return type, for example `{ Out: ... }` in both rawWgsl entrypoint functions and `vertexFnShell(in, Out)`.
-   * Must be flat (every value must be resolvable).
    */
   out?: ExternalMap;
 };
@@ -79,8 +75,8 @@ export function createFnCore(
 
     setExternals(key: keyof FnExternals, newExternal: ExternalMap): void {
       if (key === 'userProvided') {
+        // other external keys may be set multiple times by multiple resolves
         if ('userProvided' in externals) {
-          // other external keys may be set multiple times by multiple resolves
           throw new Error(
             "Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.",
           );
