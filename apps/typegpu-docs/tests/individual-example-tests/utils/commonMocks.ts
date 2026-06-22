@@ -91,16 +91,18 @@ export function mockResizeObserver() {
 }
 
 export function mockCreateImageBitmap({ width = 2, height = 2 } = {}) {
-  vi.stubGlobal('createImageBitmap', async () => {
+  vi.stubGlobal('createImageBitmap', async (_source: unknown, options?: ImageBitmapOptions) => {
+    const w = options?.resizeWidth ?? width;
+    const h = options?.resizeHeight ?? height;
     return {
-      width,
-      height,
+      width: w,
+      height: h,
       close: vi.fn(),
       getImageData: () => {
         return {
           data: new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255]),
-          width,
-          height,
+          width: w,
+          height: h,
         };
       },
     } as ImageBitmap;
