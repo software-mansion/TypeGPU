@@ -1145,4 +1145,23 @@ describe('tgsl fn when using plugin', () => {
       }"
     `);
   });
+
+  it('does not name slot values after the slot', () => {
+    const functionSlot = tgpu.slot(tgpu.fn([])(() => {}));
+
+    const fn = () => {
+      'use gpu';
+      functionSlot.$();
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn item() {
+
+      }
+
+      fn fn_1() {
+        item();
+      }"
+    `);
+  });
 });

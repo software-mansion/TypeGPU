@@ -186,17 +186,17 @@ describe('TgpuLazy', () => {
     });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn foo() -> f32 {
+      "fn item() -> f32 {
         return 1f;
       }
 
-      fn foo2() -> f32 {
+      fn item_1() -> f32 {
         return 2f;
       }
 
       fn main() {
-        foo();
-        foo2();
+        item();
+        item_1();
       }"
     `);
   });

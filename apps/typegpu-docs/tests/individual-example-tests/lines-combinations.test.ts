@@ -35,7 +35,7 @@ describe('lines combinations example', () => {
         radius: f32,
       }
 
-      fn testCaseSlot(vertexIndex: u32, time: f32) -> LineControlPoint {
+      fn item(vertexIndex: u32, time: f32) -> LineControlPoint {
         let s = sin(time);
         let c = cos(time);
         const r = 0.25;
@@ -269,10 +269,10 @@ describe('lines combinations example', () => {
 
       @vertex fn mainVertex(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) instanceIndex: u32) -> mainVertex_Output {
         let t = uniforms.time;
-        let A = testCaseSlot(instanceIndex, t);
-        let B = testCaseSlot((instanceIndex + 1u), t);
-        let C = testCaseSlot((instanceIndex + 2u), t);
-        let D = testCaseSlot((instanceIndex + 3u), t);
+        let A = item(instanceIndex, t);
+        let B = item((instanceIndex + 1u), t);
+        let C = item((instanceIndex + 2u), t);
+        let D = item((instanceIndex + 3u), t);
         if (((((A.radius < 0f) || (B.radius < 0f)) || (C.radius < 0f)) || (D.radius < 0f))) {
           return mainVertex_Output();
         }

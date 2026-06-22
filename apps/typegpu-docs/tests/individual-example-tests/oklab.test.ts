@@ -218,7 +218,7 @@ describe('oklab example', () => {
         return linearToSrgb(oklabToLinearRgb(gamutClipAdaptiveL05(lab)));
       }
 
-      fn patternSlot(_arg_0: vec2f, _arg_1: vec3f) -> f32 {
+      fn item_1(_arg_0: vec2f, _arg_1: vec3f) -> f32 {
         return 1f;
       }
 
@@ -236,7 +236,7 @@ describe('oklab example', () => {
         let outOfGamut = (any((rgb < vec3f())) || any((rgb > vec3f(1))));
         let clipLab = gamutClipAdaptiveL05(lab);
         let color = oklabToRgb(lab);
-        let patternScaled = ((patternSlot(uv, clipLab) * 0.1f) + 0.9f);
+        let patternScaled = ((item_1(uv, clipLab) * 0.1f) + 0.9f);
         return vec4f(select(color, (color * patternScaled), outOfGamut), 1f);
       }"
     `);
