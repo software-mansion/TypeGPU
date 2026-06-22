@@ -17,21 +17,24 @@ function i(identifier: string): t.Identifier {
   return t.identifier(identifier);
 }
 
-// TODO: simplify
-function externalsToNode(externals: Externals | string): t.Expression {
-  if (typeof externals === 'string') {
-    const chain = externals.split('.');
-    if (!chain[0]) {
-      throw new Error('Internal error, expected chain to not be empty');
-    }
-    const base = chain[0] === 'this' ? t.thisExpression() : i(chain[0]);
-    const propAccess = chain
-      .slice(1)
-      .reduce<t.Expression>((obj, prop) => t.memberExpression(obj, t.identifier(prop)), base);
-    return t.arrowFunctionExpression([], propAccess);
-  }
+function externalsToNode(externals: Externals): t.Expression {
   return t.objectExpression(
-    externals.map((key) => t.objectProperty(t.stringLiteral(key), externalsToNode(key), false)),
+    externals.map((key) => {
+      const chain = key.split('.');
+      if (!chain[0]) {
+        throw new Error('Internal error, expected chain to not be empty');
+      }
+      const base = chain[0] === 'this' ? t.thisExpression() : i(chain[0]);
+      const propAccess = chain
+        .slice(1)
+        .reduce<t.Expression>((obj, prop) => t.memberExpression(obj, t.identifier(prop)), base);
+
+      return t.objectProperty(
+        t.stringLiteral(key),
+        t.arrowFunctionExpression([], propAccess),
+        false,
+      );
+    }),
   );
 }
 
