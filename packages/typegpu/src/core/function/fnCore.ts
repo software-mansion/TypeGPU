@@ -74,20 +74,17 @@ export function createFnCore(
     [$getNameForward]: typeof implementation === 'function' ? implementation : undefined,
 
     setExternals(key: keyof FnExternals, newExternal: ExternalMap): void {
-      if (key === 'userProvided') {
-        // other external keys may be set multiple times by multiple resolves
-        if ('userProvided' in externals) {
-          throw new Error(
-            "Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.",
-          );
-        }
-        if ('pluginProvided' in externals) {
-          throw new Error(
-            "Cannot call '$uses' on functions whose metadata was provided by unplugin-typegpu.",
-          );
-        }
+      if (key === 'userProvided' && 'userProvided' in externals) {
+        throw new Error(
+          "Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.",
+        );
       }
       externals[key] = newExternal;
+      if (externals.userProvided && externals.pluginProvided) {
+        throw new Error(
+          "Cannot call '$uses' on functions whose metadata was provided by unplugin-typegpu.",
+        );
+      }
     },
 
     resolve(

@@ -263,20 +263,15 @@ describe('external name collisions', () => {
   });
 
   it('does not modify original externals', () => {
-    const ext = { out: 1 };
-    const vertexFn = tgpu
-      .vertexFn({
-        in: { vId: d.builtin.vertexIndex },
-        out: { position: d.builtin.position },
-      })((input, Out) => {
-        const x = input.vId;
-        return Out();
-      })
-      .$uses(ext);
+    const ext = { n: 1 };
+    const vertexFn = tgpu.vertexFn({
+      in: { vId: d.builtin.vertexIndex },
+      out: { position: d.builtin.position },
+    })`{ let a = n; return Out(); }`.$uses(ext);
 
     tgpu.resolve([vertexFn]);
 
-    expect(ext).toStrictEqual({ out: 1 });
+    expect(ext).toStrictEqual({ n: 1 });
   });
 
   it('does not break when an unused unresolvable external is passed', () => {
@@ -289,5 +284,27 @@ describe('external name collisions', () => {
           let a = 1;
         }"
     `);
+  });
+
+  it("throws when calling '$uses' on a function with metadata", () => {
+    const fn = tgpu.fn([])(() => {
+      'use gpu';
+    });
+
+    expect(() => tgpu.resolve([fn.$uses({})])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:fn: Cannot call '$uses' on functions whose metadata was provided by unplugin-typegpu.]
+    `);
+  });
+
+  it("throws when calling '$uses' on a function twice", () => {
+    const fn = tgpu.fn([])`{
+      let a = EXT;
+    }`.$uses({ EXT: 1 });
+
+    expect(() => fn.$uses({ EXT: 2 })).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.]`,
+    );
   });
 });
