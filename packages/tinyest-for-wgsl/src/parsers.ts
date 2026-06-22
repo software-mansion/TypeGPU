@@ -286,8 +286,9 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
     throw new Error(`Unsupported JS functionality: ${node.type}`);
   }
 
-  // TODO: document
   if (ctx.ignoreExternalDepth === 0) {
+    // Check if the node is an external prop access chain, and if so,
+    // add it to externals and swap the AST node for an identifier.
     const externalChain = tryFindExternalChain(ctx, node);
     if (externalChain) {
       if (!ctx.externalNames.includes(externalChain)) {
