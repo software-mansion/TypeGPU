@@ -96,24 +96,14 @@ const texture = root.createTexture({
 
 ## Writing to a texture
 
-The `.write()` method provides multiple overloads for different data sources:
+Texture writes cover decoded images, blobs, single-channel writes, and raw texel data:
 
-```ts
-// Image sources (single or array)
-write(source: GPUCopyExternalImageSource | GPUCopyExternalImageSource[], options?: Pick<TextureWriteOptions, 'resize' | 'filter'>): void
-
-// Image source with destination/source rectangles
-write(source: TextureImageWrite): void
-
-// Single destination channel writes
-write(source: TextureChannelWrite): void
-
-// Blob decode/resize path
-writeAsync(source: Blob | TextureBlobWrite): Promise<void>
-
-// Raw binary data with optional mip level
-write(source: ArrayBuffer | TypedArray | DataView, mipLevel?: number): void
-```
+- `texture.write(source)` uploads a decoded image source, such as an `ImageBitmap`, `ImageData`, canvas, video frame, or video element.
+- `texture.write(source, { resize: true })` allows a decoded image source to be resampled when its size does not match the destination.
+- `texture.write({ source, sourceOrigin, sourceSize, origin, size })` writes a cropped source rectangle into a chosen destination rectangle.
+- `texture.write({ channels })` updates selected destination channels, for example packing grayscale roughness, metalness, and mask maps into one RGBA texture.
+- `texture.write(bytes, mipLevel?)` uploads raw texel data directly.
+- `texture.writeAsync({ source: blob, size, resize: true })` decodes and resizes a `Blob` without TypeGPU's render-pass resize path.
 
 ### Writing image data
 
@@ -125,6 +115,10 @@ You can write various image sources to textures. `GPUCopyExternalImageSource` in
 - `ImageData`
 - `OffscreenCanvas`
 - `VideoFrame`
+
+:::caution[Browser support]
+`HTMLImageElement` and `ImageData` sources are not widely available in WebGPU yet. Firefox and Safari do not support them currently, so avoid them in portable code; decode to an `ImageBitmap` instead.
+:::
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -139,7 +133,7 @@ const texture = root.createTexture({
 const response = await fetch('path/to/image.png');
 const blob = await response.blob();
 const imageBitmap = await createImageBitmap(blob);
-texture.write(imageBitmap, { resize: true });
+texture.write(imageBitmap);
 
 // From an HTMLCanvasElement
 const canvas = document.createElement('canvas');
@@ -148,13 +142,20 @@ const ctx = canvas.getContext('2d');
 texture.write(canvas);
 ```
 
-:::tip
-Synchronous image writes require matching source and destination sizes by default. Pass `resize: true` when you want TypeGPU to resample an image source.
-:::
+The source and destination sizes must match unless you pass `resize: true`. Matching sizes use a direct WebGPU copy. Mismatched sizes use TypeGPU's render-pass blit path, so the destination texture needs `.$usage('render')` and a 2D format that can be sampled as floats and used as a render attachment.
+
+```ts
+const texture = root.createTexture({
+  size: [256, 256],
+  format: 'rgba8unorm',
+}).$usage('sampled', 'render');
+
+texture.write(imageBitmap, { resize: true });
+```
 
 ### Writing image regions
 
-Use a descriptor with `source`, `origin` and `size` to write into a destination rectangle. `origin` is the destination origin in texture pixels, and `size` is the destination extent in pixels.
+Use an object descriptor when you need a source crop, a destination rectangle, or a specific mip level. `sourceOrigin` and `sourceSize` pick pixels from the source image; `origin` and `size` choose where they land in the texture.
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -164,17 +165,18 @@ declare const imageBitmap: ImageBitmap;
 const texture = root.createTexture({
   size: [512, 512],
   format: 'rgba8unorm',
-}).$usage('sampled');
+}).$usage('sampled', 'render');
 
 texture.write({
   source: imageBitmap,
+  sourceOrigin: [16, 16],
+  sourceSize: [128, 128],
   origin: [128, 64],
-  size: [256, 256],
-  resize: true,
+  size: [128, 128],
 });
 ```
 
-You can crop the source before writing:
+If `sourceSize` and `size` differ, add `resize: true`; this uses the same render-pass path as other decoded-source resizing:
 
 ```ts
 texture.write({
@@ -182,12 +184,14 @@ texture.write({
   sourceOrigin: [16, 16],
   sourceSize: [128, 128],
   origin: [0, 0],
+  size: [256, 256],
+  resize: true,
 });
 ```
 
 ### Writing blobs
 
-Use `writeAsync` when you want TypeGPU to decode a `Blob`. Blob writes use `createImageBitmap`, so resizing happens before upload:
+Use `writeAsync` when your source is still a `Blob`, such as a fetched PNG or JPEG. Its main purpose is resized uploads without a TypeGPU render pass: with `resize: true`, TypeGPU asks `createImageBitmap` for the requested `size`, then uploads that bitmap.
 
 ```ts twoslash
 import tgpu from 'typegpu';
@@ -196,7 +200,7 @@ const root = await tgpu.init();
 const texture = root.createTexture({
   size: [512, 512],
   format: 'rgba8unorm',
-}).$usage('sampled');
+}).$usage('sampled', 'render');
 
 const blob = await (await fetch('path/to/image.png')).blob();
 
@@ -206,6 +210,8 @@ await texture.writeAsync({
   resize: true,
 });
 ```
+
+This avoids TypeGPU's render-pass resize and its current format limits. The destination texture still needs `.$usage('render')`, because WebGPU requires `RENDER_ATTACHMENT` for external image copies.
 
 ### Writing single channels
 
@@ -232,7 +238,7 @@ texture.write({
 });
 ```
 
-Only single destination channels are supported for now: `r`, `g`, `b`, and `a`. Region options apply to the grouped write:
+Only single destination channels are supported for now: `r`, `g`, `b`, and `a`. Each write uses a WebGPU render pass with a color write mask, so the target texture must be 2D and use a format supported by TypeGPU's render-pass write path. Region options apply to the grouped write:
 
 ```ts
 texture.write({
