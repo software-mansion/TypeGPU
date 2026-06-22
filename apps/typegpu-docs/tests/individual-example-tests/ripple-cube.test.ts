@@ -660,18 +660,18 @@ describe('ripple-cube example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
+      @group(1) @binding(1) var outputTexture: texture_storage_2d<rgba16float, write>;
+
+      @group(1) @binding(0) var inputTexture: texture_2d<f32>;
+
+      @group(1) @binding(2) var sampler_1: sampler;
+
       struct BloomParams {
         threshold: f32,
         intensity: f32,
       }
 
       @group(0) @binding(1) var<uniform> bloomUniform: BloomParams;
-
-      @group(1) @binding(1) var outputTexture: texture_storage_2d<rgba16float, write>;
-
-      @group(1) @binding(0) var inputTexture: texture_2d<f32>;
-
-      @group(1) @binding(2) var sampler_1: sampler;
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
         let dimensions = textureDimensions(outputTexture);
@@ -765,18 +765,18 @@ describe('ripple-cube example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
+      @group(1) @binding(0) var colorTexture: texture_2d<f32>;
+
+      @group(1) @binding(2) var sampler_1: sampler;
+
+      @group(1) @binding(1) var bloomTexture: texture_2d<f32>;
+
       struct BloomParams {
         threshold: f32,
         intensity: f32,
       }
 
       @group(0) @binding(0) var<uniform> bloomUniform: BloomParams;
-
-      @group(1) @binding(0) var colorTexture: texture_2d<f32>;
-
-      @group(1) @binding(2) var sampler_1: sampler;
-
-      @group(1) @binding(1) var bloomTexture: texture_2d<f32>;
 
       struct fragmentMain_Input {
         @location(0) uv: vec2f,

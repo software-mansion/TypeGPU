@@ -22,6 +22,13 @@ describe('boids example', () => {
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
+      struct TriangleData {
+        position: vec2f,
+        velocity: vec2f,
+      }
+
+      @group(1) @binding(0) var<storage, read> currentTrianglePos: array<TriangleData>;
+
       struct Params {
         separationDistance: f32,
         separationStrength: f32,
@@ -32,13 +39,6 @@ describe('boids example', () => {
       }
 
       @group(0) @binding(1) var<uniform> paramsBuffer: Params;
-
-      struct TriangleData {
-        position: vec2f,
-        velocity: vec2f,
-      }
-
-      @group(1) @binding(0) var<storage, read> currentTrianglePos: array<TriangleData>;
 
       @group(1) @binding(1) var<storage, read_write> nextTrianglePos: array<TriangleData>;
 

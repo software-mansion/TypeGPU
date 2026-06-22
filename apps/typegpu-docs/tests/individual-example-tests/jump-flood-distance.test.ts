@@ -303,16 +303,16 @@ describe('jump flood (distance) example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
+      @group(1) @binding(0) var distTexture: texture_2d<f32>;
+
+      @group(1) @binding(1) var sampler_1: sampler;
+
       struct VisualizationParams {
         showInside: u32,
         showOutside: u32,
       }
 
       @group(0) @binding(0) var<uniform> paramsUniform: VisualizationParams;
-
-      @group(1) @binding(0) var distTexture: texture_2d<f32>;
-
-      @group(1) @binding(1) var sampler_1: sampler;
 
       const outsideGradient: array<vec3f, 5> = array<vec3f, 5>(vec3f(0.05000000074505806, 0.05000000074505806, 0.15000000596046448), vec3f(0.20000000298023224, 0.10000000149011612, 0.4000000059604645), vec3f(0.6000000238418579, 0.20000000298023224, 0.5), vec3f(0.949999988079071, 0.5, 0.30000001192092896), vec3f(1, 0.949999988079071, 0.800000011920929));
 

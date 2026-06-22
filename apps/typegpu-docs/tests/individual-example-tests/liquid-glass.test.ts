@@ -64,6 +64,8 @@ describe('liquid-glass example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
+      @group(0) @binding(0) var<uniform> mousePosUniform: vec2f;
+
       struct Params {
         rectDims: vec2f,
         radius: f32,
@@ -78,9 +80,7 @@ describe('liquid-glass example', () => {
         tintColor: vec3f,
       }
 
-      @group(0) @binding(0) var<uniform> paramsUniform: Params;
-
-      @group(0) @binding(1) var<uniform> mousePosUniform: vec2f;
+      @group(0) @binding(1) var<uniform> paramsUniform: Params;
 
       fn sdRoundedBox2d(point: vec2f, size: vec2f, cornerRadius: f32) -> f32 {
         let d = ((abs(point) - size) + vec2f(cornerRadius));

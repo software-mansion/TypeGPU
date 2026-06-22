@@ -102,16 +102,16 @@ describe('simple shadow example', () => {
 
       @group(0) @binding(2) var<uniform> lightSpaceUniform: LightSpace;
 
+      @group(2) @binding(0) var shadowMap: texture_depth_2d;
+
+      @group(2) @binding(1) var comparisonSampler: sampler_comparison;
+
       struct VisParams {
         shadowOnly: f32,
         lightDepth: f32,
       }
 
       @group(0) @binding(3) var<uniform> paramsUniform: VisParams;
-
-      @group(2) @binding(0) var shadowMap: texture_depth_2d;
-
-      @group(2) @binding(1) var comparisonSampler: sampler_comparison;
 
       struct mainFrag_Input {
         @location(0) normal: vec4f,

@@ -55,6 +55,13 @@ describe('wgsl resolution example', () => {
         return _arg_0.color;
       }
 
+      struct TriangleData {
+        position: vec2f,
+        velocity: vec2f,
+      }
+
+      @group(2) @binding(0) var<storage, read> currentTrianglePos_1: array<TriangleData>;
+
       struct Params {
         separationDistance: f32,
         separationStrength: f32,
@@ -65,13 +72,6 @@ describe('wgsl resolution example', () => {
       }
 
       @group(0) @binding(0) var<uniform> paramsBuffer: Params;
-
-      struct TriangleData {
-        position: vec2f,
-        velocity: vec2f,
-      }
-
-      @group(2) @binding(0) var<storage, read> currentTrianglePos_1: array<TriangleData>;
 
       @group(2) @binding(1) var<storage, read_write> nextTrianglePos: array<TriangleData>;
 

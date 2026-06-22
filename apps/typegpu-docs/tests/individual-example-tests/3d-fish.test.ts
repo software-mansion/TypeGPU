@@ -86,17 +86,6 @@ describe('3d fish example', () => {
 
       @group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
-      struct FishBehaviorParams {
-        separationDist: f32,
-        separationStr: f32,
-        alignmentDist: f32,
-        alignmentStr: f32,
-        cohesionDist: f32,
-        cohesionStr: f32,
-      }
-
-      @group(1) @binding(4) var<uniform> fishBehavior: FishBehaviorParams;
-
       struct ModelData {
         position: vec3f,
         direction: vec3f,
@@ -108,6 +97,17 @@ describe('3d fish example', () => {
       }
 
       @group(1) @binding(0) var<storage, read> currentFishData: array<ModelData>;
+
+      struct FishBehaviorParams {
+        separationDist: f32,
+        separationStr: f32,
+        alignmentDist: f32,
+        alignmentStr: f32,
+        cohesionDist: f32,
+        cohesionStr: f32,
+      }
+
+      @group(1) @binding(4) var<uniform> fishBehavior: FishBehaviorParams;
 
       struct Line3 {
         origin: vec3f,
@@ -232,15 +232,6 @@ describe('3d fish example', () => {
         simulate(id.x, id.y, id.z);
       }
 
-      struct Camera {
-        position: vec4f,
-        targetPos: vec4f,
-        view: mat4x4f,
-        projection: mat4x4f,
-      }
-
-      @group(0) @binding(2) var<uniform> camera: Camera;
-
       struct ModelData {
         position: vec3f,
         direction: vec3f,
@@ -274,6 +265,15 @@ describe('3d fish example', () => {
       }
 
       @group(0) @binding(4) var<uniform> currentTime: f32;
+
+      struct Camera {
+        position: vec4f,
+        targetPos: vec4f,
+        view: mat4x4f,
+        projection: mat4x4f,
+      }
+
+      @group(0) @binding(2) var<uniform> camera: Camera;
 
       struct vertexShader_Output {
         @location(0) worldPosition: vec3f,

@@ -82,6 +82,14 @@ describe('slime mold 3d example', () => {
         wrappedCallback(id.x, id.y, id.z);
       }
 
+      @group(1) @binding(0) var oldState: texture_3d<f32>;
+
+      @group(1) @binding(2) var sampler_1: sampler;
+
+      fn getSummand(uv: vec3f, offset: vec3f) -> f32 {
+        return textureSampleLevel(oldState, sampler_1, (uv + offset), 0).x;
+      }
+
       struct Params {
         deltaTime: f32,
         moveSpeed: f32,
@@ -92,14 +100,6 @@ describe('slime mold 3d example', () => {
       }
 
       @group(0) @binding(0) var<uniform> params: Params;
-
-      @group(1) @binding(0) var oldState: texture_3d<f32>;
-
-      @group(1) @binding(2) var sampler_1: sampler;
-
-      fn getSummand(uv: vec3f, offset: vec3f) -> f32 {
-        return textureSampleLevel(oldState, sampler_1, (uv + offset), 0).x;
-      }
 
       @group(1) @binding(1) var newState: texture_storage_3d<r32float, write>;
 
@@ -120,17 +120,6 @@ describe('slime mold 3d example', () => {
         let newValue = saturate((blurred - params.evaporationRate));
         textureStore(newState, gid.xyz, vec4f(newValue, 0f, 0f, 1f));
       }
-
-      struct Params {
-        deltaTime: f32,
-        moveSpeed: f32,
-        sensorAngle: f32,
-        sensorDistance: f32,
-        turnSpeed: f32,
-        evaporationRate: f32,
-      }
-
-      @group(0) @binding(0) var<uniform> params: Params;
 
       var<private> seed: vec2f;
 
@@ -166,6 +155,17 @@ describe('slime mold 3d example', () => {
         }
         return normalize(cross(dir, axis));
       }
+
+      struct Params {
+        deltaTime: f32,
+        moveSpeed: f32,
+        sensorAngle: f32,
+        sensorDistance: f32,
+        turnSpeed: f32,
+        evaporationRate: f32,
+      }
+
+      @group(0) @binding(0) var<uniform> params: Params;
 
       struct SenseResult {
         weightedDir: vec3f,
@@ -382,14 +382,6 @@ describe('slime mold 3d example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      struct Camera {
-        viewProj: mat4x4f,
-        invViewProj: mat4x4f,
-        position: vec3f,
-      }
-
-      @group(0) @binding(0) var<uniform> cameraData: Camera;
-
       var<private> seed: vec2f;
 
       fn seed2(value: vec2f) {
@@ -399,6 +391,14 @@ describe('slime mold 3d example', () => {
       fn randSeed2(seed: vec2f) {
         seed2(seed);
       }
+
+      struct Camera {
+        viewProj: mat4x4f,
+        invViewProj: mat4x4f,
+        position: vec3f,
+      }
+
+      @group(0) @binding(0) var<uniform> cameraData: Camera;
 
       struct RayBoxResult {
         tNear: f32,

@@ -75,13 +75,6 @@ describe('jelly switch example', () => {
         return Ray(rayOrigin, rayDir);
       }
 
-      struct DirectionalLight {
-        direction: vec3f,
-        color: vec3f,
-      }
-
-      @group(0) @binding(2) var<uniform> lightUniform: DirectionalLight;
-
       fn sdPlane(point: vec3f, normal: vec3f, height: f32) -> f32 {
         return (dot(point, normal) + height);
       }
@@ -119,7 +112,7 @@ describe('jelly switch example', () => {
         wiggleX: f32,
       }
 
-      @group(0) @binding(3) var<uniform> stateUniform: SwitchState;
+      @group(0) @binding(2) var<uniform> stateUniform: SwitchState;
 
       fn opRotateAxisAngle(p: vec3f, axis: vec3f, angle: f32) -> vec3f {
         return (mix((axis * dot(p, axis)), p, cos(angle)) + (cross(p, axis) * sin(angle)));
@@ -178,11 +171,18 @@ describe('jelly switch example', () => {
         return getApproxNormal(position, 1e-4f);
       }
 
-      @group(0) @binding(4) var<uniform> jellyColorUniform: vec4f;
+      @group(0) @binding(3) var<uniform> jellyColorUniform: vec4f;
 
       fn sqLength(a: vec3f) -> f32 {
         return dot(a, a);
       }
+
+      struct DirectionalLight {
+        direction: vec3f,
+        color: vec3f,
+      }
+
+      @group(0) @binding(4) var<uniform> lightUniform: DirectionalLight;
 
       fn getFakeShadow(position: vec3f, lightDir: vec3f) -> vec3f {
         if ((position.y < -0.03f)) {

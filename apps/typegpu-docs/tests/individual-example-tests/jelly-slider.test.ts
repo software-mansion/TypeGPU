@@ -104,13 +104,6 @@ describe('jelly-slider example', () => {
         return Ray(rayOrigin, rayDir);
       }
 
-      struct DirectionalLight {
-        direction: vec3f,
-        color: vec3f,
-      }
-
-      @group(0) @binding(2) var<uniform> lightUniform: DirectionalLight;
-
       fn sdPlane(point: vec3f, normal: vec3f, height: f32) -> f32 {
         return (dot(point, normal) + height);
       }
@@ -140,11 +133,11 @@ describe('jelly-slider example', () => {
         return opUnion(sdPlane(position, vec3f(0, 1, 0), 0.06f), (opExtrudeY(position, -(rectangleCutoutDist(position.xz)), (groundThickness - groundRoundness)) - groundRoundness));
       }
 
-      @group(0) @binding(3) var<uniform> endCapUniform: vec4f;
+      @group(0) @binding(2) var<uniform> endCapUniform: vec4f;
 
-      @group(0) @binding(4) var digitsTextureView: texture_2d_array<f32>;
+      @group(0) @binding(3) var digitsTextureView: texture_2d_array<f32>;
 
-      @group(0) @binding(5) var filteringSampler: sampler;
+      @group(0) @binding(4) var filteringSampler: sampler;
 
       fn renderPercentageOnGround(hitPosition: vec3f, center: vec3f, percentage: u32) -> vec4f {
         const textWidth = 0.38;
@@ -161,6 +154,13 @@ describe('jelly-slider example', () => {
         }
         return textureSampleLevel(digitsTextureView, filteringSampler, vec2f(uvX, uvZ), percentage, 0);
       }
+
+      struct DirectionalLight {
+        direction: vec3f,
+        color: vec3f,
+      }
+
+      @group(0) @binding(5) var<uniform> lightUniform: DirectionalLight;
 
       @group(0) @binding(6) var bezierTexture: texture_2d<f32>;
 

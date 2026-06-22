@@ -51,11 +51,11 @@ describe('mnist inference example', () => {
 
       enable subgroups;
 
+      const workgroupSize: u32 = 128u;
+
       @group(0) @binding(1) var<storage, read_write> output: array<f32>;
 
       @group(0) @binding(0) var<storage, read> input: array<f32>;
-
-      const workgroupSize: u32 = 128u;
 
       @group(1) @binding(0) var<storage, read> weights: array<f32>;
 

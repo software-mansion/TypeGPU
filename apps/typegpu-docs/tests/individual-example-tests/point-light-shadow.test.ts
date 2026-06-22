@@ -74,6 +74,8 @@ describe('point light shadow example', () => {
         return vertexMain_Output(pos, worldPos, uv, worldNormal);
       }
 
+      @group(1) @binding(3) var<uniform> lightPosition: vec3f;
+
       struct item {
         pcfSamples: u32,
         diskRadius: f32,
@@ -82,8 +84,6 @@ describe('point light shadow example', () => {
       }
 
       @group(0) @binding(0) var<uniform> shadowParams: item;
-
-      @group(1) @binding(3) var<uniform> lightPosition: vec3f;
 
       @group(0) @binding(1) var<uniform> samplesUniform: array<vec4f, 64>;
 
@@ -127,14 +127,14 @@ describe('point light shadow example', () => {
         return vec4f(color, 1f);
       }
 
+      @group(0) @binding(1) var<uniform> lightPosition: vec3f;
+
       struct CameraData {
         viewProjectionMatrix: mat4x4f,
         inverseViewProjectionMatrix: mat4x4f,
       }
 
       @group(0) @binding(0) var<uniform> camera: CameraData;
-
-      @group(0) @binding(1) var<uniform> lightPosition: vec3f;
 
       struct vertexLightIndicator_Output {
         @builtin(position) pos: vec4f,
