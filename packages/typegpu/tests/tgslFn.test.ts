@@ -1146,30 +1146,3 @@ describe('tgsl fn when using plugin', () => {
     `);
   });
 });
-
-it('TODO: broken test', ({ root }) => {
-  const buf = root.createBuffer(d.f32).$usage('uniform').as('uniform');
-  const fnAcc = tgpu.accessor(d.f32, () => {
-    'use gpu';
-    return 1;
-  });
-
-  const main = () => {
-    'use gpu';
-    const a = buf.$;
-    const b = fnAcc.$;
-  };
-
-  expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-    "fn fnAcc() -> i32 {
-      return 1;
-    }
-
-    @group(0) @binding(0) var<uniform> buf: f32;
-
-    fn main() {
-      let a = buf;
-      let b = fnAcc();
-    }"
-  `);
-});

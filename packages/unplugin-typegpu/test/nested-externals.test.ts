@@ -13,8 +13,9 @@ function extractExternals(code: string | undefined | null) {
   return code.slice(startIndex, endIndex).trim();
 }
 
-const codes = {
-  'allows multiple usages of one external': `\
+describe('externals gathering', () => {
+  describe('multiple usages of one external', () => {
+    const code = `\
     const ext = {
       value: 7,
       config: {
@@ -29,9 +30,27 @@ const codes = {
       const c = ext.config.zero;
       const d = ext.config.multiplier;
     };
-    console.log(fn);`,
-  // ---
-  'treats dereference like a regular external': `\
+    console.log(fn);`;
+
+    it('works for BABEL', () => {
+      expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
+        "{
+            "ext.value": () => ext.value,
+            "ext.config.multiplier": () => ext.config.multiplier,
+            "ext.config.zero": () => ext.config.zero
+          }"
+      `);
+    });
+
+    it('works for ROLLUP', async () => {
+      expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
+        `"{ "ext.value": () => ext.value, "ext.config.multiplier": () => ext.config.multiplier, "ext.config.zero": () => ext.config.zero }"`,
+      );
+    });
+  });
+
+  describe('dereference', () => {
+    const code = `\
     import tgpu, { d } from 'typegpu';
 
     const root = await tgpu.init();
@@ -40,9 +59,25 @@ const codes = {
       'use gpu';
       const a = buffer.$.x;
     };
-    console.log(fn);`,
-  // ---
-  'skips computed prop access': `\
+    console.log(fn);`;
+
+    it('works for BABEL', () => {
+      expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
+        "{
+            "buffer.$.x": () => buffer.$.x
+          }"
+      `);
+    });
+
+    it('works for ROLLUP', async () => {
+      expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
+        `"{ "buffer.$.x": () => buffer.$.x }"`,
+      );
+    });
+  });
+
+  describe('computed prop access', () => {
+    const code = `\
     const ext = {
       n: 1,
     };
@@ -51,9 +86,25 @@ const codes = {
       'use gpu';
       const a = ext['n'];
     };
-    console.log(fn);`,
-  // ---
-  'skips calls': `\
+    console.log(fn);`;
+
+    it('works for BABEL', () => {
+      expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
+        "{
+            "ext": () => ext
+          }"
+      `);
+    });
+
+    it('works for ROLLUP', async () => {
+      expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
+        `"{ "ext": () => ext }"`,
+      );
+    });
+  });
+
+  describe('calls', () => {
+    const code = `\
     import tgpu, { d } from 'typegpu';
 
     const fn = () => {
@@ -72,49 +123,9 @@ const codes = {
       },
     };
 
-    console.log(fn);`,
-  // TODO(#2591): private access test
-};
+    console.log(fn);`;
 
-// TODO: define code before a pair of tests so that it is closer to the snapshot
-
-describe('externals gathering', () => {
-  describe('BABEL', () => {
-    it('allows multiple usages of one external', () => {
-      const code = codes['allows multiple usages of one external'];
-
-      expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
-        "{
-            "ext.value": () => ext.value,
-            "ext.config.multiplier": () => ext.config.multiplier,
-            "ext.config.zero": () => ext.config.zero
-          }"
-      `);
-    });
-
-    it('treats dereference like a regular external', () => {
-      const code = codes['treats dereference like a regular external'];
-
-      expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
-        "{
-            "buffer.$.x": () => buffer.$.x
-          }"
-      `);
-    });
-
-    it('skips computed prop access', () => {
-      const code = codes['skips computed prop access'];
-
-      expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
-        "{
-            "ext": () => ext
-          }"
-      `);
-    });
-
-    it('skips calls', () => {
-      const code = codes['skips calls'];
-
+    it('works for BABEL', () => {
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "{
             "ext.comptime": () => ext.comptime,
@@ -122,36 +133,8 @@ describe('externals gathering', () => {
           }"
       `);
     });
-  });
 
-  describe('ROLLUP', () => {
-    it('allows multiple usages of one external', async () => {
-      const code = codes['allows multiple usages of one external'];
-
-      expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
-        `"{ "ext.value": () => ext.value, "ext.config.multiplier": () => ext.config.multiplier, "ext.config.zero": () => ext.config.zero }"`,
-      );
-    });
-
-    it('treats dereference like a regular external', async () => {
-      const code = codes['treats dereference like a regular external'];
-
-      expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
-        `"{ "buffer.$.x": () => buffer.$.x }"`,
-      );
-    });
-
-    it('skips computed prop access', async () => {
-      const code = codes['skips computed prop access'];
-
-      expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
-        `"{ "ext": () => ext }"`,
-      );
-    });
-
-    it('skips calls', async () => {
-      const code = codes['skips calls'];
-
+    it('works for ROLLUP', async () => {
       expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
         `"{ "ext.comptime": () => ext.comptime, "ext.runtime": () => ext.runtime }"`,
       );

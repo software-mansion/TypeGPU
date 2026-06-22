@@ -216,6 +216,7 @@ describe('transpileFn', () => {
       const { externalNames, body } = transpileFn(
         p(`() => {
           const a = ext.p;
+
           const b = ext.q.a;
           const c = ext.q.b;
 
@@ -278,7 +279,7 @@ describe('transpileFn', () => {
   );
 
   it(
-    '...',
+    'does not prune externals when they reappear',
     dualTest((p) => {
       const { externalNames, body } = transpileFn(
         p(`() => {
@@ -303,5 +304,3 @@ describe('transpileFn', () => {
     }),
   );
 });
-
-// TODO: a test for item used both without and with a private
