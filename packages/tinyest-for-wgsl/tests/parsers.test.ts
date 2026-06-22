@@ -30,7 +30,7 @@ describe('transpileFn', () => {
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
-      expect(externalNames).toMatchInlineSnapshot(`{}`);
+      expect(externalNames).toMatchInlineSnapshot(`[]`);
     }),
   );
 
@@ -41,7 +41,7 @@ describe('transpileFn', () => {
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
-      expect(externalNames).toMatchInlineSnapshot(`{}`);
+      expect(externalNames).toMatchInlineSnapshot(`[]`);
     }),
   );
 
@@ -58,9 +58,9 @@ describe('transpileFn', () => {
         `"[0,[[10,[1,[1,"a","+","b"],"-","c"]]]]"`,
       );
       expect(externalNames).toMatchInlineSnapshot(`
-        {
-          "c": "c",
-        }
+        [
+          "c",
+        ]
       `);
     }),
   );
@@ -81,9 +81,9 @@ describe('transpileFn', () => {
       );
       // Only 'c' is external, as 'a' is declared in the same scope.
       expect(externalNames).toMatchInlineSnapshot(`
-        {
-          "c": "c",
-        }
+        [
+          "c",
+        ]
       `);
     }),
   );
@@ -106,9 +106,9 @@ describe('transpileFn', () => {
       );
       // Only 'c' is external, as 'a' is declared in the outer scope.
       expect(externalNames).toMatchInlineSnapshot(`
-        {
-          "c": "c",
-        }
+        [
+          "c",
+        ]
       `);
     }),
   );
@@ -119,18 +119,12 @@ describe('transpileFn', () => {
       const { params, body, externalNames } = transpileFn(p('() => external.outside.prop'));
 
       expect(params).toStrictEqual([]);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[10,[7,[7,"external","outside"],"prop"]]]]"`,
-      );
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,"external.outside.prop"]]]"`);
       // Only 'external' is external.
       expect(externalNames).toMatchInlineSnapshot(`
-        {
-          "external": {
-            "outside": {
-              "prop": "external.outside.prop",
-            },
-          },
-        }
+        [
+          "external.outside.prop",
+        ]
       `);
     }),
   );
@@ -160,7 +154,7 @@ describe('transpileFn', () => {
         },
       ]);
 
-      expect(externalNames).toMatchInlineSnapshot(`{}`);
+      expect(externalNames).toMatchInlineSnapshot(`[]`);
     }),
   );
 
@@ -206,7 +200,7 @@ describe('transpileFn', () => {
         },
       ]);
 
-      expect(externalNames).toMatchInlineSnapshot(`{}`);
+      expect(externalNames).toMatchInlineSnapshot(`[]`);
     }),
   );
 
@@ -219,7 +213,7 @@ describe('transpileFn', () => {
   it(
     'handles complex external trees',
     dualTest((p) => {
-      const { externalNames } = transpileFn(
+      const { externalNames, body } = transpileFn(
         p(`() => {
           const a = ext.p;
           const b = ext.q.a;
@@ -235,27 +229,76 @@ describe('transpileFn', () => {
           const i = ext.t.comp['computed'].x;
 
           const j = (ext).u;
+
+          const k = ext;
         }`),
       );
 
       expect(externalNames).toMatchInlineSnapshot(`
-        {
-          "ext": {
-            "p": "ext.p",
-            "q": {
-              "a": "ext.q.a",
-              "b": "ext.q.b",
-            },
-            "r": "ext.r",
-            "s": "ext.s",
-            "t": {
-              "comp": "ext.t.comp",
-              "fn": "ext.t.fn",
-            },
-            "u": "ext.u",
-          },
-        }
+        [
+          "ext.p",
+          "ext.q.a",
+          "ext.q.b",
+          "ext.r.a",
+          "ext.r",
+          "ext.s",
+          "ext.s.a",
+          "ext.t.fn",
+          "ext.t.comp",
+          "ext.u",
+          "ext",
+        ]
+      `);
+
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[13,"a","ext.p"],[13,"b","ext.q.a"],[13,"c","ext.q.b"],[13,"d","ext.r.a"],[13,"e","ext.r"],[13,"f","ext.s"],[13,"g","ext.s.a"],[13,"h",[7,[6,"ext.t.fn",[]],"x"]],[13,"i",[7,[8,"ext.t.comp",[103,"computed"]],"x"]],[13,"j","ext.u"],[13,"k","ext"]]]"`,
+      );
+    }),
+  );
+
+  it(
+    'does not duplicate externals',
+    dualTest((p) => {
+      const { externalNames } = transpileFn(
+        p(`() => {
+          const a = ext;
+          const b = ext;
+        }`),
+      );
+
+      expect(externalNames).toMatchInlineSnapshot(`
+        [
+          "ext",
+        ]
       `);
     }),
   );
+
+  it(
+    '...',
+    dualTest((p) => {
+      const { externalNames, body } = transpileFn(
+        p(`() => {
+          const a = ext.value;
+          const b = ext.config.multiplier;
+          const c = ext.config.zero;
+          const d = ext.config.multiplier;
+        };`),
+      );
+
+      expect(externalNames).toMatchInlineSnapshot(`
+        [
+          "ext.value",
+          "ext.config.multiplier",
+          "ext.config.zero",
+        ]
+      `);
+
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[13,"a","ext.value"],[13,"b","ext.config.multiplier"],[13,"c","ext.config.zero"],[13,"d","ext.config.multiplier"]]]"`,
+      );
+    }),
+  );
 });
+
+// TODO: a test for item used both without and with a private

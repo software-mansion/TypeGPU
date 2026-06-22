@@ -10,8 +10,9 @@ export interface RawMetadataV1 {
     Record<string, unknown> | (() => Record<string, unknown>);
 }
 
+// TODO: inline
 interface ExternalsV2 {
-  [key: string]: ExternalsV2 | (() => unknown);
+  [key: string]: () => unknown;
 }
 
 export interface RawMetadataV2 {

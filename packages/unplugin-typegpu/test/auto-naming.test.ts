@@ -175,13 +175,11 @@ describe('[BABEL] auto naming', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, [[10, [6, [7, "d", "vec4f"], []]]]],
+          body: [0, [[10, [6, "d.vec4f", []]]]],
           externalNames: ["d"]
         },
         externals: {
-          d: {
-            vec4f: () => d.vec4f
-          }
+          "d.vec4f": () => d.vec4f
         }
       }) && $.f)({})), "myFragmentFn");"
     `);
@@ -661,8 +659,8 @@ describe('[ROLLUP] auto naming', () => {
               (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => d.vec4f()), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[[10,[6,[7,"d","vec4f"],[]]]]],"externalNames":["d"]},
-          externals: { d: { vec4f: () => d.vec4f } }
+          ast: {"params":[],"body":[0,[[10,[6,"d.vec4f",[]]]]],"externalNames":["d"]},
+          externals: { "d.vec4f": () => d.vec4f }
         }) && $.f)({})),
             ), "myFragmentFn"));
       "

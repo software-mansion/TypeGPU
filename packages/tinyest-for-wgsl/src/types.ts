@@ -7,9 +7,7 @@ export type Scope = {
   declaredNames: string[];
 };
 
-export interface Externals {
-  [key: string]: Externals | string;
-}
+export type Externals = string[];
 
 export type Context = {
   /** Holds a set of all identifiers that were used in code, but were not declared in code. */
@@ -17,7 +15,7 @@ export type Context = {
   /** Used to signal to identifiers that they should not treat their resolution as possible external uses. */
   ignoreExternalDepth: number;
   stack: Scope[];
-  ancestorChain: JsNode[];
+  ancestorChain: JsNode[]; // TODO: remove
 };
 
 export type TranspilationResult = {
