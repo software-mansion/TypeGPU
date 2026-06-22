@@ -92,13 +92,10 @@ describe('meta', () => {
     const meta: RawMetadataV2 = {
       v: 2,
       name: 'fn',
-      externals: { EXT: { N: { $: () => EXT.N.$ } } },
+      externals: { 'EXT.N.$': () => EXT.N.$ },
       ast: {
         params: [],
-        body: [
-          NODE.block,
-          [[NODE.let, 'a', [NODE.memberAccess, [NODE.memberAccess, 'EXT', 'N'], '$']]],
-        ],
+        body: [NODE.block, [[NODE.let, 'a', 'EXT.N.$']]],
         externalNames: ['EXT'],
       },
     };

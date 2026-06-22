@@ -76,6 +76,8 @@ const codes = {
   // TODO(#2591): private access test
 };
 
+// TODO: define code before a pair of tests so that it is closer to the snapshot
+
 describe('externals gathering', () => {
   describe('BABEL', () => {
     it('allows multiple usages of one external', () => {
