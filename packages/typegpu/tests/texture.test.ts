@@ -547,10 +547,12 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         root,
         device,
       }) => {
-        const texture = root.createTexture({
-          size: [32, 32],
-          format: 'rgba8unorm',
-        });
+        const texture = root
+          .createTexture({
+            size: [32, 32],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
 
         const mockImage = {
           width: 32,
@@ -570,28 +572,62 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
+      it('throws a clear error when image source writes are missing render usage', ({ root }) => {
+        const mockImage = {
+          width: 32,
+          height: 32,
+        } as HTMLImageElement;
+
+        expect(() =>
+          root
+            .createTexture({
+              size: [32, 32],
+              format: 'rgba8unorm',
+            })
+            .write(mockImage),
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Error: texture.write(...) with image sources requires 'render' usage. Add it via the $usage('render') method.]`,
+        );
+
+        expect(() =>
+          root.createTexture({ size: [32, 32], format: 'rgba8unorm' }).write({
+            channels: {
+              r: mockImage,
+            },
+          }),
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Error: texture.write(...) with image sources requires 'render' usage. Add it via the $usage('render') method.]`,
+        );
+      });
+
       it('throws when image dimensions do not match texture without resize', ({ root }) => {
-        const texture = root.createTexture({
-          size: [64, 64],
-          format: 'rgba8unorm',
-        });
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
 
         const mockImage = {
           width: 32,
           height: 32,
         } as HTMLImageElement;
 
-        expect(() => texture.write(mockImage)).toThrow('Pass resize: true');
+        expect(() => texture.write(mockImage)).toThrowErrorMatchingInlineSnapshot(
+          `[Error: Texture write source size 32x32 does not match target size 64x64. Pass resize: true to resize explicitly.]`,
+        );
       });
 
       it('handles resizing when image dimensions do not match texture with resize', ({
         root,
         device,
       }) => {
-        const texture = root.createTexture({
-          size: [64, 64],
-          format: 'rgba8unorm',
-        });
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
 
         const mockImage = {
           width: 32,
@@ -614,11 +650,13 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         root,
         device,
       }) => {
-        const texture = root.createTexture({
-          size: [64, 64],
-          format: 'rgba8unorm',
-          mipLevelCount: 2,
-        });
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+            mipLevelCount: 2,
+          })
+          .$usage('render');
 
         const mockImage = {
           width: 8,
@@ -644,10 +682,12 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       });
 
       it('passes source crop options when writing image descriptors', ({ root, device }) => {
-        const texture = root.createTexture({
-          size: [64, 64],
-          format: 'rgba8unorm',
-        });
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
 
         const mockImage = {
           width: 16,
@@ -673,18 +713,22 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       });
 
       it('throws when image descriptor size resizes without resize', ({ root }) => {
-        const texture = root.createTexture({
-          size: [64, 64],
-          format: 'rgba8unorm',
-        });
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
 
         const mockImage = {
           width: 16,
           height: 16,
         } as HTMLImageElement;
 
-        expect(() => texture.write({ source: mockImage, size: [32, 32] })).toThrow(
-          'Pass resize: true',
+        expect(() =>
+          texture.write({ source: mockImage, size: [32, 32] }),
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Error: Texture write source size 16x16 does not match target size 32x32. Pass resize: true to resize explicitly.]`,
         );
       });
 
@@ -692,10 +736,12 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         root,
         device,
       }) => {
-        const texture = root.createTexture({
-          size: [64, 64],
-          format: 'rgba8unorm',
-        });
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
 
         const mockImage = {
           width: 16,
@@ -716,10 +762,12 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       });
 
       it('writes blobs through createImageBitmap', async ({ root, device }) => {
-        const texture = root.createTexture({
-          size: [32, 32],
-          format: 'rgba8unorm',
-        });
+        const texture = root
+          .createTexture({
+            size: [32, 32],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
 
         const blob = new Blob(['image']);
         const imageBitmap = {
@@ -746,10 +794,12 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       });
 
       it('resizes blobs through createImageBitmap when requested', async ({ root, device }) => {
-        const texture = root.createTexture({
-          size: [64, 64],
-          format: 'rgba8unorm',
-        });
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
 
         const blob = new Blob(['image']);
         const imageBitmap = {
@@ -774,10 +824,12 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       });
 
       it('writes grouped single channels with color write masks', ({ root, device }) => {
-        const texture = root.createTexture({
-          size: [32, 32],
-          format: 'rgba8unorm',
-        });
+        const texture = root
+          .createTexture({
+            size: [32, 32],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
 
         const roughnessMap = {
           width: 32,
@@ -814,10 +866,12 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       });
 
       it('applies shared regions to channel writes', ({ root, device }) => {
-        const texture = root.createTexture({
-          size: [64, 64],
-          format: 'rgba8unorm',
-        });
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
 
         const roughnessMap = {
           width: 8,
@@ -848,10 +902,12 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       });
 
       it('requires resize for channel writes with mismatched sizes', ({ root }) => {
-        const texture = root.createTexture({
-          size: [64, 64],
-          format: 'rgba8unorm',
-        });
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
 
         const roughnessMap = {
           width: 16,
@@ -865,14 +921,18 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
             },
             size: [32, 32],
           }),
-        ).toThrow('Pass resize: true');
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Error: Texture write source size 16x16 does not match target size 32x32. Pass resize: true to resize explicitly.]`,
+        );
       });
 
       it('rejects grouped channel keys for now', ({ root }) => {
-        const texture = root.createTexture({
-          size: [32, 32],
-          format: 'rgba8unorm',
-        });
+        const texture = root
+          .createTexture({
+            size: [32, 32],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
 
         const roughnessMap = {
           width: 32,
@@ -885,7 +945,9 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
               rg: roughnessMap,
             },
           } as never),
-        ).toThrow('single channels');
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Error: Texture channel writes only support single channels: r, g, b, a.]`,
+        );
       });
 
       it('calls device methods when copyFrom is called', ({ root, device }) => {

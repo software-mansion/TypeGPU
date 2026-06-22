@@ -24,7 +24,7 @@ const root = await tgpu.init();
 const texture = root.createTexture({
   size: [256, 256],
   format: 'rgba8unorm' as const,
-}).$usage('sampled');
+}).$usage('sampled', 'render');
 
 const response = await fetch('path/to/image.png');
 const blob = await response.blob();
@@ -79,7 +79,7 @@ const texture = root.createTexture({
 })
   .$usage('sampled') // Can be sampled in shaders
   .$usage('storage') // Can be written or read to as storage texture
-  .$usage('render'); // Can be used as a render target
+  .$usage('render'); // Can be used as a render target or image upload target
 ```
 
 You can also add multiple flags at once:
@@ -98,7 +98,7 @@ const texture = root.createTexture({
 
 Texture writes cover decoded images, blobs, single-channel writes, and raw texel data:
 
-- `texture.write(source)` uploads a decoded image source, such as an `ImageBitmap`, `ImageData`, canvas, video frame, or video element.
+- `texture.write(source)` uploads a decoded image source, such as an `ImageBitmap`, `ImageData`, canvas, video frame, or video element. Decoded image writes require `.$usage('render')`.
 - `texture.write(source, { resize: true })` allows a decoded image source to be resampled when its size does not match the destination.
 - `texture.write({ source, sourceOrigin, sourceSize, origin, size })` writes a cropped source rectangle into a chosen destination rectangle.
 - `texture.write({ channels })` updates selected destination channels, for example packing grayscale roughness, metalness, and mask maps into one RGBA texture.
@@ -127,7 +127,7 @@ const root = await tgpu.init();
 const texture = root.createTexture({
   size: [256, 256],
   format: 'rgba8unorm',
-}).$usage('sampled');
+}).$usage('sampled', 'render');
 
 // From an ImageBitmap
 const response = await fetch('path/to/image.png');
@@ -142,7 +142,7 @@ const ctx = canvas.getContext('2d');
 texture.write(canvas);
 ```
 
-The source and destination sizes must match unless you pass `resize: true`. Matching sizes use a direct WebGPU copy. Mismatched sizes use TypeGPU's render-pass blit path, so the destination texture needs `.$usage('render')` and a 2D format that can be sampled as floats and used as a render attachment.
+Image-source writes require `.$usage('render')`. The source and destination sizes must match unless you pass `resize: true`. Mismatched sizes additionally use TypeGPU's render-pass blit path, so the destination texture must be 2D and use a format that can be sampled as floats and used as a render attachment.
 
 ```ts
 const texture = root.createTexture({
@@ -211,7 +211,7 @@ await texture.writeAsync({
 });
 ```
 
-This avoids TypeGPU's render-pass resize and its current format limits. The destination texture still needs `.$usage('render')`, because WebGPU requires `RENDER_ATTACHMENT` for external image copies.
+This avoids TypeGPU's render-pass resize and its current format limits. The destination texture still needs `.$usage('render')`.
 
 ### Writing single channels
 
@@ -227,7 +227,7 @@ declare const maskMap: ImageBitmap;
 const texture = root.createTexture({
   size: [512, 512],
   format: 'rgba8unorm',
-}).$usage('sampled');
+}).$usage('sampled', 'render');
 
 texture.write({
   channels: {
@@ -238,7 +238,7 @@ texture.write({
 });
 ```
 
-Only single destination channels are supported for now: `r`, `g`, `b`, and `a`. Each write uses a WebGPU render pass with a color write mask, so the target texture must be 2D and use a format supported by TypeGPU's render-pass write path. Region options apply to the grouped write:
+Only single destination channels are supported for now: `r`, `g`, `b`, and `a`. Channel image writes require `.$usage('render')`. Each write uses a WebGPU render pass with a color write mask, so the target texture must be 2D and use a format supported by TypeGPU's render-pass write path. Region options apply to the grouped write:
 
 ```ts
 texture.write({
@@ -265,7 +265,7 @@ const texture3d = root.createTexture({
   size: [256, 256, 3],
   format: 'rgba8unorm',
   dimension: '3d',
-}).$usage('sampled');
+}).$usage('sampled', 'render');
 
 // Write array of images for each layer
 texture3d.write([imageBitmap1, imageBitmap2, imageBitmap3]);

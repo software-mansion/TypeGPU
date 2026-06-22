@@ -511,6 +511,8 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
   }
 
   #writeImage(write: TextureImageWrite) {
+    this.#ensureRenderUsageForImageWrite();
+
     const normalized = normalizeImageWrite(write);
 
     if (!needsResize(normalized)) {
@@ -523,7 +525,11 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
   }
 
   #writeChannels(write: TextureChannelWrite): void {
-    for (const channelWrite of expandChannelWrites(write)) {
+    const channelWrites = expandChannelWrites(write);
+
+    this.#ensureRenderUsageForImageWrite();
+
+    for (const channelWrite of channelWrites) {
       const normalized = normalizeImageWrite(channelWrite.write);
       validateResizeAllowed(channelWrite.write, normalized);
       writeTextureChannel(this.#branch.device, this[$internal].unwrap(), {
@@ -531,6 +537,14 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
         from: channelWrite.from,
         to: channelWrite.to,
       });
+    }
+  }
+
+  #ensureRenderUsageForImageWrite(): void {
+    if (!this.usableAsRender) {
+      throw new Error(
+        "texture.write(...) with image sources requires 'render' usage. Add it via the $usage('render') method.",
+      );
     }
   }
 
