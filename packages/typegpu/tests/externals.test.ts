@@ -252,4 +252,33 @@ describe('external name collisions', () => {
       fn myFn() -> Schema { let a = Schema(); }"
     `);
   });
+
+  it('does not modify original externals', () => {
+    const ext = { out: 1 };
+    const vertexFn = tgpu
+      .vertexFn({
+        in: { vId: d.builtin.vertexIndex },
+        out: { position: d.builtin.position },
+      })((input, Out) => {
+        const x = input.vId;
+        return Out();
+      })
+      .$uses(ext);
+
+    tgpu.resolve([vertexFn]);
+
+    expect(ext).toStrictEqual({ out: 1 });
+  });
+
+  it('does not break when an unused unresolvable external is passed', () => {
+    const fn = tgpu.fn([])`() {
+    let a = ext;
+  }`.$uses({ ext: 1, unused: () => {} });
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() {
+          let a = 1;
+        }"
+      `);
+  });
 });
