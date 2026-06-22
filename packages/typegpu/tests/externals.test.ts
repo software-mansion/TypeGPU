@@ -137,6 +137,10 @@ describe('external name collisions', () => {
       in: { uv: d.vec2f },
       out: d.vec4f,
     })`{ return d.vec4f(in); }`.$uses({ in: 1 });
+    const computeFn = tgpu.computeFn({
+      in: { gid: d.builtin.globalInvocationId },
+      workgroupSize: [1],
+    })`{ let x = in; }`.$uses({ in: 1 });
 
     expect(() => tgpu.resolve([vertexFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
@@ -147,6 +151,11 @@ describe('external name collisions', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fragmentFn:fragmentFn: Key 'in' appears in externals despite already being used for argument/return type. Please rename this external.]
+    `);
+    expect(() => tgpu.resolve([computeFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - computeFn:computeFn: Key 'in' appears in externals despite already being used for argument/return type. Please rename this external.]
     `);
   });
 
@@ -166,6 +175,12 @@ describe('external name collisions', () => {
       const x = EXT.in;
       return d.vec4f();
     });
+    const computeFn = tgpu.computeFn({
+      workgroupSize: [1],
+    })(() => {
+      'use gpu';
+      const x = EXT.in;
+    });
 
     expect(tgpu.resolve([vertexFn])).toMatchInlineSnapshot(`
       "struct vertexFn_Output {
@@ -181,6 +196,11 @@ describe('external name collisions', () => {
       "@fragment fn fragmentFn() -> @location(0) vec4f {
         const x = 1;
         return vec4f();
+      }"
+    `);
+    expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
+      "@compute @workgroup_size(1) fn computeFn() {
+        const x = 1;
       }"
     `);
   });
