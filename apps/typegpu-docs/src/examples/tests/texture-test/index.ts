@@ -131,7 +131,6 @@ function writeCroppedContent() {
     ...cropRect(),
     size: currentSize,
     resize: true,
-    filter: 'nearest',
   });
   texture.generateMipmaps();
 }

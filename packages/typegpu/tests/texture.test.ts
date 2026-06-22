@@ -764,6 +764,31 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         expect(device.mock.queue.submit).toHaveBeenCalled();
       });
 
+      it('keeps sRGB image writes in sRGB when resampling', ({ root, device }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm-srgb',
+          })
+          .$usage('render');
+
+        const mockImage = {
+          width: 16,
+          height: 16,
+        } as HTMLImageElement;
+
+        texture.write({
+          source: mockImage,
+          size: [32, 32],
+          resize: true,
+        });
+
+        expect(device.mock.createTexture).toHaveBeenNthCalledWith(
+          2,
+          expect.objectContaining({ format: 'rgba8unorm-srgb' }),
+        );
+      });
+
       it('writes blobs through createImageBitmap', async ({ root, device }) => {
         const texture = root
           .createTexture({

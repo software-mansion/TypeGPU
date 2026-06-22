@@ -235,16 +235,29 @@ function blit(options: BlitOptions): void {
   }
 }
 
-function getStagedImageTexture(device: GPUDevice, write: TextureImageWriteLayout): GPUTexture {
+function imageStagingFormat(format: GPUTextureFormat): GPUTextureFormat {
+  if (format === 'rgba8unorm-srgb' || format === 'bgra8unorm-srgb') {
+    return format;
+  }
+
+  return 'rgba8unorm';
+}
+
+function getStagedImageTexture(
+  device: GPUDevice,
+  write: TextureImageWriteLayout,
+  targetFormat: GPUTextureFormat,
+): GPUTexture {
   const cache = getOrCreateDeviceCache(device);
-  const key = `${write.sourceSize.width}x${write.sourceSize.height}`;
+  const format = imageStagingFormat(targetFormat);
+  const key = `${format}:${write.sourceSize.width}x${write.sourceSize.height}`;
   let inputTexture = cache.stagedTexture?.key === key ? cache.stagedTexture.texture : undefined;
 
   if (!inputTexture) {
     cache.stagedTexture?.texture.destroy();
     inputTexture = device.createTexture({
       size: write.sourceSize,
-      format: 'rgba8unorm',
+      format,
       usage:
         GPUTextureUsage.TEXTURE_BINDING |
         GPUTextureUsage.COPY_DST |
@@ -399,7 +412,7 @@ export function resampleImage(
   }
 
   const { filterable } = validateBlitFormat(device, targetTexture.format, 'resample');
-  const inputTexture = getStagedImageTexture(device, write);
+  const inputTexture = getStagedImageTexture(device, write, targetTexture.format);
 
   const encoder = device.createCommandEncoder();
 
@@ -409,7 +422,7 @@ export function resampleImage(
     destination: targetTexture.createView(targetViewDescriptor(write)),
     format: targetTexture.format,
     filterable,
-    sampleType: 'float', // Input is always rgba8unorm which is filterable
+    sampleType: 'float',
     ...(write.filter !== undefined && { filter: write.filter }),
     encoder,
     loadOp: 'load',
@@ -429,7 +442,7 @@ export function writeTextureChannel(
   }
 
   const { filterable } = validateBlitFormat(device, targetTexture.format, 'write channels');
-  const inputTexture = getStagedImageTexture(device, write);
+  const inputTexture = getStagedImageTexture(device, write, targetTexture.format);
   const resources = getBlitResources(device, filterable, 'float', write.filter);
   const pipeline = device.createRenderPipeline({
     layout: resources.pipelineLayout,
