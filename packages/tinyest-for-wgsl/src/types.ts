@@ -15,7 +15,6 @@ export type Context = {
   /** Used to signal to identifiers that they should not treat their resolution as possible external uses. */
   ignoreExternalDepth: number;
   stack: Scope[];
-  ancestorChain: JsNode[]; // TODO: remove
 };
 
 export type TranspilationResult = {

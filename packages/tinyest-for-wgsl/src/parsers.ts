@@ -298,11 +298,8 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
     }
   }
 
-  ctx.ancestorChain.push(node);
   // @ts-expect-error <too much for typescript, it seems :/ >
-  const result = transpiler(ctx, node);
-  ctx.ancestorChain.pop();
-  return result;
+  return transpiler(ctx, node);
 }
 
 export function extractFunctionParts(rootNode: JsNode): {
@@ -418,7 +415,6 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
         ),
       },
     ],
-    ancestorChain: [],
   };
 
   const tinyestBody = transpile(ctx, body);
@@ -447,7 +443,6 @@ export function transpileNode(node: JsNode): tinyest.AnyNode {
         declaredNames: [],
       },
     ],
-    ancestorChain: [],
   };
 
   return transpile(ctx, node);
