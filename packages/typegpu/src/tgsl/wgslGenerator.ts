@@ -384,7 +384,36 @@ ${this.ctx.pre}}`;
       }
 
       if (op === '===' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
-        return snip(lhsExpr.value === rhsExpr.value, bool, 'constant');
+        return snip(lhsExpr.value === rhsExpr.value, bool, 'constant', false);
+      }
+
+      if (op === '!==' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
+        return snip(lhsExpr.value !== rhsExpr.value, bool, 'constant', false);
+      }
+
+      if (
+        (op === '<' || op === '<=' || op === '>' || op === '>=') &&
+        isKnownAtComptime(lhsExpr) &&
+        isKnownAtComptime(rhsExpr)
+      ) {
+        const left = lhsExpr.value;
+        const right = rhsExpr.value;
+        if (typeof left !== 'number' || typeof right !== 'number') {
+          throw new WgslTypeError(
+            `Inequality comparison '${op}' requires numeric operands, got '${typeof left}' and '${typeof right}'`,
+          );
+        }
+
+        switch (op) {
+          case '<':
+            return snip(left < right, bool, 'constant', false);
+          case '<=':
+            return snip(left <= right, bool, 'constant', false);
+          case '>':
+            return snip(left > right, bool, 'constant', false);
+          case '>=':
+            return snip(left >= right, bool, 'constant', false);
+        }
       }
 
       if (lhsExpr.dataType === UnknownData) {
@@ -967,6 +996,12 @@ ${this.ctx.pre}}`;
   }
 
   public numericLiteral(value: number, schema: wgsl.BaseData): ResolvedSnippet {
+    if (!Number.isFinite(value)) {
+      throw new Error(
+        `Value '${value}' (${schema.type}) cannot be resolved due to WGSL's Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption). This value might be a result of a comptime-evaluated operation.`,
+      );
+    }
+
     if (schema.type === 'abstractInt') {
       return snip(`${value}`, schema, /* origin */ 'constant');
     }

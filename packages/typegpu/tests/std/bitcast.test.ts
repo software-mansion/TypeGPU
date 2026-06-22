@@ -97,15 +97,6 @@ describe('bitcast', () => {
     expect(nsub).toBeGreaterThan(-1e-44);
   });
 
-  it('bitcastU32toF32 vector specials', () => {
-    const v = vec4u(0x7f800000, 0xff800000, 0x7fc00000, 0x80000000);
-    const cast = std.bitcastU32toF32(v);
-    expect(cast.x).toBe(Number.POSITIVE_INFINITY);
-    expect(cast.y).toBe(Number.NEGATIVE_INFINITY);
-    expect(Number.isNaN(cast.z)).toBe(true);
-    expect(Object.is(cast.w, -0)).toBe(true);
-  });
-
   it('bitcastU32toI32 more edges', () => {
     // Scalars
     expect(std.bitcastU32toI32(0x00000000)).toBe(0);

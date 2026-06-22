@@ -1,6 +1,14 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
-import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  type RefObject,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  lazy,
+} from 'react';
 import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom.ts';
 import { codeEditorShownAtom, tsoverUsedAtom } from '../utils/examples/exampleViewStateAtoms.ts';
 import { ExecutionCancelledError } from '../utils/examples/errors.ts';
@@ -9,7 +17,6 @@ import { executeExample } from '../utils/examples/exampleRunner.ts';
 import type { ExampleState } from '../utils/examples/exampleState.ts';
 import type { Example, ExampleCommonFile, ExampleSrcFile } from '../utils/examples/types.ts';
 import { isGPUSupported } from '../utils/isGPUSupported.ts';
-import { CodeEditor } from './CodeEditor.tsx';
 import { ControlPanel } from './ControlPanel.tsx';
 import { Button } from './design/Button.tsx';
 import { Snackbar } from './design/Snackbar.tsx';
@@ -20,6 +27,9 @@ type Props = {
   common: ExampleCommonFile[];
   isPlayground?: boolean;
 };
+
+// Lazy-loading the CodeEditor component, as the Monaco editor is quite heavy
+const CodeEditor = lazy(() => import('./CodeEditor.tsx'));
 
 function useExample(
   tsImport: () => Promise<unknown>,
@@ -65,9 +75,11 @@ function useExample(
 }
 
 export function ExampleView({ example, common }: Props) {
-  const { tsFiles: srcFiles, tsImport, htmlFile } = example;
+  const { tsImport, sourceAtom } = example;
 
-  const tsFiles = filterRelevantTsFiles(srcFiles, common);
+  const exampleSource = useAtomValue(sourceAtom);
+
+  const tsFiles = filterRelevantTsFiles(exampleSource.tsFiles, common);
   const filePaths = tsFiles.map((file) => file.path);
   const entryFile = filePaths.find((path) => path.startsWith('index.ts')) as string;
   const editorTabsList = [
@@ -87,8 +99,8 @@ export function ExampleView({ example, common }: Props) {
     if (!exampleHtmlRef.current) {
       return;
     }
-    exampleHtmlRef.current.innerHTML = htmlFile.content;
-  }, [htmlFile]);
+    exampleHtmlRef.current.innerHTML = exampleSource.htmlFile.content;
+  }, [exampleSource]);
 
   useExample(tsImport, setSnackbarText);
   useResizableCanvas(exampleHtmlRef);
@@ -143,26 +155,34 @@ export function ExampleView({ example, common }: Props) {
                   </div>
                 </div>
 
-                <CodeEditor
-                  shown={currentFilePath === 'index.html'}
-                  file={htmlFile}
-                  language={'html'}
-                  tsoverEnabled={false}
-                />
-
-                {tsFiles.map((file) => (
+                <Suspense
+                  fallback={
+                    <div className="bg-white h-[calc(100%-7rem)] md:h-[calc(100%-3rem)] rounded-lg flex justify-center items-center">
+                      Loading...
+                    </div>
+                  }
+                >
                   <CodeEditor
-                    key={file.path}
-                    shown={file.path === currentFilePath}
-                    language={'typescript'}
-                    tsoverEnabled={tsoverUsed}
-                    file={file}
+                    shown={currentFilePath === 'index.html'}
+                    file={exampleSource.htmlFile}
+                    language={'html'}
+                    tsoverEnabled={false}
                   />
-                ))}
+
+                  {tsFiles.map((file) => (
+                    <CodeEditor
+                      key={file.path}
+                      shown={file.path === currentFilePath}
+                      language={'typescript'}
+                      tsoverEnabled={tsoverUsed}
+                      file={file}
+                    />
+                  ))}
+                </Suspense>
               </div>
 
               <div className="absolute right-0 z-5 md:top-15 md:right-8 md:hidden">
-                <Button onClick={() => openInStackBlitz(example, common)}>
+                <Button onClick={() => openInStackBlitz(example, exampleSource, common)}>
                   <span className="font-bold">Edit </span>
                   <img
                     src="/TypeGPU/stackblitz-logomark-blue.svg"
@@ -173,7 +193,7 @@ export function ExampleView({ example, common }: Props) {
               </div>
 
               <div className="absolute right-0 z-5 md:top-15 md:right-8 hidden md:block">
-                <Button onClick={() => openInStackBlitz(example, common)}>
+                <Button onClick={() => openInStackBlitz(example, exampleSource, common)}>
                   <span className="font-bold">Edit on</span>
                   <img
                     src="/TypeGPU/stackblitz-logo-black_blue.svg"

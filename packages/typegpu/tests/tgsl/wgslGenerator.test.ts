@@ -1113,6 +1113,53 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('renames items that would result in invalid WGSL', () => {
+    const myConst0 = tgpu.const(d.u32, 1).$name('');
+    const myConst1 = tgpu.const(d.u32, 1).$name('0');
+    const myConst2 = tgpu.const(d.u32, 1).$name('__');
+    const myConst3 = tgpu.const(d.u32, 1).$name('struct');
+
+    const main = () => {
+      'use gpu';
+      const a = myConst0.$;
+      const b = myConst1.$;
+      const c = myConst2.$;
+      const d = myConst3.$;
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "const item: u32 = 1u;
+
+      const item_1: u32 = 1u;
+
+      const item_2: u32 = 1u;
+
+      const struct_1: u32 = 1u;
+
+      fn main() {
+        const a = item;
+        const b = item_1;
+        const c = item_2;
+        const d = struct_1;
+      }"
+    `);
+  });
+
+  it('throws when struct prop is named wrongly', () => {
+    expect(() => tgpu.resolve([d.struct({ '': d.u32 })])).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Invalid property key '': Identifiers cannot be equal to '' or '_']`,
+    );
+    expect(() => tgpu.resolve([d.struct({ '0': d.u32 })])).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Invalid property key '0': Not compliant with WGSL guidelines.]`,
+    );
+    expect(() => tgpu.resolve([d.struct({ __: d.u32 })])).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Invalid property key '__': Identifiers cannot start with double underscores.]`,
+    );
+    expect(() => tgpu.resolve([d.struct({ struct: d.u32 })])).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Invalid property key 'struct': Identifiers cannot start with reserved keywords.]`,
+    );
+  });
+
   it('renames parameters that would result in invalid WGSL', () => {
     const main = tgpu.fn(
       [d.i32, d.i32],
@@ -1284,21 +1331,6 @@ describe('wgslGenerator', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:testFn: Index access 'myArray[i]' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.]
-    `);
-  });
-
-  it('throws an error when accessing an object with a runtime known index', () => {
-    const Boid = d.struct({ 0: d.u32 });
-
-    const testFn = tgpu.fn([Boid])((b) => {
-      const i = 0;
-      const v = b[i];
-    });
-
-    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn:testFn: Index access 'b[i]' is invalid. If the value is an array, to address this, consider one of the following approaches: (1) declare the array using 'tgpu.const', (2) store the array in a buffer, or (3) define the array within the GPU function scope.]
     `);
   });
 
@@ -1670,6 +1702,37 @@ describe('wgslGenerator', () => {
     `);
   });
 
+  it('prunes inequalities if comptime known (>=)', () => {
+    const renderAspect = 1.5;
+
+    const fn = () => {
+      'use gpu';
+      let rayDir = d.vec2f();
+
+      if (renderAspect >= 1) {
+        rayDir = d.vec2f(1, 0);
+      } else {
+        rayDir = d.vec2f(0, 1);
+      }
+
+      if (renderAspect < 0) {
+        return d.vec2f(-1, -1);
+      }
+
+      return rayDir;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> vec2f {
+        var rayDir = vec2f();
+        {
+          rayDir = vec2f(1, 0);
+        }
+        return rayDir;
+      }"
+    `);
+  });
+
   it('dedents multinested comptime if/else without else blocks', () => {
     const v = 3 as number;
 
@@ -1886,6 +1949,41 @@ describe('wgslGenerator', () => {
       - <root>
       - fn*:fn
       - fn*:fn(): 'a++' is invalid because update is only allowed as a statement.]
+    `);
+  });
+
+  it('throws a readable error when encountering NaN or Infinity', () => {
+    const fn1 = tgpu.fn([])(() => {
+      'use gpu';
+      const n = Infinity;
+    });
+
+    const fn2 = tgpu.fn([])(() => {
+      'use gpu';
+      const n = 1 / 0;
+    });
+
+    const fn3 = tgpu.fn([])(() => {
+      'use gpu';
+      const n = std.div(0, 0);
+    });
+
+    expect(() => tgpu.resolve([fn1])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:fn1: Value 'Infinity' (abstractFloat) cannot be resolved due to WGSL's Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption). This value might be a result of a comptime-evaluated operation.]
+    `);
+
+    expect(() => tgpu.resolve([fn2])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:fn2: Value 'Infinity' (abstractFloat) cannot be resolved due to WGSL's Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption). This value might be a result of a comptime-evaluated operation.]
+    `);
+
+    expect(() => tgpu.resolve([fn3])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:fn3: Value 'NaN' (abstractFloat) cannot be resolved due to WGSL's Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption). This value might be a result of a comptime-evaluated operation.]
     `);
   });
 

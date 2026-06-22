@@ -123,4 +123,34 @@ describe('autogenerating wgsl headers for tgpu entry functions with raw string W
         }"
     `);
   });
+
+  it('disallows reserved keywords in compute fn', () => {
+    const f = tgpu.computeFn({
+      in: { loop: d.builtin.globalInvocationId },
+      workgroupSize: [1],
+    })`{
+      let x = loop.x;
+    }`;
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - computeFn:f: Invalid argument name "loop", the identifier is a reserved keyword.]
+    `);
+  });
+
+  it('disallows reserved keywords in fragment fn', () => {
+    const f = tgpu.fragmentFn({
+      in: { loop: d.builtin.position },
+      out: d.vec4f,
+    })`{
+      return vec4f(loop.x);
+    }`;
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fragmentFn:f: Invalid argument name "loop", the identifier is a reserved keyword.]
+    `);
+  });
 });

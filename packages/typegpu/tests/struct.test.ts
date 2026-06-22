@@ -1,5 +1,5 @@
 import { BufferReader, BufferWriter } from 'typed-binary';
-import { describe, expect, expectTypeOf, it } from 'vitest';
+import { describe, expect, expectTypeOf } from 'vitest';
 import { readData, writeData } from '../src/data/dataIO.ts';
 import {
   alignmentOf,
@@ -22,6 +22,7 @@ import tgpu from '../src/index.js';
 import * as d from '../src/data/index.ts';
 import type { Infer } from '../src/shared/repr.ts';
 import { frexp } from '../src/std/numeric.ts';
+import { it } from 'typegpu-testing-utility';
 
 describe('struct', () => {
   it('aligns struct properties when measuring', () => {
@@ -421,6 +422,307 @@ describe('struct', () => {
       }"
     `);
   });
+
+  it('resolves struct casts', () => {
+    const props = {
+      pos: d.vec3f,
+      vel: d.vec3f,
+    } as const;
+
+    const Boid = d.struct(props);
+    const Bird = d.struct(props);
+
+    function main() {
+      'use gpu';
+      const boid = Boid();
+      const clone = Boid(boid); // no prop listing
+      const bird = Bird(boid); // prop listing
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec3f,
+        vel: vec3f,
+      }
+
+      struct Bird {
+        pos: vec3f,
+        vel: vec3f,
+      }
+
+      fn main() {
+        let boid = Boid();
+        let clone = boid;
+        let bird = Bird(boid.pos, boid.vel);
+      }"
+    `);
+  });
+
+  it('resolves struct casts and coerces props accordingly', () => {
+    const Boid = d.struct({ a: d.u32, b: d.f32 });
+    const Bird = d.struct({ a: d.i32, b: d.i32 });
+
+    function main() {
+      'use gpu';
+      const boid = Boid();
+      const bird = Bird(boid);
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct Boid {
+        a: u32,
+        b: f32,
+      }
+
+      struct Bird {
+        a: i32,
+        b: i32,
+      }
+
+      fn main() {
+        let boid = Boid();
+        let bird = Bird(i32(boid.a), i32(boid.b));
+      }"
+    `);
+  });
+
+  it('resolves nested struct casts', () => {
+    const Boid = d.struct({ prop: d.struct({ a: d.u32, b: d.f32 }) });
+    const Bird = d.struct({ prop: d.struct({ a: d.i32, b: d.i32 }) });
+
+    function main() {
+      'use gpu';
+      const boid = Boid();
+      const bird = Bird(boid);
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct prop {
+        a: u32,
+        b: f32,
+      }
+
+      struct Boid {
+        prop: prop,
+      }
+
+      struct prop_1 {
+        a: i32,
+        b: i32,
+      }
+
+      struct Bird {
+        prop: prop_1,
+      }
+
+      fn main() {
+        let boid = Boid();
+        let bird = Bird(prop_1(i32(boid.prop.a), i32(boid.prop.b)));
+      }"
+    `);
+  });
+
+  it('resolves struct subtype to supertype casts', () => {
+    const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
+    const Bird = d.struct({ pos: d.vec2u });
+
+    function main() {
+      'use gpu';
+      const boid = Boid();
+      const bird = Bird(boid);
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec2u,
+        id: u32,
+      }
+
+      struct Bird {
+        pos: vec2u,
+      }
+
+      fn main() {
+        let boid = Boid();
+        let bird = Bird(boid.pos);
+      }"
+    `);
+  });
+
+  it('does not resolve struct casts when trying to copy with missing props', () => {
+    const Boid = d.struct({ pos: d.vec2u });
+    const Bird = d.struct({ pos: d.vec2u, id: d.u32 });
+
+    function main() {
+      'use gpu';
+      const boid = Boid();
+      // @ts-expect-error
+      const bird = Bird(boid);
+    }
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Cannot auto-convert struct 'Boid' to 'Bird' because the property 'id' is missing.]
+    `);
+  });
+
+  it('does not resolve struct casts when this would modify code behavior', () => {
+    const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
+    const Bird = d.struct({ pos: d.vec2u, id: d.u32 });
+
+    const reallyExpensiveAndAlsoModifiedPrivateVarsBtw = () => {
+      'use gpu';
+      return Boid();
+    };
+
+    const main = () => {
+      'use gpu';
+      const bird = Bird(reallyExpensiveAndAlsoModifiedPrivateVarsBtw());
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Cannot resolve struct cast from 'Boid' to 'Bird'. Store the value to a variable first, then cast it.]
+    `);
+  });
+
+  it('resolves struct casts in function calls', () => {
+    const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
+    const Bird = d.struct({ pos: d.vec2u, id: d.u32 });
+
+    const helper = tgpu.fn([Bird])((bird) => {
+      'use gpu';
+    });
+
+    const main = tgpu.fn([])(() => {
+      'use gpu';
+      const boid = Boid();
+      helper(boid);
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec2u,
+        id: u32,
+      }
+
+      struct Bird {
+        pos: vec2u,
+        id: u32,
+      }
+
+      fn helper(bird: Bird) {
+
+      }
+
+      fn main() {
+        let boid = Boid();
+        helper(Bird(boid.pos, boid.id));
+      }"
+    `);
+  });
+
+  it('resolves struct casts for entry IO', ({ root }) => {
+    const Boid = d.struct({ pos: d.vec4f, id: d.f32 });
+
+    const pipeline = root.createRenderPipeline({
+      vertex: tgpu.vertexFn({ out: { pos: d.builtin.position, id: d.f32 } })(() => {
+        'use gpu';
+        const boid = Boid();
+        return boid;
+      }),
+      fragment: () => {
+        'use gpu';
+        return d.vec4f();
+      },
+    });
+
+    expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
+      "struct Boid {
+        pos: vec4f,
+        id: f32,
+      }
+
+      struct vertex_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) id: f32,
+      }
+
+      @vertex fn vertex() -> vertex_Output {
+        let boid = Boid();
+        return vertex_Output(boid.pos, boid.id);
+      }
+
+      @fragment fn fragment() -> @location(0) vec4f {
+        return vec4f();
+      }"
+    `);
+  });
+
+  it('throws a descriptive error when it cannot resolve struct casts for entry IO', ({ root }) => {
+    const Boid = d.struct({ pos: d.vec3f, id: d.f32 });
+
+    const pipeline = root.createRenderPipeline({
+      vertex: tgpu.vertexFn({ out: { pos: d.builtin.position, id: d.f32 } })(() => {
+        'use gpu';
+        const boid = Boid();
+        return boid as unknown as { pos: d.v4f; id: number };
+      }),
+      fragment: () => {
+        'use gpu';
+        return d.vec4f();
+      },
+    });
+
+    expect(() => tgpu.resolve([pipeline])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - renderPipeline:pipeline
+      - renderPipelineCore
+      - vertexFn:vertex: Cannot auto-convert struct 'Boid' to 'vertex_Output' because type 'vec3f' is not convertible to 'vec4f'.]
+    `);
+  });
+
+  it('throws a descriptive error when resolving fails', () => {
+    const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
+    const Bird = d.struct({ pos: d.vec2u, id: d.vec2u });
+
+    const main = tgpu.fn([])(() => {
+      'use gpu';
+      const boid = Boid();
+      // @ts-expect-error
+      const bird = Bird(boid);
+    });
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:main: Cannot auto-convert struct 'Boid' to 'Bird' because type 'u32' is not convertible to 'vec2u'.]
+    `);
+  });
+
+  // TODO(#2519): make this resolve throw an error
+  // it('does not resolve struct casts when it needs a ref', () => {
+  //   const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
+  //   const Bird = d.struct({ pos: d.vec2u, id: d.u32 });
+
+  //   const modify = tgpu.fn([d.ptrFn(Bird)])((bird) => {
+  //     'use gpu';
+  //     bird.$.id += 1;
+  //   });
+
+  //   const main = tgpu.fn([])(() => {
+  //     'use gpu';
+  //     const boid = Boid();
+  //     modify(d.ref(boid));
+  //   });
+
+  //   expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot();
+  // });
 });
 
 describe('WgslStruct', () => {
