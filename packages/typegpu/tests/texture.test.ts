@@ -621,6 +621,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       it('handles resizing when image dimensions do not match texture with resize', ({
         root,
         device,
+        renderPassEncoder,
       }) => {
         const texture = root
           .createTexture({
@@ -636,12 +637,11 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
         texture.write(mockImage, { resize: true });
 
-        // Should create textures for resampling since image size doesn't match texture size
-        expect(device.mock.createTexture).toHaveBeenCalled();
+        expect(device.mock.createTexture).toHaveBeenCalledTimes(2);
         expect(device.mock.createShaderModule).toHaveBeenCalled();
         expect(device.mock.createRenderPipeline).toHaveBeenCalled();
-
-        // Verify that command encoder and render pass are used for resampling
+        expect(renderPassEncoder.mock.setViewport).toHaveBeenCalledWith(0, 0, 64, 64, 0, 1);
+        expect(renderPassEncoder.mock.setScissorRect).toHaveBeenCalledWith(0, 0, 64, 64);
         expect(device.mock.createCommandEncoder).toHaveBeenCalled();
         expect(device.mock.queue.submit).toHaveBeenCalled();
       });
@@ -735,6 +735,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       it('uses the render path when image descriptor size resamples the source', ({
         root,
         device,
+        renderPassEncoder,
       }) => {
         const texture = root
           .createTexture({
@@ -754,9 +755,11 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           resize: true,
         });
 
-        expect(device.mock.createTexture).toHaveBeenCalled();
+        expect(device.mock.createTexture).toHaveBeenCalledTimes(2);
         expect(device.mock.createShaderModule).toHaveBeenCalled();
         expect(device.mock.createRenderPipeline).toHaveBeenCalled();
+        expect(renderPassEncoder.mock.setViewport).toHaveBeenCalledWith(0, 0, 32, 32, 0, 1);
+        expect(renderPassEncoder.mock.setScissorRect).toHaveBeenCalledWith(0, 0, 32, 32);
         expect(device.mock.createCommandEncoder).toHaveBeenCalled();
         expect(device.mock.queue.submit).toHaveBeenCalled();
       });
@@ -847,6 +850,9 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           },
         });
 
+        expect(device.mock.createTexture).toHaveBeenCalledTimes(2);
+        expect(device.mock.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(2);
+        expect(device.mock.createCommandEncoder).toHaveBeenCalledTimes(2);
         expect(device.mock.createRenderPipeline).toHaveBeenNthCalledWith(
           1,
           expect.objectContaining({
@@ -865,7 +871,11 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
-      it('applies shared regions to channel writes', ({ root, device }) => {
+      it('applies shared regions to channel writes', ({
+        root,
+        commandEncoder,
+        renderPassEncoder,
+      }) => {
         const texture = root
           .createTexture({
             size: [64, 64],
@@ -886,19 +896,9 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           size: [8, 9],
         });
 
-        const commandEncoder =
-          device.mock.createCommandEncoder.mock.results[
-            device.mock.createCommandEncoder.mock.results.length - 1
-          ]?.value;
-        expect(commandEncoder?.copyTextureToTexture).toHaveBeenCalledWith(
-          {
-            texture: expect.anything(),
-            mipLevel: 0,
-            origin: { x: 4, y: 5, z: 0 },
-          },
-          { texture: expect.anything() },
-          { width: 8, height: 9, depthOrArrayLayers: 1 },
-        );
+        expect(commandEncoder.mock.copyTextureToTexture).not.toHaveBeenCalled();
+        expect(renderPassEncoder.mock.setViewport).toHaveBeenCalledWith(4, 5, 8, 9, 0, 1);
+        expect(renderPassEncoder.mock.setScissorRect).toHaveBeenCalledWith(4, 5, 8, 9);
       });
 
       it('requires resize for channel writes with mismatched sizes', ({ root }) => {
