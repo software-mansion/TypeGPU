@@ -186,9 +186,7 @@ function createFragmentFn(
   const core = createFnCore(implementation, 'fragment');
   const outputType = shell.returnType;
   if (typeof implementation === 'string') {
-    addReturnTypeToExternals(implementation, outputType, (externals) =>
-      core.applyExternals(externals),
-    );
+    addReturnTypeToExternals(implementation, outputType, core);
   }
 
   const result: This = {
@@ -196,7 +194,7 @@ function createFragmentFn(
     outputType,
 
     $uses(newExternals) {
-      core.applyExternals(newExternals);
+      core.setExternals('userProvided', newExternals);
       return this;
     },
 
@@ -216,7 +214,9 @@ function createFragmentFn(
       if (entryInput.dataSchema && isNamable(entryInput.dataSchema)) {
         entryInput.dataSchema.$name(`${getName(this) ?? ''}_Input`);
       }
-      core.applyExternals({ Out: outputType });
+      if (typeof implementation === 'string') {
+        core.setExternals('out', { Out: outputType });
+      }
 
       return ctx.withSlots([[shaderStageSlot, 'fragment']], () =>
         core.resolve(ctx, [], shell.returnType, entryInput),

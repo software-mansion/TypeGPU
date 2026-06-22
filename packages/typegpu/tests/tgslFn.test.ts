@@ -28,36 +28,30 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves externals', () => {
-    const getColor = tgpu
-      .fn(
-        [],
-        d.vec3f,
-      )(() => {
-        const color = d.vec3f();
-        const color2 = d.vec3f(1, 2, 3);
-        return color;
-      })
-      .$uses({ v: d.vec3f });
+    const getColor = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
+      const color = d.vec3f();
+      const color2 = d.vec3f(1, 2, 3);
+      return color;
+    });
 
-    const getX = tgpu
-      .fn(
-        [],
-        d.f32,
-      )(() => {
-        const color = getColor();
-        return 3;
-      })
-      .$uses({ getColor });
+    const getX = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      const color = getColor();
+      return 3;
+    });
 
-    const getY = tgpu
-      .fn(
-        [],
-        d.f32,
-      )(() => {
-        const c = getColor();
-        return getX();
-      })
-      .$uses({ getX, getColor });
+    const getY = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      const c = getColor();
+      return getX();
+    });
 
     expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
