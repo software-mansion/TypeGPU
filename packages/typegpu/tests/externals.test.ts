@@ -17,48 +17,58 @@ describe('addArgTypesToExternals', () => {
 
   it('extracts struct argument types with their names', () => {
     const externals: ExternalMap[] = [];
-    // addArgTypesToExternals(
-    //   '(a: vec4f, b: Particle, c: Light) {}',
-    //   [d.vec4f, Particle, Light],
-    //   (result) => externals.push(result),
-    // );
-    // expect(externals).toStrictEqual([{ Particle, Light }]);
+    addArgTypesToExternals('(a: vec4f, b: Particle, c: Light) {}', [d.vec4f, Particle, Light], {
+      setExternals(_, result) {
+        externals.push(result);
+      },
+    });
+    expect(externals).toStrictEqual([{ Particle, Light }]);
   });
 
   it('gets the names from argument list in WGSL implementation', () => {
     const externals: ExternalMap[] = [];
-    // addArgTypesToExternals('(b: P, a: vec4f, c: L) -> L {}', [Particle, d.vec4f, Light], (result) =>
-    //   externals.push(result),
-    // );
-    // expect(externals).toStrictEqual([{ P: Particle, L: Light }]);
+    addArgTypesToExternals('(b: P, a: vec4f, c: L) -> L {}', [Particle, d.vec4f, Light], {
+      setExternals(_, result) {
+        externals.push(result);
+      },
+    });
+    expect(externals).toStrictEqual([{ P: Particle, L: Light }]);
   });
 
   it('works when builtins are present', () => {
     const externals: ExternalMap[] = [];
-    // addArgTypesToExternals(
-    //   '(@builtin(workgroup_id) WorkGroupID : vec3u, a: vec4f, b: Particle, c: Light) {}',
-    //   [d.vec3u, d.vec4f, Particle, Light],
-    //   (result) => externals.push(result),
-    // );
-    // expect(externals).toStrictEqual([{ Particle, Light }]);
+    addArgTypesToExternals(
+      '(@builtin(workgroup_id) WorkGroupID : vec3u, a: vec4f, b: Particle, c: Light) {}',
+      [d.vec3u, d.vec4f, Particle, Light],
+      {
+        setExternals(_, result) {
+          externals.push(result);
+        },
+      },
+    );
+    expect(externals).toStrictEqual([{ Particle, Light }]);
   });
 
   it('works with unusual whitespace', () => {
     const externals: ExternalMap[] = [];
-    //   addArgTypesToExternals(
-    //     ` WorkGroupID : vec3u
-    //     ,
-    //       a   : A   ,
-    //       (@builtin(workgroup_id) b
+    addArgTypesToExternals(
+      ` WorkGroupID : vec3u
+        ,
+          a   : A   ,
+          (@builtin(workgroup_id) b
 
-    // : B,
+    : B,
 
-    //       c: C
-    //     ) -> vec4f {}`,
-    //     [d.vec3u, Particle, Particle, Particle],
-    //     (result) => externals.push(result),
-    //   );
-    //   expect(externals).toStrictEqual([{ A: Particle, B: Particle, C: Particle }]);
+          c: C
+        ) -> vec4f {}`,
+      [d.vec3u, Particle, Particle, Particle],
+      {
+        setExternals(_, result) {
+          externals.push(result);
+        },
+      },
+    );
+    expect(externals).toStrictEqual([{ A: Particle, B: Particle, C: Particle }]);
   });
 });
 
@@ -276,9 +286,9 @@ describe('external name collisions', () => {
   }`.$uses({ ext: 1, unused: () => {} });
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "fn fn_1() {
+      "fn fn_1() {
           let a = 1;
         }"
-      `);
+    `);
   });
 });

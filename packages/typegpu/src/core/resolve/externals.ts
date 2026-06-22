@@ -35,7 +35,11 @@ export function mergeFunctionExternals(fnExternals: FnExternals): ExternalMap {
   return result;
 }
 
-export function addArgTypesToExternals(implementation: string, argTypes: unknown[], core: FnCore) {
+export function addArgTypesToExternals(
+  implementation: string,
+  argTypes: unknown[],
+  core: { setExternals: (key: 'args', externals: ExternalMap) => void },
+) {
   const argTypeNames = [...implementation.matchAll(/:\s*(?<arg>.*?)\s*[,)]/g)].map((found) =>
     found ? found[1] : undefined,
   );
@@ -53,7 +57,7 @@ export function addArgTypesToExternals(implementation: string, argTypes: unknown
 export function addReturnTypeToExternals(
   implementation: string,
   returnType: unknown,
-  core: FnCore,
+  core: { setExternals: (key: 'out', externals: ExternalMap) => void },
 ) {
   const matched = implementation.match(/->\s(?<output>[\w\d_]+)\s{/);
   const outputName = matched ? matched[1]?.trim() : undefined;
