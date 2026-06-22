@@ -10,6 +10,7 @@ import {
   getBlockScope,
   initPluginState,
   makeAstBackwardsCompatible,
+  requiresQuotation,
 } from './core/common.ts';
 import { createFilterForId } from './core/filter.ts';
 
@@ -31,7 +32,11 @@ function externalsToNode(externals: Externals | string): t.Expression {
   }
   return t.objectExpression(
     Object.entries(externals).map(([name, value]) =>
-      t.objectProperty(i(name), externalsToNode(value), false),
+      t.objectProperty(
+        requiresQuotation(name) ? t.stringLiteral(name) : i(name),
+        externalsToNode(value),
+        false,
+      ),
     ),
   );
 }
