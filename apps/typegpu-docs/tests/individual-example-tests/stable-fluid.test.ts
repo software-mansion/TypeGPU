@@ -25,16 +25,16 @@ describe('stable-fluid example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var src: texture_2d<f32>;
-
-      @group(0) @binding(1) var dst: texture_storage_2d<rgba16float, write>;
-
-      struct ShaderParams {
+      "struct ShaderParams {
         dt: f32,
         viscosity: f32,
       }
 
       @group(0) @binding(2) var<uniform> simParams: ShaderParams;
+
+      @group(0) @binding(0) var src: texture_2d<f32>;
+
+      @group(0) @binding(1) var dst: texture_storage_2d<rgba16float, write>;
 
       @group(0) @binding(3) var linSampler: sampler;
 
@@ -53,6 +53,13 @@ describe('stable-fluid example', () => {
         let prevVelocity = textureSampleLevel(src, linSampler, normalizedPos, 0);
         textureStore(dst, pixelPos, prevVelocity);
       }
+
+      struct ShaderParams {
+        dt: f32,
+        viscosity: f32,
+      }
+
+      @group(0) @binding(2) var<uniform> simParams: ShaderParams;
 
       @group(0) @binding(0) var in: texture_2d<f32>;
 
@@ -76,13 +83,6 @@ describe('stable-fluid example', () => {
         }
         return adjacentOffsets;
       }
-
-      struct ShaderParams {
-        dt: f32,
-        viscosity: f32,
-      }
-
-      @group(0) @binding(2) var<uniform> simParams: ShaderParams;
 
       @group(0) @binding(1) var out: texture_storage_2d<rgba16float, write>;
 
@@ -221,16 +221,16 @@ describe('stable-fluid example', () => {
         textureStore(out, pixelPos, vec4f(projectedVel, 0f, 1f));
       }
 
-      @group(0) @binding(1) var src: texture_2d<f32>;
-
-      @group(0) @binding(0) var vel: texture_2d<f32>;
-
       struct ShaderParams {
         dt: f32,
         viscosity: f32,
       }
 
       @group(0) @binding(3) var<uniform> simParams: ShaderParams;
+
+      @group(0) @binding(1) var src: texture_2d<f32>;
+
+      @group(0) @binding(0) var vel: texture_2d<f32>;
 
       @group(0) @binding(4) var linSampler: sampler;
 

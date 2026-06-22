@@ -37,10 +37,6 @@ describe('image tuning example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
-      @group(0) @binding(0) var imageView: texture_2d<f32>;
-
-      @group(0) @binding(1) var imageSampler: sampler;
-
       struct LUTParams {
         size: f32,
         min: vec3f,
@@ -48,11 +44,7 @@ describe('image tuning example', () => {
         enabled: u32,
       }
 
-      @group(0) @binding(2) var<uniform> lut: LUTParams;
-
-      @group(1) @binding(0) var currentLUTTexture: texture_3d<f32>;
-
-      @group(0) @binding(3) var lutSampler: sampler;
+      @group(0) @binding(0) var<uniform> lut: LUTParams;
 
       struct Adjustments {
         exposure: f32,
@@ -62,7 +54,15 @@ describe('image tuning example', () => {
         saturation: f32,
       }
 
-      @group(0) @binding(4) var<uniform> adjustments: Adjustments;
+      @group(0) @binding(1) var<uniform> adjustments: Adjustments;
+
+      @group(0) @binding(2) var imageView: texture_2d<f32>;
+
+      @group(0) @binding(3) var imageSampler: sampler;
+
+      @group(1) @binding(0) var currentLUTTexture: texture_3d<f32>;
+
+      @group(0) @binding(4) var lutSampler: sampler;
 
       struct fragment_Input {
         @location(0) uv: vec2f,

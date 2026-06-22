@@ -287,7 +287,7 @@ describe('tgpu.slot', () => {
 
       fn func() {
         let pos = vec3f(1, 2, 3);
-        const posX = 1f;
+        const posX = 1;
         let vel = (&boid.vel);
         let velX = boid.vel.x;
         let vel_ = (&boid.vel);

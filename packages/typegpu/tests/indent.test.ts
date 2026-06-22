@@ -174,13 +174,7 @@ describe('indents', () => {
     });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "@group(0) @binding(2) var<storage, read_write> counter: u32;
-
-      fn incrementCounter() {
-        counter += 1u;
-      }
-
-      struct PhysicsData {
+      "struct PhysicsData {
         weight: f32,
         velocity: vec3f,
         position: vec3f,
@@ -198,6 +192,12 @@ describe('indents', () => {
       }
 
       @group(0) @binding(0) var<storage, read_write> systemData: SystemData;
+
+      @group(0) @binding(2) var<storage, read_write> counter: u32;
+
+      fn incrementCounter() {
+        counter += 1u;
+      }
 
       @group(0) @binding(1) var densityField: texture_storage_3d<r32float, read>;
 

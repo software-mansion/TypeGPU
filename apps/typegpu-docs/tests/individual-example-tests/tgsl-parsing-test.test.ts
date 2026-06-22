@@ -165,16 +165,18 @@ describe('tgsl parsing test example', () => {
         return s;
       }
 
+      struct SimpleStruct_1 {
+        vec: vec2f,
+      }
+
+      var<private> privateStruct: SimpleStruct_1;
+
       fn modifyNumFn(ptr: ptr<function, u32>) {
         (*ptr) += 1u;
       }
 
       fn modifyVecFn(ptr: ptr<function, vec2f>) {
         (*ptr).x += 1f;
-      }
-
-      struct SimpleStruct_1 {
-        vec: vec2f,
       }
 
       fn modifyStructFn(ptr: ptr<function, SimpleStruct_1>) {
@@ -190,8 +192,6 @@ describe('tgsl parsing test example', () => {
       fn modifyStructPrivate(ptr: ptr<private, SimpleStruct_1>) {
         (*ptr).vec.x += 1f;
       }
-
-      var<private> privateStruct: SimpleStruct_1;
 
       fn pointersTest() -> bool {
         var s = true;

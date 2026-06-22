@@ -67,8 +67,6 @@ describe('slime mold example', () => {
         wrappedCallback(id.x, id.y, id.z);
       }
 
-      @group(1) @binding(0) var oldState: texture_storage_2d<rgba8unorm, read>;
-
       struct Params {
         moveSpeed: f32,
         sensorAngle: f32,
@@ -78,6 +76,8 @@ describe('slime mold example', () => {
       }
 
       @group(0) @binding(0) var<uniform> params: Params;
+
+      @group(1) @binding(0) var oldState: texture_storage_2d<rgba8unorm, read>;
 
       @group(1) @binding(1) var newState: texture_storage_2d<rgba8unorm, write>;
 
@@ -192,6 +192,16 @@ describe('slime mold example', () => {
         textureStore(newState, gid.xy, vec4f(newColor, 1f));
       }
 
+      struct Params {
+        moveSpeed: f32,
+        sensorAngle: f32,
+        sensorDistance: f32,
+        turnSpeed: f32,
+        evaporationRate: f32,
+      }
+
+      @group(0) @binding(0) var<uniform> params: Params;
+
       var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
@@ -209,7 +219,7 @@ describe('slime mold example', () => {
         angle: f32,
       }
 
-      @group(0) @binding(0) var<storage, read_write> agentsData: array<Agent, 200000>;
+      @group(0) @binding(1) var<storage, read_write> agentsData: array<Agent, 200000>;
 
       fn sample() -> f32 {
         let a = dot(seed, vec2f(23.140779495239258, 232.6168975830078));
@@ -222,16 +232,6 @@ describe('slime mold example', () => {
       fn randFloat01() -> f32 {
         return sample();
       }
-
-      struct Params {
-        moveSpeed: f32,
-        sensorAngle: f32,
-        sensorDistance: f32,
-        turnSpeed: f32,
-        evaporationRate: f32,
-      }
-
-      @group(0) @binding(1) var<uniform> params: Params;
 
       fn sense(pos: vec2f, angle: f32, sensorAngleOffset: f32) -> f32 {
         let sensorAngle = (angle + sensorAngleOffset);

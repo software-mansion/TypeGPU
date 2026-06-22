@@ -155,11 +155,11 @@ describe('tgpu.accessor', () => {
     });
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> redUniform: vec3f;
-
-      fn getColor() -> vec3f {
+      "fn getColor() -> vec3f {
         return vec3f(1, 0, 0);
       }
+
+      @group(0) @binding(0) var<uniform> redUniform: vec3f;
 
       fn main() {
         let color = vec3f(1, 0, 0);
