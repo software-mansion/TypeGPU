@@ -238,7 +238,7 @@ texture.write({
 });
 ```
 
-Only single destination channels are supported for now: `r`, `g`, `b`, and `a`. Channel image writes require `.$usage('render')`. Each write uses a WebGPU render pass with a color write mask, so the target texture must be 2D and use a format supported by TypeGPU's render-pass write path. Region options apply to the grouped write:
+Channel image writes require `.$usage('render')`. The target texture must be 2D and use a format supported by TypeGPU's render-pass write path. Region options apply to the grouped write:
 
 ```ts
 texture.write({
