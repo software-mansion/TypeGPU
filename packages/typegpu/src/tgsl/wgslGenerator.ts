@@ -484,19 +484,28 @@ ${this.ctx.pre}}`;
       if (stdBinaryRelationalOp) {
         const equalityCheck = ['===', '!=='].includes(op);
         const correctOperandTypes =
-          (wgsl.isNumericSchema(lhsExpr.dataType) && wgsl.isNumericSchema(rhsExpr.dataType)) ||
-          (equalityCheck && wgsl.isBool(lhsExpr.dataType) && wgsl.isBool(rhsExpr.dataType));
+          (wgsl.isNumericSchema(convLhs.dataType) && wgsl.isNumericSchema(convRhs.dataType)) ||
+          (equalityCheck && wgsl.isBool(convLhs.dataType) && wgsl.isBool(convRhs.dataType));
 
         if (!correctOperandTypes) {
-          const bothVectors = wgsl.isVec(lhsExpr.dataType) && wgsl.isVec(rhsExpr.dataType);
+          const bothVectors = wgsl.isVec(convLhs.dataType) && wgsl.isVec(convRhs.dataType);
           throw new WgslTypeError(
-            `Comparison '${op}' requires numeric${equalityCheck ? ' or boolean' : ''} operands. Got '${lhsExpr.dataType}' and '${rhsExpr.dataType}'.${
+            `Comparison '${op}' requires numeric${equalityCheck ? ' or boolean' : ''} operands. Got '${String(convLhs.dataType)}' and '${String(convRhs.dataType)}'.${
               bothVectors
                 ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}'.`
                 : ''
             }`,
           );
         }
+      }
+
+      if (
+        (op === '&&' || op === '||') &&
+        !(wgsl.isBool(convLhs.dataType) && wgsl.isBool(convRhs.dataType))
+      ) {
+        throw new WgslTypeError(
+          `Logical expression '${op}' requires boolean operands. Got '${String(convLhs.dataType)}' and '${String(convRhs.dataType)}'.`,
+        );
       }
 
       return snip(
