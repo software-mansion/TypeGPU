@@ -481,6 +481,24 @@ ${this.ctx.pre}}`;
         }
       }
 
+      if (stdBinaryRelationalOp) {
+        const equalityCheck = ['===', '!=='].includes(op);
+        const correctOperandTypes =
+          (wgsl.isNumericSchema(lhsExpr.dataType) && wgsl.isNumericSchema(rhsExpr.dataType)) ||
+          (equalityCheck && wgsl.isBool(lhsExpr.dataType) && wgsl.isBool(rhsExpr.dataType));
+
+        if (!correctOperandTypes) {
+          const bothVectors = wgsl.isVec(lhsExpr.dataType) && wgsl.isVec(rhsExpr.dataType);
+          throw new WgslTypeError(
+            `Comparison '${op}' requires numeric${equalityCheck ? ' or boolean' : ''} operands. Got '${lhsExpr.dataType}' and '${rhsExpr.dataType}'.${
+              bothVectors
+                ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}'.`
+                : ''
+            }`,
+          );
+        }
+      }
+
       return snip(
         parenthesizedOps.includes(op)
           ? `(${lhsStr} ${OP_MAP[op] ?? op} ${rhsStr})`

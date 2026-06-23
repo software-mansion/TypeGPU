@@ -36,7 +36,7 @@ describe('binaryLogicalOps', () => {
         `);
       });
 
-      it('equality check handles non numeric operands', () => {
+      it('equality comparison handles non numeric operands', () => {
         const x = Boid();
         const y = BoidOnSteroids();
 
@@ -134,7 +134,7 @@ describe('binaryLogicalOps', () => {
       });
     });
 
-    describe.skip('runtime', () => {
+    describe('runtime', () => {
       it('handles numeric', () => {
         const x = 7 as number;
 
@@ -158,6 +158,25 @@ describe('binaryLogicalOps', () => {
             r = (7i <= y);
             r = (7i > y);
             r = (7i >= y);
+          }"
+        `);
+      });
+
+      it('equality comparison handles boolean operands', () => {
+        const a = false;
+        const cAccessor = tgpu.accessor(d.bool, () => true);
+        const f = tgpu.fn([d.bool])((b) => {
+          'use gpu';
+          let r = true;
+          r = cAccessor.$ === b;
+          r = a !== b;
+        });
+
+        expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+          "fn f(b: bool) {
+            var r = true;
+            r = (true == b);
+            r = (false != b);
           }"
         `);
       });
@@ -193,13 +212,13 @@ describe('binaryLogicalOps', () => {
         expect(() => tgpu.resolve([eq])).toThrowErrorMatchingInlineSnapshot(`
           [Error: Resolution of the following tree failed:
           - <root>
-          - fn:eq: Comparison '===' requires numeric operands. Got 'struct:Boid' and 'struct:BoidOnSteroids'.]
+          - fn:eq: Comparison '===' requires numeric or boolean operands. Got 'struct:Boid' and 'struct:BoidOnSteroids'.]
         `);
         expect(() => tgpu.resolve([ne])).toThrowErrorMatchingInlineSnapshot(
           `
           [Error: Resolution of the following tree failed:
           - <root>
-          - fn:ne: Comparison '!==' requires numeric operands. Got 'struct:Boid' and 'struct:BoidOnSteroids'.]
+          - fn:ne: Comparison '!==' requires numeric or boolean operands. Got 'struct:Boid' and 'struct:BoidOnSteroids'.]
         `,
         );
         expect(() => tgpu.resolve([lt])).toThrowErrorMatchingInlineSnapshot(
@@ -234,18 +253,16 @@ describe('binaryLogicalOps', () => {
 
       it('when both operands are vectors suggests std function', () => {
         const x = d.vec3f();
-        const y = x;
 
-        const f = () => {
+        const f = tgpu.fn([d.vec3f])((y) => {
           'use gpu';
           return x === y;
-        };
+        });
 
         expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
           [Error: Resolution of the following tree failed:
           - <root>
-          - fn*:f
-          - fn*:f(): Comparison '===' requires numeric operands. For component-wise comparison, use 'std.eq''.]
+          - fn:f: Comparison '===' requires numeric or boolean operands. Got 'vec3f' and 'vec3f'. For component-wise comparison, use 'std.eq'.]
         `);
       });
     });
