@@ -6,6 +6,7 @@ import { cancelExit, failAndExit } from './prompts.ts';
 import { type } from 'arktype';
 import { PackageJsonSchema, AppJsonSchema } from './types.ts';
 import { multiselectPkgs, sanitizeToExpoSlug } from './inputs.ts';
+import { hasDependency, VERSION } from './pkg.ts';
 
 const renameFiles = {
   _gitignore: '.gitignore',
@@ -33,12 +34,21 @@ function emptyDir(dir: string) {
   }
 }
 
-export async function prepareDirectory(cwd: string, projectDir: string) {
+export async function prepareDirectory(
+  cwd: string,
+  projectDir: string,
+  options: { interactive?: boolean } = {},
+) {
   const dir = path.join(cwd, projectDir);
+  const interactive = options.interactive ?? true;
 
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   } else if (!isEmptyDir(dir)) {
+    if (!interactive) {
+      failAndExit(`Directory ${dir} is not empty.`);
+    }
+
     const overwrite = await p.select({
       message: `Directory ${dir} is not empty.`,
       options: [
@@ -59,6 +69,7 @@ export async function scaffoldProject(
   templateDir: string,
   projectDir: string,
   packageName: string,
+  packageNames?: string[],
 ) {
   const entries = fs.readdirSync(templateDir);
   for (const entry of entries.filter(
@@ -100,11 +111,15 @@ export async function scaffoldProject(
     failAndExit(`[INTERNAL] Invalid package.json in template ${templateDir}`, pkg.summary);
   }
   pkg.name = packageName;
-  const pkgs = await multiselectPkgs(pkg);
-  if (pkgs) {
+  const pkgs = packageNames
+    ? packageNames.map((pkgName) => ({ pkg: pkgName, ver: VERSION }))
+    : await multiselectPkgs(pkg);
+  if (pkgs?.length) {
     pkg.dependencies ??= {};
     for (const { pkg: dep, ver } of pkgs) {
-      pkg.dependencies[dep] = ver;
+      if (!hasDependency(pkg, dep)) {
+        pkg.dependencies[dep] = ver;
+      }
     }
   }
 

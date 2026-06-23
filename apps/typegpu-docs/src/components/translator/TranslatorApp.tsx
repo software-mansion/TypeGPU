@@ -19,6 +19,7 @@ import {
   wgslCodeAtom,
 } from './lib/translatorStore.ts';
 import { useAutoCompile } from './lib/useAutoCompile.ts';
+import { sandboxModulesAtom } from '../../utils/examples/sandboxModules.ts';
 
 interface EditorSectionProps {
   id: string;
@@ -39,6 +40,8 @@ function EditorSection({
   readOnly,
   onMount,
 }: EditorSectionProps) {
+  const sandboxModules = useAtomValue(sandboxModulesAtom);
+
   return (
     <section className="flex min-h-[24rem] flex-col lg:min-h-0">
       <h2 id={id} className="mb-2 font-medium text-gray-300 text-sm">
@@ -49,7 +52,7 @@ function EditorSection({
         value={value}
         onChange={onChange ? (v) => onChange(v || '') : undefined}
         theme="vs-dark"
-        beforeMount={language === 'typescript' ? setupMonacoEditor : undefined}
+        beforeMount={language === 'typescript' ? setupMonacoEditor(sandboxModules) : undefined}
         onMount={onMount}
         loading={
           <div className="flex items-center justify-center text-gray-400">Loading editor...</div>
