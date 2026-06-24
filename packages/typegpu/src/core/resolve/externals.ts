@@ -103,10 +103,12 @@ export function replaceExternalsInWgsl(
 
   return wgsl.replaceAll(matcher, (match) => {
     const chain = match.split('.');
+
     let currentItem: unknown = externalMap;
     let name: string | undefined = undefined;
     let suffix = '';
     let resolvedItem = false;
+
     for (const [i, elem] of chain.entries()) {
       currentItem = (currentItem as ExternalMap)[elem];
       name = elem;
@@ -119,7 +121,11 @@ export function replaceExternalsInWgsl(
         break;
       }
 
-      if (typeof currentItem !== 'object' || currentItem === null) {
+      if (
+        typeof currentItem !== 'object' ||
+        currentItem === null /* || i ===  chain.length - 1 */
+      ) {
+        // throw new Error('aaa');
         console.warn(
           `During resolution, the external '${name}' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.`,
         );
@@ -130,19 +136,22 @@ export function replaceExternalsInWgsl(
     // The chain ended on a nested external map rather than a resolvable value
     // (e.g. a bare `in`). Nothing to substitute — leave it untouched.
     if (!resolvedItem) {
+      console.warn(
+        `During resolution, the external '${chain.join('.')}' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.`,
+      );
       return match;
     }
 
-    if (isNamable(currentItem) && getName(currentItem) === undefined) {
+    if (isNamable(currentItem) && getName(currentItem) === undefined && name !== undefined) {
       setName(currentItem, name);
     }
 
-    if (cache.has(currentItem)) {
-      return cache.get(currentItem) + suffix;
+    let resolved = cache.get(currentItem);
+    if (resolved === undefined) {
+      resolved = ctx.resolve(currentItem).value;
+      cache.set(currentItem, resolved);
     }
-    const resolved = ctx.resolve(currentItem).value;
-    cache.set(currentItem, resolved);
 
-    return resolved + suffix; // cache!!!!!
+    return resolved + suffix;
   });
 }

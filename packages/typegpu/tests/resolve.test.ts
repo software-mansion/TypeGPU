@@ -527,6 +527,24 @@ describe('tgpu resolveWithContext', () => {
     );
   });
 
+  it('should warn when the end of external chain was reached without a resolvable', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const getColor = tgpu.fn([])`() {
+      let color = EXT.p.q;
+    }`.$uses({ EXT: { p: { q: { r: d.vec3f() } } } });
+
+    expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
+      "fn getColor() {
+            let color = EXT.p.q;
+          }"
+    `);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "During resolution, the external 'EXT.p.q' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.",
+    );
+  });
+
   it('should not warn when In/Out are unused', () => {
     using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
