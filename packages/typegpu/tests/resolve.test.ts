@@ -310,12 +310,12 @@ fn main() {
     });
 
     expect(resolved).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> intensity: u32;
-
-      fn get_color() -> vec3f {
+      "fn get_color() -> vec3f {
               let color = vec3f();
               return color;
             }
+
+      @group(0) @binding(0) var<uniform> intensity: u32;
             fn main () {
               let c = get_color() * intensity;
             }"

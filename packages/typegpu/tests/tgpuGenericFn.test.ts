@@ -318,6 +318,8 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
     expect(tgpu.resolve([pipeline.pipeline])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -326,8 +328,6 @@ describe('TgpuGenericFn - shellless callback wrapper', () => {
       }
 
       @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
