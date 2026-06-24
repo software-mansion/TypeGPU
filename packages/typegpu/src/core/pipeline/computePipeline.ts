@@ -37,6 +37,11 @@ import {
   triggerPerformanceCallback,
 } from './timeable.ts';
 import type { IndirectFlag, TgpuBuffer } from '../buffer/buffer.ts';
+import {
+  NullPerformanceTracker,
+  PerformanceTrackerImpl,
+  type PerformanceTracker,
+} from './performanceTracker.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
@@ -482,48 +487,4 @@ class ComputePipelineCore implements SelfResolvable {
 
     return { resolutionResult, module };
   }
-}
-
-interface PerformanceTracker {
-  measureResolve(callback: () => ResolutionResult): ResolutionResult;
-  measureCompile(device: GPUDevice): void;
-}
-
-class PerformanceTrackerImpl implements PerformanceTracker {
-  #resolveMeasure: PerformanceMeasure | undefined;
-  #wgslSize: number | undefined;
-
-  measureResolve(callback: () => ResolutionResult): ResolutionResult {
-    const resolveStart = performance.mark('typegpu:resolution:start');
-    const result = callback();
-    this.#resolveMeasure = performance.measure('typegpu:resolution', {
-      start: resolveStart.name,
-    });
-    this.#wgslSize = result.code.length;
-    return result;
-  }
-
-  measureCompile(device: GPUDevice): void {
-    void (async () => {
-      const start = performance.mark('typegpu:compile-start');
-      await device.queue.onSubmittedWorkDone();
-      const compileMeasure = performance.measure('typegpu:compiled', {
-        start: start.name,
-      });
-
-      PERF?.record('resolution', {
-        resolveDuration: this.#resolveMeasure?.duration,
-        compileDuration: compileMeasure.duration,
-        wgslSize: this.#wgslSize,
-      });
-    })();
-  }
-}
-
-class NullPerformanceTracker implements PerformanceTracker {
-  measureResolve(callback: () => ResolutionResult): ResolutionResult {
-    return callback();
-  }
-
-  measureCompile(): void {}
 }
