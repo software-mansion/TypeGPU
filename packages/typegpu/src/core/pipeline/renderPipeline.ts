@@ -191,6 +191,18 @@ export interface TgpuRenderPipeline<in Targets = never>
   ): void;
 
   /**
+   * Immediately resolves the pipeline, then awaits `device.createComputePipelineAsync()`.
+   * NOTE: it is not necessary to initialize pipelines manually.
+   */
+  initAsync(): Promise<void>;
+
+  /**
+   * Immediately resolves the pipeline and creates WebGPU resources.
+   * NOTE: it is not necessary to initialize pipelines manually.
+   */
+  initSync(): void;
+
+  /**
    * Draws primitives using parameters read from a buffer.
    * The buffer must contain 4 consecutive u32 values (vertexCount, instanceCount, firstVertex, firstInstance).
    * To get the correct offset within complex data structures, use `d.memoryLayoutOf(...)`.
