@@ -168,51 +168,7 @@ describe('external name collisions', () => {
     `);
   });
 
-  it("allows an 'in' external in TGSL implemented entrypoints", () => {
-    const EXT = { in: 1 };
-    const vertexFn = tgpu.vertexFn({
-      out: { position: d.builtin.position },
-    })(() => {
-      'use gpu';
-      const x = EXT.in;
-      return { position: d.vec4f() };
-    });
-    const fragmentFn = tgpu.fragmentFn({
-      out: d.vec4f,
-    })(() => {
-      'use gpu';
-      const x = EXT.in;
-      return d.vec4f();
-    });
-    const computeFn = tgpu.computeFn({
-      workgroupSize: [1],
-    })(() => {
-      'use gpu';
-      const x = EXT.in;
-    });
-
-    expect(tgpu.resolve([vertexFn])).toMatchInlineSnapshot(`
-      "struct vertexFn_Output {
-        @builtin(position) position: vec4f,
-      }
-
-      @vertex fn vertexFn() -> vertexFn_Output {
-        const x = 1;
-        return vertexFn_Output(vec4f());
-      }"
-    `);
-    expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
-      "@fragment fn fragmentFn() -> @location(0) vec4f {
-        const x = 1;
-        return vec4f();
-      }"
-    `);
-    expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
-      "@compute @workgroup_size(1) fn computeFn() {
-        const x = 1;
-      }"
-    `);
-  });
+  // no test for 'in' in TGSL since it cannot occur naturally
 
   it('throws when rawWgsl fn has an external colliding with argument type', () => {
     const Schema = d.struct({ p: d.u32 });
@@ -246,6 +202,19 @@ describe('external name collisions', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn:myFn: Key 'S' appears in externals despite already being used for argument/return type. Please rename this external.]
+    `);
+  });
+
+  it('allows for nested external name collision', () => {
+    const Schema = d.struct({ p: d.u32 });
+    const myFn = tgpu.fn([], Schema)`() -> S { let a = EXT.S; }`.$uses({ EXT: { S: 1 } });
+
+    expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
+      "struct Schema {
+        p: u32,
+      }
+
+      fn myFn() -> Schema { let a = 1; }"
     `);
   });
 
