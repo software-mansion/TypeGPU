@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "typegpu-expo-simple-project",
-    "slug": "typegpu-expo-simple-project",
+    "name": "typegpu-expo-bare-project",
+    "slug": "typegpu-expo-bare-project",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,14 +14,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.typegpusimpleexpo"
+      "bundleIdentifier": "com.anonymous.typegpubareexpo"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.typegpusimpleexpo"
+      "package": "com.anonymous.typegpubareexpo"
     },
     "web": {
       "favicon": "./assets/favicon.png"

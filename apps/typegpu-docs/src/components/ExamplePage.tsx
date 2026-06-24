@@ -1,5 +1,5 @@
 import { useAtomValue, useSetAtom } from 'jotai';
-import { Suspense, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { currentExampleAtom } from '../utils/examples/currentExampleAtom.ts';
 import { common, examples } from '../examples/exampleContent.ts';
 import { ExampleNotFound } from './ExampleNotFound.tsx';
@@ -49,11 +49,7 @@ function ExamplePage() {
     return <ExampleNotFound />;
   })();
 
-  return (
-    <main className="max-w-full flex-1">
-      <Suspense fallback={'Loading...'}>{content}</Suspense>
-    </main>
-  );
+  return <main className="max-w-full flex-1">{content}</main>;
 }
 
 export default ExamplePage;

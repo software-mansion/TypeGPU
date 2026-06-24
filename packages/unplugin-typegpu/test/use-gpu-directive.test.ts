@@ -1209,7 +1209,8 @@ describe('hoists exported marked function statements', () => {
 
   test('babel', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "const mul = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function mul(a, b) {
+      "/** MUL */
+      const mul = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function mul(a, b) {
         'use gpu';
 
         return __tsover_mul(a, b);
@@ -1231,6 +1232,7 @@ describe('hoists exported marked function statements', () => {
           return {};
         }
       }) && $.f)({});
+      /** ADD */
       const add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
         'use gpu';
 
@@ -1255,10 +1257,7 @@ describe('hoists exported marked function statements', () => {
       }) && $.f)({});
       console.log(add);
       console.log(mul);
-
-      /** ADD */
       export { add };
-      /** MUL */
       export { mul };"
     `);
   });
@@ -1309,7 +1308,8 @@ describe('hoists default exported marked function statement', () => {
 
   test('babel', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "const add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
+      "/** ADD */
+      const add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
         'use gpu';
 
         return __tsover_add(a, b);
@@ -1332,8 +1332,6 @@ describe('hoists default exported marked function statement', () => {
         }
       }) && $.f)({});
       console.log(add);
-
-      /** ADD */
       export default add;"
     `);
   });
