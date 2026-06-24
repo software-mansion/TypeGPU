@@ -249,6 +249,11 @@ This happens automatically the first time the pipeline is executed via `.draw`, 
 The `initSync` method lets you start the initialization early.
 To wait until initialization actually finishes on the device (fully avoiding a stall on first execution), use `initAsync` instead.
 
+:::note
+For small and medium sized shaders, pipeline pre-initialization does not provide a noticeable performance improvement.
+Use `initSync`/`initAsync` only in larger applications, or in cases where your shaders are particularly large or numerous.
+:::
+
 ```ts twoslash
 import tgpu from 'typegpu';
 const root = await tgpu.init();
@@ -298,7 +303,6 @@ await initPromise;
 // Stall avoided, the pipeline is already resolved and initialized on the device.
 pipeline.dispatchWorkgroups(1);
 ```
-
 
 ## Execution
 
