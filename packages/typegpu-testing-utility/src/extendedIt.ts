@@ -124,6 +124,7 @@ export const it = base
         return querySet;
       }),
       createRenderPipeline: vi.fn(() => 'mockRenderPipeline'),
+      createRenderPipelineAsync: vi.fn(async () => 'mockRenderPipeline'),
       createSampler: vi.fn(() => 'mockSampler'),
       createShaderModule: vi.fn(() => 'mockShaderModule'),
       createTexture: vi.fn((descriptor) => createTextureMock(descriptor)),
