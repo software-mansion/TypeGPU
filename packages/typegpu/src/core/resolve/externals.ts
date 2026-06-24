@@ -95,7 +95,7 @@ export function replaceExternalsInWgsl(
   return wgsl.replaceAll(boundedPropChain, (match) => {
     const chain = match.split('.');
 
-    if (!((chain.at(0) as string) in externalMap)) {
+    if (!Object.hasOwn(externalMap, chain.at(0) as string)) {
       // this prop access does not start with an external
       return match;
     }
