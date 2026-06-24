@@ -5,7 +5,7 @@ describe('tgpu.declare', () => {
   it('should inject provided declaration when resolving a function', () => {
     const declaration = tgpu['~unstable'].declare('@group(0) @binding(0) var<uniform> val: f32;');
 
-    const empty = tgpu.fn([])`() { /* do nothing */ }`.$uses({ declaration });
+    const empty = tgpu.fn([])`declaration () { /* do nothing */ }`.$uses({ declaration });
 
     expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> val: f32;
@@ -33,7 +33,7 @@ struct Output {
   x: u32,
 }`);
 
-    const empty = tgpu.fn([])`() { /* do nothing */ }`.$uses({ decl1, decl2 });
+    const empty = tgpu.fn([])`decl1 decl2 () { /* do nothing */ }`.$uses({ decl1, decl2 });
 
     expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> val: f32;
@@ -48,17 +48,17 @@ struct Output {
 
   it('should replace nested declarations', () => {
     const declaration = tgpu['~unstable']
-      .declare('@group(0) @binding(0) var<uniform> val: f32;')
+      .declare('@group(0) @binding(0) var<uniform> val: f32; nested')
       .$uses({
         nested: tgpu['~unstable'].declare('struct Output { x: u32 }'),
       });
 
-    const empty = tgpu.fn([])`() { /* do nothing */ }`.$uses({ declaration });
+    const empty = tgpu.fn([])`declaration () { /* do nothing */ }`.$uses({ declaration });
 
     expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "struct Output { x: u32 }
 
-      @group(0) @binding(0) var<uniform> val: f32;
+      @group(0) @binding(0) var<uniform> val: f32; 
 
       fn empty() { /* do nothing */ }"
     `);
@@ -73,7 +73,7 @@ struct Output {
       .declare('@group(0) @binding(0) var<uniform> val: Output;')
       .$uses({ Output });
 
-    const empty = tgpu.fn([])`() { /* do nothing */ }`.$uses({ declaration });
+    const empty = tgpu.fn([])`declaration () { /* do nothing */ }`.$uses({ declaration });
 
     expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "struct Output {
