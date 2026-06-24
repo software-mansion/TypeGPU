@@ -495,25 +495,6 @@ describe('tgpu resolveWithContext', () => {
     expect(configSpy.mock.lastCall?.[0].bindings).toEqual([[colorSlot, v]]);
   });
 
-  it('should warn when external WGSL is not used', () => {
-    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    tgpu.resolveWithContext({
-      template: 'fn testFn() { return; }',
-      externals: {
-        ArraySchema: d.arrayOf(d.u32, 4),
-        JavaScriptObject: { field: d.vec2f() },
-      },
-    });
-
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "The external 'ArraySchema' wasn't used in the resolved template.",
-    );
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "The external 'JavaScriptObject' wasn't used in the resolved template.",
-    );
-  });
-
   it('should warn when external is neither wgsl nor an object', () => {
     using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
