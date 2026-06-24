@@ -107,7 +107,6 @@ export function replaceExternalsInWgsl(
     let currentItem: unknown = externalMap;
     let name: string | undefined = undefined;
     let suffix = '';
-    let resolvedItem = false;
 
     for (const [i, elem] of chain.entries()) {
       currentItem = (currentItem as ExternalMap)[elem];
@@ -117,29 +116,15 @@ export function replaceExternalsInWgsl(
           .slice(i + 1)
           .map((s) => `.${s}`)
           .join('');
-        resolvedItem = true;
         break;
       }
 
-      if (
-        typeof currentItem !== 'object' ||
-        currentItem === null /* || i ===  chain.length - 1 */
-      ) {
-        // throw new Error('aaa');
+      if (typeof currentItem !== 'object' || currentItem === null || i === chain.length - 1) {
         console.warn(
-          `During resolution, the external '${name}' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.`,
+          `During resolution, the external '${chain.slice(0, i + 1).join('.')}' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.`,
         );
         return match;
       }
-    }
-
-    // The chain ended on a nested external map rather than a resolvable value
-    // (e.g. a bare `in`). Nothing to substitute — leave it untouched.
-    if (!resolvedItem) {
-      console.warn(
-        `During resolution, the external '${chain.join('.')}' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.`,
-      );
-      return match;
     }
 
     if (isNamable(currentItem) && getName(currentItem) === undefined && name !== undefined) {
