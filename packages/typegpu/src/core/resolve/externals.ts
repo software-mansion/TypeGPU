@@ -66,15 +66,15 @@ export function addReturnTypeToExternals(
   }
 }
 
-function boundedRegex(inner: RegExp) {
-  return new RegExp(`(?<![\\w\\$_.])${inner.source}(?![\\w\\$_])`, 'ug');
-}
+const anyIdent = /([$_\p{XID_Start}][$\p{XID_Continue}]*)/u; // WGSL ident, modified to include $
+const anyPropChain = new RegExp(`(${anyIdent.source})(\\.${anyIdent.source})*`, 'ug');
+const boundedPropChain = new RegExp(`(?<![\\w\\$_.])${anyPropChain.source}(?![\\w\\$_])`, 'ug');
 
 /**
  * Replaces all occurrences of external names in WGSL code with their resolved values.
  * It adds all necessary definitions to the resolution context.
  * @param ctx - The resolution context.
- * @param externalMap - The external map.
+ * @param externalMap - The external map. Assumes that keys don't contain dots.
  * @param wgsl - The WGSL code.
  *
  * @returns The WGSL code with all external names replaced with their resolved values.
@@ -92,17 +92,13 @@ export function replaceExternalsInWgsl(
   // Avoid resolving the same item multiple times during one call.
   const cache: Map<unknown, string> = new Map();
 
-  const anyIdent = /([$_\p{XID_Start}][$\p{XID_Continue}]*)/u;
-  const initialIdents = new RegExp(
-    keys.map((key) => key.replaceAll('.', '\\.').replaceAll('$', '\\$')).join('|'),
-    'u',
-  );
-  const matcher = boundedRegex(
-    new RegExp(`(${initialIdents.source})(\\.${anyIdent.source})*`, 'ug'),
-  );
-
-  return wgsl.replaceAll(matcher, (match) => {
+  return wgsl.replaceAll(boundedPropChain, (match) => {
     const chain = match.split('.');
+
+    if (!((chain.at(0) as string) in externalMap)) {
+      // this prop access does not start with an external
+      return match;
+    }
 
     let currentItem: unknown = externalMap;
     let name: string | undefined = undefined;
