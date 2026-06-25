@@ -8,7 +8,7 @@ import type { ResolvableObject, SelfResolvable, Wgsl } from '../../types.ts';
 import type { WgslEnableExtension } from '../../wgslExtensions.ts';
 import { isPipeline } from '../pipeline/typeGuards.ts';
 import type { Configurable, ExperimentalTgpuRoot } from '../root/rootTypes.ts';
-import { mergeExternals, replaceExternalsInWgsl } from './externals.ts';
+import { replaceExternalsInWgsl } from './externals.ts';
 import { type Namespace, namespace } from './namespace.ts';
 
 export interface TgpuResolveOptions {
@@ -195,14 +195,11 @@ function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionRes
     );
   }
 
-  const dependencies = {} as Record<string, Wgsl>;
-  mergeExternals(dependencies, externals ?? {});
-
   const resolutionObj: SelfResolvable = {
     [$internal]: true,
     [$resolve](ctx): ResolvedSnippet {
       return snip(
-        replaceExternalsInWgsl(ctx, dependencies, template ?? ''),
+        replaceExternalsInWgsl(ctx, externals, template ?? ''),
         Void,
         /* origin */ 'runtime',
       );
