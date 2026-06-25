@@ -710,6 +710,14 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }) as unknown as this & HasIndexBuffer;
   }
 
+  initAsync(): Promise<void> {
+    return this[$internal].core.initAsync();
+  }
+
+  initSync() {
+    this[$internal].core.initSync();
+  }
+
   private _createRenderPass(encoder: GPUCommandEncoder): GPURenderPassEncoder {
     const internals = this[$internal];
     const { root, descriptor } = internals.core.options;
@@ -1088,9 +1096,46 @@ class RenderPipelineCore implements SelfResolvable {
     return (this.#performanceCallbackQuerySet ??= this.options.root.createQuerySet('timestamp', 2));
   }
 
-  public unwrap(): Memo {
+  initAsync(): Promise<void> {
     if (this.#memo !== undefined) {
-      return this.#memo;
+      // the pipeline was already resolved & compiled
+      return Promise.resolve();
+    }
+
+    if (this.#initAsyncPromise === undefined) {
+      // the pipeline did not start resolution & compilation
+      const device = this.options.root.device;
+      const { resolutionResult, descriptor, connectedAttribs } =
+        this.resolveAndCreateShaderModule();
+      const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
+
+      this.#initAsyncPromise = device
+        .createRenderPipelineAsync(descriptor)
+        .then((pipeline) => {
+          this.#memo = {
+            pipeline,
+            usedBindGroupLayouts,
+            catchall,
+            logResources,
+            usedVertexLayouts: connectedAttribs.usedVertexLayouts,
+            fragmentOut: this.#latestAutoFragmentOut as BaseData,
+          };
+          this.#performanceTracker.measureCompile(device);
+        })
+        .finally(() => {
+          this.#initAsyncPromise = undefined;
+        });
+    }
+    return this.#initAsyncPromise;
+  }
+
+  initSync() {
+    if (this.#memo !== undefined) {
+      return;
+    }
+
+    if (this.#initAsyncPromise !== undefined) {
+      throw new Error("'pipeline.initAsync()' was called and is not yet resolved.");
     }
 
     const device = this.options.root.device;
@@ -1107,8 +1152,11 @@ class RenderPipelineCore implements SelfResolvable {
     };
 
     this.#performanceTracker.measureCompile(device);
+  }
 
-    return this.#memo;
+  public unwrap(): Memo {
+    this.initSync();
+    return this.#memo as Memo;
   }
 
   public resolveAndCreateShaderModule() {

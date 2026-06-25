@@ -178,10 +178,18 @@ describe('pipeline initialization', () => {
 
         pipeline.initSync();
 
-        expect(device.mock.createComputePipeline).toHaveBeenCalled();
+        expect(device.mock.createRenderPipeline).toHaveBeenCalled();
         expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-          "@compute @workgroup_size(1, 1, 1) fn computeFn() {
+          "struct vertexFn_Output {
+            @builtin(position) pos: vec4f,
+          }
 
+          @vertex fn vertexFn() -> vertexFn_Output {
+            return vertexFn_Output(vec4f());
+          }
+
+          @fragment fn fragmentFn() -> @location(0) vec4f {
+            return vec4f();
           }"
         `);
       });
@@ -196,8 +204,16 @@ describe('pipeline initialization', () => {
         expect(device.mock.createRenderPipelineAsync).toHaveBeenCalled();
         expect(() => root.unwrap(pipeline)).not.toThrow(); // this means that memo already exists
         expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-          "@compute @workgroup_size(1, 1, 1) fn computeFn() {
+          "struct vertexFn_Output {
+            @builtin(position) pos: vec4f,
+          }
 
+          @vertex fn vertexFn() -> vertexFn_Output {
+            return vertexFn_Output(vec4f());
+          }
+
+          @fragment fn fragmentFn() -> @location(0) vec4f {
+            return vec4f();
           }"
         `);
         expect(device.mock.createRenderPipeline).not.toHaveBeenCalled();
