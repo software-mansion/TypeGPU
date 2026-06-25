@@ -196,7 +196,7 @@ export interface TgpuRenderPipeline<in Targets = never>
   ): void;
 
   /**
-   * Immediately resolves the pipeline, then awaits `device.createComputePipelineAsync()`.
+   * Immediately resolves the pipeline, then awaits `device.createRenderPipelineAsync()`.
    * NOTE: it is not necessary to initialize pipelines manually.
    */
   initAsync(): Promise<void>;
