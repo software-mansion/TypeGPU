@@ -1093,6 +1093,25 @@ class RenderPipelineCore implements SelfResolvable {
       return this.#memo;
     }
 
+    const device = this.options.root.device;
+    const { resolutionResult, descriptor, connectedAttribs } = this.resolveAndCreateShaderModule();
+    const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
+
+    this.#memo = {
+      pipeline: device.createRenderPipeline(descriptor),
+      usedBindGroupLayouts,
+      catchall,
+      logResources,
+      usedVertexLayouts: connectedAttribs.usedVertexLayouts,
+      fragmentOut: this.#latestAutoFragmentOut as BaseData,
+    };
+
+    this.#performanceTracker.measureCompile(device);
+
+    return this.#memo;
+  }
+
+  public resolveAndCreateShaderModule() {
     const { root, descriptor: tgpuDescriptor } = this.options;
     const device = root.device;
     const enableExtensions = wgslEnableExtensions.filter((extension) =>
@@ -1110,7 +1129,7 @@ class RenderPipelineCore implements SelfResolvable {
       }),
     );
 
-    const { code, usedBindGroupLayouts, catchall, logResources } = resolutionResult;
+    const { code, usedBindGroupLayouts, catchall } = resolutionResult;
 
     if (catchall !== undefined) {
       usedBindGroupLayouts[catchall[0]]?.$name(
@@ -1182,18 +1201,7 @@ class RenderPipelineCore implements SelfResolvable {
       descriptor.multisample = tgpuDescriptor.multisample;
     }
 
-    this.#memo = {
-      pipeline: device.createRenderPipeline(descriptor),
-      usedBindGroupLayouts,
-      catchall,
-      logResources,
-      usedVertexLayouts: connectedAttribs.usedVertexLayouts,
-      fragmentOut: this.#latestAutoFragmentOut as BaseData,
-    };
-
-    this.#performanceTracker.measureCompile(device);
-
-    return this.#memo;
+    return { resolutionResult, descriptor, connectedAttribs };
   }
 }
 
