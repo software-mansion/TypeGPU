@@ -16,7 +16,7 @@ describe('point light shadow example', () => {
         category: 'rendering',
         name: 'point-light-shadow',
         setupMocks: mockResizeObserver,
-        expectedCalls: 3,
+        expectedCalls: 5,
       },
       device,
     );
@@ -127,6 +127,74 @@ describe('point light shadow example', () => {
         return vec4f(color, 1f);
       }
 
+      struct fullScreenTriangle_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      @group(0) @binding(0) var previewView: texture_depth_2d_array;
+
+      @group(0) @binding(1) var previewSampler: sampler;
+
+      fn depthToColor(depth: f32) -> vec3f {
+        let linear = clamp((1f - (depth * 6f)), 0f, 1f);
+        let t = (linear * linear);
+        let r = clamp(((t * 2f) - 0.5f), 0f, 1f);
+        let g = (clamp((1f - (abs((t - 0.5f)) * 2f)), 0f, 0.9f) * t);
+        let b = (clamp((1f - (t * 1.5f)), 0f, 1f) * t);
+        return vec3f(r, g, b);
+      }
+
+      struct previewFragment_Input {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn previewFragment(_arg_0: previewFragment_Input) -> @location(0) vec4f {
+        let gridX = i32(floor((_arg_0.uv.x * 4f)));
+        let gridY = i32(floor((_arg_0.uv.y * 3f)));
+        let localU = fract((_arg_0.uv.x * 4f));
+        let localV = fract((_arg_0.uv.y * 3f));
+        let localUV = vec2f(localU, localV);
+        let bgColor = vec3f(0.10000000149011612, 0.10000000149011612, 0.11999999731779099);
+        var faceIndex = -1i;
+        if (((gridY == 0i) && (gridX == 1i))) {
+          faceIndex = 2i;
+        }
+        if ((gridY == 1i)) {
+          if ((gridX == 0i)) {
+            faceIndex = 0i;
+          }
+          if ((gridX == 1i)) {
+            faceIndex = 4i;
+          }
+          if ((gridX == 2i)) {
+            faceIndex = 1i;
+          }
+          if ((gridX == 3i)) {
+            faceIndex = 5i;
+          }
+        }
+        if (((gridY == 2i) && (gridX == 1i))) {
+          faceIndex = 3i;
+        }
+        let depth = textureSample(previewView, previewSampler, localUV, faceIndex);
+        if ((faceIndex < 0i)) {
+          return vec4f(bgColor, 1f);
+        }
+        let color = depthToColor(depth);
+        const border = 0.02;
+        let isBorder = ((((localU < border) || (localU > (1f - border))) || (localV < border)) || (localV > (1f - border)));
+        let finalColor = select(color, (0.5f * color), isBorder);
+        return vec4f(finalColor, 1f);
+      }
+
       @group(0) @binding(1) var<uniform> lightPosition: vec3f;
 
       struct CameraData {
@@ -148,6 +216,52 @@ describe('point light shadow example', () => {
 
       @fragment fn fragmentLightIndicator() -> @location(0) vec4f {
         return vec4f(1, 1, 0.5, 1);
+      }
+
+      struct CameraData {
+        viewProjectionMatrix: mat4x4f,
+        inverseViewProjectionMatrix: mat4x4f,
+      }
+
+      @group(0) @binding(0) var<uniform> camera: CameraData;
+
+      struct vertexMain_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) worldPos: vec3f,
+        @location(1) uv: vec2f,
+        @location(2) normal: vec3f,
+      }
+
+      @vertex fn vertexMain(@location(0) position: vec3f, @location(2) uv: vec2f, @location(1) normal: vec3f, @location(3) column1: vec4f, @location(4) column2: vec4f, @location(5) column3: vec4f, @location(6) column4: vec4f) -> vertexMain_Output {
+        let modelMatrix = mat4x4f(column1, column2, column3, column4);
+        let worldPos = (modelMatrix * vec4f(position, 1f)).xyz;
+        let pos = (camera.viewProjectionMatrix * vec4f(worldPos, 1f));
+        let worldNormal = normalize((modelMatrix * vec4f(normal, 0f)).xyz);
+        return vertexMain_Output(pos, worldPos, uv, worldNormal);
+      }
+
+      @group(0) @binding(3) var<uniform> lightPosition: vec3f;
+
+      fn depthToColor(depth: f32) -> vec3f {
+        let linear = clamp((1f - (depth * 6f)), 0f, 1f);
+        let t = (linear * linear);
+        let r = clamp(((t * 2f) - 0.5f), 0f, 1f);
+        let g = (clamp((1f - (abs((t - 0.5f)) * 2f)), 0f, 0.9f) * t);
+        let b = (clamp((1f - (t * 1.5f)), 0f, 1f) * t);
+        return vec3f(r, g, b);
+      }
+
+      struct fragmentDistanceView_Input {
+        @location(0) worldPos: vec3f,
+        @location(1) uv: vec2f,
+        @location(2) normal: vec3f,
+      }
+
+      @fragment fn fragmentDistanceView(_arg_0: fragmentDistanceView_Input) -> @location(0) vec4f {
+        let lightPos = (&lightPosition);
+        let dist = length((_arg_0.worldPos - (*lightPos)));
+        let color = depthToColor((dist / 100f));
+        return vec4f(color, 1f);
       }"
     `);
   });

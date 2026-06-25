@@ -17,7 +17,7 @@ describe('mnist inference example', () => {
         name: 'mnist-inference',
         setupMocks: mockMnistWeights,
         controlTriggers: ['Test Resolution'],
-        expectedCalls: 2,
+        expectedCalls: 3,
       },
       device,
     );
