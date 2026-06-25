@@ -205,7 +205,7 @@ describe('autonaming', () => {
         }) && $.f)({}));
 
 
-      			const main = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(__vite_ssr_import_3__.default.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+      			const main = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(__vite_ssr_import_2__.tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
       				myFun();
       			}), {
           v: 1,
