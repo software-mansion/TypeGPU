@@ -89,6 +89,11 @@ export function createFnCore(
                 `Invalid argument name "${arg.schemaKey}"${result.error ? `: ${result.error}` : ''}`,
               );
             }
+            if (ctx.isIdentifierBanned(arg.schemaKey)) {
+              throw new Error(
+                `Invalid argument name "${arg.schemaKey}", the identifier is a reserved keyword.`,
+              );
+            }
           }
 
           mergeExternals(externalMap, {

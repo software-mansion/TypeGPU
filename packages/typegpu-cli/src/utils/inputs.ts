@@ -23,7 +23,7 @@ export function sanitizeToExpoSlug(packageName: string) {
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-  return slug || 'typegpu-expo-simple-project';
+  return slug || 'typegpu-expo-bare-project';
 }
 
 export async function getProjectName(initialValue: string) {
@@ -61,19 +61,19 @@ export async function getPackageName() {
 export async function multiselectPkgs(pkg: PackageJson) {
   const options = typegpuPkgs.filter((entry) => !hasDependency(pkg, entry.value));
   if (options.length === 0) {
-    p.log.info('All typegpu ecosystem packages are already installed.');
+    p.log.info('All TypeGPU add-ons are already installed.');
     return;
   }
 
-  const packages = await p.multiselect({
-    message: "Pick packages to add ('space' to select, 'enter' to confirm):",
+  const addons = await p.multiselect({
+    message: "Pick add-ons to install ('space' to select, 'enter' to confirm):",
     options: options,
     required: false,
   });
 
-  if (p.isCancel(packages)) {
+  if (p.isCancel(addons)) {
     cancelExit();
   }
 
-  return packages.map((pkgName) => ({ pkg: pkgName, ver: VERSION }));
+  return addons.map((pkgName) => ({ pkg: pkgName, ver: VERSION }));
 }

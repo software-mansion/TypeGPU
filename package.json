@@ -25,7 +25,7 @@
     "test": "pnpm run test:types && pnpm run test:style && pnpm run test:unit-and-attest && pnpm run test:circular-deps",
     "test:circular-deps": "pnpm dpdm -T --exit-code circular:1 packages/**/src/index.ts packages/**/src/index.js !packages/**/node_modules",
     "test:types": "pnpm run --filter typegpu-docs transform-overloads && pnpm run -r --parallel test:types",
-    "test:style": "oxlint -c oxlint.config.ts --max-warnings=0 --type-aware --ignore-pattern 'packages/typegpu-cli/templates/template-expo-simple/**' --report-unused-disable-directives && oxlint -c oxlint.config.ts --max-warnings=0 packages/typegpu-cli/templates/template-expo-simple --report-unused-disable-directives && oxfmt --check",
+    "test:style": "oxlint -c oxlint.config.ts --max-warnings=0 --type-aware --ignore-pattern 'packages/typegpu-cli/templates/template-expo-bare/**' --report-unused-disable-directives && oxlint -c oxlint.config.ts --max-warnings=0 packages/typegpu-cli/templates/template-expo-bare --report-unused-disable-directives && oxfmt --check",
     "test:unit-and-attest": "ENABLE_ATTEST=1 vitest run --project=!browser",
     "test:unit": "vitest run --project=!browser",
     "test:unit:watch": "vitest --project=!browser",
@@ -59,25 +59,5 @@
   "engines": {
     "node": ">=24.0.0"
   },
-  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@rolldown/browser",
-      "@tailwindcss/oxide",
-      "bun",
-      "canvas",
-      "esbuild",
-      "msw",
-      "sharp"
-    ],
-    "overrides": {
-      "rollup": "catalog:build",
-      "vite": "8.0.5",
-      "@babel/types": "catalog:",
-      "@types/node": "catalog:types",
-      "typescript": "catalog:types",
-      "three": "catalog:example",
-      "@typescript-eslint/utils": "^8.57.2"
-    }
-  }
+  "packageManager": "pnpm@11.1.2+sha512.415a1cc25974731e75455c1468371be74c5aa5fb7621b50d4056d222451609f11412f23fd602e6169f1e060466641f798597e1be961a10688836a67b16569499"
 }

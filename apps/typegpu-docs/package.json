@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "transform-overloads": "find ./src/examples -type f \\( -name '*.tsnotover.ts' -o -name '*.tsnotover.tsx' \\) -delete && node scripts/transform-overloads.ts",
-    "dev": "pnpm run transform-overloads && astro dev",
+    "dev": "rm -rf ./src/content/docs/api && astro dev",
     "build": "pnpm run transform-overloads && astro check && astro build",
     "test:types": "astro check",
     "preview": "astro preview",
@@ -84,6 +84,7 @@
     "@webgpu/types": "catalog:types",
     "astro-vtbot": "^2.1.10",
     "autoprefixer": "^10.4.21",
+    "comptime": "^0.1.0",
     "magic-string": "^0.30.21",
     "tailwindcss": "^4.1.11",
     "tailwindcss-motion": "^1.1.1",

@@ -95,7 +95,7 @@ import { vec3f, vec3u } from '../../data/vector.ts';
 import { u32 } from '../../data/numeric.ts';
 import { ceil } from '../../std/numeric.ts';
 import { allEq } from '../../std/boolean.ts';
-import { setName } from '../../shared/meta.ts';
+import { getName, setName } from '../../shared/meta.ts';
 
 /**
  * Changes the given array to a vec of 3 numbers, filling missing values with 1.
@@ -267,6 +267,9 @@ class WithBindingImpl implements WithBinding {
 
     const workgroupSize = workgroupSizeConfigs[callback.length] as v3u;
     const wrappedCallback = fn([u32, u32, u32])(callback as (...args: number[]) => void);
+    if (getName(wrappedCallback) === undefined) {
+      wrappedCallback.$name('wrappedCallback');
+    }
 
     const sizeUniform = root.createUniform(vec3u);
 
