@@ -20,6 +20,7 @@ export default defineConfig({
     'eslint-plugin-unicorn/prefer-add-event-listener': 'off',
     'eslint-plugin-import/no-named-as-default': 'off',
     'eslint-plugin-import/no-named-as-default-member': 'off',
+    'eslint-plugin-import/namespace': 'off',
     'eslint-plugin-import/extensions': ['error', 'always', { ignorePackages: true }],
     'eslint-plugin-internal/no-useless-path-segments': 'error',
     'eslint-plugin-internal/no-tgpu-namespace-import': 'error',
