@@ -111,7 +111,6 @@ function updateInputDisplays() {
 
 let isComputing = false;
 
-await Promise.all(pipelinePromises);
 async function compute() {
   if (isComputing) {
     console.warn('Computation already in progress');
@@ -240,6 +239,7 @@ function printMatrixToHtml(element: HTMLDivElement, matrix: number[], rows: numb
   }
 }
 
+await Promise.all(pipelinePromises);
 // #endregion
 
 // #region Example controls & Cleanup
