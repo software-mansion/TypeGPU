@@ -22,7 +22,7 @@ import {
   type WgslArray,
   type WgslStruct,
 } from '../../data/wgslTypes.ts';
-import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
+import { resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';

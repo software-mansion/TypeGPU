@@ -4,7 +4,7 @@ import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { applyBindGroups } from './applyPipelineState.ts';
-import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
+import { resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
 
