@@ -20,9 +20,7 @@ export const noTgpuNamespaceImport = createRule({
         if (
           node.specifiers.some(
             (specifier) =>
-              (specifier.type === 'ImportDefaultSpecifier' ||
-                specifier.type === 'ImportNamespaceSpecifier') &&
-              specifier.local.name === 'tgpu',
+              specifier.type === 'ImportDefaultSpecifier' && specifier.local.name === 'tgpu',
           )
         ) {
           context.report({

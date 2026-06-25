@@ -16,10 +16,6 @@ describe('noTgpuNamespaceImport', () => {
         errors: [{ messageId: 'oldImport' }],
       },
       {
-        code: "import * as tgpu from 'typegpu';",
-        errors: [{ messageId: 'oldImport' }],
-      },
-      {
         code: "import tgpu, { d } from 'typegpu';",
         errors: [{ messageId: 'oldImport' }],
       },
