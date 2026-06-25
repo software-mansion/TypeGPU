@@ -1,13 +1,17 @@
+'use client'; // will cause the <Root /> component to be hydrated on the client
 import React, {
   createContext,
   type ReactNode,
+  Suspense,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import tgpu, { type TgpuRoot } from 'typegpu';
 import { useDeferredCleanup } from './helper-hooks.ts';
+import { useBailOnServer } from './use-bail-on-server.ts';
 
 function attachPromiseStatus<T>(
   promise: PromiseLike<T> & {
@@ -53,10 +57,23 @@ const use =
     }
   };
 
+type RootContextPendingResult = {
+  status: 'pending';
+  promise: Promise<TgpuRoot>;
+  settledPromise: Promise<PromiseSettledResult<TgpuRoot>>;
+};
+type RootContextFulfilledResult = {
+  status: 'fulfilled';
+  promise?: Promise<TgpuRoot> | undefined;
+  settledPromise?: Promise<PromiseSettledResult<TgpuRoot>> | undefined;
+  value: TgpuRoot;
+};
+type RootContextRejectedResult = { status: 'rejected'; reason: unknown };
+
 type RootContextResult =
-  | { status: 'pending'; promise: Promise<TgpuRoot> }
-  | { status: 'resolved'; value: TgpuRoot }
-  | { status: 'rejected'; error: unknown };
+  | RootContextPendingResult
+  | RootContextFulfilledResult
+  | RootContextRejectedResult;
 
 interface RootContext {
   initOrGetRoot(): RootContextResult;
@@ -70,28 +87,36 @@ class OwnRootContext implements RootContext {
   initOrGetRoot(): RootContextResult {
     if (this.#destroyed) {
       console.warn(`[@typegpu/react]: Tried to init an already destroyed root.`);
-      return { status: 'rejected', error: new Error('Already destroyed') };
+      return { status: 'rejected', reason: new Error('Already destroyed') };
     }
 
     if (!this.#result) {
+      const promise = tgpu.init().then(
+        (root) => {
+          if (this.#destroyed) {
+            root.destroy();
+            this.#result = undefined;
+          } else {
+            this.#result = { status: 'fulfilled', promise, settledPromise, value: root };
+          }
+
+          return root;
+        },
+        (reason) => {
+          this.#result = { status: 'rejected', reason };
+          throw reason;
+        },
+      );
+
+      const settledPromise = promise.then(
+        (value) => ({ status: 'fulfilled' as const, value }),
+        (reason) => ({ status: 'rejected' as const, reason }),
+      );
+
       this.#result = {
         status: 'pending',
-        promise: tgpu.init().then(
-          (root) => {
-            if (this.#destroyed) {
-              root.destroy();
-              this.#result = undefined;
-            } else {
-              this.#result = { status: 'resolved', value: root };
-            }
-
-            return root;
-          },
-          (error) => {
-            this.#result = { status: 'rejected', error };
-            throw error;
-          },
-        ),
+        promise,
+        settledPromise,
       };
     }
 
@@ -101,7 +126,7 @@ class OwnRootContext implements RootContext {
   unmount(): void {
     this.#destroyed = true;
 
-    if (this.#result?.status === 'resolved') {
+    if (this.#result?.status === 'fulfilled') {
       this.#result.value.destroy();
     }
     this.#result = undefined;
@@ -109,10 +134,10 @@ class OwnRootContext implements RootContext {
 }
 
 class ExistingRootContext implements RootContext {
-  result: { status: 'resolved'; value: TgpuRoot };
+  result: { status: 'fulfilled'; value: TgpuRoot };
 
   constructor(root: TgpuRoot) {
-    this.result = { status: 'resolved', value: root };
+    this.result = { status: 'fulfilled', value: root };
   }
 
   initOrGetRoot(): RootContextResult {
@@ -142,6 +167,22 @@ export interface RootProps {
   children?: ReactNode | undefined;
 }
 
+function WarnSuspense() {
+  const warnedRef = useRef(false);
+  useEffect(() => {
+    if (warnedRef.current) {
+      return;
+    }
+
+    warnedRef.current = true;
+    console.warn(
+      `[@typegpu/react] There's no Suspense boundary between <Root /> and components using @typegpu/react hooks. Either move the <Root /> component above a boundary, or provide one below it to customize the loading fallback. Note that the <ClientOnly /> component also acts as a Suspense boundary.`,
+    );
+  }, []);
+
+  return null;
+}
+
 export const Root = ({ children, root }: RootProps) => {
   const [ownCtx] = useState(() => new OwnRootContext());
   const existingRootCtx = useMemo(() => {
@@ -155,7 +196,11 @@ export const Root = ({ children, root }: RootProps) => {
     ownCtx.unmount();
   });
 
-  return <rootContext.Provider value={existingRootCtx ?? ownCtx}>{children}</rootContext.Provider>;
+  return (
+    <rootContext.Provider value={existingRootCtx ?? ownCtx}>
+      <Suspense fallback={<WarnSuspense />}>{children}</Suspense>
+    </rootContext.Provider>
+  );
 };
 
 /**
@@ -169,42 +214,50 @@ export const Root = ({ children, root }: RootProps) => {
  * {@link useRootWithStatus} instead.
  */
 export function useRoot(): TgpuRoot {
+  useBailOnServer();
+
   const context = useContext(rootContext) ?? globalRootContextValue;
 
   const result = context.initOrGetRoot();
   if (result.status === 'rejected') {
-    throw result.error as Error;
+    throw result.reason as Error;
   }
-  return result.status === 'pending' ? use(result.promise) : result.value;
+  // Making sure to `use` the promise again after the component unsuspends and it's already
+  // been resolved, and to return the value outright if there was no promise to suspend on
+  // before. This allows React to verify that hooks have been ran in the same order across renders.
+  return result.promise ? use(result.promise) : (result as RootContextFulfilledResult).value;
 }
 
 /**
  * Same as {@link useRoot}, but returns `null` if the root failed to initialize.
  */
 export function useRootOrError():
-  | { status: 'resolved'; value: TgpuRoot }
-  | { status: 'rejected'; error: unknown } {
+  | { status: 'fulfilled'; value: TgpuRoot }
+  | { status: 'rejected'; reason: unknown } {
+  useBailOnServer();
+
   const context = useContext(rootContext) ?? globalRootContextValue;
 
   const result = context.initOrGetRoot();
 
   if (result.status === 'rejected') {
-    return { status: 'rejected', error: result.error };
+    return { status: 'rejected', reason: result.reason };
   }
 
-  return result.status === 'pending'
-    ? use(
-        result.promise
-          .then((value) => ({ status: 'resolved' as const, value }))
-          .catch((error) => ({ status: 'rejected' as const, error })),
-      )
-    : { status: 'resolved', value: result.value };
+  // Making sure to `use` the promise again after the component unsuspends and it's already
+  // been resolved, and to return the value outright if there was no promise to suspend on
+  // before. This allows React to verify that hooks have been ran in the same order across renders.
+  return result.settledPromise
+    ? use(result.settledPromise)
+    : { status: 'fulfilled', value: (result as RootContextFulfilledResult).value };
 }
 
 /**
  * Same as {@link useRoot}, but does not suspend or throw.
  */
 export function useRootWithStatus(): RootContextResult {
+  useBailOnServer();
+
   const context = useContext(rootContext) ?? globalRootContextValue;
   const result = context.initOrGetRoot();
 
