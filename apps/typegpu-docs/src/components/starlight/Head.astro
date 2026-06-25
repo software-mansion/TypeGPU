@@ -1,8 +1,13 @@
 ---
-import StarlightHead from '@astrojs/starlight/components/Head.astro';
-import VtbotStarlight from 'astro-vtbot/components/starlight/Base.astro';
+import StarlightHead from "@astrojs/starlight/components/Head.astro";
 ---
 
-<VtbotStarlight {...Astro.locals.starlightRoute} transition:animate="none">
-  <StarlightHead><slot /></StarlightHead>
-</VtbotStarlight>
+<StarlightHead>
+    <style>
+        @view-transition {
+            navigation: auto;
+            types: slide, forwards;
+        }
+    </style>
+    <slot />
+</StarlightHead>
