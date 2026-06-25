@@ -101,9 +101,6 @@ export interface Snippet {
    * the return value is not equivalent to just not executing the WGSL code at
    * all, with a margin of executing a few more instructions. For example, code
    * that mutates memory, or synchronizes threads, has side effects.
-   *
-   * This information is currently used to determine if a ternary expression
-   * can be safely translated into a select() call.
    */
   readonly possibleSideEffects: boolean;
 }
