@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import {
   vec2f,
   vec2i,
@@ -11,6 +11,9 @@ import {
   vec4u,
 } from '../../src/data/vector.ts';
 import tgpu, { d, std } from '../../src/index.js';
+
+// remember to pad with zeros to 8 hex symbols
+const floatFromHex = (hex: string) => Buffer.from(hex, 'hex').readFloatBE(0);
 
 describe('bitcast', () => {
   it('bitcastU32toF32', () => {
@@ -35,6 +38,14 @@ describe('bitcast', () => {
     // 10000000000000000000000000000000
     const i2 = std.bitcastU32toI32(2147483648);
     expect(i2).toBe(-2147483648);
+  });
+
+  it('bitcastF32toU32', () => {
+    const i1 = std.bitcastF32toU32(floatFromHex('00000001'));
+    expect(i1).toBe(1);
+
+    const i2 = std.bitcastF32toU32(floatFromHex('7f800000'));
+    expect(i2).toBe(2139095040);
   });
 
   it('bitcastU32toF32 vectors', () => {
@@ -63,6 +74,25 @@ describe('bitcast', () => {
     const v4 = vec4u(0, 1, 4294967295, 2147483648);
     const cast4 = std.bitcastU32toI32(v4);
     expect(cast4).toEqual(vec4i(0, 1, -1, -2147483648));
+  });
+
+  it('bitcastF32toU32 vectors', () => {
+    const v2 = vec2f(floatFromHex('7c800001'), floatFromHex('100008c7'));
+    const cast2 = std.bitcastF32toU32(v2);
+    expect(cast2).toStrictEqual(vec2u(2088763393, 268437703));
+
+    const v3 = vec3f(floatFromHex('ff000000'), floatFromHex('00000001'), floatFromHex('80000001'));
+    const cast3 = std.bitcastF32toU32(v3);
+    expect(cast3).toStrictEqual(vec3u(4278190080, 1, 2147483649));
+
+    const v4 = vec4f(
+      floatFromHex('84220925'),
+      floatFromHex('68800000'),
+      floatFromHex('48980780'),
+      floatFromHex('0000075a'),
+    );
+    const cast4 = std.bitcastF32toU32(v4);
+    expect(cast4).toStrictEqual(vec4u(2216823077, 1753219072, 1217922944, 1882));
   });
 
   it('bitcastU32toF32 specials (NaN, infinities etc)', () => {
@@ -113,12 +143,62 @@ describe('bitcast', () => {
     const c4 = std.bitcastU32toI32(v4);
     expect(c4).toEqual(vec4i(-2147483648, 1, 0, 2147483647));
   });
+
+  it('bitcastF32toU32 specials (NaN, infinities etc)', () => {
+    // +0
+    expect(std.bitcastF32toU32(+0)).toBe(0x00000000);
+
+    // -0
+    expect(std.bitcastF32toU32(-0)).toBe(0x80000000);
+
+    // +Inf / -Inf
+    expect(std.bitcastF32toU32(Number.POSITIVE_INFINITY)).toBe(0x7f800000);
+    expect(std.bitcastF32toU32(Number.NEGATIVE_INFINITY)).toBe(0xff800000);
+
+    // NaN
+    expect(std.bitcastF32toU32(Number.NaN)).toBe(0x7fc00000);
+
+    // Smallest positive subnormal
+    expect(std.bitcastF32toU32(floatFromHex('00000001'))).toBe(0x00000001);
+
+    // Smallest negative subnormal
+    expect(std.bitcastF32toU32(floatFromHex('80000001'))).toBe(0x80000001);
+  });
+
+  it('handles union of types', () => {
+    const f1 = (x: number | d.v2u) => {
+      'use gpu';
+      return std.bitcastU32toF32(x);
+    };
+    expectTypeOf(f1).returns.toEqualTypeOf<number | d.v2f>();
+
+    const f2 = (x: number | d.v2u) => {
+      'use gpu';
+      return std.bitcastU32toI32(x);
+    };
+    expectTypeOf(f2).returns.toEqualTypeOf<number | d.v2i>();
+
+    const f3 = (x: number | d.v2f) => {
+      'use gpu';
+      return std.bitcastF32toU32(x);
+    };
+    expectTypeOf(f3).returns.toEqualTypeOf<number | d.v2u>();
+  });
+
+  it('type error on invalid argument', () => {
+    const _f = (x: number | d.v2f) => {
+      'use gpu';
+      // @ts-expect-error
+      return std.bitcastU32toI32(x);
+    };
+  });
 });
 
 describe('bitcast in shaders', () => {
   it('works for primitives', () => {
     const fnf32 = tgpu.fn([], d.f32)(() => std.bitcastU32toF32(1234));
     const fni32 = tgpu.fn([], d.i32)(() => std.bitcastU32toI32(d.u32(2 ** 31)));
+    const fnu32 = tgpu.fn([d.f32], d.u32)((v) => std.bitcastF32toU32(v));
 
     expect(tgpu.resolve([fnf32])).toMatchInlineSnapshot(`
       "fn fnf32() -> f32 {
@@ -130,11 +210,17 @@ describe('bitcast in shaders', () => {
         return -2147483648i;
       }"
     `);
+    expect(tgpu.resolve([fnu32])).toMatchInlineSnapshot(`
+      "fn fnu32(v: f32) -> u32 {
+        return bitcast<u32>(v);
+      }"
+    `);
   });
 
   it('works for vectors', () => {
     const fnvec4i = tgpu.fn([], d.vec4i)(() => std.bitcastU32toI32(vec4u(1, 2, 3, 4)));
     const fnvec4f = tgpu.fn([], d.vec4f)(() => std.bitcastU32toF32(vec4u(1, 2, 3, 4)));
+    const fnvec4u = tgpu.fn([d.vec4f], d.vec4u)((v) => std.bitcastF32toU32(v));
 
     expect(tgpu.resolve([fnvec4i])).toMatchInlineSnapshot(`
       "fn fnvec4i() -> vec4i {
@@ -145,6 +231,65 @@ describe('bitcast in shaders', () => {
       "fn fnvec4f() -> vec4f {
         return vec4f(1.401298464324817e-45, 2.802596928649634e-45, 4.203895392974451e-45, 5.605193857299268e-45);
       }"
+    `);
+    expect(tgpu.resolve([fnvec4u])).toMatchInlineSnapshot(`
+      "fn fnvec4u(v: vec4f) -> vec4u {
+        return bitcast<vec4u>(v);
+      }"
+    `);
+  });
+
+  it('throws an error for unsupported signatures', () => {
+    const f1 = () => {
+      'use gpu';
+      // @ts-expect-error
+      return std.bitcastU32toF32(d.vec2i());
+    };
+    expect(() => tgpu.resolve([f1])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f1
+      - fn*:f1()
+      - fn:bitcastU32toF32: Unsupported data types: vec2i. Supported types are: u32, vec2u, vec3u, vec4u.]
+    `);
+
+    const f2 = () => {
+      'use gpu';
+      // @ts-expect-error
+      return std.bitcastU32toI32(d.vec3f());
+    };
+    expect(() => tgpu.resolve([f2])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f2
+      - fn*:f2()
+      - fn:bitcastU32toI32: Unsupported data types: vec3f. Supported types are: u32, vec2u, vec3u, vec4u.]
+    `);
+
+    const f3 = () => {
+      'use gpu';
+      // @ts-expect-error
+      return std.bitcastF32toU32(d.vec2h());
+    };
+    expect(() => tgpu.resolve([f3])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f3
+      - fn*:f3()
+      - fn:bitcastF32toU32: Unsupported data types: vec2h. Supported types are: f32, vec2f, vec3f, vec4f.]
+    `);
+
+    const f4 = () => {
+      'use gpu';
+      const u = d.u32(1);
+      return std.bitcastF32toU32(u);
+    };
+    expect(() => tgpu.resolve([f4])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f4
+      - fn*:f4()
+      - fn:bitcastF32toU32: Unsupported data types: u32. Supported types are: f32, vec2f, vec3f, vec4f.]
     `);
   });
 });
