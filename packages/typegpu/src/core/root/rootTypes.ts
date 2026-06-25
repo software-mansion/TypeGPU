@@ -666,6 +666,23 @@ export interface RenderBundleEncoderPass {
   drawIndexedIndirect(indirectBuffer: GPUBuffer, indirectOffset: GPUSize64): void;
 }
 
+type Replace<T, R> = Omit<T, keyof R> & R;
+
+/**
+ * The same as {@link GPURenderPassDescriptor}, but accepting readonly tuples as the clearValue
+ */
+type TgpuRenderPassDescriptor = Replace<
+  GPURenderPassDescriptor,
+  {
+    colorAttachments: (Replace<
+      GPURenderPassColorAttachment,
+      {
+        clearValue?: readonly [number, number, number, number] | GPUColor | undefined;
+      }
+    > | null)[];
+  }
+>;
+
 export interface RenderPass extends RenderBundleEncoderPass {
   /**
    * Sets the viewport used during the rasterization stage to linearly map from
@@ -1096,7 +1113,7 @@ export interface ExperimentalTgpuRoot
     CreateTextureResult<TSize, TFormat, TMipLevelCount, TSampleCount, TViewFormats, TDimension>
   >;
 
-  beginRenderPass(descriptor: GPURenderPassDescriptor, callback: (pass: RenderPass) => void): void;
+  beginRenderPass(descriptor: TgpuRenderPassDescriptor, callback: (pass: RenderPass) => void): void;
 
   /**
    * Creates a {@link GPURenderBundle} by recording draw commands into a
