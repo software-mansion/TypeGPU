@@ -6,6 +6,7 @@ export { useUniform } from './core/use-uniform.ts';
 export { useMirroredUniform } from './core/use-mirrored-uniform.ts';
 export { useBuffer } from './core/use-buffer.ts';
 export { useBindGroup } from './core/use-bind-group.ts';
+export { ClientOnly } from './core/client-only.tsx';
 
 export type {
   UseConfigureContextOptions,
