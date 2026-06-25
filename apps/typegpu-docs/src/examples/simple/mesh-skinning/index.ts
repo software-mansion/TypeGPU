@@ -273,7 +273,9 @@ const pipelineConfig = {
 };
 
 const lbsPipeline = root.createRenderPipeline({ vertex, ...pipelineConfig });
+lbsPipeline.initSync();
 const dqsPipeline = root.createRenderPipeline({ vertex: dqsVertex, ...pipelineConfig });
+dqsPipeline.initSync();
 
 const resizeObserver = new ResizeObserver(() => {
   depthTexture = createDepthTexture();

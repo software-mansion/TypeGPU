@@ -126,19 +126,6 @@ const projectPipeline = createComputePipeline(c.projectFn);
 const advectInkPipeline = createComputePipeline(c.advectInkFn);
 const addInkPipeline = createComputePipeline(c.addInkFn);
 
-// Eagerly initialize all pipelines
-await Promise.all([
-  brushPipeline.initAsync(),
-  addForcePipeline.initAsync(),
-  advectPipeline.initAsync(),
-  diffusionPipeline.initAsync(),
-  divergencePipeline.initAsync(),
-  pressurePipeline.initAsync(),
-  projectPipeline.initAsync(),
-  advectInkPipeline.initAsync(),
-  addInkPipeline.initAsync(),
-]);
-
 // Create render pipelines
 function createRenderPipeline(fragmentFn: TgpuFragmentFn<{ uv: d.Vec2f }, d.Vec4f>) {
   return root.createRenderPipeline({
@@ -154,6 +141,22 @@ function createRenderPipeline(fragmentFn: TgpuFragmentFn<{ uv: d.Vec2f }, d.Vec4
 const renderPipelineInk = createRenderPipeline(fragmentInkFn);
 const renderPipelineVel = createRenderPipeline(fragmentVelFn);
 const renderPipelineImage = createRenderPipeline(fragmentImageFn);
+
+// Eagerly initialize all pipelines
+await Promise.all([
+  brushPipeline.initAsync(),
+  addForcePipeline.initAsync(),
+  advectPipeline.initAsync(),
+  diffusionPipeline.initAsync(),
+  divergencePipeline.initAsync(),
+  pressurePipeline.initAsync(),
+  projectPipeline.initAsync(),
+  advectInkPipeline.initAsync(),
+  addInkPipeline.initAsync(),
+  renderPipelineInk.initAsync(),
+  renderPipelineVel.initAsync(),
+  renderPipelineImage.initAsync(),
+]);
 
 // Setup simulation buffers
 const velBuffer = new DoubleBuffer(velTex[0], velTex[1]);

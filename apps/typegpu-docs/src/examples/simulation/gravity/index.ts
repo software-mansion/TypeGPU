@@ -116,6 +116,8 @@ const renderPipeline = root
 const pipelinePromises = [
   computeCollisionsPipeline.initAsync(),
   computeGravityPipeline.initAsync(),
+  skyBoxPipeline.initAsync(),
+  renderPipeline.initAsync(),
 ];
 
 let depthTexture = root.device.createTexture({
