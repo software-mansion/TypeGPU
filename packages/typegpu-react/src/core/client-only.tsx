@@ -22,7 +22,7 @@ export function ClientOnly(props: ClientOnly.Props) {
   }, []);
 
   if (!hydrated) {
-    return props.fallback || null;
+    return props.fallback ?? null;
   }
 
   return <Suspense fallback={props.fallback}>{props.children}</Suspense>;

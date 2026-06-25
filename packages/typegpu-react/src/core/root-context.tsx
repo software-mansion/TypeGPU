@@ -223,13 +223,14 @@ export function useRoot(): TgpuRoot {
     throw result.reason as Error;
   }
   // Making sure to `use` the promise again after the component unsuspends and it's already
-  // been resolved, and to return the value outright if there was no promise to suspend on
-  // before. This allows React to verify that hooks have been ran in the same order across renders.
+  // been fulfilled, and to return the value outright if there was no promise to suspend on
+  // before. This allows React to verify that hooks have run in the same order across renders.
   return result.promise ? use(result.promise) : (result as RootContextFulfilledResult).value;
 }
 
 /**
- * Same as {@link useRoot}, but returns `null` if the root failed to initialize.
+ * Same as {@link useRoot}, but returns a PromiseSettledResult-style object instead of throwing.
+ * If initialization is still in progress, this hook will suspend until it settles.
  */
 export function useRootOrError():
   | { status: 'fulfilled'; value: TgpuRoot }
@@ -245,8 +246,8 @@ export function useRootOrError():
   }
 
   // Making sure to `use` the promise again after the component unsuspends and it's already
-  // been resolved, and to return the value outright if there was no promise to suspend on
-  // before. This allows React to verify that hooks have been ran in the same order across renders.
+  // been fulfilled, and to return the value outright if there was no promise to suspend on
+  // before. This allows React to verify that hooks have run in the same order across renders.
   return result.settledPromise
     ? use(result.settledPromise)
     : { status: 'fulfilled', value: (result as RootContextFulfilledResult).value };
