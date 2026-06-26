@@ -16,6 +16,7 @@ context.configure({
 });
 
 const [width, height] = [canvas.width, canvas.height];
+const initialBrushRadius = 0.015;
 
 // Scene texture + views.
 const sceneTexture = root
@@ -47,7 +48,7 @@ const paramsUniform = root.createUniform(DrawParams, {
   isDrawing: 0,
   lastMousePos: d.vec2f(0.5),
   mousePos: d.vec2f(0.5),
-  brushRadius: 0.05,
+  brushRadius: initialBrushRadius,
   lightColor: d.vec3f(1, 0.9, 0.7),
 });
 
@@ -182,8 +183,10 @@ function drawScene() {
 
 function updateScene() {
   if (sceneDirty) {
-    floodRunner.run();
-    radianceRunner.run();
+    const encoder = root.device.createCommandEncoder();
+    floodRunner.run(encoder);
+    radianceRunner.run(encoder);
+    root.device.queue.submit([encoder.finish()]);
     sceneDirty = false;
   }
 }
@@ -220,8 +223,8 @@ function frame(timestamp: number) {
 export const controls = defineControls({
   ...drawInteraction.controls,
   'Brush Size': {
-    initial: 0.015,
-    min: 0.015,
+    initial: initialBrushRadius,
+    min: initialBrushRadius,
     max: 0.15,
     step: 0.015,
     onSliderChange(value: number) {
