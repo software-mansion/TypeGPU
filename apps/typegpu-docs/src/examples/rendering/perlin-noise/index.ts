@@ -1,4 +1,4 @@
-import { perlin3d } from '@typegpu/noise';
+import { perlin3d, randomGeneratorSlot, XOROSHIRO64STARSTAR } from '@typegpu/noise';
 import tgpu, { common, d } from 'typegpu';
 import { abs, mix, mul, pow, sign, tanh } from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';
@@ -36,25 +36,28 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 const createRenderPipeline = (sharpenFn: (n: number, sharpness: number) => number) =>
-  root.pipe(perlinCacheConfig.inject(dynamicLayout.$)).createRenderPipeline({
-    vertex: common.fullScreenTriangle,
-    fragment: ({ uv }) => {
-      'use gpu';
-      const suv = mul(gridSize.$, uv);
-      const n = perlin3d.sample(d.vec3f(suv, time.$));
+  root
+    .with(randomGeneratorSlot, XOROSHIRO64STARSTAR)
+    .pipe(perlinCacheConfig.inject(dynamicLayout.$))
+    .createRenderPipeline({
+      vertex: common.fullScreenTriangle,
+      fragment: ({ uv }) => {
+        'use gpu';
+        const suv = mul(gridSize.$, uv);
+        const n = perlin3d.sample(d.vec3f(suv, time.$));
 
-      // Apply sharpening function
-      const sharp = sharpenFn(n, sharpness.$);
+        // Apply sharpening function
+        const sharp = sharpenFn(n, sharpness.$);
 
-      // Map to 0-1 range
-      const n01 = sharp * 0.5 + 0.5;
+        // Map to 0-1 range
+        const n01 = sharp * 0.5 + 0.5;
 
-      // Gradient map
-      const dark = d.vec3f(0, 0.2, 1);
-      const light = d.vec3f(1, 0.3, 0.5);
-      return d.vec4f(mix(dark, light, n01), 1);
-    },
-  });
+        // Gradient map
+        const dark = d.vec3f(0, 0.2, 1);
+        const light = d.vec3f(1, 0.3, 0.5);
+        return d.vec4f(mix(dark, light, n01), 1);
+      },
+    });
 
 const renderPipelines = {
   exponential: createRenderPipeline(exponentialSharpen),
