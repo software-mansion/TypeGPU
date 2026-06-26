@@ -24,7 +24,7 @@ describe('react/spinning-triangle example', () => {
     expect(shaderCodes).toMatchInlineSnapshot(`
       "const vertices: array<vec2f, 3> = array<vec2f, 3>(vec2f(0, 1), vec2f(-0.8660253882408142, -0.5), vec2f(0.8660253882408142, -0.5));
 
-      @group(0) @binding(0) var<uniform> item: f32;
+      @group(0) @binding(0) var<uniform> time: f32;
 
       fn rotate(v: vec2f, angle: f32) -> vec2f {
         let pos = vec2f(((v.x * cos(angle)) - (v.y * sin(angle))), ((v.x * sin(angle)) + (v.y * cos(angle))));
@@ -44,7 +44,7 @@ describe('react/spinning-triangle example', () => {
 
       @vertex fn vertex(_arg_0: VertexIn) -> VertexOut {
         let local = vertices[_arg_0.vertexIndex];
-        let rotated = rotate(local, (item * 0.1f));
+        let rotated = rotate(local, (time * 0.1f));
         return VertexOut(vec4f((rotated * 0.7f), 0f, 1f), length((local - vertices[0i])), length((local - vertices[1i])), length((local - vertices[2i])));
       }
 
@@ -235,7 +235,7 @@ describe('react/spinning-triangle example', () => {
 
       @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
         let dist = (1f / (1.4f - min(min(_arg_0.dist0, _arg_0.dist1), _arg_0.dist2)));
-        let albedo = getGradientColor((((fract(((dist * 2f) - item)) * 2f) - 1f) + cos(item)));
+        let albedo = getGradientColor((((fract(((dist * 2f) - time)) * 2f) - 1f) + cos(time)));
         return vec4f(albedo, 1f);
       }"
     `);

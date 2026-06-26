@@ -528,11 +528,11 @@ describe('transforms numeric operations', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[12, "c", [1, [1, "a", "+", "b"], "+", [5, "2"]]], [2, "c", "+=", [1, [5, "2"], "*", "b"]], [2, "countMutable.$", "+=", [5, "3"]]]],
+          body: [0, [[12, "c", [1, [1, "a", "+", "b"], "+", [5, "2"]]], [2, "c", "+=", [1, [5, "2"], "*", "b"]], [2, [7, "countMutable", "$"], "+=", [5, "3"]]]],
           externalNames: ["countMutable"]
         },
         externals: {
-          "countMutable.$": () => countMutable.$
+          "countMutable": () => countMutable
         }
       }) && $.f)({});
       console.log(main);"
@@ -556,8 +556,8 @@ describe('transforms numeric operations', () => {
           }), {
           v: 2,
           name: "main",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[12,"c",[1,[1,"a","+","b"],"+",[5,"2"]]],[2,"c","+=",[1,[5,"2"],"*","b"]],[2,"countMutable.$","+=",[5,"3"]]]],"externalNames":["countMutable"]},
-          externals: { "countMutable.$": () => countMutable.$ }
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[12,"c",[1,[1,"a","+","b"],"+",[5,"2"]]],[2,"c","+=",[1,[5,"2"],"*","b"]],[2,[7,"countMutable","$"],"+=",[5,"3"]]]],"externalNames":["countMutable"]},
+          externals: { "countMutable": () => countMutable }
         }) && $.f)({}));
 
           console.log(main);
@@ -1179,7 +1179,7 @@ describe('hoists exported marked function statements', () => {
 
         return __tsover_mul(a, b);
       }, {
-        v: 1,
+        v: 2,
         name: "mul",
         ast: {
           params: [{
@@ -1192,9 +1192,7 @@ describe('hoists exported marked function statements', () => {
           body: [0, [[10, [1, "a", "*", "b"]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({});
       /** ADD */
       const add = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function add(a, b) {
@@ -1202,7 +1200,7 @@ describe('hoists exported marked function statements', () => {
 
         return __tsover_add(a, b);
       }, {
-        v: 1,
+        v: 2,
         name: "add",
         ast: {
           params: [{
@@ -1215,9 +1213,7 @@ describe('hoists exported marked function statements', () => {
           body: [0, [[10, [1, "a", "+", "b"]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({});
       console.log(add);
       console.log(mul);
@@ -1233,10 +1229,10 @@ describe('hoists exported marked function statements', () => {
             'use gpu';
             return __tsover_mul(a, b);
           }), {
-          v: 1,
+          v: 2,
           name: "mul",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
 
       /** ADD */
@@ -1244,10 +1240,10 @@ describe('hoists exported marked function statements', () => {
             'use gpu';
             return __tsover_add(a, b);
           }), {
-          v: 1,
+          v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
 
       console.log(add);
@@ -1278,7 +1274,7 @@ describe('hoists default exported marked function statement', () => {
 
         return __tsover_add(a, b);
       }, {
-        v: 1,
+        v: 2,
         name: "add",
         ast: {
           params: [{
@@ -1291,9 +1287,7 @@ describe('hoists default exported marked function statement', () => {
           body: [0, [[10, [1, "a", "+", "b"]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({});
       console.log(add);
       export default add;"
@@ -1307,10 +1301,10 @@ describe('hoists default exported marked function statement', () => {
             'use gpu';
             return __tsover_add(a, b);
           }), {
-          v: 1,
+          v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
       console.log(add);
 
@@ -1349,7 +1343,7 @@ describe('export marked arrow function', () => {
 
         return __tsover_add(a, b);
       }, {
-        v: 1,
+        v: 2,
         name: "add",
         ast: {
           params: [{
@@ -1362,16 +1356,14 @@ describe('export marked arrow function', () => {
           body: [0, [[10, [1, "a", "+", "b"]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({});
       const increment = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = n => {
         'use gpu';
 
         return __tsover_add(n, 1);
       }, {
-        v: 1,
+        v: 2,
         name: "increment",
         ast: {
           params: [{
@@ -1381,9 +1373,7 @@ describe('export marked arrow function', () => {
           body: [0, [[10, [1, "n", "+", [5, "1"]]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({});
       export { increment };
       const mul = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a, b) => {
@@ -1391,7 +1381,7 @@ describe('export marked arrow function', () => {
 
         return __tsover_mul(a, b);
       }, {
-        v: 1,
+        v: 2,
         name: "mul",
         ast: {
           params: [{
@@ -1404,9 +1394,7 @@ describe('export marked arrow function', () => {
           body: [0, [[10, [1, "a", "*", "b"]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({});
       export default mul;"
     `);
@@ -1418,30 +1406,30 @@ describe('export marked arrow function', () => {
             'use gpu';
             return __tsover_add(a, b);
           }), {
-          v: 1,
+          v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
 
           const increment = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((n) => {
             'use gpu';
             return __tsover_add(n, 1);
           }), {
-          v: 1,
+          v: 2,
           name: "increment",
           ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[10,[1,"n","+",[5,"1"]]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
           
           const mul = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
             'use gpu';
             return __tsover_mul(a, b);
           }), {
-          v: 1,
+          v: 2,
           name: "mul",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
 
       export { add, mul as default, increment };
@@ -1465,7 +1453,7 @@ describe('anonymous default export marked function statement', () => {
 
         return __tsover_add(a, b);
       }, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [{
@@ -1478,9 +1466,7 @@ describe('anonymous default export marked function statement', () => {
           body: [0, [[10, [1, "a", "+", "b"]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({});"
     `);
   });
@@ -1491,10 +1477,10 @@ describe('anonymous default export marked function statement', () => {
             'use gpu';
             return __tsover_add(a, b);
           }), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
 
       export { _virtual_code as default };
@@ -1518,7 +1504,7 @@ describe('anonymous default export marked arrow function', () => {
 
         return __tsover_add(a, b);
       }, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [{
@@ -1531,9 +1517,7 @@ describe('anonymous default export marked arrow function', () => {
           body: [0, [[10, [1, "a", "+", "b"]]]],
           externalNames: []
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({});"
     `);
   });
@@ -1544,10 +1528,10 @@ describe('anonymous default export marked arrow function', () => {
             'use gpu';
             return __tsover_add(a, b);
           }), {
-          v: 1,
+          v: 2,
           name: undefined,
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
-          externals: () => ({}),
+          externals: {  }
         }) && $.f)({}));
 
       export { _virtual_code as default };

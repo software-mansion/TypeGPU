@@ -64,14 +64,14 @@ describe('externals gathering', () => {
     it('works for BABEL', () => {
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "{
-            "buffer.$.x": () => buffer.$.x
+            "buffer": () => buffer
           }"
       `);
     });
 
     it('works for ROLLUP', async () => {
       expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
-        `"{ "buffer.$.x": () => buffer.$.x }"`,
+        `"{ "buffer": () => buffer }"`,
       );
     });
   });

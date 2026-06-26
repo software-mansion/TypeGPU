@@ -153,7 +153,7 @@ describe('TgpuLazy', () => {
 
       fn func() {
         let pos = vec3f(2, 4, 6);
-        const posX = 2;
+        const posX = 2f;
         let vel = (&boid.vel);
         let velX = boid.vel.x;
         let vel_ = (&boid.vel);
