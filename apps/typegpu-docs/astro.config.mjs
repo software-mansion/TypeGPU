@@ -221,6 +221,11 @@ export default defineConfig({
               badge: { text: 'dev', variant: 'note' },
             },
             DEV && {
+              label: 'Explaining the magic',
+              slug: 'advanced/explaining-the-magic',
+              badge: { text: 'dev', variant: 'note' },
+            },
+            DEV && {
               label: 'Shader Generation',
               slug: 'advanced/shader-generation',
               badge: { text: 'dev', variant: 'note' },

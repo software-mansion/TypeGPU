@@ -1,0 +1,137 @@
+---
+title: Explaining the magic
+description: This doc explains how a 'use gpu' directive can make a function runnable on the GPU.
+---
+
+This tutorial explains in depth what exactly happens during the bundle time and runtime to make 'use gpu' functions possible.
+
+## Introduction
+
+Take a look at the following code. It declares a `counter` buffer, and increases it in `incrementPipeline`.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+
+const root = await tgpu.init();
+
+const counter = root.createMutable(d.vec2u);
+const incrementBy = {
+  allModifier: tgpu.const(d.vec2u, d.vec2u(1, 1)),
+  yModifier: tgpu.const(d.u32, 2),
+};
+
+const increment = tgpu.computeFn({ workgroupSize: [1] })(() => {
+  'use gpu';
+  counter.$ += incrementBy.allModifier.$;
+  counter.$.y += incrementBy.yModifier.$;
+});
+
+const incrementPipeline = root.createComputePipeline({ compute: increment });
+
+incrementPipeline.dispatchWorkgroups(1);
+console.log(await counter.read()); // d.vec2u(1, 3)
+```
+
+TypeGPU translated this code to WebGPU, which can be previewed by using `tgpu.resolve`:
+
+```ts twoslash
+import { tgpu } from 'typegpu';
+const root = await tgpu.init();
+const incrementPipeline = root.createComputePipeline({ compute: tgpu.computeFn({ workgroupSize: [1] })`` });
+// ---cut---
+console.log(tgpu.resolve([incrementPipeline]));
+// @group(0) @binding(0) var<storage, read_write> counter: vec2u;
+//
+// const allModifier: vec2u = vec2u(1);
+//
+// const yModifier: u32 = 2u;
+//
+// @compute @workgroup_size(1) fn increment() {
+//   counter += allModifier;
+//   counter.y += yModifier;
+// }
+```
+
+This was made possible by [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu), 
+which modifies the existing code during bundle (build) time.
+The modified code can be previewed for debug/educational purposes with the following trick:
+
+```ts twoslash
+// ... imports
+const main = async () => {
+  // ... remaining file content
+}
+console.log(main.toString());
+```
+
+The code with the compute pipeline is transformed as follows (don't try to parse it, we'll explain it step by step in just a second):
+
+```js
+async () => {
+	const root = await tgpu.init();
+	const counter = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createMutable(d.vec2u), "counter"));
+	const incrementBy = {
+		allModifier: (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.vec2u, d.vec2u(1, 1)), "allModifier")),
+		yModifier: (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 2), "yModifier"))
+	};
+	const increment = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.computeFn({ workgroupSize: [1] })((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+		"use gpu";
+		counter.$ = __tsover_add(counter.$, incrementBy.allModifier.$);
+		counter.$.y = __tsover_add(counter.$.y, incrementBy.yModifier.$);
+	}), {
+    v: 2,
+    name: undefined,
+    ast: {"params":[],"body":[0,[[2,"counter.$","+=","incrementBy.allModifier.$"],[2,"counter.$.y","+=","incrementBy.yModifier.$"]]],"externalNames":["counter","incrementBy"]},
+    externals: { "counter.$": () => counter.$, "incrementBy.allModifier.$": () => incrementBy.allModifier.$, "counter.$.y": () => counter.$.y, "incrementBy.yModifier.$": () => incrementBy.yModifier.$ }
+  }) && $.f)({}))), "increment"));
+	const incrementPipeline = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createComputePipeline({ compute: increment }), "incrementPipeline"));
+	incrementPipeline.dispatchWorkgroups(1);
+	console.log(await counter.read());
+}
+```
+
+As can be seen, unplugin heavily modifies code around some tgpu elements. 
+The changes can be split into a few categories, that will be explained in following paragraphs:
+
+- auto-naming (`globalThis.__TYPEGPU_AUTONAME__`),
+- function metadata assignment (`globalThis.__TYPEGPU_META__`),
+- operator overloading (`__tsover_add`).
+
+## Auto-naming
+
+Most TypeGPU resources can be named with `$name`.
+A name present can make debugging easier, and it also serves as a primer for identifiers in resulting WGSL.
+
+Unplugin-typegpu traverses the AST of each bundled file, and matches most common patterns where a default name for a resource (recognized by constructor name) can be inferred.
+
+```js
+const counter = root.createMutable(d.vec2u); // can be named 'counter'
+
+const incrementBy = {
+  allModifier: tgpu.const(d.vec2u, d.vec2u(1, 1)), // can be named 'allModifier'
+}
+```
+
+The matched resource is only wrapped in the autonaming function if the method `$name` was not called before:
+
+```ts
+const main = () => {
+  const myConst = tgpu.const(d.u32, 2).$name('incrementValue');
+  const otherConst = tgpu.const(d.u32, 2);
+};
+
+console.log(main.toString());
+// () => {
+// 	const myConst = tgpu.const(d.u32, 2).$name("incrementValue");
+// 	const otherConst = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 2), "otherConst"));
+// }
+```
+
+The `globalThis.__TYPEGPU_AUTONAME__` function checks its argument for the `$internal` symbol and `$name` prop, and if both are present, calls `$name` on the item.
+Therefore, some potential false positives (e.g. if user named their unrelated function `createMutable`) cause no harm.
+
+## Function metadata assignment
+
+
+
+
