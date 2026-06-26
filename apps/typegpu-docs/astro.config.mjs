@@ -221,7 +221,7 @@ export default defineConfig({
               badge: { text: 'dev', variant: 'note' },
             },
             DEV && {
-              label: 'Explaining the magic',
+              label: 'Explaining the Magic',
               slug: 'advanced/explaining-the-magic',
               badge: { text: 'dev', variant: 'note' },
             },
