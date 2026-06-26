@@ -22,7 +22,7 @@ describe('Root unmount cleanup', () => {
       const result = useRootWithStatus();
 
       useEffect(() => {
-        if (result.status === 'resolved') {
+        if (result.status === 'fulfilled') {
           capturedRoot = result.value;
         }
       });
@@ -100,7 +100,7 @@ describe('Root unmount cleanup', () => {
         const result = useRootWithStatus();
 
         useEffect(() => {
-          if (result.status === 'resolved') {
+          if (result.status === 'fulfilled') {
             capturedRoot = result.value;
           }
         });

@@ -39,13 +39,13 @@ export function addArgTypesToExternals(
   argTypes: unknown[],
   core: { setExternals: (key: 'args', externals: ExternalMap) => void },
 ) {
-  const argTypeNames = [...implementation.matchAll(/:\s*(?<arg>.*?)\s*[,)]/g)].map((found) =>
-    found ? found[1] : undefined,
+  const argTypeNames = [...implementation.matchAll(/:\s*(?<arg>.*?)\s*[,)]/g)].map(
+    (found) => found?.[1],
   );
 
   const args = Object.fromEntries(
     argTypes.flatMap((argType, i) => {
-      const argTypeName = argTypeNames ? argTypeNames[i] : undefined;
+      const argTypeName = argTypeNames?.[i];
       return isWgslStruct(argType) && argTypeName !== undefined ? [[argTypeName, argType]] : [];
     }),
   );
