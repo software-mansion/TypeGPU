@@ -101,17 +101,20 @@ export function replaceExternalsInWgsl(
     }
 
     let currentItem: unknown = externalMap;
-    let name: string | undefined = undefined;
     let suffix = '';
 
     for (const [i, elem] of chain.entries()) {
       currentItem = (currentItem as ExternalMap)[elem];
-      name = elem;
       if (isResolvable(currentItem)) {
         suffix = chain
           .slice(i + 1)
           .map((s) => `.${s}`)
           .join('');
+
+        if (isNamable(currentItem) && getName(currentItem) === undefined) {
+          setName(currentItem, elem);
+        }
+
         break;
       }
 
@@ -121,10 +124,6 @@ export function replaceExternalsInWgsl(
         );
         return match;
       }
-    }
-
-    if (isNamable(currentItem) && getName(currentItem) === undefined && name !== undefined) {
-      setName(currentItem, name);
     }
 
     let resolved = cache.get(currentItem);
