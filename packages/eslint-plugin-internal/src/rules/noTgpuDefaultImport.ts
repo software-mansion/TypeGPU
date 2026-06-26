@@ -1,7 +1,7 @@
 import { createRule } from '../ruleCreator.ts';
 
-export const noTgpuNamespaceImport = createRule({
-  name: 'no-tgpu-namespace-import',
+export const noTgpuDefaultImport = createRule({
+  name: 'no-tgpu-default-import',
   meta: {
     type: 'suggestion',
     docs: {

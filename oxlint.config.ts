@@ -23,7 +23,7 @@ export default defineConfig({
     'eslint-plugin-import/namespace': 'off',
     'eslint-plugin-import/extensions': ['error', 'always', { ignorePackages: true }],
     'eslint-plugin-internal/no-useless-path-segments': 'error',
-    'eslint-plugin-internal/no-tgpu-namespace-import': 'error',
+    'eslint-plugin-internal/no-tgpu-default-import': 'error',
   },
   ignorePatterns: ['**/*.astro', '**/*.mjs'],
   overrides: [

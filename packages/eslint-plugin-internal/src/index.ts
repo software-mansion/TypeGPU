@@ -1,7 +1,7 @@
 import pkg from '../package.json' with { type: 'json' };
 import type { TSESLint } from '@typescript-eslint/utils';
 import { noUselessPathSegments } from './rules/noUselessPathSegments.ts';
-import { noTgpuNamespaceImport } from './rules/noTgpuNamespaceImport.ts';
+import { noTgpuDefaultImport } from './rules/noTgpuDefaultImport.ts';
 
 const plugin = {
   meta: {
@@ -10,7 +10,7 @@ const plugin = {
   },
   rules: {
     'no-useless-path-segments': noUselessPathSegments,
-    'no-tgpu-namespace-import': noTgpuNamespaceImport,
+    'no-tgpu-default-import': noTgpuDefaultImport,
   },
 } satisfies TSESLint.FlatConfig.Plugin;
 

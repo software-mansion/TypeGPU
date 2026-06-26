@@ -1,9 +1,9 @@
 import { describe } from 'vitest';
 import { ruleTester } from '../utils/ruleTester.ts';
-import { noTgpuNamespaceImport } from '../../src/rules/noTgpuNamespaceImport.ts';
+import { noTgpuDefaultImport } from '../../src/rules/noTgpuDefaultImport.ts';
 
-describe('noTgpuNamespaceImport', () => {
-  ruleTester.run('noTgpuNamespaceImport', noTgpuNamespaceImport, {
+describe('noTgpuDefaultImport', () => {
+  ruleTester.run('noTgpuDefaultImport', noTgpuDefaultImport, {
     valid: [
       { code: "import { tgpu } from 'typegpu';" },
       { code: 'import { tgpu, d } from "typegpu";' },
