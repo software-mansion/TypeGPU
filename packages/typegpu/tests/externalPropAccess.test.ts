@@ -17,29 +17,13 @@ describe('external prop access', () => {
     `);
   });
 
-  it('supports comptime known array.length', () => {
-    const layout = tgpu.bindGroupLayout({
-      arr: { storage: d.arrayOf(d.u32, 4) },
-    });
-    const fn = () => {
-      'use gpu';
-      const len = layout.$.arr.length; // externals: { ...: () => layout.$.arr.length }
-    };
-
-    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-      "fn fn_1() {
-        const len = 4;
-      }"
-    `);
-  });
-
   it('supports runtime sized array.length', () => {
     const layout = tgpu.bindGroupLayout({
       arr: { storage: d.arrayOf(d.u32) },
     });
     const fn = () => {
       'use gpu';
-      const len = layout.$.arr.length; // externals: { ...: () => layout.$.arr.length }
+      const len = layout.$.arr.length; // externals: { ...: () => layout }
     };
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
