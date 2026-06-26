@@ -24,7 +24,8 @@ export type FnExternals = {
    */
   pluginProvided?: ExternalMap;
   /**
-   * Function arguments, for example `{ in: { S: Schema } }` in `tgpu.fn([Schema])('(arg: S) => {}')`.
+   * Function arguments, for example `{ S: Schema }` in `tgpu.fn([Schema])('(arg: S) => {}')`,
+   * or { in: { position: 'position' } } in `fragmentFn({ in: { position: d.builtin.position }, out: d.vec4f, })('...')`
    */
   args?: ExternalMap;
   /**

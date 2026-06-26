@@ -69,6 +69,14 @@ function assignMetadata(
     if (t.isExportNamedDeclaration(path.parent)) {
       nodeToOverride = path.parent;
       code = `export ${code}`;
+    } else if (t.isExportDefaultDeclaration(path.parent)) {
+      nodeToOverride = path.parent;
+
+      if (t.isFunctionDeclaration(path.node) && path.node.id) {
+        code = `${code}export default ${path.node.id.name};`;
+      } else {
+        code = `export default ${code};`;
+      }
     }
   }
 

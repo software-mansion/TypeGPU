@@ -667,7 +667,9 @@ describe('TgpuBindGroup', () => {
         entries: [
           {
             binding: 0,
-            resource: 'view',
+            resource: {
+              label: '<unnamed>',
+            },
           },
         ],
       });
@@ -696,7 +698,9 @@ describe('TgpuBindGroup', () => {
         entries: [
           {
             binding: 0,
-            resource: 'view',
+            resource: {
+              label: 'foo',
+            },
           },
         ],
       });
@@ -844,7 +848,9 @@ describe('TgpuBindGroup', () => {
         entries: [
           {
             binding: 0,
-            resource: 'view',
+            resource: {
+              label: '<unnamed>',
+            },
           },
         ],
       });
@@ -881,7 +887,9 @@ describe('TgpuBindGroup', () => {
         entries: [
           {
             binding: 0,
-            resource: 'view',
+            resource: {
+              label: 'foo',
+            },
           },
         ],
       });
