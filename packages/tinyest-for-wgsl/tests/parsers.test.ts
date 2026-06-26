@@ -30,7 +30,7 @@ describe('transpileFn', () => {
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
-      expect(externalNames).toMatchInlineSnapshot(`[]`);
+      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
   );
 
@@ -41,7 +41,7 @@ describe('transpileFn', () => {
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
-      expect(externalNames).toMatchInlineSnapshot(`[]`);
+      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
   );
 
@@ -58,9 +58,9 @@ describe('transpileFn', () => {
         `"[0,[[10,[1,[1,"a","+","b"],"-","c"]]]]"`,
       );
       expect(externalNames).toMatchInlineSnapshot(`
-        [
+        Set {
           "c",
-        ]
+        }
       `);
     }),
   );
@@ -81,9 +81,9 @@ describe('transpileFn', () => {
       );
       // Only 'c' is external, as 'a' is declared in the same scope.
       expect(externalNames).toMatchInlineSnapshot(`
-        [
+        Set {
           "c",
-        ]
+        }
       `);
     }),
   );
@@ -106,9 +106,9 @@ describe('transpileFn', () => {
       );
       // Only 'c' is external, as 'a' is declared in the outer scope.
       expect(externalNames).toMatchInlineSnapshot(`
-        [
+        Set {
           "c",
-        ]
+        }
       `);
     }),
   );
@@ -122,9 +122,9 @@ describe('transpileFn', () => {
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,"external.outside.prop"]]]"`);
       // Only 'external' is external.
       expect(externalNames).toMatchInlineSnapshot(`
-        [
+        Set {
           "external.outside.prop",
-        ]
+        }
       `);
     }),
   );
@@ -154,7 +154,7 @@ describe('transpileFn', () => {
         },
       ]);
 
-      expect(externalNames).toMatchInlineSnapshot(`[]`);
+      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
   );
 
@@ -200,7 +200,7 @@ describe('transpileFn', () => {
         },
       ]);
 
-      expect(externalNames).toMatchInlineSnapshot(`[]`);
+      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
   );
 
@@ -237,7 +237,7 @@ describe('transpileFn', () => {
       );
 
       expect(externalNames).toMatchInlineSnapshot(`
-        [
+        Set {
           "ext.p",
           "ext.q.a",
           "ext.q.b",
@@ -250,7 +250,7 @@ describe('transpileFn', () => {
           "ext.t",
           "ext.u",
           "ext",
-        ]
+        }
       `);
 
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
@@ -270,9 +270,9 @@ describe('transpileFn', () => {
       );
 
       expect(externalNames).toMatchInlineSnapshot(`
-        [
+        Set {
           "ext",
-        ]
+        }
       `);
     }),
   );
@@ -290,11 +290,11 @@ describe('transpileFn', () => {
       );
 
       expect(externalNames).toMatchInlineSnapshot(`
-        [
+        Set {
           "ext.value",
           "ext.config.multiplier",
           "ext.config.zero",
-        ]
+        }
       `);
 
       expect(JSON.stringify(body)).toMatchInlineSnapshot(

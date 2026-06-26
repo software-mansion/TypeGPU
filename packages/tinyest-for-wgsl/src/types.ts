@@ -7,7 +7,7 @@ export type Scope = {
   declaredNames: string[];
 };
 
-export type Externals = string[];
+export type Externals = Set<string>;
 
 export type Context = {
   /** Holds a set of all identifiers that were used in code, but were not declared in code. */

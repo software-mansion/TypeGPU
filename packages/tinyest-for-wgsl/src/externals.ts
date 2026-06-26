@@ -19,6 +19,7 @@ const visitedMap: WeakMap<Context, Set<JsNode>> = new WeakMap();
  * tryFindExternalChain(ctx, node`ext.p.q`); // 'ext.p.q'
  * tryFindExternalChain(ctx, node`ext.p.q().r`); // undefined
  * tryFindExternalChain(ctx, node`local.p.q`); // undefined
+ * tryFindExternalChain(ctx, node`local.$.q`); // undefined
  */
 export function tryFindExternalChain(ctx: Context, node: JsNode): string | undefined {
   let visited = visitedMap.get(ctx);

@@ -19,7 +19,7 @@ function i(identifier: string): t.Identifier {
 
 function externalsToNode(externals: Externals): t.Expression {
   return t.objectExpression(
-    externals.map((key) => {
+    Array.from(externals, (key) => {
       const chain = key.split('.');
       if (!chain[0]) {
         throw new Error('Internal error, expected chain to not be empty');

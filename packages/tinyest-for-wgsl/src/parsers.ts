@@ -291,9 +291,7 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
     // add it to externals and swap the AST node for an identifier.
     const externalChain = tryFindExternalChain(ctx, node);
     if (externalChain) {
-      if (!ctx.externalNames.includes(externalChain)) {
-        ctx.externalNames.push(externalChain);
-      }
+      ctx.externalNames.add(externalChain);
       return externalChain;
     }
   }
@@ -404,7 +402,7 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
   const { params, body } = extractFunctionParts(rootNode);
 
   const ctx: Context = {
-    externalNames: [],
+    externalNames: new Set(),
     ignoreExternalDepth: 0,
     stack: [
       {
@@ -436,7 +434,7 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
 
 export function transpileNode(node: JsNode): tinyest.AnyNode {
   const ctx: Context = {
-    externalNames: [],
+    externalNames: new Set(),
     ignoreExternalDepth: 0,
     stack: [
       {

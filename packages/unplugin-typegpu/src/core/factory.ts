@@ -34,7 +34,7 @@ function embedJSON(jsValue: unknown) {
 }
 
 function externalsToString(externals: Externals): string {
-  const entries = externals.map((key) => `"${key}": () => ${key}`);
+  const entries = Array.from(externals, (key) => `"${key}": () => ${key}`);
   return `{ ${entries.join(', ')} }`;
 }
 
