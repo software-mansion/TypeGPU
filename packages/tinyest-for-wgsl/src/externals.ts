@@ -38,6 +38,9 @@ export function tryFindExternalChain(ctx: Context, node: JsNode): string | undef
     return 'this';
   }
   if (node.type === 'MemberExpression' && !node.computed && node.property.type === 'Identifier') {
+    if (node.property.name === '$') {
+      return;
+    }
     const lhs = tryFindExternalChain(ctx, node.object);
     if (lhs) {
       return `${lhs}.${node.property.name}`;

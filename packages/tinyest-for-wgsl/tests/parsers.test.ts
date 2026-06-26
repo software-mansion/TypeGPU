@@ -228,12 +228,11 @@ describe('transpileFn', () => {
 
           const h = ext.t.fn().x;
           const i = ext.t.comp['computed'].x;
+          const j = ext.t;
 
-          const j = (ext).u;
+          const k = (ext).u;
 
-          const k = ext;
-
-          const l = ext.v().a.b.c.d.e.f;
+          const l = ext;
         }`),
       );
 
@@ -248,14 +247,14 @@ describe('transpileFn', () => {
           "ext.s.a",
           "ext.t.fn",
           "ext.t.comp",
+          "ext.t",
           "ext.u",
           "ext",
-          "ext.v",
         ]
       `);
 
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"a","ext.p"],[13,"b","ext.q.a"],[13,"c","ext.q.b"],[13,"d","ext.r.a"],[13,"e","ext.r"],[13,"f","ext.s"],[13,"g","ext.s.a"],[13,"h",[7,[6,"ext.t.fn",[]],"x"]],[13,"i",[7,[8,"ext.t.comp",[103,"computed"]],"x"]],[13,"j","ext.u"],[13,"k","ext"],[13,"l",[7,[7,[7,[7,[7,[7,[6,"ext.v",[]],"a"],"b"],"c"],"d"],"e"],"f"]]]]"`,
+        `"[0,[[13,"a","ext.p"],[13,"b","ext.q.a"],[13,"c","ext.q.b"],[13,"d","ext.r.a"],[13,"e","ext.r"],[13,"f","ext.s"],[13,"g","ext.s.a"],[13,"h",[7,[6,"ext.t.fn",[]],"x"]],[13,"i",[7,[8,"ext.t.comp",[103,"computed"]],"x"]],[13,"j","ext.t"],[13,"k","ext.u"],[13,"l","ext"]]]"`,
       );
     }),
   );
