@@ -202,7 +202,13 @@ class ItemStateStackImpl implements ItemStateStack {
           setName(external, id.split('.').at(-1) as string);
         }
 
-        return coerceToSnippet(external);
+        if (external !== undefined && external !== null) {
+          return coerceToSnippet(external);
+        }
+
+        // Since functions cannot access resources from the calling scope, we
+        // return early here.
+        return undefined;
       }
 
       if (layer?.type === 'blockScope') {
