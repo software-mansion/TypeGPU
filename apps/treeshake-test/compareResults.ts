@@ -2,7 +2,7 @@
 
 import { type } from 'arktype';
 import * as fs from 'node:fs/promises';
-import { emptyResultsString, ResultsTable, type Result } from './resultsTable.ts';
+import { calculateChange, emptyResultsString, ResultsTable, type Result } from './resultsTable.ts';
 
 // Define schema for benchmark results
 const ResultRecord = type({
@@ -53,7 +53,9 @@ async function generateReport(
 
   // Summary statistics
   let totalDecreased = 0;
+  let maxDecrease = 0;
   let totalIncreased = 0;
+  let maxIncrease = 0;
   let totalUnchanged = 0;
   let totalUnknown = 0;
 
@@ -62,10 +64,21 @@ async function generateReport(
       const result = grouped[test]?.[bundler];
       const { prNamespace: prSize, targetNamespace: targetSize } = result ?? {};
 
-      if (targetSize === undefined || prSize === undefined) totalUnknown++;
-      else if (prSize > targetSize) totalIncreased++;
-      else if (prSize < targetSize) totalDecreased++;
-      else totalUnchanged++;
+      if (targetSize === undefined || prSize === undefined) {
+        totalUnknown++;
+        continue;
+      }
+      if (prSize > targetSize) {
+        totalIncreased++;
+        maxIncrease = Math.max(maxIncrease, calculateChange(prSize, targetSize));
+        continue;
+      }
+      if (prSize < targetSize) {
+        totalDecreased++;
+        maxDecrease = Math.min(maxDecrease, calculateChange(prSize, targetSize));
+        continue;
+      }
+      totalUnchanged++;
     }
   }
 
@@ -84,7 +97,7 @@ async function generateReport(
 
   output +=
     '### Bundle size comparison (`import * as ...` in PR vs `import * as ...` in target):\n\n';
-  output += '| 🟢 Decreased | ➖ Unchanged | 🔴 Increased | ❔ Unknown |\n';
+  output += `| 🟢 Decreased ${maxDecrease === 0 ? '' : `(max ${(maxDecrease * 100).toFixed(2)}%) `}| ➖ Unchanged | 🔴 Increased ${maxIncrease === 0 ? '' : `(max ${(maxIncrease * 100).toFixed(2)}%) `}| ❔ Unknown |\n`;
   output += '| :---: | :---: | :---: | :---: |\n';
   output += `| **${totalDecreased}** | **${totalUnchanged}** | **${totalIncreased}** | **${totalUnknown}** |\n\n`;
 
