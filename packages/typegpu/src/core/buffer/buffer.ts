@@ -22,17 +22,10 @@ import { $internal } from '../../shared/symbols.ts';
 import type { Prettify, UnionToIntersection } from '../../shared/utilityTypes.ts';
 import { isGPUBuffer } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
-import {
-  mutable,
-  readonly,
-  type TgpuBufferMutable,
-  type TgpuBufferReadonly,
-  type TgpuBufferUniform,
-  type TgpuFixedBufferUsage,
-  uniform,
-} from './bufferUsage.ts';
+import { mutable, readonly, uniform } from './bufferUsage.ts';
 import { calculateOffsets, readFromArrayBuffer, writeToArrayBuffer } from '../../data/dataIO.ts';
 import { patchArrayBuffer } from '../../data/partialIO.ts';
+import type { TgpuMutable, TgpuReadonly, TgpuUniform } from './bufferShorthand.ts';
 
 // ----------
 // Public API
@@ -83,9 +76,9 @@ type ViewUsages<TBuffer extends TgpuBuffer<BaseData>> =
   | (boolean extends TBuffer['usableAsStorage'] ? never : 'readonly' | 'mutable');
 
 type UsageTypeToBufferUsage<TData extends BaseData> = {
-  uniform: TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData>;
-  mutable: TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData>;
-  readonly: TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData>;
+  uniform: TgpuUniform<TData>;
+  mutable: TgpuMutable<TData>;
+  readonly: TgpuReadonly<TData>;
 };
 
 const usageToUsageConstructor = { uniform, mutable, readonly };

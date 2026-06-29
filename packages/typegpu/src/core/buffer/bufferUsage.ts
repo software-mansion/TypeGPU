@@ -51,6 +51,9 @@ export interface TgpuBufferUsage<
   };
 }
 
+/**
+ * @deprecated use TgpuUniform instead.
+ */
 export interface TgpuBufferUniform<TData extends BaseData> extends TgpuBufferUsage<
   TData,
   'uniform'
@@ -62,6 +65,9 @@ export interface TgpuBufferUniform<TData extends BaseData> extends TgpuBufferUsa
   readonly $: InferGPU<TData>;
 }
 
+/**
+ * @deprecated use TgpuReadonly instead.
+ */
 export interface TgpuBufferReadonly<TData extends BaseData> extends TgpuBufferUsage<
   TData,
   'readonly'
@@ -77,6 +83,9 @@ export interface TgpuFixedBufferUsage<TData extends BaseData> extends TgpuNamabl
   readonly buffer: TgpuBuffer<TData>;
 }
 
+/**
+ * @deprecated use TgpuMutable instead.
+ */
 export interface TgpuBufferMutable<TData extends BaseData> extends TgpuBufferUsage<
   TData,
   'mutable'
