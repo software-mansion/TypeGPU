@@ -442,6 +442,9 @@ export function isGPUBuffer(value: unknown): value is GPUBuffer {
   return !!value && typeof value === 'object' && 'getMappedRange' in value && 'mapAsync' in value;
 }
 
+/**
+ * @deprecated Use isBufferShorthand instead.
+ */
 export function isBufferUsage(
   value: unknown,
 ): value is
