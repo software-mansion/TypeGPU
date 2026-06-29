@@ -20,7 +20,7 @@ import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { BindableBufferUsage, ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import type { TgpuBuffer, UniformFlag } from './buffer.ts';
-import { TgpuBufferShorthandImpl, type TgpuMutable } from './bufferShorthand.ts';
+import { TgpuBufferShorthandImpl, type TgpuMutable, type TgpuReadonly } from './bufferShorthand.ts';
 
 // ----------
 // Public API
@@ -311,12 +311,12 @@ export function mutable<TData extends AnyWgslData>(
 
 const readonlyUsageMap = new WeakMap<
   TgpuBuffer<BaseData>,
-  TgpuFixedBufferImpl<BaseData, 'readonly'>
+  TgpuBufferShorthandImpl<'readonly', BaseData>
 >();
 
 export function readonly<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & StorageFlag,
-): TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData> {
+): TgpuReadonly<TData> {
   if (!isUsableAsStorage(buffer)) {
     throw new Error(
       `Cannot call as('readonly') on ${buffer}, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
@@ -325,10 +325,10 @@ export function readonly<TData extends AnyWgslData>(
 
   let usage = readonlyUsageMap.get(buffer);
   if (!usage) {
-    usage = new TgpuFixedBufferImpl('readonly', buffer);
+    usage = new TgpuBufferShorthandImpl('readonly', buffer);
     readonlyUsageMap.set(buffer, usage);
   }
-  return usage as unknown as TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData>;
+  return usage as unknown as TgpuReadonly<TData>;
 }
 
 const uniformUsageMap = new WeakMap<
