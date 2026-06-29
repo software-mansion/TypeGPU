@@ -17,5 +17,6 @@ export default defineConfig({
       ? [...configDefaults.exclude, 'tests/internal/**/*.{test,spec}.?(c|m)[jt]s?(x)']
       : configDefaults.exclude,
     globalSetup: ['setupVitest.ts'],
+    isolate: false,
   },
 });
