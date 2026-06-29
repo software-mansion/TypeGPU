@@ -20,7 +20,12 @@ import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { BindableBufferUsage, ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import type { TgpuBuffer, UniformFlag } from './buffer.ts';
-import { TgpuBufferShorthandImpl, type TgpuMutable, type TgpuReadonly } from './bufferShorthand.ts';
+import {
+  TgpuBufferShorthandImpl,
+  type TgpuMutable,
+  type TgpuReadonly,
+  type TgpuUniform,
+} from './bufferShorthand.ts';
 
 // ----------
 // Public API
@@ -333,12 +338,12 @@ export function readonly<TData extends AnyWgslData>(
 
 const uniformUsageMap = new WeakMap<
   TgpuBuffer<BaseData>,
-  TgpuFixedBufferImpl<BaseData, 'uniform'>
+  TgpuBufferShorthandImpl<'uniform', BaseData>
 >();
 
 export function uniform<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & UniformFlag,
-): TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData> {
+): TgpuUniform<BaseData> {
   if (!isUsableAsUniform(buffer)) {
     throw new Error(
       `Cannot call as('uniform') on ${buffer}, as it is not allowed to be used as a uniform. To allow it, call .$usage('uniform') when creating the buffer.`,
@@ -347,8 +352,8 @@ export function uniform<TData extends AnyWgslData>(
 
   let usage = uniformUsageMap.get(buffer);
   if (!usage) {
-    usage = new TgpuFixedBufferImpl('uniform', buffer);
+    usage = new TgpuBufferShorthandImpl('uniform', buffer);
     uniformUsageMap.set(buffer, usage);
   }
-  return usage as unknown as TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData>;
+  return usage as unknown as TgpuUniform<TData>;
 }
