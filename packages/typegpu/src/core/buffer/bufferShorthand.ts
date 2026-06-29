@@ -37,6 +37,9 @@ interface TgpuBufferShorthandBase<TData extends BaseData> extends TgpuNamable {
   // Accessible on the GPU
   readonly [$gpuValueOf]: InferGPU<TData>;
   // ---
+
+  /** Type-token, not available at runtime */
+  readonly [$repr]: Infer<TData>;
 }
 
 export interface TgpuMutable<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
@@ -51,6 +54,9 @@ export interface TgpuMutable<out TData extends BaseData> extends TgpuBufferShort
   value: InferGPU<TData>;
   $: InferGPU<TData>;
   // ---
+
+  /** Type-token, not available at runtime */
+  readonly [$repr]: Infer<TData>;
 }
 
 export interface TgpuReadonly<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
@@ -65,6 +71,9 @@ export interface TgpuReadonly<out TData extends BaseData> extends TgpuBufferShor
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
   // ---
+
+  /** Type-token, not available at runtime */
+  readonly [$repr]: Infer<TData>;
 }
 
 export interface TgpuUniform<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
