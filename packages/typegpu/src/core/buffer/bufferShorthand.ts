@@ -11,13 +11,13 @@ import {
   $gpuValueOf,
   $internal,
   $ownSnippet,
+  $repr,
   $resolve,
 } from '../../shared/symbols.ts';
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import type { BufferWriteOptions, TgpuBuffer, UniformFlag } from './buffer.ts';
-import type { TgpuBufferUsage } from './bufferUsage.ts';
 
 // ----------
 // Public API
@@ -40,7 +40,8 @@ interface TgpuBufferShorthandBase<TData extends BaseData> extends TgpuNamable {
 }
 
 export interface TgpuMutable<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
-  readonly resourceType: 'mutable';
+  readonly resourceType: 'buffer-shorthand';
+  readonly usage: 'mutable';
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
 
   // Accessible on the GPU
@@ -50,10 +51,13 @@ export interface TgpuMutable<out TData extends BaseData> extends TgpuBufferShort
   value: InferGPU<TData>;
   $: InferGPU<TData>;
   // ---
+
+  readonly [$repr]: Infer<TData>;
 }
 
 export interface TgpuReadonly<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
-  readonly resourceType: 'readonly';
+  readonly resourceType: 'buffer-shorthand';
+  readonly usage: 'readonly';
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
 
   // Accessible on the GPU
@@ -63,10 +67,13 @@ export interface TgpuReadonly<out TData extends BaseData> extends TgpuBufferShor
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
   // ---
+
+  readonly [$repr]: Infer<TData>;
 }
 
 export interface TgpuUniform<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
-  readonly resourceType: 'uniform';
+  readonly resourceType: 'buffer-shorthand';
+  readonly usage: 'uniform';
   readonly buffer: TgpuBuffer<TData> & UniformFlag;
 
   // Accessible on the GPU
@@ -76,6 +83,8 @@ export interface TgpuUniform<out TData extends BaseData> extends TgpuBufferShort
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
   // ---
+
+  readonly [$repr]: Infer<TData>;
 }
 
 export type TgpuBufferShorthand<TData extends BaseData> =
@@ -99,15 +108,15 @@ export class TgpuBufferShorthandImpl<
 > implements SelfResolvable {
   readonly [$internal] = true;
   readonly [$getNameForward]: object;
-  readonly resourceType: TType;
+  readonly usage: TType;
   readonly buffer: TgpuBuffer<TData> &
     (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag);
 
   constructor(
-    resourceType: TType,
+    usage: TType,
     buffer: TgpuBuffer<TData> & (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag),
   ) {
-    this.resourceType = resourceType;
+    this.usage = usage;
     this.buffer = buffer;
     this[$getNameForward] = buffer;
   }
@@ -136,7 +145,7 @@ export class TgpuBufferShorthandImpl<
 
   get [$gpuValueOf](): InferGPU<TData> {
     const dataType = this.buffer.dataType;
-    const usage = this.resourceType;
+    const usage = this.usage;
 
     return new Proxy(
       {
@@ -185,23 +194,21 @@ export class TgpuBufferShorthandImpl<
   }
 
   toString(): string {
-    return `${this.resourceType}BufferShorthand:${getName(this) ?? '<unnamed>'}`;
+    return `${this.usage}BufferShorthand:${getName(this) ?? '<unnamed>'}`;
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const dataType = this.buffer.dataType;
     const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const { group, binding } = ctx.allocateFixedEntry(
-      this.resourceType === 'uniform'
-        ? { uniform: dataType }
-        : { storage: dataType, access: this.resourceType },
+      this.usage === 'uniform' ? { uniform: dataType } : { storage: dataType, access: this.usage },
       this.buffer,
     );
 
     return ctx.gen.declareGlobalVar({
       group,
       binding,
-      scope: this.resourceType,
+      scope: this.usage,
       id,
       dataType,
       init: undefined,
