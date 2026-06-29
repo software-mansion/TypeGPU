@@ -34,6 +34,7 @@
     "./data": "./src/data/index.ts",
     "./std": "./src/std/index.ts",
     "./common": "./src/common/index.ts",
+    "./~internal": "./src/internal.ts",
     "./$built$": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
@@ -49,6 +50,10 @@
     "./common/$built$": {
       "types": "./dist/common/index.d.ts",
       "default": "./dist/common/index.js"
+    },
+    "./~internal/$built$": {
+      "types": "./dist/internal.d.ts",
+      "default": "./dist/internal.js"
     }
   },
   "publishConfig": {
@@ -71,6 +76,10 @@
       "./common": {
         "types": "./dist/common/index.d.ts",
         "default": "./dist/common/index.js"
+      },
+      "./~internal": {
+        "types": "./dist/internal.d.ts",
+        "default": "./dist/internal.js"
       }
     },
     "linkDirectory": false,
