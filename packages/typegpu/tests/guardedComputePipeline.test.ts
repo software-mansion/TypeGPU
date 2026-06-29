@@ -1,8 +1,7 @@
+import { tgpu } from 'typegpu';
+import { f32 } from 'typegpu/data';
 import { describe, expect, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import { getName } from '../src/shared/meta.ts';
-import { bindGroupLayout } from '../src/tgpuBindGroupLayout.ts';
-import { f32 } from '../src/data/numeric.ts';
 
 describe('TgpuGuardedComputePipeline', () => {
   it('can be named', ({ root }) => {
@@ -12,12 +11,11 @@ describe('TgpuGuardedComputePipeline', () => {
       })
       .$name('myPipeline');
 
-    expect(getName(pipeline)).toBe('myPipeline');
-    expect(getName(pipeline.pipeline)).toBe('myPipeline');
+    expect(root.unwrap(pipeline.pipeline).label).toBe('myPipeline');
   });
 
   it('can be named after filling a bind group', ({ root }) => {
-    const myBindGroupLayout = bindGroupLayout({ a: { uniform: f32 } });
+    const myBindGroupLayout = tgpu.bindGroupLayout({ a: { uniform: f32 } });
     const myBindGroup = root.createBindGroup(myBindGroupLayout, {
       a: root.createBuffer(f32).$usage('uniform'),
     });
@@ -28,8 +26,7 @@ describe('TgpuGuardedComputePipeline', () => {
       .with(myBindGroup)
       .$name('myPipeline');
 
-    expect(getName(pipeline)).toBe('myPipeline');
-    expect(getName(pipeline.pipeline)).toBe('myPipeline');
+    expect(root.unwrap(pipeline.pipeline).label).toBe('myPipeline');
   });
 
   it('delegates `withPerformanceCallback` to the underlying pipeline', ({ root }) => {

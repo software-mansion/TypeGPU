@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import tgpu, { d } from '../../src/index.js';
+import tgpu, { d } from 'typegpu';
 
 describe('rawCodeSnippet', () => {
   it('should throw a descriptive error when called in JS', () => {

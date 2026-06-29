@@ -1,7 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import { namespace } from '../src/core/resolve/namespace.ts';
-import { resolve } from '../src/resolutionCtx.ts';
+import tgpu, { d } from 'typegpu';
 
 describe('d.interpolate', () => {
   it('adds @interpolate (only interpolation type) attribute for struct members', () => {
@@ -19,11 +17,7 @@ describe('d.interpolate', () => {
       }>
     >();
 
-    const opts = {
-      namespace: namespace({ names: 'strict' }),
-    };
-
-    expect(resolve(s1, opts).code).toContain('@interpolate(flat) b: u32,');
+    expect(tgpu.resolve([s1])).toContain('@interpolate(flat) b: u32,');
   });
 
   it('adds @interpolate (with interpolation type and sampling method) attribute for struct members', () => {
@@ -46,10 +40,6 @@ describe('d.interpolate', () => {
     // @ts-expect-error integer values can't interpolate
     d.interpolate('linear, sample', d.i32);
 
-    const opts = {
-      namespace: namespace({ names: 'strict' }),
-    };
-
-    expect(resolve(s1, opts).code).toContain('@interpolate(linear, sample) b: f32,');
+    expect(tgpu.resolve([s1])).toContain('@interpolate(linear, sample) b: f32,');
   });
 });

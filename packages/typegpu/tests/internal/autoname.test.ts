@@ -1,14 +1,15 @@
+// TODO(#2659): Move out of /internal once `getName` is available through 'typegpu/~internal'
 import { describe, expect } from 'vitest';
-import { struct } from '../../src/data/index.ts';
-import tgpu, { d, type TgpuBindGroupLayout } from '../../src/index.js';
+import { struct } from 'typegpu/data';
 import { getName } from '../../src/shared/meta.ts';
+import tgpu, { d, type TgpuBindGroupLayout } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('autonaming', () => {
   it('autonames resources created using tgpu', () => {
     const mySlot = tgpu.slot<number>();
     const myLayout = tgpu.bindGroupLayout({ foo: { uniform: d.vec3f } });
-    const myVertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(d.i32, n));
+    const myVertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(d.f32, n));
     const myAccessor = tgpu.accessor(d.f32);
     const myPrivateVar = tgpu.privateVar(d.vec2f);
     const myWorkgroupVar = tgpu.workgroupVar(d.f32);
@@ -70,7 +71,7 @@ describe('autonaming', () => {
   it('autonames when the constructor is hidden behind other methods', ({ root }) => {
     const myBuffer = root.createBuffer(d.u32).$usage('storage').$addFlags(GPUBufferUsage.STORAGE);
     const Item = d.struct({ a: d.u32 });
-    const myFn = tgpu.fn([Item], Item) /* wgsl */ `(item) { return item; }`.$uses({ Item });
+    const myFn = tgpu.fn([Item], Item) /* wgsl */ `(item) { return item; }`;
     const myLayout = tgpu.bindGroupLayout({ foo: { uniform: d.vec3f } }).$idx(0);
 
     expect(getName(myBuffer)).toBe('myBuffer');
@@ -96,7 +97,10 @@ describe('autonaming', () => {
   it('does not rename already named resources', () => {
     const myStruct = d.struct({ a: d.u32 }).$name('IntStruct');
     const myFunction = tgpu
-      .fn([])(() => 0)
+      .fn(
+        [],
+        d.u32,
+      )(() => 0)
       .$name('ConstFunction');
 
     expect(getName(myStruct)).toBe('IntStruct');
@@ -104,7 +108,7 @@ describe('autonaming', () => {
   });
 
   it('names TGPU functions', () => {
-    const myFunction = tgpu.fn([])(() => 0);
+    const myFunction = tgpu.fn([], d.u32)(() => 0);
     const myComputeFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
     const myVertexFn = tgpu.vertexFn({ out: { ret: d.i32 } })(() => ({ ret: 0 }));
     const myFragmentFn = tgpu.fragmentFn({
@@ -201,7 +205,7 @@ describe('autonaming', () => {
         }) && $.f)({}));
 
 
-      			const main = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(__vite_ssr_import_2__.default.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+      			const main = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(__vite_ssr_import_3__.default.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
       				myFun();
       			}), {
           v: 1,
@@ -235,7 +239,9 @@ describe('autonaming', () => {
   });
 
   it('autonames object member assignment', ({ root }) => {
-    const items: { myBuffer: unknown } = { myBuffer: undefined };
+    const items = {
+      myBuffer: undefined as ReturnType<typeof root.createUniform> | undefined,
+    };
 
     items.myBuffer = root.createUniform(d.u32);
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu, { d, std } from '../../../src/index.js';
+import tgpu, { d, std } from 'typegpu';
 
 describe('round', () => {
   it('rounds to even numbers', () => {

@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { mat4x4f, vec4f } from '../../../src/data/index.ts';
-import tgpu from '../../../src/index.js';
-import { isCloseTo, mul } from '../../../src/std/index.ts';
-import { rotateX4, rotateY4, rotateZ4 } from '../../../src/std/matrix.ts';
+import tgpu from 'typegpu';
+import { mat4x4f, vec4f } from 'typegpu/data';
+import { isCloseTo, mul, rotateX4, rotateY4, rotateZ4 } from 'typegpu/std';
 
 describe('rotate', () => {
   it('generates correct WGSL for rotateX4 with custom matrix', () => {

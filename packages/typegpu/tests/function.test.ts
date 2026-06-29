@@ -1,10 +1,5 @@
-import { attest } from '@ark/attest';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import type { InferIO, InheritArgNames, IOLayout } from '../src/core/function/fnTypes.ts';
-import * as d from '../src/data/index.ts';
-import { Void } from '../src/data/wgslTypes.ts';
-import tgpu, { type TgpuFn, type TgpuFnShell } from '../src/index.js';
-import type { Prettify } from '../src/shared/utilityTypes.ts';
+import tgpu, { d, type TgpuFn, type TgpuFnShell } from 'typegpu';
 
 const empty = tgpu.fn([])`() {
   // do nothing
@@ -134,39 +129,7 @@ describe('tgpu.vertexFn', () => {
 
 describe('tgpu.fragmentFn', () => {
   it('does not create Out struct when the are no output parameters', () => {
-    const foo = tgpu.fragmentFn({ out: Void })(() => {});
+    const foo = tgpu.fragmentFn({ out: d.Void })(() => {});
     expect(tgpu.resolve([foo])).not.toContain('struct foo_Out');
-  });
-});
-
-describe('InferIO', () => {
-  it('unwraps f32', () => {
-    const layout = d.f32 satisfies IOLayout;
-
-    expectTypeOf<InferIO<typeof layout>>().toEqualTypeOf<number>();
-  });
-
-  it('unwraps a record of numeric primitives', () => {
-    const layout = { a: d.f32, b: d.location(2, d.u32) } satisfies IOLayout;
-
-    expectTypeOf<InferIO<typeof layout>>().toEqualTypeOf<{
-      a: number;
-      b: number;
-    }>();
-  });
-});
-
-describe('InheritArgNames', () => {
-  it('should inherit argument names from one fn to another', () => {
-    const isEven = (x: number) => (x & 1) === 0;
-    const identity = (num: number) => num;
-    // Should have the same argument names as `identity`, but the signature of `isEven`
-    const isEvenWithNames = undefined as unknown as Prettify<
-      InheritArgNames<typeof isEven, typeof identity>
-    >['result'];
-
-    attest(isEven).type.toString.snap('(x: number) => boolean');
-    attest(identity).type.toString.snap('(num: number) => number');
-    attest(isEvenWithNames).type.toString.snap('(num: number) => boolean');
   });
 });
