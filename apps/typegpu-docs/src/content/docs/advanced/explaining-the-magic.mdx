@@ -3,7 +3,7 @@ title: Explaining the Magic
 description: This doc explains how a 'use gpu' directive can make a function runnable on the GPU.
 ---
 
-This tutorial explains in depth what exactly happens during the bundle time and runtime to make 'use gpu' functions possible.
+This tutorial explains in depth what exactly happens during the bundle time to make 'use gpu' functions possible.
 Understanding this is not at all necessary for using TypeGPU, but it may help new contributors understand why some things work like they do.
 
 ## Introduction
@@ -101,7 +101,7 @@ The changes can be split into three categories:
 ## Auto-naming
 
 Most TypeGPU resources can be named with `$name` method.
-While it is completely optional, a name can make debugging easier, and it also serves as a primer for identifiers in resulting WGSL.
+While this is completely optional, a name can make debugging easier, and it also serves as a primer for identifiers in resulting WGSL.
 
 Unplugin-typegpu traverses the AST of each bundled file, and matches most common patterns where a default name for a resource (recognized by constructor name) can be inferred.
 
@@ -164,7 +164,7 @@ This could theoretically be done in runtime, but it would require bundling a Jav
 ### Externals
 
 Along with AST, [tinyest-for-wgsl](https://github.com/software-mansion/TypeGPU/blob/main/packages/tinyest-for-wgsl/README.md) also returns a set of externals.
-This section is more technical, feel free to skip it, if you're not working on the TypeGPU library.
+This section is more technical to explain our design choices.
 
 #### Step 1: tinyest-for-wgsl
 
@@ -180,7 +180,7 @@ const fn = () => {
   const d = ext.p; // 'ext.p' added to externals, the prop access is replaced with an identifier 'ext.p'
 }
 // tinyest-for-wgsl returns the generated AST and externals: Set { 'ext', 'ext.p' }
-// No code was modified so far, the prop access squashing only refers to the generated AST.
+// No code was modified so far, the prop access squashing only applies to the generated AST.
 ```
 
 The externals are not flattened all the way to the end though. There are three most important cases where we stop early:
@@ -193,6 +193,7 @@ const fn = () => {
   const c = ext.r1.$.r3; // 'ext.r1' added to externals
 }
 ```
+// przetestować czy () => ({}) robi resolution. Jeśli tak, to jest powodem czemu nie robimy tak, bo pruning
 
 Stopping at `$` is not necessary in any way for the library to function properly.
 However, this lets the library try to auto-name resources that were missed by unplugin autonaming,
@@ -220,7 +221,7 @@ const computeFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
 }); // { buffer: buffer } would now become { buffer: undefined }
 buffer = root.createMutable(d.u32); // externals do not update
 ```
-The same scenario may occur when a function reference resources that are recreated (e.g. a resized buffer).
+The same scenario may occur when a function references resources that are recreated (e.g. a resized buffer).
 
 The second reason is the fact that some of our getters depend on the current resolution mode.
 `const.$` returns the value of the const when called outside of resolution, but during resolution it returns a different object with `[$ownSnippet]` and `[$resolve]` symbols.
@@ -237,13 +238,64 @@ const externals = {
 }
 ```
 
-Deciding whether a given object comes from externals is difficult, and we cannot concretize the externals just yet,
-because they may be used by another resolves of the same function.
+This iteration of externals is still shared between different resolutions of the same function, thus we cannot concretize the externals just yet.
+
+Also, during resolution, deciding whether a given object comes from externals is difficult. Getters let us forget about this problem.
 Without this change, the `wgslGenerator` would throw when encountering a function not marked with 'use gpu'.
 
 When the `wgslGenerator` cannot find an identifier in scope, 
 it accesses the externals, which return the correct code snippets and automatically add any used definitions to the context, 
 as this is the behavior of resource prop access during resolution.
+
+:::caution[Fragility of external prop access]
+There are cases where external prop access performed in during resolution modifies the context.
+
+The following code assumes that `helperAccess.$` is actually called in our internals.
+This may happen for example if we included the entire prop chain in externals,
+and then iterated over external values during resolution.
+
+```ts
+const helper = () => {
+  'use gpu';
+  return 2;
+};
+const helperAccess = tgpu.accessor(d.u32, helper);
+
+const main = () => {
+  'use gpu';
+  if (2 + 2 === 5) {
+    return helperAccess.$;
+  }
+  return 0;
+};
+
+// This snippet would generate if `resolve` actually executed `helperAccess.$`.
+expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+  "fn helper() -> i32 {
+    return 2;
+  }
+
+  fn main() -> i32 {
+    return 0;
+  }"
+`);
+```
+
+This situation can occur even when pruning externals at `.$`:
+```ts
+const ctx = {
+  get helper() {
+    return helperAccess.$;
+  },
+};
+
+// ctx.helper
+```
+
+This is the reason why in unplugin we prepend each external with `() =>` 
+instead of just prepending the entire object - this lets us only evaluate the externals that were actually used.
+
+:::
 
 ## Operator overloading
 
