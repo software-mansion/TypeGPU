@@ -539,6 +539,42 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
           }"
     `);
   });
+
+  it('names resolved externals', () => {
+    const c1 = (() => tgpu.const(d.vec2u, d.vec2u(1)))(); // unnamed
+    const c2 = (() => tgpu.const(d.vec2u, d.vec2u(2)))(); // unnamed
+    const c3 = (() => tgpu.const(d.vec2u, d.vec2u(3)))(); // unnamed
+    const fn = tgpu.fn([])`() { 
+  let a = n1; 
+  let b = ext.n2; 
+  let c = ext.n3.x; 
+}`.$uses({
+      n1: c1,
+      ext: { n2: c2, n3: c3 },
+    });
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "const n1: vec2u = vec2u(1);
+
+      const n2: vec2u = vec2u(2);
+
+      const n3: vec2u = vec2u(3);
+
+      fn fn_1() { 
+        let a = n1; 
+        let b = n2; 
+        let c = n3.x; 
+      }"
+    `);
+  });
+
+  it("resolved externals's names stay the same", () => {
+    const c1 = (() => tgpu.const(d.vec2u, d.vec2u(1)))(); // unnamed
+    tgpu.resolve([tgpu.fn([])`() { let a = myConst; }`.$uses({ myConst: c1 })]);
+    tgpu.resolve([tgpu.fn([])`() { let a = otherName; }`.$uses({ otherName: c1 })]);
+
+    expect(getName(c1)).toMatchInlineSnapshot(`"myConst"`);
+  });
 });
 
 describe('tgpu.computeFn with raw string WGSL implementation', () => {
