@@ -51,8 +51,6 @@ export interface TgpuMutable<out TData extends BaseData> extends TgpuBufferShort
   value: InferGPU<TData>;
   $: InferGPU<TData>;
   // ---
-
-  readonly [$repr]: Infer<TData>;
 }
 
 export interface TgpuReadonly<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
@@ -67,8 +65,6 @@ export interface TgpuReadonly<out TData extends BaseData> extends TgpuBufferShor
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
   // ---
-
-  readonly [$repr]: Infer<TData>;
 }
 
 export interface TgpuUniform<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
@@ -83,8 +79,6 @@ export interface TgpuUniform<out TData extends BaseData> extends TgpuBufferShort
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
   // ---
-
-  readonly [$repr]: Infer<TData>;
 }
 
 export type TgpuBufferShorthand<TData extends BaseData> =
@@ -106,11 +100,15 @@ export class TgpuBufferShorthandImpl<
   TType extends 'mutable' | 'readonly' | 'uniform',
   TData extends BaseData,
 > implements SelfResolvable {
+  /** Type-token, not available at runtime */
+  declare readonly [$repr]: Infer<TData>;
+
   readonly [$internal] = true;
   readonly [$getNameForward]: object;
   readonly usage: TType;
   readonly buffer: TgpuBuffer<TData> &
     (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag);
+  readonly resourceType = 'buffer-shorthand';
 
   constructor(
     usage: TType,
@@ -189,8 +187,40 @@ export class TgpuBufferShorthandImpl<
     return assertExhaustive(mode, 'bufferUsage.ts#TgpuFixedBufferImpl/$');
   }
 
+  set $(value: InferGPU<TData>) {
+    const mode = getExecMode();
+    const insideTgpuFn = isInsideTgpuFn();
+
+    if (mode.type === 'normal') {
+      throw new IllegalBufferAccessError(
+        insideTgpuFn
+          ? `Cannot access ${String(
+              this.buffer,
+            )}. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+          : '.$ is inaccessible during normal JS execution. Try `.write()`',
+      );
+    }
+
+    if (mode.type === 'codegen') {
+      // The WGSL generator handles buffer assignment, and does not defer to
+      // whatever's being assigned to generate the WGSL.
+      throw new Error('Unreachable bufferUsage.ts#TgpuFixedBufferImpl/$');
+    }
+
+    if (mode.type === 'simulate') {
+      mode.buffers.set(this.buffer, value);
+      return;
+    }
+
+    assertExhaustive(mode, 'bufferUsage.ts#TgpuFixedBufferImpl/$');
+  }
+
   get value(): InferGPU<TData> {
     return this.$;
+  }
+
+  set value(value: InferGPU<TData>) {
+    this.$ = value;
   }
 
   toString(): string {

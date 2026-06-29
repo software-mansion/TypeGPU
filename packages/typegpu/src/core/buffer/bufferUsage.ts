@@ -20,6 +20,7 @@ import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { BindableBufferUsage, ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import type { TgpuBuffer, UniformFlag } from './buffer.ts';
+import { TgpuBufferShorthandImpl, type TgpuMutable } from './bufferShorthand.ts';
 
 // ----------
 // Public API
@@ -288,12 +289,12 @@ export class TgpuLaidOutBufferImpl<TData extends BaseData, TUsage extends Bindab
 
 const mutableUsageMap = new WeakMap<
   TgpuBuffer<BaseData>,
-  TgpuFixedBufferImpl<BaseData, 'mutable'>
+  TgpuBufferShorthandImpl<'mutable', BaseData>
 >();
 
 export function mutable<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & StorageFlag,
-): TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData> {
+): TgpuMutable<TData> {
   if (!isUsableAsStorage(buffer)) {
     throw new Error(
       `Cannot call as('mutable') on ${buffer}, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
@@ -302,10 +303,10 @@ export function mutable<TData extends AnyWgslData>(
 
   let usage = mutableUsageMap.get(buffer);
   if (!usage) {
-    usage = new TgpuFixedBufferImpl('mutable', buffer);
+    usage = new TgpuBufferShorthandImpl('mutable', buffer);
     mutableUsageMap.set(buffer, usage);
   }
-  return usage as unknown as TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData>;
+  return usage as unknown as TgpuMutable<TData>;
 }
 
 const readonlyUsageMap = new WeakMap<
