@@ -86,11 +86,10 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
 
   p.log.success(`Scaffolded project at ${projectName}.`);
 
-  const detected = await detect({ cwd: root });
-  let pm: Agent | undefined = options?.packageManager ?? detected?.agent;
-  if (!pm && process.env.npm_config_user_agent) {
-    pm = pmFromUserAgent(process.env.npm_config_user_agent);
-  }
+  const userAgentPm = process.env.npm_config_user_agent
+    ? pmFromUserAgent(process.env.npm_config_user_agent)
+    : undefined;
+  const pm = options?.packageManager ?? userAgentPm ?? (await detect({ cwd: root }))?.agent;
   if (!pm) {
     failAndExit('Could not detect package manager. Pass --package-manager <pm>.');
   }
