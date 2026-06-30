@@ -4,7 +4,6 @@ import {
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
   type TgpuBufferUniform,
-  TgpuLaidOutBufferImpl,
 } from './core/buffer/bufferUsage.ts';
 import {
   isComparisonSampler,
@@ -56,6 +55,7 @@ import type { Default, NullableToOptional, Prettify } from './shared/utilityType
 import type { TgpuShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
 import type { WgslComparisonSampler, WgslSampler } from './data/sampler.ts';
+import { TgpuLaidOutBufferImpl } from './core/buffer/laidOutBuffer.ts';
 
 // ----------
 // Public API
