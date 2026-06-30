@@ -55,7 +55,7 @@ describe('TgpuRootWebGL - createUniform', () => {
 
     const uniform = root.createUniform(d.vec4f);
     expect(uniform).toBeDefined();
-    expect(uniform.usage).toBe('uniform');
+    expect(uniform.resourceType).toBe('uniform');
     expect(gl.createBuffer).toHaveBeenCalled();
   });
 

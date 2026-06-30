@@ -43,8 +43,7 @@ interface TgpuBufferShorthandBase<TData extends BaseData> extends TgpuNamable {
 }
 
 export interface TgpuMutable<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
-  readonly resourceType: 'buffer-shorthand';
-  readonly usage: 'mutable';
+  readonly resourceType: 'mutable';
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
 
   // Accessible on the GPU
@@ -60,8 +59,7 @@ export interface TgpuMutable<out TData extends BaseData> extends TgpuBufferShort
 }
 
 export interface TgpuReadonly<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
-  readonly resourceType: 'buffer-shorthand';
-  readonly usage: 'readonly';
+  readonly resourceType: 'readonly';
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
 
   // Accessible on the GPU
@@ -77,8 +75,7 @@ export interface TgpuReadonly<out TData extends BaseData> extends TgpuBufferShor
 }
 
 export interface TgpuUniform<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
-  readonly resourceType: 'buffer-shorthand';
-  readonly usage: 'uniform';
+  readonly resourceType: 'uniform';
   readonly buffer: TgpuBuffer<TData> & UniformFlag;
 
   // Accessible on the GPU
@@ -114,16 +111,15 @@ export class TgpuBufferShorthandImpl<
 
   readonly [$internal] = true;
   readonly [$getNameForward]: object;
-  readonly usage: TType;
   readonly buffer: TgpuBuffer<TData> &
     (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag);
-  readonly resourceType = 'buffer-shorthand';
+  readonly resourceType: TType;
 
   constructor(
     usage: TType,
     buffer: TgpuBuffer<TData> & (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag),
   ) {
-    this.usage = usage;
+    this.resourceType = usage;
     this.buffer = buffer;
     this[$getNameForward] = buffer;
   }
@@ -152,7 +148,7 @@ export class TgpuBufferShorthandImpl<
 
   get [$gpuValueOf](): InferGPU<TData> {
     const dataType = this.buffer.dataType;
-    const usage = this.usage;
+    const usage = this.resourceType;
 
     return new Proxy(
       {
@@ -233,21 +229,23 @@ export class TgpuBufferShorthandImpl<
   }
 
   toString(): string {
-    return `${this.usage}BufferShorthand:${getName(this) ?? '<unnamed>'}`;
+    return `${this.resourceType}BufferShorthand:${getName(this) ?? '<unnamed>'}`;
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const dataType = this.buffer.dataType;
     const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const { group, binding } = ctx.allocateFixedEntry(
-      this.usage === 'uniform' ? { uniform: dataType } : { storage: dataType, access: this.usage },
+      this.resourceType === 'uniform'
+        ? { uniform: dataType }
+        : { storage: dataType, access: this.resourceType },
       this.buffer,
     );
 
     return ctx.gen.declareGlobalVar({
       group,
       binding,
-      scope: this.usage,
+      scope: this.resourceType,
       id,
       dataType,
       init: undefined,
