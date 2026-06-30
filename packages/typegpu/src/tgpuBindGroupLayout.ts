@@ -1,5 +1,12 @@
 import { isBuffer, type TgpuBuffer, type UniformFlag } from './core/buffer/buffer.ts';
 import {
+  isBufferShorthand,
+  type TgpuBufferShorthand,
+  type TgpuMutable,
+  type TgpuReadonly,
+  type TgpuUniform,
+} from './core/buffer/bufferShorthand.ts';
+import {
   isUsableAsUniform,
   type TgpuBufferMutable,
   type TgpuBufferReadonly,
@@ -341,6 +348,7 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   TgpuLayoutEntry | null extends T
     ?
         | TgpuBuffer<AnyWgslData>
+        | TgpuBufferShorthand<AnyWgslData>
         | GPUBuffer
         | TgpuSampler
         | GPUSampler
@@ -350,10 +358,15 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
         | GPUExternalTexture
     : // Strict type-checking
       T extends TgpuLayoutUniform
-      ? (TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>> & UniformFlag) | GPUBuffer
+      ?
+          | (TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>> & UniformFlag)
+          | TgpuUniform<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>>
+          | GPUBuffer
       : T extends TgpuLayoutStorage
         ?
             | (TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>> & StorageFlag)
+            | TgpuMutable<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>>
+            | TgpuReadonly<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>>
             | GPUBuffer
         : T extends TgpuLayoutSampler
           ? TgpuSampler | GPUSampler
@@ -682,7 +695,14 @@ export class TgpuBindGroupImpl<
             return null;
           }
 
-          const value = this.entries[key as keyof typeof this.entries];
+          // Buffer shorthands (uniform/mutable/readonly) are accepted directly
+          // for buffer-typed entries; unwrap them to their underlying buffer so
+          // the rest of the bind-group machinery is unchanged.
+          const entryValue = this.entries[key as keyof typeof this.entries];
+          const value = (isBufferShorthand(entryValue) ? entryValue.buffer : entryValue) as Exclude<
+            (typeof this.entries)[keyof typeof this.entries],
+            TgpuBufferShorthand<AnyWgslData>
+          >;
 
           if (value === undefined) {
             throw new Error(
