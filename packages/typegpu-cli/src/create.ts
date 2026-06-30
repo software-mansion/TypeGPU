@@ -139,9 +139,13 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
     msg += steps.join('\n');
     msg += `\n\n`;
     msg += `\
+   Note: To enable Oxlint highlighting, install the OXC extension for your editor,
+   or refer to the documentation:
+   https://oxc.rs/docs/guide/usage/linter/editors.html
+
    Note: If you are using VS Code or Cursor, you may need to run
-   “TypeScript: Select TypeScript Version” and choose
-   “Use Workspace Version” to enable tsover.`;
+   "TypeScript: Select TypeScript Version" and choose
+   "Use Workspace Version" to enable tsover.`;
   }
 
   p.outro(msg);
