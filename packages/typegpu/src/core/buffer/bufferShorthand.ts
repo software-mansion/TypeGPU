@@ -1,9 +1,9 @@
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { snip, type ResolvedSnippet } from '../../data/snippet.ts';
-import type { BaseData } from '../../data/wgslTypes.ts';
+import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
 import { getExecMode, isInsideTgpuFn } from '../../execMode.ts';
-import type { StorageFlag } from '../../extension.ts';
+import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
 import { getName, setName, type TgpuNamable } from '../../shared/meta.ts';
 import type { Infer, InferGPU, InferInput, InferPatch, InferPartial } from '../../shared/repr.ts';
 import {
@@ -18,6 +18,7 @@ import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import type { BufferWriteOptions, TgpuBuffer, UniformFlag } from './buffer.ts';
+import { isUsableAsUniform } from './bufferUsage.ts';
 
 // ----------
 // Public API
@@ -251,4 +252,74 @@ export class TgpuBufferShorthandImpl<
       init: undefined,
     });
   }
+}
+
+// --------------
+// Constructors
+// --------------
+
+const mutableUsageMap = new WeakMap<
+  TgpuBuffer<BaseData>,
+  TgpuBufferShorthandImpl<'mutable', BaseData>
+>();
+
+export function mutable<TData extends AnyWgslData>(
+  buffer: TgpuBuffer<TData> & StorageFlag,
+): TgpuMutable<TData> {
+  if (!isUsableAsStorage(buffer)) {
+    throw new Error(
+      `Cannot call as('mutable') on ${buffer}, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
+    );
+  }
+
+  let usage = mutableUsageMap.get(buffer);
+  if (!usage) {
+    usage = new TgpuBufferShorthandImpl('mutable', buffer);
+    mutableUsageMap.set(buffer, usage);
+  }
+  return usage as unknown as TgpuMutable<TData>;
+}
+
+const readonlyUsageMap = new WeakMap<
+  TgpuBuffer<BaseData>,
+  TgpuBufferShorthandImpl<'readonly', BaseData>
+>();
+
+export function readonly<TData extends AnyWgslData>(
+  buffer: TgpuBuffer<TData> & StorageFlag,
+): TgpuReadonly<TData> {
+  if (!isUsableAsStorage(buffer)) {
+    throw new Error(
+      `Cannot call as('readonly') on ${buffer}, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.`,
+    );
+  }
+
+  let usage = readonlyUsageMap.get(buffer);
+  if (!usage) {
+    usage = new TgpuBufferShorthandImpl('readonly', buffer);
+    readonlyUsageMap.set(buffer, usage);
+  }
+  return usage as unknown as TgpuReadonly<TData>;
+}
+
+const uniformUsageMap = new WeakMap<
+  TgpuBuffer<BaseData>,
+  TgpuBufferShorthandImpl<'uniform', BaseData>
+>();
+
+export function uniform<TData extends AnyWgslData>(
+  buffer: TgpuBuffer<TData> & UniformFlag,
+): TgpuUniform<BaseData> {
+  if (!isUsableAsUniform(buffer)) {
+    throw new Error(
+      `Cannot call as('uniform') on ${buffer}, as it is not allowed to be used as a uniform. To allow it, call .$usage('uniform') when creating the buffer.`,
+    );
+  }
+
+  let usage = uniformUsageMap.get(buffer);
+  if (!usage) {
+    usage = new TgpuBufferShorthandImpl('uniform', buffer);
+    uniformUsageMap.set(buffer, usage);
+  }
+  return usage as unknown as TgpuUniform<TData>;
 }

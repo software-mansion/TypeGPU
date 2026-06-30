@@ -22,10 +22,16 @@ import { $internal } from '../../shared/symbols.ts';
 import type { Prettify, UnionToIntersection } from '../../shared/utilityTypes.ts';
 import { isGPUBuffer } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
-import { mutable, readonly, uniform } from './bufferUsage.ts';
 import { calculateOffsets, readFromArrayBuffer, writeToArrayBuffer } from '../../data/dataIO.ts';
 import { patchArrayBuffer } from '../../data/partialIO.ts';
-import type { TgpuMutable, TgpuReadonly, TgpuUniform } from './bufferShorthand.ts';
+import {
+  mutable,
+  readonly,
+  uniform,
+  type TgpuMutable,
+  type TgpuReadonly,
+  type TgpuUniform,
+} from './bufferShorthand.ts';
 
 // ----------
 // Public API
@@ -443,7 +449,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   }
 
   as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferShorthand<TData>[T] {
-    return usageToUsageConstructor[usage]?.(this as never) as UsageTypeToBufferShorthand<TData>[T];
+    return usageToUsageConstructor[usage](this as never) as UsageTypeToBufferShorthand<TData>[T];
   }
 
   destroy() {
