@@ -2,7 +2,6 @@ import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { type AnyWgslData, type BaseData } from '../../data/wgslTypes.ts';
 import { inCodegenMode } from '../../execMode.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
-import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $ownSnippet, $repr, $resolve } from '../../shared/symbols.ts';
@@ -21,7 +20,7 @@ import {
 // Public API
 // ----------
 
-export interface TgpuBufferUsage<
+interface TgpuBufferUsage<
   TData extends BaseData = BaseData,
   TUsage extends BindableBufferUsage = BindableBufferUsage,
 > {
@@ -67,10 +66,6 @@ export interface TgpuBufferReadonly<TData extends BaseData> extends TgpuBufferUs
    */
   readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
-}
-
-export interface TgpuFixedBufferUsage<TData extends BaseData> extends TgpuNamable {
-  readonly buffer: TgpuBuffer<TData>;
 }
 
 /**

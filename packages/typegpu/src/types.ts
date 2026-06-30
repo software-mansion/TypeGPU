@@ -4,7 +4,6 @@ import type {
   TgpuBufferMutable,
   TgpuBufferReadonly,
   TgpuBufferUniform,
-  TgpuBufferUsage,
 } from './core/buffer/bufferUsage.ts';
 import type { TgpuConst } from './core/constant/tgpuConstant.ts';
 import type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
@@ -51,7 +50,6 @@ import { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 
 export type ResolvableObject =
   | SelfResolvable
-  | TgpuBufferUsage
   | TgpuConst
   | TgpuDeclare
   | TgpuBindGroupLayout
