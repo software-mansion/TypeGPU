@@ -338,14 +338,6 @@ const pipelineDistanceView = root.createRenderPipeline({
   multisample: { count: 4 },
 });
 
-const pipelinePromises = [
-  pipelineDepthOne.initAsync(),
-  pipelineMain.initAsync(),
-  pipelinePreview.initAsync(),
-  pipelineLightIndicator.initAsync(),
-  pipelineDistanceView.initAsync(),
-];
-
 const mainBindGroup = root.createBindGroup(renderLayoutWithShadow, {
   camera: mainCamera.uniform.buffer,
   shadowDepthCube: pointLight.createCubeView(),
@@ -426,7 +418,6 @@ function render(timestamp: number) {
 
   animationFrameId = requestAnimationFrame(render);
 }
-await Promise.all(pipelinePromises);
 animationFrameId = requestAnimationFrame(render);
 
 const resizeObserver = new ResizeObserver((entries) => {

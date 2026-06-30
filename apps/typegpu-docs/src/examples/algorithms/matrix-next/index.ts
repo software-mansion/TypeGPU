@@ -35,10 +35,6 @@ const buffers = {
 let bindGroup = createBindGroup();
 
 const pipelines = createPipelines();
-const pipelinePromises = [
-  pipelines['gpu-optimized'].initAsync(),
-  pipelines['gpu-simple'].initAsync(),
-];
 
 function createBindGroup() {
   return root.createBindGroup(computeLayout, {
@@ -239,7 +235,6 @@ function printMatrixToHtml(element: HTMLDivElement, matrix: number[], rows: numb
   }
 }
 
-await Promise.all(pipelinePromises);
 // #endregion
 
 // #region Example controls & Cleanup

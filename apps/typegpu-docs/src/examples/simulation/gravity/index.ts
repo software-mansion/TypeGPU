@@ -113,13 +113,6 @@ const renderPipeline = root
     },
   });
 
-const pipelinePromises = [
-  computeCollisionsPipeline.initAsync(),
-  computeGravityPipeline.initAsync(),
-  skyBoxPipeline.initAsync(),
-  renderPipeline.initAsync(),
-];
-
 let depthTexture = root.device.createTexture({
   size: [canvas.width, canvas.height, 1],
   format: 'depth24plus',
@@ -174,7 +167,6 @@ function frame(timestamp: DOMHighResTimeStamp) {
   render();
   requestAnimationFrame(frame);
 }
-await Promise.all(pipelinePromises);
 requestAnimationFrame(frame);
 
 async function loadPreset(preset: Preset): Promise<DynamicResources> {

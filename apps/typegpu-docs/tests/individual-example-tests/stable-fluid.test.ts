@@ -19,67 +19,13 @@ describe('stable-fluid example', () => {
           mockImageLoading();
           mockCreateImageBitmap();
         },
-        expectedCalls: 12,
+        expectedCalls: 7,
       },
       device,
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct BrushParams {
-        pos: vec2i,
-        delta: vec2f,
-        radius: f32,
-        forceScale: f32,
-        inkAmount: f32,
-      }
-
-      @group(0) @binding(0) var<uniform> brushParams: BrushParams;
-
-      @group(0) @binding(1) var forceDst: texture_storage_2d<rgba16float, write>;
-
-      @group(0) @binding(2) var inkDst: texture_storage_2d<rgba16float, write>;
-
-      @compute @workgroup_size(16, 16) fn brushFn(@builtin(global_invocation_id) gid: vec3u) {
-        let pixelPos = gid.xy;
-        let brushSettings = (&brushParams);
-        var forceVec = vec2f();
-        var inkAmount = 0f;
-        let deltaX = (f32(pixelPos.x) - f32((*brushSettings).pos.x));
-        let deltaY = (f32(pixelPos.y) - f32((*brushSettings).pos.y));
-        let distSquared = ((deltaX * deltaX) + (deltaY * deltaY));
-        let radiusSquared = ((*brushSettings).radius * (*brushSettings).radius);
-        if ((distSquared < radiusSquared)) {
-          let brushWeight = exp((-(distSquared) / radiusSquared));
-          forceVec = (((*brushSettings).forceScale * brushWeight) * (*brushSettings).delta);
-          inkAmount = ((*brushSettings).inkAmount * brushWeight);
-        }
-        textureStore(forceDst, pixelPos, vec4f(forceVec, 0f, 1f));
-        textureStore(inkDst, pixelPos, vec4f(inkAmount, 0f, 0f, 1f));
-      }
-
-      @group(0) @binding(0) var src: texture_2d<f32>;
-
-      @group(0) @binding(2) var force: texture_2d<f32>;
-
-      struct ShaderParams {
-        dt: f32,
-        viscosity: f32,
-      }
-
-      @group(0) @binding(3) var<uniform> simParams: ShaderParams;
-
-      @group(0) @binding(1) var dst: texture_storage_2d<rgba16float, write>;
-
-      @compute @workgroup_size(16, 16) fn addForcesFn(@builtin(global_invocation_id) gid: vec3u) {
-        let pixelPos = gid.xy;
-        let currentVel = textureLoad(src, pixelPos, 0).xy;
-        let forceVec = textureLoad(force, pixelPos, 0).xy;
-        let timeStep = simParams.dt;
-        let newVel = (currentVel + (timeStep * forceVec));
-        textureStore(dst, pixelPos, vec4f(newVel, 0f, 1f));
-      }
-
-      @group(0) @binding(0) var src: texture_2d<f32>;
+      "@group(0) @binding(0) var src: texture_2d<f32>;
 
       @group(0) @binding(1) var dst: texture_storage_2d<rgba16float, write>;
 
@@ -300,69 +246,6 @@ describe('stable-fluid example', () => {
         let normalizedPos = ((clampedPos + 0.5f) / vec2f(texSize.xy));
         let inkVal = textureSampleLevel(src, linSampler, normalizedPos, 0);
         textureStore(dst, pixelPos, inkVal);
-      }
-
-      @group(0) @binding(2) var add: texture_2d<f32>;
-
-      @group(0) @binding(0) var src: texture_2d<f32>;
-
-      @group(0) @binding(1) var dst: texture_storage_2d<rgba16float, write>;
-
-      @compute @workgroup_size(16, 16) fn addInkFn(@builtin(global_invocation_id) gid: vec3u) {
-        let pixelPos = gid.xy;
-        let addVal = textureLoad(add, pixelPos, 0).x;
-        let srcVal = textureLoad(src, pixelPos, 0).x;
-        textureStore(dst, pixelPos, vec4f((addVal + srcVal), 0f, 0f, 1f));
-      }
-
-      struct renderFn_Output {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
-      }
-
-      @vertex fn renderFn(@builtin(vertex_index) idx: u32) -> renderFn_Output {
-        let vertices = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
-        let texCoords = array<vec2f, 3>(vec2f(), vec2f(2, 0), vec2f(0, 2));
-        return renderFn_Output(vec4f(vertices[idx], 0f, 1f), texCoords[idx]);
-      }
-
-      @group(0) @binding(0) var result: texture_2d<f32>;
-
-      @group(0) @binding(2) var linSampler: sampler;
-
-      struct fragmentInkFn_Input {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn fragmentInkFn(_arg_0: fragmentInkFn_Input) -> @location(0) vec4f {
-        let density = textureSample(result, linSampler, _arg_0.uv).x;
-        return vec4f(density, (density * 0.8f), (density * 0.5f), 1f);
-      }
-
-      struct renderFn_Output {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
-      }
-
-      @vertex fn renderFn(@builtin(vertex_index) idx: u32) -> renderFn_Output {
-        let vertices = array<vec2f, 3>(vec2f(-1), vec2f(3, -1), vec2f(-1, 3));
-        let texCoords = array<vec2f, 3>(vec2f(), vec2f(2, 0), vec2f(0, 2));
-        return renderFn_Output(vec4f(vertices[idx], 0f, 1f), texCoords[idx]);
-      }
-
-      @group(0) @binding(0) var result: texture_2d<f32>;
-
-      @group(0) @binding(2) var linSampler: sampler;
-
-      struct fragmentVelFn_Input {
-        @location(0) uv: vec2f,
-      }
-
-      @fragment fn fragmentVelFn(_arg_0: fragmentVelFn_Input) -> @location(0) vec4f {
-        let velocity = textureSample(result, linSampler, _arg_0.uv).xy;
-        let magnitude = length(velocity);
-        let outColor = vec4f(((velocity.x + 1f) * 0.5f), ((velocity.y + 1f) * 0.5f), (magnitude * 0.4f), 1f);
-        return outColor;
       }
 
       struct renderFn_Output {

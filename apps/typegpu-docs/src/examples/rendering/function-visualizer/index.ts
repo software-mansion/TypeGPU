@@ -90,7 +90,6 @@ const createComputePipeline = (exprCode: string) => {
 const computePipelines: Array<TgpuGuardedComputePipeline> = initialFunctions.map(
   (functionData, _) => createComputePipeline(functionData.code),
 );
-const pipelinePromises = computePipelines.map((guarded) => guarded.initAsync());
 
 // Render background shader
 
@@ -225,7 +224,6 @@ function draw() {
 
   requestAnimationFrame(draw);
 }
-await Promise.all(pipelinePromises);
 requestAnimationFrame(draw);
 
 function runComputePass(functionNumber: number) {

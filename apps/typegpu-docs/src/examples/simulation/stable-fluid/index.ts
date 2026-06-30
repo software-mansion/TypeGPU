@@ -142,22 +142,6 @@ const renderPipelineInk = createRenderPipeline(fragmentInkFn);
 const renderPipelineVel = createRenderPipeline(fragmentVelFn);
 const renderPipelineImage = createRenderPipeline(fragmentImageFn);
 
-// Eagerly initialize all pipelines
-await Promise.all([
-  brushPipeline.initAsync(),
-  addForcePipeline.initAsync(),
-  advectPipeline.initAsync(),
-  diffusionPipeline.initAsync(),
-  divergencePipeline.initAsync(),
-  pressurePipeline.initAsync(),
-  projectPipeline.initAsync(),
-  advectInkPipeline.initAsync(),
-  addInkPipeline.initAsync(),
-  renderPipelineInk.initAsync(),
-  renderPipelineVel.initAsync(),
-  renderPipelineImage.initAsync(),
-]);
-
 // Setup simulation buffers
 const velBuffer = new DoubleBuffer(velTex[0], velTex[1]);
 const inkBuffer = new DoubleBuffer(inkTex[0], inkTex[1]);
