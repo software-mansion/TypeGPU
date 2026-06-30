@@ -92,7 +92,6 @@ export type {
 } from './core/sampler/sampler.ts';
 export type { TgpuQuerySet } from './core/querySet/querySet.ts';
 export type {
-  BindLayoutEntry,
   ExtractBindGroupInputFromLayout,
   LayoutEntryToInput,
   TgpuBindGroup,

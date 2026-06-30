@@ -1,11 +1,5 @@
 import { isBuffer, type TgpuBuffer, type UniformFlag } from './core/buffer/buffer.ts';
-import {
-  isUsableAsUniform,
-  type TgpuBufferMutable,
-  type TgpuBufferReadonly,
-  type TgpuBufferUniform,
-  TgpuLaidOutBufferImpl,
-} from './core/buffer/bufferUsage.ts';
+import { isUsableAsUniform, TgpuLaidOutBufferImpl } from './core/buffer/bufferUsage.ts';
 import {
   isComparisonSampler,
   isSampler,
@@ -17,10 +11,7 @@ import {
   comparisonSampler as wgslComparisonSampler,
   sampler as wgslSampler,
 } from './data/sampler.ts';
-import {
-  type TgpuExternalTexture,
-  TgpuExternalTextureImpl,
-} from './core/texture/externalTexture.ts';
+import { TgpuExternalTextureImpl } from './core/texture/externalTexture.ts';
 import {
   isTexture,
   isTextureView,
@@ -45,7 +36,7 @@ import {
 } from './data/texture.ts';
 import type { StorageTextureFormats } from './core/texture/textureFormats.ts';
 import type { AnyWgslData, BaseData, F32, I32, U32 } from './data/wgslTypes.ts';
-import { NotUniformError } from './errors.ts';
+import { invariant, NotUniformError } from './errors.ts';
 import { isUsableAsStorage, NotStorageError, type StorageFlag } from './extension.ts';
 import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
@@ -53,7 +44,7 @@ import type { InferGPU, MemIdentity } from './shared/repr.ts';
 import { safeStringify } from './shared/stringify.ts';
 import { $gpuValueOf, $internal } from './shared/symbols.ts';
 import type { Default, NullableToOptional, Prettify } from './shared/utilityTypes.ts';
-import type { TgpuShaderStage } from './types.ts';
+import type { ResolvableObject, TgpuShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
 import type { WgslComparisonSampler, WgslSampler } from './data/sampler.ts';
 
@@ -268,22 +259,12 @@ type UnwrapRuntimeConstructorInner<T extends BaseData | ((_: number) => BaseData
 export type UnwrapRuntimeConstructor<T extends BaseData | ((_: number) => BaseData)> =
   T extends unknown ? UnwrapRuntimeConstructorInner<T> : never;
 
-interface BindGroupLayoutInternals<Entries extends Record<string, TgpuLayoutEntry | null>> {
-  bound: { [K in keyof Entries]: BindLayoutEntry<Entries[K]> };
-}
-
 export interface TgpuBindGroupLayout<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
 > extends TgpuNamable {
-  readonly [$internal]: BindGroupLayoutInternals<Entries>;
+  readonly [$internal]: ResolvableObject[];
   readonly resourceType: 'bind-group-layout';
   readonly entries: Entries;
-  /**
-   * @deprecated Use `layout.$.foo` instead of `layout.bound.foo.$`
-   */
-  readonly bound: {
-    [K in keyof Entries]: BindLayoutEntry<Entries[K]>;
-  };
   readonly [$gpuValueOf]: {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
@@ -319,22 +300,6 @@ export interface TgpuBindGroupLayout<
    */
   unwrap(unwrapper: Unwrapper): GPUBindGroupLayout;
 }
-
-type StorageUsageForEntry<T extends TgpuLayoutStorage> = T extends {
-  access?: infer Access;
-} // Is the access defined on the type?
-  ? 'mutable' | 'readonly' extends Access // Is the access ambiguous?
-    ?
-        | TgpuBufferReadonly<UnwrapRuntimeConstructor<T['storage']>>
-        | TgpuBufferMutable<UnwrapRuntimeConstructor<T['storage']>>
-    : 'readonly' extends Access // Is the access strictly 'readonly'?
-      ? TgpuBufferReadonly<UnwrapRuntimeConstructor<T['storage']>>
-      : 'mutable' extends Access // Is the access strictly 'mutable'?
-        ? TgpuBufferMutable<UnwrapRuntimeConstructor<T['storage']>>
-        :
-            | TgpuBufferReadonly<UnwrapRuntimeConstructor<T['storage']>>
-            | TgpuBufferMutable<UnwrapRuntimeConstructor<T['storage']>>
-  : TgpuBufferReadonly<UnwrapRuntimeConstructor<T['storage']>>; // <- access is undefined, so default to 'readonly';
 
 export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   // Widest type
@@ -374,22 +339,6 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
                 : T extends TgpuLayoutExternalTexture
                   ? GPUExternalTexture
                   : never;
-
-export type BindLayoutEntry<T extends TgpuLayoutEntry | null> = T extends TgpuLayoutUniform
-  ? TgpuBufferUniform<T['uniform']>
-  : T extends TgpuLayoutStorage
-    ? StorageUsageForEntry<T>
-    : T extends TgpuLayoutSampler
-      ? TgpuSampler
-      : T extends TgpuLayoutComparisonSampler
-        ? TgpuComparisonSampler
-        : T extends TgpuLayoutTexture<infer TSchema>
-          ? TgpuTextureView<TSchema>
-          : T extends TgpuLayoutStorageTexture<infer TSchema>
-            ? TgpuTextureView<TSchema>
-            : T extends TgpuLayoutExternalTexture
-              ? TgpuExternalTexture
-              : never;
 
 export type InferLayoutEntry<T extends TgpuLayoutEntry | null> = T extends TgpuLayoutUniform
   ? InferGPU<T['uniform']>
@@ -466,7 +415,7 @@ class TgpuBindGroupLayoutImpl<
 > implements TgpuBindGroupLayout<Entries> {
   #index: number | undefined;
 
-  readonly [$internal]: BindGroupLayoutInternals<Entries>;
+  readonly [$internal]: ResolvableObject[];
   readonly resourceType = 'bind-group-layout' as const;
 
   readonly value = {} as {
@@ -485,11 +434,9 @@ class TgpuBindGroupLayoutImpl<
 
   constructor(entries: Entries) {
     this.entries = entries;
+    this[$internal] = [];
 
     let idx = 0;
-
-    const bound = {} as { [K in keyof Entries]: BindLayoutEntry<Entries[K]> };
-    this[$internal] = { bound };
 
     for (const [key, entry] of Object.entries(entries)) {
       if (entry === null) {
@@ -498,52 +445,43 @@ class TgpuBindGroupLayoutImpl<
       }
 
       const membership: LayoutMembership = { layout: this, key, idx };
+      let item: undefined | (ResolvableObject & { $: unknown }) = undefined;
 
       if ('uniform' in entry) {
-        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
-        (bound[key] as any) = new TgpuLaidOutBufferImpl('uniform', entry.uniform, membership);
+        item = new TgpuLaidOutBufferImpl('uniform', entry.uniform, membership);
       }
 
       if ('storage' in entry) {
         const dataType = 'type' in entry.storage ? entry.storage : entry.storage(0);
-
-        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
-        (bound[key] as any) = new TgpuLaidOutBufferImpl(
-          entry.access ?? 'readonly',
-          dataType,
-          membership,
-        );
+        item = new TgpuLaidOutBufferImpl(entry.access ?? 'readonly', dataType, membership);
       }
 
       if ('texture' in entry) {
-        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
-        (bound[key] as any) = new TgpuLaidOutTextureViewImpl(entry.texture, membership);
+        item = new TgpuLaidOutTextureViewImpl(entry.texture, membership);
       }
 
       if ('storageTexture' in entry) {
-        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
-        (bound[key] as any) = new TgpuLaidOutTextureViewImpl(entry.storageTexture, membership);
+        item = new TgpuLaidOutTextureViewImpl(entry.storageTexture, membership);
       }
 
       if ('externalTexture' in entry) {
-        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
-        (bound[key] as any) = new TgpuExternalTextureImpl(entry.externalTexture, membership);
+        item = new TgpuExternalTextureImpl(entry.externalTexture, membership);
       }
 
       if ('sampler' in entry) {
-        // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
-        (bound[key] as any) = new TgpuLaidOutSamplerImpl(
+        item = new TgpuLaidOutSamplerImpl(
           entry.sampler === 'comparison' ? wgslComparisonSampler() : wgslSampler(),
           membership,
         );
       }
 
+      invariant(item !== undefined, 'Internal error, expected item to be defined');
       Object.defineProperty(this.value, key, {
         get: () => {
-          // oxlint-disable-next-line typescript/no-explicit-any -- no need for type magic
-          return (bound[key] as any).value;
+          return item.$;
         },
       });
+      this[$internal].push(item);
 
       idx++;
     }
@@ -560,10 +498,6 @@ class TgpuBindGroupLayoutImpl<
   $name(label: string): this {
     setName(this, label);
     return this;
-  }
-
-  public get bound() {
-    return this[$internal].bound;
   }
 
   $idx(index?: number): this {
