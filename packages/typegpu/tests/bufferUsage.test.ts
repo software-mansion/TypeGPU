@@ -4,6 +4,7 @@ import { d, tgpu } from '../src/index.js';
 import type { Infer } from '../src/shared/repr.ts';
 import { it } from 'typegpu-testing-utility';
 
+// TODO(#2666) - remove this file
 describe('TgpuBufferUniform', () => {
   it('represents a `number` value', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('uniform');

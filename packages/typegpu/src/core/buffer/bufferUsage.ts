@@ -4,6 +4,8 @@ import { $gpuValueOf, $internal, $repr } from '../../shared/symbols.ts';
 import type { BindableBufferUsage } from '../../types.ts';
 import type { TgpuBuffer, UniformFlag } from './buffer.ts';
 
+// TODO(#2666) - remove this file
+
 // ----------
 // Public API
 // ----------
