@@ -205,6 +205,8 @@ const drawInteraction = createDrawInteraction({
   },
 });
 
+radianceRunner.initSync();
+floodRunner.initSync();
 let frameId = requestAnimationFrame(frame);
 function frame(timestamp: number) {
   drawInteraction.update(timestamp);

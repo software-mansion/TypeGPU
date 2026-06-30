@@ -255,6 +255,9 @@ export type Executor = {
   with(bindGroup: TgpuBindGroup): Executor;
   /** Clean up GPU resources created by this executor. */
   destroy(): void;
+
+  initSync(): void;
+  initAsync(): Promise<void>;
 };
 
 type JumpFloodOptions = {
@@ -423,12 +426,21 @@ export function createJumpFlood(options: JumpFloodOptions): Executor {
       prebuiltFinalizePipelines[sourceIdx]?.dispatchWorkgroups(workgroupsX, workgroupsY);
     }
 
+    const pipelines = [
+      prebuiltInitPipeline,
+      ...prebuiltFloodPipelines,
+      ...prebuiltFinalizePipelines,
+    ];
+
     return {
       run,
       with: (bindGroup) => createExecutor([...additionalBindGroups, bindGroup]),
       destroy,
       sdfOutput: sdfTexture,
       colorOutput: colorTexture,
+      initSync: () => pipelines.forEach((pipeline) => pipeline.initSync()),
+      initAsync: () =>
+        Promise.all(pipelines.map((pipeline) => pipeline.initAsync())).then(() => {}),
     };
   }
 
