@@ -112,9 +112,9 @@ export class TgpuBufferShorthandImpl<
 
   readonly [$internal] = true;
   readonly [$getNameForward]: object;
+  readonly resourceType: TType;
   readonly buffer: TgpuBuffer<TData> &
     (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag);
-  readonly resourceType: TType;
 
   constructor(
     usage: TType,
@@ -190,7 +190,7 @@ export class TgpuBufferShorthandImpl<
       return mode.buffers.get(this.buffer) as InferGPU<TData>;
     }
 
-    return assertExhaustive(mode, 'bufferUsage.ts#TgpuFixedBufferImpl/$');
+    return assertExhaustive(mode, 'bufferShorthand.ts#TgpuBufferShorthandImpl/$');
   }
 
   set $(value: InferGPU<TData>) {
@@ -210,7 +210,7 @@ export class TgpuBufferShorthandImpl<
     if (mode.type === 'codegen') {
       // The WGSL generator handles buffer assignment, and does not defer to
       // whatever's being assigned to generate the WGSL.
-      throw new Error('Unreachable bufferUsage.ts#TgpuFixedBufferImpl/$');
+      throw new Error('Unreachable bufferShorthand.ts#TgpuBufferShorthandImpl/$');
     }
 
     if (mode.type === 'simulate') {
@@ -218,7 +218,7 @@ export class TgpuBufferShorthandImpl<
       return;
     }
 
-    assertExhaustive(mode, 'bufferUsage.ts#TgpuFixedBufferImpl/$');
+    assertExhaustive(mode, 'bufferShorthand.ts#TgpuBufferShorthandImpl/$');
   }
 
   get value(): InferGPU<TData> {
