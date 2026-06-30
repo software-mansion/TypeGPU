@@ -16,7 +16,7 @@ const boolCast = callableSchema({
     }
     return !!v;
   },
-  codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(bool, args),
+  codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(bool, v ? [v] : []),
 });
 
 /**
@@ -65,7 +65,7 @@ const u32Cast = callableSchema({
     // Integer input: treat as bit reinterpretation (i32 -> u32)
     return (v & 0xffffffff) >>> 0;
   },
-  codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(u32, args),
+  codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(u32, v ? [v] : []),
 });
 
 /**
@@ -105,7 +105,7 @@ const i32Cast = callableSchema({
     }
     return v | 0;
   },
-  codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(i32, args),
+  codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(i32, v ? [v] : []),
 });
 
 export const u16: U16 = {
@@ -148,7 +148,7 @@ const f32Cast = callableSchema({
     }
     return Math.fround(v);
   },
-  codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(f32, args),
+  codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(f32, v ? [v] : []),
 });
 
 /**
@@ -275,7 +275,7 @@ const f16Cast = callableSchema({
     return roundToF16(v);
   },
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
-  codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(f16, args),
+  codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(f16, v ? [v] : []),
 });
 
 /**

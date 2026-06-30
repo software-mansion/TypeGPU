@@ -179,6 +179,10 @@ export function buildWriter(
     }
 
     if (wgsl.isWgslArray(node) || isDisarray(node)) {
+      if (node.elementCount === 0) {
+        throw new Error('Cannot write using a runtime-sized schema.');
+      }
+
       const elementSize = roundUp(sizeOf(node.elementType), alignmentOf(node));
       const totalSize = node.elementCount * elementSize;
 

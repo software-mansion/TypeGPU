@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import tgpu, { d } from '../../src/index.js';
+import tgpu, { d } from 'typegpu';
 
 describe('rawCodeSnippet', () => {
   it('should throw a descriptive error when called in JS', () => {
@@ -122,6 +122,18 @@ describe('rawCodeSnippet', () => {
         return (myBuffer + myBuffer);
       }"
     `);
+  });
+
+  it("throws when '$uses' is called multiple times", ({ root }) => {
+    const myBuffer = root.createUniform(d.u32, 7);
+
+    const rawSnippet = tgpu['~unstable']
+      .rawCodeSnippet('myBuffer', d.u32, 'uniform')
+      .$uses({ myBuffer });
+
+    expect(() => rawSnippet.$uses({ myBuffer })).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.]`,
+    );
   });
 
   it('should be accessed transitively through a slot', () => {

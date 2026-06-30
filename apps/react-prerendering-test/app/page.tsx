@@ -1,12 +1,16 @@
-'use client';
-
-import dynamic from 'next/dynamic';
+import { Root, ClientOnly } from '@typegpu/react';
 import Shader from '../components/Shader.tsx';
 
-const ShaderNoSSR = dynamic(() => import('../components/Shader.tsx'), {
-  ssr: false,
-});
-
 export default function Page() {
-  return process.env.NEXT_PUBLIC_DISABLE_SSR ? <ShaderNoSSR /> : <Shader />;
+  return (
+    <Root>
+      <ClientOnly
+        fallback={
+          <p style={{ backgroundColor: 'red', color: 'white', padding: '1rem' }}>Loading...</p>
+        }
+      >
+        <Shader />
+      </ClientOnly>
+    </Root>
+  );
 }

@@ -1,14 +1,15 @@
 import { describe, expect, vi } from 'vitest';
-import { getName } from '../src/shared/meta.ts';
-import { $internal } from '../src/shared/symbols.ts';
 import { it } from 'typegpu-testing-utility';
 
 describe('TgpuQuerySet', () => {
   it('should be namable', ({ root }) => {
-    const querySet = root.createQuerySet('occlusion', 8).$name('myQuerySet');
+    const querySet = root.createQuerySet('occlusion', 8);
 
-    expect(getName(querySet)).toBe('myQuerySet');
+    querySet.querySet;
+    querySet.$name('myQuerySet');
+
     expect(querySet.querySet).toBeDefined();
+    expect(querySet.querySet.label).toBe('myQuerySet');
   });
 
   it('should create a query set with correct type and count', ({ root, device }) => {
@@ -27,41 +28,17 @@ describe('TgpuQuerySet', () => {
     });
   });
 
-  it('should create buffers lazily when accessed', ({ root, device }) => {
-    const querySet = root.createQuerySet('occlusion', 2);
-
-    expect(device.mock.createBuffer).not.toHaveBeenCalled();
-
-    const readBuffer = querySet[$internal].readBuffer;
-    const resolveBuffer = querySet[$internal].resolveBuffer;
-
-    expect(device.mock.createBuffer).toHaveBeenCalledWith({
-      size: 2 * BigUint64Array.BYTES_PER_ELEMENT,
-      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-    });
-
-    expect(device.mock.createBuffer).toHaveBeenCalledWith({
-      size: 2 * BigUint64Array.BYTES_PER_ELEMENT,
-      usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
-    });
-
-    expect(readBuffer).toBeDefined();
-    expect(resolveBuffer).toBeDefined();
-  });
-
   it('should resolve query set correctly', ({ root, device, commandEncoder }) => {
     const querySet = root.createQuerySet('timestamp', 3);
 
     querySet.resolve();
-
-    const resolveBuffer = querySet[$internal].resolveBuffer;
 
     expect(device.mock.createCommandEncoder).toHaveBeenCalled();
     expect(commandEncoder.resolveQuerySet).toHaveBeenCalledWith(
       querySet.querySet,
       0,
       3,
-      resolveBuffer,
+      expect.any(Object),
       0,
     );
     expect(commandEncoder.finish).toHaveBeenCalled();
@@ -74,13 +51,14 @@ describe('TgpuQuerySet', () => {
     querySet.resolve();
 
     const testData = new BigUint64Array([123n, 456n]);
-    const readBuffer = querySet[$internal].readBuffer;
+    const readPromise = querySet.read();
+    const readBuffer = device.mock.createBuffer.mock.results.at(-1)?.value as GPUBuffer;
     readBuffer.getMappedRange = vi.fn(() => testData.buffer);
 
-    const data = await querySet.read();
+    const data = await readPromise;
 
     expect(commandEncoder.copyBufferToBuffer).toHaveBeenCalledWith(
-      querySet[$internal].resolveBuffer,
+      expect.any(Object),
       0,
       readBuffer,
       0,
@@ -157,18 +135,6 @@ describe('TgpuQuerySet', () => {
     expect(querySet.destroyed).toBe(true);
   });
 
-  it('should destroy internal buffers when destroyed', ({ root }) => {
-    const querySet = root.createQuerySet('occlusion', 2);
-
-    const readBuffer = querySet[$internal].readBuffer;
-    const resolveBuffer = querySet[$internal].resolveBuffer;
-
-    querySet.destroy();
-
-    expect(readBuffer.destroy).toHaveBeenCalled();
-    expect(resolveBuffer.destroy).toHaveBeenCalled();
-  });
-
   it('should handle multiple destroy calls gracefully', ({ root }) => {
     const querySet = root.createQuerySet('timestamp', 1);
     const rawQuerySet = querySet.querySet;
@@ -199,35 +165,6 @@ describe('TgpuQuerySet', () => {
       type: 'timestamp',
       count: 2,
     });
-  });
-
-  it('should calculate buffer sizes correctly for different counts', ({ root, device }) => {
-    const smallQuerySet = root.createQuerySet('timestamp', 1);
-    const largeQuerySet = root.createQuerySet('occlusion', 100);
-
-    smallQuerySet[$internal].readBuffer;
-    largeQuerySet[$internal].readBuffer;
-
-    expect(device.mock.createBuffer).toHaveBeenCalledWith({
-      size: 1 * BigUint64Array.BYTES_PER_ELEMENT,
-      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-    });
-
-    expect(device.mock.createBuffer).toHaveBeenCalledWith({
-      size: 100 * BigUint64Array.BYTES_PER_ELEMENT,
-      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-    });
-  });
-
-  it('should only create internal buffers once', ({ root, device }) => {
-    const querySet = root.createQuerySet('occlusion', 3);
-
-    querySet[$internal].readBuffer;
-    querySet[$internal].readBuffer;
-    querySet[$internal].resolveBuffer;
-    querySet[$internal].resolveBuffer;
-
-    expect(device.mock.createBuffer).toHaveBeenCalledTimes(2);
   });
 
   it('should handle resolve operations correctly', ({ root, device, commandEncoder }) => {

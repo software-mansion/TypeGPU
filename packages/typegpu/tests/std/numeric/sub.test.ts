@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import type { m3x3f, v2f, v3f, v4f } from '../../../src/data/index.ts';
+import type { m3x3f, v2f, v3f, v4f } from 'typegpu/data';
 import {
   mat2x2f,
   mat3x3f,
@@ -13,9 +13,8 @@ import {
   vec4f,
   vec4i,
   vec4u,
-} from '../../../src/data/index.ts';
-
-import { sub } from '../../../src/std/index.ts';
+} from 'typegpu/data';
+import { sub } from 'typegpu/std';
 
 describe('sub', () => {
   it('computes difference of two vec2f', () => {
