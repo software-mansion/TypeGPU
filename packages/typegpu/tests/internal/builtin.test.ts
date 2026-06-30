@@ -4,6 +4,7 @@ import type { OmitBuiltins } from '../../src/builtin.ts';
 
 describe('builtin', () => {
   it('can be omitted from a record type', () => {
+    throw new Error('aaa');
     const x = {
       a: d.u32,
       b: d.builtin.localInvocationId,
