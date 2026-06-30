@@ -4,7 +4,10 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "exports": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./config": "./src/config.ts"
+  },
   "scripts": {
     "test:types": "pnpm tsc --p ./tsconfig.json --noEmit"
   },
