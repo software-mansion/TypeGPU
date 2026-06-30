@@ -1,9 +1,7 @@
-import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import tgpu, { d } from '../src/index.js';
-
-import { readData, writeData } from '../src/data/dataIO.ts';
-import { isCloseTo } from '../src/std/index.ts';
+import tgpu, { d } from 'typegpu';
+import { readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+import { isCloseTo } from 'typegpu/std';
 
 describe('mat2x2f', () => {
   it('creates a 2x2 matrix with zeros', () => {
@@ -34,8 +32,8 @@ describe('mat2x2f', () => {
 
     const buffer = new ArrayBuffer(d.sizeOf(d.mat2x2f));
 
-    writeData(new BufferWriter(buffer), d.mat2x2f, identity);
-    expect(readData(new BufferReader(buffer), d.mat2x2f)).toStrictEqual(identity);
+    writeToArrayBuffer(buffer, d.mat2x2f, identity);
+    expect(readFromArrayBuffer(buffer, d.mat2x2f)).toStrictEqual(identity);
   });
 
   it('encodes a matrix properly', () => {
@@ -46,8 +44,8 @@ describe('mat2x2f', () => {
 
     const buffer = new ArrayBuffer(d.sizeOf(d.mat2x2f));
 
-    writeData(new BufferWriter(buffer), d.mat2x2f, mat);
-    expect(readData(new BufferReader(buffer), d.mat2x2f)).toStrictEqual(mat);
+    writeToArrayBuffer(buffer, d.mat2x2f, mat);
+    expect(readFromArrayBuffer(buffer, d.mat2x2f)).toStrictEqual(mat);
   });
 
   it('can be indexed into', () => {
@@ -135,8 +133,8 @@ describe('mat3x3f', () => {
 
     const buffer = new ArrayBuffer(d.sizeOf(d.mat3x3f));
 
-    writeData(new BufferWriter(buffer), d.mat3x3f, identity);
-    expect(readData(new BufferReader(buffer), d.mat3x3f)).toStrictEqual(identity);
+    writeToArrayBuffer(buffer, d.mat3x3f, identity);
+    expect(readFromArrayBuffer(buffer, d.mat3x3f)).toStrictEqual(identity);
   });
 
   it('encodes a matrix properly', () => {
@@ -148,8 +146,8 @@ describe('mat3x3f', () => {
 
     const buffer = new ArrayBuffer(d.sizeOf(d.mat3x3f));
 
-    writeData(new BufferWriter(buffer), d.mat3x3f, mat);
-    expect(readData(new BufferReader(buffer), d.mat3x3f)).toStrictEqual(mat);
+    writeToArrayBuffer(buffer, d.mat3x3f, mat);
+    expect(readFromArrayBuffer(buffer, d.mat3x3f)).toStrictEqual(mat);
   });
 
   it('can be indexed into', () => {
@@ -266,8 +264,8 @@ describe('mat4x4f', () => {
 
     const buffer = new ArrayBuffer(d.sizeOf(d.mat4x4f));
 
-    writeData(new BufferWriter(buffer), d.mat4x4f, identity);
-    expect(readData(new BufferReader(buffer), d.mat4x4f)).toStrictEqual(identity);
+    writeToArrayBuffer(buffer, d.mat4x4f, identity);
+    expect(readFromArrayBuffer(buffer, d.mat4x4f)).toStrictEqual(identity);
   });
 
   it('encodes a matrix properly', () => {
@@ -280,8 +278,8 @@ describe('mat4x4f', () => {
 
     const buffer = new ArrayBuffer(d.sizeOf(d.mat4x4f));
 
-    writeData(new BufferWriter(buffer), d.mat4x4f, mat);
-    expect(readData(new BufferReader(buffer), d.mat4x4f)).toStrictEqual(mat);
+    writeToArrayBuffer(buffer, d.mat4x4f, mat);
+    expect(readFromArrayBuffer(buffer, d.mat4x4f)).toStrictEqual(mat);
   });
 
   it('can be indexed into', () => {

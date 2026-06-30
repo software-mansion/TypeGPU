@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import * as d from '../src/data/index.ts';
+import * as d from 'typegpu/data';
 import { it } from 'typegpu-testing-utility';
 import type {
   StorageFlag,
@@ -8,7 +8,7 @@ import type {
   TgpuReadonly,
   TgpuUniform,
   UniformFlag,
-} from '../src/index.js';
+} from 'typegpu';
 import { attest } from '@ark/attest';
 
 describe('root.createMutable', () => {
