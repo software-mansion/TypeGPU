@@ -33,10 +33,11 @@ describe('resolve', () => {
   });
 
   it('can resolve a render pipeline', ({ root }) => {
-    const pipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { format: 'rgba8unorm' })
-      .createPipeline();
+    const pipeline = root.createRenderPipeline({
+      vertex: vertexFn,
+      fragment: fragmentFn,
+      targets: { format: 'rgba8unorm' },
+    });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct Boid {
@@ -65,7 +66,7 @@ describe('resolve', () => {
   });
 
   it('can resolve a compute pipeline', ({ root }) => {
-    const pipeline = root.withCompute(computeFn).createPipeline();
+    const pipeline = root.createComputePipeline({ compute: computeFn });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct Boid {
@@ -110,12 +111,13 @@ describe('resolve', () => {
   });
 
   it('throws when resolving multiple pipelines', ({ root }) => {
-    const renderPipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { format: 'rgba8unorm' })
-      .createPipeline();
+    const renderPipeline = root.createRenderPipeline({
+      vertex: vertexFn,
+      fragment: fragmentFn,
+      targets: { format: 'rgba8unorm' },
+    });
 
-    const computePipeline = root.withCompute(computeFn).createPipeline();
+    const computePipeline = root.createComputePipeline({ compute: computeFn });
 
     expect(() =>
       tgpu.resolve([renderPipeline, computePipeline]),

@@ -739,7 +739,11 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
     });
 
     const createRenderPipeline = (root: TgpuRoot) =>
-      root.withVertex(vertexFn).withFragment(fragmentFn, { format: 'rgba8unorm' }).createPipeline();
+      root.createRenderPipeline({
+        vertex: vertexFn,
+        fragment: fragmentFn,
+        targets: { format: 'rgba8unorm' },
+      });
 
     it('works correctly when using either a texture or its view as a render target', ({ root }) => {
       const texture = root

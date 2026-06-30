@@ -44,9 +44,6 @@ export type {
   ValidateUniformSchema,
   Withable,
   WithBinding,
-  WithCompute,
-  WithFragment,
-  WithVertex,
 } from './core/root/rootTypes.ts';
 export type { Storage, StorageFlag } from './extension.ts';
 export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
