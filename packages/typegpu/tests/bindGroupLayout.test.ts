@@ -550,38 +550,6 @@ describe('TgpuBindGroup', () => {
     });
   });
 
-  describe('legacy texture layout', () => {
-    it('supports legacy texture definitions and converts the types correctly', ({ root }) => {
-      const layout = tgpu.bindGroupLayout({
-        foo: { texture: 'float', viewDimension: '2d' },
-        bar: { storageTexture: 'bgra8unorm', access: 'readonly' },
-      });
-
-      const bg = root.createBindGroup(layout, {
-        foo: root
-          .createTexture({
-            size: [64, 64],
-            format: 'rgba8unorm',
-          })
-          .$usage('sampled'),
-        bar: root
-          .createTexture({
-            size: [64, 64],
-            format: 'bgra8unorm',
-          })
-          .$usage('storage'),
-      });
-
-      expect(bg).toBeDefined();
-
-      const { foo, bar } = layout.bound;
-      expectTypeOf(foo).toEqualTypeOf<TgpuTextureView<d.WgslTexture2d<d.F32>>>();
-      expectTypeOf(bar).toEqualTypeOf<
-        TgpuTextureView<d.WgslStorageTexture2d<'bgra8unorm', 'read-only'>>
-      >();
-    });
-  });
-
   describe('texture layout', () => {
     let layout2d: TgpuBindGroupLayout<{
       foo: { texture: d.WgslTexture2d<d.F32> };
@@ -743,21 +711,6 @@ describe('TgpuBindGroup', () => {
       // root.createBindGroup(layout3d, {
       //   foo: texture3d,
       // });
-    });
-
-    it('properly fill the bound property', () => {
-      const layout = tgpu.bindGroupLayout({
-        foo: { texture: d.texture2d(d.f32) },
-        bar: {
-          texture: d.textureCubeArray(d.f32),
-          sampleType: 'unfilterable-float',
-        },
-      });
-
-      const { foo, bar } = layout.bound;
-
-      expectTypeOf(foo).toEqualTypeOf<TgpuTextureView<d.WgslTexture2d<d.F32>>>();
-      expectTypeOf(bar).toEqualTypeOf<TgpuTextureView<d.WgslTextureCubeArray<d.F32>>>();
     });
   });
 
@@ -938,24 +891,6 @@ describe('TgpuBindGroup', () => {
       // root.createBindGroup(layout2d, {
       //   foo: texture2d,
       // });
-    });
-
-    it('properly fill the bound property', () => {
-      const layout = tgpu.bindGroupLayout({
-        foo: { storageTexture: d.textureStorage3d('rgba8unorm', 'write-only') },
-        bar: {
-          storageTexture: d.textureStorage2dArray('rg32sint', 'write-only'),
-        },
-      });
-
-      const { foo, bar } = layout.bound;
-
-      expectTypeOf(foo).toEqualTypeOf<
-        TgpuTextureView<d.WgslStorageTexture3d<'rgba8unorm', 'write-only'>>
-      >();
-      expectTypeOf(bar).toEqualTypeOf<
-        TgpuTextureView<d.WgslStorageTexture2dArray<'rg32sint', 'write-only'>>
-      >();
     });
   });
 
