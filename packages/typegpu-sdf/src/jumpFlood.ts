@@ -256,7 +256,15 @@ export type Executor = {
   /** Clean up GPU resources created by this executor. */
   destroy(): void;
 
+  /**
+   * Eagerly initializes every pipeline by calling `initSync` on each.
+   * Calling this is optional.
+   */
   initSync(): void;
+  /**
+   * Eagerly initializes every pipeline by calling `initAsync` on each.
+   * Calling this is optional.
+   */
   initAsync(): Promise<void>;
 };
 
