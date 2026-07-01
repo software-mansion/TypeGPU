@@ -17,7 +17,7 @@ import tgpu, {
   type TgpuRenderPipeline,
   type TgpuVertexFn,
 } from 'typegpu';
-import { makeDereferencable, makeResolvable } from 'typegpu/~internal';
+import { makeDereferencable, makeResolvable, snip } from 'typegpu/~internal';
 
 import { fragmentGlslGenerator, vertexGlslGenerator } from './glslGenerator.ts';
 
@@ -326,13 +326,18 @@ makeDereferencable(
     resolve(ctx) {
       const glslType = ctx.resolve(this.dataType).value;
       ctx.addDeclaration(`uniform ${glslType} ${this.glslName};`);
-      return { value: this.glslName, dataType: this.dataType, origin: 'uniform' };
+      return snip(this.glslName, this.dataType, 'uniform', /* possibleSideEffects */ false);
     },
     asString() {
       return `uniform:${this.glslName}`;
     },
   }),
   {
+    derefInJS() {
+      throw new Error(
+        'Cannot read WebGL uniform outside of shader code. Use `.write()` to update it.',
+      );
+    },
     getDataTypeAndOrigin(): [dataType: d.BaseData, origin: 'uniform'] {
       return [this.dataType, 'uniform'];
     },
