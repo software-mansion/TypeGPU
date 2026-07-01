@@ -96,31 +96,31 @@ ${exampleSource.htmlFile.content}
     "@tailwindcss/vite": "^4.1.18"
   },
   "dependencies": ${JSON.stringify(
-          {
-            typegpu: `^${typegpuPackageJson.version}`,
-            'unplugin-typegpu': `^${unpluginPackageJson.version}`,
-            'wgpu-matrix': pnpmWorkspaceYaml.catalogs.example['wgpu-matrix'],
-            '@loaders.gl/core': typegpuDocsPackageJson.dependencies['@loaders.gl/core'],
-            '@loaders.gl/obj': typegpuDocsPackageJson.dependencies['@loaders.gl/obj'],
-            '@loaders.gl/gltf': typegpuDocsPackageJson.dependencies['@loaders.gl/gltf'],
-            'typed-binary': typegpuDocsPackageJson.dependencies['typed-binary'],
-            three: pnpmWorkspaceYaml.catalogs.example.three,
-            '@typegpu/noise': typegpuNoisePackageJson.version,
-            '@typegpu/color': typegpuColorPackageJson.version,
-            '@typegpu/gl': typegpuGlPackageJson.version,
-            '@typegpu/sdf': typegpuSdfPackageJson.version,
-            '@typegpu/three': typegpuThreePackageJson.version,
-            ...(example.usedApis.includes('@typegpu/react')
-              ? {
-                '@typegpu/react': typegpuReactPackageJson.version,
-                react: '^19.2.0',
-                'react-dom': '^19.2.0',
-              }
-              : {}),
-          },
-          undefined,
-          2,
-        ).replaceAll('\n', '\n  ')}
+    {
+      typegpu: `^${typegpuPackageJson.version}`,
+      'unplugin-typegpu': `^${unpluginPackageJson.version}`,
+      'wgpu-matrix': pnpmWorkspaceYaml.catalogs.example['wgpu-matrix'],
+      '@loaders.gl/core': typegpuDocsPackageJson.dependencies['@loaders.gl/core'],
+      '@loaders.gl/obj': typegpuDocsPackageJson.dependencies['@loaders.gl/obj'],
+      '@loaders.gl/gltf': typegpuDocsPackageJson.dependencies['@loaders.gl/gltf'],
+      'typed-binary': typegpuDocsPackageJson.dependencies['typed-binary'],
+      three: pnpmWorkspaceYaml.catalogs.example.three,
+      '@typegpu/noise': typegpuNoisePackageJson.version,
+      '@typegpu/color': typegpuColorPackageJson.version,
+      '@typegpu/gl': typegpuGlPackageJson.version,
+      '@typegpu/sdf': typegpuSdfPackageJson.version,
+      '@typegpu/three': typegpuThreePackageJson.version,
+      ...(example.usedApis.includes('@typegpu/react')
+        ? {
+            '@typegpu/react': typegpuReactPackageJson.version,
+            react: '^19.2.0',
+            'react-dom': '^19.2.0',
+          }
+        : {}),
+    },
+    undefined,
+    2,
+  ).replaceAll('\n', '\n  ')}
 }`,
         'vite.config.js': `\
 import { defineConfig } from 'vite';
