@@ -89,9 +89,6 @@ export function replaceExternalsInWgsl(
     return wgsl;
   }
 
-  // Avoid resolving the same item multiple times during one call.
-  const cache: Map<unknown, string> = new Map();
-
   return wgsl.replaceAll(boundedPropChain, (match) => {
     const chain = match.split('.');
 
@@ -126,12 +123,6 @@ export function replaceExternalsInWgsl(
       }
     }
 
-    let resolved = cache.get(currentItem);
-    if (resolved === undefined) {
-      resolved = ctx.resolve(currentItem).value;
-      cache.set(currentItem, resolved);
-    }
-
-    return resolved + suffix;
+    return ctx.resolve(currentItem).value + suffix;
   });
 }
