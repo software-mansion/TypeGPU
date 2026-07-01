@@ -366,6 +366,25 @@ struct fragment_Output {
             }"
     `);
   });
+
+  it('allows for re-resolves of slotted functions', () => {
+    const slot = tgpu.slot<number>(1);
+    const helper = tgpu.fn([], d.u32)`() { return slot.$ }`.$uses({ slot }).with(slot, 2);
+
+    const main = tgpu.fn([])`() {
+  let x = helper();
+  let y = helper();
+}`.$uses({ helper });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn helper() -> u32 { return 2.$ }
+
+      fn main() {
+        let x = helper();
+        let y = helper();
+      }"
+    `);
+  });
 });
 
 describe('tgpu.fn with raw wgsl and missing types', () => {
