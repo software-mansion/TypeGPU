@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec2h, vec3f, vec3h, vec4f, vec4h } from '../../../src/data/index.ts';
-import { isCloseTo } from '../../../src/std/index.ts';
-import { exp2 } from '../../../src/std/numeric.ts';
+import { vec2f, vec2h, vec3f, vec3h, vec4f, vec4h } from 'typegpu/data';
+import { isCloseTo } from 'typegpu/std';
+import { exp2 } from 'typegpu/std';
 
 describe('exp2', () => {
   it('computes exp2 of a number', () => {

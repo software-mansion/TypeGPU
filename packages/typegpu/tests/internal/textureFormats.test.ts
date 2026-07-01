@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { getTextureFormatInfo } from '../src/core/texture/textureFormats.ts';
-import { f32, i32, u32 } from '../src/data/numeric.ts';
-import { vec4f, vec4i, vec4u } from '../src/data/vector.ts';
+import { getTextureFormatInfo } from '../../src/core/texture/textureFormats.ts';
+import { f32, i32, u32 } from '../../src/data/numeric.ts';
+import { vec4f, vec4i, vec4u } from '../../src/data/vector.ts';
 
 describe('getTextureFormatInfo', () => {
   describe('8-bit formats', () => {

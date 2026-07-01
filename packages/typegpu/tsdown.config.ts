@@ -6,6 +6,7 @@ const entry = [
   'src/data/index.ts',
   'src/std/index.ts',
   'src/common/index.ts',
+  'src/internal.ts',
 ];
 
 export default defineConfig({

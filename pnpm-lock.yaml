@@ -56,7 +56,7 @@ overrides:
   vite: 8.0.5
   '@babel/types': ^7.29.0
   '@types/node': ^24.10.0
-  typescript: npm:tsover@^5.9.11
+  typescript: npm:tsover@^6.0.2
   three: ^0.181.0
   '@typescript-eslint/utils': ^8.57.2
 
@@ -113,8 +113,11 @@ importers:
         specifier: ^0.0.66
         version: 0.0.66
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
+      typegpu-testing-utility:
+        specifier: workspace:*
+        version: link:packages/typegpu-testing-utility
       unplugin-typegpu:
         specifier: workspace:*
         version: link:packages/unplugin-typegpu
@@ -134,8 +137,8 @@ importers:
         specifier: 'workspace:'
         version: link:../../packages/typegpu
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       unplugin-typegpu:
         specifier: 'workspace:'
         version: link:../../packages/unplugin-typegpu
@@ -187,8 +190,8 @@ importers:
         specifier: catalog:types
         version: 0.1.69
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../../packages/unplugin-typegpu
@@ -226,16 +229,16 @@ importers:
         version: 0.25.12
       ts-loader:
         specifier: ^9.5.4
-        version: 9.5.4(tsover@5.9.11)(webpack@5.104.1)
+        version: 9.5.4(tsover@6.0.2)(webpack@5.104.1)
       tsdown:
         specifier: ^0.15.6
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
       tsx:
         specifier: ^4.19.2
         version: 4.20.6
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       webpack:
         specifier: ^5.102.0
         version: 5.104.1(esbuild@0.25.12)(webpack-cli@6.0.1)
@@ -247,7 +250,7 @@ importers:
     dependencies:
       '@astrojs/check':
         specifier: ^0.9.7
-        version: 0.9.7(prettier@3.8.0)(tsover@5.9.11)
+        version: 0.9.7(prettier@3.8.0)(tsover@6.0.2)
       '@astrojs/react':
         specifier: ^5.0.0
         version: 5.0.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(esbuild@0.27.5)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
@@ -256,10 +259,10 @@ importers:
         version: 3.7.1
       '@astrojs/starlight':
         specifier: ^0.38.1
-        version: 0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3))
+        version: 0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3))
       '@astrojs/starlight-tailwind':
         specifier: ^5.0.0
-        version: 5.0.0(@astrojs/starlight@0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3)))(tailwindcss@4.1.11)
+        version: 5.0.0(@astrojs/starlight@0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3)))(tailwindcss@4.1.11)
       '@babel/standalone':
         specifier: ^7.28.6
         version: 7.28.6
@@ -328,13 +331,13 @@ importers:
         version: 2.1.28
       astro:
         specifier: ^6.0.8
-        version: 6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3)
+        version: 6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3)
       classnames:
         specifier: ^2.5.1
         version: 2.5.1
       expressive-code-twoslash:
-        specifier: ^0.5.3
-        version: 0.5.3(@expressive-code/core@0.41.7)(expressive-code@0.41.7)(tsover@5.9.11)
+        specifier: ^0.6.1
+        version: 0.6.1(@expressive-code/core@0.41.7)(eslint@9.39.2(jiti@2.6.1))(expressive-code@0.41.7)(tsover@6.0.2)
       fuse.js:
         specifier: catalog:frontend
         version: 7.1.0
@@ -385,10 +388,10 @@ importers:
         version: 0.34.2
       starlight-blog:
         specifier: ^0.26.1
-        version: 0.26.1(@astrojs/starlight@0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3)))(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3))
+        version: 0.26.1(@astrojs/starlight@0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3)))(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3))
       starlight-typedoc:
         specifier: ^0.21.5
-        version: 0.21.5(@astrojs/starlight@0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3)))(typedoc-plugin-markdown@4.10.0(typedoc@0.28.17(tsover@5.9.11)))(typedoc@0.28.17(tsover@5.9.11))
+        version: 0.21.5(@astrojs/starlight@0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3)))(typedoc-plugin-markdown@4.10.0(typedoc@0.28.17(tsover@6.0.2)))(typedoc@0.28.17(tsover@6.0.2))
       three:
         specifier: ^0.181.0
         version: 0.181.2
@@ -403,16 +406,16 @@ importers:
         version: 4.3.3
       typedoc:
         specifier: ^0.28.17
-        version: 0.28.17(tsover@5.9.11)
+        version: 0.28.17(tsover@6.0.2)
       typedoc-plugin-markdown:
         specifier: 4.10.0
-        version: 4.10.0(typedoc@0.28.17(tsover@5.9.11))
+        version: 4.10.0(typedoc@0.28.17(tsover@6.0.2))
       typegpu:
         specifier: workspace:*
         version: link:../../packages/typegpu
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../../packages/unplugin-typegpu
@@ -452,7 +455,7 @@ importers:
         version: 0.1.69
       astro-vtbot:
         specifier: ^2.1.10
-        version: 2.1.10(prettier@3.8.0)(tsover@5.9.11)
+        version: 2.1.10(prettier@3.8.0)(tsover@6.0.2)
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.21(postcss@8.5.8)
@@ -485,26 +488,26 @@ importers:
     dependencies:
       '@typescript-eslint/utils':
         specifier: ^8.57.2
-        version: 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@5.9.11)
+        version: 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@6.0.2)
     devDependencies:
       '@types/node':
         specifier: ^24.10.0
         version: 24.10.0
       '@typescript-eslint/rule-tester':
         specifier: ^8.57.2
-        version: 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@5.9.11)
+        version: 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@6.0.2)
       eslint:
         specifier: ^9.39.2
         version: 9.39.2(jiti@2.6.1)
       eslint-doc-generator:
         specifier: ^3.3.2
-        version: 3.3.2(eslint@9.39.2(jiti@2.6.1))(prettier@3.8.0)(tsover@5.9.11)
+        version: 3.3.2(eslint@9.39.2(jiti@2.6.1))(prettier@3.8.0)(tsover@6.0.2)
       tsdown:
         specifier: ^0.20.3
-        version: 0.20.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)
+        version: 0.20.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       vitest:
         specifier: ^4.0.17
         version: 4.0.18(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(@vitest/browser-preview@4.1.2(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))(vitest@4.1.2))(esbuild@0.27.5)(jiti@2.6.1)(jsdom@27.0.0(postcss@8.5.8))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
@@ -513,20 +516,20 @@ importers:
     dependencies:
       '@typescript-eslint/utils':
         specifier: ^8.57.2
-        version: 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@5.9.11)
+        version: 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@6.0.2)
     devDependencies:
       '@types/node':
         specifier: ^24.10.0
         version: 24.10.0
       '@typescript-eslint/rule-tester':
         specifier: ^8.57.2
-        version: 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@5.9.11)
+        version: 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@6.0.2)
       eslint:
         specifier: ^9.39.2
         version: 9.39.2(jiti@2.6.1)
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       vitest:
         specifier: catalog:test
         version: 4.1.2(@types/node@24.10.0)(@vitest/browser-preview@4.1.2)(jsdom@27.0.0(postcss@8.5.8))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))
@@ -591,10 +594,10 @@ importers:
         version: link:../tgpu-dev-cli
       tsdown:
         specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
     publishDirectory: dist
 
   packages/tinyest-for-wgsl:
@@ -617,10 +620,10 @@ importers:
         version: 8.14.1
       tsdown:
         specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
     publishDirectory: dist
 
   packages/typegpu:
@@ -637,7 +640,7 @@ importers:
     devDependencies:
       '@ark/attest':
         specifier: ^0.56.0
-        version: 0.56.0(tsover@5.9.11)
+        version: 0.56.0(tsover@6.0.2)
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
         version: link:../tgpu-dev-cli
@@ -658,13 +661,13 @@ importers:
         version: 27.0.0(postcss@8.5.8)
       tsdown:
         specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
       typegpu-testing-utility:
         specifier: workspace:*
         version: link:../typegpu-testing-utility
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
@@ -705,10 +708,10 @@ importers:
         version: 24.10.0
       tsdown:
         specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
 
   packages/typegpu-color:
     devDependencies:
@@ -722,11 +725,11 @@ importers:
         specifier: workspace:*
         version: link:../typegpu
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       unbuild:
         specifier: catalog:build
-        version: 3.5.0(tsover@5.9.11)
+        version: 3.5.0(tsover@6.0.2)
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
@@ -744,11 +747,11 @@ importers:
         specifier: workspace:*
         version: link:../typegpu
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       unbuild:
         specifier: catalog:build
-        version: 3.5.0(tsover@5.9.11)
+        version: 3.5.0(tsover@6.0.2)
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
@@ -767,7 +770,7 @@ importers:
         version: link:../tinyest
       tsdown:
         specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -775,11 +778,11 @@ importers:
         specifier: workspace:*
         version: link:../typegpu-testing-utility
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       unbuild:
         specifier: catalog:build
-        version: 3.5.0(tsover@5.9.11)
+        version: 3.5.0(tsover@6.0.2)
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
@@ -797,11 +800,11 @@ importers:
         specifier: workspace:*
         version: link:../typegpu
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       unbuild:
         specifier: catalog:build
-        version: 3.5.0(tsover@5.9.11)
+        version: 3.5.0(tsover@6.0.2)
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
@@ -817,13 +820,13 @@ importers:
         version: 0.1.69
       tsdown:
         specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
@@ -870,7 +873,7 @@ importers:
         version: 0.84.1(@babel/core@7.29.0)(@types/react@19.1.8)(react@19.2.6)
       tsdown:
         specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
@@ -878,8 +881,8 @@ importers:
         specifier: workspace:^
         version: link:../typegpu-testing-utility
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
@@ -895,13 +898,13 @@ importers:
         version: 0.1.69
       tsdown:
         specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
@@ -919,11 +922,11 @@ importers:
         specifier: workspace:*
         version: link:../typegpu
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       unbuild:
         specifier: catalog:build
-        version: 3.5.0(tsover@5.9.11)
+        version: 3.5.0(tsover@6.0.2)
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
@@ -939,8 +942,8 @@ importers:
         specifier: ^24.10.0
         version: 24.10.0
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       vitest:
         specifier: catalog:test
         version: 4.1.2(@types/node@24.10.0)(@vitest/browser-preview@4.1.2)(jsdom@27.0.0(postcss@8.5.8))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(esbuild@0.27.5)(jiti@2.6.1)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3))
@@ -964,11 +967,11 @@ importers:
         specifier: workspace:*
         version: link:../typegpu
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
       unbuild:
         specifier: catalog:build
-        version: 3.5.0(tsover@5.9.11)
+        version: 3.5.0(tsover@6.0.2)
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
@@ -1039,10 +1042,10 @@ importers:
         version: 4.60.1
       tsdown:
         specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
+        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
       typescript:
-        specifier: npm:tsover@^5.9.11
-        version: tsover@5.9.11
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
     publishDirectory: dist
 
 packages:
@@ -1248,6 +1251,11 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
+  '@babel/parser@7.29.7':
+    resolution: {integrity: sha512-hnORnjP/1P/zFEndoeX+n+t1RwWRJiJpM/jO7FW32Kn9r5+sJB2JWOdYo4L6k78j15eCwY3Gm/7364B1EMwtNg==}
+    engines: {node: '>=6.0.0'}
+    hasBin: true
+
   '@babel/parser@8.0.0-rc.2':
     resolution: {integrity: sha512-29AhEtcq4x8Dp3T72qvUMZHx0OMXCj4Jy/TEReQa+KWLln524Cj1fWb3QFi0l/xSpptQBR6y9RNEXuxpFvwiUQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -1441,6 +1449,21 @@ packages:
   '@discoveryjs/json-ext@0.6.3':
     resolution: {integrity: sha512-4B4OijXeVNOPZlYA2oEwWOTkzyltLao+xbotHQeqN++Rv27Y6s818+n2Qkp8q+Fxhn0t/5lA5X1Mxktud8eayQ==}
     engines: {node: '>=14.17.0'}
+
+  '@ec-ts/twoslash-vue@1.0.0':
+    resolution: {integrity: sha512-3bB0/1DPPLHjS0eok2Cne7xQjCQVU5AWScEBGYTqsKuTCTukDUMxUiYI54rDPQME3OLnpysiORi0FQKLA96pAg==}
+    peerDependencies:
+      typescript: ^5.5.0
+
+  '@ec-ts/twoslash@1.0.0':
+    resolution: {integrity: sha512-Bp4MCmeDWVRkTkuytPTszan+QGUqeftiasOBadvxSfQpbXYiWsle/N0lMrG+S14bfS9iBzI8mEqdGgd3Fvr3jQ==}
+    peerDependencies:
+      typescript: ^5.5.0
+
+  '@ec-ts/vfs@1.0.0':
+    resolution: {integrity: sha512-GQYRPMp58p9ak+TOwSLB/HZ+iknFyTRjqMTdXDkitNN3h5yjHuO+yeeO+/cuXiv7dyXGLYs4HaYrFgRKImp8yg==}
+    peerDependencies:
+      typescript: ^5.5.0
 
   '@emmetio/abbreviation@2.3.3':
     resolution: {integrity: sha512-mgv58UrU3rh4YgbE/TzgLQwJ3pFsHHhCLqY20aJq+9comytTXUDNGG/SMtSeMJdkpxgXSXunBGLD8Boka3JyVA==}
@@ -4498,6 +4521,9 @@ packages:
   '@volar/language-core@2.4.27':
     resolution: {integrity: sha512-DjmjBWZ4tJKxfNC1F6HyYERNHPYS7L7OPFyCrestykNdUZMFYzI9WTyvwPcaNaHlrEUwESHYsfEw3isInncZxQ==}
 
+  '@volar/language-core@2.4.28':
+    resolution: {integrity: sha512-w4qhIJ8ZSitgLAkVay6AbcnC7gP3glYM3fYwKV3srj8m494E3xtrCv6E+bWviiK/8hs6e6t1ij1s2Endql7vzQ==}
+
   '@volar/language-server@2.4.27':
     resolution: {integrity: sha512-SymGNkErcHg8GjiG65iQN8sLkhqu1pwKhFySmxeBuYq5xFYagKBW36eiNITXQTdvT0tutI1GXcXdq/FdE/IyjA==}
 
@@ -4506,6 +4532,9 @@ packages:
 
   '@volar/source-map@2.4.27':
     resolution: {integrity: sha512-ynlcBReMgOZj2i6po+qVswtDUeeBRCTgDurjMGShbm8WYZgJ0PA4RmtebBJ0BCYol1qPv3GQF6jK7C9qoVc7lg==}
+
+  '@volar/source-map@2.4.28':
+    resolution: {integrity: sha512-yX2BDBqJkRXfKw8my8VarTyjv48QwxdJtvRgUpNE5erCsgEUdI2DsLbpa+rOQVAJYshY99szEcRDmyHbF10ggQ==}
 
   '@volar/typescript@2.4.27':
     resolution: {integrity: sha512-eWaYCcl/uAPInSK2Lze6IqVWaBu/itVqR5InXcHXFyles4zO++Mglt3oxdgj75BDcv1Knr9Y93nowS8U3wqhxg==}
@@ -4530,6 +4559,18 @@ packages:
 
   '@vtbag/utensil-drawer@1.2.14':
     resolution: {integrity: sha512-M/mABCYeWi2768jEmCEtfBGTWFG0Dczaf8XTA91WUJTML8AzJc3/s6A2xlDM9xi+ZrYgxeaOLfJVGikA6u7GuA==}
+
+  '@vue/compiler-core@3.5.38':
+    resolution: {integrity: sha512-s99aGxWYig9ErHbct27KXEGhrBYlRI6c4MwAgXErOAbX9xiW37/uMa+XUDO69zLz83dng8UUZ70CTOJrLrYrEQ==}
+
+  '@vue/compiler-dom@3.5.38':
+    resolution: {integrity: sha512-JTqp25l8aFfJYF7/KmsXZjAxJz7T+SjmTJLoXVjHtc2BrSgSiW2n9Aem/cWq1OPe68A8JL06B3eVdhlP0H4TVw==}
+
+  '@vue/language-core@3.3.5':
+    resolution: {integrity: sha512-UkKu5nhX89fg4VhlG/FOeI10G3cj/7radKT/cy9BT4Q9qJmJlSTAc/dP63Xqs29aypN4f39xUV6PsLNk/dcD6g==}
+
+  '@vue/shared@3.5.38':
+    resolution: {integrity: sha512-FTW0AFZNaK5/mOqvGBwVfUlNLU38TiQn4+DQgIFUnrBBJQ1crMJ82yeGQLV5jyKFsO8yRukpbuP7x+nRbH6aug==}
 
   '@webassemblyjs/ast@1.14.1':
     resolution: {integrity: sha512-nuBEDgQfm1ccRp/8bCQrx1frohyufl4JlbMMZ4P1wpeOfDhF6FQkxZJ1b/e+PLwr6X1Nhw6OLme5usuBWYBvuQ==}
@@ -4679,6 +4720,9 @@ packages:
 
   ajv@8.17.1:
     resolution: {integrity: sha512-B/gBuNg5SiMTrPkC+A2+cW0RszwxYmn6VYxB/inlBStS5nx6xHIt/ehKRhIMhqusl7a8LjQoZnjCs5vhwxOQ1g==}
+
+  alien-signals@3.2.1:
+    resolution: {integrity: sha512-I8FjmltrfnDFoZedi5CG8DghVYNhzb/Ijluz7tCSJH0xpd0484Kowhbb1XDYOxfJpU1p5wnM2X54dA+IfGyD1g==}
 
   anser@1.4.10:
     resolution: {integrity: sha512-hCv9AqTQ8ycjpSd3upOJd7vFwW1JaoYQ7tpham03GJ1ca8/65rqn0RpaWpItOAd6ylW9wAw6luXYPJIyPFVOww==}
@@ -5162,6 +5206,9 @@ packages:
     peerDependencies:
       postcss: ^8.0.9
 
+  css-js-gen@1.1.0:
+    resolution: {integrity: sha512-CuPSTe6EwlrDHcMFOfcO3SwVqclVKLnqSbTGGYzfFt8z2NenGeupp47Z3wx+yhQ2pdozb3R8hc+nyECBTykooQ==}
+
   css-select@5.1.0:
     resolution: {integrity: sha512-nwoRF1rvRRnnCqqY7updORDsuqKzqYJ28+oSMaJMMgOauh3fvwHqMS7EZpIPqK8GL+g9mKxF1vP/ZjSeNjEVHg==}
 
@@ -5553,6 +5600,10 @@ packages:
     resolution: {integrity: sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g==}
     engines: {node: '>=0.12'}
 
+  entities@7.0.1:
+    resolution: {integrity: sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA==}
+    engines: {node: '>=0.12'}
+
   env-paths@2.2.1:
     resolution: {integrity: sha512-+h1lkLKhZMTYjog1VEpJNG7NZJWcuc2DDk/qsqSTRRCOXiLjeQ1d1/udrUGhqMxUgAlwKNZ0cf2uqan5GLuS2A==}
     engines: {node: '>=6'}
@@ -5748,12 +5799,12 @@ packages:
   exponential-backoff@3.1.3:
     resolution: {integrity: sha512-ZgEeZXj30q+I0EN+CbSSpIyPaJ5HVQD18Z1m+u1FXbAeT94mr1zw50q4q6jiiC447Nl/YTcIYSAftiGqetwXCA==}
 
-  expressive-code-twoslash@0.5.3:
-    resolution: {integrity: sha512-BcttA3taicvhesKpQ4TvRxoDHByDr2FH6bvjc6elxC8TXVU3GVZv0wHvdcNz9xrVEUcwbDbsprqsGF7M7Yq59A==}
+  expressive-code-twoslash@0.6.1:
+    resolution: {integrity: sha512-aEeKBgqg6cF4rQPxT5BHNbRffwsA66zWkNT/Y7CcUIE8eHW6KJHPCnZrGCLxvQ5xRd+qWj7ZXq84gT2zd2ECbg==}
     peerDependencies:
-      '@expressive-code/core': '>=0.40.0'
-      expressive-code: '>=0.40.0'
-      typescript: ^5.7
+      '@expressive-code/core': ^0.41.7
+      expressive-code: ^0.41.7
+      typescript: ^5.5.0
 
   expressive-code@0.41.7:
     resolution: {integrity: sha512-2wZjC8OQ3TaVEMcBtYY4Va3lo6J+Ai9jf3d4dbhURMJcU4Pbqe6EcHe424MIZI0VHUA1bR6xdpoHYi3yxokWqA==}
@@ -6807,6 +6858,9 @@ packages:
   mdast-util-from-markdown@2.0.2:
     resolution: {integrity: sha512-uZhTV/8NBuw0WHkPTrCqDOl0zVe1BIng5ZtHoDk49ME1qqcjYmmLmOf0gELgcRMxN4w2iuIeVso5/6QymSrgmA==}
 
+  mdast-util-from-markdown@2.0.3:
+    resolution: {integrity: sha512-W4mAWTvSlKvf8L6J+VN9yLSqQ9AOAAvHuoDAmPkz4dHf553m5gVj2ejadHJhoJmcmxEnOv6Pa8XJhpxE93kb8Q==}
+
   mdast-util-gfm-autolink-literal@2.0.1:
     resolution: {integrity: sha512-5HVP2MKaP6L+G6YaxPNjuL0BPrq9orG3TsrZ9YXbA3vDw/ACI4MEsnoDpn6ZNm7GnZgtAcONJyPhOP8tNJQavQ==}
 
@@ -6842,9 +6896,6 @@ packages:
 
   mdast-util-phrasing@4.1.0:
     resolution: {integrity: sha512-TqICwyvJJpBwvGAMZjj4J2n0X8QWp21b9l0o7eXyVJ25YNWYbJDVIyD1bZXE6WtV6RmKJVYmQAKWa0zWOABz2w==}
-
-  mdast-util-to-hast@13.2.0:
-    resolution: {integrity: sha512-QGYKEuUsYT9ykKBCMOEDLsU5JRObWQusAolFMeko/tYPufNkRffBAQjIE+99jbA87xv6FgmjLtwjh9wBWajwAA==}
 
   mdast-util-to-hast@13.2.1:
     resolution: {integrity: sha512-cctsq2wp5vTsLIcaymblUriiTcZd0CwWtCbLvrOzYCDZoWyMNV8sZ7krj09FSnsiJi3WVsHLM4k6Dq/yaPyCXA==}
@@ -8629,8 +8680,8 @@ packages:
   tsover-runtime@0.0.7:
     resolution: {integrity: sha512-FHHwMJzZbnP23+fU1PxXljy7j0RRRosL2r1/CRUNTqfW+l7m35JsUkM615x/cAzw4GqRdXPIl3axKMj9qzpZtQ==}
 
-  tsover@5.9.11:
-    resolution: {integrity: sha512-l3kN4gSwpdAbtWB/dXnssSxJnuOqR20n94Wx0gKBY5n5ZtVcfjBN846VwuBBz4Jv7epcEmsMC1LWlIh0tHkgDw==}
+  tsover@6.0.2:
+    resolution: {integrity: sha512-jvGCZ82Hg/vT5kqpg/+DU1emj1tEYJcigocE7eqqReV/jYsxk4c/Ggu6B69z9JR+MB9DvZbN2VpSJYmehIeXuQ==}
     hasBin: true
 
   tsx@4.20.6:
@@ -8642,13 +8693,13 @@ packages:
     resolution: {integrity: sha512-1h/Lnq9yajKY2PEbBadPXj3VxsDDu844OnaAo52UVmIzIvwwtBPIuNvkjuzBlTWpfJyUbG3ez0KSBibQkj4ojg==}
     engines: {node: '>=0.6.11 <=0.7.0 || >=0.7.3'}
 
-  twoslash-protocol@0.2.12:
-    resolution: {integrity: sha512-5qZLXVYfZ9ABdjqbvPc4RWMr7PrpPaaDSeaYY55vl/w1j6H6kzsWK/urAEIXlzYlyrFmyz1UbwIt+AA0ck+wbg==}
-
-  twoslash@0.2.12:
-    resolution: {integrity: sha512-tEHPASMqi7kqwfJbkk7hc/4EhlrKCSLcur+TcvYki3vhIfaRMXnXjaYFgXpoZRbT6GdprD4tGuVBEmTpUgLBsw==}
+  twoslash-eslint@0.3.9:
+    resolution: {integrity: sha512-KxXHj3iCSIR3blHk7OUI0WqXpR9brhOW8/DYQ54ghijmKmH0BBZFETJetWERAD823tTnXbugvRx89XHQNDNkww==}
     peerDependencies:
-      typescript: '*'
+      eslint: '>=8.50.0'
+
+  twoslash-protocol@0.3.9:
+    resolution: {integrity: sha512-9/iwp+CXOnjFMPQuPL5PkuRbZnDoNpBvtJCLs9t8kDYkL3YHujbvnHfZA1i5fApDftVEdBw+T/4F+dH5kIzpYQ==}
 
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
@@ -9423,16 +9474,16 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
 
-  '@ark/attest@0.56.0(tsover@5.9.11)':
+  '@ark/attest@0.56.0(tsover@6.0.2)':
     dependencies:
       '@ark/fs': 0.56.0
       '@ark/util': 0.56.0
       '@prettier/sync': 0.6.1(prettier@3.6.2)
       '@typescript/analyze-trace': 0.10.1
-      '@typescript/vfs': 1.6.1(tsover@5.9.11)
+      '@typescript/vfs': 1.6.1(tsover@6.0.2)
       arktype: 2.1.28
       prettier: 3.6.2
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
     transitivePeerDependencies:
       - supports-color
 
@@ -9462,12 +9513,12 @@ snapshots:
 
   '@asamuzakjp/nwsapi@2.3.9': {}
 
-  '@astrojs/check@0.9.7(prettier@3.8.0)(tsover@5.9.11)':
+  '@astrojs/check@0.9.7(prettier@3.8.0)(tsover@6.0.2)':
     dependencies:
-      '@astrojs/language-server': 2.16.3(prettier@3.8.0)(tsover@5.9.11)
+      '@astrojs/language-server': 2.16.3(prettier@3.8.0)(tsover@6.0.2)
       chokidar: 4.0.3
       kleur: 4.1.5
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
       yargs: 17.7.2
     transitivePeerDependencies:
       - prettier
@@ -9481,12 +9532,12 @@ snapshots:
     dependencies:
       picomatch: 4.0.4
 
-  '@astrojs/language-server@2.16.3(prettier@3.8.0)(tsover@5.9.11)':
+  '@astrojs/language-server@2.16.3(prettier@3.8.0)(tsover@6.0.2)':
     dependencies:
       '@astrojs/compiler': 2.13.0
       '@astrojs/yaml2ts': 0.2.2
       '@jridgewell/sourcemap-codec': 1.5.5
-      '@volar/kit': 2.4.27(tsover@5.9.11)
+      '@volar/kit': 2.4.27(tsover@6.0.2)
       '@volar/language-core': 2.4.27
       '@volar/language-server': 2.4.27
       '@volar/language-service': 2.4.27
@@ -9556,12 +9607,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@astrojs/mdx@5.0.0(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3))':
+  '@astrojs/mdx@5.0.0(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3))':
     dependencies:
       '@astrojs/markdown-remark': 7.0.0
       '@mdx-js/mdx': 3.1.1
       acorn: 8.16.0
-      astro: 6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3)
+      astro: 6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3)
       es-module-lexer: 2.0.0
       estree-util-visit: 2.0.0
       hast-util-to-html: 9.0.5
@@ -9623,22 +9674,22 @@ snapshots:
       stream-replace-string: 2.0.0
       zod: 4.3.6
 
-  '@astrojs/starlight-tailwind@5.0.0(@astrojs/starlight@0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3)))(tailwindcss@4.1.11)':
+  '@astrojs/starlight-tailwind@5.0.0(@astrojs/starlight@0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3)))(tailwindcss@4.1.11)':
     dependencies:
-      '@astrojs/starlight': 0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3))
+      '@astrojs/starlight': 0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3))
       tailwindcss: 4.1.11
 
-  '@astrojs/starlight@0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3))':
+  '@astrojs/starlight@0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3))':
     dependencies:
       '@astrojs/markdown-remark': 7.0.0
-      '@astrojs/mdx': 5.0.0(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3))
+      '@astrojs/mdx': 5.0.0(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3))
       '@astrojs/sitemap': 3.7.1
       '@pagefind/default-ui': 1.3.0
       '@types/hast': 3.0.4
       '@types/js-yaml': 4.0.9
       '@types/mdast': 4.0.4
-      astro: 6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3)
-      astro-expressive-code: 0.41.7(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3))
+      astro: 6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3)
+      astro-expressive-code: 0.41.7(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3))
       bcp-47: 2.1.0
       hast-util-from-html: 2.0.3
       hast-util-select: 6.0.4
@@ -9775,6 +9826,10 @@ snapshots:
       '@babel/types': 7.29.0
 
   '@babel/parser@7.29.0':
+    dependencies:
+      '@babel/types': 7.29.0
+
+  '@babel/parser@7.29.7':
     dependencies:
       '@babel/types': 7.29.0
 
@@ -9960,6 +10015,23 @@ snapshots:
   '@dimforge/rapier3d-compat@0.12.0': {}
 
   '@discoveryjs/json-ext@0.6.3': {}
+
+  '@ec-ts/twoslash-vue@1.0.0(tsover@6.0.2)':
+    dependencies:
+      '@ec-ts/twoslash': 1.0.0(tsover@6.0.2)
+      '@vue/language-core': 3.3.5
+      twoslash-protocol: 0.3.9
+      typescript: tsover@6.0.2
+
+  '@ec-ts/twoslash@1.0.0(tsover@6.0.2)':
+    dependencies:
+      '@ec-ts/vfs': 1.0.0(tsover@6.0.2)
+      twoslash-protocol: 0.3.9
+      typescript: tsover@6.0.2
+
+  '@ec-ts/vfs@1.0.0(tsover@6.0.2)':
+    dependencies:
+      typescript: tsover@6.0.2
 
   '@emmetio/abbreviation@2.3.3':
     dependencies:
@@ -12181,32 +12253,32 @@ snapshots:
     dependencies:
       '@types/yargs-parser': 21.0.3
 
-  '@typescript-eslint/parser@8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@5.9.11)':
+  '@typescript-eslint/parser@8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@6.0.2)':
     dependencies:
       '@typescript-eslint/scope-manager': 8.57.2
       '@typescript-eslint/types': 8.57.2
-      '@typescript-eslint/typescript-estree': 8.57.2(tsover@5.9.11)
+      '@typescript-eslint/typescript-estree': 8.57.2(tsover@6.0.2)
       '@typescript-eslint/visitor-keys': 8.57.2
       debug: 4.4.3
       eslint: 9.39.2(jiti@2.6.1)
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/project-service@8.57.2(tsover@5.9.11)':
+  '@typescript-eslint/project-service@8.57.2(tsover@6.0.2)':
     dependencies:
-      '@typescript-eslint/tsconfig-utils': 8.57.2(tsover@5.9.11)
+      '@typescript-eslint/tsconfig-utils': 8.57.2(tsover@6.0.2)
       '@typescript-eslint/types': 8.57.2
       debug: 4.4.3
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/rule-tester@8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@5.9.11)':
+  '@typescript-eslint/rule-tester@8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@6.0.2)':
     dependencies:
-      '@typescript-eslint/parser': 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@5.9.11)
-      '@typescript-eslint/typescript-estree': 8.57.2(tsover@5.9.11)
-      '@typescript-eslint/utils': 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@5.9.11)
+      '@typescript-eslint/parser': 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@6.0.2)
+      '@typescript-eslint/typescript-estree': 8.57.2(tsover@6.0.2)
+      '@typescript-eslint/utils': 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@6.0.2)
       ajv: 6.12.6
       eslint: 9.39.2(jiti@2.6.1)
       json-stable-stringify-without-jsonify: 1.0.1
@@ -12221,35 +12293,35 @@ snapshots:
       '@typescript-eslint/types': 8.57.2
       '@typescript-eslint/visitor-keys': 8.57.2
 
-  '@typescript-eslint/tsconfig-utils@8.57.2(tsover@5.9.11)':
+  '@typescript-eslint/tsconfig-utils@8.57.2(tsover@6.0.2)':
     dependencies:
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
 
   '@typescript-eslint/types@8.57.2': {}
 
-  '@typescript-eslint/typescript-estree@8.57.2(tsover@5.9.11)':
+  '@typescript-eslint/typescript-estree@8.57.2(tsover@6.0.2)':
     dependencies:
-      '@typescript-eslint/project-service': 8.57.2(tsover@5.9.11)
-      '@typescript-eslint/tsconfig-utils': 8.57.2(tsover@5.9.11)
+      '@typescript-eslint/project-service': 8.57.2(tsover@6.0.2)
+      '@typescript-eslint/tsconfig-utils': 8.57.2(tsover@6.0.2)
       '@typescript-eslint/types': 8.57.2
       '@typescript-eslint/visitor-keys': 8.57.2
       debug: 4.4.3
       minimatch: 10.2.4
       semver: 7.7.4
       tinyglobby: 0.2.16
-      ts-api-utils: 2.4.0(tsover@5.9.11)
-      typescript: tsover@5.9.11
+      ts-api-utils: 2.4.0(tsover@6.0.2)
+      typescript: tsover@6.0.2
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/utils@8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@5.9.11)':
+  '@typescript-eslint/utils@8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@6.0.2)':
     dependencies:
       '@eslint-community/eslint-utils': 4.9.1(eslint@9.39.2(jiti@2.6.1))
       '@typescript-eslint/scope-manager': 8.57.2
       '@typescript-eslint/types': 8.57.2
-      '@typescript-eslint/typescript-estree': 8.57.2(tsover@5.9.11)
+      '@typescript-eslint/typescript-estree': 8.57.2(tsover@6.0.2)
       eslint: 9.39.2(jiti@2.6.1)
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
     transitivePeerDependencies:
       - supports-color
 
@@ -12269,10 +12341,10 @@ snapshots:
       treeify: 1.1.0
       yargs: 16.2.0
 
-  '@typescript/vfs@1.6.1(tsover@5.9.11)':
+  '@typescript/vfs@1.6.1(tsover@6.0.2)':
     dependencies:
       debug: 4.4.3
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
     transitivePeerDependencies:
       - supports-color
 
@@ -12462,18 +12534,22 @@ snapshots:
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.0
 
-  '@volar/kit@2.4.27(tsover@5.9.11)':
+  '@volar/kit@2.4.27(tsover@6.0.2)':
     dependencies:
       '@volar/language-service': 2.4.27
       '@volar/typescript': 2.4.27
       typesafe-path: 0.2.2
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
       vscode-languageserver-textdocument: 1.0.12
       vscode-uri: 3.1.0
 
   '@volar/language-core@2.4.27':
     dependencies:
       '@volar/source-map': 2.4.27
+
+  '@volar/language-core@2.4.28':
+    dependencies:
+      '@volar/source-map': 2.4.28
 
   '@volar/language-server@2.4.27':
     dependencies:
@@ -12496,6 +12572,8 @@ snapshots:
 
   '@volar/source-map@2.4.27': {}
 
+  '@volar/source-map@2.4.28': {}
+
   '@volar/typescript@2.4.27':
     dependencies:
       '@volar/language-core': 2.4.27
@@ -12516,9 +12594,9 @@ snapshots:
 
   '@vtbag/element-crossing@1.1.0': {}
 
-  '@vtbag/inspection-chamber@1.0.23(prettier@3.8.0)(tsover@5.9.11)':
+  '@vtbag/inspection-chamber@1.0.23(prettier@3.8.0)(tsover@6.0.2)':
     dependencies:
-      '@astrojs/check': 0.9.7(prettier@3.8.0)(tsover@5.9.11)
+      '@astrojs/check': 0.9.7(prettier@3.8.0)(tsover@6.0.2)
     transitivePeerDependencies:
       - prettier
       - prettier-plugin-astro
@@ -12527,6 +12605,31 @@ snapshots:
   '@vtbag/turn-signal@1.3.1': {}
 
   '@vtbag/utensil-drawer@1.2.14': {}
+
+  '@vue/compiler-core@3.5.38':
+    dependencies:
+      '@babel/parser': 7.29.7
+      '@vue/shared': 3.5.38
+      entities: 7.0.1
+      estree-walker: 2.0.2
+      source-map-js: 1.2.1
+
+  '@vue/compiler-dom@3.5.38':
+    dependencies:
+      '@vue/compiler-core': 3.5.38
+      '@vue/shared': 3.5.38
+
+  '@vue/language-core@3.3.5':
+    dependencies:
+      '@volar/language-core': 2.4.28
+      '@vue/compiler-dom': 3.5.38
+      '@vue/shared': 3.5.38
+      alien-signals: 3.2.1
+      muggle-string: 0.4.1
+      path-browserify: 1.0.1
+      picomatch: 4.0.4
+
+  '@vue/shared@3.5.38': {}
 
   '@webassemblyjs/ast@1.14.1':
     dependencies:
@@ -12679,6 +12782,8 @@ snapshots:
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
+  alien-signals@3.2.1: {}
+
   anser@1.4.10: {}
 
   ansi-regex@5.0.1: {}
@@ -12749,9 +12854,9 @@ snapshots:
 
   astring@1.9.0: {}
 
-  astro-expressive-code@0.41.7(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3)):
+  astro-expressive-code@0.41.7(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3)):
     dependencies:
-      astro: 6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3)
+      astro: 6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3)
       rehype-expressive-code: 0.41.7
 
   astro-remote@0.3.4:
@@ -12762,11 +12867,11 @@ snapshots:
       marked-smartypants: 1.1.9(marked@12.0.2)
       ultrahtml: 1.6.0
 
-  astro-vtbot@2.1.10(prettier@3.8.0)(tsover@5.9.11):
+  astro-vtbot@2.1.10(prettier@3.8.0)(tsover@6.0.2):
     dependencies:
       '@vtbag/cam-shaft': 1.0.6
       '@vtbag/element-crossing': 1.1.0
-      '@vtbag/inspection-chamber': 1.0.23(prettier@3.8.0)(tsover@5.9.11)
+      '@vtbag/inspection-chamber': 1.0.23(prettier@3.8.0)(tsover@6.0.2)
       '@vtbag/turn-signal': 1.3.1
       '@vtbag/utensil-drawer': 1.2.14
     transitivePeerDependencies:
@@ -12774,7 +12879,7 @@ snapshots:
       - prettier-plugin-astro
       - typescript
 
-  astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3):
+  astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3):
     dependencies:
       '@astrojs/compiler': 3.0.0
       '@astrojs/internal-helpers': 0.8.0
@@ -12820,7 +12925,7 @@ snapshots:
       tinyclip: 0.1.12
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
-      tsconfck: 3.1.6(tsover@5.9.11)
+      tsconfck: 3.1.6(tsover@6.0.2)
       ultrahtml: 1.6.0
       unifont: 0.7.4
       unist-util-visit: 5.1.0
@@ -13243,14 +13348,14 @@ snapshots:
 
   cookie@1.1.1: {}
 
-  cosmiconfig@9.0.1(tsover@5.9.11):
+  cosmiconfig@9.0.1(tsover@6.0.2):
     dependencies:
       env-paths: 2.2.1
       import-fresh: 3.3.1
       js-yaml: 4.1.1
       parse-json: 5.2.0
     optionalDependencies:
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
 
   cross-spawn@7.0.6:
     dependencies:
@@ -13265,6 +13370,8 @@ snapshots:
   css-declaration-sorter@7.2.0(postcss@8.5.8):
     dependencies:
       postcss: 8.5.8
+
+  css-js-gen@1.1.0: {}
 
   css-select@5.1.0:
     dependencies:
@@ -13611,7 +13718,7 @@ snapshots:
       glob: 10.5.0
       ora: 5.4.1
       tslib: 2.8.1
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
       yargs: 17.7.2
 
   draco3d@1.5.7: {}
@@ -13665,6 +13772,8 @@ snapshots:
   entities@4.5.0: {}
 
   entities@6.0.1: {}
+
+  entities@7.0.1: {}
 
   env-paths@2.2.1: {}
 
@@ -13792,13 +13901,13 @@ snapshots:
 
   escape-string-regexp@5.0.0: {}
 
-  eslint-doc-generator@3.3.2(eslint@9.39.2(jiti@2.6.1))(prettier@3.8.0)(tsover@5.9.11):
+  eslint-doc-generator@3.3.2(eslint@9.39.2(jiti@2.6.1))(prettier@3.8.0)(tsover@6.0.2):
     dependencies:
-      '@typescript-eslint/utils': 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@5.9.11)
+      '@typescript-eslint/utils': 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@6.0.2)
       ajv: 8.17.1
       change-case: 5.4.4
       commander: 14.0.3
-      cosmiconfig: 9.0.1(tsover@5.9.11)
+      cosmiconfig: 9.0.1(tsover@6.0.2)
       deepmerge: 4.3.1
       dot-prop: 10.1.0
       editorconfig: 3.0.2
@@ -13967,16 +14076,21 @@ snapshots:
 
   exponential-backoff@3.1.3: {}
 
-  expressive-code-twoslash@0.5.3(@expressive-code/core@0.41.7)(expressive-code@0.41.7)(tsover@5.9.11):
+  expressive-code-twoslash@0.6.1(@expressive-code/core@0.41.7)(eslint@9.39.2(jiti@2.6.1))(expressive-code@0.41.7)(tsover@6.0.2):
     dependencies:
+      '@ec-ts/twoslash': 1.0.0(tsover@6.0.2)
+      '@ec-ts/twoslash-vue': 1.0.0(tsover@6.0.2)
       '@expressive-code/core': 0.41.7
+      '@typescript-eslint/parser': 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@6.0.2)
+      css-js-gen: 1.1.0
       expressive-code: 0.41.7
-      mdast-util-from-markdown: 2.0.2
+      mdast-util-from-markdown: 2.0.3
       mdast-util-gfm: 3.1.0
-      mdast-util-to-hast: 13.2.0
-      twoslash: 0.2.12(tsover@5.9.11)
-      typescript: tsover@5.9.11
+      mdast-util-to-hast: 13.2.1
+      twoslash-eslint: 0.3.9(eslint@9.39.2(jiti@2.6.1))
+      typescript: tsover@6.0.2
     transitivePeerDependencies:
+      - eslint
       - supports-color
 
   expressive-code@0.41.7:
@@ -15105,6 +15219,23 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  mdast-util-from-markdown@2.0.3:
+    dependencies:
+      '@types/mdast': 4.0.4
+      '@types/unist': 3.0.3
+      decode-named-character-reference: 1.1.0
+      devlop: 1.1.0
+      mdast-util-to-string: 4.0.0
+      micromark: 4.0.1
+      micromark-util-decode-numeric-character-reference: 2.0.2
+      micromark-util-decode-string: 2.0.1
+      micromark-util-normalize-identifier: 2.0.1
+      micromark-util-symbol: 2.0.1
+      micromark-util-types: 2.0.2
+      unist-util-stringify-position: 4.0.0
+    transitivePeerDependencies:
+      - supports-color
+
   mdast-util-gfm-autolink-literal@2.0.1:
     dependencies:
       '@types/mdast': 4.0.4
@@ -15227,18 +15358,6 @@ snapshots:
     dependencies:
       '@types/mdast': 4.0.4
       unist-util-is: 6.0.1
-
-  mdast-util-to-hast@13.2.0:
-    dependencies:
-      '@types/hast': 3.0.4
-      '@types/mdast': 4.0.4
-      '@ungap/structured-clone': 1.3.0
-      devlop: 1.1.0
-      micromark-util-sanitize-uri: 2.0.1
-      trim-lines: 3.0.1
-      unist-util-position: 5.0.0
-      unist-util-visit: 5.0.0
-      vfile: 6.0.3
 
   mdast-util-to-hast@13.2.1:
     dependencies:
@@ -15787,7 +15906,7 @@ snapshots:
 
   mkdirp@1.0.4: {}
 
-  mkdist@2.2.0(tsover@5.9.11):
+  mkdist@2.2.0(tsover@6.0.2):
     dependencies:
       autoprefixer: 10.4.21(postcss@8.5.8)
       citty: 0.1.6
@@ -15803,7 +15922,7 @@ snapshots:
       semver: 7.7.4
       tinyglobby: 0.2.16
     optionalDependencies:
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
 
   mlly@1.8.0:
     dependencies:
@@ -16818,7 +16937,7 @@ snapshots:
 
   robust-predicates@3.0.2: {}
 
-  rolldown-plugin-dts@0.17.8(rolldown@1.0.0-beta.45(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(tsover@5.9.11):
+  rolldown-plugin-dts@0.17.8(rolldown@1.0.0-beta.45(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(tsover@6.0.2):
     dependencies:
       '@babel/generator': 7.29.1
       '@babel/parser': 7.29.0
@@ -16831,11 +16950,11 @@ snapshots:
       obug: 2.1.1
       rolldown: 1.0.0-beta.45(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
     optionalDependencies:
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
     transitivePeerDependencies:
       - oxc-resolver
 
-  rolldown-plugin-dts@0.22.4(rolldown@1.0.0-rc.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(tsover@5.9.11):
+  rolldown-plugin-dts@0.22.4(rolldown@1.0.0-rc.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(tsover@6.0.2):
     dependencies:
       '@babel/generator': 8.0.0-rc.2
       '@babel/helper-validator-identifier': 8.0.0-rc.2
@@ -16848,7 +16967,7 @@ snapshots:
       obug: 2.1.1
       rolldown: 1.0.0-rc.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
     optionalDependencies:
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
     transitivePeerDependencies:
       - oxc-resolver
 
@@ -16945,11 +17064,11 @@ snapshots:
       - '@emnapi/core'
       - '@emnapi/runtime'
 
-  rollup-plugin-dts@6.1.1(rollup@4.60.1)(tsover@5.9.11):
+  rollup-plugin-dts@6.1.1(rollup@4.60.1)(tsover@6.0.2):
     dependencies:
       magic-string: 0.30.21
       rollup: 4.60.1
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
     optionalDependencies:
       '@babel/code-frame': 7.29.0
 
@@ -17238,12 +17357,12 @@ snapshots:
     dependencies:
       type-fest: 0.7.1
 
-  starlight-blog@0.26.1(@astrojs/starlight@0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3)))(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3)):
+  starlight-blog@0.26.1(@astrojs/starlight@0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3)))(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3)):
     dependencies:
       '@astrojs/markdown-remark': 7.0.0
-      '@astrojs/mdx': 5.0.0(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3))
+      '@astrojs/mdx': 5.0.0(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3))
       '@astrojs/rss': 4.0.17
-      '@astrojs/starlight': 0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3))
+      '@astrojs/starlight': 0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3))
       astro-remote: 0.3.4
       github-slugger: 2.0.0
       hast-util-from-html: 2.0.3
@@ -17259,12 +17378,12 @@ snapshots:
       - astro
       - supports-color
 
-  starlight-typedoc@0.21.5(@astrojs/starlight@0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3)))(typedoc-plugin-markdown@4.10.0(typedoc@0.28.17(tsover@5.9.11)))(typedoc@0.28.17(tsover@5.9.11)):
+  starlight-typedoc@0.21.5(@astrojs/starlight@0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3)))(typedoc-plugin-markdown@4.10.0(typedoc@0.28.17(tsover@6.0.2)))(typedoc@0.28.17(tsover@6.0.2)):
     dependencies:
-      '@astrojs/starlight': 0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@5.9.11)(tsx@4.20.6)(yaml@2.8.3))
+      '@astrojs/starlight': 0.38.1(astro@6.0.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(jiti@2.6.1)(rollup@4.60.1)(terser@5.44.1)(tsover@6.0.2)(tsx@4.20.6)(yaml@2.8.3))
       github-slugger: 2.0.0
-      typedoc: 0.28.17(tsover@5.9.11)
-      typedoc-plugin-markdown: 4.10.0(typedoc@0.28.17(tsover@5.9.11))
+      typedoc: 0.28.17(tsover@6.0.2)
+      typedoc-plugin-markdown: 4.10.0(typedoc@0.28.17(tsover@6.0.2))
 
   state-local@1.0.7: {}
 
@@ -17497,25 +17616,25 @@ snapshots:
 
   trough@2.2.0: {}
 
-  ts-api-utils@2.4.0(tsover@5.9.11):
+  ts-api-utils@2.4.0(tsover@6.0.2):
     dependencies:
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
 
-  ts-loader@9.5.4(tsover@5.9.11)(webpack@5.104.1):
+  ts-loader@9.5.4(tsover@6.0.2)(webpack@5.104.1):
     dependencies:
       chalk: 4.1.2
       enhanced-resolve: 5.18.3
       micromatch: 4.0.8
       semver: 7.7.3
       source-map: 0.7.4
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
       webpack: 5.104.1(esbuild@0.25.12)(webpack-cli@6.0.1)
 
-  tsconfck@3.1.6(tsover@5.9.11):
+  tsconfck@3.1.6(tsover@6.0.2):
     optionalDependencies:
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
 
-  tsdown@0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)):
+  tsdown@0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)):
     dependencies:
       ansis: 4.2.0
       cac: 6.7.14
@@ -17525,14 +17644,14 @@ snapshots:
       empathic: 2.0.0
       hookable: 5.5.3
       rolldown: 1.0.0-beta.45(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
-      rolldown-plugin-dts: 0.17.8(rolldown@1.0.0-beta.45(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(tsover@5.9.11)
+      rolldown-plugin-dts: 0.17.8(rolldown@1.0.0-beta.45(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(tsover@6.0.2)
       semver: 7.7.4
       tinyexec: 1.1.1
       tinyglobby: 0.2.16
       tree-kill: 1.2.2
       unconfig: 7.4.2
     optionalDependencies:
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
       unrun: 0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
     transitivePeerDependencies:
       - '@emnapi/core'
@@ -17543,7 +17662,7 @@ snapshots:
       - supports-color
       - vue-tsc
 
-  tsdown@0.20.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@5.9.11):
+  tsdown@0.20.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2):
     dependencies:
       ansis: 4.2.0
       cac: 6.7.14
@@ -17554,7 +17673,7 @@ snapshots:
       obug: 2.1.1
       picomatch: 4.0.3
       rolldown: 1.0.0-rc.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
-      rolldown-plugin-dts: 0.22.4(rolldown@1.0.0-rc.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(tsover@5.9.11)
+      rolldown-plugin-dts: 0.22.4(rolldown@1.0.0-rc.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(tsover@6.0.2)
       semver: 7.7.4
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
@@ -17562,7 +17681,7 @@ snapshots:
       unconfig-core: 7.5.0
       unrun: 0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
     optionalDependencies:
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -17578,7 +17697,7 @@ snapshots:
 
   tsover-runtime@0.0.7: {}
 
-  tsover@5.9.11:
+  tsover@6.0.2:
     dependencies:
       minimatch: 9.0.5
       unplugin: 2.3.5
@@ -17592,15 +17711,12 @@ snapshots:
 
   tunnel@0.0.6: {}
 
-  twoslash-protocol@0.2.12: {}
-
-  twoslash@0.2.12(tsover@5.9.11):
+  twoslash-eslint@0.3.9(eslint@9.39.2(jiti@2.6.1)):
     dependencies:
-      '@typescript/vfs': 1.6.1(tsover@5.9.11)
-      twoslash-protocol: 0.2.12
-      typescript: tsover@5.9.11
-    transitivePeerDependencies:
-      - supports-color
+      eslint: 9.39.2(jiti@2.6.1)
+      twoslash-protocol: 0.3.9
+
+  twoslash-protocol@0.3.9: {}
 
   type-check@0.4.0:
     dependencies:
@@ -17620,17 +17736,17 @@ snapshots:
 
   typed-binary@4.3.3: {}
 
-  typedoc-plugin-markdown@4.10.0(typedoc@0.28.17(tsover@5.9.11)):
+  typedoc-plugin-markdown@4.10.0(typedoc@0.28.17(tsover@6.0.2)):
     dependencies:
-      typedoc: 0.28.17(tsover@5.9.11)
+      typedoc: 0.28.17(tsover@6.0.2)
 
-  typedoc@0.28.17(tsover@5.9.11):
+  typedoc@0.28.17(tsover@6.0.2):
     dependencies:
       '@gerrit0/mini-shiki': 3.23.0
       lunr: 2.3.9
       markdown-it: 14.1.0
       minimatch: 9.0.5
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
       yaml: 2.8.3
 
   typesafe-path@0.2.2: {}
@@ -17645,7 +17761,7 @@ snapshots:
 
   ultrahtml@1.6.0: {}
 
-  unbuild@3.5.0(tsover@5.9.11):
+  unbuild@3.5.0(tsover@6.0.2):
     dependencies:
       '@rollup/plugin-alias': 5.1.1(rollup@4.60.1)
       '@rollup/plugin-commonjs': 28.0.3(rollup@4.60.1)
@@ -17661,18 +17777,18 @@ snapshots:
       hookable: 5.5.3
       jiti: 2.6.1
       magic-string: 0.30.21
-      mkdist: 2.2.0(tsover@5.9.11)
+      mkdist: 2.2.0(tsover@6.0.2)
       mlly: 1.8.0
       pathe: 2.0.3
       pkg-types: 2.1.0
       pretty-bytes: 6.1.1
       rollup: 4.60.1
-      rollup-plugin-dts: 6.1.1(rollup@4.60.1)(tsover@5.9.11)
+      rollup-plugin-dts: 6.1.1(rollup@4.60.1)(tsover@6.0.2)
       scule: 1.3.0
       tinyglobby: 0.2.16
       untyped: 2.0.0
     optionalDependencies:
-      typescript: tsover@5.9.11
+      typescript: tsover@6.0.2
     transitivePeerDependencies:
       - sass
       - vue

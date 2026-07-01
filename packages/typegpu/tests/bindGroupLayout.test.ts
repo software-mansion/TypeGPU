@@ -1,20 +1,15 @@
 import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
-import {
-  d,
-  tgpu,
-  type TgpuBindGroupLayout,
-  type TgpuBuffer,
-  type TgpuTextureView,
-  type UniformFlag,
-} from '../src/index.js';
-import {
-  type ExtractBindGroupInputFromLayout,
-  MissingBindingError,
-  type TgpuBindGroup,
-  type TgpuLayoutComparisonSampler,
-  type TgpuLayoutSampler,
-  type UnwrapRuntimeConstructor,
-} from '../src/tgpuBindGroupLayout.ts';
+import { d, tgpu } from 'typegpu';
+import type {
+  TgpuBindGroupLayout,
+  TgpuBuffer,
+  TgpuTextureView,
+  UniformFlag,
+  ExtractBindGroupInputFromLayout,
+  TgpuBindGroup,
+  TgpuLayoutComparisonSampler,
+  TgpuLayoutSampler,
+} from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 const DEFAULT_READONLY_VISIBILITY_FLAGS =
@@ -667,7 +662,9 @@ describe('TgpuBindGroup', () => {
         entries: [
           {
             binding: 0,
-            resource: 'view',
+            resource: {
+              label: '<unnamed>',
+            },
           },
         ],
       });
@@ -696,7 +693,9 @@ describe('TgpuBindGroup', () => {
         entries: [
           {
             binding: 0,
-            resource: 'view',
+            resource: {
+              label: 'foo',
+            },
           },
         ],
       });
@@ -844,7 +843,9 @@ describe('TgpuBindGroup', () => {
         entries: [
           {
             binding: 0,
-            resource: 'view',
+            resource: {
+              label: '<unnamed>',
+            },
           },
         ],
       });
@@ -881,7 +882,9 @@ describe('TgpuBindGroup', () => {
         entries: [
           {
             binding: 0,
-            resource: 'view',
+            resource: {
+              label: 'foo',
+            },
           },
         ],
       });
@@ -1022,7 +1025,9 @@ describe('TgpuBindGroup', () => {
           a: aBuffer,
           b: bBuffer,
         });
-      }).toThrow(new MissingBindingError('example', 'd'));
+      }).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Bind group 'example' is missing a required binding 'd']`,
+      );
     });
 
     it('creates bind group in layout-defined order, not the insertion order of the populate parameter', ({
@@ -1121,21 +1126,5 @@ describe('TgpuBindGroup', () => {
       // the library fulfills the `foo` resource
       const group = createGroupWithFoo(layout, { custom: customBuffer });
     });
-  });
-});
-
-describe('UnwrapRuntimeConstructor', () => {
-  it('unwraps return types of functions returning TgpuData', () => {
-    expectTypeOf<UnwrapRuntimeConstructor<d.U32>>().toEqualTypeOf<d.U32>();
-    expectTypeOf<UnwrapRuntimeConstructor<d.WgslArray<d.Vec3f>>>().toEqualTypeOf<
-      d.WgslArray<d.Vec3f>
-    >();
-    expectTypeOf<UnwrapRuntimeConstructor<(_: number) => d.WgslArray<d.Vec3f>>>().toEqualTypeOf<
-      d.WgslArray<d.Vec3f>
-    >();
-
-    expectTypeOf<UnwrapRuntimeConstructor<d.F32 | ((_: number) => d.U32)>>().toEqualTypeOf<
-      d.F32 | d.U32
-    >();
   });
 });
