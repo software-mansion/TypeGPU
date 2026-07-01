@@ -8,7 +8,7 @@ const CounterState = d.struct({
 });
 
 export const FIRST_GPU_PROGRAM_SNIPPETS = {
-  consoleLog: `import tgpu, { d } from 'typegpu';
+  consoleLog: `import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -31,7 +31,7 @@ export function execute() {
 }
 `,
 
-  readValue: `import tgpu, { d } from 'typegpu';
+  readValue: `import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -54,7 +54,7 @@ export async function execute() {
 }
 `,
 
-  updateIncrementBy: `import tgpu, { d } from 'typegpu';
+  updateIncrementBy: `import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -104,15 +104,15 @@ async function createCounterProgram(withLog: boolean): Promise<CounterProgram> {
   const program = root.createGuardedComputePipeline(
     withLog
       ? () => {
-          'use gpu';
-          const currentCount = countMutable.$;
-          console.log('current count:', currentCount);
-          countMutable.$++;
-        }
+        'use gpu';
+        const currentCount = countMutable.$;
+        console.log('current count:', currentCount);
+        countMutable.$++;
+      }
       : () => {
-          'use gpu';
-          countMutable.$++;
-        },
+        'use gpu';
+        countMutable.$++;
+      },
   );
   return { countMutable, program, root };
 }

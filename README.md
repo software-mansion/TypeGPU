@@ -118,7 +118,7 @@ compute shaders, and `@abc/plot` is a library for plots and visualization using
 WebGPU.
 
 ```ts
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import gen from '@xyz/gen';
 import plot from '@abc/plot';
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as tinyest from 'tinyest';
 import { getFunctionMetadata } from '../../src/shared/meta.ts';
 import { stringifyNode } from '../../src/shared/tseynit.ts';
-import tgpu, { d } from '../../src/index.js';
+import { tgpu, d } from '../../src/index.js';
 
 function getBodyAst(fn: () => void) {
   const meta = getFunctionMetadata(fn);

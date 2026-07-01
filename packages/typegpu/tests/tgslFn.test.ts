@@ -1,7 +1,7 @@
 import { attest } from '@ark/attest';
 import { describe, expect } from 'vitest';
 import { builtin } from 'typegpu/data';
-import tgpu, { d, type TgpuFn, type TgpuSlot } from 'typegpu';
+import { tgpu, d, type TgpuFn, type TgpuSlot } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('TGSL tgpu.fn function', () => {
