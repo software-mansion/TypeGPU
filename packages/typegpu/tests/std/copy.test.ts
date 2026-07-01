@@ -1,6 +1,6 @@
 import { it } from 'typegpu-testing-utility';
 import { describe, expect } from 'vitest';
-import tgpu, { d, std } from '../../src/index.js';
+import tgpu, { d, std } from 'typegpu';
 
 describe('std.copy', () => {
   describe('on the CPU', () => {

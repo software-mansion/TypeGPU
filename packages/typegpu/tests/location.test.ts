@@ -1,7 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import * as d from '../src/data/index.ts';
-import { namespace } from '../src/core/resolve/namespace.ts';
-import { resolve } from '../src/resolutionCtx.ts';
+import tgpu, { d } from 'typegpu';
 
 describe('d.location', () => {
   it('adds @location attribute for struct members', () => {
@@ -21,11 +19,7 @@ describe('d.location', () => {
       }>
     >();
 
-    const opts = {
-      namespace: namespace({ names: 'strict' }),
-    };
-
-    expect(resolve(s1, opts).code).toContain('@location(3) b: u32,');
+    expect(tgpu.resolve([s1])).toContain('@location(3) b: u32,');
   });
 });
 

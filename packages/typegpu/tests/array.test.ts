@@ -1,10 +1,8 @@
 import { attest } from '@ark/attest';
 import { describe, expect, expectTypeOf } from 'vitest';
-import { d, tgpu, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
-import { namespace } from '../src/core/resolve/namespace.ts';
-import { resolve } from '../src/resolutionCtx.ts';
-import type { Infer } from '../src/shared/repr.ts';
-import { arrayLength } from '../src/std/array.ts';
+import { d, readFromArrayBuffer, tgpu, writeToArrayBuffer } from 'typegpu';
+import type { Infer } from 'typegpu/data';
+import { arrayLength } from 'typegpu/std';
 import { it } from 'typegpu-testing-utility';
 
 describe('array', () => {
@@ -67,9 +65,9 @@ describe('array', () => {
 
     expect(() => readFromArrayBuffer(new ArrayBuffer(0), TestArray)).toThrow();
 
-    const opts = { namespace: namespace({ names: 'strict' }) };
-
-    expect(resolve(TestArray, opts).code).toContain('array<vec3f>');
+    expect(tgpu.resolve({ template: 'TestArray', externals: { TestArray } })).toEqual(
+      'array<vec3f>',
+    );
   });
 
   it('throws when trying to nest runtime sized arrays', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f, vec4f } from '../../../src/data/index.ts';
-import { isCloseTo, log2 } from '../../../src/std/index.ts';
+import { vec2f, vec3f, vec4f } from 'typegpu/data';
+import { isCloseTo, log2 } from 'typegpu/std';
 
 describe('log2', () => {
   it('computes base-2 logarithm of numeric value', () => {

@@ -1,8 +1,7 @@
 import { attest } from '@ark/attest';
 import { describe, expect } from 'vitest';
-import { builtin } from '../src/builtin.ts';
-import tgpu, { d, type TgpuFn, type TgpuSlot } from '../src/index.js';
-import { getName } from '../src/shared/meta.ts';
+import { builtin } from 'typegpu/data';
+import tgpu, { d, type TgpuFn, type TgpuSlot } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('TGSL tgpu.fn function', () => {
@@ -14,7 +13,7 @@ describe('TGSL tgpu.fn function', () => {
       )(() => 3)
       .$name('get_x');
 
-    expect(getName(getX)).toBe('get_x');
+    expect(tgpu.resolve([getX])).toContain('fn get_x() -> f32');
   });
 
   it('resolves to WGSL', () => {
@@ -259,7 +258,6 @@ describe('TGSL tgpu.fn function', () => {
       })
       .$name('vertex_fn');
 
-    expect(getName(vertexFn)).toBe('vertex_fn');
     expect(tgpu.resolve([vertexFn])).toMatchInlineSnapshot(`
       "struct vertex_fn_Output {
         @builtin(position) pos: vec4f,
@@ -1019,6 +1017,51 @@ describe('tgsl fn when using plugin', () => {
 
       fn one() -> f32 {
         return (mainFn() + 2f);
+      }"
+    `);
+  });
+
+  it('allows for re-resolves of slotted functions', () => {
+    const slot = tgpu.slot<number>(1);
+    const helper = tgpu
+      .fn([])(() => {
+        'use gpu';
+        const x = slot.$;
+      })
+      .with(slot, 2);
+
+    const fn1 = () => {
+      'use gpu';
+      helper();
+    };
+
+    const fn2 = () => {
+      'use gpu';
+      helper();
+    };
+
+    const main = () => {
+      'use gpu';
+      fn1();
+      fn2();
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn helper() {
+        const x = 2;
+      }
+
+      fn fn1() {
+        helper();
+      }
+
+      fn fn2() {
+        helper();
+      }
+
+      fn main() {
+        fn1();
+        fn2();
       }"
     `);
   });

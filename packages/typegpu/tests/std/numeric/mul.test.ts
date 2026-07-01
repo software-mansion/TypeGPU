@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import tgpu, { d } from '../../../src/index.js';
+import tgpu, { d } from 'typegpu';
 import {
   mat2x2f,
   mat3x3f,
@@ -16,9 +16,9 @@ import {
   vec4h,
   vec4i,
   vec4u,
-} from '../../../src/data/index.ts';
-import type { m2x2f, m3x3f, m4x4f, v2f, v3f, v4f } from '../../../src/data/wgslTypes.ts';
-import { mul } from '../../../src/std/index.ts';
+} from 'typegpu/data';
+import type { m2x2f, m3x3f, m4x4f, v2f, v3f, v4f } from 'typegpu/data';
+import { mul } from 'typegpu/std';
 
 describe('mul', () => {
   it('computes product of a number and a number', () => {
