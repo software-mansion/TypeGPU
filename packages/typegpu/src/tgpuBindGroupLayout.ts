@@ -227,7 +227,7 @@ export type TgpuBindGroup<
 export function bindGroupLayout<Entries extends Record<string, TgpuLayoutEntry | null>>(
   entries: Entries,
 ): TgpuBindGroupLayout<Prettify<Entries>> {
-  return new TgpuBindGroupLayoutImpl(entries as Prettify<Entries>);
+  return new TgpuBindGroupLayoutImpl({ ...entries } as Prettify<Entries>);
 }
 
 export function isBindGroupLayout(value: unknown): value is TgpuBindGroupLayout {
