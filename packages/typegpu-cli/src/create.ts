@@ -16,7 +16,7 @@ import {
 } from './options.ts';
 
 const GRADIENT_START = [0.831, 0.553, 1.0] as const;
-const GRADIENT_END = [0.32, 0.4, 0.95] as const;
+const GRADIENT_END = [0.0, 0.349, 0.874] as const;
 
 const coloredLabelsTemplates = PROJECT_TEMPLATES.map((template, i) => {
   const t = i / (PROJECT_TEMPLATES.length - 1);
