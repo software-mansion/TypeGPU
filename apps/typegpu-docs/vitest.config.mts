@@ -40,7 +40,6 @@ export default defineConfig({
           name: 'individual-example-tests',
           root: './tests/individual-example-tests',
           environment: 'node',
-          isolate: false,
         },
       },
     ],
