@@ -14,7 +14,7 @@ import {
 } from './options.ts';
 import { failAndExit } from './utils/prompts.ts';
 import { typegpuPkgs } from './utils/pkg.ts';
-import { typegpuAsciiLogo } from './utils/logo.ts';
+import { typegpuAsciiLogoColor, typegpuAsciiLogoNoColor } from './utils/logo.ts';
 
 function formatHelpEntries(entries: readonly { value: string; label?: string; hint?: string }[]) {
   const maxLength = Math.max(...entries.map((entry) => entry.value.length));
@@ -75,7 +75,11 @@ const commonOptions = {
   ...(packageManager ? { packageManager } : {}),
 };
 
-console.log(typegpuAsciiLogo);
+if (!process.env.NO_COLOR) {
+  console.log(typegpuAsciiLogoColor);
+} else {
+  console.log(typegpuAsciiLogoNoColor);
+}
 
 if (argv.enhance) {
   const targetDir = positionals[0] ? path.resolve(cwd, positionals[0]) : cwd;
