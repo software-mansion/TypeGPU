@@ -22,4 +22,5 @@ export const arrayLength = dualImpl({
     const length = sizeOfPointedToArray(a.dataType);
     return length > 0 ? `${length}` : stitch`arrayLength(${a})`;
   },
+  sideEffects: false,
 });
