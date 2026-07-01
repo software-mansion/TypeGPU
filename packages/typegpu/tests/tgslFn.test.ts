@@ -1021,6 +1021,51 @@ describe('tgsl fn when using plugin', () => {
     `);
   });
 
+  it('allows for re-resolves of slotted functions', () => {
+    const slot = tgpu.slot<number>(1);
+    const helper = tgpu
+      .fn([])(() => {
+        'use gpu';
+        const x = slot.$;
+      })
+      .with(slot, 2);
+
+    const fn1 = () => {
+      'use gpu';
+      helper();
+    };
+
+    const fn2 = () => {
+      'use gpu';
+      helper();
+    };
+
+    const main = () => {
+      'use gpu';
+      fn1();
+      fn2();
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn helper() {
+        const x = 2;
+      }
+
+      fn fn1() {
+        helper();
+      }
+
+      fn fn2() {
+        helper();
+      }
+
+      fn main() {
+        fn1();
+        fn2();
+      }"
+    `);
+  });
+
   it('allows .with to be called at comptime', () => {
     const multiplierSlot = tgpu.slot(1);
     const scale = tgpu.fn(
