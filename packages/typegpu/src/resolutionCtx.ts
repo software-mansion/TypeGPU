@@ -378,7 +378,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   readonly #modeStack: ExecState[] = [];
   private readonly _declarations: string[] = [];
   private _varyingLocations: Record<string, number> | undefined;
-  readonly #currentlyResolvedItems: WeakSet<object> = new WeakSet();
+  /**
+   * Holds a set of base (slot-less) functions that have started their resolution process.
+   * Used for recursion detection check - a function is recursive if:
+   * - it was passed to ctx.resolve while already present in this set,
+   * - it never finished resolution (<=> it does not appear in `memoizedResolves`).
+   * The set is NOT cleared after the resolution finishes.
+   */
+  readonly #startedFunctionResolves: WeakSet<object> = new WeakSet();
   readonly #logGenerator: LogGenerator;
 
   readonly gen: ShaderGenerator;
@@ -951,16 +958,17 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolve(item: unknown, schema?: BaseData | UnknownData): ResolvedSnippet {
-    if (isTgpuFn(item) || isShelllessImpl(item)) {
+    if ((isTgpuFn(item) || isShelllessImpl(item)) && !isProviding(item)) {
+      // We skip providing functions to only perform the checks on slot-less functions.
       if (
-        this.#currentlyResolvedItems.has(item) &&
+        this.#startedFunctionResolves.has(item) &&
         !this.#namespaceInternal.memoizedResolves.has(item)
       ) {
         throw new Error(
           `Recursive function ${item} detected. Recursion is not allowed on the GPU.`,
         );
       }
-      this.#currentlyResolvedItems.add(item as object);
+      this.#startedFunctionResolves.add(item as object);
     }
 
     if (isProviding(item)) {
