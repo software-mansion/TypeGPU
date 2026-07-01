@@ -61,6 +61,12 @@ function createMockWebGL2(canvas: OffscreenCanvas) {
     return b as unknown as WebGLBuffer;
   };
 
+  const mockVertexArray = () => {
+    const va = { _type: 'vertexArray' };
+
+    return va as unknown as WebGLVertexArrayObject;
+  };
+
   const gl = {
     canvas,
 
@@ -90,6 +96,10 @@ function createMockWebGL2(canvas: OffscreenCanvas) {
     bindBuffer: vi.fn(),
     bindBufferBase: vi.fn(),
     bufferData: vi.fn(),
+
+    createVertexArray: vi.fn(mockVertexArray),
+    deleteVertexArray: vi.fn(),
+    bindVertexArray: vi.fn(),
 
     createShader: vi.fn((_type: number) => mockShader()),
     shaderSource: vi.fn(),
