@@ -181,18 +181,18 @@ describe('ternary operator', () => {
     `);
   });
 
-  it('should throw when test is not comptime known', () => {
+  it('should throw when test cannot be converted to bool', () => {
     const myFn = tgpu.fn(
-      [d.u32],
+      [d.vec3f, d.u32],
       d.u32,
-    )((n) => {
-      return n > 0 ? n : -n;
+    )((v, n) => {
+      return v ? n : n + 1;
     });
 
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Ternary operator '(n > 0) ? n : (-n)' is invalid. For more complex branching, please use 'std.select' or if/else statements.]
+      - fn:myFn: Cannot convert value of type 'vec3f' to any of the target types: [bool]]
     `);
   });
 });
