@@ -379,11 +379,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _declarations: string[] = [];
   private _varyingLocations: Record<string, number> | undefined;
   /**
-   * Holds a set of base (slot-less) functions that have started their resolution process.
-   * Used for recursion detection check - a function is recursive if:
-   * - it was passed to ctx.resolve while already present in this map,
-   * - it never finished resolution (<=> it does not appear in `memoizedResolves`).
-   * The set is NOT cleared after the resolution finishes.
+   /**
+    * Holds a set of base (slot-less) functions that have started their resolution process.
+    * Used for recursion detection check - a function is recursive if:
+    * - it was passed to ctx.resolve while already present in this set,
+    * - it never finished resolution (<=> it does not appear in `memoizedResolves`).
+    * The set is NOT cleared after the resolution finishes.
    */
   readonly #startedFunctionResolves: WeakSet<object> = new WeakSet();
   readonly #logGenerator: LogGenerator;
