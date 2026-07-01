@@ -98,10 +98,11 @@ function BufferControls({ onSelect, runner, selected }: BufferControlsProps) {
           return (
             <button
               aria-pressed={isSelected}
-              className={`grid min-w-0 grid-cols-[auto_1fr] items-center gap-1.5 rounded-sm border px-2 py-1 text-left text-xs font-medium transition-colors ${isSelected
+              className={`grid min-w-0 grid-cols-[auto_1fr] items-center gap-1.5 rounded-sm border px-2 py-1 text-left text-xs font-medium transition-colors ${
+                isSelected
                   ? 'border-[var(--sl-color-text-accent)] text-[var(--sl-color-text-accent)]'
                   : 'border-[var(--sl-color-gray-5)] text-[var(--sl-color-text)] hover:text-[var(--sl-color-text-accent)]'
-                }`}
+              }`}
               key={option.label}
               onClick={() => onSelect(index as BufferIndex)}
               type="button"

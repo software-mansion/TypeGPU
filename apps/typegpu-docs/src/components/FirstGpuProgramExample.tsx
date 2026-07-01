@@ -104,15 +104,15 @@ async function createCounterProgram(withLog: boolean): Promise<CounterProgram> {
   const program = root.createGuardedComputePipeline(
     withLog
       ? () => {
-        'use gpu';
-        const currentCount = countMutable.$;
-        console.log('current count:', currentCount);
-        countMutable.$++;
-      }
+          'use gpu';
+          const currentCount = countMutable.$;
+          console.log('current count:', currentCount);
+          countMutable.$++;
+        }
       : () => {
-        'use gpu';
-        countMutable.$++;
-      },
+          'use gpu';
+          countMutable.$++;
+        },
   );
   return { countMutable, program, root };
 }
