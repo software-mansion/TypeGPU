@@ -39,7 +39,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "arktype": "catalog:",
-    "astro": "^6.0.8",
+    "astro": "^6.4.6",
     "classnames": "^2.5.1",
     "expressive-code-twoslash": "^0.6.1",
     "fuse.js": "catalog:frontend",
