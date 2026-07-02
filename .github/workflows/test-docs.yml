@@ -1,4 +1,4 @@
-name: CI
+name: Test docs
 
 on:
   push:
@@ -8,6 +8,10 @@ on:
   merge_group:
     types:
       - checks_requested
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
@@ -29,8 +33,5 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Test
-        run: pnpm test
-
       - name: Build docs
-        run: cd apps/typegpu-docs && pnpm build
+        run: pnpm run --filter typegpu-docs build
