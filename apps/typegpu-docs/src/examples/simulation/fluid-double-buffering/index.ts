@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { d, std, type TgpuBufferMutable, type TgpuBufferReadonly } from 'typegpu';
+import { tgpu, d, std, type TgpuBufferMutable, type TgpuBufferReadonly } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const MAX_GRID_SIZE = 1024;

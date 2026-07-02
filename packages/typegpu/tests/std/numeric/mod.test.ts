@@ -15,7 +15,7 @@ import {
 } from 'typegpu/data';
 import type { v2f, v2h, v2i, v2u, v3f, v3h, v3i, v3u, v4f, v4h, v4i, v4u } from 'typegpu/data';
 import { isCloseTo, mod } from 'typegpu/std';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 describe('mod', () => {
   it('computes modulo of a number and a number', () => {

@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { d, std, type RenderFlag, type TgpuTexture } from 'typegpu';
+import { tgpu, d, std, type RenderFlag, type TgpuTexture } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import {

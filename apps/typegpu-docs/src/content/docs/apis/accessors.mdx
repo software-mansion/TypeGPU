@@ -6,7 +6,7 @@ description: Accessors are schema-aware typed placeholders for GPU resources, al
 When writing reusable GPU functions in TypeGPU, you often need to reference "some global value" without coupling to a specific buffer, texture or variable. [Slots](/TypeGPU/apis/slots) seem like the right tool for the job, but they encode the delivery mechanism into the slot type (e.g. a buffer or texture), making it inflexible for reusable functions.
 
 ```ts twoslash
-import tgpu, { type TgpuUniform, d } from 'typegpu';
+import { tgpu, type TgpuUniform, d } from 'typegpu';
 // ---cut---
 // 👎 only works with JS literals
 const staticColorSlot = tgpu.slot<d.v3f>();
@@ -28,7 +28,7 @@ const colorAccess = tgpu.accessor(d.vec3f);
 Create an accessor with `tgpu.accessor(schema)`. Optionally pass a default value as the second argument:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 // ---cut---
 // No default — must be bound before resolving.
 const colorAccess = tgpu.accessor(d.vec3f);
@@ -40,7 +40,7 @@ const colorWithDefault = tgpu.accessor(d.vec3f, d.vec3f(1, 0, 0));
 Inside a GPU function, read the accessor's value using `.$`:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const colorAccess = tgpu.accessor(d.vec3f, d.vec3f(1, 0, 0));
 // ---cut---
@@ -58,7 +58,7 @@ Accessing it outside GPU context throws a runtime error.
 If no default is set and no binding is provided at resolution time, TypeGPU throws a descriptive error:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 // ---cut---
 const colorAccess = tgpu.accessor(d.vec3f);
 
@@ -79,7 +79,7 @@ tgpu.resolve([getColor]);
 Use `.with(accessor, value)` on a function or pipeline — the same pattern as [slots](/apis/slots):
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const RED = d.vec3f(1, 0, 0);
 const GREEN = d.vec3f(0, 1, 0);
@@ -112,7 +112,7 @@ fn getColor_1() -> vec3f {
 You can also override on a pipeline:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -136,7 +136,7 @@ Accessors accept several types of GPU resources as values.
 The simplest binding — the value is resolved at compile time and inlined directly into the WGSL:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 // ---cut---
 const colorAccess = tgpu.accessor(d.vec3f);
 const multiplierAccess = tgpu.accessor(d.f32);
@@ -168,7 +168,7 @@ Notice how, because the values are known at compile time, the result is precompu
 Resolves to a function call in the generated WGSL:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 // ---cut---
 const colorAccess = tgpu.accessor(d.vec3f, () => {
   'use gpu';
@@ -196,7 +196,7 @@ fn getColor() -> vec3f {
 Resolves to the WGSL variable declaration for that buffer binding:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 const RED = d.vec3f(1, 0, 0);
@@ -225,7 +225,7 @@ fn getColor() -> vec3f {
 A common pattern for library-style code: use a bind group layout entry as the default, making it easy to swap the resource via `.with()`:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 // ---cut---
 const ImageData = (count: number) =>
   d.struct({
@@ -247,7 +247,7 @@ const imageAccess = tgpu.accessor(ImageData, () => layout.$.image);
 Bind a private or workgroup variable:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 // ---cut---
 const colorAccess = tgpu.accessor(d.vec3f);
 
@@ -280,7 +280,7 @@ fn getColor_1() -> vec3f {
 ### Constant
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 // ---cut---
 const colorAccess = tgpu.accessor(d.vec3f);
 
@@ -304,7 +304,7 @@ fn getColor() -> vec3f {
 ### Texture view
 
 ```ts twoslash
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -335,7 +335,7 @@ fn main() {
 Because accessors know the schema of their resource, you can access struct fields directly through `.$`:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 // ---cut---
 const ImageData = (count: number) =>
   d.struct({
@@ -379,7 +379,7 @@ fn getPixel(x: i32, y: i32) -> vec4f {
 You can also access deeply nested references — e.g., a specific element of a buffer's array field:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -415,7 +415,7 @@ fn main() {
 Use `tgpu.mutableAccessor` when you need to *write* to the resource:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -447,7 +447,7 @@ The split between `tgpu.accessor` and `tgpu.mutableAccessor` is useful, as the r
 You can also mutate fields of a non-primitive struct:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 

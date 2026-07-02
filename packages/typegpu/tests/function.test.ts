@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import tgpu, { d, type TgpuFn, type TgpuFnShell } from 'typegpu';
+import { tgpu, d, type TgpuFn, type TgpuFnShell } from 'typegpu';
 
 const empty = tgpu.fn([])`() {
   // do nothing

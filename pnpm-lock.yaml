@@ -115,6 +115,9 @@ importers:
       typescript:
         specifier: npm:tsover@^6.0.2
         version: tsover@6.0.2
+      typegpu-testing-utility:
+        specifier: workspace:*
+        version: link:packages/typegpu-testing-utility
       unplugin-typegpu:
         specifier: workspace:*
         version: link:packages/unplugin-typegpu

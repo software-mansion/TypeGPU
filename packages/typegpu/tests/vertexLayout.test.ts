@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 describe('tgpu.vertexLayout', () => {
   it('creates attributes from loose array of vec3f', () => {

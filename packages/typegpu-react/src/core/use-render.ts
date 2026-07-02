@@ -1,5 +1,5 @@
 import * as d from 'typegpu/data';
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import { useMemo, useRef } from 'react';
 
 import { useRoot } from './root-context.tsx';
