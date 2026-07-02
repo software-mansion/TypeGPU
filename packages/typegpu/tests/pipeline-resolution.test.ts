@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('resolve', () => {

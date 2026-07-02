@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 import * as c from './constants.ts';
 import { Distribution, PlotType, type PRNG } from './types.ts';

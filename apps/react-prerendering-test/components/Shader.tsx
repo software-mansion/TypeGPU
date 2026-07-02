@@ -2,7 +2,7 @@
 
 import { useConfigureContext, useFrame, useRoot, useUniform } from '@typegpu/react';
 import { useMemo } from 'react';
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import { perlin2d } from '@typegpu/noise';
 import { hexToOklab, oklabToRgb } from '@typegpu/color';
 

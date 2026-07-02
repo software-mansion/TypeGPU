@@ -1,4 +1,4 @@
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { directionToEquirectUv, loadEnvironmentCubemap } from './cubemap.ts';
 import { loadModel, ModelVertex } from './model.ts';

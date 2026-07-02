@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import { mat4x4f, vec3f, vec4f } from 'typegpu/data';
 import { isCloseTo, mul, scale4, translate4 } from 'typegpu/std';
 

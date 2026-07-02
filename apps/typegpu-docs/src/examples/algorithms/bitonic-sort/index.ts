@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import {
   type BitonicSorter,
   type BitonicSorterOptions,

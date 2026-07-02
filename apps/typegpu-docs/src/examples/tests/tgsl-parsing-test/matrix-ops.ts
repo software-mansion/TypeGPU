@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 
 // TODO: replace `s = s &&` with `s &&=` when implemented
 export const matrixOpsTests = tgpu.fn(

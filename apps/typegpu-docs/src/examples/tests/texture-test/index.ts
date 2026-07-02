@@ -1,4 +1,4 @@
-import tgpu, { common, d } from 'typegpu';
+import { tgpu, common, d } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();

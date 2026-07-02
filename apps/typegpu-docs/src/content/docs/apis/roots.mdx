@@ -16,7 +16,7 @@ It requests a GPU device with default requirements. An optional parameter
 can be passed in with special requirements for the GPU device.
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 
 const root = await tgpu.init();
 ```
@@ -24,7 +24,7 @@ const root = await tgpu.init();
 If you already have a device that you want to use, you can pass it into `tgpu.initFromDevice` instead.
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 
 const adapter = await navigator.gpu.requestAdapter();
 const device = await adapter?.requestDevice() as GPUDevice;
@@ -42,7 +42,7 @@ To retrieve the device that is associated with a root, you can use the `root.dev
 In order to draw on a canvas, you need to create and configure a context that will be later passed to a pipeline. 
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 const canvas = {} as HTMLCanvasElement;
 // ---cut---
@@ -56,7 +56,7 @@ context.configure({
 ```
 TypeGPU streamlines this process with `root.configureContext` method.
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 const canvas = {} as HTMLCanvasElement;
 // ---cut---

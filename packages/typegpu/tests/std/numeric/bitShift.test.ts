@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { u32, i32, vec3f, vec3i, vec3u, f32, vec2u } from 'typegpu/data';
 import { bitShiftLeft, bitShiftRight } from 'typegpu/std';
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 
 describe('bit shift', () => {
   it('casts rhs to u32', () => {
