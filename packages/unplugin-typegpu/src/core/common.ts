@@ -8,7 +8,7 @@ import { transpileFn } from 'tinyest-for-wgsl';
  * Each breaking change to the metadata format requires a bump to this number.
  * It's used at runtime by `typegpu` to determine how to interpret a function's metadata.
  */
-export const METADATA_FORMAT_VERSION = 1;
+export const METADATA_FORMAT_VERSION = 2;
 
 export interface Options {
   /** @default [/\.m?[jt]sx?$/] */
@@ -428,6 +428,14 @@ const operators = {
   '/=': '__tsover_div',
   '%=': '__tsover_mod',
 };
+
+export function makeAstBackwardsCompatible(ast: ReturnType<typeof transpileFn>) {
+  return {
+    params: ast.params,
+    body: ast.body,
+    externalNames: [...new Set(Array.from(ast.externalNames, (name) => name.split('.').at(0)))],
+  };
+}
 
 function containsUseGpuDirective(
   node: t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,

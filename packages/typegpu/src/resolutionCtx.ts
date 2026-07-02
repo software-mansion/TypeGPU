@@ -198,7 +198,7 @@ class ItemStateStackImpl implements ItemStateStack {
 
         const external = layer.externalMap[id];
         if (isNamable(external) && getName(external) === undefined) {
-          setName(external, id);
+          setName(external, id.split('.').at(-1) as string);
         }
 
         if (external !== undefined && external !== null) {
