@@ -1,5 +1,4 @@
-// The version is inlined during build-time 🎉
-import { version } from '../../package.json';
+import { version } from 'typegpu/package.json';
 import { DEV, TEST } from './env.ts';
 import { $getNameForward, isMarkedInternal } from './symbols.ts';
 import { normalizeMetadata, type Metadata, type RawMetadata } from './normalizeMetadata.ts';
