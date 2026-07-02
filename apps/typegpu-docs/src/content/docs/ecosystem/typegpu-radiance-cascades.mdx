@@ -29,7 +29,7 @@ The package currently focuses on 2D radiance fields. It expects distances in UV-
 ```ts twoslash
 import * as rc from '@typegpu/radiance-cascades';
 import * as sdf from '@typegpu/sdf';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 
 const root = await tgpu.init();
 const previewSize = { width: 512, height: 512 };
@@ -87,7 +87,7 @@ A common setup is to generate an SDF texture with [`@typegpu/sdf`](/TypeGPU/ecos
 ```ts
 import * as rc from '@typegpu/radiance-cascades';
 import * as sdf from '@typegpu/sdf';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 
 const root = await tgpu.init();
 const floodSize = { width: 2048, height: 2048 };

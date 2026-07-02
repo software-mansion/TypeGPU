@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
-import tgpu, {
+import {
+  tgpu,
   common,
   d,
   MissingBindGroupsError,

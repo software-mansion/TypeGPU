@@ -11,7 +11,7 @@ GPU sorting and scanning algorithms for TypeGPU.
 Sorts a `u32` storage buffer in-place. Arrays with non-power-of-2 lengths are padded automatically.
 
 ```ts
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { createBitonicSorter } from '@typegpu/sort';
 
 const root = await tgpu.init();

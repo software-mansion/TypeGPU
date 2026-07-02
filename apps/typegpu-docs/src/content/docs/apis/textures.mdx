@@ -17,7 +17,7 @@ TypeGPU textures serve as a wrapper that provides type safety and higher level u
 Let's look at an example of creating and using a typed texture.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -54,7 +54,7 @@ type TextureProps = {
 ```
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -71,7 +71,7 @@ const texture = root.createTexture({
 Similar to buffers, textures need usage flags to specify how they will be used. You can add usage flags using the `.$usage(...)` method.
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -86,7 +86,7 @@ const texture = root.createTexture({
 You can also add multiple flags at once:
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -119,7 +119,7 @@ You can write various image sources to textures. `ExternalImageSource` includes:
 - `VideoFrame`
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -149,7 +149,7 @@ If image dimensions don't match the texture size, the image will be automaticall
 For 3D textures or texture arrays, you can write multiple images:
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 declare const imageBitmap1: ImageBitmap;
 declare const imageBitmap2: ImageBitmap;
@@ -170,7 +170,7 @@ texture3d.write([imageBitmap1, imageBitmap2, imageBitmap3]);
 You can write raw binary data directly to textures using `ArrayBuffer`, typed arrays, or `DataView`:
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -195,7 +195,7 @@ texture.write(mipData, 1); // Write to mip level 1
 You can also copy from another texture:
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const sourceTexture = root.createTexture({
@@ -216,7 +216,7 @@ targetTexture.copyFrom(sourceTexture);
 TypeGPU provides automatic mipmap generation for textures:
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 declare const imageBitmap: ImageBitmap;
 // ---cut---
@@ -239,7 +239,7 @@ The `generateMipmaps()` method requires both `'sampled'` and `'render'` usage fl
 To create a view - which will also serve as fixed texture usage - you can use one of the available [texture schemas](/TypeGPU/apis/data-schemas/#textures). You can pass it to the `.createView` method of the texture.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -257,7 +257,7 @@ const sampledView = texture.createView(d.texture2d(d.f32));
 If type information is available the view schema will be staticly checked against the texture properties.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -270,7 +270,7 @@ const sampledView = texture.createView(d.texture2d(d.f32));
 ```
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -288,7 +288,7 @@ const sampledView = texture.createView(d.textureStorage2d('rgba8unorm')); // <--
 To sample textures in shaders, you'll often need a sampler that defines how the texture should be filtered and addressed. The `createSampler` method accepts the same descriptor as the vanilla WebGPU `GPUSamplerDescriptor`:
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const sampler = root.createSampler({
@@ -309,7 +309,7 @@ Textures can be used in shaders through bind groups or as fixed resources, simil
 ### Manual binding
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -340,7 +340,7 @@ const bindGroup = root.createBindGroup(bindGroupLayout, {
 For textures that remain consistent across operations, you can create fixed texture views:
 
 ```ts twoslash
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { connectAttributesToShader } from '../../src/core/vertexLayout/connectAttributesToShader.ts';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 describe('connectAttributesToShader', () => {
   it('connects a single f32 attribute', () => {

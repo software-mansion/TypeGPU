@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 const RED = 'vec3f(1., 0., 0.)';

@@ -23,7 +23,7 @@ async function executeTgslModule(
       '/shader.ts': { content: tgslCode },
       '/index.ts': {
         content: `
-          import tgpu from 'typegpu';
+          import { tgpu } from 'typegpu';
           import * as exports from './shader.ts';
 
           const shaderCode = tgpu.resolve({ externals: exports });

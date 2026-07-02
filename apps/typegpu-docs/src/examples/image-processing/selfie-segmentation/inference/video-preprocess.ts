@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import type { TgpuBindGroup, TgpuRoot } from 'typegpu';
 import { FrameCropParams, initialFrameCropParams, type VideoFrameCrop } from '../frame.ts';
 import { WORKGROUP_SIZE, type Vec4Buffer } from './kernels/types.ts';

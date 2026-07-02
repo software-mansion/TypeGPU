@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 

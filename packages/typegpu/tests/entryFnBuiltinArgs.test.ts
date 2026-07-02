@@ -1,5 +1,5 @@
 import { describe, it } from 'vitest';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import type { TgpuComputeFn, TgpuFragmentFn, TgpuVertexFn } from 'typegpu';
 import { attest } from '@ark/attest';
 

@@ -9,7 +9,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import tgpu, { type TgpuRoot } from 'typegpu';
+import { tgpu, type TgpuRoot } from 'typegpu';
 import { useDeferredCleanup } from './helper-hooks.ts';
 import { useBailOnServer } from './use-bail-on-server.ts';
 
