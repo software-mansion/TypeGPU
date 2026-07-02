@@ -4,7 +4,7 @@ description: This doc explains how a 'use gpu' directive can make a function run
 ---
 
 This tutorial explains in depth what exactly happens during the bundle time to make 'use gpu' functions possible.
-Understanding this is not at all necessary for using TypeGPU, but it may help new contributors understand why some things work like they do.
+Understanding this is not at all necessary to start using TypeGPU, but it may help contributors understand why some things work like they do.
 
 ## Introduction
 
@@ -100,7 +100,7 @@ The changes can be split into three categories:
 
 ## Auto-naming
 
-Most TypeGPU resources can be named with `$name` method.
+Most TypeGPU resources can be named via the `$name` method.
 While this is completely optional, a name can make debugging easier, and it also serves as a primer for identifiers in resulting WGSL.
 
 Unplugin-typegpu traverses the AST of each bundled file, and matches most common patterns where a default name for a resource (recognized by constructor name) can be inferred.
@@ -128,7 +128,7 @@ console.log(main.toString());
 // }
 ```
 
-The `globalThis.__TYPEGPU_AUTONAME__` function checks its argument for the `$internal` symbol and `$name` prop, and if both are present, calls `$name` on the item.
+The `globalThis.__TYPEGPU_AUTONAME__` function checks its argument for the `$internal` symbol and `$name` prop, and if both are present (and the item does not already have a name), calls `$name` on the item.
 Therefore, some potential false positive calls to `__TYPEGPU_AUTONAME__` (e.g. if user named their unrelated function `createMutable`) cause no harm.
 
 It is worth noting that we actually wrap the function in a `(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))` call: 
@@ -155,15 +155,15 @@ Only functions marked with `'use gpu'` are processed.
 
 ### AST
 
-The plugin uses a package [tinyest-for-wgsl](https://github.com/software-mansion/TypeGPU/blob/main/packages/tinyest-for-wgsl/README.md) 
-to parse the function AST into our custom AST format called [tinyest](https://github.com/software-mansion/TypeGPU/blob/main/packages/tinyest/README.md).
+The plugin uses the [tinyest-for-wgsl](https://github.com/software-mansion/TypeGPU/blob/main/packages/tinyest-for-wgsl/README.md) 
+package to parse the function AST into our custom AST format called [tinyest](https://github.com/software-mansion/TypeGPU/blob/main/packages/tinyest/README.md).
 Our `wgslGenerator` traverses this AST and generates code snippets.
 
-This could theoretically be done in runtime, but it would require bundling a JavaScript parser with TypeGPU, and catching externals would be really difficult.
+This could theoretically be done in runtime from the function's `toString`, but it would require bundling a JavaScript parser with TypeGPU, and catching externals would be really difficult.
 
 ### Externals
 
-Along with AST, [tinyest-for-wgsl](https://github.com/software-mansion/TypeGPU/blob/main/packages/tinyest-for-wgsl/README.md) also returns a set of externals.
+Along with AST, [tinyest-for-wgsl](https://github.com/software-mansion/TypeGPU/blob/main/packages/tinyest-for-wgsl/README.md) also returns a set of externals (variables captured from outer scope).
 This section is more technical to explain our design choices.
 
 #### Step 1: tinyest-for-wgsl

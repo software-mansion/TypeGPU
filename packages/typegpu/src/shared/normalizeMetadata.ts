@@ -36,7 +36,7 @@ export interface Metadata {
  * we turn them into getters.
  *
  * @example
- * normalizeExternalsV2({ "ext.prop": () => ext.prop; }); // { "ext.prop": [Getter] }
+ * normalizeExternalsV2({ "ext.prop": () => ext.prop; }); // { get "ext.prop"() => ext.prop; }
  */
 function normalizeExternalsV2(externals: RawMetadataV2['externals']): Record<string, unknown> {
   const result: Record<string, unknown> = {};
