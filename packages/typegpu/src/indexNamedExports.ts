@@ -17,7 +17,7 @@ export { isComparisonSampler, isSampler } from './core/sampler/sampler.ts';
 export { isTexture } from './core/texture/texture.ts';
 export { isUsableAsRender, isUsableAsSampled } from './core/texture/usageExtension.ts';
 export { isUsableAsStorage } from './extension.ts';
-export { isUsableAsUniform } from './core/buffer/bufferUsage.ts';
+export { isUsableAsUniform } from './core/buffer/buffer.ts';
 export { isBufferShorthand } from './core/buffer/bufferShorthand.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
 export { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';

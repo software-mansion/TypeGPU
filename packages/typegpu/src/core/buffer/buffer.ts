@@ -183,6 +183,12 @@ export function isUsableAsIndex<T extends TgpuBuffer<BaseData>>(
   return !!buffer.usableAsIndex;
 }
 
+export function isUsableAsUniform<T extends TgpuBuffer<BaseData>>(
+  buffer: T,
+): buffer is T & UniformFlag {
+  return !!buffer.usableAsUniform;
+}
+
 // --------------
 // Implementation
 // --------------

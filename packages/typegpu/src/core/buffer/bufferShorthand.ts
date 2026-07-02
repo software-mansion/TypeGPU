@@ -17,8 +17,12 @@ import {
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
-import type { BufferWriteOptions, TgpuBuffer, UniformFlag } from './buffer.ts';
-import { isUsableAsUniform } from './bufferUsage.ts';
+import {
+  isUsableAsUniform,
+  type BufferWriteOptions,
+  type TgpuBuffer,
+  type UniformFlag,
+} from './buffer.ts';
 
 // ----------
 // Public API
@@ -309,7 +313,7 @@ const uniformUsageMap = new WeakMap<
 
 export function uniform<TData extends AnyWgslData>(
   buffer: TgpuBuffer<TData> & UniformFlag,
-): TgpuUniform<BaseData> {
+): TgpuUniform<TData> {
   if (!isUsableAsUniform(buffer)) {
     throw new Error(
       `Cannot call as('uniform') on ${buffer}, as it is not allowed to be used as a uniform. To allow it, call .$usage('uniform') when creating the buffer.`,

@@ -2,7 +2,6 @@ import { type BaseData } from '../../data/wgslTypes.ts';
 import type { Infer, InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $repr } from '../../shared/symbols.ts';
 import type { BindableBufferUsage } from '../../types.ts';
-import type { TgpuBuffer, UniformFlag } from './buffer.ts';
 
 // TODO(#2666) - remove this file
 
@@ -65,9 +64,3 @@ export interface TgpuBufferMutable<TData extends BaseData> extends TgpuBufferUsa
   TData,
   'mutable'
 > {}
-
-export function isUsableAsUniform<T extends TgpuBuffer<BaseData>>(
-  buffer: T,
-): buffer is T & UniformFlag {
-  return !!buffer.usableAsUniform;
-}

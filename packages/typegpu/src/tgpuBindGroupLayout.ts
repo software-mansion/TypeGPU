@@ -1,5 +1,9 @@
-import { isBuffer, type TgpuBuffer, type UniformFlag } from './core/buffer/buffer.ts';
-import { isUsableAsUniform } from './core/buffer/bufferUsage.ts';
+import {
+  isBuffer,
+  isUsableAsUniform,
+  type TgpuBuffer,
+  type UniformFlag,
+} from './core/buffer/buffer.ts';
 import {
   isComparisonSampler,
   isSampler,
