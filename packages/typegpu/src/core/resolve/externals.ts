@@ -68,7 +68,10 @@ export function addReturnTypeToExternals(
 
 const anyIdent = /([$_\p{XID_Start}][$\p{XID_Continue}]*)/u; // WGSL ident, modified to include $
 const anyPropChain = new RegExp(`(${anyIdent.source})(\\.${anyIdent.source})*`, 'ug');
-const boundedPropChain = new RegExp(`(?<![\\w\\$_.])${anyPropChain.source}(?![\\w\\$_])`, 'ug');
+const boundedPropChain = new RegExp(
+  `(?<![\\p{XID_Continue}\\$.])${anyPropChain.source}(?![\\p{XID_Continue}\\$])`,
+  'ug',
+);
 
 /**
  * Replaces all occurrences of external names in WGSL code with their resolved values.
@@ -87,6 +90,11 @@ export function replaceExternalsInWgsl(
   const keys = Object.keys(externalMap);
   if (keys.length === 0) {
     return wgsl;
+  }
+
+  const maybeInvalidKey = keys.find((key) => key.includes('.'));
+  if (maybeInvalidKey) {
+    throw new Error(`External key '${maybeInvalidKey}' contains invalid character '.'`);
   }
 
   return wgsl.replaceAll(boundedPropChain, (match) => {
