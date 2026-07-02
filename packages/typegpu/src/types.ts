@@ -1,10 +1,5 @@
 import type { Block, FuncParameter } from 'tinyest';
 import type { TgpuBuffer } from './core/buffer/buffer.ts';
-import type {
-  TgpuBufferMutable,
-  TgpuBufferReadonly,
-  TgpuBufferUniform,
-} from './core/buffer/bufferUsage.ts';
 import type { TgpuConst } from './core/constant/tgpuConstant.ts';
 import type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
 import type { TgpuComputeFn } from './core/function/tgpuComputeFn.ts';
@@ -438,23 +433,4 @@ export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
 
 export function isGPUBuffer(value: unknown): value is GPUBuffer {
   return !!value && typeof value === 'object' && 'getMappedRange' in value && 'mapAsync' in value;
-}
-
-/**
- * @deprecated Use isBufferShorthand instead.
- */
-export function isBufferUsage(
-  value: unknown,
-): value is
-  | TgpuBufferUniform<BaseData>
-  | TgpuBufferReadonly<BaseData>
-  | TgpuBufferMutable<BaseData> {
-  return (
-    (
-      value as
-        | TgpuBufferUniform<BaseData>
-        | TgpuBufferReadonly<BaseData>
-        | TgpuBufferMutable<BaseData>
-    )?.resourceType === 'buffer-usage'
-  );
 }
