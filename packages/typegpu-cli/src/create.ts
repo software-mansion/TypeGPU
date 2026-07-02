@@ -113,7 +113,7 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
   const cdPath = path.relative(cwd, root);
   const installCmd = resolveCommand(pm, 'install', []);
   const prebuildCmd = projectTemplate.includes('expo')
-    ? { command: 'npx', args: ['expo', 'prebuild'] }
+    ? resolveCommand(pm, 'execute', ['expo', 'prebuild'])
     : undefined;
   const runCmd = projectTemplate.includes('expo')
     ? resolveCommand(pm, 'run', ['ios # or android'])
