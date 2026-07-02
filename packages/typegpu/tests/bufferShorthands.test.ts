@@ -114,14 +114,18 @@ describe('root.createMutable', () => {
     root.createBuffer(d.u32, 2).$usage('storage', 'uniform').as('mutable');
     root.createBuffer(d.u32, 2).$usage('vertex', 'storage').as('mutable');
     // @ts-expect-error
-    expect(() => root.createBuffer(d.u32, 2).as('mutable')).toThrow();
+    expect(() => root.createBuffer(d.u32, 2).as('mutable')).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot call as('mutable') on buffer:<unnamed>, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.]`,
+    );
     expect(() =>
       root
         .createBuffer(d.u32, 2)
         .$usage('uniform')
         // @ts-expect-error
         .as('mutable'),
-    ).toThrow();
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot call as('mutable') on buffer:<unnamed>, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.]`,
+    );
   });
 
   it('creates a mutable', ({ root }) => {
@@ -339,14 +343,18 @@ describe('root.createReadonly', () => {
     root.createBuffer(d.u32, 2).$usage('storage', 'uniform').as('readonly');
     root.createBuffer(d.u32, 2).$usage('storage', 'vertex').as('readonly');
     // @ts-expect-error
-    expect(() => root.createBuffer(d.u32, 2).as('readonly')).toThrow();
+    expect(() => root.createBuffer(d.u32, 2).as('readonly')).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot call as('readonly') on buffer:<unnamed>, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.]`,
+    );
     expect(() =>
       root
         .createBuffer(d.u32, 2)
         .$usage('uniform')
         // @ts-expect-error
         .as('readonly'),
-    ).toThrow();
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot call as('readonly') on buffer:<unnamed>, as it is not allowed to be used as storage. To allow it, call .$usage('storage') when creating the buffer.]`,
+    );
   });
 
   it('creates a readonly', ({ root }) => {
@@ -524,14 +532,18 @@ describe('root.createUniform', () => {
     root.createBuffer(d.u32, 2).$usage('uniform', 'storage').as('uniform');
     root.createBuffer(d.u32, 2).$usage('uniform', 'vertex').as('uniform');
     // @ts-expect-error
-    expect(() => root.createBuffer(d.u32, 2).as('uniform')).toThrow();
+    expect(() => root.createBuffer(d.u32, 2).as('uniform')).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot call as('uniform') on buffer:<unnamed>, as it is not allowed to be used as a uniform. To allow it, call .$usage('uniform') when creating the buffer.]`,
+    );
     expect(() =>
       root
         .createBuffer(d.u32, 2)
         .$usage('storage')
         // @ts-expect-error
         .as('uniform'),
-    ).toThrow();
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot call as('uniform') on buffer:<unnamed>, as it is not allowed to be used as a uniform. To allow it, call .$usage('uniform') when creating the buffer.]`,
+    );
   });
 
   it('creates a uniform', ({ root }) => {
