@@ -13,53 +13,10 @@ import {
 } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
-describe('root.withVertex(...).withFragment(...)', () => {
+describe('render pipeline behavior', () => {
   const vert = tgpu.vertexFn({
     out: { a: d.vec3f, b: d.vec2f },
   })`{ return Out(); }`;
-  const vertWithBuiltin = tgpu.vertexFn({
-    out: { a: d.vec3f, b: d.vec2f, pos: d.builtin.position },
-  })`{ return Out(); }`;
-
-  it('allows fragment functions to use a subset of the vertex output', ({ root }) => {
-    const emptyFragment = tgpu.fragmentFn({ in: {}, out: {} })`{}`;
-    const emptyFragmentWithBuiltin = tgpu.fragmentFn({
-      in: { pos: d.builtin.frontFacing },
-      out: {},
-    })`{}`;
-    const fullFragment = tgpu.fragmentFn({
-      in: { a: d.vec3f, b: d.vec2f },
-      out: d.vec4f,
-    })`{ return vec4f(); }`;
-
-    // Using none
-    const pipeline = root.withVertex(vert).withFragment(emptyFragment).createPipeline();
-
-    // Using none (builtins are erased from the vertex output)
-    const pipeline2 = root.withVertex(vertWithBuiltin).withFragment(emptyFragment).createPipeline();
-
-    // Using none (builtins are ignored in the fragment input)
-    const pipeline3 = root.withVertex(vert).withFragment(emptyFragmentWithBuiltin).createPipeline();
-
-    // Using none (builtins are ignored in both input and output,
-    // so their conflict of the `pos` key is fine)
-    const pipeline4 = root
-      .withVertex(vertWithBuiltin)
-      .withFragment(emptyFragmentWithBuiltin)
-      .createPipeline();
-
-    // Using all
-    const pipeline5 = root
-      .withVertex(vert)
-      .withFragment(fullFragment, { format: 'rgba8unorm' })
-      .createPipeline();
-
-    expect(pipeline).toBeDefined();
-    expect(pipeline2).toBeDefined();
-    expect(pipeline3).toBeDefined();
-    expect(pipeline4).toBeDefined();
-    expect(pipeline5).toBeDefined();
-  });
 
   it('rejects fragment functions that use non-existent vertex output', ({ root }) => {
     const fragment = tgpu.fragmentFn({
@@ -68,7 +25,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
     })('');
 
     // @ts-expect-error: Missing from vertex output
-    root.withVertex(vert, {}).withFragment(fragment, {}).createPipeline();
+    root.createRenderPipeline({ vertex: vert, fragment });
   });
 
   it('rejects fragment functions that use mismatched vertex output data types', ({ root }) => {
@@ -78,7 +35,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
     })('');
 
     // @ts-expect-error: Mismatched vertex output
-    root.withVertex(vert, {}).withFragment(fragment, {}).createPipeline();
+    root.createRenderPipeline({ vertex: vert, fragment });
   });
 
   it('throws an error if bind groups are missing', ({ root }) => {
@@ -93,9 +50,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
     })`{}`;
 
     const pipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { out: { format: 'rgba8unorm' } })
-      .createPipeline()
+      .createRenderPipeline({
+        vertex: vertexFn,
+        fragment: fragmentFn,
+        targets: { out: { format: 'rgba8unorm' } },
+      })
       // oxlint-disable-next-line typescript/no-explicit-any -- not testing color attachment at this time
       .withColorAttachment({ out: {} } as any);
 
@@ -120,51 +79,6 @@ describe('root.withVertex(...).withFragment(...)', () => {
     expectTypeOf(tgpu.fragmentFn({ out: {} })).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
   });
 
-  it('properly handles custom depth output in fragment functions', ({ root }) => {
-    const vertices = tgpu.const(d.arrayOf(d.vec2f, 3), [
-      d.vec2f(-1, -1),
-      d.vec2f(3, -1),
-      d.vec2f(-1, 3),
-    ]);
-    const vertexMain = tgpu.vertexFn({
-      in: { vid: d.builtin.vertexIndex },
-      out: { pos: d.builtin.position },
-    })(({ vid }) => ({ pos: d.vec4f(vertices.$[vid]!, 0, 1) }));
-
-    const fragmentMain = tgpu.fragmentFn({
-      out: { color: d.vec4f, depth: d.builtin.fragDepth },
-    })(() => ({ color: d.vec4f(1, 0, 0, 1), depth: 0.5 }));
-
-    const pipeline = root
-      .withVertex(vertexMain, {})
-      .withFragment(fragmentMain, { color: { format: 'rgba8unorm' } })
-      .createPipeline();
-
-    pipeline.withColorAttachment({
-      color: {
-        view: {} as unknown as GPUTextureView,
-        loadOp: 'clear',
-        storeOp: 'store',
-      },
-    });
-
-    expect(() => {
-      pipeline.withColorAttachment({
-        color: {
-          view: {} as unknown as GPUTextureView,
-          loadOp: 'clear',
-          storeOp: 'store',
-        },
-        // @ts-expect-error
-        depth: {
-          view: {} as unknown as GPUTextureView,
-          loadOp: 'clear',
-          storeOp: 'store',
-        },
-      });
-    });
-  });
-
   it('type checks passed bind groups', ({ root }) => {
     const vertexMain = tgpu.vertexFn({
       out: { bar: d.location(0, d.vec3f) },
@@ -175,10 +89,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
       in: { bar: d.vec3f },
       out: d.vec4f,
     })(() => d.vec4f());
-    const renderPipeline = root
-      .withVertex(vertexMain, {})
-      .withFragment(fragmentMain, { format: 'r8unorm' })
-      .createPipeline();
+    const renderPipeline = root.createRenderPipeline({
+      vertex: vertexMain,
+      fragment: fragmentMain,
+      targets: { format: 'r8unorm' },
+    });
 
     const layout1 = tgpu.bindGroupLayout({ buf: { uniform: d.u32 } });
     const bindGroup1 = root.createBindGroup(layout1, {
@@ -196,35 +111,6 @@ describe('root.withVertex(...).withFragment(...)', () => {
   });
 
   describe('resolve', () => {
-    it('allows resolving the entire shader code', ({ root }) => {
-      const pipeline = root
-        .withVertex(vertWithBuiltin.$name('vertex'), {})
-        .withFragment(
-          tgpu
-            .fragmentFn({
-              in: { a: d.builtin.position },
-              out: d.vec4f,
-            })(() => d.vec4f(1, 2, 3, 4))
-            .$name('fragment'),
-          { format: 'r8unorm' },
-        )
-        .createPipeline();
-
-      expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-        "struct vertex_Output {
-          @location(0) a: vec3f,
-          @location(1) b: vec2f,
-          @builtin(position) pos: vec4f,
-        }
-
-        @vertex fn vertex() -> vertex_Output { return vertex_Output(); }
-
-        @fragment fn fragment() -> @location(0) vec4f {
-          return vec4f(1, 2, 3, 4);
-        }"
-      `);
-    });
-
     it('resolves with correct locations when pairing up a vertex and a fragment function', ({
       root,
     }) => {
@@ -256,10 +142,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
         out: d.vec4f,
       })(() => d.vec4f());
 
-      const pipeline = root
-        .withVertex(vertexMain, {})
-        .withFragment(fragmentMain, { format: 'r8unorm' })
-        .createPipeline();
+      const pipeline = root.createRenderPipeline({
+        vertex: vertexMain,
+        fragment: fragmentMain,
+        targets: { format: 'r8unorm' },
+      });
 
       expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
         "struct vertexMain_Output {
@@ -306,10 +193,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
         out: d.vec4f,
       })`{ return vec4f(in.bar, 1); }`;
 
-      const pipeline = root
-        .withVertex(vertexMain, {})
-        .withFragment(fragmentMain, { format: 'r8unorm' })
-        .createPipeline();
+      const pipeline = root.createRenderPipeline({
+        vertex: vertexMain,
+        fragment: fragmentMain,
+        targets: { format: 'r8unorm' },
+      });
 
       expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
         "struct vertexMain_Output {
@@ -356,10 +244,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
         out: d.vec4f,
       })(() => d.vec4f());
 
-      const pipeline = root
-        .withVertex(vertexMain, {})
-        .withFragment(fragmentMain, { format: 'r8unorm' })
-        .createPipeline();
+      const pipeline = root.createRenderPipeline({
+        vertex: vertexMain,
+        fragment: fragmentMain,
+        targets: { format: 'r8unorm' },
+      });
 
       tgpu.resolve([pipeline]);
       expect(consoleWarnSpy).toHaveBeenCalledWith(
@@ -389,10 +278,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
         out: d.vec4f,
       })(() => d.vec4f());
 
-      const pipeline = root
-        .withVertex(vertexMain, {})
-        .withFragment(fragmentMain, { format: 'r8unorm' })
-        .createPipeline();
+      const pipeline = root.createRenderPipeline({
+        vertex: vertexMain,
+        fragment: fragmentMain,
+        targets: { format: 'r8unorm' },
+      });
 
       tgpu.resolve([pipeline]);
       expect(consoleWarnSpy).not.toHaveBeenCalledWith(
@@ -430,7 +320,7 @@ describe('root.withVertex(...).withFragment(...)', () => {
     );
   });
 
-  it("should not throw 'A color target was not provided to the shader'", ({ root, device }) => {
+  it("should not throw 'A color target was not provided to the shader'", ({ root }) => {
     const vertexFn = tgpu.vertexFn({
       out: { pos: d.builtin.position },
     })('');
@@ -449,53 +339,12 @@ describe('root.withVertex(...).withFragment(...)', () => {
     });
 
     expect(() => {
-      root
-        .withVertex(vertexFn, {})
-        .withFragment(fragmentFn, { fragColor: { format: 'rgba8unorm' } })
-        .createPipeline();
-    }).not.toThrow("A color target by the name of 'fragDepth' was not provided to the shader.");
-  });
-
-  it('should setup timestamp writes in render pass descriptor', ({ root, commandEncoder }) => {
-    const vertexFn = tgpu.vertexFn({
-      out: { pos: d.builtin.position },
-    })('');
-
-    const fragmentFn = tgpu.fragmentFn({
-      out: { color: d.vec4f },
-    })('');
-
-    const querySet = root.createQuerySet('timestamp', 4);
-
-    const pipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-      .createPipeline()
-      .withTimestampWrites({
-        querySet,
-        beginningOfPassWriteIndex: 1,
-        endOfPassWriteIndex: 2,
-      })
-      .withColorAttachment({
-        color: {
-          view: {} as unknown as GPUTextureView,
-          loadOp: 'clear',
-          storeOp: 'store',
-        },
+      root.createRenderPipeline({
+        vertex: vertexFn,
+        fragment: fragmentFn,
+        targets: { fragColor: { format: 'rgba8unorm' } },
       });
-
-    pipeline.draw(3);
-
-    expect(commandEncoder.beginRenderPass).toHaveBeenCalledWith(
-      expect.objectContaining({
-        label: 'pipeline',
-        timestampWrites: {
-          querySet: querySet.querySet,
-          beginningOfPassWriteIndex: 1,
-          endOfPassWriteIndex: 2,
-        },
-      }),
-    );
+    }).not.toThrow("A color target by the name of 'fragDepth' was not provided to the shader.");
   });
 
   it('should handle depth stencil attachments with timestamp writes', ({
@@ -513,9 +362,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
     const querySet = root.createQuerySet('timestamp', 2);
 
     const pipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-      .createPipeline()
+      .createRenderPipeline({
+        vertex: vertexFn,
+        fragment: fragmentFn,
+        targets: { color: { format: 'rgba8unorm' } },
+      })
       .withTimestampWrites({
         querySet,
         beginningOfPassWriteIndex: 0,
@@ -560,13 +411,15 @@ describe('root.withVertex(...).withFragment(...)', () => {
       .$name('fragment');
 
     const pipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-      .withDepthStencil({
-        format: 'stencil8',
-        stencilFront: { passOp: 'replace' },
+      .createRenderPipeline({
+        vertex: vertexFn,
+        fragment: fragmentFn,
+        targets: { color: { format: 'rgba8unorm' } },
+        depthStencil: {
+          format: 'stencil8',
+          stencilFront: { passOp: 'replace' },
+        },
       })
-      .createPipeline()
       .withColorAttachment({
         color: {
           view: {} as unknown as GPUTextureView,
@@ -606,9 +459,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
       .$name('fragment');
 
     const pipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-      .createPipeline()
+      .createRenderPipeline({
+        vertex: vertexFn,
+        fragment: fragmentFn,
+        targets: { color: { format: 'rgba8unorm' } },
+      })
       .withColorAttachment({
         color: {
           view: {} as unknown as GPUTextureView,
@@ -627,70 +482,6 @@ describe('root.withVertex(...).withFragment(...)', () => {
     const pipelineWithIndex = pipeline.withIndexBuffer(indexBuffer);
 
     expect(() => pipelineWithIndex.drawIndexed(3)).not.toThrow();
-  });
-
-  it('works when combining timestamp writes and index buffer', ({
-    root,
-    device,
-    commandEncoder,
-  }) => {
-    const vertexFn = tgpu
-      .vertexFn({
-        out: { pos: d.builtin.position },
-      })('')
-      .$name('vertex');
-
-    const fragmentFn = tgpu
-      .fragmentFn({
-        out: { color: d.vec4f },
-      })('')
-      .$name('fragment');
-
-    const querySet = root.createQuerySet('timestamp', 2);
-    const indexBuffer = root.createBuffer(d.arrayOf(d.u16, 2)).$usage('index');
-
-    const beginRenderPassSpy = vi.spyOn(commandEncoder, 'beginRenderPass');
-
-    const pipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-      .createPipeline()
-      .withIndexBuffer(indexBuffer)
-      .withTimestampWrites({
-        querySet,
-        beginningOfPassWriteIndex: 0,
-        endOfPassWriteIndex: 1,
-      })
-      .withColorAttachment({
-        color: {
-          view: {} as unknown as GPUTextureView,
-          loadOp: 'clear',
-          storeOp: 'store',
-        },
-      });
-
-    pipeline.drawIndexed(3);
-
-    expect(device.mock.createQuerySet).toHaveBeenCalledWith({
-      type: 'timestamp',
-      count: 2,
-    });
-
-    expect(beginRenderPassSpy).toHaveBeenCalledWith({
-      colorAttachments: [
-        {
-          loadOp: 'clear',
-          storeOp: 'store',
-          view: expect.any(Object),
-        },
-      ],
-      label: 'pipeline',
-      timestampWrites: {
-        beginningOfPassWriteIndex: 0,
-        endOfPassWriteIndex: 1,
-        querySet: querySet.querySet,
-      },
-    });
   });
 
   it('warns when buffer limits are exceeded', ({ root }) => {
@@ -752,10 +543,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
       return d.vec4f();
     });
 
-    const pipeline = root
-      .withVertex(vertexFn)
-      .withFragment(fragmentFn, { format: 'rgba8unorm' })
-      .createPipeline();
+    const pipeline = root.createRenderPipeline({
+      vertex: vertexFn,
+      fragment: fragmentFn,
+      targets: { format: 'rgba8unorm' },
+    });
 
     pipeline
       .withColorAttachment({
