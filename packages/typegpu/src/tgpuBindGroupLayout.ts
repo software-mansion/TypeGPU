@@ -1,5 +1,6 @@
-import { isBuffer, type TgpuBuffer, type UniformFlag } from './core/buffer/buffer.ts';
-import { isUsableAsUniform, TgpuLaidOutBufferImpl } from './core/buffer/bufferUsage.ts';
+import { type TgpuBuffer, type UniformFlag } from './core/buffer/buffer.ts';
+import { isBuffer, isUsableAsStorage } from './types.ts';
+import { isUsableAsUniform } from './types.ts';
 import {
   isComparisonSampler,
   isSampler,
@@ -37,7 +38,7 @@ import {
 import type { StorageTextureFormats } from './core/texture/textureFormats.ts';
 import type { AnyWgslData, BaseData, F32, I32, U32 } from './data/wgslTypes.ts';
 import { invariant, NotUniformError } from './errors.ts';
-import { isUsableAsStorage, NotStorageError, type StorageFlag } from './extension.ts';
+import { NotStorageError, type StorageFlag } from './extension.ts';
 import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
 import type { InferGPU, MemIdentity } from './shared/repr.ts';
@@ -47,6 +48,7 @@ import type { Default, NullableToOptional, Prettify } from './shared/utilityType
 import type { ResolvableObject, TgpuShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
 import type { WgslComparisonSampler, WgslSampler } from './data/sampler.ts';
+import { TgpuLaidOutBufferImpl } from './core/buffer/laidOutBuffer.ts';
 
 // ----------
 // Public API
