@@ -1,10 +1,10 @@
 {
-  "extends": "./tsconfig.base.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "declaration": false,
     "emitDeclarationOnly": false,
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "exclude": ["**/dist", "**/node_modules", "node_modules", "apps/**"]
+  "include": ["src/**/*.ts"]
 }
