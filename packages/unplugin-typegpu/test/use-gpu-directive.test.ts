@@ -76,7 +76,7 @@ describe('"use gpu" marked arrow function, assigned to a const', () => {
 
 describe('marked arrow functions passed to shells', () => {
   const code = `\
-    import tgpu from 'typegpu';
+    import { tgpu } from 'typegpu';
 
     const shell = tgpu.fn([]);
 
@@ -92,7 +92,7 @@ describe('marked arrow functions passed to shells', () => {
 
   test('babel', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       const shell = tgpu.fn([]);
       shell(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a, b) => {
         'use gpu';
@@ -124,7 +124,7 @@ describe('marked arrow functions passed to shells', () => {
 
   test('rollup', async () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
 
       const shell = tgpu.fn([]);
 
@@ -148,7 +148,7 @@ describe('marked arrow functions passed to shells', () => {
 
 describe('marked anonymous function expressions passed to shells', () => {
   const code = `\
-    import tgpu from 'typegpu';
+    import { tgpu } from 'typegpu';
 
     const shell = tgpu.fn([]);
 
@@ -164,7 +164,7 @@ describe('marked anonymous function expressions passed to shells', () => {
 
   test('babel', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       const shell = tgpu.fn([]);
       shell(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function (a, b) {
         'use gpu';
@@ -196,7 +196,7 @@ describe('marked anonymous function expressions passed to shells', () => {
 
   test('rollup', async () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
 
       const shell = tgpu.fn([]);
 
@@ -220,7 +220,7 @@ describe('marked anonymous function expressions passed to shells', () => {
 
 describe('marked named function expressions passed to shells', () => {
   const code = `\
-    import tgpu from 'typegpu';
+    import { tgpu } from 'typegpu';
 
     const shell = tgpu.fn([]);
 
@@ -236,7 +236,7 @@ describe('marked named function expressions passed to shells', () => {
 
   test('babel', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       const shell = tgpu.fn([]);
       shell(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = function addGPU(a, b) {
         'use gpu';
@@ -268,7 +268,7 @@ describe('marked named function expressions passed to shells', () => {
 
   test('rollup', async () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
 
       const shell = tgpu.fn([]);
 
@@ -500,7 +500,7 @@ describe('marked object methods', () => {
 
 describe('transforms numeric operations', () => {
   const code = `\
-    import tgpu, { d } from 'typegpu';
+    import { tgpu, d } from 'typegpu';
 
     const root = await tgpu.init();
     const countMutable = root.createMutable(d.i32, 0);
@@ -519,7 +519,7 @@ describe('transforms numeric operations', () => {
 
   test('babel', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu, { d } from 'typegpu';
+      "import { tgpu, d } from 'typegpu';
       const root = await tgpu.init();
       const countMutable = root.createMutable(d.i32, 0);
 
@@ -557,7 +557,7 @@ describe('transforms numeric operations', () => {
 
   test('rollup', async () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu, { d } from 'typegpu';
+      "import { tgpu, d } from 'typegpu';
 
       const root = await tgpu.init();
           const countMutable = root.createMutable(d.i32, 0);

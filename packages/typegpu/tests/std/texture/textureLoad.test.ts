@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import { textureLoad } from 'typegpu/std';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 // we need this since all other usages will be removed by plugin
 expectTypeOf(() => {});

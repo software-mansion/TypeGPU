@@ -493,14 +493,14 @@ function generateImports(options) {
   return [
     options.usedImports?.tgpu
       ? options.moduleSyntax === 'commonjs'
-        ? "const tgpu = require('typegpu').default;"
-        : "import tgpu from 'typegpu';"
+        ? "const { tgpu } = require('typegpu');"
+        : "import { tgpu } from 'typegpu';"
       : null,
 
     options.usedImports?.data
       ? options.moduleSyntax === 'commonjs'
-        ? "const d = require('typegpu/data');"
-        : "import * as d from 'typegpu/data';"
+        ? "const { d } = require('typegpu');"
+        : "import { d } from 'typegpu';"
       : null,
   ]
     .filter((imp) => !!imp)

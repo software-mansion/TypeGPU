@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { operatorSlot, uniformOpLayout, WORKGROUP_SIZE } from '../schemas.ts';
 
 export const uniformOp = tgpu.computeFn({

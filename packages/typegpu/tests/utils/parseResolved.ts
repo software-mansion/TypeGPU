@@ -1,7 +1,7 @@
 import type * as tinyest from 'tinyest';
 import { NodeTypeCatalog as NODE } from 'tinyest';
 import { type Assertion, expect } from 'vitest';
-import tgpu, { d, type TgpuFn } from 'typegpu';
+import { tgpu, d, type TgpuFn } from 'typegpu';
 import {
   type Snippet,
   UnknownData,
