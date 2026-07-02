@@ -1,8 +1,8 @@
 import { $ } from 'bun';
 import { consola } from 'consola';
+import { rm } from 'node:fs/promises';
 
 const magenta = '\u001b[35m';
-const green = `\u001b[32;1m`;
 const reset = '\u001b[0m';
 
 console.log(`
@@ -17,15 +17,33 @@ ${magenta}  \\_____/
 process.chdir(import.meta.dir);
 
 consola.start('Cleaning dist...');
-await $`rm -rf dist`;
+await rm('dist', { recursive: true, force: true });
 
 consola.start('Building with tsc...');
 await $`tsc --p tsconfig.build.json`;
 
+consola.start('Inlining package version...');
+const { version } = await Bun.file('package.json').json();
+const versionImport = /import\s*\{\s*version\s*\}\s*from\s*['"]typegpu\/package\.json['"];?\n?/g;
+
+for await (const path of new Bun.Glob('dist/**/*.js').scan('.')) {
+  const file = Bun.file(path);
+  const content = await file.text();
+  const replaced = content.replace(versionImport, `const version = ${JSON.stringify(version)};\n`);
+
+  if (replaced !== content) {
+    consola.log(` - ${path}`);
+    await Bun.write(path, replaced);
+  }
+}
+
+consola.start('Copying bin.mjs...');
+await Bun.write('dist/bin.mjs', Bun.file('bin.mjs'));
+
 consola.start('Swapping index declaration file...');
 // Overriding the generated declaration file with a custom one, that
 // better complies with older TypeScript versions
-await $`rm dist/index.d.ts`;
+await rm('dist/index.d.ts');
 await Bun.write('dist/index.d.ts', Bun.file('src/index.d.ts'));
 
 consola.success('Success!');
