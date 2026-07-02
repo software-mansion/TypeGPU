@@ -13,6 +13,15 @@ import {
 import { attest } from '@ark/attest';
 
 describe('root.createMutable', () => {
+  it('is resolvable', ({ root }) => {
+    const buffer = root.createBuffer(d.f32).$usage('storage');
+    const mutable = buffer.as('mutable');
+
+    expect(tgpu.resolve([mutable])).toMatchInlineSnapshot(
+      `"@group(0) @binding(0) var<storage, read_write> buffer: f32;"`,
+    );
+  });
+
   it('represents a `number` value', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('storage');
     const mutable = buffer.as('mutable');
@@ -179,6 +188,15 @@ describe('root.createMutable', () => {
 });
 
 describe('root.createReadonly', () => {
+  it('is resolvable', ({ root }) => {
+    const buffer = root.createBuffer(d.f32).$usage('storage');
+    const readonly = buffer.as('readonly');
+
+    expect(tgpu.resolve([readonly])).toMatchInlineSnapshot(
+      `"@group(0) @binding(0) var<storage, read> buffer: f32;"`,
+    );
+  });
+
   it('represents a `number` value', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('storage');
     const readonly = buffer.as('readonly');
@@ -395,6 +413,15 @@ describe('root.createReadonly', () => {
 });
 
 describe('root.createUniform', () => {
+  it('is resolvable', ({ root }) => {
+    const buffer = root.createBuffer(d.f32).$usage('uniform');
+    const uniform = buffer.as('uniform');
+
+    expect(tgpu.resolve([uniform])).toMatchInlineSnapshot(
+      `"@group(0) @binding(0) var<uniform> buffer: f32;"`,
+    );
+  });
+
   it('represents a `number` value', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('uniform');
     const uniform = buffer.as('uniform');
