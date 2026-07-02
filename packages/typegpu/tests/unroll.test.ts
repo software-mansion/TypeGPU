@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import tgpu, { std, d } from 'typegpu';
+import { tgpu, std, d } from 'typegpu';
 
 describe('tgpu.unroll', () => {
   it('called outside the gpu function returns passed iterable', () => {

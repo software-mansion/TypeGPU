@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
 import { matchUpVaryingLocations } from '../../src/core/pipeline/renderPipeline.ts';
 import type { TgpuQuerySet } from '../../src/core/querySet/querySet.ts';
-import tgpu, { d, type TgpuRenderPipeline } from 'typegpu';
+import { tgpu, d, type TgpuRenderPipeline } from 'typegpu';
 import { $internal } from '../../src/shared/symbols.ts';
 import { it } from 'typegpu-testing-utility';
 

@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import { textureSample } from 'typegpu/std';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 describe('textureSample', () => {
   it('does not allow for raw schemas to be passed in', ({ root }) => {

@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 describe('d.size', () => {
   it('adds @size attribute for the custom sized struct members', () => {

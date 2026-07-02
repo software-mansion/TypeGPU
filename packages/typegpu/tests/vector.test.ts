@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { sizeOf } from 'typegpu/data';
-import tgpu, { d, std, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
+import { tgpu, d, std, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
 
 describe('constructors', () => {
   it('casts floats to signed integers', () => {

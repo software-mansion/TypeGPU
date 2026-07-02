@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu, { d, std, type TgpuVar, type VariableScope } from 'typegpu';
+import { tgpu, d, std, type TgpuVar, type VariableScope } from 'typegpu';
 
 describe('tgpu.privateVar|tgpu.workgroupVar', () => {
   it('should inject variable declaration when used in functions', () => {

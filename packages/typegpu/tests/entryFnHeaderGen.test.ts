@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 describe('autogenerating wgsl headers for tgpu entry functions with raw string WGSL implementations', () => {
   it('works for fragment entry function with non-decorated non-struct output', () => {

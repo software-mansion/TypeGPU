@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import { textureGather } from 'typegpu/std';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 describe('textureGather', () => {
   it('Has correct signatures', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { warnIfOverflow } from '../../src/core/pipeline/limitsOverflow.ts';
 
 describe('warnIfOverflow', () => {
