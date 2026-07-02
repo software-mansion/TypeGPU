@@ -167,28 +167,6 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
 
-export function isBuffer(value: unknown): value is TgpuBuffer<BaseData> {
-  return (value as TgpuBuffer<BaseData>).resourceType === 'buffer';
-}
-
-export function isUsableAsVertex<T extends TgpuBuffer<BaseData>>(
-  buffer: T,
-): buffer is T & VertexFlag {
-  return !!buffer.usableAsVertex;
-}
-
-export function isUsableAsIndex<T extends TgpuBuffer<BaseData>>(
-  buffer: T,
-): buffer is T & IndexFlag {
-  return !!buffer.usableAsIndex;
-}
-
-export function isUsableAsUniform<T extends TgpuBuffer<BaseData>>(
-  buffer: T,
-): buffer is T & UniformFlag {
-  return !!buffer.usableAsUniform;
-}
-
 // --------------
 // Implementation
 // --------------

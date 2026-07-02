@@ -1,5 +1,5 @@
 import type { Block, FuncParameter } from 'tinyest';
-import type { TgpuBuffer } from './core/buffer/buffer.ts';
+import type { IndexFlag, TgpuBuffer, UniformFlag, VertexFlag } from './core/buffer/buffer.ts';
 import type { TgpuConst } from './core/constant/tgpuConstant.ts';
 import type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
 import type { TgpuComputeFn } from './core/function/tgpuComputeFn.ts';
@@ -42,6 +42,7 @@ import type { TgpuBindGroupLayout, TgpuLayoutEntry } from './tgpuBindGroupLayout
 import type { WgslEnableExtension } from './wgslExtensions.ts';
 import type { Infer } from './shared/repr.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
+import type { StorageFlag } from './extension.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -433,4 +434,30 @@ export type BufferUsage = 'uniform' | 'readonly' | 'mutable' | 'vertex';
 
 export function isGPUBuffer(value: unknown): value is GPUBuffer {
   return !!value && typeof value === 'object' && 'getMappedRange' in value && 'mapAsync' in value;
+}
+
+export function isBuffer(value: unknown): value is TgpuBuffer<BaseData> {
+  return (value as TgpuBuffer<BaseData>).resourceType === 'buffer';
+}
+
+export function isUsableAsVertex<T extends TgpuBuffer<BaseData>>(
+  buffer: T,
+): buffer is T & VertexFlag {
+  return !!buffer.usableAsVertex;
+}
+
+export function isUsableAsIndex<T extends TgpuBuffer<BaseData>>(
+  buffer: T,
+): buffer is T & IndexFlag {
+  return !!buffer.usableAsIndex;
+}
+
+export function isUsableAsUniform<T extends TgpuBuffer<BaseData>>(
+  buffer: T,
+): buffer is T & UniformFlag {
+  return !!buffer.usableAsUniform;
+}
+
+export function isUsableAsStorage<T>(value: T): value is T & StorageFlag {
+  return !!(value as StorageFlag)?.usableAsStorage;
 }

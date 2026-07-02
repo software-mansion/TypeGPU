@@ -3,7 +3,7 @@ import { snip, type ResolvedSnippet } from '../../data/snippet.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
 import { getExecMode, isInsideTgpuFn } from '../../execMode.ts';
-import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
+import { type StorageFlag } from '../../extension.ts';
 import { getName, setName, type TgpuNamable } from '../../shared/meta.ts';
 import type { Infer, InferGPU, InferInput, InferPatch, InferPartial } from '../../shared/repr.ts';
 import {
@@ -17,12 +17,8 @@ import {
 import { assertExhaustive } from '../../shared/utilityTypes.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
-import {
-  isUsableAsUniform,
-  type BufferWriteOptions,
-  type TgpuBuffer,
-  type UniformFlag,
-} from './buffer.ts';
+import { type BufferWriteOptions, type TgpuBuffer, type UniformFlag } from './buffer.ts';
+import { isUsableAsStorage, isUsableAsUniform } from '../../types.ts';
 
 // ----------
 // Public API
