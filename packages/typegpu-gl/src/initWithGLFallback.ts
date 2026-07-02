@@ -1,4 +1,4 @@
-import tgpu, { type TgpuRoot } from 'typegpu';
+import { tgpu, type TgpuRoot } from 'typegpu';
 
 export async function initWithGLFallback(): Promise<TgpuRoot> {
   // Try WebGPU first

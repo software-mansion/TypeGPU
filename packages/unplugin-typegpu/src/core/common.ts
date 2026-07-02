@@ -176,7 +176,7 @@ export function getBlockScope(
 
 /**
  * Checks if `node` is an alias for the 'tgpu' object, traditionally
- * available via `import tgpu from 'typegpu'`.
+ * available via `import { tgpu } from 'typegpu'`.
  */
 function isTgpu(state: PluginState, node: t.Node): boolean {
   let path = '';

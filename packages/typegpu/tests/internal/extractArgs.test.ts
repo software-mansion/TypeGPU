@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractArgs } from '../src/core/function/extractArgs.ts';
+import { extractArgs } from '../../src/core/function/extractArgs.ts';
 
 function createArg(identifier: string, attributes: string[], type: string | undefined) {
   return { identifier, attributes, type };

@@ -1,6 +1,6 @@
 import { it } from 'typegpu-testing-utility';
 import { describe, expect } from 'vitest';
-import tgpu, { d } from '../src/index.js';
+import { tgpu, d } from '../src/index.js';
 
 describe('external prop access', () => {
   it('supports matrix.column', () => {

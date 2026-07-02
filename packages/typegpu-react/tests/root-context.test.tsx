@@ -1,6 +1,5 @@
 import { act, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
-import tgpu from 'typegpu';
 import type { TgpuRoot } from 'typegpu';
 import { Root, useRootWithStatus } from '@typegpu/react';
 import { useEffect } from 'react';
@@ -56,15 +55,9 @@ describe('Root unmount cleanup', () => {
   });
 
   it('should destroy root when init promise resolves after unmount', async ({
-    root: fixtureRoot,
+    stallDeviceRequest,
   }) => {
-    let resolveInit!: (root: TgpuRoot) => void;
-    const initPromise = new Promise<TgpuRoot>((resolve) => {
-      resolveInit = resolve;
-    });
-
-    using _initSpy = vi.spyOn(tgpu, 'init').mockReturnValue(initPromise);
-    const destroySpy = vi.spyOn(fixtureRoot, 'destroy');
+    const resume = stallDeviceRequest();
 
     function TestConsumer() {
       useRootWithStatus();
@@ -82,7 +75,8 @@ describe('Root unmount cleanup', () => {
     vi.runAllTimers();
 
     // Resolve init after context has been destroyed
-    resolveInit(fixtureRoot);
+    const device = await resume();
+    const destroySpy = vi.spyOn(device, 'destroy');
 
     // Flush microtasks so the .then() callback runs
     await act(async () => {

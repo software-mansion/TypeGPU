@@ -4,7 +4,7 @@ import { babelTransform, rollupTransform } from './transform.ts';
 describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
   it('wraps argument passed to function shell with globalThis set call', () => {
     const code = `\
-        import tgpu from 'typegpu';
+        import { tgpu } from 'typegpu';
         import * as d from 'typegpu/data';
 
         const counterBuffer = root
@@ -22,7 +22,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       const counterBuffer = root.createBuffer(d.vec3f, d.vec3f(0, 1, 0)).$usage('storage');
       const counter = counterBuffer.as('mutable');
@@ -57,7 +57,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
 
   it('works for multiple functions, skips wgsl-implemented', () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
 
       const a = tgpu.computeFn({ workgroupSize: [1] })((input) => {
         const x = true;
@@ -74,7 +74,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       const a = tgpu.computeFn({
         workgroupSize: [1]
       })(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
@@ -123,14 +123,14 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
 
   it('transpiles only function shell invocations', () => {
     const code = `\
-        import tgpu from 'typegpu';
+        import { tgpu } from 'typegpu';
         import * as d from 'typegpu/data';
 
         tgpu.x()(d.arrayOf(d.u32));
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       tgpu.x()(d.arrayOf(d.u32));"
     `);
@@ -138,7 +138,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
 
   it('works with some typescript features', () => {
     const code = `\
-        import tgpu from 'typegpu';
+        import { tgpu } from 'typegpu';
 
         const fun = tgpu.computeFn({ workgroupSize: [1] })((input) => {
           const x = true;
@@ -154,7 +154,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
     `;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       const fun = tgpu.computeFn({
         workgroupSize: [1]
       })(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = input => {
@@ -211,7 +211,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
 
   it('correctly lists "this" in externals', () => {
     const code = `
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       const root = await tgpu.init();
@@ -228,7 +228,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
       console.log(tgpu.resolve([myController.myFn]));`;
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       const root = await tgpu.init();
       class MyController {
@@ -257,7 +257,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
 describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
   it('wraps argument passed to function shell with globalThis set call', async () => {
     const code = `\
-        import tgpu from 'typegpu';
+        import { tgpu } from 'typegpu';
         import * as d from 'typegpu/data';
 
         const counterBuffer = root
@@ -275,7 +275,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       const counterBuffer = root
@@ -301,7 +301,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
 
   it('works for multiple functions, skips wgsl-implemented', async () => {
     const code = `\
-        import tgpu from 'typegpu';
+        import { tgpu } from 'typegpu';
 
         const a = tgpu.computeFn({ workgroupSize: [1] })((input) => {
         const x = true;
@@ -318,7 +318,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
 
       tgpu.computeFn({ workgroupSize: [1] })((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((input) => {
               }), {
@@ -351,14 +351,14 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
 
   it('transpiles only function shell invocations', async () => {
     const code = `\
-        import tgpu from 'typegpu';
+        import { tgpu } from 'typegpu';
         import * as d from 'typegpu/data';
 
         tgpu.x()(d.arrayOf(d.u32));
     `;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       tgpu.x()(d.arrayOf(d.u32));
@@ -368,7 +368,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
 
   it('correctly lists "this" in externals', async () => {
     const code = `
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       const root = await tgpu.init();
@@ -385,7 +385,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
       console.log(tgpu.resolve([myController.myFn]));`;
 
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       const root = await tgpu.init();

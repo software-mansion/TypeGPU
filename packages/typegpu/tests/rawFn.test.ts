@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import tgpu, { d } from '../src/index.js';
-import { getName } from '../src/shared/meta.ts';
+import { tgpu, d } from 'typegpu';
 
 describe('tgpu.fn with raw string WGSL implementation', () => {
   it('is namable', () => {
     const getX = tgpu.fn([], d.f32)`() { return 3.0f; }`.$name('get_x');
 
-    expect(getName(getX)).toBe('get_x');
+    expect(tgpu.resolve([getX])).toContain('fn get_x() -> f32');
   });
 
   it('resolves to WGSL', () => {
@@ -573,7 +572,7 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
     tgpu.resolve([tgpu.fn([])`() { let a = myConst; }`.$uses({ myConst: c1 })]);
     tgpu.resolve([tgpu.fn([])`() { let a = otherName; }`.$uses({ otherName: c1 })]);
 
-    expect(getName(c1)).toMatchInlineSnapshot(`"myConst"`);
+    expect(tgpu.resolve([c1])).toContain('myConst');
   });
 });
 

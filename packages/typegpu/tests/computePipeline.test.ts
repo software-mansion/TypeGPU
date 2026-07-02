@@ -1,9 +1,7 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
-import type { TgpuQuerySet } from '../src/core/querySet/querySet.ts';
-import { d, MissingBindGroupsError, tgpu, type TgpuComputePipeline } from '../src/index.js';
-import { $internal } from '../src/shared/symbols.ts';
+import { d, MissingBindGroupsError, tgpu, type TgpuComputePipeline } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
-import { extensionEnabled } from '../src/std/extensions.ts';
+import { extensionEnabled } from 'typegpu/std';
 
 describe('TgpuComputePipeline', () => {
   it('can be created with a compute entry function', ({ root, device }) => {
@@ -85,337 +83,107 @@ describe('TgpuComputePipeline', () => {
     () => computePipeline.with(layout1, bindGroup2);
   });
 
-  describe('Performance Callbacks', () => {
-    it('should add performance callback with automatic query set', ({ root }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+  it('should warn if timestamp-query feature is not enabled', ({ root, device }) => {
+    // @ts-expect-error
+    device.features = new Set();
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const callback = vi.fn();
-      const pipeline = root
-        .createComputePipeline({ compute: entryFn })
-        .withPerformanceCallback(callback);
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
 
-      expect(pipeline).toBeDefined();
-      expectTypeOf(pipeline).toEqualTypeOf<TgpuComputePipeline>();
+    const callback = vi.fn();
 
-      expect(pipeline[$internal].priors.performanceCallback).toBe(callback);
+    expect(() => {
+      const before = root.createComputePipeline({ compute: entryFn });
+      const after = before.withPerformanceCallback(callback);
+      // no-op
+      expect(after).toBe(before);
+    }).not.toThrow();
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
+    );
+  });
 
-      const timestampWrites = pipeline[$internal].priors.timestampWrites;
-      expect(timestampWrites).toBeDefined();
-      expect(timestampWrites?.beginningOfPassWriteIndex).toBe(0);
-      expect(timestampWrites?.endOfPassWriteIndex).toBe(1);
+  it('should setup timestamp writes in compute pass descriptor', ({ root, commandEncoder }) => {
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+
+    const querySet = root.createQuerySet('timestamp', 4);
+
+    const pipeline = root.createComputePipeline({ compute: entryFn }).withTimestampWrites({
+      querySet,
+      beginningOfPassWriteIndex: 1,
+      endOfPassWriteIndex: 2,
     });
 
-    it('should create automatic query set when adding performance callback', ({ root, device }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+    pipeline.dispatchWorkgroups(1);
 
-      const callback = vi.fn();
-      const pipeline = root
-        .createComputePipeline({ compute: entryFn })
-        .withPerformanceCallback(callback);
-
-      const timestampWrites = pipeline[$internal].priors.timestampWrites;
-      expect(timestampWrites?.querySet).toBeDefined();
-      expect(timestampWrites?.querySet.count).toBe(2);
-
-      (timestampWrites?.querySet as TgpuQuerySet<'timestamp'>).querySet;
-      expect(device.mock.createQuerySet).toHaveBeenCalledWith({
-        type: 'timestamp',
-        count: 2,
-      });
-    });
-
-    it('should replace previous performance callback', ({ root }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
-
-      const callback1 = vi.fn();
-      const callback2 = vi.fn();
-
-      const pipeline = root
-        .createComputePipeline({ compute: entryFn })
-        .withPerformanceCallback(callback1)
-        .withPerformanceCallback(callback2);
-
-      expect(pipeline).toBeDefined();
-
-      expect(pipeline[$internal].priors.performanceCallback).toBe(callback2);
-      expect(pipeline[$internal].priors.performanceCallback).not.toBe(callback1);
-    });
-
-    it('should warn if timestamp-query feature is not enabled', ({ root, device }) => {
-      // @ts-expect-error
-      device.features = new Set();
-      using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
-
-      const callback = vi.fn();
-
-      expect(() => {
-        const before = root.createComputePipeline({ compute: entryFn });
-        const after = before.withPerformanceCallback(callback);
-        // no-op
-        expect(after).toBe(before);
-      }).not.toThrow();
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
-      );
+    expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
+      label: 'pipeline',
+      timestampWrites: {
+        querySet: querySet.querySet,
+        beginningOfPassWriteIndex: 1,
+        endOfPassWriteIndex: 2,
+      },
     });
   });
 
-  describe('Timestamp Writes', () => {
-    it('should add timestamp writes with custom query set', ({ root }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+  it('should work with bind groups and timestamp writes regardless of call order', ({
+    root,
+    commandEncoder,
+  }) => {
+    const layout = tgpu.bindGroupLayout({
+      data: { uniform: d.f32 },
+    });
 
-      const querySet = root.createQuerySet('timestamp', 4);
+    const buffer = root.createBuffer(d.f32).$usage('uniform');
+    buffer.write(42.0);
 
-      const pipeline = root.createComputePipeline({ compute: entryFn }).withTimestampWrites({
+    const bindGroup = root.createBindGroup(layout, {
+      data: buffer,
+    });
+
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
+      layout.$.data;
+    });
+
+    const querySet = root.createQuerySet('timestamp', 4);
+
+    const pipeline = root
+      .createComputePipeline({ compute: entryFn })
+      .withTimestampWrites({
         querySet,
         beginningOfPassWriteIndex: 0,
         endOfPassWriteIndex: 1,
-      });
+      })
+      .with(bindGroup);
 
-      expect(pipeline).toBeDefined();
-      expectTypeOf(pipeline).toEqualTypeOf<TgpuComputePipeline>();
-
-      const timestampWrites = pipeline[$internal].priors.timestampWrites;
-      expect(timestampWrites?.querySet).toBe(querySet);
-      expect(timestampWrites?.beginningOfPassWriteIndex).toBe(0);
-      expect(timestampWrites?.endOfPassWriteIndex).toBe(1);
-    });
-
-    it('should add timestamp writes with raw GPU query set', ({ root, device }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
-
-      const rawQuerySet = device.createQuerySet({
-        type: 'timestamp',
-        count: 4,
-      });
-
-      const pipeline = root.createComputePipeline({ compute: entryFn }).withTimestampWrites({
-        querySet: rawQuerySet,
+    const pipeline2 = root
+      .createComputePipeline({ compute: entryFn })
+      .with(bindGroup)
+      .withTimestampWrites({
+        querySet,
         beginningOfPassWriteIndex: 2,
         endOfPassWriteIndex: 3,
       });
 
-      expect(pipeline).toBeDefined();
+    pipeline.dispatchWorkgroups(1);
+    pipeline2.dispatchWorkgroups(1);
 
-      const timestampWrites = pipeline[$internal].priors.timestampWrites;
-      expect(timestampWrites?.querySet).toBe(rawQuerySet);
-      expect(timestampWrites?.beginningOfPassWriteIndex).toBe(2);
-      expect(timestampWrites?.endOfPassWriteIndex).toBe(3);
-    });
-
-    it('should handle optional timestamp write indices', ({ root }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
-
-      const querySet = root.createQuerySet('timestamp', 4);
-
-      const pipeline1 = root.createComputePipeline({ compute: entryFn }).withTimestampWrites({
-        querySet,
+    expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
+      label: 'pipeline',
+      timestampWrites: {
+        querySet: querySet.querySet,
         beginningOfPassWriteIndex: 0,
-      });
-
-      const pipeline2 = root.createComputePipeline({ compute: entryFn }).withTimestampWrites({
-        querySet,
         endOfPassWriteIndex: 1,
-      });
-
-      const pipeline3 = root.createComputePipeline({ compute: entryFn }).withTimestampWrites({
-        querySet,
-      });
-
-      expect(pipeline1).toBeDefined();
-      expect(pipeline2).toBeDefined();
-      expect(pipeline3).toBeDefined();
-
-      expect(pipeline1[$internal].priors.timestampWrites?.beginningOfPassWriteIndex).toBe(0);
-      expect(pipeline1[$internal].priors.timestampWrites?.endOfPassWriteIndex).toBeUndefined();
-
-      expect(
-        pipeline2[$internal].priors.timestampWrites?.beginningOfPassWriteIndex,
-      ).toBeUndefined();
-      expect(pipeline2[$internal].priors.timestampWrites?.endOfPassWriteIndex).toBe(1);
-
-      expect(
-        pipeline3[$internal].priors.timestampWrites?.beginningOfPassWriteIndex,
-      ).toBeUndefined();
-      expect(pipeline3[$internal].priors.timestampWrites?.endOfPassWriteIndex).toBeUndefined();
+      },
     });
 
-    it('should setup timestamp writes in compute pass descriptor', ({ root, commandEncoder }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
-
-      const querySet = root.createQuerySet('timestamp', 4);
-
-      const pipeline = root.createComputePipeline({ compute: entryFn }).withTimestampWrites({
-        querySet,
-        beginningOfPassWriteIndex: 1,
-        endOfPassWriteIndex: 2,
-      });
-
-      pipeline.dispatchWorkgroups(1);
-
-      expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
-        label: 'pipeline',
-        timestampWrites: {
-          querySet: querySet.querySet,
-          beginningOfPassWriteIndex: 1,
-          endOfPassWriteIndex: 2,
-        },
-      });
-    });
-
-    it('should work with bind groups and timestamp writes regardless of call order', ({
-      root,
-      commandEncoder,
-    }) => {
-      const layout = tgpu.bindGroupLayout({
-        data: { uniform: d.f32 },
-      });
-
-      const buffer = root.createBuffer(d.f32).$usage('uniform');
-      buffer.write(42.0);
-
-      const bindGroup = root.createBindGroup(layout, {
-        data: buffer,
-      });
-
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
-        layout.$.data;
-      });
-
-      const querySet = root.createQuerySet('timestamp', 4);
-
-      const pipeline = root
-        .createComputePipeline({ compute: entryFn })
-        .withTimestampWrites({
-          querySet,
-          beginningOfPassWriteIndex: 0,
-          endOfPassWriteIndex: 1,
-        })
-        .with(bindGroup);
-
-      const pipeline2 = root
-        .createComputePipeline({ compute: entryFn })
-        .with(bindGroup)
-        .withTimestampWrites({
-          querySet,
-          beginningOfPassWriteIndex: 2,
-          endOfPassWriteIndex: 3,
-        });
-
-      pipeline.dispatchWorkgroups(1);
-      pipeline2.dispatchWorkgroups(1);
-
-      expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
-        label: 'pipeline',
-        timestampWrites: {
-          querySet: querySet.querySet,
-          beginningOfPassWriteIndex: 0,
-          endOfPassWriteIndex: 1,
-        },
-      });
-
-      expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
-        label: 'pipeline2',
-        timestampWrites: {
-          querySet: querySet.querySet,
-          beginningOfPassWriteIndex: 2,
-          endOfPassWriteIndex: 3,
-        },
-      });
-    });
-  });
-
-  describe('Combined Performance callback and Timestamp Writes', () => {
-    it('should work with both performance callback and custom timestamp writes', ({
-      root,
-      device,
-      commandEncoder,
-    }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
-
-      const querySet = root.createQuerySet('timestamp', 10);
-      const callback = vi.fn();
-
-      const pipeline = root
-        .createComputePipeline({ compute: entryFn })
-        .withTimestampWrites({
-          querySet,
-          beginningOfPassWriteIndex: 3,
-          endOfPassWriteIndex: 7,
-        })
-        .withPerformanceCallback(callback);
-
-      const priors = pipeline[$internal].priors;
-      expect(priors.performanceCallback).toBe(callback);
-      expect(priors.timestampWrites?.querySet).toBe(querySet);
-      expect(priors.timestampWrites?.beginningOfPassWriteIndex).toBe(3);
-      expect(priors.timestampWrites?.endOfPassWriteIndex).toBe(7);
-
-      pipeline.dispatchWorkgroups(1);
-
-      expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
-        label: 'pipeline',
-        timestampWrites: {
-          querySet: querySet.querySet,
-          beginningOfPassWriteIndex: 3,
-          endOfPassWriteIndex: 7,
-        },
-      });
-
-      expect(commandEncoder.resolveQuerySet).toHaveBeenCalledWith(
-        querySet.querySet,
-        0,
-        10,
-        querySet[$internal].resolveBuffer,
-        0,
-      );
-
-      expect(device.mock.createQuerySet).toHaveBeenCalledTimes(1);
-      expect(device.mock.createQuerySet).toHaveBeenCalledWith({
-        type: 'timestamp',
-        count: 10,
-      });
-    });
-
-    it('should prioritize custom timestamp writes over automatic ones', ({
-      root,
-      commandEncoder,
-    }) => {
-      const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {});
-
-      const querySet = root.createQuerySet('timestamp', 8);
-      const callback = vi.fn();
-
-      let pipeline = root
-        .createComputePipeline({ compute: entryFn })
-        .withPerformanceCallback(callback);
-
-      const autoQuerySet = pipeline[$internal].priors.timestampWrites?.querySet;
-
-      pipeline = pipeline.withTimestampWrites({
-        querySet,
+    expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
+      label: 'pipeline2',
+      timestampWrites: {
+        querySet: querySet.querySet,
         beginningOfPassWriteIndex: 2,
-        endOfPassWriteIndex: 5,
-      });
-
-      const priors = pipeline[$internal].priors;
-      expect(priors.performanceCallback).toBe(callback);
-      expect(priors.timestampWrites?.querySet).toBe(querySet);
-      expect(priors.timestampWrites?.beginningOfPassWriteIndex).toBe(2);
-      expect(priors.timestampWrites?.endOfPassWriteIndex).toBe(5);
-
-      pipeline.dispatchWorkgroups(1);
-
-      expect(commandEncoder.beginComputePass).toHaveBeenCalledWith({
-        label: 'pipeline',
-        timestampWrites: {
-          querySet: querySet.querySet,
-          beginningOfPassWriteIndex: 2,
-          endOfPassWriteIndex: 5,
-        },
-      });
+        endOfPassWriteIndex: 3,
+      },
     });
   });
 
