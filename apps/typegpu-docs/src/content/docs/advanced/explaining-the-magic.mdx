@@ -193,7 +193,6 @@ const fn = () => {
   const c = ext.r1.$.r3; // 'ext.r1' added to externals
 }
 ```
-// przetestować czy () => ({}) robi resolution. Jeśli tak, to jest powodem czemu nie robimy tak, bo pruning
 
 Stopping at `$` is not necessary in any way for the library to function properly.
 However, this lets the library try to auto-name resources that were missed by unplugin autonaming,

@@ -1,6 +1,6 @@
 import type { Context, JsNode } from './types.ts';
 
-export function isDeclared(ctx: Context, name: string) {
+function isDeclared(ctx: Context, name: string) {
   return ctx.stack.some((scope) => scope.declaredNames.includes(name));
 }
 
