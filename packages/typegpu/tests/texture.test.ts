@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, vi } from 'vitest';
 import type { RenderFlag, SampledFlag, TgpuRoot, TgpuTexture, TgpuTextureView } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 import { attest } from '@ark/attest';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 describe('TgpuTexture', () => {
   it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({

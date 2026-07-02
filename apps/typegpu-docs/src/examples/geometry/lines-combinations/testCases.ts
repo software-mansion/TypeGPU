@@ -1,6 +1,6 @@
 import { LineControlPoint } from '@typegpu/geometry';
 import { perlin2d, randf } from '@typegpu/noise';
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import { arrayOf, f32, i32, mat2x2f, u32, vec2f } from 'typegpu/data';
 import { abs, clamp, cos, floor, max, pow, select, sin } from 'typegpu/std';
 import { TEST_SEGMENT_COUNT } from './constants.ts';

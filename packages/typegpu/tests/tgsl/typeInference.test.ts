@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 
 describe('wgsl generator type inference', () => {
   it('coerces nested structs', () => {

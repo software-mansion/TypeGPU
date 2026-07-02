@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import tgpu, { std, d } from 'typegpu';
+import { tgpu, std, d } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('TgpuGenericFn - shellless callback wrapper', () => {

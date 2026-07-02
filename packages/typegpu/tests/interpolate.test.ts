@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 describe('d.interpolate', () => {
   it('adds @interpolate (only interpolation type) attribute for struct members', () => {

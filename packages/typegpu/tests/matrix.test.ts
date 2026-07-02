@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
 import { isCloseTo } from 'typegpu/std';
 

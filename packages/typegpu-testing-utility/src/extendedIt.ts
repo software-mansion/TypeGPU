@@ -1,6 +1,6 @@
 // oxlint-disable no-empty-pattern
 import { test as base, vi } from 'vitest';
-import tgpu, { type TgpuRoot } from 'typegpu';
+import { tgpu, type TgpuRoot } from 'typegpu';
 // oxlint-disable-next-line import/no-unassigned-import -- imported for side effects
 import './webgpuGlobals.ts';
 

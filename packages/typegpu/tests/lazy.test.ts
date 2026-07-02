@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
-import tgpu, { d, type TgpuLazy } from 'typegpu';
+import { tgpu, d, type TgpuLazy } from 'typegpu';
 import { mul } from 'typegpu/std';
 import { it } from 'typegpu-testing-utility';
 

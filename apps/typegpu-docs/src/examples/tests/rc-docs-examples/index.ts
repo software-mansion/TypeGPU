@@ -1,6 +1,6 @@
 import * as rc from '@typegpu/radiance-cascades';
 import * as sdf from '@typegpu/sdf';
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();

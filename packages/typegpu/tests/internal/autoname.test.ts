@@ -2,7 +2,7 @@
 import { describe, expect } from 'vitest';
 import { struct } from 'typegpu/data';
 import { getName } from '../../src/shared/meta.ts';
-import tgpu, { d, type TgpuBindGroupLayout } from 'typegpu';
+import { tgpu, d, type TgpuBindGroupLayout } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('autonaming', () => {
@@ -205,7 +205,7 @@ describe('autonaming', () => {
         }) && $.f)({}));
 
 
-      			const main = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(__vite_ssr_import_3__.default.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+      			const main = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(__vite_ssr_import_3__.tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
       				myFun();
       			}), {
           v: 1,

@@ -1,4 +1,5 @@
-import tgpu, {
+import {
+  tgpu,
   type SampledFlag,
   type StorageFlag,
   type TgpuBindGroup,
