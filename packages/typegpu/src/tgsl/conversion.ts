@@ -3,7 +3,7 @@ import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
-import { isAlias, snip, withDataType, type Snippet } from '../data/snippet.ts';
+import { snip, withDataType, type Snippet } from '../data/snippet.ts';
 import {
   type AbstractFloat,
   type AnyWgslData,
@@ -265,7 +265,7 @@ function applyActionToSnippet(
         const targetName = getName(targetType) ?? '<unnamed>';
 
         // Struct to struct casting
-        if (!isAlias(snippet)) {
+        if (snippet.possibleSideEffects) {
           throw new Error(
             `Cannot resolve struct cast from '${typeName}' to '${targetName}'. Store the value to a variable first, then cast it.`,
           );
