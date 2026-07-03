@@ -273,10 +273,41 @@ const ACCESS_TYPES = {
   read_write: 'mutable',
 };
 
-const SAMPLE_TYPES = {
-  u32: 'uint',
-  i32: 'sint',
-  f32: 'float',
+const STORAGE_TEXTURE_ACCESS = {
+  read: 'read-only',
+  write: 'write-only',
+  read_write: 'read-write',
+};
+
+const TEXTURE_SAMPLE_SCHEMAS = {
+  u32: 'd.u32',
+  i32: 'd.i32',
+  f32: 'd.f32',
+};
+
+const TEXTURE_SCHEMA_FUNCTIONS = {
+  texture_1d: 'texture1d',
+  texture_2d: 'texture2d',
+  texture_2d_array: 'texture2dArray',
+  texture_3d: 'texture3d',
+  texture_cube: 'textureCube',
+  texture_cube_array: 'textureCubeArray',
+  texture_multisampled_2d: 'textureMultisampled2d',
+};
+
+const DEPTH_TEXTURE_SCHEMA_FUNCTIONS = {
+  texture_depth_2d: 'textureDepth2d',
+  texture_depth_multisampled_2d: 'textureDepthMultisampled2d',
+  texture_depth_2d_array: 'textureDepth2dArray',
+  texture_depth_cube: 'textureDepthCube',
+  texture_depth_cube_array: 'textureDepthCubeArray',
+};
+
+const STORAGE_TEXTURE_SCHEMA_FUNCTIONS = {
+  texture_storage_1d: 'textureStorage1d',
+  texture_storage_2d: 'textureStorage2d',
+  texture_storage_2d_array: 'textureStorage2dArray',
+  texture_storage_3d: 'textureStorage3d',
 };
 
 /**
@@ -335,41 +366,24 @@ function generateStorageVariable(variable, options) {
 
 /**
  * @param {VariableInfo} variable
+ * @param {Options} options
  */
-function getViewDimension(variable) {
+function generateStorageTextureVariable(variable, options) {
+  setUseImport('data', options);
   const type_ = variable.type.name;
-  const dimension = type_.includes('_1d')
-    ? '1d'
-    : type_.includes('_2d')
-      ? '2d'
-      : type_.includes('_3d')
-        ? '3d'
-        : type_.includes('_cube')
-          ? 'cube'
-          : null;
-
-  return type_.includes('_array')
-    ? `${dimension ?? '2d'}-array`
-    : dimension !== '2d'
-      ? dimension
-      : null;
-}
-
-/**
- * @param {VariableInfo} variable
- */
-function generateStorageTextureVariable(variable) {
-  const viewDimension = getViewDimension(variable);
-
+  const schemaFn =
+    STORAGE_TEXTURE_SCHEMA_FUNCTIONS[
+      /** @type {keyof typeof STORAGE_TEXTURE_SCHEMA_FUNCTIONS} */ (type_)
+    ] ?? 'textureStorage2d';
   const access =
     variable.type instanceof TemplateInfo
       ? /** @type ('read' | 'write' | 'read_write') */ (variable.type.access)
       : null;
 
   return `{
-    storageTexture: '${variable.format?.name}',${
-      access ? `\n    access: '${ACCESS_TYPES[access]}',` : ''
-    }${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}
+    storageTexture: d.${schemaFn}('${variable.format?.name}'${
+      access ? `, '${STORAGE_TEXTURE_ACCESS[access]}'` : ''
+    }),
   }`;
 }
 
@@ -391,37 +405,48 @@ function generateSamplerVariable(variable) {
 
 /**
  * @param {VariableInfo} variable
+ * @param {Options} options
  */
-function generateTextureVariable(variable) {
+function generateTextureVariable(variable, options) {
+  setUseImport('data', options);
   const type_ = variable.type.name;
 
   if (type_ === 'texture_external') {
-    return generateExternalTextureVariable(variable);
+    return generateExternalTextureVariable(variable, options);
+  }
+
+  const depthSchemaFn =
+    DEPTH_TEXTURE_SCHEMA_FUNCTIONS[
+      /** @type {keyof typeof DEPTH_TEXTURE_SCHEMA_FUNCTIONS} */ (type_)
+    ];
+  if (depthSchemaFn) {
+    return `{
+    texture: d.${depthSchemaFn}(),
+  }`;
   }
 
   const format = variable.format?.name;
-  const viewDimension = getViewDimension(variable);
-  const multisampled = type_.includes('_multisampled');
+  const schemaFn =
+    TEXTURE_SCHEMA_FUNCTIONS[/** @type {keyof typeof TEXTURE_SCHEMA_FUNCTIONS} */ (type_)] ??
+    'texture2d';
+  const sampleType =
+    format && format in TEXTURE_SAMPLE_SCHEMAS
+      ? TEXTURE_SAMPLE_SCHEMAS[/** @type {keyof typeof TEXTURE_SAMPLE_SCHEMAS} */ (format)]
+      : 'd.u32';
 
   return `{
-    texture: '${
-      type_.includes('_depth')
-        ? 'depth'
-        : format && format in SAMPLE_TYPES
-          ? SAMPLE_TYPES[/** @type (keyof typeof SAMPLE_TYPES) */ (format)]
-          : 'uint'
-    }',${viewDimension ? `\n    viewDimension: '${viewDimension}',` : ''}${
-      multisampled ? '\n    multisampled: true,' : ''
-    }
+    texture: d.${schemaFn}(${sampleType}),
   }`;
 }
 
 /**
  * @param {VariableInfo} _variable
+ * @param {Options} options
  */
-function generateExternalTextureVariable(_variable) {
+function generateExternalTextureVariable(_variable, options) {
+  setUseImport('data', options);
   return `{
-    externalTexture: {},
+    externalTexture: d.textureExternal(),
   }`;
 }
 
@@ -490,21 +515,18 @@ function declareConst(ident, options) {
  * @param {Options} options
  */
 function generateImports(options) {
-  return [
-    options.usedImports?.tgpu
-      ? options.moduleSyntax === 'commonjs'
-        ? "const { tgpu } = require('typegpu');"
-        : "import { tgpu } from 'typegpu';"
-      : null,
+  const imports = [
+    options.usedImports?.tgpu ? 'tgpu' : null,
+    options.usedImports?.data ? 'd' : null,
+  ].filter((imp) => !!imp);
 
-    options.usedImports?.data
-      ? options.moduleSyntax === 'commonjs'
-        ? "const { d } = require('typegpu');"
-        : "import { d } from 'typegpu';"
-      : null,
-  ]
-    .filter((imp) => !!imp)
-    .join('\n');
+  if (imports.length === 0) {
+    return '';
+  }
+
+  return options.moduleSyntax === 'commonjs'
+    ? `const { ${imports.join(', ')} } = require('typegpu');`
+    : `import { ${imports.join(', ')} } from 'typegpu';`;
 }
 
 /**

@@ -5,7 +5,7 @@ import { tgpu, d, type TgpuRenderPipeline } from 'typegpu';
 import { $internal } from '../../src/shared/symbols.ts';
 import { it } from 'typegpu-testing-utility';
 
-describe('root.withVertex(...).withFragment(...)', () => {
+describe('render pipeline timing', () => {
   describe('Performance Callbacks', () => {
     it('should add performance callback with automatic query set', ({ root }) => {
       const vertexFn = tgpu.vertexFn({
@@ -18,9 +18,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
 
       const callback = vi.fn();
       const pipeline = root
-        .withVertex(vertexFn, {})
-        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-        .createPipeline()
+        .createRenderPipeline({
+          vertex: vertexFn,
+          fragment: fragmentFn,
+          targets: { color: { format: 'rgba8unorm' } },
+        })
         .withPerformanceCallback(callback);
 
       expect(pipeline).toBeDefined();
@@ -45,9 +47,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
 
       const callback = vi.fn();
       const pipeline = root
-        .withVertex(vertexFn, {})
-        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-        .createPipeline()
+        .createRenderPipeline({
+          vertex: vertexFn,
+          fragment: fragmentFn,
+          targets: { color: { format: 'rgba8unorm' } },
+        })
         .withPerformanceCallback(callback)
         .withColorAttachment({
           color: {
@@ -85,9 +89,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
       const callback2 = vi.fn();
 
       const pipeline = root
-        .withVertex(vertexFn, {})
-        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-        .createPipeline()
+        .createRenderPipeline({
+          vertex: vertexFn,
+          fragment: fragmentFn,
+          targets: { color: { format: 'rgba8unorm' } },
+        })
         .withPerformanceCallback(callback1)
         .withPerformanceCallback(callback2);
 
@@ -111,9 +117,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
       const querySet = root.createQuerySet('timestamp', 4);
 
       const pipeline = root
-        .withVertex(vertexFn, {})
-        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-        .createPipeline()
+        .createRenderPipeline({
+          vertex: vertexFn,
+          fragment: fragmentFn,
+          targets: { color: { format: 'rgba8unorm' } },
+        })
         .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 0,
@@ -144,9 +152,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
       });
 
       const pipeline = root
-        .withVertex(vertexFn, {})
-        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-        .createPipeline()
+        .createRenderPipeline({
+          vertex: vertexFn,
+          fragment: fragmentFn,
+          targets: { color: { format: 'rgba8unorm' } },
+        })
         .withTimestampWrites({
           querySet: rawQuerySet,
           beginningOfPassWriteIndex: 2,
@@ -173,27 +183,33 @@ describe('root.withVertex(...).withFragment(...)', () => {
       const querySet = root.createQuerySet('timestamp', 4);
 
       const pipeline1 = root
-        .withVertex(vertexFn, {})
-        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-        .createPipeline()
+        .createRenderPipeline({
+          vertex: vertexFn,
+          fragment: fragmentFn,
+          targets: { color: { format: 'rgba8unorm' } },
+        })
         .withTimestampWrites({
           querySet,
           beginningOfPassWriteIndex: 0,
         });
 
       const pipeline2 = root
-        .withVertex(vertexFn, {})
-        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-        .createPipeline()
+        .createRenderPipeline({
+          vertex: vertexFn,
+          fragment: fragmentFn,
+          targets: { color: { format: 'rgba8unorm' } },
+        })
         .withTimestampWrites({
           querySet,
           endOfPassWriteIndex: 1,
         });
 
       const pipeline3 = root
-        .withVertex(vertexFn, {})
-        .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-        .createPipeline()
+        .createRenderPipeline({
+          vertex: vertexFn,
+          fragment: fragmentFn,
+          targets: { color: { format: 'rgba8unorm' } },
+        })
         .withTimestampWrites({
           querySet,
         });
@@ -242,9 +258,11 @@ describe('root.withVertex(...).withFragment(...)', () => {
     const callback = vi.fn();
 
     const pipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { color: { format: 'rgba8unorm' } })
-      .createPipeline()
+      .createRenderPipeline({
+        vertex: vertexFn,
+        fragment: fragmentFn,
+        targets: { color: { format: 'rgba8unorm' } },
+      })
       .withIndexBuffer(indexBuffer)
       .withTimestampWrites({
         querySet,
