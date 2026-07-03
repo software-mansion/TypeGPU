@@ -72,37 +72,36 @@ export const layout0 = tgpu.bindGroupLayout({
 @group(1) @binding(6) var tex6: texture_depth_2d_array;
 `;
 
-    const expected = `\
-export const layout1 = tgpu.bindGroupLayout({
-  tex0: {
-    texture: 'float',
-    viewDimension: '3d',
-  },
-  tex1: {
-    externalTexture: {},
-  },
-  tex2: {
-    texture: 'float',
-  },
-  tex3: {
-    texture: 'depth',
-    multisampled: true,
-  },
-  tex4: {
-    texture: 'uint',
-    multisampled: true,
-  },
-  tex5: {
-    texture: 'depth',
-    viewDimension: 'cube-array',
-  },
-  tex6: {
-    texture: 'depth',
-    viewDimension: '2d-array',
-  },
-});`;
+    expect(generate(wgsl)).toMatchInlineSnapshot(`
+      "/* generated via tgpu-gen by TypeGPU */
+      import { tgpu, d } from 'typegpu';
 
-    expect(generate(wgsl)).toContain(expected);
+      /* bindGroupLayouts */
+      export const layout1 = tgpu.bindGroupLayout({
+        tex0: {
+          texture: d.texture3d(d.f32),
+        },
+        tex1: {
+          externalTexture: d.textureExternal(),
+        },
+        tex2: {
+          texture: d.texture2d(d.f32),
+        },
+        tex3: {
+          texture: d.textureDepthMultisampled2d(),
+        },
+        tex4: {
+          texture: d.textureMultisampled2d(d.u32),
+        },
+        tex5: {
+          texture: d.textureDepthCubeArray(),
+        },
+        tex6: {
+          texture: d.textureDepth2dArray(),
+        },
+      });
+      "
+    `);
   });
 
   it('generates sampler tgpu.bindGroupLayout definitions', () => {
@@ -130,20 +129,21 @@ export const layout2 = tgpu.bindGroupLayout({
 @group(1) @binding(1) var tex1: texture_storage_3d<r8sint, read_write>;
 `;
 
-    const expected = `\
-export const layout1 = tgpu.bindGroupLayout({
-  tex0: {
-    storageTexture: 'rgba8unorm',
-    access: 'writeonly',
-  },
-  tex1: {
-    storageTexture: 'r8sint',
-    access: 'mutable',
-    viewDimension: '3d',
-  },
-});`;
+    expect(generate(wgsl)).toMatchInlineSnapshot(`
+      "/* generated via tgpu-gen by TypeGPU */
+      import { tgpu, d } from 'typegpu';
 
-    expect(generate(wgsl)).toContain(expected);
+      /* bindGroupLayouts */
+      export const layout1 = tgpu.bindGroupLayout({
+        tex0: {
+          storageTexture: d.textureStorage2d('rgba8unorm', 'write-only'),
+        },
+        tex1: {
+          storageTexture: d.textureStorage3d('r8sint', 'read-write'),
+        },
+      });
+      "
+    `);
   });
 
   it('puts in (_: null)s for missing bindings', () => {
@@ -211,8 +211,8 @@ export const layout3 = tgpu.bindGroupLayout({
     expect(generated).toContain(expected3);
   });
 
-  it('adds typegpu import to the generated code', () => {
-    const importStatement = "import tgpu from 'typegpu';";
+  it('adds typegpu imports to the generated code', () => {
+    const importStatement = "import { tgpu, d } from 'typegpu';";
 
     expect(generate('@binding(0) @group(0) var<uniform> a : f32;')).toContain(importStatement);
     expect(generate('')).not.toContain(importStatement);

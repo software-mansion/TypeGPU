@@ -1,12 +1,12 @@
 import { describe, expect } from 'vitest';
-import * as d from '../src/data/index.ts';
-import { offsetsForProps } from '../src/data/offsets.ts';
+import { d } from 'typegpu';
+import { offsetsForProps } from '../../src/data/offsets.ts';
 import {
   convertPartialToPatch,
   getPatchInstructions,
   type WriteInstruction,
-} from '../src/data/partialIO.ts';
-import type { TypedArray } from '../src/shared/utilityTypes.ts';
+} from '../../src/data/partialIO.ts';
+import type { TypedArray } from '../../src/shared/utilityTypes.ts';
 import { it } from 'typegpu-testing-utility';
 
 function expectInstruction(

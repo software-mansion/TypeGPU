@@ -181,6 +181,8 @@ export interface TgpuTextureView<
   readonly [$gpuValueOf]: Infer<TSchema>;
   value: Infer<TSchema>;
   $: Infer<TSchema>;
+
+  toString(): string;
 }
 
 export interface TgpuTextureRenderView {

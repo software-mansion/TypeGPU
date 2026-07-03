@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { rgbToOklab } from './oklab.ts';
 
 export const hexToRgb = tgpu.comptime((hex: string | number): d.v3f => {

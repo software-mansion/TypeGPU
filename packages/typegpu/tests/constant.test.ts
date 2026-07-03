@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { d, tgpu } from '../src/index.js';
+import { d, tgpu } from 'typegpu';
 import { extractSnippetFromFn } from './utils/parseResolved.ts';
 
 const Boid = d.struct({

@@ -11,7 +11,7 @@ const GRID_WIDTH = 8;
 const GRID_HEIGHT = 6;
 const GridSchema = d.arrayOf(d.arrayOf(d.u32, GRID_HEIGHT), GRID_WIDTH);
 
-export const COMPUTE_SHADER_GRID_SNIPPET = `import tgpu, { d } from 'typegpu';
+export const COMPUTE_SHADER_GRID_SNIPPET = `import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 

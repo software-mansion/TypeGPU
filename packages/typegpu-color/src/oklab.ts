@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import { f32, struct, vec3f } from 'typegpu/data';
 import { abs, clamp, length, max, min, mix, pow, select, sign, sqrt } from 'typegpu/std';
 import { linearToSrgb, srgbToLinear } from './srgb.ts';

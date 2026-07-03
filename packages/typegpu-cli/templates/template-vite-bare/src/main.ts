@@ -1,4 +1,4 @@
-import tgpu, { common, d } from 'typegpu';
+import { tgpu, common, d } from 'typegpu';
 
 const root = await tgpu.init();
 

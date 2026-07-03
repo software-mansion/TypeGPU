@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest';
-import { buildWriter, getCompiledWriter } from '../src/data/compiledIO.ts';
-import * as d from '../src/data/index.ts';
-import { sizeOf } from '../src/data/sizeOf.ts';
+import { buildWriter, getCompiledWriter } from '../../src/data/compiledIO.ts';
+import { d } from 'typegpu';
+import { sizeOf } from 'typegpu/data';
 import { it } from 'typegpu-testing-utility';
 
 describe('buildWriter', () => {

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f, vec4f } from '../../../src/data/index.ts';
-import { smoothstep } from '../../../src/std/index.ts';
-import { isCloseTo } from '../../../src/std/boolean.ts';
+import { vec2f, vec3f, vec4f } from 'typegpu/data';
+import { smoothstep, isCloseTo } from 'typegpu/std';
 
 describe('smoothstep', () => {
   it('returns 0 when x is less than or equal to edge0', () => {

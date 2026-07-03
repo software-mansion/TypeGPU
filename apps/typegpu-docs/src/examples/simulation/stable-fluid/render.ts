@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { SIM_N } from './params.ts';
 
 export const renderLayout = tgpu.bindGroupLayout({
