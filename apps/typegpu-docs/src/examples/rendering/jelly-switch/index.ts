@@ -1,4 +1,4 @@
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import * as sdf from '@typegpu/sdf';
 
 import { randf } from '@typegpu/noise';

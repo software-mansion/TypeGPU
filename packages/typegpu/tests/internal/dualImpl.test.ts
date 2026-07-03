@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dualImpl, MissingCpuImplError } from '../../src/core/function/dualImpl.ts';
 import { getName } from '../../src/shared/meta.ts';
-import tgpu, { d } from '../../src/index.js';
+import { tgpu, d } from '../../src/index.js';
 
 describe('dualImpl', () => {
   it('names functions created by dualImpl', () => {

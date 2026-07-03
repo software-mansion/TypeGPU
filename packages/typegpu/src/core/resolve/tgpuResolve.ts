@@ -233,7 +233,7 @@ function resolveFromArray(
       for (const item of items) {
         // Support for: tgpu.resolve([layout])
         if (isBindGroupLayout(item)) {
-          for (const binding of Object.values(item[$internal].bound)) {
+          for (const binding of Object.values(item[$internal])) {
             ctx.resolve(binding);
           }
         } else {

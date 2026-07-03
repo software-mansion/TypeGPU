@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec3f } from '../../../src/data/index.ts';
-import { isCloseTo, sign } from '../../../src/std/index.ts';
+import { vec3f } from 'typegpu/data';
+import { isCloseTo, sign } from 'typegpu/std';
 
 describe('sign', () => {
   it('computes sign of numeric value', () => {

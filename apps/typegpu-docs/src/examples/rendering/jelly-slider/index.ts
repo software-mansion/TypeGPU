@@ -1,5 +1,5 @@
 import * as sdf from '@typegpu/sdf';
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 
 import { randf } from '@typegpu/noise';
 import { Slider } from './slider.ts';

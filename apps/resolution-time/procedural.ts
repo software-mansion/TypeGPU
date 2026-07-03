@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import tgpu, { d, std, type TgpuComptime } from 'typegpu';
+import { tgpu, d, std, type TgpuComptime } from 'typegpu';
 
 interface ProcGenConfig {
   mainBranching: number;

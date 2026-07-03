@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { test } from 'typegpu-testing-utility';
 import { expectSideEffects } from '../utils/parseResolved.ts';
 import { describe } from 'vitest';
