@@ -74,8 +74,7 @@ export const layout0 = tgpu.bindGroupLayout({
 
     expect(generate(wgsl)).toMatchInlineSnapshot(`
       "/* generated via tgpu-gen by TypeGPU */
-      import { tgpu } from 'typegpu';
-      import { d } from 'typegpu';
+      import { tgpu, d } from 'typegpu';
 
       /* bindGroupLayouts */
       export const layout1 = tgpu.bindGroupLayout({
@@ -132,8 +131,7 @@ export const layout2 = tgpu.bindGroupLayout({
 
     expect(generate(wgsl)).toMatchInlineSnapshot(`
       "/* generated via tgpu-gen by TypeGPU */
-      import { tgpu } from 'typegpu';
-      import { d } from 'typegpu';
+      import { tgpu, d } from 'typegpu';
 
       /* bindGroupLayouts */
       export const layout1 = tgpu.bindGroupLayout({
@@ -213,8 +211,8 @@ export const layout3 = tgpu.bindGroupLayout({
     expect(generated).toContain(expected3);
   });
 
-  it('adds typegpu import to the generated code', () => {
-    const importStatement = "import { tgpu } from 'typegpu';";
+  it('adds typegpu imports to the generated code', () => {
+    const importStatement = "import { tgpu, d } from 'typegpu';";
 
     expect(generate('@binding(0) @group(0) var<uniform> a : f32;')).toContain(importStatement);
     expect(generate('')).not.toContain(importStatement);

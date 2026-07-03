@@ -515,21 +515,18 @@ function declareConst(ident, options) {
  * @param {Options} options
  */
 function generateImports(options) {
-  return [
-    options.usedImports?.tgpu
-      ? options.moduleSyntax === 'commonjs'
-        ? "const { tgpu } = require('typegpu');"
-        : "import { tgpu } from 'typegpu';"
-      : null,
+  const imports = [
+    options.usedImports?.tgpu ? 'tgpu' : null,
+    options.usedImports?.data ? 'd' : null,
+  ].filter((imp) => !!imp);
 
-    options.usedImports?.data
-      ? options.moduleSyntax === 'commonjs'
-        ? "const { d } = require('typegpu');"
-        : "import { d } from 'typegpu';"
-      : null,
-  ]
-    .filter((imp) => !!imp)
-    .join('\n');
+  if (imports.length === 0) {
+    return '';
+  }
+
+  return options.moduleSyntax === 'commonjs'
+    ? `const { ${imports.join(', ')} } = require('typegpu');`
+    : `import { ${imports.join(', ')} } from 'typegpu';`;
 }
 
 /**
