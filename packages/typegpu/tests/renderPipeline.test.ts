@@ -79,6 +79,46 @@ describe('render pipeline behavior', () => {
     expectTypeOf(tgpu.fragmentFn({ out: {} })).toEqualTypeOf<TgpuFragmentFnShell<{}, {}>>();
   });
 
+  it('rejects depth outputs passed as color attachments', ({ root }) => {
+    const vertexMain = tgpu.vertexFn({
+      out: { pos: d.builtin.position },
+    })(() => ({ pos: d.vec4f(0, 0, 0, 1) }));
+
+    const fragmentMain = tgpu.fragmentFn({
+      out: { color: d.vec4f, depth: d.builtin.fragDepth },
+    })(() => ({ color: d.vec4f(1, 0, 0, 1), depth: 0.5 }));
+
+    const pipeline = root.createRenderPipeline({
+      vertex: vertexMain,
+      fragment: fragmentMain,
+      targets: { color: { format: 'rgba8unorm' } },
+    });
+
+    pipeline.withColorAttachment({
+      color: {
+        view: {} as unknown as GPUTextureView,
+        loadOp: 'clear',
+        storeOp: 'store',
+      },
+    });
+
+    expect(() => {
+      pipeline.withColorAttachment({
+        color: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+        // @ts-expect-error: depth outputs use withDepthStencilAttachment.
+        depth: {
+          view: {} as unknown as GPUTextureView,
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      });
+    });
+  });
+
   it('type checks passed bind groups', ({ root }) => {
     const vertexMain = tgpu.vertexFn({
       out: { bar: d.location(0, d.vec3f) },
