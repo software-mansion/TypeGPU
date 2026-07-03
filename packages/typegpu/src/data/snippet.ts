@@ -92,6 +92,16 @@ export interface Snippet {
    */
   readonly dataType: BaseData | UnknownData;
   readonly origin: Origin;
+  /**
+   * A snippet has possible side effects either if we're sure that it has side
+   * effects, or if our systems are unable to reliably determine that it
+   * doesn't have side effects.
+   *
+   * A snippet has side-effects if executing the WGSL code within and not using
+   * the return value is not equivalent to just not executing the WGSL code at
+   * all, with a margin of executing a few more instructions. For example, code
+   * that mutates memory, or synchronizes threads, has side effects.
+   */
   readonly possibleSideEffects: boolean;
 }
 
