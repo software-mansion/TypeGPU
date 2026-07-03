@@ -1,12 +1,12 @@
-import tgpu from "typegpu";
-import { vec3f } from "typegpu/data";
-import { max, min, mix, select, saturate } from "typegpu/std";
+import { tgpu } from 'typegpu';
+import { vec3f } from 'typegpu/data';
+import { max, min, mix, select, saturate } from 'typegpu/std';
 
 export const aces = tgpu.fn(
   [vec3f],
-  vec3f
+  vec3f,
 )((rgb) => {
-  "use gpu";
+  'use gpu';
 
   const a = 2.51;
   const b = 0.03;
@@ -19,9 +19,9 @@ export const aces = tgpu.fn(
 
 const hableCurve = tgpu.fn(
   [vec3f],
-  vec3f
+  vec3f,
 )((x) => {
-  "use gpu";
+  'use gpu';
 
   const a = 0.15;
   const b = 0.5;
@@ -35,9 +35,9 @@ const hableCurve = tgpu.fn(
 
 export const hable = tgpu.fn(
   [vec3f],
-  vec3f
+  vec3f,
 )((rgb) => {
-  "use gpu";
+  'use gpu';
 
   const W = vec3f(11.2);
 
@@ -46,18 +46,18 @@ export const hable = tgpu.fn(
 
 export const reinhard = tgpu.fn(
   [vec3f],
-  vec3f
+  vec3f,
 )((rgb) => {
-  "use gpu";
-  
+  'use gpu';
+
   return saturate(rgb / (vec3f(1.0) + rgb));
 });
 
 export const neutral = tgpu.fn(
   [vec3f],
-  vec3f
+  vec3f,
 )((rgb) => {
-  "use gpu";
+  'use gpu';
 
   const startCompression = 0.8 - 0.04;
   const desaturation = 0.15;

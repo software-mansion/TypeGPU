@@ -1,9 +1,9 @@
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
-import { hable, reinhard, aces, neutral } from "@typegpu/color";
+import { hable, reinhard, aces, neutral } from '@typegpu/color';
 
 const root = await tgpu.init();
-const canvas = document.querySelector("canvas") as HTMLCanvasElement;
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
 
 const tonemappingUniform = root.createUniform(d.u32, 0);
@@ -18,23 +18,18 @@ const mainFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  "use gpu";
+  'use gpu';
 
-  const brightness =
-    pointLightScale.$ /
-    std.length(uv - d.vec2f(pointLightX.$, pointLightY.$));
+  const brightness = pointLightScale.$ / std.length(uv - d.vec2f(pointLightX.$, pointLightY.$));
   let color = pointLightColor.$ * brightness;
 
   if (tonemappingUniform.$ === 1) {
     color = aces(color);
-  }
-  else if (tonemappingUniform.$ === 2) {
+  } else if (tonemappingUniform.$ === 2) {
     color = hable(color);
-  }
-  else if (tonemappingUniform.$ === 3) {
+  } else if (tonemappingUniform.$ === 3) {
     color = reinhard(color);
-  }
-  else if(tonemappingUniform.$ === 4) {
+  } else if (tonemappingUniform.$ === 4) {
     color = neutral(color);
   }
 
@@ -50,7 +45,7 @@ const sideBySideFragment = tgpu.fragmentFn({
   in: { uv: d.vec2f },
   out: d.vec4f,
 })(({ uv }) => {
-  "use gpu";
+  'use gpu';
 
   const rows = 3;
   const columns = 3;
@@ -68,26 +63,20 @@ const sideBySideFragment = tgpu.fragmentFn({
   );
 
   const brightness =
-    pointLightScale.$ /
-    std.length(localUV - d.vec2f(pointLightX.$, pointLightY.$));
+    pointLightScale.$ / std.length(localUV - d.vec2f(pointLightX.$, pointLightY.$));
   let color = pointLightColor.$ * brightness;
 
-  if(column === 0 && row === 0) {
+  if (column === 0 && row === 0) {
     color = d.vec3f(color);
-  }
-  else if (column === 1 && row === 0) {
+  } else if (column === 1 && row === 0) {
     color = aces(color);
-  }
-  else if (column === 2 && row === 0) {
+  } else if (column === 2 && row === 0) {
     color = hable(color);
-  }
-  else if (column === 0 && row === 1) {
+  } else if (column === 0 && row === 1) {
     color = reinhard(color);
-  }
-  else if (column === 1 && row === 1) {
+  } else if (column === 1 && row === 1) {
     color = neutral(color);
-  }
-  else {
+  } else {
     color = d.vec3f(1.0);
   }
 
@@ -110,36 +99,30 @@ function draw() {
 requestAnimationFrame(draw);
 
 export const controls = defineControls({
-  "Tonemapping Mode": {
-    initial: "None",
-    options: [
-      "None",
-      "ACES",
-      "Hable",
-      "Reinhard",
-      "Neutral",
-    ],
+  'Tonemapping Mode': {
+    initial: 'None',
+    options: ['None', 'ACES', 'Hable', 'Reinhard', 'Neutral'],
     onSelectChange(value: string) {
-      if (value === "None") {
+      if (value === 'None') {
         tonemappingUniform.write(0);
-      } else if (value === "ACES") {
+      } else if (value === 'ACES') {
         tonemappingUniform.write(1);
-      } else if (value === "Hable") {
+      } else if (value === 'Hable') {
         tonemappingUniform.write(2);
-      } else if (value === "Reinhard") {
+      } else if (value === 'Reinhard') {
         tonemappingUniform.write(3);
-      } else if (value === "Neutral") {
+      } else if (value === 'Neutral') {
         tonemappingUniform.write(4);
       }
-    }
+    },
   },
-  "Point Light Color": {
+  'Point Light Color': {
     initial: d.vec3f(1.0, 0.45, 0.075),
     onColorChange: (c) => {
       pointLightColor.write(c);
     },
   },
-  "Point Light Scale": {
+  'Point Light Scale': {
     initial: 0.2,
     min: 0.01,
     max: 2,
@@ -148,7 +131,7 @@ export const controls = defineControls({
       pointLightScale.write(value);
     },
   },
-  "Point Light X": {
+  'Point Light X': {
     initial: 0.5,
     min: 0,
     max: 1,
@@ -157,7 +140,7 @@ export const controls = defineControls({
       pointLightX.write(value);
     },
   },
-  "Point Light Y": {
+  'Point Light Y': {
     initial: 0.5,
     min: 0,
     max: 1,
@@ -166,7 +149,7 @@ export const controls = defineControls({
       pointLightY.write(value);
     },
   },
-  "Side by Side": {
+  'Side by Side': {
     initial: false,
     onToggleChange: (value: boolean) => {
       sideBySide = value;

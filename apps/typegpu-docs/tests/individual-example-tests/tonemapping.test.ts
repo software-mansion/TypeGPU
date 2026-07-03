@@ -12,11 +12,11 @@ describe('tonemapping example', () => {
   it('should produce valid code', async ({ device }) => {
     const shaderCodes = await runExampleTest(
       {
-        category: "image-processing",
-        name: "tonemapping",
-        expectedCalls: 1
+        category: 'image-processing',
+        name: 'tonemapping',
+        expectedCalls: 1,
       },
-      device
+      device,
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
