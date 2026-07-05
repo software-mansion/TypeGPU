@@ -273,10 +273,17 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     const hasSampled = usages.includes('sampled');
     const hasRender = usages.includes('render');
     const hasTransient = usages.includes('transient');
+    const hasTransientConflict = hasSampled || hasStorage;
+
+    if (
+      (hasTransient && (hasTransientConflict || this.usableAsSampled || this.usableAsStorage)) ||
+      (this.#flags & GPUTextureUsage.TRANSIENT_ATTACHMENT && hasTransientConflict)
+    ) {
+      throw new Error("Transient texture usage cannot be combined with 'sampled' or 'storage'.");
+    }
 
     if (hasTransient) {
-      this.#flags &= ~(GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC);
-      this.#flags |= GPUTextureUsage.TRANSIENT_ATTACHMENT | GPUTextureUsage.RENDER_ATTACHMENT;
+      this.#flags = GPUTextureUsage.TRANSIENT_ATTACHMENT | GPUTextureUsage.RENDER_ATTACHMENT;
     }
 
     this.#flags |= hasSampled ? GPUTextureUsage.TEXTURE_BINDING : 0;

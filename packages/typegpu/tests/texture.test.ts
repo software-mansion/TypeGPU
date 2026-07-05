@@ -175,6 +175,17 @@ describe('TgpuTexture', () => {
     );
   });
 
+  it('rejects combining transient texture usage with sampled usage', ({ root }) => {
+    expect(() =>
+      root
+        .createTexture({
+          size: [512, 512],
+          format: 'rgba8unorm',
+        })
+        .$usage('transient', 'sampled'),
+    ).toThrow("Transient texture usage cannot be combined with 'sampled' or 'storage'.");
+  });
+
   it('sets raw WebGPU usage flags exactly', ({ root, device }) => {
     const texture = root
       .createTexture({
