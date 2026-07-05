@@ -154,6 +154,27 @@ describe('TgpuTexture', () => {
     >();
   });
 
+  it('creates transient textures with the exact WebGPU usage bits', ({ root, device }) => {
+    const texture = root
+      .createTexture({
+        size: [512, 512],
+        format: 'rgba8unorm',
+      })
+      .$usage('transient');
+
+    expectTypeOf(texture).toEqualTypeOf<
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & RenderFlag
+    >();
+
+    root.unwrap(texture);
+
+    expect(device.mock.createTexture).toHaveBeenCalledWith(
+      expect.objectContaining({
+        usage: GPUTextureUsage.TRANSIENT_ATTACHMENT | GPUTextureUsage.RENDER_ATTACHMENT,
+      }),
+    );
+  });
+
   it('limits available extensions based on the chosen format', ({ root }) => {
     root
       .createTexture({

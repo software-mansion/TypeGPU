@@ -265,18 +265,25 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     return this;
   }
 
-  $usage<T extends ('sampled' | 'storage' | 'render')[]>(
+  $usage<T extends ('sampled' | 'storage' | 'render' | 'transient')[]>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToExtensionMap[T[number]]> {
     const hasStorage = usages.includes('storage');
     const hasSampled = usages.includes('sampled');
     const hasRender = usages.includes('render');
+    const hasTransient = usages.includes('transient');
+
+    if (hasTransient) {
+      this.#flags &= ~(GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC);
+      this.#flags |= GPUTextureUsage.TRANSIENT_ATTACHMENT | GPUTextureUsage.RENDER_ATTACHMENT;
+    }
+
     this.#flags |= hasSampled ? GPUTextureUsage.TEXTURE_BINDING : 0;
     this.#flags |= hasStorage ? GPUTextureUsage.STORAGE_BINDING : 0;
     this.#flags |= hasRender ? GPUTextureUsage.RENDER_ATTACHMENT : 0;
     this.usableAsStorage ||= hasStorage;
     this.usableAsSampled ||= hasSampled;
-    this.usableAsRender ||= hasRender;
+    this.usableAsRender ||= hasRender || hasTransient;
 
     return this as this & UnionToIntersection<LiteralToExtensionMap[T[number]]>;
   }
