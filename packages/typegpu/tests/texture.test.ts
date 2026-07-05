@@ -175,6 +175,23 @@ describe('TgpuTexture', () => {
     );
   });
 
+  it('sets raw WebGPU usage flags exactly', ({ root, device }) => {
+    const texture = root
+      .createTexture({
+        size: [512, 512],
+        format: 'rgba8unorm',
+      })
+      .$setFlags(GPUTextureUsage.RENDER_ATTACHMENT);
+
+    root.unwrap(texture);
+
+    expect(device.mock.createTexture).toHaveBeenCalledWith(
+      expect.objectContaining({
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      }),
+    );
+  });
+
   it('limits available extensions based on the chosen format', ({ root }) => {
     root
       .createTexture({
