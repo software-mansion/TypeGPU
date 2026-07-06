@@ -73,7 +73,11 @@ describe('wgslGenerator with console.log', () => {
       return d.vec4f();
     });
 
-    const pipeline = root.withVertex(vs).withFragment(fs, { format: 'rg8unorm' }).createPipeline();
+    const pipeline = root.createRenderPipeline({
+      vertex: vs,
+      fragment: fs,
+      targets: { format: 'rg8unorm' },
+    });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct vs_Output {
