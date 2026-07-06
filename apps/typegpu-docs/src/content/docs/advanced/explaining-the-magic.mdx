@@ -103,7 +103,7 @@ The changes can be split into three categories:
 Most TypeGPU resources can be named via the `$name` method.
 While this is completely optional, a name can make debugging easier, and it also serves as a primer for identifiers in resulting WGSL.
 
-Unplugin-typegpu traverses the AST of each bundled file, and matches most common patterns where a default name for a resource (recognized by constructor name) can be inferred.
+`unplugin-typegpu` traverses the AST of each bundled file, and matches most common patterns where a default name for a resource (recognized by constructor name) can be inferred.
 
 ```js
 const counter = root.createMutable(d.vec2u); // can be named 'counter'
@@ -149,9 +149,9 @@ const createBuffer = () => {
 
 ## Function metadata assignment
 
-Function metadata is what makes it possible to parse JS functions into WGSL. 
+Function metadata is what makes it possible to generate WGSL from JavaScript code. 
 The metadata consists of the metadata version, the function name, the AST ([abstract syntax tree](https://en.wikipedia.org/wiki/Abstract_syntax_tree)), and externals (the captured scope of the function),
-Only functions marked with `'use gpu'` are processed.
+Only functions marked with `'use gpu'` are processed, as well as those immediately passed into `tgpu.fn` shells. 
 
 ### AST
 
@@ -159,7 +159,7 @@ The plugin uses the [tinyest-for-wgsl](https://github.com/software-mansion/TypeG
 package to parse the function AST into our custom AST format called [tinyest](https://github.com/software-mansion/TypeGPU/blob/main/packages/tinyest/README.md).
 Our `wgslGenerator` traverses this AST and generates code snippets.
 
-This could theoretically be done in runtime from the function's `toString`, but it would require bundling a JavaScript parser with TypeGPU, and catching externals would be really difficult.
+This could theoretically be done at runtime from the function's `toString`, but it would require bundling a JavaScript parser with TypeGPU, and make catching externals impossible.
 
 ### Externals
 
@@ -227,7 +227,7 @@ The second reason is the fact that some of our getters depend on the current res
 
 #### Step 3: runtime
 
-In runtime, the thunks are changed to getters for convenience.
+At runtime, the thunks are changed to getters for convenience.
 
 ```ts
 const externals = { 
@@ -298,7 +298,7 @@ instead of just prepending the entire object - this lets us only evaluate the ex
 
 ## Operator overloading
 
-For full [tsover](https://github.com/software-mansion/tsover/tree/main) experience, inside the function code, overloaded operators are swapped with calls to functions like `__tsover_add`, defined by [tsover-runtime](https://github.com/software-mansion/tsover/blob/main/packages/tsover-runtime/README.md).
+To allow [tsover](https://github.com/software-mansion/tsover/tree/main) to work as we expect when the function is called in JavaScript, operators used inside the function body are swapped with calls to functions like `__tsover_add`, defined by [tsover-runtime](https://github.com/software-mansion/tsover/blob/main/packages/tsover-runtime/README.md).
 This makes it possible to add vectors together without referencing `std.mul` and such.
 
 :::note
@@ -307,6 +307,6 @@ Generated tinyest metadata is not modified.
 :::
 
 :::caution
-Unplugin only transforms operators inside of 'use gpu' functions.
+`unplugin-typegpu` only transforms operators inside of 'use gpu' functions.
 :::
 
