@@ -108,6 +108,7 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
             returnType,
             // Functions give up ownership of their return value
             /* origin */ 'constant',
+            options.sideEffects,
           );
         } catch (e) {
           // cpuImpl may in some cases be present but implemented only partially.

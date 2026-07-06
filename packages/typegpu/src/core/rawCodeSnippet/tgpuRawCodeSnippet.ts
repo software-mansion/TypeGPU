@@ -76,8 +76,9 @@ export function rawCodeSnippet<TDataType extends AnyData>(
   expression: string,
   type: TDataType,
   origin: RawCodeSnippetOrigin | undefined = 'runtime',
+  possibleSideEffects: boolean | undefined = true,
 ): TgpuRawCodeSnippet<TDataType> {
-  return new TgpuRawCodeSnippetImpl(expression, type, origin);
+  return new TgpuRawCodeSnippetImpl(expression, type, origin, possibleSideEffects);
 }
 
 // --------------
@@ -90,14 +91,21 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
   readonly [$internal]: true;
   readonly dataType: TDataType;
   readonly origin: RawCodeSnippetOrigin;
+  readonly possibleSideEffects: boolean;
 
   #expression: string;
   #externals: ExternalMap | undefined;
 
-  constructor(expression: string, type: TDataType, origin: RawCodeSnippetOrigin) {
+  constructor(
+    expression: string,
+    type: TDataType,
+    origin: RawCodeSnippetOrigin,
+    possibleSideEffects: boolean,
+  ) {
     this[$internal] = true;
     this.dataType = type;
     this.origin = origin;
+    this.possibleSideEffects = possibleSideEffects;
 
     this.#expression = expression;
   }
@@ -115,7 +123,7 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const replacedExpression = replaceExternalsInWgsl(ctx, this.#externals ?? {}, this.#expression);
 
-    return snip(replacedExpression, this.dataType, this.origin);
+    return snip(replacedExpression, this.dataType, this.origin, this.possibleSideEffects);
   }
 
   toString() {
@@ -125,12 +133,13 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
   get [$gpuValueOf](): InferGPU<TDataType> {
     const dataType = this.dataType;
     const origin = this.origin;
+    const possibleSideEffects = this.possibleSideEffects;
 
     return new Proxy(
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, dataType, origin);
+          return snip(this, dataType, origin, possibleSideEffects);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `raw(${String(this.dataType)}): "${this.#expression}".$`,

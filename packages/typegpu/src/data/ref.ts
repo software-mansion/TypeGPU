@@ -77,7 +77,7 @@ export const _ref = (() => {
       if (isPtr(value.dataType)) {
         // This can happen if we take a reference of an *implicit* pointer, one
         // made by assigning a reference to a `const`.
-        return snip(value.value, explicitFrom(value.dataType), value.origin);
+        return snip(value.value, explicitFrom(value.dataType), value.origin, false);
       }
 
       /**
@@ -90,7 +90,12 @@ export const _ref = (() => {
        * ```
        */
       const ptrType = createPtrFromOrigin(value.origin, value.dataType as StorableData);
-      return snip(new RefOperator(value, ptrType), ptrType ?? UnknownData, /* origin */ 'runtime');
+      return snip(
+        new RefOperator(value, ptrType),
+        ptrType ?? UnknownData,
+        /* origin */ 'runtime',
+        value.possibleSideEffects,
+      );
     },
   };
 
@@ -175,14 +180,14 @@ export class RefOperator implements SelfResolvable {
     if (!this.#ptrType) {
       throw new Error(stitch`Cannot take a reference of ${this.snippet}`);
     }
-    return snip(this, this.#ptrType, this.snippet.origin);
+    return snip(this, this.#ptrType, this.snippet.origin, this.snippet.possibleSideEffects);
   }
 
   [$resolve](): ResolvedSnippet {
     if (!this.#ptrType) {
       throw new Error(stitch`Cannot take a reference of ${this.snippet}`);
     }
-    return snip(stitch`(&${this.snippet})`, this.#ptrType, this.snippet.origin);
+    return snip(stitch`(&${this.snippet})`, this.#ptrType, this.snippet.origin, false);
   }
 }
 
@@ -194,8 +199,13 @@ export function derefSnippet(snippet: Snippet): Snippet {
   const innerType = snippet.dataType.inner;
 
   if (snippet.value instanceof RefOperator) {
-    return snip(stitch`${snippet.value.snippet}`, innerType, snippet.origin);
+    return snip(
+      stitch`${snippet.value.snippet}`,
+      innerType,
+      snippet.origin,
+      snippet.value.snippet.possibleSideEffects,
+    );
   }
 
-  return snip(stitch`(*${snippet})`, innerType, snippet.origin);
+  return snip(stitch`(*${snippet})`, innerType, snippet.origin, false);
 }

@@ -20,7 +20,8 @@ export class UnrollableIterable implements SelfResolvable {
   }
 
   [$resolve](_ctx: ResolutionCtx): ResolvedSnippet {
-    return snip(stitch`${this.snippet}`, this.snippet.dataType as BaseData, this.snippet.origin);
+    const { dataType, origin, possibleSideEffects } = this.snippet;
+    return snip(stitch`${this.snippet}`, dataType as BaseData, origin, possibleSideEffects);
   }
 }
 
@@ -95,7 +96,12 @@ export const unroll = (() => {
   impl[$internal] = true;
   impl[$gpuCallable] = {
     call(_ctx, [value]) {
-      return snip(new UnrollableIterable(value), value.dataType, value.origin);
+      return snip(
+        new UnrollableIterable(value),
+        value.dataType,
+        value.origin,
+        value.possibleSideEffects,
+      );
     },
   };
 

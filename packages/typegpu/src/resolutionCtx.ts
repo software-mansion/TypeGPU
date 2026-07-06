@@ -1006,7 +1006,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     if (typeof item === 'boolean') {
-      return snip(item ? 'true' : 'false', bool, /* origin */ 'constant');
+      return snip(item ? 'true' : 'false', bool, /* origin */ 'constant', false);
     }
 
     if (typeof item === 'string') {
@@ -1052,6 +1052,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       this.resolve(snippet.value, snippet.dataType).value,
       snippet.dataType,
       snippet.origin,
+      snippet.possibleSideEffects,
     ) as ResolvedSnippet;
   }
 

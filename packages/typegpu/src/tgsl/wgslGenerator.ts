@@ -31,7 +31,6 @@ import {
   coerceToSnippet,
   concretize,
   type GenerationCtx,
-  numericLiteralToSnippet,
 } from './generationHelpers.ts';
 import { accessIndex } from './accessIndex.ts';
 import { accessProp } from './accessProp.ts';
@@ -163,35 +162,33 @@ function operatorToType<
 
 const unaryOpCodeToCodegen = {
   '-': neg[$gpuCallable].call.bind(neg),
-  void: () => snip(undefined, wgsl.Void, 'constant'),
+  void: () => snip(undefined, wgsl.Void, 'constant', false),
   '!': (ctx: GenerationCtx, [argExpr]: Snippet[]) => {
     if (argExpr === undefined) {
       throw new Error('The unary operator `!` expects 1 argument, but 0 were provided.');
     }
 
     if (isKnownAtComptime(argExpr)) {
-      return snip(!argExpr.value, bool, 'constant');
+      return snip(!argExpr.value, bool, 'constant', false);
     }
 
     const { value, dataType } = argExpr;
     const argStr = ctx.resolve(value, dataType).value;
 
     if (wgsl.isBool(dataType)) {
-      return snip(`!${argStr}`, bool, 'runtime');
+      return snip(`!${argStr}`, bool, 'runtime', argExpr.possibleSideEffects);
     }
     if (wgsl.isNumericSchema(dataType)) {
       const resultStr = `!bool(${argStr})`;
       const nanGuardedStr = // abstractFloat will be resolved as comptime known value
-        dataType.type === 'f32'
-          ? `(((bitcast<u32>(${argStr}) & 0x7fffffff) > 0x7f800000) || ${resultStr})`
-          : dataType.type === 'f16'
-            ? `(((bitcast<u32>(${argStr}) & 0x7fff) > 0x7c00) || ${resultStr})`
-            : resultStr;
+        dataType.type === 'f32' || dataType.type === 'f16'
+          ? `(((bitcast<u32>(${dataType.type === 'f16' ? `f32(${argStr})` : argStr}) << 1u) - 1u) < 0xff000000)`
+          : resultStr;
 
-      return snip(nanGuardedStr, bool, 'runtime');
+      return snip(nanGuardedStr, bool, 'runtime', argExpr.possibleSideEffects);
     }
 
-    return snip(false, bool, 'constant');
+    return snip(false, bool, 'constant', argExpr.possibleSideEffects);
   },
 } satisfies Partial<Record<tinyest.UnaryOperator, (...args: never[]) => unknown>>;
 
@@ -262,9 +259,10 @@ ${this.ctx.pre}}`;
     const varName = this.ctx.makeUniqueIdentifier(id, 'block');
     const ptrType = ptrFn(dataType);
     const snippet = snip(
-      new RefOperator(snip(varName, dataType, 'function'), ptrType),
+      new RefOperator(snip(varName, dataType, 'function', false), ptrType),
       ptrType,
       'function',
+      false,
     );
     this.ctx.defineVariable(id, snippet);
     return varName;
@@ -288,7 +286,7 @@ ${this.ctx.pre}}`;
       throw new Error('Cannot resolve an empty identifier');
     }
     if (id === 'undefined') {
-      return snip(undefined, wgsl.Void, 'constant');
+      return snip(undefined, wgsl.Void, 'constant', false);
     }
 
     const res = this.ctx.getById(id);
@@ -331,7 +329,7 @@ ${this.ctx.pre}}`;
     }
 
     if (typeof expression === 'boolean') {
-      return snip(expression, bool, /* origin */ 'constant');
+      return snip(expression, bool, /* origin */ 'constant', false);
     }
 
     if (
@@ -348,7 +346,7 @@ ${this.ctx.pre}}`;
         const evalRhs = op === '&&' ? lhsExpr.value : !lhsExpr.value;
 
         if (!evalRhs) {
-          return snip(op === '||', bool, 'constant');
+          return snip(op === '||', bool, 'constant', false);
         }
 
         const rhsExpr = this._expression(rhs);
@@ -358,13 +356,13 @@ ${this.ctx.pre}}`;
         }
 
         if (isKnownAtComptime(rhsExpr)) {
-          return snip(!!rhsExpr.value, bool, 'constant');
+          return snip(!!rhsExpr.value, bool, 'constant', false);
         }
 
         // we can skip lhs
         const convRhs = tryConvertSnippet(this.ctx, rhsExpr, bool, false);
         const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
-        return snip(rhsStr, bool, 'runtime');
+        return snip(rhsStr, bool, 'runtime', convRhs.possibleSideEffects);
       }
 
       const rhsExpr = this._expression(rhs);
@@ -540,8 +538,8 @@ ${this.ctx.pre}}`;
       // Numeric Literal
       const type =
         typeof expression[1] === 'string'
-          ? numericLiteralToSnippet(parseNumericString(expression[1]))
-          : numericLiteralToSnippet(expression[1]);
+          ? coerceToSnippet(parseNumericString(expression[1]))
+          : coerceToSnippet(expression[1]);
       invariant(type, `Expected ${stringifyNode(expression)} to be valid numeric literal`);
       return type;
     }
@@ -575,6 +573,7 @@ ${this.ctx.pre}}`;
             callee.value,
             // A new struct, so not a reference.
             /* origin */ 'runtime',
+            /* possibleSideEffects */ false,
           );
         }
 
@@ -587,6 +586,7 @@ ${this.ctx.pre}}`;
           callee.value,
           // A new struct, so not a reference.
           /* origin */ 'runtime',
+          arg.possibleSideEffects,
         );
       }
 
@@ -604,6 +604,7 @@ ${this.ctx.pre}}`;
             callee.value,
             // A new array, so not a reference.
             /* origin */ 'runtime',
+            /* possibleSideEffects */ false,
           );
         }
 
@@ -617,6 +618,7 @@ ${this.ctx.pre}}`;
             stitch`${this.ctx.resolve(callee.value).value}(${arg.value.elements})`,
             arg.dataType,
             /* origin */ 'runtime',
+            arg.possibleSideEffects,
           );
         }
 
@@ -627,6 +629,7 @@ ${this.ctx.pre}}`;
           callee.value,
           // A new array, so not a reference.
           /* origin */ 'runtime',
+          arg.possibleSideEffects,
         );
       }
 
@@ -851,7 +854,12 @@ ${this.ctx.pre}}`;
 
       const arrayType = arrayOf(elemType as wgsl.AnyWgslData, values.length);
 
-      return snip(new ArrayExpression(arrayType, values), arrayType, /* origin */ 'runtime');
+      return snip(
+        new ArrayExpression(arrayType, values),
+        arrayType,
+        /* origin */ 'runtime',
+        values.some((v) => v.possibleSideEffects),
+      );
     }
 
     if (expression[0] === NODE.conditionalExpr) {
@@ -1154,8 +1162,7 @@ Try 'return ${typeStr}(${str});' instead.
       this.ctx.makeUniqueIdentifier(rawId, 'block'),
       concreteType,
       /* origin */ 'local-def',
-      // Accessing variable declarations is side-effect free.
-      /* possibleSideEffects */ false,
+      false,
     );
     this.ctx.defineVariable(rawId, snippet);
 
@@ -1270,8 +1277,7 @@ Try 'return ${typeStr}(${str});' instead.
       this.ctx.makeUniqueIdentifier(rawId, 'block'),
       concreteType,
       /* origin */ varOrigin,
-      // Accessing variable declarations is side-effect free.
-      /* possibleSideEffects */ false,
+      false,
     );
     this.ctx.defineVariable(rawId, snippet);
 
