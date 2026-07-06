@@ -82,7 +82,7 @@ async () => {
 	}), {
     v: 2,
     name: undefined,
-    ast: {"params":[],"body":[0,[[2,[7,"counter","$"],"+=",[7,"incrementBy.allModifier","$"]],[2,[7,[7,"counter","$"],"y"],"+=",[7,"incrementBy.yModifier","$"]]]],"externalNames":["counter","incrementBy"]},
+    ast: {"params":[],"body":[0,[[2,[7,"counter","$"],"+=",[7,"incrementBy.allModifier","$"]],[2,[7,[7,"counter","$"],"y"],"+=",[7,"incrementBy.yModifier","$"]]]]},
     externals: { "counter": () => counter, "incrementBy.allModifier": () => incrementBy.allModifier, "incrementBy.yModifier": () => incrementBy.yModifier }
   }) && $.f)({}))), "increment"));
 	const incrementPipeline = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createComputePipeline({ compute: increment }), "incrementPipeline"));
