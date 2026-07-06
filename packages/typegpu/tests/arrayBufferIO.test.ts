@@ -1,18 +1,5 @@
-import { attest } from '@ark/attest';
-import { describe, expect, expectTypeOf, vi } from 'vitest';
-import * as common from '../src/common/index.ts';
-import * as d from '../src/data/index.ts';
-import { sizeOf } from '../src/data/sizeOf.ts';
-import {
-  patchArrayBuffer,
-  readFromArrayBuffer,
-  writeToArrayBuffer,
-  type ValidateBufferSchema,
-  type ValidUsagesFor,
-} from '../src/index.js';
-import { getName } from '../src/shared/meta.ts';
-import type { InferPatch, IsValidBufferSchema, IsValidUniformSchema } from '../src/shared/repr.ts';
-import type { TypedArray } from '../src/shared/utilityTypes.ts';
+import { describe, expect } from 'vitest';
+import { d, patchArrayBuffer, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('arrayBufferIO', () => {

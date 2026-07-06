@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import tgpu, { d, std } from '../../src/index.js';
+import { tgpu, d, std } from 'typegpu';
 
 describe('ternary operator', () => {
   it('should resolve to one of the branches', () => {
@@ -183,15 +183,15 @@ describe('ternary operator', () => {
 
   it('should generate select() for runtime condition with function params', () => {
     const myFn = tgpu.fn(
-      [d.u32],
-      d.u32,
+      [d.i32],
+      d.i32,
     )((n) => {
       return n > 0 ? n : -n;
     });
 
     expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
-      "fn myFn(n: u32) -> u32 {
-        return select(-(n), n, (n > 0u));
+      "fn myFn(n: i32) -> i32 {
+        return select(-(n), n, (n > 0i));
       }"
     `);
   });

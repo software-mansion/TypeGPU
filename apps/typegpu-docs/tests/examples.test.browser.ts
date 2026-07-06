@@ -4,6 +4,7 @@ import { server } from '@vitest/browser/context';
 import * as Plot from '@observablehq/plot';
 import type { INTERNAL_GlobalExt } from 'typegpu';
 import { pipe } from 'remeda';
+import { createStore } from 'jotai';
 
 const globalExt = globalThis as INTERNAL_GlobalExt;
 
@@ -31,11 +32,12 @@ test(
   async () => {
     const exampleView = document.createElement('div');
     document.body.appendChild(exampleView);
+    const store = createStore();
 
     for (const example of examples) {
       for (let i = 0; i < iterations; ++i) {
         // Creating the appropriate markup for the example
-        exampleView.innerHTML = example.htmlFile.content;
+        exampleView.innerHTML = (await store.get(example.sourceAtom)).htmlFile.content;
 
         // Executing the example
         const result = await example.tsImport();

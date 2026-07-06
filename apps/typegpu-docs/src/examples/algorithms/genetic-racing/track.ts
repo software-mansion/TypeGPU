@@ -3,7 +3,7 @@ import { std } from 'typegpu';
 export type TrackResult = {
   width: number;
   height: number;
-  data: Uint8ClampedArray;
+  data: Uint8ClampedArray<ArrayBuffer>;
   spawn: { position: [number, number]; angle: number };
   trackLength: number;
 };

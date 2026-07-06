@@ -1,9 +1,8 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import { modf } from '../../../src/std/numeric.ts';
-import { vec2f, vec3h } from '../../../src/data/vector.ts';
-import type { v2f } from '../../../src/data/index.ts';
-import type { v3h } from '../../../src/data/wgslTypes.ts';
+import { modf } from 'typegpu/std';
+import { vec2f, vec3h } from 'typegpu/data';
+import type { v2f, v3h } from 'typegpu/data';
 
 describe('modf', () => {
   it('gets inferred correctly', () => {

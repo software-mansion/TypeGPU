@@ -181,7 +181,7 @@ function createFn<ImplSchema extends AnyFn>(
     [$internal]: { implementation },
 
     $uses(newExternals: Record<string, unknown>) {
-      core.applyExternals(newExternals);
+      core.setExternals('userProvided', newExternals);
       return this;
     },
 
@@ -203,8 +203,8 @@ function createFn<ImplSchema extends AnyFn>(
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
       if (typeof implementation === 'string') {
-        addArgTypesToExternals(implementation, shell.argTypes, core.applyExternals);
-        addReturnTypeToExternals(implementation, shell.returnType, core.applyExternals);
+        addArgTypesToExternals(implementation, shell.argTypes, core);
+        addReturnTypeToExternals(implementation, shell.returnType, core);
       }
 
       return core.resolve(ctx, shell.argTypes, shell.returnType);

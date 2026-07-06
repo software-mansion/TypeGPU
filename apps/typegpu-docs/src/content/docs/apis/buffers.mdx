@@ -19,7 +19,7 @@ results of parallel computation back to JS. When creating a buffer, a schema for
 As an example, let's create a buffer for storing particles.
 
 ```ts twoslash {22-28}
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 // Defining a struct type
 const Particle = d.struct({
@@ -66,7 +66,7 @@ To create a buffer, you will need to define its schema by composing data types i
 structs and arrays. They will be explored in more detail in [a following chapter](/TypeGPU/apis/data-schemas).
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const countBuffer = root.createBuffer(d.u32);
@@ -85,7 +85,7 @@ To be able to use these buffers in WGSL shaders, we have to declare their usage 
 
 ```ts twoslash
 // @noErrors
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const buffer = root.createBuffer(d.u32)
@@ -98,7 +98,7 @@ You can also add all flags in a single `$usage()`.
 
 ```ts twoslash
 // @noErrors
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const buffer = root.createBuffer(d.u32)
@@ -109,7 +109,7 @@ const buffer = root.createBuffer(d.u32)
 :::note
 Along with passing the appropriate flags to WebGPU, the methods will also embed type information into the buffer.
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 
@@ -126,7 +126,7 @@ or indirectly through the `.$usage` method.
 
 ```ts twoslash
 /// <reference types="@webgpu/types" />
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 const buffer = root.createBuffer(d.f32);
 // ---cut---
@@ -147,7 +147,7 @@ You can also pass an initial value to the `root.createBuffer` function.
 When the buffer is created, it will be mapped at creation, and the initial value will be written to the buffer.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 // Will be initialized to `100`
@@ -164,7 +164,7 @@ For cases where a plain typed value is not enough, you can also pass an initiali
 It receives the newly created typed buffer while it is still mapped, so you can populate it with multiple writes or helper utilities before the first upload.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -186,7 +186,7 @@ You can also create a buffer using an existing WebGPU buffer. This is useful whe
 
 ```ts twoslash {7}
 /// <reference types="@webgpu/types" />
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 const device = root.device;
 // ---cut---
@@ -212,7 +212,7 @@ method's arguments.
 
 ```ts twoslash
 // @noErrors
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const Particle = d.struct({
@@ -255,7 +255,7 @@ The same API is used internally for buffer writes.
 When data already lives in tuples or typed arrays, skipping typed instance construction avoids allocating TypeGPU wrapper objects, which can reduce garbage-collector pressure in hot paths such as per-frame updates or simulation ticks.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const vecBuffer = root.createBuffer(d.vec3f);
@@ -278,7 +278,7 @@ WGSL matrices are stored by columns, not rows.
 For `mat3x3f`, use packed `number[]` (9 floats) or padded `Float32Array` (12 floats, one padding float per column).
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const mat3Buffer = root.createBuffer(d.mat3x3f);
@@ -303,7 +303,7 @@ mat3Buffer.write(new Float32Array([
 Wherever a `TypedArray` or `ArrayBuffer` is passed, the bytes are copied directly without any interpretation. The data must already match the GPU memory layout, including any padding. For example, each element in `d.arrayOf(d.vec3f, N)` occupies **16 bytes** (12 bytes of data + 4 bytes of padding), so the input must include those padding bytes.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const arrBuffer = root.createBuffer(d.arrayOf(d.vec3f, 2));
@@ -329,7 +329,7 @@ Use `d.memoryLayoutOf` to obtain the correct byte offset for a given schema elem
 :::
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const schema = d.arrayOf(d.u32, 6);
@@ -351,7 +351,7 @@ Both offsets are **byte-based**. Any component whose byte position falls at or b
 :::
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const schema = d.arrayOf(d.vec3u, 4);
@@ -386,7 +386,7 @@ The format of the `data` value depends on your schema type:
   a plain array for full replacement, or a `TypedArray` for byte-level replacement.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const Planet = d.struct({
@@ -413,7 +413,7 @@ When the buffer schema is an `array<struct<...>>`, you can write the data in a s
 This is useful when your CPU-side data is already stored per-field, such as simulation attributes kept in separate typed arrays.
 
 ```ts twoslash
-import tgpu, { d, common } from 'typegpu';
+import { tgpu, d, common } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -455,7 +455,7 @@ TypeGPU inserts the required WGSL padding while scattering the data into the tar
 You can also restrict the write to a slice of the destination buffer:
 
 ```ts twoslash
-import tgpu, { d, common } from 'typegpu';
+import { tgpu, d, common } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -498,7 +498,7 @@ There's also an option to copy value from another typed buffer using the `.copyF
 as long as both buffers have a matching data schema.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 
 const Particle = d.struct({
@@ -518,7 +518,7 @@ To read data from a buffer on the CPU, you can use the `.read()` method.
 It returns a promise that resolves to the data read from the buffer.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const buffer = root.createBuffer(d.arrayOf(d.u32, 10));
@@ -549,7 +549,7 @@ TypeGPU also allows for the use of index buffers. An index buffer is a buffer co
 You may refer to the [pipelines](/TypeGPU/apis/pipelines/#drawing-with-drawindexed) section for usage details.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -570,7 +570,7 @@ The default option is to create bind group layouts and bind your buffers via bin
 Read more in the chapter dedicated to [bind groups](/TypeGPU/apis/bind-groups).
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -608,7 +608,7 @@ Fixed buffers are created using dedicated root methods.
 | `var<storage, read_write>` | `root.createMutable()`  |
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---

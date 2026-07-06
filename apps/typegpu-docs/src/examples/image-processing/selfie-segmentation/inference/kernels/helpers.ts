@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { headLayout, weightedLayout } from './layouts.ts';
 
 export type Vec4Op = (value: d.v4f) => d.v4f;

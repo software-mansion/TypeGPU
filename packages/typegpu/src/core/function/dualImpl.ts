@@ -30,9 +30,18 @@ interface DualImplOptions<T extends AnyFn> {
   readonly noComptime?: boolean | undefined;
   readonly ignoreImplicitCastWarning?: boolean | undefined;
   /**
-   * Whether the function always has side effects. If `true`, the result always
-   * has `possibleSideEffects: true` regardless of argument side-effects. If
-   * `false`, the result has side effects only when any argument does.
+   * Whether calling this function is a side-effect in itself, irrespective of
+   * its arguments. Examples:
+   *
+   * - `discard` -> `true` - it discards the fragment.
+   * - `workgroupBarrier()` -> `true` - the barrier synchronizes threads.
+   * - `atomicLoad(p)` -> `true` - atomic operations may synchronize threads
+   *   through memory ordering.
+   * - `sin(x)`, `abs(x)` -> `false` - these are purely value-producing; the call
+   *   itself has no observable effect beyond the returned value.
+   *
+   * When `false`, the result inherits side-effects from its arguments: it
+   * only has `possibleSideEffects: true` if at least one argument does.
    */
   readonly sideEffects: boolean;
 }

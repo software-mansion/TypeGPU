@@ -64,6 +64,8 @@ export interface TgpuAccessor<T extends BaseData = BaseData> extends TgpuNamable
    */
   readonly value: InferGPU<T>;
   readonly $: InferGPU<T>;
+
+  toString(): string;
 }
 
 type DataAccessorIn<T extends BaseData> =

@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 export const WeightedOffsets = d.struct({
   weightBase: d.u32,

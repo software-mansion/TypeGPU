@@ -35,7 +35,12 @@ import {
 } from './generationHelpers.ts';
 import { accessIndex } from './accessIndex.ts';
 import { accessProp } from './accessProp.ts';
-import type { ShaderGenerator } from './shaderGenerator.ts';
+import type {
+  ShaderGenerator,
+  ConstantDefinitionOptions,
+  FunctionDefinitionOptions,
+  VariableDefinitionOptions,
+} from './shaderGenerator.ts';
 import { resolveData } from '../core/resolve/resolveData.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
 import { _ref, RefOperator } from '../data/ref.ts';
@@ -49,11 +54,6 @@ import type { ExternalMap } from '../core/resolve/externals.ts';
 import * as forOfUtils from './forOfUtils.ts';
 import { isTgpuRange } from '../std/range.ts';
 import { stringifyNode } from '../shared/tseynit.ts';
-import type {
-  ConstantDefinitionOptions,
-  FunctionDefinitionOptions,
-  VariableDefinitionOptions,
-} from './shaderGenerator_members.ts';
 import { getAttributesString } from '../data/attributes.ts';
 import { validSelectBranchTypes } from '../std/boolean.ts';
 import { isInfixDispatch } from './infixDispatch.ts';
@@ -384,7 +384,36 @@ ${this.ctx.pre}}`;
       }
 
       if (op === '===' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
-        return snip(lhsExpr.value === rhsExpr.value, bool, 'constant');
+        return snip(lhsExpr.value === rhsExpr.value, bool, 'constant', false);
+      }
+
+      if (op === '!==' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
+        return snip(lhsExpr.value !== rhsExpr.value, bool, 'constant', false);
+      }
+
+      if (
+        (op === '<' || op === '<=' || op === '>' || op === '>=') &&
+        isKnownAtComptime(lhsExpr) &&
+        isKnownAtComptime(rhsExpr)
+      ) {
+        const left = lhsExpr.value;
+        const right = rhsExpr.value;
+        if (typeof left !== 'number' || typeof right !== 'number') {
+          throw new WgslTypeError(
+            `Inequality comparison '${op}' requires numeric operands, got '${typeof left}' and '${typeof right}'`,
+          );
+        }
+
+        switch (op) {
+          case '<':
+            return snip(left < right, bool, 'constant', false);
+          case '<=':
+            return snip(left <= right, bool, 'constant', false);
+          case '>':
+            return snip(left > right, bool, 'constant', false);
+          case '>=':
+            return snip(left >= right, bool, 'constant', false);
+        }
       }
 
       if (lhsExpr.dataType === UnknownData) {
