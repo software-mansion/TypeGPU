@@ -24,12 +24,19 @@ await $`tsc --p tsconfig.build.json`;
 
 consola.start('Inlining package version...');
 const { version } = await Bun.file('package.json').json();
+// Targets imports of the form: import { version } from 'typegpu/package.json';
 const versionImport = /import\s*\{\s*version\s*\}\s*from\s*['"]typegpu\/package\.json['"];?\n?/g;
+// Targets any JSON imports, used to verify if all JSON imports have been replaced.
+const jsonImport = /from\s*['"]\S*\.json['"]/g;
 
 for await (const path of new Bun.Glob('dist/**/*.js').scan('.')) {
   const file = Bun.file(path);
   const content = await file.text();
   const replaced = content.replace(versionImport, `const version = ${JSON.stringify(version)};\n`);
+
+  if (jsonImport.test(replaced)) {
+    throw new Error(`Not all JSON imports have been resolved: ${path}`);
+  }
 
   if (replaced !== content) {
     consola.log(` - ${path}`);
