@@ -500,7 +500,7 @@ ${this.ctx.pre}}`;
 
       const type = operatorToType(argExpr.dataType, op);
       // Result of an operation, so not a reference to anything
-      return snip(`${op}${argStr}`, type, /* origin */ 'runtime');
+      return snip(`${op}${argStr}`, type, /* origin */ 'runtime', argExpr.possibleSideEffects);
     }
 
     if (expression[0] === NODE.memberAccess) {
@@ -549,7 +549,12 @@ ${this.ctx.pre}}`;
       const [_, calleeNode, argNodes] = expression;
       const _callee = this._expression(calleeNode);
       const callee = mathToStd.has(_callee.value as AnyFn)
-        ? snip(mathToStd.get(_callee.value as AnyFn) as DualFn<AnyFn>, UnknownData, 'runtime')
+        ? snip(
+            mathToStd.get(_callee.value as AnyFn) as DualFn<AnyFn>,
+            UnknownData,
+            'runtime',
+            _callee.possibleSideEffects,
+          )
         : _callee;
 
       if (supportedLogOps().includes(callee.value as AnyFn)) {
@@ -573,7 +578,7 @@ ${this.ctx.pre}}`;
             callee.value,
             // A new struct, so not a reference.
             /* origin */ 'runtime',
-            /* possibleSideEffects */ false,
+            false,
           );
         }
 
@@ -604,7 +609,7 @@ ${this.ctx.pre}}`;
             callee.value,
             // A new array, so not a reference.
             /* origin */ 'runtime',
-            /* possibleSideEffects */ false,
+            false,
           );
         }
 
@@ -808,6 +813,7 @@ ${this.ctx.pre}}`;
           stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
           structType,
           /* origin */ 'runtime',
+          convertedSnippets.some((s) => s.possibleSideEffects),
         );
       }
 
@@ -892,7 +898,7 @@ ${this.ctx.pre}}`;
     }
 
     if (expression[0] === NODE.stringLiteral) {
-      return snip(expression[1], UnknownData, /* origin */ 'constant');
+      return snip(expression[1], UnknownData, /* origin */ 'constant', false);
     }
 
     if (expression[0] === NODE.preUpdate) {
@@ -1000,10 +1006,20 @@ ${this.ctx.pre}}`;
     if (args.length === 1 && args[0]?.dataType === schema) {
       // Already of the desired type, e.g. `bool(false)` or `vec3f(vec3f(1, 2, 3))`
       // We can make this snippet ephemeral, as we know it will be deep copied in JS
-      return snip(stitch`${args[0]}`, schema, fallthroughCopyOrigin(args[0].origin));
+      return snip(
+        stitch`${args[0]}`,
+        schema,
+        fallthroughCopyOrigin(args[0].origin),
+        args[0].possibleSideEffects,
+      );
     }
     // Creating a 'runtime' snippet, since it's instantiating a new value
-    return snip(stitch`${this.ctx.resolve(schema).value}(${args})`, schema, 'runtime');
+    return snip(
+      stitch`${this.ctx.resolve(schema).value}(${args})`,
+      schema,
+      'runtime',
+      args.some((s) => s.possibleSideEffects),
+    );
   }
 
   public numericLiteral(value: number, schema: wgsl.BaseData): ResolvedSnippet {
@@ -1014,13 +1030,13 @@ ${this.ctx.pre}}`;
     }
 
     if (schema.type === 'abstractInt') {
-      return snip(`${value}`, schema, /* origin */ 'constant');
+      return snip(`${value}`, schema, /* origin */ 'constant', false);
     }
     if (schema.type === 'u32') {
-      return snip(`${value}u`, schema, /* origin */ 'constant');
+      return snip(`${value}u`, schema, /* origin */ 'constant', false);
     }
     if (schema.type === 'i32') {
-      return snip(`${value}i`, schema, /* origin */ 'constant');
+      return snip(`${value}i`, schema, /* origin */ 'constant', false);
     }
 
     const exp = value.toExponential();
@@ -1030,12 +1046,12 @@ ${this.ctx.pre}}`;
     // Just picking the shorter one
     const base = exp.length < decimal.length ? exp : decimal;
     if (schema.type === 'f32') {
-      return snip(`${base}f`, schema, /* origin */ 'constant');
+      return snip(`${base}f`, schema, /* origin */ 'constant', false);
     }
     if (schema.type === 'f16') {
-      return snip(`${base}h`, schema, /* origin */ 'constant');
+      return snip(`${base}h`, schema, /* origin */ 'constant', false);
     }
-    return snip(base, schema, /* origin */ 'constant');
+    return snip(base, schema, /* origin */ 'constant', false);
   }
 
   protected _return(statement: tinyest.Return): string {
@@ -1473,7 +1489,7 @@ ${this.ctx.pre}else ${alternate}`;
 
         if (isTgpuRange(iterableSnippet.value)) {
           bodyStr = this._block(blockified, {
-            [originalLoopVarName]: snip(index, range.start.dataType, 'runtime'), // range.start, .end , .step have the same dataType
+            [originalLoopVarName]: snip(index, range.start.dataType, 'runtime', false), // range.start, .end , .step have the same dataType
           });
         } else {
           this.ctx.indent();
@@ -1493,7 +1509,7 @@ ${this.ctx.pre}else ${alternate}`;
           )};`;
 
           bodyStr = `{\n${loopVarDeclStr}\n${this._blockStatement(blockified, {
-            [originalLoopVarName]: snip(loopVarName, elementType, elementSnippet.origin),
+            [originalLoopVarName]: snip(loopVarName, elementType, elementSnippet.origin, false),
           })}\n`;
           this.ctx.dedent();
           bodyStr += `${this.ctx.pre}}`;

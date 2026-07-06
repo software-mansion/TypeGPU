@@ -41,6 +41,7 @@ export type RawCodeSnippetOrigin = Exclude<
  * @param expression The code snippet that will be injected in place of `foo.$`
  * @param type The type of the expression
  * @param [origin='runtime'] Where the value originates from.
+ * @param [possibleSideEffects=true] Whether generating this snippet may produce a WGSL expression with observable side-effects (e.g. calling a barrier, discarding a fragment, or writing to memory).
  *
  * **-- Which origin to choose?**
  *
@@ -59,7 +60,7 @@ export type RawCodeSnippetOrigin = Exclude<
  * // final shader bundle, but we cannot
  * // refer to it in any other way.
  * const existingGlobal = tgpu['~unstable']
- *   .rawCodeSnippet('EXISTING_GLOBAL', d.f32, 'constant');
+ *   .rawCodeSnippet('EXISTING_GLOBAL', d.f32, 'constant', false);
  *
  * const foo = () => {
  *   'use gpu';
