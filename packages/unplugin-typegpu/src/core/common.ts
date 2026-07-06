@@ -429,14 +429,6 @@ const operators = {
   '%=': '__tsover_mod',
 };
 
-export function makeAstBackwardsCompatible(ast: ReturnType<typeof transpileFn>) {
-  return {
-    params: ast.params,
-    body: ast.body,
-    externalNames: [...new Set(Array.from(ast.externalNames, (name) => name.split('.').at(0)))],
-  };
-}
-
 function containsUseGpuDirective(
   node: t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
 ): boolean {

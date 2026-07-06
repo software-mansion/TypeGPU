@@ -96,7 +96,6 @@ describe('meta', () => {
       ast: {
         params: [],
         body: [NODE.block, [[NODE.let, 'a', [NODE.memberAccess, 'EXT.O.N', '$']]]],
-        externalNames: ['EXT'],
       },
     };
     assignMetadata(fn, meta);
@@ -184,7 +183,6 @@ describe('meta', () => {
       ast: {
         params: [],
         body: [NODE.block, [[NODE.return, 'a']]],
-        externalNames: ['a'],
       },
     };
     assignMetadata(fn, meta);

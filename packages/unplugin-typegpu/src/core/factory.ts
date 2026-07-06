@@ -13,7 +13,6 @@ import {
   functionVisitor,
   getBlockScope,
   METADATA_FORMAT_VERSION,
-  makeAstBackwardsCompatible,
 } from './common.ts';
 
 import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
@@ -44,11 +43,10 @@ function assignMetadata(
   name: string | undefined,
   ast: ReturnType<typeof transpileFn>,
 ): void {
-  // TODO (#2504): remove externalNames from ast
   const metadata = `{
     v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
-    ast: ${embedJSON(makeAstBackwardsCompatible(ast))},
+    ast: ${embedJSON({ params: ast.params, body: ast.body })},
     externals: ${externalsToString(ast.externalNames)}
   }`;
 

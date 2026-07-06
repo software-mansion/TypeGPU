@@ -13,7 +13,7 @@ export interface RawMetadataV1 {
 export interface RawMetadataV2 {
   v: 2;
   name: string;
-  ast: { params: FuncParameter[]; body: Block; externalNames: string[] };
+  ast: { params: FuncParameter[]; body: Block };
   externals: { [key: string]: () => unknown };
 }
 
