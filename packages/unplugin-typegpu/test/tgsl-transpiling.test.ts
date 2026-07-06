@@ -44,8 +44,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
             type: "i",
             name: "input"
           }],
-          body: [0, [[13, "tmp", [7, [7, "counter", "$"], "x"]], [2, [7, [7, "counter", "$"], "x"], "=", [7, [7, "counter", "$"], "y"]], [2, [7, [7, "counter", "$"], "y"], "+=", "tmp"], [2, [7, [7, "counter", "$"], "z"], "+=", [6, "d.f32", [[7, [7, "input", "num"], "x"]]]]]],
-          externalNames: ["counter", "d"]
+          body: [0, [[13, "tmp", [7, [7, "counter", "$"], "x"]], [2, [7, [7, "counter", "$"], "x"], "=", [7, [7, "counter", "$"], "y"]], [2, [7, [7, "counter", "$"], "y"], "+=", "tmp"], [2, [7, [7, "counter", "$"], "z"], "+=", [6, "d.f32", [[7, [7, "input", "num"], "x"]]]]]]
         },
         externals: {
           "counter": () => counter,
@@ -87,8 +86,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
             type: "i",
             name: "input"
           }],
-          body: [0, [[13, "x", true]]],
-          externalNames: []
+          body: [0, [[13, "x", true]]]
         },
         externals: {}
       }) && $.f)({}));
@@ -99,8 +97,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, [[13, "y", [1, [5, "2"], "+", [5, "2"]]]]],
-          externalNames: []
+          body: [0, [[13, "y", [1, [5, "2"], "+", [5, "2"]]]]]
         },
         externals: {}
       }) && $.f)({}));
@@ -110,8 +107,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, [[10, "cx"]]],
-          externalNames: ["cx"]
+          body: [0, [[10, "cx"]]]
         },
         externals: {
           "cx": () => cx
@@ -167,8 +163,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
             type: "i",
             name: "input"
           }],
-          body: [0, [[13, "x", true]]],
-          externalNames: []
+          body: [0, [[13, "x", true]]]
         },
         externals: {}
       }) && $.f)({}));
@@ -184,8 +179,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
             type: "i",
             name: "input"
           }],
-          body: [0, [[13, "x", true]]],
-          externalNames: []
+          body: [0, [[13, "x", true]]]
         },
         externals: {}
       }) && $.f)({}));
@@ -201,8 +195,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
             type: "i",
             name: "input"
           }],
-          body: [0, [[13, "x", true]]],
-          externalNames: []
+          body: [0, [[13, "x", true]]]
         },
         externals: {}
       }) && $.f)({}));"
@@ -240,8 +233,7 @@ describe('[BABEL] plugin for transpiling tgsl functions to tinyest', () => {
           name: undefined,
           ast: {
             params: [],
-            body: [0, [[10, [7, "this.myBuffer", "$"]]]],
-            externalNames: ["this"]
+            body: [0, [[10, [7, "this.myBuffer", "$"]]]]
           },
           externals: {
             "this.myBuffer": () => this.myBuffer
@@ -292,7 +284,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
                   }), {
           v: 2,
           name: undefined,
-          ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","$"],"x"]],[2,[7,[7,"counter","$"],"x"],"=",[7,[7,"counter","$"],"y"]],[2,[7,[7,"counter","$"],"y"],"+=","tmp"],[2,[7,[7,"counter","$"],"z"],"+=",[6,"d.f32",[[7,[7,"input","num"],"x"]]]]]],"externalNames":["counter","d"]},
+          ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","$"],"x"]],[2,[7,[7,"counter","$"],"x"],"=",[7,[7,"counter","$"],"y"]],[2,[7,[7,"counter","$"],"y"],"+=","tmp"],[2,[7,[7,"counter","$"],"z"],"+=",[6,"d.f32",[[7,[7,"input","num"],"x"]]]]]]},
           externals: { "counter": () => counter, "d.f32": () => d.f32 }
         }) && $.f)({})));
       "
@@ -324,7 +316,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               }), {
           v: 2,
           name: undefined,
-          ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]]},
           externals: {  }
         }) && $.f)({})));
 
@@ -332,7 +324,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               }), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]]},
           externals: {  }
         }) && $.f)({})));
 
@@ -340,7 +332,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => cx), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[[10,"cx"]]],"externalNames":["cx"]},
+          ast: {"params":[],"body":[0,[[10,"cx"]]]},
           externals: { "cx": () => cx }
         }) && $.f)({})));
 
@@ -397,7 +389,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
               }), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[[10,[7,"this.myBuffer","$"]]]],"externalNames":["this"]},
+          ast: {"params":[],"body":[0,[[10,[7,"this.myBuffer","$"]]]]},
           externals: { "this.myBuffer": () => this.myBuffer }
         }) && $.f)({})));
             }

@@ -36,8 +36,7 @@ describe('"use gpu" marked arrow function, assigned to a const', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[10, [1, "a", "+", "b"]]]],
-          externalNames: []
+          body: [0, [[10, [1, "a", "+", "b"]]]]
         },
         externals: {}
       }) && $.f)({});
@@ -58,7 +57,7 @@ describe('"use gpu" marked arrow function, assigned to a const', () => {
           }), {
           v: 2,
           name: "addGPU",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -107,8 +106,7 @@ describe('marked arrow functions passed to shells', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[10, [1, "a", "+", "b"]]]],
-          externalNames: []
+          body: [0, [[10, [1, "a", "+", "b"]]]]
         },
         externals: {}
       }) && $.f)({}));
@@ -130,7 +128,7 @@ describe('marked arrow functions passed to shells', () => {
           }), {
           v: 2,
           name: undefined,
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
           externals: {  }
         }) && $.f)({})));
 
@@ -177,8 +175,7 @@ describe('marked anonymous function expressions passed to shells', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[10, [1, "a", "+", "b"]]]],
-          externalNames: []
+          body: [0, [[10, [1, "a", "+", "b"]]]]
         },
         externals: {}
       }) && $.f)({}));
@@ -200,7 +197,7 @@ describe('marked anonymous function expressions passed to shells', () => {
           }), {
           v: 2,
           name: undefined,
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
           externals: {  }
         }) && $.f)({})));
 
@@ -247,8 +244,7 @@ describe('marked named function expressions passed to shells', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[10, [1, "a", "+", "b"]]]],
-          externalNames: []
+          body: [0, [[10, [1, "a", "+", "b"]]]]
         },
         externals: {}
       }) && $.f)({}));
@@ -270,7 +266,7 @@ describe('marked named function expressions passed to shells', () => {
           }), {
           v: 2,
           name: "addGPU",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
           externals: {  }
         }) && $.f)({})));
 
@@ -318,8 +314,7 @@ describe('marked function statements', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[10, [1, "a", "+", "b"]]]],
-          externalNames: []
+          body: [0, [[10, [1, "a", "+", "b"]]]]
         },
         externals: {}
       }) && $.f)({});
@@ -340,7 +335,7 @@ describe('marked function statements', () => {
           }), {
           v: 2,
           name: "addGPU",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -404,8 +399,7 @@ describe('marked object methods', () => {
               type: "i",
               name: "b"
             }],
-            body: [0, [[10, [1, "a", "%", "b"]]]],
-            externalNames: []
+            body: [0, [[10, [1, "a", "%", "b"]]]]
           },
           externals: {}
         }) && $.f)({})
@@ -432,8 +426,7 @@ describe('marked object methods', () => {
             type: "i",
             name: "n"
           }],
-          body: [0, [[11, [1, "n", "<=", [5, "1"]], [0, [[10, false]]]], [14, [12, "i", [5, "2"]], [1, "i", "<", "n"], [102, "++", "i"], [0, [[11, [1, [6, "obj.mod", ["n", "i"]], "===", [5, "0"]], [0, [[10, false]]]]]]], [10, true]]],
-          externalNames: ["obj"]
+          body: [0, [[11, [1, "n", "<=", [5, "1"]], [0, [[10, false]]]], [14, [12, "i", [5, "2"]], [1, "i", "<", "n"], [102, "++", "i"], [0, [[11, [1, [6, "obj.mod", ["n", "i"]], "===", [5, "0"]], [0, [[10, false]]]]]]], [10, true]]]
         },
         externals: {
           "obj.mod": () => obj.mod
@@ -453,7 +446,7 @@ describe('marked object methods', () => {
             }), {
           v: 2,
           name: "mod",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","%","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","%","b"]]]]},
           externals: {  }
         }) && $.f)({}))
           };
@@ -474,7 +467,7 @@ describe('marked object methods', () => {
           }), {
           v: 2,
           name: "isPrime",
-          ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[11,[1,"n","<=",[5,"1"]],[0,[[10,false]]]],[14,[12,"i",[5,"2"]],[1,"i","<","n"],[102,"++","i"],[0,[[11,[1,[6,"obj.mod",["n","i"]],"===",[5,"0"]],[0,[[10,false]]]]]]],[10,true]]],"externalNames":["obj"]},
+          ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[11,[1,"n","<=",[5,"1"]],[0,[[10,false]]]],[14,[12,"i",[5,"2"]],[1,"i","<","n"],[102,"++","i"],[0,[[11,[1,[6,"obj.mod",["n","i"]],"===",[5,"0"]],[0,[[10,false]]]]]]],[10,true]]]},
           externals: { "obj.mod": () => obj.mod }
         }) && $.f)({}));
 
@@ -528,8 +521,7 @@ describe('transforms numeric operations', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[12, "c", [1, [1, "a", "+", "b"], "+", [5, "2"]]], [2, "c", "+=", [1, [5, "2"], "*", "b"]], [2, [7, "countMutable", "$"], "+=", [5, "3"]]]],
-          externalNames: ["countMutable"]
+          body: [0, [[12, "c", [1, [1, "a", "+", "b"], "+", [5, "2"]]], [2, "c", "+=", [1, [5, "2"], "*", "b"]], [2, [7, "countMutable", "$"], "+=", [5, "3"]]]]
         },
         externals: {
           "countMutable": () => countMutable
@@ -556,7 +548,7 @@ describe('transforms numeric operations', () => {
           }), {
           v: 2,
           name: "main",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[12,"c",[1,[1,"a","+","b"],"+",[5,"2"]]],[2,"c","+=",[1,[5,"2"],"*","b"]],[2,[7,"countMutable","$"],"+=",[5,"3"]]]],"externalNames":["countMutable"]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[12,"c",[1,[1,"a","+","b"],"+",[5,"2"]]],[2,"c","+=",[1,[5,"2"],"*","b"]],[2,[7,"countMutable","$"],"+=",[5,"3"]]]]},
           externals: { "countMutable": () => countMutable }
         }) && $.f)({}));
 
@@ -605,8 +597,7 @@ describe('hoists global function statements marked with "use gpu"', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[10, [1, "a", "*", "b"]]]],
-          externalNames: []
+          body: [0, [[10, [1, "a", "*", "b"]]]]
         },
         externals: {}
       }) && $.f)({});
@@ -627,8 +618,7 @@ describe('hoists global function statements marked with "use gpu"', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[10, [1, "a", "+", "b"]]]],
-          externalNames: []
+          body: [0, [[10, [1, "a", "+", "b"]]]]
         },
         externals: {}
       }) && $.f)({});
@@ -646,7 +636,7 @@ describe('hoists global function statements marked with "use gpu"', () => {
           }), {
           v: 2,
           name: "mul",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -658,7 +648,7 @@ describe('hoists global function statements marked with "use gpu"', () => {
           }), {
           v: 2,
           name: "add",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -709,8 +699,7 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
               type: "i",
               name: "b"
             }],
-            body: [0, [[10, [1, "a", "*", "b"]]]],
-            externalNames: []
+            body: [0, [[10, [1, "a", "*", "b"]]]]
           },
           externals: {}
         }) && $.f)({});
@@ -731,8 +720,7 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
               type: "i",
               name: "b"
             }],
-            body: [0, [[10, [1, "a", "+", "b"]]]],
-            externalNames: []
+            body: [0, [[10, [1, "a", "+", "b"]]]]
           },
           externals: {}
         }) && $.f)({});
@@ -752,7 +740,7 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
             }), {
           v: 2,
           name: "mul",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -764,7 +752,7 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
             }), {
           v: 2,
           name: "add",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -826,8 +814,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
               type: "i",
               name: "b"
             }],
-            body: [0, [[10, [1, "a", "*", "b"]]]],
-            externalNames: []
+            body: [0, [[10, [1, "a", "*", "b"]]]]
           },
           externals: {}
         }) && $.f)({});
@@ -848,8 +835,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
               type: "i",
               name: "b"
             }],
-            body: [0, [[10, [1, "a", "+", "b"]]]],
-            externalNames: []
+            body: [0, [[10, [1, "a", "+", "b"]]]]
           },
           externals: {}
         }) && $.f)({});
@@ -869,7 +855,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
             }), {
           v: 2,
           name: "mul",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -881,7 +867,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
             }), {
           v: 2,
           name: "add",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -945,8 +931,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
               type: "i",
               name: "b"
             }],
-            body: [0, [[10, [1, [1, "a", "*", "b"], "*", "c"]]]],
-            externalNames: ["c"]
+            body: [0, [[10, [1, [1, "a", "*", "b"], "*", "c"]]]]
           },
           externals: {
             "c": () => c
@@ -969,8 +954,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
               type: "i",
               name: "b"
             }],
-            body: [0, [[10, [1, [1, "a", "+", "b"], "+", "c"]]]],
-            externalNames: ["c"]
+            body: [0, [[10, [1, [1, "a", "+", "b"], "+", "c"]]]]
           },
           externals: {
             "c": () => c
@@ -993,7 +977,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
             }), {
           v: 2,
           name: "mul",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","*","b"],"*","c"]]]],"externalNames":["c"]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","*","b"],"*","c"]]]]},
           externals: { "c": () => c }
         }) && $.f)({}));
 
@@ -1005,7 +989,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
             }), {
           v: 2,
           name: "add",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","+","b"],"+","c"]]]],"externalNames":["c"]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","+","b"],"+","c"]]]]},
           externals: { "c": () => c }
         }) && $.f)({}));
 
@@ -1073,8 +1057,7 @@ describe('replaces function statements marked with "use gpu" in place when condi
                 type: "i",
                 name: "b"
               }],
-              body: [0, [[10, [1, [1, "a", "+", "b"], "+", "c"]]]],
-              externalNames: ["c"]
+              body: [0, [[10, [1, [1, "a", "+", "b"], "+", "c"]]]]
             },
             externals: {
               "c": () => c
@@ -1099,8 +1082,7 @@ describe('replaces function statements marked with "use gpu" in place when condi
                 type: "i",
                 name: "b"
               }],
-              body: [0, [[10, [1, [1, "a", "*", "b"], "*", "c"]]]],
-              externalNames: ["c"]
+              body: [0, [[10, [1, [1, "a", "*", "b"], "*", "c"]]]]
             },
             externals: {
               "c": () => c
@@ -1126,7 +1108,7 @@ describe('replaces function statements marked with "use gpu" in place when condi
               }), {
           v: 2,
           name: "add",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","+","b"],"+","c"]]]],"externalNames":["c"]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","+","b"],"+","c"]]]]},
           externals: { "c": () => c }
         }) && $.f)({}));
 
@@ -1141,7 +1123,7 @@ describe('replaces function statements marked with "use gpu" in place when condi
               }), {
           v: 2,
           name: "mul",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","*","b"],"*","c"]]]],"externalNames":["c"]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","*","b"],"*","c"]]]]},
           externals: { "c": () => c }
         }) && $.f)({}));
 
@@ -1189,8 +1171,7 @@ describe('hoists exported marked function statements', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[10, [1, "a", "*", "b"]]]],
-          externalNames: []
+          body: [0, [[10, [1, "a", "*", "b"]]]]
         },
         externals: {}
       }) && $.f)({});
@@ -1210,8 +1191,7 @@ describe('hoists exported marked function statements', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[10, [1, "a", "+", "b"]]]],
-          externalNames: []
+          body: [0, [[10, [1, "a", "+", "b"]]]]
         },
         externals: {}
       }) && $.f)({});
@@ -1231,7 +1211,7 @@ describe('hoists exported marked function statements', () => {
           }), {
           v: 2,
           name: "mul",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -1242,7 +1222,7 @@ describe('hoists exported marked function statements', () => {
           }), {
           v: 2,
           name: "add",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -1284,8 +1264,7 @@ describe('hoists default exported marked function statement', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[10, [1, "a", "+", "b"]]]],
-          externalNames: []
+          body: [0, [[10, [1, "a", "+", "b"]]]]
         },
         externals: {}
       }) && $.f)({});
@@ -1303,7 +1282,7 @@ describe('hoists default exported marked function statement', () => {
           }), {
           v: 2,
           name: "add",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
           externals: {  }
         }) && $.f)({}));
       console.log(add);
@@ -1353,8 +1332,7 @@ describe('export marked arrow function', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[10, [1, "a", "+", "b"]]]],
-          externalNames: []
+          body: [0, [[10, [1, "a", "+", "b"]]]]
         },
         externals: {}
       }) && $.f)({});
@@ -1370,8 +1348,7 @@ describe('export marked arrow function', () => {
             type: "i",
             name: "n"
           }],
-          body: [0, [[10, [1, "n", "+", [5, "1"]]]]],
-          externalNames: []
+          body: [0, [[10, [1, "n", "+", [5, "1"]]]]]
         },
         externals: {}
       }) && $.f)({});
@@ -1391,8 +1368,7 @@ describe('export marked arrow function', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[10, [1, "a", "*", "b"]]]],
-          externalNames: []
+          body: [0, [[10, [1, "a", "*", "b"]]]]
         },
         externals: {}
       }) && $.f)({});
@@ -1408,7 +1384,7 @@ describe('export marked arrow function', () => {
           }), {
           v: 2,
           name: "add",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -1418,7 +1394,7 @@ describe('export marked arrow function', () => {
           }), {
           v: 2,
           name: "increment",
-          ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[10,[1,"n","+",[5,"1"]]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[10,[1,"n","+",[5,"1"]]]]]},
           externals: {  }
         }) && $.f)({}));
           
@@ -1428,7 +1404,7 @@ describe('export marked arrow function', () => {
           }), {
           v: 2,
           name: "mul",
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -1463,8 +1439,7 @@ describe('anonymous default export marked function statement', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[10, [1, "a", "+", "b"]]]],
-          externalNames: []
+          body: [0, [[10, [1, "a", "+", "b"]]]]
         },
         externals: {}
       }) && $.f)({});"
@@ -1479,7 +1454,7 @@ describe('anonymous default export marked function statement', () => {
           }), {
           v: 2,
           name: undefined,
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -1514,8 +1489,7 @@ describe('anonymous default export marked arrow function', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[10, [1, "a", "+", "b"]]]],
-          externalNames: []
+          body: [0, [[10, [1, "a", "+", "b"]]]]
         },
         externals: {}
       }) && $.f)({});"
@@ -1530,7 +1504,7 @@ describe('anonymous default export marked arrow function', () => {
           }), {
           v: 2,
           name: undefined,
-          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]],"externalNames":[]},
+          ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
           externals: {  }
         }) && $.f)({}));
 

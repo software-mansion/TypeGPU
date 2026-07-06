@@ -20,8 +20,7 @@ describe('[BABEL] tgpu alias gathering', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]],
-          externalNames: []
+          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]]
         },
         externals: {}
       }) && $.f)({}));"
@@ -46,8 +45,7 @@ describe('[BABEL] tgpu alias gathering', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]],
-          externalNames: []
+          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]]
         },
         externals: {}
       }) && $.f)({}));"
@@ -72,8 +70,7 @@ describe('[BABEL] tgpu alias gathering', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]],
-          externalNames: []
+          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]]
         },
         externals: {}
       }) && $.f)({}));"
@@ -97,7 +94,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
             }), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[]]},
           externals: {  }
         }) && $.f)({})));
       "
@@ -120,7 +117,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
             }), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[]]},
           externals: {  }
         }) && $.f)({})));
       "
@@ -143,7 +140,7 @@ describe('[ROLLUP] tgpu alias gathering', () => {
             }), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[]]},
           externals: {  }
         }) && $.f)({})));
       "

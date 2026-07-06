@@ -26,8 +26,7 @@ describe('[BABEL] auto naming', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, []],
-          externalNames: []
+          body: [0, []]
         },
         externals: {}
       }) && $.f)({})), "fn");
@@ -130,8 +129,7 @@ describe('[BABEL] auto naming', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, [[10, [5, "0"]]]],
-          externalNames: []
+          body: [0, [[10, [5, "0"]]]]
         },
         externals: {}
       }) && $.f)({})), "myFunction");
@@ -142,8 +140,7 @@ describe('[BABEL] auto naming', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, []],
-          externalNames: []
+          body: [0, []]
         },
         externals: {}
       }) && $.f)({})), "myComputeFn");
@@ -160,8 +157,7 @@ describe('[BABEL] auto naming', () => {
           params: [],
           body: [0, [[10, [104, {
             ret: [5, "0"]
-          }]]]],
-          externalNames: []
+          }]]]]
         },
         externals: {}
       }) && $.f)({})), "myVertexFn");
@@ -175,8 +171,7 @@ describe('[BABEL] auto naming', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, [[10, [6, "d.vec4f", []]]]],
-          externalNames: ["d"]
+          body: [0, [[10, [6, "d.vec4f", []]]]]
         },
         externals: {
           "d.vec4f": () => d.vec4f
@@ -325,8 +320,7 @@ describe('[BABEL] auto naming', () => {
         name: "myFun3",
         ast: {
           params: [],
-          body: [0, [[10, [5, "0"]]]],
-          externalNames: []
+          body: [0, [[10, [5, "0"]]]]
         },
         externals: {}
       }) && $.f)({});
@@ -339,8 +333,7 @@ describe('[BABEL] auto naming', () => {
         name: "myFun1",
         ast: {
           params: [],
-          body: [0, [[10, [5, "0"]]]],
-          externalNames: []
+          body: [0, [[10, [5, "0"]]]]
         },
         externals: {}
       }) && $.f)({});
@@ -353,8 +346,7 @@ describe('[BABEL] auto naming', () => {
         name: "myFun2",
         ast: {
           params: [],
-          body: [0, [[10, [5, "0"]]]],
-          externalNames: []
+          body: [0, [[10, [5, "0"]]]]
         },
         externals: {}
       }) && $.f)({});"
@@ -501,8 +493,7 @@ describe('[BABEL] auto naming', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, []],
-          externalNames: []
+          body: [0, []]
         },
         externals: {}
       }) && $.f)({})), "myGuardedPipeline");
@@ -513,8 +504,7 @@ describe('[BABEL] auto naming', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, []],
-          externalNames: []
+          body: [0, []]
         },
         externals: {}
       }) && $.f)({})).dispatchThreads(), "anotherGuardedPipeline");
@@ -549,7 +539,7 @@ describe('[ROLLUP] auto naming', () => {
             (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {}), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[]]},
           externals: {  }
         }) && $.f)({}))), "fn"));
             (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.accessor(d.u32), "accessor"));
@@ -633,14 +623,14 @@ describe('[ROLLUP] auto naming', () => {
       (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => 0), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[[10,[5,"0"]]]]},
           externals: {  }
         }) && $.f)({}))), "myFunction"));
             (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.computeFn({ workgroupSize: [1] })(
               (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {}), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[]]},
           externals: {  }
         }) && $.f)({})),
             ), "myComputeFn"));
@@ -648,7 +638,7 @@ describe('[ROLLUP] auto naming', () => {
               (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => ({ ret: 0 })), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[[10,[104,{"ret":[5,"0"]}]]]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[[10,[104,{"ret":[5,"0"]}]]]]},
           externals: {  }
         }) && $.f)({})),
             ), "myVertexFn"));
@@ -659,7 +649,7 @@ describe('[ROLLUP] auto naming', () => {
               (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => d.vec4f()), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[[10,[6,"d.vec4f",[]]]]],"externalNames":["d"]},
+          ast: {"params":[],"body":[0,[[10,[6,"d.vec4f",[]]]]]},
           externals: { "d.vec4f": () => d.vec4f }
         }) && $.f)({})),
             ), "myFragmentFn"));
@@ -814,7 +804,7 @@ describe('[ROLLUP] auto naming', () => {
             }), {
           v: 2,
           name: "myFun3",
-          ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[[10,[5,"0"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -824,7 +814,7 @@ describe('[ROLLUP] auto naming', () => {
             }), {
           v: 2,
           name: "myFun1",
-          ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[[10,[5,"0"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -834,7 +824,7 @@ describe('[ROLLUP] auto naming', () => {
             }), {
           v: 2,
           name: "myFun2",
-          ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[[10,[5,"0"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -1011,7 +1001,7 @@ describe('[ROLLUP] auto naming', () => {
             }), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[]]},
           externals: {  }
         }) && $.f)({}))), "myGuardedPipeline"));
 
@@ -1021,7 +1011,7 @@ describe('[ROLLUP] auto naming', () => {
               }), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[]]},
           externals: {  }
         }) && $.f)({})))
               .dispatchThreads(), "anotherGuardedPipeline"));
