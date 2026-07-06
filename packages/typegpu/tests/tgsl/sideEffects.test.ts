@@ -239,7 +239,7 @@ describe('code without side-effects', () => {
       'use gpu';
       const v = impureVec();
       return d.ref(v);
-    }).toEqual(true);
+    }).toEqual(false);
   });
 
   test('variables', () => {
