@@ -19,25 +19,27 @@ export function tryFindExternalChain(ctx: Context, node: JsNode): string | undef
   }
   ctx.visitedNodes.add(node);
 
-  if (current.property.type === 'PrivateName') {
-    return `#${current.property.id.name}`;
-  }
-  if (current.property.type === 'PrivateIdentifier') {
-    return `#${current.property.name}`;
-  }
   if (node.type === 'Identifier' && !isDeclared(ctx, node.name)) {
     return node.name;
   }
   if (node.type === 'ThisExpression') {
     return 'this';
   }
-  if (node.type === 'MemberExpression' && !node.computed && node.property.type === 'Identifier') {
-    if (node.property.name === '$') {
+  if (node.type === 'MemberExpression' && !node.computed) {
+    let property;
+    if (node.property.type === 'Identifier' && node.property.name !== '$') {
+      property = node.property.name;
+    } else if (node.property.type === 'PrivateName') {
+      property = `#${node.property.id.name}`;
+    } else if (node.property.type === 'PrivateIdentifier') {
+      property = `#${node.property.name}`;
+    } else {
       return;
     }
+
     const lhs = tryFindExternalChain(ctx, node.object);
     if (lhs) {
-      return `${lhs}.${node.property.name}`;
+      return `${lhs}.${property}`;
     }
   }
 }

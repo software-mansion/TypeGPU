@@ -159,18 +159,16 @@ describe('externals gathering', () => {
     it('works for BABEL', () => {
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "{
-            "ext.comptime": () => ext.comptime,
-            "ext.runtime": () => ext.runtime
-          }"
+              "this.#const": () => this.#const
+            }"
       `);
     });
 
     it('works for ROLLUP', async () => {
       expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
         "{
-            "ext.comptime": () => ext.comptime,
-            "ext.runtime": () => ext.runtime
-          }"
+              "this.#const": () => this.#const
+            }"
       `);
     });
   });

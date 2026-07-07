@@ -325,10 +325,8 @@ describe('transpileFn', () => {
       const { externalNames } = transpileFn(fn);
 
       expect(externalNames).toMatchInlineSnapshot(`
-        {
-          "this": {
-            "#v": "this.#v",
-          },
+        Set {
+          "this.#v",
         }
       `);
     }),
