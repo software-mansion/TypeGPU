@@ -1,18 +1,9 @@
 import type { AnyComputeBuiltin, AnyFragmentInputBuiltin, OmitBuiltins } from '../../builtin.ts';
 import type { TgpuQuerySet } from '../querySet/querySet.ts';
-import type { AnyData, Disarray, UndecorateRecord } from '../../data/dataTypes.ts';
+import type { AnyData, Disarray } from '../../data/dataTypes.ts';
 import type { InstanceToSchema } from '../../data/instanceToSchema.ts';
 import type { WgslComparisonSamplerProps, WgslSamplerProps } from '../../data/sampler.ts';
-import type {
-  AnyWgslData,
-  BaseData,
-  U16,
-  U32,
-  v4f,
-  Vec3u,
-  Void,
-  WgslArray,
-} from '../../data/wgslTypes.ts';
+import type { AnyWgslData, BaseData, v4f, Vec3u, Void, WgslArray } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import type {
   ExtractInvalidSchemaError,
@@ -43,12 +34,7 @@ import type {
   AutoVertexOut,
 } from '../function/autoIO.ts';
 import type { IORecord } from '../function/fnTypes.ts';
-import type {
-  FragmentInConstrained,
-  FragmentOutConstrained,
-  TgpuFragmentFn,
-  VertexOutToVarying,
-} from '../function/tgpuFragmentFn.ts';
+import type { TgpuFragmentFn, VertexOutToVarying } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
 import type { FragmentOutToTargets, TgpuRenderPipeline } from '../pipeline/renderPipeline.ts';
@@ -60,7 +46,6 @@ import type {
   LayoutToAllowedAttribs,
 } from '../vertexLayout/vertexAttribute.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
-import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 
 // ----------
 // Public API
@@ -109,6 +94,18 @@ export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> e
   dispatchThreads(...args: TArgs): void;
 
   /**
+   * Immediately resolves the pipeline, then awaits `device.createComputePipelineAsync()`.
+   * NOTE: it is not necessary to initialize pipelines manually.
+   */
+  initAsync(): Promise<void>;
+
+  /**
+   * Immediately resolves the pipeline and creates WebGPU resources.
+   * NOTE: it is not necessary to initialize pipelines manually.
+   */
+  initSync(): void;
+
+  /**
    * The underlying pipeline used during `dispatchThreads`.
    */
   pipeline: TgpuComputePipeline;
@@ -118,104 +115,6 @@ export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> e
    * For pipelines with a dimension count lower than 3, the remaining coordinates are expected to be 1.
    */
   sizeUniform: TgpuUniform<Vec3u>;
-}
-
-export interface WithCompute {
-  createPipeline(): TgpuComputePipeline;
-}
-
-type OptionalArgs<T> = T extends Record<string, never> | undefined ? [] | [T] : [T];
-
-/**
- * TODO: Remove in favor of createRenderPipeline's validation
- */
-export type ValidateFragmentIn<
-  VertexOut extends TgpuVertexFn.Out,
-  FragmentIn extends FragmentInConstrained,
-  FragmentOut extends FragmentOutConstrained,
-> =
-  UndecorateRecord<FragmentIn> extends Partial<UndecorateRecord<VertexOut>>
-    ? UndecorateRecord<VertexOut> extends UndecorateRecord<FragmentIn>
-      ? OptionalArgs<FragmentOutToTargets<FragmentOut>> extends infer Args
-        ? Args extends [infer T]
-          ? [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>, targets: T]
-          : Args extends [] | [infer T]
-            ?
-                | [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>]
-                | [entryFn: TgpuFragmentFn<FragmentIn, FragmentOut>, targets: T]
-            : never
-        : never
-      : [
-          entryFn: 'n/a',
-          targets: 'n/a',
-          MissingFromVertexOutput: {
-            [Key in Exclude<keyof FragmentIn, keyof VertexOut>]: FragmentIn[Key];
-          },
-        ]
-    : [
-        entryFn: 'n/a',
-        targets: 'n/a',
-        MismatchedVertexOutput: {
-          [Key in keyof FragmentIn & keyof VertexOut as FragmentIn[Key] extends VertexOut[Key]
-            ? never
-            : Key]: [got: VertexOut[Key], expecting: FragmentIn[Key]];
-        },
-      ];
-
-export interface WithVertex<VertexOut extends TgpuVertexFn.Out = TgpuVertexFn.Out> {
-  /**
-   * @deprecated Use `root.createRenderPipeline` instead.
-   */
-  withFragment<
-    FragmentIn extends FragmentInConstrained,
-    FragmentOut extends FragmentOutConstrained,
-  >(
-    ...args: ValidateFragmentIn<VertexOut, FragmentIn, FragmentOut>
-  ): WithFragment<FragmentOut>;
-
-  /**
-   * @deprecated Use `root.createRenderPipeline` instead.
-   */
-  withPrimitive(
-    primitiveState:
-      | GPUPrimitiveState
-      | (Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
-          stripIndexFormat?: U32 | U16;
-        })
-      | undefined,
-  ): WithFragment<Void>;
-
-  /**
-   * @deprecated Use `root.createRenderPipeline` instead.
-   */
-  withDepthStencil(depthStencilState: GPUDepthStencilState | undefined): WithFragment<Void>;
-
-  /**
-   * @deprecated Use `root.createRenderPipeline` instead.
-   */
-  withMultisample(multisampleState: GPUMultisampleState | undefined): WithFragment<Void>;
-
-  /**
-   * @deprecated Use `root.createRenderPipeline` instead.
-   */
-  createPipeline(): TgpuRenderPipeline<Void>;
-}
-
-export interface WithFragment<Targets extends FragmentOutConstrained = FragmentOutConstrained> {
-  withPrimitive(
-    primitiveState:
-      | GPUPrimitiveState
-      | (Omit<GPUPrimitiveState, 'stripIndexFormat'> & {
-          stripIndexFormat?: U32 | U16;
-        })
-      | undefined,
-  ): WithFragment<Targets>;
-
-  withDepthStencil(depthStencilState: GPUDepthStencilState | undefined): WithFragment<Targets>;
-
-  withMultisample(multisampleState: GPUMultisampleState | undefined): WithFragment<Targets>;
-
-  createPipeline(): TgpuRenderPipeline<Targets>;
 }
 
 export interface Withable<TSelf> {
@@ -270,11 +169,6 @@ type NormalizeOutput<T> = T extends { readonly [$internal]: unknown } | number |
   : { [K in keyof OmitBuiltins<T>]: InstanceToSchema<OmitBuiltins<T>[K]> };
 
 export interface WithBinding extends Withable<WithBinding> {
-  /** @deprecated Use `root.createComputePipeline` instead. */
-  withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
-    entryFn: TgpuComputeFn<ComputeIn>,
-  ): WithCompute;
-
   createComputePipeline<ComputeIn extends IORecord<AnyComputeBuiltin>>(
     descriptor: TgpuComputePipeline.Descriptor<ComputeIn>,
   ): TgpuComputePipeline;
@@ -442,14 +336,6 @@ export interface WithBinding extends Withable<WithBinding> {
   createGuardedComputePipeline<TArgs extends number[]>(
     callback: (...args: TArgs) => void,
   ): TgpuGuardedComputePipeline<TArgs>;
-
-  /**
-   * @deprecated Use `root.createRenderPipeline` instead.
-   */
-  withVertex<VertexIn extends TgpuVertexFn.In, VertexOut extends TgpuVertexFn.Out>(
-    entryFn: TgpuVertexFn<VertexIn, VertexOut>,
-    ...args: OptionalArgs<LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>>
-  ): WithVertex<VertexOut>;
 
   pipe(transform: (cfg: Configurable) => Configurable): WithBinding;
 }
@@ -1028,7 +914,7 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    * @example
    * const fooLayout = tgpu.bindGroupLayout({
    *  foo: { uniform: d.vec3f },
-   *  bar: { texture: 'float' },
+   *  bar: { texture: d.texture2d(d.f32) },
    * });
    *
    * const fooBuffer = ...;
@@ -1076,8 +962,6 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
     | 'shaderGenerator'
     | 'pipe'
     | 'with'
-    | 'withCompute'
-    | 'withVertex'
   >;
 }
 
@@ -1145,21 +1029,10 @@ export interface ExperimentalTgpuRoot
    */
   flush(): void;
 
-  /** @deprecated Use `root.createComputePipeline` instead. */
-  withCompute<ComputeIn extends IORecord<AnyComputeBuiltin>>(
-    entryFn: TgpuComputeFn<ComputeIn>,
-  ): WithCompute;
-
   /** @deprecated This feature is now stable, use `root.createGuardedComputePipeline`. */
   createGuardedComputePipeline<TArgs extends number[]>(
     callback: (...args: TArgs) => void,
   ): TgpuGuardedComputePipeline<TArgs>;
-
-  /** @deprecated Use `root.createRenderPipeline` instead. */
-  withVertex<VertexIn extends TgpuVertexFn.In, VertexOut extends TgpuVertexFn.Out>(
-    entryFn: TgpuVertexFn<VertexIn, VertexOut>,
-    ...args: OptionalArgs<LayoutToAllowedAttribs<OmitBuiltins<VertexIn>>>
-  ): WithVertex<VertexOut>;
 
   /** @deprecated This feature is now stable, use `root.pipe`. */
   pipe(transform: (cfg: Configurable) => Configurable): WithBinding;

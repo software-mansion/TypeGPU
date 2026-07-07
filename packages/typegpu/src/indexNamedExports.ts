@@ -11,13 +11,17 @@ export {
   NotUniformError,
   ResolutionError,
 } from './errors.ts';
-export { isBuffer, isUsableAsVertex } from './core/buffer/buffer.ts';
 export { isAccessor, isLazy, isMutableAccessor, isSlot } from './core/slot/slotTypes.ts';
 export { isComparisonSampler, isSampler } from './core/sampler/sampler.ts';
 export { isTexture } from './core/texture/texture.ts';
 export { isUsableAsRender, isUsableAsSampled } from './core/texture/usageExtension.ts';
-export { isUsableAsStorage } from './extension.ts';
-export { isUsableAsUniform } from './core/buffer/bufferUsage.ts';
+export {
+  isBuffer,
+  isUsableAsUniform,
+  isUsableAsVertex,
+  isUsableAsIndex,
+  isUsableAsStorage,
+} from './types.ts';
 export { isBufferShorthand } from './core/buffer/bufferShorthand.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
 export { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
@@ -44,9 +48,6 @@ export type {
   ValidateUniformSchema,
   Withable,
   WithBinding,
-  WithCompute,
-  WithFragment,
-  WithVertex,
 } from './core/root/rootTypes.ts';
 export type { Storage, StorageFlag } from './extension.ts';
 export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
