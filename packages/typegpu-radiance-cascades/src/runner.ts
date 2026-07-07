@@ -57,6 +57,17 @@ export type RadianceCascadesExecutor<TOutput extends OutputResource = OutputText
   with(bindGroup: TgpuBindGroup): RadianceCascadesExecutor<TOutput>;
   destroy(): void;
   readonly output: TOutput;
+
+  /**
+   * Eagerly initializes every pipeline by calling `initSync` on each.
+   * Calling this is optional.
+   */
+  initSync(): void;
+  /**
+   * Eagerly initializes every pipeline by calling `initAsync` on each.
+   * Calling this is optional.
+   */
+  initAsync(): Promise<void>;
 };
 
 export function createRadianceCascades(
@@ -213,11 +224,16 @@ export function createRadianceCascades(
       prebuiltRadiancePipeline.dispatchWorkgroups(outputWorkgroupsX, outputWorkgroupsY);
     }
 
+    const pipelines = [...prebuiltCascadePipelines, prebuiltRadiancePipeline];
+
     return {
       run,
       with: (bg) => createExecutor([...additionalBindGroups, bg]),
       destroy,
       output: dst,
+      initSync: () => pipelines.forEach((pipeline) => pipeline.initSync()),
+      initAsync: () =>
+        Promise.all(pipelines.map((pipeline) => pipeline.initAsync())).then(() => {}),
     };
   }
 

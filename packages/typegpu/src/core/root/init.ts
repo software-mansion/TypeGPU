@@ -171,6 +171,14 @@ export class TgpuGuardedComputePipelineImpl<
     this.#pipeline.dispatchWorkgroups(workgroupCount.x, workgroupCount.y, workgroupCount.z);
   }
 
+  initAsync(): Promise<void> {
+    return this.#pipeline.initAsync();
+  }
+
+  initSync(): void {
+    this.#pipeline.initSync();
+  }
+
   get pipeline() {
     return this.#pipeline;
   }
