@@ -6,10 +6,6 @@ import typegpuLogoDark from '../public/typegpu-logo-dark.svg';
 import typegpuLogoLight from '../public/typegpu-logo-light.svg';
 import nextLogo from '../public/next.svg';
 
-export function generateStaticParams() {
-  return [{ slug: [''] }];
-}
-
 export default function Page() {
   return (
     <div className="mx-auto flex h-svh w-[1126px] max-w-full flex-col border-x border-border">
