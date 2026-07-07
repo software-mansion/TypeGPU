@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ESNext",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "types": ["@webgpu/types"],
+    "types": ["@webgpu/types", "@types/react", "@types/react-dom"],
     "module": "ESNext",
     "esModuleInterop": true,
     "skipLibCheck": true,

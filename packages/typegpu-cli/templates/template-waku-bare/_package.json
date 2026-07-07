@@ -13,13 +13,13 @@
     "types": "tsc --p ./tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@typegpu/react": "^0.11.1",
+    "@typegpu/react": "^0.11.2",
     "hono": "^4.12.14",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-server-dom-webpack": "^19.2.6",
-    "typegpu": "^0.11.8",
-    "waku": "^1.0.0-beta.2"
+    "typegpu": "^0.11.9",
+    "waku": "^1.0.0-beta.6"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.0",
@@ -32,7 +32,7 @@
     "oxlint": "^1.64.0",
     "tailwindcss": "^4.3.0",
     "typescript": "npm:tsover@6.0.1",
-    "unplugin-typegpu": "^0.11.4"
+    "unplugin-typegpu": "^0.11.6"
   },
   "overrides": {
     "typescript": "npm:tsover@6.0.1"
