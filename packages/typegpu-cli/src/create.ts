@@ -15,8 +15,8 @@ import {
   type ProjectTemplate,
 } from './options.ts';
 
-const GRADIENT_START = [0.831, 0.553, 1.0] as const;
-const GRADIENT_END = [0.0, 0.349, 0.874] as const;
+const GRADIENT_START = [0.867, 0.663, 1.0] as const;
+const GRADIENT_END = [0.384, 0.439, 0.964] as const;
 
 const coloredLabelsTemplates = PROJECT_TEMPLATES.map((template, i) => {
   const t = i / (PROJECT_TEMPLATES.length - 1);
@@ -54,8 +54,6 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
     options?.projectDir ??
     (nonInteractive ? DEFAULT_PROJECT_DIR : await getProjectName(DEFAULT_PROJECT_DIR));
 
-  const root = await prepareDirectory(cwd, projectName, { interactive: !nonInteractive });
-
   const packageName =
     getDefaultPackageName(cwd, projectName) ??
     (nonInteractive ? undefined : await getPackageName());
@@ -71,6 +69,8 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
     (nonInteractive ? DEFAULT_PROJECT_TEMPLATE : await promptProjectTemplate());
 
   p.log.step(`Scaffolding project in ${projectName}...`);
+
+  const root = await prepareDirectory(cwd, projectName, { interactive: !nonInteractive });
 
   const templateDir = path.resolve(
     import.meta.dirname,

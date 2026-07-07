@@ -12,7 +12,7 @@ import {
   parsePackageManager,
   parseTemplate,
 } from './options.ts';
-import { failAndExit } from './utils/prompts.ts';
+import { colorsEnabled, failAndExit } from './utils/prompts.ts';
 import { typegpuPkgs } from './utils/pkg.ts';
 import { typegpuAsciiLogoColor, typegpuAsciiLogoNoColor } from './utils/logo.ts';
 
@@ -75,11 +75,7 @@ const commonOptions = {
   ...(packageManager ? { packageManager } : {}),
 };
 
-if (!process.env.NO_COLOR) {
-  console.log(typegpuAsciiLogoColor);
-} else {
-  console.log(typegpuAsciiLogoNoColor);
-}
+console.log(colorsEnabled ? typegpuAsciiLogoColor : typegpuAsciiLogoNoColor);
 
 if (argv.enhance) {
   const targetDir = positionals[0] ? path.resolve(cwd, positionals[0]) : cwd;
