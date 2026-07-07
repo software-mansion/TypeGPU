@@ -13,7 +13,7 @@ import { askForVite, setupVite } from './steps/vite.ts';
 import { addAgentSkills, askForAgentSkills } from './steps/skills.ts';
 import type { EnhanceProjectOptions } from './options.ts';
 
-const PROJECT_KINDS = [{ value: 'vite', label: rgbText('Vite', 175, 105, 245) }];
+const PROJECT_KINDS = [{ value: 'vite', label: rgbText('Vite', 221, 169, 255) }];
 
 async function runViteFlow(
   cwd: string,
