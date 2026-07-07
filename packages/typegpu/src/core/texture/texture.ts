@@ -7,6 +7,7 @@ import {
   type WgslTextureProps,
 } from '../../data/texture.ts';
 import { inCodegenMode } from '../../execMode.ts';
+import type { StorageFlag } from '../../extension.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { F32, Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -25,7 +26,12 @@ import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import type { TextureProps } from './textureProps.ts';
-import type { AllowedUsages, LiteralToExtensionMap } from './usageExtension.ts';
+import type {
+  AllowedUsages,
+  LiteralToExtensionMap,
+  RenderFlag,
+  SampledFlag,
+} from './usageExtension.ts';
 import { generateTextureMipmaps, getImageSourceDimensions, resampleImage } from './textureUtils.ts';
 
 export type TextureInternals = {
@@ -142,9 +148,7 @@ export interface TgpuTexture<TProps extends TextureProps = any> extends TgpuNama
   $usage<T extends AllowedUsages<TProps>[]>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToExtensionMap[T[number]]>;
-  $overrideFlags(
-    flags: GPUTextureUsageFlags,
-  ): this & UnionToIntersection<LiteralToExtensionMap['sampled' | 'storage' | 'render']>;
+  $overrideFlags(flags: GPUTextureUsageFlags): this & StorageFlag & SampledFlag & RenderFlag;
 
   createView(
     ...args: this['usableAsSampled'] extends true
@@ -280,12 +284,20 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     const hasSampled = usages.includes('sampled');
     const hasRender = usages.includes('render');
     const hasTransient = usages.includes('transient');
-    const hasTransientConflict = hasSampled || hasStorage;
+    const previousFlags = this.#flags;
+
+    this.#flags |= hasTransient
+      ? GPUTextureUsage.TRANSIENT_ATTACHMENT | GPUTextureUsage.RENDER_ATTACHMENT
+      : 0;
+    this.#flags |= hasSampled ? GPUTextureUsage.TEXTURE_BINDING : 0;
+    this.#flags |= hasStorage ? GPUTextureUsage.STORAGE_BINDING : 0;
+    this.#flags |= hasRender ? GPUTextureUsage.RENDER_ATTACHMENT : 0;
 
     if (
-      (hasTransient && (hasTransientConflict || this.usableAsSampled || this.usableAsStorage)) ||
-      (this.#flags & GPUTextureUsage.TRANSIENT_ATTACHMENT && hasTransientConflict)
+      this.#flags & GPUTextureUsage.TRANSIENT_ATTACHMENT &&
+      this.#flags & (GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING)
     ) {
+      this.#flags = previousFlags;
       throw new Error("Transient texture usage cannot be combined with 'sampled' or 'storage'.");
     }
 
@@ -293,9 +305,6 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       this.#flags = GPUTextureUsage.TRANSIENT_ATTACHMENT | GPUTextureUsage.RENDER_ATTACHMENT;
     }
 
-    this.#flags |= hasSampled ? GPUTextureUsage.TEXTURE_BINDING : 0;
-    this.#flags |= hasStorage ? GPUTextureUsage.STORAGE_BINDING : 0;
-    this.#flags |= hasRender ? GPUTextureUsage.RENDER_ATTACHMENT : 0;
     this.usableAsStorage ||= hasStorage;
     this.usableAsSampled ||= hasSampled;
     this.usableAsRender ||= hasRender || hasTransient;
@@ -303,16 +312,13 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     return this as this & UnionToIntersection<LiteralToExtensionMap[T[number]]>;
   }
 
-  $overrideFlags(
-    flags: GPUTextureUsageFlags,
-  ): this & UnionToIntersection<LiteralToExtensionMap['sampled' | 'storage' | 'render']> {
+  $overrideFlags(flags: GPUTextureUsageFlags): this & StorageFlag & SampledFlag & RenderFlag {
     this.#flags = flags;
     this.#flagsOverridden = true;
     this.usableAsSampled = true;
     this.usableAsStorage = true;
     this.usableAsRender = true;
-    return this as this &
-      UnionToIntersection<LiteralToExtensionMap['sampled' | 'storage' | 'render']>;
+    return this as this & StorageFlag & SampledFlag & RenderFlag;
   }
 
   createView(
