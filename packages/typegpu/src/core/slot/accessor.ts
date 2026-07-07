@@ -1,6 +1,6 @@
 import { type AnyData, isData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
-import { isSnippet, type ResolvedSnippet, snip } from '../../data/snippet.ts';
+import { isSnippet, type ResolvedSnippet, snip, withValue } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx, inCodegenMode } from '../../execMode.ts';
 import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
@@ -94,7 +94,6 @@ abstract class AccessorBase<
    * @returns A snippet representing the accessor.
    */
   #createSnippet() {
-    // oxlint-disable-next-line typescript/no-non-null-assertion -- it's there
     const ctx = getResolutionCtx()!;
     let value = getGpuValueRecursively(ctx.unwrap(this.slot));
 
@@ -164,12 +163,7 @@ abstract class AccessorBase<
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const snippet = this.#createSnippet();
-    return snip(
-      ctx.resolve(snippet.value, snippet.dataType).value,
-      snippet.dataType as T,
-      snippet.origin,
-      snippet.possibleSideEffects,
-    );
+    return withValue(ctx.resolve(snippet.value, snippet.dataType).value, snippet);
   }
 }
 

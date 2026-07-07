@@ -1,4 +1,3 @@
-import { stitch } from '../core/resolve/stitch.ts';
 import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
@@ -384,12 +383,7 @@ export function tryConvertSnippet(
 
     if (dataType === UnknownData) {
       // Commit unknown to the expected type.
-      return snip(
-        stitch`${snip(value, target, origin, possibleSideEffects)}`,
-        target,
-        origin,
-        possibleSideEffects,
-      );
+      return ctx.resolveSnippet(snip(value, target, origin, possibleSideEffects));
     }
   }
 

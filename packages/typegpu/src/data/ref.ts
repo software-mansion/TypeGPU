@@ -5,7 +5,7 @@ import { $gpuCallable, $internal, $ownSnippet, $resolve } from '../shared/symbol
 import type { DualFn, SelfResolvable } from '../types.ts';
 import { UnknownData } from './dataTypes.ts';
 import { createPtrFromOrigin, explicitFrom } from './ptr.ts';
-import { isAlias, type ResolvedSnippet, snip, type Snippet } from './snippet.ts';
+import { isAlias, type ResolvedSnippet, snip, type Snippet, withDataType } from './snippet.ts';
 import { isNaturallyEphemeral, isPtr, type Ptr, type StorableData } from './wgslTypes.ts';
 
 // ----------
@@ -77,7 +77,7 @@ export const _ref = (() => {
       if (isPtr(value.dataType)) {
         // This can happen if we take a reference of an *implicit* pointer, one
         // made by assigning a reference to a `const`.
-        return snip(value.value, explicitFrom(value.dataType), value.origin, false);
+        return withDataType(explicitFrom(value.dataType), value);
       }
 
       /**
@@ -187,7 +187,12 @@ export class RefOperator implements SelfResolvable {
     if (!this.#ptrType) {
       throw new Error(stitch`Cannot take a reference of ${this.snippet}`);
     }
-    return snip(stitch`(&${this.snippet})`, this.#ptrType, this.snippet.origin, false);
+    return snip(
+      stitch`(&${this.snippet})`,
+      this.#ptrType,
+      this.snippet.origin,
+      this.snippet.possibleSideEffects,
+    );
   }
 }
 
@@ -203,7 +208,7 @@ export function derefSnippet(snippet: Snippet): Snippet {
       stitch`${snippet.value.snippet}`,
       innerType,
       snippet.origin,
-      snippet.value.snippet.possibleSideEffects,
+      snippet.possibleSideEffects,
     );
   }
 

@@ -12,7 +12,13 @@ import {
 } from './core/slot/slotTypes.ts';
 import { isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
-import { type Origin, type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
+import {
+  type Origin,
+  type ResolvedSnippet,
+  snip,
+  type Snippet,
+  withValue,
+} from './data/snippet.ts';
 import { type BaseData, isPtr, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
 import { invariant, MissingSlotValueError, ResolutionError, WgslTypeError } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
@@ -1048,12 +1054,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolveSnippet(snippet: Snippet): ResolvedSnippet {
-    return snip(
-      this.resolve(snippet.value, snippet.dataType).value,
-      snippet.dataType,
-      snippet.origin,
-      snippet.possibleSideEffects,
-    ) as ResolvedSnippet;
+    return withValue(this.resolve(snippet.value, snippet.dataType).value, snippet);
   }
 
   pushMode(mode: ExecState) {
@@ -1117,11 +1118,7 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
       new TgpuBindGroupImpl(
         catchallLayout,
         Object.fromEntries(
-          ctx.fixedBindings.map(
-            (binding, idx) =>
-              // oxlint-disable-next-line typescript/no-explicit-any -- it's fine
-              [String(idx), binding.resource] as [string, any],
-          ),
+          ctx.fixedBindings.map((binding, idx) => [String(idx), binding.resource] as [string, any]),
         ),
       ),
     ] as [number, TgpuBindGroup];

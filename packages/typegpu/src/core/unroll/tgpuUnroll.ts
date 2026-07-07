@@ -1,10 +1,8 @@
-import { stitch } from '../resolve/stitch.ts';
 import { $gpuCallable, $internal, $resolve } from '../../shared/symbols.ts';
 import { setName } from '../../shared/meta.ts';
 import type { DualFn } from '../../types.ts';
-import { type ResolvedSnippet, snip, type Snippet } from '../../data/snippet.ts';
+import { type ResolvedSnippet, type Snippet, withValue } from '../../data/snippet.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import type { BaseData } from '../../data/wgslTypes.ts';
 
 /**
  * The result of calling `tgpu.unroll(...)`. The code responsible for
@@ -19,9 +17,8 @@ export class UnrollableIterable implements SelfResolvable {
     this.snippet = snippet;
   }
 
-  [$resolve](_ctx: ResolutionCtx): ResolvedSnippet {
-    const { dataType, origin, possibleSideEffects } = this.snippet;
-    return snip(stitch`${this.snippet}`, dataType as BaseData, origin, possibleSideEffects);
+  [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
+    return ctx.resolveSnippet(this.snippet);
   }
 }
 
@@ -96,12 +93,7 @@ export const unroll = (() => {
   impl[$internal] = true;
   impl[$gpuCallable] = {
     call(_ctx, [value]) {
-      return snip(
-        new UnrollableIterable(value),
-        value.dataType,
-        value.origin,
-        value.possibleSideEffects,
-      );
+      return withValue(new UnrollableIterable(value), value);
     },
   };
 
