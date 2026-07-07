@@ -484,6 +484,12 @@ importers:
         specifier: ^2.8.3
         version: 2.8.3
 
+  packages/create-typegpu:
+    devDependencies:
+      typescript:
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
+
   packages/eslint-plugin:
     dependencies:
       '@typescript-eslint/utils':
