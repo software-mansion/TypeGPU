@@ -17,7 +17,7 @@ ${magenta}  \\_____/
 process.chdir(import.meta.dir);
 
 consola.start('Cleaning dist...');
-await rm('dist', { recursive: true, force: true });
+await rm('dist', { recursive: true, force: true, maxRetries: 3 });
 
 consola.start('Building with tsc...');
 await $`tsc --p tsconfig.build.json`;
