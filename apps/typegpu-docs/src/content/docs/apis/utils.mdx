@@ -89,7 +89,7 @@ const myFunction = tgpu.fn([])(() => {
 :::caution
 Ternary operator's condition must be a comptime-known value.
 This restriction is due to WGSL having no ternary operator equivalent.
-However, if both branches are known to have no side-effects, then condition can be a runtime value.
+However, if both branches are known to have no side-effects, then the condition can be a runtime value.
 :::
 
 ## *console.log*
@@ -549,7 +549,7 @@ storage binding, ...), then choose from `'uniform'`, `'mutable'`, `'readonly'`, 
 `'private'` or `'handle'` depending on the address space of the referred value.
 
 ### `possibleSideEffects`
-The fourth optional parameter `possibleSideEffects` is an indicator, whether generating this snippet may produce a WGSL expression with
+The fourth optional parameter `possibleSideEffects` indicates, whether generating this snippet may produce a WGSL expression with
 observable side-effects (e.g. calling a barrier, discarding a fragment,
 or writing to memory).
 

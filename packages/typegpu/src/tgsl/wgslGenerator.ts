@@ -183,7 +183,7 @@ const unaryOpCodeToCodegen = {
       const resultStr = `!bool(${argStr})`;
       const nanGuardedStr = // abstractFloat will be resolved as comptime known value
         dataType.type === 'f32' || dataType.type === 'f16'
-          ? `(((bitcast<u32>(${dataType.type === 'f16' ? `f32(${argStr})` : argStr}) << 1u) - 1u) < 0xff000000)`
+          ? `(((bitcast<u32>(${dataType.type === 'f16' ? `f32(${argStr})` : argStr}) << 1u) - 1u) >= 0xff000000)`
           : resultStr;
 
       return snip(nanGuardedStr, bool, 'runtime', argExpr.possibleSideEffects);

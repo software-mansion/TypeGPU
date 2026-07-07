@@ -578,7 +578,7 @@ describe('code with side-effects', () => {
     }).toEqual(true);
   });
 
-  test('coercion of the object with an impure field to the struct type', () => {
+  test('coercion of an object with an impure field to the struct type', () => {
     expectSideEffects(
       tgpu.fn(
         [],
