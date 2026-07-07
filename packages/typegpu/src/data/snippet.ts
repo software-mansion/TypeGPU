@@ -93,22 +93,14 @@ export interface Snippet {
   readonly dataType: BaseData | UnknownData;
   readonly origin: Origin;
   /**
-   * Whether generating this snippet may produce a WGSL expression with
-   * observable side-effects (e.g. calling a barrier, discarding a fragment,
-   * or writing to memory).
+   * A snippet has possible side effects either if we're sure that it has side
+   * effects, or if our systems are unable to reliably determine that it
+   * doesn't have side effects.
    *
-   * Snippets with `possibleSideEffects: true` cannot appear in ternary
-   * branches that get compiled to `select()`, because `select()` evaluates
-   * both branches unconditionally — a side-effect meant to be conditional
-   * would execute regardless of the condition.
-   *
-   * This is not the same as "impure" in the functional-programming sense.
-   * Reading a mutable storage buffer is not referentially transparent (another
-   * thread may have written to it), yet producing its WGSL expression has no
-   * observable side-effect — the read itself does not modify program state, so
-   * such a snippet has `possibleSideEffects: false`. Conversely, `atomicLoad(p)`
-   * does count as a side-effect because atomic operations
-   * may synchronize threads through memory ordering.
+   * A snippet has side-effects if executing the WGSL code within and not using
+   * the return value is not equivalent to just not executing the WGSL code at
+   * all, with a margin of executing a few more instructions. For example, code
+   * that mutates memory, or synchronizes threads, has side effects.
    */
   readonly possibleSideEffects: boolean;
 }
@@ -147,14 +139,6 @@ export function isSnippetNumeric(snippet: Snippet) {
   return isNumericSchema(snippet.dataType);
 }
 
-/**
- * Create a snippet.
- *
- * @param possibleSideEffects — whether generating this snippet produces
- *   observable side-effects in WGSL. Defaults to `true` (safe/conservative).
- *   Set to `false` when you know the expression is side-effect-free, e.g.
- *   reading a function parameter, accessing a constant, or any pure builtin.
- */
 export function snip(
   value: string,
   dataType: BaseData,
@@ -205,11 +189,6 @@ export function withSideEffects(possibleSideEffects: boolean, snippet: Snippet):
   return new SnippetImpl(snippet.value, snippet.dataType, snippet.origin, possibleSideEffects);
 }
 
-/**
- * Returns a copy of the snippet marked as having no side-effects.
- * Use when you know the produced WGSL expression is observationally pure
- * (e.g. reading a parameter, accessing a constant, or a pure builtin like `sin`).
- */
 export function noSideEffects(snippet: ResolvedSnippet): ResolvedSnippet;
 export function noSideEffects(snippet: Snippet): Snippet;
 export function noSideEffects(snippet: Snippet): Snippet {

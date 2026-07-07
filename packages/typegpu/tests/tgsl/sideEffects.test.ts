@@ -5,9 +5,6 @@ import { expectSideEffects } from '../utils/parseResolved.ts';
 
 const Boid = d.struct({ pos: d.vec3f });
 
-// These are pure functions (they return constants), but for now we
-// assume any user-defined function may have side-effects, so calling one
-// yields a snippet with `possibleSideEffects: true`.
 const impureVec = () => {
   'use gpu';
   return d.vec3f(6, 6, 6);
