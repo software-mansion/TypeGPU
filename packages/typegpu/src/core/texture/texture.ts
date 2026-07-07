@@ -227,6 +227,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
   #formatInfo: TextureFormatInfo;
   #destroyed = false;
   #flags = GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC;
+  #flagsOverridden = false;
   #texture: GPUTexture | null = null;
   #branch: ExperimentalTgpuRoot;
 
@@ -271,6 +272,10 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
   $usage<T extends ('sampled' | 'storage' | 'render' | 'transient')[]>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToExtensionMap[T[number]]> {
+    if (this.#flagsOverridden) {
+      throw new Error('Cannot call $usage() after $overrideFlags().');
+    }
+
     const hasStorage = usages.includes('storage');
     const hasSampled = usages.includes('sampled');
     const hasRender = usages.includes('render');
@@ -302,6 +307,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     flags: GPUTextureUsageFlags,
   ): this & UnionToIntersection<LiteralToExtensionMap['sampled' | 'storage' | 'render']> {
     this.#flags = flags;
+    this.#flagsOverridden = true;
     this.usableAsSampled = true;
     this.usableAsStorage = true;
     this.usableAsRender = true;

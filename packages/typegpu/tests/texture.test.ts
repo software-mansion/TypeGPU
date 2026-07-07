@@ -215,6 +215,9 @@ describe('TgpuTexture', () => {
       usableAsStorage: true,
       usableAsRender: true,
     });
+    expect(() => texture.$usage('transient')).toThrow(
+      'Cannot call $usage() after $overrideFlags().',
+    );
     expect(device.mock.createTexture).toHaveBeenCalledWith(
       expect.objectContaining({
         usage: GPUTextureUsage.RENDER_ATTACHMENT,

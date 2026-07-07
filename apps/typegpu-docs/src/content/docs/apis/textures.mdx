@@ -110,7 +110,7 @@ const texture = root
 ```
 
 ::::caution
-This is an escape hatch. It replaces the flags TypeGPU would normally infer and marks the texture as usable through sampled, storage, and render APIs. Use it responsibly, and make sure the resulting `GPUTextureDescriptor` is valid.
+This is an escape hatch. It replaces the flags TypeGPU would normally infer and marks the texture as usable through sampled, storage, and render APIs. Use it responsibly, do not call `.$usage(...)` after it, and make sure the resulting `GPUTextureDescriptor` is valid.
 ::::
 
 ## Writing to a texture
