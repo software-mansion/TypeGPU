@@ -1,8 +1,7 @@
 import { tgpu, d, std } from 'typegpu';
 import { test } from 'typegpu-testing-utility';
-import { describe, expect } from 'vitest';
+import { describe } from 'vitest';
 import { expectSideEffects } from '../utils/parseResolved.ts';
-import { isBeingTranspiled } from '../../src/std/environment.ts';
 
 const Boid = d.struct({ pos: d.vec3f });
 
@@ -265,7 +264,7 @@ describe('code without side-effects', () => {
     }).toEqual(false);
   });
 
-  test('indexed arrays', () => {
+  test('indexed array', () => {
     expectSideEffects(() => {
       'use gpu';
       const hello = [1, 2, 3];
@@ -273,7 +272,7 @@ describe('code without side-effects', () => {
     }).toEqual(false);
   });
 
-  test('indexed vectors', () => {
+  test('indexed vector', () => {
     expectSideEffects(() => {
       'use gpu';
       const v = d.vec3f();
@@ -281,7 +280,7 @@ describe('code without side-effects', () => {
     }).toEqual(false);
   });
 
-  test('indexed matrix columns', () => {
+  test('indexed matrix column', () => {
     expectSideEffects(() => {
       'use gpu';
       const m = d.mat2x2f();
@@ -289,7 +288,7 @@ describe('code without side-effects', () => {
     }).toEqual(false);
   });
 
-  test('vectors created from indexed arrays', () => {
+  test('vector created from indexed array', () => {
     expectSideEffects(() => {
       'use gpu';
       const arr = [1, 2, 3];
@@ -365,7 +364,7 @@ describe('code without side-effects', () => {
     }).toEqual(false);
   });
 
-  test('boolean literals', () => {
+  test('boolean literal', () => {
     expectSideEffects(() => {
       'use gpu';
       return false;
@@ -388,17 +387,17 @@ describe('code without side-effects', () => {
     const flag = true;
     expectSideEffects(() => {
       'use gpu';
-      return !isBeingTranspiled() || flag;
+      return !std.isBeingTranspiled() || flag;
     }).toEqual(false);
 
     expectSideEffects(() => {
       'use gpu';
-      return isBeingTranspiled() || impureBool();
+      return std.isBeingTranspiled() || impureBool();
     }).toEqual(false);
 
     expectSideEffects(() => {
       'use gpu';
-      return !isBeingTranspiled() && impureBool();
+      return !std.isBeingTranspiled() && impureBool();
     }).toEqual(false);
   });
 
@@ -406,17 +405,17 @@ describe('code without side-effects', () => {
     expectSideEffects(() => {
       'use gpu';
       const flag = true;
-      return !isBeingTranspiled() || flag;
+      return !std.isBeingTranspiled() || flag;
     }).toEqual(false);
 
     expectSideEffects(() => {
       'use gpu';
       const flag = true;
-      return isBeingTranspiled() && flag;
+      return std.isBeingTranspiled() && flag;
     }).toEqual(false);
   });
 
-  test('comptime-folded comparisons', () => {
+  test('comptime-folded comparison', () => {
     const x = 1;
     expectSideEffects(() => {
       'use gpu';
@@ -474,6 +473,13 @@ describe('code without side-effects', () => {
       'use gpu';
       const flag = false;
       return flag ? 1 : 2;
+    }).toEqual(false);
+  });
+
+  test('logical not of impure value of complex datatype', () => {
+    expectSideEffects(() => {
+      'use gpu';
+      return !impureStruct();
     }).toEqual(false);
   });
 });
@@ -540,19 +546,19 @@ describe('code with side-effects', () => {
   test('logical not of impure value', () => {
     expectSideEffects(() => {
       'use gpu';
-      return !impureStruct();
+      return !impureInt();
     }).toEqual(true);
   });
 
   test('logical short-circuit with impure rhs', () => {
     expectSideEffects(() => {
       'use gpu';
-      return !isBeingTranspiled() || impureBool();
+      return !std.isBeingTranspiled() || impureBool();
     }).toEqual(true);
 
     expectSideEffects(() => {
       'use gpu';
-      return isBeingTranspiled() && impureBool();
+      return std.isBeingTranspiled() && impureBool();
     }).toEqual(true);
   });
 

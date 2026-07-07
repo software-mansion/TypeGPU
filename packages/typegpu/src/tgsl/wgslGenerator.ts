@@ -189,7 +189,7 @@ const unaryOpCodeToCodegen = {
       return snip(nanGuardedStr, bool, 'runtime', argExpr.possibleSideEffects);
     }
 
-    return snip(false, bool, 'constant', argExpr.possibleSideEffects);
+    return snip(false, bool, 'constant', false);
   },
 } satisfies Partial<Record<tinyest.UnaryOperator, (...args: never[]) => unknown>>;
 
