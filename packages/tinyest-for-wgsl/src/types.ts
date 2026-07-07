@@ -14,6 +14,13 @@ export type Context = {
   externalNames: Externals;
   /** Used to signal to identifiers that they should not treat their resolution as possible external uses. */
   ignoreExternalDepth: number;
+  /**
+   * Keeps the set of nodes visited by `tryFindExternalChain`.
+   * This helps optimize code like `ext().x.y.z.t`:
+   * instead of traversing chains `.x.y.z.t`, `.x.y.z`, `.x.y` and `.x`,
+   * we only traverse the first one and then return early.
+   */
+  visitedNodes: Set<JsNode>;
   stack: Scope[];
 };
 

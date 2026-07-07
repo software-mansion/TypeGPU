@@ -404,6 +404,7 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
   const ctx: Context = {
     externalNames: new Set(),
     ignoreExternalDepth: 0,
+    visitedNodes: new Set(),
     stack: [
       {
         declaredNames: params.flatMap((param) =>
@@ -436,6 +437,7 @@ export function transpileNode(node: JsNode): tinyest.AnyNode {
   const ctx: Context = {
     externalNames: new Set(),
     ignoreExternalDepth: 0,
+    visitedNodes: new Set(),
     stack: [
       {
         declaredNames: [],

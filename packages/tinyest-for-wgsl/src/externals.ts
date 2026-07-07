@@ -5,14 +5,6 @@ function isDeclared(ctx: Context, name: string) {
 }
 
 /**
- * Keeps the set of nodes visited by `tryFindExternalChain`.
- * This helps optimize code like `ext().x.y.z.t`:
- * instead of traversing chains `.x.y.z.t`, `.x.y.z`, `.x.y` and `.x`,
- * we only traverse the first one and then return early.
- */
-const visitedMap: WeakMap<Context, Set<JsNode>> = new WeakMap();
-
-/**
  * Checks if the provided node is an external chain access.
  * @example
  * tryFindExternalChain(ctx, node`ext`); // 'ext'
@@ -22,15 +14,10 @@ const visitedMap: WeakMap<Context, Set<JsNode>> = new WeakMap();
  * tryFindExternalChain(ctx, node`ext.$.q`); // undefined
  */
 export function tryFindExternalChain(ctx: Context, node: JsNode): string | undefined {
-  let visited = visitedMap.get(ctx);
-  if (!visited) {
-    visited = new Set();
-    visitedMap.set(ctx, visited);
-  }
-  if (visited.has(node)) {
+  if (ctx.visitedNodes.has(node)) {
     return;
   }
-  visited.add(node);
+  ctx.visitedNodes.add(node);
 
   if (node.type === 'Identifier' && !isDeclared(ctx, node.name)) {
     return node.name;
