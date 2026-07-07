@@ -1,6 +1,5 @@
 import { type TgpuBuffer, type UniformFlag } from './core/buffer/buffer.ts';
-import { isBuffer, isUsableAsStorage } from './types.ts';
-import { isUsableAsUniform } from './types.ts';
+import { isBuffer, isUsableAsStorage, isUsableAsUniform } from './types.ts';
 import {
   isComparisonSampler,
   isSampler,
