@@ -1118,6 +1118,7 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
       new TgpuBindGroupImpl(
         catchallLayout,
         Object.fromEntries(
+          // oxlint-disable-next-line typescript/no-explicit-any -- it's fine
           ctx.fixedBindings.map((binding, idx) => [String(idx), binding.resource] as [string, any]),
         ),
       ),
