@@ -1,6 +1,6 @@
 import { expect, describe, beforeEach } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 describe('binaryLogicalOps', () => {
   const Boid = d.struct({ pos: d.vec3f });
