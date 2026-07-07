@@ -27,9 +27,3 @@ export function Shader({ className }: { className?: string }) {
 
   return <canvas ref={ref} className={className} />;
 }
-
-export const getConfig = async () => {
-  return {
-    render: 'dynamic',
-  } as const;
-};
