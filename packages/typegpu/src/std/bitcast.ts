@@ -122,4 +122,5 @@ export const bitcastF32toU32 = dualImpl({
         : u32,
     };
   },
+  sideEffects: false,
 });
