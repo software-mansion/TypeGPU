@@ -178,10 +178,6 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
     assertExhaustive(mode, 'tgpuVariable.ts#TgpuVarImpl/$');
   }
 
-  get value(): InferGPU<TDataType> {
-    return this.$;
-  }
-
   set value(v: InferGPU<TDataType>) {
     this.$ = v;
   }

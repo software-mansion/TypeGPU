@@ -23,10 +23,6 @@ export interface TgpuSlot<T> extends TgpuNamable {
   areEqual(a: T, b: T): boolean;
 
   readonly [$gpuValueOf]: GPUValueOf<T>;
-  /**
-   * @deprecated Use `.$` instead, works the same way.
-   */
-  readonly value: GPUValueOf<T>;
   readonly $: GPUValueOf<T>;
   toString(): string;
 }
@@ -38,10 +34,6 @@ export interface TgpuLazy<out T> extends Withable<TgpuLazy<T>> {
   readonly resourceType: 'lazy';
 
   readonly [$gpuValueOf]: GPUValueOf<T>;
-  /**
-   * @deprecated Use `.$` instead, works the same way.
-   */
-  readonly value: GPUValueOf<T>;
   readonly $: GPUValueOf<T>;
 
   // Type-tokens, not available at runtime
