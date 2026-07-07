@@ -533,4 +533,21 @@ describe('tgpu.accessor', () => {
       }"
     `);
   });
+
+  it('allows zero-argument dualFn', () => {
+    const accessor = tgpu.accessor(d.bool, std.subgroupElect);
+
+    expect(
+      tgpu.resolve([
+        () => {
+          'use gpu';
+          return accessor.$;
+        },
+      ]),
+    ).toMatchInlineSnapshot(`
+      "fn item() -> bool {
+        return subgroupElect();
+      }"
+    `);
+  });
 });

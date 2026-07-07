@@ -154,7 +154,7 @@ describe('code without side-effects', () => {
     }).toEqual(false);
   });
 
-  test('pure function access from accessor', () => {
+  test('pure function call from accessor', () => {
     const accessor = tgpu.accessor(d.bool, std.subgroupElect);
 
     expectSideEffects(() => {
