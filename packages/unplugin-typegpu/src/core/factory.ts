@@ -13,7 +13,6 @@ import {
   functionVisitor,
   getBlockScope,
   METADATA_FORMAT_VERSION,
-  requiresQuotation,
 } from './common.ts';
 
 import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
