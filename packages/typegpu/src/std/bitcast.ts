@@ -48,6 +48,7 @@ export const bitcastU32toF32 = dualImpl({
         : f32,
     };
   },
+  sideEffects: false,
 });
 
 type BitcastU32toI32Overload = <T extends number | v2u | v3u | v4u>(
@@ -83,6 +84,7 @@ export const bitcastU32toI32 = dualImpl({
         : i32,
     };
   },
+  sideEffects: false,
 });
 
 type BitcastF32toU32Overload = <T extends number | v2f | v3f | v4f>(

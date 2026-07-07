@@ -140,7 +140,7 @@ class TgpuFixedBufferImpl<TData extends BaseData, TUsage extends BindableBufferU
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, dataType, usage);
+          return snip(this, dataType, usage, /* possibleSideEffects */ false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,
@@ -262,7 +262,7 @@ export class TgpuLaidOutBufferImpl<TData extends BaseData, TUsage extends Bindab
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema, usage);
+          return snip(this, schema, usage, /* possibleSideEffects */ false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,

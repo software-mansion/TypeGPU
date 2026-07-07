@@ -122,6 +122,7 @@ export const textureSample = dualImpl({
       returnType: isDepth ? f32 : vec4f,
     };
   },
+  sideEffects: false,
 });
 
 function sampleBiasCpu<T extends texture1d>(
@@ -180,6 +181,7 @@ export const textureSampleBias = dualImpl({
     argTypes: args as BaseData[],
     returnType: vec4f,
   }),
+  sideEffects: false,
 });
 
 function sampleLevelCpu<T extends texture1d>(
@@ -301,6 +303,7 @@ export const textureSampleLevel = dualImpl({
       returnType: isDepth ? f32 : vec4f,
     };
   },
+  sideEffects: false,
 });
 
 type PrimitiveToLoadedType = {
@@ -415,6 +418,7 @@ export const textureLoad = dualImpl({
       returnType: dataType,
     };
   },
+  sideEffects: false,
 });
 
 function textureStoreCpu<T extends textureStorage1d>(
@@ -454,6 +458,7 @@ export const textureStore = dualImpl({
   normalImpl: textureStoreCpu,
   codegenImpl: (_ctx, args) => stitch`textureStore(${args})`,
   signature: (...args) => ({ argTypes: args, returnType: Void }),
+  sideEffects: true,
 });
 
 function textureDimensionsCpu<T extends texture1d | textureStorage1d>(texture: T): number;
@@ -505,6 +510,7 @@ export const textureDimensions = dualImpl({
       returnType: vec2u,
     };
   },
+  sideEffects: false,
 });
 
 type Gather2dArgs<T extends texture2d = texture2d> = [
@@ -624,6 +630,7 @@ export const textureGather = dualImpl({
       returnType: sampleTypeToVecType[(texture as WgslTexture).sampleType.type],
     };
   },
+  sideEffects: false,
 });
 
 function textureSampleCompareCpu<T extends textureDepth2d>(
@@ -688,6 +695,7 @@ export const textureSampleCompare = dualImpl({
     argTypes: args,
     returnType: f32,
   }),
+  sideEffects: false,
 });
 
 function textureSampleCompareLevelCpu<T extends textureDepth2d>(
@@ -752,6 +760,7 @@ export const textureSampleCompareLevel = dualImpl({
     argTypes: args,
     returnType: f32,
   }),
+  sideEffects: false,
 });
 
 function textureSampleBaseClampToEdgeCpu<T extends texture2d | textureExternal>(
@@ -848,6 +857,7 @@ export const textureSampleGrad = dualImpl({
     argTypes: args,
     returnType: vec4f,
   }),
+  sideEffects: false,
 });
 
 export const textureSampleBaseClampToEdge = dualImpl({
@@ -858,4 +868,5 @@ export const textureSampleBaseClampToEdge = dualImpl({
     argTypes: args,
     returnType: vec4f,
   }),
+  sideEffects: false,
 });

@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 /** Default comparison function: ascending order (a < b means a comes before b) */
 export const defaultCompare = tgpu.fn([d.u32, d.u32], d.bool)((a, b) => a < b);

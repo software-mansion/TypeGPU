@@ -1,16 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import {
-  vec2f,
-  vec2i,
-  vec2u,
-  vec3f,
-  vec3i,
-  vec3u,
-  vec4f,
-  vec4i,
-  vec4u,
-} from '../../src/data/vector.ts';
-import tgpu, { d, std } from '../../src/index.js';
+import { vec2f, vec2i, vec2u, vec3f, vec3i, vec3u, vec4f, vec4i, vec4u } from 'typegpu/data';
+import { tgpu, d, std } from 'typegpu';
 
 // remember to pad with zeros to 8 hex symbols
 const floatFromHex = (hex: string) => Buffer.from(hex, 'hex').readFloatBE(0);

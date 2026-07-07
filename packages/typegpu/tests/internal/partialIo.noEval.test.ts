@@ -3,12 +3,12 @@
  */
 import { describe, expect, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import type { TypedArray } from '../src/shared/utilityTypes.ts';
-import type { WriteInstruction } from '../src/data/partialIO.ts';
-import { getPatchInstructions } from '../src/data/partialIO.ts';
-import * as d from '../src/data/index.ts';
+import type { TypedArray } from '../../src/shared/utilityTypes.ts';
+import type { WriteInstruction } from '../../src/data/partialIO.ts';
+import { getPatchInstructions } from '../../src/data/partialIO.ts';
+import { d } from 'typegpu';
 
-vi.mock('../src/data/compiledIO.ts', () => ({
+vi.mock('../../src/data/compiledIO.ts', () => ({
   EVAL_ALLOWED_IN_ENV: false,
   getCompiledWriter: () => undefined,
   buildWriter: () => '',

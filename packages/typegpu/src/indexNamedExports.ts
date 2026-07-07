@@ -24,8 +24,12 @@ export { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
 export { isTgpuVertexFn } from './core/function/tgpuVertexFn.ts';
 export { isTgpuComputeFn } from './core/function/tgpuComputeFn.ts';
 export { isVariable } from './core/variable/tgpuVariable.ts';
-export { ShaderGenerator } from './tgsl/shaderGenerator.ts';
-export { WgslGenerator } from './tgsl/wgslGenerator.ts';
+export type {
+  /** @deprecated Import from 'typegpu/~internal' instead */ ShaderGenerator,
+} from './tgsl/shaderGenerator.ts';
+export {
+  /** @deprecated Import from 'typegpu/~internal' instead */ WgslGenerator,
+} from './tgsl/wgslGenerator.ts';
 export { readFromArrayBuffer, writeToArrayBuffer } from './data/dataIO.ts';
 export { patchArrayBuffer } from './data/partialIO.ts';
 
@@ -40,9 +44,6 @@ export type {
   ValidateUniformSchema,
   Withable,
   WithBinding,
-  WithCompute,
-  WithFragment,
-  WithVertex,
 } from './core/root/rootTypes.ts';
 export type { Storage, StorageFlag } from './extension.ts';
 export type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
@@ -60,6 +61,9 @@ export type {
   ValidUsagesFor,
   Vertex,
   VertexFlag,
+  BufferWriteOptions,
+  BufferInitCallback,
+  BufferInitialData,
 } from './core/buffer/buffer.ts';
 export type {
   TgpuBufferMutable,
@@ -92,7 +96,6 @@ export type {
 } from './core/sampler/sampler.ts';
 export type { TgpuQuerySet } from './core/querySet/querySet.ts';
 export type {
-  BindLayoutEntry,
   ExtractBindGroupInputFromLayout,
   LayoutEntryToInput,
   TgpuBindGroup,

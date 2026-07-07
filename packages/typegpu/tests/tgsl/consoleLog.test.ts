@@ -1,6 +1,6 @@
 import { describe, expect, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import tgpu, { d } from '../../src/index.js';
+import { tgpu, d } from 'typegpu';
 
 describe('wgslGenerator with console.log', () => {
   it('Parses console.log in a stray function to a comment and warns', () => {
@@ -73,7 +73,11 @@ describe('wgslGenerator with console.log', () => {
       return d.vec4f();
     });
 
-    const pipeline = root.withVertex(vs).withFragment(fs, { format: 'rg8unorm' }).createPipeline();
+    const pipeline = root.createRenderPipeline({
+      vertex: vs,
+      fragment: fs,
+      targets: { format: 'rg8unorm' },
+    });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct vs_Output {

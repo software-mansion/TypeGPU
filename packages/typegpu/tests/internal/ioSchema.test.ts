@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { type IOLayoutToSchema, withLocations } from '../src/core/function/ioSchema.ts';
-import * as d from '../src/data/index.ts';
+import { type IOLayoutToSchema, withLocations } from '../../src/core/function/ioSchema.ts';
+import { d } from 'typegpu';
 
 describe('withLocations', () => {
   it("adds location attribute to non-builtin schemas in a record, if they don't have custom location specified", () => {

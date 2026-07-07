@@ -1,5 +1,5 @@
 import { describe, expect, vi } from 'vitest';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { initWithGL } from '../src/index.ts';
 import { it } from './utils/extendedTest.ts';
 

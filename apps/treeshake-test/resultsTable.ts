@@ -155,7 +155,12 @@ function calculateTrendMessage(prSize: number | undefined, targetSize: number | 
  * calculateChange(100, 200); // -0.5 (-50%)
  * calculateChange(100, undefined); // undefined
  */
-function calculateChange(value: number | undefined, base: number | undefined) {
+export function calculateChange(value: number, base: number): number;
+export function calculateChange(
+  value: number | undefined,
+  base: number | undefined,
+): number | undefined;
+export function calculateChange(value: number | undefined, base: number | undefined) {
   if (value === undefined || base === undefined) {
     return undefined;
   }
