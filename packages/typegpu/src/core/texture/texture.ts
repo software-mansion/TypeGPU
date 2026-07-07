@@ -284,27 +284,26 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     const hasSampled = usages.includes('sampled');
     const hasRender = usages.includes('render');
     const hasTransient = usages.includes('transient');
-    const previousFlags = this.#flags;
 
-    this.#flags |= hasTransient
-      ? GPUTextureUsage.TRANSIENT_ATTACHMENT | GPUTextureUsage.RENDER_ATTACHMENT
-      : 0;
-    this.#flags |= hasSampled ? GPUTextureUsage.TEXTURE_BINDING : 0;
-    this.#flags |= hasStorage ? GPUTextureUsage.STORAGE_BINDING : 0;
-    this.#flags |= hasRender ? GPUTextureUsage.RENDER_ATTACHMENT : 0;
+    const bindingFlags =
+      (hasSampled ? GPUTextureUsage.TEXTURE_BINDING : 0) |
+      (hasStorage ? GPUTextureUsage.STORAGE_BINDING : 0);
+    const transientFlags = GPUTextureUsage.TRANSIENT_ATTACHMENT | GPUTextureUsage.RENDER_ATTACHMENT;
+    const nextFlags =
+      this.#flags | bindingFlags | (hasRender ? GPUTextureUsage.RENDER_ATTACHMENT : 0);
 
-    if (
-      this.#flags & GPUTextureUsage.TRANSIENT_ATTACHMENT &&
-      this.#flags & (GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING)
-    ) {
-      this.#flags = previousFlags;
+    const hasTransientUsage =
+      hasTransient || !!(this.#flags & GPUTextureUsage.TRANSIENT_ATTACHMENT);
+    const hasSampledOrStorageUsage = !!(
+      nextFlags &
+      (GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING)
+    );
+
+    if (hasTransientUsage && hasSampledOrStorageUsage) {
       throw new Error("Transient texture usage cannot be combined with 'sampled' or 'storage'.");
     }
 
-    if (hasTransient) {
-      this.#flags = GPUTextureUsage.TRANSIENT_ATTACHMENT | GPUTextureUsage.RENDER_ATTACHMENT;
-    }
-
+    this.#flags = hasTransient ? transientFlags : nextFlags;
     this.usableAsStorage ||= hasStorage;
     this.usableAsSampled ||= hasSampled;
     this.usableAsRender ||= hasRender || hasTransient;
