@@ -107,6 +107,10 @@ export const it = base
         label: descriptor.label ?? '',
         getBindGroupLayout: vi.fn(() => 'mockBindGroupLayout'),
       })),
+      createComputePipelineAsync: vi.fn(async (descriptor: GPUComputePipelineDescriptor) => ({
+        label: descriptor.label ?? '',
+        getBindGroupLayout: vi.fn(() => 'mockBindGroupLayout'),
+      })),
       createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),
       createQuerySet: vi.fn(
         ({ type, count, label }: GPUQuerySetDescriptor): GPUQuerySet => ({
@@ -118,6 +122,7 @@ export const it = base
         }),
       ),
       createRenderPipeline: vi.fn(() => 'mockRenderPipeline'),
+      createRenderPipelineAsync: vi.fn(async () => 'mockRenderPipeline'),
       createSampler: vi.fn(() => 'mockSampler'),
       createShaderModule: vi.fn(() => 'mockShaderModule'),
       createTexture: vi.fn((descriptor) => createTextureMock(descriptor)),

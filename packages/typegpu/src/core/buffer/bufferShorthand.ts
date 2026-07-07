@@ -155,7 +155,7 @@ export class TgpuBufferShorthandImpl<
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, dataType, usage);
+          return snip(this, dataType, usage, /* possible side effects */ false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${usage}:${getName(this) ?? '<unnamed>'}.$`,

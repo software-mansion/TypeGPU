@@ -60,7 +60,7 @@ export class TgpuLaidOutBufferImpl<
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema, usage);
+          return snip(this, schema, usage, /* possible side effects */ false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,
