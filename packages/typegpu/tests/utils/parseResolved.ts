@@ -74,6 +74,6 @@ export function expectDataTypeOf(
   return expect<d.BaseData | UnknownData>(extractSnippetFromFn(cb).dataType);
 }
 
-export function expectSideEffects(cb: () => unknown): Assertion<boolean> {
+export function expectSideEffects(cb: TgpuFn | (() => unknown)): Assertion<boolean> {
   return expect<boolean>(extractSnippetFromFn(cb).possibleSideEffects);
 }

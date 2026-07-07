@@ -102,11 +102,13 @@ export interface Snippet {
    * both branches unconditionally — a side-effect meant to be conditional
    * would execute regardless of the condition.
    *
-   * This is **not** the same as "impure" in the functional-programming sense.
-   * A call like `atomicLoad(p)` is not referentially transparent (it reads
-   * mutable state), but producing its WGSL expression has no observable side
-   * effects — the read itself does not modify program state. That is why
-   * `atomicLoad` has `sideEffects: false` in its `DualImplOptions`.
+   * This is not the same as "impure" in the functional-programming sense.
+   * Reading a mutable storage buffer is not referentially transparent (another
+   * thread may have written to it), yet producing its WGSL expression has no
+   * observable side-effect — the read itself does not modify program state, so
+   * such a snippet has `possibleSideEffects: false`. Conversely, `atomicLoad(p)`
+   * does count as a side-effect because atomic operations
+   * may synchronize threads through memory ordering.
    */
   readonly possibleSideEffects: boolean;
 }

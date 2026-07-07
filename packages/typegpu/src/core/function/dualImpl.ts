@@ -35,9 +35,8 @@ interface DualImplOptions<T extends AnyFn> {
    *
    * - `workgroupBarrier()` → `true` — the barrier synchronizes threads.
    * - `discard` → `true` — it discards the fragment.
-   * - `sin(x)`, `atomicLoad(p)`, `abs(x)` → `false` — these are purely
-   *   value-producing; the call itself has no observable effect beyond the
-   *   returned value.
+   * - `sin(x)`, `abs(x)` → `false` — these are purely value-producing; the
+   *   call itself has no observable effect beyond the returned value.
    *
    * When `true`, every call produces a snippet whose `possibleSideEffects` is
    * `true`, regardless of whether the arguments have side-effects. This

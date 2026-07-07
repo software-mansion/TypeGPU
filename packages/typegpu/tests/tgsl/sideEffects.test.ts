@@ -6,6 +6,9 @@ import { isBeingTranspiled } from '../../src/std/environment.ts';
 
 const Boid = d.struct({ pos: d.vec3f });
 
+// These are pure functions (they return constants), but for now we
+// assume any user-defined function may have side-effects, so calling one
+// yields a snippet with `possibleSideEffects: true`.
 const impureVec = () => {
   'use gpu';
   return d.vec3f(6, 6, 6);
@@ -84,7 +87,7 @@ describe('code without side-effects', () => {
     }).toEqual(false);
   });
 
-  test('bind group buffer slots', () => {
+  test('bound buffer reads', () => {
     const layout = tgpu.bindGroupLayout({
       uniform: { uniform: d.f32 },
       readonly: { storage: d.f32, access: 'readonly' },
@@ -144,7 +147,7 @@ describe('code without side-effects', () => {
     }).toEqual(false);
   });
 
-  test('buffer access from accessor', ({ root }) => {
+  test('buffer read from accessor', ({ root }) => {
     const Boid = d.struct({ pos: d.vec3f });
     const buffer = root.createUniform(Boid);
     const accessor = tgpu.accessor(d.f32, () => buffer.$.pos.y);
@@ -209,7 +212,7 @@ describe('code without side-effects', () => {
     }).toEqual(false);
   });
 
-  test('workgroup and private var references', () => {
+  test('workgroup and private var reads', () => {
     const w = tgpu.workgroupVar(d.u32);
     const p = tgpu.privateVar(d.u32, 2);
 
@@ -332,7 +335,7 @@ describe('code without side-effects', () => {
     }).toEqual(false);
   });
 
-  test('snippet with UnknownData datatypes convertion', () => {
+  test('snippet with the UnknownData datatype conversion', () => {
     const boidSlot = tgpu.slot(Boid());
 
     expectSideEffects(
@@ -362,7 +365,7 @@ describe('code without side-effects', () => {
     }).toEqual(false);
   });
 
-  test('boolean literal false', () => {
+  test('boolean literals', () => {
     expectSideEffects(() => {
       'use gpu';
       return false;
@@ -437,7 +440,7 @@ describe('code without side-effects', () => {
     }).toEqual(false);
   });
 
-  test('unary expression of pure value', () => {
+  test('unary expression with pure value', () => {
     expectSideEffects(() => {
       'use gpu';
       return ~5;
@@ -466,7 +469,7 @@ describe('code without side-effects', () => {
     }).toEqual(false);
   });
 
-  test('runtime ternary with pure branches', () => {
+  test('runtime ternary with pure condition', () => {
     expectSideEffects(() => {
       'use gpu';
       const flag = false;
@@ -491,7 +494,7 @@ describe('code with side-effects', () => {
     }).toEqual(true);
   });
 
-  test('unroll with impure element', () => {
+  test('unroll over array with impure element', () => {
     expectSideEffects(() => {
       'use gpu';
       return tgpu.unroll([1, impureInt(), 3]);
@@ -520,7 +523,7 @@ describe('code with side-effects', () => {
     }).toEqual(true);
   });
 
-  test('struct field access on impure struct', () => {
+  test('prop access on impure struct', () => {
     expectSideEffects(() => {
       'use gpu';
       return impureStruct().pos;

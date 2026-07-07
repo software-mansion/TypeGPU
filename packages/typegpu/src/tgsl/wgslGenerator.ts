@@ -30,6 +30,7 @@ import {
   ArrayExpression,
   coerceToSnippet,
   concretize,
+  numericLiteralToSnippet,
   type GenerationCtx,
 } from './generationHelpers.ts';
 import { accessIndex } from './accessIndex.ts';
@@ -538,8 +539,8 @@ ${this.ctx.pre}}`;
       // Numeric Literal
       const type =
         typeof expression[1] === 'string'
-          ? coerceToSnippet(parseNumericString(expression[1]))
-          : coerceToSnippet(expression[1]);
+          ? numericLiteralToSnippet(parseNumericString(expression[1]))
+          : numericLiteralToSnippet(expression[1]);
       invariant(type, `Expected ${stringifyNode(expression)} to be valid numeric literal`);
       return type;
     }
