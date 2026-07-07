@@ -28,8 +28,7 @@ describe('as type', () => {
             type: "i",
             name: "b"
           }],
-          body: [0, [[10, [1, "a", "+", "b"]]]],
-          externalNames: []
+          body: [0, [[10, [1, "a", "+", "b"]]]]
         },
         externals: {}
       }) && $.f)({});"

@@ -10,15 +10,11 @@ export interface RawMetadataV1 {
     Record<string, unknown> | (() => Record<string, unknown>);
 }
 
-interface ExternalsV2 {
-  [key: string]: ExternalsV2 | (() => unknown);
-}
-
 export interface RawMetadataV2 {
   v: 2;
   name: string;
-  ast: { params: FuncParameter[]; body: Block; externalNames: string[] };
-  externals: ExternalsV2;
+  ast: { params: FuncParameter[]; body: Block };
+  externals: { [key: string]: () => unknown };
 }
 
 /**
@@ -40,16 +36,12 @@ export interface Metadata {
  * we turn them into getters.
  *
  * @example
- * normalizeExternalsV2({ ext: { prop: () => ext.prop; }}); // { ext: { prop: [Getter] } }
+ * normalizeExternalsV2({ "ext.prop": () => ext.prop; }); // { get "ext.prop"() => ext.prop; }
  */
-function normalizeExternalsV2(externals: ExternalsV2): Record<string, unknown> {
+function normalizeExternalsV2(externals: RawMetadataV2['externals']): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(externals)) {
-    if (typeof value === 'function') {
-      Object.defineProperty(result, key, { get: value, enumerable: true });
-    } else {
-      result[key] = normalizeExternalsV2(value);
-    }
+    Object.defineProperty(result, key, { get: value, enumerable: true });
   }
   return result;
 }

@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { resolutionAccess, timeAccess } from './consts.ts';
 import {
   mainFragment1,

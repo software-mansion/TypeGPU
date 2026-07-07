@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { randf } from '@typegpu/noise';
 
 const Boid = d.struct({

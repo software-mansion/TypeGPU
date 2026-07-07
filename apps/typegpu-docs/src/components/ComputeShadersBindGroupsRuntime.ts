@@ -1,5 +1,5 @@
 import { sdBox2d } from '@typegpu/sdf';
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import { createExampleRoot } from './runnable/index.ts';
 
 const PARTICLE_COUNT = 96;

@@ -181,6 +181,8 @@ export interface TgpuTextureView<
   readonly [$gpuValueOf]: Infer<TSchema>;
   value: Infer<TSchema>;
   $: Infer<TSchema>;
+
+  toString(): string;
 }
 
 export interface TgpuTextureRenderView {
@@ -243,7 +245,8 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
           this.#texture = branch.device.createTexture({
             label: getName(this) ?? '<unnamed>',
             format: props.format,
-            size: props.size,
+            // The WebGPU types accept only mutable arrays, which is too loosely typed
+            size: props.size as number[],
             usage: this.#flags,
             dimension: props.dimension ?? '2d',
             viewFormats: props.viewFormats ?? [],

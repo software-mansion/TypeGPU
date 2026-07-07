@@ -4,7 +4,7 @@ import { babelTransform, rollupTransform } from './transform.ts';
 describe('[BABEL] parser options', () => {
   it('with no include option, import determines whether to run the plugin', () => {
     const codeWithImport = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       
       const increment = tgpu.fn([])(() => {
         const x = 2+2;
@@ -12,7 +12,7 @@ describe('[BABEL] parser options', () => {
     `;
 
     expect(babelTransform(codeWithImport, { include: [/virtual:/] })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       const increment = tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const x = 2 + 2;
       }, {
@@ -20,8 +20,7 @@ describe('[BABEL] parser options', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]],
-          externalNames: []
+          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]]
         },
         externals: {}
       }) && $.f)({}));"
@@ -44,7 +43,7 @@ describe('[BABEL] parser options', () => {
 describe('[ROLLUP] tgpu alias gathering', async () => {
   it('with no include option, import determines whether to run the plugin', async () => {
     const codeWithImport = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       
       const increment = tgpu.fn([])(() => {
       });
@@ -53,13 +52,13 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
   `;
 
     expect(await rollupTransform(codeWithImport, { include: [/virtual:/] })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
 
       const increment = tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[]]},
           externals: {  }
         }) && $.f)({})));
 

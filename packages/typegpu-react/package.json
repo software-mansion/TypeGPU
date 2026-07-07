@@ -1,6 +1,6 @@
 {
   "name": "@typegpu/react",
-  "version": "0.11.1",
+  "version": "0.11.2",
   "description": "The best way to integrate TypeGPU into your React app.",
   "keywords": [
     "React",
@@ -62,14 +62,14 @@
   "peerDependencies": {
     "react": "^19.0.0",
     "react-native": "*",
-    "react-native-wgpu": "*",
+    "react-native-webgpu": "*",
     "typegpu": "workspace:^"
   },
   "peerDependenciesMeta": {
     "react-native": {
       "optional": true
     },
-    "react-native-wgpu": {
+    "react-native-webgpu": {
       "optional": true
     }
   }

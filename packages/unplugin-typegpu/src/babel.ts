@@ -9,8 +9,6 @@ import {
   functionVisitor,
   getBlockScope,
   initPluginState,
-  makeAstBackwardsCompatible,
-  requiresQuotation,
 } from './core/common.ts';
 import { createFilterForId } from './core/filter.ts';
 
@@ -18,26 +16,24 @@ function i(identifier: string): t.Identifier {
   return t.identifier(identifier);
 }
 
-function externalsToNode(externals: Externals | string): t.Expression {
-  if (typeof externals === 'string') {
-    const chain = externals.split('.');
-    if (!chain[0]) {
-      throw new Error('Internal error, expected chain to not be empty');
-    }
-    const base = chain[0] === 'this' ? t.thisExpression() : i(chain[0]);
-    const propAccess = chain
-      .slice(1)
-      .reduce<t.Expression>((obj, prop) => t.memberExpression(obj, t.identifier(prop)), base);
-    return t.arrowFunctionExpression([], propAccess);
-  }
+function externalsToNode(externals: Externals): t.Expression {
   return t.objectExpression(
-    Object.entries(externals).map(([name, value]) =>
-      t.objectProperty(
-        requiresQuotation(name) ? t.stringLiteral(name) : i(name),
-        externalsToNode(value),
+    Array.from(externals, (key) => {
+      const chain = key.split('.');
+      if (!chain[0]) {
+        throw new Error('Internal error, expected chain to not be empty');
+      }
+      const base = chain[0] === 'this' ? t.thisExpression() : i(chain[0]);
+      const propAccess = chain
+        .slice(1)
+        .reduce<t.Expression>((obj, prop) => t.memberExpression(obj, t.identifier(prop)), base);
+
+      return t.objectProperty(
+        t.stringLiteral(key),
+        t.arrowFunctionExpression([], propAccess),
         false,
-      ),
-    ),
+      );
+    }),
   );
 }
 
@@ -50,7 +46,7 @@ function assignMetadata(
   const metadata = t.objectExpression([
     t.objectProperty(i('v'), t.numericLiteral(METADATA_FORMAT_VERSION)),
     t.objectProperty(i('name'), t.valueToNode(name)),
-    t.objectProperty(i('ast'), t.valueToNode(makeAstBackwardsCompatible(ast))),
+    t.objectProperty(i('ast'), t.valueToNode({ params: ast.params, body: ast.body })),
     t.objectProperty(i('externals'), externalsToNode(ast.externalNames)),
   ]);
 
@@ -96,6 +92,14 @@ function assignMetadata(
       t.variableDeclarator(path.node.id, callExpr),
     ]);
     t.inheritLeadingComments(declaration, path.node);
+
+    if (
+      path.parentPath &&
+      (path.parentPath.isExportNamedDeclaration() || path.parentPath.isExportDefaultDeclaration())
+    ) {
+      t.inheritLeadingComments(declaration, path.parentPath.node);
+      path.parentPath.node.leadingComments = null;
+    }
     replacement = declaration;
   }
 
@@ -103,7 +107,17 @@ function assignMetadata(
     // Hoisting the declaration to the top of the scope
     visibility.unshiftContainer('body', replacement as t.Statement);
     this.alreadyTransformed.add(expression);
-    path.remove();
+
+    const id = t.isFunctionDeclaration(path.node) ? path.node.id : undefined;
+    if (id && path.parentPath.isExportNamedDeclaration()) {
+      path.parentPath.replaceWith(
+        t.exportNamedDeclaration(null, [t.exportSpecifier(t.cloneNode(id), t.cloneNode(id))]),
+      );
+    } else if (id && path.parentPath.isExportDefaultDeclaration()) {
+      path.parentPath.replaceWith(t.exportDefaultDeclaration(t.cloneNode(id)));
+    } else {
+      path.remove();
+    }
   } else {
     path.replaceWith(replacement);
   }

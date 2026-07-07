@@ -47,7 +47,7 @@ import {
 import type { TgpuBindGroupLayout, TgpuLayoutEntry } from './tgpuBindGroupLayout.ts';
 import type { WgslEnableExtension } from './wgslExtensions.ts';
 import type { Infer } from './shared/repr.ts';
-import { ShaderGenerator } from './tgsl/shaderGenerator.ts';
+import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -354,6 +354,7 @@ export interface ResolutionCtx {
    */
   makeUniqueIdentifier(primer: string | undefined, scope: 'global' | 'block'): string;
 
+  isIdentifierBanned(name: string): boolean;
   isIdentifierTaken(name: string): boolean;
 
   /**

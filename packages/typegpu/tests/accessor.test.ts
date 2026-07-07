@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import tgpu, { d, std, type TgpuAccessor } from '../src/index.js';
+import { tgpu, d, std, type TgpuAccessor } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 const RED = d.vec3f(1, 0, 0);
@@ -168,6 +168,34 @@ describe('tgpu.accessor', () => {
         const colorX = 1f;
         let color2X = redUniform.x;
         let color3X = getColor().x;
+      }"
+    `);
+  });
+
+  it('prunes unused functions', () => {
+    const helper = () => {
+      'use gpu';
+      return 2;
+    };
+    const helperAccess = tgpu.accessor(d.u32, helper);
+
+    const ctx = {
+      get helper() {
+        return helperAccess.$;
+      },
+    };
+
+    const main = () => {
+      'use gpu';
+      if (2 + 2 === 5) {
+        return ctx.helper;
+      }
+      return 0;
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        return 0;
       }"
     `);
   });
@@ -496,6 +524,20 @@ describe('tgpu.accessor', () => {
         let hello = image.pixels[4].x;
       }"
     `);
+  });
+
+  it('throws when $ is accessed outside of codegen mode', () => {
+    const colorAccess = tgpu.accessor(d.vec3f);
+    expect(() => colorAccess.$).toThrow(
+      '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use `tgpu.slot` for non-WGSL values instead.',
+    );
+  });
+
+  it('throws when mutable $ is accessed outside of codegen mode', () => {
+    const counterAccess = tgpu.mutableAccessor(d.u32);
+    expect(() => counterAccess.$).toThrow(
+      '`tgpu.mutableAccessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use `tgpu.slot` for non-WGSL values instead.',
+    );
   });
 
   it('allows for arbitrarily nested access functions', ({ root }) => {

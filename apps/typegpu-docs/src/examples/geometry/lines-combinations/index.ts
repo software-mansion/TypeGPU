@@ -5,11 +5,12 @@ import {
   joinSlot,
   lineSegmentIndices,
   lineSegmentLeftIndices,
-  lineSegmentVariableWidth,
+  polylineVariableWidth,
   lineSegmentWireframeIndices,
   startCapSlot,
+  arrowCapParamsSlot,
 } from '@typegpu/geometry';
-import tgpu, { type ColorAttachment } from 'typegpu';
+import { tgpu, type ColorAttachment } from 'typegpu';
 import {
   arrayOf,
   builtin,
@@ -140,7 +141,7 @@ const mainVertex = tgpu.vertexFn({
     return Out();
   }
 
-  const result = lineSegmentVariableWidth(vertexIndex, A, B, C, D, MAX_JOIN_COUNT);
+  const result = polylineVariableWidth(A, B, C, D, vertexIndex, MAX_JOIN_COUNT);
 
   return {
     outPos: vec4f(result.vertexPosition * result.w, 0, result.w),
@@ -287,6 +288,7 @@ function createPipelines() {
     .with(startCapSlot, startCap)
     .with(endCapSlot, endCap)
     .with(testCaseSlot, testCase)
+    .with(arrowCapParamsSlot, { length: 7.5, width: 1.75, slant: -0.8 })
     .createRenderPipeline({
       vertex: mainVertex,
       fragment: mainFragment,
@@ -303,6 +305,7 @@ function createPipelines() {
     .with(startCapSlot, startCap)
     .with(endCapSlot, endCap)
     .with(testCaseSlot, testCase)
+    .with(arrowCapParamsSlot, { length: 7.5, width: 1.75, slant: -0.8 })
     .createRenderPipeline({
       vertex: mainVertex,
       fragment: outlineFragment,

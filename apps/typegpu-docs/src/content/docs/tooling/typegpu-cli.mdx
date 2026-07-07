@@ -1,0 +1,126 @@
+---
+title: TypeGPU CLI
+description: Create a TypeGPU project or add TypeGPU to an existing project with npx typegpu@latest.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+The TypeGPU CLI is the project starter for TypeGPU.
+Use it to scaffold a new TypeGPU project or enhance an existing project with TypeGPU dependencies and setup.
+
+## Creating a project
+
+Run the CLI in the directory where you want to create your project:
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm" icon="seti:npm">
+    ```sh frame=none
+    npx typegpu@latest
+    ```
+  </TabItem>
+  <TabItem label="pnpm" icon="pnpm">
+    ```sh frame=none
+    pnpm dlx typegpu@latest
+    ```
+  </TabItem>
+  <TabItem label="yarn" icon="seti:yarn">
+    ```sh frame=none
+    yarn dlx typegpu@latest
+    ```
+  </TabItem>
+  <TabItem label="bun" icon="bun">
+    ```sh frame=none
+    bunx typegpu@latest
+    ```
+  </TabItem>
+</Tabs>
+
+The CLI lets you choose a project name and one of the available templates:
+
+- Vite
+- Vite + React
+- Expo React Native
+- ... and more
+
+It can also install dependencies and download the official TypeGPU AI skill during setup.
+
+### Non-interactive creation
+
+Use `--yes` to skip prompts and use defaults:
+
+```sh
+npx typegpu@latest my-app --yes
+```
+
+You can still select the important setup choices explicitly:
+
+```sh
+npx typegpu@latest my-app --yes --template vite-react --addons @typegpu/sdf,@typegpu/noise
+```
+
+`--yes` skips dependency installation and installs the TypeGPU AI skill automatically.
+
+## Enhancing an existing project
+
+Run the CLI with `--enhance` from the root of an existing project:
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm" icon="seti:npm">
+    ```sh frame=none
+    npx typegpu@latest --enhance
+    ```
+  </TabItem>
+  <TabItem label="pnpm" icon="pnpm">
+    ```sh frame=none
+    pnpm dlx typegpu@latest --enhance
+    ```
+  </TabItem>
+  <TabItem label="yarn" icon="seti:yarn">
+    ```sh frame=none
+    yarn dlx typegpu@latest --enhance
+    ```
+  </TabItem>
+  <TabItem label="bun" icon="bun">
+    ```sh frame=none
+    bunx typegpu@latest --enhance
+    ```
+  </TabItem>
+</Tabs>
+
+You can also pass the project directory explicitly:
+
+```sh
+npx typegpu@latest my-app --enhance
+```
+
+### Non-interactive enhancement
+
+Use `--yes` to apply the standard Vite-oriented TypeGPU setup without prompts:
+
+```sh
+npx typegpu@latest --enhance --yes
+```
+
+You can also add ecosystem packages in the same pass:
+
+```sh
+npx typegpu@latest --enhance --yes --addons @typegpu/sdf
+```
+
+If the CLI cannot detect a package manager, pass `--package-manager npm`, `pnpm`, `pnpm@6`, `yarn`, `yarn@berry`, or `bun`.
+
+:::caution
+Back up your project before running the enhance flow.
+The CLI does not provide an automatic rollback.
+:::
+
+## Options
+
+- `-y`, `--yes`: skip prompts and use defaults.
+- `--template <name>`: choose `vite-bare`, `vite-complex`, `vite-react`, or `expo-bare`.
+- `--addons <name1>,<name2>`: add TypeGPU ecosystem packages.
+- `--package-manager <pm>`: choose the package manager for dependency and skill commands.
+
+## Related tools
+
+If you want to convert existing WGSL shader files into TypeGPU definitions, use [tgpu-gen](/TypeGPU/tooling/tgpu-gen) instead.

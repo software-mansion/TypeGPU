@@ -32,6 +32,8 @@ export interface TgpuSampler {
   readonly [$gpuValueOf]: Infer<WgslSampler>;
   value: Infer<WgslSampler>;
   $: Infer<WgslSampler>;
+
+  toString(): string;
 }
 
 export interface TgpuComparisonSampler {
@@ -42,6 +44,8 @@ export interface TgpuComparisonSampler {
   readonly [$gpuValueOf]: Infer<WgslComparisonSampler>;
   value: Infer<WgslComparisonSampler>;
   $: Infer<WgslComparisonSampler>;
+
+  toString(): string;
 }
 
 export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {}

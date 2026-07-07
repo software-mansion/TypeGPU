@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu, { d } from '../src/index.js';
+import { tgpu, d } from 'typegpu';
 
 describe('f32', () => {
   it('differs in type from other numeric schemas', () => {
@@ -76,5 +76,52 @@ describe('TGSL', () => {
         const b = false;
       }"
     `);
+  });
+});
+
+describe('Edge cases', () => {
+  it('throws when called on +Infinity', () => {
+    expect(() => d.f32(Infinity)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot convert value 'Infinity' to type f32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
+    );
+    expect(() => d.f16(Infinity)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot convert value 'Infinity' to type f16 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
+    );
+    expect(() => d.i32(Infinity)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot convert value 'Infinity' to type i32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
+    );
+    expect(() => d.u32(Infinity)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot convert value 'Infinity' to type u32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
+    );
+  });
+
+  it('throws when called on -Infinity', () => {
+    expect(() => d.f32(-Infinity)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot convert value '-Infinity' to type f32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
+    );
+    expect(() => d.f16(-Infinity)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot convert value '-Infinity' to type f16 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
+    );
+    expect(() => d.i32(-Infinity)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot convert value '-Infinity' to type i32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
+    );
+    expect(() => d.u32(-Infinity)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot convert value '-Infinity' to type u32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
+    );
+  });
+
+  it('throws when called on NaN', () => {
+    expect(() => d.f32(NaN)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot convert value 'NaN' to type f32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
+    );
+    expect(() => d.f16(NaN)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot convert value 'NaN' to type f16 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
+    );
+    expect(() => d.i32(NaN)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot convert value 'NaN' to type i32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
+    );
+    expect(() => d.u32(NaN)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot convert value 'NaN' to type u32 because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
+    );
   });
 });

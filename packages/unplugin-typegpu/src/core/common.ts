@@ -176,7 +176,7 @@ export function getBlockScope(
 
 /**
  * Checks if `node` is an alias for the 'tgpu' object, traditionally
- * available via `import tgpu from 'typegpu'`.
+ * available via `import { tgpu } from 'typegpu'`.
  */
 function isTgpu(state: PluginState, node: t.Node): boolean {
   let path = '';
@@ -444,14 +444,6 @@ const operators = {
   '/=': '__tsover_div',
   '%=': '__tsover_mod',
 };
-
-export function makeAstBackwardsCompatible(ast: ReturnType<typeof transpileFn>) {
-  return {
-    params: ast.params,
-    body: ast.body,
-    externalNames: Object.keys(ast.externalNames),
-  };
-}
 
 function containsUseGpuDirective(
   node: t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,

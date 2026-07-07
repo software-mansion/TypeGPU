@@ -1,0 +1,312 @@
+---
+title: Explaining the Magic
+description: This doc explains how a 'use gpu' directive can make a function runnable on the GPU.
+---
+
+This tutorial explains in depth what exactly happens during the bundle time to make 'use gpu' functions possible.
+Understanding this is not at all necessary to start using TypeGPU, but it may help contributors understand why some things work like they do.
+
+## Introduction
+
+Take a look at the following code. It declares a `counter` buffer, and increases it in `incrementPipeline`.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+
+const root = await tgpu.init();
+
+const counter = root.createMutable(d.vec2u);
+const incrementBy = {
+  allModifier: tgpu.const(d.vec2u, d.vec2u(1, 1)),
+  yModifier: tgpu.const(d.u32, 2),
+};
+
+const increment = tgpu.computeFn({ workgroupSize: [1] })(() => {
+  'use gpu';
+  counter.$ += incrementBy.allModifier.$;
+  counter.$.y += incrementBy.yModifier.$;
+});
+
+const incrementPipeline = root.createComputePipeline({ compute: increment });
+
+incrementPipeline.dispatchWorkgroups(1);
+console.log(await counter.read()); // d.vec2u(1, 3)
+```
+
+TypeGPU translated this code to WebGPU, which can be previewed using `tgpu.resolve`:
+
+```ts twoslash
+import { tgpu } from 'typegpu';
+const root = await tgpu.init();
+const incrementPipeline = root.createComputePipeline({ compute: tgpu.computeFn({ workgroupSize: [1] })`` });
+// ---cut---
+console.log(tgpu.resolve([incrementPipeline]));
+// @group(0) @binding(0) var<storage, read_write> counter: vec2u;
+//
+// const allModifier: vec2u = vec2u(1);
+//
+// const yModifier: u32 = 2u;
+//
+// @compute @workgroup_size(1) fn increment() {
+//   counter += allModifier;
+//   counter.y += yModifier;
+// }
+```
+
+This was made possible by [unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu), 
+which modifies the existing code during bundle (build) time.
+The modified code can be previewed for debug/educational purposes with the following trick:
+
+```ts twoslash
+// ... imports
+const main = async () => {
+  // ... remaining file content
+}
+console.log(main.toString());
+```
+
+The code with the compute pipeline is transformed as follows (don't try to parse it, we will explain it on higher level in a second):
+
+```js
+async () => {
+	const root = await tgpu.init();
+	const counter = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createMutable(d.vec2u), "counter"));
+	const incrementBy = {
+		allModifier: (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.vec2u, d.vec2u(1, 1)), "allModifier")),
+		yModifier: (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 2), "yModifier"))
+	};
+	const increment = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.computeFn({ workgroupSize: [1] })((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+		"use gpu";
+		counter.$ = __tsover_add(counter.$, incrementBy.allModifier.$);
+		counter.$.y = __tsover_add(counter.$.y, incrementBy.yModifier.$);
+	}), {
+    v: 2,
+    name: undefined,
+    ast: {"params":[],"body":[0,[[2,[7,"counter","$"],"+=",[7,"incrementBy.allModifier","$"]],[2,[7,[7,"counter","$"],"y"],"+=",[7,"incrementBy.yModifier","$"]]]]},
+    externals: { "counter": () => counter, "incrementBy.allModifier": () => incrementBy.allModifier, "incrementBy.yModifier": () => incrementBy.yModifier }
+  }) && $.f)({}))), "increment"));
+	const incrementPipeline = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createComputePipeline({ compute: increment }), "incrementPipeline"));
+	incrementPipeline.dispatchWorkgroups(1);
+	console.log(await counter.read());
+}
+```
+
+As can be seen, unplugin heavily modifies code around some tgpu elements. 
+The changes can be split into three categories:
+
+- auto-naming (`globalThis.__TYPEGPU_AUTONAME__`),
+- function metadata assignment (`globalThis.__TYPEGPU_META__`),
+- operator overloading (`__tsover_add` and similar).
+
+## Auto-naming
+
+Most TypeGPU resources can be named via the `$name` method.
+While this is completely optional, a name can make debugging easier, and it also serves as a primer for identifiers in resulting WGSL.
+
+`unplugin-typegpu` traverses the AST of each bundled file, and matches most common patterns where a default name for a resource (recognized by constructor name) can be inferred.
+
+```js
+const counter = root.createMutable(d.vec2u); // can be named 'counter'
+
+const incrementBy = {
+  allModifier: tgpu.const(d.vec2u, d.vec2u(1, 1)), // can be named 'allModifier'
+}
+```
+
+The matched resource is only wrapped in the autonaming function if the method `$name` was not called before:
+
+```ts
+const main = () => {
+  const myConst = tgpu.const(d.u32, 2).$name('incrementValue');
+  const otherConst = tgpu.const(d.u32, 2);
+};
+
+console.log(main.toString());
+// () => {
+// 	const myConst = tgpu.const(d.u32, 2).$name("incrementValue");
+// 	const otherConst = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.const(d.u32, 2), "otherConst"));
+// }
+```
+
+The `globalThis.__TYPEGPU_AUTONAME__` function checks its argument for the `$internal` symbol and `$name` prop, and if both are present (and the item does not already have a name), calls `$name` on the item.
+Therefore, some potential false positive calls to `__TYPEGPU_AUTONAME__` (e.g. if user named their unrelated function `createMutable`) cause no harm.
+
+It is worth noting that we actually wrap the function in a `(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))` call: 
+we cannot know for sure that TypeGPU was already imported and assigned the autonaming function, so we need a fallback.
+This is also the reason why we cannot just export a function like `tgpu.name`.
+
+:::note
+Not all resources can be named by the unplugin. 
+The most popular case where a name is not assigned is when a resource is returned from a function.
+Such resources are named 'item' in the resolved WGSL.
+```ts
+const createBuffer = () => {
+  return root.createBuffer(d.u32);
+}
+```
+:::
+
+
+## Function metadata assignment
+
+Function metadata is what makes it possible to generate WGSL from JavaScript code. 
+The metadata consists of the metadata version, the function name, the AST ([abstract syntax tree](https://en.wikipedia.org/wiki/Abstract_syntax_tree)), and externals (the captured scope of the function),
+Only functions marked with `'use gpu'` are processed, as well as those immediately passed into `tgpu.fn` shells. 
+
+### AST
+
+The plugin uses the [tinyest-for-wgsl](https://github.com/software-mansion/TypeGPU/blob/main/packages/tinyest-for-wgsl/README.md) 
+package to parse the function AST into our custom AST format called [tinyest](https://github.com/software-mansion/TypeGPU/blob/main/packages/tinyest/README.md).
+Our `wgslGenerator` traverses this AST and generates code snippets.
+
+This could theoretically be done at runtime from the function's `toString`, but it would require bundling a JavaScript parser with TypeGPU, and make catching externals impossible.
+
+### Externals
+
+Along with AST, [tinyest-for-wgsl](https://github.com/software-mansion/TypeGPU/blob/main/packages/tinyest-for-wgsl/README.md) also returns a set of externals (variables captured from outer scope).
+This section is more technical to explain our design choices.
+
+#### Step 1: tinyest-for-wgsl
+
+During tinyest generation, tinyest-for-wgsl also remembers all variables introduced into the scope. This lets it return a set of variables that reference outer scope.
+Externals are immediately flattened, which means that the prop accesses are 'squashed' into identifiers:
+
+```ts
+const fn = () => {
+  'use gpu';
+  const a = 1; // no externals introduced
+  const b = a + 1; // no externals introduced
+  const c = ext; // 'ext' added to externals
+  const d = ext.p; // 'ext.p' added to externals, the prop access is replaced with an identifier 'ext.p'
+}
+// tinyest-for-wgsl returns the generated AST and externals: Set { 'ext', 'ext.p' }
+// No code was modified so far, the prop access squashing only applies to the generated AST.
+```
+
+The externals are not flattened all the way to the end though. There are three most important cases where we stop early:
+
+```ts
+const fn = () => {
+  'use gpu';
+  const a = ext.p1.p2().p3; // 'ext.p1.p2' added to externals
+  const b = ext.q1['q2'].q3; // 'ext.q1' added to externals
+  const c = ext.r1.$.r3; // 'ext.r1' added to externals
+}
+```
+
+Stopping at `$` is not necessary in any way for the library to function properly.
+However, this lets the library try to auto-name resources that were missed by unplugin autonaming,
+while also not affecting the tree-shaking.
+
+#### Step 2: assigning metadata
+
+When the unplugin assigns metadata, the list of externals is turned into an object of thunks:
+```ts
+const externals = { 
+  "ext.p1.p2": () => ext.p1.p2, 
+  "ext.q1": () => ext.q1, 
+  "ext.r1": () => ext.r1
+}
+```
+
+There are two important reasons why we need to delay the external computation and cannot just generate entries like `"ext.p1.p2": ext.p1.p2`.
+
+The first reason is externals recapture:
+```ts
+let buffer;
+let pipeline;
+const computeFn = tgpu.computeFn({ workgroupSize: [1] })(() => { 
+  'use gpu'; buffer.$ += 1; 
+}); // { buffer: buffer } would now become { buffer: undefined }
+buffer = root.createMutable(d.u32); // externals do not update
+```
+The same scenario may occur when a function references resources that are recreated (e.g. a resized buffer).
+
+The second reason is the fact that some of our getters depend on the current resolution mode.
+`const.$` returns the value of the const when called outside of resolution, but during resolution it returns a different object with `[$ownSnippet]` and `[$resolve]` symbols.
+
+#### Step 3: runtime
+
+At runtime, the thunks are changed to getters for convenience.
+
+```ts
+const externals = { 
+  get "ext.p1.p2"() { return ext.p1.p2 }, 
+  get "ext.q1"() { return ext.q1 }, 
+  get "ext.r1"() { return ext.r1 } 
+}
+```
+
+This iteration of externals is still shared between different resolutions of the same function, thus we cannot concretize the externals just yet.
+
+Also, during resolution, deciding whether a given object comes from externals is difficult. Getters let us forget about this problem.
+Without this change, the `wgslGenerator` would throw when encountering a function not marked with 'use gpu'.
+
+When the `wgslGenerator` cannot find an identifier in scope, 
+it accesses the externals, which return the correct code snippets and automatically add any used definitions to the context, 
+as this is the behavior of resource prop access during resolution.
+
+:::caution[Fragility of external prop access]
+There are cases where external prop access performed in during resolution modifies the context.
+
+The following code assumes that `helperAccess.$` is actually called in our internals.
+This may happen for example if we included the entire prop chain in externals,
+and then iterated over external values during resolution.
+
+```ts
+const helper = () => {
+  'use gpu';
+  return 2;
+};
+const helperAccess = tgpu.accessor(d.u32, helper);
+
+const main = () => {
+  'use gpu';
+  if (2 + 2 === 5) {
+    return helperAccess.$;
+  }
+  return 0;
+};
+
+// This snippet would generate if `resolve` actually executed `helperAccess.$`.
+expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+  "fn helper() -> i32 {
+    return 2;
+  }
+
+  fn main() -> i32 {
+    return 0;
+  }"
+`);
+```
+
+This situation can occur even when pruning externals at `.$`:
+```ts
+const ctx = {
+  get helper() {
+    return helperAccess.$;
+  },
+};
+
+// ctx.helper
+```
+
+This is the reason why in unplugin we prepend each external with `() =>` 
+instead of just prepending the entire object - this lets us only evaluate the externals that were actually used.
+
+:::
+
+## Operator overloading
+
+To allow [tsover](https://github.com/software-mansion/tsover/tree/main) to work as we expect when the function is called in JavaScript, operators used inside the function body are swapped with calls to functions like `__tsover_add`, defined by [tsover-runtime](https://github.com/software-mansion/tsover/blob/main/packages/tsover-runtime/README.md).
+This makes it possible to add vectors together without referencing `std.mul` and such.
+
+:::note
+This change occurs only in the actual code.
+Generated tinyest metadata is not modified.
+:::
+
+:::caution
+`unplugin-typegpu` only transforms operators inside of 'use gpu' functions.
+:::
+

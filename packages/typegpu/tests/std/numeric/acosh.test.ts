@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vec2f, vec3f, vec4f } from '../../../src/data/index.ts';
-import { acosh, isCloseTo } from '../../../src/std/index.ts';
+import { vec2f, vec3f, vec4f } from 'typegpu/data';
+import { acosh, isCloseTo } from 'typegpu/std';
 
 describe('acosh', () => {
   it('computes acosh of a number', () => {

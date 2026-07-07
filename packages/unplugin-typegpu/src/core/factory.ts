@@ -13,7 +13,6 @@ import {
   functionVisitor,
   getBlockScope,
   METADATA_FORMAT_VERSION,
-  makeAstBackwardsCompatible,
   requiresQuotation,
 } from './common.ts';
 
@@ -34,13 +33,8 @@ function embedJSON(jsValue: unknown) {
     .replace(/\u2029/g, '\\u2029');
 }
 
-function externalsToString(externals: Externals | string): string {
-  if (typeof externals === 'string') {
-    return `() => ${externals}`;
-  }
-  const entries = Object.entries(externals).map(
-    ([key, value]) => `${requiresQuotation(key) ? `"${key}"` : key}: ${externalsToString(value)}`,
-  );
+function externalsToString(externals: Externals): string {
+  const entries = Array.from(externals, (key) => `"${key}": () => ${key}`);
   return `{ ${entries.join(', ')} }`;
 }
 
@@ -50,11 +44,10 @@ function assignMetadata(
   name: string | undefined,
   ast: ReturnType<typeof transpileFn>,
 ): void {
-  // TODO (#2504): remove externalNames from ast
   const metadata = `{
     v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
-    ast: ${embedJSON(makeAstBackwardsCompatible(ast))},
+    ast: ${embedJSON({ params: ast.params, body: ast.body })},
     externals: ${externalsToString(ast.externalNames)}
   }`;
 
@@ -79,6 +72,14 @@ function assignMetadata(
     if (t.isExportNamedDeclaration(path.parent)) {
       nodeToOverride = path.parent;
       code = `export ${code}`;
+    } else if (t.isExportDefaultDeclaration(path.parent)) {
+      nodeToOverride = path.parent;
+
+      if (t.isFunctionDeclaration(path.node) && path.node.id) {
+        code = `${code}export default ${path.node.id.name};`;
+      } else {
+        code = `export default ${code};`;
+      }
     }
   }
 

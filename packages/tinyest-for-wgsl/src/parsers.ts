@@ -3,13 +3,9 @@ import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import { FuncParameterType } from 'tinyest';
 import type { Context, JsNode, TranspilationResult } from './types';
-import { addExternal } from './externals.ts';
+import { tryFindExternalChain } from './externals.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
-
-function isDeclared(ctx: Context, name: string) {
-  return ctx.stack.some((scope) => scope.declaredNames.includes(name));
-}
 
 const tsFallthrough = (ctx: Context, node: { expression: babel.Expression }): tinyest.AnyNode => {
   return transpile(ctx, node.expression);
@@ -56,14 +52,10 @@ const Transpilers: Partial<{
       : [NODE.return],
 
   Identifier(ctx, node) {
-    if (ctx.ignoreExternalDepth === 0 && !isDeclared(ctx, node.name)) {
-      addExternal(ctx.externalNames, ctx.ancestorChain);
-    }
     return node.name;
   },
 
-  ThisExpression(ctx) {
-    addExternal(ctx.externalNames, ctx.ancestorChain);
+  ThisExpression() {
     return 'this';
   },
 
@@ -302,11 +294,18 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
     throw new Error(`Unsupported JS functionality: ${node.type}`);
   }
 
-  ctx.ancestorChain.push(node);
+  if (ctx.ignoreExternalDepth === 0) {
+    // Check if the node is an external prop access chain, and if so,
+    // add it to externals and swap the AST node for an identifier.
+    const externalChain = tryFindExternalChain(ctx, node);
+    if (externalChain) {
+      ctx.externalNames.add(externalChain);
+      return externalChain;
+    }
+  }
+
   // @ts-expect-error <too much for typescript, it seems :/ >
-  const result = transpiler(ctx, node);
-  ctx.ancestorChain.pop();
-  return result;
+  return transpiler(ctx, node);
 }
 
 export function extractFunctionParts(rootNode: JsNode): {
@@ -411,8 +410,9 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
   const { params, body } = extractFunctionParts(rootNode);
 
   const ctx: Context = {
-    externalNames: Object.create(null),
+    externalNames: new Set(),
     ignoreExternalDepth: 0,
+    visitedNodes: new Set(),
     stack: [
       {
         declaredNames: params.flatMap((param) =>
@@ -422,7 +422,6 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
         ),
       },
     ],
-    ancestorChain: [],
   };
 
   const tinyestBody = transpile(ctx, body);
@@ -444,14 +443,14 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
 
 export function transpileNode(node: JsNode): tinyest.AnyNode {
   const ctx: Context = {
-    externalNames: Object.create(null),
+    externalNames: new Set(),
     ignoreExternalDepth: 0,
+    visitedNodes: new Set(),
     stack: [
       {
         declaredNames: [],
       },
     ],
-    ancestorChain: [],
   };
 
   return transpile(ctx, node);

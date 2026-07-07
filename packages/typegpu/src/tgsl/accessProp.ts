@@ -1,7 +1,7 @@
 import { stitch } from '../core/resolve/stitch.ts';
 import { AutoStruct } from '../data/autoStruct.ts';
 import { EntryInputRouter } from '../core/function/entryInputRouter.ts';
-import { isUnstruct, MatrixColumnsAccess, undecorate, UnknownData } from '../data/dataTypes.ts';
+import { isUnstruct, MatrixColumnsAccess, UnknownData } from '../data/dataTypes.ts';
 import { bool, f16, f32, i32, u32 } from '../data/numeric.ts';
 import { derefSnippet } from '../data/ref.ts';
 import { isSnippet, snip, type Snippet } from '../data/snippet.ts';
@@ -33,6 +33,8 @@ import {
 import { isKnownAtComptime } from '../types.ts';
 import { coerceToSnippet, numericLiteralToSnippet } from './generationHelpers.ts';
 import { InfixDispatch, infixOperators, type InfixOperatorName } from './infixDispatch.ts';
+import { accessStructProp } from './accessStructProp.ts';
+import { getName, isNamable, setName } from '../shared/meta.ts';
 
 const infixKinds = [
   'vec2f',
@@ -123,18 +125,7 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
   }
 
   if (isWgslStruct(target.dataType) || isUnstruct(target.dataType)) {
-    let propType = target.dataType.propTypes[propName];
-    if (!propType) {
-      return undefined;
-    }
-    propType = undecorate(propType);
-
-    return snip(
-      stitch`${target}.${propName}`,
-      propType,
-      /* origin */ target.origin,
-      target.possibleSideEffects,
-    );
+    return accessStructProp(target, propName);
   }
 
   if (target.dataType instanceof AutoStruct) {
@@ -215,7 +206,11 @@ export function accessProp(target: Snippet, propName: string): Snippet | undefin
 
   if (isKnownAtComptime(target) || target.dataType === UnknownData) {
     // oxlint-disable-next-line typescript/no-explicit-any -- we either know exactly what it is, or have no idea at all
-    return coerceToSnippet((target.value as any)[propName]);
+    const prop = (target.value as any)[propName];
+    if (isNamable(prop) && getName(prop) === undefined) {
+      setName(prop, propName);
+    }
+    return coerceToSnippet(prop);
   }
 
   return undefined;

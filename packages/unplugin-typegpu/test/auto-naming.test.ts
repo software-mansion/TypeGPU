@@ -4,7 +4,7 @@ import { babelTransform, rollupTransform } from './transform.ts';
 describe('[BABEL] auto naming', () => {
   it('works with tgpu items', () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       const bindGroupLayout = tgpu.bindGroupLayout({});
@@ -17,7 +17,7 @@ describe('[BABEL] auto naming', () => {
     `;
 
     expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       const bindGroupLayout = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.bindGroupLayout({}), "bindGroupLayout");
       const vertexLayout = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.vertexLayout(d.arrayOf(d.u32)), "vertexLayout");
@@ -26,8 +26,7 @@ describe('[BABEL] auto naming', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, []],
-          externalNames: []
+          body: [0, []]
         },
         externals: {}
       }) && $.f)({})), "fn");
@@ -39,7 +38,7 @@ describe('[BABEL] auto naming', () => {
 
   it(`works with tgpu['~unstable'] items`, () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       let nothing, accessor = tgpu['~unstable'].accessor(d.u32);
@@ -49,7 +48,7 @@ describe('[BABEL] auto naming', () => {
     `;
 
     expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       let nothing,
         accessor = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu['~unstable'].accessor(d.u32), "accessor");
@@ -86,7 +85,7 @@ describe('[BABEL] auto naming', () => {
 
   it('works with root items', () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
 
       const root = await tgpu.init();
       const myBuffer = root.createBuffer(d.u32, 2);
@@ -95,7 +94,7 @@ describe('[BABEL] auto naming', () => {
     `;
 
     expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       const root = await tgpu.init();
       const myBuffer = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createBuffer(d.u32, 2), "myBuffer");
       console.log(myBuffer);"
@@ -104,7 +103,7 @@ describe('[BABEL] auto naming', () => {
 
   it('works with functions', () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       const myFunction = tgpu.fn([])(() => 0);
@@ -123,15 +122,14 @@ describe('[BABEL] auto naming', () => {
     `;
 
     expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       const myFunction = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => 0, {
         v: 2,
         name: undefined,
         ast: {
           params: [],
-          body: [0, [[10, [5, "0"]]]],
-          externalNames: []
+          body: [0, [[10, [5, "0"]]]]
         },
         externals: {}
       }) && $.f)({})), "myFunction");
@@ -142,8 +140,7 @@ describe('[BABEL] auto naming', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, []],
-          externalNames: []
+          body: [0, []]
         },
         externals: {}
       }) && $.f)({})), "myComputeFn");
@@ -160,8 +157,7 @@ describe('[BABEL] auto naming', () => {
           params: [],
           body: [0, [[10, [104, {
             ret: [5, "0"]
-          }]]]],
-          externalNames: []
+          }]]]]
         },
         externals: {}
       }) && $.f)({})), "myVertexFn");
@@ -175,13 +171,10 @@ describe('[BABEL] auto naming', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, [[10, [6, [7, "d", "vec4f"], []]]]],
-          externalNames: ["d"]
+          body: [0, [[10, [6, "d.vec4f", []]]]]
         },
         externals: {
-          d: {
-            vec4f: () => d.vec4f
-          }
+          "d.vec4f": () => d.vec4f
         }
       }) && $.f)({})), "myFragmentFn");"
     `);
@@ -221,7 +214,7 @@ describe('[BABEL] auto naming', () => {
 
   it('does not name already named items', () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       import { struct } from 'typegpu/data';
 
@@ -235,7 +228,7 @@ describe('[BABEL] auto naming', () => {
     `;
 
     expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       import { struct } from 'typegpu/data';
       const root = await tgpu.init();
@@ -327,8 +320,7 @@ describe('[BABEL] auto naming', () => {
         name: "myFun3",
         ast: {
           params: [],
-          body: [0, [[10, [5, "0"]]]],
-          externalNames: []
+          body: [0, [[10, [5, "0"]]]]
         },
         externals: {}
       }) && $.f)({});
@@ -341,8 +333,7 @@ describe('[BABEL] auto naming', () => {
         name: "myFun1",
         ast: {
           params: [],
-          body: [0, [[10, [5, "0"]]]],
-          externalNames: []
+          body: [0, [[10, [5, "0"]]]]
         },
         externals: {}
       }) && $.f)({});
@@ -355,8 +346,7 @@ describe('[BABEL] auto naming', () => {
         name: "myFun2",
         ast: {
           params: [],
-          body: [0, [[10, [5, "0"]]]],
-          externalNames: []
+          body: [0, [[10, [5, "0"]]]]
         },
         externals: {}
       }) && $.f)({});"
@@ -365,7 +355,7 @@ describe('[BABEL] auto naming', () => {
 
   it('works with class properties', () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       const root = await tgpu.init();
 
@@ -375,7 +365,7 @@ describe('[BABEL] auto naming', () => {
     `;
 
     expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       const root = await tgpu.init();
       class MyController {
@@ -427,7 +417,7 @@ describe('[BABEL] auto naming', () => {
 
   it('works with object properties', () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       const root = await tgpu.init();
 
@@ -437,7 +427,7 @@ describe('[BABEL] auto naming', () => {
     `;
 
     expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       const root = await tgpu.init();
       const items: {
@@ -451,7 +441,7 @@ describe('[BABEL] auto naming', () => {
 
   it('works with assigning to "this" property', () => {
     const code = `\
-      import tgpu, { type TgpuUniform } from 'typegpu';
+      import { tgpu, type TgpuUniform } from 'typegpu';
       import * as d from 'typegpu/data';
       const root = await tgpu.init();
 
@@ -465,7 +455,7 @@ describe('[BABEL] auto naming', () => {
     `;
 
     expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu, { type TgpuUniform } from 'typegpu';
+      "import { tgpu, type TgpuUniform } from 'typegpu';
       import * as d from 'typegpu/data';
       const root = await tgpu.init();
       class MyController {
@@ -479,7 +469,7 @@ describe('[BABEL] auto naming', () => {
 
   it('works with assigning to "this" private property', () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       const root = await tgpu.init();
@@ -500,7 +490,7 @@ describe('[BABEL] auto naming', () => {
     `;
 
     expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       const root = await tgpu.init();
       class MyController {
@@ -518,7 +508,7 @@ describe('[BABEL] auto naming', () => {
 
   it('works with guarded pipelines', () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
 
       const root = await tgpu.init();
 
@@ -535,7 +525,7 @@ describe('[BABEL] auto naming', () => {
     `;
 
     expect(babelTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       const root = await tgpu.init();
       const myGuardedPipeline = /*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createGuardedComputePipeline(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         'use gpu';
@@ -544,8 +534,7 @@ describe('[BABEL] auto naming', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, []],
-          externalNames: []
+          body: [0, []]
         },
         externals: {}
       }) && $.f)({})), "myGuardedPipeline");
@@ -556,8 +545,7 @@ describe('[BABEL] auto naming', () => {
         name: undefined,
         ast: {
           params: [],
-          body: [0, []],
-          externalNames: []
+          body: [0, []]
         },
         externals: {}
       }) && $.f)({})).dispatchThreads(), "anotherGuardedPipeline");
@@ -569,7 +557,7 @@ describe('[BABEL] auto naming', () => {
 describe('[ROLLUP] auto naming', () => {
   it('works with tgpu items', async () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       const bindGroupLayout = tgpu.bindGroupLayout({});
@@ -583,7 +571,7 @@ describe('[ROLLUP] auto naming', () => {
     `;
 
     expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       const bindGroupLayout = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.bindGroupLayout({}), "bindGroupLayout"));
@@ -592,7 +580,7 @@ describe('[ROLLUP] auto naming', () => {
             (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {}), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[]]},
           externals: {  }
         }) && $.f)({}))), "fn"));
             (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.accessor(d.u32), "accessor"));
@@ -630,7 +618,7 @@ describe('[ROLLUP] auto naming', () => {
 
   it('works with root items', async () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
 
       const root = await tgpu.init();
       const myBuffer = root.createBuffer(d.u32, 2);
@@ -639,7 +627,7 @@ describe('[ROLLUP] auto naming', () => {
     `;
 
     expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
 
       const root = await tgpu.init();
             const myBuffer = (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(root.createBuffer(d.u32, 2), "myBuffer"));
@@ -651,7 +639,7 @@ describe('[ROLLUP] auto naming', () => {
 
   it('works with functions', async () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       const myFunction = tgpu.fn([])(() => 0);
@@ -670,20 +658,20 @@ describe('[ROLLUP] auto naming', () => {
     `;
 
     expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => 0), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[[10,[5,"0"]]]]},
           externals: {  }
         }) && $.f)({}))), "myFunction"));
             (/*#__PURE__*/(globalThis.__TYPEGPU_AUTONAME__ ?? (a => a))(tgpu.computeFn({ workgroupSize: [1] })(
               (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {}), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[]]},
           externals: {  }
         }) && $.f)({})),
             ), "myComputeFn"));
@@ -691,7 +679,7 @@ describe('[ROLLUP] auto naming', () => {
               (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => ({ ret: 0 })), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[[10,[104,{"ret":[5,"0"]}]]]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[[10,[104,{"ret":[5,"0"]}]]]]},
           externals: {  }
         }) && $.f)({})),
             ), "myVertexFn"));
@@ -702,8 +690,8 @@ describe('[ROLLUP] auto naming', () => {
               (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => d.vec4f()), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[[10,[6,[7,"d","vec4f"],[]]]]],"externalNames":["d"]},
-          externals: { d: { vec4f: () => d.vec4f } }
+          ast: {"params":[],"body":[0,[[10,[6,"d.vec4f",[]]]]]},
+          externals: { "d.vec4f": () => d.vec4f }
         }) && $.f)({})),
             ), "myFragmentFn"));
       "
@@ -745,7 +733,7 @@ describe('[ROLLUP] auto naming', () => {
 
   it('does not name already named items', async () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       import { struct } from 'typegpu/data';
 
@@ -759,7 +747,7 @@ describe('[ROLLUP] auto naming', () => {
     `;
 
     expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       import { struct } from 'typegpu/data';
 
@@ -857,7 +845,7 @@ describe('[ROLLUP] auto naming', () => {
             }), {
           v: 2,
           name: "myFun3",
-          ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[[10,[5,"0"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -867,7 +855,7 @@ describe('[ROLLUP] auto naming', () => {
             }), {
           v: 2,
           name: "myFun1",
-          ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[[10,[5,"0"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -877,7 +865,7 @@ describe('[ROLLUP] auto naming', () => {
             }), {
           v: 2,
           name: "myFun2",
-          ast: {"params":[],"body":[0,[[10,[5,"0"]]]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[[10,[5,"0"]]]]},
           externals: {  }
         }) && $.f)({}));
 
@@ -890,7 +878,7 @@ describe('[ROLLUP] auto naming', () => {
 
   it('works with class properties', async () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       const root = await tgpu.init();
 
@@ -902,7 +890,7 @@ describe('[ROLLUP] auto naming', () => {
     `;
 
     expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       const root = await tgpu.init();
@@ -964,7 +952,7 @@ describe('[ROLLUP] auto naming', () => {
 
   it('works with object properties', async () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       const root = await tgpu.init();
 
@@ -976,7 +964,7 @@ describe('[ROLLUP] auto naming', () => {
     `;
 
     expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       const root = await tgpu.init();
@@ -992,7 +980,7 @@ describe('[ROLLUP] auto naming', () => {
 
   it('works with assigning to "this" property', async () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
       const root = await tgpu.init();
 
@@ -1008,7 +996,7 @@ describe('[ROLLUP] auto naming', () => {
     `;
 
     expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       const root = await tgpu.init();
@@ -1028,7 +1016,7 @@ describe('[ROLLUP] auto naming', () => {
 
   it('works with assigning to "this" private property', async () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       const root = await tgpu.init();
@@ -1049,7 +1037,7 @@ describe('[ROLLUP] auto naming', () => {
     `;
 
     expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
       import * as d from 'typegpu/data';
 
       const root = await tgpu.init();
@@ -1073,7 +1061,7 @@ describe('[ROLLUP] auto naming', () => {
 
   it('works with guarded pipelines', async () => {
     const code = `\
-      import tgpu from 'typegpu';
+      import { tgpu } from 'typegpu';
 
       const root = await tgpu.init();
 
@@ -1091,7 +1079,7 @@ describe('[ROLLUP] auto naming', () => {
     `;
 
     expect(await rollupTransform(code, { autoNamingEnabled: true })).toMatchInlineSnapshot(`
-      "import tgpu from 'typegpu';
+      "import { tgpu } from 'typegpu';
 
       const root = await tgpu.init();
 
@@ -1100,7 +1088,7 @@ describe('[ROLLUP] auto naming', () => {
             }), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[]]},
           externals: {  }
         }) && $.f)({}))), "myGuardedPipeline"));
 
@@ -1110,7 +1098,7 @@ describe('[ROLLUP] auto naming', () => {
               }), {
           v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          ast: {"params":[],"body":[0,[]]},
           externals: {  }
         }) && $.f)({})))
               .dispatchThreads(), "anotherGuardedPipeline"));

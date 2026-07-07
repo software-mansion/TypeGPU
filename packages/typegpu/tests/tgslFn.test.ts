@@ -1,8 +1,7 @@
 import { attest } from '@ark/attest';
 import { describe, expect } from 'vitest';
-import { builtin } from '../src/builtin.ts';
-import tgpu, { d, type TgpuFn, type TgpuSlot } from '../src/index.js';
-import { getName } from '../src/shared/meta.ts';
+import { builtin } from 'typegpu/data';
+import { tgpu, d, type TgpuFn, type TgpuSlot } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('TGSL tgpu.fn function', () => {
@@ -14,7 +13,7 @@ describe('TGSL tgpu.fn function', () => {
       )(() => 3)
       .$name('get_x');
 
-    expect(getName(getX)).toBe('get_x');
+    expect(tgpu.resolve([getX])).toContain('fn get_x() -> f32');
   });
 
   it('resolves to WGSL', () => {
@@ -28,36 +27,30 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves externals', () => {
-    const getColor = tgpu
-      .fn(
-        [],
-        d.vec3f,
-      )(() => {
-        const color = d.vec3f();
-        const color2 = d.vec3f(1, 2, 3);
-        return color;
-      })
-      .$uses({ v: d.vec3f });
+    const getColor = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
+      const color = d.vec3f();
+      const color2 = d.vec3f(1, 2, 3);
+      return color;
+    });
 
-    const getX = tgpu
-      .fn(
-        [],
-        d.f32,
-      )(() => {
-        const color = getColor();
-        return 3;
-      })
-      .$uses({ getColor });
+    const getX = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      const color = getColor();
+      return 3;
+    });
 
-    const getY = tgpu
-      .fn(
-        [],
-        d.f32,
-      )(() => {
-        const c = getColor();
-        return getX();
-      })
-      .$uses({ getX, getColor });
+    const getY = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      const c = getColor();
+      return getX();
+    });
 
     expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
@@ -265,7 +258,6 @@ describe('TGSL tgpu.fn function', () => {
       })
       .$name('vertex_fn');
 
-    expect(getName(vertexFn)).toBe('vertex_fn');
     expect(tgpu.resolve([vertexFn])).toMatchInlineSnapshot(`
       "struct vertex_fn_Output {
         @builtin(position) pos: vec4f,
@@ -911,6 +903,42 @@ describe('tgsl fn when using plugin', () => {
     `);
   });
 
+  it('throws when it detects simple recursion', () => {
+    function increment(n: number, k: number): number {
+      'use gpu';
+      if (k === 0) return n;
+      return increment(n, k - 1) + 1;
+    }
+
+    const f1 = () => {
+      'use gpu';
+      return increment(d.u32(7), d.u32(3));
+    };
+
+    expect(() => tgpu.resolve([f1])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f1
+      - fn*:f1()
+      - fn*:increment(u32, u32): Recursive function fn*:increment(u32, u32) detected. Recursion is not allowed on the GPU.]
+    `);
+
+    const wrappedIncrement = tgpu.fn(increment);
+
+    const f2 = () => {
+      'use gpu';
+      return wrappedIncrement(d.u32(7), d.u32(3));
+    };
+
+    expect(() => tgpu.resolve([f2])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f2
+      - fn*:f2()
+      - fn*:increment(u32, u32): Recursive function fn*:increment(u32, u32) detected. Recursion is not allowed on the GPU.]
+    `);
+  });
+
   it('throws when it detects a cyclic dependency (recursion)', () => {
     let bar: TgpuFn;
     let foo: TgpuFn;
@@ -989,6 +1017,51 @@ describe('tgsl fn when using plugin', () => {
 
       fn one() -> f32 {
         return (mainFn() + 2f);
+      }"
+    `);
+  });
+
+  it('allows for re-resolves of slotted functions', () => {
+    const slot = tgpu.slot<number>(1);
+    const helper = tgpu
+      .fn([])(() => {
+        'use gpu';
+        const x = slot.$;
+      })
+      .with(slot, 2);
+
+    const fn1 = () => {
+      'use gpu';
+      helper();
+    };
+
+    const fn2 = () => {
+      'use gpu';
+      helper();
+    };
+
+    const main = () => {
+      'use gpu';
+      fn1();
+      fn2();
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn helper() {
+        const x = 2;
+      }
+
+      fn fn1() {
+        helper();
+      }
+
+      fn fn2() {
+        helper();
+      }
+
+      fn main() {
+        fn1();
+        fn2();
       }"
     `);
   });
@@ -1074,6 +1147,84 @@ describe('tgsl fn when using plugin', () => {
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "fn fn_1() -> i32 {
         return 2;
+      }"
+    `);
+  });
+
+  it('names used externals', () => {
+    const myConst = (() => tgpu.const(d.u32, 1))(); // unnamed
+    const fn = () => {
+      'use gpu';
+      return myConst.$;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "const myConst: u32 = 1u;
+
+      fn fn_1() -> u32 {
+        return myConst;
+      }"
+    `);
+  });
+
+  it('names used nested externals', () => {
+    const EXT = { myConst: (() => tgpu.const(d.u32, 1))() /* unnamed */ };
+    const fn = () => {
+      'use gpu';
+      return EXT.myConst.$;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "const myConst: u32 = 1u;
+
+      fn fn_1() -> u32 {
+        return myConst;
+      }"
+    `);
+  });
+
+  it("does not name externals that shouldn't be named", () => {
+    const Schema = (() =>
+      d.struct({ p: (() => d.struct({ q: (() => d.struct({ r: d.u32 }))() }))() }))();
+    const fn = () => {
+      'use gpu';
+      return Schema();
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "struct item_1 {
+        r: u32,
+      }
+
+      struct item {
+        q: item_1,
+      }
+
+      struct Schema {
+        p: item,
+      }
+
+      fn fn_1() -> Schema {
+        return Schema();
+      }"
+    `);
+  });
+
+  it('does not name slot values after the slot', () => {
+    const functionSlot = tgpu.slot(tgpu.fn([])(() => {}));
+
+    const fn = () => {
+      'use gpu';
+      functionSlot.$();
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn item() {
+
+      }
+
+      fn fn_1() {
+        item();
       }"
     `);
   });

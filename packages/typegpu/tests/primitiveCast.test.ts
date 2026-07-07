@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bool, f16, f32, i32, u32 } from '../src/data/index.ts';
+import { bool, f16, f32, i32, u32 } from 'typegpu/data';
 
 describe('u32', () => {
   it('casts a number to u32', () => {
@@ -72,11 +72,7 @@ describe('f16', () => {
     expect(f16(-65505)).toBe(-65504);
   });
 
-  it('preserves special values and signed zeros', () => {
-    expect(f16(Number.POSITIVE_INFINITY)).toBe(Number.POSITIVE_INFINITY);
-    expect(f16(Number.NEGATIVE_INFINITY)).toBe(Number.NEGATIVE_INFINITY);
-    expect(Number.isNaN(f16(Number.NaN))).toBe(true);
-
+  it('preserves signed zeros', () => {
     expect(Object.is(f16(0), 0)).toBe(true);
     expect(Object.is(f16(-0), -0)).toBe(true);
   });

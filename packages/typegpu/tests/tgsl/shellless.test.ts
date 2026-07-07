@@ -1,5 +1,6 @@
 import { describe, expect } from 'vitest';
-import tgpu, {
+import {
+  tgpu,
   d,
   std,
   type TgpuAccessor,
@@ -7,7 +8,7 @@ import tgpu, {
   type TgpuSlot,
   type TgpuTextureView,
   type TgpuUniform,
-} from '../../src/index.js';
+} from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('shellless', () => {
@@ -405,7 +406,7 @@ describe('shellless', () => {
   });
 
   it('throws a descriptive error when a slot argument is not dereferenced', () => {
-    const mySlot = tgpu.slot<number>();
+    const mySlot = tgpu.slot<number>(5);
     const fn = (slot: TgpuSlot<number>) => {
       'use gpu';
       return 0;
@@ -471,7 +472,7 @@ describe('shellless', () => {
   });
 
   it('throws a descriptive error when an accessor argument is not dereferenced', () => {
-    const myAccess = tgpu.accessor(d.f32);
+    const myAccess = tgpu.accessor(d.f32, 2);
     const fn = (access: TgpuAccessor<d.F32>) => {
       'use gpu';
       return 0;

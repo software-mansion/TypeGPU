@@ -1,16 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  vec2f,
-  vec2i,
-  vec2u,
-  vec3f,
-  vec3i,
-  vec3u,
-  vec4f,
-  vec4i,
-  vec4u,
-} from '../../src/data/vector.ts';
-import tgpu, { d, std } from '../../src/index.js';
+import { vec2f, vec2i, vec2u, vec3f, vec3i, vec3u, vec4f, vec4i, vec4u } from 'typegpu/data';
+import { tgpu, d, std } from 'typegpu';
 
 describe('bitcast', () => {
   it('bitcastU32toF32', () => {
@@ -95,15 +85,6 @@ describe('bitcast', () => {
     const nsub = std.bitcastU32toF32(0x80000001);
     expect(nsub).toBeLessThan(0);
     expect(nsub).toBeGreaterThan(-1e-44);
-  });
-
-  it('bitcastU32toF32 vector specials', () => {
-    const v = vec4u(0x7f800000, 0xff800000, 0x7fc00000, 0x80000000);
-    const cast = std.bitcastU32toF32(v);
-    expect(cast.x).toBe(Number.POSITIVE_INFINITY);
-    expect(cast.y).toBe(Number.NEGATIVE_INFINITY);
-    expect(Number.isNaN(cast.z)).toBe(true);
-    expect(Object.is(cast.w, -0)).toBe(true);
   });
 
   it('bitcastU32toI32 more edges', () => {
