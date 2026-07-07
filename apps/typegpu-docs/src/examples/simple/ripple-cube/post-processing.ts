@@ -1,5 +1,5 @@
 import type { ColorAttachment, TgpuRoot } from 'typegpu';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { fullScreenTriangle } from 'typegpu/common';
 import { BLUR_RADIUS, TAA_BLEND } from './constants.ts';
 import { BloomParams } from './types.ts';

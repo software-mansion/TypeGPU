@@ -11,7 +11,7 @@ In the previous section, we went over the basics of creating compute shaders and
 So far, most of our shaders have looked like this:
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -45,7 +45,7 @@ We still have to be careful not to read or write outside the bounds of the array
 If the dispatch size might be larger than the buffer length, guard the array access inside the shader:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -81,7 +81,7 @@ This is a useful analogy for understanding how the thread index maps to data. Bu
 When one thread reads data that another thread may be writing, the loop analogy breaks down:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -149,7 +149,7 @@ Laid out resources split the setup into two pieces:
 The layout is created first, without providing any actual buffers. For buffers, each layout entry uses the same schema we would use to create the buffer. If the entry is a storage buffer, it can also include an access mode:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const bindGroupLayout = tgpu.bindGroupLayout({
   counter: { storage: d.u32, access: 'mutable' },
@@ -170,7 +170,7 @@ Storage entries are readonly by default, so `{ storage: d.u32 }` and `{ storage:
 To provide the resources, create a bind group with `root.createBindGroup(layout, entries)`:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -192,7 +192,7 @@ const bindGroup = root.createBindGroup(bindGroupLayout, {
 Because bind group entries are typed, providing a resource with the wrong schema or usage is a TypeScript error.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -221,7 +221,7 @@ Now the same simulation step can be written in either style. The Fixed Resources
 <Tabs>
   <TabItem label="Laid Out Resources">
     ```ts twoslash {13-16, 18-21}
-    import tgpu, { d } from 'typegpu';
+    import { tgpu, d } from 'typegpu';
 
     const root = await tgpu.init();
 
@@ -255,7 +255,7 @@ Now the same simulation step can be written in either style. The Fixed Resources
   </TabItem>
   <TabItem label="Fixed Resources">
     ```ts twoslash {10-11}
-    import tgpu, { d } from 'typegpu';
+    import { tgpu, d } from 'typegpu';
 
     const root = await tgpu.init();
 

@@ -1,4 +1,4 @@
-import tgpu, { std, d } from 'typegpu';
+import { tgpu, std, d } from 'typegpu';
 
 const ERODE_BIAS = 2;
 

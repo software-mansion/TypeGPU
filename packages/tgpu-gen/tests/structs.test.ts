@@ -212,7 +212,6 @@ export const Triangles = (arrayLength) => d.struct({
         outputPath: '',
         toTs: false,
         moduleSyntax: 'esmodule',
-        experimentalFunctions: false,
       }),
     ).toContain(expected);
   });
@@ -238,7 +237,6 @@ struct Triangles {
       outputPath: '',
       toTs: true,
       moduleSyntax: 'commonjs',
-      experimentalFunctions: false,
     });
 
     expect(generated).not.toContain(`\
@@ -254,8 +252,8 @@ const Triangles = (arrayLength: number) => d.struct({
     expect(generated).not.toContain('export const Vertex = d.struct({');
     expect(generated).toContain('const Vertex = d.struct({');
 
-    expect(generated).toContain("const d = require('typegpu/data');");
-    expect(generated).not.toContain("import * as d from 'typegpu/data';");
+    expect(generated).toContain("const { d } = require('typegpu');");
+    expect(generated).not.toContain("import { d } from 'typegpu';");
 
     expect(generated).toContain('module.exports = {Vertex, Triangle, Triangles};');
   });
@@ -283,7 +281,7 @@ struct D {
   });
 
   it('adds typegpu/data import to the generated code', () => {
-    const importStatement = "import * as d from 'typegpu/data';";
+    const importStatement = "import { d } from 'typegpu';";
 
     expect(generate('struct A { d: u32 };')).toContain(importStatement);
     expect(generate('')).not.toContain(importStatement);

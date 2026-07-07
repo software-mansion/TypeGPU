@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const WORKGROUP_SIZE = [8, 8] as [number, number];
