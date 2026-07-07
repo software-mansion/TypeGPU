@@ -142,7 +142,9 @@ export interface TgpuTexture<TProps extends TextureProps = any> extends TgpuNama
   $usage<T extends AllowedUsages<TProps>[]>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToExtensionMap[T[number]]>;
-  $setFlags(flags: GPUTextureUsageFlags): this;
+  $overrideFlags(
+    flags: GPUTextureUsageFlags,
+  ): this & UnionToIntersection<LiteralToExtensionMap['sampled' | 'storage' | 'render']>;
 
   createView(
     ...args: this['usableAsSampled'] extends true
@@ -296,9 +298,15 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     return this as this & UnionToIntersection<LiteralToExtensionMap[T[number]]>;
   }
 
-  $setFlags(flags: GPUTextureUsageFlags) {
+  $overrideFlags(
+    flags: GPUTextureUsageFlags,
+  ): this & UnionToIntersection<LiteralToExtensionMap['sampled' | 'storage' | 'render']> {
     this.#flags = flags;
-    return this;
+    this.usableAsSampled = true;
+    this.usableAsStorage = true;
+    this.usableAsRender = true;
+    return this as this &
+      UnionToIntersection<LiteralToExtensionMap['sampled' | 'storage' | 'render']>;
   }
 
   createView(

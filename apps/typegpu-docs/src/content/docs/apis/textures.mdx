@@ -95,6 +95,24 @@ const texture = root.createTexture({
 }).$usage('sampled', 'storage', 'render');
 ```
 
+For raw WebGPU usage flags, use `.$overrideFlags(...)`:
+
+```ts twoslash
+import { tgpu } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const texture = root
+  .createTexture({
+    size: [256, 256],
+    format: 'rgba8unorm',
+  })
+  .$overrideFlags(GPUTextureUsage.RENDER_ATTACHMENT);
+```
+
+::::caution
+This is an escape hatch. It replaces the flags TypeGPU would normally infer and marks the texture as usable through sampled, storage, and render APIs. Use it responsibly, and make sure the resulting `GPUTextureDescriptor` is valid.
+::::
+
 ## Writing to a texture
 
 The `.write()` method provides multiple overloads for different data sources:

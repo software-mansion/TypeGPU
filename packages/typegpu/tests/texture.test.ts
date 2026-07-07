@@ -1,5 +1,12 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
-import type { RenderFlag, SampledFlag, TgpuRoot, TgpuTexture, TgpuTextureView } from 'typegpu';
+import type {
+  RenderFlag,
+  SampledFlag,
+  StorageFlag,
+  TgpuRoot,
+  TgpuTexture,
+  TgpuTextureView,
+} from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 import { attest } from '@ark/attest';
 import { tgpu, d } from 'typegpu';
@@ -186,16 +193,28 @@ describe('TgpuTexture', () => {
     ).toThrow("Transient texture usage cannot be combined with 'sampled' or 'storage'.");
   });
 
-  it('sets raw WebGPU usage flags exactly', ({ root, device }) => {
+  it('overrides raw WebGPU usage flags exactly', ({ root, device }) => {
     const texture = root
       .createTexture({
         size: [512, 512],
         format: 'rgba8unorm',
       })
-      .$setFlags(GPUTextureUsage.RENDER_ATTACHMENT);
+      .$overrideFlags(GPUTextureUsage.RENDER_ATTACHMENT);
+
+    expectTypeOf(texture).toEqualTypeOf<
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> &
+        SampledFlag &
+        StorageFlag &
+        RenderFlag
+    >();
 
     root.unwrap(texture);
 
+    expect(texture).toMatchObject({
+      usableAsSampled: true,
+      usableAsStorage: true,
+      usableAsRender: true,
+    });
     expect(device.mock.createTexture).toHaveBeenCalledWith(
       expect.objectContaining({
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
