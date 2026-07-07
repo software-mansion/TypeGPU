@@ -1,4 +1,5 @@
 import React from 'react';
+import { ClientOnly } from '@typegpu/react';
 
 import Shader from './Shader.tsx';
 import typegpuLogoDark from '../public/typegpu-logo-dark.svg';
@@ -13,7 +14,13 @@ export default function Page() {
   return (
     <div className="mx-auto flex h-svh w-[1126px] max-w-full flex-col border-x border-border">
       <section className="flex grow flex-col place-content-center place-items-center pt-8 pb-8 max-[1024px]:pt-8 max-[1024px]:pb-6">
-        <Shader className="h-[min(55vw,55svh)] w-[min(55vw,55svh)] max-w-full" />
+        <ClientOnly
+          fallback={
+            <p style={{ backgroundColor: 'red', color: 'white', padding: '1rem' }}>Loading...</p>
+          }
+        >
+          <Shader className="h-[min(55vw,55svh)] w-[min(55vw,55svh)] max-w-full" />
+        </ClientOnly>
       </section>
 
       <div className="ticks" />

@@ -7,22 +7,21 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "moduleResolution": "bundler",
+    "moduleDetection": "force",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
     "strict": true,
-    "noFallthroughCasesInSwitch": true,
     "allowJs": true,
-    "forceConsistentCasingInFileNames": true,
     "incremental": true,
     "plugins": [
       {
         "name": "next"
       }
     ],
-    "types": ["@webgpu/types"]
+    "types": ["@webgpu/types", "@types/react", "@types/react-dom", "@types/node"]
   },
   "include": [
     "next-env.d.ts",

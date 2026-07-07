@@ -1,10 +1,29 @@
 'use client';
 
-import React from 'react';
-import dynamic from 'next/dynamic';
+import React, { useMemo } from 'react';
+import { useConfigureContext, useFrame, useRoot } from '@typegpu/react';
+import { common, d } from 'typegpu';
 
-const ShaderInner = dynamic(() => import('./ShaderInner.tsx'), { ssr: false });
+export default function Shader({ className }: { className?: string }) {
+  const { ref, ctxRef } = useConfigureContext({ autoResize: true, alphaMode: 'premultiplied' });
 
-export default function Canvas({ className }: { className?: string }) {
-  return <ShaderInner className={className} />;
+  const root = useRoot();
+  const renderPipeline = useMemo(
+    () =>
+      root.createRenderPipeline({
+        vertex: common.fullScreenTriangle,
+        fragment: ({ uv }) => {
+          'use gpu';
+          return d.vec4f(0.55, uv, 1);
+        },
+      }),
+    [root],
+  );
+
+  useFrame(() => {
+    if (!ctxRef.current) return;
+    renderPipeline.withColorAttachment({ view: ctxRef.current }).draw(3);
+  });
+
+  return <canvas ref={ref} className={className} />;
 }

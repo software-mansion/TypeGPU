@@ -11,11 +11,11 @@
     "types": "tsc --p ./tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@typegpu/react": "^0.11.1",
+    "@typegpu/react": "^0.11.2",
     "next": "16.2.7",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "typegpu": "^0.11.8"
+    "typegpu": "^0.11.9"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -28,7 +28,7 @@
     "oxlint": "^1.64.0",
     "tailwindcss": "^4",
     "typescript": "npm:tsover@6.0.1",
-    "unplugin-typegpu": "^0.11.4"
+    "unplugin-typegpu": "^0.11.6"
   },
   "overrides": {
     "typescript": "npm:tsover@6.0.1"
