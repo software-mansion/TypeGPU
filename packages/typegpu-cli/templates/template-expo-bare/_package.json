@@ -14,12 +14,12 @@
   },
   "dependencies": {
     "@typegpu/react": "^0.11.2",
-    "expo": "~56.0.12",
-    "expo-build-properties": "~56.0.19",
-    "expo-splash-screen": "~56.0.10",
+    "expo": "~57.0.4",
+    "expo-build-properties": "~57.0.3",
+    "expo-splash-screen": "~57.0.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "react-native": "0.85.3",
+    "react-native": "0.86.0",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-web": "^0.21.0",
     "react-native-webgpu": "^0.5.11",
@@ -31,7 +31,7 @@
     "@babel/core": "^7.28.5",
     "@types/react": "~19.2.17",
     "@webgpu/types": "^0.1.69",
-    "babel-preset-expo": "~56.0.15",
+    "babel-preset-expo": "~57.0.2",
     "eslint": "^9.38.0",
     "eslint-plugin-typegpu": "^0.11.1",
     "oxfmt": "^0.49.0",
@@ -51,7 +51,7 @@
   },
   "expo": {
     "install": {
-      "exclude": ["typescript", "react-native-worklets"]
+      "exclude": ["typescript"]
     }
   }
 }
