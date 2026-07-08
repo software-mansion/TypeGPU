@@ -409,7 +409,7 @@ ${this.ctx.pre}}`;
           throw new WgslTypeError(
             `Comparison '${op}' requires numeric operands.${
               bothVectors
-                ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}''.`
+                ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}'.`
                 : ''
             }`,
           );
@@ -917,12 +917,6 @@ ${this.ctx.pre}}`;
         return test.value ? this._expression(consequentNode) : this._expression(alternativeNode);
       } else {
         const convertedTest = tryConvertSnippet(this.ctx, test, bool, false);
-        if (!convertedTest) {
-          throw new Error(
-            `Ternary operator '${stringifyNode(expression)}' is invalid. Cannot convert condition to bool.`,
-          );
-        }
-
         const consequent = this._expression(consequentNode);
         const alternative = this._expression(alternativeNode);
         const [con, alt] =
@@ -939,7 +933,7 @@ ${this.ctx.pre}}`;
           con.dataType,
           'runtime',
           // this select has side-effects only if the condition has side-effects
-          convertedTest.possibleSideEffects,
+          test.possibleSideEffects,
         );
       }
     }

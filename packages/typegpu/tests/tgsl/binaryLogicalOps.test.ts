@@ -129,7 +129,7 @@ describe('binaryLogicalOps', () => {
           [Error: Resolution of the following tree failed:
           - <root>
           - fn*:f
-          - fn*:f(): Comparison '>=' requires numeric operands. For component-wise comparison, use 'std.ge''.]
+          - fn*:f(): Comparison '>=' requires numeric operands. For component-wise comparison, use 'std.ge'.]
         `);
       });
     });
