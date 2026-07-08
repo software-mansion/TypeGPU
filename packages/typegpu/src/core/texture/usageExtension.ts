@@ -15,11 +15,13 @@ export type LiteralToExtensionMap = {
   storage: StorageFlag; // <- shared between buffers and textures
   sampled: SampledFlag;
   render: RenderFlag;
+  transient: RenderFlag;
 };
 
 export type AllowedUsages<TProps extends TextureProps> =
   | 'sampled'
   | 'render'
+  | 'transient'
   | (TProps['format'] extends StorageTextureFormats ? 'storage' : never);
 
 export function isUsableAsSampled<T>(value: T): value is T & SampledFlag {
