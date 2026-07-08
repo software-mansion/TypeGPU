@@ -555,14 +555,14 @@ describe('tgpu.fn with raw wgsl and missing types', () => {
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "const n1: vec2u = vec2u(1);
 
-      const n2: vec2u = vec2u(2);
+      const ext_n2: vec2u = vec2u(2);
 
-      const n3: vec2u = vec2u(3);
+      const ext_n3: vec2u = vec2u(3);
 
       fn fn_1() { 
         let a = n1; 
-        let b = n2; 
-        let c = n3.x; 
+        let b = ext_n2; 
+        let c = ext_n3.x; 
       }"
     `);
   });

@@ -96,7 +96,7 @@ export function replaceExternalsInWgsl(
 
     if (isResolvable(external)) {
       if (isNamable(external) && getName(external) === undefined) {
-        setName(external, externalName.split('.').at(-1) as string);
+        setName(external, externalName.replaceAll('.', '_'));
       }
       return acc.replaceAll(externalRegex, ctx.resolve(external).value);
     }
