@@ -164,7 +164,7 @@ abstract class AccessorBase<
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const snippet = this.#createSnippet();
-    return withValue(ctx.resolve(snippet.value, snippet.dataType).value, snippet);
+    return ctx.resolveSnippet(snippet);
   }
 }
 

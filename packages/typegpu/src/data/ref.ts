@@ -212,5 +212,5 @@ export function derefSnippet(snippet: Snippet): Snippet {
     );
   }
 
-  return snip(stitch`(*${snippet})`, innerType, snippet.origin, false);
+  return snip(stitch`(*${snippet})`, innerType, snippet.origin, snippet.possibleSideEffects);
 }
