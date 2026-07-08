@@ -32,6 +32,8 @@ export interface TgpuSampler {
   readonly [$gpuValueOf]: Infer<WgslSampler>;
   value: Infer<WgslSampler>;
   $: Infer<WgslSampler>;
+
+  toString(): string;
 }
 
 export interface TgpuComparisonSampler {
@@ -42,6 +44,8 @@ export interface TgpuComparisonSampler {
   readonly [$gpuValueOf]: Infer<WgslComparisonSampler>;
   value: Infer<WgslComparisonSampler>;
   $: Infer<WgslComparisonSampler>;
+
+  toString(): string;
 }
 
 export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {}
@@ -117,7 +121,7 @@ export class TgpuLaidOutSamplerImpl<
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema, /* origin */ 'handle');
+          return snip(this, schema, /* origin */ 'handle', false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.toString()}.$`,
@@ -208,7 +212,7 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema, /* origin */ 'handle');
+          return snip(this, schema, /* origin */ 'handle', false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.toString()}.$`,

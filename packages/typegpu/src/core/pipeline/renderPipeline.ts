@@ -22,7 +22,7 @@ import {
   type WgslArray,
   type WgslStruct,
 } from '../../data/wgslTypes.ts';
-import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
+import { resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
@@ -83,6 +83,11 @@ import {
 } from './timeable.ts';
 import { type PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
 import { resolveIndirectOffset } from './pipelineUtils.ts';
+import {
+  NullPerformanceTracker,
+  PerformanceTrackerImpl,
+  type PerformanceTracker,
+} from './performanceTracker.ts';
 
 const DRAW_INDIRECT_SIZE = 16; // 4 x 4
 const DRAW_INDEXED_INDIRECT_SIZE = 20; // 5 x 4
@@ -189,6 +194,18 @@ export interface TgpuRenderPipeline<in Targets = never>
     firstVertex?: number,
     firstInstance?: number,
   ): void;
+
+  /**
+   * Immediately resolves the pipeline, then awaits `device.createRenderPipelineAsync()`.
+   * NOTE: it is not necessary to initialize pipelines manually.
+   */
+  initAsync(): Promise<void>;
+
+  /**
+   * Immediately resolves the pipeline and creates WebGPU resources.
+   * NOTE: it is not necessary to initialize pipelines manually.
+   */
+  initSync(): void;
 
   /**
    * Draws primitives using parameters read from a buffer.
@@ -693,6 +710,14 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     }) as unknown as this & HasIndexBuffer;
   }
 
+  initAsync(): Promise<void> {
+    return this[$internal].core.initAsync();
+  }
+
+  initSync() {
+    this[$internal].core.initSync();
+  }
+
   private _createRenderPass(encoder: GPUCommandEncoder): GPURenderPassEncoder {
     const internals = this[$internal];
     const { root, descriptor } = internals.core.options;
@@ -997,8 +1022,10 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 class RenderPipelineCore implements SelfResolvable {
   readonly [$internal] = true;
   readonly options: RenderPipelineCoreOptions;
+  #performanceTracker: PerformanceTracker;
 
-  private _memo: Memo | undefined;
+  #initAsyncPromise: Promise<void> | undefined;
+  #memo: Memo | undefined;
 
   #latestAutoVertexIn: TgpuVertexFn.In | undefined;
   #latestAutoFragmentOut: BaseData | undefined;
@@ -1006,6 +1033,9 @@ class RenderPipelineCore implements SelfResolvable {
 
   constructor(options: RenderPipelineCoreOptions) {
     this.options = options;
+    this.#performanceTracker = PERF?.enabled
+      ? new PerformanceTrackerImpl()
+      : new NullPerformanceTracker();
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
@@ -1066,11 +1096,70 @@ class RenderPipelineCore implements SelfResolvable {
     return (this.#performanceCallbackQuerySet ??= this.options.root.createQuerySet('timestamp', 2));
   }
 
-  public unwrap(): Memo {
-    if (this._memo !== undefined) {
-      return this._memo;
+  initAsync(): Promise<void> {
+    if (this.#memo !== undefined) {
+      // the pipeline was already resolved & compiled
+      return Promise.resolve();
     }
 
+    if (this.#initAsyncPromise === undefined) {
+      // the pipeline did not start resolution & compilation
+      const device = this.options.root.device;
+      const { resolutionResult, descriptor, connectedAttribs } =
+        this.resolveAndCreateShaderModule();
+      const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
+
+      this.#initAsyncPromise = device
+        .createRenderPipelineAsync(descriptor)
+        .then((pipeline) => {
+          this.#memo = {
+            pipeline,
+            usedBindGroupLayouts,
+            catchall,
+            logResources,
+            usedVertexLayouts: connectedAttribs.usedVertexLayouts,
+            fragmentOut: this.#latestAutoFragmentOut as BaseData,
+          };
+          this.#performanceTracker.measureCompile(device);
+        })
+        .finally(() => {
+          this.#initAsyncPromise = undefined;
+        });
+    }
+    return this.#initAsyncPromise;
+  }
+
+  initSync() {
+    if (this.#memo !== undefined) {
+      return;
+    }
+
+    if (this.#initAsyncPromise !== undefined) {
+      throw new Error("'pipeline.initAsync()' was called and is not yet resolved.");
+    }
+
+    const device = this.options.root.device;
+    const { resolutionResult, descriptor, connectedAttribs } = this.resolveAndCreateShaderModule();
+    const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
+
+    this.#memo = {
+      pipeline: device.createRenderPipeline(descriptor),
+      usedBindGroupLayouts,
+      catchall,
+      logResources,
+      usedVertexLayouts: connectedAttribs.usedVertexLayouts,
+      fragmentOut: this.#latestAutoFragmentOut as BaseData,
+    };
+
+    this.#performanceTracker.measureCompile(device);
+  }
+
+  public unwrap(): Memo {
+    this.initSync();
+    return this.#memo as Memo;
+  }
+
+  public resolveAndCreateShaderModule() {
     const { root, descriptor: tgpuDescriptor } = this.options;
     const device = root.device;
     const enableExtensions = wgslEnableExtensions.filter((extension) =>
@@ -1078,31 +1167,17 @@ class RenderPipelineCore implements SelfResolvable {
     );
 
     // Resolving code
-    let resolutionResult: ResolutionResult;
-
-    let resolveMeasure: PerformanceMeasure | undefined;
     const ns = namespace({ names: root.nameRegistrySetting });
-    if (PERF?.enabled) {
-      const resolveStart = performance.mark('typegpu:resolution:start');
-      resolutionResult = resolve(this, {
+    const resolutionResult = this.#performanceTracker.measureResolve(() =>
+      resolve(this, {
         namespace: ns,
         enableExtensions,
         shaderGenerator: root.shaderGenerator,
         root,
-      });
-      resolveMeasure = performance.measure('typegpu:resolution', {
-        start: resolveStart.name,
-      });
-    } else {
-      resolutionResult = resolve(this, {
-        namespace: ns,
-        enableExtensions,
-        shaderGenerator: root.shaderGenerator,
-        root,
-      });
-    }
+      }),
+    );
 
-    const { code, usedBindGroupLayouts, catchall, logResources } = resolutionResult;
+    const { code, usedBindGroupLayouts, catchall } = resolutionResult;
 
     if (catchall !== undefined) {
       usedBindGroupLayouts[catchall[0]]?.$name(
@@ -1174,32 +1249,7 @@ class RenderPipelineCore implements SelfResolvable {
       descriptor.multisample = tgpuDescriptor.multisample;
     }
 
-    this._memo = {
-      pipeline: device.createRenderPipeline(descriptor),
-      usedBindGroupLayouts,
-      catchall,
-      logResources,
-      usedVertexLayouts: connectedAttribs.usedVertexLayouts,
-      fragmentOut: this.#latestAutoFragmentOut as BaseData,
-    };
-
-    if (PERF?.enabled) {
-      void (async () => {
-        const start = performance.mark('typegpu:compile-start');
-        await device.queue.onSubmittedWorkDone();
-        const compileMeasure = performance.measure('typegpu:compiled', {
-          start: start.name,
-        });
-
-        PERF?.record('resolution', {
-          resolveDuration: resolveMeasure?.duration,
-          compileDuration: compileMeasure.duration,
-          wgslSize: code.length,
-        });
-      })();
-    }
-
-    return this._memo;
+    return { resolutionResult, descriptor, connectedAttribs };
   }
 }
 

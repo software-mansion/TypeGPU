@@ -128,7 +128,7 @@ class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType>,
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, dataType, 'constant-immutable-def');
+          return snip(this, dataType, 'constant-immutable-def', /* possibleSideEffects */ false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `const:${getName(this) ?? '<unnamed>'}.$`,

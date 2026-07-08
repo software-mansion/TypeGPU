@@ -6,12 +6,36 @@ import { validateIdentifier } from '../../nameUtils.ts';
 import { getFunctionMetadata, getName } from '../../shared/meta.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx, TgpuShaderStage } from '../../types.ts';
-import { mergeExternals, type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
+import {
+  type ExternalMap,
+  replaceExternalsInWgsl,
+  mergeFunctionExternals,
+} from '../resolve/externals.ts';
 import { extractArgs } from './extractArgs.ts';
 import type { Implementation, SeparatedEntryArgs } from './fnTypes.ts';
 
+export type FnExternals = {
+  /**
+   * Externals provided by calling `$uses()`.
+   */
+  userProvided?: ExternalMap;
+  /**
+   * Externals provided by unplugin-typegpu via function metadata.
+   */
+  pluginProvided?: ExternalMap;
+  /**
+   * Function arguments, for example `{ S: Schema }` in `tgpu.fn([Schema])('(arg: S) => {}')`,
+   * or { in: { position: 'position' } } in `fragmentFn({ in: { position: d.builtin.position }, out: d.vec4f, })('...')`
+   */
+  args?: ExternalMap;
+  /**
+   * Function return type, for example `{ Out: ... }` in both rawWgsl entrypoint functions and `vertexFnShell(in, Out)`.
+   */
+  out?: ExternalMap;
+};
+
 export interface FnCore {
-  applyExternals: (newExternals: ExternalMap) => void;
+  setExternals: (key: keyof FnExternals, newExternal: ExternalMap) => void;
   resolve(
     ctx: ResolutionCtx,
     /**
@@ -43,14 +67,25 @@ export function createFnCore(
    * initialized yet (like when accessing the Output struct of a vertex
    * entry fn).
    */
-  const externalsToApply: ExternalMap[] = [];
+  const externals: FnExternals = {};
 
   const core = {
     // Making the implementation the holder of the name, as long as it's
     // a function (and not a string implementation)
     [$getNameForward]: typeof implementation === 'function' ? implementation : undefined,
-    applyExternals(newExternals: ExternalMap): void {
-      externalsToApply.push(newExternals);
+
+    setExternals(key: keyof FnExternals, newExternal: ExternalMap): void {
+      if (key === 'userProvided' && 'userProvided' in externals) {
+        throw new Error(
+          "Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.",
+        );
+      }
+      externals[key] = newExternal;
+      if (externals.userProvided && externals.pluginProvided) {
+        throw new Error(
+          "Cannot call '$uses' on functions whose metadata was provided by unplugin-typegpu.",
+        );
+      }
     },
 
     resolve(
@@ -59,8 +94,6 @@ export function createFnCore(
       returnType: BaseData | undefined,
       entryInput?: SeparatedEntryArgs,
     ): ResolvedSnippet {
-      const externalMap: ExternalMap = {};
-
       let attributes = '';
       if (functionType === 'compute') {
         attributes = `@compute @workgroup_size(${workgroupSize?.join(', ')}) `;
@@ -68,10 +101,6 @@ export function createFnCore(
         attributes = `@vertex `;
       } else if (functionType === 'fragment') {
         attributes = `@fragment `;
-      }
-
-      for (const externals of externalsToApply) {
-        mergeExternals(externalMap, externals);
       }
 
       const id = ctx.makeUniqueIdentifier(getName(this), 'global');
@@ -96,14 +125,18 @@ export function createFnCore(
             }
           }
 
-          mergeExternals(externalMap, {
+          this.setExternals('args', {
             in: Object.fromEntries(
               entryInput.positionalArgs.map((a) => [a.schemaKey, a.schemaKey]),
             ),
           });
         }
 
-        const replacedImpl = replaceExternalsInWgsl(ctx, externalMap, implementation);
+        const replacedImpl = replaceExternalsInWgsl(
+          ctx,
+          mergeFunctionExternals(externals),
+          implementation,
+        );
 
         let header = '';
         let body = '';
@@ -175,11 +208,7 @@ export function createFnCore(
 
       const pluginExternals = pluginData?.externals();
       if (pluginExternals) {
-        const missing = Object.fromEntries(
-          Object.entries(pluginExternals).filter(([name]) => !(name in externalMap)),
-        );
-
-        mergeExternals(externalMap, missing);
+        this.setExternals('pluginProvided', pluginExternals);
       }
 
       const ast = pluginData?.ast;
@@ -193,7 +222,7 @@ export function createFnCore(
       // We look at the identifier chosen by the user and add it to externals.
       const maybeSecondArg = ast.params[1];
       if (maybeSecondArg && maybeSecondArg.type === 'i' && functionType !== 'normal') {
-        mergeExternals(externalMap, {
+        this.setExternals('out', {
           // oxlint-disable-next-line typescript/no-non-null-assertion -- entry functions cannot be shellless
           [maybeSecondArg.name]: undecorate(returnType!),
         });
@@ -210,7 +239,7 @@ export function createFnCore(
         params: ast.params,
         returnType,
         body: ast.body,
-        externalMap,
+        externalMap: mergeFunctionExternals(externals),
       });
 
       ctx.addDeclaration(code);

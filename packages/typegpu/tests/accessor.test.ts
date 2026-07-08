@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import tgpu, { d, std, type TgpuAccessor } from '../src/index.js';
+import { tgpu, d, std, type TgpuAccessor } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 const RED = d.vec3f(1, 0, 0);
@@ -530,6 +530,23 @@ describe('tgpu.accessor', () => {
 
       fn main() -> f32 {
         return (f32(counterMutable) / 2f);
+      }"
+    `);
+  });
+
+  it('allows zero-argument dualFn', () => {
+    const accessor = tgpu.accessor(d.bool, std.subgroupElect);
+
+    expect(
+      tgpu.resolve([
+        () => {
+          'use gpu';
+          return accessor.$;
+        },
+      ]),
+    ).toMatchInlineSnapshot(`
+      "fn item() -> bool {
+        return subgroupElect();
       }"
     `);
   });

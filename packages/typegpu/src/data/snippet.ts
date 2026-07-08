@@ -92,6 +92,16 @@ export interface Snippet {
    */
   readonly dataType: BaseData | UnknownData;
   readonly origin: Origin;
+  /**
+   * A snippet has possible side effects either if we're sure that it has side
+   * effects, or if our systems are unable to reliably determine that it
+   * doesn't have side effects.
+   *
+   * A snippet has side-effects if executing the WGSL code within and not using
+   * the return value is not equivalent to just not executing the WGSL code at
+   * all, with a margin of executing a few more instructions. For example, code
+   * that mutates memory, or synchronizes threads, has side effects.
+   */
   readonly possibleSideEffects: boolean;
 }
 
@@ -168,6 +178,12 @@ export function withDataType(
 export function withDataType(dataType: BaseData | UnknownData, snippet: Snippet): Snippet;
 export function withDataType(dataType: BaseData | UnknownData, snippet: Snippet): Snippet {
   return new SnippetImpl(snippet.value, dataType, snippet.origin, snippet.possibleSideEffects);
+}
+
+export function withValue(value: string, snippet: Snippet): ResolvedSnippet;
+export function withValue(value: unknown, snippet: Snippet): Snippet;
+export function withValue(value: unknown, snippet: Snippet): Snippet {
+  return new SnippetImpl(value, snippet.dataType, snippet.origin, snippet.possibleSideEffects);
 }
 
 export function withSideEffects(

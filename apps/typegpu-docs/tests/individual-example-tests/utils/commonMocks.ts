@@ -192,13 +192,13 @@ export function mock3DModelLoading() {
     load: vi.fn(async () => ({
       attributes: {
         POSITION: {
-          value: new Float32Array(),
+          value: new Float32Array([0, 0, 0, 1, 1, 1, 2, 2, 2]),
         },
         NORMAL: {
-          value: new Float32Array(),
+          value: new Float32Array([0, 1, 0, 0, 1, 0, 0, 1, 0]),
         },
         TEXCOORD_0: {
-          value: new Float32Array(),
+          value: new Float32Array([0, 0, 0, 0, 0, 0]),
         },
       },
     })),

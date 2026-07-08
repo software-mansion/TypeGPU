@@ -1,6 +1,6 @@
 import { vec2f } from 'typegpu/data';
 import type { JoinInput } from '../types.ts';
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 
 export const arrowCapParamsSlot = tgpu.slot({
   length: 7.5,

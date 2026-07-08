@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import { u32, vec2f } from 'typegpu/data';
 import { dot, neg, normalize, select } from 'typegpu/std';
 import { intersectLines, rot90ccw, rot90cw } from '../utils.ts';

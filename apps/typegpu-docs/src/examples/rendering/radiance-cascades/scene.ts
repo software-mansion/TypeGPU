@@ -1,5 +1,5 @@
 import * as sdf from '@typegpu/sdf';
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 export interface SceneElement<T extends 'box' | 'disk'> {
   id: string;

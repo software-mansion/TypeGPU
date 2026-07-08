@@ -4,7 +4,7 @@
 // and the packaged example:
 // https://docs.swmansion.com/TypeGPU/examples#example=rendering--radiance-cascades-drawing
 import * as sdf from '@typegpu/sdf';
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 import { DragController } from './drag-controller.ts';
 import { SceneData, sceneData, sceneDataAccess, sceneSDF, updateElementPosition } from './scene.ts';

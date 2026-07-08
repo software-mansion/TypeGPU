@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import type { LayerData, Network } from './data.ts';
 import { downloadLayers } from './helpers.ts';
 import { defineControls } from '../../common/defineControls.ts';
@@ -102,6 +102,7 @@ const pipelines = {
     ? root.createComputePipeline({ compute: subgroupCompute })
     : null,
 };
+const pipelinePromises = [pipelines.default.initAsync(), pipelines.subgroup?.initAsync()];
 
 // Definitions for the network
 
@@ -202,6 +203,7 @@ function createNetwork(layers: [LayerData, LayerData][]): Network {
 }
 
 const network = createNetwork(await downloadLayers(root, float));
+await Promise.all(pipelinePromises);
 
 // #region Example controls and cleanup
 

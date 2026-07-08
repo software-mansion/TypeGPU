@@ -1,11 +1,14 @@
 import type * as tinyest from 'tinyest';
 import { NodeTypeCatalog as NODE } from 'tinyest';
 import { type Assertion, expect } from 'vitest';
-import tgpu, { d, ShaderGenerator, WgslGenerator, type TgpuFn } from 'typegpu';
-
-type Snippet = ShaderGenerator.Snippet;
-type UnknownData = ShaderGenerator.UnknownData;
-type Origin = ShaderGenerator.Origin;
+import { tgpu, d, type TgpuFn } from 'typegpu';
+import {
+  type Snippet,
+  UnknownData,
+  type Origin,
+  WgslGenerator,
+  type FunctionDefinitionOptions,
+} from 'typegpu/~internal';
 
 class ExtractingGenerator extends WgslGenerator {
   #fnDepth: number;
@@ -17,7 +20,7 @@ class ExtractingGenerator extends WgslGenerator {
     this.#fnDepth = 0;
   }
 
-  public functionDefinition(options: ShaderGenerator.FunctionDefinitionOptions): string {
+  public functionDefinition(options: FunctionDefinitionOptions): string {
     this.#fnDepth++;
     try {
       return super.functionDefinition(options);
@@ -31,10 +34,13 @@ class ExtractingGenerator extends WgslGenerator {
       if (this.returnedSnippet) {
         throw new Error('Cannot inspect multiple return values');
       }
-      if (!statement[1]) {
+      if (statement[1] === undefined) {
         throw new Error('Cannot inspect if nothing is returned');
       }
-      this.returnedSnippet = this._expression(statement[1]);
+      const expectedReturnType = this.ctx.topFunctionReturnType;
+      this.returnedSnippet = expectedReturnType
+        ? this._typedExpression(statement[1], expectedReturnType)
+        : this._expression(statement[1]);
       return super._return([NODE.return]);
     }
 
@@ -68,6 +74,6 @@ export function expectDataTypeOf(
   return expect<d.BaseData | UnknownData>(extractSnippetFromFn(cb).dataType);
 }
 
-export function expectSideEffects(cb: () => unknown): Assertion<boolean> {
+export function expectSideEffects(cb: TgpuFn | (() => unknown)): Assertion<boolean> {
   return expect<boolean>(extractSnippetFromFn(cb).possibleSideEffects);
 }

@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { simulate } from './compute.ts';
 import { loadModel } from './load-model.ts';

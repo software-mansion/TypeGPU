@@ -12,7 +12,13 @@ import {
 } from './core/slot/slotTypes.ts';
 import { isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
-import { type Origin, type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
+import {
+  type Origin,
+  type ResolvedSnippet,
+  snip,
+  type Snippet,
+  withValue,
+} from './data/snippet.ts';
 import { type BaseData, isPtr, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
 import { invariant, MissingSlotValueError, ResolutionError, WgslTypeError } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
@@ -48,7 +54,7 @@ import type {
   TgpuShaderStage,
   Wgsl,
 } from './types.ts';
-import { CodegenState, isSelfResolvable, NormalState } from './types.ts';
+import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
 import type { WgslEnableExtension } from './wgslExtensions.ts';
 import { getName, hasTinyestMetadata, isNamable, setName } from './shared/meta.ts';
 import { FuncParameterType } from 'tinyest';
@@ -59,7 +65,6 @@ import { isTgpuFn } from './core/function/tgpuFn.ts';
 import type { IOData } from './core/function/fnTypes.ts';
 import { AutoStruct } from './data/autoStruct.ts';
 import { EntryInputRouter } from './core/function/entryInputRouter.ts';
-import type { FunctionArgument } from './tgsl/shaderGenerator_members.ts';
 import { validateIdentifier, sanitizePrimer, bannedTokens } from './nameUtils.ts';
 
 /**
@@ -349,7 +354,7 @@ function createArgument(
     name,
     access: () => {
       used = true;
-      return snip(name, type, origin);
+      return snip(name, type, origin, /* possibleSideEffects */ false);
     },
     decoratedType: type,
     get used() {
@@ -379,7 +384,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   readonly #modeStack: ExecState[] = [];
   private readonly _declarations: string[] = [];
   private _varyingLocations: Record<string, number> | undefined;
-  readonly #currentlyResolvedItems: WeakSet<object> = new WeakSet();
+  /**
+   * Holds a set of base (slot-less) functions that have started their resolution process.
+   * Used for recursion detection check - a function is recursive if:
+   * - it was passed to ctx.resolve while already present in this set,
+   * - it never finished resolution (<=> it does not appear in `memoizedResolves`).
+   * The set is NOT cleared after the resolution finishes.
+   */
+  readonly #startedFunctionResolves: WeakSet<object> = new WeakSet();
   readonly #logGenerator: LogGenerator;
 
   readonly gen: ShaderGenerator;
@@ -952,16 +964,17 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolve(item: unknown, schema?: BaseData | UnknownData): ResolvedSnippet {
-    if (isTgpuFn(item) || isShelllessImpl(item)) {
+    if ((isTgpuFn(item) || isShelllessImpl(item)) && !isProviding(item)) {
+      // We skip providing functions to only perform the checks on slot-less functions.
       if (
-        this.#currentlyResolvedItems.has(item) &&
+        this.#startedFunctionResolves.has(item) &&
         !this.#namespaceInternal.memoizedResolves.has(item)
       ) {
         throw new Error(
           `Recursive function ${item} detected. Recursion is not allowed on the GPU.`,
         );
       }
-      this.#currentlyResolvedItems.add(item as object);
+      this.#startedFunctionResolves.add(item as object);
     }
 
     if (isProviding(item)) {
@@ -999,7 +1012,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     if (typeof item === 'boolean') {
-      return snip(item ? 'true' : 'false', bool, /* origin */ 'constant');
+      return snip(item ? 'true' : 'false', bool, /* origin */ 'constant', false);
     }
 
     if (typeof item === 'string') {
@@ -1041,11 +1054,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolveSnippet(snippet: Snippet): ResolvedSnippet {
-    return snip(
-      this.resolve(snippet.value, snippet.dataType).value,
-      snippet.dataType,
-      snippet.origin,
-    ) as ResolvedSnippet;
+    return withValue(this.resolve(snippet.value, snippet.dataType).value, snippet);
   }
 
   pushMode(mode: ExecState) {
@@ -1109,11 +1118,8 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
       new TgpuBindGroupImpl(
         catchallLayout,
         Object.fromEntries(
-          ctx.fixedBindings.map(
-            (binding, idx) =>
-              // oxlint-disable-next-line typescript/no-explicit-any -- it's fine
-              [String(idx), binding.resource] as [string, any],
-          ),
+          // oxlint-disable-next-line typescript/no-explicit-any -- it's fine
+          ctx.fixedBindings.map((binding, idx) => [String(idx), binding.resource] as [string, any]),
         ),
       ),
     ] as [number, TgpuBindGroup];
