@@ -1,6 +1,6 @@
 # create-typegpu
 
-This package is a proxy for the `@typegpu/cli`[https://github.com/software-mansion/TypeGPU/tree/main/packages/typegpu-cli], and allows you to
+This package is a proxy for the [`@typegpu/cli`](https://github.com/software-mansion/TypeGPU/tree/main/packages/typegpu-cli), and allows you to
 spin up new TypeGPU projects with the `npm create typegpu` command.
 
 ```sh
