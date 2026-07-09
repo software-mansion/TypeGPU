@@ -86,7 +86,7 @@ export interface TransformMethods {
 
   replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void;
 
-  removeUseGpuDirective(path: NodePath<MetadatableFunction>): void;
+  removeUseGpuDirective(this: PluginState, path: NodePath<MetadatableFunction>): void;
 }
 
 export interface PluginState extends TransformMethods {

@@ -149,7 +149,7 @@ function replaceWithAssignmentOverload(
   );
 }
 
-function removeUseGpuDirective(path: NodePath<MetadatableFunction>) {}
+function removeUseGpuDirective(this: PluginState, path: NodePath<MetadatableFunction>) {}
 
 function replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void {
   path.replaceWith(
