@@ -131,7 +131,7 @@ describe('tgpu.slot', () => {
 
   it('reuses common nested functions', () => {
     const sizeSlot = tgpu.slot<1 | 100>();
-    const colorSlot = tgpu.slot<typeof RED | typeof GREEN>();
+    const colorSlot = tgpu.slot<d.v3f>();
 
     const getSize = tgpu.fn([], d.f32)`() { return sizeSlot; }`.$uses({ sizeSlot });
 
