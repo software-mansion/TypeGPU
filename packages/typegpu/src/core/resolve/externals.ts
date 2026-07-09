@@ -132,8 +132,6 @@ export function replaceExternalsInWgsl(
       }
     }
 
-    return (
-      (typeof currentItem === 'string' ? currentItem : ctx.resolve(currentItem).value) + suffix
-    );
+    return ctx.resolve(currentItem).value + suffix;
   });
 }
