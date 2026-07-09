@@ -423,4 +423,55 @@ describe('tgpu.slot', () => {
       }"
     `);
   });
+
+  it('allows comptime strings', () => {
+    const precisionSlot = tgpu.slot<string>('f16');
+
+    const getFloat = () => {
+      'use gpu';
+      if (precisionSlot.$ === 'f32') {
+        return d.f32();
+      } else {
+        return d.f16();
+      }
+    };
+
+    expect(tgpu.resolve([getFloat])).toMatchInlineSnapshot(`
+      "fn getFloat() -> f16 {
+        {
+          return 0h;
+        }
+      }"
+    `);
+  });
+
+  it('disallows runtime strings in raw-wgsl implemented functions', () => {
+    const stringSlot = tgpu.slot<string>('vec3f()');
+
+    const getVec = tgpu.fn([])`() => {
+      return stringSlot;
+    }`.$uses({ stringSlot });
+
+    expect(() => tgpu.resolve([getVec])).toThrowErrorMatchingInlineSnapshot();
+  });
+
+  it('disallows runtime strings in TGSL implemented functions', () => {
+    const stringSlot = tgpu.slot<string>('vec3f()');
+
+    const getVec = () => {
+      'use gpu';
+      const v = stringSlot.$;
+      return v;
+    };
+
+    expect(() => tgpu.resolve([getVec])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:getVec
+      - fn*:getVec(): 'const v = stringSlot.$' is invalid, cannot determine WGSL type of 'stringSlot.$'
+      -----
+      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const v = Schema(stringSlot.$)'
+      -----]
+    `);
+  });
 });
