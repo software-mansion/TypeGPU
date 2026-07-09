@@ -1,12 +1,8 @@
 import { attest } from '@ark/attest';
-import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, expectTypeOf } from 'vitest';
-import { readData, writeData } from '../src/data/dataIO.ts';
-import { d, tgpu } from '../src/index.js';
-import { namespace } from '../src/core/resolve/namespace.ts';
-import { resolve } from '../src/resolutionCtx.ts';
-import type { Infer } from '../src/shared/repr.ts';
-import { arrayLength } from '../src/std/array.ts';
+import { d, readFromArrayBuffer, tgpu, writeToArrayBuffer } from 'typegpu';
+import type { Infer } from 'typegpu/data';
+import { arrayLength } from 'typegpu/std';
 import { it } from 'typegpu-testing-utility';
 
 describe('array', () => {
@@ -23,20 +19,18 @@ describe('array', () => {
   it('aligns array elements when writing', () => {
     const TestArray = d.arrayOf(d.vec3u, 3);
     const buffer = new ArrayBuffer(d.sizeOf(TestArray));
-    const writer = new BufferWriter(buffer);
 
-    writeData(writer, TestArray, [d.vec3u(1, 2, 3), d.vec3u(4, 5, 6), d.vec3u(7, 8, 9)]);
+    writeToArrayBuffer(buffer, TestArray, [d.vec3u(1, 2, 3), d.vec3u(4, 5, 6), d.vec3u(7, 8, 9)]);
     expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
   });
 
   it('aligns array elements when reading', () => {
     const TestArray = d.arrayOf(d.vec3u, 3);
     const buffer = new ArrayBuffer(d.sizeOf(TestArray));
-    const reader = new BufferReader(buffer);
 
     new Uint32Array(buffer).set([1, 2, 3, 0, 4, 5, 6, 0, 7, 8, 9, 0]);
 
-    expect(readData(reader, TestArray)).toStrictEqual([
+    expect(readFromArrayBuffer(buffer, TestArray)).toStrictEqual([
       d.vec3u(1, 2, 3),
       d.vec3u(4, 5, 6),
       d.vec3u(7, 8, 9),
@@ -56,8 +50,8 @@ describe('array', () => {
       d.vec3f(1.5, 2, 15),
     ];
 
-    writeData(new BufferWriter(buffer), TestArray, value);
-    expect(readData(new BufferReader(buffer), TestArray)).toStrictEqual(value);
+    writeToArrayBuffer(buffer, TestArray, value);
+    expect(readFromArrayBuffer(buffer, TestArray)).toStrictEqual(value);
   });
 
   it('throws when trying to read/write a runtime-sized array', () => {
@@ -66,14 +60,14 @@ describe('array', () => {
     expect(d.sizeOf(TestArray)).toBeNaN();
 
     expect(() =>
-      writeData(new BufferWriter(new ArrayBuffer(0)), TestArray, [d.vec3f(), d.vec3f()]),
+      writeToArrayBuffer(new ArrayBuffer(0), TestArray, [d.vec3f(), d.vec3f()]),
     ).toThrow();
 
-    expect(() => readData(new BufferReader(new ArrayBuffer(0)), TestArray)).toThrow();
+    expect(() => readFromArrayBuffer(new ArrayBuffer(0), TestArray)).toThrow();
 
-    const opts = { namespace: namespace({ names: 'strict' }) };
-
-    expect(resolve(TestArray, opts).code).toContain('array<vec3f>');
+    expect(tgpu.resolve({ template: 'TestArray', externals: { TestArray } })).toEqual(
+      'array<vec3f>',
+    );
   });
 
   it('throws when trying to nest runtime sized arrays', () => {
@@ -460,7 +454,7 @@ describe('array', () => {
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
         const i = 2;
-        const a = i;
+        let a = i;
         const b = 2i;
       }"
     `);

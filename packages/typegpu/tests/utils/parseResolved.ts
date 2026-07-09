@@ -1,11 +1,14 @@
 import type * as tinyest from 'tinyest';
 import { NodeTypeCatalog as NODE } from 'tinyest';
 import { type Assertion, expect } from 'vitest';
-import tgpu, { d, ShaderGenerator, WgslGenerator } from 'typegpu';
-
-type Snippet = ShaderGenerator.Snippet;
-type UnknownData = ShaderGenerator.UnknownData;
-type Origin = ShaderGenerator.Origin;
+import { tgpu, d, type TgpuFn } from 'typegpu';
+import {
+  type Snippet,
+  UnknownData,
+  type Origin,
+  WgslGenerator,
+  type FunctionDefinitionOptions,
+} from 'typegpu/~internal';
 
 class ExtractingGenerator extends WgslGenerator {
   #fnDepth: number;
@@ -17,7 +20,7 @@ class ExtractingGenerator extends WgslGenerator {
     this.#fnDepth = 0;
   }
 
-  public functionDefinition(options: ShaderGenerator.FunctionDefinitionOptions): string {
+  public functionDefinition(options: FunctionDefinitionOptions): string {
     this.#fnDepth++;
     try {
       return super.functionDefinition(options);
@@ -43,7 +46,7 @@ class ExtractingGenerator extends WgslGenerator {
   }
 }
 
-export function extractSnippetFromFn(cb: () => unknown): Snippet {
+export function extractSnippetFromFn(cb: TgpuFn | (() => unknown)): Snippet {
   const generator = new ExtractingGenerator();
 
   tgpu.resolve([cb], { unstable_shaderGenerator: generator });
@@ -56,12 +59,18 @@ export function extractSnippetFromFn(cb: () => unknown): Snippet {
 }
 
 export function expectSnippetOf(
-  cb: () => unknown,
+  cb: TgpuFn | (() => unknown),
 ): Assertion<[unknown, d.BaseData | UnknownData, Origin]> {
   const snippet = extractSnippetFromFn(cb);
   return expect([snippet.value, snippet.dataType, snippet.origin]);
 }
 
-export function expectDataTypeOf(cb: () => unknown): Assertion<d.BaseData | UnknownData> {
+export function expectDataTypeOf(
+  cb: TgpuFn | (() => unknown),
+): Assertion<d.BaseData | UnknownData> {
   return expect<d.BaseData | UnknownData>(extractSnippetFromFn(cb).dataType);
+}
+
+export function expectSideEffects(cb: () => unknown): Assertion<boolean> {
+  return expect<boolean>(extractSnippetFromFn(cb).possibleSideEffects);
 }

@@ -119,7 +119,7 @@ abstract class AccessorBase<
     try {
       // Doing a deep copy each time so that we don't have to deal with refs
       const cloned = schemaCallWrapper(this.schema, value);
-      return snip(cloned, this.schema, 'constant');
+      return snip(cloned, this.schema, 'constant', /* possibleSideEffects */ false);
     } finally {
       ctx.popMode('normal');
     }
@@ -179,7 +179,7 @@ export class TgpuAccessorImpl<T extends BaseData>
     }
 
     throw new Error(
-      '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
+      '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use `tgpu.slot` for non-WGSL values instead.',
     );
   }
 }
@@ -203,7 +203,7 @@ export class TgpuMutableAccessorImpl<T extends BaseData>
     }
 
     throw new Error(
-      '`tgpu.mutableAccessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call',
+      '`tgpu.mutableAccessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use `tgpu.slot` for non-WGSL values instead.',
     );
   }
 }

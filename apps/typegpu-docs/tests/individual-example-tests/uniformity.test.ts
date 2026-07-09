@@ -23,9 +23,13 @@ describe('uniformity test example', () => {
     );
 
     expect(shaderCodes).toMatchInlineSnapshot(`
-      "struct fullScreenTriangle_Output {
-        @builtin(position) pos: vec4f,
-        @location(0) uv: vec2f,
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      struct Config {
+        gridSize: f32,
+        canvasRatio: f32,
+        samplesPerThread: u32,
+        takeAverage: u32,
       }
 
       @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {

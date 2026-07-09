@@ -4,34 +4,34 @@ import { DEV } from '../shared/env.ts';
 import { type BaseData, isNumericSchema } from './wgslTypes.ts';
 
 export type Origin =
-  | 'uniform'
-  | 'readonly' // equivalent to ptr<storage, ..., read>
-  | 'mutable' // equivalent to ptr<storage, ..., read-write>
-  | 'workgroup'
-  | 'private'
-  | 'function'
-  | 'this-function'
-  | 'handle'
-  // is an argument (or part of an argument) given to the
-  // function we're resolving. This includes primitives, to
-  // catch cases where we update an argument's primitive member
-  // prop, e.g.: `vec.x += 1;`
+  // --- ADDRESS SPACE ORIGINS
+  | 'uniform' /*   defined in the 'uniform' address space  */
+  | 'readonly' /*  defined in the 'storage' address space, with 'read' access  */
+  | 'mutable' /*   defined in the 'storage' address space, with 'read-write' access  */
+  | 'workgroup' /* defined in the 'workgroup' address space  */
+  | 'private' /*   defined in the 'private' address space  */
+  | 'handle' /*    defined in the 'handle' address space  */
+  | 'function' /*  defined in a callee, passed down to us as an argument ('function' address space)  */
+  // --- DEFINITIONS
+  // defined in the current function
+  | 'local-def'
+  // A reference to a deeply immutable definition, recognized by WGSL as a 'constant'.
+  // This is the usual case, read about 'runtime-immutable-def' to know when this doesn't apply.
+  // A reference to a tgpu.const().$ value (which is frozen) fits into this category.
+  | 'constant-immutable-def'
+  // A reference to a deeply immutable definition, NOT recognized by WGSL as a 'constant'.
+  // This can happen if say a constant is accessed with a runtime-known index. WGSL doesn't treat it like
+  // a 'constant' anymore, but it's still a frozen value in JS, so we must treat it like it's immutable.
+  | 'runtime-immutable-def'
+  // ---------
+  // non-pointer function arguments (or part of an argument).
   | 'argument'
-  // not a ref to anything, known at runtime
+  // not a reference to anything, known at runtime
   | 'runtime'
-  // not a ref to anything, known at pipeline creation time
-  // (not to be confused with 'comptime')
-  // note that this doesn't automatically mean the value can be stored in a `const`
-  // variable, more so that it's valid to do so in WGSL (but not necessarily safe to do in JS shaders)
-  | 'constant'
-  // don't even get me started on these. They're references to non-primitive values that originate
-  // from a tgpu.const(...).$ call.
-  | 'constant-tgpu-const-ref' /* turns into a `const` when assigned to a variable */
-  | 'runtime-tgpu-const-ref' /* turns into a `let` when assigned to a variable */;
-
-export function isEphemeralOrigin(space: Origin) {
-  return space === 'runtime' || space === 'constant' || space === 'argument';
-}
+  // an ephemeral value that is a valid WGSL 'constant' (not to be confused with 'comptime')
+  // doesn't always lead to creating a `const` variable, as we cannot always guarantee that
+  // the value won't be mutated in JS
+  | 'constant';
 
 /**
  * What happens to a snippet's origin when it's deep copied in JS, and left as is in WGSL?
@@ -49,8 +49,27 @@ export function fallthroughCopyOrigin(origin: Origin): Origin {
   return 'runtime';
 }
 
-export function isEphemeralSnippet(snippet: Snippet) {
-  return isEphemeralOrigin(snippet.origin);
+/**
+ * Whether a snippet aliases a value that lives outside the current expression.
+ *
+ * @example
+ * ```ts
+ * function foo(a: number) {
+ *   const color = d.vec3f(1, 2, 3);
+ *   return color * a;
+ * }
+ *
+ * // References:
+ * // -  color
+ * // -  a
+ * //
+ * // Not references:
+ * // - d.vec3f(1, 2, 3)
+ * // - color * a
+ * ```
+ */
+export function isAlias(snippet: Snippet) {
+  return !(snippet.origin === 'runtime' || snippet.origin === 'constant');
 }
 
 export const originToPtrParams = {
@@ -60,7 +79,8 @@ export const originToPtrParams = {
   workgroup: { space: 'workgroup', access: 'read-write' },
   private: { space: 'private', access: 'read-write' },
   function: { space: 'function', access: 'read-write' },
-  'this-function': { space: 'function', access: 'read-write' },
+  // Local declarations are also in the `function` address space
+  'local-def': { space: 'function', access: 'read-write' },
 } as const;
 export type OriginToPtrParams = typeof originToPtrParams;
 
@@ -72,6 +92,17 @@ export interface Snippet {
    */
   readonly dataType: BaseData | UnknownData;
   readonly origin: Origin;
+  /**
+   * A snippet has possible side effects either if we're sure that it has side
+   * effects, or if our systems are unable to reliably determine that it
+   * doesn't have side effects.
+   *
+   * A snippet has side-effects if executing the WGSL code within and not using
+   * the return value is not equivalent to just not executing the WGSL code at
+   * all, with a margin of executing a few more instructions. For example, code
+   * that mutates memory, or synchronizes threads, has side effects.
+   */
+  readonly possibleSideEffects: boolean;
 }
 
 export interface ResolvedSnippet extends Snippet {
@@ -85,11 +116,18 @@ class SnippetImpl implements Snippet {
   readonly value: unknown;
   readonly dataType: BaseData | UnknownData;
   readonly origin: Origin;
+  readonly possibleSideEffects: boolean;
 
-  constructor(value: unknown, dataType: BaseData | UnknownData, origin: Origin) {
+  constructor(
+    value: unknown,
+    dataType: BaseData | UnknownData,
+    origin: Origin,
+    possibleSideEffects: boolean,
+  ) {
     this.value = value;
     this.dataType = dataType;
     this.origin = origin;
+    this.possibleSideEffects = possibleSideEffects;
   }
 }
 
@@ -101,12 +139,23 @@ export function isSnippetNumeric(snippet: Snippet) {
   return isNumericSchema(snippet.dataType);
 }
 
-export function snip(value: string, dataType: BaseData, origin: Origin): ResolvedSnippet;
-export function snip(value: unknown, dataType: BaseData | UnknownData, origin: Origin): Snippet;
+export function snip(
+  value: string,
+  dataType: BaseData,
+  origin: Origin,
+  possibleSideEffects?: boolean,
+): ResolvedSnippet;
 export function snip(
   value: unknown,
   dataType: BaseData | UnknownData,
   origin: Origin,
+  possibleSideEffects?: boolean,
+): Snippet;
+export function snip(
+  value: unknown,
+  dataType: BaseData | UnknownData,
+  origin: Origin,
+  possibleSideEffects: boolean = true,
 ): Snippet | ResolvedSnippet {
   if (DEV && isSnippet(value)) {
     // An early error, but not worth checking every time in production
@@ -118,5 +167,30 @@ export function snip(
     // We don't care about attributes in snippet land, so we discard that information.
     undecorate(dataType as BaseData),
     origin,
+    possibleSideEffects,
   );
+}
+
+export function withDataType(
+  dataType: BaseData | UnknownData,
+  snippet: ResolvedSnippet,
+): ResolvedSnippet;
+export function withDataType(dataType: BaseData | UnknownData, snippet: Snippet): Snippet;
+export function withDataType(dataType: BaseData | UnknownData, snippet: Snippet): Snippet {
+  return new SnippetImpl(snippet.value, dataType, snippet.origin, snippet.possibleSideEffects);
+}
+
+export function withSideEffects(
+  possibleSideEffects: boolean,
+  snippet: ResolvedSnippet,
+): ResolvedSnippet;
+export function withSideEffects(possibleSideEffects: boolean, snippet: Snippet): Snippet;
+export function withSideEffects(possibleSideEffects: boolean, snippet: Snippet): Snippet {
+  return new SnippetImpl(snippet.value, snippet.dataType, snippet.origin, possibleSideEffects);
+}
+
+export function noSideEffects(snippet: ResolvedSnippet): ResolvedSnippet;
+export function noSideEffects(snippet: Snippet): Snippet;
+export function noSideEffects(snippet: Snippet): Snippet {
+  return withSideEffects(/* possibleSideEffects */ false, snippet);
 }

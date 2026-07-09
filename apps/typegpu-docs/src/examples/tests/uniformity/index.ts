@@ -1,5 +1,5 @@
 import { randf, randomGeneratorSlot } from '@typegpu/noise';
-import tgpu, { common, d, std, type TgpuGuardedComputePipeline } from 'typegpu';
+import { tgpu, common, d, std, type TgpuGuardedComputePipeline } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 
 import { prngKeys, prngs, type PRNGKey } from './prngs.ts';
@@ -275,6 +275,7 @@ export const controls = defineControls({
       redraw();
     },
   },
+  // this is the only place where some niche prngs are tested
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick: () => {
       modes.forEach((mode) => {

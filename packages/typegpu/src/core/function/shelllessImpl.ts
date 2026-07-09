@@ -27,6 +27,10 @@ export interface ShelllessImpl extends SelfResolvable {
   readonly [$getNameForward]: unknown;
 }
 
+export function isShelllessImpl(value: unknown): value is ShelllessImpl {
+  return (value as ShelllessImpl)?.resourceType === 'shellless-impl';
+}
+
 export function createShelllessImpl(
   argTypes: BaseData[],
   implementation: (...args: never[]) => unknown,

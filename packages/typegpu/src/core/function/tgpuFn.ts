@@ -181,7 +181,7 @@ function createFn<ImplSchema extends AnyFn>(
     [$internal]: { implementation },
 
     $uses(newExternals: Record<string, unknown>) {
-      core.applyExternals(newExternals);
+      core.setExternals('userProvided', newExternals);
       return this;
     },
 
@@ -203,8 +203,8 @@ function createFn<ImplSchema extends AnyFn>(
 
     [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
       if (typeof implementation === 'string') {
-        addArgTypesToExternals(implementation, shell.argTypes, core.applyExternals);
-        addReturnTypeToExternals(implementation, shell.returnType, core.applyExternals);
+        addArgTypesToExternals(implementation, shell.argTypes, core);
+        addReturnTypeToExternals(implementation, shell.returnType, core);
       }
 
       return core.resolve(ctx, shell.argTypes, shell.returnType);
@@ -238,6 +238,7 @@ function createFn<ImplSchema extends AnyFn>(
       }),
     codegenImpl: (ctx, args) =>
       ctx.withResetIndentLevel(() => stitch`${ctx.resolve(fn).value}(${args})`),
+    sideEffects: true,
   });
 
   const fn = Object.assign(call, fnBase) as TgpuFn<ImplSchema>;
@@ -297,6 +298,7 @@ function createBoundFunction<ImplSchema extends AnyFn>(
     normalImpl: innerFn,
     codegenImpl: (ctx, args) =>
       ctx.withResetIndentLevel(() => stitch`${ctx.resolve(fn).value}(${args})`),
+    sideEffects: true,
   });
 
   const fn = Object.assign(call, fnBase) as TgpuFn<ImplSchema>;
@@ -352,8 +354,9 @@ function createGenericFn<T extends AnyFn>(inner: T, pairs: SlotValuePair[]): Tgp
   const genericFn = Object.assign(call, fnBase) as unknown as TgpuGenericFn<T>;
 
   // Inheriting name from `inner`, if it exists
-  if (getName(inner)) {
-    setName(genericFn, getName(inner));
+  const innerName = getName(inner);
+  if (innerName) {
+    setName(genericFn, innerName);
   }
 
   Object.defineProperty(genericFn, 'toString', {

@@ -1,4 +1,4 @@
-import tgpu, { d, type TgpuFnShell, type TgpuSlot, std } from 'typegpu';
+import { tgpu, d, type TgpuFnShell, type TgpuSlot, std } from 'typegpu';
 import { hash, rotl, u32To01F32 } from './utils.ts';
 
 export interface StatefulGenerator {

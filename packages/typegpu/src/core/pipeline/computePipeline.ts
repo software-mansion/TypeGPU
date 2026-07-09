@@ -1,10 +1,10 @@
 import type { AnyComputeBuiltin } from '../../builtin.ts';
-import type { TgpuQuerySet } from '../../core/querySet/querySet.ts';
+import type { TgpuQuerySet } from '../querySet/querySet.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { AnyWgslData } from '../../data/wgslTypes.ts';
 import { Void } from '../../data/wgslTypes.ts';
 import { applyBindGroups } from './applyPipelineState.ts';
-import { type ResolutionResult, resolve } from '../../resolutionCtx.ts';
+import { resolve } from '../../resolutionCtx.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, PERF, setName } from '../../shared/meta.ts';
 
@@ -19,7 +19,7 @@ import { isGPUCommandEncoder, isGPUComputePassEncoder } from './typeGuards.ts';
 import { logDataFromGPU } from '../../tgsl/consoleLog/deserializers.ts';
 import type { LogResources } from '../../tgsl/consoleLog/types.ts';
 import { isGPUBuffer, type ResolutionCtx, type SelfResolvable } from '../../types.ts';
-import { wgslExtensions, wgslExtensionToFeatureName } from '../../wgslExtensions.ts';
+import { wgslEnableExtensions, wgslEnableExtensionToFeatureName } from '../../wgslExtensions.ts';
 import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuComputeFn } from '../function/tgpuComputeFn.ts';
 import { namespace } from '../resolve/namespace.ts';
@@ -37,6 +37,11 @@ import {
   triggerPerformanceCallback,
 } from './timeable.ts';
 import type { IndirectFlag, TgpuBuffer } from '../buffer/buffer.ts';
+import {
+  NullPerformanceTracker,
+  PerformanceTrackerImpl,
+  type PerformanceTracker,
+} from './performanceTracker.ts';
 
 interface ComputePipelineInternals {
   readonly rawPipeline: GPUComputePipeline;
@@ -66,6 +71,18 @@ export interface TgpuComputePipeline extends TgpuNamable, SelfResolvable, Timeab
   with(pass: GPUComputePassEncoder): this;
 
   dispatchWorkgroups(x: number, y?: number, z?: number): void;
+
+  /**
+   * Immediately resolves the pipeline, then awaits `device.createComputePipelineAsync()`.
+   * NOTE: it is not necessary to initialize pipelines manually.
+   */
+  initAsync(): Promise<void>;
+
+  /**
+   * Immediately resolves the pipeline and creates WebGPU resources.
+   * NOTE: it is not necessary to initialize pipelines manually.
+   */
+  initSync(): void;
 
   /**
    * Dispatches compute workgroups using parameters read from a buffer.
@@ -249,6 +266,14 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     this._executeComputePass((pass) => pass.dispatchWorkgroupsIndirect(rawBuffer, offset));
   }
 
+  initAsync(): Promise<void> {
+    return this.#core.initAsync();
+  }
+
+  initSync() {
+    this.#core.initSync();
+  }
+
   private _applyComputeState(pass: GPUComputePassEncoder): void {
     const memo = this.#core.unwrap();
     const { root } = this.#core;
@@ -318,7 +343,10 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
 class ComputePipelineCore implements SelfResolvable {
   readonly [$internal] = true;
   readonly root: ExperimentalTgpuRoot;
-  private _memo: Memo | undefined;
+  #performanceTracker: PerformanceTracker;
+
+  #initAsyncPromise: Promise<void> | undefined;
+  #memo: Memo | undefined;
 
   #slotBindings: [TgpuSlot<unknown>, unknown][];
   #descriptor: TgpuComputePipeline.Descriptor;
@@ -332,6 +360,9 @@ class ComputePipelineCore implements SelfResolvable {
     this.root = root;
     this.#slotBindings = slotBindings;
     this.#descriptor = descriptor;
+    this.#performanceTracker = PERF?.enabled
+      ? new PerformanceTrackerImpl()
+      : new NullPerformanceTracker();
   }
 
   [$resolve](ctx: ResolutionCtx) {
@@ -352,82 +383,108 @@ class ComputePipelineCore implements SelfResolvable {
     return (this.#performanceCallbackQuerySet ??= this.root.createQuerySet('timestamp', 2));
   }
 
-  public unwrap(): Memo {
-    if (this._memo === undefined) {
+  /**
+   * @privateRemarks
+   * This function cannot be a regular async function
+   * because when called multiple times before the promise finishes,
+   * we want it to return the same promise each time.
+   */
+  initAsync(): Promise<void> {
+    if (this.#memo !== undefined) {
+      // the pipeline was already resolved & compiled
+      return Promise.resolve();
+    }
+
+    if (this.#initAsyncPromise === undefined) {
+      // the pipeline did not start resolution & compilation
       const device = this.root.device;
-      const enableExtensions = wgslExtensions.filter((extension) =>
-        this.root.enabledFeatures.has(wgslExtensionToFeatureName[extension]),
-      );
+      const { resolutionResult, module } = this.resolveAndCreateShaderModule();
+      const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
 
-      // Resolving code
-      let resolutionResult: ResolutionResult;
-
-      let resolveMeasure: PerformanceMeasure | undefined;
-      const ns = namespace({ names: this.root.nameRegistrySetting });
-      if (PERF?.enabled) {
-        const resolveStart = performance.mark('typegpu:resolution:start');
-        resolutionResult = resolve(this, {
-          namespace: ns,
-          enableExtensions,
-          shaderGenerator: this.root.shaderGenerator,
-          root: this.root,
-        });
-        resolveMeasure = performance.measure('typegpu:resolution', {
-          start: resolveStart.name,
-        });
-      } else {
-        resolutionResult = resolve(this, {
-          namespace: ns,
-          enableExtensions,
-          shaderGenerator: this.root.shaderGenerator,
-          root: this.root,
-        });
-      }
-
-      const { code, usedBindGroupLayouts, catchall, logResources } = resolutionResult;
-
-      if (catchall !== undefined) {
-        usedBindGroupLayouts[catchall[0]]?.$name(
-          `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
-        );
-      }
-
-      const module = device.createShaderModule({
-        label: `${getName(this) ?? '<unnamed>'} - Shader`,
-        code,
-      });
-
-      this._memo = {
-        pipeline: device.createComputePipeline({
+      this.#initAsyncPromise = device
+        .createComputePipelineAsync({
           label: getName(this) ?? '<unnamed>',
           layout: device.createPipelineLayout({
             label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
             bindGroupLayouts: usedBindGroupLayouts.map((l) => this.root.unwrap(l)),
           }),
           compute: { module },
-        }),
-        usedBindGroupLayouts,
-        catchall,
-        logResources,
-      };
+        })
+        .then((pipeline) => {
+          this.#memo = { pipeline, usedBindGroupLayouts, catchall, logResources };
+          this.#performanceTracker.measureCompile(device);
+        })
+        .finally(() => {
+          this.#initAsyncPromise = undefined;
+        });
+    }
+    return this.#initAsyncPromise;
+  }
 
-      if (PERF?.enabled) {
-        void (async () => {
-          const start = performance.mark('typegpu:compile-start');
-          await device.queue.onSubmittedWorkDone();
-          const compileMeasure = performance.measure('typegpu:compiled', {
-            start: start.name,
-          });
-
-          PERF?.record('resolution', {
-            resolveDuration: resolveMeasure?.duration,
-            compileDuration: compileMeasure.duration,
-            wgslSize: code.length,
-          });
-        })();
-      }
+  initSync() {
+    if (this.#memo !== undefined) {
+      return;
     }
 
-    return this._memo;
+    if (this.#initAsyncPromise !== undefined) {
+      throw new Error("'pipeline.initAsync()' was called and is not yet resolved.");
+    }
+
+    const device = this.root.device;
+    const { resolutionResult, module } = this.resolveAndCreateShaderModule();
+    const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
+
+    this.#memo = {
+      pipeline: device.createComputePipeline({
+        label: getName(this) ?? '<unnamed>',
+        layout: device.createPipelineLayout({
+          label: `${getName(this) ?? '<unnamed>'} - Pipeline Layout`,
+          bindGroupLayouts: usedBindGroupLayouts.map((l) => this.root.unwrap(l)),
+        }),
+        compute: { module },
+      }),
+      usedBindGroupLayouts,
+      catchall,
+      logResources,
+    };
+
+    this.#performanceTracker.measureCompile(device);
+  }
+
+  public unwrap(): Memo {
+    this.initSync();
+    return this.#memo as Memo;
+  }
+
+  private resolveAndCreateShaderModule() {
+    const device = this.root.device;
+    const enableExtensions = wgslEnableExtensions.filter((extension) =>
+      this.root.enabledFeatures.has(wgslEnableExtensionToFeatureName[extension]),
+    );
+
+    // Resolving code
+    const ns = namespace({ names: this.root.nameRegistrySetting });
+    const resolutionResult = this.#performanceTracker.measureResolve(() =>
+      resolve(this, {
+        namespace: ns,
+        enableExtensions,
+        shaderGenerator: this.root.shaderGenerator,
+        root: this.root,
+      }),
+    );
+    const { code, usedBindGroupLayouts, catchall } = resolutionResult;
+
+    if (catchall !== undefined) {
+      usedBindGroupLayouts[catchall[0]]?.$name(
+        `${getName(this) ?? '<unnamed>'} - Automatic Bind Group & Layout`,
+      );
+    }
+
+    const module = device.createShaderModule({
+      label: `${getName(this) ?? '<unnamed>'} - Shader`,
+      code,
+    });
+
+    return { resolutionResult, module };
   }
 }

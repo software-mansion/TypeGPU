@@ -1,7 +1,6 @@
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import * as d from '../src/data/index.ts';
-import tgpu, { std } from '../src/index.js';
+import { tgpu, std, d } from 'typegpu';
 
 describe('tgpu.unroll', () => {
   it('called outside the gpu function returns passed iterable', () => {
@@ -116,7 +115,7 @@ describe('tgpu.unroll', () => {
         {
           const boo = 1;
           {
-            const foo = boo;
+            let foo = boo;
             fooResult += f32(foo);
           }
           const bar = 1;
@@ -125,7 +124,7 @@ describe('tgpu.unroll', () => {
         {
           const boo = 2;
           {
-            const foo = boo;
+            let foo = boo;
             fooResult += f32(foo);
           }
           const bar = 2;

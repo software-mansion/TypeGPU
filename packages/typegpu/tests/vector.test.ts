@@ -1,9 +1,6 @@
-import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { readData, writeData } from '../src/data/dataIO.ts';
-import { sizeOf } from '../src/data/sizeOf.ts';
-import tgpu, { d } from '../src/index.js';
-import * as std from '../src/std/index.ts';
+import { sizeOf } from 'typegpu/data';
+import { tgpu, d, std, readFromArrayBuffer, writeToArrayBuffer } from 'typegpu';
 
 describe('constructors', () => {
   it('casts floats to signed integers', () => {
@@ -66,8 +63,8 @@ describe('vec2f', () => {
 
     const buffer = new ArrayBuffer(d.sizeOf(d.vec2f));
 
-    writeData(new BufferWriter(buffer), d.vec2f, vec);
-    expect(readData(new BufferReader(buffer), d.vec2f)).toStrictEqual(vec);
+    writeToArrayBuffer(buffer, d.vec2f, vec);
+    expect(readFromArrayBuffer(buffer, d.vec2f)).toStrictEqual(vec);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -147,8 +144,8 @@ describe('vec2i', () => {
 
     const buffer = new ArrayBuffer(d.sizeOf(d.vec2i));
 
-    writeData(new BufferWriter(buffer), d.vec2i, vec);
-    expect(readData(new BufferReader(buffer), d.vec2i)).toStrictEqual(vec);
+    writeToArrayBuffer(buffer, d.vec2i, vec);
+    expect(readFromArrayBuffer(buffer, d.vec2i)).toStrictEqual(vec);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -222,8 +219,8 @@ describe('vec2<bool>', () => {
   it('is not host shareable', () => {
     const buffer = new ArrayBuffer(8);
 
-    expect(() => writeData(new BufferWriter(buffer), d.vec2b, d.vec2b())).toThrow();
-    expect(() => readData(new BufferReader(buffer), d.vec2b)).toThrow();
+    expect(() => writeToArrayBuffer(buffer, d.vec2b, d.vec2b())).toThrow();
+    expect(() => readFromArrayBuffer(buffer, d.vec2b)).toThrow();
   });
 
   it('differs in type from other vector schemas', () => {
@@ -329,8 +326,8 @@ describe('vec3f', () => {
 
     const buffer = new ArrayBuffer(d.sizeOf(d.vec3f));
 
-    writeData(new BufferWriter(buffer), d.vec3f, vec);
-    expect(readData(new BufferReader(buffer), d.vec3f)).toStrictEqual(vec);
+    writeToArrayBuffer(buffer, d.vec3f, vec);
+    expect(readFromArrayBuffer(buffer, d.vec3f)).toStrictEqual(vec);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -417,8 +414,8 @@ describe('vec3i', () => {
 
     const buffer = new ArrayBuffer(d.sizeOf(d.vec3i));
 
-    writeData(new BufferWriter(buffer), d.vec3i, vec);
-    expect(readData(new BufferReader(buffer), d.vec3i)).toStrictEqual(vec);
+    writeToArrayBuffer(buffer, d.vec3i, vec);
+    expect(readFromArrayBuffer(buffer, d.vec3i)).toStrictEqual(vec);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -499,8 +496,8 @@ describe('vec3<bool>', () => {
   it('is not host shareable', () => {
     const buffer = new ArrayBuffer(16);
 
-    expect(() => writeData(new BufferWriter(buffer), d.vec3b, d.vec3b())).toThrow();
-    expect(() => readData(new BufferReader(buffer), d.vec3b)).toThrow();
+    expect(() => writeToArrayBuffer(buffer, d.vec3b, d.vec3b())).toThrow();
+    expect(() => readFromArrayBuffer(buffer, d.vec3b)).toThrow();
   });
 
   it('differs in type from other vector schemas', () => {
@@ -616,8 +613,8 @@ describe('vec4f', () => {
 
     const buffer = new ArrayBuffer(d.sizeOf(d.vec4f));
 
-    writeData(new BufferWriter(buffer), d.vec4f, vec);
-    expect(readData(new BufferReader(buffer), d.vec4f)).toStrictEqual(vec);
+    writeToArrayBuffer(buffer, d.vec4f, vec);
+    expect(readFromArrayBuffer(buffer, d.vec4f)).toStrictEqual(vec);
   });
 
   it('differs in type from other vector schemas', () => {
@@ -700,8 +697,8 @@ describe('vec2h', () => {
     const vec = d.vec2h(1, 2050);
     const buffer = new ArrayBuffer(sizeOf(d.vec2h));
 
-    writeData(new BufferWriter(buffer), d.vec2h, vec);
-    expect(readData(new BufferReader(buffer), d.vec2h)).toStrictEqual(vec);
+    writeToArrayBuffer(buffer, d.vec2h, vec);
+    expect(readFromArrayBuffer(buffer, d.vec2h)).toStrictEqual(vec);
   });
 
   it('should change unrepresentable values to the closest representable', () => {
@@ -709,8 +706,8 @@ describe('vec2h', () => {
 
     const buffer = new ArrayBuffer(sizeOf(d.vec2h));
 
-    writeData(new BufferWriter(buffer), d.vec2h, vec);
-    expect(readData(new BufferReader(buffer), d.vec2h)).toStrictEqual(d.vec2h(1, 4096));
+    writeToArrayBuffer(buffer, d.vec2h, vec);
+    expect(readFromArrayBuffer(buffer, d.vec2h)).toStrictEqual(d.vec2h(1, 4096));
   });
 
   it('differs in type from other vector schemas', () => {

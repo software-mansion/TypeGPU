@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 export const WORKGROUP_SIZE = 256;
 
@@ -13,5 +13,5 @@ export const uniformOpLayout = tgpu.bindGroupLayout({
 });
 
 export const operatorSlot = tgpu.slot<(a: number, b: number) => number>();
-export const identitySlot = tgpu.accessor(d.f32);
+export const identitySlot = tgpu.slot<number>();
 export const onlyGreatestElementSlot = tgpu.slot<boolean>();

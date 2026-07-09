@@ -1,6 +1,7 @@
 import { $internal } from '../shared/symbols.ts';
 import type { AbstractFloat, AbstractInt, Bool, F16, F32, I32, U16, U32 } from './wgslTypes.ts';
 import { callableSchema } from '../core/function/createCallableSchema.ts';
+import { FiniteMathAssumptionError } from '../errors.ts';
 
 const boolCast = callableSchema({
   name: 'bool',
@@ -15,7 +16,7 @@ const boolCast = callableSchema({
     }
     return !!v;
   },
-  codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(bool, args),
+  codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(bool, v ? [v] : []),
 });
 
 /**
@@ -48,6 +49,9 @@ const u32Cast = callableSchema({
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
+    if (!Number.isFinite(v)) {
+      throw new FiniteMathAssumptionError(v, u32);
+    }
     if (!Number.isInteger(v)) {
       const truncated = Math.trunc(v);
       if (truncated < 0) {
@@ -61,7 +65,7 @@ const u32Cast = callableSchema({
     // Integer input: treat as bit reinterpretation (i32 -> u32)
     return (v & 0xffffffff) >>> 0;
   },
-  codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(u32, args),
+  codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(u32, v ? [v] : []),
 });
 
 /**
@@ -96,9 +100,12 @@ const i32Cast = callableSchema({
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
+    if (!Number.isFinite(v)) {
+      throw new FiniteMathAssumptionError(v, i32);
+    }
     return v | 0;
   },
-  codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(i32, args),
+  codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(i32, v ? [v] : []),
 });
 
 export const u16: U16 = {
@@ -136,9 +143,12 @@ const f32Cast = callableSchema({
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
+    if (!Number.isFinite(v)) {
+      throw new FiniteMathAssumptionError(v, f32);
+    }
     return Math.fround(v);
   },
-  codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(f32, args),
+  codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(f32, v ? [v] : []),
 });
 
 /**
@@ -259,10 +269,13 @@ const f16Cast = callableSchema({
     if (typeof v === 'boolean') {
       return v ? 1 : 0;
     }
+    if (!Number.isFinite(v)) {
+      throw new FiniteMathAssumptionError(v, f16);
+    }
     return roundToF16(v);
   },
   // TODO: make usage of f16() in GPU mode check for feature availability and throw if not available
-  codegenImpl: (ctx, args) => ctx.gen.typeInstantiation(f16, args),
+  codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(f16, v ? [v] : []),
 });
 
 /**

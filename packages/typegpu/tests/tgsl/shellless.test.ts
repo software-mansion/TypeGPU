@@ -1,5 +1,6 @@
 import { describe, expect } from 'vitest';
-import tgpu, {
+import {
+  tgpu,
   d,
   std,
   type TgpuAccessor,
@@ -7,7 +8,7 @@ import tgpu, {
   type TgpuSlot,
   type TgpuTextureView,
   type TgpuUniform,
-} from '../../src/index.js';
+} from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('shellless', () => {

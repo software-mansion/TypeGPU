@@ -1,6 +1,6 @@
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import tgpu, { d } from '../../src/index.js';
+import { tgpu, d } from 'typegpu';
 
 describe('function argument origin tracking', () => {
   it('should fail on mutation of primitive arguments', () => {
@@ -135,11 +135,11 @@ describe('function argument origin tracking', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - fn*:foo(vec3f): 'let b = a' is invalid, because references to arguments cannot be assigned to 'let' variable declarations.
-        -----
-        - Try 'let b = vec3f(a)' if you need to reassign 'b' later
-        - Try 'const b = a' if you won't reassign 'b' later.
-        -----]
+      - fn*:foo(vec3f): 'let b = a' is invalid, because references cannot be assigned to 'let' variable declarations.
+      -----
+      - Try 'let b = vec3f(a)' if you need to reassign 'b' later
+      - Try 'const b = a' if you won't reassign 'b' later.
+      -----]
     `);
   });
 
@@ -161,7 +161,7 @@ describe('function argument origin tracking', () => {
       - <root>
       - fn*:main
       - fn*:main()
-      - fn*:foo(vec3f): 'b = a' is invalid, because argument references cannot be assigned.
+      - fn*:foo(vec3f): 'b = a' is invalid, because references cannot be assigned.
       -----
       Try 'b = vec3f(a)' to copy the value instead.
       -----]
@@ -196,14 +196,14 @@ describe('function argument origin tracking', () => {
     };
 
     expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn*:testFn
-        - fn*:testFn(): 'let b = a' is invalid, because references cannot be assigned to 'let' variable declarations.
-        -----
-        - Try 'let b = vec3f(a)' if you need to reassign 'b' later
-        - Try 'const b = a' if you won't reassign 'b' later.
-        -----]
-      `);
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): 'let b = a' is invalid, because references cannot be assigned to 'let' variable declarations.
+      -----
+      - Try 'let b = vec3f(a)' if you need to reassign 'b' later
+      - Try 'const b = a' if you won't reassign 'b' later.
+      -----]
+    `);
   });
 });

@@ -1,4 +1,4 @@
-import tgpu, { d, std, type TgpuFragmentFn } from 'typegpu';
+import { tgpu, d, std, type TgpuFragmentFn } from 'typegpu';
 import { MODEL_HEIGHT, MODEL_WIDTH } from './model.ts';
 import {
   blockDim,

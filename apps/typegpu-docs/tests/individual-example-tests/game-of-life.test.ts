@@ -53,7 +53,7 @@ describe('game of life example', () => {
 
       fn wrappedCallback(x: u32, y: u32, _arg_2: u32) {
         randSeed2(((vec2f(f32(x), f32(y)) / f32(gameSizeUniform)) * timeUniform));
-        textureStore(next, vec2u(x, y), vec4u(u32(select(0, 1, (randFloat01() > 0.5f))), 0u, 0u, 0u));
+        textureStore(next, vec2u(x, y), vec4u(u32(select(0i, 1i, (randFloat01() > 0.5f))), 0u, 0u, 0u));
       }
 
       @compute @workgroup_size(16, 16, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
@@ -146,7 +146,7 @@ describe('game of life example', () => {
         let current_1 = readTile(lx, ly);
         let neighbors = countNeighborsInTile(lx, ly);
         let nextAlive = golNextState((current_1 != 0u), neighbors);
-        textureStore(next, gid.xy, vec4u(u32(select(0, 1, nextAlive)), 0u, 0u, 0u));
+        textureStore(next, gid.xy, vec4u(u32(select(0i, 1i, nextAlive)), 0u, 0u, 0u));
       }
 
       @group(0) @binding(0) var<uniform> gameSizeUniform: u32;
@@ -199,7 +199,7 @@ describe('game of life example', () => {
         let current_1 = readTile(lx, ly);
         let neighbors = countNeighborsInTile(lx, ly);
         let nextAlive = golNextState((current_1 != 0u), neighbors);
-        textureStore(next, gid.xy, vec4u(u32(select(0, 1, nextAlive)), 0u, 0u, 0u));
+        textureStore(next, gid.xy, vec4u(u32(select(0i, 1i, nextAlive)), 0u, 0u, 0u));
       }
 
       struct fullScreenTriangle_Output {

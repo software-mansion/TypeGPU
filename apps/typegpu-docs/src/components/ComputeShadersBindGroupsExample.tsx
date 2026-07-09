@@ -14,7 +14,7 @@ const BUFFER_OPTIONS: readonly BufferOption[] = [
   { colorCss: '#bef264', label: 'Buffer C', name: 'Burst' },
 ];
 
-export const COMPUTE_SHADER_BIND_GROUPS_SNIPPET = `import tgpu, { d, std } from 'typegpu';
+export const COMPUTE_SHADER_BIND_GROUPS_SNIPPET = `import { tgpu, d, std } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -44,7 +44,7 @@ const simulate = root.createGuardedComputePipeline((i) => {
   'use gpu';
   const particle = particleLayout.$.particles[i];
   particleLayout.$.particles[i].position = std.fract(
-    particle.position.add(particle.velocity),
+    particle.position + particle.velocity,
   );
 });
 

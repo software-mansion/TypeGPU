@@ -5,7 +5,7 @@ import type { GPUValueOf, Infer, InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
 import type { UnwrapRuntimeConstructor } from '../../tgpuBindGroupLayout.ts';
 import type { TgpuBufferShorthand } from '../buffer/bufferShorthand.ts';
-import type { TgpuBufferUsage } from './../buffer/bufferUsage.ts';
+import type { TgpuBufferUsage } from '../buffer/bufferUsage.ts';
 import type { TgpuConst } from '../constant/tgpuConstant.ts';
 import type { Withable } from '../root/rootTypes.ts';
 import type { TgpuTextureView } from '../texture/texture.ts';
@@ -64,6 +64,8 @@ export interface TgpuAccessor<T extends BaseData = BaseData> extends TgpuNamable
    */
   readonly value: InferGPU<T>;
   readonly $: InferGPU<T>;
+
+  toString(): string;
 }
 
 type DataAccessorIn<T extends BaseData> =

@@ -1,4 +1,4 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
@@ -16,6 +16,43 @@ async function increment() {
   incrementPipeline.dispatchThreads();
   return await counter.read();
 }
+
+import { randf } from '@typegpu/noise';
+
+const b = root.createMutable(d.f32);
+const f = () => {
+  'use gpu';
+  b.$ = randf.sample();
+};
+// ---cut---
+import {
+  hash,
+  randomGeneratorShell,
+  randomGeneratorSlot,
+  u32To01F32,
+  type StatefulGenerator,
+} from '@typegpu/noise';
+
+const LCG32: StatefulGenerator = (() => {
+  const seed = tgpu.privateVar(d.u32);
+
+  const multiplier = tgpu.accessor(d.u32, 1664525);
+  const increment = tgpu.accessor(d.u32, 1013904223);
+
+  return {
+    seed: tgpu.fn([d.f32])((value) => {
+      seed.$ = hash(std.bitcastF32toU32(value));
+    }),
+
+    sample: randomGeneratorShell(() => {
+      'use gpu';
+      seed.$ = multiplier.$ * seed.$ + increment.$; // % 2 ^ 32
+      return u32To01F32(seed.$);
+    }).$name('sample'),
+  };
+})();
+
+const pipeline = root.with(randomGeneratorSlot, LCG32).createGuardedComputePipeline(f);
 
 // #region Example controls & Cleanup
 

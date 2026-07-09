@@ -1,7 +1,7 @@
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import { not } from '../../../src/std/boolean.ts';
-import tgpu, { d, std } from '../../../src/index.js';
+import { not } from 'typegpu/std';
+import { tgpu, d, std } from 'typegpu';
 
 describe('not', () => {
   it('negates booleans', () => {
@@ -90,19 +90,6 @@ describe('not', () => {
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn(v: vec3f) -> vec3<bool> {
         return !(vec3<bool>(v));
-      }"
-    `);
-  });
-
-  it('generates correct WGSL on a numeric vector comptime-known argument', () => {
-    const f = () => {
-      'use gpu';
-      const v = not(d.vec4f(Infinity, -Infinity, 0, NaN));
-    };
-
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-      "fn f() {
-        let v = vec4<bool>(false, false, true, false);
       }"
     `);
   });
@@ -221,19 +208,6 @@ describe('not', () => {
     expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "fn testFn(v: vec3f) -> vec3<bool> {
         return !(vec3<bool>(v));
-      }"
-    `);
-  });
-
-  it('generates correct WGSL on a numeric vector comptime-known argument', () => {
-    const f = () => {
-      'use gpu';
-      const v = not(d.vec4f(Infinity, -Infinity, 0, NaN));
-    };
-
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-      "fn f() {
-        let v = vec4<bool>(false, false, true, false);
       }"
     `);
   });

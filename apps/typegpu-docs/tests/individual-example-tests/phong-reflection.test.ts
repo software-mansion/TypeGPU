@@ -47,11 +47,11 @@ describe('phong reflection example', () => {
         @builtin(position) canvasPosition: vec4f,
       }
 
-      @vertex fn vertexShader(@location(0) _arg_modelPosition: vec3f, @location(1) _arg_modelNormal: vec3f) -> vertexShader_Output {
-        let worldPosition = vec4f(_arg_modelPosition, 1f);
+      @vertex fn vertexShader(@location(0) modelPosition: vec3f, @location(1) modelNormal: vec3f) -> vertexShader_Output {
+        let worldPosition = vec4f(modelPosition, 1f);
         let camera = (&cameraUniform);
         let canvasPosition = (((*camera).projection * (*camera).view) * worldPosition);
-        return vertexShader_Output(_arg_modelPosition, _arg_modelNormal, canvasPosition);
+        return vertexShader_Output(modelPosition, modelNormal, canvasPosition);
       }
 
       struct ExampleControls {

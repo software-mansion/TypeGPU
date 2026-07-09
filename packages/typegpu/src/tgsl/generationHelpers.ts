@@ -1,13 +1,8 @@
 import { UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
-import {
-  isEphemeralSnippet,
-  isSnippet,
-  type ResolvedSnippet,
-  snip,
-  type Snippet,
-} from '../data/snippet.ts';
+import { isAlias, isSnippet, snip } from '../data/snippet.ts';
+import type { ResolvedSnippet, Snippet } from '../data/snippet.ts';
 import {
   type AnyWgslData,
   type BaseData,
@@ -26,14 +21,13 @@ import {
   type SelfResolvable,
 } from '../types.ts';
 import type { ShelllessRepository } from './shellless.ts';
-import { stitch } from '../../src/core/resolve/stitch.ts';
-import { WgslTypeError } from '../../src/errors.ts';
-import { $internal, $resolve } from '../../src/shared/symbols.ts';
+import { WgslTypeError } from '../errors.ts';
+import { $internal, $resolve } from '../shared/symbols.ts';
 import type { SupportedLogOp } from './consoleLog/types.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
-    return snip(value, abstractFloat, /* origin */ 'constant');
+    return snip(value, abstractFloat, /* origin */ 'constant', /* possibleSideEffects */ false);
   }
   // WGSL AbstractInt uses 64-bit precision, but JS numbers are only safe up to 2^53 - 1.
   // Warn when values exceed this range to prevent precision loss.
@@ -43,9 +37,9 @@ export function numericLiteralToSnippet(value: number): Snippet {
         `The integer ${value} exceeds the safe integer range and may have lost precision.`,
       );
     }
-    return snip(value, abstractInt, /* origin */ 'constant');
+    return snip(value, abstractInt, /* origin */ 'constant', /* possibleSideEffects */ false);
   }
-  return snip(value, abstractFloat, /* origin */ 'constant');
+  return snip(value, abstractFloat, /* origin */ 'constant', /* possibleSideEffects */ false);
 }
 
 export function concretize<T extends BaseData>(type: T): T | F32 | I32 {
@@ -119,7 +113,12 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   if (isVecInstance(value) || isMatInstance(value)) {
-    return snip(value, WORKAROUND_getSchema(value), /* origin */ 'constant');
+    return snip(
+      value,
+      WORKAROUND_getSchema(value),
+      /* origin */ 'constant',
+      /* possibleSideEffects */ false,
+    );
   }
 
   if (
@@ -131,7 +130,7 @@ export function coerceToSnippet(value: unknown): Snippet {
     value === null
   ) {
     // Nothing representable in WGSL as-is, so unknown
-    return snip(value, UnknownData, /* origin */ 'constant');
+    return snip(value, UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false);
   }
 
   if (typeof value === 'number') {
@@ -139,10 +138,10 @@ export function coerceToSnippet(value: unknown): Snippet {
   }
 
   if (typeof value === 'boolean') {
-    return snip(value, bool, /* origin */ 'constant');
+    return snip(value, bool, /* origin */ 'constant', /* possibleSideEffects */ false);
   }
 
-  return snip(value, UnknownData, /* origin */ 'constant');
+  return snip(value, UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false);
 }
 
 /**
@@ -167,10 +166,7 @@ export class ArrayExpression implements SelfResolvable {
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     for (const elem of this.elements) {
       // We check if there are no references among the elements
-      if (
-        (elem.origin === 'argument' && !isNaturallyEphemeral(elem.dataType)) ||
-        !isEphemeralSnippet(elem)
-      ) {
+      if (isAlias(elem) && !isNaturallyEphemeral(elem.dataType)) {
         const snippetStr = ctx.resolve(elem.value, elem.dataType).value;
         const snippetType = ctx.resolve(concretize(elem.dataType as BaseData)).value;
         throw new WgslTypeError(
@@ -179,8 +175,6 @@ export class ArrayExpression implements SelfResolvable {
       }
     }
 
-    const arrayType = `array<${ctx.resolve(this.type.elementType).value}, ${this.elements.length}>`;
-
-    return snip(stitch`${arrayType}(${this.elements})`, this.type, /* origin */ 'runtime');
+    return ctx.gen.typeInstantiation(this.type, this.elements);
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "typegpu",
-  "version": "0.11.5",
+  "version": "0.11.9",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "keywords": [
     "compute",
@@ -22,6 +22,7 @@
     "url": "git+https://github.com/software-mansion/TypeGPU.git",
     "directory": "packages/typegpu"
   },
+  "bin": "./bin.mjs",
   "type": "module",
   "sideEffects": false,
   "exports": {
@@ -33,6 +34,7 @@
     "./data": "./src/data/index.ts",
     "./std": "./src/std/index.ts",
     "./common": "./src/common/index.ts",
+    "./~internal": "./src/internal.ts",
     "./$built$": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
@@ -48,6 +50,10 @@
     "./common/$built$": {
       "types": "./dist/common/index.d.ts",
       "default": "./dist/common/index.js"
+    },
+    "./~internal/$built$": {
+      "types": "./dist/internal.d.ts",
+      "default": "./dist/internal.js"
     }
   },
   "publishConfig": {
@@ -70,6 +76,10 @@
       "./common": {
         "types": "./dist/common/index.d.ts",
         "default": "./dist/common/index.js"
+      },
+      "./~internal": {
+        "types": "./dist/internal.d.ts",
+        "default": "./dist/internal.js"
       }
     },
     "linkDirectory": false,
@@ -77,13 +87,13 @@
     "types": "./dist/index.d.ts"
   },
   "scripts": {
-    "build": "tsdown",
-    "test:types": "pnpm tsc --p ./tsconfig.test.json --noEmit",
+    "build": "bun build.mjs",
+    "test:types": "tsc --p ./tsconfig.test.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
-    "tinyest": "workspace:~0.3.1",
-    "tsover-runtime": "^0.0.6",
+    "tinyest": "workspace:~",
+    "tsover-runtime": "^0.0.7",
     "typed-binary": "^4.3.3"
   },
   "devDependencies": {
@@ -92,9 +102,10 @@
     "@types/node": "catalog:types",
     "@webgpu/types": "catalog:types",
     "arktype": "catalog:",
+    "bun": "catalog:",
+    "consola": "^3.4.0",
     "jiti": "catalog:build",
     "jsdom": "^27.0.0",
-    "tsdown": "catalog:build",
     "typegpu-testing-utility": "workspace:*",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*",
@@ -103,5 +114,5 @@
   "engines": {
     "node": ">=12.20.0"
   },
-  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67"
+  "packageManager": "pnpm@11.1.2+sha512.415a1cc25974731e75455c1468371be74c5aa5fb7621b50d4056d222451609f11412f23fd602e6169f1e060466641f798597e1be961a10688836a67b16569499"
 }

@@ -1,6 +1,6 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import { type BaseData, isNaturallyEphemeral } from '../../data/wgslTypes.ts';
+import type { BaseData } from '../../data/wgslTypes.ts';
 import { IllegalVarAccessError } from '../../errors.ts';
 import { getExecMode, isInsideTgpuFn } from '../../execMode.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -88,15 +88,11 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const id = ctx.makeUniqueIdentifier(getName(this), 'global');
-    const pre = `var<${this.#scope}> ${id}: ${ctx.resolve(this.#dataType).value}`;
+    const init = this.#initialValue
+      ? snip(this.#initialValue, this.#dataType, 'constant')
+      : undefined;
 
-    if (this.#initialValue) {
-      ctx.addDeclaration(`${pre} = ${ctx.resolve(this.#initialValue, this.#dataType).value};`);
-    } else {
-      ctx.addDeclaration(`${pre};`);
-    }
-
-    return snip(id, this.#dataType, isNaturallyEphemeral(this.#dataType) ? 'runtime' : this.#scope);
+    return ctx.gen.declareGlobalVar({ scope: this.#scope, id, dataType: this.#dataType, init });
   }
 
   $name(label: string) {
@@ -110,7 +106,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
 
   get [$gpuValueOf](): InferGPU<TDataType> {
     const dataType = this.#dataType;
-    const origin = isNaturallyEphemeral(dataType) ? 'runtime' : this.#scope;
+    const origin = this.#scope;
 
     return new Proxy(
       {
@@ -170,7 +166,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
 
     if (mode.type === 'codegen') {
       // The WGSL generator handles variable assignment, and does not defer to
-      // whatever's being assigned to to generate the WGSL.
+      // whatever's being assigned to generate the WGSL.
       throw new Error('Unreachable tgpuVariable.ts#TgpuVarImpl/$');
     }
 
