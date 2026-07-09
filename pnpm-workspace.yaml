@@ -40,7 +40,7 @@ catalogs:
 
 overrides:
   rollup: catalog:build
-  vite: 8.0.5
+  vite: 8.1.0
   '@babel/types': 'catalog:'
   '@types/node': 'catalog:types'
   typescript: 'catalog:types'
