@@ -34,9 +34,3 @@ export function bitcastF32toU32Impl(n: number): number {
   f32arr[0] = n;
   return u32arr[0] as number;
 }
-
-export function bitcastF32toU32Impl(n: number): number {
-  const dataView = new DataView(new ArrayBuffer(4));
-  dataView.setFloat32(0, n, true);
-  return dataView.getUint32(0, true);
-}

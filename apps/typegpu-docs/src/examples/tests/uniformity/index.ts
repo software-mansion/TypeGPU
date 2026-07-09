@@ -1,9 +1,9 @@
 import { randf, randomGeneratorSlot } from '@typegpu/noise';
 import { tgpu, common, d, std, type TgpuGuardedComputePipeline } from 'typegpu';
-import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 
-import { prngKeys, prngs, type PRNGKey } from './prngs.ts';
 import { defineControls } from '../../common/defineControls.ts';
+import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
+import { prngKeys, prngs, type PRNGKey } from './prngs.ts';
 
 type Mode = '2d' | '3d';
 
@@ -219,6 +219,12 @@ const { cleanupCamera, targetCamera } = setupOrbitCamera(
 );
 
 export const controls = defineControls({
+  Run: {
+    onButtonClick: () => {
+      resample();
+      redraw();
+    },
+  },
   Mode: {
     initial: mode,
     options: modes,
@@ -278,12 +284,10 @@ export const controls = defineControls({
   // this is the only place where some niche prngs are tested
   'Test Resolution': import.meta.env.DEV && {
     onButtonClick: () => {
-      modes.forEach((mode) => {
-        prngKeys.forEach((key) => {
-          // don't care about display pipelines
-          root.device.createShaderModule({
-            code: tgpu.resolve([getComputePipeline(mode, key).pipeline]),
-          });
+      prngKeys.forEach((key) => {
+        // don't care about display pipelines
+        root.device.createShaderModule({
+          code: tgpu.resolve([getComputePipeline('2d', key).pipeline]),
         });
       });
     },
