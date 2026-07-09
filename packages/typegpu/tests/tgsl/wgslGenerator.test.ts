@@ -2161,7 +2161,7 @@ describe('wgslGenerator', () => {
     });
   });
 
-  it("allows two definition to share a name as long as they don't shadow one another", () => {
+  it('allows a for-loop variable to reuse an external name without shadowing it after the loop', () => {
     const size = tgpu.privateVar(d.u32, 4);
 
     function foo() {
