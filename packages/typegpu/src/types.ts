@@ -426,7 +426,6 @@ export function isWgsl(value: unknown): value is Wgsl {
   return (
     typeof value === 'number' ||
     typeof value === 'boolean' ||
-    typeof value === 'string' ||
     isSelfResolvable(value) ||
     isWgslData(value) ||
     isSlot(value) ||

@@ -958,6 +958,16 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolve(item: unknown, schema?: BaseData | UnknownData): ResolvedSnippet {
+    if (typeof item === 'string') {
+      if (!schema || schema === UnknownData) {
+        throw new Error(
+          `Strings cannot be injected into WGSL directly (tried to inject '${item}'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.`,
+        );
+      }
+      // Already resolved
+      return snip(item, schema, /* origin */ 'runtime');
+    }
+
     if ((isTgpuFn(item) || isShelllessImpl(item)) && !isProviding(item)) {
       // We skip providing functions to only perform the checks on slot-less functions.
       if (
@@ -1009,11 +1019,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       return snip(item ? 'true' : 'false', bool, /* origin */ 'constant');
     }
 
-    if (typeof item === 'string') {
-      // Already resolved
-      return snip(item, Void, /* origin */ 'runtime');
-    }
-
     if (schema && isWgslArray(schema)) {
       if (!Array.isArray(item)) {
         throw new WgslTypeError(`Cannot coerce ${item} into value of type '${schema}'`);
@@ -1042,7 +1047,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     throw new WgslTypeError(
       `Value ${safeStringify(item)} is not resolvable${
-        schema ? ` to type ${safeStringify(schema)}` : ''
+        schema && schema !== UnknownData ? ` to type ${safeStringify(schema)}` : ''
       }`,
     );
   }

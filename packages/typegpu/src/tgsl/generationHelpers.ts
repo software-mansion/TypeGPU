@@ -167,7 +167,7 @@ export class ArrayExpression implements SelfResolvable {
     for (const elem of this.elements) {
       // We check if there are no references among the elements
       if (isAlias(elem) && !isNaturallyEphemeral(elem.dataType)) {
-        const snippetStr = ctx.resolve(elem.value, elem.dataType).value;
+        const snippetStr = ctx.resolveSnippet(elem).value;
         const snippetType = ctx.resolve(concretize(elem.dataType as BaseData)).value;
         throw new WgslTypeError(
           `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,
