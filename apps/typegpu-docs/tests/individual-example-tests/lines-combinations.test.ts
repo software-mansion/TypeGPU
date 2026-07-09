@@ -16,7 +16,7 @@ describe('lines combinations example', () => {
         category: 'geometry',
         name: 'lines-combinations',
         setupMocks: mockResizeObserver,
-        expectedCalls: 14,
+        expectedCalls: 1,
         controlTriggers: ['Test Resolution'],
       },
       device,
@@ -39,7 +39,7 @@ describe('lines combinations example', () => {
         let s = sin(time);
         let c = cos(time);
         const r = 0.25;
-        var points = array<vec2f, 4>(vec2f(((r * s) - 0.25f), (r * c)), vec2f(-0.25, 0), vec2f(0.25, 0), vec2f(((-(r) * s) + 0.25f), (r * c)));
+        let points = array<vec2f, 4>(vec2f(((r * s) - 0.25f), (r * c)), vec2f(-0.25, 0), vec2f(0.25, 0), vec2f(((-(r) * s) + 0.25f), (r * c)));
         let i = clamp((i32(vertexIndex) - 1i), 0i, 3i);
         return LineControlPoint(points[i], 0.2f);
       }
@@ -72,13 +72,13 @@ describe('lines combinations example', () => {
         let b = (distance_1.y * sinDivLen);
         let c = (distance_1.x * sinDivLen);
         let d = (distance_1.y * cosDivLen);
-        var nL = vec2f((a - b), (c + d));
-        var nR = vec2f((a + b), (-(c) + d));
+        let nL = vec2f((a - b), (c + d));
+        let nR = vec2f((a + b), (-(c) + d));
         return ExternalNormals(nL, nR);
       }
 
       fn miterPointNoCheck(a: vec2f, b: vec2f) -> vec2f {
-        var ab = (a + b);
+        let ab = (a + b);
         return (ab * (2f / dot(ab, ab)));
       }
 
@@ -98,10 +98,10 @@ describe('lines combinations example', () => {
         let tooCloseToJoinR = (dot(eAB.nR, eBC.nR) > 0.99f);
         let shouldJoinL = (isHairpin || (underLimitL && !tooCloseToJoinL));
         let shouldJoinR = (isHairpin || (underLimitR && !tooCloseToJoinR));
-        var dLMiter = miterPointNoCheck(eAB.nL, eBC.nL);
-        var dRMiter = miterPointNoCheck(eBC.nR, eAB.nR);
-        var dL = select(eBC.nL, dLMiter, (!isCap && !shouldJoinL));
-        var dR = select(eBC.nR, dRMiter, (!isCap && !shouldJoinR));
+        let dLMiter = miterPointNoCheck(eAB.nL, eBC.nL);
+        let dRMiter = miterPointNoCheck(eBC.nR, eAB.nR);
+        let dL = select(eBC.nL, dLMiter, (!isCap && !shouldJoinL));
+        let dR = select(eBC.nR, dRMiter, (!isCap && !shouldJoinR));
         return JoinResult(dL, dR, shouldJoinL, shouldJoinR, isHairpin);
       }
 
@@ -116,10 +116,10 @@ describe('lines combinations example', () => {
       }
 
       fn intersectLines(A1: vec2f, A2: vec2f, B1: vec2f, B2: vec2f) -> Intersection {
-        var a = (A2 - A1);
-        var b = (B2 - B1);
+        let a = (A2 - A1);
+        let b = (B2 - B1);
         let axb = cross2d(a, b);
-        var AB = (B1 - A1);
+        let AB = (B1 - A1);
         let t = (cross2d(AB, b) / axb);
         return Intersection((((axb != 0f) && (t >= 0f)) && (t <= 1f)), t, (A1 + (a * t)));
       }
@@ -129,10 +129,9 @@ describe('lines combinations example', () => {
         v: vec2f,
         d: vec2f,
         fw: vec2f,
+        cross: vec2f,
         start: vec2f,
         end: vec2f,
-        shouldJoin: bool,
-        isCap: bool,
       }
 
       fn rot90ccw(v: vec2f) -> vec2f {
@@ -146,9 +145,9 @@ describe('lines combinations example', () => {
       fn bisectCcw(a: vec2f, b: vec2f) -> vec2f {
         let sin_1 = cross2d(a, b);
         let sinSign = select(-1f, 1f, (sin_1 >= 0f));
-        var orthoA = rot90ccw(a);
-        var orthoB = rot90cw(b);
-        var dir = select(((a + b) * sinSign), (orthoA + orthoB), (dot(a, b) < 0f));
+        let orthoA = rot90ccw(a);
+        let orthoB = rot90cw(b);
+        let dir = select(((a + b) * sinSign), (orthoA + orthoB), (dot(a, b) < 0f));
         return normalize(dir);
       }
 
@@ -157,7 +156,7 @@ describe('lines combinations example', () => {
       }
 
       fn slerpApprox(a: vec2f, b: vec2f, t: f32) -> vec2f {
-        var mid = bisectNoCheck(a, b);
+        let mid = bisectNoCheck(a, b);
         var a_ = a;
         var b_ = mid;
         var t_ = (2f * t);
@@ -173,15 +172,15 @@ describe('lines combinations example', () => {
         if ((joinVertexIndex == 0u)) {
           return join.v;
         }
-        var dir = slerpApprox(join.d, bisectCcw(join.start, join.end), (f32(joinVertexIndex) / f32(maxJoinCount)));
+        let dir = slerpApprox(join.d, bisectCcw(join.start, join.end), (f32(joinVertexIndex) / f32(maxJoinCount)));
         return (join.C.position + (dir * join.C.radius));
       }
 
-      fn lineSegmentVariableWidth(vertexIndex: u32, A: LineControlPoint, B: LineControlPoint, C: LineControlPoint, D: LineControlPoint, maxJoinCount: u32) -> LineSegmentOutput {
-        var AB = (B.position - A.position);
-        var BC = (C.position - B.position);
-        var DC = (C.position - D.position);
-        var CB = -(BC);
+      fn polylineVariableWidth(A: LineControlPoint, B: LineControlPoint, C: LineControlPoint, D: LineControlPoint, vertexIndex: u32, maxJoinCount: u32) -> LineSegmentOutput {
+        let AB = (B.position - A.position);
+        let BC = (C.position - B.position);
+        let DC = (C.position - D.position);
+        let CB = -(BC);
         let radiusABDelta = (A.radius - B.radius);
         let radiusBCDelta = (B.radius - C.radius);
         let radiusCDDelta = (C.radius - D.radius);
@@ -190,10 +189,10 @@ describe('lines combinations example', () => {
         }
         let isCapB = (dot(AB, AB) <= (radiusABDelta * radiusABDelta));
         let isCapC = (dot(DC, DC) <= (radiusCDDelta * radiusCDDelta));
-        var eAB = externalNormals(AB, A.radius, B.radius);
-        var eBC = externalNormals(BC, B.radius, C.radius);
-        var eCB = ExternalNormals(eBC.nR, eBC.nL);
-        var eDC = externalNormals(DC, D.radius, C.radius);
+        let eAB = externalNormals(AB, A.radius, B.radius);
+        let eBC = externalNormals(BC, B.radius, C.radius);
+        let eCB = ExternalNormals(eBC.nR, eBC.nL);
+        let eDC = externalNormals(DC, D.radius, C.radius);
         let joinLimit = dot(eBC.nL, BC);
         var joinB = solveJoin(AB, BC, eAB, eBC, joinLimit, isCapB);
         var joinC = solveJoin(DC, CB, eDC, eCB, -(joinLimit), isCapC);
@@ -201,16 +200,16 @@ describe('lines combinations example', () => {
         let d3 = (&joinB.dR);
         let d4 = (&joinC.dL);
         let d5 = (&joinC.dR);
-        var v2orig = (B.position + ((*d2) * B.radius));
-        var v3orig = (B.position + ((*d3) * B.radius));
-        var v4orig = (C.position + ((*d4) * C.radius));
-        var v5orig = (C.position + ((*d5) * C.radius));
-        var limL = intersectLines(B.position, v2orig, C.position, v5orig);
-        var limR = intersectLines(B.position, v3orig, C.position, v4orig);
-        var v2 = select(v2orig, limL.point, limL.valid);
-        var v5 = select(v5orig, limL.point, limL.valid);
-        var v3 = select(v3orig, limR.point, limR.valid);
-        var v4 = select(v4orig, limR.point, limR.valid);
+        let v2orig = (B.position + ((*d2) * B.radius));
+        let v3orig = (B.position + ((*d3) * B.radius));
+        let v4orig = (C.position + ((*d4) * C.radius));
+        let v5orig = (C.position + ((*d5) * C.radius));
+        let limL = intersectLines(B.position, v2orig, C.position, v5orig);
+        let limR = intersectLines(B.position, v3orig, C.position, v4orig);
+        let v2 = select(v2orig, limL.point, limL.valid);
+        let v5 = select(v5orig, limL.point, limL.valid);
+        let v3 = select(v3orig, limR.point, limR.valid);
+        let v4 = select(v4orig, limR.point, limR.valid);
         if ((vertexIndex == 0u)) {
           return LineSegmentOutput(B.position, (1f / B.radius));
         }
@@ -220,24 +219,38 @@ describe('lines combinations example', () => {
         let coreVertexIndex = ((vertexIndex - 2u) & 3u);
         let joinVertexIndex = ((vertexIndex - 2u) >> 2u);
         var join = JoinInput();
+        var isCap = false;
+        var shouldJoin = false;
+        let normBC = normalize(BC);
+        let normCB = -(normBC);
+        let crossL = rot90ccw(normBC);
+        let crossR = rot90cw(normBC);
         if ((coreVertexIndex == 0u)) {
-          join = JoinInput(B, v2, (*d2), CB, (*d2), select(eAB.nL, (*d3), (joinB.isHairpin || isCapB)), joinB.shouldJoinL, isCapB);
+          isCap = isCapB;
+          shouldJoin = joinB.shouldJoinL;
+          join = JoinInput(B, v2, (*d2), normCB, crossL, (*d2), select(eAB.nL, (*d3), (joinB.isHairpin || isCapB)));
         }
         else {
           if ((coreVertexIndex == 1u)) {
-            join = JoinInput(B, v3, (*d3), CB, select(eAB.nR, (*d2), (joinB.isHairpin || isCapB)), (*d3), joinB.shouldJoinR, isCapB);
+            isCap = isCapB;
+            shouldJoin = joinB.shouldJoinR;
+            join = JoinInput(B, v3, (*d3), normCB, crossR, select(eAB.nR, (*d2), (joinB.isHairpin || isCapB)), (*d3));
           }
           else {
             if ((coreVertexIndex == 2u)) {
-              join = JoinInput(C, v4, (*d4), BC, (*d4), select(eDC.nL, (*d5), (joinC.isHairpin || isCapC)), joinC.shouldJoinL, isCapC);
+              isCap = isCapC;
+              shouldJoin = joinC.shouldJoinL;
+              join = JoinInput(C, v4, (*d4), normBC, crossR, (*d4), select(eDC.nL, (*d5), (joinC.isHairpin || isCapC)));
             }
             else {
-              join = JoinInput(C, v5, (*d5), BC, select(eDC.nR, (*d4), (joinC.isHairpin || isCapC)), (*d5), joinC.shouldJoinR, isCapC);
+              isCap = isCapC;
+              shouldJoin = joinC.shouldJoinR;
+              join = JoinInput(C, v5, (*d5), normBC, crossL, select(eDC.nR, (*d4), (joinC.isHairpin || isCapC)), (*d5));
             }
           }
         }
         var vertexPosition = join.v;
-        if (join.isCap) {
+        if (isCap) {
           if ((coreVertexIndex < 2u)) {
             vertexPosition = round_1(join, joinVertexIndex, maxJoinCount);
           }
@@ -246,7 +259,7 @@ describe('lines combinations example', () => {
           }
         }
         else {
-          if (join.shouldJoin) {
+          if (shouldJoin) {
             vertexPosition = round_1(join, joinVertexIndex, maxJoinCount);
           }
         }
@@ -256,14 +269,14 @@ describe('lines combinations example', () => {
 
       @vertex fn mainVertex(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) instanceIndex: u32) -> mainVertex_Output {
         let t = uniforms.time;
-        var A = item(instanceIndex, t);
-        var B = item((instanceIndex + 1u), t);
-        var C = item((instanceIndex + 2u), t);
-        var D = item((instanceIndex + 3u), t);
+        let A = item(instanceIndex, t);
+        let B = item((instanceIndex + 1u), t);
+        let C = item((instanceIndex + 2u), t);
+        let D = item((instanceIndex + 3u), t);
         if (((((A.radius < 0f) || (B.radius < 0f)) || (C.radius < 0f)) || (D.radius < 0f))) {
           return mainVertex_Output();
         }
-        var result = lineSegmentVariableWidth(vertexIndex, A, B, C, D, 6u);
+        let result = polylineVariableWidth(A, B, C, D, vertexIndex, 6u);
         return mainVertex_Output(vec4f((result.vertexPosition * result.w), 0f, result.w), result.vertexPosition, vec2f(0f, select(0f, 1f, (vertexIndex > 1u))), instanceIndex, vertexIndex, 0u);
       }
 
@@ -278,7 +291,7 @@ describe('lines combinations example', () => {
       @fragment fn mainFragment(_arg_0: mainFragment_Input, @builtin(front_facing) frontFacing: bool, @builtin(position) screenPosition: vec4f) -> @location(0) vec4f {
         let fillType = uniforms.fillType;
         var color = vec3f();
-        var colors = array<vec3f, 9>(vec3f(1, 0, 0), vec3f(0, 1, 0), vec3f(0, 0, 1), vec3f(1, 0, 1), vec3f(1, 1, 0), vec3f(0, 1, 1), vec3f(0.75, 0.25, 0.25), vec3f(0.25, 0.75, 0.25), vec3f(0.25, 0.25, 0.75));
+        let colors = array<vec3f, 9>(vec3f(1, 0, 0), vec3f(0, 1, 0), vec3f(0, 0, 1), vec3f(1, 0, 1), vec3f(1, 1, 0), vec3f(0, 1, 1), vec3f(0.75, 0.25, 0.25), vec3f(0.25, 0.75, 0.25), vec3f(0.25, 0.25, 0.75));
         if ((fillType == 1u)) {
           color = mix(vec3f(0.7699999809265137, 0.38999998569488525, 1), vec3f(0.10999999940395355, 0.4399999976158142, 0.9399999976158142), ((_arg_0.position.x * 0.5f) + 0.5f));
         }

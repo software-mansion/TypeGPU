@@ -1,5 +1,5 @@
 import { describe, expect } from 'vitest';
-import tgpu, { d } from '../src/index.js';
+import { tgpu, d } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('resolve', () => {
@@ -33,10 +33,11 @@ describe('resolve', () => {
   });
 
   it('can resolve a render pipeline', ({ root }) => {
-    const pipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { format: 'rgba8unorm' })
-      .createPipeline();
+    const pipeline = root.createRenderPipeline({
+      vertex: vertexFn,
+      fragment: fragmentFn,
+      targets: { format: 'rgba8unorm' },
+    });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct Boid {
@@ -50,7 +51,7 @@ describe('resolve', () => {
       }
 
       @vertex fn vertexFn() -> vertexFn_Output {
-        var myBoid = Boid();
+        let myBoid = Boid();
         return vertexFn_Output(vec4f(myBoid.position, 0f, 1f), myBoid.color);
       }
 
@@ -65,7 +66,7 @@ describe('resolve', () => {
   });
 
   it('can resolve a compute pipeline', ({ root }) => {
-    const pipeline = root.withCompute(computeFn).createPipeline();
+    const pipeline = root.createComputePipeline({ compute: computeFn });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
       "struct Boid {
@@ -74,7 +75,7 @@ describe('resolve', () => {
       }
 
       @compute @workgroup_size(1, 1, 1) fn computeFn() {
-        var myBoid = Boid(vec2f(), vec4f(1, 0, 0, 1));
+        let myBoid = Boid(vec2f(), vec4f(1, 0, 0, 1));
       }"
     `);
   });
@@ -97,7 +98,7 @@ describe('resolve', () => {
       }
 
       fn wrappedCallback(x: u32, y: u32, z: u32) {
-        var myBoid = Boid(vec2f(), vec4f(f32(x), f32(y), f32(z), 1f));
+        let myBoid = Boid(vec2f(), vec4f(f32(x), f32(y), f32(z), 1f));
       }
 
       @compute @workgroup_size(8, 8, 4) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
@@ -110,12 +111,13 @@ describe('resolve', () => {
   });
 
   it('throws when resolving multiple pipelines', ({ root }) => {
-    const renderPipeline = root
-      .withVertex(vertexFn, {})
-      .withFragment(fragmentFn, { format: 'rgba8unorm' })
-      .createPipeline();
+    const renderPipeline = root.createRenderPipeline({
+      vertex: vertexFn,
+      fragment: fragmentFn,
+      targets: { format: 'rgba8unorm' },
+    });
 
-    const computePipeline = root.withCompute(computeFn).createPipeline();
+    const computePipeline = root.createComputePipeline({ compute: computeFn });
 
     expect(() =>
       tgpu.resolve([renderPipeline, computePipeline]),

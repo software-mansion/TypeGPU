@@ -1,12 +1,18 @@
 <div align="center">
 
-![TypeGPU (light mode)](./apps/typegpu-docs/public/typegpu-logo-light.svg#gh-light-mode-only)
-![TypeGPU (dark mode)](./apps/typegpu-docs/public/typegpu-logo-dark.svg#gh-dark-mode-only)
+<picture>
+<source srcset="https://typegpu.com/typegpu-logo-dark.svg" media="(prefers-color-scheme: dark)" />
+<img src="https://typegpu.com/typegpu-logo-light.svg" />
+</picture>
 
 [Website](https://docs.swmansion.com/TypeGPU) —
 [Documentation](https://docs.swmansion.com/TypeGPU/getting-started)
 
 </div>
+
+[![Ad](https://swm-delivery.com/www/images/zone-gh-typeGPU-1?n=1)](https://swm-delivery.com/www/delivery/ck-slug.php?zoneid=zone-gh-typeGPU-1&n=1)
+[![Ad](https://swm-delivery.com/www/images/zone-gh-typeGPU-2?n=1)](https://swm-delivery.com/www/delivery/ck-slug.php?zoneid=zone-gh-typeGPU-2&n=1)
+[![Ad](https://swm-delivery.com/www/images/zone-gh-typeGPU-3?n=1)](https://swm-delivery.com/www/delivery/ck-slug.php?zoneid=zone-gh-typeGPU-3&n=1)
 
 **TypeGPU** is a modular and open-ended toolkit for WebGPU, with advanced type
 inference and the ability to write shaders in TypeScript.
@@ -112,7 +118,7 @@ compute shaders, and `@abc/plot` is a library for plots and visualization using
 WebGPU.
 
 ```ts
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import gen from '@xyz/gen';
 import plot from '@abc/plot';
 

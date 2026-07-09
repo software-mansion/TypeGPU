@@ -1,0 +1,240 @@
+---
+title: Slots
+description: Slots can be used to inject arbitrary values into shader code at a granular level.
+---
+Slots are a powerful dependency injection mechanism in TypeGPU that allows you to write shader logic without having to tightly couple to specific resources.
+Similarly to bind group layouts, you can think of slots as of typed "holes" in TypeGPU shaders, that can be filled in later on from the outside.
+The main differences between slots and bound resources include the following:
+
+- Slots are filled in before the shader module compile time, instead of just before the shader execution starts.
+- Slots can contain not only buffers, but also basically any JavaScript value, even TypeGPU functions.
+
+Main use cases for slots include:
+
+- Generics -- instead of rewriting a function for each generic parameter, it suffices to fill a slot with a different value.
+- Passing callbacks -- high-level libraries based on TypeGPU can leave slots for user-defined functions to call.
+{/*- Conditional compilation -- an `if` statement with a boolean slot can be pruned at compile time if the slot is filled with `false`.*/}
+
+## Basic usage
+
+A slot is created using the `tgpu.slot()` function and can optionally take a default value:
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+// ---cut---
+const filterColorSlot = tgpu.slot<d.v3f>(); // Slot for a 3D vector.
+const mySlot = tgpu.slot<number>(42); // Slot with a default value.
+
+interface Config {
+  fogEnabled: boolean;
+  tint: d.v3f;
+}
+
+const configSlot = tgpu.slot<Config>();
+```
+
+You can access a slot's value using `.$`:
+
+```typescript
+const value = mySlot.$;
+```
+
+:::caution
+Slot values can only be accessed inside TypeGPU functions.
+Attempting to access them outside will throw an error.
+:::
+
+Slots are resolved during the TypeGPU resolution phase.
+The slot object itself does not hold any value.
+Instead, you can bind it in one of two ways.
+
+### Binding after defining a function
+
+The first way to bind a value to a slot is to call the `with` method on a wrapped TypeGPU function:
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+// ---cut---
+const filterColorSlot = tgpu.slot<d.v3f>();
+
+const filter = (color: d.v3f): d.v3f => {
+  'use gpu';
+  const filterColor = filterColorSlot.$;
+  return color.mul(filterColor);
+};
+
+// Bind the filter function with a red color.
+const filterWithRed = tgpu.fn(filter)
+  .with(filterColorSlot, d.vec3f(1, 0, 0));
+
+// Bind the filter function with a green color.
+const filterWithGreen = tgpu.fn(filter)
+  .with(filterColorSlot, d.vec3f(0, 1, 0));
+```
+
+In the example above, after resolution we are left with two different WGSL functions:
+
+```wgsl
+fn filter_0(color: vec3f) ->  vec3f{
+  var filterColor = vec3f(1, 0, 0);
+  return (color * filterColor);
+}
+
+fn filter_1(color: vec3f) ->  vec3f{
+  var filterColor = vec3f(0, 1, 0);
+  return (color * filterColor);
+}
+```
+
+### Binding during pipeline creation
+
+The other way to fill in a slot is to call the `with` method during the creation of a `TgpuComputePipeline` or `TgpuRenderPipeline`:
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const resultBuffer = root.createMutable(d.i32, 0);
+const multiplierSlot = tgpu.slot<number>();
+
+const computeMultiply = tgpu.computeFn({ workgroupSize: [1] })(() => {
+  resultBuffer.$ = resultBuffer.$ * multiplierSlot.$;
+});
+
+const pipeline = root
+  .with(multiplierSlot, 3)
+  .createComputePipeline({ compute: computeMultiply });
+```
+
+The pipeline above resolves to the following WGSL:
+
+```wgsl
+@group(0) @binding(0) var<storage, read_write> resultBuffer_1: i32;
+
+@compute @workgroup_size(1) fn computeMultiply_0(){
+  resultBuffer_1 = (resultBuffer_1 * 3);
+}
+```
+
+:::note
+Static code analysis does not verify whether all slots have been filled.
+If you forget to assign a value to a slot, a runtime error will be thrown instead.
+:::
+
+## Inversion of control
+
+Slots allow libraries to expose customization points to their users.
+They enable internal behavior to be modified without sacrificing type safety or performance.
+
+```ts twoslash
+// physics.ts
+import { tgpu, d } from 'typegpu';
+import { add, mul } from 'typegpu/std';
+
+const root = await tgpu.init();
+
+const Obj = d.struct({
+  position: d.vec2f,
+  velocity: d.vec2f,
+});
+
+const objects = root.createReadonly(d.arrayOf(Obj, 256));
+const deltaTime = root.createUniform(d.f32);
+
+// ---cut---
+const defaultGravity = tgpu.fn([d.vec2f], d.vec2f)((pos) => {
+  return d.vec2f(0, -9.8);
+});
+
+export const gravitySlot = tgpu.slot(defaultGravity);
+//           ^?
+
+export const stepPhysics = tgpu.fn([])(() => {
+  for (const obj of objects.$) {
+    // Calling whatever implementation was provided.
+    const gravity = gravitySlot.$(obj.position);
+
+    obj.velocity = add(obj.velocity, mul(gravity, deltaTime.$));
+  }
+});
+```
+
+```ts
+// main.ts
+
+import { stepPhysics, gravitySlot } from './physics.ts';
+
+const gravityTowardsCenter = tgpu.fn([vec2f], vec2f)((pos) => {
+  return mul(normalize(pos), -1);
+});
+
+const stepPhysicsCustomized = stepPhysics
+  .with(gravitySlot, gravityTowardsCenter);
+
+const main = tgpu.computeFn()(() => {
+  stepPhysicsCustomized(); // <- Will use altered gravity.
+});
+```
+
+{/*
+TODO: re-add and rewrite this section back when we actually prune branches.
+
+## Conditional compilation
+
+Slots can be used for conditional compilation of segments of shaders.
+When the slot holding a boolean value is filled with `false`, all `if` statements depending on the value of that slot will be pruned by our tree-shaking mechanism.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+import { max } from 'typegpu/std';
+
+const root = await tgpu.init();
+
+const Obj = d.struct({
+  pos: d.vec3f,
+});
+
+const objects = root.createReadonly(d.arrayOf(Obj, 256));
+
+// ---cut---
+const safeLoopSlot = tgpu.slot(false);
+
+const processObjects = tgpu.fn([])(() => {
+  let len = objects.$.length;
+
+  if (safeLoopSlot.$) { // <- evaluated at compile time
+    // This will be included in the shader code only if
+    // `safeLoopSlot` is bound to true in the caller's scope.
+    len = max(len, 9999);
+  }
+
+  for (let i = 0; i < len; ++i) {
+    // ...
+  }
+});
+```
+
+*/}
+
+## Slots in raw WGSL
+
+It is possible to use slots even in TypeGPU functions that are implemented in WGSL:
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+// ---cut---
+const colorSlot = tgpu.slot(d.vec3f(1, 0, 0));
+
+const getColor = tgpu.fn([], d.vec3f)`() {
+  return colorSlot;
+}`.$uses({ colorSlot });
+```
+
+The code above resolves to the following WGSL:
+
+```wgsl
+fn getColor() -> vec3f {
+  return vec3f(1, 0, 0);
+}
+```

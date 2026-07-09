@@ -1,8 +1,7 @@
 import { attest } from '@ark/attest';
 import { describe, expect } from 'vitest';
-import { builtin } from '../src/builtin.ts';
-import tgpu, { d, type TgpuFn, type TgpuSlot } from '../src/index.js';
-import { getName } from '../src/shared/meta.ts';
+import { builtin } from 'typegpu/data';
+import { tgpu, d, type TgpuFn, type TgpuSlot } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('TGSL tgpu.fn function', () => {
@@ -14,7 +13,7 @@ describe('TGSL tgpu.fn function', () => {
       )(() => 3)
       .$name('get_x');
 
-    expect(getName(getX)).toBe('get_x');
+    expect(tgpu.resolve([getX])).toContain('fn get_x() -> f32');
   });
 
   it('resolves to WGSL', () => {
@@ -28,51 +27,45 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves externals', () => {
-    const getColor = tgpu
-      .fn(
-        [],
-        d.vec3f,
-      )(() => {
-        const color = d.vec3f();
-        const color2 = d.vec3f(1, 2, 3);
-        return color;
-      })
-      .$uses({ v: d.vec3f });
+    const getColor = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
+      const color = d.vec3f();
+      const color2 = d.vec3f(1, 2, 3);
+      return color;
+    });
 
-    const getX = tgpu
-      .fn(
-        [],
-        d.f32,
-      )(() => {
-        const color = getColor();
-        return 3;
-      })
-      .$uses({ getColor });
+    const getX = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      const color = getColor();
+      return 3;
+    });
 
-    const getY = tgpu
-      .fn(
-        [],
-        d.f32,
-      )(() => {
-        const c = getColor();
-        return getX();
-      })
-      .$uses({ getX, getColor });
+    const getY = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      const c = getColor();
+      return getX();
+    });
 
     expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-        var color = vec3f();
-        var color2 = vec3f(1, 2, 3);
+        let color = vec3f();
+        let color2 = vec3f(1, 2, 3);
         return color;
       }
 
       fn getX() -> f32 {
-        var color = getColor();
+        let color = getColor();
         return 3f;
       }
 
       fn getY() -> f32 {
-        var c = getColor();
+        let c = getColor();
         return getX();
       }"
     `);
@@ -176,11 +169,11 @@ describe('TGSL tgpu.fn function', () => {
         @location(0) uv: vec2f,
       }
 
-      @vertex fn vertex_fn(@builtin(vertex_index) _arg_vi: u32, @builtin(instance_index) _arg_ii: u32, @location(0) _arg_color: vec4f) -> vertex_fn_Output {
-        let vi = f32(_arg_vi);
-        let ii = f32(_arg_ii);
-        let color = _arg_color;
-        return vertex_fn_Output(vec4f(color.w, ii, vi, 1f), vec2f(color.w, vi));
+      @vertex fn vertex_fn(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32, @location(0) color: vec4f) -> vertex_fn_Output {
+        let vi_1 = f32(vi);
+        let ii_1 = f32(ii);
+        let color_1 = color;
+        return vertex_fn_Output(vec4f(color_1.w, ii_1, vi_1, 1f), vec2f(color_1.w, vi_1));
       }"
     `);
   });
@@ -265,15 +258,14 @@ describe('TGSL tgpu.fn function', () => {
       })
       .$name('vertex_fn');
 
-    expect(getName(vertexFn)).toBe('vertex_fn');
     expect(tgpu.resolve([vertexFn])).toMatchInlineSnapshot(`
       "struct vertex_fn_Output {
         @builtin(position) pos: vec4f,
         @location(0) uv: vec2f,
       }
 
-      @vertex fn vertex_fn(@builtin(vertex_index) _arg_vi: u32, @builtin(instance_index) _arg_ii: u32, @location(0) _arg_color: vec4f) -> vertex_fn_Output {
-        var myOutput = vertex_fn_Output(vec4f(_arg_color.w, f32(_arg_ii), f32(_arg_vi), 1f), vec2f(_arg_color.w, f32(_arg_vi)));
+      @vertex fn vertex_fn(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32, @location(0) color: vec4f) -> vertex_fn_Output {
+        let myOutput = vertex_fn_Output(vec4f(color.w, f32(ii), f32(vi), 1f), vec2f(color.w, f32(vi)));
         return myOutput;
       }"
     `);
@@ -293,11 +285,29 @@ describe('TGSL tgpu.fn function', () => {
       .$name('compute_fn');
 
     expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
-      "@compute @workgroup_size(24) fn compute_fn(@builtin(global_invocation_id) _arg_gid: vec3u) {
-        let index = _arg_gid.x;
+      "@compute @workgroup_size(24) fn compute_fn(@builtin(global_invocation_id) gid: vec3u) {
+        let index = gid.x;
         const iterationF = 0f;
         const sign_1 = 0;
-        var change = vec4f();
+        let change = vec4f();
+      }"
+    `);
+  });
+
+  it('resolves linear compute builtins', () => {
+    const computeFn = tgpu.computeFn({
+      in: {
+        globalIndex: builtin.globalInvocationIndex,
+        workgroupIndex: builtin.workgroupIndex,
+      },
+      workgroupSize: [24],
+    })((input) => {
+      const index = input.globalIndex + input.workgroupIndex;
+    });
+
+    expect(tgpu.resolve([computeFn])).toMatchInlineSnapshot(`
+      "@compute @workgroup_size(24) fn computeFn(@builtin(global_invocation_index) globalIndex: u32, @builtin(workgroup_index) workgroupIndex: u32) {
+        let index = (globalIndex + workgroupIndex);
       }"
     `);
   });
@@ -320,7 +330,7 @@ describe('TGSL tgpu.fn function', () => {
         let index = gid.x;
         const iterationF = 0f;
         const sign_1 = 0;
-        var change = vec4f();
+        let change = vec4f();
       }"
     `);
   });
@@ -369,13 +379,13 @@ describe('TGSL tgpu.fn function', () => {
         @location(0) out: vec4f,
       }
 
-      @fragment fn fragmentFn(@builtin(position) _arg_pos: vec4f, @builtin(sample_mask) _arg_sampleMask: u32) -> fragmentFn_Output {
-        let pos = _arg_pos;
-        var sampleMask = 0;
-        if (((_arg_sampleMask > 0u) && (pos.x > 0f))) {
-          sampleMask = 1i;
+      @fragment fn fragmentFn(@builtin(position) pos: vec4f, @builtin(sample_mask) sampleMask: u32) -> fragmentFn_Output {
+        let pos_1 = pos;
+        var sampleMask_1 = 0;
+        if (((sampleMask > 0u) && (pos_1.x > 0f))) {
+          sampleMask_1 = 1i;
         }
-        return fragmentFn_Output(u32(sampleMask), 1f, vec4f());
+        return fragmentFn_Output(u32(sampleMask_1), 1f, vec4f());
       }"
     `);
   });
@@ -412,9 +422,9 @@ describe('TGSL tgpu.fn function', () => {
         @location(0) out: vec4f,
       }
 
-      @fragment fn fragmentFn(@builtin(position) _arg_pos: vec4f, @builtin(sample_mask) _arg_sampleMask: u32) -> fragmentFn_Output {
+      @fragment fn fragmentFn(@builtin(position) pos: vec4f, @builtin(sample_mask) sampleMask: u32) -> fragmentFn_Output {
         var myOutput = fragmentFn_Output(0u, 1f, vec4f());
-        if (((_arg_sampleMask > 0u) && (_arg_pos.x > 0f))) {
+        if (((sampleMask > 0u) && (pos.x > 0f))) {
           myOutput.sampleMask = 1u;
         }
         return myOutput;
@@ -437,7 +447,7 @@ describe('TGSL tgpu.fn function', () => {
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
       "@fragment fn fragmentFn() -> @location(0) vec4f {
-        var hmm = vec4f(1.25);
+        let hmm = vec4f(1.25);
         return hmm;
       }"
     `);
@@ -491,8 +501,8 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     expect(tgpu.resolve([fragmentFn])).toMatchInlineSnapshot(`
-      "@fragment fn fragmentFn(@builtin(position) _arg_pos: vec4f) -> @location(0) vec4f {
-        return _arg_pos;
+      "@fragment fn fragmentFn(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+        return pos;
       }"
     `);
   });
@@ -567,7 +577,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       @compute @workgroup_size(24) fn compute_fn() {
-        var testStruct = getTestStruct();
+        let testStruct = getTestStruct();
       }"
     `);
   });
@@ -646,7 +656,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       fn fun(_arg_0: Input) {
-        var vector = vec2u(u32(_arg_0.value));
+        let vector = vec2u(u32(_arg_0.value));
       }"
     `);
   });
@@ -666,7 +676,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       fn fun(input: Input) {
-        var vector = vec2u(u32(input.value));
+        let vector = vec2u(u32(input.value));
       }"
     `);
   });
@@ -686,7 +696,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       fn fun(_arg_0: Input) {
-        var vector = vec2u(u32(_arg_0.value));
+        let vector = vec2u(u32(_arg_0.value));
       }"
     `);
   });
@@ -706,7 +716,7 @@ describe('TGSL tgpu.fn function', () => {
       }
 
       fn fun(_arg_0: Input, x: i32, _arg_2: Input) {
-        var vector = vec3u(u32(_arg_0.value), u32(x), u32(_arg_2.value));
+        let vector = vec3u(u32(_arg_0.value), u32(x), u32(_arg_2.value));
       }"
     `);
   });
@@ -893,6 +903,42 @@ describe('tgsl fn when using plugin', () => {
     `);
   });
 
+  it('throws when it detects simple recursion', () => {
+    function increment(n: number, k: number): number {
+      'use gpu';
+      if (k === 0) return n;
+      return increment(n, k - 1) + 1;
+    }
+
+    const f1 = () => {
+      'use gpu';
+      return increment(d.u32(7), d.u32(3));
+    };
+
+    expect(() => tgpu.resolve([f1])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f1
+      - fn*:f1()
+      - fn*:increment(u32, u32): Recursive function fn*:increment(u32, u32) detected. Recursion is not allowed on the GPU.]
+    `);
+
+    const wrappedIncrement = tgpu.fn(increment);
+
+    const f2 = () => {
+      'use gpu';
+      return wrappedIncrement(d.u32(7), d.u32(3));
+    };
+
+    expect(() => tgpu.resolve([f2])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f2
+      - fn*:f2()
+      - fn*:increment(u32, u32): Recursive function fn*:increment(u32, u32) detected. Recursion is not allowed on the GPU.]
+    `);
+  });
+
   it('throws when it detects a cyclic dependency (recursion)', () => {
     let bar: TgpuFn;
     let foo: TgpuFn;
@@ -975,6 +1021,51 @@ describe('tgsl fn when using plugin', () => {
     `);
   });
 
+  it('allows for re-resolves of slotted functions', () => {
+    const slot = tgpu.slot<number>(1);
+    const helper = tgpu
+      .fn([])(() => {
+        'use gpu';
+        const x = slot.$;
+      })
+      .with(slot, 2);
+
+    const fn1 = () => {
+      'use gpu';
+      helper();
+    };
+
+    const fn2 = () => {
+      'use gpu';
+      helper();
+    };
+
+    const main = () => {
+      'use gpu';
+      fn1();
+      fn2();
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn helper() {
+        const x = 2;
+      }
+
+      fn fn1() {
+        helper();
+      }
+
+      fn fn2() {
+        helper();
+      }
+
+      fn main() {
+        fn1();
+        fn2();
+      }"
+    `);
+  });
+
   it('allows .with to be called at comptime', () => {
     const multiplierSlot = tgpu.slot(1);
     const scale = tgpu.fn(
@@ -1007,16 +1098,88 @@ describe('tgsl fn when using plugin', () => {
     `);
   });
 
-  it('throws a readable error when assigning to a value defined outside of tgsl', () => {
+  it('throws a readable error when assigning to a value defined outside of scope', () => {
     let a = 0;
-    const f = tgpu.fn([])(() => {
+    const f = () => {
+      'use gpu';
+      // oxlint-disable-next-line typegpu/no-invalid-assignment
       a = 2;
-    });
+    };
 
     expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:f: '0 = 2' is invalid, because 0 is a constant. This error may also occur when assigning to a value defined outside of a TypeGPU function's scope.]
+      - fn*:f
+      - fn*:f(): 'a = 2' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.]
+    `);
+  });
+
+  it('throws a readable error when updating a value defined outside of scope', () => {
+    let a = 0;
+    const f = () => {
+      'use gpu';
+      // oxlint-disable-next-line typegpu/no-invalid-assignment
+      a++;
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): 'a++' is invalid, because the left side is defined outside of the shader, and therefore is immutable during its execution. Try using tgpu.privateVar or buffers.]
+    `);
+  });
+
+  it('allows external variable recapture', () => {
+    let a = 1;
+    const fn = () => {
+      'use gpu';
+      return a;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 1;
+      }"
+    `);
+
+    a = 2;
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> i32 {
+        return 2;
+      }"
+    `);
+  });
+
+  it('names used externals', () => {
+    const myConst = (() => tgpu.const(d.u32, 1))(); // unnamed
+    const fn = () => {
+      'use gpu';
+      return myConst.$;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "const myConst: u32 = 1u;
+
+      fn fn_1() -> u32 {
+        return myConst;
+      }"
+    `);
+  });
+
+  it('names used nested externals', () => {
+    const EXT = { myConst: (() => tgpu.const(d.u32, 1))() /* unnamed */ };
+    const fn = () => {
+      'use gpu';
+      return EXT.myConst.$;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "const myConst: u32 = 1u;
+
+      fn fn_1() -> u32 {
+        return myConst;
+      }"
     `);
   });
 });

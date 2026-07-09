@@ -3,6 +3,8 @@
   "compilerOptions": {
     "declaration": false,
     "emitDeclarationOnly": false,
-    "noEmit": true
-  }
+    "noEmit": true,
+    "jsx": "react-jsx"
+  },
+  "exclude": ["**/dist", "**/node_modules", "node_modules", "apps/**"]
 }

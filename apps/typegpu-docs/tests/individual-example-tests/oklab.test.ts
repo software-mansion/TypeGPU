@@ -130,7 +130,7 @@ describe('oklab example', () => {
 
       fn findCusp(a: f32, b: f32) -> LC {
         let S_cusp = computeMaxSaturation(a, b);
-        var rgb_at_max = oklabToLinearRgb(vec3f(1f, (S_cusp * a), (S_cusp * b)));
+        let rgb_at_max = oklabToLinearRgb(vec3f(1f, (S_cusp * a), (S_cusp * b)));
         let L_cusp = cbrt((1f / max(max(rgb_at_max.x, rgb_at_max.y), rgb_at_max.z)));
         let C_cusp = (L_cusp * S_cusp);
         return LC(L_cusp, C_cusp);
@@ -203,7 +203,7 @@ describe('oklab example', () => {
         let Ld = (L - 0.5f);
         let e1 = ((0.5f + abs(Ld)) + (alpha * C));
         let L0 = (0.5f * (1f + (sign(Ld) * (e1 - sqrt(max(0f, ((e1 * e1) - (2f * abs(Ld)))))))));
-        var cusp = findCusp(a_, b_);
+        let cusp = findCusp(a_, b_);
         let t = clamp(findGamutIntersection(a_, b_, L, C, L0, cusp), 0f, 1f);
         let L_clipped = mix(L0, L, t);
         let C_clipped = (t * C);
@@ -227,15 +227,15 @@ describe('oklab example', () => {
       }
 
       @fragment fn mainFragment(_arg_0: mainFragment_Input) -> @location(0) vec4f {
-        var uv = ((_arg_0.uv - 0.5f) * vec2f(2, -2));
+        let uv = ((_arg_0.uv - 0.5f) * vec2f(2, -2));
         let hue = uniforms.hue;
-        var pos = scaleView(uv);
-        var yzDir = vec2f(cos(hue), sin(hue));
-        var lab = vec3f(pos.y, (yzDir * pos.x));
-        var rgb = oklabToLinearRgb(lab);
+        let pos = scaleView(uv);
+        let yzDir = vec2f(cos(hue), sin(hue));
+        let lab = vec3f(pos.y, (yzDir * pos.x));
+        let rgb = oklabToLinearRgb(lab);
         let outOfGamut = (any((rgb < vec3f())) || any((rgb > vec3f(1))));
-        var clipLab = gamutClipAdaptiveL05(lab);
-        var color = oklabToRgb(lab);
+        let clipLab = gamutClipAdaptiveL05(lab);
+        let color = oklabToRgb(lab);
         let patternScaled = ((item_1(uv, clipLab) * 0.1f) + 0.9f);
         return vec4f(select(color, (color * patternScaled), outOfGamut), 1f);
       }"

@@ -1,21 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import tgpu, { d, std } from '../../src/index.js';
-import { namespace } from '../../src/core/resolve/namespace.ts';
-import { ResolutionCtxImpl } from '../../src/resolutionCtx.ts';
-import { CodegenState } from '../../src/types.ts';
-import wgslGenerator from '../../src/tgsl/wgslGenerator.ts';
+import { describe, expect, it, vi } from 'vitest';
+import { tgpu, d, std } from 'typegpu';
 
 describe('wgsl generator type inference', () => {
-  let ctx: ResolutionCtxImpl;
-
-  beforeEach(() => {
-    ctx = new ResolutionCtxImpl({
-      namespace: namespace({ names: 'strict' }),
-      shaderGenerator: wgslGenerator,
-    });
-    ctx.pushMode(new CodegenState());
-  });
-
   it('coerces nested structs', () => {
     const Inner = d.struct({ prop: d.vec2f });
     const Outer = d.struct({ inner: Inner });
@@ -34,7 +20,7 @@ describe('wgsl generator type inference', () => {
       }
 
       fn myFn() {
-        var myStruct = Outer(Inner(vec2f()));
+        let myStruct = Outer(Inner(vec2f()));
       }"
     `);
   });
@@ -101,10 +87,10 @@ describe('wgsl generator type inference', () => {
 
     expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "fn myFn() {
-        var myArrayF32 = array<f32, 2>(1f, 2f);
-        var myArrayF16 = array<f16, 2>(3h, 4h);
-        var myArrayI32 = array<i32, 2>(5i, 6i);
-        var myArrayU32 = array<u32, 2>(7u, 8u);
+        let myArrayF32 = array<f32, 2>(1f, 2f);
+        let myArrayF16 = array<f16, 2>(3h, 4h);
+        let myArrayI32 = array<i32, 2>(5i, 6i);
+        let myArrayU32 = array<u32, 2>(7u, 8u);
       }"
     `);
   });
@@ -143,7 +129,7 @@ describe('wgsl generator type inference', () => {
       }
 
       fn myFn() {
-        var myStructArray = array<Struct, 2>(Struct(vec2f(1, 2)), Struct(vec2f(3, 4)));
+        let myStructArray = array<Struct, 2>(Struct(vec2f(1, 2)), Struct(vec2f(3, 4)));
       }"
     `);
   });
@@ -167,7 +153,7 @@ describe('wgsl generator type inference', () => {
       }
 
       fn myFn() {
-        var myBoid = id(Boid(vec2f(1), vec2f()));
+        let myBoid = id(Boid(vec2f(1), vec2f()));
       }"
     `);
   });
@@ -267,7 +253,7 @@ describe('wgsl generator type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: No target type could be inferred for object with keys [pos, vel], please wrap the object in the corresponding schema.]
+      - fn:myFn: No target type could be inferred for object '{ pos: d.vec2f(), vel: d.vec2f() }', please wrap the object in the corresponding schema.]
     `);
   });
 
@@ -339,16 +325,6 @@ describe('wgsl generator type inference', () => {
 });
 
 describe('wgsl generator js type inference', () => {
-  let ctx: ResolutionCtxImpl;
-
-  beforeEach(() => {
-    ctx = new ResolutionCtxImpl({
-      namespace: namespace({ names: 'strict' }),
-      shaderGenerator: wgslGenerator,
-    });
-    ctx.pushMode(new CodegenState());
-  });
-
   it('coerces external to be an array', () => {
     const arr = [1, 2, 3];
     const Result = d.arrayOf(d.f32, 3);
@@ -359,7 +335,7 @@ describe('wgsl generator js type inference', () => {
 
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "fn foo() {
-        var result = array<f32, 3>(1f, 2f, 3f);
+        let result = array<f32, 3>(1f, 2f, 3f);
       }"
     `);
   });
@@ -411,7 +387,7 @@ describe('wgsl generator js type inference', () => {
       }
 
       fn myFn() {
-        var myStruct = Outer(Inner(vec2f()));
+        let myStruct = Outer(Inner(vec2f()));
       }"
     `);
   });
@@ -485,10 +461,10 @@ describe('wgsl generator js type inference', () => {
 
     expect(tgpu.resolve([myFn])).toMatchInlineSnapshot(`
       "fn myFn() {
-        var myArrayF32 = array<f32, 2>(1f, 2f);
-        var myArrayF16 = array<f16, 2>(3h, 4h);
-        var myArrayI32 = array<i32, 2>(5i, 6i);
-        var myArrayU32 = array<u32, 2>(7u, 8u);
+        let myArrayF32 = array<f32, 2>(1f, 2f);
+        let myArrayF16 = array<f16, 2>(3h, 4h);
+        let myArrayI32 = array<i32, 2>(5i, 6i);
+        let myArrayU32 = array<u32, 2>(7u, 8u);
       }"
     `);
   });
@@ -524,7 +500,7 @@ describe('wgsl generator js type inference', () => {
       }
 
       fn myFn() {
-        var myStructArray = array<Struct, 2>(Struct(vec2f(1, 2)), Struct(vec2f(3, 4)));
+        let myStructArray = array<Struct, 2>(Struct(vec2f(1, 2)), Struct(vec2f(3, 4)));
       }"
     `);
   });
@@ -549,7 +525,7 @@ describe('wgsl generator js type inference', () => {
       }
 
       fn myFn() {
-        var myBoid = id(Boid(vec2f(1), vec2f()));
+        let myBoid = id(Boid(vec2f(1), vec2f()));
       }"
     `);
   });
@@ -605,7 +581,10 @@ describe('wgsl generator js type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Tried to define variable 'unrelated' of unknown type]
+      - fn:myFn: 'const unrelated = structValue' is invalid, cannot determine WGSL type of 'structValue'
+      -----
+      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const unrelated = Schema(structValue)'
+      -----]
     `);
   });
 
@@ -618,7 +597,10 @@ describe('wgsl generator js type inference', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Tried to define variable 'myArr' of unknown type]
+      - fn:myFn: 'const myArr = arrayValue' is invalid, cannot determine WGSL type of 'arrayValue'
+      -----
+      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const myArr = Schema(arrayValue)'
+      -----]
     `);
   });
 
@@ -658,8 +640,8 @@ describe('wgsl generator js type inference', () => {
       }
 
       fn main() {
-        var foo = interpolate(0.1f, array<f32, 3>(0., 0.5, 1.), array<i32, 3>(100, 200, 100));
-        var bar = interpolate_1(0.6f, array<f32, 2>(0., 0.5), array<f32, 2>(100., 40.5));
+        let foo = interpolate(0.1f, array<f32, 3>(0., 0.5, 1.), array<i32, 3>(100, 200, 100));
+        let bar = interpolate_1(0.6f, array<f32, 2>(0., 0.5), array<f32, 2>(100., 40.5));
       }"
     `);
   });

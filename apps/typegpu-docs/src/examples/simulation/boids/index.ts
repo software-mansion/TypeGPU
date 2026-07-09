@@ -1,4 +1,4 @@
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const triangleAmount = 1000;

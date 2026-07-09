@@ -16,20 +16,21 @@ export const divInteger = (lhs: number, rhs: number) => {
   return Math.trunc(lhs / rhs);
 };
 
+const buf32 = new ArrayBuffer(4);
+const f32arr = new Float32Array(buf32);
+const u32arr = new Uint32Array(buf32);
+const i32arr = new Int32Array(buf32);
 export function bitcastU32toF32Impl(n: number): number {
-  const dataView = new DataView(new ArrayBuffer(4));
-  dataView.setUint32(0, n, true);
-  return dataView.getFloat32(0, true);
+  u32arr[0] = n;
+  return f32arr[0] as number;
 }
 
 export function bitcastU32toI32Impl(n: number): number {
-  const dataView = new DataView(new ArrayBuffer(4));
-  dataView.setUint32(0, n, true);
-  return dataView.getInt32(0, true);
+  u32arr[0] = n;
+  return i32arr[0] as number;
 }
 
 export function bitcastF32toU32Impl(n: number): number {
-  const dataView = new DataView(new ArrayBuffer(4));
-  dataView.setFloat32(0, n, true);
-  return dataView.getUint32(0, true);
+  f32arr[0] = n;
+  return u32arr[0] as number;
 }

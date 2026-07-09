@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 
-import { d, tgpu } from '../src/index.js';
-import type { Infer } from '../src/shared/repr.ts';
+import { d, tgpu } from 'typegpu';
+import type { Infer } from 'typegpu/data';
 import { it } from 'typegpu-testing-utility';
 
 describe('TgpuBufferUniform', () => {
@@ -68,6 +68,37 @@ describe('TgpuBufferUniform', () => {
         let pos = (&boid.pos);
         let velX = boid.vel.x;
       }"
+    `);
+  });
+
+  it('forbids assignment to uniforms', ({ root }) => {
+    const myUniform = root.createUniform(d.vec2u);
+    const myFn = () => {
+      'use gpu';
+      // @ts-expect-error: .$ is a readonly property
+      myUniform.$ = d.vec2u();
+    };
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:myFn
+      - fn*:myFn(): 'myUniform.$ = d.vec2u()' is invalid, because uniform buffers cannot be mutated.]
+    `);
+  });
+
+  it('forbids assignment to uniform props', ({ root }) => {
+    const myUniform = root.createUniform(d.vec2u);
+    const myFn = () => {
+      'use gpu';
+      myUniform.$.x = 1;
+    };
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:myFn
+      - fn*:myFn(): 'myUniform.$.x = 1' is invalid, because uniform buffers cannot be mutated.]
     `);
   });
 
@@ -281,6 +312,37 @@ describe('TgpuBufferReadonly', () => {
     expect(() => foo()).toThrowErrorMatchingInlineSnapshot(`
       [Error: Execution of the following tree failed:
       - fn:foo: Cannot access buffer:fooBuffer. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation]
+    `);
+  });
+
+  it('forbids assignment to readonlys', ({ root }) => {
+    const myReadonly = root.createReadonly(d.vec2u);
+    const myFn = () => {
+      'use gpu';
+      // @ts-expect-error
+      myReadonly.$ = d.vec2u();
+    };
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:myFn
+      - fn*:myFn(): 'myReadonly.$ = d.vec2u()' is invalid, because readonly buffers cannot be mutated.]
+    `);
+  });
+
+  it('forbids assignment to readonly props', ({ root }) => {
+    const myReadonly = root.createReadonly(d.vec2u);
+    const myFn = () => {
+      'use gpu';
+      myReadonly.$.x = 1;
+    };
+
+    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:myFn
+      - fn*:myFn(): 'myReadonly.$.x = 1' is invalid, because readonly buffers cannot be mutated.]
     `);
   });
 

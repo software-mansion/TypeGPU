@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { d, tgpu } from '../src/index.js';
+import { d, tgpu } from 'typegpu';
+import { extractSnippetFromFn } from './utils/parseResolved.ts';
 
 const Boid = d.struct({
   pos: d.vec3f,
@@ -87,12 +88,33 @@ describe('tgpu.const', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): 'boid.pos = vec3f()' is invalid, because boid.pos is a constant. This error may also occur when assigning to a value defined outside of a TypeGPU function's scope.]
+      - fn*:fn(): 'boid.$.pos = d.vec3f(0, 0, 0)' is invalid, because the left side is a constant.]
     `);
 
     // Since we freeze the object, we cannot mutate when running the function in JS either
     expect(() => fn()).toThrowErrorMatchingInlineSnapshot(
       `[TypeError: Cannot assign to read only property 'pos' of object '#<Object>']`,
+    );
+  });
+
+  it('cannot be updated', () => {
+    const boid = tgpu.const(d.vec3f, d.vec3f());
+
+    const fn = () => {
+      'use gpu';
+      boid.$.x++;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): 'boid.$.x++' is invalid, because the left side is a constant.]
+    `);
+
+    // Since we freeze the object, we cannot mutate when running the function in JS either
+    expect(() => fn()).toThrowErrorMatchingInlineSnapshot(
+      `[TypeError: Cannot assign to read only property 'e0' of object '[object Array]']`,
     );
   });
 
@@ -136,6 +158,74 @@ describe('tgpu.const', () => {
       fn main() {
         const pos = positions[1i];
       }"
+    `);
+  });
+
+  it('forbids assignment to consts', () => {
+    const c = tgpu.const(d.vec2u, d.vec2u(1, 2));
+    const testFn = () => {
+      'use gpu';
+      // @ts-expect-error
+      c.$ = d.vec2u();
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): 'c.$ = d.vec2u()' is invalid, because the left side is a constant.]
+    `);
+  });
+
+  it('forbids assignment to const props', () => {
+    const c = tgpu.const(d.vec2u, d.vec2u(1, 2));
+    const testFn = () => {
+      'use gpu';
+      c.$.x = 1;
+    };
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): 'c.$.x = 1' is invalid, because the left side is a constant.]
+    `);
+  });
+
+  it('allows for tgpu.const-tgpu.const index access', () => {
+    const myConstArray = tgpu.const(d.arrayOf(d.u32, 2), [1, 2]);
+    const myConstIndex = tgpu.const(d.u32, 1);
+
+    const fn = () => {
+      'use gpu';
+      return myConstArray.$[myConstIndex.$];
+    };
+
+    expect(extractSnippetFromFn(fn).origin).toBe('constant-immutable-def');
+  });
+
+  it('forbids assignment to runtime-known consts', () => {
+    const c = tgpu.const(d.arrayOf(d.f32), [1, 2, 3]);
+    function testFn() {
+      'use gpu';
+      const index = 0;
+      // @ts-expect-error
+      c.$[index] = 1;
+    }
+
+    expect(
+      extractSnippetFromFn(() => {
+        'use gpu';
+        const index = 0;
+        return c.$[index];
+      }).origin,
+    ).toEqual('runtime-immutable-def');
+
+    expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:testFn
+      - fn*:testFn(): 'c.$[index] = 1' is invalid, because the left side is a constant.]
     `);
   });
 });

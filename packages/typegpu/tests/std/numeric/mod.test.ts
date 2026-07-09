@@ -12,23 +12,10 @@ import {
   vec4h,
   vec4i,
   vec4u,
-} from '../../../src/data/index.ts';
-import type {
-  v2f,
-  v2h,
-  v2i,
-  v2u,
-  v3f,
-  v3h,
-  v3i,
-  v3u,
-  v4f,
-  v4h,
-  v4i,
-  v4u,
-} from '../../../src/data/wgslTypes.ts';
-import { isCloseTo, mod } from '../../../src/std/index.ts';
-import tgpu, { d } from '../../../src/index.js';
+} from 'typegpu/data';
+import type { v2f, v2h, v2i, v2u, v3f, v3h, v3i, v3u, v4f, v4h, v4i, v4u } from 'typegpu/data';
+import { isCloseTo, mod } from 'typegpu/std';
+import { tgpu, d } from 'typegpu';
 
 describe('mod', () => {
   it('computes modulo of a number and a number', () => {
@@ -105,20 +92,20 @@ describe('mod', () => {
 
 describe('mod overload', () => {
   it('has correct return type for vector-vector operations', () => {
-    expectTypeOf(mod(vec2f(), vec2f())).toEqualTypeOf<v2f>();
-    expectTypeOf(mod(vec2h(), vec2h())).toEqualTypeOf<v2h>();
-    expectTypeOf(mod(vec2i(), vec2i())).toEqualTypeOf<v2i>();
-    expectTypeOf(mod(vec2u(), vec2u())).toEqualTypeOf<v2u>();
+    expectTypeOf(mod(vec2f(), vec2f(1))).toEqualTypeOf<v2f>();
+    expectTypeOf(mod(vec2h(), vec2h(1))).toEqualTypeOf<v2h>();
+    expectTypeOf(mod(vec2i(), vec2i(1))).toEqualTypeOf<v2i>();
+    expectTypeOf(mod(vec2u(), vec2u(1))).toEqualTypeOf<v2u>();
 
-    expectTypeOf(mod(vec3f(), vec3f())).toEqualTypeOf<v3f>();
-    expectTypeOf(mod(vec3h(), vec3h())).toEqualTypeOf<v3h>();
-    expectTypeOf(mod(vec3i(), vec3i())).toEqualTypeOf<v3i>();
-    expectTypeOf(mod(vec3u(), vec3u())).toEqualTypeOf<v3u>();
+    expectTypeOf(mod(vec3f(), vec3f(1))).toEqualTypeOf<v3f>();
+    expectTypeOf(mod(vec3h(), vec3h(1))).toEqualTypeOf<v3h>();
+    expectTypeOf(mod(vec3i(), vec3i(1))).toEqualTypeOf<v3i>();
+    expectTypeOf(mod(vec3u(), vec3u(1))).toEqualTypeOf<v3u>();
 
-    expectTypeOf(mod(vec4f(), vec4f())).toEqualTypeOf<v4f>();
-    expectTypeOf(mod(vec4h(), vec4h())).toEqualTypeOf<v4h>();
-    expectTypeOf(mod(vec4i(), vec4i())).toEqualTypeOf<v4i>();
-    expectTypeOf(mod(vec4u(), vec4u())).toEqualTypeOf<v4u>();
+    expectTypeOf(mod(vec4f(), vec4f(1))).toEqualTypeOf<v4f>();
+    expectTypeOf(mod(vec4h(), vec4h(1))).toEqualTypeOf<v4h>();
+    expectTypeOf(mod(vec4i(), vec4i(1))).toEqualTypeOf<v4i>();
+    expectTypeOf(mod(vec4u(), vec4u(1))).toEqualTypeOf<v4u>();
   });
 
   it('rejects when incompatible types', () => {

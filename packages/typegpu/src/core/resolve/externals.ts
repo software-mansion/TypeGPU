@@ -1,64 +1,68 @@
 import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
-import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
+import { getName, hasTinyestMetadata, isNamable, setName } from '../../shared/meta.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
+import type { FnExternals } from '../function/fnCore.ts';
 
 /**
  * A key-value mapping where keys represent identifiers within shader code,
- * and values can be any type that can be resolved to a code string.
+ * and values can either be another ExternalMap, or be any type that can be resolved to a code string.
  */
 export type ExternalMap = Record<string, unknown>;
 
-/**
- * Merges two external maps into one. If a key is present in both maps, the value from the new map is used.
- * If the external value is a namable object, it is given a name if it does not already have one.
- * @param existing - The existing external map.
- * @param newExternals - The new external map.
- */
-export function applyExternals(existing: ExternalMap, newExternals: ExternalMap) {
-  for (const [key, value] of Object.entries(newExternals)) {
-    existing[key] = value;
+function isResolvable(value: unknown) {
+  return isWgsl(value) || isLooseData(value) || hasTinyestMetadata(value);
+}
 
-    // Giving name to external value, if it does not already have one.
-    if (
-      value &&
-      (typeof value === 'object' || typeof value === 'function') &&
-      getName(value) === undefined
-    ) {
-      setName(value, key);
+/**
+ * Merges function externals into one map.
+ */
+export function mergeFunctionExternals(fnExternals: FnExternals): ExternalMap {
+  const base = fnExternals.pluginProvided ?? fnExternals.userProvided ?? {};
+  // avoid calling any of the getters
+  const result: ExternalMap = Object.defineProperties({}, Object.getOwnPropertyDescriptors(base));
+  for (const flatExternal of [fnExternals.args, fnExternals.out].filter((e) => e !== undefined)) {
+    for (const [key, value] of Object.entries(flatExternal)) {
+      if (key in result && result[key] !== value) {
+        throw new Error(
+          `Key '${key}' appears in externals despite already being used for argument/return type. Please rename this external.`,
+        );
+      }
+      result[key] = value;
     }
   }
+  return result;
 }
 
 export function addArgTypesToExternals(
   implementation: string,
   argTypes: unknown[],
-  applyExternals: (externals: ExternalMap) => void,
+  core: { setExternals: (key: 'args', externals: ExternalMap) => void },
 ) {
-  const argTypeNames = [...implementation.matchAll(/:\s*(?<arg>.*?)\s*[,)]/g)].map((found) =>
-    found ? found[1] : undefined,
+  const argTypeNames = [...implementation.matchAll(/:\s*(?<arg>.*?)\s*[,)]/g)].map(
+    (found) => found?.[1],
   );
 
-  applyExternals(
-    Object.fromEntries(
-      argTypes.flatMap((argType, i) => {
-        const argTypeName = argTypeNames ? argTypeNames[i] : undefined;
-        return isWgslStruct(argType) && argTypeName !== undefined ? [[argTypeName, argType]] : [];
-      }),
-    ),
+  const args = Object.fromEntries(
+    argTypes.flatMap((argType, i) => {
+      const argTypeName = argTypeNames?.[i];
+      return isWgslStruct(argType) && argTypeName !== undefined ? [[argTypeName, argType]] : [];
+    }),
   );
+
+  core.setExternals('args', args);
 }
 
 export function addReturnTypeToExternals(
   implementation: string,
   returnType: unknown,
-  applyExternals: (externals: ExternalMap) => void,
+  core: { setExternals: (key: 'out', externals: ExternalMap) => void },
 ) {
   const matched = implementation.match(/->\s(?<output>[\w\d_]+)\s{/);
   const outputName = matched ? matched[1]?.trim() : undefined;
 
   if (isWgslStruct(returnType) && outputName && !/\s/g.test(outputName)) {
-    applyExternals({ [outputName]: returnType });
+    core.setExternals('out', { [outputName]: returnType });
   }
 }
 
@@ -90,7 +94,10 @@ export function replaceExternalsInWgsl(
       // continue anyway, we still might need to resolve the external
     }
 
-    if (isWgsl(external) || isLooseData(external) || hasTinyestMetadata(external)) {
+    if (isResolvable(external)) {
+      if (isNamable(external) && getName(external) === undefined) {
+        setName(external, externalName.split('.').at(-1) as string);
+      }
       return acc.replaceAll(externalRegex, ctx.resolve(external).value);
     }
 

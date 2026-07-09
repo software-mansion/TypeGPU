@@ -2,16 +2,40 @@ import { getAttributesString } from '../../data/attributes.ts';
 import { undecorate } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { type BaseData, isWgslData, isWgslStruct, Void } from '../../data/wgslTypes.ts';
-import { MissingLinksError } from '../../errors.ts';
-import { getMetaData, getName } from '../../shared/meta.ts';
+import { validateIdentifier } from '../../nameUtils.ts';
+import { getFunctionMetadata, getName } from '../../shared/meta.ts';
 import { $getNameForward } from '../../shared/symbols.ts';
 import type { ResolutionCtx, TgpuShaderStage } from '../../types.ts';
-import { applyExternals, type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
+import {
+  type ExternalMap,
+  replaceExternalsInWgsl,
+  mergeFunctionExternals,
+} from '../resolve/externals.ts';
 import { extractArgs } from './extractArgs.ts';
 import type { Implementation, SeparatedEntryArgs } from './fnTypes.ts';
 
+export type FnExternals = {
+  /**
+   * Externals provided by calling `$uses()`.
+   */
+  userProvided?: ExternalMap;
+  /**
+   * Externals provided by unplugin-typegpu via function metadata.
+   */
+  pluginProvided?: ExternalMap;
+  /**
+   * Function arguments, for example `{ S: Schema }` in `tgpu.fn([Schema])('(arg: S) => {}')`,
+   * or { in: { position: 'position' } } in `fragmentFn({ in: { position: d.builtin.position }, out: d.vec4f, })('...')`
+   */
+  args?: ExternalMap;
+  /**
+   * Function return type, for example `{ Out: ... }` in both rawWgsl entrypoint functions and `vertexFnShell(in, Out)`.
+   */
+  out?: ExternalMap;
+};
+
 export interface FnCore {
-  applyExternals: (newExternals: ExternalMap) => void;
+  setExternals: (key: keyof FnExternals, newExternal: ExternalMap) => void;
   resolve(
     ctx: ResolutionCtx,
     /**
@@ -43,14 +67,25 @@ export function createFnCore(
    * initialized yet (like when accessing the Output struct of a vertex
    * entry fn).
    */
-  const externalsToApply: ExternalMap[] = [];
+  const externals: FnExternals = {};
 
   const core = {
     // Making the implementation the holder of the name, as long as it's
     // a function (and not a string implementation)
     [$getNameForward]: typeof implementation === 'function' ? implementation : undefined,
-    applyExternals(newExternals: ExternalMap): void {
-      externalsToApply.push(newExternals);
+
+    setExternals(key: keyof FnExternals, newExternal: ExternalMap): void {
+      if (key === 'userProvided' && 'userProvided' in externals) {
+        throw new Error(
+          "Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.",
+        );
+      }
+      externals[key] = newExternal;
+      if (externals.userProvided && externals.pluginProvided) {
+        throw new Error(
+          "Cannot call '$uses' on functions whose metadata was provided by unplugin-typegpu.",
+        );
+      }
     },
 
     resolve(
@@ -59,8 +94,6 @@ export function createFnCore(
       returnType: BaseData | undefined,
       entryInput?: SeparatedEntryArgs,
     ): ResolvedSnippet {
-      const externalMap: ExternalMap = {};
-
       let attributes = '';
       if (functionType === 'compute') {
         attributes = `@compute @workgroup_size(${workgroupSize?.join(', ')}) `;
@@ -70,41 +103,53 @@ export function createFnCore(
         attributes = `@fragment `;
       }
 
-      for (const externals of externalsToApply) {
-        applyExternals(externalMap, externals);
-      }
-
-      const id = ctx.getUniqueName(this);
+      const id = ctx.makeUniqueIdentifier(getName(this), 'global');
 
       if (typeof implementation === 'string') {
         if (!returnType) {
           throw new Error('Explicit return type is required for string implementation');
         }
 
-        const validArgNames = entryInput
-          ? Object.fromEntries(
-              entryInput.positionalArgs.map((a) => [a.schemaKey, ctx.makeNameValid(a.schemaKey)]),
-            )
-          : undefined;
+        if (entryInput) {
+          for (const arg of entryInput.positionalArgs) {
+            const result = validateIdentifier(arg.schemaKey);
+            if (!result.success) {
+              throw new Error(
+                `Invalid argument name "${arg.schemaKey}"${result.error ? `: ${result.error}` : ''}`,
+              );
+            }
+            if (ctx.isIdentifierBanned(arg.schemaKey)) {
+              throw new Error(
+                `Invalid argument name "${arg.schemaKey}", the identifier is a reserved keyword.`,
+              );
+            }
+          }
 
-        if (validArgNames && Object.keys(validArgNames).length > 0) {
-          applyExternals(externalMap, { in: validArgNames });
+          this.setExternals('args', {
+            in: Object.fromEntries(
+              entryInput.positionalArgs.map((a) => [a.schemaKey, a.schemaKey]),
+            ),
+          });
         }
 
-        const replacedImpl = replaceExternalsInWgsl(ctx, externalMap, implementation);
+        const replacedImpl = replaceExternalsInWgsl(
+          ctx,
+          mergeFunctionExternals(externals),
+          implementation,
+        );
 
         let header = '';
         let body = '';
 
-        if (functionType !== 'normal' && entryInput && validArgNames) {
+        if (functionType !== 'normal' && entryInput) {
           const { dataSchema, positionalArgs } = entryInput;
           const parts: string[] = [];
           if (dataSchema && isArgUsedInBody('in', replacedImpl)) {
             parts.push(`in: ${ctx.resolve(dataSchema).value}`);
           }
           for (const a of positionalArgs) {
-            const argName = validArgNames[a.schemaKey] ?? '';
-            if (argName !== '' && isArgUsedInBody(argName, replacedImpl)) {
+            const argName = a.schemaKey;
+            if (isArgUsedInBody(argName, replacedImpl)) {
               parts.push(`${getAttributesString(a.type)}${argName}: ${ctx.resolve(a.type).value}`);
             }
           }
@@ -159,21 +204,11 @@ export function createFnCore(
       }
 
       // get data generated by the plugin
-      const pluginData = getMetaData(implementation);
+      const pluginData = getFunctionMetadata(implementation);
 
-      // Passing a record happens prior to version 0.9.0
-      // TODO: Support for this can be removed down the line
-      const pluginExternals =
-        typeof pluginData?.externals === 'function'
-          ? pluginData.externals()
-          : pluginData?.externals;
-
+      const pluginExternals = pluginData?.externals();
       if (pluginExternals) {
-        const missing = Object.fromEntries(
-          Object.entries(pluginExternals).filter(([name]) => !(name in externalMap)),
-        );
-
-        applyExternals(externalMap, missing);
+        this.setExternals('pluginProvided', pluginExternals);
       }
 
       const ast = pluginData?.ast;
@@ -183,17 +218,11 @@ export function createFnCore(
         );
       }
 
-      // verify all required externals are present
-      const missingExternals = ast.externalNames.filter((name) => !(name in externalMap));
-      if (missingExternals.length > 0) {
-        throw new MissingLinksError(getName(this), missingExternals);
-      }
-
       // If an entrypoint implementation has a second argument, it represents the output schema.
       // We look at the identifier chosen by the user and add it to externals.
       const maybeSecondArg = ast.params[1];
       if (maybeSecondArg && maybeSecondArg.type === 'i' && functionType !== 'normal') {
-        applyExternals(externalMap, {
+        this.setExternals('out', {
           // oxlint-disable-next-line typescript/no-non-null-assertion -- entry functions cannot be shellless
           [maybeSecondArg.name]: undecorate(returnType!),
         });
@@ -201,17 +230,19 @@ export function createFnCore(
 
       // generate wgsl string
 
-      const { code, returnType: actualReturnType } = ctx.fnToWgsl({
+      const { code, returnType: actualReturnType } = ctx.resolveFunction({
         functionType,
+        name: id,
+        workgroupSize,
         argTypes,
         entryInput,
         params: ast.params,
         returnType,
         body: ast.body,
-        externalMap,
+        externalMap: mergeFunctionExternals(externals),
       });
 
-      ctx.addDeclaration(`${attributes}fn ${id}${code}`);
+      ctx.addDeclaration(code);
 
       return snip(id, actualReturnType, /* origin */ 'runtime');
     },

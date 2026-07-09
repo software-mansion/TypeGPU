@@ -4,6 +4,8 @@
 
 // NOTE: This is a barrel file, internal files should not import things from this file
 
+export { copy } from './copy.ts';
+
 export { discard } from './discard.ts';
 
 export {
@@ -187,3 +189,5 @@ export { extensionEnabled } from './extensions.ts';
 export { bitcastU32toF32, bitcastU32toI32, bitcastF32toU32 } from './bitcast.ts';
 
 export { range } from './range.ts';
+
+export { isBeingTranspiled, getTargetShaderLanguage } from './environment.ts';

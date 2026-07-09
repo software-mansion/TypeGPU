@@ -1,0 +1,58 @@
+---
+import { Code } from "@astrojs/starlight/components";
+import ComputeShadersArrayExample, {
+  COMPUTE_SHADER_ARRAY_SNIPPET,
+} from "./ComputeShadersArrayExample.tsx";
+import ComputeShadersBindGroupsExample, {
+  COMPUTE_SHADER_BIND_GROUPS_SNIPPET,
+} from "./ComputeShadersBindGroupsExample.tsx";
+import COMPUTE_SHADER_BIND_GROUPS_FULL_SNIPPET from "./ComputeShadersBindGroupsRuntime.ts?raw";
+import ComputeShadersGridExample, {
+  COMPUTE_SHADER_GRID_SNIPPET,
+} from "./ComputeShadersGridExample.tsx";
+
+interface Props {
+  example?: "array" | "bindGroups" | "grid";
+}
+
+const { example = "array" } = Astro.props as Props;
+---
+
+{
+  example === "bindGroups" ? (
+    <>
+      <ComputeShadersBindGroupsExample client:load>
+        <Code
+          code={COMPUTE_SHADER_BIND_GROUPS_SNIPPET}
+          lang="ts"
+          meta="twoslash {13-15, 29-32, 38-40}"
+        />
+      </ComputeShadersBindGroupsExample>
+      <p>
+        The visible snippet hides the rendering code behind{" "}
+        <code>render(...)</code> because render pipelines and SDF drawing have
+        not been introduced yet. The full example below includes that part.
+      </p>
+      <details>
+        <summary>Show full example code</summary>
+        <Code code={COMPUTE_SHADER_BIND_GROUPS_FULL_SNIPPET} lang="ts" />
+      </details>
+    </>
+  ) : example === "grid" ? (
+    <ComputeShadersGridExample client:load>
+      <Code
+        code={COMPUTE_SHADER_GRID_SNIPPET}
+        lang="ts"
+        meta="twoslash {8-10, 12-15, 18-20}"
+      />
+    </ComputeShadersGridExample>
+  ) : (
+    <ComputeShadersArrayExample client:load>
+      <Code
+        code={COMPUTE_SHADER_ARRAY_SNIPPET}
+        lang="ts"
+        meta="twoslash {7-10, 13-14}"
+      />
+    </ComputeShadersArrayExample>
+  )
+}

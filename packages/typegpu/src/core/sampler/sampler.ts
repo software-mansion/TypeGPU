@@ -32,6 +32,8 @@ export interface TgpuSampler {
   readonly [$gpuValueOf]: Infer<WgslSampler>;
   value: Infer<WgslSampler>;
   $: Infer<WgslSampler>;
+
+  toString(): string;
 }
 
 export interface TgpuComparisonSampler {
@@ -42,6 +44,8 @@ export interface TgpuComparisonSampler {
   readonly [$gpuValueOf]: Infer<WgslComparisonSampler>;
   value: Infer<WgslComparisonSampler>;
   $: Infer<WgslComparisonSampler>;
+
+  toString(): string;
 }
 
 export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {}
@@ -99,7 +103,7 @@ export class TgpuLaidOutSamplerImpl<
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.getUniqueName(this);
+    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const group = ctx.allocateLayoutEntry(this.#membership.layout);
 
     ctx.addDeclaration(
@@ -186,7 +190,7 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.getUniqueName(this);
+    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
 
     const { group, binding } = ctx.allocateFixedEntry(
       this.schema.type === 'sampler_comparison'

@@ -1,4 +1,4 @@
-import tgpu, { d } from '../src/index.js';
+import { tgpu, d } from 'typegpu';
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 
@@ -32,7 +32,7 @@ describe('d.ref', () => {
     `);
   });
 
-  it('fails when trying to assign a ref to an existing variable', () => {
+  it('fails when trying to initialize a `let` declaration', () => {
     const update = (value: d.ref<number>) => {
       'use gpu';
       value.$ += 1;
@@ -40,10 +40,8 @@ describe('d.ref', () => {
 
     const hello = () => {
       'use gpu';
-      let foo = d.ref(0);
-      update(foo);
       // Nuh-uh
-      foo = d.ref(1);
+      let foo = d.ref(0);
       update(foo);
     };
 
@@ -51,7 +49,10 @@ describe('d.ref', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:hello
-      - fn*:hello(): Cannot assign a ref to an existing variable '(&foo)', define a new variable instead.]
+      - fn*:hello(): 'let foo = d.ref(0)' is invalid, cannot initialize 'let' variables with d.ref()
+      -----
+      - Try 'const foo = d.ref(0)'.
+      -----]
     `);
   });
 
@@ -242,14 +243,14 @@ describe('d.ref', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:foo
-      - fn*:foo(): Cannot return references, returning 'value']
+      - fn*:foo(): Cannot return 'value' because it is a d.ref]
     `);
 
     expect(() => tgpu.resolve([bar])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:bar
-      - fn*:bar(): Cannot return references, returning '0']
+      - fn*:bar(): Cannot return 'd.ref(0)' because it is a d.ref]
     `);
   });
 
@@ -276,13 +277,114 @@ describe('d.ref', () => {
       - fn*:main
       - fn*:main()
       - fn*:foo(vec3f)
-      - fn:ref: d.ref(hello) is illegal, cannot take a reference of an argument. Copy the value locally first, and take a reference of the copy.]
+      - fn:ref: d.ref(hello) is illegal, cannot take a reference of an argument. Copy the value first, and take a reference of the copy.]
+    `);
+  });
+
+  it('fails when taking a reference of an naturally ephemeral local definition', () => {
+    const myConst = tgpu.const(d.vec2u, d.vec2u());
+
+    function modify(n: d.ref<number>) {
+      'use gpu';
+      n.$++;
+    }
+
+    function good() {
+      'use gpu';
+      const a = d.f32(1);
+      const aRef = d.ref(d.f32(a)); // we copy the value and create a new referencable value
+      modify(aRef);
+    }
+
+    function bad() {
+      'use gpu';
+      const a = d.f32(1);
+      const aRef = d.ref(a); // we try to reference a scalar
+      modify(aRef);
+    }
+
+    expect(() => tgpu.resolve([good])).not.toThrow();
+    expect(() => tgpu.resolve([bad])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:bad
+      - fn*:bad()
+      - fn:ref: d.ref(a) is illegal, cannot take a reference to a scalar value.
+      -----
+      - Try 'd.ref(f32(a));' instead to create a new referencable scalar.
+      -----]
+    `);
+  });
+
+  it('fails when taking a reference of a tgpu.const', () => {
+    const myConst = tgpu.const(d.vec2u, d.vec2u());
+
+    function modify(n: d.ref<d.v2u>) {
+      'use gpu';
+      n.$.x++;
+    }
+
+    function good() {
+      'use gpu';
+      const aRef = d.ref(d.vec2u(myConst.$)); // we copy the value and create a new referencable value
+      modify(aRef);
+    }
+
+    function bad() {
+      'use gpu';
+      const aRef = d.ref(myConst.$); // we try to reference a constant
+      modify(aRef);
+    }
+
+    expect(() => tgpu.resolve([good])).not.toThrow();
+    expect(() => tgpu.resolve([bad])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:bad
+      - fn*:bad()
+      - fn:ref: d.ref(myConst) is illegal, cannot take a reference to a constant.
+      -----
+      - Try 'd.ref(vec2u(myConst));' instead to create a new referencable value.
+      -----]
+    `);
+  });
+
+  it('fails when taking a reference of an naturally ephemeral piece of tgpu.const', () => {
+    const myConst = tgpu.const(d.vec2u, d.vec2u());
+
+    function modify(n: d.ref<number>) {
+      'use gpu';
+      n.$++;
+    }
+
+    function good() {
+      'use gpu';
+      const aRef = d.ref(d.u32(myConst.$.x)); // we copy the value and create a new referencable value
+      modify(aRef);
+    }
+
+    function bad() {
+      'use gpu';
+      const aRef = d.ref(myConst.$.x); // we try to reference a constant
+      modify(aRef);
+    }
+
+    expect(() => tgpu.resolve([good])).not.toThrow();
+    expect(() => tgpu.resolve([bad])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:bad
+      - fn*:bad()
+      - fn:ref: d.ref(myConst.x) is illegal, cannot take a reference to a constant.
+      -----
+      - Try 'd.ref(u32(myConst.x));' instead to create a new referencable value.
+      -----]
     `);
   });
 
   it('turns an implicit pointer into an explicit one', () => {
     const layout = tgpu.bindGroupLayout({
-      positions: { storage: d.arrayOf(d.vec3f) },
+      positions: { storage: d.arrayOf(d.vec3f), access: 'mutable' },
     });
 
     const advance = (value: d.ref<d.v3f>) => {
@@ -298,9 +400,9 @@ describe('d.ref', () => {
     };
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<storage, read> positions: array<vec3f>;
+      "@group(0) @binding(0) var<storage, read_write> positions: array<vec3f>;
 
-      fn advance(value: ptr<storage, vec3f, read>) {
+      fn advance(value: ptr<storage, vec3f, read_write>) {
         (*value).x += 1f;
       }
 

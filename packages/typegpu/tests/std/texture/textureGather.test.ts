@@ -1,14 +1,11 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import { textureGather } from '../../../src/std/texture.ts';
-import tgpu from '../../../src/index.js';
-import * as d from '../../../src/data/index.ts';
-import { bindGroupLayout } from '../../../src/tgpuBindGroupLayout.ts';
-import { resolve } from '../../../src/core/resolve/tgpuResolve.ts';
+import { textureGather } from 'typegpu/std';
+import { tgpu, d } from 'typegpu';
 
 describe('textureGather', () => {
   it('Has correct signatures', () => {
-    const testLayout = bindGroupLayout({
+    const testLayout = tgpu.bindGroupLayout({
       tex2d: { texture: d.texture2d() },
       tex2d_u32: { texture: d.texture2d(d.u32) },
       tex2d_array: { texture: d.texture2dArray(d.i32) },
@@ -66,7 +63,7 @@ describe('textureGather', () => {
       }
     });
 
-    expect(resolve([testFn])).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var tex2d: texture_2d<f32>;
 
       @group(0) @binding(6) var sampler_1: sampler;
@@ -82,16 +79,16 @@ describe('textureGather', () => {
       @group(0) @binding(5) var texdepth2d_array: texture_depth_2d_array;
 
       fn testFn() {
-        var uv2d = vec2f(0.5);
-        var uv3d = vec3f(0.5, 0.5, 0);
+        let uv2d = vec2f(0.5);
+        let uv3d = vec3f(0.5, 0.5, 0);
         const idx = 1.2000000476837158f;
         const component = 0i;
-        var gather2d = textureGather(component, tex2d, sampler_1, uv2d);
-        var gather2d_u32 = textureGather(component, tex2d_u32, sampler_1, uv2d);
-        var gather2d_array = textureGather(component, tex2d_array, sampler_1, uv2d, u32(idx));
-        var gathercube_array = textureGather(component, texcube_array, sampler_1, uv3d, u32(idx));
-        var gatherdepth2d = textureGather(texdepth2d, sampler_1, uv2d);
-        var gatherdepth2d_array = textureGather(texdepth2d_array, sampler_1, uv2d, u32(idx));
+        let gather2d = textureGather(component, tex2d, sampler_1, uv2d);
+        let gather2d_u32 = textureGather(component, tex2d_u32, sampler_1, uv2d);
+        let gather2d_array = textureGather(component, tex2d_array, sampler_1, uv2d, u32(idx));
+        let gathercube_array = textureGather(component, texcube_array, sampler_1, uv3d, u32(idx));
+        let gatherdepth2d = textureGather(texdepth2d, sampler_1, uv2d);
+        let gatherdepth2d_array = textureGather(texdepth2d_array, sampler_1, uv2d, u32(idx));
       }"
     `);
   });

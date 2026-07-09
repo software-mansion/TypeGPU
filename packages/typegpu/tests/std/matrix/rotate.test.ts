@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { mat4x4f, vec4f } from '../../../src/data/index.ts';
-import tgpu from '../../../src/index.js';
-import { isCloseTo, mul } from '../../../src/std/index.ts';
-import { rotateX4, rotateY4, rotateZ4 } from '../../../src/std/matrix.ts';
+import { tgpu } from 'typegpu';
+import { mat4x4f, vec4f } from 'typegpu/data';
+import { isCloseTo, mul, rotateX4, rotateY4, rotateZ4 } from 'typegpu/std';
 
 describe('rotate', () => {
   it('generates correct WGSL for rotateX4 with custom matrix', () => {
@@ -16,7 +15,7 @@ describe('rotate', () => {
     expect(tgpu.resolve([rotateFn])).toMatchInlineSnapshot(`
       "fn rotateFn() {
         const angle = 4;
-        var resultExpression = (mat4x4f(1, 0, 0, 0, 0, cos(f32(angle)), sin(f32(angle)), 0, 0, -sin(f32(angle)), cos(f32(angle)), 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
+        let resultExpression = (mat4x4f(1, 0, 0, 0, 0, cos(f32(angle)), sin(f32(angle)), 0, 0, -sin(f32(angle)), cos(f32(angle)), 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
       }"
     `);
   });
@@ -32,7 +31,7 @@ describe('rotate', () => {
     expect(tgpu.resolve([rotateFn])).toMatchInlineSnapshot(`
       "fn rotateFn() {
         const angle = 4;
-        var resultExpression = (mat4x4f(cos(f32(angle)), 0, -sin(f32(angle)), 0, 0, 1, 0, 0, sin(f32(angle)), 0, cos(f32(angle)), 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
+        let resultExpression = (mat4x4f(cos(f32(angle)), 0, -sin(f32(angle)), 0, 0, 1, 0, 0, sin(f32(angle)), 0, cos(f32(angle)), 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
       }"
     `);
   });
@@ -48,7 +47,7 @@ describe('rotate', () => {
     expect(tgpu.resolve([rotateFn])).toMatchInlineSnapshot(`
       "fn rotateFn() {
         const angle = 4;
-        var resultExpression = (mat4x4f(cos(f32(angle)), sin(f32(angle)), 0, 0, -sin(f32(angle)), cos(f32(angle)), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
+        let resultExpression = (mat4x4f(cos(f32(angle)), sin(f32(angle)), 0, 0, -sin(f32(angle)), cos(f32(angle)), 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) * mat4x4f(1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1));
       }"
     `);
   });

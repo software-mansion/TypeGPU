@@ -29,7 +29,7 @@ Shape primitives are centered around the origin. To move, scale, or rotate a sha
 
 ## Basic usage
 
-Call SDF helpers from [TypeGPU functions](/TypeGPU/fundamentals/functions/) just like any other TypeGPU resource.
+Call SDF helpers from [TypeGPU functions](/TypeGPU/apis/functions/) just like any other TypeGPU resource.
 Resolving the function includes the SDF code and its dependencies automatically.
 
 <div class="my-4 flex justify-center">
@@ -37,7 +37,7 @@ Resolving the function includes the SDF code and its dependencies automatically.
 </div>
 
 ```ts twoslash
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import * as sdf from '@typegpu/sdf';
 
 const renderRoundedBox = tgpu.fn([d.vec2f], d.vec4f)((uv) => {
@@ -65,7 +65,7 @@ The package includes a few common operators. They take distances as input, so yo
 </div>
 
 ```ts twoslash
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import * as sdf from '@typegpu/sdf';
 
 const sceneSdf = tgpu.fn([d.vec2f], d.f32)((p) => {
@@ -102,7 +102,7 @@ The 3D primitives follow the same rules as the 2D ones. They are useful for ray 
 </div>
 
 ```ts twoslash
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import * as sdf from '@typegpu/sdf';
 
 const sceneSdf = tgpu.fn([d.vec3f], d.f32)((p) => {
@@ -185,7 +185,7 @@ Here the source shape is a triangle mask baked into a texture first, then jump f
 </div>
 
 ```ts twoslash
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import * as sdf from '@typegpu/sdf';
 
 const root = await tgpu.init();

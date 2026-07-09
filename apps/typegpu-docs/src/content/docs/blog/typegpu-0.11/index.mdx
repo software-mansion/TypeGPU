@@ -83,7 +83,7 @@ positionsMutable.write(new Float32Array([0, 1, 2, 0, 3, 4, 5, 0, 6, 7, 8, 0])); 
 // and more...
 ```
 Each one is more efficient than the previous, so you can choose the appropriate API for your efficiency needs.
-[More about these new APIs here](https://docs.swmansion.com/TypeGPU/fundamentals/buffers/#writing-to-a-buffer).
+[More about these new APIs here](https://docs.swmansion.com/TypeGPU/apis/buffers/#writing-to-a-buffer).
 
 ### A better partial write
 
@@ -132,7 +132,7 @@ We could traverse the value deeper to disambiguate, but for the sake of efficien
 + foos.patch({ 1: /* ... */, 0: /* ... */ });
 ```
 
-[You can read more about .patch in the Buffers guide](/TypeGPU/fundamentals/buffers/#patching-buffers).
+[You can read more about .patch in the Buffers guide](/TypeGPU/apis/buffers/#patching-buffers).
 
 ### Writing struct-of-arrays (SoA) data
 
@@ -155,7 +155,7 @@ common.writeSoA(particleBuffer, {
 });
 ```
 
-[More about this API can be found in the Buffers guide.](/TypeGPU/fundamentals/buffers/#writing-struct-of-arrays-soa-data)
+[More about this API can be found in the Buffers guide.](/TypeGPU/apis/buffers/#writing-struct-of-arrays-soa-data)
 
 ## Shader code ergonomics
 
@@ -193,7 +193,7 @@ var result = 0u;
 ```
 
 Because `i` is known at comptime, the `i * 10` is evaluated and injected into the generated code in each block.
-For more, refer to [tgpu.unroll documentation.](/TypeGPU/fundamentals/utils/#tgpuunroll).
+For more, refer to [tgpu.unroll documentation.](/TypeGPU/apis/utils/#tgpuunroll).
 
 ### Boolean logic
 
@@ -255,7 +255,7 @@ There has been a lot of work outside of the `typegpu` package, both internally a
 Aleksander Katan ([@aleksanderkatan](https://github.com/aleksanderkatan)) has been working behind the scenes on an ESLint/Oxlint plugin, capable of catching user errors that types cannot.
 
 ```ts
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 function increment(n: number) {
   'use gpu';

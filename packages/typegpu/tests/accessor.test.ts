@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import tgpu, { d, std, type TgpuAccessor } from '../src/index.js';
+import { tgpu, d, std, type TgpuAccessor } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 const RED = d.vec3f(1, 0, 0);
@@ -162,9 +162,9 @@ describe('tgpu.accessor', () => {
       }
 
       fn main() {
-        var color = vec3f(1, 0, 0);
+        let color = vec3f(1, 0, 0);
         let color2 = (&redUniform);
-        var color3 = getColor();
+        let color3 = getColor();
         const colorX = 1f;
         let color2X = redUniform.x;
         let color3X = getColor().x;
@@ -234,7 +234,7 @@ describe('tgpu.accessor', () => {
       }
 
       fn main() {
-        var pixel = getPixel(0i, 0i);
+        let pixel = getPixel(0i, 0i);
       }"
     `);
   });
@@ -276,8 +276,8 @@ describe('tgpu.accessor', () => {
       }
 
       fn main() {
-        var foo = getColor();
-        var bar = getColor_1();
+        let foo = getColor();
+        let bar = getColor_1();
       }"
     `);
   });
@@ -309,7 +309,7 @@ describe('tgpu.accessor', () => {
       }
 
       fn main() {
-        var foo = getColor();
+        let foo = getColor();
       }"
     `);
   });
@@ -358,7 +358,7 @@ describe('tgpu.accessor', () => {
       }
 
       fn main() {
-        var pixel = getPixel(0i, 0i);
+        let pixel = getPixel(0i, 0i);
       }"
     `);
   });
@@ -496,6 +496,20 @@ describe('tgpu.accessor', () => {
         let hello = image.pixels[4].x;
       }"
     `);
+  });
+
+  it('throws when $ is accessed outside of codegen mode', () => {
+    const colorAccess = tgpu.accessor(d.vec3f);
+    expect(() => colorAccess.$).toThrow(
+      '`tgpu.accessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use `tgpu.slot` for non-WGSL values instead.',
+    );
+  });
+
+  it('throws when mutable $ is accessed outside of codegen mode', () => {
+    const counterAccess = tgpu.mutableAccessor(d.u32);
+    expect(() => counterAccess.$).toThrow(
+      '`tgpu.mutableAccessor` relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call. Use `tgpu.slot` for non-WGSL values instead.',
+    );
   });
 
   it('allows for arbitrarily nested access functions', ({ root }) => {

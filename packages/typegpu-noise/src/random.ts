@@ -1,4 +1,4 @@
-import tgpu, { d, type TgpuFn } from 'typegpu';
+import { tgpu, d, type TgpuFn } from 'typegpu';
 import { cos, dot, log, normalize, select, sign, sin, sqrt, step, tan } from 'typegpu/std';
 import { randomGeneratorSlot } from './generator.ts';
 

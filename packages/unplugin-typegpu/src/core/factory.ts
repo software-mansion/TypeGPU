@@ -1,21 +1,21 @@
 import defu from 'defu';
-import { generateTransform, MagicStringAST } from 'magic-string-ast';
+import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import type { UnpluginBuildContext, UnpluginContext, UnpluginFactory } from 'unplugin';
 import _traverse, { type NodePath } from '@babel/traverse';
-import { FORMAT_VERSION } from 'tinyest';
 import { transpileFn } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
-import { t } from './babel-types.ts';
+import * as t from '@babel/types';
 import {
   defaultOptions,
   earlyPruneRegex,
   initPluginState,
   functionVisitor,
   getBlockScope,
+  METADATA_FORMAT_VERSION,
 } from './common.ts';
 
-import type { Options, UnpluginPluginState, MetadatableFunction } from './common.ts';
+import type { Options, UnpluginPluginState, MetadatableFunction, NodeLocation } from './common.ts';
 
 // I love CommonJS 💔
 let traverse = _traverse;
@@ -38,8 +38,9 @@ function assignMetadata(
   name: string | undefined,
   ast: ReturnType<typeof transpileFn>,
 ): void {
+  // TODO (#2504): remove externalNames from ast
   const metadata = `{
-    v: ${FORMAT_VERSION},
+    v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
     ast: ${embedJSON(ast)},
     externals: () => ({${ast.externalNames
@@ -51,7 +52,7 @@ function assignMetadata(
     ? getBlockScope(path as NodePath<t.FunctionDeclaration>)
     : undefined;
 
-  const fnCode = this.magicString.sliceNode(path.node);
+  const fnCode = this.slice(path.node);
 
   let nodeToOverride: t.Node = path.node;
   let code = fnWrapperTemplate(fnCode, metadata);
@@ -68,18 +69,28 @@ function assignMetadata(
     if (t.isExportNamedDeclaration(path.parent)) {
       nodeToOverride = path.parent;
       code = `export ${code}`;
+    } else if (t.isExportDefaultDeclaration(path.parent)) {
+      nodeToOverride = path.parent;
+
+      if (t.isFunctionDeclaration(path.node) && path.node.id) {
+        code = `${code}export default ${path.node.id.name};`;
+      } else {
+        code = `export default ${code};`;
+      }
     }
   }
 
   if (insertPos < (path.node.start ?? 0)) {
     for (const comment of nodeToOverride.leadingComments?.toReversed() ?? []) {
-      code = `${this.magicString.slice(comment.start ?? 0, comment.end ?? 0)}\n${code}`;
-      this.magicString.removeNode(comment);
+      if (comment) {
+        code = `${this.slice(comment)}\n${code}`;
+        this.remove(comment);
+      }
     }
-    this.magicString.removeNode(nodeToOverride);
+    this.remove(nodeToOverride);
     this.magicString.prependLeft(insertPos, code);
   } else {
-    this.magicString.overwriteNode(nodeToOverride, code);
+    this.overwrite(nodeToOverride, code);
   }
 }
 
@@ -101,9 +112,9 @@ function replaceWithAssignmentOverload(
   path: NodePath<t.AssignmentExpression>,
   runtimeFn: string,
 ): void {
-  const lhs = this.magicString.sliceNode(path.node.left);
-  const rhs = this.magicString.sliceNode(path.node.right);
-  this.magicString.overwriteNode(path.node, `${lhs} = ${runtimeFn}(${lhs}, ${rhs})`);
+  const lhs = this.slice(path.node.left);
+  const rhs = this.slice(path.node.right);
+  this.overwrite(path.node, `${lhs} = ${runtimeFn}(${lhs}, ${rhs})`);
 }
 
 function replaceWithBinaryOverload(
@@ -111,10 +122,22 @@ function replaceWithBinaryOverload(
   path: NodePath<t.BinaryExpression>,
   runtimeFn: string,
 ): void {
-  const lhs = this.magicString.sliceNode(path.node.left);
-  const rhs = this.magicString.sliceNode(path.node.right);
-  this.magicString.overwriteNode(path.node, `${runtimeFn}(${lhs}, ${rhs})`);
+  const lhs = this.slice(path.node.left);
+  const rhs = this.slice(path.node.right);
+  this.overwrite(path.node, `${runtimeFn}(${lhs}, ${rhs})`);
 }
+
+const NodeUtils = {
+  slice(this: UnpluginPluginState, node: NodeLocation): string {
+    return this.magicString.slice(node.start ?? 0, node.end ?? 0);
+  },
+  remove(this: UnpluginPluginState, node: NodeLocation): void {
+    this.magicString.remove(node.start ?? 0, node.end ?? 0);
+  },
+  overwrite(this: UnpluginPluginState, node: NodeLocation, content: string): void {
+    this.magicString.overwrite(node.start ?? 0, node.end ?? 0, content);
+  },
+};
 
 export const unpluginFactory = ((rawOptions, _meta) => {
   const options = defu(rawOptions, defaultOptions);
@@ -150,12 +173,13 @@ export const unpluginFactory = ((rawOptions, _meta) => {
           return undefined;
         }
 
-        const magicString = new MagicStringAST(code);
+        const magicString = new MagicString(code);
 
         const state = {
           filename: id,
           magicString,
           opts: options,
+          ...NodeUtils,
         } as UnpluginPluginState;
 
         initPluginState(state, {
@@ -168,7 +192,20 @@ export const unpluginFactory = ((rawOptions, _meta) => {
 
         traverse(ast, functionVisitor, undefined, state);
 
-        return generateTransform(magicString, id);
+        if (magicString.hasChanged()) {
+          return {
+            code: magicString.toString(),
+            get map() {
+              return magicString.generateMap({
+                source: id,
+                includeContent: true,
+                hires: 'boundary',
+              });
+            },
+          };
+        }
+
+        return undefined;
       },
     },
   };

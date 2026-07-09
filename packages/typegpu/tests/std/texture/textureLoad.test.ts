@@ -1,17 +1,14 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import { textureLoad } from '../../../src/std/texture.ts';
-import tgpu from '../../../src/index.js';
-import * as d from '../../../src/data/index.ts';
-import { bindGroupLayout } from '../../../src/tgpuBindGroupLayout.ts';
-import { resolve } from '../../../src/core/resolve/tgpuResolve.ts';
+import { textureLoad } from 'typegpu/std';
+import { tgpu, d } from 'typegpu';
 
 // we need this since all other usages will be removed by plugin
 expectTypeOf(() => {});
 
 describe('textureLoad', () => {
   it('Has correct signatures for sampled and depth textures', () => {
-    const testLayout = bindGroupLayout({
+    const testLayout = tgpu.bindGroupLayout({
       tex1d: { texture: d.texture1d() },
       tex2d: { texture: d.texture2d() },
       tex2d_u32: { texture: d.texture2d(d.u32) },
@@ -62,7 +59,7 @@ describe('textureLoad', () => {
       }
     });
 
-    expect(resolve([testFn])).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var tex1d: texture_1d<f32>;
 
       @group(0) @binding(1) var tex2d: texture_2d<f32>;
@@ -85,18 +82,18 @@ describe('textureLoad', () => {
 
       fn testFn() {
         const coord1d = 0i;
-        var coord2d = vec2i();
-        var coord3d = vec3i();
+        let coord2d = vec2i();
+        let coord3d = vec3i();
         const level = 0i;
         const arrayIndex = 0i;
         const sampleIndex = 0i;
-        var load1d = textureLoad(tex1d, coord1d, level);
-        var load2d = textureLoad(tex2d, coord2d, level);
-        var load2d_u32 = textureLoad(tex2d_u32, coord2d, level);
-        var load2d_i32 = textureLoad(tex2d_i32, coord2d, level);
-        var load2d_array = textureLoad(tex2d_array, coord2d, arrayIndex, level);
-        var load3d = textureLoad(tex3d, coord3d, level);
-        var loadms2d = textureLoad(texms2d, coord2d, sampleIndex);
+        let load1d = textureLoad(tex1d, coord1d, level);
+        let load2d = textureLoad(tex2d, coord2d, level);
+        let load2d_u32 = textureLoad(tex2d_u32, coord2d, level);
+        let load2d_i32 = textureLoad(tex2d_i32, coord2d, level);
+        let load2d_array = textureLoad(tex2d_array, coord2d, arrayIndex, level);
+        let load3d = textureLoad(tex3d, coord3d, level);
+        let loadms2d = textureLoad(texms2d, coord2d, sampleIndex);
         let loaddepth2d = textureLoad(texdepth2d, coord2d, level);
         let loaddepth2d_array = textureLoad(texdepth2d_array, coord2d, arrayIndex, level);
         let loaddepthms2d = textureLoad(texdepthms2d, coord2d, sampleIndex);
@@ -105,7 +102,7 @@ describe('textureLoad', () => {
   });
 
   it('Has correct signatures for storage textures', () => {
-    const testLayout = bindGroupLayout({
+    const testLayout = tgpu.bindGroupLayout({
       store1d: { storageTexture: d.textureStorage1d('rgba32float', 'read-only') },
       store2d: { storageTexture: d.textureStorage2d('rgba32float', 'read-only') },
       store2d_uint: { storageTexture: d.textureStorage2d('rgba32uint', 'read-only') },
@@ -137,7 +134,7 @@ describe('textureLoad', () => {
       }
     });
 
-    expect(resolve([testFn])).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var store1d: texture_storage_1d<rgba32float, read>;
 
       @group(0) @binding(1) var store2d: texture_storage_2d<rgba32float, read>;
@@ -152,21 +149,21 @@ describe('textureLoad', () => {
 
       fn testFn() {
         const coord1d = 0i;
-        var coord2d = vec2i();
-        var coord3d = vec3i();
+        let coord2d = vec2i();
+        let coord3d = vec3i();
         const arrayIndex = 0i;
-        var loadStore1d = textureLoad(store1d, coord1d);
-        var loadStore2d = textureLoad(store2d, coord2d);
-        var loadStore2d_uint = textureLoad(store2d_uint, coord2d);
-        var loadStore2d_sint = textureLoad(store2d_sint, coord2d);
-        var loadStore2d_array = textureLoad(store2d_array, coord2d, arrayIndex);
-        var loadStore3d = textureLoad(store3d, coord3d);
+        let loadStore1d = textureLoad(store1d, coord1d);
+        let loadStore2d = textureLoad(store2d, coord2d);
+        let loadStore2d_uint = textureLoad(store2d_uint, coord2d);
+        let loadStore2d_sint = textureLoad(store2d_sint, coord2d);
+        let loadStore2d_array = textureLoad(store2d_array, coord2d, arrayIndex);
+        let loadStore3d = textureLoad(store3d, coord3d);
       }"
     `);
   });
 
   it('Has correct signatures for external textures', () => {
-    const testLayout = bindGroupLayout({
+    const testLayout = tgpu.bindGroupLayout({
       texExternal: { externalTexture: d.textureExternal() },
     });
 
@@ -180,12 +177,12 @@ describe('textureLoad', () => {
       }
     });
 
-    expect(resolve([testFn])).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var texExternal: texture_external;
 
       fn testFn() {
-        var coord2d = vec2i();
-        var loadExternal = textureLoad(texExternal, coord2d);
+        let coord2d = vec2i();
+        let loadExternal = textureLoad(texExternal, coord2d);
       }"
     `);
   });
@@ -199,7 +196,7 @@ describe('textureLoad', () => {
       .$usage('sampled');
     const sampledView = someTexture.createView(d.texture2d());
 
-    const someLayout = bindGroupLayout({
+    const someLayout = tgpu.bindGroupLayout({
       tex2d: { texture: d.texture2d() },
     });
 

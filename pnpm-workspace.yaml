@@ -2,10 +2,21 @@ packages:
   - packages/*
   - apps/*
 
+allowBuilds:
+  '@rolldown/browser': true
+  bun: true
+  canvas: true
+  esbuild: true
+  msw: true
+  protobufjs: false
+  sharp: true
+
 catalog:
   '@babel/types': ^7.29.0
   bun: 1.3.10
   arktype: ^2.1.22
+  react: ^19.2.6
+  react-dom: ^19.2.6
 
 catalogs:
   build:
@@ -25,4 +36,16 @@ catalogs:
     '@types/node': ^24.10.0
     '@types/three': ^0.181.0
     '@webgpu/types': ^0.1.66
-    typescript: npm:tsover@^5.9.11
+    typescript: npm:tsover@^6.0.2
+
+overrides:
+  rollup: catalog:build
+  vite: 8.0.5
+  '@babel/types': 'catalog:'
+  '@types/node': 'catalog:types'
+  typescript: 'catalog:types'
+  three: 'catalog:example'
+  '@typescript-eslint/utils': ^8.57.2
+
+patchedDependencies:
+  comptime@0.1.0: 'patches/comptime@0.1.0.patch'

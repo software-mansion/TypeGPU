@@ -1,54 +1,57 @@
-import tgpu, { d } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 
-const purple = d.vec4f(0.769, 0.392, 1.0, 1);
+// Constants and helper functions
+
+const purple = d.vec4f(0.769, 0.392, 1, 1);
 const blue = d.vec4f(0.114, 0.447, 0.941, 1);
 
-const getGradientColor = tgpu.fn([d.f32], d.vec4f) /* wgsl */ `(ratio) {
-  return mix(purple, blue, ratio);
-}
-`.$uses({ purple, blue });
+const getGradientColor = (ratio: number) => {
+  'use gpu';
+  return std.mix(purple, blue, ratio);
+};
 
-const mainVertex = tgpu.vertexFn({
-  in: { vertexIndex: d.builtin.vertexIndex },
-  out: { outPos: d.builtin.position, uv: d.vec2f },
-}) /* wgsl */ `{
-  var pos = array<vec2f, 3>(
-    vec2(0.0, 0.5),
-    vec2(-0.5, -0.5),
-    vec2(0.5, -0.5)
-  );
+const pos = tgpu.const(d.arrayOf(d.vec2f, 3), [
+  d.vec2f(0.0, 0.5),
+  d.vec2f(-0.5, -0.5),
+  d.vec2f(0.5, -0.5),
+]);
 
-  var uv = array<vec2f, 3>(
-    vec2(0.5, 1.0),
-    vec2(0.0, 0.0),
-    vec2(1.0, 0.0),
-  );
+const uv = tgpu.const(d.arrayOf(d.vec2f, 3), [
+  d.vec2f(0.5, 1.0),
+  d.vec2f(0.0, 0.0),
+  d.vec2f(1.0, 0.0),
+]);
 
-  return Out(vec4f(pos[in.vertexIndex], 0.0, 1.0), uv[in.vertexIndex]);
-}`;
-
-const mainFragment = tgpu.fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-}) /* wgsl */ `{
-  return getGradientColor((in.uv[0] + in.uv[1]) / 2);
-}
-`.$uses({ getGradientColor });
+// Render pipeline
 
 const root = await tgpu.init();
-
-const canvas = document.querySelector('canvas') as HTMLCanvasElement;
-const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
-
 const pipeline = root.createRenderPipeline({
-  vertex: mainVertex,
-  fragment: mainFragment,
+  vertex: ({ $vertexIndex: vid }) => {
+    'use gpu';
+    return {
+      $position: d.vec4f(pos.$[vid], 0, 1),
+      uv: uv.$[vid],
+    };
+  },
+  fragment: ({ uv }) => {
+    'use gpu';
+    return getGradientColor((uv.x + uv.y) / 2);
+  },
 });
 
-setTimeout(() => {
-  pipeline.withColorAttachment({ view: context }).draw(3);
-}, 100);
+// Setting up the canvas and drawing to it
+
+const context = root.configureContext({
+  canvas: document.querySelector('canvas') as HTMLCanvasElement,
+  alphaMode: 'premultiplied',
+});
+
+pipeline.withColorAttachment({ view: context }).draw(3);
+
+// #region Cleanup
 
 export function onCleanup() {
   root.destroy();
 }
+
+// #endregion

@@ -1,6 +1,6 @@
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
-import { type AnyWgslData, type BaseData, isNaturallyEphemeral } from '../../data/wgslTypes.ts';
+import { type AnyWgslData, type BaseData } from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
 import { getExecMode, inCodegenMode, isInsideTgpuFn } from '../../execMode.ts';
 import { isUsableAsStorage, type StorageFlag } from '../../extension.ts';
@@ -86,12 +86,6 @@ export function isUsableAsUniform<T extends TgpuBuffer<BaseData>>(
 // Implementation
 // --------------
 
-const usageToVarTemplateMap: Record<BindableBufferUsage, string> = {
-  uniform: 'uniform',
-  mutable: 'storage, read_write',
-  readonly: 'storage, read',
-};
-
 class TgpuFixedBufferImpl<TData extends BaseData, TUsage extends BindableBufferUsage>
   implements TgpuBufferUsage<TData, TUsage>, SelfResolvable, TgpuFixedBufferUsage<TData>
 {
@@ -118,18 +112,20 @@ class TgpuFixedBufferImpl<TData extends BaseData, TUsage extends BindableBufferU
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const dataType = this.buffer.dataType;
-    const id = ctx.getUniqueName(this);
+    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const { group, binding } = ctx.allocateFixedEntry(
       this.usage === 'uniform' ? { uniform: dataType } : { storage: dataType, access: this.usage },
       this.buffer,
     );
-    const usage = usageToVarTemplateMap[this.usage];
 
-    ctx.addDeclaration(
-      `@group(${group}) @binding(${binding}) var<${usage}> ${id}: ${ctx.resolve(dataType).value};`,
-    );
-
-    return snip(id, dataType, isNaturallyEphemeral(dataType) ? 'runtime' : this.usage);
+    return ctx.gen.declareGlobalVar({
+      group,
+      binding,
+      scope: this.usage,
+      id,
+      dataType,
+      init: undefined,
+    });
   }
 
   toString(): string {
@@ -144,7 +140,7 @@ class TgpuFixedBufferImpl<TData extends BaseData, TUsage extends BindableBufferU
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, dataType, isNaturallyEphemeral(dataType) ? 'runtime' : usage);
+          return snip(this, dataType, usage, /* possibleSideEffects */ false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,
@@ -202,7 +198,7 @@ class TgpuFixedBufferImpl<TData extends BaseData, TUsage extends BindableBufferU
 
     if (mode.type === 'codegen') {
       // The WGSL generator handles buffer assignment, and does not defer to
-      // whatever's being assigned to to generate the WGSL.
+      // whatever's being assigned to generate the WGSL.
       throw new Error('Unreachable bufferUsage.ts#TgpuFixedBufferImpl/$');
     }
 
@@ -241,17 +237,17 @@ export class TgpuLaidOutBufferImpl<TData extends BaseData, TUsage extends Bindab
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const id = ctx.getUniqueName(this);
+    const id = ctx.makeUniqueIdentifier(getName(this), 'global');
     const group = ctx.allocateLayoutEntry(this.#membership.layout);
-    const usage = usageToVarTemplateMap[this.usage];
 
-    ctx.addDeclaration(
-      `@group(${group}) @binding(${this.#membership.idx}) var<${usage}> ${id}: ${
-        ctx.resolve(this.dataType).value
-      };`,
-    );
-
-    return snip(id, this.dataType, isNaturallyEphemeral(this.dataType) ? 'runtime' : this.usage);
+    return ctx.gen.declareGlobalVar({
+      group,
+      binding: this.#membership.idx,
+      scope: this.usage,
+      id,
+      dataType: this.dataType,
+      init: undefined,
+    });
   }
 
   toString(): string {
@@ -266,7 +262,7 @@ export class TgpuLaidOutBufferImpl<TData extends BaseData, TUsage extends Bindab
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema, isNaturallyEphemeral(schema) ? 'runtime' : usage);
+          return snip(this, schema, usage, /* possibleSideEffects */ false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.usage}:${getName(this) ?? '<unnamed>'}.$`,

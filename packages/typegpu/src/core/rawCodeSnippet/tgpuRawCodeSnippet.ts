@@ -5,7 +5,7 @@ import { inCodegenMode } from '../../execMode.ts';
 import type { InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { applyExternals, type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
+import { type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 
 // ----------
@@ -25,13 +25,13 @@ export interface TgpuRawCodeSnippet<TDataType extends BaseData> {
 }
 
 // The origin 'function' refers to values passed in from the calling scope, which means
-// we would have access to this value anyway. Same goes for 'argument' and 'this-function',
+// we would have access to this value anyway. Same goes for 'argument' and 'local-def',
 // the values literally exist in the function we're writing.
 //
-// 'constant-ref' was excluded because it's a special origin reserved for tgpu.const values.
+// '*-immutable-def' were excluded because they're a special origin reserved for tgpu.const values.
 export type RawCodeSnippetOrigin = Exclude<
   Origin,
-  'function' | 'this-function' | 'argument' | 'constant-ref'
+  'function' | 'local-def' | 'argument' | 'constant-immutable-def' | 'runtime-immutable-def'
 >;
 
 /**
@@ -92,7 +92,7 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
   readonly origin: RawCodeSnippetOrigin;
 
   #expression: string;
-  #externalsToApply: ExternalMap[];
+  #externals: ExternalMap | undefined;
 
   constructor(expression: string, type: TDataType, origin: RawCodeSnippetOrigin) {
     this[$internal] = true;
@@ -100,22 +100,20 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
     this.origin = origin;
 
     this.#expression = expression;
-    this.#externalsToApply = [];
   }
 
   $uses(dependencyMap: Record<string, unknown>): this {
-    this.#externalsToApply.push(dependencyMap);
+    if (this.#externals !== undefined) {
+      throw new Error(
+        "Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.",
+      );
+    }
+    this.#externals = dependencyMap;
     return this;
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const externalMap: ExternalMap = {};
-
-    for (const externals of this.#externalsToApply) {
-      applyExternals(externalMap, externals);
-    }
-
-    const replacedExpression = replaceExternalsInWgsl(ctx, externalMap, this.#expression);
+    const replacedExpression = replaceExternalsInWgsl(ctx, this.#externals ?? {}, this.#expression);
 
     return snip(replacedExpression, this.dataType, this.origin);
   }

@@ -1,8 +1,8 @@
 import { test } from 'typegpu-testing-utility';
 import { expect, vi } from 'vitest';
-import tgpu, { d } from 'typegpu';
 
 import { expectSnippetOf } from '../utils/parseResolved.ts';
+import { tgpu, d } from 'typegpu';
 
 test('multiplying i32 with a float literal should implicitly convert to an f32', () => {
   using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});

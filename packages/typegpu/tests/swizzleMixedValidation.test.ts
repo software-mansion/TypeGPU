@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import tgpu, { d } from '../src/index.js';
+import { tgpu, d } from 'typegpu';
 
 describe('Mixed swizzle validation', () => {
   describe('JS validation', () => {
@@ -71,12 +71,12 @@ describe('Mixed swizzle validation', () => {
         return mixed;
       };
 
-      // The resolution should fail because accessProp returns undefined for mixed swizzles
+      // The resolution should fail because accessProp won't match any prop and will return undefined
       expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
         - fn*:main
-        - fn*:main(): Property 'xrgy' not found on value 'vec' of type vec4f]
+        - fn*:main(): Property 'xrgy' not found on 'vec']
       `);
     });
 
@@ -93,7 +93,7 @@ describe('Mixed swizzle validation', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn*:main
-        - fn*:main(): Property 'rgxw' not found on value 'vec' of type vec4f]
+        - fn*:main(): Property 'rgxw' not found on 'vec']
       `);
     });
   });

@@ -1,0 +1,628 @@
+---
+title: Buffers
+description: A guide on how to use TypeGPU typed buffers.
+---
+
+:::note[Recommended reading]
+We assume that you are familiar with the following concepts:
+- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-fundamentals.html" target="_blank" rel="noopener noreferrer">WebGPU Fundamentals</a>
+- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-uniforms.html" target="_blank" rel="noopener noreferrer">Uniforms</a>
+- <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-storage-buffers.html" target="_blank" rel="noopener noreferrer">Storage Buffers</a>
+:::
+
+Memory on the GPU can be allocated and managed through buffers. That way, WGSL shaders can be provided with an additional context, or retrieve the
+results of parallel computation back to JS. When creating a buffer, a schema for the contained values has to be provided, which allows for:
+- Calculating the required size of the buffer,
+- Automatic conversion to-and-from a binary representation,
+- Type-safe APIs for writing and reading.
+
+As an example, let's create a buffer for storing particles.
+
+```ts twoslash {22-28}
+import { tgpu, d } from 'typegpu';
+
+// Defining a struct type
+const Particle = d.struct({
+  position: d.vec3f,
+  velocity: d.vec3f,
+  health: d.f32,
+});
+
+// Utility for creating a random particle
+function createParticle(): d.InferInput<typeof Particle> {
+  return {
+    position: d.vec3f(Math.random(), 2, Math.random()),
+    velocity: d.vec3f(0, 9.8, 0),
+    health: 100,
+  };
+}
+
+const root = await tgpu.init();
+
+// Creating and initializing a buffer.
+const buffer = root
+  .createBuffer(
+    d.arrayOf(Particle, 100), // <- holds 100 particles
+    Array.from({ length: 100 }).map(createParticle), // <- initial value
+  )
+  .$usage('storage'); // <- can be used as a "storage buffer"
+
+// -
+// --
+// --- Shader omitted for brevity...
+// --
+// -
+
+// Reading back from the buffer
+const value = await buffer.read();
+//    ^?
+```
+
+This buffer can then be used and/or updated by a WGSL shader.
+
+## Creating a buffer
+
+To create a buffer, you will need to define its schema by composing data types imported from `typegpu/data`. Every WGSL data-type can be represented as JS schemas, including
+structs and arrays. They will be explored in more detail in [a following chapter](/TypeGPU/apis/data-schemas).
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const countBuffer = root.createBuffer(d.u32);
+//    ^?
+
+const listBuffer = root.createBuffer(d.arrayOf(d.f32, 10));
+//    ^?
+
+const uniformsBuffer = root.createBuffer(d.struct({ a: d.f32, b: d.f32 }));
+//    ^?
+```
+
+### Usage flags
+
+To be able to use these buffers in WGSL shaders, we have to declare their usage upfront with `.$usage(...)`.
+
+```ts twoslash
+// @noErrors
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const buffer = root.createBuffer(d.u32)
+  .$usage('uniform')
+  .$usage('')
+//         ^|
+```
+
+You can also add all flags in a single `$usage()`.
+
+```ts twoslash
+// @noErrors
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const buffer = root.createBuffer(d.u32)
+  .$usage('uniform', 'storage', '');
+//                               ^|
+```
+
+:::note
+Along with passing the appropriate flags to WebGPU, the methods will also embed type information into the buffer.
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+
+const buffer = root.createBuffer(d.u32).$usage('uniform', 'storage');
+//    ^?
+```
+:::
+
+### Additional flags
+
+It is also possible to add any of the `GPUBufferUsage` flags to a typed buffer object, using the `.$addFlags` method.
+Though it shouldn't be necessary in most scenarios as majority of the flags are handled automatically by the library
+or indirectly through the `.$usage` method.
+
+```ts twoslash
+/// <reference types="@webgpu/types" />
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+const buffer = root.createBuffer(d.f32);
+// ---cut---
+buffer.$addFlags(GPUBufferUsage.QUERY_RESOLVE);
+```
+
+:::note
+Every typed buffer created without providing existing GPU buffer has `COPY_DST` and `COPY_SRC` flags included by default.
+However once the `MAP_READ` flag is provided, the only other flag set is `COPY_DST`. Similarly when setting `MAP_WRITE` it is paired with `COPY_SRC`.
+:::
+
+Flags can only be added this way if the typed buffer was not created with an existing GPU buffer.
+If it was, then all flags need to be provided to the existing buffer when constructing it.
+
+### Initial value
+
+You can also pass an initial value to the `root.createBuffer` function.
+When the buffer is created, it will be mapped at creation, and the initial value will be written to the buffer.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+// Will be initialized to `100`
+const buffer1 = root.createBuffer(d.u32, 100);
+
+// Will be initialized to an array of two vec3fs with the specified values.
+const buffer2 = root.createBuffer(d.arrayOf(d.vec3f, 2), [
+  d.vec3f(0, 1, 2),
+  d.vec3f(3, 4, 5),
+]);
+```
+
+For cases where a plain typed value is not enough, you can also pass an initializer callback.
+It receives the newly created typed buffer while it is still mapped, so you can populate it with multiple writes or helper utilities before the first upload.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const Schema = d.arrayOf(d.u32, 6);
+const firstChunk = d.memoryLayoutOf(Schema, (a) => a[1]);
+const secondChunk = d.memoryLayoutOf(Schema, (a) => a[4]);
+
+const buffer = root.createBuffer(Schema, (mappedBuffer) => {
+  mappedBuffer.write([10, 20], { startOffset: firstChunk.offset });
+  mappedBuffer.write([30, 40], { startOffset: secondChunk.offset });
+});
+```
+
+For buffers whose CPU-side data already lives in separate per-field arrays, see the [SoA write section](#writing-struct-of-arrays-soa-data).
+
+### Using an existing buffer
+
+You can also create a buffer using an existing WebGPU buffer. This is useful when you have existing logic but want to introduce type-safe data operations.
+
+```ts twoslash {7}
+/// <reference types="@webgpu/types" />
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+const device = root.device;
+// ---cut---
+// A raw WebGPU buffer
+const existingBuffer = root.device.createBuffer({
+  size: 4,
+  usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+});
+
+const buffer = root.createBuffer(d.u32, existingBuffer);
+
+buffer.write(12); // Writing to `existingBuffer` through a type-safe API
+```
+
+:::caution[WebGPU Interoperability]
+Since the buffer is already created, you are responsible for the buffer's lifecycle and ensuring the type matches the buffer's contents.
+:::
+
+## Writing to a buffer
+
+To write data to a buffer from the CPU, you can use the `.write(value)` method. The typed schema enables auto-complete as well as static validation of this
+method's arguments.
+
+```ts twoslash
+// @noErrors
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const Particle = d.struct({
+  position: d.vec2f,
+  health: d.u32,
+});
+
+const particleBuffer = root.createBuffer(Particle);
+
+particleBuffer.write({
+  position: d.vec2f(1.0, 2.0),
+  heal
+  //  ^|
+});
+```
+
+:::caution[WebGPU Interoperability]
+If you create a buffer from an existing WebGPU buffer that happens to be mapped, the data will be written directly to the buffer (the buffer will not be unmapped).
+If you pass an unmapped buffer, the data will be written to the buffer using `GPUQueue.writeBuffer`.
+
+If you passed your own buffer to the `root.createBuffer` function, you need to ensure it has the `GPUBufferUsage.COPY_DST` usage flag if you want to write to it using the `write` method.
+:::
+
+:::tip
+To write to, patch, or read from an `ArrayBuffer` directly, TypeGPU provides [a dedicated API](/TypeGPU/apis/data-schemas/#arraybuffer-io) for that purpose. 
+The same API is used internally for buffer writes.
+:::
+
+### Permissive write inputs
+
+`.write()` accepts several equivalent forms — you don't need to construct typed instances:
+
+| Input form | Example for `vec3f` | Example for `mat2x2f` | Notes |
+|---|---|---|---|
+| Typed instance | `d.vec3f(1, 2, 3)` | `d.mat2x2f(1, 2, 3, 4)` | Allocates a TypeGPU wrapper object |
+| Plain JS array | `[1, 2, 3]` | `[1, 2, 3, 4]` | No TypeGPU wrapper allocated |
+| TypedArray | `new Float32Array([1, 2, 3])` | `new Float32Array([1, 2, 3, 4])` | Bytes copied as-is — must match GPU layout |
+| ArrayBuffer | `rawBytes` | `rawBytes` | Bytes copied as-is — must match GPU layout |
+
+When data already lives in tuples or typed arrays, skipping typed instance construction avoids allocating TypeGPU wrapper objects, which can reduce garbage-collector pressure in hot paths such as per-frame updates or simulation ticks.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const vecBuffer = root.createBuffer(d.vec3f);
+
+vecBuffer.write(d.vec3f(1, 2, 3));            // typed instance
+vecBuffer.write([1, 2, 3]);                   // plain tuple
+vecBuffer.write(new Float32Array([1, 2, 3])); // TypedArray
+
+const Particle = d.struct({ position: d.vec3f, velocity: d.vec3f, health: d.f32 });
+const particleBuffer = root.createBuffer(d.arrayOf(Particle, 100));
+
+// Bytes already laid out exactly as the GPU expects
+declare const rawBytes: ArrayBuffer;
+particleBuffer.write(rawBytes);              // ArrayBuffer
+```
+
+:::tip[WGSL matrices are column-major]
+WGSL matrices are stored by columns, not rows.
+
+For `mat3x3f`, use packed `number[]` (9 floats) or padded `Float32Array` (12 floats, one padding float per column).
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const mat3Buffer = root.createBuffer(d.mat3x3f);
+
+// Column-major packed input (3 columns, 3 rows each)
+mat3Buffer.write([
+  1, 2, 3, // column 0
+  4, 5, 6, // column 1
+  7, 8, 9, // column 2
+]);
+
+// Equivalent padded WGSL layout
+mat3Buffer.write(new Float32Array([
+  1, 2, 3, 0,
+  4, 5, 6, 0,
+  7, 8, 9, 0,
+]));
+```
+:::
+
+:::note[TypedArray and ArrayBuffer inputs are copied as-is]
+Wherever a `TypedArray` or `ArrayBuffer` is passed, the bytes are copied directly without any interpretation. The data must already match the GPU memory layout, including any padding. For example, each element in `d.arrayOf(d.vec3f, N)` occupies **16 bytes** (12 bytes of data + 4 bytes of padding), so the input must include those padding bytes.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const arrBuffer = root.createBuffer(d.arrayOf(d.vec3f, 2));
+
+// TypedArray: must match the padded GPU layout (4 floats per element, 4th is padding)
+arrBuffer.write(new Float32Array([1, 2, 3, 0, 4, 5, 6, 0]));
+
+// vec4f has no padding, so the layout is straightforward:
+const vec4Buffer = root.createBuffer(d.arrayOf(d.vec4f, 2));
+vec4Buffer.write(new Float32Array([1, 2, 3, 4, 5, 6, 7, 8]));
+```
+
+Plain JS arrays, tuples, and objects always go through the normal path, which handles layout automatically.
+:::
+
+### Writing a slice
+
+You can write a contiguous slice of data into a buffer using the optional second argument of `.write()`.
+Pass the values to write along with `startOffset` - the byte position at which writing begins.
+
+:::tip
+Use `d.memoryLayoutOf` to obtain the correct byte offset for a given schema element without having to manually calculate it.
+:::
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const schema = d.arrayOf(d.u32, 6);
+const buffer = root.createBuffer(schema, [0, 1, 2, 0, 0, 0]);
+
+// Get the byte offset of element [3]
+const layout = d.memoryLayoutOf(schema, (a) => a[3]);
+
+// Write [4, 5, 6] starting at element [3], leaving [0, 1, 2] untouched
+buffer.write([4, 5, 6], { startOffset: layout.offset });
+const data = await buffer.read(); // will be [0, 1, 2, 4, 5, 6]
+```
+
+An optional `endOffset` specifies the byte offset at which writing stops entirely.
+Combined with `startOffset` and `d.memoryLayoutOf`, this lets you write to a precise region of the buffer. If ommitted, writing will continue until the end of the provided data or the end of the buffer, whichever comes first.
+
+:::note
+Both offsets are **byte-based**. Any component whose byte position falls at or beyond `endOffset` is not written, which means offsets that do not align to schema element boundaries can result in partial elements being written. Use `d.memoryLayoutOf` to target whole elements safely.
+:::
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const schema = d.arrayOf(d.vec3u, 4);
+const buffer = root.createBuffer(schema);
+
+// Get the byte offsets of element [1] (start) and element [2] (stop)
+const startLayout = d.memoryLayoutOf(schema, (a) => a[1]);
+const endLayout = d.memoryLayoutOf(schema, (a) => a[2]);
+
+// Write one vec3u at element [1], stopping before element [2]
+buffer.write([d.vec3u(4, 5, 6)], {
+  startOffset: startLayout.offset,
+  endOffset: endLayout.offset,
+});
+```
+
+:::note
+In this particular case the `patch` method described in the next section would be a more convenient option, but the `startOffset` and `endOffset` options are useful for writing bigger slices of data.
+:::
+
+### Patching buffers
+
+When you want to update only a subset of a buffer’s fields, you can use the `.patch(data)` method. This method updates only the fields provided in the `data` object and leaves the rest unchanged.
+
+The format of the `data` value depends on your schema type:
+
+- **For `d.struct` schemas:**
+  Provide an object with keys corresponding to the subset of the schema’s fields you wish to update.
+
+- **For `d.array` schemas:**
+  Provide an object with numeric keys as indices mapped to new values (sparse update),
+  a plain array for full replacement, or a `TypedArray` for byte-level replacement.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const Planet = d.struct({
+  radius: d.f32,
+  mass: d.f32,
+  position: d.vec3f,
+  colors: d.arrayOf(d.vec3f, 5),
+});
+
+const planetBuffer = root.createBuffer(Planet);
+
+planetBuffer.patch({
+  mass: 123.1,
+  colors: {
+    2: d.vec3f(1, 0, 0),
+    4: d.vec3f(0, 0, 1),
+  },
+});
+```
+
+### Writing struct-of-arrays (SoA) data
+
+When the buffer schema is an `array<struct<...>>`, you can write the data in a struct-of-arrays form with `writeSoA` from `typegpu/common`.
+This is useful when your CPU-side data is already stored per-field, such as simulation attributes kept in separate typed arrays.
+
+```ts twoslash
+import { tgpu, d, common } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const Particle = d.struct({
+  pos: d.vec3f,
+  vel: d.f32,
+});
+
+const particleBuffer = root.createBuffer(d.arrayOf(Particle, 2));
+
+common.writeSoA(particleBuffer, {
+  pos: new Float32Array([
+    1, 2, 3,
+    4, 5, 6,
+  ]),
+  vel: new Float32Array([10, 20]),
+});
+```
+
+`writeSoA` converts those field-wise arrays into the buffer's GPU array-of-structs layout before uploading.
+For the example above, the resulting bytes match two `Particle` structs laid out in memory, including the padding required by `vec3f`.
+
+:::note[Supported field shapes]
+SoA writes work for arrays of structs whose fields are:
+- scalars,
+- vectors,
+- matrices,
+- fixed-size arrays of scalars, vectors, or matrices.
+
+Nested struct fields are not supported.
+:::
+
+:::tip[Packed input, padded output]
+Unlike `.write()` with a raw `TypedArray` or `ArrayBuffer`, `writeSoA` expects each field in its natural packed form.
+For example, a `vec3f` field should be provided as 3 floats per element, not 4, and a `mat3x3f` field should be provided as 9 floats per matrix, not 12.
+TypeGPU inserts the required WGSL padding while scattering the data into the target buffer.
+:::
+
+You can also restrict the write to a slice of the destination buffer:
+
+```ts twoslash
+import { tgpu, d, common } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const Entry = d.struct({
+  id: d.u32,
+  values: d.arrayOf(d.vec3f, 2),
+});
+
+const schema = d.arrayOf(Entry, 4);
+const buffer = root.createBuffer(schema);
+
+const start = d.memoryLayoutOf(schema, (a) => a[1]);
+const end = d.memoryLayoutOf(schema, (a) => a[3]);
+
+common.writeSoA(
+  buffer,
+  {
+    id: new Uint32Array([30, 40]),
+    values: new Float32Array([
+      1, 2, 3,
+      4, 5, 6,
+      7, 8, 9,
+      10, 11, 12,
+    ]),
+  },
+  {
+    startOffset: start.offset,
+    endOffset: end.offset,
+  },
+);
+```
+
+If `endOffset` is omitted, TypeGPU infers the written range from the provided field arrays and stops at the shortest complete element count implied by the data.
+`startOffset` is still byte-based and should point to the start of a struct element, so `d.memoryLayoutOf` is the safest way to compute it.
+All struct fields must be present in the SoA object.
+
+### Copying
+
+There's also an option to copy value from another typed buffer using the `.copyFrom(buffer)` method,
+as long as both buffers have a matching data schema.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+
+const Particle = d.struct({
+  position: d.vec2f,
+  health: d.u32,
+});
+
+const particleBuffer = root.createBuffer(Particle);
+// ---cut---
+const backupParticleBuffer = root.createBuffer(Particle);
+backupParticleBuffer.copyFrom(particleBuffer);
+```
+
+## Reading from a buffer
+
+To read data from a buffer on the CPU, you can use the `.read()` method.
+It returns a promise that resolves to the data read from the buffer.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const buffer = root.createBuffer(d.arrayOf(d.u32, 10));
+
+const data = await buffer.read();
+//    ^?
+```
+
+import ListItem from '../../../components/ListItem.astro';
+
+:::note[Inner Workings]
+**How the reading operation is handled differs based on the different types of existing buffers that are passed to the `createBuffer` function.**
+
+<ListItem idx={1}>
+  If you pass a mapped buffer, the data will be read directly from the buffer (the buffer will not be unmapped).
+</ListItem>
+<ListItem idx={2}>
+  If you pass a mappable but unmapped buffer, the buffer will be mapped and then unmapped after the data is read.
+</ListItem>
+<ListItem idx={3}>
+  In the case of a buffer that is not mappable, a staging buffer will be created, and the
+  data will be copied to the staging buffer before being read. After the data is read, the staging buffer will be destroyed.
+</ListItem>
+:::
+
+## Index Buffers
+TypeGPU also allows for the use of index buffers. An index buffer is a buffer containing a sequence of `u32` or `u16` indices, which indicate in which order vertices will be processed. This is particulary useful for rendering geometry, where vertices are often shared between multiple primitives (e.g., triangles), as it avoids duplicating vertex data.
+You may refer to the [pipelines](/TypeGPU/apis/pipelines/#drawing-with-drawindexed) section for usage details.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const indexBuffer = root
+  .createBuffer(d.arrayOf(d.u16, 6), [0, 2, 1, 0, 3, 2])
+  .$usage('index');
+
+```
+
+## Binding buffers
+
+To use a buffer in a shader, it needs to be bound using a bind group.
+There are two approaches provided by TypeGPU.
+
+### Manual binding
+
+The default option is to create bind group layouts and bind your buffers via bind groups.
+Read more in the chapter dedicated to [bind groups](/TypeGPU/apis/bind-groups).
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const layout = tgpu.bindGroupLayout({
+  points: { storage: d.arrayOf(d.vec2i), access: 'mutable' },
+});
+
+const pipeline = root.createGuardedComputePipeline((x) => {
+  'use gpu';
+  // Access and modify the bound buffer via the layout
+  layout.$.points[x] = d.vec2i(1, 2);
+});
+
+const pointsBuffer = root
+  .createBuffer(d.arrayOf(d.vec2i, 100))
+  .$usage('storage');
+
+const bindGroup = root.createBindGroup(layout, {
+  points: pointsBuffer
+});
+
+pipeline.with(bindGroup).dispatchThreads(100);
+```
+
+### Using fixed resources
+
+For scenarios where buffers remain consistent across multiple compute or render operations,
+TypeGPU offers fixed resources that appear bindless from a code perspective.
+Fixed buffers are created using dedicated root methods.
+
+| WGSL type                  | TypeGPU constructor     |
+|----------------------------|-------------------------|
+| `var<uniform>`             | `root.createUniform()`  |
+| `var<storage, read>`       | `root.createReadonly()` |
+| `var<storage, read_write>` | `root.createMutable()`  |
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const pointsMutable = root.createMutable(d.arrayOf(d.vec2i, 100));
+
+const pipeline = root.createGuardedComputePipeline((x) => {
+  'use gpu';
+  // Access and modify the fixed buffer directly
+  pointsMutable.$[x] = d.vec2i();
+});
+
+pipeline.dispatchThreads(100);
+```
+
+TypeGPU automatically generates a "catch-all" bind group and populates it with the fixed resources.
+
+You can also use [`resolveWithContext`](/TypeGPU/apis/resolve/#resolvewithcontext) to access the automatically generated bind group and layout containing your fixed resources.

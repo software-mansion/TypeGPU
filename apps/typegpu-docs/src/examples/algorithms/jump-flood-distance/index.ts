@@ -1,4 +1,4 @@
-import tgpu, { common, d, std } from 'typegpu';
+import { tgpu, common, d, std } from 'typegpu';
 import { distanceFrag } from './visualization.ts';
 import {
   BrushParams,

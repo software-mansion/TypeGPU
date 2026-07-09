@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { mat4x4f, vec3f, vec4f } from '../../../src/data/index.ts';
-import tgpu from '../../../src/index.js';
-import { isCloseTo, mul, scale4, translate4 } from '../../../src/std/index.ts';
+import { tgpu } from 'typegpu';
+import { mat4x4f, vec3f, vec4f } from 'typegpu/data';
+import { isCloseTo, mul, scale4, translate4 } from 'typegpu/std';
 
 describe('scale', () => {
   it('scales a matrix by a vec3f vector', () => {
@@ -21,7 +21,7 @@ describe('scale', () => {
 
     expect(tgpu.resolve([scaleFn])).toMatchInlineSnapshot(`
       "fn scaleFn() {
-        var resultExpression = mat4x4f(2, 0, 0, 1, 0, 2, 0, 0, 2, 0, 4, 0, 0, 2, 0, 1);
+        let resultExpression = mat4x4f(2, 0, 0, 1, 0, 2, 0, 0, 2, 0, 4, 0, 0, 2, 0, 1);
       }"
     `);
   });
