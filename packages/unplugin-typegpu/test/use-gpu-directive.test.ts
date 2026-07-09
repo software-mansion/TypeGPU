@@ -1,6 +1,52 @@
 import { describe, expect, test } from 'vitest';
 import { babelTransform, rollupTransform } from './transform.ts';
 
+describe('"use gpu" is removed after transform', () => {
+  const code = `\
+    const fn = () => {
+      'use gpu';
+    };
+
+    console.log(fn);
+  `;
+
+  test('babel', () => {
+    expect(babelTransform(code)).toMatchInlineSnapshot(`
+      "const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        'use gpu';
+      }, {
+        v: 1,
+        name: "fn",
+        ast: {
+          params: [],
+          body: [0, []],
+          externalNames: []
+        },
+        externals: () => {
+          return {};
+        }
+      }) && $.f)({});
+      console.log(fn);"
+    `);
+  });
+
+  test('rollup', async () => {
+    expect(await rollupTransform(code)).toMatchInlineSnapshot(`
+      "const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+            'use gpu';
+          }), {
+          v: 1,
+          name: "fn",
+          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({}));
+
+          console.log(fn);
+      "
+    `);
+  });
+});
+
 describe('"use gpu" marked arrow function, assigned to a const', () => {
   const code = `\
     /** ADD */
