@@ -1,5 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["@types/node"]
+  },
   "include": ["bin.mjs"],
   "exclude": ["node_modules", "dist"]
 }

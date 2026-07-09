@@ -23,6 +23,7 @@
     "test:types": "tsc"
   },
   "devDependencies": {
+    "@types/node": "catalog:types",
     "typescript": "catalog:types"
   },
   "engines": {
