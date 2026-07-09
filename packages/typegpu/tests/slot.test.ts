@@ -89,7 +89,7 @@ describe('tgpu.slot', () => {
   });
 
   it('prefers closer scope', () => {
-    const colorSlot = tgpu.slot<string>(); // no default
+    const colorSlot = tgpu.slot<d.v3f>(); // no default
 
     const getColor = tgpu.fn([], d.vec3f)`() -> vec3f {
       return colorSlot;
