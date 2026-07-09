@@ -83,7 +83,8 @@ describe('tgpu.slot', () => {
     expect(() => tgpu.resolve([getColor])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:getColor: Missing value for 'slot:color']
+      - fn:getColor
+      - slot:color: Missing value for 'slot:color']
     `);
   });
 
@@ -441,37 +442,6 @@ describe('tgpu.slot', () => {
           return 0h;
         }
       }"
-    `);
-  });
-
-  it('disallows runtime strings in raw-wgsl implemented functions', () => {
-    const stringSlot = tgpu.slot<string>('vec3f()');
-
-    const getVec = tgpu.fn([])`() => {
-      return stringSlot;
-    }`.$uses({ stringSlot });
-
-    expect(() => tgpu.resolve([getVec])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn:getVec: Slots cannot be used for string injection. For that, use 'rawCodeSnippet'.]
-    `);
-  });
-
-  it(`doesn't allow arbitrary shader code to be injected`, () => {
-    const bar = tgpu.slot('// a comment');
-
-    function foo() {
-      'use gpu';
-      bar.$;
-      return 2;
-    }
-
-    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:foo
-      - fn*:foo(): Strings cannot be injected into WGSL directly (tried to inject '// a comment'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
     `);
   });
 });

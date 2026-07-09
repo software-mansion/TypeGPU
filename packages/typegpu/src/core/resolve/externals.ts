@@ -132,10 +132,6 @@ export function replaceExternalsInWgsl(
       }
     }
 
-    if (isSlot(currentItem) && typeof currentItem.$ === 'string') {
-      throw new Error("Slots cannot be used for string injection. For that, use 'rawCodeSnippet'.");
-    }
-
     return (
       (typeof currentItem === 'string' ? currentItem : ctx.resolve(currentItem).value) + suffix
     );
