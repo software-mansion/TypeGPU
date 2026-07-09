@@ -2,7 +2,7 @@ import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import { FuncParameterType } from 'tinyest';
-import type { Context, JsNode, TranspilationResult } from './types';
+import type { Context, JsNode, TranspilationResult } from './types.ts';
 import { tryFindExternalChain } from './externals.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
