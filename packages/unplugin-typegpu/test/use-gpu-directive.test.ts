@@ -58,7 +58,7 @@ describe('"use gpu" marked arrow function, assigned to a const', () => {
           v: 2,
           name: "addGPU",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
 
           const addCPU = (a, b) => {
@@ -129,7 +129,7 @@ describe('marked arrow functions passed to shells', () => {
           v: 2,
           name: undefined,
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({})));
 
           shell((a, b) => {
@@ -198,7 +198,7 @@ describe('marked anonymous function expressions passed to shells', () => {
           v: 2,
           name: undefined,
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({})));
 
           shell(function(a, b) {
@@ -267,7 +267,7 @@ describe('marked named function expressions passed to shells', () => {
           v: 2,
           name: "addGPU",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({})));
 
           shell(function addCPU(a, b) {
@@ -336,7 +336,7 @@ describe('marked function statements', () => {
           v: 2,
           name: "addGPU",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
 
 
@@ -447,7 +447,7 @@ describe('marked object methods', () => {
           v: 2,
           name: "mod",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","%","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}))
           };
 
@@ -468,7 +468,7 @@ describe('marked object methods', () => {
           v: 2,
           name: "isPrime",
           ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[11,[1,"n","<=",[5,"1"]],[0,[[10,false]]]],[14,[12,"i",[5,"2"]],[1,"i","<","n"],[102,"++","i"],[0,[[11,[1,[6,"obj.mod",["n","i"]],"===",[5,"0"]],[0,[[10,false]]]]]]],[10,true]]]},
-          externals: { "obj.mod": () => obj.mod }
+          externals: {"obj.mod":() => obj.mod}
         }) && $.f)({}));
 
           console.log(obj, isPrime);
@@ -549,7 +549,7 @@ describe('transforms numeric operations', () => {
           v: 2,
           name: "main",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[12,"c",[1,[1,"a","+","b"],"+",[5,"2"]]],[2,"c","+=",[1,[5,"2"],"*","b"]],[2,[7,"countMutable","$"],"+=",[5,"3"]]]]},
-          externals: { "countMutable": () => countMutable }
+          externals: {"countMutable":() => countMutable}
         }) && $.f)({}));
 
           console.log(main);
@@ -637,7 +637,7 @@ describe('hoists global function statements marked with "use gpu"', () => {
           v: 2,
           name: "mul",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
 
       /** ADD */
@@ -649,7 +649,7 @@ describe('hoists global function statements marked with "use gpu"', () => {
           v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
 
       console.log(add, mul);
@@ -741,7 +741,7 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
           v: 2,
           name: "mul",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
 
       /** ADD */
@@ -753,7 +753,7 @@ describe('hoists function statements marked with "use gpu", scoped inside anothe
           v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
 
       console.log(add, mul);
@@ -856,7 +856,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
           v: 2,
           name: "mul",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
 
       /** ADD */
@@ -868,7 +868,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an arr
           v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
 
       console.log(add, mul);
@@ -978,7 +978,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
           v: 2,
           name: "mul",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","*","b"],"*","c"]]]]},
-          externals: { "c": () => c }
+          externals: {"c":() => c}
         }) && $.f)({}));
 
       /** ADD */
@@ -990,7 +990,7 @@ describe('hoists function statements marked with "use gpu", scoped inside an if 
           v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","+","b"],"+","c"]]]]},
-          externals: { "c": () => c }
+          externals: {"c":() => c}
         }) && $.f)({}));
 
       console.log(add, mul);
@@ -1109,7 +1109,7 @@ describe('replaces function statements marked with "use gpu" in place when condi
           v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","+","b"],"+","c"]]]]},
-          externals: { "c": () => c }
+          externals: {"c":() => c}
         }) && $.f)({}));
 
 
@@ -1124,7 +1124,7 @@ describe('replaces function statements marked with "use gpu" in place when condi
           v: 2,
           name: "mul",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,[1,"a","*","b"],"*","c"]]]]},
-          externals: { "c": () => c }
+          externals: {"c":() => c}
         }) && $.f)({}));
 
 
@@ -1212,7 +1212,7 @@ describe('hoists exported marked function statements', () => {
           v: 2,
           name: "mul",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
 
       /** ADD */
@@ -1223,7 +1223,7 @@ describe('hoists exported marked function statements', () => {
           v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
 
       console.log(add);
@@ -1283,7 +1283,7 @@ describe('hoists default exported marked function statement', () => {
           v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
       console.log(add);
 
@@ -1385,7 +1385,7 @@ describe('export marked arrow function', () => {
           v: 2,
           name: "add",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
 
           const increment = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((n) => {
@@ -1395,7 +1395,7 @@ describe('export marked arrow function', () => {
           v: 2,
           name: "increment",
           ast: {"params":[{"type":"i","name":"n"}],"body":[0,[[10,[1,"n","+",[5,"1"]]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
           
           const mul = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = ((a, b) => {
@@ -1405,7 +1405,7 @@ describe('export marked arrow function', () => {
           v: 2,
           name: "mul",
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","*","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
 
       export { add, mul as default, increment };
@@ -1455,7 +1455,7 @@ describe('anonymous default export marked function statement', () => {
           v: 2,
           name: undefined,
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
 
       export { _virtual_code as default };
@@ -1505,7 +1505,7 @@ describe('anonymous default export marked arrow function', () => {
           v: 2,
           name: undefined,
           ast: {"params":[{"type":"i","name":"a"},{"type":"i","name":"b"}],"body":[0,[[10,[1,"a","+","b"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
 
       export { _virtual_code as default };

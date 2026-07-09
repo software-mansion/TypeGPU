@@ -285,7 +285,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
           v: 2,
           name: undefined,
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"tmp",[7,[7,"counter","$"],"x"]],[2,[7,[7,"counter","$"],"x"],"=",[7,[7,"counter","$"],"y"]],[2,[7,[7,"counter","$"],"y"],"+=","tmp"],[2,[7,[7,"counter","$"],"z"],"+=",[6,"d.f32",[[7,[7,"input","num"],"x"]]]]]]},
-          externals: { "counter": () => counter, "d.f32": () => d.f32 }
+          externals: {"counter":() => counter,"d.f32":() => d.f32}
         }) && $.f)({})));
       "
     `);
@@ -317,7 +317,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
           v: 2,
           name: undefined,
           ast: {"params":[{"type":"i","name":"input"}],"body":[0,[[13,"x",true]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({})));
 
               tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
@@ -325,7 +325,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
           v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[[13,"y",[1,[5,"2"],"+",[5,"2"]]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({})));
 
               const cx = 2;
@@ -333,7 +333,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
           v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[[10,"cx"]]]},
-          externals: { "cx": () => cx }
+          externals: {"cx":() => cx}
         }) && $.f)({})));
 
               tgpu.fn([])('() {}');
@@ -390,7 +390,7 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
           v: 2,
           name: undefined,
           ast: {"params":[],"body":[0,[[10,[7,"this.myBuffer","$"]]]]},
-          externals: { "this.myBuffer": () => this.myBuffer }
+          externals: {"this.myBuffer":() => this.myBuffer}
         }) && $.f)({})));
             }
 

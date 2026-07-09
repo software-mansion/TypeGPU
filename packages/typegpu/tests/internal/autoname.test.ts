@@ -201,7 +201,7 @@ describe('autonaming', () => {
           v: 2,
           name: "myFun",
           ast: {"params":[],"body":[0,[[10,[5,"0"]]]]},
-          externals: {  }
+          externals: {}
         }) && $.f)({}));
 
 
