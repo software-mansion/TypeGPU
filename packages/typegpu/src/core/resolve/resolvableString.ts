@@ -1,4 +1,5 @@
-import { snip, UnknownData } from '../../internal.ts';
+import { UnknownData } from '../../data/dataTypes.ts';
+import { snip } from '../../data/snippet.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
 
 export class ResolvableString {
