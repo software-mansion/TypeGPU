@@ -1,8 +1,17 @@
 {
   "name": "create-typegpu",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A CLI tool for bootstrapping TypeGPU projects.",
+  "homepage": "https://typegpu.com",
+  "bugs": {
+    "url": "https://github.com/software-mansion/TypeGPU/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion/TypeGPU.git#main",
+    "directory": "packages/create-typegpu"
+  },
   "bin": {
     "create-typegpu": "./bin.mjs"
   },
@@ -11,8 +20,7 @@
   ],
   "type": "module",
   "scripts": {
-    "test:types": "tsc",
-    "prepublishOnly": "npm run build"
+    "test:types": "tsc"
   },
   "devDependencies": {
     "typescript": "catalog:types"
