@@ -3,6 +3,7 @@ import { isWgslStruct } from '../../data/wgslTypes.ts';
 import { getName, hasTinyestMetadata, isNamable, setName } from '../../shared/meta.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
 import type { FnExternals } from '../function/fnCore.ts';
+import { isSlot } from '../slot/slotTypes.ts';
 
 /**
  * A key-value mapping where keys represent identifiers within shader code,
@@ -129,6 +130,10 @@ export function replaceExternalsInWgsl(
         );
         return match;
       }
+    }
+
+    if (isSlot(currentItem) && typeof currentItem.$ === 'string') {
+      throw new Error("Slots cannot be used for string injection. For that, use 'rawCodeSnippet'.");
     }
 
     return ctx.resolve(currentItem).value + suffix;
