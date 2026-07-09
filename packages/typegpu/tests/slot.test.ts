@@ -2,8 +2,8 @@ import { describe, expect } from 'vitest';
 import { tgpu, d, std } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
-const RED = 'vec3f(1., 0., 0.)';
-const GREEN = 'vec3f(0., 1., 0.)';
+const RED = d.vec3f(1, 0, 0);
+const GREEN = d.vec3f(0, 1, 0);
 
 describe('tgpu.slot', () => {
   it('resolves to default value if no value provided', () => {
@@ -15,7 +15,7 @@ describe('tgpu.slot', () => {
 
     expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-            return vec3f(1., 0., 0.);
+            return vec3f(1, 0, 0);
           }"
     `);
   });
@@ -38,7 +38,7 @@ describe('tgpu.slot', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-            return vec3f(0., 1., 0.);
+            return vec3f(0, 1, 0);
           }
 
       fn main() {
@@ -48,14 +48,14 @@ describe('tgpu.slot', () => {
   });
 
   it('resolves to provided value', () => {
-    const colorSlot = tgpu.slot<string>(); // no default
+    const colorSlot = tgpu.slot<d.v3f>(); // no default
 
     const getColor = tgpu.fn([], d.vec3f)`() {
         return colorSlot;
       }`.$uses({ colorSlot });
 
     // overriding to green
-    const getColorWithGreen = getColor.with(colorSlot, 'vec3f(0., 1., 0.)');
+    const getColorWithGreen = getColor.with(colorSlot, d.vec3f(0, 1, 0));
 
     const main = tgpu.fn([])`() {
         getColorWithGreen();
@@ -64,7 +64,7 @@ describe('tgpu.slot', () => {
     // should be green
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-              return vec3f(0., 1., 0.);
+              return vec3f(0, 1, 0);
             }
 
       fn main() {
@@ -89,7 +89,7 @@ describe('tgpu.slot', () => {
   });
 
   it('prefers closer scope', () => {
-    const colorSlot = tgpu.slot<string>(); // no default
+    const colorSlot = tgpu.slot<d.v3f>(); // no default
 
     const getColor = tgpu.fn([], d.vec3f)`() -> vec3f {
       return colorSlot;
@@ -111,11 +111,11 @@ describe('tgpu.slot', () => {
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
-            return vec3f(1., 0., 0.);
+            return vec3f(1, 0, 0);
           }
 
       fn getColor_1() -> vec3f {
-            return vec3f(0., 1., 0.);
+            return vec3f(0, 1, 0);
           }
 
       fn wrapper() {
@@ -131,7 +131,7 @@ describe('tgpu.slot', () => {
 
   it('reuses common nested functions', () => {
     const sizeSlot = tgpu.slot<1 | 100>();
-    const colorSlot = tgpu.slot<typeof RED | typeof GREEN>();
+    const colorSlot = tgpu.slot<d.v3f>();
 
     const getSize = tgpu.fn([], d.f32)`() { return sizeSlot; }`.$uses({ sizeSlot });
 
@@ -168,7 +168,7 @@ describe('tgpu.slot', () => {
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
       "fn getSize() -> f32 { return 1; }
 
-      fn getColor() -> vec3f { return vec3f(1., 0., 0.); }
+      fn getColor() -> vec3f { return vec3f(1, 0, 0); }
 
       fn sizeAndColor() {
               getSize();
@@ -190,7 +190,7 @@ describe('tgpu.slot', () => {
               sizeAndColor_1();
             }
 
-      fn getColor_1() -> vec3f { return vec3f(0., 1., 0.); }
+      fn getColor_1() -> vec3f { return vec3f(0, 1, 0); }
 
       fn sizeAndColor_2() {
               getSize();
@@ -421,6 +421,23 @@ describe('tgpu.slot', () => {
         redFn();
         blueFn();
       }"
+    `);
+  });
+
+  it(`doesn't allow arbitrary shader code to be injected`, () => {
+    const bar = tgpu.slot('// a comment');
+
+    function foo() {
+      'use gpu';
+      bar.$;
+      return 2;
+    }
+
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo(): Strings cannot be injected into WGSL directly (tried to inject '// a comment'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
     `);
   });
 });

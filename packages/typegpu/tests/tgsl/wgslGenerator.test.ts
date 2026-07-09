@@ -2160,4 +2160,37 @@ describe('wgslGenerator', () => {
       `);
     });
   });
+
+  it(`doesn't allow for code injection through string literals`, () => {
+    function main() {
+      'use gpu';
+      const some = 1 + 2;
+      ('pieceOfCode()');
+      return some + 4;
+    }
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Strings cannot be injected into WGSL directly (tried to inject 'pieceOfCode()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+
+  it(`doesn't allow for code injection through external strings`, () => {
+    const pieceOfCode = 'pieceOfCode()';
+    function main() {
+      'use gpu';
+      const some = 1 + 2;
+      pieceOfCode;
+      return some + 4;
+    }
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Strings cannot be injected into WGSL directly (tried to inject 'pieceOfCode()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
 });

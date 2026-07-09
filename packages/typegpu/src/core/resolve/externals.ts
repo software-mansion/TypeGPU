@@ -94,6 +94,10 @@ export function replaceExternalsInWgsl(
       // continue anyway, we still might need to resolve the external
     }
 
+    if (typeof external === 'string') {
+      return acc.replaceAll(externalRegex, external);
+    }
+
     if (isResolvable(external)) {
       if (isNamable(external) && getName(external) === undefined) {
         setName(external, externalName.split('.').at(-1) as string);
