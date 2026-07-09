@@ -4,6 +4,7 @@ import { transpileFn } from 'tinyest-for-wgsl';
 import * as t from '@babel/types';
 import {
   METADATA_FORMAT_VERSION,
+  type MetadatableFunction,
   type PluginState,
   defaultOptions,
   functionVisitor,
@@ -148,6 +149,8 @@ function replaceWithAssignmentOverload(
   );
 }
 
+function removeUseGpuDirective(path: NodePath<MetadatableFunction>) {}
+
 function replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void {
   path.replaceWith(
     t.callExpression(i(runtimeFn), [path.node.left as t.Expression, path.node.right]),
@@ -165,6 +168,7 @@ export default function TypeGPUPlugin() {
         wrapInAutoName,
         replaceWithAssignmentOverload,
         replaceWithBinaryOverload,
+        removeUseGpuDirective,
       });
     },
     visitor: {

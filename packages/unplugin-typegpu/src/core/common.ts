@@ -85,6 +85,8 @@ export interface TransformMethods {
   replaceWithAssignmentOverload(path: NodePath<t.AssignmentExpression>, runtimeFn: string): void;
 
   replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void;
+
+  removeUseGpuDirective(path: NodePath<MetadatableFunction>): void;
 }
 
 export interface PluginState extends TransformMethods {
@@ -108,7 +110,7 @@ export interface PluginState extends TransformMethods {
 
   inUseGpuScope: boolean;
 
-  alreadyTransformed: WeakSet<t.Node>;
+  alreadyTransformed: WeakSet<t.Node>; // TODO: take a look
 }
 
 export interface NodeLocation {
@@ -450,6 +452,7 @@ function functionOnExit(
   if (!containsUseGpuDirective(node)) {
     return;
   }
+  state.removeUseGpuDirective(path);
 
   state.inUseGpuScope = false;
 

@@ -127,6 +127,8 @@ function replaceWithBinaryOverload(
   this.overwrite(path.node, `${runtimeFn}(${lhs}, ${rhs})`);
 }
 
+function removeUseGpuDirective(path: NodePath<MetadatableFunction>) {}
+
 const NodeUtils = {
   slice(this: UnpluginPluginState, node: NodeLocation): string {
     return this.magicString.slice(node.start ?? 0, node.end ?? 0);
@@ -188,6 +190,7 @@ export const unpluginFactory = ((rawOptions, _meta) => {
           wrapInAutoName,
           replaceWithAssignmentOverload,
           replaceWithBinaryOverload,
+          removeUseGpuDirective,
         });
 
         traverse(ast, functionVisitor, undefined, state);
