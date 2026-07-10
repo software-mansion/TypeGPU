@@ -149,7 +149,11 @@ function replaceWithAssignmentOverload(
   );
 }
 
-function removeUseGpuDirective(this: PluginState, path: NodePath<MetadatableFunction>) {}
+function removeUseGpuDirective(this: PluginState, path: NodePath<MetadatableFunction>) {
+  const directives = path.get('body').get('directives');
+  const maybeUseGpu = directives.find((directive) => directive.node.value.value === 'use gpu');
+  maybeUseGpu?.remove();
+}
 
 function replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void {
   path.replaceWith(
