@@ -88,6 +88,8 @@ describe('wgslGenerator with console.log', () => {
         return vs_Output(vec4f());
       }
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -96,8 +98,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -170,6 +170,8 @@ describe('wgslGenerator with console.log', () => {
         return vs_Output(vec4f());
       }
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -178,8 +180,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -261,6 +261,8 @@ describe('wgslGenerator with console.log', () => {
         return VertexOut(vec4f());
       }
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -269,8 +271,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -321,7 +321,9 @@ describe('wgslGenerator with console.log', () => {
     const pipeline = root.createComputePipeline({ compute: fn });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
+      "var<private> dataBlockIndex: u32;
+
+      @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
         id: u32,
@@ -329,8 +331,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -379,7 +379,9 @@ describe('wgslGenerator with console.log', () => {
     });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
+      "var<private> dataBlockIndex: u32;
+
+      @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
         id: u32,
@@ -387,8 +389,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -457,7 +457,9 @@ describe('wgslGenerator with console.log', () => {
     });
 
     expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
+      "var<private> dataBlockIndex: u32;
+
+      @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
         id: u32,
@@ -465,8 +467,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -543,6 +543,8 @@ describe('wgslGenerator with console.log', () => {
         data: array<SimpleStruct, 3>,
       }
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(0) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -551,8 +553,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(1) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -694,6 +694,8 @@ describe('wgslGenerator with console.log', () => {
 
       @group(0) @binding(1) var<uniform> myUniform: vec2f;
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(2) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -702,8 +704,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(3) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
@@ -757,6 +757,8 @@ describe('wgslGenerator with console.log', () => {
     expect(tgpu.resolve([myPipeline.pipeline])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
+      var<private> dataBlockIndex: u32;
+
       @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
 
       struct SerializedLogData {
@@ -765,8 +767,6 @@ describe('wgslGenerator with console.log', () => {
       }
 
       @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
-
-      var<private> dataBlockIndex: u32;
 
       var<private> dataByteIndex: u32;
 
