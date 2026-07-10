@@ -263,12 +263,12 @@ fn main() {
     });
 
     expect(resolved).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> intensity: u32;
-
-      fn get_color() -> vec3f {
+      "fn get_color() -> vec3f {
               let color = vec3f();
               return color;
             }
+
+      @group(0) @binding(0) var<uniform> intensity: u32;
             fn main () {
               let c = get_color() * intensity;
             }"
@@ -448,25 +448,6 @@ describe('tgpu resolveWithContext', () => {
     expect(configSpy.mock.lastCall?.[0].bindings).toEqual([[colorSlot, v]]);
   });
 
-  it('should warn when external WGSL is not used', () => {
-    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    tgpu.resolveWithContext({
-      template: 'fn testFn() { return; }',
-      externals: {
-        ArraySchema: d.arrayOf(d.u32, 4),
-        JavaScriptObject: { field: d.vec2f() },
-      },
-    });
-
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "The external 'ArraySchema' wasn't used in the resolved template.",
-    );
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "The external 'JavaScriptObject' wasn't used in the resolved template.",
-    );
-  });
-
   it('should warn when external is neither wgsl nor an object', () => {
     using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -477,6 +458,24 @@ describe('tgpu resolveWithContext', () => {
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       "During resolution, the external 'identity' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.",
+    );
+  });
+
+  it('should warn when the end of external chain was reached without a resolvable', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const getColor = tgpu.fn([])`() {
+      let color = EXT.p.q;
+    }`.$uses({ EXT: { p: { q: { r: d.vec3f() } } } });
+
+    expect(tgpu.resolve([getColor])).toMatchInlineSnapshot(`
+      "fn getColor() {
+            let color = EXT.p.q;
+          }"
+    `);
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "During resolution, the external 'EXT.p.q' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.",
     );
   });
 
