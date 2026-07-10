@@ -153,7 +153,7 @@ export {
   type StatefulGenerator,
 } from './generator.ts';
 
-export { hash, u32To01F32 } from './utils.ts';
+export { hash, rotl, u32To01F32 } from './utils.ts';
 
 export * as perlin2d from './perlin-2d/index.ts';
 export * as perlin3d from './perlin-3d/index.ts';
