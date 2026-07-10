@@ -14,8 +14,6 @@ describe('as type', () => {
 
     expect(babelTransform(code)).toMatchInlineSnapshot(`
       "const hello = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (a: number, b: number | undefined) => {
-        'use gpu';
-
         return __tsover_add(a, b as number);
       }, {
         v: 1,
