@@ -72,7 +72,7 @@ export type ResolvableObject =
   | AnyData
   | ((...args: never[]) => unknown);
 
-export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
+export type Wgsl = Eventual<number | boolean | ResolvableObject>;
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 

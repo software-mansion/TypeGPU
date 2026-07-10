@@ -964,7 +964,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           `Strings cannot be injected into WGSL directly (tried to inject '${item}'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.`,
         );
       }
-      // Already resolved
+      // For example:
+      // () => { 'use gpu'; const color = d.vec3f(); return color; }
+      //                             snip('color', d.vec3f) ^^^^^
       return snip(item, schema, /* origin */ 'runtime');
     }
 
