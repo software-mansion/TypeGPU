@@ -165,7 +165,9 @@ describe('externals gathering', () => {
     });
 
     it('works for ROLLUP', async () => {
-      expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(`"{"this.#const":() => this.#const}"`);
+      expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
+        `"{"this.#const":() => this.#const}"`,
+      );
     });
   });
 });
