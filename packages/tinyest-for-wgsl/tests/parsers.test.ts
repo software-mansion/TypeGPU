@@ -224,7 +224,11 @@ describe('transpileFn', () => {
       }`),
       );
 
-      expect(externalNames).toStrictEqual(['a']);
+      expect(externalNames).toMatchInlineSnapshot(`
+        Set {
+          "a",
+        }
+      `);
     }),
   );
 
@@ -242,7 +246,11 @@ describe('transpileFn', () => {
       }`),
       );
 
-      expect(externalNames).toStrictEqual(['a']);
+      expect(externalNames).toMatchInlineSnapshot(`
+        Set {
+          "a",
+        }
+      `);
     }),
   );
 
