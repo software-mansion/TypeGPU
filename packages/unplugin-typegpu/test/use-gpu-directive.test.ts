@@ -3,18 +3,28 @@ import { babelTransform, rollupTransform } from './transform.ts';
 
 describe('"use gpu" is removed after transform', () => {
   const code = `\
-    const fn = () => {
+    const fn1 = () => {
       'use gpu';
     };
 
-    console.log(fn);
+    const fn2 = () => {
+      'use gpu';
+      'worklet';
+    };
+
+    const fn3 = () => {
+      'worklet';
+      'use gpu';
+    };
+
+    console.log(fn1, fn2, fn3);
   `;
 
   test('babel', () => {
     expect(babelTransform(code)).toMatchInlineSnapshot(`
-      "const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {}, {
+      "const fn1 = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {}, {
         v: 1,
-        name: "fn",
+        name: "fn1",
         ast: {
           params: [],
           body: [0, []],
@@ -24,22 +34,70 @@ describe('"use gpu" is removed after transform', () => {
           return {};
         }
       }) && $.f)({});
-      console.log(fn);"
+      const fn2 = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        'worklet';
+      }, {
+        v: 1,
+        name: "fn2",
+        ast: {
+          params: [],
+          body: [0, []],
+          externalNames: []
+        },
+        externals: () => {
+          return {};
+        }
+      }) && $.f)({});
+      const fn3 = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
+        'worklet';
+      }, {
+        v: 1,
+        name: "fn3",
+        ast: {
+          params: [],
+          body: [0, []],
+          externalNames: []
+        },
+        externals: () => {
+          return {};
+        }
+      }) && $.f)({});
+      console.log(fn1, fn2, fn3);"
     `);
   });
 
   test('rollup', async () => {
     expect(await rollupTransform(code)).toMatchInlineSnapshot(`
-      "const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+      "const fn1 = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             
           }), {
           v: 1,
-          name: "fn",
+          name: "fn1",
           ast: {"params":[],"body":[0,[]],"externalNames":[]},
           externals: () => ({}),
         }) && $.f)({}));
 
-          console.log(fn);
+          const fn2 = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+            
+            'worklet';
+          }), {
+          v: 1,
+          name: "fn2",
+          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({}));
+
+          const fn3 = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+            'worklet';
+            
+          }), {
+          v: 1,
+          name: "fn3",
+          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({}));
+
+          console.log(fn1, fn2, fn3);
       "
     `);
   });
