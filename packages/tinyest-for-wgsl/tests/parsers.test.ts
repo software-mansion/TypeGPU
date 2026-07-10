@@ -211,6 +211,50 @@ describe('transpileFn', () => {
   });
 
   it(
+    'defines a new scope for variables defined in the head of a `for` loop',
+    dualTest((p) => {
+      const { externalNames } = transpileFn(
+        p(`() => {
+          let value = 0;
+          for (let a = 0; a < 0; a++) {
+            value += a;
+          }
+          value += a; // refers to an external 'a'
+          return value;
+      }`),
+      );
+
+      expect(externalNames).toMatchInlineSnapshot(`
+        Set {
+          "a",
+        }
+      `);
+    }),
+  );
+
+  it(
+    'defines a new scope for the iterator in a `for ... of` loop',
+    dualTest((p) => {
+      const { externalNames } = transpileFn(
+        p(`() => {
+          let value = 0;
+          for (const a of [1, 2, 3]) {
+            value += a;
+          }
+          value += a; // refers to an external 'a'
+          return value;
+      }`),
+      );
+
+      expect(externalNames).toMatchInlineSnapshot(`
+        Set {
+          "a",
+        }
+      `);
+    }),
+  );
+
+  it(
     'handles complex external trees',
     dualTest((p) => {
       const { externalNames, body } = transpileFn(

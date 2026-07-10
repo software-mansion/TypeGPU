@@ -33,8 +33,8 @@ function embedJSON(jsValue: unknown) {
 }
 
 function externalsToString(externals: Externals): string {
-  const entries = Array.from(externals, (key) => `"${key}": () => ${key}`);
-  return `{ ${entries.join(', ')} }`;
+  const entries = Array.from(externals, (key) => `"${key}":() => ${key}`);
+  return `{${entries.join(',')}}`;
 }
 
 function assignMetadata(

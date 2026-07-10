@@ -1175,10 +1175,10 @@ describe('tgsl fn when using plugin', () => {
     };
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-      "const myConst: u32 = 1u;
+      "const EXT_myConst: u32 = 1u;
 
       fn fn_1() -> u32 {
-        return myConst;
+        return EXT_myConst;
       }"
     `);
   });

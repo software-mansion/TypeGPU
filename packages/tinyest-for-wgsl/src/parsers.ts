@@ -2,7 +2,7 @@ import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import { FuncParameterType } from 'tinyest';
-import type { Context, JsNode, TranspilationResult } from './types';
+import type { Context, JsNode, TranspilationResult } from './types.ts';
 import { tryFindExternalChain } from './externals.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
@@ -245,10 +245,14 @@ const Transpilers: Partial<{
   },
 
   ForStatement(ctx, node) {
+    ctx.stack.push({ declaredNames: [] });
+
     const init = node.init ? (transpile(ctx, node.init) as tinyest.Statement) : null;
     const condition = node.test ? (transpile(ctx, node.test) as tinyest.Expression) : null;
     const update = node.update ? (transpile(ctx, node.update) as tinyest.Statement) : null;
     const body = transpile(ctx, node.body) as tinyest.Statement;
+
+    ctx.stack.pop();
 
     return [NODE.for, init, condition, update, body];
   },
@@ -256,13 +260,19 @@ const Transpilers: Partial<{
   WhileStatement(ctx, node) {
     const condition = transpile(ctx, node.test) as tinyest.Expression;
     const body = transpile(ctx, node.body) as tinyest.Statement;
+
     return [NODE.while, condition, body];
   },
 
   ForOfStatement(ctx, node) {
+    ctx.stack.push({ declaredNames: [] });
+
     const loopVar = transpile(ctx, node.left) as tinyest.Const | tinyest.Let;
     const iterable = transpile(ctx, node.right) as tinyest.Expression;
     const body = transpile(ctx, node.body) as tinyest.Statement;
+
+    ctx.stack.pop();
+
     return [NODE.forOf, loopVar, iterable, body];
   },
 

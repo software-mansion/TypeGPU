@@ -14,11 +14,6 @@ function isDeclared(ctx: Context, name: string) {
  * tryFindExternalChain(ctx, node`ext.$.q`); // undefined
  */
 export function tryFindExternalChain(ctx: Context, node: JsNode): string | undefined {
-  if (ctx.visitedNodes.has(node)) {
-    return;
-  }
-  ctx.visitedNodes.add(node);
-
   if (node.type === 'Identifier' && !isDeclared(ctx, node.name)) {
     return node.name;
   }
@@ -26,6 +21,11 @@ export function tryFindExternalChain(ctx: Context, node: JsNode): string | undef
     return 'this';
   }
   if (node.type === 'MemberExpression' && !node.computed) {
+    if (ctx.visitedNodes.has(node)) {
+      return;
+    }
+    ctx.visitedNodes.add(node);
+
     let property;
     if (node.property.type === 'Identifier' && node.property.name !== '$') {
       property = node.property.name;

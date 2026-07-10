@@ -44,7 +44,7 @@ describe('externals gathering', () => {
 
     it('works for ROLLUP', async () => {
       expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
-        `"{ "ext.value": () => ext.value, "ext.config.multiplier": () => ext.config.multiplier, "ext.config.zero": () => ext.config.zero }"`,
+        `"{"ext.value":() => ext.value,"ext.config.multiplier":() => ext.config.multiplier,"ext.config.zero":() => ext.config.zero}"`,
       );
     });
   });
@@ -71,7 +71,7 @@ describe('externals gathering', () => {
 
     it('works for ROLLUP', async () => {
       expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
-        `"{ "buffer": () => buffer }"`,
+        `"{"buffer":() => buffer}"`,
       );
     });
   });
@@ -98,7 +98,7 @@ describe('externals gathering', () => {
 
     it('works for ROLLUP', async () => {
       expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
-        `"{ "ext": () => ext }"`,
+        `"{"ext":() => ext}"`,
       );
     });
   });
@@ -136,7 +136,7 @@ describe('externals gathering', () => {
 
     it('works for ROLLUP', async () => {
       expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
-        `"{ "ext.comptime": () => ext.comptime, "ext.runtime": () => ext.runtime }"`,
+        `"{"ext.comptime":() => ext.comptime,"ext.runtime":() => ext.runtime}"`,
       );
     });
   });

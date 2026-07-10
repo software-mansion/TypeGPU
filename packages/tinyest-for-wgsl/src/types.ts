@@ -20,7 +20,7 @@ export type Context = {
    * instead of traversing chains `.x.y.z.t`, `.x.y.z`, `.x.y` and `.x`,
    * we only traverse the first one and then return early.
    */
-  visitedNodes: Set<JsNode>;
+  visitedNodes: Set<babel.MemberExpression | acorn.MemberExpression>;
   stack: Scope[];
 };
 

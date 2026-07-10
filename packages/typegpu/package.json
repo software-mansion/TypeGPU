@@ -87,8 +87,8 @@
     "types": "./dist/index.d.ts"
   },
   "scripts": {
-    "build": "tsdown",
-    "test:types": "pnpm tsc --p ./tsconfig.test.json --noEmit",
+    "build": "bun build.mjs",
+    "test:types": "tsc --p ./tsconfig.test.json --noEmit",
     "prepublishOnly": "tgpu-dev-cli prepack"
   },
   "dependencies": {
@@ -102,9 +102,10 @@
     "@types/node": "catalog:types",
     "@webgpu/types": "catalog:types",
     "arktype": "catalog:",
+    "bun": "catalog:",
+    "consola": "^3.4.0",
     "jiti": "catalog:build",
     "jsdom": "^27.0.0",
-    "tsdown": "catalog:build",
     "typegpu-testing-utility": "workspace:*",
     "typescript": "catalog:types",
     "unplugin-typegpu": "workspace:*",
