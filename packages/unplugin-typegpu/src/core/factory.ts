@@ -131,7 +131,7 @@ function removeUseGpuDirective(this: UnpluginPluginState, path: NodePath<Metadat
   const directives = 'directives' in path.node.body ? (path.node.body?.directives ?? []) : [];
   for (const directive of directives) {
     if (directive.value.value === 'use gpu') {
-      this.overwrite(directive, '');
+      this.remove(directive);
     }
   }
 }

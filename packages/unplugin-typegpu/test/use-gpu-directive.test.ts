@@ -103,6 +103,50 @@ describe('"use gpu" is removed after transform', () => {
   });
 });
 
+describe('double transformation', () => {
+  const code = `\
+    const fn = () => {
+      'use gpu';
+    };
+
+    console.log(fn);
+  `;
+
+  test('babel', () => {
+    expect(babelTransform(babelTransform(code) ?? '')).toMatchInlineSnapshot(`
+      "const fn = /*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {}, {
+        v: 1,
+        name: "fn",
+        ast: {
+          params: [],
+          body: [0, []],
+          externalNames: []
+        },
+        externals: () => {
+          return {};
+        }
+      }) && $.f)({});
+      console.log(fn);"
+    `);
+  });
+
+  test('rollup', async () => {
+    expect(await rollupTransform(await rollupTransform(code))).toMatchInlineSnapshot(`
+      "const fn = (/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
+            
+          }), {
+          v: 1,
+          name: "fn",
+          ast: {"params":[],"body":[0,[]],"externalNames":[]},
+          externals: () => ({}),
+        }) && $.f)({}));
+
+          console.log(fn);
+      "
+    `);
+  });
+});
+
 describe('"use gpu" marked arrow function, assigned to a const', () => {
   const code = `\
     /** ADD */

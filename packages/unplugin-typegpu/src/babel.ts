@@ -102,7 +102,6 @@ function assignMetadata(
   if (visibility) {
     // Hoisting the declaration to the top of the scope
     visibility.unshiftContainer('body', replacement as t.Statement);
-    this.alreadyTransformed.add(expression);
 
     const id = t.isFunctionDeclaration(path.node) ? path.node.id : undefined;
     if (id && path.parentPath.isExportNamedDeclaration()) {

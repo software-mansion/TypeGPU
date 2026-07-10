@@ -109,8 +109,6 @@ export interface PluginState extends TransformMethods {
   opts: Options;
 
   inUseGpuScope: boolean;
-
-  alreadyTransformed: WeakSet<t.Node>; // TODO: take a look
 }
 
 export interface NodeLocation {
@@ -129,7 +127,6 @@ export function initPluginState(state: PluginState, methods: TransformMethods): 
   state.tgpuAliases = new Set<string>(state.opts.forceTgpuAlias ? [state.opts.forceTgpuAlias] : []);
   state.autoNamingEnabled = state.opts.autoNamingEnabled ?? true;
   state.inUseGpuScope = false;
-  state.alreadyTransformed = new WeakSet<t.Node>();
   Object.assign(state, methods);
 }
 
@@ -456,17 +453,12 @@ function functionOnExit(
 
   state.inUseGpuScope = false;
 
-  if (state.alreadyTransformed.has(node)) {
-    return;
-  }
-
   const ast = fnNodeToTranspiledMap.get(path.node);
   const maybeName = getFunctionName(path);
   if (!ast) {
     throw new Error(`No metadata found for function ${maybeName ?? '<unnamed>'}`);
   }
   state.assignMetadata(path, maybeName, ast);
-  state.alreadyTransformed.add(node);
   path.skip();
 }
 
