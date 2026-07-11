@@ -26,7 +26,7 @@
 // WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY
 // WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-export const LTC_1 = new Float32Array([
+export const LTC_1 = new Float16Array([
   1, 0, 0, 2e-5, 1, 0, 0, 0.000503905, 1, 0, 0, 0.00201562, 1, 0, 0, 0.00453516, 1, 0, 0,
   0.00806253, 1, 0, 0, 0.0125978, 1, 0, 0, 0.018141, 1, 0, 0, 0.0246924, 1, 0, 0, 0.0322525, 1, 0,
   0, 0.0408213, 1, 0, 0, 0.0503999, 1, 0, 0, 0.0609894, 1, 0, 0, 0.0725906, 1, 0, 0, 0.0852058, 1,
@@ -1858,7 +1858,7 @@ export const LTC_1 = new Float32Array([
   0.0489007, 1.6577,
 ]);
 
-export const LTC_2 = new Float32Array([
+export const LTC_2 = new Float16Array([
   1, 0, 0, 0, 1, 7.91421e-31, 0, 0, 1, 1.04392e-24, 0, 0, 1, 3.49405e-21, 0, 0, 1, 1.09923e-18, 0,
   0, 1, 9.47414e-17, 0, 0, 1, 3.59627e-15, 0, 0, 1, 7.72053e-14, 0, 0, 1, 1.08799e-12, 0, 0, 1,
   1.10655e-11, 0, 0, 1, 8.65818e-11, 0, 0, 0.999998, 5.45037e-10, 0, 0, 0.999994, 2.85095e-9, 0, 0,

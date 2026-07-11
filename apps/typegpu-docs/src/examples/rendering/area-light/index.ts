@@ -1,4 +1,4 @@
-import tgpu, { common, d, std } from 'typegpu';
+import { common, d, std, tgpu } from 'typegpu';
 import { Camera, setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
 import { defineControls } from '../../common/defineControls.ts';
 import { createSceneMesh, initialLights } from './geometry.ts';
@@ -7,20 +7,17 @@ import {
   LIGHT_COUNT,
   Lights,
   RenderParams,
-  createLtcLayout,
+  ltcLayout,
   sceneLayout,
   vertexLayout,
 } from './schemas.ts';
-import { createMainFragment, lightFragment, lightVertex, skyFragment } from './shaders.ts';
+import { lightFragment, lightVertex, mainFragment, skyFragment, skyVertex } from './shaders.ts';
 
 const SAMPLE_COUNT = 4;
 const DISCO_TRANSITION_MS = 1600;
 const DISCO_HUE_SPEED = 0.00008;
 
-const root = await tgpu.init({ device: { optionalFeatures: ['float32-filterable'] } });
-const ltcFilterable = root.enabledFeatures.has('float32-filterable');
-const ltcLayout = createLtcLayout(ltcFilterable);
-const mainFragment = createMainFragment(ltcLayout, ltcFilterable);
+const root = await tgpu.init();
 
 const INITIAL_PARAMS = {
   exposure: 1.12,
@@ -42,8 +39,8 @@ const cameraUniform = root.createUniform(Camera);
 const lightsUniform = root.createUniform(Lights, initialLights);
 const paramsUniform = root.createUniform(RenderParams, INITIAL_PARAMS);
 
-function createLtcTexture(data: Float32Array) {
-  const texture = root.createTexture({ size: [64, 64], format: 'rgba32float' }).$usage('sampled');
+function createLtcTexture(data: Float16Array) {
+  const texture = root.createTexture({ size: [64, 64], format: 'rgba16float' }).$usage('sampled');
   texture.write(data);
   return texture;
 }
@@ -57,37 +54,24 @@ const sceneBindGroup = root.createBindGroup(sceneLayout, {
 const ltcBindGroup = root.createBindGroup(ltcLayout, {
   ltcMat: createLtcTexture(LTC_1),
   ltcAmp: createLtcTexture(LTC_2),
-  ltcSampler: root.createSampler(
-    ltcFilterable
-      ? {
-          magFilter: 'linear',
-          minFilter: 'linear',
-        }
-      : {
-          magFilter: 'nearest',
-          minFilter: 'nearest',
-        },
-  ),
+  ltcSampler: root.createSampler({ magFilter: 'linear', minFilter: 'linear' }),
 });
 
 function createRenderTargets() {
   const size = [canvas.width, canvas.height] as [number, number];
 
+  const color = root
+    .createTexture({ size, format: presentationFormat, sampleCount: SAMPLE_COUNT })
+    .$usage('transient');
+  const depth = root
+    .createTexture({ size, format: 'depth24plus', sampleCount: SAMPLE_COUNT })
+    .$usage('transient');
+
   return {
-    color: root
-      .createTexture({
-        size,
-        format: presentationFormat,
-        sampleCount: SAMPLE_COUNT,
-      })
-      .$usage('render'),
-    depth: root
-      .createTexture({
-        size,
-        format: 'depth24plus',
-        sampleCount: SAMPLE_COUNT,
-      })
-      .$usage('render'),
+    color,
+    depth,
+    colorView: root.unwrap(color).createView(),
+    depthView: root.unwrap(depth).createView(),
   };
 }
 
@@ -107,41 +91,50 @@ const lightState = initialLights.map((light) => ({
   intensity: light.intensity,
 }));
 
-const skyPipeline = root.createRenderPipeline({
-  vertex: common.fullScreenTriangle,
-  fragment: skyFragment,
-  targets: { format: presentationFormat },
-  multisample: { count: SAMPLE_COUNT },
-});
+const scenePipeline = root
+  .createRenderPipeline({
+    attribs: vertexLayout.attrib,
+    vertex: ({ position, normal, albedo, roughness, metallic, wetness }) => {
+      'use gpu';
+      const camera = sceneLayout.$.camera;
+      return {
+        $position: camera.projection * camera.view * d.vec4f(position, 1),
+        worldPos: position,
+        normal,
+        albedo,
+        material: d.vec3f(roughness, metallic, wetness),
+      };
+    },
+    fragment: mainFragment,
+    targets: { format: presentationFormat },
+    depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
+    multisample: { count: SAMPLE_COUNT },
+    primitive: { cullMode: 'none' },
+  })
+  .with(sceneBindGroup)
+  .with(ltcBindGroup)
+  .with(vertexLayout, vertexBuffer);
 
-const scenePipeline = root.createRenderPipeline({
-  attribs: vertexLayout.attrib,
-  vertex: ({ position, normal, albedo, roughness, metallic, wetness }) => {
-    'use gpu';
-    const camera = sceneLayout.$.camera;
-    return {
-      $position: camera.projection * camera.view * d.vec4f(position, 1),
-      worldPos: position,
-      normal,
-      albedo,
-      material: d.vec3f(roughness, metallic, wetness),
-    };
-  },
-  fragment: mainFragment,
-  targets: { format: presentationFormat },
-  depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
-  multisample: { count: SAMPLE_COUNT },
-  primitive: { cullMode: 'none' },
-});
+const lightPipeline = root
+  .createRenderPipeline({
+    vertex: lightVertex,
+    fragment: lightFragment,
+    targets: { format: presentationFormat },
+    depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
+    multisample: { count: SAMPLE_COUNT },
+    primitive: { cullMode: 'none' },
+  })
+  .with(sceneBindGroup);
 
-const lightPipeline = root.createRenderPipeline({
-  vertex: lightVertex,
-  fragment: lightFragment,
-  targets: { format: presentationFormat },
-  depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
-  multisample: { count: SAMPLE_COUNT },
-  primitive: { cullMode: 'none' },
-});
+const skyPipeline = root
+  .createRenderPipeline({
+    vertex: skyVertex,
+    fragment: skyFragment,
+    targets: { format: presentationFormat },
+    depthStencil: { format: 'depth24plus', depthWriteEnabled: false, depthCompare: 'less-equal' },
+    multisample: { count: SAMPLE_COUNT },
+  })
+  .with(sceneBindGroup);
 
 const { cleanupCamera } = setupOrbitCamera(
   canvas,
@@ -221,47 +214,31 @@ function render(time: number) {
   previousFrameTime = time;
   paramsUniform.patch({ time: time * 0.001 });
 
-  skyPipeline
-    .with(sceneBindGroup)
-    .withColorAttachment({
-      view: targets.color,
-      clearValue: [0.014, 0.012, 0.016, 1],
-      loadOp: 'clear',
-      storeOp: 'store',
-    })
-    .draw(3);
-
-  scenePipeline
-    .with(sceneBindGroup)
-    .with(ltcBindGroup)
-    .with(vertexLayout, vertexBuffer)
-    .withColorAttachment({
-      view: targets.color,
-      loadOp: 'load',
-      storeOp: 'store',
-    })
-    .withDepthStencilAttachment({
-      view: targets.depth,
+  const encoder = root.device.createCommandEncoder();
+  const pass = encoder.beginRenderPass({
+    colorAttachments: [
+      {
+        view: targets.colorView,
+        resolveTarget: context.getCurrentTexture().createView(),
+        loadOp: 'clear',
+        clearValue: [0.014, 0.012, 0.016, 1],
+        storeOp: 'discard',
+      },
+    ],
+    depthStencilAttachment: {
+      view: targets.depthView,
       depthClearValue: 1,
       depthLoadOp: 'clear',
-      depthStoreOp: 'store',
-    })
-    .draw(mesh.vertexCount);
+      depthStoreOp: 'discard',
+    },
+  });
 
-  lightPipeline
-    .with(sceneBindGroup)
-    .withColorAttachment({
-      view: targets.color,
-      resolveTarget: context,
-      loadOp: 'load',
-      storeOp: 'store',
-    })
-    .withDepthStencilAttachment({
-      view: targets.depth,
-      depthLoadOp: 'load',
-      depthStoreOp: 'store',
-    })
-    .draw(6, LIGHT_COUNT);
+  scenePipeline.with(pass).draw(mesh.vertexCount);
+  lightPipeline.with(pass).draw(6, LIGHT_COUNT);
+  skyPipeline.with(pass).draw(3);
+
+  pass.end();
+  root.device.queue.submit([encoder.finish()]);
 
   animationFrameId = requestAnimationFrame(render);
 }
