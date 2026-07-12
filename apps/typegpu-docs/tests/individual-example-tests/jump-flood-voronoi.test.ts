@@ -127,113 +127,111 @@ describe('jump flood (voronoi) example', () => {
         var minDist = 1e+20;
         var bestSample = SampleResult(vec4f(), vec2f(-1));
         // unrolled iteration #0
+        // unrolled iteration #0 / #0
         {
-          // unrolled iteration #0
-          {
-            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (-1i * offset)));
-            if ((sample.coord.x >= 0f)) {
-              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
-              if ((dist < minDist)) {
-                minDist = dist;
-                bestSample = sample;
-              }
-            }
-          }
-          // unrolled iteration #1
-          {
-            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (-1i * offset)));
-            if ((sample.coord.x >= 0f)) {
-              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
-              if ((dist < minDist)) {
-                minDist = dist;
-                bestSample = sample;
-              }
-            }
-          }
-          // unrolled iteration #2
-          {
-            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (-1i * offset)));
-            if ((sample.coord.x >= 0f)) {
-              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
-              if ((dist < minDist)) {
-                minDist = dist;
-                bestSample = sample;
-              }
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (-1i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
             }
           }
         }
+        // unrolled iteration #0 / #1
+        {
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (-1i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
+            }
+          }
+        }
+        // unrolled iteration #0 / #2
+        {
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (-1i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
+            }
+          }
+        }
+        // ---
         // unrolled iteration #1
+        // unrolled iteration #1 / #0
         {
-          // unrolled iteration #0
-          {
-            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (0i * offset)));
-            if ((sample.coord.x >= 0f)) {
-              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
-              if ((dist < minDist)) {
-                minDist = dist;
-                bestSample = sample;
-              }
-            }
-          }
-          // unrolled iteration #1
-          {
-            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (0i * offset)));
-            if ((sample.coord.x >= 0f)) {
-              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
-              if ((dist < minDist)) {
-                minDist = dist;
-                bestSample = sample;
-              }
-            }
-          }
-          // unrolled iteration #2
-          {
-            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (0i * offset)));
-            if ((sample.coord.x >= 0f)) {
-              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
-              if ((dist < minDist)) {
-                minDist = dist;
-                bestSample = sample;
-              }
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (0i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
             }
           }
         }
+        // unrolled iteration #1 / #1
+        {
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (0i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
+            }
+          }
+        }
+        // unrolled iteration #1 / #2
+        {
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (0i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
+            }
+          }
+        }
+        // ---
         // unrolled iteration #2
+        // unrolled iteration #2 / #0
         {
-          // unrolled iteration #0
-          {
-            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (1i * offset)));
-            if ((sample.coord.x >= 0f)) {
-              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
-              if ((dist < minDist)) {
-                minDist = dist;
-                bestSample = sample;
-              }
-            }
-          }
-          // unrolled iteration #1
-          {
-            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (1i * offset)));
-            if ((sample.coord.x >= 0f)) {
-              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
-              if ((dist < minDist)) {
-                minDist = dist;
-                bestSample = sample;
-              }
-            }
-          }
-          // unrolled iteration #2
-          {
-            let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (1i * offset)));
-            if ((sample.coord.x >= 0f)) {
-              let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
-              if ((dist < minDist)) {
-                minDist = dist;
-                bestSample = sample;
-              }
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((-1i * offset), (1i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
             }
           }
         }
+        // unrolled iteration #2 / #1
+        {
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((0i * offset), (1i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
+            }
+          }
+        }
+        // unrolled iteration #2 / #2
+        {
+          let sample = sampleWithOffset(readView, vec2i(i32(x), i32(y)), vec2i((1i * offset), (1i * offset)));
+          if ((sample.coord.x >= 0f)) {
+            let dist = distance(vec2f(f32(x), f32(y)), (sample.coord * vec2f(size)));
+            if ((dist < minDist)) {
+              minDist = dist;
+              bestSample = sample;
+            }
+          }
+        }
+        // ---
+        // ---
         textureStore(writeView, vec2i(i32(x), i32(y)), 0, bestSample.color);
         textureStore(writeView, vec2i(i32(x), i32(y)), 1, vec4f(bestSample.coord, 0f, 0f));
       }

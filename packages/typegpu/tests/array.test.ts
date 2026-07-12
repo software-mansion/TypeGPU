@@ -213,7 +213,6 @@ describe('array', () => {
         let myClone = myArray;
         let myExternal = array<u32, 1>(3u);
         f(myArray);
-        return;
       }"
     `);
   });
@@ -231,7 +230,6 @@ describe('array', () => {
       "fn testFn() {
         let myArrays = array<array<i32, 1>, 1>(array<i32, 1>(10i));
         let myClone = myArrays[0i];
-        return;
       }"
     `);
   });
@@ -246,7 +244,6 @@ describe('array', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
         let arr = array<f32, 2>(6f, 7f);
-        return;
       }"
     `);
   });
@@ -275,7 +272,6 @@ describe('array', () => {
       fn main() {
         let v1 = vec4f(7);
         f(v1);
-        return;
       }"
     `);
   });
@@ -290,7 +286,6 @@ describe('array', () => {
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() {
         let arr = array<f32, 3>(5f, 6.7f, 8f);
-        return;
       }"
     `);
   });

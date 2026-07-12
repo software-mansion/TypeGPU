@@ -75,6 +75,7 @@ export type GenerationCtx = ResolutionCtx & {
 
   readonly topFunctionScope: FunctionScopeLayer | undefined;
   readonly topFunctionReturnType: BaseData | undefined;
+  readonly blockDepth: number;
 
   indent(): string;
   dedent(): string;

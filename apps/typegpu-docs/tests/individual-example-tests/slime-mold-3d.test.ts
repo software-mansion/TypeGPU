@@ -267,6 +267,7 @@ describe('slime mold 3d example', () => {
           weightedDir = (weightedDir + (sensorDir * weight));
           totalWeight = (totalWeight + weight);
         }
+        // ---
         return SenseResult(weightedDir, totalWeight);
       }
 

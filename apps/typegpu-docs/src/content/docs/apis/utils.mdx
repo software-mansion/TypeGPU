@@ -231,18 +231,14 @@ Generates:
 
 fn processNeighbors(cell: vec2i) {
   // unrolled iteration #0
-  {
-    // unrolled iteration #0
-    {
-      processNeighbor(cell + vec2i(-1, -1));
-    }
-    // unrolled iteration #1
-    {
-      processNeighbor(cell + vec2i(0, -1));
-    }
-    // (and so on...)
-  }
-  // (and so on ...)
+  // unrolled iteration #0 / #0
+  processNeighbor(cell + vec2i(-1, -1));
+  // unrolled iteration #0 / #1
+  processNeighbor(cell + vec2i(0, -1));
+  // unrolled iteration #0 / #2
+  processNeighbor(cell + vec2i(1, -1));
+  // ---
+  // (and so on...)
 }
 ```
 
@@ -275,17 +271,12 @@ Generates:
 fn fbm(pos: vec3f) -> f32 {
   var sum = 0f;
   // unrolled iteration #0
-  {
-    sum += noise3d(pos * 1.4f) * 1f;
-  }
+  sum += noise3d(pos * 1.4f) * 1f;
   // unrolled iteration #1
-  {
-    sum += noise3d(pos * 2.8f) * 0.5f;
-  }
+  sum += noise3d(pos * 2.8f) * 0.5f;
   // unrolled iteration #2
-  {
-    sum += noise3d(pos * 5.6f) * 0.25f;
-  }
+  sum += noise3d(pos * 5.6f) * 0.25f;
+  // ---
   return sum;
 }
 ```
@@ -324,17 +315,12 @@ for (const foo of tgpu.unroll([1, 2, 3])) {
 Generates:
 ```wgsl
 // unrolled iteration #0
-{
-  result += 1u;
-}
+result += 1u;
 // unrolled iteration #1
-{
-  result += 2u;
-}
+result += 2u;
 // unrolled iteration #2
-{
-  result += 3u;
-}
+result += 3u;
+// ---
 ```
 :::note
 `std.range` falls into the primitive array expression category.
@@ -355,17 +341,14 @@ for (const foo of tgpu.unroll([b1, b2])) {
 Generates:
 ```wgsl
 // unrolled iteration #0
-{
-  let boo = (&b1);
-  res = (res + b1.vel);
-  (*boo).pos = vec2i();
-}
+let boo = (&b1);
+res = (res + b1.vel);
+(*boo).pos = vec2i();
 // unrolled iteration #1
-{
-  let boo = (&b2);
-  res = (res + b2.vel);
-  (*boo).pos = vec2i();
-}
+let boo = (&b2);
+res = (res + b2.vel);
+(*boo).pos = vec2i();
+// ---
 ```
 
 :::caution
@@ -384,17 +367,12 @@ for (const foo of tgpu.unroll(d.vec3f(v))) {
 Generates:
 ```wgsl
 // unrolled iteration #0
-{
-  res = res + v[0u];
-}
+res = res + v[0u];
 // unrolled iteration #1
-{
-  res = res + v[1u];
-}
+res = res + v[1u];
 // unrolled iteration #2
-{
-  res = res + v[2u];
-}
+res = res + v[2u];
+// ---
 ```
 
 **Array expression of struct field names**
@@ -417,17 +395,12 @@ Generates:
 // ...
 
 // unrolled iteration #0
-{
-  result += 1u;
-}
+result += 1u;
 // unrolled iteration #1
-{
-  result += 2u;
-}
+result += 2u;
 // unrolled iteration #2
-{
-  result += 3u;
-}
+result += 3u;
+// ---
 
 // ...
 ```
@@ -452,17 +425,12 @@ Generates:
 var arr = array<i32, 3>(1, 2, 3);
 var res = 0f;
 // unrolled iteration #0
-{
-  res += f32(arr[0u]);
-}
+res += f32(arr[0u]);
 // unrolled iteration #1
-{
-  res += f32(arr[1u]);
-}
+res += f32(arr[1u]);
 // unrolled iteration #2
-{
-  res += f32(arr[2u]);
-}
+res += f32(arr[2u]);
+// ---
 ```
 
 **Buffer, `const`, `accessor`, `comptime`, `lazy`, etc.**
@@ -490,17 +458,12 @@ Generates:
 fn f() -> u32 {
   var result = 0u;
   // unrolled iteration #0
-  {
-    result += buffer[0u];
-  }
+  result += buffer[0u];
   // unrolled iteration #1
-  {
-    result += buffer[1u];
-  }
+  result += buffer[1u];
   // unrolled iteration #2
-  {
-    result += buffer[2u];
-  }
+  result += buffer[2u];
+  // ---
   return result;
 }
 ```

@@ -89,104 +89,102 @@ describe('slime mold example', () => {
         var sum = vec3f();
         var count = 0f;
         // unrolled iteration #0
+        // unrolled iteration #0 / #0
         {
-          // unrolled iteration #0
-          {
-            let samplePos = (vec2i(gid.xy) + vec2i(-1));
-            let dimsi = vec2i(dims);
-            if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
-              sum += color;
-              count += 1f;
-            }
-          }
-          // unrolled iteration #1
-          {
-            let samplePos = (vec2i(gid.xy) + vec2i(0, -1));
-            let dimsi = vec2i(dims);
-            if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
-              sum += color;
-              count += 1f;
-            }
-          }
-          // unrolled iteration #2
-          {
-            let samplePos = (vec2i(gid.xy) + vec2i(1, -1));
-            let dimsi = vec2i(dims);
-            if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
-              sum += color;
-              count += 1f;
-            }
+          let samplePos = (vec2i(gid.xy) + vec2i(-1));
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
           }
         }
+        // unrolled iteration #0 / #1
+        {
+          let samplePos = (vec2i(gid.xy) + vec2i(0, -1));
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
+          }
+        }
+        // unrolled iteration #0 / #2
+        {
+          let samplePos = (vec2i(gid.xy) + vec2i(1, -1));
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
+          }
+        }
+        // ---
         // unrolled iteration #1
+        // unrolled iteration #1 / #0
         {
-          // unrolled iteration #0
-          {
-            let samplePos = (vec2i(gid.xy) + vec2i(-1, 0));
-            let dimsi = vec2i(dims);
-            if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
-              sum += color;
-              count += 1f;
-            }
-          }
-          // unrolled iteration #1
-          {
-            let samplePos = (vec2i(gid.xy) + vec2i());
-            let dimsi = vec2i(dims);
-            if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
-              sum += color;
-              count += 1f;
-            }
-          }
-          // unrolled iteration #2
-          {
-            let samplePos = (vec2i(gid.xy) + vec2i(1, 0));
-            let dimsi = vec2i(dims);
-            if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
-              sum += color;
-              count += 1f;
-            }
+          let samplePos = (vec2i(gid.xy) + vec2i(-1, 0));
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
           }
         }
+        // unrolled iteration #1 / #1
+        {
+          let samplePos = (vec2i(gid.xy) + vec2i());
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
+          }
+        }
+        // unrolled iteration #1 / #2
+        {
+          let samplePos = (vec2i(gid.xy) + vec2i(1, 0));
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
+          }
+        }
+        // ---
         // unrolled iteration #2
+        // unrolled iteration #2 / #0
         {
-          // unrolled iteration #0
-          {
-            let samplePos = (vec2i(gid.xy) + vec2i(-1, 1));
-            let dimsi = vec2i(dims);
-            if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
-              sum += color;
-              count += 1f;
-            }
-          }
-          // unrolled iteration #1
-          {
-            let samplePos = (vec2i(gid.xy) + vec2i(0, 1));
-            let dimsi = vec2i(dims);
-            if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
-              sum += color;
-              count += 1f;
-            }
-          }
-          // unrolled iteration #2
-          {
-            let samplePos = (vec2i(gid.xy) + vec2i(1));
-            let dimsi = vec2i(dims);
-            if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
-              let color = textureLoad(oldState, vec2u(samplePos)).rgb;
-              sum += color;
-              count += 1f;
-            }
+          let samplePos = (vec2i(gid.xy) + vec2i(-1, 1));
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
           }
         }
+        // unrolled iteration #2 / #1
+        {
+          let samplePos = (vec2i(gid.xy) + vec2i(0, 1));
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
+          }
+        }
+        // unrolled iteration #2 / #2
+        {
+          let samplePos = (vec2i(gid.xy) + vec2i(1));
+          let dimsi = vec2i(dims);
+          if (((((samplePos.x >= 0i) && (samplePos.x < dimsi.x)) && (samplePos.y >= 0i)) && (samplePos.y < dimsi.y))) {
+            let color = textureLoad(oldState, vec2u(samplePos)).rgb;
+            sum += color;
+            count += 1f;
+          }
+        }
+        // ---
+        // ---
         let blurred = (sum / count);
         let newColor = saturate((blurred - params.evaporationRate));
         textureStore(newState, gid.xy, vec4f(newColor, 1f));
@@ -260,9 +258,7 @@ describe('slime mold example', () => {
         let weightLeft = sense((*agent).position, (*agent).angle, params.sensorAngle);
         let weightRight = sense((*agent).position, (*agent).angle, -(params.sensorAngle));
         var angle = (*agent).angle;
-        if (((weightForward > weightLeft) && (weightForward > weightRight))) {
-
-        }
+        if (((weightForward > weightLeft) && (weightForward > weightRight))) {}
         else {
           if (((weightForward < weightLeft) && (weightForward < weightRight))) {
             angle = (angle + ((((random * 2f) - 1f) * params.turnSpeed) * deltaTime));

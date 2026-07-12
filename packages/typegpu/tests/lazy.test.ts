@@ -93,17 +93,11 @@ describe('TgpuLazy', () => {
       .with(gridSizeSlot, 1);
 
     expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn fill(arr: array<f32, 1>) {
+      "fn fill(arr: array<f32, 1>) {}
 
-      }
+      fn fill_1(arr: array<f32, 2>) {}
 
-      fn fill_1(arr: array<f32, 2>) {
-
-      }
-
-      fn fill_2(arr: array<f32, 3>) {
-
-      }
+      fn fill_2(arr: array<f32, 3>) {}
 
       fn main() {
         fill(array<f32, 1>(1f));

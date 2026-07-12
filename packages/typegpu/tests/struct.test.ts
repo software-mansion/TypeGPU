@@ -337,7 +337,6 @@ describe('struct', () => {
       fn testFn() {
         let myStruct = TestStruct(1u, 2f);
         let myClone = myStruct;
-        return;
       }"
     `);
   });
@@ -363,7 +362,6 @@ describe('struct', () => {
       fn testFn() {
         let myStructs = array<TestStruct, 1>(TestStruct(1u, 2f));
         let myClone = myStructs[0i];
-        return;
       }"
     `);
   });
@@ -632,9 +630,7 @@ describe('struct', () => {
         id: u32,
       }
 
-      fn helper(bird: Bird) {
-
-      }
+      fn helper(bird: Bird) {}
 
       fn main() {
         let boid = Boid();

@@ -249,6 +249,7 @@ describe('fluid double buffering example', () => {
             }
           }
         }
+        // ---
         let leastCostDir = (&dirChoices[u32((randFloat01() * f32(dirChoiceCount)))]);
         return (*leastCostDir);
       }
@@ -476,6 +477,7 @@ describe('fluid double buffering example', () => {
             }
           }
         }
+        // ---
         let leastCostDir = (&dirChoices[u32((randFloat01() * f32(dirChoiceCount)))]);
         return (*leastCostDir);
       }
