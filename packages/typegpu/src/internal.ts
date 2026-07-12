@@ -29,6 +29,7 @@ export type { Snippet, ResolvedSnippet, Origin } from './data/snippet.ts';
 
 export type {
   ShaderGenerator,
+  ResolvedStatement,
   BinaryOperator,
   ShaderGeneratorClass,
   FunctionDefinitionOptions,
