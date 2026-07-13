@@ -161,6 +161,11 @@ Our `wgslGenerator` traverses this AST and generates code snippets.
 
 This could theoretically be done at runtime from the function's `toString`, but it would require bundling a JavaScript parser with TypeGPU, and make catching externals impossible.
 
+:::note
+TypeScript's types take no part in WGSL generation. 
+TypeGPU works just as well in plain JavaScript, the types are not included in the AST.
+:::
+
 ### Externals
 
 Along with AST, [tinyest-for-wgsl](https://github.com/software-mansion/TypeGPU/blob/main/packages/tinyest-for-wgsl/README.md) also returns a set of externals (variables captured from outer scope).
