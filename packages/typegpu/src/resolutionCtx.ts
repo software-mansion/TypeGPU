@@ -1076,7 +1076,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
  *
  * @param code - The resolved code.
  * @param usedBindGroupLayouts - List of used `tgpu.bindGroupLayout`s.
- * @param catchall - Automatically constructed bind group for buffer usages and buffer shorthands, preceded by its index.
+ * @param catchall - Automatically constructed bind group for buffer usages and buffer bindings, preceded by its index.
  * @param logResources - Buffers and information about used console.logs needed to decode the raw data.
  */
 export interface ResolutionResult {
