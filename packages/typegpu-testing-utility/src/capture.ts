@@ -1,4 +1,4 @@
-import { WgslGenerator, type Snippet } from 'typegpu/~internal';
+import { UnknownData, WgslGenerator, type Snippet } from 'typegpu/~internal';
 import * as tinyest from 'tinyest';
 import { tgpu, type TgpuFn } from 'typegpu';
 import { dualImpl } from 'typegpu/~internal';
@@ -36,4 +36,11 @@ export function captureSnippets(fn: TgpuFn | (() => unknown)) {
   tgpu.resolve([fn], { unstable_shaderGenerator: generator });
 
   return generator.capturedSnippets;
+}
+
+export function simplifyType(snippet: Snippet) {
+  return {
+    ...snippet,
+    dataType: snippet.dataType === UnknownData ? 'UnknownData' : snippet.dataType.type,
+  };
 }

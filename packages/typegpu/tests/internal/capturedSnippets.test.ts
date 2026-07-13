@@ -1,11 +1,8 @@
-// TODO(#2659): Move out of /internal once `getName` is available through 'typegpu/~internal'
 import { describe, expect } from 'vitest';
-import { struct } from 'typegpu/data';
-import { getName } from '../../src/shared/meta.ts';
-import { tgpu, d, type TgpuBindGroupLayout } from 'typegpu';
-import { CAPTURE, captureSnippets, it } from 'typegpu-testing-utility';
+import { tgpu, d } from 'typegpu';
+import { CAPTURE, captureSnippets, it, simplifyType } from 'typegpu-testing-utility';
 
-describe('...', () => {
+describe('CAPTURE', () => {
   it('is a no-op in regular resolves', () => {
     const fn = tgpu.fn([d.u32])((x) => {
       'use gpu';
@@ -34,44 +31,34 @@ describe('...', () => {
       const d = CAPTURE(CAPTURE(1) + (c + x));
     });
 
-    expect(captureSnippets(fn)).toMatchInlineSnapshot(`
+    expect(captureSnippets(fn).map(simplifyType)).toMatchInlineSnapshot(`
       [
-        SnippetImpl {
-          "dataType": {
-            "concretized": [Function],
-            "toString": [Function],
-            "type": "abstractInt",
-            Symbol(typegpu:0.11.9:$internal): {},
-          },
+        {
+          "dataType": "abstractInt",
           "origin": "constant",
           "possibleSideEffects": true,
           "value": 3,
         },
-        SnippetImpl {
-          "dataType": [Function],
+        {
+          "dataType": "i32",
           "origin": "runtime",
           "possibleSideEffects": false,
           "value": "(a + 1i)",
         },
-        SnippetImpl {
-          "dataType": [Function],
+        {
+          "dataType": "u32",
           "origin": "argument",
           "possibleSideEffects": false,
           "value": "x",
         },
-        SnippetImpl {
-          "dataType": {
-            "concretized": [Function],
-            "toString": [Function],
-            "type": "abstractInt",
-            Symbol(typegpu:0.11.9:$internal): {},
-          },
+        {
+          "dataType": "abstractInt",
           "origin": "constant",
           "possibleSideEffects": false,
           "value": 1,
         },
-        SnippetImpl {
-          "dataType": [Function],
+        {
+          "dataType": "u32",
           "origin": "runtime",
           "possibleSideEffects": false,
           "value": "(1u + (c + x))",
@@ -91,5 +78,16 @@ describe('...', () => {
     expect(captureSnippets(fn)[0]?.value).toBe(0);
     expect(captureSnippets(fn)[0]?.value).toBe(1);
     expect(captureSnippets(fn)[0]?.value).toBe(2);
+  });
+
+  it('captures inner to outer', () => {
+    const fn = () => {
+      'use gpu';
+      return CAPTURE(CAPTURE(1) + 2);
+    };
+
+    const captured = captureSnippets(fn);
+    expect(captured[0]?.value).toBe(1);
+    expect(captured[1]?.value).toBe(3);
   });
 });
