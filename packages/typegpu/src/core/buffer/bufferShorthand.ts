@@ -48,10 +48,6 @@ export interface TgpuMutable<out TData extends BaseData> extends TgpuBufferShort
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
 
   // Accessible on the GPU
-  /**
-   * @deprecated Use `.$` instead, works the same way.
-   */
-  value: InferGPU<TData>;
   $: InferGPU<TData>;
   // ---
 
@@ -64,10 +60,6 @@ export interface TgpuReadonly<out TData extends BaseData> extends TgpuBufferShor
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
 
   // Accessible on the GPU
-  /**
-   * @deprecated Use `.$` instead, works the same way.
-   */
-  readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
   // ---
 
@@ -80,10 +72,6 @@ export interface TgpuUniform<out TData extends BaseData> extends TgpuBufferShort
   readonly buffer: TgpuBuffer<TData> & UniformFlag;
 
   // Accessible on the GPU
-  /**
-   * @deprecated Use `.$` instead, works the same way.
-   */
-  readonly value: InferGPU<TData>;
   readonly $: InferGPU<TData>;
   // ---
 }
