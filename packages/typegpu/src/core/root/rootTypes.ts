@@ -25,7 +25,7 @@ import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
 import type { TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
-import type { TgpuMutable, TgpuReadonly, TgpuUniform } from '../buffer/bufferShorthand.ts';
+import type { TgpuMutable, TgpuReadonly, TgpuUniform } from '../buffer/bufferBinding.ts';
 import type {
   AnyAutoCustoms,
   AutoFragmentIn,
