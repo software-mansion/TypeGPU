@@ -5,7 +5,7 @@ import { pmFromUserAgent, pmInstall } from './utils/pm.ts';
 import { cancelExit, confirmStep, failAndExit, rgbText } from './utils/prompts.ts';
 import { scaffoldProject, prepareDirectory } from './utils/files.ts';
 import { getProjectName, isValidPackageName, getPackageName } from './utils/inputs.ts';
-import { detect, resolveCommand, type Agent } from 'package-manager-detector';
+import { detect, resolveCommand } from 'package-manager-detector';
 import { addAgentSkills, askForAgentSkills } from './steps/skills.ts';
 import {
   DEFAULT_PROJECT_TEMPLATE,
@@ -86,11 +86,10 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
 
   p.log.success(`Scaffolded project at ${projectName}.`);
 
-  const detected = await detect({ cwd: root });
-  let pm: Agent | undefined = options?.packageManager ?? detected?.agent;
-  if (!pm && process.env.npm_config_user_agent) {
-    pm = pmFromUserAgent(process.env.npm_config_user_agent);
-  }
+  const userAgentPm = process.env.npm_config_user_agent
+    ? pmFromUserAgent(process.env.npm_config_user_agent)
+    : undefined;
+  const pm = options?.packageManager ?? userAgentPm ?? (await detect({ cwd: root }))?.agent;
   if (!pm) {
     failAndExit('Could not detect package manager. Pass --package-manager <pm>.');
   }
@@ -140,9 +139,13 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
     msg += steps.join('\n');
     msg += `\n\n`;
     msg += `\
+   Note: To enable Oxlint highlighting, install the OXC extension for your editor,
+   or refer to the documentation:
+   https://oxc.rs/docs/guide/usage/linter/editors.html
+
    Note: If you are using VS Code or Cursor, you may need to run
-   “TypeScript: Select TypeScript Version” and choose
-   “Use Workspace Version” to enable tsover.`;
+   "TypeScript: Select TypeScript Version" and choose
+   "Use Workspace Version" to enable tsover.`;
   }
 
   p.outro(msg);
