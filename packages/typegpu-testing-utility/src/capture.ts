@@ -1,16 +1,14 @@
 import { WgslGenerator, type Snippet } from 'typegpu/~internal';
-import type { Expression } from '../../tinyest/src/nodes';
 import * as tinyest from 'tinyest';
 import { tgpu, type TgpuFn } from 'typegpu';
-import { dualImpl } from '../../typegpu/src/core/function/dualImpl.ts';
-import { stitch } from '../../typegpu/src/core/resolve/stitch.ts';
+import { dualImpl } from 'typegpu/~internal';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
 export class CapturingGenerator extends WgslGenerator {
   public capturedSnippets: Snippet[] = [];
 
-  protected _expression(expression: Expression): Snippet {
+  protected _expression(expression: tinyest.Expression): Snippet {
     if (Array.isArray(expression) && expression[0] === NODE.call) {
       const [_, calleeNode, argNodes] = expression;
       const callee = this._expression(calleeNode);
@@ -28,7 +26,7 @@ export const CAPTURE = dualImpl({
   name: 'CAPTURE',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: <T>(expr: T): T => expr,
-  codegenImpl: (_ctx, [expr]) => stitch`${expr}`,
+  codegenImpl: (ctx, [expr]) => ctx.resolveSnippet(expr).value,
   sideEffects: false,
 });
 
