@@ -561,4 +561,9 @@ describe('tgpu.accessor', () => {
       }"
     `);
   });
+
+  it('correctly infers input type from array schema', () => {
+    const accessor = tgpu.accessor(d.arrayOf(d.u32, 1), d.arrayOf(d.u32, 1)([1]));
+    expectTypeOf(accessor).toEqualTypeOf<TgpuAccessor<d.WgslArray<d.U32>>>();
+  });
 });
