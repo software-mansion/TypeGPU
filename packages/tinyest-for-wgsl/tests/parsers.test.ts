@@ -31,7 +31,6 @@ describe('transpileFn', () => {
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
       expect(externalNames).toMatchInlineSnapshot(`Set {}`);
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
   );
 
@@ -42,7 +41,6 @@ describe('transpileFn', () => {
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
       expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
   );
@@ -59,11 +57,6 @@ describe('transpileFn', () => {
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[0,[[10,[1,[1,"a","+","b"],"-","c"]]]]"`,
       );
-      expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "c",
-        }
-      `);
       expect(externalNames).toMatchInlineSnapshot(`
         Set {
           "c",
@@ -87,11 +80,6 @@ describe('transpileFn', () => {
         `"[0,[[13,"a",[5,"0"]],[2,"c","=",[1,"a","+",[5,"2"]]]]]"`,
       );
       // Only 'c' is external, as 'a' is declared in the same scope.
-      expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "c",
-        }
-      `);
       expect(externalNames).toMatchInlineSnapshot(`
         Set {
           "c",
@@ -122,11 +110,6 @@ describe('transpileFn', () => {
           "c",
         }
       `);
-      expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "c",
-        }
-      `);
     }),
   );
 
@@ -137,13 +120,7 @@ describe('transpileFn', () => {
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,"external.outside.prop"]]]"`);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,"external.outside.prop"]]]"`);
       // Only 'external' is external.
-      expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "external.outside.prop",
-        }
-      `);
       expect(externalNames).toMatchInlineSnapshot(`
         Set {
           "external.outside.prop",
@@ -177,7 +154,6 @@ describe('transpileFn', () => {
         },
       ]);
 
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
       expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
   );
@@ -225,7 +201,6 @@ describe('transpileFn', () => {
       ]);
 
       expect(externalNames).toMatchInlineSnapshot(`Set {}`);
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
   );
 
@@ -249,11 +224,6 @@ describe('transpileFn', () => {
       }`),
       );
 
-      expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "a",
-        }
-      `);
       expect(externalNames).toMatchInlineSnapshot(`
         Set {
           "a",
