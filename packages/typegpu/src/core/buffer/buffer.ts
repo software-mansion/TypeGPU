@@ -22,17 +22,16 @@ import { $internal } from '../../shared/symbols.ts';
 import type { Prettify, UnionToIntersection } from '../../shared/utilityTypes.ts';
 import { isGPUBuffer } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
+import { calculateOffsets, readFromArrayBuffer, writeToArrayBuffer } from '../../data/dataIO.ts';
+import { patchArrayBuffer } from '../../data/partialIO.ts';
 import {
   mutable,
   readonly,
-  type TgpuBufferMutable,
-  type TgpuBufferReadonly,
-  type TgpuBufferUniform,
-  type TgpuFixedBufferUsage,
   uniform,
-} from './bufferUsage.ts';
-import { calculateOffsets, readFromArrayBuffer, writeToArrayBuffer } from '../../data/dataIO.ts';
-import { patchArrayBuffer } from '../../data/partialIO.ts';
+  type TgpuMutable,
+  type TgpuReadonly,
+  type TgpuUniform,
+} from './bufferBinding.ts';
 
 // ----------
 // Public API
@@ -82,10 +81,10 @@ type ViewUsages<TBuffer extends TgpuBuffer<BaseData>> =
   | (boolean extends TBuffer['usableAsUniform'] ? never : 'uniform')
   | (boolean extends TBuffer['usableAsStorage'] ? never : 'readonly' | 'mutable');
 
-type UsageTypeToBufferUsage<TData extends BaseData> = {
-  uniform: TgpuBufferUniform<TData> & TgpuFixedBufferUsage<TData>;
-  mutable: TgpuBufferMutable<TData> & TgpuFixedBufferUsage<TData>;
-  readonly: TgpuBufferReadonly<TData> & TgpuFixedBufferUsage<TData>;
+type UsageTypeToBufferBinding<TData extends BaseData> = {
+  uniform: TgpuUniform<TData>;
+  mutable: TgpuMutable<TData>;
+  readonly: TgpuReadonly<TData>;
 };
 
 const usageToUsageConstructor = { uniform, mutable, readonly };
@@ -141,7 +140,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   $addFlags(flags: GPUBufferUsageFlags): this;
 
-  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T];
+  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferBinding<TData>[T];
 
   compileWriter(): void;
   write(data: InferInput<TData>, options?: BufferWriteOptions): void;
@@ -166,22 +165,6 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
   }
 
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
-}
-
-export function isBuffer(value: unknown): value is TgpuBuffer<BaseData> {
-  return (value as TgpuBuffer<BaseData>).resourceType === 'buffer';
-}
-
-export function isUsableAsVertex<T extends TgpuBuffer<BaseData>>(
-  buffer: T,
-): buffer is T & VertexFlag {
-  return !!buffer.usableAsVertex;
-}
-
-export function isUsableAsIndex<T extends TgpuBuffer<BaseData>>(
-  buffer: T,
-): buffer is T & IndexFlag {
-  return !!buffer.usableAsIndex;
 }
 
 // --------------
@@ -449,8 +432,8 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     return res;
   }
 
-  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferUsage<TData>[T] {
-    return usageToUsageConstructor[usage]?.(this as never) as UsageTypeToBufferUsage<TData>[T];
+  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferBinding<TData>[T] {
+    return usageToUsageConstructor[usage](this as never) as UsageTypeToBufferBinding<TData>[T];
   }
 
   destroy() {
