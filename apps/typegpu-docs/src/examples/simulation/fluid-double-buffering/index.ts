@@ -1,5 +1,5 @@
 import { randf } from '@typegpu/noise';
-import { tgpu, d, std, type TgpuBufferMutable, type TgpuBufferReadonly } from 'typegpu';
+import { tgpu, d, std, type TgpuMutable, type TgpuReadonly } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const MAX_GRID_SIZE = 1024;
@@ -22,8 +22,8 @@ const BoxObstacle = d.struct({
 
 const gridSize = 256;
 
-const inputGridSlot = tgpu.slot<TgpuBufferReadonly<GridData> | TgpuBufferMutable<GridData>>();
-const outputGridSlot = tgpu.slot<TgpuBufferMutable<GridData>>();
+const inputGridSlot = tgpu.slot<TgpuReadonly<GridData> | TgpuMutable<GridData>>();
+const outputGridSlot = tgpu.slot<TgpuMutable<GridData>>();
 
 const MAX_OBSTACLES = 4;
 const BoxObstacleArray = d.arrayOf(BoxObstacle, MAX_OBSTACLES);
@@ -409,8 +409,8 @@ const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 
 function makePipelines(
-  inputGridReadonly: TgpuBufferReadonly<GridData>,
-  outputGridMutable: TgpuBufferMutable<GridData>,
+  inputGridReadonly: TgpuReadonly<GridData>,
+  outputGridMutable: TgpuMutable<GridData>,
 ) {
   const initWorldPipeline = root
     .with(outputGridSlot, outputGridMutable)
