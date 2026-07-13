@@ -186,7 +186,6 @@ export interface TgpuTextureView<
   readonly size?: number[] | undefined;
 
   readonly [$gpuValueOf]: Infer<TSchema>;
-  value: Infer<TSchema>;
   $: Infer<TSchema>;
 
   toString(): string;
@@ -629,10 +628,6 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
     );
   }
 
-  get value(): Infer<T> {
-    return this.$;
-  }
-
   get size(): number[] {
     return this.#baseTexture.props.size;
   }
@@ -724,10 +719,6 @@ export class TgpuLaidOutTextureViewImpl<T extends WgslTexture | WgslStorageTextu
         getName(this) ?? '<unnamed>'
       }' outside of codegen mode. Direct access to texture views values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead`,
     );
-  }
-
-  get value(): Infer<T> {
-    return this.$;
   }
 
   $name(label: string): this {

@@ -66,7 +66,7 @@ export async function multiselectPkgs(pkg: PackageJson) {
   }
 
   const addons = await p.multiselect({
-    message: "Pick add-ons to install ('space' to select, 'enter' to confirm):",
+    message: 'Pick add-ons to install:',
     options: options,
     required: false,
   });
