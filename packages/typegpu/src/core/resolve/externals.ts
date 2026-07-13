@@ -117,7 +117,7 @@ export function replaceExternalsInWgsl(
           .join('');
 
         if (isNamable(currentItem) && getName(currentItem) === undefined) {
-          setName(currentItem, elem);
+          setName(currentItem, chain.slice(0, i + 1).join('_'));
         }
 
         break;

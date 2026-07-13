@@ -8,7 +8,7 @@ import { transpileFn } from 'tinyest-for-wgsl';
  * Each breaking change to the metadata format requires a bump to this number.
  * It's used at runtime by `typegpu` to determine how to interpret a function's metadata.
  */
-export const METADATA_FORMAT_VERSION = 1;
+export const METADATA_FORMAT_VERSION = 2;
 
 export interface Options {
   /** @default [/\.m?[jt]sx?$/] */
@@ -85,6 +85,8 @@ export interface TransformMethods {
   replaceWithAssignmentOverload(path: NodePath<t.AssignmentExpression>, runtimeFn: string): void;
 
   replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void;
+
+  removeUseGpuDirective(this: PluginState, path: NodePath<MetadatableFunction>): void;
 }
 
 export interface PluginState extends TransformMethods {
@@ -107,8 +109,6 @@ export interface PluginState extends TransformMethods {
   opts: Options;
 
   inUseGpuScope: boolean;
-
-  alreadyTransformed: WeakSet<t.Node>;
 }
 
 export interface NodeLocation {
@@ -127,7 +127,6 @@ export function initPluginState(state: PluginState, methods: TransformMethods): 
   state.tgpuAliases = new Set<string>(state.opts.forceTgpuAlias ? [state.opts.forceTgpuAlias] : []);
   state.autoNamingEnabled = state.opts.autoNamingEnabled ?? true;
   state.inUseGpuScope = false;
-  state.alreadyTransformed = new WeakSet<t.Node>();
   Object.assign(state, methods);
 }
 
@@ -450,12 +449,9 @@ function functionOnExit(
   if (!containsUseGpuDirective(node)) {
     return;
   }
+  state.removeUseGpuDirective(path);
 
   state.inUseGpuScope = false;
-
-  if (state.alreadyTransformed.has(node)) {
-    return;
-  }
 
   const ast = fnNodeToTranspiledMap.get(path.node);
   const maybeName = getFunctionName(path);
@@ -463,7 +459,6 @@ function functionOnExit(
     throw new Error(`No metadata found for function ${maybeName ?? '<unnamed>'}`);
   }
   state.assignMetadata(path, maybeName, ast);
-  state.alreadyTransformed.add(node);
   path.skip();
 }
 
