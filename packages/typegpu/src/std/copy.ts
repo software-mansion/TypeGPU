@@ -31,4 +31,5 @@ export const copy = dualImpl({
   codegenImpl(_ctx, [a]) {
     return stitch`${a}`;
   },
+  sideEffects: false,
 });

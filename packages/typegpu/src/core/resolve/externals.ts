@@ -66,18 +66,18 @@ export function addReturnTypeToExternals(
   }
 }
 
-function identifierRegex(name: string) {
-  return new RegExp(
-    `(?<![\\w\\$_.])${name.replaceAll('.', '\\.').replaceAll('$', '\\$')}(?![\\w\\$_])`,
-    'g',
-  );
-}
+export const anyIdent = /([$_\p{XID_Start}][$\p{XID_Continue}]*)/u; // WGSL ident, modified to include $
+const anyPropChain = new RegExp(`(${anyIdent.source})(\\.${anyIdent.source})*`, 'ug');
+export const boundedPropChain = new RegExp(
+  `(?<![\\p{XID_Continue}\\$.])${anyPropChain.source}(?![\\p{XID_Continue}\\$])`,
+  'ug',
+);
 
 /**
  * Replaces all occurrences of external names in WGSL code with their resolved values.
  * It adds all necessary definitions to the resolution context.
  * @param ctx - The resolution context.
- * @param externalMap - The external map.
+ * @param externalMap - The external map. Assumes that keys don't contain dots.
  * @param wgsl - The WGSL code.
  *
  * @returns The WGSL code with all external names replaced with their resolved values.
@@ -87,52 +87,50 @@ export function replaceExternalsInWgsl(
   externalMap: ExternalMap,
   wgsl: string,
 ): string {
-  return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
-    const externalRegex = identifierRegex(externalName);
-    if (wgsl && externalName !== 'Out' && externalName !== 'in' && !externalRegex.test(wgsl)) {
-      console.warn(`The external '${externalName}' wasn't used in the resolved template.`);
-      // continue anyway, we still might need to resolve the external
+  const keys = Object.keys(externalMap);
+  if (keys.length === 0) {
+    return wgsl;
+  }
+
+  const maybeInvalidKey = keys.find((key) => key.includes('.'));
+  if (maybeInvalidKey) {
+    throw new Error(`External key '${maybeInvalidKey}' contains invalid character '.'`);
+  }
+
+  return wgsl.replaceAll(boundedPropChain, (match) => {
+    const chain = match.split('.');
+
+    if (!Object.hasOwn(externalMap, chain.at(0) as string)) {
+      // this prop access does not start with an external
+      return match;
     }
 
-    if (isResolvable(external)) {
-      if (isNamable(external) && getName(external) === undefined) {
-        setName(external, externalName.split('.').at(-1) as string);
+    let currentItem: unknown = externalMap;
+    let suffix = '';
+
+    for (const [i, elem] of chain.entries()) {
+      currentItem = (currentItem as ExternalMap)[elem];
+      if (isResolvable(currentItem)) {
+        suffix = chain
+          .slice(i + 1)
+          .map((s) => `.${s}`)
+          .join('');
+
+        if (isNamable(currentItem) && getName(currentItem) === undefined) {
+          setName(currentItem, elem);
+        }
+
+        break;
       }
-      return acc.replaceAll(externalRegex, ctx.resolve(external).value);
+
+      if (typeof currentItem !== 'object' || currentItem === null || i === chain.length - 1) {
+        console.warn(
+          `During resolution, the external '${chain.slice(0, i + 1).join('.')}' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.`,
+        );
+        return match;
+      }
     }
 
-    if (external !== null && typeof external === 'object') {
-      const foundProperties = [
-        ...wgsl.matchAll(
-          new RegExp(
-            `${externalName
-              .replaceAll('.', '\\.')
-              .replaceAll('$', '\\$')}\\.(?<prop>.*?)(?![\\w\\$_])`,
-            'g',
-          ),
-        ),
-      ].map((found) => found[1]);
-      const uniqueProperties = [...new Set(foundProperties)];
-
-      return uniqueProperties.reduce(
-        (innerAcc: string, prop) =>
-          prop && prop in external
-            ? replaceExternalsInWgsl(
-                ctx,
-                {
-                  [`${externalName}.${prop}`]: external[prop as keyof typeof external],
-                },
-                innerAcc,
-              )
-            : innerAcc,
-        acc,
-      );
-    }
-
-    console.warn(
-      `During resolution, the external '${externalName}' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.`,
-    );
-
-    return acc;
-  }, wgsl);
+    return ctx.resolve(currentItem).value + suffix;
+  });
 }

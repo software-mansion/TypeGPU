@@ -15,12 +15,8 @@ import type {
 import { isBindGroup, isBindGroupLayout, TgpuBindGroupImpl } from '../../tgpuBindGroupLayout.ts';
 import type { LogGeneratorOptions } from '../../tgsl/consoleLog/types.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
-import {
-  INTERNAL_createBuffer,
-  isBuffer,
-  type TgpuBuffer,
-  type VertexFlag,
-} from '../buffer/buffer.ts';
+import { INTERNAL_createBuffer, type TgpuBuffer, type VertexFlag } from '../buffer/buffer.ts';
+import { isBuffer } from '../../types.ts';
 import {
   TgpuBufferShorthandImpl,
   type TgpuMutable,
@@ -169,6 +165,14 @@ export class TgpuGuardedComputePipelineImpl<
       this.#sizeUniform.write(sanitizedSize);
     }
     this.#pipeline.dispatchWorkgroups(workgroupCount.x, workgroupCount.y, workgroupCount.z);
+  }
+
+  initAsync(): Promise<void> {
+    return this.#pipeline.initAsync();
+  }
+
+  initSync(): void {
+    this.#pipeline.initSync();
   }
 
   get pipeline() {
