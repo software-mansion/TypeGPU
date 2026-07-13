@@ -1,5 +1,5 @@
 import { type BaseData } from '../../data/wgslTypes.ts';
-import type { TgpuMutable, TgpuReadonly, TgpuUniform } from './bufferShorthand.ts';
+import type { TgpuMutable, TgpuReadonly, TgpuUniform } from './bufferBinding.ts';
 
 // TODO(#2666) - remove this file
 

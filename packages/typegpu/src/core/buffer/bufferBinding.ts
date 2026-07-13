@@ -24,7 +24,7 @@ import { isUsableAsStorage, isUsableAsUniform } from '../../types.ts';
 // Public API
 // ----------
 
-interface TgpuBufferShorthandBase<TData extends BaseData> extends TgpuNamable {
+interface TgpuBufferBindingBase<TData extends BaseData> extends TgpuNamable {
   readonly [$internal]: true;
 
   // Accessible on the CPU
@@ -43,7 +43,7 @@ interface TgpuBufferShorthandBase<TData extends BaseData> extends TgpuNamable {
   readonly [$repr]: Infer<TData>;
 }
 
-export interface TgpuMutable<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
+export interface TgpuMutable<out TData extends BaseData> extends TgpuBufferBindingBase<TData> {
   readonly resourceType: 'mutable';
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
 
@@ -59,7 +59,7 @@ export interface TgpuMutable<out TData extends BaseData> extends TgpuBufferShort
   readonly [$repr]: Infer<TData>;
 }
 
-export interface TgpuReadonly<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
+export interface TgpuReadonly<out TData extends BaseData> extends TgpuBufferBindingBase<TData> {
   readonly resourceType: 'readonly';
   readonly buffer: TgpuBuffer<TData> & StorageFlag;
 
@@ -75,7 +75,7 @@ export interface TgpuReadonly<out TData extends BaseData> extends TgpuBufferShor
   readonly [$repr]: Infer<TData>;
 }
 
-export interface TgpuUniform<out TData extends BaseData> extends TgpuBufferShorthandBase<TData> {
+export interface TgpuUniform<out TData extends BaseData> extends TgpuBufferBindingBase<TData> {
   readonly resourceType: 'uniform';
   readonly buffer: TgpuBuffer<TData> & UniformFlag;
 
@@ -88,22 +88,26 @@ export interface TgpuUniform<out TData extends BaseData> extends TgpuBufferShort
   // ---
 }
 
-export type TgpuBufferShorthand<TData extends BaseData> =
+export type TgpuBufferBinding<TData extends BaseData> =
   | TgpuMutable<TData>
   | TgpuReadonly<TData>
   | TgpuUniform<TData>;
 
-export function isBufferShorthand<TData extends BaseData>(
+export function isBufferBinding<TData extends BaseData>(
   value: unknown,
-): value is TgpuBufferShorthand<TData> {
-  return value instanceof TgpuBufferShorthandImpl;
+): value is TgpuBufferBinding<TData> {
+  return value instanceof TgpuBufferBindingImpl;
 }
+
+// TODO(#2666) - remove this
+/** @deprecated Use 'isBufferBinding' instead. */
+export const isBufferShorthand = isBufferBinding;
 
 // --------------
 // Implementation
 // --------------
 
-export class TgpuBufferShorthandImpl<
+export class TgpuBufferBindingImpl<
   TType extends 'mutable' | 'readonly' | 'uniform',
   TData extends BaseData,
 > implements SelfResolvable {
@@ -190,7 +194,7 @@ export class TgpuBufferShorthandImpl<
       return mode.buffers.get(this.buffer) as InferGPU<TData>;
     }
 
-    return assertExhaustive(mode, 'bufferShorthand.ts#TgpuBufferShorthandImpl/$');
+    return assertExhaustive(mode, 'bufferBinding.ts#TgpuBufferBindingImpl/$');
   }
 
   set $(value: InferGPU<TData>) {
@@ -210,7 +214,7 @@ export class TgpuBufferShorthandImpl<
     if (mode.type === 'codegen') {
       // The WGSL generator handles buffer assignment, and does not defer to
       // whatever's being assigned to generate the WGSL.
-      throw new Error('Unreachable bufferShorthand.ts#TgpuBufferShorthandImpl/$');
+      throw new Error('Unreachable bufferBinding.ts#TgpuBufferBindingImpl/$');
     }
 
     if (mode.type === 'simulate') {
@@ -218,7 +222,7 @@ export class TgpuBufferShorthandImpl<
       return;
     }
 
-    assertExhaustive(mode, 'bufferShorthand.ts#TgpuBufferShorthandImpl/$');
+    assertExhaustive(mode, 'bufferBinding.ts#TgpuBufferBindingImpl/$');
   }
 
   get value(): InferGPU<TData> {
@@ -230,7 +234,7 @@ export class TgpuBufferShorthandImpl<
   }
 
   toString(): string {
-    return `${this.resourceType}BufferShorthand:${getName(this) ?? '<unnamed>'}`;
+    return `${this.resourceType}BufferBinding:${getName(this) ?? '<unnamed>'}`;
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
@@ -260,7 +264,7 @@ export class TgpuBufferShorthandImpl<
 
 const mutableUsageMap = new WeakMap<
   TgpuBuffer<BaseData>,
-  TgpuBufferShorthandImpl<'mutable', BaseData>
+  TgpuBufferBindingImpl<'mutable', BaseData>
 >();
 
 export function mutable<TData extends AnyWgslData>(
@@ -274,7 +278,7 @@ export function mutable<TData extends AnyWgslData>(
 
   let usage = mutableUsageMap.get(buffer);
   if (!usage) {
-    usage = new TgpuBufferShorthandImpl('mutable', buffer);
+    usage = new TgpuBufferBindingImpl('mutable', buffer);
     mutableUsageMap.set(buffer, usage);
   }
   return usage as unknown as TgpuMutable<TData>;
@@ -282,7 +286,7 @@ export function mutable<TData extends AnyWgslData>(
 
 const readonlyUsageMap = new WeakMap<
   TgpuBuffer<BaseData>,
-  TgpuBufferShorthandImpl<'readonly', BaseData>
+  TgpuBufferBindingImpl<'readonly', BaseData>
 >();
 
 export function readonly<TData extends AnyWgslData>(
@@ -296,7 +300,7 @@ export function readonly<TData extends AnyWgslData>(
 
   let usage = readonlyUsageMap.get(buffer);
   if (!usage) {
-    usage = new TgpuBufferShorthandImpl('readonly', buffer);
+    usage = new TgpuBufferBindingImpl('readonly', buffer);
     readonlyUsageMap.set(buffer, usage);
   }
   return usage as unknown as TgpuReadonly<TData>;
@@ -304,7 +308,7 @@ export function readonly<TData extends AnyWgslData>(
 
 const uniformUsageMap = new WeakMap<
   TgpuBuffer<BaseData>,
-  TgpuBufferShorthandImpl<'uniform', BaseData>
+  TgpuBufferBindingImpl<'uniform', BaseData>
 >();
 
 export function uniform<TData extends AnyWgslData>(
@@ -318,7 +322,7 @@ export function uniform<TData extends AnyWgslData>(
 
   let usage = uniformUsageMap.get(buffer);
   if (!usage) {
-    usage = new TgpuBufferShorthandImpl('uniform', buffer);
+    usage = new TgpuBufferBindingImpl('uniform', buffer);
     uniformUsageMap.set(buffer, usage);
   }
   return usage as unknown as TgpuUniform<TData>;

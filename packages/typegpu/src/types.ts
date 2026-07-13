@@ -43,7 +43,7 @@ import type { WgslEnableExtension } from './wgslExtensions.ts';
 import type { Infer } from './shared/repr.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 import type { StorageFlag } from './extension.ts';
-import type { TgpuBufferShorthand } from './core/buffer/bufferShorthand.ts';
+import type { TgpuBufferBinding } from './core/buffer/bufferBinding.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -61,7 +61,7 @@ export type ResolvableObject =
   | TgpuExternalTexture
   | TgpuTexture
   | TgpuTextureView
-  | TgpuBufferShorthand<BaseData>
+  | TgpuBufferBinding<BaseData>
   | TgpuVar
   | AnyVecInstance
   | AnyMatInstance

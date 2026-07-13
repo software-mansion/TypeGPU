@@ -527,7 +527,7 @@ describe('root.createUniform', () => {
     `);
   });
 
-  it('allows creating shorthands only for buffers allowing them', ({ root }) => {
+  it('allows creating bindings only for buffers allowing them', ({ root }) => {
     root.createBuffer(d.u32, 2).$usage('uniform').as('uniform');
     root.createBuffer(d.u32, 2).$usage('uniform', 'storage').as('uniform');
     root.createBuffer(d.u32, 2).$usage('uniform', 'vertex').as('uniform');

@@ -31,7 +31,7 @@ import {
   type TgpuMutable,
   type TgpuReadonly,
   type TgpuUniform,
-} from './bufferShorthand.ts';
+} from './bufferBinding.ts';
 
 // ----------
 // Public API
@@ -81,7 +81,7 @@ type ViewUsages<TBuffer extends TgpuBuffer<BaseData>> =
   | (boolean extends TBuffer['usableAsUniform'] ? never : 'uniform')
   | (boolean extends TBuffer['usableAsStorage'] ? never : 'readonly' | 'mutable');
 
-type UsageTypeToBufferShorthand<TData extends BaseData> = {
+type UsageTypeToBufferBinding<TData extends BaseData> = {
   uniform: TgpuUniform<TData>;
   mutable: TgpuMutable<TData>;
   readonly: TgpuReadonly<TData>;
@@ -140,7 +140,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   ): this & UnionToIntersection<LiteralToUsageType<T[number]>>;
   $addFlags(flags: GPUBufferUsageFlags): this;
 
-  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferShorthand<TData>[T];
+  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferBinding<TData>[T];
 
   compileWriter(): void;
   write(data: InferInput<TData>, options?: BufferWriteOptions): void;
@@ -432,8 +432,8 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     return res;
   }
 
-  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferShorthand<TData>[T] {
-    return usageToUsageConstructor[usage](this as never) as UsageTypeToBufferShorthand<TData>[T];
+  as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferBinding<TData>[T] {
+    return usageToUsageConstructor[usage](this as never) as UsageTypeToBufferBinding<TData>[T];
   }
 
   destroy() {
