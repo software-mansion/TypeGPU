@@ -1,5 +1,12 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
-import type { RenderFlag, SampledFlag, TgpuRoot, TgpuTexture, TgpuTextureView } from 'typegpu';
+import type {
+  RenderFlag,
+  SampledFlag,
+  StorageFlag,
+  TgpuRoot,
+  TgpuTexture,
+  TgpuTextureView,
+} from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 import { attest } from '@ark/attest';
 import { tgpu, d } from 'typegpu';
@@ -152,6 +159,70 @@ describe('TgpuTexture', () => {
     expectTypeOf(texture).toEqualTypeOf<
       TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & SampledFlag & RenderFlag
     >();
+  });
+
+  it('creates transient textures with the exact WebGPU usage bits', ({ root, device }) => {
+    const texture = root
+      .createTexture({
+        size: [512, 512],
+        format: 'rgba8unorm',
+      })
+      .$usage('transient');
+
+    expectTypeOf(texture).toEqualTypeOf<
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & RenderFlag
+    >();
+
+    root.unwrap(texture);
+
+    expect(device.mock.createTexture).toHaveBeenCalledWith(
+      expect.objectContaining({
+        usage: GPUTextureUsage.TRANSIENT_ATTACHMENT | GPUTextureUsage.RENDER_ATTACHMENT,
+      }),
+    );
+  });
+
+  it('rejects combining transient texture usage with sampled usage', ({ root }) => {
+    expect(() =>
+      root
+        .createTexture({
+          size: [512, 512],
+          format: 'rgba8unorm',
+        })
+        .$usage('transient', 'sampled'),
+    ).toThrow("Transient texture usage cannot be combined with 'sampled' or 'storage'.");
+  });
+
+  it('overrides raw WebGPU usage flags exactly', ({ root, device }) => {
+    const texture = root
+      .createTexture({
+        size: [512, 512],
+        format: 'rgba8unorm',
+      })
+      .$overrideFlags(GPUTextureUsage.RENDER_ATTACHMENT);
+
+    expectTypeOf(texture).toEqualTypeOf<
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> &
+        SampledFlag &
+        StorageFlag &
+        RenderFlag
+    >();
+
+    root.unwrap(texture);
+
+    expect(texture).toMatchObject({
+      usableAsSampled: true,
+      usableAsStorage: true,
+      usableAsRender: true,
+    });
+    expect(() => texture.$usage('transient')).toThrow(
+      'Cannot call $usage() after $overrideFlags().',
+    );
+    expect(device.mock.createTexture).toHaveBeenCalledWith(
+      expect.objectContaining({
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      }),
+    );
   });
 
   it('limits available extensions based on the chosen format', ({ root }) => {

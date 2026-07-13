@@ -209,6 +209,14 @@ export class TgpuBufferShorthandImpl<
     assertExhaustive(mode, 'bufferShorthand.ts#TgpuBufferShorthandImpl/$');
   }
 
+  get value(): InferGPU<TData> {
+    return this.$;
+  }
+
+  set value(value: InferGPU<TData>) {
+    this.$ = value;
+  }
+
   toString(): string {
     return `${this.resourceType}BufferShorthand:${getName(this) ?? '<unnamed>'}`;
   }

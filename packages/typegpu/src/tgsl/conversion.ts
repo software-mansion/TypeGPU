@@ -303,6 +303,9 @@ function applyActionToSnippet(
   }
 }
 
+/**
+ * Unifies input types to a common type.
+ */
 export function unify<T extends (BaseData | UnknownData)[] | []>(
   inTypes: T,
   restrictTo?: BaseData[],
@@ -312,6 +315,29 @@ export function unify<T extends (BaseData | UnknownData)[] | []>(
   }
 
   const conversion = getBestConversion(inTypes as BaseData[], restrictTo);
+  if (!conversion) {
+    return undefined;
+  }
+
+  return inTypes.map((type) => (isVec(type) || isMat(type) ? type : conversion.targetType)) as {
+    [K in keyof T]: BaseData;
+  };
+}
+
+/**
+ * Unifies input types to a common type.
+ * Unlike `unify`, it does not allow implicit conversions.
+ */
+export function unifyStrict<T extends (BaseData | UnknownData)[] | []>(
+  inTypes: T,
+  restrictTo?: BaseData[],
+): { [K in keyof T]: BaseData } | undefined {
+  if (inTypes.some((type) => type === UnknownData)) {
+    return undefined;
+  }
+
+  const uniqueTargetTypes = [...new Set(((restrictTo || inTypes) as BaseData[]).map(undecorate))];
+  const conversion = findBestType(inTypes as BaseData[], uniqueTargetTypes, false);
   if (!conversion) {
     return undefined;
   }

@@ -2160,4 +2160,29 @@ describe('wgslGenerator', () => {
       `);
     });
   });
+
+  it('allows a for-loop variable to reuse an external name without shadowing it after the loop', () => {
+    const size = tgpu.privateVar(d.u32, 4);
+
+    function foo() {
+      'use gpu';
+      let acc = d.u32(0);
+      for (let size = d.u32(0); size < 3; size++) {
+        acc += size;
+      }
+      return acc + size.$;
+    }
+
+    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
+      "var<private> size: u32 = 4u;
+
+      fn foo() -> u32 {
+        var acc = 0u;
+        for (var size = 0u; (size < 3u); size++) {
+          acc += size;
+        }
+        return (acc + size);
+      }"
+    `);
+  });
 });
