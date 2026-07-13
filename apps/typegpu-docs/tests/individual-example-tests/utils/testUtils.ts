@@ -19,6 +19,10 @@ export function createDeepNoopProxy<T extends object>(
     get(_obj, prop, _receiver) {
       accessedProperties.add(prop);
 
+      if (prop in target) {
+        return Reflect.get(target, prop);
+      }
+
       return () => createDeepNoopProxy({}, accessedProperties);
     },
     set() {
