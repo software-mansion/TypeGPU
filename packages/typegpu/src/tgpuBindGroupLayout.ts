@@ -126,12 +126,6 @@ export interface TgpuBindGroupLayout<
   readonly [$gpuValueOf]: {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
-  /**
-   * @deprecated Use `.$` instead, works the same way.
-   */
-  readonly value: {
-    [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
-  };
   readonly $: {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
@@ -266,11 +260,7 @@ class TgpuBindGroupLayoutImpl<
   readonly [$internal]: ResolvableObject[];
   readonly resourceType = 'bind-group-layout' as const;
 
-  readonly value = {} as {
-    [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
-  };
-
-  readonly $ = this.value as {
+  readonly $ = {} as {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
 
@@ -324,7 +314,7 @@ class TgpuBindGroupLayoutImpl<
       }
 
       invariant(item !== undefined, 'Internal error, expected item to be defined');
-      Object.defineProperty(this.value, key, {
+      Object.defineProperty(this.$, key, {
         get: () => {
           return item.$;
         },

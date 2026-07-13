@@ -16,16 +16,13 @@ describe('[BABEL] parser options', () => {
       const increment = tgpu.fn([])(/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = () => {
         const x = 2 + 2;
       }, {
-        v: 1,
+        v: 2,
         name: undefined,
         ast: {
           params: [],
-          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]],
-          externalNames: []
+          body: [0, [[13, "x", [1, [5, "2"], "+", [5, "2"]]]]]
         },
-        externals: () => {
-          return {};
-        }
+        externals: {}
       }) && $.f)({}));"
     `);
 
@@ -59,10 +56,10 @@ describe('[ROLLUP] tgpu alias gathering', async () => {
 
       const increment = tgpu.fn([])((/*#__PURE__*/($ => (globalThis.__TYPEGPU_META__ ??= new WeakMap()).set($.f = (() => {
             }), {
-          v: 1,
+          v: 2,
           name: undefined,
-          ast: {"params":[],"body":[0,[]],"externalNames":[]},
-          externals: () => ({}),
+          ast: {"params":[],"body":[0,[]]},
+          externals: {}
         }) && $.f)({})));
 
             console.log(increment);

@@ -23,10 +23,6 @@ export interface TgpuSlot<T> extends TgpuNamable {
   areEqual(a: T, b: T): boolean;
 
   readonly [$gpuValueOf]: GPUValueOf<T>;
-  /**
-   * @deprecated Use `.$` instead, works the same way.
-   */
-  readonly value: GPUValueOf<T>;
   readonly $: GPUValueOf<T>;
   toString(): string;
 }
@@ -38,10 +34,6 @@ export interface TgpuLazy<out T> extends Withable<TgpuLazy<T>> {
   readonly resourceType: 'lazy';
 
   readonly [$gpuValueOf]: GPUValueOf<T>;
-  /**
-   * @deprecated Use `.$` instead, works the same way.
-   */
-  readonly value: GPUValueOf<T>;
   readonly $: GPUValueOf<T>;
 
   // Type-tokens, not available at runtime
@@ -58,10 +50,6 @@ export interface TgpuAccessor<T extends BaseData = BaseData> extends TgpuNamable
   readonly slot: TgpuSlot<TgpuAccessor.In<T>>;
 
   readonly [$gpuValueOf]: InferGPU<T>;
-  /**
-   * @deprecated Use `.$` instead, works the same way.
-   */
-  readonly value: InferGPU<T>;
   readonly $: InferGPU<T>;
 
   toString(): string;
@@ -95,7 +83,6 @@ export interface TgpuMutableAccessor<T extends BaseData = BaseData> extends Tgpu
   readonly slot: TgpuSlot<TgpuMutableAccessor.In<T>>;
 
   readonly [$gpuValueOf]: InferGPU<T>;
-  value: InferGPU<T>;
   $: InferGPU<T>;
 }
 

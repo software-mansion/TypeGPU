@@ -172,6 +172,34 @@ describe('tgpu.accessor', () => {
     `);
   });
 
+  it('prunes unused functions', () => {
+    const helper = () => {
+      'use gpu';
+      return 2;
+    };
+    const helperAccess = tgpu.accessor(d.u32, helper);
+
+    const ctx = {
+      get helper() {
+        return helperAccess.$;
+      },
+    };
+
+    const main = () => {
+      'use gpu';
+      if (2 + 2 === 5) {
+        return ctx.helper;
+      }
+      return 0;
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        return 0;
+      }"
+    `);
+  });
+
   it('retains type information', () => {
     // Typed as f32, but literal could be automatically inferred as an i32
     const fooAccess = tgpu.accessor(d.f32, 1);
