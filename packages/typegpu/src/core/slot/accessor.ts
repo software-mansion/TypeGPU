@@ -146,10 +146,6 @@ abstract class AccessorBase<
 
   abstract readonly $: InferGPU<T>;
 
-  get value(): InferGPU<T> {
-    return this.$;
-  }
-
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const snippet = this.#createSnippet();
     return snip(

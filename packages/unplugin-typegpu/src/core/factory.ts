@@ -3,7 +3,7 @@ import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import type { UnpluginBuildContext, UnpluginContext, UnpluginFactory } from 'unplugin';
 import _traverse, { type NodePath } from '@babel/traverse';
-import { transpileFn } from 'tinyest-for-wgsl';
+import { transpileFn, type Externals } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
 import {
@@ -32,20 +32,22 @@ function embedJSON(jsValue: unknown) {
     .replace(/\u2029/g, '\\u2029');
 }
 
+function externalsToString(externals: Externals): string {
+  const entries = Array.from(externals, (key) => `"${key}":() => ${key}`);
+  return `{${entries.join(',')}}`;
+}
+
 function assignMetadata(
   this: UnpluginPluginState,
   path: NodePath<MetadatableFunction>,
   name: string | undefined,
   ast: ReturnType<typeof transpileFn>,
 ): void {
-  // TODO (#2504): remove externalNames from ast
   const metadata = `{
     v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
-    ast: ${embedJSON(ast)},
-    externals: () => ({${ast.externalNames
-      .map((e) => (e === 'this' ? '"this": this' : e))
-      .join(', ')}}),
+    ast: ${embedJSON({ params: ast.params, body: ast.body })},
+    externals: ${externalsToString(ast.externalNames)}
   }`;
 
   const visibility = t.isFunctionDeclaration(path.node)
