@@ -6,9 +6,9 @@ const SEEDS = 17;
 const SAMPLES = 111;
 
 const generators = {
-  XOROSHIRO64STARSTAR: XOROSHIRO64STARSTAR,
-  LCG32: LCG32,
-  BPETER: BPETER,
+  XOROSHIRO64STARSTAR,
+  LCG32,
+  BPETER,
 } as const;
 const seedFns = ['seed', 'seed2', 'seed3', 'seed4'] as const;
 
