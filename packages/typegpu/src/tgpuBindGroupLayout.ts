@@ -43,6 +43,11 @@ import type { ResolvableObject, TgpuShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
 import type { WgslComparisonSampler, WgslSampler } from './data/sampler.ts';
 import { TgpuLaidOutBufferImpl } from './core/buffer/laidOutBuffer.ts';
+import {
+  isMutableBinding,
+  isReadonlyBinding,
+  isUniformBinding,
+} from './core/buffer/bufferBinding.ts';
 
 // ----------
 // Public API
@@ -472,6 +477,8 @@ export class TgpuBindGroupImpl<
                 throw new NotUniformError(value);
               }
               resource = { buffer: unwrapper.unwrap(value) };
+            } else if (isUniformBinding(value)) {
+              resource = { buffer: unwrapper.unwrap(value) };
             } else {
               resource = { buffer: value as GPUBuffer };
             }
@@ -489,6 +496,13 @@ export class TgpuBindGroupImpl<
               if (!isUsableAsStorage(value)) {
                 throw new NotStorageError(value);
               }
+              resource = { buffer: unwrapper.unwrap(value) };
+            } else if (isMutableBinding(value) || isReadonlyBinding(value)) {
+              // Types should guarantee that access is mutable if and only if the binding is mutable.
+              invariant(
+                (entry.access === 'mutable') === (value.resourceType === 'mutable'),
+                'Invalid buffer access mode.',
+              );
               resource = { buffer: unwrapper.unwrap(value) };
             } else {
               resource = { buffer: value as GPUBuffer };
