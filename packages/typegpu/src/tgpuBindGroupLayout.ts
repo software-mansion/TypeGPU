@@ -30,7 +30,7 @@ import {
   type WgslStorageTexture,
   type WgslTexture,
 } from './data/texture.ts';
-import type { AnyWgslData, BaseData } from './data/wgslTypes.ts';
+import type { BaseData } from './data/wgslTypes.ts';
 import { invariant, NotUniformError } from './errors.ts';
 import { NotStorageError, type StorageFlag } from './extension.ts';
 import type { TgpuNamable } from './shared/meta.ts';
@@ -52,7 +52,6 @@ import {
   type TgpuReadonly,
   type TgpuUniform,
 } from './core/buffer/bufferBinding.ts';
-import type { AnyData } from './data/dataTypes.ts';
 
 // ----------
 // Public API
