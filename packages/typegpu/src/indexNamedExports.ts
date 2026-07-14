@@ -11,14 +11,18 @@ export {
   NotUniformError,
   ResolutionError,
 } from './errors.ts';
-export { isBuffer, isUsableAsVertex } from './core/buffer/buffer.ts';
 export { isAccessor, isLazy, isMutableAccessor, isSlot } from './core/slot/slotTypes.ts';
 export { isComparisonSampler, isSampler } from './core/sampler/sampler.ts';
 export { isTexture } from './core/texture/texture.ts';
 export { isUsableAsRender, isUsableAsSampled } from './core/texture/usageExtension.ts';
-export { isUsableAsStorage } from './extension.ts';
-export { isUsableAsUniform } from './core/buffer/bufferUsage.ts';
-export { isBufferShorthand } from './core/buffer/bufferShorthand.ts';
+export {
+  isBuffer,
+  isUsableAsUniform,
+  isUsableAsVertex,
+  isUsableAsIndex,
+  isUsableAsStorage,
+} from './types.ts';
+export { isBufferBinding, isBufferShorthand } from './core/buffer/bufferBinding.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
 export { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
 export { isTgpuVertexFn } from './core/function/tgpuVertexFn.ts';
@@ -70,7 +74,7 @@ export type {
   TgpuBufferReadonly,
   TgpuBufferUniform,
 } from './core/buffer/bufferUsage.ts';
-export type { TgpuMutable, TgpuReadonly, TgpuUniform } from './core/buffer/bufferShorthand.ts';
+export type { TgpuMutable, TgpuReadonly, TgpuUniform } from './core/buffer/bufferBinding.ts';
 export type {
   Eventual,
   TgpuAccessor,
