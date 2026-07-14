@@ -25,10 +25,39 @@ describe('probability distribution plot example', () => {
 
       @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -73,10 +102,39 @@ describe('probability distribution plot example', () => {
 
       @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -113,10 +171,39 @@ describe('probability distribution plot example', () => {
 
       @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -154,10 +241,39 @@ describe('probability distribution plot example', () => {
 
       @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -194,10 +310,39 @@ describe('probability distribution plot example', () => {
 
       @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -229,10 +374,39 @@ describe('probability distribution plot example', () => {
 
       @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -270,10 +444,39 @@ describe('probability distribution plot example', () => {
 
       @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -328,10 +531,39 @@ describe('probability distribution plot example', () => {
 
       @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -378,10 +610,39 @@ describe('probability distribution plot example', () => {
 
       @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -418,10 +679,39 @@ describe('probability distribution plot example', () => {
 
       @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -457,10 +747,39 @@ describe('probability distribution plot example', () => {
 
       @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -501,10 +820,39 @@ describe('probability distribution plot example', () => {
 
       @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -546,10 +894,39 @@ describe('probability distribution plot example', () => {
 
       @group(0) @binding(0) var<storage, read> seedBuffer: array<f32>;
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {

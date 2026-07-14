@@ -28,7 +28,7 @@ const cpuImplNotAvailable = (prng: string, fn: string) => {
  * "Particle System in WebGPU" by Benedikt Peter
  */
 export const BPETER: StatefulGenerator = (() => {
-  const gpuSeed = tgpu.privateVar(d.vec2f);
+  const seed = tgpu.privateVar(d.vec2f);
 
   return {
     seed: tgpu.fn([d.f32])((value) => {
@@ -38,8 +38,7 @@ export const BPETER: StatefulGenerator = (() => {
       }
 
       const scrambled = scrambleSeed(value);
-      gpuSeed.$ =
-        d.vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16)))) * 2 - 1;
+      seed.$ = d.vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16)))) * 2 - 1;
     }),
 
     seed2: tgpu.fn([d.vec2f])((value) => {
@@ -49,7 +48,7 @@ export const BPETER: StatefulGenerator = (() => {
       }
 
       const scrambled = scrambleSeed2(value);
-      gpuSeed.$ =
+      seed.$ =
         d.vec2f(
           u32To01F32(hash(scrambled.x ^ scrambled.y)),
           u32To01F32(hash(rotl(scrambled.x, 16) ^ scrambled.y)),
@@ -65,7 +64,7 @@ export const BPETER: StatefulGenerator = (() => {
       }
 
       const scrambled = scrambleSeed3(value);
-      gpuSeed.$ =
+      seed.$ =
         d.vec2f(
           u32To01F32(hash(scrambled.x ^ rotl(scrambled.z, 16))),
           u32To01F32(hash(rotl(scrambled.y, 16) ^ scrambled.z)),
@@ -81,7 +80,7 @@ export const BPETER: StatefulGenerator = (() => {
       }
 
       const scrambled = scrambleSeed4(value);
-      gpuSeed.$ =
+      seed.$ =
         d.vec2f(
           u32To01F32(hash(scrambled.x ^ rotl(scrambled.z, 16) ^ rotl(scrambled.w, 8))),
           u32To01F32(hash(rotl(scrambled.y, 16) ^ scrambled.z ^ scrambled.w)),
@@ -96,11 +95,11 @@ export const BPETER: StatefulGenerator = (() => {
         cpuImplNotAvailable('BPETER', 'sample');
       }
 
-      const a = std.dot(gpuSeed.$, d.vec2f(23.14077926, 232.61690225));
-      const b = std.dot(gpuSeed.$, d.vec2f(54.47856553, 345.84153136));
-      gpuSeed.$.x = std.fract(std.cos(a) * 136.8168);
-      gpuSeed.$.y = std.fract(std.cos(b) * 534.7645);
-      return gpuSeed.$.y;
+      const a = std.dot(seed.$, d.vec2f(23.14077926, 232.61690225));
+      const b = std.dot(seed.$, d.vec2f(54.47856553, 345.84153136));
+      seed.$.x = std.fract(std.cos(a) * 136.8168);
+      seed.$.y = std.fract(std.cos(b) * 534.7645);
+      return seed.$.y;
     }).$name('sample'),
   };
 })();

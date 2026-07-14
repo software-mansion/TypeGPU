@@ -120,10 +120,40 @@ describe('uniformity test example', () => {
 
       @group(0) @binding(1) var<uniform> configUniform: Config;
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed2(value: vec2f) -> vec2u {
+        let u32Value = bitcast<vec2u>(value);
+        return vec2u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed2(value: vec2f) {
-        seed = value;
+        let scrambled = scrambleSeed2(value);
+        seed = ((vec2f(u32To01F32(hash((scrambled.x ^ scrambled.y))), u32To01F32(hash((rotl(scrambled.x, 16u) ^ scrambled.y)))) * 2f) - 1f);
       }
 
       fn randSeed2(seed: vec2f) {
@@ -180,27 +210,35 @@ describe('uniformity test example', () => {
       @group(0) @binding(1) var<uniform> configUniform: Config;
 
       fn hash(value: u32) -> u32 {
-        var x = (value ^ (value >> 17u));
-        x *= 3982152891u;
-        x ^= (x >> 11u);
-        x *= 2890668881u;
-        x ^= (x >> 15u);
-        x *= 830770091u;
-        x ^= (x >> 14u);
-        return x;
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed2(value: vec2f) -> vec2u {
+        let u32Value = bitcast<vec2u>(value);
+        return vec2u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)));
       }
 
       fn rotl(x: u32, k: u32) -> u32 {
         return ((x << k) | (x >> (32u - k)));
       }
 
-      var<private> seed: u32;
+      var<private> gpuSeed: u32;
 
       fn seed2(value: vec2f) {
-        let u32Value = bitcast<vec2u>(value);
-        let hx = hash((u32Value.x ^ 1253408251u));
-        let hy = hash((u32Value.y ^ 2900286023u));
-        seed = hash((hx ^ rotl(hy, 16u)));
+        let scrambled = scrambleSeed2(value);
+        let newSeed = (hash((scrambled.x ^ scrambled.y)) ^ hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
+        {
+          gpuSeed = newSeed;
+        }
       }
 
       fn randSeed2(seed: vec2f) {
@@ -215,8 +253,10 @@ describe('uniformity test example', () => {
       }
 
       fn sample() -> f32 {
-        seed = ((1664525u * seed) + 1013904223u);
-        return u32To01F32(seed);
+        {
+          gpuSeed = ((1664525u * gpuSeed) + 1013904223u);
+          return u32To01F32(gpuSeed);
+        }
       }
 
       fn randFloat01() -> f32 {
@@ -261,27 +301,35 @@ describe('uniformity test example', () => {
       @group(0) @binding(1) var<uniform> configUniform: Config;
 
       fn hash(value: u32) -> u32 {
-        var x = (value ^ (value >> 17u));
-        x *= 3982152891u;
-        x ^= (x >> 11u);
-        x *= 2890668881u;
-        x ^= (x >> 15u);
-        x *= 830770091u;
-        x ^= (x >> 14u);
-        return x;
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed2(value: vec2f) -> vec2u {
+        let u32Value = bitcast<vec2u>(value);
+        return vec2u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)));
       }
 
       fn rotl(x: u32, k: u32) -> u32 {
         return ((x << k) | (x >> (32u - k)));
       }
 
-      var<private> seed: vec2u;
+      var<private> gpuSeed: vec2u;
 
       fn seed2(value: vec2f) {
-        let u32Value = bitcast<vec2u>(value);
-        let hx = hash((u32Value.x ^ 1253408251u));
-        let hy = hash((u32Value.y ^ 2900286023u));
-        seed = vec2u(hash((hx ^ hy)), hash((rotl(hx, 16u) ^ hy)));
+        let scrambled = scrambleSeed2(value);
+        let newSeed = vec2u(hash((scrambled.x ^ scrambled.y)), hash((rotl(scrambled.x, 16u) ^ scrambled.y)));
+        {
+          gpuSeed = newSeed;
+        }
       }
 
       fn randSeed2(seed: vec2f) {
@@ -289,12 +337,14 @@ describe('uniformity test example', () => {
       }
 
       fn next() -> u32 {
-        let s0 = seed[0i];
-        var s1 = seed[1i];
-        s1 ^= s0;
-        seed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
-        seed[1i] = rotl(s1, 13u);
-        return (rotl((seed[0i] * 2654435771u), 5u) * 5u);
+        {
+          let s0 = gpuSeed[0i];
+          var s1 = gpuSeed[1i];
+          s1 ^= s0;
+          gpuSeed[0i] = ((rotl(s0, 26u) ^ s1) ^ (s1 << 9u));
+          gpuSeed[1i] = rotl(s1, 13u);
+          return (rotl((gpuSeed[0i] * 2654435771u), 5u) * 5u);
+        }
       }
 
       fn u32To01F32(value: u32) -> f32 {

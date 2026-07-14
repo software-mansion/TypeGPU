@@ -22,10 +22,39 @@ describe('slime mold 3d example', () => {
     expect(shaderCodes).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -121,10 +150,39 @@ describe('slime mold 3d example', () => {
         textureStore(newState, gid.xyz, vec4f(newValue, 0f, 0f, 1f));
       }
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed(value: f32) -> u32 {
+        return hash((bitcast<u32>(value) ^ 1253408251u));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed_1(value: f32) {
-        seed = vec2f(value, 0f);
+        let scrambled = scrambleSeed(value);
+        seed = ((vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16u)))) * 2f) - 1f);
       }
 
       fn randSeed(seed: f32) {
@@ -382,10 +440,40 @@ describe('slime mold 3d example', () => {
         return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
       }
 
+      fn hash(value: u32) -> u32 {
+        {
+          var x = (value ^ (value >> 17u));
+          x *= 3982152891u;
+          x ^= (x >> 11u);
+          x *= 2890668881u;
+          x ^= (x >> 15u);
+          x *= 830770091u;
+          x ^= (x >> 14u);
+          return x;
+        }
+      }
+
+      fn scrambleSeed2(value: vec2f) -> vec2u {
+        let u32Value = bitcast<vec2u>(value);
+        return vec2u(hash((u32Value.x ^ 1253408251u)), hash((u32Value.y ^ 2900286023u)));
+      }
+
+      fn u32To01F32(value: u32) -> f32 {
+        let mantissa = (value & 8388607u);
+        let bits = (1065353216u | mantissa);
+        let f = bitcast<f32>(bits);
+        return (f - 1f);
+      }
+
+      fn rotl(x: u32, k: u32) -> u32 {
+        return ((x << k) | (x >> (32u - k)));
+      }
+
       var<private> seed: vec2f;
 
       fn seed2(value: vec2f) {
-        seed = value;
+        let scrambled = scrambleSeed2(value);
+        seed = ((vec2f(u32To01F32(hash((scrambled.x ^ scrambled.y))), u32To01F32(hash((rotl(scrambled.x, 16u) ^ scrambled.y)))) * 2f) - 1f);
       }
 
       fn randSeed2(seed: vec2f) {
