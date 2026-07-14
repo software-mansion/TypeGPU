@@ -62,15 +62,13 @@ export function extractSnippetFromFn(cb: TgpuFn | (() => unknown)): Snippet {
 }
 
 export function expectSnippetOf(
-  cb: TgpuFn | (() => unknown),
+  cb: () => unknown,
 ): Assertion<[unknown, d.BaseData | UnknownData, Origin]> {
   const snippet = extractSnippetFromFn(cb);
   return expect([snippet.value, snippet.dataType, snippet.origin]);
 }
 
-export function expectDataTypeOf(
-  cb: TgpuFn | (() => unknown),
-): Assertion<d.BaseData | UnknownData> {
+export function expectDataTypeOf(cb: () => unknown): Assertion<d.BaseData | UnknownData> {
   return expect<d.BaseData | UnknownData>(extractSnippetFromFn(cb).dataType);
 }
 

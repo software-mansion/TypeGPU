@@ -1,6 +1,6 @@
 import { type AnyData, isData } from '../../data/dataTypes.ts';
 import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
-import { isSnippet, type ResolvedSnippet, snip, withValue } from '../../data/snippet.ts';
+import { isSnippet, type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { getResolutionCtx, inCodegenMode } from '../../execMode.ts';
 import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
@@ -29,6 +29,14 @@ import type { TgpuAccessor, TgpuMutableAccessor, TgpuSlot } from './slotTypes.ts
 // ----------
 // Public API
 // ----------
+export function accessor<T extends AnyData>(
+  schema: T,
+  defaultValue?: TgpuAccessor.In<NoInfer<T>>,
+): TgpuAccessor<UnwrapRuntimeConstructor<T>>;
+export function accessor<T extends (count: number) => AnyData>(
+  schema: T,
+  defaultValue?: TgpuAccessor.In<NoInfer<T>>,
+): TgpuAccessor<UnwrapRuntimeConstructor<T>>;
 export function accessor<T extends AnyData | ((count: number) => AnyData)>(
   schemaOrConstructor: T,
   defaultValue?: TgpuAccessor.In<NoInfer<T>>,
@@ -38,6 +46,14 @@ export function accessor<T extends AnyData | ((count: number) => AnyData)>(
   >;
 }
 
+export function mutableAccessor<T extends AnyData>(
+  schema: T,
+  defaultValue?: TgpuMutableAccessor.In<NoInfer<T>>,
+): TgpuMutableAccessor<UnwrapRuntimeConstructor<T>>;
+export function mutableAccessor<T extends (count: number) => AnyData>(
+  schema: T,
+  defaultValue?: TgpuMutableAccessor.In<NoInfer<T>>,
+): TgpuMutableAccessor<UnwrapRuntimeConstructor<T>>;
 export function mutableAccessor<T extends AnyData | ((count: number) => AnyData)>(
   schemaOrConstructor: T,
   defaultValue?: TgpuMutableAccessor.In<NoInfer<T>>,
@@ -158,13 +174,8 @@ abstract class AccessorBase<
 
   abstract readonly $: InferGPU<T>;
 
-  get value(): InferGPU<T> {
-    return this.$;
-  }
-
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const snippet = this.#createSnippet();
-    return ctx.resolveSnippet(snippet);
+    return ctx.resolveSnippet(this.#createSnippet());
   }
 }
 

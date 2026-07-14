@@ -75,10 +75,6 @@ export class TgpuExternalTextureImpl implements TgpuExternalTexture, SelfResolva
     );
   }
 
-  get value(): Infer<WgslExternalTexture> {
-    return this.$;
-  }
-
   toString() {
     return `textureExternal:${getName(this) ?? '<unnamed>'}`;
   }

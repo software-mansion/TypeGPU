@@ -1175,11 +1175,125 @@ describe('tgsl fn when using plugin', () => {
     };
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-      "const myConst: u32 = 1u;
+      "const EXT_myConst: u32 = 1u;
 
       fn fn_1() -> u32 {
-        return myConst;
+        return EXT_myConst;
       }"
+    `);
+  });
+
+  it("does not name externals that shouldn't be named", () => {
+    const Schema = (() =>
+      d.struct({ p: (() => d.struct({ q: (() => d.struct({ r: d.u32 }))() }))() }))();
+    const fn = () => {
+      'use gpu';
+      return Schema();
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "struct item_1 {
+        r: u32,
+      }
+
+      struct item {
+        q: item_1,
+      }
+
+      struct Schema {
+        p: item,
+      }
+
+      fn fn_1() -> Schema {
+        return Schema();
+      }"
+    `);
+  });
+
+  it('does not name slot values after the slot', () => {
+    const functionSlot = tgpu.slot(tgpu.fn([])(() => {}));
+
+    const fn = () => {
+      'use gpu';
+      functionSlot.$();
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn item() {
+
+      }
+
+      fn fn_1() {
+        item();
+      }"
+    `);
+  });
+});
+
+describe('string injection', () => {
+  it('is forbidden directly', () => {
+    const fn = () => {
+      'use gpu';
+      const x = 1;
+      ('call()');
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+
+  it('is forbidden via direct externals', () => {
+    const call = 'call()';
+
+    const fn = () => {
+      'use gpu';
+      const x = 1;
+      call;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+
+  it('is forbidden via indirect externals', () => {
+    const call = ['call()'];
+
+    const fn = () => {
+      'use gpu';
+      const x = 1;
+      call[0];
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+
+  it('is forbidden via slots', () => {
+    const slot = tgpu.slot('call()');
+
+    const fn = () => {
+      'use gpu';
+      const x = 1;
+      slot.$;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
     `);
   });
 });

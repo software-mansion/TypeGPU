@@ -567,21 +567,43 @@ describe('struct', () => {
     const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
     const Bird = d.struct({ pos: d.vec2u, id: d.u32 });
 
-    const reallyExpensiveAndAlsoModifiedPrivateVarsBtw = () => {
+    const counter = tgpu.privateVar(d.u32, 0);
+    function getNextCounter() {
       'use gpu';
-      return Boid();
-    };
+      counter.$++;
+      return counter.$;
+    }
 
-    const main = () => {
+    function getNewBoid() {
       'use gpu';
-      const bird = Bird(reallyExpensiveAndAlsoModifiedPrivateVarsBtw());
-    };
+      return Boid({ pos: d.vec2u(), id: getNextCounter() });
+    }
+
+    function main() {
+      'use gpu';
+      const bird = Bird(getNewBoid());
+    }
 
     expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
       - fn*:main(): Cannot resolve struct cast from 'Boid' to 'Bird'. Store the value to a variable first, then cast it.]
+    `);
+
+    function main2() {
+      'use gpu';
+      const boids = d.arrayOf(Boid, 2)();
+      // Should fail, because even though `boids[getNextCounter()]` is an alias for an existing
+      // value, the expression has side-effects (increments counter).
+      const bird = Bird(boids[getNextCounter()]!);
+    }
+
+    expect(() => tgpu.resolve([main2])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main2
+      - fn*:main2(): Cannot resolve struct cast from 'Boid' to 'Bird'. Store the value to a variable first, then cast it.]
     `);
   });
 

@@ -1,5 +1,5 @@
-import { isBuffer, type TgpuBuffer, type UniformFlag } from './core/buffer/buffer.ts';
-import { isUsableAsUniform, TgpuLaidOutBufferImpl } from './core/buffer/bufferUsage.ts';
+import { type TgpuBuffer, type UniformFlag } from './core/buffer/buffer.ts';
+import { isBuffer, isUsableAsStorage, isUsableAsUniform } from './types.ts';
 import {
   isComparisonSampler,
   isSampler,
@@ -32,7 +32,7 @@ import {
 } from './data/texture.ts';
 import type { AnyWgslData, BaseData } from './data/wgslTypes.ts';
 import { invariant, NotUniformError } from './errors.ts';
-import { isUsableAsStorage, NotStorageError, type StorageFlag } from './extension.ts';
+import { NotStorageError, type StorageFlag } from './extension.ts';
 import type { TgpuNamable } from './shared/meta.ts';
 import { getName, setName } from './shared/meta.ts';
 import type { InferGPU, MemIdentity } from './shared/repr.ts';
@@ -42,6 +42,7 @@ import type { NullableToOptional, Prettify } from './shared/utilityTypes.ts';
 import type { ResolvableObject, TgpuShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
 import type { WgslComparisonSampler, WgslSampler } from './data/sampler.ts';
+import { TgpuLaidOutBufferImpl } from './core/buffer/laidOutBuffer.ts';
 
 // ----------
 // Public API
@@ -123,12 +124,6 @@ export interface TgpuBindGroupLayout<
   readonly resourceType: 'bind-group-layout';
   readonly entries: Entries;
   readonly [$gpuValueOf]: {
-    [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
-  };
-  /**
-   * @deprecated Use `.$` instead, works the same way.
-   */
-  readonly value: {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
   readonly $: {
@@ -265,11 +260,7 @@ class TgpuBindGroupLayoutImpl<
   readonly [$internal]: ResolvableObject[];
   readonly resourceType = 'bind-group-layout' as const;
 
-  readonly value = {} as {
-    [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
-  };
-
-  readonly $ = this.value as {
+  readonly $ = {} as {
     [K in keyof Entries]: InferLayoutEntry<Entries[K]>;
   };
 
@@ -323,7 +314,7 @@ class TgpuBindGroupLayoutImpl<
       }
 
       invariant(item !== undefined, 'Internal error, expected item to be defined');
-      Object.defineProperty(this.value, key, {
+      Object.defineProperty(this.$, key, {
         get: () => {
           return item.$;
         },

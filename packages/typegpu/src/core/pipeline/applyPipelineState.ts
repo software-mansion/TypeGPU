@@ -3,7 +3,8 @@ import {
   type TgpuBindGroup,
   type TgpuBindGroupLayout,
 } from '../../tgpuBindGroupLayout.ts';
-import { isBuffer, type TgpuBuffer, type VertexFlag } from '../buffer/buffer.ts';
+import { type TgpuBuffer, type VertexFlag } from '../buffer/buffer.ts';
+import { isBuffer } from '../../types.ts';
 import { MissingBindGroupsError, MissingVertexBuffersError } from '../../errors.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 

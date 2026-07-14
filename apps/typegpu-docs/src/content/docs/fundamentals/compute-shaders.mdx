@@ -159,7 +159,7 @@ const bindGroupLayout = tgpu.bindGroupLayout({
 
 Each key in the bind group layout maps to a single resource. For the buffer resources we have explored so far, the equivalent layout entries look like this:
 
-| Fixed Resources shorthand | Laid Out Resources entry |
+| Buffer binding | Layout entry |
 | --- | --- |
 | `root.createUniform(d.u32)` | `{ uniform: d.u32 }` |
 | `root.createReadonly(d.u32)` | `{ storage: d.u32 }` |
