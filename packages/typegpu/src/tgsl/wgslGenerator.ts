@@ -345,10 +345,9 @@ ${this.ctx.pre}}`;
       const [_, lhs, op, rhs] = expression;
       const lhsExpr = this._expression(lhs);
 
-      const castToBool = wgsl.isBool(this.ctx.expectedType);
-
       // Short Circuit Evaluation
       if (isKnownAtComptime(lhsExpr)) {
+        const castToBool = wgsl.isBool(this.ctx.expectedType);
         const evalRhs = op === '&&' ? lhsExpr.value : !lhsExpr.value;
 
         if (!evalRhs) {
