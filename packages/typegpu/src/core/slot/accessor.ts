@@ -163,12 +163,7 @@ abstract class AccessorBase<
   abstract readonly $: InferGPU<T>;
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const snippet = this.#createSnippet();
-    return snip(
-      ctx.resolve(snippet.value, snippet.dataType).value,
-      snippet.dataType as T,
-      snippet.origin,
-    );
+    return ctx.resolveSnippet(this.#createSnippet());
   }
 }
 
