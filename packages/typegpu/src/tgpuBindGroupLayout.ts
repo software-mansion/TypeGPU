@@ -47,7 +47,12 @@ import {
   isMutableBinding,
   isReadonlyBinding,
   isUniformBinding,
+  type TgpuBufferBinding,
+  type TgpuMutable,
+  type TgpuReadonly,
+  type TgpuUniform,
 } from './core/buffer/bufferBinding.ts';
+import type { AnyData } from './data/dataTypes.ts';
 
 // ----------
 // Public API
@@ -162,7 +167,8 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   // Widest type
   TgpuLayoutEntry | null extends T
     ?
-        | TgpuBuffer<AnyWgslData>
+        | TgpuBuffer<AnyWgslData> // TODO: investigate
+        | TgpuBufferBinding<AnyData>
         | GPUBuffer
         | TgpuSampler
         | GPUSampler
@@ -172,10 +178,16 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
         | GPUExternalTexture
     : // Strict type-checking
       T extends TgpuLayoutUniform
-      ? (TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>> & UniformFlag) | GPUBuffer
+      ?
+          | (TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>> & UniformFlag)
+          | TgpuUniform<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>>
+          | GPUBuffer
       : T extends TgpuLayoutStorage
         ?
             | (TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>> & StorageFlag)
+            | (T extends { access: 'mutable' }
+                ? TgpuMutable<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>>
+                : TgpuReadonly<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>>)
             | GPUBuffer
         : T extends TgpuLayoutSampler
           ? TgpuSampler | GPUSampler
