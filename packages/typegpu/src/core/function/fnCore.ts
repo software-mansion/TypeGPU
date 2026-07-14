@@ -11,6 +11,7 @@ import {
   replaceExternalsInWgsl,
   mergeFunctionExternals,
 } from '../resolve/externals.ts';
+import { ResolvableString } from '../resolve/resolvableString.ts';
 import { extractArgs } from './extractArgs.ts';
 import type { Implementation, SeparatedEntryArgs } from './fnTypes.ts';
 
@@ -127,7 +128,10 @@ export function createFnCore(
 
           this.setExternals('args', {
             in: Object.fromEntries(
-              entryInput.positionalArgs.map((a) => [a.schemaKey, a.schemaKey]),
+              entryInput.positionalArgs.map((a) => [
+                a.schemaKey,
+                new ResolvableString(a.schemaKey),
+              ]),
             ),
           });
         }

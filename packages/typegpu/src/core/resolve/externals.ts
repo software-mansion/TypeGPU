@@ -110,7 +110,7 @@ export function replaceExternalsInWgsl(
 
     for (const [i, elem] of chain.entries()) {
       currentItem = (currentItem as ExternalMap)[elem];
-      if (isResolvable(currentItem)) {
+      if (isResolvable(currentItem) || typeof currentItem === 'string') {
         suffix = chain
           .slice(i + 1)
           .map((s) => `.${s}`)
