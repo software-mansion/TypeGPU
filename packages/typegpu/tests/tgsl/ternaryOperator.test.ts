@@ -181,7 +181,7 @@ describe('ternary operator', () => {
     `);
   });
 
-  it('should throw when test cannot be converted to bool', () => {
+  it('should throw when condition cannot be converted to bool', () => {
     const myFn = tgpu.fn(
       [d.vec3f, d.u32],
       d.u32,

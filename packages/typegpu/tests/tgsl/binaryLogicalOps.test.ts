@@ -411,8 +411,9 @@ describe('binaryLogicalOps', () => {
         const f = () => {
           'use gpu';
           let res = -1;
-          // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+
           if (
+            // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
             getTrackedBool() ||
             true ||
             getTrackedBool() ||
@@ -506,8 +507,8 @@ describe('binaryLogicalOps', () => {
         const f = () => {
           'use gpu';
           let res = -1;
-          // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
           if (
+            // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
             getTrackedBool() &&
             false &&
             getTrackedBool() &&

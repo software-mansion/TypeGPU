@@ -345,18 +345,24 @@ ${this.ctx.pre}}`;
       const [_, lhs, op, rhs] = expression;
       const lhsExpr = this._expression(lhs);
 
+      const castToBool = wgsl.isBool(this.ctx.expectedType);
+
       // Short Circuit Evaluation
       if (isKnownAtComptime(lhsExpr)) {
         const evalRhs = op === '&&' ? lhsExpr.value : !lhsExpr.value;
 
         if (!evalRhs) {
-          return coerceToSnippet(lhsExpr.value);
+          return castToBool
+            ? snip(op === '||', bool, 'constant', false)
+            : coerceToSnippet(lhsExpr.value);
         }
 
         const rhsExpr = this._expression(rhs);
 
         if (isKnownAtComptime(rhsExpr)) {
-          return coerceToSnippet(rhsExpr.value);
+          return castToBool
+            ? snip(!!rhsExpr.value, bool, 'constant', false)
+            : coerceToSnippet(rhsExpr.value);
         }
 
         if (rhsExpr.dataType === UnknownData) {
@@ -396,8 +402,13 @@ ${this.ctx.pre}}`;
         );
       }
 
-      // hardcoded parentheses - operators not present in `pare`
-      return snip(`(${lhsStr} ${op} ${rhsStr})`, bool, /* origin */ 'runtime');
+      // hardcoded parentheses - operators not present in `parenthesizedOps`
+      return snip(
+        `(${lhsStr} ${op} ${rhsStr})`,
+        bool,
+        'runtime',
+        lhsExpr.possibleSideEffects || rhsExpr.possibleSideEffects,
+      );
     }
 
     if (expression[0] === NODE.binaryExpr || expression[0] === NODE.assignmentExpr) {

@@ -486,6 +486,22 @@ describe('code without side-effects', () => {
       return !impureStruct();
     }).toEqual(false);
   });
+
+  test('operators && and || with pure runtime operands', () => {
+    expectSideEffects(() => {
+      'use gpu';
+      const b1 = false;
+      const b2 = true;
+      return b1 && b2;
+    }).toEqual(false);
+
+    expectSideEffects(() => {
+      'use gpu';
+      const b1 = false;
+      const b2 = true;
+      return b1 || b2;
+    }).toEqual(false);
+  });
 });
 
 describe('code with side-effects', () => {
@@ -619,6 +635,20 @@ describe('code with side-effects', () => {
     expectSideEffects(() => {
       'use gpu';
       return arr.$[impureInt()];
+    }).toEqual(true);
+  });
+
+  test('operators && and || with impure runtime operand', () => {
+    expectSideEffects(() => {
+      'use gpu';
+      const b1 = false;
+      return b1 && impureBool();
+    }).toEqual(true);
+
+    expectSideEffects(() => {
+      'use gpu';
+      const b1 = false;
+      return impureBool() || b1;
     }).toEqual(true);
   });
 });
