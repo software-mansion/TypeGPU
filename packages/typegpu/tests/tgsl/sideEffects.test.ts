@@ -5,24 +5,31 @@ import { expectSideEffects } from '../utils/parseResolved.ts';
 
 const Boid = d.struct({ pos: d.vec3f });
 
+const impuritySource = tgpu.privateVar(d.bool);
+
 const impureVec = () => {
   'use gpu';
+  impuritySource.$ = true;
   return d.vec3f(6, 6, 6);
 };
 const impureInt = () => {
   'use gpu';
+  impuritySource.$ = true;
   return 666;
 };
 const impureMat = () => {
   'use gpu';
+  impuritySource.$ = true;
   return d.mat2x2f(6, 6, 6, 6);
 };
 const impureStruct = () => {
   'use gpu';
+  impuritySource.$ = true;
   return Boid();
 };
 const impureBool = () => {
   'use gpu';
+  impuritySource.$ = true;
   return true;
 };
 
