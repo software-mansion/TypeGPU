@@ -123,15 +123,19 @@ export const XOROSHIRO64STARSTAR: StatefulGenerator = (() => {
     if (std.isBeingTranspiled()) {
       const s0 = gpuSeed.$[0];
       let s1 = gpuSeed.$[1];
+
       s1 ^= s0;
       gpuSeed.$[0] = rotl(s0, 26) ^ s1 ^ (s1 << 9);
       gpuSeed.$[1] = rotl(s1, 13);
+
       return rotl(gpuSeed.$[0] * 0x9e3779bb, 5) * 5;
     } else {
       const s0 = cpuSeed[0];
       let s1 = cpuSeed[1];
+
       s1 ^= s0;
       updateCpuSeed(d.vec2u(rotl(s0, 26) ^ s1 ^ (s1 << 9), rotl(s1, 13)));
+
       const temp = Math.imul(cpuSeed[0], 0x9e3779bb);
       return Math.imul(rotl(temp, 5), 5);
     }

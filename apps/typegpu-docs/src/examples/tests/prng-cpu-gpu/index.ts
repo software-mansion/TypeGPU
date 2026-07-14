@@ -12,8 +12,7 @@ const generators = {
 } as const;
 const seedFns = ['seed', 'seed2', 'seed3', 'seed4'] as const;
 
-const valueColorClass = (value: number): 'good' | 'warn' | 'bad' =>
-  value <= 1e-6 ? 'good' : 'bad';
+const valueColorClass = (value: number): 'good' | 'bad' => (value <= 1e-6 ? 'good' : 'bad');
 
 const root = await tgpu.init();
 const seedsArrayBuffer = new Float32Array(SEEDS * 4);

@@ -30,7 +30,7 @@ export function quinticDerivative(t: d.vecBase): d.vecBase {
 }
 
 /**
- * Left circular shif of x by k positions to the left.
+ * Left circular shift of x by k positions to the left.
  */
 export const rotl = tgpu.fn(
   [d.u32, d.u32],
