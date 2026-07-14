@@ -10,9 +10,7 @@ const generators = {
   LCG32: LCG32,
   BPETER: BPETER,
 } as const;
-
-type SeedFn = 'seed' | 'seed2' | 'seed3' | 'seed4';
-const seedFns: SeedFn[] = ['seed', 'seed2', 'seed3', 'seed4'];
+const seedFns = ['seed', 'seed2', 'seed3', 'seed4'] as const;
 
 const valueColorClass = (value: number): 'good' | 'warn' | 'bad' =>
   value <= 1e-6 ? 'good' : 'bad';
