@@ -20,7 +20,7 @@ fn fs_main() -> @location(0) vec4<f32> {
   return vec4<f32>(1.0, 0.0, 0.0, 1.0);
 }`;
 
-export const DEFAULT_TGSL = `import tgpu, { d } from 'typegpu';
+export const DEFAULT_TGSL = `import { tgpu, d } from 'typegpu';
 
 const Particle = d.struct({
   position: d.vec3f,

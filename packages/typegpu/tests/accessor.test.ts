@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf } from 'vitest';
-import tgpu, { d, std, type TgpuAccessor } from '../src/index.js';
+import { tgpu, d, std, type TgpuAccessor } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 const RED = d.vec3f(1, 0, 0);
@@ -168,6 +168,34 @@ describe('tgpu.accessor', () => {
         const colorX = 1f;
         let color2X = redUniform.x;
         let color3X = getColor().x;
+      }"
+    `);
+  });
+
+  it('prunes unused functions', () => {
+    const helper = () => {
+      'use gpu';
+      return 2;
+    };
+    const helperAccess = tgpu.accessor(d.u32, helper);
+
+    const ctx = {
+      get helper() {
+        return helperAccess.$;
+      },
+    };
+
+    const main = () => {
+      'use gpu';
+      if (2 + 2 === 5) {
+        return ctx.helper;
+      }
+      return 0;
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        return 0;
       }"
     `);
   });
@@ -532,5 +560,10 @@ describe('tgpu.accessor', () => {
         return (f32(counterMutable) / 2f);
       }"
     `);
+  });
+
+  it('correctly infers input type from array schema', () => {
+    const accessor = tgpu.accessor(d.arrayOf(d.u32, 1), d.arrayOf(d.u32, 1)([1]));
+    expectTypeOf(accessor).toEqualTypeOf<TgpuAccessor<d.WgslArray<d.U32>>>();
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import { expectDataTypeOf } from '../utils/parseResolved.ts';
-import tgpu, { d } from '../../src/index.js';
+import { tgpu, d } from 'typegpu';
 
 describe('convertToCommonType', () => {
   it('converts identical types', () => {
@@ -51,15 +51,17 @@ describe('convertToCommonType', () => {
   });
 
   it('performs pointer dereferencing', () => {
-    const fn = tgpu.fn(
-      [d.ptrFn(d.f32)],
-      d.f32,
-    )((a) => {
-      const t = [a.$, d.f32(2)];
+    function fn(a: d.ref<number>) {
+      'use gpu';
+      const t = [a.$, d.f32(2)]; // <- should convert all elements to f32
       return t[0] as number;
-    });
+    }
 
-    expectDataTypeOf(fn).toBe(d.f32);
+    expectDataTypeOf(() => {
+      'use gpu';
+      const numRef = d.ref(1);
+      return fn(numRef);
+    }).toBe(d.f32);
   });
 
   it('returns undefined for incompatible types', () => {

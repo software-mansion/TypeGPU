@@ -1,17 +1,14 @@
 import { describe, expect, expectTypeOf } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import { textureLoad } from '../../../src/std/texture.ts';
-import tgpu from '../../../src/index.js';
-import * as d from '../../../src/data/index.ts';
-import { bindGroupLayout } from '../../../src/tgpuBindGroupLayout.ts';
-import { resolve } from '../../../src/core/resolve/tgpuResolve.ts';
+import { textureLoad } from 'typegpu/std';
+import { tgpu, d } from 'typegpu';
 
 // we need this since all other usages will be removed by plugin
 expectTypeOf(() => {});
 
 describe('textureLoad', () => {
   it('Has correct signatures for sampled and depth textures', () => {
-    const testLayout = bindGroupLayout({
+    const testLayout = tgpu.bindGroupLayout({
       tex1d: { texture: d.texture1d() },
       tex2d: { texture: d.texture2d() },
       tex2d_u32: { texture: d.texture2d(d.u32) },
@@ -62,7 +59,7 @@ describe('textureLoad', () => {
       }
     });
 
-    expect(resolve([testFn])).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var tex1d: texture_1d<f32>;
 
       @group(0) @binding(1) var tex2d: texture_2d<f32>;
@@ -105,7 +102,7 @@ describe('textureLoad', () => {
   });
 
   it('Has correct signatures for storage textures', () => {
-    const testLayout = bindGroupLayout({
+    const testLayout = tgpu.bindGroupLayout({
       store1d: { storageTexture: d.textureStorage1d('rgba32float', 'read-only') },
       store2d: { storageTexture: d.textureStorage2d('rgba32float', 'read-only') },
       store2d_uint: { storageTexture: d.textureStorage2d('rgba32uint', 'read-only') },
@@ -137,7 +134,7 @@ describe('textureLoad', () => {
       }
     });
 
-    expect(resolve([testFn])).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var store1d: texture_storage_1d<rgba32float, read>;
 
       @group(0) @binding(1) var store2d: texture_storage_2d<rgba32float, read>;
@@ -166,7 +163,7 @@ describe('textureLoad', () => {
   });
 
   it('Has correct signatures for external textures', () => {
-    const testLayout = bindGroupLayout({
+    const testLayout = tgpu.bindGroupLayout({
       texExternal: { externalTexture: d.textureExternal() },
     });
 
@@ -180,7 +177,7 @@ describe('textureLoad', () => {
       }
     });
 
-    expect(resolve([testFn])).toMatchInlineSnapshot(`
+    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var texExternal: texture_external;
 
       fn testFn() {
@@ -199,7 +196,7 @@ describe('textureLoad', () => {
       .$usage('sampled');
     const sampledView = someTexture.createView(d.texture2d());
 
-    const someLayout = bindGroupLayout({
+    const someLayout = tgpu.bindGroupLayout({
       tex2d: { texture: d.texture2d() },
     });
 

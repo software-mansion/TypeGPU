@@ -53,14 +53,14 @@ async function runNonInteractiveEnhance(
 export async function enhanceProject(cwd: string, options?: EnhanceProjectOptions) {
   p.intro('Enhancing project with TypeGPU.');
 
-  const detected = await detect({ cwd });
-  let pmAgent = options?.packageManager ?? detected?.agent;
-  if (!pmAgent && process.env.npm_config_user_agent) {
-    pmAgent = pmFromUserAgent(process.env.npm_config_user_agent);
-  }
+  const userAgentPm = process.env.npm_config_user_agent
+    ? pmFromUserAgent(process.env.npm_config_user_agent)
+    : undefined;
+  const pmAgent = options?.packageManager ?? userAgentPm ?? (await detect({ cwd: cwd }))?.agent;
   if (!pmAgent) {
     failAndExit('Could not detect package manager. Pass --package-manager <pm>.');
   }
+
   p.log.info(`Detected package manager: ${pmAgent}.`);
 
   const pkgPath = path.join(cwd, 'package.json');

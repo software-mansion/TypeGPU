@@ -112,6 +112,9 @@ importers:
       pkg-pr-new:
         specifier: ^0.0.66
         version: 0.0.66
+      typegpu-testing-utility:
+        specifier: workspace:*
+        version: link:packages/typegpu-testing-utility
       typescript:
         specifier: npm:tsover@^6.0.2
         version: tsover@6.0.2
@@ -650,15 +653,18 @@ importers:
       arktype:
         specifier: 'catalog:'
         version: 2.1.28
+      bun:
+        specifier: 'catalog:'
+        version: 1.3.10
+      consola:
+        specifier: ^3.4.0
+        version: 3.4.0
       jiti:
         specifier: catalog:build
         version: 2.6.1
       jsdom:
         specifier: ^27.0.0
         version: 27.0.0(postcss@8.5.8)
-      tsdown:
-        specifier: catalog:build
-        version: 0.15.12(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))
       typegpu-testing-utility:
         specifier: workspace:*
         version: link:../typegpu-testing-utility

@@ -85,21 +85,17 @@ describe('meta', () => {
   });
 
   it('correctly parses deferred externals v2', () => {
-    const EXT = { N: tgpu.const(d.u32, 1) };
+    const EXT = { O: { N: tgpu.const(d.u32, 1) } };
     const fn = () => {
-      let a = EXT.N.$;
+      let a = EXT.O.N.$;
     };
     const meta: RawMetadataV2 = {
       v: 2,
       name: 'fn',
-      externals: { EXT: { N: { $: () => EXT.N.$ } } },
+      externals: { 'EXT.O.N': () => EXT.O.N },
       ast: {
         params: [],
-        body: [
-          NODE.block,
-          [[NODE.let, 'a', [NODE.memberAccess, [NODE.memberAccess, 'EXT', 'N'], '$']]],
-        ],
-        externalNames: ['EXT'],
+        body: [NODE.block, [[NODE.let, 'a', [NODE.memberAccess, 'EXT.O.N', '$']]]],
       },
     };
     assignMetadata(fn, meta);
@@ -187,7 +183,6 @@ describe('meta', () => {
       ast: {
         params: [],
         body: [NODE.block, [[NODE.return, 'a']]],
-        externalNames: ['a'],
       },
     };
     assignMetadata(fn, meta);

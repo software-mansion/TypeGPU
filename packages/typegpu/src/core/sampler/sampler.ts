@@ -30,8 +30,9 @@ export interface TgpuSampler {
   readonly schema: WgslSampler;
 
   readonly [$gpuValueOf]: Infer<WgslSampler>;
-  value: Infer<WgslSampler>;
   $: Infer<WgslSampler>;
+
+  toString(): string;
 }
 
 export interface TgpuComparisonSampler {
@@ -40,8 +41,9 @@ export interface TgpuComparisonSampler {
   readonly schema: WgslComparisonSampler;
 
   readonly [$gpuValueOf]: Infer<WgslComparisonSampler>;
-  value: Infer<WgslComparisonSampler>;
   $: Infer<WgslComparisonSampler>;
+
+  toString(): string;
 }
 
 export interface TgpuFixedSampler extends TgpuSampler, TgpuNamable {}
@@ -136,10 +138,6 @@ export class TgpuLaidOutSamplerImpl<
     );
   }
 
-  get value(): Infer<T> {
-    return this.$;
-  }
-
   toString() {
     return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
@@ -225,10 +223,6 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
     throw new Error(
       'Direct access to sampler values is possible only as part of a compute dispatch or draw call.',
     );
-  }
-
-  get value(): Infer<T> {
-    return this.$;
   }
 
   $name(label: string) {

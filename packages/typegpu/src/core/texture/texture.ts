@@ -7,6 +7,7 @@ import {
   type WgslTextureProps,
 } from '../../data/texture.ts';
 import { inCodegenMode } from '../../execMode.ts';
+import type { StorageFlag } from '../../extension.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { F32, Vec4f, Vec4i, Vec4u } from '../../data/wgslTypes.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -25,7 +26,12 @@ import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import type { TextureProps } from './textureProps.ts';
-import type { AllowedUsages, LiteralToExtensionMap } from './usageExtension.ts';
+import type {
+  AllowedUsages,
+  LiteralToExtensionMap,
+  RenderFlag,
+  SampledFlag,
+} from './usageExtension.ts';
 import { generateTextureMipmaps, getImageSourceDimensions, resampleImage } from './textureUtils.ts';
 
 export type TextureInternals = {
@@ -142,6 +148,7 @@ export interface TgpuTexture<TProps extends TextureProps = any> extends TgpuNama
   $usage<T extends AllowedUsages<TProps>[]>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToExtensionMap[T[number]]>;
+  $overrideFlags(flags: GPUTextureUsageFlags): this & StorageFlag & SampledFlag & RenderFlag;
 
   createView(
     ...args: this['usableAsSampled'] extends true
@@ -179,8 +186,9 @@ export interface TgpuTextureView<
   readonly size?: number[] | undefined;
 
   readonly [$gpuValueOf]: Infer<TSchema>;
-  value: Infer<TSchema>;
   $: Infer<TSchema>;
+
+  toString(): string;
 }
 
 export interface TgpuTextureRenderView {
@@ -222,6 +230,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
   #formatInfo: TextureFormatInfo;
   #destroyed = false;
   #flags = GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC;
+  #flagsOverridden = false;
   #texture: GPUTexture | null = null;
   #branch: ExperimentalTgpuRoot;
 
@@ -263,20 +272,51 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     return this;
   }
 
-  $usage<T extends ('sampled' | 'storage' | 'render')[]>(
+  $usage<T extends ('sampled' | 'storage' | 'render' | 'transient')[]>(
     ...usages: T
   ): this & UnionToIntersection<LiteralToExtensionMap[T[number]]> {
+    if (this.#flagsOverridden) {
+      throw new Error('Cannot call $usage() after $overrideFlags().');
+    }
+
     const hasStorage = usages.includes('storage');
     const hasSampled = usages.includes('sampled');
     const hasRender = usages.includes('render');
-    this.#flags |= hasSampled ? GPUTextureUsage.TEXTURE_BINDING : 0;
-    this.#flags |= hasStorage ? GPUTextureUsage.STORAGE_BINDING : 0;
-    this.#flags |= hasRender ? GPUTextureUsage.RENDER_ATTACHMENT : 0;
+    const hasTransient = usages.includes('transient');
+
+    const bindingFlags =
+      (hasSampled ? GPUTextureUsage.TEXTURE_BINDING : 0) |
+      (hasStorage ? GPUTextureUsage.STORAGE_BINDING : 0);
+    const transientFlags = GPUTextureUsage.TRANSIENT_ATTACHMENT | GPUTextureUsage.RENDER_ATTACHMENT;
+    const nextFlags =
+      this.#flags | bindingFlags | (hasRender ? GPUTextureUsage.RENDER_ATTACHMENT : 0);
+
+    const hasTransientUsage =
+      hasTransient || !!(this.#flags & GPUTextureUsage.TRANSIENT_ATTACHMENT);
+    const hasSampledOrStorageUsage = !!(
+      nextFlags &
+      (GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING)
+    );
+
+    if (hasTransientUsage && hasSampledOrStorageUsage) {
+      throw new Error("Transient texture usage cannot be combined with 'sampled' or 'storage'.");
+    }
+
+    this.#flags = hasTransient ? transientFlags : nextFlags;
     this.usableAsStorage ||= hasStorage;
     this.usableAsSampled ||= hasSampled;
-    this.usableAsRender ||= hasRender;
+    this.usableAsRender ||= hasRender || hasTransient;
 
     return this as this & UnionToIntersection<LiteralToExtensionMap[T[number]]>;
+  }
+
+  $overrideFlags(flags: GPUTextureUsageFlags): this & StorageFlag & SampledFlag & RenderFlag {
+    this.#flags = flags;
+    this.#flagsOverridden = true;
+    this.usableAsSampled = true;
+    this.usableAsStorage = true;
+    this.usableAsRender = true;
+    return this as this & StorageFlag & SampledFlag & RenderFlag;
   }
 
   createView(
@@ -588,10 +628,6 @@ class TgpuFixedTextureViewImpl<T extends WgslTexture | WgslStorageTexture>
     );
   }
 
-  get value(): Infer<T> {
-    return this.$;
-  }
-
   get size(): number[] {
     return this.#baseTexture.props.size;
   }
@@ -683,10 +719,6 @@ export class TgpuLaidOutTextureViewImpl<T extends WgslTexture | WgslStorageTextu
         getName(this) ?? '<unnamed>'
       }' outside of codegen mode. Direct access to texture views values is possible only as part of a compute dispatch or draw call. Try .read() or .write() instead`,
     );
-  }
-
-  get value(): Infer<T> {
-    return this.$;
   }
 
   $name(label: string): this {

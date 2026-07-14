@@ -19,7 +19,7 @@ Most code snippets on this page are inspectable: hover over an identifier to see
 :::
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -84,7 +84,7 @@ That gives us a few useful properties:
 Let's use that to create a simple GPU program that actually writes data to GPU memory.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -118,7 +118,7 @@ This is useful for fast debugging, but `console.log` only displays the value. It
 In the previous examples, we used `createMutable()` without paying much attention to what it creates. In short, it allocates GPU memory that can be accessed directly from a TypeGPU shader and modified from shader code. You might wonder why you could not just do something like:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -141,7 +141,7 @@ That is why we use buffers for state that the GPU can read or write. You can thi
 The `createMutable()` function is a shorthand for creating a storage buffer and viewing it as mutable:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -170,7 +170,7 @@ So far, we know how to allocate GPU buffers, update them from inside shaders, an
 With our current knowledge, we could just write a shader that writes some values to the buffer:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -198,7 +198,7 @@ This will work correctly (as long as we always want to increment by 10), and som
 Because this version always increments by `10`, we could also drop the `incrementBy` field from our GPU state and capture a JavaScript constant instead. Captured constants are inlined into the generated shader, so this only works for values that do not need to change at runtime.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -228,7 +228,7 @@ As we can see, our program grew quite a bit. Let's examine what changed:
 1. **Add a new value to our GPU state**, which we will use to control each increment step. We used `d.struct`, which works exactly like you would expect a struct to: it lets us group data together.
 
    ```ts twoslash
-   import tgpu, { d } from 'typegpu';
+   import { tgpu, d } from 'typegpu';
 
    const root = await tgpu.init();
 
@@ -241,7 +241,7 @@ As we can see, our program grew quite a bit. Let's examine what changed:
 2. **Add initial data.** Apart from the schema, buffer constructors also take a second argument, which lets you efficiently write data at buffer creation time.
 
    ```ts twoslash
-   import tgpu, { d } from 'typegpu';
+   import { tgpu, d } from 'typegpu';
 
    const root = await tgpu.init();
 
@@ -257,7 +257,7 @@ As we can see, our program grew quite a bit. Let's examine what changed:
    This data will be typed according to the schema, so there is no byte counting involved. If you want to modify a buffer after it has been created, you can use the `.write()` method, which takes the same data shape.
 
    ```ts twoslash
-   import tgpu, { d } from 'typegpu';
+   import { tgpu, d } from 'typegpu';
 
    const root = await tgpu.init();
 
@@ -276,7 +276,7 @@ As we can see, our program grew quite a bit. Let's examine what changed:
 3. **Update the shader code** so that it uses the new field and increments `counter` by the current `incrementBy` value.
 
    ```ts twoslash
-   import tgpu, { d } from 'typegpu';
+   import { tgpu, d } from 'typegpu';
 
    const root = await tgpu.init();
 
@@ -295,7 +295,7 @@ As we can see, our program grew quite a bit. Let's examine what changed:
 4. **Use `.patch()` to update just one buffer field.** By default, `.write()` expects you to write the entire buffer at once. Since we do not have the current `counter` value available on the CPU side, we would need to read it each time (or track mirrored state on the CPU) - in short, not something we want to do. The `.patch()` API allows us to pass a subset of the buffer and write only the present values.
 
    ```ts twoslash
-   import tgpu, { d } from 'typegpu';
+   import { tgpu, d } from 'typegpu';
 
    const root = await tgpu.init();
 

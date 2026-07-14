@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { addArgTypesToExternals, type ExternalMap } from '../src/core/resolve/externals.ts';
-import * as d from '../src/data/index.ts';
-import tgpu from '../src/index.js';
+import {
+  addArgTypesToExternals,
+  anyIdent,
+  boundedPropChain,
+  type ExternalMap,
+} from '../../src/core/resolve/externals.ts';
+import { tgpu, d } from 'typegpu';
 
 describe('addArgTypesToExternals', () => {
   const Particle = d.struct({
@@ -275,5 +279,60 @@ describe('external name collisions', () => {
     expect(() => fn.$uses({ EXT: 2 })).toThrowErrorMatchingInlineSnapshot(
       `[Error: Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.]`,
     );
+  });
+});
+
+function matches(str: string, regex: RegExp) {
+  const globalRegex = regex.flags.includes('g')
+    ? regex
+    : new RegExp(regex.source, regex.flags + 'g');
+  return [...str.matchAll(globalRegex)].map((m) => m[0]).join(' ');
+}
+
+describe('regexes in externals', () => {
+  describe('anyIdent', () => {
+    it('correctly recognizes wgsl identifiers', () => {
+      expect(matches(' ident ', anyIdent)).toMatchInlineSnapshot(`"ident"`);
+      expect(matches(' _ident ', anyIdent)).toMatchInlineSnapshot(`"_ident"`);
+      expect(matches(' ident_1 ', anyIdent)).toMatchInlineSnapshot(`"ident_1"`);
+      expect(matches(' café_ඞඞඞ ', anyIdent)).toMatchInlineSnapshot(`"café_ඞඞඞ"`);
+    });
+
+    it('stops at non-ident characters', () => {
+      expect(matches(' ident;ident ', anyIdent)).toMatchInlineSnapshot(`"ident ident"`);
+      expect(matches(' ident.ident ', anyIdent)).toMatchInlineSnapshot(`"ident ident"`);
+      expect(matches(' ident)ident ', anyIdent)).toMatchInlineSnapshot(`"ident ident"`);
+      expect(matches(' ident+ident ', anyIdent)).toMatchInlineSnapshot(`"ident ident"`);
+      expect(matches(' ident/ident ', anyIdent)).toMatchInlineSnapshot(`"ident ident"`);
+    });
+
+    it('accepts dollar signs', () => {
+      expect(matches(' $ ', anyIdent)).toMatchInlineSnapshot(`"$"`);
+      expect(matches(' $ident ', anyIdent)).toMatchInlineSnapshot(`"$ident"`);
+      expect(matches(' ident$ident ', anyIdent)).toMatchInlineSnapshot(`"ident$ident"`);
+      expect(matches(' ident$$ident ', anyIdent)).toMatchInlineSnapshot(`"ident$$ident"`);
+    });
+  });
+
+  describe('boundedPropChain', () => {
+    it('correctly recognizes prop chains', () => {
+      expect(matches(' p1 ', boundedPropChain)).toMatchInlineSnapshot(`"p1"`);
+      expect(matches(' p1.p2 ', boundedPropChain)).toMatchInlineSnapshot(`"p1.p2"`);
+      expect(matches(' p1.p2.p3.p4.p5 ', boundedPropChain)).toMatchInlineSnapshot(
+        `"p1.p2.p3.p4.p5"`,
+      );
+      expect(matches(' p1.$ ', boundedPropChain)).toMatchInlineSnapshot(`"p1.$"`);
+    });
+
+    it('does not match non prop chains', () => {
+      expect(matches(' 1.0 ', boundedPropChain)).toMatchInlineSnapshot(`""`);
+      expect(matches(' .5f ', boundedPropChain)).toMatchInlineSnapshot(`""`);
+      expect(matches(' .prop ', boundedPropChain)).toMatchInlineSnapshot(`""`);
+      expect(matches(' p1 . p2 ', boundedPropChain)).toMatchInlineSnapshot(`"p1 p2"`);
+      expect(matches(' call().x ', boundedPropChain)).toMatchInlineSnapshot(`"call"`);
+      expect(matches(' arr[i].x ', boundedPropChain)).toMatchInlineSnapshot(`"arr i"`);
+      expect(matches(' (v1 + v2).x ', boundedPropChain)).toMatchInlineSnapshot(`"v1 v2"`);
+      expect(matches(' x,y ', boundedPropChain)).toMatchInlineSnapshot(`"x y"`);
+    });
   });
 });

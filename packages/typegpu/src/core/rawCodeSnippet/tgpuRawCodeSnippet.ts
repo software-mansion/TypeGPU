@@ -18,7 +18,6 @@ import { valueProxyHandler } from '../valueProxyUtils.ts';
  */
 export interface TgpuRawCodeSnippet<TDataType extends BaseData> {
   $: InferGPU<TDataType>;
-  value: InferGPU<TDataType>;
   readonly [$gpuValueOf]: InferGPU<TDataType>;
 
   $uses(dependencyMap: Record<string, unknown>): this;
@@ -145,9 +144,5 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
     }
 
     return this[$gpuValueOf];
-  }
-
-  get value(): InferGPU<TDataType> {
-    return this.$;
   }
 }
