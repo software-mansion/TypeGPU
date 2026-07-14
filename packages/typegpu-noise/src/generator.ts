@@ -1,5 +1,13 @@
 import { tgpu, d, type TgpuFnShell, type TgpuSlot, std } from 'typegpu';
-import { hash, rotl, scrambleSeed1, scrambleSeed2, scrambleSeed3, scrambleSeed4, u32To01F32 } from './utils.ts';
+import {
+  hash,
+  rotl,
+  scrambleSeed,
+  scrambleSeed2,
+  scrambleSeed3,
+  scrambleSeed4,
+  u32To01F32,
+} from './utils.ts';
 
 export interface StatefulGenerator {
   seed?: (seed: number) => void;
@@ -11,6 +19,10 @@ export interface StatefulGenerator {
 
 export const randomGeneratorShell: TgpuFnShell<[], d.F32> = tgpu.fn([], d.f32);
 
+const cpuImplNotAvailable = (prng: string, fn: string) => {
+  throw new Error(`CPU implementation of ${prng}:${fn} is not available`);
+};
+
 /**
  * Incorporated from https://www.cg.tuwien.ac.at/research/publications/2023/PETER-2023-PSW/PETER-2023-PSW-.pdf
  * "Particle System in WebGPU" by Benedikt Peter
@@ -18,81 +30,77 @@ export const randomGeneratorShell: TgpuFnShell<[], d.F32> = tgpu.fn([], d.f32);
 export const BPETER: StatefulGenerator = (() => {
   const gpuSeed = tgpu.privateVar(d.vec2f);
 
-  let cpuSeed = d.vec2f();
-
-  function updateCpuSeed(seed: d.v2f) {
-    cpuSeed = seed;
-  }
-
   return {
     seed: tgpu.fn([d.f32])((value) => {
       'use gpu';
-      const scrambled = scrambleSeed1(value);
-      const newSeed = d.vec2f(
-        u32To01F32(hash(scrambled)) ,
-        u32To01F32(hash(rotl(scrambled, 16))),
-      ) * 2 - 1;
-      if (std.isBeingTranspiled()) {
-        gpuSeed.$ = d.vec2f(newSeed);
-      } else {
-        updateCpuSeed(newSeed);
+      if (!std.isBeingTranspiled()) {
+        cpuImplNotAvailable('BPETER', 'seed');
       }
+
+      const scrambled = scrambleSeed(value);
+      gpuSeed.$ =
+        d.vec2f(u32To01F32(hash(scrambled)), u32To01F32(hash(rotl(scrambled, 16)))) * 2 - 1;
     }),
 
     seed2: tgpu.fn([d.vec2f])((value) => {
       'use gpu';
-      const scrambled = scrambleSeed2(value);
-      const newSeed = d.vec2f(
-        u32To01F32(hash(scrambled.x ^ scrambled.y)),
-        u32To01F32(hash(rotl(scrambled.x, 16) ^ scrambled.y)),
-      ) * 2 - 1;
-      if (std.isBeingTranspiled()) {
-        gpuSeed.$ = d.vec2f(newSeed);
-      } else {
-        updateCpuSeed(newSeed);
+      if (!std.isBeingTranspiled()) {
+        cpuImplNotAvailable('BPETER', 'seed2');
       }
+
+      const scrambled = scrambleSeed2(value);
+      gpuSeed.$ =
+        d.vec2f(
+          u32To01F32(hash(scrambled.x ^ scrambled.y)),
+          u32To01F32(hash(rotl(scrambled.x, 16) ^ scrambled.y)),
+        ) *
+          2 -
+        1;
     }),
 
     seed3: tgpu.fn([d.vec3f])((value) => {
       'use gpu';
-      const scrambled = scrambleSeed3(value);
-      const newSeed = d.vec2f(
-        u32To01F32(hash(scrambled.x ^ rotl(scrambled.z, 16))) ,
-        u32To01F32(hash(rotl(scrambled.y, 16) ^ scrambled.z)) ,
-      ) * 2 - 1;
-      if (std.isBeingTranspiled()) {
-        gpuSeed.$ = d.vec2f(newSeed);
-      } else {
-        updateCpuSeed(newSeed);
+      if (!std.isBeingTranspiled()) {
+        cpuImplNotAvailable('BPETER', 'seed3');
       }
+
+      const scrambled = scrambleSeed3(value);
+      gpuSeed.$ =
+        d.vec2f(
+          u32To01F32(hash(scrambled.x ^ rotl(scrambled.z, 16))),
+          u32To01F32(hash(rotl(scrambled.y, 16) ^ scrambled.z)),
+        ) *
+          2 -
+        1;
     }),
 
     seed4: tgpu.fn([d.vec4f])((value) => {
       'use gpu';
-      const scrambled = scrambleSeed4(value);
-      const newSeed = d.vec2f(
-        u32To01F32(hash(scrambled.x ^ rotl(scrambled.z, 16) ^ rotl(scrambled.w, 8))),
-        u32To01F32(hash(rotl(scrambled.y, 16) ^ scrambled.z ^ scrambled.w)),
-      ) * 2 - 1;
-      if (std.isBeingTranspiled()) {
-        gpuSeed.$ = d.vec2f(newSeed);
-      } else {
-        updateCpuSeed(newSeed);
+      if (!std.isBeingTranspiled()) {
+        cpuImplNotAvailable('BPETER', 'seed4');
       }
+
+      const scrambled = scrambleSeed4(value);
+      gpuSeed.$ =
+        d.vec2f(
+          u32To01F32(hash(scrambled.x ^ rotl(scrambled.z, 16) ^ rotl(scrambled.w, 8))),
+          u32To01F32(hash(rotl(scrambled.y, 16) ^ scrambled.z ^ scrambled.w)),
+        ) *
+          2 -
+        1;
     }),
 
     sample: randomGeneratorShell(() => {
       'use gpu';
-      const seed = std.isBeingTranspiled() ? gpuSeed.$ : d.vec2f(cpuSeed);
-      const a = std.dot(seed, d.vec2f(23.14077926, 232.61690225));
-      const b = std.dot(seed, d.vec2f(54.47856553, 345.84153136));
-      const newSeed = d.vec2f(std.fract(std.cos(a) * 136.8168), std.fract(std.cos(b) * 534.7645));
-      if (std.isBeingTranspiled()) {
-        gpuSeed.$ = d.vec2f(newSeed);
-      } else {
-        updateCpuSeed(newSeed);
+      if (!std.isBeingTranspiled()) {
+        cpuImplNotAvailable('BPETER', 'sample');
       }
-      return newSeed.y;
+
+      const a = std.dot(gpuSeed.$, d.vec2f(23.14077926, 232.61690225));
+      const b = std.dot(gpuSeed.$, d.vec2f(54.47856553, 345.84153136));
+      gpuSeed.$.x = std.fract(std.cos(a) * 136.8168);
+      gpuSeed.$.y = std.fract(std.cos(b) * 534.7645);
+      return gpuSeed.$.y;
     }).$name('sample'),
   };
 })();
@@ -132,8 +140,9 @@ export const XOROSHIRO64STARSTAR: StatefulGenerator = (() => {
 
   return {
     seed: tgpu.fn([d.f32])((value) => {
-      const scrambled = scrambleSeed1(value);
+      const scrambled = scrambleSeed(value);
       const newSeed = d.vec2u(hash(scrambled), hash(rotl(scrambled, 16)));
+
       if (std.isBeingTranspiled()) {
         gpuSeed.$ = d.vec2u(newSeed);
       } else {
@@ -146,6 +155,7 @@ export const XOROSHIRO64STARSTAR: StatefulGenerator = (() => {
         hash(scrambled.x ^ scrambled.y),
         hash(rotl(scrambled.x, 16) ^ scrambled.y),
       );
+
       if (std.isBeingTranspiled()) {
         gpuSeed.$ = d.vec2u(newSeed);
       } else {
@@ -159,6 +169,7 @@ export const XOROSHIRO64STARSTAR: StatefulGenerator = (() => {
         hash(scrambled.x ^ rotl(scrambled.z, 16)),
         hash(rotl(scrambled.y, 16) ^ scrambled.z),
       );
+
       if (std.isBeingTranspiled()) {
         gpuSeed.$ = d.vec2u(newSeed);
       } else {
@@ -172,6 +183,7 @@ export const XOROSHIRO64STARSTAR: StatefulGenerator = (() => {
         hash(scrambled.x ^ rotl(scrambled.z, 16) ^ rotl(scrambled.w, 8)),
         hash(rotl(scrambled.y, 16) ^ scrambled.z ^ scrambled.w),
       );
+
       if (std.isBeingTranspiled()) {
         gpuSeed.$ = d.vec2u(newSeed);
       } else {
@@ -203,8 +215,9 @@ export const LCG32: StatefulGenerator = (() => {
 
   return {
     seed: tgpu.fn([d.f32])((value) => {
-      const scrambled = scrambleSeed1(value);
+      const scrambled = scrambleSeed(value);
       const newSeed = hash(scrambled) ^ hash(rotl(scrambled, 16));
+
       if (std.isBeingTranspiled()) {
         gpuSeed.$ = newSeed;
       } else {
@@ -215,6 +228,7 @@ export const LCG32: StatefulGenerator = (() => {
     seed2: tgpu.fn([d.vec2f])((value) => {
       const scrambled = scrambleSeed2(value);
       const newSeed = hash(scrambled.x ^ scrambled.y) ^ hash(rotl(scrambled.x, 16) ^ scrambled.y);
+
       if (std.isBeingTranspiled()) {
         gpuSeed.$ = newSeed;
       } else {
@@ -224,7 +238,9 @@ export const LCG32: StatefulGenerator = (() => {
 
     seed3: tgpu.fn([d.vec3f])((value) => {
       const scrambled = scrambleSeed3(value);
-      const newSeed = hash(scrambled.x ^ rotl(scrambled.z, 16)) ^ hash(rotl(scrambled.y, 16) ^ scrambled.z);
+      const newSeed =
+        hash(scrambled.x ^ rotl(scrambled.z, 16)) ^ hash(rotl(scrambled.y, 16) ^ scrambled.z);
+
       if (std.isBeingTranspiled()) {
         gpuSeed.$ = newSeed;
       } else {
@@ -234,8 +250,10 @@ export const LCG32: StatefulGenerator = (() => {
 
     seed4: tgpu.fn([d.vec4f])((value) => {
       const scrambled = scrambleSeed4(value);
-      const newSeed = hash(scrambled.x ^ rotl(scrambled.z, 16) ^ rotl(scrambled.w, 8))
-        ^ hash(rotl(scrambled.y, 16) ^ scrambled.z ^ scrambled.w);
+      const newSeed =
+        hash(scrambled.x ^ rotl(scrambled.z, 16) ^ rotl(scrambled.w, 8)) ^
+        hash(rotl(scrambled.y, 16) ^ scrambled.z ^ scrambled.w);
+
       if (std.isBeingTranspiled()) {
         gpuSeed.$ = newSeed;
       } else {

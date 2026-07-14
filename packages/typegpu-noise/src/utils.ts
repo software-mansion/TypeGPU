@@ -84,12 +84,12 @@ export const hash = tgpu.fn(
   }
 });
 
-const seedSaltX = 0x4ab57dfb;
-const seedSaltY = 0xacdeda47;
-const seedSaltZ = 0xbca0294b;
-const seedSaltW = 0xd94a5f35;
+const seedSaltX = 0x4ab57dfb >>> 0;
+const seedSaltY = 0xacdeda47 >>> 0;
+const seedSaltZ = 0xbca0294b >>> 0;
+const seedSaltW = 0xd94a5f35 >>> 0;
 
-export const scrambleSeed1 = tgpu.fn(
+export const scrambleSeed = tgpu.fn(
   [d.f32],
   d.u32,
 )((value) => {
@@ -101,10 +101,7 @@ export const scrambleSeed2 = tgpu.fn(
   d.vec2u,
 )((value) => {
   const u32Value = std.bitcastF32toU32(value);
-  return d.vec2u(
-    hash(u32Value.x ^ seedSaltX),
-    hash(u32Value.y ^ seedSaltY),
-  );
+  return d.vec2u(hash(u32Value.x ^ seedSaltX), hash(u32Value.y ^ seedSaltY));
 });
 
 export const scrambleSeed3 = tgpu.fn(
