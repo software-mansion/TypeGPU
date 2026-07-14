@@ -167,8 +167,8 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   // Widest type
   TgpuLayoutEntry | null extends T
     ?
-        | TgpuBuffer<AnyWgslData> // TODO: investigate
-        | TgpuBufferBinding<AnyData>
+        | TgpuBuffer<BaseData>
+        | TgpuBufferBinding<BaseData>
         | GPUBuffer
         | TgpuSampler
         | GPUSampler
