@@ -90,4 +90,16 @@ describe('CAPTURE', () => {
     expect(captured[0]?.value).toBe(1);
     expect(captured[1]?.value).toBe(3);
   });
+
+  it('captures before type casting', () => {
+    const fn = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
+      'use gpu';
+      return CAPTURE(1.5);
+    });
+
+    expect(captureSnippets(fn)[0]?.value).toBe(1.5);
+  });
 });
