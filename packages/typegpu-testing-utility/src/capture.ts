@@ -1,7 +1,6 @@
-import { UnknownData, WgslGenerator, type Snippet } from 'typegpu/~internal';
+import { UnknownData, WgslGenerator, type Snippet, dualImpl } from 'typegpu/~internal';
 import * as tinyest from 'tinyest';
 import { tgpu, type TgpuFn } from 'typegpu';
-import { dualImpl } from 'typegpu/~internal';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 

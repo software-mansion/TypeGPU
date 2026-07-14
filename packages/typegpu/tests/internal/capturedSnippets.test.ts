@@ -91,6 +91,23 @@ describe('CAPTURE', () => {
     expect(captured[1]?.value).toBe(3);
   });
 
+  it('captures structs after casting', () => {
+    const Boid = d.struct({
+      pos: d.vec3f,
+    });
+
+    const fn = tgpu.fn(
+      [],
+      Boid,
+    )(() => {
+      'use gpu';
+      return CAPTURE({ pos: d.vec3f() });
+    });
+
+    const captured = captureSnippets(fn);
+    expect(captured[0]?.dataType).toBe(Boid);
+  });
+
   it('captures before type casting', () => {
     const fn = tgpu.fn(
       [],
