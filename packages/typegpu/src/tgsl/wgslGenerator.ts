@@ -82,8 +82,6 @@ const parenthesizedOps = [
   '|',
   '^',
   '&',
-  '&&',
-  '||',
 ];
 
 const binaryLogicalOps = ['&&', '||', '==', '!=', '===', '!==', '<', '<=', '>', '>='];
@@ -343,39 +341,69 @@ ${this.ctx.pre}}`;
       return snip(expression, bool, /* origin */ 'constant', false);
     }
 
-    if (
-      expression[0] === NODE.logicalExpr ||
-      expression[0] === NODE.binaryExpr ||
-      expression[0] === NODE.assignmentExpr
-    ) {
-      // Logical/Binary/Assignment Expression
-      const [exprType, lhs, op, rhs] = expression;
+    if (expression[0] === NODE.logicalExpr) {
+      const [_, lhs, op, rhs] = expression;
       const lhsExpr = this._expression(lhs);
 
       // Short Circuit Evaluation
-      if ((op === '||' || op === '&&') && isKnownAtComptime(lhsExpr)) {
+      if (isKnownAtComptime(lhsExpr)) {
         const evalRhs = op === '&&' ? lhsExpr.value : !lhsExpr.value;
 
         if (!evalRhs) {
-          return snip(op === '||', bool, 'constant', false);
+          return coerceToSnippet(lhsExpr.value);
         }
 
         const rhsExpr = this._expression(rhs);
+
+        if (isKnownAtComptime(rhsExpr)) {
+          return coerceToSnippet(rhsExpr.value);
+        }
 
         if (rhsExpr.dataType === UnknownData) {
           throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
         }
 
-        if (isKnownAtComptime(rhsExpr)) {
-          return snip(!!rhsExpr.value, bool, 'constant', false);
-        }
-
         // we can skip lhs
-        const convRhs = tryConvertSnippet(this.ctx, rhsExpr, bool, false);
-        const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
-        return snip(rhsStr, bool, 'runtime', convRhs.possibleSideEffects);
+
+        return rhsExpr;
       }
 
+      const rhsExpr = this._expression(rhs);
+
+      // they are not known at comptime
+      if (lhsExpr.dataType === UnknownData) {
+        throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
+      }
+
+      if (!isKnownAtComptime(rhsExpr) && rhsExpr.dataType === UnknownData) {
+        throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
+      }
+
+      const [convLhs, convRhs] = convertToCommonType(this.ctx, [lhsExpr, rhsExpr], [bool]) ?? [
+        lhsExpr,
+        rhsExpr,
+      ];
+
+      const lhsStr = this.ctx.resolve(convLhs.value, convLhs.dataType).value;
+      const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
+
+      if (
+        (op === '&&' || op === '||') &&
+        !(wgsl.isBool(convLhs.dataType) && wgsl.isBool(convRhs.dataType))
+      ) {
+        throw new WgslTypeError(
+          `Logical expression '${op}' requires boolean operands. Got '${String(convLhs.dataType)}' and '${String(convRhs.dataType)}'.`,
+        );
+      }
+
+      // hardcoded parentheses - operators not present in `pare`
+      return snip(`(${lhsStr} ${op} ${rhsStr})`, bool, /* origin */ 'runtime');
+    }
+
+    if (expression[0] === NODE.binaryExpr || expression[0] === NODE.assignmentExpr) {
+      // Binary/Assignment Expression
+      const [exprType, lhs, op, rhs] = expression;
+      const lhsExpr = this._expression(lhs);
       const rhsExpr = this._expression(rhs);
 
       if (rhsExpr.value instanceof RefOperator) {
@@ -496,15 +524,6 @@ ${this.ctx.pre}}`;
             }`,
           );
         }
-      }
-
-      if (
-        (op === '&&' || op === '||') &&
-        !(wgsl.isBool(convLhs.dataType) && wgsl.isBool(convRhs.dataType))
-      ) {
-        throw new WgslTypeError(
-          `Logical expression '${op}' requires boolean operands. Got '${String(convLhs.dataType)}' and '${String(convRhs.dataType)}'.`,
-        );
       }
 
       return snip(

@@ -268,7 +268,7 @@ describe('binaryLogicalOps', () => {
     });
   });
 
-  describe('operator &&', () => {
+  describe('operator && runtime operands', () => {
     it('handles boolean operands', () => {
       const and = tgpu.fn(
         [d.bool, d.bool],
@@ -281,6 +281,23 @@ describe('binaryLogicalOps', () => {
       expect(tgpu.resolve([and])).toMatchInlineSnapshot(`
         "fn and(x: bool, y: bool) -> bool {
           return (x && y);
+        }"
+      `);
+    });
+
+    it('handles ref', () => {
+      const f = () => {
+        'use gpu';
+        const a = d.ref(false);
+        const b = d.ref(true);
+        const c = a.$ && b.$;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() {
+          var a = false;
+          var b = true;
+          let c = (a && b);
         }"
       `);
     });
@@ -302,7 +319,7 @@ describe('binaryLogicalOps', () => {
     });
   });
 
-  describe('operator ||', () => {
+  describe('operator || runtime operands', () => {
     it('handles boolean operands', () => {
       const or = tgpu.fn(
         [d.bool, d.bool],
@@ -315,6 +332,23 @@ describe('binaryLogicalOps', () => {
       expect(tgpu.resolve([or])).toMatchInlineSnapshot(`
         "fn or(x: bool, y: bool) -> bool {
           return (x || y);
+        }"
+      `);
+    });
+
+    it('handles ref', () => {
+      const f = () => {
+        'use gpu';
+        const a = d.ref(false);
+        const b = d.ref(true);
+        const c = a.$ || b.$;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() {
+          var a = false;
+          var b = true;
+          let c = (a || b);
         }"
       `);
     });
@@ -347,18 +381,19 @@ describe('binaryLogicalOps', () => {
       state.result = true;
     });
 
-    it('handles ||', () => {
-      const f = () => {
-        'use gpu';
-        let res = -1;
-        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
-        if (true || getTrackedBool()) {
-          res = 1;
-        }
-        return res;
-      };
+    describe('inside condition', () => {
+      it('handles ||', () => {
+        const f = () => {
+          'use gpu';
+          let res = -1;
+          // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+          if (true || getTrackedBool()) {
+            res = 1;
+          }
+          return res;
+        };
 
-      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
         "fn f() -> i32 {
           var res = -1;
           {
@@ -367,49 +402,55 @@ describe('binaryLogicalOps', () => {
           return res;
         }"
       `);
-      expect(state.counter).toBe(0);
-    });
-
-    it('handles chained ||', () => {
-      state.result = false;
-
-      const f = () => {
-        'use gpu';
-        let res = -1;
-        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
-        if (getTrackedBool() || true || getTrackedBool() || getTrackedBool() || getTrackedBool()) {
-          res = 1;
-        }
-        return res;
-      };
-
-      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() -> i32 {
-          var res = -1;
-          {
-            res = 1i;
-          }
-          return res;
-        }"
-      `);
-      expect(state.counter).toEqual(1);
-    });
-
-    it('skips false lhs', () => {
-      const f = tgpu.fn(
-        [d.bool],
-        d.i32,
-      )((b) => {
-        'use gpu';
-        let res = -1;
-        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
-        if (false || b) {
-          res = 1;
-        }
-        return res;
+        expect(state.counter).toBe(0);
       });
 
-      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      it('handles chained ||', () => {
+        state.result = false;
+
+        const f = () => {
+          'use gpu';
+          let res = -1;
+          // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+          if (
+            getTrackedBool() ||
+            true ||
+            getTrackedBool() ||
+            getTrackedBool() ||
+            getTrackedBool()
+          ) {
+            res = 1;
+          }
+          return res;
+        };
+
+        expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          var res = -1;
+          {
+            res = 1i;
+          }
+          return res;
+        }"
+      `);
+        expect(state.counter).toEqual(1);
+      });
+
+      it('skips false lhs', () => {
+        const f = tgpu.fn(
+          [d.bool],
+          d.i32,
+        )((b) => {
+          'use gpu';
+          let res = -1;
+          // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+          if (false || b) {
+            res = 1;
+          }
+          return res;
+        });
+
+        expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
         "fn f(b: bool) -> i32 {
           var res = -1;
           if (b) {
@@ -418,81 +459,90 @@ describe('binaryLogicalOps', () => {
           return res;
         }"
       `);
-    });
-
-    it('throws when rhs cannot be converted to boolean', () => {
-      const b = false;
-      const f = tgpu.fn(
-        [d.vec3f],
-        d.bool,
-      )((v) => {
-        'use gpu';
-
-        return !!(b || v);
       });
 
-      expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      it('throws when rhs cannot be converted to boolean', () => {
+        const b = false;
+        const f = tgpu.fn(
+          [d.vec3f],
+          d.i32,
+        )((v) => {
+          'use gpu';
+          let res = -1;
+          if (b || v) {
+            res = 1;
+          }
+          return res;
+        });
+
+        expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:f: Cannot convert value of type 'vec3f' to any of the target types: [bool]]
       `);
-    });
-
-    it('handles &&', () => {
-      const f = () => {
-        'use gpu';
-        let res = -1;
-        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
-        if (false && getTrackedBool()) {
-          res = 1;
-        }
-        return res;
-      };
-
-      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() -> i32 {
-          let res = -1;
-          return res;
-        }"
-      `);
-      expect(state.counter).toBe(0);
-    });
-
-    it('handles chained &&', () => {
-      const f = () => {
-        'use gpu';
-        let res = -1;
-        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
-        if (getTrackedBool() && false && getTrackedBool() && getTrackedBool() && getTrackedBool()) {
-          res = 1;
-        }
-        return res;
-      };
-
-      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() -> i32 {
-          let res = -1;
-          return res;
-        }"
-      `);
-      expect(state.counter).toBe(1);
-    });
-
-    it('skips true lhs', () => {
-      const f = tgpu.fn(
-        [d.bool],
-        d.i32,
-      )((b) => {
-        'use gpu';
-        let res = -1;
-        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
-        if (true && b) {
-          res = 1;
-        }
-        return res;
       });
 
-      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      it('handles &&', () => {
+        const f = () => {
+          'use gpu';
+          let res = -1;
+          // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+          if (false && getTrackedBool()) {
+            res = 1;
+          }
+          return res;
+        };
+
+        expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          let res = -1;
+          return res;
+        }"
+      `);
+        expect(state.counter).toBe(0);
+      });
+
+      it('handles chained &&', () => {
+        const f = () => {
+          'use gpu';
+          let res = -1;
+          // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+          if (
+            getTrackedBool() &&
+            false &&
+            getTrackedBool() &&
+            getTrackedBool() &&
+            getTrackedBool()
+          ) {
+            res = 1;
+          }
+          return res;
+        };
+
+        expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> i32 {
+          let res = -1;
+          return res;
+        }"
+      `);
+        expect(state.counter).toBe(1);
+      });
+
+      it('skips true lhs', () => {
+        const f = tgpu.fn(
+          [d.bool],
+          d.i32,
+        )((b) => {
+          'use gpu';
+          let res = -1;
+          // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+          if (true && b) {
+            res = 1;
+          }
+          return res;
+        });
+
+        expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
         "fn f(b: bool) -> i32 {
           var res = -1;
           if (b) {
@@ -501,38 +551,41 @@ describe('binaryLogicalOps', () => {
           return res;
         }"
       `);
-    });
-
-    it('throws when rhs cannot be converted to boolean', () => {
-      const b = true;
-      const f = tgpu.fn(
-        [d.vec3f],
-        d.bool,
-      )((v) => {
-        'use gpu';
-
-        return !!(b && v);
       });
 
-      expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      it('throws when rhs cannot be converted to boolean', () => {
+        const b = true;
+        const f = tgpu.fn(
+          [d.vec3f],
+          d.i32,
+        )((v) => {
+          'use gpu';
+          let res = -1;
+          if (b && v) {
+            res = 1;
+          }
+          return res;
+        });
+
+        expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:f: Cannot convert value of type 'vec3f' to any of the target types: [bool]]
       `);
-    });
+      });
 
-    it('handles mixed operators', () => {
-      const f = () => {
-        'use gpu';
-        let res = -1;
-        // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
-        if (true || (getTrackedBool() && getTrackedBool())) {
-          res = 1;
-        }
-        return res;
-      };
+      it('handles mixed operators', () => {
+        const f = () => {
+          'use gpu';
+          let res = -1;
+          // oxlint-disable-next-line(no-constant-binary-expression) -- part of the test
+          if (true || (getTrackedBool() && getTrackedBool())) {
+            res = 1;
+          }
+          return res;
+        };
 
-      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
         "fn f() -> i32 {
           var res = -1;
           {
@@ -541,7 +594,107 @@ describe('binaryLogicalOps', () => {
           return res;
         }"
       `);
-      expect(state.counter).toBe(0);
+        expect(state.counter).toBe(0);
+      });
+    });
+    describe('outside condition', () => {
+      it('operator && returns comptime lhs if it is false', () => {
+        const x = 0;
+        const v = d.vec3f();
+
+        const f = () => {
+          'use gpu';
+          const y = x && v;
+        };
+
+        expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+          "fn f() {
+            const y = 0;
+          }"
+        `);
+      });
+
+      it('operator && returns comptime rhs if lhs is true', () => {
+        const x = 1;
+        const v = d.vec3f();
+
+        const f = () => {
+          'use gpu';
+          const y = x && v;
+        };
+
+        expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+          "fn f() {
+            let y = vec3f();
+          }"
+        `);
+      });
+
+      it('operator && returns runtime rhs if lhs is true', () => {
+        const x = 1;
+
+        const f = () => {
+          'use gpu';
+          const v = d.vec3f();
+          const y = x && v;
+        };
+
+        expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+          "fn f() {
+            let v = vec3f();
+            let y = (&v);
+          }"
+        `);
+      });
+
+      it('operator || returns comptime lhs if it is true', () => {
+        const x = 1;
+        const v = d.vec3f();
+
+        const f = () => {
+          'use gpu';
+          const y = x || v;
+        };
+
+        expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+          "fn f() {
+            const y = 1;
+          }"
+        `);
+      });
+
+      it('operator || returns comptime rhs if lhs is false', () => {
+        const x = 0;
+        const v = d.vec3f();
+
+        const f = () => {
+          'use gpu';
+          const y = x || v;
+        };
+
+        expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+          "fn f() {
+            let y = vec3f();
+          }"
+        `);
+      });
+
+      it('operator || returns runtime rhs if lhs is false', () => {
+        const x = 0;
+
+        const f = () => {
+          'use gpu';
+          const v = d.vec3f();
+          const y = x || v;
+        };
+
+        expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+          "fn f() {
+            let v = vec3f();
+            let y = (&v);
+          }"
+        `);
+      });
     });
   });
 });
