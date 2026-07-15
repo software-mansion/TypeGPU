@@ -30,58 +30,124 @@
     "./package.json": "./package.json",
     ".": "./src/index.ts",
     "./$built$": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./rollup": "./src/rollup.ts",
     "./rollup/$built$": {
-      "types": "./dist/rollup.d.ts",
-      "default": "./dist/rollup.js"
+      "import": {
+        "types": "./dist/rollup.d.ts",
+        "default": "./dist/rollup.js"
+      },
+      "require": {
+        "types": "./dist/rollup.d.cts",
+        "default": "./dist/rollup.cjs"
+      }
     },
     "./babel": "./src/babel.ts",
     "./babel/$built$": {
-      "types": "./dist/babel.d.ts",
-      "default": "./dist/babel.js"
+      "import": {
+        "types": "./dist/babel.d.ts",
+        "default": "./dist/babel.js"
+      },
+      "require": {
+        "types": "./dist/babel.d.cts",
+        "default": "./dist/babel.cjs"
+      }
     },
     "./bun": "./src/bun.ts",
     "./bun/$built$": {
-      "types": "./dist/bun.d.ts",
-      "default": "./dist/bun.js"
+      "import": {
+        "types": "./dist/bun.d.ts",
+        "default": "./dist/bun.js"
+      },
+      "require": {
+        "types": "./dist/bun.d.cts",
+        "default": "./dist/bun.cjs"
+      }
     },
     "./esbuild": "./src/esbuild.ts",
     "./esbuild/$built$": {
-      "types": "./dist/esbuild.d.ts",
-      "default": "./dist/esbuild.js"
+      "import": {
+        "types": "./dist/esbuild.d.ts",
+        "default": "./dist/esbuild.js"
+      },
+      "require": {
+        "types": "./dist/esbuild.d.cts",
+        "default": "./dist/esbuild.cjs"
+      }
     },
     "./farm": "./src/farm.ts",
     "./farm/$built$": {
-      "types": "./dist/farm.d.ts",
-      "default": "./dist/farm.js"
+      "import": {
+        "types": "./dist/farm.d.ts",
+        "default": "./dist/farm.js"
+      },
+      "require": {
+        "types": "./dist/farm.d.cts",
+        "default": "./dist/farm.cjs"
+      }
     },
     "./rolldown": "./src/rolldown.ts",
     "./rolldown/$built$": {
-      "types": "./dist/rolldown.d.ts",
-      "default": "./dist/rolldown.js"
+      "import": {
+        "types": "./dist/rolldown.d.ts",
+        "default": "./dist/rolldown.js"
+      },
+      "require": {
+        "types": "./dist/rolldown.d.cts",
+        "default": "./dist/rolldown.cjs"
+      }
     },
     "./rolldown-browser": "./src/rolldown-browser.ts",
     "./rolldown-browser/$built$": {
-      "types": "./dist/rolldown-browser.d.ts",
-      "default": "./dist/rolldown-browser.js"
+      "import": {
+        "types": "./dist/rolldown-browser.d.ts",
+        "default": "./dist/rolldown-browser.js"
+      },
+      "require": {
+        "types": "./dist/rolldown-browser.d.cts",
+        "default": "./dist/rolldown-browser.cjs"
+      }
     },
     "./rspack": "./src/rspack.ts",
     "./rspack/$built$": {
-      "types": "./dist/rspack.d.ts",
-      "default": "./dist/rspack.js"
+      "import": {
+        "types": "./dist/rspack.d.ts",
+        "default": "./dist/rspack.js"
+      },
+      "require": {
+        "types": "./dist/rspack.d.cts",
+        "default": "./dist/rspack.cjs"
+      }
     },
     "./vite": "./src/vite.ts",
     "./vite/$built$": {
-      "types": "./dist/vite.d.ts",
-      "default": "./dist/vite.js"
+      "import": {
+        "types": "./dist/vite.d.ts",
+        "default": "./dist/vite.js"
+      },
+      "require": {
+        "types": "./dist/vite.d.cts",
+        "default": "./dist/vite.cjs"
+      }
     },
     "./webpack": "./src/webpack.ts",
     "./webpack/$built$": {
-      "types": "./dist/webpack.d.ts",
-      "default": "./dist/webpack.js"
+      "import": {
+        "types": "./dist/webpack.d.ts",
+        "default": "./dist/webpack.js"
+      },
+      "require": {
+        "types": "./dist/webpack.d.cts",
+        "default": "./dist/webpack.cjs"
+      }
     }
   },
   "publishConfig": {
