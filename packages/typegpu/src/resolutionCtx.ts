@@ -739,7 +739,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  addDeclaration(declaration: string, name?: string | undefined): void {
+  addDeclaration(declaration: string, name?: string): void {
     this._declarations.push({ name, code: declaration });
   }
 
