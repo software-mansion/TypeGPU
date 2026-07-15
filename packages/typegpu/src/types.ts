@@ -322,7 +322,7 @@ export interface ResolutionCtx {
   resolve(item: unknown, schema?: BaseData | UnknownData): ResolvedSnippet;
 
   /**
-   * Equivalent to `snip(ctx.resolve(snippet.value, snippet.dataType).value, snippet.dataType, snippet.origin)`.
+   * Equivalent to `snip(ctx.resolve(snippet.value, snippet.dataType).value, snippet.dataType, snippet.origin, snippet.possibleSideEffects)`.
    */
   resolveSnippet(snippet: Snippet): ResolvedSnippet;
 

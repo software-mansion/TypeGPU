@@ -120,7 +120,7 @@ export class TgpuLaidOutSamplerImpl<
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema, /* origin */ 'handle');
+          return snip(this, schema, /* origin */ 'handle', false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.toString()}.$`,
@@ -208,7 +208,7 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema, /* origin */ 'handle');
+          return snip(this, schema, /* origin */ 'handle', false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `${this.toString()}.$`,

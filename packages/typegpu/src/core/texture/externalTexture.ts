@@ -57,7 +57,7 @@ export class TgpuExternalTextureImpl implements TgpuExternalTexture, SelfResolva
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, schema, 'handle');
+          return snip(this, schema, 'handle', false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `textureExternal:${getName(this) ?? '<unnamed>'}.$`,
