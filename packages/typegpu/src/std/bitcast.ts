@@ -57,6 +57,11 @@ type BitcastU32toF32Overload = <T extends number | v2u | v3u | v4u>(
 
 const u32AllowedSchemas = [u32, vec2u, vec3u, vec4u];
 
+// TODO(#???): Remove deprecated bitcasts. Remember about cpu implementations.
+
+/**
+ * @deprecated Use 'std.bitcast' instead.
+ */
 export const bitcastU32toF32 = dualImpl({
   name: 'bitcastU32toF32',
   normalImpl: ((value) => {
@@ -93,6 +98,9 @@ type BitcastU32toI32Overload = <T extends number | v2u | v3u | v4u>(
   value: T,
 ) => T extends v2u ? v2i : T extends v3u ? v3i : T extends v4u ? v4i : number;
 
+/**
+ * @deprecated Use 'std.bitcast' instead.
+ */
 export const bitcastU32toI32 = dualImpl({
   name: 'bitcastU32toI32',
   normalImpl: ((value) => {
@@ -131,6 +139,9 @@ type BitcastF32toU32Overload = <T extends number | v2f | v3f | v4f>(
 
 const f32AllowedSchemas = [f32, vec2f, vec3f, vec4f];
 
+/**
+ * @deprecated Use 'std.bitcast' instead.
+ */
 export const bitcastF32toU32 = dualImpl({
   name: 'bitcastF32toU32',
   normalImpl: ((value) => {
@@ -163,7 +174,7 @@ export const bitcastF32toU32 = dualImpl({
   sideEffects: false,
 });
 
-const validBitcastTypes = [
+const bitcastAllowedSchemas = [
   /* 2 bytes */
   f16,
 
@@ -193,17 +204,17 @@ const validBitcastTypes = [
   vec4u,
 ] as const;
 
-type BitcastIOType = (typeof validBitcastTypes)[number];
+type BitcastAllowedTypes = (typeof bitcastAllowedSchemas)[number];
 
-const buf = new ArrayBuffer(16);
+const buffer = new ArrayBuffer(16);
 const bufViews = {
-  f32: new Float32Array(buf),
-  u32: new Uint32Array(buf),
-  i32: new Int32Array(buf),
-  f16: new Float16Array(buf),
+  f32: new Float32Array(buffer),
+  u32: new Uint32Array(buffer),
+  i32: new Int32Array(buffer),
+  f16: new Float16Array(buffer),
 };
 
-function writeToBuf(
+function writeToBuffer(
   item: AnyNumericVecInstance | number,
   target: Float32Array | Uint32Array | Int32Array | Float16Array,
 ): void {
@@ -216,7 +227,7 @@ function writeToBuf(
   }
 }
 
-function readFromBuf<Schema extends BitcastIOType>(
+function readFromBuffer<Schema extends BitcastAllowedTypes>(
   buf: Float32Array | Uint32Array | Int32Array | Float16Array,
   schema: Schema,
 ): Infer<Schema> {
@@ -228,7 +239,7 @@ function readFromBuf<Schema extends BitcastIOType>(
   return schema(...items) as Infer<Schema>;
 }
 
-const cpuBitcast = <In extends BitcastIOType, Out extends BitcastIOType>(
+const getCpuBitcast = <In extends BitcastAllowedTypes, Out extends BitcastAllowedTypes>(
   inType: In,
   outType: Out,
 ) => {
@@ -237,18 +248,18 @@ const cpuBitcast = <In extends BitcastIOType, Out extends BitcastIOType>(
     'primitive' in outType ? outType.primitive : outType;
 
   return (value: Infer<In>): Infer<Out> => {
-    writeToBuf(value, bufViews[writeToPrimitive.type]);
-    return readFromBuf(bufViews[readFromPrimitive.type], outType);
+    writeToBuffer(value, bufViews[writeToPrimitive.type]);
+    return readFromBuffer(bufViews[readFromPrimitive.type], outType);
   };
 };
 
-const bitcastFor = <In extends BitcastIOType, Out extends BitcastIOType>(
+const bitcastFor = <In extends BitcastAllowedTypes, Out extends BitcastAllowedTypes>(
   inType: In,
   outType: Out,
 ) => {
   return dualImpl({
     name: 'bitcast',
-    normalImpl: cpuBitcast<In, Out>(inType, outType),
+    normalImpl: getCpuBitcast<In, Out>(inType, outType),
     codegenImpl: (_ctx, [n]) => stitch`bitcast<${outType.type}>(${n})`,
     signature: (arg) => {
       const uarg = unifyStrict([arg], [inType]);
@@ -362,12 +373,12 @@ const casts = {
   },
 } as const;
 
-type WgslTypeFor<Type extends string> = Extract<AnyWgslData, { type: Type }>;
+type SchemaFor<Type extends string> = Extract<AnyWgslData, { type: Type }>;
 
 function getBitcast<
   FromType extends keyof typeof casts,
   ToType extends keyof (typeof casts)[FromType] & string,
->(from: WgslTypeFor<FromType>, to: WgslTypeFor<ToType>) {
+>(from: SchemaFor<FromType>, to: SchemaFor<ToType>) {
   if ('type' in from && from.type in casts) {
     const intermediate = casts[from.type];
     if ('type' in to && to.type in intermediate) {
