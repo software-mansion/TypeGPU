@@ -181,17 +181,16 @@ const unaryOpCodeToCodegen = {
       return snip(!argExpr.value, bool, 'constant', false);
     }
 
-    const { value, dataType } = argExpr;
-    const argStr = ctx.resolve(value, dataType).value;
+    const argStr = ctx.resolveSnippet(argExpr).value;
 
-    if (wgsl.isBool(dataType)) {
+    if (wgsl.isBool(argExpr.dataType)) {
       return snip(`!${argStr}`, bool, 'runtime', argExpr.possibleSideEffects);
     }
-    if (wgsl.isNumericSchema(dataType)) {
+    if (wgsl.isNumericSchema(argExpr.dataType)) {
       const resultStr = `!bool(${argStr})`;
       const nanGuardedStr = // abstractFloat will be resolved as comptime known value
-        dataType.type === 'f32' || dataType.type === 'f16'
-          ? `(((bitcast<u32>(${dataType.type === 'f16' ? `f32(${argStr})` : argStr}) << 1u) - 1u) >= 0xff000000)`
+        argExpr.dataType.type === 'f32' || argExpr.dataType.type === 'f16'
+          ? `(((bitcast<u32>(${argExpr.dataType.type === 'f16' ? `f32(${argStr})` : argStr}) << 1u) - 1u) >= 0xff000000)`
           : resultStr;
 
       return snip(nanGuardedStr, bool, 'runtime', argExpr.possibleSideEffects);
@@ -369,7 +368,6 @@ ${this.ctx.pre}}`;
         }
 
         // we can skip lhs
-
         return rhsExpr;
       }
 
@@ -498,8 +496,8 @@ ${this.ctx.pre}}`;
         ];
       }
 
-      const lhsStr = this.ctx.resolve(convLhs.value, convLhs.dataType).value;
-      const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
+      const lhsStr = this.ctx.resolveSnippet(convLhs).value;
+      const rhsStr = this.ctx.resolveSnippet(convRhs).value;
       const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
       if (exprType === NODE.assignmentExpr) {
@@ -562,7 +560,7 @@ ${this.ctx.pre}}`;
         return codegen(this.ctx, [argExpr]);
       }
 
-      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
+      const argStr = this.ctx.resolveSnippet(argExpr).value;
 
       const type = operatorToType(argExpr.dataType, op);
       // Result of an operation, so not a reference to anything
@@ -653,7 +651,7 @@ ${this.ctx.pre}}`;
         // Either `Struct({ x: 1, y: 2 })`, or `Struct(otherStruct)`.
         // In both cases, we just let the argument resolve everything.
         return snip(
-          this.ctx.resolve(arg.value, callee.value).value,
+          this.ctx.resolveSnippet(arg).value,
           callee.value,
           // A new struct, so not a reference.
           /* origin */ 'runtime',
@@ -696,7 +694,7 @@ ${this.ctx.pre}}`;
         // `d.arrayOf(...)(otherArr)`.
         // We just let the argument resolve everything.
         return snip(
-          this.ctx.resolve(arg.value, callee.value).value,
+          this.ctx.resolveSnippet(arg).value,
           callee.value,
           // A new array, so not a reference.
           /* origin */ 'runtime',
@@ -1250,7 +1248,7 @@ Try 'return ${typeStr}(${str});' instead.
     this.ctx.defineVariable(rawId, snippet);
 
     const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
-    const rhsStr = this.ctx.resolve(rhsSnippet.value, rhsSnippet.dataType).value;
+    const rhsStr = this.ctx.resolveSnippet(rhsSnippet).value;
 
     // Even though the user defined a 'let' (expecting it to be reassigned), the
     // reassignment might happen in a pruned branch, in which case we can generate
@@ -1365,7 +1363,7 @@ Try 'return ${typeStr}(${str});' instead.
     this.ctx.defineVariable(rawId, snippet);
 
     const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
-    const rhsStr = this.ctx.resolve(rhsSnippet.value, rhsSnippet.dataType).value;
+    const rhsStr = this.ctx.resolveSnippet(rhsSnippet).value;
 
     let emittedVarType: 'var' | 'let' | 'const' | `#VAR_${number}#`;
     if (varType === '<deferred>') {
@@ -1383,8 +1381,8 @@ Try 'return ${typeStr}(${str});' instead.
   protected _statement(statement: tinyest.Statement): string {
     if (typeof statement === 'string') {
       const id = this._identifier(statement);
-      const resolved = id.value && this.ctx.resolve(id.value).value;
-      // oxlint-disable-next-line typescript/no-base-to-string
+      const resolved =
+        id.value !== undefined && id.value !== null ? this.ctx.resolveSnippet(id).value : '';
       return resolved ? `${this.ctx.pre}${resolved};` : '';
     }
 
@@ -1477,7 +1475,7 @@ ${this.ctx.pre}else ${alternate}`;
       try {
         const [_, condition, body] = statement;
         const condSnippet = this._typedExpression(condition, bool);
-        const conditionStr = this.ctx.resolve(condSnippet.value).value;
+        const conditionStr = this.ctx.resolveSnippet(condSnippet).value;
 
         const bodyStr = this._block(blockifySingleStatement(body));
         return `${this.ctx.pre}while (${conditionStr}) ${bodyStr}`;
@@ -1597,7 +1595,7 @@ ${this.ctx.pre}else ${alternate}`;
       // Post-update statement
       const [_, op, arg] = statement;
       const argExpr = this._expression(arg);
-      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
+      const argStr = this.ctx.resolveSnippet(argExpr).value;
 
       validateSnippetMutation(argExpr, statement);
       this.tryMarkModified(arg);
@@ -1620,8 +1618,8 @@ ${this.ctx.pre}else ${alternate}`;
     }
 
     const expr = this._expression(statement);
-    const resolved = expr.value && this.ctx.resolve(expr.value).value;
-    // oxlint-disable-next-line typescript/no-base-to-string
+    const resolved =
+      expr.value !== undefined && expr.value !== null ? this.ctx.resolveSnippet(expr).value : '';
     return resolved ? `${this.ctx.pre}${resolved};` : '';
   }
 

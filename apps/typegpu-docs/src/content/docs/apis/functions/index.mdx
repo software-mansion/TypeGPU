@@ -399,7 +399,7 @@ const neighborhood = tgpu.fn([d.f32, d.f32], d.vec2f)/* wgsl */`(a, r) {
 ### Including external resources
 
 Shelled WGSL functions can use external resources passed via the `$uses` method.
-*Externals* can include anything that can be resolved to WGSL by TypeGPU (numbers, vectors, matrices, constants, TypeGPU functions, buffer usages, textures, samplers, slots, accessors etc.).
+*Externals* can include anything that can be resolved to WGSL by TypeGPU (numbers, vectors, matrices, constants, TypeGPU functions, buffer bindings, textures, samplers, slots, accessors etc.).
 
 ```ts twoslash
 import { tgpu, d } from 'typegpu';

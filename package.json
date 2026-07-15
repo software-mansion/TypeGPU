@@ -34,7 +34,6 @@
     "test:browser": "vitest run --browser.enabled --project browser",
     "test:browser:watch": "vitest --browser.enabled --project browser",
     "test:coverage": "vitest --coverage run",
-    "nightly-build": "SKIP_TESTS=true pnpm --filter typegpu --filter @typegpu/noise --filter @typegpu/react --filter @typegpu/cli --filter unplugin-typegpu prepublishOnly --skip-publish-tag-check",
     "changes": "tgpu-dev-cli changes"
   },
   "devDependencies": {
