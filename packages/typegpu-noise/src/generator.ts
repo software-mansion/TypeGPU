@@ -136,8 +136,7 @@ export const XOROSHIRO64STARSTAR: StatefulGenerator = (() => {
       s1 ^= s0;
       updateCpuSeed(d.vec2u(rotl(s0, 26) ^ s1 ^ (s1 << 9), rotl(s1, 13)));
 
-      const temp = Math.imul(cpuSeed[0], 0x9e3779bb);
-      return Math.imul(rotl(temp, 5), 5);
+      return Math.imul(rotl(Math.imul(cpuSeed[0], 0x9e3779bb), 5), 5);
     }
   });
 
@@ -152,6 +151,7 @@ export const XOROSHIRO64STARSTAR: StatefulGenerator = (() => {
         updateCpuSeed(newSeed);
       }
     }),
+
     seed2: tgpu.fn([d.vec2f])((value) => {
       const scrambled = scrambleSeed2(value);
       const newSeed = d.vec2u(
