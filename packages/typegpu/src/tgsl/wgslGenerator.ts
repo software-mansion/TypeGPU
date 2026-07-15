@@ -19,7 +19,7 @@ import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared
 import { safeStringify } from '../shared/stringify.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
-import { eq, ne, lt, le, gt, ge } from '../std/boolean.ts';
+import { eq, ne, lt, le, gt, ge, not } from '../std/boolean.ts';
 
 import {
   isGPUCallable,
@@ -183,20 +183,17 @@ const unaryOpCodeToCodegen = {
 
     const argStr = ctx.resolveSnippet(argExpr).value;
 
-    if (wgsl.isBool(argExpr.dataType)) {
-      return snip(`!${argStr}`, bool, 'runtime', argExpr.possibleSideEffects);
-    }
-    if (wgsl.isNumericSchema(argExpr.dataType)) {
-      const resultStr = `!bool(${argStr})`;
-      const nanGuardedStr = // abstractFloat will be resolved as comptime known value
-        argExpr.dataType.type === 'f32' || argExpr.dataType.type === 'f16'
-          ? `(((bitcast<u32>(${argExpr.dataType.type === 'f16' ? `f32(${argStr})` : argStr}) << 1u) - 1u) >= 0xff000000)`
-          : resultStr;
-
-      return snip(nanGuardedStr, bool, 'runtime', argExpr.possibleSideEffects);
+    if (!wgsl.isBool(argExpr.dataType)) {
+      throw new WgslTypeError(
+        `Unary operator ! requires boolean operand. Got ${String(argExpr.dataType)}.${
+          wgsl.isVecBool(argExpr.dataType)
+            ? ` For component-wise negation, use 'std.${not.toString()}'.`
+            : ''
+        }`,
+      );
     }
 
-    return snip(false, bool, 'constant', false);
+    return snip(`!${argStr}`, bool, 'runtime', argExpr.possibleSideEffects);
   },
 } satisfies Partial<Record<tinyest.UnaryOperator, (...args: never[]) => unknown>>;
 
