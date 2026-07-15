@@ -13,11 +13,26 @@ const root = await tgpu.init({
 const dataGroups = Array.from(document.querySelectorAll<HTMLDivElement>('.data-group'));
 const yAxisLabels = Array.from(document.querySelectorAll<HTMLSpanElement>('.y-axis-labels span'));
 
-const results = SIZES.map(() => ({ jsTime: 0, gpuTime: 0, gpuShaderTime: 0 }));
+const results = SIZES.map(() => ({
+  jsTime: 0,
+  uploadTime: 0,
+  computeTime: 0,
+  syncTime: 0,
+  readbackTime: 0,
+}));
+
+const SEGMENTS = [
+  { cls: '.seg-upload', key: 'uploadTime', label: 'Upload' },
+  { cls: '.seg-compute', key: 'computeTime', label: 'GPU compute' },
+  { cls: '.seg-sync', key: 'syncTime', label: 'Submit & sync' },
+  { cls: '.seg-readback', key: 'readbackTime', label: 'Readback' },
+] as const;
 
 function drawCharts() {
   const overallMax = Math.max(
-    ...results.map((r) => Math.max(r.jsTime, r.gpuTime, r.gpuShaderTime)),
+    ...results.map((r) =>
+      Math.max(r.jsTime, r.uploadTime + r.computeTime + r.syncTime + r.readbackTime),
+    ),
   );
 
   // Update y-axis
@@ -27,35 +42,33 @@ function drawCharts() {
     label.textContent = ticks[i].toFixed(1);
   }
 
-  const metrics = [
-    { cls: '.bar-js', key: 'jsTime', label: 'JS' },
-    { cls: '.bar-gpu-total', key: 'gpuTime', label: 'Total GPU' },
-    { cls: '.bar-gpu-shader', key: 'gpuShaderTime', label: 'GPU shader' },
-  ] as const;
-
   for (const [i, group] of dataGroups.entries()) {
     const r = results[i];
 
     // Update speedup label
-    const speedup = r.gpuShaderTime > 0 ? (r.jsTime / r.gpuShaderTime).toFixed(1) : '-';
+    const speedup = r.computeTime > 0 ? (r.jsTime / r.computeTime).toFixed(1) : '-';
     (group.querySelector('.speedup-label') as HTMLDivElement).textContent = `${speedup}x`;
 
     // Update bars and tooltips
-    for (const m of metrics) {
-      const bar = group.querySelector(m.cls) as HTMLDivElement;
-      const value = r[m.key];
-      const height = overallMax > 0 ? value / overallMax : 0;
-      bar.style.setProperty('--bar-height', `${height}`);
+    const jsBar = group.querySelector('.bar-js') as HTMLDivElement;
+    jsBar.style.setProperty('--bar-height', `${overallMax > 0 ? r.jsTime / overallMax : 0}`);
+    (jsBar.querySelector('.bar-tooltip') as HTMLDivElement).textContent =
+      `JS: ${r.jsTime.toFixed(2)}ms`;
 
-      const tooltip = bar.querySelector('.bar-tooltip') as HTMLDivElement;
-      tooltip.textContent = `${m.label}: ${value.toFixed(2)}ms`;
+    for (const s of SEGMENTS) {
+      const segment = group.querySelector(s.cls) as HTMLDivElement;
+      const value = r[s.key];
+      segment.style.setProperty('--seg-height', `${overallMax > 0 ? value / overallMax : 0}`);
+      segment.classList.toggle('nonzero', value > 0);
+      (segment.querySelector('.bar-tooltip') as HTMLDivElement).textContent =
+        `${s.label}: ${value.toFixed(2)}ms`;
     }
   }
 }
 
 async function runBenchmarks() {
   for (const [i, size] of SIZES.entries()) {
-    const input = Array(size).fill(1);
+    const input = new Float32Array(size).fill(1);
     const result = await performCalculationsWithTime(root, input);
     if (result.success) {
       results[i] = result;
