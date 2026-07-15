@@ -34,10 +34,13 @@ class ExtractingGenerator extends WgslGenerator {
       if (this.returnedSnippet) {
         throw new Error('Cannot inspect multiple return values');
       }
-      if (!statement[1]) {
+      if (statement[1] === undefined) {
         throw new Error('Cannot inspect if nothing is returned');
       }
-      this.returnedSnippet = this._expression(statement[1]);
+      const expectedReturnType = this.ctx.topFunctionReturnType;
+      this.returnedSnippet = expectedReturnType
+        ? this._typedExpression(statement[1], expectedReturnType)
+        : this._expression(statement[1]);
       return super._return([NODE.return]);
     }
 

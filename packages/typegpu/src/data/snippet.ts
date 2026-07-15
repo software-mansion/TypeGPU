@@ -180,6 +180,12 @@ export function withDataType(dataType: BaseData | UnknownData, snippet: Snippet)
   return new SnippetImpl(snippet.value, dataType, snippet.origin, snippet.possibleSideEffects);
 }
 
+export function withValue(value: string, snippet: Snippet): ResolvedSnippet;
+export function withValue(value: unknown, snippet: Snippet): Snippet;
+export function withValue(value: unknown, snippet: Snippet): Snippet {
+  return new SnippetImpl(value, snippet.dataType, snippet.origin, snippet.possibleSideEffects);
+}
+
 export function withSideEffects(
   possibleSideEffects: boolean,
   snippet: ResolvedSnippet,
