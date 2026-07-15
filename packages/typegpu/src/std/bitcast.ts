@@ -30,6 +30,10 @@ import type {
   AnyVecInstance,
   AnyWgslData,
   BaseData,
+  F16,
+  F32,
+  I32,
+  U32,
   v2f,
   v2i,
   v2u,
@@ -159,24 +163,35 @@ export const bitcastF32toU32 = dualImpl({
   sideEffects: false,
 });
 
-const validBitcastNTypes = [f32, f16, i32, u32] as const;
+const validBitcastTypes = [
+  /* 2 bytes */
+  f16,
 
-const validBitcastVTypes = [
-  vec2f,
-  vec3f,
-  vec4f,
+  /* 4 bytes */
+  f32,
+  i32,
+  u32,
   vec2h,
+
+  /* 6 bytes */
   vec3h,
-  vec4h,
+
+  /* 8 bytes */
+  vec2f,
   vec2i,
-  vec3i,
-  vec4i,
   vec2u,
+  vec4h,
+
+  /* 12 bytes */
+  vec3f,
+  vec3i,
   vec3u,
+
+  /* 16 bytes */
+  vec4f,
+  vec4i,
   vec4u,
 ] as const;
-
-const validBitcastTypes = [...validBitcastNTypes, ...validBitcastVTypes] as const;
 
 type BitcastIOType = (typeof validBitcastTypes)[number];
 
@@ -213,15 +228,16 @@ function readFromBuf<Schema extends BitcastIOType>(
   return schema(...items) as Infer<Schema>;
 }
 
-const cpuBitcast = (
-  inType: WgslTypeFor<keyof typeof bufViews>,
-  outType: (typeof validBitcastNTypes)[number],
+const cpuBitcast = <In extends BitcastIOType, Out extends BitcastIOType>(
+  inType: In,
+  outType: Out,
 ) => {
-  const writeToPrimitive = 'primitive' in inType ? inType.primitive : inType;
-  const readFromPrimitive = 'primitive' in outType ? outType.primitive : outType;
+  const writeToPrimitive: F32 | U32 | I32 | F16 = 'primitive' in inType ? inType.primitive : inType;
+  const readFromPrimitive: F32 | U32 | I32 | F16 =
+    'primitive' in outType ? outType.primitive : outType;
 
-  return (n: number | AnyNumericVecInstance) => {
-    writeToBuf(n, bufViews[writeToPrimitive.type]);
+  return (value: Infer<In>): Infer<Out> => {
+    writeToBuf(value, bufViews[writeToPrimitive.type]);
     return readFromBuf(bufViews[readFromPrimitive.type], outType);
   };
 };
@@ -232,7 +248,7 @@ const bitcastFor = <In extends BitcastIOType, Out extends BitcastIOType>(
 ) => {
   return dualImpl({
     name: 'bitcast',
-    normalImpl: cpuBitcast(inType, outType) as unknown as (value: Infer<In>) => Infer<Out>, // TODO: type the function properly
+    normalImpl: cpuBitcast<In, Out>(inType, outType),
     codegenImpl: (_ctx, [n]) => stitch`bitcast<${outType.type}>(${n})`,
     signature: (arg) => {
       const uarg = unifyStrict([arg], [inType]);
@@ -248,10 +264,13 @@ const bitcastFor = <In extends BitcastIOType, Out extends BitcastIOType>(
   });
 };
 
-// TODO: lepiej podzielić to na klasy abstrakcji
-// i typować na chama
-// ... i cacheować dual imple??
 const casts = {
+  /* 2 bytes */
+  f16: {
+    f16: bitcastFor(f16, f16),
+  },
+
+  /* 4 bytes */
   f32: {
     f32: bitcastFor(f32, f32),
     i32: bitcastFor(f32, i32),
@@ -270,7 +289,19 @@ const casts = {
     u32: bitcastFor(u32, u32),
     vec2h: bitcastFor(u32, vec2h),
   },
+  vec2h: {
+    vec2h: bitcastFor(vec2h, vec2h),
+    f32: bitcastFor(vec2h, f32),
+    i32: bitcastFor(vec2h, i32),
+    u32: bitcastFor(vec2h, u32),
+  },
 
+  /* 6 bytes */
+  vec3h: {
+    vec3h: bitcastFor(vec3h, vec3h),
+  },
+
+  /* 8 bytes */
   vec2f: {
     vec2f: bitcastFor(vec2f, vec2f),
     vec2i: bitcastFor(vec2f, vec2i),
@@ -289,7 +320,14 @@ const casts = {
     vec2u: bitcastFor(vec2u, vec2u),
     vec4h: bitcastFor(vec2u, vec4h),
   },
+  vec4h: {
+    vec2f: bitcastFor(vec4h, vec2f),
+    vec2i: bitcastFor(vec4h, vec2i),
+    vec2u: bitcastFor(vec4h, vec2u),
+    vec4h: bitcastFor(vec4h, vec4h),
+  },
 
+  /* 12 bytes */
   vec3f: {
     vec3f: bitcastFor(vec3f, vec3f),
     vec3i: bitcastFor(vec3f, vec3i),
@@ -306,6 +344,7 @@ const casts = {
     vec3u: bitcastFor(vec3u, vec3u),
   },
 
+  /* 16 bytes */
   vec4f: {
     vec4f: bitcastFor(vec4f, vec4f),
     vec4i: bitcastFor(vec4f, vec4i),
@@ -320,25 +359,6 @@ const casts = {
     vec4f: bitcastFor(vec4u, vec4f),
     vec4i: bitcastFor(vec4u, vec4i),
     vec4u: bitcastFor(vec4u, vec4u),
-  },
-
-  f16: {
-    f16: bitcastFor(f16, f16),
-  },
-  vec2h: {
-    vec2h: bitcastFor(vec2h, vec2h),
-    f32: bitcastFor(vec2h, f32),
-    i32: bitcastFor(vec2h, i32),
-    u32: bitcastFor(vec2h, u32),
-  },
-  vec3h: {
-    vec3h: bitcastFor(vec3h, vec3h),
-  },
-  vec4h: {
-    vec4h: bitcastFor(vec4h, vec4h),
-    vec2f: bitcastFor(vec4h, vec2f),
-    vec2i: bitcastFor(vec4h, vec2i),
-    vec2u: bitcastFor(vec4h, vec2u),
   },
 } as const;
 
@@ -358,9 +378,3 @@ function getBitcast<
 }
 
 export const bitcast = comptime(getBitcast);
-
-// T <=> T (liczby, wektory)
-// T <=> S (f32, i32, u32)
-// T <=> S (vecf ...)
-// vec2h <=> u32/i32/f32
-// vec4h <=> v2f/v2u/v2h
