@@ -108,7 +108,7 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, dataType, origin);
+          return snip(this, dataType, origin, false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `var:${getName(this) ?? '<unnamed>'}.$`,
