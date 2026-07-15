@@ -897,7 +897,10 @@ ${this.ctx.pre}}`;
     const resolvedDataType = this.ctx.resolve(options.dataType).value;
     const resolvedValue = this.ctx.resolveSnippet(options.init).value;
 
-    this.ctx.addDeclaration(`const ${options.id}: ${resolvedDataType} = ${resolvedValue};`);
+    this.ctx.addDeclaration(
+      `const ${options.id}: ${resolvedDataType} = ${resolvedValue};`,
+      options.id,
+    );
 
     return snip(options.id, options.dataType, 'constant-immutable-def');
   }
@@ -923,6 +926,7 @@ ${this.ctx.pre}}`;
 
     this.ctx.addDeclaration(
       options.init ? `${pre} = ${this.ctx.resolveSnippet(options.init).value};` : `${pre};`,
+      options.id,
     );
 
     return snip(options.id, options.dataType, options.scope);

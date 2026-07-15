@@ -376,7 +376,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   private readonly _indentController = new IndentController();
   private readonly _itemStateStack = new ItemStateStackImpl();
   readonly #modeStack: ExecState[] = [];
-  private readonly _declarations: string[] = [];
+  private readonly _declarations: ResolvedDeclaration[] = [];
   private _varyingLocations: Record<string, number> | undefined;
   /**
    * Holds a set of base (slot-less) functions that have started their resolution process.
@@ -733,8 +733,12 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
   }
 
-  addDeclaration(declaration: string): void {
-    this._declarations.push(declaration);
+  addDeclaration(declaration: string, name?: string | undefined): void {
+    this._declarations.push({ name, code: declaration });
+  }
+
+  get declarations(): readonly ResolvedDeclaration[] {
+    return this._declarations;
   }
 
   allocateLayoutEntry(layout: TgpuBindGroupLayout): string {
@@ -997,7 +1001,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           this.pushMode(new CodegenState());
           const result = provideCtx(this, () => this._getOrInstantiate(item));
           return snip(
-            `${[...this._declarations].join('\n\n')}${result.value}`,
+            `${this._declarations.map((decl) => decl.code).join('\n\n')}${result.value}`,
             Void,
             /* origin */ 'runtime', // arbitrary
           );
@@ -1079,15 +1083,32 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 }
 
 /**
+ * A single module-scope declaration emitted during resolution.
+ *
+ * @param name - The resolved identifier the declaration declares (a fn,
+ *   struct, var, const or alias name), or `undefined` for declarations that
+ *   don't declare a single identifier (e.g. `tgpu['~unstable'].declare`).
+ * @param code - The WGSL code of the declaration.
+ */
+export interface ResolvedDeclaration {
+  name: string | undefined;
+  code: string;
+}
+
+/**
  * The results of a WGSL resolution.
  *
  * @param code - The resolved code.
+ * @param declarations - The module-scope declarations `code` is made of, in
+ *   emission order. When resolving with a shared namespace, only declarations
+ *   emitted by *this* resolution are included (memoized ones are not re-emitted).
  * @param usedBindGroupLayouts - List of used `tgpu.bindGroupLayout`s.
  * @param catchall - Automatically constructed bind group for buffer usages and buffer bindings, preceded by its index.
  * @param logResources - Buffers and information about used console.logs needed to decode the raw data.
  */
 export interface ResolutionResult {
   code: string;
+  declarations: ResolvedDeclaration[];
   usedBindGroupLayouts: TgpuBindGroupLayout[];
   catchall: [number, TgpuBindGroup] | undefined;
   logResources: LogResources | undefined;
@@ -1112,11 +1133,17 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
     (binding, idx) => [String(idx), binding.layoutEntry] as [string, TgpuLayoutEntry],
   );
 
+  // Bind group indices are only known now, so the same placeholder
+  // replacements applied to `code` are recorded and re-applied to each
+  // declaration's code.
+  const bindingReplacements: [placeholder: string, index: string][] = [];
+
   const createCatchallGroup = () => {
     const catchallIdx = automaticIds.next().value;
     const catchallLayout = bindGroupLayout(Object.fromEntries(layoutEntries));
     usedBindGroupLayouts[catchallIdx] = catchallLayout;
     code = code.replaceAll(CATCHALL_BIND_GROUP_IDX_MARKER, String(catchallIdx));
+    bindingReplacements.push([CATCHALL_BIND_GROUP_IDX_MARKER, String(catchallIdx)]);
 
     return [
       catchallIdx,
@@ -1141,6 +1168,7 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
     const idx = layout.index ?? automaticIds.next().value;
     usedBindGroupLayouts[idx] = layout;
     code = code.replaceAll(placeholder, String(idx));
+    bindingReplacements.push([placeholder, String(idx)]);
   }
 
   if (options.enableExtensions && options.enableExtensions.length > 0) {
@@ -1148,8 +1176,17 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
     code = `${extensions.join('\n')}\n\n${code}`;
   }
 
+  const declarations = ctx.declarations.map(({ name, code: declarationCode }) => ({
+    name,
+    code: bindingReplacements.reduce(
+      (acc, [placeholder, idx]) => acc.replaceAll(placeholder, idx),
+      declarationCode,
+    ),
+  }));
+
   return {
     code,
+    declarations,
     usedBindGroupLayouts,
     catchall,
     logResources: ctx.logResources,
