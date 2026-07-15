@@ -21,9 +21,15 @@ import type {
 import { $internal } from '../../shared/symbols.ts';
 import type { Prettify, UnionToIntersection } from '../../shared/utilityTypes.ts';
 import { isGPUBuffer } from '../../types.ts';
-import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
+import type { ExperimentalTgpuRoot, TgpuRoot } from '../root/rootTypes.ts';
 import { calculateOffsets, readFromArrayBuffer, writeToArrayBuffer } from '../../data/dataIO.ts';
 import { patchArrayBuffer } from '../../data/partialIO.ts';
+import {
+  deserializeDataSchema,
+  serializeDataSchema,
+  type SerializedDataSchema,
+} from '../../serial/schema.ts';
+import type { RestoreContext } from '../../serial/types.ts';
 import {
   mutable,
   readonly,
@@ -63,7 +69,7 @@ export interface IndirectFlag {
  */
 export type Vertex = VertexFlag;
 
-type UsageLiteral = 'uniform' | 'storage' | 'vertex' | 'index' | 'indirect';
+export type UsageLiteral = 'uniform' | 'storage' | 'vertex' | 'index' | 'indirect';
 
 type LiteralToUsageType<T extends UsageLiteral> = T extends 'uniform'
   ? UniformFlag
@@ -117,6 +123,7 @@ export type BufferInitialData<TData extends BaseData> =
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'buffer';
+  readonly root: TgpuRoot;
   readonly dataType: TData;
   readonly initial?: InferInput<TData> | undefined;
   readonly arrayBuffer: ArrayBuffer;
@@ -167,12 +174,70 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
 
+export interface TgpuBufferSnapshot {
+  readonly type: 'buffer';
+  readonly device: GPUDevice;
+  readonly buffer: GPUBuffer;
+  readonly schema: SerializedDataSchema;
+  readonly usages: UsageLiteral[];
+}
+
+function getBufferUsages(buffer: TgpuBuffer<BaseData>): UsageLiteral[] {
+  const usages: UsageLiteral[] = [];
+  if (buffer.usableAsUniform) {
+    usages.push('uniform');
+  }
+  if (buffer.usableAsStorage) {
+    usages.push('storage');
+  }
+  if (buffer.usableAsVertex) {
+    usages.push('vertex');
+  }
+  if (buffer.usableAsIndex) {
+    usages.push('index');
+  }
+  if (buffer.usableAsIndirect) {
+    usages.push('indirect');
+  }
+  return usages;
+}
+
+export function INTERNAL_snapshotBuffer(buffer: TgpuBuffer<BaseData>): TgpuBufferSnapshot {
+  return {
+    type: 'buffer',
+    device: buffer.root.device,
+    buffer: buffer.buffer,
+    schema: serializeDataSchema(buffer.dataType),
+    usages: getBufferUsages(buffer),
+  };
+}
+
+export function INTERNAL_applyBufferUsages(
+  buffer: TgpuBuffer<BaseData>,
+  usages: UsageLiteral[],
+): void {
+  if (usages.length > 0) {
+    (buffer as TgpuBufferImpl<BaseData>).$usage(...usages);
+  }
+}
+
+export function INTERNAL_restoreBuffer(
+  snapshot: TgpuBufferSnapshot,
+  ctx: RestoreContext,
+): TgpuBuffer<AnyData> {
+  const root = ctx.getRoot(snapshot.device);
+  const buffer = root.createBuffer(deserializeDataSchema(snapshot.schema), snapshot.buffer);
+  INTERNAL_applyBufferUsages(buffer, snapshot.usages);
+  return buffer;
+}
+
 // --------------
 // Implementation
 // --------------
 class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   readonly [$internal] = true;
   readonly resourceType = 'buffer';
+  readonly root: ExperimentalTgpuRoot;
   flags: GPUBufferUsageFlags = GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
   readonly dataType: TData;
 
@@ -203,6 +268,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     initialOrBuffer?: BufferInitialData<TData> | GPUBuffer,
     disallowedUsages?: UsageLiteral[],
   ) {
+    this.root = root;
     this.dataType = dataType;
     this.#disallowedUsages = disallowedUsages;
     this.#device = root.device;

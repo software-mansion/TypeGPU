@@ -7,6 +7,11 @@ import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import {
+  deserializeDataSchema,
+  serializeDataSchema,
+  type SerializedDataSchema,
+} from '../../serial/schema.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 
 // ----------
@@ -59,6 +64,32 @@ export function constant(
   }
 
   return new TgpuConstImpl(dataType, value);
+}
+
+export function isConst(value: unknown): value is TgpuConst {
+  return (
+    (value as TgpuConst | undefined)?.resourceType === 'const' &&
+    !!(value as { [$internal]?: unknown } | undefined)?.[$internal]
+  );
+}
+
+export interface TgpuConstSnapshot {
+  readonly type: 'const';
+  readonly schema: SerializedDataSchema;
+  readonly value: unknown;
+}
+
+export function INTERNAL_snapshotConst(value: TgpuConst): TgpuConstSnapshot {
+  const impl = value as TgpuConstImpl<BaseData>;
+  return {
+    type: 'const',
+    schema: serializeDataSchema(impl.dataType),
+    value: impl.$,
+  };
+}
+
+export function INTERNAL_restoreConst(snapshot: TgpuConstSnapshot): TgpuConst {
+  return constant(deserializeDataSchema(snapshot.schema), snapshot.value);
 }
 
 // --------------

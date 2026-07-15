@@ -1,9 +1,11 @@
 import { setName, type TgpuNamable } from '../../shared/meta.ts';
-import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
+import type { ExperimentalTgpuRoot, TgpuRoot } from '../root/rootTypes.ts';
+import type { RestoreContext } from '../../serial/types.ts';
 import { $internal } from '../../shared/symbols.ts';
 
 export interface TgpuQuerySet<T extends GPUQueryType> extends TgpuNamable {
   readonly resourceType: 'query-set';
+  readonly root: TgpuRoot;
   readonly type: T;
   readonly count: number;
 
@@ -35,13 +37,42 @@ export function isQuerySet<T extends GPUQueryType>(value: unknown): value is Tgp
   return maybe?.resourceType === 'query-set' && !!maybe[$internal];
 }
 
+export interface TgpuQuerySetSnapshot {
+  readonly type: 'query-set';
+  readonly device: GPUDevice;
+  readonly querySet: GPUQuerySet;
+  readonly queryType: GPUQueryType;
+  readonly count: number;
+}
+
+export function INTERNAL_snapshotQuerySet(
+  querySet: TgpuQuerySet<GPUQueryType>,
+): TgpuQuerySetSnapshot {
+  return {
+    type: 'query-set',
+    device: querySet.root.device,
+    querySet: querySet.querySet,
+    queryType: querySet.type,
+    count: querySet.count,
+  };
+}
+
+export function INTERNAL_restoreQuerySet(
+  snapshot: TgpuQuerySetSnapshot,
+  ctx: RestoreContext,
+): TgpuQuerySet<GPUQueryType> {
+  return ctx
+    .getRoot(snapshot.device)
+    .createQuerySet(snapshot.queryType, snapshot.count, snapshot.querySet);
+}
+
 class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
   readonly resourceType = 'query-set' as const;
+  readonly root: TgpuRoot;
   readonly type: T;
   readonly count: number;
 
   readonly #rawQuerySet: GPUQuerySet | undefined;
-  readonly #device: GPUDevice;
   #querySet: GPUQuerySet | undefined;
   readonly #ownQuerySet: boolean;
   #destroyed = false;
@@ -50,7 +81,7 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
   #resolveBuffer: GPUBuffer | undefined = undefined;
 
   constructor(root: ExperimentalTgpuRoot, type: T, count: number, rawQuerySet?: GPUQuerySet) {
-    this.#device = root.device;
+    this.root = root;
     this.type = type;
     this.count = count;
     this.#rawQuerySet = rawQuerySet;
@@ -69,7 +100,7 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
       return this.#querySet;
     }
 
-    this.#querySet = this.#device.createQuerySet({
+    this.#querySet = this.root.device.createQuerySet({
       type: this.type,
       count: this.count,
     });
@@ -90,7 +121,7 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
     return {
       get readBuffer(): GPUBuffer {
         if (!self.#readBuffer) {
-          self.#readBuffer = self.#device.createBuffer({
+          self.#readBuffer = self.root.device.createBuffer({
             size: self.count * BigUint64Array.BYTES_PER_ELEMENT,
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
           });
@@ -99,7 +130,7 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
       },
       get resolveBuffer(): GPUBuffer {
         if (!self.#resolveBuffer) {
-          self.#resolveBuffer = self.#device.createBuffer({
+          self.#resolveBuffer = self.root.device.createBuffer({
             size: self.count * BigUint64Array.BYTES_PER_ELEMENT,
             usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
           });
@@ -125,9 +156,9 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
       throw new Error('This QuerySet is busy resolving or reading.');
     }
 
-    const commandEncoder = this.#device.createCommandEncoder();
+    const commandEncoder = this.root.device.createCommandEncoder();
     commandEncoder.resolveQuerySet(this.querySet, 0, this.count, this[$internal].resolveBuffer, 0);
-    this.#device.queue.submit([commandEncoder.finish()]);
+    this.root.device.queue.submit([commandEncoder.finish()]);
   }
 
   async read(): Promise<bigint[]> {
@@ -137,7 +168,7 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
 
     this.#available = false;
     try {
-      const commandEncoder = this.#device.createCommandEncoder();
+      const commandEncoder = this.root.device.createCommandEncoder();
       commandEncoder.copyBufferToBuffer(
         this[$internal].resolveBuffer,
         0,
@@ -145,7 +176,7 @@ class TgpuQuerySetImpl<T extends GPUQueryType> implements TgpuQuerySet<T> {
         0,
         this.count * BigUint64Array.BYTES_PER_ELEMENT,
       );
-      this.#device.queue.submit([commandEncoder.finish()]);
+      this.root.device.queue.submit([commandEncoder.finish()]);
 
       const readBuffer = this[$internal].readBuffer;
       await readBuffer.mapAsync(GPUMapMode.READ);

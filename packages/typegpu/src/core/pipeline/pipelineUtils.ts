@@ -2,7 +2,48 @@ import type { IndirectFlag, TgpuBuffer } from '../buffer/buffer.ts';
 import { memoryLayoutOf, type PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
+import type { TgpuBindGroup, TgpuBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
+import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import { isGPUBuffer } from '../../types.ts';
+import type { Timeable, TimestampWritesPriors } from './timeable.ts';
+
+export function collectBindGroupPairs(
+  layouts: TgpuBindGroupLayout[],
+  catchall: [number, TgpuBindGroup] | undefined,
+  map: Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup> | undefined,
+): [TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup][] {
+  return layouts.flatMap((layout, idx): [TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup][] => {
+    const resource = catchall && idx === catchall[0] ? catchall[1] : map?.get(layout);
+    return resource ? [[layout, resource]] : [];
+  });
+}
+
+export function collectVertexBufferPairs<Buffer>(
+  layouts: TgpuVertexLayout[],
+  map: Map<TgpuVertexLayout, Buffer> | undefined,
+): [TgpuVertexLayout, Buffer][] {
+  return layouts.flatMap((layout): [TgpuVertexLayout, Buffer][] => {
+    const resource = map?.get(layout);
+    return resource ? [[layout, resource]] : [];
+  });
+}
+
+export function restoreTimestampPriors<T extends Timeable>(
+  pipeline: T,
+  priors: {
+    readonly timestampWrites: TimestampWritesPriors['timestampWrites'] | undefined;
+    readonly performanceCallback: TimestampWritesPriors['performanceCallback'] | undefined;
+  },
+): T {
+  let result = pipeline;
+  if (priors.timestampWrites) {
+    result = result.withTimestampWrites(priors.timestampWrites);
+  }
+  if (priors.performanceCallback) {
+    result = result.withPerformanceCallback(priors.performanceCallback);
+  }
+  return result;
+}
 
 type IndirectOperation = 'dispatchWorkgroupsIndirect' | 'drawIndirect' | 'drawIndexedIndirect';
 const IndirectOperationToRequiredData = {

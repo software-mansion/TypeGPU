@@ -4,6 +4,27 @@ import { tgpu, d } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('TgpuRoot', () => {
+  describe('init', () => {
+    it('does not forward optionalFeatures to requestDevice', async ({ adapter }) => {
+      const root = await tgpu.init({
+        device: { optionalFeatures: ['timestamp-query'] },
+      });
+
+      expect(adapter.requestDevice.mock.calls).toMatchInlineSnapshot(`
+        [
+          [
+            {
+              "requiredFeatures": [
+                "timestamp-query",
+              ],
+            },
+          ],
+        ]
+      `);
+      root.destroy();
+    });
+  });
+
   describe('.createBuffer', () => {
     it('should create buffer with no initialization', ({ root }) => {
       const dataBuffer = root.createBuffer(d.u32).$usage('uniform');

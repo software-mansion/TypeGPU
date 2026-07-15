@@ -3,6 +3,7 @@ import {
   tgpu,
   common,
   d,
+  isBindGroup,
   MissingBindGroupsError,
   type TgpuFragmentFn,
   type TgpuFragmentFnShell,
@@ -11,6 +12,7 @@ import {
   type TgpuVertexFn,
   type TgpuVertexFnShell,
 } from 'typegpu';
+import { restoreResource, snapshotResource } from 'typegpu/~internal';
 import { it } from 'typegpu-testing-utility';
 
 describe('render pipeline behavior', () => {
@@ -483,6 +485,53 @@ describe('render pipeline behavior', () => {
     pipeline.withStencilReference(7).draw(3);
 
     expect(renderPassEncoder.setStencilReference).toHaveBeenNthCalledWith(2, 7);
+  });
+
+  it('should wrap raw render pipelines with bind groups', ({ root, renderPassEncoder }) => {
+    const manualLayout = tgpu.bindGroupLayout({ params: { uniform: d.f32 } });
+    const manualBindGroup = root.createBindGroup(manualLayout, {
+      params: root.createBuffer(d.f32).$usage('uniform'),
+    });
+    const fixedUniform = root.createUniform(d.f32);
+
+    const sourcePipeline = root
+      .createRenderPipeline({
+        vertex: common.fullScreenTriangle,
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(fixedUniform.$, manualLayout.$.params, 0, 1);
+        },
+      })
+      .with(manualBindGroup);
+
+    const snapshot = snapshotResource(sourcePipeline);
+    if (snapshot?.type !== 'render-pipeline') {
+      throw new Error('Expected a render pipeline snapshot');
+    }
+
+    const pipeline = (
+      restoreResource(snapshot, { getRoot: () => root }) as TgpuRenderPipeline<typeof d.vec4f>
+    ).withColorAttachment({ view: {} as unknown as GPUTextureView });
+
+    expect(snapshot.device).toBe(root.device);
+    expect(snapshot.fragmentOut).toMatchInlineSnapshot(`
+      {
+        "key": "vec4f",
+        "type": "d",
+      }
+    `);
+    expect(snapshot.bindGroups).toHaveLength(2);
+    expect(snapshot.bindGroups.some(([, bindGroup]) => bindGroup === manualBindGroup)).toBe(true);
+
+    pipeline.draw(3);
+
+    expect(renderPassEncoder.mock.setPipeline).toHaveBeenCalledWith(snapshot.pipeline);
+    for (const [layout, bindGroup] of snapshot.bindGroups) {
+      expect(renderPassEncoder.mock.setBindGroup).toHaveBeenCalledWith(
+        snapshot.usedBindGroupLayouts.indexOf(layout),
+        isBindGroup(bindGroup) ? root.unwrap(bindGroup) : bindGroup,
+      );
+    }
   });
 
   it('should onlly allow for drawIndexed with assigned index buffer', ({ root }) => {

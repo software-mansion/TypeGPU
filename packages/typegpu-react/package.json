@@ -17,7 +17,16 @@
   "sideEffects": false,
   "types": "./src/browser/index.ts",
   "exports": {
-    ".": "./src/browser/index.ts",
+    ".": {
+      "react-native": "./src/react-native/index.ts",
+      "browser": "./src/browser/index.ts",
+      "default": "./src/browser/index.ts"
+    },
+    "./react-native-worklets": {
+      "types": "./src/react-native/worklets.ts",
+      "react-native": "./src/react-native/worklets.ts",
+      "default": "./src/react-native/worklets.ts"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -29,6 +38,11 @@
         "browser": "./dist/browser/index.js",
         "react-native": "./dist/react-native/index.js",
         "default": "./dist/browser/index.js"
+      },
+      "./react-native-worklets": {
+        "types": "./dist/react-native/worklets.d.ts",
+        "react-native": "./dist/react-native/worklets.js",
+        "default": "./dist/react-native/worklets.js"
       }
     },
     "linkDirectory": false,
@@ -53,6 +67,7 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-native": "0.84.1",
+    "react-native-worklets": "0.10.2",
     "tsdown": "catalog:build",
     "typegpu": "workspace:*",
     "typegpu-testing-utility": "workspace:^",
@@ -63,6 +78,7 @@
     "react": "^19.0.0",
     "react-native": "*",
     "react-native-webgpu": "*",
+    "react-native-worklets": "*",
     "typegpu": "workspace:^"
   },
   "peerDependenciesMeta": {
@@ -70,6 +86,9 @@
       "optional": true
     },
     "react-native-webgpu": {
+      "optional": true
+    },
+    "react-native-worklets": {
       "optional": true
     }
   }

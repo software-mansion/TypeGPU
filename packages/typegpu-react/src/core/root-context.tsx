@@ -9,7 +9,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { tgpu, type TgpuRoot } from 'typegpu';
+import { tgpu, type InitOptions, type TgpuRoot } from 'typegpu';
 import { useDeferredCleanup } from './helper-hooks.ts';
 import { useBailOnServer } from './use-bail-on-server.ts';
 
@@ -83,6 +83,11 @@ interface RootContext {
 class OwnRootContext implements RootContext {
   #result: RootContextResult | undefined;
   #destroyed: boolean = false;
+  readonly #options: InitOptions | undefined;
+
+  constructor(options?: InitOptions) {
+    this.#options = options;
+  }
 
   initOrGetRoot(): RootContextResult {
     if (this.#destroyed) {
@@ -91,7 +96,7 @@ class OwnRootContext implements RootContext {
     }
 
     if (!this.#result) {
-      const promise = tgpu.init().then(
+      const promise = tgpu.init(this.#options).then(
         (root) => {
           if (this.#destroyed) {
             root.destroy();
@@ -157,6 +162,8 @@ const globalRootContextValue = new OwnRootContext();
 const rootContext = createContext<RootContext | null>(null);
 
 export interface RootProps {
+  /** Options used when this provider creates its own root, ignored when `root` is provided */
+  options?: InitOptions | undefined;
   /**
    * An existing root to provide. If undefined (default), a new root will be initialized for
    * this provider's children.
@@ -183,8 +190,8 @@ function WarnSuspense() {
   return null;
 }
 
-export const Root = ({ children, root }: RootProps) => {
-  const [ownCtx] = useState(() => new OwnRootContext());
+export const Root = ({ children, options, root }: RootProps) => {
+  const [ownCtx] = useState(() => new OwnRootContext(options));
   const existingRootCtx = useMemo(() => {
     if (root) {
       return new ExistingRootContext(root);

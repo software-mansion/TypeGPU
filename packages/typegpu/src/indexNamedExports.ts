@@ -23,11 +23,15 @@ export {
   isUsableAsStorage,
 } from './types.ts';
 export { isBufferBinding, isBufferShorthand } from './core/buffer/bufferBinding.ts';
+export { isBindGroup, isBindGroupLayout } from './tgpuBindGroupLayout.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
 export { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
 export { isTgpuVertexFn } from './core/function/tgpuVertexFn.ts';
 export { isTgpuComputeFn } from './core/function/tgpuComputeFn.ts';
+export { isComputePipeline, isPipeline, isRenderPipeline } from './core/pipeline/typeGuards.ts';
+export { isQuerySet } from './core/querySet/querySet.ts';
 export { isVariable } from './core/variable/tgpuVariable.ts';
+export { isVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 export type {
   /** @deprecated Import from 'typegpu/~internal' instead */ ShaderGenerator,
 } from './tgsl/shaderGenerator.ts';
@@ -62,6 +66,7 @@ export type {
   TgpuBuffer,
   Uniform,
   UniformFlag,
+  UsageLiteral,
   ValidUsagesFor,
   Vertex,
   VertexFlag,

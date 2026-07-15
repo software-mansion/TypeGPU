@@ -79,6 +79,7 @@ import { u32 } from '../../data/numeric.ts';
 import { ceil } from '../../std/numeric.ts';
 import { allEq } from '../../std/boolean.ts';
 import { getName, setName } from '../../shared/meta.ts';
+import type { RestoreContext } from '../../serial/types.ts';
 
 /**
  * Changes the given array to a vec of 3 numbers, filling missing values with 1.
@@ -100,7 +101,9 @@ const workgroupSizeConfigs = [
 export class TgpuGuardedComputePipelineImpl<
   TArgs extends number[],
 > implements TgpuGuardedComputePipeline<TArgs> {
-  #root: ExperimentalTgpuRoot;
+  readonly resourceType = 'guarded-compute-pipeline' as const;
+
+  #root: TgpuRoot;
   #pipeline: TgpuComputePipeline;
   #sizeUniform: TgpuUniform<Vec3u>;
   #workgroupSize: v3u;
@@ -108,7 +111,7 @@ export class TgpuGuardedComputePipelineImpl<
   #lastSize: v3u;
 
   constructor(
-    root: ExperimentalTgpuRoot,
+    root: TgpuRoot,
     pipeline: TgpuComputePipeline,
     sizeUniform: TgpuUniform<Vec3u>,
     workgroupSize: v3u,
@@ -183,6 +186,14 @@ export class TgpuGuardedComputePipelineImpl<
     return this.#sizeUniform;
   }
 
+  get root() {
+    return this.#root;
+  }
+
+  get workgroupSize() {
+    return this.#workgroupSize;
+  }
+
   [$internal] = true;
   get [$getNameForward]() {
     return this.#pipeline;
@@ -191,6 +202,66 @@ export class TgpuGuardedComputePipelineImpl<
     setName(this, label);
     return this;
   }
+}
+
+export function isGuardedComputePipeline(maybe: unknown): maybe is TgpuGuardedComputePipeline {
+  return (
+    (maybe as TgpuGuardedComputePipeline | undefined)?.resourceType ===
+      'guarded-compute-pipeline' && !!(maybe as { [$internal]?: boolean } | undefined)?.[$internal]
+  );
+}
+
+export function isRoot(maybe: unknown): maybe is TgpuRoot {
+  return (
+    (maybe as TgpuRoot | undefined)?.resourceType === 'root' &&
+    !!(maybe as { [$internal]?: unknown } | undefined)?.[$internal]
+  );
+}
+
+export interface TgpuRootSnapshot {
+  readonly type: 'root';
+  readonly device: GPUDevice;
+}
+
+export function INTERNAL_snapshotRoot(root: TgpuRoot): TgpuRootSnapshot {
+  return { type: 'root', device: root.device };
+}
+
+export function INTERNAL_restoreRoot(snapshot: TgpuRootSnapshot, ctx: RestoreContext): TgpuRoot {
+  return ctx.getRoot(snapshot.device);
+}
+
+export interface TgpuGuardedComputePipelineSnapshot {
+  readonly type: 'guarded-compute-pipeline';
+  readonly device: GPUDevice;
+  readonly pipeline: TgpuComputePipeline;
+  readonly sizeUniform: TgpuUniform<Vec3u>;
+  readonly workgroupSize: [number, number, number];
+}
+
+export function INTERNAL_snapshotGuardedComputePipeline(
+  pipeline: TgpuGuardedComputePipeline,
+): TgpuGuardedComputePipelineSnapshot {
+  const impl = pipeline as TgpuGuardedComputePipelineImpl<number[]>;
+  return {
+    type: 'guarded-compute-pipeline',
+    device: impl.root.device,
+    pipeline: impl.pipeline,
+    sizeUniform: impl.sizeUniform,
+    workgroupSize: [impl.workgroupSize.x, impl.workgroupSize.y, impl.workgroupSize.z],
+  };
+}
+
+export function INTERNAL_restoreGuardedComputePipeline(
+  snapshot: TgpuGuardedComputePipelineSnapshot,
+  ctx: RestoreContext,
+): TgpuGuardedComputePipeline {
+  return new TgpuGuardedComputePipelineImpl(
+    ctx.getRoot(snapshot.device),
+    snapshot.pipeline,
+    snapshot.sizeUniform,
+    vec3u(...snapshot.workgroupSize),
+  );
 }
 
 class WithBindingImpl implements WithBinding {
@@ -281,6 +352,7 @@ class WithBindingImpl implements WithBinding {
 class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpuRoot {
   '~unstable': TgpuRoot['~unstable'];
 
+  readonly resourceType = 'root' as const;
   readonly device: GPUDevice;
   readonly nameRegistrySetting: 'random' | 'strict';
   readonly shaderGenerator: ShaderGenerator | undefined;
@@ -380,8 +452,11 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
   createBindGroup<
     Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
-  >(layout: TgpuBindGroupLayout<Entries>, entries: ExtractBindGroupInputFromLayout<Entries>) {
-    return new TgpuBindGroupImpl(layout, entries);
+  >(
+    layout: TgpuBindGroupLayout<Entries>,
+    entries: ExtractBindGroupInputFromLayout<Entries>,
+  ): TgpuBindGroup<Entries> {
+    return new TgpuBindGroupImpl(this, layout, entries);
   }
 
   destroy() {
@@ -711,6 +786,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     unstable_names: names = 'strict',
     unstable_logOptions,
   } = options ?? {};
+  const { optionalFeatures, ...deviceDescriptor } = deviceOpt ?? {};
 
   if (!navigator.gpu) {
     throw new Error('WebGPU is not supported by this browser.');
@@ -723,13 +799,13 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
   }
 
   const availableFeatures: GPUFeatureName[] = [];
-  for (const feature of deviceOpt?.requiredFeatures ?? []) {
+  for (const feature of deviceDescriptor.requiredFeatures ?? []) {
     if (!adapter.features.has(feature)) {
       throw new Error(`Requested feature "${feature}" is not supported by the adapter.`);
     }
     availableFeatures.push(feature);
   }
-  for (const feature of deviceOpt?.optionalFeatures ?? []) {
+  for (const feature of optionalFeatures ?? []) {
     if (adapter.features.has(feature)) {
       availableFeatures.push(feature);
     } else {
@@ -738,7 +814,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
   }
 
   const device = await adapter.requestDevice({
-    ...deviceOpt,
+    ...deviceDescriptor,
     requiredFeatures: availableFeatures,
   });
 
