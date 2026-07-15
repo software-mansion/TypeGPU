@@ -149,9 +149,9 @@ describe('bitcast', () => {
 
 describe('bitcast in shaders', () => {
   it('works for primitives', () => {
-    const fnf32 = tgpu.fn([], d.f32)(() => std.bitcastU32toF32(1234));
-    const fni32 = tgpu.fn([], d.i32)(() => std.bitcastU32toI32(d.u32(2 ** 31)));
-    const fnu32 = tgpu.fn([d.f32], d.u32)((v) => std.bitcastF32toU32(v));
+    const fnf32 = tgpu.fn([], d.f32)(() => bitcast(d.u32, d.f32)(1234));
+    const fni32 = tgpu.fn([], d.i32)(() => bitcast(d.u32, d.i32)(d.u32(2 ** 31)));
+    const fnu32 = tgpu.fn([d.f32], d.u32)((v) => bitcast(d.f32, d.u32)(v));
 
     expect(tgpu.resolve([fnf32])).toMatchInlineSnapshot(`
       "fn fnf32() -> f32 {
@@ -171,9 +171,9 @@ describe('bitcast in shaders', () => {
   });
 
   it('works for vectors', () => {
-    const fnvec4i = tgpu.fn([], d.vec4i)(() => std.bitcastU32toI32(vec4u(1, 2, 3, 4)));
-    const fnvec4f = tgpu.fn([], d.vec4f)(() => std.bitcastU32toF32(vec4u(1, 2, 3, 4)));
-    const fnvec4u = tgpu.fn([d.vec4f], d.vec4u)((v) => std.bitcastF32toU32(v));
+    const fnvec4i = tgpu.fn([], d.vec4i)(() => bitcast(d.vec4u, d.vec4i)(vec4u(1, 2, 3, 4)));
+    const fnvec4f = tgpu.fn([], d.vec4f)(() => bitcast(d.vec4u, d.vec4f)(vec4u(1, 2, 3, 4)));
+    const fnvec4u = tgpu.fn([d.vec4f], d.vec4u)((v) => bitcast(d.vec4f, d.vec4u)(v));
 
     expect(tgpu.resolve([fnvec4i])).toMatchInlineSnapshot(`
       "fn fnvec4i() -> vec4i {
@@ -196,53 +196,53 @@ describe('bitcast in shaders', () => {
     const f1 = () => {
       'use gpu';
       // @ts-expect-error
-      return std.bitcastU32toF32(d.vec2i());
+      return bitcast(d.vec2u, d.vec2i)(d.vec2i());
     };
     expect(() => tgpu.resolve([f1])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f1
       - fn*:f1()
-      - fn:bitcastU32toF32: Unsupported data types: vec2i. Supported types are: u32, vec2u, vec3u, vec4u.]
+      - fn:bitcast: Unsupported data types: vec2i. Supported types are: vec2u.]
     `);
 
     const f2 = () => {
       'use gpu';
       // @ts-expect-error
-      return std.bitcastU32toI32(d.vec3f());
+      return bitcast(d.vec2u, d.vec2i)(d.vec3f());
     };
     expect(() => tgpu.resolve([f2])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f2
       - fn*:f2()
-      - fn:bitcastU32toI32: Unsupported data types: vec3f. Supported types are: u32, vec2u, vec3u, vec4u.]
+      - fn:bitcast: Unsupported data types: vec3f. Supported types are: vec2u.]
     `);
 
     const f3 = () => {
       'use gpu';
       // @ts-expect-error
-      return std.bitcastF32toU32(d.vec2h());
+      return bitcast(d.vec2u, d.vec4h)(d.vec2h());
     };
     expect(() => tgpu.resolve([f3])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f3
       - fn*:f3()
-      - fn:bitcastF32toU32: Unsupported data types: vec2h. Supported types are: f32, vec2f, vec3f, vec4f.]
+      - fn:bitcast: Unsupported data types: vec2h. Supported types are: vec2u.]
     `);
 
     const f4 = () => {
       'use gpu';
       const u = d.u32(1);
-      return std.bitcastF32toU32(u);
+      return bitcast(d.f32, d.u32)(u);
     };
     expect(() => tgpu.resolve([f4])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:f4
       - fn*:f4()
-      - fn:bitcastF32toU32: Unsupported data types: u32. Supported types are: f32, vec2f, vec3f, vec4f.]
+      - fn:bitcast: Unsupported data types: u32. Supported types are: f32.]
     `);
   });
 });
