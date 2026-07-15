@@ -1085,10 +1085,10 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 /**
  * A single module-scope declaration emitted during resolution.
  *
- * @param name - The resolved identifier the declaration declares (a fn,
- *   struct, var, const or alias name), or `undefined` for declarations that
- *   don't declare a single identifier (e.g. `tgpu['~unstable'].declare`).
- * @param code - The WGSL code of the declaration.
+ * @property name - The resolved identifier the declaration declares (a fn, struct, var, const or
+ *   alias name), or `undefined` for declarations that don't declare a single identifier (e.g.
+ *   `tgpu['~unstable'].declare`).
+ * @property code - The WGSL code of the declaration.
  */
 export interface ResolvedDeclaration {
   name: string | undefined;
@@ -1099,9 +1099,12 @@ export interface ResolvedDeclaration {
  * The results of a WGSL resolution.
  *
  * @param code - The resolved code.
- * @param declarations - The module-scope declarations `code` is made of, in
- *   emission order. When resolving with a shared namespace, only declarations
- *   emitted by *this* resolution are included (memoized ones are not re-emitted).
+ * @param declarations - The module-scope declarations emitted by TypeGPU
+ *  during this resolution, in emission order. When resolving an array without a
+ *  template, `code` equals `declarations.map((d) => d.code).join('\n\n')`.
+ *  When resolving a template, the template itself is not included in `declarations`.
+ *  With a shared namespace, only declarations emitted by *this* resolution are
+ *  included (memoized ones are not re-emitted).
  * @param usedBindGroupLayouts - List of used `tgpu.bindGroupLayout`s.
  * @param catchall - Automatically constructed bind group for buffer usages and buffer bindings, preceded by its index.
  * @param logResources - Buffers and information about used console.logs needed to decode the raw data.
