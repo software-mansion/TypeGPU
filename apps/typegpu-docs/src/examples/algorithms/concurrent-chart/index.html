@@ -20,11 +20,11 @@
           <div class="bar bar-js">
             <div class="bar-tooltip"></div>
           </div>
-          <div class="bar bar-gpu-total">
-            <div class="bar-tooltip"></div>
-          </div>
-          <div class="bar bar-gpu-shader">
-            <div class="bar-tooltip"></div>
+          <div class="bar bar-gpu">
+            <div class="bar-segment seg-upload"><div class="bar-tooltip"></div></div>
+            <div class="bar-segment seg-compute"><div class="bar-tooltip"></div></div>
+            <div class="bar-segment seg-sync"><div class="bar-tooltip"></div></div>
+            <div class="bar-segment seg-readback"><div class="bar-tooltip"></div></div>
           </div>
         </div>
         <div class="speedup-label"></div>
@@ -37,11 +37,11 @@
           <div class="bar bar-js">
             <div class="bar-tooltip"></div>
           </div>
-          <div class="bar bar-gpu-total">
-            <div class="bar-tooltip"></div>
-          </div>
-          <div class="bar bar-gpu-shader">
-            <div class="bar-tooltip"></div>
+          <div class="bar bar-gpu">
+            <div class="bar-segment seg-upload"><div class="bar-tooltip"></div></div>
+            <div class="bar-segment seg-compute"><div class="bar-tooltip"></div></div>
+            <div class="bar-segment seg-sync"><div class="bar-tooltip"></div></div>
+            <div class="bar-segment seg-readback"><div class="bar-tooltip"></div></div>
           </div>
         </div>
         <div class="speedup-label"></div>
@@ -54,11 +54,11 @@
           <div class="bar bar-js">
             <div class="bar-tooltip"></div>
           </div>
-          <div class="bar bar-gpu-total">
-            <div class="bar-tooltip"></div>
-          </div>
-          <div class="bar bar-gpu-shader">
-            <div class="bar-tooltip"></div>
+          <div class="bar bar-gpu">
+            <div class="bar-segment seg-upload"><div class="bar-tooltip"></div></div>
+            <div class="bar-segment seg-compute"><div class="bar-tooltip"></div></div>
+            <div class="bar-segment seg-sync"><div class="bar-tooltip"></div></div>
+            <div class="bar-segment seg-readback"><div class="bar-tooltip"></div></div>
           </div>
         </div>
         <div class="speedup-label"></div>
@@ -71,11 +71,11 @@
           <div class="bar bar-js">
             <div class="bar-tooltip"></div>
           </div>
-          <div class="bar bar-gpu-total">
-            <div class="bar-tooltip"></div>
-          </div>
-          <div class="bar bar-gpu-shader">
-            <div class="bar-tooltip"></div>
+          <div class="bar bar-gpu">
+            <div class="bar-segment seg-upload"><div class="bar-tooltip"></div></div>
+            <div class="bar-segment seg-compute"><div class="bar-tooltip"></div></div>
+            <div class="bar-segment seg-sync"><div class="bar-tooltip"></div></div>
+            <div class="bar-segment seg-readback"><div class="bar-tooltip"></div></div>
           </div>
         </div>
         <div class="speedup-label"></div>
@@ -88,11 +88,11 @@
           <div class="bar bar-js">
             <div class="bar-tooltip"></div>
           </div>
-          <div class="bar bar-gpu-total">
-            <div class="bar-tooltip"></div>
-          </div>
-          <div class="bar bar-gpu-shader">
-            <div class="bar-tooltip"></div>
+          <div class="bar bar-gpu">
+            <div class="bar-segment seg-upload"><div class="bar-tooltip"></div></div>
+            <div class="bar-segment seg-compute"><div class="bar-tooltip"></div></div>
+            <div class="bar-segment seg-sync"><div class="bar-tooltip"></div></div>
+            <div class="bar-segment seg-readback"><div class="bar-tooltip"></div></div>
           </div>
         </div>
         <div class="speedup-label"></div>
@@ -100,14 +100,25 @@
       </div>
     </div>
   </div>
+
+  <div class="legend">
+    <span><i class="swatch swatch-js"></i>JS (single thread)</span>
+    <span><i class="swatch swatch-upload"></i>Upload</span>
+    <span><i class="swatch swatch-compute"></i>GPU compute</span>
+    <span><i class="swatch swatch-sync"></i>Submit &amp; sync</span>
+    <span><i class="swatch swatch-readback"></i>Readback</span>
+    <span class="legend-note">Nx = JS / GPU compute (GPU-resident data)</span>
+  </div>
 </div>
 
 <style>
   :root {
     --axis-color: #e6e6f2;
     --bar-gradient: linear-gradient(to right, #c464ff, #1d72f0);
-    --bar-color-gpu-shader: #ffd54a;
-    --bar-color-gpu-total: #18b6d5;
+    --seg-color-upload: #18b6d5;
+    --seg-color-compute: #ffd54a;
+    --seg-color-sync: #b9b9cc;
+    --seg-color-readback: #f16ba4;
     --bar-track-bg: linear-gradient(to right, transparent, var(--axis-color));
   }
 
@@ -174,7 +185,7 @@
   .bars {
     grid-area: bars;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.25rem;
     align-items: end;
     height: 10rem;
@@ -185,30 +196,53 @@
     width: 1rem;
     height: 100%;
     background: var(--bar-track-bg);
-    border-radius: 9999px;
+    border-radius: 0.375rem;
     cursor: pointer;
     display: flex;
     align-items: end;
   }
 
-  .bar::after {
+  .bar-js::after {
     content: '';
     width: 100%;
     height: calc(100% * clamp(0, var(--bar-height, 0), 1));
-    border-radius: 9999px;
+    border-radius: 0.375rem;
+    background-image: var(--bar-gradient);
     transition: height 0.3s ease-in-out;
   }
 
-  .bar-gpu-shader::after {
-    background-color: var(--bar-color-gpu-shader);
+  .bar-gpu {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    justify-content: flex-start;
   }
 
-  .bar-gpu-total::after {
-    background-color: var(--bar-color-gpu-total);
+  .bar-segment {
+    position: relative;
+    height: calc(100% * clamp(0, var(--seg-height, 0), 1));
+    transition: height 0.3s ease-in-out;
   }
 
-  .bar-js::after {
-    background-image: var(--bar-gradient);
+  .bar-segment.nonzero {
+    min-height: 0.25rem;
+  }
+
+  .seg-upload {
+    background-color: var(--seg-color-upload);
+    border-radius: 0 0 0.375rem 0.375rem;
+  }
+
+  .seg-compute {
+    background-color: var(--seg-color-compute);
+  }
+
+  .seg-sync {
+    background-color: var(--seg-color-sync);
+  }
+
+  .seg-readback {
+    background-color: var(--seg-color-readback);
+    border-radius: 0.375rem 0.375rem 0 0;
   }
 
   .speedup-label {
@@ -224,6 +258,51 @@
     font-size: 0.875rem;
     color: #666;
     text-align: center;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin-top: 1.5rem;
+    font-size: 0.875rem;
+    color: #666;
+  }
+
+  .legend span {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .legend-note {
+    font-style: italic;
+  }
+
+  .swatch {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 9999px;
+  }
+
+  .swatch-js {
+    background-image: var(--bar-gradient);
+  }
+
+  .swatch-upload {
+    background-color: var(--seg-color-upload);
+  }
+
+  .swatch-compute {
+    background-color: var(--seg-color-compute);
+  }
+
+  .swatch-sync {
+    background-color: var(--seg-color-sync);
+  }
+
+  .swatch-readback {
+    background-color: var(--seg-color-readback);
   }
 
   .bar-tooltip {
@@ -256,7 +335,8 @@
     border-top-color: rgba(0, 0, 0, 0.8);
   }
 
-  .bar:hover .bar-tooltip {
+  .bar-js:hover .bar-tooltip,
+  .bar-segment:hover > .bar-tooltip {
     opacity: 1;
     visibility: visible;
   }
