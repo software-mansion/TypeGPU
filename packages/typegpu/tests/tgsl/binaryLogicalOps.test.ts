@@ -286,18 +286,18 @@ describe('binaryLogicalOps', () => {
     });
 
     it('handles ref', () => {
-      const f = () => {
+      const and = () => {
         'use gpu';
         const a = d.ref(false);
         const b = d.ref(true);
-        const c = a.$ && b.$;
+        return !!(a.$ && b.$);
       };
 
-      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() {
+      expect(tgpu.resolve([and])).toMatchInlineSnapshot(`
+        "fn and() -> bool {
           var a = false;
           var b = true;
-          let c = (a && b);
+          return !!(a && b);
         }"
       `);
     });
@@ -337,18 +337,18 @@ describe('binaryLogicalOps', () => {
     });
 
     it('handles ref', () => {
-      const f = () => {
+      const or = () => {
         'use gpu';
         const a = d.ref(false);
         const b = d.ref(true);
-        const c = a.$ || b.$;
+        return !!(a.$ || b.$);
       };
 
-      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-        "fn f() {
+      expect(tgpu.resolve([or])).toMatchInlineSnapshot(`
+        "fn or() -> bool {
           var a = false;
           var b = true;
-          let c = (a || b);
+          return !!(a || b);
         }"
       `);
     });

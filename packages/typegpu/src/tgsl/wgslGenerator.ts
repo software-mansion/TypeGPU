@@ -392,10 +392,7 @@ ${this.ctx.pre}}`;
       const lhsStr = this.ctx.resolve(convLhs.value, convLhs.dataType).value;
       const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
 
-      if (
-        (op === '&&' || op === '||') &&
-        !(wgsl.isBool(convLhs.dataType) && wgsl.isBool(convRhs.dataType))
-      ) {
+      if (!wgsl.isBool(convLhs.dataType) || !wgsl.isBool(convRhs.dataType)) {
         throw new WgslTypeError(
           `Logical expression '${op}' requires boolean operands. Got '${String(convLhs.dataType)}' and '${String(convRhs.dataType)}'.`,
         );
