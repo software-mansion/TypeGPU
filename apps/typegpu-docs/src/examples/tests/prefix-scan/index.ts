@@ -1,6 +1,12 @@
 import { tgpu } from 'typegpu';
 import * as d from 'typegpu/data';
-import { type BinaryOp, prefixScan, scan } from '@typegpu/sort';
+import {
+  type BinaryOp,
+  createPrefixScanComputer,
+  prefixScan,
+  scan,
+  type ScanElementType,
+} from '@typegpu/sort';
 import * as std from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';
 import { addFn, concat10, isArrayEqual, mulFn, prefixScanJS, scanJS } from './functions.ts';
@@ -47,6 +53,34 @@ async function runAndCompare(arr: number[], op: BinaryOp, scanOnly: boolean) {
         outputBuffer: input,
         operation: op.operation,
         identityElement: op.identityElement,
+      });
+
+  const actual = await output.read();
+  const expected = scanOnly ? scanJS(arr, op) : prefixScanJS(arr, op);
+  return compareAndLog(actual, expected);
+}
+
+async function runAndCompareTyped(
+  arr: number[],
+  op: BinaryOp,
+  dataType: ScanElementType,
+  scanOnly: boolean,
+) {
+  const input = root.createBuffer(d.arrayOf(dataType, arr.length), arr).$usage('storage');
+
+  const output = scanOnly
+    ? scan(root, {
+        inputBuffer: input,
+        operation: op.operation,
+        identityElement: op.identityElement,
+        dataType,
+      })
+    : prefixScan(root, {
+        inputBuffer: input,
+        outputBuffer: input,
+        operation: op.operation,
+        identityElement: op.identityElement,
+        dataType,
       });
 
   const actual = await output.read();
@@ -238,6 +272,78 @@ async function testPrefixDoesNotCacheBuffers(): Promise<boolean> {
   );
 }
 
+// integer element type tests
+
+async function testU32Prefix65537(): Promise<boolean> {
+  const arr = Array.from({ length: 65537 }, () => 1);
+  const op = { operation: std.add, identityElement: 0 };
+  return runAndCompareTyped(arr, op, d.u32, false);
+}
+
+async function testU32Reduce(): Promise<boolean> {
+  const arr = Array.from({ length: 123 }, (_, i) => i % 7);
+  const op = { operation: std.add, identityElement: 0 };
+  return runAndCompareTyped(arr, op, d.u32, true);
+}
+
+async function testI32PrefixNegatives(): Promise<boolean> {
+  const arr = Array.from({ length: 4099 }, (_, i) => (i % 2 === 0 ? -3 : 2));
+  const op = { operation: std.add, identityElement: 0 };
+  return runAndCompareTyped(arr, op, d.i32, false);
+}
+
+async function testI32Max(): Promise<boolean> {
+  const arr = Array.from({ length: 257 }, (_, i) => ((i * 37) % 513) - 256);
+  const op = { operation: std.max, identityElement: -2147483647 };
+  return runAndCompareTyped(arr, op, d.i32, true);
+}
+
+// composition tests
+
+async function testRecordsIntoUserEncoder(): Promise<boolean> {
+  const arr = Array.from({ length: 4099 }, () => 1);
+  const input = root.createBuffer(d.arrayOf(d.u32, arr.length), arr).$usage('storage');
+
+  const computer = createPrefixScanComputer(root, {
+    operation: std.add,
+    identityElement: 0,
+    dataType: d.u32,
+  });
+  const plan = computer.prepare(input);
+
+  const encoder = root.device.createCommandEncoder();
+  plan.run({ encoder });
+  root.device.queue.submit([encoder.finish()]);
+
+  const actual = await input.read();
+  const expected = prefixScanJS(arr, { operation: std.add, identityElement: 0 });
+  plan.destroy();
+  return compareAndLog(actual, expected);
+}
+
+async function testRecordsIntoUserPass(): Promise<boolean> {
+  const arr = Array.from({ length: 4099 }, () => 2);
+  const input = root.createBuffer(d.arrayOf(d.u32, arr.length), arr).$usage('storage');
+
+  const computer = createPrefixScanComputer(root, {
+    operation: std.add,
+    identityElement: 0,
+    dataType: d.u32,
+  });
+  const plan = computer.prepare(input);
+
+  const encoder = root.device.createCommandEncoder();
+  const pass = encoder.beginComputePass();
+  plan.run({ pass });
+  pass.end();
+  root.device.queue.submit([encoder.finish()]);
+
+  const actual = await input.read();
+  const expected = prefixScanJS(arr, { operation: std.add, identityElement: 0 });
+  plan.destroy();
+  return compareAndLog(actual, expected);
+}
+
 // benchmark
 
 const BENCH_SIZES = [2_048, 65_536, 1_048_576, 16_777_216];
@@ -316,13 +422,21 @@ async function runTests(): Promise<boolean> {
   result =
     (await runTest('testPrefixDoesNotCacheBuffers', testPrefixDoesNotCacheBuffers)) && result;
 
+  result = (await runTest('testU32Prefix65537', testU32Prefix65537)) && result;
+  result = (await runTest('testU32Reduce', testU32Reduce)) && result;
+  result = (await runTest('testI32PrefixNegatives', testI32PrefixNegatives)) && result;
+  result = (await runTest('testI32Max', testI32Max)) && result;
+  result = (await runTest('testRecordsIntoUserEncoder', testRecordsIntoUserEncoder)) && result;
+  result = (await runTest('testRecordsIntoUserPass', testRecordsIntoUserPass)) && result;
+
   return result;
 }
 
-const table = document.querySelector<HTMLDivElement>('.result');
-if (!table) {
+const maybeTable = document.querySelector<HTMLDivElement>('.result');
+if (!maybeTable) {
   throw new Error('Nowhere to display the results');
 }
+const table: HTMLDivElement = maybeTable;
 
 let testsPassed: boolean | null = null;
 let benchmarkPromise: Promise<void> | null = null;
