@@ -281,7 +281,7 @@ export interface ResolutionCtx {
    *   const or alias name), if it declares one. Reported back to the caller
    *   through `ResolutionResult.declarations`.
    */
-  addDeclaration(declaration: string, name?: string | undefined): void;
+  addDeclaration(declaration: string, name?: string): void;
   withResetIndentLevel<T>(callback: () => T): T;
 
   /**
