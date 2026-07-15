@@ -3,7 +3,9 @@ import {
   type BitonicSorter,
   type BitonicSorterOptions,
   createBitonicSorter,
+  createRadixSorter,
   decomposeWorkgroups,
+  type RadixSorter,
 } from '@typegpu/sort';
 import { randf } from '@typegpu/noise';
 import { fullScreenTriangle } from 'typegpu/common';
@@ -19,7 +21,7 @@ const maxBufferSize = await navigator.gpu.requestAdapter().then((adapter) => {
 
 const root = await tgpu.init({
   device: {
-    optionalFeatures: ['timestamp-query'],
+    optionalFeatures: ['timestamp-query', 'subgroups'],
     requiredLimits: {
       maxStorageBufferBindingSize: maxBufferSize,
       maxBufferSize: maxBufferSize,
@@ -35,13 +37,14 @@ const context = root.configureContext({ canvas });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const maxSide = Math.floor(Math.sqrt(maxBufferSize / 4));
-const minLog = 2; // log_2(4)
+const minLog = 2;
 const maxLog = Math.floor(Math.log2(maxSide));
 const arraySizeOptions = Array.from({ length: 8 }, (_, i) => {
   const side = Math.round(2 ** (minLog + (i * (maxLog - minLog)) / 7));
   return side * side;
 });
 
+type AlgorithmKey = 'bitonic' | 'radix';
 type SortOrderKey = 'ascending' | 'descending' | 'bit-reversed' | 'xor-scatter';
 
 const sortOrders: Record<SortOrderKey, BitonicSorterOptions> = {
@@ -68,6 +71,7 @@ const sortOrders: Record<SortOrderKey, BitonicSorterOptions> = {
 };
 
 const state = {
+  algorithm: 'bitonic' as AlgorithmKey,
   arraySize: arraySizeOptions[2],
   sortOrder: 'ascending' as SortOrderKey,
 };
@@ -144,48 +148,56 @@ const initPipeline = root.createComputePipeline({ compute: initKernel });
 
 let buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage('storage');
 
-let bindGroup = root.createBindGroup(renderLayout, {
-  data: buffer,
-});
-let initBindGroup = root.createBindGroup(initLayout, {
-  data: buffer,
-});
+let bindGroup = root.createBindGroup(renderLayout, { data: buffer });
 
-function createSorters(buf: typeof buffer) {
+function createBitonicSorters(buf: typeof buffer) {
   return Object.fromEntries(
     Object.entries(sortOrders).map(([key, opts]) => [key, createBitonicSorter(root, buf, opts)]),
   ) as Record<SortOrderKey, BitonicSorter>;
 }
 
-let sorters = createSorters(buffer);
+function createRadixSorters(buf: typeof buffer) {
+  return {
+    ascending: createRadixSorter(root, buf),
+    descending: createRadixSorter(root, buf, { direction: 'descending' }),
+  };
+}
 
-function recreateBuffer() {
-  for (const s of Object.values(sorters)) {
+let bitonicSorters = createBitonicSorters(buffer);
+let radixSorters = createRadixSorters(buffer);
+
+function destroySorters() {
+  for (const s of Object.values(bitonicSorters)) {
     s.destroy();
   }
+  for (const s of Object.values(radixSorters)) {
+    s.destroy();
+  }
+}
+
+function recreateBuffer() {
+  destroySorters();
   buffer.destroy();
 
   buffer = root.createBuffer(d.arrayOf(d.u32, state.arraySize)).$usage('storage');
+  bindGroup = root.createBindGroup(renderLayout, { data: buffer });
 
-  bindGroup = root.createBindGroup(renderLayout, {
-    data: buffer,
-  });
-
-  initBindGroup = root.createBindGroup(initLayout, {
-    data: buffer,
-  });
-
-  sorters = createSorters(buffer);
+  bitonicSorters = createBitonicSorters(buffer);
+  radixSorters = createRadixSorters(buffer);
 }
 
-function generateRandomArray() {
-  const workgroupsTotal = Math.ceil(state.arraySize / WORKGROUP_SIZE);
+function fillRandom(buf: typeof buffer, size: number) {
+  const workgroupsTotal = Math.ceil(size / WORKGROUP_SIZE);
   const [workgroupsX, workgroupsY, workgroupsZ] = decomposeWorkgroups(workgroupsTotal);
 
   initSeed.write(Math.random());
+  initPipeline
+    .with(root.createBindGroup(initLayout, { data: buf }))
+    .dispatchWorkgroups(workgroupsX, workgroupsY, workgroupsZ);
+}
 
-  initPipeline.with(initBindGroup).dispatchWorkgroups(workgroupsX, workgroupsY, workgroupsZ);
-
+function generateRandomArray() {
+  fillRandom(buffer, state.arraySize);
   render();
 }
 
@@ -221,36 +233,128 @@ function hideOverlay(delayMs = 1500) {
   }, delayMs);
 }
 
+function pickSorter(): { sorter: BitonicSorter | RadixSorter; note: string } {
+  if (state.algorithm === 'radix') {
+    if (state.sortOrder === 'ascending' || state.sortOrder === 'descending') {
+      return { sorter: radixSorters[state.sortOrder], note: '' };
+    }
+    return {
+      sorter: bitonicSorters[state.sortOrder],
+      note: ' (custom orders need the bitonic sorter)',
+    };
+  }
+  return { sorter: bitonicSorters[state.sortOrder], note: '' };
+}
+
+async function measureGpuTime(): Promise<number | null> {
+  if (querySet?.available) {
+    querySet.resolve();
+    const timestamps = await querySet.read();
+    return Number(timestamps[1] - timestamps[0]) / 1_000_000;
+  }
+  return null;
+}
+
+function formatMs(gpuTimeMs: number): string {
+  return gpuTimeMs >= 1000 ? `${(gpuTimeMs / 1000).toFixed(2)}s` : `${gpuTimeMs.toFixed(2)}ms`;
+}
+
 async function sort() {
-  const sorter = sorters[state.sortOrder];
+  const { sorter, note } = pickSorter();
 
   showOverlay('Sorting...');
   sorter.run({ querySet: querySet ?? undefined });
 
-  let gpuTimeMs: number | null = null;
-  if (querySet?.available) {
-    querySet.resolve();
-    const timestamps = await querySet.read();
-    gpuTimeMs = Number(timestamps[1] - timestamps[0]) / 1_000_000;
-  }
+  const gpuTimeMs = await measureGpuTime();
 
   render();
 
-  const timeStr =
-    gpuTimeMs !== null
-      ? ` in ${
-          gpuTimeMs >= 1000 ? `${(gpuTimeMs / 1000).toFixed(2)}s` : `${gpuTimeMs.toFixed(2)}ms`
-        }`
-      : '';
-  showOverlay(`\u2714 Sorted${timeStr}`, false);
+  const timeStr = gpuTimeMs !== null ? ` in ${formatMs(gpuTimeMs)}` : '';
+  showOverlay(`✔ Sorted${timeStr}${note}`, false);
   hideOverlay();
 }
 
+// #region Benchmark
+
+const BENCH_WARMUP = 3;
+const BENCH_RUNS = 10;
+
+async function benchmarkSorter(sorter: BitonicSorter | RadixSorter): Promise<number | null> {
+  for (let i = 0; i < BENCH_WARMUP; i++) {
+    sorter.run();
+  }
+  await root.device.queue.onSubmittedWorkDone();
+
+  let total = 0;
+  for (let i = 0; i < BENCH_RUNS; i++) {
+    sorter.run({ querySet: querySet ?? undefined });
+    await root.device.queue.onSubmittedWorkDone();
+    const gpuTimeMs = await measureGpuTime();
+    if (gpuTimeMs === null) {
+      return null;
+    }
+    total += gpuTimeMs;
+  }
+  return total / BENCH_RUNS;
+}
+
+async function runBenchmark() {
+  if (!querySet) {
+    showOverlay('Benchmark requires timestamp-query', false);
+    hideOverlay();
+    return;
+  }
+
+  const sizes = [2 ** 12, 2 ** 16, 2 ** 20, 2 ** 22, 2 ** 24].filter(
+    (size) => size * 4 <= maxBufferSize,
+  );
+
+  console.log(`=== Sort benchmark (avg GPU time, ${BENCH_RUNS} runs) ===`);
+  for (const size of sizes) {
+    showOverlay(`Benchmarking ${size.toLocaleString()} keys...`);
+
+    const benchBuffer = root.createBuffer(d.arrayOf(d.u32, size)).$usage('storage');
+    fillRandom(benchBuffer, size);
+
+    const bitonic = createBitonicSorter(root, benchBuffer);
+    const bitonicMs = await benchmarkSorter(bitonic);
+    bitonic.destroy();
+
+    fillRandom(benchBuffer, size);
+    const radix = createRadixSorter(root, benchBuffer);
+    const radixMs = await benchmarkSorter(radix);
+    const subgroupsNote = radix.usesSubgroups ? 'subgroup scatter' : 'fallback scatter';
+    radix.destroy();
+
+    benchBuffer.destroy();
+
+    console.log(
+      `  ${size.toLocaleString().padStart(12)} keys: bitonic ${
+        bitonicMs === null ? 'n/a' : formatMs(bitonicMs)
+      }, radix ${radixMs === null ? 'n/a' : formatMs(radixMs)} (${subgroupsNote})`,
+    );
+  }
+  console.log('===============================================');
+
+  showOverlay('✔ Benchmark complete (see console)', false);
+  hideOverlay(3000);
+}
+
+// #endregion
+
 // #region Example controls & Cleanup
 
+const algorithmKeys: AlgorithmKey[] = ['bitonic', 'radix'];
 const sortOrderKeys = Object.keys(sortOrders) as SortOrderKey[];
 
 export const controls = defineControls({
+  Algorithm: {
+    initial: 'bitonic' as AlgorithmKey,
+    options: algorithmKeys,
+    onSelectChange: (value) => {
+      state.algorithm = value;
+    },
+  },
   'Array Size': {
     initial: arraySizeOptions[2],
     options: arraySizeOptions,
@@ -261,7 +365,7 @@ export const controls = defineControls({
     },
   },
   'Sort Order': {
-    initial: 'ascending',
+    initial: 'ascending' as SortOrderKey,
     options: sortOrderKeys,
     onSelectChange: (value) => {
       state.sortOrder = value;
@@ -269,12 +373,11 @@ export const controls = defineControls({
   },
   Reshuffle: { onButtonClick: generateRandomArray },
   Sort: { onButtonClick: sort },
+  Benchmark: { onButtonClick: runBenchmark },
 });
 
 export function onCleanup() {
-  for (const s of Object.values(sorters)) {
-    s.destroy();
-  }
+  destroySorters();
   root.destroy();
 }
 

@@ -41,6 +41,7 @@
     "@typegpu/tgpu-dev-cli": "workspace:*",
     "@webgpu/types": "catalog:types",
     "typegpu": "workspace:*",
+    "typegpu-testing-utility": "workspace:*",
     "typescript": "catalog:types",
     "unbuild": "catalog:build",
     "unplugin-typegpu": "workspace:*"
