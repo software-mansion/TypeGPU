@@ -7,6 +7,7 @@ import type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import type { TgpuBindGroup, TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 import type { BaseData } from './data/wgslTypes.ts';
+import type { TgpuBufferBinding } from './core/buffer/bufferBinding.ts';
 
 export interface Unwrapper {
   readonly device: GPUDevice;
@@ -15,6 +16,7 @@ export interface Unwrapper {
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
   unwrap(resource: TgpuBuffer<BaseData>): GPUBuffer;
+  unwrap(resource: TgpuBufferBinding<BaseData>): GPUBuffer;
   unwrap(resource: TgpuTextureView): GPUTextureView;
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
   unwrap(resource: TgpuSampler): GPUSampler;
