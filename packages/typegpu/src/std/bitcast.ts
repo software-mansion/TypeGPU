@@ -295,10 +295,10 @@ const casts = {
     vec2h: bitcastFor(u32, vec2h),
   },
   vec2h: {
-    vec2h: bitcastFor(vec2h, vec2h),
     f32: bitcastFor(vec2h, f32),
     i32: bitcastFor(vec2h, i32),
     u32: bitcastFor(vec2h, u32),
+    vec2h: bitcastFor(vec2h, vec2h),
   },
 
   /* 6 bytes */
@@ -311,7 +311,7 @@ const casts = {
     vec2f: bitcastFor(vec2f, vec2f),
     vec2i: bitcastFor(vec2f, vec2i),
     vec2u: bitcastFor(vec2f, vec2u),
-    vec4h: bitcastFor(vec2f, vec2h),
+    vec4h: bitcastFor(vec2f, vec4h),
   },
   vec2i: {
     vec2f: bitcastFor(vec2i, vec2f),
