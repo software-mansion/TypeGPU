@@ -7,6 +7,7 @@ import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
 import {
   $getNameForward,
+  $gpuCallable,
   $gpuValueOf,
   $internal,
   $ownSnippet,
@@ -15,6 +16,7 @@ import {
 import type { UnwrapRuntimeConstructor } from '../../tgpuBindGroupLayout.ts';
 import {
   getOwnSnippet,
+  isGPUCallable,
   NormalState,
   type ResolutionCtx,
   type SelfResolvable,
@@ -112,7 +114,12 @@ abstract class AccessorBase<
     const ctx = getResolutionCtx()!;
     let value = getGpuValueRecursively(ctx.unwrap(this.slot));
 
-    while (typeof value === 'function' && !isTgpuFn(value) && !hasTinyestMetadata(value)) {
+    while (
+      typeof value === 'function' &&
+      !isTgpuFn(value) &&
+      !isGPUCallable(value) &&
+      !hasTinyestMetadata(value)
+    ) {
       // Not a GPU function, so has to be a resource accessor (ran in codegen mode) or comptime
       value = value();
       if (isSnippet(value)) {
@@ -125,9 +132,14 @@ abstract class AccessorBase<
       return ownSnippet;
     }
 
+    if (isGPUCallable(value)) {
+      return value[$gpuCallable].call(ctx, []);
+    }
+
     if (isTgpuFn(value) || hasTinyestMetadata(value)) {
+      const fn = ctx.resolve(value);
       return ctx.withResetIndentLevel(() =>
-        snip(`${ctx.resolve(value).value}()`, this.schema, /* origin */ 'runtime'),
+        snip(`${fn.value}()`, this.schema, /* origin */ 'runtime', fn.possibleSideEffects),
       );
     }
 
