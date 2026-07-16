@@ -247,10 +247,10 @@ const getCpuBitcast = <In extends BitcastAllowedTypes, Out extends BitcastAllowe
   };
 };
 
-const bitcastFor = <In extends BitcastAllowedTypes, Out extends BitcastAllowedTypes>(
+function bitcastFor<In extends BitcastAllowedTypes, Out extends BitcastAllowedTypes>(
   inType: In,
   outType: Out,
-) => {
+): (value: Infer<In>) => Infer<Out> {
   return dualImpl({
     name: 'bitcast',
     normalImpl: getCpuBitcast<In, Out>(inType, outType),
@@ -267,7 +267,7 @@ const bitcastFor = <In extends BitcastAllowedTypes, Out extends BitcastAllowedTy
     },
     sideEffects: false,
   });
-};
+}
 
 const casts = {
   /* 2 bytes */
