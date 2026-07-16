@@ -689,6 +689,7 @@ export class TgpuLaidOutTextureViewImpl<T extends WgslTexture | WgslStorageTextu
       `@group(${group}) @binding(${this.#membership.idx}) var ${id}: ${
         ctx.resolve(this.schema).value
       };`,
+      id,
     );
 
     return snip(id, this.schema, /* origin */ 'handle');

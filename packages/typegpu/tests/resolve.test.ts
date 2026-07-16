@@ -608,3 +608,87 @@ describe('resolve without template', () => {
       `);
   });
 });
+
+describe('tgpu resolveWithContext declarations', () => {
+  it('reports each module-scope declaration with its resolved name', () => {
+    const Boid = d.struct({
+      pos: d.vec3f,
+      vel: d.vec3f,
+    });
+
+    const getSpeed = tgpu.fn([Boid], d.f32)((boid) => boid.vel.x);
+
+    const isFast = tgpu.fn([Boid], d.bool)((boid) => getSpeed(boid) > 1);
+
+    const { code, declarations } = tgpu.resolveWithContext([isFast], {
+      names: 'strict',
+    });
+
+    expect(declarations.map((decl) => decl.name)).toEqual(['Boid', 'getSpeed', 'isFast']);
+    // The code is exactly the declarations, joined.
+    expect(declarations.map((decl) => decl.code).join('\n\n')).toBe(code);
+  });
+
+  it('reports declarations that have no name', () => {
+    const declaration = '/* my declaration */';
+    const myDecl = tgpu['~unstable'].declare(declaration);
+
+    const main = () => {
+      'use gpu';
+      myDecl;
+    };
+
+    const { declarations } = tgpu.resolveWithContext([main], { names: 'strict' });
+
+    expect(declarations[0]).toStrictEqual({ name: undefined, code: declaration });
+  });
+
+  it('does not include the template itself in declarations', () => {
+    const Gradient = d.struct({
+      start: d.vec3f,
+      end: d.vec3f,
+    });
+
+    const { declarations } = tgpu.resolveWithContext({
+      template: 'fn foo() { var g: Gradient; }',
+      externals: { Gradient },
+      names: 'strict',
+    });
+
+    expect(declarations.map((decl) => decl.name)).toEqual(['Gradient']);
+  });
+
+  it('reports only newly emitted declarations when sharing a namespace', () => {
+    const Boid = d.struct({
+      pos: d.vec3f,
+    });
+
+    const getX = tgpu.fn([Boid], d.f32)((boid) => boid.pos.x);
+    const getY = tgpu.fn([Boid], d.f32)((boid) => boid.pos.y);
+
+    const names = tgpu['~unstable'].namespace();
+
+    const first = tgpu.resolveWithContext([getX], { names });
+    const second = tgpu.resolveWithContext([getY], { names });
+
+    expect(first.declarations.map((decl) => decl.name)).toEqual(['Boid', 'getX']);
+    // Boid is memoized in the namespace, so it is neither re-emitted nor re-reported.
+    expect(second.declarations.map((decl) => decl.name)).toEqual(['getY']);
+  });
+
+  it('applies bind group indices to declaration code', () => {
+    const layout = tgpu.bindGroupLayout({
+      ambient: { uniform: d.vec3f },
+    });
+
+    const readAmbient = tgpu.fn([], d.vec3f)(() => layout.$.ambient);
+
+    const { declarations } = tgpu.resolveWithContext([readAmbient], {
+      names: 'strict',
+    });
+
+    const ambient = declarations.find((decl) => decl.name === 'ambient');
+    expect(ambient?.code).toContain('@group(0)');
+    expect(ambient?.code).not.toContain('#BIND_GROUP_LAYOUT');
+  });
+});
