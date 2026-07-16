@@ -1,7 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 import { vec2f, vec2i, vec2u, vec3f, vec3i, vec3u, vec4f, vec4i, vec4u } from 'typegpu/data';
 import { tgpu, d, std } from 'typegpu';
-import { bitcast } from '../../src/std/bitcast.ts';
 
 // remember to pad with zeros to 8 hex symbols
 const floatFromHex = (hex: string) => Buffer.from(hex, 'hex').readFloatBE(0);
@@ -110,10 +109,10 @@ describe('bitcast', () => {
 
   it('bitcast U32 to I32 more edges', () => {
     // Scalars
-    expect(bitcast(d.u32, d.i32)(0x00000000)).toBe(0);
-    expect(bitcast(d.u32, d.i32)(0x00000001)).toBe(1);
-    expect(bitcast(d.u32, d.i32)(0x7fffffff)).toBe(2147483647);
-    expect(bitcast(d.u32, d.i32)(0xffffffff)).toBe(-1);
+    expect(std.bitcast(d.u32, d.i32)(0x00000000)).toBe(0);
+    expect(std.bitcast(d.u32, d.i32)(0x00000001)).toBe(1);
+    expect(std.bitcast(d.u32, d.i32)(0x7fffffff)).toBe(2147483647);
+    expect(std.bitcast(d.u32, d.i32)(0xffffffff)).toBe(-1);
 
     // Vectors
     const v3 = vec3u(0x00000000, 0x80000000, 0xffffffff);
@@ -127,23 +126,23 @@ describe('bitcast', () => {
 
   it('bitcast F32 to U32 specials (NaN, infinities etc)', () => {
     // +0
-    expect(bitcast(d.f32, d.u32)(+0)).toBe(0x00000000);
+    expect(std.bitcast(d.f32, d.u32)(+0)).toBe(0x00000000);
 
     // -0
-    expect(bitcast(d.f32, d.u32)(-0)).toBe(0x80000000);
+    expect(std.bitcast(d.f32, d.u32)(-0)).toBe(0x80000000);
 
     // +Inf / -Inf
-    expect(bitcast(d.f32, d.u32)(Number.POSITIVE_INFINITY)).toBe(0x7f800000);
-    expect(bitcast(d.f32, d.u32)(Number.NEGATIVE_INFINITY)).toBe(0xff800000);
+    expect(std.bitcast(d.f32, d.u32)(Number.POSITIVE_INFINITY)).toBe(0x7f800000);
+    expect(std.bitcast(d.f32, d.u32)(Number.NEGATIVE_INFINITY)).toBe(0xff800000);
 
     // NaN
-    expect(bitcast(d.f32, d.u32)(Number.NaN)).toBe(0x7fc00000);
+    expect(std.bitcast(d.f32, d.u32)(Number.NaN)).toBe(0x7fc00000);
 
     // Smallest positive subnormal
-    expect(bitcast(d.f32, d.u32)(floatFromHex('00000001'))).toBe(0x00000001);
+    expect(std.bitcast(d.f32, d.u32)(floatFromHex('00000001'))).toBe(0x00000001);
 
     // Smallest negative subnormal
-    expect(bitcast(d.f32, d.u32)(floatFromHex('80000001'))).toBe(0x80000001);
+    expect(std.bitcast(d.f32, d.u32)(floatFromHex('80000001'))).toBe(0x80000001);
   });
 });
 
