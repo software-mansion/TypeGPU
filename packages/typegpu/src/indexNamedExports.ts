@@ -22,7 +22,13 @@ export {
   isUsableAsIndex,
   isUsableAsStorage,
 } from './types.ts';
-export { isBufferBinding, isBufferShorthand } from './core/buffer/bufferBinding.ts';
+export {
+  isBufferBinding,
+  isBufferShorthand,
+  isMutableBinding,
+  isReadonlyBinding,
+  isUniformBinding,
+} from './core/buffer/bufferBinding.ts';
 export { isBindGroup, isBindGroupLayout } from './tgpuBindGroupLayout.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
 export { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';

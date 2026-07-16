@@ -20,18 +20,26 @@ export function tryFindExternalChain(ctx: Context, node: JsNode): string | undef
   if (node.type === 'ThisExpression') {
     return 'this';
   }
-  if (node.type === 'MemberExpression' && !node.computed && node.property.type === 'Identifier') {
+  if (node.type === 'MemberExpression' && !node.computed) {
     if (ctx.visitedNodes.has(node)) {
       return;
     }
     ctx.visitedNodes.add(node);
 
-    if (node.property.name === '$') {
+    let property;
+    if (node.property.type === 'Identifier' && node.property.name !== '$') {
+      property = node.property.name;
+    } else if (node.property.type === 'PrivateName') {
+      property = `#${node.property.id.name}`;
+    } else if (node.property.type === 'PrivateIdentifier') {
+      property = `#${node.property.name}`;
+    } else {
       return;
     }
+
     const lhs = tryFindExternalChain(ctx, node.object);
     if (lhs) {
-      return `${lhs}.${node.property.name}`;
+      return `${lhs}.${property}`;
     }
   }
 }
