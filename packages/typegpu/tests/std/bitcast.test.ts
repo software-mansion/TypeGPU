@@ -105,6 +105,14 @@ describe('bitcast', () => {
     const nsub = std.bitcast(d.u32, d.f32)(0x80000001);
     expect(nsub).toBeLessThan(0);
     expect(nsub).toBeGreaterThan(-1e-44);
+
+    // +Inf / -Inf
+    expect(() => std.bitcast(d.u32, d.f32)(0x7f800000)).toThrow('Finite Math Assumption');
+    expect(() => std.bitcast(d.u32, d.f32)(0xff800000)).toThrow('Finite Math Assumption');
+
+    // NaNs
+    expect(() => std.bitcast(d.u32, d.f32)(0x7fc00000)).toThrow('Finite Math Assumption');
+    expect(() => std.bitcast(d.u32, d.f32)(0x7f800001)).toThrow('Finite Math Assumption');
   });
 
   it('bitcast U32 to I32 more edges', () => {
