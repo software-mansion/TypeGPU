@@ -1532,6 +1532,10 @@ export function isVecInstance(value: unknown): value is AnyVecInstance {
   return isMarkedInternal(v) && typeof v.kind === 'string' && v.kind.startsWith('vec');
 }
 
+export function isVecBoolInstance(value: unknown): value is v2b | v3b | v4b {
+  return isVecInstance(value) && value.kind.includes('b');
+}
+
 export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {
   const v = value as AnyWgslData | undefined;
   return isMarkedInternal(v) && typeof v.type === 'string' && v.type.startsWith('vec2');
