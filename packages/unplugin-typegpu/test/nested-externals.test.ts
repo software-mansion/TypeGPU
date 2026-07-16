@@ -140,4 +140,34 @@ describe('externals gathering', () => {
       );
     });
   });
+
+  describe('private prop access', () => {
+    const code = `\
+    import tgpu, { d } from 'typegpu';
+
+    const cls = new (class {
+      #const = tgpu.const(d.u32, 1);
+
+      fn = () => {
+        'use gpu';
+        const a = this.#const.$;
+      };
+    })();
+
+    console.log(cls);`;
+
+    it('works for BABEL', () => {
+      expect(extractExternals(babelTransform(code))).toMatchInlineSnapshot(`
+        "{
+              "this.#const": () => this.#const
+            }"
+      `);
+    });
+
+    it('works for ROLLUP', async () => {
+      expect(extractExternals(await rollupTransform(code))).toMatchInlineSnapshot(
+        `"{"this.#const":() => this.#const}"`,
+      );
+    });
+  });
 });
