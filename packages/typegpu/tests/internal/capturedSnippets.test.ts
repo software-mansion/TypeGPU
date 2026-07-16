@@ -36,7 +36,7 @@ describe('CAPTURE', () => {
         {
           "dataType": "abstractInt",
           "origin": "constant",
-          "possibleSideEffects": true,
+          "possibleSideEffects": false,
           "value": 3,
         },
         {
