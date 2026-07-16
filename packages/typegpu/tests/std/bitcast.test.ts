@@ -7,7 +7,7 @@ import { bitcast } from '../../src/std/bitcast.ts';
 const floatFromHex = (hex: string) => Buffer.from(hex, 'hex').readFloatBE(0);
 
 describe('bitcast', () => {
-  it('bitcastU32toF32', () => {
+  it('bitcast U32 to F32', () => {
     // 1.0 in f32
     //0 01111111 00000000000000000000000
     const f = std.bitcast(d.u32, d.f32)(1065353216);
@@ -19,7 +19,7 @@ describe('bitcast', () => {
     expect(f2).toBeCloseTo(-1.0);
   });
 
-  it('bitcastU32toI32', () => {
+  it('bitcast U32 to I32', () => {
     // -1 in i32
     // 1111111111111111111111111111111
     const i = std.bitcast(d.u32, d.i32)(4294967295);
@@ -31,7 +31,7 @@ describe('bitcast', () => {
     expect(i2).toBe(-2147483648);
   });
 
-  it('bitcastF32toU32', () => {
+  it('bitcast F32 to U32', () => {
     const i1 = std.bitcast(d.f32, d.u32)(floatFromHex('00000001'));
     expect(i1).toBe(1);
 
@@ -39,7 +39,7 @@ describe('bitcast', () => {
     expect(i2).toBe(2139095040);
   });
 
-  it('bitcastU32toF32 vectors', () => {
+  it('bitcast U32 to F32 vectors', () => {
     const v2 = vec2u(1065353216, 3212836864); // 1.0f, -1.0f
     const cast2 = std.bitcast(d.vec2u, d.vec2f)(v2);
     expect(std.isCloseTo(cast2, vec2f(1.0, -1.0))).toBe(true);
@@ -53,7 +53,7 @@ describe('bitcast', () => {
     expect(std.isCloseTo(cast4, vec4f(0.0, 1.0, -1.0, 0.0))).toBe(true);
   });
 
-  it('bitcastU32toI32 vectors', () => {
+  it('bitcast U32 to I32 vectors', () => {
     const v2 = vec2u(4294967295, 2147483648); // -1, -2147483648
     const cast2 = std.bitcast(d.vec2u, d.vec2i)(v2); // int vector
     expect(cast2).toEqual(vec2i(-1, -2147483648));
@@ -67,7 +67,7 @@ describe('bitcast', () => {
     expect(cast4).toEqual(vec4i(0, 1, -1, -2147483648));
   });
 
-  it('bitcastF32toU32 vectors', () => {
+  it('bitcast F32 to U32 vectors', () => {
     const v2 = vec2f(floatFromHex('7c800001'), floatFromHex('100008c7'));
     const cast2 = std.bitcast(d.vec2f, d.vec2u)(v2);
     expect(cast2).toStrictEqual(vec2u(2088763393, 268437703));
@@ -86,7 +86,7 @@ describe('bitcast', () => {
     expect(cast4).toStrictEqual(vec4u(2216823077, 1753219072, 1217922944, 1882));
   });
 
-  it('bitcastU32toF32 specials', () => {
+  it('bitcast U32 to F32 specials', () => {
     // +0
     const pz = std.bitcast(d.u32, d.f32)(0x00000000);
     expect(Object.is(pz, 0)).toBe(true);
@@ -108,7 +108,7 @@ describe('bitcast', () => {
     expect(nsub).toBeGreaterThan(-1e-44);
   });
 
-  it('bitcastU32toI32 more edges', () => {
+  it('bitcast U32 to I32 more edges', () => {
     // Scalars
     expect(bitcast(d.u32, d.i32)(0x00000000)).toBe(0);
     expect(bitcast(d.u32, d.i32)(0x00000001)).toBe(1);
@@ -125,7 +125,7 @@ describe('bitcast', () => {
     expect(c4).toEqual(vec4i(-2147483648, 1, 0, 2147483647));
   });
 
-  it('bitcastF32toU32 specials (NaN, infinities etc)', () => {
+  it('bitcast F32 to U32 specials (NaN, infinities etc)', () => {
     // +0
     expect(bitcast(d.f32, d.u32)(+0)).toBe(0x00000000);
 

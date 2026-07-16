@@ -5,20 +5,17 @@ import {
   bitcastU32toF32Impl,
   bitcastU32toI32Impl,
 } from '../data/numberOps.ts';
-import { bool, f16, f32, i32, u32 } from '../data/numeric.ts';
+import { f16, f32, i32, u32 } from '../data/numeric.ts';
 import { isVec } from '../data/wgslTypes.ts';
 import {
-  vec2b,
   vec2f,
   vec2h,
   vec2i,
   vec2u,
-  vec3b,
   vec3f,
   vec3h,
   vec3i,
   vec3u,
-  vec4b,
   vec4f,
   vec4h,
   vec4i,
@@ -27,9 +24,7 @@ import {
 import { VectorOps } from '../data/vectorOps.ts';
 import type {
   AnyNumericVecInstance,
-  AnyVecInstance,
   AnyWgslData,
-  BaseData,
   F16,
   F32,
   I32,
@@ -49,7 +44,6 @@ import { SignatureNotSupportedError } from '../errors.ts';
 import { comptime } from '../tgpu.ts';
 import { getName } from '../internal.ts';
 import type { Infer } from '../shared/repr.ts';
-import { sizeOf } from '../data/sizeOf.ts';
 
 type BitcastU32toF32Overload = <T extends number | v2u | v3u | v4u>(
   value: T,
