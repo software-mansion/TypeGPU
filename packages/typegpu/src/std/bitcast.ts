@@ -41,9 +41,9 @@ import type {
 } from '../data/wgslTypes.ts';
 import { unifyStrict } from '../tgsl/conversion.ts';
 import { SignatureNotSupportedError } from '../errors.ts';
-import { comptime } from '../tgpu.ts';
 import { getName } from '../internal.ts';
 import type { Infer } from '../shared/repr.ts';
+import { comptime } from '../core/function/comptime.ts';
 
 type BitcastU32toF32Overload = <T extends number | v2u | v3u | v4u>(
   value: T,
