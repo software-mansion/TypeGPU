@@ -5,7 +5,7 @@ import { $gpuCallable, $internal, $ownSnippet, $resolve } from '../shared/symbol
 import type { DualFn, SelfResolvable } from '../types.ts';
 import { UnknownData } from './dataTypes.ts';
 import { createPtrFromOrigin, explicitFrom } from './ptr.ts';
-import { isAlias, type ResolvedSnippet, snip, type Snippet } from './snippet.ts';
+import { isAlias, type ResolvedSnippet, snip, type Snippet, withDataType } from './snippet.ts';
 import { isNaturallyEphemeral, isPtr, type Ptr, type StorableData } from './wgslTypes.ts';
 
 // ----------
@@ -77,7 +77,7 @@ export const _ref = (() => {
       if (isPtr(value.dataType)) {
         // This can happen if we take a reference of an *implicit* pointer, one
         // made by assigning a reference to a `const`.
-        return snip(value.value, explicitFrom(value.dataType), value.origin);
+        return withDataType(explicitFrom(value.dataType), value);
       }
 
       /**
@@ -90,7 +90,12 @@ export const _ref = (() => {
        * ```
        */
       const ptrType = createPtrFromOrigin(value.origin, value.dataType as StorableData);
-      return snip(new RefOperator(value, ptrType), ptrType ?? UnknownData, /* origin */ 'runtime');
+      return snip(
+        new RefOperator(value, ptrType),
+        ptrType ?? UnknownData,
+        /* origin */ 'runtime',
+        value.possibleSideEffects,
+      );
     },
   };
 
@@ -175,14 +180,19 @@ export class RefOperator implements SelfResolvable {
     if (!this.#ptrType) {
       throw new Error(stitch`Cannot take a reference of ${this.snippet}`);
     }
-    return snip(this, this.#ptrType, this.snippet.origin);
+    return snip(this, this.#ptrType, this.snippet.origin, this.snippet.possibleSideEffects);
   }
 
   [$resolve](): ResolvedSnippet {
     if (!this.#ptrType) {
       throw new Error(stitch`Cannot take a reference of ${this.snippet}`);
     }
-    return snip(stitch`(&${this.snippet})`, this.#ptrType, this.snippet.origin);
+    return snip(
+      stitch`(&${this.snippet})`,
+      this.#ptrType,
+      this.snippet.origin,
+      this.snippet.possibleSideEffects,
+    );
   }
 }
 
@@ -194,8 +204,13 @@ export function derefSnippet(snippet: Snippet): Snippet {
   const innerType = snippet.dataType.inner;
 
   if (snippet.value instanceof RefOperator) {
-    return snip(stitch`${snippet.value.snippet}`, innerType, snippet.origin);
+    return snip(
+      stitch`${snippet.value.snippet}`,
+      innerType,
+      snippet.origin,
+      snippet.possibleSideEffects,
+    );
   }
 
-  return snip(stitch`(*${snippet})`, innerType, snippet.origin);
+  return snip(stitch`(*${snippet})`, innerType, snippet.origin, snippet.possibleSideEffects);
 }
