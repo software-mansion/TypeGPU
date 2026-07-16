@@ -35,10 +35,8 @@ interface DualImplOptions<T extends AnyFn> {
    *
    * - `discard` -> `true` - it discards the fragment.
    * - `workgroupBarrier()` -> `true` - the barrier synchronizes threads.
-   * - `atomicLoad(p)` -> `true` - atomic operations may synchronize threads
-   *   through memory ordering.
-   * - `sin(x)`, `abs(x)` -> `false` - these are purely value-producing; the call
-   *   itself has no observable effect beyond the returned value.
+   * - `sin(x)`, `abs(x)` -> `false` - these are purely value-producing; the
+   *   call itself has no observable effect beyond the returned value.
    *
    * When `false`, the result inherits side-effects from its arguments: it
    * only has `possibleSideEffects: true` if at least one argument does.
@@ -103,6 +101,7 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
             returnType,
             // Functions give up ownership of their return value
             /* origin */ 'constant',
+            options.sideEffects,
           );
         } catch (e) {
           // cpuImpl may in some cases be present but implemented only partially.

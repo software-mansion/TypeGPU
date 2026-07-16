@@ -1,7 +1,7 @@
 import { UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
-import { isAlias, isSnippet, snip } from '../data/snippet.ts';
+import { isAlias, isSnippet, snip, withDataType } from '../data/snippet.ts';
 import type { ResolvedSnippet, Snippet } from '../data/snippet.ts';
 import {
   type AnyWgslData,
@@ -55,7 +55,7 @@ export function concretize<T extends BaseData>(type: T): T | F32 | I32 {
 }
 
 export function concretizeSnippet(snippet: Snippet): Snippet {
-  return snip(snippet.value, concretize(snippet.dataType as AnyWgslData), snippet.origin);
+  return withDataType(concretize(snippet.dataType as AnyWgslData), snippet);
 }
 
 export function concretizeSnippets(args: Snippet[]): Snippet[] {
@@ -119,18 +119,6 @@ export function coerceToSnippet(value: unknown): Snippet {
       /* origin */ 'constant',
       /* possibleSideEffects */ false,
     );
-  }
-
-  if (
-    typeof value === 'string' ||
-    typeof value === 'function' ||
-    typeof value === 'object' ||
-    typeof value === 'symbol' ||
-    typeof value === 'undefined' ||
-    value === null
-  ) {
-    // Nothing representable in WGSL as-is, so unknown
-    return snip(value, UnknownData, /* origin */ 'constant', /* possibleSideEffects */ false);
   }
 
   if (typeof value === 'number') {

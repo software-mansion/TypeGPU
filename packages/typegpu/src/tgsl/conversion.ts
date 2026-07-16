@@ -1,4 +1,3 @@
-import { stitch } from '../core/resolve/stitch.ts';
 import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
@@ -256,7 +255,12 @@ function applyActionToSnippet(
 
   switch (action.action) {
     case 'ref':
-      return snip(new RefOperator(snippet, targetType as Ptr), targetType, snippet.origin);
+      return snip(
+        new RefOperator(snippet, targetType as Ptr),
+        targetType,
+        snippet.origin,
+        snippet.possibleSideEffects,
+      );
     case 'deref':
       return derefSnippet(snippet);
     case 'cast': {
@@ -394,18 +398,18 @@ export function tryConvertSnippet(
 ): Snippet {
   const targets = Array.isArray(targetDataTypes) ? targetDataTypes : [targetDataTypes];
 
-  const { value, dataType, origin } = snippet;
+  const { value, dataType, origin, possibleSideEffects } = snippet;
 
   if (targets.length === 1) {
     const target = targets[0] as AnyWgslData;
 
     if (target === dataType) {
-      return snip(value, target, origin);
+      return snip(value, target, origin, possibleSideEffects);
     }
 
     if (dataType === UnknownData) {
       // Commit unknown to the expected type.
-      return snip(stitch`${snip(value, target, origin)}`, target, origin);
+      return ctx.resolveSnippet(snip(value, target, origin, possibleSideEffects));
     }
   }
 

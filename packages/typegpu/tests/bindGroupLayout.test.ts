@@ -9,6 +9,7 @@ import type {
   TgpuBindGroup,
   TgpuLayoutComparisonSampler,
   TgpuLayoutSampler,
+  TgpuUniform,
 } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
@@ -1012,21 +1013,44 @@ describe('TgpuBindGroup', () => {
   describe('wide type', () => {
     it('accepts wide buffer', ({ root }) => {
       const layout = tgpu.bindGroupLayout({}) as TgpuBindGroupLayout;
-      const buffer = root.createBuffer(d.f32) as TgpuBuffer<d.AnyWgslData>;
+      const anyBuffer = root.createBuffer(d.f32) as TgpuBuffer<d.AnyWgslData>;
+      const baseBuffer = root.createBuffer(d.f32) as TgpuBuffer<d.BaseData>;
 
       root.createBindGroup(layout, {
-        foo: buffer,
+        foo: anyBuffer,
+      });
+      root.createBindGroup(layout, {
+        foo: baseBuffer,
       });
     });
 
     it('accepts wide uniform buffer', ({ root }) => {
       const layout = tgpu.bindGroupLayout({}) as TgpuBindGroupLayout;
 
-      const buffer = root.createBuffer(d.f32).$usage('uniform') as TgpuBuffer<d.AnyWgslData> &
+      const anyBuffer = root.createBuffer(d.f32).$usage('uniform') as TgpuBuffer<d.AnyWgslData> &
+        UniformFlag;
+      const baseBuffer = root.createBuffer(d.f32).$usage('uniform') as TgpuBuffer<d.BaseData> &
         UniformFlag;
 
       root.createBindGroup(layout, {
-        foo: buffer,
+        foo: anyBuffer,
+      });
+      root.createBindGroup(layout, {
+        foo: baseBuffer,
+      });
+    });
+
+    it('accepts wide buffer binding', ({ root }) => {
+      const layout = tgpu.bindGroupLayout({}) as TgpuBindGroupLayout;
+
+      const anyBuffer = root.createUniform(d.f32) as TgpuUniform<d.AnyWgslData>;
+      const baseBuffer = root.createUniform(d.f32) as TgpuUniform<d.BaseData>;
+
+      root.createBindGroup(layout, {
+        foo: anyBuffer,
+      });
+      root.createBindGroup(layout, {
+        foo: baseBuffer,
       });
     });
 
