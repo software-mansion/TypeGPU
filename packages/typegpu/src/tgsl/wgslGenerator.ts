@@ -30,8 +30,8 @@ import {
   ArrayExpression,
   coerceToSnippet,
   concretize,
-  type GenerationCtx,
   numericLiteralToSnippet,
+  type GenerationCtx,
 } from './generationHelpers.ts';
 import { accessIndex } from './accessIndex.ts';
 import { accessProp } from './accessProp.ts';
@@ -163,35 +163,32 @@ function operatorToType<
 
 const unaryOpCodeToCodegen = {
   '-': neg[$gpuCallable].call.bind(neg),
-  void: () => snip(undefined, wgsl.Void, 'constant'),
+  void: () => snip(undefined, wgsl.Void, 'constant', false),
   '!': (ctx: GenerationCtx, [argExpr]: Snippet[]) => {
     if (argExpr === undefined) {
       throw new Error('The unary operator `!` expects 1 argument, but 0 were provided.');
     }
 
     if (isKnownAtComptime(argExpr)) {
-      return snip(!argExpr.value, bool, 'constant');
+      return snip(!argExpr.value, bool, 'constant', false);
     }
 
-    const { value, dataType } = argExpr;
-    const argStr = ctx.resolve(value, dataType).value;
+    const argStr = ctx.resolveSnippet(argExpr).value;
 
-    if (wgsl.isBool(dataType)) {
-      return snip(`!${argStr}`, bool, 'runtime');
+    if (wgsl.isBool(argExpr.dataType)) {
+      return snip(`!${argStr}`, bool, 'runtime', argExpr.possibleSideEffects);
     }
-    if (wgsl.isNumericSchema(dataType)) {
+    if (wgsl.isNumericSchema(argExpr.dataType)) {
       const resultStr = `!bool(${argStr})`;
       const nanGuardedStr = // abstractFloat will be resolved as comptime known value
-        dataType.type === 'f32'
-          ? `(((bitcast<u32>(${argStr}) & 0x7fffffff) > 0x7f800000) || ${resultStr})`
-          : dataType.type === 'f16'
-            ? `(((bitcast<u32>(${argStr}) & 0x7fff) > 0x7c00) || ${resultStr})`
-            : resultStr;
+        argExpr.dataType.type === 'f32' || argExpr.dataType.type === 'f16'
+          ? `(((bitcast<u32>(${argExpr.dataType.type === 'f16' ? `f32(${argStr})` : argStr}) << 1u) - 1u) >= 0xff000000)`
+          : resultStr;
 
-      return snip(nanGuardedStr, bool, 'runtime');
+      return snip(nanGuardedStr, bool, 'runtime', argExpr.possibleSideEffects);
     }
 
-    return snip(false, bool, 'constant');
+    return snip(false, bool, 'constant', false);
   },
 } satisfies Partial<Record<tinyest.UnaryOperator, (...args: never[]) => unknown>>;
 
@@ -262,9 +259,10 @@ ${this.ctx.pre}}`;
     const varName = this.ctx.makeUniqueIdentifier(id, 'block');
     const ptrType = ptrFn(dataType);
     const snippet = snip(
-      new RefOperator(snip(varName, dataType, 'function'), ptrType),
+      new RefOperator(snip(varName, dataType, 'function', false), ptrType),
       ptrType,
       'function',
+      false,
     );
     this.ctx.defineVariable(id, snippet);
     return varName;
@@ -288,7 +286,7 @@ ${this.ctx.pre}}`;
       throw new Error('Cannot resolve an empty identifier');
     }
     if (id === 'undefined') {
-      return snip(undefined, wgsl.Void, 'constant');
+      return snip(undefined, wgsl.Void, 'constant', false);
     }
 
     const res = this.ctx.getById(id);
@@ -331,7 +329,7 @@ ${this.ctx.pre}}`;
     }
 
     if (typeof expression === 'boolean') {
-      return snip(expression, bool, /* origin */ 'constant');
+      return snip(expression, bool, /* origin */ 'constant', false);
     }
 
     if (
@@ -348,7 +346,7 @@ ${this.ctx.pre}}`;
         const evalRhs = op === '&&' ? lhsExpr.value : !lhsExpr.value;
 
         if (!evalRhs) {
-          return snip(op === '||', bool, 'constant');
+          return snip(op === '||', bool, 'constant', false);
         }
 
         const rhsExpr = this._expression(rhs);
@@ -358,13 +356,13 @@ ${this.ctx.pre}}`;
         }
 
         if (isKnownAtComptime(rhsExpr)) {
-          return snip(!!rhsExpr.value, bool, 'constant');
+          return snip(!!rhsExpr.value, bool, 'constant', false);
         }
 
         // we can skip lhs
         const convRhs = tryConvertSnippet(this.ctx, rhsExpr, bool, false);
-        const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
-        return snip(rhsStr, bool, 'runtime');
+        const rhsStr = this.ctx.resolveSnippet(convRhs).value;
+        return snip(rhsStr, bool, 'runtime', convRhs.possibleSideEffects);
       }
 
       const rhsExpr = this._expression(rhs);
@@ -452,8 +450,8 @@ ${this.ctx.pre}}`;
         ];
       }
 
-      const lhsStr = this.ctx.resolve(convLhs.value, convLhs.dataType).value;
-      const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
+      const lhsStr = this.ctx.resolveSnippet(convLhs).value;
+      const rhsStr = this.ctx.resolveSnippet(convRhs).value;
       const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
 
       if (exprType === NODE.assignmentExpr) {
@@ -498,11 +496,11 @@ ${this.ctx.pre}}`;
         return codegen(this.ctx, [argExpr]);
       }
 
-      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
+      const argStr = this.ctx.resolveSnippet(argExpr).value;
 
       const type = operatorToType(argExpr.dataType, op);
       // Result of an operation, so not a reference to anything
-      return snip(`${op}${argStr}`, type, /* origin */ 'runtime');
+      return snip(`${op}${argStr}`, type, /* origin */ 'runtime', argExpr.possibleSideEffects);
     }
 
     if (expression[0] === NODE.memberAccess) {
@@ -551,7 +549,12 @@ ${this.ctx.pre}}`;
       const [_, calleeNode, argNodes] = expression;
       const _callee = this._expression(calleeNode);
       const callee = mathToStd.has(_callee.value as AnyFn)
-        ? snip(mathToStd.get(_callee.value as AnyFn) as DualFn<AnyFn>, UnknownData, 'runtime')
+        ? snip(
+            mathToStd.get(_callee.value as AnyFn) as DualFn<AnyFn>,
+            UnknownData,
+            'runtime',
+            _callee.possibleSideEffects,
+          )
         : _callee;
 
       if (supportedLogOps().includes(callee.value as AnyFn)) {
@@ -575,6 +578,7 @@ ${this.ctx.pre}}`;
             callee.value,
             // A new struct, so not a reference.
             /* origin */ 'runtime',
+            false,
           );
         }
 
@@ -583,10 +587,11 @@ ${this.ctx.pre}}`;
         // Either `Struct({ x: 1, y: 2 })`, or `Struct(otherStruct)`.
         // In both cases, we just let the argument resolve everything.
         return snip(
-          this.ctx.resolve(arg.value, callee.value).value,
+          this.ctx.resolveSnippet(arg).value,
           callee.value,
           // A new struct, so not a reference.
           /* origin */ 'runtime',
+          arg.possibleSideEffects,
         );
       }
 
@@ -604,6 +609,7 @@ ${this.ctx.pre}}`;
             callee.value,
             // A new array, so not a reference.
             /* origin */ 'runtime',
+            false,
           );
         }
 
@@ -617,16 +623,18 @@ ${this.ctx.pre}}`;
             stitch`${this.ctx.resolve(callee.value).value}(${arg.value.elements})`,
             arg.dataType,
             /* origin */ 'runtime',
+            arg.possibleSideEffects,
           );
         }
 
         // `d.arrayOf(...)(otherArr)`.
         // We just let the argument resolve everything.
         return snip(
-          this.ctx.resolve(arg.value, callee.value).value,
+          this.ctx.resolveSnippet(arg).value,
           callee.value,
           // A new array, so not a reference.
           /* origin */ 'runtime',
+          arg.possibleSideEffects,
         );
       }
 
@@ -805,6 +813,7 @@ ${this.ctx.pre}}`;
           stitch`${this.ctx.resolve(structType).value}(${convertedSnippets})`,
           structType,
           /* origin */ 'runtime',
+          convertedSnippets.some((s) => s.possibleSideEffects),
         );
       }
 
@@ -851,7 +860,12 @@ ${this.ctx.pre}}`;
 
       const arrayType = arrayOf(elemType as wgsl.AnyWgslData, values.length);
 
-      return snip(new ArrayExpression(arrayType, values), arrayType, /* origin */ 'runtime');
+      return snip(
+        new ArrayExpression(arrayType, values),
+        arrayType,
+        /* origin */ 'runtime',
+        values.some((v) => v.possibleSideEffects),
+      );
     }
 
     if (expression[0] === NODE.conditionalExpr) {
@@ -884,7 +898,7 @@ ${this.ctx.pre}}`;
     }
 
     if (expression[0] === NODE.stringLiteral) {
-      return snip(expression[1], UnknownData, /* origin */ 'constant');
+      return snip(expression[1], UnknownData, /* origin */ 'constant', false);
     }
 
     if (expression[0] === NODE.preUpdate) {
@@ -992,10 +1006,20 @@ ${this.ctx.pre}}`;
     if (args.length === 1 && args[0]?.dataType === schema) {
       // Already of the desired type, e.g. `bool(false)` or `vec3f(vec3f(1, 2, 3))`
       // We can make this snippet ephemeral, as we know it will be deep copied in JS
-      return snip(stitch`${args[0]}`, schema, fallthroughCopyOrigin(args[0].origin));
+      return snip(
+        stitch`${args[0]}`,
+        schema,
+        fallthroughCopyOrigin(args[0].origin),
+        args[0].possibleSideEffects,
+      );
     }
     // Creating a 'runtime' snippet, since it's instantiating a new value
-    return snip(stitch`${this.ctx.resolve(schema).value}(${args})`, schema, 'runtime');
+    return snip(
+      stitch`${this.ctx.resolve(schema).value}(${args})`,
+      schema,
+      'runtime',
+      args.some((s) => s.possibleSideEffects),
+    );
   }
 
   public numericLiteral(value: number, schema: wgsl.BaseData): ResolvedSnippet {
@@ -1006,13 +1030,13 @@ ${this.ctx.pre}}`;
     }
 
     if (schema.type === 'abstractInt') {
-      return snip(`${value}`, schema, /* origin */ 'constant');
+      return snip(`${value}`, schema, /* origin */ 'constant', false);
     }
     if (schema.type === 'u32') {
-      return snip(`${value}u`, schema, /* origin */ 'constant');
+      return snip(`${value}u`, schema, /* origin */ 'constant', false);
     }
     if (schema.type === 'i32') {
-      return snip(`${value}i`, schema, /* origin */ 'constant');
+      return snip(`${value}i`, schema, /* origin */ 'constant', false);
     }
 
     const exp = value.toExponential();
@@ -1022,12 +1046,12 @@ ${this.ctx.pre}}`;
     // Just picking the shorter one
     const base = exp.length < decimal.length ? exp : decimal;
     if (schema.type === 'f32') {
-      return snip(`${base}f`, schema, /* origin */ 'constant');
+      return snip(`${base}f`, schema, /* origin */ 'constant', false);
     }
     if (schema.type === 'f16') {
-      return snip(`${base}h`, schema, /* origin */ 'constant');
+      return snip(`${base}h`, schema, /* origin */ 'constant', false);
     }
-    return snip(base, schema, /* origin */ 'constant');
+    return snip(base, schema, /* origin */ 'constant', false);
   }
 
   protected _return(statement: tinyest.Return): string {
@@ -1154,13 +1178,12 @@ Try 'return ${typeStr}(${str});' instead.
       this.ctx.makeUniqueIdentifier(rawId, 'block'),
       concreteType,
       /* origin */ 'local-def',
-      // Accessing variable declarations is side-effect free.
-      /* possibleSideEffects */ false,
+      false,
     );
     this.ctx.defineVariable(rawId, snippet);
 
     const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
-    const rhsStr = this.ctx.resolve(rhsSnippet.value, rhsSnippet.dataType).value;
+    const rhsStr = this.ctx.resolveSnippet(rhsSnippet).value;
 
     // Even though the user defined a 'let' (expecting it to be reassigned), the
     // reassignment might happen in a pruned branch, in which case we can generate
@@ -1270,13 +1293,12 @@ Try 'return ${typeStr}(${str});' instead.
       this.ctx.makeUniqueIdentifier(rawId, 'block'),
       concreteType,
       /* origin */ varOrigin,
-      // Accessing variable declarations is side-effect free.
-      /* possibleSideEffects */ false,
+      false,
     );
     this.ctx.defineVariable(rawId, snippet);
 
     const rhsSnippet = tryConvertSnippet(this.ctx, eq, definitionDataType, false);
-    const rhsStr = this.ctx.resolve(rhsSnippet.value, rhsSnippet.dataType).value;
+    const rhsStr = this.ctx.resolveSnippet(rhsSnippet).value;
 
     let emittedVarType: 'var' | 'let' | 'const' | `#VAR_${number}#`;
     if (varType === '<deferred>') {
@@ -1294,8 +1316,8 @@ Try 'return ${typeStr}(${str});' instead.
   protected _statement(statement: tinyest.Statement): string {
     if (typeof statement === 'string') {
       const id = this._identifier(statement);
-      const resolved = id.value && this.ctx.resolve(id.value).value;
-      // oxlint-disable-next-line typescript/no-base-to-string
+      const resolved =
+        id.value !== undefined && id.value !== null ? this.ctx.resolveSnippet(id).value : '';
       return resolved ? `${this.ctx.pre}${resolved};` : '';
     }
 
@@ -1388,7 +1410,7 @@ ${this.ctx.pre}else ${alternate}`;
       try {
         const [_, condition, body] = statement;
         const condSnippet = this._typedExpression(condition, bool);
-        const conditionStr = this.ctx.resolve(condSnippet.value).value;
+        const conditionStr = this.ctx.resolveSnippet(condSnippet).value;
 
         const bodyStr = this._block(blockifySingleStatement(body));
         return `${this.ctx.pre}while (${conditionStr}) ${bodyStr}`;
@@ -1467,7 +1489,7 @@ ${this.ctx.pre}else ${alternate}`;
 
         if (isTgpuRange(iterableSnippet.value)) {
           bodyStr = this._block(blockified, {
-            [originalLoopVarName]: snip(index, range.start.dataType, 'runtime'), // range.start, .end , .step have the same dataType
+            [originalLoopVarName]: snip(index, range.start.dataType, 'runtime', false), // range.start, .end , .step have the same dataType
           });
         } else {
           this.ctx.indent();
@@ -1487,7 +1509,7 @@ ${this.ctx.pre}else ${alternate}`;
           )};`;
 
           bodyStr = `{\n${loopVarDeclStr}\n${this._blockStatement(blockified, {
-            [originalLoopVarName]: snip(loopVarName, elementType, elementSnippet.origin),
+            [originalLoopVarName]: snip(loopVarName, elementType, elementSnippet.origin, false),
           })}\n`;
           this.ctx.dedent();
           bodyStr += `${this.ctx.pre}}`;
@@ -1508,7 +1530,7 @@ ${this.ctx.pre}else ${alternate}`;
       // Post-update statement
       const [_, op, arg] = statement;
       const argExpr = this._expression(arg);
-      const argStr = this.ctx.resolve(argExpr.value, argExpr.dataType).value;
+      const argStr = this.ctx.resolveSnippet(argExpr).value;
 
       validateSnippetMutation(argExpr, statement);
       this.tryMarkModified(arg);
@@ -1531,8 +1553,8 @@ ${this.ctx.pre}else ${alternate}`;
     }
 
     const expr = this._expression(statement);
-    const resolved = expr.value && this.ctx.resolve(expr.value).value;
-    // oxlint-disable-next-line typescript/no-base-to-string
+    const resolved =
+      expr.value !== undefined && expr.value !== null ? this.ctx.resolveSnippet(expr).value : '';
     return resolved ? `${this.ctx.pre}${resolved};` : '';
   }
 

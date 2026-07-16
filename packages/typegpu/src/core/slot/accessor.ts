@@ -7,6 +7,7 @@ import { getName, hasTinyestMetadata, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
 import {
   $getNameForward,
+  $gpuCallable,
   $gpuValueOf,
   $internal,
   $ownSnippet,
@@ -15,6 +16,7 @@ import {
 import type { UnwrapRuntimeConstructor } from '../../tgpuBindGroupLayout.ts';
 import {
   getOwnSnippet,
+  isGPUCallable,
   NormalState,
   type ResolutionCtx,
   type SelfResolvable,
@@ -27,6 +29,14 @@ import type { TgpuAccessor, TgpuMutableAccessor, TgpuSlot } from './slotTypes.ts
 // ----------
 // Public API
 // ----------
+export function accessor<T extends AnyData>(
+  schema: T,
+  defaultValue?: TgpuAccessor.In<NoInfer<T>>,
+): TgpuAccessor<UnwrapRuntimeConstructor<T>>;
+export function accessor<T extends (count: number) => AnyData>(
+  schema: T,
+  defaultValue?: TgpuAccessor.In<NoInfer<T>>,
+): TgpuAccessor<UnwrapRuntimeConstructor<T>>;
 export function accessor<T extends AnyData | ((count: number) => AnyData)>(
   schemaOrConstructor: T,
   defaultValue?: TgpuAccessor.In<NoInfer<T>>,
@@ -36,6 +46,14 @@ export function accessor<T extends AnyData | ((count: number) => AnyData)>(
   >;
 }
 
+export function mutableAccessor<T extends AnyData>(
+  schema: T,
+  defaultValue?: TgpuMutableAccessor.In<NoInfer<T>>,
+): TgpuMutableAccessor<UnwrapRuntimeConstructor<T>>;
+export function mutableAccessor<T extends (count: number) => AnyData>(
+  schema: T,
+  defaultValue?: TgpuMutableAccessor.In<NoInfer<T>>,
+): TgpuMutableAccessor<UnwrapRuntimeConstructor<T>>;
 export function mutableAccessor<T extends AnyData | ((count: number) => AnyData)>(
   schemaOrConstructor: T,
   defaultValue?: TgpuMutableAccessor.In<NoInfer<T>>,
@@ -96,7 +114,12 @@ abstract class AccessorBase<
     const ctx = getResolutionCtx()!;
     let value = getGpuValueRecursively(ctx.unwrap(this.slot));
 
-    while (typeof value === 'function' && !isTgpuFn(value) && !hasTinyestMetadata(value)) {
+    while (
+      typeof value === 'function' &&
+      !isTgpuFn(value) &&
+      !isGPUCallable(value) &&
+      !hasTinyestMetadata(value)
+    ) {
       // Not a GPU function, so has to be a resource accessor (ran in codegen mode) or comptime
       value = value();
       if (isSnippet(value)) {
@@ -109,9 +132,14 @@ abstract class AccessorBase<
       return ownSnippet;
     }
 
+    if (isGPUCallable(value)) {
+      return value[$gpuCallable].call(ctx, []);
+    }
+
     if (isTgpuFn(value) || hasTinyestMetadata(value)) {
+      const fn = ctx.resolve(value);
       return ctx.withResetIndentLevel(() =>
-        snip(`${ctx.resolve(value).value}()`, this.schema, /* origin */ 'runtime'),
+        snip(`${fn.value}()`, this.schema, /* origin */ 'runtime', fn.possibleSideEffects),
       );
     }
 
@@ -147,12 +175,7 @@ abstract class AccessorBase<
   abstract readonly $: InferGPU<T>;
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    const snippet = this.#createSnippet();
-    return snip(
-      ctx.resolve(snippet.value, snippet.dataType).value,
-      snippet.dataType as T,
-      snippet.origin,
-    );
+    return ctx.resolveSnippet(this.#createSnippet());
   }
 }
 

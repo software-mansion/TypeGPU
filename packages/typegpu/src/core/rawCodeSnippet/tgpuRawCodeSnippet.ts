@@ -40,6 +40,7 @@ export type RawCodeSnippetOrigin = Exclude<
  * @param expression The code snippet that will be injected in place of `foo.$`
  * @param type The type of the expression
  * @param [origin='runtime'] Where the value originates from.
+ * @param [possibleSideEffects=true] Whether generating this snippet may produce a WGSL expression with observable side-effects (e.g. calling a barrier, discarding a fragment, or writing to memory).
  *
  * **-- Which origin to choose?**
  *
@@ -58,7 +59,7 @@ export type RawCodeSnippetOrigin = Exclude<
  * // final shader bundle, but we cannot
  * // refer to it in any other way.
  * const existingGlobal = tgpu['~unstable']
- *   .rawCodeSnippet('EXISTING_GLOBAL', d.f32, 'constant');
+ *   .rawCodeSnippet('EXISTING_GLOBAL', d.f32, 'constant', false);
  *
  * const foo = () => {
  *   'use gpu';
@@ -75,8 +76,9 @@ export function rawCodeSnippet<TDataType extends AnyData>(
   expression: string,
   type: TDataType,
   origin: RawCodeSnippetOrigin | undefined = 'runtime',
+  possibleSideEffects: boolean | undefined = true,
 ): TgpuRawCodeSnippet<TDataType> {
-  return new TgpuRawCodeSnippetImpl(expression, type, origin);
+  return new TgpuRawCodeSnippetImpl(expression, type, origin, possibleSideEffects);
 }
 
 // --------------
@@ -89,14 +91,21 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
   readonly [$internal]: true;
   readonly dataType: TDataType;
   readonly origin: RawCodeSnippetOrigin;
+  readonly possibleSideEffects: boolean;
 
   #expression: string;
   #externals: ExternalMap | undefined;
 
-  constructor(expression: string, type: TDataType, origin: RawCodeSnippetOrigin) {
+  constructor(
+    expression: string,
+    type: TDataType,
+    origin: RawCodeSnippetOrigin,
+    possibleSideEffects: boolean,
+  ) {
     this[$internal] = true;
     this.dataType = type;
     this.origin = origin;
+    this.possibleSideEffects = possibleSideEffects;
 
     this.#expression = expression;
   }
@@ -114,7 +123,7 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const replacedExpression = replaceExternalsInWgsl(ctx, this.#externals ?? {}, this.#expression);
 
-    return snip(replacedExpression, this.dataType, this.origin);
+    return snip(replacedExpression, this.dataType, this.origin, this.possibleSideEffects);
   }
 
   toString() {
@@ -124,12 +133,13 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
   get [$gpuValueOf](): InferGPU<TDataType> {
     const dataType = this.dataType;
     const origin = this.origin;
+    const possibleSideEffects = this.possibleSideEffects;
 
     return new Proxy(
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, dataType, origin);
+          return snip(this, dataType, origin, possibleSideEffects);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `raw(${String(this.dataType)}): "${this.#expression}".$`,

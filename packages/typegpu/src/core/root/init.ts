@@ -18,11 +18,13 @@ import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import { INTERNAL_createBuffer, type TgpuBuffer, type VertexFlag } from '../buffer/buffer.ts';
 import { isBuffer } from '../../types.ts';
 import {
-  TgpuBufferShorthandImpl,
+  isBufferBinding,
+  TgpuBufferBindingImpl,
+  type TgpuBufferBinding,
   type TgpuMutable,
   type TgpuReadonly,
   type TgpuUniform,
-} from '../buffer/bufferShorthand.ts';
+} from '../buffer/bufferBinding.ts';
 import { computeFn } from '../function/tgpuComputeFn.ts';
 import { fn } from '../function/tgpuFn.ts';
 import {
@@ -345,7 +347,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
       .$usage('uniform' as any);
 
-    return new TgpuBufferShorthandImpl('uniform', buffer);
+    return new TgpuBufferBindingImpl('uniform', buffer);
   }
 
   createMutable<TData extends AnyWgslData>(
@@ -356,7 +358,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
       .$usage('storage' as any);
 
-    return new TgpuBufferShorthandImpl('mutable', buffer);
+    return new TgpuBufferBindingImpl('mutable', buffer);
   }
 
   createReadonly<TData extends AnyWgslData>(
@@ -367,7 +369,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       // oxlint-disable-next-line typescript/no-explicit-any -- i'm sure it's fine
       .$usage('storage' as any);
 
-    return new TgpuBufferShorthandImpl('readonly', buffer);
+    return new TgpuBufferBindingImpl('readonly', buffer);
   }
 
   createQuerySet<T extends GPUQueryType>(
@@ -435,6 +437,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
   unwrap(resource: TgpuBuffer<BaseData>): GPUBuffer;
+  unwrap(resource: TgpuBufferBinding<BaseData>): GPUBuffer;
   unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(resource: TgpuTextureView): GPUTextureView;
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
@@ -448,6 +451,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       | TgpuBindGroupLayout
       | TgpuBindGroup
       | TgpuBuffer<BaseData>
+      | TgpuBufferBinding<BaseData>
       | TgpuTexture
       | TgpuTextureView
       | TgpuVertexLayout
@@ -483,6 +487,10 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
     if (isBuffer(resource)) {
       return resource.buffer;
+    }
+
+    if (isBufferBinding(resource)) {
+      return resource.buffer.buffer;
     }
 
     if (isTexture(resource)) {

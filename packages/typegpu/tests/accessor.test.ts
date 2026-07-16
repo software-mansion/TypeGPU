@@ -561,4 +561,26 @@ describe('tgpu.accessor', () => {
       }"
     `);
   });
+
+  it('correctly infers input type from array schema', () => {
+    const accessor = tgpu.accessor(d.arrayOf(d.u32, 1), d.arrayOf(d.u32, 1)([1]));
+    expectTypeOf(accessor).toEqualTypeOf<TgpuAccessor<d.WgslArray<d.U32>>>();
+  });
+
+  it('allows zero-argument dualFn', () => {
+    const accessor = tgpu.accessor(d.bool, std.subgroupElect);
+
+    expect(
+      tgpu.resolve([
+        () => {
+          'use gpu';
+          return accessor.$;
+        },
+      ]),
+    ).toMatchInlineSnapshot(`
+      "fn item() -> bool {
+        return subgroupElect();
+      }"
+    `);
+  });
 });

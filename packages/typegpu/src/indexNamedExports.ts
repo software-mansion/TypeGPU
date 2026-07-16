@@ -22,7 +22,13 @@ export {
   isUsableAsIndex,
   isUsableAsStorage,
 } from './types.ts';
-export { isBufferShorthand } from './core/buffer/bufferShorthand.ts';
+export {
+  isBufferBinding,
+  isBufferShorthand,
+  isMutableBinding,
+  isReadonlyBinding,
+  isUniformBinding,
+} from './core/buffer/bufferBinding.ts';
 export { isTgpuFn } from './core/function/tgpuFn.ts';
 export { isTgpuFragmentFn } from './core/function/tgpuFragmentFn.ts';
 export { isTgpuVertexFn } from './core/function/tgpuVertexFn.ts';
@@ -74,7 +80,7 @@ export type {
   TgpuBufferReadonly,
   TgpuBufferUniform,
 } from './core/buffer/bufferUsage.ts';
-export type { TgpuMutable, TgpuReadonly, TgpuUniform } from './core/buffer/bufferShorthand.ts';
+export type { TgpuMutable, TgpuReadonly, TgpuUniform } from './core/buffer/bufferBinding.ts';
 export type {
   Eventual,
   TgpuAccessor,

@@ -13,6 +13,47 @@ import {
 import { attest } from '@ark/attest';
 
 describe('root.createMutable', () => {
+  it('can be unwrapped', ({ root }) => {
+    const myMutable = root.createMutable(d.u32);
+
+    expect(root.unwrap(myMutable)).toBe(root.unwrap(myMutable.buffer));
+  });
+
+  it('is allowed in bind groups', ({ root, device }) => {
+    const myMutable = root.createMutable(d.u32);
+
+    const layout = tgpu.bindGroupLayout({ buff: { storage: d.u32, access: 'mutable' } });
+    const bindGroup = root.createBindGroup(layout, { buff: myMutable });
+    root.unwrap(bindGroup);
+
+    expect(device.createBindGroup).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entries: [
+          {
+            binding: 0,
+            resource: {
+              buffer: root.unwrap(myMutable),
+            },
+          },
+        ],
+      }),
+    );
+  });
+
+  it('is disallowed in bind groups of different access mode', ({ root }) => {
+    const layout = tgpu.bindGroupLayout;
+    const create = root.createBindGroup;
+
+    const myMutable = root.createMutable(d.u32);
+
+    // @ts-expect-error
+    () => create(layout({ b: { uniform: d.u32 } }), { b: myMutable });
+    // @ts-expect-error
+    () => create(layout({ b: { storage: d.u32 } }), { b: myMutable });
+    // @ts-expect-error
+    () => create(layout({ b: { storage: d.u32, access: 'readonly' } }), { b: myMutable });
+  });
+
   it('is resolvable', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('storage');
     const mutable = buffer.as('mutable');
@@ -192,6 +233,45 @@ describe('root.createMutable', () => {
 });
 
 describe('root.createReadonly', () => {
+  it('can be unwrapped', ({ root }) => {
+    const myReadonly = root.createReadonly(d.u32);
+
+    expect(root.unwrap(myReadonly)).toBe(root.unwrap(myReadonly.buffer));
+  });
+
+  it('is allowed in bind groups', ({ root, device }) => {
+    const myReadonly = root.createReadonly(d.u32);
+
+    const layout = tgpu.bindGroupLayout({ buff: { storage: d.u32, access: 'readonly' } });
+    const bindGroup = root.createBindGroup(layout, { buff: myReadonly });
+    root.unwrap(bindGroup);
+
+    expect(device.createBindGroup).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entries: [
+          {
+            binding: 0,
+            resource: {
+              buffer: root.unwrap(myReadonly),
+            },
+          },
+        ],
+      }),
+    );
+  });
+
+  it('is disallowed in bind groups of different access mode', ({ root }) => {
+    const layout = tgpu.bindGroupLayout;
+    const create = root.createBindGroup;
+
+    const myReadonly = root.createReadonly(d.u32);
+
+    // @ts-expect-error
+    () => create(layout({ b: { uniform: d.u32 } }), { b: myReadonly });
+    // @ts-expect-error
+    () => create(layout({ b: { storage: d.u32, access: 'mutable' } }), { b: myReadonly });
+  });
+
   it('is resolvable', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('storage');
     const readonly = buffer.as('readonly');
@@ -421,6 +501,47 @@ describe('root.createReadonly', () => {
 });
 
 describe('root.createUniform', () => {
+  it('can be unwrapped', ({ root }) => {
+    const myUniform = root.createUniform(d.u32);
+
+    expect(root.unwrap(myUniform)).toBe(root.unwrap(myUniform.buffer));
+  });
+
+  it('is allowed in bind groups', ({ root, device }) => {
+    const myUniform = root.createUniform(d.u32);
+
+    const layout = tgpu.bindGroupLayout({ buff: { uniform: d.u32 } });
+    const bindGroup = root.createBindGroup(layout, { buff: myUniform });
+    root.unwrap(bindGroup);
+
+    expect(device.createBindGroup).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entries: [
+          {
+            binding: 0,
+            resource: {
+              buffer: root.unwrap(myUniform),
+            },
+          },
+        ],
+      }),
+    );
+  });
+
+  it('is disallowed in bind groups of different access mode', ({ root }) => {
+    const layout = tgpu.bindGroupLayout;
+    const create = root.createBindGroup;
+
+    const myUniform = root.createUniform(d.u32);
+
+    // @ts-expect-error
+    () => create(layout({ b: { storage: d.u32 } }), { b: myUniform });
+    // @ts-expect-error
+    () => create(layout({ b: { storage: d.u32, access: 'readonly' } }), { b: myUniform });
+    // @ts-expect-error
+    () => create(layout({ b: { storage: d.u32, access: 'mutable' } }), { b: myUniform });
+  });
+
   it('is resolvable', ({ root }) => {
     const buffer = root.createBuffer(d.f32).$usage('uniform');
     const uniform = buffer.as('uniform');
@@ -527,7 +648,7 @@ describe('root.createUniform', () => {
     `);
   });
 
-  it('allows creating shorthands only for buffers allowing them', ({ root }) => {
+  it('allows creating bindings only for buffers allowing them', ({ root }) => {
     root.createBuffer(d.u32, 2).$usage('uniform').as('uniform');
     root.createBuffer(d.u32, 2).$usage('uniform', 'storage').as('uniform');
     root.createBuffer(d.u32, 2).$usage('uniform', 'vertex').as('uniform');

@@ -12,7 +12,13 @@ import {
 } from './core/slot/slotTypes.ts';
 import { isData, UnknownData } from './data/dataTypes.ts';
 import { bool } from './data/numeric.ts';
-import { type Origin, type ResolvedSnippet, snip, type Snippet } from './data/snippet.ts';
+import {
+  type Origin,
+  type ResolvedSnippet,
+  snip,
+  type Snippet,
+  withValue,
+} from './data/snippet.ts';
 import { type BaseData, isPtr, isWgslArray, isWgslStruct, Void } from './data/wgslTypes.ts';
 import { invariant, MissingSlotValueError, ResolutionError, WgslTypeError } from './errors.ts';
 import { provideCtx, topLevelState } from './execMode.ts';
@@ -958,6 +964,18 @@ export class ResolutionCtxImpl implements ResolutionCtx {
   }
 
   resolve(item: unknown, schema?: BaseData | UnknownData): ResolvedSnippet {
+    if (typeof item === 'string') {
+      if (!schema || schema === UnknownData) {
+        throw new Error(
+          `Strings cannot be injected into WGSL directly (tried to inject '${item}'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.`,
+        );
+      }
+      // For example:
+      // () => { 'use gpu'; const color = d.vec3f(); return color; }
+      //                             snip('color', d.vec3f) ^^^^^
+      return snip(item, schema, /* origin */ 'runtime');
+    }
+
     if ((isTgpuFn(item) || isShelllessImpl(item)) && !isProviding(item)) {
       // We skip providing functions to only perform the checks on slot-less functions.
       if (
@@ -1006,12 +1024,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     }
 
     if (typeof item === 'boolean') {
-      return snip(item ? 'true' : 'false', bool, /* origin */ 'constant');
-    }
-
-    if (typeof item === 'string') {
-      // Already resolved
-      return snip(item, Void, /* origin */ 'runtime');
+      return snip(item ? 'true' : 'false', bool, /* origin */ 'constant', false);
     }
 
     if (schema && isWgslArray(schema)) {
@@ -1042,17 +1055,13 @@ export class ResolutionCtxImpl implements ResolutionCtx {
 
     throw new WgslTypeError(
       `Value ${safeStringify(item)} is not resolvable${
-        schema ? ` to type ${safeStringify(schema)}` : ''
+        schema && schema !== UnknownData ? ` to type ${safeStringify(schema)}` : ''
       }`,
     );
   }
 
   resolveSnippet(snippet: Snippet): ResolvedSnippet {
-    return snip(
-      this.resolve(snippet.value, snippet.dataType).value,
-      snippet.dataType,
-      snippet.origin,
-    ) as ResolvedSnippet;
+    return withValue(this.resolve(snippet.value, snippet.dataType).value, snippet);
   }
 
   pushMode(mode: ExecState) {
@@ -1076,7 +1085,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
  *
  * @param code - The resolved code.
  * @param usedBindGroupLayouts - List of used `tgpu.bindGroupLayout`s.
- * @param catchall - Automatically constructed bind group for buffer usages and buffer shorthands, preceded by its index.
+ * @param catchall - Automatically constructed bind group for buffer usages and buffer bindings, preceded by its index.
  * @param logResources - Buffers and information about used console.logs needed to decode the raw data.
  */
 export interface ResolutionResult {
@@ -1116,11 +1125,8 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
       new TgpuBindGroupImpl(
         catchallLayout,
         Object.fromEntries(
-          ctx.fixedBindings.map(
-            (binding, idx) =>
-              // oxlint-disable-next-line typescript/no-explicit-any -- it's fine
-              [String(idx), binding.resource] as [string, any],
-          ),
+          // oxlint-disable-next-line typescript/no-explicit-any -- it's fine
+          ctx.fixedBindings.map((binding, idx) => [String(idx), binding.resource] as [string, any]),
         ),
       ),
     ] as [number, TgpuBindGroup];

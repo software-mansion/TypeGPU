@@ -1,4 +1,4 @@
-import type { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
+import type { TgpuMutable } from '../../core/buffer/bufferBinding.ts';
 import { stitch } from '../../core/resolve/stitch.ts';
 import type { TgpuRoot } from '../../core/root/rootTypes.ts';
 import { shaderStageSlot } from '../../core/slot/internalSlots.ts';

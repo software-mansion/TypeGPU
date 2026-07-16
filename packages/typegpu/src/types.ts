@@ -43,7 +43,7 @@ import type { WgslEnableExtension } from './wgslExtensions.ts';
 import type { Infer } from './shared/repr.ts';
 import type { ShaderGenerator } from './tgsl/shaderGenerator.ts';
 import type { StorageFlag } from './extension.ts';
-import type { TgpuBufferShorthand } from './core/buffer/bufferShorthand.ts';
+import type { TgpuBufferBinding } from './core/buffer/bufferBinding.ts';
 
 export type ResolvableObject =
   | SelfResolvable
@@ -61,14 +61,14 @@ export type ResolvableObject =
   | TgpuExternalTexture
   | TgpuTexture
   | TgpuTextureView
-  | TgpuBufferShorthand<BaseData>
+  | TgpuBufferBinding<BaseData>
   | TgpuVar
   | AnyVecInstance
   | AnyMatInstance
   | AnyData
   | ((...args: never[]) => unknown);
 
-export type Wgsl = Eventual<string | number | boolean | ResolvableObject>;
+export type Wgsl = Eventual<number | boolean | ResolvableObject>;
 
 export type TgpuShaderStage = 'compute' | 'vertex' | 'fragment';
 
@@ -315,7 +315,7 @@ export interface ResolutionCtx {
   resolve(item: unknown, schema?: BaseData | UnknownData): ResolvedSnippet;
 
   /**
-   * Equivalent to `snip(ctx.resolve(snippet.value, snippet.dataType).value, snippet.dataType, snippet.origin)`.
+   * Equivalent to `snip(ctx.resolve(snippet.value, snippet.dataType).value, snippet.dataType, snippet.origin, snippet.possibleSideEffects)`.
    */
   resolveSnippet(snippet: Snippet): ResolvedSnippet;
 
@@ -422,7 +422,6 @@ export function isWgsl(value: unknown): value is Wgsl {
   return (
     typeof value === 'number' ||
     typeof value === 'boolean' ||
-    typeof value === 'string' ||
     isSelfResolvable(value) ||
     isWgslData(value) ||
     isSlot(value) ||
