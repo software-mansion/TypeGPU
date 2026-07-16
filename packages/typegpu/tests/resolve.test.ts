@@ -629,6 +629,20 @@ describe('tgpu resolveWithContext declarations', () => {
     expect(declarations.map((decl) => decl.code).join('\n\n')).toBe(code);
   });
 
+  it('reports declarations that have no name', () => {
+    const declaration = '/* my declaration */';
+    const myDecl = tgpu['~unstable'].declare(declaration);
+
+    const main = () => {
+      'use gpu';
+      myDecl;
+    };
+
+    const { declarations } = tgpu.resolveWithContext([main], { names: 'strict' });
+
+    expect(declarations[0]).toStrictEqual({ name: undefined, code: declaration });
+  });
+
   it('does not include the template itself in declarations', () => {
     const Gradient = d.struct({
       start: d.vec3f,
