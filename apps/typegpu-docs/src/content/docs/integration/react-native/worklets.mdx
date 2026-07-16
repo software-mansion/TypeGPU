@@ -45,7 +45,7 @@ Create resources on the JS thread, then use them freely inside a `useFrame` work
 import { useMemo } from 'react';
 import { Canvas } from 'react-native-webgpu';
 import tgpu, { common, d } from 'typegpu';
-import { useConfigureWorkletContext, useFrame, useRoot, useUniform } from '@typegpu/react';
+import { useConfigureContext, useFrame, useRoot, useUniform } from '@typegpu/react';
 
 export function Pulse() {
   const root = useRoot();
@@ -63,12 +63,12 @@ export function Pulse() {
     [root, color],
   );
 
-  const { ref, ctxRef } = useConfigureWorkletContext({ alphaMode: 'premultiplied' });
+  const { ref, ctxRef } = useConfigureContext({ alphaMode: 'premultiplied' });
 
   // Runs each frame on the UI thread
   useFrame(({ elapsedSeconds }) => {
     'worklet';
-    const ctx = ctxRef.value;
+    const ctx = ctxRef.current;
     if (!ctx) return;
 
     color.write(d.vec3f(0.5 + Math.sin(elapsedSeconds) * 0.5, 0.447, 0.941));
@@ -95,7 +95,7 @@ To keep everything on the JS thread even with `react-native-worklets` installed,
 </Root>
 ```
 
-`useFrame` then runs its callbacks on the JS thread, and `useConfigureWorkletContext` returns a plain object of the same shape, so the code above keeps working unchanged.
+`useFrame` then runs its callbacks on the JS thread, and `useConfigureContext` returns a plain object of the same shape, so the code above keeps working unchanged.
 
 ## Rules of transfer
 
