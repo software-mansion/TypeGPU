@@ -161,6 +161,13 @@ const globalRootContextValue = new OwnRootContext();
 
 const rootContext = createContext<RootContext | null>(null);
 
+const workletsDisabledContext = createContext(false);
+
+/** @internal Reads the `disableWorklets` flag from the nearest <Root> provider */
+export function useWorkletsDisabled(): boolean {
+  return useContext(workletsDisabledContext);
+}
+
 export interface RootProps {
   /** Options used when this provider creates its own root, ignored when `root` is provided */
   options?: InitOptions | undefined;
@@ -171,6 +178,13 @@ export interface RootProps {
    * @default undefined
    */
   root?: TgpuRoot | undefined;
+  /**
+   * (React Native only) When true, `useFrame` runs on the JS thread even if
+   * `react-native-worklets` is installed. Ignored on the web
+   *
+   * @default false
+   */
+  disableWorklets?: boolean | undefined;
   children?: ReactNode | undefined;
 }
 
@@ -190,7 +204,7 @@ function WarnSuspense() {
   return null;
 }
 
-export const Root = ({ children, options, root }: RootProps) => {
+export const Root = ({ children, options, root, disableWorklets = false }: RootProps) => {
   const [ownCtx] = useState(() => new OwnRootContext(options));
   const existingRootCtx = useMemo(() => {
     if (root) {
@@ -205,7 +219,9 @@ export const Root = ({ children, options, root }: RootProps) => {
 
   return (
     <rootContext.Provider value={existingRootCtx ?? ownCtx}>
-      <Suspense fallback={<WarnSuspense />}>{children}</Suspense>
+      <workletsDisabledContext.Provider value={disableWorklets}>
+        <Suspense fallback={<WarnSuspense />}>{children}</Suspense>
+      </workletsDisabledContext.Provider>
     </rootContext.Provider>
   );
 };

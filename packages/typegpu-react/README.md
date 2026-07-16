@@ -48,7 +48,7 @@ const App = (props: Props) => {
 
 # React Native
 
-The `@typegpu/react/react-native-worklets` entrypoint lets per-frame GPU work run on the UI thread.
+When `react-native-worklets` is installed, per-frame GPU work can run on the UI thread - `useFrame` picks it up automatically for worklet callbacks.
 TypeGPU resources captured by worklets are transferred between runtimes automatically.
 See the [React Native Worklets guide](https://typegpu.com/integration/react-native/worklets).
 

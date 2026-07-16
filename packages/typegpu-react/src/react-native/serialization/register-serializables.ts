@@ -1,5 +1,4 @@
 import { installWebGPU } from 'react-native-webgpu';
-import { isWorkletFunction, registerCustomSerializable } from 'react-native-worklets';
 import {
   isNonTransferableResource,
   isSnapshotableResource,
@@ -13,6 +12,7 @@ import {
   getOrCreateTransferId,
   getTransferredRoot,
 } from './transfer-cache.ts';
+import { getWorkletsModule } from '../worklets-integration.ts';
 
 export type PackedTgpuResource = {
   id: number;
@@ -25,9 +25,13 @@ export function registerTypegpuReactSerializables(): void {
   if (registered) {
     return;
   }
+  const worklets = getWorkletsModule();
+  if (!worklets) {
+    return;
+  }
   registered = true;
 
-  registerCustomSerializable({
+  worklets.registerCustomSerializable({
     name: 'TypeGPU',
     determine(value: object): value is object {
       'worklet';
@@ -46,9 +50,10 @@ export function registerTypegpuReactSerializables(): void {
         );
       }
       for (const [key, field] of Object.entries(snapshot)) {
+        // Inlined isWorkletFunction, the lazily resolved module cannot be captured in a worklet
         if (
           typeof field === 'function' &&
-          !isWorkletFunction(field) &&
+          !(field as { __workletHash?: unknown }).__workletHash &&
           !(field as { __bundleData?: unknown }).__bundleData
         ) {
           throw new Error(

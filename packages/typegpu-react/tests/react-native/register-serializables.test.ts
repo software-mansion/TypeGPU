@@ -1,13 +1,15 @@
-import { registerCustomSerializable } from 'react-native-worklets';
 import { it } from 'typegpu-testing-utility';
 import { tgpu, d } from 'typegpu';
 import { describe, expect, vi } from 'vitest';
 import { registerTypegpuReactSerializables } from '../../src/react-native/serialization/register-serializables.ts';
 
-vi.mock('react-native-webgpu', () => ({ installWebGPU: vi.fn() }));
-vi.mock('react-native-worklets', () => ({
+const { registerCustomSerializable } = vi.hoisted(() => ({
   registerCustomSerializable: vi.fn(),
-  isWorkletFunction: (value: unknown) => typeof value === 'function' && '__workletHash' in value,
+}));
+
+vi.mock('react-native-webgpu', () => ({ installWebGPU: vi.fn() }));
+vi.mock('../../src/react-native/worklets-integration.ts', () => ({
+  getWorkletsModule: () => ({ registerCustomSerializable }),
 }));
 
 type Serializer = {

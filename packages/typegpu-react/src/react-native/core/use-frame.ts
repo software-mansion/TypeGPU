@@ -1,10 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { runOnUISync, createShareable, UIRuntimeId } from 'react-native-worklets';
 
-interface FrameCtx {
-  readonly deltaSeconds: number;
-  readonly elapsedSeconds: number;
-}
+import { useWorkletsDisabled } from '../../core/root-context.tsx';
+import { type FrameCtx, startFrameLoop } from '../../core/use-frame.ts';
+import { getWorkletsModule } from '../worklets-integration.ts';
 
 type FrameCallback = (ctx: FrameCtx) => void;
 type FrameCallbackRef = { current: FrameCallback };
@@ -13,17 +11,36 @@ type UiValue<T> = {
   setSync(value: T | ((prev: T) => T)): void;
 };
 
+/**
+ * Runs the frame loop on the UI runtime when the callback is a worklet and
+ * `react-native-worklets` is available, on the JS thread otherwise
+ */
 export function useFrame(cb: FrameCallback) {
-  const latestCb = useRef<UiValue<FrameCallbackRef> | undefined>(undefined);
+  const workletsDisabled = useWorkletsDisabled();
+  const worklets = getWorkletsModule();
+  const runOnUI = worklets !== null && !workletsDisabled && worklets.isWorkletFunction(cb);
+
+  const latestCb = useRef(cb);
+  const uiCbRef = useRef<UiValue<FrameCallbackRef> | undefined>(undefined);
 
   useEffect(() => {
+    latestCb.current = cb;
+    uiCbRef.current?.setSync({ current: cb });
+  }, [cb]);
+
+  useEffect(() => {
+    if (!runOnUI || !worklets) {
+      return startFrameLoop((ctx) => latestCb.current(ctx));
+    }
+
+    const { runOnUISync, createShareable, UIRuntimeId } = worklets;
     const cbRef = createShareable(
       UIRuntimeId,
-      { current: cb },
+      { current: latestCb.current },
       { initSynchronously: true },
     ) as UiValue<FrameCallbackRef>;
     const frameId = createShareable(UIRuntimeId, undefined) as UiValue<number | undefined>;
-    latestCb.current = cbRef;
+    uiCbRef.current = cbRef;
 
     runOnUISync(() => {
       'worklet';
@@ -49,7 +66,7 @@ export function useFrame(cb: FrameCallback) {
     });
 
     return () => {
-      latestCb.current = undefined;
+      uiCbRef.current = undefined;
       runOnUISync(() => {
         'worklet';
         if (frameId.value !== undefined) {
@@ -57,9 +74,5 @@ export function useFrame(cb: FrameCallback) {
         }
       });
     };
-  }, []);
-
-  useEffect(() => {
-    latestCb.current?.setSync({ current: cb });
-  }, [cb]);
+  }, [runOnUI, worklets]);
 }

@@ -32,11 +32,8 @@ module.exports = (api) => {
 };
 ```
 
-Import the hooks from the dedicated entrypoint - importing it also registers the transfer support for TypeGPU resources:
-
-```ts
-import { useRoot, useFrame, useConfigureContext, useUniform } from '@typegpu/react/react-native-worklets';
-```
+No extra imports are needed - `@typegpu/react` detects `react-native-worklets` at runtime and registers the transfer support for TypeGPU resources automatically.
+`useFrame` runs its callback on the UI thread whenever the callback is marked with the `'worklet'` directive; plain callbacks keep running on the JS thread.
 
 After changing the babel config, clear the Metro cache with `npx expo start --clear`.
 
@@ -48,7 +45,7 @@ Create resources on the JS thread, then use them freely inside a `useFrame` work
 import { useMemo } from 'react';
 import { Canvas } from 'react-native-webgpu';
 import tgpu, { common, d } from 'typegpu';
-import { useConfigureContext, useFrame, useRoot, useUniform } from '@typegpu/react/react-native-worklets';
+import { useConfigureWorkletContext, useFrame, useRoot, useUniform } from '@typegpu/react';
 
 export function Pulse() {
   const root = useRoot();
@@ -66,7 +63,7 @@ export function Pulse() {
     [root, color],
   );
 
-  const { ref, ctxRef } = useConfigureContext({ alphaMode: 'premultiplied' });
+  const { ref, ctxRef } = useConfigureWorkletContext({ alphaMode: 'premultiplied' });
 
   // Runs each frame on the UI thread
   useFrame(({ elapsedSeconds }) => {
@@ -87,6 +84,18 @@ The `color` uniform and `pipeline` captured by the worklet are transferred to th
 Both runtimes share the same underlying GPU objects, and transferring the same resource again yields the same object back.
 
 This works for buffers (including `createUniform`/`createMutable`/`createReadonly`), textures, samplers, bind groups and their layouts, vertex layouts, query sets, pipelines, roots, slots, accessors, consts, and vector/matrix instances.
+
+## Opting out
+
+To keep everything on the JS thread even with `react-native-worklets` installed, pass `disableWorklets` to the `Root` provider:
+
+```tsx
+<Root disableWorklets>
+  <Pulse />
+</Root>
+```
+
+`useFrame` then runs its callbacks on the JS thread, and `useConfigureWorkletContext` returns a plain object of the same shape, so the code above keeps working unchanged.
 
 ## Rules of transfer
 
