@@ -57,7 +57,7 @@ type BitcastU32toF32Overload = <T extends number | v2u | v3u | v4u>(
 
 const u32AllowedSchemas = [u32, vec2u, vec3u, vec4u];
 
-// TODO(#???): Remove deprecated bitcasts. Remember about cpu implementations.
+// TODO(#2731): Remove deprecated bitcasts. Remember about cpu implementations.
 
 /**
  * @deprecated Use 'std.bitcast' instead.

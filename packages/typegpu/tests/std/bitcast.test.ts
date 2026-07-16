@@ -10,70 +10,70 @@ describe('bitcast', () => {
   it('bitcastU32toF32', () => {
     // 1.0 in f32
     //0 01111111 00000000000000000000000
-    const f = bitcast(d.u32, d.f32)(1065353216);
+    const f = std.bitcast(d.u32, d.f32)(1065353216);
     expect(f).toBeCloseTo(1.0);
 
     // -1 in f32
     //1 01111111 00000000000000000000000
-    const f2 = bitcast(d.u32, d.f32)(3212836864);
+    const f2 = std.bitcast(d.u32, d.f32)(3212836864);
     expect(f2).toBeCloseTo(-1.0);
   });
 
   it('bitcastU32toI32', () => {
     // -1 in i32
     // 1111111111111111111111111111111
-    const i = bitcast(d.u32, d.i32)(4294967295);
+    const i = std.bitcast(d.u32, d.i32)(4294967295);
     expect(i).toBe(-1);
 
     // -2147483648 in i32
     // 10000000000000000000000000000000
-    const i2 = bitcast(d.u32, d.i32)(2147483648);
+    const i2 = std.bitcast(d.u32, d.i32)(2147483648);
     expect(i2).toBe(-2147483648);
   });
 
   it('bitcastF32toU32', () => {
-    const i1 = bitcast(d.f32, d.u32)(floatFromHex('00000001'));
+    const i1 = std.bitcast(d.f32, d.u32)(floatFromHex('00000001'));
     expect(i1).toBe(1);
 
-    const i2 = bitcast(d.f32, d.u32)(floatFromHex('7f800000'));
+    const i2 = std.bitcast(d.f32, d.u32)(floatFromHex('7f800000'));
     expect(i2).toBe(2139095040);
   });
 
   it('bitcastU32toF32 vectors', () => {
     const v2 = vec2u(1065353216, 3212836864); // 1.0f, -1.0f
-    const cast2 = bitcast(d.vec2u, d.vec2f)(v2);
+    const cast2 = std.bitcast(d.vec2u, d.vec2f)(v2);
     expect(std.isCloseTo(cast2, vec2f(1.0, -1.0))).toBe(true);
 
     const v3 = vec3u(0, 1065353216, 3212836864); // 0.0f, 1.0f, -1.0f
-    const cast3 = bitcast(d.vec3u, d.vec3f)(v3);
+    const cast3 = std.bitcast(d.vec3u, d.vec3f)(v3);
     expect(std.isCloseTo(cast3, vec3f(0.0, 1.0, -1.0))).toBe(true);
 
     const v4 = vec4u(0, 1065353216, 3212836864, 0); // 0,1,-1,0
-    const cast4 = bitcast(d.vec4u, d.vec4f)(v4);
+    const cast4 = std.bitcast(d.vec4u, d.vec4f)(v4);
     expect(std.isCloseTo(cast4, vec4f(0.0, 1.0, -1.0, 0.0))).toBe(true);
   });
 
   it('bitcastU32toI32 vectors', () => {
     const v2 = vec2u(4294967295, 2147483648); // -1, -2147483648
-    const cast2 = bitcast(d.vec2u, d.vec2i)(v2); // int vector
+    const cast2 = std.bitcast(d.vec2u, d.vec2i)(v2); // int vector
     expect(cast2).toEqual(vec2i(-1, -2147483648));
 
     const v3 = vec3u(0, 4294967295, 2147483648);
-    const cast3 = bitcast(d.vec3u, d.vec3i)(v3);
+    const cast3 = std.bitcast(d.vec3u, d.vec3i)(v3);
     expect(cast3).toEqual(vec3i(0, -1, -2147483648));
 
     const v4 = vec4u(0, 1, 4294967295, 2147483648);
-    const cast4 = bitcast(d.vec4u, d.vec4i)(v4);
+    const cast4 = std.bitcast(d.vec4u, d.vec4i)(v4);
     expect(cast4).toEqual(vec4i(0, 1, -1, -2147483648));
   });
 
   it('bitcastF32toU32 vectors', () => {
     const v2 = vec2f(floatFromHex('7c800001'), floatFromHex('100008c7'));
-    const cast2 = bitcast(d.vec2f, d.vec2u)(v2);
+    const cast2 = std.bitcast(d.vec2f, d.vec2u)(v2);
     expect(cast2).toStrictEqual(vec2u(2088763393, 268437703));
 
     const v3 = vec3f(floatFromHex('ff000000'), floatFromHex('00000001'), floatFromHex('80000001'));
-    const cast3 = bitcast(d.vec3f, d.vec3u)(v3);
+    const cast3 = std.bitcast(d.vec3f, d.vec3u)(v3);
     expect(cast3).toStrictEqual(vec3u(4278190080, 1, 2147483649));
 
     const v4 = vec4f(
@@ -82,28 +82,28 @@ describe('bitcast', () => {
       floatFromHex('48980780'),
       floatFromHex('0000075a'),
     );
-    const cast4 = bitcast(d.vec4f, d.vec4u)(v4);
+    const cast4 = std.bitcast(d.vec4f, d.vec4u)(v4);
     expect(cast4).toStrictEqual(vec4u(2216823077, 1753219072, 1217922944, 1882));
   });
 
   it('bitcastU32toF32 specials', () => {
     // +0
-    const pz = bitcast(d.u32, d.f32)(0x00000000);
+    const pz = std.bitcast(d.u32, d.f32)(0x00000000);
     expect(Object.is(pz, 0)).toBe(true);
     expect(1 / pz).toBe(Number.POSITIVE_INFINITY);
 
     // -0
-    const nz = bitcast(d.u32, d.f32)(0x80000000);
+    const nz = std.bitcast(d.u32, d.f32)(0x80000000);
     expect(Object.is(nz, -0)).toBe(true);
     expect(1 / nz).toBe(Number.NEGATIVE_INFINITY);
 
     // Smallest positive subnormal
-    const sub = bitcast(d.u32, d.f32)(0x00000001);
+    const sub = std.bitcast(d.u32, d.f32)(0x00000001);
     expect(sub).toBeGreaterThan(0);
     expect(sub).toBeLessThan(1e-44);
 
     // Smallest negative subnormal
-    const nsub = bitcast(d.u32, d.f32)(0x80000001);
+    const nsub = std.bitcast(d.u32, d.f32)(0x80000001);
     expect(nsub).toBeLessThan(0);
     expect(nsub).toBeGreaterThan(-1e-44);
   });
@@ -117,11 +117,11 @@ describe('bitcast', () => {
 
     // Vectors
     const v3 = vec3u(0x00000000, 0x80000000, 0xffffffff);
-    const c3 = bitcast(d.vec3u, d.vec3i)(v3);
+    const c3 = std.bitcast(d.vec3u, d.vec3i)(v3);
     expect(c3).toEqual(vec3i(0, -2147483648, -1));
 
     const v4 = vec4u(0x80000000, 0x00000001, 0x00000000, 0x7fffffff);
-    const c4 = bitcast(d.vec4u, d.vec4i)(v4);
+    const c4 = std.bitcast(d.vec4u, d.vec4i)(v4);
     expect(c4).toEqual(vec4i(-2147483648, 1, 0, 2147483647));
   });
 
@@ -149,9 +149,9 @@ describe('bitcast', () => {
 
 describe('bitcast in shaders', () => {
   it('works for primitives', () => {
-    const fnf32 = tgpu.fn([], d.f32)(() => bitcast(d.u32, d.f32)(1234));
-    const fni32 = tgpu.fn([], d.i32)(() => bitcast(d.u32, d.i32)(d.u32(2 ** 31)));
-    const fnu32 = tgpu.fn([d.f32], d.u32)((v) => bitcast(d.f32, d.u32)(v));
+    const fnf32 = tgpu.fn([], d.f32)(() => std.bitcast(d.u32, d.f32)(1234));
+    const fni32 = tgpu.fn([], d.i32)(() => std.bitcast(d.u32, d.i32)(d.u32(2 ** 31)));
+    const fnu32 = tgpu.fn([d.f32], d.u32)((v) => std.bitcast(d.f32, d.u32)(v));
 
     expect(tgpu.resolve([fnf32])).toMatchInlineSnapshot(`
       "fn fnf32() -> f32 {
@@ -171,9 +171,9 @@ describe('bitcast in shaders', () => {
   });
 
   it('works for vectors', () => {
-    const fnvec4i = tgpu.fn([], d.vec4i)(() => bitcast(d.vec4u, d.vec4i)(vec4u(1, 2, 3, 4)));
-    const fnvec4f = tgpu.fn([], d.vec4f)(() => bitcast(d.vec4u, d.vec4f)(vec4u(1, 2, 3, 4)));
-    const fnvec4u = tgpu.fn([d.vec4f], d.vec4u)((v) => bitcast(d.vec4f, d.vec4u)(v));
+    const fnvec4i = tgpu.fn([], d.vec4i)(() => std.bitcast(d.vec4u, d.vec4i)(vec4u(1, 2, 3, 4)));
+    const fnvec4f = tgpu.fn([], d.vec4f)(() => std.bitcast(d.vec4u, d.vec4f)(vec4u(1, 2, 3, 4)));
+    const fnvec4u = tgpu.fn([d.vec4f], d.vec4u)((v) => std.bitcast(d.vec4f, d.vec4u)(v));
 
     expect(tgpu.resolve([fnvec4i])).toMatchInlineSnapshot(`
       "fn fnvec4i() -> vec4i {
@@ -196,7 +196,7 @@ describe('bitcast in shaders', () => {
     const f1 = () => {
       'use gpu';
       // @ts-expect-error
-      return bitcast(d.vec2u, d.vec2i)(d.vec2i());
+      return std.bitcast(d.vec2u, d.vec2i)(d.vec2i());
     };
     expect(() => tgpu.resolve([f1])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
@@ -209,7 +209,7 @@ describe('bitcast in shaders', () => {
     const f2 = () => {
       'use gpu';
       // @ts-expect-error
-      return bitcast(d.vec2u, d.vec2i)(d.vec3f());
+      return std.bitcast(d.vec2u, d.vec2i)(d.vec3f());
     };
     expect(() => tgpu.resolve([f2])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
@@ -222,7 +222,7 @@ describe('bitcast in shaders', () => {
     const f3 = () => {
       'use gpu';
       // @ts-expect-error
-      return bitcast(d.vec2u, d.vec4h)(d.vec2h());
+      return std.bitcast(d.vec2u, d.vec4h)(d.vec2h());
     };
     expect(() => tgpu.resolve([f3])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
@@ -235,7 +235,7 @@ describe('bitcast in shaders', () => {
     const f4 = () => {
       'use gpu';
       const u = d.u32(1);
-      return bitcast(d.f32, d.u32)(u);
+      return std.bitcast(d.f32, d.u32)(u);
     };
     expect(() => tgpu.resolve([f4])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
