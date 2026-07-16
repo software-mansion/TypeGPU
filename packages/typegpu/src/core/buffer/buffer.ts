@@ -25,12 +25,6 @@ import type { ExperimentalTgpuRoot, TgpuRoot } from '../root/rootTypes.ts';
 import { calculateOffsets, readFromArrayBuffer, writeToArrayBuffer } from '../../data/dataIO.ts';
 import { patchArrayBuffer } from '../../data/partialIO.ts';
 import {
-  deserializeDataSchema,
-  serializeDataSchema,
-  type SerializedDataSchema,
-} from '../../serial/schema.ts';
-import type { RestoreContext } from '../../serial/types.ts';
-import {
   mutable,
   readonly,
   uniform,
@@ -174,44 +168,6 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
 
-export interface TgpuBufferSnapshot {
-  readonly type: 'buffer';
-  readonly device: GPUDevice;
-  readonly buffer: GPUBuffer;
-  readonly schema: SerializedDataSchema;
-  readonly usages: UsageLiteral[];
-}
-
-function getBufferUsages(buffer: TgpuBuffer<BaseData>): UsageLiteral[] {
-  const usages: UsageLiteral[] = [];
-  if (buffer.usableAsUniform) {
-    usages.push('uniform');
-  }
-  if (buffer.usableAsStorage) {
-    usages.push('storage');
-  }
-  if (buffer.usableAsVertex) {
-    usages.push('vertex');
-  }
-  if (buffer.usableAsIndex) {
-    usages.push('index');
-  }
-  if (buffer.usableAsIndirect) {
-    usages.push('indirect');
-  }
-  return usages;
-}
-
-export function INTERNAL_snapshotBuffer(buffer: TgpuBuffer<BaseData>): TgpuBufferSnapshot {
-  return {
-    type: 'buffer',
-    device: buffer.root.device,
-    buffer: buffer.buffer,
-    schema: serializeDataSchema(buffer.dataType),
-    usages: getBufferUsages(buffer),
-  };
-}
-
 export function INTERNAL_applyBufferUsages(
   buffer: TgpuBuffer<BaseData>,
   usages: UsageLiteral[],
@@ -219,16 +175,6 @@ export function INTERNAL_applyBufferUsages(
   if (usages.length > 0) {
     (buffer as TgpuBufferImpl<BaseData>).$usage(...usages);
   }
-}
-
-export function INTERNAL_restoreBuffer(
-  snapshot: TgpuBufferSnapshot,
-  ctx: RestoreContext,
-): TgpuBuffer<AnyData> {
-  const root = ctx.getRoot(snapshot.device);
-  const buffer = root.createBuffer(deserializeDataSchema(snapshot.schema), snapshot.buffer);
-  INTERNAL_applyBufferUsages(buffer, snapshot.usages);
-  return buffer;
 }
 
 // --------------

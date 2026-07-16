@@ -42,12 +42,6 @@ import { $gpuValueOf, $internal } from './shared/symbols.ts';
 import type { NullableToOptional, Prettify } from './shared/utilityTypes.ts';
 import type { ResolvableObject, TgpuShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
-import {
-  deserializeLayoutEntry,
-  serializeLayoutEntry,
-  type SerializedLayoutEntry,
-} from './serial/layoutEntries.ts';
-import type { RestoreContext } from './serial/types.ts';
 import type { WgslComparisonSampler, WgslSampler } from './data/sampler.ts';
 import { TgpuLaidOutBufferImpl } from './core/buffer/laidOutBuffer.ts';
 
@@ -239,66 +233,6 @@ export function isBindGroupLayout(value: unknown): value is TgpuBindGroupLayout 
 
 export function isBindGroup(value: unknown): value is TgpuBindGroup {
   return !!value && (value as TgpuBindGroup).resourceType === 'bind-group';
-}
-
-export interface TgpuBindGroupLayoutSnapshot {
-  readonly type: 'bind-group-layout';
-  readonly entries: [string, SerializedLayoutEntry][];
-  readonly index: number | undefined;
-}
-
-export function INTERNAL_snapshotBindGroupLayout(
-  layout: TgpuBindGroupLayout,
-): TgpuBindGroupLayoutSnapshot {
-  return {
-    type: 'bind-group-layout',
-    entries: Object.entries(layout.entries).map(([key, entry]) => [
-      key,
-      serializeLayoutEntry(entry),
-    ]),
-    index: layout.index,
-  };
-}
-
-export function INTERNAL_restoreBindGroupLayout(
-  snapshot: TgpuBindGroupLayoutSnapshot,
-): TgpuBindGroupLayout {
-  const layout = bindGroupLayout(
-    Object.fromEntries(
-      snapshot.entries.map(([key, entry]) => [key, deserializeLayoutEntry(entry)]),
-    ),
-  );
-  return layout.$idx(snapshot.index);
-}
-
-export interface TgpuBindGroupSnapshot {
-  readonly type: 'bind-group';
-  readonly device: GPUDevice;
-  readonly layout: TgpuBindGroupLayout;
-  readonly bindGroup: GPUBindGroup;
-}
-
-export function INTERNAL_snapshotBindGroup(bindGroup: TgpuBindGroup): TgpuBindGroupSnapshot {
-  return {
-    type: 'bind-group',
-    device: bindGroup.root.device,
-    layout: bindGroup.layout,
-    bindGroup: bindGroup.root.unwrap(bindGroup),
-  };
-}
-
-export function INTERNAL_restoreBindGroup(
-  snapshot: TgpuBindGroupSnapshot,
-  ctx: RestoreContext,
-): TgpuBindGroup {
-  const root = ctx.getRoot(snapshot.device);
-  const bindGroup = snapshot.bindGroup;
-  return {
-    resourceType: 'bind-group',
-    root,
-    layout: snapshot.layout,
-    unwrap: () => bindGroup,
-  };
 }
 
 /**

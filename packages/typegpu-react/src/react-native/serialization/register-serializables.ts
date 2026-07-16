@@ -46,7 +46,7 @@ export function registerTypegpuReactSerializables(): void {
         throw new Error(
           `[typegpu-react] TypeGPU object '${resourceType}' cannot be transferred to a worklet. ` +
             'Definitions (functions, comptime, derived) are runtime-local: import them from a module ' +
-            'covered by importForwarding, or build pipelines on the JS thread and transfer the result.',
+            'covered by importForwarding, or build pipelines on the RN thread and transfer the result.',
         );
       }
       for (const [key, field] of Object.entries(snapshot)) {

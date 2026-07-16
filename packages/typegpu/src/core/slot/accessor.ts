@@ -22,11 +22,6 @@ import {
   type SelfResolvable,
 } from '../../types.ts';
 import { isTgpuFn } from '../function/tgpuFn.ts';
-import {
-  deserializeDataSchema,
-  serializeDataSchema,
-  type SerializedDataSchema,
-} from '../../serial/schema.ts';
 import { getGpuValueRecursively, valueProxyHandler } from '../valueProxyUtils.ts';
 import { slot } from './slot.ts';
 import type { TgpuAccessor, TgpuMutableAccessor, TgpuSlot } from './slotTypes.ts';
@@ -67,31 +62,6 @@ export function mutableAccessor<T extends AnyData | ((count: number) => AnyData)
     schemaOrConstructor,
     defaultValue as TgpuMutableAccessor.In<BaseData>,
   ) as unknown as TgpuMutableAccessor<UnwrapRuntimeConstructor<T>>;
-}
-
-export interface TgpuAccessorSnapshot {
-  readonly type: 'accessor' | 'mutable-accessor';
-  readonly schema: SerializedDataSchema;
-  readonly defaultValue: unknown;
-}
-
-export function INTERNAL_snapshotAccessor(
-  value: TgpuAccessor | TgpuMutableAccessor,
-): TgpuAccessorSnapshot {
-  return {
-    type: value.resourceType,
-    schema: serializeDataSchema(value.schema),
-    defaultValue: value.defaultValue,
-  };
-}
-
-export function INTERNAL_restoreAccessor(
-  snapshot: TgpuAccessorSnapshot,
-): TgpuAccessor | TgpuMutableAccessor {
-  const schema = deserializeDataSchema(snapshot.schema);
-  return snapshot.type === 'accessor'
-    ? accessor(schema, snapshot.defaultValue)
-    : mutableAccessor(schema, snapshot.defaultValue as TgpuMutableAccessor.In<AnyData>);
 }
 
 // --------------

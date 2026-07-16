@@ -3,8 +3,8 @@ title: React Native Worklets
 description: A guide on running TypeGPU render loops on the UI thread with react-native-worklets.
 ---
 
-With [react-native-worklets](https://docs.swmansion.com/react-native-worklets/), per-frame GPU work can run on the UI thread, unaffected by a busy JS thread.
-TypeGPU resources created on the JS thread can be captured by worklets directly, they are transferred between runtimes automatically.
+With [react-native-worklets](https://docs.swmansion.com/react-native-worklets/), per-frame GPU work can be scheduled on the UI thread, unaffected by tasks running on the default React Native thread (or RN thread).
+TypeGPU resources created on the RN thread can be captured by worklets directly, they are transferred between runtimes automatically.
 
 ## Setup
 
@@ -33,13 +33,13 @@ module.exports = (api) => {
 ```
 
 No extra imports are needed - `@typegpu/react` detects `react-native-worklets` at runtime and registers the transfer support for TypeGPU resources automatically.
-`useFrame` runs its callback on the UI thread whenever the callback is marked with the `'worklet'` directive; plain callbacks keep running on the JS thread.
+`useFrame` runs its callback on the UI thread whenever the callback is marked with the `'worklet'` directive; plain callbacks keep running on the RN thread.
 
 After changing the babel config, clear the Metro cache with `npx expo start --clear`.
 
 ## Example
 
-Create resources on the JS thread, then use them freely inside a `useFrame` worklet:
+Create resources on the RN thread, then use them freely inside a `useFrame` worklet:
 
 ```tsx
 import { useMemo } from 'react';
@@ -87,7 +87,7 @@ This works for buffers (including `createUniform`/`createMutable`/`createReadonl
 
 ## Opting out
 
-To keep everything on the JS thread even with `react-native-worklets` installed, pass `disableWorklets` to the `Root` provider:
+To keep everything on the RN thread even with `react-native-worklets` installed, pass `disableWorklets` to the `Root` provider:
 
 ```tsx
 <Root disableWorklets>
@@ -95,7 +95,7 @@ To keep everything on the JS thread even with `react-native-worklets` installed,
 </Root>
 ```
 
-`useFrame` then runs its callbacks on the JS thread, and `useConfigureContext` returns a plain object of the same shape, so the code above keeps working unchanged.
+`useFrame` then runs its callbacks on the RN thread, and `useConfigureContext` returns a plain object of the same shape, so the code above keeps working unchanged.
 
 ## Rules of transfer
 

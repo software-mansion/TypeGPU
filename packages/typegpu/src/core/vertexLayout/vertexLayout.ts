@@ -1,21 +1,9 @@
 import { alignmentOf, customAlignmentOf } from '../../data/alignmentOf.ts';
-import { arrayOf } from '../../data/array.ts';
-import { disarrayOf } from '../../data/disarray.ts';
-import type { AnyData, Disarray } from '../../data/dataTypes.ts';
-import {
-  getCustomLocation,
-  isDisarray,
-  isLooseDecorated,
-  isUnstruct,
-} from '../../data/dataTypes.ts';
+import type { Disarray } from '../../data/dataTypes.ts';
+import { getCustomLocation, isLooseDecorated, isUnstruct } from '../../data/dataTypes.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
-import type { AnyWgslData, BaseData, WgslArray } from '../../data/wgslTypes.ts';
-import { isDecorated, isWgslArray, isWgslStruct } from '../../data/wgslTypes.ts';
-import {
-  deserializeDataSchema,
-  serializeDataSchema,
-  type SerializedDataSchema,
-} from '../../serial/schema.ts';
+import type { BaseData, WgslArray } from '../../data/wgslTypes.ts';
+import { isDecorated, isWgslStruct } from '../../data/wgslTypes.ts';
 import { roundUp } from '../../mathUtils.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { setName } from '../../shared/meta.ts';
@@ -57,33 +45,6 @@ export function vertexLayout<TData extends WgslArray | Disarray>(
 
 export function isVertexLayout(value: unknown): value is TgpuVertexLayout {
   return (value as TgpuVertexLayout)?.resourceType === 'vertex-layout';
-}
-
-export interface TgpuVertexLayoutSnapshot {
-  readonly type: 'vertex-layout';
-  readonly schema: SerializedDataSchema;
-  readonly stepMode: 'vertex' | 'instance';
-}
-
-export function INTERNAL_snapshotVertexLayout(layout: TgpuVertexLayout): TgpuVertexLayoutSnapshot {
-  return {
-    type: 'vertex-layout',
-    schema: serializeDataSchema(layout.schemaForCount(0)),
-    stepMode: layout.stepMode,
-  };
-}
-
-export function INTERNAL_restoreVertexLayout(snapshot: TgpuVertexLayoutSnapshot): TgpuVertexLayout {
-  const schema = deserializeDataSchema(snapshot.schema);
-  if (isWgslArray(schema)) {
-    const elementType = schema.elementType as AnyWgslData;
-    return vertexLayout((count) => arrayOf(elementType, count), snapshot.stepMode);
-  }
-  if (isDisarray(schema)) {
-    const elementType = schema.elementType as AnyData;
-    return vertexLayout((count) => disarrayOf(elementType, count), snapshot.stepMode);
-  }
-  throw new Error('TypeGPU vertex layout payload could not be reconstructed.');
 }
 
 // --------------

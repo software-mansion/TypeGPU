@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 
-import { useWorkletsDisabled } from '../../core/root-context.tsx';
-import { type FrameCtx, startFrameLoop } from '../../core/use-frame.ts';
-import { getWorkletsModule } from '../worklets-integration.ts';
+import { useWorkletsDisabled } from '../core/root-context.tsx';
+import { type FrameCtx, startFrameLoop } from '../core/use-frame.ts';
+import { getWorkletsModule } from './worklets-integration.ts';
 
 type FrameCallback = (ctx: FrameCtx) => void;
 type FrameCallbackRef = { current: FrameCallback };
@@ -13,12 +13,12 @@ type UiValue<T> = {
 
 /**
  * Runs the frame loop on the UI runtime when the callback is a worklet and
- * `react-native-worklets` is available, on the JS thread otherwise
+ * `react-native-worklets` is available, on the RN thread otherwise
  */
 export function useFrame(cb: FrameCallback) {
   const workletsDisabled = useWorkletsDisabled();
-  const worklets = getWorkletsModule();
-  const runOnUI = worklets !== null && !workletsDisabled && worklets.isWorkletFunction(cb);
+  const worklets = workletsDisabled ? null : getWorkletsModule();
+  const runOnUI = worklets !== null && worklets.isWorkletFunction(cb);
 
   const latestCb = useRef(cb);
   const uiCbRef = useRef<UiValue<FrameCallbackRef> | undefined>(undefined);

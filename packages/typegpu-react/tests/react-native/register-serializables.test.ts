@@ -64,7 +64,7 @@ describe('react-native serializable registration', () => {
 
     expect(serializer.determine(view)).toBe(true);
     expect(() => serializer.pack(view)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: [typegpu-react] TypeGPU object 'texture-view' cannot be transferred to a worklet. Definitions (functions, comptime, derived) are runtime-local: import them from a module covered by importForwarding, or build pipelines on the JS thread and transfer the result.]`,
+      `[Error: [typegpu-react] TypeGPU object 'texture-view' cannot be transferred to a worklet. Definitions (functions, comptime, derived) are runtime-local: import them from a module covered by importForwarding, or build pipelines on the RN thread and transfer the result.]`,
     );
   });
 

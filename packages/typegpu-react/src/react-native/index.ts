@@ -10,5 +10,5 @@ registerTypegpuReactSerializables();
 export * from '../shared-exports.ts';
 
 // Intentionally shadows the browser `useFrame`, this one can run the frame loop on the UI runtime
-export { useFrame } from './core/use-frame.ts';
+export { useFrame } from './use-frame.ts';
 export { useConfigureContext } from './use-configure-worklet-context.ts';

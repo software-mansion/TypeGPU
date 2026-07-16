@@ -1,9 +1,27 @@
+import { INTERNAL_applyBufferUsages } from '../core/buffer/buffer.ts';
 import {
-  INTERNAL_applyBufferUsages,
+  INTERNAL_restoreAccessor,
+  INTERNAL_restoreBindGroup,
+  INTERNAL_restoreBindGroupLayout,
   INTERNAL_restoreBuffer,
+  INTERNAL_restoreConst,
+  INTERNAL_restoreRenderPipeline,
+  INTERNAL_restoreVertexLayout,
+  INTERNAL_snapshotAccessor,
+  INTERNAL_snapshotBindGroup,
+  INTERNAL_snapshotBindGroupLayout,
   INTERNAL_snapshotBuffer,
+  INTERNAL_snapshotConst,
+  INTERNAL_snapshotRenderPipeline,
+  INTERNAL_snapshotVertexLayout,
+  type TgpuAccessorSnapshot,
+  type TgpuBindGroupLayoutSnapshot,
+  type TgpuBindGroupSnapshot,
   type TgpuBufferSnapshot,
-} from '../core/buffer/buffer.ts';
+  type TgpuConstSnapshot,
+  type TgpuRenderPipelineSnapshot,
+  type TgpuVertexLayoutSnapshot,
+} from './resources.ts';
 import { isBuffer } from '../types.ts';
 import { isBufferBinding, type TgpuBufferBinding } from '../core/buffer/bufferBinding.ts';
 import type { AnyWgslData, BaseData } from '../data/wgslTypes.ts';
@@ -13,11 +31,6 @@ import {
   INTERNAL_snapshotComputePipeline,
   type TgpuComputePipelineSnapshot,
 } from '../core/pipeline/computePipeline.ts';
-import {
-  INTERNAL_restoreRenderPipeline,
-  INTERNAL_snapshotRenderPipeline,
-  type TgpuRenderPipelineSnapshot,
-} from '../core/pipeline/renderPipeline.ts';
 import { isComputePipeline, isRenderPipeline } from '../core/pipeline/typeGuards.ts';
 import {
   INTERNAL_restoreQuerySet,
@@ -25,12 +38,7 @@ import {
   isQuerySet,
   type TgpuQuerySetSnapshot,
 } from '../core/querySet/querySet.ts';
-import {
-  INTERNAL_restoreConst,
-  INTERNAL_snapshotConst,
-  isConst,
-  type TgpuConstSnapshot,
-} from '../core/constant/tgpuConstant.ts';
+import { isConst } from '../core/constant/tgpuConstant.ts';
 import {
   INTERNAL_restoreGuardedComputePipeline,
   INTERNAL_restoreRoot,
@@ -41,11 +49,6 @@ import {
   type TgpuGuardedComputePipelineSnapshot,
   type TgpuRootSnapshot,
 } from '../core/root/init.ts';
-import {
-  INTERNAL_restoreAccessor,
-  INTERNAL_snapshotAccessor,
-  type TgpuAccessorSnapshot,
-} from '../core/slot/accessor.ts';
 import {
   INTERNAL_restoreSlot,
   INTERNAL_snapshotSlot,
@@ -71,22 +74,8 @@ import {
   isTexture,
   type TgpuTextureSnapshot,
 } from '../core/texture/texture.ts';
-import {
-  INTERNAL_restoreVertexLayout,
-  INTERNAL_snapshotVertexLayout,
-  isVertexLayout,
-  type TgpuVertexLayoutSnapshot,
-} from '../core/vertexLayout/vertexLayout.ts';
-import {
-  INTERNAL_restoreBindGroup,
-  INTERNAL_restoreBindGroupLayout,
-  INTERNAL_snapshotBindGroup,
-  INTERNAL_snapshotBindGroupLayout,
-  isBindGroup,
-  isBindGroupLayout,
-  type TgpuBindGroupLayoutSnapshot,
-  type TgpuBindGroupSnapshot,
-} from '../tgpuBindGroupLayout.ts';
+import { isVertexLayout } from '../core/vertexLayout/vertexLayout.ts';
+import { isBindGroup, isBindGroupLayout } from '../tgpuBindGroupLayout.ts';
 import type { RestoreContext } from './types.ts';
 
 /** Plain objects that make a resource recreatable in another JS runtime sharing the same device */

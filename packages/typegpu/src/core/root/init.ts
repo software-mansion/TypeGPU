@@ -5,7 +5,7 @@ import type { AnyWgslData, BaseData, v3u, Vec3u, WgslArray } from '../../data/wg
 import { WeakMemo } from '../../memo.ts';
 import { clearTextureUtilsCache } from '../texture/textureUtils.ts';
 import type { BufferInitialData } from '../buffer/buffer.ts';
-import { $getNameForward, $internal } from '../../shared/symbols.ts';
+import { $getNameForward, $internal, isMarkedInternal } from '../../shared/symbols.ts';
 import type {
   ExtractBindGroupInputFromLayout,
   TgpuBindGroup,
@@ -207,15 +207,12 @@ export class TgpuGuardedComputePipelineImpl<
 export function isGuardedComputePipeline(maybe: unknown): maybe is TgpuGuardedComputePipeline {
   return (
     (maybe as TgpuGuardedComputePipeline | undefined)?.resourceType ===
-      'guarded-compute-pipeline' && !!(maybe as { [$internal]?: boolean } | undefined)?.[$internal]
+      'guarded-compute-pipeline' && isMarkedInternal(maybe)
   );
 }
 
 export function isRoot(maybe: unknown): maybe is TgpuRoot {
-  return (
-    (maybe as TgpuRoot | undefined)?.resourceType === 'root' &&
-    !!(maybe as { [$internal]?: unknown } | undefined)?.[$internal]
-  );
+  return (maybe as TgpuRoot | undefined)?.resourceType === 'root' && isMarkedInternal(maybe);
 }
 
 export interface TgpuRootSnapshot {

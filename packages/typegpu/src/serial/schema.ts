@@ -1,4 +1,5 @@
 import * as d from '../data/index.ts';
+import { assertExhaustive } from '../shared/utilityTypes.ts';
 
 type SerializedDataAttrib =
   | { type: 'align'; value: number }
@@ -92,7 +93,10 @@ function applyAttrib(schema: d.AnyData, attrib: SerializedDataAttrib): d.AnyData
   if (attrib.type === 'builtin') {
     return getBuiltinByName(attrib.value);
   }
-  return d.invariant(schema as Parameters<typeof d.invariant>[0]);
+  if (attrib.type === 'invariant') {
+    return d.invariant(schema as Parameters<typeof d.invariant>[0]);
+  }
+  assertExhaustive(attrib, 'schema.ts#applyAttrib');
 }
 
 function serializeProps(propTypes: Record<string, d.BaseData>): [string, SerializedDataSchema][] {

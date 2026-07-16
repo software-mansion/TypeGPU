@@ -93,11 +93,6 @@ import {
   PerformanceTrackerImpl,
   type PerformanceTracker,
 } from './performanceTracker.ts';
-import {
-  deserializeDataSchema,
-  serializeDataSchema,
-  type SerializedDataSchema,
-} from '../../serial/schema.ts';
 import type { RestoreContext } from '../../serial/types.ts';
 
 const DRAW_INDIRECT_SIZE = 16; // 4 x 4
@@ -461,11 +456,10 @@ export function INTERNAL_createRenderPipeline(options: RenderPipelineCoreOptions
   return new TgpuRenderPipelineImpl(new RenderPipelineCore(options), {});
 }
 
-export interface TgpuRenderPipelineSnapshot {
-  readonly type: 'render-pipeline';
+export interface TgpuRenderPipelineSnapshotParts {
   readonly device: GPUDevice;
   readonly pipeline: GPURenderPipeline;
-  readonly fragmentOut: SerializedDataSchema | undefined;
+  readonly fragmentOut: BaseData | undefined;
   readonly usedBindGroupLayouts: TgpuBindGroupLayout[];
   readonly bindGroups: [TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup][];
   readonly usedVertexLayouts: TgpuVertexLayout[];
@@ -474,9 +468,9 @@ export interface TgpuRenderPipelineSnapshot {
   readonly performanceCallback: TimestampWritesPriors['performanceCallback'];
 }
 
-export function INTERNAL_snapshotRenderPipeline(
+export function INTERNAL_snapshotRenderPipelineParts(
   pipeline: TgpuRenderPipeline,
-): TgpuRenderPipelineSnapshot {
+): TgpuRenderPipelineSnapshotParts {
   const internals = pipeline[$internal];
   const memo = internals.core.unwrap();
   const fragmentOut =
@@ -484,10 +478,9 @@ export function INTERNAL_snapshotRenderPipeline(
       ?.returnType ?? memo.fragmentOut;
 
   return {
-    type: 'render-pipeline',
     device: internals.root.device,
     pipeline: memo.pipeline,
-    fragmentOut: fragmentOut ? serializeDataSchema(fragmentOut) : undefined,
+    fragmentOut,
     usedBindGroupLayouts: memo.usedBindGroupLayouts,
     bindGroups: collectBindGroupPairs(
       memo.usedBindGroupLayouts,
@@ -504,24 +497,24 @@ export function INTERNAL_snapshotRenderPipeline(
   };
 }
 
-export function INTERNAL_restoreRenderPipeline(
-  snapshot: TgpuRenderPipelineSnapshot,
+export function INTERNAL_restoreRenderPipelineParts(
+  parts: TgpuRenderPipelineSnapshotParts,
   ctx: RestoreContext,
 ): TgpuRenderPipeline {
-  const root = ctx.getRoot(snapshot.device) as ExperimentalTgpuRoot;
+  const root = ctx.getRoot(parts.device) as ExperimentalTgpuRoot;
   const core = RenderPipelineCore.precompiled(root, {
-    pipeline: snapshot.pipeline,
-    usedBindGroupLayouts: snapshot.usedBindGroupLayouts,
+    pipeline: parts.pipeline,
+    usedBindGroupLayouts: parts.usedBindGroupLayouts,
     catchall: undefined,
     logResources: undefined,
-    usedVertexLayouts: snapshot.usedVertexLayouts,
-    fragmentOut: snapshot.fragmentOut ? deserializeDataSchema(snapshot.fragmentOut) : undefined,
+    usedVertexLayouts: parts.usedVertexLayouts,
+    fragmentOut: parts.fragmentOut,
   });
   const pipeline: TgpuRenderPipeline = new TgpuRenderPipelineImpl(core, {
-    bindGroupLayoutMap: new Map(snapshot.bindGroups),
-    vertexLayoutMap: new Map(snapshot.vertexBuffers),
+    bindGroupLayoutMap: new Map(parts.bindGroups),
+    vertexLayoutMap: new Map(parts.vertexBuffers),
   });
-  return restoreTimestampPriors(pipeline, snapshot);
+  return restoreTimestampPriors(pipeline, parts);
 }
 
 // --------------

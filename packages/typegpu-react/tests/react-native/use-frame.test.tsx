@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useFrame } from '../../src/react-native/core/use-frame.ts';
+import { useFrame } from '../../src/react-native/use-frame.ts';
 
 const holder = vi.hoisted(() => ({
   worklets: null as object | null,
