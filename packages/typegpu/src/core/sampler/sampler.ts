@@ -108,6 +108,7 @@ export class TgpuLaidOutSamplerImpl<
       `@group(${group}) @binding(${this.#membership.idx}) var ${id}: ${
         ctx.resolve(this.schema).value
       };`,
+      id,
     );
 
     return snip(id, this.schema, /* origin */ 'handle');
@@ -195,6 +196,7 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
 
     ctx.addDeclaration(
       `@group(${group}) @binding(${binding}) var ${id}: ${ctx.resolve(this.schema).value};`,
+      id,
     );
 
     return snip(id, this.schema, /* origin */ 'handle');

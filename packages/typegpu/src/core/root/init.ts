@@ -18,7 +18,9 @@ import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import { INTERNAL_createBuffer, type TgpuBuffer, type VertexFlag } from '../buffer/buffer.ts';
 import { isBuffer } from '../../types.ts';
 import {
+  isBufferBinding,
   TgpuBufferBindingImpl,
+  type TgpuBufferBinding,
   type TgpuMutable,
   type TgpuReadonly,
   type TgpuUniform,
@@ -435,6 +437,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
   unwrap(resource: TgpuBuffer<BaseData>): GPUBuffer;
+  unwrap(resource: TgpuBufferBinding<BaseData>): GPUBuffer;
   unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(resource: TgpuTextureView): GPUTextureView;
   unwrap(resource: TgpuVertexLayout): GPUVertexBufferLayout;
@@ -448,6 +451,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       | TgpuBindGroupLayout
       | TgpuBindGroup
       | TgpuBuffer<BaseData>
+      | TgpuBufferBinding<BaseData>
       | TgpuTexture
       | TgpuTextureView
       | TgpuVertexLayout
@@ -483,6 +487,10 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
 
     if (isBuffer(resource)) {
       return resource.buffer;
+    }
+
+    if (isBufferBinding(resource)) {
+      return resource.buffer.buffer;
     }
 
     if (isTexture(resource)) {

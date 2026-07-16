@@ -1,5 +1,5 @@
 import babel from '@babel/parser';
-import type { Node } from '@babel/types';
+import type { ClassDeclaration, ClassProperty, Expression, Node } from '@babel/types';
 import * as acorn from 'acorn';
 import { describe, expect, it } from 'vitest';
 import { transpileFn } from '../src/parsers.ts';
@@ -344,6 +344,35 @@ describe('transpileFn', () => {
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[0,[[13,"a","ext.value"],[13,"b","ext.config.multiplier"],[13,"c","ext.config.zero"],[13,"d","ext.config.multiplier"]]]"`,
       );
+    }),
+  );
+
+  it(
+    'handles private property access',
+    dualTest((p) => {
+      // `this.#v` is only valid inside a class body, so we parse a class and pluck out the arrow function.
+      const tree = p(`
+        class Foo {
+          #v = 0;
+          fn = () => {
+            const k = this.#v;
+          };
+        }
+      `) as ClassDeclaration | acorn.Program;
+      const cls = (tree.type === 'Program' ? tree.body[0] : tree) as
+        | ClassDeclaration
+        | acorn.ClassDeclaration;
+      const props = cls.body.body;
+      const lastProp = props.at(-1) as ClassProperty | acorn.PropertyDefinition;
+      const fn = lastProp.value as Expression | acorn.Expression;
+
+      const { externalNames } = transpileFn(fn);
+
+      expect(externalNames).toMatchInlineSnapshot(`
+        Set {
+          "this.#v",
+        }
+      `);
     }),
   );
 });
