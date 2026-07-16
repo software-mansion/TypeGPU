@@ -41,6 +41,7 @@ import {
   type v4i,
   type Vec2f,
   type VecData,
+  WORKAROUND_getSchema,
 } from '../data/wgslTypes.ts';
 import { SignatureNotSupportedError } from '../errors.ts';
 import type { Infer } from '../shared/repr.ts';
@@ -1227,11 +1228,23 @@ export const tanh = dualImpl({
   sideEffects: false,
 });
 
-export const transpose = dualImpl<<T extends AnyMatInstance>(e: T) => T>({
+function cpuTranspose<T extends AnyMatInstance>(value: T): T {
+  const schema = WORKAROUND_getSchema(value);
+  // NOTE: This assumes all matrices are square
+  const transposed = schema() as T;
+  for (let c = 0; c < value.columns.length; c++) {
+    for (let r = 0; r < value.columns[0].length; r++) {
+      // oxlint-disable-next-line typescript/no-non-null-assertion
+      transposed.columns[r]![c] = value.columns[c]![r]!;
+    }
+  }
+  return transposed;
+}
+
+export const transpose = dualImpl({
   name: 'transpose',
   signature: unaryIdentitySignature,
-  normalImpl:
-    'CPU implementation for transpose not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
+  normalImpl: cpuTranspose,
   codegenImpl: (_ctx, [e]) => stitch`transpose(${e})`,
   sideEffects: false,
 });
