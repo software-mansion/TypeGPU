@@ -199,7 +199,7 @@ function cpuNot<T extends AnyBooleanVecInstance | boolean>(value: T): T {
   }
 
   if (!isVecBoolInstance(value)) {
-    throw new Error(`std.not requires a boolean or boolean vector.`);
+    throw new Error(`'std.not' requires a boolean or boolean vector.`);
   }
 
   switch (value.length) {

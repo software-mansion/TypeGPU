@@ -61,7 +61,7 @@ describe('bool', () => {
   it('throws if argument is not a number or boolean', () => {
     // @ts-expect-error
     expect(() => d.bool({})).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Invalid argument type for 'd.bool'. Got object, expected number or boolean]`,
+      `[Error: Invalid argument type for 'd.bool'. Got 'object', expected number or boolean]`,
     );
   });
 
