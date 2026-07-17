@@ -48,7 +48,7 @@ export const u32To01F32 = tgpu.fn(
 )((value) => {
   const mantissa = value & 0x007fffff;
   const bits = 0x3f800000 | mantissa;
-  const f = std.bitcastU32toF32(bits);
+  const f = std.bitcast(d.u32, d.f32)(bits);
   return f - 1;
 });
 
@@ -93,14 +93,14 @@ export const scrambleSeed = tgpu.fn(
   [d.f32],
   d.u32,
 )((value) => {
-  return hash(std.bitcastF32toU32(value) ^ seedSaltX);
+  return hash(std.bitcast(d.f32, d.u32)(value) ^ seedSaltX);
 });
 
 export const scrambleSeed2 = tgpu.fn(
   [d.vec2f],
   d.vec2u,
 )((value) => {
-  const u32Value = std.bitcastF32toU32(value);
+  const u32Value = std.bitcast(d.vec2f, d.vec2u)(value);
   return d.vec2u(hash(u32Value.x ^ seedSaltX), hash(u32Value.y ^ seedSaltY));
 });
 
@@ -108,7 +108,7 @@ export const scrambleSeed3 = tgpu.fn(
   [d.vec3f],
   d.vec3u,
 )((value) => {
-  const u32Value = std.bitcastF32toU32(value);
+  const u32Value = std.bitcast(d.vec3f, d.vec3u)(value);
   return d.vec3u(
     hash(u32Value.x ^ seedSaltX),
     hash(u32Value.y ^ seedSaltY),
@@ -120,7 +120,7 @@ export const scrambleSeed4 = tgpu.fn(
   [d.vec4f],
   d.vec4u,
 )((value) => {
-  const u32Value = std.bitcastF32toU32(value);
+  const u32Value = std.bitcast(d.vec4f, d.vec4u)(value);
   return d.vec4u(
     hash(u32Value.x ^ seedSaltX),
     hash(u32Value.y ^ seedSaltY),
