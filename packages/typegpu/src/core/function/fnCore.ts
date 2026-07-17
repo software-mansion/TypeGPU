@@ -202,7 +202,7 @@ export function createFnCore(
           body = replacedImpl.slice(providedArgs.range.end);
         }
 
-        ctx.addDeclaration(`${attributes}fn ${id}${header}${body}`);
+        ctx.addDeclaration(`${attributes}fn ${id}${header}${body}`, id);
 
         return snip(id, returnType, /* origin */ 'runtime');
       }
@@ -246,7 +246,7 @@ export function createFnCore(
         externalMap: mergeFunctionExternals(externals),
       });
 
-      ctx.addDeclaration(code);
+      ctx.addDeclaration(code, id);
 
       return snip(id, actualReturnType, /* origin */ 'runtime');
     },
