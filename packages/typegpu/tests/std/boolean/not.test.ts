@@ -18,15 +18,15 @@ describe('not', () => {
   it('throws on non-boolean operand', () => {
     // @ts-expect-error
     expect(() => not(0)).toThrowErrorMatchingInlineSnapshot(
-      `[Error: std.not requires a boolean or boolean vector.]`,
+      `[Error: 'std.not' requires a boolean or boolean vector.]`,
     );
     // @ts-expect-error
     expect(() => not(d.vec3f())).toThrowErrorMatchingInlineSnapshot(
-      `[Error: std.not requires a boolean or boolean vector.]`,
+      `[Error: 'std.not' requires a boolean or boolean vector.]`,
     );
     // @ts-expect-error
     expect(() => not({})).toThrowErrorMatchingInlineSnapshot(
-      `[Error: std.not requires a boolean or boolean vector.]`,
+      `[Error: 'std.not' requires a boolean or boolean vector.]`,
     );
   });
 

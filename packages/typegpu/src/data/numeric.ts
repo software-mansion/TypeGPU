@@ -32,13 +32,15 @@ const boolCast = callableSchema({
     }
 
     throw new Error(
-      `Invalid argument type for 'd.bool'. Got ${typeof v}, expected number or boolean`,
+      `Invalid argument type for 'd.bool'. Got '${typeof v}', expected number or boolean`,
     );
   },
   codegenImpl: (ctx, [v]) => {
+    // check if zero arguments were passed
     if (v === undefined) {
       return ctx.gen.typeInstantiation(bool, []);
     }
+
     if (isBool(v.dataType) || isSnippetNumeric(v)) {
       return ctx.gen.typeInstantiation(bool, [v]);
     }
