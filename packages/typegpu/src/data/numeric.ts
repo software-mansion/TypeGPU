@@ -1,22 +1,54 @@
 import { $internal } from '../shared/symbols.ts';
-import type { AbstractFloat, AbstractInt, Bool, F16, F32, I32, U16, U32 } from './wgslTypes.ts';
+import {
+  isBool,
+  type AbstractFloat,
+  type AbstractInt,
+  type Bool,
+  type F16,
+  type F32,
+  type I32,
+  type U16,
+  type U32,
+} from './wgslTypes.ts';
 import { callableSchema } from '../core/function/createCallableSchema.ts';
-import { FiniteMathAssumptionError } from '../errors.ts';
+import { FiniteMathAssumptionError, SignatureNotSupportedError, WgslTypeError } from '../errors.ts';
+import { isSnippetNumeric } from './snippet.ts';
+import { UnknownData } from './dataTypes.ts';
 
 const boolCast = callableSchema({
   name: 'bool',
   schema: () => bool,
   argTypes: (arg) => (arg ? [arg] : []),
-  normalImpl(v?: number | boolean) {
-    if (v === undefined) {
-      return false;
-    }
+  normalImpl(v: number | boolean = false) {
     if (typeof v === 'boolean') {
       return v;
     }
-    return !!v;
+
+    if (typeof v === 'number') {
+      if (!Number.isFinite(v)) {
+        throw new FiniteMathAssumptionError(v, bool);
+      }
+      return Boolean(v);
+    }
+
+    throw new Error(
+      `Invalid argument type for 'd.bool'. Got ${typeof v}, expected number or boolean`,
+    );
   },
-  codegenImpl: (ctx, [v]) => ctx.gen.typeInstantiation(bool, v ? [v] : []),
+  codegenImpl: (ctx, [v]) => {
+    if (v === undefined) {
+      return ctx.gen.typeInstantiation(bool, []);
+    }
+    if (isBool(v.dataType) || isSnippetNumeric(v)) {
+      return ctx.gen.typeInstantiation(bool, [v]);
+    }
+
+    if (v.dataType === UnknownData) {
+      throw new WgslTypeError("Unknown argument type for 'd.bool'.");
+    }
+
+    throw new SignatureNotSupportedError([v.dataType], [bool, u32, i32, f32, f16]);
+  },
 });
 
 /**
