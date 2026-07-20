@@ -67,6 +67,13 @@ export function setupCommonMocks() {
       configurable: true,
     });
 
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) => ({
+        matches: false,
+      })),
+    );
+
     vi.stubGlobal('fetch', mockFetch);
   });
 }
