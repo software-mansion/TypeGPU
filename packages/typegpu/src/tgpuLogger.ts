@@ -22,18 +22,18 @@ interface Logger {
 // user-facing API
 interface Warn {
   disable(type: WarningType): void;
-  enable(type: WarningType): void;
+  reset(): void;
 }
 
-class TgpuLogger implements Logger, Warn {
+export class TgpuLogger implements Logger, Warn {
   #enabledWarnings: Set<WarningType> = new Set(warningTypes);
 
   disable(type: WarningType) {
     this.#enabledWarnings.delete(type);
   }
 
-  enable(type: WarningType) {
-    this.#enabledWarnings.add(type);
+  reset() {
+    this.#enabledWarnings = new Set(warningTypes);
   }
 
   warn(type: WarningType, ...args: unknown[]) {
