@@ -98,9 +98,12 @@ describe('TgpuComputePipeline', () => {
       // no-op
       expect(after).toBe(before);
     }).not.toThrow();
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [webgpu-feature-missing}] ",
+        "Performance callback cannot be used because the timestamp-query feature is not enabled on the root.",
+      ]
+    `);
   });
 
   it('should setup timestamp writes in compute pass descriptor', ({ root, commandEncoder }) => {
@@ -329,14 +332,20 @@ describe('TgpuComputePipeline', () => {
 
     pipeline.dispatchThreads();
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      `Total number of uniform buffers (14) exceeds maxUniformBuffersPerShaderStage (12). Consider:
-1. Grouping some of the uniforms into one using 'd.struct',
-2. Increasing the limit when requesting a device or creating a root.`,
-    );
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      `Total number of storage buffers (9) exceeds maxStorageBuffersPerShaderStage (8).`,
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [webgpu-limits-exceeded}] ",
+        "Total number of uniform buffers (14) exceeds maxUniformBuffersPerShaderStage (12). Consider:
+      1. Grouping some of the uniforms into one using 'd.struct',
+      2. Increasing the limit when requesting a device or creating a root.",
+      ]
+    `);
+    expect(consoleWarnSpy.mock.calls[1]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [webgpu-limits-exceeded}] ",
+        "Total number of storage buffers (9) exceeds maxStorageBuffersPerShaderStage (8).",
+      ]
+    `);
   });
 
   describe('dispatchWorkgroupsIndirect', () => {
@@ -413,9 +422,12 @@ describe('TgpuComputePipeline', () => {
         d.memoryLayoutOf(PaddedStruct, (s) => s.a),
       );
 
-      expect(warnSpy.mock.calls[0]![0]).toMatchInlineSnapshot(
-        `"dispatchWorkgroupsIndirect: Starting at offset 0, only 4 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
-      );
+      expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+        [
+          "⚠️ [suspicious}] ",
+          "dispatchWorkgroupsIndirect: Starting at offset 0, only 4 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior.",
+        ]
+      `);
 
       const deepBuffer = root.createBuffer(DeepStruct).$usage('indirect');
       pipeline.dispatchWorkgroupsIndirect(
@@ -423,18 +435,24 @@ describe('TgpuComputePipeline', () => {
         d.memoryLayoutOf(DeepStruct, (s) => s.someData[11]),
       );
 
-      expect(warnSpy.mock.calls[1]![0]).toMatchInlineSnapshot(
-        `"dispatchWorkgroupsIndirect: Starting at offset 44, only 8 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
-      );
+      expect(warnSpy.mock.calls[1]).toMatchInlineSnapshot(`
+        [
+          "⚠️ [suspicious}] ",
+          "dispatchWorkgroupsIndirect: Starting at offset 44, only 8 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior.",
+        ]
+      `);
 
       pipeline.dispatchWorkgroupsIndirect(
         deepBuffer,
         d.memoryLayoutOf(DeepStruct, (s) => s.nested.innerNested[0]?.yy),
       );
 
-      expect(warnSpy.mock.calls[2]![0]).toMatchInlineSnapshot(
-        `"dispatchWorkgroupsIndirect: Starting at offset 84, only 8 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior."`,
-      );
+      expect(warnSpy.mock.calls[2]).toMatchInlineSnapshot(`
+        [
+          "⚠️ [suspicious}] ",
+          "dispatchWorkgroupsIndirect: Starting at offset 84, only 8 contiguous bytes are available before padding. 'dispatchWorkgroupsIndirect' requires 12 bytes (3 x u32). Reading across padding may result in undefined behavior.",
+        ]
+      `);
     });
 
     it('does not warn when dispatch has sufficient contiguous data', ({ root }) => {

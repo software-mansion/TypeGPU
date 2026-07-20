@@ -234,9 +234,17 @@ describe('wgsl generator type inference', () => {
       }"
     `);
 
-    expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
-      'Implicit conversions from [\n  1.1: abstractFloat\n] to u32 are supported, but not recommended.\nConsider using explicit conversions instead.',
-    );
+    expect(warnSpy.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          "⚠️ [implicit-conversion}] ",
+          "Implicit conversions from [
+        1.1: abstractFloat
+      ] to u32 are supported, but not recommended.
+      Consider using explicit conversions instead.",
+        ],
+      ]
+    `);
   });
 
   it('throws when no info about what to coerce to', () => {

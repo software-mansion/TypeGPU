@@ -16,9 +16,12 @@ describe('wgslGenerator with console.log', () => {
       }"
     `);
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "'console.log' is only supported when resolving pipelines.",
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [fallback}] ",
+        "'console.log' is only supported when resolving pipelines.",
+      ]
+    `);
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -218,9 +221,12 @@ describe('wgslGenerator with console.log', () => {
       }"
     `);
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "'console' operations are not supported in vertex shaders.",
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [suspicious}] ",
+        "'console' operations are not supported in vertex shaders.",
+      ]
+    `);
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
   });
 

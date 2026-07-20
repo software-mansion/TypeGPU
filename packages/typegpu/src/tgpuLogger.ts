@@ -38,8 +38,7 @@ class TgpuLogger implements Logger, Warn {
 
   warn(type: WarningType, ...args: unknown[]) {
     if (this.#enabledWarnings.has(type)) {
-      console.warn(...args);
-      // console.warn(`⚠️ [${type}}] `, ...args);
+      console.warn(`⚠️ [${type}}] `, ...args);
     }
   }
 }

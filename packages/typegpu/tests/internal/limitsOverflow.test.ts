@@ -35,11 +35,14 @@ describe('warnIfOverflow', () => {
 
     warnIfOverflow([layout], limits);
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      `Total number of uniform buffers (3) exceeds maxUniformBuffersPerShaderStage (2). Consider:
-1. Grouping some of the uniforms into one using 'd.struct',
-2. Increasing the limit when requesting a device or creating a root.`,
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [webgpu-limits-exceeded}] ",
+        "Total number of uniform buffers (3) exceeds maxUniformBuffersPerShaderStage (2). Consider:
+      1. Grouping some of the uniforms into one using 'd.struct',
+      2. Increasing the limit when requesting a device or creating a root.",
+      ]
+    `);
   });
 
   it('warns for storages', () => {
@@ -52,9 +55,12 @@ describe('warnIfOverflow', () => {
 
     warnIfOverflow([layout], limits);
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      `Total number of storage buffers (2) exceeds maxStorageBuffersPerShaderStage (1).`,
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [webgpu-limits-exceeded}] ",
+        "Total number of storage buffers (2) exceeds maxStorageBuffersPerShaderStage (1).",
+      ]
+    `);
   });
 
   it('warns when resources are split among layouts', () => {
@@ -74,10 +80,13 @@ describe('warnIfOverflow', () => {
 
     warnIfOverflow([layout1, layout2, layout3], limits);
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      `Total number of uniform buffers (3) exceeds maxUniformBuffersPerShaderStage (2). Consider:
-1. Grouping some of the uniforms into one using 'd.struct',
-2. Increasing the limit when requesting a device or creating a root.`,
-    );
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [webgpu-limits-exceeded}] ",
+        "Total number of uniform buffers (3) exceeds maxUniformBuffersPerShaderStage (2). Consider:
+      1. Grouping some of the uniforms into one using 'd.struct',
+      2. Increasing the limit when requesting a device or creating a root.",
+      ]
+    `);
   });
 });
