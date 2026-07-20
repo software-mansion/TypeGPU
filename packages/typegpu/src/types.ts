@@ -274,7 +274,14 @@ export interface ResolutionCtx {
   readonly enableExtensions: WgslEnableExtension[] | undefined;
   readonly gen: ShaderGenerator;
 
-  addDeclaration(declaration: string): void;
+  /**
+   * Adds a module-scope declaration to the resolution output.
+   * @param declaration - The WGSL code of the declaration.
+   * @param name - The identifier the declaration declares (a fn, struct, var,
+   *   const or alias name), if it declares one. Reported back to the caller
+   *   through `ResolutionResult.declarations`.
+   */
+  addDeclaration(declaration: string, name?: string): void;
   withResetIndentLevel<T>(callback: () => T): T;
 
   /**

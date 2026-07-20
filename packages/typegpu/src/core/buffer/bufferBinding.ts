@@ -87,6 +87,24 @@ export function isBufferBinding<TData extends BaseData>(
   return value instanceof TgpuBufferBindingImpl;
 }
 
+export function isUniformBinding<TData extends BaseData>(
+  value: unknown,
+): value is TgpuUniform<TData> {
+  return isBufferBinding(value) && value.resourceType === 'uniform';
+}
+
+export function isMutableBinding<TData extends BaseData>(
+  value: unknown,
+): value is TgpuMutable<TData> {
+  return isBufferBinding(value) && value.resourceType === 'mutable';
+}
+
+export function isReadonlyBinding<TData extends BaseData>(
+  value: unknown,
+): value is TgpuReadonly<TData> {
+  return isBufferBinding(value) && value.resourceType === 'readonly';
+}
+
 // TODO(#2666) - remove this
 /** @deprecated Use 'isBufferBinding' instead. */
 export const isBufferShorthand = isBufferBinding;

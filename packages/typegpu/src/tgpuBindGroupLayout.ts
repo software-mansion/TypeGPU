@@ -30,7 +30,7 @@ import {
   type WgslStorageTexture,
   type WgslTexture,
 } from './data/texture.ts';
-import type { AnyWgslData, BaseData } from './data/wgslTypes.ts';
+import type { BaseData } from './data/wgslTypes.ts';
 import { invariant, NotUniformError } from './errors.ts';
 import { NotStorageError, type StorageFlag } from './extension.ts';
 import type { TgpuNamable } from './shared/meta.ts';
@@ -43,6 +43,15 @@ import type { ResolvableObject, TgpuShaderStage } from './types.ts';
 import type { Unwrapper } from './unwrapper.ts';
 import type { WgslComparisonSampler, WgslSampler } from './data/sampler.ts';
 import { TgpuLaidOutBufferImpl } from './core/buffer/laidOutBuffer.ts';
+import {
+  isMutableBinding,
+  isReadonlyBinding,
+  isUniformBinding,
+  type TgpuBufferBinding,
+  type TgpuMutable,
+  type TgpuReadonly,
+  type TgpuUniform,
+} from './core/buffer/bufferBinding.ts';
 
 // ----------
 // Public API
@@ -157,7 +166,8 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
   // Widest type
   TgpuLayoutEntry | null extends T
     ?
-        | TgpuBuffer<AnyWgslData>
+        | TgpuBuffer<BaseData>
+        | TgpuBufferBinding<BaseData>
         | GPUBuffer
         | TgpuSampler
         | GPUSampler
@@ -167,10 +177,16 @@ export type LayoutEntryToInput<T extends TgpuLayoutEntry | null> =
         | GPUExternalTexture
     : // Strict type-checking
       T extends TgpuLayoutUniform
-      ? (TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>> & UniformFlag) | GPUBuffer
+      ?
+          | (TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>> & UniformFlag)
+          | TgpuUniform<MemIdentity<UnwrapRuntimeConstructor<T['uniform']>>>
+          | GPUBuffer
       : T extends TgpuLayoutStorage
         ?
             | (TgpuBuffer<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>> & StorageFlag)
+            | (T extends { access: 'mutable' }
+                ? TgpuMutable<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>>
+                : TgpuReadonly<MemIdentity<UnwrapRuntimeConstructor<T['storage']>>>)
             | GPUBuffer
         : T extends TgpuLayoutSampler
           ? TgpuSampler | GPUSampler
@@ -472,6 +488,8 @@ export class TgpuBindGroupImpl<
                 throw new NotUniformError(value);
               }
               resource = { buffer: unwrapper.unwrap(value) };
+            } else if (isUniformBinding(value)) {
+              resource = { buffer: unwrapper.unwrap(value) };
             } else {
               resource = { buffer: value as GPUBuffer };
             }
@@ -489,6 +507,13 @@ export class TgpuBindGroupImpl<
               if (!isUsableAsStorage(value)) {
                 throw new NotStorageError(value);
               }
+              resource = { buffer: unwrapper.unwrap(value) };
+            } else if (isMutableBinding(value) || isReadonlyBinding(value)) {
+              // Types should guarantee that access is mutable if and only if the binding is mutable.
+              invariant(
+                (entry.access === 'mutable') === (value.resourceType === 'mutable'),
+                'Invalid buffer access mode.',
+              );
               resource = { buffer: unwrapper.unwrap(value) };
             } else {
               resource = { buffer: value as GPUBuffer };
