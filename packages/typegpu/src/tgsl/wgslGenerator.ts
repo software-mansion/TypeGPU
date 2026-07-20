@@ -382,19 +382,14 @@ ${this.ctx.pre}}`;
         throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
       }
 
-      const [convLhs, convRhs] = convertToCommonType(this.ctx, [lhsExpr, rhsExpr], [bool]) ?? [
-        lhsExpr,
-        rhsExpr,
-      ];
-
-      if (!wgsl.isBool(convLhs.dataType) || !wgsl.isBool(convRhs.dataType)) {
+      if (!wgsl.isBool(lhsExpr.dataType) || !wgsl.isBool(rhsExpr.dataType)) {
         throw new WgslTypeError(
-          `Logical expression '${op}' requires boolean operands. Got '${String(convLhs.dataType)}' and '${String(convRhs.dataType)}'.`,
+          `Logical expression '${op}' requires boolean operands. Got '${String(lhsExpr.dataType)}' and '${String(rhsExpr.dataType)}'.`,
         );
       }
 
-      const lhsStr = this.ctx.resolve(convLhs.value, convLhs.dataType).value;
-      const rhsStr = this.ctx.resolve(convRhs.value, convRhs.dataType).value;
+      const lhsStr = this.ctx.resolve(lhsExpr.value, lhsExpr.dataType).value;
+      const rhsStr = this.ctx.resolve(rhsExpr.value, rhsExpr.dataType).value;
 
       // hardcoded parentheses - operators not present in `parenthesizedOps`
       return snip(

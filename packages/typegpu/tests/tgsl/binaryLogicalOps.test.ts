@@ -317,6 +317,22 @@ describe('binaryLogicalOps', () => {
         - fn:and: Logical expression '&&' requires boolean operands. Got 'u32' and 'struct:Boid'.]
       `);
     });
+
+    it('does not implicitly convert numbers to booleans', () => {
+      const or = tgpu.fn(
+        [d.u32, d.u32],
+        d.bool,
+      )((x, y) => {
+        'use gpu';
+        return !!(x && y);
+      });
+
+      expect(() => tgpu.resolve([or])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:or: Logical expression '&&' requires boolean operands. Got 'u32' and 'u32'.]
+      `);
+    });
   });
 
   describe('operator || runtime operands', () => {
@@ -366,6 +382,22 @@ describe('binaryLogicalOps', () => {
         [Error: Resolution of the following tree failed:
         - <root>
         - fn:or: Logical expression '||' requires boolean operands. Got 'u32' and 'struct:Boid'.]
+      `);
+    });
+
+    it('does not implicitly convert numbers to booleans', () => {
+      const or = tgpu.fn(
+        [d.u32, d.u32],
+        d.bool,
+      )((x, y) => {
+        'use gpu';
+        return !!(x || y);
+      });
+
+      expect(() => tgpu.resolve([or])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:or: Logical expression '||' requires boolean operands. Got 'u32' and 'u32'.]
       `);
     });
   });
