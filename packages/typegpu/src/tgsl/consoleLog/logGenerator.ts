@@ -43,7 +43,7 @@ export class LogGeneratorNullImpl implements LogGenerator {
     return undefined;
   }
   generateLog(): Snippet {
-    tgpuLogger.warn('not-supported', "'console.log' is only supported when resolving pipelines.");
+    tgpuLogger.warn('fallback', "'console.log' is only supported when resolving pipelines.");
     return fallbackSnippet;
   }
 }
@@ -81,7 +81,7 @@ export class LogGeneratorImpl implements LogGenerator {
   generateLog(ctx: GenerationCtx, op: SupportedLogOp, args: Snippet[]): Snippet {
     if (shaderStageSlot.$ === 'vertex') {
       tgpuLogger.warn(
-        'suspicious-call',
+        'suspicious',
         `'console' operations are not supported in vertex shaders.`,
       );
       return fallbackSnippet;

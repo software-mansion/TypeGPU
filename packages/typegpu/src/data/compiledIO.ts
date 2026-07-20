@@ -291,7 +291,7 @@ export function buildWriter(
 export function getCompiledWriter(schema: wgsl.BaseData): CompiledWriter | undefined {
   if (!EVAL_ALLOWED_IN_ENV) {
     tgpuLogger.warn(
-      'eval-not-supported-in-env',
+      'fallback',
       'This environment does not allow eval - using default writer as fallback',
     );
     return undefined;
@@ -321,7 +321,7 @@ export function getCompiledWriter(schema: wgsl.BaseData): CompiledWriter | undef
     return fn;
   } catch (error) {
     tgpuLogger.warn(
-      'failed-to-compile-writer',
+      'fallback',
       `Failed to compile writer for schema: ${schema}\nReason: ${
         error instanceof Error ? error.message : String(error)
       }\nFalling back to default writer`,

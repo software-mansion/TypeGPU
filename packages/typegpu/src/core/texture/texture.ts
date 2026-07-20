@@ -396,7 +396,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
 
     if (actualMipLevels <= 1) {
       tgpuLogger.warn(
-        'suspicious-call',
+        'suspicious',
         `generateMipmaps is a no-op: would generate ${actualMipLevels} mip levels (base: ${baseMipLevel}, total: ${
           this.props.mipLevelCount ?? 1
         })`,
@@ -442,7 +442,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     const layerCount = this.props.size[2] ?? 1;
     if (source.length > layerCount) {
       tgpuLogger.warn(
-        'suspicious-call',
+        'suspicious',
         `Too many image sources provided. Expected ${layerCount} layers, got ${source.length}. Extra sources will be ignored.`,
       );
     }

@@ -1,17 +1,16 @@
 const warningTypes = [
-  'implicit-conversion',
+  'deprecated',
+  'suspicious',
+  'fallback',
+
   'missing-webgpu-feature',
-  'non-contiguous-memory',
   'webgpu-limits-exceeded',
+
+  'implicit-conversion',
   'mismatched-locations',
-  'omitted-external',
-  'deprecated-method-called',
-  'suspicious-call',
-  'eval-not-supported-in-env',
-  'not-supported',
-  'precision-loss',
   'log-limit-exceeded',
-  'failed-to-compile-writer',
+  'omitted-external',
+  'precision-loss',
 ] as const;
 type WarningType = (typeof warningTypes)[number];
 

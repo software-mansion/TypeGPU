@@ -192,7 +192,7 @@ function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionRes
 
   if (!template) {
     tgpuLogger.warn(
-      'deprecated-method-called',
+      'deprecated',
       "Calling resolve with an empty template is deprecated and will soon return an empty string. Consider using the 'tgpu.resolve(resolvableArray, options)' API instead.",
     );
   }

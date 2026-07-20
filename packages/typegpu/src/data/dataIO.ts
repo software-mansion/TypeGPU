@@ -457,7 +457,7 @@ export function writeData<TData extends wgsl.BaseData>(
     const expected = sizeOf(schema);
     if (src.byteLength !== expected) {
       tgpuLogger.warn(
-        'suspicious-call',
+        'suspicious',
         `TypedArray size mismatch: schema expects ${expected} bytes, got ${src.byteLength}. ` +
           (src.byteLength < expected ? 'Data truncated.' : 'Excess ignored.'),
       );
@@ -844,7 +844,7 @@ export function writeToArrayBuffer<T extends BaseData>(
     const regionSize = endOffset - startOffset;
     if (src.byteLength !== regionSize) {
       tgpuLogger.warn(
-        'suspicious-call',
+        'suspicious',
         `Buffer size mismatch: expected ${regionSize} bytes, got ${src.byteLength}. ` +
           (src.byteLength < regionSize ? 'Data truncated.' : 'Excess ignored.'),
       );

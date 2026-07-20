@@ -53,7 +53,7 @@ export function resolveIndirectOffset(
 
   if (contiguous < requiredSize) {
     tgpuLogger.warn(
-      'non-contiguous-memory',
+      'suspicious',
       `${operation}: Starting at offset ${offset}, only ${contiguous} contiguous bytes are available before padding. '${operation}' requires ${requiredSize} bytes (${IndirectOperationToRequiredData[operation]}). Reading across padding may result in undefined behavior.`,
     );
   }

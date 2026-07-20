@@ -660,7 +660,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   }
 
   flush() {
-    tgpuLogger.warn('deprecated-method-called', 'flush() has been deprecated, and has no effect.');
+    tgpuLogger.warn('deprecated', 'flush() has been deprecated, and has no effect.');
   }
 }
 
