@@ -8,12 +8,12 @@ import for_libraries from '../assets/hero/for_libraries.svg';
 const sectionId = 'interactive-code-section';
 ---
 
-<div class="flex flex-col" id={sectionId}>
+<div class="flex flex-col self-stretch" id={sectionId}>
   <div
-    class="horizontal-scroll -mx-6 flex gap-4 overflow-x-auto px-6 pb-2 sm:grid sm:grid-cols-3 sm:overflow-visible"
+    class="horizontal-scroll box-border flex max-w-screen gap-4 overflow-x-auto px-6 pb-2 md:grid md:grid-cols-3 md:overflow-visible"
   >
     <div
-      class="code-button-wrapper w-72 flex-shrink-0 cursor-pointer opacity-60 transition-opacity duration-200 ease-in-out hover:opacity-100 sm:w-auto"
+      class="code-button-wrapper w-72 flex-shrink-0 cursor-pointer opacity-60 transition-opacity duration-200 ease-in-out hover:opacity-100 md:w-auto"
     >
       <CodeButton
         title="As a foundation"
@@ -22,7 +22,7 @@ const sectionId = 'interactive-code-section';
       />
     </div>
     <div
-      class="code-button-wrapper w-72 flex-shrink-0 cursor-pointer opacity-60 transition-opacity duration-200 ease-in-out hover:opacity-100 sm:w-auto"
+      class="code-button-wrapper w-72 flex-shrink-0 cursor-pointer opacity-60 transition-opacity duration-200 ease-in-out hover:opacity-100 md:w-auto"
     >
       <CodeButton
         title="As a puzzle piece"
@@ -31,7 +31,7 @@ const sectionId = 'interactive-code-section';
       />
     </div>
     <div
-      class="code-button-wrapper w-72 flex-shrink-0 cursor-pointer opacity-60 transition-opacity duration-200 ease-in-out hover:opacity-100 sm:w-auto"
+      class="code-button-wrapper w-72 flex-shrink-0 cursor-pointer opacity-60 transition-opacity duration-200 ease-in-out hover:opacity-100 md:w-auto"
     >
       <CodeButton
         title="For libraries"
@@ -41,12 +41,12 @@ const sectionId = 'interactive-code-section';
     </div>
   </div>
 
-  <div class="codepen-container">
+  <div class="codepen-container px-6">
     <CodePen
-      code={`const neighborhood = (a: number, r: number) => {
+      code={`function neighborhood(a: number, r: number) {
   'use gpu';
   return d.vec2f(a - r, a + r);
-};
+}
 
 //
 // #1) Can be called in JS
@@ -57,10 +57,10 @@ const range = neighborhood(1.1, 0.5);
 //
 // #2) Used to generate WGSL
 //
-const main = () => {
+function main() {
   'use gpu';
   return neighborhood(1.1, 0.5);
-};
+}
 
 const wgsl = tgpu.resolve([main]);
 //    ^? string
@@ -68,7 +68,7 @@ const wgsl = tgpu.resolve([main]);
 //
 // #3) Executed on the GPU (generates WGSL underneath)
 //
-root['~unstable']
+root
   .createGuardedComputePipeline(main)
   .dispatchThreads();`}
       language="typescript"

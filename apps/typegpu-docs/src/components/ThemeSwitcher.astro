@@ -1,63 +1,86 @@
 ---
-import { Image } from 'astro:assets';
 import LightModeIconSvg from '../assets/sun.svg';
 import DarkModeIconSvg from '../assets/moon.svg';
 ---
 
 <div
-  class="grid grid-cols-2 overflow-hidden border border-blue-900/30 transition-colors duration-300 dark:border-gray-700"
+  class="border-navy-100 dark:border-navy-0 box-border grid h-10 w-20 grid-cols-2 overflow-hidden border"
 >
   <button
     type="button"
-    class="theme-toggle-btn grid cursor-pointer place-items-center bg-blue-900 p-2 transition duration-300 dark:bg-transparent"
-    data-theme-toggle="light"
-    aria-pressed="false"
+    class="theme-toggle-btn bg-navy-100 grid cursor-pointer place-items-center p-2 dark:bg-transparent"
+    data-target-theme="light"
     aria-label="Switch to light theme"
   >
-    <Image src={LightModeIconSvg} class="h-6 w-6" alt="Light Mode" />
+    <LightModeIconSvg class="h-4.5" />
   </button>
 
   <button
     type="button"
-    class="theme-toggle-btn grid cursor-pointer place-items-center bg-transparent p-2 transition duration-300 dark:bg-white"
-    data-theme-toggle="dark"
-    aria-pressed="false"
+    class="theme-toggle-btn dark:bg-navy-0 grid cursor-pointer place-items-center bg-transparent p-2"
+    data-target-theme="dark"
     aria-label="Switch to dark theme"
   >
-    <Image src={DarkModeIconSvg} class="h-6 w-6" alt="Dark Mode" />
+    <DarkModeIconSvg class="h-4.5" />
   </button>
 </div>
 
 <script is:inline>
   (() => {
-    const storageKey = 'typegpu-theme';
-    const buttons = Array.from(document.querySelectorAll('.theme-toggle-btn'));
+    /**
+     * Key in `localStorage` to store color theme preference at.
+     * This is the same as Starlight's, syncing it with the theme
+     * in the documentation.
+     */
+    const storageKey = 'starlight-theme';
 
-    // seriously no better way to do this?
-    const applyTheme = (theme) => {
-      document.documentElement.dataset.theme = theme;
-      document.documentElement.classList.toggle('dark', theme === 'dark');
-      buttons.forEach((btn) => {
-        const isActive = btn.dataset.themeToggle === theme;
-        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-      });
-    };
+    /** Get the preferred system color scheme. */
+    const getPreferredColorScheme = () =>
+      matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
 
-    const persistTheme = (theme) => {
-      try {
-        window.localStorage.setItem(storageKey, theme);
-      } catch (error) {
-        console.error('Failed to persist theme preference:', error);
+    /** Get a typesafe theme string from any JS value (unknown values are coerced to `'auto'`). */
+    const parseTheme = (theme) =>
+      theme === 'auto' || theme === 'dark' || theme === 'light'
+        ? theme
+        : 'auto';
+
+    /** Load the user’s preference from `localStorage`. */
+    const loadTheme = () =>
+      parseTheme(
+        typeof localStorage !== 'undefined' && localStorage.getItem(storageKey),
+      );
+
+    function applyTheme(theme) {
+      document.documentElement.dataset.theme =
+        theme === 'auto' ? getPreferredColorScheme() : theme;
+    }
+
+    function persistTheme(theme) {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(
+          storageKey,
+          theme === 'light' || theme === 'dark' ? theme : '',
+        );
       }
-    };
+    }
 
+    function onThemeChange(theme) {
+      applyTheme(theme);
+      persistTheme(theme);
+    }
+
+    // React to changes in system color scheme.
+    matchMedia(`(prefers-color-scheme: light)`).addEventListener(
+      'change',
+      () => {
+        if (loadTheme() === 'auto') onThemeChange('auto');
+      },
+    );
+
+    const buttons = Array.from(document.querySelectorAll('.theme-toggle-btn'));
     buttons.forEach((btn) => {
       btn.addEventListener('click', () => {
-        const targetTheme = btn.dataset.themeToggle;
-        if (targetTheme === 'light' || targetTheme === 'dark') {
-          applyTheme(targetTheme);
-          persistTheme(targetTheme);
-        }
+        onThemeChange(parseTheme(btn.dataset.targetTheme));
       });
     });
   })();
