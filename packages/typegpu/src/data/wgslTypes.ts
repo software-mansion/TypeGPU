@@ -604,7 +604,8 @@ export type mBaseForVec<T extends vecBase> = T extends v2f
  * Boolean schema representing a single WGSL bool value.
  * Cannot be used inside buffers as it is not host-shareable.
  */
-export interface Bool extends BaseData, DualFn<(v?: number | boolean) => boolean> {
+export interface Bool
+  extends BaseData, DualFn<((v: number | boolean) => boolean) & (() => boolean)> {
   readonly type: 'bool';
 
   // Type-tokens, not available at runtime
@@ -1530,6 +1531,10 @@ export type AnyWgslData =
 export function isVecInstance(value: unknown): value is AnyVecInstance {
   const v = value as AnyVecInstance | undefined;
   return isMarkedInternal(v) && typeof v.kind === 'string' && v.kind.startsWith('vec');
+}
+
+export function isVecBoolInstance(value: unknown): value is v2b | v3b | v4b {
+  return isVecInstance(value) && value.kind.includes('b');
 }
 
 export function isVec2(value: unknown): value is Vec2f | Vec2h | Vec2i | Vec2u {

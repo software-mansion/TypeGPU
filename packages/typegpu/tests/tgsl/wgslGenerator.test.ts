@@ -1762,125 +1762,107 @@ describe('wgslGenerator', () => {
     `);
   });
 
-  it('handles unary operator `!` on boolean runtime-known operand', () => {
-    const testFn = tgpu.fn(
-      [d.bool],
-      d.bool,
-    )((b) => {
-      return !b;
-    });
+  describe('handles unary operator !', () => {
+    it('works with boolean runtime-known operand', () => {
+      const testFn = tgpu.fn(
+        [d.bool],
+        d.bool,
+      )((b) => {
+        return !b;
+      });
 
-    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+      expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
         "fn testFn(b: bool) -> bool {
           return !b;
         }"
       `);
-  });
-
-  it('handles unary operator `!` on numeric runtime-known operand', () => {
-    const testFn = tgpu.fn(
-      [d.i32],
-      d.bool,
-    )((n) => {
-      return !n;
     });
 
-    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-        "fn testFn(n: i32) -> bool {
-          return !bool(n);
+    it('throws on non-boolean runtime-known operand', () => {
+      const testFn = tgpu.fn(
+        [d.vec3f],
+        d.bool,
+      )((n) => {
+        return !n;
+      });
+
+      expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:testFn: Unary operator ! requires boolean operand. Got vec3f.]
+      `);
+    });
+
+    it('throws on vector runtime-known operand and provides info about std.not', () => {
+      const testFn = tgpu.fn(
+        [d.vec3b],
+        d.bool,
+      )((n) => {
+        return !n;
+      });
+
+      expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn:testFn: Unary operator ! requires boolean operand. Got vec3<bool>. For component-wise negation, use 'std.not'.]
+      `);
+    });
+
+    it('mimics js on comptime-known operands', () => {
+      const Boid = d.struct({
+        pos: d.vec2f,
+        vel: d.vec2f,
+      });
+
+      const b = false;
+      const falsyNumber = 0;
+      const truthyNumber = 1;
+      const slot = tgpu.slot<d.Infer<typeof Boid>>({ pos: d.vec2f(), vel: d.vec2f() });
+      const accessor = tgpu.accessor(d.vec4u, d.vec4u(1, 8, 8, 2));
+      const falsy = tgpu.comptime(() => undefined);
+
+      const f = () => {
+        'use gpu';
+        let r = false;
+        r = !b;
+        r = !falsyNumber;
+        r = !truthyNumber;
+        r = !slot.$;
+        r = !accessor.$;
+        r = !falsy();
+        return r;
+      };
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f() -> bool {
+          var r = false;
+          r = true;
+          r = true;
+          r = false;
+          r = false;
+          r = false;
+          r = true;
+          return r;
         }"
       `);
-  });
-
-  it('handles unary operator `!` on non-primitive values', ({ root }) => {
-    const buffer = root.createUniform(d.mat4x4f);
-    const testFn = tgpu.fn([d.vec3f, d.atomic(d.u32), d.ptrPrivate(d.u32)])((v, a, p) => {
-      const _b0 = !buffer;
-      const _b1 = !buffer.$;
-      const _b2 = !v;
-      const _b3 = !a;
-      const _b4 = !std.atomicLoad(a);
-      const _b5 = !p;
-      const _b6 = !p.$;
     });
 
-    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var<uniform> buffer: mat4x4f;
+    it('chain', () => {
+      const x = 0;
+      const testFn = tgpu.fn(
+        [d.bool],
+        d.bool,
+      )((b) => {
+        // oxlint-disable-next-line
+        return !!!b || !!!!x;
+      });
 
-      fn testFn(v: vec3f, a: atomic<u32>, p: ptr<private, u32>) {
-        const _b0 = false;
-        const _b1 = false;
-        const _b2 = false;
-        const _b3 = false;
-        let _b4 = !bool(atomicLoad(&a));
-        const _b5 = false;
-        let _b6 = !bool((*p));
-      }"
-    `);
-  });
-
-  it('handles unary operator `!` on numeric and boolean comptime-known operands', () => {
-    const getN = tgpu.comptime(() => 1882);
-
-    const f = () => {
-      'use gpu';
-      if (!(getN() === 7) || !getN()) {
-        return 1;
-      }
-      return -1;
-    };
-
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-      "fn f() -> i32 {
-        {
-          return 1;
-        }
-        return -1;
-      }"
-    `);
-  });
-
-  it('handles unary operator `!` on operands from slots and accessors', () => {
-    const Boid = d.struct({
-      pos: d.vec2f,
-      vel: d.vec2f,
+      expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
+        "fn testFn(b: bool) -> bool {
+          return (!!!b || false);
+        }"
+      `);
     });
-
-    const slot = tgpu.slot<d.Infer<typeof Boid>>({ pos: d.vec2f(), vel: d.vec2f() });
-    const accessor = tgpu.accessor(d.vec4u, d.vec4u(1, 8, 8, 2));
-
-    const f = () => {
-      'use gpu';
-      if (!!slot.$ && !!accessor.$) {
-        return 1;
-      }
-      return -1;
-    };
-
-    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
-      "fn f() -> i32 {
-        {
-          return 1;
-        }
-        return -1;
-      }"
-    `);
-  });
-
-  it('handles chained unary operators `!`', () => {
-    const testFn = tgpu.fn(
-      [d.i32],
-      d.bool,
-    )((n) => {
-      // oxlint-disable-next-line
-      return !!!!!false || !!!n;
-    });
-
-    expect(tgpu.resolve([testFn])).toMatchInlineSnapshot(`
-      "fn testFn(n: i32) -> bool {
-        return true;
-      }"
-    `);
   });
 
   it('throws a readable error when assigning an argument reference', () => {

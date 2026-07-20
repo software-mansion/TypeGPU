@@ -480,13 +480,6 @@ describe('code without side-effects', () => {
     }).toEqual(false);
   });
 
-  test('logical not of impure value of complex datatype', () => {
-    expectSideEffects(() => {
-      'use gpu';
-      return !impureStruct();
-    }).toEqual(false);
-  });
-
   test('operators && and || with pure runtime operands', () => {
     expectSideEffects(() => {
       'use gpu';
@@ -566,7 +559,7 @@ describe('code with side-effects', () => {
   test('logical not of impure value', () => {
     expectSideEffects(() => {
       'use gpu';
-      return !impureInt();
+      return !impureBool();
     }).toEqual(true);
   });
 

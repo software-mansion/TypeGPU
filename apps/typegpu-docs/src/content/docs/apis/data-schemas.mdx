@@ -17,6 +17,31 @@ Schemas can also be called to create instances of the types they represent.
 
 TypeGPU provides data schemas for scalar, vector and matrix types, as well as constructors for struct and array schemas.
 
+:::danger
+WGSL has no `undefined` or `null`.
+
+If you are tempted to write the following (or any code that relies on `undefined` in JS):
+```ts twoslash
+// @noUncheckedIndexedAccess: true
+import { tgpu, d } from 'typegpu';
+
+const arr = tgpu.const(d.arrayOf(d.u32, 7), [0, 1, 2, 3, 4, 5, 6]);
+// ---cut---
+const length = () => {
+  'use gpu';
+  let i = 0;
+  let e = arr.$[i];
+  //  ^?
+  while (!!e) {
+    i++;
+    e = arr.$[i];
+  }
+  return i;
+}
+```
+Be aware that this is undefined behavior in WGSL.
+:::
+
 ## Scalars, vectors and matrices
 
 ### Constructors

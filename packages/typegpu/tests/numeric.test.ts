@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { tgpu, d } from 'typegpu';
+import { UnknownData } from 'typegpu/~internal';
 
 describe('f32', () => {
   it('differs in type from other numeric schemas', () => {
@@ -49,6 +50,34 @@ describe('f16', () => {
   });
 });
 
+describe('bool', () => {
+  it('correctly casts values to booleans', () => {
+    expect(d.bool(0)).toBe(false);
+    expect(d.bool(1)).toBe(true);
+    expect(d.bool(false)).toBe(false);
+    expect(d.bool(true)).toBe(true);
+  });
+
+  it('throws if argument is not a number or boolean', () => {
+    // @ts-expect-error
+    expect(() => d.bool({})).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Invalid argument type for 'd.bool'. Got 'object', expected number or boolean]`,
+    );
+  });
+
+  it('throws if passed number is not finite', () => {
+    expect(() => d.bool(NaN)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot convert value 'NaN' to type bool because of the Finite Math Assumption (see: https://www.w3.org/TR/WGSL/#finite-math-assumption)]`,
+    );
+  });
+
+  it('does not accept a possibly undefined argument', () => {
+    const possiblyUndefined = 1 as number | undefined;
+    // @ts-expect-error
+    () => d.bool(possiblyUndefined);
+  });
+});
+
 it('has correct default values', () => {
   expect(d.f32()).toBe(0);
   expect(d.f16()).toBe(0);
@@ -76,6 +105,68 @@ describe('TGSL', () => {
         const b = false;
       }"
     `);
+  });
+
+  describe('bool', () => {
+    it('works with scalars', () => {
+      const f = tgpu.fn([d.bool, d.u32, d.i32, d.f32, d.f16])((b, u, i, f, h) => {
+        const _bb = d.bool(b);
+        const _ub = d.bool(u);
+        const _ib = d.bool(i);
+        const _fb = d.bool(f);
+        const _hb = d.bool(h);
+      });
+
+      expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+        "fn f(b: bool, u: u32, i: i32, f_1: f32, h: f16) {
+          let _bb = b;
+          let _ub = bool(u);
+          let _ib = bool(i);
+          let _fb = bool(f_1);
+          let _hb = bool(h);
+        }"
+      `);
+    });
+
+    it('throws when argument datatype is unknown', () => {
+      const ud = tgpu['~unstable'].rawCodeSnippet(
+        '',
+        UnknownData as unknown as d.AnyData,
+        'runtime',
+        false,
+      );
+
+      const f = () => {
+        'use gpu';
+        // @ts-expect-error
+        const _bud = d.bool(ud.$);
+      };
+
+      expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:f
+        - fn*:f()
+        - fn:bool: Unknown argument type for 'd.bool'.]
+      `);
+    });
+
+    it('throws when argument datatype is not numeric and boolean', () => {
+      const f = () => {
+        'use gpu';
+        const v = d.vec3f();
+        // @ts-expect-error
+        const _bv = d.bool(v);
+      };
+
+      expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:f
+        - fn*:f()
+        - fn:bool: Unsupported data types: vec3f. Supported types are: bool, u32, i32, f32, f16.]
+      `);
+    });
   });
 });
 
