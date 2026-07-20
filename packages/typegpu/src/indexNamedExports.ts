@@ -96,8 +96,9 @@ export type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 export type {
   TextureBlobWrite,
   TextureChannel,
-  TextureChannelWrite,
+  TextureCopyOptions,
   TextureImageWrite,
+  TextureRawWriteOptions,
   TextureWriteOptions,
 } from './core/texture/textureWrite.ts';
 export type { TextureProps } from './core/texture/textureProps.ts';

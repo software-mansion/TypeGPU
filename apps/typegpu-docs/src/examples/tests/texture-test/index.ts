@@ -145,13 +145,11 @@ async function writeBlobContent() {
 
 function writeGreenToRedContent() {
   texture.clear();
-  texture.write({
-    channels: {
-      r: { source: imageBitmap, from: 'g' },
-    },
-    size: currentSize,
-    resize: true,
-  });
+  common.writeChannels(
+    texture,
+    { r: { source: imageBitmap, from: 'g' } },
+    { size: currentSize, resize: true },
+  );
   texture.generateMipmaps();
 }
 

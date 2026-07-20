@@ -10,9 +10,9 @@ We assume that you are familiar with the following concepts:
 - <a href="https://webgpufundamentals.org/webgpu/lessons/webgpu-storage-textures.html" target="_blank" rel="noopener noreferrer">Storage Textures</a>
 :::
 
-Textures store spatial data on the GPU. They can be sampled, used as render targets, exposed as storage textures, and mipmapped.
+In a similar fashion to buffers, textures provide a way to store and manage data on the GPU. They allow for both read and write access from WGSL shaders, and can also be sampled in the case of sampled textures. The main advantage of using textures over buffers is their optimized memory layout for spatial data, which can lead to better performance in certain scenarios as well as additional functionality such as filtering and mipmapping.
 
-TypeGPU wraps WebGPU textures with typed views, usage checks, and helpers for common writes.
+TypeGPU textures serve as a wrapper that provides type safety and higher level utilities (such as automatic mipmap generation). They also allow - in a similar way to buffers - for fixed resource creation that can be used directly in shaders without the need for manual bind group management.
 
 Let's look at an example of creating and using a typed texture.
 
@@ -30,6 +30,7 @@ const texture = root.createTexture({
   format: 'rgba8unorm' as const,
 }).$usage('sampled', 'render');
 
+// Uploading image data to the texture
 texture.write(imageBitmap);
 
 // Creating a view to use in shader
@@ -114,23 +115,26 @@ This is an escape hatch. It replaces the flags TypeGPU would normally infer and 
 
 ## Writing to a texture
 
-Most texture writes are one of: decoded images, blobs, image arrays, raw bytes, regions, or channel writes.
+The `.write()` method accepts a variety of data sources. Here's a quick overview of the available options:
 
 | Source | Use when |
 | --- | --- |
-| `texture.write(imageBitmap)` | You already have a decoded image with the right size. |
-| `texture.write(imageBitmap, { resize: true })` | The decoded image should be resized into the texture. |
-| `texture.writeAsync({ source: blob, ... })` | You have a fetched `Blob` and do not need to keep the decoded bitmap. |
+| `texture.write(imageBitmap)` | You already have a decoded image that matches the texture size. |
+| `texture.write(imageBitmap, { resize: true })` | You want the image resampled to fit the texture. |
+| `texture.writeAsync({ source: blob, ... })` | You have a fetched `Blob` and don't need to keep the decoded bitmap around. |
 | `texture.write([layer0, layer1])` | You want to fill a texture array or 3D texture one layer at a time. |
 | `texture.write(bytes)` | You already have raw texel bytes. |
-| `texture.write({ source, ... })` | You need a crop, destination region, or channel write. |
+| `texture.write({ source, ... })` | You need a crop or a destination region. |
+| `common.writeChannels(texture, { ... })` | You want to pack image sources into individual channels. |
 
-Image writes require `.$usage('render')`. Source and destination sizes must match unless you pass `resize: true`.
+Note that writing image sources requires the `'render'` usage flag, and that the source and destination sizes have to match unless you opt into resizing with `resize: true`.
 
-### Exact-size image upload
+### Writing image data
+
+You can write various image sources to textures. If the image dimensions match the texture size, all it takes is a single `.write()` call:
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 const response = await fetch('path/to/image.png');
 const blob = await response.blob();
@@ -145,10 +149,12 @@ texture.write(imageBitmap);
 ```
 
 :::caution[Browser support]
-`GPUCopyExternalImageSource` also includes canvas, video, `ImageData`, `HTMLImageElement`, and `VideoFrame`, but browser support varies. Decode fetched images to `ImageBitmap` for portable code.
+Besides `ImageBitmap`, `GPUCopyExternalImageSource` also includes canvas, video, `ImageData`, `HTMLImageElement`, and `VideoFrame` - but browser support for these varies. For portable code, decode fetched images to `ImageBitmap` first.
 :::
 
-### Resizing decoded images
+### Resizing images
+
+If the image dimensions don't match the texture size, you can ask TypeGPU to resample the image to fit by passing `resize: true`:
 
 ```ts
 const texture = root.createTexture({
@@ -168,12 +174,12 @@ texture.write({
 ```
 
 :::note
-Resizing decoded images uses TypeGPU's render-pass blit path, so the destination must be a 2D texture with a renderable, float-sampleable format.
+Under the hood, resizing runs a render-pass blit, so the destination has to be a 2D texture with a renderable, float-sampleable format.
 :::
 
-### Blob helper
+### Writing blobs
 
-Use `writeAsync` when you have a `Blob` and do not need to keep the decoded `ImageBitmap`. With `resize: true`, TypeGPU passes resize options to `createImageBitmap` before uploading.
+If you fetched an image and don't need to keep the decoded `ImageBitmap` around, you can hand the `Blob` directly to `writeAsync` and let TypeGPU handle the decoding. With `resize: true`, the resize options are passed along to `createImageBitmap` before uploading.
 
 ```ts twoslash
 import { tgpu } from 'typegpu';
@@ -186,18 +192,14 @@ const texture = root.createTexture({
 
 const blob = await (await fetch('path/to/image.png')).blob();
 
-await texture.writeAsync({
-  source: blob,
-  size: [512, 512],
-  resize: true,
-});
+await texture.writeAsync({ source: blob, resize: true });
 ```
 
-The resulting bitmap is still written as an image source, so the texture needs `.$usage('render')`.
+If you don't specify a `size`, it defaults to the texture size. Keep in mind that the decoded bitmap is still written as an image source, so the texture needs the `'render'` usage flag.
 
-### Texture arrays and 3D textures
+### Writing arrays of images
 
-Pass an array of images to write one image per layer.
+For texture arrays, you can write multiple images at once - one per layer:
 
 ```ts twoslash
 import { tgpu } from 'typegpu';
@@ -214,13 +216,13 @@ const texture = root.createTexture({
 texture.write([layer0, layer1, layer2]);
 ```
 
-Each image must match the layer size unless you pass `{ resize: true }`.
+Each image has to match the layer size, unless you pass `{ resize: true }`.
 
-For 3D textures, add `dimension: '3d'`; the same `write([layer0, layer1, ...])` form writes depth slices.
+The same form works for 3D textures (created with `dimension: '3d'`) - each image in the array fills one depth slice.
 
 ### Writing raw binary data
 
-Use raw bytes when you already have texel data in CPU memory.
+You can write raw binary data directly to textures using `ArrayBuffer`, typed arrays, or `DataView`:
 
 ```ts twoslash
 import { tgpu } from 'typegpu';
@@ -244,16 +246,20 @@ texture.write(data);
 // Write to a specific mip level
 const mipData = new Uint8Array(4); // Data for 1 pixel
 texture.write(mipData, 1); // Write to mip level 1
+
+// Update just a region
+const regionData = new Uint8Array(4); // Data for 1 pixel
+texture.write(regionData, { origin: [1, 1], size: [1, 1] });
 ```
 
-Raw writes do not need `.$usage('render')`, but the byte length must exactly match the texture format, size, and mip level.
+Writing raw data doesn't require the `'render'` usage flag, but the byte length has to exactly match the written region for the given texture format.
 
 ### Regions and channel writes
 
-Use an object descriptor for source crops, destination regions, or selected channels.
+If you only want to update a part of the texture, or copy just a fragment of the source image, you can pass an object descriptor with source and destination regions. The descriptor also lets you flip the source vertically (`flipY`), premultiply alpha (`premultipliedAlpha`), or convert to a specific color space (`colorSpace`).
 
 ```ts twoslash
-import { tgpu } from 'typegpu';
+import { tgpu, common } from 'typegpu';
 const root = await tgpu.init();
 declare const imageBitmap: ImageBitmap;
 declare const roughnessMap: ImageBitmap;
@@ -272,17 +278,30 @@ texture.write({
   origin: [128, 64],
   size: [128, 128],
 });
+```
 
-texture.write({
-  channels: {
-    r: roughnessMap,
-    g: metalnessMap,
-    a: { source: maskMap, from: 'r' },
-  },
+Sometimes you'll want to pack multiple grayscale maps into a single texture - for example combining separate roughness, metalness, and mask maps into one material texture. The `common.writeChannels` utility does exactly that. Each entry writes a single channel of the texture; `from` selects which channel of the source to read, and defaults to the destination channel.
+
+```ts twoslash
+import { tgpu, common } from 'typegpu';
+const root = await tgpu.init();
+declare const roughnessMap: ImageBitmap;
+declare const metalnessMap: ImageBitmap;
+declare const maskMap: ImageBitmap;
+// ---cut---
+const texture = root.createTexture({
+  size: [512, 512],
+  format: 'rgba8unorm',
+}).$usage('sampled', 'render');
+
+common.writeChannels(texture, {
+  r: roughnessMap,
+  g: metalnessMap,
+  a: { source: maskMap, from: 'r' },
 });
 ```
 
-Region and channel writes follow the same render usage and resize rules as other image writes.
+Region and channel writes follow the same rules as other image writes - they require the `'render'` usage flag, and sizes have to match unless you pass `resize: true`.
 
 ### Mipmaps
 
@@ -307,7 +326,32 @@ texture.generateMipmaps(); // Generate all mip levels automatically
 The `generateMipmaps()` method requires both `'sampled'` and `'render'` usage flags, as TypeGPU runs a downsampling pipeline behind the scenes to generate the mip levels.
 :::
 
-You can also copy between equal-sized, same-format textures with `targetTexture.copyFrom(sourceTexture)`.
+### Copying and clearing
+
+You can also copy data from another texture. If both textures have the same size and format, a plain `targetTexture.copyFrom(sourceTexture)` is all you need. To copy a region, target a specific mip level, or copy between differently sized textures, pass copy options:
+
+```ts twoslash
+import { tgpu } from 'typegpu';
+const root = await tgpu.init();
+const sourceTexture = root.createTexture({ size: [64, 64], format: 'rgba8unorm' });
+const targetTexture = root.createTexture({ size: [512, 512], format: 'rgba8unorm' });
+// ---cut---
+targetTexture.copyFrom(sourceTexture, {
+  sourceOrigin: [16, 16],
+  origin: [128, 64],
+  size: [32, 32],
+});
+```
+
+To wipe a texture clean, use `texture.clear()`, which fills it with zeros. You can also pass an rgba color to fill the texture with instead (this requires the `'render'` usage flag):
+
+```ts twoslash
+import { tgpu } from 'typegpu';
+const root = await tgpu.init();
+const texture = root.createTexture({ size: [512, 512], format: 'rgba8unorm' }).$usage('render');
+// ---cut---
+texture.clear([0, 0.5, 0, 1]);
+```
 
 ## Texture views
 

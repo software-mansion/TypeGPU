@@ -9,7 +9,7 @@ import type {
 } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 import { attest } from '@ark/attest';
-import { tgpu, d } from 'typegpu';
+import { tgpu, d, common } from 'typegpu';
 
 describe('TgpuTexture', () => {
   it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({
@@ -603,10 +603,27 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         texture.write(data, 2);
 
         expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
-          { texture: expect.anything(), mipLevel: 2 },
+          { texture: expect.anything(), mipLevel: 2, origin: { x: 0, y: 0, z: 0 } },
           data,
           { bytesPerRow: 8, rowsPerImage: 2 }, // 2 pixels * 4 bytes per pixel
           [2, 2, 1], // Mip level 2 dimensions
+        );
+      });
+
+      it('writes buffer data to a region', ({ root, device }) => {
+        const texture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+        });
+
+        const data = new Uint8Array(4 * 5 * 4);
+        texture.write(data, { origin: [2, 3], size: [4, 5] });
+
+        expect(device.mock.queue.writeTexture).toHaveBeenCalledWith(
+          { texture: expect.anything(), mipLevel: 0, origin: { x: 2, y: 3, z: 0 } },
+          data,
+          { bytesPerRow: 16, rowsPerImage: 5 },
+          [4, 5, 1],
         );
       });
 
@@ -657,13 +674,15 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
 
         expect(() =>
-          root.createTexture({ size: [32, 32], format: 'rgba8unorm' }).write({
-            channels: {
+          common.writeChannels(
+            root.createTexture({ size: [32, 32], format: 'rgba8unorm' }) as TgpuTexture &
+              RenderFlag,
+            {
               r: mockImage,
             },
-          }),
+          ),
         ).toThrowErrorMatchingInlineSnapshot(
-          `[Error: texture.write(...) with image sources requires 'render' usage. Add it via the $usage('render') method.]`,
+          `[Error: writeChannels requires 'render' usage. Add it via the $usage('render') method.]`,
         );
       });
 
@@ -711,6 +730,102 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         expect(renderPassEncoder.mock.setScissorRect).toHaveBeenCalledWith(0, 0, 64, 64);
         expect(device.mock.createCommandEncoder).toHaveBeenCalled();
         expect(device.mock.queue.submit).toHaveBeenCalled();
+      });
+
+      it('resamples all layers of an image array in one submit', ({
+        root,
+        device,
+        renderPassEncoder,
+      }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64, 2],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        const mockImage = {
+          width: 32,
+          height: 32,
+        } as HTMLImageElement;
+
+        texture.write([mockImage, mockImage], { resize: true });
+
+        expect(device.mock.createCommandEncoder).toHaveBeenCalledTimes(1);
+        expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
+        expect(renderPassEncoder.mock.draw).toHaveBeenCalledTimes(2);
+
+        const [target, staging1, staging2] = device.mock.createTexture.mock.results;
+        expect(target?.value.destroy).not.toHaveBeenCalled();
+        expect(staging1?.value.destroy).toHaveBeenCalled();
+        expect(staging2?.value.destroy).toHaveBeenCalled();
+      });
+
+      it('destroys the staging texture after resampling', ({ root, device }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        const mockImage = {
+          width: 32,
+          height: 32,
+        } as HTMLImageElement;
+
+        texture.write(mockImage, { resize: true });
+
+        const [target, staging] = device.mock.createTexture.mock.results;
+        expect(staging?.value.destroy).toHaveBeenCalled();
+        expect(target?.value.destroy).not.toHaveBeenCalled();
+      });
+
+      it('throws when passing a Blob to synchronous write', ({ root }) => {
+        const texture = root
+          .createTexture({
+            size: [32, 32],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        expect(() =>
+          texture.write(new Blob(['image']) as never),
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Error: Blob sources are only supported in texture.writeAsync(...).]`,
+        );
+      });
+
+      it('passes premultipliedAlpha and colorSpace through to the copy', ({ root, device }) => {
+        const texture = root
+          .createTexture({
+            size: [32, 32],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        const mockImage = {
+          width: 32,
+          height: 32,
+        } as HTMLImageElement;
+
+        texture.write({
+          source: mockImage,
+          premultipliedAlpha: true,
+          colorSpace: 'display-p3',
+        });
+
+        expect(device.mock.queue.copyExternalImageToTexture).toHaveBeenCalledWith(
+          { source: mockImage },
+          {
+            texture: expect.anything(),
+            mipLevel: 0,
+            origin: { x: 0, y: 0, z: 0 },
+            premultipliedAlpha: true,
+            colorSpace: 'display-p3',
+          },
+          { width: 32, height: 32, depthOrArrayLayers: 1 },
+        );
       });
 
       it('writes image descriptors with destination origin, size and mip level', ({
@@ -776,26 +891,6 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
             origin: { x: 6, y: 7, z: 0 },
           },
           { width: 4, height: 5, depthOrArrayLayers: 1 },
-        );
-      });
-
-      it('throws when image descriptor size resizes without resize', ({ root }) => {
-        const texture = root
-          .createTexture({
-            size: [64, 64],
-            format: 'rgba8unorm',
-          })
-          .$usage('render');
-
-        const mockImage = {
-          width: 16,
-          height: 16,
-        } as HTMLImageElement;
-
-        expect(() =>
-          texture.write({ source: mockImage, size: [32, 32] }),
-        ).toThrowErrorMatchingInlineSnapshot(
-          `[Error: Texture write source size 16x16 does not match target size 32x32. Pass resize: true to resize explicitly.]`,
         );
       });
 
@@ -888,7 +983,10 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         expect(imageBitmap.close).toHaveBeenCalled();
       });
 
-      it('resizes blobs through createImageBitmap when requested', async ({ root, device }) => {
+      it('resizes blobs through createImageBitmap, defaulting to the texture size', async ({
+        root,
+        device,
+      }) => {
         const texture = root
           .createTexture({
             size: [64, 64],
@@ -905,20 +1003,22 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         const createImageBitmapMock = vi.fn(() => Promise.resolve(imageBitmap));
         vi.stubGlobal('createImageBitmap', createImageBitmapMock);
 
-        await texture.writeAsync({
-          source: blob,
-          size: [64, 64],
-          resize: true,
-        });
+        await texture.writeAsync({ source: blob, resize: true });
 
         expect(createImageBitmapMock).toHaveBeenCalledWith(blob, {
           resizeWidth: 64,
           resizeHeight: 64,
+          resizeQuality: 'high',
         });
         expect(device.mock.createRenderPipeline).not.toHaveBeenCalled();
       });
 
-      it('writes grouped single channels with color write masks', ({ root, device }) => {
+      it('writes grouped single channels with color write masks in one submit', ({
+        root,
+        device,
+        commandEncoder,
+        renderPassEncoder,
+      }) => {
         const texture = root
           .createTexture({
             size: [32, 32],
@@ -935,16 +1035,17 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           height: 32,
         } as HTMLImageElement;
 
-        texture.write({
-          channels: {
-            r: roughnessMap,
-            a: { source: maskMap, from: 'g' },
-          },
+        common.writeChannels(texture, {
+          r: roughnessMap,
+          a: { source: maskMap, from: 'g' },
         });
 
-        expect(device.mock.createTexture).toHaveBeenCalledTimes(2);
+        expect(device.mock.createTexture).toHaveBeenCalledTimes(3);
         expect(device.mock.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(2);
-        expect(device.mock.createCommandEncoder).toHaveBeenCalledTimes(2);
+        expect(device.mock.createCommandEncoder).toHaveBeenCalledTimes(1);
+        expect(commandEncoder.mock.beginRenderPass).toHaveBeenCalledTimes(1);
+        expect(renderPassEncoder.mock.draw).toHaveBeenCalledTimes(2);
+        expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
         expect(device.mock.createRenderPipeline).toHaveBeenNthCalledWith(
           1,
           expect.objectContaining({
@@ -980,13 +1081,14 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           height: 9,
         } as HTMLImageElement;
 
-        texture.write({
-          channels: {
-            r: roughnessMap,
+        common.writeChannels(
+          texture,
+          { r: roughnessMap },
+          {
+            origin: [4, 5],
+            size: [8, 9],
           },
-          origin: [4, 5],
-          size: [8, 9],
-        });
+        );
 
         expect(commandEncoder.mock.copyTextureToTexture).not.toHaveBeenCalled();
         expect(renderPassEncoder.mock.setViewport).toHaveBeenCalledWith(4, 5, 8, 9, 0, 1);
@@ -1007,12 +1109,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         } as HTMLImageElement;
 
         expect(() =>
-          texture.write({
-            channels: {
-              r: roughnessMap,
-            },
-            size: [32, 32],
-          }),
+          common.writeChannels(texture, { r: roughnessMap }, { size: [32, 32] }),
         ).toThrowErrorMatchingInlineSnapshot(
           `[Error: Texture write source size 16x16 does not match target size 32x32. Pass resize: true to resize explicitly.]`,
         );
@@ -1032,11 +1129,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         } as HTMLImageElement;
 
         expect(() =>
-          texture.write({
-            channels: {
-              rg: roughnessMap,
-            },
-          } as never),
+          common.writeChannels(texture, { rg: roughnessMap } as never),
         ).toThrowErrorMatchingInlineSnapshot(
           `[Error: Texture channel writes only support single channels: r, g, b, a.]`,
         );
@@ -1063,13 +1156,72 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
             device.mock.createCommandEncoder.mock.results.length - 1
           ]?.value;
         expect(commandEncoder?.copyTextureToTexture).toHaveBeenCalledWith(
-          { texture: expect.anything() },
-          { texture: expect.anything() },
-          [16, 16],
+          { texture: expect.anything(), mipLevel: 0, origin: { x: 0, y: 0, z: 0 } },
+          { texture: expect.anything(), mipLevel: 0, origin: { x: 0, y: 0, z: 0 } },
+          [16, 16, 1],
         );
 
         expect(commandEncoder?.finish).toHaveBeenCalledTimes(1);
         expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
+      });
+
+      it('copies a region between differently sized textures', ({ root, device }) => {
+        const sourceTexture = root.createTexture({
+          size: [32, 32],
+          format: 'rgba8unorm',
+        });
+
+        const targetTexture = root.createTexture({
+          size: [16, 16],
+          format: 'rgba8unorm',
+          mipLevelCount: 2,
+        });
+
+        targetTexture.copyFrom(sourceTexture, {
+          sourceOrigin: [4, 4],
+          origin: [2, 2],
+          size: [8, 8],
+          mipLevel: 1,
+        });
+
+        const commandEncoder =
+          device.mock.createCommandEncoder.mock.results[
+            device.mock.createCommandEncoder.mock.results.length - 1
+          ]?.value;
+        expect(commandEncoder?.copyTextureToTexture).toHaveBeenCalledWith(
+          { texture: expect.anything(), mipLevel: 0, origin: { x: 4, y: 4, z: 0 } },
+          { texture: expect.anything(), mipLevel: 1, origin: { x: 2, y: 2, z: 0 } },
+          [8, 8, 1],
+        );
+      });
+
+      it('clears with a color using empty render passes', ({ root, device, commandEncoder }) => {
+        const texture = root
+          .createTexture({
+            size: [8, 8],
+            format: 'rgba8unorm',
+            mipLevelCount: 2,
+          })
+          .$usage('render');
+
+        texture.clear([0, 0.5, 0, 1]);
+
+        expect(device.mock.queue.writeTexture).not.toHaveBeenCalled();
+        expect(commandEncoder.mock.beginRenderPass).toHaveBeenCalledTimes(2);
+        expect(commandEncoder.mock.beginRenderPass).toHaveBeenCalledWith(
+          expect.objectContaining({
+            colorAttachments: [
+              expect.objectContaining({ loadOp: 'clear', clearValue: [0, 0.5, 0, 1] }),
+            ],
+          }),
+        );
+        expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
+
+        expect(() =>
+          root.createTexture({ size: [8, 8], format: 'rgba8unorm' }).clear([0, 0, 0, 1]),
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Error: texture.clear(color) requires 'render' usage. Add it via the $usage('render') method.]`,
+        );
       });
 
       it('throws error when copyFrom is called with mismatched format', ({ root }) => {

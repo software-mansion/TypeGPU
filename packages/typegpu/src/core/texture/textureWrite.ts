@@ -1,14 +1,14 @@
-type TextureSourceSize = readonly [number, number] | Pick<GPUExtent3DDict, 'width' | 'height'>;
-
 export type TextureWriteOptions = {
   mipLevel?: GPUIntegerCoordinate;
-  origin?: GPUOrigin3D;
-  size?: GPUExtent3D;
-  sourceOrigin?: GPUOrigin2D;
-  sourceSize?: TextureSourceSize;
+  origin?: readonly [x: number, y: number, z?: number];
+  size?: readonly [width: number, height: number];
+  sourceOrigin?: readonly [x: number, y: number];
+  sourceSize?: readonly [width: number, height: number];
   resize?: boolean;
   filter?: GPUFilterMode;
   flipY?: boolean;
+  premultipliedAlpha?: boolean;
+  colorSpace?: PredefinedColorSpace;
 };
 
 export type TextureImageWrite = TextureWriteOptions & {
@@ -21,15 +21,24 @@ export type TextureBlobWrite = Omit<TextureWriteOptions, 'sourceOrigin' | 'sourc
 
 export type TextureChannel = 'r' | 'g' | 'b' | 'a';
 
-type TextureChannelWriteSource =
-  | GPUCopyExternalImageSource
-  | { source: GPUCopyExternalImageSource; from?: TextureChannel };
+export type TextureResizeOptions = Pick<
+  TextureWriteOptions,
+  'resize' | 'filter' | 'flipY' | 'premultipliedAlpha' | 'colorSpace'
+>;
 
-export type TextureChannelWrite = TextureWriteOptions & {
-  channels: Partial<Record<TextureChannel, TextureChannelWriteSource>>;
+export type TextureRawWriteOptions = {
+  mipLevel?: GPUIntegerCoordinate;
+  origin?: readonly [x: number, y: number, z?: number];
+  size?: readonly [width: number, height: number, depthOrArrayLayers?: number];
 };
 
-export type TextureResizeOptions = Pick<TextureWriteOptions, 'resize' | 'filter'>;
+export type TextureCopyOptions = {
+  sourceMipLevel?: GPUIntegerCoordinate;
+  mipLevel?: GPUIntegerCoordinate;
+  sourceOrigin?: readonly [x: number, y: number, z?: number];
+  origin?: readonly [x: number, y: number, z?: number];
+  size?: readonly [width: number, height: number, depthOrArrayLayers?: number];
+};
 
 export type TextureImageWriteLayout = {
   source: GPUCopyExternalImageSource;
@@ -40,20 +49,14 @@ export type TextureImageWriteLayout = {
   mipLevel: number;
   filter?: GPUFilterMode;
   flipY?: boolean;
+  premultipliedAlpha?: boolean;
+  colorSpace?: PredefinedColorSpace;
 };
 
 export type TextureChannelWriteLayout = TextureImageWriteLayout & {
   from: TextureChannel;
   to: TextureChannel;
 };
-
-export type TextureChannelWriteEntry = {
-  from: TextureChannel;
-  to: TextureChannel;
-  write: TextureImageWrite;
-};
-
-const TEXTURE_CHANNELS = ['r', 'g', 'b', 'a'] as const satisfies readonly TextureChannel[];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -63,96 +66,37 @@ function hasSource(value: unknown): value is { source: unknown } {
   return isRecord(value) && 'source' in value;
 }
 
-function isIterable(value: unknown): value is Iterable<number> {
-  return typeof value === 'object' && value !== null && Symbol.iterator in value;
-}
-
-function isTextureChannel(value: string): value is TextureChannel {
-  return (TEXTURE_CHANNELS as readonly string[]).includes(value);
-}
-
-function isChannelWriteImage(
-  value: TextureChannelWriteSource,
-): value is { source: GPUCopyExternalImageSource; from?: TextureChannel } {
-  return hasSource(value);
-}
-
-function origin2(value: TextureWriteOptions['sourceOrigin']): { x: number; y: number } {
-  if (isIterable(value)) {
-    const [x = 0, y = 0] = value;
-    return { x, y };
-  }
-
-  return { x: value?.x ?? 0, y: value?.y ?? 0 };
-}
-
-function origin3(value: TextureWriteOptions['origin']): { x: number; y: number; z: number } {
-  if (isIterable(value)) {
-    const [x = 0, y = 0, z = 0] = value;
-    return { x, y, z };
-  }
-
-  return { x: value?.x ?? 0, y: value?.y ?? 0, z: value?.z ?? 0 };
-}
-
-function size2(
-  value: TextureWriteOptions['sourceSize'],
-  fallback: { width: number; height: number },
-): { width: number; height: number } {
-  if (isIterable(value)) {
-    const [width = fallback.width, height = fallback.height] = value;
-    return { width, height };
-  }
-
-  return { width: value?.width ?? fallback.width, height: value?.height ?? fallback.height };
-}
-
-function size3(
-  value: TextureWriteOptions['size'],
-  fallback: { width: number; height: number; depthOrArrayLayers: number },
-): { width: number; height: number; depthOrArrayLayers: number } {
-  if (isIterable(value)) {
-    const [
-      width = fallback.width,
-      height = fallback.height,
-      depthOrArrayLayers = fallback.depthOrArrayLayers,
-    ] = value;
-    return {
-      width,
-      height,
-      depthOrArrayLayers,
-    };
-  }
-
-  return {
-    width: value?.width ?? fallback.width,
-    height: value?.height ?? fallback.height,
-    depthOrArrayLayers: value?.depthOrArrayLayers ?? fallback.depthOrArrayLayers,
-  };
-}
-
 export function isTextureImageWrite(value: unknown): value is TextureImageWrite {
   return hasSource(value);
 }
 
-export function isTextureChannelWrite(value: unknown): value is TextureChannelWrite {
-  return isRecord(value) && 'channels' in value;
+export function textureLayerSize(size: readonly number[]): readonly [number, number] {
+  return [size[0] ?? 1, size[1] ?? 1];
 }
 
-export function textureLayerSize(size: readonly number[]): [number, number, number] {
-  return [size[0] ?? 1, size[1] ?? 1, 1];
+export function mipLevelSize(
+  size: readonly number[],
+  mipLevel: number,
+  dimension: GPUTextureDimension,
+): [number, number, number] {
+  const scale = (value: number) => Math.max(1, value >> mipLevel);
+  return [
+    scale(size[0] ?? 1),
+    scale(size[1] ?? 1),
+    dimension === '3d' ? scale(size[2] ?? 1) : (size[2] ?? 1),
+  ];
 }
 
 export function imageWriteForLayer(
   source: GPUCopyExternalImageSource,
   textureSize: readonly number[],
-  layer: number | undefined,
+  layer: number,
   options: TextureResizeOptions,
 ): TextureImageWrite {
   return {
     source,
     size: textureLayerSize(textureSize),
-    ...(layer !== undefined && { origin: [0, 0, layer] as const }),
+    origin: [0, 0, layer],
     ...options,
   };
 }
@@ -161,6 +105,10 @@ export function getImageSourceDimensions(source: GPUCopyExternalImageSource): {
   width: number;
   height: number;
 } {
+  if (typeof Blob !== 'undefined' && source instanceof Blob) {
+    throw new Error('Blob sources are only supported in texture.writeAsync(...).');
+  }
+
   const { videoWidth, videoHeight } = source as HTMLVideoElement;
   if (videoWidth && videoHeight) {
     return { width: videoWidth, height: videoHeight };
@@ -185,31 +133,35 @@ export function getImageSourceDimensions(source: GPUCopyExternalImageSource): {
 }
 
 export function normalizeImageWrite(write: TextureImageWrite): TextureImageWriteLayout {
-  const sourceOrigin = origin2(write.sourceOrigin);
+  const sourceOrigin = { x: write.sourceOrigin?.[0] ?? 0, y: write.sourceOrigin?.[1] ?? 0 };
   const sourceDimensions = getImageSourceDimensions(write.source);
-  const sourceSize = size2(write.sourceSize, {
-    width: sourceDimensions.width - sourceOrigin.x,
-    height: sourceDimensions.height - sourceOrigin.y,
-  });
-  const targetSize = size3(write.size, {
-    width: sourceSize.width,
-    height: sourceSize.height,
+  const sourceSize = {
+    width: write.sourceSize?.[0] ?? sourceDimensions.width - sourceOrigin.x,
+    height: write.sourceSize?.[1] ?? sourceDimensions.height - sourceOrigin.y,
+  };
+  const targetSize = {
+    width: write.size?.[0] ?? sourceSize.width,
+    height: write.size?.[1] ?? sourceSize.height,
     depthOrArrayLayers: 1,
-  });
-
-  if (targetSize.depthOrArrayLayers !== 1) {
-    throw new Error('Texture image writes can only write one layer at a time.');
-  }
+  };
 
   return {
     source: write.source,
     sourceOrigin,
     sourceSize,
-    targetOrigin: origin3(write.origin),
+    targetOrigin: {
+      x: write.origin?.[0] ?? 0,
+      y: write.origin?.[1] ?? 0,
+      z: write.origin?.[2] ?? 0,
+    },
     targetSize,
     mipLevel: write.mipLevel ?? 0,
     ...(write.filter !== undefined && { filter: write.filter }),
     ...(write.flipY !== undefined && { flipY: write.flipY }),
+    ...(write.premultipliedAlpha !== undefined && {
+      premultipliedAlpha: write.premultipliedAlpha,
+    }),
+    ...(write.colorSpace !== undefined && { colorSpace: write.colorSpace }),
   };
 }
 
@@ -231,53 +183,19 @@ export function validateResizeAllowed(
   }
 }
 
-function channelImageWrite(
-  write: TextureChannelWrite,
-  source: GPUCopyExternalImageSource,
-): TextureImageWrite {
-  const { channels: _channels, ...options } = write;
-  return { ...options, source };
-}
-
-export function expandChannelWrites(write: TextureChannelWrite): TextureChannelWriteEntry[] {
-  for (const key of Object.keys(write.channels)) {
-    if (!isTextureChannel(key)) {
-      throw new Error(`Texture channel writes only support single channels: r, g, b, a.`);
-    }
-  }
-
-  return TEXTURE_CHANNELS.flatMap((to) => {
-    const entry = write.channels[to];
-    if (!entry) {
-      return [];
-    }
-
-    const entryWrite = isChannelWriteImage(entry) ? entry : { source: entry };
-    const from = entryWrite.from ?? to;
-
-    if (!isTextureChannel(from)) {
-      throw new Error(`Invalid source channel '${from}'. Expected one of r, g, b, a.`);
-    }
-
-    return [{ from, to, write: channelImageWrite(write, entryWrite.source) }];
-  });
-}
-
 export async function createBitmapForBlobWrite(write: TextureBlobWrite): Promise<ImageBitmap> {
   if (typeof createImageBitmap !== 'function') {
     throw new Error('Texture writeAsync requires createImageBitmap to be available.');
   }
 
-  const resizeTo =
+  const bitmapOptions =
     write.resize && write.size
-      ? size3(write.size, { width: 1, height: 1, depthOrArrayLayers: 1 })
+      ? {
+          resizeWidth: write.size[0],
+          resizeHeight: write.size[1],
+          resizeQuality: (write.filter === 'nearest' ? 'pixelated' : 'high') as ResizeQuality,
+        }
       : undefined;
-  const bitmapOptions = resizeTo
-    ? {
-        resizeWidth: resizeTo.width,
-        resizeHeight: resizeTo.height,
-      }
-    : undefined;
 
   return createImageBitmap(write.source, bitmapOptions);
 }

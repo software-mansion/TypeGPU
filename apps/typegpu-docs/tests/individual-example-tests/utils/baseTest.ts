@@ -2,7 +2,6 @@
  * @vitest-environment jsdom
  */
 
-import tgpu from 'typegpu';
 import { setupCommonMocks } from './commonMocks.ts';
 import {
   extractShaderCodes,
@@ -10,24 +9,6 @@ import {
   testExampleShaderGeneration,
   waitForExpectedCalls,
 } from './testUtils.ts';
-
-let resizePatched = false;
-
-function allowTextureResize(device: GPUDevice) {
-  if (resizePatched) {
-    return;
-  }
-  resizePatched = true;
-
-  const root = tgpu.initFromDevice({ device });
-  const proto = Object.getPrototypeOf(
-    root.createTexture({ size: [1, 1], format: 'rgba8unorm' }),
-  ) as { write: (source: unknown, options?: object) => unknown };
-  const originalWrite = proto.write;
-  proto.write = function (this: unknown, source: unknown, options?: object) {
-    return originalWrite.call(this, source, { ...options, resize: true });
-  };
-}
 
 export interface ExampleTestConfig {
   category: string;
@@ -45,8 +26,6 @@ export async function runExampleTest(
   if (config.setupMocks) {
     config.setupMocks();
   }
-
-  allowTextureResize(device);
 
   const urls = getExampleURLs(config.category, config.name);
   const html = await import(urls.html);
