@@ -1,3 +1,5 @@
+import { DEV, TEST } from './shared/env.ts';
+
 const warningTypes = [
   'deprecated',
   'suspicious',
@@ -19,21 +21,49 @@ interface Logger {
   warn(type: (typeof warningTypes)[number], ...args: unknown[]): void;
 }
 
-// user-facing API
+/**
+ * Use this object to globally disable TypeGPU warnings.
+ * All warnings are better addressed than silenced, only use this when absolutely necessary.
+ *
+ * By default, lesser warnings are already silenced in production environment.
+ */
 interface Warn {
+  /**
+   * Globally disables one kind of warnings.
+   * Do not use unless absolutely necessary.
+   */
   disable(type: WarningType): void;
+  /**
+   * Restores the initial state.
+   */
   reset(): void;
 }
 
 export class TgpuLogger implements Logger, Warn {
-  #enabledWarnings: Set<WarningType> = new Set(warningTypes);
+  #initialEnabledWarnings: readonly WarningType[];
+  #enabledWarnings: Set<WarningType>;
+
+  constructor(prod: boolean) {
+    if (prod) {
+      this.#initialEnabledWarnings = [
+        'webgpu-feature-missing',
+        'webgpu-limits-exceeded',
+        'locations-mismatched',
+        'log-limit-exceeded',
+        'external-omitted',
+      ];
+    } else {
+      this.#initialEnabledWarnings = warningTypes;
+    }
+    this.#enabledWarnings = new Set(this.#initialEnabledWarnings);
+  }
 
   disable(type: WarningType) {
     this.#enabledWarnings.delete(type);
   }
 
   reset() {
-    this.#enabledWarnings = new Set(warningTypes);
+    this.#enabledWarnings = new Set(this.#initialEnabledWarnings);
   }
 
   warn(type: WarningType, ...args: unknown[]) {
@@ -43,6 +73,6 @@ export class TgpuLogger implements Logger, Warn {
   }
 }
 
-const tgpuLogger = new TgpuLogger();
+const tgpuLogger = new TgpuLogger(!(DEV || TEST));
 export const logger: Logger = tgpuLogger;
 export const warn: Warn = tgpuLogger;

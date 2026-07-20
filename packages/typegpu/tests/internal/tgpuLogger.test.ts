@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { logger, TgpuLogger, warn } from '../../src/tgpuLogger.ts';
+import { TgpuLogger } from '../../src/tgpuLogger.ts';
 
 describe('tgpuLogger', () => {
   it('warns through console.warn', () => {
     using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const logger = new TgpuLogger();
+    const logger = new TgpuLogger(false);
 
     logger.warn('deprecated', 'this is deprecated');
 
@@ -19,7 +19,7 @@ describe('tgpuLogger', () => {
 
   it('does not warn after disabling', () => {
     using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const logger = new TgpuLogger();
+    const logger = new TgpuLogger(false);
 
     logger.disable('deprecated');
     logger.warn('deprecated', 'this is deprecated');
@@ -29,7 +29,7 @@ describe('tgpuLogger', () => {
 
   it('starts warning after reset', () => {
     using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const logger = new TgpuLogger();
+    const logger = new TgpuLogger(false);
 
     logger.disable('deprecated');
     logger.reset();
@@ -46,6 +46,7 @@ describe('tgpuLogger', () => {
 
   it('works with multiple arguments', () => {
     using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const logger = new TgpuLogger(false);
 
     logger.warn('suspicious', 'there is an impostor among us', 42, { prop: 1 });
 
@@ -64,8 +65,9 @@ describe('tgpuLogger', () => {
 
   it('only silences the disabled type', () => {
     using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const logger = new TgpuLogger(false);
 
-    warn.disable('deprecated');
+    logger.disable('deprecated');
     logger.warn('suspicious', 'still warns');
 
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
@@ -75,5 +77,16 @@ describe('tgpuLogger', () => {
         "still warns",
       ]
     `);
+  });
+
+  it('has stricter rules in prod mode', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const logger = new TgpuLogger(true);
+
+    logger.warn('suspicious', '...');
+    logger.warn('deprecated', '...');
+    logger.warn('fallback', '...');
+
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
   });
 });
