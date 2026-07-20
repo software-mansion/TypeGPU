@@ -22,7 +22,7 @@ export interface TgpuResolveOptions {
    * This allows tracking the behavior of the resolution process, as well as
    * sharing state between calls to `tgpu.resolve`.
    *
-   * @default 'random'
+   * @default 'strict'
    */
   names?: 'strict' | 'random' | Namespace | undefined;
   /**
