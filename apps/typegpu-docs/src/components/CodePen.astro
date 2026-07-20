@@ -1,36 +1,36 @@
 ---
-import { Code } from "astro/components";
+import { Code } from 'astro/components';
 
 type SupportedLanguages =
-  | "typescript"
-  | "javascript"
-  | "jsx"
-  | "tsx"
-  | "html"
-  | "css"
-  | "json"
-  | "yaml"
-  | "markdown"
-  | "bash"
-  | "shell";
+  | 'typescript'
+  | 'javascript'
+  | 'jsx'
+  | 'tsx'
+  | 'html'
+  | 'css'
+  | 'json'
+  | 'yaml'
+  | 'markdown'
+  | 'bash'
+  | 'shell';
 
 interface Props {
   code: string;
   language?: SupportedLanguages;
 }
 
-const { code, language = "typescript" } = Astro.props as Props;
+const { code, language = 'typescript' } = Astro.props as Props;
 
 const formattedCode = code.trim();
 ---
 
 <div class="w-full">
-  <div class:list={["overflow-x-auto", "text-[0.5rem] md:text-sm font-mono"]}>
+  <div class:list={['overflow-x-auto', 'font-mono text-[0.5rem] md:text-sm']}>
     <Code
       code={formattedCode}
       lang={language}
       theme="github-dark"
-      class={"p-4"}
+      class={'p-4'}
     />
   </div>
 </div>
@@ -38,7 +38,7 @@ const formattedCode = code.trim();
 <style>
   code {
     counter-reset: line;
-    font-family: "JetBrains Mono", monospace;
+    font-family: 'JetBrains Mono', monospace;
   }
 
   :global(code) {
