@@ -6,17 +6,17 @@ interface Props {
 }
 
 const {
-  title = "Get started",
-  href = "/TypeGPU/getting-started",
+  title = 'Get started',
+  href = '/TypeGPU/getting-started',
   class: className,
 } = Astro.props;
 ---
 
 <a
   class:list={[
-    "relative overflow-hidden box-border flex justify-center items-center w-full gap-3 py-4 px-6 md:py-5 md:px-7 lg:px-8 lg:py-6 text-grayscale-0 transition-all duration-200 hover:duration-500 ease-out text-base md:text-xl lg:text-2xl no-underline sm:w-auto",
-    "bg-gradient-to-tl bg-size-[200%_200%] from-gradient-blue via-gradient-purple to-[#f8f7dd] bg-position-[100%_100%] hover:bg-position-[50%_50%]",
-    'before:content-[""] before:animate-scroll-bg-y-slow before:transition-opacity before:skew-x-16 before:duration-200 hover:before:delay-200 hover:before:duration-[1s] before:ease-out before:opacity-0 hover:before:opacity-100 before:block before:absolute before:inset-0 before:bg-gradient-to-tr before:from-white/20 before:to-white/0 before:bg-center before:bg-size-[3rem_2rem] before:mix-blend-color-dodge',
+    'text-grayscale-0 relative box-border flex w-full items-center justify-center gap-3 overflow-hidden px-6 py-4 text-base no-underline transition-all duration-200 ease-out hover:duration-500 sm:w-auto md:px-7 md:py-5 md:text-xl lg:px-8 lg:py-6 lg:text-2xl',
+    'from-gradient-blue via-gradient-purple bg-gradient-to-tl to-[#f8f7dd] bg-size-[200%_200%] bg-position-[100%_100%] hover:bg-position-[50%_50%]',
+    'before:animate-scroll-bg-y-slow before:absolute before:inset-0 before:block before:skew-x-16 before:bg-gradient-to-tr before:from-white/20 before:to-white/0 before:bg-size-[3rem_2rem] before:bg-center before:opacity-0 before:mix-blend-color-dodge before:transition-opacity before:duration-200 before:ease-out before:content-[""] hover:before:opacity-100 hover:before:delay-200 hover:before:duration-[1s]',
     className,
   ]}
   {href}
