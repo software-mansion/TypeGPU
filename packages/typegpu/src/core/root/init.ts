@@ -743,7 +743,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
       availableFeatures.push(feature);
     } else {
       logger.warn(
-        'missing-webgpu-feature',
+        'webgpu-feature-missing',
         `Optional feature "${feature}" is not supported by the adapter.`,
       );
     }

@@ -3,14 +3,14 @@ const warningTypes = [
   'suspicious',
   'fallback',
 
-  'missing-webgpu-feature',
-  'webgpu-limits-exceeded',
-
-  'implicit-conversion',
-  'mismatched-locations',
-  'log-limit-exceeded',
-  'omitted-external',
   'precision-loss',
+  'implicit-conversion',
+
+  'webgpu-feature-missing',
+  'webgpu-limits-exceeded',
+  'locations-mismatched',
+  'log-limit-exceeded',
+  'external-omitted',
 ] as const;
 type WarningType = (typeof warningTypes)[number];
 

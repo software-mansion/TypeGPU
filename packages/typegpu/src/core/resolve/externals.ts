@@ -126,7 +126,7 @@ export function replaceExternalsInWgsl(
 
       if (typeof currentItem !== 'object' || currentItem === null || i === chain.length - 1) {
         logger.warn(
-          'omitted-external',
+          'external-omitted',
           `During resolution, the external '${chain.slice(0, i + 1).join('.')}' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.`,
         );
         return match;

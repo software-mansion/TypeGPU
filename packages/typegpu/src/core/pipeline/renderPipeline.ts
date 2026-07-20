@@ -603,7 +603,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const querySet = internals.core.performanceCallbackQuerySet;
     if (!querySet) {
       logger.warn(
-        'missing-webgpu-feature',
+        'webgpu-feature-missing',
         'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
       );
       return this;
@@ -1291,7 +1291,7 @@ export function matchUpVaryingLocations(
       saveLocation(key, customLocation);
     } else if (locations[key] !== customLocation) {
       logger.warn(
-        'mismatched-locations',
+        'locations-mismatched',
         `Mismatched location between vertexFn (${vertexFnName}) output (${
           locations[key]
         }) and fragmentFn (${fragmentFnName}) input (${customLocation}) for the key "${key}", using the location set on vertex output.`,

@@ -229,7 +229,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     const querySet = this.#core.performanceCallbackQuerySet;
     if (!querySet) {
       logger.warn(
-        'missing-webgpu-feature',
+        'webgpu-feature-missing',
         'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
       );
       return this;
