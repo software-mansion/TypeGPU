@@ -1,9 +1,8 @@
-import { stitch } from '../core/resolve/stitch.ts';
 import { UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
-import { isAlias, snip, withDataType, type Snippet } from '../data/snippet.ts';
+import { snip, withDataType, type Snippet } from '../data/snippet.ts';
 import {
   type AbstractFloat,
   type AnyWgslData,
@@ -256,7 +255,12 @@ function applyActionToSnippet(
 
   switch (action.action) {
     case 'ref':
-      return snip(new RefOperator(snippet, targetType as Ptr), targetType, snippet.origin);
+      return snip(
+        new RefOperator(snippet, targetType as Ptr),
+        targetType,
+        snippet.origin,
+        snippet.possibleSideEffects,
+      );
     case 'deref':
       return derefSnippet(snippet);
     case 'cast': {
@@ -265,7 +269,7 @@ function applyActionToSnippet(
         const targetName = getName(targetType) ?? '<unnamed>';
 
         // Struct to struct casting
-        if (!isAlias(snippet)) {
+        if (snippet.possibleSideEffects) {
           throw new Error(
             `Cannot resolve struct cast from '${typeName}' to '${targetName}'. Store the value to a variable first, then cast it.`,
           );
@@ -303,6 +307,9 @@ function applyActionToSnippet(
   }
 }
 
+/**
+ * Unifies input types to a common type.
+ */
 export function unify<T extends (BaseData | UnknownData)[] | []>(
   inTypes: T,
   restrictTo?: BaseData[],
@@ -312,6 +319,29 @@ export function unify<T extends (BaseData | UnknownData)[] | []>(
   }
 
   const conversion = getBestConversion(inTypes as BaseData[], restrictTo);
+  if (!conversion) {
+    return undefined;
+  }
+
+  return inTypes.map((type) => (isVec(type) || isMat(type) ? type : conversion.targetType)) as {
+    [K in keyof T]: BaseData;
+  };
+}
+
+/**
+ * Unifies input types to a common type.
+ * Unlike `unify`, it does not allow implicit conversions.
+ */
+export function unifyStrict<T extends (BaseData | UnknownData)[] | []>(
+  inTypes: T,
+  restrictTo?: BaseData[],
+): { [K in keyof T]: BaseData } | undefined {
+  if (inTypes.some((type) => type === UnknownData)) {
+    return undefined;
+  }
+
+  const uniqueTargetTypes = [...new Set(((restrictTo || inTypes) as BaseData[]).map(undecorate))];
+  const conversion = findBestType(inTypes as BaseData[], uniqueTargetTypes, false);
   if (!conversion) {
     return undefined;
   }
@@ -368,18 +398,18 @@ export function tryConvertSnippet(
 ): Snippet {
   const targets = Array.isArray(targetDataTypes) ? targetDataTypes : [targetDataTypes];
 
-  const { value, dataType, origin } = snippet;
+  const { value, dataType, origin, possibleSideEffects } = snippet;
 
   if (targets.length === 1) {
     const target = targets[0] as AnyWgslData;
 
     if (target === dataType) {
-      return snip(value, target, origin);
+      return snip(value, target, origin, possibleSideEffects);
     }
 
     if (dataType === UnknownData) {
       // Commit unknown to the expected type.
-      return snip(stitch`${snip(value, target, origin)}`, target, origin);
+      return ctx.resolveSnippet(snip(value, target, origin, possibleSideEffects));
     }
   }
 

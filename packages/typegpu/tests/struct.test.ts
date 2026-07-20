@@ -1,6 +1,4 @@
-import { BufferReader, BufferWriter } from 'typed-binary';
 import { describe, expect, expectTypeOf } from 'vitest';
-import { readData, writeData } from '../src/data/dataIO.ts';
 import {
   alignmentOf,
   arrayOf,
@@ -17,11 +15,10 @@ import {
   vec3f,
   vec3h,
   vec3u,
-} from '../src/data/index.ts';
-import tgpu from '../src/index.js';
-import * as d from '../src/data/index.ts';
-import type { Infer } from '../src/shared/repr.ts';
-import { frexp } from '../src/std/numeric.ts';
+} from 'typegpu/data';
+import { readFromArrayBuffer, tgpu, writeToArrayBuffer, d } from 'typegpu';
+import type { Infer } from 'typegpu/data';
+import { frexp } from 'typegpu/std';
 import { it } from 'typegpu-testing-utility';
 
 describe('struct', () => {
@@ -40,9 +37,8 @@ describe('struct', () => {
     });
 
     const buffer = new ArrayBuffer(sizeOf(TestStruct));
-    const writer = new BufferWriter(buffer);
 
-    writeData(writer, TestStruct, { x: 1, y: vec3u(1, 2, 3) });
+    writeToArrayBuffer(buffer, TestStruct, { x: 1, y: vec3u(1, 2, 3) });
     expect([...new Uint32Array(buffer)]).toStrictEqual([1, 0, 0, 0, 1, 2, 3, 0]);
   });
 
@@ -53,11 +49,10 @@ describe('struct', () => {
     });
 
     const buffer = new ArrayBuffer(sizeOf(TestStruct));
-    const reader = new BufferReader(buffer);
 
     new Uint32Array(buffer).set([3, 0, 0, 0, 4, 5, 6]);
 
-    expect(readData(reader, TestStruct)).toStrictEqual({
+    expect(readFromArrayBuffer(buffer, TestStruct)).toStrictEqual({
       x: 3,
       y: vec3u(4, 5, 6),
     });
@@ -94,8 +89,8 @@ describe('struct', () => {
       },
     };
 
-    writeData(new BufferWriter(buffer), TestStruct, value);
-    expect(readData(new BufferReader(buffer), TestStruct)).toStrictEqual(value);
+    writeToArrayBuffer(buffer, TestStruct, value);
+    expect(readFromArrayBuffer(buffer, TestStruct)).toStrictEqual(value);
   });
 
   it('allows for runtime sized arrays as last property', () => {
@@ -163,8 +158,8 @@ describe('struct', () => {
       d: 4.0,
     };
 
-    writeData(new BufferWriter(buffer), TestStruct, value);
-    expect(readData(new BufferReader(buffer), TestStruct)).toStrictEqual(value);
+    writeToArrayBuffer(buffer, TestStruct, value);
+    expect(readFromArrayBuffer(buffer, TestStruct)).toStrictEqual(value);
   });
 
   it('properly aligns with f16', () => {
@@ -185,8 +180,8 @@ describe('struct', () => {
       c: 3,
     };
 
-    writeData(new BufferWriter(buffer), TestStruct, value);
-    expect(readData(new BufferReader(buffer), TestStruct)).toStrictEqual(value);
+    writeToArrayBuffer(buffer, TestStruct, value);
+    expect(readFromArrayBuffer(buffer, TestStruct)).toStrictEqual(value);
   });
 
   it('supports and properly aligns with vectors of f16', () => {
@@ -205,8 +200,8 @@ describe('struct', () => {
       b: 4.0,
     };
 
-    writeData(new BufferWriter(buffer), TestStruct, value);
-    expect(readData(new BufferReader(buffer), TestStruct)).toStrictEqual(value);
+    writeToArrayBuffer(buffer, TestStruct, value);
+    expect(readFromArrayBuffer(buffer, TestStruct)).toStrictEqual(value);
 
     const TestStruct2 = struct({
       a: vec2h,
@@ -230,8 +225,8 @@ describe('struct', () => {
       c: vec2h(8.0, 9.0),
     };
 
-    writeData(new BufferWriter(buffer2), TestStruct2, value2);
-    expect(readData(new BufferReader(buffer2), TestStruct2)).toStrictEqual(value2);
+    writeToArrayBuffer(buffer2, TestStruct2, value2);
+    expect(readFromArrayBuffer(buffer2, TestStruct2)).toStrictEqual(value2);
   });
 
   it('can be called to create an object', () => {
@@ -572,21 +567,43 @@ describe('struct', () => {
     const Boid = d.struct({ pos: d.vec2u, id: d.u32 });
     const Bird = d.struct({ pos: d.vec2u, id: d.u32 });
 
-    const reallyExpensiveAndAlsoModifiedPrivateVarsBtw = () => {
+    const counter = tgpu.privateVar(d.u32, 0);
+    function getNextCounter() {
       'use gpu';
-      return Boid();
-    };
+      counter.$++;
+      return counter.$;
+    }
 
-    const main = () => {
+    function getNewBoid() {
       'use gpu';
-      const bird = Bird(reallyExpensiveAndAlsoModifiedPrivateVarsBtw());
-    };
+      return Boid({ pos: d.vec2u(), id: getNextCounter() });
+    }
+
+    function main() {
+      'use gpu';
+      const bird = Bird(getNewBoid());
+    }
 
     expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
       - fn*:main(): Cannot resolve struct cast from 'Boid' to 'Bird'. Store the value to a variable first, then cast it.]
+    `);
+
+    function main2() {
+      'use gpu';
+      const boids = d.arrayOf(Boid, 2)();
+      // Should fail, because even though `boids[getNextCounter()]` is an alias for an existing
+      // value, the expression has side-effects (increments counter).
+      const bird = Bird(boids[getNextCounter()]!);
+    }
+
+    expect(() => tgpu.resolve([main2])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main2
+      - fn*:main2(): Cannot resolve struct cast from 'Boid' to 'Bird'. Store the value to a variable first, then cast it.]
     `);
   });
 

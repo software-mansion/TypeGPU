@@ -1,5 +1,5 @@
 import type { StatefulGenerator } from '@typegpu/noise';
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 
 export const LCG: StatefulGenerator = (() => {
   const seed = tgpu.privateVar(d.u32);
@@ -10,7 +10,7 @@ export const LCG: StatefulGenerator = (() => {
   )((value) => {
     const mantissa = value >> 9;
     const bits = 0x3f800000 | mantissa;
-    const f = std.bitcastU32toF32(bits);
+    const f = std.bitcast(d.u32, d.f32)(bits);
     return f - 1;
   });
 

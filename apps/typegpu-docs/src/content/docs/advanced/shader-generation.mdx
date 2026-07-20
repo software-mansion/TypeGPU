@@ -39,53 +39,6 @@ const boid = createBoid();
 //    ^?
 ```
 
-:::caution
-We could do everything at runtime, transforming the code a bit so that the TypeGPU shader generator can have access to
-a function's JS source code, along with references to values referenced from the outer scope.
-
-The code shipped to the browser could look like so:
-```js
-const createBoid = () => {
-  'use gpu';
-  return Boid({ pos: vec3(), vel: vec3(0, 1, 0) });
-};
-
-// Associate metadata with the function, which the TypeGPU generator can later use
-(globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(createBoid, {
-  v: 1,
-  name: 'createBoid',
-  code: `() => {
-    'use gpu';
-    return Boid({ pos: vec3(), vel: vec3(0, 1, 0) });
-  }`,
-  get externals() { return { Boid, vec3 }; },
-});
-```
-
-However, parsing code at runtime requires both shipping the parser to the end user, and having to spend time parsing the code,
-sacrificing load times and performance.
-:::
-
-In order to avoid parsing at runtime while keeping the desired flexibility, we parse the AST at build time and compress it into
-our custom format called [tinyest](https://npmjs.com/package/tinyest). It retains only information required for WGSL code
-generation.
-
-The code shipped to the browser looks more like this:
-```js
-const createBoid = () => {
-  'use gpu';
-  return Boid({ pos: vec3(), vel: vec3(0, 1, 0) });
-};
-
-(globalThis.__TYPEGPU_META__ ??= new WeakMap()).set(createBoid, {
-  v: 1,
-  name: 'createBoid',
-  // NOTE: Not meant to be read by humans
-  ast: {params:[],body:[0,[[10,[6,"Boid",[[104,{pos:[6,"vec3",[]],vel:[6,"vec3",[[5,"0"],[5,"1"],[5,"0"]]]}]]]]]],externalNames:["Boid","vec3"]},
-  get externals() { return { Boid, vec3 }; },
-});
-```
-
 ## Snippets
 
 Snippets are the basis for TypeGPU shader code generation. They are immutable objects that hold three values:

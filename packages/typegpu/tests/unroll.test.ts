@@ -1,7 +1,6 @@
 import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import * as d from '../src/data/index.ts';
-import tgpu, { std } from '../src/index.js';
+import { tgpu, std, d } from 'typegpu';
 
 describe('tgpu.unroll', () => {
   it('called outside the gpu function returns passed iterable', () => {
@@ -904,6 +903,77 @@ describe('tgpu.unroll', () => {
           a += 7f;
         }
         return a;
+      }"
+    `);
+  });
+
+  it('allows for emulating dynamic dispatch', () => {
+    function power(color: d.v3f) {
+      'use gpu';
+      return std.pow(color, d.vec3f(2));
+    }
+
+    function tanh(color: d.v3f) {
+      'use gpu';
+      return std.tanh(color);
+    }
+
+    const Tonemap = {
+      None: undefined,
+      Power: power,
+      Tanh: tanh,
+    };
+    type TonemapKey = keyof typeof Tonemap;
+    const tonemapKeys = Object.keys(Tonemap) as TonemapKey[];
+
+    const tonemapKeyToIdx = tgpu.comptime((key: TonemapKey) => tonemapKeys.indexOf(key));
+
+    function dynamicDispatch(fnIdx: number, color: d.v3f) {
+      'use gpu';
+      for (const key of tgpu.unroll(tonemapKeys)) {
+        if (Tonemap[key] && fnIdx === tonemapKeyToIdx(key)) {
+          return Tonemap[key](color);
+        }
+      }
+      return d.vec3f(color);
+    }
+
+    function main() {
+      'use gpu';
+      return dynamicDispatch(0, d.vec3f(1, 0.5, 0.25));
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn power(color: vec3f) -> vec3f {
+        return pow(color, vec3f(2));
+      }
+
+      fn tanh_1(color: vec3f) -> vec3f {
+        return tanh(color);
+      }
+
+      fn dynamicDispatch(fnIdx: i32, color: vec3f) -> vec3f {
+        // unrolled iteration #0
+        {
+
+        }
+        // unrolled iteration #1
+        {
+          if ((fnIdx == 1i)) {
+            return power(color);
+          }
+        }
+        // unrolled iteration #2
+        {
+          if ((fnIdx == 2i)) {
+            return tanh_1(color);
+          }
+        }
+        return color;
+      }
+
+      fn main() -> vec3f {
+        return dynamicDispatch(0i, vec3f(1, 0.5, 0.25));
       }"
     `);
   });

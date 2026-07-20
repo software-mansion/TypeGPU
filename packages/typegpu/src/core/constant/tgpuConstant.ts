@@ -24,10 +24,6 @@ type DeepReadonly<T> = T extends { [$internal]: unknown }
 export interface TgpuConst<TDataType extends BaseData = BaseData> extends TgpuNamable {
   readonly resourceType: 'const';
   readonly [$gpuValueOf]: DeepReadonly<InferGPU<TDataType>>;
-  /**
-   * @deprecated Use `.$` instead, works the same way.
-   */
-  readonly value: DeepReadonly<InferGPU<TDataType>>;
   readonly $: DeepReadonly<InferGPU<TDataType>>;
 
   readonly [$internal]: {
@@ -128,7 +124,7 @@ class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType>,
       {
         [$internal]: true,
         get [$ownSnippet]() {
-          return snip(this, dataType, 'constant-immutable-def');
+          return snip(this, dataType, 'constant-immutable-def', /* possibleSideEffects */ false);
         },
         [$resolve]: (ctx) => ctx.resolve(this),
         toString: () => `const:${getName(this) ?? '<unnamed>'}.$`,
@@ -143,9 +139,5 @@ class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType>,
     }
 
     return this.#value;
-  }
-
-  get value(): DeepReadonly<InferGPU<TDataType>> {
-    return this.$;
   }
 }

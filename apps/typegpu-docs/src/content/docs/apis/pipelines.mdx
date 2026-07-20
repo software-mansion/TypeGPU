@@ -21,7 +21,7 @@ A pipeline can be defined with one of the following methods on the [root](/TypeG
 
 ```ts twoslash
 /// <reference types="@webgpu/types" />
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -73,7 +73,7 @@ The `createRenderPipeline` method creates a render pipeline by accepting an opti
 The vertex function's input parameters (non-builtin) are matched to vertex attributes specified in the pipeline's vertex layout when executing. Vertex attributes are validated at the type level for compatibility.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 const presentationFormat = 'rgba8unorm';
@@ -123,7 +123,7 @@ When a custom location is provided by the user (via the `d.location` attribute f
 as long as there is no conflict between vertex and fragment location values.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const vertex = tgpu.vertexFn({
   out: { pos: d.builtin.position },
@@ -152,7 +152,7 @@ The `createComputePipeline` method creates a compute pipeline by accepting an op
 - `compute`: The `TgpuComputeFn` to use as the compute shader.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -176,7 +176,7 @@ Instead of dispatching workgroups, the guarded pipeline allows calling an exact 
 Under the hood, it creates a compute pipeline that calls the provided callback only if the current thread ID is within the requested range.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const data = root.createMutable(d.arrayOf(d.u32, 8), [0, 1, 2, 3, 4, 5, 6, 7]);
@@ -210,7 +210,7 @@ Buffer initialization commonly uses random number generators.
 For that, you can use the [`@typegpu/noise`](TypeGPU/ecosystem/typegpu-noise) library.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 // ---cut---
 import { randf } from '@typegpu/noise';
 
@@ -241,6 +241,68 @@ const innerPipeline = doubleUpPipeline.with(bindGroup1).pipeline;
 tgpu.resolve([innerPipeline]);
 ```
 :::
+
+## Initialization
+
+Pipeline initialization involves resolving the pipeline code, creating the shader module, and creating the underlying WebGPU pipeline.
+This happens automatically the first time the pipeline is executed via `.draw`, `.dispatchWorkgroups`, or a similar method.
+The `initSync` method lets you start the initialization early.
+To wait until initialization actually finishes on the device (fully avoiding a stall on first execution), use `initAsync` instead.
+
+:::note
+For small and medium sized shaders, pipeline pre-initialization does not provide a noticeable performance improvement.
+Use `initSync`/`initAsync` only in larger applications, or in cases where your shaders are particularly large or numerous.
+:::
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+const mainCompute = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+const pipeline = root.createComputePipeline({
+  compute: mainCompute,
+});
+// ---cut---
+// Automatically calls `pipeline.initSync();`,
+// then enqueues a dispatch.
+pipeline.dispatchWorkgroups(1);
+```
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+const mainCompute = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+const pipeline = root.createComputePipeline({
+  compute: mainCompute,
+});
+// ---cut---
+// If not already initialized, runs JS initialization,
+// and issues pipeline initialization steps on the device.
+pipeline.initSync();
+
+// Enqueues a dispatch.
+// Stall partially avoided because the pipeline is already resolved.
+pipeline.dispatchWorkgroups(1);
+```
+
+```ts twoslash
+import tgpu from 'typegpu';
+const root = await tgpu.init();
+const mainCompute = tgpu.computeFn({ workgroupSize: [1] })(() => {});
+const pipeline = root.createComputePipeline({
+  compute: mainCompute,
+});
+// ---cut---
+// If not already initialized, runs JS initialization,
+// and issues pipeline initialization steps on the device.
+const initPromise = pipeline.initAsync();
+
+// Awaits until the initialization finishes.
+await initPromise;
+
+// Enqueues a dispatch.
+// Stall avoided, the pipeline is already resolved and initialized on the device.
+pipeline.dispatchWorkgroups(1);
+```
 
 ## Execution
 
@@ -342,7 +404,7 @@ Compute pipelines are executed using the `dispatchWorkgroups` method, which acce
 The `drawIndexed` is analogous to draw, but takes advantage of [index buffer](/TypeGPU/apis/buffers/#index-buffers) to explicitly map vertex data onto primitives. When using an index buffer, you don't need to list every vertex for every primitive explicitly. Instead, you provide a list of unique vertices in a vertex buffer. Then, the index buffer defines how these vertices are connected to form primitives.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 const presentationFormat = "rgba8unorm";
@@ -428,7 +490,7 @@ That way, they can be used with a regular WebGPU API, but unlike the `root['~uns
 resources.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 

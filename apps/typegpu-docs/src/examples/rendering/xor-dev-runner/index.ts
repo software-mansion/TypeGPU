@@ -12,7 +12,7 @@
  * ```
  */
 
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 import { abs, add, cos, max, min, mul, select, sign, sin, sub, tanh } from 'typegpu/std';
 import { defineControls } from '../../common/defineControls.ts';
 import { Camera, setupFirstPersonCamera } from '../../common/setup-first-person-camera.ts';

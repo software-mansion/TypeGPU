@@ -1,12 +1,15 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
-import type { TgpuTexture, TgpuTextureView } from '../src/core/texture/texture.ts';
-import type { RenderFlag, SampledFlag } from '../src/core/texture/usageExtension.ts';
-import type { ExperimentalTgpuRoot } from '../src/core/root/rootTypes.ts';
+import type {
+  RenderFlag,
+  SampledFlag,
+  StorageFlag,
+  TgpuRoot,
+  TgpuTexture,
+  TgpuTextureView,
+} from 'typegpu';
 import { it } from 'typegpu-testing-utility';
-import * as d from '../src/data/index.ts';
 import { attest } from '@ark/attest';
-import tgpu from '../src/index.js';
-import { getName } from '../src/shared/meta.ts';
+import { tgpu, d } from 'typegpu';
 
 describe('TgpuTexture', () => {
   it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({
@@ -158,6 +161,70 @@ describe('TgpuTexture', () => {
     >();
   });
 
+  it('creates transient textures with the exact WebGPU usage bits', ({ root, device }) => {
+    const texture = root
+      .createTexture({
+        size: [512, 512],
+        format: 'rgba8unorm',
+      })
+      .$usage('transient');
+
+    expectTypeOf(texture).toEqualTypeOf<
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> & RenderFlag
+    >();
+
+    root.unwrap(texture);
+
+    expect(device.mock.createTexture).toHaveBeenCalledWith(
+      expect.objectContaining({
+        usage: GPUTextureUsage.TRANSIENT_ATTACHMENT | GPUTextureUsage.RENDER_ATTACHMENT,
+      }),
+    );
+  });
+
+  it('rejects combining transient texture usage with sampled usage', ({ root }) => {
+    expect(() =>
+      root
+        .createTexture({
+          size: [512, 512],
+          format: 'rgba8unorm',
+        })
+        .$usage('transient', 'sampled'),
+    ).toThrow("Transient texture usage cannot be combined with 'sampled' or 'storage'.");
+  });
+
+  it('overrides raw WebGPU usage flags exactly', ({ root, device }) => {
+    const texture = root
+      .createTexture({
+        size: [512, 512],
+        format: 'rgba8unorm',
+      })
+      .$overrideFlags(GPUTextureUsage.RENDER_ATTACHMENT);
+
+    expectTypeOf(texture).toEqualTypeOf<
+      TgpuTexture<{ size: [512, 512]; format: 'rgba8unorm' }> &
+        SampledFlag &
+        StorageFlag &
+        RenderFlag
+    >();
+
+    root.unwrap(texture);
+
+    expect(texture).toMatchObject({
+      usableAsSampled: true,
+      usableAsStorage: true,
+      usableAsRender: true,
+    });
+    expect(() => texture.$usage('transient')).toThrow(
+      'Cannot call $usage() after $overrideFlags().',
+    );
+    expect(device.mock.createTexture).toHaveBeenCalledWith(
+      expect.objectContaining({
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      }),
+    );
+  });
+
   it('limits available extensions based on the chosen format', ({ root }) => {
     root
       .createTexture({
@@ -178,7 +245,7 @@ describe('TgpuTexture', () => {
 
     const sampled1 = texture.createView(d.texture2d(d.i32)).$name('myView');
 
-    expect(getName(sampled1)).toBe('myView');
+    expect(root.unwrap(sampled1).label).toBe('myView');
   });
 
   it('creates a sampled texture view with correct type', ({ root }) => {
@@ -1126,8 +1193,12 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       return d.vec4f(uv, 0, 1);
     });
 
-    const createRenderPipeline = (root: ExperimentalTgpuRoot) =>
-      root.withVertex(vertexFn).withFragment(fragmentFn, { format: 'rgba8unorm' }).createPipeline();
+    const createRenderPipeline = (root: TgpuRoot) =>
+      root.createRenderPipeline({
+        vertex: vertexFn,
+        fragment: fragmentFn,
+        targets: { format: 'rgba8unorm' },
+      });
 
     it('works correctly when using either a texture or its view as a render target', ({ root }) => {
       const texture = root

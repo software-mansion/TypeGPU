@@ -10,13 +10,15 @@ export function setupCommonMocks() {
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
     });
 
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => {
-      return createDeepNoopProxy(
-        {} as unknown as CanvasRenderingContext2D,
-        new Set(),
-        // oxlint-disable-next-line typescript/no-explicit-any -- we testing here
-      ) as any;
-    });
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(
+      function (this: HTMLCanvasElement) {
+        return createDeepNoopProxy(
+          { canvas: this } as unknown as CanvasRenderingContext2D,
+          new Set(),
+          // oxlint-disable-next-line typescript/no-explicit-any -- we testing here
+        ) as any;
+      },
+    );
 
     Object.defineProperty(HTMLCanvasElement.prototype, 'width', {
       get: () => 256,
@@ -194,13 +196,13 @@ export function mock3DModelLoading() {
     load: vi.fn(async () => ({
       attributes: {
         POSITION: {
-          value: new Float32Array(),
+          value: new Float32Array([0, 0, 0, 1, 1, 1, 2, 2, 2]),
         },
         NORMAL: {
-          value: new Float32Array(),
+          value: new Float32Array([0, 1, 0, 0, 1, 0, 0, 1, 0]),
         },
         TEXCOORD_0: {
-          value: new Float32Array(),
+          value: new Float32Array([0, 0, 0, 0, 0, 0]),
         },
       },
     })),

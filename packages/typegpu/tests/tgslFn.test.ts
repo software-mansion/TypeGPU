@@ -1,8 +1,7 @@
 import { attest } from '@ark/attest';
 import { describe, expect } from 'vitest';
-import { builtin } from '../src/builtin.ts';
-import tgpu, { d, type TgpuFn, type TgpuSlot } from '../src/index.js';
-import { getName } from '../src/shared/meta.ts';
+import { builtin } from 'typegpu/data';
+import { tgpu, d, type TgpuFn, type TgpuSlot } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 
 describe('TGSL tgpu.fn function', () => {
@@ -14,7 +13,7 @@ describe('TGSL tgpu.fn function', () => {
       )(() => 3)
       .$name('get_x');
 
-    expect(getName(getX)).toBe('get_x');
+    expect(tgpu.resolve([getX])).toContain('fn get_x() -> f32');
   });
 
   it('resolves to WGSL', () => {
@@ -28,36 +27,30 @@ describe('TGSL tgpu.fn function', () => {
   });
 
   it('resolves externals', () => {
-    const getColor = tgpu
-      .fn(
-        [],
-        d.vec3f,
-      )(() => {
-        const color = d.vec3f();
-        const color2 = d.vec3f(1, 2, 3);
-        return color;
-      })
-      .$uses({ v: d.vec3f });
+    const getColor = tgpu.fn(
+      [],
+      d.vec3f,
+    )(() => {
+      const color = d.vec3f();
+      const color2 = d.vec3f(1, 2, 3);
+      return color;
+    });
 
-    const getX = tgpu
-      .fn(
-        [],
-        d.f32,
-      )(() => {
-        const color = getColor();
-        return 3;
-      })
-      .$uses({ getColor });
+    const getX = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      const color = getColor();
+      return 3;
+    });
 
-    const getY = tgpu
-      .fn(
-        [],
-        d.f32,
-      )(() => {
-        const c = getColor();
-        return getX();
-      })
-      .$uses({ getX, getColor });
+    const getY = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      const c = getColor();
+      return getX();
+    });
 
     expect(tgpu.resolve([getY])).toMatchInlineSnapshot(`
       "fn getColor() -> vec3f {
@@ -265,7 +258,6 @@ describe('TGSL tgpu.fn function', () => {
       })
       .$name('vertex_fn');
 
-    expect(getName(vertexFn)).toBe('vertex_fn');
     expect(tgpu.resolve([vertexFn])).toMatchInlineSnapshot(`
       "struct vertex_fn_Output {
         @builtin(position) pos: vec4f,
@@ -1029,6 +1021,51 @@ describe('tgsl fn when using plugin', () => {
     `);
   });
 
+  it('allows for re-resolves of slotted functions', () => {
+    const slot = tgpu.slot<number>(1);
+    const helper = tgpu
+      .fn([])(() => {
+        'use gpu';
+        const x = slot.$;
+      })
+      .with(slot, 2);
+
+    const fn1 = () => {
+      'use gpu';
+      helper();
+    };
+
+    const fn2 = () => {
+      'use gpu';
+      helper();
+    };
+
+    const main = () => {
+      'use gpu';
+      fn1();
+      fn2();
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn helper() {
+        const x = 2;
+      }
+
+      fn fn1() {
+        helper();
+      }
+
+      fn fn2() {
+        helper();
+      }
+
+      fn main() {
+        fn1();
+        fn2();
+      }"
+    `);
+  });
+
   it('allows .with to be called at comptime', () => {
     const multiplierSlot = tgpu.slot(1);
     const scale = tgpu.fn(
@@ -1138,11 +1175,125 @@ describe('tgsl fn when using plugin', () => {
     };
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-      "const myConst: u32 = 1u;
+      "const EXT_myConst: u32 = 1u;
 
       fn fn_1() -> u32 {
-        return myConst;
+        return EXT_myConst;
       }"
+    `);
+  });
+
+  it("does not name externals that shouldn't be named", () => {
+    const Schema = (() =>
+      d.struct({ p: (() => d.struct({ q: (() => d.struct({ r: d.u32 }))() }))() }))();
+    const fn = () => {
+      'use gpu';
+      return Schema();
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "struct item_1 {
+        r: u32,
+      }
+
+      struct item {
+        q: item_1,
+      }
+
+      struct Schema {
+        p: item,
+      }
+
+      fn fn_1() -> Schema {
+        return Schema();
+      }"
+    `);
+  });
+
+  it('does not name slot values after the slot', () => {
+    const functionSlot = tgpu.slot(tgpu.fn([])(() => {}));
+
+    const fn = () => {
+      'use gpu';
+      functionSlot.$();
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn item() {
+
+      }
+
+      fn fn_1() {
+        item();
+      }"
+    `);
+  });
+});
+
+describe('string injection', () => {
+  it('is forbidden directly', () => {
+    const fn = () => {
+      'use gpu';
+      const x = 1;
+      ('call()');
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+
+  it('is forbidden via direct externals', () => {
+    const call = 'call()';
+
+    const fn = () => {
+      'use gpu';
+      const x = 1;
+      call;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+
+  it('is forbidden via indirect externals', () => {
+    const call = ['call()'];
+
+    const fn = () => {
+      'use gpu';
+      const x = 1;
+      call[0];
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
+    `);
+  });
+
+  it('is forbidden via slots', () => {
+    const slot = tgpu.slot('call()');
+
+    const fn = () => {
+      'use gpu';
+      const x = 1;
+      slot.$;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Strings cannot be injected into WGSL directly (tried to inject 'call()'). Look for TypeGPU APIs that cover your use-case, or resort to using tgpu['~unstable'].rawCodeSnippet for raw code injection.]
     `);
   });
 });

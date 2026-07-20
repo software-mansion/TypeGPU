@@ -139,7 +139,7 @@ export function isTextureChannelWrite(value: unknown): value is TextureChannelWr
   return isRecord(value) && 'channels' in value;
 }
 
-export function textureLayerSize(size: readonly number[]): readonly [number, number, number] {
+export function textureLayerSize(size: readonly number[]): [number, number, number] {
   return [size[0] ?? 1, size[1] ?? 1, 1];
 }
 

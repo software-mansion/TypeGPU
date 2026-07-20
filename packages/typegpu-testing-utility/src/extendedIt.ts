@@ -1,17 +1,25 @@
 // oxlint-disable no-empty-pattern
 import { test as base, vi } from 'vitest';
-import tgpu, { type TgpuRoot } from 'typegpu';
+import { tgpu, type TgpuRoot } from 'typegpu';
 // oxlint-disable-next-line import/no-unassigned-import -- imported for side effects
 import './webgpuGlobals.ts';
 
-const createTextureMock = (descriptor: GPUTextureDescriptor) => ({
-  ...descriptor,
-  with: (descriptor.size as number[])[0] ?? 1,
-  height: (descriptor.size as number[])[1] ?? 1,
-  depthOrArrayLayers: (descriptor.size as number[])[2] ?? 1,
-  createView: vi.fn(() => 'view'),
-  destroy: vi.fn(),
-});
+const createTextureMock = (descriptor: GPUTextureDescriptor) => {
+  const size =
+    'width' in descriptor.size
+      ? [descriptor.size.width, descriptor.size.height, descriptor.size.depthOrArrayLayers]
+      : [...descriptor.size];
+
+  return {
+    ...descriptor,
+    label: descriptor.label ?? '',
+    width: size[0] ?? 1,
+    height: size[1] ?? 1,
+    depthOrArrayLayers: size[2] ?? 1,
+    createView: vi.fn((viewDesc?: GPUTextureViewDescriptor) => ({ label: viewDesc?.label ?? '' })),
+    destroy: vi.fn(),
+  };
+};
 
 type ExperimentalTgpuRoot = TgpuRoot & TgpuRoot['~unstable'];
 
@@ -67,24 +75,6 @@ export const it = base
     return mockCommandEncoder as unknown as GPUCommandEncoder & { mock: typeof mockCommandEncoder };
   })
   .extend('device', ({ commandEncoder }) => {
-    const mockQuerySet = {
-      destroy: vi.fn(),
-      get label() {
-        return this._label || '<unnamed>';
-      },
-      set label(value) {
-        this._label = value;
-      },
-      _label: '<unnamed>',
-    };
-
-    const mockComputePipeline = {
-      get getBindGroupLayout() {
-        return vi.fn(() => 'mockBindGroupLayout');
-      },
-      label: '<unnamed>',
-    };
-
     const mockDevice = {
       get mock() {
         return mockDevice;
@@ -99,7 +89,7 @@ export const it = base
           mapState: mappedAtCreation ? 'mapped' : 'unmapped',
           size,
           usage,
-          label: label ?? '<unnamed>',
+          label: label ?? '',
           getMappedRange: vi.fn(() => new ArrayBuffer(size)),
           unmap: vi.fn(() => {
             mockBuffer.mapState = 'unmapped';
@@ -115,16 +105,26 @@ export const it = base
       createCommandEncoder: vi.fn(function () {
         return commandEncoder;
       }),
-      createComputePipeline: vi.fn(() => mockComputePipeline),
+      createComputePipeline: vi.fn((descriptor: GPUComputePipelineDescriptor) => ({
+        label: descriptor.label ?? '',
+        getBindGroupLayout: vi.fn(() => 'mockBindGroupLayout'),
+      })),
+      createComputePipelineAsync: vi.fn(async (descriptor: GPUComputePipelineDescriptor) => ({
+        label: descriptor.label ?? '',
+        getBindGroupLayout: vi.fn(() => 'mockBindGroupLayout'),
+      })),
       createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),
-      createQuerySet: vi.fn(({ type, count }: GPUQuerySetDescriptor) => {
-        const querySet = Object.create(mockQuerySet);
-        querySet.type = type;
-        querySet.count = count;
-        querySet._label = '<unnamed>';
-        return querySet;
-      }),
+      createQuerySet: vi.fn(
+        ({ type, count, label }: GPUQuerySetDescriptor): GPUQuerySet => ({
+          __brand: 'GPUQuerySet',
+          destroy: vi.fn(),
+          type,
+          count: count,
+          label: label ?? '',
+        }),
+      ),
       createRenderPipeline: vi.fn(() => 'mockRenderPipeline'),
+      createRenderPipelineAsync: vi.fn(async () => 'mockRenderPipeline'),
       createSampler: vi.fn(() => 'mockSampler'),
       createShaderModule: vi.fn(() => 'mockShaderModule'),
       createTexture: vi.fn((descriptor) => createTextureMock(descriptor)),
@@ -145,10 +145,39 @@ export const it = base
 
     return mockDevice as unknown as GPUDevice & { mock: typeof mockDevice };
   })
-  .extend('adapter', ({ device }) => {
+  .extend('_stallDeviceRequest', ({ device }) => {
+    let stallResolve: () => void;
+    let stallPromise: Promise<void> | undefined;
+    let devicePromise: Promise<GPUDevice> | undefined;
+
+    const result = {
+      enabled: false,
+      get stallPromise() {
+        return (stallPromise ??= new Promise<void>((r) => {
+          stallResolve = r;
+        }));
+      },
+      get devicePromise(): Promise<GPUDevice> {
+        return (devicePromise ??= this.stallPromise.then(() => device));
+      },
+      get stallResolve() {
+        void this.stallPromise; // ensuring the promise is initialized
+        return stallResolve;
+      },
+    };
+
+    return result;
+  })
+  .extend('adapter', ({ device, _stallDeviceRequest }) => {
     const adapterMock = {
       features: new Set(['timestamp-query']),
-      requestDevice: vi.fn((_descriptor) => Promise.resolve(device)),
+      requestDevice: vi.fn((_descriptor) => {
+        if (_stallDeviceRequest.enabled) {
+          return _stallDeviceRequest.devicePromise;
+        }
+
+        return Promise.resolve(device);
+      }),
       limits: {
         maxStorageBufferBindingSize: 64 * 1024 * 1024,
         maxBufferSize: 64 * 1024 * 1024,
@@ -178,6 +207,33 @@ export const it = base
       vi.unstubAllGlobals();
     });
   })
+  /**
+   * Used to introduce an artificial delay between requesting a device and getting it.
+   * @example
+   * ```ts
+   * it('foo', async ({ stallDeviceRequest }) => {
+   *   const resume = stallDeviceRequest();
+   *
+   *   // do something asynchronous that requests a device
+   *
+   *   const device = await resume(); // causes the device to resolve
+   * });
+   * ```
+   */
+  .extend('stallDeviceRequest', ({ _stallDeviceRequest }) => {
+    return () => {
+      if (_stallDeviceRequest.enabled) {
+        throw new Error('Cannot stall .requestDevice() more than once at a time');
+      }
+      _stallDeviceRequest.enabled = true;
+
+      return async () => {
+        _stallDeviceRequest.stallResolve();
+        _stallDeviceRequest.enabled = false;
+        return await _stallDeviceRequest.devicePromise;
+      };
+    };
+  })
   .extend('root', async ({}, { onCleanup }) => {
     const root = await tgpu.init();
 
@@ -194,7 +250,7 @@ export const it = base
       setVertexBuffer: vi.fn(),
       setIndexBuffer: vi.fn(),
       finish: vi.fn(() => 'mockRenderBundle'),
-      label: '<unnamed>',
+      label: '',
     };
 
     return mockRenderBundleEncoder as unknown as GPURenderBundleEncoder & {

@@ -2,6 +2,7 @@ import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
 import { getName, hasTinyestMetadata, isNamable, setName } from '../../shared/meta.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
+import type { FnExternals } from '../function/fnCore.ts';
 
 /**
  * A key-value mapping where keys represent identifiers within shader code,
@@ -14,81 +15,69 @@ function isResolvable(value: unknown) {
 }
 
 /**
- * Merges two external maps into one.
- * If the external value is a namable object, it is given a name if it does not already have one.
- * @param existing - The existing external map.
- * @param newExternals - The new external map.
- *
- * NOTE:
- * This function attempts to avoid accidental reference modification
- * by performing a shallow copy before each modification,
- * but it cannot avoid `existing` modification.
- * Make sure that `existing` is created internally, instead of being passed in by users.
+ * Merges function externals into one map.
  */
-export function mergeExternals(existing: ExternalMap, newExternals: ExternalMap) {
-  for (const [key, value] of Object.entries(newExternals)) {
-    const existingValue = existing[key];
-    if (
-      existingValue !== null &&
-      typeof existingValue === 'object' &&
-      value !== null &&
-      typeof value === 'object' &&
-      !isResolvable(existingValue) &&
-      !isResolvable(value)
-    ) {
-      const copiedValue = { ...(existingValue as ExternalMap) };
-      mergeExternals(copiedValue, value as ExternalMap);
-      existing[key] = copiedValue;
-    } else {
-      existing[key] = value;
+export function mergeFunctionExternals(fnExternals: FnExternals): ExternalMap {
+  const base = fnExternals.pluginProvided ?? fnExternals.userProvided ?? {};
+  // avoid calling any of the getters
+  const result: ExternalMap = Object.defineProperties({}, Object.getOwnPropertyDescriptors(base));
+  for (const flatExternal of [fnExternals.args, fnExternals.out].filter((e) => e !== undefined)) {
+    for (const [key, value] of Object.entries(flatExternal)) {
+      if (key in result && result[key] !== value) {
+        throw new Error(
+          `Key '${key}' appears in externals despite already being used for argument/return type. Please rename this external.`,
+        );
+      }
+      result[key] = value;
     }
   }
+  return result;
 }
 
 export function addArgTypesToExternals(
   implementation: string,
   argTypes: unknown[],
-  applyExternals: (externals: ExternalMap) => void,
+  core: { setExternals: (key: 'args', externals: ExternalMap) => void },
 ) {
-  const argTypeNames = [...implementation.matchAll(/:\s*(?<arg>.*?)\s*[,)]/g)].map((found) =>
-    found ? found[1] : undefined,
+  const argTypeNames = [...implementation.matchAll(/:\s*(?<arg>.*?)\s*[,)]/g)].map(
+    (found) => found?.[1],
   );
 
-  applyExternals(
-    Object.fromEntries(
-      argTypes.flatMap((argType, i) => {
-        const argTypeName = argTypeNames ? argTypeNames[i] : undefined;
-        return isWgslStruct(argType) && argTypeName !== undefined ? [[argTypeName, argType]] : [];
-      }),
-    ),
+  const args = Object.fromEntries(
+    argTypes.flatMap((argType, i) => {
+      const argTypeName = argTypeNames?.[i];
+      return isWgslStruct(argType) && argTypeName !== undefined ? [[argTypeName, argType]] : [];
+    }),
   );
+
+  core.setExternals('args', args);
 }
 
 export function addReturnTypeToExternals(
   implementation: string,
   returnType: unknown,
-  applyExternals: (externals: ExternalMap) => void,
+  core: { setExternals: (key: 'out', externals: ExternalMap) => void },
 ) {
   const matched = implementation.match(/->\s(?<output>[\w\d_]+)\s{/);
   const outputName = matched ? matched[1]?.trim() : undefined;
 
   if (isWgslStruct(returnType) && outputName && !/\s/g.test(outputName)) {
-    applyExternals({ [outputName]: returnType });
+    core.setExternals('out', { [outputName]: returnType });
   }
 }
 
-function identifierRegex(name: string) {
-  return new RegExp(
-    `(?<![\\w\\$_.])${name.replaceAll('.', '\\.').replaceAll('$', '\\$')}(?![\\w\\$_])`,
-    'g',
-  );
-}
+export const anyIdent = /([$_\p{XID_Start}][$\p{XID_Continue}]*)/u; // WGSL ident, modified to include $
+const anyPropChain = new RegExp(`(${anyIdent.source})(\\.${anyIdent.source})*`, 'ug');
+export const boundedPropChain = new RegExp(
+  `(?<![\\p{XID_Continue}\\$.])${anyPropChain.source}(?![\\p{XID_Continue}\\$])`,
+  'ug',
+);
 
 /**
  * Replaces all occurrences of external names in WGSL code with their resolved values.
  * It adds all necessary definitions to the resolution context.
  * @param ctx - The resolution context.
- * @param externalMap - The external map.
+ * @param externalMap - The external map. Assumes that keys don't contain dots.
  * @param wgsl - The WGSL code.
  *
  * @returns The WGSL code with all external names replaced with their resolved values.
@@ -98,52 +87,50 @@ export function replaceExternalsInWgsl(
   externalMap: ExternalMap,
   wgsl: string,
 ): string {
-  return Object.entries(externalMap).reduce((acc, [externalName, external]) => {
-    const externalRegex = identifierRegex(externalName);
-    if (wgsl && externalName !== 'Out' && externalName !== 'in' && !externalRegex.test(wgsl)) {
-      console.warn(`The external '${externalName}' wasn't used in the resolved template.`);
-      // continue anyway, we still might need to resolve the external
+  const keys = Object.keys(externalMap);
+  if (keys.length === 0) {
+    return wgsl;
+  }
+
+  const maybeInvalidKey = keys.find((key) => key.includes('.'));
+  if (maybeInvalidKey) {
+    throw new Error(`External key '${maybeInvalidKey}' contains invalid character '.'`);
+  }
+
+  return wgsl.replaceAll(boundedPropChain, (match) => {
+    const chain = match.split('.');
+
+    if (!Object.hasOwn(externalMap, chain.at(0) as string)) {
+      // this prop access does not start with an external
+      return match;
     }
 
-    if (isResolvable(external)) {
-      if (isNamable(external) && getName(external) === undefined) {
-        setName(external, externalName.split('.').at(-1) as string);
+    let currentItem: unknown = externalMap;
+    let suffix = '';
+
+    for (const [i, elem] of chain.entries()) {
+      currentItem = (currentItem as ExternalMap)[elem];
+      if (isResolvable(currentItem) || typeof currentItem === 'string') {
+        suffix = chain
+          .slice(i + 1)
+          .map((s) => `.${s}`)
+          .join('');
+
+        if (isNamable(currentItem) && getName(currentItem) === undefined) {
+          setName(currentItem, chain.slice(0, i + 1).join('_'));
+        }
+
+        break;
       }
-      return acc.replaceAll(externalRegex, ctx.resolve(external).value);
+
+      if (typeof currentItem !== 'object' || currentItem === null || i === chain.length - 1) {
+        console.warn(
+          `During resolution, the external '${chain.slice(0, i + 1).join('.')}' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.`,
+        );
+        return match;
+      }
     }
 
-    if (external !== null && typeof external === 'object') {
-      const foundProperties = [
-        ...wgsl.matchAll(
-          new RegExp(
-            `${externalName
-              .replaceAll('.', '\\.')
-              .replaceAll('$', '\\$')}\\.(?<prop>.*?)(?![\\w\\$_])`,
-            'g',
-          ),
-        ),
-      ].map((found) => found[1]);
-      const uniqueProperties = [...new Set(foundProperties)];
-
-      return uniqueProperties.reduce(
-        (innerAcc: string, prop) =>
-          prop && prop in external
-            ? replaceExternalsInWgsl(
-                ctx,
-                {
-                  [`${externalName}.${prop}`]: external[prop as keyof typeof external],
-                },
-                innerAcc,
-              )
-            : innerAcc,
-        acc,
-      );
-    }
-
-    console.warn(
-      `During resolution, the external '${externalName}' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.`,
-    );
-
-    return acc;
-  }, wgsl);
+    return ctx.resolve(currentItem).value + suffix;
+  });
 }

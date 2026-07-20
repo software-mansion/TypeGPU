@@ -1,4 +1,4 @@
-import tgpu, { d, std, type TgpuRoot } from 'typegpu';
+import { tgpu, d, std, type TgpuRoot } from 'typegpu';
 
 const convertLayout = tgpu.bindGroupLayout({
   equirect: { texture: d.texture2d(d.f32) },

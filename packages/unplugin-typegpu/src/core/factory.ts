@@ -3,7 +3,7 @@ import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import type { UnpluginBuildContext, UnpluginContext, UnpluginFactory } from 'unplugin';
 import _traverse, { type NodePath } from '@babel/traverse';
-import { transpileFn } from 'tinyest-for-wgsl';
+import { transpileFn, type Externals } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
 import {
@@ -32,20 +32,22 @@ function embedJSON(jsValue: unknown) {
     .replace(/\u2029/g, '\\u2029');
 }
 
+function externalsToString(externals: Externals): string {
+  const entries = Array.from(externals, (key) => `"${key}":() => ${key}`);
+  return `{${entries.join(',')}}`;
+}
+
 function assignMetadata(
   this: UnpluginPluginState,
   path: NodePath<MetadatableFunction>,
   name: string | undefined,
   ast: ReturnType<typeof transpileFn>,
 ): void {
-  // TODO (#2504): remove externalNames from ast
   const metadata = `{
     v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
-    ast: ${embedJSON(ast)},
-    externals: () => ({${ast.externalNames
-      .map((e) => (e === 'this' ? '"this": this' : e))
-      .join(', ')}}),
+    ast: ${embedJSON({ params: ast.params, body: ast.body })},
+    externals: ${externalsToString(ast.externalNames)}
   }`;
 
   const visibility = t.isFunctionDeclaration(path.node)
@@ -69,6 +71,14 @@ function assignMetadata(
     if (t.isExportNamedDeclaration(path.parent)) {
       nodeToOverride = path.parent;
       code = `export ${code}`;
+    } else if (t.isExportDefaultDeclaration(path.parent)) {
+      nodeToOverride = path.parent;
+
+      if (t.isFunctionDeclaration(path.node) && path.node.id) {
+        code = `${code}export default ${path.node.id.name};`;
+      } else {
+        code = `export default ${code};`;
+      }
     }
   }
 
@@ -117,6 +127,15 @@ function replaceWithBinaryOverload(
   const lhs = this.slice(path.node.left);
   const rhs = this.slice(path.node.right);
   this.overwrite(path.node, `${runtimeFn}(${lhs}, ${rhs})`);
+}
+
+function removeUseGpuDirective(this: UnpluginPluginState, path: NodePath<MetadatableFunction>) {
+  const directives = 'directives' in path.node.body ? (path.node.body?.directives ?? []) : [];
+  for (const directive of directives) {
+    if (directive.value.value === 'use gpu') {
+      this.remove(directive);
+    }
+  }
 }
 
 const NodeUtils = {
@@ -180,6 +199,7 @@ export const unpluginFactory = ((rawOptions, _meta) => {
           wrapInAutoName,
           replaceWithAssignmentOverload,
           replaceWithBinaryOverload,
+          removeUseGpuDirective,
         });
 
         traverse(ast, functionVisitor, undefined, state);

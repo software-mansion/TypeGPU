@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { d, tgpu } from '../src/index.js';
+import { d, tgpu } from 'typegpu';
 
 describe('tgpu.declare', () => {
   it('should inject provided declaration when resolving a function', () => {
     const declaration = tgpu['~unstable'].declare('@group(0) @binding(0) var<uniform> val: f32;');
 
-    const empty = tgpu.fn([])`() { /* do nothing */ }`.$uses({ declaration });
+    const empty = tgpu.fn([])`declaration () { /* do nothing */ }`.$uses({ declaration });
 
     expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> val: f32;
@@ -33,7 +33,7 @@ struct Output {
   x: u32,
 }`);
 
-    const empty = tgpu.fn([])`() { /* do nothing */ }`.$uses({ decl1, decl2 });
+    const empty = tgpu.fn([])`decl1 decl2 () { /* do nothing */ }`.$uses({ decl1, decl2 });
 
     expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var<uniform> val: f32;
@@ -48,17 +48,17 @@ struct Output {
 
   it('should replace nested declarations', () => {
     const declaration = tgpu['~unstable']
-      .declare('@group(0) @binding(0) var<uniform> val: f32;')
+      .declare('@group(0) @binding(0) var<uniform> val: f32; nested')
       .$uses({
         nested: tgpu['~unstable'].declare('struct Output { x: u32 }'),
       });
 
-    const empty = tgpu.fn([])`() { /* do nothing */ }`.$uses({ declaration });
+    const empty = tgpu.fn([])`declaration () { /* do nothing */ }`.$uses({ declaration });
 
     expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "struct Output { x: u32 }
 
-      @group(0) @binding(0) var<uniform> val: f32;
+      @group(0) @binding(0) var<uniform> val: f32; 
 
       fn empty() { /* do nothing */ }"
     `);
@@ -73,7 +73,7 @@ struct Output {
       .declare('@group(0) @binding(0) var<uniform> val: Output;')
       .$uses({ Output });
 
-    const empty = tgpu.fn([])`() { /* do nothing */ }`.$uses({ declaration });
+    const empty = tgpu.fn([])`declaration () { /* do nothing */ }`.$uses({ declaration });
 
     expect(tgpu.resolve([empty])).toMatchInlineSnapshot(`
       "struct Output {
@@ -104,5 +104,17 @@ struct Output {
         return 2f;
       }"
     `);
+  });
+
+  it("throws when '$uses' is called multiple times", () => {
+    const declaration = tgpu['~unstable']
+      .declare('@group(0) @binding(0) var<myStruct> val: f32;')
+      .$uses({ myStruct: d.struct({ p: d.u32 }) });
+
+    expect(() =>
+      declaration.$uses({ myStruct: d.struct({ p: d.u32 }) }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot call '$uses' multiple times. If you wish to override dependencies, use slots or accessors instead.]`,
+    );
   });
 });

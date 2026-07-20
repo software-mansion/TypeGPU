@@ -117,6 +117,7 @@ export const add = dualImpl({
   signature: binaryArithmeticSignature,
   normalImpl: cpuAdd,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} + ${rhs})`,
+  sideEffects: false,
 });
 
 function cpuSub(lhs: number, rhs: number): number; // default subtraction
@@ -144,6 +145,7 @@ export const sub = dualImpl({
   signature: binaryArithmeticSignature,
   normalImpl: cpuSub,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} - ${rhs})`,
+  sideEffects: false,
 });
 
 function cpuMul(lhs: number, rhs: number): number; // default multiplication
@@ -195,6 +197,7 @@ export const mul = dualImpl({
   signature: binaryMulSignature,
   normalImpl: cpuMul,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} * ${rhs})`,
+  sideEffects: false,
 });
 
 function cpuDiv(lhs: number, rhs: number): number; // default js division
@@ -225,6 +228,7 @@ export const div = dualImpl({
   normalImpl: cpuDiv,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} / ${rhs})`,
   ignoreImplicitCastWarning: true,
+  sideEffects: false,
 });
 
 type ModOverload = {
@@ -263,6 +267,7 @@ export const mod = dualImpl({
     throw new Error('Mod called with invalid arguments, expected types: number or vector.');
   }) as ModOverload,
   codegenImpl: (_ctx, [lhs, rhs]) => stitch`(${lhs} % ${rhs})`,
+  sideEffects: false,
 });
 
 function cpuNeg(value: number): number;
@@ -282,6 +287,7 @@ export const neg = dualImpl({
   }),
   normalImpl: cpuNeg,
   codegenImpl: (_ctx, [arg]) => stitch`-(${arg})`,
+  sideEffects: false,
 });
 
 const anyConcreteInteger = [i32, u32, vec2i, vec3i, vec4i, vec2u, vec3u, vec4u] as BaseData[];
@@ -354,6 +360,7 @@ export const bitShiftLeft = dualImpl({
     }
     return stitch`(${lhs} << ${rhs})`;
   },
+  sideEffects: false,
 });
 
 function cpuBitShiftRight(lhs: number, rhs: number): number;
@@ -390,4 +397,5 @@ export const bitShiftRight = dualImpl({
     }
     return stitch`(${lhs} >> ${rhs})`;
   },
+  sideEffects: false,
 });

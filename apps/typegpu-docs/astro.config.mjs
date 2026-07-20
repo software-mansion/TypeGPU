@@ -221,6 +221,11 @@ export default defineConfig({
               badge: { text: 'dev', variant: 'note' },
             },
             DEV && {
+              label: 'Explaining the Magic',
+              slug: 'advanced/explaining-the-magic',
+              badge: { text: 'dev', variant: 'note' },
+            },
+            DEV && {
               label: 'Shader Generation',
               slug: 'advanced/shader-generation',
               badge: { text: 'dev', variant: 'note' },
@@ -323,6 +328,19 @@ export default defineConfig({
             {
               label: 'WGSL to TypeGPU',
               slug: 'tooling/tgpu-gen',
+            },
+          ]),
+        },
+        {
+          label: 'Migrations',
+          items: stripFalsy([
+            DEV && {
+              label: 'Migrating to 0.12',
+              slug: 'migrations/0-12',
+            },
+            {
+              label: 'Migrating to 0.11',
+              slug: 'migrations/0-11',
             },
           ]),
         },

@@ -29,6 +29,19 @@ interface DualImplOptions<T extends AnyFn> {
    */
   readonly noComptime?: boolean | undefined;
   readonly ignoreImplicitCastWarning?: boolean | undefined;
+  /**
+   * Whether calling this function is a side-effect in itself, irrespective of
+   * its arguments. Examples:
+   *
+   * - `discard` -> `true` - it discards the fragment.
+   * - `workgroupBarrier()` -> `true` - the barrier synchronizes threads.
+   * - `sin(x)`, `abs(x)` -> `false` - these are purely value-producing; the
+   *   call itself has no observable effect beyond the returned value.
+   *
+   * When `false`, the result inherits side-effects from its arguments: it
+   * only has `possibleSideEffects: true` if at least one argument does.
+   */
+  readonly sideEffects: boolean;
 }
 
 export class MissingCpuImplError extends Error {
@@ -88,6 +101,7 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
             returnType,
             // Functions give up ownership of their return value
             /* origin */ 'constant',
+            options.sideEffects,
           );
         } catch (e) {
           // cpuImpl may in some cases be present but implemented only partially.
@@ -101,11 +115,14 @@ export function dualImpl<T extends AnyFn>(options: DualImplOptions<T>): DualFn<T
         }
       }
 
+      const possibleSideEffects = options.sideEffects || args.some((a) => a.possibleSideEffects);
+
       return snip(
         options.codegenImpl(ctx, converted),
         concretize(returnType),
         // Functions give up ownership of their return value
         /* origin */ 'runtime',
+        possibleSideEffects,
       );
     },
   };

@@ -3,66 +3,13 @@ title: Utilities
 description: A list of various utilities provided by TypeGPU.
 ---
 
-## *tgpu.rawCodeSnippet*
-
-When working on top of some existing shader code, sometimes you may know for certain that some variable will be already defined and should be accessible in the code. 
-In such scenario you can use `tgpu['~unstable'].rawCodeSnippet` -- an advanced API that creates a typed shader expression which can be injected into the final shader bundle upon use.
-
-```ts twoslash
-import tgpu, { d } from 'typegpu';
-
-// ---cut---
-// `EXISTING_GLOBAL` is an identifier that we know will be in the
-// final shader bundle, but we cannot
-// refer to it in any other way.
-const existingGlobal = tgpu['~unstable']
-  .rawCodeSnippet('EXISTING_GLOBAL', d.f32, 'constant');
-
-const foo = tgpu.fn([], d.f32)(() => {
-  'use gpu';
-  return existingGlobal.$ * 22;
-});
-
-const wgsl = tgpu.resolve([foo]);
-// fn foo() -> f32 {
-//   return (EXISTING_GLOBAL * 22f);
-// }
-```
-
-:::note
-There currently is no way to create a `rawCodeSnippet` that refers to an existing function.
-:::
-
-### Which origin to choose?
-
-The optional third parameter `origin` lets TypeGPU transpiler know how to optimize the code snippet, as well as allows for some transpilation-time validity checks.
-
-Usually `'runtime'` (the default) is a safe bet, but if you're sure that the expression or
-computation is constant (either a reference to a constant, a numeric literal,
-or an operation on constants), then pass `'constant'` as it might lead to better
-optimizations.
-
-If what the expression is a direct reference to an existing value (e.g. a uniform, a
-storage binding, ...), then choose from `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`,
-`'private'` or `'handle'` depending on the address space of the referred value.
-
-:::tip
-`TgpuGuardedComputePipeline` provides getters for the underlying pipeline and the size buffer.
-Those might be useful for `tgpu.resolve`, since you cannot resolve a guarded pipeline directly.
-
-```ts
-const innerPipeline = doubleUpPipeline.with(bindGroup1).pipeline;
-tgpu.resolve([innerPipeline]);
-```
-:::
-
 ## *tgpu.comptime*
 
 `tgpu.comptime(func)` creates a version of `func` that instead of being transpiled to WGSL, will be called during the WGSL code generation.
 This can be used to precompute and inject a value into the final shader code.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 // ---cut---
 const color = tgpu.comptime((int: number) => {
@@ -98,7 +45,7 @@ Comptime-known conditions include:
 - values returned by `comptime` functions.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const counterEnabledSlot = tgpu.slot<boolean>(false);
@@ -129,7 +76,7 @@ since we treat `tgpu.const` as a way to opt-out of inlining.
 Branch pruning also works for ternary operators.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 const counterEnabledSlot = tgpu.slot<boolean>(false);
 const counter = root.createMutable(d.u32);
@@ -141,51 +88,9 @@ const myFunction = tgpu.fn([])(() => {
 
 :::caution
 Ternary operator's condition must be a comptime-known value.
-This restriction is due to WGSL having no ternary operator equivalent. 
+This restriction is due to WGSL having no ternary operator equivalent.
+However, if both branches are known to have no side-effects, then the condition can be a runtime value.
 :::
-
-## *tgpu.rawCodeSnippet*
-
-When working on top of some existing shader code, sometimes you may know for certain that some variable will be already defined and should be accessible in the code. 
-In such scenario you can use `tgpu['~unstable'].rawCodeSnippet` -- an advanced API that creates a typed shader expression which can be injected into the final shader bundle upon use.
-
-```ts twoslash
-import tgpu, { d } from 'typegpu';
-
-// ---cut---
-// `EXISTING_GLOBAL` is an identifier that we know will be in the
-// final shader bundle, but we cannot
-// refer to it in any other way.
-const existingGlobal = tgpu['~unstable']
-  .rawCodeSnippet('EXISTING_GLOBAL', d.f32, 'constant');
-
-const foo = tgpu.fn([], d.f32)(() => {
-  'use gpu';
-  return existingGlobal.$ * 22;
-});
-
-const wgsl = tgpu.resolve([foo]);
-// fn foo() -> f32 {
-//   return (EXISTING_GLOBAL * 22f);
-// }
-```
-
-:::note
-There currently is no way to create a `rawCodeSnippet` that refers to an existing function.
-:::
-
-### Which origin to choose?
-
-The optional third parameter `origin` lets TypeGPU transpiler know how to optimize the code snippet, as well as allows for some transpilation-time validity checks.
-
-Usually `'runtime'` (the default) is a safe bet, but if you're sure that the expression or
-computation is constant (either a reference to a constant, a numeric literal,
-or an operation on constants), then pass `'constant'` as it might lead to better
-optimizations.
-
-If what the expression is a direct reference to an existing value (e.g. a uniform, a
-storage binding, ...), then choose from `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`,
-`'private'` or `'handle'` depending on the address space of the referred value.
 
 ## *console.log*
 
@@ -193,7 +98,7 @@ Yes, you read that correctly, TypeGPU implements logging to the console on the G
 Just call `console.log` like you would in plain JavaScript, and open the console to see the results.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const root = await tgpu.init();
 // ---cut---
@@ -220,7 +125,7 @@ The buffer is of fixed size, which may limit the total amount of information tha
 If that's an issue, you may specify the size manually when creating the `root` object.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const presentationFormat = undefined as any;
 const canvas = undefined as any;
@@ -273,7 +178,7 @@ This is due to a [WebGPU limitation](https://www.w3.org/TR/WGSL/#address-space) 
 TypeGPU supports `for...of...` loops in shader functions. The only constraints are that the loop variable must be declared with `const` and the iterable must be stored in a variable.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const processNeighbor = (cell: d.v2i) => {};
 
@@ -303,7 +208,7 @@ For code with small, fixed iteration counts, you can use `tgpu.unroll` to unroll
 Wrap your iterable with `tgpu.unroll()`:
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
 const processNeighbor = (cell: d.v2i) => {};
 
@@ -599,3 +504,56 @@ fn f() -> u32 {
   return result;
 }
 ```
+
+## *tgpu.rawCodeSnippet*
+
+When working on top of some existing shader code, sometimes you may know for certain that some variable will be already defined and should be accessible in the code. 
+In such scenario you can use `tgpu['~unstable'].rawCodeSnippet` -- an advanced API that creates a typed shader expression which can be injected into the final shader bundle upon use.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+
+// ---cut---
+// `EXISTING_GLOBAL` is an identifier that we know will be in the
+// final shader bundle, but we cannot
+// refer to it in any other way.
+const existingGlobal = tgpu['~unstable']
+  .rawCodeSnippet('EXISTING_GLOBAL', d.f32, 'constant', false);
+
+const foo = tgpu.fn([], d.f32)(() => {
+  'use gpu';
+  return existingGlobal.$ * 22;
+});
+
+const wgsl = tgpu.resolve([foo]);
+// fn foo() -> f32 {
+//   return (EXISTING_GLOBAL * 22f);
+// }
+```
+
+:::note
+There currently is no way to create a `rawCodeSnippet` that refers to an existing function.
+:::
+
+### Which origin to choose?
+
+The optional third parameter `origin` lets TypeGPU transpiler know how to optimize the code snippet, as well as allows for some transpilation-time validity checks.
+
+Usually `'runtime'` (the default) is a safe bet, but if you're sure that the expression or
+computation is constant (either a reference to a constant, a numeric literal,
+or an operation on constants), then pass `'constant'` as it might lead to better
+optimizations.
+
+If what the expression is a direct reference to an existing value (e.g. a uniform, a
+storage binding, ...), then choose from `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`,
+`'private'` or `'handle'` depending on the address space of the referred value.
+
+### `possibleSideEffects`
+The fourth optional parameter `possibleSideEffects` indicates, whether generating this snippet may produce a WGSL expression with
+observable side-effects (e.g. calling a barrier, discarding a fragment,
+or writing to memory).
+
+Snippets with `possibleSideEffects: true` cannot appear in ternary
+branches that get compiled to `select()`, because `select()` evaluates
+both branches unconditionally - a side-effect meant to be conditional
+would execute regardless of the condition.

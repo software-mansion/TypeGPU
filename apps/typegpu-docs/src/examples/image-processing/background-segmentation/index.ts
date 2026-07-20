@@ -1,5 +1,5 @@
 import type { RenderFlag, SampledFlag, StorageFlag, TgpuBindGroup, TgpuTexture } from 'typegpu';
-import tgpu, { common, d } from 'typegpu';
+import { tgpu, common, d } from 'typegpu';
 
 import { MODEL_HEIGHT, MODEL_WIDTH, MODELS, prepareSession } from './model.ts';
 import {

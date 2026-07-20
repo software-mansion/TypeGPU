@@ -1,4 +1,4 @@
-import type { TgpuMutable } from '../../core/buffer/bufferShorthand.ts';
+import type { TgpuMutable } from '../../core/buffer/bufferBinding.ts';
 import { fn, type TgpuFn } from '../../core/function/tgpuFn.ts';
 import { slot } from '../../core/slot/slot.ts';
 import { privateVar } from '../../core/variable/tgpuVariable.ts';

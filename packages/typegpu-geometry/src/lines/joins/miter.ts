@@ -1,4 +1,4 @@
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 import type { v2f } from 'typegpu/data';
 import { vec2f } from 'typegpu/data';
 import { dot, normalize, select } from 'typegpu/std';

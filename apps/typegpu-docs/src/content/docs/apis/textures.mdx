@@ -17,7 +17,7 @@ TypeGPU wraps WebGPU textures with typed views, usage checks, and helpers for co
 Let's look at an example of creating and using a typed texture.
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 
 const root = await tgpu.init();
 
@@ -53,7 +53,7 @@ type TextureProps = {
 ```
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -70,7 +70,7 @@ const texture = root.createTexture({
 Similar to buffers, textures need usage flags to specify how they will be used. You can add usage flags using the `.$usage(...)` method.
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -85,7 +85,7 @@ const texture = root.createTexture({
 You can also add multiple flags at once:
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -93,6 +93,24 @@ const texture = root.createTexture({
   format: 'rgba8unorm',
 }).$usage('sampled', 'storage', 'render');
 ```
+
+For raw WebGPU usage flags, use `.$overrideFlags(...)`:
+
+```ts twoslash
+import { tgpu } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const texture = root
+  .createTexture({
+    size: [256, 256],
+    format: 'rgba8unorm',
+  })
+  .$overrideFlags(GPUTextureUsage.RENDER_ATTACHMENT);
+```
+
+::::caution
+This is an escape hatch. It replaces the flags TypeGPU would normally infer and marks the texture as usable through sampled, storage, and render APIs. Use it responsibly, do not call `.$usage(...)` after it, and make sure the resulting `GPUTextureDescriptor` is valid.
+::::
 
 ## Writing to a texture
 
@@ -158,7 +176,7 @@ Resizing decoded images uses TypeGPU's render-pass blit path, so the destination
 Use `writeAsync` when you have a `Blob` and do not need to keep the decoded `ImageBitmap`. With `resize: true`, TypeGPU passes resize options to `createImageBitmap` before uploading.
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -182,7 +200,7 @@ The resulting bitmap is still written as an image source, so the texture needs `
 Pass an array of images to write one image per layer.
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 declare const layer0: ImageBitmap;
 declare const layer1: ImageBitmap;
@@ -205,7 +223,7 @@ For 3D textures, add `dimension: '3d'`; the same `write([layer0, layer1, ...])` 
 Use raw bytes when you already have texel data in CPU memory.
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -235,7 +253,7 @@ Raw writes do not need `.$usage('render')`, but the byte length must exactly mat
 Use an object descriptor for source crops, destination regions, or selected channels.
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 declare const imageBitmap: ImageBitmap;
 declare const roughnessMap: ImageBitmap;
@@ -271,7 +289,7 @@ Region and channel writes follow the same render usage and resize rules as other
 TypeGPU provides automatic mipmap generation for textures:
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 declare const imageBitmap: ImageBitmap;
 // ---cut---
@@ -296,7 +314,7 @@ You can also copy between equal-sized, same-format textures with `targetTexture.
 To create a view - which will also serve as fixed texture usage - you can use one of the available [texture schemas](/TypeGPU/apis/data-schemas/#textures). You can pass it to the `.createView` method of the texture.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -314,7 +332,7 @@ const sampledView = texture.createView(d.texture2d(d.f32));
 If type information is available the view schema will be statically checked against the texture properties.
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -327,7 +345,7 @@ const sampledView = texture.createView(d.texture2d(d.f32));
 ```
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -345,7 +363,7 @@ const sampledView = texture.createView(d.textureStorage2d('rgba8unorm')); // <--
 To sample textures in shaders, you'll often need a sampler that defines how the texture should be filtered and addressed. The `createSampler` method accepts the same descriptor as the vanilla WebGPU `GPUSamplerDescriptor`:
 
 ```ts twoslash
-import tgpu from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const sampler = root.createSampler({
@@ -366,7 +384,7 @@ Textures can be used in shaders through bind groups or as fixed resources, simil
 ### Manual binding
 
 ```ts twoslash
-import tgpu, { d } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
@@ -397,7 +415,7 @@ const bindGroup = root.createBindGroup(bindGroupLayout, {
 For textures that remain consistent across operations, you can create fixed texture views:
 
 ```ts twoslash
-import tgpu, { d, std } from 'typegpu';
+import { tgpu, d, std } from 'typegpu';
 const root = await tgpu.init();
 // ---cut---
 const texture = root.createTexture({
