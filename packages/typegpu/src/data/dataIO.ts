@@ -31,6 +31,7 @@ import type { BufferWriteOptions } from '../core/buffer/buffer.ts';
 import { getCompiledWriter } from './compiledIO.ts';
 import { getName } from '../shared/meta.ts';
 import { roundUp } from '../mathUtils.ts';
+import { tgpuLogger } from '../tgpuLogger.ts';
 
 type DataWriter<TSchema extends wgsl.BaseData> = (
   output: ISerialOutput,
@@ -455,7 +456,8 @@ export function writeData<TData extends wgsl.BaseData>(
     const src = value as ArrayBufferView;
     const expected = sizeOf(schema);
     if (src.byteLength !== expected) {
-      console.warn(
+      tgpuLogger.warn(
+        'suspicious-call',
         `TypedArray size mismatch: schema expects ${expected} bytes, got ${src.byteLength}. ` +
           (src.byteLength < expected ? 'Data truncated.' : 'Excess ignored.'),
       );
@@ -841,7 +843,8 @@ export function writeToArrayBuffer<T extends BaseData>(
         : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
     const regionSize = endOffset - startOffset;
     if (src.byteLength !== regionSize) {
-      console.warn(
+      tgpuLogger.warn(
+        'suspicious-call',
         `Buffer size mismatch: expected ${regionSize} bytes, got ${src.byteLength}. ` +
           (src.byteLength < regionSize ? 'Data truncated.' : 'Excess ignored.'),
       );

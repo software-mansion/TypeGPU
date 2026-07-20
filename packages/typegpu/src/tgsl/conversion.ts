@@ -23,6 +23,7 @@ import { DEV, TEST } from '../shared/env.ts';
 import { getName } from '../shared/meta.ts';
 import { safeStringify } from '../shared/stringify.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
+import { tgpuLogger } from '../tgpuLogger.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { accessStructProp } from './accessStructProp.ts';
 
@@ -363,6 +364,7 @@ export function convertToCommonType<T extends Snippet[]>(
     return undefined;
   }
 
+  // TODO: investigate
   if (DEV && Array.isArray(restrictTo) && restrictTo.length === 0) {
     console.warn(
       'convertToCommonType was called with an empty restrictTo array, which prevents any conversions from being made. If you intend to allow all conversions, pass undefined instead. If this was intended call the function conditionally since the result will always be undefined.',
@@ -374,8 +376,9 @@ export function convertToCommonType<T extends Snippet[]>(
     return undefined;
   }
 
-  if ((TEST || DEV) && verbose && conversion.hasImplicitConversions) {
-    console.warn(
+  if (conversion.hasImplicitConversions) {
+    tgpuLogger.warn(
+      'implicit-conversion',
       `Implicit conversions from [\n${values
         .map((v) => `  ${ctx.resolveSnippet(v).value}: ${safeStringify(v.dataType)}`)
         .join(',\n')}\n] to ${conversion.targetType.type} are supported, but not recommended.

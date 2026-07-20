@@ -29,6 +29,7 @@ import type { Infer } from '../../shared/repr.ts';
 import { niceStringify } from '../../shared/stringify.ts';
 import { bitcast } from '../../std/bitcast.ts';
 import { unpack2x16float } from '../../std/packing.ts';
+import { tgpuLogger } from '../../tgpuLogger.ts';
 import type { LogMeta, LogResources } from './types.ts';
 
 const toF = (n: number | undefined) => bitcast(u32, f32)(n ?? 0);
@@ -186,7 +187,8 @@ export function logDataFromGPU(resources: LogResources) {
 
   void indexBuffer.read().then((totalCalls) => {
     if (totalCalls > options.logCountLimit) {
-      console.warn(
+      tgpuLogger.warn(
+        'log-limit-exceeded',
         `Log count limit per dispatch (${options.logCountLimit}) exceeded by ${
           totalCalls - options.logCountLimit
         } calls. Consider increasing the limit by passing appropriate options to tgpu.init().`,

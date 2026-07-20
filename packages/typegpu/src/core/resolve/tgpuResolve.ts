@@ -3,6 +3,7 @@ import { Void } from '../../data/wgslTypes.ts';
 import { type ResolutionResult, resolve as resolveImpl } from '../../resolutionCtx.ts';
 import { $internal, $resolve } from '../../shared/symbols.ts';
 import { isBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
+import { tgpuLogger } from '../../tgpuLogger.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import type { ResolvableObject, SelfResolvable, Wgsl } from '../../types.ts';
 import type { WgslEnableExtension } from '../../wgslExtensions.ts';
@@ -190,7 +191,8 @@ function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionRes
   } = options;
 
   if (!template) {
-    console.warn(
+    tgpuLogger.warn(
+      'deprecated-method-called',
       "Calling resolve with an empty template is deprecated and will soon return an empty string. Consider using the 'tgpu.resolve(resolvableArray, options)' API instead.",
     );
   }

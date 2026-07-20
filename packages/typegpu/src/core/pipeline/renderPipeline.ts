@@ -88,6 +88,7 @@ import {
   PerformanceTrackerImpl,
   type PerformanceTracker,
 } from './performanceTracker.ts';
+import { tgpuLogger } from '../../tgpuLogger.ts';
 
 const DRAW_INDIRECT_SIZE = 16; // 4 x 4
 const DRAW_INDEXED_INDIRECT_SIZE = 20; // 5 x 4
@@ -601,7 +602,8 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
     const querySet = internals.core.performanceCallbackQuerySet;
     if (!querySet) {
-      console.warn(
+      tgpuLogger.warn(
+        'missing-webgpu-feature',
         'Performance callback cannot be used because the timestamp-query feature is not enabled on the root.',
       );
       return this;
@@ -1288,7 +1290,8 @@ export function matchUpVaryingLocations(
     if (locations[key] === undefined) {
       saveLocation(key, customLocation);
     } else if (locations[key] !== customLocation) {
-      console.warn(
+      tgpuLogger.warn(
+        'mismatched-locations',
         `Mismatched location between vertexFn (${vertexFnName}) output (${
           locations[key]
         }) and fragmentFn (${fragmentFnName}) input (${customLocation}) for the key "${key}", using the location set on vertex output.`,
