@@ -1,7 +1,7 @@
 import { isLooseData } from '../../data/dataTypes.ts';
 import { isWgslStruct } from '../../data/wgslTypes.ts';
 import { getName, hasTinyestMetadata, isNamable, setName } from '../../shared/meta.ts';
-import { tgpuLogger } from '../../tgpuLogger.ts';
+import { logger } from '../../tgpuLogger.ts';
 import { isWgsl, type ResolutionCtx } from '../../types.ts';
 import type { FnExternals } from '../function/fnCore.ts';
 
@@ -125,7 +125,7 @@ export function replaceExternalsInWgsl(
       }
 
       if (typeof currentItem !== 'object' || currentItem === null || i === chain.length - 1) {
-        tgpuLogger.warn(
+        logger.warn(
           'omitted-external',
           `During resolution, the external '${chain.slice(0, i + 1).join('.')}' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.`,
         );

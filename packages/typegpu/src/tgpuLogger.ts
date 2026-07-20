@@ -14,22 +14,36 @@ const warningTypes = [
 ] as const;
 type WarningType = (typeof warningTypes)[number];
 
-class TgpuLogger {
+// internal-facing API
+interface Logger {
+  warn(type: (typeof warningTypes)[number], ...args: unknown[]): void;
+}
+
+// user-facing API
+interface Warn {
+  disable(type: WarningType): void;
+  enable(type: WarningType): void;
+}
+
+class TgpuLogger implements Logger, Warn {
   #enabledWarnings: Set<WarningType> = new Set(warningTypes);
 
-  disableWarn(type: WarningType) {
+  disable(type: WarningType) {
     this.#enabledWarnings.delete(type);
   }
 
-  enableWarn(type: WarningType) {
+  enable(type: WarningType) {
     this.#enabledWarnings.add(type);
   }
 
-  warn(type: (typeof warningTypes)[number], ...args: unknown[]) {
+  warn(type: WarningType, ...args: unknown[]) {
     if (this.#enabledWarnings.has(type)) {
       console.warn(...args);
+      // console.warn(`⚠️ [${type}}] `, ...args);
     }
   }
 }
 
-export const tgpuLogger = new TgpuLogger();
+const tgpuLogger = new TgpuLogger();
+export const logger: Logger = tgpuLogger;
+export const warn: Warn = tgpuLogger;

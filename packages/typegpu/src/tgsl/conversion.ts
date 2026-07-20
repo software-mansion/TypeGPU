@@ -23,7 +23,7 @@ import { DEV, TEST } from '../shared/env.ts';
 import { getName } from '../shared/meta.ts';
 import { safeStringify } from '../shared/stringify.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
-import { tgpuLogger } from '../tgpuLogger.ts';
+import { logger } from '../tgpuLogger.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { accessStructProp } from './accessStructProp.ts';
 
@@ -377,7 +377,7 @@ export function convertToCommonType<T extends Snippet[]>(
   }
 
   if (conversion.hasImplicitConversions) {
-    tgpuLogger.warn(
+    logger.warn(
       'implicit-conversion',
       `Implicit conversions from [\n${values
         .map((v) => `  ${ctx.resolveSnippet(v).value}: ${safeStringify(v.dataType)}`)

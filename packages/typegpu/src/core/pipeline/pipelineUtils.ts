@@ -3,7 +3,7 @@ import { memoryLayoutOf, type PrimitiveOffsetInfo } from '../../data/offsetUtils
 import { sizeOf } from '../../data/sizeOf.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { isGPUBuffer } from '../../types.ts';
-import { tgpuLogger } from '../../tgpuLogger.ts';
+import { logger } from '../../tgpuLogger.ts';
 
 type IndirectOperation = 'dispatchWorkgroupsIndirect' | 'drawIndirect' | 'drawIndexedIndirect';
 const IndirectOperationToRequiredData = {
@@ -52,7 +52,7 @@ export function resolveIndirectOffset(
   validateIndirectBufferSize(sizeOf(indirectBuffer.dataType), offset, requiredSize, operation);
 
   if (contiguous < requiredSize) {
-    tgpuLogger.warn(
+    logger.warn(
       'suspicious',
       `${operation}: Starting at offset ${offset}, only ${contiguous} contiguous bytes are available before padding. '${operation}' requires ${requiredSize} bytes (${IndirectOperationToRequiredData[operation]}). Reading across padding may result in undefined behavior.`,
     );

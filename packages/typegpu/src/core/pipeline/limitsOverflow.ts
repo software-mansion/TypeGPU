@@ -1,5 +1,5 @@
 import type { TgpuBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
-import { tgpuLogger } from '../../tgpuLogger.ts';
+import { logger } from '../../tgpuLogger.ts';
 
 export function warnIfOverflow(layouts: TgpuBindGroupLayout[], limits: GPUSupportedLimits) {
   const entries = Object.values(layouts)
@@ -10,7 +10,7 @@ export function warnIfOverflow(layouts: TgpuBindGroupLayout[], limits: GPUSuppor
   const storage = entries.filter((entry) => 'storage' in entry).length;
 
   if (uniform > limits.maxUniformBuffersPerShaderStage) {
-    tgpuLogger.warn(
+    logger.warn(
       'webgpu-limits-exceeded',
       `Total number of uniform buffers (${uniform}) exceeds maxUniformBuffersPerShaderStage (${limits.maxUniformBuffersPerShaderStage}). Consider:
 1. Grouping some of the uniforms into one using 'd.struct',
@@ -19,7 +19,7 @@ export function warnIfOverflow(layouts: TgpuBindGroupLayout[], limits: GPUSuppor
   }
 
   if (storage > limits.maxStorageBuffersPerShaderStage) {
-    tgpuLogger.warn(
+    logger.warn(
       'webgpu-limits-exceeded',
       `Total number of storage buffers (${storage}) exceeds maxStorageBuffersPerShaderStage (${limits.maxStorageBuffersPerShaderStage}).`,
     );

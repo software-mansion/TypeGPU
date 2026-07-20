@@ -81,7 +81,7 @@ import { u32 } from '../../data/numeric.ts';
 import { ceil } from '../../std/numeric.ts';
 import { allEq } from '../../std/boolean.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import { tgpuLogger } from '../../tgpuLogger.ts';
+import { logger } from '../../tgpuLogger.ts';
 
 /**
  * Changes the given array to a vec of 3 numbers, filling missing values with 1.
@@ -660,7 +660,7 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   }
 
   flush() {
-    tgpuLogger.warn('deprecated', 'flush() has been deprecated, and has no effect.');
+    logger.warn('deprecated', 'flush() has been deprecated, and has no effect.');
   }
 }
 
@@ -742,7 +742,7 @@ export async function init(options?: InitOptions): Promise<TgpuRoot> {
     if (adapter.features.has(feature)) {
       availableFeatures.push(feature);
     } else {
-      tgpuLogger.warn(
+      logger.warn(
         'missing-webgpu-feature',
         `Optional feature "${feature}" is not supported by the adapter.`,
       );

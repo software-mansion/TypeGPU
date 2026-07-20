@@ -33,7 +33,7 @@ import type {
   SampledFlag,
 } from './usageExtension.ts';
 import { generateTextureMipmaps, getImageSourceDimensions, resampleImage } from './textureUtils.ts';
-import { tgpuLogger } from '../../tgpuLogger.ts';
+import { logger } from '../../tgpuLogger.ts';
 
 export type TextureInternals = {
   unwrap(): GPUTexture;
@@ -395,7 +395,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     const actualMipLevels = mipLevels ?? (this.props.mipLevelCount ?? 1) - baseMipLevel;
 
     if (actualMipLevels <= 1) {
-      tgpuLogger.warn(
+      logger.warn(
         'suspicious',
         `generateMipmaps is a no-op: would generate ${actualMipLevels} mip levels (base: ${baseMipLevel}, total: ${
           this.props.mipLevelCount ?? 1
@@ -441,7 +441,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
 
     const layerCount = this.props.size[2] ?? 1;
     if (source.length > layerCount) {
-      tgpuLogger.warn(
+      logger.warn(
         'suspicious',
         `Too many image sources provided. Expected ${layerCount} layers, got ${source.length}. Extra sources will be ignored.`,
       );
