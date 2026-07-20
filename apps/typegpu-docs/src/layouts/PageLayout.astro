@@ -8,7 +8,6 @@ import {
   topBarBannerReservationScript,
 } from '../components/TopBarBanner/shared';
 import { TOP_BAR_BANNER } from '../components/TopBarBanner/config';
-const { title, theme = 'light' } = Astro.props;
 
 const DEV = (import.meta as any).env.DEV;
 const enableAnalytics = !DEV;
@@ -25,9 +24,16 @@ const reservationScript = firstZone
       TOP_BAR_BANNER.hiddenPaths,
     )
   : '';
+
+interface Props {
+  title: string;
+  forceTheme?: 'light' | 'dark' | undefined;
+}
+
+const { title, forceTheme } = Astro.props;
 ---
 
-<html data-theme={theme} class={theme === 'dark' ? 'dark' : undefined}>
+<html data-theme={forceTheme} data-force-theme={forceTheme}>
   <head>
     <title>{title ?? 'TypeGPU'}</title>
     <meta charset="UTF-8" />
@@ -80,7 +86,6 @@ const reservationScript = firstZone
 
       body {
         margin: 0;
-        @apply transition-colors duration-300 ease-in-out;
       }
 
       [data-theme='dark'] body {
@@ -106,7 +111,7 @@ const reservationScript = firstZone
       enableAnalytics && (
         <script
           is:inline
-          set:html={`  
+          set:html={`
         (function (w, d, s, l, i) {
           w[l] = w[l] || [];
           w[l].push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
@@ -123,34 +128,25 @@ const reservationScript = firstZone
     }
     <!-- End Google Tag Manager -->
     <script is:inline>
-      const storageKey = 'typegpu-theme';
-      const doc = document.documentElement;
+      if (document.documentElement.dataset.forceTheme === undefined) {
+        /**
+         * Key in `localStorage` to store color theme preference at.
+         * This is the same as Starlight's, syncing it with the theme
+         * in the documentation.
+         */
+        const storageKey = 'starlight-theme';
 
-      const applyTheme = (theme) => {
-        doc.dataset.theme = theme;
-        doc.classList.toggle('dark', theme === 'dark');
-      };
-
-      let storedTheme = null;
-      try {
-        storedTheme = window.localStorage.getItem(storageKey);
-      } catch (error) {
-        storedTheme = null;
+        // Applying stored theme
+        const storedTheme =
+          typeof localStorage !== 'undefined' &&
+          localStorage.getItem(storageKey);
+        const theme = storedTheme || getPreferredColorScheme();
+        document.documentElement.dataset.theme =
+          theme === 'light' ? 'light' : 'dark';
       }
-
-      const systemPrefersDark =
-        window.matchMedia &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-      const themeToApply =
-        storedTheme ||
-        doc.dataset.theme ||
-        (systemPrefersDark ? 'dark' : 'light');
-
-      applyTheme(themeToApply);
     </script>
   </head>
-  <body>
+  <body class="dark:bg-navy-bg bg-white dark:text-white">
     <!-- Google Tag Manager (noscript) -->
     {
       enableAnalytics && (

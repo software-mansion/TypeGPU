@@ -1,14 +1,13 @@
 ---
 import { Image } from 'astro:assets';
 import GithubIconSvg from '../../assets/github-icon.svg';
-import GithubIconDarkSvg from '../../assets/github-icon-dark.svg';
 import SwmLogomarkSvg from '../../assets/swm-logomark.svg';
-import SwmLogoSvg from '../../assets/typegpu-logo-light.svg';
+import TypeGPULogoLight from '../../assets/typegpu-logo-light.svg';
 import TypeGPULogoDark from '../../assets/typegpu-logo-dark.svg';
-import TypeGPULogoLight from '../../assets/typegpu-logomark-light.svg';
+import TypeGPULogomark from '../../assets/typegpu-logomark-light.svg';
 import Backlog from '../../components/Backlog.astro';
 import CodeShowcase from '../../components/CodeShowcase.astro';
-import GetStartedButton from '../../components/GetStartedButton.astro';
+import CallToActionButton from '../../components/CallToActionButton.astro';
 import GradientTitle from '../../components/GradientTitle.astro';
 import ThemeSwitcher from '../../components/ThemeSwitcher.astro';
 import Videos from '../../components/Videos.astro';
@@ -19,63 +18,53 @@ import { HeroEffect } from '../../components/hero-effect/HeroEffect';
 
 <PageLayout title="TypeGPU – Type-safe WebGPU toolkit">
   <div
-    class="flex flex-col gap-14 text-blue-950 transition-colors duration-300 md:gap-30 dark:text-gray-100"
+    class="flex flex-col items-center text-blue-950 transition-colors duration-300 dark:text-gray-100"
   >
-    <main>
+    <main class="self-stretch">
       <div class="absolute top-0 right-32 -z-10 flex flex-col items-center">
         <HeroEffect client:only="react" />
       </div>
       <header
-        class="flex h-24 shrink-0 items-center justify-between self-stretch px-4 sm:px-7.5 md:px-10 lg:px-12.5"
+        class="mb-16 flex h-24 shrink-0 items-center justify-between self-stretch px-4 sm:px-7.5 md:px-10 lg:px-12.5"
       >
         <a href="https://swmansion.com" target="_blank" rel="noreferrer">
           <Image
-            src={TypeGPULogoLight}
-            class="block h-14 w-auto md:hidden"
-            alt="Software Mansion Logo"
+            src={TypeGPULogomark}
+            class="block h-10 w-auto md:hidden"
+            alt="TypeGPU Logo"
           />
           <Image
             src={TypeGPULogoDark}
-            class="hidden h-14 w-auto md:dark:block"
-            alt="Software Mansion Logo"
+            class="hidden h-10 w-auto md:dark:block"
+            alt="TypeGPU Logo"
           />
           <Image
-            src={SwmLogoSvg}
-            class="hidden h-14 w-auto md:block md:dark:hidden"
-            alt="Software Mansion Logo (mobile)"
+            src={TypeGPULogoLight}
+            class="hidden h-10 w-auto md:block md:dark:hidden"
+            alt="TypeGPU Logo (mobile)"
           />
         </a>
 
-        <div
-          class="flex h-4 items-center gap-10 text-blue-900 dark:text-gray-100"
-        >
+        <div class="flex h-4 items-center gap-10">
           <!-- Light / Dark -->
           <ThemeSwitcher />
           <!-- Docs -->
           <a
             href="/TypeGPU/getting-started"
             target="_blank"
-            class="no-underline"
+            class="text-navy-80 dark:text-navy-0 text-xl no-underline"
             rel="noreferrer"
           >
-            <p class="text-blue-900 dark:text-gray-100">Docs</p>
+            Docs
           </a>
           <!-- GitHub -->
           <a
             href="https://github.com/software-mansion/TypeGPU"
             target="_blank"
             rel="noreferrer"
+            class="text-navy-80 dark:text-navy-0 no-underline"
           >
-            <Image
-              src={GithubIconSvg}
-              class="h-6 w-6 fill-blue-900 opacity-75 sm:h-8 sm:w-8 md:h-10 md:w-10 dark:hidden"
-              alt="GitHub Logo"
-            />
-            <Image
-              src={GithubIconDarkSvg}
-              class="hidden h-6 w-6 fill-gray-100 opacity-75 sm:h-8 sm:w-8 md:h-10 md:w-10 dark:block"
-              alt="GitHub Logo"
-            />
+            <GithubIconSvg class="h-8 w-8" />
           </a>
         </div>
       </header>
@@ -83,41 +72,62 @@ import { HeroEffect } from '../../components/hero-effect/HeroEffect';
 
     <!-- Hero Section -->
     <section
-      class="mx-auto flex flex-col items-center md:max-w-214 lg:max-w-[1024px] lg:px-72"
+      class="mt-10 mb-14 flex flex-col items-start gap-8 self-stretch px-6 md:mx-auto md:mt-20 md:mb-40 md:w-full md:max-w-214 md:gap-20 lg:max-w-[1024px]"
     >
-      <div class="flex flex-col gap-4 px-6 md:gap-12 lg:px-0">
+      <div class="flex flex-col gap-4 md:gap-12">
+        <!-- Hero Copy -->
         <div
-          class="text-2xl font-bold text-[#001A72] md:text-6xl dark:text-gray-100"
+          class="dark:text-almost-white text-[1.625rem] font-bold text-[#001A72] md:text-6xl"
         >
           Type<GradientTitle title="GPU" />
         </div>
-        <div
-          class="text-2xl text-pretty text-blue-950 md:pr-40 md:text-3xl dark:text-gray-200"
+        <p
+          class="text-navy-100 dark:text-almost-white max-w-[40rem] text-2xl leading-[1.14] font-normal tracking-[2%] text-pretty md:text-[32px]"
         >
           A modular and open-ended toolkit for WebGPU, with advanced type
           interface and ability to write shaders in TypeScript.
-        </div>
-        <div class="my-4 flex flex-col gap-4 sm:flex-row md:my-8">
-          <GetStartedButton class="h-18" />
-          <a
-            class="from-gradient-blue via-gradient-purple w-full bg-gradient-to-tl to-[#f8f7dd] bg-size-[200%_200%] bg-position-[100%_100%] p-[1px] no-underline sm:w-auto"
-            href="/TypeGPU/examples"
-          >
-            <span
-              class="box-border flex items-center justify-center bg-white px-6 py-4 text-center text-base text-black/75 shadow hover:text-black sm:py-6 md:px-7 md:text-xl lg:px-8 lg:py-5 lg:text-2xl dark:bg-gray-800 dark:text-gray-100 dark:hover:text-white"
-            >
-              See examples
-            </span>
-          </a>
-        </div>
+        </p>
       </div>
+
+      <div class="flex flex-col items-stretch gap-4 self-stretch sm:flex-row">
+        <CallToActionButton
+          href="/TypeGPU/getting-started"
+          title="Get started"
+          size="base"
+        />
+        <a
+          class="from-gradient-blue via-gradient-purple dark:text-almost-white text-navy-100 relative box-border flex items-center justify-center border-none bg-gradient-to-tl to-[#f8f7dd] bg-size-[200%_200%] bg-position-[100%_100%] px-6 py-4 text-center text-xl font-medium no-underline hover:text-black sm:w-auto dark:hover:text-white"
+          href="/TypeGPU/examples"
+        >
+          <span class="dark:bg-navy-bg absolute inset-[1px] bg-white"></span>
+          <span class="z-10">See examples</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- TypeGPU examples -->
+    <section class="mx-auto mb-14 px-6 md:mb-30 md:max-w-214 lg:max-w-[1024px]">
+      <div class="flex flex-col gap-6 pb-14">
+        <h2
+          class="text-navy-100 dark:text-almost-white text-2xl font-medium tracking-[2%] md:text-4xl"
+        >
+          Explore TypeGPU examples
+        </h2>
+        <p
+          class="text-navy-100 dark:text-almost-white text-lg font-normal text-pretty md:text-xl"
+        >
+          From interactive 3D apps to custom shaders and type-safe libraries,
+          TypeGPU gives you the tools to build anything WebGPU can do.
+        </p>
+      </div>
+      <LandingExampleGrid client:visible />
     </section>
 
     <!-- Code Showcase -->
     <section
-      class="flex flex-col gap-10 px-6 sm:mx-auto md:max-w-214 md:gap-20 lg:max-w-[1024px]"
+      class="mb-14 flex flex-col gap-10 self-stretch sm:mx-auto sm:w-full md:mb-30 md:max-w-214 md:gap-20 lg:max-w-[1024px]"
     >
-      <div class="flex flex-col gap-4 md:gap-6">
+      <div class="flex flex-col gap-4 px-6 md:gap-6">
         <h2
           class="center text-2xl font-medium text-blue-950 md:text-4xl dark:text-gray-100"
         >
@@ -131,7 +141,9 @@ import { HeroEffect } from '../../components/hero-effect/HeroEffect';
         </p>
       </div>
       <CodeShowcase />
-      <div class="flex flex-col gap-6 md:flex-row md:justify-between md:gap-0">
+      <div
+        class="flex flex-col gap-6 px-6 md:flex-row md:justify-between md:gap-0"
+      >
         <h3
           class="center text-xl font-medium text-blue-950 md:text-2xl dark:text-gray-100"
         >
@@ -150,26 +162,10 @@ import { HeroEffect } from '../../components/hero-effect/HeroEffect';
       </div>
     </section>
 
-    <!-- TypeGPU examples -->
-    <section class="mx-auto px-6 md:max-w-214 lg:max-w-[1024px] lg:px-72">
-      <div class="flex flex-col gap-6 pb-14">
-        <h2
-          class="center text-2xl font-medium text-blue-950 md:text-4xl dark:text-gray-100"
-        >
-          Explore TypeGPU examples
-        </h2>
-        <p
-          class="text-lg text-pretty text-blue-950 md:text-xl dark:text-gray-300"
-        >
-          From interactive 3D apps to custom shaders and type-safe libraries,
-          TypeGPU gives you the tools to build anything WebGPU can do.
-        </p>
-      </div>
-      <LandingExampleGrid client:visible />
-    </section>
-
     <!-- Videos -->
-    <section class="mx-auto px-6 md:max-w-214 lg:max-w-[1024px] lg:px-72">
+    <section
+      class="mx-auto mb-14 px-6 md:mb-30 md:max-w-214 lg:max-w-[1024px] lg:px-72"
+    >
       <div class="flex flex-col gap-6 pb-20">
         <h2
           class="center text-2xl font-medium text-blue-950 md:text-4xl dark:text-gray-100"
@@ -186,28 +182,9 @@ import { HeroEffect } from '../../components/hero-effect/HeroEffect';
       <Videos />
     </section>
 
-    <!-- Backlog -->
-    <section class="mx-auto my-12 px-6 md:max-w-214 lg:max-w-[1024px] lg:px-72">
-      <div class="flex flex-col gap-6 pb-20">
-        <h2
-          class="center text-2xl font-medium text-blue-950 md:text-4xl dark:text-gray-100"
-        >
-          What's around the corner?
-        </h2>
-        <p
-          class="text-lg text-pretty text-blue-950 md:text-xl dark:text-gray-300"
-        >
-          Our journey toward end-to-end type safety involves several
-          interoperating primitives – explore our live board to see what
-          features are coming next.
-        </p>
-      </div>
-      <Backlog />
-    </section>
-
     <!-- Call to Action -->
     <section
-      class="mx-auto flex flex-col items-center gap-16 px-6 md:max-w-214 lg:max-w-[1024px] lg:px-72"
+      class="mx-auto mb-14 flex flex-col items-center gap-16 px-6 md:mb-30 md:max-w-214 lg:max-w-[1024px] lg:px-72"
     >
       <h2
         class="text-center text-3xl leading-tight font-bold text-blue-950 lg:text-5xl dark:text-gray-100"
@@ -216,33 +193,40 @@ import { HeroEffect } from '../../components/hero-effect/HeroEffect';
           ><GradientTitle title="TypeGPU" />?</span
         >
       </h2>
-      <GetStartedButton />
+      <CallToActionButton
+        href="/TypeGPU/getting-started"
+        title="Get started"
+        size="lg"
+      />
     </section>
 
     <!-- Footer -->
     <footer
-      class="to-accent-50 mt-20 flex flex-col items-center gap-10 bg-gradient-to-b from-white md:gap-15 lg:gap-20 dark:from-[#232736] dark:to-gray-800"
+      class="to-accent-50 mt-20 flex flex-col items-center self-stretch bg-gradient-to-b from-white dark:from-[#C86EFF00] dark:to-[#5A9CFF40]"
     >
       <div
-        class="mx-auto flex flex-col items-center gap-12 px-6 text-blue-950 md:max-w-214 lg:max-w-[1024px] lg:px-72 dark:text-gray-100"
+        class="dark:text-almost-white mx-auto flex flex-col items-center px-6 text-blue-950 md:max-w-214 lg:max-w-[1024px] lg:px-72"
       >
         <h2 class="text-center text-3xl leading-tight font-bold lg:text-5xl">
           We are <GradientTitle title="Software Mansion" />
         </h2>
+
         <div
-          class="mb-4 text-center text-xl text-pretty text-blue-900 dark:text-gray-300"
+          class="dark:text-almost-white mt-6 mb-12 max-w-[40rem] text-center text-xl font-normal text-pretty text-blue-900"
         >
           We’re a software company built around improving developer experience
           and bringing to life the innovative ideas of our clients. Do you have
           a software project that we can help you with?
         </div>
-        <GetStartedButton
+
+        <CallToActionButton
           title="Hire us"
+          size="base"
           href="https://swmansion.com/contact/projects?utm_source=typegpu&utm_medium=docs"
         />
 
         <div
-          class="grid w-full max-w-7xl grid-cols-1 gap-8 bg-white py-8 text-center sm:grid-cols-2 md:grid-cols-3 dark:bg-[#272B3C]"
+          class="dark:bg-off-navy my-15 grid w-full max-w-7xl grid-cols-1 gap-8 bg-white py-8 text-center sm:grid-cols-2 md:grid-cols-3"
         >
           <a
             href="https://docs.swmansion.com/react-native-reanimated/"
@@ -290,14 +274,11 @@ import { HeroEffect } from '../../components/hero-effect/HeroEffect';
             >byegl</a
           >
         </div>
-        <div
-          class="text-grayscale-100 flex flex-col items-center gap-4 pb-4 dark:text-gray-400"
-        >
+        <p class="text-grayscale-100 dark:text-almost-white text-sm">
           &copy; Software Mansion {new Date().getFullYear()}. All trademarks and
           copyrights belong to their respective owners.
-
-          <Image src={SwmLogomarkSvg} alt="Software Mansion Logomark" />
-        </div>
+        </p>
+        <SwmLogomarkSvg class="my-15" />
       </div>
     </footer>
   </div>
