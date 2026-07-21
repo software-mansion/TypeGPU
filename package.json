@@ -31,6 +31,8 @@
     "test:built-unit": "pnpm run --filter './packages/*' build && TEST_BUILT=1 vitest run --project=!browser",
     "test:built-unit-and-attest": "pnpm run --filter './packages/*' build && TEST_BUILT=1 ENABLE_ATTEST=1 vitest run --project=!browser",
     "test:unit:watch": "vitest --project=!browser",
+    "test:fast-unit": "vitest run --project=!browser --exclude '**/individual-example-tests/**'",
+    "test:fast-unit:watch": "vitest --project=!browser --exclude '**/individual-example-tests/**'",
     "test:browser": "vitest run --browser.enabled --project browser",
     "test:browser:watch": "vitest --browser.enabled --project browser",
     "test:coverage": "vitest --coverage run",
