@@ -1,25 +1,30 @@
 import tgpu, { d, std, type TgpuRoot } from 'typegpu';
 import * as m from 'wgpu-matrix';
-import {
-  type CubemapNames,
-  cubeVertices,
-  loadCubemap,
-} from '../../../examples/rendering/cubemap-reflection/cubemap.ts';
+import { type CubemapNames, cubeVertices, loadCubemap } from './cubemap.ts';
 import {
   Camera,
   CubeVertex,
   DirectionalLight,
   Material,
   Vertex,
-} from '../../../examples/rendering/cubemap-reflection/dataTypes.ts';
-import { IcosphereGenerator } from '../../../examples/rendering/cubemap-reflection/icosphere.ts';
+} from './dataTypes.ts';
+import { IcosphereGenerator } from './icosphere.ts';
 
 // Initialization
 
-export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, signal: AbortSignal) {
-  // Canvas Setup
+function hideHelp() {
+  const helpElem = document.getElementById('help');
+  if (helpElem) {
+    helpElem.style.opacity = '0';
+  }
+}
 
-  const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
+  const maxBufferSize = root.device.limits.maxStorageBufferBindingSize;
+  const maxStorageBufferBindingSize =
+    root.device.limits.maxStorageBufferBindingSize;
+  const maxSize = Math.min(maxBufferSize, maxStorageBufferBindingSize);
+  const canvas = context.canvas as HTMLCanvasElement;
   let exampleDestroyed = false;
 
   // Geometry & Material Setup
@@ -34,8 +39,11 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
     specular: d.vec3f(0.8, 0.8, 0.8),
   };
 
-  const icosphereGenerator = new IcosphereGenerator(root, 2048); // TODO: Verify size
-  let vertexBuffer = icosphereGenerator.createIcosphere(subdivisions, smoothNormals);
+  const icosphereGenerator = new IcosphereGenerator(root, maxSize);
+  let vertexBuffer = icosphereGenerator.createIcosphere(
+    subdivisions,
+    smoothNormals,
+  );
   const cubeVertexBuffer = root
     .createBuffer(d.arrayOf(CubeVertex, cubeVertices.length), cubeVertices)
     .$usage('vertex');
@@ -67,13 +75,15 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
     })
     .$usage('uniform');
 
-  const materialBuffer = root.createBuffer(Material, materialProps).$usage('uniform');
+  const materialBuffer = root
+    .createBuffer(Material, materialProps)
+    .$usage('uniform');
 
   // Textures & Samplers
 
   let chosenCubemap: CubemapNames = 'campsite';
   const size = 2048;
-  const texture = root['~unstable']
+  const texture = root
     .createTexture({
       dimension: '2d',
       size: [size, size, 6],
@@ -83,7 +93,7 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
   await loadCubemap(texture, chosenCubemap);
 
   const cubemap = texture.createView(d.textureCube(d.f32));
-  const sampler = root['~unstable'].createSampler({
+  const sampler = root.createSampler({
     magFilter: 'linear',
     minFilter: 'linear',
   });
@@ -113,7 +123,9 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
   });
 
   const vertexLayout = tgpu.vertexLayout(d.disarrayOf(Vertex));
-  const cubeVertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(CubeVertex, n));
+  const cubeVertexLayout = tgpu.vertexLayout((n: number) =>
+    d.arrayOf(CubeVertex, n),
+  );
 
   // Shader Functions
 
@@ -150,23 +162,35 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
       .mul(renderLayout.$.light.color)
       .mul(renderLayout.$.light.intensity);
 
-    const diffuseFactor = std.max(std.dot(normalizedNormal, normalizedLightDir), 0);
+    const diffuseFactor = std.max(
+      std.dot(normalizedNormal, normalizedLightDir),
+      0,
+    );
     const diffuseLight = renderLayout.$.material.diffuse
       .mul(renderLayout.$.light.color)
       .mul(renderLayout.$.light.intensity)
       .mul(diffuseFactor);
 
-    const viewDirection = std.normalize(renderLayout.$.camera.position.xyz.sub(input.worldPos.xyz));
-    const reflectionDirection = std.reflect(std.neg(normalizedLightDir), normalizedNormal);
+    const viewDirection = std.normalize(
+      renderLayout.$.camera.position.xyz.sub(input.worldPos.xyz),
+    );
+    const reflectionDirection = std.reflect(
+      std.neg(normalizedLightDir),
+      normalizedNormal,
+    );
 
     const specularFactor =
-      std.max(std.dot(viewDirection, reflectionDirection), 0) ** renderLayout.$.material.shininess;
+      std.max(std.dot(viewDirection, reflectionDirection), 0) **
+      renderLayout.$.material.shininess;
     const specularLight = renderLayout.$.material.specular
       .mul(renderLayout.$.light.color)
       .mul(renderLayout.$.light.intensity)
       .mul(specularFactor);
 
-    const reflectionVector = std.reflect(std.neg(viewDirection), normalizedNormal);
+    const reflectionVector = std.reflect(
+      std.neg(viewDirection),
+      normalizedNormal,
+    );
     const environmentColor = std.textureSample(
       textureLayout.$.cubemap,
       textureLayout.$.texSampler,
@@ -177,7 +201,7 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
 
     const finalColor = std.mix(
       directLighting,
-      environmentColor.xyz,
+      environmentColor.rgb,
       renderLayout.$.material.reflectivity,
     );
 
@@ -194,7 +218,9 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
       texCoord: d.vec3f,
     },
   })((input) => {
-    const viewPos = renderLayout.$.camera.view.mul(d.vec4f(input.position.xyz, 0)).xyz;
+    const viewPos = renderLayout.$.camera.view.mul(
+      d.vec4f(input.position.xyz, 0),
+    ).xyz;
 
     return {
       pos: renderLayout.$.camera.projection.mul(d.vec4f(viewPos, 1)),
@@ -234,10 +260,8 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
   function render() {
     cubePipeline
       .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
+        view: context,
         clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
-        loadOp: 'clear',
-        storeOp: 'store',
       })
       .with(cubeVertexLayout, cubeVertexBuffer)
       .with(renderBindGroup)
@@ -246,10 +270,9 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
 
     pipeline
       .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
+        view: context,
         clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1 },
         loadOp: 'load',
-        storeOp: 'store',
       })
       .with(vertexLayout, vertexBuffer)
       .with(renderBindGroup)
@@ -283,7 +306,7 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
         10000,
         d.mat4x4f(),
       );
-      cameraBuffer.writePartial({ projection: newProj });
+      cameraBuffer.patch({ projection: newProj });
     }
   });
   resizeObserver.observe(canvas);
@@ -305,13 +328,22 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
     const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
     const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
 
-    const newView = m.mat4.lookAt(newCameraPos, d.vec3f(0, 0, 0), d.vec3f(0, 1, 0), d.mat4x4f());
-    cameraBuffer.writePartial({ view: newView, position: newCameraPos });
+    const newView = m.mat4.lookAt(
+      newCameraPos,
+      d.vec3f(0, 0, 0),
+      d.vec3f(0, 1, 0),
+      d.mat4x4f(),
+    );
+    cameraBuffer.patch({ view: newView, position: newCameraPos });
   }
 
   function updateCameraOrbit(dx: number, dy: number) {
     orbitYaw += -dx * 0.005;
-    orbitPitch = std.clamp(orbitPitch + dy * 0.005, -Math.PI / 2 + 0.01, Math.PI / 2 - 0.01);
+    orbitPitch = std.clamp(
+      orbitPitch + dy * 0.005,
+      -Math.PI / 2 + 0.01,
+      Math.PI / 2 - 0.01,
+    );
     updateCameraPosition();
   }
 
@@ -410,96 +442,59 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
     { passive: false },
   );
 
-  function hideHelp() {
-    const helpElem = document.getElementById('help');
-    if (helpElem) {
-      helpElem.style.opacity = '0';
-    }
-  }
   for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
     canvas.addEventListener(eventName, hideHelp, { once: true, passive: true });
   }
 
-  const controls = {
-    subdivisions: {
-      initial: 2,
-      min: 0,
-      max: 10,
-      step: 1,
-      onSliderChange(value: number) {
-        subdivisions = value;
-        vertexBuffer = icosphereGenerator.createIcosphere(subdivisions, smoothNormals);
-      },
+  return {
+    set subdivisions(value: number) {
+      subdivisions = value;
+      vertexBuffer = icosphereGenerator.createIcosphere(
+        subdivisions,
+        smoothNormals,
+      );
     },
-    'smooth normals': {
-      initial: false,
-      onToggleChange: (value: boolean) => {
-        smoothNormals = value;
-        vertexBuffer = icosphereGenerator.createIcosphere(subdivisions, smoothNormals);
-      },
+    set smoothNormals(value: boolean) {
+      smoothNormals = value;
+      vertexBuffer = icosphereGenerator.createIcosphere(
+        subdivisions,
+        smoothNormals,
+      );
     },
-    'cubemap texture': {
-      initial: chosenCubemap,
-      options: ['campsite', 'beach', 'chapel', 'city'],
-      onSelectChange: async (value: CubemapNames) => {
-        chosenCubemap = value;
-        await loadCubemap(texture, chosenCubemap);
-      },
+    set cubemapTexture(value: CubemapNames) {
+      chosenCubemap = value;
+      void loadCubemap(texture, chosenCubemap);
     },
-    'ambient color': {
-      initial: [materialProps.ambient.x, materialProps.ambient.y, materialProps.ambient.z] as const,
-      onColorChange: (value: readonly [number, number, number]) => {
-        materialProps.ambient = d.vec3f(value[0], value[1], value[2]);
-        materialBuffer.writePartial({ ambient: materialProps.ambient });
-      },
+    set ambientColor(value: d.v3f) {
+      materialProps.ambient = value;
+      materialBuffer.patch({ ambient: materialProps.ambient });
     },
-    'diffuse color': {
-      initial: [materialProps.diffuse.x, materialProps.diffuse.y, materialProps.diffuse.z] as const,
-      onColorChange: (value: readonly [number, number, number]) => {
-        materialProps.diffuse = d.vec3f(value[0], value[1], value[2]);
-        materialBuffer.writePartial({ diffuse: materialProps.diffuse });
-      },
+    set diffuseColor(value: d.v3f) {
+      materialProps.diffuse = value;
+      materialBuffer.patch({ diffuse: materialProps.diffuse });
     },
-    'specular color': {
-      initial: [
-        materialProps.specular.x,
-        materialProps.specular.y,
-        materialProps.specular.z,
-      ] as const,
-      onColorChange: (value: readonly [number, number, number]) => {
-        materialProps.specular = d.vec3f(value[0], value[1], value[2]);
-        materialBuffer.writePartial({ specular: materialProps.specular });
-      },
+    set specularColor(value: d.v3f) {
+      materialProps.specular = value;
+      materialBuffer.patch({ specular: materialProps.specular });
     },
-    shininess: {
-      initial: materialProps.shininess,
-      min: 1,
-      max: 128,
-      step: 1,
-      onSliderChange: (value: number) => {
-        materialProps.shininess = value;
-        materialBuffer.writePartial({ shininess: value });
-      },
+    set shininess(value: number) {
+      materialProps.shininess = value;
+      materialBuffer.patch({ shininess: value });
     },
-    reflectivity: {
-      initial: materialProps.reflectivity,
-      min: 0,
-      max: 1,
-      step: 0.1,
-      onSliderChange: (value: number) => {
-        materialProps.reflectivity = value;
-        materialBuffer.writePartial({ reflectivity: value });
-      },
+    set reflectivity(value: number) {
+      materialProps.reflectivity = value;
+      materialBuffer.patch({ reflectivity: value });
+    },
+    onCleanup() {
+      exampleDestroyed = true;
+      window.removeEventListener('mouseup', mouseUpEventListener);
+      window.removeEventListener('mousemove', mouseMoveEventListener);
+      window.removeEventListener('touchmove', touchMoveEventListener);
+      window.removeEventListener('touchend', touchEndEventListener);
+      resizeObserver.unobserve(canvas);
+      icosphereGenerator.destroy();
     },
   };
-
-  signal.addEventListener('abort', () => {
-    exampleDestroyed = true;
-    window.removeEventListener('mouseup', mouseUpEventListener);
-    window.removeEventListener('mousemove', mouseMoveEventListener);
-    window.removeEventListener('touchmove', touchMoveEventListener);
-    window.removeEventListener('touchend', touchEndEventListener);
-    resizeObserver.unobserve(canvas);
-    icosphereGenerator.destroy();
-  });
 }
+
+// #endregion

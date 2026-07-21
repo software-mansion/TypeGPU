@@ -1,10 +1,10 @@
 import { randf } from '@typegpu/noise';
 import { d, std, type TgpuRoot } from 'typegpu';
 import * as m from 'wgpu-matrix';
-import { simulate } from '../../../examples/rendering/3d-fish/compute.ts';
-import { loadModel } from '../../../examples/rendering/3d-fish/load-model.ts';
-import * as p from '../../../examples/rendering/3d-fish/params.ts';
-import { fragmentShader, vertexShader } from '../../../examples/rendering/3d-fish/render.ts';
+import { simulate } from './compute.ts';
+import { loadModel } from './load-model.ts';
+import * as p from './params.ts';
+import { fragmentShader, vertexShader } from './render.ts';
 import {
   Camera,
   computeBindGroupLayout,
@@ -15,15 +15,39 @@ import {
   modelVertexLayout,
   renderBindGroupLayout,
   renderInstanceLayout,
-} from '../../../examples/rendering/3d-fish/schemas.ts';
+} from './schemas.ts';
 
 // setup
-let speedMultiplier = 1;
+export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
+  const canvas = context.canvas as HTMLCanvasElement;
+  let speedMultiplier = 1;
+  let disposed = false;
 
-export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, signal: AbortSignal) {
-  const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+  // models and textures
 
-  // TODO: Load in parallel using Promise.all, and add abort signal to cancel loading
+  const presets = {
+    default: {
+      separationDist: 0.3,
+      separationStr: 0.0006,
+      alignmentDist: 0.3,
+      alignmentStr: 0.01,
+      cohesionDist: 0.5,
+      cohesionStr: 0.0013,
+    },
+    init: {
+      separationDist: 0.2,
+      separationStr: 0.1,
+      alignmentDist: 0.5,
+      alignmentStr: 1,
+      cohesionDist: 0.3,
+      cohesionStr: 0.013,
+    },
+  } as const;
+
+  const spinnerBackground = document.querySelector(
+    '.spinner-background',
+  ) as HTMLDivElement | null;
+
   // https://sketchfab.com/3d-models/animated-low-poly-fish-64adc2e5a4be471e8279532b9610c878
   const fishModel = await loadModel(
     root,
@@ -39,33 +63,6 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
     '/TypeGPU/assets/3d-fish/ocean_floor.png',
   );
 
-  if (signal.aborted) {
-    return;
-  }
-
-  // models and textures
-
-  const presets = {
-    default: {
-      separationDist: 0.3,
-      separationStr: 0.0006,
-      alignmentDist: 0.3,
-      alignmentStr: 0.005,
-      cohesionDist: 0.5,
-      cohesionStr: 0.0004,
-    },
-    init: {
-      separationDist: 0.2,
-      separationStr: 0.1,
-      alignmentDist: 0.5,
-      alignmentStr: 1,
-      cohesionDist: 0.3,
-      cohesionStr: 0.013,
-    },
-  } as const;
-
-  const spinnerBackground = document.querySelector('.spinner-background') as HTMLDivElement;
-
   // buffers
 
   const fishDataBuffers = Array.from({ length: 2 }, (_, idx) =>
@@ -77,13 +74,17 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
 
   function enqueuePresetChanges() {
     speedMultiplier = 3;
-    spinnerBackground.style.display = 'grid';
+    if (spinnerBackground) {
+      spinnerBackground.style.display = 'grid';
+    }
     fishBehaviorBuffer.write(presets.init);
 
-    setTimeout(() => {
+    window.setTimeout(() => {
       if (disposed) return;
       fishBehaviorBuffer.write(presets.default);
-      spinnerBackground.style.display = 'none';
+      if (spinnerBackground) {
+        spinnerBackground.style.display = 'none';
+      }
       speedMultiplier = 1;
     }, 300);
   }
@@ -91,29 +92,31 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
   const buffer0mutable = fishDataBuffers[0].as('mutable');
   const buffer1mutable = fishDataBuffers[1].as('mutable');
   const seedUniform = root.createUniform(d.f32);
-  const randomizeFishPositionsPipeline = root.createGuardedComputePipeline((x) => {
-    'use gpu';
-    randf.seed2(d.vec2f(x, seedUniform.$));
-    const data = ModelData({
-      position: d.vec3f(
-        randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
-        randf.sample() * p.aquariumSize.y - p.aquariumSize.y / 2,
-        randf.sample() * p.aquariumSize.z - p.aquariumSize.z / 2,
-      ),
-      direction: d.vec3f(
-        randf.sample() * 0.1 - 0.05,
-        randf.sample() * 0.1 - 0.05,
-        randf.sample() * 0.1 - 0.05,
-      ),
-      scale: p.fishModelScale * (1 + (randf.sample() - 0.5) * 0.8),
-      variant: randf.sample(),
-      applySinWave: 1,
-      applySeaFog: 1,
-      applySeaDesaturation: 1,
-    });
-    buffer0mutable.$[x] = ModelData(data);
-    buffer1mutable.$[x] = ModelData(data);
-  });
+  const randomizeFishPositionsPipeline = root.createGuardedComputePipeline(
+    (x) => {
+      'use gpu';
+      randf.seed2(d.vec2f(x, seedUniform.$));
+      const data = ModelData({
+        position: d.vec3f(
+          randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
+          randf.sample() * p.aquariumSize.y - p.aquariumSize.y / 2,
+          randf.sample() * p.aquariumSize.z - p.aquariumSize.z / 2,
+        ),
+        direction: d.vec3f(
+          randf.sample() * 0.1 - 0.05,
+          randf.sample() * 0.1 - 0.05,
+          randf.sample() * 0.1 - 0.05,
+        ),
+        scale: p.fishModelScale * (1 + (randf.sample() - 0.5) * 0.8),
+        variant: randf.sample(),
+        applySinWave: 1,
+        applySeaFog: 1,
+        applySeaDesaturation: 1,
+      });
+      buffer0mutable.$[x] = ModelData(data);
+      buffer1mutable.$[x] = ModelData(data);
+    },
+  );
 
   const randomizeFishPositions = () => {
     seedUniform.write((performance.now() % 10000) / 10000);
@@ -140,13 +143,8 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
   };
 
   const cameraBuffer = root.createBuffer(Camera, camera).$usage('uniform');
-
-  const mouseRayBuffer = root
-    .createBuffer(Line3, { origin: d.vec3f(), dir: d.vec3f() })
-    .$usage('uniform');
-
+  const mouseRayBuffer = root.createBuffer(Line3).$usage('uniform');
   const timePassedBuffer = root.createBuffer(d.f32).$usage('uniform');
-
   const currentTimeBuffer = root.createBuffer(d.f32).$usage('uniform');
 
   const fishBehaviorBuffer = root
@@ -175,13 +173,11 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
     attribs: modelVertexLayout.attrib,
     vertex: vertexShader,
     fragment: fragmentShader,
+
     depthStencil: {
       format: 'depth24plus',
       depthWriteEnabled: true,
       depthCompare: 'less',
-    },
-    primitive: {
-      topology: 'triangle-list',
     },
   });
 
@@ -212,13 +208,16 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
     }),
   );
 
-  const renderOceanFloorBindGroup = root.createBindGroup(renderBindGroupLayout, {
-    modelData: oceanFloorDataBuffer,
-    camera: cameraBuffer,
-    modelTexture: oceanFloorModel.texture,
-    sampler: sampler,
-    currentTime: currentTimeBuffer,
-  });
+  const renderOceanFloorBindGroup = root.createBindGroup(
+    renderBindGroupLayout,
+    {
+      modelData: oceanFloorDataBuffer,
+      camera: cameraBuffer,
+      modelTexture: oceanFloorModel.texture,
+      sampler: sampler,
+      currentTime: currentTimeBuffer,
+    },
+  );
 
   const computeBindGroups = [0, 1].map((idx) =>
     root.createBindGroup(computeBindGroupLayout, {
@@ -234,12 +233,9 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
 
   let odd = false;
   let lastTimestamp: DOMHighResTimeStamp = 0;
-  let disposed = false;
+  let animationFrameId: number;
 
   function frame(timestamp: DOMHighResTimeStamp) {
-    if (disposed) {
-      return;
-    }
     odd = !odd;
 
     currentTimeBuffer.write(timestamp);
@@ -247,14 +243,19 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
     lastTimestamp = timestamp;
     cameraBuffer.write(camera);
 
-    simulatePipeline.with(computeBindGroups[odd ? 1 : 0]).dispatchThreads(p.fishAmount);
+    simulatePipeline
+      .with(computeBindGroups[odd ? 1 : 0])
+      .dispatchThreads(p.fishAmount);
 
     renderPipeline
       .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        clearValue: [p.backgroundColor.x, p.backgroundColor.y, p.backgroundColor.z, 1],
-        loadOp: 'clear',
-        storeOp: 'store',
+        view: context,
+        clearValue: [
+          p.backgroundColor.x,
+          p.backgroundColor.y,
+          p.backgroundColor.z,
+          1,
+        ],
       })
       .withDepthStencilAttachment({
         view: depthTexture.createView(),
@@ -269,10 +270,14 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
 
     renderPipeline
       .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        clearValue: [p.backgroundColor.x, p.backgroundColor.y, p.backgroundColor.z, 1],
+        view: context,
+        clearValue: [
+          p.backgroundColor.x,
+          p.backgroundColor.y,
+          p.backgroundColor.z,
+          1,
+        ],
         loadOp: 'load',
-        storeOp: 'store',
       })
       .withDepthStencilAttachment({
         view: depthTexture.createView(),
@@ -285,25 +290,29 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
       .with(renderFishBindGroups[odd ? 1 : 0])
       .draw(fishModel.polygonCount, p.fishAmount);
 
-    requestAnimationFrame(frame);
+    animationFrameId = requestAnimationFrame(frame);
   }
   enqueuePresetChanges();
-  requestAnimationFrame(frame);
-
-  // #region Example controls and cleanup
+  animationFrameId = requestAnimationFrame(frame);
 
   // Variables for interaction
 
-  let isLeftPressed = false;
+  let isPressed = false;
   let previousMouseX = 0;
   let previousMouseY = 0;
 
   let isPopupDiscarded = false;
-  const controlsPopup = document.getElementById('help') as HTMLDivElement;
+  const controlsPopup = document.getElementById(
+    'help',
+  ) as HTMLDivElement | null;
 
-  const cameraRadius = std.length(std.sub(p.cameraInitialPosition.xyz, p.cameraInitialTarget.xyz));
+  const cameraRadius = std.length(
+    std.sub(p.cameraInitialPosition.xyz, p.cameraInitialTarget.xyz),
+  );
   let cameraYaw =
-    (Math.atan2(p.cameraInitialPosition.x, p.cameraInitialPosition.z) + Math.PI) % Math.PI;
+    (Math.atan2(p.cameraInitialPosition.x, p.cameraInitialPosition.z) +
+      Math.PI) %
+    Math.PI;
   let cameraPitch = Math.asin(p.cameraInitialPosition.y / cameraRadius);
 
   function updateCameraTarget(cx: number, cy: number) {
@@ -331,10 +340,14 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
     );
   }
 
-  async function updateMouseRay(cx: number, cy: number) {
+  function updateMouseRay(cx: number, cy: number) {
     const boundingBox = canvas.getBoundingClientRect();
-    const canvasX = Math.floor((cx - boundingBox.left) * window.devicePixelRatio);
-    const canvasY = Math.floor((cy - boundingBox.top) * window.devicePixelRatio);
+    const canvasX = Math.floor(
+      (cx - boundingBox.left) * window.devicePixelRatio,
+    );
+    const canvasY = Math.floor(
+      (cy - boundingBox.top) * window.devicePixelRatio,
+    );
     const canvasPoint = d.vec4f(
       (canvasX / canvas.width) * 2 - 1,
       (1 - canvasY / canvas.height) * 2 - 1,
@@ -352,39 +365,39 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
       worldPos.z / worldPos.w,
     );
 
-    mouseRayBuffer.write({
-      origin: camera.position.xyz,
-      dir: std.normalize(std.sub(worldPosNonUniform, camera.position.xyz)),
-    });
+    mouseRayBuffer.write(
+      Line3({
+        origin: camera.position.xyz,
+        dir: std.normalize(std.sub(worldPosNonUniform, camera.position.xyz)),
+      }),
+    );
   }
-
-  // Prevent the context menu from appearing on right click.
-  canvas.addEventListener('contextmenu', (event) => {
-    event.preventDefault();
-  });
 
   // Mouse controls
 
   canvas.addEventListener('mousedown', async (event) => {
     previousMouseX = event.clientX;
     previousMouseY = event.clientY;
-    controlsPopup.style.opacity = '0';
+    if (controlsPopup) {
+      controlsPopup.style.opacity = '0';
+    }
     isPopupDiscarded = true;
 
     if (event.button === 0) {
-      isLeftPressed = true;
+      isPressed = true;
     }
+    updateMouseRay(event.clientX, event.clientY);
   });
 
   const mouseUpEventListener = (event: MouseEvent) => {
     if (event.button === 0) {
-      isLeftPressed = false;
+      isPressed = false;
     }
   };
   window.addEventListener('mouseup', mouseUpEventListener);
 
   canvas.addEventListener('mousemove', () => {
-    if (!isPopupDiscarded) {
+    if (!isPopupDiscarded && controlsPopup) {
       controlsPopup.style.opacity = '1';
     }
   });
@@ -395,7 +408,7 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
     previousMouseX = event.clientX;
     previousMouseY = event.clientY;
 
-    if (isLeftPressed) {
+    if (isPressed) {
       updateCameraTarget(dx, dy);
     }
 
@@ -412,7 +425,9 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
       if (event.touches.length === 1) {
         previousMouseX = event.touches[0].clientX;
         previousMouseY = event.touches[0].clientY;
-        updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
+      }
+      updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
+      if (controlsPopup) {
         controlsPopup.style.opacity = '0';
       }
     },
@@ -427,8 +442,8 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
       previousMouseY = event.touches[0].clientY;
 
       updateCameraTarget(dx, dy);
-      updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
     }
+    updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
   };
   window.addEventListener('touchmove', touchMoveEventListener);
 
@@ -452,11 +467,17 @@ export default async function init(root: TgpuRoot, canvas: HTMLCanvasElement, si
   });
   resizeObserver.observe(canvas);
 
-  signal.addEventListener('abort', () => {
-    disposed = true;
-    window.removeEventListener('mouseup', mouseUpEventListener);
-    window.removeEventListener('mousemove', mouseMoveEventListener);
-    window.removeEventListener('touchmove', touchMoveEventListener);
-    resizeObserver.disconnect();
-  });
+  return {
+    randomizeFishPositions,
+    onCleanup() {
+      disposed = true;
+      cancelAnimationFrame(animationFrameId);
+      window.removeEventListener('mouseup', mouseUpEventListener);
+      window.removeEventListener('mousemove', mouseMoveEventListener);
+      window.removeEventListener('touchmove', touchMoveEventListener);
+      resizeObserver.disconnect();
+    },
+  };
 }
+
+// #endregion

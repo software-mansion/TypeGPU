@@ -2,20 +2,23 @@ import { perlin3d } from '@typegpu/noise';
 import { sdPlane } from '@typegpu/sdf';
 import tgpu, { d, std, type TgpuRoot } from 'typegpu';
 
-import * as c from '../../../examples/simple/vaporrave/constants.ts';
-import { circles } from '../../../examples/simple/vaporrave/floor.ts';
-import { rayUnion } from '../../../examples/simple/vaporrave/helpers.ts';
-import { getSphere } from '../../../examples/simple/vaporrave/sphere.ts';
-import { LightRay, Ray } from '../../../examples/simple/vaporrave/types.ts';
+import * as c from './constants.ts';
+import { circles, grid } from './floor.ts';
+import { rayUnion } from './helpers.ts';
+import { getSphere } from './sphere.ts';
+import { LightRay, Ray } from './types.ts';
 
-export default function init(root: TgpuRoot, canvas: HTMLCanvasElement, signal: AbortSignal) {
-  // == INIT ==
-  const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
+// == INIT ==
+export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
+  const canvas = context.canvas as HTMLCanvasElement;
 
   // == BUFFERS ==
   const floorAngleUniform = root.createUniform(d.f32);
   const sphereAngleUniform = root.createUniform(d.f32);
-  const glowIntensityUniform = root.createUniform(d.f32, c.INITIAL_GLOW_INTENSITY);
+  const glowIntensityUniform = root.createUniform(
+    d.f32,
+    c.INITIAL_GLOW_INTENSITY,
+  );
   const resolutionUniform = root.createUniform(d.vec2f);
   const sphereColorUniform = root.createUniform(d.vec3f, c.initialSphereColor);
 
@@ -35,15 +38,18 @@ export default function init(root: TgpuRoot, canvas: HTMLCanvasElement, signal: 
       dist: sdPlane(p, c.planeOrthonormal, c.PLANE_OFFSET),
       color: floorPatternSlot.$(p.xz, floorAngleUniform.$),
     });
-    const sphere = getSphere(p, sphereColorUniform.$, c.sphereCenter, sphereAngleUniform.$);
+    const sphere = getSphere(
+      p,
+      sphereColorUniform.$,
+      c.sphereCenter,
+      sphereAngleUniform.$,
+    );
 
     return rayUnion(floor, sphere);
   });
 
-  const rayMarch = tgpu.fn(
-    [d.vec3f, d.vec3f],
-    LightRay,
-  )((ro, rd) => {
+  const rayMarch = (ro: d.v3f, rd: d.v3f) => {
+    'use gpu';
     let distOrigin = d.f32();
     const result = Ray({
       dist: d.f32(c.MAX_DIST),
@@ -53,11 +59,16 @@ export default function init(root: TgpuRoot, canvas: HTMLCanvasElement, signal: 
     let glow = d.vec3f();
 
     for (let i = 0; i < c.MAX_STEPS; i++) {
-      const p = rd.mul(distOrigin).add(ro);
+      const p = rd * distOrigin + ro;
       const scene = getSceneRay(p);
-      const sphereDist = getSphere(p, sphereColorUniform.$, c.sphereCenter, sphereAngleUniform.$);
+      const sphereDist = getSphere(
+        p,
+        sphereColorUniform.$,
+        c.sphereCenter,
+        sphereAngleUniform.$,
+      );
 
-      glow = d.vec3f(sphereColorUniform.$).mul(std.exp(-sphereDist.dist)).add(glow);
+      glow += d.vec3f(sphereColorUniform.$) * std.exp(-sphereDist.dist);
 
       distOrigin += scene.dist;
 
@@ -73,8 +84,8 @@ export default function init(root: TgpuRoot, canvas: HTMLCanvasElement, signal: 
       }
     }
 
-    return { ray: result, glow };
-  });
+    return LightRay({ ray: result, glow });
+  };
 
   const vertexMain = tgpu.vertexFn({
     in: { idx: d.builtin.vertexIndex },
@@ -93,7 +104,8 @@ export default function init(root: TgpuRoot, canvas: HTMLCanvasElement, signal: 
     in: { uv: d.vec2f },
     out: d.vec4f,
   })((input) => {
-    const uv = input.uv.mul(2).sub(1);
+    'use gpu';
+    const uv = input.uv * 2 - 1;
     uv.x *= resolutionUniform.$.x / resolutionUniform.$.y;
 
     // ray origin and direction
@@ -104,7 +116,7 @@ export default function init(root: TgpuRoot, canvas: HTMLCanvasElement, signal: 
     const march = rayMarch(ro, rd);
 
     // sky gradient
-    const y = rd.mul(march.ray.dist).add(ro).y - 2; // camera at level 2
+    const y = rd.y * march.ray.dist + ro.y - 2; // camera at level 2
     const sky = std.mix(c.skyColor1, c.skyColor2, y / c.MAX_DIST);
 
     // fog coefficient
@@ -149,20 +161,37 @@ export default function init(root: TgpuRoot, canvas: HTMLCanvasElement, signal: 
     sphereAngleUniform.write(sphereAngle);
     resolutionUniform.write(d.vec2f(canvas.width, canvas.height));
 
-    renderPipeline
-      .withColorAttachment({
-        view: context.getCurrentTexture().createView(),
-        loadOp: 'clear',
-        storeOp: 'store',
-      })
-      .draw(3);
+    renderPipeline.withColorAttachment({ view: context }).draw(3);
 
     animationFrame = requestAnimationFrame(run);
   }
 
   animationFrame = requestAnimationFrame(run);
 
-  signal.addEventListener('abort', () => {
-    cancelAnimationFrame(animationFrame);
-  });
+  return {
+    set glowIntensity(value: number) {
+      glowIntensityUniform.write(value);
+    },
+    set floorSpeed(value: number) {
+      floorSpeed = value;
+    },
+    set sphereSpeed(value: number) {
+      sphereSpeed = value;
+    },
+    set sphereColor(value: d.v3f) {
+      sphereColorUniform.write(value);
+    },
+    set floorPattern(value: 'grid' | 'circles') {
+      renderPipeline = root
+        .with(floorPatternSlot, value === 'grid' ? grid : circles)
+        .pipe(perlinCache.inject())
+        .createRenderPipeline({
+          vertex: vertexMain,
+          fragment: fragmentMain,
+        });
+    },
+    onCleanup() {
+      cancelAnimationFrame(animationFrame);
+    },
+  };
 }

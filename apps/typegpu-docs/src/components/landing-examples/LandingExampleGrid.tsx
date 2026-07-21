@@ -1,64 +1,64 @@
+import { Root } from '@typegpu/react';
 import ExternalOpenSvg from '../../assets/externalopen.svg';
 import CausticsGif from '../../assets/hero/caustics_bg.webp';
 import RayMarchingGif from '../../assets/hero/rayMarch_bg.webp';
-import JellySliderGif from '../../assets/hero/jellySlider_bg.jpg';
+import JellySliderThumbnail from '../../examples/rendering/jelly-slider/thumbnail.png';
 import FishGif from '../../assets/hero/fish_bg.webp';
 import ReflectionGif from '../../assets/hero/reflection_bg.jpg';
 import VaporRaveGif from '../../assets/hero/rave_bg.webp';
 
 import HoverExampleIsland from './HoverExampleIsland.tsx';
 
-import initReflection from './cubemap-reflection/index.ts';
-import initJelly from './jelly-slider/index.ts';
-import initVaporRave from './vaporrave/index.ts';
-import initRayMarching from './ray-marching/index.ts';
-import initFish from './3d-fish/index.ts';
-import initCaustics from './caustics/index.ts';
-
-// const root = await tgpu.init({
-//   device: {
-//     optionalFeatures: ['timestamp-query'],
-//   },
-// });
+import { setupScene as setupReflection } from '../../examples/rendering/cubemap-reflection/scene.ts';
+import { setupScene as setupJelly } from '../../examples/rendering/jelly-slider/scene.ts';
+import { setupScene as setupVaporRave } from '../../examples/simple/vaporrave/scene.ts';
+import { setupScene as setupRayMarching } from '../../examples/rendering/ray-marching/scene.ts';
+import { setupScene as setupFish } from '../../examples/rendering/3d-fish/scene.ts';
+import { setupScene as setupCaustics } from '../../examples/rendering/caustics/scene.ts';
 
 const galleryItems = [
   {
-    asset: ReflectionGif,
-    title: 'Reflection',
-    key: 'cubemap-reflection',
-    init: initReflection,
+    asset: JellySliderThumbnail,
+    title: 'Jelly Slider',
+    key: 'rendering--jelly-slider',
+    setup: setupJelly,
   },
   {
-    asset: JellySliderGif,
-    title: 'Jelly Slider',
-    key: 'jelly-slider',
-    init: initJelly,
+    asset: ReflectionGif,
+    title: 'Reflection',
+    key: 'rendering--cubemap-reflection',
+    setup: setupReflection,
   },
   {
     asset: VaporRaveGif,
     title: 'VaporRave',
-    key: 'vaporrave',
-    init: initVaporRave,
+    key: 'simple--vaporrave',
+    setup: setupVaporRave,
   },
   {
     asset: RayMarchingGif,
     title: 'Ray Marching',
-    key: 'ray-marching',
-    init: initRayMarching,
+    key: 'rendering--ray-marching',
+    setup: setupRayMarching,
   },
-  { asset: FishGif, title: '3D Fish', key: '3d-fish', init: initFish },
+  {
+    asset: FishGif,
+    title: '3D Fish',
+    key: 'rendering--3d-fish',
+    setup: setupFish,
+  },
   {
     asset: CausticsGif,
     title: 'Caustics',
-    key: 'caustics',
-    init: initCaustics,
+    key: 'rendering--caustics',
+    setup: setupCaustics,
   },
 ] as const;
 
 export default function TgpuExamples() {
   return (
-    <>
-      <div className="mb-4 border border-accent-500 px-4 py-3 text-center text-sm sm:hidden dark:text-white">
+    <Root>
+      <div className="border-accent-500 mb-4 border px-4 py-3 text-center text-sm sm:hidden dark:text-white">
         Hint: tap the example with two fingers to preview
       </div>
 
@@ -74,7 +74,9 @@ export default function TgpuExamples() {
               href={`/TypeGPU/examples/#example=${item.key}`}
               className="absolute inset-x-6 bottom-6 z-10 flex h-16 items-center justify-between gap-3 bg-white px-4 text-blue-900 no-underline"
             >
-              <span className="max-w-[70%] truncate font-medium text-sm">{item.title}</span>
+              <span className="max-w-[70%] truncate text-sm font-medium">
+                {item.title}
+              </span>
               <img
                 src={ExternalOpenSvg.src}
                 alt="Open example"
@@ -86,7 +88,7 @@ export default function TgpuExamples() {
             <img
               src={item.asset.src}
               alt={item.title}
-              className="h-full w-full object-contain transition duration-300 ease-out"
+              className="h-full w-full object-cover transition duration-300 ease-out"
             />
 
             <div
@@ -94,12 +96,12 @@ export default function TgpuExamples() {
               className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition duration-300 ease-out group-hover:pointer-events-auto group-hover:opacity-100 data-[active=true]:pointer-events-auto data-[active=true]:opacity-100"
             >
               <div className="pointer-events-auto h-full w-full backdrop-blur">
-                <HoverExampleIsland exampleKey={item.key} html={item.html} />
+                <HoverExampleIsland exampleKey={item.key} setup={item.setup} />
               </div>
             </div>
           </div>
         ))}
       </div>
-    </>
+    </Root>
   );
 }
