@@ -1,11 +1,11 @@
 import { Root } from '@typegpu/react';
 import ExternalOpenSvg from '../../assets/externalopen.svg';
-import CausticsGif from '../../assets/hero/caustics_bg.webp';
-import RayMarchingGif from '../../assets/hero/rayMarch_bg.webp';
+import CausticsThumbnail from '../../examples/rendering/caustics/thumbnail.png';
+import RayMarchingThumbnail from '../../examples/rendering/ray-marching/thumbnail.png';
 import JellySliderThumbnail from '../../examples/rendering/jelly-slider/thumbnail.png';
-import FishGif from '../../assets/hero/fish_bg.webp';
-import ReflectionGif from '../../assets/hero/reflection_bg.jpg';
-import VaporRaveGif from '../../assets/hero/rave_bg.webp';
+import FishThumbnail from '../../examples/rendering/3d-fish/thumbnail.png';
+import CubemapReflectionThumbnail from '../../examples/rendering/cubemap-reflection/thumbnail.png';
+import VaporRaveThumbnail from '../../examples/simple/vaporrave/thumbnail.png';
 
 import HoverExampleIsland from './HoverExampleIsland.tsx';
 
@@ -24,34 +24,34 @@ const galleryItems = [
     setup: setupJelly,
   },
   {
-    asset: ReflectionGif,
-    title: 'Reflection',
-    key: 'rendering--cubemap-reflection',
-    setup: setupReflection,
-  },
-  {
-    asset: VaporRaveGif,
-    title: 'VaporRave',
-    key: 'simple--vaporrave',
-    setup: setupVaporRave,
-  },
-  {
-    asset: RayMarchingGif,
-    title: 'Ray Marching',
-    key: 'rendering--ray-marching',
-    setup: setupRayMarching,
-  },
-  {
-    asset: FishGif,
+    asset: FishThumbnail,
     title: '3D Fish',
     key: 'rendering--3d-fish',
     setup: setupFish,
   },
   {
-    asset: CausticsGif,
+    asset: VaporRaveThumbnail,
+    title: 'VaporRave',
+    key: 'simple--vaporrave',
+    setup: setupVaporRave,
+  },
+  {
+    asset: CubemapReflectionThumbnail,
+    title: 'Cubemap Reflection',
+    key: 'rendering--cubemap-reflection',
+    setup: setupReflection,
+  },
+  {
+    asset: CausticsThumbnail,
     title: 'Caustics',
     key: 'rendering--caustics',
     setup: setupCaustics,
+  },
+  {
+    asset: RayMarchingThumbnail,
+    title: 'Ray Marching',
+    key: 'rendering--ray-marching',
+    setup: setupRayMarching,
   },
 ] as const;
 
