@@ -1732,3 +1732,83 @@ describe('ValidateBufferSchema', () => {
     );
   });
 });
+
+describe('Uniform alignment', () => {
+  it('does not report legit schemas', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createUniform(d.u32);
+    root.createUniform(d.struct({ p: d.u32 }));
+    root.createUniform(d.struct({ p: d.struct({ p: d.u32 }), q: d.vec4f }));
+    root.createUniform(d.struct({ p: d.struct({ p: d.u32 }), q: d.align(16, d.u32) }));
+    root.createUniform(d.struct({ p: d.struct({ p: d.u32 }), q: d.align(32, d.u32) }));
+    root.createUniform(d.struct({ p: d.struct({ p: d.u32 }), q: d.vec3f }));
+    root.createUniform(d.struct({ p: d.size(16, d.struct({ p: d.u32 })), q: d.u32 }));
+    root.createUniform(d.struct({ p: d.size(32, d.struct({ p: d.u32 })), q: d.u32 }));
+    root.createUniform(d.arrayOf(d.vec4f, 3));
+    root.createUniform(d.arrayOf(d.vec3f, 3));
+    root.createUniform(d.arrayOf(d.align(16, d.u32), 3));
+    root.createUniform(d.arrayOf(d.struct({ p: d.vec3f }), 3));
+
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it('reports unaligned props in structs', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createUniform(d.struct({ p: d.struct({ p: d.u32 }), q: d.u32 }));
+
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`undefined`);
+  });
+
+  it('reports further unaligned props in structs', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createUniform(d.struct({ p: d.struct({ p: d.u32 }), q: d.vec4f, r: d.u32 }));
+
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`undefined`);
+  });
+
+  it('reports nested unaligned props in structs', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createUniform(
+      d.struct({ p: d.vec4f, q: d.struct({ p: d.struct({ p: d.u32 }), q: d.u32 }) }),
+    );
+
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`undefined`);
+  });
+
+  it('reports unaligned arrays', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createUniform(d.arrayOf(d.u32, 3));
+
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`undefined`);
+  });
+
+  it('reports nested unaligned arrays', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createUniform(d.arrayOf(d.arrayOf(d.u32, 4), 4));
+
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`undefined`);
+  });
+
+  it('reports when giving usage', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createBuffer(d.arrayOf(d.u32, 2)).$usage('uniform');
+
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`undefined`);
+  });
+
+  it('does not report twice', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createBuffer(d.arrayOf(d.u32, 2)).$usage('uniform').as('uniform');
+
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`undefined`);
+  });
+});
