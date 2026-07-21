@@ -55,17 +55,3 @@ export function onCleanup() {
 }
 
 // #endregion
-
-// import { tgpu, d, tgpuLogger } from 'typegpu';
-
-// const fn = tgpu.fn(
-//   [d.u32, d.f32],
-//   d.u32,
-// )((a, b) => {
-//   'use gpu';
-//   return a / b;
-// });
-
-// tgpuLogger.disableWarn('implicit-conversion');
-
-// console.log(tgpu.resolve([fn]));

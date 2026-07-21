@@ -548,7 +548,7 @@ If what the expression is a direct reference to an existing value (e.g. a unifor
 storage binding, ...), then choose from `'uniform'`, `'mutable'`, `'readonly'`, `'workgroup'`,
 `'private'` or `'handle'` depending on the address space of the referred value.
 
-### `possibleSideEffects`
+### *possibleSideEffects*
 The fourth optional parameter `possibleSideEffects` indicates, whether generating this snippet may produce a WGSL expression with
 observable side-effects (e.g. calling a barrier, discarding a fragment,
 or writing to memory).
@@ -557,3 +557,21 @@ Snippets with `possibleSideEffects: true` cannot appear in ternary
 branches that get compiled to `select()`, because `select()` evaluates
 both branches unconditionally - a side-effect meant to be conditional
 would execute regardless of the condition.
+
+## *warn*
+
+TypeGPU warns you about a lot of potential problems or API misuses.
+Although it is almost always better addressed properly, the `warn` object let's you silence specific warning types.
+
+```ts twoslash
+import { tgpu, d, warn } from 'typegpu';
+
+const fn = tgpu.fn([], d.u32)(() => {
+  'use gpu';
+  return 1.5; // <- AbstractFloat needs an implicit cast to u32
+});
+
+warn.disable('implicit-conversion');
+console.log(tgpu.resolve([fn])); // resolves without warning about the cast
+warn.reset();
+```
