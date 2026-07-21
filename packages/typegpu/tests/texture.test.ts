@@ -678,7 +678,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
             root.createTexture({ size: [32, 32], format: 'rgba8unorm' }) as TgpuTexture &
               RenderFlag,
             {
-              r: mockImage,
+              r: { source: mockImage, from: 'r' },
             },
           ),
         ).toThrowErrorMatchingInlineSnapshot(
@@ -809,8 +809,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           height: 32,
         } as HTMLImageElement;
 
-        texture.write({
-          source: mockImage,
+        texture.write(mockImage, {
           premultipliedAlpha: true,
           colorSpace: 'display-p3',
         });
@@ -845,8 +844,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           height: 9,
         } as HTMLImageElement;
 
-        texture.write({
-          source: mockImage,
+        texture.write(mockImage, {
           origin: [4, 5],
           size: [8, 9],
           mipLevel: 1,
@@ -876,10 +874,10 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           height: 16,
         } as HTMLImageElement;
 
-        texture.write({
-          source: mockImage,
+        texture.write(mockImage, {
           sourceOrigin: [2, 3],
           sourceSize: [4, 5],
+          size: [4, 5],
           origin: [6, 7],
         });
 
@@ -911,8 +909,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           height: 16,
         } as HTMLImageElement;
 
-        texture.write({
-          source: mockImage,
+        texture.write(mockImage, {
           size: [32, 32],
           resize: true,
         });
@@ -939,8 +936,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           height: 16,
         } as HTMLImageElement;
 
-        texture.write({
-          source: mockImage,
+        texture.write(mockImage, {
           size: [32, 32],
           resize: true,
         });
@@ -1003,7 +999,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         const createImageBitmapMock = vi.fn(() => Promise.resolve(imageBitmap));
         vi.stubGlobal('createImageBitmap', createImageBitmapMock);
 
-        await texture.writeAsync({ source: blob, resize: true });
+        await texture.writeAsync(blob, { resize: true });
 
         expect(createImageBitmapMock).toHaveBeenCalledWith(blob, {
           resizeWidth: 64,
@@ -1036,7 +1032,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         } as HTMLImageElement;
 
         common.writeChannels(texture, {
-          r: roughnessMap,
+          r: { source: roughnessMap, from: 'r' },
           a: { source: maskMap, from: 'g' },
         });
 
@@ -1083,7 +1079,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
         common.writeChannels(
           texture,
-          { r: roughnessMap },
+          { r: { source: roughnessMap, from: 'r' } },
           {
             origin: [4, 5],
             size: [8, 9],
@@ -1109,7 +1105,11 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         } as HTMLImageElement;
 
         expect(() =>
-          common.writeChannels(texture, { r: roughnessMap }, { size: [32, 32] }),
+          common.writeChannels(
+            texture,
+            { r: { source: roughnessMap, from: 'r' } },
+            { size: [32, 32] },
+          ),
         ).toThrowErrorMatchingInlineSnapshot(
           `[Error: Texture write source size 16x16 does not match target size 32x32. Pass resize: true to resize explicitly.]`,
         );
@@ -1129,7 +1129,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         } as HTMLImageElement;
 
         expect(() =>
-          common.writeChannels(texture, { rg: roughnessMap } as never),
+          common.writeChannels(texture, { rg: { source: roughnessMap, from: 'r' } } as never),
         ).toThrowErrorMatchingInlineSnapshot(
           `[Error: Texture channel writes only support single channels: r, g, b, a.]`,
         );

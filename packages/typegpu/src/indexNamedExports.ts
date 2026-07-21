@@ -94,10 +94,9 @@ export type {
 } from './core/rawCodeSnippet/tgpuRawCodeSnippet.ts';
 export type { TgpuTexture, TgpuTextureView } from './core/texture/texture.ts';
 export type {
-  TextureBlobWrite,
+  TextureBlobWriteOptions,
   TextureChannel,
   TextureCopyOptions,
-  TextureImageWrite,
   TextureRawWriteOptions,
   TextureWriteOptions,
 } from './core/texture/textureWrite.ts';

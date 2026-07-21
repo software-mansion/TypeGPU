@@ -4,19 +4,15 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const imageBlob = await (await fetch('/TypeGPU/plums.jpg')).blob();
 const imageBitmap = await createImageBitmap(imageBlob);
 
 const size = [512, 512] as const;
 
-const sourceTexture = root
-  .createTexture({ size, format: 'rgba8unorm' })
-  .$usage('sampled', 'render');
-const targetTexture = root
-  .createTexture({ size, format: 'rgba8unorm' })
-  .$usage('sampled', 'render');
+const [sourceTexture, targetTexture] = [0, 1].map(() =>
+  root.createTexture({ size, format: 'rgba8unorm' }).$usage('sampled', 'render'),
+);
 
 sourceTexture.write(imageBitmap, { resize: true });
 targetTexture.copyFrom(sourceTexture);
@@ -25,7 +21,7 @@ type Channel = 'r' | 'g' | 'b' | 'a';
 type ChannelSource = Channel | 'none';
 
 const channelSources: Record<Channel, ChannelSource> = { r: 'r', g: 'g', b: 'b', a: 'none' };
-let clearColor = d.vec3f(0, 0, 0);
+let clearColor = d.vec3f();
 
 function writeSelectedChannels() {
   const channels: Partial<Record<Channel, { source: ImageBitmap; from: Channel }>> = {};
@@ -53,43 +49,33 @@ function clearTarget() {
 const channelUniform = root.createUniform(d.i32);
 
 const sampler = root.createSampler({ magFilter: 'linear', minFilter: 'linear' });
-
-const layout = tgpu.bindGroupLayout({
-  tex: { texture: d.texture2d(d.f32) },
-});
-
-const bindGroup = root.createBindGroup(layout, { tex: targetTexture });
-
-const fragmentFunction = tgpu.fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-})(({ uv }) => {
-  const color = std.textureSample(layout.$.tex, sampler.$, uv);
-
-  if (channelUniform.$ === 1) {
-    return d.vec4f(color.rrr, 1);
-  }
-  if (channelUniform.$ === 2) {
-    return d.vec4f(color.ggg, 1);
-  }
-  if (channelUniform.$ === 3) {
-    return d.vec4f(color.bbb, 1);
-  }
-  if (channelUniform.$ === 4) {
-    return d.vec4f(color.aaa, 1);
-  }
-
-  return d.vec4f(color);
-});
+const sampledView = targetTexture.createView();
 
 const pipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
-  fragment: fragmentFunction,
-  targets: { format: presentationFormat },
+  fragment: ({ uv }) => {
+    'use gpu';
+    const color = std.textureSample(sampledView.$, sampler.$, uv);
+
+    if (channelUniform.$ === 1) {
+      return d.vec4f(color.rrr, 1);
+    }
+    if (channelUniform.$ === 2) {
+      return d.vec4f(color.ggg, 1);
+    }
+    if (channelUniform.$ === 3) {
+      return d.vec4f(color.bbb, 1);
+    }
+    if (channelUniform.$ === 4) {
+      return d.vec4f(color.aaa, 1);
+    }
+
+    return d.vec4f(color);
+  },
 });
 
 function render() {
-  pipeline.with(bindGroup).withColorAttachment({ view: context }).draw(3);
+  pipeline.withColorAttachment({ view: context }).draw(3);
 
   requestAnimationFrame(render);
 }

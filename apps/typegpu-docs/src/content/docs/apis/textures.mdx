@@ -121,10 +121,10 @@ The `.write()` method accepts a variety of data sources. Here's a quick overview
 | --- | --- |
 | `texture.write(imageBitmap)` | You already have a decoded image that matches the texture size. |
 | `texture.write(imageBitmap, { resize: true })` | You want the image resampled to fit the texture. |
-| `texture.writeAsync({ source: blob, ... })` | You have a fetched `Blob` and don't need to keep the decoded bitmap around. |
+| `texture.writeAsync(blob, { ... })` | You have a fetched `Blob` and don't need to keep the decoded bitmap around. |
 | `texture.write([layer0, layer1])` | You want to fill a texture array or 3D texture one layer at a time. |
 | `texture.write(bytes)` | You already have raw texel bytes. |
-| `texture.write({ source, ... })` | You need a crop or a destination region. |
+| `texture.write(imageBitmap, { origin, size, ... })` | You need a crop or a destination region. |
 | `common.writeChannels(texture, { ... })` | You want to pack image sources into individual channels. |
 
 Note that writing image sources requires the `'render'` usage flag, and that the source and destination sizes have to match unless you opt into resizing with `resize: true`.
@@ -164,8 +164,7 @@ const texture = root.createTexture({
 
 texture.write(imageBitmap, { resize: true });
 
-texture.write({
-  source: imageBitmap,
+texture.write(imageBitmap, {
   sourceOrigin: [16, 16],
   sourceSize: [128, 128],
   size: [256, 256],
@@ -192,7 +191,7 @@ const texture = root.createTexture({
 
 const blob = await (await fetch('path/to/image.png')).blob();
 
-await texture.writeAsync({ source: blob, resize: true });
+await texture.writeAsync(blob, { resize: true });
 ```
 
 If you don't specify a `size`, it defaults to the texture size. Keep in mind that the decoded bitmap is still written as an image source, so the texture needs the `'render'` usage flag.
@@ -256,7 +255,7 @@ Writing raw data doesn't require the `'render'` usage flag, but the byte length 
 
 ### Regions and channel writes
 
-If you only want to update a part of the texture, or copy just a fragment of the source image, you can pass an object descriptor with source and destination regions. The descriptor also lets you flip the source vertically (`flipY`), premultiply alpha (`premultipliedAlpha`), or convert to a specific color space (`colorSpace`).
+If you only want to update a part of the texture, or copy just a fragment of the source image, you can pass options with source and destination regions. The options also let you flip the source vertically (`flipY`), premultiply alpha (`premultipliedAlpha`), or convert to a specific color space (`colorSpace`).
 
 ```ts twoslash
 import { tgpu, common } from 'typegpu';
@@ -271,8 +270,7 @@ const texture = root.createTexture({
   format: 'rgba8unorm',
 }).$usage('sampled', 'render');
 
-texture.write({
-  source: imageBitmap,
+texture.write(imageBitmap, {
   sourceOrigin: [16, 16],
   sourceSize: [128, 128],
   origin: [128, 64],
@@ -280,7 +278,7 @@ texture.write({
 });
 ```
 
-Sometimes you'll want to pack multiple grayscale maps into a single texture - for example combining separate roughness, metalness, and mask maps into one material texture. The `common.writeChannels` utility does exactly that. Each entry writes a single channel of the texture; `from` selects which channel of the source to read, and defaults to the destination channel.
+Sometimes you'll want to pack multiple grayscale maps into a single texture - for example combining separate roughness, metalness, and mask maps into one material texture. The `common.writeChannels` utility does exactly that. Each entry writes a single channel of the texture, with `from` selecting which channel of the source to read.
 
 ```ts twoslash
 import { tgpu, common } from 'typegpu';
@@ -295,8 +293,8 @@ const texture = root.createTexture({
 }).$usage('sampled', 'render');
 
 common.writeChannels(texture, {
-  r: roughnessMap,
-  g: metalnessMap,
+  r: { source: roughnessMap, from: 'r' },
+  g: { source: metalnessMap, from: 'r' },
   a: { source: maskMap, from: 'r' },
 });
 ```

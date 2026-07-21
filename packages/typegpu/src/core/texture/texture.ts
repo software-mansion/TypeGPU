@@ -41,18 +41,17 @@ import {
 import {
   createBitmapForBlobWrite,
   imageWriteForLayer,
-  isTextureImageWrite,
   mipLevelSize,
   needsResize,
   normalizeImageWrite,
   textureLayerSize,
   validateResizeAllowed,
-  type TextureBlobWrite,
+  type TextureBlobWriteOptions,
   type TextureCopyOptions,
   type TextureImageWrite,
   type TextureImageWriteLayout,
   type TextureRawWriteOptions,
-  type TextureResizeOptions,
+  type TextureWriteOptions,
 } from './textureWrite.ts';
 
 export type TextureInternals = {
@@ -68,10 +67,9 @@ type TextureViewInternals = {
 
 export type TexelData = Vec4u | Vec4i | Vec4f;
 export type {
-  TextureBlobWrite,
+  TextureBlobWriteOptions,
   TextureChannel,
   TextureCopyOptions,
-  TextureImageWrite,
   TextureRawWriteOptions,
   TextureWriteOptions,
 } from './textureWrite.ts';
@@ -161,10 +159,6 @@ type FormatCompatibleTexture<T extends TextureProps> = TgpuTexture<{
   sampleCount?: T['sampleCount'];
 }>;
 
-function isBlob(value: Blob | TextureBlobWrite): value is Blob {
-  return typeof Blob !== 'undefined' && value instanceof Blob;
-}
-
 // oxlint-disable-next-line typescript/no-explicit-any -- we can't tame the validation otherwise
 export interface TgpuTexture<TProps extends TextureProps = any> extends TgpuNamable {
   readonly [$internal]: TextureInternals;
@@ -204,14 +198,13 @@ export interface TgpuTexture<TProps extends TextureProps = any> extends TgpuNama
   generateMipmaps(baseMipLevel?: number, mipLevels?: number): void;
   write(
     source: GPUCopyExternalImageSource | GPUCopyExternalImageSource[],
-    options?: TextureResizeOptions,
+    options?: TextureWriteOptions,
   ): void;
-  write(source: TextureImageWrite): void;
   write(
     source: ArrayBuffer | TypedArray | DataView,
     options?: number | TextureRawWriteOptions,
   ): void;
-  writeAsync(source: Blob | TextureBlobWrite): Promise<void>;
+  writeAsync(source: Blob, options?: TextureBlobWriteOptions): Promise<void>;
   // TODO: support copies from GPUBuffers and TgpuBuffers
   copyFrom<T extends CopyCompatibleTexture<TProps>>(source: T): void;
   copyFrom<T extends FormatCompatibleTexture<TProps>>(source: T, options: TextureCopyOptions): void;
@@ -492,9 +485,8 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
 
   write(
     source: GPUCopyExternalImageSource | GPUCopyExternalImageSource[],
-    options?: TextureResizeOptions,
+    options?: TextureWriteOptions,
   ): void;
-  write(source: TextureImageWrite): void;
   write(
     source: ArrayBuffer | TypedArray | DataView,
     options?: number | TextureRawWriteOptions,
@@ -503,11 +495,10 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     source:
       | GPUCopyExternalImageSource
       | GPUCopyExternalImageSource[]
-      | TextureImageWrite
       | ArrayBuffer
       | TypedArray
       | DataView,
-    optionsOrMipLevel: TextureResizeOptions | TextureRawWriteOptions | number = 0,
+    optionsOrMipLevel: TextureWriteOptions | TextureRawWriteOptions | number = 0,
   ) {
     if (source instanceof ArrayBuffer || ArrayBuffer.isView(source)) {
       this.#writeBufferData(
@@ -519,41 +510,38 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       return;
     }
 
-    if (isTextureImageWrite(source)) {
-      this.#writeImages([source]);
-      return;
-    }
-
     const options =
-      typeof optionsOrMipLevel === 'number' ? {} : (optionsOrMipLevel as TextureResizeOptions);
+      typeof optionsOrMipLevel === 'number' ? {} : (optionsOrMipLevel as TextureWriteOptions);
     const sources = Array.isArray(source) ? source : [source];
     const layerCount = this.props.size[2] ?? 1;
+    const baseLayer = options.origin?.[2] ?? 0;
 
-    if (sources.length > layerCount) {
+    if (baseLayer + sources.length > layerCount) {
       console.warn(
-        `Too many image sources provided. Expected ${layerCount} layers, got ${sources.length}. Extra sources will be ignored.`,
+        `Too many image sources provided. Expected ${layerCount} layers, got ${
+          baseLayer + sources.length
+        }. Extra sources will be ignored.`,
       );
     }
 
     const writes: TextureImageWrite[] = [];
-    for (let layer = 0; layer < Math.min(sources.length, layerCount); layer++) {
+    for (let layer = 0; layer < Math.min(sources.length, layerCount - baseLayer); layer++) {
       const image = sources[layer];
       if (image) {
-        writes.push(imageWriteForLayer(image, this.props.size, layer, options));
+        writes.push(imageWriteForLayer(image, this.props.size, baseLayer + layer, options));
       }
     }
 
     this.#writeImages(writes);
   }
 
-  async writeAsync(source: Blob | TextureBlobWrite): Promise<void> {
-    const base: TextureBlobWrite = isBlob(source) ? { source } : source;
-    const write = { ...base, size: base.size ?? textureLayerSize(this.props.size) };
-    const bitmap = await createBitmapForBlobWrite(write);
-    const { source: _source, resize: _resize, ...options } = write;
+  async writeAsync(source: Blob, options?: TextureBlobWriteOptions): Promise<void> {
+    const write = { ...options, size: options?.size ?? textureLayerSize(this.props.size) };
+    const bitmap = await createBitmapForBlobWrite(source, write);
+    const { resize: _resize, ...imageOptions } = write;
 
     try {
-      this.#writeImages([{ ...options, source: bitmap, resize: false }]);
+      this.#writeImages([{ ...imageOptions, source: bitmap, resize: false }]);
     } finally {
       bitmap.close();
     }

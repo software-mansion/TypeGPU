@@ -15,16 +15,9 @@ export type TextureImageWrite = TextureWriteOptions & {
   source: GPUCopyExternalImageSource;
 };
 
-export type TextureBlobWrite = Omit<TextureWriteOptions, 'sourceOrigin' | 'sourceSize'> & {
-  source: Blob;
-};
+export type TextureBlobWriteOptions = Omit<TextureWriteOptions, 'sourceOrigin' | 'sourceSize'>;
 
 export type TextureChannel = 'r' | 'g' | 'b' | 'a';
-
-export type TextureResizeOptions = Pick<
-  TextureWriteOptions,
-  'resize' | 'filter' | 'flipY' | 'premultipliedAlpha' | 'colorSpace'
->;
 
 export type TextureRawWriteOptions = {
   mipLevel?: GPUIntegerCoordinate;
@@ -58,18 +51,6 @@ export type TextureChannelWriteLayout = TextureImageWriteLayout & {
   to: TextureChannel;
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function hasSource(value: unknown): value is { source: unknown } {
-  return isRecord(value) && 'source' in value;
-}
-
-export function isTextureImageWrite(value: unknown): value is TextureImageWrite {
-  return hasSource(value);
-}
-
 export function textureLayerSize(size: readonly number[]): readonly [number, number] {
   return [size[0] ?? 1, size[1] ?? 1];
 }
@@ -91,13 +72,13 @@ export function imageWriteForLayer(
   source: GPUCopyExternalImageSource,
   textureSize: readonly number[],
   layer: number,
-  options: TextureResizeOptions,
+  options: TextureWriteOptions,
 ): TextureImageWrite {
   return {
-    source,
-    size: textureLayerSize(textureSize),
-    origin: [0, 0, layer],
     ...options,
+    source,
+    size: options.size ?? textureLayerSize(textureSize),
+    origin: [options.origin?.[0] ?? 0, options.origin?.[1] ?? 0, layer],
   };
 }
 
@@ -183,19 +164,22 @@ export function validateResizeAllowed(
   }
 }
 
-export async function createBitmapForBlobWrite(write: TextureBlobWrite): Promise<ImageBitmap> {
+export async function createBitmapForBlobWrite(
+  source: Blob,
+  options: TextureBlobWriteOptions,
+): Promise<ImageBitmap> {
   if (typeof createImageBitmap !== 'function') {
     throw new Error('Texture writeAsync requires createImageBitmap to be available.');
   }
 
   const bitmapOptions =
-    write.resize && write.size
+    options.resize && options.size
       ? {
-          resizeWidth: write.size[0],
-          resizeHeight: write.size[1],
-          resizeQuality: (write.filter === 'nearest' ? 'pixelated' : 'high') as ResizeQuality,
+          resizeWidth: options.size[0],
+          resizeHeight: options.size[1],
+          resizeQuality: (options.filter === 'nearest' ? 'pixelated' : 'high') as ResizeQuality,
         }
       : undefined;
 
-  return createImageBitmap(write.source, bitmapOptions);
+  return createImageBitmap(source, bitmapOptions);
 }

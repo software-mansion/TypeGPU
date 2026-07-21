@@ -4,7 +4,6 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const imageBlob = await (await fetch('/TypeGPU/plums.jpg')).blob();
 const imageBitmap = await createImageBitmap(imageBlob);
@@ -21,6 +20,7 @@ const texture = root
   })
   .$usage('sampled', 'render');
 
+// this exists only so I don't have to ship another image as an asset
 function createPatternCanvas(size: number): OffscreenCanvas {
   const pattern = new OffscreenCanvas(size, size);
   const ctx = pattern.getContext('2d') as OffscreenCanvasRenderingContext2D;
@@ -93,31 +93,20 @@ const sampler = root.createSampler({
   mipmapFilter: 'linear',
 });
 
-const layout = tgpu.bindGroupLayout({
-  tex: { texture: d.texture2dArray(d.f32) },
-});
-
-const bindGroup = root.createBindGroup(layout, {
-  tex: texture.createView(d.texture2dArray(d.f32)),
-});
-
-const fragmentFunction = tgpu.fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-})(({ uv }) => {
-  return std.textureSampleLevel(layout.$.tex, sampler.$, uv, layerUniform.$, mipUniform.$);
-});
+const sampledView = texture.createView(d.texture2dArray());
 
 const pipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
-  fragment: fragmentFunction,
-  targets: { format: presentationFormat },
+  fragment: ({ uv }) => {
+    'use gpu';
+    return std.textureSampleLevel(sampledView.$, sampler.$, uv, layerUniform.$, mipUniform.$);
+  },
 });
 
 writeLayerImages();
 
 function render() {
-  pipeline.with(bindGroup).withColorAttachment({ view: context }).draw(3);
+  pipeline.withColorAttachment({ view: context }).draw(3);
 
   requestAnimationFrame(render);
 }

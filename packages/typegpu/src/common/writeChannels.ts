@@ -11,22 +11,17 @@ import {
 import type { RenderFlag } from '../core/texture/usageExtension.ts';
 import { $internal } from '../shared/symbols.ts';
 
-export type TextureChannelSource =
-  | GPUCopyExternalImageSource
-  | { source: GPUCopyExternalImageSource; from?: TextureChannel };
+export type TextureChannelSource = {
+  source: GPUCopyExternalImageSource;
+  from: TextureChannel;
+};
 
 export type TextureChannels = Partial<Record<TextureChannel, TextureChannelSource>>;
 
-const TEXTURE_CHANNELS = ['r', 'g', 'b', 'a'] as const satisfies readonly TextureChannel[];
+const TEXTURE_CHANNELS = ['r', 'g', 'b', 'a'] as const;
 
 function isTextureChannel(value: string): value is TextureChannel {
-  return (TEXTURE_CHANNELS as readonly string[]).includes(value);
-}
-
-function hasSource(
-  value: TextureChannelSource,
-): value is { source: GPUCopyExternalImageSource; from?: TextureChannel } {
-  return typeof value === 'object' && value !== null && 'source' in value;
+  return TEXTURE_CHANNELS.includes(value as TextureChannel);
 }
 
 /** Packs image sources into individual channels of `texture` in a single render pass */
@@ -55,7 +50,7 @@ export function writeChannels(
       continue;
     }
 
-    const { source, from = to } = hasSource(entry) ? entry : { source: entry };
+    const { source, from } = entry;
 
     if (!isTextureChannel(from)) {
       throw new Error(`Invalid source channel '${from}'. Expected one of r, g, b, a.`);

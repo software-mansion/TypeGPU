@@ -4,7 +4,6 @@ import { defineControls } from '../../common/defineControls.ts';
 const root = await tgpu.init();
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas });
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
 const imageBlob = await (await fetch('/TypeGPU/plums.jpg')).blob();
 const imageBitmap = await createImageBitmap(imageBlob);
@@ -42,10 +41,8 @@ const channelUniform = root.createUniform(d.i32);
 const filteringSampler = root.createSampler({ magFilter: 'linear', minFilter: 'linear' });
 const nearestSampler = root.createSampler({ magFilter: 'nearest', minFilter: 'nearest' });
 
-const viewChannel = tgpu.fn(
-  [d.vec4f],
-  d.vec4f,
-)((color) => {
+const viewChannel = (color: d.v4f) => {
+  'use gpu';
   if (channelUniform.$ === 1) {
     return d.vec4f(color.rrr, 1);
   }
@@ -59,7 +56,7 @@ const viewChannel = tgpu.fn(
     return d.vec4f(color.aaa, 1);
   }
   return d.vec4f(color);
-});
+};
 
 function createViewer(filterable: boolean) {
   const layout = tgpu.bindGroupLayout({
@@ -70,18 +67,13 @@ function createViewer(filterable: boolean) {
   });
   const sampler = filterable ? filteringSampler : nearestSampler;
 
-  const fragmentFunction = tgpu.fragmentFn({
-    in: { uv: d.vec2f },
-    out: d.vec4f,
-  })(({ uv }) => {
-    const color = std.textureSample(layout.$.tex, sampler.$, uv);
-    return viewChannel(color);
-  });
-
   const pipeline = root.createRenderPipeline({
     vertex: common.fullScreenTriangle,
-    fragment: fragmentFunction,
-    targets: { format: presentationFormat },
+    fragment: ({ uv }) => {
+      'use gpu';
+      const color = std.textureSample(layout.$.tex, sampler.$, uv);
+      return viewChannel(color);
+    },
   });
 
   return { layout, pipeline };
@@ -117,8 +109,7 @@ function writeImage() {
           size: [Math.floor(currentSize[0] / 2), Math.floor(currentSize[1] / 2)],
         } as const)
       : { size: currentSize };
-  texture.write({
-    source: imageBitmap,
+  texture.write(imageBitmap, {
     ...cropRect(),
     ...target,
     resize: true,
@@ -128,7 +119,7 @@ function writeImage() {
 }
 
 async function writeBlob() {
-  await texture.writeAsync({ source: imageBlob, resize: true, filter });
+  await texture.writeAsync(imageBlob, { resize: true, filter });
 }
 
 let texture = createTestTexture();
