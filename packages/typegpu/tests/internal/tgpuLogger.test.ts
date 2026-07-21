@@ -89,4 +89,16 @@ describe('tgpuLogger', () => {
 
     expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
   });
+
+  it('correctly resets to initial state', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const logger = new TgpuLogger(true);
+
+    logger.reset();
+    logger.warn('suspicious', '...');
+    logger.warn('deprecated', '...');
+    logger.warn('fallback', '...');
+
+    expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
+  });
 });

@@ -864,7 +864,8 @@ export function writeToArrayBuffer<T extends BaseData>(
       compiledWriter(dataView, startOffset, data, isLittleEndian, endOffset);
       return;
     } catch (error) {
-      console.error(
+      logger.warn(
+        'fallback',
         `Error when using compiled writer for data type '${
           schema.type
         }' (${getName(schema) ?? 'unnamed'}) - this is likely a bug, please submit an issue at https://github.com/software-mansion/TypeGPU/issues\nUsing fallback writer instead.`,

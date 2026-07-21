@@ -16,7 +16,7 @@ const warningTypes = [
 ] as const;
 type WarningType = (typeof warningTypes)[number];
 
-// internal-facing API
+// internal API
 interface Logger {
   warn(type: (typeof warningTypes)[number], ...args: unknown[]): void;
 }
