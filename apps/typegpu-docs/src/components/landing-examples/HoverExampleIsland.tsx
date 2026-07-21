@@ -1,19 +1,33 @@
+import type { TgpuRoot } from 'typegpu';
+import { useConfigureContext, useRoot } from '@typegpu/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { PointerEvent as ReactPointerEvent, TouchEvent as ReactTouchEvent } from 'react';
+import type {
+  PointerEvent as ReactPointerEvent,
+  TouchEvent as ReactTouchEvent,
+} from 'react';
 import { useAtom } from 'jotai';
 import { activeExampleAtom } from '../../utils/examples/activeExampleAtom.ts';
-import { executeExample } from '../../utils/examples/exampleRunner.ts';
 import { isGPUSupported } from '../../utils/isGPUSupported.ts';
 
-type Props = {
-  exampleKey: string;
-  html: string;
-};
+interface ExampleState {
+  onCleanup(): void;
+}
 
-export default function HoverExampleIsland({ exampleKey, html }: Props) {
+interface HoverExampleIslandProps {
+  exampleKey: string;
+  setup: (root: TgpuRoot, context: GPUCanvasContext) => Promise<ExampleState>;
+}
+
+export default function HoverExampleIsland({
+  exampleKey,
+  setup,
+}: HoverExampleIslandProps) {
+  const root = useRoot();
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const cleanupRef = useRef<(() => void) | undefined>(undefined);
+  const { ctxRef, ref: canvasRef } = useConfigureContext({
+    alphaMode: 'premultiplied',
+  });
   const twoFingerActiveRef = useRef(false);
 
   const [activeExample, setActiveExample] = useAtom(activeExampleAtom);
@@ -25,17 +39,16 @@ export default function HoverExampleIsland({ exampleKey, html }: Props) {
   const reset = useCallback(() => {
     cleanupRef.current?.();
     cleanupRef.current = undefined;
-    if (containerRef.current) {
-      containerRef.current.innerHTML = '';
-    }
   }, []);
 
   const activate = () => setActiveExample(exampleKey);
-  const deactivate = () => setActiveExample((prev) => (prev === exampleKey ? null : prev));
+  const deactivate = () =>
+    setActiveExample((prev) => (prev === exampleKey ? null : prev));
 
-  // pointer events
-  const handlePointerEnter = (e: ReactPointerEvent) => e.pointerType !== 'touch' && activate();
-  const handlePointerLeave = (e: ReactPointerEvent) => e.pointerType !== 'touch' && deactivate();
+  const handlePointerEnter = (e: ReactPointerEvent) =>
+    e.pointerType !== 'touch' && activate();
+  const handlePointerLeave = (e: ReactPointerEvent) =>
+    e.pointerType !== 'touch' && deactivate();
   const handleTouchStart = (e: ReactTouchEvent) => {
     if (e.touches.length >= 2) {
       e.preventDefault();
@@ -55,7 +68,6 @@ export default function HoverExampleIsland({ exampleKey, html }: Props) {
     twoFingerActiveRef.current = false;
   };
 
-  // intersection observer
   useEffect(() => {
     const element = rootRef.current;
     if (!element) return;
@@ -71,16 +83,14 @@ export default function HoverExampleIsland({ exampleKey, html }: Props) {
     return () => observer.disconnect();
   });
 
-  // Sync data-active attribute on overlay
   useEffect(() => {
-    const overlay = containerRef.current?.closest('[data-hover-overlay]');
+    const overlay = rootRef.current?.closest('[data-hover-overlay]');
     if (!overlay) return;
 
     overlay.toggleAttribute('data-active', isActive);
     return () => overlay.removeAttribute('data-active');
   }, [isActive]);
 
-  // examples runner
   useEffect(() => {
     if (!isActive) {
       reset();
@@ -99,25 +109,21 @@ export default function HoverExampleIsland({ exampleKey, html }: Props) {
           throw new Error('WebGPU is not enabled/supported in this browser.');
         }
 
-        if (!containerRef.current) return;
+        if (!ctxRef.current) return;
 
-        containerRef.current.innerHTML = html;
-        resizeCanvases(containerRef.current);
-
-        const tsPath = `../pages/landing-examples/${exampleKey}/index.ts`;
-        const tsImport = () => import(/* @vite-ignore */ `${tsPath}?t=${Date.now()}`);
-
-        const { dispose } = await executeExample(tsImport);
+        const { onCleanup } = await setup(root, ctxRef.current);
 
         if (cancelled) {
-          dispose();
+          onCleanup();
           return;
         }
 
-        cleanupRef.current = dispose;
+        cleanupRef.current = onCleanup;
       } catch (err) {
         console.error(err);
-        setError(err instanceof Error ? err.message : 'Failed to load example.');
+        setError(
+          err instanceof Error ? err.message : 'Failed to load example.',
+        );
         reset();
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -128,7 +134,7 @@ export default function HoverExampleIsland({ exampleKey, html }: Props) {
       cancelled = true;
       reset();
     };
-  }, [exampleKey, html, isActive, reset]);
+  }, [isActive, reset, root, setup]);
 
   return (
     <div
@@ -139,32 +145,21 @@ export default function HoverExampleIsland({ exampleKey, html }: Props) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchCancel}
-      className="h-full w-full overflow-hidden"
+      className="relative h-full w-full overflow-hidden"
     >
+      <canvas ref={canvasRef} className="h-full w-full" />
       {error ? (
-        <p className="text-center font-medium text-sm text-white">{error}</p>
-      ) : (
-        <div className="flex h-full w-full items-center justify-center">
-          {isLoading && (
-            <span className="animate-pulse text-center font-medium text-white/60 text-xs uppercase tracking-widest">
-              Loading…
-            </span>
-          )}
-          <div ref={containerRef} className="h-full w-full" />
+        <p className="absolute inset-0 flex items-center justify-center text-center text-sm font-medium text-white">
+          {error}
+        </p>
+      ) : null}
+      {isLoading ? (
+        <div className="absolute inset-0 flex h-full w-full items-center justify-center">
+          <span className="animate-pulse text-center text-xs font-medium tracking-widest text-white/60 uppercase">
+            Loading...
+          </span>
         </div>
-      )}
+      ) : null}
     </div>
   );
-}
-
-function resizeCanvases(container: HTMLElement) {
-  const dpr = window.devicePixelRatio || 1;
-
-  for (const canvas of container.querySelectorAll('canvas')) {
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr * 2;
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-  }
 }
