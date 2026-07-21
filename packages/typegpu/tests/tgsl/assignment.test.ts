@@ -1,8 +1,8 @@
 import { beforeEach, expect, type MockInstance, vi } from 'vitest';
 import { it } from 'typegpu-testing-utility';
-import { tgpu, d, tgpuLogger } from 'typegpu';
+import { tgpu, d } from 'typegpu';
 
-let warnSpy: MockInstance<typeof tgpuLogger.warn>;
+let warnSpy: MockInstance<typeof console.warn>;
 
 beforeEach(() => {
   warnSpy = vi.spyOn(console, 'warn');
