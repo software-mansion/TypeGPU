@@ -1033,6 +1033,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
         common.writeChannels(texture, {
           r: { source: roughnessMap, from: 'r' },
+          g: undefined,
           a: { source: maskMap, from: 'g' },
         });
 

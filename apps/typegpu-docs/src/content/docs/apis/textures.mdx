@@ -278,7 +278,7 @@ texture.write(imageBitmap, {
 });
 ```
 
-Sometimes you'll want to pack multiple grayscale maps into a single texture - for example combining separate roughness, metalness, and mask maps into one material texture. The `common.writeChannels` utility does exactly that. Each entry writes a single channel of the texture, with `from` selecting which channel of the source to read.
+Sometimes you'll want to pack multiple grayscale maps into a single texture - for example combining separate roughness, metalness, and mask maps into one material texture. The `common.writeChannels` utility does exactly that. Each entry writes a single channel of the texture, with `from` selecting which channel of the source to read. Entries set to `undefined` are skipped.
 
 ```ts twoslash
 import { tgpu, common } from 'typegpu';

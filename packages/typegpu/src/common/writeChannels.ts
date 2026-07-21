@@ -16,7 +16,9 @@ export type TextureChannelSource = {
   from: TextureChannel;
 };
 
-export type TextureChannels = Partial<Record<TextureChannel, TextureChannelSource>>;
+export type TextureChannels = {
+  [Channel in TextureChannel]?: TextureChannelSource | undefined;
+};
 
 const TEXTURE_CHANNELS = ['r', 'g', 'b', 'a'] as const;
 

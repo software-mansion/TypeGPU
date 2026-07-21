@@ -1,4 +1,4 @@
-import { tgpu, common, d, std } from 'typegpu';
+import { tgpu, common, d, std, type TextureChannel } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 const root = await tgpu.init();
@@ -17,21 +17,21 @@ const [sourceTexture, targetTexture] = [0, 1].map(() =>
 sourceTexture.write(imageBitmap, { resize: true });
 targetTexture.copyFrom(sourceTexture);
 
-type Channel = 'r' | 'g' | 'b' | 'a';
-type ChannelSource = Channel | 'none';
+type ChannelSource = TextureChannel | 'none';
 
-const channelSources: Record<Channel, ChannelSource> = { r: 'r', g: 'g', b: 'b', a: 'none' };
+const channelSources: Record<TextureChannel, ChannelSource> = { r: 'r', g: 'g', b: 'b', a: 'none' };
 let clearColor = d.vec3f();
 
 function writeSelectedChannels() {
-  const channels: Partial<Record<Channel, { source: ImageBitmap; from: Channel }>> = {};
-  for (const to of ['r', 'g', 'b', 'a'] as const) {
+  const pick = (to: TextureChannel) => {
     const from = channelSources[to];
-    if (from !== 'none') {
-      channels[to] = { source: imageBitmap, from };
-    }
-  }
-  common.writeChannels(targetTexture, channels, { size, resize: true });
+    return from === 'none' ? undefined : { source: imageBitmap, from };
+  };
+  common.writeChannels(
+    targetTexture,
+    { r: pick('r'), g: pick('g'), b: pick('b'), a: pick('a') },
+    { size, resize: true },
+  );
 }
 
 function copyQuarterToCenter() {
