@@ -21,7 +21,7 @@ catalog:
 catalogs:
   build:
     jiti: ^2.6.0
-    rollup: ^4.60.0
+    rollup: ^4.62.2
     tsdown: 0.15.12
     unbuild: ^3.5.0
   example:
