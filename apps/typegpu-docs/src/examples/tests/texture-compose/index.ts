@@ -113,13 +113,13 @@ export const controls = defineControls({
     },
   },
   'Write channels': {
-    onButtonClick: () => writeSelectedChannels(),
+    onButtonClick: writeSelectedChannels,
   },
   'Copy full image': {
     onButtonClick: () => targetTexture.copyFrom(sourceTexture),
   },
   'Copy quarter to center': {
-    onButtonClick: () => copyQuarterToCenter(),
+    onButtonClick: copyQuarterToCenter,
   },
   'Clear color': {
     initial: clearColor,
@@ -128,7 +128,7 @@ export const controls = defineControls({
     },
   },
   'Clear target': {
-    onButtonClick: () => clearTarget(),
+    onButtonClick: clearTarget,
   },
   Channel: {
     initial: 'RGBA',

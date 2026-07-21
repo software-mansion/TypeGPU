@@ -225,7 +225,7 @@ export const controls = defineControls({
     },
   },
   'Write blob': {
-    onButtonClick: () => writeBlob(),
+    onButtonClick: writeBlob,
   },
   Channel: {
     initial: 'RGBA',

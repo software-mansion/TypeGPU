@@ -134,13 +134,13 @@ export const controls = defineControls({
     },
   },
   'Write layer images': {
-    onButtonClick: () => writeLayerImages(),
+    onButtonClick: writeLayerImages,
   },
   'Paint mip colors': {
-    onButtonClick: () => paintMipColors(),
+    onButtonClick: paintMipColors,
   },
   'Raw checkerboard': {
-    onButtonClick: () => writeRawCheckerboard(),
+    onButtonClick: writeRawCheckerboard,
   },
   'Base mip': {
     initial: baseMip,
