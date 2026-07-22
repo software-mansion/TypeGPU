@@ -1,19 +1,8 @@
-import babel from '@babel/parser';
 import type { ClassDeclaration, ClassProperty, Expression, Node } from '@babel/types';
 import * as acorn from 'acorn';
 import { describe, expect, it } from 'vitest';
 import { transpileFn } from '../src/parsers.ts';
-
-const parseRollup = (code: string) => acorn.parse(code, { ecmaVersion: 'latest' });
-const parseBabel = (code: string) =>
-  babel.parse(code, { sourceType: 'module', plugins: ['typescript'] }).program.body[0] as Node;
-
-function dualTest(test: (p: (code: string) => Node | acorn.AnyNode) => void) {
-  return () => {
-    test(parseBabel);
-    test(parseRollup);
-  };
-}
+import { dualTest, parseBabel } from './helpers.ts';
 
 describe('transpileFn', () => {
   it(
