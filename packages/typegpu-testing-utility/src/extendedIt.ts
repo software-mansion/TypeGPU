@@ -205,6 +205,19 @@ export const it = base
       vi.unstubAllGlobals();
     });
   })
+  .extend('disableWebGPU', ({ navigator }, { onCleanup }) => {
+    const originalGpu = navigator.gpu;
+
+    onCleanup(() => {
+      // oxlint-disable-next-line typescript/no-explicit-any
+      (navigator as any).gpu = originalGpu;
+    });
+
+    return () => {
+      // oxlint-disable-next-line typescript/no-explicit-any
+      (navigator as any).gpu = undefined;
+    };
+  })
   /**
    * Used to introduce an artificial delay between requesting a device and getting it.
    * @example
