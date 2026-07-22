@@ -22,10 +22,6 @@ export type TextureChannels = {
 
 const TEXTURE_CHANNELS = ['r', 'g', 'b', 'a'] as const;
 
-function isTextureChannel(value: string): value is TextureChannel {
-  return TEXTURE_CHANNELS.includes(value as TextureChannel);
-}
-
 /**
  * Writes image sources into individual channels of `texture`. Each entry
  * writes a single channel, with `from` selecting which channel of the
@@ -53,12 +49,6 @@ export function writeChannels(
     );
   }
 
-  for (const key of Object.keys(channels)) {
-    if (!isTextureChannel(key)) {
-      throw new Error('Texture channel writes only support single channels: r, g, b, a.');
-    }
-  }
-
   const writes: TextureChannelWriteLayout[] = [];
 
   for (const to of TEXTURE_CHANNELS) {
@@ -69,7 +59,7 @@ export function writeChannels(
 
     const { source, from } = entry;
 
-    if (!isTextureChannel(from)) {
+    if (!TEXTURE_CHANNELS.includes(from)) {
       throw new Error(`Invalid source channel '${from}'. Expected one of r, g, b, a.`);
     }
 
