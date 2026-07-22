@@ -27,6 +27,14 @@ export interface Options {
   autoNamingEnabled?: boolean | undefined;
 
   /**
+   * Minify the generated AST.
+   * This results in obfuscation of the generated WGSL, and in smaller bundle sizes.
+   *
+   * @default false
+   */
+  minify?: boolean | undefined;
+
+  /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
    * In case this early pruning hinders transformation, you
    * can disable it.
@@ -137,7 +145,8 @@ export const defaultOptions = {
   include: /\.m?[jt]sx?(?:\?.*)?$/,
   autoNamingEnabled: true,
   earlyPruning: true,
-};
+  minify: false,
+} satisfies Partial<Options>;
 
 /**
  * Returns the block scope of a function declaration, if one exists.
