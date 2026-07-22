@@ -4,6 +4,10 @@ export class MinifierNullImpl implements Minifier {
   minify(name: string): string {
     return name;
   }
+  getIfMinified(name: string) {
+    return name;
+    // TODO: reconsider, this may backfire
+  }
 }
 
 export class MinifierImpl implements Minifier {
@@ -23,5 +27,9 @@ export class MinifierImpl implements Minifier {
     }
 
     return minifiedName;
+  }
+
+  getIfMinified(name: string) {
+    return this.#nameMap.get(name);
   }
 }

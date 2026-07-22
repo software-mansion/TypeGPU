@@ -1,7 +1,11 @@
 import type { Context, JsNode } from './types.ts';
 
 function isDeclared(ctx: Context, name: string) {
-  return ctx.stack.some((scope) => scope.declaredNames.includes(name));
+  const minifiedName = ctx.minifier.getIfMinified(name);
+  if (!minifiedName) {
+    return false;
+  }
+  return ctx.stack.some((scope) => scope.declaredNames.includes(minifiedName));
 }
 
 /**

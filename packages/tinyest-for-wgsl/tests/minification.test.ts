@@ -14,9 +14,9 @@ describe('transpileFn', () => {
         true,
       );
 
-      expect(params).toStrictEqual([]);
+      expect(params).toMatchInlineSnapshot(`[]`);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"variable",[5,"1"]],[13,"other",[5,"2"]],[13,"sensitiveName",[5,"3"]]]]"`,
+        `"[0,[[13,"a",[5,"1"]],[13,"aa",[5,"2"]],[13,"aaa",[5,"3"]]]]"`,
       );
       expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
@@ -30,9 +30,9 @@ describe('transpileFn', () => {
         true,
       );
 
-      expect(params).toStrictEqual([]);
+      expect(params).toMatchInlineSnapshot(`[]`);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"variable",[5,"1"]],[13,"other",[5,"2"]],[13,"sensitiveName",[5,"3"]]]]"`,
+        `"[0,[[13,"a",[5,"1"]],[10,"a"]]]"`,
       );
       expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
@@ -46,11 +46,27 @@ describe('transpileFn', () => {
         true,
       );
 
-      expect(params).toStrictEqual([]);
+      expect(params).toMatchInlineSnapshot(`
+        [
+          {
+            "name": "param1",
+            "type": "i",
+          },
+          {
+            "name": "param2",
+            "type": "i",
+          },
+        ]
+      `);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"variable",[5,"1"]],[13,"other",[5,"2"]],[13,"sensitiveName",[5,"3"]]]]"`,
+        `"[0,[[10,[1,"param2","+","param1"]]]]"`,
       );
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+      expect(externalNames).toMatchInlineSnapshot(`
+        Set {
+          "param2",
+          "param1",
+        }
+      `);
     }),
   );
 
@@ -58,15 +74,26 @@ describe('transpileFn', () => {
     'does not minify struct params',
     dualTest((p) => {
       const { params, body, externalNames } = transpileFn(
-        p('(param) => { const struct; return param.prop + struct.field; }'),
+        p('(param) => { let struct; return param.prop + struct.field; }'),
         true,
       );
 
-      expect(params).toStrictEqual([]);
+      expect(params).toMatchInlineSnapshot(`
+        [
+          {
+            "name": "param",
+            "type": "i",
+          },
+        ]
+      `);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"variable",[5,"1"]],[13,"other",[5,"2"]],[13,"sensitiveName",[5,"3"]]]]"`,
+        `"[0,[[12,"a"],[10,[1,"param.prop","+",[7,"a","aa"]]]]]"`,
       );
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+      expect(externalNames).toMatchInlineSnapshot(`
+        Set {
+          "param.prop",
+        }
+      `);
     }),
   );
 });

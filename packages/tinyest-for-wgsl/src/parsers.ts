@@ -53,7 +53,7 @@ const Transpilers: Partial<{
       : [NODE.return],
 
   Identifier(ctx, node) {
-    return node.name;
+    return ctx.minifier.minify(node.name);
   },
 
   ThisExpression() {
@@ -180,7 +180,9 @@ const Transpilers: Partial<{
 
     const decl = node.declarations[0];
     ctx.ignoreExternalDepth++;
+    console.log(decl.id);
     const id = transpile(ctx, decl.id);
+    console.log(id);
     ctx.ignoreExternalDepth--;
 
     if (typeof id !== 'string') {

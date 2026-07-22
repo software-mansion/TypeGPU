@@ -10,7 +10,15 @@ export type Scope = {
 export type Externals = Set<string>;
 
 export interface Minifier {
+  /**
+   * If `name` wasn't minified before, it gives it a new minified name.
+   * Then, returns the minified version of `name`.
+   */
   minify(name: string): string;
+  /**
+   * Returns the minified version of `name` if it exists, otherwise returns undefined.
+   */
+  getIfMinified(name: string): string | undefined;
 }
 
 export type Context = {
