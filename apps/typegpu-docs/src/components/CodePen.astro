@@ -1,5 +1,5 @@
 ---
-import { Code } from 'astro/components';
+import { Code } from 'astro:components';
 
 type SupportedLanguages =
   | 'typescript'
@@ -29,7 +29,7 @@ const formattedCode = code.trim();
     <Code
       code={formattedCode}
       lang={language}
-      theme="github-dark"
+      theme="catppuccin-mocha"
       class={'p-4'}
     />
   </div>
