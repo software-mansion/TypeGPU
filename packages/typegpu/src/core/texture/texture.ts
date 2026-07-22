@@ -193,20 +193,27 @@ export interface TgpuTexture<TProps extends TextureProps = any> extends TgpuNama
     viewDescriptor?: TgpuTextureViewDescriptor,
   ): TgpuTextureView<T>;
 
+  /** Clears the texture to zeros */
   clear(mipLevel?: number | 'all'): void;
+  /** Clears the texture to `color`. Requires the `'render'` usage flag */
   clear(color: readonly [number, number, number, number], mipLevel?: number | 'all'): void;
   generateMipmaps(baseMipLevel?: number, mipLevels?: number): void;
+  /** Writes image sources to the texture, one per array layer. Requires the `'render'` usage flag */
   write(
     source: GPUCopyExternalImageSource | GPUCopyExternalImageSource[],
     options?: TextureWriteOptions,
   ): void;
+  /** Writes raw texel data to the texture */
   write(
     source: ArrayBuffer | TypedArray | DataView,
     options?: number | TextureRawWriteOptions,
   ): void;
+  /** Decodes an image blob and writes it to the texture. Requires the `'render'` usage flag */
   writeAsync(source: Blob, options?: TextureBlobWriteOptions): Promise<void>;
   // TODO: support copies from GPUBuffers and TgpuBuffers
+  /** Copies the contents of a texture with a matching size and format */
   copyFrom<T extends CopyCompatibleTexture<TProps>>(source: T): void;
+  /** Copies a region between textures of the same format */
   copyFrom<T extends FormatCompatibleTexture<TProps>>(source: T, options: TextureCopyOptions): void;
 
   destroy(): void;

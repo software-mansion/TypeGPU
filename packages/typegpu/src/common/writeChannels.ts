@@ -26,7 +26,22 @@ function isTextureChannel(value: string): value is TextureChannel {
   return TEXTURE_CHANNELS.includes(value as TextureChannel);
 }
 
-/** Packs image sources into individual channels of `texture` in a single render pass */
+/**
+ * Writes image sources into individual channels of `texture`. Each entry
+ * writes a single channel, with `from` selecting which channel of the
+ * source to read. Omitted channels are left untouched.
+ *
+ * Requires the `'render'` usage flag on the texture.
+ *
+ * @example
+ * ```ts
+ * common.writeChannels(material, {
+ *   r: { source: roughnessMap, from: 'r' },
+ *   g: { source: metalnessMap, from: 'r' },
+ *   a: { source: maskMap, from: 'r' },
+ * });
+ * ```
+ */
 export function writeChannels(
   texture: TgpuTexture & RenderFlag,
   channels: TextureChannels,
