@@ -127,7 +127,7 @@ function App() {
 
   const particleDataBuffer = useBuffer(d.arrayOf(ParticleData, PARTICLE_AMOUNT), {
     initial: writeRandomPositions,
-  }).$usage('storage', 'uniform', 'vertex');
+  }).$usage('storage', 'vertex');
 
   const aspectRatio = useUniform(d.f32, { initial: 1 });
   const deltaTime = useUniform(d.f32);
