@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { TgpuLogger } from '../../src/tgpuLogger.ts';
 
 describe('tgpuLogger', () => {
@@ -11,7 +11,7 @@ describe('tgpuLogger', () => {
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
-        "⚠️ [deprecated}] ",
+        "⚠️ [deprecated] ",
         "this is deprecated",
       ]
     `);
@@ -38,7 +38,7 @@ describe('tgpuLogger', () => {
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
-        "⚠️ [deprecated}] ",
+        "⚠️ [deprecated] ",
         "this is deprecated",
       ]
     `);
@@ -53,7 +53,7 @@ describe('tgpuLogger', () => {
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
-        "⚠️ [suspicious}] ",
+        "⚠️ [suspicious] ",
         "there is an impostor among us",
         42,
         {
@@ -73,7 +73,7 @@ describe('tgpuLogger', () => {
     expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
-        "⚠️ [suspicious}] ",
+        "⚠️ [suspicious] ",
         "still warns",
       ]
     `);

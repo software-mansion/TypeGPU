@@ -293,7 +293,7 @@ describe('render pipeline behavior', () => {
       tgpu.resolve([pipeline]);
       expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
         [
-          "⚠️ [locations-mismatched}] ",
+          "⚠️ [locations-mismatched] ",
           "Mismatched location between vertexFn (vertexMain) output (0) and fragmentFn (fragmentMain) input (1) for the key "bar", using the location set on vertex output.",
         ]
       `);
@@ -360,7 +360,7 @@ describe('render pipeline behavior', () => {
     }).not.toThrow();
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
-        "⚠️ [webgpu-feature-missing}] ",
+        "⚠️ [webgpu-feature-missing] ",
         "Performance callback cannot be used because the timestamp-query feature is not enabled on the root.",
       ]
     `);
@@ -605,7 +605,7 @@ describe('render pipeline behavior', () => {
 
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
-        "⚠️ [webgpu-limits-exceeded}] ",
+        "⚠️ [webgpu-limits-exceeded] ",
         "Total number of uniform buffers (13) exceeds maxUniformBuffersPerShaderStage (12). Consider:
       1. Grouping some of the uniforms into one using 'd.struct',
       2. Increasing the limit when requesting a device or creating a root.",
@@ -613,7 +613,7 @@ describe('render pipeline behavior', () => {
     `);
     expect(consoleWarnSpy.mock.calls[1]).toMatchInlineSnapshot(`
       [
-        "⚠️ [webgpu-limits-exceeded}] ",
+        "⚠️ [webgpu-limits-exceeded] ",
         "Total number of storage buffers (9) exceeds maxStorageBuffersPerShaderStage (8).",
       ]
     `);
@@ -1591,7 +1591,7 @@ describe('drawIndirect / drawIndexedIndirect buffer and offset validation', () =
 
       expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
         [
-          "⚠️ [suspicious}] ",
+          "⚠️ [suspicious] ",
           "drawIndirect: Starting at offset 40, only 12 contiguous bytes are available before padding. 'drawIndirect' requires 16 bytes (4 x u32). Reading across padding may result in undefined behavior.",
         ]
       `);
@@ -1665,7 +1665,7 @@ describe('drawIndirect / drawIndexedIndirect buffer and offset validation', () =
 
       expect(warnSpy.mock.calls[0]).toMatchInlineSnapshot(`
         [
-          "⚠️ [suspicious}] ",
+          "⚠️ [suspicious] ",
           "drawIndexedIndirect: Starting at offset 36, only 16 contiguous bytes are available before padding. 'drawIndexedIndirect' requires 20 bytes (3 x u32, i32, u32). Reading across padding may result in undefined behavior.",
         ]
       `);

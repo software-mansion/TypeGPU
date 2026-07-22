@@ -237,7 +237,7 @@ describe('wgsl generator type inference', () => {
     expect(warnSpy.mock.calls).toMatchInlineSnapshot(`
       [
         [
-          "⚠️ [implicit-conversion}] ",
+          "⚠️ [implicit-conversion] ",
           "Implicit conversions from [
         1.1: abstractFloat
       ] to u32 are supported, but not recommended.

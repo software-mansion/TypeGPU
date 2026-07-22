@@ -19,7 +19,7 @@ type WarningType = (typeof warningTypes)[number];
 
 // internal API
 interface Logger {
-  warn(type: (typeof warningTypes)[number], ...args: unknown[]): void;
+  warn(type: WarningType, ...args: unknown[]): void;
 }
 
 /**
@@ -69,7 +69,7 @@ export class TgpuLogger implements Logger, Warn {
 
   warn(type: WarningType, ...args: unknown[]) {
     if (this.#enabledWarnings.has(type)) {
-      console.warn(`⚠️ [${type}}] `, ...args);
+      console.warn(`⚠️ [${type}] `, ...args);
     }
   }
 }

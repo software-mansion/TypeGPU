@@ -458,7 +458,7 @@ describe('tgpu resolveWithContext', () => {
 
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
-        "⚠️ [external-omitted}] ",
+        "⚠️ [external-omitted] ",
         "During resolution, the external 'identity' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.",
       ]
     `);
@@ -479,7 +479,7 @@ describe('tgpu resolveWithContext', () => {
 
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
-        "⚠️ [external-omitted}] ",
+        "⚠️ [external-omitted] ",
         "During resolution, the external 'EXT.p.q' has been omitted. Only TGPU resources, 'use gpu' functions, primitives, and plain JS objects can be used as externals.",
       ]
     `);
@@ -519,7 +519,7 @@ describe('resolve without template', () => {
 
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
-        "⚠️ [deprecated}] ",
+        "⚠️ [deprecated] ",
         "Calling resolve with an empty template is deprecated and will soon return an empty string. Consider using the 'tgpu.resolve(resolvableArray, options)' API instead.",
       ]
     `);
