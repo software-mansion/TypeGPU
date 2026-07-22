@@ -90,6 +90,11 @@ export function getImageSourceDimensions(source: GPUCopyExternalImageSource): {
     throw new Error('Blob sources are only supported in texture.writeAsync(...).');
   }
 
+  const { width, height } = source as ImageBitmap;
+  if (width && height) {
+    return { width, height };
+  }
+
   const { videoWidth, videoHeight } = source as HTMLVideoElement;
   if (videoWidth && videoHeight) {
     return { width: videoWidth, height: videoHeight };
@@ -103,11 +108,6 @@ export function getImageSourceDimensions(source: GPUCopyExternalImageSource): {
   const { codedWidth, codedHeight } = source as VideoFrame;
   if (codedWidth && codedHeight) {
     return { width: codedWidth, height: codedHeight };
-  }
-
-  const { width, height } = source as ImageBitmap;
-  if (width && height) {
-    return { width, height };
   }
 
   throw new Error('Cannot determine dimensions of the provided image source.');

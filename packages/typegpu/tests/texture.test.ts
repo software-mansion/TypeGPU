@@ -11,6 +11,65 @@ import { it } from 'typegpu-testing-utility';
 import { attest } from '@ark/attest';
 import { tgpu, d, common } from 'typegpu';
 
+type AnyMockFn = {
+  mock: { calls: unknown[][]; invocationCallOrder: readonly number[] };
+};
+
+type TextureMock = { width: number; height: number; destroy: AnyMockFn };
+
+/** Flattens GPU mock activity into a chronological list of labeled calls */
+function gpuCallTimeline(fixtures: {
+  device: {
+    mock: {
+      createTexture: AnyMockFn & {
+        mock: { results: readonly { value: TextureMock | undefined }[] };
+      };
+      createRenderPipeline: AnyMockFn;
+      createBindGroup: AnyMockFn;
+      createCommandEncoder: AnyMockFn;
+      queue: { copyExternalImageToTexture: AnyMockFn; submit: AnyMockFn };
+    };
+  };
+  commandEncoder: { mock: { beginRenderPass: AnyMockFn } };
+  renderPassEncoder: { mock: { draw: AnyMockFn; setViewport: AnyMockFn } };
+}): string[] {
+  const events: [order: number, label: string][] = [];
+  const record = (fn: AnyMockFn, label: (args: unknown[]) => string) => {
+    fn.mock.invocationCallOrder.forEach((order, i) => {
+      events.push([order, label(fn.mock.calls[i] ?? [])]);
+    });
+  };
+
+  const { device, commandEncoder, renderPassEncoder } = fixtures;
+  record(device.mock.createTexture, (args) => {
+    const size = (args[0] as GPUTextureDescriptor).size;
+    const [width, height] = 'width' in size ? [size.width, size.height] : [...size];
+    return `createTexture(${width}x${height})`;
+  });
+  record(device.mock.queue.copyExternalImageToTexture, () => 'copyExternalImageToTexture');
+  record(device.mock.createRenderPipeline, () => 'createRenderPipeline');
+  record(device.mock.createBindGroup, () => 'createBindGroup');
+  record(device.mock.createCommandEncoder, () => 'createCommandEncoder');
+  record(commandEncoder.mock.beginRenderPass, (args) => {
+    const [attachment] = (args[0] as { colorAttachments: GPURenderPassColorAttachment[] })
+      .colorAttachments;
+    return `beginRenderPass(${attachment?.loadOp})`;
+  });
+  record(
+    renderPassEncoder.mock.setViewport,
+    (args) => `setViewport(${args.slice(0, 4).join(', ')})`,
+  );
+  record(renderPassEncoder.mock.draw, () => 'draw');
+  record(device.mock.queue.submit, () => 'submit');
+  for (const { value: texture } of device.mock.createTexture.mock.results) {
+    if (texture) {
+      record(texture.destroy, () => `destroyTexture(${texture.width}x${texture.height})`);
+    }
+  }
+
+  return events.toSorted(([a], [b]) => a - b).map(([, label]) => label);
+}
+
 describe('TgpuTexture', () => {
   it('makes passing the default, `undefined` or omitting an option prop result in the same type.', ({
     root,
@@ -425,7 +484,12 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
-      it('calls appropriate device methods when generateMipmaps is called', ({ root, device }) => {
+      it('calls appropriate device methods when generateMipmaps is called', ({
+        root,
+        device,
+        commandEncoder,
+        renderPassEncoder,
+      }) => {
         const texture = root
           .createTexture({
             size: [64, 64],
@@ -465,19 +529,6 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
             ]
           `);
 
-        expect(device.mock.createRenderPipeline).toHaveBeenCalledWith(
-          expect.objectContaining({
-            vertex: expect.objectContaining({
-              module: expect.anything(),
-            }),
-            fragment: expect.objectContaining({
-              module: expect.anything(),
-              targets: [{ format: 'rgba8unorm' }],
-            }),
-            primitive: { topology: 'triangle-list' },
-          }),
-        );
-
         expect(device.mock.createSampler).toHaveBeenCalledWith({
           magFilter: 'linear',
           minFilter: 'linear',
@@ -498,11 +549,30 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           ],
         });
 
-        expect(device.mock.createCommandEncoder).toHaveBeenCalled();
-        expect(device.mock.queue.submit).toHaveBeenCalled();
+        expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
+          .toMatchInlineSnapshot(`
+          [
+            "createTexture(64x64)",
+            "createCommandEncoder",
+            "createRenderPipeline",
+            "createBindGroup",
+            "beginRenderPass(clear)",
+            "draw",
+            "createBindGroup",
+            "beginRenderPass(clear)",
+            "draw",
+            "createBindGroup",
+            "beginRenderPass(clear)",
+            "draw",
+            "submit",
+          ]
+        `);
       });
 
-      it('calls generateMipmaps with specific parameters', ({ root, device }) => {
+      it('blits only the requested mip range when generateMipmaps is called with parameters', ({
+        root,
+        device,
+      }) => {
         const texture = root
           .createTexture({
             size: [32, 32],
@@ -513,12 +583,47 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
         texture.generateMipmaps(1, 3); // Start at mip 1, generate 3 levels
 
-        // Should create shader modules for mipmap generation (fresh cache per test)
-        expect(device.mock.createRenderPipeline).toHaveBeenCalled();
-        expect(device.mock.createCommandEncoder).toHaveBeenCalled();
-
-        // Should call submit for each mip level transition (2 levels: 1->2, 2->3)
-        expect(device.mock.queue.submit).toHaveBeenCalled();
+        const [target] = device.mock.createTexture.mock.results;
+        expect(target?.value.createView.mock.calls).toMatchInlineSnapshot(`
+          [
+            [
+              {
+                "arrayLayerCount": 1,
+                "baseArrayLayer": 0,
+                "baseMipLevel": 1,
+                "dimension": "2d",
+                "mipLevelCount": 1,
+              },
+            ],
+            [
+              {
+                "arrayLayerCount": 1,
+                "baseArrayLayer": 0,
+                "baseMipLevel": 2,
+                "dimension": "2d",
+                "mipLevelCount": 1,
+              },
+            ],
+            [
+              {
+                "arrayLayerCount": 1,
+                "baseArrayLayer": 0,
+                "baseMipLevel": 2,
+                "dimension": "2d",
+                "mipLevelCount": 1,
+              },
+            ],
+            [
+              {
+                "arrayLayerCount": 1,
+                "baseArrayLayer": 0,
+                "baseMipLevel": 3,
+                "dimension": "2d",
+                "mipLevelCount": 1,
+              },
+            ],
+          ]
+        `);
       });
 
       it('caches blit resources appropriately per level', ({ root, device }) => {
@@ -530,43 +635,56 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           sampler: device.mock.createSampler.mock.calls.length,
           bindGroupLayout: device.mock.createBindGroupLayout.mock.calls.length,
           pipelineLayout: device.mock.createPipelineLayout.mock.calls.length,
+          renderPipeline: device.mock.createRenderPipeline.mock.calls.length,
         });
 
         // First filterable texture
         createTex('rgba8unorm').generateMipmaps();
-        expect(getCalls()).toEqual({
-          shaderModule: 2,
-          sampler: 1,
-          bindGroupLayout: 1,
-          pipelineLayout: 1,
-        });
+        expect(getCalls()).toMatchInlineSnapshot(`
+          {
+            "bindGroupLayout": 1,
+            "pipelineLayout": 1,
+            "renderPipeline": 1,
+            "sampler": 1,
+            "shaderModule": 2,
+          }
+        `);
 
         // Same format - all cached
         createTex('rgba8unorm').generateMipmaps();
-        expect(getCalls()).toEqual({
-          shaderModule: 2,
-          sampler: 1,
-          bindGroupLayout: 1,
-          pipelineLayout: 1,
-        });
+        expect(getCalls()).toMatchInlineSnapshot(`
+          {
+            "bindGroupLayout": 1,
+            "pipelineLayout": 1,
+            "renderPipeline": 1,
+            "sampler": 1,
+            "shaderModule": 2,
+          }
+        `);
 
-        // Different filterable format - still uses same cache (both filterable floats)
+        // Different filterable format - same modules and layouts, new pipeline per format
         createTex('rgba16float').generateMipmaps();
-        expect(getCalls()).toEqual({
-          shaderModule: 2,
-          sampler: 1,
-          bindGroupLayout: 1,
-          pipelineLayout: 1,
-        });
+        expect(getCalls()).toMatchInlineSnapshot(`
+          {
+            "bindGroupLayout": 1,
+            "pipelineLayout": 1,
+            "renderPipeline": 2,
+            "sampler": 1,
+            "shaderModule": 2,
+          }
+        `);
 
-        // Unfilterable format - new fragment shader, sampler, and layouts (vertex module reused)
+        // Unfilterable format - new fragment shader, sampler, layouts and pipeline (vertex module reused)
         createTex('r32float').generateMipmaps();
-        expect(getCalls()).toEqual({
-          shaderModule: 3,
-          sampler: 2,
-          bindGroupLayout: 2,
-          pipelineLayout: 2,
-        });
+        expect(getCalls()).toMatchInlineSnapshot(`
+          {
+            "bindGroupLayout": 2,
+            "pipelineLayout": 2,
+            "renderPipeline": 3,
+            "sampler": 2,
+            "shaderModule": 3,
+          }
+        `);
       });
 
       it('calls queue.writeTexture when write is called with buffer data', ({ root, device }) => {
@@ -707,6 +825,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       it('handles resizing when image dimensions do not match texture with resize', ({
         root,
         device,
+        commandEncoder,
         renderPassEncoder,
       }) => {
         const texture = root
@@ -723,18 +842,28 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
         texture.write(mockImage, { resize: true });
 
-        expect(device.mock.createTexture).toHaveBeenCalledTimes(2);
-        expect(device.mock.createShaderModule).toHaveBeenCalled();
-        expect(device.mock.createRenderPipeline).toHaveBeenCalled();
-        expect(renderPassEncoder.mock.setViewport).toHaveBeenCalledWith(0, 0, 64, 64, 0, 1);
-        expect(renderPassEncoder.mock.setScissorRect).toHaveBeenCalledWith(0, 0, 64, 64);
-        expect(device.mock.createCommandEncoder).toHaveBeenCalled();
-        expect(device.mock.queue.submit).toHaveBeenCalled();
+        expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
+          .toMatchInlineSnapshot(`
+          [
+            "createTexture(64x64)",
+            "createTexture(32x32)",
+            "copyExternalImageToTexture",
+            "createRenderPipeline",
+            "createBindGroup",
+            "createCommandEncoder",
+            "beginRenderPass(clear)",
+            "setViewport(0, 0, 64, 64)",
+            "draw",
+            "submit",
+            "destroyTexture(32x32)",
+          ]
+        `);
       });
 
-      it('resamples all layers of an image array in one submit', ({
+      it('resamples each layer of an image array in its own submit with one staging texture alive at a time', ({
         root,
         device,
+        commandEncoder,
         renderPassEncoder,
       }) => {
         const texture = root
@@ -751,34 +880,31 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
         texture.write([mockImage, mockImage], { resize: true });
 
-        expect(device.mock.createCommandEncoder).toHaveBeenCalledTimes(1);
-        expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
-        expect(renderPassEncoder.mock.draw).toHaveBeenCalledTimes(2);
-
-        const [target, staging1, staging2] = device.mock.createTexture.mock.results;
-        expect(target?.value.destroy).not.toHaveBeenCalled();
-        expect(staging1?.value.destroy).toHaveBeenCalled();
-        expect(staging2?.value.destroy).toHaveBeenCalled();
-      });
-
-      it('destroys the staging texture after resampling', ({ root, device }) => {
-        const texture = root
-          .createTexture({
-            size: [64, 64],
-            format: 'rgba8unorm',
-          })
-          .$usage('render');
-
-        const mockImage = {
-          width: 32,
-          height: 32,
-        } as HTMLImageElement;
-
-        texture.write(mockImage, { resize: true });
-
-        const [target, staging] = device.mock.createTexture.mock.results;
-        expect(staging?.value.destroy).toHaveBeenCalled();
-        expect(target?.value.destroy).not.toHaveBeenCalled();
+        expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
+          .toMatchInlineSnapshot(`
+          [
+            "createTexture(64x64)",
+            "createTexture(32x32)",
+            "copyExternalImageToTexture",
+            "createRenderPipeline",
+            "createBindGroup",
+            "createCommandEncoder",
+            "beginRenderPass(clear)",
+            "setViewport(0, 0, 64, 64)",
+            "draw",
+            "submit",
+            "destroyTexture(32x32)",
+            "createTexture(32x32)",
+            "copyExternalImageToTexture",
+            "createBindGroup",
+            "createCommandEncoder",
+            "beginRenderPass(clear)",
+            "setViewport(0, 0, 64, 64)",
+            "draw",
+            "submit",
+            "destroyTexture(32x32)",
+          ]
+        `);
       });
 
       it('throws when passing a Blob to synchronous write', ({ root }) => {
@@ -895,6 +1021,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
       it('uses the render path when image descriptor size resamples the source', ({
         root,
         device,
+        commandEncoder,
         renderPassEncoder,
       }) => {
         const texture = root
@@ -914,13 +1041,22 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           resize: true,
         });
 
-        expect(device.mock.createTexture).toHaveBeenCalledTimes(2);
-        expect(device.mock.createShaderModule).toHaveBeenCalled();
-        expect(device.mock.createRenderPipeline).toHaveBeenCalled();
-        expect(renderPassEncoder.mock.setViewport).toHaveBeenCalledWith(0, 0, 32, 32, 0, 1);
-        expect(renderPassEncoder.mock.setScissorRect).toHaveBeenCalledWith(0, 0, 32, 32);
-        expect(device.mock.createCommandEncoder).toHaveBeenCalled();
-        expect(device.mock.queue.submit).toHaveBeenCalled();
+        expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
+          .toMatchInlineSnapshot(`
+          [
+            "createTexture(64x64)",
+            "createTexture(16x16)",
+            "copyExternalImageToTexture",
+            "createRenderPipeline",
+            "createBindGroup",
+            "createCommandEncoder",
+            "beginRenderPass(load)",
+            "setViewport(0, 0, 32, 32)",
+            "draw",
+            "submit",
+            "destroyTexture(16x16)",
+          ]
+        `);
       });
 
       it('keeps sRGB image writes in sRGB when resampling', ({ root, device }) => {
@@ -1009,7 +1145,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         expect(device.mock.createRenderPipeline).not.toHaveBeenCalled();
       });
 
-      it('writes grouped single channels with color write masks in one submit', ({
+      it('writes channels from distinct sources in one pass per source', ({
         root,
         device,
         commandEncoder,
@@ -1037,28 +1173,133 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           a: { source: maskMap, from: 'g' },
         });
 
-        expect(device.mock.createTexture).toHaveBeenCalledTimes(3);
-        expect(device.mock.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(2);
-        expect(device.mock.createCommandEncoder).toHaveBeenCalledTimes(1);
-        expect(commandEncoder.mock.beginRenderPass).toHaveBeenCalledTimes(1);
-        expect(renderPassEncoder.mock.draw).toHaveBeenCalledTimes(2);
-        expect(device.mock.queue.submit).toHaveBeenCalledTimes(1);
-        expect(device.mock.createRenderPipeline).toHaveBeenNthCalledWith(
-          1,
-          expect.objectContaining({
-            fragment: expect.objectContaining({
-              targets: [{ format: 'rgba8unorm', writeMask: GPUColorWrite.RED }],
-            }),
-          }),
-        );
-        expect(device.mock.createRenderPipeline).toHaveBeenNthCalledWith(
-          2,
-          expect.objectContaining({
-            fragment: expect.objectContaining({
-              targets: [{ format: 'rgba8unorm', writeMask: GPUColorWrite.ALPHA }],
-            }),
-          }),
-        );
+        expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
+          .toMatchInlineSnapshot(`
+          [
+            "createTexture(32x32)",
+            "createTexture(32x32)",
+            "copyExternalImageToTexture",
+            "createCommandEncoder",
+            "beginRenderPass(load)",
+            "createBindGroup",
+            "setViewport(0, 0, 32, 32)",
+            "createRenderPipeline",
+            "draw",
+            "submit",
+            "destroyTexture(32x32)",
+            "createTexture(32x32)",
+            "copyExternalImageToTexture",
+            "createCommandEncoder",
+            "beginRenderPass(load)",
+            "createBindGroup",
+            "setViewport(0, 0, 32, 32)",
+            "createRenderPipeline",
+            "draw",
+            "submit",
+            "destroyTexture(32x32)",
+          ]
+        `);
+
+        expect(
+          (
+            device.mock.createRenderPipeline.mock.calls as unknown as [
+              GPURenderPipelineDescriptor,
+            ][]
+          ).map((call) => call[0].fragment?.targets),
+        ).toMatchInlineSnapshot(`
+          [
+            [
+              {
+                "format": "rgba8unorm",
+                "writeMask": 1,
+              },
+            ],
+            [
+              {
+                "format": "rgba8unorm",
+                "writeMask": 8,
+              },
+            ],
+          ]
+        `);
+      });
+
+      it('uploads a shared source once and packs its channels in a single pass', ({
+        root,
+        device,
+        commandEncoder,
+        renderPassEncoder,
+      }) => {
+        const texture = root
+          .createTexture({
+            size: [32, 32],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        const packedMap = {
+          width: 32,
+          height: 32,
+        } as HTMLImageElement;
+
+        common.writeChannels(texture, {
+          r: { source: packedMap, from: 'r' },
+          g: { source: packedMap, from: 'g' },
+          b: { source: packedMap, from: 'b' },
+          a: { source: packedMap, from: 'a' },
+        });
+
+        expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
+          .toMatchInlineSnapshot(`
+          [
+            "createTexture(32x32)",
+            "createTexture(32x32)",
+            "copyExternalImageToTexture",
+            "createCommandEncoder",
+            "beginRenderPass(load)",
+            "createBindGroup",
+            "setViewport(0, 0, 32, 32)",
+            "createRenderPipeline",
+            "draw",
+            "setViewport(0, 0, 32, 32)",
+            "createRenderPipeline",
+            "draw",
+            "setViewport(0, 0, 32, 32)",
+            "createRenderPipeline",
+            "draw",
+            "setViewport(0, 0, 32, 32)",
+            "createRenderPipeline",
+            "draw",
+            "submit",
+            "destroyTexture(32x32)",
+          ]
+        `);
+      });
+
+      it('reuses cached channel pipelines across writeChannels calls', ({ root, device }) => {
+        const texture = root
+          .createTexture({
+            size: [32, 32],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        const packedMap = {
+          width: 32,
+          height: 32,
+        } as HTMLImageElement;
+
+        common.writeChannels(texture, {
+          r: { source: packedMap, from: 'r' },
+          g: { source: packedMap, from: 'g' },
+        });
+        const pipelineCount = device.mock.createRenderPipeline.mock.calls.length;
+
+        common.writeChannels(texture, {
+          r: { source: packedMap, from: 'r' },
+          g: { source: packedMap, from: 'g' },
+        });
+        expect(device.mock.createRenderPipeline).toHaveBeenCalledTimes(pipelineCount);
       });
 
       it('applies shared regions to channel writes', ({
