@@ -1761,9 +1761,9 @@ describe('Uniform alignment', () => {
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [uniform-schema-misaligned}] ",
-        "Schema '<unnamed>' is used in an uniform buffer, and its property p does not meet required alignment (offset is 4, required alignment is 16).
+        "Schema '<unnamed>' is used in an uniform buffer, and its property 'p' does not meet required alignment (offset is 4, required alignment is 16).
       This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
-      To address this, wrap the property in 'd.align(16, ...)'.",
+      To address this, wrap the property 'p' in 'd.align(16, ...)'.",
       ]
     `);
   });
@@ -1823,7 +1823,7 @@ describe('Uniform alignment', () => {
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [uniform-schema-misaligned}] ",
-        "Schema '<unnamed>' is used in an array in an uniform buffer, and its stride (4) is not a multiple of 16.
+        "Schema 'u32' is used in an array in an uniform buffer, and its stride (4) is not a multiple of 16.
       This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
       To address this, wrap the element in 'd.align(16, ...)'.",
       ]
@@ -1838,7 +1838,7 @@ describe('Uniform alignment', () => {
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [uniform-schema-misaligned}] ",
-        "Schema '<unnamed>' is used in an array in an uniform buffer, and its stride (4) is not a multiple of 16.
+        "Schema 'u32' is used in an array in an uniform buffer, and its stride (4) is not a multiple of 16.
       This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
       To address this, wrap the element in 'd.align(16, ...)'.",
       ]
@@ -1853,7 +1853,7 @@ describe('Uniform alignment', () => {
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [uniform-schema-misaligned}] ",
-        "Schema '<unnamed>' is used in an array in an uniform buffer, and its stride (4) is not a multiple of 16.
+        "Schema 'u32' is used in an array in an uniform buffer, and its stride (4) is not a multiple of 16.
       This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
       To address this, wrap the element in 'd.align(16, ...)'.",
       ]
@@ -1869,7 +1869,7 @@ describe('Uniform alignment', () => {
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
         "⚠️ [uniform-schema-misaligned}] ",
-        "Schema '<unnamed>' is used in an array in an uniform buffer, and its stride (4) is not a multiple of 16.
+        "Schema 'u32' is used in an array in an uniform buffer, and its stride (4) is not a multiple of 16.
       This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
       To address this, wrap the element in 'd.align(16, ...)'.",
       ]

@@ -55,7 +55,7 @@ export function warnIfNotUniformAligned(schema: BaseData) {
       logger.warn(
         'uniform-schema-misaligned',
         `\
-Schema '${getName(schema) ?? '<unnamed>'}' is used in an array in an uniform buffer, and its stride (${stride}) is not a multiple of 16.
+Schema '${getName(schema.elementType) ?? '<unnamed>'}' is used in an array in an uniform buffer, and its stride (${stride}) is not a multiple of 16.
 This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
 To address this, wrap the element in 'd.align(16, ...)'.`,
       );
@@ -72,9 +72,9 @@ To address this, wrap the element in 'd.align(16, ...)'.`,
         logger.warn(
           'uniform-schema-misaligned',
           `\
-Schema '${getName(schema) ?? '<unnamed>'}' is used in an uniform buffer, and its property ${key} does not meet required alignment (offset is ${offset}, required alignment is ${requiredAlignment}).
+Schema '${getName(schema) ?? '<unnamed>'}' is used in an uniform buffer, and its property '${key}' does not meet required alignment (offset is ${offset}, required alignment is ${requiredAlignment}).
 This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
-To address this, wrap the property in 'd.align(${requiredAlignment}, ...)'.`,
+To address this, wrap the property '${key}' in 'd.align(${requiredAlignment}, ...)'.`,
         );
       }
     });
