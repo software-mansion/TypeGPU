@@ -19,6 +19,8 @@ import { $gpuCallable, $internal, $providing, isMarkedInternal } from '../shared
 import { safeStringify } from '../shared/stringify.ts';
 import { pow } from '../std/numeric.ts';
 import { add, div, mul, neg, sub } from '../std/operators.ts';
+import { eq, ne, lt, le, gt, ge } from '../std/boolean.ts';
+
 import {
   isGPUCallable,
   isKnownAtComptime,
@@ -80,11 +82,17 @@ const parenthesizedOps = [
   '|',
   '^',
   '&',
-  '&&',
-  '||',
 ];
 
 const binaryLogicalOps = ['&&', '||', '==', '!=', '===', '!==', '<', '<=', '>', '>='];
+const binaryRelationalOpToStdMap: Record<string, string> = {
+  '===': eq.toString(),
+  '!==': ne.toString(),
+  '<': lt.toString(),
+  '<=': le.toString(),
+  '>': gt.toString(),
+  '>=': ge.toString(),
+};
 
 const bitShiftOps: string[] = ['<<', '>>', '<<=', '>>='];
 
@@ -332,39 +340,70 @@ ${this.ctx.pre}}`;
       return snip(expression, bool, /* origin */ 'constant', false);
     }
 
-    if (
-      expression[0] === NODE.logicalExpr ||
-      expression[0] === NODE.binaryExpr ||
-      expression[0] === NODE.assignmentExpr
-    ) {
-      // Logical/Binary/Assignment Expression
-      const [exprType, lhs, op, rhs] = expression;
+    if (expression[0] === NODE.logicalExpr) {
+      const [_, lhs, op, rhs] = expression;
       const lhsExpr = this._expression(lhs);
 
       // Short Circuit Evaluation
-      if ((op === '||' || op === '&&') && isKnownAtComptime(lhsExpr)) {
+      if (isKnownAtComptime(lhsExpr)) {
+        const castToBool = wgsl.isBool(this.ctx.expectedType);
         const evalRhs = op === '&&' ? lhsExpr.value : !lhsExpr.value;
 
         if (!evalRhs) {
-          return snip(op === '||', bool, 'constant', false);
+          return castToBool
+            ? snip(op === '||', bool, 'constant', false)
+            : coerceToSnippet(lhsExpr.value);
         }
 
         const rhsExpr = this._expression(rhs);
+
+        if (isKnownAtComptime(rhsExpr)) {
+          return castToBool
+            ? snip(!!rhsExpr.value, bool, 'constant', false)
+            : coerceToSnippet(rhsExpr.value);
+        }
 
         if (rhsExpr.dataType === UnknownData) {
           throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
         }
 
-        if (isKnownAtComptime(rhsExpr)) {
-          return snip(!!rhsExpr.value, bool, 'constant', false);
-        }
-
         // we can skip lhs
-        const convRhs = tryConvertSnippet(this.ctx, rhsExpr, bool, false);
-        const rhsStr = this.ctx.resolveSnippet(convRhs).value;
-        return snip(rhsStr, bool, 'runtime', convRhs.possibleSideEffects);
+        return rhsExpr;
       }
 
+      const rhsExpr = this._expression(rhs);
+
+      // they are not known at comptime
+      if (lhsExpr.dataType === UnknownData) {
+        throw new WgslTypeError(`Left-hand side of '${op}' is of unknown type`);
+      }
+
+      if (!isKnownAtComptime(rhsExpr) && rhsExpr.dataType === UnknownData) {
+        throw new WgslTypeError(`Right-hand side of '${op}' is of unknown type`);
+      }
+
+      if (!wgsl.isBool(lhsExpr.dataType) || !wgsl.isBool(rhsExpr.dataType)) {
+        throw new WgslTypeError(
+          `Logical expression '${op}' requires boolean operands. Got '${String(lhsExpr.dataType)}' and '${String(rhsExpr.dataType)}'.`,
+        );
+      }
+
+      const lhsStr = this.ctx.resolve(lhsExpr.value, lhsExpr.dataType).value;
+      const rhsStr = this.ctx.resolve(rhsExpr.value, rhsExpr.dataType).value;
+
+      // hardcoded parentheses - operators not present in `parenthesizedOps`
+      return snip(
+        `(${lhsStr} ${op} ${rhsStr})`,
+        bool,
+        'runtime',
+        lhsExpr.possibleSideEffects || rhsExpr.possibleSideEffects,
+      );
+    }
+
+    if (expression[0] === NODE.binaryExpr || expression[0] === NODE.assignmentExpr) {
+      // Binary/Assignment Expression
+      const [exprType, lhs, op, rhs] = expression;
+      const lhsExpr = this._expression(lhs);
       const rhsExpr = this._expression(rhs);
 
       if (rhsExpr.value instanceof RefOperator) {
@@ -381,24 +420,26 @@ ${this.ctx.pre}}`;
         throw new Error('Please use the !== operator instead of !=');
       }
 
-      if (op === '===' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
-        return snip(lhsExpr.value === rhsExpr.value, bool, 'constant', false);
-      }
-
-      if (op === '!==' && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
-        return snip(lhsExpr.value !== rhsExpr.value, bool, 'constant', false);
-      }
-
-      if (
-        (op === '<' || op === '<=' || op === '>' || op === '>=') &&
-        isKnownAtComptime(lhsExpr) &&
-        isKnownAtComptime(rhsExpr)
-      ) {
+      const stdBinaryRelationalOp = binaryRelationalOpToStdMap[op];
+      if (stdBinaryRelationalOp && isKnownAtComptime(lhsExpr) && isKnownAtComptime(rhsExpr)) {
         const left = lhsExpr.value;
         const right = rhsExpr.value;
+
+        switch (op) {
+          case '===':
+            return snip(left === right, bool, 'constant', false);
+          case '!==':
+            return snip(left !== right, bool, 'constant', false);
+        }
+
         if (typeof left !== 'number' || typeof right !== 'number') {
+          const bothVectors = wgsl.isVec(lhsExpr.dataType) && wgsl.isVec(rhsExpr.dataType);
           throw new WgslTypeError(
-            `Inequality comparison '${op}' requires numeric operands, got '${typeof left}' and '${typeof right}'`,
+            `Comparison '${op}' requires numeric operands.${
+              bothVectors
+                ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}'.`
+                : ''
+            }`,
           );
         }
 
@@ -463,6 +504,24 @@ ${this.ctx.pre}}`;
             `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
               this.ctx.resolve(rhsExpr.dataType).value
             }(${stringifyNode(rhs)})' to copy the value instead.\n-----`,
+          );
+        }
+      }
+
+      if (stdBinaryRelationalOp) {
+        const equalityCheck = ['===', '!=='].includes(op);
+        const correctOperandTypes =
+          (wgsl.isNumericSchema(convLhs.dataType) && wgsl.isNumericSchema(convRhs.dataType)) ||
+          (equalityCheck && wgsl.isBool(convLhs.dataType) && wgsl.isBool(convRhs.dataType));
+
+        if (!correctOperandTypes) {
+          const bothVectors = wgsl.isVec(convLhs.dataType) && wgsl.isVec(convRhs.dataType);
+          throw new WgslTypeError(
+            `Comparison '${op}' requires numeric${equalityCheck ? ' or boolean' : ''} operands. Got '${String(convLhs.dataType)}' and '${String(convRhs.dataType)}'.${
+              bothVectors
+                ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}'.`
+                : ''
+            }`,
           );
         }
       }
@@ -876,6 +935,7 @@ ${this.ctx.pre}}`;
       if (isKnownAtComptime(test)) {
         return test.value ? this._expression(consequentNode) : this._expression(alternativeNode);
       } else {
+        const convertedTest = tryConvertSnippet(this.ctx, test, bool, false);
         const consequent = this._expression(consequentNode);
         const alternative = this._expression(alternativeNode);
         const [con, alt] =
@@ -888,7 +948,7 @@ ${this.ctx.pre}}`;
         }
 
         return snip(
-          stitch`select(${alt}, ${con}, ${test})`,
+          stitch`select(${alt}, ${con}, ${convertedTest})`,
           con.dataType,
           'runtime',
           // this select has side-effects only if the condition has side-effects
