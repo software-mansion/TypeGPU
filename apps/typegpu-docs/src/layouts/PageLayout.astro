@@ -136,6 +136,12 @@ const { title, forceTheme } = Astro.props;
          */
         const storageKey = 'starlight-theme';
 
+        /** Get the preferred system color scheme. */
+        const getPreferredColorScheme = () =>
+          matchMedia('(prefers-color-scheme: light)').matches
+            ? 'light'
+            : 'dark';
+
         // Applying stored theme
         const storedTheme =
           typeof localStorage !== 'undefined' &&
