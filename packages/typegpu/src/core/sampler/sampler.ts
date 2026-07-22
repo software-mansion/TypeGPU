@@ -14,10 +14,15 @@ import {
   type WgslSampler,
 } from '../../data/sampler.ts';
 import { inCodegenMode } from '../../execMode.ts';
+import { invariant } from '../../errors.ts';
+import type { RestoreContext } from '../../serial/types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 
 interface SamplerInternals {
   readonly unwrap?: (() => GPUSampler) | undefined;
+  // Only present on fixed samplers
+  readonly props?: WgslSamplerProps | WgslComparisonSamplerProps | undefined;
+  readonly device?: GPUDevice | undefined;
 }
 
 // ----------
@@ -76,6 +81,36 @@ export function isSampler(resource: unknown): resource is TgpuSampler {
 export function isComparisonSampler(resource: unknown): resource is TgpuComparisonSampler {
   const maybe = resource as TgpuComparisonSampler | undefined;
   return maybe?.resourceType === 'sampler-comparison' && !!maybe[$internal];
+}
+
+export interface TgpuSamplerSnapshot {
+  readonly type: 'sampler' | 'sampler-comparison';
+  readonly device: GPUDevice;
+  readonly props: WgslSamplerProps | WgslComparisonSamplerProps;
+}
+
+export function INTERNAL_isSnapshotableSampler(
+  value: unknown,
+): value is TgpuSampler | TgpuComparisonSampler {
+  return (isSampler(value) || isComparisonSampler(value)) && value[$internal].props !== undefined;
+}
+
+export function INTERNAL_snapshotSampler(
+  sampler: TgpuSampler | TgpuComparisonSampler,
+): TgpuSamplerSnapshot {
+  const { props, device } = sampler[$internal];
+  invariant(props && device, 'Only samplers created from props can be snapshotted.');
+  return { type: sampler.resourceType, device, props };
+}
+
+export function INTERNAL_restoreSampler(
+  snapshot: TgpuSamplerSnapshot,
+  ctx: RestoreContext,
+): TgpuSampler | TgpuComparisonSampler {
+  const root = ctx.getRoot(snapshot.device);
+  return snapshot.type === 'sampler'
+    ? root.createSampler(snapshot.props as WgslSamplerProps)
+    : root.createComparisonSampler(snapshot.props as WgslComparisonSamplerProps);
 }
 
 // --------------
@@ -175,6 +210,8 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
 
         return this.#sampler;
       },
+      props,
+      device: branch.device,
     };
 
     // Based on https://www.w3.org/TR/webgpu/#sampler-creation

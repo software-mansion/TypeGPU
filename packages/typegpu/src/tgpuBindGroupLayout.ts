@@ -30,6 +30,7 @@ import {
   type WgslStorageTexture,
   type WgslTexture,
 } from './data/texture.ts';
+import type { TgpuRoot } from './core/root/rootTypes.ts';
 import type { BaseData } from './data/wgslTypes.ts';
 import { invariant, NotUniformError } from './errors.ts';
 import { NotStorageError, type StorageFlag } from './extension.ts';
@@ -231,6 +232,7 @@ export type TgpuBindGroup<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
 > = {
   readonly resourceType: 'bind-group';
+  readonly root: TgpuRoot;
   readonly layout: TgpuBindGroupLayout<Entries>;
   unwrap(unwrapper: Unwrapper): GPUBindGroup;
 };
@@ -442,13 +444,16 @@ export class TgpuBindGroupImpl<
   Entries extends Record<string, TgpuLayoutEntry | null> = Record<string, TgpuLayoutEntry | null>,
 > implements TgpuBindGroup<Entries> {
   readonly resourceType = 'bind-group' as const;
+  readonly root: TgpuRoot;
   readonly layout: TgpuBindGroupLayout<Entries>;
   readonly entries: ExtractBindGroupInputFromLayout<Entries>;
 
   constructor(
+    root: TgpuRoot,
     layout: TgpuBindGroupLayout<Entries>,
     entries: ExtractBindGroupInputFromLayout<Entries>,
   ) {
+    this.root = root;
     this.layout = layout;
     this.entries = entries;
 

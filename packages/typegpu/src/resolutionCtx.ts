@@ -1153,6 +1153,8 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
     return [
       catchallIdx,
       new TgpuBindGroupImpl(
+        // Undefined only in rootless `tgpu.resolve()`, where the group is never unwrapped
+        options.root as ExperimentalTgpuRoot,
         catchallLayout,
         Object.fromEntries(
           // oxlint-disable-next-line typescript/no-explicit-any -- it's fine

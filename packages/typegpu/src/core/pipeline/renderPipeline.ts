@@ -82,12 +82,18 @@ import {
   triggerPerformanceCallback,
 } from './timeable.ts';
 import { type PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
-import { resolveIndirectOffset } from './pipelineUtils.ts';
+import {
+  collectBindGroupPairs,
+  collectVertexBufferPairs,
+  resolveIndirectOffset,
+  restoreTimestampPriors,
+} from './pipelineUtils.ts';
 import {
   NullPerformanceTracker,
   PerformanceTrackerImpl,
   type PerformanceTracker,
 } from './performanceTracker.ts';
+import type { RestoreContext } from '../../serial/types.ts';
 
 const DRAW_INDIRECT_SIZE = 16; // 4 x 4
 const DRAW_INDEXED_INDIRECT_SIZE = 20; // 5 x 4
@@ -442,11 +448,73 @@ export type AnyFragmentColorAttachment = ColorAttachment | Record<string, ColorA
 export type RenderPipelineCoreOptions = {
   root: ExperimentalTgpuRoot;
   slotBindings: [TgpuSlot<unknown>, unknown][];
-  descriptor: TgpuRenderPipeline.Descriptor;
+  /** Undefined for precompiled pipelines, which are never resolved again */
+  descriptor: TgpuRenderPipeline.Descriptor | undefined;
 };
 
 export function INTERNAL_createRenderPipeline(options: RenderPipelineCoreOptions) {
   return new TgpuRenderPipelineImpl(new RenderPipelineCore(options), {});
+}
+
+export interface TgpuRenderPipelineSnapshotParts {
+  readonly device: GPUDevice;
+  readonly pipeline: GPURenderPipeline;
+  readonly fragmentOut: BaseData | undefined;
+  readonly usedBindGroupLayouts: TgpuBindGroupLayout[];
+  readonly bindGroups: [TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup][];
+  readonly usedVertexLayouts: TgpuVertexLayout[];
+  readonly vertexBuffers: [TgpuVertexLayout, (TgpuBuffer<BaseData> & VertexFlag) | GPUBuffer][];
+  readonly timestampWrites: TimestampWritesPriors['timestampWrites'];
+  readonly performanceCallback: TimestampWritesPriors['performanceCallback'];
+}
+
+export function INTERNAL_snapshotRenderPipelineParts(
+  pipeline: TgpuRenderPipeline,
+): TgpuRenderPipelineSnapshotParts {
+  const internals = pipeline[$internal];
+  const memo = internals.core.unwrap();
+  const fragmentOut =
+    (internals.core.options.descriptor?.fragment as TgpuFragmentFn | undefined)?.shell
+      ?.returnType ?? memo.fragmentOut;
+
+  return {
+    device: internals.root.device,
+    pipeline: memo.pipeline,
+    fragmentOut,
+    usedBindGroupLayouts: memo.usedBindGroupLayouts,
+    bindGroups: collectBindGroupPairs(
+      memo.usedBindGroupLayouts,
+      memo.catchall,
+      internals.priors.bindGroupLayoutMap,
+    ),
+    usedVertexLayouts: memo.usedVertexLayouts,
+    vertexBuffers: collectVertexBufferPairs(
+      memo.usedVertexLayouts,
+      internals.priors.vertexLayoutMap,
+    ),
+    timestampWrites: internals.priors.timestampWrites,
+    performanceCallback: internals.priors.performanceCallback,
+  };
+}
+
+export function INTERNAL_restoreRenderPipelineParts(
+  parts: TgpuRenderPipelineSnapshotParts,
+  ctx: RestoreContext,
+): TgpuRenderPipeline {
+  const root = ctx.getRoot(parts.device) as ExperimentalTgpuRoot;
+  const core = RenderPipelineCore.precompiled(root, {
+    pipeline: parts.pipeline,
+    usedBindGroupLayouts: parts.usedBindGroupLayouts,
+    catchall: undefined,
+    logResources: undefined,
+    usedVertexLayouts: parts.usedVertexLayouts,
+    fragmentOut: parts.fragmentOut,
+  });
+  const pipeline: TgpuRenderPipeline = new TgpuRenderPipelineImpl(core, {
+    bindGroupLayoutMap: new Map(parts.bindGroups),
+    vertexLayoutMap: new Map(parts.vertexBuffers),
+  });
+  return restoreTimestampPriors(pipeline, parts);
 }
 
 // --------------
@@ -479,7 +547,7 @@ type Memo = {
   catchall: [number, TgpuBindGroup] | undefined;
   logResources: LogResources | undefined;
   usedVertexLayouts: TgpuVertexLayout[];
-  fragmentOut: BaseData;
+  fragmentOut: BaseData | undefined;
 };
 
 const _lastAppliedRender = new WeakMap<
@@ -723,35 +791,36 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     const { root, descriptor } = internals.core.options;
 
     const memo = internals.core.unwrap();
-    const colorAttachments = descriptor.fragment
-      ? (connectAttachmentToShader(
-          (descriptor.fragment as TgpuFragmentFn)?.shell?.returnType ?? memo.fragmentOut,
-          internals.priors.colorAttachment ?? {},
-        ).map((_attachment) => {
-          const attachment = {
-            loadOp: 'clear',
-            storeOp: 'store',
-            ..._attachment,
-          };
+    const fragmentOut =
+      (descriptor?.fragment as TgpuFragmentFn | undefined)?.shell?.returnType ?? memo.fragmentOut;
+    const colorAttachments = fragmentOut
+      ? (connectAttachmentToShader(fragmentOut, internals.priors.colorAttachment ?? {}).map(
+          (_attachment) => {
+            const attachment = {
+              loadOp: 'clear',
+              storeOp: 'store',
+              ..._attachment,
+            };
 
-          if (isTexture(attachment.view)) {
-            attachment.view = root.unwrap(attachment.view).createView();
-          } else if (isTextureView(attachment.view)) {
-            attachment.view = root.unwrap(attachment.view);
-          } else if (isGPUCanvasContext(attachment.view)) {
-            attachment.view = attachment.view.getCurrentTexture().createView();
-          }
+            if (isTexture(attachment.view)) {
+              attachment.view = root.unwrap(attachment.view).createView();
+            } else if (isTextureView(attachment.view)) {
+              attachment.view = root.unwrap(attachment.view);
+            } else if (isGPUCanvasContext(attachment.view)) {
+              attachment.view = attachment.view.getCurrentTexture().createView();
+            }
 
-          if (isTexture(attachment.resolveTarget)) {
-            attachment.resolveTarget = root.unwrap(attachment.resolveTarget).createView();
-          } else if (isTextureView(attachment.resolveTarget)) {
-            attachment.resolveTarget = root.unwrap(attachment.resolveTarget);
-          } else if (isGPUCanvasContext(attachment.resolveTarget)) {
-            attachment.resolveTarget = attachment.resolveTarget.getCurrentTexture().createView();
-          }
+            if (isTexture(attachment.resolveTarget)) {
+              attachment.resolveTarget = root.unwrap(attachment.resolveTarget).createView();
+            } else if (isTextureView(attachment.resolveTarget)) {
+              attachment.resolveTarget = root.unwrap(attachment.resolveTarget);
+            } else if (isGPUCanvasContext(attachment.resolveTarget)) {
+              attachment.resolveTarget = attachment.resolveTarget.getCurrentTexture().createView();
+            }
 
-          return attachment;
-        }) as GPURenderPassColorAttachment[])
+            return attachment;
+          },
+        ) as GPURenderPassColorAttachment[])
       : [];
 
     const renderPassDescriptor: GPURenderPassDescriptor = {
@@ -1038,9 +1107,22 @@ class RenderPipelineCore implements SelfResolvable {
       : new NullPerformanceTracker();
   }
 
+  static precompiled(root: ExperimentalTgpuRoot, memo: Memo): RenderPipelineCore {
+    const core = new RenderPipelineCore({
+      root,
+      slotBindings: [],
+      descriptor: undefined,
+    });
+    core.#memo = memo;
+    return core;
+  }
+
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
     const { slotBindings } = this.options;
-    const { vertex, fragment, attribs = {} } = this.options.descriptor;
+    const { vertex, fragment, attribs = {} } = this.options.descriptor ?? {};
+    if (!vertex) {
+      return snip('', Void, /* origin */ 'runtime');
+    }
     this.#latestAutoVertexIn = undefined;
     this.#latestAutoFragmentOut = undefined;
 
@@ -1161,6 +1243,9 @@ class RenderPipelineCore implements SelfResolvable {
 
   public resolveAndCreateShaderModule() {
     const { root, descriptor: tgpuDescriptor } = this.options;
+    if (!tgpuDescriptor) {
+      throw new Error('Precompiled pipelines are never resolved again.');
+    }
     const device = root.device;
     const enableExtensions = wgslEnableExtensions.filter((extension) =>
       root.enabledFeatures.has(wgslEnableExtensionToFeatureName[extension]),
@@ -1190,7 +1275,7 @@ class RenderPipelineCore implements SelfResolvable {
       code,
     });
 
-    const { vertex, fragment, attribs = {}, targets } = this.options.descriptor;
+    const { vertex, fragment, attribs = {}, targets } = tgpuDescriptor;
     const connectedAttribs = connectAttributesToShader(
       (vertex as TgpuVertexFn)?.shell?.in ?? this.#latestAutoVertexIn ?? {},
       attribs,

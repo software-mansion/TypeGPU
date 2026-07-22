@@ -1,0 +1,117 @@
+---
+title: React Native Worklets
+description: A guide on running TypeGPU render loops on the UI thread with react-native-worklets.
+---
+
+With [react-native-worklets](https://docs.swmansion.com/react-native-worklets/), per-frame GPU work can be scheduled on the UI thread, unaffected by tasks running on the default React Native thread (or RN thread).
+TypeGPU resources created on the RN thread can be captured by worklets directly, they are transferred between runtimes automatically.
+
+## Setup
+
+Follow the [React Native guide](/TypeGPU/integration/react-native/) first, then install `react-native-worklets` and enable its babel plugin with [Bundle Mode](https://docs.swmansion.com/react-native-worklets/docs/bundleMode/):
+
+```diff lang=js title="babel.config.js"
++const workletsPluginOptions = {
++  bundleMode: true,
++  importForwarding: {
++    moduleNames: ['typegpu'],
++    // Directories with your module-scope shader definitions
++    relativePaths: ['my-app/components'],
++  },
++};
+
+module.exports = (api) => {
+  api.cache(true);
+  return {
+    presets: ['babel-preset-expo'],
+    plugins: [
+      'unplugin-typegpu/babel',
++      ['react-native-worklets/plugin', workletsPluginOptions],
+    ],
+  };
+};
+```
+
+No extra imports are needed - `@typegpu/react` detects `react-native-worklets` at runtime and registers the transfer support for TypeGPU resources automatically.
+`useFrame` runs its callback on the UI thread whenever the callback is marked with the `'worklet'` directive; plain callbacks keep running on the RN thread.
+
+After changing the babel config, clear the Metro cache with `npx expo start --clear`.
+
+## Example
+
+Create resources on the RN thread, then use them freely inside a `useFrame` worklet:
+
+```tsx
+import { useMemo } from 'react';
+import { Canvas } from 'react-native-webgpu';
+import tgpu, { common, d } from 'typegpu';
+import { useConfigureContext, useFrame, useRoot, useUniform } from '@typegpu/react';
+
+export function Pulse() {
+  const root = useRoot();
+  const color = useUniform(d.vec3f, { initial: d.vec3f(0.114, 0.447, 0.941) });
+
+  const pipeline = useMemo(
+    () =>
+      root.createRenderPipeline({
+        vertex: common.fullScreenTriangle,
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(color.$, 1);
+        },
+      }),
+    [root, color],
+  );
+
+  const { ref, ctxRef } = useConfigureContext({ alphaMode: 'premultiplied' });
+
+  // Runs each frame on the UI thread
+  useFrame(({ elapsedSeconds }) => {
+    'worklet';
+    const ctx = ctxRef.current;
+    if (!ctx) return;
+
+    color.write(d.vec3f(0.5 + Math.sin(elapsedSeconds) * 0.5, 0.447, 0.941));
+    pipeline.withColorAttachment({ view: ctx }).draw(3);
+    ctx.present?.();
+  });
+
+  return <Canvas ref={ref} style={{ aspectRatio: 1 }} transparent />;
+}
+```
+
+The `color` uniform and `pipeline` captured by the worklet are transferred to the UI runtime on first use.
+Both runtimes share the same underlying GPU objects, and transferring the same resource again yields the same object back.
+
+This works for buffers (including `createUniform`/`createMutable`/`createReadonly`), textures, samplers, bind groups and their layouts, vertex layouts, query sets, pipelines, roots, slots, accessors, consts, and vector/matrix instances.
+
+## Opting out
+
+To keep everything on the RN thread even with `react-native-worklets` installed, pass `disableWorklets` to the `Root` provider:
+
+```tsx
+<Root disableWorklets>
+  <Pulse />
+</Root>
+```
+
+`useFrame` then runs its callbacks on the RN thread, and `useConfigureContext` returns a plain object of the same shape, so the code above keeps working unchanged.
+
+## Rules of transfer
+
+**Definitions are runtime-local.**
+Shader functions (`tgpu.fn`, entry functions), `tgpu.comptime`, and schemas cannot be serialized.
+Make sure to create them on the runtime they will be used on, or keep them at module scope in files covered by `importForwarding`; worklets then re-import them natively on the UI runtime instead of transferring them.
+
+**Functions crossing runtimes must be worklets.**
+Any plain function reachable from a transferred resource (e.g. a `withPerformanceCallback` callback) has to be marked with the `'worklet'` directive.
+
+:::note
+Definitions created dynamically (inside components or worklets) cannot cross runtimes and throw.
+If you create pipelines on the UI thread, memoize them - resolving a pipeline every frame is wasted work.
+:::
+
+:::caution
+Render pipelines created on the UI runtime must specify an explicit target format (e.g. `targets: { format: 'bgra8unorm' }`), the default relies on
+`navigator.gpu.getPreferredCanvasFormat()`, and `navigator` is not available on worklet runtimes by default.
+:::

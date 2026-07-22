@@ -52,6 +52,8 @@ import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 // ----------
 
 export interface TgpuGuardedComputePipeline<TArgs extends number[] = number[]> extends TgpuNamable {
+  readonly resourceType: 'guarded-compute-pipeline';
+
   /**
    * Returns a pipeline wrapper with the specified bind group bound.
    * Analogous to `TgpuComputePipeline.with(bindGroup)`.
@@ -732,6 +734,8 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
   [$internal]: {
     logOptions: LogGeneratorOptions;
   };
+
+  readonly resourceType: 'root';
 
   /**
    * The GPU device associated with this root.

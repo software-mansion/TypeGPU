@@ -21,7 +21,7 @@ import type {
 import { $internal } from '../../shared/symbols.ts';
 import type { Prettify, UnionToIntersection } from '../../shared/utilityTypes.ts';
 import { isGPUBuffer } from '../../types.ts';
-import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
+import type { ExperimentalTgpuRoot, TgpuRoot } from '../root/rootTypes.ts';
 import { calculateOffsets, readFromArrayBuffer, writeToArrayBuffer } from '../../data/dataIO.ts';
 import { patchArrayBuffer } from '../../data/partialIO.ts';
 import {
@@ -63,7 +63,7 @@ export interface IndirectFlag {
  */
 export type Vertex = VertexFlag;
 
-type UsageLiteral = 'uniform' | 'storage' | 'vertex' | 'index' | 'indirect';
+export type UsageLiteral = 'uniform' | 'storage' | 'vertex' | 'index' | 'indirect';
 
 type LiteralToUsageType<T extends UsageLiteral> = T extends 'uniform'
   ? UniformFlag
@@ -117,6 +117,7 @@ export type BufferInitialData<TData extends BaseData> =
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly [$internal]: true;
   readonly resourceType: 'buffer';
+  readonly root: TgpuRoot;
   readonly dataType: TData;
   readonly initial?: InferInput<TData> | undefined;
   readonly arrayBuffer: ArrayBuffer;
@@ -167,12 +168,22 @@ export function INTERNAL_createBuffer<TData extends AnyData>(
   return new TgpuBufferImpl(group, typeSchema, initialOrBuffer);
 }
 
+export function INTERNAL_applyBufferUsages(
+  buffer: TgpuBuffer<BaseData>,
+  usages: UsageLiteral[],
+): void {
+  if (usages.length > 0) {
+    (buffer as TgpuBufferImpl<BaseData>).$usage(...usages);
+  }
+}
+
 // --------------
 // Implementation
 // --------------
 class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   readonly [$internal] = true;
   readonly resourceType = 'buffer';
+  readonly root: ExperimentalTgpuRoot;
   flags: GPUBufferUsageFlags = GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC;
   readonly dataType: TData;
 
@@ -203,6 +214,7 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     initialOrBuffer?: BufferInitialData<TData> | GPUBuffer,
     disallowedUsages?: UsageLiteral[],
   ) {
+    this.root = root;
     this.dataType = dataType;
     this.#disallowedUsages = disallowedUsages;
     this.#device = root.device;

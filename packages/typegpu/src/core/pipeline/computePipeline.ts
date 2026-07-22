@@ -27,7 +27,12 @@ import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import type { TgpuSlot } from '../slot/slotTypes.ts';
 
 import type { PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
-import { resolveIndirectOffset } from './pipelineUtils.ts';
+import {
+  collectBindGroupPairs,
+  resolveIndirectOffset,
+  restoreTimestampPriors,
+} from './pipelineUtils.ts';
+import type { RestoreContext } from '../../serial/types.ts';
 import {
   createWithPerformanceCallback,
   createWithTimestampWrites,
@@ -44,6 +49,7 @@ import {
 } from './performanceTracker.ts';
 
 interface ComputePipelineInternals {
+  readonly core: ComputePipelineCore;
   readonly rawPipeline: GPUComputePipeline;
   readonly priors: TgpuComputePipelinePriors & TimestampWritesPriors;
   readonly root: ExperimentalTgpuRoot;
@@ -113,12 +119,60 @@ export function INTERNAL_createComputePipeline(
   return new TgpuComputePipelineImpl(new ComputePipelineCore(branch, slotBindings, descriptor), {});
 }
 
+export interface TgpuComputePipelineSnapshot {
+  readonly type: 'compute-pipeline';
+  readonly device: GPUDevice;
+  readonly pipeline: GPUComputePipeline;
+  readonly usedBindGroupLayouts: TgpuBindGroupLayout[];
+  readonly bindGroups: [TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup][];
+  readonly timestampWrites: TimestampWritesPriors['timestampWrites'];
+  readonly performanceCallback: TimestampWritesPriors['performanceCallback'];
+}
+
+export function INTERNAL_snapshotComputePipeline(
+  pipeline: TgpuComputePipeline,
+): TgpuComputePipelineSnapshot {
+  const internals = pipeline[$internal];
+  const memo = internals.core.unwrap();
+
+  return {
+    type: 'compute-pipeline',
+    device: internals.root.device,
+    pipeline: memo.pipeline,
+    usedBindGroupLayouts: memo.usedBindGroupLayouts,
+    bindGroups: collectBindGroupPairs(
+      memo.usedBindGroupLayouts,
+      memo.catchall,
+      internals.priors.bindGroupLayoutMap,
+    ),
+    timestampWrites: internals.priors.timestampWrites,
+    performanceCallback: internals.priors.performanceCallback,
+  };
+}
+
+export function INTERNAL_restoreComputePipeline(
+  snapshot: TgpuComputePipelineSnapshot,
+  ctx: RestoreContext,
+): TgpuComputePipeline {
+  const root = ctx.getRoot(snapshot.device) as ExperimentalTgpuRoot;
+  const core = ComputePipelineCore.precompiled(root, {
+    pipeline: snapshot.pipeline,
+    usedBindGroupLayouts: snapshot.usedBindGroupLayouts,
+    catchall: undefined,
+    logResources: undefined,
+  });
+  const pipeline: TgpuComputePipeline = new TgpuComputePipelineImpl(core, {
+    bindGroupLayoutMap: new Map(snapshot.bindGroups),
+  });
+  return restoreTimestampPriors(pipeline, snapshot);
+}
+
 // --------------
 // Implementation
 // --------------
 
 type TgpuComputePipelinePriors = {
-  readonly bindGroupLayoutMap?: Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup>;
+  readonly bindGroupLayoutMap?: Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup> | undefined;
   readonly externalEncoder?: GPUCommandEncoder | undefined;
   readonly externalPass?: GPUComputePassEncoder | undefined;
 } & TimestampWritesPriors;
@@ -145,6 +199,7 @@ class TgpuComputePipelineImpl implements TgpuComputePipeline {
     this.#priors = priors;
 
     this[$internal] = {
+      core,
       get rawPipeline() {
         return core.unwrap().pipeline;
       },
@@ -349,13 +404,13 @@ class ComputePipelineCore implements SelfResolvable {
   #memo: Memo | undefined;
 
   #slotBindings: [TgpuSlot<unknown>, unknown][];
-  #descriptor: TgpuComputePipeline.Descriptor;
+  #descriptor: TgpuComputePipeline.Descriptor | undefined;
   #performanceCallbackQuerySet: TgpuQuerySet<'timestamp'> | undefined;
 
   constructor(
     root: ExperimentalTgpuRoot,
     slotBindings: [TgpuSlot<unknown>, unknown][],
-    descriptor: TgpuComputePipeline.Descriptor,
+    descriptor: TgpuComputePipeline.Descriptor | undefined,
   ) {
     this.root = root;
     this.#slotBindings = slotBindings;
@@ -365,9 +420,20 @@ class ComputePipelineCore implements SelfResolvable {
       : new NullPerformanceTracker();
   }
 
+  static precompiled(root: ExperimentalTgpuRoot, memo: Memo): ComputePipelineCore {
+    const core = new ComputePipelineCore(root, [], undefined);
+    core.#memo = memo;
+    return core;
+  }
+
   [$resolve](ctx: ResolutionCtx) {
+    const descriptor = this.#descriptor;
+    if (!descriptor) {
+      // Precompiled pipelines have nothing to contribute to the shader
+      return snip('', Void, /* origin */ 'runtime');
+    }
     return ctx.withSlots(this.#slotBindings, () => {
-      ctx.resolve(this.#descriptor.compute);
+      ctx.resolve(descriptor.compute);
       return snip('', Void, /* origin */ 'runtime');
     });
   }

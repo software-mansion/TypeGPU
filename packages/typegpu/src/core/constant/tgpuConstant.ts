@@ -61,6 +61,13 @@ export function constant(
   return new TgpuConstImpl(dataType, value);
 }
 
+export function isConst(value: unknown): value is TgpuConst {
+  return (
+    (value as TgpuConst | undefined)?.resourceType === 'const' &&
+    !!(value as { [$internal]?: unknown } | undefined)?.[$internal]
+  );
+}
+
 // --------------
 // Implementation
 // --------------

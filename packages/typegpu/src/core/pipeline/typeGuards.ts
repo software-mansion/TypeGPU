@@ -20,8 +20,8 @@ export function isGPUCommandEncoder(value: unknown): value is GPUCommandEncoder 
   return (
     !!value &&
     typeof value === 'object' &&
-    'beginRenderPass' in value &&
-    'beginComputePass' in value
+    typeof (value as GPUCommandEncoder).beginRenderPass === 'function' &&
+    typeof (value as GPUCommandEncoder).beginComputePass === 'function'
   );
 }
 
@@ -29,23 +29,28 @@ export function isGPUComputePassEncoder(value: unknown): value is GPUComputePass
   return (
     !!value &&
     typeof value === 'object' &&
-    'dispatchWorkgroups' in value &&
-    !('beginRenderPass' in value)
+    typeof (value as GPUComputePassEncoder).dispatchWorkgroups === 'function' &&
+    typeof (value as GPUCommandEncoder).beginRenderPass !== 'function'
   );
 }
 
 export function isGPURenderPassEncoder(value: unknown): value is GPURenderPassEncoder {
-  return !!value && typeof value === 'object' && 'executeBundles' in value && 'draw' in value;
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    typeof (value as GPURenderPassEncoder).executeBundles === 'function' &&
+    typeof (value as GPURenderPassEncoder).draw === 'function'
+  );
 }
 
 export function isGPURenderBundleEncoder(value: unknown): value is GPURenderBundleEncoder {
   return (
     !!value &&
     typeof value === 'object' &&
-    'draw' in value &&
-    'finish' in value &&
-    !('executeBundles' in value) &&
-    !('beginRenderPass' in value) &&
-    !('dispatchWorkgroups' in value)
+    typeof (value as GPURenderBundleEncoder).draw === 'function' &&
+    typeof (value as GPURenderBundleEncoder).finish === 'function' &&
+    typeof (value as GPURenderPassEncoder).executeBundles !== 'function' &&
+    typeof (value as GPUCommandEncoder).beginRenderPass !== 'function' &&
+    typeof (value as GPUComputePassEncoder).dispatchWorkgroups !== 'function'
   );
 }

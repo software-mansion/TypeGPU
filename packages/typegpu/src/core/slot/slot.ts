@@ -13,6 +13,19 @@ export function slot<T>(defaultValue?: T): TgpuSlot<T> {
   return new TgpuSlotImpl(defaultValue);
 }
 
+export interface TgpuSlotSnapshot {
+  readonly type: 'slot';
+  readonly defaultValue: unknown;
+}
+
+export function INTERNAL_snapshotSlot(value: TgpuSlot<unknown>): TgpuSlotSnapshot {
+  return { type: 'slot', defaultValue: value.defaultValue };
+}
+
+export function INTERNAL_restoreSlot(snapshot: TgpuSlotSnapshot): TgpuSlot<unknown> {
+  return slot(snapshot.defaultValue);
+}
+
 // --------------
 // Implementation
 // --------------

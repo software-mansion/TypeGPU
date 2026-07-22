@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, vi } from 'vitest';
-import { d, MissingBindGroupsError, tgpu, type TgpuComputePipeline } from 'typegpu';
+import { d, isBindGroup, MissingBindGroupsError, tgpu, type TgpuComputePipeline } from 'typegpu';
+import { restoreResource, snapshotResource } from 'typegpu/~internal';
 import { it } from 'typegpu-testing-utility';
 import { extensionEnabled } from 'typegpu/std';
 
@@ -185,6 +186,91 @@ describe('TgpuComputePipeline', () => {
         endOfPassWriteIndex: 3,
       },
     });
+  });
+
+  it('should wrap raw compute pipelines with bind groups', ({ root, commandEncoder }) => {
+    const manualLayout = tgpu.bindGroupLayout({ params: { uniform: d.f32 } });
+    const manualBindGroup = root.createBindGroup(manualLayout, {
+      params: root.createBuffer(d.f32).$usage('uniform'),
+    });
+    const fixedUniform = root.createUniform(d.f32);
+
+    const sourcePipeline = root
+      .createComputePipeline({
+        compute: tgpu.computeFn({ workgroupSize: [1] })(() => {
+          'use gpu';
+          fixedUniform.$;
+          manualLayout.$.params;
+        }),
+      })
+      .with(manualBindGroup);
+
+    const snapshot = snapshotResource(sourcePipeline);
+    if (snapshot?.type !== 'compute-pipeline') {
+      throw new Error('Expected a compute pipeline snapshot');
+    }
+
+    const pipeline = restoreResource(snapshot, { getRoot: () => root }) as TgpuComputePipeline;
+
+    expect(snapshot.device).toBe(root.device);
+    expect(snapshot.bindGroups).toHaveLength(2);
+    expect(snapshot.bindGroups.some(([, bindGroup]) => bindGroup === manualBindGroup)).toBe(true);
+
+    pipeline.dispatchWorkgroups(1);
+
+    const computePass = commandEncoder.mock.beginComputePass.mock.results[0]!.value as {
+      setPipeline: ReturnType<typeof vi.fn>;
+      setBindGroup: ReturnType<typeof vi.fn>;
+    };
+
+    expect(computePass.setPipeline).toHaveBeenCalledWith(snapshot.pipeline);
+    for (const [layout, bindGroup] of snapshot.bindGroups) {
+      expect(computePass.setBindGroup).toHaveBeenCalledWith(
+        snapshot.usedBindGroupLayouts.indexOf(layout),
+        isBindGroup(bindGroup) ? root.unwrap(bindGroup) : bindGroup,
+      );
+    }
+  });
+
+  it('should let .with() override preset bind groups on raw compute pipelines', ({
+    root,
+    commandEncoder,
+  }) => {
+    const manualLayout = tgpu.bindGroupLayout({ params: { uniform: d.f32 } });
+    const manualBindGroup = root.createBindGroup(manualLayout, {
+      params: root.createBuffer(d.f32).$usage('uniform'),
+    });
+    const overrideBindGroup = root.createBindGroup(manualLayout, {
+      params: root.createBuffer(d.f32).$usage('uniform'),
+    });
+
+    const sourcePipeline = root
+      .createComputePipeline({
+        compute: tgpu.computeFn({ workgroupSize: [1] })(() => {
+          'use gpu';
+          manualLayout.$.params;
+        }),
+      })
+      .with(manualBindGroup);
+
+    const snapshot = snapshotResource(sourcePipeline);
+    if (snapshot?.type !== 'compute-pipeline') {
+      throw new Error('Expected a compute pipeline snapshot');
+    }
+
+    const pipeline = (
+      restoreResource(snapshot, { getRoot: () => root }) as TgpuComputePipeline
+    ).with(overrideBindGroup);
+
+    pipeline.dispatchWorkgroups(1);
+
+    const computePass = commandEncoder.mock.beginComputePass.mock.results[0]!.value as {
+      setBindGroup: ReturnType<typeof vi.fn>;
+    };
+
+    expect(computePass.setBindGroup).toHaveBeenCalledTimes(1);
+    expect(computePass.setBindGroup.mock.calls[0]![0]).toBe(0);
+    expect(computePass.setBindGroup.mock.calls[0]![1]).toBe(root.unwrap(overrideBindGroup));
   });
 
   it('enables language extensions when their corresponding feature is enabled', ({

@@ -23,7 +23,8 @@ import { $gpuValueOf, $internal, $ownSnippet, $repr, $resolve } from '../../shar
 import type { Default, TypedArray, UnionToIntersection } from '../../shared/utilityTypes.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
+import type { TgpuRoot } from '../root/rootTypes.ts';
+import type { RestoreContext } from '../../serial/types.ts';
 import { valueProxyHandler } from '../valueProxyUtils.ts';
 import type { TextureProps } from './textureProps.ts';
 import type {
@@ -137,6 +138,7 @@ type CopyCompatibleTexture<T extends TextureProps> = TgpuTexture<{
 export interface TgpuTexture<TProps extends TextureProps = any> extends TgpuNamable {
   readonly [$internal]: TextureInternals;
   readonly resourceType: 'texture';
+  readonly root: TgpuRoot;
   readonly props: TProps; // <- storing to be able to differentiate structurally between different textures.
   readonly destroyed: boolean;
 
@@ -199,9 +201,55 @@ export interface TgpuTextureRenderView {
 
 export function INTERNAL_createTexture(
   props: TextureProps,
-  branch: ExperimentalTgpuRoot,
+  branch: TgpuRoot,
+  rawTexture?: GPUTexture,
 ): TgpuTexture<TextureProps> {
-  return new TgpuTextureImpl(props, branch);
+  return new TgpuTextureImpl(props, branch, rawTexture);
+}
+
+export type TextureUsageLiteral = 'sampled' | 'storage' | 'render';
+
+export interface TgpuTextureSnapshot {
+  readonly type: 'texture';
+  readonly device: GPUDevice;
+  readonly texture: GPUTexture;
+  readonly props: TextureProps;
+  readonly usages: TextureUsageLiteral[];
+}
+
+export function INTERNAL_snapshotTexture(texture: TgpuTexture): TgpuTextureSnapshot {
+  const usages: TextureUsageLiteral[] = [];
+  if (texture.usableAsSampled) {
+    usages.push('sampled');
+  }
+  if (texture.usableAsStorage) {
+    usages.push('storage');
+  }
+  if (texture.usableAsRender) {
+    usages.push('render');
+  }
+  return {
+    type: 'texture',
+    device: texture.root.device,
+    texture: texture.root.unwrap(texture),
+    props: texture.props,
+    usages,
+  };
+}
+
+export function INTERNAL_restoreTexture(
+  snapshot: TgpuTextureSnapshot,
+  ctx: RestoreContext,
+): TgpuTexture {
+  const texture = INTERNAL_createTexture(
+    snapshot.props,
+    ctx.getRoot(snapshot.device),
+    snapshot.texture,
+  );
+  if (snapshot.usages.length > 0) {
+    texture.$usage(...(snapshot.usages as AllowedUsages<TextureProps>[]));
+  }
+  return texture;
 }
 
 export function isTexture(value: unknown): value is TgpuTexture {
@@ -222,6 +270,7 @@ export function isTextureView(value: unknown): value is TgpuTextureView {
 class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps> {
   readonly [$internal]: TextureInternals;
   readonly resourceType = 'texture';
+  readonly root: TgpuRoot;
   readonly props: TProps;
   usableAsSampled = false;
   usableAsStorage = false;
@@ -232,10 +281,14 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
   #flags = GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC;
   #flagsOverridden = false;
   #texture: GPUTexture | null = null;
-  #branch: ExperimentalTgpuRoot;
+  #ownTexture: boolean;
+  #branch: TgpuRoot;
 
-  constructor(props: TProps, branch: ExperimentalTgpuRoot) {
+  constructor(props: TProps, branch: TgpuRoot, rawTexture?: GPUTexture) {
     this.props = props;
+    this.root = branch;
+    this.#texture = rawTexture ?? null;
+    this.#ownTexture = rawTexture === undefined;
 
     const format = props.format as TProps['format'];
 
@@ -548,7 +601,9 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
       return;
     }
     this.#destroyed = true;
-    this.#texture?.destroy();
+    if (this.#ownTexture) {
+      this.#texture?.destroy();
+    }
   }
 }
 
