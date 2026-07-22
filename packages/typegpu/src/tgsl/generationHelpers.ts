@@ -24,6 +24,7 @@ import type { ShelllessRepository } from './shellless.ts';
 import { WgslTypeError } from '../errors.ts';
 import { $internal, $resolve } from '../shared/symbols.ts';
 import type { SupportedLogOp } from './consoleLog/types.ts';
+import { logger } from '../tgpuLogger.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
   if (value >= 2 ** 63 || value < -(2 ** 63)) {
@@ -33,7 +34,8 @@ export function numericLiteralToSnippet(value: number): Snippet {
   // Warn when values exceed this range to prevent precision loss.
   if (Number.isInteger(value)) {
     if (!Number.isSafeInteger(value)) {
-      console.warn(
+      logger.warn(
+        'precision-loss',
         `The integer ${value} exceeds the safe integer range and may have lost precision.`,
       );
     }

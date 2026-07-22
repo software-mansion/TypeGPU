@@ -17,6 +17,7 @@ import {
 } from '../../data/wgslTypes.ts';
 import { invariant } from '../../errors.ts';
 import { $internal } from '../../shared/symbols.ts';
+import { logger } from '../../tgpuLogger.ts';
 import { convertToCommonType } from '../conversion.ts';
 import { concretizeSnippet, type GenerationCtx } from '../generationHelpers.ts';
 import { createLoggingFunction } from './serializers.ts';
@@ -42,7 +43,7 @@ export class LogGeneratorNullImpl implements LogGenerator {
     return undefined;
   }
   generateLog(): Snippet {
-    console.warn("'console.log' is only supported when resolving pipelines.");
+    logger.warn('fallback', "'console.log' is only supported when resolving pipelines.");
     return fallbackSnippet;
   }
 }
@@ -79,7 +80,7 @@ export class LogGeneratorImpl implements LogGenerator {
    */
   generateLog(ctx: GenerationCtx, op: SupportedLogOp, args: Snippet[]): Snippet {
     if (shaderStageSlot.$ === 'vertex') {
-      console.warn(`'console' operations are not supported in vertex shaders.`);
+      logger.warn('suspicious', `'console' operations are not supported in vertex shaders.`);
       return fallbackSnippet;
     }
 

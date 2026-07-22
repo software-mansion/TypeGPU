@@ -42,6 +42,7 @@ export {
 } from './tgsl/wgslGenerator.ts';
 export { readFromArrayBuffer, writeToArrayBuffer } from './data/dataIO.ts';
 export { patchArrayBuffer } from './data/partialIO.ts';
+export { warn } from './tgpuLogger.ts';
 
 // types
 
