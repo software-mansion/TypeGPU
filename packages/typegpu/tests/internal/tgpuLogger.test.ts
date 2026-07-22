@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { TgpuLogger } from '../../src/tgpuLogger.ts';
 
 describe('tgpuLogger', () => {
