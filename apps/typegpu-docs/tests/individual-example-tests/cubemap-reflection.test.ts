@@ -237,6 +237,7 @@ describe('cubemap reflection example', () => {
           (*nextVertex).position = packVec2u((*reprojectedVertex));
           (*nextVertex).normal = packVec2u(normal);
         }
+        // ---
       }
 
       struct Camera {

@@ -174,9 +174,7 @@ describe('wgslGenerator', () => {
         var arr = array<i32, 3>(1, 2, 3);
         for (var i = 0u; i < 3u; i += 1u) {
           let foo = arr[i];
-          {
-            continue;
-          }
+          continue;
         }
       }"
     `);
@@ -205,9 +203,7 @@ describe('wgslGenerator', () => {
         var res = 0f;
         for (var i = 0u; i < 3u; i += 1u) {
           let foo = arr[i];
-          {
-            res += foo;
-          }
+          res += foo;
         }
       }"
     `);
@@ -231,13 +227,9 @@ describe('wgslGenerator', () => {
         var res = 0f;
         for (var i = 0u; i < 3u; i += 1u) {
           let foo = arr[i];
-          {
-            for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
-              let boo = arr[i_1];
-              {
-                res += (foo * boo);
-              }
-            }
+          for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
+            let boo = arr[i_1];
+            res += (foo * boo);
           }
         }
       }"
@@ -262,13 +254,9 @@ describe('wgslGenerator', () => {
         var res = 0f;
         for (var i = 0u; i < 3u; i += 1u) {
           let foo = arr[i];
-          {
-            for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
-              let foo_1 = arr[i_1];
-              {
-                res += (foo_1 * foo_1);
-              }
-            }
+          for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
+            let foo_1 = arr[i_1];
+            res += (foo_1 * foo_1);
           }
         }
       }"
@@ -291,9 +279,7 @@ describe('wgslGenerator', () => {
         var res = 0;
         for (var i = 0u; i < 3u; i += 1u) {
           let foo = (&arr[i]);
-          {
-            res += i32((*foo).x);
-          }
+          res += i32((*foo).x);
         }
       }"
     `);
@@ -319,9 +305,7 @@ describe('wgslGenerator', () => {
         var res = 0f;
         for (var i = 0u; i < arrayLength((&arr)); i += 1u) {
           let foo = arr[i];
-          {
-            res += foo;
-          }
+          res += foo;
         }
       }"
     `);
@@ -348,16 +332,12 @@ describe('wgslGenerator', () => {
         var v1 = vec4u(44, 88, 132, 176);
         for (var i = 0u; i < 4u; i += 1u) {
           let foo = v1[i];
-          {
-            continue;
-          }
+          continue;
         }
         var v2 = vec2f(1, 2);
         for (var i = 0u; i < 2u; i += 1u) {
           let foo = v2[i];
-          {
-            continue;
-          }
+          continue;
         }
       }"
     `);
@@ -384,9 +364,7 @@ describe('wgslGenerator', () => {
         var result = 0u;
         for (var i = 0u; i < 7u; i += 1u) {
           let foo = b[i];
-          {
-            result += foo;
-          }
+          result += foo;
         }
         return result;
       }"
@@ -427,21 +405,15 @@ describe('wgslGenerator', () => {
         var res3 = false;
         for (var i = 0u; i < 4u; i += 1u) {
           let foo = v1[i];
-          {
-            res1 += foo;
-          }
+          res1 += foo;
         }
         for (var i = 0u; i < 3u; i += 1u) {
           let foo = v2[i];
-          {
-            res2 *= foo;
-          }
+          res2 *= foo;
         }
         for (var i = 0u; i < 2u; i += 1u) {
           let foo = v3[i];
-          {
-            res3 = (foo != res3);
-          }
+          res3 = (foo != res3);
         }
       }"
     `);
@@ -469,9 +441,7 @@ describe('wgslGenerator', () => {
         var testStruct = TestStruct(array<f32, 4>(1f, 8f, 8f, 2f));
         for (var i = 0u; i < 4u; i += 1u) {
           let foo = testStruct.arr[i];
-          {
-            continue;
-          }
+          continue;
         }
       }"
     `);
@@ -550,9 +520,7 @@ describe('wgslGenerator', () => {
         var arr = array<i32, 3>(1, 2, 3);
         for (var i = 0u; i < 3u; i += 1u) {
           let item = arr[i];
-          {
-            continue;
-          }
+          continue;
         }
       }"
     `);
@@ -594,9 +562,7 @@ describe('wgslGenerator', () => {
         var arr = array<i32, 3>(1, 2, 3);
         for (var i_1 = 0u; i_1 < 3u; i_1 += 1u) {
           let foo = arr[i_1];
-          {
-            continue;
-          }
+          continue;
         }
       }"
     `);
@@ -622,9 +588,7 @@ describe('wgslGenerator', () => {
         var arr = array<u32, 4>(1u, 2u, 3u, i);
         for (var i_1 = 0u; i_1 < 4u; i_1 += 1u) {
           let foo = arr[i_1];
-          {
-            continue;
-          }
+          continue;
         }
       }"
     `);
@@ -703,9 +667,7 @@ describe('wgslGenerator', () => {
         var res = 0;
         for (var i = 0u; i < 3u; i += 1u) {
           let i_1 = arr[i];
-          {
-            res += i_1;
-          }
+          res += i_1;
         }
       }"
     `);
@@ -731,9 +693,7 @@ describe('wgslGenerator', () => {
         var res = 0;
         for (var i_1 = 0u; i_1 < 4u; i_1 += 1u) {
           let i_2 = arr[i_1];
-          {
-            res += i32(i_2);
-          }
+          res += i32(i_2);
         }
       }"
     `);
@@ -1215,11 +1175,9 @@ describe('wgslGenerator', () => {
   it('does not cause identifier clashes when renaming parameters', () => {
     const main = tgpu.fn([d.u32, d.u32])((extern, extern_1) => {});
 
-    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
-      "fn main(extern_1: u32, extern_1_1: u32) {
-
-      }"
-    `);
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(
+      `"fn main(extern_1: u32, extern_1_1: u32) {}"`,
+    );
   });
 
   it('generates correct code for pow expression', () => {
@@ -1474,6 +1432,7 @@ describe('wgslGenerator', () => {
           let x = y;
           return x;
         }
+        // ---
       }"
     `);
   });
@@ -1492,6 +1451,7 @@ describe('wgslGenerator', () => {
         {
           const y = 1;
         }
+        // ---
       }"
     `);
   });
@@ -1514,11 +1474,8 @@ describe('wgslGenerator', () => {
         var result = 0i;
         var list = array<i32, 1>(1);
         // unrolled iteration #0
-        {
-          {
-            result += list[0u];
-          }
-        }
+        result += list[0u];
+        // ---
       }"
     `);
   });
@@ -1606,9 +1563,7 @@ describe('wgslGenerator', () => {
     expect(tgpu.resolve([fn.with(vAccess, 0)])).toMatchInlineSnapshot(`
       "fn fn_1() -> i32 {
         var a = -1;
-        {
-          a = 0i;
-        }
+        a = 0i;
         return a;
       }"
     `);
@@ -1616,9 +1571,7 @@ describe('wgslGenerator', () => {
     expect(tgpu.resolve([fn.with(vAccess, 1)])).toMatchInlineSnapshot(`
       "fn fn_1() -> i32 {
         var a = -1;
-        {
-          a = 1i;
-        }
+        a = 1i;
         return a;
       }"
     `);
@@ -1669,9 +1622,7 @@ describe('wgslGenerator', () => {
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "fn fn_1() -> i32 {
         var a = -1;
-        {
-          a = 2i;
-        }
+        a = 2i;
         return a;
       }"
     `);
@@ -1695,9 +1646,7 @@ describe('wgslGenerator', () => {
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "fn fn_1() {
         var a = -1;
-        {
-          a = 2i;
-        }
+        a = 2i;
       }"
     `);
   });
@@ -1725,9 +1674,7 @@ describe('wgslGenerator', () => {
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "fn fn_1() -> vec2f {
         var rayDir = vec2f();
-        {
-          rayDir = vec2f(1, 0);
-        }
+        rayDir = vec2f(1, 0);
         return rayDir;
       }"
     `);
@@ -1755,9 +1702,7 @@ describe('wgslGenerator', () => {
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
       "fn fn_1() {
         var a = -1;
-        {
-          a = 3i;
-        }
+        a = 3i;
       }"
     `);
   });
@@ -1832,10 +1777,7 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> i32 {
-        {
-          return 1;
-        }
-        return -1;
+        return 1;
       }"
     `);
   });
@@ -1859,10 +1801,7 @@ describe('wgslGenerator', () => {
 
     expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
       "fn f() -> i32 {
-        {
-          return 1;
-        }
-        return -1;
+        return 1;
       }"
     `);
   });
@@ -2017,9 +1956,7 @@ describe('wgslGenerator', () => {
       expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
         "fn f() -> i32 {
           var res = -1;
-          {
-            res = 1i;
-          }
+          res = 1i;
           return res;
         }"
       `);
@@ -2062,9 +1999,7 @@ describe('wgslGenerator', () => {
       expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
         "fn f() -> i32 {
           var res = -1;
-          {
-            res = 1i;
-          }
+          res = 1i;
           return res;
         }"
       `);
@@ -2105,9 +2040,7 @@ describe('wgslGenerator', () => {
       expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
         "fn f() -> i32 {
           var res = -1;
-          {
-            res = 1i;
-          }
+          res = 1i;
           return res;
         }"
       `);
@@ -2182,6 +2115,74 @@ describe('wgslGenerator', () => {
           acc += size;
         }
         return (acc + size);
+      }"
+    `);
+  });
+
+  it('prunes based on early return', ({ root }) => {
+    const counter = tgpu.privateVar(d.u32);
+    function main() {
+      'use gpu';
+      const hello = 1 + 2;
+      if (true) {
+        return;
+      }
+      // This line will never be generated, meaning the private
+      // var `counter` will never be declared
+      counter.$++;
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() {
+        const hello = 3;
+      }"
+    `);
+  });
+
+  it('prunes based on early break', () => {
+    function main() {
+      'use gpu';
+      let value = d.u32(0);
+      for (let i = 0; i < 10; i++) {
+        value += i;
+        break;
+        value *= 2;
+      }
+      return value;
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> u32 {
+        var value = 0u;
+        for (var i = 0; (i < 10i); i++) {
+          value += u32(i);
+          break;
+        }
+        return value;
+      }"
+    `);
+  });
+
+  it('prunes based on early continue', () => {
+    function main() {
+      'use gpu';
+      let value = d.u32(0);
+      for (let i = 0; i < 10; i++) {
+        value += i;
+        continue;
+        value *= 2;
+      }
+      return value;
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> u32 {
+        var value = 0u;
+        for (var i = 0; (i < 10i); i++) {
+          value += u32(i);
+          continue;
+        }
+        return value;
       }"
     `);
   });

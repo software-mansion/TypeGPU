@@ -155,6 +155,7 @@ export class GlslGenerator extends WgslGenerator {
 
         const block = super._block(
           [NODE.block, [...transformed.map((t) => t.assignment), [NODE.return]]],
+          /* allowInlining */ true,
           Object.fromEntries(
             transformed.map(({ name, snippet }) => {
               return [name, snippet.$] as const;
@@ -162,7 +163,7 @@ export class GlslGenerator extends WgslGenerator {
           ),
         );
 
-        return `${this.ctx.pre}${block}`;
+        return `${this.ctx.pre}${block.code}`;
       } else {
         // Resolving the expression to inspect it's type
         // We will resolve it again as part of the modifed statement
@@ -178,10 +179,11 @@ export class GlslGenerator extends WgslGenerator {
         if (expr.dataType.type.startsWith('vec')) {
           const block = super._block(
             [NODE.block, [[NODE.assignmentExpr, 'gl_Position', '=', exprNode], [NODE.return]]],
+            /* allowInlining */ true,
             { gl_Position: gl_PositionSnippet.$ },
           );
 
-          return `${this.ctx.pre}${block}`;
+          return `${this.ctx.pre}${block.code}`;
         }
       }
     }
@@ -205,7 +207,7 @@ export class GlslGenerator extends WgslGenerator {
     }
 
     try {
-      const body = this._block(options.body);
+      const body = this._block(options.body, /* allowInlining */ false).code;
 
       // Only after generating the body can we determine the return type
       const returnType = options.determineReturnType();
@@ -224,7 +226,7 @@ export class GlslGenerator extends WgslGenerator {
             }
           }
         }
-        return `void main() ${body}`;
+        return `void main() ${body || '{}'}`;
       }
 
       const argList = options.args

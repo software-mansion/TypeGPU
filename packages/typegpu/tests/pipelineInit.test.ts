@@ -12,11 +12,9 @@ describe('pipeline initialization', () => {
         pipeline.initSync();
 
         expect(device.mock.createComputePipeline).toHaveBeenCalled();
-        expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-          "@compute @workgroup_size(1, 1, 1) fn computeFn() {
-
-          }"
-        `);
+        expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(
+          `"@compute @workgroup_size(1, 1, 1) fn computeFn() {}"`,
+        );
       });
     });
 
@@ -28,11 +26,9 @@ describe('pipeline initialization', () => {
 
         expect(device.mock.createComputePipelineAsync).toHaveBeenCalled();
         expect(() => root.unwrap(pipeline)).not.toThrow(); // this means that memo already exists
-        expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(`
-          "@compute @workgroup_size(1, 1, 1) fn computeFn() {
-
-          }"
-        `);
+        expect(tgpu.resolve([pipeline])).toMatchInlineSnapshot(
+          `"@compute @workgroup_size(1, 1, 1) fn computeFn() {}"`,
+        );
         expect(device.mock.createComputePipeline).not.toHaveBeenCalled();
       });
 
@@ -81,9 +77,7 @@ describe('pipeline initialization', () => {
         expect(tgpu.resolve([pipeline.pipeline])).toMatchInlineSnapshot(`
           "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
-          fn wrappedCallback(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-
-          }
+          fn wrappedCallback(_arg_0: u32, _arg_1: u32, _arg_2: u32) {}
 
           @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
             if (any(id >= sizeUniform)) {
@@ -108,9 +102,7 @@ describe('pipeline initialization', () => {
         expect(tgpu.resolve([pipeline.pipeline])).toMatchInlineSnapshot(`
           "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
 
-          fn wrappedCallback(_arg_0: u32, _arg_1: u32, _arg_2: u32) {
-
-          }
+          fn wrappedCallback(_arg_0: u32, _arg_1: u32, _arg_2: u32) {}
 
           @compute @workgroup_size(1, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
             if (any(id >= sizeUniform)) {

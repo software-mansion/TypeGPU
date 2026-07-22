@@ -48,414 +48,408 @@ describe('blur example', () => {
         let dims = vec2i(textureDimensions(inTexture));
         let baseIndex = (vec2i(((wid.xy * vec2u((*settings).blockDim, 4u)) + (lid.xy * vec2u(4, 1)))) - vec2i(filterOffset, 0i));
         // unrolled iteration #0
+        // unrolled iteration #0 / #0
         {
-          // unrolled iteration #0
-          {
-            var loadIndex = (baseIndex + vec2i());
-            if ((flip != 0u)) {
-              loadIndex = loadIndex.yx;
-            }
-            tileData[0i][((lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+          var loadIndex = (baseIndex + vec2i());
+          if ((flip != 0u)) {
+            loadIndex = loadIndex.yx;
           }
-          // unrolled iteration #1
-          {
-            var loadIndex = (baseIndex + vec2i(1, 0));
-            if ((flip != 0u)) {
-              loadIndex = loadIndex.yx;
-            }
-            tileData[0i][((lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
-          }
-          // unrolled iteration #2
-          {
-            var loadIndex = (baseIndex + vec2i(2, 0));
-            if ((flip != 0u)) {
-              loadIndex = loadIndex.yx;
-            }
-            tileData[0i][((lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
-          }
-          // unrolled iteration #3
-          {
-            var loadIndex = (baseIndex + vec2i(3, 0));
-            if ((flip != 0u)) {
-              loadIndex = loadIndex.yx;
-            }
-            tileData[0i][((lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
-          }
+          tileData[0i][((lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
         }
+        // unrolled iteration #0 / #1
+        {
+          var loadIndex = (baseIndex + vec2i(1, 0));
+          if ((flip != 0u)) {
+            loadIndex = loadIndex.yx;
+          }
+          tileData[0i][((lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+        }
+        // unrolled iteration #0 / #2
+        {
+          var loadIndex = (baseIndex + vec2i(2, 0));
+          if ((flip != 0u)) {
+            loadIndex = loadIndex.yx;
+          }
+          tileData[0i][((lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+        }
+        // unrolled iteration #0 / #3
+        {
+          var loadIndex = (baseIndex + vec2i(3, 0));
+          if ((flip != 0u)) {
+            loadIndex = loadIndex.yx;
+          }
+          tileData[0i][((lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+        }
+        // ---
         // unrolled iteration #1
+        // unrolled iteration #1 / #0
         {
-          // unrolled iteration #0
-          {
-            var loadIndex = (baseIndex + vec2i(0, 1));
-            if ((flip != 0u)) {
-              loadIndex = loadIndex.yx;
-            }
-            tileData[1i][((lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+          var loadIndex = (baseIndex + vec2i(0, 1));
+          if ((flip != 0u)) {
+            loadIndex = loadIndex.yx;
           }
-          // unrolled iteration #1
-          {
-            var loadIndex = (baseIndex + vec2i(1));
-            if ((flip != 0u)) {
-              loadIndex = loadIndex.yx;
-            }
-            tileData[1i][((lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
-          }
-          // unrolled iteration #2
-          {
-            var loadIndex = (baseIndex + vec2i(2, 1));
-            if ((flip != 0u)) {
-              loadIndex = loadIndex.yx;
-            }
-            tileData[1i][((lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
-          }
-          // unrolled iteration #3
-          {
-            var loadIndex = (baseIndex + vec2i(3, 1));
-            if ((flip != 0u)) {
-              loadIndex = loadIndex.yx;
-            }
-            tileData[1i][((lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
-          }
+          tileData[1i][((lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
         }
+        // unrolled iteration #1 / #1
+        {
+          var loadIndex = (baseIndex + vec2i(1));
+          if ((flip != 0u)) {
+            loadIndex = loadIndex.yx;
+          }
+          tileData[1i][((lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+        }
+        // unrolled iteration #1 / #2
+        {
+          var loadIndex = (baseIndex + vec2i(2, 1));
+          if ((flip != 0u)) {
+            loadIndex = loadIndex.yx;
+          }
+          tileData[1i][((lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+        }
+        // unrolled iteration #1 / #3
+        {
+          var loadIndex = (baseIndex + vec2i(3, 1));
+          if ((flip != 0u)) {
+            loadIndex = loadIndex.yx;
+          }
+          tileData[1i][((lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+        }
+        // ---
         // unrolled iteration #2
+        // unrolled iteration #2 / #0
         {
-          // unrolled iteration #0
-          {
-            var loadIndex = (baseIndex + vec2i(0, 2));
-            if ((flip != 0u)) {
-              loadIndex = loadIndex.yx;
-            }
-            tileData[2i][((lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+          var loadIndex = (baseIndex + vec2i(0, 2));
+          if ((flip != 0u)) {
+            loadIndex = loadIndex.yx;
           }
-          // unrolled iteration #1
-          {
-            var loadIndex = (baseIndex + vec2i(1, 2));
-            if ((flip != 0u)) {
-              loadIndex = loadIndex.yx;
-            }
-            tileData[2i][((lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
-          }
-          // unrolled iteration #2
-          {
-            var loadIndex = (baseIndex + vec2i(2));
-            if ((flip != 0u)) {
-              loadIndex = loadIndex.yx;
-            }
-            tileData[2i][((lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
-          }
-          // unrolled iteration #3
-          {
-            var loadIndex = (baseIndex + vec2i(3, 2));
-            if ((flip != 0u)) {
-              loadIndex = loadIndex.yx;
-            }
-            tileData[2i][((lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
-          }
+          tileData[2i][((lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
         }
+        // unrolled iteration #2 / #1
+        {
+          var loadIndex = (baseIndex + vec2i(1, 2));
+          if ((flip != 0u)) {
+            loadIndex = loadIndex.yx;
+          }
+          tileData[2i][((lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+        }
+        // unrolled iteration #2 / #2
+        {
+          var loadIndex = (baseIndex + vec2i(2));
+          if ((flip != 0u)) {
+            loadIndex = loadIndex.yx;
+          }
+          tileData[2i][((lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+        }
+        // unrolled iteration #2 / #3
+        {
+          var loadIndex = (baseIndex + vec2i(3, 2));
+          if ((flip != 0u)) {
+            loadIndex = loadIndex.yx;
+          }
+          tileData[2i][((lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+        }
+        // ---
         // unrolled iteration #3
+        // unrolled iteration #3 / #0
         {
-          // unrolled iteration #0
-          {
-            var loadIndex = (baseIndex + vec2i(0, 3));
-            if ((flip != 0u)) {
-              loadIndex = loadIndex.yx;
-            }
-            tileData[3i][((lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+          var loadIndex = (baseIndex + vec2i(0, 3));
+          if ((flip != 0u)) {
+            loadIndex = loadIndex.yx;
           }
-          // unrolled iteration #1
-          {
-            var loadIndex = (baseIndex + vec2i(1, 3));
-            if ((flip != 0u)) {
-              loadIndex = loadIndex.yx;
-            }
-            tileData[3i][((lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
-          }
-          // unrolled iteration #2
-          {
-            var loadIndex = (baseIndex + vec2i(2, 3));
-            if ((flip != 0u)) {
-              loadIndex = loadIndex.yx;
-            }
-            tileData[3i][((lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
-          }
-          // unrolled iteration #3
-          {
-            var loadIndex = (baseIndex + vec2i(3));
-            if ((flip != 0u)) {
-              loadIndex = loadIndex.yx;
-            }
-            tileData[3i][((lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
-          }
+          tileData[3i][((lid.x * 4u) + 0u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
         }
+        // unrolled iteration #3 / #1
+        {
+          var loadIndex = (baseIndex + vec2i(1, 3));
+          if ((flip != 0u)) {
+            loadIndex = loadIndex.yx;
+          }
+          tileData[3i][((lid.x * 4u) + 1u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+        }
+        // unrolled iteration #3 / #2
+        {
+          var loadIndex = (baseIndex + vec2i(2, 3));
+          if ((flip != 0u)) {
+            loadIndex = loadIndex.yx;
+          }
+          tileData[3i][((lid.x * 4u) + 2u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+        }
+        // unrolled iteration #3 / #3
+        {
+          var loadIndex = (baseIndex + vec2i(3));
+          if ((flip != 0u)) {
+            loadIndex = loadIndex.yx;
+          }
+          tileData[3i][((lid.x * 4u) + 3u)] = textureSampleLevel(inTexture, sampler_1, ((vec2f(loadIndex) + vec2f(0.5)) / vec2f(dims)), 0).rgb;
+        }
+        // ---
+        // ---
         workgroupBarrier();
         // unrolled iteration #0
+        // unrolled iteration #0 / #0
         {
-          // unrolled iteration #0
-          {
-            var writeIndex = (baseIndex + vec2i());
-            if ((flip != 0u)) {
-              writeIndex = writeIndex.yx;
-            }
-            let center = (i32((4u * lid.x)) + 0i);
-            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
-              var acc = vec3f();
-              for (var f = 0; (f < (*settings).filterDim); f++) {
-                let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[0i][i] * (1f / f32((*settings).filterDim))));
-              }
-              textureStore(outTexture, writeIndex, vec4f(acc, 1f));
-            }
+          var writeIndex = (baseIndex + vec2i());
+          if ((flip != 0u)) {
+            writeIndex = writeIndex.yx;
           }
-          // unrolled iteration #1
-          {
-            var writeIndex = (baseIndex + vec2i(1, 0));
-            if ((flip != 0u)) {
-              writeIndex = writeIndex.yx;
+          let center = (i32((4u * lid.x)) + 0i);
+          if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+            var acc = vec3f();
+            for (var f = 0; (f < (*settings).filterDim); f++) {
+              let i = ((center + f) - filterOffset);
+              acc = (acc + (tileData[0i][i] * (1f / f32((*settings).filterDim))));
             }
-            let center = (i32((4u * lid.x)) + 1i);
-            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
-              var acc = vec3f();
-              for (var f = 0; (f < (*settings).filterDim); f++) {
-                let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[0i][i] * (1f / f32((*settings).filterDim))));
-              }
-              textureStore(outTexture, writeIndex, vec4f(acc, 1f));
-            }
-          }
-          // unrolled iteration #2
-          {
-            var writeIndex = (baseIndex + vec2i(2, 0));
-            if ((flip != 0u)) {
-              writeIndex = writeIndex.yx;
-            }
-            let center = (i32((4u * lid.x)) + 2i);
-            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
-              var acc = vec3f();
-              for (var f = 0; (f < (*settings).filterDim); f++) {
-                let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[0i][i] * (1f / f32((*settings).filterDim))));
-              }
-              textureStore(outTexture, writeIndex, vec4f(acc, 1f));
-            }
-          }
-          // unrolled iteration #3
-          {
-            var writeIndex = (baseIndex + vec2i(3, 0));
-            if ((flip != 0u)) {
-              writeIndex = writeIndex.yx;
-            }
-            let center = (i32((4u * lid.x)) + 3i);
-            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
-              var acc = vec3f();
-              for (var f = 0; (f < (*settings).filterDim); f++) {
-                let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[0i][i] * (1f / f32((*settings).filterDim))));
-              }
-              textureStore(outTexture, writeIndex, vec4f(acc, 1f));
-            }
+            textureStore(outTexture, writeIndex, vec4f(acc, 1f));
           }
         }
+        // unrolled iteration #0 / #1
+        {
+          var writeIndex = (baseIndex + vec2i(1, 0));
+          if ((flip != 0u)) {
+            writeIndex = writeIndex.yx;
+          }
+          let center = (i32((4u * lid.x)) + 1i);
+          if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+            var acc = vec3f();
+            for (var f = 0; (f < (*settings).filterDim); f++) {
+              let i = ((center + f) - filterOffset);
+              acc = (acc + (tileData[0i][i] * (1f / f32((*settings).filterDim))));
+            }
+            textureStore(outTexture, writeIndex, vec4f(acc, 1f));
+          }
+        }
+        // unrolled iteration #0 / #2
+        {
+          var writeIndex = (baseIndex + vec2i(2, 0));
+          if ((flip != 0u)) {
+            writeIndex = writeIndex.yx;
+          }
+          let center = (i32((4u * lid.x)) + 2i);
+          if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+            var acc = vec3f();
+            for (var f = 0; (f < (*settings).filterDim); f++) {
+              let i = ((center + f) - filterOffset);
+              acc = (acc + (tileData[0i][i] * (1f / f32((*settings).filterDim))));
+            }
+            textureStore(outTexture, writeIndex, vec4f(acc, 1f));
+          }
+        }
+        // unrolled iteration #0 / #3
+        {
+          var writeIndex = (baseIndex + vec2i(3, 0));
+          if ((flip != 0u)) {
+            writeIndex = writeIndex.yx;
+          }
+          let center = (i32((4u * lid.x)) + 3i);
+          if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+            var acc = vec3f();
+            for (var f = 0; (f < (*settings).filterDim); f++) {
+              let i = ((center + f) - filterOffset);
+              acc = (acc + (tileData[0i][i] * (1f / f32((*settings).filterDim))));
+            }
+            textureStore(outTexture, writeIndex, vec4f(acc, 1f));
+          }
+        }
+        // ---
         // unrolled iteration #1
+        // unrolled iteration #1 / #0
         {
-          // unrolled iteration #0
-          {
-            var writeIndex = (baseIndex + vec2i(0, 1));
-            if ((flip != 0u)) {
-              writeIndex = writeIndex.yx;
-            }
-            let center = (i32((4u * lid.x)) + 0i);
-            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
-              var acc = vec3f();
-              for (var f = 0; (f < (*settings).filterDim); f++) {
-                let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[1i][i] * (1f / f32((*settings).filterDim))));
-              }
-              textureStore(outTexture, writeIndex, vec4f(acc, 1f));
-            }
+          var writeIndex = (baseIndex + vec2i(0, 1));
+          if ((flip != 0u)) {
+            writeIndex = writeIndex.yx;
           }
-          // unrolled iteration #1
-          {
-            var writeIndex = (baseIndex + vec2i(1));
-            if ((flip != 0u)) {
-              writeIndex = writeIndex.yx;
+          let center = (i32((4u * lid.x)) + 0i);
+          if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+            var acc = vec3f();
+            for (var f = 0; (f < (*settings).filterDim); f++) {
+              let i = ((center + f) - filterOffset);
+              acc = (acc + (tileData[1i][i] * (1f / f32((*settings).filterDim))));
             }
-            let center = (i32((4u * lid.x)) + 1i);
-            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
-              var acc = vec3f();
-              for (var f = 0; (f < (*settings).filterDim); f++) {
-                let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[1i][i] * (1f / f32((*settings).filterDim))));
-              }
-              textureStore(outTexture, writeIndex, vec4f(acc, 1f));
-            }
-          }
-          // unrolled iteration #2
-          {
-            var writeIndex = (baseIndex + vec2i(2, 1));
-            if ((flip != 0u)) {
-              writeIndex = writeIndex.yx;
-            }
-            let center = (i32((4u * lid.x)) + 2i);
-            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
-              var acc = vec3f();
-              for (var f = 0; (f < (*settings).filterDim); f++) {
-                let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[1i][i] * (1f / f32((*settings).filterDim))));
-              }
-              textureStore(outTexture, writeIndex, vec4f(acc, 1f));
-            }
-          }
-          // unrolled iteration #3
-          {
-            var writeIndex = (baseIndex + vec2i(3, 1));
-            if ((flip != 0u)) {
-              writeIndex = writeIndex.yx;
-            }
-            let center = (i32((4u * lid.x)) + 3i);
-            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
-              var acc = vec3f();
-              for (var f = 0; (f < (*settings).filterDim); f++) {
-                let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[1i][i] * (1f / f32((*settings).filterDim))));
-              }
-              textureStore(outTexture, writeIndex, vec4f(acc, 1f));
-            }
+            textureStore(outTexture, writeIndex, vec4f(acc, 1f));
           }
         }
+        // unrolled iteration #1 / #1
+        {
+          var writeIndex = (baseIndex + vec2i(1));
+          if ((flip != 0u)) {
+            writeIndex = writeIndex.yx;
+          }
+          let center = (i32((4u * lid.x)) + 1i);
+          if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+            var acc = vec3f();
+            for (var f = 0; (f < (*settings).filterDim); f++) {
+              let i = ((center + f) - filterOffset);
+              acc = (acc + (tileData[1i][i] * (1f / f32((*settings).filterDim))));
+            }
+            textureStore(outTexture, writeIndex, vec4f(acc, 1f));
+          }
+        }
+        // unrolled iteration #1 / #2
+        {
+          var writeIndex = (baseIndex + vec2i(2, 1));
+          if ((flip != 0u)) {
+            writeIndex = writeIndex.yx;
+          }
+          let center = (i32((4u * lid.x)) + 2i);
+          if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+            var acc = vec3f();
+            for (var f = 0; (f < (*settings).filterDim); f++) {
+              let i = ((center + f) - filterOffset);
+              acc = (acc + (tileData[1i][i] * (1f / f32((*settings).filterDim))));
+            }
+            textureStore(outTexture, writeIndex, vec4f(acc, 1f));
+          }
+        }
+        // unrolled iteration #1 / #3
+        {
+          var writeIndex = (baseIndex + vec2i(3, 1));
+          if ((flip != 0u)) {
+            writeIndex = writeIndex.yx;
+          }
+          let center = (i32((4u * lid.x)) + 3i);
+          if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+            var acc = vec3f();
+            for (var f = 0; (f < (*settings).filterDim); f++) {
+              let i = ((center + f) - filterOffset);
+              acc = (acc + (tileData[1i][i] * (1f / f32((*settings).filterDim))));
+            }
+            textureStore(outTexture, writeIndex, vec4f(acc, 1f));
+          }
+        }
+        // ---
         // unrolled iteration #2
+        // unrolled iteration #2 / #0
         {
-          // unrolled iteration #0
-          {
-            var writeIndex = (baseIndex + vec2i(0, 2));
-            if ((flip != 0u)) {
-              writeIndex = writeIndex.yx;
-            }
-            let center = (i32((4u * lid.x)) + 0i);
-            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
-              var acc = vec3f();
-              for (var f = 0; (f < (*settings).filterDim); f++) {
-                let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[2i][i] * (1f / f32((*settings).filterDim))));
-              }
-              textureStore(outTexture, writeIndex, vec4f(acc, 1f));
-            }
+          var writeIndex = (baseIndex + vec2i(0, 2));
+          if ((flip != 0u)) {
+            writeIndex = writeIndex.yx;
           }
-          // unrolled iteration #1
-          {
-            var writeIndex = (baseIndex + vec2i(1, 2));
-            if ((flip != 0u)) {
-              writeIndex = writeIndex.yx;
+          let center = (i32((4u * lid.x)) + 0i);
+          if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+            var acc = vec3f();
+            for (var f = 0; (f < (*settings).filterDim); f++) {
+              let i = ((center + f) - filterOffset);
+              acc = (acc + (tileData[2i][i] * (1f / f32((*settings).filterDim))));
             }
-            let center = (i32((4u * lid.x)) + 1i);
-            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
-              var acc = vec3f();
-              for (var f = 0; (f < (*settings).filterDim); f++) {
-                let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[2i][i] * (1f / f32((*settings).filterDim))));
-              }
-              textureStore(outTexture, writeIndex, vec4f(acc, 1f));
-            }
-          }
-          // unrolled iteration #2
-          {
-            var writeIndex = (baseIndex + vec2i(2));
-            if ((flip != 0u)) {
-              writeIndex = writeIndex.yx;
-            }
-            let center = (i32((4u * lid.x)) + 2i);
-            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
-              var acc = vec3f();
-              for (var f = 0; (f < (*settings).filterDim); f++) {
-                let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[2i][i] * (1f / f32((*settings).filterDim))));
-              }
-              textureStore(outTexture, writeIndex, vec4f(acc, 1f));
-            }
-          }
-          // unrolled iteration #3
-          {
-            var writeIndex = (baseIndex + vec2i(3, 2));
-            if ((flip != 0u)) {
-              writeIndex = writeIndex.yx;
-            }
-            let center = (i32((4u * lid.x)) + 3i);
-            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
-              var acc = vec3f();
-              for (var f = 0; (f < (*settings).filterDim); f++) {
-                let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[2i][i] * (1f / f32((*settings).filterDim))));
-              }
-              textureStore(outTexture, writeIndex, vec4f(acc, 1f));
-            }
+            textureStore(outTexture, writeIndex, vec4f(acc, 1f));
           }
         }
+        // unrolled iteration #2 / #1
+        {
+          var writeIndex = (baseIndex + vec2i(1, 2));
+          if ((flip != 0u)) {
+            writeIndex = writeIndex.yx;
+          }
+          let center = (i32((4u * lid.x)) + 1i);
+          if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+            var acc = vec3f();
+            for (var f = 0; (f < (*settings).filterDim); f++) {
+              let i = ((center + f) - filterOffset);
+              acc = (acc + (tileData[2i][i] * (1f / f32((*settings).filterDim))));
+            }
+            textureStore(outTexture, writeIndex, vec4f(acc, 1f));
+          }
+        }
+        // unrolled iteration #2 / #2
+        {
+          var writeIndex = (baseIndex + vec2i(2));
+          if ((flip != 0u)) {
+            writeIndex = writeIndex.yx;
+          }
+          let center = (i32((4u * lid.x)) + 2i);
+          if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+            var acc = vec3f();
+            for (var f = 0; (f < (*settings).filterDim); f++) {
+              let i = ((center + f) - filterOffset);
+              acc = (acc + (tileData[2i][i] * (1f / f32((*settings).filterDim))));
+            }
+            textureStore(outTexture, writeIndex, vec4f(acc, 1f));
+          }
+        }
+        // unrolled iteration #2 / #3
+        {
+          var writeIndex = (baseIndex + vec2i(3, 2));
+          if ((flip != 0u)) {
+            writeIndex = writeIndex.yx;
+          }
+          let center = (i32((4u * lid.x)) + 3i);
+          if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+            var acc = vec3f();
+            for (var f = 0; (f < (*settings).filterDim); f++) {
+              let i = ((center + f) - filterOffset);
+              acc = (acc + (tileData[2i][i] * (1f / f32((*settings).filterDim))));
+            }
+            textureStore(outTexture, writeIndex, vec4f(acc, 1f));
+          }
+        }
+        // ---
         // unrolled iteration #3
+        // unrolled iteration #3 / #0
         {
-          // unrolled iteration #0
-          {
-            var writeIndex = (baseIndex + vec2i(0, 3));
-            if ((flip != 0u)) {
-              writeIndex = writeIndex.yx;
-            }
-            let center = (i32((4u * lid.x)) + 0i);
-            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
-              var acc = vec3f();
-              for (var f = 0; (f < (*settings).filterDim); f++) {
-                let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[3i][i] * (1f / f32((*settings).filterDim))));
-              }
-              textureStore(outTexture, writeIndex, vec4f(acc, 1f));
-            }
+          var writeIndex = (baseIndex + vec2i(0, 3));
+          if ((flip != 0u)) {
+            writeIndex = writeIndex.yx;
           }
-          // unrolled iteration #1
-          {
-            var writeIndex = (baseIndex + vec2i(1, 3));
-            if ((flip != 0u)) {
-              writeIndex = writeIndex.yx;
+          let center = (i32((4u * lid.x)) + 0i);
+          if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+            var acc = vec3f();
+            for (var f = 0; (f < (*settings).filterDim); f++) {
+              let i = ((center + f) - filterOffset);
+              acc = (acc + (tileData[3i][i] * (1f / f32((*settings).filterDim))));
             }
-            let center = (i32((4u * lid.x)) + 1i);
-            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
-              var acc = vec3f();
-              for (var f = 0; (f < (*settings).filterDim); f++) {
-                let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[3i][i] * (1f / f32((*settings).filterDim))));
-              }
-              textureStore(outTexture, writeIndex, vec4f(acc, 1f));
-            }
-          }
-          // unrolled iteration #2
-          {
-            var writeIndex = (baseIndex + vec2i(2, 3));
-            if ((flip != 0u)) {
-              writeIndex = writeIndex.yx;
-            }
-            let center = (i32((4u * lid.x)) + 2i);
-            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
-              var acc = vec3f();
-              for (var f = 0; (f < (*settings).filterDim); f++) {
-                let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[3i][i] * (1f / f32((*settings).filterDim))));
-              }
-              textureStore(outTexture, writeIndex, vec4f(acc, 1f));
-            }
-          }
-          // unrolled iteration #3
-          {
-            var writeIndex = (baseIndex + vec2i(3));
-            if ((flip != 0u)) {
-              writeIndex = writeIndex.yx;
-            }
-            let center = (i32((4u * lid.x)) + 3i);
-            if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
-              var acc = vec3f();
-              for (var f = 0; (f < (*settings).filterDim); f++) {
-                let i = ((center + f) - filterOffset);
-                acc = (acc + (tileData[3i][i] * (1f / f32((*settings).filterDim))));
-              }
-              textureStore(outTexture, writeIndex, vec4f(acc, 1f));
-            }
+            textureStore(outTexture, writeIndex, vec4f(acc, 1f));
           }
         }
+        // unrolled iteration #3 / #1
+        {
+          var writeIndex = (baseIndex + vec2i(1, 3));
+          if ((flip != 0u)) {
+            writeIndex = writeIndex.yx;
+          }
+          let center = (i32((4u * lid.x)) + 1i);
+          if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+            var acc = vec3f();
+            for (var f = 0; (f < (*settings).filterDim); f++) {
+              let i = ((center + f) - filterOffset);
+              acc = (acc + (tileData[3i][i] * (1f / f32((*settings).filterDim))));
+            }
+            textureStore(outTexture, writeIndex, vec4f(acc, 1f));
+          }
+        }
+        // unrolled iteration #3 / #2
+        {
+          var writeIndex = (baseIndex + vec2i(2, 3));
+          if ((flip != 0u)) {
+            writeIndex = writeIndex.yx;
+          }
+          let center = (i32((4u * lid.x)) + 2i);
+          if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+            var acc = vec3f();
+            for (var f = 0; (f < (*settings).filterDim); f++) {
+              let i = ((center + f) - filterOffset);
+              acc = (acc + (tileData[3i][i] * (1f / f32((*settings).filterDim))));
+            }
+            textureStore(outTexture, writeIndex, vec4f(acc, 1f));
+          }
+        }
+        // unrolled iteration #3 / #3
+        {
+          var writeIndex = (baseIndex + vec2i(3));
+          if ((flip != 0u)) {
+            writeIndex = writeIndex.yx;
+          }
+          let center = (i32((4u * lid.x)) + 3i);
+          if ((((center >= filterOffset) && (center < (128i - filterOffset))) && all((writeIndex < dims)))) {
+            var acc = vec3f();
+            for (var f = 0; (f < (*settings).filterDim); f++) {
+              let i = ((center + f) - filterOffset);
+              acc = (acc + (tileData[3i][i] * (1f / f32((*settings).filterDim))));
+            }
+            textureStore(outTexture, writeIndex, vec4f(acc, 1f));
+          }
+        }
+        // ---
+        // ---
       }
 
       struct fullScreenTriangle_Output {

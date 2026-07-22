@@ -53,11 +53,9 @@ describe('TgpuComputePipeline', () => {
       compute: main,
     });
 
-    expect(tgpu.resolve([computePipeline])).toMatchInlineSnapshot(`
-      "@compute @workgroup_size(32) fn main() {
-
-      }"
-    `);
+    expect(tgpu.resolve([computePipeline])).toMatchInlineSnapshot(
+      `"@compute @workgroup_size(32) fn main() {}"`,
+    );
   });
 
   it('type checks passed bind groups', ({ root }) => {
@@ -263,12 +261,8 @@ describe('TgpuComputePipeline', () => {
 
       @compute @workgroup_size(1) fn fn_1(@builtin(global_invocation_id) gid: vec3u) {
         var a = array<f16, 3>();
-        {
-          a[0i] = f16(gid.x);
-        }
-        {
-          a[1i] = 1h;
-        }
+        a[0i] = f16(gid.x);
+        a[1i] = 1h;
       }"
     `);
   });
