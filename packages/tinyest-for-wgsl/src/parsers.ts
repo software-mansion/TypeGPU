@@ -4,6 +4,7 @@ import * as tinyest from 'tinyest';
 import { FuncParameterType } from 'tinyest';
 import type { Context, JsNode, TranspilationResult } from './types.ts';
 import { tryFindExternalChain } from './externals.ts';
+import { MinifierImpl, MinifierNullImpl } from './minifier.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -408,13 +409,15 @@ export function extractFunctionParts(rootNode: JsNode): {
   };
 }
 
-export function transpileFn(rootNode: JsNode): TranspilationResult {
+// TODO: make this parameter mandatory
+export function transpileFn(rootNode: JsNode, minify = false): TranspilationResult {
   const { params, body } = extractFunctionParts(rootNode);
 
   const ctx: Context = {
     externalNames: new Set(),
     ignoreExternalDepth: 0,
     visitedNodes: new Set(),
+    minifier: minify ? new MinifierImpl() : new MinifierNullImpl(),
     stack: [
       {
         declaredNames: params.flatMap((param) =>
@@ -443,11 +446,13 @@ export function transpileFn(rootNode: JsNode): TranspilationResult {
   };
 }
 
-export function transpileNode(node: JsNode): tinyest.AnyNode {
+// TODO: make this parameter mandatory
+export function transpileNode(node: JsNode, minify = false): tinyest.AnyNode {
   const ctx: Context = {
     externalNames: new Set(),
     ignoreExternalDepth: 0,
     visitedNodes: new Set(),
+    minifier: minify ? new MinifierImpl() : new MinifierNullImpl(),
     stack: [
       {
         declaredNames: [],

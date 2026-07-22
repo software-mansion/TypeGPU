@@ -9,6 +9,10 @@ export type Scope = {
 
 export type Externals = Set<string>;
 
+export interface Minifier {
+  minify(name: string): string;
+}
+
 export type Context = {
   /** Holds a set of all identifiers that were used in code, but were not declared in code. */
   externalNames: Externals;
@@ -22,6 +26,10 @@ export type Context = {
    */
   visitedNodes: Set<babel.MemberExpression | acorn.MemberExpression>;
   stack: Scope[];
+  /**
+   * Used to transform identifiers.
+   */
+  minifier: Minifier;
 };
 
 export type TranspilationResult = {
