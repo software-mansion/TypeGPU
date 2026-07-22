@@ -1753,20 +1753,49 @@ describe('Uniform alignment', () => {
     expect(consoleWarnSpy).not.toHaveBeenCalled();
   });
 
+  it('reports props not meeting requiredAlignOf in structs', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    root.createUniform(d.struct({ q: d.u32, p: d.struct({ p: d.u32 }) }));
+
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [uniform-schema-misaligned}] ",
+        "Schema '<unnamed>' is used in an array in an uniform buffer, and its property p does not meet its required alignment (offset is 4, required alignment is 16).
+      This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
+      To address this, wrap the property in 'd.align(16, ...)'.",
+      ]
+    `);
+  });
+
   it('reports unaligned props in structs', ({ root }) => {
     using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     root.createUniform(d.struct({ p: d.struct({ p: d.u32 }), q: d.u32 }));
 
-    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`undefined`);
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [uniform-schema-misaligned}] ",
+        "Schema '<unnamed>' is used in an uniform buffer, and the difference between memory offsets of 'p' and 'q' props (4) is less than recommended (16).
+      This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
+      To address this, wrap the 'p' prop in 'd.size(16, ...)'.",
+      ]
+    `);
   });
 
   it('reports further unaligned props in structs', ({ root }) => {
     using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    root.createUniform(d.struct({ p: d.struct({ p: d.u32 }), q: d.vec4f, r: d.u32 }));
+    root.createUniform(d.struct({ p: d.vec4f, q: d.struct({ p: d.u32 }), r: d.u32 }));
 
-    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`undefined`);
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [uniform-schema-misaligned}] ",
+        "Schema '<unnamed>' is used in an uniform buffer, and the difference between memory offsets of 'q' and 'r' props (4) is less than recommended (16).
+      This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
+      To address this, wrap the 'q' prop in 'd.size(16, ...)'.",
+      ]
+    `);
   });
 
   it('reports nested unaligned props in structs', ({ root }) => {
@@ -1776,7 +1805,14 @@ describe('Uniform alignment', () => {
       d.struct({ p: d.vec4f, q: d.struct({ p: d.struct({ p: d.u32 }), q: d.u32 }) }),
     );
 
-    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`undefined`);
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [uniform-schema-misaligned}] ",
+        "Schema 'q' is used in an uniform buffer, and the difference between memory offsets of 'p' and 'q' props (4) is less than recommended (16).
+      This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
+      To address this, wrap the 'p' prop in 'd.size(16, ...)'.",
+      ]
+    `);
   });
 
   it('reports unaligned arrays', ({ root }) => {
@@ -1784,7 +1820,14 @@ describe('Uniform alignment', () => {
 
     root.createUniform(d.arrayOf(d.u32, 3));
 
-    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`undefined`);
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [uniform-schema-misaligned}] ",
+        "Schema '<unnamed>' is used in an array in an uniform buffer, and its stride (4) is not a multiple of 16.
+      This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
+      To address this, wrap the element in 'd.align(16, ...)'.",
+      ]
+    `);
   });
 
   it('reports nested unaligned arrays', ({ root }) => {
@@ -1792,7 +1835,14 @@ describe('Uniform alignment', () => {
 
     root.createUniform(d.arrayOf(d.arrayOf(d.u32, 4), 4));
 
-    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`undefined`);
+    expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
+      [
+        "⚠️ [uniform-schema-misaligned}] ",
+        "Schema '<unnamed>' is used in an array in an uniform buffer, and its stride (4) is not a multiple of 16.
+      This is not portable (see https://www.w3.org/TR/WGSL/#address-space-layout-constraints), and will break on some devices.
+      To address this, wrap the element in 'd.align(16, ...)'.",
+      ]
+    `);
   });
 
   it('reports when giving usage', ({ root }) => {
