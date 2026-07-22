@@ -37,7 +37,7 @@ describe('warnIfOverflow', () => {
 
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
-        "⚠️ [webgpu-limits-exceeded}] ",
+        "⚠️ [webgpu-limits-exceeded] ",
         "Total number of uniform buffers (3) exceeds maxUniformBuffersPerShaderStage (2). Consider:
       1. Grouping some of the uniforms into one using 'd.struct',
       2. Increasing the limit when requesting a device or creating a root.",
@@ -57,7 +57,7 @@ describe('warnIfOverflow', () => {
 
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
-        "⚠️ [webgpu-limits-exceeded}] ",
+        "⚠️ [webgpu-limits-exceeded] ",
         "Total number of storage buffers (2) exceeds maxStorageBuffersPerShaderStage (1).",
       ]
     `);
@@ -82,7 +82,7 @@ describe('warnIfOverflow', () => {
 
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
-        "⚠️ [webgpu-limits-exceeded}] ",
+        "⚠️ [webgpu-limits-exceeded] ",
         "Total number of uniform buffers (3) exceeds maxUniformBuffersPerShaderStage (2). Consider:
       1. Grouping some of the uniforms into one using 'd.struct',
       2. Increasing the limit when requesting a device or creating a root.",

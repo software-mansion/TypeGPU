@@ -29,7 +29,7 @@ it('implicitly casts right-hand side, with a warning', () => {
   expect(warnSpy.mock.calls).toMatchInlineSnapshot(`
     [
       [
-        "⚠️ [implicit-conversion}] ",
+        "⚠️ [implicit-conversion] ",
         "Implicit conversions from [
       a: i32,
       arg: f32

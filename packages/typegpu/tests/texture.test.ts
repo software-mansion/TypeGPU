@@ -745,7 +745,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
         expect(consoleSpy.mock.calls[0]).toMatchInlineSnapshot(`
           [
-            "⚠️ [suspicious}] ",
+            "⚠️ [suspicious] ",
             "generateMipmaps is a no-op: would generate 0 mip levels (base: 3, total: 3)",
           ]
         `);
@@ -769,7 +769,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
         expect(consoleSpy.mock.calls[0]).toMatchInlineSnapshot(`
           [
-            "⚠️ [suspicious}] ",
+            "⚠️ [suspicious] ",
             "generateMipmaps is a no-op: would generate 1 mip levels (base: 2, total: 3)",
           ]
         `);

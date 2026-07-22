@@ -18,7 +18,7 @@ describe('wgslGenerator with console.log', () => {
 
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
-        "⚠️ [fallback}] ",
+        "⚠️ [fallback] ",
         "'console.log' is only supported when resolving pipelines.",
       ]
     `);
@@ -223,7 +223,7 @@ describe('wgslGenerator with console.log', () => {
 
     expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
       [
-        "⚠️ [suspicious}] ",
+        "⚠️ [suspicious] ",
         "'console' operations are not supported in vertex shaders.",
       ]
     `);
