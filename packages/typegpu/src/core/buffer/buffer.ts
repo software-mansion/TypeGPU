@@ -32,6 +32,7 @@ import {
   type TgpuReadonly,
   type TgpuUniform,
 } from './bufferBinding.ts';
+import { warnIfNotUniformAligned } from '../pipeline/webgpuLimitations.ts';
 
 // ----------
 // Public API
@@ -290,6 +291,10 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
     for (const usage of usages) {
       if (this.#disallowedUsages?.includes(usage)) {
         throw new Error(`Buffer of type ${this.dataType.type} cannot be used as ${usage}`);
+      }
+
+      if (usage === 'uniform') {
+        warnIfNotUniformAligned(this.dataType);
       }
 
       this.flags |= usage === 'uniform' ? GPUBufferUsage.UNIFORM : 0;
