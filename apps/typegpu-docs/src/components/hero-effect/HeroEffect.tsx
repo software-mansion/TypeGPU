@@ -1,24 +1,36 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { initHeroEffect } from './hero-effect.ts';
+import { useConfigureContext, useRootOrError } from '@typegpu/react';
 
 export function HeroEffect() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const result = useRootOrError();
+  const { ref, ctxRef } = useConfigureContext({ alphaMode: 'premultiplied' });
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const ctx = ctxRef.current;
+    if (!ctx || result.status === 'rejected') return;
+    const root = result.value;
 
-    const ctrl = new AbortController();
-    initHeroEffect({ canvas, signal: ctrl.signal });
+    let cancelled = false;
+    let onCleanup: (() => void) | undefined;
+    (async () => {
+      const result = await initHeroEffect({ root, context: ctx });
+      onCleanup = result.onCleanup;
+      if (cancelled) {
+        onCleanup();
+      }
+    })();
 
     return () => {
-      ctrl.abort();
+      cancelled = true;
+      onCleanup?.();
+      onCleanup = undefined;
     };
-  });
+  }, [result]);
 
   return (
     <div className="relative h-[48rem] w-[48rem]">
-      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full bg-transparent" />
+      <canvas ref={ref} className="absolute inset-0 h-full w-full bg-transparent" />
     </div>
   );
 }

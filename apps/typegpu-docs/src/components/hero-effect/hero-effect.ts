@@ -1,6 +1,4 @@
-import tgpu from 'typegpu';
-import * as d from 'typegpu/data';
-import * as std from 'typegpu/std';
+import tgpu, { d, std, type TgpuRoot } from 'typegpu';
 import { mat4 } from 'wgpu-matrix';
 import { loadModel, modelVertexLayout } from './load-model.ts';
 import { fullScreenTriangle } from 'typegpu/common';
@@ -9,8 +7,8 @@ import { Pattern } from './pattern.ts';
 import { createFluidSim, renderFluidSimLayout, SIM_N } from './fluid-sim.ts';
 
 interface HeroEffectOptions {
-  signal: AbortSignal;
-  canvas: HTMLCanvasElement;
+  root: TgpuRoot;
+  context: GPUCanvasContext;
 }
 
 const Uniforms = d.struct({
@@ -19,59 +17,32 @@ const Uniforms = d.struct({
 });
 
 export async function initHeroEffect(options: HeroEffectOptions) {
-  const root = await tgpu.init();
+  const { root, context } = options;
+  const canvas = context.canvas as HTMLCanvasElement;
   const model = await loadModel(root);
-  const fluidSim = createFluidSim(root, options.canvas);
+  const fluidSim = createFluidSim(root, canvas);
   const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
-  if (options.signal.aborted) {
-    root.destroy();
-    return;
-  }
-
-  const ctx = options.canvas.getContext('webgpu');
-  if (!ctx) {
-    throw new Error('WebGPU context not available');
-  }
-
-  ctx.configure({
-    device: root.device,
-    format: presentationFormat,
-    alphaMode: 'premultiplied',
-  });
-
-  const resolution = [
-    options.canvas.width * window.devicePixelRatio,
-    options.canvas.height * window.devicePixelRatio,
-  ] as [number, number];
-
+  const resolution = [canvas.width, canvas.height] as [number, number];
   const screenTextures = new ScreenTextures(root, resolution);
 
-  const observer = new ResizeObserver((entries) => {
-    const entry = entries.find((entry) => entry.target === options.canvas);
-    if (!entry) return;
-
-    resolution[0] = entry.devicePixelContentBoxSize[0].inlineSize;
-    resolution[1] = entry.devicePixelContentBoxSize[0].blockSize;
-    options.canvas.width = resolution[0];
-    options.canvas.height = resolution[1];
-
+  function onResize(width: number, height: number) {
+    resolution[0] = width;
+    resolution[1] = height;
     screenTextures.resolution = resolution;
-  });
-  observer.observe(options.canvas);
+  }
 
   const uniforms = root.createUniform(Uniforms);
   const time = root.createUniform(d.f32);
   const pattern = new Pattern(root);
-  const fsampler = root['~unstable'].createSampler({
+  const fsampler = root.createSampler({
     minFilter: 'linear',
     magFilter: 'linear',
     addressModeU: 'repeat',
     addressModeV: 'repeat',
-    // addressModeW: 'repeat',
   });
 
-  const vertexFn = tgpu['~unstable'].vertexFn({
+  const vertexFn = tgpu.vertexFn({
     in: { pos: d.vec3f, normal: d.vec3f, vid: d.builtin.vertexIndex },
     out: { localPos: d.vec3f, position: d.builtin.position, normal: d.vec3f },
   })((input) => {
@@ -86,7 +57,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     };
   });
 
-  const fragmentFn = tgpu['~unstable'].fragmentFn({
+  const fragmentFn = tgpu.fragmentFn({
     in: { localPos: d.vec3f, normal: d.vec3f },
     out: d.vec4f,
   })((input) => {
@@ -97,15 +68,18 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     return d.vec4f(std.saturate(diffuse.mul(att).add(ambient)), 1);
   });
 
-  const renderPipeline = root['~unstable']
-    .withVertex(vertexFn, modelVertexLayout.attrib)
-    .withFragment(fragmentFn, { format: presentationFormat })
-    .withDepthStencil({
-      format: 'depth24plus',
-      depthWriteEnabled: true,
-      depthCompare: 'less',
-    })
-    .createPipeline();
+  const renderPipeline = root
+    .createRenderPipeline({
+      attribs: modelVertexLayout.attrib,
+      vertex: vertexFn,
+      fragment: fragmentFn,
+      targets: { format: presentationFormat },
+      depthStencil: {
+        format: 'depth24plus',
+        depthWriteEnabled: true,
+        depthCompare: 'less',
+      },
+    });
 
   const CirclePattern = d.struct({
     color: d.vec4f,
@@ -142,7 +116,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     return std.textureSample(renderFluidSimLayout.$.inkTexture, fsampler.$, uv).x;
   };
 
-  const postProcessFragmentFn = tgpu['~unstable'].fragmentFn({
+  const postProcessFragmentFn = tgpu.fragmentFn({
     in: { pixelCoord: d.builtin.position, uv: d.vec2f },
     out: d.vec4f,
   })((input) => {
@@ -193,15 +167,22 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     // return d.vec4f(c1.mul(c2).xyz, std.saturate(c1.w + c2.w));
   });
 
-  const postProcessPipeline = root['~unstable']
-    .withVertex(fullScreenTriangle)
-    .withFragment(postProcessFragmentFn, { format: presentationFormat })
-    .createPipeline();
+  const postProcessPipeline = root.createRenderPipeline({
+    vertex: fullScreenTriangle,
 
+          fragment: postProcessFragmentFn,
+            targets: { format: presentationFormat },
+          });
+
+  let running = true;
   const frame = (timestamp: number) => {
-    if (options.signal.aborted) {
-      root.destroy();
+    if (!running) {
       return;
+    }
+    requestAnimationFrame(frame);
+
+    if (resolution[0] !== canvas.width || resolution[1] !== canvas.height) {
+      onResize(canvas.width, canvas.height);
     }
 
     fluidSim.update();
@@ -231,7 +212,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
 
     const depthView = screenTextures.depthTexture.createView('render');
     const modelRenderView = screenTextures.modelTexture.createView('render');
-    const canvasView = ctx.getCurrentTexture().createView();
+    const canvasView = context.getCurrentTexture().createView();
 
     renderPipeline
       .withIndexBuffer(model.body.indexBuffer)
@@ -274,9 +255,13 @@ export async function initHeroEffect(options: HeroEffectOptions) {
         storeOp: 'store',
       })
       .draw(3);
-
-    requestAnimationFrame(frame);
   };
 
   requestAnimationFrame(frame);
+
+  return {
+    onCleanup() {
+      running = false;
+    }
+  };
 }
