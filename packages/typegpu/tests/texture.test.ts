@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, vi } from 'vitest';
+import { describe, expect, expectTypeOf, type MockInstance, vi } from 'vitest';
 import type {
   RenderFlag,
   SampledFlag,
@@ -7,34 +7,23 @@ import type {
   TgpuTexture,
   TgpuTextureView,
 } from 'typegpu';
-import { it } from 'typegpu-testing-utility';
+import {
+  it,
+  type MockCommandEncoder,
+  type MockDevice,
+  type MockRenderPassEncoder,
+} from 'typegpu-testing-utility';
 import { attest } from '@ark/attest';
 import { tgpu, d, common } from 'typegpu';
 
-type AnyMockFn = {
-  mock: { calls: unknown[][]; invocationCallOrder: readonly number[] };
-};
-
-type TextureMock = { width: number; height: number; destroy: AnyMockFn };
-
 /** Flattens GPU mock activity into a chronological list of labeled calls */
 function gpuCallTimeline(fixtures: {
-  device: {
-    mock: {
-      createTexture: AnyMockFn & {
-        mock: { results: readonly { value: TextureMock | undefined }[] };
-      };
-      createRenderPipeline: AnyMockFn;
-      createBindGroup: AnyMockFn;
-      createCommandEncoder: AnyMockFn;
-      queue: { copyExternalImageToTexture: AnyMockFn; submit: AnyMockFn };
-    };
-  };
-  commandEncoder: { mock: { beginRenderPass: AnyMockFn } };
-  renderPassEncoder: { mock: { draw: AnyMockFn; setViewport: AnyMockFn } };
+  device: MockDevice;
+  commandEncoder: MockCommandEncoder;
+  renderPassEncoder: MockRenderPassEncoder;
 }): string[] {
   const events: [order: number, label: string][] = [];
-  const record = (fn: AnyMockFn, label: (args: unknown[]) => string) => {
+  const record = (fn: MockInstance, label: (args: unknown[]) => string) => {
     fn.mock.invocationCallOrder.forEach((order, i) => {
       events.push([order, label(fn.mock.calls[i] ?? [])]);
     });

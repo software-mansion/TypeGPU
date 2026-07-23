@@ -280,11 +280,15 @@ function blit(options: BlitOptions): void {
 }
 
 function imageStagingFormat(format: GPUTextureFormat): GPUTextureFormat {
-  if (format === 'rgba8unorm-srgb' || format === 'bgra8unorm-srgb') {
+  if (format.endsWith('srgb')) {
     return format;
   }
 
-  return 'rgba8unorm';
+  if (format.endsWith('8unorm')) {
+    return 'rgba8unorm';
+  }
+
+  return 'rgba16float';
 }
 
 function sourceCopyInfo(write: TextureImageWriteLayout): GPUCopyExternalImageSourceInfo {
