@@ -31,9 +31,7 @@ describe('transpileFn', () => {
       );
 
       expect(params).toMatchInlineSnapshot(`[]`);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"a",[5,"1"]],[10,"a"]]]"`,
-      );
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[13,"a",[5,"1"]],[10,"a"]]]"`);
       expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
   );
@@ -58,9 +56,71 @@ describe('transpileFn', () => {
           },
         ]
       `);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[10,[1,"aa","+","a"]]]]"`,
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[1,"aa","+","a"]]]]"`);
+      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+    }),
+  );
+
+  it(
+    'minifies destructured parameters',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p('(param, { prop }) => { return param + prop; }'),
+        true,
       );
+
+      expect(params).toMatchInlineSnapshot(`
+        [
+          {
+            "name": "a",
+            "type": "i",
+          },
+          {
+            "props": [
+              {
+                "alias": "aa",
+                "name": "prop",
+              },
+            ],
+            "type": "d",
+          },
+        ]
+      `);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[1,"a","+","aa"]]]]"`);
+      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+    }),
+  );
+
+  it(
+    'minifies destructured parameters with aliases',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p('(param, { prop, other: alias }) => { return param + prop + alias; }'),
+        true,
+      );
+
+      expect(params).toMatchInlineSnapshot(`
+        [
+          {
+            "name": "a",
+            "type": "i",
+          },
+          {
+            "props": [
+              {
+                "alias": "aa",
+                "name": "prop",
+              },
+              {
+                "alias": "aaa",
+                "name": "other",
+              },
+            ],
+            "type": "d",
+          },
+        ]
+      `);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[1,[1,"a","+","aa"],"+","aaa"]]]]"`);
       expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
   );
