@@ -195,7 +195,89 @@ describe('transpileFn', () => {
     }),
   );
 
-  // TODO: shadowing
+  it(
+    'minifies complex externals',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p(`() => {
+          const h = ext.t.fn().prop;
+          const i = ext.t.comp['computed'].prop;
+          const j = ext.t.$.prop;
+          const k = (ext).prop;
+        }`),
+        true,
+      );
+
+      expect(params).toMatchInlineSnapshot(`[]`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[13,"a",[7,[6,"b",[]],"prop"]],[13,"c",[7,[8,"d",[103,"computed"]],"prop"]],[13,"e",[7,[7,"f","$"],"prop"]],[13,"g","h"]]]"`,
+      );
+      expect(externalNames).toMatchInlineSnapshot(`
+        Map {
+          "b" => "ext.t.fn",
+          "d" => "ext.t.comp",
+          "f" => "ext.t",
+          "h" => "ext.prop",
+        }
+      `);
+    }),
+  );
+
+  it(
+    'correctly handles variable shadowing',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p(`() => {
+          const variable = 1;
+          {
+            const variable = 2;
+            if (false) {
+              return variable;
+            }
+          }
+          return variable;
+        }`),
+        true,
+      );
+
+      expect(params).toMatchInlineSnapshot(`[]`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[13,"a",[5,"1"]],[0,[[13,"a",[5,"2"]],[11,false,[0,[[10,"a"]]]]]],[10,"a"]]]"`,
+      );
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+    }),
+  );
+
+  it(
+    'correctly handles parameter shadowing',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p(`(parameter) => {
+          {
+            const parameter = 2;
+            if (false) {
+              return parameter;
+            }
+          }
+          return parameter;
+        }`),
+        true,
+      );
+
+      expect(params).toMatchInlineSnapshot(`
+        [
+          {
+            "name": "a",
+            "type": "i",
+          },
+        ]
+      `);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[0,[[13,"a",[5,"2"]],[11,false,[0,[[10,"a"]]]]]],[10,"a"]]]"`,
+      );
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+    }),
+  );
 
   it(
     'supports more than 26 names',
