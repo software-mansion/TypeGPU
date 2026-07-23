@@ -1,6 +1,3 @@
-import babel from '@babel/parser';
-import type { ClassDeclaration, ClassProperty, Expression, Node } from '@babel/types';
-import * as acorn from 'acorn';
 import { describe, expect, it } from 'vitest';
 import { transpileFn } from '../src/parsers.ts';
 import { dualTest } from './helpers.ts';
@@ -65,6 +62,33 @@ describe('transpileFn', () => {
         `"[0,[[14,[12,"a",[5,"0"]],[1,"a","<",[5,"10"]],[102,"++","a"],[0,[[10,"a"]]]]]]"`,
       );
       expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+    }),
+  );
+
+  it(
+    'handles weird identifiers',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p(`() => {
+          const a = undefined;
+          const b = Infinity;
+          const c = NaN;
+        }`),
+        true,
+      );
+
+      expect(params).toStrictEqual([]);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[13,"a","b"],[13,"c","d"],[13,"e","f"]]]"`,
+      );
+      // These are identifiers, so they should be in externals.
+      expect(externalNames).toMatchInlineSnapshot(`
+        Map {
+          "b" => "undefined",
+          "d" => "Infinity",
+          "f" => "NaN",
+        }
+      `);
     }),
   );
 

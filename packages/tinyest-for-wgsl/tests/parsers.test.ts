@@ -6,6 +6,33 @@ import { dualTest, parseBabel } from './helpers.ts';
 
 describe('transpileFn', () => {
   it(
+    'handles weird identifiers',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p(`() => {
+          const a = undefined;
+          const b = Infinity;
+          const c = NaN;
+        }`),
+        false,
+      );
+
+      expect(params).toStrictEqual([]);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[13,"a","undefined"],[13,"b","Infinity"],[13,"c","NaN"]]]"`,
+      );
+      // These are identifiers, so they should be in externals.
+      expect(externalNames).toMatchInlineSnapshot(`
+        Map {
+          "undefined" => "undefined",
+          "Infinity" => "Infinity",
+          "NaN" => "NaN",
+        }
+      `);
+    }),
+  );
+
+  it(
     'fails when the input is not a function',
     dualTest((p) => {
       expect(() => transpileFn(p('1 + 2'), false)).toThrow();
