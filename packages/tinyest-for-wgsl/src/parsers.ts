@@ -53,6 +53,9 @@ const Transpilers: Partial<{
       : [NODE.return],
 
   Identifier(ctx, node) {
+    if (ctx.ignoreMinificationDepth > 0) {
+      return node.name;
+    }
     return ctx.minifier.minify(node.name);
   },
 
@@ -95,7 +98,9 @@ const Transpilers: Partial<{
 
     // If the property is not computed, we don't want to register identifiers as external.
     ctx.ignoreExternalDepth++;
+    ctx.ignoreMinificationDepth++;
     const property = transpile(ctx, node.property) as tinyest.Expression;
+    ctx.ignoreMinificationDepth--;
     ctx.ignoreExternalDepth--;
 
     if (typeof property !== 'string') {
@@ -418,6 +423,7 @@ export function transpileFn(rootNode: JsNode, minify = false): TranspilationResu
   const ctx: Context = {
     externalNames: new Set(),
     ignoreExternalDepth: 0,
+    ignoreMinificationDepth: 0,
     visitedNodes: new Set(),
     minifier: minify ? new MinifierImpl() : new MinifierNullImpl(),
     stack: [
@@ -453,6 +459,7 @@ export function transpileNode(node: JsNode, minify = false): tinyest.AnyNode {
   const ctx: Context = {
     externalNames: new Set(),
     ignoreExternalDepth: 0,
+    ignoreMinificationDepth: 0,
     visitedNodes: new Set(),
     minifier: minify ? new MinifierImpl() : new MinifierNullImpl(),
     stack: [

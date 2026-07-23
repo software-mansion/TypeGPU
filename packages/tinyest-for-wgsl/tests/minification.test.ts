@@ -87,7 +87,7 @@ describe('transpileFn', () => {
         ]
       `);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[12,"a"],[10,[1,"param.prop","+",[7,"a","aa"]]]]]"`,
+        `"[0,[[12,"a"],[10,[1,"param.prop","+",[7,"a","field"]]]]]"`,
       );
       expect(externalNames).toMatchInlineSnapshot(`
         Set {

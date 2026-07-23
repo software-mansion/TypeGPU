@@ -26,6 +26,8 @@ export type Context = {
   externalNames: Externals;
   /** Used to signal to identifiers that they should not treat their resolution as possible external uses. */
   ignoreExternalDepth: number;
+  /** Used to signal to identifiers that they should not be minified (they are minified by default). */
+  ignoreMinificationDepth: number;
   /**
    * Keeps the set of nodes visited by `tryFindExternalChain`.
    * This helps optimize code like `ext().x.y.z.t`:
