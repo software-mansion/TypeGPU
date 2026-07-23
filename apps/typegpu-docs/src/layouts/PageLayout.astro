@@ -8,7 +8,6 @@ import {
   topBarBannerReservationScript,
 } from '../components/TopBarBanner/shared';
 import { TOP_BAR_BANNER } from '../components/TopBarBanner/config';
-const { title, theme = 'light' } = Astro.props;
 
 const DEV = (import.meta as any).env.DEV;
 const enableAnalytics = !DEV;
@@ -25,9 +24,16 @@ const reservationScript = firstZone
       TOP_BAR_BANNER.hiddenPaths,
     )
   : '';
+
+interface Props {
+  title: string;
+  forceTheme?: 'light' | 'dark' | undefined;
+}
+
+const { title, forceTheme } = Astro.props;
 ---
 
-<html data-theme={theme}>
+<html data-theme={forceTheme} data-force-theme={forceTheme}>
   <head>
     <title>{title ?? 'TypeGPU'}</title>
     <meta charset="UTF-8" />
@@ -35,9 +41,12 @@ const reservationScript = firstZone
     {reservationScript && <script is:inline set:html={reservationScript} />}
     <link rel="icon" href="/TypeGPU/favicon.svg" />
     <link rel="sitemap" href="/TypeGPU/sitemap-index.xml" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Reddit+Mono&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&family=Reddit+Mono&display=swap"
+      rel="stylesheet"
+    />
     <script is:inline src="/TypeGPU/coi-serviceworker.js"></script>
     <style is:global>
       .bg-blurred-radial-purple {
@@ -55,23 +64,23 @@ const reservationScript = firstZone
       @reference "../tailwind.css";
       @layer base {
         h1 {
-          @apply m-0 lg:text-[3.25rem] md:text-[2.5rem] text-[1.4375rem] leading-[130%];
+          @apply m-0 text-[1.4375rem] leading-[130%] md:text-[2.5rem] lg:text-[3.25rem];
         }
 
         h2 {
-          @apply m-0 lg:text-[3rem] md:text-[2.125rem] text-[1.375rem] leading-[130%];
+          @apply m-0 text-[1.375rem] leading-[130%] md:text-[2.125rem] lg:text-[3rem];
         }
 
         h3 {
-          @apply m-0 lg:text-[2.125rem] md:text-[1.5rem] text-[1.25rem] leading-[140%];
+          @apply m-0 text-[1.25rem] leading-[140%] md:text-[1.5rem] lg:text-[2.125rem];
         }
 
         p {
-          @apply m-0 lg:text-[1.5rem] md:text-[1.25rem] text-[1rem] leading-[150%];
+          @apply m-0 text-[1rem] leading-[150%] md:text-[1.25rem] lg:text-[1.5rem];
         }
 
         .text-micro {
-          @apply lg:text-[1rem] md:text-[0.875rem] text-[0.75rem] leading-[160%];
+          @apply text-[0.75rem] leading-[160%] md:text-[0.875rem] lg:text-[1rem];
         }
       }
 
@@ -80,7 +89,7 @@ const reservationScript = firstZone
       }
 
       [data-theme='dark'] body {
-        background-color: #171724;
+        background-color: #232736;
         color: white;
       }
 
@@ -102,7 +111,7 @@ const reservationScript = firstZone
       enableAnalytics && (
         <script
           is:inline
-          set:html={`  
+          set:html={`
         (function (w, d, s, l, i) {
           w[l] = w[l] || [];
           w[l].push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
@@ -118,8 +127,32 @@ const reservationScript = firstZone
       )
     }
     <!-- End Google Tag Manager -->
+    <script is:inline>
+      if (document.documentElement.dataset.forceTheme === undefined) {
+        /**
+         * Key in `localStorage` to store color theme preference at.
+         * This is the same as Starlight's, syncing it with the theme
+         * in the documentation.
+         */
+        const storageKey = 'starlight-theme';
+
+        /** Get the preferred system color scheme. */
+        const getPreferredColorScheme = () =>
+          matchMedia('(prefers-color-scheme: light)').matches
+            ? 'light'
+            : 'dark';
+
+        // Applying stored theme
+        const storedTheme =
+          typeof localStorage !== 'undefined' &&
+          localStorage.getItem(storageKey);
+        const theme = storedTheme || getPreferredColorScheme();
+        document.documentElement.dataset.theme =
+          theme === 'light' ? 'light' : 'dark';
+      }
+    </script>
   </head>
-  <body>
+  <body class="dark:bg-navy-bg bg-white dark:text-white">
     <!-- Google Tag Manager (noscript) -->
     {
       enableAnalytics && (

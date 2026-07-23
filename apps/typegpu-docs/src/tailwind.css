@@ -34,6 +34,14 @@
   --color-grayscale-20: #ebebed;
   --color-grayscale-0: #fff;
 
+  --color-navy-bg: #232736;
+  --color-navy-100: #001a72;
+  --color-navy-80: #33488e;
+  --color-navy-0: #f8f9ff;
+
+  --color-off-navy: #272b3c;
+  --color-almost-white: #fcfcff;
+
   --color-special-stroke: #2a0a6629;
 
   /* Gradients */
@@ -62,6 +70,15 @@
   --breakpoint-sm: 601px;
   --breakpoint-md: 1025px;
   --breakpoint-lg: 1441px;
+}
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+body {
+  /* causes the font weights to reflect how they appear on Figma */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-smooth: never;
 }
 
 button,

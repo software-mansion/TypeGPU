@@ -6,15 +6,15 @@ const addStyles = {
   statusColor: 'dark:before:bg-green-900 before:bg-green-300',
   borderColor: 'before:border-green-600',
   contentColor: 'before:text-green-600',
-  plusOrMinus: 'before:content-["+"]'
-}
+  plusOrMinus: 'before:content-["+"]',
+};
 
 const delStyles = {
   statusColor: 'dark:before:bg-red-900 before:bg-red-300',
   borderColor: 'before:border-red-600',
   contentColor: 'before:text-red-600',
-  plusOrMinus: 'before:content-["-"]'
-}
+  plusOrMinus: 'before:content-["-"]',
+};
 
 if (!add && !del) {
   throw new Error('You must provide either `add` or `del` prop');
@@ -23,14 +23,16 @@ if (!add && !del) {
 const styles = add ? addStyles : delStyles;
 ---
 
-<div class:list={[
-  "inline-block before:block before:border-l-2 before:pl-1 dark:before:mix-blend-lighten before:mix-blend-multiply",
-  "before:flex before:items-center",
-  "before:absolute before:left-0 before:right-0 before:h-[24.75px]",
-  styles.statusColor,
-  styles.contentColor,
-  styles.borderColor,
-  styles.plusOrMinus,
-]}>
-    <span set:html={content} />
+<div
+  class:list={[
+    'inline-block before:block before:border-l-2 before:pl-1 before:mix-blend-multiply dark:before:mix-blend-lighten',
+    'before:flex before:items-center',
+    'before:absolute before:right-0 before:left-0 before:h-[24.75px]',
+    styles.statusColor,
+    styles.contentColor,
+    styles.borderColor,
+    styles.plusOrMinus,
+  ]}
+>
+  <span set:html={content} />
 </div>
