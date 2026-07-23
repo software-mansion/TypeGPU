@@ -16,7 +16,7 @@ describe('transpileFn', () => {
 
       expect(params).toMatchInlineSnapshot(`[]`);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[13,"a",[5,"1"]],[13,"aa",[5,"2"]],[13,"aaa",[5,"3"]]]]"`,
+        `"[0,[[13,"a",[5,"1"]],[13,"b",[5,"2"]],[13,"c",[5,"3"]]]]"`,
       );
       expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
@@ -51,12 +51,12 @@ describe('transpileFn', () => {
             "type": "i",
           },
           {
-            "name": "aa",
+            "name": "b",
             "type": "i",
           },
         ]
       `);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[1,"aa","+","a"]]]]"`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[1,"b","+","a"]]]]"`);
       expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
   );
@@ -78,7 +78,7 @@ describe('transpileFn', () => {
           {
             "props": [
               {
-                "alias": "aa",
+                "alias": "b",
                 "name": "prop",
               },
             ],
@@ -86,7 +86,7 @@ describe('transpileFn', () => {
           },
         ]
       `);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[1,"a","+","aa"]]]]"`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[1,"a","+","b"]]]]"`);
       expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
   );
@@ -108,11 +108,11 @@ describe('transpileFn', () => {
           {
             "props": [
               {
-                "alias": "aa",
+                "alias": "b",
                 "name": "prop",
               },
               {
-                "alias": "aaa",
+                "alias": "c",
                 "name": "other",
               },
             ],
@@ -120,7 +120,9 @@ describe('transpileFn', () => {
           },
         ]
       `);
-      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[1,[1,"a","+","aa"],"+","aaa"]]]]"`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[10,[1,[1,"a","+","b"],"+","c"]]]]"`,
+      );
       expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
   );
@@ -142,8 +144,44 @@ describe('transpileFn', () => {
         ]
       `);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[12,"aa"],[10,[1,[7,"a","prop"],"+",[7,"aa","field"]]]]]"`,
+        `"[0,[[12,"b"],[10,[1,[7,"a","prop"],"+",[7,"b","field"]]]]]"`,
       );
+      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+    }),
+  );
+
+  // TODO: externals
+  // TODO: shadowing
+
+  it(
+    'supports more than 26 names',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p(`() => { ${Array.from({ length: 100 }, (_, i) => `let v${i};`).join('\n')} }`),
+        true,
+      );
+
+      expect(params).toMatchInlineSnapshot(`[]`);
+      const stringifiedBody = JSON.stringify(body);
+      expect(stringifiedBody).toContain('z');
+      expect(stringifiedBody).toContain('aa');
+      expect(stringifiedBody).toContain('ab');
+      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+    }),
+  );
+
+  it(
+    'omits reserved words',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p(`() => { ${Array.from({ length: 26 + 26 * 26 }, (_, i) => `let v${i};`).join('\n')} }`),
+        true,
+      );
+
+      expect(params).toMatchInlineSnapshot(`[]`);
+      const stringifiedBody = JSON.stringify(body);
+      expect(stringifiedBody).not.toContain('if');
+      expect(stringifiedBody).toContain('aaa');
       expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
   );
