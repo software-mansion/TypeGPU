@@ -1418,6 +1418,28 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
+      it('requires a fit mode for channel writes from a smaller source without a size', ({
+        root,
+      }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        const roughnessMap = {
+          width: 16,
+          height: 16,
+        } as HTMLImageElement;
+
+        expect(() =>
+          common.writeChannels(texture, { r: { source: roughnessMap, from: 'r' } }),
+        ).toThrowErrorMatchingInlineSnapshot(
+          `[Error: Texture write source size 16x16 does not match target size 64x64. Pass fit: 'stretch' to scale the source or fit: 'clip' to copy the overlapping region.]`,
+        );
+      });
+
       it('ignores grouped channel keys (rejected at the type level)', ({ root, device }) => {
         const texture = root
           .createTexture({

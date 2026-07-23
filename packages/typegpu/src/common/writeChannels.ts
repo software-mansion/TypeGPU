@@ -1,6 +1,7 @@
 import type { TgpuTexture } from '../core/texture/texture.ts';
 import { writeTextureChannels } from '../core/texture/textureUtils.ts';
 import {
+  defaultWriteSize,
   normalizeImageWrite,
   validateFit,
   type TextureChannel,
@@ -63,7 +64,13 @@ export function writeChannels(
       throw new Error(`Invalid source channel '${from}'. Expected one of r, g, b, a.`);
     }
 
-    const write: TextureImageWrite = { ...options, source };
+    const write: TextureImageWrite = {
+      ...options,
+      source,
+      size:
+        options?.size ??
+        defaultWriteSize(texture.props.size, texture.props.dimension ?? '2d', options ?? {}),
+    };
     const normalized = normalizeImageWrite(write);
     validateFit(write, normalized);
     writes.push({ ...normalized, from, to });
