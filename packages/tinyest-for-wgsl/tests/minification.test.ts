@@ -18,7 +18,7 @@ describe('transpileFn', () => {
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[0,[[13,"a",[5,"1"]],[13,"b",[5,"2"]],[13,"c",[5,"3"]]]]"`,
       );
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
     }),
   );
 
@@ -32,7 +32,7 @@ describe('transpileFn', () => {
 
       expect(params).toMatchInlineSnapshot(`[]`);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[13,"a",[5,"1"]],[10,"a"]]]"`);
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
     }),
   );
 
@@ -57,7 +57,7 @@ describe('transpileFn', () => {
         ]
       `);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[1,"b","+","a"]]]]"`);
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
     }),
   );
 
@@ -87,7 +87,7 @@ describe('transpileFn', () => {
         ]
       `);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[1,"a","+","b"]]]]"`);
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
     }),
   );
 
@@ -123,7 +123,7 @@ describe('transpileFn', () => {
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[0,[[10,[1,[1,"a","+","b"],"+","c"]]]]"`,
       );
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
     }),
   );
 
@@ -146,11 +146,55 @@ describe('transpileFn', () => {
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[0,[[12,"b"],[10,[1,[7,"a","prop"],"+",[7,"b","field"]]]]]"`,
       );
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
     }),
   );
 
-  // TODO: externals
+  it(
+    "minifies 'this'",
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p(`() => { return this.prop1.prop2; }`),
+        true,
+      );
+
+      expect(params).toMatchInlineSnapshot(`[]`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,"a"]]]"`);
+      expect(externalNames).toMatchInlineSnapshot(`
+        Map {
+          "a" => "this.prop1.prop2",
+        }
+      `);
+    }),
+  );
+
+  it(
+    'minifies externals',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p(`() => {
+          const var1 = ext.value;
+          const var2 = ext.config.multiplier;
+          const var3 = ext.config.zero;
+          const var4 = ext.config.multiplier;
+        }`),
+        true,
+      );
+
+      expect(params).toMatchInlineSnapshot(`[]`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[13,"a","b"],[13,"c","d"],[13,"e","f"],[13,"g","d"]]]"`,
+      );
+      expect(externalNames).toMatchInlineSnapshot(`
+        Map {
+          "b" => "ext.value",
+          "d" => "ext.config.multiplier",
+          "f" => "ext.config.zero",
+        }
+      `);
+    }),
+  );
+
   // TODO: shadowing
 
   it(
@@ -166,7 +210,7 @@ describe('transpileFn', () => {
       expect(stringifiedBody).toContain('z');
       expect(stringifiedBody).toContain('aa');
       expect(stringifiedBody).toContain('ab');
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
     }),
   );
 
@@ -182,7 +226,7 @@ describe('transpileFn', () => {
       const stringifiedBody = JSON.stringify(body);
       expect(stringifiedBody).not.toContain('if');
       expect(stringifiedBody).toContain('aaa');
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
     }),
   );
 });

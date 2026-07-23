@@ -7,7 +7,7 @@ export type Scope = {
   declaredNames: string[];
 };
 
-export type Externals = Set<string>;
+export type Externals = Map<string, string>;
 
 export interface Minifier {
   /**

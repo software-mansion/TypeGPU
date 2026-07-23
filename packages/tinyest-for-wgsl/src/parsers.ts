@@ -309,8 +309,9 @@ function transpile(ctx: Context, node: JsNode): tinyest.AnyNode {
     // add it to externals and swap the AST node for an identifier.
     const externalChain = tryFindExternalChain(ctx, node);
     if (externalChain) {
-      ctx.externalNames.add(externalChain);
-      return externalChain;
+      const minified = ctx.minifier.minify(externalChain);
+      ctx.externalNames.set(minified, externalChain);
+      return minified;
     }
   }
 
@@ -447,7 +448,7 @@ export function transpileNode(node: JsNode, minify = false): tinyest.AnyNode {
 }
 
 class ContextImpl implements Context {
-  readonly externalNames: Set<string> = new Set();
+  readonly externalNames: Map<string, string> = new Map();
   ignoreExternalDepth = 0;
   ignoreMinificationDepth = 0;
   readonly visitedNodes: Set<babel.MemberExpression | acorn.MemberExpression> = new Set();

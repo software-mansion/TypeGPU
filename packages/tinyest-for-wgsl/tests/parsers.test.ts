@@ -19,7 +19,7 @@ describe('transpileFn', () => {
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
     }),
   );
 
@@ -30,7 +30,7 @@ describe('transpileFn', () => {
 
       expect(params).toStrictEqual([]);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[]]"`);
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
     }),
   );
 
@@ -47,8 +47,8 @@ describe('transpileFn', () => {
         `"[0,[[10,[1,[1,"a","+","b"],"-","c"]]]]"`,
       );
       expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "c",
+        Map {
+          "c" => "c",
         }
       `);
     }),
@@ -70,8 +70,8 @@ describe('transpileFn', () => {
       );
       // Only 'c' is external, as 'a' is declared in the same scope.
       expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "c",
+        Map {
+          "c" => "c",
         }
       `);
     }),
@@ -95,8 +95,8 @@ describe('transpileFn', () => {
       );
       // Only 'c' is external, as 'a' is declared in the outer scope.
       expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "c",
+        Map {
+          "c" => "c",
         }
       `);
     }),
@@ -111,8 +111,8 @@ describe('transpileFn', () => {
       expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,"external.outside.prop"]]]"`);
       // Only 'external' is external.
       expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "external.outside.prop",
+        Map {
+          "external.outside.prop" => "external.outside.prop",
         }
       `);
     }),
@@ -143,7 +143,7 @@ describe('transpileFn', () => {
         },
       ]);
 
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
     }),
   );
 
@@ -189,7 +189,7 @@ describe('transpileFn', () => {
         },
       ]);
 
-      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
     }),
   );
 
@@ -214,8 +214,8 @@ describe('transpileFn', () => {
       );
 
       expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "a",
+        Map {
+          "a" => "a",
         }
       `);
     }),
@@ -236,8 +236,8 @@ describe('transpileFn', () => {
       );
 
       expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "a",
+        Map {
+          "a" => "a",
         }
       `);
     }),
@@ -270,19 +270,19 @@ describe('transpileFn', () => {
       );
 
       expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "ext.p",
-          "ext.q.a",
-          "ext.q.b",
-          "ext.r.a",
-          "ext.r",
-          "ext.s",
-          "ext.s.a",
-          "ext.t.fn",
-          "ext.t.comp",
-          "ext.t",
-          "ext.u",
-          "ext",
+        Map {
+          "ext.p" => "ext.p",
+          "ext.q.a" => "ext.q.a",
+          "ext.q.b" => "ext.q.b",
+          "ext.r.a" => "ext.r.a",
+          "ext.r" => "ext.r",
+          "ext.s" => "ext.s",
+          "ext.s.a" => "ext.s.a",
+          "ext.t.fn" => "ext.t.fn",
+          "ext.t.comp" => "ext.t.comp",
+          "ext.t" => "ext.t",
+          "ext.u" => "ext.u",
+          "ext" => "ext",
         }
       `);
 
@@ -303,8 +303,8 @@ describe('transpileFn', () => {
       );
 
       expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "ext",
+        Map {
+          "ext" => "ext",
         }
       `);
     }),
@@ -323,10 +323,10 @@ describe('transpileFn', () => {
       );
 
       expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "ext.value",
-          "ext.config.multiplier",
-          "ext.config.zero",
+        Map {
+          "ext.value" => "ext.value",
+          "ext.config.multiplier" => "ext.config.multiplier",
+          "ext.config.zero" => "ext.config.zero",
         }
       `);
 
@@ -358,8 +358,8 @@ describe('transpileFn', () => {
       const { externalNames } = transpileFn(fn);
 
       expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "this.#v",
+        Map {
+          "this.#v" => "this.#v",
         }
       `);
     }),
