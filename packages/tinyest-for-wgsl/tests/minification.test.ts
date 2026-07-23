@@ -128,7 +128,7 @@ describe('transpileFn', () => {
   );
 
   it(
-    'does not minify struct params',
+    'does not minify struct props',
     dualTest((p) => {
       const { params, body, externalNames } = transpileFn(
         p('(param) => { let struct; return param.prop + struct.field; }'),
@@ -145,6 +145,29 @@ describe('transpileFn', () => {
       `);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[0,[[12,"b"],[10,[1,[7,"a","prop"],"+",[7,"b","field"]]]]]"`,
+      );
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+    }),
+  );
+
+  it(
+    'does not minify struct keys',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p('(param) => { let struct = { field: 1 }; return struct.field; }'),
+        true,
+      );
+
+      expect(params).toMatchInlineSnapshot(`
+        [
+          {
+            "name": "a",
+            "type": "i",
+          },
+        ]
+      `);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[12,"b",[104,{"field":[5,"1"]}]],[10,[7,"b","field"]]]]"`,
       );
       expect(externalNames).toMatchInlineSnapshot(`Map {}`);
     }),
@@ -276,6 +299,33 @@ describe('transpileFn', () => {
         `"[0,[[0,[[13,"a",[5,"2"]],[11,false,[0,[[10,"a"]]]]]],[10,"a"]]]"`,
       );
       expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+    }),
+  );
+
+  it(
+    'correctly handles external shadowing',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p(`() => {
+          const variable = external;
+          {
+            const external = 1;
+            return external;
+          }
+          return external;
+        }`),
+        true,
+      );
+
+      expect(params).toMatchInlineSnapshot(`[]`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[13,"a","b"],[0,[[13,"b",[5,"1"]],[10,"b"]]],[10,"b"]]]"`,
+      );
+      expect(externalNames).toMatchInlineSnapshot(`
+        Map {
+          "b" => "external",
+        }
+      `);
     }),
   );
 

@@ -239,10 +239,12 @@ const Transpilers: Partial<{
       }
 
       ctx.ignoreExternalDepth++;
+      ctx.ignoreMinificationDepth++;
       const key =
         prop.key.type === 'Identifier'
           ? (transpile(ctx, prop.key) as string)
           : String(prop.key.value);
+      ctx.ignoreMinificationDepth--;
       ctx.ignoreExternalDepth--;
       const value = transpile(ctx, prop.value) as tinyest.Expression;
 
