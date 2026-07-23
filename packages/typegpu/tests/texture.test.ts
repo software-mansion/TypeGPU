@@ -39,10 +39,17 @@ function gpuCallTimeline(fixtures: {
   record(device.mock.createRenderPipeline, () => 'createRenderPipeline');
   record(device.mock.createBindGroup, () => 'createBindGroup');
   record(device.mock.createCommandEncoder, () => 'createCommandEncoder');
+  record(commandEncoder.mock.copyTextureToTexture, (args) => {
+    const destination = args[1] as GPUTexelCopyTextureInfo;
+    const origin = destination.origin as GPUOrigin3DDict | undefined;
+    return `copyTextureToTexture(z=${origin?.z ?? 0})`;
+  });
   record(commandEncoder.mock.beginRenderPass, (args) => {
     const [attachment] = (args[0] as { colorAttachments: GPURenderPassColorAttachment[] })
       .colorAttachments;
-    return `beginRenderPass(${attachment?.loadOp})`;
+    const depthSlice =
+      attachment?.depthSlice !== undefined ? `, depthSlice ${attachment.depthSlice}` : '';
+    return `beginRenderPass(${attachment?.loadOp}${depthSlice})`;
   });
   record(
     renderPassEncoder.mock.setViewport,
@@ -894,6 +901,123 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
             "destroyTexture(32x32)",
           ]
         `);
+      });
+
+      it('stages image writes to 3d textures and copies them into depth slices', ({
+        root,
+        device,
+        commandEncoder,
+        renderPassEncoder,
+      }) => {
+        const texture = root
+          .createTexture({
+            size: [32, 32, 2],
+            format: 'rgba8unorm',
+            dimension: '3d',
+          })
+          .$usage('render');
+
+        const mockImage = {
+          width: 32,
+          height: 32,
+        } as HTMLImageElement;
+
+        texture.write([mockImage, mockImage]);
+
+        expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
+          .toMatchInlineSnapshot(`
+            [
+              "createTexture(32x32)",
+              "createTexture(32x32)",
+              "copyExternalImageToTexture",
+              "createCommandEncoder",
+              "copyTextureToTexture(z=0)",
+              "submit",
+              "destroyTexture(32x32)",
+              "createTexture(32x32)",
+              "copyExternalImageToTexture",
+              "createCommandEncoder",
+              "copyTextureToTexture(z=1)",
+              "submit",
+              "destroyTexture(32x32)",
+            ]
+          `);
+      });
+
+      it('renders into depth slices when resampling into a 3d texture', ({
+        root,
+        device,
+        commandEncoder,
+        renderPassEncoder,
+      }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64, 2],
+            format: 'rgba8unorm',
+            dimension: '3d',
+          })
+          .$usage('render');
+
+        const mockImage = {
+          width: 32,
+          height: 32,
+        } as HTMLImageElement;
+
+        texture.write([mockImage, mockImage], { fit: 'stretch' });
+
+        expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
+          .toMatchInlineSnapshot(`
+            [
+              "createTexture(64x64)",
+              "createTexture(32x32)",
+              "copyExternalImageToTexture",
+              "createRenderPipeline",
+              "createBindGroup",
+              "createCommandEncoder",
+              "beginRenderPass(clear, depthSlice 0)",
+              "setViewport(0, 0, 64, 64)",
+              "draw",
+              "submit",
+              "destroyTexture(32x32)",
+              "createTexture(32x32)",
+              "copyExternalImageToTexture",
+              "createBindGroup",
+              "createCommandEncoder",
+              "beginRenderPass(clear, depthSlice 1)",
+              "setViewport(0, 0, 64, 64)",
+              "draw",
+              "submit",
+              "destroyTexture(32x32)",
+            ]
+          `);
+      });
+
+      it('accounts for mip-scaled depth when writing image arrays to 3d textures', ({
+        root,
+        device,
+      }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64, 4],
+            format: 'rgba8unorm',
+            dimension: '3d',
+            mipLevelCount: 2,
+          })
+          .$usage('render');
+
+        const mockImage = {
+          width: 32,
+          height: 32,
+        } as HTMLImageElement;
+
+        const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        texture.write([mockImage, mockImage, mockImage], { mipLevel: 1 });
+
+        expect(consoleSpy).toHaveBeenCalledWith(
+          'Too many image sources provided. Texture has 2 layers, got 3 sources starting at layer 0. Extra sources will be ignored.',
+        );
+        expect(device.mock.queue.copyExternalImageToTexture).toHaveBeenCalledTimes(2);
+        consoleSpy.mockRestore();
       });
 
       it('throws when passing a Blob to synchronous write', ({ root }) => {

@@ -521,7 +521,11 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     const options =
       typeof optionsOrMipLevel === 'number' ? {} : (optionsOrMipLevel as TextureWriteOptions);
     const sources = Array.isArray(source) ? source : [source];
-    const layerCount = this.props.size[2] ?? 1;
+    const layerCount = mipLevelSize(
+      this.props.size,
+      options.mipLevel ?? 0,
+      this.props.dimension ?? '2d',
+    )[2];
     const baseLayer = options.origin?.[2] ?? 0;
 
     if (baseLayer + sources.length > layerCount) {

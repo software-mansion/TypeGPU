@@ -177,6 +177,7 @@ type BlitOptions = {
   encoder?: GPUCommandEncoder;
   loadOp?: GPULoadOp;
   viewport?: { x: number; y: number; width: number; height: number };
+  depthSlice?: number;
 };
 
 function getBlitPipeline(
@@ -248,6 +249,7 @@ function blit(options: BlitOptions): void {
     colorAttachments: [
       {
         view: destination,
+        ...(options.depthSlice !== undefined && { depthSlice: options.depthSlice }),
         loadOp: options.loadOp ?? 'clear',
         storeOp: 'store',
       },
@@ -344,16 +346,41 @@ export function copyImageToTexture(
   texture: GPUTexture,
   write: TextureImageWriteLayout,
 ): void {
+  if (texture.dimension !== '3d') {
+    device.queue.copyExternalImageToTexture(
+      sourceCopyInfo(write),
+      {
+        texture,
+        mipLevel: write.mipLevel,
+        origin: write.targetOrigin,
+        ...destinationCopyOptions(write),
+      },
+      write.targetSize,
+    );
+    return;
+  }
+
+  // copyExternalImageToTexture only accepts 2d destinations, so 3d writes stage through a 2d texture
+  const stagingTexture = device.createTexture({
+    size: [write.targetSize.width, write.targetSize.height],
+    format: texture.format,
+    usage: GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC | GPUTextureUsage.RENDER_ATTACHMENT,
+  });
+
   device.queue.copyExternalImageToTexture(
     sourceCopyInfo(write),
-    {
-      texture,
-      mipLevel: write.mipLevel,
-      origin: write.targetOrigin,
-      ...destinationCopyOptions(write),
-    },
-    write.targetSize,
+    { texture: stagingTexture, ...destinationCopyOptions(write) },
+    [write.targetSize.width, write.targetSize.height],
   );
+
+  const encoder = device.createCommandEncoder();
+  encoder.copyTextureToTexture(
+    { texture: stagingTexture },
+    { texture, mipLevel: write.mipLevel, origin: write.targetOrigin },
+    [write.targetSize.width, write.targetSize.height, 1],
+  );
+  device.queue.submit([encoder.finish()]);
+  stagingTexture.destroy();
 }
 
 function validateBlitFormat(
@@ -396,6 +423,20 @@ function targetViewDescriptor(mipLevel: number, arrayLayer: number): GPUTextureV
     baseArrayLayer: arrayLayer,
     arrayLayerCount: 1,
   };
+}
+
+function targetBlitAttachment(
+  texture: GPUTexture,
+  mipLevel: number,
+  layer: number,
+): { view: GPUTextureView; depthSlice?: number } {
+  if (texture.dimension === '3d') {
+    return {
+      view: texture.createView({ dimension: '3d', baseMipLevel: mipLevel, mipLevelCount: 1 }),
+      depthSlice: layer,
+    };
+  }
+  return { view: texture.createView(targetViewDescriptor(mipLevel, layer)) };
 }
 
 function targetViewport(write: TextureImageWriteLayout): {
@@ -470,21 +511,21 @@ export function resampleImages(
     return;
   }
 
-  if (targetTexture.dimension !== '2d') {
-    throw new Error('Resampling only supports 2D textures.');
-  }
-
   const { filterable } = validateBlitFormat(device, targetTexture.format, 'resample');
 
   for (const write of writes) {
     const inputTexture = createStagedImageTexture(device, write, targetTexture.format);
+    const { view, depthSlice } = targetBlitAttachment(
+      targetTexture,
+      write.mipLevel,
+      write.targetOrigin.z,
+    );
 
     blit({
       device,
       source: inputTexture.createView(),
-      destination: targetTexture.createView(
-        targetViewDescriptor(write.mipLevel, write.targetOrigin.z),
-      ),
+      destination: view,
+      ...(depthSlice !== undefined && { depthSlice }),
       format: targetTexture.format,
       filterable,
       sampleType: 'float',

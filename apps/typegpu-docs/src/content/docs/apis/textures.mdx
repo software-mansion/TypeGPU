@@ -176,7 +176,7 @@ texture.write(tileBitmap, { origin: [128, 64], fit: 'clip' });
 ```
 
 :::note
-Under the hood, `fit: 'stretch'` runs a render-pass blit, so the destination has to be a 2D texture with a renderable, float-sampleable format. `fit: 'clip'` is a plain texel copy.
+Under the hood, `fit: 'stretch'` runs a render-pass blit, so the destination has to have a renderable, float-sampleable format. `fit: 'clip'` is a plain texel copy.
 :::
 
 ### Writing blobs
@@ -220,7 +220,23 @@ texture.write([layer0, layer1, layer2]);
 
 Each image has to match the layer size, unless you pass a `fit` mode.
 
-The same form works for 3D textures (created with `dimension: '3d'`) - each image in the array fills one depth slice.
+The same form works for 3D textures (created with `dimension: '3d'`) - each image in the array fills one depth slice:
+
+```ts twoslash
+import { tgpu } from 'typegpu';
+const root = await tgpu.init();
+declare const slice0: ImageBitmap;
+declare const slice1: ImageBitmap;
+declare const slice2: ImageBitmap;
+// ---cut---
+const texture3d = root.createTexture({
+  size: [256, 256, 3],
+  format: 'rgba8unorm',
+  dimension: '3d',
+}).$usage('sampled', 'render');
+
+texture3d.write([slice0, slice1, slice2]);
+```
 
 ### Writing raw binary data
 
