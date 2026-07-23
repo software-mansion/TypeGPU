@@ -2,7 +2,7 @@ import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import { FuncParameterType } from 'tinyest';
-import type { Context, JsNode, TranspilationResult } from './types.ts';
+import type { Context, JsNode, Minifier, Scope, TranspilationResult } from './types.ts';
 import { tryFindExternalChain } from './externals.ts';
 import { MinifierImpl, MinifierNullImpl } from './minifier.ts';
 
@@ -420,35 +420,20 @@ export function extractFunctionParts(rootNode: JsNode): {
 export function transpileFn(rootNode: JsNode, minify = false): TranspilationResult {
   const { params, body } = extractFunctionParts(rootNode);
 
-  const ctx: Context = {
-    externalNames: new Set(),
-    ignoreExternalDepth: 0,
-    ignoreMinificationDepth: 0,
-    visitedNodes: new Set(),
-    minifier: minify ? new MinifierImpl() : new MinifierNullImpl(),
-    stack: [
-      {
-        declaredNames: params.flatMap((param) =>
-          param.type === FuncParameterType.identifier
-            ? param.name
-            : param.props.map((prop) => prop.alias),
-        ),
-      },
-    ],
-  };
+  const ctx: Context = new ContextImpl(minify, params);
 
   const tinyestBody = transpile(ctx, body);
 
   if (body.type === 'BlockStatement') {
     return {
-      params,
+      params: ctx.params,
       body: tinyestBody as tinyest.Block,
       externalNames: ctx.externalNames,
     };
   }
 
   return {
-    params,
+    params: ctx.params,
     body: [NODE.block, [[NODE.return, tinyestBody as tinyest.Expression]]],
     externalNames: ctx.externalNames,
   };
@@ -456,18 +441,37 @@ export function transpileFn(rootNode: JsNode, minify = false): TranspilationResu
 
 // TODO: make this parameter mandatory
 export function transpileNode(node: JsNode, minify = false): tinyest.AnyNode {
-  const ctx: Context = {
-    externalNames: new Set(),
-    ignoreExternalDepth: 0,
-    ignoreMinificationDepth: 0,
-    visitedNodes: new Set(),
-    minifier: minify ? new MinifierImpl() : new MinifierNullImpl(),
-    stack: [
-      {
-        declaredNames: [],
-      },
-    ],
-  };
+  const ctx: Context = new ContextImpl(minify);
 
   return transpile(ctx, node);
+}
+
+class ContextImpl implements Context {
+  readonly externalNames: Set<string> = new Set();
+  ignoreExternalDepth = 0;
+  ignoreMinificationDepth = 0;
+  readonly visitedNodes: Set<babel.MemberExpression | acorn.MemberExpression> = new Set();
+  readonly minifier: Minifier;
+  readonly stack: Scope[] = [];
+  readonly params: tinyest.FuncParameter[];
+
+  constructor(minify: boolean, params?: tinyest.FuncParameter[]) {
+    this.minifier = minify ? new MinifierImpl() : new MinifierNullImpl();
+    this.params = (params ?? []).map((param) => {
+      if (param.type === FuncParameterType.identifier) {
+        return { ...param, name: this.minifier.minify(param.name) };
+      }
+      return {
+        ...param,
+        props: param.props.map((prop) => ({ ...prop, alias: this.minifier.minify(prop.alias) })),
+      };
+    });
+
+    const declaredNames = this.params.flatMap((param) =>
+      param.type === FuncParameterType.identifier
+        ? param.name
+        : param.props.map((prop) => prop.alias),
+    );
+    this.stack.push({ declaredNames });
+  }
 }

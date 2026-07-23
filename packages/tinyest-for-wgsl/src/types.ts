@@ -36,6 +36,7 @@ export type Context = {
    */
   visitedNodes: Set<babel.MemberExpression | acorn.MemberExpression>;
   stack: Scope[];
+  params: tinyest.FuncParameter[];
   /**
    * Used to transform identifiers.
    */

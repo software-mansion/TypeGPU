@@ -49,24 +49,19 @@ describe('transpileFn', () => {
       expect(params).toMatchInlineSnapshot(`
         [
           {
-            "name": "param1",
+            "name": "a",
             "type": "i",
           },
           {
-            "name": "param2",
+            "name": "aa",
             "type": "i",
           },
         ]
       `);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[10,[1,"param2","+","param1"]]]]"`,
+        `"[0,[[10,[1,"aa","+","a"]]]]"`,
       );
-      expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "param2",
-          "param1",
-        }
-      `);
+      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
   );
 
@@ -81,19 +76,15 @@ describe('transpileFn', () => {
       expect(params).toMatchInlineSnapshot(`
         [
           {
-            "name": "param",
+            "name": "a",
             "type": "i",
           },
         ]
       `);
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
-        `"[0,[[12,"a"],[10,[1,"param.prop","+",[7,"a","field"]]]]]"`,
+        `"[0,[[12,"aa"],[10,[1,[7,"a","prop"],"+",[7,"aa","field"]]]]]"`,
       );
-      expect(externalNames).toMatchInlineSnapshot(`
-        Set {
-          "param.prop",
-        }
-      `);
+      expect(externalNames).toMatchInlineSnapshot(`Set {}`);
     }),
   );
 });
