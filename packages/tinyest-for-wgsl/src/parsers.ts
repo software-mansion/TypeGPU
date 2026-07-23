@@ -417,8 +417,7 @@ export function extractFunctionParts(rootNode: JsNode): {
   };
 }
 
-// TODO: make this parameter mandatory
-export function transpileFn(rootNode: JsNode, minify = false): TranspilationResult {
+export function transpileFn(rootNode: JsNode, minify: boolean): TranspilationResult {
   const { params, body } = extractFunctionParts(rootNode);
 
   const ctx: Context = new ContextImpl(minify, params);
