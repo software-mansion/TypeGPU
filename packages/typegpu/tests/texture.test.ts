@@ -1346,7 +1346,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
-      it('rejects grouped channel keys for now', ({ root }) => {
+      it('ignores grouped channel keys (rejected at the type level)', ({ root, device }) => {
         const texture = root
           .createTexture({
             size: [32, 32],
@@ -1359,11 +1359,10 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           height: 32,
         } as HTMLImageElement;
 
-        expect(() =>
-          common.writeChannels(texture, { rg: { source: roughnessMap, from: 'r' } } as never),
-        ).toThrowErrorMatchingInlineSnapshot(
-          `[Error: Texture channel writes only support single channels: r, g, b, a.]`,
-        );
+        common.writeChannels(texture, { rg: { source: roughnessMap, from: 'r' } } as never);
+
+        expect(device.mock.queue.copyExternalImageToTexture).not.toHaveBeenCalled();
+        expect(device.mock.queue.submit).not.toHaveBeenCalled();
       });
 
       it('calls device methods when copyFrom is called', ({ root, device }) => {
