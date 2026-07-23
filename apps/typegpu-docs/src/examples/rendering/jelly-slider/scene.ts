@@ -660,6 +660,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   const digitsTexture = digitsProvider.digitTextureAtlas.createView(d.texture2dArray(d.f32));
 
   let qualityScale = 0.5;
+  let [prevCanvasWidth, prevCanvasHeight] = [canvas.width, canvas.height];
   let [width, height] = [canvas.width * qualityScale, canvas.height * qualityScale];
 
   let textures = createTextures(root, width, height);
@@ -745,8 +746,24 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   }
   let bindGroups = createBindGroups();
 
+  function onResize() {
+    [prevCanvasWidth, prevCanvasHeight] = [canvas.width, canvas.height];
+    [width, height] = [canvas.width * qualityScale, canvas.height * qualityScale];
+    camera.updateProjection(Math.PI / 4, width, height);
+    textures = createTextures(root, width, height);
+    backgroundTexture = createBackgroundTexture(root, width, height);
+    taaResolver.resize(width, height);
+    frameCount = 0;
+
+    bindGroups = createBindGroups();
+  }
+
   let animationFrameHandle: number;
   function render(timestamp: number) {
+    if (canvas.width !== prevCanvasWidth || canvas.height !== prevCanvasHeight) {
+      onResize();
+    }
+
     frameCount++;
     camera.jitter();
     const deltaTime = Math.min(
@@ -856,16 +873,6 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
       }
 
       return resolutionScale;
-    },
-    onResize() {
-      [width, height] = [canvas.width * qualityScale, canvas.height * qualityScale];
-      camera.updateProjection(Math.PI / 4, width, height);
-      textures = createTextures(root, width, height);
-      backgroundTexture = createBackgroundTexture(root, width, height);
-      taaResolver.resize(width, height);
-      frameCount = 0;
-
-      bindGroups = createBindGroups();
     },
     onCleanup() {
       cancelAnimationFrame(animationFrameHandle);

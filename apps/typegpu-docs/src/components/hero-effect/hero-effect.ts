@@ -68,18 +68,17 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     return d.vec4f(std.saturate(diffuse.mul(att).add(ambient)), 1);
   });
 
-  const renderPipeline = root
-    .createRenderPipeline({
-      attribs: modelVertexLayout.attrib,
-      vertex: vertexFn,
-      fragment: fragmentFn,
-      targets: { format: presentationFormat },
-      depthStencil: {
-        format: 'depth24plus',
-        depthWriteEnabled: true,
-        depthCompare: 'less',
-      },
-    });
+  const renderPipeline = root.createRenderPipeline({
+    attribs: modelVertexLayout.attrib,
+    vertex: vertexFn,
+    fragment: fragmentFn,
+    targets: { format: presentationFormat },
+    depthStencil: {
+      format: 'depth24plus',
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+    },
+  });
 
   const CirclePattern = d.struct({
     color: d.vec4f,
@@ -170,9 +169,9 @@ export async function initHeroEffect(options: HeroEffectOptions) {
   const postProcessPipeline = root.createRenderPipeline({
     vertex: fullScreenTriangle,
 
-          fragment: postProcessFragmentFn,
-            targets: { format: presentationFormat },
-          });
+    fragment: postProcessFragmentFn,
+    targets: { format: presentationFormat },
+  });
 
   let running = true;
   const frame = (timestamp: number) => {
@@ -262,6 +261,6 @@ export async function initHeroEffect(options: HeroEffectOptions) {
   return {
     onCleanup() {
       running = false;
-    }
+    },
   };
 }

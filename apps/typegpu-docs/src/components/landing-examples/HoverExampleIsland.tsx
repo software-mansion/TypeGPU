@@ -1,54 +1,41 @@
-import type { TgpuRoot } from 'typegpu';
-import { useConfigureContext, useRoot } from '@typegpu/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type {
-  PointerEvent as ReactPointerEvent,
-  TouchEvent as ReactTouchEvent,
-} from 'react';
 import { useAtom } from 'jotai';
-import { activeExampleAtom } from '../../utils/examples/activeExampleAtom.ts';
-import { isGPUSupported } from '../../utils/isGPUSupported.ts';
+import { useRootOrError } from '@typegpu/react';
+import React, { Suspense, useCallback, useRef } from 'react';
+import type { PointerEvent as ReactPointerEvent, TouchEvent as ReactTouchEvent } from 'react';
 
-interface ExampleState {
-  onCleanup(): void;
-}
+import ExternalOpenSvg from '../../assets/externalopen.svg';
+import { activeExampleAtom } from '../../utils/examples/activeExampleAtom.ts';
 
 interface HoverExampleIslandProps {
   exampleKey: string;
-  setup: (root: TgpuRoot, context: GPUCanvasContext) => Promise<ExampleState>;
+  title: string;
+  previewImageSrc: string;
+  liveComponent: React.ReactNode;
 }
 
 export default function HoverExampleIsland({
   exampleKey,
-  setup,
+  title,
+  previewImageSrc,
+  liveComponent,
 }: HoverExampleIslandProps) {
-  const root = useRoot();
+  const root = useRootOrError();
+  const webgpuSupported = root.status === 'fulfilled';
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const cleanupRef = useRef<(() => void) | undefined>(undefined);
-  const { ctxRef, ref: canvasRef } = useConfigureContext({
-    alphaMode: 'premultiplied',
-  });
   const twoFingerActiveRef = useRef(false);
 
   const [activeExample, setActiveExample] = useAtom(activeExampleAtom);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string>();
 
   const isActive = activeExample === exampleKey;
 
-  const reset = useCallback(() => {
-    cleanupRef.current?.();
-    cleanupRef.current = undefined;
-  }, []);
+  const activate = useCallback(() => setActiveExample(exampleKey), [exampleKey]);
+  const deactivate = useCallback(
+    () => setActiveExample((prev) => (prev === exampleKey ? null : prev)),
+    [exampleKey],
+  );
 
-  const activate = () => setActiveExample(exampleKey);
-  const deactivate = () =>
-    setActiveExample((prev) => (prev === exampleKey ? null : prev));
-
-  const handlePointerEnter = (e: ReactPointerEvent) =>
-    e.pointerType !== 'touch' && activate();
-  const handlePointerLeave = (e: ReactPointerEvent) =>
-    e.pointerType !== 'touch' && deactivate();
+  const handlePointerEnter = (e: ReactPointerEvent) => e.pointerType !== 'touch' && activate();
+  const handlePointerLeave = (e: ReactPointerEvent) => e.pointerType !== 'touch' && deactivate();
   const handleTouchStart = (e: ReactTouchEvent) => {
     if (e.touches.length >= 2) {
       e.preventDefault();
@@ -68,98 +55,60 @@ export default function HoverExampleIsland({
     twoFingerActiveRef.current = false;
   };
 
-  useEffect(() => {
-    const element = rootRef.current;
-    if (!element) return;
-
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) {
-        twoFingerActiveRef.current = false;
-        deactivate();
-      }
-    });
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  });
-
-  useEffect(() => {
-    const overlay = rootRef.current?.closest('[data-hover-overlay]');
-    if (!overlay) return;
-
-    overlay.toggleAttribute('data-active', isActive);
-    return () => overlay.removeAttribute('data-active');
-  }, [isActive]);
-
-  useEffect(() => {
-    if (!isActive) {
-      reset();
-      setIsLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        setIsLoading(true);
-        setError(undefined);
-
-        if (!isGPUSupported) {
-          throw new Error('WebGPU is not enabled/supported in this browser.');
-        }
-
-        if (!ctxRef.current) return;
-
-        const { onCleanup } = await setup(root, ctxRef.current);
-
-        if (cancelled) {
-          onCleanup();
-          return;
-        }
-
-        cleanupRef.current = onCleanup;
-      } catch (err) {
-        console.error(err);
-        setError(
-          err instanceof Error ? err.message : 'Failed to load example.',
-        );
-        reset();
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      reset();
-    };
-  }, [isActive, reset, root, setup]);
-
   return (
     <div
-      ref={rootRef}
+      className="group relative aspect-square overflow-hidden"
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchCancel}
-      className="relative h-full w-full overflow-hidden"
+      style={{ touchAction: 'pan-x pan-y' }}
     >
-      <canvas ref={canvasRef} className="h-full w-full" />
-      {error ? (
-        <p className="absolute inset-0 flex items-center justify-center text-center text-sm font-medium text-white">
-          {error}
-        </p>
-      ) : null}
-      {isLoading ? (
-        <div className="absolute inset-0 flex h-full w-full items-center justify-center">
-          <span className="animate-pulse text-center text-xs font-medium tracking-widest text-white/60 uppercase">
-            Loading...
-          </span>
+      <a
+        href={`/TypeGPU/examples/#example=${exampleKey}`}
+        className="absolute inset-x-6 bottom-6 z-10 flex h-16 items-center justify-between gap-3 bg-white px-4 text-blue-900 no-underline"
+      >
+        <span className="max-w-[70%] truncate text-sm font-medium">{title}</span>
+        <img
+          src={ExternalOpenSvg.src}
+          alt="Open example"
+          className="h-6 w-6 flex-shrink-0"
+          loading="lazy"
+        />
+      </a>
+
+      <img
+        src={previewImageSrc}
+        alt={title}
+        className="h-full w-full object-cover transition duration-300 ease-out"
+      />
+
+      {webgpuSupported && (
+        <div
+          data-active={isActive}
+          className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition duration-300 ease-out group-hover:pointer-events-auto group-hover:opacity-100 data-[active=true]:pointer-events-auto data-[active=true]:opacity-100"
+        >
+          <div className="pointer-events-auto h-full w-full backdrop-blur">
+            <div ref={rootRef} className="relative h-full w-full overflow-hidden">
+              <Suspense fallback={<></>}>{isActive ? liveComponent : null}</Suspense>
+              {/*{error ? (
+              <p className="absolute inset-0 flex items-center justify-center text-center text-sm font-medium text-white">
+                {error}
+              </p>
+            ) : null}
+            {isLoading ? (
+              <div className="absolute inset-0 flex h-full w-full items-center justify-center">
+                <span className="animate-pulse text-center text-xs font-medium tracking-widest text-white/60 uppercase">
+                  Loading...
+                </span>
+              </div>
+            ) : null}*/}
+            </div>
+          </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
