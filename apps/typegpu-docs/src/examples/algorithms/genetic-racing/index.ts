@@ -66,7 +66,7 @@ const carSpriteTexture = root
     format: 'rgba8unorm',
   })
   .$usage('sampled', 'render');
-carSpriteTexture.write(carBitmap);
+carSpriteTexture.write(carBitmap, { fit: 'stretch' });
 const carSpriteView = carSpriteTexture.createView();
 
 const linearSampler = root.createSampler({
