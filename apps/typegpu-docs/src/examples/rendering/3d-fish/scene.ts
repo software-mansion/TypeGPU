@@ -44,9 +44,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     },
   } as const;
 
-  const spinnerBackground = document.querySelector(
-    '.spinner-background',
-  ) as HTMLDivElement | null;
+  const spinnerBackground = document.querySelector('.spinner-background') as HTMLDivElement | null;
 
   // https://sketchfab.com/3d-models/animated-low-poly-fish-64adc2e5a4be471e8279532b9610c878
   const fishModel = await loadModel(
@@ -92,31 +90,29 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   const buffer0mutable = fishDataBuffers[0].as('mutable');
   const buffer1mutable = fishDataBuffers[1].as('mutable');
   const seedUniform = root.createUniform(d.f32);
-  const randomizeFishPositionsPipeline = root.createGuardedComputePipeline(
-    (x) => {
-      'use gpu';
-      randf.seed2(d.vec2f(x, seedUniform.$));
-      const data = ModelData({
-        position: d.vec3f(
-          randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
-          randf.sample() * p.aquariumSize.y - p.aquariumSize.y / 2,
-          randf.sample() * p.aquariumSize.z - p.aquariumSize.z / 2,
-        ),
-        direction: d.vec3f(
-          randf.sample() * 0.1 - 0.05,
-          randf.sample() * 0.1 - 0.05,
-          randf.sample() * 0.1 - 0.05,
-        ),
-        scale: p.fishModelScale * (1 + (randf.sample() - 0.5) * 0.8),
-        variant: randf.sample(),
-        applySinWave: 1,
-        applySeaFog: 1,
-        applySeaDesaturation: 1,
-      });
-      buffer0mutable.$[x] = ModelData(data);
-      buffer1mutable.$[x] = ModelData(data);
-    },
-  );
+  const randomizeFishPositionsPipeline = root.createGuardedComputePipeline((x) => {
+    'use gpu';
+    randf.seed2(d.vec2f(x, seedUniform.$));
+    const data = ModelData({
+      position: d.vec3f(
+        randf.sample() * p.aquariumSize.x - p.aquariumSize.x / 2,
+        randf.sample() * p.aquariumSize.y - p.aquariumSize.y / 2,
+        randf.sample() * p.aquariumSize.z - p.aquariumSize.z / 2,
+      ),
+      direction: d.vec3f(
+        randf.sample() * 0.1 - 0.05,
+        randf.sample() * 0.1 - 0.05,
+        randf.sample() * 0.1 - 0.05,
+      ),
+      scale: p.fishModelScale * (1 + (randf.sample() - 0.5) * 0.8),
+      variant: randf.sample(),
+      applySinWave: 1,
+      applySeaFog: 1,
+      applySeaDesaturation: 1,
+    });
+    buffer0mutable.$[x] = ModelData(data);
+    buffer1mutable.$[x] = ModelData(data);
+  });
 
   const randomizeFishPositions = () => {
     seedUniform.write((performance.now() % 10000) / 10000);
@@ -208,16 +204,13 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     }),
   );
 
-  const renderOceanFloorBindGroup = root.createBindGroup(
-    renderBindGroupLayout,
-    {
-      modelData: oceanFloorDataBuffer,
-      camera: cameraBuffer,
-      modelTexture: oceanFloorModel.texture,
-      sampler: sampler,
-      currentTime: currentTimeBuffer,
-    },
-  );
+  const renderOceanFloorBindGroup = root.createBindGroup(renderBindGroupLayout, {
+    modelData: oceanFloorDataBuffer,
+    camera: cameraBuffer,
+    modelTexture: oceanFloorModel.texture,
+    sampler: sampler,
+    currentTime: currentTimeBuffer,
+  });
 
   const computeBindGroups = [0, 1].map((idx) =>
     root.createBindGroup(computeBindGroupLayout, {
@@ -243,19 +236,12 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     lastTimestamp = timestamp;
     cameraBuffer.write(camera);
 
-    simulatePipeline
-      .with(computeBindGroups[odd ? 1 : 0])
-      .dispatchThreads(p.fishAmount);
+    simulatePipeline.with(computeBindGroups[odd ? 1 : 0]).dispatchThreads(p.fishAmount);
 
     renderPipeline
       .withColorAttachment({
         view: context,
-        clearValue: [
-          p.backgroundColor.x,
-          p.backgroundColor.y,
-          p.backgroundColor.z,
-          1,
-        ],
+        clearValue: [p.backgroundColor.x, p.backgroundColor.y, p.backgroundColor.z, 1],
       })
       .withDepthStencilAttachment({
         view: depthTexture.createView(),
@@ -271,12 +257,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     renderPipeline
       .withColorAttachment({
         view: context,
-        clearValue: [
-          p.backgroundColor.x,
-          p.backgroundColor.y,
-          p.backgroundColor.z,
-          1,
-        ],
+        clearValue: [p.backgroundColor.x, p.backgroundColor.y, p.backgroundColor.z, 1],
         loadOp: 'load',
       })
       .withDepthStencilAttachment({
@@ -302,17 +283,11 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   let previousMouseY = 0;
 
   let isPopupDiscarded = false;
-  const controlsPopup = document.getElementById(
-    'help',
-  ) as HTMLDivElement | null;
+  const controlsPopup = document.getElementById('help') as HTMLDivElement | null;
 
-  const cameraRadius = std.length(
-    std.sub(p.cameraInitialPosition.xyz, p.cameraInitialTarget.xyz),
-  );
+  const cameraRadius = std.length(std.sub(p.cameraInitialPosition.xyz, p.cameraInitialTarget.xyz));
   let cameraYaw =
-    (Math.atan2(p.cameraInitialPosition.x, p.cameraInitialPosition.z) +
-      Math.PI) %
-    Math.PI;
+    (Math.atan2(p.cameraInitialPosition.x, p.cameraInitialPosition.z) + Math.PI) % Math.PI;
   let cameraPitch = Math.asin(p.cameraInitialPosition.y / cameraRadius);
 
   function updateCameraTarget(cx: number, cy: number) {
@@ -342,12 +317,8 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
 
   function updateMouseRay(cx: number, cy: number) {
     const boundingBox = canvas.getBoundingClientRect();
-    const canvasX = Math.floor(
-      (cx - boundingBox.left) * window.devicePixelRatio,
-    );
-    const canvasY = Math.floor(
-      (cy - boundingBox.top) * window.devicePixelRatio,
-    );
+    const canvasX = Math.floor((cx - boundingBox.left) * window.devicePixelRatio);
+    const canvasY = Math.floor((cy - boundingBox.top) * window.devicePixelRatio);
     const canvasPoint = d.vec4f(
       (canvasX / canvas.width) * 2 - 1,
       (1 - canvasY / canvas.height) * 2 - 1,

@@ -56,11 +56,7 @@ const getMorphingShape = (p: d.v3f, t: number): Shape => {
   const boxSize = d.vec3f(0.7);
 
   // Create two spheres that move in a circular pattern
-  const sphere1Offset = d.vec3f(
-    std.cos(t * 2) * 0.8,
-    std.sin(t * 3) * 0.3,
-    std.sin(t * 2) * 0.8,
-  );
+  const sphere1Offset = d.vec3f(std.cos(t * 2) * 0.8, std.sin(t * 3) * 0.3, std.sin(t * 2) * 0.8);
   const sphere2Offset = d.vec3f(
     std.cos(t * 2 + 3.14) * 0.8,
     std.sin(t * 3 + 1.57) * 0.3,
@@ -92,11 +88,7 @@ const getOrbitingLightPos = (t: number): d.v3f => {
   const height = d.f32(6);
   const speed = d.f32(1);
 
-  return d.vec3f(
-    std.cos(t * speed) * radius,
-    height + std.sin(t * speed) * radius,
-    4,
-  );
+  return d.vec3f(std.cos(t * speed) * radius, height + std.sin(t * speed) * radius, 4);
 };
 
 const vertexMain = tgpu.vertexFn({
@@ -151,13 +143,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     return result;
   };
 
-  const softShadow = (
-    ro: d.v3f,
-    rd: d.v3f,
-    minT: number,
-    maxT: number,
-    k: number,
-  ): number => {
+  const softShadow = (ro: d.v3f, rd: d.v3f, minT: number, maxT: number, k: number): number => {
     'use gpu';
     let res = d.f32(1);
     let t = minT;

@@ -39,8 +39,8 @@
   --color-navy-80: #33488e;
   --color-navy-0: #f8f9ff;
 
-  --color-off-navy: #272B3C;
-  --color-almost-white: #FCFCFF;
+  --color-off-navy: #272b3c;
+  --color-almost-white: #fcfcff;
 
   --color-special-stroke: #2a0a6629;
 
@@ -75,10 +75,10 @@
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 body {
-    /* causes the font weights to reflect how they appear on Figma */
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    font-smooth: never;
+  /* causes the font weights to reflect how they appear on Figma */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-smooth: never;
 }
 
 button,

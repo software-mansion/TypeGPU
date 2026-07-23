@@ -1,13 +1,7 @@
 import tgpu, { d, std, type TgpuRoot } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { type CubemapNames, cubeVertices, loadCubemap } from './cubemap.ts';
-import {
-  Camera,
-  CubeVertex,
-  DirectionalLight,
-  Material,
-  Vertex,
-} from './dataTypes.ts';
+import { Camera, CubeVertex, DirectionalLight, Material, Vertex } from './dataTypes.ts';
 import { IcosphereGenerator } from './icosphere.ts';
 
 // Initialization
@@ -21,8 +15,7 @@ function hideHelp() {
 
 export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   const maxBufferSize = root.device.limits.maxStorageBufferBindingSize;
-  const maxStorageBufferBindingSize =
-    root.device.limits.maxStorageBufferBindingSize;
+  const maxStorageBufferBindingSize = root.device.limits.maxStorageBufferBindingSize;
   const maxSize = Math.min(maxBufferSize, maxStorageBufferBindingSize);
   const canvas = context.canvas as HTMLCanvasElement;
   let exampleDestroyed = false;
@@ -40,10 +33,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   };
 
   const icosphereGenerator = new IcosphereGenerator(root, maxSize);
-  let vertexBuffer = icosphereGenerator.createIcosphere(
-    subdivisions,
-    smoothNormals,
-  );
+  let vertexBuffer = icosphereGenerator.createIcosphere(subdivisions, smoothNormals);
   const cubeVertexBuffer = root
     .createBuffer(d.arrayOf(CubeVertex, cubeVertices.length), cubeVertices)
     .$usage('vertex');
@@ -75,9 +65,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     })
     .$usage('uniform');
 
-  const materialBuffer = root
-    .createBuffer(Material, materialProps)
-    .$usage('uniform');
+  const materialBuffer = root.createBuffer(Material, materialProps).$usage('uniform');
 
   // Textures & Samplers
 
@@ -123,9 +111,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   });
 
   const vertexLayout = tgpu.vertexLayout(d.disarrayOf(Vertex));
-  const cubeVertexLayout = tgpu.vertexLayout((n: number) =>
-    d.arrayOf(CubeVertex, n),
-  );
+  const cubeVertexLayout = tgpu.vertexLayout((n: number) => d.arrayOf(CubeVertex, n));
 
   // Shader Functions
 
@@ -162,35 +148,23 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
       .mul(renderLayout.$.light.color)
       .mul(renderLayout.$.light.intensity);
 
-    const diffuseFactor = std.max(
-      std.dot(normalizedNormal, normalizedLightDir),
-      0,
-    );
+    const diffuseFactor = std.max(std.dot(normalizedNormal, normalizedLightDir), 0);
     const diffuseLight = renderLayout.$.material.diffuse
       .mul(renderLayout.$.light.color)
       .mul(renderLayout.$.light.intensity)
       .mul(diffuseFactor);
 
-    const viewDirection = std.normalize(
-      renderLayout.$.camera.position.xyz.sub(input.worldPos.xyz),
-    );
-    const reflectionDirection = std.reflect(
-      std.neg(normalizedLightDir),
-      normalizedNormal,
-    );
+    const viewDirection = std.normalize(renderLayout.$.camera.position.xyz.sub(input.worldPos.xyz));
+    const reflectionDirection = std.reflect(std.neg(normalizedLightDir), normalizedNormal);
 
     const specularFactor =
-      std.max(std.dot(viewDirection, reflectionDirection), 0) **
-      renderLayout.$.material.shininess;
+      std.max(std.dot(viewDirection, reflectionDirection), 0) ** renderLayout.$.material.shininess;
     const specularLight = renderLayout.$.material.specular
       .mul(renderLayout.$.light.color)
       .mul(renderLayout.$.light.intensity)
       .mul(specularFactor);
 
-    const reflectionVector = std.reflect(
-      std.neg(viewDirection),
-      normalizedNormal,
-    );
+    const reflectionVector = std.reflect(std.neg(viewDirection), normalizedNormal);
     const environmentColor = std.textureSample(
       textureLayout.$.cubemap,
       textureLayout.$.texSampler,
@@ -218,9 +192,7 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
       texCoord: d.vec3f,
     },
   })((input) => {
-    const viewPos = renderLayout.$.camera.view.mul(
-      d.vec4f(input.position.xyz, 0),
-    ).xyz;
+    const viewPos = renderLayout.$.camera.view.mul(d.vec4f(input.position.xyz, 0)).xyz;
 
     return {
       pos: renderLayout.$.camera.projection.mul(d.vec4f(viewPos, 1)),
@@ -328,22 +300,13 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     const newCamZ = orbitRadius * Math.cos(orbitYaw) * Math.cos(orbitPitch);
     const newCameraPos = d.vec4f(newCamX, newCamY, newCamZ, 1);
 
-    const newView = m.mat4.lookAt(
-      newCameraPos,
-      d.vec3f(0, 0, 0),
-      d.vec3f(0, 1, 0),
-      d.mat4x4f(),
-    );
+    const newView = m.mat4.lookAt(newCameraPos, d.vec3f(0, 0, 0), d.vec3f(0, 1, 0), d.mat4x4f());
     cameraBuffer.patch({ view: newView, position: newCameraPos });
   }
 
   function updateCameraOrbit(dx: number, dy: number) {
     orbitYaw += -dx * 0.005;
-    orbitPitch = std.clamp(
-      orbitPitch + dy * 0.005,
-      -Math.PI / 2 + 0.01,
-      Math.PI / 2 - 0.01,
-    );
+    orbitPitch = std.clamp(orbitPitch + dy * 0.005, -Math.PI / 2 + 0.01, Math.PI / 2 - 0.01);
     updateCameraPosition();
   }
 
@@ -449,17 +412,11 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   return {
     set subdivisions(value: number) {
       subdivisions = value;
-      vertexBuffer = icosphereGenerator.createIcosphere(
-        subdivisions,
-        smoothNormals,
-      );
+      vertexBuffer = icosphereGenerator.createIcosphere(subdivisions, smoothNormals);
     },
     set smoothNormals(value: boolean) {
       smoothNormals = value;
-      vertexBuffer = icosphereGenerator.createIcosphere(
-        subdivisions,
-        smoothNormals,
-      );
+      vertexBuffer = icosphereGenerator.createIcosphere(subdivisions, smoothNormals);
     },
     set cubemapTexture(value: CubemapNames) {
       chosenCubemap = value;
