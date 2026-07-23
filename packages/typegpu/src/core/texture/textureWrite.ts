@@ -1,10 +1,12 @@
+export type TextureWriteFit = 'stretch' | 'clip';
+
 export type TextureWriteOptions = {
   mipLevel?: GPUIntegerCoordinate;
   origin?: readonly [x: number, y: number, z?: number];
   size?: readonly [width: number, height: number];
   sourceOrigin?: readonly [x: number, y: number];
   sourceSize?: readonly [width: number, height: number];
-  resize?: boolean;
+  fit?: TextureWriteFit;
   filter?: GPUFilterMode;
   flipY?: boolean;
   premultipliedAlpha?: boolean;
@@ -51,10 +53,6 @@ export type TextureChannelWriteLayout = TextureImageWriteLayout & {
   to: TextureChannel;
 };
 
-export function textureLayerSize(size: readonly number[]): readonly [number, number] {
-  return [size[0] ?? 1, size[1] ?? 1];
-}
-
 export function mipLevelSize(
   size: readonly number[],
   mipLevel: number,
@@ -68,16 +66,26 @@ export function mipLevelSize(
   ];
 }
 
+export function defaultWriteSize(
+  textureSize: readonly number[],
+  dimension: GPUTextureDimension,
+  options: TextureWriteOptions,
+): readonly [number, number] {
+  const [mipWidth, mipHeight] = mipLevelSize(textureSize, options.mipLevel ?? 0, dimension);
+  return [mipWidth - (options.origin?.[0] ?? 0), mipHeight - (options.origin?.[1] ?? 0)];
+}
+
 export function imageWriteForLayer(
   source: GPUCopyExternalImageSource,
   textureSize: readonly number[],
+  dimension: GPUTextureDimension,
   layer: number,
   options: TextureWriteOptions,
 ): TextureImageWrite {
   return {
     ...options,
     source,
-    size: options.size ?? textureLayerSize(textureSize),
+    size: options.size ?? defaultWriteSize(textureSize, dimension, options),
     origin: [options.origin?.[0] ?? 0, options.origin?.[1] ?? 0, layer],
   };
 }
@@ -88,11 +96,6 @@ export function getImageSourceDimensions(source: GPUCopyExternalImageSource): {
 } {
   if (typeof Blob !== 'undefined' && source instanceof Blob) {
     throw new Error('Blob sources are only supported in texture.writeAsync(...).');
-  }
-
-  const { width, height } = source as ImageBitmap;
-  if (width && height) {
-    return { width, height };
   }
 
   const { videoWidth, videoHeight } = source as HTMLVideoElement;
@@ -110,6 +113,11 @@ export function getImageSourceDimensions(source: GPUCopyExternalImageSource): {
     return { width: codedWidth, height: codedHeight };
   }
 
+  const { width, height } = source as ImageBitmap;
+  if (width && height) {
+    return { width, height };
+  }
+
   throw new Error('Cannot determine dimensions of the provided image source.');
 }
 
@@ -125,6 +133,15 @@ export function normalizeImageWrite(write: TextureImageWrite): TextureImageWrite
     height: write.size?.[1] ?? sourceSize.height,
     depthOrArrayLayers: 1,
   };
+
+  if (write.fit === 'clip') {
+    const width = Math.min(sourceSize.width, targetSize.width);
+    const height = Math.min(sourceSize.height, targetSize.height);
+    sourceSize.width = width;
+    sourceSize.height = height;
+    targetSize.width = width;
+    targetSize.height = height;
+  }
 
   return {
     source: write.source,
@@ -153,13 +170,10 @@ export function needsResize(write: TextureImageWriteLayout): boolean {
   );
 }
 
-export function validateResizeAllowed(
-  write: TextureImageWrite,
-  normalized: TextureImageWriteLayout,
-): void {
-  if (needsResize(normalized) && !write.resize) {
+export function validateFit(write: TextureImageWrite, normalized: TextureImageWriteLayout): void {
+  if (needsResize(normalized) && write.fit !== 'stretch') {
     throw new Error(
-      `Texture write source size ${normalized.sourceSize.width}x${normalized.sourceSize.height} does not match target size ${normalized.targetSize.width}x${normalized.targetSize.height}. Pass resize: true to resize explicitly.`,
+      `Texture write source size ${normalized.sourceSize.width}x${normalized.sourceSize.height} does not match target size ${normalized.targetSize.width}x${normalized.targetSize.height}. Pass fit: 'stretch' to scale the source or fit: 'clip' to copy the overlapping region.`,
     );
   }
 }
@@ -173,7 +187,7 @@ export async function createBitmapForBlobWrite(
   }
 
   const bitmapOptions =
-    options.resize && options.size
+    options.fit === 'stretch' && options.size
       ? {
           resizeWidth: options.size[0],
           resizeHeight: options.size[1],

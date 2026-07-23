@@ -98,6 +98,7 @@ export type {
   TextureChannel,
   TextureCopyOptions,
   TextureRawWriteOptions,
+  TextureWriteFit,
   TextureWriteOptions,
 } from './core/texture/textureWrite.ts';
 export type { TextureProps } from './core/texture/textureProps.ts';

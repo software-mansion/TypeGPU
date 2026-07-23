@@ -91,7 +91,7 @@ const plums = await response.blob();
 const backgroundTexture = root
   .createTexture({ size: [p.N, p.N], format: 'rgba8unorm' })
   .$usage('sampled', 'render');
-await backgroundTexture.writeAsync(plums, { size: [p.N, p.N], resize: true });
+await backgroundTexture.writeAsync(plums, { size: [p.N, p.N], fit: 'stretch' });
 
 // Create simulation textures
 const velTex = [createField('velocity0'), createField('velocity1')];

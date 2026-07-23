@@ -793,7 +793,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
-      it('throws when image dimensions do not match texture without resize', ({ root }) => {
+      it('throws when image dimensions do not match texture without a fit mode', ({ root }) => {
         const texture = root
           .createTexture({
             size: [64, 64],
@@ -807,11 +807,11 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         } as HTMLImageElement;
 
         expect(() => texture.write(mockImage)).toThrowErrorMatchingInlineSnapshot(
-          `[Error: Texture write source size 32x32 does not match target size 64x64. Pass resize: true to resize explicitly.]`,
+          `[Error: Texture write source size 32x32 does not match target size 64x64. Pass fit: 'stretch' to scale the source or fit: 'clip' to copy the overlapping region.]`,
         );
       });
 
-      it('handles resizing when image dimensions do not match texture with resize', ({
+      it('handles resizing when image dimensions do not match texture with fit: stretch', ({
         root,
         device,
         commandEncoder,
@@ -829,7 +829,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           height: 32,
         } as HTMLImageElement;
 
-        texture.write(mockImage, { resize: true });
+        texture.write(mockImage, { fit: 'stretch' });
 
         expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
           .toMatchInlineSnapshot(`
@@ -867,7 +867,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
           height: 32,
         } as HTMLImageElement;
 
-        texture.write([mockImage, mockImage], { resize: true });
+        texture.write([mockImage, mockImage], { fit: 'stretch' });
 
         expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
           .toMatchInlineSnapshot(`
@@ -1007,6 +1007,78 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         );
       });
 
+      it('defaults the write size to the mip level size', ({ root, device }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+            mipLevelCount: 2,
+          })
+          .$usage('render');
+
+        const mip1SizedImage = { width: 32, height: 32 } as HTMLImageElement;
+
+        texture.write(mip1SizedImage, { mipLevel: 1 });
+
+        expect(device.mock.queue.copyExternalImageToTexture).toHaveBeenCalledWith(
+          { source: mip1SizedImage },
+          {
+            texture: expect.anything(),
+            mipLevel: 1,
+            origin: { x: 0, y: 0, z: 0 },
+          },
+          { width: 32, height: 32, depthOrArrayLayers: 1 },
+        );
+      });
+
+      it('clips an oversized source to the target region with fit: clip', ({ root, device }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        const mockImage = { width: 100, height: 80 } as HTMLImageElement;
+
+        texture.write(mockImage, { fit: 'clip' });
+
+        expect(device.mock.queue.copyExternalImageToTexture).toHaveBeenCalledWith(
+          { source: mockImage },
+          {
+            texture: expect.anything(),
+            mipLevel: 0,
+            origin: { x: 0, y: 0, z: 0 },
+          },
+          { width: 64, height: 64, depthOrArrayLayers: 1 },
+        );
+        expect(device.mock.createRenderPipeline).not.toHaveBeenCalled();
+      });
+
+      it('writes a patch at an origin with fit: clip', ({ root, device }) => {
+        const texture = root
+          .createTexture({
+            size: [64, 64],
+            format: 'rgba8unorm',
+          })
+          .$usage('render');
+
+        const tile = { width: 8, height: 8 } as HTMLImageElement;
+
+        texture.write(tile, { origin: [4, 5], fit: 'clip' });
+
+        expect(device.mock.queue.copyExternalImageToTexture).toHaveBeenCalledWith(
+          { source: tile },
+          {
+            texture: expect.anything(),
+            mipLevel: 0,
+            origin: { x: 4, y: 5, z: 0 },
+          },
+          { width: 8, height: 8, depthOrArrayLayers: 1 },
+        );
+        expect(device.mock.createRenderPipeline).not.toHaveBeenCalled();
+      });
+
       it('uses the render path when image descriptor size resamples the source', ({
         root,
         device,
@@ -1027,7 +1099,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
         texture.write(mockImage, {
           size: [32, 32],
-          resize: true,
+          fit: 'stretch',
         });
 
         expect(gpuCallTimeline({ device, commandEncoder, renderPassEncoder }))
@@ -1063,7 +1135,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
 
         texture.write(mockImage, {
           size: [32, 32],
-          resize: true,
+          fit: 'stretch',
         });
 
         expect(device.mock.createTexture).toHaveBeenNthCalledWith(
@@ -1124,7 +1196,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         const createImageBitmapMock = vi.fn(() => Promise.resolve(imageBitmap));
         vi.stubGlobal('createImageBitmap', createImageBitmapMock);
 
-        await texture.writeAsync(blob, { resize: true });
+        await texture.writeAsync(blob, { fit: 'stretch' });
 
         expect(createImageBitmapMock).toHaveBeenCalledWith(blob, {
           resizeWidth: 64,
@@ -1322,7 +1394,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         expect(renderPassEncoder.mock.setScissorRect).toHaveBeenCalledWith(4, 5, 8, 9);
       });
 
-      it('requires resize for channel writes with mismatched sizes', ({ root }) => {
+      it('requires a fit mode for channel writes with mismatched sizes', ({ root }) => {
         const texture = root
           .createTexture({
             size: [64, 64],
@@ -1342,7 +1414,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
             { size: [32, 32] },
           ),
         ).toThrowErrorMatchingInlineSnapshot(
-          `[Error: Texture write source size 16x16 does not match target size 32x32. Pass resize: true to resize explicitly.]`,
+          `[Error: Texture write source size 16x16 does not match target size 32x32. Pass fit: 'stretch' to scale the source or fit: 'clip' to copy the overlapping region.]`,
         );
       });
 

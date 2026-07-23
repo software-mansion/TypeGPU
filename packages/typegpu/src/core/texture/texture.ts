@@ -40,12 +40,12 @@ import {
 } from './textureUtils.ts';
 import {
   createBitmapForBlobWrite,
+  defaultWriteSize,
   imageWriteForLayer,
   mipLevelSize,
   needsResize,
   normalizeImageWrite,
-  textureLayerSize,
-  validateResizeAllowed,
+  validateFit,
   type TextureBlobWriteOptions,
   type TextureCopyOptions,
   type TextureImageWrite,
@@ -71,6 +71,7 @@ export type {
   TextureChannel,
   TextureCopyOptions,
   TextureRawWriteOptions,
+  TextureWriteFit,
   TextureWriteOptions,
 } from './textureWrite.ts';
 
@@ -525,9 +526,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
 
     if (baseLayer + sources.length > layerCount) {
       console.warn(
-        `Too many image sources provided. Expected ${layerCount} layers, got ${
-          baseLayer + sources.length
-        }. Extra sources will be ignored.`,
+        `Too many image sources provided. Texture has ${layerCount} layers, got ${sources.length} sources starting at layer ${baseLayer}. Extra sources will be ignored.`,
       );
     }
 
@@ -535,7 +534,15 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     for (let layer = 0; layer < Math.min(sources.length, layerCount - baseLayer); layer++) {
       const image = sources[layer];
       if (image) {
-        writes.push(imageWriteForLayer(image, this.props.size, baseLayer + layer, options));
+        writes.push(
+          imageWriteForLayer(
+            image,
+            this.props.size,
+            this.props.dimension ?? '2d',
+            baseLayer + layer,
+            options,
+          ),
+        );
       }
     }
 
@@ -543,12 +550,16 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
   }
 
   async writeAsync(source: Blob, options?: TextureBlobWriteOptions): Promise<void> {
-    const write = { ...options, size: options?.size ?? textureLayerSize(this.props.size) };
+    const write = {
+      ...options,
+      size:
+        options?.size ??
+        defaultWriteSize(this.props.size, this.props.dimension ?? '2d', options ?? {}),
+    };
     const bitmap = await createBitmapForBlobWrite(source, write);
-    const { resize: _resize, ...imageOptions } = write;
 
     try {
-      this.#writeImages([{ ...imageOptions, source: bitmap, resize: false }]);
+      this.#writeImages([{ ...write, source: bitmap }]);
     } finally {
       bitmap.close();
     }
@@ -617,7 +628,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
         continue;
       }
 
-      validateResizeAllowed(write, normalized);
+      validateFit(write, normalized);
       resamples.push(normalized);
     }
 

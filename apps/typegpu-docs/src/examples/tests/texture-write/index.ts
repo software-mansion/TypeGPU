@@ -112,14 +112,14 @@ function writeImage() {
   texture.write(imageBitmap, {
     ...cropRect(),
     ...target,
-    resize: true,
+    fit: 'stretch',
     flipY,
     filter,
   });
 }
 
 async function writeBlob() {
-  await texture.writeAsync(imageBlob, { resize: true, filter });
+  await texture.writeAsync(imageBlob, { fit: 'stretch', filter });
 }
 
 let texture = createTestTexture();

@@ -579,11 +579,8 @@ export function writeTextureChannels(
   const targetView = targetTexture.createView(targetViewDescriptor(view.mipLevel, view.arrayLayer));
 
   for (const group of groupWritesBySource(writes)) {
-    const inputTexture = createStagedImageTexture(
-      device,
-      group[0] as TextureChannelWriteLayout,
-      targetTexture.format,
-    );
+    // oxlint-disable-next-line typescript/no-non-null-assertion -- groups are never empty
+    const inputTexture = createStagedImageTexture(device, group[0]!, targetTexture.format);
     const inputView = inputTexture.createView();
     const bindGroups = new Map<GPUFilterMode, GPUBindGroup>();
 

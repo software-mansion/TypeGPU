@@ -120,14 +120,15 @@ The `.write()` method accepts a variety of data sources. Here's a quick overview
 | Source | Use when |
 | --- | --- |
 | `texture.write(imageBitmap)` | You already have a decoded image that matches the texture size. |
-| `texture.write(imageBitmap, { resize: true })` | You want the image resampled to fit the texture. |
+| `texture.write(imageBitmap, { fit: 'stretch' })` | You want the image resampled to fit the texture. |
+| `texture.write(imageBitmap, { fit: 'clip' })` | You want a 1:1 copy of the overlapping region. |
 | `texture.writeAsync(blob, { ... })` | You have a fetched `Blob` and don't need to keep the decoded bitmap around. |
 | `texture.write([layer0, layer1])` | You want to fill a texture array or 3D texture one layer at a time. |
 | `texture.write(bytes)` | You already have raw texel bytes. |
 | `texture.write(imageBitmap, { origin, size, ... })` | You need a crop or a destination region. |
 | `common.writeChannels(texture, { ... })` | You want to pack image sources into individual channels. |
 
-Note that writing image sources requires the `'render'` usage flag, and that the source and destination sizes have to match unless you opt into resizing with `resize: true`.
+Note that writing image sources requires the `'render'` usage flag, and that the source and destination sizes have to match unless you pick a mismatch behavior with the `fit` option.
 
 ### Writing image data
 
@@ -152,9 +153,9 @@ texture.write(imageBitmap);
 Besides `ImageBitmap`, `GPUCopyExternalImageSource` also includes canvas, video, `ImageData`, `HTMLImageElement`, and `VideoFrame` - but browser support for these varies. For portable code, decode fetched images to `ImageBitmap` first.
 :::
 
-### Resizing images
+### Handling size mismatches
 
-If the image dimensions don't match the texture size, you can ask TypeGPU to resample the image to fit by passing `resize: true`:
+If the image dimensions don't match the texture size, a plain `.write()` call throws. The `fit` option picks what happens instead: `'stretch'` resamples the source to fill the target region, while `'clip'` copies texels 1:1 and cuts off whatever doesn't overlap.
 
 ```ts
 const texture = root.createTexture({
@@ -162,23 +163,25 @@ const texture = root.createTexture({
   format: 'rgba8unorm',
 }).$usage('sampled', 'render');
 
-texture.write(imageBitmap, { resize: true });
+texture.write(imageBitmap, { fit: 'stretch' });
 
 texture.write(imageBitmap, {
   sourceOrigin: [16, 16],
   sourceSize: [128, 128],
   size: [256, 256],
-  resize: true,
+  fit: 'stretch',
 });
+
+texture.write(tileBitmap, { origin: [128, 64], fit: 'clip' });
 ```
 
 :::note
-Under the hood, resizing runs a render-pass blit, so the destination has to be a 2D texture with a renderable, float-sampleable format.
+Under the hood, `fit: 'stretch'` runs a render-pass blit, so the destination has to be a 2D texture with a renderable, float-sampleable format. `fit: 'clip'` is a plain texel copy.
 :::
 
 ### Writing blobs
 
-If you fetched an image and don't need to keep the decoded `ImageBitmap` around, you can hand the `Blob` directly to `writeAsync` and let TypeGPU handle the decoding. With `resize: true`, the resize options are passed along to `createImageBitmap` before uploading.
+If you fetched an image and don't need to keep the decoded `ImageBitmap` around, you can hand the `Blob` directly to `writeAsync` and let TypeGPU handle the decoding. With `fit: 'stretch'`, the resize options are passed along to `createImageBitmap` before uploading.
 
 ```ts twoslash
 import { tgpu } from 'typegpu';
@@ -191,10 +194,10 @@ const texture = root.createTexture({
 
 const blob = await (await fetch('path/to/image.png')).blob();
 
-await texture.writeAsync(blob, { resize: true });
+await texture.writeAsync(blob, { fit: 'stretch' });
 ```
 
-If you don't specify a `size`, it defaults to the texture size. Keep in mind that the decoded bitmap is still written as an image source, so the texture needs the `'render'` usage flag.
+If you don't specify a `size`, it defaults to the size of the written region - the target mip level minus the origin offset. Keep in mind that the decoded bitmap is still written as an image source, so the texture needs the `'render'` usage flag.
 
 ### Writing arrays of images
 
@@ -215,7 +218,7 @@ const texture = root.createTexture({
 texture.write([layer0, layer1, layer2]);
 ```
 
-Each image has to match the layer size, unless you pass `{ resize: true }`.
+Each image has to match the layer size, unless you pass a `fit` mode.
 
 The same form works for 3D textures (created with `dimension: '3d'`) - each image in the array fills one depth slice.
 
@@ -258,12 +261,9 @@ Writing raw data doesn't require the `'render'` usage flag, but the byte length 
 If you only want to update a part of the texture, or copy just a fragment of the source image, you can pass options with source and destination regions. The options also let you flip the source vertically (`flipY`), premultiply alpha (`premultipliedAlpha`), or convert to a specific color space (`colorSpace`).
 
 ```ts twoslash
-import { tgpu, common } from 'typegpu';
+import { tgpu } from 'typegpu';
 const root = await tgpu.init();
 declare const imageBitmap: ImageBitmap;
-declare const roughnessMap: ImageBitmap;
-declare const metalnessMap: ImageBitmap;
-declare const maskMap: ImageBitmap;
 // ---cut---
 const texture = root.createTexture({
   size: [512, 512],
@@ -299,7 +299,7 @@ common.writeChannels(texture, {
 });
 ```
 
-Region and channel writes follow the same rules as other image writes - they require the `'render'` usage flag, and sizes have to match unless you pass `resize: true`.
+Region and channel writes follow the same rules as other image writes - they require the `'render'` usage flag, and sizes have to match unless you pass a `fit` mode.
 
 ### Mipmaps
 

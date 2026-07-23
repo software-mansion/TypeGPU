@@ -2,7 +2,7 @@ import type { TgpuTexture } from '../core/texture/texture.ts';
 import { writeTextureChannels } from '../core/texture/textureUtils.ts';
 import {
   normalizeImageWrite,
-  validateResizeAllowed,
+  validateFit,
   type TextureChannel,
   type TextureChannelWriteLayout,
   type TextureImageWrite,
@@ -65,7 +65,7 @@ export function writeChannels(
 
     const write: TextureImageWrite = { ...options, source };
     const normalized = normalizeImageWrite(write);
-    validateResizeAllowed(write, normalized);
+    validateFit(write, normalized);
     writes.push({ ...normalized, from, to });
   }
 

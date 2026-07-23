@@ -58,7 +58,7 @@ let viewLayer = 0;
 let baseMip = 0;
 
 function writeLayerImages() {
-  texture.write([imageBitmap, patternCanvas], { resize: true });
+  texture.write([imageBitmap, patternCanvas], { fit: 'stretch' });
   texture.generateMipmaps();
 }
 

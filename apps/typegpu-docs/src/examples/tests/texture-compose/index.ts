@@ -14,7 +14,7 @@ const [sourceTexture, targetTexture] = [0, 1].map(() =>
   root.createTexture({ size, format: 'rgba8unorm' }).$usage('sampled', 'render'),
 );
 
-sourceTexture.write(imageBitmap, { resize: true });
+sourceTexture.write(imageBitmap, { fit: 'stretch' });
 targetTexture.copyFrom(sourceTexture);
 
 type ChannelSource = TextureChannel | 'none';
@@ -30,7 +30,7 @@ function writeSelectedChannels() {
   common.writeChannels(
     targetTexture,
     { r: pick('r'), g: pick('g'), b: pick('b'), a: pick('a') },
-    { size, resize: true },
+    { size, fit: 'stretch' },
   );
 }
 
