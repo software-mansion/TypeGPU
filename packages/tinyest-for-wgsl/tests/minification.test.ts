@@ -37,6 +37,38 @@ describe('transpileFn', () => {
   );
 
   it(
+    'remembers minified names in computed access',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p('() => { const variable = 1; const array = [1, 2]; return array[variable]; }'),
+        true,
+      );
+
+      expect(params).toMatchInlineSnapshot(`[]`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[13,"a",[5,"1"]],[13,"b",[100,[[5,"1"],[5,"2"]]]],[10,[8,"b","a"]]]]"`,
+      );
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+    }),
+  );
+
+  it(
+    'remembers minified names in for loops',
+    dualTest((p) => {
+      const { params, body, externalNames } = transpileFn(
+        p('() => { for (let i = 0; i< 10; i++) { return i; } }'),
+        true,
+      );
+
+      expect(params).toMatchInlineSnapshot(`[]`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[14,[12,"a",[5,"0"]],[1,"a","<",[5,"10"]],[102,"++","a"],[0,[[10,"a"]]]]]]"`,
+      );
+      expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+    }),
+  );
+
+  it(
     'minifies parameters',
     dualTest((p) => {
       const { params, body, externalNames } = transpileFn(
