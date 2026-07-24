@@ -10,7 +10,7 @@ describe('prefix scan', () => {
 
     for (const dataType of [d.u32, d.i32] as const) {
       const buffer = root.createBuffer(d.arrayOf(dataType, 4096)).$usage('storage');
-      prefixScan(root, { inputBuffer: buffer, operation: std.add, identityElement: 0, dataType });
+      prefixScan(root, { inputBuffer: buffer, operation: std.add, identityElement: 0 });
     }
     const f32Buffer = root.createBuffer(d.arrayOf(d.f32, 4096)).$usage('storage');
     prefixScan(root, { inputBuffer: f32Buffer, operation: std.add, identityElement: 0 });
@@ -45,7 +45,7 @@ describe('prefix scan', () => {
     expect(device.mock.createShaderModule.mock.calls.length).toBe(modulesAfterFirst);
   });
 
-  it('throws when combining querySet with an external pass', ({ root }) => {
+  it('rejects ambiguous recording destinations', ({ root, device }) => {
     const computer = createPrefixScanComputer(root, {
       operation: std.add,
       identityElement: 0,
@@ -56,10 +56,36 @@ describe('prefix scan', () => {
     const externalPass = {
       __brand: 'GPUComputePassEncoder',
     } as unknown as GPUComputePassEncoder;
-    const querySet = root.createQuerySet('timestamp', 2);
+    const encoder = device.createCommandEncoder();
 
-    expect(() => plan.run({ pass: externalPass, querySet })).toThrowError(
-      /cannot be used when recording/,
+    expect(() =>
+      plan.run({ pass: externalPass, encoder } as never),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: A run cannot record into both an encoder and an existing compute pass.]`,
+    );
+  });
+
+  it('rejects empty and mismatched buffers', ({ root }) => {
+    const computer = createPrefixScanComputer(root, {
+      operation: std.add,
+      identityElement: 0,
+    });
+    const empty = root.createBuffer(d.arrayOf(d.f32, 0)).$usage('storage');
+    expect(() => computer.prepare(empty)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot scan an empty buffer.]`,
+    );
+
+    const input = root.createBuffer(d.arrayOf(d.u32, 4)).$usage('storage');
+    const output = root.createBuffer(d.arrayOf(d.u32, 3)).$usage('storage');
+    expect(() =>
+      prefixScan(root, {
+        inputBuffer: input,
+        outputBuffer: output,
+        operation: std.add,
+        identityElement: 0,
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: The input and output scan buffers must have the same type and length.]`,
     );
   });
 });

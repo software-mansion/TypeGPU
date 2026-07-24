@@ -57,7 +57,8 @@ function makeDigitFn(keyType: RadixKeyType, direction: SortDirection) {
       [d.f32, d.u32],
       d.u32,
     )((v, shift) => {
-      const bits = std.bitcastF32toU32(v);
+      // Canonicalize signed zero so a stable numeric sort preserves its input order.
+      const bits = std.select(std.bitcastF32toU32(v), d.u32(0), v === 0);
       const mask = std.select(d.u32(0x80000000), d.u32(0xffffffff), bits >> 31 === 1);
       return ((bits ^ mask) >> shift) & (RADIX_SIZE - 1);
     }),
