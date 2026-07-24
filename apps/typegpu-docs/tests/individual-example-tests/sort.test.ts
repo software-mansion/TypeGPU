@@ -49,9 +49,9 @@ describe('sort example', () => {
         return ((wid.x + (wid.y * numWorkgroups.x)) + ((wid.z * numWorkgroups.x) * numWorkgroups.y));
       }
 
-      var<workgroup> localKeys: array<u32, 512>;
-
       @group(0) @binding(0) var<storage, read_write> data: array<u32>;
+
+      var<workgroup> localKeys: array<u32, 512>;
 
       fn loadShared(base: u32, tid: u32) {
         localKeys[tid] = data[(base + tid)];
@@ -99,6 +99,9 @@ describe('sort example', () => {
       @compute @workgroup_size(256) fn localSortKernel(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
         let tid = lid.x;
         let base = (flatWorkgroupIndex(wid, numWorkgroups) * 512u);
+        if ((base >= arrayLength(&data))) {
+          return;
+        }
         loadShared(base, tid);
         for (var kShift = 1u; (kShift <= 9u); kShift++) {
           mergeDown(base, tid, kShift, (1u << kShift));
@@ -158,9 +161,9 @@ describe('sort example', () => {
         return ((wid.x + (wid.y * numWorkgroups.x)) + ((wid.z * numWorkgroups.x) * numWorkgroups.y));
       }
 
-      var<workgroup> localKeys: array<u32, 512>;
-
       @group(0) @binding(0) var<storage, read_write> data: array<u32>;
+
+      var<workgroup> localKeys: array<u32, 512>;
 
       fn loadShared(base: u32, tid: u32) {
         localKeys[tid] = data[(base + tid)];
@@ -215,6 +218,9 @@ describe('sort example', () => {
       @compute @workgroup_size(256) fn localMergeKernel(@builtin(local_invocation_id) lid: vec3u, @builtin(workgroup_id) wid: vec3u, @builtin(num_workgroups) numWorkgroups: vec3u) {
         let tid = lid.x;
         let base = (flatWorkgroupIndex(wid, numWorkgroups) * 512u);
+        if ((base >= arrayLength(&data))) {
+          return;
+        }
         loadShared(base, tid);
         mergeDown(base, tid, 9u, uniforms.k);
         workgroupBarrier();

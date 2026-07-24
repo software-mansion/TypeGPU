@@ -21,7 +21,7 @@ const maxBufferSize = await navigator.gpu.requestAdapter().then((adapter) => {
 
 const root = await tgpu.init({
   device: {
-    optionalFeatures: ['timestamp-query', 'subgroups'],
+    optionalFeatures: ['timestamp-query'],
     requiredLimits: {
       maxStorageBufferBindingSize: maxBufferSize,
       maxBufferSize: maxBufferSize,
@@ -323,7 +323,6 @@ async function runBenchmark() {
     fillRandom(benchBuffer, size);
     const radix = createRadixSorter(root, benchBuffer);
     const radixMs = await benchmarkSorter(radix);
-    const subgroupsNote = radix.usesSubgroups ? 'subgroup scatter' : 'fallback scatter';
     radix.destroy();
 
     benchBuffer.destroy();
@@ -331,7 +330,7 @@ async function runBenchmark() {
     console.log(
       `  ${size.toLocaleString().padStart(12)} keys: bitonic ${
         bitonicMs === null ? 'n/a' : formatMs(bitonicMs)
-      }, radix ${radixMs === null ? 'n/a' : formatMs(radixMs)} (${subgroupsNote})`,
+      }, radix ${radixMs === null ? 'n/a' : formatMs(radixMs)}`,
     );
   }
   console.log('===============================================');
