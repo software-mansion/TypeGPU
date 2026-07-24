@@ -38,7 +38,7 @@ export function makeComputeBlock(schemas: ScanSchemas) {
 
     for (const i of tgpu.unroll(std.range(ELEMENTS_PER_THREAD))) {
       if (baseIdx + i < scanLayout.$.input.length) {
-        partialSums[i] = operatorSlot.$(prev as number, scanLayout.$.input[baseIdx + i] as number);
+        partialSums[i] = operatorSlot.$(prev, scanLayout.$.input[baseIdx + i] as number);
         prev = partialSums[i];
         lastIdx = i;
       }
@@ -67,7 +67,7 @@ export function makeComputeBlock(schemas: ScanSchemas) {
             scanLayout.$.input[baseIdx + i] = scannedSum;
           } else {
             scanLayout.$.input[baseIdx + i] = operatorSlot.$(
-              scannedSum as number,
+              scannedSum,
               partialSums[i - 1] as number,
             );
           }
