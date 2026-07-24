@@ -48,7 +48,7 @@ const particleGeometryBuffer = root
 
 const particleDataBuffer = root
   .createBuffer(d.arrayOf(ParticleData, PARTICLE_AMOUNT))
-  .$usage('storage', 'uniform', 'vertex');
+  .$usage('storage', 'vertex');
 
 let elapsedTime = 0;
 const aspectRatio = root.createUniform(d.f32, canvas.width / canvas.height);

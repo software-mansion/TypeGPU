@@ -10,7 +10,7 @@ import type { BaseData } from '../../data/wgslTypes.ts';
 
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
-import { warnIfOverflow } from './limitsOverflow.ts';
+import { warnIfOverflow } from './webgpuLimitations.ts';
 
 // -----------------------------------------------
 // shared helpers for applying pipeline state to render/compute pass encoders

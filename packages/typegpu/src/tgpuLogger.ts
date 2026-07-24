@@ -13,6 +13,7 @@ const warningTypes = [
   'locations-mismatched',
   'log-limit-exceeded',
   'external-omitted',
+  'uniform-schema-misaligned',
 ] as const;
 type WarningType = (typeof warningTypes)[number];
 
