@@ -73,7 +73,7 @@ export function makeScatterKernel(schemas: RadixSchemas): TgpuComputeFn {
       }
       std.workgroupBarrier();
 
-      runningTotal.$[local_i] = (runningTotal.$[local_i] as number) + round_total;
+      runningTotal.$[local_i] = runningTotal.$[local_i] + round_total;
     }
   });
 }

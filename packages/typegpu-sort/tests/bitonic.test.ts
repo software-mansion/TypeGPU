@@ -51,4 +51,20 @@ describe('bitonic sort', () => {
     createBitonicSorter(root, keys, { values }).run();
     expect(getResolvedWgsl(device)).toContain('vals');
   });
+
+  it('rejects payload sorting when padding would be required', ({ root }) => {
+    const keys = root.createBuffer(d.arrayOf(d.u32, 3)).$usage('storage');
+    const values = root.createBuffer(d.arrayOf(d.u32, 3)).$usage('storage');
+
+    expect(() => createBitonicSorter(root, keys, { values })).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Bitonic sorting with a values buffer requires a power-of-two element count.]`,
+    );
+  });
+
+  it('rejects empty buffers', ({ root }) => {
+    const keys = root.createBuffer(d.arrayOf(d.u32, 0)).$usage('storage');
+    expect(() => createBitonicSorter(root, keys)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot create a bitonic sorter for an empty buffer.]`,
+    );
+  });
 });

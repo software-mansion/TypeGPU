@@ -26,6 +26,18 @@ describe('radix sort', () => {
     expect(wgsl).not.toContain('-2147483648i');
   });
 
+  it('canonicalizes signed zero before extracting f32 digits', ({ root, device }) => {
+    const data = root.createBuffer(d.arrayOf(d.f32, 512)).$usage('storage');
+    createRadixSorter(root, data).run();
+
+    const canonicalization = getResolvedWgsl(device)
+      .split('\n')
+      .find((line) => line.includes('bitcast<u32>(v)'));
+    expect(canonicalization).toMatchInlineSnapshot(
+      `"  let bits = select(bitcast<u32>(v), 0u, (v == 0f));"`,
+    );
+  });
+
   it('allocates no new GPU resources on repeated runs', ({ root, device }) => {
     const data = root.createBuffer(d.arrayOf(d.u32, 4096)).$usage('storage');
     const sorter = createRadixSorter(root, data);

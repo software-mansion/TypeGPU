@@ -3,7 +3,6 @@ import {
   type StorageFlag,
   type TgpuBuffer,
   type TgpuComputePipeline,
-  type TgpuQuerySet,
   type TgpuRoot,
 } from 'typegpu';
 import { decomposeWorkgroups } from '../bitonic/utils.ts';
@@ -148,6 +147,10 @@ export class PrefixScanComputer<TElement extends ScanElementType = d.F32> {
     let currentLength = buffer.dataType.elementCount;
     let resultBuffer = buffer;
 
+    if (currentLength === 0) {
+      throw new Error('Cannot scan an empty buffer.');
+    }
+
     for (;;) {
       const numWorkgroups = Math.ceil(currentLength / BLOCK_SIZE);
       const sumsBuffer = this.createScratchBuffer(numWorkgroups === 1 ? 1 : numWorkgroups);
@@ -249,9 +252,6 @@ export class PrefixScanComputer<TElement extends ScanElementType = d.F32> {
  *                   Defaults to in-place (overwrites `inputBuffer`).
  *   - operation: The binary operation to use for the scan (e.g., std.add)
  *   - identityElement: The identity element for the operation (e.g., 0 for addition)
- *   - dataType: (optional) Element type of the buffers — `d.f32` (default), `d.u32` or `d.i32`
- * @param querySet - Optional timestamp query set (size >= 2) for GPU timing.
- *                   Index 0 gets the begin timestamp, index 1 gets the end timestamp.
  * @returns The output buffer instance which contains the scanned values.
  *
  * @example
@@ -294,11 +294,9 @@ export function prefixScan<TElement extends ScanElementType = d.F32>(
     outputBuffer?: ScanBuffer<TElement>;
     operation: BinaryOp['operation'];
     identityElement: BinaryOp['identityElement'];
-    dataType?: TElement;
   },
-  querySet?: TgpuQuerySet<'timestamp'>,
 ): ScanBuffer<TElement> {
-  return runScan(root, options, false, querySet);
+  return runScan(root, options, false);
 }
 
 /**
@@ -311,9 +309,6 @@ export function prefixScan<TElement extends ScanElementType = d.F32>(
  *   - inputBuffer: A storage buffer with the input values to reduce
  *   - operation: The binary operation to use for the reduction (e.g., std.add)
  *   - identityElement: The identity element for the operation (e.g., 0 for addition)
- *   - dataType: (optional) Element type of the buffers — `d.f32` (default), `d.u32` or `d.i32`
- * @param querySet - Optional timestamp query set (size >= 2) for GPU timing.
- *                   Index 0 gets the begin timestamp, index 1 gets the end timestamp.
  * @returns A buffer containing the aggregated reduction result (single-element buffer).
  *          The buffer is owned by the internally cached scan plan and is reused by
  *          subsequent `scan` calls on the same input buffer.
@@ -354,11 +349,9 @@ export function scan<TElement extends ScanElementType = d.F32>(
     inputBuffer: ScanBuffer<TElement>;
     operation: BinaryOp['operation'];
     identityElement: BinaryOp['identityElement'];
-    dataType?: TElement;
   },
-  querySet?: TgpuQuerySet<'timestamp'>,
 ): ScanBuffer<TElement> {
-  return runScan(root, options, true, querySet);
+  return runScan(root, options, true);
 }
 
 function runScan<TElement extends ScanElementType>(
@@ -368,29 +361,32 @@ function runScan<TElement extends ScanElementType>(
     outputBuffer?: ScanBuffer<TElement>;
     operation: BinaryOp['operation'];
     identityElement: BinaryOp['identityElement'];
-    dataType?: TElement;
   },
   onlyGreatestElement: boolean,
-  querySet?: TgpuQuerySet<'timestamp'>,
 ): ScanBuffer<TElement> {
+  const elementType = options.inputBuffer.dataType.elementType;
   const computer = createPrefixScanComputer(root, {
     operation: options.operation,
     identityElement: options.identityElement,
-    ...(options.dataType !== undefined && { dataType: options.dataType }),
+    dataType: elementType,
   });
 
-  const runOptions = querySet ? { querySet } : undefined;
-
   if (onlyGreatestElement) {
-    return computer.compute(options.inputBuffer, true, runOptions);
+    return computer.compute(options.inputBuffer, true);
   }
 
   const outputBuffer = options.outputBuffer ?? options.inputBuffer;
   if (options.inputBuffer !== outputBuffer) {
-    (outputBuffer as ScanBuffer<d.F32>).copyFrom(options.inputBuffer as ScanBuffer<d.F32>);
+    if (
+      outputBuffer.dataType.elementType.type !== elementType.type ||
+      outputBuffer.dataType.elementCount !== options.inputBuffer.dataType.elementCount
+    ) {
+      throw new Error('The input and output scan buffers must have the same type and length.');
+    }
+    (outputBuffer as ScanBuffer).copyFrom(options.inputBuffer as ScanBuffer);
   }
 
-  return computer.compute(outputBuffer, false, runOptions);
+  return computer.compute(outputBuffer, false);
 }
 
 /**
