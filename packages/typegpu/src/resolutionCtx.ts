@@ -202,17 +202,14 @@ class ItemStateStackImpl implements ItemStateStack {
           return access();
         }
 
-        const external = layer.externalMap[id];
-        if (isNamable(external) && getName(external) === undefined) {
-          setName(external, id.replaceAll('.', '_'));
-        }
-
-        if (external !== undefined && external !== null) {
+        if (id in layer.externalMap) {
+          const external = layer.externalMap[id];
+          if (isNamable(external) && getName(external) === undefined) {
+            setName(external, id.replaceAll('.', '_'));
+          }
           return coerceToSnippet(external);
         }
 
-        // Since functions cannot access resources from the calling scope, we
-        // return early here.
         return undefined;
       }
 

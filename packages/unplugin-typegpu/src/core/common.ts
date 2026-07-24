@@ -15,7 +15,7 @@ export interface Options {
   include?: FilterPattern;
 
   /** @default undefined */
-  exclude?: FilterPattern;
+  exclude?: FilterPattern | undefined;
 
   /** @default undefined */
   enforce?: 'post' | 'pre' | undefined;
@@ -24,7 +24,15 @@ export interface Options {
   forceTgpuAlias?: string | undefined;
 
   /** @default true */
-  autoNamingEnabled?: boolean | undefined;
+  autoNamingEnabled?: boolean;
+
+  /**
+   * Minify the generated AST.
+   * This results in obfuscation of the generated WGSL, and in smaller bundle sizes.
+   *
+   * @default false
+   */
+  minify?: boolean;
 
   /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
@@ -106,7 +114,7 @@ export interface PluginState extends TransformMethods {
    * In Babel, options are assigned to the property `opts` on the plugin state.
    * We use this pattern everywhere for consistency.
    */
-  opts: Options;
+  opts: Required<Options>;
 
   inUseGpuScope: boolean;
 }
@@ -137,7 +145,8 @@ export const defaultOptions = {
   include: /\.m?[jt]sx?(?:\?.*)?$/,
   autoNamingEnabled: true,
   earlyPruning: true,
-};
+  minify: false,
+} satisfies Partial<Options>;
 
 /**
  * Returns the block scope of a function declaration, if one exists.
@@ -529,7 +538,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   ArrowFunctionExpression: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
+        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node, this.opts.minify));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -542,7 +551,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   FunctionExpression: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
+        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node, this.opts.minify));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -555,7 +564,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   FunctionDeclaration: {
     enter(path, state) {
       if (containsUseGpuDirective(path.node)) {
-        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node));
+        fnNodeToTranspiledMap.set(path.node, transpileFn(path.node, this.opts.minify));
         if (state.inUseGpuScope) {
           throw new Error(`Nesting 'use gpu' functions is not allowed`);
         }
@@ -584,7 +593,7 @@ export const functionVisitor: TraverseOptions<PluginState> = {
               t.ArrowFunctionExpression | t.FunctionDeclaration | t.FunctionExpression
             >,
             getFunctionName(path.get('arguments.0')),
-            transpileFn(implementation),
+            transpileFn(implementation, this.opts.minify),
           );
         }
       }

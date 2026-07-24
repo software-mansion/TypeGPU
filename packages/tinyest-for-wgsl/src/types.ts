@@ -7,13 +7,27 @@ export type Scope = {
   declaredNames: string[];
 };
 
-export type Externals = Set<string>;
+export type Externals = Map<string, string>;
+
+export interface Minifier {
+  /**
+   * If `name` wasn't minified before, it gives it a new minified name.
+   * Then, returns the minified version of `name`.
+   */
+  minify(name: string): string;
+  /**
+   * Returns the minified version of `name` if it exists, otherwise returns undefined.
+   */
+  getIfMinified(name: string): string | undefined;
+}
 
 export type Context = {
   /** Holds a set of all identifiers that were used in code, but were not declared in code. */
   externalNames: Externals;
   /** Used to signal to identifiers that they should not treat their resolution as possible external uses. */
   ignoreExternalDepth: number;
+  /** Used to signal to identifiers that they should not be minified (they are minified by default). */
+  ignoreMinificationDepth: number;
   /**
    * Keeps the set of nodes visited by `tryFindExternalChain`.
    * This helps optimize code like `ext().x.y.z.t`:
@@ -22,6 +36,11 @@ export type Context = {
    */
   visitedNodes: Set<babel.MemberExpression | acorn.MemberExpression>;
   stack: Scope[];
+  params: tinyest.FuncParameter[];
+  /**
+   * Used to transform identifiers.
+   */
+  minifier: Minifier;
 };
 
 export type TranspilationResult = {
