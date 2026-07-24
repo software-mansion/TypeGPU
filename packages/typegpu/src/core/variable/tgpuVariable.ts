@@ -2,14 +2,13 @@ import type { AnyData } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { IllegalVarAccessError } from '../../errors.ts';
-import { getExecMode, isInsideTgpuFn } from '../../execMode.ts';
+import { isInsideTgpuFn } from '../../execMode.ts';
+import { makeDereferenceable } from '../../internal.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
-import { assertExhaustive } from '../../shared/utilityTypes.ts';
+import { $gpuValueOf, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { valueProxyHandler } from '../valueProxyUtils.ts';
 
 // ----------
 // Public API
@@ -75,6 +74,45 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
   readonly #dataType: TDataType;
   readonly #initialValue: InferGPU<TDataType> | undefined;
 
+  declare $: InferGPU<TDataType>;
+  declare readonly [$gpuValueOf]: InferGPU<TDataType>;
+
+  static {
+    makeDereferenceable(TgpuVarImpl.prototype as TgpuVarImpl<VariableScope, BaseData>, {
+      getBaseSnippet(trackingProxy) {
+        return snip(trackingProxy, this.#dataType, this.#scope, false);
+      },
+      simulateGet(state) {
+        if (!state.vars[this.#scope].has(this)) {
+          // Not initialized yet
+          state.vars[this.#scope].set(this, this.#initialValue);
+        }
+        return state.vars[this.#scope].get(this);
+      },
+      simulateSet(state, value) {
+        state.vars[this.#scope].set(this, value);
+      },
+      normalGet() {
+        throw new IllegalVarAccessError(
+          isInsideTgpuFn()
+            ? `Cannot access variable '${
+                getName(this) ?? '<unnamed>'
+              }'. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+            : 'TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
+        );
+      },
+      normalSet(_value) {
+        throw new IllegalVarAccessError(
+          isInsideTgpuFn()
+            ? `Cannot access ${String(
+                this,
+              )}. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+            : 'TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
+        );
+      },
+    });
+  }
+
   constructor(scope: TScope, dataType: TDataType, initialValue?: InferGPU<TDataType>) {
     this.resourceType = 'var';
     this.#scope = scope;
@@ -98,79 +136,5 @@ class TgpuVarImpl<TScope extends VariableScope, TDataType extends BaseData>
 
   toString() {
     return `var:${getName(this) ?? '<unnamed>'}`;
-  }
-
-  get [$gpuValueOf](): InferGPU<TDataType> {
-    const dataType = this.#dataType;
-    const origin = this.#scope;
-
-    return new Proxy(
-      {
-        [$internal]: true,
-        get [$ownSnippet]() {
-          return snip(this, dataType, origin, false);
-        },
-        [$resolve]: (ctx) => ctx.resolve(this),
-        toString: () => `var:${getName(this) ?? '<unnamed>'}.$`,
-      },
-      valueProxyHandler,
-    ) as InferGPU<TDataType>;
-  }
-
-  get $(): InferGPU<TDataType> {
-    const mode = getExecMode();
-    const insideTgpuFn = isInsideTgpuFn();
-
-    if (mode.type === 'normal') {
-      throw new IllegalVarAccessError(
-        insideTgpuFn
-          ? `Cannot access variable '${
-              getName(this) ?? '<unnamed>'
-            }'. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-          : 'TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
-      );
-    }
-
-    if (mode.type === 'codegen') {
-      return this[$gpuValueOf];
-    }
-
-    if (mode.type === 'simulate') {
-      if (!mode.vars[this.#scope].has(this)) {
-        // Not initialized yet
-        mode.vars[this.#scope].set(this, this.#initialValue);
-      }
-      return mode.vars[this.#scope].get(this) as InferGPU<TDataType>;
-    }
-
-    return assertExhaustive(mode, 'tgpuVariable.ts#TgpuVarImpl/$');
-  }
-
-  set $(value: InferGPU<TDataType>) {
-    const mode = getExecMode();
-    const insideTgpuFn = isInsideTgpuFn();
-
-    if (mode.type === 'normal') {
-      throw new IllegalVarAccessError(
-        insideTgpuFn
-          ? `Cannot access ${String(
-              this,
-            )}. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-          : 'TypeGPU variables are inaccessible during normal JS execution. If you wanted to simulate GPU behavior, try `tgpu.simulate()`',
-      );
-    }
-
-    if (mode.type === 'codegen') {
-      // The WGSL generator handles variable assignment, and does not defer to
-      // whatever's being assigned to generate the WGSL.
-      throw new Error('Unreachable tgpuVariable.ts#TgpuVarImpl/$');
-    }
-
-    if (mode.type === 'simulate') {
-      mode.vars[this.#scope].set(this, value);
-      return;
-    }
-
-    assertExhaustive(mode, 'tgpuVariable.ts#TgpuVarImpl/$');
   }
 }

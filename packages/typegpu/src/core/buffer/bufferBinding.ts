@@ -2,23 +2,15 @@ import { schemaCallWrapper } from '../../data/schemaCallWrapper.ts';
 import { snip, type ResolvedSnippet } from '../../data/snippet.ts';
 import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { IllegalBufferAccessError } from '../../errors.ts';
-import { getExecMode, isInsideTgpuFn } from '../../execMode.ts';
+import { isInsideTgpuFn } from '../../execMode.ts';
 import { type StorageFlag } from '../../extension.ts';
 import { getName, setName, type TgpuNamable } from '../../shared/meta.ts';
 import type { Infer, InferGPU, InferInput, InferPatch, InferPartial } from '../../shared/repr.ts';
-import {
-  $getNameForward,
-  $gpuValueOf,
-  $internal,
-  $ownSnippet,
-  $repr,
-  $resolve,
-} from '../../shared/symbols.ts';
-import { assertExhaustive } from '../../shared/utilityTypes.ts';
-import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { valueProxyHandler } from '../valueProxyUtils.ts';
-import { type BufferWriteOptions, type TgpuBuffer, type UniformFlag } from './buffer.ts';
+import { $getNameForward, $gpuValueOf, $internal, $repr, $resolve } from '../../shared/symbols.ts';
 import { isUsableAsStorage, isUsableAsUniform } from '../../types.ts';
+import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
+import { makeDereferenceable } from '../../tgsl/makeDereferenceable.ts';
+import { type BufferWriteOptions, type TgpuBuffer, type UniformFlag } from './buffer.ts';
 
 // ----------
 // Public API
@@ -126,6 +118,63 @@ export class TgpuBufferBindingImpl<
   readonly buffer: TgpuBuffer<TData> &
     (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag);
 
+  // prototype properties
+  declare $: InferGPU<TData>;
+  declare readonly [$gpuValueOf]: InferGPU<TData>;
+
+  static {
+    makeDereferenceable(TgpuBufferBindingImpl.prototype, {
+      //
+      // CODEGEN
+      //
+      getBaseSnippet(trackingProxy) {
+        return snip(
+          trackingProxy,
+          this.buffer.dataType,
+          /* origin */ this.resourceType,
+          /* possibleSideEffects */ false,
+        );
+      },
+      //
+      // SIMULATE
+      //
+      simulateGet(state) {
+        if (!state.buffers.has(this.buffer)) {
+          // Not initialized yet
+          state.buffers.set(
+            this.buffer,
+            schemaCallWrapper(this.buffer.dataType, this.buffer.initial),
+          );
+        }
+        return state.buffers.get(this.buffer);
+      },
+      simulateSet(state, value) {
+        state.buffers.set(this.buffer, value);
+      },
+      //
+      // NORMAL
+      //
+      normalGet() {
+        throw new IllegalBufferAccessError(
+          isInsideTgpuFn()
+            ? `Cannot access ${String(
+                this.buffer,
+              )}. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+            : '.$ is inaccessible during normal JS execution. Try `.read()`',
+        );
+      },
+      normalSet() {
+        throw new IllegalBufferAccessError(
+          isInsideTgpuFn()
+            ? `Cannot access ${String(
+                this.buffer,
+              )}. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
+            : '.$ is inaccessible during normal JS execution. Try `.write()`',
+        );
+      },
+    });
+  }
+
   constructor(
     usage: TType,
     buffer: TgpuBuffer<TData> & (TType extends 'mutable' | 'readonly' ? StorageFlag : UniformFlag),
@@ -155,88 +204,6 @@ export class TgpuBufferBindingImpl<
 
   read(): Promise<Infer<TData>> {
     return this.buffer.read();
-  }
-
-  get [$gpuValueOf](): InferGPU<TData> {
-    const dataType = this.buffer.dataType;
-    const usage = this.resourceType;
-
-    return new Proxy(
-      {
-        [$internal]: true,
-        get [$ownSnippet]() {
-          return snip(this, dataType, usage, /* possible side effects */ false);
-        },
-        [$resolve]: (ctx) => ctx.resolve(this),
-        toString: () => `${usage}:${getName(this) ?? '<unnamed>'}.$`,
-      },
-      valueProxyHandler,
-    ) as InferGPU<TData>;
-  }
-
-  get $(): InferGPU<TData> {
-    const mode = getExecMode();
-    const insideTgpuFn = isInsideTgpuFn();
-
-    if (mode.type === 'normal') {
-      throw new IllegalBufferAccessError(
-        insideTgpuFn
-          ? `Cannot access ${String(
-              this.buffer,
-            )}. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-          : '.$ is inaccessible during normal JS execution. Try `.read()`',
-      );
-    }
-
-    if (mode.type === 'codegen') {
-      return this[$gpuValueOf];
-    }
-
-    if (mode.type === 'simulate') {
-      if (!mode.buffers.has(this.buffer)) {
-        // Not initialized yet
-        mode.buffers.set(this.buffer, schemaCallWrapper(this.buffer.dataType, this.buffer.initial));
-      }
-      return mode.buffers.get(this.buffer) as InferGPU<TData>;
-    }
-
-    return assertExhaustive(mode, 'bufferBinding.ts#TgpuBufferBindingImpl/$');
-  }
-
-  set $(value: InferGPU<TData>) {
-    const mode = getExecMode();
-    const insideTgpuFn = isInsideTgpuFn();
-
-    if (mode.type === 'normal') {
-      throw new IllegalBufferAccessError(
-        insideTgpuFn
-          ? `Cannot access ${String(
-              this.buffer,
-            )}. TypeGPU functions that depends on GPU resources need to be part of a compute dispatch, draw call or simulation`
-          : '.$ is inaccessible during normal JS execution. Try `.write()`',
-      );
-    }
-
-    if (mode.type === 'codegen') {
-      // The WGSL generator handles buffer assignment, and does not defer to
-      // whatever's being assigned to generate the WGSL.
-      throw new Error('Unreachable bufferBinding.ts#TgpuBufferBindingImpl/$');
-    }
-
-    if (mode.type === 'simulate') {
-      mode.buffers.set(this.buffer, value);
-      return;
-    }
-
-    assertExhaustive(mode, 'bufferBinding.ts#TgpuBufferBindingImpl/$');
-  }
-
-  get value(): InferGPU<TData> {
-    return this.$;
-  }
-
-  set value(value: InferGPU<TData>) {
-    this.$ = value;
   }
 
   toString(): string {

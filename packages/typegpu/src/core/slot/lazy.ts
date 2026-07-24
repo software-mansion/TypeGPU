@@ -1,5 +1,6 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { getResolutionCtx } from '../../execMode.ts';
+import { makeDereferenceable, makeResolvable } from '../../internal.ts';
 import type { GPUValueOf } from '../../shared/repr.ts';
 import { $gpuValueOf, $internal, $providing } from '../../shared/symbols.ts';
 import { getGpuValueRecursively } from '../valueProxyUtils.ts';
@@ -36,6 +37,29 @@ class TgpuLazyImpl<out T> implements TgpuLazy<T> {
   // prototype properties
   declare resourceType: 'lazy';
 
+  static {
+    TgpuLazyImpl.prototype.resourceType = 'lazy';
+
+    makeDereferenceable(
+      makeResolvable(TgpuLazyImpl.prototype, {
+        asString() {
+          return 'lazy';
+        },
+        resolve(_ctx) {
+          throw new Error(`Unreachable, is never resolved directly`);
+        },
+      }),
+      {
+        codegenGet() {
+          return this.#getValue();
+        },
+        normalGet() {
+          return this.#getValue();
+        },
+      },
+    );
+  }
+
   constructor(compute: () => T, providing: Providing | undefined) {
     this[$internal] = {
       compute,
@@ -55,8 +79,12 @@ class TgpuLazyImpl<out T> implements TgpuLazy<T> {
     return this[$gpuValueOf];
   }
 
-  toString(): string {
-    return 'lazy';
+  #getValue() {
+    const ctx = getResolutionCtx();
+    if (!ctx) {
+      throw new Error(`Cannot access tgpu.lazy's value outside of resolution.`);
+    }
+    return getGpuValueRecursively(ctx.unwrap(this));
   }
 
   with<TData extends AnyData>(
@@ -72,5 +100,3 @@ class TgpuLazyImpl<out T> implements TgpuLazy<T> {
     });
   }
 }
-
-TgpuLazyImpl.prototype.resourceType = 'lazy';

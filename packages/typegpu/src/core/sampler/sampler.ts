@@ -2,8 +2,8 @@ import type { WgslComparisonSamplerProps, WgslSamplerProps } from '../../data/sa
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
-import type { Infer } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal, $ownSnippet, $repr, $resolve } from '../../shared/symbols.ts';
+import type { Infer, InferGPU } from '../../shared/repr.ts';
+import { $gpuValueOf, $internal, $repr, $resolve } from '../../shared/symbols.ts';
 import type { LayoutMembership } from '../../tgpuBindGroupLayout.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import type { Unwrapper } from '../../unwrapper.ts';
@@ -13,8 +13,7 @@ import {
   type WgslComparisonSampler,
   type WgslSampler,
 } from '../../data/sampler.ts';
-import { inCodegenMode } from '../../execMode.ts';
-import { valueProxyHandler } from '../valueProxyUtils.ts';
+import { makeDereferenceable } from '../../internal.ts';
 
 interface SamplerInternals {
   readonly unwrap?: (() => GPUSampler) | undefined;
@@ -29,8 +28,8 @@ export interface TgpuSampler {
   readonly resourceType: 'sampler';
   readonly schema: WgslSampler;
 
-  readonly [$gpuValueOf]: Infer<WgslSampler>;
-  $: Infer<WgslSampler>;
+  readonly [$gpuValueOf]: InferGPU<WgslSampler>;
+  $: InferGPU<WgslSampler>;
 
   toString(): string;
 }
@@ -40,8 +39,8 @@ export interface TgpuComparisonSampler {
   readonly resourceType: 'sampler-comparison';
   readonly schema: WgslComparisonSampler;
 
-  readonly [$gpuValueOf]: Infer<WgslComparisonSampler>;
-  $: Infer<WgslComparisonSampler>;
+  readonly [$gpuValueOf]: InferGPU<WgslComparisonSampler>;
+  $: InferGPU<WgslComparisonSampler>;
 
   toString(): string;
 }
@@ -91,6 +90,22 @@ export class TgpuLaidOutSamplerImpl<
   readonly schema: T;
   readonly #membership: LayoutMembership;
 
+  declare $: InferGPU<WgslSampler>;
+  declare readonly [$gpuValueOf]: InferGPU<WgslSampler>;
+
+  static {
+    makeDereferenceable(TgpuLaidOutSamplerImpl.prototype, {
+      getBaseSnippet(trackingProxy) {
+        return snip(trackingProxy, this.schema, /* origin */ 'handle', false);
+      },
+      normalGet() {
+        throw new Error(
+          'Direct access to sampler values is possible only as part of a compute dispatch or draw call.',
+        );
+      },
+    });
+  }
+
   constructor(schema: T, membership: LayoutMembership) {
     this.schema = schema;
     this.#membership = membership;
@@ -114,31 +129,6 @@ export class TgpuLaidOutSamplerImpl<
     return snip(id, this.schema, /* origin */ 'handle');
   }
 
-  get [$gpuValueOf](): Infer<T> {
-    const schema = this.schema;
-    return new Proxy(
-      {
-        [$internal]: true,
-        get [$ownSnippet]() {
-          return snip(this, schema, /* origin */ 'handle', false);
-        },
-        [$resolve]: (ctx) => ctx.resolve(this),
-        toString: () => `${this.toString()}.$`,
-      },
-      valueProxyHandler,
-    ) as unknown as Infer<T>;
-  }
-
-  get $(): Infer<T> {
-    if (inCodegenMode()) {
-      return this[$gpuValueOf];
-    }
-
-    throw new Error(
-      'Direct access to sampler values is possible only as part of a compute dispatch or draw call.',
-    );
-  }
-
   toString() {
     return `${this.resourceType}:${getName(this) ?? '<unnamed>'}`;
   }
@@ -156,6 +146,22 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
   #sampler: GPUSampler | null = null;
   #props: WgslSamplerProps | WgslComparisonSamplerProps;
   #branch: Unwrapper;
+
+  declare readonly [$gpuValueOf]: InferGPU<T>;
+  declare readonly $: InferGPU<T>;
+
+  static {
+    makeDereferenceable(TgpuFixedSamplerImpl.prototype, {
+      getBaseSnippet(trackingProxy) {
+        return snip(trackingProxy, this.schema, /* origin */ 'handle', false);
+      },
+      normalGet() {
+        throw new Error(
+          'Direct access to sampler values is possible only as part of a compute dispatch or draw call.',
+        );
+      },
+    });
+  }
 
   constructor(schema: T, props: WgslSamplerProps | WgslComparisonSamplerProps, branch: Unwrapper) {
     this.schema = schema;
@@ -200,31 +206,6 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler>
     );
 
     return snip(id, this.schema, /* origin */ 'handle');
-  }
-
-  get [$gpuValueOf](): Infer<T> {
-    const schema = this.schema;
-    return new Proxy(
-      {
-        [$internal]: true,
-        get [$ownSnippet]() {
-          return snip(this, schema, /* origin */ 'handle', false);
-        },
-        [$resolve]: (ctx) => ctx.resolve(this),
-        toString: () => `${this.toString()}.$`,
-      },
-      valueProxyHandler,
-    ) as unknown as Infer<T>;
-  }
-
-  get $(): Infer<T> {
-    if (inCodegenMode()) {
-      return this[$gpuValueOf];
-    }
-
-    throw new Error(
-      'Direct access to sampler values is possible only as part of a compute dispatch or draw call.',
-    );
   }
 
   $name(label: string) {

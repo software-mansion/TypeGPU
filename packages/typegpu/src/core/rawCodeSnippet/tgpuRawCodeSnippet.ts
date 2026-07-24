@@ -1,12 +1,11 @@
 import type { AnyData } from '../../data/dataTypes.ts';
 import { type Origin, type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
-import { inCodegenMode } from '../../execMode.ts';
+import { makeDereferenceable } from '../../internal.ts';
 import type { InferGPU } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
+import { $gpuValueOf, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
 import { type ExternalMap, replaceExternalsInWgsl } from '../resolve/externals.ts';
-import { valueProxyHandler } from '../valueProxyUtils.ts';
 
 // ----------
 // Public API
@@ -96,6 +95,20 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
   #expression: string;
   #externals: ExternalMap | undefined;
 
+  declare readonly [$gpuValueOf]: InferGPU<TDataType>;
+  declare $: InferGPU<TDataType>;
+
+  static {
+    makeDereferenceable(TgpuRawCodeSnippetImpl.prototype, {
+      getBaseSnippet(trackingProxy) {
+        return snip(trackingProxy, this.dataType, this.origin, this.possibleSideEffects);
+      },
+      normalGet() {
+        throw new Error('Raw code snippets can only be used on the GPU.');
+      },
+    });
+  }
+
   constructor(
     expression: string,
     type: TDataType,
@@ -128,31 +141,5 @@ class TgpuRawCodeSnippetImpl<TDataType extends BaseData>
 
   toString() {
     return `raw(${String(this.dataType)}): "${this.#expression}"`;
-  }
-
-  get [$gpuValueOf](): InferGPU<TDataType> {
-    const dataType = this.dataType;
-    const origin = this.origin;
-    const possibleSideEffects = this.possibleSideEffects;
-
-    return new Proxy(
-      {
-        [$internal]: true,
-        get [$ownSnippet]() {
-          return snip(this, dataType, origin, possibleSideEffects);
-        },
-        [$resolve]: (ctx) => ctx.resolve(this),
-        toString: () => `raw(${String(this.dataType)}): "${this.#expression}".$`,
-      },
-      valueProxyHandler,
-    ) as InferGPU<TDataType>;
-  }
-
-  get $(): InferGPU<TDataType> {
-    if (!inCodegenMode()) {
-      throw new Error('Raw code snippets can only be used on the GPU.');
-    }
-
-    return this[$gpuValueOf];
   }
 }

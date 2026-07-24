@@ -1,9 +1,9 @@
-import { snip, type Origin } from '../data/snippet.ts';
-import type { BaseData } from '../data/wgslTypes.ts';
+import type { Snippet } from '../data/snippet.ts';
 import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../shared/symbols.ts';
 import { valueProxyHandler } from '../core/valueProxyUtils.ts';
-import type { SelfResolvable } from '../types.ts';
-import { inCodegenMode } from '../execMode.ts';
+import type { SelfResolvable, SimulationState } from '../types.ts';
+import { getExecMode } from '../execMode.ts';
+import { assertExhaustive } from '../shared/utilityTypes.ts';
 
 /**
  * WARNING: This is an API that touches a lot of internals, and is not stable
@@ -21,56 +21,100 @@ export function makeDereferenceable<T extends SelfResolvable, TValue>(
   value: T,
   options: makeDereferenceable.Options<T, TValue>,
 ): T & { $: TValue } {
+  const { normalSet, simulateSet } = options;
+
   Object.defineProperty(value, $gpuValueOf, {
     get() {
-      const [dataType, origin] = options.getDataTypeAndOrigin.apply(this);
+      if (options.codegenGet) {
+        return options.codegenGet.apply(this);
+      }
 
-      return new Proxy(
+      // oxlint-disable-next-line typescript/no-this-alias
+      const resource = this;
+      const proxy = new Proxy(
         {
           [$internal]: true,
           get [$ownSnippet]() {
-            return snip(this, dataType, origin);
+            // TODO: Enforce this on the type level
+            // oxlint-disable-next-line typescript/no-non-null-assertion -- enforced on the type level
+            return options.getBaseSnippet!.apply(resource, [proxy]);
           },
-          [$resolve]: (ctx) => ctx.resolve(this),
-          toString: () => `${this.toString()}.$`,
+          [$resolve]: (ctx) => ctx.resolve(resource),
+          toString: () => `${resource.toString()}.$`,
         },
         valueProxyHandler,
-      );
+      ) as TValue;
+
+      return proxy;
     },
   });
 
-  if (options.setInJS) {
-    // oxlint-disable-next-line typescript/unbound-method -- setInJS is explicitly bound down below
-    const setInJS = options.setInJS;
-    Object.defineProperty(value, '$', {
-      get() {
-        if (inCodegenMode()) {
-          return this[$gpuValueOf];
+  Object.defineProperty(value, '$', {
+    get() {
+      const mode = getExecMode();
+
+      if (mode.type === 'codegen') {
+        return this[$gpuValueOf];
+      }
+
+      if (mode.type === 'simulate') {
+        if (options.simulateGet) {
+          return options.simulateGet.apply(this, [mode]);
         }
-        return options.getInJS.apply(this);
-      },
-      set(v: TValue) {
-        setInJS.apply(this, [v]);
-      },
-    });
-  } else {
-    Object.defineProperty(value, '$', {
-      get() {
-        if (inCodegenMode()) {
-          return this[$gpuValueOf];
+        return options.normalGet.apply(this);
+      }
+
+      if (mode.type === 'normal') {
+        return options.normalGet.apply(this);
+      }
+
+      return assertExhaustive(mode, 'makeDereferenceable.ts#$ (get)');
+    },
+    set(value: TValue) {
+      const mode = getExecMode();
+
+      if (mode.type === 'normal') {
+        if (!normalSet) {
+          throw new Error(`'${this.toString()}' cannot be set in normal mode`);
         }
-        return options.getInJS.apply(this);
-      },
-    });
-  }
+        normalSet.apply(this, [value]);
+        return;
+      }
+
+      if (mode.type === 'simulate') {
+        if (simulateSet) {
+          simulateSet.apply(this, [mode, value]);
+        } else if (normalSet) {
+          // Falling back to the 'normal' set
+          normalSet.apply(this, [value]);
+        } else {
+          throw new Error(`'${this.toString()}' cannot be set in simulate mode`);
+        }
+        return;
+      }
+
+      if (mode.type === 'codegen') {
+        // The shader generator handles assignment, and does not defer to
+        // whatever's being assigned to generate the shader code.
+        throw new Error('Unreachable makeDerefenceable.ts#$ (set)');
+      }
+
+      return assertExhaustive(mode, 'makeDereferenceable.ts#$ (set)');
+    },
+  });
 
   return value as T & { $: TValue };
 }
 
 export namespace makeDereferenceable {
   export interface Options<T extends SelfResolvable, TValue> {
-    getInJS(this: T): TValue;
-    setInJS?(this: T, value: TValue): void;
-    getDataTypeAndOrigin(this: T): [dataType: BaseData, origin: Origin];
+    normalGet(this: T): TValue;
+    normalSet?(this: T, value: TValue): void;
+    codegenGet?(this: T): TValue;
+    getBaseSnippet?(this: T, trackingProxy: TValue): Snippet;
+    /** @deprecate 'simulate' mode is planned to be removed in the future */
+    simulateGet?(this: T, state: SimulationState): TValue;
+    /** @deprecate 'simulate' mode is planned to be removed in the future */
+    simulateSet?(this: T, state: SimulationState, value: TValue): void;
   }
 }

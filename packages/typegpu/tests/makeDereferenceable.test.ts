@@ -24,10 +24,10 @@ describe('makeDereferenceable', () => {
         },
       ),
       {
-        getDataTypeAndOrigin() {
-          return [d.f32, 'uniform'];
+        getBaseSnippet(trackingProxy) {
+          return snip(trackingProxy, d.f32, 'uniform');
         },
-        getInJS(): number {
+        normalGet(): number {
           throw new Error(`Cannot be used in JS.`);
         },
       },
@@ -35,12 +35,12 @@ describe('makeDereferenceable', () => {
 
     function fn1() {
       'use gpu';
-      return d.vec4f(0, intensity.$, 0, 1);
+      return d.vec4f(0, intensity.$ + 1, 0, 1);
     }
 
     function fn2() {
       'use gpu';
-      return d.vec4f(intensity.$, 0, 0, 1);
+      return d.vec4f(intensity.$ + 2, 0, 0, 1);
     }
 
     const resolved = tgpu.resolve([fn1, fn2]);
@@ -51,11 +51,11 @@ describe('makeDereferenceable', () => {
       "@group(0) @binding(0) var<uniform> intensity: f32;
 
       fn fn1() -> vec4f {
-        return vec4f(0f, intensity, 0f, 1f);
+        return vec4f(0f, (intensity + 1f), 0f, 1f);
       }
 
       fn fn2() -> vec4f {
-        return vec4f(intensity, 0f, 0f, 1f);
+        return vec4f((intensity + 2f), 0f, 0f, 1f);
       }"
     `);
   });

@@ -1,13 +1,12 @@
 import { isData, type AnyData } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
 import { type AnyWgslData, type BaseData, type WgslArray } from '../../data/wgslTypes.ts';
-import { inCodegenMode } from '../../execMode.ts';
+import { makeDereferenceable } from '../../internal.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
 import { getName, setName } from '../../shared/meta.ts';
 import type { InferGPU } from '../../shared/repr.ts';
-import { $gpuValueOf, $internal, $ownSnippet, $resolve } from '../../shared/symbols.ts';
+import { $gpuValueOf, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { valueProxyHandler } from '../valueProxyUtils.ts';
 
 // ----------
 // Public API
@@ -86,8 +85,26 @@ class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType>,
   readonly [$internal] = {};
   readonly resourceType: 'const';
   readonly dataType: TDataType;
-
   readonly #value: DeepReadonly<InferGPU<TDataType>>;
+
+  declare readonly [$gpuValueOf]: DeepReadonly<InferGPU<TDataType>>;
+  declare readonly $: DeepReadonly<InferGPU<TDataType>>;
+
+  static {
+    makeDereferenceable(TgpuConstImpl.prototype, {
+      getBaseSnippet(trackingProxy) {
+        return snip(
+          trackingProxy,
+          this.dataType,
+          'constant-immutable-def',
+          /* possibleSideEffects */ false,
+        );
+      },
+      normalGet() {
+        return this.#value;
+      },
+    });
+  }
 
   constructor(dataType: TDataType, value: InferGPU<TDataType>) {
     this.resourceType = 'const';
@@ -115,29 +132,5 @@ class TgpuConstImpl<TDataType extends BaseData> implements TgpuConst<TDataType>,
 
   toString() {
     return `const:${getName(this) ?? '<unnamed>'}`;
-  }
-
-  get [$gpuValueOf](): DeepReadonly<InferGPU<TDataType>> {
-    const dataType = this.dataType;
-
-    return new Proxy(
-      {
-        [$internal]: true,
-        get [$ownSnippet]() {
-          return snip(this, dataType, 'constant-immutable-def', /* possibleSideEffects */ false);
-        },
-        [$resolve]: (ctx) => ctx.resolve(this),
-        toString: () => `const:${getName(this) ?? '<unnamed>'}.$`,
-      },
-      valueProxyHandler,
-    ) as DeepReadonly<InferGPU<TDataType>>;
-  }
-
-  get $(): DeepReadonly<InferGPU<TDataType>> {
-    if (inCodegenMode()) {
-      return this[$gpuValueOf];
-    }
-
-    return this.#value;
   }
 }
