@@ -4,6 +4,7 @@ export {
   PrefixScanComputer,
   type PrefixScanPlan,
   scan,
+  type ScanBuffer,
   type ScanRunOptions,
 } from './prefixScan.ts';
 export type { ScanElementType } from './schemas.ts';
