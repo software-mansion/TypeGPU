@@ -112,6 +112,15 @@ importers:
       pkg-pr-new:
         specifier: ^0.0.66
         version: 0.0.66
+      prettier:
+        specifier: ^3.9.5
+        version: 3.9.5
+      prettier-plugin-astro:
+        specifier: ^0.14.1
+        version: 0.14.1
+      prettier-plugin-tailwindcss:
+        specifier: ^0.8.1
+        version: 0.8.1(prettier-plugin-astro@0.14.1)(prettier@3.9.5)
       typescript:
         specifier: npm:tsover@^6.0.2
         version: tsover@6.0.2
@@ -247,7 +256,7 @@ importers:
     dependencies:
       '@astrojs/check':
         specifier: ^0.9.7
-        version: 0.9.7(prettier@3.8.0)(tsover@6.0.2)
+        version: 0.9.7(prettier-plugin-astro@0.14.1)(prettier@3.9.5)(tsover@6.0.2)
       '@astrojs/react':
         specifier: ^5.0.0
         version: 5.0.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@24.10.0)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(esbuild@0.27.5)(jiti@2.6.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.3)
@@ -452,7 +461,7 @@ importers:
         version: 0.1.69
       astro-vtbot:
         specifier: ^2.1.10
-        version: 2.1.10(prettier@3.8.0)(tsover@6.0.2)
+        version: 2.1.10(prettier-plugin-astro@0.14.1)(prettier@3.9.5)(tsover@6.0.2)
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.21(postcss@8.5.8)
@@ -498,7 +507,7 @@ importers:
         version: 9.39.2(jiti@2.6.1)
       eslint-doc-generator:
         specifier: ^3.3.2
-        version: 3.3.2(eslint@9.39.2(jiti@2.6.1))(prettier@3.8.0)(tsover@6.0.2)
+        version: 3.3.2(eslint@9.39.2(jiti@2.6.1))(prettier@3.9.5)(tsover@6.0.2)
       tsdown:
         specifier: ^0.20.3
         version: 0.20.3(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(tsover@6.0.2)
@@ -7714,6 +7723,65 @@ packages:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
 
+  prettier-plugin-astro@0.14.1:
+    resolution: {integrity: sha512-RiBETaaP9veVstE4vUwSIcdATj6dKmXljouXc/DDNwBSPTp8FRkLGDSGFClKsAFeeg+13SB0Z1JZvbD76bigJw==}
+    engines: {node: ^14.15.0 || >=16.0.0}
+
+  prettier-plugin-tailwindcss@0.8.1:
+    resolution: {integrity: sha512-iaFMYqDsE4ffdDkn5qup0j5f2aCEBFZrdrZnvu9QKTlWx/iGPeQ4HHu7b7fCPMxeo9nwQBiOAh2nSypdFYWJkw==}
+    engines: {node: '>=20.19'}
+    peerDependencies:
+      '@ianvs/prettier-plugin-sort-imports': '*'
+      '@prettier/plugin-hermes': '*'
+      '@prettier/plugin-oxc': '*'
+      '@prettier/plugin-pug': '*'
+      '@shopify/prettier-plugin-liquid': '*'
+      '@trivago/prettier-plugin-sort-imports': '*'
+      '@zackad/prettier-plugin-twig': '*'
+      prettier: ^3.0
+      prettier-plugin-astro: '*'
+      prettier-plugin-css-order: '*'
+      prettier-plugin-jsdoc: '*'
+      prettier-plugin-marko: '*'
+      prettier-plugin-multiline-arrays: '*'
+      prettier-plugin-organize-attributes: '*'
+      prettier-plugin-organize-imports: '*'
+      prettier-plugin-sort-imports: '*'
+      prettier-plugin-svelte: '*'
+    peerDependenciesMeta:
+      '@ianvs/prettier-plugin-sort-imports':
+        optional: true
+      '@prettier/plugin-hermes':
+        optional: true
+      '@prettier/plugin-oxc':
+        optional: true
+      '@prettier/plugin-pug':
+        optional: true
+      '@shopify/prettier-plugin-liquid':
+        optional: true
+      '@trivago/prettier-plugin-sort-imports':
+        optional: true
+      '@zackad/prettier-plugin-twig':
+        optional: true
+      prettier-plugin-astro:
+        optional: true
+      prettier-plugin-css-order:
+        optional: true
+      prettier-plugin-jsdoc:
+        optional: true
+      prettier-plugin-marko:
+        optional: true
+      prettier-plugin-multiline-arrays:
+        optional: true
+      prettier-plugin-organize-attributes:
+        optional: true
+      prettier-plugin-organize-imports:
+        optional: true
+      prettier-plugin-sort-imports:
+        optional: true
+      prettier-plugin-svelte:
+        optional: true
+
   prettier@3.6.2:
     resolution: {integrity: sha512-I7AIg5boAr5R0FFtJ6rCfD+LFsWHp81dolrFD8S79U9tb8Az2nGrJncnMSnys+bpQJfRUzqs9hnA81OAA3hCuQ==}
     engines: {node: '>=14'}
@@ -7721,6 +7789,11 @@ packages:
 
   prettier@3.8.0:
     resolution: {integrity: sha512-yEPsovQfpxYfgWNhCfECjG5AQaO+K3dp6XERmOepyPDVqcJm+bjyCVO3pmU+nAPe0N5dDvekfGezt/EIiRe1TA==}
+    engines: {node: '>=14'}
+    hasBin: true
+
+  prettier@3.9.5:
+    resolution: {integrity: sha512-/FVl766LpUfB5vXgCYOYa0MeV/441Ia99AeICQIQFTY/Nw0roZwULcXpku5i1/m5kt/baz+s4Zogspd839HSMg==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -8108,11 +8181,17 @@ packages:
   rw@1.3.3:
     resolution: {integrity: sha512-PdhdWy89SiZogBLaw42zdeqtRJ//zFd2PgQavcICDUgJT5oW10QCRKbJ6bg4r0/UY2M6BWd5tkxuGFRvCkgfHQ==}
 
+  s.color@0.0.15:
+    resolution: {integrity: sha512-AUNrbEUHeKY8XsYr/DYpl+qk5+aM+DChopnWOPEzn8YKzOhv4l2zH6LzZms3tOZP3wwdOyc0RmTciyi46HLIuA==}
+
   safe-buffer@5.2.1:
     resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
 
   safer-buffer@2.1.2:
     resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
+
+  sass-formatter@0.7.9:
+    resolution: {integrity: sha512-CWZ8XiSim+fJVG0cFLStwDvft1VI7uvXdCNJYXhDvowiv+DsbD1nXLiQ4zrE5UBvj5DWZJ93cwN0NX5PMsr1Pw==}
 
   sax@1.4.4:
     resolution: {integrity: sha512-1n3r/tGXO6b6VXMdFT54SHzT9ytu9yr7TaELowdYpMqY/Ao7EnlQGmAQ1+RatX7Tkkdm6hONI2owqNx2aZj5Sw==}
@@ -8405,6 +8484,9 @@ packages:
     engines: {node: ^18.12.0 || ^20.9.0 || >=22.0}
     peerDependencies:
       postcss: ^8.4.31
+
+  suf-log@2.5.3:
+    resolution: {integrity: sha512-KvC8OPjzdNOe+xQ4XWJV2whQA0aM1kGVczMQ8+dStAO6KfEB140JEVQ9dE76ONZ0/Ylf67ni4tILPJB41U0eow==}
 
   supports-color@7.2.0:
     resolution: {integrity: sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==}
@@ -9278,7 +9360,7 @@ packages:
     resolution: {integrity: sha512-xYys/sgYuqk1CmIGfsIBCI9gG9Or48qk5TFtlGby5qx+hn+FvCMC8SBC0EkQ/wCDxjTORDb8d/6B27U/BX7qMQ==}
 
   wgsl_reflect@https://codeload.github.com/mhawryluk/wgsl_reflect/tar.gz/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63:
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/mhawryluk/wgsl_reflect/tar.gz/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63}
+    resolution: {gitHosted: true, integrity: sha512-sZRE7LutVUd2gNH/H/5FkYiY5Fd/BEwrOoEO3A8VvRsRcp4HX1eDEPEVJ2a8Vt79DXEMMEj6ocYGuhYsuZcw9w==, tarball: https://codeload.github.com/mhawryluk/wgsl_reflect/tar.gz/85994fdc8d8a3abbb4f79baf3891e54eed0c1c63}
     version: 1.0.14
 
   whatwg-encoding@3.1.1:
@@ -9510,9 +9592,9 @@ snapshots:
 
   '@asamuzakjp/nwsapi@2.3.9': {}
 
-  '@astrojs/check@0.9.7(prettier@3.8.0)(tsover@6.0.2)':
+  '@astrojs/check@0.9.7(prettier-plugin-astro@0.14.1)(prettier@3.9.5)(tsover@6.0.2)':
     dependencies:
-      '@astrojs/language-server': 2.16.3(prettier@3.8.0)(tsover@6.0.2)
+      '@astrojs/language-server': 2.16.3(prettier-plugin-astro@0.14.1)(prettier@3.9.5)(tsover@6.0.2)
       chokidar: 4.0.3
       kleur: 4.1.5
       typescript: tsover@6.0.2
@@ -9529,7 +9611,7 @@ snapshots:
     dependencies:
       picomatch: 4.0.4
 
-  '@astrojs/language-server@2.16.3(prettier@3.8.0)(tsover@6.0.2)':
+  '@astrojs/language-server@2.16.3(prettier-plugin-astro@0.14.1)(prettier@3.9.5)(tsover@6.0.2)':
     dependencies:
       '@astrojs/compiler': 2.13.0
       '@astrojs/yaml2ts': 0.2.2
@@ -9543,14 +9625,15 @@ snapshots:
       volar-service-css: 0.0.68(@volar/language-service@2.4.27)
       volar-service-emmet: 0.0.68(@volar/language-service@2.4.27)
       volar-service-html: 0.0.68(@volar/language-service@2.4.27)
-      volar-service-prettier: 0.0.68(@volar/language-service@2.4.27)(prettier@3.8.0)
+      volar-service-prettier: 0.0.68(@volar/language-service@2.4.27)(prettier@3.9.5)
       volar-service-typescript: 0.0.68(@volar/language-service@2.4.27)
       volar-service-typescript-twoslash-queries: 0.0.68(@volar/language-service@2.4.27)
       volar-service-yaml: 0.0.68(@volar/language-service@2.4.27)
       vscode-html-languageservice: 5.6.1
       vscode-uri: 3.1.0
     optionalDependencies:
-      prettier: 3.8.0
+      prettier: 3.9.5
+      prettier-plugin-astro: 0.14.1
     transitivePeerDependencies:
       - typescript
 
@@ -12591,9 +12674,9 @@ snapshots:
 
   '@vtbag/element-crossing@1.1.0': {}
 
-  '@vtbag/inspection-chamber@1.0.23(prettier@3.8.0)(tsover@6.0.2)':
+  '@vtbag/inspection-chamber@1.0.23(prettier-plugin-astro@0.14.1)(prettier@3.9.5)(tsover@6.0.2)':
     dependencies:
-      '@astrojs/check': 0.9.7(prettier@3.8.0)(tsover@6.0.2)
+      '@astrojs/check': 0.9.7(prettier-plugin-astro@0.14.1)(prettier@3.9.5)(tsover@6.0.2)
     transitivePeerDependencies:
       - prettier
       - prettier-plugin-astro
@@ -12864,11 +12947,11 @@ snapshots:
       marked-smartypants: 1.1.9(marked@12.0.2)
       ultrahtml: 1.6.0
 
-  astro-vtbot@2.1.10(prettier@3.8.0)(tsover@6.0.2):
+  astro-vtbot@2.1.10(prettier-plugin-astro@0.14.1)(prettier@3.9.5)(tsover@6.0.2):
     dependencies:
       '@vtbag/cam-shaft': 1.0.6
       '@vtbag/element-crossing': 1.1.0
-      '@vtbag/inspection-chamber': 1.0.23(prettier@3.8.0)(tsover@6.0.2)
+      '@vtbag/inspection-chamber': 1.0.23(prettier-plugin-astro@0.14.1)(prettier@3.9.5)(tsover@6.0.2)
       '@vtbag/turn-signal': 1.3.1
       '@vtbag/utensil-drawer': 1.2.14
     transitivePeerDependencies:
@@ -13898,7 +13981,7 @@ snapshots:
 
   escape-string-regexp@5.0.0: {}
 
-  eslint-doc-generator@3.3.2(eslint@9.39.2(jiti@2.6.1))(prettier@3.8.0)(tsover@6.0.2):
+  eslint-doc-generator@3.3.2(eslint@9.39.2(jiti@2.6.1))(prettier@3.9.5)(tsover@6.0.2):
     dependencies:
       '@typescript-eslint/utils': 8.57.2(eslint@9.39.2(jiti@2.6.1))(tsover@6.0.2)
       ajv: 8.17.1
@@ -13917,7 +14000,7 @@ snapshots:
       table: 6.9.0
       type-fest: 5.5.0
     optionalDependencies:
-      prettier: 3.8.0
+      prettier: 3.9.5
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -16498,9 +16581,23 @@ snapshots:
 
   prelude-ls@1.2.1: {}
 
+  prettier-plugin-astro@0.14.1:
+    dependencies:
+      '@astrojs/compiler': 2.13.0
+      prettier: 3.8.0
+      sass-formatter: 0.7.9
+
+  prettier-plugin-tailwindcss@0.8.1(prettier-plugin-astro@0.14.1)(prettier@3.9.5):
+    dependencies:
+      prettier: 3.9.5
+    optionalDependencies:
+      prettier-plugin-astro: 0.14.1
+
   prettier@3.6.2: {}
 
   prettier@3.8.0: {}
+
+  prettier@3.9.5: {}
 
   pretty-bytes@6.1.1: {}
 
@@ -17104,9 +17201,15 @@ snapshots:
 
   rw@1.3.3: {}
 
+  s.color@0.0.15: {}
+
   safe-buffer@5.2.1: {}
 
   safer-buffer@2.1.2: {}
+
+  sass-formatter@0.7.9:
+    dependencies:
+      suf-log: 2.5.3
 
   sax@1.4.4: {}
 
@@ -17451,6 +17554,10 @@ snapshots:
       browserslist: 4.28.1
       postcss: 8.5.8
       postcss-selector-parser: 6.1.2
+
+  suf-log@2.5.3:
+    dependencies:
+      s.color: 0.0.15
 
   supports-color@7.2.0:
     dependencies:
@@ -18133,12 +18240,12 @@ snapshots:
     optionalDependencies:
       '@volar/language-service': 2.4.27
 
-  volar-service-prettier@0.0.68(@volar/language-service@2.4.27)(prettier@3.8.0):
+  volar-service-prettier@0.0.68(@volar/language-service@2.4.27)(prettier@3.9.5):
     dependencies:
       vscode-uri: 3.1.0
     optionalDependencies:
       '@volar/language-service': 2.4.27
-      prettier: 3.8.0
+      prettier: 3.9.5
 
   volar-service-typescript-twoslash-queries@0.0.68(@volar/language-service@2.4.27):
     dependencies:
