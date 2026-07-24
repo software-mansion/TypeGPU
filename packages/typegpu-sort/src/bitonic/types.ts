@@ -8,14 +8,13 @@ export interface BitonicSorterOptions<TValue extends d.AnyWgslData = d.AnyWgslDa
   /**
    * Value used to pad arrays to power-of-2 length. Must sort to the end with your comparator.
    * Defaults to the maximum value of the key type (works for ascending). For descending
-   * order, use the minimum value of the key type. When a `values` payload is used, keys equal
-   * to the padding value may read back payloads from padding slots, so the padding value
-   * should not occur among the keys.
+   * order, use the minimum value of the key type.
    */
   paddingValue?: number;
   /**
    * Optional payload buffer reordered alongside the keys (e.g. indices into
-   * another data structure). Must have the same element count as the key buffer.
+   * another data structure). Must have the same power-of-two element count as
+   * the key buffer.
    * When omitted, the payload machinery is not built at all — a key-only sorter
    * carries zero overhead for it.
    */

@@ -101,11 +101,11 @@ function makeKernels(schemas: BitonicSchemas) {
       return;
     }
 
-    copyLayout.$.dst[idx] = std.select(
-      copyLayout.$.params.paddingValue as number,
-      copyLayout.$.src[idx] as number,
-      idx < copyLayout.$.params.srcLength,
-    );
+    if (idx < copyLayout.$.params.srcLength) {
+      copyLayout.$.dst[idx] = copyLayout.$.src[idx] as number;
+    } else {
+      copyLayout.$.dst[idx] = copyLayout.$.params.paddingValue;
+    }
   });
 
   function makeCopyBackKernel(
@@ -162,7 +162,8 @@ function makeKernels(schemas: BitonicSchemas) {
     const right = sortLayout.$.data[ixj] as number;
 
     const leftFirst = compareSlot.$(left, right);
-    const shouldSwap = std.select(leftFirst, !leftFirst, ascending);
+    const rightFirst = compareSlot.$(right, left);
+    const shouldSwap = std.select(leftFirst, rightFirst, ascending);
 
     if (shouldSwap) {
       sortLayout.$.data[i] = right;
@@ -246,7 +247,8 @@ function makeLocalKernels(schemas: BitonicSchemas, valueType?: d.AnyWgslData) {
     const right = localKeys.$[ixjLocal] as number;
     const ascending = ((base + iLocal) & k) === 0;
     const leftFirst = compareSlot.$(left, right);
-    const shouldSwap = std.select(leftFirst, !leftFirst, ascending);
+    const rightFirst = compareSlot.$(right, left);
+    const shouldSwap = std.select(leftFirst, rightFirst, ascending);
     if (shouldSwap) {
       localKeys.$[iLocal] = right;
       localKeys.$[ixjLocal] = left;
@@ -339,6 +341,9 @@ export function createBitonicSorter<
   const valueBuffer = options?.values as ValueBuffer | undefined;
 
   const originalSize = keyBuffer.dataType.elementCount;
+  if (originalSize === 0) {
+    throw new Error('Cannot create a bitonic sorter for an empty buffer.');
+  }
   const paddedSize = nextPowerOf2(originalSize);
   const wasPadded = paddedSize !== originalSize;
 
@@ -346,6 +351,9 @@ export function createBitonicSorter<
     throw new Error(
       `The values buffer (${valueBuffer.dataType.elementCount} elements) must match the key buffer (${originalSize} elements).`,
     );
+  }
+  if (valueBuffer && wasPadded) {
+    throw new Error('Bitonic sorting with a values buffer requires a power-of-two element count.');
   }
 
   const keyType = keyBuffer.dataType.elementType;
