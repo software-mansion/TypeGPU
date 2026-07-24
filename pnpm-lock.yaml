@@ -937,6 +937,9 @@ importers:
 
   packages/typegpu-testing-utility:
     dependencies:
+      tinyest:
+        specifier: workspace:*
+        version: link:../tinyest
       typegpu:
         specifier: workspace:*
         version: link:../typegpu
