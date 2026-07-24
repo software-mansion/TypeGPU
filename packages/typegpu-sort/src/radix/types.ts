@@ -19,8 +19,6 @@ export type RadixSorterRunOptions = RunPassOptions;
 export interface RadixSorter {
   /** Number of elements in the sorted buffer. */
   readonly size: number;
-  /** Whether the sorter uses the subgroup-accelerated scatter path. */
-  readonly usesSubgroups: boolean;
   /**
    * Sort the buffer in place — standalone by default, or into the encoder/pass
    * provided in `options` to compose the sort with other GPU work.

@@ -7,6 +7,7 @@ import {
   decomposeWorkgroups,
   type RadixSorter,
   scan,
+  type ScanBuffer,
 } from '@typegpu/sort';
 import { randf } from '@typegpu/noise';
 import { defineControls } from '../../common/defineControls.ts';
@@ -18,21 +19,14 @@ const maxBufferSize = await navigator.gpu.requestAdapter().then((adapter) => {
   return Math.min(adapter.limits.maxStorageBufferBindingSize, adapter.limits.maxBufferSize);
 });
 
-const subgroupRoot = await tgpu.init({
+const root = await tgpu.init({
   device: {
-    optionalFeatures: ['subgroups'],
     requiredLimits: {
       maxStorageBufferBindingSize: maxBufferSize,
       maxBufferSize: maxBufferSize,
     },
   },
 });
-const fallbackRoot = await tgpu.init();
-
-const roots = [
-  { root: subgroupRoot, label: 'subgroups' },
-  { root: fallbackRoot, label: 'fallback' },
-];
 
 // reference implementations & comparison
 
@@ -109,7 +103,7 @@ function randomF32Array(length: number): number[] {
 
 // radix test runners
 
-type Root = typeof subgroupRoot;
+type Root = typeof root;
 type KeySchema = d.U32 | d.I32 | d.F32;
 
 async function runRadixAndRead(
@@ -387,10 +381,10 @@ const checkSortedKernel = tgpu.computeFn({
   }
 });
 
-const fillPipeline = subgroupRoot.createComputePipeline({ compute: fillKernel });
-const checkPipeline = subgroupRoot.createComputePipeline({ compute: checkSortedKernel });
+const fillPipeline = root.createComputePipeline({ compute: fillKernel });
+const checkPipeline = root.createComputePipeline({ compute: checkSortedKernel });
 
-async function wrappingSum(root: Root, buffer: Parameters<typeof scan>[1]['inputBuffer']) {
+async function wrappingSum(root: Root, buffer: ScanBuffer<d.U32>) {
   const result = scan(root, {
     inputBuffer: buffer,
     operation: std.add,
@@ -401,7 +395,6 @@ async function wrappingSum(root: Root, buffer: Parameters<typeof scan>[1]['input
 }
 
 async function testHugeBuffer(): Promise<boolean> {
-  const root = subgroupRoot;
   const length = 2 ** 27 + 5;
   if (length * 4 > maxBufferSize) {
     console.warn(`Skipping huge buffer test: needs ${length * 4} bytes, limit ${maxBufferSize}`);
@@ -474,25 +467,12 @@ const radixTests = {
 async function runTests(): Promise<boolean> {
   let result = true;
 
-  for (const { root, label } of roots) {
-    const probe = root.createBuffer(d.arrayOf(d.u32, 4), [3, 2, 1, 0]).$usage('storage');
-    const probeSorter = createRadixSorter(root, probe);
-    console.log(
-      `--- radix tests on '${label}' root (scatter path: ${
-        probeSorter.usesSubgroups ? 'subgroups' : 'fallback'
-      }) ---`,
-    );
-    probeSorter.destroy();
-    probe.destroy();
-
-    for (const [name, fn] of Object.entries(radixTests)) {
-      result = (await runTest(`${label}: ${name}`, () => fn(root))) && result;
-    }
+  for (const [name, fn] of Object.entries(radixTests)) {
+    result = (await runTest(name, () => fn(root))) && result;
   }
 
-  result = (await runTest('testBitonicU32', () => testBitonicU32(subgroupRoot))) && result;
-  result =
-    (await runTest('testBitonicDescending', () => testBitonicDescending(subgroupRoot))) && result;
+  result = (await runTest('testBitonicU32', () => testBitonicU32(root))) && result;
+  result = (await runTest('testBitonicDescending', () => testBitonicDescending(root))) && result;
 
   return result;
 }
@@ -527,6 +507,5 @@ export const controls = defineControls({
 });
 
 export function onCleanup() {
-  subgroupRoot.destroy();
-  fallbackRoot.destroy();
+  root.destroy();
 }

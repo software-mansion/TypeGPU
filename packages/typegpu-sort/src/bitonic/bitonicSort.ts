@@ -181,8 +181,10 @@ function makeKernels(schemas: BitonicSchemas) {
  * never cross the block boundary. `localSortKernel` covers all phases with
  * k <= LOCAL_BLOCK (a full bitonic sort of each block); `localMergeKernel`
  * finishes a k-phase (k read from the uniforms) once the stride drops below the
- * block size. Only used when the padded size is a multiple of LOCAL_BLOCK, so no
- * bounds checks are needed.
+ * block size. Only used when the padded size is a multiple of LOCAL_BLOCK, so
+ * per-element bounds checks are not needed. The 3D dispatch grid may contain
+ * more workgroups than blocks, and whole workgroups past the last block exit
+ * early.
  */
 function makeLocalKernels(schemas: BitonicSchemas, valueType?: d.AnyWgslData) {
   const { keyType, sortLayout, valsLayout } = schemas;
@@ -273,6 +275,9 @@ function makeLocalKernels(schemas: BitonicSchemas, valueType?: d.AnyWgslData) {
   })(({ lid, wid, numWorkgroups }) => {
     const tid = lid.x;
     const base = flatWorkgroupIndex(wid, numWorkgroups) * LOCAL_BLOCK;
+    if (base >= sortLayout.$.data.length) {
+      return;
+    }
 
     loadShared(base, tid);
 
@@ -294,6 +299,9 @@ function makeLocalKernels(schemas: BitonicSchemas, valueType?: d.AnyWgslData) {
   })(({ lid, wid, numWorkgroups }) => {
     const tid = lid.x;
     const base = flatWorkgroupIndex(wid, numWorkgroups) * LOCAL_BLOCK;
+    if (base >= sortLayout.$.data.length) {
+      return;
+    }
 
     loadShared(base, tid);
     mergeDown(base, tid, LOCAL_BLOCK_LOG2, sortLayout.$.uniforms.k);
