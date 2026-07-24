@@ -3,8 +3,7 @@ import { decomposeWorkgroups } from '../bitonic/utils.ts';
 import { beginRunPass } from '../runPass.ts';
 import { createPrefixScanComputer } from '../scan/index.ts';
 import { makeCountKernel } from './count.ts';
-import { makeSubgroupScatterKernel } from './scatter.ts';
-import { makeFallbackScatterKernel } from './scatterFallback.ts';
+import { makeScatterKernel } from './scatter.ts';
 import {
   histLayout,
   makeRadixSchemas,
@@ -14,37 +13,12 @@ import {
   RADIX_BITS,
   RADIX_SIZE,
   type RadixKeyType,
-  type RadixSchemas,
   TILE_SIZE,
-  TILE_THREADS,
 } from './schemas.ts';
 import type { RadixSorter, RadixSorterOptions, RadixSorterRunOptions } from './types.ts';
 
-const DEFAULT_SUBGROUP_MIN_SIZE = 16;
-
 type KeyBuffer = TgpuBuffer<d.WgslArray<RadixKeyType>> & StorageFlag;
 type ValueBuffer = TgpuBuffer<d.WgslArray<d.AnyWgslData>> & StorageFlag;
-
-function createScatterPipeline(root: TgpuRoot, schemas: RadixSchemas) {
-  if (root.enabledFeatures.has('subgroups')) {
-    const subgroupMinSize = root.device.adapterInfo?.subgroupMinSize ?? DEFAULT_SUBGROUP_MIN_SIZE;
-    const maxSubgroups = Math.ceil(TILE_THREADS / subgroupMinSize);
-    const sharedMemoryBytes = (maxSubgroups * RADIX_SIZE + RADIX_SIZE) * 4;
-    if (sharedMemoryBytes <= root.device.limits.maxComputeWorkgroupStorageSize) {
-      return {
-        pipeline: root.createComputePipeline({
-          compute: makeSubgroupScatterKernel(schemas, maxSubgroups),
-        }),
-        usesSubgroups: true,
-      };
-    }
-  }
-
-  return {
-    pipeline: root.createComputePipeline({ compute: makeFallbackScatterKernel(schemas) }),
-    usesSubgroups: false,
-  };
-}
 
 /**
  * Create a radix sorter for the given key buffer (u32, i32 or f32 elements). The
@@ -53,13 +27,9 @@ function createScatterPipeline(root: TgpuRoot, schemas: RadixSchemas) {
  * digit-major histogram, turns the histogram into scatter offsets with a single
  * exclusive prefix scan, and scatters elements to their stable positions. i32 and f32 keys are ordered via
  * order-preserving bit transforms applied at digit extraction only — the data
- * buffers are never transformed. For f32 keys, NaNs sort after +Infinity when
- * ascending; the sort is oblivious to the distinction between -0 and +0.
- *
- * When the root has the 'subgroups' feature enabled (and the device's subgroup
- * sizes fit the workgroup memory budget), the scatter uses a subgroup-ballot
- * ranking path; otherwise a portable fallback is used. The choice happens once
- * here — `run` performs no capability checks.
+ * buffers are never transformed. For f32 keys sorted ascending, NaNs with a
+ * cleared sign bit sort after +Infinity and NaNs with a set sign bit sort
+ * before -Infinity; the sort is oblivious to the distinction between -0 and +0.
  *
  * All internal buffers, bind groups and pipelines are created up front; `run`
  * only records dispatches.
@@ -114,7 +84,7 @@ export function createRadixSorter<
   });
   const scanPlan = scanComputer.prepare(histBuffer);
 
-  const { pipeline: scatterPipeline, usesSubgroups } = createScatterPipeline(root, schemas);
+  const scatterPipeline = root.createComputePipeline({ compute: makeScatterKernel(schemas) });
 
   const countPipeline = root.createComputePipeline({ compute: makeCountKernel(schemas) });
 
@@ -177,5 +147,5 @@ export function createRadixSorter<
     }
   }
 
-  return { size: n, usesSubgroups, run, destroy };
+  return { size: n, run, destroy };
 }

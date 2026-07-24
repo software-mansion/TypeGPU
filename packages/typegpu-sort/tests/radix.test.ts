@@ -1,23 +1,10 @@
-import { d, tgpu } from 'typegpu';
+import { d } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 import { describe, expect, vi } from 'vitest';
 import { createRadixSorter } from '../src/index.ts';
-import { makeSubgroupScatterKernel } from '../src/radix/scatter.ts';
-import { makeRadixSchemas } from '../src/radix/schemas.ts';
 import { getConversionWarnings, getResolvedWgsl } from './utils.ts';
 
 describe('radix sort', () => {
-  it('selects the fallback scatter when subgroups are unavailable', ({ root, device }) => {
-    const data = root.createBuffer(d.arrayOf(d.u32, 512)).$usage('storage');
-    const sorter = createRadixSorter(root, data);
-
-    expect(sorter.usesSubgroups).toBe(false);
-
-    sorter.run();
-
-    expect(getResolvedWgsl(device)).not.toContain('subgroup');
-  });
-
   it('emits no implicit conversion warnings for any key type', ({ root }) => {
     const warnSpy = vi.spyOn(console, 'warn');
 
@@ -64,27 +51,5 @@ describe('radix sort', () => {
     const values = root.createBuffer(d.arrayOf(d.vec4f, 512)).$usage('storage');
     createRadixSorter(root, keys, { values }).run();
     expect(getResolvedWgsl(device)).toContain('dstVals');
-  });
-});
-
-describe('subgroup scatter kernel', () => {
-  it('resolves with subgroup operations, sized by the maxSubgroups bound', () => {
-    const schemas = makeRadixSchemas(d.u32, 'ascending');
-    const kernel = makeSubgroupScatterKernel(schemas, 8);
-    const wgsl = tgpu.resolve([kernel], { enableExtensions: ['subgroups'] });
-
-    expect(wgsl).toContain('subgroupBallot');
-    expect(wgsl).toContain('subgroup_invocation_id');
-    expect(wgsl).toContain('subgroup_id');
-    expect(wgsl).toContain('array<u32, 2048>');
-  });
-
-  it('moves the payload alongside keys when a value type is provided', () => {
-    const schemas = makeRadixSchemas(d.u32, 'ascending', d.vec4f);
-    const kernel = makeSubgroupScatterKernel(schemas, 8);
-    const wgsl = tgpu.resolve([kernel], { enableExtensions: ['subgroups'] });
-
-    expect(wgsl).toContain('array<vec4f>');
-    expect(wgsl).toContain('dstVals');
   });
 });

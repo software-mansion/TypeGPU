@@ -19,7 +19,10 @@ import {
 } from './schemas.ts';
 import type { BinaryOp } from './types.ts';
 
-type ScanBuffer<TElement extends ScanElementType> = TgpuBuffer<d.WgslArray<TElement>> & StorageFlag;
+export type ScanBuffer<TElement extends ScanElementType = d.F32> = TgpuBuffer<
+  d.WgslArray<TElement>
+> &
+  StorageFlag;
 
 type AnyScanBuffer = TgpuBuffer<d.WgslArray<ScanElementType>> & StorageFlag;
 

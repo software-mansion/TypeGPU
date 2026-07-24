@@ -12,17 +12,13 @@ and composes with your own command encoders and compute passes.
 
 The fast path — a stable 4-pass LSD radix sort. Keys are ordered by the natural
 order of their type (i32 and f32 keys are handled via order-preserving bit
-transforms; the buffers themselves are never transformed). When the root has the
-`subgroups` feature enabled, a subgroup-ballot scatter is selected automatically
-at creation time; otherwise a portable fallback is used.
+transforms; the buffers themselves are never transformed).
 
 ```ts
 import { tgpu, d } from 'typegpu';
 import { createRadixSorter } from '@typegpu/sort';
 
-const root = await tgpu.init({
-  device: { optionalFeatures: ['subgroups'] },
-});
+const root = await tgpu.init();
 const keys = root.createBuffer(d.arrayOf(d.f32, 100_000), data).$usage('storage');
 
 const sorter = createRadixSorter(root, keys);
@@ -45,7 +41,8 @@ All internal buffers, bind groups and pipelines are created once in
 `createRadixSorter` — `run()` only records dispatches, so it is safe (and cheap)
 to call every frame.
 
-For f32 keys, NaNs sort after +Infinity when ascending.
+For f32 keys sorted ascending, NaNs with a cleared sign bit sort after
++Infinity and NaNs with a set sign bit sort before -Infinity.
 
 ## Bitonic Sort
 
@@ -70,7 +67,8 @@ const sorter = createBitonicSorter(root, keys, {
 ```
 
 The bitonic sorter also accepts a `values` payload buffer, swapped alongside the
-keys.
+keys. With a payload, keys equal to the padding value may read back payloads
+from padding slots, so the padding value should not occur among the keys.
 
 ## Prefix Scan
 
